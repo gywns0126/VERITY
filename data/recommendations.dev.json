@@ -207,7 +207,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 60,
+      "multi_score": 61,
       "grade": "매수",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -227,7 +227,7 @@
         "technical": 57,
         "sentiment": 50,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 64,
         "quality": 59,
         "volatility": 50,
@@ -238,7 +238,7 @@
         "technical": 9.4,
         "sentiment": 4.9,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 5.6,
         "quality": 5.5,
         "volatility": 3.2,
@@ -458,7 +458,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -473,7 +473,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -482,9 +482,9 @@
       "pbr_invalid_to_1.0"
     ],
     "timing_signal": {
-      "score": 52.8,
+      "score": 54.2,
       "signal": "NEUTRAL",
-      "sentiment_component": 51.0,
+      "sentiment_component": 53.0,
       "technical_component": 57.0,
       "weights": {
         "sentiment": 0.7,
@@ -493,7 +493,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 55.8,
+    "raw_brain_score": 56.2,
     "brain_score_pre_macro": 56,
     "macro_multiplier": {
       "multiplier": 0.85,
@@ -503,7 +503,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1517.27,
+        "usdkrw": 1515.82,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -512,18 +512,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 45.6,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.6,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 55.8,
+      "raw_before_penalty": 56.2,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 56,
-      "raw_brain_score": 55.8,
+      "raw_brain_score": 56.2,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
@@ -536,7 +536,7 @@
       "fact_score": {
         "score": 57,
         "components": {
-          "multi_factor": 60.0,
+          "multi_factor": 61.0,
           "consensus": 100.0,
           "prediction": 75.6,
           "backtest": 50.0,
@@ -604,31 +604,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 53,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 80.0,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 50,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 6,
-        "base_vci": 6,
+        "vci": 4,
+        "base_vci": 4,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.4,
+        "mispricing_z": 0.27,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -654,11 +654,11 @@
         "max_pct": 3,
         "rationale": "Kelly 26.7% → WATCH 상한 3% 적용"
       },
-      "reasoning": "달바글로벌: 브레인 56점 (팩트 57 / 심리 51 / VCI +6) | 팩트 최강 consensus(100) / 최약 backtest(50) | V5: Graham가치↑97 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "달바글로벌: 브레인 56점 (팩트 57 / 심리 53 / VCI +4) | 팩트 최강 consensus(100) / 최약 backtest(50) | V5: Graham가치↑97 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 60점 (매수) — 관찰 필요",
-    "confidence": 60,
+    "ai_verdict": "멀티팩터 61점 (매수) — 관찰 필요",
+    "confidence": 61,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "PER 13.04배 저평가 | 고점 대비 -31.73% 하락",
@@ -1014,7 +1014,7 @@
       "kis_analyst_firm": "IM증권"
     },
     "multi_factor": {
-      "multi_score": 53,
+      "multi_score": 54,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -1034,7 +1034,7 @@
         "technical": 42,
         "sentiment": 50,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 35,
         "quality": 36,
         "volatility": 66,
@@ -1045,7 +1045,7 @@
         "technical": 6.9,
         "sentiment": 4.9,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 3.1,
         "quality": 3.4,
         "volatility": 4.2,
@@ -1079,20 +1079,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 88.0,
-      "prediction_std": 10.6,
+      "up_probability": 88.6,
+      "prediction_std": 10.9,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8907,
+      "conformal_q_hat": 0.8934,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 52.1,
+      "model_accuracy": 52.0,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -1104,16 +1104,16 @@
         "lightgbm": {
           "architecture": "gbdt",
           "wf_accuracy": 52.7,
-          "val_accuracy": 45.7,
+          "val_accuracy": 42.9,
           "wf_folds": 6,
           "weight": 0.5267
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.7,
-          "val_accuracy": 34.3,
+          "wf_accuracy": 51.3,
+          "val_accuracy": 32.9,
           "wf_folds": 6,
-          "weight": 0.5167
+          "weight": 0.5133
         },
         "mlp": {
           "architecture": "neural_net",
@@ -1132,11 +1132,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 39.1614,
-        "rsi14": 28.7989,
-        "macd_hist": 26.8708,
-        "drawdown_20d": 26.1446,
-        "vol_ratio": 23.1623
+        "volatility_20d": 39.188,
+        "rsi14": 30.3912,
+        "macd_hist": 28.6176,
+        "drawdown_20d": 24.647,
+        "vol_ratio": 22.0686
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -1157,10 +1157,10 @@
       "reasons": [
         "RSI 27.54 과매도 — 반등 가능",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 88.0% — 강한 매수 신호"
+        "AI 상승확률 88.6% — 강한 매수 신호"
       ]
     },
-    "low_52w": 34399.87109375,
+    "low_52w": 34399.8671875,
     "price_1m": 56200.0,
     "price_3m": 43477.6953125,
     "price_6m": 36766.8828125,
@@ -1435,7 +1435,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -1450,7 +1450,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -1472,9 +1472,9 @@
       "penalty_applied": false
     },
     "timing_signal": {
-      "score": 48.3,
+      "score": 49.7,
       "signal": "WEAK",
-      "sentiment_component": 51.0,
+      "sentiment_component": 53.0,
       "technical_component": 42.0,
       "weights": {
         "sentiment": 0.7,
@@ -1483,7 +1483,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 51.8,
+    "raw_brain_score": 52.2,
     "brain_score_pre_macro": 52,
     "macro_multiplier": {
       "multiplier": 0.85,
@@ -1493,7 +1493,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1517.27,
+        "usdkrw": 1515.82,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -1502,18 +1502,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 41.6,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.6,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 51.8,
+      "raw_before_penalty": 52.2,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 52,
-      "raw_brain_score": 51.8,
+      "raw_brain_score": 52.2,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
@@ -1526,9 +1526,9 @@
       "fact_score": {
         "score": 52,
         "components": {
-          "multi_factor": 53.0,
+          "multi_factor": 54.0,
           "consensus": 72.0,
-          "prediction": 88.0,
+          "prediction": 88.6,
           "backtest": 29.8,
           "timing": 69.0,
           "commodity_margin": 57.2,
@@ -1592,31 +1592,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 53,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 80.0,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 50,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 1,
-        "base_vci": 1,
+        "vci": -1,
+        "base_vci": -1,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.07,
+        "mispricing_z": -0.07,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -1652,11 +1652,11 @@
         "max_pct": 3,
         "rationale": "Kelly 20.0% → WATCH 상한 3% 적용"
       },
-      "reasoning": "SNT에너지: 브레인 52점 (팩트 52 / 심리 51 / VCI +1) | 팩트 최강 prediction(88) / 최약 backtest(30) | V5: Graham가치↑85 | 지분: 최대주주 계 59.13% | NAV +2328.5% 할증 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "SNT에너지: 브레인 52점 (팩트 52 / 심리 53 / VCI -1) | 팩트 최강 prediction(89) / 최약 backtest(30) | V5: Graham가치↑85 | 지분: 최대주주 계 59.13% | NAV +2328.5% 할증 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
-    "confidence": 53,
+    "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
+    "confidence": 54,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "RSI 27.54로 과매도 구간 | PER 7.67배 저평가 | 고점 대비 -48.07% 하락",
@@ -2007,7 +2007,7 @@
       "kis_analyst_firm": "메리츠"
     },
     "multi_factor": {
-      "multi_score": 52,
+      "multi_score": 53,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -2027,7 +2027,7 @@
         "technical": 35,
         "sentiment": 50,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 24,
         "quality": 47,
         "volatility": 59,
@@ -2038,7 +2038,7 @@
         "technical": 5.8,
         "sentiment": 4.9,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 2.1,
         "quality": 4.4,
         "volatility": 3.8,
@@ -2070,20 +2070,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 81.8,
-      "prediction_std": 10.5,
+      "up_probability": 82.0,
+      "prediction_std": 10.6,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8195,
+      "conformal_q_hat": 0.8251,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 45.8,
+      "model_accuracy": 46.2,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -2094,10 +2094,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 43.7,
-          "val_accuracy": 44.3,
+          "wf_accuracy": 45.7,
+          "val_accuracy": 42.9,
           "wf_folds": 6,
-          "weight": 0.4367
+          "weight": 0.4567
         },
         "catboost": {
           "architecture": "gbdt",
@@ -2123,11 +2123,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 37.4812,
-        "ma20_ratio": 22.0536,
-        "ma5_ratio": 22.018,
-        "bb_position": 20.9091,
-        "return_5d": 19.6265
+        "volatility_20d": 39.4812,
+        "ma20_ratio": 21.3869,
+        "ma5_ratio": 20.6846,
+        "rsi7": 20.5018,
+        "macd_hist": 19.8877
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -2148,7 +2148,7 @@
       "reasons": [
         "RSI 35.28 저평가 구간",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 81.8% — 강한 매수 신호"
+        "AI 상승확률 82.0% — 강한 매수 신호"
       ]
     },
     "low_52w": 10610.0,
@@ -2368,7 +2368,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -2383,7 +2383,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -2392,9 +2392,9 @@
       "pbr_invalid_to_1.0"
     ],
     "timing_signal": {
-      "score": 46.2,
+      "score": 46.9,
       "signal": "WEAK",
-      "sentiment_component": 51.0,
+      "sentiment_component": 52.0,
       "technical_component": 35.0,
       "weights": {
         "sentiment": 0.7,
@@ -2403,7 +2403,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 50.8,
+    "raw_brain_score": 51.0,
     "brain_score_pre_macro": 51,
     "macro_multiplier": {
       "multiplier": 0.85,
@@ -2413,7 +2413,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1517.27,
+        "usdkrw": 1515.82,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -2422,18 +2422,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 45.6,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.4,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 55.8,
+      "raw_before_penalty": 56.0,
       "penalties": {
         "red_flag": -5.0,
         "quadrant_unfavored": 0
       },
       "final_score": 51,
-      "raw_brain_score": 50.8,
+      "raw_brain_score": 51.0,
       "grade": "CAUTION",
       "grade_caps_applied": []
     },
@@ -2446,9 +2446,9 @@
       "fact_score": {
         "score": 57,
         "components": {
-          "multi_factor": 52.0,
+          "multi_factor": 53.0,
           "consensus": 87.0,
-          "prediction": 81.8,
+          "prediction": 82.0,
           "backtest": 34.0,
           "timing": 62.0,
           "commodity_margin": 71.8,
@@ -2512,31 +2512,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 52,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 78.2,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 50,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 6,
-        "base_vci": 6,
+        "vci": 5,
+        "base_vci": 5,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.4,
+        "mispricing_z": 0.33,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -2581,11 +2581,11 @@
         "max_pct": 0,
         "rationale": "Kelly 18.3% → CAUTION 상한 0% 적용"
       },
-      "reasoning": "GKL: 브레인 51점 (팩트 57 / 심리 51 / VCI +6) | 팩트 최강 consensus(87) / 최약 backtest(34) | 퀀트: 모멘텀↓24 | V5: Graham가치↑92 | 지분: 최대주주 한국관광공사 51.0% | NAV +36429.4% 할증 | 하향조정: 공매도 비율 주의 9.3% | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "GKL: 브레인 51점 (팩트 57 / 심리 52 / VCI +5) | 팩트 최강 consensus(87) / 최약 backtest(34) | 퀀트: 모멘텀↓24 | V5: Graham가치↑92 | 지분: 최대주주 한국관광공사 51.0% | NAV +36429.4% 할증 | 하향조정: 공매도 비율 주의 9.3% | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
-    "confidence": 52,
+    "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
+    "confidence": 53,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "PER 10.18배 저평가 | 고점 대비 -38.8% 하락",
@@ -2958,7 +2958,7 @@
       "kis_analyst_firm": "상상인"
     },
     "multi_factor": {
-      "multi_score": 53,
+      "multi_score": 54,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -2978,7 +2978,7 @@
         "technical": 37,
         "sentiment": 50,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 20,
         "quality": 64,
         "volatility": 52,
@@ -2989,7 +2989,7 @@
         "technical": 6.1,
         "sentiment": 4.9,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 1.7,
         "quality": 6.0,
         "volatility": 3.3,
@@ -3934,7 +3934,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -3949,7 +3949,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -3958,9 +3958,9 @@
       "pbr_invalid_to_1.0"
     ],
     "timing_signal": {
-      "score": 46.8,
+      "score": 48.2,
       "signal": "WEAK",
-      "sentiment_component": 51.0,
+      "sentiment_component": 53.0,
       "technical_component": 37.0,
       "weights": {
         "sentiment": 0.7,
@@ -3969,8 +3969,8 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 52.4,
-    "brain_score_pre_macro": 52,
+    "raw_brain_score": 52.8,
+    "brain_score_pre_macro": 53,
     "macro_multiplier": {
       "multiplier": 0.85,
       "total_penalty": 0.15,
@@ -3979,7 +3979,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1517.27,
+        "usdkrw": 1515.82,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -3988,23 +3988,23 @@
     },
     "score_breakdown": {
       "fact_contribution": 47.2,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.6,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 57.4,
+      "raw_before_penalty": 57.8,
       "penalties": {
         "red_flag": -5.0,
         "quadrant_unfavored": 0
       },
-      "final_score": 52,
-      "raw_brain_score": 52.4,
+      "final_score": 53,
+      "raw_brain_score": 52.8,
       "grade": "CAUTION",
       "grade_caps_applied": []
     },
     "verity_brain": {
-      "brain_score": 52,
+      "brain_score": 53,
       "grade": "CAUTION",
       "grade_label": "주의",
       "grade_confidence": "firm",
@@ -4012,7 +4012,7 @@
       "fact_score": {
         "score": 59,
         "components": {
-          "multi_factor": 53.0,
+          "multi_factor": 54.0,
           "consensus": 84.0,
           "prediction": 75.4,
           "backtest": 34.5,
@@ -4077,31 +4077,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 53,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 80.0,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 50,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 8,
-        "base_vci": 8,
+        "vci": 6,
+        "base_vci": 6,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.53,
+        "mispricing_z": 0.4,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -4133,15 +4133,15 @@
       "red_flag_penalty": 5.0,
       "position_guide": {
         "recommended_pct": 0,
-        "kelly_raw_pct": 20.0,
+        "kelly_raw_pct": 21.7,
         "max_pct": 0,
-        "rationale": "Kelly 20.0% → CAUTION 상한 0% 적용"
+        "rationale": "Kelly 21.7% → CAUTION 상한 0% 적용"
       },
-      "reasoning": "파마리서치: 브레인 52점 (팩트 59 / 심리 51 / VCI +8) | 팩트 최강 consensus(84) / 최약 backtest(34) | 퀀트: 모멘텀↓20 | V5: Graham가치↑85 | 지분: 최대주주 정상수 30.8% | NAV +1303.5% 할증 | 하향조정: 공매도 비율 주의 8.9% | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "파마리서치: 브레인 53점 (팩트 59 / 심리 53 / VCI +6) | 팩트 최강 consensus(84) / 최약 backtest(34) | 퀀트: 모멘텀↓20 | V5: Graham가치↑85 | 지분: 최대주주 정상수 30.8% | NAV +1303.5% 할증 | 하향조정: 공매도 비율 주의 8.9% | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
-    "confidence": 53,
+    "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
+    "confidence": 54,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "PER 12.64배 저평가 | 고점 대비 -58.85% 하락",
@@ -4516,7 +4516,7 @@
         "technical": 47,
         "sentiment": 50,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 35,
         "quality": 47,
         "volatility": 64,
@@ -4527,7 +4527,7 @@
         "technical": 7.8,
         "sentiment": 4.9,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 3.1,
         "quality": 4.4,
         "volatility": 4.1,
@@ -5278,7 +5278,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -5293,7 +5293,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -5315,9 +5315,9 @@
       "penalty_applied": false
     },
     "timing_signal": {
-      "score": 49.8,
-      "signal": "WEAK",
-      "sentiment_component": 51.0,
+      "score": 51.2,
+      "signal": "NEUTRAL",
+      "sentiment_component": 53.0,
       "technical_component": 47.0,
       "weights": {
         "sentiment": 0.7,
@@ -5326,7 +5326,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 53.8,
+    "raw_brain_score": 54.2,
     "brain_score_pre_macro": 54,
     "macro_multiplier": {
       "multiplier": 0.85,
@@ -5336,7 +5336,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1517.27,
+        "usdkrw": 1515.82,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -5345,18 +5345,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 45.6,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.6,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": -2.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 53.8,
+      "raw_before_penalty": 54.2,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 54,
-      "raw_brain_score": 53.8,
+      "raw_brain_score": 54.2,
       "grade": "AVOID",
       "grade_caps_applied": []
     },
@@ -5435,31 +5435,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 53,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 80.0,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 50,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 6,
-        "base_vci": 6,
+        "vci": 4,
+        "base_vci": 4,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.4,
+        "mispricing_z": 0.27,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -5495,7 +5495,7 @@
         "max_pct": 0,
         "rationale": "레드플래그(즉시회피) — 포지션 불가"
       },
-      "reasoning": "JYP Ent.: 브레인 54점 (팩트 57 / 심리 51 / VCI +6) | 팩트 최강 prediction(87) / 최약 backtest(31) | V5: Graham가치↑90 | 지분: 최대주주 계 15.82% | NAV +714.6% 할증 | 레드플래그(즉시회피): 공매도 비율 5일 평균 15.9% (과다) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "JYP Ent.: 브레인 54점 (팩트 57 / 심리 53 / VCI +4) | 팩트 최강 prediction(87) / 최약 backtest(31) | V5: Graham가치↑90 | 지분: 최대주주 계 15.82% | NAV +714.6% 할증 | 레드플래그(즉시회피): 공매도 비율 5일 평균 15.9% (과다) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -5875,7 +5875,7 @@
       "kis_analyst_firm": "상상인"
     },
     "multi_factor": {
-      "multi_score": 56,
+      "multi_score": 57,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -5895,7 +5895,7 @@
         "technical": 47,
         "sentiment": 50,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 28,
         "quality": 60,
         "volatility": 56,
@@ -5906,7 +5906,7 @@
         "technical": 7.8,
         "sentiment": 4.9,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 2.4,
         "quality": 5.6,
         "volatility": 3.6,
@@ -6326,7 +6326,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -6341,7 +6341,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [
@@ -6365,9 +6365,9 @@
       "penalty_applied": false
     },
     "timing_signal": {
-      "score": 49.8,
-      "signal": "WEAK",
-      "sentiment_component": 51.0,
+      "score": 51.2,
+      "signal": "NEUTRAL",
+      "sentiment_component": 53.0,
       "technical_component": 47.0,
       "weights": {
         "sentiment": 0.7,
@@ -6376,8 +6376,8 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 58.2,
-    "brain_score_pre_macro": 58,
+    "raw_brain_score": 58.6,
+    "brain_score_pre_macro": 59,
     "macro_multiplier": {
       "multiplier": 0.85,
       "total_penalty": 0.15,
@@ -6386,7 +6386,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1517.27,
+        "usdkrw": 1515.82,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -6395,25 +6395,25 @@
     },
     "score_breakdown": {
       "fact_contribution": 48.0,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.6,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 58.2,
+      "raw_before_penalty": 58.6,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
-      "final_score": 58,
-      "raw_brain_score": 58.2,
+      "final_score": 59,
+      "raw_brain_score": 58.6,
       "grade": "CAUTION",
       "grade_caps_applied": [
         "ai_upside_relax"
       ]
     },
     "verity_brain": {
-      "brain_score": 58,
+      "brain_score": 59,
       "grade": "CAUTION",
       "grade_label": "주의",
       "grade_confidence": "firm",
@@ -6421,7 +6421,7 @@
       "fact_score": {
         "score": 60,
         "components": {
-          "multi_factor": 56.0,
+          "multi_factor": 57.0,
           "consensus": 89.0,
           "prediction": 73.1,
           "backtest": 46.2,
@@ -6486,31 +6486,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 53,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 80.0,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 50,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 9,
-        "base_vci": 9,
+        "vci": 7,
+        "base_vci": 7,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.6,
+        "mispricing_z": 0.47,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -6542,15 +6542,15 @@
       "red_flag_penalty": 0,
       "position_guide": {
         "recommended_pct": 0.0,
-        "kelly_raw_pct": 30.0,
+        "kelly_raw_pct": 31.7,
         "max_pct": 0,
         "rationale": "레드플래그(즉시회피) — 포지션 불가"
       },
-      "reasoning": "클래시스: 브레인 58점 (팩트 60 / 심리 51 / VCI +9) | 팩트 최강 consensus(89) / 최약 backtest(46) | V5: Graham가치↑92 | 지분: 최대주주 BCPE Centur Investments, LP 54.16% | NAV +11797.8% 할증 | 레드플래그(즉시회피): 공매도 비율 5일 평균 16.2% (과다) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "클래시스: 브레인 59점 (팩트 60 / 심리 53 / VCI +7) | 팩트 최강 consensus(89) / 최약 backtest(46) | V5: Graham가치↑92 | 지분: 최대주주 BCPE Centur Investments, LP 54.16% | NAV +11797.8% 할증 | 레드플래그(즉시회피): 공매도 비율 5일 평균 16.2% (과다) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
-    "confidence": 56,
+    "ai_verdict": "멀티팩터 57점 (관망) — 관찰 필요",
+    "confidence": 57,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "RSI 32.45로 과매도 구간 | PER 12.25배 저평가 | 고점 대비 -45.04% 하락",
@@ -6923,7 +6923,7 @@
       "kis_analyst_firm": "DB증권"
     },
     "multi_factor": {
-      "multi_score": 57,
+      "multi_score": 58,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -6943,7 +6943,7 @@
         "technical": 42,
         "sentiment": 50,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 53,
         "quality": 44,
         "volatility": 73,
@@ -6954,7 +6954,7 @@
         "technical": 6.9,
         "sentiment": 4.9,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 4.6,
         "quality": 4.1,
         "volatility": 4.7,
@@ -7702,7 +7702,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -7717,7 +7717,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -7726,9 +7726,9 @@
       "pbr_invalid_to_1.0"
     ],
     "timing_signal": {
-      "score": 48.3,
+      "score": 49.7,
       "signal": "WEAK",
-      "sentiment_component": 51.0,
+      "sentiment_component": 53.0,
       "technical_component": 42.0,
       "weights": {
         "sentiment": 0.7,
@@ -7737,7 +7737,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 54.8,
+    "raw_brain_score": 55.2,
     "brain_score_pre_macro": 55,
     "macro_multiplier": {
       "multiplier": 0.85,
@@ -7747,7 +7747,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1517.27,
+        "usdkrw": 1515.82,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -7756,18 +7756,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 45.6,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.6,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": -1.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 54.8,
+      "raw_before_penalty": 55.2,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 55,
-      "raw_brain_score": 54.8,
+      "raw_brain_score": 55.2,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
@@ -7780,7 +7780,7 @@
       "fact_score": {
         "score": 57,
         "components": {
-          "multi_factor": 57.0,
+          "multi_factor": 58.0,
           "consensus": 92.0,
           "prediction": 88.3,
           "backtest": 46.9,
@@ -7845,31 +7845,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 53,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 80.0,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 50,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 6,
-        "base_vci": 6,
+        "vci": 4,
+        "base_vci": 4,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.4,
+        "mispricing_z": 0.27,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -7905,11 +7905,11 @@
         "max_pct": 3,
         "rationale": "Kelly 25.0% → WATCH 상한 3% 적용"
       },
-      "reasoning": "한국카본: 브레인 55점 (팩트 57 / 심리 51 / VCI +6) | 팩트 최강 consensus(92) / 최약 export_trade(42) | V5: Graham가치↑92 | 지분: 최대주주 조연호 22.86% | NAV +1215.3% 할증 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "한국카본: 브레인 55점 (팩트 57 / 심리 53 / VCI +4) | 팩트 최강 consensus(92) / 최약 export_trade(42) | V5: Graham가치↑92 | 지분: 최대주주 조연호 22.86% | NAV +1215.3% 할증 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 57점 (관망) — 관찰 필요",
-    "confidence": 57,
+    "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
+    "confidence": 58,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "RSI 20.35로 과매도 구간 | PER 11.43배 저평가 | 고점 대비 -42.33% 하락",
@@ -8287,7 +8287,7 @@
       "kis_analyst_firm": "DB증권"
     },
     "multi_factor": {
-      "multi_score": 57,
+      "multi_score": 58,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -8307,7 +8307,7 @@
         "technical": 57,
         "sentiment": 50,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 41,
         "quality": 44,
         "volatility": 60,
@@ -8318,7 +8318,7 @@
         "technical": 9.4,
         "sentiment": 4.9,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 3.6,
         "quality": 4.1,
         "volatility": 3.8,
@@ -8347,26 +8347,26 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 77.3,
-      "prediction_std": 5.1,
+      "up_probability": 76.8,
+      "prediction_std": 4.8,
       "confidence_interval": [
         0.5,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7681,
+      "conformal_q_hat": 0.763,
       "conformal_width_pct": 99.5,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 52.5,
+      "model_accuracy": 52.4,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.0,
+          "wf_accuracy": 50.7,
           "val_accuracy": 62.9,
           "wf_folds": 6,
-          "weight": 0.51
+          "weight": 0.5067
         },
         "lightgbm": {
           "architecture": "gbdt",
@@ -8378,7 +8378,7 @@
         "catboost": {
           "architecture": "gbdt",
           "wf_accuracy": 52.7,
-          "val_accuracy": 48.6,
+          "val_accuracy": 52.9,
           "wf_folds": 6,
           "weight": 0.5267
         },
@@ -8399,11 +8399,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 37.565,
-        "macd_hist": 34.7939,
-        "rsi14": 26.4771,
-        "vol_ratio": 23.998,
-        "volume_price_trend": 22.2682
+        "volatility_20d": 38.0645,
+        "macd_hist": 34.0282,
+        "rsi14": 26.1065,
+        "vol_ratio": 24.2812,
+        "volume_price_trend": 22.4611
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -8423,7 +8423,7 @@
       "color": "#86EFAC",
       "reasons": [
         "RSI 38.1 저평가 구간",
-        "AI 상승확률 77.3% — 강한 매수 신호"
+        "AI 상승확률 76.8% — 강한 매수 신호"
       ]
     },
     "low_52w": 301024.15625,
@@ -9441,7 +9441,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -9456,7 +9456,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -9465,9 +9465,9 @@
       "pbr_invalid_to_1.0"
     ],
     "timing_signal": {
-      "score": 52.8,
+      "score": 54.2,
       "signal": "NEUTRAL",
-      "sentiment_component": 51.0,
+      "sentiment_component": 53.0,
       "technical_component": 57.0,
       "weights": {
         "sentiment": 0.7,
@@ -9476,8 +9476,8 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 54.4,
-    "brain_score_pre_macro": 54,
+    "raw_brain_score": 54.8,
+    "brain_score_pre_macro": 55,
     "macro_multiplier": {
       "multiplier": 0.85,
       "total_penalty": 0.15,
@@ -9486,7 +9486,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1517.27,
+        "usdkrw": 1515.82,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -9495,23 +9495,23 @@
     },
     "score_breakdown": {
       "fact_contribution": 47.2,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.6,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 2.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 59.4,
+      "raw_before_penalty": 59.8,
       "penalties": {
         "red_flag": -5.0,
         "quadrant_unfavored": 0
       },
-      "final_score": 54,
-      "raw_brain_score": 54.4,
+      "final_score": 55,
+      "raw_brain_score": 54.8,
       "grade": "CAUTION",
       "grade_caps_applied": []
     },
     "verity_brain": {
-      "brain_score": 54,
+      "brain_score": 55,
       "grade": "CAUTION",
       "grade_label": "주의",
       "grade_confidence": "firm",
@@ -9519,9 +9519,9 @@
       "fact_score": {
         "score": 59,
         "components": {
-          "multi_factor": 57.0,
+          "multi_factor": 58.0,
           "consensus": 100.0,
-          "prediction": 77.3,
+          "prediction": 76.8,
           "backtest": 53.4,
           "timing": 68.0,
           "commodity_margin": 62.0,
@@ -9584,31 +9584,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 53,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 80.0,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 50,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 8,
-        "base_vci": 8,
+        "vci": 6,
+        "base_vci": 6,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.53,
+        "mispricing_z": 0.4,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -9649,15 +9649,15 @@
       "red_flag_penalty": 5.0,
       "position_guide": {
         "recommended_pct": 0,
-        "kelly_raw_pct": 23.3,
+        "kelly_raw_pct": 25.0,
         "max_pct": 0,
-        "rationale": "Kelly 23.3% → CAUTION 상한 0% 적용"
+        "rationale": "Kelly 25.0% → CAUTION 상한 0% 적용"
       },
-      "reasoning": "HD한국조선해양: 브레인 54점 (팩트 59 / 심리 51 / VCI +8) | 팩트 최강 consensus(100) / 최약 backtest(53) | V5: Graham가치↑92 | 지분: 최대주주 계 36.64% | NAV +46.3% 할증 | 하향조정: 공매도 비율 주의 10.8% | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "HD한국조선해양: 브레인 55점 (팩트 59 / 심리 53 / VCI +6) | 팩트 최강 consensus(100) / 최약 backtest(53) | V5: Graham가치↑92 | 지분: 최대주주 계 36.64% | NAV +46.3% 할증 | 하향조정: 공매도 비율 주의 10.8% | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 57점 (관망) — 관찰 필요",
-    "confidence": 57,
+    "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
+    "confidence": 58,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "PER 6.74배 저평가",
@@ -10034,7 +10034,7 @@
       "kis_analyst_firm": "현대차"
     },
     "multi_factor": {
-      "multi_score": 57,
+      "multi_score": 58,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -10054,7 +10054,7 @@
         "technical": 45,
         "sentiment": 50,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 52,
         "quality": 53,
         "volatility": 73,
@@ -10065,7 +10065,7 @@
         "technical": 7.4,
         "sentiment": 4.9,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 4.5,
         "quality": 4.9,
         "volatility": 4.7,
@@ -10096,40 +10096,40 @@
     },
     "prediction": {
       "up_probability": 48.2,
-      "prediction_std": 8.4,
+      "prediction_std": 7.2,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7075,
+      "conformal_q_hat": 0.7064,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 49.9,
+      "model_accuracy": 49.7,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
           "wf_accuracy": 46.7,
-          "val_accuracy": 55.7,
+          "val_accuracy": 54.3,
           "wf_folds": 6,
           "weight": 0.4667
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.0,
+          "wf_accuracy": 49.3,
           "val_accuracy": 57.1,
           "wf_folds": 6,
-          "weight": 0.49
+          "weight": 0.4933
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.3,
-          "val_accuracy": 60.0,
+          "wf_accuracy": 46.7,
+          "val_accuracy": 61.4,
           "wf_folds": 6,
-          "weight": 0.4833
+          "weight": 0.4667
         },
         "mlp": {
           "architecture": "neural_net",
@@ -10148,11 +10148,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 34.4116,
-        "macd_hist": 27.3761,
-        "rsi14": 24.0225,
-        "return_5d": 23.1516,
-        "volume_price_trend": 21.3182
+        "volatility_20d": 34.9169,
+        "macd_hist": 27.1848,
+        "rsi14": 23.7799,
+        "volume_price_trend": 21.9054,
+        "return_5d": 21.4224
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -10478,7 +10478,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -10493,18 +10493,20 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "cape_bubble"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
     ],
     "timing_signal": {
-      "score": 49.2,
-      "signal": "WEAK",
-      "sentiment_component": 51.0,
+      "score": 50.6,
+      "signal": "NEUTRAL",
+      "sentiment_component": 53.0,
       "technical_component": 45.0,
       "weights": {
         "sentiment": 0.7,
@@ -10513,8 +10515,8 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 59.3,
-    "brain_score_pre_macro": 59,
+    "raw_brain_score": 59.7,
+    "brain_score_pre_macro": 60,
     "macro_multiplier": {
       "multiplier": 0.85,
       "total_penalty": 0.15,
@@ -10523,7 +10525,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1517.27,
+        "usdkrw": 1515.82,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -10532,23 +10534,25 @@
     },
     "score_breakdown": {
       "fact_contribution": 45.6,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.6,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 3.5,
       "inst_bonus": 0,
-      "raw_before_penalty": 59.3,
+      "raw_before_penalty": 59.7,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
-      "final_score": 59,
-      "raw_brain_score": 59.3,
+      "final_score": 60,
+      "raw_brain_score": 59.7,
       "grade": "WATCH",
-      "grade_caps_applied": []
+      "grade_caps_applied": [
+        "cape_bubble"
+      ]
     },
     "verity_brain": {
-      "brain_score": 59,
+      "brain_score": 60,
       "grade": "WATCH",
       "grade_label": "관망",
       "grade_confidence": "firm",
@@ -10556,7 +10560,7 @@
       "fact_score": {
         "score": 57,
         "components": {
-          "multi_factor": 57.0,
+          "multi_factor": 58.0,
           "consensus": 83.0,
           "prediction": 48.2,
           "backtest": 43.0,
@@ -10621,31 +10625,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 53,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 80.0,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 50,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 6,
-        "base_vci": 6,
+        "vci": 4,
+        "base_vci": 4,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.4,
+        "mispricing_z": 0.27,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -10677,15 +10681,15 @@
       "red_flag_penalty": 0,
       "position_guide": {
         "recommended_pct": 3,
-        "kelly_raw_pct": 31.7,
+        "kelly_raw_pct": 33.3,
         "max_pct": 3,
-        "rationale": "Kelly 31.7% → WATCH 상한 3% 적용"
+        "rationale": "Kelly 33.3% → WATCH 상한 3% 적용"
       },
-      "reasoning": "풍산홀딩스: 브레인 59점 (팩트 57 / 심리 51 / VCI +6) | 팩트 최강 consensus(83) / 최약 backtest(43) | V5: Graham가치↑92 | 지분: 최대주주 류진 37.61% | NAV -22.5% 할인 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "풍산홀딩스: 브레인 60점 (팩트 57 / 심리 53 / VCI +4) | 팩트 최강 consensus(83) / 최약 backtest(43) | V5: Graham가치↑92 | 지분: 최대주주 류진 37.61% | NAV -22.5% 할인 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 57점 (관망) — 관찰 필요",
-    "confidence": 57,
+    "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
+    "confidence": 58,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "PER 8.21배 저평가 | 고점 대비 -36.45% 하락",
@@ -11058,7 +11062,7 @@
       "kis_analyst_firm": "삼성"
     },
     "multi_factor": {
-      "multi_score": 58,
+      "multi_score": 59,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -11078,7 +11082,7 @@
         "technical": 57,
         "sentiment": 50,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 62,
         "quality": 47,
         "volatility": 60,
@@ -11089,7 +11093,7 @@
         "technical": 9.4,
         "sentiment": 4.9,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 5.4,
         "quality": 4.4,
         "volatility": 3.8,
@@ -11119,15 +11123,15 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 21.5,
+      "up_probability": 21.4,
       "prediction_std": 11.1,
       "confidence_interval": [
         0.0,
-        98.4
+        98.3
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7689,
-      "conformal_width_pct": 98.4,
+      "conformal_q_hat": 0.769,
+      "conformal_width_pct": 98.3,
       "prediction_set": [
         0
       ],
@@ -11142,10 +11146,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 43.7,
+          "wf_accuracy": 44.0,
           "val_accuracy": 61.4,
           "wf_folds": 6,
-          "weight": 0.4367
+          "weight": 0.44
         },
         "catboost": {
           "architecture": "gbdt",
@@ -11195,7 +11199,7 @@
       "color": "#888",
       "reasons": [
         "RSI 36.35 저평가 구간",
-        "AI 상승확률 21.5% — 강한 하락 신호"
+        "AI 상승확률 21.4% — 강한 하락 신호"
       ]
     },
     "low_52w": 6830.951171875,
@@ -11506,7 +11510,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -11521,7 +11525,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -11530,9 +11534,9 @@
       "pbr_invalid_to_1.0"
     ],
     "timing_signal": {
-      "score": 50.7,
+      "score": 52.1,
       "signal": "NEUTRAL",
-      "sentiment_component": 48.0,
+      "sentiment_component": 50.0,
       "technical_component": 57.0,
       "weights": {
         "sentiment": 0.7,
@@ -11541,7 +11545,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 52.8,
+    "raw_brain_score": 53.2,
     "brain_score_pre_macro": 53,
     "macro_multiplier": {
       "multiplier": 0.85,
@@ -11551,7 +11555,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1517.27,
+        "usdkrw": 1515.82,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -11560,18 +11564,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 43.2,
-      "sentiment_contribution": 9.6,
+      "sentiment_contribution": 10.0,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 52.8,
+      "raw_before_penalty": 53.2,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 53,
-      "raw_brain_score": 52.8,
+      "raw_brain_score": 53.2,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
@@ -11584,9 +11588,9 @@
       "fact_score": {
         "score": 54,
         "components": {
-          "multi_factor": 58.0,
+          "multi_factor": 59.0,
           "consensus": 80.0,
-          "prediction": 21.5,
+          "prediction": 21.4,
           "backtest": 23.7,
           "timing": 48.0,
           "commodity_margin": 61.8,
@@ -11649,31 +11653,31 @@
         }
       },
       "sentiment_score": {
-        "score": 48,
+        "score": 50,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 50.0,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 50,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 6,
-        "base_vci": 6,
+        "vci": 4,
+        "base_vci": 4,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.4,
+        "mispricing_z": 0.27,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -11709,11 +11713,11 @@
         "max_pct": 3,
         "rationale": "Kelly 21.7% → WATCH 상한 3% 적용"
       },
-      "reasoning": "에이블씨엔씨: 브레인 53점 (팩트 54 / 심리 48 / VCI +6) | 팩트 최강 consensus(80) / 최약 prediction(22) | V5: Graham가치↑92 | 지분: 최대주주 계 62.01% | NAV +423.0% 할증 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "에이블씨엔씨: 브레인 53점 (팩트 54 / 심리 50 / VCI +4) | 팩트 최강 consensus(80) / 최약 prediction(21) | V5: Graham가치↑92 | 지분: 최대주주 계 62.01% | NAV +423.0% 할증 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
-    "confidence": 58,
+    "ai_verdict": "멀티팩터 59점 (관망) — 관찰 필요",
+    "confidence": 59,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "PER 9.75배 저평가 | 고점 대비 -30.97% 하락",
@@ -12549,7 +12553,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 53,
+      "multi_score": 54,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -12569,7 +12573,7 @@
         "technical": 42,
         "sentiment": 52,
         "flow": 57,
-        "macro": 50,
+        "macro": 60,
         "momentum": 50,
         "quality": 37,
         "volatility": 68,
@@ -12580,7 +12584,7 @@
         "technical": 6.9,
         "sentiment": 5.0,
         "flow": 7.2,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 4.4,
         "quality": 3.4,
         "volatility": 4.4,
@@ -12623,7 +12627,7 @@
         0,
         1
       ],
-      "model_accuracy": 55.4,
+      "model_accuracy": 55.5,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -12634,10 +12638,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 54.3,
+          "wf_accuracy": 54.6,
           "val_accuracy": 57.5,
           "wf_folds": 7,
-          "weight": 0.5429
+          "weight": 0.5457
         },
         "catboost": {
           "architecture": "gbdt",
@@ -12692,7 +12696,7 @@
     "low_52w": 256.9527893066406,
     "price_1m": 307.6499938964844,
     "price_3m": 297.8656311035156,
-    "price_6m": 305.96697998046875,
+    "price_6m": 305.9669494628906,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -12808,7 +12812,7 @@
       "credit": {
         "debt_ratio_pct": 91.8
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -12823,14 +12827,14 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
     "timing_signal": {
-      "score": 48.3,
+      "score": 49.7,
       "signal": "WEAK",
-      "sentiment_component": 51.0,
+      "sentiment_component": 53.0,
       "technical_component": 42.0,
       "weights": {
         "sentiment": 0.7,
@@ -12839,7 +12843,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 46.8,
+    "raw_brain_score": 47.2,
     "brain_score_pre_macro": 47,
     "macro_multiplier": {
       "multiplier": 0.859,
@@ -12858,18 +12862,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 41.6,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.6,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 51.8,
+      "raw_before_penalty": 52.2,
       "penalties": {
         "red_flag": -5.0,
         "quadrant_unfavored": 0
       },
       "final_score": 47,
-      "raw_brain_score": 46.8,
+      "raw_brain_score": 47.2,
       "grade": "CAUTION",
       "grade_caps_applied": []
     },
@@ -12882,7 +12886,7 @@
       "fact_score": {
         "score": 52,
         "components": {
-          "multi_factor": 53.0,
+          "multi_factor": 54.0,
           "consensus": 60.0,
           "prediction": 59.6,
           "backtest": 69.0,
@@ -12946,31 +12950,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 53,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 76.67,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 56,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 1,
-        "base_vci": 1,
+        "vci": -1,
+        "base_vci": -1,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.07,
+        "mispricing_z": -0.07,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -13015,11 +13019,11 @@
         "max_pct": 0,
         "rationale": "Kelly 11.7% → CAUTION 상한 0% 적용"
       },
-      "reasoning": "JPM: 브레인 47점 (팩트 52 / 심리 51 / VCI +1) | 팩트 최강 backtest(69) / 최약 commodity_margin(50) | V5: Graham가치↑72 | US 미수집: 옵션플로우 | 하향조정: FCF $-147,782M (음수) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "JPM: 브레인 47점 (팩트 52 / 심리 53 / VCI -1) | 팩트 최강 backtest(69) / 최약 commodity_margin(50) | V5: Graham가치↑72 | US 미수집: 옵션플로우 | 하향조정: FCF $-147,782M (음수) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
-    "confidence": 53,
+    "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
+    "confidence": 54,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "PER 14.2배 저평가",
@@ -13870,7 +13874,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 58,
+      "multi_score": 59,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -13890,7 +13894,7 @@
         "technical": 70,
         "sentiment": 56,
         "flow": 61,
-        "macro": 50,
+        "macro": 60,
         "momentum": 52,
         "quality": 38,
         "volatility": 68,
@@ -13901,7 +13905,7 @@
         "technical": 11.6,
         "sentiment": 5.4,
         "flow": 7.7,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 4.5,
         "quality": 3.5,
         "volatility": 4.4,
@@ -13932,34 +13936,34 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 60.4,
+      "up_probability": 59.7,
       "prediction_std": 16.4,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7281,
+      "conformal_q_hat": 0.7244,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 54.9,
+      "model_accuracy": 54.5,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.7,
+          "wf_accuracy": 51.1,
           "val_accuracy": 47.9,
           "wf_folds": 7,
-          "weight": 0.5171
+          "weight": 0.5114
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.4,
+          "wf_accuracy": 49.7,
           "val_accuracy": 56.2,
           "wf_folds": 7,
-          "weight": 0.5143
+          "weight": 0.4971
         },
         "catboost": {
           "architecture": "gbdt",
@@ -13985,11 +13989,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 37.5117,
-        "vol_ratio": 29.5273,
-        "rsi7": 21.0111,
-        "rsi14": 19.7357,
-        "return_5d": 19.4382
+        "volatility_20d": 38.845,
+        "vol_ratio": 26.8607,
+        "rsi7": 21.3445,
+        "rsi14": 20.069,
+        "return_5d": 18.4382
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -14010,7 +14014,7 @@
       "reasons": [
         "MACD 상승반전 신호",
         "이동평균 정배열 — 상승 추세",
-        "AI 상승확률 60.4%",
+        "AI 상승확률 59.7%",
         "수급 우호적"
       ]
     },
@@ -14134,7 +14138,7 @@
         "debt_ratio_pct": 120.0,
         "note": "부채비율 120% — 평균 이상"
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -14149,14 +14153,14 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
     "timing_signal": {
-      "score": 58.1,
+      "score": 59.5,
       "signal": "NEUTRAL",
-      "sentiment_component": 53.0,
+      "sentiment_component": 55.0,
       "technical_component": 70.0,
       "weights": {
         "sentiment": 0.7,
@@ -14165,8 +14169,8 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 52.2,
-    "brain_score_pre_macro": 52,
+    "raw_brain_score": 52.6,
+    "brain_score_pre_macro": 53,
     "macro_multiplier": {
       "multiplier": 0.908,
       "total_penalty": 0.091,
@@ -14184,23 +14188,23 @@
     },
     "score_breakdown": {
       "fact_contribution": 41.6,
-      "sentiment_contribution": 10.6,
+      "sentiment_contribution": 11.0,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 52.2,
+      "raw_before_penalty": 52.6,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
-      "final_score": 52,
-      "raw_brain_score": 52.2,
+      "final_score": 53,
+      "raw_brain_score": 52.6,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
     "verity_brain": {
-      "brain_score": 52,
+      "brain_score": 53,
       "grade": "WATCH",
       "grade_label": "관망",
       "grade_confidence": "firm",
@@ -14208,9 +14212,9 @@
       "fact_score": {
         "score": 52,
         "components": {
-          "multi_factor": 58.0,
+          "multi_factor": 59.0,
           "consensus": 65.0,
-          "prediction": 60.4,
+          "prediction": 59.7,
           "backtest": 60.6,
           "timing": 73.0,
           "commodity_margin": 50.0,
@@ -14271,31 +14275,31 @@
         }
       },
       "sentiment_score": {
-        "score": 53,
+        "score": 55,
         "components": {
           "news_sentiment": 53,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 91.67,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 61,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": -1,
-        "base_vci": -1,
+        "vci": -3,
+        "base_vci": -3,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": -0.07,
+        "mispricing_z": -0.2,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -14317,15 +14321,15 @@
       "red_flag_penalty": 0,
       "position_guide": {
         "recommended_pct": 3,
-        "kelly_raw_pct": 20.0,
+        "kelly_raw_pct": 21.7,
         "max_pct": 3,
-        "rationale": "Kelly 20.0% → WATCH 상한 3% 적용"
+        "rationale": "Kelly 21.7% → WATCH 상한 3% 적용"
       },
-      "reasoning": "BAC: 브레인 52점 (팩트 52 / 심리 53 / VCI -1) | 팩트 최강 timing(73) / 최약 commodity_margin(50) | V5: Graham가치↑77 | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "BAC: 브레인 53점 (팩트 52 / 심리 55 / VCI -3) | 팩트 최강 timing(73) / 최약 commodity_margin(50) | V5: Graham가치↑77 | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
-    "confidence": 58,
+    "ai_verdict": "멀티팩터 59점 (관망) — 관찰 필요",
+    "confidence": 59,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "PER 12.78배 저평가",
@@ -15158,7 +15162,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 54,
+      "multi_score": 55,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -15178,7 +15182,7 @@
         "technical": 70,
         "sentiment": 53,
         "flow": 40,
-        "macro": 50,
+        "macro": 60,
         "momentum": 34,
         "quality": 60,
         "volatility": 64,
@@ -15189,7 +15193,7 @@
         "technical": 11.6,
         "sentiment": 5.1,
         "flow": 5.0,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 3.0,
         "quality": 5.6,
         "volatility": 4.1,
@@ -15424,7 +15428,7 @@
       "credit": {
         "debt_ratio_pct": 53.4
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -15440,7 +15444,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -15460,9 +15464,9 @@
       "postmortem_caution"
     ],
     "timing_signal": {
-      "score": 56.7,
+      "score": 57.4,
       "signal": "NEUTRAL",
-      "sentiment_component": 51.0,
+      "sentiment_component": 52.0,
       "technical_component": 70.0,
       "weights": {
         "sentiment": 0.7,
@@ -15471,7 +15475,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 45.2,
+    "raw_brain_score": 45.4,
     "brain_score_pre_macro": 45,
     "macro_multiplier": {
       "multiplier": 0.775,
@@ -15490,18 +15494,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 40.0,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.4,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 50.2,
+      "raw_before_penalty": 50.4,
       "penalties": {
         "red_flag": -5.0,
         "quadrant_unfavored": 0
       },
       "final_score": 45,
-      "raw_brain_score": 45.2,
+      "raw_brain_score": 45.4,
       "grade": "CAUTION",
       "grade_caps_applied": []
     },
@@ -15514,7 +15518,7 @@
       "fact_score": {
         "score": 50,
         "components": {
-          "multi_factor": 54.0,
+          "multi_factor": 55.0,
           "consensus": 63.0,
           "prediction": 49.5,
           "backtest": 27.2,
@@ -15576,31 +15580,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 52,
         "components": {
           "news_sentiment": 52,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 69.74,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 54,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": -1,
-        "base_vci": -1,
+        "vci": -2,
+        "base_vci": -2,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": -0.07,
+        "mispricing_z": -0.13,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -15653,11 +15657,11 @@
         "max_pct": 0,
         "rationale": "Kelly 8.3% → CAUTION 상한 0% 적용"
       },
-      "reasoning": "ADBE: 브레인 45점 (팩트 50 / 심리 51 / VCI -1) | 팩트 최강 commodity_margin(63) / 최약 backtest(27) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -25.52 (대량 매도) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "ADBE: 브레인 45점 (팩트 50 / 심리 52 / VCI -2) | 팩트 최강 commodity_margin(63) / 최약 backtest(27) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -25.52 (대량 매도) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
-    "confidence": 54,
+    "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
+    "confidence": 55,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "고점 대비 -34.98% 하락",
@@ -16498,7 +16502,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 52,
+      "multi_score": 53,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -16518,7 +16522,7 @@
         "technical": 42,
         "sentiment": 55,
         "flow": 61,
-        "macro": 50,
+        "macro": 60,
         "momentum": 46,
         "quality": 41,
         "volatility": 55,
@@ -16529,7 +16533,7 @@
         "technical": 6.9,
         "sentiment": 5.3,
         "flow": 7.7,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 4.0,
         "quality": 3.8,
         "volatility": 3.5,
@@ -16557,46 +16561,46 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 33.6,
+      "up_probability": 35.7,
       "prediction_std": 19.8,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7112,
+      "conformal_q_hat": 0.709,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 51.5,
+      "model_accuracy": 51.0,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 53.1,
-          "val_accuracy": 45.2,
+          "wf_accuracy": 53.4,
+          "val_accuracy": 50.7,
           "wf_folds": 7,
-          "weight": 0.5314
+          "weight": 0.5343
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.6,
-          "val_accuracy": 49.3,
+          "wf_accuracy": 51.7,
+          "val_accuracy": 45.2,
           "wf_folds": 7,
-          "weight": 0.5257
+          "weight": 0.5171
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 54.6,
-          "val_accuracy": 37.0,
+          "wf_accuracy": 52.3,
+          "val_accuracy": 38.4,
           "wf_folds": 7,
-          "weight": 0.5457
+          "weight": 0.5229
         },
         "mlp": {
           "architecture": "neural_net",
           "wf_accuracy": 46.9,
-          "val_accuracy": 53.4,
+          "val_accuracy": 50.7,
           "wf_folds": 7,
           "weight": 0.4686
         },
@@ -16610,11 +16614,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 35.0664,
-        "macd_hist": 30.9103,
-        "vol_ratio": 25.0116,
-        "ma20_ratio": 20.5522,
-        "return_1d": 18.9267
+        "volatility_20d": 33.2161,
+        "macd_hist": 27.3872,
+        "vol_ratio": 25.3716,
+        "return_1d": 19.4479,
+        "ma20_ratio": 18.3255
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -16628,12 +16632,12 @@
       "test_samples": 73
     },
     "timing": {
-      "timing_score": 44,
-      "action": "SELL",
-      "label": "매도 고려",
-      "color": "#FCA5A5",
+      "timing_score": 49,
+      "action": "HOLD",
+      "label": "관망",
+      "color": "#888",
       "reasons": [
-        "AI 상승확률 33.6% — 강한 하락 신호",
+        "AI 상승확률 35.7%",
         "수급 우호적"
       ]
     },
@@ -16756,7 +16760,7 @@
       "credit": {
         "debt_ratio_pct": 38.3
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -16772,14 +16776,14 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
     "timing_signal": {
-      "score": 49.7,
-      "signal": "WEAK",
-      "sentiment_component": 53.0,
+      "score": 51.1,
+      "signal": "NEUTRAL",
+      "sentiment_component": 55.0,
       "technical_component": 42.0,
       "weights": {
         "sentiment": 0.7,
@@ -16788,7 +16792,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 53.0,
+    "raw_brain_score": 53.4,
     "brain_score_pre_macro": 53,
     "macro_multiplier": {
       "multiplier": 0.893,
@@ -16807,18 +16811,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 42.4,
-      "sentiment_contribution": 10.6,
+      "sentiment_contribution": 11.0,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 53.0,
+      "raw_before_penalty": 53.4,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 53,
-      "raw_brain_score": 53.0,
+      "raw_brain_score": 53.4,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
@@ -16831,11 +16835,11 @@
       "fact_score": {
         "score": 53,
         "components": {
-          "multi_factor": 52.0,
+          "multi_factor": 53.0,
           "consensus": 67.0,
-          "prediction": 33.6,
+          "prediction": 35.7,
           "backtest": 44.9,
-          "timing": 44.0,
+          "timing": 49.0,
           "commodity_margin": 50.0,
           "export_trade": 58.0,
           "moat_quality": 58.0,
@@ -16894,31 +16898,31 @@
         }
       },
       "sentiment_score": {
-        "score": 53,
+        "score": 55,
         "components": {
           "news_sentiment": 51,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 90.67,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 60,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 0,
-        "base_vci": 0,
+        "vci": -2,
+        "base_vci": -2,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.0,
+        "mispricing_z": -0.13,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -16954,11 +16958,11 @@
         "max_pct": 3,
         "rationale": "Kelly 21.7% → WATCH 상한 3% 적용"
       },
-      "reasoning": "DIS: 브레인 53점 (팩트 53 / 심리 53 / VCI +0) | 팩트 최강 consensus(67) / 최약 prediction(34) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "DIS: 브레인 53점 (팩트 53 / 심리 55 / VCI -2) | 팩트 최강 consensus(67) / 최약 prediction(36) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
-    "confidence": 52,
+    "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
+    "confidence": 53,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "펀더멘털 양호",
@@ -17789,7 +17793,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 49,
+      "multi_score": 50,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -17809,7 +17813,7 @@
         "technical": 60,
         "sentiment": 51,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 23,
         "quality": 18,
         "volatility": 69,
@@ -17820,7 +17824,7 @@
         "technical": 9.9,
         "sentiment": 5.0,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 2.0,
         "quality": 1.7,
         "volatility": 4.4,
@@ -18052,7 +18056,7 @@
       "credit": {
         "debt_ratio_pct": 52.3
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -18067,7 +18071,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -18087,9 +18091,9 @@
       "postmortem_caution"
     ],
     "timing_signal": {
-      "score": 53.0,
+      "score": 53.7,
       "signal": "NEUTRAL",
-      "sentiment_component": 50.0,
+      "sentiment_component": 51.0,
       "technical_component": 60.0,
       "weights": {
         "sentiment": 0.7,
@@ -18098,7 +18102,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 45.0,
+    "raw_brain_score": 45.2,
     "brain_score_pre_macro": 45,
     "macro_multiplier": {
       "multiplier": 0.865,
@@ -18117,18 +18121,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 40.0,
-      "sentiment_contribution": 10.0,
+      "sentiment_contribution": 10.2,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 50.0,
+      "raw_before_penalty": 50.2,
       "penalties": {
         "red_flag": -5.0,
         "quadrant_unfavored": 0
       },
       "final_score": 45,
-      "raw_brain_score": 45.0,
+      "raw_brain_score": 45.2,
       "grade": "CAUTION",
       "grade_caps_applied": []
     },
@@ -18141,7 +18145,7 @@
       "fact_score": {
         "score": 50,
         "components": {
-          "multi_factor": 49.0,
+          "multi_factor": 50.0,
           "consensus": 59.0,
           "prediction": 49.4,
           "backtest": 38.7,
@@ -18204,31 +18208,31 @@
         }
       },
       "sentiment_score": {
-        "score": 50,
+        "score": 51,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 65.83,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 52,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 0,
-        "base_vci": 0,
+        "vci": -1,
+        "base_vci": -1,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.0,
+        "mispricing_z": -0.07,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -18273,11 +18277,11 @@
         "max_pct": 0,
         "rationale": "Kelly 8.3% → CAUTION 상한 0% 적용"
       },
-      "reasoning": "SOFI: 브레인 45점 (팩트 50 / 심리 50 / VCI +0) | 팩트 최강 consensus(59) / 최약 backtest(39) | 퀀트: 모멘텀↓23 | 퀄리티↓18 | US 미수집: 옵션플로우 | 하향조정: FCF $-3,742M (음수) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "SOFI: 브레인 45점 (팩트 50 / 심리 51 / VCI -1) | 팩트 최강 consensus(59) / 최약 backtest(39) | 퀀트: 모멘텀↓23 | 퀄리티↓18 | US 미수집: 옵션플로우 | 하향조정: FCF $-3,742M (음수) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
-    "confidence": 49,
+    "ai_verdict": "멀티팩터 50점 (관망) — 관찰 필요",
+    "confidence": 50,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "고점 대비 -43.23% 하락",
@@ -19139,7 +19143,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 57,
+      "multi_score": 58,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -19159,7 +19163,7 @@
         "technical": 78,
         "sentiment": 51,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 73,
         "quality": 55,
         "volatility": 52,
@@ -19170,7 +19174,7 @@
         "technical": 12.9,
         "sentiment": 5.0,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 6.4,
         "quality": 5.1,
         "volatility": 3.3,
@@ -19406,7 +19410,7 @@
         "alert": true,
         "note": "부채비율 322% — 높은 레버리지"
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -19422,7 +19426,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -19442,9 +19446,9 @@
       "postmortem_caution"
     ],
     "timing_signal": {
-      "score": 58.4,
+      "score": 59.8,
       "signal": "NEUTRAL",
-      "sentiment_component": 50.0,
+      "sentiment_component": 52.0,
       "technical_component": 78.0,
       "weights": {
         "sentiment": 0.7,
@@ -19453,7 +19457,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 54.0,
+    "raw_brain_score": 54.4,
     "brain_score_pre_macro": 54,
     "macro_multiplier": {
       "multiplier": 0.775,
@@ -19472,18 +19476,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 44.0,
-      "sentiment_contribution": 10.0,
+      "sentiment_contribution": 10.4,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 54.0,
+      "raw_before_penalty": 54.4,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 54,
-      "raw_brain_score": 54.0,
+      "raw_brain_score": 54.4,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
@@ -19496,7 +19500,7 @@
       "fact_score": {
         "score": 55,
         "components": {
-          "multi_factor": 57.0,
+          "multi_factor": 58.0,
           "consensus": 18.0,
           "prediction": 61.7,
           "backtest": 67.6,
@@ -19558,31 +19562,31 @@
         }
       },
       "sentiment_score": {
-        "score": 50,
+        "score": 52,
         "components": {
           "news_sentiment": 51,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 67.18,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 52,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 5,
-        "base_vci": 5,
+        "vci": 3,
+        "base_vci": 3,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.33,
+        "mispricing_z": 0.2,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -19626,11 +19630,11 @@
         "max_pct": 3,
         "rationale": "Kelly 23.3% → WATCH 상한 3% 적용"
       },
-      "reasoning": "QCOM: 브레인 54점 (팩트 55 / 심리 50 / VCI +5) | 팩트 최강 backtest(68) / 최약 consensus(18) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "QCOM: 브레인 54점 (팩트 55 / 심리 52 / VCI +3) | 팩트 최강 backtest(68) / 최약 consensus(18) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 57점 (관망) — 관찰 필요",
-    "confidence": 57,
+    "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
+    "confidence": 58,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "펀더멘털 양호",
@@ -20420,7 +20424,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 48,
+      "multi_score": 49,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -20440,7 +20444,7 @@
         "technical": 20,
         "sentiment": 55,
         "flow": 57,
-        "macro": 50,
+        "macro": 60,
         "momentum": 44,
         "quality": 52,
         "volatility": 62,
@@ -20451,7 +20455,7 @@
         "technical": 3.3,
         "sentiment": 5.3,
         "flow": 7.2,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 3.8,
         "quality": 4.8,
         "volatility": 4.0,
@@ -20681,7 +20685,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -20697,14 +20701,14 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
     "timing_signal": {
-      "score": 42.4,
+      "score": 43.8,
       "signal": "WEAK",
-      "sentiment_component": 52.0,
+      "sentiment_component": 54.0,
       "technical_component": 20.0,
       "weights": {
         "sentiment": 0.7,
@@ -20713,7 +20717,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 53.6,
+    "raw_brain_score": 54.0,
     "brain_score_pre_macro": 54,
     "macro_multiplier": {
       "multiplier": 0.775,
@@ -20732,18 +20736,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 43.2,
-      "sentiment_contribution": 10.4,
+      "sentiment_contribution": 10.8,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 53.6,
+      "raw_before_penalty": 54.0,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 54,
-      "raw_brain_score": 53.6,
+      "raw_brain_score": 54.0,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
@@ -20756,7 +20760,7 @@
       "fact_score": {
         "score": 54,
         "components": {
-          "multi_factor": 48.0,
+          "multi_factor": 49.0,
           "consensus": 61.0,
           "prediction": 59.4,
           "backtest": 47.7,
@@ -20819,31 +20823,31 @@
         }
       },
       "sentiment_score": {
-        "score": 52,
+        "score": 54,
         "components": {
           "news_sentiment": 53,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 79.17,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 58,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 2,
-        "base_vci": 2,
+        "vci": 0,
+        "base_vci": 0,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.13,
+        "mispricing_z": 0.0,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -20879,11 +20883,11 @@
         "max_pct": 3,
         "rationale": "Kelly 23.3% → WATCH 상한 3% 적용"
       },
-      "reasoning": "PG: 브레인 54점 (팩트 54 / 심리 52 / VCI +2) | 팩트 최강 commodity_margin(80) / 최약 timing(37) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "PG: 브레인 54점 (팩트 54 / 심리 54 / VCI +0) | 팩트 최강 commodity_margin(80) / 최약 timing(37) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
-    "confidence": 48,
+    "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
+    "confidence": 49,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "펀더멘털 양호",
@@ -21647,7 +21651,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 53,
+      "multi_score": 54,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -21667,7 +21671,7 @@
         "technical": 32,
         "sentiment": 56,
         "flow": 61,
-        "macro": 50,
+        "macro": 60,
         "momentum": 42,
         "quality": 64,
         "volatility": 73,
@@ -21678,7 +21682,7 @@
         "technical": 5.3,
         "sentiment": 5.4,
         "flow": 7.7,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 3.7,
         "quality": 6.0,
         "volatility": 4.7,
@@ -21708,19 +21712,19 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 72.4,
-      "prediction_std": 16.9,
+      "up_probability": 71.5,
+      "prediction_std": 15.9,
       "confidence_interval": [
-        5.1,
+        4.4,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6728,
-      "conformal_width_pct": 94.9,
+      "conformal_q_hat": 0.6714,
+      "conformal_width_pct": 95.6,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 48.4,
+      "model_accuracy": 48.2,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -21731,10 +21735,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.3,
-          "val_accuracy": 34.2,
+          "wf_accuracy": 47.4,
+          "val_accuracy": 37.0,
           "wf_folds": 7,
-          "weight": 0.4829
+          "weight": 0.4743
         },
         "catboost": {
           "architecture": "gbdt",
@@ -21761,10 +21765,10 @@
       "confidence_level": "low",
       "top_features": {
         "volatility_20d": 31.0219,
-        "macd_hist": 28.4388,
-        "drawdown_20d": 24.6177,
-        "volume_price_trend": 21.3785,
-        "return_5d": 19.5434
+        "macd_hist": 25.1055,
+        "volume_price_trend": 23.7118,
+        "vol_ratio": 22.5589,
+        "drawdown_20d": 21.9511
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -21784,14 +21788,14 @@
       "color": "#86EFAC",
       "reasons": [
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 72.4% — 강한 매수 신호",
+        "AI 상승확률 71.5% — 강한 매수 신호",
         "수급 우호적"
       ]
     },
     "low_52w": 525.719970703125,
     "price_1m": 610.4099731445312,
     "price_3m": 667.1587524414062,
-    "price_6m": 639.7999877929688,
+    "price_6m": 639.7999267578125,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -21910,7 +21914,7 @@
       "credit": {
         "debt_ratio_pct": 27.0
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -21926,14 +21930,14 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
     "timing_signal": {
-      "score": 46.7,
+      "score": 48.1,
       "signal": "WEAK",
-      "sentiment_component": 53.0,
+      "sentiment_component": 55.0,
       "technical_component": 32.0,
       "weights": {
         "sentiment": 0.7,
@@ -21942,7 +21946,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 53.0,
+    "raw_brain_score": 53.4,
     "brain_score_pre_macro": 53,
     "macro_multiplier": {
       "multiplier": 0.775,
@@ -21961,18 +21965,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 42.4,
-      "sentiment_contribution": 10.6,
+      "sentiment_contribution": 11.0,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 53.0,
+      "raw_before_penalty": 53.4,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 53,
-      "raw_brain_score": 53.0,
+      "raw_brain_score": 53.4,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
@@ -21985,9 +21989,9 @@
       "fact_score": {
         "score": 53,
         "components": {
-          "multi_factor": 53.0,
+          "multi_factor": 54.0,
           "consensus": 70.0,
-          "prediction": 72.4,
+          "prediction": 71.5,
           "backtest": 38.7,
           "timing": 58.0,
           "commodity_margin": 50.0,
@@ -22048,31 +22052,31 @@
         }
       },
       "sentiment_score": {
-        "score": 53,
+        "score": 55,
         "components": {
           "news_sentiment": 53,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 93.12,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 60,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 0,
-        "base_vci": 0,
+        "vci": -2,
+        "base_vci": -2,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.0,
+        "mispricing_z": -0.13,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -22108,11 +22112,11 @@
         "max_pct": 3,
         "rationale": "Kelly 21.7% → WATCH 상한 3% 적용"
       },
-      "reasoning": "META: 브레인 53점 (팩트 53 / 심리 53 / VCI +0) | 팩트 최강 prediction(72) / 최약 backtest(39) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "META: 브레인 53점 (팩트 53 / 심리 55 / VCI -2) | 팩트 최강 prediction(72) / 최약 backtest(39) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
-    "confidence": 53,
+    "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
+    "confidence": 54,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "펀더멘털 양호",
@@ -22821,7 +22825,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 45,
+      "multi_score": 46,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -22841,7 +22845,7 @@
         "technical": 32,
         "sentiment": 53,
         "flow": 45,
-        "macro": 50,
+        "macro": 60,
         "momentum": 45,
         "quality": 25,
         "volatility": 62,
@@ -22852,7 +22856,7 @@
         "technical": 5.3,
         "sentiment": 5.1,
         "flow": 5.7,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 3.9,
         "quality": 2.3,
         "volatility": 4.0,
@@ -23080,7 +23084,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -23095,7 +23099,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -23104,9 +23108,9 @@
       "pbr_invalid_to_1.0"
     ],
     "timing_signal": {
-      "score": 43.2,
+      "score": 44.6,
       "signal": "WEAK",
-      "sentiment_component": 48.0,
+      "sentiment_component": 50.0,
       "technical_component": 32.0,
       "weights": {
         "sentiment": 0.7,
@@ -23115,7 +23119,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 48.0,
+    "raw_brain_score": 48.4,
     "brain_score_pre_macro": 48,
     "macro_multiplier": {
       "multiplier": 0.925,
@@ -23134,18 +23138,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 38.4,
-      "sentiment_contribution": 9.6,
+      "sentiment_contribution": 10.0,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 48.0,
+      "raw_before_penalty": 48.4,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 48,
-      "raw_brain_score": 48.0,
+      "raw_brain_score": 48.4,
       "grade": "AVOID",
       "grade_caps_applied": []
     },
@@ -23158,7 +23162,7 @@
       "fact_score": {
         "score": 48,
         "components": {
-          "multi_factor": 45.0,
+          "multi_factor": 46.0,
           "consensus": 57.0,
           "prediction": 37.8,
           "backtest": 46.2,
@@ -23222,31 +23226,31 @@
         }
       },
       "sentiment_score": {
-        "score": 48,
+        "score": 50,
         "components": {
           "news_sentiment": 49,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 50.0,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 58,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 0,
-        "base_vci": 0,
+        "vci": -2,
+        "base_vci": -2,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.0,
+        "mispricing_z": -0.13,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -23282,11 +23286,11 @@
         "max_pct": 0,
         "rationale": "레드플래그(즉시회피) — 포지션 불가"
       },
-      "reasoning": "BRK-B: 브레인 48점 (팩트 48 / 심리 48 / VCI +0) | 팩트 최강 consensus(57) / 최약 prediction(38) | 퀀트: 퀄리티↓25 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 3.2 (Lynch 절대 매도) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "BRK-B: 브레인 48점 (팩트 48 / 심리 50 / VCI -2) | 팩트 최강 consensus(57) / 최약 prediction(38) | 퀀트: 퀄리티↓25 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 3.2 (Lynch 절대 매도) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 45점 (관망) — 관찰 필요",
-    "confidence": 45,
+    "ai_verdict": "멀티팩터 46점 (관망) — 관찰 필요",
+    "confidence": 46,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "PER 14.01배 저평가",
@@ -24074,7 +24078,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 50,
+      "multi_score": 51,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -24094,7 +24098,7 @@
         "technical": 32,
         "sentiment": 54,
         "flow": 62,
-        "macro": 50,
+        "macro": 60,
         "momentum": 72,
         "quality": 31,
         "volatility": 59,
@@ -24105,7 +24109,7 @@
         "technical": 5.3,
         "sentiment": 5.2,
         "flow": 7.8,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 6.3,
         "quality": 2.9,
         "volatility": 3.8,
@@ -24143,7 +24147,7 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.732,
+      "conformal_q_hat": 0.7318,
       "conformal_width_pct": 96.1,
       "prediction_set": [
         1
@@ -24159,10 +24163,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 60.9,
+          "wf_accuracy": 60.6,
           "val_accuracy": 46.6,
           "wf_folds": 7,
-          "weight": 0.6086
+          "weight": 0.6057
         },
         "catboost": {
           "architecture": "gbdt",
@@ -24216,7 +24220,7 @@
         "수급 우호적"
       ]
     },
-    "low_52w": 98.684326171875,
+    "low_52w": 98.68431854248047,
     "price_1m": 152.65386962890625,
     "price_3m": 148.80996704101562,
     "price_6m": 115.0766830444336,
@@ -24337,7 +24341,7 @@
       "credit": {
         "debt_ratio_pct": 8.9
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -24353,14 +24357,14 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
     "timing_signal": {
-      "score": 45.3,
+      "score": 46.7,
       "signal": "WEAK",
-      "sentiment_component": 51.0,
+      "sentiment_component": 53.0,
       "technical_component": 32.0,
       "weights": {
         "sentiment": 0.7,
@@ -24369,8 +24373,8 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 50.2,
-    "brain_score_pre_macro": 50,
+    "raw_brain_score": 50.6,
+    "brain_score_pre_macro": 51,
     "macro_multiplier": {
       "multiplier": 0.855,
       "total_penalty": 0.146,
@@ -24388,23 +24392,23 @@
     },
     "score_breakdown": {
       "fact_contribution": 40.0,
-      "sentiment_contribution": 10.2,
+      "sentiment_contribution": 10.6,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 50.2,
+      "raw_before_penalty": 50.6,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
-      "final_score": 50,
-      "raw_brain_score": 50.2,
+      "final_score": 51,
+      "raw_brain_score": 50.6,
       "grade": "AVOID",
       "grade_caps_applied": []
     },
     "verity_brain": {
-      "brain_score": 50,
+      "brain_score": 51,
       "grade": "AVOID",
       "grade_label": "회피",
       "grade_confidence": "firm",
@@ -24412,7 +24416,7 @@
       "fact_score": {
         "score": 50,
         "components": {
-          "multi_factor": 50.0,
+          "multi_factor": 51.0,
           "consensus": 59.0,
           "prediction": 77.1,
           "backtest": 60.0,
@@ -24475,31 +24479,31 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 53,
         "components": {
           "news_sentiment": 53,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 72.8,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 56,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": -1,
-        "base_vci": -1,
+        "vci": -3,
+        "base_vci": -3,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": -0.07,
+        "mispricing_z": -0.2,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -24549,15 +24553,15 @@
       "red_flag_penalty": 0,
       "position_guide": {
         "recommended_pct": 0.0,
-        "kelly_raw_pct": 16.7,
+        "kelly_raw_pct": 18.3,
         "max_pct": 0,
         "rationale": "레드플래그(즉시회피) — 포지션 불가"
       },
-      "reasoning": "XOM: 브레인 50점 (팩트 50 / 심리 51 / VCI -1) | 팩트 최강 prediction(77) / 최약 commodity_margin(36) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 9.7 (Lynch 절대 매도) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "XOM: 브레인 51점 (팩트 50 / 심리 53 / VCI -3) | 팩트 최강 prediction(77) / 최약 commodity_margin(36) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 9.7 (Lynch 절대 매도) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 50점 (관망) — 관찰 필요",
-    "confidence": 50,
+    "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
+    "confidence": 51,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "펀더멘털 양호",
@@ -25205,7 +25209,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 49,
+      "multi_score": 50,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -25225,7 +25229,7 @@
         "technical": 32,
         "sentiment": 53,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 61,
         "quality": 55,
         "volatility": 62,
@@ -25236,7 +25240,7 @@
         "technical": 5.3,
         "sentiment": 5.1,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 5.3,
         "quality": 5.1,
         "volatility": 4.0,
@@ -25265,41 +25269,41 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 53.6,
-      "prediction_std": 16.6,
+      "up_probability": 54.0,
+      "prediction_std": 17.3,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7365,
+      "conformal_q_hat": 0.7353,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 52.7,
+      "model_accuracy": 53.0,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.4,
+          "wf_accuracy": 49.7,
           "val_accuracy": 42.5,
           "wf_folds": 7,
-          "weight": 0.4943
+          "weight": 0.4971
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.7,
+          "wf_accuracy": 52.6,
           "val_accuracy": 43.8,
           "wf_folds": 7,
-          "weight": 0.5171
+          "weight": 0.5257
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 54.6,
+          "wf_accuracy": 54.9,
           "val_accuracy": 38.4,
           "wf_folds": 7,
-          "weight": 0.5457
+          "weight": 0.5486
         },
         "mlp": {
           "architecture": "neural_net",
@@ -25318,11 +25322,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 40.6756,
-        "drawdown_20d": 27.1583,
-        "macd_hist": 23.6769,
-        "vol_ratio": 20.4977,
-        "return_1d": 18.1969
+        "volatility_20d": 38.0089,
+        "drawdown_20d": 25.8249,
+        "macd_hist": 25.3436,
+        "vol_ratio": 21.1644,
+        "return_1d": 20.8636
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -25344,7 +25348,7 @@
         "이동평균 역배열 — 하락 추세"
       ]
     },
-    "low_52w": 146.13856506347656,
+    "low_52w": 146.1385498046875,
     "price_1m": 222.91798400878906,
     "price_3m": 243.8973388671875,
     "price_6m": 203.08619689941406,
@@ -25463,7 +25467,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -25479,14 +25483,14 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
     "timing_signal": {
-      "score": 46.0,
+      "score": 46.7,
       "signal": "WEAK",
-      "sentiment_component": 52.0,
+      "sentiment_component": 53.0,
       "technical_component": 32.0,
       "weights": {
         "sentiment": 0.7,
@@ -25495,8 +25499,8 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 54.4,
-    "brain_score_pre_macro": 54,
+    "raw_brain_score": 54.6,
+    "brain_score_pre_macro": 55,
     "macro_multiplier": {
       "multiplier": 0.775,
       "total_penalty": 0.225,
@@ -25514,23 +25518,23 @@
     },
     "score_breakdown": {
       "fact_contribution": 44.0,
-      "sentiment_contribution": 10.4,
+      "sentiment_contribution": 10.6,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 54.4,
+      "raw_before_penalty": 54.6,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
-      "final_score": 54,
-      "raw_brain_score": 54.4,
+      "final_score": 55,
+      "raw_brain_score": 54.6,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
     "verity_brain": {
-      "brain_score": 54,
+      "brain_score": 55,
       "grade": "WATCH",
       "grade_label": "관망",
       "grade_confidence": "firm",
@@ -25538,9 +25542,9 @@
       "fact_score": {
         "score": 55,
         "components": {
-          "multi_factor": 49.0,
+          "multi_factor": 50.0,
           "consensus": 59.0,
-          "prediction": 53.6,
+          "prediction": 54.0,
           "backtest": 72.0,
           "timing": 44.0,
           "commodity_margin": 50.0,
@@ -25601,31 +25605,31 @@
         }
       },
       "sentiment_score": {
-        "score": 52,
+        "score": 53,
         "components": {
           "news_sentiment": 51,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 80.0,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 57,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 3,
-        "base_vci": 3,
+        "vci": 2,
+        "base_vci": 2,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.2,
+        "mispricing_z": 0.13,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -25657,15 +25661,15 @@
       "red_flag_penalty": 0,
       "position_guide": {
         "recommended_pct": 3,
-        "kelly_raw_pct": 23.3,
+        "kelly_raw_pct": 25.0,
         "max_pct": 3,
-        "rationale": "Kelly 23.3% → WATCH 상한 3% 적용"
+        "rationale": "Kelly 25.0% → WATCH 상한 3% 적용"
       },
-      "reasoning": "JNJ: 브레인 54점 (팩트 55 / 심리 52 / VCI +3) | 팩트 최강 backtest(72) / 최약 timing(44) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "JNJ: 브레인 55점 (팩트 55 / 심리 53 / VCI +2) | 팩트 최강 backtest(72) / 최약 timing(44) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
-    "confidence": 49,
+    "ai_verdict": "멀티팩터 50점 (관망) — 관찰 필요",
+    "confidence": 50,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "펀더멘털 양호",
@@ -26273,7 +26277,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 55,
+      "multi_score": 56,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -26293,7 +26297,7 @@
         "technical": 78,
         "sentiment": 54,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 43,
         "quality": 60,
         "volatility": 64,
@@ -26304,7 +26308,7 @@
         "technical": 12.9,
         "sentiment": 5.2,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 3.8,
         "quality": 5.6,
         "volatility": 4.1,
@@ -26346,28 +26350,28 @@
         0,
         1
       ],
-      "model_accuracy": 44.2,
+      "model_accuracy": 44.0,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 45.7,
+          "wf_accuracy": 44.6,
           "val_accuracy": 52.1,
           "wf_folds": 7,
-          "weight": 0.4571
+          "weight": 0.4457
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.1,
+          "wf_accuracy": 48.3,
           "val_accuracy": 45.2,
           "wf_folds": 7,
-          "weight": 0.4914
+          "weight": 0.4829
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 44.6,
+          "wf_accuracy": 45.4,
           "val_accuracy": 57.5,
           "wf_folds": 7,
-          "weight": 0.4457
+          "weight": 0.4543
         },
         "mlp": {
           "architecture": "neural_net",
@@ -26535,7 +26539,7 @@
       "credit": {
         "debt_ratio_pct": 12.6
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -26551,7 +26555,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -26571,9 +26575,9 @@
       "postmortem_caution"
     ],
     "timing_signal": {
-      "score": 60.5,
+      "score": 61.9,
       "signal": "BUY",
-      "sentiment_component": 53.0,
+      "sentiment_component": 55.0,
       "technical_component": 78.0,
       "weights": {
         "sentiment": 0.7,
@@ -26582,7 +26586,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 54.6,
+    "raw_brain_score": 55.0,
     "brain_score_pre_macro": 55,
     "macro_multiplier": {
       "multiplier": 0.775,
@@ -26601,18 +26605,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 44.0,
-      "sentiment_contribution": 10.6,
+      "sentiment_contribution": 11.0,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 54.6,
+      "raw_before_penalty": 55.0,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 55,
-      "raw_brain_score": 54.6,
+      "raw_brain_score": 55.0,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
@@ -26625,7 +26629,7 @@
       "fact_score": {
         "score": 55,
         "components": {
-          "multi_factor": 55.0,
+          "multi_factor": 56.0,
           "consensus": 64.0,
           "prediction": 36.0,
           "backtest": 42.2,
@@ -26688,31 +26692,31 @@
         }
       },
       "sentiment_score": {
-        "score": 53,
+        "score": 55,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 93.82,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 60,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 2,
-        "base_vci": 2,
+        "vci": 0,
+        "base_vci": 0,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.13,
+        "mispricing_z": 0.0,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -26756,11 +26760,11 @@
         "max_pct": 3,
         "rationale": "Kelly 25.0% → WATCH 상한 3% 적용"
       },
-      "reasoning": "MSFT: 브레인 55점 (팩트 55 / 심리 53 / VCI +2) | 팩트 최강 consensus(64) / 최약 prediction(36) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "MSFT: 브레인 55점 (팩트 55 / 심리 55 / VCI +0) | 팩트 최강 consensus(64) / 최약 prediction(36) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
-    "confidence": 55,
+    "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
+    "confidence": 56,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "펀더멘털 양호",
@@ -27410,7 +27414,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 55,
+      "multi_score": 56,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -27430,7 +27434,7 @@
         "technical": 56,
         "sentiment": 55,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 64,
         "quality": 64,
         "volatility": 72,
@@ -27441,7 +27445,7 @@
         "technical": 9.2,
         "sentiment": 5.3,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 5.6,
         "quality": 6.0,
         "volatility": 4.6,
@@ -27551,10 +27555,10 @@
         "AI 상승확률 38.2%"
       ]
     },
-    "low_52w": 164.8184814453125,
+    "low_52w": 164.81846618652344,
     "price_1m": 383.25,
     "price_3m": 302.9167785644531,
-    "price_6m": 314.46282958984375,
+    "price_6m": 314.4627990722656,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -27660,7 +27664,7 @@
       "credit": {
         "debt_ratio_pct": 11.8
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_down_inflation_down",
@@ -27675,14 +27679,14 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
     "timing_signal": {
-      "score": 53.9,
+      "score": 55.3,
       "signal": "NEUTRAL",
-      "sentiment_component": 53.0,
+      "sentiment_component": 55.0,
       "technical_component": 56.0,
       "weights": {
         "sentiment": 0.7,
@@ -27691,7 +27695,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 57.8,
+    "raw_brain_score": 58.2,
     "brain_score_pre_macro": 58,
     "macro_multiplier": {
       "multiplier": 0.775,
@@ -27710,18 +27714,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 47.2,
-      "sentiment_contribution": 10.6,
+      "sentiment_contribution": 11.0,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 57.8,
+      "raw_before_penalty": 58.2,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 58,
-      "raw_brain_score": 57.8,
+      "raw_brain_score": 58.2,
       "grade": "WATCH",
       "grade_caps_applied": []
     },
@@ -27734,7 +27738,7 @@
       "fact_score": {
         "score": 59,
         "components": {
-          "multi_factor": 55.0,
+          "multi_factor": 56.0,
           "consensus": 60.0,
           "prediction": 38.2,
           "backtest": 77.5,
@@ -27798,31 +27802,31 @@
         }
       },
       "sentiment_score": {
-        "score": 53,
+        "score": 55,
         "components": {
           "news_sentiment": 51,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 91.25,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 60,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 6,
-        "base_vci": 6,
+        "vci": 4,
+        "base_vci": 4,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.4,
+        "mispricing_z": 0.27,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -27858,11 +27862,11 @@
         "max_pct": 3,
         "rationale": "Kelly 30.0% → WATCH 상한 3% 적용"
       },
-      "reasoning": "GOOGL: 브레인 58점 (팩트 59 / 심리 53 / VCI +6) | 팩트 최강 backtest(78) / 최약 prediction(38) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "GOOGL: 브레인 58점 (팩트 59 / 심리 55 / VCI +4) | 팩트 최강 backtest(78) / 최약 prediction(38) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
-    "confidence": 55,
+    "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
+    "confidence": 56,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "펀더멘털 양호",
@@ -28516,7 +28520,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 50,
+      "multi_score": 51,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -28536,7 +28540,7 @@
         "technical": 60,
         "sentiment": 55,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 38,
         "quality": 44,
         "volatility": 64,
@@ -28547,7 +28551,7 @@
         "technical": 9.9,
         "sentiment": 5.3,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 3.3,
         "quality": 4.1,
         "volatility": 4.1,
@@ -28775,7 +28779,7 @@
       "credit": {
         "debt_ratio_pct": 74.6
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -28791,7 +28795,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -28811,9 +28815,9 @@
       "postmortem_caution"
     ],
     "timing_signal": {
-      "score": 55.1,
+      "score": 56.5,
       "signal": "NEUTRAL",
-      "sentiment_component": 53.0,
+      "sentiment_component": 55.0,
       "technical_component": 60.0,
       "weights": {
         "sentiment": 0.7,
@@ -28822,7 +28826,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 53.0,
+    "raw_brain_score": 53.4,
     "brain_score_pre_macro": 53,
     "macro_multiplier": {
       "multiplier": 0.801,
@@ -28841,18 +28845,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 42.4,
-      "sentiment_contribution": 10.6,
+      "sentiment_contribution": 11.0,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 53.0,
+      "raw_before_penalty": 53.4,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 53,
-      "raw_brain_score": 53.0,
+      "raw_brain_score": 53.4,
       "grade": "AVOID",
       "grade_caps_applied": []
     },
@@ -28865,7 +28869,7 @@
       "fact_score": {
         "score": 53,
         "components": {
-          "multi_factor": 50.0,
+          "multi_factor": 51.0,
           "consensus": 66.0,
           "prediction": 39.7,
           "backtest": 51.4,
@@ -28928,31 +28932,31 @@
         }
       },
       "sentiment_score": {
-        "score": 53,
+        "score": 55,
         "components": {
           "news_sentiment": 51,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 91.85,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 60,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 0,
-        "base_vci": 0,
+        "vci": -2,
+        "base_vci": -2,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.0,
+        "mispricing_z": -0.13,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -28998,11 +29002,11 @@
         "max_pct": 0,
         "rationale": "레드플래그(즉시회피) — 포지션 불가"
       },
-      "reasoning": "TMO: 브레인 53점 (팩트 53 / 심리 53 / VCI +0) | 팩트 최강 consensus(66) / 최약 prediction(40) | V5: Graham가치↓27 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.4 (Lynch 절대 매도) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "TMO: 브레인 53점 (팩트 53 / 심리 55 / VCI -2) | 팩트 최강 consensus(66) / 최약 prediction(40) | V5: Graham가치↓27 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.4 (Lynch 절대 매도) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 50점 (관망) — 관찰 필요",
-    "confidence": 50,
+    "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
+    "confidence": 51,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "펀더멘털 양호",
@@ -29642,7 +29646,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 53,
+      "multi_score": 54,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -29662,7 +29666,7 @@
         "technical": 65,
         "sentiment": 53,
         "flow": 50,
-        "macro": 50,
+        "macro": 60,
         "momentum": 80,
         "quality": 55,
         "volatility": 55,
@@ -29673,7 +29677,7 @@
         "technical": 10.7,
         "sentiment": 5.1,
         "flow": 6.3,
-        "macro": 5.0,
+        "macro": 5.9,
         "momentum": 7.0,
         "quality": 5.1,
         "volatility": 3.5,
@@ -29706,34 +29710,34 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 48.6,
-      "prediction_std": 22.2,
+      "up_probability": 50.7,
+      "prediction_std": 21.2,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8261,
+      "conformal_q_hat": 0.826,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 55.9,
+      "model_accuracy": 56.0,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
           "wf_accuracy": 52.9,
-          "val_accuracy": 43.8,
+          "val_accuracy": 39.7,
           "wf_folds": 7,
           "weight": 0.5286
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.1,
-          "val_accuracy": 43.8,
+          "wf_accuracy": 51.4,
+          "val_accuracy": 42.5,
           "wf_folds": 7,
-          "weight": 0.5114
+          "weight": 0.5143
         },
         "catboost": {
           "architecture": "gbdt",
@@ -29759,11 +29763,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 36.6504,
-        "macd_hist": 20.5523,
-        "return_1d": 18.7372,
-        "bb_position": 18.1033,
-        "vol_ratio": 17.7115
+        "volatility_20d": 33.3156,
+        "macd_hist": 19.8849,
+        "rsi14": 19.8111,
+        "bb_position": 19.4371,
+        "return_1d": 19.0713
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -29787,7 +29791,7 @@
         "이동평균 정배열 — 상승 추세"
       ]
     },
-    "low_52w": 62.64799880981445,
+    "low_52w": 62.64800262451172,
     "price_1m": 92.62999725341797,
     "price_3m": 80.43415832519531,
     "price_6m": 75.2276382446289,
@@ -29911,7 +29915,7 @@
       "credit": {
         "debt_ratio_pct": 52.6
       },
-      "updated_at": "2026-06-03T06:15:33+09:00"
+      "updated_at": "2026-06-03T07:27:42+09:00"
     },
     "us_fscore": 8,
     "quadrant_info": {
@@ -29927,7 +29931,7 @@
         "경기민감주"
       ],
       "crypto_bias": "risk_off",
-      "gdp_growth": 0.0,
+      "gdp_growth": 0.6,
       "cpi_yoy": 2.5
     },
     "overrides_applied": [],
@@ -29947,9 +29951,9 @@
       "postmortem_caution"
     ],
     "timing_signal": {
-      "score": 55.9,
+      "score": 57.3,
       "signal": "NEUTRAL",
-      "sentiment_component": 52.0,
+      "sentiment_component": 54.0,
       "technical_component": 65.0,
       "weights": {
         "sentiment": 0.7,
@@ -29958,7 +29962,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 57.6,
+    "raw_brain_score": 58.0,
     "brain_score_pre_macro": 58,
     "macro_multiplier": {
       "multiplier": 0.775,
@@ -29977,18 +29981,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 47.2,
-      "sentiment_contribution": 10.4,
+      "sentiment_contribution": 10.8,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 57.6,
+      "raw_before_penalty": 58.0,
       "penalties": {
         "red_flag": 0,
         "quadrant_unfavored": 0
       },
       "final_score": 58,
-      "raw_brain_score": 57.6,
+      "raw_brain_score": 58.0,
       "grade": "AVOID",
       "grade_caps_applied": []
     },
@@ -30001,9 +30005,9 @@
       "fact_score": {
         "score": 59,
         "components": {
-          "multi_factor": 53.0,
+          "multi_factor": 54.0,
           "consensus": 52.0,
-          "prediction": 48.6,
+          "prediction": 50.7,
           "backtest": 73.6,
           "timing": 49.0,
           "commodity_margin": 60.4,
@@ -30063,31 +30067,31 @@
         }
       },
       "sentiment_score": {
-        "score": 52,
+        "score": 54,
         "components": {
           "news_sentiment": 51,
-          "x_sentiment": 41,
-          "market_mood": 50,
+          "x_sentiment": 42,
+          "market_mood": 60,
           "consensus_opinion": 82.31,
           "crypto_macro": 42,
           "market_fear_greed": 57.0,
           "social_sentiment": 57,
-          "fx_sentiment": 39.65,
-          "commodity_sentiment": 49.13,
+          "fx_sentiment": 41.0,
+          "commodity_sentiment": 47.92,
           "global_index_decoupling": 50.6,
           "geopolitical_score": 50,
-          "macro_headlines": 50.0,
+          "macro_headlines": 56.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 7,
-        "base_vci": 7,
+        "vci": 5,
+        "base_vci": 5,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.47,
+        "mispricing_z": 0.33,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -30141,11 +30145,11 @@
         "max_pct": 0,
         "rationale": "레드플래그(즉시회피) — 포지션 불가"
       },
-      "reasoning": "CSCO: 브레인 58점 (팩트 59 / 심리 52 / VCI +7) | 팩트 최강 backtest(74) / 최약 prediction(49) | 퀀트: 모멘텀↑80 | V5: Graham가치↓24 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 3.4 (Lynch 절대 매도) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "CSCO: 브레인 58점 (팩트 59 / 심리 54 / VCI +5) | 팩트 최강 backtest(74) / 최약 timing(49) | 퀀트: 모멘텀↑80 | V5: Graham가치↓24 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 3.4 (Lynch 절대 매도) | 매크로 CAPE 버블: Shiller CAPE 42.8 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
-    "confidence": 53,
+    "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
+    "confidence": 54,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "펀더멘털 양호",
