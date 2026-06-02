@@ -7,6 +7,7 @@ Gemini API 기반 최종 의사결정 모듈 (Sprint 9: Verity Brain 통합)
 """
 import json
 import os
+import re
 import time
 from typing import List, Optional
 from google import genai
@@ -325,6 +326,25 @@ def _pick_model(critical: bool = False) -> str:
     if critical and GEMINI_PRO_ENABLE:
         return GEMINI_MODEL_CRITICAL
     return GEMINI_MODEL_DEFAULT
+
+
+def _extract_json(text: str) -> dict:
+    """LLM 응답에서 JSON 객체 추출 — 서론 prose / 코드펜스 / 후행 텍스트 내성.
+
+    Gemini 2.5 가 system instruction 의 존댓말 페르소나("15년차 펀드매니저") 영향으로
+    '대표님, …분석 결과입니다' 같은 정중한 서론을 JSON 앞에 붙이는 drift
+    (2026-06-03 사고, full run 추천 28건 중 24건 파싱 실패) 를 흡수한다.
+    호출부는 response_mime_type=application/json 으로 서론을 원천 차단하되,
+    모델/캐시 경로에서 미적용될 때를 대비한 2차 방어선. postmortem._parse_llm_json 과 동일 로직.
+    """
+    t = text.strip()
+    m = re.search(r"```(?:json)?\s*(.*?)```", t, re.DOTALL)
+    if m:
+        t = m.group(1).strip()
+    start, end = t.find("{"), t.rfind("}")
+    if start != -1 and end > start:
+        t = t[start:end + 1]
+    return json.loads(t)
 
 
 def _generate_cached(client, *, model: str, contents, system_instruction: str, call_type: Optional[str] = None, **extra_config):
@@ -907,6 +927,7 @@ def analyze_stock(
             contents=prompt,
             system_instruction=sys_instr,
             call_type="stock_analysis",
+            response_mime_type="application/json",
         )
         text = response.text.strip()
 
@@ -925,11 +946,7 @@ def analyze_stock(
         except Exception:
             pass
 
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-            text = text.rsplit("```", 1)[0]
-
-        result = json.loads(text)
+        result = _extract_json(text)
 
         detected_risks = []
         for kw in RISK_KEYWORDS:
@@ -1145,6 +1162,7 @@ JSON만:
             contents=prompt,
             system_instruction=sys_instr,
             call_type="daily_report",
+            response_mime_type="application/json",
         )
         text = response.text.strip()
 
@@ -1163,10 +1181,7 @@ JSON만:
         except Exception:
             pass
 
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-            text = text.rsplit("```", 1)[0]
-        result = json.loads(text)
+        result = _extract_json(text)
         result["_gemini_model"] = model
         return result
     except Exception as e:
@@ -1343,13 +1358,10 @@ JSON만:
             contents=prompt,
             system_instruction=sys_instr,
             call_type="periodic_report",
+            response_mime_type="application/json",
         )
         text = response.text.strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-            text = text.rsplit("```", 1)[0]
-
-        result = json.loads(text)
+        result = _extract_json(text)
         result["_gemini_model"] = model
         result["_period"] = analysis_data.get("period", "unknown")
         result["_period_label"] = period_label
