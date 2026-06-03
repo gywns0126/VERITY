@@ -31,7 +31,7 @@ from server.config import (
 )
 from server.kis_rest_client import (
     fetch_daily, fetch_minute, fetch_orderbook, fetch_price, fetch_trades,
-    place_kr_order, place_us_order, get_balance,
+    fetch_program_trade, place_kr_order, place_us_order, get_balance,
 )
 from server.kis_ws_client import KISWebSocketClient
 
@@ -306,6 +306,16 @@ async def chart(ticker: str, type: str = Query("all")):
     except Exception as e:
         logger.error("chart 조회 실패 %s: %s", tk, e)
         return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.get("/program/{market}")
+async def program_trade(market: str = "K"):
+    """KIS 프로그램매매 종합현황(시간) — KRX 스크래핑(해외IP+안티봇 차단) 대체.
+    Railway 상주 토큰(read-only consumer)으로 조회. market: K(코스피)/Q(코스닥).
+    raw output 반환 — collector 가 차익/비차익 순매수 매핑."""
+    loop = asyncio.get_event_loop()
+    data = await loop.run_in_executor(None, fetch_program_trade, market.upper())
+    return {"program": data}
 
 
 @app.get("/api/order")

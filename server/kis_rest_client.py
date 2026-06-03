@@ -430,6 +430,28 @@ def fetch_price(ticker: str) -> dict:
     }
 
 
+def fetch_program_trade(market: str = "K") -> dict:
+    """KIS 프로그램매매 종합현황(시간) — comp-program-trade-today, tr_id FHPPG04600101.
+
+    2026-06-03: KRX getJsonData 스크래핑(해외IP 차단 + 안티봇 LOGOUT)을 KIS 공식 API 로 대체.
+    토큰 인증이라 IP/안티봇 무관. market: K(코스피)/Q(코스닥). output 구조는 raw 반환 —
+    collector 측에서 차익/비차익 순매수 필드 매핑 (실호출로 필드명 확정 후).
+    """
+    d = _get(
+        "/uapi/domestic-stock/v1/quotations/comp-program-trade-today",
+        "FHPPG04600101",
+        {
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_MRKT_CLS_CODE": market,
+            "FID_SCTN_CLS_CODE": "",
+            "FID_INPUT_ISCD": "",
+            "FID_COND_MRKT_DIV_CODE1": "",
+            "FID_INPUT_HOUR_1": "",
+        },
+    )
+    return d
+
+
 # ── 국내 주문 ──
 
 def place_kr_order(ticker: str, side: str, qty: int, price: int, order_type: str) -> dict:
