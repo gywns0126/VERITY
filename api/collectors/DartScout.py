@@ -479,6 +479,15 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
     if related_party and len(related_party) > 30000:
         related_party = related_party[:30000]
 
+    # 2026-06-04 going-concern/강조사항 — 감사보고서가 같은 ZIP 번들 시 포착.
+    # doubt 전용 구문만 (정상 boilerplate "계속기업을 전제로" 회피, false-positive 차단).
+    try:
+        from api.analyzers.dart_audit_signals import detect_going_concern
+        _gc = detect_going_concern(cleaned)
+    except Exception:
+        _gc = {"going_concern_doubt": False, "emphasis_of_matter": False,
+               "severity": "none", "matched_phrase": "", "snippet": ""}
+
     return {
         "rcept_no": rcept_no,
         "report_nm": latest.get("report_nm", ""),
@@ -488,6 +497,11 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
         "char_count": len(section),
         "related_party_text": related_party,
         "related_party_char_count": len(related_party),
+        "going_concern_doubt": _gc["going_concern_doubt"],
+        "emphasis_of_matter": _gc["emphasis_of_matter"],
+        "going_concern_severity": _gc["severity"],
+        "going_concern_phrase": _gc["matched_phrase"],
+        "going_concern_snippet": _gc["snippet"],
     }
 
 

@@ -3464,6 +3464,29 @@ def main():
                               f"(이벤트 {ev_flagged}, 관측 only)")
                 except Exception as e:
                     print(f"  ⚠️ 공시 이벤트 스캔 스킵: {e}")
+
+                # ── DART 감사 신호: going-concern/강조사항 (관측 only) ──
+                # 2026-06-04. doubt 전용 구문(boilerplate 회피). scored 미반영 = RULE 7.
+                try:
+                    from api.analyzers.dart_audit_signals import scan_audit_signals
+                    au_result = scan_audit_signals(stocks_dict)
+                    au_attached = au_flagged = 0
+                    for stock in candidates:
+                        t = stock.get("ticker")
+                        if not t:
+                            continue
+                        t6 = str(t).split(".")[0].zfill(6)
+                        au = au_result.get(t6)
+                        if au:
+                            stock["dart_audit_signals"] = au
+                            au_attached += 1
+                            if au.get("going_concern_doubt"):
+                                au_flagged += 1
+                    if au_attached:
+                        print(f"  ✓ {au_attached}개 종목에 dart_audit_signals 부착 "
+                              f"(going-concern {au_flagged}, 관측 only)")
+                except Exception as e:
+                    print(f"  ⚠️ 감사 신호 스캔 스킵: {e}")
             else:
                 print(f"  KR 종목 없음 — skip")
         except Exception as e:
