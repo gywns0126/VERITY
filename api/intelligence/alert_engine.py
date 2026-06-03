@@ -174,19 +174,27 @@ def _deduplicate_and_prioritize(alerts: list, max_total: int = 20) -> list:
     info = [a for a in deduped if a.get("level") == "INFO"]
 
     result = list(critical)
-
     cats_covered = {a.get("category") for a in result}
-    for a in warning:
-        if a.get("category") not in cats_covered or len(result) < max_total:
+
+    # 2026-06-03: 기존 OR 조건(`not in cats_covered or len < max`)은 max 미만인 동안 category
+    #   무관 무조건 append → 규칙 3(각 category 최소 1개 보장)이 약화되고 특정 category 가 자리
+    #   선점 가능. 의도대로 (3) 미커버 category top WARNING 1개씩 보장 → (4) 남은 자리 채움 순서로 정정.
+    for a in warning:  # (3) category 보장 우선
+        if len(result) >= max_total:
+            break
+        if a.get("category") not in cats_covered:
             result.append(a)
             cats_covered.add(a.get("category"))
-
-    remaining = max_total - len(result)
-    if remaining > 0:
-        for a in info:
-            if len(result) >= max_total:
-                break
+    for a in warning:  # (4) 남은 자리 WARNING 채움
+        if len(result) >= max_total:
+            break
+        if a not in result:
             result.append(a)
+
+    for a in info:
+        if len(result) >= max_total:
+            break
+        result.append(a)
 
     return result[:max_total]
 
