@@ -46,6 +46,7 @@ runs:
                  system_health_snapshot.json \
                  macro_snapshot.json \
                  price_pulse.json \
+                 bonds.json \
                  kr_stock_names.json \
                  admin_todos.json \
                  brain_kb_usage.json \
@@ -77,6 +78,14 @@ runs:
         if [ -s "_public_dist/price_pulse.json" ] && [ -s "_public_dist/portfolio.json" ]; then
           python3 "${{ github.action_path }}/merge_pulse.py" \
             _public_dist/portfolio.json _public_dist/price_pulse.json
+        fi
+
+        # ── bonds inline merge (2026-06-03) ──
+        # bonds 를 별도 파일(data/bonds.json, 단일 writer)로 분리 → race 회피.
+        # publish 시점에 portfolio.bonds 를 bonds.json 으로 갱신 → 컴포넌트가 보는 채권 항상 fresh.
+        if [ -s "_public_dist/bonds.json" ] && [ -s "_public_dist/portfolio.json" ]; then
+          python3 "${{ github.action_path }}/merge_bonds.py" \
+            _public_dist/portfolio.json _public_dist/bonds.json
         fi
 
         # ── equity_research/ 디렉토리 publish (2026-05-16) ──

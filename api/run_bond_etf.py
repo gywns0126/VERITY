@@ -10,7 +10,7 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from api.config import now_kst
+from api.config import now_kst, DATA_DIR
 from api.vams.engine import load_portfolio, save_portfolio
 
 MODE = os.environ.get("BOND_ETF_MODE", "all").strip().lower()
@@ -40,6 +40,15 @@ def _run_bonds(portfolio: dict) -> dict:
     if regime:
         portfolio["bonds"]["bond_regime"] = regime
     print(f"[BOND] regime: {json.dumps(regime, ensure_ascii=False)}")
+
+    # 별도 파일 분리 (2026-06-03) — bonds 를 단일 writer 파일로 저장 → portfolio.json
+    # 공유 race 회피. publish-data 가 publish 시 portfolio.bonds 로 inline merge (price_pulse 패턴).
+    try:
+        with open(os.path.join(DATA_DIR, "bonds.json"), "w", encoding="utf-8") as f:
+            json.dump(portfolio["bonds"], f, ensure_ascii=False)
+        print("[BOND] data/bonds.json 저장 (publish-merge 소스, race-free)")
+    except Exception as _e:
+        print(f"[BOND] bonds.json 저장 실패(무시): {_e}")
 
     return {
         "kr_shape": kr_shape,
