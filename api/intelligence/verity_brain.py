@@ -26,13 +26,7 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
-from datetime import date as _date, datetime as _datetime
-
-from api.config import (
-    DATA_DIR, MACRO_DGS10_DEFENSE_PCT,
-    US_IV_PERCENTILE_WARN, US_PUT_CALL_BEARISH, US_INSIDER_MSPR_PENALTY,
-    now_kst,
-)
+from api.config import MACRO_DGS10_DEFENSE_PCT
 from api.utils.portfolio_writer import read_section
 
 # 2026-05-24 분해 — analyze_stock 3,738줄 monolith → factor 모듈.
@@ -46,18 +40,15 @@ from api.intelligence.factors._common import (
     reset_ic_cache,  # main.py:3515 외부 caller 보호
 )
 from api.intelligence.factors.candle import _compute_candle_psychology_score
-from api.intelligence.factors.canslim import _compute_canslim_score
 from api.intelligence.factors.fact import (
     _compute_fact_score,
     _compute_postmortem_penalty,
     _is_regime_panic,
 )
-from api.intelligence.factors.graham import _compute_graham_score
 from api.intelligence.factors.mean_reversion import (
     _compute_kr_fundamental_mean_reversion_score,
     _compute_technical_mean_reversion_score,
 )
-from api.intelligence.factors.moat import _compute_moat_score
 from api.intelligence.factors.red_flags import (
     _compute_freshness,
     _detect_red_flags,

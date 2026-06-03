@@ -217,6 +217,9 @@ def get_pcr_composite_signal() -> dict:
     std = (sum((v - mean)**2 for v in values) / len(values)) ** 0.5 if len(values) > 1 else 0.0
     z_score = (latest_pcr - mean) / std if std > 0 else 0.0
 
+    # 🚨 RULE 7: PCR 단계 vci_adj + panic 임계 = 휴리스틱 v0 (자체 설정).
+    #   PCR 1.0 중립·고PCR 공포 = 시장 관행 / z>=2σ = 통계 표준이나, 단계 폭(±6/±3)·
+    #   panic 1.4 는 자체 추정 = 가설. 검증 N 누적 중, walk-forward 보정 큐.
     if latest_pcr >= 1.3:   vci_adj = +6.0
     elif latest_pcr >= 1.1: vci_adj = +3.0
     elif latest_pcr >= 0.9: vci_adj = 0.0

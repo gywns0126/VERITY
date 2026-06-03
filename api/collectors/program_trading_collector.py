@@ -25,6 +25,8 @@ HEADERS = {
 }
 
 # 임계값 (억원 단위)
+# 🚨 RULE 7: 아래 sell_bomb/warning 임계 = 휴리스틱 v0 (자체 설정, 학술 출처 부재).
+#   프로그램 매도 규모 관행 기반 추정값 — 검증 trail N 누적 중 = 가설. walk-forward 보정 큐.
 _NON_ARB_SELL_BOMB = -5000
 _TOTAL_SELL_BOMB = -7000
 _ARB_SELL_WARNING = -2000

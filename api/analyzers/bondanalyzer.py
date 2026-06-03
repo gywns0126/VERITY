@@ -10,6 +10,8 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from api.config import now_kst  # 2026-06-03: analyzed_at 메타 tz_aware (feedback_tz_aware)
+
 logger = logging.getLogger(__name__)
 
 
@@ -134,7 +136,7 @@ def analyze_yield_curve(curve_data: Dict[str, float], market: str = "KR") -> Dic
     curve_data: { "1Y": 3.15, "3Y": 3.22, "10Y": 3.48, ... }
     market: "KR" | "US"
     """
-    result: Dict[str, Any] = {"market": market, "analyzed_at": datetime.now().isoformat()}
+    result: Dict[str, Any] = {"market": market, "analyzed_at": now_kst().isoformat()}
 
     y_1m = curve_data.get("1M")
     y_3m = curve_data.get("3M")
@@ -233,8 +235,10 @@ def analyze_credit_spreads(spreads: Dict[str, Any]) -> Dict[str, Any]:
     ig = spreads.get("IG_OAS") or spreads.get("us_ig_oas")
     hy = spreads.get("HY_OAS") or spreads.get("us_hy_oas")
 
-    result: Dict[str, Any] = {"analyzed_at": datetime.now().isoformat()}
+    result: Dict[str, Any] = {"analyzed_at": now_kst().isoformat()}
 
+    # 🚨 RULE 7: HY OAS credit_cycle 임계(3.0/4.5/6.5%) = 휴리스틱 v0 (자체 설정).
+    #   HY 스프레드 수준 해석은 시장 관행에 가까우나 구간 경계는 자체 추정 = 가설. 검증 N 누적 중.
     if hy is not None:
         if hy < 3.0:
             credit_cycle = "tightening"
@@ -286,7 +290,7 @@ def run_bond_analysis(portfolio_bonds: Dict[str, Any]) -> Dict[str, Any]:
         "credit_spreads": {"us_ig_oas": 1.05, "us_hy_oas": 3.52, ...}
     }
     """
-    result: Dict[str, Any] = {"analyzed_at": datetime.now().isoformat()}
+    result: Dict[str, Any] = {"analyzed_at": now_kst().isoformat()}
 
     yc = portfolio_bonds.get("yield_curves", {})
 
