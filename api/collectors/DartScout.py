@@ -462,6 +462,23 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
     if len(section) > MAX_CHARS:
         section = section[:MAX_CHARS]
 
+    # 2026-06-03 DART 2차 원문 심화 — "대주주 등과의 거래내용"(특수관계자 거래 =
+    # 터널링·일감몰아주기) 섹션 additive 슬라이스. 같은 document 라 추가 fetch 0.
+    # 한국 특유 지배구조 red flag (글로벌 LLM·개인이 한국 공시에서 체계 추출 못 함).
+    rp_patterns = [
+        r"(?is)대주주\s*등과의\s*거래\s*내용(.*?)(?:그\s*밖에\s*투자자|이사회\s*등|전문가의\s*확인|재무제표)",
+        r"(?is)특수관계자\s*(?:와의|간)?\s*거래(.*?)(?:그\s*밖에|전문가의\s*확인|재무제표\s*주석\s*종료)",
+    ]
+    related_party = ""
+    for pat in rp_patterns:
+        rp_matches = re.findall(pat, cleaned)
+        if rp_matches:
+            related_party = max(rp_matches, key=len).strip()
+            if len(related_party) > 300:
+                break
+    if related_party and len(related_party) > 30000:
+        related_party = related_party[:30000]
+
     return {
         "rcept_no": rcept_no,
         "report_nm": latest.get("report_nm", ""),
@@ -469,6 +486,8 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
         "bsns_year": bsns_year,
         "raw_text": section,
         "char_count": len(section),
+        "related_party_text": related_party,
+        "related_party_char_count": len(related_party),
     }
 
 

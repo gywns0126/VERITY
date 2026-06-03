@@ -102,6 +102,7 @@ _SPEC: List[tuple] = [
     ("컨센실적", "prediction", _dict_ok, "all"),
     # 한국 1차자료 (DART — 유일 해자, 한국 전용)
     ("DART한국", "dart_business_analysis", _dict_ok, "kr"),
+    ("DART한국", "dart_related_party", _dict_ok, "kr"),  # 2026-06-03 2차 원문 심화
     ("DART한국", "fscore_deltas", _dict_ok, "all"),
     # Lynch/value (한국 전용)
     ("Lynch", "lynch_kr", _dict_ok, "kr"),

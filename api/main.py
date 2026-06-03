@@ -3416,6 +3416,31 @@ def main():
                         dart_attached += 1
                 if dart_attached:
                     print(f"  ✓ {dart_attached}개 종목에 dart_business_analysis 부착")
+
+                # ── DART 2차 원문 심화: 특수관계자/대주주 거래 터널링 분석 ──
+                # 2026-06-03. 🚨 관측 only — dart_related_party 데이터 필드로만 부착.
+                # scored risk_flags 미주입(detected_risk_keywords→auto_avoid 경로로 Brain
+                # 점수 영향 = RULE 7). 점수 반영은 N 누적 후 사전등록 + PM 승인.
+                try:
+                    from api.analyzers.dart_related_party import analyze_all_related_party
+                    rp_result = analyze_all_related_party(stocks_dict, auto_fetch_missing=True)
+                    rp_attached = rp_high = 0
+                    for stock in candidates:
+                        t = stock.get("ticker")
+                        if not t:
+                            continue
+                        t6 = str(t).split(".")[0].zfill(6)
+                        rp = rp_result.get(t6)
+                        if rp and "_skip_reason" not in rp:
+                            stock["dart_related_party"] = rp
+                            rp_attached += 1
+                            if rp.get("severity") == "high":
+                                rp_high += 1
+                    if rp_attached:
+                        print(f"  ✓ {rp_attached}개 종목에 dart_related_party 부착 "
+                              f"(터널링 고위험 {rp_high}, 관측 only)")
+                except Exception as e:
+                    print(f"  ⚠️ 특수관계자 분석 스킵: {e}")
             else:
                 print(f"  KR 종목 없음 — skip")
         except Exception as e:
