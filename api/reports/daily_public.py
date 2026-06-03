@@ -400,33 +400,54 @@ def _extract_text_and_reason(response) -> tuple:
 def _default_gemini_caller(prompt: str) -> str:
     """기본 Gemini 호출. 일반인용은 가벼운 모델 사용.
 
-    2026-06-03 공개 리포트 ~40% out=0 빈 생성 사고 정공법 — response.text 가
-    빈 생성을 silent 삼켜 finish_reason 진단 불가였음. (1) response_mime_type=
-    application/json 으로 recitation/prose 차단 (2) candidates 경유 finish_reason
-    진단 stderr (3) 간헐적 block 대비 1회 재시도. 2회 모두 빈 생성이면 명확한
-    예외 → caller 의 success=False 경로 유지.
+    2026-06-03 공개 리포트 ~40% out=0 실패 정공법. 실 cron 진단 결과 주원인 =
+    **Gemini 503 UNAVAILABLE (모델 high-demand 과부하, 일시적)** — generate_content
+    가 예외를 던지는데 옛 경로는 재시도 없이 그대로 실패. (1) 일시적 API 오류
+    (503/429/overload) backoff 재시도 (2) response_mime_type=application/json
+    (3) 빈 생성(finish_reason != STOP) 대비 candidates 경유 진단 + 재시도.
+    전 attempt 소진 시 명확한 예외 → caller 의 success=False(fallback) 경로 유지.
     """
     import sys
+    import time
     from api.analyzers.gemini_analyst import init_gemini, _pick_model
 
     client = init_gemini()
     model = _pick_model(critical=False)
     reason = "unknown"
-    for attempt in range(2):
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config={
-                "system_instruction": "JSON 만 출력하라. 마크다운 코드 펜스 금지.",
-                "response_mime_type": "application/json",
-            },
-        )
+    last_err = None
+    MAX_ATTEMPTS = 3
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config={
+                    "system_instruction": "JSON 만 출력하라. 마크다운 코드 펜스 금지.",
+                    "response_mime_type": "application/json",
+                },
+            )
+        except Exception as e:
+            last_err = e
+            msg = str(e)
+            transient = any(k in msg for k in (
+                "503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED",
+                "overloaded", "high demand", "500", "INTERNAL"))
+            print(f"[daily_public] API 오류 attempt={attempt + 1}/{MAX_ATTEMPTS} "
+                  f"transient={transient} err={msg[:120]}", file=sys.stderr, flush=True)
+            if not transient or attempt == MAX_ATTEMPTS - 1:
+                raise
+            time.sleep(4 * (attempt + 1))  # 4s, 8s backoff
+            continue
+
         text, reason = _extract_text_and_reason(response)
         if text:
             return text
-        print(f"[daily_public] 빈 생성 attempt={attempt + 1}/2 finish_reason={reason}",
-              file=sys.stderr, flush=True)
-    raise RuntimeError(f"empty_generation(finish_reason={reason})")
+        print(f"[daily_public] 빈 생성 attempt={attempt + 1}/{MAX_ATTEMPTS} "
+              f"finish_reason={reason}", file=sys.stderr, flush=True)
+        if attempt < MAX_ATTEMPTS - 1:
+            time.sleep(2)
+    raise RuntimeError(
+        f"generation_failed(finish_reason={reason}, last_err={str(last_err)[:80]})")
 
 
 def _parse_llm_json(raw: str) -> Dict[str, Any]:
