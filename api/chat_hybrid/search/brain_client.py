@@ -76,6 +76,68 @@ def _load_portfolio() -> Dict[str, Any]:
     return _load_from_url()
 
 
+# ── price_pulse: 5분-fresh KIS 시세 overlay (2026-06-03) ──
+# portfolio.json 가격은 분석 cron(~하루 1회) 기준 → 챗이 옛 가격을 인용.
+# price_pulse.json 의 KIS 5분-fresh 가격을 유니버스 종목에 덧씌운다.
+# ※ 이미 수집된 파일 read 일 뿐 KIS 직접 호출 아님 → RULE 1 무관. 실패 시 fail-open.
+def _price_pulse_url() -> str:
+    return os.environ.get(
+        "PRICE_PULSE_URL",
+        "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/price_pulse.json",
+    )
+
+
+_pulse_cache: Dict[str, Any] = {"data": None, "ts": 0.0}
+
+
+def _load_price_pulse() -> Dict[str, Any]:
+    """price_pulse.json 로드 (로컬 우선, URL 폴백). 실패 시 {}."""
+    now = time.time()
+    if _pulse_cache["data"] is not None and now - _pulse_cache["ts"] < _URL_CACHE_TTL:
+        return _pulse_cache["data"]
+
+    data: Dict[str, Any] = {}
+    pp = _portfolio_path()
+    local = os.path.join(os.path.dirname(pp), "price_pulse.json") if pp else ""
+    if local and os.path.isfile(local):
+        try:
+            with open(local, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            data = {}
+    if not data:
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                _price_pulse_url(), headers={"User-Agent": "VERITY-Chat-Hybrid/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                txt = resp.read().decode("utf-8")
+                txt = txt.replace("NaN", "null").replace("Infinity", "null").replace("-Infinity", "null")
+                data = json.loads(txt)
+        except Exception as e:
+            logger.warning("price_pulse 로드 실패: %s", e)
+            data = {}
+
+    _pulse_cache["data"] = data
+    _pulse_cache["ts"] = now
+    return data
+
+
+def _pulse_price_map(pulse: Dict[str, Any]) -> Dict[str, float]:
+    """price_pulse → {TICKER(upper): price(float)} 맵."""
+    p = pulse.get("prices") if isinstance(pulse, dict) else None
+    if not isinstance(p, dict):
+        return {}
+    out: Dict[str, float] = {}
+    for k, v in p.items():
+        try:
+            out[str(k).strip().upper()] = float(v)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
 def _format_portfolio_summary(pf: Dict[str, Any]) -> List[str]:
     """시장 전반 요약 — 모든 질문에 공통 주입."""
     parts: List[str] = []
@@ -101,21 +163,27 @@ def _format_portfolio_summary(pf: Dict[str, Any]) -> List[str]:
     return parts
 
 
-def _format_ticker_block(s: Dict[str, Any]) -> str:
-    """단일 종목 요약 블록."""
+def _format_ticker_block(s: Dict[str, Any], fresh_prices: Optional[Dict[str, float]] = None) -> str:
+    """단일 종목 요약 블록. fresh_prices(price_pulse) 있으면 KIS 5분-fresh 가격 우선."""
     name = s.get("name", "?")
     ticker = s.get("ticker", "?")
     rec = s.get("recommendation", "?")
     brain = s.get("verity_brain", {}).get("brain_score", s.get("brain_score", "?"))
     grade = s.get("verity_brain", {}).get("grade", "?")
     price = s.get("current_price") or s.get("price") or "?"
+    price_src = ""
+    if fresh_prices:
+        fp = fresh_prices.get(str(ticker).strip().upper())
+        if fp:
+            price = f"{int(fp):,}" if float(fp).is_integer() else fp
+            price_src = " (KIS 실시간)"
     multi = (s.get("multi_factor") or {}).get("multi_score", "?")
     timing = (s.get("timing") or {}).get("timing_score", "?")
 
     lines = [
         f"[{name} {ticker}]",
         f"  판정: {rec} · 등급: {grade} · Brain: {brain}",
-        f"  현재가: {price} · 멀티팩터: {multi} · 타이밍: {timing}",
+        f"  현재가: {price}{price_src} · 멀티팩터: {multi} · 타이밍: {timing}",
     ]
 
     # 등급 근거 — fact/심리/VCI 분해 (왜 이 등급인지, 답 깊이의 핵심)
@@ -230,6 +298,7 @@ def _find_stocks_by_name(pf: Dict[str, Any], query: str) -> List[Dict]:
 def _format_user_watchlist(
     user_watchlist: Optional[List[Dict[str, Any]]],
     pf: Optional[Dict[str, Any]],
+    fresh_prices: Optional[Dict[str, float]] = None,
 ) -> List[str]:
     """사용자 개인 관심종목(localStorage 기반) 컨텍스트 블록.
 
@@ -269,7 +338,7 @@ def _format_user_watchlist(
         if rich:
             parts.append("\n[관심종목 상세 — Brain 데이터 매칭분]")
             for s in rich[:5]:
-                parts.append(_format_ticker_block(s))
+                parts.append(_format_ticker_block(s, fresh_prices))
     return parts
 
 
@@ -305,11 +374,18 @@ def fetch_brain_context(
     parts: List[str] = list(cached)
     matched_tickers: List[str] = []
 
+    # price_pulse — 5분-fresh KIS 시세 overlay (자체 60s 캐시). 실패 시 빈 맵 = 무영향.
+    pulse = _load_price_pulse()
+    fresh_prices = _pulse_price_map(pulse)
+    pulse_ts = pulse.get("updated_at") if isinstance(pulse, dict) else None
+    if fresh_prices and pulse_ts:
+        parts.append(f"[실시간 시세 갱신] {pulse_ts} (KIS, 유니버스 {len(fresh_prices)}종목)")
+
     # 사용자 개인 관심종목 — portfolio.json 캐시 hit 시에도 풍부 데이터 위해 재로드
     if user_watchlist:
         if pf is None:
             pf = _load_portfolio()
-        watchlist_parts = _format_user_watchlist(user_watchlist, pf)
+        watchlist_parts = _format_user_watchlist(user_watchlist, pf, fresh_prices)
         if watchlist_parts:
             parts.extend(watchlist_parts)
             for it in user_watchlist[:50]:
@@ -328,7 +404,7 @@ def fetch_brain_context(
         if stocks:
             parts.append("\n[관련 종목]")
             for s in stocks[:5]:
-                parts.append(_format_ticker_block(s))
+                parts.append(_format_ticker_block(s, fresh_prices))
                 matched_tickers.append(str(s.get("ticker", "")))
 
     # 알림 (portfolio_only 질문 특히 유용)

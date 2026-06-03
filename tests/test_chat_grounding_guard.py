@@ -55,3 +55,35 @@ def test_no_ungrounded_no_marker():
         ungrounded_tickers=[],
     )
     assert "시세 미확인" not in msg
+
+
+# ── 갈래 A: price_pulse 5분-fresh KIS 시세 overlay (2026-06-03) ──
+from api.chat_hybrid.search import brain_client as _bc
+
+
+def test_pulse_price_map_parses_prices():
+    pulse = {"prices": {"005930": 365000.0, "009540": "383500", "bad": None}}
+    m = _bc._pulse_price_map(pulse)
+    assert m["005930"] == 365000.0
+    assert m["009540"] == 383500.0
+    assert "BAD" not in m  # None 값은 제외
+
+
+def test_ticker_block_prefers_fresh_kis_price():
+    # portfolio 가격(111) 대신 price_pulse fresh(365000) 우선 + 'KIS 실시간' 라벨
+    fresh = {"005930": 365000.0}
+    blk = _bc._format_ticker_block(
+        {"name": "삼성전자", "ticker": "005930", "current_price": 111}, fresh_prices=fresh
+    )
+    assert "365,000" in blk
+    assert "KIS 실시간" in blk
+    assert "현재가: 111 " not in blk  # 옛 가격이 노출되지 않음
+
+
+def test_ticker_block_no_fresh_falls_back():
+    # fresh 맵에 없는 종목 → portfolio 가격 유지, 라벨 없음 (회귀 방지)
+    blk = _bc._format_ticker_block(
+        {"name": "x", "ticker": "999999", "current_price": 111}, fresh_prices={"005930": 365000.0}
+    )
+    assert "KIS 실시간" not in blk
+    assert "111" in blk
