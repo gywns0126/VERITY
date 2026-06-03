@@ -77,7 +77,7 @@ function _clearSession() { if (typeof window !== "undefined") localStorage.remov
    삭제된 헬퍼: _supaReq, _refreshSession. supabaseUrl/AnonKey props 는 backward-compat 로 유지. */
 
 /* ─── Design tokens ─── */
-const GRADE_COLOR: Record<string, string> = { STRONG_BUY: C.success, BUY: C.accent, WATCH: C.watch, CAUTION: C.caution, AVOID: C.danger }
+const GRADE_COLOR: Record<string, string> = { STRONG_BUY: C.success, BUY: C.buy, WATCH: C.watch, CAUTION: C.caution, AVOID: C.danger }
 const GRADE_LABEL: Record<string, string> = { STRONG_BUY: "강력매수", BUY: "매수", WATCH: "관망", CAUTION: "주의", AVOID: "회피" }
 
 // §8 AVOID 라벨 의미 — 펀더멘털 결함 전용

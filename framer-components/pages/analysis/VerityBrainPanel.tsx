@@ -379,7 +379,7 @@ export default function VerityBrainPanel(props: Props) {
 
     const gradeOrder = ["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"]
     const gradeLabels: Record<string, string> = { STRONG_BUY: "강력매수", BUY: "매수", WATCH: "관망", CAUTION: "주의", AVOID: "회피" }
-    const gradeColors: Record<string, string> = { STRONG_BUY: C.success, BUY: C.accent, WATCH: C.watch, CAUTION: C.caution, AVOID: C.danger }
+    const gradeColors: Record<string, string> = { STRONG_BUY: C.success, BUY: C.buy, WATCH: C.watch, CAUTION: C.caution, AVOID: C.danger }
 
     const totalGraded = Object.values(gradeDist).reduce((a, b) => a + b, 0) || 1
     const ovMode = String(macroOv.mode || "").toLowerCase()
