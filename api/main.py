@@ -3908,6 +3908,19 @@ def main():
     print(f"\n[7] VAMS 가상 투자")
     portfolio["recommendations"] = analyzed
 
+    # ── 필드 커버리지 측정 (데이터 품질 = breadth × 정확성 × 신선도 × 커버리지) ──
+    # 2026-06-03: silent 누수(6/3 80% AI_ANALYSIS_FAILED 등)를 측정값으로 전환.
+    # trust_score(시스템 GO/NO-GO)와 직교 — 종목·필드 레벨. 모든 mode 에서 실행.
+    try:
+        from api.observability.field_coverage import (
+            compute_field_coverage, log_field_coverage, summary_line)
+        _fc = compute_field_coverage(analyzed)
+        portfolio["field_coverage"] = _fc
+        log_field_coverage(_fc)
+        print(f"  [field_coverage] {summary_line(_fc)}")
+    except Exception as _fc_err:
+        print(f"  [field_coverage] 스킵: {_fc_err}")
+
     # rec_price 스냅샷 + current_price alias 주입 (preflight MIN-5 후속).
     # BacktestDashboard 가 'rec_price → current_price' 로 수익률을 시각화하려면
     # 추천 시점 가격이 고정 저장돼야 함. 기존 recommendations 에서 동일 ticker 의
@@ -4359,8 +4372,10 @@ def main():
             else:
                 print(f"  최근 7일 유의미한 오심 없음")
 
-            # 2026-05-24: postmortem_auto_evolve wire (P0 유령 모듈 활성화).
+            # 2026-05-24 wire / 2026-06-03 정정: ledger 적재·관측 only.
             # postmortem.misleading_factors → EWMA factor weight learning + ledger 적재.
+            # ⚠ quarantine 결과는 brain 점수에 자동 반영 안 함 (N 부족 — factor_decay 5/23 동결과
+            # 일관, RULE 7 곡선맞추기 방지). 적용 활성화 = 유효 N 마일스톤 + PM 재승인.
             try:
                 from api.intelligence.postmortem_auto_evolve import evaluate_and_persist
                 _ae = evaluate_and_persist(portfolio)
