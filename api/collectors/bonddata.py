@@ -103,13 +103,17 @@ def _ecos_yield_curve() -> Dict[str, Any]:
     if not ECOS_API_KEY:
         return {}
 
+    # ECOS stat 817Y002 국고채 item 코드 (2026-06-03 정정 — 메타 API StatisticItemList 확인).
+    # 옛 코드는 mislabel/오류: "1Y"=010200000(실제 3년), "3Y"=010210000(실제 10년),
+    # 5Y/10Y 코드(010200002/010210001)는 무효 → KR 커브 라벨 오류 + 5Y/10Y/2Y 누락 사고.
     tenor_map = {
-        "1Y":  ("817Y002", "010200000"),
-        "3Y":  ("817Y002", "010210000"),
-        "5Y":  ("817Y002", "010200002"),
-        "10Y": ("817Y002", "010210001"),
-        "20Y": ("817Y002", "010220000"),
-        "30Y": ("817Y002", "010230000"),
+        "1Y":  ("817Y002", "010190000"),  # 국고채(1년)
+        "2Y":  ("817Y002", "010195000"),  # 국고채(2년)
+        "3Y":  ("817Y002", "010200000"),  # 국고채(3년)
+        "5Y":  ("817Y002", "010200001"),  # 국고채(5년)
+        "10Y": ("817Y002", "010210000"),  # 국고채(10년)
+        "20Y": ("817Y002", "010220000"),  # 국고채(20년)
+        "30Y": ("817Y002", "010230000"),  # 국고채(30년)
     }
 
     curve: List[Dict[str, Any]] = []
@@ -179,7 +183,18 @@ def get_bond_market_summary() -> Dict[str, Any]:
     pykrx_data = _pykrx_bond_yields()
     ecos_data = _ecos_yield_curve()
 
-    curve = pykrx_data.get("curve") or ecos_data.get("curve") or []
+    # ECOS(BOK 공식, credential 불요) 우선 + pykrx 보충 — 만기 union (2026-06-03 정정).
+    # 옛 'pykrx OR ecos' = pykrx 부분 성공(KRX 로그인 실패에도 일부 반환) 시 ECOS 통째 무시 →
+    # KR 커브 결손(5Y/10Y/2Y 누락). 두 소스 병합으로 결손 방지, ECOS 값 우선.
+    _by_tenor: Dict[str, Any] = {}
+    for _c in (pykrx_data.get("curve") or []):
+        if isinstance(_c, dict) and _c.get("tenor"):
+            _by_tenor[_c["tenor"]] = _c
+    for _c in (ecos_data.get("curve") or []):
+        if isinstance(_c, dict) and _c.get("tenor"):
+            _by_tenor[_c["tenor"]] = _c
+    _kr_order = {t: i for i, t in enumerate(["1Y", "2Y", "3Y", "5Y", "10Y", "20Y", "30Y"])}
+    curve = sorted(_by_tenor.values(), key=lambda c: _kr_order.get(c.get("tenor"), 99))
 
     if curve:
         result["curve"] = curve
