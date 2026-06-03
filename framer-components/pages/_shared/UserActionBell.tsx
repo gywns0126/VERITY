@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
  * VERITY — User Action Bell (TIDE 디자인 풀카피, 2026-05-26).
  *
  * TIDE 톤 흡수: flat minimal, Lora serif heading, sep borderBottom 구분선.
- * 시그너처 라임 #B5FF17 보존 (PM 5/25 결정, TIDE 민트 #7fffa0 → 라임 차환).
+ * 브랜드 TIDE 초록 #7fffa0 (PM 5/30 결단 — 라임 #B5FF17 폐기. 5/25 라임 차환 결정 번복).
  *
  * 기능 보존 (VERITY 자기 자산):
  *   - Supabase REST + JWT + RPC (action_queue_complete / action_queue_skip)
@@ -25,9 +25,9 @@ const T = {
     borderStrong: "rgba(255,255,255,0.12)",
     text: "#ffffff",
     muted: "#6b7280",
-    accent: "#B5FF17",
+    accent: "#7fffa0",
     accentDim: "#7A9F2E",
-    accentSoft: "rgba(181,255,23,0.08)",
+    accentSoft: "rgba(127, 255, 160,0.08)",
     danger: "#ff5a5a",
     warn: "#ffa05a",
     info: "#5BA9FF",
@@ -363,7 +363,7 @@ export default function UserActionBell(props: Props) {
             height: 8,
             borderRadius: 999,
             background: todayP0 > 0 ? T.danger : T.accent,
-            boxShadow: `0 0 0 2px ${T.bgCard}, 0 0 6px ${todayP0 > 0 ? "rgba(255,90,90,0.5)" : "rgba(181,255,23,0.5)"}`,
+            boxShadow: `0 0 0 2px ${T.bgCard}, 0 0 6px ${todayP0 > 0 ? "rgba(255,90,90,0.5)" : "rgba(127, 255, 160,0.5)"}`,
         }
 
     const panel: React.CSSProperties = {

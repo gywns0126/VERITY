@@ -6,20 +6,20 @@ import React, { useEffect, useState, useRef } from "react"
  * ────────────────────────────────────────────────────────────── */
 const C = {
     bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
-    border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#B5FF17",
+    border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
     textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
-    accent: "#B5FF17", accentSoft: "rgba(181,255,23,0.12)",
-    strongBuy: "#22C55E", buy: "#B5FF17", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
+    strongBuy: "#22C55E", buy: "#2DD4BF", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
     info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
     brandFactor: "#A78BFA", brandClaude: "#A855F7",
     hoverOverlay: "rgba(255,255,255,0.04)", activeOverlay: "rgba(255,255,255,0.08)",
-    focusRing: "rgba(181,255,23,0.35)", scrim: "rgba(0,0,0,0.5)",
+    focusRing: "rgba(127, 255, 160,0.35)", scrim: "rgba(0,0,0,0.5)",
 }
 const G = {
-    accent: "0 0 8px rgba(181,255,23,0.35)",
-    accentSoft: "0 0 4px rgba(181,255,23,0.20)",
-    accentStrong: "0 0 12px rgba(181,255,23,0.50)",
+    accent: "0 0 8px rgba(127, 255, 160,0.35)",
+    accentSoft: "0 0 4px rgba(127, 255, 160,0.20)",
+    accentStrong: "0 0 12px rgba(127, 255, 160,0.50)",
     danger: "0 0 6px rgba(239,68,68,0.30)",
 }
 const T = {
@@ -716,7 +716,7 @@ export default function VerityReport(props: Props) {
                     <div style={bodyWrap}>
                         {/* 핵심 요약 배너 */}
                         {periodicReport.executive_summary && (
-                            <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,23,0.08), rgba(181,255,23,0.02))`, borderRadius: R.md, }}>
+                            <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(127, 255, 160,0.08), rgba(127, 255, 160,0.02))`, borderRadius: R.md, }}>
                                 <span style={{ color: C.accent, fontSize: T.sub, fontWeight: T.w_black, fontFamily: font, lineHeight: T.lh_normal }}>
                                     {periodicReport.executive_summary}
                                 </span>
@@ -754,7 +754,7 @@ export default function VerityReport(props: Props) {
                                             <div style={{ color: C.textTertiary, fontSize: T.body, fontFamily: font, padding: `${S.md}px 0` }}>데이터 누적 중</div>
                                         )}
                                     </div>
-                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,23,0.10), ${C.bgElevated})`, borderRadius: R.md, boxShadow: "none" }}>
+                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(127, 255, 160,0.10), ${C.bgElevated})`, borderRadius: R.md, boxShadow: "none" }}>
                                         <div style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: 0.5, marginBottom: S.sm, fontFamily: font }}>
                                             이번 리포트 기대수익률
                                         </div>
@@ -1117,7 +1117,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
             })()}
 
             {hasReport && (
-                <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,23,0.08), rgba(181,255,23,0.02))`, }}>
+                <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(127, 255, 160,0.08), rgba(127, 255, 160,0.02))`, }}>
                     <span style={{ color: C.accent, fontSize: T.title, fontWeight: T.w_black, fontFamily: font, lineHeight: T.lh_normal }}>{report.market_summary || "—"}</span>
                 </div>
             )}

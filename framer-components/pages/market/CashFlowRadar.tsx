@@ -27,9 +27,9 @@ import { useEffect, useState, type CSSProperties } from "react"
  * ────────────────────────────────────────────────────────────── */
 const C = {
     bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
-    border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#B5FF17",
+    border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
     textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
-    accent: "#B5FF17", accentSoft: "rgba(181,255,23,0.12)",
+    accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
 }
 const T = {
@@ -340,7 +340,7 @@ function RadarChart({ scores }: { scores: Record<AssetKey, { score: number | nul
                 {/* 데이터 polygon */}
                 <polygon
                     points={polygonStr}
-                    fill="rgba(181,255,23,0.18)"
+                    fill="rgba(127, 255, 160,0.18)"
                     stroke={C.accent}
                     strokeWidth={2}
                     strokeLinejoin="round"

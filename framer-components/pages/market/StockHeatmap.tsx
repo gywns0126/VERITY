@@ -30,14 +30,14 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
  * ────────────────────────────────────────────────────────────── */
 const C = {
     bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
-    border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#B5FF17",
+    border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
     textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
-    accent: "#B5FF17", accentSoft: "rgba(181,255,23,0.12)",
-    strongBuy: "#22C55E", buy: "#B5FF17", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
+    strongBuy: "#22C55E", buy: "#2DD4BF", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
 }
 const G = {
-    accent: "0 0 8px rgba(181,255,23,0.35)",
+    accent: "0 0 8px rgba(127, 255, 160,0.35)",
     success: "0 0 6px rgba(34,197,94,0.30)",
     danger: "0 0 6px rgba(239,68,68,0.30)",
 }
@@ -261,7 +261,7 @@ export default function StockHeatmap({ dataUrl, market }: Props) {
                     const grade = vb.grade
                     const gradeColor =
                           grade === "STRONG_BUY" ? "#22C55E"
-                        : grade === "BUY"        ? "#B5FF17"
+                        : grade === "BUY"        ? "#2DD4BF"
                         : grade === "WATCH"      ? "#FFD600"
                         : grade === "CAUTION"    ? "#F59E0B"
                         : grade === "AVOID"      ? "#EF4444"

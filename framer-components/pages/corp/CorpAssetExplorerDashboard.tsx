@@ -12,9 +12,9 @@ import React, { useEffect, useState } from "react"
 /* ◆ VERITY 터미널 토큰 (project color styles: /VERITY /Base /배경 /Border) ◆ */
 const C = {
     bgPage: "#08070E", bgCard: "#0E0F11", bgElevated: "#16161D", bgInput: "#1C1C25",
-    border: "#202026", borderStrong: "#2E2E37", borderHover: "#B5FF17",
+    border: "#202026", borderStrong: "#2E2E37", borderHover: "#7fffa0",
     textPrimary: "#F2F3F5", textSecondary: "#9AA0AA", textTertiary: "#5E5E68",
-    accent: "#B5FF17", accentSoft: "rgba(181,255,23,0.12)",
+    accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     gradeHOT: "#EF4444", gradeWARM: "#F59E0B", gradeNEUT: "#9AA0AA",
     statusPos: "#22C55E", statusNeg: "#EF4444",
 }

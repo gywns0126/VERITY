@@ -12,7 +12,7 @@ const C = {
     bgCard: "#0E0F11", bgElevated: "#16161D", bgInput: "#1C1C25",
     borderStrong: "#2E2E37", borderSoft: "#202026",
     textPrimary: "#F2F3F5", textSecondary: "#9AA0AA", textTertiary: "#5E5E68",
-    accent: "#B5FF17", accentSoft: "rgba(181,255,23,0.12)",
+    accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
 }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
