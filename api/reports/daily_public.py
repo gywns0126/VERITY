@@ -375,18 +375,58 @@ def _detect_section_cross_refs(sections: Dict[str, Any]) -> list:
 
 # ─── 내부 유틸 ────────────────────────────────────────────────
 
+def _extract_text_and_reason(response) -> tuple:
+    """google-genai 응답에서 텍스트 + finish_reason 안전 추출.
+
+    response.text 직접 접근은 finish_reason != STOP(RECITATION/SAFETY/MAX_TOKENS) 시
+    경고/예외 → candidates 경유로 빈 생성 원인을 진단 가능하게 노출한다.
+    """
+    try:
+        cands = getattr(response, "candidates", None) or []
+        if not cands:
+            pf = getattr(response, "prompt_feedback", None)
+            br = getattr(pf, "block_reason", None) if pf else None
+            return "", f"no_candidates(block={br})"
+        c = cands[0]
+        fr = getattr(c, "finish_reason", None)
+        content = getattr(c, "content", None)
+        parts = getattr(content, "parts", None) or []
+        txt = "".join((getattr(p, "text", "") or "") for p in parts).strip()
+        return txt, str(fr)
+    except Exception as e:
+        return "", f"extract_err:{type(e).__name__}"
+
+
 def _default_gemini_caller(prompt: str) -> str:
-    """기본 Gemini 호출. 일반인용은 가벼운 모델 사용."""
+    """기본 Gemini 호출. 일반인용은 가벼운 모델 사용.
+
+    2026-06-03 공개 리포트 ~40% out=0 빈 생성 사고 정공법 — response.text 가
+    빈 생성을 silent 삼켜 finish_reason 진단 불가였음. (1) response_mime_type=
+    application/json 으로 recitation/prose 차단 (2) candidates 경유 finish_reason
+    진단 stderr (3) 간헐적 block 대비 1회 재시도. 2회 모두 빈 생성이면 명확한
+    예외 → caller 의 success=False 경로 유지.
+    """
+    import sys
     from api.analyzers.gemini_analyst import init_gemini, _pick_model
 
     client = init_gemini()
     model = _pick_model(critical=False)
-    response = client.models.generate_content(
-        model=model,
-        contents=prompt,
-        config={"system_instruction": "JSON 만 출력하라. 마크다운 코드 펜스 금지."},
-    )
-    return (response.text or "").strip()
+    reason = "unknown"
+    for attempt in range(2):
+        response = client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config={
+                "system_instruction": "JSON 만 출력하라. 마크다운 코드 펜스 금지.",
+                "response_mime_type": "application/json",
+            },
+        )
+        text, reason = _extract_text_and_reason(response)
+        if text:
+            return text
+        print(f"[daily_public] 빈 생성 attempt={attempt + 1}/2 finish_reason={reason}",
+              file=sys.stderr, flush=True)
+    raise RuntimeError(f"empty_generation(finish_reason={reason})")
 
 
 def _parse_llm_json(raw: str) -> Dict[str, Any]:
