@@ -385,6 +385,17 @@ def _format_framework_block(title: str, payload) -> str:
     return f"{title}:\n{body}"
 
 
+# 수치·종목 환각 차단 공유 가드 (2026-06-03). verdict/gold_insight/market_analysis 가
+# '숫자 근거 필수'를 요구하면서 grounding 제약이 없어 LLM 이 학습 기억 수치를 지어냈음
+# (삼성전자 65,000원·환율 1482.7 류). 모든 분석 경로가 공유하는 system_instruction 에 부착.
+_GEMINI_GROUNDING_GUARD = """
+
+[수치·종목 grounding — 절대 규칙]
+- 현재가·등락률·VIX·환율·지수 등 모든 수치는 프롬프트에 제공된 데이터의 값만 그대로 쓴다. 제공되지 않은 수치를 학습 기억으로 생성·추정 금지 (학습 시점 값은 현재와 크게 다름).
+- 프롬프트에 없는 종목명을 임의로 등장시키지 말 것. 보유 여부는 제공된 정보로만 판단.
+- 근거 수치가 없으면 수치 없이 정성적으로만 서술하거나 생략한다."""
+
+
 def _load_system_instruction() -> str:
     """verity_constitution.json에서 system_instruction 로드 (프로세스 내 1회 캐시).
 
@@ -428,6 +439,8 @@ def _load_system_instruction() -> str:
             "너는 15년 차 한국 펀드매니저다.\n"
             "사용자를 '대표님'으로 호칭. 존댓말 필수. 숫자 근거 중심."
         )
+    # 정상/폴백 양 경로 공통 — 수치·종목 환각 차단 가드 부착 (안정 prefix 유지, 캐시 친화).
+    _SYS_INSTR_CACHE = _SYS_INSTR_CACHE + _GEMINI_GROUNDING_GUARD
     return _SYS_INSTR_CACHE
 
 
