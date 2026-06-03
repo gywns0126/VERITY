@@ -21,6 +21,7 @@ from api.config import (
     ANTHROPIC_API_KEY,
     CLAUDE_MODEL_LIGHT,
     CLAUDE_MODEL_DEFAULT,
+    now_kst,
 )
 
 # 수치·종목 환각 차단 공유 가드 (2026-06-03 삼성전자 65,000원·환율 1482.7·보유 단정 사고).
@@ -641,7 +642,11 @@ VIX: {macro.get('vix', {}).get('value', '?')} | 환율: {macro.get('usd_krw', {}
 JSON만:
 {{"scenario": "내일 시장 핵심 시나리오 1문장", "watch_points": ["주목 포인트 1", "주목 포인트 2"], "risk_note": "리스크 주의사항 1문장", "top_pick_comment": "브레인 상위 종목 중 내일 특히 주목할 종목과 이유 1문장"}}"""
 
-    return _call_claude(_MORNING_SYSTEM, prompt, max_tokens=500)
+    result = _call_claude(_MORNING_SYSTEM, prompt, max_tokens=500)
+    # per-section 타임스탬프 — 소비자/검수가 staleness 판별 가능하게 (feedback_macro_timestamp_policy).
+    if isinstance(result, dict):
+        result["generated_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+    return result
 
 
 @mockable("claude.brain_drift")
