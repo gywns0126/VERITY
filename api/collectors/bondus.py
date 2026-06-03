@@ -5,6 +5,7 @@
   - IG / HY 신용 스프레드 (ICE BofA OAS)
 기존 fred_macro.py의 _fetch_series 패턴을 재사용.
 """
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -34,34 +35,46 @@ _CREDIT_SERIES = {
 }
 
 
-def _fetch_latest(series_id: str, limit: int = 5) -> Optional[float]:
-    """FRED 시리즈 최신 관측값 1개."""
+def _fetch_latest(series_id: str, limit: int = 10, retries: int = 3) -> Optional[float]:
+    """FRED 시리즈 최신 관측값 1개. transient 실패(timeout/5xx/429) 시 backoff 재시도.
+
+    2026-06-03 fix: retry 부재로 11개 시리즈 루프 중 일부가 간헐 실패 → US 커브 부분 결손
+    (run 마다 다른 만기 누락 = '불안정'; 2Y/10Y 누락 시 spread 계산 불가 → 채권 viz 공백 +
+    MarketHorizon 침체확률 '?' 연쇄). limit 5→10 = '.' 공백일 헤더룸 확보.
+    """
     if not FRED_API_KEY:
         return None
-    try:
-        r = requests.get(
-            FRED_OBS_URL,
-            params={
-                "series_id": series_id,
-                "api_key": FRED_API_KEY,
-                "file_type": "json",
-                "sort_order": "desc",
-                "limit": limit,
-            },
-            timeout=20,
-        )
-        if r.status_code != 200:
-            return None
-        for obs in r.json().get("observations", []):
-            raw = obs.get("value")
-            if raw in (".", "", None):
+    for attempt in range(retries):
+        try:
+            r = requests.get(
+                FRED_OBS_URL,
+                params={
+                    "series_id": series_id,
+                    "api_key": FRED_API_KEY,
+                    "file_type": "json",
+                    "sort_order": "desc",
+                    "limit": limit,
+                },
+                timeout=20,
+            )
+            if r.status_code != 200:
+                if r.status_code in (429, 500, 502, 503, 504) and attempt < retries - 1:
+                    time.sleep(0.6 * (attempt + 1))
+                    continue
+                return None
+            for obs in r.json().get("observations", []):
+                raw = obs.get("value")
+                if raw in (".", "", None):
+                    continue
+                try:
+                    return float(raw)
+                except (TypeError, ValueError):
+                    continue
+            return None  # 200 정상이나 유효값 없음 — 재시도 무의미
+        except Exception:
+            if attempt < retries - 1:
+                time.sleep(0.6 * (attempt + 1))
                 continue
-            try:
-                return float(raw)
-            except (TypeError, ValueError):
-                continue
-    except Exception:
-        pass
     return None
 
 
