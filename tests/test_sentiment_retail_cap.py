@@ -47,8 +47,10 @@ def test_retail_cap_meme_stock_pump():
       x_sentiment 0.125, social_sentiment 0.085 → retail 합 0.21
       RETAIL_CAP_BASE 0.22 → retail 21% < cap 22% = **정상 운영 cap 미발동**
 
-    Test 7-source active (신규 6 미셋업) 환경에서 actual:
-      - score: 63
+    2026-06-03: constitution sentiment weights 를 13개 설계값(_default_w)과 동기화 후 actual:
+      - score: 62 (이전 63 = constitution 7개가 신규 6개 _default_w 와 혼재해 w_sum=1.26
+        이던 출처 이중화 상태값. 단일 출처(w_sum=1.0) 회복으로 1점 미세 변동 — weight
+        재배분의 정당한 귀결, retail cap 의도/동작은 불변)
       - retail_cap_applied: False
       - retail_excess_score: 0.0
 
@@ -60,8 +62,8 @@ def test_retail_cap_meme_stock_pump():
     result = _compute_sentiment_score(stock, portfolio)
 
     # ── 13-source hard-wire 산식: x=100/social=100 = retail 21% < cap 22% → cap 미발동 ──
-    assert result["score"] == 63, (
-        f"expected 63 with 13-source hard-wire, got {result['score']} "
+    assert result["score"] == 62, (
+        f"expected 62 with 13-source single-source weights, got {result['score']} "
         f"(retail_excess={result.get('retail_excess_score')})"
     )
 

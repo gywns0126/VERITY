@@ -109,17 +109,23 @@
     }
   },
   "sentiment_score": {
-    "description": "심리/감성 기반 종합 점수 (0~100). V5.1: 전체 7개 소스 가중치 합 = 1.0",
+    "description": "심리/감성 기반 종합 점수 (0~100). V5.2: 전체 13개 소스 가중치 합 = 1.0",
     "weights": {
-      "news_sentiment": 0.25,
-      "x_sentiment": 0.18,
-      "market_mood": 0.18,
-      "consensus_opinion": 0.12,
-      "crypto_macro": 0.08,
-      "market_fear_greed": 0.1,
-      "social_sentiment": 0.09
+      "news_sentiment": 0.175,
+      "x_sentiment": 0.125,
+      "market_mood": 0.125,
+      "consensus_opinion": 0.1,
+      "crypto_macro": 0.065,
+      "market_fear_greed": 0.065,
+      "social_sentiment": 0.085,
+      "fx_sentiment": 0.05,
+      "commodity_sentiment": 0.04,
+      "global_index_decoupling": 0.04,
+      "geopolitical_score": 0.06,
+      "macro_headlines": 0.05,
+      "market_horizon_link": 0.02
     },
-    "notes": "V5.1: crypto_macro/market_fear_greed/social_sentiment을 동적 delta에서 정규 가중치로 승격. 기존 4개 소스 비율 유지하면서 재배분."
+    "notes": "V5.2 (2026-06-03 PM승인): 구버전 7개(합1.0)가 코드 _default_w 13개를 덮어써 w_sum=1.26 → 신규 6 매크로 소스 희석되던 출처 이중화(RULE7) 정정. 코드 sentiment.py _default_w(2026-05-16 Phase B Perplexity 자문 설계값)와 동기화 = 단일 출처. 기존 7개 합 0.74 + 신규 6개 합 0.26. 신호 영향(기존 7개 비중 축소)은 의도된 설계 복원이며 곡선맞추기 아님."
   },
   "vci": {
     "description": "Verity Contrarian Index — 팩트와 심리의 괴리율",
