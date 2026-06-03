@@ -16,12 +16,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from api.config import DART_API_KEY, DATA_DIR
 
 MAPPING_PATH = os.path.join(DATA_DIR, "mapping.json")
+# {종목코드: 종목명} — 챗 name_resolver 가 역맵으로 종목명→코드 결정적 변환 (L2, 2026-06-03).
+# corp_list 를 어차피 순회하므로 추가 API 호출 0. 챗(Vercel)은 publish 된 이 파일만 읽음.
+NAME_MAP_PATH = os.path.join(DATA_DIR, "kr_stock_names.json")
+_NAME_MAP_MAX_AGE_S = 30 * 24 * 3600  # 30일 — 신규 상장 흡수 주기 (월1회 갱신 등가)
 
 _mapping_cache: Optional[Dict[str, str]] = None
+_name_ensured = False
 
 
 def build_mapping() -> Dict[str, str]:
-    """dart-fss로 전체 상장사 목록을 받아 {종목코드: 고유번호} dict를 생성·저장한다."""
+    """dart-fss로 전체 상장사 목록을 받아 {종목코드: 고유번호} + {종목코드: 종목명} 동시 생성·저장."""
     if not DART_API_KEY:
         raise RuntimeError("DART_API_KEY 환경변수가 설정되지 않았습니다.")
 
@@ -29,17 +34,46 @@ def build_mapping() -> Dict[str, str]:
     corp_list = dart_fss.get_corp_list()
 
     mapping: Dict[str, str] = {}
+    names: Dict[str, str] = {}
     for corp in corp_list:
         stock_code = getattr(corp, "stock_code", None)
         corp_code = getattr(corp, "corp_code", None)
         if stock_code and corp_code:
-            mapping[stock_code.strip()] = corp_code.strip()
+            sc = stock_code.strip()
+            mapping[sc] = corp_code.strip()
+            nm = (getattr(corp, "corp_name", None) or "").strip()
+            if nm:
+                names[sc] = nm
 
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(MAPPING_PATH, "w", encoding="utf-8") as f:
         json.dump(mapping, f, ensure_ascii=False, indent=2)
+    with open(NAME_MAP_PATH, "w", encoding="utf-8") as f:
+        json.dump(names, f, ensure_ascii=False, indent=2)
 
     return mapping
+
+
+def ensure_name_map() -> None:
+    """kr_stock_names.json 이 없거나 30일 초과면 재생성 (dart-fss). fail-safe — 실패해도 진행.
+
+    daily_analysis_full(DART_API_KEY 보유, git add data/ broad, publish-data 호출)의
+    load_mapping 경유로 발동 → 생성·커밋·publish 자동 (전용 cron 불필요). 프로세스당 1회.
+    """
+    global _name_ensured
+    if _name_ensured:
+        return
+    _name_ensured = True
+    try:
+        import time as _t
+        need = True
+        if os.path.exists(NAME_MAP_PATH):
+            need = (_t.time() - os.path.getmtime(NAME_MAP_PATH)) > _NAME_MAP_MAX_AGE_S
+        if need and DART_API_KEY:
+            sys.stderr.write("[name_map] kr_stock_names.json 생성/갱신 (dart-fss, ~1분)\n")
+            build_mapping()
+    except Exception as _e:  # 분석 파이프라인을 깨지 않음
+        sys.stderr.write(f"[name_map] ensure 실패(무시): {type(_e).__name__}: {_e}\n")
 
 
 def load_mapping() -> Dict[str, str]:
@@ -73,6 +107,7 @@ def load_mapping() -> Dict[str, str]:
 
     with open(MAPPING_PATH, "r", encoding="utf-8") as f:
         _mapping_cache = json.load(f)
+    ensure_name_map()  # 이름맵 동반 보장 (fail-safe, 프로세스당 1회)
     return _mapping_cache
 
 

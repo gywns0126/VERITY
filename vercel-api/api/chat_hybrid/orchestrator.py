@@ -326,6 +326,14 @@ def _run_hybrid_core(
     # → ungrounded 티커가 있으면 web grounding 을 강제해 실시간 시세를 주입한다.
     related_up = [str(t).upper() for t in intent.get("related_tickers", []) if t]
     matched_up = {str(t).upper() for t in brain_ctx.get("matched_tickers", [])}
+    # L2 — classifier 가 종목명을 코드로 못 바꿨거나(누락) 안 넣은 경우를 결정적으로 보강.
+    # DART 마스터 역맵으로 query 내 종목명→코드 (LLM 무관 → 코드 환각 0). 부재 시 [] = 무영향.
+    try:
+        from api.chat_hybrid.search import name_resolver
+        resolved = name_resolver.resolve(query, exclude=matched_up, limit=3)
+    except Exception:
+        resolved = []
+    related_up = list(dict.fromkeys(related_up + [str(c).upper() for c in resolved]))
     ungrounded_tickers = [t for t in related_up if t not in matched_up]
     if ungrounded_tickers:
         if intent_type == "portfolio_only":

@@ -142,3 +142,55 @@ def test_kis_quote_failure_returns_none(monkeypatch):
         raise OSError("railway down")
     monkeypatch.setattr(_kq.urllib.request, "urlopen", _boom)
     assert _kq.fetch_kr_quote("005930") is None
+
+
+# ── L2: 결정적 종목명→코드 resolver (LLM 무관, 코드 환각 0) ──
+from api.chat_hybrid.search import name_resolver as _nr
+
+_STUB_NAMES = {  # {code: name}
+    "005930": "삼성전자",
+    "006400": "삼성SDI",
+    "000660": "SK하이닉스",
+    "017670": "SK텔레콤",
+    "A": "에",  # 1글자 — 제외돼야 (오매칭 위험)
+}
+
+
+def _use_stub(monkeypatch):
+    monkeypatch.setattr(_nr, "_load_raw", lambda: dict(_STUB_NAMES))
+    _nr._cache["pairs"] = None  # 캐시 무효화
+    _nr._cache["ts"] = 0.0
+
+
+def test_resolver_name_to_code(monkeypatch):
+    _use_stub(monkeypatch)
+    assert _nr.resolve("삼성전자 어때?") == ["005930"]
+    assert _nr.resolve("SK하이닉스 전망") == ["000660"]
+
+
+def test_resolver_longest_first_no_substring_dup(monkeypatch):
+    # '삼성전자' 매칭 후 '삼성SDI'(별개) 도 query 에 있으면 둘 다, 단 '삼성'이 내부 재매칭 X
+    _use_stub(monkeypatch)
+    codes = _nr.resolve("삼성전자랑 삼성SDI 비교")
+    assert "005930" in codes and "006400" in codes
+
+
+def test_resolver_excludes_universe(monkeypatch):
+    # 이미 유니버스 매칭된 코드는 제외 (중복 grounding 방지)
+    _use_stub(monkeypatch)
+    assert _nr.resolve("삼성전자 어때?", exclude={"005930"}) == []
+
+
+def test_resolver_limit_and_1char_filtered(monkeypatch):
+    _use_stub(monkeypatch)
+    # 1글자 이름('에')은 후보에서 제외 — 오매칭 위험
+    pairs = _nr._sorted_pairs()
+    assert all(len(n) >= 2 for n, _ in pairs)
+
+
+def test_resolver_empty_map_noop(monkeypatch):
+    # 맵 부재(파일 없음) → [] (web grounding 폴백, 무영향)
+    monkeypatch.setattr(_nr, "_load_raw", lambda: {})
+    _nr._cache["pairs"] = None
+    _nr._cache["ts"] = 0.0
+    assert _nr.resolve("삼성전자 어때?") == []
