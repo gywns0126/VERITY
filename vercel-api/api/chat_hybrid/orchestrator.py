@@ -340,6 +340,34 @@ def _run_hybrid_core(
             "reason": "유니버스 밖 종목 — 실시간 시세 grounding 강제",
         }
 
+        # 갈래 B — 유니버스 밖 KR 6자리 종목: Railway read-only KIS 시세 주입.
+        # RULE 1: KIS 직접 호출/발급 X. Railway(공유토큰 read 소비자) /chart?type=price HTTP 호출만.
+        # 실패 시 brain_ctx 변화 없음 → web grounding(위에서 강제)이 fallback.
+        kr_ung = [t for t in ungrounded_tickers if t.isdigit() and len(t) == 6]
+        if kr_ung:
+            try:
+                from api.chat_hybrid.search import kis_quote
+                quotes = kis_quote.fetch_kr_quotes(kr_ung[:3])
+            except Exception as _e:
+                quotes = {}
+                metrics["kis_quote_error"] = str(_e)[:120]
+            if quotes:
+                qlines = ["\n[KIS 실시간 시세 (Railway read-only)]"]
+                for tk, q in quotes.items():
+                    chg = q.get("change_pct")
+                    qlines.append(
+                        f"  {tk}: 현재가 {q['price']:,}원"
+                        + (f" ({chg:+.2f}%)" if isinstance(chg, (int, float)) else "")
+                    )
+                brain_ctx["text"] = (brain_ctx.get("text", "") + "\n" + "\n".join(qlines)).strip()
+                metrics["kis_quotes"] = list(quotes.keys())
+                yield {
+                    "type": "status",
+                    "stage": "kis_quote",
+                    "tickers": list(quotes.keys()),
+                    "source": "railway_readonly",
+                }
+
     # 5. External 호출 분기
     perplexity_result = None
     grounding_result = None

@@ -87,3 +87,58 @@ def test_ticker_block_no_fresh_falls_back():
     )
     assert "KIS 실시간" not in blk
     assert "111" in blk
+
+
+# ── 갈래 B: 유니버스 밖 KR on-demand 시세 (Railway read-only, RULE 1 안전) ──
+from api.chat_hybrid.search import kis_quote as _kq
+
+
+class _FakeResp:
+    def __init__(self, payload):
+        import json as _j
+        self._b = _j.dumps(payload).encode()
+
+    def read(self):
+        return self._b
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def test_kis_quote_rejects_non_kr(monkeypatch):
+    # 미국 티커/종목명/빈값 → None (네트워크 호출 없이 즉시 거부)
+    def _no_net(*a, **k):
+        raise AssertionError("US 티커는 네트워크 호출하면 안 됨")
+    monkeypatch.setattr(_kq.urllib.request, "urlopen", _no_net)
+    assert _kq.fetch_kr_quote("NVDA") is None
+    assert _kq.fetch_kr_quote("AAPL") is None
+    assert _kq.fetch_kr_quote("") is None
+
+
+def test_kis_quote_parses_railway(monkeypatch):
+    monkeypatch.setattr(
+        _kq.urllib.request, "urlopen",
+        lambda req, timeout=0: _FakeResp({"price": {"price": 365000, "change_pct": 1.23}}),
+    )
+    q = _kq.fetch_kr_quote("005930")
+    assert q == {"ticker": "005930", "price": 365000, "change_pct": 1.23}
+
+
+def test_kis_quote_zero_price_returns_none(monkeypatch):
+    # 가격 0/누락 → None (caller=web fallback)
+    monkeypatch.setattr(
+        _kq.urllib.request, "urlopen",
+        lambda req, timeout=0: _FakeResp({"price": {"price": 0}}),
+    )
+    assert _kq.fetch_kr_quote("005930") is None
+
+
+def test_kis_quote_failure_returns_none(monkeypatch):
+    # Railway 호출 예외 → None (RULE 1: 발급 시도 없음, 조용히 web fallback)
+    def _boom(req, timeout=0):
+        raise OSError("railway down")
+    monkeypatch.setattr(_kq.urllib.request, "urlopen", _boom)
+    assert _kq.fetch_kr_quote("005930") is None
