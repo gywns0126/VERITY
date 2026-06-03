@@ -172,6 +172,49 @@ def _annualized_sharpe(series: List[float]) -> Optional[float]:
     return round((mean / std) * math.sqrt(_TRADING_DAYS_PER_YEAR), 2)
 
 
+# 2026-06-03 — 과적합 인지 Sharpe 유의성. raw Sharpe 는 저N 에서 부풀려짐 →
+# PSR/DSR(Bailey-López de Prado) 병기로 "이 Sharpe 가 통계적으로 유의한가 /
+# 다중검정 착시인가" 노출. 1인 운영자 자기기만 가드 (최강 루프의 validate rigor).
+# n_trials = Brain 결합 factor 폭 ≈ 다중검정 횟수 (보수 가정, 출력에 라벨 노출).
+_DSR_N_TRIALS_ASSUMED = 10
+
+
+def _sharpe_significance(series: List[float]) -> dict:
+    """per-period Sharpe → PSR(SR>0 유의?) + DSR(다중검정 보정). 관측 only.
+
+    🚨 verdict/pass 게이트엔 미반영 (RULE 7 — 게이트 DSR 반영은 사전등록 후).
+    psr.py 재사용 (신규 산식 0). 저N 에선 미달이 정상 (= 엣지 미증명 정직 신호).
+    """
+    try:
+        rets = _daily_log_returns(series)
+        if len(rets) < 4:
+            return {"psr": None, "dsr": None, "_note": "표본<4 — 유의성 측정 불가"}
+        mean = sum(rets) / len(rets)
+        var = sum((r - mean) ** 2 for r in rets) / (len(rets) - 1)
+        std = math.sqrt(var)
+        if std == 0:
+            return {"psr": None, "dsr": None, "_note": "std=0"}
+        sr_pp = mean / std  # per-period(비연율) Sharpe — PSR/DSR 표준 입력
+        T = len(rets)
+        from api.quant.alpha.psr import compute_psr, compute_deflated_sharpe_ratio
+        psr = compute_psr(sr_pp, 0.0, T, returns=rets)
+        dsr = compute_deflated_sharpe_ratio(sr_pp, T, _DSR_N_TRIALS_ASSUMED, returns=rets)
+        # psr.py quirk: compute_deflated_sharpe_ratio 는 deflated benchmark 로
+        # compute_psr 위임 → DSR 확률이 "psr" 키로 반환 (n_trials<1 시만 "dsr":None).
+        _dsr = dsr.get("psr", dsr.get("dsr"))
+        return {
+            "psr": psr.get("psr"),
+            "dsr": _dsr,
+            "T": T,
+            "n_trials_assumed": _DSR_N_TRIALS_ASSUMED,
+            "significant_95": (_dsr is not None and _dsr >= 0.95),
+            "_note": ("관측 only — verdict 미반영. PSR=SR>0 유의확률, "
+                      "DSR≥0.95=다중검정 보정 95% 신뢰. 저N 미달=엣지 미증명 정상"),
+        }
+    except Exception as e:
+        return {"psr": None, "dsr": None, "_error": str(e)[:60]}
+
+
 def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
     """매매 통계. start_date 이전 SELL은 제외. date 필드는 'YYYY-MM-DD HH:MM' 형식 가정 (앞 10자 파싱)."""
     start_dt = _parse_start_date(start_date)
@@ -308,6 +351,8 @@ def compute_validation_report(
         "threshold_pass": VAMS_PASS_SHARPE,
         "threshold_redesign_below": VAMS_REDESIGN_SHARPE,
         "verdict": verdict,
+        # 2026-06-03 과적합 인지 Sharpe 유의성 (관측 only, pass/verdict 미반영 = RULE 7)
+        "significance": _sharpe_significance(vams_series),
         "pass": _p(
             sharpe is not None and sharpe >= VAMS_PASS_SHARPE,
             sharpe is None or not days_ok,
