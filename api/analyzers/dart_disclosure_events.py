@@ -26,6 +26,15 @@ _UNFAITHFUL_KW = ("불성실공시", "공시번복", "공시불이행")
 _DISTRESS_KW = ("회생절차", "파산", "영업정지", "감자결정", "관리종목", "상장폐지", "거래정지")
 
 
+def _is_friday(rcept_dt: str) -> bool:
+    """YYYYMMDD → 금요일 여부. 파싱 실패 시 False."""
+    try:
+        from datetime import datetime
+        return datetime.strptime(rcept_dt[:8], "%Y%m%d").weekday() == 4
+    except (ValueError, TypeError):
+        return False
+
+
 def classify_disclosures(disclosures: List[Dict[str, Any]], window_days: int = 90) -> Dict[str, Any]:
     """공시 리스트(report_nm 포함) → 이벤트 분류. 순수 함수(I/O 없음, 완전 테스트 가능)."""
     dilution: List[str] = []
@@ -33,18 +42,27 @@ def classify_disclosures(disclosures: List[Dict[str, Any]], window_days: int = 9
     correction = 0
     unfaithful = False
 
+    owl_count = 0  # 악재(distress/불성실/희석)를 금요일에 공시한 건수 (올빼미 패턴)
     for d in disclosures or []:
         nm = str(d.get("report_nm") or "")
         dt = str(d.get("rcept_dt") or "")
         tag = f"{nm} ({dt})" if dt else nm
+        is_neg = False
         if any(k in nm for k in _DILUTION_KW):
             dilution.append(tag)
+            is_neg = True
         if any(k in nm for k in _DISTRESS_KW):
             distress.append(tag)
+            is_neg = True
         if any(k in nm for k in _CORRECTION_KW):
             correction += 1
         if any(k in nm for k in _UNFAITHFUL_KW):
             unfaithful = True
+            is_neg = True
+        # 올빼미 공시 — 악재를 금요일에 묻는 행동 패턴 (rcept_dt=YYYYMMDD, 요일 수준).
+        # 장후 시각은 list.json 미제공 → 금요일 detection 만 (soft 신호).
+        if is_neg and _is_friday(dt):
+            owl_count += 1
 
     # severity: distress 있으면 high / 유상증자·불성실 medium / 정정多 low~medium
     if distress:
@@ -65,6 +83,8 @@ def classify_disclosures(disclosures: List[Dict[str, Any]], window_days: int = 9
         parts.append("불성실공시")
     if correction:
         parts.append(f"정정공시 {correction}건")
+    if owl_count:
+        parts.append(f"올빼미(금요일 악재) {owl_count}건")
     summary = " / ".join(parts) if parts else "특이 이벤트 없음"
 
     return {
@@ -72,6 +92,7 @@ def classify_disclosures(disclosures: List[Dict[str, Any]], window_days: int = 9
         "distress_events": distress[:5],
         "correction_count": correction,
         "unfaithful_disclosure": unfaithful,
+        "owl_disclosure_count": owl_count,  # 금요일 악재 공시 (올빼미 패턴, soft)
         "event_count": len(dilution) + len(distress) + correction + (1 if unfaithful else 0),
         "severity": severity,
         "summary": summary,
