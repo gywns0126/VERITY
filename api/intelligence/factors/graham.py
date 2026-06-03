@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from api.intelligence.factors._common import _clip
+from api.intelligence.factors._common import _clip, _safe_float
 
 
 def _compute_graham_score(stock: Dict[str, Any]) -> float:
@@ -41,10 +41,13 @@ def _compute_graham_score(stock: Dict[str, Any]) -> float:
             roe = stock.get("roe", 0)
             current_ratio = 0
 
-    per = float(per) if per is not None else 0
-    pbr = float(pbr) if pbr is not None else 0
-    debt_ratio = float(debt_ratio)
-    roe = float(roe)
+    # 2026-06-03: 무방어 float() → _safe_float (per/pbr/roe 등이 'N/A'·'-' 비숫자 문자열이면
+    #   ValueError 로 _compute_graham_score 전체 크래시 → 상위에서 삼켜지면 fact_score silent 결손).
+    per = _safe_float(per, 0) or 0
+    pbr = _safe_float(pbr, 0) or 0
+    debt_ratio = _safe_float(debt_ratio, 100) or 100
+    roe = _safe_float(roe, 0) or 0
+    current_ratio = _safe_float(current_ratio, 0) or 0
 
     # PER <= 15: Graham 기준 충족
     if 0 < per <= 15:

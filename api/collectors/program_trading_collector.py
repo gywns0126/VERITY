@@ -2,19 +2,26 @@
 KRX 프로그램 매매동향 수집기
 차익/비차익 매도 폭탄 감지 → alert_engine 연동
 """
-import os
 import logging
 from datetime import date
 from typing import Optional
 
 import requests
 
+from api.config import now_kst
+
 logger = logging.getLogger(__name__)
 
 KRX_BASE = "http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
+# 2026-06-03: SEC EDGAR UA(verity@example.com)는 KRX 안티봇에 부적절 → 브라우저 UA + 세션 쿠키.
+_KRX_INDEX = "http://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd"
 HEADERS = {
-    "User-Agent": os.getenv("SEC_EDGAR_USER_AGENT", "VERITY verity@example.com"),
-    "Referer": "http://data.krx.co.kr",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+    ),
+    "Referer": "http://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd",
+    "X-Requested-With": "XMLHttpRequest",
 }
 
 # 임계값 (억원 단위)
@@ -28,13 +35,29 @@ def get_program_trading_today(target_date: Optional[date] = None) -> dict:
     KRX 프로그램 매매동향 (당일 차익/비차익 순매수 금액).
     출처: KRX 정보데이터시스템 MDCSTAT06401
     """
-    today = (target_date or date.today()).strftime("%Y%m%d")
+    # 2026-06-03: date.today() naive → now_kst().date() (GH=UTC 시 trdDd 하루 어긋남).
+    today = (target_date or now_kst().date()).strftime("%Y%m%d")
     payload = {
         "bld": "dbms/MDC/STAT/standard/MDCSTAT06401",
         "trdDd": today,
     }
     try:
-        resp = requests.post(KRX_BASE, data=payload, headers=HEADERS, timeout=10)
+        sess = requests.Session()
+        sess.headers.update(HEADERS)
+        # 세션 쿠키(JSESSIONID) 선확보 — KRX getJsonData 는 세션 없으면 400 LOGOUT 반환.
+        try:
+            sess.get(_KRX_INDEX, timeout=10)
+        except Exception:
+            pass
+        resp = sess.post(KRX_BASE, data=payload, timeout=10)
+        # 🚨 2026-06-03 진단: status 400 또는 body 'LOGOUT' = bld 코드 폐기/세션 거부 (휴장 빈응답과 구분).
+        #   현재 MDCSTAT06401 이 LOGOUT 반환 → KRX bld 변경 의심. 올바른 bld 외부 verify 필요 (검증 큐).
+        if resp.status_code == 400 or resp.text.strip() == "LOGOUT":
+            logger.error(
+                "[Program] KRX bld 거부 (status=%s body=%r) — MDCSTAT06401 폐기 의심, bld 재확인 필요",
+                resp.status_code, resp.text[:40],
+            )
+            return _fallback(today, note="KRX bld 거부 (LOGOUT) — bld 코드 재확인 필요")
         resp.raise_for_status()
         raw = resp.json()
         rows = raw.get("output", [])

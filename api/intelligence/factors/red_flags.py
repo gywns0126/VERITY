@@ -284,10 +284,11 @@ def _detect_red_flags(
     earnings = stock.get("earnings", {})
     next_e = earnings.get("next_earnings")
     if next_e:
-        from datetime import datetime
         try:
-            d = datetime.strptime(next_e[:10], "%Y-%m-%d")
-            days = (d - datetime.now()).days
+            # 2026-06-03: naive datetime.now() → now_kst() (GH=UTC 시 D-day 하루 오차).
+            #   date 끼리 비교 (aware-naive 혼용 TypeError 회피). feedback_tz_aware.
+            d = _datetime.strptime(next_e[:10], "%Y-%m-%d").date()
+            days = (d - now_kst().date()).days
             if 0 <= days <= 1:
                 # next_earnings 는 미래 이벤트 — freshness 미적용 (event_date 생략)
                 downgrade_d.append(_make_flag(f"실적 발표 D-{days}"))
