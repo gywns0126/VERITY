@@ -363,6 +363,14 @@ class KISBroker:
             self._load_cached_token()
             if self._token and self._token_expires and now < self._token_expires:
                 return self._token
+            # 2026-06-03 fix: file cache 만료/부재 시 Supabase 공유 store read (cache_only 경로 완성).
+            #   cache_only consumer(price_pulse 등)도 actions/cache 날짜-key immutability 버그로
+            #   만료 토큰 잔존 시 KR 가격 yfinance fallback 으로 강등되던 것 우회.
+            #   8defc4ff 가 일반(cache_only=False) 경로에만 fallback 추가 → 고빈도 consumer 누락분 보강.
+            #   🚨 RULE 1: read-only(발급 X) — 이미 발급된 shared 값 read. cache_only 정신(신규 발급 금지)과
+            #   완전 정합. Supabase 없거나 만료면 종전대로 raise.
+            if self._apply_shared_token():
+                return self._token
             print(
                 "[kis_auth] cache_only mode — no valid token, refusing to issue new",
                 file=sys.stderr,

@@ -104,3 +104,33 @@ def test_authenticate_raises_when_shared_also_absent(shared_env):
         with pytest.raises(RuntimeError):
             broker.authenticate()
     mpost.assert_not_called()      # 🚨 발급 X
+
+
+def test_cache_only_uses_shared_token_no_issuance(shared_env):
+    """🚨 RULE 1 핵심 (cache_only 경로, 2026-06-03 fix): price_pulse 등 고빈도 consumer 가
+    file cache 만료/부재 시 Supabase read 로 토큰 반환, 신규 발급 POST 절대 안 함.
+    8defc4ff 가 일반 경로에만 fallback 추가 → cache_only 누락분 보강 회귀."""
+    broker = kb.KISBroker(cache_only=True)
+    broker._load_cached_token = MagicMock()  # no-op → file cache 부재
+    broker._token = None
+
+    with patch.object(kb.requests, "get", return_value=_mock_get([_row()])) as mget, \
+         patch.object(kb.requests, "post") as mpost:
+        token = broker.authenticate()
+
+    assert token == "SHAREDTOKEN"
+    mget.assert_called()           # Supabase read 발생
+    mpost.assert_not_called()      # 🚨 cache_only 는 발급 절대 X (RULE 1)
+
+
+def test_cache_only_raises_when_shared_also_absent(shared_env):
+    """cache_only + Supabase 도 없으면 종전대로 raise (발급 X)."""
+    broker = kb.KISBroker(cache_only=True)
+    broker._load_cached_token = MagicMock()
+    broker._token = None
+
+    with patch.object(kb.requests, "get", return_value=_mock_get([])), \
+         patch.object(kb.requests, "post") as mpost:
+        with pytest.raises(RuntimeError):
+            broker.authenticate()
+    mpost.assert_not_called()      # 🚨 발급 X
