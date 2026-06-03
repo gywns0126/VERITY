@@ -65,6 +65,11 @@ jobs:
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
           KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO }}
           KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
+          # 2026-06-03: cache_only consumer 도 Supabase 공유 store read fallback (file cache 날짜-key
+          # 버그 우회). read-only — 발급 X (RULE 1). daily_analysis/daily_realtime 와 동일 store.
+          KIS_SHARED_TOKEN: "1"
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python api/cron/price_pulse.py
 
       - name: Commit data/price_pulse.json
