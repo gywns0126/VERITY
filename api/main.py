@@ -3441,6 +3441,29 @@ def main():
                               f"(터널링 고위험 {rp_high}, 관측 only)")
                 except Exception as e:
                     print(f"  ⚠️ 특수관계자 분석 스킵: {e}")
+
+                # ── DART 공시 이벤트 스캔: 유상증자/정정/불성실/distress (관측 only) ──
+                # 2026-06-04. 키워드 분류(LLM 0). scored risk_flags 미주입 = RULE 7.
+                try:
+                    from api.analyzers.dart_disclosure_events import scan_disclosure_events
+                    ev_result = scan_disclosure_events(stocks_dict, window_days=90)
+                    ev_attached = ev_flagged = 0
+                    for stock in candidates:
+                        t = stock.get("ticker")
+                        if not t:
+                            continue
+                        t6 = str(t).split(".")[0].zfill(6)
+                        ev = ev_result.get(t6)
+                        if ev:
+                            stock["dart_disclosure_events"] = ev
+                            ev_attached += 1
+                            if ev.get("severity") in ("high", "medium"):
+                                ev_flagged += 1
+                    if ev_attached:
+                        print(f"  ✓ {ev_attached}개 종목에 dart_disclosure_events 부착 "
+                              f"(이벤트 {ev_flagged}, 관측 only)")
+                except Exception as e:
+                    print(f"  ⚠️ 공시 이벤트 스캔 스킵: {e}")
             else:
                 print(f"  KR 종목 없음 — skip")
         except Exception as e:
