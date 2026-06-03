@@ -446,22 +446,19 @@ def send_morning_briefing(portfolio: dict):
     except (TypeError, ValueError):
         spf = None
 
-    macro_notable = False
+    # 실시간 수치는 항상 fresh 데이터로 노출 (LLM prose 박제 금지 정합, 2026-06-03).
+    # 옛: mood 60 등 조건에 걸려 숨겨지면 prose 의 stale 수치만 노출되는 사고 → 조건 제거.
+    macro_bits = []
     if spf is not None:
-        macro_notable = (
-            abs(spf) >= 1.0
-            or abs(ndxc) >= 1.0
-            or abs(usd_pct) >= 0.5
-            or vix_v >= 22.0
-        )
-    show_index_line = spf is not None and (
-        mood_score < 40 or mood_score > 60 or macro_notable
-    )
-    if show_index_line:
-        lines.append(
-            f"S&P {spf:+.2f}% | NDX {ndxc:+.2f}%"
-            f" | VIX {vix.get('value', '—')} | 환율 {fx.get('value', '—')}"
-        )
+        macro_bits.append(f"S&P {spf:+.2f}%")
+    if ndx.get("change_pct") is not None:
+        macro_bits.append(f"NDX {ndxc:+.2f}%")
+    if vix.get("value") is not None:
+        macro_bits.append(f"VIX {vix.get('value')}")
+    if fx.get("value") is not None:
+        macro_bits.append(f"환율 {fx.get('value')}")
+    if macro_bits:
+        lines.append(" | ".join(macro_bits))
 
     upcoming = [e for e in events if (e.get("d_day") or 99) <= 7]
     if upcoming:
