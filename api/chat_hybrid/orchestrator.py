@@ -319,6 +319,27 @@ def _run_hybrid_core(
         "matched_tickers": brain_ctx.get("matched_tickers", []),
     }
 
+    # 4.5 정공법 grounding 보강 (2026-06-03 삼성전자 65,000원 환각 사고):
+    # 질의에 언급된 종목인데 VERITY 데이터가 없으면(유니버스 밖) brain 컨텍스트가
+    # 비어 합성 LLM 이 학습 기억으로 가격을 지어낸다. portfolio_only 분류 시
+    # 외부 grounding 이 하드 차단(_validate)되어 빈 컨텍스트가 그대로 합성에 감.
+    # → ungrounded 티커가 있으면 web grounding 을 강제해 실시간 시세를 주입한다.
+    related_up = [str(t).upper() for t in intent.get("related_tickers", []) if t]
+    matched_up = {str(t).upper() for t in brain_ctx.get("matched_tickers", [])}
+    ungrounded_tickers = [t for t in related_up if t not in matched_up]
+    if ungrounded_tickers:
+        if intent_type == "portfolio_only":
+            intent_type = "hybrid"
+            intent["intent_type"] = "hybrid"
+        intent["needs_gemini_grounding"] = True
+        metrics["ungrounded_tickers"] = ungrounded_tickers
+        yield {
+            "type": "status",
+            "stage": "grounding_forced",
+            "ungrounded_tickers": ungrounded_tickers,
+            "reason": "유니버스 밖 종목 — 실시간 시세 grounding 강제",
+        }
+
     # 5. External 호출 분기
     perplexity_result = None
     grounding_result = None
@@ -382,6 +403,7 @@ def _run_hybrid_core(
         perplexity_result=perplexity_result,
         grounding_result=grounding_result,
         recent_turns=recent_turns,
+        ungrounded_tickers=ungrounded_tickers,
     ):
         etype = ev.get("type")
         if etype == "delta":
