@@ -74,7 +74,7 @@ _SPEC: List[tuple] = [
     ("펀더멘털", "debt_ratio", _has_value, "all"),
     ("펀더멘털", "operating_margin", _has_value, "all"),
     ("펀더멘털", "revenue_growth", _has_value, "all"),
-    ("펀더멘털", "free_cashflow", _has_value, "all"),
+    ("펀더멘털", "free_cashflow", _has_value, "nonfin"),  # 금융주 N/A (FCF 미정의)
     ("펀더멘털", "operating_cashflow", _has_value, "all"),
     # 가격/가치
     ("가격가치", "current_price", _pos, "all"),
@@ -120,8 +120,26 @@ def _is_kr(stock: Dict[str, Any]) -> bool:
     return mkt in ("KOSPI", "KOSDAQ", "KONEX") or cur == "KRW"
 
 
-def _applies(scope: str, is_kr: bool) -> bool:
-    return scope == "all" or (scope == "kr" and is_kr)
+def _is_financial(stock: Dict[str, Any]) -> bool:
+    """금융 섹터 여부 — free_cashflow 가 N/A 인 대상 판정.
+
+    은행/보험/증권/여신은 전통적 capex 개념이 없어 FCF(=OCF−capex) 미정의 →
+    yfinance 도 freeCashflow None 반환. 결손이 아니라 N/A (2026-06-04 진단:
+    BAC/JPM 은행·SOFI Credit 결손 = 금융주 only, 비금융 22종목 FCF 100%).
+    """
+    s = (str(stock.get("sector") or "") + str(stock.get("industry") or "")
+         + str(stock.get("company_type") or ""))
+    return any(k in s for k in (
+        "Financ", "Bank", "Insurance", "Capital Markets", "Credit Services",
+        "은행", "금융", "보험", "증권", "여신"))
+
+
+def _applies(scope: str, is_kr: bool, is_fin: bool) -> bool:
+    if scope == "kr":
+        return is_kr
+    if scope == "nonfin":
+        return not is_fin  # free_cashflow 등 금융주 N/A 필드
+    return scope == "all"
 
 
 def compute_field_coverage(recommendations: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -150,10 +168,11 @@ def compute_field_coverage(recommendations: List[Dict[str, Any]]) -> Dict[str, A
 
     for r in recs:
         is_kr = _is_kr(r)
+        is_fin = _is_financial(r)
         stock_valid = 0
         stock_appl = 0
         for cat, field, validator, scope in _SPEC:
-            if not _applies(scope, is_kr):
+            if not _applies(scope, is_kr, is_fin):
                 continue  # N/A 필드는 분자·분모 모두 제외 (noise 방지)
             field_appl[field] += 1
             stock_appl += 1
