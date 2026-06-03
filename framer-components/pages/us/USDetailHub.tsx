@@ -232,7 +232,7 @@ export default function USDetailHub(props: Props) {
             <div style={hr} />
 
             {/* Mag 7 tab */}
-            {tab === "mag7" && <Mag7View recs={usRecs} allHoldings={data?.holdings || []} />}
+            {tab === "mag7" && <Mag7View recs={usRecs} allHoldings={data?.vams?.holdings || data?.holdings || []} />}
 
             {/* Insider tab */}
             {tab === "insider" && (
