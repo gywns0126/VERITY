@@ -1124,6 +1124,31 @@ def _cap_grade(grade: str, max_grade: str) -> str:
     return GRADE_ORDER[max(g_idx, m_idx)]
 
 
+def _grade_confidence(score: float, grade: str) -> str:
+    """등급 판정의 견고성 라벨 — "firm" / "soft".
+
+    2026-06-03 정의 신설 (RULE 10 audit): 395/411/1705/1769 에서 호출되나 정의·import
+    부재 → 만기주(chase_buy_allowed=False)+BUY 종목 시 NameError 로 analyze_all 전체
+    크래시하던 잠복 P0 차단. 호출부 시그니처(score, grade) 그대로 수용.
+
+    산식 (자기 산식 — 가설, 검증 N 누적 중): brain_score 가 해당 등급 구간의 경계
+    (하한 min_brain_score / 상한 = 다음 상위 등급 min)에서 margin(5점) 이내면 "soft"
+    (작은 입력 변동에 등급이 흔들림), 구간 중앙이면 "firm". 임계는 constitution
+    decision_tree.grades 단일 출처 로드 (하드코드 X, RULE 7 정합).
+    """
+    const = _load_constitution()
+    grades = const.get("decision_tree", {}).get("grades", {})
+    margin = 5.0
+    idx = GRADE_ORDER.index(grade) if grade in GRADE_ORDER else len(GRADE_ORDER) - 1
+    lo = grades.get(grade, {}).get("min_brain_score", 0)
+    hi = 100.0
+    if idx > 0:  # 다음 상위 등급의 min = 현재 등급의 상한
+        hi = grades.get(GRADE_ORDER[idx - 1], {}).get("min_brain_score", 100.0)
+    near_lo = (score - lo) < margin
+    near_hi = idx > 0 and (hi - score) < margin
+    return "soft" if (near_lo or near_hi) else "firm"
+
+
 # ─── V4: Position Sizing Guide (Kelly Criterion) ────────────
 
 def _compute_position_guide(
@@ -1485,6 +1510,10 @@ def analyze_stock(
         "raw_brain_score": raw_brain_score,
         "grade": grade,
         "grade_label": GRADE_LABELS.get(grade, grade),
+        # 2026-06-03 P1-3: 정상 경로 confidence/coverage 실측 (이전엔 정상 return 에 부재 →
+        # 소비단 default "firm"/1.0 placeholder 로 Brier 채점·리포트 신호 0 이던 것 정정).
+        "grade_confidence": _grade_confidence(brain_score, grade),
+        "data_coverage": round(_safe_float(fact.get("data_coverage"), 1.0) or 1.0, 3),
         "fact_score": fact,
         "sentiment_score": sentiment,
         "vci": vci,
