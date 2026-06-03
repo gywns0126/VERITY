@@ -22,7 +22,8 @@ def _run_bonds(portfolio: dict) -> dict:
     from api.analyzers.bondanalyzer import run_bond_analysis
 
     print("[BOND] 수익률 곡선 + 신용 스프레드 수집 시작")
-    bonds_raw = get_full_yield_curve_data()
+    # 정공법 forward-fill: 직전 bonds 를 넘겨 transient fetch 결손 만기를 carry-forward.
+    bonds_raw = get_full_yield_curve_data(prev_bonds=portfolio.get("bonds"))
     portfolio["bonds"] = bonds_raw
 
     yc = bonds_raw.get("yield_curves", {})

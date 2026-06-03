@@ -308,33 +308,6 @@ async def chart(ticker: str, type: str = Query("all")):
         return JSONResponse({"error": str(e)}, status_code=502)
 
 
-@app.get("/debug/krx_probe")
-async def krx_probe():
-    """1회 진단(2026-06-03): Railway 외부 IP 국가 + KRX getJsonData 접근 가능 여부.
-    program_trading 의 KRX LOGOUT 근본원인(IP 차단 vs bld) 판별용. 검증 후 본 엔드포인트로 대체/제거."""
-    import requests
-    out = {}
-    try:
-        ipr = requests.get("http://ip-api.com/json", timeout=8).json()
-        out["ip_country"] = ipr.get("country")
-        out["isp"] = ipr.get("isp")
-    except Exception as e:
-        out["ip_error"] = str(e)
-    try:
-        r = requests.post(
-            "http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd",
-            headers={"User-Agent": "Mozilla/5.0", "Referer": "http://data.krx.co.kr/"},
-            data={"bld": "dbms/MDC/STAT/standard/MDCSTAT01501", "mktId": "STK", "trdDd": "20260602"},
-            timeout=10,
-        )
-        out["krx_status"] = r.status_code
-        out["krx_len"] = len(r.text)
-        out["krx_body_head"] = r.text[:100]
-    except Exception as e:
-        out["krx_error"] = f"{type(e).__name__}: {e}"
-    return out
-
-
 @app.get("/api/order")
 async def order_balance(request: Request, market: str = Query("kr")):
     """잔고 조회 — Railway 상주 토큰 사용."""
