@@ -24,7 +24,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *
  * 모던 심플 6원칙 + feedback_no_hardcode_position 적용.
  *
- * NOTE: 통합 분량 큰 cluster — 각 view 는 hero 영역만 박음. 세부 그래프
+ * NOTE: 통합 분량 큰 cluster — 각 view 는 hero 영역만 노출. 세부 그래프
  * 일부 단순화 (drift drilldown 등은 v2 cycle 에서 보강).
  */
 

@@ -164,7 +164,7 @@ interface HealthData {
 
 // API_LABELS: portfolio.json system_health.api_health 의 key 매핑.
 // 2026-05-17 audit:
-//   - 활성 (check_api_health 박힘, portfolio.json 14 + optional ecos): dart/fred/telegram/gemini/
+//   - 활성 (check_api_health 연결, portfolio.json 14 + optional ecos): dart/fred/telegram/gemini/
 //     anthropic/kipris/public_data/krx_open_api/perplexity/finnhub/polygon/sec_edgar/ecos/
 //     reports_signed_url
 //   - 잠재 dead 매핑 (UI label 만, 실제 source 0건): kis/newsapi/cftc_cot/cboe_pcr/fund_flows/

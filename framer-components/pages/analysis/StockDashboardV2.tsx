@@ -35,7 +35,7 @@ import {
  * feedback_no_hardcode_position 적용: inline 렌더링.
  *
  * NOTE (A.2): main render 는 placeholder. listPanel / detailPanel /
- * 11 detail tab 은 다음 turn 들에서 점진 박음. 현재는 "준비 중" 카드.
+ * 11 detail tab 은 다음 turn 들에서 점진 추가. 현재는 "준비 중" 카드.
  */
 
 /* ──────────────────────────────────────────────────────────────
@@ -3686,7 +3686,7 @@ function NicheEmpty({ text }: { text: string }) {
 
 /* ─────────── PropertyTab — 부동산 자산 (US 10-K / KR DART 분기) ─────────── */
 /* 굳이 test (옵션 C, 2026-05-05): list 4종 (US 소유/임차 30 + KR 해외 25 +
- * KR 국내 30) 은 expand on tap 으로 박음. 정보 보존 + 시각 깔끔. */
+ * KR 국내 30) 은 expand on tap 으로 처리. 정보 보존 + 시각 깔끔. */
 function PropertyTab({
     stock, isUS, apiBase,
 }: { stock: any; isUS: boolean; apiBase: string }) {

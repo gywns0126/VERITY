@@ -67,7 +67,7 @@ interface UserWatchlistItem {
     addedAt?: number
 }
 
-/** StockSearch / WatchGroupsCard 가 localStorage 에 박는 사용자 관심종목 — 챗 요청에 동봉 */
+/** StockSearch / WatchGroupsCard 가 localStorage 에 저장하는 사용자 관심종목 — 챗 요청에 동봉 */
 function readUserWatchlist(): UserWatchlistItem[] {
     if (typeof window === "undefined") return []
     try {
