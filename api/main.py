@@ -1104,6 +1104,18 @@ def _load_previous_analysis() -> list:
 def _apply_fallback_judgments(analyzed: list):
     """Gemini 미실행/실패 시 멀티팩터 기반 자동 판단"""
     for stock in analyzed:
+        # 2026-06-04 AI_ANALYSIS_FAILED 불변식 — 정상 verdict 인데 실패 플래그 잔존 =
+        # stale 모순 (GOOGL 6/4: 다중 pass merge 로 정상 Gemini verdict + fallback
+        # risk_flags 공존). risk_flags→auto_avoid 점수 오염 + field_coverage 지표 오염
+        # 차단. 좋은 분석이면 AI_ANALYSIS_FAILED 제거 (실패 verdict 면 유지).
+        _v = stock.get("ai_verdict", "") or ""
+        if _v and not any(m in _v for m in ("파싱 실패", "분석 오류", "분석 실패", "수동 확인")):
+            _rf = stock.get("risk_flags") or []
+            if "AI_ANALYSIS_FAILED" in _rf:
+                stock["risk_flags"] = [x for x in _rf if x != "AI_ANALYSIS_FAILED"]
+                _drk = stock.get("detected_risk_keywords") or []
+                stock["detected_risk_keywords"] = [x for x in _drk if x != "AI_ANALYSIS_FAILED"]
+
         mf = stock.get("multi_factor", {})
         ms = mf.get("multi_score", 0)
         if "recommendation" not in stock or "오류" in stock.get("ai_verdict", ""):
