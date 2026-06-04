@@ -626,7 +626,7 @@ const panelWrap: React.CSSProperties = {
     height: 520,
     maxHeight: "min(520px, 100vh - 48px)",
     minHeight: 0,
-    background: "#000000",
+    background: C.bgPage,
 
     borderRadius: 16,
     display: "flex",

@@ -6,8 +6,8 @@ import { addPropertyControls, ControlType } from "framer"
  * ────────────────────────────────────────────────────────────── */
 const C = {
     bgPage: "#0E0F11",
-    bgCard: "#111111",
-    bgElevated: "#141414",
+    bgCard: "#171820",
+    bgElevated: "#22232B",
     bgInput: "#2A2B33",
     border: "rgba(255,255,255,0.06)",
     borderStrong: "rgba(255,255,255,0.10)",

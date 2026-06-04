@@ -322,7 +322,7 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
         if (this.state.error) {
             const err = this.state.error
             return (
-                <div style={{ padding: 20, background: "#1a0000", borderRadius: 12, margin: "10px 0" }}>
+                <div style={{ padding: 20, background: C.bgCard, border: `1px solid ${C.danger}`, borderRadius: 12, margin: "10px 0" }}>
                     <div style={{ color: C.danger, fontSize: 13, fontWeight: 800, fontFamily: FONT, marginBottom: 8 }}>
                         ⚠ {this.props.label} 렌더링 에러
                     </div>
@@ -410,19 +410,19 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                         borderBottom: `1px solid rgba(255,255,255,0.06)`,
                     }}>
                         <span style={{
-                            fontSize: 11, color: "#6B6E76",
+                            fontSize: 11, color: C.textTertiary,
                             textTransform: "uppercase", letterSpacing: "0.04em",
                             fontWeight: 600, fontFamily: FONT,
                         }}>POSTMORTEM</span>
                         <span style={{
-                            fontSize: 11, color: "#6B6E76",
+                            fontSize: 11, color: C.textTertiary,
                             fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums",
                         }}>analyzed {postmortem.analyzed_count ?? 0}</span>
                     </div>
                     {pmCaveat && (
                         <div style={{
                             display: "inline-block", marginTop: 12,
-                            fontSize: 11, color: "#FFA05A",
+                            fontSize: 11, color: C.caution,
                             fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums",
                             padding: "3px 8px",
                             border: `1px solid rgba(255,255,255,0.06)`,
@@ -431,7 +431,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                     )}
                     {postmortem?.summary && (
                         <div style={{
-                            color: "#ffffff", fontSize: 13, fontWeight: 500,
+                            color: C.textPrimary, fontSize: 13, fontWeight: 500,
                             lineHeight: 1.5, fontFamily: FONT,
                             marginTop: 12,
                         }}>{postmortem.summary}</div>
@@ -439,13 +439,14 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                     <div style={{ marginTop: 12 }}>
                         {pmFailures.slice(0, 4).map((f: any, i: number) => {
                             const r = typeof f.actual_return === "number" ? f.actual_return : null
-                            const retColor = r == null ? "#6B6E76" : (r >= 0 ? "#7fffa0" : "#FF5A5A")
+                            const retColor = r == null ? C.textTertiary : (r >= 0 ? C.accent : C.danger)
                             const retText = r == null ? "—" : `${r >= 0 ? "+" : ""}${r.toFixed(2)}%`
                             const recColor =
-                                f.original_rec === "STRONG_BUY" || f.original_rec === "BUY" ? "#7fffa0" :
-                                f.original_rec === "WATCH" ? "#5BA9FF" :
-                                f.original_rec === "CAUTION" ? "#FFA05A" :
-                                f.original_rec === "AVOID" ? "#FF5A5A" : "#A8ABB2"
+                                f.original_rec === "STRONG_BUY" ? C.strongBuy :
+                                f.original_rec === "BUY" ? C.buy :
+                                f.original_rec === "WATCH" ? C.watch :
+                                f.original_rec === "CAUTION" ? C.caution :
+                                f.original_rec === "AVOID" ? C.avoid : C.textSecondary
                             return (
                                 <div key={`${f.ticker}-${i}`} style={{
                                     padding: "10px 0",
@@ -457,7 +458,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                                         marginBottom: 6,
                                     }}>
                                         <span style={{
-                                            color: "#ffffff", fontSize: 13, fontWeight: 600,
+                                            color: C.textPrimary, fontSize: 13, fontWeight: 600,
                                             fontFamily: FONT,
                                         }}>{f.name || f.ticker || "—"}</span>
                                         <span style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
@@ -465,7 +466,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                                                 color: recColor, fontSize: 11, fontWeight: 600,
                                                 textTransform: "uppercase", letterSpacing: "0.04em",
                                             }}>{f.original_rec || "—"}</span>
-                                            <span style={{ color: "#6B6E76", fontSize: 11 }}>→</span>
+                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>→</span>
                                             <span style={{
                                                 color: retColor, fontSize: 12, fontWeight: 600,
                                                 fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums",
@@ -474,7 +475,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                                     </div>
                                     {f.lesson && (
                                         <div style={{
-                                            color: "#A8ABB2", fontSize: 12,
+                                            color: C.textSecondary, fontSize: 12,
                                             fontFamily: FONT, lineHeight: 1.5,
                                         }}>{f.lesson}</div>
                                     )}
@@ -488,13 +489,13 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                             paddingBottom: 4,
                         }}>
                             <div style={{
-                                fontSize: 11, color: "#FF5A5A",
+                                fontSize: 11, color: C.danger,
                                 textTransform: "uppercase", letterSpacing: "0.04em",
                                 fontWeight: 600, fontFamily: FONT,
                                 marginBottom: 6,
                             }}>추천 시스템 조치</div>
                             <div style={{
-                                color: "#F2F3F5", fontSize: 12,
+                                color: C.textPrimary, fontSize: 12,
                                 lineHeight: 1.55, fontFamily: FONT,
                             }}>{postmortem.system_suggestion}</div>
                         </div>

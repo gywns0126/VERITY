@@ -260,11 +260,11 @@ export default function StockHeatmap({ dataUrl, market }: Props) {
                     const vb = (s as any).verity_brain || {}
                     const grade = vb.grade
                     const gradeColor =
-                          grade === "STRONG_BUY" ? "#22C55E"
-                        : grade === "BUY"        ? "#2DD4BF"
-                        : grade === "WATCH"      ? "#FFD600"
-                        : grade === "CAUTION"    ? "#F59E0B"
-                        : grade === "AVOID"      ? "#EF4444"
+                          grade === "STRONG_BUY" ? C.strongBuy
+                        : grade === "BUY"        ? C.buy
+                        : grade === "WATCH"      ? C.watch
+                        : grade === "CAUTION"    ? C.caution
+                        : grade === "AVOID"      ? C.avoid
                         : null
                     return (
                         <div
