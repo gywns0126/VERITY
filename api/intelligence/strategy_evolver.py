@@ -32,6 +32,7 @@ from api.config import (
     STRATEGY_MIN_SNAPSHOT_DAYS,
     STRATEGY_MIN_SNAPSHOT_DAYS_FORCED,
     STRATEGY_MIN_OOS_DAYS,
+    STRATEGY_MIN_VALIDATION_N,
     now_kst,
 )
 
@@ -1146,6 +1147,21 @@ def send_strategy_proposal(proposal: Dict[str, Any], backtest_result: Dict[str, 
 
 # ── 메인 진화 루프 ────────────────────────────────────────
 
+def _validation_trade_count(portfolio: Dict[str, Any]) -> int:
+    """가중치 변경 정당화에 필요한 OUTCOME 표본 = VAMS 종료 거래(SELL+pnl) 수.
+
+    스냅샷 *일수*(가격 데이터)와 다름 — 거래 결과가 weight 검증의 실제 표본이다.
+    불명 시 0(보수적 = block). 2026-06-05 N-gate.
+    """
+    try:
+        from api.vams.engine import load_history
+        hist = load_history() or []
+        return sum(1 for h in hist
+                   if h.get("type") == "SELL" and h.get("pnl") is not None)
+    except Exception:
+        return 0
+
+
 def run_evolution_cycle(
     portfolio: Dict[str, Any],
     trigger_context: Optional[Dict[str, Any]] = None,
@@ -1183,6 +1199,22 @@ def run_evolution_cycle(
         "period_end": ctx.get("period_end", ""),
         "generated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
+
+    # 2026-06-05 🚨 검증-N 게이트 — 스냅샷 일수만으론 곡선맞추기 방어 불충분.
+    # 가중치 변경은 종료 거래(OUTCOME) 표본이 충분해야 정당. N<MIN 이면 제안·백테스트·
+    # 텔레그램·auto_apply 전부 차단(이론 고정 단계). 6/5 사고: BUY=0/거래 0 인데 가격
+    # 스냅샷에 28축 재가중 제안. force(수동 디버그)도 N-gate 적용 — 거래 0 에서 weight
+    # 변경은 디버그여도 무의미·위험.
+    _val_n = _validation_trade_count(portfolio)
+    if _val_n < STRATEGY_MIN_VALIDATION_N:
+        result["status"] = "n_gated"
+        result["reason"] = (
+            f"검증 표본 부족 — 종료 거래 {_val_n} < {STRATEGY_MIN_VALIDATION_N}. "
+            f"가중치 이론 고정 단계 (가격 스냅샷 기반 재가중 = 곡선맞추기 회피)")
+        result["validation_n"] = _val_n
+        print(f"  [V2] 🚨 N-gate: 종료거래 {_val_n} < {STRATEGY_MIN_VALIDATION_N} "
+              f"→ 전략 제안 억제 (곡선맞추기 회피)")
+        return result
 
     min_days = STRATEGY_MIN_SNAPSHOT_DAYS_FORCED if force else STRATEGY_MIN_SNAPSHOT_DAYS
     dates = list_available_dates()

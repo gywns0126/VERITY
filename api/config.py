@@ -474,6 +474,11 @@ STRATEGY_MAX_CUMULATIVE_DRIFT = _env_float("STRATEGY_MAX_CUMULATIVE_DRIFT", 0.20
 # 과적합 방지는 STRATEGY_MAX_WEIGHT_DELTA(±0.05) + MAX_CUMULATIVE_DRIFT(0.20) 가 담당.
 STRATEGY_MIN_SNAPSHOT_DAYS = _env_int("STRATEGY_MIN_SNAPSHOT_DAYS", 10)
 STRATEGY_MIN_SNAPSHOT_DAYS_FORCED = _env_int("STRATEGY_MIN_SNAPSHOT_DAYS_FORCED", 5)
+# 2026-06-05 🚨 검증-N 게이트 — 스냅샷 *일수*(가격)로만 게이트하면 종료 거래 0건이어도
+# 최근 가격 움직임에 가중치 재fit(곡선맞추기). 가중치 변경은 OUTCOME 표본(종료 거래)이
+# 충분해야 정당 → N<MIN 이면 제안 자체 억제(이론 고정 단계, feedback_threshold_calibration
+# _overfit_guard N<50). 6/5 사고: proposer 가 "원달러 +1% + urgent 7건"(초단기)에 28축 재가중.
+STRATEGY_MIN_VALIDATION_N = _env_int("STRATEGY_MIN_VALIDATION_N", 50)
 # 자동 적용 시 최소 Out-of-Sample 검증 기간 (일).
 # Perplexity Q4 (2026-05-17) 학계 자문: 30 → 90.
 # T=22 거래일 SE(SR)≈±0.22 노이즈 폭발. Lopez de Prado MinTRL 기준 90~120일 권장.
