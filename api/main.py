@@ -91,7 +91,7 @@ from api.vams.engine import (
 # Graceful SIGTERM handler — watchdog 발동 시 partial portfolio 보호 (2026-05-10)
 # ────────────────────────────────────────────────────────────
 # 5/10 1500 stage SIGTERM (1h 23m, watchdog 82분 발동) 직후 portfolio.json
-# 변화 0건 = 다음 cron 의 stale 데이터 risk. graceful save 박아 partial 보호.
+# 변화 0건 = 다음 cron 의 stale 데이터 risk. graceful save 추가해 partial 보호.
 _latest_portfolio_ref = None
 
 
@@ -2735,7 +2735,7 @@ def main():
             stock.setdefault("backtest", {})
 
     # ── STEP 5.05: A5.1 fix — quant_volatility 재계산 (post-backtest) ──
-    # 2026-05-19 박힘. 5/18 A5 fix unfinished 부분 정정.
+    # 2026-05-19 추가. 5/18 A5 fix unfinished 부분 정정.
     # 진단 (docs/BRAIN_SCORE_AUDIT_20260518.md §3, quant_volatility 100% fallback):
     #   STEP 4.5 quant_factors 계산 → STEP 5 backtester vol propagation 순서 결함.
     #   compute_volatility_score 가 vol_20d/60d 없는 stock 입력받아 모두 score=50 반환.
@@ -3145,7 +3145,7 @@ def main():
         except Exception as e:
             print(f"  SpecialScout 스킵: {e}")
 
-    # ── STEP 5.78: full 전용 — DART catalyst alert (2026-05-19 박힘) ──
+    # ── STEP 5.78: full 전용 — DART catalyst alert (2026-05-19 추가) ──
     # 운영 풀 KR 종목 직전 7일 catalyst (주요사항 B / 발행 C / 지분 D + 정정) 자동 감지.
     # 산식 동결 가드 정합 (B 옵션 6월 중순) — brain 산식 영향 X, 별 reporting 만.
     # data/dart_catalyst_alerts.jsonl append (dedupe by rcept_no).
@@ -3504,7 +3504,7 @@ def main():
         except Exception as e:
             print(f"  ⚠️ DART 분석 스킵: {e}")
 
-    # ── STEP 5.89 (2026-05-19 박힘): Perplexity 외부 리스크 — BEFORE brain ──
+    # ── STEP 5.89 (2026-05-19 추가): Perplexity 외부 리스크 — BEFORE brain ──
     # 옛 STEP 5.95 (post-brain) 순서 결함 fix.
     # 진단 (docs/BRAIN_SCORE_AUDIT_20260518.md §9 B audit):
     #   external_risk raw 10/25 종목 부착 → brain 안에서 perplexity_risk 100% fallback.
@@ -4612,9 +4612,16 @@ def main():
         except Exception as e:
             portfolio.pop("claude_morning_strategy", None)
             print(f"  모닝 전략 스킵: {e} — stale carry-forward blob 제거")
+    elif portfolio.get("claude_morning_strategy"):
+        # 기능 비활성(CLAUDE_MORNING_STRATEGY=0 default — production) 인데 load_portfolio()
+        # carry-forward 로 옛 blob 이 남아 있으면 제거. 안 그러면 fossil 환각 blob 이
+        # portfolio.json/history 에 영구 carry-forward (2026-06-05: production 플래그 off
+        # 상태에서 6/3 이전 fossil 이 매 아침 송출되던 사고의 잔존 경로 차단).
+        portfolio.pop("claude_morning_strategy", None)
+        print(f"\n[10.7] Claude 모닝 전략 비활성 — carry-forward fossil blob 제거")
 
     # ── STEP 10.8: Claude 종합 검수 (full 모드, 1회/일) ──
-    # 2026-05-11 박음. project_claude_budget_guard 정합 (~$2.81/월).
+    # 2026-05-11 추가. project_claude_budget_guard 정합 (~$2.81/월).
     # portfolio 핵심 (brain top 10 / macro / horizon / VAMS / tail_risk) 종합 → Claude
     # 가 합리성·일관성 검수. claude_final_verdict 산출 (PROCEED/CAUTION/REVIEW_REQUIRED).
     if effective_mode == "full" and ANTHROPIC_API_KEY:

@@ -186,7 +186,7 @@ def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False,
         VAMS 손절, circuit breaker, 수동 명령 응답) 만 사용.
     source: 발송 source 식별자 (예: "kis_token_refresh", "cron_health_monitor",
         "sec_8k_alert", "vams_circuit"). volume_ledger 추적 + spam 시 source 즉시 식별
-        가능 (P1-4 dispatch_chain hotfix 후속 2026-05-16). 미박힘이면 GITHUB_WORKFLOW
+        가능 (P1-4 dispatch_chain hotfix 후속 2026-05-16). 미설정이면 GITHUB_WORKFLOW
         env 에서 자동 추정.
     """
     import os as _os
