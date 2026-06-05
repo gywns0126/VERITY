@@ -6,7 +6,7 @@
     "hit_rate_pct": 80
   },
   "cumulative_stats": {
-    "total_proposals": 31,
+    "total_proposals": 32,
     "accepted": 0,
     "rejected": 1,
     "hit_count": 0,
@@ -56,7 +56,72 @@
       "snapshot_source": "seed_from_current_constitution"
     }
   ],
-  "pending_proposal": null,
+  "pending_proposal": {
+    "proposal": {
+      "changes": {
+        "fact_score_weights": {
+          "equity_brief_verdict": 0.03,
+          "us_fscore": 0.03,
+          "multi_factor": 0.14,
+          "consensus": 0.1,
+          "prediction": 0.07,
+          "backtest": 0.0682,
+          "timing": 0.04,
+          "commodity_margin": 0.0341,
+          "export_trade": 0.0782,
+          "moat_quality": 0.0653,
+          "graham_value": 0.0882,
+          "canslim_growth": 0.0882,
+          "analyst_report": 0.0784,
+          "dart_health": 0.069,
+          "perplexity_risk": 0.03
+        },
+        "sentiment_score_weights": {
+          "news_sentiment": 0.165,
+          "x_sentiment": 0.115,
+          "market_mood": 0.115,
+          "consensus_opinion": 0.09,
+          "crypto_macro": 0.065,
+          "market_fear_greed": 0.075,
+          "social_sentiment": 0.095,
+          "fx_sentiment": 0.07,
+          "commodity_sentiment": 0.04,
+          "global_index_decoupling": 0.04,
+          "geopolitical_score": 0.07,
+          "macro_headlines": 0.045,
+          "market_horizon_link": 0.02
+        },
+        "grade_thresholds": null
+      },
+      "reason": "Decay critical 팩터(multi_factor/consensus/prediction/timing/quality) 일괄 하향, IC 양호한 sentiment·FX·지정학 상향 — 원달러 +1% 급변 + urgent tone 7건 연속 반영",
+      "expected_improvement": "오신호(붕괴 팩터발 BUY) 감소로 적중률 +3~5%p, Sharpe +0.1~0.2 예상. FX/리스크 민감도 상향으로 cautious 국면 AVOID 정확도 개선",
+      "_model": "claude-opus-4-7",
+      "_input_tokens": 3294,
+      "_output_tokens": 667
+    },
+    "backtest_result": {
+      "sharpe": 1.27,
+      "hit_rate": 48.0,
+      "expected_value": 2.14,
+      "total_trades": 25,
+      "avg_return": 2.14,
+      "max_drawdown": 48.1,
+      "win_count": 12,
+      "loss_count": 13,
+      "lookback_days": 90,
+      "actual_span_days": 61,
+      "coverage_ratio": 0.678,
+      "quality_label": "amber",
+      "trail_sufficient": false,
+      "trail_warning": "trail 부족 — 요청 90d / 실제 61d (coverage 0.68, quality=amber). backtest 결과 통계 신뢰도 낮음. project_verity_backtest_sprint B 옵션 진입 의무 검증.",
+      "current_sharpe": -3.23,
+      "current_max_drawdown": 20.7,
+      "oos_days": 90
+    },
+    "trigger": "full",
+    "period_end": "",
+    "proposed_at": "2026-06-05T09:00:48+09:00"
+  },
   "circuit_breaker": {
     "rolling_window": 8,
     "min_rolling_hit_rate_pct": 55,
