@@ -1107,7 +1107,7 @@ def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, he
     try:
         client = init_gemini()
     except Exception:
-        return _fallback_report(macro, candidates, sectors, market=market)
+        return _carry_forward_daily_report(market) or _fallback_report(macro, candidates, sectors, market=market)
 
     is_us = market == "us"
 
@@ -1296,7 +1296,35 @@ JSON만:
         return result
     except Exception as e:
         _alert_gemini_quota_exceeded("daily_report", str(e))
-        return _fallback_report(macro, candidates, sectors, market=market)
+        return _carry_forward_daily_report(market) or _fallback_report(macro, candidates, sectors, market=market)
+
+
+def _carry_forward_daily_report(market: str = "kr") -> Optional[dict]:
+    """Gemini 일시 장애 시 thin fallback 대신 직전 성공 daily_report 재사용 (1 사이클 bridge).
+
+    2026-06-05: 구글측 prepay billing 글리치가 한 사이클을 통째 덮는 패턴(07:07 사이클 69건
+    실패 → 다음 사이클 0건 자동복구) 대응. 초 단위 retry 로는 못 살리므로 직전 리포트로 bridge.
+    직전이 이미 stale/carry/fallback 이면 재사용 X → 지속 장애는 2번째 사이클부터 정직한
+    thin fallback 으로 degrade (무한 stale 차단). grounding guard 로 prose 에 절대수치 없이
+    정성 서술만 있어 1 사이클 carry 안전 (수치는 시스템이 실시간 별도 렌더)."""
+    key = "daily_report_us" if market == "us" else "daily_report"
+    try:
+        with open(os.path.join(DATA_DIR, "portfolio.json"), encoding="utf-8") as f:
+            prev = json.load(f).get(key) or {}
+    except Exception:
+        return None
+    if not isinstance(prev, dict) or not prev.get("market_summary"):
+        return None
+    if prev.get("_stale") or prev.get("_gemini_model") in ("fallback", "carry_forward"):
+        return None  # 직전이 진짜 Gemini 리포트일 때만 1회 bridge
+    if "Gemini API 연결 시" in (str(prev.get("risk_watch", "")) + str(prev.get("market_analysis", ""))):
+        return None  # _gemini_model 없던 구버전 fallback 도 텍스트 마커로 차단
+    out = dict(prev)
+    out["_stale"] = True
+    out["_gemini_model"] = "carry_forward"
+    out["_carry_reason"] = "gemini_transient_unavailable"
+    print(f"  [carry-forward] {key} 직전 리포트 재사용 (Gemini 일시 장애 1 사이클 bridge)")
+    return out
 
 
 def _fallback_report(macro: dict, candidates: list, sectors: list, market: str = "kr") -> dict:
@@ -1318,6 +1346,7 @@ def _fallback_report(macro: dict, candidates: list, sectors: list, market: str =
             "risk_watch": "Gemini API 연결 시 상세 분석 제공",
             "hot_theme": f"강세 섹터: {', '.join(top_sec)}" if top_sec else "특별한 테마 없음",
             "tomorrow_outlook": "미장 변동성 주시",
+            "_gemini_model": "fallback",
         }
     return {
         "market_summary": f"시장 분위기 {mood.get('label', '?')} ({mood.get('score', 0)}점)",
@@ -1326,6 +1355,7 @@ def _fallback_report(macro: dict, candidates: list, sectors: list, market: str =
         "risk_watch": "구체적 리스크 분석은 Gemini API 연결 시 제공됩니다",
         "hot_theme": f"금일 강세 섹터: {', '.join(top_sec)}" if top_sec else "특별한 테마 없음",
         "tomorrow_outlook": "장중 변동성에 주의하며 대응",
+        "_gemini_model": "fallback",
     }
 
 

@@ -172,6 +172,68 @@ def test_alert_silent_on_telegram_module_failure(monkeypatch, _reset_quota):
 
 
 # ──────────────────────────────────────────────
+# 2.5 _carry_forward_daily_report — Gemini 일시 장애 1 사이클 bridge
+# ──────────────────────────────────────────────
+
+def _write_portfolio(tmp_path, payload):
+    import json as _json
+    (tmp_path / "portfolio.json").write_text(
+        _json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def test_carry_forward_reuses_real_prev_report(monkeypatch, tmp_path):
+    from api.analyzers import gemini_analyst as ga
+    _write_portfolio(tmp_path, {"daily_report": {
+        "market_summary": "코스피 상승 우위", "risk_watch": "외국인 수급 점검",
+        "_gemini_model": "gemini-2.5-pro",
+    }})
+    monkeypatch.setattr(ga, "DATA_DIR", str(tmp_path))
+    out = ga._carry_forward_daily_report("kr")
+    assert out is not None
+    assert out["market_summary"] == "코스피 상승 우위"
+    assert out["_stale"] is True
+    assert out["_gemini_model"] == "carry_forward"
+
+
+def test_carry_forward_skips_fallback_prev(monkeypatch, tmp_path):
+    from api.analyzers import gemini_analyst as ga
+    _write_portfolio(tmp_path, {"daily_report": {
+        "market_summary": "x",
+        "risk_watch": "구체적 리스크 분석은 Gemini API 연결 시 제공됩니다",
+        "_gemini_model": "fallback",
+    }})
+    monkeypatch.setattr(ga, "DATA_DIR", str(tmp_path))
+    assert ga._carry_forward_daily_report("kr") is None
+
+
+def test_carry_forward_skips_already_carried(monkeypatch, tmp_path):
+    """지속 장애 — 직전이 carry 면 무한 stale 방지 위해 재사용 안 함."""
+    from api.analyzers import gemini_analyst as ga
+    _write_portfolio(tmp_path, {"daily_report": {
+        "market_summary": "x", "_stale": True, "_gemini_model": "carry_forward",
+    }})
+    monkeypatch.setattr(ga, "DATA_DIR", str(tmp_path))
+    assert ga._carry_forward_daily_report("kr") is None
+
+
+def test_carry_forward_none_when_no_file(monkeypatch, tmp_path):
+    from api.analyzers import gemini_analyst as ga
+    monkeypatch.setattr(ga, "DATA_DIR", str(tmp_path))  # 빈 디렉토리
+    assert ga._carry_forward_daily_report("kr") is None
+
+
+def test_carry_forward_uses_us_key(monkeypatch, tmp_path):
+    from api.analyzers import gemini_analyst as ga
+    _write_portfolio(tmp_path, {"daily_report_us": {
+        "market_summary": "S&P 강세", "_gemini_model": "gemini-2.5-pro",
+    }})
+    monkeypatch.setattr(ga, "DATA_DIR", str(tmp_path))
+    out = ga._carry_forward_daily_report("us")
+    assert out is not None and out["market_summary"] == "S&P 강세"
+
+
+# ──────────────────────────────────────────────
 # 3. PDF fallback 필터 — _is_fallback_text
 # ──────────────────────────────────────────────
 
