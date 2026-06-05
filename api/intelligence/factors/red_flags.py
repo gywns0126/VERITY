@@ -182,6 +182,21 @@ def _detect_red_flags(
         elif fcf is not None and fcf < 0:
             downgrade_d.append(_make_flag(f"FCF 마이너스({fcf/1e8:,.0f}억)"))
 
+        # ── DART distress red-flag 3종 — 2026-06-05 점수 사전등록 (RULE 7, PM 승인) ──
+        # 관측 only(2026-06-03/04 부착) → 점수 반영. binary 신호 3종 = fit할 임계 없음
+        # (곡선맞추기 surface 0). 출처 = DART 감사보고서/공시 원문. prior = 회계/distress 문헌.
+        # going_concern_doubt + distress 공시 = auto_avoid(critical). 불성실공시 = downgrade.
+        # 정정·유상증자·올빼미·터널링 score 는 임계 fit 필요 → 관측 유지(N 누적 후 별도 등록).
+        _gc = stock.get("dart_audit_signals") or {}
+        if _gc.get("going_concern_doubt"):
+            auto_avoid_d.append(_make_flag("계속기업 불확실성 (감사인 명시)"))
+        _ev = stock.get("dart_disclosure_events") or {}
+        _distress = _ev.get("distress_events") or []
+        if _distress:
+            auto_avoid_d.append(_make_flag(f"distress 공시: {', '.join(_distress[:3])}"))
+        if _ev.get("unfaithful_disclosure"):
+            downgrade_d.append(_make_flag("불성실공시법인 지정"))
+
         # KIS 공매도 비율 경고
         ks = stock.get("kis_short_sale", {})
         short_r = ks.get("avg_short_ratio_5d", 0)

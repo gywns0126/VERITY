@@ -3454,8 +3454,9 @@ def main():
                 except Exception as e:
                     print(f"  ⚠️ 특수관계자 분석 스킵: {e}")
 
-                # ── DART 공시 이벤트 스캔: 유상증자/정정/불성실/distress (관측 only) ──
-                # 2026-06-04. 키워드 분류(LLM 0). scored risk_flags 미주입 = RULE 7.
+                # ── DART 공시 이벤트 스캔: 유상증자/정정/불성실/distress ──
+                # 2026-06-04. 키워드 분류(LLM 0). 🚨 distress/불성실 = 2026-06-05 점수 사전등록
+                # (factors/red_flags.py, RULE 7 PM 승인). 유상증자/정정/올빼미 = 관측 only(임계 fit 대기).
                 try:
                     from api.analyzers.dart_disclosure_events import scan_disclosure_events
                     ev_result = scan_disclosure_events(stocks_dict, window_days=90)
@@ -3477,8 +3478,9 @@ def main():
                 except Exception as e:
                     print(f"  ⚠️ 공시 이벤트 스캔 스킵: {e}")
 
-                # ── DART 감사 신호: going-concern/강조사항 (관측 only) ──
-                # 2026-06-04. doubt 전용 구문(boilerplate 회피). scored 미반영 = RULE 7.
+                # ── DART 감사 신호: going-concern/강조사항 ──
+                # 2026-06-04. doubt 전용 구문(boilerplate 회피). 🚨 going_concern_doubt =
+                # 2026-06-05 점수 사전등록(factors/red_flags.py, RULE 7 PM 승인). 강조사항 = 관측 only.
                 try:
                     from api.analyzers.dart_audit_signals import scan_audit_signals
                     au_result = scan_audit_signals(stocks_dict)
