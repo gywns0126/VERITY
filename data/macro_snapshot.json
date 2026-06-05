@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-06-05T09:01:36+09:00",
+  "collected_at": "2026-06-05T13:20:15+09:00",
   "macro": {
     "usd_krw": {
       "value": 1533.98,
@@ -827,11 +827,11 @@
         "curve": [
           {
             "tenor": "1M",
-            "yield": 3.72
+            "yield": 3.71
           },
           {
             "tenor": "3M",
-            "yield": 3.77
+            "yield": 3.78
           },
           {
             "tenor": "6M",
@@ -839,45 +839,45 @@
           },
           {
             "tenor": "1Y",
-            "yield": 3.82
+            "yield": 3.84
           },
           {
             "tenor": "2Y",
-            "yield": 4.05
+            "yield": 4.08
           },
           {
             "tenor": "3Y",
-            "yield": 4.09
+            "yield": 4.14
           },
           {
             "tenor": "5Y",
-            "yield": 4.17
+            "yield": 4.21
           },
           {
             "tenor": "7Y",
-            "yield": 4.31
+            "yield": 4.34
           },
           {
             "tenor": "10Y",
-            "yield": 4.46
+            "yield": 4.49
           },
           {
             "tenor": "20Y",
-            "yield": 4.97
+            "yield": 5.0
           },
           {
             "tenor": "30Y",
-            "yield": 4.97
+            "yield": 4.99
           }
         ],
         "curve_shape": "normal",
         "spread_2y_10y": 0.41,
-        "spread_3m_10y": 0.69
+        "spread_3m_10y": 0.71
       }
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-06-05T09:01:51+09:00",
+    "updated_at": "2026-06-05T13:20:24+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.93,
       "us_ig_risk": "LOW",
@@ -1112,12 +1112,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 28.03
+    "errors": [
+      "macro: exception:ValueError:cannot convert float NaN to integer"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 24.58
   },
   "schema_version": "v0"
 }
