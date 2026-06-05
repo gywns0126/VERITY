@@ -46,6 +46,35 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
         .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
 
+// ── last-good 캐시 fallback (2026-06-06 표준 스니펫, self-contained) ──
+// fetch 성공 시 데이터 저장, 실패 시 마지막 성공본 렌더 + "오프라인" badge 명시.
+// Blob/gh-pages publish race 순간 404 → 빈화면 추락 방지 (금융 데이터라 stale 은 명시).
+const CACHE_KEY = "verity_cache_bonds"
+function loadCache(key: string): { data: any; ts: number } | null {
+    try {
+        const raw = localStorage.getItem(key)
+        if (!raw) return null
+        const obj = JSON.parse(raw)
+        return obj && obj.ts ? obj : null
+    } catch (e) {
+        return null
+    }
+}
+function saveCache(key: string, data: any) {
+    try {
+        localStorage.setItem(key, JSON.stringify({ data: data, ts: Date.now() }))
+    } catch (e) {
+        // quota 등 저장 실패 무시
+    }
+}
+function cacheAge(ts: number): string {
+    const m = Math.round((Date.now() - ts) / 60000)
+    if (m < 1) return "방금 전"
+    if (m < 60) return `${m}분 전`
+    const h = Math.round(m / 60)
+    return h < 24 ? `${h}시간 전` : `${Math.round(h / 24)}일 전`
+}
+
 const font = FONT
 const BG = C.bgPage
 const CARD = C.bgCard
@@ -136,13 +165,14 @@ export default function BondDashboard(props: Props) {
     const { dataUrl } = props
     const [bonds, setBonds] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [cacheTs, setCacheTs] = useState<number | null>(null)
 
     useEffect(() => {
         if (!dataUrl) return
         const ac = new AbortController()
         fetchJson(dataUrl, ac.signal)
-            .then((d) => { if (!ac.signal.aborted) { setBonds(d.bonds ?? null); setLoading(false) } })
-            .catch(() => { if (!ac.signal.aborted) setLoading(false) })
+            .then((d) => { if (!ac.signal.aborted) { const v = d.bonds ?? null; saveCache(CACHE_KEY, v); setBonds(v); setCacheTs(null); setLoading(false) } })
+            .catch(() => { if (!ac.signal.aborted) { const c = loadCache(CACHE_KEY); if (c) { setBonds(c.data); setCacheTs(c.ts) } setLoading(false) } })
         return () => ac.abort()
     }, [dataUrl])
 
@@ -161,8 +191,10 @@ export default function BondDashboard(props: Props) {
         <div style={wrap}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.textTertiary, fontFamily: font, letterSpacing: 0.5, textTransform: "uppercase" }}>채권 시장</span>
-                <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>
-                    {bonds.updated_at ? new Date(bonds.updated_at).toLocaleString("ko-KR") : ""}
+                <span style={{ fontSize: 12, color: cacheTs ? WARN : MUTED, fontFamily: font }}>
+                    {cacheTs
+                        ? `⚠ 오프라인 · ${cacheAge(cacheTs)} 데이터`
+                        : (bonds.updated_at ? new Date(bonds.updated_at).toLocaleString("ko-KR") : "")}
                 </span>
             </div>
 
