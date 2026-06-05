@@ -1,8 +1,11 @@
 """Gemini 429/RESOURCE_EXHAUSTED 알림 + PDF fallback 텍스트 필터 검증.
 
-핵심:
+핵심 (2026-06-05 정공법 개편 반영):
   - _is_quota_error: 에러 문자열 패턴 매칭
-  - _alert_gemini_quota_exceeded: 1h dedupe — Telegram 호출 mock 으로 검증
+  - _classify_quota_error: 선불 크레딧 / 월 지출 한도 / rate-limit 분기
+  - _alert_gemini_quota_exceeded: 연속 ≥2 사이클일 때만 발송 (단발 transient 무시)
+    + 한 run 1회 + 1h dedupe backstop
+  - _reset_quota_streak: 정상 응답 시 streak 0
   - _is_fallback_text: PDF 출력 전 fallback 메시지 필터
 """
 import time
@@ -11,17 +14,24 @@ import pytest
 
 
 # ──────────────────────────────────────────────
-# 1. _is_quota_error
+# 공통 fixture — streak store 를 in-memory 로 stub + 모듈 run-flag 초기화
 # ──────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
-def _reset_dedupe():
-    """각 테스트 전에 quota alert dedupe 타임스탬프 초기화."""
+def _reset_quota(monkeypatch):
     from api.analyzers import gemini_analyst as ga
     ga._quota_alert_last_ts = 0.0
-    yield
-    ga._quota_alert_last_ts = 0.0
+    ga._quota_run_bumped = False
+    ga._quota_run_reset = False
+    store = {"streak": 0}
+    monkeypatch.setattr(ga, "_read_quota_streak", lambda: store["streak"])
+    monkeypatch.setattr(ga, "_write_quota_state", lambda n, **kw: store.__setitem__("streak", int(n)))
+    yield store
 
+
+# ──────────────────────────────────────────────
+# 1. _is_quota_error / _classify_quota_error
+# ──────────────────────────────────────────────
 
 def test_is_quota_error_recognizes_429_and_resource_exhausted():
     from api.analyzers.gemini_analyst import _is_quota_error
@@ -39,8 +49,21 @@ def test_is_quota_error_rejects_other_errors():
     assert not _is_quota_error(None)
 
 
+def test_classify_quota_error_branches():
+    from api.analyzers.gemini_analyst import _classify_quota_error
+    # 선불 크레딧 (이번 사고의 실제 에러)
+    assert _classify_quota_error(
+        "429 RESOURCE_EXHAUSTED. {'message': 'Your prepayment credits are depleted.'}"
+    ) == "credits"
+    assert _classify_quota_error("credits are depleted") == "credits"
+    # 월 지출 한도
+    assert _classify_quota_error("exceeded its monthly spending cap") == "spend_cap"
+    # 그 외 429 = 비율/일시
+    assert _classify_quota_error("429 RESOURCE_EXHAUSTED") == "rate_limit"
+
+
 # ──────────────────────────────────────────────
-# 2. _alert_gemini_quota_exceeded — 1h dedupe + Telegram 호출
+# 2. _alert_gemini_quota_exceeded — persistence gate + 분기
 # ──────────────────────────────────────────────
 
 def _patch_send_message(monkeypatch):
@@ -55,12 +78,25 @@ def _patch_send_message(monkeypatch):
     return calls
 
 
-def test_alert_fires_on_quota_error(monkeypatch):
+def test_single_transient_failure_suppressed(monkeypatch):
+    """단발(1 사이클) 실패 = 일시 글리치 가능 → 알림 보류."""
     calls = _patch_send_message(monkeypatch)
     from api.analyzers.gemini_analyst import _alert_gemini_quota_exceeded
-    _alert_gemini_quota_exceeded("daily_report", "429 RESOURCE_EXHAUSTED")
-    assert len(calls) == 1
-    assert "Gemini" in calls[0]
+    _alert_gemini_quota_exceeded(
+        "daily_report", "429 RESOURCE_EXHAUSTED prepayment credits are depleted"
+    )
+    assert calls == []
+
+
+def test_alert_fires_on_second_consecutive_cycle(monkeypatch):
+    """연속 2 사이클 실패 시에만 발송."""
+    calls = _patch_send_message(monkeypatch)
+    from api.analyzers import gemini_analyst as ga
+    ga._alert_gemini_quota_exceeded("daily_report", "429 RESOURCE_EXHAUSTED")
+    assert calls == []                # 1 사이클 = 보류
+    ga._quota_run_bumped = False      # 다음 run 시뮬
+    ga._alert_gemini_quota_exceeded("daily_report", "429 RESOURCE_EXHAUSTED")
+    assert len(calls) == 1            # 2 사이클 연속 → 발송
     assert "daily_report" in calls[0]
 
 
@@ -71,37 +107,68 @@ def test_alert_skipped_for_non_quota_error(monkeypatch):
     assert calls == []
 
 
-def test_alert_dedupe_within_1h(monkeypatch):
-    """같은 cap 초과 상황에서 5번 호출돼도 알림은 1번만."""
+def test_alert_once_per_run(monkeypatch, _reset_quota):
+    """한 run 에서 여러 호출이 실패해도 streak 1회 증가 + 알림 1회."""
+    _reset_quota["streak"] = 1        # 직전 사이클 이미 실패
     calls = _patch_send_message(monkeypatch)
     from api.analyzers.gemini_analyst import _alert_gemini_quota_exceeded
     for _ in range(5):
         _alert_gemini_quota_exceeded("periodic_report", "429 RESOURCE_EXHAUSTED")
     assert len(calls) == 1
+    assert _reset_quota["streak"] == 2   # 1회만 증가
 
 
-def test_alert_resends_after_dedupe_window(monkeypatch):
-    """1시간 지나면 다시 알림 (사용자가 cap 풀고 다음번에 또 실패하는 경우 등)."""
+def test_alert_resends_next_run_after_window(monkeypatch, _reset_quota):
+    """다음 run + 1h dedupe 경과 시 재발송 (장애 지속 알림)."""
+    _reset_quota["streak"] = 1
     calls = _patch_send_message(monkeypatch)
     from api.analyzers import gemini_analyst as ga
     ga._alert_gemini_quota_exceeded("periodic_report", "429 RESOURCE_EXHAUSTED")
     assert len(calls) == 1
-    # 시뮬레이트 — 1h+1 초 경과
+    ga._quota_run_bumped = False
     ga._quota_alert_last_ts = time.time() - (3600 + 1)
     ga._alert_gemini_quota_exceeded("periodic_report", "429 RESOURCE_EXHAUSTED")
     assert len(calls) == 2
 
 
-def test_alert_silent_on_telegram_module_failure(monkeypatch):
-    """telegram 모듈 자체가 import 실패해도 분석 흐름이 깨지면 안 됨."""
+def test_reset_clears_streak(_reset_quota):
     from api.analyzers import gemini_analyst as ga
-    # telegram import 자체를 실패시키긴 어려우니 send_message 가 raise 하도록 패치
+    _reset_quota["streak"] = 3
+    ga._reset_quota_streak()
+    assert _reset_quota["streak"] == 0
+
+
+def test_credits_error_points_to_billing_not_cap(monkeypatch, _reset_quota):
+    """선불 크레딧 에러 → 결제(Billing) 탭 안내, cap 증액 오안내 안 함."""
+    _reset_quota["streak"] = 1
+    calls = _patch_send_message(monkeypatch)
+    from api.analyzers import gemini_analyst as ga
+    ga._alert_gemini_quota_exceeded(
+        "daily_report", "429 RESOURCE_EXHAUSTED prepayment credits are depleted"
+    )
+    assert len(calls) == 1
+    assert "결제" in calls[0]
+    assert "지출 한도 수정" not in calls[0]
+
+
+def test_spend_cap_error_points_to_cap(monkeypatch, _reset_quota):
+    _reset_quota["streak"] = 1
+    calls = _patch_send_message(monkeypatch)
+    from api.analyzers import gemini_analyst as ga
+    ga._alert_gemini_quota_exceeded("daily_report", "exceeded its monthly spending cap")
+    assert len(calls) == 1
+    assert "지출 한도" in calls[0]
+
+
+def test_alert_silent_on_telegram_module_failure(monkeypatch, _reset_quota):
+    """telegram send 가 raise 해도 분석 흐름이 깨지면 안 됨."""
+    _reset_quota["streak"] = 1
     import api.notifications.telegram as tg
     def _boom(*a, **kw):
         raise RuntimeError("telegram down")
     monkeypatch.setattr(tg, "send_message", _boom)
-    # 예외 없이 종료해야
-    ga._alert_gemini_quota_exceeded("daily_report", "429 RESOURCE_EXHAUSTED")
+    from api.analyzers import gemini_analyst as ga
+    ga._alert_gemini_quota_exceeded("daily_report", "429 RESOURCE_EXHAUSTED")  # 예외 없이 종료
 
 
 # ──────────────────────────────────────────────

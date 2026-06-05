@@ -21,16 +21,27 @@ from api.config import (
     GEMINI_CRITICAL_TOP_N,
     RISK_KEYWORDS,
     DATA_DIR,
+    now_kst,
 )
 
 _CONSTITUTION_PATH = os.path.join(DATA_DIR, "verity_constitution.json")
 
 
-# ── Gemini 할당량 초과 (429 / RESOURCE_EXHAUSTED) Telegram 알림 ──
-# 같은 cap 초과 상황에서 5개 호출이 모두 알림 보내지 않도록 1시간 dedupe.
+# ── Gemini 호출 실패 (429 / RESOURCE_EXHAUSTED) Telegram 알림 ──
+# 2026-06-05 정공법 개편 (false-alarm 사고): 구글측 일시 billing 글리치가
+# 'prepayment credits are depleted'(실제 잔액 멀쩡) 를 단발로 뱉어도 한 사이클만
+# 실패 후 자동 복구되는데, 기존 알림은 단발 429 에도 "🚨 할당량 초과 → 충전/cap 증액"
+# 을 P0 로 쏴서 PM 오판 유발 (실제 ₩6,296/₩75,000 멀쩡). 개편 2축:
+#   (1) persistence gate — 연속 ≥2 사이클 실패할 때만 발송 (단발 transient 자동 필터).
+#       사이클 간 streak = data/metadata/gemini_quota_state.json 영속 (cron broad git add data/).
+#   (2) 에러 타입 분기 — 선불 크레딧(결제 탭) / 월 지출 한도(지출 탭) / rate-limit 정확히 안내.
 _QUOTA_ALERT_DEDUPE_SEC = 3600
+_QUOTA_STREAK_THRESHOLD = 2  # 연속 N 사이클 실패 시에만 알림 (단발 글리치 무시)
 _quota_alert_last_ts: float = 0.0
+_quota_run_bumped: bool = False   # 한 run 내 streak 증가 1회만
+_quota_run_reset: bool = False    # 한 run 내 reset 1회만
 _QUOTA_PATTERNS = ("RESOURCE_EXHAUSTED", "spending cap", "429")
+_QUOTA_STATE_PATH = os.path.join(DATA_DIR, "metadata", "gemini_quota_state.json")
 
 
 def _is_quota_error(err_text: str) -> bool:
@@ -38,32 +49,116 @@ def _is_quota_error(err_text: str) -> bool:
     return any(p in s for p in _QUOTA_PATTERNS)
 
 
+def _classify_quota_error(err_text: str) -> str:
+    """에러 문자열 → 종류. credits(선불 소진) / spend_cap(월 지출 한도) / rate_limit(일시·비율)."""
+    s = str(err_text or "").lower()
+    if "spending cap" in s or ("spend" in s and "cap" in s):
+        return "spend_cap"
+    if ("credits" in s and "deplet" in s) or "prepayment" in s:
+        return "credits"
+    return "rate_limit"
+
+
+def _read_quota_streak() -> int:
+    try:
+        with open(_QUOTA_STATE_PATH, encoding="utf-8") as f:
+            return int(json.load(f).get("streak", 0))
+    except Exception:
+        return 0
+
+
+def _write_quota_state(streak: int, *, context: str = "", kind: str = "") -> None:
+    try:
+        os.makedirs(os.path.dirname(_QUOTA_STATE_PATH), exist_ok=True)
+        with open(_QUOTA_STATE_PATH, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "streak": int(streak),
+                    "updated_kst": now_kst().isoformat(),
+                    "last_context": context,
+                    "last_kind": kind,
+                },
+                f, ensure_ascii=False, indent=2,
+            )
+    except Exception:
+        pass
+
+
+def _bump_quota_streak(context: str, kind: str) -> int:
+    """이번 run 의 Gemini quota 실패를 streak 에 1회만 반영하고 새 streak 반환."""
+    global _quota_run_bumped
+    if _quota_run_bumped:
+        return _read_quota_streak()
+    _quota_run_bumped = True
+    n = _read_quota_streak() + 1
+    _write_quota_state(n, context=context, kind=kind)
+    return n
+
+
+def _reset_quota_streak() -> None:
+    """Gemini 정상 응답(복구) 시 streak 0 으로 — daily_report 성공 경로에서 호출."""
+    global _quota_run_reset
+    if _quota_run_reset:
+        return
+    _quota_run_reset = True
+    if _read_quota_streak() != 0:
+        _write_quota_state(0, context="recovered", kind="")
+
+
+def _quota_alert_text(context: str, kind: str, streak: int) -> str:
+    head = (
+        f"<b>🚨 Gemini 호출 {streak} 사이클 연속 실패</b>\n\n"
+        f"위치: <code>{context}</code>\n"
+        "AI 리포트가 fallback 으로 떨어졌습니다.\n"
+        "(단발 일시 오류는 자동 복구되며 이 알림 안 뜸 — 지금은 지속 상태)\n\n"
+    )
+    if kind == "spend_cap":
+        return head + (
+            "원인: <b>월 지출 한도 도달</b>\n"
+            "조치:\n"
+            "1) AI Studio → 지출 → '지출 한도 수정' 으로 cap 증액\n"
+            "2) 또는 GEMINI_PRO_ENABLE=0 으로 Pro 호출 비활성"
+        )
+    if kind == "credits":
+        return head + (
+            "원인: Gemini 가 <b>'prepayment credits depleted'</b> 반환\n"
+            "※ 지출 한도(지출 탭)가 아니라 <b>선불 잔액</b> 문제 — 지출 페이지는 잔액을 안 보여줌\n"
+            "조치:\n"
+            "1) AI Studio → <b>결제(Billing)</b> 탭에서 선불 크레딧 잔액 확인 (0 이면 충전)\n"
+            "2) 잔액 멀쩡한데 지속되면 구글측 billing 장애 — 시간차 자동 복구 가능\n"
+            "3) GEMINI_PRO_ENABLE=0 으로 burn 감소"
+        )
+    return head + (
+        "원인: <b>429 (분당/일일 비율 또는 일시 장애)</b>\n"
+        "조치:\n"
+        "1) 보통 시간차 자동 복구 — 지속 시 AI Studio → '비율 제한(Tier)' 확인\n"
+        "2) GEMINI_PRO_ENABLE=0 으로 Pro 호출 비율 완화"
+    )
+
+
 def _alert_gemini_quota_exceeded(context: str, error_msg: str) -> None:
-    """Gemini API 가 할당량 초과를 반환했을 때 한 번만 Telegram 알림.
-    사용자가 ai.studio/spend 에서 cap 늘리지 않으면 다음 호출도 같은 에러 → 1h dedupe.
+    """Gemini quota/429 실패 — 연속 ≥2 사이클일 때만 Telegram 알림 (단발 transient 무시).
+    사이클 간 streak 은 data/metadata/gemini_quota_state.json 에 영속.
     """
-    global _quota_alert_last_ts
     if not _is_quota_error(error_msg):
         return
+    kind = _classify_quota_error(error_msg)
+    streak = _bump_quota_streak(context, kind)
+    if streak < _QUOTA_STREAK_THRESHOLD:
+        return  # 첫(또는 단발) 실패 = 일시 글리치 가능 → 알림 보류, 다음 사이클 확인
+    global _quota_alert_last_ts
     now = time.time()
     if now - _quota_alert_last_ts < _QUOTA_ALERT_DEDUPE_SEC:
         return
     _quota_alert_last_ts = now
     try:
         from api.notifications.telegram import send_message
-        text = (
-            "<b>🚨 Gemini API 할당량 초과</b>\n\n"
-            f"위치: <code>{context}</code>\n"
-            "이번 분석 사이클의 AI 리포트가 fallback 으로 떨어졌습니다.\n\n"
-            "조치:\n"
-            "1) https://ai.studio/spend 에서 monthly cap 증액\n"
-            "2) 또는 GEMINI_PRO_ENABLE=0 으로 Pro 호출 비활성\n"
-            "3) 다음 cron 자동 복구"
-        )
-        send_message(text)
+        send_message(_quota_alert_text(context, kind, streak))
     except Exception:
         # 알림 실패가 분석 흐름을 깨지 않도록 swallow
         pass
+
+
 _KNOWLEDGE_BASE_PATH = os.path.join(DATA_DIR, "brain_knowledge_base.json")
 _knowledge_cache: Optional[dict] = None
 
@@ -1197,6 +1292,7 @@ JSON만:
 
         result = _extract_json(text)
         result["_gemini_model"] = model
+        _reset_quota_streak()  # Gemini 정상 응답 = 복구 → streak 0 (다음 단발 글리치 또 보류)
         return result
     except Exception as e:
         _alert_gemini_quota_exceeded("daily_report", str(e))
