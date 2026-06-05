@@ -4604,9 +4604,14 @@ def main():
                     claude_light_calls += 1  # morning 도 light 카운트로 합산 (별도 카운터 신설 X)
                     print(f"  [cost] morning tokens: in={_morning_in} out={_morning_out}")
             else:
-                print(f"  Claude 모닝 전략 생성 실패 (API 오류)")
+                # 재생성 실패 — load_portfolio() carry-forward 로 들어온 옛 blob 을 반드시 제거.
+                # 안 그러면 stale 환각 blob 이 portfolio.json/history 에 재저장되고 매 아침
+                # 재전송됨 (2026-06-05 삼성 65,000원 환각 3차 surface 의 근본 원인).
+                portfolio.pop("claude_morning_strategy", None)
+                print(f"  Claude 모닝 전략 생성 실패 (API 오류) — stale carry-forward blob 제거")
         except Exception as e:
-            print(f"  모닝 전략 스킵: {e}")
+            portfolio.pop("claude_morning_strategy", None)
+            print(f"  모닝 전략 스킵: {e} — stale carry-forward blob 제거")
 
     # ── STEP 10.8: Claude 종합 검수 (full 모드, 1회/일) ──
     # 2026-05-11 박음. project_claude_budget_guard 정합 (~$2.81/월).

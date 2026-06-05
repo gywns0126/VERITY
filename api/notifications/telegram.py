@@ -486,9 +486,24 @@ def send_morning_briefing(portfolio: dict):
             lines.append(f"\n<b>AI 수동검토</b>: {len(manual_rows)}건 ({names})")
 
     # Claude 모닝 전략 코멘트 (full에서 생성된 것)
+    # 신선도 게이트 (2026-06-05): generate_morning_strategy 가 None 을 반환하면 STEP 10.7 이
+    # 옛 blob 을 덮어쓰지 못하고, load_portfolio() carry-forward 로 stale blob 이 매 아침
+    # 재전송됨 — 6/3 fix 이전 환각(삼성 65,000원/VIX 19.23/환율 1482.7)이 3차 surface 한 사고.
+    # generated_at 가 없거나(=pre-fix 또는 재생성 실패) 20h 초과면 코멘트 섹션 자체를 생략한다.
+    # (저녁 full ~20시 생성 → 아침 08시 송출 = ~12h. 20h 윈도우는 직전 저녁분만 통과.)
     ms = portfolio.get("claude_morning_strategy") or {}
     scenario = (ms.get("scenario") or "").strip()
-    if scenario:
+    strategy_fresh = False
+    gen_at = (ms.get("generated_at") or "").strip()
+    if scenario and gen_at:
+        try:
+            from datetime import datetime
+            gen_dt = datetime.fromisoformat(gen_at)
+            age_h = (now_kst() - gen_dt).total_seconds() / 3600.0
+            strategy_fresh = 0 <= age_h <= 20
+        except Exception:
+            strategy_fresh = False
+    if scenario and strategy_fresh:
         lines.append(f"\n<b>🧠 Claude 전략 코멘트</b>")
         lines.append(scenario)
         for wp in (ms.get("watch_points") or [])[:2]:
