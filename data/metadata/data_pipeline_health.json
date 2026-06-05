@@ -1,9 +1,9 @@
 {
-  "collected_at": "2026-06-05T20:44:51+09:00",
+  "collected_at": "2026-06-05T23:32:03+09:00",
   "overall_status": "error",
   "summary": {
-    "fresh": 5,
-    "stale": 0,
+    "fresh": 4,
+    "stale": 1,
     "missing": 1,
     "total": 6
   },
@@ -15,7 +15,7 @@
       "type": "jsonl_run_summary",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-06-05T20:43:16.619413+09:00",
+      "last_update_kst": "2026-06-05T23:30:19.212208+09:00",
       "age_hours": 0.03,
       "status": "fresh",
       "line_count": 109,
@@ -34,7 +34,7 @@
       "type": "jsonl_quarter",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-06-05T20:43:16.606413+09:00",
+      "last_update_kst": "2026-06-05T23:30:19.200208+09:00",
       "age_hours": 0.03,
       "status": "fresh",
       "line_count": 2214,
@@ -50,7 +50,7 @@
       "max_fresh_hours": 192.0,
       "exists": true,
       "last_update_kst": "2026-05-17T23:23:47+09:00",
-      "age_hours": 453.35,
+      "age_hours": 456.14,
       "status": "missing",
       "diagnostics": {
         "ok": true,
@@ -70,11 +70,11 @@
       "type": "json_collected_at",
       "max_fresh_hours": 1.0,
       "exists": true,
-      "last_update_kst": "2026-06-05T20:44:32+09:00",
+      "last_update_kst": "2026-06-05T23:31:36+09:00",
       "age_hours": 0.01,
       "status": "fresh",
       "diagnostics": {
-        "elapsed_s": 18.67,
+        "elapsed_s": 27.39,
         "used_prev_snapshot": []
       }
     },
@@ -86,8 +86,8 @@
       "max_fresh_hours": 2.0,
       "exists": true,
       "last_update_kst": "2026-06-05T19:34:27+09:00",
-      "age_hours": 1.17,
-      "status": "fresh",
+      "age_hours": 3.96,
+      "status": "stale",
       "diagnostics": {
         "ok": true,
         "candidates_count": 25,
@@ -104,16 +104,16 @@
       "type": "jsonl_runtime",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-06-05T20:43:16.551413+09:00",
+      "last_update_kst": "2026-06-05T23:30:19.143208+09:00",
       "age_hours": 0.03,
       "status": "fresh",
-      "line_count": 198,
+      "line_count": 201,
       "last_entry": {
-        "mode": "universe_scan",
-        "ramp_up_stage": 5000,
-        "execution_time_seconds": 990.91,
+        "mode": "quick",
+        "ramp_up_stage": 0,
+        "execution_time_seconds": 0.0,
         "fail_triggers": [],
-        "yfinance_failure_rate": 0.0005
+        "yfinance_failure_rate": 0.0
       }
     }
   ],
