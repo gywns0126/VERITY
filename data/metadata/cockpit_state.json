@@ -41,7 +41,24 @@
     "maintenance": false,
     "warn_days": 7.0
   },
-  "pre_registration_pending": [],
+  "pre_registration_pending": [
+    {
+      "sha": "b47fdc3a",
+      "date": "2026-06-05",
+      "subject": "fix(brain-v2): 전략 진화 N-gate — 종료 거래 N<50 시 가중치 제안 억제 (곡선맞추기 차단)",
+      "is_candidate": true,
+      "has_pm": false,
+      "has_why": true,
+      "has_data": false,
+      "has_expected": false,
+      "missing": [
+        "PM=approved",
+        "DATA",
+        "EXPECTED"
+      ],
+      "passed": false
+    }
+  ],
   "alert_volume_24h": {
     "sent": 13,
     "dedupe_skip": 10,
@@ -64,10 +81,15 @@
     "quarter": "2026Q2",
     "start": "2026-04-01",
     "end": "2026-06-30",
-    "count": 3,
+    "count": 4,
     "limit": 4,
-    "status": "OK",
+    "status": "AT_LIMIT",
     "commits": [
+      {
+        "sha": "b47fdc3a",
+        "date": "2026-06-05",
+        "subject": "fix(brain-v2): 전략 진화 N-gate — 종료 거래 N<50 시 가중치 제안 억제 (곡선맞추기 차단)"
+      },
       {
         "sha": "65f4467a",
         "date": "2026-05-24",
@@ -84,6 +106,6 @@
         "subject": "[brain] B-continuous macro_multiplier v0 박음 — soft gate score discount (PM 승인 20"
       }
     ],
-    "as_of": "2026-06-04T14:05:39+09:00"
+    "as_of": "2026-06-05T13:47:28+09:00"
   }
 }
