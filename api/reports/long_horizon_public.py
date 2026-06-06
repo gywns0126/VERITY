@@ -262,10 +262,13 @@ def _render_pdf(content: Dict[str, Any], title_label: str) -> str:
         pdf._set_font("B", 11); pdf.set_text_color(*c); pdf.set_x(15)
         pdf.cell(0, 7, label); pdf.ln(8)
         for it in items:
+            # LLM 출력이 dict({label,reason}) 또는 str 로 옴 — 양쪽 허용 (2026-06-06 crash 가드).
+            it_label = it.get("label", "") if isinstance(it, dict) else str(it)
+            it_reason = it.get("reason", "") if isinstance(it, dict) else ""
             pdf._set_font("B", 10); pdf.set_text_color(*pdf.WHITE); pdf.set_x(18)
-            pdf.cell(50, 6, _norm_text(it.get("label", "")))
+            pdf.cell(50, 6, _norm_text(it_label))
             pdf._set_font("", 9); pdf.set_text_color(60, 60, 60)
-            pdf.multi_cell(125, pdf.LH_COMPACT, _norm_text(it.get("reason", "")), align="L"); pdf.ln(1)
+            pdf.multi_cell(125, pdf.LH_COMPACT, _norm_text(it_reason), align="L"); pdf.ln(1)
         pdf.ln(4)
 
     # 다음 기간
@@ -275,8 +278,10 @@ def _render_pdf(content: Dict[str, Any], title_label: str) -> str:
     pdf.cell(0, 9, f"{nxt} 미리 보기"); pdf.ln(11)
     nx = sections.get("next", {}) or {}
     for ev in (nx.get("events", []) or [])[:3]:
+        # events 도 dict({description}) 또는 str 로 옴 (key_events 는 str) — 양쪽 허용.
+        ev_desc = ev.get("description", "") if isinstance(ev, dict) else str(ev)
         pdf.set_x(18); pdf._set_font("", 10); pdf.set_text_color(60, 60, 60)
-        pdf.multi_cell(177, pdf.LH_BODY, f"· {_norm_text(ev.get('description', ''))}", align="L")
+        pdf.multi_cell(177, pdf.LH_BODY, f"· {_norm_text(ev_desc)}", align="L")
         pdf.ln(2)
     if nx.get("positive_scenario"):
         pdf._set_font("B", 10); pdf.set_text_color(*pdf.GREEN); pdf.set_x(15)
