@@ -229,6 +229,50 @@ def _count_expected_daily_full_in_window(now_utc: datetime, hours: int = 24) -> 
     return count
 
 
+# bespoke 블록이 이미 다루는 / 자기참조 / 고빈도 = generic sweep 제외 (중복·noise 방지).
+_SWEEP_EXCLUDE = {
+    "cron_health_monitor.yml", "cron_health_audit.yml",   # self
+    "daily_analysis_full.yml", "universe_scan.yml", "macro_collect.yml",  # 위 bespoke
+    "price_pulse.yml", "hourly_pulse.yml",                 # 고빈도 (별도/expected)
+    "kis_token_refresh.yml", "daily_realtime.yml",         # KIS bespoke + RULE 1
+}
+
+
+def _sweep_workflow_latest_failures() -> List[Dict[str, Any]]:
+    """전 workflow 의 최신 완료 run 이 failure 인 것 sweep (윈도우 무관).
+
+    2026-06-07 신설 — dart_batch(주간)가 3주 silent 실패한 학습. 기존 analyze 는
+    bespoke 몇 개만 봐서, 감시 목록 밖 ~30 workflow 가 실패해도 알림 0이었다.
+    이 sweep 은 .github/workflows/*.yml 전부의 최신 run 결론을 확인 → 현재 깨진 것 포착.
+    """
+    import glob as _glob
+    out: List[Dict[str, Any]] = []
+    wf_dir = os.path.join(_REPO_ROOT, ".github", "workflows")
+    for path in sorted(_glob.glob(os.path.join(wf_dir, "*.yml"))):
+        name = os.path.basename(path)
+        if name in _SWEEP_EXCLUDE:
+            continue
+        runs = _gh_run_list(name, limit=5)
+        completed = [r for r in runs if r.get("status") == "completed"]
+        if not completed:
+            continue
+        latest = completed[0]  # gh run list = 최신순
+        if latest.get("conclusion") in ("failure", "timed_out", "startup_failure"):
+            age_h = None
+            try:
+                ts = datetime.fromisoformat(str(latest.get("createdAt", "")).replace("Z", "+00:00"))
+                age_h = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
+            except Exception:
+                pass
+            out.append({
+                "workflow": name,
+                "conclusion": latest.get("conclusion"),
+                "age_h": round(age_h, 1) if age_h is not None else None,
+                "title": latest.get("displayTitle", "?"),
+            })
+    return out
+
+
 def analyze(hours_window: int = 24) -> Dict[str, Any]:
     """직전 N시간 cron 결과 종합 분석.
 
@@ -576,9 +620,20 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         except Exception as e:
             findings.append(f"vision metric 산출 실패: {type(e).__name__}: {e}")
 
+    # N) 전 workflow 최신-run 실패 sweep (bespoke 밖 cron silent 실패 포착 — dart_batch 3주 학습)
+    workflow_failures = _sweep_workflow_latest_failures()
+    if workflow_failures:
+        severity = "WARNING" if severity == "PASS" else severity
+        for wf in workflow_failures[:8]:
+            age_txt = f"{wf['age_h']:.0f}h 전" if wf.get("age_h") is not None else "시점?"
+            findings.append(
+                f"⚠ {wf['workflow']} 최신 run {wf['conclusion']} ({age_txt}) — 감시목록 밖 silent 실패"
+            )
+
     return {
         "severity": severity,
         "findings": findings,
+        "workflow_latest_failures": workflow_failures,
         "daily_summary": daily_summary,
         "universe_scan_summary": uni_summary,
         "macro_collect_summary": macro_summary,
