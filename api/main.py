@@ -4647,6 +4647,24 @@ def main():
         portfolio.pop("claude_morning_strategy", None)
         print(f"\n[10.7] Claude 모닝 전략 비활성 — carry-forward fossil blob 제거")
 
+    # ── STEP 10.75: Claude 종합 검수 신선도 가드 (2026-06-07) ──
+    # claude_final_review 는 full 모드(10.8)에서만 생성되나 recommendations 는 light cycle 에서도
+    # 갱신됨 → load_portfolio carry-forward 로 낡은 검수가 잔존해 REVIEW_REQUIRED stale 표시 사고(6/7,
+    # market_horizon 미산출/CSCO 등 현재와 불일치 concern). claude_morning_strategy fossil 가드(10.7)
+    # 와 동형 — recs 시그니처 불일치/미표기 시 제거(다음 full 실행에서 재생성).
+    def _cfr_recs_sig(pf):
+        recs = pf.get("recommendations") or []
+        return "|".join(sorted(
+            f"{r.get('ticker')}:{r.get('grade') or r.get('recommendation') or ''}" for r in recs
+        ))
+    _cur_sig = _cfr_recs_sig(portfolio)
+    _cfr_existing = portfolio.get("claude_final_review")
+    if isinstance(_cfr_existing, dict):
+        _old_sig = _cfr_existing.get("_recs_sig")
+        if (not _old_sig) or (_old_sig != _cur_sig):
+            portfolio.pop("claude_final_review", None)
+            print("\n[10.75] Claude 검수 신선도 가드 — recs 스냅샷 불일치/미표기 → 낡은 검수 제거")
+
     # ── STEP 10.8: Claude 종합 검수 (full 모드, 1회/일) ──
     # 2026-05-11 추가. project_claude_budget_guard 정합 (~$2.81/월).
     # portfolio 핵심 (brain top 10 / macro / horizon / VAMS / tail_risk) 종합 → Claude
@@ -4658,6 +4676,7 @@ def main():
             review = final_portfolio_review(portfolio)
             if review:
                 portfolio["claude_final_review"] = review
+                review["_recs_sig"] = _cur_sig  # 신선도 가드 (10.75) — 다음 빌드 stale 판별
                 verdict = review.get("claude_final_verdict", "?")
                 score = review.get("review_score", "?")
                 concerns = review.get("concerns", [])
