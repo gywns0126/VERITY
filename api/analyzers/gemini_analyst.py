@@ -791,9 +791,9 @@ def _build_prompt(
     cm_block = ""
     if pr.get("commodity_ticker"):
         cm_block = f"""
-[원자재·마진] 연동 {pr.get('commodity_ticker')} | 60일 r {pr.get('correlation_60d', 'n/a')}
+[원자재·마진] 연동 {pr.get('commodity_ticker')} | 60일 연동도 {pr.get('correlation_60d', 'n/a')}
 20일: 원자재 {pr.get('commodity_20d_pct', '?')}% / 주가 {pr.get('stock_20d_pct', '?')}% | 국면 {pr.get('spread_regime', '?')}
-마진안심(가공) {pr.get('margin_safety_score', '?')} (판가력 {pr.get('pricing_power', '?')} vs 원가변동성 {pr.get('raw_material_volatility_score', '?')})
+마진 방어력 {pr.get('margin_safety_score', '?')} (판가력 {pr.get('pricing_power', '?')} vs 원가 변동성 {pr.get('raw_material_volatility_score', '?')})
 """
 
     x_sent = stock.get("x_sentiment", {})
