@@ -278,7 +278,7 @@ const containerStyle: React.CSSProperties = {
     minHeight: 600,
     background: "#0a0a0a",
     color: "#ffffff",
-    fontFamily: "Inter, sans-serif",
+    fontFamily: "'Pretendard', 'Inter', -apple-system, sans-serif",
     padding: 24,
     boxSizing: "border-box",
 }
@@ -317,7 +317,7 @@ const labelStyle: React.CSSProperties = {
 }
 const numberStyle: React.CSSProperties = {
     fontSize: 56,
-    fontFamily: "Lora, serif",
+    fontFamily: "'Lora', serif",
     fontWeight: 600,
     lineHeight: 1.1,
     marginTop: 4,
