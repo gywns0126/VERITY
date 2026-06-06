@@ -279,14 +279,14 @@ def send_alerts(alerts: list[dict]) -> bool:
     sent_any = False
 
     if crit:
-        lines = ["<b>🔔 안심 AI 비서 알림 (긴급)</b>\n"]
+        lines = ["<b>🚨 VERITY 긴급 알림</b>\n"]
         for alert in crit:
             lines.append(alert["message"])
         if send_message("\n".join(lines), bypass_quiet=True):
             sent_any = True
 
     if rest and not TELEGRAM_CRITICAL_ONLY:
-        lines = ["<b>🔔 안심 AI 비서 알림</b>\n"]
+        lines = ["<b>🔔 VERITY 알림</b>\n"]
         for alert in rest:
             lines.append(alert["message"])
         if send_message("\n".join(lines), bypass_quiet=False):
