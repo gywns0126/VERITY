@@ -200,7 +200,7 @@ function Header({ authError, checkedAt, onRefresh, refreshing }: {
         <header style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: `${S.md}px ${S.lg}px`, background: C.bgPage,
-
+            borderBottom: `1px solid ${C.border}`,
         }}>
             <div style={{
                 fontSize: T.title, fontWeight: 700, color: C.textPrimary,
@@ -244,7 +244,7 @@ function Tabs({ current, onChange }: { current: Tab; onChange: (t: Tab) => void 
     return (
         <div style={{
             display: "flex", padding: `0 ${S.lg}px`, background: C.bgPage,
-            overflowX: "auto",
+            overflowX: "auto", borderBottom: `1px solid ${C.border}`,
         }}>
             {items.map(it => {
                 const active = it.id === current
@@ -252,7 +252,8 @@ function Tabs({ current, onChange }: { current: Tab; onChange: (t: Tab) => void 
                     <div key={it.id} onClick={() => onChange(it.id)} style={{
                         padding: `${S.md}px ${S.lg}px`, cursor: "pointer",
                         color: active ? C.textPrimary : C.textTertiary,
-                        
+                        borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
+                        marginBottom: -1,
                         fontWeight: active ? 700 : 500,
                         fontSize: T.cap, letterSpacing: 0.5, textTransform: "uppercase",
                         flexShrink: 0, transition: "color 180ms ease",
@@ -278,7 +279,7 @@ function OverviewTab({ data, selected, setSelected, hovered, setHovered }: any) 
     return (
         <div style={{
             display: "grid", gridTemplateColumns: "minmax(0,3fr) minmax(0,2fr)",
-            gap: S.lg,
+            gap: S.lg, alignItems: "start",
         }}>
             {/* 좌: 토폴로지 */}
             <Panel title="Brain — 노드 상태">
@@ -296,6 +297,7 @@ function OverviewTab({ data, selected, setSelected, hovered, setHovered }: any) 
                     <Kpi label="Drift" value={fmtNum(kpi.drift_score)} unit="" />
                     <Kpi label="Confidence" value={kpi.confidence} unit="" />
                 </div>
+                <div style={{ height: 1, background: C.border }} />
                 <Panel title={`알림 (최근 24h)`}>
                     {alerts.length === 0
                         ? <Empty msg="알림 없음" small />
@@ -305,6 +307,7 @@ function OverviewTab({ data, selected, setSelected, hovered, setHovered }: any) 
                             </div>
                         ))}</div>}
                 </Panel>
+                <div style={{ height: 1, background: C.border }} />
                 <Panel title="TRUST — 오늘 발행 가능?">
                     <TrustVerdict trust={trust} />
                 </Panel>
@@ -350,7 +353,8 @@ function Topology2D({ topo, selected, setSelected, hovered, setHovered }: any) {
         const out: {
             positions: Record<string, { x: number; y: number }>;
             boxes: Array<{ subId: string; cluster: string; label: string; x: number; y: number; w: number; h: number; nodes: NodeT[] }>;
-        } = { positions: {}, boxes: [] }
+            height: number;
+        } = { positions: {}, boxes: [], height: 0 }
         if (!topo?.nodes) return out
         const W = width, H = HEIGHT
         const COL_W = W / 3
@@ -389,7 +393,7 @@ function Topology2D({ topo, selected, setSelected, hovered, setHovered }: any) {
                 return HEADER_H + rows * 30 + 16  // 노드 1줄 = 30px
             })
             const totalH = subHeights.reduce((a, b) => a + b, 0) + (subs.length - 1) * GAP
-            const startY = (H - totalH) / 2
+            const startY = PADY
 
             let curY = startY
             subs.forEach((sub, idx) => {
@@ -418,6 +422,7 @@ function Topology2D({ topo, selected, setSelected, hovered, setHovered }: any) {
                 })
                 curY += boxH + GAP
             })
+            out.height = Math.max(out.height, curY - GAP + PADY)
         })
 
         return out
@@ -451,7 +456,7 @@ function Topology2D({ topo, selected, setSelected, hovered, setHovered }: any) {
 
     return (
         <div ref={wrapRef} style={{ position: "relative", width: "100%" }}>
-            <svg width={width} height={HEIGHT} style={{ display: "block" }}>
+            <svg width={width} height={layout.height || HEIGHT} style={{ display: "block" }}>
                 {/* sub_cluster 박스 (배경) */}
                 {layout.boxes.map(b => {
                     const sum = subHealthSummary(b.nodes)
