@@ -11,11 +11,11 @@ import React, { useEffect, useState } from "react"
 
 /* ◆ VERITY 터미널 토큰 (project color styles: /VERITY /Base /배경 /Border) ◆ */
 const C = {
-    bgPage: "#08070E", bgCard: "#0E0F11", bgElevated: "#16161D", bgInput: "#1C1C25",
-    border: "#202026", borderStrong: "#2E2E37", borderHover: "#7fffa0",
-    textPrimary: "#F2F3F5", textSecondary: "#9AA0AA", textTertiary: "#5E5E68",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
+    border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
-    gradeHOT: "#EF4444", gradeWARM: "#F59E0B", gradeNEUT: "#9AA0AA",
+    gradeHOT: "#EF4444", gradeWARM: "#F59E0B", gradeNEUT: "#A8ABB2",
     statusPos: "#22C55E", statusNeg: "#EF4444",
 }
 const T = { cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 26,

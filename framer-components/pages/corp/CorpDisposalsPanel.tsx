@@ -9,9 +9,9 @@ import React, { useEffect, useMemo, useState } from "react"
 
 /* ◆ VERITY 터미널 토큰 ◆ */
 const C = {
-    bgCard: "#0E0F11", bgElevated: "#16161D", bgInput: "#1C1C25",
-    borderStrong: "#2E2E37", borderSoft: "#202026",
-    textPrimary: "#F2F3F5", textSecondary: "#9AA0AA", textTertiary: "#5E5E68",
+    bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
+    borderStrong: "rgba(255,255,255,0.10)", borderSoft: "rgba(255,255,255,0.06)",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
 }
@@ -170,7 +170,7 @@ export default function CorpDisposalsPanel(props: Props) {
                     disabled={!tickerValid}
                     style={{
                         background: tickerValid ? C.accent : C.borderSoft,
-                        color: tickerValid ? "#08070E" : C.textTertiary,
+                        color: tickerValid ? "#0a0a0a" : C.textTertiary,
                         border: "none",
                         borderRadius: R.sm,
                         padding: "6px 14px",
