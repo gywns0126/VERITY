@@ -76,6 +76,33 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
         .finally(() => clearTimeout(timer))
 }
 
+// ── last-good 캐시 fallback (2026-06-06 표준 스니펫, self-contained) ──
+const CACHE_KEY = "verity_cache_heatmap"
+function loadCache(key: string): { data: any; ts: number } | null {
+    try {
+        const raw = localStorage.getItem(key)
+        if (!raw) return null
+        const obj = JSON.parse(raw)
+        return obj && obj.ts ? obj : null
+    } catch (e) {
+        return null
+    }
+}
+function saveCache(key: string, data: any) {
+    try {
+        localStorage.setItem(key, JSON.stringify({ data: data, ts: Date.now() }))
+    } catch (e) {
+        // quota 등 저장 실패 무시
+    }
+}
+function cacheAge(ts: number): string {
+    const m = Math.round((Date.now() - ts) / 60000)
+    if (m < 1) return "방금 전"
+    if (m < 60) return `${m}분 전`
+    const h = Math.round(m / 60)
+    return h < 24 ? `${h}시간 전` : `${Math.round(h / 24)}일 전`
+}
+
 
 /* ─────────── 헬퍼 ─────────── */
 function isKRX(market: string): boolean {
@@ -173,6 +200,7 @@ interface Props {
 
 export default function StockHeatmap({ dataUrl, market }: Props) {
     const [data, setData] = useState<any>(null)
+    const [cacheTs, setCacheTs] = useState<number | null>(null)
     const [hovered, setHovered] = useState<any>(null)
     const [tipPos, setTipPos] = useState({ x: 0, y: 0 })
     const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -182,7 +210,9 @@ export default function StockHeatmap({ dataUrl, market }: Props) {
     useEffect(() => {
         if (!dataUrl) return
         const ac = new AbortController()
-        fetchJson(dataUrl, ac.signal).then((d) => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        fetchJson(dataUrl, ac.signal)
+            .then((d) => { if (!ac.signal.aborted) { saveCache(CACHE_KEY, d); setData(d); setCacheTs(null) } })
+            .catch(() => { const c = loadCache(CACHE_KEY); if (c) { setData(c.data); setCacheTs(c.ts) } })
         return () => ac.abort()
     }, [dataUrl])
 
@@ -221,6 +251,11 @@ export default function StockHeatmap({ dataUrl, market }: Props) {
 
     return (
         <div style={shell}>
+            {cacheTs != null && (
+                <div style={{ fontSize: 11, color: "#F59E0B", fontFamily: FONT, marginBottom: 6 }}>
+                    ⚠ 오프라인 · {cacheAge(cacheTs)} 데이터
+                </div>
+            )}
             {/* Header */}
             <div style={headerRow}>
                 <div style={headerLeft}>

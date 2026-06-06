@@ -47,6 +47,33 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
         .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
 
+// ── last-good 캐시 fallback (2026-06-06 표준 스니펫, self-contained) ──
+const CACHE_KEY = "verity_cache_etf"
+function loadCache(key: string): { data: any; ts: number } | null {
+    try {
+        const raw = localStorage.getItem(key)
+        if (!raw) return null
+        const obj = JSON.parse(raw)
+        return obj && obj.ts ? obj : null
+    } catch (e) {
+        return null
+    }
+}
+function saveCache(key: string, data: any) {
+    try {
+        localStorage.setItem(key, JSON.stringify({ data: data, ts: Date.now() }))
+    } catch (e) {
+        // quota 등 저장 실패 무시
+    }
+}
+function cacheAge(ts: number): string {
+    const m = Math.round((Date.now() - ts) / 60000)
+    if (m < 1) return "방금 전"
+    if (m < 60) return `${m}분 전`
+    const h = Math.round(m / 60)
+    return h < 24 ? `${h}시간 전` : `${Math.round(h / 24)}일 전`
+}
+
 const font = FONT
 const BG = C.bgPage
 const CARD = C.bgCard
@@ -197,6 +224,7 @@ export default function ETFScreenerPanel(props: Props) {
     const [selected, setSelected] = useState<ETFDetail | null>(null)
     const [minScore, setMinScore] = useState(0)
     const [bondOnly, setBondOnly] = useState(false)
+    const [cacheTs, setCacheTs] = useState<number | null>(null)
 
     useEffect(() => {
         if (!dataUrl) return
@@ -204,9 +232,11 @@ export default function ETFScreenerPanel(props: Props) {
         fetchJson(dataUrl, ac.signal).then((data) => {
             if (ac.signal.aborted) return
             const screened = data.etfs?.overall_top20 ?? [...(data.etfs?.kr_top ?? []), ...(data.etfs?.us_top ?? []), ...(data.etfs?.us_bond ?? [])]
+            saveCache(CACHE_KEY, screened)
             setEtfs(screened)
+            setCacheTs(null)
             setLoading(false)
-        }).catch(() => { if (!ac.signal.aborted) setLoading(false) })
+        }).catch(() => { if (!ac.signal.aborted) { const c = loadCache(CACHE_KEY); if (c) { setEtfs(c.data); setCacheTs(c.ts) } setLoading(false) } })
         return () => ac.abort()
     }, [dataUrl])
 
@@ -219,6 +249,12 @@ export default function ETFScreenerPanel(props: Props) {
     return (
         <div style={{ ...wrap, position: "relative" as const }}>
             {selected && <DetailCard etf={selected} onClose={() => setSelected(null)} />}
+
+            {cacheTs != null && (
+                <div style={{ fontSize: 11, color: "#F59E0B", fontFamily: font, marginBottom: 6 }}>
+                    ⚠ 오프라인 · {cacheAge(cacheTs)} 데이터
+                </div>
+            )}
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.textTertiary, fontFamily: font, letterSpacing: 0.5, textTransform: "uppercase" }}>ETF 스크리너</span>

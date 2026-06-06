@@ -160,6 +160,33 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
         .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
 
+// ── last-good 캐시 fallback (2026-06-06 표준 스니펫, self-contained) ──
+const CACHE_KEY = "verity_cache_cryptomacro"
+function loadCache(key: string): { data: any; ts: number } | null {
+    try {
+        const raw = localStorage.getItem(key)
+        if (!raw) return null
+        const obj = JSON.parse(raw)
+        return obj && obj.ts ? obj : null
+    } catch (e) {
+        return null
+    }
+}
+function saveCache(key: string, data: any) {
+    try {
+        localStorage.setItem(key, JSON.stringify({ data: data, ts: Date.now() }))
+    } catch (e) {
+        // quota 등 저장 실패 무시
+    }
+}
+function cacheAge(ts: number): string {
+    const m = Math.round((Date.now() - ts) / 60000)
+    if (m < 1) return "방금 전"
+    if (m < 60) return `${m}분 전`
+    const h = Math.round(m / 60)
+    return h < 24 ? `${h}시간 전` : `${Math.round(h / 24)}일 전`
+}
+
 
 /* ─────────── 색 매핑 ─────────── */
 function fngColor(value: number): string {
@@ -220,14 +247,15 @@ export default function CryptoMacroSensor(props: Props) {
     const { dataUrl, refreshIntervalSec = 180, layout = "full" } = props
     const [data, setData] = useState<any>(null)
     const [fetchErr, setFetchErr] = useState<string | null>(null)
+    const [cacheTs, setCacheTs] = useState<number | null>(null)
 
     useEffect(() => {
         if (!dataUrl) return
         const ac = new AbortController()
         setFetchErr(null)
         fetchJson(dataUrl, ac.signal)
-            .then((d) => { if (!ac.signal.aborted) setData(d) })
-            .catch((e) => { if (!ac.signal.aborted) setFetchErr(e instanceof Error ? e.message : String(e)) })
+            .then((d) => { if (!ac.signal.aborted) { saveCache(CACHE_KEY, d); setData(d); setCacheTs(null) } })
+            .catch((e) => { if (!ac.signal.aborted) { const c = loadCache(CACHE_KEY); if (c) { setData(c.data); setCacheTs(c.ts) } else { setFetchErr(e instanceof Error ? e.message : String(e)) } } })
         const sec = Math.max(30, refreshIntervalSec)
         const id = setInterval(() => {
             fetchJson(dataUrl).then((d) => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
@@ -314,6 +342,11 @@ export default function CryptoMacroSensor(props: Props) {
     if (layout === "compact") {
         return (
             <div style={shell}>
+                {cacheTs != null && (
+                    <div style={{ fontSize: 11, color: "#F59E0B", marginBottom: 6 }}>
+                        ⚠ 오프라인 · {cacheAge(cacheTs)} 데이터
+                    </div>
+                )}
                 <div style={{ display: "flex", alignItems: "center", gap: S.lg, flexWrap: "wrap" }}>
                     <span style={{
                         color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_bold,
@@ -384,6 +417,11 @@ export default function CryptoMacroSensor(props: Props) {
 
     return (
         <div style={shell}>
+            {cacheTs != null && (
+                <div style={{ fontSize: 11, color: "#F59E0B", marginBottom: 6 }}>
+                    ⚠ 오프라인 · {cacheAge(cacheTs)} 데이터
+                </div>
+            )}
             {/* Header — 단순 한 줄 */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingBottom: S.sm, }}>
                 <span style={{ fontSize: T.cap, color: C.textPrimary, fontWeight: T.w_bold, letterSpacing: 0.5, textTransform: "uppercase" }}>크립토 센서</span>
