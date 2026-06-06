@@ -28,9 +28,9 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react"
  * ◆ DESIGN TOKENS START ◆
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
     border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
 }
@@ -371,7 +371,7 @@ function ViewChip({ label, active, onClick }: { label: string; active: boolean; 
                 
                 color: active ? C.textPrimary : C.textTertiary,
                 padding: `${S.xs}px ${S.md}px`,
-                borderRadius: R.pill,
+                borderRadius: R.sm,
                 fontSize: T.cap,
                 fontWeight: active ? T.w_bold : T.w_semi,
                 fontFamily: FONT,
@@ -535,7 +535,7 @@ const shell: CSSProperties = {
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
 
-    borderRadius: 16,
+    borderRadius: 8,
     padding: S.xxl,
     display: "flex", flexDirection: "column",
     gap: S.lg,

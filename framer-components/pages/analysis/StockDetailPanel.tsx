@@ -6,9 +6,9 @@ import type { CSSProperties, ReactNode } from "react"
  * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
     border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     strongBuy: "#22C55E", buy: "#2DD4BF", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
@@ -39,7 +39,7 @@ class PanelErrorBoundary extends Component<{ children: ReactNode }> {
     static getDerivedStateFromError(e: Error) { return { error: e.message || "렌더 오류" } }
     render() {
         if (this.state.error) return (
-            <div style={{ width: "100%", height: "100%", minHeight: 120, background: C.bgPage, borderRadius: 20, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: FONT }}>
+            <div style={{ width: "100%", height: "100%", minHeight: 120, background: C.bgPage, borderRadius: 8, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: FONT }}>
                 <div style={{ color: C.up, fontSize: 14, fontWeight: 700 }}>컴포넌트 오류</div>
                 <div style={{ color: C.textSecondary, fontSize: 12, textAlign: "center" as const, maxWidth: 280 }}>{this.state.error}</div>
                 <button onClick={() => this.setState({ error: null })} style={{ border: "none", padding: "8px 20px", borderRadius: 10, background: "transparent", color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
@@ -851,13 +851,13 @@ function StockDetailPanelInner(props: Props) {
                             <div style={{ color: C.textPrimary, fontSize: "clamp(15px, 3.8vw, 22px)", fontWeight: 800, lineHeight: 1.2, letterSpacing: -0.3 }}>{selectedStock.name}</div>
                             <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>
                                 {selectedStock.ticker}
-                                <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 999, color: realtimeColor }}>{kisLoading ? "로딩..." : realtimeLabel}</span>
+                                <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 4, color: realtimeColor }}>{kisLoading ? "로딩..." : realtimeLabel}</span>
                                 {(() => {
                                     // WARN-23: 분석(portfolio) 데이터 freshness 배지 — 실시간 가격과 별도 컨텍스트
                                     const s = stalenessInfo(portfolio?.updated_at)
                                     if (!s.label) return null
                                     return (
-                                        <span style={{ marginLeft: 6, fontSize: 12, fontWeight: s.stale ? 800 : 600, padding: "2px 7px", borderRadius: 999, background: s.stale ? "rgba(255,77,77,0.10)" : "transparent", color: s.color }}>
+                                        <span style={{ marginLeft: 6, fontSize: 12, fontWeight: s.stale ? 800 : 600, padding: "2px 7px", borderRadius: 4, background: s.stale ? "rgba(255,77,77,0.10)" : "transparent", color: s.color }}>
                                             분석 {s.label}
                                         </span>
                                     )
@@ -1135,7 +1135,7 @@ function StockDetailPanelInner(props: Props) {
                                 {/* 확인 모달 */}
                                 {showConfirm && (
                                     <div style={{ position: "fixed" as const, inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-                                        <div style={{ background: "transparent", borderRadius: 20, padding: 24, maxWidth: 360, width: "90%", }}>
+                                        <div style={{ background: "transparent", borderRadius: 8, padding: 24, maxWidth: 360, width: "90%", }}>
                                             <div style={{ color: C.textPrimary, fontSize: 18, fontWeight: 800, marginBottom: 16 }}>주문 확인</div>
                                             <div style={{ color: MUTED, fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
                                                 <span style={{ color: orderSide === "buy" ? UP : DOWN, fontWeight: 800 }}>{orderSide === "buy" ? "매수" : "매도"}</span>
@@ -1169,7 +1169,7 @@ function StockDetailPanelInner(props: Props) {
                                         setShowConfirm(true)
                                     }}
                                     style={{ border: "none",
-                                        width: "100%", padding: "16px 0", borderRadius: 14, 
+                                        width: "100%", padding: "16px 0", borderRadius: 8,
                                         background: orderSide === "buy" ? UP : DOWN,
                                         color: C.textPrimary, fontSize: 17, fontWeight: 800, cursor: "pointer", fontFamily: _font,
                                     }}>
@@ -1245,7 +1245,7 @@ const wrapStyle: CSSProperties = {
     minHeight: 240,
     alignSelf: "stretch",
     background: C.bgPage,
-    borderRadius: 16,
+    borderRadius: 8,
     
     overflow: "hidden",
     fontFamily: _font,
