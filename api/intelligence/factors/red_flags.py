@@ -289,7 +289,7 @@ def _detect_red_flags(
         if ms is not None and float(ms) < 30:
             cm_ticker = pr.get("commodity_ticker", "원자재")
             pct = pr.get("commodity_20d_pct", "?")
-            downgrade_d.append(_make_flag(f"{cm_ticker} 급변({pct}%) + 마진안심 {ms}"))
+            downgrade_d.append(_make_flag(f"{cm_ticker} 급변({pct}%) + 마진 방어력 취약"))
 
     timing = stock.get("timing", {})
     ts = timing.get("timing_score", 50)
@@ -332,7 +332,7 @@ def _detect_red_flags(
     # downgrade 감점에서 제외. 역할 분리 — graded score=상대 랭킹, red_flag=배제(auto_avoid)만.
     # Grinold-Kahn 독립신호 합산 원칙 / Barra USE4 공선성 최소화 정합 (Perplexity 검증 2026-05-31).
     # auto_avoid(고부채>avoid임계, PEG>3, 유동비율<50 등)는 기능이 달라 유지. 거래량 목적 아님 = correctness.
-    _DEDUP_PATTERNS = ("고부채", "ROE ", "PBR×PER", "마진안심", "타이밍 스코어", "외인·기관 순매도")
+    _DEDUP_PATTERNS = ("고부채", "ROE ", "PBR×PER", "마진 방어력", "타이밍 스코어", "외인·기관 순매도")
     def _is_dedup(_t: str) -> bool:
         return any(_p in _t for _p in _DEDUP_PATTERNS)
     _penalized_d = [d for d in downgrade_d if not _is_dedup(d["text"])]

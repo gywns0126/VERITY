@@ -78,35 +78,42 @@ def _template_line(ev: Dict[str, Any]) -> str:
     s = linked[0]
     name = s.get("name", "?")
     regime = s.get("spread_regime") or "중립"
-    r = s.get("correlation_60d")
     ms = s.get("margin_safety_score")
-    r_s = f"{float(r):.2f}" if r is not None else "n/a"
-    ms_s = f"{float(ms):.0f}" if ms is not None else "n/a"
     opm = s.get("operating_margin")
     up = s.get("upside_pct")
-    opm_s = f"영업이익률 {float(opm):.1f}%" if opm is not None else "영업이익률 데이터 없음"
+    opm_s = f"영업이익률 {float(opm):.1f}%" if opm is not None else "영업이익률 미공시"
     up_s = ""
     if up is not None:
         up_s = f", 목표가 여력 {float(up):+.1f}%"
 
-    if regime == "마진 스프레드 확대":
-        tail = "원가 약세·주가 강세라 마진 스프레드 확대 구간으로 본다."
-    elif regime == "동반 상승":
-        tail = "원가·주가 동반 상승 — 판가 전이가 붙는지 컨센·실적으로만 판단."
-    elif regime == "비용 압박":
-        tail = "원가 상승에 주가는 못 따라감 — 마진 압박, 방어 점검."
-    elif regime == "최악의 상황":
-        tail = "원가 급등·주가 급락 겹침 — 최악 국면, 손절·비중부터."
+    # 내부 점수(margin_safety_score 0~100)는 사용자 화면에 그대로 노출하지 않고 정성 표현으로.
+    if ms is None:
+        margin_phrase = "마진 여력은 데이터가 부족"
+    elif float(ms) >= 65:
+        margin_phrase = "원가를 흡수할 마진 여력은 넉넉한 편"
+    elif float(ms) >= 40:
+        margin_phrase = "마진 여력은 보통 수준"
     else:
-        tail = "국면 중립에 가깝다 — 숫자만 보고 과매수만 피하자."
+        margin_phrase = "마진 여력은 다소 빠듯한 편"
+
+    if regime == "마진 스프레드 확대":
+        tail = "원가는 빠지고 주가는 강해 마진 스프레드가 벌어지는 구간입니다."
+    elif regime == "동반 상승":
+        tail = "원가와 주가가 같이 올라, 판가 전이가 실제로 붙는지는 컨센·실적으로 확인해야 합니다."
+    elif regime == "비용 압박":
+        tail = "원가는 오르는데 주가가 못 따라가 마진이 눌립니다. 방어 점검하세요."
+    elif regime == "최악의 상황":
+        tail = "원가 급등에 주가 급락까지 겹친 최악 국면입니다. 손절·비중부터 보세요."
+    else:
+        tail = "국면은 중립에 가까워 과매수만 피하면 됩니다."
 
     extra = ""
     if len(linked) > 1:
-        extra = f" 외 {len(linked) - 1}종 동일 원자재 연동."
+        extra = f" 같은 원자재에 엮인 종목이 {len(linked) - 1}개 더 있습니다."
 
     return (
         f"사장님, {ct} 전월 대비 {pct_s}. '{name}' {opm_s}{up_s}. "
-        f"60일 r {r_s}, 마진안심 {ms_s} — {tail}{extra}"
+        f"{margin_phrase}. {tail}{extra}"
     )
 
 
@@ -144,6 +151,9 @@ def _gemini_briefs(events: List[Dict[str, Any]]) -> Optional[List[str]]:
     prompt = f"""너는 15년 차 한국 펀드매니저다. 사장님께 텔레그램으로 짧게 보고한다.
 규칙: 한국어. 반말·굵은 말투 OK. "분석 결과" 같은 서론 금지. 입력에 없는 숫자·사실 invent 금지.
 각 이벤트당 한 문장(최대 160자). 원자재 티커명은 그대로 써도 됨.
+내부 점수명·약어(margin_safety_score·마진안심·correlation·r 값·spread_regime 등)나 0~100 raw 점수
+숫자는 그대로 노출하지 말고 정성적으로 풀어 써라 (예: '마진 여력 넉넉/보통/빠듯', '원자재와 강하게/느슨하게
+연동'). 영업이익률·목표가 여력·등락률 같은 실제 재무·시장 수치는 그대로 써도 됨.
 
 입력(JSON):
 {json.dumps(slim, ensure_ascii=False)}
