@@ -34,6 +34,7 @@ KST = timezone(timedelta(hours=9))
 _lock = threading.Lock()
 _token: Optional[str] = None
 _token_expires: float = 0.0  # unix timestamp
+_token_source: str = "none"  # shared_consumer / tmp_cache / legacy_stale_guard / self_issue / none (RULE 1 관측성)
 
 _TOKEN_CACHE_PATH = os.path.join(
     os.environ.get("XDG_CACHE_HOME", "/tmp"),
@@ -156,7 +157,7 @@ def _get_token() -> str:
 
     KIS_SHARED_TOKEN 미설정 시(legacy 롤백) = 자체 발급 + /tmp + 24h 가드.
     """
-    global _token, _token_expires
+    global _token, _token_expires, _token_source
     with _lock:
         # 1) 메모리 cache 유효
         if _token and time.time() < _token_expires:
@@ -170,12 +171,14 @@ def _get_token() -> str:
             if s_tok and s_exp and srow.get("app_key_fp") == _app_key_fp():
                 if time.time() < s_exp - 300:  # 유효 (5분 여유)
                     _token, _token_expires = s_tok, s_exp - 300
+                    _token_source = "shared_consumer"
                     _save_cached_token()
                     logger.info("KIS REST 공유 store 소비 (GH 발급분, 남은: %.0f분)", (s_exp - time.time()) / 60)
                     return _token
 
         # 3) /tmp cache fallback (Supabase 일시 장애 대비)
         if _load_cached_token():
+            _token_source = "tmp_cache"
             return _token  # type: ignore
 
         # ★ 순수 소비자 모드 — store/cache 어디에도 없음 → 발급 금지 (RULE 1 GH 단일 발급원).
@@ -204,6 +207,7 @@ def _get_token() -> str:
                     )
                     _token = stale_token
                     _token_expires = stale_expires
+                    _token_source = "legacy_stale_guard"
                     return _token
         except (FileNotFoundError, _json.JSONDecodeError, KeyError, ValueError):
             pass
@@ -229,9 +233,27 @@ def _get_token() -> str:
             _token_expires = exp_dt.timestamp() - 300  # 5분 여유
         except Exception:
             _token_expires = time.time() + 20 * 3600
+        _token_source = "self_issue"
         _save_cached_token()
         logger.info("KIS REST 토큰 신규 발급 (legacy 롤백 모드, 만료: %s)", exp_str)
         return _token
+
+
+def token_status() -> dict:
+    """런타임 KIS REST 토큰 상태 — /health 노출용 (RULE 1 관측성, 2026-06-07).
+
+    rule1_ok=False (shared_flag=True 인데 source='self_issue') = Railway 자체 발급 = P0.
+    토큰 값/키는 노출 안 함 (app_key_fp = sha256 prefix 12, 키 일치 확인용).
+    """
+    now = time.time()
+    return {
+        "shared_flag": _shared_enabled(),
+        "source": _token_source,
+        "has_valid_token": bool(_token and now < _token_expires),
+        "remaining_hours": round((_token_expires - now) / 3600, 1) if _token_expires else None,
+        "app_key_fp": _app_key_fp(),
+        "rule1_ok": (_token_source != "self_issue") if _shared_enabled() else True,
+    }
 
 
 def _headers(tr_id: str) -> dict:

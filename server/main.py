@@ -32,6 +32,7 @@ from server.config import (
 from server.kis_rest_client import (
     fetch_daily, fetch_minute, fetch_orderbook, fetch_price, fetch_trades,
     fetch_program_trade, place_kr_order, place_us_order, get_balance,
+    token_status,
 )
 from server.kis_ws_client import KISWebSocketClient
 
@@ -230,6 +231,8 @@ async def health():
         "uptime_seconds": round(ws_client.uptime, 1),
         "approval_key_age_hours": round(key_age / 3600, 1),
         "approval_key_remaining_hours": round(key_remaining / 3600, 1),
+        # RULE 1 관측성 — Railway REST 토큰 모드. rule1_ok=False = 자체 발급(P0).
+        "kis_rest_token": token_status(),
     }
 
 
