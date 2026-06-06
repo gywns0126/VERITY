@@ -165,7 +165,7 @@ def handle_query(text: str) -> str:
             from api.intelligence.chat_engine import ask
             answer = ask(text, context=data)
             _gemini_increment()
-            return f"🤖 <b>AI 비서</b>\n\n{answer}"
+            return f"🤖 <b>VERITY</b>\n\n{answer}"
         except Exception:
             pass
 

@@ -143,7 +143,7 @@ FIXTURES: dict = {
     "gemini.commodity_sector_map": {},
 
     # ── Gemini (chat) ──────────────────────────────────────
-    "gemini.chat": "[MOCK] dev 모드 — AI 비서 응답 대체",
+    "gemini.chat": "[MOCK] dev 모드 — VERITY 응답 대체",
 
     # ── Gemini (tail risk) ─────────────────────────────────
     "gemini.tail_risk": None,

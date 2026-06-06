@@ -197,7 +197,7 @@ def ask(
         client = genai.Client(api_key=GEMINI_API_KEY)
     except Exception as e:
         logger.error(f"Gemini 초기화 실패: {e}")
-        return "AI 비서 연결에 실패했습니다."
+        return "VERITY 연결에 실패했습니다."
 
     portfolio_ctx = _load_portfolio_context()
     stock_ctx = _build_stock_context(question, context)
@@ -236,4 +236,4 @@ def ask(
                 "Gemini 할당량 초과입니다. Google AI Studio 결제/쿼터를 확인하거나 "
                 "환경변수 GEMINI_MODEL_CHAT 을 더 가벼운 모델로 바꿔 보세요."
             )
-        return f"AI 비서 응답 오류: {e}"
+        return f"VERITY 응답 오류: {e}"
