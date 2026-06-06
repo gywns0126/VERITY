@@ -387,7 +387,6 @@ function FilterChip({ label, active, count, onClick, color }: {
             onClick={onClick}
             style={{ border: "none",
                 background: "transparent",
-                
                 color: active ? color : C.textTertiary,
                 padding: `${S.xs}px ${S.md}px`,
                 borderRadius: R.pill,
@@ -473,7 +472,6 @@ function AlertCard({ alert }: { alert: any }) {
                     style={{
                         color: C.accent, fontSize: T.cap, fontWeight: T.w_semi,
                         background: "transparent",
-                        
                         padding: `${S.xs}px ${S.sm}px`,
                         borderRadius: R.sm,
                         marginTop: 2,
@@ -524,7 +522,6 @@ const badgeRow: CSSProperties = {
 
 const actionBox: CSSProperties = {
     background: "transparent",
-    
     padding: `${S.md}px ${S.lg}px`,
     borderRadius: R.sm,
     display: "flex", flexDirection: "column",

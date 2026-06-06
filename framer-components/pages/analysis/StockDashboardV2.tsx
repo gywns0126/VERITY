@@ -1160,7 +1160,6 @@ export default function StockDashboardV2(props: Props) {
                                         <span style={{
                                             fontSize: T.cap, fontWeight: T.w_bold,
                                             color: C.accent, background: "transparent",
-                                            
                                             borderRadius: R.sm,
                                             padding: `2px ${S.sm}px`,
                                             letterSpacing: 0.5,
@@ -1669,7 +1668,6 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
                 <div style={{
                     display: "flex", alignItems: "center", gap: S.sm,
                     background: "transparent",
-                    
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                 }}>
@@ -1719,7 +1717,6 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
                             key={i}
                             style={{
                                 background: "transparent",
-                                
                                 color: C.accent,
                                 fontSize: T.cap, fontWeight: T.w_semi,
                                 padding: `2px ${S.sm}px`,
@@ -1849,7 +1846,6 @@ function USOnlySection({ stock }: { stock: any }) {
                 display: "inline-flex", alignItems: "center", gap: S.xs,
                 padding: `${S.xs}px ${S.md}px`,
                 background: "transparent",
-                
                 borderRadius: R.sm,
                 color: C.info, fontSize: T.cap, fontWeight: T.w_semi,
                 textDecoration: "none",
@@ -1955,7 +1951,6 @@ function USOnlySection({ stock }: { stock: any }) {
                     display: "inline-flex", alignItems: "center", gap: S.xs,
                     padding: `${S.xs}px ${S.md}px`,
                     background: "transparent",
-                    
                     borderRadius: R.sm,
                     color: C.info, fontSize: T.cap, fontWeight: T.w_semi,
                     textDecoration: "none",
@@ -2249,7 +2244,6 @@ function BrainSignalsSection({
             {typeof brain.inst_13f_bonus === "number" && brain.inst_13f_bonus > 0 && (
                 <div style={{
                     background: "transparent",
-                    
                     borderRadius: R.sm,
                     padding: `${S.sm}px ${S.md}px`,
                     display: "flex", alignItems: "center", gap: S.sm,
@@ -2348,7 +2342,6 @@ function RedFlagsSection({ rf }: { rf: any }) {
                         key={`a${i}`}
                         style={{
                             background: "transparent",
-                            
                             borderRadius: R.sm,
                             padding: `${S.xs}px ${S.md}px`,
                             color: C.danger, fontSize: T.cap, fontWeight: T.w_semi,
@@ -2363,7 +2356,6 @@ function RedFlagsSection({ rf }: { rf: any }) {
                         key={`d${i}`}
                         style={{
                             background: "transparent",
-                            
                             borderRadius: R.sm,
                             padding: `${S.xs}px ${S.md}px`,
                             color: C.warn, fontSize: T.cap,
@@ -2936,7 +2928,6 @@ function ShortInterestSection({ si }: { si: any }) {
             {sp >= 20 && (
                 <div style={{
                     background: "transparent",
-                    
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                     color: C.danger, fontSize: T.cap, fontWeight: T.w_semi,
@@ -2948,7 +2939,6 @@ function ShortInterestSection({ si }: { si: any }) {
             {si.trend === "surge" && (
                 <div style={{
                     background: "transparent",
-                    
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                     color: C.warn, fontSize: T.cap, lineHeight: T.lh_normal,
@@ -3028,7 +3018,6 @@ function MacroTab({ data }: { data: any }) {
                         return (
                             <div key={i} style={{
                                 background: "transparent",
-                                
                                 borderRadius: R.sm,
                                 padding: `${S.xs}px ${S.md}px`,
                                 color: C.textSecondary, fontSize: T.cap,
@@ -3297,7 +3286,6 @@ function PredictTab({ stock }: { stock: any }) {
                                 key={k}
                                 style={{
                                     background: "transparent",
-                                    
                                     color: C.success, fontSize: T.cap, fontWeight: T.w_semi,
                                     padding: `2px ${S.sm}px`, borderRadius: R.sm,
                                     letterSpacing: 0.5,
@@ -3429,7 +3417,6 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
                 {n.legal?.risk_flag && (
                     <div style={{
                         background: "transparent",
-                        
                         borderRadius: R.sm,
                         padding: `${S.xs}px ${S.md}px`,
                         color: C.danger, fontSize: T.cap, fontWeight: T.w_bold,
@@ -4159,7 +4146,6 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                     {fac.geopolitical_risk && (
                         <div style={{
                             background: "transparent",
-                            
                             borderRadius: R.md,
                             padding: `${S.md}px ${S.lg}px`,
                             display: "flex", flexDirection: "column", gap: S.xs,
@@ -4698,7 +4684,6 @@ function QuantBar({
                             key={i}
                             style={{
                                 background: "transparent",
-                                
                                 color: C.success,
                                 fontSize: T.cap, fontWeight: T.w_semi,
                                 padding: `2px ${S.sm}px`, borderRadius: R.sm,
@@ -4984,7 +4969,6 @@ function GroupNode({
     return (
         <div style={{
             background: "transparent",
-            
             borderRadius: R.md,
             padding: `${S.sm}px ${S.md}px`,
             textAlign: "center",
@@ -5081,7 +5065,6 @@ function WatchGroupPicker({
                 onClick={onToggle}
                 style={{ border: "none",
                     background: "transparent",
-                    
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.sm}px`,
                     color: open ? C.bgPage : C.accent,
@@ -5098,7 +5081,6 @@ function WatchGroupPicker({
                 <div style={{
                     position: "absolute", top: 32, left: 0, zIndex: 20,
                     background: "transparent",
-                    
                     borderRadius: R.md,
                     padding: S.xs,
                     minWidth: 180,
@@ -5111,7 +5093,6 @@ function WatchGroupPicker({
                             onClick={() => onPick(g.id)}
                             style={{ border: "none",
                                 background: "transparent",
-                                
                                 borderRadius: R.sm,
                                 padding: `${S.xs}px ${S.sm}px`,
                                 cursor: "pointer",
@@ -5238,7 +5219,6 @@ function StockListItem({
                             <span style={{
                                 fontSize: T.cap, fontWeight: T.w_bold,
                                 color: C.accent, background: "transparent",
-                                
                                 borderRadius: R.sm,
                                 padding: `1px ${S.xs}px`,
                                 whiteSpace: "nowrap",

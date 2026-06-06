@@ -204,7 +204,7 @@ function _isUSAlert(a: any, usTokens: Set<string>, krTokens: Set<string>): boole
 
 /* ─── Sub-components (defined outside VerityReport to prevent remount on re-render) ─── */
 /* SectionIcon — 펜타그램 톤: emoji 박스 폐기, 8px dot indicator */
-function SectionIcon({ color }: { icon?: string; color: string }) {
+function SectionIcon({ color }: { color: string }) {
     return (
         <span style={{
             width: 8, height: 8, borderRadius: "50%",
@@ -213,7 +213,7 @@ function SectionIcon({ color }: { icon?: string; color: string }) {
     )
 }
 
-function Section({ iconColor, label, children }: { icon?: string; iconColor: string; label: string; children?: any }) {
+function Section({ iconColor, label, children }: { iconColor: string; label: string; children?: any }) {
     return (
         <div style={{ padding: `${S.lg}px ${S.xl}px`, background: C.bgCard, borderRadius: R.lg, marginBottom: S.md }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.md }}>
@@ -536,7 +536,6 @@ export default function VerityReport(props: Props) {
                                     <button key={k} type="button" onClick={() => _openArchive(k)}
                                             style={{ border: "none",
                                                 background: "transparent",
-                                                
                                                 color: active ? C.textPrimary : C.textTertiary,
                                                 fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font,
                                                 padding: `${S.xs}px ${S.md}px`,
@@ -781,7 +780,7 @@ export default function VerityReport(props: Props) {
 
                         {/* 추천 성과 복기 */}
                         {periodicReport._raw_stats && (
-                            <Section icon="📊" iconColor={C.success} label={`추천 성과 복기 — 적중률 ${periodicReport._raw_stats.hit_rate_pct || 0}%`}>
+                            <Section iconColor={C.success} label={`추천 성과 복기 — 적중률 ${periodicReport._raw_stats.hit_rate_pct || 0}%`}>
                                 <MetricRow items={[
                                     { label: "BUY 추천", value: `${periodicReport._raw_stats.total_buy_recs || 0}건` },
                                     { label: "적중률", value: `${periodicReport._raw_stats.hit_rate_pct || 0}%`, color: (periodicReport._raw_stats.hit_rate_pct || 0) >= 50 ? C.up : C.down },
@@ -823,7 +822,7 @@ export default function VerityReport(props: Props) {
 
                         {/* 섹터 동향 분석 */}
                         {periodicReport._raw_stats?.top3_sectors?.length > 0 && (
-                            <Section icon="📈" iconColor={C.brandFactor} label="섹터 동향 — 돈의 흐름">
+                            <Section iconColor={C.brandFactor} label="섹터 동향 — 돈의 흐름">
                                 <BarChart items={periodicReport._raw_stats.top3_sectors.map((s: any) => ({
                                     label: s.name,
                                     value: s.avg_change_pct,
@@ -856,7 +855,7 @@ export default function VerityReport(props: Props) {
                             return (
                                 <>
                                     {auxList.length > 0 && (
-                                        <Section icon="🔬" iconColor={C.info} label={`메타 분석 — 보조 입력 (5) · 시장 baseline ${driftPct}%`}>
+                                        <Section iconColor={C.info} label={`메타 분석 — 보조 입력 (5) · 시장 baseline ${driftPct}%`}>
                                             {/* baseline 설명 */}
                                             <p style={{ ...sectionText, marginBottom: S.md, color: C.textTertiary, fontSize: T.cap }}>
                                                 같은 기간 종목 상승 비율 = <strong>{driftPct}%</strong> (무뇌 'BUY 전부' 의 적중률). 실력 = 적중률 − baseline = <strong>excess</strong>.
@@ -895,7 +894,7 @@ export default function VerityReport(props: Props) {
                                         const bExcess = brainNode.excess_accuracy_pct ?? (brainNode.accuracy_pct - driftPct)
                                         const bColor = excessColor(bExcess)
                                         return (
-                                            <Section icon="🧠" iconColor={C.accent} label="Brain 종합 판단자 성적 (참고치)">
+                                            <Section iconColor={C.accent} label="Brain 종합 판단자 성적 (참고치)">
                                                 <div style={{
                                                     display: "flex", alignItems: "baseline", gap: S.md,
                                                     padding: `${S.md}px ${S.lg}px`, background: C.bgPage, borderRadius: R.md,
@@ -925,7 +924,7 @@ export default function VerityReport(props: Props) {
 
                         {/* 브레인 정확도 평가 */}
                         {periodicReport._raw_stats?.brain_grades && Object.keys(periodicReport._raw_stats.brain_grades).length > 0 && (
-                            <Section icon="🧠" iconColor={C.accent} label="AI 브레인 등급별 실적">
+                            <Section iconColor={C.accent} label="AI 브레인 등급별 실적">
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: S.sm, marginBottom: S.md }}>
                                     {Object.entries(periodicReport._raw_stats.brain_grades as Record<string, any>).map(([grade, stats]) => (
                                         <div key={grade} style={{
@@ -949,21 +948,21 @@ export default function VerityReport(props: Props) {
 
                         {/* 매크로 전망 */}
                         {periodicReport.macro_outlook && (
-                            <Section icon="M" iconColor={C.brandFactor} label="매크로 환경 변화">
+                            <Section iconColor={C.brandFactor} label="매크로 환경 변화">
                                 <p style={sectionText}>{periodicReport.macro_outlook}</p>
                             </Section>
                         )}
 
                         {/* 전략 제안 */}
                         {periodicReport.strategy && (
-                            <Section icon="T" iconColor={C.success} label={`다음 ${PERIOD_LABELS[period]} 전략`}>
+                            <Section iconColor={C.success} label={`다음 ${PERIOD_LABELS[period]} 전략`}>
                                 <p style={sectionText}>{periodicReport.strategy}</p>
                             </Section>
                         )}
 
                         {/* 리스크 주의 */}
                         {periodicReport.risk_watch && (
-                            <Section icon="!" iconColor={C.danger} label="리스크 주의">
+                            <Section iconColor={C.danger} label="리스크 주의">
                                 <p style={sectionText}>{periodicReport.risk_watch}</p>
                             </Section>
                         )}
@@ -1124,7 +1123,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
 
             <div style={bodyWrap}>
                 {brainScore !== null && (
-                    <Section icon="🧠" iconColor={C.accent} label="Verity Brain 종합">
+                    <Section iconColor={C.accent} label="Verity Brain 종합">
                         <MetricRow items={[
                             { label: "종합 점수", value: `${brainScore}`, color: brainScore >= 65 ? C.accent : brainScore >= 45 ? C.watch : C.danger },
                             { label: "팩트", value: `${factScore ?? "—"}`, color: C.success },
@@ -1157,7 +1156,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {dualRows.length > 0 && (
-                    <Section icon="H" iconColor={C.info} label="듀얼 모델 합의 상태">
+                    <Section iconColor={C.info} label="듀얼 모델 합의 상태">
                         <MetricRow items={[
                             { label: "합의율", value: `${Math.round((dualAgree / Math.max(dualRows.length, 1)) * 100)}%`, color: dualAgree / Math.max(dualRows.length, 1) >= 0.7 ? C.success : C.watch },
                             { label: "수동검토", value: `${dualManual}종목`, color: dualManual > 0 ? C.danger : C.success },
@@ -1185,12 +1184,12 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {report.market_analysis && (
-                    <Section icon="A" iconColor={C.info} label="시장 분석">
+                    <Section iconColor={C.info} label="시장 분석">
                         <p style={sectionText}>{report.market_analysis}</p>
                     </Section>
                 )}
 
-                <Section icon="M" iconColor={C.brandFactor} label="글로벌 매크로">
+                <Section iconColor={C.brandFactor} label="글로벌 매크로">
                     <MetricRow items={[
                         { label: "시장 분위기", value: mood.label || "—", color: (mood.score || 50) >= 60 ? C.success : (mood.score || 50) <= 40 ? C.danger : C.watch },
                         { label: "VIX", value: `${macro.vix?.value || "—"}`, color: (macro.vix?.value || 0) > 25 ? C.danger : C.success },
@@ -1223,13 +1222,13 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 </Section>
 
                 {report.strategy && (
-                    <Section icon="T" iconColor={C.success} label="투자 전략">
+                    <Section iconColor={C.success} label="투자 전략">
                         <p style={sectionText}>{report.strategy}</p>
                     </Section>
                 )}
 
                 {holdings.length > 0 && (
-                    <Section icon="P" iconColor={C.caution} label="포트폴리오 현황">
+                    <Section iconColor={C.caution} label="포트폴리오 현황">
                         <MetricRow items={[
                             { label: "총 자산", value: totalAsset ? `${totalAsset.toLocaleString()}원` : "—" },
                             { label: "수익률", value: `${totalReturn >= 0 ? "+" : ""}${totalReturn.toFixed(2)}%`, color: totalReturn >= 0 ? C.up : C.down },
@@ -1248,7 +1247,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     </Section>
                 )}
 
-                <Section icon="R" iconColor={C.accent} label={`추천 종목 요약 (KR ${krRecs.length} · US ${usRecs.length})`}>
+                <Section iconColor={C.accent} label={`추천 종목 요약 (KR ${krRecs.length} · US ${usRecs.length})`}>
                     {krRecs.length > 0 && (
                         <>
                             <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.sm }}>
@@ -1299,7 +1298,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 </Section>
 
                 {sectors.length > 0 && (
-                    <Section icon="S" iconColor={C.brandFactor} label="섹터 동향">
+                    <Section iconColor={C.brandFactor} label="섹터 동향">
                         {krSectors.length > 0 && (
                             <>
                                 <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.sm }}>
@@ -1366,13 +1365,13 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {report.risk_watch && (
-                    <Section icon="!" iconColor={C.danger} label="리스크 주의">
+                    <Section iconColor={C.danger} label="리스크 주의">
                         <p style={sectionText}>{report.risk_watch}</p>
                     </Section>
                 )}
 
                 {allHeadlines.length > 0 && (
-                    <Section icon="N" iconColor={C.info} label={`뉴스 요약 (호재 ${posHeadlines} / 악재 ${negHeadlines})`}>
+                    <Section iconColor={C.info} label={`뉴스 요약 (호재 ${posHeadlines} / 악재 ${negHeadlines})`}>
                         {krHeadlines.slice(0, 4).map((h: any, i: number) => {
                             const sc = h.sentiment === "positive" ? C.success : h.sentiment === "negative" ? C.danger : C.textSecondary
                             return (
@@ -1402,13 +1401,13 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {report.hot_theme && (
-                    <Section icon="H" iconColor={C.caution} label="주목 테마">
+                    <Section iconColor={C.caution} label="주목 테마">
                         <p style={sectionText}>{report.hot_theme}</p>
                     </Section>
                 )}
 
                 {events.filter((e: any) => (e.d_day ?? 99) <= 14).length > 0 && (
-                    <Section icon="E" iconColor={C.brandClaude} label="주요 이벤트">
+                    <Section iconColor={C.brandClaude} label="주요 이벤트">
                         {events.filter((e: any) => (e.d_day ?? 99) <= 14).slice(0, 5).map((e: any, i: number) => (
                             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                 <div style={{ flex: 1 }}>
@@ -1422,7 +1421,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {briefingHeadline && (
-                    <Section icon="V" iconColor={C.watch} label="비서의 한마디">
+                    <Section iconColor={C.watch} label="비서의 한마디">
                         <p style={{ ...sectionText, color: C.watch, fontWeight: T.w_semi }}>{briefingHeadline}</p>
                         {briefingActions.length > 0 && (
                             <div style={{ marginTop: S.sm }}>
@@ -1435,14 +1434,14 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {report.tomorrow_outlook && (
-                    <Section icon="→" iconColor={C.brandFactor} label="향후 전망">
+                    <Section iconColor={C.brandFactor} label="향후 전망">
                         <p style={sectionText}>{report.tomorrow_outlook}</p>
                     </Section>
                 )}
 
                 {/* 저평가 발굴 (Value Hunter) */}
                 {data?.value_hunt?.gate_open && Array.isArray(data.value_hunt.value_candidates) && data.value_hunt.value_candidates.length > 0 && (
-                    <Section icon="V" iconColor={C.info} label={`저평가 발굴 (${data.value_hunt.value_candidates.length}종목)`}>
+                    <Section iconColor={C.info} label={`저평가 발굴 (${data.value_hunt.value_candidates.length}종목)`}>
                         <p style={{ color: C.info, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: font, margin: `0 0 ${S.sm}px` }}>{data.value_hunt.gate_reason || ""}</p>
                         {data.value_hunt.value_candidates.slice(0, 5).map((vc: any, i: number) => (
                             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
@@ -1458,7 +1457,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
 
                 {/* AI 포스트모텀 */}
                 {data?.postmortem?.failures && data.postmortem.failures.length > 0 && (
-                    <Section icon="X" iconColor={C.danger} label={`AI 오심 분석 (${data.postmortem.analyzed_count || data.postmortem.failures.length}건)`}>
+                    <Section iconColor={C.danger} label={`AI 오심 분석 (${data.postmortem.analyzed_count || data.postmortem.failures.length}건)`}>
                         {data.postmortem.lesson && <p style={{ ...sectionText, color: C.danger }}>{data.postmortem.lesson}</p>}
                         {data.postmortem.system_suggestion && <p style={{ ...sectionText, color: C.caution, marginTop: S.sm }}>개선: {data.postmortem.system_suggestion}</p>}
                         {data.postmortem.failures.slice(0, 3).map((f: any, i: number) => (
@@ -1485,7 +1484,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     const decFactors = ic.decaying_factors || []
 
                     return (
-                        <Section icon="Q" iconColor={C.info} label="팩터 예측력 순위">
+                        <Section iconColor={C.info} label="팩터 예측력 순위">
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                 <thead>
                                     <tr>
@@ -1545,7 +1544,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     const sourceLabel: Record<string, string> = { gemini: "Gemini", claude: "Claude", gemini_disputed: "Gemini (이견)" }
 
                     return (
-                        <Section icon="AI" iconColor={C.caution} label={`AI 소스별 성과 (${lb.window_days || 30}일)`}>
+                        <Section iconColor={C.caution} label={`AI 소스별 성과 (${lb.window_days || 30}일)`}>
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                 <thead>
                                     <tr>
@@ -1580,7 +1579,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
 
                 {/* 전략 진화 */}
                 {data?.strategy_evolution && data.strategy_evolution.status && data.strategy_evolution.status !== "no_change" && (
-                    <Section icon="⚙" iconColor={C.brandFactor} label="전략 진화">
+                    <Section iconColor={C.brandFactor} label="전략 진화">
                         <div style={{ display: "flex", gap: S.sm, alignItems: "center", marginBottom: S.sm }}>
                             <span style={{ padding: `3px ${S.sm}px`, borderRadius: R.sm, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, background: data.strategy_evolution.status === "auto_applied" ? "rgba(34,197,94,0.15)" : "rgba(234,179,8,0.12)", color: data.strategy_evolution.status === "auto_applied" ? C.success : C.watch }}>
                                 {data.strategy_evolution.status === "auto_applied" ? "자동 적용" : data.strategy_evolution.status === "pending_approval" ? "승인 대기" : data.strategy_evolution.status}
@@ -1594,7 +1593,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
 
                 {/* 실적 캘린더 요약 */}
                 {recs.some((r: any) => r.earnings?.next_earnings) && (
-                    <Section icon="📅" iconColor={C.caution} label="실적 발표 예정">
+                    <Section iconColor={C.caution} label="실적 발표 예정">
                         {recs.filter((r: any) => r.earnings?.next_earnings).slice(0, 5).map((r: any, i: number) => (
                             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                 <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{r.name}</span>
@@ -1675,7 +1674,6 @@ const header: React.CSSProperties = {
 const pdfBtn: React.CSSProperties = {
     border: "none",
     background: "transparent",
-    
     color: C.accent,
     fontSize: T.cap,
     fontWeight: T.w_bold,
@@ -1695,7 +1693,6 @@ const aiBadge: React.CSSProperties = {
     fontFamily: FONT_MONO,
     letterSpacing: 1,
     background: "transparent",
-    
     padding: `${S.xs}px ${S.sm}px`,
     borderRadius: R.sm,
     whiteSpace: "nowrap",

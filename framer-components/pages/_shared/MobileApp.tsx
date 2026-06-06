@@ -1233,7 +1233,6 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
                     width: 42, height: 42, borderRadius: 12, background: "transparent",
-                    
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 }}>
                     <span style={{ color: gc, fontSize: 14, fontWeight: 800, fontFamily: FONT, lineHeight: 1 }}>{brain ?? "—"}</span>
@@ -1604,7 +1603,6 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
                     width: 40, height: 40, borderRadius: 12, background: "transparent",
-                    
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 }}>
                     <span style={{ color: tierColor, fontSize: 15, fontWeight: 900, fontFamily: FONT }}>{tier}</span>

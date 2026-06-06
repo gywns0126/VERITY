@@ -687,7 +687,6 @@ const tgLink: React.CSSProperties = {
     lineHeight: 0,
     boxSizing: "border-box",
     background: "transparent",
-    
 }
 
 const closeBtn: React.CSSProperties = {
