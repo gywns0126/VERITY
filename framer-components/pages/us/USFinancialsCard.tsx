@@ -18,9 +18,9 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react"
 
 /* ◆ DESIGN TOKENS — VERITY 마스터 (USDetailHub 정합) ◆ */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
     border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     up: "#22C55E", down: "#EF4444",
     info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
@@ -212,7 +212,7 @@ function USFinancialsCard({ apiBase, defaultTicker, tickerList }: Props) {
                 <span style={{ fontSize: T.cap, color: C.textSecondary }}>{name}</span>
                 {isFin && (
                     <span style={{ fontSize: 10, color: C.info, background: "rgba(91,169,255,0.1)",
-                        padding: `1px ${S.sm}px`, borderRadius: R.pill, fontWeight: T.w_semi }}>금융</span>
+                        padding: `1px ${S.sm}px`, borderRadius: R.sm, fontWeight: T.w_semi }}>금융</span>
                 )}
             </div>
 
@@ -330,7 +330,7 @@ function USFinancialsCard({ apiBase, defaultTicker, tickerList }: Props) {
 const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
-    background: C.bgPage, borderRadius: 16, padding: S.xxl,
+    background: C.bgPage, borderRadius: 8, padding: S.xxl,
     display: "flex", flexDirection: "column", gap: S.lg,
 }
 const headerRow: CSSProperties = {
