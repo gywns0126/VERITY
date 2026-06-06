@@ -72,6 +72,13 @@ export default function BrainGradeBreakdown(props: Props) {
                     name: String(r.name || r.ticker || ""),
                 }))
                 setTickers(opts)
+                // self-heal: selected 가 현 추천 세트에 없으면 (rotation 으로 빠진
+                // stale defaultTicker 등) 첫 유효 ticker 로 교정. <select> value 가
+                // 옵션에 없으면 브라우저가 첫 옵션을 표시하지만 state 는 stale 유지 →
+                // 표시(BRK-B)와 breakdown fetch(stale) 불일치 + 404 발생. 이를 차단.
+                setSelected((cur) =>
+                    opts.some((o) => o.ticker === cur) ? cur : (opts[0]?.ticker || "")
+                )
             })
             .catch((e) => setError("portfolio: " + String(e)))
     }, [portfolioUrl])
@@ -358,7 +365,7 @@ BrainGradeBreakdown.defaultProps = {
     apiUrl: "https://verity-api-kim-hyojuns-projects.vercel.app/api/brain_breakdown",
     portfolioUrl: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
     showIcDead: true,
-    defaultTicker: "200670",
+    defaultTicker: "",
 }
 
 addPropertyControls(BrainGradeBreakdown, {
@@ -374,8 +381,8 @@ addPropertyControls(BrainGradeBreakdown, {
     },
     defaultTicker: {
         type: ControlType.String,
-        title: "초기 Ticker",
-        defaultValue: "200670",
+        title: "초기 Ticker (빈값 = 첫 추천 ticker 자동)",
+        defaultValue: "",
     },
     showIcDead: {
         type: ControlType.Boolean,
