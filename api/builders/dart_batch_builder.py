@@ -61,11 +61,19 @@ def _build_kr_universe_tickers() -> List[str]:
 
     stage = max(int(UNIVERSE_RAMP_UP_STAGE or 0), 500)
     kr_target = max(int(stage * 0.4), 100)  # KR 비중 40% (stock_filter 와 정합)
-    try:
-        kr_entries = build_extended_universe("KR", target_size=kr_target, apply_hard_floor=True)
-    except Exception as e:
-        sys.stderr.write(f"[dart_batch] KR universe build 실패: {e}\n")
-        return []
+    # KRX OpenAPI 가 transient 로 빈 결과/예외 → 재시도. 1회 빈값이 dart_batch 를
+    # kr_universe_empty exit 1 로 떨구던 false 실패 방지(진짜 다운이면 3회 다 빈값 → 여전히 loud).
+    kr_entries: list = []
+    for attempt in range(3):
+        try:
+            kr_entries = build_extended_universe("KR", target_size=kr_target, apply_hard_floor=True)
+            if kr_entries:
+                break
+            sys.stderr.write(f"[dart_batch] KR universe 빈값 (시도 {attempt+1}/3) — 재시도\n")
+        except Exception as e:
+            sys.stderr.write(f"[dart_batch] KR universe build 실패 (시도 {attempt+1}/3): {e}\n")
+        if attempt < 2:
+            time.sleep(3 * (attempt + 1))
     return [str(e["ticker"]).zfill(6) for e in kr_entries if e.get("ticker")]
 
 
