@@ -240,11 +240,13 @@ def _answer_market(data: dict) -> str:
             lines.append(f"  • {d}")
 
     events = data.get("global_events", [])
-    upcoming = [e for e in events if e.get("d_day", 99) <= 3]
+    upcoming = [e for e in events if isinstance(e.get("d_day"), (int, float)) and 0 <= e["d_day"] <= 3]
     if upcoming:
         lines.append(f"\n<b>임박 이벤트:</b>")
         for e in upcoming[:3]:
-            lines.append(f"  ⚡ D-{e['d_day']} {e['name']}")
+            dd = int(e["d_day"])
+            tag = "오늘(D-Day)" if dd == 0 else f"D-{dd}"
+            lines.append(f"  ⚡ {tag} {e['name']}")
 
     return "\n".join(lines)
 

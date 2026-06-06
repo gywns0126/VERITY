@@ -1406,15 +1406,15 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     </Section>
                 )}
 
-                {events.filter((e: any) => (e.d_day ?? 99) <= 14).length > 0 && (
+                {events.filter((e: any) => (e.d_day ?? 99) >= 0 && (e.d_day ?? 99) <= 14).length > 0 && (
                     <Section iconColor={C.brandClaude} label="주요 이벤트">
-                        {events.filter((e: any) => (e.d_day ?? 99) <= 14).slice(0, 5).map((e: any, i: number) => (
+                        {events.filter((e: any) => (e.d_day ?? 99) >= 0 && (e.d_day ?? 99) <= 14).slice(0, 5).map((e: any, i: number) => (
                             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                 <div style={{ flex: 1 }}>
                                     <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{e.name}</span>
                                     {e.impact && <div style={{ color: C.textTertiary, fontSize: T.cap, marginTop: 2 }}>{e.impact}</div>}
                                 </div>
-                                <span style={{ color: C.brandClaude, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: FONT_MONO, flexShrink: 0 }}>D-{e.d_day ?? "?"}</span>
+                                <span style={{ color: C.brandClaude, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: FONT_MONO, flexShrink: 0 }}>{e.d_day === 0 ? "오늘" : `D-${e.d_day ?? "?"}`}</span>
                             </div>
                         ))}
                     </Section>

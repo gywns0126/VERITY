@@ -375,11 +375,13 @@ def send_daily_report(portfolio: dict):
             lines.append(f"  🎯 {r['name']} (타이밍 {ts}점)")
 
     events = portfolio.get("global_events", [])
-    upcoming = [e for e in events if e.get("d_day", 99) <= 3]
+    upcoming = [e for e in events if isinstance(e.get("d_day"), (int, float)) and 0 <= e["d_day"] <= 3]
     if upcoming:
         lines.append(f"\n<b>임박 이벤트:</b>")
         for e in upcoming[:2]:
-            lines.append(f"  ⚡ D-{e['d_day']} {e['name']}")
+            dd = int(e["d_day"])
+            tag = "오늘(D-Day)" if dd == 0 else f"D-{dd}"
+            lines.append(f"  ⚡ {tag} {e['name']}")
 
     ci = portfolio.get("commodity_impact") or {}
     narr = ci.get("narrative_lines") or []
@@ -460,11 +462,13 @@ def send_morning_briefing(portfolio: dict):
     if macro_bits:
         lines.append(" | ".join(macro_bits))
 
-    upcoming = [e for e in events if (e.get("d_day") or 99) <= 7]
+    upcoming = [e for e in events if isinstance(e.get("d_day"), (int, float)) and 0 <= e["d_day"] <= 7]
     if upcoming:
         lines.append(f"\n<b>이번 주 이벤트</b>")
         for e in upcoming[:4]:
-            lines.append(f"  D-{e['d_day']} {e['name']}")
+            dd = int(e["d_day"])
+            tag = "오늘(D-Day)" if dd == 0 else f"D-{dd}"
+            lines.append(f"  {tag} {e['name']}")
 
     if rotation.get("cycle_label"):
         lines.append(f"\n<b>섹터 전략</b>: {rotation['cycle_label']}")
