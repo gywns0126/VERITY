@@ -5,9 +5,9 @@ import React, { useEffect, useRef, useState } from "react"
  * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
     border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     strongBuy: "#22C55E", buy: "#2DD4BF", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
@@ -636,12 +636,12 @@ export default function VAMSProfilePanel(props: Props) {
     }, [vams?.holdings])
 
     if (loading) return (
-        <div style={{ fontFamily: font, background: BG, color: MUTED, padding: 40, borderRadius: 16, textAlign: "center", fontSize: 13 }}>
+        <div style={{ fontFamily: font, background: BG, color: MUTED, padding: 40, borderRadius: 8, textAlign: "center", fontSize: 13 }}>
             로딩 중…
         </div>
     )
     if (error) return (
-        <div style={{ fontFamily: font, background: BG, color: UP, padding: 20, borderRadius: 16, textAlign: "center", fontSize: 13 }}>
+        <div style={{ fontFamily: font, background: BG, color: UP, padding: 20, borderRadius: 8, textAlign: "center", fontSize: 13 }}>
             {error}
         </div>
     )
@@ -680,7 +680,7 @@ export default function VAMSProfilePanel(props: Props) {
     const recentTrades = history.slice(0, 12)
 
     return (
-        <div style={{ fontFamily: font, background: BG, padding: 16, borderRadius: 16, display: "flex", flexDirection: "column", gap: 14, width: "100%", boxSizing: "border-box" }}>
+        <div style={{ fontFamily: font, background: BG, padding: 16, borderRadius: 8, display: "flex", flexDirection: "column", gap: 14, width: "100%", boxSizing: "border-box" }}>
 
             {/* 헤더 — 펜타그램 톤: sub-label uppercase + 큰 숫자 */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
