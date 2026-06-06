@@ -145,7 +145,6 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
             tabIndex={0}
             style={{
                 position: "relative", display: "inline-block",
-                
                 cursor: "help", outline: "none",
             }}
         >
@@ -586,7 +585,6 @@ function TradePlanSection({ plan, isUS }: { plan: TradePlan | null | undefined; 
                 <div style={{
                     marginTop: S.sm,
                     background: C.bgCard, borderRadius: R.sm,
-                    
                     padding: `${S.xs}px ${S.md}px`,
                 }}>
                     <span style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_bold }}>
@@ -604,7 +602,6 @@ function TradePlanSection({ plan, isUS }: { plan: TradePlan | null | undefined; 
             <div style={{
                 marginTop: S.sm,
                 background: C.bgCard, borderRadius: R.sm,
-                
                 padding: `${S.xs}px ${S.md}px`,
             }}>
                 <span style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_bold }}>
@@ -689,7 +686,6 @@ function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
                             style={{
                                 display: "flex", justifyContent: "space-between",
                                 padding: `2px 0`,
-                                
                             }}
                         >
                             <span style={{ color: C.textPrimary, fontSize: T.cap }}>{s.name}</span>
@@ -707,7 +703,6 @@ function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
                             style={{
                                 display: "flex", justifyContent: "space-between",
                                 padding: `2px 0`,
-                                
                             }}
                         >
                             <span style={{ color: C.textSecondary, fontSize: T.cap }}>{s.name}</span>
@@ -1222,7 +1217,6 @@ export default function StockDashboardV2(props: Props) {
                                         color: C.textSecondary, fontSize: T.cap,
                                         lineHeight: T.lh_loose,
                                         background: C.bgPage,
-                                        
                                         borderRadius: R.sm,
                                         padding: `${S.xs}px ${S.md}px`,
                                     }}>
@@ -1384,7 +1378,6 @@ function FactorBars({ breakdown }: { breakdown: Record<string, number> }) {
                         key={key}
                         style={{
                             background: C.bgCard,
-                            
                             borderRadius: R.sm,
                             padding: `${S.sm}px ${S.md}px`,
                             display: "flex", flexDirection: "column", gap: S.xs,
@@ -1504,7 +1497,6 @@ function ClaudeAnalysisCard({ ca }: { ca: any }) {
     return (
         <div style={{
             background: agrees ? `${C.bgElevated}` : C.bgPage,
-            
             borderRadius: R.sm,
             padding: `${S.sm}px ${S.md}px`,
             display: "flex", flexDirection: "column", gap: S.xs,
@@ -1571,7 +1563,6 @@ function DualConsensusCard({ dc }: { dc: any }) {
     return (
         <div style={{
             background: C.bgPage,
-            
             borderRadius: R.sm,
             padding: `${S.sm}px ${S.md}px`,
             display: "flex", flexDirection: "column", gap: S.xs,
@@ -2226,7 +2217,6 @@ function BrainSignalsSection({
             {vci.signal && vci.signal !== "ALIGNED" && (
                 <div style={{
                     background: vciVal > 15 ? `${C.bgElevated}` : `${C.bgElevated}`,
-                    
                     borderRadius: R.sm,
                     padding: `${S.sm}px ${S.md}px`,
                     display: "flex", alignItems: "center", gap: S.sm,
@@ -3432,7 +3422,6 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
                                 key={i}
                                 style={{
                                     background: C.bgPage,
-                                    
                                     borderRadius: R.sm,
                                     padding: `${S.xs}px ${S.md}px`,
                                     color: C.textSecondary, fontSize: T.cap,
@@ -3522,7 +3511,6 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
                                     key={i}
                                     style={{
                                         background: C.bgPage,
-                                        
                                         borderRadius: R.sm,
                                         padding: `${S.xs}px ${S.md}px`,
                                         display: "flex", flexDirection: "column", gap: 2,
@@ -4033,7 +4021,6 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                         {fac.headquarters?.location && (
                             <div style={{
                                 background: C.bgPage,
-                                
                                 borderRadius: R.sm,
                                 padding: `${S.sm}px ${S.md}px`,
                                 display: "flex", flexDirection: "column", gap: 2,
@@ -4099,7 +4086,6 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                                         key={i}
                                         style={{
                                             background: C.bgPage,
-                                            
                                             borderRadius: R.sm,
                                             padding: `${S.sm}px ${S.md}px`,
                                             display: "flex", flexDirection: "column", gap: 2,
@@ -4235,7 +4221,6 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                                 style={{
                                     display: "flex", justifyContent: "space-between",
                                     alignItems: "center", padding: `${S.xs}px 0`,
-                                    
                                 }}
                             >
                                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -4340,7 +4325,6 @@ function PropertyRowUS({ p, useMap }: { p: any; useMap: Record<string, string> }
     return (
         <div style={{
             background: C.bgPage,
-            
             borderRadius: R.sm,
             padding: `${S.sm}px ${S.md}px`,
             display: "flex", justifyContent: "space-between",
@@ -4375,7 +4359,6 @@ function PropertyRowKR({
     return (
         <div style={{
             background: C.bgPage,
-            
             borderRadius: R.sm,
             padding: `${S.sm}px ${S.md}px`,
             display: "flex", justifyContent: "space-between",
@@ -4639,14 +4622,12 @@ const icThStyle: CSSProperties = {
     fontSize: T.cap,
     fontWeight: T.w_bold,
     color: C.textTertiary,
-    
     letterSpacing: 0.5,
 }
 
 const icTdStyle: CSSProperties = {
     padding: `${S.xs}px ${S.sm}px`,
     fontSize: T.cap,
-    
 }
 
 function QuantBar({
@@ -4903,7 +4884,6 @@ function GroupTab({ stock }: { stock: any }) {
                                         {sub.is_listed && (
                                             <span style={{
                                                 color: C.accent,
-                                                
                                                 fontSize: 9, fontWeight: T.w_bold,
                                                 padding: `1px ${S.xs}px`, borderRadius: R.sm,
                                                 letterSpacing: 0.5,
@@ -5028,7 +5008,6 @@ function GroupLink({ href, label }: { href: string; label: string }) {
             rel="noopener noreferrer"
             style={{
                 background: C.bgPage,
-                
                 borderRadius: R.sm,
                 padding: `1px ${S.xs}px`,
                 color: C.accent, fontSize: T.cap, fontWeight: T.w_semi,
@@ -5192,7 +5171,6 @@ function StockListItem({
             style={{
                 ...listItem,
                 background: isActive ? C.bgElevated : "transparent",
-                
                 boxShadow: "none",
             }}
             onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = `${C.bgElevated}` }}
@@ -5297,7 +5275,6 @@ function FilterChip({
             onClick={onClick}
             style={{ border: "none",
                 background: active ? `${C.bgElevated}` : "transparent",
-                
                 color: active ? c : C.textSecondary,
                 padding: `${S.xs}px ${S.md}px`,
                 borderRadius: R.pill,
@@ -5379,7 +5356,6 @@ const listPanel: CSSProperties = {
 
 const listItem: CSSProperties = {
     padding: `${S.md}px ${S.md}px`,
-    
     cursor: "pointer",
     transition: "background-color 180ms ease, border-left-color 180ms ease",
     display: "flex",
@@ -5405,7 +5381,6 @@ const detailPanel: CSSProperties = {
 const detailHeader: CSSProperties = {
     display: "flex", gap: S.lg,
     background: C.bgCard,
-    
     borderRadius: R.md,
     padding: S.xl,
     flexWrap: "wrap",
@@ -5442,7 +5417,6 @@ const newsTitle: CSSProperties = {
 /* sub-component 공용 */
 const subCard: CSSProperties = {
     background: C.bgCard,
-    
     borderRadius: R.md,
     padding: `${S.md}px ${S.lg}px`,
     display: "flex", flexDirection: "column",
@@ -5458,7 +5432,6 @@ const subCardCap: CSSProperties = {
 
 const trendBlock: CSSProperties = {
     background: C.bgPage,
-    
     borderRadius: R.sm,
     padding: `${S.sm}px ${S.md}px`,
     marginTop: S.xs,
@@ -5466,7 +5439,6 @@ const trendBlock: CSSProperties = {
 
 const miniMetric: CSSProperties = {
     background: C.bgPage,
-    
     borderRadius: R.sm,
     padding: `${S.xs}px ${S.md}px`,
     display: "flex", flexDirection: "column", gap: 2,
@@ -5489,7 +5461,6 @@ const miniValue: CSSProperties = {
 
 const planCell: CSSProperties = {
     background: C.bgCard,
-    
     borderRadius: R.sm,
     padding: `${S.sm}px ${S.md}px`,
     display: "flex", flexDirection: "column", gap: 2,

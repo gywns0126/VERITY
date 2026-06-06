@@ -251,7 +251,6 @@ export default function AlertHub(props: Props) {
             <div
                 style={{
                     ...banner,
-                    
                     cursor: "pointer",
                 }}
                 onClick={() => setExpanded((v) => !v)}
@@ -421,11 +420,9 @@ function AlertCard({ alert }: { alert: any }) {
         <div
             style={{
                 padding: `${S.md}px ${S.lg}px`,
-                
                 display: "flex",
                 flexDirection: "column",
                 gap: S.xs,
-                
             }}
         >
             {/* level + category row */}

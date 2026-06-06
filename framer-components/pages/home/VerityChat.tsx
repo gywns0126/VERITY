@@ -643,7 +643,6 @@ const panelHeader: React.CSSProperties = {
     alignItems: "center",
     gap: 16,
     padding: "16px 24px",
-    
     flexShrink: 0,
     minHeight: 56,
     boxSizing: "border-box",
@@ -703,7 +702,6 @@ const closeBtn: React.CSSProperties = {
     justifyContent: "center",
     flexShrink: 0,
     boxSizing: "border-box",
-    
     background: "transparent",
     userSelect: "none",
 }
@@ -748,7 +746,6 @@ const suggestChip: React.CSSProperties = {
     color: C.textSecondary,
     fontSize: 12,
     padding: "5px 10px",
-    
     borderRadius: 20,
     cursor: "pointer",
     fontFamily: font,
@@ -812,7 +809,6 @@ const citationIdx: React.CSSProperties = {
 
 const citationTitle: React.CSSProperties = {
     color: C.info,
-    
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -824,7 +820,6 @@ const inputBar: React.CSSProperties = {
     display: "flex",
     gap: 10,
     padding: "14px 24px 18px",
-    
     flexShrink: 0,
     boxSizing: "border-box",
 }
@@ -833,7 +828,6 @@ const inputField: React.CSSProperties = {
     border: "none",
     flex: 1,
     background: C.bgPage,
-    
     borderRadius: 8,
     padding: "8px 12px",
     color: C.textPrimary,

@@ -506,7 +506,6 @@ export default function VerityReport(props: Props) {
                         {/* 헤더 */}
                         <div style={{
                             padding: `${S.md}px ${S.lg}px`,
-                            
                             display: "flex", justifyContent: "space-between", alignItems: "center",
                         }}>
                             <div>
@@ -975,7 +974,6 @@ export default function VerityReport(props: Props) {
                 {/* 미생성 안내 (정기 리포트 데이터 없는 경우) */}
                 {period !== "daily" && !periodicReport && (
                     <div style={{ padding: `${S.xxxl}px ${S.xl}px`, textAlign: "center" }}>
-                        <div style={{ color: C.textTertiary, fontSize: 40, marginBottom: S.md }}>📋</div>
                         <span style={{ color: C.textTertiary, fontSize: T.sub, fontFamily: font, display: "block", marginBottom: S.sm }}>
                             {PERIOD_LABELS[period]} 리포트가 아직 생성되지 않았습니다
                         </span>
@@ -1644,13 +1642,11 @@ const periodBar: React.CSSProperties = {
     display: "flex",
     gap: S.xs,
     padding: `${S.md}px ${S.lg}px`,
-    
     overflowX: "auto",
 }
 
 const periodBtn: React.CSSProperties = {
     border: "none",
-    
     borderRadius: R.md,
     padding: `${S.sm}px ${S.lg}px`,
     fontSize: T.cap,
@@ -1668,7 +1664,6 @@ const header: React.CSSProperties = {
     alignItems: "flex-start",
     gap: S.xl,
     padding: `${S.xl}px ${S.xl}px ${S.lg}px`,
-    
 }
 
 const pdfBtn: React.CSSProperties = {
@@ -1715,5 +1710,4 @@ const sectionText: React.CSSProperties = {
 
 const footer: React.CSSProperties = {
     padding: `${S.md}px ${S.lg}px ${S.lg}px`,
-    
 }

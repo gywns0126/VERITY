@@ -540,7 +540,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                     <CardTitle>오늘 · 내일</CardTitle>
                     {dailyReport.hot_theme && (
                         <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, lineHeight: 1.6, marginBottom: 8 }}>
-                            🔥 {dailyReport.hot_theme}
+                            {dailyReport.hot_theme}
                         </div>
                     )}
                     {dailyReport.tomorrow_outlook && (
@@ -1266,7 +1266,7 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
                     )}
                     {targetUpside != null && (
                         <div style={{ color: targetUpside >= 0 ? C.accent : C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginTop: 2 }}>
-                            🎯 {targetUpside >= 0 ? "+" : ""}{targetUpside.toFixed(1)}%
+                            {targetUpside >= 0 ? "+" : ""}{targetUpside.toFixed(1)}%
                         </div>
                     )}
                 </div>
@@ -1697,7 +1697,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                         <Card>
                             <CardTitle>리포트 이벤트</CardTitle>
                             {dailyReport.hot_theme && (
-                                <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginBottom: 8 }}>🔥 {dailyReport.hot_theme}</div>
+                                <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginBottom: 8 }}>{dailyReport.hot_theme}</div>
                             )}
                             {dailyReport.tomorrow_outlook && (
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
@@ -1937,7 +1937,6 @@ export default function MobileApp(props: Props) {
                 flexShrink: 0,
                 background: "rgba(0,0,0,0.92)", backdropFilter: "blur(12px)",
                 WebkitBackdropFilter: "blur(12px)",
-                
                 display: "flex", justifyContent: "space-around", alignItems: "center",
                 padding: "10px 0 calc(env(safe-area-inset-bottom, 0px) + 14px)",
                 minHeight: 64,

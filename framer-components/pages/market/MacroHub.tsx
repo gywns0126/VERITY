@@ -138,7 +138,6 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
             tabIndex={0}
             style={{
                 position: "relative", display: "inline-block",
-                
                 cursor: "help", outline: "none",
             }}
         >
@@ -159,7 +158,6 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                             <span style={{
                                 color: C.accent, fontSize: 9, letterSpacing: 1.5, fontWeight: T.w_black,
                                 textTransform: "uppercase", padding: "1px 6px", borderRadius: R.pill,
-                                
                             }}>L3</span>
                         )}
                     </div>
@@ -1200,7 +1198,6 @@ const overrideBox: CSSProperties = {
 
 const blockStyle: CSSProperties = {
     background: C.bgCard,
-    
     borderRadius: R.md,
     padding: `${S.md}px ${S.lg}px`,
     display: "flex", flexDirection: "column", gap: S.xs,
