@@ -31,9 +31,9 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  * ◆ DESIGN TOKENS START ◆
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
     border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     strongBuy: "#22C55E", buy: "#2DD4BF", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
@@ -130,8 +130,8 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                     position: "fixed", top: pos.top, left: pos.left,
                     width: TIP_W, zIndex: 100,
                     padding: "10px 12px", borderRadius: R.md,
-                    background: "transparent", 
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                    background: C.bgElevated,
+                    border: `1px solid ${C.border}`,
                     fontFamily: FONT, fontSize: 12, lineHeight: 1.5,
                     whiteSpace: "normal", pointerEvents: "none",
                 }}>
@@ -649,7 +649,7 @@ const shell: CSSProperties = {
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
 
-    borderRadius: 16,
+    borderRadius: 8,
     padding: `${S.xl}px ${S.xxl}px`,
     display: "flex", flexDirection: "column",
     gap: S.xs,

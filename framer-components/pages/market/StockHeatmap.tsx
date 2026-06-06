@@ -29,9 +29,9 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
  * ◆ DESIGN TOKENS START ◆
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
     border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     strongBuy: "#22C55E", buy: "#2DD4BF", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
@@ -463,7 +463,6 @@ function HeatmapTooltip({
                 border: `1px solid ${C.border}`,
                 borderRadius: R.md,
                 padding: `${S.md}px ${S.lg}px`,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
                 fontFamily: FONT,
                 cursor: "default",
                 display: "flex", flexDirection: "column", gap: S.sm,
@@ -587,7 +586,7 @@ const shell: CSSProperties = {
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
 
-    borderRadius: 16,
+    borderRadius: 8,
     padding: S.xxl,
     display: "flex", flexDirection: "column",
     gap: S.lg,
