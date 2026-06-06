@@ -20,9 +20,9 @@ import React, { useEffect, useState, useCallback } from "react"
  * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
     border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     strongBuy: "#22C55E", buy: "#2DD4BF", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
@@ -163,7 +163,7 @@ function _statusColor(level: "ok" | "warn" | "danger"): string {
 function Card({ title, status, children }: { title: string; status?: "ok" | "warn" | "danger"; children: React.ReactNode }) {
     return (
         <div style={{
-            background: C.bgCard, borderRadius: 16, 
+            background: C.bgCard, borderRadius: 8, 
             padding: "18px 18px", display: "flex", flexDirection: "column", gap: 10,
         }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -195,7 +195,7 @@ function Row({ label, value, color }: { label: string; value: React.ReactNode; c
 function Bar({ pct, color }: { pct: number; color: string }) {
     const w = Math.max(0, Math.min(100, pct))
     return (
-        <div style={{ width: "100%", height: 6, background: "transparent", borderRadius: 16, overflow: "hidden" }}>
+        <div style={{ width: "100%", height: 6, background: "transparent", borderRadius: 8, overflow: "hidden" }}>
             <div style={{ width: `${w}%`, height: "100%", background: color, transition: "width 240ms ease" }} />
         </div>
     )
@@ -246,7 +246,7 @@ function CardBillingLinks({ portfolio }: { portfolio: any }) {
                     rel="noopener noreferrer"
                     style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
-                        padding: "10px 12px", borderRadius: 16,
+                        padding: "10px 12px", borderRadius: 8,
                         background: "transparent", 
                         textDecoration: "none", marginTop: 4,
                         transition: "border-color 180ms ease",
@@ -478,7 +478,6 @@ function CardSchedule({ portfolio, kbUsage, userTodos }: { portfolio: any; kbUsa
                             </div>
                             {inBucket.map((it, i) => (
                                 <div key={i} style={{
-                                    paddingLeft: 8, borderLeft: `2px solid ${_statusColor(it.severity)}40`,
                                     fontSize: 12, fontFamily: FONT, color: C.textPrimary, lineHeight: 1.5,
                                     display: "flex", flexDirection: "column", gap: 4,
                                 }}>
@@ -556,8 +555,8 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
                                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color, display: "inline-block", flexShrink: 0 }} />
                                     {meta.label}
                                 </span>
-                                <span style={{ flex: 1, height: 6, background: "transparent", borderRadius: 16 }}>
-                                    <span style={{ display: "block", height: "100%", width: `${barW}%`, background: meta.color, borderRadius: 16 }} />
+                                <span style={{ flex: 1, height: 6, background: "transparent", borderRadius: 8 }}>
+                                    <span style={{ display: "block", height: "100%", width: `${barW}%`, background: meta.color, borderRadius: 8 }} />
                                 </span>
                                 <span style={{ width: 80, textAlign: "right", ...MONO, color: C.textPrimary }}>
                                     {c}종 ({p.toFixed(1)}%)
@@ -570,7 +569,7 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
             {lowQ > 0 && (
                 <div style={{
                     marginTop: 8, padding: "4px 8px", background: "transparent",
-                    borderRadius: 16,
+                    borderRadius: 8,
                     color: C.warn, fontSize: 10, fontFamily: FONT,
                 }}>
                     ⚠ data_quality=low: {lowQ}종 ({lowQPct}%) — revenue_growth/market_cap/operating_margin 누락.
@@ -692,7 +691,7 @@ function CardTradePlanV0({ portfolio }: { portfolio: any }) {
 
             {/* 진화 상태 박스 */}
             {evoStatus !== "no_data" && (
-                <div style={{ marginTop: 8, padding: "8px 10px", background: "transparent", borderRadius: 16 }}>
+                <div style={{ marginTop: 8, padding: "8px 10px", background: "transparent", borderRadius: 8 }}>
                     <Row label="진화 상태" value={
                         <span style={{ color: cardStatus === "danger" ? C.danger : cardStatus === "warn" ? C.warn : C.textPrimary, fontWeight: 800 }}>
                             {evoLabel[evoStatus] || evoStatus}
@@ -709,7 +708,7 @@ function CardTradePlanV0({ portfolio }: { portfolio: any }) {
 
             {/* 룰 변경 후보 (rule_review_needed 일 때) */}
             {candidates.length > 0 && (
-                <div style={{ marginTop: 6, padding: "8px 10px", background: "transparent", borderRadius: 16, display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ marginTop: 6, padding: "8px 10px", background: "transparent", borderRadius: 8, display: "flex", flexDirection: "column", gap: 4 }}>
                     <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, fontWeight: 700 }}>룰 변경 후보 (수동 검토)</span>
                     {candidates.slice(0, 3).map((c, i) => (
                         <span key={i} style={{ color: C.textPrimary, fontSize: 11, fontFamily: FONT, lineHeight: 1.45 }}>· {c}</span>
@@ -794,7 +793,7 @@ function CardBacktestSummary({ portfolio }: { portfolio: any }) {
                         key={pk}
                         onClick={() => setActivePeriod(pk)}
                         style={{
-                            padding: "3px 10px", borderRadius: 16,
+                            padding: "3px 10px", borderRadius: 8,
                             background: activePeriod === pk ? C.accent : "transparent",
                             color: activePeriod === pk ? C.bgPage : C.textTertiary,
                             fontSize: 12, fontWeight: 700, fontFamily: FONT,
@@ -1093,7 +1092,7 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
             {error && (
                 <div style={{
                     background: "transparent", 
-                    borderRadius: 16, padding: "8px 12px", marginBottom: 10,
+                    borderRadius: 8, padding: "8px 12px", marginBottom: 10,
                     color: C.danger, fontSize: 12,
                 }}>
                     ⚠ {error}
@@ -1123,13 +1122,13 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
                     </div>
                     <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                         <button onClick={() => callRpc("approve", p.id)} disabled={busy === p.id} style={{ border: "none",
-                            padding: "6px 12px", borderRadius: 16,
+                            padding: "6px 12px", borderRadius: 8,
                             background: C.success, color: C.bgPage, 
                             fontSize: 12, fontWeight: 700, fontFamily: FONT,
                             cursor: busy === p.id ? "wait" : "pointer", opacity: busy === p.id ? 0.5 : 1,
                         }}>승인</button>
                         <button onClick={() => callRpc("reject", p.id)} disabled={busy === p.id} style={{ border: "none",
-                            padding: "6px 12px", borderRadius: 16,
+                            padding: "6px 12px", borderRadius: 8,
                             background: "transparent", color: C.danger,
                             
                             fontSize: 12, fontWeight: 700, fontFamily: FONT,
@@ -1226,7 +1225,7 @@ export default function AdminDashboard(props: Props) {
             width: "100%", minHeight: "100vh", background: C.bgPage,
             padding: "20px 16px 40px", boxSizing: "border-box",
             fontFamily: FONT, color: C.textPrimary,
-            borderRadius: 16, overflow: "hidden",
+            borderRadius: 8, overflow: "hidden",
         }}>
             {/* 헤더 */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
@@ -1257,7 +1256,7 @@ export default function AdminDashboard(props: Props) {
             {error && (
                 <div style={{
                     background: "transparent", 
-                    borderRadius: 16, padding: "10px 14px", marginBottom: 16,
+                    borderRadius: 8, padding: "10px 14px", marginBottom: 16,
                     color: C.danger, fontSize: 12,
                 }}>
                     ⚠ {error}

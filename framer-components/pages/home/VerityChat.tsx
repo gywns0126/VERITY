@@ -5,9 +5,9 @@ import React, { useEffect, useRef, useState, type ReactNode } from "react"
  * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
     border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     strongBuy: "#22C55E", buy: "#2DD4BF", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
@@ -628,13 +628,13 @@ const panelWrap: React.CSSProperties = {
     minHeight: 0,
     background: C.bgPage,
 
-    borderRadius: 16,
+    borderRadius: 8,
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
     fontFamily: font,
     zIndex: 3,
-    boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
+    border: `1px solid ${C.border}`,
     pointerEvents: "auto",
 }
 
@@ -746,7 +746,7 @@ const suggestChip: React.CSSProperties = {
     color: C.textSecondary,
     fontSize: 12,
     padding: "5px 10px",
-    borderRadius: 20,
+    borderRadius: 8,
     cursor: "pointer",
     fontFamily: font,
 }
