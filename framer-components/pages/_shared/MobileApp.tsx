@@ -5,9 +5,9 @@ import React, { useEffect, useState, useRef, useCallback } from "react"
  * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
     border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     strongBuy: "#22C55E", buy: "#2DD4BF", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
@@ -222,7 +222,7 @@ function RingGauge({ value, size = 48, color, label, strokeWidth }: { value: num
 function Card({ children, style, onClick }: { children: React.ReactNode; style?: React.CSSProperties; onClick?: () => void }) {
     return (
         <div onClick={onClick} style={{
-            background: C.bgCard, borderRadius: 16, 
+            background: C.bgCard, borderRadius: 8, 
             padding: "18px 18px", cursor: onClick ? "pointer" : "default",
             transition: "border-color 180ms ease",
             boxSizing: "border-box", minWidth: 0,
@@ -245,7 +245,7 @@ function CardTitle({ children, color, right }: { children: React.ReactNode; colo
 function Pill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
     return (
         <button onClick={onClick} style={{ border: "none",
-            borderRadius: 20, padding: "6px 14px",
+            borderRadius: 8, padding: "6px 14px",
             fontSize: 12, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
             letterSpacing: 0.3,
             background: "transparent", color: active ? C.bgPage : C.textSecondary,
@@ -1539,7 +1539,7 @@ function RecoTab({ data }: { data: any }) {
             <div style={{ display: "flex", gap: 6, padding: "0 2px", flexWrap: "wrap" }}>
                 {([["all", "전체"], ["kr", "국내"], ["us", "미국"]] as const).map(([k, l]) => (
                     <button key={k} onClick={() => setRegion(k)} style={{ border: "none",
-                        padding: "5px 12px", borderRadius: 16,
+                        padding: "5px 12px", borderRadius: 8,
                         fontSize: 12, fontWeight: region === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                         background: region === k ? C.accent : C.bgCard,
                         color: region === k ? C.bgPage : C.textSecondary,
@@ -1549,7 +1549,7 @@ function RecoTab({ data }: { data: any }) {
                     <>
                         <span style={{ color: C.textTertiary, margin: "0 2px", alignSelf: "center" }}>|</span>
                         <button onClick={() => setBuyOnly(!buyOnly)} style={{ border: "none",
-                            padding: "5px 12px", borderRadius: 16, fontSize: 12,
+                            padding: "5px 12px", borderRadius: 8, fontSize: 12,
                             fontWeight: buyOnly ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                             background: buyOnly ? C.success : "transparent", color: buyOnly ? C.bgPage : C.textSecondary,
                         }}>매수만 {counts.buy}</button>
@@ -1736,7 +1736,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                     <div style={{ display: "flex", gap: 6, padding: "0 2px" }}>
                         {([["all", `전체 ${krNews.length + usNews.length}`], ["kr", `국내 ${krNews.length}`], ["us", `해외 ${usNews.length}`]] as const).map(([k, l]) => (
                             <button key={k} onClick={() => setNewsRegion(k)} style={{ border: "none",
-                                padding: "5px 12px", borderRadius: 16,
+                                padding: "5px 12px", borderRadius: 8,
                                 fontSize: 12, fontWeight: newsRegion === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                                 background: newsRegion === k ? C.accent : C.bgCard,
                                 color: newsRegion === k ? C.bgPage : C.textSecondary,

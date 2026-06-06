@@ -28,8 +28,8 @@ const T = {
     accent: "#7fffa0",
     accentDim: "#7A9F2E",
     accentSoft: "rgba(127, 255, 160,0.08)",
-    danger: "#ff5a5a",
-    warn: "#ffa05a",
+    danger: "#EF4444",
+    warn: "#F59E0B",
     info: "#5BA9FF",
     sep: "rgba(255,255,255,0.05)",
 }
@@ -328,8 +328,7 @@ export default function UserActionBell(props: Props) {
         alignItems: "center",
         justifyContent: "center",
         cursor: "pointer",
-        boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
-        transition: "transform 180ms ease, background 180ms ease, box-shadow 180ms ease",
+        transition: "transform 180ms ease, background 180ms ease",
         userSelect: "none",
     }
 
@@ -373,12 +372,12 @@ export default function UserActionBell(props: Props) {
         maxHeight: "min(560px, 100vh - 100px)",
         background: T.bgCard,
         border: `1px solid ${T.border}`,
-        borderRadius: 14,
+        borderRadius: 8,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
         zIndex: 9999,
-        boxShadow: "0 18px 50px rgba(0,0,0,0.7)",
+        border: `1px solid ${T.border}`,
         pointerEvents: "auto",
         fontFamily: FONT,
     }

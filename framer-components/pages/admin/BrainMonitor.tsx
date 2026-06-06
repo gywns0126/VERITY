@@ -15,12 +15,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
  * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11",
-    bgCard: "#171820",
-    bgElevated: "#22232B",
+    bgPage: "#0a0a0a",
+    bgCard: "#141414",
+    bgElevated: "#1a1a1a",
     border: "rgba(255,255,255,0.06)",
     borderStrong: "rgba(255,255,255,0.10)",
-    textPrimary: "#F2F3F5",
+    textPrimary: "#ffffff",
     textSecondary: "#A8ABB2",
     textTertiary: "#6B6E76",
     accent: "#7fffa0",
@@ -169,7 +169,7 @@ export default function BrainMonitor(props: Props) {
             fontFamily: '-apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif',
             fontSize: T.body, width: "100%", height: "100%", overflow: "auto",
             display: "flex", flexDirection: "column",
-            borderRadius: 16,
+            borderRadius: 8,
         }}>
             <Header authError={authError} checkedAt={overview?.checked_at}
                     onRefresh={refresh} refreshing={refreshing} />
@@ -994,7 +994,7 @@ const TIDE = {
     border: "rgba(255,255,255,0.06)",
     borderSubtle: "rgba(255,255,255,0.04)",
     textPrimary: "#ffffff",
-    textBody: "#F2F3F5",
+    textBody: "#ffffff",
     textSecondary: "#A8ABB2",
     textTertiary: "#6B6E76",
     buy: "#7fffa0",
