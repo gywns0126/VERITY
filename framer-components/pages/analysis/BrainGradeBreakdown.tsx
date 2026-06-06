@@ -34,7 +34,7 @@ interface BrainData {
     sentiment_components: Component[]
     ic_dead: string[]
     regime: string
-    // 2026-05-27 v2 — footnote 동적 박음
+    // 2026-05-27 v2 — footnote 동적 산출
     validation_days?: number
     validation_target?: number
     validation_sample?: number
@@ -51,8 +51,10 @@ interface TickerOption {
  * BrainGradeBreakdown — Prospero drill-down (self-contained dynamic).
  * source: [[project_prospero_component_grade_2026_05_27]]
  * v2 (2026-05-27): footnote 동적화 — endpoint 의 validation_days /
- *   validation_target / validation_sample / vams_days_since_reset 박음.
+ *   validation_target / validation_sample / vams_days_since_reset 반영.
  *   옛 "N=14 / reset 후 0일" static drift 회복.
+ * v3 (2026-06-06): stale defaultTicker desync fix — 추천 rotation 에서 빠진
+ *   ticker 가 selected 에 남아 404 나던 결함을 첫 유효 ticker self-heal 로 해결.
  */
 export default function BrainGradeBreakdown(props: Props) {
     const { apiUrl, portfolioUrl, showIcDead, defaultTicker } = props
@@ -87,8 +89,8 @@ export default function BrainGradeBreakdown(props: Props) {
         if (!selected) return
         setLoading(true)
         setError(null)
-        // 501 등 비-200 status 박은 부분 body 박은 정상 JSON 박을 수 있음 (Vercel Python wrapper).
-        // status 박은 부분 무시, body 박은 부분 parse 박은 후 error 키 박은 부분만 확인.
+        // Vercel Python wrapper 는 비-200 status 에도 정상 JSON body 를 반환할 수 있음.
+        // status 무시, body 를 parse 한 후 error 키만 확인.
         fetch(apiUrl + "?ticker=" + encodeURIComponent(selected))
             .then((r) => r.json())
             .then((d) => {
@@ -108,7 +110,7 @@ export default function BrainGradeBreakdown(props: Props) {
         grade === "HOLD" || grade === "CAUTION" ? "#ffa05a" :
         grade === "AVOID" ? "#ff5a5a" : "#6b7280"
 
-    // Footnote 동적 박음 — endpoint v2 필드 부재 시 fallback (옛 static 유지)
+    // Footnote 동적 산출 — endpoint v2 필드 부재 시 fallback (옛 static 유지)
     const phaseDays = data?.validation_days
     const phaseTarget = data?.validation_target || 90
     const phaseSample = data?.validation_sample
