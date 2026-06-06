@@ -298,7 +298,7 @@ function CardKBUsage({ kbUsage }: { kbUsage: any }) {
     const cardStatus: "ok" | "warn" | "danger" = total === 0 ? "warn" : "ok"
 
     return (
-        <Card title="📚 KB 인용 패턴" status={cardStatus}>
+        <Card title="KB 인용 패턴" status={cardStatus}>
             {total === 0 ? (
                 <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>
                     아직 인용 데이터 없음 — Full cron 며칠 더 누적 필요
@@ -363,7 +363,7 @@ function CardKBUsage({ kbUsage }: { kbUsage: any }) {
 function _computeSchedule(portfolio: any, kbUsage: any, userTodos: UserTodo[] = []): ScheduleItem[] {
     const items: ScheduleItem[] = []
 
-    // ── 사용자 메모 (admin_todos.json) — done=false 만 표시, 📌 prefix 로 시각 구분 ──
+    // ── 사용자 메모 (admin_todos.json) — done=false 만 표시, [메모] prefix 로 시각 구분 ──
     for (const t of userTodos) {
         if (!t || t.done) continue
         const text = (t.text || "").trim()
@@ -372,7 +372,7 @@ function _computeSchedule(portfolio: any, kbUsage: any, userTodos: UserTodo[] = 
         items.push({
             bucket: bucket,
             severity: t.severity || "info",
-            text: `📌 ${text}${t.due ? ` (마감: ${t.due})` : ""}`,
+            text: `[메모] ${text}${t.due ? ` (마감: ${t.due})` : ""}`,
         })
     }
 
@@ -507,7 +507,7 @@ function CardSchedule({ portfolio, kbUsage, userTodos }: { portfolio: any; kbUsa
                 color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4,
             }}>
                 자동: portfolio.json + brain_kb_usage.json 누적 상태 기반.
-                📌 표시는 data/admin_todos.json 사용자 메모 (GitHub 직접 편집).
+                [메모] 표시는 data/admin_todos.json 사용자 메모 (GitHub 직접 편집).
                 5분마다 갱신.
             </div>
         </Card>
@@ -538,7 +538,7 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
     const order = ["FAST_GROWER", "STALWART", "TURNAROUND", "CYCLICAL", "ASSET_PLAY", "SLOW_GROWER"]
 
     return (
-        <Card title={`📚 Lynch 6분류 (한국) — ${total}종목`} status="ok">
+        <Card title={`Lynch 6분류 (한국) — ${total}종목`} status="ok">
             {total === 0 ? (
                 <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>
                     분류 데이터 없음 — Full cron 1회 후 자동 채워짐
@@ -954,7 +954,7 @@ function CardMyHoldings({ portfolio }: { portfolio: any }) {
     }
 
     return (
-        <Card title={`💼 내 보유 (${holdings.length})`} status={status}>
+        <Card title={`내 보유 (${holdings.length})`} status={status}>
             <Row
                 label="총자산"
                 value={totalAsset != null ? `${fmtKRW(totalAsset)}원` : "—"}

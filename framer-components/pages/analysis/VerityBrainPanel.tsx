@@ -435,7 +435,7 @@ export default function VerityBrainPanel(props: Props) {
                     
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
-                    <span style={{ fontSize: 18 }}>{expiryWatch === "FULL_WATCH" ? "\u26A0\uFE0F" : "\u23F3"}</span>
+                    <span style={{ fontSize: 18, color: expiryWatch === "FULL_WATCH" ? C.danger : C.caution }}>\u26A0</span>
                     <div style={{ flex: 1 }}>
                         <span style={{
                             color: expiryWatch === "FULL_WATCH" ? C.danger : C.caution,

@@ -84,7 +84,7 @@ function daysSince(dateStr: string): number {
 
 /* ──────────────────────────────────────────────────────────────
  * 세금 산식 (backend api/vams/engine.py compute_adjusted_return 정합)
- * Perplexity 자문 2026-05-17 (메모리 [[after-tax-sharpe-kr-us]] 박힘)
+ * Perplexity 자문 2026-05-17 (메모리 [[after-tax-sharpe-kr-us]] 기재)
  *
  * KR 0% (비대주주 비과세) / US 22% (250만 공제 후) / 배당 KR 15.4% / US 15.0%
  * 증권거래세 KR 0.18% (일반주) / KR ETF 0% / US 0% / FX 0.3%/년
@@ -260,7 +260,7 @@ function TradeRow({ t }: { t: any }) {
 
 /* ──────────────────────────────────────────────────────────────
  * 세후 PnL 분해 — backend api/vams/engine.py compute_adjusted_return 결과 소비
- * portfolio.json `vams.adjusted_performance.deductions` 박힘. 5/17 리셋 직후 = 빈 dict,
+ * portfolio.json `vams.adjusted_performance.deductions` 에 기재. 5/17 리셋 직후 = 빈 dict,
  * VAMS 매매 누적 시 자동 채워짐. RULE 7 정합 (가설 N=일수 명시).
  * ────────────────────────────────────────────────────────────── */
 function DeductionBreakdown({ adj, daysObserved }: { adj: any; daysObserved: number }) {

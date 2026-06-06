@@ -43,7 +43,10 @@ const UP = C.up
 const DOWN = C.down
 
 const DEFAULT_COLORS = [C.accent, C.down, C.up, C.watch, C.brandFactor, C.success]
-const DEFAULT_ICONS = ["⭐", "🔥", "💎", "🚀", "📊", "🏦", "💰", "🎯"]
+// 아이콘 = 중립 기하 도형 (이모지 0). 그룹 color 로 틴트.
+const DEFAULT_ICONS = ["●", "◆", "▲", "■", "○", "◇", "△", "□"]
+// 백엔드에 저장된 옛 이모지 아이콘 → 도형으로 폴백
+const normalizeIcon = (ic?: string) => (ic && DEFAULT_ICONS.includes(ic) ? ic : "●")
 
 function bustUrl(url: string): string {
     const u = (url || "").trim()
@@ -360,7 +363,7 @@ export default function WatchGroupsCard(props: Props) {
                 id: "__local__",
                 name: "관심종목",
                 color: ACCENT,
-                icon: "❤️",
+                icon: "●",
                 sort_order: -1,
                 items: localItems,
             })
@@ -645,7 +648,7 @@ export default function WatchGroupsCard(props: Props) {
                             >
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <span style={{ fontSize: 18 }}>{g.icon}</span>
+                                        <span style={{ fontSize: 18, color: g.color || C.textPrimary }}>{normalizeIcon(g.icon)}</span>
                                         <div>
                                             <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT }}>{g.name}</div>
                                             <div style={{ color: MUTED, fontSize: 12, fontFamily: FONT }}>{itemCount}종목</div>

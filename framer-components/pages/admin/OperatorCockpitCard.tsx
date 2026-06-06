@@ -7,9 +7,9 @@
 //   - 좌측 초록 strip 제거 (borderLeft: 3px)
 //   - sevBg tinted background 제거 (flat #0a0a0a)
 //   - 이모지 제거
-//   - horizontal border 박음 (TIDE 패턴)
-//   - label UPPERCASE 11px / number Lora serif 박음
-//   - block sub-card 박은 부분 단순 horizontal section 박음
+//   - horizontal border 적용 (TIDE 패턴)
+//   - label UPPERCASE 11px / number Lora serif 적용
+//   - block sub-card 적용한 부분 단순 horizontal section 적용
 import * as React from "react"
 import { addPropertyControls, ControlType } from "framer"
 
@@ -50,7 +50,7 @@ export default function OperatorCockpitCard(props: Props) {
 
     React.useEffect(() => {
         const ctrl = new AbortController()
-        // CDN 캐시 (raw.githubusercontent.com ~5분) 우회 — query param 박음
+        // CDN 캐시 (raw.githubusercontent.com ~5분) 우회 — query param 추가
         const url = `${cockpitStateUrl}${cockpitStateUrl.includes("?") ? "&" : "?"}t=${Date.now()}`
         fetch(url, { signal: ctrl.signal, cache: "no-store" })
             .then((r) => r.json())
@@ -91,7 +91,7 @@ export default function OperatorCockpitCard(props: Props) {
                 <div style={oneLinerStyle}>{state.one_liner}</div>
             )}
 
-            {/* Severity reasons (RED/YELLOW 박음 시) */}
+            {/* Severity reasons (RED/YELLOW 표시 시) */}
             {state.severity_reasons && state.severity_reasons.length > 0 && (
                 <div style={section}>
                     <div style={{ ...labelStyle, marginBottom: 6 }}>SEVERITY REASONS</div>

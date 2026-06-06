@@ -379,7 +379,7 @@ function StockDetailPanelInner(props: Props) {
         setLiveCandles([])
     }, [])
 
-    /* 외부 StockSearch 가 dispatch 하는 STOCK_DETAIL_OPEN 이벤트 listener — 같은 framer 페이지에 둘 다 박혀있으면 자동 연결 */
+    /* 외부 StockSearch 가 dispatch 하는 STOCK_DETAIL_OPEN 이벤트 listener — 같은 framer 페이지에 둘 다 배치되어 있으면 자동 연결 */
     useEffect(() => {
         if (typeof window === "undefined") return
         const onOpen = (e: Event) => {

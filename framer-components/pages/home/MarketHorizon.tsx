@@ -434,7 +434,7 @@ export default function MarketHorizon(props: Props) {
                             ...subLabelStyle,
                             display: "flex", alignItems: "center", gap: S.sm,
                         }}>
-                            <span>🦢 Black Swan · 직전 24h</span>
+                            <span>Black Swan · 직전 24h</span>
                             {(data.recent_black_swan_events?.length || 0) === 0 && (
                                 <span style={{
                                     color: C.textDisabled, fontSize: 9, fontWeight: 600,

@@ -1,12 +1,12 @@
 // OperatorCockpitBar v2 — Phase 1 P1-a UI (TIDE 디자인 정합, 2026-05-27 재설계).
-// Framer canvas mirror (codeFileId 박힘 후 sync).
+// Framer canvas mirror (codeFileId 고정 후 sync).
 // source: plan §Phase 1-a + docs/design_system_tide.md
 // PM=approved 2026-05-23.
 //
 // v2 변경 (2026-05-27):
-//   - 이모지 제거 (옛 🌗 박은 부분)
+//   - 이모지 제거 (옛 달 아이콘 부분)
 //   - 좌측 strip 제거
-//   - horizontal border 박음 (TIDE 패턴 — BrainGradeBreakdown reference)
+//   - horizontal border 적용 (TIDE 패턴 — BrainGradeBreakdown reference)
 //   - label UPPERCASE 11px 0.04em letter-spacing
 //   - number Lora serif
 //
@@ -46,7 +46,7 @@ export default function OperatorCockpitBar(props: Props) {
 
     React.useEffect(() => {
         const ctrl = new AbortController()
-        // CDN 캐시 (raw.githubusercontent.com ~5분) 우회 — query param 박음
+        // CDN 캐시 (raw.githubusercontent.com ~5분) 우회 — query param 추가
         const url = `${cockpitStateUrl}${cockpitStateUrl.includes("?") ? "&" : "?"}t=${Date.now()}`
         fetch(url, { signal: ctrl.signal, cache: "no-store" })
             .then((r) => r.json())

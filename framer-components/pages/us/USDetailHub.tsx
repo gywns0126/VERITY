@@ -19,7 +19,7 @@ import { useEffect, useState, type CSSProperties } from "react"
  *   2. Flat hierarchy — title + tab + list
  *   3. Mono numerics — 가격, 변화율, 카운트
  *   4. Color discipline — 토큰만 (success/warn/danger/info)
- *   5. Emoji 0 (✨🍎🪟🔍📦🟢📘⚡▲▼📊🏛️ 폐기)
+ *   5. Emoji 0 (그림 이모지 전부 폐기)
  *   6. 자체 색 (#22C55E #EF4444 #7fffa0 #ccc #666 #4ADE80 #444 #A78BFA
  *      #60A5FA #0D2A0D #2A0D0D 등) 모두 토큰
  *

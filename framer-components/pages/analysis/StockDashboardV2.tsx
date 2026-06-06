@@ -14,8 +14,8 @@ import {
  * 출처: StockDashboard.tsx (3,095줄) 통째 재작성.
  *
  * 진행 단계 (총 13~14 turn 예상):
- *   - A.1 ✅ 본체 chapter 분석
- *   - A.2 ✅ 골격 (이 파일) — 토큰 + TermTooltip + 7 sub-component
+ *   - A.1 (완료) 본체 chapter 분석
+ *   - A.2 (완료) 골격 (이 파일) — 토큰 + TermTooltip + 7 sub-component
  *          + 메인 shell (placeholder render)
  *   - A.3 listPanel — 종목 list
  *   - A.4 detailPanel header + tab bar
