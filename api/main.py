@@ -3454,6 +3454,31 @@ def main():
                 except Exception as e:
                     print(f"  ⚠️ 특수관계자 분석 스킵: {e}")
 
+                # ── DART 2차 원문 심화: 소송/우발부채/제재 분석 ──
+                # 2026-06-06. 🚨 관측 only — dart_litigation 데이터 필드로만 부착.
+                # distress(회생·파산, dart_disclosure_events)와 별개 = 진행 중 소송 *규모*·
+                # 우발채무. scored risk_flags 미주입(RULE 7, 점수 반영은 N 누적 후 사전등록 + PM 승인).
+                try:
+                    from api.analyzers.dart_litigation import analyze_all_litigation
+                    lit_result = analyze_all_litigation(stocks_dict, auto_fetch_missing=True)
+                    lit_attached = lit_high = 0
+                    for stock in candidates:
+                        t = stock.get("ticker")
+                        if not t:
+                            continue
+                        t6 = str(t).split(".")[0].zfill(6)
+                        lit = lit_result.get(t6)
+                        if lit and "_skip_reason" not in lit:
+                            stock["dart_litigation"] = lit
+                            lit_attached += 1
+                            if lit.get("severity") == "high":
+                                lit_high += 1
+                    if lit_attached:
+                        print(f"  ✓ {lit_attached}개 종목에 dart_litigation 부착 "
+                              f"(소송·우발부채 고위험 {lit_high}, 관측 only)")
+                except Exception as e:
+                    print(f"  ⚠️ 소송·우발부채 분석 스킵: {e}")
+
                 # ── DART 공시 이벤트 스캔: 유상증자/정정/불성실/distress ──
                 # 2026-06-04. 키워드 분류(LLM 0). 🚨 distress/불성실 = 2026-06-05 점수 사전등록
                 # (factors/red_flags.py, RULE 7 PM 승인). 유상증자/정정/올빼미 = 관측 only(임계 fit 대기).

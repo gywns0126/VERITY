@@ -90,7 +90,7 @@ def _call(endpoint: str, params: Dict[str, str]) -> Dict[str, Any]:
                 return {"status": "013", "list": []}
             if status != "000":
                 record_dart_call(status)
-                # 2026-05-27 박음: fail status 분포 진단 (cron_health detect 박은 ~16% fail rate root cause).
+                # 2026-05-27 추가: fail status 분포 진단 (cron_health detect 한 ~16% fail rate root cause).
                 # corp_code 만 노출 (key 노출 X).
                 import sys as _sys
                 msg = (data.get("message", "") or "")[:60]
@@ -479,6 +479,28 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
     if related_party and len(related_party) > 30000:
         related_party = related_party[:30000]
 
+    # 2026-06-06 DART 2차 원문 심화 — 소송/우발부채/제재 additive 슬라이스.
+    # distress(회생·파산, dart_disclosure_events)와 별개 — 진행 중 소송 *규모*·우발채무·
+    # 약정·제재는 fundamental risk 신호 (충당부채 인식 전 잠재 손실). 한국 공시 특유 영역
+    # (글로벌 LLM·개인 미추출). 같은 document → 추가 fetch 0. 정밀(precision) 우선 — 경계
+    # 못 찾으면 미매칭(거대 garbage 회피), 청크별 12K·합산 30K cap.
+    lit_patterns = [
+        r"(?is)(?:계류\s*중인\s*소송|진행\s*중인\s*소송|소송\s*등의?\s*현황|소송\s*사건)(.*?)(?:우발\s*부채|약정\s*사항|특수관계자|보고기간\s*후|주석\s*\d+)",
+        # '약정사항' 은 경계서 제외 — "우발부채 및 약정사항" 헤딩서 즉시 매칭돼 본문 잘림(2026-06-06 검증).
+        r"(?is)(?:우발\s*부채|우발\s*채무)(.*?)(?:특수관계자|중요한\s*거래|보고기간\s*후|주석\s*\d+\s*[\.\)])",
+        r"(?is)그\s*밖에\s*투자자\s*보호.{0,40}?사항(.*?)(?:전문가의\s*확인|이사회|상장규정|코스닥시장)",
+    ]
+    lit_chunks: List[str] = []
+    for pat in lit_patterns:
+        lm = re.findall(pat, cleaned)
+        if lm:
+            best = max(lm, key=len).strip()
+            if len(best) > 150:
+                lit_chunks.append(best[:12000])
+    litigation = "\n\n---\n\n".join(dict.fromkeys(lit_chunks))  # 순서보존 dedupe
+    if litigation and len(litigation) > 30000:
+        litigation = litigation[:30000]
+
     # 2026-06-04 going-concern/강조사항 — 감사보고서가 같은 ZIP 번들 시 포착.
     # doubt 전용 구문만 (정상 boilerplate "계속기업을 전제로" 회피, false-positive 차단).
     try:
@@ -497,6 +519,8 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
         "char_count": len(section),
         "related_party_text": related_party,
         "related_party_char_count": len(related_party),
+        "litigation_text": litigation,
+        "litigation_char_count": len(litigation),
         "going_concern_doubt": _gc["going_concern_doubt"],
         "emphasis_of_matter": _gc["emphasis_of_matter"],
         "going_concern_severity": _gc["severity"],

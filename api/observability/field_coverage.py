@@ -103,6 +103,7 @@ _SPEC: List[tuple] = [
     # 한국 1차자료 (DART — 유일 해자, 한국 전용)
     ("DART한국", "dart_business_analysis", _dict_ok, "kr"),
     ("DART한국", "dart_related_party", _dict_ok, "kr"),  # 2026-06-03 2차 원문 심화
+    ("DART한국", "dart_litigation", _dict_ok, "kr"),  # 2026-06-06 소송·우발부채
     ("DART한국", "dart_disclosure_events", _dict_ok, "kr"),  # 2026-06-04 공시 이벤트
     ("DART한국", "dart_audit_signals", _dict_ok, "kr"),  # 2026-06-04 going-concern
     ("DART한국", "fscore_deltas", _dict_ok, "all"),
