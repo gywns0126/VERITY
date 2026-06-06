@@ -69,9 +69,30 @@ def _build_kr_universe_tickers() -> List[str]:
     return [str(e["ticker"]).zfill(6) for e in kr_entries if e.get("ticker")]
 
 
-def build() -> Dict[str, Any]:
-    """KR universe DART 일괄 fetch → snapshot dict.
+def _current_bsns_year() -> str:
+    """DART 조회 사업연도 = 직전 연도 (연간보고서 3월 확정, collector 와 동일 규칙)."""
+    return str(_now_kst().year - 1)
 
+
+def _is_fresh_dart(rec: Any, bsns_year: str) -> bool:
+    """직전 snapshot 의 종목 record 가 현 bsns_year DART 정식 데이터인가.
+
+    연간보고서(reprt_code 11011)는 해당 연도 내 불변 → 재사용 정합(stale 아님).
+    """
+    return (
+        isinstance(rec, dict)
+        and str(rec.get("source", "")).startswith("DART")
+        and str(rec.get("report_date", "")) == str(bsns_year)
+        and (rec.get("total_assets") or 0) > 0
+    )
+
+
+def build() -> Dict[str, Any]:
+    """KR universe DART 증분 fetch → snapshot dict.
+
+    증분 (2026-06-06 fix): 연간 데이터는 해당 연도 불변이므로, 직전 snapshot 에 현
+    bsns_year DART 정식 record 가 있는 종목은 재사용하고 누락분만 fetch. 매주 1874종목
+    전체 재호출이 DART throttle(GH IP, 48s/콜)을 자초하던 문제 해소.
     실패 시에도 항상 dict 반환 (diagnostics 에 source 명시).
     """
     from api.collectors.dart_fundamentals import fetch_dart_fundamentals_batch
@@ -79,27 +100,39 @@ def build() -> Dict[str, Any]:
     now = _now_kst()
     started = time.time()
     error: str | None = None
+    bsns_year = _current_bsns_year()
 
     tickers = _build_kr_universe_tickers()
     if not tickers:
         error = "kr_universe_empty"
         sys.stderr.write(f"[dart_batch] FAIL: {error}\n")
 
-    fundamentals: Dict[str, Dict] = {}
-    if tickers:
+    # 증분: 직전 snapshot 에서 현 bsns_year DART 정식분 재사용, 누락분만 fetch.
+    prev = _load_existing()
+    prev_funds = prev.get("fundamentals") if isinstance(prev.get("fundamentals"), dict) else {}
+    reuse: Dict[str, Dict] = {t: prev_funds[t] for t in tickers if _is_fresh_dart(prev_funds.get(t), bsns_year)}
+    to_fetch = [t for t in tickers if t not in reuse]
+    sys.stderr.write(
+        f"[dart_batch] 증분: 재사용 {len(reuse)} / fetch 대상 {len(to_fetch)} (bsns_year={bsns_year})\n"
+    )
+
+    fetched: Dict[str, Dict] = {}
+    if to_fetch:
         try:
-            fundamentals = fetch_dart_fundamentals_batch(tickers, max_workers=10) or {}
+            # max_workers 6 — throttle 압력 완화 (기존 10).
+            fetched = fetch_dart_fundamentals_batch(to_fetch, max_workers=6, bsns_year=bsns_year) or {}
         except BaseException as e:
             error = f"{type(e).__name__}: {str(e)[:200]}"
-            sys.stderr.write(f"[dart_batch] FAIL: {error}\n")
+            sys.stderr.write(f"[dart_batch] fetch 일부 실패 (graceful): {error}\n")
+
+    fundamentals: Dict[str, Dict] = {**reuse, **fetched}
 
     elapsed = round(time.time() - started, 2)
 
     # 0건 fallback — 직전 snapshot 보존
-    prev = _load_existing()
     used_prev = False
-    if not fundamentals and isinstance(prev.get("fundamentals"), dict) and prev["fundamentals"]:
-        fundamentals = prev["fundamentals"]
+    if not fundamentals and prev_funds:
+        fundamentals = prev_funds
         used_prev = True
         sys.stderr.write(
             f"[dart_batch] used_prev=True (이번 run 0건, 직전 snapshot {len(fundamentals)}건)\n"
@@ -114,10 +147,13 @@ def build() -> Dict[str, Any]:
     diagnostics = {
         "ok": error is None and bool(fundamentals),
         "tickers_attempted": len(tickers),
+        "reused_count": len(reuse),
+        "fetched_count": len(fetched),
         "fundamentals_count": len(fundamentals),
         "source_counts": source_counts,
         "elapsed_s": elapsed,
         "used_prev_snapshot": used_prev,
+        "bsns_year": bsns_year,
         "error": error,
     }
 

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import functools
 import json
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout, as_completed
 from datetime import datetime
@@ -324,20 +325,35 @@ def fetch_dart_fundamentals_batch(
         now = datetime.now(ZoneInfo("Asia/Seoul"))
         bsns_year = str(now.year - 1) if now.month <= 4 else str(now.year - 1)
 
+    # batch 전체 deadline — 초과 시 raise 하지 않고 완료분(partial)만 반환.
+    # (기존: TimeoutError 가 호출부로 전파 → 그 run 진행분 전부 손실 → 영원히 0 수렴.
+    #  이제 부분진행을 저장 → 증분 빌더가 다음 run 에 이어받아 drip-fill 수렴.)
+    batch_deadline_s = min(540.0, max(120.0, len(tickers) * 0.5))
+
     out: dict[str, dict] = {}
-    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+    ex = ThreadPoolExecutor(max_workers=max_workers)
+    try:
         futures = {
             ex.submit(_fetch_one_dart_fundamentals, t, bsns_year): t
             for t in tickers
         }
-        for fu in as_completed(futures, timeout=max(timeout_per_ticker * 4, 60)):
-            tk = futures[fu]
-            try:
-                out[tk] = fu.result(timeout=timeout_per_ticker)
-            except (FutTimeout, Exception):
-                out[tk] = {
-                    "per": None, "pbr": None, "roe": None,
-                    "debt_ratio": None, "op_margin": None,
-                    "report_date": None, "source": "error",
-                }
+        try:
+            for fu in as_completed(futures, timeout=batch_deadline_s):
+                tk = futures[fu]
+                try:
+                    out[tk] = fu.result(timeout=timeout_per_ticker)
+                except (FutTimeout, Exception):
+                    out[tk] = {
+                        "per": None, "pbr": None, "roe": None,
+                        "debt_ratio": None, "op_margin": None,
+                        "report_date": None, "source": "error",
+                    }
+        except FutTimeout:
+            sys.stderr.write(
+                f"[dart_fundamentals] batch deadline {batch_deadline_s:.0f}s 초과 — "
+                f"완료분 {len(out)}/{len(tickers)} 반환 (나머지 다음 run drip-fill)\n"
+            )
+    finally:
+        # 펜딩 future 즉시 취소 — drain 으로 23분 매달리던 것 방지.
+        ex.shutdown(wait=False, cancel_futures=True)
     return out

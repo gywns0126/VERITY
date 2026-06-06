@@ -148,7 +148,7 @@ SOURCES = [
         "label": "Universe 후보 (top N)",
         "path": "data/universe_candidates.json",
         "type": "json_collected_at",
-        "max_fresh_hours": 2.0,  # daily + 2h margin (오전 cron 후 평일만)
+        "max_fresh_hours": 26.0,  # daily cron(평일) + 마진. 2.0 은 오설정이었음(daily 인데 2h → 만성 false missing, dart 같은 진짜 결손 가림). 2026-06-07 fix. api/health.py 26h 와 정합.
     },
     {
         "key": "runtime_load",
