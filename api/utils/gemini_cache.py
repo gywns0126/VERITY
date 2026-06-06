@@ -88,21 +88,60 @@ def generate_with_cache(
 
     call_type 전달 시 (2026-05-31) llm_cost.jsonl 에 usage 1줄 기록 — cost 84.7%
     지배 경로(stock_analysis/chat)가 이 함수 단일 경유라 coverage 의 핵심.
+
+    503/429/500 일시적 과부하 내성 (2026-06-06): 단발 generate_content 가 Gemini
+    high-demand 503 에 그대로 실패 → periodic(월간/주간) 리포트 등 단일호출 경로가 통째
+    _fallback 으로 떨어지던 사고. daily_public._default_gemini_caller(f16e11c5) 의 검증된
+    2층 패턴 재사용 — (1) 모델별 backoff 2회(4s) (2) 주 모델 지속 과부하 시 모델 폴백
+    (flash→GEMINI_MODEL_CHAT/flash-lite). transient 만 재시도, 비일시적(400/인증)은 즉시 raise.
+    이 함수가 stock_analysis/chat/daily_report/periodic 단일 chokepoint 라 전 경로 동시 보호.
     """
-    cache_name = get_or_create_cache(client, model, system_instruction)
-    config = dict(extra_config)
-    if cache_name:
-        config["cached_content"] = cache_name
-    else:
-        config["system_instruction"] = system_instruction
-    resp = client.models.generate_content(model=model, contents=contents, config=config)
-    if call_type:
-        try:
-            from api.utils.gemini_tracked import log_gemini_usage
-            log_gemini_usage(resp, model, call_type, contents=contents)
-        except Exception:
-            pass
-    return resp
+    import sys
+    from api.config import GEMINI_MODEL_CHAT
+
+    models = [model]
+    if GEMINI_MODEL_CHAT and GEMINI_MODEL_CHAT != model:
+        models.append(GEMINI_MODEL_CHAT)
+
+    PER_MODEL_ATTEMPTS = 2
+    last_err = None
+    for mi, m in enumerate(models):
+        cache_name = get_or_create_cache(client, m, system_instruction)
+        config = dict(extra_config)
+        if cache_name:
+            config["cached_content"] = cache_name
+        else:
+            config["system_instruction"] = system_instruction
+        for attempt in range(PER_MODEL_ATTEMPTS):
+            try:
+                resp = client.models.generate_content(model=m, contents=contents, config=config)
+            except Exception as e:
+                last_err = e
+                msg = str(e)
+                transient = any(k in msg for k in (
+                    "503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED",
+                    "overloaded", "high demand", "500", "INTERNAL"))
+                print(f"[gemini_cache] API 오류 model={m} attempt={attempt + 1}/{PER_MODEL_ATTEMPTS} "
+                      f"transient={transient} call_type={call_type} err={msg[:120]}",
+                      file=sys.stderr, flush=True)
+                if not transient:
+                    raise  # 비일시적(400/인증 등) = 재시도/폴백 무의미
+                if attempt < PER_MODEL_ATTEMPTS - 1:
+                    time.sleep(4 * (attempt + 1))  # 4s, 8s backoff
+                continue  # 소진 시 다음 모델로 폴백
+            if call_type:
+                try:
+                    from api.utils.gemini_tracked import log_gemini_usage
+                    log_gemini_usage(resp, m, call_type, contents=contents)
+                except Exception:
+                    pass
+            if mi > 0:
+                print(f"[gemini_cache] 폴백 모델 {m} 성공 call_type={call_type}",
+                      file=sys.stderr, flush=True)
+            return resp
+    # 전 모델 소진 — 마지막 예외를 그대로 올려 caller 의 기존 except 경로(폴백 리포트) 유지
+    raise last_err if last_err else RuntimeError(
+        f"generate_with_cache: 전 모델 소진 (models={models})")
 
 
 def invalidate_all() -> None:
