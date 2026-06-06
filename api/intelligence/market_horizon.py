@@ -74,9 +74,11 @@ def cape_percentile(cape: Optional[float]) -> Optional[int]:
 # ──────────────────────────────────────────────────────────────
 # 3) Cycle stage 분류 (rule-based, 5변수 — V1 2026-05-06)
 # ──────────────────────────────────────────────────────────────
-# V0 는 CAPE/PMI 의존 → 둘 다 수집 모듈 없어 unknown 고정. V1 = 현재 박힌
-# 5변수 (spread / hy_oas / unemployment / consumer_sentiment / vix) 로 재작성.
-# CAPE/PMI 추가 시 V2 에서 보강.
+# V1 = spread / hy_oas / unemployment / consumer_sentiment / vix 5변수 rule-based.
+# unknown 반환 = spread 또는 hy_oas 결손 시 (= 데이터 결손 센티넬, 국면 X).
+#   주의: unknown 은 시장 국면이 아님 — caller 에서 carry-forward 로 직전 known
+#   stage 유지 + alert 차단 (FRED 결손 run 이 euphoria 를 덮어쓰는 깜빡임 방지,
+#   2026-06-06 fix). CAPE/PMI refinement 는 V2 에서 보강.
 def classify_cycle_stage(
     spread_2y_10y: Optional[float],
     hy_oas: Optional[float],
@@ -88,7 +90,7 @@ def classify_cycle_stage(
 ) -> str:
     """5단계 분류 — early_bull / mid_bull / late_bull / euphoria / bear.
 
-    핵심 2변수 (spread + hy_oas) 만 박혀있으면 진행. CAPE/실업/소비심리 etc 는 refinement.
+    핵심 2변수 (spread + hy_oas) 만 있으면 진행. CAPE/실업/소비심리 etc 는 refinement.
     """
     if spread_2y_10y is None or hy_oas is None:
         return "unknown"
@@ -713,6 +715,17 @@ def _alert_stage_change(
         _save_horizon_state(state)
         return
 
+    # unknown = 데이터 결손 센티넬 (국면 X). caller carry-forward 가 1차 방어지만,
+    # 직전 known stage 부재 (최초 분류 전) 등 carry-forward 불가 시엔 unknown 이 통과.
+    # in/out unknown 전이는 spurious cycle 변경 alert → state 만 갱신, 텔레그램 차단
+    # (2026-06-06 fix, defense-in-depth).
+    if prev_stage == "unknown" or new_stage == "unknown":
+        state["cycle_stage"] = new_stage
+        state["previous_stage"] = prev_stage
+        state["changed_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+        _save_horizon_state(state)
+        return
+
     # 변경 감지 → 텔레그램 alert
     direction_arrow = "→"
     severity_emoji = "📊"
@@ -835,6 +848,18 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
         fred_recession_now=fred_recession_now,
         cape_pctile=cape_p,
     )
+    # carry-forward (2026-06-06 fix): spread/hy_oas 결손 run = unknown 반환.
+    # unknown = 데이터 결손 센티넬이지 국면 변경 X. 매크로 국면은 run 단위로 안 바뀜 —
+    # FRED 미적재 라이트 run 이 직전 known stage (euphoria 등) 를 unknown 으로 덮어쓰면
+    # euphoria↔unknown 깜빡임 + 매 왕복마다 spurious cycle 변경 alert. 직전 known stage 유지.
+    if stage == "unknown":
+        _prev_stage = _load_horizon_state().get("cycle_stage")
+        if _prev_stage and _prev_stage != "unknown":
+            logger.info(
+                f"market_horizon: 입력 결손 (spread/hy_oas) → carry-forward "
+                f"직전 stage '{_prev_stage}' 유지 (unknown 무시)"
+            )
+            stage = _prev_stage
     horizons = horizon_returns(stage)
     horizon_12m_med = horizons.get("12m", {}).get("median")
 
