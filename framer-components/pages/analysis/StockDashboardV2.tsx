@@ -1293,7 +1293,7 @@ export default function StockDashboardV2(props: Props) {
                                         {DETAIL_TABS.find((t) => t.key === detailTab)?.label || detailTab}
                                     </span>
                                     <span style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal }}>
-                                        상세 내용은 다음 turn 들에서 박힙니다.
+                                        상세 내용은 다음 단계에서 추가됩니다.
                                     </span>
                                 </div>
                             )}
