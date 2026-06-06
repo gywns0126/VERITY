@@ -18,6 +18,7 @@ Memory: project_brain_learning_loop_repair, project_perplexity_q1_q6_batch_2026_
 """
 from __future__ import annotations
 
+import functools
 import json
 import os
 import sys
@@ -29,6 +30,36 @@ KST = timezone(timedelta(hours=9))
 
 REPO_ROOT = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 REGISTRY_PATH = REPO_ROOT / "data" / "strategy_registry.json"
+_CONSTITUTION_PATH = REPO_ROOT / "data" / "verity_constitution.json"
+_GRADE_ORDER = ("STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID")  # high → low
+
+
+@functools.lru_cache(maxsize=1)
+def _grade_min_scores() -> tuple:
+    """constitution decision_tree.grades 의 (grade, min_brain_score) — 등급 사다리 단일 출처.
+
+    2026-06-07: 앙상블 verdict 하드코드(75/60/45/25) → constitution 단일 출처화.
+    verity_brain._score_to_grade 와 동일 source(constitution decision_tree.grades) 참조 →
+    CAUTION 25 등 임계가 한 곳에서만 정의(drift 차단). 실패 시 안전 fallback.
+    """
+    defaults = (75.0, 60.0, 45.0, 25.0, 0.0)
+    try:
+        c = json.loads(_CONSTITUTION_PATH.read_text())
+        g = c.get("decision_tree", {}).get("grades", {})
+        return tuple(
+            (name, float(g.get(name, {}).get("min_brain_score", d)))
+            for name, d in zip(_GRADE_ORDER, defaults)
+        )
+    except Exception:
+        return tuple(zip(_GRADE_ORDER, defaults))
+
+
+def _verdict_from_score(score: float) -> str:
+    """점수 → verdict (constitution 등급 사다리, high→low 순)."""
+    for name, mn in _grade_min_scores():
+        if score >= mn:
+            return name
+    return "AVOID"
 
 
 def load_pool(registry: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
@@ -215,17 +246,8 @@ def compute_ensemble_signal(
         weight_total += w
 
     ensemble_score = round(weighted_sum / max(weight_total, 1e-9), 2)
-    # verdict mapping
-    if ensemble_score >= 75:
-        verdict = "STRONG_BUY"
-    elif ensemble_score >= 60:
-        verdict = "BUY"
-    elif ensemble_score >= 45:
-        verdict = "WATCH"
-    elif ensemble_score >= 25:
-        verdict = "CAUTION"
-    else:
-        verdict = "AVOID"
+    # verdict mapping — constitution decision_tree.grades 단일 출처 (2026-06-07, 하드코드 제거)
+    verdict = _verdict_from_score(ensemble_score)
 
     return {
         "ensemble_score": ensemble_score,

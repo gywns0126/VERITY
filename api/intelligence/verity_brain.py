@@ -326,17 +326,15 @@ def _load_bond_regime() -> Dict[str, Any]:
         return _defaults
 
 
-def _reclassify_signal(vci: float) -> str:
-    """VCI 점수 → 시그널 재분류 (verity_constitution vci.thresholds 동기화)."""
-    if vci >= 75:
-        return "STRONG_BUY"
-    if vci >= 60:
-        return "BUY"
-    if vci >= 45:
-        return "WATCH"
-    if vci >= 30:
-        return "CAUTION"
-    return "AVOID"
+def _reclassify_signal(market_vci_0_100: float) -> str:
+    """시장 VCI(0-100 composite) → 시그널.
+
+    2026-06-07: 등급 사다리를 constitution `decision_tree.grades` 단일 출처로 통일
+    (기존 하드코드 75/60/45/30 → _score_to_grade 위임, CAUTION 25). 주석도 정정 —
+    여기 인자는 종목 contrarian VCI(±25, constitution vci.thresholds)가 아니라
+    시장 0-100 composite 다(혼동 주의). 종목 등급(_score_to_grade)과 동일 사다리 사용.
+    """
+    return _score_to_grade(market_vci_0_100)
 
 
 def _apply_bond_regime(brain_result: Dict[str, Any], bond_regime: Dict[str, Any]) -> Dict[str, Any]:
