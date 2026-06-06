@@ -24,9 +24,9 @@ import React, { useEffect, useState, type CSSProperties } from "react"
 
 /* ◆ DESIGN TOKENS — VERITY 마스터 ◆ */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a",
     border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
 }
@@ -198,7 +198,7 @@ function CapitalEvolutionPath({ portfolioUrl, refreshIntervalSec, maxWidth }: Pr
     return (
         <div style={{
             width: "100%", maxWidth: maxWidth || undefined,
-            background: C.bgCard, borderRadius: 12,
+            background: C.bgCard, borderRadius: 8,
             padding: "20px 24px",
             fontFamily: FONT, color: C.textPrimary,
             boxSizing: "border-box",

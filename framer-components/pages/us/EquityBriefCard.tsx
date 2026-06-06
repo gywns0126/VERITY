@@ -17,9 +17,9 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react"
 
 /* ◆ DESIGN TOKENS — VERITY 마스터 (USDetailHub 정합) ◆ */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    bgPage: "#0a0a0a", bgCard: "#141414", bgElevated: "#1a1a1a", bgInput: "transparent",
     border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#7fffa0",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    textPrimary: "#ffffff", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#7fffa0", accentSoft: "rgba(127, 255, 160,0.12)",
     strongBuy: "#22C55E", buy: "#2DD4BF", hold: "#FFD600", avoid: "#F59E0B", strongAvoid: "#EF4444",
     up: "#22C55E", down: "#EF4444",
@@ -177,7 +177,7 @@ function VerdictBadge({ verdict }: { verdict?: string }) {
     return (
         <span style={{ display: "inline-flex", alignItems: "center",
             padding: `2px ${S.sm}px`, background: color + "1A", color,
-            borderRadius: R.pill, fontSize: T.cap, fontWeight: T.w_bold,
+            borderRadius: R.sm, fontSize: T.cap, fontWeight: T.w_bold,
             fontFamily: FONT, letterSpacing: 0.5, lineHeight: 1.4 }}>{label}</span>
     )
 }
@@ -310,8 +310,7 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
                     {showTrail && (
                         <>
                             <div style={hr} />
-                            <div style={{ display: "flex", flexDirection: "column", gap: S.sm,
-                                borderLeft: `2px solid ${C.accent}`, paddingLeft: S.md }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
                                 <div style={{ display: "flex", alignItems: "baseline", gap: S.md, flexWrap: "wrap" }}>
                                     <span style={{ fontSize: T.cap, color: C.accent, textTransform: "uppercase",
                                         letterSpacing: 0.5, fontWeight: T.w_bold }}>
@@ -451,7 +450,7 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
 const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
-    background: C.bgPage, borderRadius: 16, padding: S.xxl,
+    background: C.bgPage, borderRadius: 8, padding: S.xxl,
     display: "flex", flexDirection: "column", gap: S.lg, minWidth: 320,
 }
 const headerRow: CSSProperties = {
