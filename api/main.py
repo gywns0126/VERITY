@@ -3526,6 +3526,30 @@ def main():
                               f"(going-concern {au_flagged}, 관측 only)")
                 except Exception as e:
                     print(f"  ⚠️ 감사 신호 스캔 스킵: {e}")
+
+                # ── DART 기관 대량보유(5%+) — 2026-06-07 (action_queue d7158b4f) ──
+                # 🚨 관측 only — dart_major_holders 데이터 필드만. 결정/점수 미반영 (RULE 7,
+                # 신규 신호). 기관 순매집/처분 = smart-money flow(약 prior). 점수 편입 = 검증 후.
+                try:
+                    from api.collectors.dart_major_holders import analyze_all as _mh_all
+                    mh_result = _mh_all(stocks_dict)
+                    mh_attached = mh_accum = 0
+                    for stock in candidates:
+                        t = stock.get("ticker")
+                        if not t:
+                            continue
+                        t6 = str(t).split(".")[0].zfill(6)
+                        mh = mh_result.get(t6)
+                        if mh:
+                            stock["dart_major_holders"] = mh
+                            mh_attached += 1
+                            if mh.get("net_flow_direction") == "accumulate":
+                                mh_accum += 1
+                    if mh_attached:
+                        print(f"  ✓ {mh_attached}개 종목에 dart_major_holders 부착 "
+                              f"(기관 순매집 {mh_accum}, 관측 only)")
+                except Exception as e:
+                    print(f"  ⚠️ 기관 대량보유 수집 스킵: {e}")
             else:
                 print(f"  KR 종목 없음 — skip")
         except Exception as e:
