@@ -50,6 +50,13 @@ def _compute_candle_psychology_score(stock: Dict[str, Any]) -> float:
     if candle_base == 0:
         return 0.0
 
+    # ── Nison 원전 검증 (2026-06-07, action_queue a76f7dd5) ──
+    # 구조 = Nison "Rule of Multiple Techniques"(캔들 + 타 기법 confluence 확인) — 충실.
+    # 단, 아래 수치 임계(vol_ratio>1.5 / RSI 40·60 / 가중치 1.5·1.0·cap 4)는 Nison 의
+    # *정성* 서술(거래량 support / oversold-overbought confluence)을 자체 수치화한 것 =
+    # 원전에 숫자 없음 → 가설(self-op), N 누적 후 검증 대상. RULE 7.
+    # 패턴 *기하*(망치 몸통:꼬리 비율 등)는 본 파일 아닌 upstream tech.signals 에서 탐지 →
+    # 기하 임계 Nison 검증은 별도(action_queue 재등록).
     # Nison 확인 조건: 거래량 동반 확인
     volume_bonus = 0
     if abs(candle_base) > 0 and vol_ratio > 1.5:
