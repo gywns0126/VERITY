@@ -43,6 +43,28 @@ DRIFT_THRESHOLD = float(os.environ.get("TRUST_DRIFT_THRESHOLD", "0.3"))
 BRAIN_DIST_DELTA_MAX = 0.20  # BUY+ 비율 변화 ±20%p
 
 
+def _weekend_grace_hours(since_dt) -> float:
+    """since_dt(KST) ~ now 사이 비거래일(주말) 일수 × 24h grace.
+
+    2026-06-07 PM 승인 — flat 24h 임계가 주말 시장 휴장을 무시해 일요일 밤
+    present-but-stale(예: 토요일 산출 → 일요일 39h) 를 false-alarm 차단.
+    daily_analysis 는 주말 repository_dispatch 미발생 → 갱신 공백이 정상.
+    휴장일(법정공휴일) 단일 +1일은 미반영(보수적) — 드물어 별도 의제.
+    [[feedback_weekday_check_mandatory]] 정합 (운영 freshness 도 거래일 인지).
+    """
+    now = now_kst()
+    try:
+        cur = since_dt.astimezone(now.tzinfo)
+    except (ValueError, TypeError):
+        return 0.0
+    grace = 0.0
+    while cur.date() < now.date():
+        cur += timedelta(days=1)
+        if cur.weekday() >= 5:  # 토(5)/일(6)
+            grace += 24.0
+    return grace
+
+
 def _check_freshness(data_health: Dict[str, Any]) -> Dict[str, Any]:
     meta = data_health.get("_meta") if isinstance(data_health, dict) else None
     if not meta:
@@ -50,8 +72,11 @@ def _check_freshness(data_health: Dict[str, Any]) -> Dict[str, Any]:
     fm = meta.get("portfolio_freshness_minutes")
     if fm is None:
         return {"ok": False, "detail": "freshness 미상"}
-    return {"ok": fm < FRESHNESS_MAX_MIN,
-            "detail": f"{fm}분 (임계 {FRESHNESS_MAX_MIN}분)"}
+    # 주말 grace — 산출 시점(now - fm) 이후 비거래일만큼 임계 확장.
+    implied = now_kst() - timedelta(minutes=fm)
+    limit = FRESHNESS_MAX_MIN + _weekend_grace_hours(implied) * 60
+    return {"ok": fm < limit,
+            "detail": f"{fm}분 (임계 {limit:.0f}분)"}
 
 
 def _check_core_sources(data_health: Dict[str, Any]) -> Dict[str, Any]:
@@ -152,8 +177,9 @@ def _check_pipeline_cron(portfolio: dict) -> Dict[str, Any]:
     try:
         dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
         age = (now_kst() - dt).total_seconds() / 3600
-        return {"ok": age < 24,
-                "detail": f"마지막 업데이트 {age:.1f}h 전"}
+        limit = 24 + _weekend_grace_hours(dt)  # 주말 비거래일 grace
+        return {"ok": age < limit,
+                "detail": f"마지막 업데이트 {age:.1f}h 전 (임계 {limit:.0f}h)"}
     except (ValueError, TypeError):
         return {"ok": False, "detail": "updated_at 파싱 실패"}
 
