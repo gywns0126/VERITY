@@ -1645,8 +1645,58 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
 /* ══════════════════════════════════════════════════════════════════
    AI TAB
    ══════════════════════════════════════════════════════════════════ */
+/* 내 할 일 — UserActionBell 모바일 인라인판 (fixed FAB 화면 가림 회피, MoreTab 임베드).
+ * 데이터 소스/필터는 UserActionBell.tsx 와 동일 (user_action_queue, status=pending, actor=user). */
+function MobileActionQueue({ session, supabaseUrl, supabaseAnonKey }: { session: AuthSession | null; supabaseUrl: string; supabaseAnonKey: string }) {
+    const [rows, setRows] = useState<any[]>([])
+    const [err, setErr] = useState("")
+    useEffect(() => {
+        const jwt = session?.access_token
+        if (!jwt || !supabaseUrl || !supabaseAnonKey) { setErr("로그인 필요"); return }
+        let alive = true
+        const fetchRows = async () => {
+            try {
+                const url = `${supabaseUrl}/rest/v1/user_action_queue` +
+                    `?select=id,title,detail,category,priority,due_at` +
+                    `&status=eq.pending&actor=eq.user` +
+                    `&order=priority.asc,due_at.asc.nullslast&limit=50`
+                const r = await fetch(url, { headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${jwt}` } })
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                const d = await r.json()
+                if (alive) { setRows(Array.isArray(d) ? d : []); setErr("") }
+            } catch (e: any) { if (alive) setErr(e?.message || "조회 실패") }
+        }
+        fetchRows()
+        const id = globalThis.setInterval(fetchRows, 60000)
+        return () => { alive = false; globalThis.clearInterval(id) }
+    }, [session?.access_token, supabaseUrl, supabaseAnonKey])
+
+    const PCOLOR: Record<string, string> = { p0: C.danger, p1: C.warn, p2: C.textSecondary }
+    const CLABEL: Record<string, string> = { framer_paste: "FRAMER", supabase_migration: "SUPABASE", verification: "VERIFY", monitoring: "MONITOR", misc: "MISC" }
+
+    if (err) return <Card><div style={{ color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>{err}</div></Card>
+    if (!rows.length) return <Card><div style={{ color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>대기 중인 할 일이 없습니다.</div></Card>
+    return (
+        <Card>
+            <CardTitle>내 할 일 <span style={{ color: C.accent }}>{rows.length}</span></CardTitle>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {rows.map((r: any) => (
+                    <div key={r.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: PCOLOR[r.priority] || C.textSecondary, fontFamily: FONT }}>{String(r.priority || "").toUpperCase()}</span>
+                            <span style={{ fontSize: 10, color: C.textTertiary, fontFamily: FONT }}>{CLABEL[r.category] || r.category}</span>
+                            <span style={{ fontSize: 10, color: C.textTertiary, fontFamily: FONT, marginLeft: "auto" }}>{r.due_at ? String(r.due_at).slice(0, 10) : "무기한"}</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: C.textPrimary, fontFamily: FONT, lineHeight: 1.4 }}>{r.title}</div>
+                    </div>
+                ))}
+            </div>
+        </Card>
+    )
+}
+
 function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { data: any; session: AuthSession | null; onLogout: () => void; supabaseUrl: string; supabaseAnonKey: string }) {
-    const [section, setSection] = useState<"events" | "news" | "settings">("events")
+    const [section, setSection] = useState<"events" | "news" | "todo" | "settings">("events")
     const [newsRegion, setNewsRegion] = useState<"all" | "kr" | "us">("all")
     const events: any[] = asArr(data?.global_events)
     const expiry = data?.expiry_status || {}
@@ -1658,10 +1708,14 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "0 2px" }}>
-                {([["events", "경제지표"], ["news", "뉴스"], ["settings", "설정"]] as const).map(([k, l]) => (
+                {([["events", "경제지표"], ["news", "뉴스"], ["todo", "할 일"], ["settings", "설정"]] as const).map(([k, l]) => (
                     <Pill key={k} label={l} active={section === k} onClick={() => setSection(k)} />
                 ))}
             </div>
+
+            {section === "todo" && (
+                <MobileActionQueue session={session} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} />
+            )}
 
             {section === "events" && (
                 <>
