@@ -377,7 +377,6 @@ export default function UserActionBell(props: Props) {
         flexDirection: "column",
         overflow: "hidden",
         zIndex: 9999,
-        border: `1px solid ${T.border}`,
         pointerEvents: "auto",
         fontFamily: FONT,
     }
