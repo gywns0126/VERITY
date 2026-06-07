@@ -655,20 +655,29 @@ function PortfolioTab({ data }: { data: any }) {
     const pnlSign = pnl > 0 ? "+" : pnl < 0 ? "-" : ""
     const winners = holdings.filter((h: any) => effectiveReturnPct(h) > 0).length
     const losers = holdings.filter((h: any) => effectiveReturnPct(h) < 0).length
+    // fx_hedge_reserve(β USD ETF) — total_asset 에 포함되나 holdings 리스트엔 없음.
+    // 종목 0 + 헷지만 보유 시 종목-기반 weightedReturn 이 0 → VAMS 정합 total_return_pct 우선.
+    const reserve = vams.fx_hedge_reserve || null
+    const reserveValue = Number(reserve?.current_krw ?? 0) || 0
+    const reservePnl = Number(reserve?.pnl_krw ?? 0) || 0
+    const reserveRet = Number(reserve?.return_pct ?? 0) || 0
+    const displayReturn = typeof vams.total_return_pct === "number" ? vams.total_return_pct : weightedReturn
+    const totalPnl = pnl + reservePnl
+    const totalPnlSign = totalPnl > 0 ? "+" : totalPnl < 0 ? "-" : ""
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* Asset summary */}
             <Card>
-                <CardTitle right={<Badge text={weightedReturn >= 0 ? "수익중" : "손실중"} color={weightedReturn >= 0 ? C.success : C.danger} />}>내 자산</CardTitle>
+                <CardTitle right={<Badge text={displayReturn >= 0 ? "수익중" : "손실중"} color={displayReturn >= 0 ? C.success : C.danger} />}>내 자산</CardTitle>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 14 }}>
                     <div style={{ minWidth: 0 }}>
                         <div style={{ color: C.textPrimary, fontSize: 28, fontWeight: 900, fontFamily: FONT, letterSpacing: -0.5 }}>{fmtKRW(totalAsset)}</div>
                         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
-                            <PctText value={weightedReturn} fontSize={14} />
-                            {pnl !== 0 && (
+                            <PctText value={displayReturn} fontSize={14} />
+                            {totalPnl !== 0 && (
                                 <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>
-                                    {pnlSign}{fmtCap(Math.abs(pnl))}
+                                    {totalPnlSign}{fmtCap(Math.abs(totalPnl))}
                                 </span>
                             )}
                         </div>
@@ -729,10 +738,27 @@ function PortfolioTab({ data }: { data: any }) {
                         )
                     })}
                 </Card>
-            ) : (
+            ) : reserveValue <= 0 ? (
                 <Card>
                     <div style={{ textAlign: "center", padding: "20px 0", color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>
                         보유 종목 없음
+                    </div>
+                </Card>
+            ) : null}
+
+            {/* 환헷지 (β USD ETF) — total_asset 에 포함되는 포지션, 종목 리스트와 별개 */}
+            {reserveValue > 0 && (
+                <Card>
+                    <CardTitle right={<span style={{ color: reserveRet >= 0 ? C.success : C.danger, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{reserveRet >= 0 ? "+" : ""}{reserveRet.toFixed(2)}%</span>}>환헷지 (β)</CardTitle>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reserve?.name || "USD 헷지"}</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>진입 {reserve?.entry_usdkrw ? Number(reserve.entry_usdkrw).toFixed(0) : "—"}원 · ${Number(reserve?.usd_value ?? 0).toFixed(0)}</div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                            <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(reserveValue)}</div>
+                            <div style={{ fontSize: 12, fontWeight: 700, fontFamily: FONT, color: reservePnl >= 0 ? C.success : C.danger }}>{reservePnl >= 0 ? "+" : ""}{fmtCap(Math.abs(reservePnl))}</div>
+                        </div>
                     </div>
                 </Card>
             )}
