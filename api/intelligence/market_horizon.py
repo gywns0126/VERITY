@@ -585,6 +585,54 @@ def build_signals(
     return sigs
 
 
+def _us_sentiment_signals(us: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """미장 sentiment/positioning priors → market_horizon informational signals.
+
+    사전등록 spec(docs/PREREG_US_SENTIMENT_SIGNALS_2026_06_07.md) 임계 lock.
+    ⚠️ informational ONLY — cycle_stage/verdict 가중 0 (N≥50 엣지 검증 전 → brain 불간섭).
+    가설 labeling(RULE 7). 데이터 = data/observations/us_market_signals.jsonl 최신.
+    two-track([[feedback_priors_vs_validation_two_track]]): 문헌 prior 있는 established 신호 → 지금 modest 사용 정당.
+    """
+    out: List[Dict[str, Any]] = []
+    if not isinstance(us, dict):
+        return out
+
+    def _m(src: str) -> Dict[str, Any]:
+        v = us.get(src)
+        return v.get("metrics", {}) if isinstance(v, dict) else {}
+
+    # 1) AAII bull-bear spread — contrarian (Fisher-Statman 2000)
+    spr = _m("aaii").get("bull_bear_spread")
+    if spr is not None:
+        direction = "ok" if spr < -10 else "warn" if spr > 20 else "neutral"
+        out.append({"name": "aaii_sentiment", "value": spr, "direction": direction,
+                    "note": f"AAII 개인심리 bull-bear {spr:+.1f}p (contrarian, Fisher-Statman 2000) · 가설 informational, verdict 가중 0"})
+
+    # 2) NAAIM 매니저 노출 — positioning (practitioner 약 prior)
+    exp = _m("naaim").get("exposure_mean")
+    if exp is not None:
+        direction = "warn" if exp > 90 else "ok" if exp < 30 else "neutral"
+        out.append({"name": "naaim_exposure", "value": exp, "direction": direction,
+                    "note": f"NAAIM 매니저 노출 {exp:.0f} (positioning, practitioner 약 prior) · 가설 informational, 가중 0"})
+
+    # 3) FINRA 시장 공매도 비중 — daily short VOLUME(≠interest), 약 prior·관측 위주
+    sv = _m("finra_short").get("market_short_volume_pct")
+    if sv is not None:
+        direction = "warn" if sv > 52 else "neutral"
+        out.append({"name": "short_volume", "value": sv, "direction": direction,
+                    "note": f"시장 공매도 비중 {sv:.1f}% (daily volume, 약 prior·관측 위주) · 가설 informational, 가중 0"})
+
+    # 4) SEC Form4 내부자 순매수 — Cohen-Malloy-Pomorski 2012 (aggregate proxy)
+    ins = _m("insider_form4")
+    net, br = ins.get("net_buy_minus_sell"), ins.get("buy_ratio")
+    if net is not None:
+        direction = "ok" if net > 0 else "warn" if (br is not None and br < 0.10) else "neutral"
+        out.append({"name": "insider_net", "value": net, "direction": direction,
+                    "note": f"내부자 순매수 {net:+d} (buy_ratio {br if br is not None else 'n/a'}, Cohen-Malloy-Pomorski 2012, aggregate proxy) · 가설 informational, 가중 0"})
+
+    return out
+
+
 # ──────────────────────────────────────────────────────────────
 # 7) 메인 진입점
 # ──────────────────────────────────────────────────────────────
@@ -877,6 +925,10 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
         cot_conviction=cot_conviction,
         new_listing_quality=new_listing_quality,
     )
+
+    # 미장 sentiment/positioning priors — modest informational (cycle_stage 무관 → brain 불간섭).
+    # 사전등록 lock(docs/PREREG_US_SENTIMENT_SIGNALS_2026_06_07.md). verdict 가중 0 (N≥50 엣지 검증 전).
+    signals.extend(_us_sentiment_signals(portfolio.get("us_sentiment") or {}))
 
     # cycle_stage 변경 감지 + 텔레그램 alert (V2, 2026-05-07)
     _alert_stage_change(stage, recession_p, cape_p, horizon_12m_med, verdict)

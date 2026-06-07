@@ -35,6 +35,39 @@ def test_parse_aaii_rejects_when_no_table():
     assert _parse_aaii("<p>Bullish has averaged 37.5% historically.</p>") is None
 
 
+def test_us_sentiment_signals_thresholds():
+    """사전등록 임계(docs/PREREG_US_SENTIMENT_SIGNALS_2026_06_07.md) lock 검증."""
+    from api.intelligence.market_horizon import _us_sentiment_signals
+    us = {
+        "aaii": {"metrics": {"bull_bear_spread": -15.0}},        # < -10 → ok (contrarian)
+        "naaim": {"metrics": {"exposure_mean": 95.0}},           # > 90 → warn
+        "finra_short": {"metrics": {"market_short_volume_pct": 55.0}},  # > 52 → warn
+        "insider_form4": {"metrics": {"net_buy_minus_sell": 5, "buy_ratio": 0.6}},  # net>0 → ok
+    }
+    sigs = {s["name"]: s for s in _us_sentiment_signals(us)}
+    assert sigs["aaii_sentiment"]["direction"] == "ok"
+    assert sigs["naaim_exposure"]["direction"] == "warn"
+    assert sigs["short_volume"]["direction"] == "warn"
+    assert sigs["insider_net"]["direction"] == "ok"
+
+
+def test_us_sentiment_signals_neutral_and_empty():
+    from api.intelligence.market_horizon import _us_sentiment_signals
+    # 중립대
+    us = {"aaii": {"metrics": {"bull_bear_spread": 5.0}},
+          "naaim": {"metrics": {"exposure_mean": 60.0}},
+          "insider_form4": {"metrics": {"net_buy_minus_sell": -10, "buy_ratio": 0.3}}}
+    sigs = {s["name"]: s for s in _us_sentiment_signals(us)}
+    assert sigs["aaii_sentiment"]["direction"] == "neutral"
+    assert sigs["naaim_exposure"]["direction"] == "neutral"
+    assert sigs["insider_net"]["direction"] == "neutral"
+    # 강한 순매도 → warn
+    us2 = {"insider_form4": {"metrics": {"net_buy_minus_sell": -30, "buy_ratio": 0.05}}}
+    assert _us_sentiment_signals(us2)[0]["direction"] == "warn"
+    # 빈 입력
+    assert _us_sentiment_signals({}) == []
+
+
 def test_append_observations_dedupe(tmp_path, monkeypatch):
     import api.collectors.us_market_observations as m
     obs = tmp_path / "obs.jsonl"

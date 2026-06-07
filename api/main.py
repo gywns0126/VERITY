@@ -3653,6 +3653,17 @@ def main():
     except Exception as _nl_e:  # noqa: BLE001
         print(f"  new_listings 주입 실패(무시): {_nl_e}")
 
+    # 미장 sentiment/positioning 관측 주입 — market_horizon modest informational prior.
+    # ⚠️ cycle_stage/verdict 가중 0 (사전등록 N≥50 전 → brain 불간섭). [[project_us_market_observations_2026_06_07]].
+    try:
+        from api.collectors.us_market_observations import latest_per_source
+        _us = latest_per_source()
+        if _us:
+            portfolio["us_sentiment"] = _us
+            print(f"  us_sentiment 주입: {list(_us.keys())} (market_horizon informational prior, 가중 0)")
+    except Exception as _us_e:  # noqa: BLE001
+        print(f"  us_sentiment 주입 실패(무시): {_us_e}")
+
     try:
         from api.intelligence.verity_brain import reset_ic_cache
         reset_ic_cache()

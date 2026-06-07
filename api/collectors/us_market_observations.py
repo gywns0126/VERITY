@@ -333,6 +333,28 @@ def append_observations(records: List[Dict[str, Any]]) -> int:
     return n
 
 
+def latest_per_source() -> Dict[str, Any]:
+    """관측 로그에서 source 별 최신 record(period+metrics) 반환.
+    market_horizon 가 modest informational prior 로 소비 (verdict 가중 0, N≥50 전).
+    [[project_us_market_observations_2026_06_07]] 사전등록 spec."""
+    out: Dict[str, Any] = {}
+    if not os.path.exists(OBS_PATH):
+        return out
+    with open(OBS_PATH, encoding="utf-8") as f:
+        for line in f:
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            src, per = rec.get("source"), rec.get("period")
+            if not src or not per:
+                continue
+            cur = out.get(src)
+            if cur is None or per > cur.get("period", ""):
+                out[src] = {"period": per, "metrics": rec.get("metrics", {})}
+    return out
+
+
 def collect(write: bool = True) -> Dict[str, Any]:
     asof = now_kst().replace(tzinfo=None)
     sess = requests.Session()
