@@ -1979,7 +1979,9 @@ export default function MobileApp(props: Props) {
 
             <div ref={scrollRef} style={{
                 flex: 1, overflowY: "auto", overflowX: "hidden",
-                padding: "22px 14px 80px",
+                // 하단 탭바(minHeight 64 + safe-area) 에 마지막 내용이 가려지지 않게
+                // 탭바 높이+여유 만큼 bottom padding 확보 (2026-06-07 모바일 하단 잘림 fix)
+                padding: "22px 14px calc(env(safe-area-inset-bottom, 0px) + 110px)",
                 WebkitOverflowScrolling: "touch",
                 minHeight: 0,
             }}>
