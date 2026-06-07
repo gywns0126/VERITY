@@ -60,7 +60,8 @@ def _parse_iso(s: Optional[str]) -> Optional[datetime]:
 def _build_messages(health: Dict[str, Any],
                    drift: Dict[str, Any],
                    trust: Dict[str, Any],
-                   state: Dict[str, Any]) -> List[Dict[str, Any]]:
+                   state: Dict[str, Any],
+                   grade_drift: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """
     검출된 알림 후보 list. 각 항목:
       {"topic": str, "level": "critical"|"warning", "message": str, "details": dict}
@@ -130,6 +131,29 @@ def _build_messages(health: Dict[str, Any],
                        "satisfied": f"{(trust or {}).get('satisfied')}/{(trust or {}).get('total')}"},
         })
 
+    # 4. grade distribution drift (NQ3 wiring, 2026-06-07 action_queue dc8c3b5b)
+    #    evaluate_grade_drift → alert_level: alert(defect drift, 재보정) / watch(원인분석) / ok.
+    gd = grade_drift or {}
+    gd_level = gd.get("alert_level")
+    prev_gd = (last_topics.get("grade_drift") or {}).get("level")
+    if gd_level == "alert" and prev_gd != "alert":
+        alerts.append({
+            "topic": "grade_drift",
+            "level": "critical",
+            "message": (f"🔴 Brain 등급 분포 drift (재보정 검토): PSI {gd.get('psi')} "
+                        f"/ {gd.get('regime_classified')}"),
+            "details": {"psi": gd.get("psi"), "share_diff": gd.get("share_diff"),
+                        "regime_flags": gd.get("regime_flags"), "reason": gd.get("reason")},
+        })
+    elif gd_level == "watch" and prev_gd not in ("watch", "alert"):
+        alerts.append({
+            "topic": "grade_drift",
+            "level": "warning",
+            "message": (f"🟡 Brain 등급 분포 watch: PSI {gd.get('psi')} "
+                        f"/ 최대 비중변화 {gd.get('max_share_change_pp')}%p"),
+            "details": {"psi": gd.get("psi"), "reason": gd.get("reason")},
+        })
+
     return alerts
 
 
@@ -193,7 +217,8 @@ def _send_one(alert: Dict[str, Any]) -> bool:
 def dispatch_alerts(health: Optional[Dict[str, Any]] = None,
                    drift: Optional[Dict[str, Any]] = None,
                    trust: Optional[Dict[str, Any]] = None,
-                   send: bool = True) -> List[Dict[str, Any]]:
+                   send: bool = True,
+                   grade_drift: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """
     상태 변화 검출 + Telegram 푸시 + 상태 저장.
 
@@ -207,7 +232,7 @@ def dispatch_alerts(health: Optional[Dict[str, Any]] = None,
     now = now_kst()
 
     try:
-        candidates = _build_messages(health or {}, drift or {}, trust or {}, state)
+        candidates = _build_messages(health or {}, drift or {}, trust or {}, state, grade_drift or {})
         to_send = _filter_warnings(candidates, state, now)
 
         sent: List[Dict[str, Any]] = []
@@ -223,6 +248,7 @@ def dispatch_alerts(health: Optional[Dict[str, Any]] = None,
         last_topics["data_health"] = {"status": (health or {}).get("_meta", {}).get("overall_status")}
         last_topics["drift"] = {"level": (drift or {}).get("level")}
         last_topics["trust"] = {"verdict": (trust or {}).get("verdict")}
+        last_topics["grade_drift"] = {"level": (grade_drift or {}).get("alert_level")}
         state["last_topics"] = last_topics
         if sent:
             state["last_push_at"] = now.isoformat()

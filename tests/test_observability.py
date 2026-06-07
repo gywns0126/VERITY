@@ -364,3 +364,22 @@ class TestReleaseGate:
         gate = check_release_gate(None)
         assert gate["allow"] is True  # 가드 정책: 게이트 실패 시 막지 않음
         assert gate["verdict"] == "unknown"
+
+
+# ── grade_distribution_drift → alert_dispatcher 배선 (NQ3, dc8c3b5b 2026-06-07) ──
+def test_grade_drift_alert_wiring():
+    from api.observability.alert_dispatcher import _build_messages
+    # alert_level=alert → critical
+    gd = {"alert_level": "alert", "psi": 0.31, "regime_classified": "defect_drift",
+          "share_diff": {}, "regime_flags": [], "reason": "PSI high"}
+    a = [x for x in _build_messages({}, {}, {}, {}, gd) if x["topic"] == "grade_drift"]
+    assert len(a) == 1 and a[0]["level"] == "critical"
+    # watch → warning
+    gw = {"alert_level": "watch", "psi": 0.12, "max_share_change_pp": 6.0, "reason": "w"}
+    aw = [x for x in _build_messages({}, {}, {}, {}, gw) if x["topic"] == "grade_drift"]
+    assert len(aw) == 1 and aw[0]["level"] == "warning"
+    # dedup: prev=alert → 재푸시 X
+    st = {"last_topics": {"grade_drift": {"level": "alert"}}}
+    assert not [x for x in _build_messages({}, {}, {}, st, gd) if x["topic"] == "grade_drift"]
+    # ok → 무알림
+    assert not [x for x in _build_messages({}, {}, {}, {}, {"alert_level": "ok"}) if x["topic"] == "grade_drift"]

@@ -75,6 +75,15 @@ def run_full_observability(portfolio: Optional[dict],
         logger.warning("observability: drift failed: %s", e, exc_info=True)
         out["drift"] = None
 
+    # 2b. grade distribution drift (NQ3 wiring, 2026-06-07 dc8c3b5b) — 출력 등급 PSI.
+    #     feature_drift(입력)와 별개. alert_level 은 dispatch_alerts 가 소비.
+    try:
+        from .grade_distribution_drift import evaluate_grade_drift
+        out["grade_drift"] = evaluate_grade_drift(portfolio)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("observability: grade_drift failed: %s", e, exc_info=True)
+        out["grade_drift"] = None
+
     # 3. explainability
     try:
         explanation = explain_brain_score(portfolio)
@@ -111,6 +120,7 @@ def run_full_observability(portfolio: Optional[dict],
             drift=out.get("drift"),
             trust=out.get("trust"),
             send=True,
+            grade_drift=out.get("grade_drift"),
         )
         if sent:
             logger.info("observability: %d alerts sent", len(sent))
