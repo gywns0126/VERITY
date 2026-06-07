@@ -280,6 +280,7 @@ const containerStyle: React.CSSProperties = {
     color: "#ffffff",
     fontFamily: "'Pretendard', 'Inter', -apple-system, sans-serif",
     padding: 24,
+    borderRadius: 8,
     boxSizing: "border-box",
 }
 const selectorRowStyle: React.CSSProperties = {

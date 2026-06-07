@@ -108,7 +108,7 @@ export default function CorpDisposalsPanel(props: Props) {
             style={{
                 width: "100%",
                 background: C.bgCard,
-                borderRadius: R.lg,
+                borderRadius: 8,
                 padding: 16,
                 fontFamily: FONT,
                 color: C.textPrimary,

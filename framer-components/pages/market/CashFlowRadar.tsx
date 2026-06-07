@@ -535,6 +535,7 @@ const shell: CSSProperties = {
     fontFamily: FONT,
     color: C.textPrimary,
     background: C.bgPage,
+    borderRadius: 8,
     padding: S.xl,
     display: "flex",
     flexDirection: "column",

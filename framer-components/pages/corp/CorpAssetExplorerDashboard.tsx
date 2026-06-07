@@ -161,7 +161,7 @@ function CorpAssetExplorerDashboard(props: { apiUrl?: string }) {
     return (
         <div style={{
             display: "flex", flexDirection: "column", gap: S.lg,
-            padding: S.xl, backgroundColor: C.bgPage, minHeight: 480,
+            padding: S.xl, backgroundColor: C.bgPage, minHeight: 480, borderRadius: 8,
             fontFamily: FONT, color: C.textPrimary,
         }}>
             {/* Header */}
