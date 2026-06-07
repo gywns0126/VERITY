@@ -136,6 +136,37 @@ def calculate_safety_score(stock: dict) -> int:
     return min(score, 100)
 
 
+# ───────────────────────────────────────────────────────────────────
+# Stage 1.5 — 금융업(industry) 제외 (2026-06-07, funnel Phase A.2)
+# ───────────────────────────────────────────────────────────────────
+# 표준 펀더멘털 팩터(P/B·ROE·레버리지)가 은행/보험/여신에 구조적 왜곡 → 분석 풀 제외.
+# sector(섹터) 통째가 아니라 industry(세부업종) 기준 (PM 결정 2026-06-07) — 자산경량
+# 금융(데이터/거래소 'Financial Data & Stock Exchanges' = 에프앤가이드 류)은 왜곡 없어 유지.
+# 제외 ≠ 영구 무시: 금융 전용 분석 sleeve(은행 NIM/CET1, 보험 combined ratio/float)는
+# 별 모듈 큐잉 ([[project_funnel_5stage_sprint]] Phase A.2 trail). 증권(Capital Markets)/
+# 자산운용(Asset Management)은 본 경계 밖 — 미래 확장.
+_EXCLUDED_FINANCIAL_INDUSTRY_KW = ("Banks", "Insurance", "Credit Services")
+
+
+def exclude_financial_sector(stocks: List[dict]) -> List[dict]:
+    """금융업(은행/보험/여신) industry 제외. 코어 포함 (팩터 왜곡은 코어도 동일).
+
+    industry 빈값(yfinance 미제공) = 통과 (보수 — 결손 데이터로 과제외 회피).
+    제외 건수 로깅 (silent cap 금지).
+    """
+    kept: List[dict] = []
+    excluded: List[str] = []
+    for s in stocks:
+        industry = str(s.get("industry") or "")
+        if industry and any(kw in industry for kw in _EXCLUDED_FINANCIAL_INDUSTRY_KW):
+            excluded.append(s.get("name") or s.get("ticker") or "?")
+        else:
+            kept.append(s)
+    if excluded:
+        print(f"[Stage 1.5 금융업 제외] {len(excluded)}종목: {excluded[:10]}")
+    return kept
+
+
 def run_filter_pipeline(market_scope: str = "all", _metrics: Optional[dict] = None) -> List[dict]:
     """필터링 파이프라인 실행. market_scope: 'kr' | 'us' | 'all'.
 
@@ -144,6 +175,9 @@ def run_filter_pipeline(market_scope: str = "all", _metrics: Optional[dict] = No
     print(f"[Filter] 전 종목 데이터 수집 중... (scope={market_scope})")
     all_stocks = get_all_stock_data(market_scope=market_scope, _metrics=_metrics)
     print(f"[Filter] 수집 완료: {len(all_stocks)}개 종목")
+
+    # Stage 1.5 — 금융업 제외 (sector 보유 후)
+    all_stocks = exclude_financial_sector(all_stocks)
 
     # ── Phase 2-B wide_scan shadow (legacy core path 도 동일 hook) ──
     # WIDE_SCAN_MODE=DISABLED 면 즉시 skip. decision 영향 0.
@@ -275,6 +309,9 @@ def run_extended_filter_pipeline(
     if not all_stocks:
         print(f"[Phase 2-A] 데이터 수집 0건 → 코어 fallback")
         return run_filter_pipeline(market_scope=market_scope, _metrics=_metrics)
+
+    # Stage 1.5 — 금융업 제외 (sector 보유 후, DART/shadow/snapshot 전)
+    all_stocks = exclude_financial_sector(all_stocks)
 
     # ── DART pre-attach (KR universe 주 1회 batch snapshot 주입) ──
     # dart_batch cron (일요일 KST 22:00) 가 dart_fundamentals_kr.json 적재.
