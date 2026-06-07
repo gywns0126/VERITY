@@ -38,6 +38,7 @@ from api.config import (
     VAMS_PASS_PROFIT_LOSS_RATIO,
     VAMS_PASS_SHARPE,
     VAMS_PASS_WIN_RATE,
+    VAMS_MIN_EXPECTANCY_R,
     VAMS_REDESIGN_SHARPE,
     VAMS_REGIME_DRAWDOWN_PCT,
     VAMS_VALIDATION_MIN_DAYS,
@@ -235,6 +236,7 @@ def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
         return {
             "trades": 0, "wins": 0, "losses": 0,
             "win_rate": None, "avg_win": None, "avg_loss": None, "pl_ratio": None,
+            "expectancy_r": None,
         }
     pnls = [float(h["pnl"]) for h in sells]
     wins = [p for p in pnls if p > 0]
@@ -243,6 +245,11 @@ def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
     avg_win = sum(wins) / len(wins) if wins else 0.0
     avg_loss = sum(losses) / len(losses) if losses else 0.0  # 음수
     pl_ratio = (avg_win / abs(avg_loss)) if avg_loss < 0 else None
+    # Expectancy (R-multiple, 2026-05-16 Perplexity MED-D1 / config VAMS_MIN_EXPECTANCY_R):
+    # E[R] = win_rate × (avg_win/|avg_loss|) − loss_rate = win_rate × pl_ratio − (1−win_rate).
+    # 1 단위 risk(=|avg_loss|) 당 평균 보상. avg_loss=0(무손실) → R 기준 미정의(None).
+    expectancy_r = (round(win_rate * pl_ratio - (1 - win_rate), 3)
+                    if pl_ratio is not None else None)
     return {
         "trades": len(pnls),
         "wins": len(wins),
@@ -251,6 +258,7 @@ def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
         "avg_win": round(avg_win, 2),
         "avg_loss": round(avg_loss, 2),
         "pl_ratio": round(pl_ratio, 3) if pl_ratio is not None else None,
+        "expectancy_r": expectancy_r,
     }
 
 
@@ -336,6 +344,17 @@ def compute_validation_report(
         "pass": _p(
             trade["pl_ratio"] is not None and trade["pl_ratio"] >= VAMS_PASS_PROFIT_LOSS_RATIO,
             trade["pl_ratio"] is None or not trades_ok,
+        ),
+    }
+    # Expectancy AND-gate (2026-05-16 Perplexity MED-D1 승인, config 정의 → 본 구현 88b40aa2).
+    # 승률 55% 단독 불충분 → Expectancy ≥ 1.2R 동반 의무(이중 임계). RULE 7: hit rate + expectancy 병기.
+    # ⚠️ 게이트는 N 충분(trades_ok) 시에만 활성 — VAMS 5/17 리셋, 65거래일 게이트 ~8월까지 pass=None.
+    m_expectancy = {
+        "expectancy_r": trade["expectancy_r"],
+        "threshold": VAMS_MIN_EXPECTANCY_R,
+        "pass": _p(
+            trade["expectancy_r"] is not None and trade["expectancy_r"] >= VAMS_MIN_EXPECTANCY_R,
+            trade["expectancy_r"] is None or not trades_ok,
         ),
     }
     if sharpe is None:
@@ -433,6 +452,7 @@ def compute_validation_report(
         "mdd": m_mdd,
         "win_rate": m_win,
         "profit_loss_ratio": m_pl,
+        "expectancy": m_expectancy,
         "sharpe": m_sharpe,
         "regime_coverage": m_regime,
         "cost_efficiency": m_cost,
@@ -477,6 +497,7 @@ def compute_validation_report(
             "mdd_ratio_max": VAMS_PASS_MDD_RATIO,
             "win_rate_min": VAMS_PASS_WIN_RATE,
             "profit_loss_ratio_min": VAMS_PASS_PROFIT_LOSS_RATIO,
+            "expectancy_r_min": VAMS_MIN_EXPECTANCY_R,
             "sharpe_min": VAMS_PASS_SHARPE,
             "sharpe_redesign_below": VAMS_REDESIGN_SHARPE,
             "regime_drawdown_pct": VAMS_REGIME_DRAWDOWN_PCT,
