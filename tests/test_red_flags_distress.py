@@ -37,6 +37,20 @@ def test_unfaithful_downgrade():
     assert any("불성실공시" in x for x in r["downgrade"])
 
 
+def test_related_party_high_downgrade():
+    """터널링 severity high → downgrade (2026-06-07 two-track 승격, auto_avoid 아님)."""
+    r = _detect_red_flags(_kr(dart_related_party={"severity": "high"}), {})
+    assert any("터널링" in x or "특수관계자" in x for x in r["downgrade"])
+    # caution 티어 — critical(배제) 아님
+    assert not any("터널링" in x or "특수관계자" in x for x in r["auto_avoid"])
+
+
+def test_related_party_medium_no_flag():
+    """severity medium/low = 무발화 (high binary 만)."""
+    r = _detect_red_flags(_kr(dart_related_party={"severity": "medium"}), {})
+    assert not any("터널링" in x or "특수관계자" in x for x in _texts(r))
+
+
 def test_clean_kr_no_distress_flags():
     r = _detect_red_flags(
         _kr(

@@ -186,7 +186,7 @@ def _detect_red_flags(
         # 관측 only(2026-06-03/04 부착) → 점수 반영. binary 신호 3종 = fit할 임계 없음
         # (곡선맞추기 surface 0). 출처 = DART 감사보고서/공시 원문. prior = 회계/distress 문헌.
         # going_concern_doubt + distress 공시 = auto_avoid(critical). 불성실공시 = downgrade.
-        # 정정·유상증자·올빼미·터널링 score 는 임계 fit 필요 → 관측 유지(N 누적 후 별도 등록).
+        # 정정·유상증자·올빼미 score = 임계 fit 필요 → 관측 유지(N 누적 후 별도 등록).
         _gc = stock.get("dart_audit_signals") or {}
         if _gc.get("going_concern_doubt"):
             auto_avoid_d.append(_make_flag("계속기업 불확실성 (감사인 명시)"))
@@ -196,6 +196,14 @@ def _detect_red_flags(
             auto_avoid_d.append(_make_flag(f"distress 공시: {', '.join(_distress[:3])}"))
         if _ev.get("unfaithful_disclosure"):
             downgrade_d.append(_make_flag("불성실공시법인 지정"))
+        # ── 터널링 — 2026-06-07 관측 only → downgrade 승격 (two-track, PM 승인) ──
+        # prior = KR 지배구조 expropriation 문헌(Johnson et al. 2000). severity = Gemini 정성 분류
+        # (일감몰아주기·부당지원·사익편취), 우리 수치 임계 fit 아님 → 새 곡선맞추기 0.
+        # 방어 비대칭(거버넌스 landmine) → 사용 정당. 단 LLM 오분류 risk = auto_avoid 아닌 downgrade(감점).
+        # risk_score 수치 임계는 여전히 미사용(관측). 검증 = severity→forward 수익률 N 누적 후.
+        _rp = stock.get("dart_related_party") or {}
+        if _rp.get("severity") == "high":
+            downgrade_d.append(_make_flag("특수관계자 거래 고위험 (터널링 의심, Gemini 정성 high)"))
 
         # KIS 공매도 비율 경고
         ks = stock.get("kis_short_sale", {})
