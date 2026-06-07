@@ -43,6 +43,20 @@
   },
   "pre_registration_pending": [
     {
+      "sha": "6dd748e8",
+      "date": "2026-06-07",
+      "subject": "fix(brain): 등급 사다리 CAUTION 임계 25 통일 + constitution 단일출처화",
+      "is_candidate": true,
+      "has_pm": false,
+      "has_why": true,
+      "has_data": true,
+      "has_expected": true,
+      "missing": [
+        "PM=approved"
+      ],
+      "passed": false
+    },
+    {
       "sha": "b47fdc3a",
       "date": "2026-06-05",
       "subject": "fix(brain-v2): 전략 진화 N-gate — 종료 거래 N<50 시 가중치 제안 억제 (곡선맞추기 차단)",
@@ -81,10 +95,15 @@
     "quarter": "2026Q2",
     "start": "2026-04-01",
     "end": "2026-06-30",
-    "count": 4,
+    "count": 5,
     "limit": 4,
-    "status": "AT_LIMIT",
+    "status": "EXCEEDED",
     "commits": [
+      {
+        "sha": "6dd748e8",
+        "date": "2026-06-07",
+        "subject": "fix(brain): 등급 사다리 CAUTION 임계 25 통일 + constitution 단일출처화"
+      },
       {
         "sha": "b47fdc3a",
         "date": "2026-06-05",
@@ -106,6 +125,6 @@
         "subject": "[brain] B-continuous macro_multiplier v0 박음 — soft gate score discount (PM 승인 20"
       }
     ],
-    "as_of": "2026-06-06T13:20:52+09:00"
+    "as_of": "2026-06-07T13:56:36+09:00"
   }
 }
