@@ -1,0 +1,492 @@
+{
+  "generated_at": "2026-06-07T21:56:55.764859+09:00",
+  "generator": "scripts/system_map.py",
+  "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
+  "scale": {
+    "code_lines_tsx_py": 156734,
+    "python_modules": 442,
+    "tsx_components": 44,
+    "json_data_files": 208,
+    "json_total_tracked": 223,
+    "workflows": 41,
+    "scheduled_workflows": 32,
+    "cron_triggers": 41,
+    "git_tracked_files": 4848
+  },
+  "subsystems": {
+    "ingest": {
+      "label": "수집",
+      "count": 58,
+      "modules": [
+        ".github/actions/publish-data/merge_pulse.py",
+        "api/analyzers/dart_audit_signals.py",
+        "api/analyzers/dart_disclosure_events.py",
+        "api/analyzers/dart_litigation.py",
+        "api/analyzers/dart_related_party.py",
+        "api/analyzers/dart_report_analyzer.py",
+        "api/analyzers/macro_adjustments.py",
+        "api/builders/dart_batch_builder.py",
+        "api/builders/dart_meta_backfill_builder.py",
+        "api/builders/industry_themes_pulse_builder.py",
+        "api/builders/macro_collect_builder.py",
+        "api/chat_hybrid/search/kis_quote.py",
+        "api/collectors/ChainScout.py",
+        "api/collectors/CommodityScout.py",
+        "api/collectors/ConsensusScout.py",
+        "api/collectors/DartScout.py",
+        "api/collectors/RSSScout.py",
+        "api/collectors/ReportScout.py",
+        "api/collectors/SpecialScout.py",
+        "api/collectors/alt_data_collectors.py",
+        "api/collectors/cboe_options_collector.py",
+        "api/collectors/crypto_macro.py",
+        "api/collectors/dart_catalyst.py",
+        "api/collectors/dart_corp_code.py",
+        "api/collectors/dart_fundamentals.py",
+        "api/collectors/ecos_fx_daily.py",
+        "api/collectors/ecos_macro.py",
+        "api/collectors/fred_macro.py",
+        "api/collectors/ipo_scout.py",
+        "api/collectors/krx_ipo_collector.py",
+        "api/collectors/macro_data.py",
+        "api/collectors/naver_community.py",
+        "api/collectors/news_sentiment.py",
+        "api/collectors/program_trading_collector.py",
+        "api/collectors/reddit_sentiment.py",
+        "api/collectors/sec_13f_collector.py",
+        "api/collectors/sentiment_engine.py",
+        "api/collectors/stocktwits_sentiment.py",
+        "api/collectors/x_sentiment.py",
+        "api/cron/price_pulse.py",
+        "api/intelligence/factors/sentiment.py",
+        "api/intelligence/macro_industry_align.py",
+        "api/intelligence/macro_themes_brief.py",
+        "api/observability/dart_metrics.py",
+        "api/quant/macro_forecast.py",
+        "api/trading/kis_broker.py",
+        "api/trading/mock_kis_broker.py",
+        "api/utils/dart_pre_attach.py",
+        "api/utils/macro_meta.py",
+        "api/utils/macro_snapshot.py",
+        "scripts/dart_kr_backfill.py",
+        "scripts/hourly_pulse_send.py",
+        "scripts/scout_penny.py",
+        "server/kis_rest_client.py",
+        "server/kis_ws_client.py",
+        "vercel-api/api/chat_hybrid/search/kis_quote.py",
+        "vercel-api/api/cron/dispatch_pulse.py",
+        "vercel-api/api/estate_macro_bridge.py"
+      ]
+    },
+    "brain": {
+      "label": "두뇌",
+      "count": 48,
+      "modules": [
+        "api/intelligence/__init__.py",
+        "api/intelligence/ai_leaderboard.py",
+        "api/intelligence/alert_engine.py",
+        "api/intelligence/attribution.py",
+        "api/intelligence/backtest_archive.py",
+        "api/intelligence/brain_evolution.py",
+        "api/intelligence/brain_weights_cv.py",
+        "api/intelligence/chat_engine.py",
+        "api/intelligence/daily_actions.py",
+        "api/intelligence/dashboard_summary.py",
+        "api/intelligence/equity_research_brief.py",
+        "api/intelligence/factor.py",
+        "api/intelligence/factors/__init__.py",
+        "api/intelligence/factors/_common.py",
+        "api/intelligence/factors/candle.py",
+        "api/intelligence/factors/canslim.py",
+        "api/intelligence/factors/fact.py",
+        "api/intelligence/factors/graham.py",
+        "api/intelligence/factors/mean_reversion.py",
+        "api/intelligence/factors/moat.py",
+        "api/intelligence/factors/red_flags.py",
+        "api/intelligence/factors/sentiment.py",
+        "api/intelligence/factors/vci.py",
+        "api/intelligence/lynch_classifier.py",
+        "api/intelligence/macro_industry_align.py",
+        "api/intelligence/macro_themes_brief.py",
+        "api/intelligence/market_horizon.py",
+        "api/intelligence/monthly_aggregator.py",
+        "api/intelligence/novelty.py",
+        "api/intelligence/periodic_report.py",
+        "api/intelligence/perplexity_realtime.py",
+        "api/intelligence/portfolio.py",
+        "api/intelligence/postmortem.py",
+        "api/intelligence/postmortem_auto_evolve.py",
+        "api/intelligence/prediction_layer.py",
+        "api/intelligence/prediction_scoring.py",
+        "api/intelligence/regime.py",
+        "api/intelligence/sec_8k_change_detector.py",
+        "api/intelligence/sector_rotation_detector.py",
+        "api/intelligence/strategy_evolver.py",
+        "api/intelligence/strategy_pool.py",
+        "api/intelligence/stress.py",
+        "api/intelligence/tail_risk_digest.py",
+        "api/intelligence/trade_plan_evolution.py",
+        "api/intelligence/us_financials.py",
+        "api/intelligence/value_hunter.py",
+        "api/intelligence/verity_brain.py",
+        "api/intelligence/veteran_triggers.py"
+      ]
+    },
+    "automation": {
+      "label": "자동화",
+      "count": 41,
+      "scheduled": 32,
+      "workflows": [
+        {
+          "name": "atr_4cell_sweep",
+          "crons": [],
+          "scheduled": false
+        },
+        {
+          "name": "atr_phase_0_verdict",
+          "crons": [],
+          "scheduled": false
+        },
+        {
+          "name": "bond_etf_analysis",
+          "crons": [
+            "7 22 * * 0-4",
+            "30 9 * * 1-5"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "cockpit_aggregate",
+          "crons": [
+            "*/5 * * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "corp_snapshot",
+          "crons": [
+            "7 17 5,12,20 4 *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "cron_health_audit",
+          "crons": [
+            "0 21 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "cron_health_monitor",
+          "crons": [
+            "0 * * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "daily_analysis",
+          "crons": [],
+          "scheduled": false
+        },
+        {
+          "name": "daily_analysis_full",
+          "crons": [
+            "7 7 * * 1-5",
+            "30 21 * * 2-5",
+            "7 0 * * 6",
+            "7 0 1 * *",
+            "7 1 2 1,4,7,10 *",
+            "7 1 3 1,7 *",
+            "7 1 4 1 *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "daily_realtime",
+          "crons": [],
+          "scheduled": false
+        },
+        {
+          "name": "dart_batch",
+          "crons": [
+            "0 13 * * 0"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "dart_meta_backfill",
+          "crons": [
+            "0 22 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "eps_estimate_snapshot",
+          "crons": [
+            "7 22 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "equity_research_brief",
+          "crons": [
+            "0 21 * * 0"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "export_trade_daily",
+          "crons": [
+            "0 6 * * 1-5"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "hourly_pulse",
+          "crons": [],
+          "scheduled": false
+        },
+        {
+          "name": "infra_status_monitor",
+          "crons": [
+            "0 0 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "ipo_watch",
+          "crons": [
+            "30 23 * * 0"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "kis_token_refresh",
+          "crons": [
+            "45 14 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "macro_collect",
+          "crons": [
+            "*/30 * * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "macro_themes_brief",
+          "crons": [
+            "30 22 * * 0"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "measure_universe_load",
+          "crons": [],
+          "scheduled": false
+        },
+        {
+          "name": "n_counter",
+          "crons": [
+            "30 0 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "new_listings",
+          "crons": [
+            "0 23 * * 0"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "operator_deadman",
+          "crons": [
+            "7 0 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "price_pulse",
+          "crons": [],
+          "scheduled": false
+        },
+        {
+          "name": "quarterly_audit_reminder",
+          "crons": [
+            "0 0 1 1,4,7,10 *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "reports_v2_cron",
+          "crons": [],
+          "scheduled": false
+        },
+        {
+          "name": "rss_scout",
+          "crons": [
+            "0,15,30,45 0-5 * * 1-5",
+            "0,15,30 6 * * 1-5",
+            "0,30 7-23 * * 1-5"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "rule7_audit",
+          "crons": [
+            "15 0 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "scout_penny",
+          "crons": [
+            "30 21 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "sec_8k_alert",
+          "crons": [
+            "30 21 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "self_assets_weekly",
+          "crons": [
+            "0 0 * * 1"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "site_audit",
+          "crons": [
+            "0 0 * * 1"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "site_growth_daily",
+          "crons": [
+            "7 16 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "telegram_audit",
+          "crons": [
+            "0 21 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "tests",
+          "crons": [],
+          "scheduled": false
+        },
+        {
+          "name": "trade_plan_followup",
+          "crons": [
+            "30 8 * * 1-5"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "universe_scan",
+          "crons": [
+            "30 6 * * 1-5"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "us_financials",
+          "crons": [
+            "0 0 5 * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "us_market_observations",
+          "crons": [
+            "0 23 * * 4"
+          ],
+          "scheduled": true
+        }
+      ]
+    },
+    "surface": {
+      "label": "출력",
+      "count": 44,
+      "by_group": {
+        "_shared": 10,
+        "market": 10,
+        "analysis": 6,
+        "admin": 4,
+        "us": 4,
+        "home": 3,
+        "portfolio": 3,
+        "corp": 2,
+        "framer-components": 1,
+        "framer-components/arena": 1
+      }
+    },
+    "data": {
+      "label": "데이터",
+      "count": 208
+    },
+    "validation": {
+      "label": "검증",
+      "n_trading_days": 14,
+      "n_calendar_days": 21,
+      "next_milestone": {
+        "next_n": 30,
+        "days_remaining": 16,
+        "label": "통계 무의미 졸업 (메모 project_minimum_n_milestones_2026_05_18)"
+      },
+      "as_of": "2026-06-07T14:01:40+09:00"
+    }
+  },
+  "python_by_dir": {
+    "api": 269,
+    "tests": 82,
+    "scripts": 44,
+    "vercel-api": 39,
+    "server": 6,
+    ".github": 2
+  },
+  "funnel": {
+    "stages": [
+      5000,
+      1000,
+      300,
+      100,
+      10
+    ],
+    "labels": [
+      "전체",
+      "1차 필터",
+      "2차",
+      "정밀",
+      "Top 10"
+    ],
+    "status": "가설 (1-4단계 일부 미구현, 현 5000→25 직접)"
+  },
+  "health": {
+    "infra_summary": {
+      "ok": 6,
+      "warn": 1,
+      "alert": 0
+    },
+    "infra_as_of": "2026-06-07T11:14:05+09:00",
+    "file_age_hours": {
+      "data/price_pulse.json": 33.9,
+      "data/portfolio.json": 31.5,
+      "data/recommendations.json": 31.5,
+      "data/metadata/n_counter.json": 0.7,
+      "data/infra_status.json": 9.9
+    }
+  }
+}

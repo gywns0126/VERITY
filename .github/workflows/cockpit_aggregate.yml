@@ -49,14 +49,19 @@ jobs:
       - name: Run cockpit aggregator
         run: python scripts/cockpit_aggregate.py
 
-      - name: Commit cockpit_state.json
+      - name: Run system map generator
+        # 2026-06-07 — SystemMap "한눈에 보기" 구조 SoT. read-only 레포 스캔 (git ls-files
+        # + line count), KIS/외부 API call 0 (RULE 1 정합). cockpit 과 별 SoT, 동반 생성.
+        run: python scripts/system_map.py
+
+      - name: Commit operator data (cockpit_state + system_map)
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증)
         # [[feedback_data_collection_verification_mandatory]] specific path commit
         # [[feedback_brain_evolution_admin_sync]] 🎯 prefix = cron blacklist (brain learn skip)
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/metadata/cockpit_state.json
+          git add data/metadata/cockpit_state.json data/metadata/system_map.json
           if git diff --staged --quiet; then
             echo "[cockpit_aggregate] no changes"
             exit 0

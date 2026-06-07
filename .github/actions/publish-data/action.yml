@@ -60,10 +60,11 @@ runs:
           fi
         done
 
-        # ── metadata/ subdir (SystemHealthBar / OperatorCockpitBar 박은 source) ──
+        # ── metadata/ subdir (SystemHealthBar / OperatorCockpitBar 의 source) ──
         # 2026-05-27: cockpit_state.json 추가 (Cockpit Phase 0 산출 SoT, 5분 cron).
+        # 2026-06-07: system_map.json 추가 (SystemMap "한눈에 보기" 구조 SoT, cockpit cron 동반 생성).
         mkdir -p _public_dist/metadata
-        for f in data_pipeline_health.json cron_health.jsonl cockpit_state.json; do
+        for f in data_pipeline_health.json cron_health.jsonl cockpit_state.json system_map.json; do
           if git show "origin/main:data/metadata/$f" > "_public_dist/metadata/$f" 2>/dev/null && [ -s "_public_dist/metadata/$f" ]; then
             echo "  + data/metadata/$f"
           else
