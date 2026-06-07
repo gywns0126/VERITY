@@ -383,3 +383,15 @@ def test_grade_drift_alert_wiring():
     assert not [x for x in _build_messages({}, {}, {}, st, gd) if x["topic"] == "grade_drift"]
     # ok → 무알림
     assert not [x for x in _build_messages({}, {}, {}, {}, {"alert_level": "ok"}) if x["topic"] == "grade_drift"]
+
+
+# ── run_cross_link → run_full_observability 배선 (P2, 9528e458 2026-06-07) ──
+def test_cross_link_wired_in_run_all(monkeypatch):
+    # telegram 실발송 차단 (테스트 spam 방지)
+    import api.observability.alert_dispatcher as _ad
+    monkeypatch.setattr(_ad, "_send_one", lambda a: True)
+    from api.observability import run_full_observability
+    out = run_full_observability({"recommendations": []}, save_jsonl=False, attach_to_portfolio=False)
+    # cross_link 이 run_all 에서 산출돼 out 에 부착됨 (trust 있으면 dict, 없으면 None — graceful)
+    assert "cross_link" in out
+    assert isinstance(out["cross_link"], (dict, type(None)))

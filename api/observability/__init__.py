@@ -106,6 +106,22 @@ def run_full_observability(portfolio: Optional[dict],
         logger.warning("observability: trust failed: %s", e, exc_info=True)
         out["trust"] = None
 
+    # 4b. cross_link layer (P2 wiring, 2026-06-07 action_queue 9528e458) —
+    #     trust 자가진단 verdict ↔ backtest 실수익 hit rate 정합 측정. 검증 전용(verdict 영향 X,
+    #     cross_link_layer §9). persist=save_jsonl 로 ledger(cumulative_trades/phase_state) 누적.
+    try:
+        from .cross_link_layer import run_cross_link
+        from api.config import now_kst as _now_kst
+        if out.get("trust"):
+            out["cross_link"] = run_cross_link(
+                evaluation_date=_now_kst().strftime("%Y-%m-%d"),
+                trust_score_result=out["trust"],
+                persist=save_jsonl,
+            )
+    except Exception as e:  # noqa: BLE001
+        logger.warning("observability: cross_link failed: %s", e, exc_info=True)
+        out["cross_link"] = None
+
     # 5. portfolio 에 슬림 요약 attach (Vercel API 노출용)
     if attach_to_portfolio and isinstance(portfolio, dict):
         try:
