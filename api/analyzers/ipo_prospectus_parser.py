@@ -238,12 +238,18 @@ def _extract_summary_financials(tables) -> Dict[str, Any]:
                 out.append(-num if neg else num)
             return out
 
-        # 단위 — 헤더/표 텍스트에서 명시값만 채택, 없으면 미상 (RULE 10: 추정 단위 오표시 회피)
-        tbl_txt = t.get_text(" ", strip=True)
+        # 단위 — 명시값만 채택, 없으면 미상 (RULE 10: 추정 단위 오표시 회피).
+        # 표 안 → 직전 캡션 sibling("(단위 : 백만원)") 순. 한국 요약표 단위는 캡션에 통상 위치.
         unit = "미상"
-        um = re.search(r"단위\s*[:：]?\s*(백만원|천원|억원|원)", tbl_txt)
+        um = re.search(r"단위\s*[:：]?\s*(백만원|천원|억원|원)", t.get_text(" ", strip=True))
         if um:
             unit = um.group(1)
+        else:
+            prev = t.find_previous(string=re.compile(r"단위"))
+            if prev:
+                um2 = re.search(r"단위\s*[:：]?\s*(백만원|천원|억원|원)", str(prev))
+                if um2:
+                    unit = um2.group(1)
 
         return {
             "available": True,

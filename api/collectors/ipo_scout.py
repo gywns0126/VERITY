@@ -87,6 +87,45 @@ def _select_ipo_candidates(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return sorted(latest.values(), key=lambda r: r.get("rcept_dt", ""), reverse=True)
 
 
+# 본문 없는 정정 유형 — fallback 대상 (첨부문서만 정정 → 표 0개)
+_ATTACH_ONLY = ("첨부정정", "첨부추가")
+
+
+def _has_offering(doc: Dict[str, Any]) -> bool:
+    o = doc.get("offering") or {}
+    return bool(o.get("price_planned") or o.get("price_confirmed") or o.get("subscribe_start"))
+
+
+def _parse_with_fallback(corp_code: str, rcept_no: str, report_nm: str) -> Dict[str, Any]:
+    """본문 파싱. 최신 신고서가 [첨부정정](본문 0)이면 corp 의 최신 본문 신고서로 fallback (v0.2)."""
+    doc = parse_prospectus(rcept_no, report_nm)
+    if _has_offering(doc):
+        return doc
+    # corp_code 스코프 C001 목록 → 최신 본문 신고서 (첨부정정/첨부추가 제외) 재시도.
+    now = now_kst()
+    listing = _call("list.json", {
+        "corp_code": corp_code,
+        "pblntf_detail_ty": "C001",
+        "bgn_de": f"{now.year}0101",
+        "end_de": now.strftime("%Y%m%d"),
+        "page_count": "30",
+        "sort": "date",
+        "sort_mth": "desc",
+    })
+    for it in listing.get("list", []):
+        rc = it.get("rcept_no", "")
+        rn = it.get("report_nm", "")
+        if rc == rcept_no or any(a in rn for a in _ATTACH_ONLY):
+            continue
+        if "증권신고서(지분증권)" not in rn:
+            continue
+        alt = parse_prospectus(rc, rn)
+        if _has_offering(alt):
+            alt["offering_from_rcept"] = rc
+            return alt
+    return doc  # fallback 실패 — 원본(offering 빈 채) 반환
+
+
 def _enrich_financials(corp_code: str) -> Dict[str, Any]:
     """외감 사업보고서가 있으면 재무 보강 (없으면 available=False).
 
@@ -122,15 +161,17 @@ def scout() -> Dict[str, Any]:
         corp_code = c.get("corp_code", "")
         rcept_no = c.get("rcept_no", "")
         report_nm = c.get("report_nm", "")
-        # 증권신고서 본문 파싱 — 공모가/청약일/stage/요약재무 (v0.1)
-        doc = parse_prospectus(rcept_no, report_nm)
+        # 증권신고서 본문 파싱 — 공모가/청약일/stage/요약재무. 첨부정정 시 fallback (v0.2)
+        doc = _parse_with_fallback(corp_code, rcept_no, report_nm)
+        # offering 데이터가 fallback 신고서에서 왔으면 링크도 그 신고서로 (데이터-링크 정합)
+        data_rcept = doc.get("offering_from_rcept") or rcept_no
         watch.append({
             "corp_name": c.get("corp_name", ""),
             "corp_code": corp_code,
             "rcept_no": rcept_no,
             "rcept_dt": c.get("rcept_dt", ""),
             "report_nm": report_nm,
-            "dart_url": DART_VIEW_URL.format(rcept_no),
+            "dart_url": DART_VIEW_URL.format(data_rcept),
             "stage": doc.get("stage"),
             "offering": doc.get("offering", {}),
             "doc_financials": doc.get("summary_financials", {"available": False}),

@@ -315,7 +315,9 @@ function RevenueSpark({ fin }: { fin?: DocFinT }) {
                     {yoy >= 0 ? "+" : ""}{yoy.toFixed(0)}%
                 </span>
             )}
-            <span style={{ color: C.textDisabled, fontSize: 9 }}>단위 DART</span>
+            <span style={{ color: C.textDisabled, fontSize: 9 }}>
+                {fin.unit && fin.unit !== "미상" ? `단위 ${fin.unit}` : "단위 DART"}
+            </span>
         </div>
     )
 }
