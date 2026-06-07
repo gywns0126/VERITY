@@ -50,6 +50,7 @@ runs:
                  kr_stock_names.json \
                  admin_todos.json \
                  brain_kb_usage.json \
+                 ipo_watch.json \
                  history.json; do
           if git show "origin/main:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
             echo "  + data/$f"

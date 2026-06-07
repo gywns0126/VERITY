@@ -1,0 +1,85 @@
+name: IPO Watch (weekly pre-IPO pipeline)
+
+# 2026-06-07 신설 — PM 요청 "비상장 기대주 미리 선별".
+# 상장 전(pre-IPO) 공모 pipeline watch. source = DART 증권신고서(C001, corp_cls=E).
+# 기존 krx_ipo_collector(상장 후 38커뮤니케이션 사이클 신호)와 시점·source·목적 분리 =
+# 보완재 (RULE 10 중복 audit 완료). 산출 = data/ipo_watch.json.
+# ⚠️ watch list = 가설(N=0), 추천 아님 (RULE 7). 상장 후 funnel 편입 시점부터 검증 시작.
+#
+# 7축 audit (CLAUDE.md):
+#   1. env/secret: DART_API_KEY (dart_batch 와 동일 패턴, 검증된 secret).
+#   2. push trigger: 없음 (schedule + dispatch). data/ 외부 commit → vercel-api/ 무관
+#      → Vercel deploy skip (RULE 2). publish 는 price_pulse 등이 origin/main 에서 주워감.
+#   3. concurrency: verity-ipo-watch 신설, 형제 없음 (dart_batch=verity-data-write 와 분리).
+#   4. timeout: 12분 (list ~263건×0.5s ≈ 132s + 문서 7건 fetch + 재무 — 안전 마진).
+#   5. KIS: 무관 (RULE 1 N/A).
+#   6. pip: requirements.txt (requests + beautifulsoup4 기존 포함).
+#   7. cron-match: 매주 월 KST 08:30 = UTC 일 23:30. 주 1회 → silent skip risk 무시 가능.
+#      dart_batch(UTC 일 13:00)·new_listings(UTC 일 23:00) 와 시간/group 분리.
+
+on:
+  schedule:
+    - cron: '30 23 * * 0'   # UTC 일 23:30 = KST 월 08:30
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-ipo-watch
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Collect pre-IPO pipeline (DART 증권신고서)
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY || vars.DART_API_KEY }}
+        run: python -m api.collectors.ipo_scout
+
+      - name: Commit data/ipo_watch.json
+        # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
+        # [[feedback_data_collection_verification_mandatory]] specific path commit (RULE 4).
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/ipo_watch.json
+          if git diff --staged --quiet; then
+            echo "[ipo_watch] no changes"
+            exit 0
+          fi
+          TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git commit -m "📈 ipo_watch ${TODAY_KST}"
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
+            echo "push attempt $i failed, retrying in $((i * 5))s..."
+            sleep $((i * 5))
+          done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::warning::push 5회 실패 — 다음 cron 재시도"
+          fi
