@@ -426,6 +426,17 @@ def _compute_weekly_sparkline(hist: pd.DataFrame, rnd: int = 2) -> list:
     return [round(float(v), rnd) for v in weekly.values]
 
 
+def _market_cap_or_fallback(market_cap, shares_outstanding, price) -> int:
+    """yfinance marketCap 누락(0/None) 시 sharesOutstanding × price fallback.
+    2026-06-07 action_queue aed82498 — TMO/SOFI 등 US 종목 시총 결손 → Ackman/원본 Altman 복구."""
+    if not market_cap and shares_outstanding and price and price > 0:
+        try:
+            return int(float(shares_outstanding) * float(price))
+        except (ValueError, TypeError):
+            return 0
+    return int(market_cap) if market_cap else 0
+
+
 def get_stock_data(
     ticker_yf: str,
     period: str = "1y",
@@ -528,6 +539,10 @@ def get_stock_data(
         shares_outstanding = info.get("sharesOutstanding")
         held_pct_insiders = info.get("heldPercentInsiders")
         held_pct_institutions = info.get("heldPercentInstitutions")
+
+        # market_cap fallback (2026-06-07 action_queue aed82498) — yfinance marketCap
+        # 간헐 누락(TMO/SOFI 등) 시 sharesOutstanding × price 로 산출 → Ackman/원본 Altman 평가 복구.
+        market_cap = _market_cap_or_fallback(market_cap, shares_outstanding, price)
 
         company_type = _resolve_company_type(info.get("sector", ""), info.get("industry", ""))
 
