@@ -3637,6 +3637,22 @@ def main():
     except Exception as _usf_e:
         print(f"  us_fscore 주입 실패(무시): {_usf_e}")
 
+    # new_listings 주입 — 막스 5번째 사이클 신호 "신규 딜 품질" source.
+    # data/new_listings.json (월 1회 KRX IPO collector cron 커밋) read-only.
+    # market_horizon.classify_new_listing_quality 가 portfolio["new_listings"] 6키 소비.
+    # 파일 부재/형식 어긋남 시 신호 None (graceful). [[project_new_listings_collector_2026_06_07]].
+    try:
+        _nl_path = os.path.join(DATA_DIR, "new_listings.json")
+        if os.path.exists(_nl_path):
+            with open(_nl_path, encoding="utf-8") as _nlf:
+                _nl_data = json.load(_nlf) or {}
+            if isinstance(_nl_data, dict) and _nl_data.get("recent_3m_count") is not None:
+                portfolio["new_listings"] = _nl_data
+                print(f"  new_listings 주입: recent={_nl_data.get('recent_3m_count')} "
+                      f"baseline={_nl_data.get('baseline_5y_count')} (막스 신규 딜 품질 source)")
+    except Exception as _nl_e:  # noqa: BLE001
+        print(f"  new_listings 주입 실패(무시): {_nl_e}")
+
     try:
         from api.intelligence.verity_brain import reset_ic_cache
         reset_ic_cache()

@@ -1,0 +1,71 @@
+name: New Listings (weekly KRX IPO quality)
+
+# 2026-06-07 신설 — action_queue 37407c7f / [[project_new_listings_collector_2026_06_07]].
+# 막스 5번째 사이클 신호 "신규 딜 품질"(market_horizon classify_new_listing_quality) 입력 source.
+# source = 38커뮤니케이션 신규상장 (공개, 무료). 첫날 시초수익률 + 공모가.
+# 산출 = data/new_listings.json → daily_analysis(main.py)가 read-only 주입 → portfolio.json.
+# 빈도: 주 1회 (cycle 신호 = 저속, recent 3M 윈도라 staleness 허용). 비용: ~24 req/run.
+
+on:
+  schedule:
+    # 매주 월 KST 08:00 = UTC 일 23:00.
+    - cron: '0 23 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-new-listings
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10   # ~24 req × 0.4s + fetch ≈ 30초, 안전 마진
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Collect KRX IPO new-listing quality
+        run: python -m api.collectors.krx_ipo_collector
+
+      - name: Commit data/new_listings.json
+        # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
+        # [[feedback_data_collection_verification_mandatory]] specific path commit (RULE 4).
+        # Vercel ignoreCommand: data/ 외부 commit → vercel-api/ 무관 → deploy skip (RULE 2).
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/new_listings.json
+          if git diff --staged --quiet; then
+            echo "[new_listings] no changes"
+            exit 0
+          fi
+          TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git commit -m "📈 new_listings ${TODAY_KST}"
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
+            echo "push attempt $i failed, retrying in $((i * 5))s..."
+            sleep $((i * 5))
+          done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::warning::push 5회 실패 — 다음 cron 재시도"
+          fi
