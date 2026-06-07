@@ -250,9 +250,13 @@ VAMS_PASS_PROFIT_LOSS_RATIO = _env_float("VAMS_PASS_PROFIT_LOSS_RATIO", 1.5)    
 VAMS_PASS_SHARPE = _env_float("VAMS_PASS_SHARPE", 1.0)                           # 샤프 통과선 (연율)
 # 2026-05-16 Perplexity MED-D1: 승률 55% 단독 부족 — Expectancy 동반 의무화.
 # Expectancy = (Win Rate × Avg Win) - (Loss Rate × Avg Loss). R-multiple 단위.
-# Van Tharp 권장: ≥ 1.2R = 1 단위 risk 당 1.2 단위 평균 보상.
-# Wide Scan Brain v5 정합 — 55% gate + Expectancy ≥ 1.2R 이중 임계.
-VAMS_MIN_EXPECTANCY_R = _env_float("VAMS_MIN_EXPECTANCY_R", 1.2)
+# 2026-06-07 Perplexity 재보정 (RULE 7 — 1회 임계 조정, PM 연구 주도):
+#   ≥1.2R 은 과도("Holy Grail" 영역, 55%+1.5pl=0.375R 의 3.2배 = 현실 시스템 대부분 탈락).
+#   실무 하한: ≥0.2R(생존) / ≥0.25R(권장 게이트) / ≥0.5R(고품질 aspirational).
+#   Van Tharp 프로 벤치 0.2~0.8R. → 1.2 → 0.25 (권장 게이트 하한).
+#   robustness 보강 = SQN = (E/σ_R)×√min(N,100), expectancy 일관성+표본 동시 반영.
+VAMS_MIN_EXPECTANCY_R = _env_float("VAMS_MIN_EXPECTANCY_R", 0.25)
+VAMS_MIN_SQN = _env_float("VAMS_MIN_SQN", 1.7)  # Van Tharp SQN "Average"(최소 통과). N<100 시 √N cap
 VAMS_REDESIGN_SHARPE = _env_float("VAMS_REDESIGN_SHARPE", 0.5)                   # 미만이면 FAIL(재설계)
 VAMS_REGIME_DRAWDOWN_PCT = _env_float("VAMS_REGIME_DRAWDOWN_PCT", 10.0)          # 벤치마크 조정 감지선 (%)
 

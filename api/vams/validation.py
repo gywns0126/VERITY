@@ -27,6 +27,7 @@ overall:
 import glob
 import json
 import math
+import statistics
 import os
 from datetime import datetime
 from typing import List, Optional, Tuple
@@ -39,6 +40,7 @@ from api.config import (
     VAMS_PASS_SHARPE,
     VAMS_PASS_WIN_RATE,
     VAMS_MIN_EXPECTANCY_R,
+    VAMS_MIN_SQN,
     VAMS_REDESIGN_SHARPE,
     VAMS_REGIME_DRAWDOWN_PCT,
     VAMS_VALIDATION_MIN_DAYS,
@@ -236,7 +238,7 @@ def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
         return {
             "trades": 0, "wins": 0, "losses": 0,
             "win_rate": None, "avg_win": None, "avg_loss": None, "pl_ratio": None,
-            "expectancy_r": None,
+            "expectancy_r": None, "sqn": None,
         }
     pnls = [float(h["pnl"]) for h in sells]
     wins = [p for p in pnls if p > 0]
@@ -250,6 +252,15 @@ def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
     # 1 단위 risk(=|avg_loss|) 당 평균 보상. avg_loss=0(무손실) → R 기준 미정의(None).
     expectancy_r = (round(win_rate * pl_ratio - (1 - win_rate), 3)
                     if pl_ratio is not None else None)
+    # SQN (Van Tharp System Quality Number, 2026-06-07 Perplexity) = mean(R)/σ(R) × √min(N,100).
+    # expectancy(일관성=σ) + 표본(N) 동시 반영 → raw expectancy 보다 robust. R = pnl/|avg_loss|.
+    sqn = None
+    _abs_loss = abs(avg_loss) if avg_loss < 0 else None
+    if _abs_loss and len(pnls) >= 2:
+        r_mults = [p / _abs_loss for p in pnls]
+        sd_r = statistics.pstdev(r_mults)
+        if sd_r > 0:
+            sqn = round((statistics.mean(r_mults) / sd_r) * math.sqrt(min(len(pnls), 100)), 3)
     return {
         "trades": len(pnls),
         "wins": len(wins),
@@ -259,6 +270,7 @@ def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
         "avg_loss": round(avg_loss, 2),
         "pl_ratio": round(pl_ratio, 3) if pl_ratio is not None else None,
         "expectancy_r": expectancy_r,
+        "sqn": sqn,
     }
 
 
@@ -357,6 +369,16 @@ def compute_validation_report(
             trade["expectancy_r"] is None or not trades_ok,
         ),
     }
+    # SQN gate (Van Tharp System Quality Number ≥ 1.7 "Average", 2026-06-07 Perplexity).
+    # expectancy 일관성(σ)+표본(N) 동시 반영 — raw expectancy 보다 robust한 품질 게이트.
+    m_sqn = {
+        "sqn": trade["sqn"],
+        "threshold": VAMS_MIN_SQN,
+        "pass": _p(
+            trade["sqn"] is not None and trade["sqn"] >= VAMS_MIN_SQN,
+            trade["sqn"] is None or not trades_ok,
+        ),
+    }
     if sharpe is None:
         verdict = "INSUFFICIENT"
     elif sharpe < VAMS_REDESIGN_SHARPE:
@@ -453,6 +475,7 @@ def compute_validation_report(
         "win_rate": m_win,
         "profit_loss_ratio": m_pl,
         "expectancy": m_expectancy,
+        "sqn": m_sqn,
         "sharpe": m_sharpe,
         "regime_coverage": m_regime,
         "cost_efficiency": m_cost,
@@ -498,6 +521,7 @@ def compute_validation_report(
             "win_rate_min": VAMS_PASS_WIN_RATE,
             "profit_loss_ratio_min": VAMS_PASS_PROFIT_LOSS_RATIO,
             "expectancy_r_min": VAMS_MIN_EXPECTANCY_R,
+            "sqn_min": VAMS_MIN_SQN,
             "sharpe_min": VAMS_PASS_SHARPE,
             "sharpe_redesign_below": VAMS_REDESIGN_SHARPE,
             "regime_drawdown_pct": VAMS_REGIME_DRAWDOWN_PCT,
