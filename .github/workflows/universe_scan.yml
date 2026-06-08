@@ -77,9 +77,9 @@ jobs:
         env:
           # 2026-05-11: VERITY_MODE — schedule cron = prod, manual dispatch = input.
           VERITY_MODE: ${{ github.event.inputs.verity_mode || 'prod' }}
-          # 2026-05-27 fix — ANALYSIS_MODE 박음 (mode=unknown 13 entry 박힌 원인).
-          # stock_filter._log_w1_runtime mode = ANALYSIS_MODE env. 미박힘 시 default "unknown".
-          # 5/10 universe_scan 분리 commit 박은 후 누락 잔재. 박은 후 jsonl mode=universe_scan 정합.
+          # 2026-05-27 fix — ANALYSIS_MODE 설정 (mode=unknown 13 entry 발생 원인).
+          # stock_filter._log_w1_runtime mode = ANALYSIS_MODE env. 미설정 시 default "unknown".
+          # 5/10 universe_scan 분리 commit 후 누락 잔재. 설정 후 jsonl mode=universe_scan 정합.
           ANALYSIS_MODE: universe_scan
           # ramp-up stage 환경변수 (daily_analysis_full 와 동일 secret 재사용)
           UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
@@ -92,7 +92,7 @@ jobs:
           KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO || vars.KIS_ACCOUNT_NO }}
           KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
           DART_API_KEY: ${{ secrets.DART_API_KEY || vars.DART_API_KEY }}
-          # 2026-05-11 fix: KR universe build (KRX K1) 가 KRX_API_KEY env 사용. 둘 다 박음 (daily_analysis_full 정합).
+          # 2026-05-11 fix: KR universe build (KRX K1) 가 KRX_API_KEY env 사용. 둘 다 설정 (daily_analysis_full 정합).
           KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
           KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
           # Telegram (FATAL 시 alert)
@@ -111,7 +111,7 @@ jobs:
           git add data/.kis_issued_date.txt 2>/dev/null || true
           # P0-2b fix (2026-05-16): runtime_load_log.jsonl 누락 — 574538fd (5/12) commit 가
           # daily_analysis inline 5000 scan 제거 → universe_scan 이 유일한 logging caller.
-          # universe_scan.yml 의 git add 가 specific file 만 박혀서 jsonl 누락 → entry 0건/5일.
+          # universe_scan.yml 의 git add 가 specific file 만 추가돼서 jsonl 누락 → entry 0건/5일.
           # daily_analysis* 는 git add data/ 라 자동 포함. universe_scan 만 결함.
           git add data/metadata/runtime_load_log.jsonl 2>/dev/null || true
           # wide_scan_log.jsonl 도 함께 — SHADOW 누적 데이터 (5/11 1 entry / 6일 = propagation 결함).

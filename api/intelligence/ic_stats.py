@@ -57,7 +57,7 @@ def rank_ic(scores: Sequence[float], fwd_returns: Sequence[float], method: str =
 def bootstrap_ic_ci(
     scores: Sequence[float],
     fwd_returns: Sequence[float],
-    method: str = "spearman",
+    method: str = "kendall",   # 스펙 §4.1 primary = Kendall τ 정합 (rank_ic 기본과 통일)
     n_boot: int = 2000,
     ci: float = 0.95,
     seed: int = 20260608,
@@ -118,8 +118,11 @@ def newey_west_tstat(ic_series: Sequence[float], horizon_days: int) -> dict:
                 "nw_tstat": None, "maxlags": 0, "T": T}
     mean = float(x.mean())
     d = x - mean
-    L = min(_auto_maxlags(T, horizon_days), T - 1)
     gamma0 = float(np.dot(d, d) / T)
+    # degenerate 가드: (near-)constant 시리즈 = float dust 분산 → 허위 거대 t-stat 차단 (nit #7).
+    if gamma0 <= 1e-18 or math.sqrt(gamma0) < 1e-9 * (abs(mean) + 1.0):
+        return {"mean_ic": mean, "nw_se": 0.0, "nw_tstat": None, "maxlags": 0, "T": T}
+    L = min(_auto_maxlags(T, horizon_days), T - 1)
     s = gamma0
     for l in range(1, L + 1):
         w = 1.0 - l / (L + 1.0)  # Bartlett kernel
@@ -232,12 +235,15 @@ def paired_ic_test(ic_a: Sequence[float], ic_b: Sequence[float]) -> dict:
     a, b = a[mask], b[mask]
     diff = a - b
     nz = diff[diff != 0]
-    if len(nz) < 6:  # Wilcoxon 최소 표본
-        return {"n_pairs": int(len(diff)), "median_diff": float(np.median(diff)) if len(diff) else None,
+    if len(nz) < 6:  # Wilcoxon 최소 표본 (zero-diff 제외 후)
+        return {"n_pairs": int(len(diff)), "effective_n": int(len(nz)),
+                "median_diff": float(np.median(diff)) if len(diff) else None,
                 "wilcoxon_stat": None, "pvalue": None, "a_better": None,
-                "note": "표본 부족 (유효쌍<6) — 검정 불가"}
-    stat, p = stats.wilcoxon(a, b)
+                "note": "표본 부족 (nonzero diff<6) — 검정 불가"}
+    # zero-diff 가드와 정합되게 nonzero diff 만 검정 (P2 #9: full-array 호출 시 scipy 내부 drop ↔ 보고 n 불일치).
+    # alternative='greater' = H1 median(diff)>0 (A=shadow 우위) 단측.
+    stat, p = stats.wilcoxon(nz, alternative="greater")
     med = float(np.median(diff))
-    return {"n_pairs": int(len(diff)), "median_diff": med,
+    return {"n_pairs": int(len(diff)), "effective_n": int(len(nz)), "median_diff": med,
             "wilcoxon_stat": float(stat), "pvalue": float(p),
-            "a_better": bool(med > 0 and p < 0.05)}
+            "a_better": bool(p < 0.05)}

@@ -18,6 +18,9 @@ from typing import Any, Dict, Optional
 from api.config import DATA_DIR, now_kst
 
 _PATH = os.path.join(DATA_DIR, "metadata", "prediction_trail.jsonl")
+# 섀도우 funnel 예측 = 별도 trail (물리 분리). 프로덕션 scorer 가 섀도우를 절대 pool 하지 않도록
+# (Shadow Funnel Scoring Spec v0 §5 source 분리 + §1 프로덕션 무오염). prediction_scoring.py 무변경 유지.
+SHADOW_PATH = os.path.join(DATA_DIR, "metadata", "shadow_prediction_trail.jsonl")
 
 # horizon → eval 까지 캘린더 일수 (상한 기준: 단 1주 / 중 3개월 / 장 12개월)
 HORIZON_DAYS = {"short": 7, "mid": 90, "long": 365}

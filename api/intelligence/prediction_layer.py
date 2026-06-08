@@ -73,7 +73,11 @@ def generate_shadow_predictions(
     picks = [{"ticker","score","entry_price","currency","name"}, ...] (wide_scan persist).
     source="shadow_funnel.v0" 분리 태그 → 프로덕션 IC 와 별도 집계/비교 (§5).
     pred_score = funnel 합성점수 (cross-section rank-IC 입력). entry_price 는 signals 에 동결 (PIT, §3).
+
+    물리 분리: path 미지정 시 PT.SHADOW_PATH(별도 trail) 에 기록 — 프로덕션 scorer 가
+    섀도우를 pool 하지 못하게 함 (§1 무오염, prediction_scoring.py 무변경). 채점은 증분 3 섀도우 scorer.
     """
+    path = path or PT.SHADOW_PATH
     out: List[Dict[str, Any]] = []
     for p in picks or []:
         ticker = p.get("ticker")

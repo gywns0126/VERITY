@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root (cockpit_aggregate 패턴)
 
-from api.config import DATA_DIR
+from api.config import DATA_DIR, now_kst
 from api.intelligence import prediction_layer as PL
 
 
@@ -54,14 +54,24 @@ def main() -> int:
     else:
         sys.stderr.write("[predict] recommendations 없음 — production skip (graceful)\n")
 
-    # 섀도우 funnel 예측 (Shadow Funnel Scoring Spec v0 — source 분리, 독립 진행)
+    # 섀도우 funnel 예측 (Shadow Funnel Scoring Spec v0 — 별도 trail, 프로덕션 무오염)
     shadow = _load(os.path.join(DATA_DIR, "metadata", "shadow_funnel_picks.json"))
+    shadow_out = (args.out + ".shadow.jsonl") if args.out else None  # 테스트 시에도 섀도우 격리
     if isinstance(shadow, dict) and shadow.get("picks"):
-        sh = PL.generate_shadow_predictions(shadow["picks"], path=args.out)
-        print(
-            f"[predict] shadow logged {len(sh)} "
-            f"(funnel {len(shadow['picks'])} × {len(PL._HORIZONS)}h, source={PL._SHADOW_SOURCE})"
-        )
+        # scan_at 신선도 가드 (P2 #13): universe_scan miss 시 stale picks 재emit → IC 시계열 중복 왜곡 방지.
+        scan_day = str(shadow.get("scan_at", ""))[:10]
+        today = now_kst().strftime("%Y-%m-%d")
+        if scan_day and scan_day < today:
+            sys.stderr.write(
+                f"[predict] shadow picks stale (scan_at={scan_day} < today={today}) — shadow skip (graceful)\n"
+            )
+        else:
+            sh = PL.generate_shadow_predictions(shadow["picks"], path=shadow_out)
+            print(
+                f"[predict] shadow logged {len(sh)} "
+                f"(funnel {len(shadow['picks'])} × {len(PL._HORIZONS)}h, source={PL._SHADOW_SOURCE}, "
+                f"trail={'shadow_prediction_trail.jsonl' if not shadow_out else shadow_out})"
+            )
     else:
         sys.stderr.write("[predict] shadow_funnel_picks 없음/빈값 — shadow skip (graceful)\n")
 

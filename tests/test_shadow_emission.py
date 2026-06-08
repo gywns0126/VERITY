@@ -72,16 +72,33 @@ def test_generate_shadow_predictions_direction_threshold():
     assert all(r["direction"] == "up" for r in out2)  # >=50 = up
 
 
-def test_shadow_records_distinct_from_production_in_same_trail():
-    """같은 trail 파일에 production + shadow 공존, source 로 분리 가능."""
-    tmp = tempfile.mktemp(suffix=".jsonl")
+def test_shadow_defaults_to_separate_trail(monkeypatch):
+    """P0 fix (물리 분리): shadow 는 path 미지정 시 SHADOW_PATH(별도 파일)로 기록 →
+    프로덕션 trail 무오염. prediction_scoring 이 섀도우를 절대 pool 못 함 (spec §1/§5)."""
+    assert PT.SHADOW_PATH != PT._PATH  # 별도 경로
+    prod_tmp = tempfile.mktemp(suffix=".jsonl")
+    shadow_tmp = tempfile.mktemp(suffix=".shadow.jsonl")
+    monkeypatch.setattr(PT, "_PATH", prod_tmp)
+    monkeypatch.setattr(PT, "SHADOW_PATH", shadow_tmp)
+
+    # 프로덕션 로깅 (default → _PATH)
     PT.log_prediction(target_type="stock", target="005930", horizon="short",
-                      direction="up", pred_score=80.0, confidence=0.6, signals={}, path=tmp)
-    PL.generate_shadow_predictions([{"ticker": "005930", "score": 85.0}], path=tmp)
+                      direction="up", pred_score=80.0, confidence=0.6, signals={})
+    # 섀도우 로깅 (path 미지정 → SHADOW_PATH)
+    PL.generate_shadow_predictions([{"ticker": "005930", "score": 85.0}])
+
+    prod_rows = [json.loads(l) for l in open(prod_tmp, encoding="utf-8") if l.strip()]
+    shadow_rows = [json.loads(l) for l in open(shadow_tmp, encoding="utf-8") if l.strip()]
+    # 프로덕션 trail = production 1건만, shadow 0건 (오염 0)
+    assert len(prod_rows) == 1 and all(r["source"] == "production" for r in prod_rows)
+    # 섀도우 trail = shadow 만
+    assert len(shadow_rows) == len(PL._HORIZONS)
+    assert all(r["source"] == "shadow_funnel.v0" for r in shadow_rows)
+
+
+def test_shadow_explicit_path_override():
+    """path 명시 시 그 경로 사용 (테스트 격리 보장)."""
+    tmp = tempfile.mktemp(suffix=".jsonl")
+    out = PL.generate_shadow_predictions([{"ticker": "005930", "score": 85.0}], path=tmp)
     rows = [json.loads(l) for l in open(tmp, encoding="utf-8") if l.strip()]
-    by_source = {}
-    for r in rows:
-        by_source.setdefault(r["source"], 0)
-        by_source[r["source"]] += 1
-    assert by_source["production"] == 1
-    assert by_source["shadow_funnel.v0"] == len(PL._HORIZONS)
+    assert len(rows) == len(out) == len(PL._HORIZONS)
