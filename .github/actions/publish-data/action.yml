@@ -73,6 +73,21 @@ runs:
           fi
         done
 
+        # ── arena/ subdir (ARENA 버서커 status 카드 source) ──
+        # 2026-06-09: 버서커 검증 진행도 status + shadow 채점 score 발행 (PM 6/8 부활).
+        # data/arena/* 는 gitignore + 버서커 3파일만 카브 추적 — main HEAD tracked 파일만 publish.
+        # asset_stats(μ/σ 엣지)는 비추적이라 자동 제외 (비공개 유지). shadow.jsonl(원시 trail)은
+        # 카드 불필요 — status + score 2파일만 발행 (카드 = 진행도 + 카운트다운).
+        mkdir -p _public_dist/arena
+        for f in berserker_status.json berserker_shadow_score.json; do
+          if git show "origin/main:data/arena/$f" > "_public_dist/arena/$f" 2>/dev/null && [ -s "_public_dist/arena/$f" ]; then
+            echo "  + data/arena/$f"
+          else
+            rm -f "_public_dist/arena/$f"
+            echo "  - data/arena/$f (not in main HEAD)"
+          fi
+        done
+
         # ── price_pulse inline merge (2026-05-11) ──
         # frontend(Framer)는 portfolio.json 만 fetch 하므로 publish 단계에서 inline merge.
         # 결과: portfolio.market_summary.indices_pulse + holdings/recommendations current_price 가 1분 fresh.
