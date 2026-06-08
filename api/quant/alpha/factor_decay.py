@@ -67,6 +67,22 @@ def _linear_trend(values: List[float]) -> Dict[str, float]:
     }
 
 
+# 팩터 유형별 최소 IC 샘플 (2026-06-08 Perplexity NQ1 — 7일 일간 IC 윈도가 fundamental 에 부적합).
+# price(모멘텀/반전/기술/심리): 일간 IC 의미 有 → 5 유지. fundamental(밸류/퀄리티/안전/컨센서스):
+# 분기 보고서 reporting-lag 45~90일 불변 → 7일 IC = 동일 데이터 자기상관 노이즈. 신호가 실제
+# 갱신(≥1 분기)되려면 더 긴 history 필요 → 21 floor(조기 DECAYING/DEAD 오분류 + 부당 downweight 차단).
+# ⚠️ Perplexity 이상치: fundamental IC 통계 유의성엔 12~20분기 필요(Flint-Vermaak / Goodwin 1998).
+#    본 21 은 premature 분류 방지 실용 floor — 저-N 노이즈 가중치 변동↓. 출처: alphaarchitect/spglobal/arxiv.
+_FUNDAMENTAL_FACTORS = {"fundamental", "quality", "safety_score", "consensus"}
+_MIN_SAMPLES_PRICE = 5
+_MIN_SAMPLES_FUNDAMENTAL = 21
+
+
+def _min_samples_for(factor: str) -> int:
+    """팩터 유형별 최소 IC 샘플 — fundamental 은 7일 자기상관 노이즈 회피 위해 상향."""
+    return _MIN_SAMPLES_FUNDAMENTAL if factor in _FUNDAMENTAL_FACTORS else _MIN_SAMPLES_PRICE
+
+
 def analyze_factor_decay(
     min_history_days: int = 7,
     forward_days: int | None = None,
@@ -129,13 +145,18 @@ def analyze_factor_decay(
             if icir is not None:
                 icir_values.append(icir)
 
-        if len(ic_values) < 5:
+        _min_samples = _min_samples_for(factor)
+        if len(ic_values) < _min_samples:
+            _is_fund = factor in _FUNDAMENTAL_FACTORS
             results[factor] = {
                 "status": "INSUFFICIENT",
-                "label": "데이터 부족",
+                "label": (f"데이터 부족 ({len(ic_values)}/{_min_samples}, "
+                          f"{'fundamental 분기 신호' if _is_fund else 'price'})"),
                 "ic_mean_all": 0,
                 "ic_recent": 0,
                 "trend": {},
+                "min_samples": _min_samples,
+                "factor_type": "fundamental" if _is_fund else "price",
             }
             continue
 
