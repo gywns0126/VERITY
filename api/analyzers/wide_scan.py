@@ -532,14 +532,32 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
     scored: List[Tuple[float, str, dict]] = []
     dim_sum = {k: 0.0 for k in DIM_WEIGHTS}
     fscore_available_n = 0     # F-Score 9 항목 중 1+ 항목이 계산된 종목 수
-    fscore_full_n = 0           # F-Score 7+ 항목 계산되어 score 값 박힌 종목 수
+    fscore_full_n = 0           # F-Score 7+ 항목 계산되어 score 값 산출된 종목 수
     altman_applicable_n = 0     # 제조업 (Altman Z 적용 가능) 종목 수
     altman_z_full_n = 0         # Z value 계산된 종목 수
+    # 데이터 가용성 de-silence (설계 audit #8/#9/#11/#14) — 차원 결손/loss/유동성분포 추적, decision 영향 0
+    debt_avail_n = 0           # debt_ratio 가용 종목 수 (safety 섹터-aware 입력)
+    loss_count = 0             # per <= 0 (적자) 종목 수 — value-trap 모니터 (#9)
+    gm_avail_n = 0             # gross_margins 가용 (profitability GP/A proxy, #8)
+    div_avail_n = 0            # dividend_yield 가용 (payout, US buyback 결손 #14)
+    tv_values: List[float] = []  # trading_value 분포 (liquidity raw, #11)
     for s in stocks:
         composite, breakdown = _score_stock(s)
         scored.append((composite, s.get("ticker", "?"), breakdown))
         for k, v in breakdown.items():
             dim_sum[k] += v
+        if s.get("debt_ratio"):
+            debt_avail_n += 1
+        _per = s.get("per")
+        if _per is not None and _per <= 0:
+            loss_count += 1
+        if s.get("gross_margins") is not None or s.get("gross_margin") is not None:
+            gm_avail_n += 1
+        if s.get("dividend_yield") or s.get("div_yield"):
+            div_avail_n += 1
+        _tv = s.get("trading_value")
+        if _tv and _tv > 0:
+            tv_values.append(float(_tv))
         # step (c) 게이트 prep — 데이터 가용성 stats 만 누적, decision 영향 0
         f_eval = _piotroski_f_score(s)
         if f_eval["available_n"] > 0:
@@ -578,6 +596,20 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
             "fscore_full_n": fscore_full_n,
             "altman_applicable_n": altman_applicable_n,
             "altman_z_full_n": altman_z_full_n,
+            # 데이터 가용성 de-silence (설계 audit) — 검증 시 결손-편향 진단용
+            "debt_ratio_avail_n": debt_avail_n,
+            "loss_count": loss_count,
+            "gross_margins_avail_n": gm_avail_n,
+            "dividend_avail_n": div_avail_n,
+            "trading_value_dist": (
+                {
+                    "min": round(min(tv_values), 1),
+                    "median": round(sorted(tv_values)[len(tv_values) // 2], 1),
+                    "max": round(max(tv_values), 1),
+                    "n": len(tv_values),
+                }
+                if tv_values else {"n": 0}
+            ),
             "data_source": "stock_dict_v0",
         },
         "note": "step_c — 게이트 구조 prep. 실 데이터 통합은 step e (stock_data 확장 + DART pre-attach).",
