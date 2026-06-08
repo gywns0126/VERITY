@@ -616,6 +616,17 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
     }
     logged = _append_jsonl(entry)
 
+    # 멀티배거 WATCH (2026-06-09, PM 결정 B) — KR 소형주 텐버거 후보 trail (로깅 전용, 결정 0).
+    # funnel(품질-가치)이 밀어내는 초기 텐버거형을 별 렌즈로 관측. 실패해도 funnel 진행 (부수효과).
+    try:
+        from api.intelligence.multibagger_watch import run_watch as _run_mb_watch
+        _mb_n = _run_mb_watch(stocks)
+        if _mb_n:
+            print(f"[wide_scan] multibagger watch: {_mb_n} KR 소형주 후보 로깅", flush=True)
+    except Exception as _mbe:
+        import sys as _sys
+        print(f"[wide_scan] multibagger watch 실패 (skip, funnel 무영향): {_mbe}", file=_sys.stderr)
+
     # ── funnel sprint Step 2/3/4 cascading (2026-05-17) ──
     # SHADOW 모드만 — PRODUCTION 진입 (8월 말 TG-1) 까지 decision 영향 0.
     # 결과는 wide_scan_log.jsonl step 별 entry 적재. top_tickers 는 step 1 결과 그대로 반환.

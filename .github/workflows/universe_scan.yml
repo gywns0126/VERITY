@@ -127,6 +127,9 @@ jobs:
           # RULE 4: specific git add 라 신규 파일 누락 시 silent 손실 (위 5~6차 사고 패턴).
           # generate_predictions(daily_analysis_full)가 다음 cron 에서 읽어 source=shadow_funnel.v0 예측 발생.
           git add data/metadata/shadow_funnel_picks.json 2>/dev/null || true
+          # multibagger_watch.jsonl — wide_scan 가 KR 소형주 텐버거 후보 로깅 (2026-06-09 PM 결정 B).
+          # 로깅 전용 trail (결정 0, active gate 2026-09). RULE 4: 신규 파일 git add 누락 방지.
+          git add data/metadata/multibagger_watch.jsonl 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔍 universe_candidates ${TIME_KST}"

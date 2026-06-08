@@ -29,6 +29,10 @@ from api.metadata.brain_learning import load_signals
 LEDGER_PATH = os.path.join(DATA_DIR, "metadata", "grade_drift_log.jsonl")
 GRADES = ("STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID")
 
+# 저위험 guard 상수 (2026-06-09 — baseline artifact 보정)
+LEDGER_COLDSTART_MIN = 4   # PSI history < N → cold-start, "major defect" critical 보류
+UNIVERSE_SHIFT_RATIO = 1.5  # baseline 내 universe-N max/min ≥ 1.5 → epoch 이질(VAMS reset 등)
+
 
 def _normalize_grade_dist(dist: Dict[str, int]) -> Dict[str, float]:
     """등급 카운트 → 비중 (합 1.0)."""
@@ -101,9 +105,53 @@ def detect_regime_flags(portfolio: Dict[str, Any]) -> List[str]:
     return flags
 
 
+def _dedup_signals(sigs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """하루 다중 스냅샷 → date 당 마지막(EOD) 1개로 수렴 — 평균 왜곡 방지.
+
+    모니터 의도는 day 기반(baseline_days/current_days 가 일 단위)인데, 같은 날
+    intraday 재실행이 2~9회 기록되어(예: 5/11 9개) 그 날을 과대 가중하던 문제
+    보정 (저위험 fix 3). load_signals 는 시간순이므로 date 당 마지막이 EOD 스냅샷.
+    """
+    seen: Dict[str, Dict[str, Any]] = {}
+    for s in sigs:
+        key = str(s.get("date") or s.get("timestamp") or "")
+        seen[key] = s
+    return list(seen.values())
+
+
+def _ledger_history_count() -> int:
+    """기존 drift 평가 ledger 줄 수 — cold-start 판정용 (log 는 평가 후 append)."""
+    try:
+        with open(LEDGER_PATH, "r", encoding="utf-8") as f:
+            return sum(1 for _ in f)
+    except (FileNotFoundError, OSError):
+        return 0
+
+
+def _baseline_epoch_flags(baseline_sigs: List[Dict[str, Any]]) -> List[str]:
+    """baseline 이질성(epoch contamination) 감지 — segment-scoped 아님 보정.
+
+    [[feedback_baseline_must_be_segment_scoped]]: stage/regime 무관 평균 금지.
+    현 baseline 은 단일 평균이므로 최소한 universe-N 급변(예: VAMS reset 5/17
+    N 50→25)을 감지해 '해석 주의' 강등 근거로 사용한다 (저위험 fix 2).
+    """
+    flags: List[str] = []
+    totals: List[int] = []
+    for s in baseline_sigs:
+        d = s.get("grade_distribution") or {}
+        t = sum(d.get(g, 0) for g in GRADES)
+        if t > 0:
+            totals.append(t)
+    if totals:
+        lo, hi = min(totals), max(totals)
+        if lo > 0 and hi / lo >= UNIVERSE_SHIFT_RATIO:
+            flags.append(f"universe-N {lo}~{hi} 급변")
+    return flags
+
+
 def evaluate_grade_drift(
     portfolio: Dict[str, Any],
-    baseline_days: int = 52 * 7,  # 52주 = 1년
+    baseline_days: int = 52 * 7,  # baseline 상한 52주(가용 데이터 한정 — 실제 깊이는 baseline_date_range 참조)
     current_days: int = 7,  # 최근 1주
 ) -> Dict[str, Any]:
     """grade 분포 drift 평가 — PSI + regime 분리 (P1-3 Guard 3).
@@ -119,7 +167,7 @@ def evaluate_grade_drift(
             "reason": str,
         }
     """
-    sigs = load_signals(baseline_days)
+    sigs = _dedup_signals(load_signals(baseline_days))
     if len(sigs) < 10:
         return {
             "psi": 0.0, "psi_tier": "insufficient",
@@ -182,11 +230,33 @@ def evaluate_grade_drift(
     else:
         alert_level = "ok"
 
+    # epoch-contamination / cold-start guard (저위험 fix 2026-06-09).
+    # baseline 이 segment-scoped 아님 → PSI history 부족(cold-start) 또는
+    # universe-N 급변(epoch 이질) 시 "재보정" critical 단정을 보류(alert→watch).
+    # artifact 가능성을 PM 에게 명시 (RULE 10 — 단일 관측 단정 회피).
+    ledger_n = _ledger_history_count()
+    epoch_flags = _baseline_epoch_flags(baseline_sigs)
+    guard_reasons: List[str] = []
+    if ledger_n < LEDGER_COLDSTART_MIN:
+        guard_reasons.append(f"PSI history {ledger_n}<{LEDGER_COLDSTART_MIN} (cold-start)")
+    if epoch_flags:
+        guard_reasons.append("baseline epoch 이질(" + ", ".join(epoch_flags) + ")")
+    guard_downgraded = False
+    if guard_reasons and alert_level == "alert":
+        alert_level = "watch"
+        guard_downgraded = True
+
+    # baseline 실제 깊이/기간 노출 (저위험 fix 1 — "52주" 라벨 정직화)
+    b_dates = [s.get("date") for s in baseline_sigs if s.get("date")]
+    baseline_date_range = f"{b_dates[0]}~{b_dates[-1]}" if b_dates else "n/a"
+
     reason = (
         f"PSI={psi:.3f} ({psi_tier}) / max 비중 변화 {max_share_change:.1f}%p / "
         f"regime flags={regime_count} ({', '.join(regime_flags) if regime_flags else 'none'}) "
         f"→ {regime_classified} / alert={alert_level}"
     )
+    if guard_downgraded:
+        reason += f" [강등: {'; '.join(guard_reasons)} — artifact 가능성, 해석 주의]"
 
     return {
         "psi": psi,
@@ -199,6 +269,11 @@ def evaluate_grade_drift(
         "alert_level": alert_level,
         "baseline_samples": len(baseline_sigs),
         "current_samples": len(current_sigs),
+        "baseline_date_range": baseline_date_range,
+        "ledger_history": ledger_n,
+        "epoch_flags": epoch_flags,
+        "guard_downgraded": guard_downgraded,
+        "guard_reasons": guard_reasons,
         "reason": reason,
     }
 
