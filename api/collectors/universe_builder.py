@@ -3,7 +3,9 @@
 
 KR: KRX OpenAPI K1 (krx_stk_ksq_rows_sorted_by_trading_value) 1콜로
     KOSPI+KOSDAQ 전체 + MKTCAP/ACC_TRDVAL/OHLC/LIST_SHRS 즉시 확보.
-US: 정적 캐시 (data/cache/universe_us.json, 주 1회 별도 갱신)
+US: 정적 캐시 (data/cache/universe_us.json) — ⚠️ 현재 캐시 gitignored + 생성 cron/코드 없음
+    → cron 체크아웃에 항상 부재 → US 는 _load_us_universe_cache fallback(S&P100+core, ~150종목)
+    으로 상시 동작. "US 3000" 은 종이 숫자, 실제는 fallback. 캐시 생성 = Tier 4+ deferred (KR-first).
     + 코어 화이트리스트 union 보장.
 
 코어 화이트리스트 85종목은 항상 포함 (is_core=True).

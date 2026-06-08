@@ -82,12 +82,19 @@ def build() -> Dict[str, Any]:
     kr_count = sum(1 for c in candidates if c.get("currency") != "USD")
     us_count = sum(1 for c in candidates if c.get("currency") == "USD")
 
+    # US 유니버스 소스 de-silence — 캐시 부재 시 fallback(S&P100+core) 명시.
+    # universe_us.json gitignored + 생성기 없음 → 상시 fallback. silent degradation 아닌 의식 상태.
+    _us_cache = os.path.join(_REPO_ROOT, "data", "cache", "universe_us.json")
+    us_universe_source = "cache" if os.path.exists(_us_cache) else "static_fallback"
+
     diagnostics = {
         "ok": error is None and bool(candidates),
         "candidates_count": len(candidates),
         "kr_count": kr_count,
         "us_count": us_count,
+        "us_universe_source": us_universe_source,  # "static_fallback" = US ~S&P100 (KR-first interim)
         "ramp_up_stage": int(os.environ.get("UNIVERSE_RAMP_UP_STAGE", "0") or 0),
+        "ramp_up_note": "5000 = cap(상한), 목표 아님 — 실 유니버스 = 품질 floor 통과 전체",
         "elapsed_s": elapsed,
         "used_prev_snapshot": used_prev,
         "error": error,

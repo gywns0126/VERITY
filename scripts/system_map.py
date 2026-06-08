@@ -124,6 +124,29 @@ def _file_age_hours(rel: str):
     return round(age_s / 3600, 1)
 
 
+def _latest_investable():
+    """실 투자가능 유니버스 수 = wide_scan_log 최신 c_gate_prep input_n (품질 floor 통과).
+
+    5000 은 cap(상한)이지 실제 수가 아님 — floor(시총·거래대금) 통과 전체가 실 유니버스.
+    """
+    fp = os.path.join(REPO_ROOT, "data", "wide_scan_log.jsonl")
+    if not os.path.exists(fp):
+        return None
+    latest = None
+    try:
+        with open(fp, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                rec = json.loads(line)
+                if rec.get("step") == "c_gate_prep" and rec.get("input_n"):
+                    latest = rec["input_n"]  # 최신값으로 갱신
+    except Exception:
+        return latest
+    return latest
+
+
 # ── 맵 구성 ────────────────────────────────────────────────────────────
 
 
@@ -199,6 +222,8 @@ def build_map() -> dict:
         )
     }
 
+    _inv = _latest_investable()  # 실 투자가능 유니버스 (floor 통과, 5000 cap 아님)
+
     return {
         "generated_at": now_kst().isoformat(),
         "generator": "scripts/system_map.py",
@@ -249,11 +274,18 @@ def build_map() -> dict:
             },
         },
         "python_by_dir": dict(sorted(py_by_dir.items(), key=lambda x: -x[1])),
-        # 5단계 funnel (config.py:325 정합). 산식=가설, N=검증 진행 중.
+        # Universe funnel — 품질 floor 기반 (5000 = cap 상한, 목표 아님; floor 통과 전체가 정의).
+        # 실 투자가능 = wide_scan c_gate input_n (KR ~1,600 + US ~150 fallback). 5000 도달 불가
+        # (KR 상장 ~2,700 + US S&P100 fallback). 산식=가설, N=검증 진행 중.
         "funnel": {
-            "stages": [5000, 1000, 300, 100, 10],
-            "labels": ["전체", "1차 필터", "2차", "정밀", "Top 10"],
-            "status": "가설 (1-4단계 일부 미구현, 현 5000→25 직접)",
+            "investable_real": _inv,
+            "cap": 5000,
+            "stages": [_inv or 0, 300, 100, 25],
+            "labels": ["투자가능(floor)", "정밀", "brain100", "Top 25"],
+            "status": (
+                "5000=cap(상한)·도달 불가. 실 투자가능 ~%s → 25. US=S&P100 fallback "
+                "(universe_us.json 부재). 산식=가설, 검증 N 진행 중." % (_inv or "?")
+            ),
         },
         "health": {
             "infra_summary": infra.get("summary"),
