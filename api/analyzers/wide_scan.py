@@ -332,7 +332,7 @@ def _piotroski_f_score(stock: dict) -> dict:
 
     available = [v for v in criteria.values() if v is not None]
     available_n = len(available)
-    # available_n ≥ 3 (current/Δ 모두 부재라도 c1+c2+c4 는 가능) 일 때 부분 score 박음
+    # available_n ≥ 3 (current/Δ 모두 부재라도 c1+c2+c4 는 가능) 일 때 부분 score 산출
     score = sum(1 for v in available if v is True) if available_n >= 3 else None
 
     return {
