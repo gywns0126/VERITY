@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-06-09T00:01:10.894405+09:00",
+  "generated_at": "2026-06-09T03:07:40.738445+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 158978,
-    "python_modules": 451,
-    "tsx_components": 45,
-    "json_data_files": 215,
-    "json_total_tracked": 230,
+    "code_lines_tsx_py": 159953,
+    "python_modules": 456,
+    "tsx_components": 46,
+    "json_data_files": 219,
+    "json_total_tracked": 234,
     "workflows": 41,
     "scheduled_workflows": 32,
     "cron_triggers": 41,
-    "git_tracked_files": 4883
+    "git_tracked_files": 4897
   },
   "subsystems": {
     "ingest": {
@@ -81,7 +81,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 49,
+      "count": 50,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -112,6 +112,7 @@
         "api/intelligence/macro_themes_brief.py",
         "api/intelligence/market_horizon.py",
         "api/intelligence/monthly_aggregator.py",
+        "api/intelligence/multibagger_watch.py",
         "api/intelligence/novelty.py",
         "api/intelligence/periodic_report.py",
         "api/intelligence/perplexity_realtime.py",
@@ -421,12 +422,12 @@
     },
     "surface": {
       "label": "출력",
-      "count": 45,
+      "count": 46,
       "by_group": {
         "_shared": 10,
         "market": 10,
+        "admin": 6,
         "analysis": 6,
-        "admin": 5,
         "us": 4,
         "home": 3,
         "portfolio": 3,
@@ -437,7 +438,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 215
+      "count": 219
     },
     "validation": {
       "label": "검증",
@@ -452,8 +453,8 @@
     }
   },
   "python_by_dir": {
-    "api": 271,
-    "tests": 88,
+    "api": 275,
+    "tests": 89,
     "scripts": 45,
     "vercel-api": 39,
     "server": 6,
