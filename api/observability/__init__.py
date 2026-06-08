@@ -78,8 +78,11 @@ def run_full_observability(portfolio: Optional[dict],
     # 2b. grade distribution drift (NQ3 wiring, 2026-06-07 dc8c3b5b) — 출력 등급 PSI.
     #     feature_drift(입력)와 별개. alert_level 은 dispatch_alerts 가 소비.
     try:
-        from .grade_distribution_drift import evaluate_grade_drift
+        from .grade_distribution_drift import evaluate_grade_drift, log_drift_evaluation
         out["grade_drift"] = evaluate_grade_drift(portfolio)
+        # ledger 적재 — drift 추세 trail (full-only, save_jsonl 게이트로 잡음 0). NQ3 wiring 누락분 보강 2026-06-08.
+        if save_jsonl and out["grade_drift"]:
+            log_drift_evaluation(out["grade_drift"])
     except Exception as e:  # noqa: BLE001
         logger.warning("observability: grade_drift failed: %s", e, exc_info=True)
         out["grade_drift"] = None
