@@ -328,3 +328,79 @@ def persist_health(result: Dict[str, Any]) -> str:
     except OSError as e:
         logger.warning("data_health: persist failed: %s", e)
         return ""
+
+
+def summarize_pipeline_stability(days: int = 30) -> Dict[str, Any]:
+    """N일(기본 30) 데이터 파이프라인 안정성 집계 — 월간 관리자 PDF §9-3.
+
+    2026-06-08 신설 — monthly_admin_pdf 가 존재하지 않는 `api.metadata.data_health.summarize`
+    를 호출(silent fallback)해 해당 섹션이 실데이터를 한 번도 렌더하지 못한 잠복 버그 정공법 fix.
+    실측 source 만 사용(외부 호출 0, 모든 진입점 try/except — spec §6):
+      - cron_health.jsonl: cron 헬스 체크 시계열 (severity PASS/WARNING/CRITICAL + findings)
+      - data_pipeline_health.json: 현 소스 신선도 스냅샷 (fresh/stale/missing/total)
+    옛 deadman/parse/fetch/uptime 필드는 추적된 적 없는 가공 필드 → 실측 지표로 대체 (RULE 10).
+
+    반환: available=False 면 데이터 부족. True 면 checks/pass/warning/critical/stability_pct
+          + current_status/sources_fresh/sources_stale/sources_missing/sources_total
+          + recent_findings(최근 경고 ≤3).
+    """
+    out: Dict[str, Any] = {"available": False, "days": days}
+    cutoff = now_kst() - timedelta(days=days)
+
+    # 1. cron_health.jsonl 시계열 (severity 분포 + 최근 findings)
+    ch_path = os.path.join(DATA_DIR, "metadata", "cron_health.jsonl")
+    try:
+        n_pass = n_warn = n_crit = 0
+        recent: list = []
+        with open(ch_path, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    e = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                ts = _parse_iso_kst(e.get("ts_kst"))
+                if ts is not None and ts < cutoff:
+                    continue
+                sev = (e.get("severity") or "").upper()
+                if sev == "PASS":
+                    n_pass += 1
+                elif sev in ("WARNING", "WARN"):
+                    n_warn += 1
+                elif sev in ("CRITICAL", "P0", "ERROR"):
+                    n_crit += 1
+                fnd = e.get("findings")
+                if fnd:
+                    for s in (fnd if isinstance(fnd, list) else [fnd]):
+                        recent.append(str(s))
+        checks = n_pass + n_warn + n_crit
+        if checks:
+            out.update({
+                "available": True,
+                "checks": checks,
+                "pass": n_pass,
+                "warning": n_warn,
+                "critical": n_crit,
+                "stability_pct": round(n_pass / checks * 100, 1),
+                "recent_findings": recent[-3:],  # 시간순 마지막 = 최신
+            })
+    except OSError:
+        pass
+
+    # 2. 현 데이터 소스 신선도 스냅샷
+    ph_path = os.path.join(DATA_DIR, "metadata", "data_pipeline_health.json")
+    try:
+        with open(ph_path, "r", encoding="utf-8") as f:
+            ph = json.load(f)
+        summ = ph.get("summary") or {}
+        out.update({
+            "available": True,
+            "current_status": ph.get("overall_status", "unknown"),
+            "sources_fresh": summ.get("fresh"),
+            "sources_stale": summ.get("stale"),
+            "sources_missing": summ.get("missing"),
+            "sources_total": summ.get("total"),
+        })
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    return out

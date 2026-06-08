@@ -1029,13 +1029,24 @@ def _render_chap9_next(pdf: VerityPDF, analysis: Dict[str, Any],
         pdf.text_block("LLM 호출량 데이터 부족", color=pdf.GRAY)
 
     pdf.subsection_title("9-3. 데이터 파이프라인 안정성")
+    # 2026-06-08 정공법 fix — 옛 `api.metadata.data_health.summarize`(부재 모듈/함수, silent
+    # fallback 으로 실데이터 0회 렌더)를 실측 집계 summarize_pipeline_stability 로 교체.
     try:
-        from api.metadata import data_health
-        hs = data_health.summarize(days=30)
-        pdf.text_block(f"deadman 발동 {hs.get('deadman_count', 0)}건 · "
-                      f"파싱 오류 {hs.get('parse_errors', 0)}건 · "
-                      f"수집 실패 {hs.get('fetch_failures', 0)}건 · "
-                      f"가동률 {hs.get('uptime_pct', 99)}%")
+        from api.observability import data_health
+        hs = data_health.summarize_pipeline_stability(days=30)
+        if hs.get("available"):
+            pdf.text_block(
+                f"30일 헬스체크 {hs.get('checks', 0)}회 · 안정 {hs.get('stability_pct', 0)}% "
+                f"(PASS {hs.get('pass', 0)} / 경고 {hs.get('warning', 0)} / 위험 {hs.get('critical', 0)})")
+            pdf.text_block(
+                f"현재 소스 신선도 {hs.get('sources_fresh', '—')}/{hs.get('sources_total', '—')} "
+                f"· 결측 {hs.get('sources_missing', '—')} · 상태 {hs.get('current_status', 'unknown')}")
+            rf = hs.get("recent_findings") or []
+            if rf:
+                pdf._set_font("", 8); pdf.set_text_color(*pdf.INK_SECONDARY); pdf.set_x(18)
+                pdf.cell(0, 5, ("· 최근 경고: " + "; ".join(str(x) for x in rf))[:150]); pdf.ln(5)
+        else:
+            pdf.text_block("데이터 파이프라인 안정성 데이터 부족", color=pdf.GRAY)
     except Exception:
         pdf.text_block("데이터 파이프라인 안정성 데이터 부족", color=pdf.GRAY)
 
