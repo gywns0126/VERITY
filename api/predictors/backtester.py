@@ -400,9 +400,11 @@ WEIGHT_COMBINATIONS: List[Dict[str, float]] = [
 ]
 CURRENT_WEIGHTS = {"fact": 0.70, "sentiment": 0.30}
 
-# verity_brain.GRADE_ORDER 와 동일 (constitution decision_tree 기반)
+# verity_brain.GRADE_ORDER 와 동일 — constitution decision_tree.grades 와 값 일치 의무.
+# 2026-06-08 drift 정정 30→25 (병렬 세션 audit, PM 승인). CAUTION=25 = 6/7 통일(6dd748e8)
+# 과 비교성 복구. 백테스트 속도 위해 로컬 list 유지, 값은 constitution(25) 추종.
 _GRADE_THRESHOLDS = [("STRONG_BUY", 75), ("BUY", 60), ("WATCH", 45),
-                     ("CAUTION", 30), ("AVOID", 0)]
+                     ("CAUTION", 25), ("AVOID", 0)]
 _GRADE_ORDER = ["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"]
 
 

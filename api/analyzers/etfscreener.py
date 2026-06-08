@@ -194,7 +194,7 @@ def calc_verity_etf_score(etf: Dict[str, Any]) -> Dict[str, Any]:
             signal = "BUY"
         elif verity_score >= 45:
             signal = "WATCH"
-        elif verity_score >= 30:
+        elif verity_score >= 25:
             signal = "CAUTION"
         else:
             signal = "AVOID"

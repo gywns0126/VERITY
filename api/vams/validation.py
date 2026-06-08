@@ -359,7 +359,8 @@ def compute_validation_report(
         ),
     }
     # Expectancy AND-gate (2026-05-16 Perplexity MED-D1 승인, config 정의 → 본 구현 88b40aa2).
-    # 승률 55% 단독 불충분 → Expectancy ≥ 1.2R 동반 의무(이중 임계). RULE 7: hit rate + expectancy 병기.
+    # 승률 55% 단독 불충분 → Expectancy 동반 의무(이중 임계). RULE 7: hit rate + expectancy 병기.
+    # 임계 0.25R (2026-06-07 재보정 6ecf2c59, Perplexity 승인). 실제 게이트 = VAMS_MIN_EXPECTANCY_R.
     # ⚠️ 게이트는 N 충분(trades_ok) 시에만 활성 — VAMS 5/17 리셋, 65거래일 게이트 ~8월까지 pass=None.
     m_expectancy = {
         "expectancy_r": trade["expectancy_r"],
