@@ -470,7 +470,7 @@ def _score_stock(stock: dict) -> Tuple[float, dict]:
 # ── 메인 진입점 ──────────────────────────────────────────────────────
 def _persist_shadow_picks(passed_100: List[Tuple[float, str, dict]],
                           stocks_map: dict, scan_iso: str) -> None:
-    """e_brain_quick 100-name (점수+entry_price) 영속화 → emission 입력원.
+    """e_factor_rank 100-name (composite 점수+entry_price) 영속화 → emission 입력원.
 
     Shadow Funnel Scoring Spec v0: generate_predictions 가 읽어 source=shadow_funnel.v0 예측 발생.
     entry_price = scan 시점 가격 동결 (PIT, §3). 실패해도 funnel 진행 (부수효과).
@@ -490,7 +490,7 @@ def _persist_shadow_picks(passed_100: List[Tuple[float, str, dict]],
             "currency": sd.get("currency"),
             "name": sd.get("name"),
         })
-    out = {"scan_at": scan_iso, "stage": "e_brain_quick", "n": len(picks), "picks": picks}
+    out = {"scan_at": scan_iso, "stage": "e_factor_rank", "n": len(picks), "picks": picks}
     path = _os.path.join(_DATA_DIR, "metadata", "shadow_funnel_picks.json")
     _os.makedirs(_os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
@@ -594,7 +594,7 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
                              "top10_tickers": [t for _, t, _ in passed_300[:10]]})
         _append_jsonl(step_d_entry)
 
-        passed_100, step_e_entry = _step_e_brain_quick(passed_300, target_n=100)
+        passed_100, step_e_entry = _step_e_factor_rank(passed_300, target_n=100)
         step_e_entry.update({"ts": now_iso, "label": LABEL, "mode": WIDE_SCAN_MODE,
                              "top10_tickers": [t for _, t, _ in passed_100[:10]]})
         _append_jsonl(step_e_entry)
@@ -649,42 +649,28 @@ def _step_d_precision_filter(passed_1k: List[Tuple[float, str, dict]],
     }
 
 
-def _step_e_brain_quick(passed_300: List[Tuple[float, str, dict]],
+def _step_e_factor_rank(passed_300: List[Tuple[float, str, dict]],
                         target_n: int = 100) -> Tuple[List[Tuple[float, str, dict]], dict]:
-    """Step 3 (300 → 100) Brain v5 quick path.
+    """Step 3 (300 → 100) 팩터 composite 상위 truncation.
 
-    fact 0.7 * fact_score + sentiment 0.3 * sentiment_score quick 산식.
-    SHADOW 모드라 portfolio 호출 X — stock dict 의 기존 fact/sentiment 컴포넌트 활용.
-    완전 호출 (verity_brain._compute_fact/_sentiment) 은 운영 부담 — 단순 proxy 사용.
+    Y 설계 (2026-06-08 audit #17, PM 승인): funnel = 순수 팩터 모델(검증 트랙). Brain 은 funnel
+    내장 X — 최종 25 의 분리 레이어(라이브 경로)에서 전량 적용. 섀도우(팩터only) IC vs 프로덕션
+    (팩터+Brain) IC = paired 비교(ic_stats.paired_ic_test)로 Brain 증분 엣지 *측정* → 검증 후 X
+    (Brain in funnel: 부분@100 + 전량@25) 승격.
+    구 e_brain_quick proxy(가짜 fact/sentiment 0.7/0.3) 제거 — 실 Brain(fact 15컴포넌트 / sentiment 13
+    뉴스·소셜 소스)과 매핑 불가 + momentum=sentiment 오분류였음. passed_300 = composite(#6/#3 개선) desc
+    정렬 → 상위 truncation. score = composite (검증되는 팩터 모델 점수).
     """
-    rescored = []
-    for composite, ticker, breakdown in passed_300:
-        # proxy: stock dict 에서 fact/sentiment 신호 발견 가능한 dim avg 활용
-        # value + profitability + safety = fact proxy. momentum + payout = sentiment proxy.
-        fact_proxy = (
-            breakdown.get("value", 50) * 0.35
-            + breakdown.get("profitability", 50) * 0.35
-            + breakdown.get("safety", 50) * 0.30
-        )
-        sent_proxy = (
-            breakdown.get("momentum", 50) * 0.60
-            + breakdown.get("payout", 50) * 0.40
-        )
-        brain_quick = round(fact_proxy * 0.7 + sent_proxy * 0.3, 2)
-        rescored.append((brain_quick, ticker, {**breakdown, "_brain_quick": brain_quick}))
-
-    rescored.sort(key=lambda t: t[0], reverse=True)
-    target = min(target_n, len(rescored))
-    out = rescored[:target]
+    n = len(passed_300)
+    target = min(target_n, n)
+    out = passed_300[:target]  # 이미 composite 내림차순 (c_gate 산출)
     return out, {
-        "step": "e_brain_quick",
-        "input_n": len(passed_300),
+        "step": "e_factor_rank",
+        "input_n": n,
         "target_n": target,
         "passed_n": len(out),
-        "weights": {"fact": 0.7, "sentiment": 0.3},
-        "fact_proxy_dims": {"value": 0.35, "profitability": 0.35, "safety": 0.30},
-        "sentiment_proxy_dims": {"momentum": 0.60, "payout": 0.40},
-        "note": "proxy 산식 — verity_brain 정식 호출은 SHADOW 운영 부담. brain_quick top N.",
+        "mode_active": "composite_topN",
+        "note": "Y: 순수 팩터 composite top-N (Brain 미개입). Brain=최종25 분리 레이어. 검증 후 X 승격.",
     }
 
 
