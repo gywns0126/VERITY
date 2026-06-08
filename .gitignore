@@ -40,8 +40,12 @@ data/*.json.bak.*
 .vercel
 data/cache/5r_analysis/
 data/analysis/_archive/
-# ARENA = 본인 only (Pre-Sprint 0 B축 산출물). public repo 노출 차단 (2026-05-31)
-data/arena/
+# ARENA B축 산출물(asset_stats μ/σ 엣지) = 비공개 유지. 버서커 shadow 3파일만 공개
+# (검증 trail = win condition 공개 차별점, PM 2026-06-08). dir 내용 ignore + 3파일 카브.
+data/arena/*
+!data/arena/berserker_status.json
+!data/arena/berserker_shadow.jsonl
+!data/arena/berserker_shadow_score.json
 
 # P2 추가 (2026-05-02)
 logs/

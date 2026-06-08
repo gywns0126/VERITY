@@ -123,7 +123,7 @@ jobs:
           # 6번째 RULE 4 violation 학습 (CLAUDE.md 5번째 명시 후 재발) — 2026-05-17 audit.
           # SystemHealthBar 의 DATA PIPELINE (Phase 2-B) 섹션 source 정합.
           git add data/metadata/data_pipeline_health.json 2>/dev/null || true
-          # shadow_funnel_picks.json — wide_scan e_brain_quick 100-name (emission 입력).
+          # shadow_funnel_picks.json — wide_scan e_factor_rank 100-name (emission 입력).
           # RULE 4: specific git add 라 신규 파일 누락 시 silent 손실 (위 5~6차 사고 패턴).
           # generate_predictions(daily_analysis_full)가 다음 cron 에서 읽어 source=shadow_funnel.v0 예측 발생.
           git add data/metadata/shadow_funnel_picks.json 2>/dev/null || true

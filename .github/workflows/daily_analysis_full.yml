@@ -321,6 +321,16 @@ jobs:
         continue-on-error: true
         run: python scripts/score_predictions.py
 
+      - name: ARENA 버서커 shadow (검증 진행도 status + 보수 vs 버서커 trail)
+        # 2026-06-08 — recommendations.json 생성 후 실행. berserker_status.json(공격 다이얼+잠금
+        # 카운트다운) + berserker_shadow.jsonl(일별 목표 포트폴리오 trail) + score.json 산출.
+        # 다음 step git add data/ (broad) + gitignore 카브(data/arena/* + 버서커 3파일 !) = RULE 4 정합.
+        # shadow only(실자본 0). 입력 결손 시 graceful. spec [[project_arena_kickoff_2026_05_30]] 6/8.
+        continue-on-error: true
+        run: |
+          python -m api.arena.berserker_status
+          python -m api.arena.berserker_shadow
+
       - name: Commit & push results
         run: |
           git config user.name "AI Stock Bot"

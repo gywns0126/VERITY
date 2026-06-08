@@ -120,8 +120,8 @@ def test_shadow_mode_appends_jsonl(tmp_path, monkeypatch):
     assert result["target_n"] == 1  # 5 × 0.22 = 1.1 → int 1
     assert result["passed_n"] == 1  # step (b2) — 7차원 absolute scoring → 22% cut
 
-    # jsonl schema 검증 — 2026-05-17 funnel sprint Step 2-4 cascading 박힌 후:
-    # step 1 (c_gate_prep) + step 2 (d_precision_fallback) + step 3 (e_brain_quick) + step 4 (f_sector_diversified) = 4 entries
+    # jsonl schema 검증 — 2026-05-17 funnel sprint Step 2-4 cascading 도입 후:
+    # step 1 (c_gate_prep) + step 2 (d_precision_fallback) + step 3 (e_factor_rank) + step 4 (f_sector_diversified) = 4 entries
     assert log_path.exists()
     lines = log_path.read_text(encoding="utf-8").strip().split("\n")
     assert len(lines) == 4  # cascading 4 단계 entry
@@ -142,7 +142,7 @@ def test_shadow_mode_appends_jsonl(tmp_path, monkeypatch):
     steps_present = {json.loads(l).get("step") for l in lines}
     assert "c_gate_prep" in steps_present
     assert "d_precision_fallback" in steps_present
-    assert "e_brain_quick" in steps_present
+    assert "e_factor_rank" in steps_present
     assert "f_sector_diversified" in steps_present
 
 
@@ -216,7 +216,7 @@ def test_financial_safety_neutralized():
 def test_fscore_returns_explicit_dict():
     """step (c+) — F-Score 가 9 항목 explicit dict 반환. 가용 = c1 (ROA), c2 (CFO), c4 (CFO>NI)."""
     from api.analyzers import wide_scan as ws
-    # ROA + CFO + EPS + shares 박은 sample
+    # ROA + CFO + EPS + shares 포함 sample
     rich = {
         "ticker": "RICH", "roa": 8.0, "operating_cashflow": 5_000_000_000,
         "eps": 1000, "shares_outstanding": 1_000_000,  # NI proxy = 1e9 < CFO
@@ -280,7 +280,7 @@ def test_jsonl_includes_gate_stats(tmp_path, monkeypatch):
 
     stocks = _sample_stocks()
     ws.run_wide_scan_shadow(stocks, run_at_iso="2026-05-10T18:00:00+09:00")
-    # 2026-05-17 funnel sprint Step 2-4 cascading 박힘 — jsonl 첫 줄 (c_gate_prep) 만 parse
+    # 2026-05-17 funnel sprint Step 2-4 cascading 적용 — jsonl 첫 줄 (c_gate_prep) 만 parse
     lines = log_path.read_text(encoding="utf-8").strip().split("\n")
     entry = json.loads(lines[0])  # c_gate_prep
     assert entry["step"] == "c_gate_prep"
@@ -291,7 +291,7 @@ def test_jsonl_includes_gate_stats(tmp_path, monkeypatch):
     assert gs["data_source"] == "stock_dict_v0"
     # 5 sample 중 ROE 가진 종목 = 5 (모두 roe 필드 있음, 음수 포함) → fscore_available_n=5
     assert gs["fscore_available_n"] == 5
-    # 5 sample 모두 ROA + CFO + EPS + shares 박혀 있음 → c1+c2+c4 가용 → available_n=3 ≥ 3 → score 박힘
+    # 5 sample 모두 ROA + CFO + EPS + shares 포함됨 → c1+c2+c4 가용 → available_n=3 ≥ 3 → score 산출됨
     assert gs["fscore_full_n"] == 5
 
 

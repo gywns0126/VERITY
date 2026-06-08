@@ -68,7 +68,7 @@ _SHADOW_SOURCE = "shadow_funnel.v0"
 def generate_shadow_predictions(
     picks: List[Dict[str, Any]], path: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """섀도우 funnel e_brain_quick 100-name → forward 예측 (Shadow Funnel Scoring Spec v0).
+    """섀도우 funnel e_factor_rank 100-name → forward 예측 (Shadow Funnel Scoring Spec v0).
 
     picks = [{"ticker","score","entry_price","currency","name"}, ...] (wide_scan persist).
     source="shadow_funnel.v0" 분리 태그 → 프로덕션 IC 와 별도 집계/비교 (§5).
@@ -90,7 +90,7 @@ def generate_shadow_predictions(
             "entry_price": p.get("entry_price"),  # scan 시점 동결 (pykrx backward-adjust drift 회피)
             "currency": p.get("currency"),
             "name": p.get("name"),
-            "stage": "e_brain_quick",
+            "stage": "e_factor_rank",
             "source": _SHADOW_SOURCE,
         }
         for h in _HORIZONS:
