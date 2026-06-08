@@ -35,6 +35,7 @@ from api.analyzers.sector_thresholds import (
     resolve_sector_bucket,
     get_per_thresholds,
     get_pbr_thresholds,
+    get_debt_ratio_thresholds,
 )
 
 WIDE_SCAN_LOG_PATH = Path("data/wide_scan_log.jsonl")
@@ -79,14 +80,18 @@ WIDE_SCAN_TARGET_RATIO = 0.22  # Q4: 5,000 → 1,000 (22%)
 LABEL = "v0_heuristic"          # 메모리 원칙 2
 
 # 7차원 가중치 (Q1 답 — AQR QMJ 4차원 + Value/Momentum/Liquidity 분산)
+# #3 (2026-06-08 설계 audit, RULE 7): liquidity = 게이트키퍼(hard_floor 가 이미 게이트) →
+# composite selection 가중에서 제거(0.0). 이중적용(게이트+soft weight) + 대형주 틸트(Amihud 반대)
+# 회피. 잔여 6 = 기존 상대 가중치 *비례 renormalize* (sum 0.90 → 1.0, 새 판단 0). liquidity
+# breakdown 은 로깅 유지(gate_stats). 단일 selection 신호 = 펀더멘털 6요인.
 DIM_WEIGHTS = {
-    "liquidity":     0.10,
-    "value":         0.20,
-    "profitability": 0.20,
-    "growth":        0.10,  # 단년 데이터 한계 → 가중치 낮게. step (c) 에서 3Y CAGR 추가 후 상향
-    "safety":        0.15,
-    "payout":        0.10,
-    "momentum":      0.15,
+    "liquidity":     0.0,      # composite 제외 (게이트는 hard_floor). 로깅용 breakdown 은 유지
+    "value":         0.2222,   # 0.20 / 0.90
+    "profitability": 0.2222,   # 0.20 / 0.90
+    "growth":        0.1111,   # 0.10 / 0.90 (단년 한계 → 최저. step c 3Y CAGR 후 RULE 7 재검토)
+    "safety":        0.1667,   # 0.15 / 0.90
+    "payout":        0.1111,   # 0.10 / 0.90
+    "momentum":      0.1667,   # 0.15 / 0.90
 }
 assert abs(sum(DIM_WEIGHTS.values()) - 1.0) < 1e-9, "DIM_WEIGHTS 합 1.0 위반"
 
@@ -198,9 +203,14 @@ def _score_growth(stock: dict, bucket: str) -> float:
 
 
 def _score_safety(stock: dict) -> float:
-    """Q1 QMJ Safety: debt_ratio (sector-aware) + current_ratio.
+    """Q1 QMJ Safety: debt_ratio (섹터-aware 밴드) + current_ratio.
 
-    금융업 (bucket=금융) 은 debt_ratio 점수 무효화 (50점 = 모름).
+    #6 (2026-06-08 설계 audit, RULE 7): debt_score 를 단일 글로벌 curve →
+    get_debt_ratio_thresholds(bucket) 의 검증된 밴드(normal_max/high/avoid) 기반 monotone
+    piecewise 로 교체. 밴드값 = 한국은행-검증 기존 임계 재사용 (새 계수 0). value/growth 와
+    sector-awareness 일관 ([[feedback_sector_aware_thresholds]]). 앵커(100/70/40/0) = 밴드-의미
+    구조값(0부채=최고 / normal_max=정상상한 / high=다운그레이드 / avoid=AVOID), 결과-튜닝 아님.
+    금융업 (bucket=금융) 은 debt_score 무효화 (50 = 모름, is_financial_excluded 철학 정합).
     현재 Beta / Volatility / Earnings Variability 미가용 — step (c) 보강.
     """
     debt = float(stock.get("debt_ratio") or 0)
@@ -209,12 +219,19 @@ def _score_safety(stock: dict) -> float:
 
     if bucket == "금융":
         debt_score = 50.0  # 금융업은 자체 부채구조 — 일반 임계값 미적용
+    elif debt <= 0:
+        debt_score = 50.0  # 결손 = 모름 (neutral)
     else:
-        # 30 = 100점, 200 = 0점
-        if debt <= 0:
-            debt_score = 50.0
-        else:
-            debt_score = _clamp(100 - (debt - 30) / 1.7, 0, 100)
+        t = get_debt_ratio_thresholds(bucket)  # 섹터별 normal_max/high/avoid (검증 밴드 재사용)
+        nm, hi, av = t["normal_max"], t["high"], t["avoid"]
+        if debt <= nm:                  # 정상 범위 → [70, 100]
+            debt_score = _clamp(100.0 - (debt / nm) * 30.0, 70.0, 100.0)
+        elif debt <= hi:                # 고부채 다운그레이드 → [40, 70]
+            debt_score = _clamp(70.0 - (debt - nm) / max(hi - nm, 1e-9) * 30.0, 40.0, 70.0)
+        elif debt <= av:                # 위험 → [0, 40]
+            debt_score = _clamp(40.0 - (debt - hi) / max(av - hi, 1e-9) * 40.0, 0.0, 40.0)
+        else:                           # avoid 초과
+            debt_score = 0.0
     # 유동비율: 1.0 = 0점, 2.0 = 100점
     if cr <= 0:
         cr_score = 50.0
