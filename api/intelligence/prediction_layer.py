@@ -61,6 +61,46 @@ def generate_stock_predictions(
     return out
 
 
+# 섀도우 funnel 예측 source 태그 (Shadow Funnel Scoring Spec v0). production 과 분리 집계.
+_SHADOW_SOURCE = "shadow_funnel.v0"
+
+
+def generate_shadow_predictions(
+    picks: List[Dict[str, Any]], path: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """섀도우 funnel e_brain_quick 100-name → forward 예측 (Shadow Funnel Scoring Spec v0).
+
+    picks = [{"ticker","score","entry_price","currency","name"}, ...] (wide_scan persist).
+    source="shadow_funnel.v0" 분리 태그 → 프로덕션 IC 와 별도 집계/비교 (§5).
+    pred_score = funnel 합성점수 (cross-section rank-IC 입력). entry_price 는 signals 에 동결 (PIT, §3).
+    """
+    out: List[Dict[str, Any]] = []
+    for p in picks or []:
+        ticker = p.get("ticker")
+        score = p.get("score")
+        if not ticker or score is None:
+            continue  # 결손 = skip (graceful)
+        direction = "up" if float(score) >= 50.0 else "neutral"
+        signals = {
+            "funnel_score": score,
+            "entry_price": p.get("entry_price"),  # scan 시점 동결 (pykrx backward-adjust drift 회피)
+            "currency": p.get("currency"),
+            "name": p.get("name"),
+            "stage": "e_brain_quick",
+            "source": _SHADOW_SOURCE,
+        }
+        for h in _HORIZONS:
+            out.append(
+                PT.log_prediction(
+                    target_type="stock", target=str(ticker), horizon=h,
+                    direction=direction, pred_score=float(score), confidence=0.5,
+                    signals=signals, spec_version="shadow.v0", source=_SHADOW_SOURCE,
+                    path=path,
+                )
+            )
+    return out
+
+
 def generate_sector_predictions(
     macro_alignment: Dict[str, Any], path: Optional[str] = None
 ) -> List[Dict[str, Any]]:

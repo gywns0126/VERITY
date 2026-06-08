@@ -42,17 +42,29 @@ def main() -> int:
 
     if isinstance(recs, dict):
         recs = recs.get("recommendations") or recs.get("data") or []
-    if not recs:
-        sys.stderr.write("[predict] recommendations 없음/빈값 — skip (graceful exit 0)\n")
-        return 0
+    # 프로덕션 예측 (recs 결손 시 skip — 섀도우는 독립 진행)
+    if recs:
+        summary = PL.run_prediction_layer(recs, macro if isinstance(macro, dict) else {}, path=args.out)
+        print(
+            f"[predict] logged {summary['total']} "
+            f"(stock {summary['stock_predictions']} + sector {summary['sector_predictions']})"
+        )
+        if summary["total"] == 0:
+            sys.stderr.write("[predict] 생성 0건 — verity_brain/sectors 결손 가능 (graceful)\n")
+    else:
+        sys.stderr.write("[predict] recommendations 없음 — production skip (graceful)\n")
 
-    summary = PL.run_prediction_layer(recs, macro if isinstance(macro, dict) else {}, path=args.out)
-    print(
-        f"[predict] logged {summary['total']} "
-        f"(stock {summary['stock_predictions']} + sector {summary['sector_predictions']})"
-    )
-    if summary["total"] == 0:
-        sys.stderr.write("[predict] 생성 0건 — verity_brain/sectors 결손 가능 (graceful)\n")
+    # 섀도우 funnel 예측 (Shadow Funnel Scoring Spec v0 — source 분리, 독립 진행)
+    shadow = _load(os.path.join(DATA_DIR, "metadata", "shadow_funnel_picks.json"))
+    if isinstance(shadow, dict) and shadow.get("picks"):
+        sh = PL.generate_shadow_predictions(shadow["picks"], path=args.out)
+        print(
+            f"[predict] shadow logged {len(sh)} "
+            f"(funnel {len(shadow['picks'])} × {len(PL._HORIZONS)}h, source={PL._SHADOW_SOURCE})"
+        )
+    else:
+        sys.stderr.write("[predict] shadow_funnel_picks 없음/빈값 — shadow skip (graceful)\n")
+
     return 0
 
 

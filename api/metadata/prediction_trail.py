@@ -37,6 +37,7 @@ def log_prediction(
     rank: Optional[int] = None,
     low_confidence: bool = False,
     spec_version: str = "v0",
+    source: Optional[str] = None,
     path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """예측 1건 로깅 (append-only, forward-only). 실패해도 caller 진행 (예측 = 부수효과)."""
@@ -53,10 +54,16 @@ def log_prediction(
     created_iso = now.strftime("%Y-%m-%dT%H:%M:%S+09:00")
     eval_date = eval_dt.strftime("%Y-%m-%d")
 
+    # source 구분 시 pred_id 충돌 회피 (프로덕션 vs 섀도우 동일 ticker/horizon).
+    pid = f"{now.strftime('%Y%m%d')}-{target}-{horizon}"
+    if source:
+        pid += f"-{source.split('.')[0]}"  # "shadow_funnel.v0" → suffix "shadow_funnel"
+
     entry = {
-        "pred_id": f"{now.strftime('%Y%m%d')}-{target}-{horizon}",
+        "pred_id": pid,
         "created_at": created_iso,
         "spec_version": spec_version,
+        "source": source or "production",   # IC 집계 source 분리 (Shadow Funnel Scoring Spec v0 §5)
         "target_type": target_type,
         "target": target,
         "horizon": horizon,

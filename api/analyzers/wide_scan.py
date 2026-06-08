@@ -451,6 +451,35 @@ def _score_stock(stock: dict) -> Tuple[float, dict]:
 
 
 # ── 메인 진입점 ──────────────────────────────────────────────────────
+def _persist_shadow_picks(passed_100: List[Tuple[float, str, dict]],
+                          stocks_map: dict, scan_iso: str) -> None:
+    """e_brain_quick 100-name (점수+entry_price) 영속화 → emission 입력원.
+
+    Shadow Funnel Scoring Spec v0: generate_predictions 가 읽어 source=shadow_funnel.v0 예측 발생.
+    entry_price = scan 시점 가격 동결 (PIT, §3). 실패해도 funnel 진행 (부수효과).
+    """
+    import json as _json
+    import os as _os
+    from api.config import DATA_DIR as _DATA_DIR
+
+    picks = []
+    for score, ticker, _bd in passed_100:
+        sd = (stocks_map or {}).get(ticker) or {}
+        price = sd.get("current_price") or sd.get("price") or sd.get("close")
+        picks.append({
+            "ticker": ticker,
+            "score": round(float(score), 2),
+            "entry_price": price,
+            "currency": sd.get("currency"),
+            "name": sd.get("name"),
+        })
+    out = {"scan_at": scan_iso, "stage": "e_brain_quick", "n": len(picks), "picks": picks}
+    path = _os.path.join(_DATA_DIR, "metadata", "shadow_funnel_picks.json")
+    _os.makedirs(_os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        _json.dump(out, f, ensure_ascii=False, indent=2)
+
+
 def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None) -> dict:
     """Phase 2-B Coarse Filter shadow 실행 — decision 영향 0.
 
@@ -552,6 +581,9 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
         step_e_entry.update({"ts": now_iso, "label": LABEL, "mode": WIDE_SCAN_MODE,
                              "top10_tickers": [t for _, t, _ in passed_100[:10]]})
         _append_jsonl(step_e_entry)
+
+        # emission 입력: 100-name 점수 persist (Shadow Funnel Scoring Spec v0 §2 N≥100)
+        _persist_shadow_picks(passed_100, stocks_map, now_iso)
 
         passed_25, step_f_entry = _step_f_sector_diversified(
             passed_100, stocks_map, target_kr=10, target_us=15
