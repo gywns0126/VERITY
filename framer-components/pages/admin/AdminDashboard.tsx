@@ -730,6 +730,80 @@ function CardTradePlanV0({ portfolio }: { portfolio: any }) {
 }
 
 
+/* CardCrossLink — trust 자가진단 verdict ↔ backtest 실수익 정합 (cross_link_layer P2). 검증 전용. */
+function CardCrossLink({ portfolio }: { portfolio: any }) {
+    const cl = portfolio?.observability?.cross_link || null
+
+    if (!cl || !cl.operating_phase) {
+        return (
+            <Card title=" cross-link 검증 (자가진단 ↔ 실수익)" status="ok">
+                <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
+                    측정 대기 — full 분석 1회 후 활성.
+                </div>
+            </Card>
+        )
+    }
+
+    const phase: string = cl.operating_phase
+    const phaseLabel: Record<string, string> = {
+        INSUFFICIENT_DATA: "데이터 부족 (거래 누적 전)",
+        STALE_UNKNOWN: "STALE (신선도 미달)",
+        TIER3_DISABLED: "Tier3 비활성",
+        FULLY_ACTIVE: "정합 측정 활성",
+    }
+    const instantHold: boolean = !!cl.instant_hold
+    const alertTier = cl.alert_tier || null
+    const baselineAlert = cl.baseline_alert || null
+    const violationClear: boolean = cl.violation_clear !== false
+
+    let cardStatus: "ok" | "warn" | "danger" = "ok"
+    if (instantHold || alertTier === "critical") cardStatus = "danger"
+    else if (baselineAlert || alertTier === "warn" || !violationClear) cardStatus = "warn"
+
+    const verdictLabel: Record<string, string> = {
+        manual_review: "수동 검토",
+        hold: "보류",
+        pass: "통과",
+    }
+
+    return (
+        <Card title=" cross-link 검증 (자가진단 ↔ 실수익)" status={cardStatus}>
+            <Row label="운영 단계" value={
+                <span style={{ color: phase === "FULLY_ACTIVE" ? C.success : C.textSecondary, fontWeight: 700 }}>
+                    {phaseLabel[phase] || phase}
+                </span>
+            } />
+            <Row label="정합 판정" value={verdictLabel[cl.final_verdict] || cl.final_verdict || "—"} />
+            <Row label="위반 클리어" value={
+                <span style={{ color: violationClear ? C.success : C.danger }}>
+                    {violationClear ? "정상" : "위반 감지"}
+                </span>
+            } />
+            {instantHold && (
+                <Row label="instant hold" value={<span style={{ color: C.danger, fontWeight: 800 }}>발동</span>} />
+            )}
+            {alertTier && (
+                <Row label="alert tier" value={<span style={{ color: alertTier === "critical" ? C.danger : C.warn }}>{String(alertTier)}</span>} />
+            )}
+            {baselineAlert && (
+                <Row label="baseline" value={<span style={{ color: C.warn }}>{String(baselineAlert)}</span>} />
+            )}
+            {cl.evaluation_date && (
+                <Row label="평가일" value={<span style={MONO}>{cl.evaluation_date}</span>} />
+            )}
+            {phase === "INSUFFICIENT_DATA" && (
+                <div style={{ marginTop: 4, color: C.textTertiary, fontSize: 11, fontFamily: FONT, lineHeight: 1.4 }}>
+                    ※ 거래 0 단계 = 정상. closed 거래 누적 시 trust 자가진단 ↔ backtest 실수익 hit rate 정합 측정 시작.
+                </div>
+            )}
+            <div style={{ marginTop: 4, paddingTop: 6, color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4 }}>
+                검증 전용 — verdict/추천 영향 X (cross_link_layer §9)
+            </div>
+        </Card>
+    )
+}
+
+
 /* ──────────────────────────────────────────────────────────────
  * ◆ CardPendingApprovals — VERITY/ESTATE 가입 승인 ◆
  *   profiles.status='pending' 사용자 리스트 + approve/reject 버튼.
@@ -1282,6 +1356,7 @@ export default function AdminDashboard(props: Props) {
                     <CardSchedule portfolio={portfolio} kbUsage={kbUsage} userTodos={userTodos} />
                     <CardLynchDistribution portfolio={portfolio} />
                     <CardTradePlanV0 portfolio={portfolio} />
+                    <CardCrossLink portfolio={portfolio} />
                     <CardBacktestSummary portfolio={portfolio} />
                     <CardGateTimeline portfolio={portfolio} />
                     <CardATRMigration portfolio={portfolio} />

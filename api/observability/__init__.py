@@ -208,6 +208,7 @@ def _build_slim_summary(out: Dict[str, Any]) -> Dict[str, Any]:
     drift = out.get("drift") or {}
     explanation = out.get("explanation") or {}
     trust = out.get("trust") or {}
+    cross_link = out.get("cross_link") or {}
 
     health_meta = health.get("_meta") or {}
     sources_slim = {}
@@ -253,5 +254,17 @@ def _build_slim_summary(out: Dict[str, Any]) -> Dict[str, Any]:
             "details": trust.get("details", {}),
             "blocking_reasons": trust.get("blocking_reasons", []),
             "recommendation": trust.get("recommendation"),
+        },
+        # cross_link (P2) — trust 자가진단 ↔ backtest 실수익 정합. 검증 전용(verdict 영향 X).
+        # AdminDashboard CrossLinkCard 소비. 거래 0 단계 = INSUFFICIENT_DATA 가 정상.
+        "cross_link": {
+            "operating_phase": cross_link.get("operating_phase"),
+            "final_verdict": cross_link.get("final_verdict"),
+            "alert_tier": cross_link.get("alert_tier"),
+            "violation_clear": cross_link.get("cross_link_violation_clear"),
+            "instant_hold": cross_link.get("instant_hold"),
+            "baseline_alert": cross_link.get("baseline_alert"),
+            "snapshot_pair": cross_link.get("snapshot_pair"),
+            "evaluation_date": cross_link.get("evaluation_date"),
         },
     }
