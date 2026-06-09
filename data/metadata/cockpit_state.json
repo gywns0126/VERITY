@@ -45,6 +45,51 @@
   },
   "pre_registration_pending": [
     {
+      "sha": "0c9973a4",
+      "date": "2026-06-09",
+      "subject": "fix(observability): grade drift 모니터 baseline artifact 보정 (cold-start + epoch gua",
+      "is_candidate": true,
+      "has_pm": false,
+      "has_why": true,
+      "has_data": true,
+      "has_expected": true,
+      "missing": [
+        "PM=approved"
+      ],
+      "passed": false
+    },
+    {
+      "sha": "987b329a",
+      "date": "2026-06-08",
+      "subject": "feat(shadow-funnel): 즉시-안전 계측 de-silence (gate_stats) + audit 명문화 + RULE9",
+      "is_candidate": true,
+      "has_pm": false,
+      "has_why": false,
+      "has_data": false,
+      "has_expected": false,
+      "missing": [
+        "PM=approved",
+        "WHY",
+        "DATA",
+        "EXPECTED"
+      ],
+      "passed": false
+    },
+    {
+      "sha": "3e8583b6",
+      "date": "2026-06-08",
+      "subject": "fix(shadow-funnel): freeze-전 정밀화 #6 safety 섹터-aware + #3 liquidity composite 제거",
+      "is_candidate": true,
+      "has_pm": false,
+      "has_why": true,
+      "has_data": true,
+      "has_expected": true,
+      "missing": [
+        "PM=approved"
+      ],
+      "passed": false
+    },
+    {
       "sha": "6ecf2c59",
       "date": "2026-06-07",
       "subject": "refactor(vams): expectancy 게이트 1.2R→0.25R 재보정 + SQN(≥1.7) 추가 (RULE 7, Perplexity",
@@ -111,10 +156,25 @@
     "quarter": "2026Q2",
     "start": "2026-04-01",
     "end": "2026-06-30",
-    "count": 6,
+    "count": 9,
     "limit": 4,
     "status": "EXCEEDED",
     "commits": [
+      {
+        "sha": "0c9973a4",
+        "date": "2026-06-09",
+        "subject": "fix(observability): grade drift 모니터 baseline artifact 보정 (cold-start + epoch gua"
+      },
+      {
+        "sha": "987b329a",
+        "date": "2026-06-08",
+        "subject": "feat(shadow-funnel): 즉시-안전 계측 de-silence (gate_stats) + audit 명문화 + RULE9"
+      },
+      {
+        "sha": "3e8583b6",
+        "date": "2026-06-08",
+        "subject": "fix(shadow-funnel): freeze-전 정밀화 #6 safety 섹터-aware + #3 liquidity composite 제거"
+      },
       {
         "sha": "6ecf2c59",
         "date": "2026-06-07",
@@ -146,6 +206,6 @@
         "subject": "[brain] B-continuous macro_multiplier v0 박음 — soft gate score discount (PM 승인 20"
       }
     ],
-    "as_of": "2026-06-08T14:02:09+09:00"
+    "as_of": "2026-06-09T13:34:30+09:00"
   }
 }
