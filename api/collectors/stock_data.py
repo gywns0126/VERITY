@@ -354,9 +354,13 @@ def get_equity_last_price(ticker_yf: str) -> Optional[float]:
         pk = _pykrx_equity_last_close(code)
         if pk is not None:
             return pk
-    from api.collectors.yfinance_safe import safe_yf_call
+    from api.collectors.yfinance_safe import safe_yf_call, yf_ticker
     try:
-        t = yf.Ticker(ticker_yf)
+        # 2026-06-09: plain yf.Ticker → yf_ticker (curl_cffi session, anti-bot + 연결 안정).
+        #   socket-level hang 방어 (6/9 realtime watchdog SIGTERM 사고 — fast_info/history
+        #   소켓 무한 대기로 10분 watchdog 도달). per-ticker thread cap 은 build_price_map 의
+        #   safe_collect 래핑이 담당 (이중 방어).
+        t = yf_ticker(ticker_yf)
         try:
             fi = safe_yf_call(lambda: t.fast_info, label=f"{ticker_yf}.fast_info")
             if fi is not None:
@@ -366,7 +370,7 @@ def get_equity_last_price(ticker_yf: str) -> Optional[float]:
         except Exception:
             pass
         hist = safe_yf_call(
-            lambda: t.history(period="5d"),
+            lambda: t.history(period="5d", timeout=8),
             label=f"{ticker_yf}.history(5d)",
         )
         if hist is None:

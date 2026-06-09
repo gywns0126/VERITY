@@ -503,7 +503,11 @@ def build_price_map(portfolio: dict, kis_broker=None) -> dict:
                     continue
             except Exception:
                 pass
-        p = get_equity_last_price(yf_t)
+        # 2026-06-09: per-ticker safe_collect 래핑 (8s thread cap). 6/9 realtime watchdog
+        #   SIGTERM 사고 — yfinance socket hang(fast_info/history)이 무로그 무한 대기로
+        #   realtime 10분 예산 소진 → early SIGTERM(portfolio 미저장). safe_yf_call 은 예외(429)만
+        #   잡고 소켓 hang 은 못 막음 → ThreadPoolExecutor timeout 으로 캡. default=0.0 (이후 >0 게이트).
+        p = safe_collect(get_equity_last_price, yf_t, name=f"yf_price:{yf_t}", timeout=8, default=0.0)
         if p is not None and p > 0:
             price_map[t] = float(p)
     return price_map
