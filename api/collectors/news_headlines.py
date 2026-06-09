@@ -74,6 +74,18 @@ def collect_headlines(max_items: int = 20) -> list:
             seen_titles.add(title_key)
             unique.append(item)
 
+    # novelty tracker (관측 only) — news_impact 3축 Sub-spec 2 인프라 활성.
+    # MinHash 유사도로 batch 내 fuzzy near-dup 포착 (exact-dedup 이후의 의미적 중복, 다출처 동일기사).
+    # 🚨 is_duplicate(유사도) 사용 — timestamp 무관. novelty_score(시간감쇠)는 batch 단일 timestamp 에서
+    #    delta≈0 → exp(0)=1.0 degenerate 라 미사용. 시간 trail/persistence 확보 후 별도 활성.
+    # 🚨 decision/brain 불간섭 — near_duplicate 는 데이터 필드일 뿐, composite_score/필터 미반영(관측 only).
+    #    점수/필터 활성은 N=14 후 사전등록 ([[project_news_impact_3axis_sprint]] / RULE 7).
+    try:
+        from api.intelligence.novelty import NoveltyTracker
+        _novelty = NoveltyTracker()
+    except Exception:
+        _novelty = None
+
     for item in unique:
         item["sentiment"] = _classify_sentiment(item["title"])
         item["credibility"] = _score_credibility(item.get("source", ""))
@@ -83,6 +95,13 @@ def collect_headlines(max_items: int = 20) -> list:
             + item["urgency"] * 0.3
             + (1.0 if item["sentiment"] != "neutral" else 0.3) * 0.3
         )
+        # 수집 순서대로 검사→등록 — 첫 출현=False, 이후 의미적 중복=True.
+        if _novelty is not None:
+            try:
+                item["near_duplicate"] = _novelty.is_duplicate(item["title"])
+                _novelty.add(item["title"])
+            except Exception:
+                pass
 
     unique.sort(key=lambda x: x["composite_score"], reverse=True)
     return unique[:max_items]
