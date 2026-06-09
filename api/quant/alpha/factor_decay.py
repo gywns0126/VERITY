@@ -115,7 +115,10 @@ def analyze_factor_decay(
     if forward_days is not None:
         history = [h for h in raw_history if h.get("forward_days", 7) == forward_days]
     else:
-        history = raw_history
+        # None = 기존 단기 윈도(7/14/30)만 병합. 신규 장기윈도(63/126, fundamental 분기)는
+        # 명시 forward_days 로만 조회 — 기존 decay 소비자(strategy_evolver/backtest_archive)
+        # backward-compat, 장기윈도 IC 가 기본 decay 분석을 오염시키지 않도록. 2026-06-09.
+        history = [h for h in raw_history if h.get("forward_days", 7) <= 30]
 
     if len(history) < min_history_days:
         return {

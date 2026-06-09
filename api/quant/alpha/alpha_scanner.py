@@ -76,6 +76,7 @@ def compute_factor_ic(
     snapshots: List[Dict[str, Any]],
     factor_name: str,
     forward_days: int = 7,
+    exact_horizon: bool = False,
 ) -> Dict[str, Any]:
     """
     스냅샷 아카이브에서 특정 팩터의 IC(Information Coefficient) 계산.
@@ -108,11 +109,21 @@ def compute_factor_ic(
         if len(recs) < 5:
             continue
 
-        future_snap = None
-        for j in range(i + 1, min(i + forward_days + 1, len(snapshots))):
+        if exact_horizon:
+            # 정확히 forward_days 후 스냅샷만 사용 — 없으면 스킵.
+            # 장기 윈도(63/126, fundamental 분기)에서 가용 history < forward_days 일 때
+            # 마지막 스냅샷으로 truncate 해 라벨(63d)과 실제 horizon(~40d)이 어긋나는 오염 방지.
+            j = i + forward_days
+            if j >= len(snapshots):
+                continue
             future_snap = snapshots[j]
-        if not future_snap:
-            continue
+        else:
+            # 기존 동작(7/14/30) — forward_days 이내 마지막 스냅샷. 기존 trail 의미 보존.
+            future_snap = None
+            for j in range(i + 1, min(i + forward_days + 1, len(snapshots))):
+                future_snap = snapshots[j]
+            if not future_snap:
+                continue
 
         future_prices: Dict[str, float] = {}
         for r in future_snap.get("recommendations", []):
@@ -190,13 +201,18 @@ def compute_factor_ic(
 
 def scan_all_factors(
     forward_days: int = 7,
+    exact_horizon: bool = False,
 ) -> Dict[str, Any]:
     """
     모든 팩터의 IC를 스캔하여 유효성 리포트 생성.
+
+    exact_horizon: 장기 윈도(63/126)에서 정확한 forward_days horizon 만 사용 (truncation 오염 방지).
     """
     from api.workflows.archiver import load_snapshots_range
 
-    LOOKBACK_DAYS = 60
+    # forward_days horizon 을 측정하려면 최소 그만큼의 스냅샷 span 이 필요.
+    # ≤30 = 기존 60d 유지(trail 의미 보존). >30 = forward_days*1.5 + 40 (거래일→달력 보정 + buffer).
+    LOOKBACK_DAYS = 60 if forward_days <= 30 else int(forward_days * 1.5) + 40
     snapshots = load_snapshots_range(LOOKBACK_DAYS)
     if len(snapshots) < 5:
         return {
@@ -210,7 +226,8 @@ def scan_all_factors(
     decaying: List[str] = []
 
     for factor_name in FACTOR_EXTRACTORS:
-        ic_result = compute_factor_ic(snapshots, factor_name, forward_days)
+        ic_result = compute_factor_ic(snapshots, factor_name, forward_days,
+                                      exact_horizon=exact_horizon)
         results[factor_name] = ic_result
 
         if ic_result.get("is_significant"):
@@ -278,7 +295,8 @@ def scan_all_factors_multi_window(
 
     from api.workflows.archiver import load_snapshots_range
 
-    LOOKBACK_DAYS = 90
+    # 최장 윈도 horizon 측정에 필요한 span 확보 (거래일→달력 보정 + buffer).
+    LOOKBACK_DAYS = max(90, int(max(windows) * 1.5) + 40)
     snapshots = load_snapshots_range(LOOKBACK_DAYS)
     if len(snapshots) < 5:
         return {
@@ -289,9 +307,16 @@ def scan_all_factors_multi_window(
 
     all_results: Dict[int, Dict[str, Any]] = {}
     for w in windows:
-        result = scan_all_factors(forward_days=w)
+        # 장기 윈도(>30, fundamental 분기)는 exact_horizon — history < w 면 sample 0(라벨오염 방지).
+        result = scan_all_factors(forward_days=w, exact_horizon=(w > 30))
         all_results[w] = result
-        if result.get("status") == "ok":
+        # 유효 sample 이 1개라도 있는 윈도만 저장 — 장기윈도가 데이터 부족 단계에서
+        # 빈(sample_count 0) entry 로 history 를 채우지 않도록.
+        has_data = any(
+            (fd.get("sample_count", 0) or 0) > 0
+            for fd in result.get("factors", {}).values()
+        )
+        if result.get("status") == "ok" and has_data:
             save_ic_snapshot(result)
 
     # ── 2026-05-24 trail span 메타 (Q4 정합 + coverage_ratio + quality_label) ──
@@ -415,7 +440,15 @@ def save_ic_snapshot(scan_result: Dict[str, Any]):
                 and h.get("forward_days", 7) == fwd)
     ]
     history.append(entry)
-    history = history[-180:]
+
+    # 윈도별 최근 120 entry 유지 — 전역 cap 은 윈도 수에 따라 윈도당 retention 이 줄어
+    # (5윈도 × -180 = 윈도당 36일), 윈도 무관하게 윈도당 trail 길이 보장.
+    from collections import defaultdict as _dd
+    _by_fwd: Dict[Any, List[Dict[str, Any]]] = _dd(list)
+    for h in history:
+        _by_fwd[h.get("forward_days", 7)].append(h)
+    history = [h for items in _by_fwd.values() for h in items[-120:]]
+    history.sort(key=lambda h: h.get("date", ""))
 
     with open(IC_CACHE_PATH, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)

@@ -4625,7 +4625,10 @@ def main():
             from api.quant.alpha.alpha_scanner import (
                 scan_all_factors_multi_window, compute_monthly_rollup,
             )
-            mw_result = scan_all_factors_multi_window([7, 14, 30])
+            # 63/126 = fundamental(밸류/퀄리티/안전/컨센서스) 분기 horizon forward IC 로깅.
+            # 7일 일간 IC 는 분기 reporting-lag 자기상관 노이즈 (Perplexity NQ1, 3a6c4f92).
+            # 장기윈도는 exact_horizon — history 부족 단계엔 자동 미저장(라벨오염 0).
+            mw_result = scan_all_factors_multi_window([7, 14, 30, 63, 126])
             ic_scan = (mw_result.get("windows", {}).get("7")
                        or mw_result.get("windows", {}).get("14")
                        or {})
