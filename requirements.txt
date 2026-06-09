@@ -37,6 +37,11 @@ statsforecast>=2.0.0,<3.0.0
 #   cross-link: [[project_news_impact_3axis_sprint_2026_05_30]] Sub-spec 2 / Perplexity Q3 정합
 datasketch>=1.6.0,<2.0.0
 dart-fss>=0.4.3,<1.0.0
+# 2026-06-09 — TA-Lib adopt (OSS 벤치마크 [[project_oss_adoption_scorecard_2026_06_09]]).
+#   BSD 라이선스, prebuilt wheel (Py3.9~3.14, C 빌드 불필요 — 로컬 0.6.8 설치 검증).
+#   현재 observation-only (talib_observations.py — self 지표 divergence + 캔들). 점수 미반영.
+#   import guard 되어 미설치 환경에서도 파이프라인 무중단.
+TA-Lib>=0.6.0,<1.0.0
 anthropic>=0.40.0,<1.0.0
 fpdf2>=2.8.0,<3.0.0
 exchange_calendars>=4.5.0,<5.0.0

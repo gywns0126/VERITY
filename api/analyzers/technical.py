@@ -465,6 +465,15 @@ def analyze_technical(ticker_yf: str) -> dict:
 
     score = max(0, min(100, score))
 
+    # TA-Lib observation-only 계측 (2026-06-09 착수, 점수 미반영). guarded.
+    try:
+        from api.analyzers.talib_observations import compute_talib_observations
+        _talib_obs = compute_talib_observations(
+            hist, self_rsi=rsi, self_macd_hist=macd_hist, self_atr=atr_14d
+        )
+    except Exception:
+        _talib_obs = {"available": False}
+
     return {
         "price": round(price, 0),
         "ma5": round(ma5, 0),
@@ -488,6 +497,7 @@ def analyze_technical(ticker_yf: str) -> dict:
         "atr_14d_method": atr_method,      # Phase 0 P-02: "wilder_ema_14" | "sma_14"
         "signals": signals,
         "technical_score": score,
+        "talib_observations": _talib_obs,
     }
 
 
@@ -499,4 +509,5 @@ def _empty_result() -> dict:
         "vol_ratio": 1.0, "atr_14d": None, "atr_14d_pct": None,
         "atr_14d_source": None, "atr_14d_method": None,
         "signals": [], "technical_score": 50,
+        "talib_observations": {"available": False},
     }
