@@ -22,7 +22,7 @@
   1. decision_log.jsonl load (applied_at null 인 항목)
   2. assumptions.yaml 의 depends_on_assumptions 가 모두 status=valid 확인
   3. Phase 0 verdict_official_60d = ok 확인
-  4. dry-run = 적용 계획만 출력 / --execute = 실제 적용 후 applied_at 박힘
+  4. dry-run = 적용 계획만 출력 / --execute = 실제 적용 후 applied_at 기록됨
 """
 from __future__ import annotations
 

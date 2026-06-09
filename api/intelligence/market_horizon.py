@@ -737,7 +737,7 @@ def _alert_signal_thresholds(curr: Dict[str, str]) -> None:
     except Exception as e:
         logger.warning(f"signal alert 실패: {e}")
 
-    # state 갱신 (변경된 신호만 박힘 — cycle_stage / changed_at 보존)
+    # state 갱신 (변경된 신호만 반영됨 — cycle_stage / changed_at 보존)
     state["signal_thresholds"] = curr
     state["signal_changed_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
     _save_horizon_state(state)
@@ -861,7 +861,7 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
     _cs_dict = _fred.get("consumer_sentiment") or {}
     consumer_sent = _cs_dict.get("value") if isinstance(_cs_dict, dict) else None
 
-    # Sentiment 5종 (이미 박힌 데이터, 2026-05-07 활용 추가)
+    # Sentiment 5종 (이미 수집된 데이터, 2026-05-07 활용 추가)
     _fg = portfolio.get("market_fear_greed") or {}
     fear_greed = _fg.get("value") if isinstance(_fg, dict) else None
     _pcr = portfolio.get("cboe_pcr") or {}
@@ -875,7 +875,7 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
     cot_conviction = _cot_summary.get("conviction_level") if isinstance(_cot_summary, dict) else None
 
     # 신규 딜 품질 (V2.3, 2026-05-09 — 막스 5번째 사이클 신호)
-    # portfolio.new_listings schema (collector 큐잉, 데이터 source 박힌 후 자동 합류):
+    # portfolio.new_listings schema (collector 큐잉, source 연결된 후 자동 합류):
     #   recent_3m_count, recent_3m_avg_first_day_pct, baseline_5y_count, baseline_5y_first_day_pct,
     #   baseline_count_sigma, baseline_return_sigma
     _nl = portfolio.get("new_listings") or {}

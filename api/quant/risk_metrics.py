@@ -9,7 +9,7 @@ audit (general-purpose agent, 2026-05-17) 결과:
 
 wiring: 현재 dead code. VAMS validation 에 wire = 후속 sprint (frontend 정합 검증 후).
 
-세후 (AT) 호환: empyrical 자체 세후 모드 없음 → 호출자가 AT returns pre-compute 후 박음.
+세후 (AT) 호환: empyrical 자체 세후 모드 없음 → 호출자가 AT returns pre-compute 후 전달.
 R_f 일관성: [[feedback_rf_pretax_consistency]] — 세전 일관 (empyrical default rf=0 라 부담 X).
 """
 from __future__ import annotations
@@ -80,7 +80,7 @@ def alpha_beta(returns: np.ndarray, benchmark_returns: np.ndarray,
                risk_free: float = 0.0, periods: int = 252) -> tuple[Optional[float], Optional[float]]:
     """Jensen's alpha + beta vs 벤치마크 (KOSPI).
 
-    VAMS validation_report 현재 excess_pp 만 박힘. alpha/beta 별도 필요.
+    VAMS validation_report 현재 excess_pp 만 기록됨. alpha/beta 별도 필요.
     """
     if not _EMP_AVAILABLE or returns is None or benchmark_returns is None:
         return (None, None)

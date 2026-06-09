@@ -180,12 +180,12 @@ VAMS_DIVIDEND_TAX_RATE = VAMS_DIVIDEND_TAX_RATE_KR  # 하위 호환 별칭
 
 # US 양도세 — 한국 거주자 비대주주 기준 (메모리 [[after-tax-sharpe-kr-us]] 산식 적용).
 # · 양도차익 22% (국세 20% + 지방세 2%) 분리과세, 연 250만원 양도소득 기본공제.
-# · KR 비대주주 상장주식 = 0% (비과세) 가정. 대주주 판정 미박힘.
+# · KR 비대주주 상장주식 = 0% (비과세) 가정. 대주주 판정 미충족.
 # · 손익통산: realized SELL/PARTIAL_SELL US PnL 합산. unrealized 는 매도 가정 estimate.
 # · 250만 공제 = realized 우선 적용, 잔여만 unrealized 에 적용.
 # · 양도일 = 결제일 (T+2 한국 시간, 미국 T+1 + 시차). VAMS history `date` 는 약정일이므로
 #   연말 cut-off 정밀화 시 결제일 변환 필요 (현 무).
-# · 손익통산 범위: 해외주식 종목간 + KR 비상장/대주주 (현 미박힘, 영향 0).
+# · 손익통산 범위: 해외주식 종목간 + KR 비상장/대주주 (현 미구현, 영향 0).
 # · 환차익은 별도 과세 X — 원화 환산 양도차익에 자동 합산. VAMS buy_price 환산 KRW 보관.
 VAMS_US_CAPITAL_GAINS_RATE = _env_float("VAMS_US_CAPITAL_GAINS_RATE", 0.22)
 VAMS_US_CAPITAL_GAINS_DEDUCTION_KRW = _env_int("VAMS_US_CAPITAL_GAINS_DEDUCTION_KRW", 2_500_000)
@@ -201,7 +201,7 @@ VAMS_US_FX_COST_RATE = _env_float("VAMS_US_FX_COST_RATE", 0.003)
 VAMS_RISK_FREE_RATE_PRETAX = _env_float("VAMS_RISK_FREE_RATE_PRETAX", 0.032)
 
 # KR 대주주 판정 + 세율 분기 (Perplexity 2026-05-17, 메모리 [[project_capital_gains_tax_kr_us_2026_05]] §5,6).
-# 자동 판정 미박힘 (지분율 데이터 미수집) — 명시 toggle 만. 기본 False = 비대주주 비과세 가정.
+# 자동 판정 미구현 (지분율 데이터 미수집) — 명시 toggle 만. 기본 False = 비대주주 비과세 가정.
 # toggle 활성 시 KR 양도세 분기 적용 (1년 미만 30% / 3억 초과 25% / 3억 이하 20%).
 VAMS_KR_MAJORITY_SHAREHOLDER = (
     os.environ.get("VAMS_KR_MAJORITY_SHAREHOLDER", "").strip().lower() in ("1", "true", "yes", "on")
@@ -223,7 +223,7 @@ VAMS_ISA_EXCESS_TAX_RATE = _env_float("VAMS_ISA_EXCESS_TAX_RATE", 0.099)        
 VAMS_DIVIDEND_COMPREHENSIVE_THRESHOLD_KRW = _env_int("VAMS_DIVIDEND_COMPREHENSIVE_THRESHOLD_KRW", 20_000_000)
 
 # 금투세 재시행 fallback (2027~2029 변곡점, [[project_geumtu_tax_horizon]]).
-# 기본 False = KR 양도세 0% (현행). True 활성 시 KR 양도세 분기 박음 (5000만 공제 / 22%·27.5% 누진 / 5년 손실이월).
+# 기본 False = KR 양도세 0% (현행). True 활성 시 KR 양도세 분기 적용 (5000만 공제 / 22%·27.5% 누진 / 5년 손실이월).
 VAMS_KR_GEUMTU_RESTORED = (
     os.environ.get("VAMS_KR_GEUMTU_RESTORED", "").strip().lower() in ("1", "true", "yes", "on")
 )
@@ -365,7 +365,7 @@ UNIVERSE_RAMP_UP_AUTO = (
 )
 
 # ── Phase 2-B: wide_scan Coarse Filter (Perplexity 7-답 종합 + 메모리 원칙 1) ──
-# DISABLED: 호출 자체 skip (default — 인프라 박힘 이후에도 명시 활성화 필요)
+# DISABLED: 호출 자체 skip (default — 인프라 완료 이후에도 명시 활성화 필요)
 # SHADOW: 7차원 + F-Score + Z 계산 → data/wide_scan_log.jsonl 만 적재. portfolio.json 영향 0
 # CANARY_5: portfolio 5%만 wide_scan 결과 사용 (FIA 자동매매 가이드라인 정합)
 # PRODUCTION: 전면 적용 (WIDE_SCAN_PRODUCTION_MIN_DAYS 거래일 SHADOW 검증 후에만)
@@ -496,7 +496,7 @@ STRATEGY_SHARPE_MIN_MARGIN = float(os.environ.get("STRATEGY_SHARPE_MIN_MARGIN", 
 STRATEGY_RUNTIME_MDD_STOP_PCT = float(os.environ.get("STRATEGY_RUNTIME_MDD_STOP_PCT", "20.0"))
 # Perplexity Q4 v2 (2026-05-17): PSR (Probabilistic Sharpe Ratio) optional gate.
 # True 시 절대 margin 검정 + PSR > confidence 검정 둘 다 통과 필요 (보수).
-# False (default) = margin only. SR returns series 가 simulate_proposal 에서 박혀야 활성 가능.
+# False (default) = margin only. SR returns series 가 simulate_proposal 에서 채워져야 활성 가능.
 STRATEGY_PSR_ENABLED = os.environ.get("STRATEGY_PSR_ENABLED", "0").strip().lower() in ("1", "true", "yes")
 STRATEGY_PSR_CONFIDENCE = float(os.environ.get("STRATEGY_PSR_CONFIDENCE", "0.90"))  # 90% 단측 검정
 # Perplexity Q4 v2: Strategy Pool (sequential → portfolio of strategies).

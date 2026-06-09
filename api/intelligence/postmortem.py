@@ -250,13 +250,13 @@ def _build_window_meta(days: int, failures: list) -> dict:
     값은 동일. downstream 의 `misleading_factors: Dict[str, int]` 가정을
     깨지 않으면서 misleading_factors 와 같은 레벨에서 신뢰도를 즉시 읽을 수 있게 함.
 
-    2026-05-24 trail span 메타 박음 (Task #19 마지막 caller).
+    2026-05-24 trail span 메타 추가 (Task #19 마지막 caller).
     """
     confidence = _confidence_from_sample(len(failures))
 
     # 2026-05-24 Q4 정합 (Perplexity) — coverage_ratio + quality_label (OK/amber/insufficient).
     # postmortem default windows = [7, 14, 30] = 모두 49d trail 안 = sufficient 정상.
-    # caller 가 큰 windows (90d+) 박을 경우 amber/insufficient 자동 detect.
+    # caller 가 큰 windows (90d+) 전달할 경우 amber/insufficient 자동 detect.
     actual_span_days = None
     coverage_ratio = None
     try:

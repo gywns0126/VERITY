@@ -858,11 +858,11 @@ def execute_buy(
                 )
                 return None  # reject
     except (ImportError, KeyError):
-        pass  # config 미박힘 또는 vams 구조 옛 — silent
+        pass  # config 미설정 또는 vams 구조 옛 — silent
 
     # FOMO Score 산출 정합 (api/quant/fomo_score.py):
-    # rule_id 박혀있으면 auto (rule-based), 없으면 manual (사용자 override). VAMS engine 호출 =
-    # 모두 auto (verdict 기반). 외부 호출 (수동 매매 endpoint) = rule_id 미박힘 → manual 분리.
+    # rule_id 설정되어 있으면 auto (rule-based), 없으면 manual (사용자 override). VAMS engine 호출 =
+    # 모두 auto (verdict 기반). 외부 호출 (수동 매매 endpoint) = rule_id 미설정 → manual 분리.
     history.append({
         "type": "BUY",
         "date": now_kst().strftime("%Y-%m-%d %H:%M"),

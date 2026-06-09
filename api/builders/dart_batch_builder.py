@@ -188,7 +188,7 @@ def _quarter_end_iso(report_date, reprt_code, fetched_at: str) -> str:
     """진짜 분기 종료일 (YYYY-MM-DD) 산출.
 
     [WHY] 2026-05-20 fscore_delta 인프라 audit — 이전 = fetched_at[:10] (수집 날짜)
-          박혀서 1867 종목 모두 quarter_end="2026-05-17". YoY find_yoy_prior(±30일)
+          설정되어 1867 종목 모두 quarter_end="2026-05-17". YoY find_yoy_prior(±30일)
           가 진짜 1년 전 분기 매칭 불가 = N 누적 의미 X.
 
     report_date format: "YYYY" 또는 "YYYY-MM-DD" 또는 None.

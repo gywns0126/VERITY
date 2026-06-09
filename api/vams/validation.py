@@ -423,7 +423,7 @@ def compute_validation_report(
         except Exception:
             extra_risk = {"available": False}
 
-    _info_note = "informational only — Phase 2 sprint 박을 때 pass 판정 wire"
+    _info_note = "informational only — Phase 2 sprint 진행할 때 pass 판정 wire"
     m_sortino = {
         "annualized": extra_risk.get("sortino"),
         "pass": None,
@@ -480,7 +480,7 @@ def compute_validation_report(
         "sharpe": m_sharpe,
         "regime_coverage": m_regime,
         "cost_efficiency": m_cost,
-        # 2026-05-29 informational — Phase 2 sprint 박을 때 pass wire
+        # 2026-05-29 informational — Phase 2 sprint 진행할 때 pass wire
         "sortino": m_sortino,
         "calmar": m_calmar,
         "alpha_beta": m_alpha_beta,

@@ -2,15 +2,15 @@
 
 PM=approved 2026-05-23 (plan §Phase 1-d).
 WHY: VAMS reset_meta 시점 = N=0 origin. 매매 이벤트 count → N_today.
-     Q11 milestone (50/100/252/365) 까지 잔여 박음. Bailey-Lopez de Prado 2014
+     Q11 milestone (50/100/252/365) 까지 잔여 계산. Bailey-Lopez de Prado 2014
      N≥252 후 통계 유의 (메모리 [[project_minimum_n_milestones_2026_05_18]]).
 DATA: portfolio.vams.simulation_stats.total_trades (5/17 reset 후 누적 trade count) +
       portfolio.validation.cumulative_days (운영 일수).
-EXPECTED: cockpit_aggregate.py 가 compute_n_today() + compute_milestones() 호출 박음.
+EXPECTED: cockpit_aggregate.py 가 compute_n_today() + compute_milestones() 호출 추가.
 
 자기 산식 0 (단순 count + 차이). RULE 7 비대상.
 
-별 ledger (verification_trail.jsonl) 박지 않음 — Phase 2 후속 (시계열 분석 필요 시).
+별 ledger (verification_trail.jsonl) 기록하지 않음 — Phase 2 후속 (시계열 분석 필요 시).
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ _MILESTONES = {
 
 
 def compute_n_today(portfolio: Dict[str, Any]) -> Dict[str, int]:
-    """portfolio.json → N counter dict 박음.
+    """portfolio.json → N counter dict 반환.
 
     Returns:
         {
@@ -36,7 +36,7 @@ def compute_n_today(portfolio: Dict[str, Any]) -> Dict[str, int]:
             "n_validation_samples": int # validation.sample_total
         }
 
-    결손 source 박은 부분 = 0 박음 (silent skip 차단 — 0 박힘이 의도된 미박힘).
+    결손 source 부분 = 0 반환 (silent skip 차단 — 0 값이 의도된 미충족).
     """
     vams = portfolio.get("vams") or {}
     sim = vams.get("simulation_stats") or {}
@@ -63,14 +63,14 @@ def compute_n_today(portfolio: Dict[str, Any]) -> Dict[str, int]:
 
 
 def compute_milestones(n_current: int) -> Dict[str, int]:
-    """N_current 기준 milestone 잔여 박음.
+    """N_current 기준 milestone 잔여 계산.
 
     Args:
         n_current: 현 N (trades / days / samples 중 하나).
 
     Returns:
         {"to_50": 잔여, "to_100": 잔여, "to_252": 잔여, "to_365": 잔여}
-        도달 시 = 0 (음수 박지 않음).
+        도달 시 = 0 (음수 반환하지 않음).
     """
     return {
         key: max(0, target - n_current)

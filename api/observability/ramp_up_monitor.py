@@ -38,7 +38,7 @@ FAIL_TRIGGER_TIME_OVERRUN_PCT = 0.50  # 추정 대비 +50%
 FAIL_TRIGGER_RATE_LIMIT_HITS = 3       # 최소 절대값 (작은 universe 가드)
 FAIL_TRIGGER_RATE_LIMIT_RATIO = 0.01   # yf_attempted 대비 1% (5000 universe scaling, 2026-05-25 RULE 7)
 # dart_attempted < N 시 fail_rate trigger 비활성 (2026-05-29 RULE 7 PM 옵션 A 승인).
-# post_main_dart_drain entry (N=수~수십) 가 1 실패로 16% 박아 5/27, 5/28 매일 false positive
+# post_main_dart_drain entry (N=수~수십) 가 1 실패로 16% 에 도달해 5/27, 5/28 매일 false positive
 # 알람 양산. 실 universe_scan all (N≥1869) 은 0.0% 멀쩡. binomial CI 정합 — N<100 시
 # 5% 임계는 통계 무의미 (CI ±10%p 이상).
 FAIL_TRIGGER_DART_MIN_SAMPLE = 100
@@ -158,10 +158,10 @@ def log_runtime_load(
           and ramp_up_stage > 0
           and os.environ.get("VERITY_MODE") != "dev"):
         # 자동 dismiss — 직전 run 알람 있었고 이번 정상 복귀 시 1회 발송.
-        # 2026-05-09 박힘 (사용자 false positive 알람 dismiss 자동화 요청).
+        # 2026-05-09 추가됨 (사용자 false positive 알람 dismiss 자동화 요청).
         # 2026-05-27 fix — same market_scope entry 만 prev 비교 (post_main_dart_drain
         # entry 추가 후 cross-entry mismatch 회피, project_dart_drain_gap_2026_05_25 후속).
-        # run_id 비교 박음 (옛 `is not rec` 는 file re-read 시 다른 object 라 항상 True).
+        # run_id 비교 추가 (옛 `is not rec` 는 file re-read 시 다른 object 라 항상 True).
         try:
             cur_scope = (rec.get("extra") or {}).get("market_scope")
             prev_runs = [

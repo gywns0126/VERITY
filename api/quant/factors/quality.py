@@ -59,7 +59,7 @@ def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:
     cf = dart.get("cashflow") or {}
     # op_cf fallback chain: dart_financials → stock(top-level) → fcf
     # 2026-05-20 fix — stock.get("operating_cashflow") 누락 (DART CFS 호출 후 stock dict
-    # top-level 박힌 값 사용 못함 → F2/F4 영구 0 score 버그)
+    # top-level 값 사용 못함 → F2/F4 영구 0 score 버그)
     fcf = cf.get("free_cashflow") or stock.get("free_cashflow") or 0
     op_cf = cf.get("operating_cashflow") or stock.get("operating_cashflow") or fcf
 

@@ -10,13 +10,13 @@
 PM 사전등록: [[project_lopez_de_prado_tscv_2026_05_26]] (2026-05-26).
 B4 backtest sprint ([[project_verity_backtest_sprint]]) 의 도구 — 산식 변경 X.
 
-박은 산식:
+구현 산식:
   1. purged_kfold_split — train/test fold 사이 buffer (purge) + embargo
   2. combinatorial_purged_cv — k 개 fold 의 combination → 다중 path → PBO 계산 base
   3. triple_barrier_labels — profit-take / stop-loss / vertical barrier label {1, -1, 0}
-  4. meta_label — 1차 signal 박은 후 take/skip 박음 (precision boost)
+  4. meta_label — 1차 signal 산출 후 take/skip 부여 (precision boost)
 
-RULE 7 정합: infrastructure (산식 변경 X). PM 결정 "전부 박자!!!" 발화 (2026-05-26).
+RULE 7 정합: infrastructure (산식 변경 X). PM 결정 "전부 구현하자!!!" 발화 (2026-05-26).
 """
 from __future__ import annotations
 
@@ -36,13 +36,13 @@ def purged_kfold_split(
 ) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
     """Purged k-fold cross validation generator.
 
-    표준 k-fold 의 train/test 사이 buffer 박음 — temporal leakage 차단.
-    추가로 test 직후 embargo 박음 — autocorrelation leakage 차단.
+    표준 k-fold 의 train/test 사이 buffer 추가 — temporal leakage 차단.
+    추가로 test 직후 embargo 적용 — autocorrelation leakage 차단.
 
     Args:
         n_samples: total time-series 길이.
         n_splits: fold 수 (default 5).
-        embargo_pct: test fold 직후 train 박지 않는 비율 (default 1% = embargo_days).
+        embargo_pct: test fold 직후 train 에 포함하지 않는 비율 (default 1% = embargo_days).
 
     Yields:
         (train_idx, test_idx) — np.ndarray int indices.
@@ -63,7 +63,7 @@ def purged_kfold_split(
         test_end = test_start + fold_size if k < n_splits - 1 else n_samples
         test_idx = indices[test_start:test_end]
 
-        # train 은 test 양쪽 — purge buffer 박음
+        # train 은 test 양쪽 — purge buffer 적용
         # 좌측 train 끝점 = test_start (purge 없음 — 시간 순서상 안전)
         # 우측 train 시작점 = test_end + embargo
         train_left = indices[:test_start]
@@ -84,7 +84,7 @@ def combinatorial_purged_cv(
 ) -> Iterator[Tuple[np.ndarray, List[np.ndarray]]]:
     """Combinatorial Purged Cross Validation (CPCV).
 
-    k 개 fold 박은 후 그 중 n_test_splits 박은 combination 박음 → C(k, n_test_splits) 개 path.
+    k 개 fold 구성 후 그 중 n_test_splits 개를 뽑는 combination 생성 → C(k, n_test_splits) 개 path.
     각 path 별 backtest → PBO (Probability of Backtest Overfitting) 계산 base.
 
     Args:
@@ -94,7 +94,7 @@ def combinatorial_purged_cv(
         embargo_pct: 각 test fold 직후 embargo 비율.
 
     Yields:
-        (train_idx, test_idxs_list) — train 박은 indices + n_test_splits 개 test fold list.
+        (train_idx, test_idxs_list) — train indices + n_test_splits 개 test fold list.
 
     Lopez de Prado 2018 Chapter 12 정합.
     """
@@ -105,7 +105,7 @@ def combinatorial_purged_cv(
     fold_size = n_samples // n_splits
     indices = np.arange(n_samples)
 
-    # 각 fold 의 (start, end) 박음
+    # 각 fold 의 (start, end) 계산
     folds = []
     for k in range(n_splits):
         start = k * fold_size
@@ -120,7 +120,7 @@ def combinatorial_purged_cv(
         for k in test_combination:
             start, end = folds[k]
             train_mask[start:end] = False
-            # embargo 박음
+            # embargo 적용
             embargo_end = min(end + embargo, n_samples)
             train_mask[end:embargo_end] = False
 
@@ -140,12 +140,12 @@ def triple_barrier_labels(
 ) -> pd.DataFrame:
     """Triple-Barrier Labeling (Lopez de Prado 2018 Chapter 3).
 
-    각 entry 시점에서 3 개 barrier 박음:
+    각 entry 시점에서 3 개 barrier 설정:
       - profit-take (PT): entry + pt_multiplier × ATR
       - stop-loss (SL): entry - sl_multiplier × ATR
       - vertical (T): entry + vertical_barrier_days
 
-    먼저 도달한 barrier 박음:
+    먼저 도달한 barrier 기준:
       label = +1 (PT 도달), -1 (SL 도달), 0 (T 도달 — barrier 미터치)
 
     Args:
@@ -233,18 +233,18 @@ def meta_label(
 ) -> pd.Series:
     """Meta-labeling (Lopez de Prado 2018 Chapter 3.6).
 
-    1차 model 박은 signal 박은 후, 2차 model 박을 binary label 박음 — take (1) / skip (0).
+    1차 model 의 signal 산출 후, 2차 model 이 binary label 부여 — take (1) / skip (0).
     1차 의 false positive 줄이고 precision ↑.
 
     Args:
-        primary_signals: 1차 model 박은 signal (e.g., +1=long, -1=short, 0=skip).
-        primary_returns: 실 forward return (signal 박은 후 실 결과).
-        min_return: signal 박은 trade 박을 박은 최소 return threshold (default 0).
+        primary_signals: 1차 model 의 signal (e.g., +1=long, -1=short, 0=skip).
+        primary_returns: 실 forward return (signal 발생 후 실 결과).
+        min_return: signal 이 발생한 trade 에 적용할 최소 return threshold (default 0).
 
     Returns:
         pd.Series of {0, 1} — meta label. 1=take, 0=skip.
 
-    Use: 1차 signal 박힘 + 2차 meta label 박음 → 둘 다 1 인 trade 만 박음.
+    Use: 1차 signal 발생 + 2차 meta label 부여 → 둘 다 1 인 trade 만 채택.
     """
     if not isinstance(primary_signals, pd.Series):
         raise TypeError("primary_signals must be pd.Series")
@@ -282,12 +282,12 @@ def probability_of_backtest_overfitting(
     if n < 2:
         return float("nan")
 
-    # 각 IS rank 박은 best 의 OS rank 확인
+    # 각 IS rank 중 best 의 OS rank 확인
     best_is = np.argmax(in_sample_sharpes)
     best_os_rank = np.argsort(np.argsort(out_of_sample_sharpes))[best_is]
     median_rank = n / 2
 
-    # logit-style — best IS 박은 후 OS 가 median 이하 박은 비율 추정
-    # 단순 version: best IS 박은 후 OS rank < median 박은 빈도
+    # logit-style — best IS 의 OS 가 median 이하인 비율 추정
+    # 단순 version: best IS 의 OS rank < median 인 빈도
     # 더 정확한 Bailey-Lopez 는 다중 path full computation 필요. 본 함수는 quick proxy.
     return float(best_os_rank < median_rank)

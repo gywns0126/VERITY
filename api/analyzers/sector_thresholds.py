@@ -20,7 +20,7 @@ from __future__ import annotations
 from typing import Dict
 
 
-# Q2 답 그대로 박힘 (KRX·FnGuide·Bloomberg 2024~2025 quartile)
+# Q2 답 그대로 기록됨 (KRX·FnGuide·Bloomberg 2024~2025 quartile)
 _PER_THRESHOLDS: Dict[str, Dict[str, float]] = {
     "금융":      {"Q1": 4.5,  "Q2": 6.2,  "Q3": 8.5,   "S&P500_Q2": 13.5},
     "지주":      {"Q1": 6.0,  "Q2": 8.8,  "Q3": 13.0,  "S&P500_Q2": 14.0},

@@ -54,7 +54,7 @@ SIGNAL_FREQ_THRESHOLD = 0.30
 SIGNAL_SENT_THRESHOLD = 0.50
 
 # theme 정규화 — 사용자 동의어 매핑. LLM 가 자유 텍스트 반환 → 매핑 없으면 frequency 분산.
-# v0 = US 미장 일반 용어 13건 박음. 신규 발견 시 추가.
+# v0 = US 미장 일반 용어 13건 등록. 신규 발견 시 추가.
 THEME_ALIASES: Dict[str, str] = {
     # AI / 반도체
     "ai capex": "AI capex",

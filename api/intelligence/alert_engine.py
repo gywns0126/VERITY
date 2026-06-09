@@ -70,7 +70,7 @@ def _check_dart_catalyst_alerts(
 ) -> list:
     """DART 공시 catalyst events → alerts 통합 (2026-05-23 Track 1 E, A4 갱신).
 
-    backend: api/collectors/dart_catalyst.py 박혀있고 portfolio.dart_catalyst_alerts
+    backend: api/collectors/dart_catalyst.py 에 구현되어 있고 portfolio.dart_catalyst_alerts
     적재. severity 5-tier (2026-05-23 사전등록 PM 결정, RULE 7,
     [[2026-05-23_Track1_자문_batch2_A4A5A6A7.md]] §A4):
       5 = B 회생/파산/영업양수도/횡령/배임/대규모 자산처분 (존속가치 훼손)

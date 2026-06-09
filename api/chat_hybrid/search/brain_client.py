@@ -31,7 +31,7 @@ def _portfolio_path() -> str:
 
 
 def _portfolio_url() -> str:
-    # 기본값: VERITY-data repo (옵션 B, 2026-05-17 박힘).
+    # 기본값: VERITY-data repo (옵션 B, 2026-05-17 확정).
     # env PORTFOLIO_URL 로 재정의 권장 (CDN 5분 캐시 회피하려면 jsdelivr 등 선택).
     return os.environ.get(
         "PORTFOLIO_URL",

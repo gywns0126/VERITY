@@ -4,7 +4,7 @@ discrete_allocation — PyPortfolioOpt DiscreteAllocation wrapper (spike, 2026-0
 audit 결과 (메모리 [[after-tax-sharpe-kr-us]] / Perplexity Q1~Q8 정합):
 - 3단 분할 도입의 1단계 = DiscreteAllocation
 - Tier 1 운영 중에도 즉시 활용 가능 (KIS 매수 lot 단위 분배)
-- cvxpy 의존성 1회 박음 = 후속 BL/EF/HRP 분할 상환
+- cvxpy 의존성 1회 추가 = 후속 BL/EF/HRP 분할 상환
 
 핵심 산식:
 - Greedy: 가장 단순 (반올림 + 남은 자본 재분배). 빠름, 결과 sub-optimal
@@ -45,7 +45,7 @@ def allocate_lots(
 
     Args:
         weights: {ticker: 비중 (0~1, 합 = 1)}
-        prices_krw: {ticker: 현재가 (KRW)}. US 종목이면 호출자가 KRW 환산 후 박음.
+        prices_krw: {ticker: 현재가 (KRW)}. US 종목이면 호출자가 KRW 환산 후 전달.
         total_capital_krw: 가용 자본 (KRW)
         method: "greedy" (빠름) or "lp" (cvxpy 정수 최적해, 느림)
         min_lot: 최소 lot (KIS 일반 = 1주). KOSPI200 ETF 등은 다를 수 있음.

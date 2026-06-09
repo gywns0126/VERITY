@@ -89,7 +89,7 @@ def attach_dart_to_stocks(
 
     DART 우선 정책 (메모리 결정 2):
       stock 의 per / pbr / roe / debt_ratio / op_margin 이 None / 0 일 때만 DART 값으로 보강.
-      yfinance 가 정확히 박혀 있으면 (가격 의존 — per 매일 갱신) 그대로 유지.
+      yfinance 가 정확히 채워져 있으면 (가격 의존 — per 매일 갱신) 그대로 유지.
       DART 만 있는 필드 (예: 분기 보고일 report_date) 는 항상 attach.
     """
     fundamentals = load_dart_fundamentals_kr(max_stale_days=max_stale_days, path=path)

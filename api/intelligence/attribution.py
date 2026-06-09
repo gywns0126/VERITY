@@ -39,7 +39,7 @@ RULE 7 정합:
   - 임계 / 분해 방법 (Brinson 변형 / factor-based / Fama-French 5-factor) = PM 사전등록
   - 본 stub = NotImplementedError. 12월 wire 시 verity_constitution.json 매핑.
 
-fallback (조건 3-C minimum viable subset, 2026-05-28 PM 옵션2 박힘):
+fallback (조건 3-C minimum viable subset, 2026-05-28 PM 옵션2 확정):
   Attribution = 옵션. slip 가능, vision 직접 영향 X.
   단 trail 자산 ↓ (LLM 못 가지는 자기 자산 정합도 ↓, RULE 6 정합).
 """

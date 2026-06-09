@@ -4,10 +4,10 @@
 PM=approved 2026-05-23 (plan §Phase 1-c).
 WHY: [[feedback_pm_decision_trail_in_commit]] WHY/DATA/EXPECTED 3요소 의무 +
      CLAUDE.md RULE 7 자기 산식 임계 조정 1회만 PM 사전 승인 의무.
-     산식 변경 commit 박음 → 4요소 미박힘 = silent drift → cockpit_state.YELLOW.
+     산식 변경 commit 발생 → 4요소 미충족 = silent drift → cockpit_state.YELLOW.
 DATA: git log --since=7d --grep 산식 변경 키워드 후보 commit → message 4요소 정합 검증.
-EXPECTED: 매일 KST 09:00 (operator_deadman 직후 chain) 실행 → 미박힌 commit list
-          → cockpit_state.pre_registration_pending 박음 → severity rule YELLOW.
+EXPECTED: 매일 KST 09:00 (operator_deadman 직후 chain) 실행 → 미충족 commit list
+          → cockpit_state.pre_registration_pending 기록 → severity rule YELLOW.
 
 source: [[project_win_condition_decision]] option 2 + [[feedback_methodology_pre_registration]].
 """
@@ -25,16 +25,16 @@ from typing import Any, Dict, List, Optional
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 COCKPIT_PATH = _REPO_ROOT / "data" / "metadata" / "cockpit_state.json"
 AUDIT_LEDGER = _REPO_ROOT / "data" / "metadata" / "pre_registration_audit.jsonl"
-# 2026-05-28 박힘 — 과거 산식 변경 commit 의 사후 PM 결정 ledger.
+# 2026-05-28 추가 — 과거 산식 변경 commit 의 사후 PM 결정 ledger.
 # schema: {sha, date, subject, missing, pm_decision, pm_why, pm_data, pm_expected, pm_approved_at, added_at}
-# pm_decision: null (사용자 미박음) | "approved" | "rejected" | "pending"
-# approved 박힌 sha = pending 에서 제외 (cron + PR + commit 모드 공통).
+# pm_decision: null (사용자 미기록) | "approved" | "rejected" | "pending"
+# approved 기록된 sha = pending 에서 제외 (cron + PR + commit 모드 공통).
 RETROACTIVE_TRAIL = _REPO_ROOT / "data" / "metadata" / "rule7_retroactive_trail.jsonl"
 
 # 산식 변경 의심 키워드 (commit message subject 또는 body)
-# RULE 7 정합 — 자기 산식 임계 조정 1회 권한 사용 시그널만 박음.
+# RULE 7 정합 — 자기 산식 임계 조정 1회 권한 사용 시그널만 매칭.
 # 좁힘 (2026-05-28): 헐거운 키워드 ("산식 변경" / "사전등록" / "자기 산식")
-# 단독 박지 않음 (메모 cross-ref / 정책 참조 false positive). diff 검증 병행.
+# 단독 매칭하지 않음 (메모 cross-ref / 정책 참조 false positive). diff 검증 병행.
 _FORMULA_KEYWORDS = [
     "임계 조정", "임계 변경", "임계 재설계",
     "가중치 조정", "가중치 변경",
@@ -44,7 +44,7 @@ _FORMULA_KEYWORDS = [
     "pre-register",
 ]
 
-# Negate — 박힌 commit 의 산식 미변경 시그널 (false positive 차단)
+# Negate — 해당 commit 의 산식 미변경 시그널 (false positive 차단)
 # 2026-05-29 확장: 5/29 baseline 측정 발견 (rule7_quota 8/4 EXCEEDED false alarm) — 3 부정합 commit
 # detect 필요 — bc81a43e (적용 범위 변경) / 5a5258ae (인프라 fix) / a2c638d8 (lookup chain).
 _NEGATE_KEYWORDS = [
@@ -62,7 +62,7 @@ _NEGATE_KEYWORDS = [
 RULE7_EFFECTIVE_DATE = "2026-05-17"
 
 # 산식 source 파일 glob — diff 검증 (좁힘 ABSOLUTE).
-# candidate = 키워드 매칭 AND diff 에 _FORMULA_FILES ≥ 1 박힘.
+# candidate = 키워드 매칭 AND diff 에 _FORMULA_FILES ≥ 1 포함.
 # 단순 메모/docs/cron yml commit = diff 0 → skip.
 _FORMULA_FILES = [
     "data/verity_constitution.json",
@@ -108,7 +108,7 @@ _EXPECTED_RE = re.compile(r"EXPECTED[:\s]", re.IGNORECASE)
 
 
 def _git_log(since_days: int = 7) -> List[Dict[str, Any]]:
-    """git log --since=Nd 후보 commit list 박음.
+    """git log --since=Nd 후보 commit list 반환.
 
     Returns: [{sha, date, subject, body}, ...] 최신순.
     """
@@ -147,13 +147,13 @@ def _git_log(since_days: int = 7) -> List[Dict[str, Any]]:
 
 
 def _is_formula_change_candidate(commit: Dict[str, Any]) -> bool:
-    """commit message 키워드 매치 AND diff 에 _FORMULA_FILES 박힘.
+    """commit message 키워드 매치 AND diff 에 _FORMULA_FILES 포함.
 
     3-stage 검증 (2026-05-29 grandfather 추가):
       1. RULE 7 시행일 (5/17) 이전 = grandfather, skip
       2. commit message _FORMULA_KEYWORDS 매칭 (5/28 좁힘 후)
-      3. Negate 박힘 = false (값 변경 0 / UI 만 / RULE 7 비대상 / 권한 사용 X / 인프라만 / ...)
-      4. diff 에 _FORMULA_FILES ≥ 1 박힘 = candidate
+      3. Negate 매칭 = false (값 변경 0 / UI 만 / RULE 7 비대상 / 권한 사용 X / 인프라만 / ...)
+      4. diff 에 _FORMULA_FILES ≥ 1 포함 = candidate
          (인프라/docs/cron yml commit = diff 0 → false)
     """
     # Grandfather — RULE 7 시행일 이전 commit skip
@@ -164,7 +164,7 @@ def _is_formula_change_candidate(commit: Dict[str, Any]) -> bool:
     msg = commit["full_message"]
     # 2026-05-29 — newline 정규화 (commit body 의 줄바꿈 영향 차단, "진입 가능케\n하는 인프라만" 같은 케이스)
     msg_lower = msg.lower().replace("\n", " ").replace("\r", " ")
-    # Negate 박힘 = candidate 분류 X
+    # Negate 매칭 = candidate 분류 X
     if any(neg.lower() in msg_lower for neg in _NEGATE_KEYWORDS):
         return False
     # 키워드 매칭 0 = skip
@@ -175,14 +175,14 @@ def _is_formula_change_candidate(commit: Dict[str, Any]) -> bool:
 
 
 def _audit_commit(commit: Dict[str, Any]) -> Dict[str, Any]:
-    """4요소 정합 검증 박음.
+    """4요소 정합 검증 수행.
 
     Returns: {
         sha, date, subject,
         is_candidate: bool,
         has_pm: bool, has_why: bool, has_data: bool, has_expected: bool,
-        missing: [str],  # 미박힌 요소 list
-        passed: bool,    # 4요소 모두 박힘
+        missing: [str],  # 미충족 요소 list
+        passed: bool,    # 4요소 모두 충족
     }
     """
     msg = commit["full_message"]
@@ -216,9 +216,9 @@ def _audit_commit(commit: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _load_retroactive_approvals() -> set:
-    """RETROACTIVE_TRAIL 에서 pm_decision='approved' 박은 short_sha set 반환.
+    """RETROACTIVE_TRAIL 에서 pm_decision='approved' 인 short_sha set 반환.
 
-    사용자가 사후 PM=approved 박은 commit 은 cron audit pending 에서 제외.
+    사용자가 사후 PM=approved 처리한 commit 은 cron audit pending 에서 제외.
     """
     if not RETROACTIVE_TRAIL.exists():
         return set()
@@ -245,8 +245,8 @@ def _load_retroactive_approvals() -> set:
 def audit_recent_commits(since_days: int = 7) -> List[Dict[str, Any]]:
     """7일 내 산식 변경 의심 commit audit.
 
-    Returns: missing 박힌 commit list (pending). passed=True 박은 commit 박지 않음.
-    RETROACTIVE_TRAIL 에 pm_decision='approved' 박힌 sha 는 제외.
+    Returns: missing 있는 commit list (pending). passed=True 인 commit 은 포함하지 않음.
+    RETROACTIVE_TRAIL 에 pm_decision='approved' 인 sha 는 제외.
     """
     commits = _git_log(since_days=since_days)
     approved = _load_retroactive_approvals()
@@ -263,7 +263,7 @@ def audit_recent_commits(since_days: int = 7) -> List[Dict[str, Any]]:
 
 
 def _current_quarter() -> Dict[str, str]:
-    """현재 분기 (KST) 시작/끝 박음. e.g. 2026Q2 → 2026-04-01 ~ 2026-06-30."""
+    """현재 분기 (KST) 시작/끝 반환. e.g. 2026Q2 → 2026-04-01 ~ 2026-06-30."""
     from datetime import date as _date
     KST = timezone(timedelta(hours=9))
     now = datetime.now(KST)
@@ -289,8 +289,8 @@ def quota_count(quarter: Optional[Dict[str, str]] = None, limit: int = 4) -> Dic
     RULE 7 정합 — 자기 산식 임계 조정 1회만 PM 사전 승인. 분기당 limit (default 4)
     초과 = 확증편향 (곡선 맞추기) detect.
 
-    candidate = _is_formula_change_candidate True 박힌 commit (passed/missing 무관).
-    retroactive approved 박힌 commit 포함 (실제 산식 변경 인지 후 PM 결정 박은 commit).
+    candidate = _is_formula_change_candidate True 인 commit (passed/missing 무관).
+    retroactive approved 인 commit 포함 (실제 산식 변경 인지 후 PM 결정한 commit).
     """
     q = quarter or _current_quarter()
     try:
@@ -347,7 +347,7 @@ def quota_count(quarter: Optional[Dict[str, str]] = None, limit: int = 4) -> Dic
 
 
 def _update_cockpit_quota(quota: Dict[str, Any]) -> None:
-    """cockpit_state.json 의 rule7_quota field 박음."""
+    """cockpit_state.json 의 rule7_quota field 기록."""
     if not COCKPIT_PATH.exists():
         return
     try:
@@ -361,9 +361,9 @@ def _update_cockpit_quota(quota: Dict[str, Any]) -> None:
 
 
 def _update_cockpit_state(pending: List[Dict[str, Any]]) -> None:
-    """cockpit_state.json 의 pre_registration_pending field 박음.
+    """cockpit_state.json 의 pre_registration_pending field 기록.
 
-    cockpit_state.json 부재 시 skip (cockpit_aggregate 가 먼저 박혀야 함).
+    cockpit_state.json 부재 시 skip (cockpit_aggregate 가 먼저 실행되어야 함).
     """
     if not COCKPIT_PATH.exists():
         print(f"  ⚠ cockpit_state.json 부재 — skip", file=sys.stderr)
@@ -385,7 +385,7 @@ def _update_cockpit_state(pending: List[Dict[str, Any]]) -> None:
 
 
 def _append_audit_ledger(pending: List[Dict[str, Any]]) -> None:
-    """pre_registration_audit.jsonl 박음 — 시계열 trail."""
+    """pre_registration_audit.jsonl 기록 — 시계열 trail."""
     AUDIT_LEDGER.parent.mkdir(parents=True, exist_ok=True)
     entry = {
         "ts_utc": datetime.now(timezone.utc).isoformat(),
@@ -444,7 +444,7 @@ def main() -> int:
     --mode cron      : 7일 lookback + cockpit_state + ledger + 분기 quota (KST 09:15)
     --mode pr-check  : --base ref 와 HEAD 비교 → fail 시 exit 1 (PR pre-merge)
     --mode commit    : --sha 단일 commit 검증 → ::warning:: post-hoc (push trigger)
-    --mode quota     : 분기 quota count only (cockpit_state.rule7_quota 박음)
+    --mode quota     : 분기 quota count only (cockpit_state.rule7_quota 기록)
     """
     import argparse
     p = argparse.ArgumentParser(description="RULE 7 산식 변경 commit audit")
@@ -459,10 +459,10 @@ def main() -> int:
         pending = audit_recent_commits(since_days=args.since_days)
         _update_cockpit_state(pending)
         _append_audit_ledger(pending)
-        # 분기 quota 동시 박음
+        # 분기 quota 동시 기록
         quota = quota_count(limit=args.quota_limit)
         _update_cockpit_quota(quota)
-        print(f"  ✓ pre_registration_audit 박힘: 산식 의심 commit {len(pending)}건 (pending)")
+        print(f"  ✓ pre_registration_audit 완료: 산식 의심 commit {len(pending)}건 (pending)")
         for p_ in pending[:5]:
             print(f"    - {p_['sha']} {p_['date']} {p_['subject']}")
             print(f"      missing: {', '.join(p_['missing'])}")
@@ -498,7 +498,7 @@ def main() -> int:
             return 0
         for p_ in pending:
             print(f"::warning::RULE 7 post-hoc violation {p_['sha']}: missing {', '.join(p_['missing'])} — {p_['subject']}")
-        return 0  # post-hoc = warning only, exit 0 (이미 main 박힘)
+        return 0  # post-hoc = warning only, exit 0 (이미 main 처리됨)
 
     if args.mode == "quota":
         quota = quota_count(limit=args.quota_limit)

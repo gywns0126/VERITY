@@ -4,7 +4,7 @@
   [[project_after_tax_sharpe_kr_us]] / [[conviction_selector.py]] 의 σ_FX 가정 0.08
   (DEFAULT_SIGMA_FX) 시점 검증 의제. Perplexity A2 자문
   ([[2026-05-23_Track1_BCE_자문_3건.md]]) = 2026-05 시점 σ_FX 0.08 "다소 보수적"
-  평가. 실측 검증 cron 박음 = ECOS 일별 USD/KRW 시계열 → 30/60/90d 실현 σ 산출.
+  평가. 실측 검증 cron 추가 = ECOS 일별 USD/KRW 시계열 → 30/60/90d 실현 σ 산출.
 
 산식:
   σ_Nd = stdev(log(R_t / R_{t-1}) for t in [now-N, now]) × √252

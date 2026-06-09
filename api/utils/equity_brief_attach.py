@@ -67,7 +67,7 @@ def load_equity_brief(
         except Exception:
             pass
 
-    # _error 박혀있으면 skip
+    # _error 설정되어 있으면 skip
     if d.get("_error"):
         return None
 

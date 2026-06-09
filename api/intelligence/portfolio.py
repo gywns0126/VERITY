@@ -36,7 +36,7 @@ RULE 7 정합:
   - 임계 (방법 선택 / shrinkage strength / BL prior weight) = PM 사전등록 후 활성
   - 본 stub = NotImplementedError. 11월 wire 시 verity_constitution.json 매핑.
 
-fallback (조건 3-C minimum viable subset, 2026-05-28 PM 옵션2 박힘):
+fallback (조건 3-C minimum viable subset, 2026-05-28 PM 옵션2 확정):
   Portfolio = 필수 ABSOLUTE. slip = vision 도달 X.
   현 path (균등 또는 safety_score top N) 유지 = 임시 fallback (vision 정합도 ↓).
 """

@@ -1,7 +1,7 @@
 """
 ATR Migration Summary — Phase 0 (SMA→Wilder EMA) 검증 데이터.
 
-portfolio.json 의 `atr_migration` key 박힘. AdminDashboard CardATRMigration
+portfolio.json 의 `atr_migration` key 에 기록됨. AdminDashboard CardATRMigration
 이 fetch 해서 운영 가시성 제공.
 
 Phase 0 verdict (5/16) 까지 outlier 추세 + diff 분포 추적.

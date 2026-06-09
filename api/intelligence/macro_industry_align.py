@@ -1,7 +1,7 @@
 """macro_industry_align — Macro Themes × Industry Themes × Mapping → sector alignment.
 
 PM 직관 (5/20): Top-down Macro → Industry → Stock 의 B 단계.
-  - A: macro_themes_pulse (IB strategist weekly themes, 5/20 박힘 af33a9f0)
+  - A: macro_themes_pulse (IB strategist weekly themes, 5/20 추가 af33a9f0)
   - B (본 모듈): A + Industry Themes + mapping dict → favored/disfavored sectors 시그널
   - C: 위 신호를 5단계 funnel + Brain v5 grade 에 적용 (Brain v6 정합 후)
 
@@ -110,7 +110,7 @@ def compute_alignment(
             if tilt_val == 0.0:
                 continue
             # dir_score 가 이미 +1 / -1 부호 반영 — mapping 의 direction key 와 매칭.
-            # 그러나 tilt_val 자체가 direction-specific 박힘 → 부호 중복 X.
+            # 그러나 tilt_val 자체가 direction-specific 반영됨 → 부호 중복 X.
             # 합성: contribution = conviction_weight × tilt_val (이미 dir-specific)
             contribution = conv_w * tilt_val
             sector_scores[sector] += contribution

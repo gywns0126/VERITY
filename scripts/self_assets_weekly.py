@@ -3,9 +3,9 @@
 self_assets_weekly.py — VERITY 자기 자산 5종 강화 weekly trail
 
 WHY: 조건 5-b 보강. 메모 RULE 6 BigBrother 대응 — LLM 못 가지는 자기 자산
-누적이 핵심 해자. 매주 자산 항목 ↑/↓/= 박아 정체 detect.
+누적이 핵심 해자. 매주 자산 항목 ↑/↓/= 기록하여 정체 detect.
 
-5 항목 (현 wire 박힌 3 + 큐잉 2):
+5 항목 (현 wire 설정된 3 + 큐잉 2):
   1. Brain learning N+    — data/metadata/brain_learning.jsonl 신 entry 누적
   2. funnel SHADOW data   — data/wide_scan_log.jsonl 신 entry 누적
   3. cron 자동화 health   — data/metadata/cron_health.jsonl 최근 7일 fail/total
@@ -37,7 +37,7 @@ def _now_kst() -> str:
 
 
 def _count_jsonl_entries_last_n_days(path: Path, days: int = 7) -> Dict[str, Any]:
-    """jsonl 파일의 최근 N일 신 entry 수 박음."""
+    """jsonl 파일의 최근 N일 신 entry 수 반환."""
     if not path.exists():
         return {"path": str(path.relative_to(_ROOT)), "n_new": -1,
                 "total": 0, "detail": "file missing"}
@@ -55,7 +55,7 @@ def _count_jsonl_entries_last_n_days(path: Path, days: int = 7) -> Dict[str, Any
                     entry = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                # timestamp 박힌 key 후보 (jsonl 파일별 schema 다름)
+                # timestamp 들어간 key 후보 (jsonl 파일별 schema 다름)
                 ts = (entry.get("ts_utc") or entry.get("ts_kst") or entry.get("as_of")
                       or entry.get("timestamp") or entry.get("created_at") or entry.get("ts"))
                 if not ts:
@@ -145,7 +145,7 @@ def check_funnel_shadow() -> Dict[str, Any]:
 
 
 def check_cron_health() -> Dict[str, Any]:
-    """cron_health.jsonl 최근 7일 fail/total 비율 박음."""
+    """cron_health.jsonl 최근 7일 fail/total 비율 반환."""
     path = _ROOT / "data" / "metadata" / "cron_health.jsonl"
     if not path.exists():
         return {"asset": "cron_health", "path": str(path.relative_to(_ROOT)),
@@ -178,7 +178,7 @@ def check_cron_health() -> Dict[str, Any]:
                 except (ValueError, TypeError):
                     continue
                 total += 1
-                # severity / status 박힌 부분 FAIL/WARNING 감지
+                # severity / status 들어간 부분 FAIL/WARNING 감지
                 sev = (entry.get("severity") or entry.get("status") or "").upper()
                 if sev in ("FAIL", "WARNING", "ERROR"):
                     fail += 1

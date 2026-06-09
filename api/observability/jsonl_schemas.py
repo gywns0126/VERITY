@@ -1,5 +1,5 @@
 """
-jsonl_schemas — pandera DataFrame schema 박음 (적재 hook 사전 차단).
+jsonl_schemas — pandera DataFrame schema 정의 (적재 hook 사전 차단).
 
 Why: 메모리 [[feedback_data_collection_verification_mandatory]] = try/finally + stderr +
 N run 누적 = 사후 detect 만. pandera = 적재 시점 schema 강제 = **사전 차단**.

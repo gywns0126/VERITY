@@ -4,12 +4,12 @@ PM=approved 2026-05-23 (plan `/Users/macbookpro/.claude/plans/1-tidy-breeze.md` 
 WHY: 11 ledger 분산 → 단일 operator 시야 통합. severity 산식 분산 → 단일 source.
 DATA: cron_health.severity / data_health.core_sources_ok / operator_deadman.trigger /
       kis_lock_commits_24h / fred staleness / dispatch_chain_summary 등 합성.
-EXPECTED: scripts/cockpit_aggregate.py 가 11 ledger 입력 dict 박음 → evaluate() 호출
-          → severity(GREEN/YELLOW/RED) + severity_reasons[] 박음.
+EXPECTED: scripts/cockpit_aggregate.py 가 11 ledger 입력 dict 전달 → evaluate() 호출
+          → severity(GREEN/YELLOW/RED) + severity_reasons[] 반환.
 
 자기 산식 규율 ([[feedback_methodology_pre_registration]]):
 - 룰 변경 = 1회만, PM 승인 의무 (RULE 7).
-- 신규 룰 추가 시 commit message PM=approved + WHY/DATA/EXPECTED 박음.
+- 신규 룰 추가 시 commit message PM=approved + WHY/DATA/EXPECTED 기록.
 
 source: [[project_win_condition_decision]] option 2, plan PM 승인 2026-05-23.
 """
@@ -92,7 +92,7 @@ def _check_yellow(inputs: Dict[str, Any]) -> List[str]:
 
     # feature_drift warning
     if inputs.get("feature_drift_warning"):
-        reasons.append("feature_drift warning 박힘")
+        reasons.append("feature_drift warning 발생")
 
     # brain anomaly ≥ 3 (brain_audit 24h 내 anomaly)
     brain_anom = inputs.get("brain_anomaly_24h")
@@ -114,7 +114,7 @@ def evaluate(inputs: Dict[str, Any]) -> Tuple[str, List[str]]:
     """11 ledger 입력 dict → (severity, severity_reasons).
 
     Args:
-        inputs: cockpit_aggregate.py 가 박은 정규화 dict.
+        inputs: cockpit_aggregate.py 가 전달한 정규화 dict.
             예상 키: kis_lock_commits_24h / operator_deadman / data_health /
             fred_age_h / dispatch_chain_ratio / open_p0_aged_24h /
             pre_registration_pending / feature_drift_warning / brain_anomaly_24h

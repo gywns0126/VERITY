@@ -325,7 +325,7 @@ def _compute_fact_score(
     ic_applied = {}
     # 2026-05-25 IC-DEAD freeze (PM 사전등록 [[project_ic_dead_freeze_2026_05_23]]):
     # "ok" 외 "frozen_2026_05_23" status 도 적용. frozen 은 4 PM disable factor 만
-    # multiplier 0.0 박힘, 나머지 9 factor 는 adjustments dict 부재 → 자동 neutral.
+    # multiplier 0.0 적용됨, 나머지 9 factor 는 adjustments dict 부재 → 자동 neutral.
     if ic_adj.get("status") in ("ok", "frozen_2026_05_23"):
         for ic_factor, wk in _IC_TO_WEIGHT_KEY.items():
             adj = ic_adj["adjustments"].get(ic_factor)
@@ -412,7 +412,7 @@ def _compute_fact_score(
 
     # Brain v6 prep (2026-05-17): equity_research_brief verdict → fact_score component.
     # Perplexity Sonar Pro institutional brief (project_perplexity_equity_brief).
-    # 미장 US15 만 데이터 박힘. KR 종목 = 50 neutral (data 부재).
+    # 미장 US15 만 데이터 존재. KR 종목 = 50 neutral (data 부재).
     # 초기 weight 0.03 (3%) — IC/ICIR 3개월 관찰 후 조정.
     _BRIEF_VERDICT_MAP = {
         "STRONG_BUY": 90.0, "BUY": 75.0, "HOLD": 50.0,
@@ -451,7 +451,7 @@ def _compute_fact_score(
     # 결함: IC=DEAD 시 weight × 0.3 적용 → multi_factor 0.188→0.056, prediction 0.085→0.026,
     #       timing 0.060→0.018. 합 1.000 → ~0.6 으로 떨어짐 → fact_score 자연 ~40% 감점.
     #       brain_score max 46 / BUY 0건 / grade 임계 75/60/45 비현실 결함의 root cause.
-    # Fix: weight 합 normalize 박아서 살아있는 factor 비중 보존 (DEAD 비중 → 살아있는 factor 재분배).
+    # Fix: weight 합 normalize 적용해 살아있는 factor 비중 보존 (DEAD 비중 → 살아있는 factor 재분배).
     #       의미: "DEAD factor 가 alpha 없으면 그 비중을 alpha 있는 factor 로 옮긴다" — 합리적.
     #       theoretical max 100 도달 가능. grade 임계 정상 작동.
     w_sum = sum(w.values())

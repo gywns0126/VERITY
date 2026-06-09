@@ -49,7 +49,7 @@ def _read_json(path: Path) -> Optional[Any]:
 
 
 def _read_jsonl_tail(path: Path, n: int = 200) -> List[Dict[str, Any]]:
-    """jsonl 의 마지막 n entry 박음. 빈 파일 / 파싱 실패 = []."""
+    """jsonl 의 마지막 n entry 반환. 빈 파일 / 파싱 실패 = []."""
     if not path.exists():
         return []
     try:
@@ -275,7 +275,7 @@ def _reduce_system_health_snapshot() -> Dict[str, Any]:
 # ─── P1-e VERITY 통합 한줄평 (LLM 호출 0, RULE 6/7 통과) ──
 
 def _compose_one_liner(portfolio: Dict[str, Any], n_today: Dict[str, int]) -> str:
-    """portfolio + n_today 박음 → VERITY 통합 한줄평 박음.
+    """portfolio + n_today 받아 → VERITY 통합 한줄평 생성.
 
     포맷: "과열 · 0 BUY / 7 WATCH / 14 CAUTION / 4 AVOID · VAMS 70% 현금 · 가설 N=30"
 
@@ -401,7 +401,7 @@ def _preserve_external_keys() -> Dict[str, Any]:
 
 
 def build_cockpit_state() -> Dict[str, Any]:
-    """모든 reducer 호출 + severity 박음 → cockpit_state dict 반환."""
+    """모든 reducer 호출 + severity 계산 → cockpit_state dict 반환."""
     inputs: Dict[str, Any] = {}
 
     # 11 ledger reduce
@@ -417,8 +417,8 @@ def build_cockpit_state() -> Dict[str, Any]:
     inputs.update(_reduce_system_health_snapshot())
     inputs.update(_reduce_vams_reset())
 
-    # severity 박음 ([[feedback_methodology_pre_registration]] 사전등록)
-    # data_health 이 nested dict 라 unpack 박음
+    # severity 계산 ([[feedback_methodology_pre_registration]] 사전등록)
+    # data_health 이 nested dict 라 unpack 처리
     flat_inputs = dict(inputs)
     if isinstance(flat_inputs.get("data_health"), dict):
         flat_inputs["data_health"] = flat_inputs["data_health"]
@@ -435,7 +435,7 @@ def build_cockpit_state() -> Dict[str, Any]:
             pass
     severity, severity_reasons = evaluate_severity(flat_inputs)
 
-    # N milestones — verification_trail helper 박음 (Phase 1 P1-d)
+    # N milestones — verification_trail helper 사용 (Phase 1 P1-d)
     portfolio = _read_json(DATA_DIR / "portfolio.json") or {}
     trail = compute_trail(portfolio)
     n_today = trail["n_today"]
@@ -456,7 +456,7 @@ def build_cockpit_state() -> Dict[str, Any]:
         "severity_reasons": severity_reasons,
         "n_verification_days": n_days,
         "n_milestones": milestones,
-        # Phase 1 P1-d — trade N + sample N 박음 (verification_trail.py)
+        # Phase 1 P1-d — trade N + sample N 기록 (verification_trail.py)
         "n_trades": n_today["n_trades"],
         "trade_milestones": trail["trade_milestones"],
         "n_validation_samples": n_today["n_validation_samples"],

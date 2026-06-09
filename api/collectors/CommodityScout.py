@@ -434,7 +434,7 @@ def run_commodity_scout(
     """
     holdings = holdings or []
     universe: Dict[str, Dict[str, Any]] = {}
-    # 2026-05-18 A6 v2 fix — 옛: 무조건 zfill(6) → US "TMO" → "000TMO" key 박음 → by_ticker 매칭 fail.
+    # 2026-05-18 A6 v2 fix — 옛: 무조건 zfill(6) → US "TMO" → "000TMO" key 생성 → by_ticker 매칭 fail.
     # 신: KR (전부 숫자) 만 6자리 padding, US 는 raw 유지. attach_commodity_to_stocks 와 정합.
     for s in candidates:
         raw = str(s.get("ticker", ""))

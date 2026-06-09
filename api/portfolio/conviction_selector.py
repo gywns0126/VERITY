@@ -2,7 +2,7 @@
 conviction_selector — KR vs US 세후 동등 hurdle + AT Sharpe 최적 비중.
 
 출처: Perplexity 2026-05-17 자문 (메모리 [[after-tax-sharpe-kr-us]] 갱신).
-docs/COST_MODEL_SPEC.md §5 정밀 산식 박음. 단순 fallback "+5%p" 폐기.
+docs/COST_MODEL_SPEC.md §5 정밀 산식 적용. 단순 fallback "+5%p" 폐기.
 
 핵심 산식:
     R_KR_AT = R_KR_gross × (1 - t_KR)            # t_KR=0 (비대주주 비과세)
@@ -16,7 +16,7 @@ docs/COST_MODEL_SPEC.md §5 정밀 산식 박음. 단순 fallback "+5%p" 폐기.
 - R_f 세전 사용 (분자/분모 동시 통일 원칙, 혼용 = Sharpe 과대 추정)
 - KR 거주자 세제 특화 산식 = 학계 부재 → 실무 도출 (목적함수 내재화)
 
-wiring: 현재 dead code (단위 테스트만). Tier 2 진입 / Brain v6 sprint 시 호출 박음.
+wiring: 현재 dead code (단위 테스트만). Tier 2 진입 / Brain v6 sprint 시 호출 연결.
 """
 
 from __future__ import annotations

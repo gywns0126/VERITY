@@ -50,7 +50,7 @@ PBLNTF_LABELS: Dict[str, str] = {
 # catalyst 강도 5-tier (2026-05-23 PM 사전등록, RULE 7).
 # Perplexity 자문 정합 ([[2026-05-23_Track1_자문_batch2_A4A5A6A7.md]] §A4):
 #   한국 PM 실무 + 자본시장법 시행령 + DART 가이드 + 학술 정합 (DBPIA M&A 가격반응 / KAIST CB-BW 희석).
-# 기존 (5/18 박음): B/C/D/corr 일률 매핑 (B 전체 = 3, 충격 차이 미반영).
+# 기존 (5/18 구현): B/C/D/corr 일률 매핑 (B 전체 = 3, 충격 차이 미반영).
 # 신규 (5/23): B 내부 report_nm keyword 매칭으로 5/4/3 분리.
 CATALYST_SEVERITY: Dict[str, int] = {
     "B_critical": 5,  # 존속가치 훼손 = 회생/파산/영업양수도/횡령/배임/대규모 자산처분

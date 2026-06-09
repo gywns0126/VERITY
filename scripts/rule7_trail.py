@@ -73,7 +73,7 @@ def _resolve_sha(prefix: str, entries: List[Dict[str, Any]]) -> Optional[Dict[st
     if not matches:
         return None
     if len(matches) > 1:
-        sys.exit(f"::error::sha prefix '{prefix}' 다중 매칭 ({len(matches)}건). 더 길게 박으세요.")
+        sys.exit(f"::error::sha prefix '{prefix}' 다중 매칭 ({len(matches)}건). 더 길게 입력하세요.")
     return matches[0]
 
 
@@ -118,7 +118,7 @@ def cmd_approve(args: argparse.Namespace) -> int:
     entries = _load_entries()
     e = _resolve_sha(args.sha, entries)
     if not e:
-        sys.exit(f"::error::sha '{args.sha}' 미발견. add 먼저 박으세요.")
+        sys.exit(f"::error::sha '{args.sha}' 미발견. add 먼저 하세요.")
     e["pm_decision"] = "approved"
     e["pm_why"] = args.why
     e["pm_data"] = args.data
@@ -136,7 +136,7 @@ def cmd_reject(args: argparse.Namespace) -> int:
         sys.exit(f"::error::sha '{args.sha}' 미발견")
     e["pm_decision"] = "rejected"
     e["pm_rejected_reason"] = args.reason
-    e["pm_approved_at"] = _now_kst()  # 결정 박힌 시각 박음 (approved/rejected 동일 컬럼)
+    e["pm_approved_at"] = _now_kst()  # 결정 기록된 시각 기록 (approved/rejected 동일 컬럼)
     _save_entries(entries)
     print(f"  ✗ rejected — {e['sha'][:8]} {e['subject'][:60]}")
     return 0
@@ -145,8 +145,8 @@ def cmd_reject(args: argparse.Namespace) -> int:
 def cmd_add(args: argparse.Namespace) -> int:
     entries = _load_entries()
     if any(e.get("sha", "").startswith(args.sha[:8]) for e in entries):
-        sys.exit(f"::error::sha '{args.sha[:8]}' 이미 박혀있음. approve/reject/show 사용.")
-    # git 에서 full SHA / date / subject 박음
+        sys.exit(f"::error::sha '{args.sha[:8]}' 이미 추가됨. approve/reject/show 사용.")
+    # git 에서 full SHA / date / subject 추가
     try:
         out = subprocess.check_output(
             ["git", "log", "-1", "--pretty=format:%H|%cs|%s", args.sha],
@@ -190,19 +190,19 @@ def main() -> int:
     p_show.add_argument("sha", help="SHA prefix (8자 이상)")
     p_show.set_defaults(func=cmd_show)
 
-    p_approve = sub.add_parser("approve", help="PM=approved + WHY/DATA/EXPECTED 박음")
+    p_approve = sub.add_parser("approve", help="PM=approved + WHY/DATA/EXPECTED 기록")
     p_approve.add_argument("sha", help="SHA prefix")
     p_approve.add_argument("--why", required=True, help="결정 이유 (정책/원전/근거)")
     p_approve.add_argument("--data", required=True, help="데이터 / 검증 / 영향 범위")
     p_approve.add_argument("--expected", required=True, help="기대 효과 / 메트릭 / 게이트")
     p_approve.set_defaults(func=cmd_approve)
 
-    p_reject = sub.add_parser("reject", help="PM=rejected 박음 (재분류 / 산식 변경 아님)")
+    p_reject = sub.add_parser("reject", help="PM=rejected 기록 (재분류 / 산식 변경 아님)")
     p_reject.add_argument("sha", help="SHA prefix")
     p_reject.add_argument("--reason", required=True, help="거부 사유")
     p_reject.set_defaults(func=cmd_reject)
 
-    p_add = sub.add_parser("add", help="신 entry 추가 (cron 미박힌 commit 직접 박을 때)")
+    p_add = sub.add_parser("add", help="신 entry 추가 (cron 미기록 commit 직접 추가할 때)")
     p_add.add_argument("sha", help="git SHA (full 또는 prefix)")
     p_add.add_argument("--missing", nargs="*", default=None,
                        help="기본 ['PM=approved']")

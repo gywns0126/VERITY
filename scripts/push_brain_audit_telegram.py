@@ -1,6 +1,6 @@
 """brain_audit 마지막 entry 텔레그램 push.
 
-2026-05-18 박힘 — 사용자 자리 비움 시 핸드폰 알림 정공법.
+2026-05-18 추가됨 — 사용자 자리 비움 시 핸드폰 알림 정공법.
 daily_analysis_full.yml step 호출. brain_audit.jsonl tail 1 → 요약 → send_message.
 
 quiet hours / dedupe = api/notifications/telegram.send_message 가 자동 정합.

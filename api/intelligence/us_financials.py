@@ -225,7 +225,7 @@ def extract_metric_series(
 
     이유: 회사가 시기별 다른 tag 사용 (예: MSFT 2010 이전 Revenues, 2018+
     RevenueFromContractWithCustomerExcludingAssessedTax — ASC 606 도입).
-    First-match 만 사용 시 시계열 잘림 (5/20 박힘 — MSFT revenue 2010 종결 결함).
+    First-match 만 사용 시 시계열 잘림 (5/20 발견 — MSFT revenue 2010 종결 결함).
 
     dedupe key: (end, fp, form). 충돌 시 accn (restatement) 최신 우선.
     """

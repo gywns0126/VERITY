@@ -432,7 +432,7 @@ def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str, metrics: O
 
     2026-05-10 — silent skip 차단 (memory feedback_data_collection_verification_mandatory):
       get_all_stock_data 가 _metrics dict 에 채운 yf_failure_rate 를 monitor 에 의무 전달.
-      이전엔 default 0.0 으로 박혀 yf rate-limit 65% 도 trigger=[] 로 보고된 결함 노출.
+      이전엔 default 0.0 으로 설정되어 yf rate-limit 65% 도 trigger=[] 로 보고된 결함 노출.
     """
     try:
         import os as _os

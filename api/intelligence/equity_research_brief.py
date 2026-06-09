@@ -8,7 +8,7 @@ Plumbing:
   - Input: data/universe_candidates.json 의 US15
   - Output: data/equity_research/<TICKER>.json
   - Cron: .github/workflows/equity_research_brief.yml (주 1회, 월요일 KST 06:00)
-  - Brain v6 input source 후보 (현재는 산출물 박는 단계)
+  - Brain v6 input source 후보 (현재는 산출물 생성 단계)
 
 Cost guard:
   - 종목당 ~$0.05-0.20 추정 (sonar-pro)
@@ -100,7 +100,7 @@ Output STRICT JSON schema (no markdown wrappers, no example values copied — fi
 def fetch_verity_trail(ticker: str) -> Dict[str, Any]:
     """portfolio.json 의 recommendations 에서 ticker 매치 → VERITY 자체 trail 추출.
 
-    2026-05-17 빅브라더 정합 박힌 추가 ([[feedback_no_new_llm_narrative_features]]).
+    2026-05-17 빅브라더 정합 발견으로 추가 ([[feedback_no_new_llm_narrative_features]]).
     Perplexity narrative = LLM 우위 (사용자가 Pro 가입 후 직접 묻는 게 더 좋음).
     VERITY 의 진짜 차별점 = 1년 운영 trail + 자체 산식 (Brain v5 가중치 / Lynch 룰 /
     VCI / red_flags / position_guide) — LLM 가입자 못 가짐.

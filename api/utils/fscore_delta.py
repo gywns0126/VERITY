@@ -220,7 +220,7 @@ def attach_fscore_deltas(stock: Dict[str, Any]) -> None:
     사이클 섹터 (반도체/조선/철강 등, Perplexity Q-fin-4) 자동 식별 후 4Q+8Q AND 게이트 적용.
 
     stock 에 ticker / current_quarter_fundamentals 필요.
-    분기 snapshot 부재 시 fscore_deltas = {data_source: "no_snapshots"} 박힘.
+    분기 snapshot 부재 시 fscore_deltas = {data_source: "no_snapshots"} 설정됨.
     """
     ticker = stock.get("ticker", "")
     if not ticker:
@@ -244,7 +244,7 @@ def attach_fscore_deltas(stock: Dict[str, Any]) -> None:
 if __name__ == "__main__":
     # CLI dry-run
     if not QUARTERLY_SNAPSHOT_PATH.exists():
-        print(f"[fscore_delta] {QUARTERLY_SNAPSHOT_PATH} 없음 — 인프라 prep 만 박힘", file=sys.stderr)
+        print(f"[fscore_delta] {QUARTERLY_SNAPSHOT_PATH} 없음 — 인프라 prep 만 완료", file=sys.stderr)
         # synthetic test
         sample_current = {"roa": 0.08, "debt_ratio": 1.2, "current_ratio": 1.5,
                           "gross_margin": 0.35, "asset_turnover": 0.7}

@@ -227,7 +227,7 @@ def _rescore_stock(stock: Dict[str, Any], override: Optional[Dict[str, Any]]) ->
     # 운영 verity_brain.py 산식 정합 — 2026-05-07 결함 수정.
     # 옛 버전 = `fact*0.7 + sent*0.3 + vci_bonus` 만. candle_bonus / red_flag_penalty
     # 누락 → 재산출 시 red_flag 종목까지 BUY → proposal universe 가 current 보다
-    # 훨씬 약함 → 27 cycle 모두 rejected_by_backtest. 가산점/페널티 박음.
+    # 훨씬 약함 → 27 cycle 모두 rejected_by_backtest. 가산점/페널티 반영.
     candle_bonus = vb.get("candle_bonus") or 0
     red_flag_penalty = vb.get("red_flag_penalty") or 0
 

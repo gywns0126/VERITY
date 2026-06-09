@@ -204,7 +204,7 @@ def _check_reports_signed_url() -> tuple:
 
     배경: 5/3 운영 시작 ~ 5/7 까지 사용자 다운로드 항상 fail. 원인 = signed URL
     합성 path 의 /storage/v1 prefix 누락. 5/7 fix (5c2a93d) 후 재발 방지 영구
-    health check 박음. 메모리 feedback_reports_are_brain_learning_input.
+    health check 추가. 메모리 feedback_reports_are_brain_learning_input.
 
     2026-05-09 instrumentation: silent skip 절대 금지 룰
     (feedback_data_collection_verification_mandatory) 정합. fail 시 정확한
@@ -213,7 +213,7 @@ def _check_reports_signed_url() -> tuple:
     검증:
     1. Supabase Storage signed URL 발급 (verity_daily_public.pdf)
     2. URL 로 HEAD fetch → 200 검증
-    3. 깨지면 즉시 false → system_health 의 errors 박힘 → 텔레그램 alert
+    3. 깨지면 즉시 false → system_health 의 errors 에 기록됨 → 텔레그램 alert
     """
     import sys
 
@@ -226,7 +226,7 @@ def _check_reports_signed_url() -> tuple:
     SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
     SUPABASE_SR = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
     if not SUPABASE_URL or not SUPABASE_SR:
-        # 어느 변수가 비었는지 정확히 — 둘 중 하나만 비면 그것만 박음
+        # 어느 변수가 비었는지 정확히 — 둘 중 하나만 비면 그것만 기록
         missing: list = []
         if not SUPABASE_URL:
             missing.append("SUPABASE_URL")
@@ -626,12 +626,12 @@ def check_version_sync() -> dict:
             # cron 자동 commit 은 self-update false positive — health check 가 자기 자신
             # commit 을 "업데이트" 로 오인.
             # 2026-05-17 Phase 3 audit: cron yml 의 `git commit -m "..."` string 전수 sweep.
-            # 옛 list (📊 📡 📑 📋) 중 📋 = dead (어떤 cron 도 박지 않음) 제거.
+            # 옛 list (📊 📡 📑 📋) 중 📋 = dead (어떤 cron 도 사용하지 않음) 제거.
             # `[verity-earnings-prep]` = eps_estimate_snapshot.yml (text prefix, 유일).
             # 신 cron 추가 시 이 list 도 정합 의무 (CLAUDE.md RULE 4 sentinel).
             msg = result.get("remote_message", "")
             CRON_AUTO_PREFIXES = (
-                # emoji prefix — yml 에서 git commit -m "<emoji> ..." 박힌 거
+                # emoji prefix — yml 에서 git commit -m "<emoji> ..." 붙은 거
                 "📊 ",   # atr_phase_0_verdict / bond_etf / equity_research_brief / macro_collect
                 "🔐 ",   # daily_analysis_full / daily_analysis / daily_realtime / kis_token_refresh
                 "🏛️ ",  # dart_batch

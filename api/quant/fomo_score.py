@@ -18,7 +18,7 @@ FOMO Score 측정 인프라 v0.1 (2026-05-17, Perplexity Q6 학계 자문 적용
     - Rule-based Turnover: trade_plan v0 의 transition_triggers 발화 카운트
 
 NOTE: 운영 누적 데이터 부족 (2026-05 운영 시작, 진짜 측정 = 1년 누적 2027+).
-본 모듈 = 산식 박는 인프라. cron_health_monitor 분기별 호출.
+본 모듈 = 산식 구현 인프라. cron_health_monitor 분기별 호출.
 """
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ def count_realized_turnover(
 ) -> Dict[str, int]:
     """VAMS history 의 BUY/SELL events 카운트.
 
-    Auto = trade_plan transition 자동 매매 (rule_id 박힘).
+    Auto = trade_plan transition 자동 매매 (rule_id 기록됨).
     Manual = 사용자 override 매매 (rule_id 없음).
 
     Returns: {auto_buys, auto_sells, manual_buys, manual_sells, total}.
@@ -125,7 +125,7 @@ def estimate_rule_based_turnover(
         except (ValueError, TypeError):
             continue
 
-        # rule_id 또는 transition trigger 박힌 events
+        # rule_id 또는 transition trigger 설정된 events
         if ev.get("rule_id") or ev.get("transition_trigger") or ev.get("auto"):
             rule_triggered += 1
         # verdict change events

@@ -9,7 +9,7 @@ data/macro_snapshot.json 을 읽고, stale 시 None 반환 (caller inline fetch 
   - 한 process 1회 로드 (lru_cache) — 같은 main.py run 안에서 재호출 X
 
 메모리 정합:
-  - feedback_macro_timestamp_policy: collected_at 메타 보존 (caller 가 portfolio 에 박아야)
+  - feedback_macro_timestamp_policy: collected_at 메타 보존 (caller 가 portfolio 에 넣어야)
   - feedback_continuous_evolution 4 가드 — 롤백 path = inline fetch fallback 보존
 """
 from __future__ import annotations

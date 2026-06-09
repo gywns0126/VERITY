@@ -44,7 +44,7 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
             if kfr.get("source") == "kis":
                 gpm = kfr.get("gross_margin")
 
-    # 2026-05-19 M1 fix — top-level fallback (KIS/yfinance 가 박는 풍부한 데이터).
+    # 2026-05-19 M1 fix — top-level fallback (KIS/yfinance 가 제공하는 풍부한 데이터).
     # 진단 (docs/BRAIN_SCORE_AUDIT_20260518.md §3): nested path (sec_financials /
     # dart_financials / kis_financial_ratio.gross_margin) 모두 0/N → fallback 50
     # 60%. top-level gross_margins(22/25)/revenue_growth(24/25) 풍부. gpm=0 은

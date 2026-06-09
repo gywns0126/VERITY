@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """sync_memory_to_vault — Claude 메모리 → verity-methodology-vault Quartz content mirror.
 
-frontmatter `publish: true` 박힌 메모리만 vault content/ 로 mirror.
+frontmatter `publish: true` 설정된 메모리만 vault content/ 로 mirror.
 
 CLAUDE.md RULE 6 정합:
   - 자기 trail (Brain v5 임계 / Phase 0 / Lynch 등) 공개 노출 = LLM 무료 tier 못 가지는 차별점
@@ -30,8 +30,8 @@ def parse_frontmatter(text: str) -> Tuple[Dict[str, str], str]:
     """frontmatter 를 dict 로 파싱 + body 분리. 메모리는 비표준 YAML (콜론/따옴표 mix
     + nested metadata indent) 가 흔해서 line-based flat parse 사용 (PyYAML strict 회피).
 
-    nested 의 indent line 도 stripping 후 root-level 과 동일 dict 박음 — 시스템이
-    publish 를 root 또는 metadata: 둘 중 어디 박아도 인식.
+    nested 의 indent line 도 stripping 후 root-level 과 동일 dict 에 넣음 — 시스템이
+    publish 를 root 또는 metadata: 둘 중 어디 두어도 인식.
     """
     m = FRONTMATTER_RE.match(text)
     if not m:
@@ -44,7 +44,7 @@ def parse_frontmatter(text: str) -> Tuple[Dict[str, str], str]:
         stripped = line.lstrip()
         if ":" in stripped:
             k, _, v = stripped.partition(":")
-            # nested metadata 의 child 도 flat 박음. 같은 key root vs nested 충돌 시 root last-wins.
+            # nested metadata 의 child 도 flat 하게 넣음. 같은 key root vs nested 충돌 시 root last-wins.
             fm[k.strip()] = v.strip()
     return fm, text[m.end():]
 
@@ -55,7 +55,7 @@ def is_published(fm: Dict[str, str]) -> bool:
 
 def emit_frontmatter(fm: Dict[str, str]) -> str:
     """Quartz 호환 frontmatter — PyYAML safe_dump 으로 escape 보장."""
-    # Quartz 권장: title 필드. description / publish / type 만 박음.
+    # Quartz 권장: title 필드. description / publish / type 만 넣음.
     safe = {
         "title": fm.get("name", ""),
         "description": fm.get("description", ""),
@@ -69,7 +69,7 @@ def emit_frontmatter(fm: Dict[str, str]) -> str:
 
 
 def collect_published(memory_dir: Path) -> List[Tuple[Path, Dict[str, str], str]]:
-    """publish: true 박힌 .md 파일들 수집. MEMORY.md (index) 는 항상 제외."""
+    """publish: true 설정된 .md 파일들 수집. MEMORY.md (index) 는 항상 제외."""
     out = []
     for p in sorted(memory_dir.glob("*.md")):
         if p.name == "MEMORY.md":
@@ -116,7 +116,7 @@ def sync(memory_dir: Path, vault_dir: Path, dry_run: bool = False) -> int:
 
     vault_content = vault_dir / "content"
     entries = collect_published(memory_dir)
-    print(f"publish: true 박힌 메모리: {len(entries)} 건")
+    print(f"publish: true 설정된 메모리: {len(entries)} 건")
 
     if dry_run:
         for p, _, _ in entries:

@@ -1,6 +1,6 @@
 """brain audit baseline — daily_full 마다 brain_score 분포 + component fill 측정.
 
-2026-05-18 박힘 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
+2026-05-18 추가됨 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
 PM 명령 (5/18 12:40 KST) — A1 fix 후 16:07 daily_full 효과 자동 측정 + jsonl 누적.
 
 입력 ([[feedback_scheduled_routine_input_first]]):
@@ -38,7 +38,7 @@ PORTFOLIO_PATH = os.path.join(_REPO_ROOT, "data", "portfolio.json")
 PORTFOLIO_DEV_PATH = os.path.join(_REPO_ROOT, "data", "portfolio.dev.json")
 AUDIT_PATH = os.path.join(_REPO_ROOT, "data", "metadata", "brain_audit.jsonl")
 
-# 8 fact_score component + 2 vol (A5 fix 2026-05-18 박힘)
+# 8 fact_score component + 2 vol (A5 fix 2026-05-18 추가됨)
 FACT_COMPONENTS = [
     "commodity_margin",
     "dart_business_analysis",

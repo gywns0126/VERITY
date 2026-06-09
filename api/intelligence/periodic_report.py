@@ -560,7 +560,7 @@ def generate_periodic_analysis(period: str) -> dict:
             "message": f"최근 {days}일 내 아카이빙된 데이터가 없습니다.",
         }
 
-    # ── 2026-05-24 trail span 메타 박음 (acb2c12c / Q4 정합 보강) ──
+    # ── 2026-05-24 trail span 메타 추가 (acb2c12c / Q4 정합 보강) ──
     # Q4 답변 (Perplexity, Bloomberg/LSEG point-in-time) 정합:
     #   ratio ≥ 0.7 → OK / 0.5 ≤ ratio < 0.7 → amber / ratio < 0.5 → insufficient.
     from datetime import datetime as _dt
@@ -709,7 +709,7 @@ def compute_sector_trend_summary() -> dict:
         - 0.5 ≤ ratio < 0.7 → quality_label = "amber" (계산 허용 + trail_warning)
         - ratio < 0.5  → quality_label = "insufficient" (통계 미생성, flag dict 만 반환)
       외부 caller (sector_rotation_detector._fallback_from_sector_trends) = top3/bottom3
-      list 사용 → amber band 도 top3/bottom3 박음 (insufficient case 만 빈 list).
+      list 사용 → amber band 도 top3/bottom3 기록 (insufficient case 만 빈 list).
     """
     from datetime import datetime as _dt
     result: dict = {}
@@ -745,7 +745,7 @@ def compute_sector_trend_summary() -> dict:
                 "rotation_out": [],
             }
             continue
-        # ratio ≥ 0.5 → 통계 박음 (OK 또는 amber)
+        # ratio ≥ 0.5 → 통계 생성 (OK 또는 amber)
         analysis = _analyze_sector_trends(snaps)
         analysis["required_days"] = days
         analysis["actual_span_days"] = actual_span_days

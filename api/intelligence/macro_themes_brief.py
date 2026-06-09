@@ -4,7 +4,7 @@ PM 직관 (사용자, 5/20): 테크 애널리스트가 매크로 데이터 + 매
 → Top-down 정공법: Macro → Industry → Stock filter.
 → A 옵션 (Macro layer) 즉시 진입 ([[project_macro_themes_tracker]]).
 
-Industry Themes Tracker (5/20 박힘) 와 차별:
+Industry Themes Tracker (5/20 추가됨) 와 차별:
   - Industry Themes: 15 brief × earnings call themes = cross-ticker frequency
   - Macro Themes (본 모듈): 1 weekly Perplexity call × IB strategist views = snapshot
     + 시계열 누적 (향후 v0.1 aggregator 에서 weekly recurrence 산출)

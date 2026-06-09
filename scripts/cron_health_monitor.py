@@ -109,7 +109,7 @@ def _drop_resolved_fails(
 ) -> List[Dict[str, Any]]:
     """fail 후 같은 workflow 의 success 가 떨어지면 resolved 로 간주.
 
-    2026-05-18 박힘 — 24h 윈도우 fail count 가 fix 이후에도 빨간불 유지하는
+    2026-05-18 추가됨 — 24h 윈도우 fail count 가 fix 이후에도 빨간불 유지하는
     frustration 증폭 결함. e.g. universe_scan FAIL 16:17 + FAIL 16:28 후
     f95ad860 numba fix → SUCCESS 16:31. 옛 logic = 5/18 16:00 까지 빨간불 유지.
     신: latest_success_ts 이전 fail = resolved (alert 대상에서 drop),
@@ -131,7 +131,7 @@ def _split_fail_vs_cancel(
 ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """conclusion 분리: 실 결함(failure/timed_out) vs 취소(cancelled).
 
-    2026-05-18 박힘 — cancellation = 코드 결함 아님 (concurrency / 수동 stop /
+    2026-05-18 추가됨 — cancellation = 코드 결함 아님 (concurrency / 수동 stop /
     runner 이슈). 옛 logic = `conclusion != 'success'` 단일 묶음 → cancel 1건도
     FAIL 격상. 신: real_fail 만 FAIL 격상, cancel 은 >3/24h 임계에서만 WARNING.
     """
@@ -146,7 +146,7 @@ def _split_fail_vs_cancel(
 def _is_run_on_kst_weekend(run: Dict[str, Any]) -> bool:
     """workflow run 의 createdAt 이 KST 토/일 인지 검사.
 
-    2026-05-18 박힘 — 현재 weekday 만 검사하던 옛 logic 결함.
+    2026-05-18 추가됨 — 현재 weekday 만 검사하던 옛 logic 결함.
     Sun 07:09 KST 발생한 daily_analysis_full fail 이 Mon 00:55 KST 모니터에
     잡힐 때 (24h 윈도우 포함) is_weekend=False 라 FAIL 격상. 실제는 KRX 휴장
     transient → fail 의 발생 시각 기준 weekday 검사로 교정.
@@ -167,7 +167,7 @@ def _is_run_on_kst_weekend(run: Dict[str, Any]) -> bool:
 def _count_expected_price_pulse_in_window(now_utc: datetime, hours: int = 24) -> int:
     """직전 N시간 윈도우 내 price_pulse 발화 예상 슬롯 수.
 
-    2026-05-18 박힘 — 현재 weekday 만 보는 옛 dispatch_chain 검사 결함.
+    2026-05-18 추가됨 — 현재 weekday 만 보는 옛 dispatch_chain 검사 결함.
     Mon 00:00~09:00 KST = is_weekend=False 인데 직전 24h = 일요일+토 후반 = 시장 0.
     옛 logic = 무조건 FAIL → false alarm. 정공법 = dispatch_pulse._resolve_events
     logic 을 윈도우 내 매 5분 슬롯 simulate → 발화 예상 슬롯 수 산출.
@@ -199,7 +199,7 @@ def _count_expected_price_pulse_in_window(now_utc: datetime, hours: int = 24) ->
 def _count_expected_daily_full_in_window(now_utc: datetime, hours: int = 24) -> int:
     """직전 N시간 윈도우 내 daily_analysis_full 발화 예상 슬롯 수 (UTC schedule 기준).
 
-    2026-05-18 박힘 — 월요일 KST 00:00~16:07 사이 = 직전 24h 가 일요일+토 후반,
+    2026-05-18 추가됨 — 월요일 KST 00:00~16:07 사이 = 직전 24h 가 일요일+토 후반,
     실 cron 도래 0건 정상인데 옛 logic ('total==0 + not is_weekend → WARNING')
     이 매 월요일 false alarm 발화. 정공법 = schedule 시각 simulate → expected=0 시 suppress.
 
@@ -296,7 +296,7 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
     daily_full_runs = [r for r in daily_recent if r.get("status") == "completed"]
 
     daily_full_bad = [r for r in daily_full_runs if r.get("conclusion") != "success"]
-    # 2026-05-18 박힘 — cancel ≠ real fail 분리 + latest_success 이후 fail 만 alert.
+    # 2026-05-18 추가됨 — cancel ≠ real fail 분리 + latest_success 이후 fail 만 alert.
     _real_fail_all, _cancel_all = _split_fail_vs_cancel(daily_full_bad)
     daily_full_fail = _drop_resolved_fails(daily_full_runs, _real_fail_all)
     daily_cancel = _cancel_all  # cancel = 빈도 임계만, supersede 무관
@@ -353,7 +353,7 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
     uni_recent = _filter_recent(uni_runs, hours_window)
     uni_completed = [r for r in uni_recent if r.get("status") == "completed"]
     uni_bad = [r for r in uni_completed if r.get("conclusion") != "success"]
-    # 2026-05-18 박힘 — cancel ≠ real fail 분리 + latest_success 이후 fail 만 alert.
+    # 2026-05-18 추가됨 — cancel ≠ real fail 분리 + latest_success 이후 fail 만 alert.
     _uni_real_all, _uni_cancel = _split_fail_vs_cancel(uni_bad)
     uni_fail = _drop_resolved_fails(uni_completed, _uni_real_all)
 
@@ -430,7 +430,7 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             findings.append(f"fail_triggers: {', '.join(sorted(critical_triggers))}")
 
     # 5) universe_candidates 신선도
-    # 2026-05-17 임계 정합 fix — funnel 1-4 미구현 (commit 5b10a44, 5/11 박힘) → 25건 = 의도된 baseline.
+    # 2026-05-17 임계 정합 fix — funnel 1-4 미구현 (commit 5b10a44, 5/11 추가됨) → 25건 = 의도된 baseline.
     # 옛 30 임계 = funnel 의도 (5,000→1,000→300→100→25) 정합인데 현재 5,000→25 직접 압축 = 25 정상.
     # 진짜 결함 = 20 미만 (funnel 정공법 후 실측에서 25 이상 baseline) 또는 KR/US 비대칭.
     # [[project_stock_filter_v0_enhancement]] + [[project_funnel_5stage_sprint]] 정합.
@@ -507,7 +507,7 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
     except Exception as e:
         findings.append(f"fred_health 신선도 점검 실패: {type(e).__name__}: {e}")
 
-    # 7) Claude final_review (STEP 10.8, 2026-05-11 박음) — 종합 시장 검수 verdict
+    # 7) Claude final_review (STEP 10.8, 2026-05-11 추가) — 종합 시장 검수 verdict
     #
     # 2026-05-20 PM 결정 (A안 분리) — Claude 검수는 severity (🔴/🟡) 를 흔들지 않는다.
     # WHY: 검수 verdict (REVIEW_REQUIRED/CAUTION) 는 LLM 의 시장 환경 판단 (CAPE %ile /
@@ -736,7 +736,7 @@ def _persist_report(report: Dict[str, Any]) -> None:
     """2026-05-17 Phase 3 audit fix — cron_health 결과 jsonl persist.
 
     옛 구현 = 텔레그램 push 만 + stdout 출력 휘발. 운영자가 과거 trend 추적 불가
-    (어제 detect 했는지 / 어떤 결함이 반복인지). jsonl append 박아 SystemHealthBar
+    (어제 detect 했는지 / 어떤 결함이 반복인지). jsonl append 하여 SystemHealthBar
     surface 가능 + 사후 audit 가능.
 
     silent skip 차단 — feedback_data_collection_verification_mandatory 정합.
@@ -770,7 +770,7 @@ def _persist_report(report: Dict[str, Any]) -> None:
 
 def _prev_run_severity() -> Optional[str]:
     """직전 cron_health run 의 severity. jsonl 마지막에서 두 번째 = 직전
-    (이번 entry 는 main 에서 _persist_report 가 이미 박은 상태). 없으면 None.
+    (이번 entry 는 main 에서 _persist_report 가 이미 추가한 상태). 없으면 None.
     """
     path = os.path.join(_REPO_ROOT, "data", "metadata", "cron_health.jsonl")
     try:

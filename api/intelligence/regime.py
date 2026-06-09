@@ -32,16 +32,16 @@ Phase 2 Module 3 — Market Regime Engine (10월 wire 전제 stub)
 
 RULE 7 정합:
   - 임계 (regime cutoff / multiplier scale / confidence floor) = PM 사전등록 후 활성
-  - R1 대안 (임계 60 고정 + multiplier) = 메모 5/19 사전등록 박힘. 10월 wire 시 commit.
+  - R1 대안 (임계 60 고정 + multiplier) = 메모 5/19 사전등록 완료. 10월 wire 시 commit.
   - 본 stub = NotImplementedError.
 
-조건 3-C (minimum viable subset, 2026-05-28 PM 옵션2 박힘):
+조건 3-C (minimum viable subset, 2026-05-28 PM 옵션2 확정):
   Regime = 옵션. slip 시 R1 대안 (임계 60 고정 + multiplier 1.0) = vision 직접
-  영향 X. project_regime_aware_position_sizing 박힌 fallback 정합.
+  영향 X. project_regime_aware_position_sizing 설정된 fallback 정합.
 
-조건 3-B (sequential 재구성, 2026-05-28 PM 옵션3 박힘):
+조건 3-B (sequential 재구성, 2026-05-28 PM 옵션3 확정):
   Regime input dep = macro + 시계열 변동성 (Factor 무관) → Factor 와 병렬 가능.
-  실 sequential vs 병렬 결정 = 2026-08 wire 시점 PM 박은 본업/시간 상황 보고.
+  실 sequential vs 병렬 결정 = 2026-08 wire 시점 PM 이 정한 본업/시간 상황 보고.
 """
 from __future__ import annotations
 

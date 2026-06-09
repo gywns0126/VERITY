@@ -14,7 +14,7 @@ Antifragility 측정 인프라 v0.1 (2026-05-17, Perplexity Q6 학계 자문 적
 
 호출 위치: cron_health_monitor 분기별 또는 weekly_admin_pdf chap7.
 
-NOTE: 운영 누적 데이터 부족 (2027~ 측정 가능). 본 모듈 = 산식 박는 인프라.
+NOTE: 운영 누적 데이터 부족 (2027~ 측정 가능). 본 모듈 = 산식 구현 인프라.
 """
 from __future__ import annotations
 

@@ -613,7 +613,7 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             #   3σ 단독 게이트 = 누락 risk. Quantile (Q1/Q5/Q95/Q99) 병행 = 비대칭 보정 + 분포 기반 학술 정합.
             #   N≥20: Q5/Q95 산출 (5% tail, 신뢰도 mid)
             #   N≥100: Q1/Q99 추가 (1% tail, 신뢰도 high — VERITY 자연 회복 ~2026-08 무렵)
-            #   PM 결정 trail: 사용자 명시 "박아" (2026-05-24 d94baa41 후속).
+            #   PM 결정 trail: 사용자 명시 "추가하라" (2026-05-24 d94baa41 후속).
             quantile_alert = None
             quantile_thresholds: Dict[str, float] = {}
             if actual_n >= 20:
@@ -759,7 +759,7 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             pass
 
     # ── Phase B 우선 2 게이트 (2026-05-16 pre-stage, Perplexity IC 검증) ──
-    # 5/17 sprint 정식 진입 전 미리 박힘 (verdict=OK 후 자동 작동).
+    # 5/17 sprint 정식 진입 전 미리 추가됨 (verdict=OK 후 자동 작동).
     # 상세 근거: docs/BRAIN_SIGNAL_INTEGRATION_PLAN_v0.1.md §3-B.
 
     # ── B-1. US 10Y Breakeven (인플레 기대) ──
@@ -909,7 +909,7 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
 
     # ── Market Horizon V2.1 통합 (cycle_stage gate) ──
     # portfolio.market_horizon (CAPE multpl + 11 signal + 8 analog + cycle/signal)
-    # = V2.1 박힌 모듈 전체 통합 (memory project_market_horizon).
+    # = V2.1 추가한 모듈 전체 통합 (memory project_market_horizon).
     # cycle_stage 매핑 → 등급 cap. project_market_horizon 현 verdict = euphoria.
     mh = portfolio.get("market_horizon") or {}
     cycle = mh.get("cycle_stage")
@@ -1042,7 +1042,7 @@ def _score_to_grade(score: float) -> str:
 
 def _compute_macro_multiplier(stock: Dict[str, Any],
                               portfolio: Dict[str, Any]) -> Tuple[float, Dict[str, Any]]:
-    """B-continuous macro overlay (2026-05-18 PM 승인 박힘).
+    """B-continuous macro overlay (2026-05-18 PM 승인 완료).
 
     근거 (Perplexity batch 5/18, learning_materials/perplexity_caution_answers_2026_05_18.md):
     - PBR > 3.0 + CAPE 99%ile = Max DD -52.4% (저PBR -15.2% 대비 3.5배)

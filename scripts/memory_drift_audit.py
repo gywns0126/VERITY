@@ -4,7 +4,7 @@
 연관:
   - audit BRAIN_SELF_GROWTH P1-5
   - feedback_source_attribution_discipline (출처 명시 의무)
-  - 메모리에 박힌 정량 임계값이 실제 코드와 일치하는지 자동 감지
+  - 메모리에 기록된 정량 임계값이 실제 코드와 일치하는지 자동 감지
   - drift 발견 시 stderr + (옵션) telegram alert
 
 검사 패턴:

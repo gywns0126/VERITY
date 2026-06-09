@@ -4,19 +4,19 @@ n_counter.py — N (산식 안정 검증 거래일) counter cron
 
 WHY: 메모 project_minimum_n_milestones_2026_05_18 정합. N = 산식 안정 검증
 거래일 누적. RULE 7 + IC 통계 게이트 (Fama-MacBeth 252 / Bailey-Lopez 684)
-박은 부분 박은 trail.
+누적 trail.
 
 입력:
-  - data/metadata/n_reset_policy.json (사용자 박은 정책, 5/28 박힘)
+  - data/metadata/n_reset_policy.json (사용자가 정한 정책, 5/28 추가)
 
 출력:
   - data/metadata/n_counter.json (현재 N + history + next_milestone)
 
 동작:
-  - 매일 cron N+1 박음 (calendar day + trading day 둘 다)
-  - reset history 마지막 entry 박은 부분 박은 박은 박은 박은 today 박은 부분 박은 박은 박은 박은 N 계산
-  - milestones (30 / 100 / 252 / 684) 박은 부분 박은 next milestone + 박은 부분 박은 박은 박은 박은 박은
-  - trading day = weekday < 5 (월~금) 단순 박음. 박은 KR 휴장일 list 박지 X (별 sprint).
+  - 매일 cron N+1 증가 (calendar day + trading day 둘 다)
+  - reset history 마지막 entry 기준 today 까지의 N 계산
+  - milestones (30 / 100 / 252 / 684) 기준 next milestone + 잔여 일수 계산
+  - trading day = weekday < 5 (월~금) 단순 판정. KR 휴장일 list 는 반영하지 않음 (별 sprint).
 
 운영: .github/workflows/n_counter.yml 매일 KST 09:30
 """
@@ -77,7 +77,7 @@ def _load_policy() -> Dict[str, Any]:
 
 
 def _next_milestone(n_trading: int, milestones: Dict[str, str]) -> Dict[str, Any]:
-    """다음 milestone 박은 부분 박은 박은 박은 박은 박은 박은 박은 박은 박은 박은 박은 N 박은 부분 박은 박은 박은 박은."""
+    """다음 milestone + 잔여 일수 계산."""
     thresholds = sorted([int(k.split("_")[1]) for k in milestones.keys() if k.startswith("n_")])
     for t in thresholds:
         if n_trading < t:
@@ -95,7 +95,7 @@ def main() -> int:
     milestones = policy.get("milestones", {})
 
     if not history:
-        sys.exit("::error::n_reset_policy.json history 빈 list — reset entry 박지 X")
+        sys.exit("::error::n_reset_policy.json history 빈 list — reset entry 없음")
 
     last_reset = history[-1]
     last_reset_date = date.fromisoformat(last_reset["date"])
@@ -124,7 +124,7 @@ def main() -> int:
     with COUNTER_PATH.open("w", encoding="utf-8") as f:
         json.dump(counter, f, ensure_ascii=False, indent=2)
 
-    print(f"n_counter 박힘: N_trading={n_trading} / N_calendar={n_calendar}")
+    print(f"n_counter 완료: N_trading={n_trading} / N_calendar={n_calendar}")
     print(f"  last_reset: {last_reset['date']} ({last_reset.get('trigger')})")
     print(f"  next milestone: n_{next_ms['next_n']} ({next_ms['days_remaining']}일 남음)")
     print(f"                  → {next_ms['label']}")

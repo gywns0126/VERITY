@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """cron_health_audit — 매일 runtime_load_log.jsonl entry 분포 자동 검증.
 
-박힌 cron 별 expected pattern vs actual. mismatch 시 telegram alert + jsonl 박음.
+설정된 cron 별 expected pattern vs actual. mismatch 시 telegram alert + jsonl 기록.
 [[feedback_data_collection_verification_mandatory]] 의 "N run 누적 검증 3중" 자동화.
 
 운영:
@@ -11,7 +11,7 @@
   - mismatch → telegram alert (PM 자리비움 시 핸드폰)
 
 drift 시 EXPECTED_PATTERNS dict manual update 의무.
-신규 cron yml 박을 때 expected entry 추가 박을 것.
+신규 cron yml 추가 시 expected entry 도 추가할 것.
 """
 from __future__ import annotations
 
@@ -28,14 +28,14 @@ KST = timezone(timedelta(hours=9))
 LOG_PATH = Path("data/metadata/runtime_load_log.jsonl")
 AUDIT_PATH = Path("data/metadata/cron_health_audit.jsonl")
 
-# expected pattern — drift 박을 때 manual update 의무.
+# expected pattern — drift 발생 시 manual update 의무.
 # key = (mode, market_scope), value = {min, max, hint}
-# min=0 → 미박힘 OK. min>0 → 어제 entry 미박힘 = missing alert.
+# min=0 → 미기록 OK. min>0 → 어제 entry 미기록 = missing alert.
 EXPECTED_PATTERNS: Dict[Tuple[str, str], Dict] = {
-    # daily_analysis_full (KST 16:00 평일, full mode) — scope=all 박힘
-    # === 진짜 jsonl entry 박는 path (5/27 매핑 박힘) ===
-    # api/main.py post_main_dart_drain (5/26 fix f7dd1c1c) — 모든 cron 박을 때 박힘
-    ("quick", "post_main_dart_drain"): {"min": 1, "max": 500, "hint": "daily_analysis/realtime quick cron post_main (매일 박혀야)"},
+    # daily_analysis_full (KST 16:00 평일, full mode) — scope=all 기록됨
+    # === 진짜 jsonl entry 기록하는 path (5/27 매핑 완료) ===
+    # api/main.py post_main_dart_drain (5/26 fix f7dd1c1c) — 모든 cron 실행 시 기록됨
+    ("quick", "post_main_dart_drain"): {"min": 1, "max": 500, "hint": "daily_analysis/realtime quick cron post_main (매일 기록되어야)"},
     ("full", "post_main_dart_drain"): {"min": 0, "max": 3, "hint": "daily_analysis_full 평일 KST 16:07 post_main (월요일 0건 자연)"},
     ("full_us", "post_main_dart_drain"): {"min": 0, "max": 2, "hint": "daily_analysis_full 화~금 KST 06:30 post_main"},
     ("periodic_weekly", "post_main_dart_drain"): {"min": 0, "max": 1, "hint": "토 KST 09:07 주간"},
@@ -44,17 +44,17 @@ EXPECTED_PATTERNS: Dict[Tuple[str, str], Dict] = {
     ("periodic_semi", "post_main_dart_drain"): {"min": 0, "max": 1, "hint": "반기 1일"},
     ("periodic_annual", "post_main_dart_drain"): {"min": 0, "max": 1, "hint": "연간 1/4"},
     # universe_scan_builder._log_w1_runtime — pipeline drain (scope=all)
-    ("universe_scan", "all"): {"min": 0, "max": 2, "hint": "universe_scan 평일 KST 15:30 (5/27 fix 후 박힘 시작, 주말 0건)"},
+    ("universe_scan", "all"): {"min": 0, "max": 2, "hint": "universe_scan 평일 KST 15:30 (5/27 fix 후 기록 시작, 주말 0건)"},
 }
 
-# 옛 entry whitelist — 5/12+ 박힘 X 박은 path. mismatch alert 회피.
-# 박은 path 의 entry 박힘 시 false positive 아닌 진짜 회귀 = unknown_pattern alert 박힘.
+# 옛 entry whitelist — 5/12+ 기록되지 않는 path. mismatch alert 회피.
+# 해당 path 의 entry 가 기록되면 false positive 아닌 진짜 회귀 = unknown_pattern alert 발생.
 # 5/12 이전 옛 entry (mode="" + scope=all/us, mode="full"/"full_us" + scope=all/us) 는
-# yesterday window 박힘 0 이라 audit 자체 무관 (window 밖 자동 제외).
+# yesterday window 기록 0 이라 audit 자체 무관 (window 밖 자동 제외).
 
 ALWAYS_ALERT_MODES = {
-    "unknown": "ANALYSIS_MODE env 박힘 X — cron yml step env 확인 의무 (5/27 universe_scan 학습)",
-    "": "ANALYSIS_MODE env 빈 문자열 박힘 — 옛 코드 default 또는 propagate 결함",
+    "unknown": "ANALYSIS_MODE env 설정 안 됨 — cron yml step env 확인 의무 (5/27 universe_scan 학습)",
+    "": "ANALYSIS_MODE env 빈 문자열 — 옛 코드 default 또는 propagate 결함",
 }
 
 
@@ -71,7 +71,7 @@ def _yesterday_window() -> Tuple[datetime, datetime]:
 
 
 def _load_window_entries(start: datetime, end: datetime) -> List[Dict]:
-    """run_id 기준 window 안 entry 추출. run_id = ISO 8601 박혀있음 가정."""
+    """run_id 기준 window 안 entry 추출. run_id = ISO 8601 형식 가정."""
     if not LOG_PATH.exists():
         return []
     out = []
@@ -86,7 +86,7 @@ def _load_window_entries(start: datetime, end: datetime) -> List[Dict]:
                     ts = datetime.fromisoformat(run_id)
                 except ValueError:
                     continue
-                # tz-naive 박혀있으면 KST 박힘 가정
+                # tz-naive 이면 KST 로 가정
                 if ts.tzinfo is None:
                     ts = ts.replace(tzinfo=KST)
                 if start <= ts < end:
@@ -106,7 +106,7 @@ def _audit(entries: List[Dict]) -> Dict:
 
     mismatches: List[Dict] = []
 
-    # 1) actual 박힌 거 검증
+    # 1) actual 기록된 거 검증
     for (mode, scope), n in actual.items():
         # always-alert mode (unknown 류)
         if mode in ALWAYS_ALERT_MODES:
@@ -125,7 +125,7 @@ def _audit(entries: List[Dict]) -> Dict:
                 "mode": mode,
                 "scope": scope,
                 "count": n,
-                "hint": "expected pattern 미정 — EXPECTED_PATTERNS dict 에 manual whitelist 박을 것",
+                "hint": "expected pattern 미정 — EXPECTED_PATTERNS dict 에 manual whitelist 추가할 것",
             })
             continue
         spec = EXPECTED_PATTERNS[key]
@@ -140,7 +140,7 @@ def _audit(entries: List[Dict]) -> Dict:
                 "hint": spec["hint"],
             })
 
-    # 2) expected 박혀야 하는데 actual 0 (missing)
+    # 2) expected 기록되어야 하는데 actual 0 (missing)
     for key, spec in EXPECTED_PATTERNS.items():
         if spec["min"] > 0 and actual.get(key, 0) == 0:
             mismatches.append({
@@ -162,7 +162,7 @@ def _audit(entries: List[Dict]) -> Dict:
 
 
 def _alert(audit: Dict) -> None:
-    """Telegram alert — mismatch 박혀있으면 push."""
+    """Telegram alert — mismatch 있으면 push."""
     if audit["mismatch_count"] == 0:
         return
     try:
@@ -198,7 +198,7 @@ def _today_window() -> Tuple[datetime, datetime]:
 
 
 def main() -> int:
-    # --window today/yesterday 옵션 박음 (default = yesterday, cron 운영)
+    # --window today/yesterday 옵션 처리 (default = yesterday, cron 운영)
     window_arg = "yesterday"
     for a in sys.argv[1:]:
         if a == "--window=today" or a == "today":
@@ -219,8 +219,8 @@ def main() -> int:
     # alert
     _alert(audit)
 
-    # exit 0 — mismatch 박혀있어도 workflow success 박음 (alert 만 의미).
-    # critical fail 박을 거 = cron_health_audit 자체 fail (jsonl IO / parse 에러).
+    # exit 0 — mismatch 있어도 workflow success 반환 (alert 만 의미).
+    # critical fail 대상 = cron_health_audit 자체 fail (jsonl IO / parse 에러).
     return 0
 
 

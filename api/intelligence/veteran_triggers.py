@@ -1,10 +1,10 @@
 """veteran_triggers — 헤지펀드 베테랑 정량 활동주의 trigger.
 
-기존 박힘 (보존):
+기존 구현 (보존):
   · Druckenmiller regime_weight: api/analyzers/multi_factor.py rate-environment 곱셈
   · Hohn 4 룰: api/intelligence/verity_brain.py _compute_moat_score (해자 + 가격결정력 + 청산가치 + ROE)
 
-신규 박힘 (2026-05-16 Sprint Day 1, 큐 b445ba47/839dc388/0b7aadbc):
+신규 추가 (2026-05-16 Sprint Day 1, 큐 b445ba47/839dc388/0b7aadbc):
   · Druckenmiller conviction concentration (확신 집중 베팅) — Brain score + VCI + macro regime 정합
   · Ackman activist target detector — value + activist potential 패턴
   · Hohn capital allocation 부실 — FCF 양수 but 환원 비율 < 30%

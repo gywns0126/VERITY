@@ -22,7 +22,7 @@ SOURCE: yfinance Ticker.dividends → pd.Series of (ex_date → amount USD)
     ]
   }
 
-wiring: 현재 dead code (cron 미박힘, US 매수 trigger 전). dividend_us cron 신설 시 활성.
+wiring: 현재 dead code (cron 미등록, US 매수 trigger 전). dividend_us cron 신설 시 활성.
 VAMS 연동: api/vams/engine.py run_vams_cycle 내부 KR 배당 누적 다음에 US 분기 추가.
 """
 from __future__ import annotations

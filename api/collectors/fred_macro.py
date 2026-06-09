@@ -7,7 +7,7 @@ https://fred.stlouisfed.org/docs/api/fred/
 2026-05-16 silent skip audit:
   _fetch_series 가 except return [] 3개 path (no key / HTTP != 200 / requests exception)
   로 silent skip 했음. 결과: hy_spread / breakeven_10y null 지속, 운영 진단 불가.
-  → 호출당 health entry 박힘 (data/metadata/fred_health.jsonl).
+  → 호출당 health entry 기록 (data/metadata/fred_health.jsonl).
   → 정정: failure reason 명시 + stderr 로그 + ledger 누적.
 """
 import json
@@ -383,7 +383,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
     # docs/QUADRANT_REGRESSION_AUDIT_20260518.md 참조. 함수가 찾는 fred.cpi_yoy /
     # fred.gdp_growth 키가 부재해 fallback (cpi=2.5 하드코드 + gdp=mood proxy) 영구 trip,
     # growth_down_inflation_down 25/25 종목 단일 강제로 constitution 5분면 차등 무효화.
-    # 실데이터 (core_cpi.yoy_pct + us_recession_smoothed_prob.pct) 는 정상 수집됨 — 매핑만 박음.
+    # 실데이터 (core_cpi.yoy_pct + us_recession_smoothed_prob.pct) 는 정상 수집됨 — 매핑만 추가.
     cpi_block = out.get("core_cpi") or {}
     cpi_yoy_val = cpi_block.get("yoy_pct")
     if cpi_yoy_val is not None:

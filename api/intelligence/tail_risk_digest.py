@@ -287,7 +287,7 @@ def _mark_sent(portfolio: Dict[str, Any], key: str) -> None:
 def _compute_verity_trail(portfolio: Dict[str, Any]) -> Dict[str, Any]:
     """tail risk 사건 시점의 VERITY 자체 trail snapshot.
 
-    2026-05-17 빅브라더 정합 박힘 ([[feedback_no_new_llm_narrative_features]]).
+    2026-05-17 빅브라더 정합 반영 ([[feedback_no_new_llm_narrative_features]]).
     Gemini 가 만드는 사건 description (외부 사건) = LLM 우위.
     VERITY 의 unique view = 자기 holdings concentration + market_horizon verdict +
     Brain 활용 가능한 자체 평가. ledger 영속화로 사후 분석 input.
@@ -526,7 +526,7 @@ def maybe_send_tail_risk_digest(portfolio: Dict[str, Any], is_realtime: bool = F
 
     # Black Swan ledger 영속화 — 텔레그램 cutoff 와 분리.
     # category irrelevant 는 저장 X. mid-severity (5+) 는 ledger 만, telegram 분기는 별도.
-    # dedupe: 같은 dk 가 24h 내 이미 ledger 박혔으면 skip (같은 사건 중복 적재 방지).
+    # dedupe: 같은 dk 가 24h 내 이미 ledger 에 기록됐으면 skip (같은 사건 중복 적재 방지).
     if cat != "irrelevant" and sev >= _LEDGER_SEVERITY_MIN:
         already_recent_ledger = False
         for past in load_black_swan_ledger(hours=24):
