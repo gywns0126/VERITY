@@ -30,6 +30,7 @@ ASSET_TICKERS: Dict[str, str] = {
     "gold": "GC=F",     # Gold futures
     "usd": "DX-Y.NYB",  # USD Index
     "oil": "CL=F",      # WTI Crude
+    "btc": "BTC-USD",   # 2026-06-09 추가 — 크립토 risk asset 동조/디커플 진단 (loop 자동 확장)
 }
 
 WINDOW_DAYS = 30
