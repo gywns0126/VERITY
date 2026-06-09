@@ -1,9 +1,9 @@
 {
-  "collected_at": "2026-06-09T01:32:44.026787+00:00",
+  "collected_at": "2026-06-09T05:51:44.024270+00:00",
   "schema_version": 1,
   "severity": "YELLOW",
   "severity_reasons": [
-    "rule7_quota 2026Q2 6/4 EXCEEDED"
+    "rule7_quota 2026Q2 9/4 EXCEEDED"
   ],
   "n_verification_days": 30,
   "n_milestones": {
@@ -31,14 +31,14 @@
   "days_clean": {
     "kis": 0,
     "fred": 1,
-    "telegram": 0,
+    "telegram": 1,
     "vercel": null
   },
   "open_p0_p1": [],
   "operator_deadman": {
     "days_git": 0.0,
     "days_telegram": null,
-    "days_uaq": 0.08,
+    "days_uaq": 0.76,
     "trigger": "ok",
     "maintenance": false,
     "warn_days": 7.0
@@ -135,21 +135,21 @@
     }
   ],
   "alert_volume_24h": {
-    "sent": 16,
-    "dedupe_skip": 12,
+    "sent": 25,
+    "dedupe_skip": 3,
     "quiet_skip": 3,
-    "fp_repeat_max": 11
+    "fp_repeat_max": 2
   },
   "auto_action_blocked": [],
   "_inputs_snapshot": {
     "kis_lock_commits_24h": 1,
-    "fred_age_h": 0.28,
-    "fred_24h_failure_rate": 0.0020325203252032522,
+    "fred_age_h": 0.42,
+    "fred_24h_failure_rate": 0.0,
     "core_sources_ok": true,
     "runtime_mode": "quick",
     "ramp_up_stage": 0,
     "brain_anomaly_24h": 0,
-    "vams_days_since_reset": 22,
+    "vams_days_since_reset": 23,
     "validation_sample": 26
   },
   "rule7_quota": {
