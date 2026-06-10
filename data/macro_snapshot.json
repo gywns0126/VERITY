@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-06-10T11:43:07+09:00",
+  "collected_at": "2026-06-10T16:03:59+09:00",
   "macro": {
     "usd_krw": {
       "value": 1522.88,
@@ -892,7 +892,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-06-10T11:43:18+09:00",
+    "updated_at": "2026-06-10T16:04:09+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.93,
       "us_ig_risk": "LOW",
@@ -1097,12 +1097,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 24.15
+    "errors": [
+      "macro: exception:ValueError:cannot convert float NaN to integer"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 24.73
   },
   "schema_version": "v0"
 }
