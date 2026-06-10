@@ -16,20 +16,14 @@
 """
 from __future__ import annotations
 
-import importlib.util
 import math
-import os
-import sys
 
 import pytest
 
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_MOD_PATH = os.path.join(_REPO_ROOT, "api", "collectors", "macro_data.py")
-
-_spec = importlib.util.spec_from_file_location("macro_data_under_test", _MOD_PATH)
-md = importlib.util.module_from_spec(_spec)
-sys.modules["macro_data_under_test"] = md
-_spec.loader.exec_module(md)
+# 2026-06-11 flaky fix: 기존엔 importlib 로 macro_data.py 를 별 이름("macro_data_under_test")으로
+#   새로 exec → 무거운 collector 의 이중 module 로드 = 풀suite 에서 sys.modules 오염/import-order
+#   fragility 로 간헐 실패. 표준 cached import 로 교체(단일 module, robust). _compute_capital_flow 동일.
+from api.collectors import macro_data as md
 
 _NAN = float("nan")
 _ASSET_KEYS = [
