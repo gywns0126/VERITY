@@ -374,6 +374,15 @@ def _recent_bas_dd_krx() -> str:
     return resolve_published_bas_dd()
 
 
+def _prev_published_bas_dd_krx(bas_dd: str) -> str:
+    """bas_dd 직전의 KRX 게시 영업일 (EOD 게시 전환 윈도 재확인용). 실패 시 ''."""
+    try:
+        prev = (datetime.strptime(bas_dd, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+    except (ValueError, TypeError):
+        return ""
+    return resolve_published_bas_dd(start_date=prev)
+
+
 def _check_krx_open_api() -> tuple:
     """
     KRX OpenAPI 18개 스냅샷 기준 헬스체크.
@@ -394,6 +403,21 @@ def _check_krx_open_api() -> tuple:
     bas_dd = str(snap.get("bas_dd") or "")
 
     if ok <= 0 and (forbidden > 0 or error > 0):
+        # KRX EOD 게시 전환 윈도 race — probe 1개(stk_bydd_trd)가 오늘-ok 라 bas_dd=오늘 선택됐으나
+        # 18-sweep 은 오늘 미게시(403/empty) → 키 오류처럼 보이는 오보. 키 유효 여부 = 직전 영업일
+        # 재확인으로 판별: 직전일 정상이면 게시 전환 중(키 유효), 직전일도 forbidden 이면 진짜 error.
+        prev_bas = _prev_published_bas_dd_krx(bas_dd)
+        if prev_bas and prev_bas != bas_dd:
+            psnap = collect_krx_openapi_snapshot(bas_dd=prev_bas, max_rows_per_endpoint=1)
+            psum = psnap.get("summary", {})
+            p_ok = int(psum.get("ok", 0))
+            p_total = int(psum.get("total", 0))
+            if p_ok > 0 and (p_ok / max(p_total, 1)) >= 0.30:
+                return (
+                    True,
+                    f"오늘 EOD 게시 전환 중 (basDd={bas_dd}: 권한없음 {forbidden}/{total}) — "
+                    f"전 영업일 {prev_bas} ok {p_ok}/{p_total} 정상, 키 유효",
+                )
         return (
             False,
             f"ok {ok}/{total}, 권한없음 {forbidden}, 오류 {error}, 빈데이터 {empty} (basDd={bas_dd})",

@@ -93,7 +93,8 @@ def recent_business_day() -> str:
     return now_kst().strftime("%Y%m%d")
 
 
-def resolve_published_bas_dd(max_lookback: int = 14) -> str:
+def resolve_published_bas_dd(max_lookback: int = 14,
+                             start_date: Optional[str] = None) -> str:
     """
     KRX OpenAPI 가 실제로 데이터를 게시한 가장 최근 영업일 YYYYMMDD.
 
@@ -101,10 +102,17 @@ def resolve_published_bas_dd(max_lookback: int = 14) -> str:
     부처님오신날 등) 은 weekday 만 보는 recent_business_day() 로는 거를 수 없음. probe
     1건 (stk_bydd_trd) 만 walk-back 해서 ok 응답 첫 날짜를 잡는다. 18개 sweep 비용 대비
     +1 호출이라 부담 없음. 키 미설정 / probe 실패 누적이면 recent_business_day() fallback.
+
+    start_date: YYYYMMDD. 지정 시 그 날짜부터 walk-back (이전 게시일 탐색용). None = 오늘.
     """
     if not KRX_API_KEY:
         return recent_business_day()
     d = now_kst().date()
+    if start_date:
+        try:
+            d = date(int(start_date[:4]), int(start_date[4:6]), int(start_date[6:8]))
+        except (ValueError, TypeError, IndexError):
+            d = now_kst().date()
     for _ in range(max_lookback):
         if d.weekday() < 5:
             b = d.strftime("%Y%m%d")
