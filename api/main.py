@@ -1833,7 +1833,11 @@ def main():
                 kis = _get_kis_broker()
             if kis:
                 kis_sleep = 0.1 if kis.is_paper else 0.35
-                mkt_overview = kis.build_market_overview()
+                # 2026-06-10: build_market_overview = KIS 배치 ~7 호출(각 _get timeout=10).
+                #   KIS 저하 시 누적이 realtime 10분 예산 잠식 → watchdog SIGTERM. safe_collect 로 캡.
+                mkt_overview = safe_collect(
+                    kis.build_market_overview, name="kis_market_overview", timeout=60, default={}
+                )
                 portfolio["kis_market"] = mkt_overview
                 parts = [k for k in ("kospi", "kosdaq", "volume_rank", "foreign_institution",
                                      "short_sale_rank", "vi_status", "news") if mkt_overview.get(k)]
@@ -1855,7 +1859,14 @@ def main():
                 kis_sleep = 0.1 if kis.is_paper else 0.35
                 # KIS 해외 시세 API는 거래소 권한 없이도 조회 가능 (NAS·NYS·HKS·SHS·SZS·TSE)
                 overseas_exchanges = ["NAS", "NYS", "HKS", "TSE", "SHS", "SZS"]
-                os_overview = kis.build_overseas_market_overview(overseas_exchanges)
+                # 2026-06-10: build_overseas_market_overview = 6 거래소 × 5 + 뉴스 2 = 32 KIS 호출
+                #   (각 _get timeout=10). KIS 해외 엔드포인트 저하(미국장 마감 시간대 등) 시 최악 ~320s 누적
+                #   → realtime 10분 예산 절반 잠식 → watchdog SIGTERM(6/10 11:30 KR 사고 hang step=[1.7]).
+                #   safe_collect 로 전체 배치 캡 (timeout 시 부분/빈 dict → 분석 계속).
+                os_overview = safe_collect(
+                    kis.build_overseas_market_overview, overseas_exchanges,
+                    name="kis_overseas_overview", timeout=90, default={},
+                )
                 portfolio["kis_overseas_market"] = os_overview
                 excd_names = {
                     "NAS": "나스닥", "NYS": "뉴욕", "AMS": "아멕스",
@@ -1879,14 +1890,31 @@ def main():
                     us_tickers = list(dict.fromkeys(us_tickers))[:30]
                     kis_us_snapshots = {}
                     us_ok = 0
+                    # 2026-06-10: 30 ticker × build_overseas_brain_snapshot(다중 KIS 호출)도 누적 무가드였음.
+                    #   build_price_map 과 동일 — 누적 예산(_US_SNAP_BUDGET) + 연속 실패 breaker 로 캡.
+                    _US_SNAP_BUDGET = 60.0
+                    _us_snap_start = time.monotonic()
+                    _us_snap_fail = 0
                     for tk, excd in us_tickers:
+                        if time.monotonic() - _us_snap_start >= _US_SNAP_BUDGET or _us_snap_fail >= 4:
+                            sys.stderr.write(
+                                f"[kis_us_snapshots] 중단 — 예산 초과 또는 연속 실패 {_us_snap_fail}회 "
+                                f"(부분 {us_ok}/{len(us_tickers)}, watchdog SIGTERM 방어)\n"
+                            )
+                            break
                         try:
-                            snap = kis.build_overseas_brain_snapshot(excd, tk)
+                            snap = safe_collect(
+                                kis.build_overseas_brain_snapshot, excd, tk,
+                                name=f"kis_us_snap:{tk}", timeout=8, default=None,
+                            )
                             if snap:
                                 kis_us_snapshots[tk] = snap
                                 us_ok += 1
+                                _us_snap_fail = 0
+                            else:
+                                _us_snap_fail += 1
                         except Exception:
-                            pass
+                            _us_snap_fail += 1
                         time.sleep(kis_sleep)
                     portfolio["kis_us_snapshots"] = kis_us_snapshots
                     if us_ok:
