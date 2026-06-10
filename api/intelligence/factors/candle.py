@@ -55,8 +55,13 @@ def _compute_candle_psychology_score(stock: Dict[str, Any]) -> float:
     # 단, 아래 수치 임계(vol_ratio>1.5 / RSI 40·60 / 가중치 1.5·1.0·cap 4)는 Nison 의
     # *정성* 서술(거래량 support / oversold-overbought confluence)을 자체 수치화한 것 =
     # 원전에 숫자 없음 → 가설(self-op), N 누적 후 검증 대상. RULE 7.
-    # 패턴 *기하*(망치 몸통:꼬리 비율 등)는 본 파일 아닌 upstream tech.signals 에서 탐지 →
-    # 기하 임계 Nison 검증은 별도(action_queue 재등록).
+    # 패턴 *기하*(망치 몸통:꼬리 비율 등)는 본 파일 아닌 upstream 에서 탐지.
+    # 🚨 DISCONNECT (2026-06-10 발견): 본 함수는 tech.signals 에서 캔들 패턴명을 찾으나
+    #    tech.signals producer 는 MA/RSI/MACD/추세뿐 — 캔들 패턴 0건. 진짜 Nison-기하 패턴은
+    #    technical.talib_observations.candle_patterns(TA-Lib CDL*, 레퍼런스 구현)에 따로 있고
+    #    미연결 → candle_bonus 사실상 항상 0(죽은 결정 경로). 브레인은 캔들 점수 없이 운영된 baseline.
+    #    재연결(=죽은 결정입력 활성)은 RULE 7 사전등록 후 N 게이트 통과 + PM 승인:
+    #    docs/PREREG_CANDLE_GEOMETRY_ACTIVATION_2026_06_10.md. 그 전까지 현 동작(0) 유지.
     # Nison 확인 조건: 거래량 동반 확인
     volume_bonus = 0
     if abs(candle_base) > 0 and vol_ratio > 1.5:
