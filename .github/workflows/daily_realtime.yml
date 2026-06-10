@@ -25,6 +25,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   # 🚨 RULE 1 — GH Actions 단일 발급원 (PM 2026-05-31). 발급 직후 Supabase publish (Railway/Vercel 소비).
   KIS_SHARED_TOKEN: "1"
+  # 2026-06-10: stdout 즉시 flush. watchdog SIGTERM 시 buffering 으로 hang step 이 로그에서
+  #   가려지던 관측성 갭 해소 (6/10 00:30 US realtime SIGTERM 진단 시 hang step 추정만 가능했음).
+  PYTHONUNBUFFERED: "1"
 
 permissions:
   contents: write

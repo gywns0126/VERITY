@@ -492,7 +492,18 @@ def build_price_map(portfolio: dict, kis_broker=None) -> dict:
     for stock in portfolio.get("recommendations", []) or []:
         add_entry(stock.get("ticker"), stock.get("ticker_yf"), stock.get("currency"))
 
+    # 2026-06-10: 누적 예산 가드 + fail-fast circuit breaker (realtime watchdog SIGTERM 재발 방어).
+    #   6/9 per-ticker 8s cap 은 단일 ticker 무한 hang 만 막음 — Yahoo 전역 저하 시 N_us×8s 누적이
+    #   10분 예산 초과 → 첫 save_portfolio 전 early SIGTERM(portfolio 미저장) 재발 (6/10 00:30 사고).
+    #   대책: (1) yf 경로 누적 wall-clock 이 _YF_BUDGET 초과 시 중단(부분 price_map 반환 → graceful save),
+    #         (2) yf 연속 실패(타임아웃/0) ≥ _YF_BREAKER 면 Yahoo 전역 다운으로 간주, 잔여 ticker skip.
+    #   둘 다 silent skip 금지 — stderr 명시 (feedback_data_collection_verification_mandatory).
+    _YF_BUDGET = 120.0   # build_price_map yf 경로 누적 상한(초). 10분 예산 중 8분 이상을 잔여 파이프라인에 보존.
+    _YF_BREAKER = 4      # 연속 yf 실패 임계. 4×8s=32s 후 차단 (vs 무가드 20×8s=160s).
     price_map = {}
+    _yf_elapsed = 0.0
+    _yf_consecutive_fail = 0
+    _yf_circuit_open = False
     for t, yf_t, is_us in entries:
         if not is_us and kis_broker:
             try:
@@ -503,13 +514,32 @@ def build_price_map(portfolio: dict, kis_broker=None) -> dict:
                     continue
             except Exception:
                 pass
+        if _yf_circuit_open:
+            continue  # circuit open — 잔여 ticker yf 호출 skip (부분 반환)
         # 2026-06-09: per-ticker safe_collect 래핑 (8s thread cap). 6/9 realtime watchdog
         #   SIGTERM 사고 — yfinance socket hang(fast_info/history)이 무로그 무한 대기로
         #   realtime 10분 예산 소진 → early SIGTERM(portfolio 미저장). safe_yf_call 은 예외(429)만
         #   잡고 소켓 hang 은 못 막음 → ThreadPoolExecutor timeout 으로 캡. default=0.0 (이후 >0 게이트).
+        _t0 = time.monotonic()
         p = safe_collect(get_equity_last_price, yf_t, name=f"yf_price:{yf_t}", timeout=8, default=0.0)
+        _yf_elapsed += time.monotonic() - _t0
         if p is not None and p > 0:
             price_map[t] = float(p)
+            _yf_consecutive_fail = 0
+        else:
+            _yf_consecutive_fail += 1
+        if _yf_consecutive_fail >= _YF_BREAKER:
+            _yf_circuit_open = True
+            sys.stderr.write(
+                f"[build_price_map] ⚡ circuit breaker open — yf 연속 {_yf_consecutive_fail}회 실패 "
+                f"(Yahoo 전역 저하 추정). 잔여 ticker skip, 부분 price_map({len(price_map)}) 반환\n"
+            )
+        elif _yf_elapsed >= _YF_BUDGET:
+            _yf_circuit_open = True
+            sys.stderr.write(
+                f"[build_price_map] ⏱ yf 누적 예산 초과 ({_yf_elapsed:.0f}s ≥ {_YF_BUDGET:.0f}s) — "
+                f"잔여 ticker skip, 부분 price_map({len(price_map)}) 반환 (watchdog SIGTERM 방어)\n"
+            )
     return price_map
 
 
