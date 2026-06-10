@@ -492,13 +492,24 @@ def _compute_capital_flow(data: dict) -> dict:
 
     def _avg(keys):
         vals = [data.get(k, {}).get("change_pct", 0) for k in keys]
-        valid = [v for v in vals if v is not None]
+        # NaN(v != v) 도 제외 — yfinance 가 NaN close 반환 시 change_pct=NaN 전파.
+        # None 만 거르면 NaN 이 sum 으로 새어들어가 _to_score round(NaN) ValueError 유발.
+        valid = [v for v in vals if v is not None and v == v]
         return round(sum(valid) / len(valid), 3) if valid else 0
 
     def _dominant(keys):
-        best_k, best_v = keys[0], abs(data.get(keys[0], {}).get("change_pct", 0))
+        # .get(k,{}).get("change_pct",0) 의 default 0 은 키 부재 시만 적용 —
+        # 값이 명시적 None 이면 None 그대로 반환 → abs(None) TypeError.
+        # (_avg 가 None 을 거르는 것과 동형: None 발생은 실재.) None/NaN → 0 정규화.
+        def _abs(k):
+            v = data.get(k, {}).get("change_pct", 0)
+            if v is None or v != v:  # None 또는 NaN
+                return 0
+            return abs(v)
+
+        best_k, best_v = keys[0], _abs(keys[0])
         for k in keys[1:]:
-            v = abs(data.get(k, {}).get("change_pct", 0))
+            v = _abs(k)
             if v > best_v:
                 best_k, best_v = k, v
         return best_k
@@ -512,6 +523,9 @@ def _compute_capital_flow(data: dict) -> dict:
     eq_chg = _avg(eq_keys)
 
     def _to_score(chg):
+        # belt-and-suspenders: chg 가 NaN 이면 round(NaN) ValueError → 중립 50 폴백.
+        if chg is None or chg != chg:
+            return 50
         return max(0, min(100, round(50 + chg * 8)))
 
     comm_score = _to_score(comm_chg)
@@ -528,8 +542,9 @@ def _compute_capital_flow(data: dict) -> dict:
     kr10 = (ecos.get("korea_gov_10y") or fred.get("korea_gov_10y") or {})
     kr10_yoy = kr10.get("yoy_pp")
 
-    if kr10_yoy is not None:
+    if kr10_yoy is not None and float(kr10_yoy) == float(kr10_yoy):
         # 한국 10Y 금리 YoY 상승 → 채권 수익률 매력 ↑ → bond_score 가산
+        # NaN(x != x) 제외 — round(float(NaN)) 도 동일 ValueError 클래스.
         adj = max(-8, min(8, round(float(kr10_yoy) * 4)))
         bond_score = max(0, min(100, bond_score + adj))
         ecos_note.append(f"KR10Y_yoy={kr10_yoy:+.2f}pp→bond{adj:+d}")
