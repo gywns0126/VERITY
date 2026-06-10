@@ -1,11 +1,51 @@
 {
   "version": "v0",
-  "computed_at": "2026-06-10T10:18:30.180506+00:00",
-  "status": "empty",
+  "computed_at": "2026-06-10T12:03:09.390658+00:00",
+  "status": "insufficient_data",
   "sample_size": {
-    "total": 0,
-    "open": 0,
-    "closed": 0
+    "total": 1,
+    "open": 1,
+    "closed": 0,
+    "with_h5": 0,
+    "with_h14": 0,
+    "with_h30": 0,
+    "min_for_decompose": 30
   },
-  "note": "운영 시작 전 — 진입 후보 누적 대기"
+  "horizon_summary": {
+    "h5": {
+      "horizon_days": 5,
+      "n": 0,
+      "hit_rate_pct": null,
+      "median_return_pct": null,
+      "ic": null
+    },
+    "h14": {
+      "horizon_days": 14,
+      "n": 0,
+      "hit_rate_pct": null,
+      "median_return_pct": null,
+      "ic": null
+    },
+    "h30": {
+      "horizon_days": 30,
+      "n": 0,
+      "hit_rate_pct": null,
+      "median_return_pct": null,
+      "ic": null
+    }
+  },
+  "feature_decomposition": {
+    "status": "insufficient_data",
+    "n": 0
+  },
+  "sector_breakdown": {},
+  "verdict_strength": {
+    "status": "insufficient_data",
+    "n": 0
+  },
+  "timeseries_baseline": {
+    "status": "insufficient_data",
+    "n": 1
+  },
+  "policy_note": "종합값 단일 신뢰 금지. horizon/feature/sector 분해 + 시간차 baseline 동시 참조. 30 row 미만은 분해 통계 'insufficient_data'."
 }
