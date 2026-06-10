@@ -121,17 +121,20 @@ def compute_decision_queue(portfolio: Dict[str, Any]) -> List[Dict[str, Any]]:
 def compute_validation(portfolio: Dict[str, Any]) -> Dict[str, Any]:
     """누적 검증일수 + 신뢰도 글로벌 통계.
 
-    cumulative_days 는 factor_ic 의 가장 큰 윈도우 사용 (30/14/7).
-    실측 누적 일수가 더 길어지면 별도 카운터로 확장 가능.
+    cumulative_days = 진짜 검증일수 = vams.validation_report.window.days (VAMS validation_start 이후 snapshot 수).
+    🔧 2026-06-11 fix: 기존엔 factor_ic 최대 윈도우(7/14/30/63/126 → max 126)를 cumulative_days 로 써서
+      "검증일수 126"으로 과장(실제 N=21). factor 윈도우 ≠ 검증일수. 권위 소스(validation_report)로 교체. RULE 7.
     """
-    fic = portfolio.get("factor_ic") or {}
-    windows = fic.get("windows_available") or []
+    vr = (portfolio.get("vams") or {}).get("validation_report") or {}
+    window = vr.get("window") or {}
     cumulative_days: Optional[int] = None
-    if windows:
-        try:
-            cumulative_days = max(int(w) for w in windows if str(w).isdigit())
-        except Exception:
-            cumulative_days = None
+    try:
+        _d = window.get("days")
+        cumulative_days = int(_d) if _d is not None else None
+    except (TypeError, ValueError):
+        cumulative_days = None
+
+    fic = portfolio.get("factor_ic") or {}  # ic_ir 계산에 사용 (cumulative_days 와 무관)
 
     # IC IR 평균 (절대값) — factor_ic.ranking 에서
     ic_ir_avg: Optional[float] = None

@@ -143,9 +143,10 @@ def mock_ledger_dir(tmp_path, monkeypatch):
         json.dumps({
             "vams": {
                 "reset_meta": {"reset_at": "2026-05-17T14:12:07+09:00"},
+                # n_validation_days 권위 소스 = validation_report.window.days (2026-06-11 fix)
+                "validation_report": {"window": {"days": 30}},
             },
             "validation": {
-                "cumulative_days": 30,
                 "target_days": 90,
                 "sample_total": 30,
             },

@@ -32,7 +32,7 @@ def compute_n_today(portfolio: Dict[str, Any]) -> Dict[str, int]:
     Returns:
         {
             "n_trades": int,            # vams.simulation_stats.total_trades
-            "n_validation_days": int,   # validation.cumulative_days (운영 일수)
+            "n_validation_days": int,   # vams.validation_report.window.days (진짜 검증일수, 5/17 reset 이후 snapshot)
             "n_validation_samples": int # validation.sample_total
         }
 
@@ -46,8 +46,12 @@ def compute_n_today(portfolio: Dict[str, Any]) -> Dict[str, int]:
         n_trades = int(sim.get("total_trades") or 0)
     except (TypeError, ValueError):
         n_trades = 0
+    # n_validation_days = 진짜 검증일수 = VAMS validation_report.window.days (validation_start 이후 snapshot 수).
+    # 🔧 2026-06-11 fix: 기존엔 validation.cumulative_days(=factor_ic 최대 윈도우, 예 126일)를 잘못 읽어
+    #   검증 ~5배 과장(N=21을 126으로 표시). RULE 7 직격. 권위 소스(validation_report.window.days)로 교체.
     try:
-        n_days = int(val.get("cumulative_days") or 0)
+        _window = (vams.get("validation_report") or {}).get("window") or {}
+        n_days = int(_window.get("days") or 0)
     except (TypeError, ValueError):
         n_days = 0
     try:
