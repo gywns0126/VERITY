@@ -41,15 +41,11 @@ TX_COST_PCT = 0.4    # round-trip 비용 (backtest_archive 와 동일 임계)
 
 # 등급 임계 (현재 constitution 보수적 기본값)
 def _grade_from_score(score: float) -> str:
-    if score >= 80:
-        return "STRONG_BUY"
-    if score >= 65:
-        return "BUY"
-    if score >= 50:
-        return "WATCH"
-    if score >= 35:
-        return "CAUTION"
-    return "AVOID"
+    # SoT 단일화(2026-06-11): 하드코딩 80/65/50/35 → constitution 임계(_score_to_grade)
+    # 재사용. 5/29 등급사다리 통합(6dd748e89)이 놓친 잔존 — CV BUY 모집단이 production
+    # (constitution 75/60/45/25)과 어긋나던 것 정합. lazy import(순환 회피).
+    from api.intelligence.verity_brain import _score_to_grade
+    return _score_to_grade(score)
 
 
 def _recompute_brain_score(rec: Dict[str, Any], w_fact: float, w_sent: float) -> Optional[float]:
