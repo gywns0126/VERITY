@@ -84,7 +84,11 @@ class KISWebSocketClient:
         self._should_run = False
         self._start_time = time.time()
 
-    # 접속키 유효시간: 발급 후 23시간까지 안전하게 사용 (24시간 만료)
+    # 🚨 이 23h 는 ws 접속키(approval_key, POST /oauth2/Approval) 전용 — REST
+    #   access_token(/oauth2/tokenP, CLAUDE.md RULE 1 "1일 1토큰") 과 무관.
+    #   ws approval_key 는 별개 크리덴셜·계좌 제재 정책 대상 아님. 24h 만료 중
+    #   23h 까지만 안전 사용(만료 직전 재연결 실패 회피)이지 발급 간격 가드가 아님.
+    #   RULE 1 센티넬(23h 표기 금지)은 access_token 한정 — 여기 23h 정정 대상 아님.
     _APPROVAL_KEY_TTL = 23 * 3600
 
     @property

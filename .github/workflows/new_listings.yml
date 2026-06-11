@@ -8,8 +8,9 @@ name: New Listings (weekly KRX IPO quality)
 
 on:
   schedule:
-    # 매주 월 KST 08:00 = UTC 일 23:00.
-    - cron: '0 23 * * 0'
+    # 매주 월 KST 08:07 = UTC 일 23:07. :07 오프셋 = GH 정각(:00) 고부하 silent-skip 마진
+    # ([[feedback_gh_short_cron_silent_skip]]). 주간 저빈도라 분 단위 시점 무관.
+    - cron: '7 23 * * 0'
   workflow_dispatch:
 
 permissions:
