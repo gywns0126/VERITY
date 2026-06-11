@@ -661,11 +661,15 @@ def _apply_volatility_adj(invest_amount: float, stock: dict) -> tuple:
             "source": "atr_14d",
         }
 
-    pred = stock.get("prediction") or {}
-    top_features = pred.get("top_features") or {}
-    vol = top_features.get("volatility_20d")
-    if not isinstance(vol, (int, float)) or vol <= 0:
+    # atr 부재 시 fallback = 실 일간변동성(top-level volatility_20d 분수) → 연환산%(×√252×100).
+    # 🚨 2026-06-12: 옛 fallback 은 prediction.top_features.volatility_20d 를 읽었으나 그 값은
+    #   xgb 정규화 feature importance(vol 아님)라 percent 임계 비교가 무의미했음. production 은
+    #   technical.atr_14d_pct 가 25/25 상존 → 이 fallback 미도달(latent dead) → 실 vol 재배선으로
+    #   교정. √252 = mean_reversion canonical(:122) 정합. 임계(15/30) 불변.
+    vol_frac = stock.get("volatility_20d")
+    if not isinstance(vol_frac, (int, float)) or vol_frac <= 0:
         return invest_amount, {"applied": False, "reason": "no_volatility_data"}
+    vol = vol_frac * (252 ** 0.5) * 100.0  # 일간분수 → 연환산%
 
     if vol <= 15.0:
         scale, tier = 1.0, "low"
@@ -677,9 +681,9 @@ def _apply_volatility_adj(invest_amount: float, stock: dict) -> tuple:
     return invest_amount * scale, {
         "applied": True,
         "tier": tier,
-        "volatility_20d_pct": round(vol, 2),
+        "volatility_20d_ann_pct": round(vol, 2),
         "scale": scale,
-        "source": "volatility_20d_proxy",
+        "source": "volatility_20d_annualized",
     }
 
 
