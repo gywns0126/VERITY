@@ -17,6 +17,8 @@ import logging
 import os
 import shutil
 from datetime import datetime, timedelta
+
+from api.config import now_kst  # tz-aware KST (datetime.now() naive 금지, RULE)
 from pathlib import Path
 
 import pandas as pd
@@ -248,7 +250,8 @@ def compute_atr_with_ab_comparison(
         with ATR_MIGRATION_LOG_PATH.open("a") as f:
             f.write(json.dumps({
                 "ticker": ticker,
-                "timestamp": datetime.now().isoformat(),
+                # writer/reader 짝 정합: atr_migration_summary.py 가 KST cutoff 로 읽음 → writer 도 KST aware
+                "timestamp": now_kst().isoformat(),
                 "atr_wilder": atr_wilder,
                 "atr_sma": atr_sma,
                 "atr_wilder_pct": atr_wilder_pct,

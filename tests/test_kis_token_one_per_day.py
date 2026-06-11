@@ -52,6 +52,21 @@ def test_force_refresh_returns_cache_when_recent(tmp_path):
     assert token == "CACHED"
 
 
+def test_interval_guard_blocks_23h_to_24h_window(tmp_path):
+    """🚨 RULE 1 line-404 회귀: 발급 23.5h 후([23h,24h) 윈도) + force_refresh + stale lock.
+    interval_h=24 → 2.5 가드가 cache 반환(2번째 발급 차단). 23 으로 회귀 시 fall-through→발급.
+    (기존 5 테스트는 2.5 가드 본문에 도달 안 해 23/24 무관하게 통과 = 드리프트 무방비였음.)"""
+    b = _broker(tmp_path, lock_hours_ago=25)  # stale lock(>24h) — 23h fall-through 시 file-lock 도 통과 → 발급
+    b._token = "CACHED"
+    # expires=now+0.5h → issued_at=expires-24h=now-23.5h → 발급 23.5h 후 = [23h,24h) 윈도
+    b._token_expires = datetime.now(KST) + timedelta(hours=0.5)
+    with mock.patch.object(b, "_load_cached_token"):  # cache 유지
+        with mock.patch.object(kb.requests, "post") as mpost:
+            token = b.authenticate(force_refresh=True)
+    mpost.assert_not_called()  # 🚨 interval_h=24 가 막음. 23 이면 post 호출 = 테스트 실패(드리프트 검출)
+    assert token == "CACHED"
+
+
 def test_force_refresh_issues_after_23h(tmp_path):
     """25h 전 lock(>23h) + 빈 cache + force_refresh=True → 정상 발급 (backup 작동)."""
     b = _broker(tmp_path, lock_hours_ago=25)
