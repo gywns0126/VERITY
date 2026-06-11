@@ -49,7 +49,11 @@ def compute_volatility_score(
     # --- 1. 실현 변동성 순위 (반전: 저변동성 = 고점수) ---
     rv_score = 50.0
     if vol_20 is not None:
-        ann_vol = vol_20 * np.sqrt(252) if vol_20 < 1 else vol_20
+        # vol_20 = 일간 수익률 표준편차(분수, producer=backtester pct_change().std()).
+        # 연환산% = 일간분수 × √252 × 100. 임계(<=15/25/35/50)는 처음부터 연환산% 가정이라
+        # *100 누락 시 입력(0.16~0.95)이 전부 <=15 → 전 종목 rv_score=90 상수(죽은 팩터)였음.
+        # 옛 'if vol_20<1 else vol_20' 휴리스틱 = percent 입력 케이스 가정이나 producer 단일=분수, dead branch.
+        ann_vol = vol_20 * np.sqrt(252) * 100.0
         if ann_vol <= 15:
             rv_score = 90
             signals.append(f"연 변동성 {ann_vol:.1f}% 초저변동")
@@ -125,7 +129,7 @@ def compute_volatility_score(
         daily_systematic = systematic_vol / np.sqrt(252)
         if vol_20 > daily_systematic:
             idio_vol = np.sqrt(max(vol_20**2 - daily_systematic**2, 0))
-            ann_idio = idio_vol * np.sqrt(252) if idio_vol < 1 else idio_vol
+            ann_idio = idio_vol * np.sqrt(252) * 100.0  # 일간분수→연환산% (line 52 동형, 임계 percent 가정)
             if ann_idio <= 10:
                 idio_score = 85
             elif ann_idio <= 20:

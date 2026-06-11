@@ -152,6 +152,34 @@ class TestPSR:
         assert "psr" in result  # DSR 도 PSR schema 반환
         assert 0 <= result["psr"] <= 1
 
+    def test_se_negative_variance_returns_nan(self):
+        """🚨 음수 점근분산(저N·고skew×SR) → SE=0(완벽추정 오독) 아닌 nan(추정불가)."""
+        from api.quant.alpha.psr import compute_sr_standard_error
+        # skew*sr = 2.0*0.8 = 1.6 > 1 → bracket = 1-1.6+... < 0 → variance < 0
+        se = compute_sr_standard_error(0.8, T=14, skew=2.0, kurt=3.0)
+        assert math.isnan(se)
+
+    def test_psr_degenerate_variance_returns_none(self):
+        """🚨 RULE 7 거짓확실성 회귀: SE 붕괴 시 psr=1.0/z=inf 아닌 None+_note (추정불가)."""
+        from api.quant.alpha.psr import compute_psr
+        r = compute_psr(sr_observed=0.8, sr_benchmark=0.0, T=14, skew=2.0, kurt=3.0)
+        assert r["psr"] is None          # 옛 거짓 1.0 회귀 차단
+        assert r["z_score"] is None      # 옛 inf 제거 (JSON Infinity 차단)
+        assert r["se_sr"] is None
+        assert "_note" in r
+        # JSON 직렬화 시 'Infinity'(무효 JSON) 미포함
+        import json
+        assert "Infinity" not in json.dumps(r)
+
+    def test_validation_significance_none_safe_on_degenerate(self):
+        """관측 표면(validation) 이 degenerate psr=None 에서 significant_95=False 안전 처리."""
+        from api.quant.alpha.psr import compute_psr, compute_deflated_sharpe_ratio
+        psr = compute_psr(0.8, 0.0, 14, skew=2.0, kurt=3.0)
+        dsr = compute_deflated_sharpe_ratio(0.8, T=14, n_trials=10, skew=2.0, kurt=3.0)
+        _dsr = dsr.get("psr", dsr.get("dsr"))
+        # validation.py:213 의 None-safe 식 재현
+        assert (_dsr is not None and _dsr >= 0.95) is False
+
 
 # ─── Strategy Pool ────────────────────────────────────────────
 

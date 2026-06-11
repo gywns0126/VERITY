@@ -109,7 +109,9 @@ def compute_sr_standard_error(
         return float("inf")
     variance = (1 - skew * sr + (kurt - 3) / 4 * sr ** 2) / (T - 1)
     if variance <= 0:
-        return 0.0
+        # 음수 점근분산 = Lo(2002) 점근 SE 식 붕괴(저N·고표본 skew×SR). SE=0(완벽추정) 아님.
+        # nan sentinel 로 '추정불가' 전달 → compute_psr 가 psr=None 처리(거짓확실성 차단, RULE 7).
+        return float("nan")
     return math.sqrt(variance)
 
 
@@ -145,14 +147,17 @@ def compute_psr(
         kurt = kurt if kurt is not None else 3.0
 
     se = compute_sr_standard_error(sr_observed, T, skew, kurt)
-    if se == 0:
+    if not math.isfinite(se) or se <= 0:
+        # SE 추정 붕괴(음수 점근분산/비유효) → psr=1.0/z=inf 거짓확실성 대신 '추정불가' None.
+        # 저N·고표본 skew×SR 에서 발생. verdict/게이트 미반영(관측 only) — significant_95 None-safe.
         return {
-            "psr": 1.0 if sr_observed > sr_benchmark else 0.0,
-            "se_sr": 0.0,
-            "skewness": skew,
-            "kurtosis": kurt,
-            "z_score": float("inf"),
+            "psr": None,
+            "se_sr": None,
+            "skewness": round(skew, 4),
+            "kurtosis": round(kurt, 4),
+            "z_score": None,
             "T": T,
+            "_note": "분산 추정 음수/비유효 — 저N·고표본SR×skew 에서 Lo(2002) 점근 SE 식 붕괴. 유의성 측정 불가(거짓확실성 차단).",
         }
     z = (sr_observed - sr_benchmark) / se
     psr = _norm_cdf(z)
