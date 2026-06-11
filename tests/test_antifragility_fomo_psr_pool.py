@@ -127,9 +127,12 @@ class TestFOMOScore:
 class TestPSR:
     def test_sr_se_lopez_de_prado(self):
         from api.quant.alpha.psr import compute_sr_standard_error
-        # T=90, SR=0.8 정규분포 → SE ≈ 0.127 (Perplexity Q4 cite)
+        import math
+        # 🚨 Lo(2002) 정규 baseline: SE = sqrt((1+½SR²)/(T-1)).
+        # T=90, SR=0.8 → sqrt((1+0.32)/89) = 0.1218. 옛 버그(½SR² 누락)=0.1060.
         se = compute_sr_standard_error(0.8, T=90, skew=0.0, kurt=3.0)
-        assert 0.10 < se < 0.13
+        assert math.isclose(se, math.sqrt(1.32 / 89), rel_tol=1e-6)
+        assert se > 0.115  # ½SR² 누락 회귀(0.106) 차단
 
     def test_psr_strong_improvement(self):
         from api.quant.alpha.psr import compute_psr

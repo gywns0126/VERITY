@@ -101,13 +101,18 @@ def compute_sr_standard_error(
     skew: float = 0.0,
     kurt: float = 3.0,
 ) -> float:
-    """Sharpe Ratio 의 표준 오차 (Lopez de Prado).
+    """Sharpe Ratio 의 표준 오차 (Lo 2002 / Mertens 2002 / Bailey-Lopez de Prado).
 
-    SE(SR) = sqrt((1 - skew × SR + (kurt - 3) / 4 × SR²) / (T - 1))
+    SE(SR) = sqrt((1 + ½·SR² − skew·SR + (kurt−3)/4·SR²) / (T − 1))
+            = sqrt((1 − skew·SR + (kurt−1)/4·SR²) / (T − 1))   # 동치 (kurt=Pearson, 정규=3)
+
+    2026-06-11 정정: 옛 식이 Lo(2002) 정규 baseline `+½·SR²` 누락 → SE 과소추정 →
+      PSR 과대(과신). 검증 2 원전 = quantstats verbatim(1+0.5·SR²+(kurt-3)/4·SR²) +
+      Bailey-Lopez de Prado((kurt-1)/4) 일치. 정규(skew=0,kurt=3): (1+½SR²)/(T-1) (Lo 2002).
     """
     if T < 2:
         return float("inf")
-    variance = (1 - skew * sr + (kurt - 3) / 4 * sr ** 2) / (T - 1)
+    variance = (1 + 0.5 * sr ** 2 - skew * sr + (kurt - 3) / 4 * sr ** 2) / (T - 1)
     if variance <= 0:
         # 음수 점근분산 = Lo(2002) 점근 SE 식 붕괴(저N·고표본 skew×SR). SE=0(완벽추정) 아님.
         # nan sentinel 로 '추정불가' 전달 → compute_psr 가 psr=None 처리(거짓확실성 차단, RULE 7).
