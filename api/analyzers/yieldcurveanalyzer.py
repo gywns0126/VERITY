@@ -11,6 +11,8 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List
 
+from api.config import now_kst  # tz-aware KST (datetime.now() naive 금지, RULE)
+
 from api.analyzers.bondanalyzer import (
     analyze_yield_curve,
     analyze_credit_spreads,
@@ -134,7 +136,7 @@ def get_bond_regime_signal(
     constitution_patch: Dict[str, Any] = {
         "bond_regime": bond_regime,
         "macro_override": recession,
-        "updated_at": datetime.now().isoformat(),
+        "updated_at": now_kst().isoformat(),
     }
 
     return {
@@ -146,7 +148,7 @@ def get_bond_regime_signal(
         "verity_constitution_patch": constitution_patch,
         "kr_curve_interpretation": kr_analysis.get("interpretation", ""),
         "us_curve_interpretation": us_analysis.get("interpretation", ""),
-        "analyzed_at": datetime.now().isoformat(),
+        "analyzed_at": now_kst().isoformat(),
     }
 
 
@@ -158,7 +160,7 @@ def format_telegram_bond_report(signal: Dict[str, Any]) -> str:
 
     lines = [
         "*VERITY 채권 시장 리포트*",
-        f"{datetime.now().strftime('%Y-%m-%d %H:%M')} KST",
+        f"{now_kst().strftime('%Y-%m-%d %H:%M')} KST",
         "",
         "*[ 금리 레짐 ]*",
         f"  환경: `{regime.get('rate_environment', 'N/A')}`",

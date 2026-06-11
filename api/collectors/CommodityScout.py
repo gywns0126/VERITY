@@ -13,6 +13,8 @@ import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from api.config import now_kst  # tz-aware KST (datetime.now() naive 금지, RULE)
+
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -227,7 +229,7 @@ JSON만 출력:
 
 
 def load_or_build_sector_map(sectors: List[str]) -> Dict[str, List[str]]:
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = now_kst().strftime("%Y-%m-%d")
     os.makedirs(os.path.dirname(COMMODITY_MAP_CACHE_PATH), exist_ok=True)
     if os.path.isfile(COMMODITY_MAP_CACHE_PATH):
         try:
@@ -497,7 +499,7 @@ def run_commodity_scout(
     mom_alerts = collect_commodity_mom_alerts(all_comm, close_cache=close_cache)
 
     payload = {
-        "updated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
         "mom_alert_threshold_pct": MOM_ALERT_PCT,
         "commodity_mom_alerts": mom_alerts,
         "high_correlation": sorted(high_corr, key=lambda x: abs(x["correlation_60d"]), reverse=True),

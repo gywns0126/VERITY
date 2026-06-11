@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+
+from api.config import now_kst  # tz-aware KST (datetime.now() naive 금지, RULE)
 from typing import Any, Dict, List
 
 LOG_PATH = Path("data/metadata/atr_migration_log.jsonl")
@@ -30,7 +32,8 @@ def _load_counter() -> Dict[str, Any]:
 def _read_recent_log(days: int = 7) -> List[Dict[str, Any]]:
     if not LOG_PATH.exists():
         return []
-    cutoff = datetime.now() - timedelta(days=days)
+    # 비교 대상 dt=fromisoformat(split('+')) = naive → cutoff 도 naive KST 로 유지
+    cutoff = now_kst().replace(tzinfo=None) - timedelta(days=days)
     out: List[Dict[str, Any]] = []
     try:
         with LOG_PATH.open() as f:
@@ -101,7 +104,7 @@ def compute_atr_migration_summary() -> Dict[str, Any]:
     ]
 
     return {
-        "as_of": datetime.now().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        "as_of": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
         "phase": "phase_0",  # 5/16 verdict 까지
         "verdict_date": "2026-05-16",
         "today": {

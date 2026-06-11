@@ -44,11 +44,12 @@ def fetch_cape() -> Optional[dict]:
         value = float(m.group(1))
         change_m = _CHANGE_RE.search(html)
         change = float(change_m.group(1)) if change_m else None
-        from datetime import datetime
+        from api.config import now_kst
         return {
             "value": value,
             "change_from_prev_close": change,
-            "as_of": datetime.now().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+            # now_kst()=aware KST → strftime KST 벽시계 + 정확한 +09:00 (GH=UTC 9h 오기 차단)
+            "as_of": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
             "source": "multpl.com (Shiller PE)",
             "series_id": "MULTPL_SHILLER_PE",
         }

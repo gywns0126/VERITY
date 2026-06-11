@@ -224,7 +224,7 @@ def is_earnings_imminent(stock: Dict[str, Any]) -> bool:
         return False
     try:
         earn_date = datetime.strptime(str(ed)[:10], "%Y-%m-%d")
-        now = datetime.now()
+        now = now_kst().replace(tzinfo=None)  # naive KST (earn_date=naive strptime 비교)
         delta = (earn_date - now).days
         return -1 <= delta <= 1
     except (ValueError, TypeError):

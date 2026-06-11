@@ -19,6 +19,7 @@ from api.config import (
     ALERT_USD_KRW_CHANGE_PCT_CRITICAL,
     ALERT_USD_KRW_CHANGE_PCT_WARNING,
     ALERT_USD_KRW_LEVEL_INFO_KRW,
+    now_kst,
 )
 
 
@@ -615,7 +616,7 @@ def _check_holdings_risks(holdings: list, recommendations: list) -> list:
 
 def _check_earnings_proximity(recommendations: list) -> list:
     alerts = []
-    now = datetime.now()
+    now = now_kst().replace(tzinfo=None)  # naive KST (earn/event date=naive strptime 비교)
 
     for stock in recommendations:
         earnings = stock.get("earnings", {})
@@ -718,7 +719,7 @@ def _check_news_urgency(headlines: list) -> list:
 
 def _check_event_proximity(events: list) -> list:
     alerts = []
-    now = datetime.now()
+    now = now_kst().replace(tzinfo=None)  # naive KST (earn/event date=naive strptime 비교)
 
     for ev in events:
         try:
@@ -991,7 +992,7 @@ def _detect_flash_moves(macro: dict, recommendations: list) -> list:
 def _check_macro_event_dday(events: list) -> list:
     """매크로 이벤트 D-day/전일 알림."""
     alerts = []
-    now = datetime.now()
+    now = now_kst().replace(tzinfo=None)  # naive KST (earn/event date=naive strptime 비교)
 
     for ev in (events or []):
         date_str = ev.get("date") or ev.get("event_date")

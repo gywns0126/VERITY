@@ -401,7 +401,9 @@ class KISBroker:
         self._load_cached_token()
         if self._token and self._token_expires:
             issued_at = self._token_expires - timedelta(hours=24)
-            interval_h = 23
+            # RULE 1: 발급 간격 최소 24h 고정. 2026-06-11 정정 — 5/29 fix(bec3c7a67)가
+            #   docstring/주석/_is_recently_issued 4곳은 23→24 했으나 이 리터럴만 누락(drift).
+            interval_h = 24
             if now < issued_at + timedelta(hours=interval_h):
                 logger.warning(
                     "KIS %dh minimum interval — issued_at≈%s, now=%s, 차이=%s. "
