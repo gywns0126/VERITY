@@ -1322,10 +1322,16 @@ def run_evolution_cycle(
                 returns=returns_series if returns_series else None,
             )
             bt_result["psr_check"] = psr_result
-            if psr_result["psr"] < STRATEGY_PSR_CONFIDENCE:
+            _psr_val = psr_result.get("psr")
+            if _psr_val is None:
+                # 유의성 측정불가(저N×고SR×skew 점근분산 붕괴 → compute_psr None, commit 73cbb847e).
+                # PSR 게이트 명시 skip — 옛 `None < float` TypeError 가 except 에 silent 삼켜지던 것
+                # 명시화(fail-open 보존, margin gate 적용). 보수적 reject-on-unmeasurable 은 향후 PM 정책.
+                print("  [V2] PSR 유의성 측정불가(추정불가) → PSR 게이트 skip, margin gate 적용", file=sys.stderr)
+            elif _psr_val < STRATEGY_PSR_CONFIDENCE:
                 result["status"] = "rejected_by_psr"
                 result["reason"] = (
-                    f"PSR {psr_result['psr']:.3f} < {STRATEGY_PSR_CONFIDENCE:.2f} "
+                    f"PSR {_psr_val:.3f} < {STRATEGY_PSR_CONFIDENCE:.2f} "
                     f"(통계적 유의성 부족, Perplexity Q4 v2 학계 자문)"
                 )
                 print(f"  [V2] {result['reason']}")

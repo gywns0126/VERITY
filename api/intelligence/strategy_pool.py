@@ -114,8 +114,13 @@ def is_significantly_better(
                 T=T,
                 returns=returns,
             )
-            if psr_result["psr"] < psr_confidence:
-                return False, f"PSR {psr_result['psr']:.3f} < {psr_confidence:.2f}"
+            _psr_val = psr_result.get("psr")
+            if _psr_val is None:
+                # 유의성 측정불가(추정불가) → PSR 게이트 명시 skip (옛 None<float TypeError→except
+                # silent fail-open 명시화). 보수적 reject-on-unmeasurable 은 PM 정책 결정.
+                pass
+            elif _psr_val < psr_confidence:
+                return False, f"PSR {_psr_val:.3f} < {psr_confidence:.2f}"
         except Exception as e:
             print(f"[strategy_pool] PSR check 실패 (margin gate 만): {e}", file=sys.stderr)
 
