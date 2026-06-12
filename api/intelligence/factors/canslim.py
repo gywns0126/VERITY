@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from api.intelligence.factors._common import _clip
+from api.intelligence.factors._common import _clip, _safe_float
 
 
 def _compute_canslim_score(stock: Dict[str, Any]) -> float:
@@ -16,9 +16,8 @@ def _compute_canslim_score(stock: Dict[str, Any]) -> float:
 
     # C: Current EPS Growth (최근 분기 EPS 성장률 ≥ 25%)
     cons = stock.get("consensus") or {}
-    eps_growth = cons.get("eps_growth_qoq_pct") or cons.get("eps_growth_yoy_pct")
+    eps_growth = _safe_float(cons.get("eps_growth_qoq_pct") or cons.get("eps_growth_yoy_pct"))
     if eps_growth is not None:
-        eps_growth = float(eps_growth)
         if eps_growth >= 50:
             score += 15
         elif eps_growth >= 25:
@@ -29,9 +28,8 @@ def _compute_canslim_score(stock: Dict[str, Any]) -> float:
             score -= 8
 
     # A: Annual EPS Growth (연간 성장률)
-    annual_growth = cons.get("operating_profit_yoy_est_pct")
+    annual_growth = _safe_float(cons.get("operating_profit_yoy_est_pct"))
     if annual_growth is not None:
-        annual_growth = float(annual_growth)
         if annual_growth >= 25:
             score += 8
         elif annual_growth >= 10:
@@ -42,9 +40,9 @@ def _compute_canslim_score(stock: Dict[str, Any]) -> float:
     # L: Leader — RS Rating (상대 강도, 기술적 모멘텀 프록시)
     tech = stock.get("technical") or {}
     # 52주 고점 대비 하락 비율을 RS 프록시로 활용
-    drop = stock.get("drop_from_high_pct", 0)
+    drop = _safe_float(stock.get("drop_from_high_pct", 0))
     if drop is not None:
-        drop = abs(float(drop))
+        drop = abs(drop)
         if drop < 5:
             score += 8
         elif drop < 15:
@@ -53,9 +51,8 @@ def _compute_canslim_score(stock: Dict[str, Any]) -> float:
             score -= 5
 
     # S: Supply & Demand — 거래량 확인
-    vol_ratio = tech.get("vol_ratio", 1.0)
+    vol_ratio = _safe_float(tech.get("vol_ratio", 1.0))
     if vol_ratio is not None:
-        vol_ratio = float(vol_ratio)
         if vol_ratio > 2.0:
             score += 5
         elif vol_ratio > 1.5:

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from api.intelligence.factors._common import _clip, _load_constitution
+from api.intelligence.factors._common import _clip, _load_constitution, _safe_float
 
 
 def _compute_moat_score(stock: Dict[str, Any]) -> float:
@@ -58,9 +58,9 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
         if isinstance(_v, (int, float)):
             rev_growth = _v
 
+    gpm = _safe_float(gpm)
+    rev_growth = _safe_float(rev_growth)
     if gpm is not None and rev_growth is not None:
-        gpm = float(gpm)
-        rev_growth = float(rev_growth)
         if gpm > 40 and rev_growth > 5:
             score += 15
         elif gpm > 30 and rev_growth > 0:
@@ -86,9 +86,9 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
             if kfr.get("debt_ratio") is not None:
                 debt_ratio = kfr.get("debt_ratio", 100)
 
+    pbr = _safe_float(pbr)
     if pbr is not None:
-        pbr = float(pbr)
-        debt_ratio = float(debt_ratio)
+        debt_ratio = _safe_float(debt_ratio, 100.0)
         from api.analyzers.sector_thresholds import resolve_sector_bucket, get_debt_ratio_thresholds
         _debt_t = get_debt_ratio_thresholds(resolve_sector_bucket(stock))
         if 0 < pbr < 1.0 and debt_ratio < _debt_t["normal_max"] * 0.5:
@@ -115,8 +115,8 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
         _v = stock.get("roe")
         if isinstance(_v, (int, float)):
             roe = _v
+    roe = _safe_float(roe)
     if roe is not None:
-        roe = float(roe)
         if roe > 20:
             score += 5
         elif roe < 0:
