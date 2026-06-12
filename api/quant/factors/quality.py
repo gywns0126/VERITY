@@ -18,6 +18,10 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 
+# 🔗 의도적 분리 (2026-06-12 verify): wide_scan.py:_piotroski_f_score 와 별개 계약.
+#   여기 = 라이브 brain 퀄리티 35점 (DART attach 후, fscore_deltas pre-attach 소비, 낙관적 fallback).
+#   wide_scan = SHADOW 로그 진단 (DART 전, stock mutate 금지로 util 직접 호출, 보수적 None 전파).
+#   공유 Δ math 는 api/utils/fscore_delta.py 단일 출처. 두 함수 통합 금지 — 계약 충돌.
 def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:
     """
     Piotroski F-Score (0~9).

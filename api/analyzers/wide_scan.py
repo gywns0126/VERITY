@@ -283,6 +283,10 @@ def _score_momentum(stock: dict) -> float:
 # step (c) 는 구조 prep — 항목별 True/False/None + missing_fields 리스트 반환
 # 실 데이터 통합 = step (e) (stock_data.py 확장 + DART pre-attach)
 
+# 🔗 의도적 분리 (2026-06-12 verify): quality.py:compute_piotroski_f_score 와 별개 계약.
+#   여기 = SHADOW 진단 (DART 전 시점, stock mutate 금지로 fscore_delta util 직접 호출, 보수적 None 전파).
+#   quality = 라이브 brain 35점 (DART 후, pre-attach 소비, 낙관적 fallback). 공유 Δ = fscore_delta.py.
+#   두 함수 통합 금지 — return 계약/시점/결측 철학 충돌. F-criteria 변경 시 양쪽 동기 주의.
 def _piotroski_f_score(stock: dict) -> dict:
     """Q3: F-Score 9 항목 explicit dict 반환.
 
