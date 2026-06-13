@@ -288,7 +288,7 @@ function BottomSheet({ open, onClose, title, children }: { open: boolean; onClos
             <div onClick={onClose} style={{ flex: 1, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }} />
             <div style={{
                 background: C.bgCard, borderTopLeftRadius: 20, borderTopRightRadius: 20,
-                padding: "14px 20px 32px", maxHeight: "82vh", overflowY: "auto",
+                padding: "14px 20px calc(env(safe-area-inset-bottom, 0px) + 120px)", maxHeight: "85vh", overflowY: "auto",
                 animation: "slideUp 0.25s ease-out",
                 WebkitOverflowScrolling: "touch",
             }}>
@@ -1671,58 +1671,8 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
 /* ══════════════════════════════════════════════════════════════════
    AI TAB
    ══════════════════════════════════════════════════════════════════ */
-/* 내 할 일 — UserActionBell 모바일 인라인판 (fixed FAB 화면 가림 회피, MoreTab 임베드).
- * 데이터 소스/필터는 UserActionBell.tsx 와 동일 (user_action_queue, status=pending, actor=user). */
-function MobileActionQueue({ session, supabaseUrl, supabaseAnonKey }: { session: AuthSession | null; supabaseUrl: string; supabaseAnonKey: string }) {
-    const [rows, setRows] = useState<any[]>([])
-    const [err, setErr] = useState("")
-    useEffect(() => {
-        const jwt = session?.access_token
-        if (!jwt || !supabaseUrl || !supabaseAnonKey) { setErr("로그인 필요"); return }
-        let alive = true
-        const fetchRows = async () => {
-            try {
-                const url = `${supabaseUrl}/rest/v1/user_action_queue` +
-                    `?select=id,title,detail,category,priority,due_at` +
-                    `&status=eq.pending&actor=eq.user` +
-                    `&order=priority.asc,due_at.asc.nullslast&limit=50`
-                const r = await fetch(url, { headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${jwt}` } })
-                if (!r.ok) throw new Error(`HTTP ${r.status}`)
-                const d = await r.json()
-                if (alive) { setRows(Array.isArray(d) ? d : []); setErr("") }
-            } catch (e: any) { if (alive) setErr(e?.message || "조회 실패") }
-        }
-        fetchRows()
-        const id = globalThis.setInterval(fetchRows, 60000)
-        return () => { alive = false; globalThis.clearInterval(id) }
-    }, [session?.access_token, supabaseUrl, supabaseAnonKey])
-
-    const PCOLOR: Record<string, string> = { p0: C.danger, p1: C.warn, p2: C.textSecondary }
-    const CLABEL: Record<string, string> = { framer_paste: "FRAMER", supabase_migration: "SUPABASE", verification: "VERIFY", monitoring: "MONITOR", misc: "MISC" }
-
-    if (err) return <Card><div style={{ color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>{err}</div></Card>
-    if (!rows.length) return <Card><div style={{ color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>대기 중인 할 일이 없습니다.</div></Card>
-    return (
-        <Card>
-            <CardTitle>내 할 일 <span style={{ color: C.accent }}>{rows.length}</span></CardTitle>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {rows.map((r: any) => (
-                    <div key={r.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 12px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: PCOLOR[r.priority] || C.textSecondary, fontFamily: FONT }}>{String(r.priority || "").toUpperCase()}</span>
-                            <span style={{ fontSize: 10, color: C.textTertiary, fontFamily: FONT }}>{CLABEL[r.category] || r.category}</span>
-                            <span style={{ fontSize: 10, color: C.textTertiary, fontFamily: FONT, marginLeft: "auto" }}>{r.due_at ? String(r.due_at).slice(0, 10) : "무기한"}</span>
-                        </div>
-                        <div style={{ fontSize: 13, color: C.textPrimary, fontFamily: FONT, lineHeight: 1.4 }}>{r.title}</div>
-                    </div>
-                ))}
-            </div>
-        </Card>
-    )
-}
-
-function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { data: any; session: AuthSession | null; onLogout: () => void; supabaseUrl: string; supabaseAnonKey: string }) {
-    const [section, setSection] = useState<"events" | "news" | "todo" | "settings">("events")
+function MoreTab({ data, session, onLogout }: { data: any; session: AuthSession | null; onLogout: () => void }) {
+    const [section, setSection] = useState<"events" | "news" | "settings">("events")
     const [newsRegion, setNewsRegion] = useState<"all" | "kr" | "us">("all")
     const events: any[] = asArr(data?.global_events)
     const expiry = data?.expiry_status || {}
@@ -1734,14 +1684,10 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "0 2px" }}>
-                {([["events", "경제지표"], ["news", "뉴스"], ["todo", "할 일"], ["settings", "설정"]] as const).map(([k, l]) => (
+                {([["events", "경제지표"], ["news", "뉴스"], ["settings", "설정"]] as const).map(([k, l]) => (
                     <Pill key={k} label={l} active={section === k} onClick={() => setSection(k)} />
                 ))}
             </div>
-
-            {section === "todo" && (
-                <MobileActionQueue session={session} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} />
-            )}
 
             {section === "events" && (
                 <>
@@ -1983,7 +1929,7 @@ export default function MobileApp(props: Props) {
             case "market": return <ErrorBoundary label="MarketTab"><MarketTab data={data} /></ErrorBoundary>
             case "reco": return <ErrorBoundary label="RecoTab"><RecoTab data={data} /></ErrorBoundary>
             case "portfolio": return <ErrorBoundary label="PortfolioTab"><PortfolioTab data={data} /></ErrorBoundary>
-            case "more": return <ErrorBoundary label="MoreTab"><MoreTab data={data} session={session} onLogout={handleLogout} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} /></ErrorBoundary>
+            case "more": return <ErrorBoundary label="MoreTab"><MoreTab data={data} session={session} onLogout={handleLogout} /></ErrorBoundary>
         }
     }
 
@@ -2005,9 +1951,9 @@ export default function MobileApp(props: Props) {
 
             <div ref={scrollRef} style={{
                 flex: 1, overflowY: "auto", overflowX: "hidden",
-                // 하단 탭바(minHeight 64 + safe-area) 에 마지막 내용이 가려지지 않게
-                // 탭바 높이+여유 만큼 bottom padding 확보 (2026-06-07 모바일 하단 잘림 fix)
-                padding: "22px 14px calc(env(safe-area-inset-bottom, 0px) + 110px)",
+                // 하단 탭바 + Framer 무료 "Made in Framer" 배지(우하단 상시 오버레이) 회피.
+                // 탭바를 배지 위로 리프트했으므로 그만큼 bottom padding 확대 (2026-06-13 무료 tier 배지 회피).
+                padding: "22px 14px calc(env(safe-area-inset-bottom, 0px) + 150px)",
                 WebkitOverflowScrolling: "touch",
                 minHeight: 0,
             }}>
@@ -2020,7 +1966,8 @@ export default function MobileApp(props: Props) {
                 background: "rgba(0,0,0,0.92)", backdropFilter: "blur(12px)",
                 WebkitBackdropFilter: "blur(12px)",
                 display: "flex", justifyContent: "space-around", alignItems: "center",
-                padding: "10px 0 calc(env(safe-area-inset-bottom, 0px) + 14px)",
+                // 무료 배지(우하단)가 우측 탭(보유/더보기)을 가리지 않게 탭 행을 배지 위로 리프트.
+                padding: "10px 0 calc(env(safe-area-inset-bottom, 0px) + 72px)",
                 minHeight: 64,
             }}>
                 {(["home", "market", "reco", "portfolio", "more"] as TabId[]).map((t) => {
