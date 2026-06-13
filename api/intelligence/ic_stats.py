@@ -2,8 +2,10 @@
 ic_stats.py — IC(정보계수) 통계 모듈. Shadow Funnel Scoring Spec v0 산식 구현.
 
 2026-06-08 신설. 사전등록: docs/shadow_funnel_scoring_spec_v0.md (PM 승인 2026-06-08).
-방법론 출처 = Perplexity 7-답 (Grinold-Kahn / Richardson-Smith 1991 / Newey-West 1987 /
-Bailey-López de Prado 2014 / Goodwin 1998).
+방법론 출처 = Perplexity 7-답 (Grinold-Kahn / Newey-West 1987 / Bailey-López de Prado 2014 /
+Goodwin 1998). 횡단면 design effect √(1+(N-1)ρ̄) 참 provenance = Kish(1965)/Moulton(1986,1990).
+2026-06-13 학술감사 정정: Richardson-Smith 1991(RFS 4(2))은 overlapping 시계열 검정용이지
+횡단면 design effect 출처가 아님 (§4 보정 = Kish/Moulton).
 
 순수 함수 (라이브 파이프라인 무의존). prediction_scoring + shadow 집계가 import.
 
@@ -11,7 +13,7 @@ Bailey-López de Prado 2014 / Goodwin 1998).
   1. rank-IC = Kendall τ (주) + Spearman ρ (병기)         — 소표본 N<30 τ 신뢰 높음
   2. bootstrap CI = 2000 resample, 95%, seed 고정
   3. 시계열 t-stat = Newey-West (maxlags = max(h-1, ceil(0.75 T^(1/3))))
-  4. 횡단면 보정 = SE × √(1+(N-1)ρ̄)  →  corrected-t = NW-t / √(1+(N-1)ρ̄)
+  4. 횡단면 보정 = SE × √(1+(N-1)ρ̄) (design effect, Kish 1965/Moulton)  →  corrected-t = NW-t / √(1+(N-1)ρ̄)
 
 statsmodels 미사용 (의존성 회피) — Newey-West 직접 구현.
 """

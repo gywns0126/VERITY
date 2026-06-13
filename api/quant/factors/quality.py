@@ -206,7 +206,8 @@ def compute_altman_z(stock: Dict[str, Any]) -> Dict[str, Any]:
                             컷 Safe ≥ 2.6 / Grey 1.1~2.6 / Distress < 1.1, X5(매출/자산) 제거
       X1 = 운전자본/총자산 (계수 6.56, wallstreetprep/Altman 원전 정합 — 2026-05-20 정정)
       X3 = EBIT/총자산 (계수 6.72)
-      X4 = 시가총액/총부채 (상장사 표준, Q-fin-2 답변 정합)
+      X4 = 시가총액/총부채 (상장사 시장가 변형, Q-fin-2 답변 정합 — 교과서 Z″-EM 원전은
+           X4=장부자본/총부채(book equity). 시장가 사용 = Z(1968) 정의 차용, 의도적 일탈. 2026-06-13 학술감사 flag)
     """
     from api.analyzers.sector_thresholds import is_financial_excluded, resolve_sector_bucket
 

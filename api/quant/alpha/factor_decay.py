@@ -2,7 +2,8 @@
 팩터 수명(Decay) 모니터
 
 학술 근거:
-  - McLean & Pontiff (2016): 학술 논문 발표 후 팩터 수익률이 58% 감소
+  - McLean & Pontiff (2016, JF): 97 predictors — 출판 후 58% 감소(post-publication) /
+    26% 표본외 감소(out-of-sample, in-sample 대비). 둘 다 citable (2026-06-13 학술감사 정합)
   - Chordia, Subrahmanyam & Tong (2014): 시장 이상현상의 수명은 유한
   - 팩터 크라우딩: 너무 많은 투자자가 같은 팩터를 쓰면 수익 감소
 
