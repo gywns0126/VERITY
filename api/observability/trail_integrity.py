@@ -90,8 +90,10 @@ def _check_history() -> Dict[str, Any]:
             if k not in snap:
                 missing_keys.append(k)
         recs = snap.get("recommendations") or []
-        # 결정시점 팩터 벡터 완전성 — 첫 rec 의 필드 수 (slim 회귀 검출)
-        rec_fields = len(recs[0].keys()) if recs else 0
+        # 결정시점 팩터 벡터 완전성 — recs 중 최대 필드 수 (slim 회귀 검출).
+        # 2026-06-13 fix: 옛 recs[0] 은 종목 순서 의존(KR~114 vs US~88 vs COIN 77 변동)으로
+        # 거짓 경보. 진짜 slim 회귀 = 전 종목 ~20 붕괴이므로 가장 풍부한 rec(max)가 견고한 신호.
+        rec_fields = max((len(r.keys()) for r in recs), default=0)
     except Exception as e:
         parse_ok, rec_fields = False, 0
         missing_keys = [f"parse_error: {str(e)[:60]}"]
