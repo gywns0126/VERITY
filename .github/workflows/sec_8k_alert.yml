@@ -70,7 +70,8 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/sec_8k_cache.json
+          # sec_ticker_cik_map.json: 30일 TTL 재fetch 시 갱신 — git add 정합 (RULE 4, 2026-06-13)
+          git add data/sec_8k_cache.json data/sec_ticker_cik_map.json
           if git diff --staged --quiet; then
             echo "[sec_8k] cache 변화 없음"
             exit 0

@@ -53,24 +53,35 @@ def _load_ticker_cik_map() -> Dict[str, str]:
     if _TICKER_CIK_CACHE is not None:
         return _TICKER_CIK_CACHE
 
-    # 디스크 cache 30일 안이면 사용
+    # 디스크 cache 30일 안이면 사용.
+    # TTL 기준 = JSON 내부 _fetched_at (mtime 금지 — GH Actions fresh checkout 은
+    # mtime=checkout 시각이라 age 항상 0 → CI 에서 TTL 영구 미만료. 2026-06-13 fix).
+    # 구버전 파일(_fetched_at 키 부재) = 만료 취급 → 재fetch.
+    stale_disk_map: Dict[str, str] = {}
     if _TICKER_CIK_CACHE_PATH.exists():
         try:
-            mtime = datetime.fromtimestamp(_TICKER_CIK_CACHE_PATH.stat().st_mtime, tz=KST)
-            age_days = (datetime.now(KST) - mtime).days
-            if age_days < _TICKER_CIK_TTL_DAYS:
-                _TICKER_CIK_CACHE = json.loads(_TICKER_CIK_CACHE_PATH.read_text())
-                return _TICKER_CIK_CACHE
+            cached = json.loads(_TICKER_CIK_CACHE_PATH.read_text())
+            fetched_at = cached.pop("_fetched_at", None)
+            stale_disk_map = cached
+            if fetched_at:
+                age_days = (datetime.now(KST) - datetime.fromisoformat(fetched_at)).days
+                if age_days < _TICKER_CIK_TTL_DAYS:
+                    _TICKER_CIK_CACHE = cached
+                    return _TICKER_CIK_CACHE
         except Exception:
             pass
 
-    # SEC fetch
+    # SEC fetch (실패 시 stale disk cache fallback — 빈 맵보다 구버전 맵이 안전)
     try:
         resp = requests.get(_TICKER_CIK_URL, headers=_HEADERS, timeout=20)
         resp.raise_for_status()
         raw = resp.json()
     except Exception as e:
         print(f"[sec_8k] ticker map fetch fail: {e}", file=sys.stderr)
+        if stale_disk_map:
+            print("[sec_8k] stale disk cache fallback 사용", file=sys.stderr)
+            _TICKER_CIK_CACHE = stale_disk_map
+            return _TICKER_CIK_CACHE
         return {}
 
     # raw 형식: {"0": {"cik_str": 320193, "ticker": "AAPL", ...}, ...}
@@ -82,7 +93,9 @@ def _load_ticker_cik_map() -> Dict[str, str]:
             mapping[ticker] = str(int(cik)).zfill(10)
 
     try:
-        _TICKER_CIK_CACHE_PATH.write_text(json.dumps(mapping, ensure_ascii=False))
+        payload = dict(mapping)
+        payload["_fetched_at"] = datetime.now(KST).isoformat()
+        _TICKER_CIK_CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False))
     except Exception:
         pass
     _TICKER_CIK_CACHE = mapping
