@@ -68,6 +68,32 @@ def main() -> int:
         else:
             sys.stderr.write("[predict] ml 0건 — ensemble 예측 없음(fallback/결손) (graceful)\n")
 
+    # 국면(regime) 예측 (Regime Validation Spec v0 — 별도 trail, 프로덕션/섀도우/ML 무오염)
+    # market_horizon.cycle_stage + verity_brain.macro_override 가 forward 시장 수익률을 예측하나
+    # 관측 검증. 시장레벨 단일값 → 자체 schema(regime_prediction.py). 관측 only(RULE 7).
+    # 입력 = 최신 history snapshot (market_horizon + verity_brain + index level 모두 포함).
+    regime_out = (args.out + ".regime.jsonl") if args.out else None  # 테스트 시에도 격리
+    try:
+        from api.intelligence import regime_prediction as RG
+        from api.workflows.archiver import load_snapshot
+        snap = load_snapshot(now_kst().strftime("%Y-%m-%d"))
+        if not snap:
+            # 오늘 snapshot 미생성 시 recommendations.json 컨테이너의 portfolio 류 fallback 없음 → skip
+            sys.stderr.write("[predict] regime: 오늘 snapshot 없음 — regime skip (graceful)\n")
+        else:
+            rg = RG.run_regime_layer(snap, path=regime_out)
+            if rg.get("regime_predictions"):
+                print(
+                    f"[predict] regime logged {rg['regime_predictions']} "
+                    f"({rg['regime_predictions'] // len(RG._HORIZONS)} state × {len(RG._HORIZONS)}h, "
+                    f"source={RG.REGIME_SOURCE}, "
+                    f"trail={'regime_prediction_trail.jsonl' if not regime_out else regime_out})"
+                )
+            else:
+                sys.stderr.write("[predict] regime 0건 — macro_override/cycle_stage 결손 (graceful)\n")
+    except Exception as e:  # noqa: BLE001
+        sys.stderr.write(f"[predict] regime skip (graceful): {type(e).__name__}: {e}\n")
+
     # 섀도우 funnel 예측 (Shadow Funnel Scoring Spec v0 — 별도 trail, 프로덕션 무오염)
     shadow = _load(os.path.join(DATA_DIR, "metadata", "shadow_funnel_picks.json"))
     shadow_out = (args.out + ".shadow.jsonl") if args.out else None  # 테스트 시에도 섀도우 격리
@@ -88,6 +114,28 @@ def main() -> int:
             )
     else:
         sys.stderr.write("[predict] shadow_funnel_picks 없음/빈값 — shadow skip (graceful)\n")
+
+    # 관측-only 신호(us_market_observations: AAII/NAAIM/FINRA/Form4) → market-level forward 예측
+    # (Observation Signal Trails Spec v0 — 별도 trail OBS_PATH, 프로덕션/섀도우/ML 무오염). 관측 only(RULE 7).
+    obs_out = (args.out + ".obs.jsonl") if args.out else None  # 테스트 시에도 관측 격리
+    try:
+        from api.collectors.us_market_observations import latest_per_source
+        obs_latest = latest_per_source()
+    except Exception as e:  # noqa: BLE001 — 관측 결손이 전체 막지 않게 (graceful)
+        sys.stderr.write(f"[predict] obs latest 로드 실패: {type(e).__name__}: {e} — obs skip (graceful)\n")
+        obs_latest = {}
+    if obs_latest:
+        obs = PL.generate_observation_predictions(obs_latest, path=obs_out)
+        if obs:
+            print(
+                f"[predict] obs logged {len(obs)} "
+                f"({len(obs) // len(PL._HORIZONS)} source × {len(PL._HORIZONS)}h, source={PL._OBS_SOURCE}, "
+                f"trail={'observation_prediction_trail.jsonl' if not obs_out else obs_out})"
+            )
+        else:
+            sys.stderr.write("[predict] obs 0건 — 매핑 신호 결손 (graceful)\n")
+    else:
+        sys.stderr.write("[predict] us_market_observations 없음/빈값 — obs skip (graceful)\n")
 
     return 0
 

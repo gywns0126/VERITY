@@ -106,6 +106,7 @@ _SPEC: List[tuple] = [
     ("DART한국", "dart_litigation", _dict_ok, "kr"),  # 2026-06-06 소송·우발부채
     ("DART한국", "dart_disclosure_events", _dict_ok, "kr"),  # 2026-06-04 공시 이벤트
     ("DART한국", "dart_audit_signals", _dict_ok, "kr"),  # 2026-06-04 going-concern
+    ("DART한국", "dividend_policy_change", _dict_ok, "kr"),  # 2026-06-13 배당 정책 변화(개시/삭감/중단)
     ("DART한국", "fscore_deltas", _dict_ok, "all"),
     # Lynch/value (한국 전용)
     ("Lynch", "lynch_kr", _dict_ok, "kr"),

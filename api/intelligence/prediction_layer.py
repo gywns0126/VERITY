@@ -166,6 +166,92 @@ def generate_ml_predictions(
     return out
 
 
+# 관측-only 신호(us_market_observations) forward 예측 source 태그. production/shadow/ml 과 분리 집계.
+_OBS_SOURCE = "obs_us_market.v0"
+
+# 관측 신호 → 시장-레벨 forward 예측 매핑 (사전등록, 강제값 = 곡선맞추기 surface 0).
+#   각 entry: (metric_key, sign). pred_score = signals[metric_key] * sign (sign 으로 "up=양수" 정렬만).
+#   direction = sign(pred_score) (>0 up / <0 down / ==0 neutral). target = 'sp500' (US 신호 → US 시장).
+#   ⚠️ contrarian flip 미적용 (자유 선택 = 곡선맞추기). as-published face-value 방향만 로깅 —
+#      face-value vs contrarian 의 정오는 N≥252 forward IC 부호가 답함 (이게 검증의 핵심, RULE 7).
+# 강제 근거:
+#   aaii          : bull_bear_spread (양수 = bullish 우세 → up). 중심 0 자연 경계.
+#   naaim         : exposure_mean − 50 (능동운용 노출 50% 중립 기준 → 초과 = bullish).
+#   finra_short   : −(market_short_volume_pct − 50) (공매도 비중 ↑ = bearish → 부호 반전, 50% 중립 기준).
+#   insider_form4 : net_buy_minus_sell (내부자 순매수 = bullish). 중심 0 자연 경계.
+_OBS_SIGNAL_MAP = {
+    "aaii": ("bull_bear_spread", 1.0, 0.0),       # (metric, sign, center)
+    "naaim": ("exposure_mean", 1.0, 50.0),        # 능동운용 노출 50% 중립
+    "finra_short": ("market_short_volume_pct", -1.0, 50.0),  # 공매도 50% 중립, 반전
+    "insider_form4": ("net_buy_minus_sell", 1.0, 0.0),
+}
+# 환산 불가(순수 메타, 방향 환산 불가능)로 제외한 신호 — 검증 trail 의 정직 기록:
+#   aaii.bullish/neutral/bearish (개별 컴포넌트) = bull_bear_spread 에 흡수(중복 회피).
+#   finra_short.n_symbols / form4.universe_covered/xml_fetched/capped 등 = 커버리지/메타(방향 없음).
+#   ⇒ 4 source 각 1 forward 신호만 (강제) — 자유 신호 선택 surface 0.
+
+
+def generate_observation_predictions(
+    obs_latest: Dict[str, Any], path: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """관측-only 신호(us_market_observations) → 시장-레벨 forward 예측 (Observation Signal Trails Spec v0).
+
+    동기: AAII/NAAIM/FINRA/Form4 가 결정에 안 들어간 채(관측 only) 로깅만 되고 forward 채점 trail 이
+    없어 "N≥252 때 wire 가치 있나" 판정 불가이던 갭. market-level forward 예측으로 환산 → 채점 누적.
+    관측 only — 채점 결과는 어떤 verdict/결정에도 피드백 0 (RULE 7). wire 가치 판정 자료로만.
+
+    obs_latest = us_market_observations.latest_per_source() 출력
+                 = {source: {"period": "YYYY-MM-DD", "metrics": {...}}, ...}.
+    매핑은 _OBS_SIGNAL_MAP (강제값, 곡선맞추기 surface 0). target='sp500'(US 시장-레벨).
+    pred_score = (metric − center) * sign (up=양수 정렬). direction = sign(pred_score).
+    confidence = 0.5 고정 (관측 신호는 캘리브레이션된 확률 미보유 — Brier 중립값. ML 과 달리 확률 아님).
+    환산 불가(순수 메타) 신호는 _OBS_SIGNAL_MAP 에서 제외 (위 주석에 사유 기록).
+
+    물리 분리: path 미지정 시 PT.OBS_PATH (프로덕션/섀도우/ML scorer 무오염, 기존 scorer 무변경).
+    채점은 market-level scorer (시장 index 절대 level forward diff) — observation_scoring.py.
+    """
+    path = path or PT.OBS_PATH
+    out: List[Dict[str, Any]] = []
+    for src, (metric_key, sign, center) in _OBS_SIGNAL_MAP.items():
+        rec = (obs_latest or {}).get(src)
+        if not isinstance(rec, dict):
+            continue  # 해당 source 관측 결손 = skip (graceful)
+        metrics = rec.get("metrics") or {}
+        raw = metrics.get(metric_key)
+        if raw is None:
+            continue  # metric 결손 = skip (graceful)
+        try:
+            score = (float(raw) - center) * sign
+        except (TypeError, ValueError):
+            continue
+        if score > 0:
+            direction = "up"
+        elif score < 0:
+            direction = "down"
+        else:
+            direction = "neutral"
+        signals = {
+            "obs_source": src,
+            "metric_key": metric_key,
+            "metric_raw": raw,
+            "center": center,
+            "sign": sign,
+            "obs_period": rec.get("period"),  # 관측 데이터 as_of (PIT 동결)
+            "source": _OBS_SOURCE,
+        }
+        for h in _HORIZONS:
+            out.append(
+                PT.log_prediction(
+                    target_type="market", target="sp500", horizon=h,
+                    direction=direction, pred_score=float(score), confidence=0.5,
+                    signals=signals, spec_version="obs.v0",
+                    source=f"{_OBS_SOURCE}.{src}",  # source 별 pred_id 충돌 회피 + 소스별 IC 분리 집계
+                    path=path,
+                )
+            )
+    return out
+
+
 def generate_sector_predictions(
     macro_alignment: Dict[str, Any], path: Optional[str] = None
 ) -> List[Dict[str, Any]]:

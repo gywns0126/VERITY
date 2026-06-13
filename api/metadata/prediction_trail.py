@@ -25,12 +25,25 @@ SHADOW_PATH = os.path.join(DATA_DIR, "metadata", "shadow_prediction_trail.jsonl"
 # ai_upside_relax 로 brain 을 override 하나 그 자체 IC/Brier 가 미채점이던 갭 → 관측 검증.
 # 프로덕션/섀도우 scorer 가 ML 을 pool 하지 않도록 별 경로. spec docs/ml_shadow_prediction_spec_v0_2026_06_13.md.
 ML_PATH = os.path.join(DATA_DIR, "metadata", "ml_prediction_trail.jsonl")
+# 국면(regime) forward 로깅 = 또 하나의 별도 trail (물리 분리). market_horizon.cycle_stage +
+# verity_brain.macro_override(panic cap / contrarian_upgrade / cboe / 35게이트)가 종목 grade 를
+# cap/flip 하나, 그 *국면 신호 자체*의 forward 시장 예측력이 어디서도 미채점이던 갭 → 관측 검증.
+# regime = 시장레벨 단일값 → cross-section log_prediction 미적합. 자체 schema 로 직접 기록
+# (regime_prediction.py). 시계열 채점 = ic_stats.py Newey-West 재사용. 관측 only(RULE 7).
+# spec docs/regime_validation_spec_v0_2026_06_13.md.
+REGIME_PATH = os.path.join(DATA_DIR, "metadata", "regime_prediction_trail.jsonl")
+# 관측-only 신호(us_market_observations: AAII/NAAIM/FINRA/Form4) forward trail (물리 분리). 이 신호들이
+# 결정에 들어가지 않은 채(관측 only) 로깅만 되고 forward 채점이 없어 "N≥252 때 wire 가치" 판정 불가이던 갭.
+# market-level forward 예측으로 환산 → 별 trail/scorer source 분리. 관측 only — 결정 피드백 0(RULE 7).
+# spec docs/observation_signal_trails_spec_v0_2026_06_13.md.
+OBS_PATH = os.path.join(DATA_DIR, "metadata", "observation_prediction_trail.jsonl")
 
 # horizon → eval 까지 캘린더 일수 (상한 기준: 단 1주 / 중 3개월 / 장 12개월)
 HORIZON_DAYS = {"short": 7, "mid": 90, "long": 365}
 VALID_HORIZONS = tuple(HORIZON_DAYS)
 VALID_DIRECTIONS = ("up", "down", "neutral")
-VALID_TARGET_TYPES = ("sector", "stock")
+# "market" = 시장-레벨(regime) 예측 — 관측 신호 trail (OBS_PATH) 의 target_type. 기존 sector/stock 불변.
+VALID_TARGET_TYPES = ("sector", "stock", "market")
 
 
 def log_prediction(

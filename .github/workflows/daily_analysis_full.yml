@@ -320,10 +320,27 @@ jobs:
         # stock 정식 채점 / sector 보류(change_pct=heat 메트릭, return source 미검증).
         # 2026-06-13 — ML(XGB up_probability) shadow trail 동시 채점 (별 trail/ic_history, source-agnostic scorer 재사용).
         #   ai_upside_relax override 정당성 검증 자료 누적. 관측 only. spec docs/ml_shadow_prediction_spec_v0_2026_06_13.md.
+        # 2026-06-13 — 관측-only 신호(AAII/NAAIM/FINRA/Form4) market-level trail 채점 (별 trail/ic_history,
+        #   market-level scorer = snapshot market_summary index level diff 재사용). "N≥252 wire 가치" 판정 자료
+        #   누적. 관측 only — 결정 피드백 0. spec docs/observation_signal_trails_spec_v0_2026_06_13.md.
         continue-on-error: true
         run: |
           python scripts/score_predictions.py
           python scripts/score_predictions.py --trail data/metadata/ml_prediction_trail.jsonl --ic-history data/ml_prediction_ic_history.jsonl
+          # 2026-06-13 — 국면(regime) 시계열 채점 (별 trail/ic_history, market-level 단일값 → 시계열 NW scorer).
+          #   macro_override/cycle_stage 의 forward 시장(KOSPI primary + S&P) 예측력 검증 자료 누적. 관측 only(RULE 7).
+          #   spec docs/regime_validation_spec_v0_2026_06_13.md. 채점 도달 전엔 graceful 0.
+          python scripts/score_predictions.py --regime --trail data/metadata/regime_prediction_trail.jsonl --ic-history data/regime_prediction_ic_history.jsonl
+          python scripts/score_observations.py
+
+      - name: Build validation summary (forward trail 검증 상태 집계 — 게이트 읽기 준비)
+        # 2026-06-13 — score 직후 실행 (채점 → 집계 순서). 기존 *_ic_history 산출물(brain/ml/
+        # factor) + trail 원본(shadow/sector)을 read-only 재집계 → data/validation_summary.json.
+        # 신규 산식 0 / 결정 피드백 0 (RULE 7). 모든 항목 "가설(N=X)" 라벨 + hit_rate 병기.
+        # N=252 IC 게이트(2027-05) 읽기 준비 + 운영자 크레덴셜. 다음 step git add data/ (broad) = RULE 4.
+        # graceful: 입력 결손 시 exit 0. spec docs/validation_summary_spec_v0_2026_06_13.md.
+        continue-on-error: true
+        run: python scripts/build_validation_summary.py
 
       - name: ARENA 버서커 shadow (검증 진행도 status + 보수 vs 버서커 trail)
         # 2026-06-08 — recommendations.json 생성 후 실행. berserker_status.json(공격 다이얼+잠금

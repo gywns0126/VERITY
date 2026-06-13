@@ -3594,6 +3594,32 @@ def main():
                 except Exception as e:
                     print(f"  ⚠️ 감사 신호 스캔 스킵: {e}")
 
+                # ── 배당 정책 변화 이벤트: 개시/삭감/중단 ──
+                # 2026-06-13. 기존 dividends_kr.json history 의 year-over-year 비교(추가 DART 콜 0).
+                # 🚨 관측 only — dividend_policy_change 데이터 필드만. scored risk_flags 미주입
+                # (RULE 7, 신규 신호). cut/omission 약신호도 점수/verdict 피드백 0. 점수 반영은
+                # N 누적 후 사전등록 + PM 승인. spec docs/dividend_policy_change_spec_v0_2026_06_13.md.
+                try:
+                    from api.analyzers.dividend_policy_change import scan_dividend_policy_changes
+                    dpc_result = scan_dividend_policy_changes(stocks_dict)
+                    dpc_attached = dpc_flagged = 0
+                    for stock in candidates:
+                        t = stock.get("ticker")
+                        if not t:
+                            continue
+                        t6 = str(t).split(".")[0].zfill(6)
+                        dpc = dpc_result.get(t6)
+                        if dpc:
+                            stock["dividend_policy_change"] = dpc
+                            dpc_attached += 1
+                            if dpc.get("severity") in ("high", "medium"):
+                                dpc_flagged += 1
+                    if dpc_attached:
+                        print(f"  ✓ {dpc_attached}개 종목에 dividend_policy_change 부착 "
+                              f"(삭감·중단 {dpc_flagged}, 관측 only)")
+                except Exception as e:
+                    print(f"  ⚠️ 배당 정책 변화 스캔 스킵: {e}")
+
                 # ── DART 기관 대량보유(5%+) — 2026-06-07 (action_queue d7158b4f) ──
                 # 🚨 관측 only — dart_major_holders 데이터 필드만. 결정/점수 미반영 (RULE 7,
                 # 신규 신호). 기관 순매집/처분 = smart-money flow(약 prior). 점수 편입 = 검증 후.

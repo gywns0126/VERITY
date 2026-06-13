@@ -25,7 +25,28 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--trail", default=None, help="trail 경로 override (테스트용)")
     ap.add_argument("--ic-history", default=None, help="ic_history 경로 override (테스트용)")
+    ap.add_argument("--regime", action="store_true",
+                    help="국면 시계열 scorer 사용 (regime_prediction. cross-section 미적용). "
+                         "spec docs/regime_validation_spec_v0_2026_06_13.md")
     args = ap.parse_args()
+
+    # 국면(regime) 시계열 채점 — market-level 단일값 → 별도 scorer(Newey-West 시계열, ic_stats 재사용).
+    if args.regime:
+        from api.intelligence import regime_prediction as RG
+        try:
+            summary = RG.score_regime_predictions(trail_path=args.trail, ic_history_path=args.ic_history)
+        except Exception as e:  # noqa: BLE001
+            sys.stderr.write(f"[score] regime 채점 실패 (graceful exit 0): {type(e).__name__}: {e}\n")
+            return 0
+        print(
+            f"[score:regime] scored={summary.get('scored', 0)} "
+            f"pending={summary.get('pending', 0)} "
+            f"unscoreable={summary.get('unscoreable', 0)} "
+            f"groups={summary.get('groups', 0)}"
+        )
+        if summary.get("scored", 0) == 0 and summary.get("pending", 0) == 0:
+            sys.stderr.write("[score:regime] 채점 도달분 0 (eval_date 미도래 — 관측 trail 누적 중, 정상)\n")
+        return 0
 
     try:
         summary = PS.score_predictions(trail_path=args.trail, ic_history_path=args.ic_history)
