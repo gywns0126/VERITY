@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-06-13T19:57:02.965005+09:00",
+  "generated_at": "2026-06-13T21:55:31.363861+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 162711,
-    "python_modules": 473,
+    "code_lines_tsx_py": 165158,
+    "python_modules": 483,
     "tsx_components": 46,
     "json_data_files": 228,
     "json_total_tracked": 243,
     "workflows": 41,
     "scheduled_workflows": 32,
     "cron_triggers": 41,
-    "git_tracked_files": 4995
+    "git_tracked_files": 5007
   },
   "subsystems": {
     "ingest": {
@@ -81,7 +81,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 50,
+      "count": 52,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -114,6 +114,7 @@
         "api/intelligence/monthly_aggregator.py",
         "api/intelligence/multibagger_watch.py",
         "api/intelligence/novelty.py",
+        "api/intelligence/observation_scoring.py",
         "api/intelligence/periodic_report.py",
         "api/intelligence/perplexity_realtime.py",
         "api/intelligence/portfolio.py",
@@ -122,6 +123,7 @@
         "api/intelligence/prediction_layer.py",
         "api/intelligence/prediction_scoring.py",
         "api/intelligence/regime.py",
+        "api/intelligence/regime_prediction.py",
         "api/intelligence/sec_8k_change_detector.py",
         "api/intelligence/sector_rotation_detector.py",
         "api/intelligence/strategy_evolver.py",
@@ -453,9 +455,9 @@
     }
   },
   "python_by_dir": {
-    "api": 282,
-    "tests": 99,
-    "scripts": 45,
+    "api": 286,
+    "tests": 103,
+    "scripts": 47,
     "vercel-api": 39,
     "server": 6,
     ".github": 2
