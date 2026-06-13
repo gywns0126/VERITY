@@ -502,6 +502,24 @@ def handle_trust(request_handler) -> dict:
     trust = obs.get("trust") or {}
     meta = portfolio.get("reports_meta") if isinstance(portfolio, dict) else None
     recent_pdfs = meta[-10:] if isinstance(meta, list) else []
+    # 결정-trail 무결성 (main.py STEP 9.52 산출, 2026-06-13). slim 으로 노출.
+    ti = portfolio.get("trail_integrity") if isinstance(portfolio, dict) else None
+    trail_integrity = None
+    if isinstance(ti, dict):
+        h = ti.get("history") or {}
+        trail_integrity = {
+            "severity": ti.get("severity"),
+            "findings": ti.get("findings", []),
+            "checked_at": ti.get("ts_kst"),
+            "history_snapshots": h.get("snapshot_count"),
+            "history_gaps": h.get("business_day_gaps", []),
+            "rec_field_count": h.get("latest_rec_field_count"),
+            "latest_parseable": h.get("latest_parseable"),
+            "trails": [
+                {"name": t.get("trail"), "size": t.get("size"), "ok": t.get("ok")}
+                for t in (ti.get("trails") or [])
+            ],
+        }
     return {"_status": 200, "_body": {
         "verdict": trust.get("verdict"),
         "recommendation": trust.get("recommendation"),
@@ -511,6 +529,7 @@ def handle_trust(request_handler) -> dict:
         "details": trust.get("details", {}),
         "blocking_reasons": trust.get("blocking_reasons", []),
         "recent_pdfs": recent_pdfs,
+        "trail_integrity": trail_integrity,
         "checked_at": obs.get("checked_at"),
     }}
 

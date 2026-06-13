@@ -940,7 +940,77 @@ function ReportReadinessTab({ data }: any) {
                         <Row key={i} label={p.name || p.kind || ""} value={p.created_at || ""} mono small />
                     ))}
             </Panel>
+
+            <TrailIntegrityPanel ti={data.trail_integrity} />
         </div>
+    )
+}
+
+// 결정-trail 무결성 — N=252 게이트 입력 자산 손실/gap/품질 단일 검증 (admin?type=trust)
+function TrailIntegrityPanel({ ti }: { ti: any }) {
+    if (!ti) return (
+        <Panel title="결정-trail 무결성">
+            <Empty msg="다음 full 분석 후 portfolio.trail_integrity 누적 시 표시" small />
+        </Panel>
+    )
+    const sev = ti.severity || "?"
+    const sevColor = sev === "PASS" ? C.success : sev === "WARNING" ? C.warn : C.danger
+    const gaps = ti.history_gaps || []
+    const fieldCount = ti.rec_field_count
+    return (
+        <Panel title="결정-trail 무결성">
+            <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.md }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: sevColor, display: "inline-block" }} />
+                <span style={{ fontSize: T.sub, fontWeight: 600, color: sevColor }}>{sev}</span>
+                <span style={{ flex: 1 }} />
+                <span style={{ fontSize: 11, color: C.textTertiary }}>{ti.checked_at || ""}</span>
+            </div>
+
+            <Row label="history 스냅샷" value={`${ti.history_snapshots ?? "—"}일`} small />
+            <Row
+                label="영업일 gap (영구손실)"
+                value={gaps.length === 0 ? "0" : `${gaps.length}건`}
+                valueColor={gaps.length === 0 ? C.success : C.warn}
+                small
+            />
+            {gaps.length > 0 && (
+                <div style={{ fontSize: 11, color: C.textTertiary, padding: `0 0 ${S.sm}px 0` }}>
+                    {gaps.slice(-6).join(" · ")}
+                </div>
+            )}
+            <Row
+                label="결정시점 벡터 완전성"
+                value={fieldCount ? `${fieldCount}필드` : "—"}
+                valueColor={fieldCount && fieldCount >= 100 ? C.success : C.warn}
+                small
+            />
+
+            <div style={{ marginTop: S.md, borderTop: `1px solid ${C.border}`, paddingTop: S.sm }}>
+                {(ti.trails || []).map((t: any, i: number) => (
+                    <div key={i} style={{
+                        display: "flex", alignItems: "center", gap: S.sm,
+                        padding: `${S.xs}px 0`, fontSize: T.cap,
+                    }}>
+                        <span style={{
+                            width: 6, height: 6, borderRadius: "50%", display: "inline-block",
+                            background: t.ok ? C.success : C.danger, flexShrink: 0,
+                        }} />
+                        <span style={{ flex: 1, color: C.textSecondary, fontFamily: "monospace", fontSize: 11 }}>
+                            {(t.name || "").replace("metadata/", "")}
+                        </span>
+                        <span style={{ color: C.textTertiary, fontSize: 11 }}>{fmtNum(t.size)}</span>
+                    </div>
+                ))}
+            </div>
+
+            {(ti.findings || []).length > 0 && (
+                <div style={{ marginTop: S.sm, fontSize: 11, color: C.warn }}>
+                    {(ti.findings || []).map((f: string, i: number) => (
+                        <div key={i} style={{ padding: "2px 0" }}>· {f}</div>
+                    ))}
+                </div>
+            )}
+        </Panel>
     )
 }
 
