@@ -105,6 +105,67 @@ def generate_shadow_predictions(
     return out
 
 
+# ML(XGB up_probability) 예측 source 태그. production/shadow_funnel 과 분리 집계.
+_ML_SOURCE = "xgb_ml.v0"
+
+
+def generate_ml_predictions(
+    recommendations: List[Dict[str, Any]], path: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """XGB up_probability forward 예측 → ML shadow trail (ML Shadow Prediction Spec v0).
+
+    동기: XGB up_probability 가 ai_upside_relax(verity_brain.py)로 brain AVOID 를 override 하나,
+    그 ML 예측 자체의 IC/Brier 가 어느 trail 에도 미채점이던 갭. 관측 only — 채점 결과는
+    ai_upside_relax 결정에 피드백 0 (RULE 7). N 누적 후 override 정당성 판정 자료로만.
+
+    매핑 (사전등록, 강제값 = 곡선맞추기 surface 0):
+      - pred_score = up_probability (0~100 연속 → cross-section rank-IC 입력)
+      - direction  = up if up_prob>50 / down if <50 / neutral if ==50 (P(up) 자연 경계)
+      - confidence = P(예측 방향 적중) = up_prob/100 (up) / 1-up_prob/100 (down) / 0.5 (neutral)
+                     → Brier 가 XGB 확률 캘리브레이션을 측정 (이게 ML 검증의 핵심).
+
+    genuine ensemble 예측만 (method='ensemble_*'). fallback/rule_based/error = ML 모델 아님 → skip.
+    물리 분리: path 미지정 시 PT.ML_PATH (프로덕션/섀도우 scorer 무오염, prediction_scoring.py 무변경).
+    """
+    path = path or PT.ML_PATH
+    out: List[Dict[str, Any]] = []
+    for rec in recommendations or []:
+        pred = rec.get("prediction") or {}
+        method = str(pred.get("method", ""))
+        up_prob = pred.get("up_probability")
+        ticker = rec.get("ticker")
+        if not ticker or up_prob is None or not method.startswith("ensemble"):
+            continue  # 결손 또는 비-ensemble(fallback/rule_based/error) = skip (graceful)
+        up = float(up_prob)
+        if up > 50.0:
+            direction, conf = "up", up / 100.0
+        elif up < 50.0:
+            direction, conf = "down", (100.0 - up) / 100.0
+        else:
+            direction, conf = "neutral", 0.5
+        signals = {
+            "up_probability": up,
+            "method": method,
+            "model_accuracy": pred.get("model_accuracy"),
+            "confidence_level": pred.get("confidence_level"),
+            "prediction_std": pred.get("prediction_std"),
+            "conformal_width_pct": pred.get("conformal_width_pct"),
+            "train_samples": pred.get("train_samples"),
+            "top_features": pred.get("top_features"),
+            "source": _ML_SOURCE,
+        }
+        for h in _HORIZONS:
+            out.append(
+                PT.log_prediction(
+                    target_type="stock", target=str(ticker), horizon=h,
+                    direction=direction, pred_score=up, confidence=conf,
+                    signals=signals, spec_version="ml.v0", source=_ML_SOURCE,
+                    path=path,
+                )
+            )
+    return out
+
+
 def generate_sector_predictions(
     macro_alignment: Dict[str, Any], path: Optional[str] = None
 ) -> List[Dict[str, Any]]:

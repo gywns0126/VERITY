@@ -21,6 +21,10 @@ _PATH = os.path.join(DATA_DIR, "metadata", "prediction_trail.jsonl")
 # 섀도우 funnel 예측 = 별도 trail (물리 분리). 프로덕션 scorer 가 섀도우를 절대 pool 하지 않도록
 # (Shadow Funnel Scoring Spec v0 §5 source 분리 + §1 프로덕션 무오염). prediction_scoring.py 무변경 유지.
 SHADOW_PATH = os.path.join(DATA_DIR, "metadata", "shadow_prediction_trail.jsonl")
+# ML(XGB up_probability) 예측 = 또 하나의 별도 trail (물리 분리). XGB up_probability 가
+# ai_upside_relax 로 brain 을 override 하나 그 자체 IC/Brier 가 미채점이던 갭 → 관측 검증.
+# 프로덕션/섀도우 scorer 가 ML 을 pool 하지 않도록 별 경로. spec docs/ml_shadow_prediction_spec_v0_2026_06_13.md.
+ML_PATH = os.path.join(DATA_DIR, "metadata", "ml_prediction_trail.jsonl")
 
 # horizon → eval 까지 캘린더 일수 (상한 기준: 단 1주 / 중 3개월 / 장 12개월)
 HORIZON_DAYS = {"short": 7, "mid": 90, "long": 365}

@@ -318,8 +318,12 @@ jobs:
         # data/prediction_ic_history.jsonl 집계 append. 다음 step git add data/ (broad) 자동 포함 = RULE 4.
         # 첫 단기 eval = 6/8 (created 6/1 + 7일). 그 전엔 도달분 0 = graceful. spec §9.3.
         # stock 정식 채점 / sector 보류(change_pct=heat 메트릭, return source 미검증).
+        # 2026-06-13 — ML(XGB up_probability) shadow trail 동시 채점 (별 trail/ic_history, source-agnostic scorer 재사용).
+        #   ai_upside_relax override 정당성 검증 자료 누적. 관측 only. spec docs/ml_shadow_prediction_spec_v0_2026_06_13.md.
         continue-on-error: true
-        run: python scripts/score_predictions.py
+        run: |
+          python scripts/score_predictions.py
+          python scripts/score_predictions.py --trail data/metadata/ml_prediction_trail.jsonl --ic-history data/ml_prediction_ic_history.jsonl
 
       - name: ARENA 버서커 shadow (검증 진행도 status + 보수 vs 버서커 trail)
         # 2026-06-08 — recommendations.json 생성 후 실행. berserker_status.json(공격 다이얼+잠금

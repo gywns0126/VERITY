@@ -54,6 +54,20 @@ def main() -> int:
     else:
         sys.stderr.write("[predict] recommendations 없음 — production skip (graceful)\n")
 
+    # ML(XGB up_probability) 예측 (ML Shadow Prediction Spec v0 — 별도 trail, 프로덕션 무오염)
+    # recs 의 prediction.up_probability 사용 (genuine ensemble 만). 관측 only(RULE 7).
+    ml_out = (args.out + ".ml.jsonl") if args.out else None  # 테스트 시에도 ML 격리
+    if recs:
+        ml = PL.generate_ml_predictions(recs, path=ml_out)
+        if ml:
+            print(
+                f"[predict] ml logged {len(ml)} "
+                f"(xgb ensemble {len(ml) // len(PL._HORIZONS)} × {len(PL._HORIZONS)}h, source={PL._ML_SOURCE}, "
+                f"trail={'ml_prediction_trail.jsonl' if not ml_out else ml_out})"
+            )
+        else:
+            sys.stderr.write("[predict] ml 0건 — ensemble 예측 없음(fallback/결손) (graceful)\n")
+
     # 섀도우 funnel 예측 (Shadow Funnel Scoring Spec v0 — 별도 trail, 프로덕션 무오염)
     shadow = _load(os.path.join(DATA_DIR, "metadata", "shadow_funnel_picks.json"))
     shadow_out = (args.out + ".shadow.jsonl") if args.out else None  # 테스트 시에도 섀도우 격리
