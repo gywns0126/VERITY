@@ -27,6 +27,21 @@ def _ensure_dir():
     os.makedirs(RUNS_DIR, exist_ok=True)
 
 
+def _atomic_write_json(path: str, payload: dict) -> None:
+    """tmp 파일에 쓴 뒤 os.replace 로 교체 (POSIX atomic rename).
+
+    2026-06-13 보강: 옛 직접 dump 는 5분 cron 부하 중 SIGTERM/crash 가 쓰기 도중
+    들이닥치면 history 최종본이 잘린 채 남아 그날 결정시점 팩터 벡터가 영구 손실됐다
+    (N=252 게이트 자산 직격). 형제 모듈 brain_history._atomic_write 와 동일 패턴.
+    """
+    tmp = f"{path}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, default=str)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
 def archive_daily_snapshot(portfolio: dict, mode: Optional[str] = None) -> str:
     """오늘자 portfolio 스냅샷을 저장한다.
 
@@ -42,13 +57,11 @@ def archive_daily_snapshot(portfolio: dict, mode: Optional[str] = None) -> str:
     safe_mode = (mode or "run").replace("/", "_").replace(" ", "_")
 
     canonical = os.path.join(HISTORY_DIR, f"{today}.json")
-    with open(canonical, "w", encoding="utf-8") as f:
-        json.dump(portfolio, f, ensure_ascii=False, default=str)
+    _atomic_write_json(canonical, portfolio)
 
     run_path = os.path.join(RUNS_DIR, f"{today}_{stamp}_{safe_mode}.json")
     try:
-        with open(run_path, "w", encoding="utf-8") as f:
-            json.dump(portfolio, f, ensure_ascii=False, default=str)
+        _atomic_write_json(run_path, portfolio)
     except Exception:
         pass
 

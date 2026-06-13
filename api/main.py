@@ -4501,6 +4501,23 @@ def main():
         except Exception as e:
             print(f"  Brain 스냅샷 스킵: {e}")
 
+        # ── STEP 9.52: 결정-trail 무결성 감사 (손실/gap/품질 단일 검증) ──
+        # 2026-06-13 신설: N=252 게이트 입력이 되는 결정시점 기록이 손실 없이·끊김 없이
+        # 축적되는지 매 실행 검증. 산식 무관 read-only. 결과 = portfolio 노출 + jsonl 적재.
+        print(f"\n[9.52] 결정-trail 무결성 감사")
+        try:
+            from api.observability.trail_integrity import run_and_log
+            _ti = run_and_log()
+            portfolio["trail_integrity"] = _ti
+            _h = _ti.get("history", {})
+            print(f"  {_ti.get('severity')} | history {_h.get('snapshot_count')}일 "
+                  f"gap {len(_h.get('business_day_gaps') or [])} | "
+                  f"필드 {_h.get('latest_rec_field_count')}")
+            for _fnd in (_ti.get("findings") or [])[:3]:
+                print(f"    - {_fnd}")
+        except Exception as e:
+            print(f"  trail 무결성 감사 스킵: {e}")
+
     # ── STEP 9.55: 추천 성과 백테스트 (PDF 보다 먼저 — 학습 트랙용) ──
     # 2026-05-03 정정: 기존엔 PDF→백테스트 순서였는데, daily_public.py 의
     # _log_brain_learning_safe 가 portfolio.backtest_stats 를 읽어 학습 트랙에
