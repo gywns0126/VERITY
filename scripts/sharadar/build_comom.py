@@ -50,6 +50,7 @@ MOM_LOOKBACK_M = 12     # 12-1 모멘텀 lookback
 MOM_SKIP_M = 1          # 최근 1개월 skip (단기 반전 회피, Jegadeesh-Titman)
 DECILE_FRAC = 0.10      # 상/하위 십분위
 MIN_UNIVERSE = 30       # 형성월 최소 유효 모멘텀 종목 (십분위 의미 확보)
+FWD_HORIZONS_Q = [4, 8] # forward WML 스프레드 측정 분기(1년/2년) — §6 IC decay 검증용
 
 
 # --------------------------------------------------------------------------- #
@@ -179,6 +180,40 @@ def extreme_deciles(mom: pd.Series, members: set) -> Optional[Dict[str, List[str
     return {"top": top, "bottom": bottom}
 
 
+def forward_wml_return(
+    monthly_close: pd.DataFrame, formation: pd.Timestamp,
+    legs: Dict[str, List[str]], k_quarters: int,
+) -> Optional[float]:
+    """형성월말 t 의 winner−loser(12-1) 동일가중 스프레드를 forward k분기 보유한 *실현* 수익률.
+
+    Lou-Polk 핵심검정: 높은 CoMOM(t) → 낮은(음) forward 모멘텀 스프레드 (1~2년 후). look-ahead 아님
+    (t 시점 십분위 멤버 고정 후 미래 실현가로 평가). 가용 종목 < 5/leg → None.
+    """
+    months = monthly_close.index
+    if formation not in months:
+        return None
+    pos = months.get_loc(formation)
+    tgt = pos + k_quarters * 3
+    if tgt >= len(months):
+        return None
+    p0 = monthly_close.iloc[pos]
+    p1 = monthly_close.iloc[tgt]
+
+    def _basket(tks: List[str]) -> Optional[float]:
+        r = []
+        for t in tks:
+            a, b = p0.get(t), p1.get(t)
+            if a is not None and b is not None and pd.notna(a) and pd.notna(b) and a > 0:
+                r.append(b / a - 1.0)
+        return float(np.mean(r)) if len(r) >= 5 else None
+
+    win = _basket(legs.get("top") or [])
+    los = _basket(legs.get("bottom") or [])
+    if win is None or los is None:
+        return None
+    return round(win - los, 4)
+
+
 def comom_for_month(
     formation: pd.Timestamp,
     monthly_close: pd.DataFrame,
@@ -209,7 +244,7 @@ def comom_for_month(
 
     res = compute_comom(weekly_returns, {"momentum": legs}, ff3, window=window)
     mres = res.get("momentum", {})
-    return {
+    rec = {
         "month_end": formation,
         "comom": mres.get("comom"),
         "comom_winner": mres.get("comom_winner"),
@@ -218,6 +253,9 @@ def comom_for_month(
         "n_loser": mres.get("n_loser"),
         "n_universe": int(len(mom[mom.index.isin(members)].dropna())),
     }
+    for k in FWD_HORIZONS_Q:
+        rec[f"fwd_wml_{k}q"] = forward_wml_return(monthly_close, formation, legs, k)
+    return rec
 
 
 # --------------------------------------------------------------------------- #
@@ -275,9 +313,9 @@ def build(
             if rec is not None and rec.get("comom") is not None:
                 rows.append(rec)
 
-        out = pd.DataFrame(rows).sort_values("month_end").reset_index(drop=True) if rows else pd.DataFrame(
-            columns=["month_end", "comom", "comom_winner", "comom_loser", "n_winner", "n_loser", "n_universe"]
-        )
+        _cols = ["month_end", "comom", "comom_winner", "comom_loser", "n_winner", "n_loser",
+                 "n_universe"] + [f"fwd_wml_{k}q" for k in FWD_HORIZONS_Q]
+        out = pd.DataFrame(rows).sort_values("month_end").reset_index(drop=True) if rows else pd.DataFrame(columns=_cols)
         log.info("CoMOM 월별 시계열: %d 개월 산출", len(out))
 
         if persist and not out.empty:
