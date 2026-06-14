@@ -1,18 +1,21 @@
 """
-purge_raw.py — Sharadar raw CSV purge 도구 (CoMOM 파이프라인 §5). 🚨 DESTRUCTIVE, 게이트.
+purge_raw.py — Sharadar 컴플라이언스 purge (CoMOM 파이프라인 §5). 🚨 DESTRUCTIVE, 게이트.
 
-2026-06-14 신설. 라이선스(Personal Use): derived 는 우리 소유로 보존, **raw 는 구독 취소 30일 내
-purge 의무**(affidavit 가능). 본 도구 = 그 의무 이행용. 단, purge 트리거 = *구독 취소 시점*이지
-지금이 아님 → **기본 dry-run**, 실삭제는 --confirm 명시 + derived 보존 검증 통과 시에만.
+2026-06-14 신설(raw만), 2026-06-15 재작성(파생 포함). 🚨 1차 약관 검증(2026-06-15):
+종료 시 30일 내 **"all copies of the Services Data, AND all data sets derived from the Services Data,
+and all software"** 삭제 + affidavit. → 삭제 대상 = raw + Sharadar-파생 모두.
 
-안전 설계 (되돌릴 수 없는 삭제):
-  1) 기본 = dry-run (무엇이 삭제될지 + derived 보존 상태만 출력).
-  2) --confirm 줘도, 필수 derived 산출물(materialized 테이블 + parquet) 전부 존재해야 삭제 진행.
-     하나라도 없으면 거부(raw 만이 유일 소스인 상태에서 삭제 차단).
-  3) 삭제 직전 affidavit 용 manifest(보존 derived 목록 + 크기 + 시각) 기록.
+🚨 trigger = 구독 *접근 종료(기간 만료)* 시점이지 지금이 아님 → **기본 dry-run**, 실삭제는 --confirm.
+구독: ~2026-06-14 시작 = 접근 ~2026-07-14, 삭제 데드라인 ~2026-08-13.
 
-🚨 raw 뷰(SEP/SF1/DAILY 등)는 raw CSV 를 참조 → purge 후 뷰 쿼리는 실패하나, materialized
-derived 테이블(BASE TABLE)은 영속(독립). 재빌드 필요 시 = 재구독/재다운로드.
+삭제 대상:
+  - raw: ~/Desktop/나스닥/SHARADAR_*.csv (~14GB, Services Data)
+  - Sharadar 파생: features/*.parquet + comom_*.parquet + sharadar.duckdb (derived data sets)
+보존(삭제 X):
+  - ff3_weekly.parquet — Kenneth French 무료 데이터(Services Data 아님)
+  - 코드(scripts/*.py) + 방법론 doc + CoMOM 고수준 결과/통계 = 합법 보존 자산(재구독 시 전량 재생성)
+
+안전: 기본 dry-run. --confirm 시 affidavit manifest(삭제 목록+시각) 기록 후 삭제.
 """
 from __future__ import annotations
 
@@ -24,115 +27,105 @@ import sys
 from datetime import datetime, timezone
 from typing import Dict, List
 
-DB_PATH_DEFAULT = os.path.expanduser("~/VERITY_data_lake/sharadar.duckdb")
 RAW_DIR_DEFAULT = os.path.expanduser("~/Desktop/나스닥")
 LAKE_DIR = os.path.expanduser("~/VERITY_data_lake")
-MANIFEST_PATH = os.path.join(LAKE_DIR, "purge_manifest.json")
+MANIFEST_PATH = os.path.join(LAKE_DIR, "purge_affidavit.json")
 
-# 필수 derived: 이것들이 전부 있어야 raw 삭제 허용 (raw 가 유일 소스인 상태 차단)
-REQUIRED_TABLES = ["universe_common", "sp500_membership", "comom_factor_monthly"]
-OPTIONAL_TABLES = ["comom_13f_crosscheck"]
-REQUIRED_PARQUETS = [
+# Sharadar 파생 산출물 (삭제 대상). ff3_weekly.parquet = 무료 FF3 → 제외.
+DERIVED_TARGETS = [
     os.path.join(LAKE_DIR, "comom_factor_monthly.parquet"),
-    os.path.join(LAKE_DIR, "ff3_weekly.parquet"),
+    os.path.join(LAKE_DIR, "comom_13f_crosscheck.parquet"),
+    os.path.join(LAKE_DIR, "comom_monthly.parquet"),
+    os.path.join(LAKE_DIR, "sharadar.duckdb"),
 ]
+DERIVED_GLOBS = [os.path.join(LAKE_DIR, "features", "*.parquet")]
+KEEP_NOTE = "보존: ff3_weekly.parquet(무료 FF3) + scripts/*.py + docs/comom_methodology_v1 + 결과통계"
 
 
-def _table_info(db_path: str) -> Dict[str, str]:
-    """{table_name: table_type} (BASE TABLE vs VIEW)."""
-    import duckdb
-    con = duckdb.connect(db_path, read_only=True)
-    try:
-        return {r[0]: r[1] for r in con.execute(
-            "SELECT table_name, table_type FROM information_schema.tables"
-        ).fetchall()}
-    finally:
-        con.close()
+def _scan(paths_or_globs: List[str], is_glob: bool = False) -> List[Dict[str, object]]:
+    files: List[str] = []
+    if is_glob:
+        for g in paths_or_globs:
+            files.extend(glob.glob(g))
+    else:
+        files = [p for p in paths_or_globs if os.path.exists(p)]
+    return [{"path": f, "bytes": os.path.getsize(f)} for f in sorted(set(files))]
 
 
-def verify_derived(db_path: str) -> Dict[str, object]:
-    """derived 보존 상태 검증. 모든 필수 테이블=BASE TABLE + 필수 parquet 존재해야 ok."""
-    info = _table_info(db_path)
-    tbl_ok = {t: (info.get(t) == "BASE TABLE") for t in REQUIRED_TABLES}
-    opt = {t: (info.get(t) == "BASE TABLE") for t in OPTIONAL_TABLES}
-    pq_ok = {p: os.path.exists(p) for p in REQUIRED_PARQUETS}
-    ok = all(tbl_ok.values()) and all(pq_ok.values())
-    return {"ok": ok, "tables": tbl_ok, "optional_tables": opt, "parquets": pq_ok}
+def collect(raw_dir: str) -> Dict[str, List[Dict[str, object]]]:
+    raw = _scan([os.path.join(raw_dir, "SHARADAR_*.csv")], is_glob=True)
+    derived = _scan(DERIVED_TARGETS) + _scan(DERIVED_GLOBS, is_glob=True)
+    return {"raw": raw, "derived": derived}
 
 
-def scan_raw(raw_dir: str) -> List[Dict[str, object]]:
-    files = sorted(glob.glob(os.path.join(raw_dir, "SHARADAR_*.csv")))
-    return [{"path": f, "bytes": os.path.getsize(f)} for f in files]
-
-
-def purge(db_path: str = DB_PATH_DEFAULT, raw_dir: str = RAW_DIR_DEFAULT,
-          confirm: bool = False) -> Dict[str, object]:
-    ver = verify_derived(db_path)
-    raw = scan_raw(raw_dir)
-    total_gb = sum(r["bytes"] for r in raw) / 1e9
+def purge(raw_dir: str = RAW_DIR_DEFAULT, confirm: bool = False) -> Dict[str, object]:
+    groups = collect(raw_dir)
+    raw_gb = sum(r["bytes"] for r in groups["raw"]) / 1e9
+    der_mb = sum(r["bytes"] for r in groups["derived"]) / 1e6
     out: Dict[str, object] = {
-        "derived_verified": ver, "raw_files": len(raw), "raw_total_gb": round(total_gb, 2),
-        "confirm": confirm, "deleted": [], "action": "dry-run",
+        "raw_files": len(groups["raw"]), "raw_gb": round(raw_gb, 2),
+        "derived_files": len(groups["derived"]), "derived_mb": round(der_mb, 1),
+        "confirm": confirm, "deleted": [], "action": "dry-run", "keep": KEEP_NOTE,
     }
     if not confirm:
-        out["note"] = "dry-run — 실삭제하려면 --confirm. (구독 취소 시점에만 실행 권장)"
-        return out
-    if not ver["ok"]:
-        out["action"] = "거부(derived 미보존)"
-        out["note"] = "필수 derived 산출물 누락 → raw 가 유일 소스. 삭제 차단. build_comom 먼저 실행."
+        out["note"] = "dry-run — 실삭제하려면 --confirm. (접근 종료~2026-07-14 후, 데드라인 ~2026-08-13)"
         return out
 
-    # affidavit manifest 기록 후 삭제
+    # 합법 보존 자산 sanity (재생성 경로 유지 확인)
+    repo = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    keepable_ok = os.path.exists(os.path.join(repo, "scripts", "sharadar", "build_comom.py"))
+    if not keepable_ok:
+        out["action"] = "거부(코드 부재)"
+        out["note"] = "재생성 코드(build_comom.py) 미확인 → 삭제 중단."
+        return out
+
     manifest = {
         "purged_at_utc": datetime.now(timezone.utc).isoformat(),
-        "license": "Sharadar Personal Use — derived retained, raw purged per cancellation obligation",
-        "derived_verified": ver,
-        "raw_purged": [{"path": os.path.basename(r["path"]), "bytes": r["bytes"]} for r in raw],
-        "raw_total_gb": round(total_gb, 2),
+        "license": "Sharadar — Services Data + derived data sets deleted within 30d of termination",
+        "raw_deleted": [{"name": os.path.basename(r["path"]), "bytes": r["bytes"]} for r in groups["raw"]],
+        "derived_deleted": [{"name": os.path.basename(r["path"]), "bytes": r["bytes"]} for r in groups["derived"]],
+        "raw_gb": round(raw_gb, 2), "derived_mb": round(der_mb, 1),
+        "retained": KEEP_NOTE,
     }
     os.makedirs(LAKE_DIR, exist_ok=True)
     with open(MANIFEST_PATH, "w") as fh:
         json.dump(manifest, fh, indent=2, ensure_ascii=False)
 
     deleted = []
-    for r in raw:
-        try:
-            os.remove(r["path"])
-            deleted.append(os.path.basename(r["path"]))
-        except OSError as e:
-            out.setdefault("errors", []).append(f"{r['path']}: {e}")
+    for grp in ("raw", "derived"):
+        for r in groups[grp]:
+            try:
+                os.remove(r["path"])
+                deleted.append(os.path.basename(r["path"]))
+            except OSError as e:
+                out.setdefault("errors", []).append(f"{r['path']}: {e}")
     out["deleted"] = deleted
-    out["action"] = f"삭제완료 {len(deleted)}/{len(raw)} 파일 ({total_gb:.1f}GB)"
+    out["action"] = f"삭제완료 {len(deleted)}개 (raw {raw_gb:.1f}GB + 파생 {der_mb:.0f}MB)"
     out["manifest"] = MANIFEST_PATH
     return out
 
 
 def _print(res: Dict[str, object]) -> None:
-    ver = res["derived_verified"]
-    print("[purge_raw] Sharadar raw purge (§5) — 🚨 DESTRUCTIVE, 기본 dry-run")
-    print(f"  derived 보존 검증: {'✅ OK' if ver['ok'] else '❌ 미보존'}")
-    for t, ok in ver["tables"].items():
-        print(f"    table {t}: {'✅' if ok else '❌ 누락'}")
-    for t, ok in ver["optional_tables"].items():
-        print(f"    table {t} (opt): {'✅' if ok else '— 없음'}")
-    for p, ok in ver["parquets"].items():
-        print(f"    parquet {os.path.basename(p)}: {'✅' if ok else '❌ 누락'}")
-    print(f"  raw: {res['raw_files']}개 파일, {res['raw_total_gb']}GB")
+    print("[purge_raw] Sharadar 컴플라이언스 purge (§5) — 🚨 DESTRUCTIVE, 기본 dry-run")
+    print(f"  raw(Services Data): {res['raw_files']}개 {res['raw_gb']}GB")
+    print(f"  파생(derived data sets): {res['derived_files']}개 {res['derived_mb']}MB")
+    print(f"  {res['keep']}")
     print(f"  결과: {res['action']}")
     if res.get("note"):
         print(f"  → {res['note']}")
     if res.get("deleted"):
-        print(f"  삭제 manifest: {res.get('manifest')}")
+        print(f"  affidavit manifest: {res.get('manifest')}")
+    if res.get("errors"):
+        print(f"  ⚠️ 오류: {res['errors']}")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--db-path", default=DB_PATH_DEFAULT)
     ap.add_argument("--raw-dir", default=RAW_DIR_DEFAULT)
-    ap.add_argument("--confirm", action="store_true", help="🚨 실삭제 (구독 취소 시점에만)")
+    ap.add_argument("--confirm", action="store_true", help="🚨 실삭제 (접근 종료 후, 데드라인 전)")
     args = ap.parse_args()
     try:
-        _print(purge(args.db_path, args.raw_dir, confirm=args.confirm))
+        _print(purge(args.raw_dir, confirm=args.confirm))
     except Exception as e:  # noqa: BLE001
         sys.stderr.write(f"[purge_raw] 실패: {type(e).__name__}: {e}\n")
         raise
