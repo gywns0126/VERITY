@@ -4544,6 +4544,22 @@ def main():
         except Exception as e:
             print(f"  trail 무결성 감사 스킵: {e}")
 
+        # ── STEP 9.53: 200MA 추세 게이트 (A1 SHADOW 꼬리리스크 오버레이) ──
+        # 2026-06-15 신설: 지수 200일선 게이트. SHADOW(실 포트 무영향, brain-input 0).
+        # full 모드만(지수 1회 fetch). target 지수 KOSPI/S&P 둘 다 로깅 = PM N후 선택.
+        if effective_mode == "full":
+            print(f"\n[9.53] 200MA 추세 게이트 (A1 SHADOW)")
+            try:
+                from api.intelligence.trend_overlay import run_shadow as _trend_shadow
+                _to = _trend_shadow()
+                portfolio["trend_overlay"] = _to
+                for _k, _v in (_to.get("indices") or {}).items():
+                    if _v.get("status") == "ok":
+                        print(f"  {_k}: {_v['gate']} (close {_v['close']} vs sma200 {_v['sma200']}, "
+                              f"gap {_v['gap_pct']:+.1f}%)")
+            except Exception as e:
+                print(f"  추세 게이트 스킵(무영향): {e}")
+
     # ── STEP 9.55: 추천 성과 백테스트 (PDF 보다 먼저 — 학습 트랙용) ──
     # 2026-05-03 정정: 기존엔 PDF→백테스트 순서였는데, daily_public.py 의
     # _log_brain_learning_safe 가 portfolio.backtest_stats 를 읽어 학습 트랙에

@@ -45,6 +45,7 @@ _TRAILS = [
     ("wide_scan_log.jsonl", "jsonl", None),
     ("factor_ic_history.json", "json", None),
     ("metadata/revision_momentum_shadow.jsonl", "jsonl", "ts_kst"),  # A2 SHADOW (2026-06-15)
+    ("metadata/trend_overlay_prediction_trail.jsonl", "jsonl", "ts_kst"),  # A1 SHADOW (2026-06-15)
 ]
 
 # N=252 IC 게이트(2027)로 누적 중인 shadow 신호 — 진행률 추적용 (path, date_key).
@@ -52,6 +53,7 @@ _TRAILS = [
 _GATE_N = 252
 _SHADOW_GATE_TRAILS = [
     ("metadata/revision_momentum_shadow.jsonl", "ts_kst"),   # A2 리비전 모멘텀
+    ("metadata/trend_overlay_prediction_trail.jsonl", "ts_kst"),  # A1 200MA 게이트
     ("wide_scan_log.jsonl", "ts"),                            # wide_scan 7차원 funnel
 ]
 
