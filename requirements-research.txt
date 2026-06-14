@@ -1,0 +1,7 @@
+# Research / on-demand 검증 도구 의존성 — 메인 requirements.txt 와 분리.
+# 🚨 cron CI(GH Actions)는 이걸 설치하지 않는다. alphalens 는 무거운 의존성(seaborn 등)이라
+# 매 cron 에 들이면 CI 가 비대해진다 (D9 검증 캐비엇). 로컬/on-demand 에서만:
+#   python3 -m pip install -r requirements-research.txt
+#
+# 용도: scripts/ic_crosscheck.py (self IC 엔진 ↔ alphalens 교차검증, D9 step 2)
+alphalens-reloaded>=0.4.5
