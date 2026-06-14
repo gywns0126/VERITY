@@ -22,6 +22,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from api.config import DATA_DIR, now_kst
+from api.quant.alpha.ic_validity import is_valid_ic_obs
 
 # ── 입력 1차 자료 경로 (모두 기존 산출물 — RULE 10 검증 완료 2026-06-13) ──────────
 # brain production 채점 집계 (prediction_scoring → prediction_ic_history.jsonl)
@@ -238,6 +239,9 @@ def _factor_signal() -> Dict[str, Any]:
     max_n = 0
     for fname, fobj in factors_raw.items():
         if not isinstance(fobj, dict):
+            continue
+        # 2026-06-14 D9: degenerate(sample_count==0 → icir 폭주) 격리. 단일 SoT predicate.
+        if not is_valid_ic_obs(fobj):
             continue
         n = fobj.get("sample_count")
         if isinstance(n, (int, float)):

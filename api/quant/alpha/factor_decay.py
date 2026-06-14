@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 from api.config import DATA_DIR, now_kst
+from api.quant.alpha.ic_validity import is_valid_ic_obs, has_valid_icir
 
 
 IC_CACHE_PATH = os.path.join(DATA_DIR, "factor_ic_history.json")
@@ -142,11 +143,15 @@ def analyze_factor_decay(
 
         for entry in history:
             fd = entry.get("factors", {}).get(factor, {})
+            # 2026-06-14 D9: degenerate(sample_count==0 → icir 폭주 100.0 등) 격리.
+            # 단일 SoT predicate. 옛 legacy placeholder + 무플래그 sample_count==0 둘 다 탈락.
+            if not is_valid_ic_obs(fd):
+                continue
             ic = fd.get("ic_mean")
             icir = fd.get("icir")
             if ic is not None:
                 ic_values.append(ic)
-            if icir is not None:
+            if icir is not None and has_valid_icir(fd):
                 icir_values.append(icir)
 
         _min_samples = _min_samples_for(factor)
