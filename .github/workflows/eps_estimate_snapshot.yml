@@ -51,11 +51,15 @@ jobs:
       - name: Run snapshot
         run: python -m api.collectors.eps_estimate_snapshot
 
+      - name: Revision momentum (A2 SHADOW — brain 무입력, 관측 적재만)
+        run: python -m api.intelligence.estimate_revision_scorer || echo "[revision] 스킵(무영향)"
+
       - name: Commit jsonl
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/metadata/eps_estimates.jsonl
+          # RULE 4: 신 shadow trail = git add 정합. revision_momentum_shadow.jsonl 누적 (A2 관측).
+          git add data/metadata/eps_estimates.jsonl data/metadata/revision_momentum_shadow.jsonl
           git diff --staged --quiet && echo "no changes" && exit 0
           git commit -m "[verity-earnings-prep] EPS estimate snapshot $(TZ=Asia/Seoul date +%Y-%m-%d)"
           BRANCH="${{ github.ref_name }}"
