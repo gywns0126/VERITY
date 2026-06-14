@@ -1,12 +1,13 @@
 {
   "schema_version": "v0.1",
-  "generated_at": "2026-06-08T07:01:23+09:00",
-  "universe_size": 17,
+  "generated_at": "2026-06-15T07:06:13+09:00",
+  "universe_size": 20,
   "universe_tickers": [
     "ADBE",
     "AMZN",
     "BAC",
     "BRK-B",
+    "COIN",
     "CRM",
     "CSCO",
     "DIS",
@@ -19,59 +20,124 @@
     "QCOM",
     "SOFI",
     "TMO",
+    "UNH",
+    "WMT",
     "XOM"
   ],
   "themes": [
     {
-      "theme": "규제 리스크",
+      "theme": "규제 강화",
       "ticker_count": 3,
-      "frequency": 0.176,
-      "sentiment": -1.0,
+      "frequency": 0.15,
+      "sentiment": -0.667,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "규제 리스크"
+        "규제 강화"
       ],
       "evidences": [
         {
-          "ticker": "ADBE",
-          "evidence": "미국과 유럽을 중심으로 빅테크·대형 소프트웨어 기업에 대한 반독점 심사와 AI·데이터 사용 관련 규제가 강화되는 추세로, 대형 인수·합병 및 데이터 활용 기반 서비스 출시에는 추가적인 승인 절차와 시간 지연이 요구되고 있음."
-        },
-        {
-          "ticker": "META",
-          "evidence": "미국·EU를 중심으로 빅테크 플랫폼에 대한 반독점 소송, 콘텐츠 모더레이션, 청소년 보호 관련 입법 논의가 이어지고 있어 장기적으로 사업 모델과 수익화 전략에 제약이 될 수 있다고 지적함."
+          "ticker": "JNJ",
+          "evidence": "의료기기와 바이오의약품 모두에서 안전성·실사용(real-world) 근거에 대한 규제기관 요구 수준이 높아지고 있어 승인 절차와 사후 모니터링 부담이 커지고 있다고 설명했음."
         },
         {
           "ticker": "MSFT",
-          "evidence": "미국과 유럽 규제 당국이 Big Tech 의 클라우드 시장 지배력과 AI 거버넌스를 집중 조사하고 있으며, 향후 데이터 사용, 모델 투명성, 번들링 관행에 대한 규제가 강화될 수 있다는 코멘트가 증가하고 있음."
+          "evidence": "미국과 유럽 규제 당국이 대형 기술 기업의 클라우드 사업, 앱 번들링, AI 인수·투자에 대해 경쟁 제한 가능성을 문제 삼으며 조사 강도를 높이고 있다고 경영진이 언급함."
+        },
+        {
+          "ticker": "TMO",
+          "evidence": "바이오의약품·진단·CDMO 분야에서 규제 요건이 꾸준히 강화되고 있으며, 회사는 규제 대응 비용 증가를 인정하면서도 품질·규제 준수가 진입장벽을 높여 장기적으로 산업 내 선도 업체에 유리하게 작용할 수 있다고 언급했음."
         }
       ]
     },
     {
-      "theme": "클라우드 재가속",
+      "theme": "환율 역풍",
       "ticker_count": 2,
-      "frequency": 0.118,
+      "frequency": 0.1,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "환율 역풍"
+      ],
+      "evidences": [
+        {
+          "ticker": "ADBE",
+          "evidence": "경영진은 실적 발표에서 해외 매출 비중이 높은 소프트웨어 업체로서 최근 분기 환율 변동이 보고 매출 성장률에 부담이 되고 있으며, 환헤지 전략에도 불구하고 일정 수준 역풍이 지속될 수 있다고 언급함."
+        },
+        {
+          "ticker": "PG",
+          "evidence": "달러 강세 지속 시 해외 매출 환산 효과가 부정적으로 작용한다고 설명하며, 실적 가이던스에서도 불리한 환율 영향을 반영하고 있다고 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "가격 인상",
+      "ticker_count": 2,
+      "frequency": 0.1,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "클라우드 재가속"
+        "가격 인상"
+      ],
+      "evidences": [
+        {
+          "ticker": "ADBE",
+          "evidence": "Adobe는 구독 포트폴리오 전반에서 제공 가치와 AI 기능 확장을 근거로 선택적 가격 인상을 단행하고 있으며, 현재까지 고객 이탈률 증가 없이 ARPU 개선에 기여하고 있다고 설명함."
+        },
+        {
+          "ticker": "PG",
+          "evidence": "최근 실적 발표에서 대부분 카테고리에서 가격 인상이 매출 성장과 마진 방어의 핵심 요인으로 작용했다고 설명하며, 브랜드 파워를 바탕으로 일정 수준의 추가 가격 조정 여력이 있다고 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "소비 둔화",
+      "ticker_count": 2,
+      "frequency": 0.1,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "소비 둔화"
       ],
       "evidences": [
         {
           "ticker": "AMZN",
-          "evidence": "엔터프라이즈 고객들의 최적화 사이클이 완화되고 신규 워크로드 도입이 재개되면서 대형 클라우드 업체 전반에서 성장률이 완만히 회복되고 있다는 코멘트가 나옴."
+          "evidence": "미국과 유럽 리테일 기업들의 실적 및 가이던스에서 중저소득층을 중심으로 온라인·오프라인 소비 패턴이 가격 민감도가 높아지고 필수재 중심으로 전환되고 있다는 언급이 나타나며, 이는 이커머스 업계 전반의 단가·장바구니 규모에 부담 요인으로 작용하고 있음."
         },
         {
-          "ticker": "MSFT",
-          "evidence": "기업 IT 예산 내에서 디지털 전환과 AI 프로젝트를 위한 클라우드 지출 비중이 확대되며, 주요 하이퍼스케일러의 IaaS/PaaS 성장률이 완만한 재가속 구간에 진입했다는 언급이 증가하고 있음."
+          "ticker": "PG",
+          "evidence": "경영진은 일부 지역에서 소비자 지출이 약화되고 있다고 언급하며, 가격 민감도가 높은 카테고리에서 볼륨 성장 압력이 있다고 코멘트함."
+        }
+      ]
+    },
+    {
+      "theme": "인건비 인플레",
+      "ticker_count": 2,
+      "frequency": 0.1,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인건비 인플레"
+      ],
+      "evidences": [
+        {
+          "ticker": "AMZN",
+          "evidence": "미국·유럽의 최저임금 인상, 물류센터·배송직 고용시장 타이트, 기술 인력에 대한 경쟁 심화가 복합적으로 작용해 유통·테크 기업 전반에서 인건비 상승 압력이 지속되고 있으며, 이는 자동화 투자 확대와 동시에 마진 구조에 하방 압력으로 작용하고 있다는 언급이 반복되고 있음."
+        },
+        {
+          "ticker": "META",
+          "evidence": "AI·클라우드·보안 등 핵심 기술 인력에 대한 글로벌 수요가 높아지면서 대형 IT·인터넷 기업들의 인건비와 스톡옵션 비용이 중장기 마진에 부담 요인으로 작용하고 있음."
         }
       ]
     },
     {
       "theme": "신용비용",
       "ticker_count": 2,
-      "frequency": 0.118,
+      "frequency": 0.1,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -92,7 +158,7 @@
     {
       "theme": "자본규제",
       "ticker_count": 2,
-      "frequency": 0.118,
+      "frequency": 0.1,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -111,30 +177,72 @@
       ]
     },
     {
-      "theme": "소비 둔화",
+      "theme": "디지털광고 회복",
       "ticker_count": 2,
-      "frequency": 0.118,
-      "sentiment": -0.5,
-      "direction_label": "negative",
+      "frequency": 0.1,
+      "sentiment": 1.0,
+      "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "소비 둔화"
+        "디지털광고 회복"
       ],
       "evidences": [
         {
-          "ticker": "AMZN",
-          "evidence": "미국과 유럽 일부 지역에서 소비 심리 약화와 가격 민감도 상승이 관찰되지만, 온라인 채널 전환 지속과 광고·프라임 멤버십 등 고부가 서비스로 부분 상쇄되고 있다는 평가가 언급됨."
+          "ticker": "GOOGL",
+          "evidence": "매크로 불확실성에도 불구하고 검색·동영상 광고 수요가 전년 대비 개선되고 있으며, 퍼포먼스 마케팅과 리테일 미디어 예산이 구조적으로 온라인으로 이동하고 있다고 설명함."
         },
         {
-          "ticker": "PG",
-          "evidence": "경영진은 일부 선진국에서 카테고리 성장률이 과거 대비 둔화되고 있어 가격 인상과 믹스 개선에 더 의존하는 구간이라고 언급하며, 전반적인 소비 환경의 약화를 시사함."
+          "ticker": "META",
+          "evidence": "전자상거래·게임·브랜드 광고주 수요가 완만히 회복되며 주요 소셜·검색 플랫폼의 광고 매출 성장률이 팬데믹 이후 둔화 국면에서 점진적으로 개선되고 있음."
+        }
+      ]
+    },
+    {
+      "theme": "에너지 전환",
+      "ticker_count": 2,
+      "frequency": 0.1,
+      "sentiment": -0.625,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "에너지 전환"
+      ],
+      "evidences": [
+        {
+          "ticker": "BRK-B",
+          "evidence": "재생에너지 및 전력망 인프라 투자 확대 압력이 커지는 한편, 규제·정책 불확실성과 높은 Capex 부담이 전력·유틸리티 사업의 장기 수익성에 복합적인 영향을 주고 있음."
+        },
+        {
+          "ticker": "XOM",
+          "evidence": "수소, CCUS 등 저탄소 솔루션 시장이 성장할 것으로 보지만, 규제·정책 방향과 탄소 가격의 불확실성으로 전통 석유·가스 사업에 대한 장기 밸류에이션 디스카운트 가능성을 industry 레벨 리스크로 인식하고 있음을 시사했음."
+        }
+      ]
+    },
+    {
+      "theme": "클라우드 전환",
+      "ticker_count": 2,
+      "frequency": 0.1,
+      "sentiment": 0.625,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "클라우드 전환"
+      ],
+      "evidences": [
+        {
+          "ticker": "CSCO",
+          "evidence": "기업 네트워크 트래픽이 퍼블릭 클라우드·SaaS로 이동하면서 전통 온프렘 장비 수요는 둔화되는 반면, 데이터센터·WAN·보안 아키텍처 재설계를 통해 새로운 프로젝트 기회가 발생하고 있다고 언급함."
+        },
+        {
+          "ticker": "MSFT",
+          "evidence": "엔터프라이즈 고객들이 기존 온프레미스 워크로드를 퍼블릭 클라우드로 이전하고, 데이터·AI 플랫폼을 통합하려는 움직임이 지속되며, 하이브리드·멀티클라우드 환경에서의 지출이 증가하고 있다는 점을 컨콜에서 강조했음."
         }
       ]
     },
     {
       "theme": "고금리 환경",
       "ticker_count": 2,
-      "frequency": 0.118,
+      "frequency": 0.1,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -153,43 +261,9 @@
       ]
     },
     {
-      "theme": "genai 확산",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "GenAI 확산"
-      ],
-      "evidences": [
-        {
-          "ticker": "ADBE",
-          "evidence": "전 산업에서 생성형 AI를 기존 워크플로에 통합하려는 수요가 급증하면서 크리에이티브·문서·마테크 소프트웨어 업체들은 AI 기능 번들 및 크레딧 기반 과금 모델을 통해 추가 수익원을 창출하고 있음."
-        }
-      ]
-    },
-    {
-      "theme": "클라우드 구독",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "클라우드 구독"
-      ],
-      "evidences": [
-        {
-          "ticker": "ADBE",
-          "evidence": "온프레미스 영구 라이선스에서 클라우드 기반 구독 모델로의 전환이 소프트웨어 산업 전반에서 계속 진행 중이며, 이는 벤더 입장에서 높은 가시성의 반복 매출과 장기 ARR 성장을 가능하게 하고 있음."
-        }
-      ]
-    },
-    {
       "theme": "생성형 ai",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -198,49 +272,32 @@
       ],
       "evidences": [
         {
-          "ticker": "AMZN",
-          "evidence": "최근 실적 컨콜에서 경영진이 AWS에서의 생성형 AI 워크로드와 관련 서비스 수요가 빠르게 증가하고 있다고 언급하며 이를 향후 수년간의 핵심 성장 동력으로 제시함."
+          "ticker": "ADBE",
+          "evidence": "최근 실적 발표에서 경영진은 생성형 AI 기능을 Creative Cloud·Document Cloud·Experience Cloud 전반에 통합해 생산성 향상과 신규 사용 사례를 창출하고 있으며, 중기적으로 추가 매출 기여가 기대된다고 강조함."
         }
       ]
     },
     {
-      "theme": "인건비 인플레",
+      "theme": "genai 수요",
       "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": -1.0,
-      "direction_label": "negative",
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "인건비 인플레"
+        "GenAI 수요"
       ],
       "evidences": [
         {
           "ticker": "AMZN",
-          "evidence": "물류센터 및 라스트마일 배송 인력에 대한 임금 상승 압력과 규제·노조 이슈가 계속되고 있어 중장기적으로 비용 구조에 부담 요인이 될 수 있다는 점이 강조됨."
-        }
-      ]
-    },
-    {
-      "theme": "규제 강화",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "규제 강화"
-      ],
-      "evidences": [
-        {
-          "ticker": "AMZN",
-          "evidence": "미국·유럽 규제 당국이 빅테크 플랫폼의 시장 지배력, 데이터·광고 관행을 집중 조사하고 있어 과징금, 사업 관행 변경 등 구조적 규제 리스크가 상존한다는 언급이 반복되고 있음."
+          "evidence": "최근 주요 클라우드 사업자 컨콜에서 기업 고객의 GenAI·LLM 관련 워크로드 이전 및 신규 서비스 도입이 가속되고 있다는 언급이 반복되며, 이는 향후 클라우드 인프라·GPU 수요와 고마진 소프트웨어 서비스 성장에 긍정적으로 작용할 것이라는 시각이 지배적임."
         }
       ]
     },
     {
       "theme": "보험가격 사이클",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -257,7 +314,7 @@
     {
       "theme": "규제·거버넌스 이슈",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -272,9 +329,94 @@
       ]
     },
     {
+      "theme": "기관 수요",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "기관 수요"
+      ],
+      "evidences": [
+        {
+          "ticker": "COIN",
+          "evidence": "최근 비트코인 현물 ETF 승인과 함께 전통 금융기관 및 자산운용사의 디지털 자산 거래·수탁·프라임 브로커리지 수요가 증가하고 있다는 점을 경영진이 강조함."
+        }
+      ]
+    },
+    {
+      "theme": "규제 불확실",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "규제 불확실"
+      ],
+      "evidences": [
+        {
+          "ticker": "COIN",
+          "evidence": "미국을 비롯한 주요 관할권에서 암호화폐를 증권·상품 등으로 어떻게 분류할지에 대한 법적·규제적 불확실성이 계속되고 있으며, 회사는 규제 명확화가 업계 전반의 핵심 리스크라고 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "온체인 활동",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "온체인 활동"
+      ],
+      "evidences": [
+        {
+          "ticker": "COIN",
+          "evidence": "L2 네트워크, 스테이블코인 결제, DeFi·NFT 등 다양한 온체인 유스케이스 확대가 장기적으로 거래·수탁·인프라 수요를 지지하는 동인이라고 컨콜에서 설명함."
+        }
+      ]
+    },
+    {
+      "theme": "수수료 경쟁",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "수수료 경쟁"
+      ],
+      "evidences": [
+        {
+          "ticker": "COIN",
+          "evidence": "글로벌 주요 거래소 간 가격 경쟁과 메이저 유저 대상 수수료 인하 트렌드가 형성되고 있어, 업계 전반의 take rate가 구조적으로 하향 압력을 받고 있다는 점을 업계 동향 설명에서 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "수익 다각화",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "수익 다각화"
+      ],
+      "evidences": [
+        {
+          "ticker": "COIN",
+          "evidence": "스테이킹, USDC 이자, 클라우드·인프라 서비스 등 구독·서비스형 매출 비중 확대가 업계 공통 과제로 부각되고 있으며, 경영진은 거래 의존도를 낮추는 방향으로 비즈니스 믹스를 전환하고 있다고 강조함."
+        }
+      ]
+    },
+    {
       "theme": "ai adoption",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -291,7 +433,7 @@
     {
       "theme": "data platform consolidation",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -308,7 +450,7 @@
     {
       "theme": "cloud optimization",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -325,7 +467,7 @@
     {
       "theme": "digital transformation",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -340,128 +482,213 @@
       ]
     },
     {
-      "theme": "ai투자",
+      "theme": "ai 인프라",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "AI투자"
+        "AI 인프라"
       ],
       "evidences": [
         {
           "ticker": "CSCO",
-          "evidence": "데이터센터 AI 구축 확대가 고속 네트워킹 인프라 수요를 지지하는 환경임."
+          "evidence": "최근 컨콜에서 하이퍼스케일러와 대형 엔터프라이즈의 AI 데이터센터 투자 확대가 고대역폭 스위칭·라우팅 장비와 광학 모듈 수요를 견인하는 핵심 요인이라고 언급함."
         }
       ]
     },
     {
-      "theme": "보안수요",
+      "theme": "재고 조정",
       "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 1.0,
-      "direction_label": "positive",
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "보안수요"
+        "재고 조정"
       ],
       "evidences": [
         {
           "ticker": "CSCO",
-          "evidence": "기업들의 보안 지출 확대는 네트워킹 대비 소프트웨어 중심 사업 믹스 개선에 우호적임."
+          "evidence": "엔터프라이즈·서비스프로바이더 채널에서 팬데믹 기간 확대되었던 네트워크 장비 재고가 정상화 단계에 접어들어 단기 주문 성장과 출하에 역풍으로 작용하고 있다는 코멘트를 반복함."
         }
       ]
     },
     {
-      "theme": "경쟁압박",
+      "theme": "보안 수요",
       "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": -1.0,
-      "direction_label": "negative",
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "경쟁압박"
+        "보안 수요"
       ],
       "evidences": [
         {
           "ticker": "CSCO",
-          "evidence": "네트워킹 업계는 대형 벤더 간 경쟁이 치열해 가격과 점유율 측면의 압박이 지속될 수 있음."
+          "evidence": "랜섬웨어·클라우드 마이그레이션·분산형 근무환경 확대로 보안 및 Observability 소프트웨어에 대한 구조적인 수요가 견조하다고 설명하며, 장기 ARR 성장의 핵심 동인으로 제시함."
         }
       ]
     },
     {
-      "theme": "가격인상",
+      "theme": "매크로 불확실",
       "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "가격인상"
-      ],
-      "evidences": [
-        {
-          "ticker": "DIS",
-          "evidence": "스트리밍과 구독형 미디어는 가격 인상과 번들링을 통해 ARPU를 높이는 방향으로 산업이 재편되고 있음."
-        }
-      ]
-    },
-    {
-      "theme": "광고압박",
-      "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "광고압박"
+        "매크로 불확실"
       ],
       "evidences": [
         {
-          "ticker": "DIS",
-          "evidence": "TV 및 광고 시장은 선형 시청 감소와 경기 민감성으로 인해 매출 가시성이 낮아지는 추세임."
+          "ticker": "CSCO",
+          "evidence": "금리 수준·거시경제 및 지정학적 리스크로 일부 공공·엔터프라이즈 고객이 네트워크·IT 인프라 투자의 승인·집행 시점을 지연하고 있어, 단기 수주와 매출 가시성이 낮아졌다고 설명함."
         }
       ]
     },
     {
-      "theme": "콘텐츠효율",
+      "theme": "구독수익",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "콘텐츠효율"
+        "구독수익"
       ],
       "evidences": [
         {
           "ticker": "DIS",
-          "evidence": "미디어 업계는 대규모 제작비를 더 엄격히 관리하며 히트작 중심으로 자본 배분을 최적화하는 흐름임."
+          "evidence": "스트리밍 업계 전반에서 가입자 수 확대보다 ARPU와 마진 개선이 더 중요한 평가축으로 이동하고 있음."
         }
       ]
     },
     {
-      "theme": "인건비상승",
+      "theme": "광고둔화",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "인건비상승"
+        "광고둔화"
       ],
       "evidences": [
         {
           "ticker": "DIS",
-          "evidence": "엔터테인먼트·테마파크 산업은 임금과 운영비 상승이 마진 회복 속도를 제약하는 구조임."
+          "evidence": "미디어 업계는 경기 민감한 광고 수요와 선형 TV 구조적 하락으로 실적 가시성이 낮아지는 흐름이 나타남."
+        }
+      ]
+    },
+    {
+      "theme": "소비변동",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "소비변동"
+      ],
+      "evidences": [
+        {
+          "ticker": "DIS",
+          "evidence": "레저·엔터테인먼트 수요는 소비심리와 가처분소득 변화에 민감해 업황 변동성이 커지고 있음."
+        }
+      ]
+    },
+    {
+      "theme": "비용압박",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "비용압박"
+      ],
+      "evidences": [
+        {
+          "ticker": "DIS",
+          "evidence": "콘텐츠·인건비·스포츠 권리비용 부담이 업계 전반의 마진 개선 속도를 제한하는 요인으로 작용함."
+        }
+      ]
+    },
+    {
+      "theme": "생성형 ai 확산",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "생성형 AI 확산"
+      ],
+      "evidences": [
+        {
+          "ticker": "GOOGL",
+          "evidence": "최근 실적 컨콜에서 경영진은 Gemini와 같은 생성형 AI 모델을 검색, Cloud, Workspace 전반에 통합하며 고객 지출 확대와 신규 워크로드 창출을 확인했다고 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "ai 인프라 투자",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "AI 인프라 투자"
+      ],
+      "evidences": [
+        {
+          "ticker": "GOOGL",
+          "evidence": "데이터센터·네트워크·커스텀 칩 등에 대한 대규모 투자로 업계 전반에서 Capex가 높게 유지되고 있으며, 이는 단기 수익성과 FCF 마진에 부담 요인이라고 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "규제 리스크",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "규제 리스크"
+      ],
+      "evidences": [
+        {
+          "ticker": "GOOGL",
+          "evidence": "미국·EU·기타 지역에서 플랫폼, 앱스토어, 개인정보 보호 관련 규제가 강화되고 있으며, 빅테크 전반에 대해 사업 관행 수정과 추가 컴플라이언스 비용이 요구되고 있다고 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "수술 수요 회복",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "수술 수요 회복"
+      ],
+      "evidences": [
+        {
+          "ticker": "JNJ",
+          "evidence": "최근 컨콜에서 회사는 선택적 수술을 포함한 글로벌 수술 볼륨이 코로나 이전 수준을 상회하며 MedTech 성장에 우호적인 환경이 지속되고 있다고 언급했음."
         }
       ]
     },
     {
       "theme": "약가 압력",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -471,65 +698,48 @@
       "evidences": [
         {
           "ticker": "JNJ",
-          "evidence": "최근 컨콜과 가이던스에서 미국 Medicare 약가 협상, 유럽 약가 인하 및 리베이트 요구 등 규제 환경 악화가 중장기 제약·바이오 산업 전반의 가격·마진에 구조적 부담이 될 것이라고 언급했음."
+          "evidence": "미국 IRA 시행과 주요 시장의 약가 규제 강화에 따라 빅파마 전반에 구조적인 가격 인하 압력이 확대되고 있다는 점을 경영진이 재차 강조했음."
         }
       ]
     },
     {
-      "theme": "수술량 회복",
+      "theme": "m&a·파트너십",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "수술량 회복"
+        "M&A·파트너십"
       ],
       "evidences": [
         {
           "ticker": "JNJ",
-          "evidence": "코로나 이후 연기됐던 선택적 수술이 점진적으로 정상화되며 글로벌 MedTech 업체들이 병원 수술량 회복과 장비·소모품 수요 증가를 실적 및 가이던스에서 공통적으로 강조하고 있음."
+          "evidence": "컨콜에서 경영진은 혁신 플랫폼과 파이프라인을 보강하기 위한 타깃형 M&A 및 라이선스 인(L/I)을 업계 전반의 중요한 성장 수단으로 보고 있다고 언급했음."
         }
       ]
     },
     {
-      "theme": "파이프라인 중요성",
+      "theme": "소송 리스크",
       "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "파이프라인 중요성"
-      ],
-      "evidences": [
-        {
-          "ticker": "JNJ",
-          "evidence": "대형 제약사들이 컨콜에서 LOE 대응을 위해 종양, 면역질환, 희귀질환 등 고부가가치 영역에서 후기단계 임상 파이프라인 확충과 선택적 M&A를 핵심 성장 전략으로 반복 강조하고 있음."
-        }
-      ]
-    },
-    {
-      "theme": "규제 심사 강화",
-      "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "규제 심사 강화"
+        "소송 리스크"
       ],
       "evidences": [
         {
           "ticker": "JNJ",
-          "evidence": "글로벌 규제기관이 안전성·효과성 데이터에 대한 요구 수준을 높이고 있어 신약과 의료기기 승인 심사 기간이 길어지고 불확실성이 증가하고 있다는 언급이 여러 헬스케어 기업 컨콜에서 나타났음."
+          "evidence": "미국을 중심으로 제약·의료기기 업계 전반에서 제품 책임 및 집단소송 규모가 확대되고 있으며, 대형 합의 사례가 증가하고 있다는 점이 컨콜 Q&A에서 논의되었음."
         }
       ]
     },
     {
       "theme": "자본시장",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -544,26 +754,43 @@
       ]
     },
     {
-      "theme": "디지털광고 회복",
+      "theme": "ai 투자",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "디지털광고 회복"
+        "AI 투자"
       ],
       "evidences": [
         {
           "ticker": "META",
-          "evidence": "최근 주요 광고주들의 온라인 마케팅 예산이 경기 둔화 국면에서도 점진적으로 회복되고 있으며, 소셜·숏폼 동영상 채널로의 예산 비중이 확대되고 있다고 언급함."
+          "evidence": "대형 플랫폼들은 광고 타기팅 고도화, 추천 알고리즘 개선, 생성형 AI 서비스 출시에 대응하기 위해 GPU·데이터센터 중심의 AI 인프라 Capex 를 공격적으로 확대하고 있음."
+        }
+      ]
+    },
+    {
+      "theme": "규제강화",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "규제강화"
+      ],
+      "evidences": [
+        {
+          "ticker": "META",
+          "evidence": "미국과 유럽에서 온라인 플랫폼의 시장 지배력, 데이터 활용, 청소년 보호에 대한 규제가 강화되며 빅테크 전반에 반독점 조사와 잠재 과징금 리스크가 확대되고 있음."
         }
       ]
     },
     {
       "theme": "ai 인프라투자",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -572,66 +799,15 @@
       ],
       "evidences": [
         {
-          "ticker": "META",
-          "evidence": "하이퍼스케일러 및 플랫폼 기업들이 생성형 AI·추천 시스템 고도화를 위해 GPU·데이터센터 투자를 공격적으로 확대하고 있다고 컨콜에서 반복적으로 강조함."
-        }
-      ]
-    },
-    {
-      "theme": "경쟁 심화",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "경쟁 심화"
-      ],
-      "evidences": [
-        {
-          "ticker": "META",
-          "evidence": "숏폼 비디오 및 크리에이터 이코노미 확대로 TikTok, YouTube 등과의 사용자 시간·광고 인벤토리 경쟁이 심화되고 있으며, 이는 광고 단가와 수익 분배 구조에 압박 요인이 될 수 있다고 언급함."
-        }
-      ]
-    },
-    {
-      "theme": "genai 수요",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "GenAI 수요"
-      ],
-      "evidences": [
-        {
           "ticker": "MSFT",
-          "evidence": "최근 실적 컨콜에서 엔터프라이즈 고객의 GenAI 워크로드가 빠르게 증가하고 있으며, 이를 반영해 주요 클라우드 벤더들이 관련 매출 가이던스를 상향 조정하고 있음."
-        }
-      ]
-    },
-    {
-      "theme": "가격 인상",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "가격 인상"
-      ],
-      "evidences": [
-        {
-          "ticker": "PG",
-          "evidence": "최근 실적 발표에서 다수 카테고리에서 추가 가격 인상과 프리미엄 제품 믹스 개선이 매출 성장을 견인했다고 설명하며, 소비재 업계 전반에 가격 주도 성장이 이어지고 있음을 강조함."
+          "evidence": "최근 실적 콜에서 경영진은 고객들의 AI 워크로드 증가로 인해 고성능 컴퓨팅, GPU, 데이터센터 네트워크 등에 대한 수요가 매우 강하며, 이에 맞춰 업계 전반에서 대규모 인프라 투자가 지속되고 있다고 언급했음."
         }
       ]
     },
     {
       "theme": "원가 완화",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -641,99 +817,31 @@
       "evidences": [
         {
           "ticker": "PG",
-          "evidence": "경영진은 일부 원자재와 해상 운임이 정점 대비 완화되고 있다고 언급하며, 업계 전반적으로 브루트 마진이 점진적으로 회복되는 추세라고 설명함."
+          "evidence": "원자재와 물류 비용이 정점을 지난 이후 점진적으로 완화되고 있다고 설명하며, 이는 향후 몇 분기 동안 마진에 우호적인 환경을 제공할 것이라고 언급함."
         }
       ]
     },
     {
-      "theme": "환율 역풍",
+      "theme": "프리미엄화",
       "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": -1.0,
-      "direction_label": "negative",
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "환율 역풍"
+        "프리미엄화"
       ],
       "evidences": [
         {
           "ticker": "PG",
-          "evidence": "달러 강세로 인해 해외 매출 환산 효과가 부담 요인이라고 코멘트하며, 글로벌 소비재 기업 전반에 환율 역풍이 지속되고 있음을 언급함."
-        }
-      ]
-    },
-    {
-      "theme": "온디바이스 ai",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "온디바이스 AI"
-      ],
-      "evidences": [
-        {
-          "ticker": "QCOM",
-          "evidence": "최근 컨퍼런스콜에서 스마트폰·PC·IoT에 탑재되는 온디바이스 AI 워크로드 증가가 AP/NPU 성능 차별화를 통해 프리미엄 칩 수요를 견인할 것이라고 강조함."
-        }
-      ]
-    },
-    {
-      "theme": "스마트폰 회복",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "스마트폰 회복"
-      ],
-      "evidences": [
-        {
-          "ticker": "QCOM",
-          "evidence": "글로벌 스마트폰 출하가 재고 조정 국면을 지나 점진적 회복세를 보이고 있으며, 프리미엄·플래그십 모델 비중 확대가 관련 AP·모뎀 업체의 ASP 개선에 우호적으로 작용한다는 코멘트가 있었음."
-        }
-      ]
-    },
-    {
-      "theme": "전장 전환",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "전장 전환"
-      ],
-      "evidences": [
-        {
-          "ticker": "QCOM",
-          "evidence": "자동차의 커넥티비티·인포테인먼트·ADAS 전장화가 진행되면서 고성능 SoC와 통신 모듈 수요가 구조적으로 증가하고 있다고 경영진이 언급함."
-        }
-      ]
-    },
-    {
-      "theme": "규제 감시",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "규제 감시"
-      ],
-      "evidences": [
-        {
-          "ticker": "QCOM",
-          "evidence": "글로벌 반독점 및 특허 라이선스 규제 당국이 무선 통신 표준필수특허와 칩셋 사업 구조를 지속적으로 점검하고 있어, 업계 전반적으로 라이선스 모델과 계약 관행에 대한 불확실성이 존재한다고 언급됨."
+          "evidence": "프리미엄 제품과 고부가가치 포맷에 대한 소비자 선호가 확대되고 있다고 언급하며, 이러한 믹스 개선이 유기적 성장과 마진 확대에 기여하고 있다고 설명함."
         }
       ]
     },
     {
       "theme": "소비 신용",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -750,7 +858,7 @@
     {
       "theme": "핀테크 규제",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -767,7 +875,7 @@
     {
       "theme": "디지털 전환",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -784,7 +892,7 @@
     {
       "theme": "예금 경쟁",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -799,111 +907,298 @@
       ]
     },
     {
-      "theme": "바이오텍 자금경색",
+      "theme": "연구비 둔화",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "바이오텍 자금경색"
+        "연구비 둔화"
       ],
       "evidences": [
         {
           "ticker": "TMO",
-          "evidence": "컨콜에서 경영진은 초기·중소 바이오텍의 자금조달 환경이 여전히 어렵고 이로 인해 연구 장비 및 시약 투자 결정이 지연되고 있다고 언급함."
+          "evidence": "최근 컨콜에서 글로벌 학술·바이오텍 연구비 지출이 팬데믹 이후 정상화 국면에 있으나 여전히 보수적인 Capex 환경이 지속된다고 언급하며, 연구 장비 및 소모품 수요 회복이 점진적이라는 점을 강조했음."
         }
       ]
     },
     {
-      "theme": "cdmo 아웃소싱",
+      "theme": "바이오파마 아웃소싱",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "CDMO 아웃소싱"
+        "바이오파마 아웃소싱"
       ],
       "evidences": [
         {
           "ticker": "TMO",
-          "evidence": "제약·바이오사가 개발·임상·상업생산을 외부 CDMO에 위탁하는 구조적 트렌드가 지속되고 있으며, 대형 고객의 장기 계약 확대가 시장 성장의 핵심 동인이라고 설명함."
+          "evidence": "제약·바이오 기업의 개발·임상·생산 공정 아웃소싱 확대가 구조적 추세로 이어지고 있으며, 경영진은 CDMO·임상시험 서비스 파이프라인과 수주 잔고가 중장기 성장의 핵심 동력이라고 설명했음."
         }
       ]
     },
     {
-      "theme": "중국 수요둔화",
+      "theme": "중국 수요 리스크",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "중국 수요둔화"
+        "중국 수요 리스크"
       ],
       "evidences": [
         {
           "ticker": "TMO",
-          "evidence": "중국 연구·병원 고객의 예산 제약 및 정부 규제 환경 변화로 수요가 과거 대비 약하며, 경영진은 중국 매출 가이던스를 보수적으로 설정했다고 언급함."
+          "evidence": "컨콜에서 중국의 장비·진단 수요가 정부 예산 축소와 현지 경쟁 심화로 약세를 보이고 있으며, 일부 병원·연구기관에서의 구매 결정 지연이 계속되고 있다고 코멘트했음."
         }
       ]
     },
     {
-      "theme": "비-covid 정상화",
+      "theme": "원가·인건비 압력",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "원가·인건비 압력"
+      ],
+      "evidences": [
+        {
+          "ticker": "TMO",
+          "evidence": "임금과 물류·에너지 비용 등 인플레이션 요인이 여전히 존재하며, 경영진은 생산성 제고와 가격 인상을 통해 이를 상쇄하고 있으나 단기적으로 마진에 부담 요인이 되고 있다고 설명했음."
+        }
+      ]
+    },
+    {
+      "theme": "의료이용률",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "의료이용률"
+      ],
+      "evidences": [
+        {
+          "ticker": "UNH",
+          "evidence": "최근 실적 컨콜에서 다수 보험사들이 고령층 중심의 의료이용률이 팬데믹 이전 수준을 상회하고 있다고 언급하며 단기적으로 손해율 및 마진에 부담이 된다고 설명함."
+        }
+      ]
+    },
+    {
+      "theme": "정책·규제",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "정책·규제"
+      ],
+      "evidences": [
+        {
+          "ticker": "UNH",
+          "evidence": "미 대선과 의회 논의 과정에서 Medicare Advantage 지불 구조, 약가 인하, PBM 투명성 강화 등 건강보험·제약·PBM 전반에 대한 규제 리스크가 재부각되고 있음."
+        }
+      ]
+    },
+    {
+      "theme": "서비스화",
+      "ticker_count": 1,
+      "frequency": 0.05,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "비-COVID 정상화"
+        "서비스화"
       ],
       "evidences": [
         {
-          "ticker": "TMO",
-          "evidence": "COVID 관련 진단·백신 연관 매출이 구조적으로 축소되는 가운데, 기저 연구용·일반 진단 및 산업용 수요가 팬데믹 이전 성장률 수준으로 점진적으로 회복되고 있다고 설명함."
+          "ticker": "UNH",
+          "evidence": "대형 헬스케어 그룹들은 데이터·IT, 케어 딜리버리, PBM 등 서비스 수익 비중을 확대해 보험 중심 구조에서 보다 안정적이고 고마진의 플랫폼/서비스 모델로 전환하려는 전략을 명확히 하고 있음."
         }
       ]
     },
     {
-      "theme": "마테크 예산",
+      "theme": "인구고령화",
       "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "마테크 예산"
+        "인구고령화"
       ],
       "evidences": [
         {
-          "ticker": "ADBE",
-          "evidence": "엔터프라이즈 고객들은 디지털 경험·마케팅 테크 스택을 유지하면서도 예산 효율화를 추구하고 있어, 신규 프로젝트는 선택적으로 진행되는 한편 기존 계약은 플랫폼 통합과 ROI 개선을 조건으로 재협상되는 흐름이 이어지고 있음."
+          "ticker": "UNH",
+          "evidence": "베이비붐 세대의 고령화로 Medicare 가입자와 만성질환 관리 수요가 구조적으로 증가하고 있어 장기적으로 MA·케어 매니지먼트·홈헬스 등 관련 시장 성장에 우호적인 환경이 조성되고 있음."
         }
       ]
     },
     {
-      "theme": "it지출 양극화",
+      "theme": "인건비",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인건비"
+      ],
+      "evidences": [
+        {
+          "ticker": "WMT",
+          "evidence": "리테일 업종 공통으로 임금 상승과 인력 운영비 부담이 수익성에 직접적인 압박으로 작용하는 구도가 지속됨."
+        }
+      ]
+    },
+    {
+      "theme": "가격경쟁",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "가격경쟁"
+      ],
+      "evidences": [
+        {
+          "ticker": "WMT",
+          "evidence": "대형 할인 유통과 전자상거래 전반에서 가격 인하 경쟁이 매출 방어에는 도움이 되지만 마진에는 부정적이라는 점이 반복적으로 강조됨."
+        }
+      ]
+    },
+    {
+      "theme": "옴니채널",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "옴니채널"
+      ],
+      "evidences": [
+        {
+          "ticker": "WMT",
+          "evidence": "오프라인 점포망과 온라인 주문·배송 결합이 업계의 구조적 경쟁력으로 평가되며, 트래픽과 물류 효율 개선의 핵심 테마로 언급됨."
+        }
+      ]
+    },
+    {
+      "theme": "정제마진",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "정제마진"
+      ],
+      "evidences": [
+        {
+          "ticker": "XOM",
+          "evidence": "정유 마진은 최근 몇 년간 구조적 정제 캐파 부족과 제품 재고 타이트닝 영향으로 사이클 평균을 상회하는 수준이 유지되고 있다는 점을 언급했음."
+        }
+      ]
+    },
+    {
+      "theme": "가스 수요",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "가스 수요"
+      ],
+      "evidences": [
+        {
+          "ticker": "XOM",
+          "evidence": "LNG 및 파이프라인 가스는 에너지 전환 과정에서 브릿지 연료 역할을 할 것이라는 관점을 재확인하며 장기 수요 성장에 대한 신뢰를 표명했음."
+        }
+      ]
+    },
+    {
+      "theme": "it예산 재조정",
+      "ticker_count": 1,
+      "frequency": 0.05,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "IT지출 양극화"
+        "IT예산 재조정"
       ],
       "evidences": [
         {
           "ticker": "ADBE",
-          "evidence": "거시 불확실성 속에서도 생산성·자동화·AI 관련 프로젝트에는 투자가 유지되는 반면, 선택적 마케팅·브랜딩성 지출은 우선순위에서 밀리는 양극화가 나타나며, 이에 따라 소프트웨어 카테고리별 성장률 차별화가 심화되고 있음."
+          "evidence": "컨퍼런스콜에서 기업 고객들이 여전히 디지털 경험·마케팅 솔루션에는 우선순위를 두고 있으나, 전반적인 IT 예산은 신중하게 집행되고 있어 대형 프로젝트 결정이 지연되는 사례가 있다고 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "디지털광고",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "디지털광고"
+      ],
+      "evidences": [
+        {
+          "ticker": "ADBE",
+          "evidence": "디지털 경험 부문에서 일부 업종의 광고·마케팅 집행이 회복되고 있으나, 업계 전반에서는 여전히 성과 기반 집행과 ROI 중심 캠페인에 집중하는 경향이 강하다고 설명함."
+        }
+      ]
+    },
+    {
+      "theme": "클라우드 최적화",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "클라우드 최적화"
+      ],
+      "evidences": [
+        {
+          "ticker": "AMZN",
+          "evidence": "지난 1~2년간 기업들의 클라우드 비용 최적화(리플랫폼·리저브드 인스턴스 재협상 등)가 이어져 IaaS 성장률을 압박했으나, 최근 컨콜에서는 최적화 강도가 완화되는 대신 신규 워크로드와 AI 관련 투자가 점진적으로 증가하고 있다는 코멘트가 다수 확인되고 있음."
+        }
+      ]
+    },
+    {
+      "theme": "물류비 변동",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "물류비 변동"
+      ],
+      "evidences": [
+        {
+          "ticker": "AMZN",
+          "evidence": "글로벌 해운 운임과 연료비가 지정학적 리스크와 공급망 병목에 따라 변동성이 확대되고 있다는 점이 다수 물류·리테일 기업 컨콜에서 언급되며, 이에 따라 이커머스 플레이어들은 자동화·네트워크 최적화로 단위 물류비를 상쇄하려는 전략을 강조하고 있음."
         }
       ]
     },
     {
       "theme": "금리민감",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -920,7 +1215,7 @@
     {
       "theme": "거래변동",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -935,26 +1230,9 @@
       ]
     },
     {
-      "theme": "에너지 전환",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "에너지 전환"
-      ],
-      "evidences": [
-        {
-          "ticker": "BRK-B",
-          "evidence": "재생에너지 및 전력망 인프라 투자 확대 압력이 커지는 한편, 규제·정책 불확실성과 높은 Capex 부담이 전력·유틸리티 사업의 장기 수익성에 복합적인 영향을 주고 있음."
-        }
-      ]
-    },
-    {
       "theme": "미국 소비·산업 사이클",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -971,7 +1249,7 @@
     {
       "theme": "enterprise it spending",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -986,77 +1264,26 @@
       ]
     },
     {
-      "theme": "it지출",
+      "theme": "클라우드 경쟁",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "IT지출"
-      ],
-      "evidences": [
-        {
-          "ticker": "CSCO",
-          "evidence": "전반적인 기업 IT 예산 집행 속도는 수요 가시성을 좌우하는 핵심 변수임."
-        }
-      ]
-    },
-    {
-      "theme": "소비둔화",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "소비둔화"
-      ],
-      "evidences": [
-        {
-          "ticker": "DIS",
-          "evidence": "가계 재량지출이 둔화되면 테마파크·여행·엔터테인먼트 소비 전반의 성장 탄력이 약해질 수 있음."
-        }
-      ]
-    },
-    {
-      "theme": "자료부족",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "자료부족"
+        "클라우드 경쟁"
       ],
       "evidences": [
         {
           "ticker": "GOOGL",
-          "evidence": "최신 컨콜, 가이던스, 공시 검색 결과가 없어 업종 테마를 사실 기반으로 추출할 수 없음."
-        }
-      ]
-    },
-    {
-      "theme": "fx 변동성",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "FX 변동성"
-      ],
-      "evidences": [
-        {
-          "ticker": "JNJ",
-          "evidence": "다국적 헬스케어 기업들이 최근 실적 발표에서 강달러 및 신흥국 통화 약세로 인한 환율 역풍과 헤지 비용을 반복적으로 언급하며, 환율이 매출·이익 가이던스에 주요 변수로 작용하고 있음을 지적했음."
+          "evidence": "글로벌 클라우드 시장에서 hyperscaler 간 가격·기능 경쟁이 지속되는 가운데, AI·데이터·보안 워크로드 중심으로 성장 기회와 마진 압력이 동시에 존재한다고 경영진이 평가함."
         }
       ]
     },
     {
       "theme": "금리정점",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -1071,94 +1298,43 @@
       ]
     },
     {
-      "theme": "소비·매크로 변동성",
+      "theme": "숏폼경쟁",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "소비·매크로 변동성"
+        "숏폼경쟁"
       ],
       "evidences": [
         {
           "ticker": "META",
-          "evidence": "경영진은 글로벌 매크로 불확실성이 여전히 존재하나, 디지털 광고가 전통 매체 대비 구조적 성장 채널이라는 점에서 경기 사이클을 상쇄하는 요소가 있다고 언급함."
+          "evidence": "TikTok 으로 대표되는 숏폼 동영상 소비가 구조적으로 확대되면서 주요 플랫폼이 숏폼 피드와 크리에이터 보상에 경쟁적으로 투자하고 있으나, 수익화 효율은 아직 과도기 단계임."
         }
       ]
     },
     {
-      "theme": "ai capex 사이클",
+      "theme": "it 예산 재배분",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "AI Capex 사이클"
+        "IT 예산 재배분"
       ],
       "evidences": [
         {
           "ticker": "MSFT",
-          "evidence": "Hyperscaler 들이 데이터센터, GPU, 자체 AI 칩에 대한 Capex 가이던스를 큰 폭으로 상향하고 있어 반도체·장비에는 긍정적이나, 단기적으로는 FCF 마진 압력 요인으로 작용할 수 있음을 컨콜에서 반복적으로 언급하고 있음."
-        }
-      ]
-    },
-    {
-      "theme": "엔터프라이즈 it 예산",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "엔터프라이즈 IT 예산"
-      ],
-      "evidences": [
-        {
-          "ticker": "MSFT",
-          "evidence": "매크로 불확실성에도 불구하고 CIO 설문에서 필수적인 보안·클라우드·AI 항목은 예산 우선순위 상단을 유지하나, 비핵심 프로젝트는 지연·축소되고 있다는 점이 주요 소프트웨어 기업 컨콜에서 공통적으로 언급되고 있음."
-        }
-      ]
-    },
-    {
-      "theme": "마케팅 강화",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "마케팅 강화"
-      ],
-      "evidences": [
-        {
-          "ticker": "PG",
-          "evidence": "브랜드 경쟁 심화에 대응해 광고·판촉비를 매출 성장보다 빠른 속도로 늘리고 있다고 설명하며, 업계적으로도 미디어·디지털 마케팅 투자가 확대되는 흐름이라고 평가함."
-        }
-      ]
-    },
-    {
-      "theme": "중국 수요",
-      "ticker_count": 1,
-      "frequency": 0.059,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "중국 수요"
-      ],
-      "evidences": [
-        {
-          "ticker": "QCOM",
-          "evidence": "중국 스마트폰 출하와 5G 보급률이 회복세이나, 현지 경쟁 격화와 매크로 불확실성으로 OEM 발주 패턴이 변동적이라는 점이 업계 리스크로 거론됨."
+          "evidence": "기업 고객들이 전체 IT 예산을 크게 늘리기보다는 유지하는 가운데, 생산성 향상과 비용 절감을 기대할 수 있는 클라우드와 AI 프로젝트로 지출을 재배분하고 있다는 점을 실적 발표에서 설명했음."
         }
       ]
     },
     {
       "theme": "환율 영향",
       "ticker_count": 1,
-      "frequency": 0.059,
+      "frequency": 0.05,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -1167,8 +1343,110 @@
       ],
       "evidences": [
         {
-          "ticker": "TMO",
-          "evidence": "글로벌 매출 비중이 높은 만큼 환율 변동의 역풍·순풍이 혼재하고 있으며, 회사는 가이던스에서 중립적 수준의 FX 가정을 사용했다고 언급함."
+          "ticker": "MSFT",
+          "evidence": "경영진은 달러 강세 완화로 전년 대비 환율 역풍은 줄어들고 있으나, 아직도 주요 통화 대비 환율 변동성이 글로벌 매출 성장률에 단기적인 플러스·마이너스 영향을 줄 수 있다고 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "정보부족",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "정보부족"
+      ],
+      "evidences": [
+        {
+          "ticker": "QCOM",
+          "evidence": "제공된 검색 결과가 없어 최신 실적발표, 가이던스, 공시 기반으로 산업 테마를 확인할 수 없음."
+        }
+      ]
+    },
+    {
+      "theme": "비용통제",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "비용통제"
+      ],
+      "evidences": [
+        {
+          "ticker": "UNH",
+          "evidence": "의료비 인플레이션과 이용률 상승 속에서 보험사·제공자·PBM 모두 네트워크 관리, value-based care, 디지털 도구를 통한 비용 통제에 집중하고 있으나 효과와 속도에 대해서는 업체별·지역별 편차가 크다고 언급됨."
+        }
+      ]
+    },
+    {
+      "theme": "소비둔화",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "소비둔화"
+      ],
+      "evidences": [
+        {
+          "ticker": "WMT",
+          "evidence": "최신 컨콜 또는 가이던스 자료가 없어 특정 발언을 인용할 수 없으나, 대형 유통 업종에서는 필수재 중심 소비 둔화 여부가 핵심 변수로 자주 거론됨."
+        }
+      ]
+    },
+    {
+      "theme": "재고관리",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "재고관리"
+      ],
+      "evidences": [
+        {
+          "ticker": "WMT",
+          "evidence": "소매업 전반에서 재고 수준 조정과 회전율 개선이 실적 변동성을 좌우하는 중요한 운영 테마로 인식됨."
+        }
+      ]
+    },
+    {
+      "theme": "유가 변동",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "유가 변동"
+      ],
+      "evidences": [
+        {
+          "ticker": "XOM",
+          "evidence": "최근 컨콜에서는 단기 유가 레벨에 대한 가이던스는 제시하지 않으면서도, 포트폴리오 브레이크이븐을 낮춰 다양한 가격 시나리오에 견딜 수 있도록 설계하고 있음을 강조했음."
+        }
+      ]
+    },
+    {
+      "theme": "석화 사이클",
+      "ticker_count": 1,
+      "frequency": 0.05,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "석화 사이클"
+      ],
+      "evidences": [
+        {
+          "ticker": "XOM",
+          "evidence": "글로벌 석유화학 업황에 대해 공급 증가와 수요 둔화가 혼재된 과도기 국면으로 평가하면서, 중장기적으로는 저비용·대규모 크래커 중심으로 업계 재편이 진행될 것이라고 언급했음."
         }
       ]
     }
