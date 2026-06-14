@@ -4560,6 +4560,19 @@ def main():
             except Exception as e:
                 print(f"  추세 게이트 스킵(무영향): {e}")
 
+        # ── STEP 9.54: DART 공시 중요도 게이팅 관측 (C1 SHADOW) ──
+        # 2026-06-15 신설: 기존 catalyst severity(중요도) 재사용 + 가격/forward 조인 관측.
+        # SHADOW(brain-input 0, 임계 미설정). 부호 확인이 1차 목적(검증상 역알파 가능).
+        if effective_mode == "full":
+            print(f"\n[9.54] DART 공시 중요도 게이팅 관측 (C1 SHADOW)")
+            try:
+                from api.intelligence.dart_importance_observer import run_shadow as _dart_obs
+                _do = _dart_obs()
+                portfolio["dart_importance_obs"] = _do
+                print(f"  신규 관측 {_do.get('new_observations')} / severity 분포 {_do.get('severity_dist')}")
+            except Exception as e:
+                print(f"  공시 중요도 관측 스킵(무영향): {e}")
+
     # ── STEP 9.55: 추천 성과 백테스트 (PDF 보다 먼저 — 학습 트랙용) ──
     # 2026-05-03 정정: 기존엔 PDF→백테스트 순서였는데, daily_public.py 의
     # _log_brain_learning_safe 가 portfolio.backtest_stats 를 읽어 학습 트랙에

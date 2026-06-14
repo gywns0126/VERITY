@@ -46,6 +46,7 @@ _TRAILS = [
     ("factor_ic_history.json", "json", None),
     ("metadata/revision_momentum_shadow.jsonl", "jsonl", "ts_kst"),  # A2 SHADOW (2026-06-15)
     ("metadata/trend_overlay_prediction_trail.jsonl", "jsonl", "ts_kst"),  # A1 SHADOW (2026-06-15)
+    ("observations/dart_importance_gating.jsonl", "jsonl", "logged_at"),   # C1 SHADOW (event-count 게이트 N>=50)
 ]
 
 # N=252 IC 게이트(2027)로 누적 중인 shadow 신호 — 진행률 추적용 (path, date_key).
