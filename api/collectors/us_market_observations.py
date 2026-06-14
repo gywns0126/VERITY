@@ -187,6 +187,53 @@ def fetch_finra_short(asof: datetime, session: Optional[requests.Session] = None
     return None
 
 
+def fetch_finra_short_per_symbol(
+    asof: datetime, universe: List[str], session: Optional[requests.Session] = None
+) -> Optional[Dict[str, Any]]:
+    """유니버스 종목별 short volume %(CNMSshvol 개별 행 = parts[1]=symbol/[2]=short/[4]=total).
+
+    fetch_finra_short 와 같은 파일에서 시장 aggregate 가 아닌 *종목별* 추출 — factor-level
+    crowding proxy 의 원자료. 🚨 관측 only. 조합식(factor crowding score)은 Perplexity 후 v1.
+    """
+    if not universe:
+        return None
+    want = {str(t).upper() for t in universe}
+    sess = session or requests.Session()
+    d = asof
+    for _ in range(7):
+        ymd = _last_trading_ymd(d)
+        try:
+            r = sess.get(FINRA_TMPL.format(ymd=ymd), headers={"User-Agent": _SEC_UA}, timeout=15)
+            if r.status_code == 200 and r.text.startswith("Date|"):
+                per: Dict[str, float] = {}
+                for line in r.text.splitlines()[1:]:
+                    parts = line.split("|")
+                    if len(parts) < 5:
+                        continue
+                    sym = parts[1].upper()
+                    if sym not in want:
+                        continue
+                    try:
+                        short_v = float(parts[2])
+                        total_v = float(parts[4])
+                    except ValueError:
+                        continue
+                    if total_v > 0:
+                        per[sym] = round(short_v / total_v * 100, 2)
+                if not per:
+                    return None
+                return {
+                    "source": "finra_short_per_symbol",
+                    "period": f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}",
+                    "per_symbol_short_pct": per,
+                    "covered": len(per), "universe": len(want),
+                }
+        except requests.RequestException as e:
+            logger.warning("FINRA per-symbol %s 실패: %s", ymd, e)
+        d -= timedelta(days=1)
+    return None
+
+
 # ── SEC Form4 내부자 (유니버스 scoped) ───────────────────────────────────
 def _us_universe() -> List[str]:
     try:
