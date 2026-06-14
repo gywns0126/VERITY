@@ -1003,6 +1003,28 @@ function TrailIntegrityPanel({ ti }: { ti: any }) {
                 ))}
             </div>
 
+            {(ti.gate_progress || []).length > 0 && (
+                <div style={{ marginTop: S.md, borderTop: `1px solid ${C.border}`, paddingTop: S.sm }}>
+                    <div style={{ fontSize: 11, color: C.textTertiary, marginBottom: S.xs }}>
+                        N=252 IC 게이트 진행률 (shadow 누적 거래일)
+                    </div>
+                    {(ti.gate_progress || []).map((g: any, i: number) => {
+                        const pct = Math.min(100, g.pct_to_gate || 0)
+                        return (
+                            <div key={i} style={{ padding: `${S.xs}px 0` }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
+                                    <span style={{ color: C.textSecondary, fontFamily: "monospace" }}>{g.signal}</span>
+                                    <span style={{ color: C.textTertiary }}>{g.n_trading_days}/{g.gate_n}일 ({pct}%)</span>
+                                </div>
+                                <div style={{ height: 4, background: C.bgElevated, borderRadius: 2, overflow: "hidden" }}>
+                                    <div style={{ width: `${pct}%`, height: "100%", background: C.accent }} />
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+
             {(ti.findings || []).length > 0 && (
                 <div style={{ marginTop: S.sm, fontSize: 11, color: C.warn }}>
                     {(ti.findings || []).map((f: string, i: number) => (

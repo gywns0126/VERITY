@@ -80,6 +80,35 @@ def test_audit_severity_on_corrupt_history(tmp_path, monkeypatch):
     assert any("파싱불가" in f for f in result["findings"])
 
 
+def test_gate_progress_counts_distinct_dates(tmp_path, monkeypatch):
+    import json
+    monkeypatch.setattr(ti, "DATA_DIR", str(tmp_path))
+    (tmp_path / "metadata").mkdir()
+    trail = tmp_path / "metadata" / "revision_momentum_shadow.jsonl"
+    # 같은 날 2회 + 다른 날 1회 = 고유 거래일 2
+    rows = [
+        {"ts_kst": "2026-06-14T01:00:00+09:00"},
+        {"ts_kst": "2026-06-14T02:00:00+09:00"},
+        {"ts_kst": "2026-06-15T01:00:00+09:00"},
+    ]
+    trail.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
+    monkeypatch.setattr(ti, "_SHADOW_GATE_TRAILS", [("metadata/revision_momentum_shadow.jsonl", "ts_kst")])
+    prog = ti._gate_progress()
+    assert len(prog) == 1
+    g = prog[0]
+    assert g["n_trading_days"] == 2  # 고유 날짜
+    assert g["gate_n"] == 252
+    assert g["remaining_days"] == 250
+    assert g["last_date"] == "2026-06-15"
+
+
+def test_gate_progress_missing_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(ti, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(ti, "_SHADOW_GATE_TRAILS", [("metadata/nope.jsonl", "ts_kst")])
+    prog = ti._gate_progress()
+    assert prog[0]["n_trading_days"] == 0 and prog[0]["last_date"] is None
+
+
 def test_update_baseline_skips_on_fail(tmp_path, monkeypatch):
     monkeypatch.setattr(ti, "META_DIR", str(tmp_path))
     monkeypatch.setattr(ti, "_BASELINE_PATH", str(tmp_path / "bl.json"))

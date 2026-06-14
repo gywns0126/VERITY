@@ -44,6 +44,15 @@ _TRAILS = [
     ("prediction_ic_history.jsonl", "jsonl", None),
     ("wide_scan_log.jsonl", "jsonl", None),
     ("factor_ic_history.json", "json", None),
+    ("metadata/revision_momentum_shadow.jsonl", "jsonl", "ts_kst"),  # A2 SHADOW (2026-06-15)
+]
+
+# N=252 IC 게이트(2027)로 누적 중인 shadow 신호 — 진행률 추적용 (path, date_key).
+# 거래일 누적 = 고유 날짜 수. ic_crosscheck 는 on-demand(일별 아님)라 제외.
+_GATE_N = 252
+_SHADOW_GATE_TRAILS = [
+    ("metadata/revision_momentum_shadow.jsonl", "ts_kst"),   # A2 리비전 모멘텀
+    ("wide_scan_log.jsonl", "ts"),                            # wide_scan 7차원 funnel
 ]
 
 
@@ -123,6 +132,43 @@ def _read_baseline() -> Dict[str, Any]:
             return json.load(f)
     except Exception:
         return {}
+
+
+def _gate_progress() -> List[Dict[str, Any]]:
+    """shadow 신호별 N=252 IC 게이트 진행률 (누적 거래일 = 고유 날짜 수).
+
+    "1년 대기 중 데이터 잘 쌓이는지" 가시화 — PM 진행률 바. 누적 거래일/252 + 잔여.
+    """
+    out: List[Dict[str, Any]] = []
+    for rel, date_key in _SHADOW_GATE_TRAILS:
+        path = _p(rel)
+        dates = set()
+        last_date = None
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except Exception:
+                        continue
+                    raw = obj.get(date_key)
+                    if isinstance(raw, str) and len(raw) >= 10:
+                        d = raw[:10]
+                        dates.add(d)
+                        last_date = d if last_date is None or d > last_date else last_date
+        n_days = len(dates)
+        out.append({
+            "signal": rel.replace("metadata/", "").replace(".jsonl", ""),
+            "n_trading_days": n_days,
+            "gate_n": _GATE_N,
+            "pct_to_gate": round(100.0 * n_days / _GATE_N, 1),
+            "remaining_days": max(0, _GATE_N - n_days),
+            "last_date": last_date,
+        })
+    return out
 
 
 def _jsonl_count_and_last_ts(path: str, ts_key: Optional[str]) -> Dict[str, Any]:
@@ -220,6 +266,7 @@ def audit() -> Dict[str, Any]:
         "findings": findings,
         "history": hist,
         "trails": trails,
+        "gate_progress": _gate_progress(),
     }
 
 
@@ -257,6 +304,7 @@ def run_and_log() -> Dict[str, Any]:
             "history_snapshots": result["history"].get("snapshot_count"),
             "history_gaps": len(result["history"].get("business_day_gaps") or []),
             "trail_sizes": {t["trail"]: t.get("size") for t in result["trails"]},
+            "gate_progress": {g["signal"]: g["n_trading_days"] for g in result.get("gate_progress", [])},
         }
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -278,6 +326,10 @@ if __name__ == "__main__":
         flag = "OK " if t["ok"] else "!! "
         print(f"  {flag}{t['trail']}: size={t.get('size')} age={t.get('age_hours')}h "
               f"{t.get('issues') or ''}")
+    print("  N=252 게이트 진행률 (shadow 누적 거래일):")
+    for g in r.get("gate_progress", []):
+        print(f"    {g['signal']:32} {g['n_trading_days']:>4}/{g['gate_n']}일 "
+              f"({g['pct_to_gate']}%) 잔여 {g['remaining_days']}일  last={g['last_date']}")
     if r["findings"]:
         print("  findings:")
         for fnd in r["findings"]:

@@ -519,6 +519,7 @@ def handle_trust(request_handler) -> dict:
                 {"name": t.get("trail"), "size": t.get("size"), "ok": t.get("ok")}
                 for t in (ti.get("trails") or [])
             ],
+            "gate_progress": ti.get("gate_progress") or [],
         }
     return {"_status": 200, "_body": {
         "verdict": trust.get("verdict"),
