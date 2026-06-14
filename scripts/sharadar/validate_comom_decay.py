@@ -25,7 +25,14 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
-PARQUET_DEFAULT = os.path.expanduser("~/VERITY_data_lake/comom_monthly.parquet")
+PARQUET_DEFAULT = os.path.expanduser("~/VERITY_data_lake/comom_factor_monthly.parquet")
+
+# 팩터별 forward 부호 기대 (Perplexity 자문) — 측정값과 대조용, 가정 아님
+FACTOR_HYPOTHESIS = {
+    "momentum": "positive-feedback → 높은 CoMOM=이후 모멘텀수익 하락 기대(slope<0)",
+    "value": "negative-feedback(차익거래=가격 적정화) → 부호 agnostic(오히려 +가능)",
+    "quality": "부호 agnostic(자문상 미확정) — 측정으로 판정",
+}
 
 
 def _auto_maxlags(T: int, horizon_q: int) -> int:
@@ -87,39 +94,47 @@ def spearman(x: pd.Series, y: pd.Series) -> Optional[float]:
 
 def validate(parquet: str = PARQUET_DEFAULT) -> Dict[str, object]:
     df = pd.read_parquet(parquet)
-    df = df.sort_values("month_end").reset_index(drop=True)
-    out: Dict[str, object] = {"n_quarters": len(df), "results": {}}
-    fwd_cols = [c for c in df.columns if c.startswith("fwd_wml_")]
-    for fc in fwd_cols:
-        hq = int(fc.replace("fwd_wml_", "").replace("q", ""))
-        reg = nw_ols(df["comom"].to_numpy(float), df[fc].to_numpy(float), horizon_q=hq)
-        out["results"][fc] = {
-            "horizon_quarters": hq,
-            "nw_ols": reg,
-            "spearman": spearman(df["comom"], df[fc]),
-            "quintile": quintile_regime(df, fc),
-        }
+    if "factor" not in df.columns:        # 구 momentum-only 포맷 호환
+        df["factor"] = "momentum"
+    fwd_cols = sorted(c for c in df.columns if c.startswith("fwd_spread_") or c.startswith("fwd_wml_"))
+    out: Dict[str, object] = {"factors": {}}
+    for factor, g in df.groupby("factor"):
+        g = g.sort_values("month_end").reset_index(drop=True)
+        fres = {"n_quarters": len(g), "horizons": {}}
+        for fc in fwd_cols:
+            if fc not in g.columns:
+                continue
+            hq = int(fc.split("_")[-1].replace("q", ""))
+            fres["horizons"][fc] = {
+                "horizon_quarters": hq,
+                "nw_ols": nw_ols(g["comom"].to_numpy(float), g[fc].to_numpy(float), horizon_q=hq),
+                "spearman": spearman(g["comom"], g[fc]),
+                "quintile": quintile_regime(g, fc),
+            }
+        out["factors"][factor] = fres
     return out
 
 
 def _print(res: Dict[str, object]) -> None:
-    print(f"[validate_comom_decay] N={res['n_quarters']} 분기 (예비결과 — N<252 IC 게이트 전, 검정력 한계)")
-    print("Lou-Polk 가설: 높은 CoMOM(t) → 낮은/음 forward 모멘텀 스프레드 → slope<0, 5분위 단조감소.\n")
-    for fc, r in res["results"].items():
-        reg = r["nw_ols"]
-        yr = r["horizon_quarters"] // 4
-        st = "" if reg["slope"] is None else f"{reg['slope']:+.4f}"
-        se = "" if reg["nw_se"] is None else f"{reg['nw_se']:.4f}"
-        tt = "" if reg["nw_t"] is None else f"{reg['nw_t']:+.2f}"
-        r2 = "" if reg["r2"] is None else f"{reg['r2']:.3f}"
-        print(f"=== forward {r['horizon_quarters']}분기(~{yr}년) ===")
-        print(f"  NW-OLS slope b={st}  NW-SE={se}  NW-t={tt}  R²={r2}  (n={reg['n']}, maxlags={reg['maxlags']})")
-        print(f"  Spearman(CoMOM, fwd) = {r['spearman']}")
-        q = r["quintile"]
-        if isinstance(q, pd.DataFrame) and not q.empty:
-            print("  CoMOM 5분위별 forward 스프레드 평균:")
-            for idx, row in q.iterrows():
-                print(f"    {idx:>10}  mean={row['mean']:+.4f}  median={row['median']:+.4f}  n={int(row['count'])}")
+    print("[validate_comom_decay] CoMOM forward decay (관측 only, RULE 7) — 예비결과: N<252 IC 게이트 전, 검정력 한계.\n")
+    for factor, fres in res["factors"].items():
+        hyp = FACTOR_HYPOTHESIS.get(factor, "")
+        print(f"########## {factor}  (N={fres['n_quarters']}분기) ##########")
+        print(f"  가설: {hyp}")
+        for fc, r in fres["horizons"].items():
+            reg = r["nw_ols"]
+            yr = r["horizon_quarters"] / 4
+            st = "—" if reg["slope"] is None else f"{reg['slope']:+.4f}"
+            se = "—" if reg["nw_se"] is None else f"{reg['nw_se']:.4f}"
+            tt = "—" if reg["nw_t"] is None else f"{reg['nw_t']:+.2f}"
+            r2 = "—" if reg["r2"] is None else f"{reg['r2']:.3f}"
+            print(f"  --- forward {r['horizon_quarters']}분기(~{yr:.0f}년) ---")
+            print(f"    NW-OLS slope b={st}  NW-SE={se}  NW-t={tt}  R²={r2}  (n={reg['n']}, maxlags={reg['maxlags']})")
+            print(f"    Spearman(CoMOM, fwd) = {r['spearman']}")
+            q = r["quintile"]
+            if isinstance(q, pd.DataFrame) and not q.empty:
+                cells = "  ".join(f"{idx.split('(')[0]}={row['mean']:+.3f}" for idx, row in q.iterrows())
+                print(f"    5분위 forward 평균: {cells}")
         print()
 
 
