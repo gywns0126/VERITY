@@ -232,7 +232,13 @@ def _format_ticker_block(s: Dict[str, Any], fresh_prices: Optional[Dict[str, flo
     # 심리 근거 헤드라인 (있을 때만)
     heads = (s.get("sentiment") or {}).get("top_headlines")
     if isinstance(heads, list) and heads:
-        lines.append("  심리 근거: " + "; ".join(str(h)[:60] for h in heads[:2]))
+        try:
+            from api.utils.external_guard import neutralize_external as _neut
+        except Exception:
+            def _neut(x):
+                return str(x or "")
+        # 외부 뉴스 헤드라인 — 간접 injection 중화 후 Brain 컨텍스트에 합류
+        lines.append("  심리 근거: " + "; ".join(_neut(str(h)[:60]) for h in heads[:2]))
 
     # 리스크/postmortem memo
     rf = s.get("verity_brain", {}).get("red_flags", {})
