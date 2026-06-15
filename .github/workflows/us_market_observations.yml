@@ -49,6 +49,13 @@ jobs:
         continue-on-error: true
         run: python -m api.observability.crowding_observations
 
+      - name: Collect KR say-do divergence (v0, 관측 only)
+        # 2026-06-15 — PM 아이디어: 셀사이드 의견(말) vs 외국인+기관 순매매(행동) 괴리.
+        # report_summaries+consensus(말) × 네이버 frgn flow(행동) 부호괴리. 관측 only, 점수 wire 0.
+        # 🚨 GH IP 네이버 frgn 접근 N=1 검증 대기 — flow_ok=0(차단) 시 로컬 전환. graceful exit 0.
+        continue-on-error: true
+        run: python -m api.observability.say_do_divergence --max 60 --delay 0.5
+
       - name: Commit data/observations/
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
         # [[feedback_data_collection_verification_mandatory]] specific path commit (RULE 4).
