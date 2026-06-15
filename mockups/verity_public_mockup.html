@@ -14,10 +14,10 @@
   :root{
     --bg:#f2f4f6;--card:#fff;--ink:#191f28;--sub:#4e5968;--faint:#8b95a1;--line:#e5e8eb;
     --red:#f04452;--redS:#fff0f1;--amber:#ff9500;--amberS:#fff6e9;--blue:#3182f6;--blueS:#eef4ff;
-    --green:#15c47e;--greenS:#eafaf3;--vg:#0ca678;--vgS:#e7faf0;
+    --green:#15c47e;--greenS:#eafaf3;--vg:#0ca678;--vgS:#e7faf0;--vt:#6c5ce7;--vtS:#f0edff;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  body.dark{--bg:#0f1318;--card:#171c23;--ink:#e3e7ec;--sub:#9aa4b1;--faint:#828d9b;--line:#252b34;--vg:#7fffa0;--vgS:#11281d;--redS:#2a1a1d;--blueS:#152031;--amberS:#2a2113;--greenS:#0f241c}
+  body.dark{--bg:#0f1318;--card:#171c23;--ink:#e3e7ec;--sub:#9aa4b1;--faint:#828d9b;--line:#252b34;--vg:#7fffa0;--vgS:#11281d;--vt:#a99bff;--vtS:#241f3a;--redS:#2a1a1d;--blueS:#152031;--amberS:#2a2113;--greenS:#0f241c}
   body.dark{background:#000}
   body.dark .top{background:rgba(18,22,28,.94)}
   .tgl{position:absolute;top:15px;right:15px;background:var(--card);border:1px solid var(--line);color:var(--sub);font-family:inherit;font-size:11px;font-weight:700;padding:6px 11px;border-radius:999px;cursor:pointer}
@@ -36,17 +36,18 @@
   .h span{font-size:12px;color:var(--faint);font-weight:600}
   .card{background:var(--card);border-radius:20px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
   .row{display:flex;align-items:center;justify-content:space-between}
-  .name{font-size:17px;font-weight:800;letter-spacing:-.3px}
+  .name{font-size:17px;font-weight:700;letter-spacing:-.3px}
   .tk{font-size:12px;color:var(--faint);font-weight:600;margin-left:6px}
   .ago{font-size:12px;color:var(--faint);font-weight:600}
   .hook{border-radius:12px;padding:10px 12px;font-size:14px;font-weight:700;letter-spacing:-.2px;margin-top:10px}
   .hook.r{background:var(--redS);color:var(--red)} .hook.g{background:var(--greenS);color:var(--green)}
   .glance{font-size:13px;color:var(--sub);font-weight:600;padding:11px 2px 2px;letter-spacing:-.2px}
-  .pat{background:var(--vgS);border-radius:12px;padding:11px 12px;margin-top:8px}
-  .pat .t{font-size:11px;font-weight:800;color:var(--vg);margin-bottom:9px}
+  
+  .pat{background:var(--vtS);border-radius:12px;padding:11px 12px;margin-top:8px}
+  .pat .t{font-size:11px;font-weight:700;color:var(--vt);margin-bottom:9px}
   .mv{display:flex;align-items:flex-end;gap:16px;padding:0 2px}
   .mv .pt{display:flex;flex-direction:column;align-items:center;gap:5px}
-  .mv .v{font-size:11px;font-weight:800} .mv .dot{width:11px;height:11px;border-radius:6px} .mv .lb{font-size:10px;color:var(--faint);font-weight:600}
+  .mv .v{font-size:11px;font-weight:700} .mv .dot{width:11px;height:11px;border-radius:6px} .mv .lb{font-size:10px;color:var(--faint);font-weight:600}
   .toggle{cursor:pointer;margin-top:12px;font-size:12.5px;font-weight:700;color:var(--vg);display:flex;justify-content:center;align-items:center;gap:5px;padding:8px;border-radius:10px}
   .toggle.open{background:var(--vgS)}
   .body{display:none;margin-top:4px;padding-top:12px;border-top:1px solid var(--line)}
@@ -66,10 +67,10 @@
   .cal{display:flex;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line)}
   .cal .dd{flex-shrink:0;width:50px;font-size:12px;font-weight:800;color:var(--vg)} .cal .ev{font-size:13px;font-weight:600;color:var(--ink)} .cal .sub{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:1px}
   .gate{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:8px 0}
-  .gate .gf{height:100%;background:var(--vg);border-radius:5px}
-  .held{background:var(--vgS);color:var(--vg);font-size:12px;font-weight:700;padding:10px 12px;border-radius:12px;text-align:center;margin-top:10px;line-height:1.5}
+  .gate .gf{height:100%;background:var(--vt);border-radius:5px}
+  .held{background:var(--vtS);color:var(--vt);font-size:12px;font-weight:700;padding:10px 12px;border-radius:12px;text-align:center;margin-top:10px;line-height:1.5}
   .pm{display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600}
-  .ok{color:var(--green);font-weight:800} .no{color:var(--red);font-weight:800}
+  .ok{color:var(--green);font-weight:600} .no{color:var(--red);font-weight:600}
   .disc{text-align:center;font-size:11px;color:var(--faint);font-weight:600;padding:14px 16px 4px;line-height:1.6}
   /* search + chart */
   .search{display:flex;align-items:center;gap:9px;background:var(--card);border-radius:14px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px}
@@ -88,8 +89,8 @@
   /* heavy report */
   .stitle{font-size:13px;font-weight:800;color:var(--ink);padding:20px 4px 8px;letter-spacing:-.3px;display:flex;justify-content:space-between;align-items:baseline}
   .stitle span{font-size:11px;color:var(--faint);font-weight:600}
-  .kv{display:flex;justify-content:space-between;padding:8px 2px;font-size:13px;border-bottom:1px solid var(--line)}.kv:last-child{border:none}.kv .k{color:var(--sub);font-weight:600}.kv .v{font-weight:800}
-  .news{padding:9px 2px;border-bottom:1px solid var(--line)}.news:last-child{border:none}.news .ti{font-size:13.5px;font-weight:700;color:var(--ink);letter-spacing:-.2px}.news .lk{font-size:11.5px;font-weight:600;color:var(--vg);margin-top:3px}.news .mt{font-size:11px;color:var(--faint);font-weight:600;margin-top:2px}
+  .kv{display:flex;justify-content:space-between;padding:8px 2px;font-size:13px;border-bottom:1px solid var(--line)}.kv:last-child{border:none}.kv .k{color:var(--sub);font-weight:600}.kv .v{font-weight:700}
+  .news{padding:9px 2px;border-bottom:1px solid var(--line)}.news:last-child{border:none}.news .ti{font-size:13.5px;font-weight:700;color:var(--ink);letter-spacing:-.2px}.news .lk{font-size:11.5px;font-weight:600;color:var(--vt);margin-top:3px}.news .mt{font-size:11px;color:var(--faint);font-weight:600;margin-top:2px}
   .note{font-size:11px;color:var(--faint);font-weight:600;margin-top:9px;padding:0 2px;line-height:1.5}
   .export{width:100%;background:#0ca678;color:#fff;border:none;border-radius:14px;padding:15px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;margin-top:18px;letter-spacing:-.3px}
   .exnote{text-align:center;font-size:11px;color:var(--faint);font-weight:600;margin-top:8px;line-height:1.5}
@@ -123,7 +124,7 @@
           <div class="mv">
             <div class="pt"><div class="v" style="color:var(--red)">-18%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'18</div></div>
             <div class="pt"><div class="v" style="color:var(--red)">-24%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'21</div></div>
-            <div class="pt"><div class="v" style="color:var(--vg)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vg)"></div><div class="lb">현재</div></div>
+            <div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div>
           </div>
         </div>
         <div class="toggle" onclick="tog(this)">근거 3개 · 어떻게 나왔나 <span class="ar">▾</span></div>
@@ -147,7 +148,7 @@
             <div class="pt"><div class="v" style="color:var(--green)">+8%</div><div class="dot" style="background:var(--green)"></div><div class="lb">'22</div></div>
             <div class="pt"><div class="v" style="color:var(--green)">+5%</div><div class="dot" style="background:var(--green)"></div><div class="lb">'23</div></div>
             <div class="pt"><div class="v" style="color:var(--green)">+6%</div><div class="dot" style="background:var(--green)"></div><div class="lb">'24</div></div>
-            <div class="pt"><div class="v" style="color:var(--vg)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vg)"></div><div class="lb">현재</div></div>
+            <div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div>
           </div>
         </div>
         <div class="toggle" onclick="tog(this)">근거 2개 · 어떻게 나왔나 <span class="ar">▾</span></div>
@@ -225,7 +226,7 @@
             <div class="pt"><div class="v" style="color:var(--red)">-21%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'17</div></div>
             <div class="pt"><div class="v" style="color:var(--red)">-12%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'20</div></div>
             <div class="pt"><div class="v" style="color:var(--green)">+4%</div><div class="dot" style="background:var(--green)"></div><div class="lb">'23</div></div>
-            <div class="pt"><div class="v" style="color:var(--vg)">현재</div><div class="dot" style="background:#fff;border:2px solid var(--vg)"></div><div class="lb">D-12</div></div>
+            <div class="pt"><div class="v" style="color:var(--vt)">현재</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">D-12</div></div>
           </div>
         </div>
       </div>
