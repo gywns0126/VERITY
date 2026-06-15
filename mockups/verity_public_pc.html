@@ -18,6 +18,16 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;color:var(--ink)}
+  /* 다크 "프로 터미널" 모드 (눈 편의 + 토스로부터 거리두기) — 순흑 아닌 저휘도 */
+  body.dark{
+    --bg:#0f1318;--card:#171c23;--ink:#e3e7ec;--sub:#9aa4b1;--faint:#6b7682;--line:#252b34;
+    --upS:#2a1a1d;--downS:#152031;--amberS:#2a2113;--greenS:#0f241c;--violetS:#1e1b30;--blueS:#152031;
+  }
+  body.dark .nav{background:rgba(18,22,28,.96)}
+  body.dark .ftab .rw:hover{background:#1c222b}
+  body.dark .ptab .me td{background:#1c222b}
+  body.dark .ix,body.dark .card,body.dark .wcard,body.dark .ftab{box-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .tgl{margin-left:10px;background:var(--bg);border:1px solid var(--line);color:var(--sub);font-family:inherit;font-size:12px;font-weight:700;padding:7px 13px;border-radius:999px;cursor:pointer}
   .up{color:var(--up)} .down{color:var(--down)}
   /* top nav */
   .nav{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);height:60px;display:flex;align-items:center;gap:28px;padding:0 28px}
@@ -110,6 +120,7 @@
     </nav>
     <div class="search"><span class="mag"></span><input placeholder="종목·코드 검색 (예: 에코프로비엠, 247540)"></div>
     <span class="navpill">사실·연결만 · 검증 중</span>
+    <button class="tgl" id="tglb" onclick="toggleTheme()">다크</button>
   </header>
 
   <div class="layout">
@@ -359,6 +370,7 @@
   </div>
 
 <script>
+  function toggleTheme(){var d=document.body.classList.toggle('dark');document.getElementById('tglb').textContent=d?'라이트':'다크'}
   function go(btn,id){
     document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on')});
     document.getElementById(id).classList.add('on');
