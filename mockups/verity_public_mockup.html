@@ -67,6 +67,20 @@
   .pm{display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600}
   .ok{color:var(--green);font-weight:800} .no{color:var(--red);font-weight:800}
   .disc{text-align:center;font-size:11px;color:var(--faint);font-weight:600;padding:14px 16px 4px;line-height:1.6}
+  /* search + chart */
+  .search{display:flex;align-items:center;gap:9px;background:var(--card);border-radius:14px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px}
+  .search .mag{width:15px;height:15px;border:2px solid var(--faint);border-radius:50%;flex-shrink:0;position:relative}
+  .search .mag::after{content:"";position:absolute;width:2px;height:6px;background:var(--faint);right:-3px;bottom:-3px;transform:rotate(-45deg)}
+  .search input{border:none;outline:none;font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);width:100%;background:none}
+  .search input::placeholder{color:var(--faint);font-weight:500}
+  .wl{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px}
+  .wl .c{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:700;color:var(--sub);cursor:pointer}
+  .wl .c.act{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .wlnote{font-size:11px;color:var(--faint);font-weight:600;padding:0 4px 14px}
+  .px{display:flex;align-items:baseline;gap:9px;margin:4px 2px 8px}
+  .px .p{font-size:25px;font-weight:800;letter-spacing:-1px} .px .ch{font-size:13px;font-weight:800}
+  .per{display:flex;gap:5px;margin-top:8px}.per b{font-size:12px;font-weight:700;color:var(--faint);padding:5px 12px;border-radius:8px;cursor:pointer}.per b.on{background:var(--blueS);color:var(--blue)}
+  .evk{display:flex;gap:16px;margin-top:11px;font-size:11px;font-weight:600;color:var(--sub)}.evk i{font-style:normal;display:inline-flex;align-items:center;gap:5px}.evk .d{width:8px;height:8px;border-radius:4px;display:inline-block}
   /* bottom nav */
   .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
   .nav button{flex:1;background:none;border:none;cursor:pointer;font-family:inherit;font-size:11px;font-weight:700;color:var(--faint);padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:3px}
@@ -137,10 +151,34 @@
 
     <!-- ───── 탭2: 종목 (리스크 레이더 — forensics) ───── -->
     <section class="sec" id="s-stock">
-      <div class="h">종목 리스크 레이더 <span>사실 + 일정</span></div>
+      <div class="h">종목 <span>검색 · 차트 · 리스크</span></div>
+
+      <!-- 검색 + 관심종목 -->
+      <div class="search"><span class="mag"></span><input placeholder="종목명·코드 검색 (예: 삼성전자, 005930)" /></div>
+      <div class="wl">
+        <span class="c act">두산에너빌리티</span><span class="c">에코프로비엠</span><span class="c">엠케이전자</span><span class="c">＋ 관심종목</span>
+      </div>
+      <div class="wlnote">검색 → 관심종목 추가 → 속보 피드에 뜸</div>
+
+      <!-- 연결된 차트 (가격 + 공시·수급 마커) -->
       <div class="card">
         <div class="row"><div><span class="name">두산에너빌리티</span><span class="tk">034020</span></div><span class="ago">기준 6/16 장중</span></div>
-        <div class="glance" style="padding-top:8px">지금 이 종목, 흩어진 공시·일정을 한 화면에. (사실/일정만 — 판단은 사용자)</div>
+        <div class="px"><span class="p">21,450</span><span class="ch" style="color:var(--red)">−6.2% (−1,420)</span></div>
+        <svg viewBox="0 0 320 130" width="100%" height="128" preserveAspectRatio="none" style="display:block;margin-top:2px">
+          <path d="M10,98 L30,90 L50,93 L70,82 L90,74 L110,78 L130,64 L150,57 L170,60 L190,49 L210,46 L230,53 L250,42 L270,90 L290,84 L310,80 L310,130 L10,130 Z" fill="rgba(49,130,246,.07)" stroke="none"/>
+          <polyline points="10,98 30,90 50,93 70,82 90,74 110,78 130,64 150,57 170,60 190,49 210,46 230,53 250,42 270,90 290,84 310,80" fill="none" stroke="#3182f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="250" y1="16" x2="250" y2="122" stroke="#f04452" stroke-width="1" stroke-dasharray="3 3" opacity=".45"/>
+          <circle cx="250" cy="42" r="4.5" fill="#f04452" stroke="#fff" stroke-width="2"/>
+          <circle cx="290" cy="84" r="4.5" fill="#3182f6" stroke="#fff" stroke-width="2"/>
+        </svg>
+        <div class="per"><b>1M</b><b class="on">3M</b><b>1Y</b><b>전체</b></div>
+        <div class="evk"><i><span class="d" style="background:var(--red)"></span>유상증자 공시</i><i><span class="d" style="background:var(--blue)"></span>외인 순매도 시작</i></div>
+        <div class="wlnote" style="padding:10px 2px 0">공시·수급이 *차트 위에* 찍힘 — 토스·네이버는 가격선만. 가격은 캔버스, 차별은 연결.</div>
+      </div>
+
+      <div class="card">
+        <div class="row"><div><span class="name">두산에너빌리티</span><span class="tk">034020</span> 리스크 레이더</div></div>
+        <div class="glance" style="padding-top:8px">흩어진 공시·일정을 한 화면에. (사실/일정만 — 판단은 사용자)</div>
 
         <div style="margin-top:12px">
           <div class="cn"><span class="chip r">오버행</span><span class="f">CB 전환가능 D-12 · 유통주식 4.1%</span></div>
