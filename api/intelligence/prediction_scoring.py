@@ -82,6 +82,37 @@ def _realized_stock_return(
     return round((eval_price - base_price) / base_price * 100.0, 4)
 
 
+def _realized_terminal_return(
+    ticker: str, base_date: str, eval_date: str, available: List[str]
+) -> Optional[float]:
+    """eval 시점 가격 소멸(상폐/소멸) 케이스 종결 실현수익 — survivorship-free 교정.
+
+    2026-06-15 추가 (PM 승인 "고고", 사전등록 = ic_dead_freeze 후속 / 자가감사 잔여 gap).
+    정상 경로(_realized_stock_return)에서 eval 가격 결손 → 드롭(unscoreable)되던 것은 상폐 손실을
+    IC 에서 배제 = 생존편향(우리가 +346bp/yr 로 정량화한 그 편향이 IC 로 재진입). 본 fallback 은
+    base~eval 사이 *마지막 가용* snapshot 가격으로 종결가를 잡아 *드롭 대신 하락을 포착*한다.
+    🚨 LOCKED 정상 산식 무변경 — 기존에 *버려지던* 케이스에만 적용(grace 초과 후). base 결손이면 None.
+    """
+    base_snap_date = _find_nearest_snapshot(base_date, available)
+    if not base_snap_date:
+        return None
+    base_snap = load_snapshot(base_snap_date)
+    if not base_snap:
+        return None
+    base_price = _get_price_map_from_snapshot(base_snap).get(ticker)
+    if not base_price or base_price <= 0:
+        return None
+    # base 이후 ~ eval 이하 snapshot 중 ticker 가격이 존재하는 *마지막*(최신) 것 = 종결가
+    for d in sorted((x for x in available if base_snap_date < x <= eval_date), reverse=True):
+        snap = load_snapshot(d)
+        if not snap:
+            continue
+        p = _get_price_map_from_snapshot(snap).get(ticker)
+        if p and p > 0:
+            return round((p - base_price) / base_price * 100.0, 4)
+    return None
+
+
 def _is_hit(direction: str, realized_return: float) -> Optional[bool]:
     """방향 적중 여부. neutral = 방향 콜 부재 → hit_rate 모집단 제외(None)."""
     if direction == "up":
@@ -220,6 +251,7 @@ def score_predictions(
     deferred_sector = 0
     pending = 0
     unscoreable = 0
+    delisted_scored = 0   # survivorship-free 종결 채점(상폐/소멸 손실 포착, 2026-06-15)
 
     for e in entries:
         if e.get("scored"):
@@ -245,11 +277,25 @@ def score_predictions(
             except ValueError:
                 ed = today
             if (today - ed).days > GRACE_DAYS:
-                e["scored"] = True
-                e["realized_return"] = None
-                e["hit"] = None
-                e["_skip_reason"] = "no_snapshot_within_grace"
-                unscoreable += 1
+                # 드롭 전 survivorship-free 종결 시도 (상폐/소멸 손실 포착)
+                term = _realized_terminal_return(
+                    str(e.get("target")), _created_date(e), eval_date, available
+                )
+                if term is not None:
+                    e["scored"] = True
+                    e["realized_return"] = term
+                    e["hit"] = _is_hit(str(e.get("direction")), term)
+                    e["ic_contrib"] = e.get("pred_score")
+                    e["realized_source"] = "last_available_delisting"
+                    e["delisted"] = True
+                    newly_scored.append(e)
+                    delisted_scored += 1
+                else:
+                    e["scored"] = True
+                    e["realized_return"] = None
+                    e["hit"] = None
+                    e["_skip_reason"] = "no_snapshot_within_grace"
+                    unscoreable += 1
             else:
                 pending += 1
             continue
@@ -274,6 +320,7 @@ def score_predictions(
 
     return {
         "scored": len(newly_scored),
+        "delisted_scored": delisted_scored,
         "deferred_sector": deferred_sector,
         "pending": pending,
         "unscoreable": unscoreable,
