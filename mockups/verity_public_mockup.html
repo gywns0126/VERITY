@@ -81,6 +81,12 @@
   .px .p{font-size:25px;font-weight:800;letter-spacing:-1px} .px .ch{font-size:13px;font-weight:800}
   .per{display:flex;gap:5px;margin-top:8px}.per b{font-size:12px;font-weight:700;color:var(--faint);padding:5px 12px;border-radius:8px;cursor:pointer}.per b.on{background:var(--blueS);color:var(--blue)}
   .evk{display:flex;gap:16px;margin-top:11px;font-size:11px;font-weight:600;color:var(--sub)}.evk i{font-style:normal;display:inline-flex;align-items:center;gap:5px}.evk .d{width:8px;height:8px;border-radius:4px;display:inline-block}
+  /* heavy report */
+  .stitle{font-size:13px;font-weight:800;color:var(--ink);padding:20px 4px 8px;letter-spacing:-.3px;display:flex;justify-content:space-between;align-items:baseline}
+  .stitle span{font-size:11px;color:var(--faint);font-weight:600}
+  .kv{display:flex;justify-content:space-between;padding:8px 2px;font-size:13px;border-bottom:1px solid var(--line)}.kv:last-child{border:none}.kv .k{color:var(--sub);font-weight:600}.kv .v{font-weight:800}
+  .news{padding:9px 2px;border-bottom:1px solid var(--line)}.news:last-child{border:none}.news .ti{font-size:13.5px;font-weight:700;color:var(--ink);letter-spacing:-.2px}.news .lk{font-size:11.5px;font-weight:600;color:var(--violet);margin-top:3px}.news .mt{font-size:11px;color:var(--faint);font-weight:600;margin-top:2px}
+  .note{font-size:11px;color:var(--faint);font-weight:600;margin-top:9px;padding:0 2px;line-height:1.5}
   /* bottom nav */
   .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
   .nav button{flex:1;background:none;border:none;cursor:pointer;font-family:inherit;font-size:11px;font-weight:700;color:var(--faint);padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:3px}
@@ -151,7 +157,7 @@
 
     <!-- ───── 탭2: 종목 (리스크 레이더 — forensics) ───── -->
     <section class="sec" id="s-stock">
-      <div class="h">종목 <span>검색 · 차트 · 리스크</span></div>
+      <div class="h">종목 리포트 <span>이 종목의 모든 것</span></div>
 
       <!-- 검색 + 관심종목 -->
       <div class="search"><span class="mag"></span><input placeholder="종목명·코드 검색 (예: 삼성전자, 005930)" /></div>
@@ -176,9 +182,28 @@
         <div class="wlnote" style="padding:10px 2px 0">공시·수급이 *차트 위에* 찍힘 — 토스·네이버는 가격선만. 가격은 캔버스, 차별은 연결.</div>
       </div>
 
+      <!-- 기본 지표 (Toss식 사실) -->
+      <div class="stitle">기본 지표 <span>사실</span></div>
+      <div class="grid">
+        <div class="tile"><div class="k">PER</div><div class="val">18.4</div><div class="d">업종 평균 22.1</div></div>
+        <div class="tile"><div class="k">PBR</div><div class="val">2.1</div><div class="d">—</div></div>
+        <div class="tile"><div class="k">배당수익률</div><div class="val">0.8%</div><div class="d">최근 결산</div></div>
+        <div class="tile"><div class="k">시가총액</div><div class="val">13.6조</div><div class="d">코스피 28위</div></div>
+        <div class="tile"><div class="k">52주</div><div class="val" style="font-size:15px">9,800~24,300</div><div class="d">현재 -12%↓고점</div></div>
+        <div class="tile"><div class="k">거래대금</div><div class="val">4,210억</div><div class="d">20일 평균 ×1.8</div></div>
+      </div>
+
+      <!-- 수급 (이 종목) -->
+      <div class="stitle">수급 — 최근 5일 (사실)</div>
       <div class="card">
-        <div class="row"><div><span class="name">두산에너빌리티</span><span class="tk">034020</span> 리스크 레이더</div></div>
-        <div class="glance" style="padding-top:8px">흩어진 공시·일정을 한 화면에. (사실/일정만 — 판단은 사용자)</div>
+        <div class="barRow"><span class="lab">외국인</span><span class="track"><span class="fill" style="width:62%;background:var(--red)"></span></span><span class="amt" style="color:var(--red)">−920억</span></div>
+        <div class="barRow"><span class="lab">기관</span><span class="track"><span class="fill" style="width:28%;background:var(--blue)"></span></span><span class="amt" style="color:var(--blue)">+340억</span></div>
+        <div class="barRow"><span class="lab">개인</span><span class="track"><span class="fill" style="width:40%;background:var(--green)"></span></span><span class="amt" style="color:var(--green)">+580억</span></div>
+      </div>
+
+      <div class="stitle">공시·리스크 레이더 <span>사실 + 일정</span></div>
+      <div class="card">
+        <div class="glance" style="padding-top:2px">흩어진 공시·일정을 한 화면에. (사실/일정만 — 판단은 사용자)</div>
 
         <div style="margin-top:12px">
           <div class="cn"><span class="chip r">오버행</span><span class="f">CB 전환가능 D-12 · 유통주식 4.1%</span></div>
@@ -201,7 +226,50 @@
         <div class="srcL" style="margin-top:0">깨끗 (이상 없음 — 사실)</div>
         <div class="cn"><span class="chip g">정상</span><span class="f">감사의견 적정 · 소송 계류 없음 · 상장폐지 사유 없음</span></div>
       </div>
-      <div class="disc">전부 DART 공시·KRX 시세에서 나온 사실 · 위험/호재 등급 아님 · 추천 아님</div>
+      <!-- 재무 요약 (DART, 사실) -->
+      <div class="stitle">재무 요약 <span>DART · 연간</span></div>
+      <div class="card">
+        <div class="kv"><span class="k">매출 (조)</span><span class="v">16.2 → 17.8 → 19.1</span></div>
+        <div class="kv"><span class="k">영업이익 (조)</span><span class="v">1.1 → 1.4 → 1.6</span></div>
+        <div class="kv"><span class="k">순이익 (조)</span><span class="v">0.6 → 0.8 → 0.9</span></div>
+        <div class="kv"><span class="k">부채비율</span><span class="v">131% → 127% → 124%</span></div>
+        <div class="kv"><span class="k">ROE</span><span class="v">7.2%</span></div>
+      </div>
+
+      <!-- 컨센서스 (애널리스트 사실 — 우리 의견 아님) -->
+      <div class="stitle">애널리스트 컨센서스 <span>FnGuide 집계</span></div>
+      <div class="card">
+        <div class="kv"><span class="k">목표주가 평균</span><span class="v">26,000원</span></div>
+        <div class="kv"><span class="k">투자의견</span><span class="v">매수 8 · 중립 3 · 매도 0</span></div>
+        <div class="kv"><span class="k">추정 EPS (올해)</span><span class="v">1,165원</span></div>
+        <div class="note">애널리스트 집계 사실 — VERITY 자체 의견·등급 아님. 자체 점수는 검증 후(2027) 공개.</div>
+      </div>
+
+      <!-- 관련 뉴스 (공시-first + 연결) -->
+      <div class="stitle">관련 뉴스 <span>공시-first</span></div>
+      <div class="card">
+        <div class="news"><div class="ti">두산에너빌리티, 유상증자 3,200억 결정</div><div class="lk">→ 오버행 6.2% · 외인 3일 순매도 연결</div><div class="mt">DART 공시 · 8분 전</div></div>
+        <div class="news"><div class="ti">"대형 원전 수주 기대" 보도</div><div class="lk">→ 공급계약 공시(6/09)와 교차 확인 필요</div><div class="mt">기사 · 2시간 전</div></div>
+        <div class="news"><div class="ti">최대주주 지분 일부 매도 공시</div><div class="lk">→ 거버넌스 플래그 (6/02)</div><div class="mt">DART 공시 · 6/02</div></div>
+      </div>
+
+      <!-- 종목 캘린더 -->
+      <div class="stitle">이 종목 일정</div>
+      <div class="card">
+        <div class="cal"><div class="dd">D-12</div><div><div class="ev">CB 전환가능일</div><div class="sub">락업/오버행</div></div></div>
+        <div class="cal"><div class="dd">D+18</div><div><div class="ev">2분기 실적발표</div><div class="sub">실적</div></div></div>
+        <div class="cal" style="border:none"><div class="dd">D+24</div><div><div class="ev">배당락</div><div class="sub">배당</div></div></div>
+      </div>
+
+      <!-- 유리박스 (이 종목) -->
+      <div class="stitle">유리박스 — 이 종목 <span>과정만</span></div>
+      <div class="card">
+        <div class="kv"><span class="k">관측 기록</span><span class="v">14건 누적</span></div>
+        <div class="kv"><span class="k">검증 진행률</span><span class="v">N=134 / 252</span></div>
+        <div class="held">이 종목의 자체 등급·점수는 검증 후(2027) 공개.<br>지금은 사실·연결·과정만.</div>
+      </div>
+
+      <div class="disc">한 종목의 모든 것 — VERITY가 가진 사실 전부 한 페이지에 · 등급·추천 아님 · 점수 held(2027)</div>
     </section>
 
     <!-- ───── 탭3: 시장 (수급·캘린더·매크로 교차) ───── -->
