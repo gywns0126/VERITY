@@ -97,7 +97,7 @@ export default function DisclosureConnectCard(props: { width?: number }) {
     >
       {/* 헤더 */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "4px 4px 12px" }}>
-        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.4 }}>📡 내 종목 속보</div>
+        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.4 }}>내 종목 속보</div>
         <div style={{ fontSize: 12, color: C.faint, fontWeight: 600 }}>공시 + 연결</div>
       </div>
 
@@ -170,22 +170,10 @@ export default function DisclosureConnectCard(props: { width?: number }) {
             </div>
 
             {/* 과거 패턴 — 킬러("처음 아님") */}
-            <div
-              style={{
-                background: C.violetSoft,
-                borderRadius: 12,
-                padding: "10px 12px",
-                display: "flex",
-                gap: 8,
-                alignItems: "flex-start",
-              }}
-            >
-              <span style={{ fontSize: 13 }}>🕰️</span>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: C.violet, marginBottom: 2 }}>이게 처음이 아님</div>
-                <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600, lineHeight: 1.45, letterSpacing: -0.2 }}>
-                  {it.pattern}
-                </div>
+            <div style={{ background: C.violetSoft, borderRadius: 12, padding: "10px 12px" }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.violet, marginBottom: 3 }}>이게 처음이 아님</div>
+              <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600, lineHeight: 1.45, letterSpacing: -0.2 }}>
+                {it.pattern}
               </div>
             </div>
           </div>
