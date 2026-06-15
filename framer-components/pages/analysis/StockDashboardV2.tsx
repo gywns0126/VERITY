@@ -737,61 +737,6 @@ function MetricCard({ label, value, color = C.textPrimary }: { label: string; va
     )
 }
 
-/* EstateLandexCard — 부동산 자산 (별도 API) */
-type EstateFacResp = {
-    landex_score?: number
-    grade?: string
-    region?: string
-    valuation?: number
-    occupancy?: number
-    [k: string]: any
-}
-
-function EstateLandexCard({ ticker, apiBase }: { ticker: string; apiBase: string }) {
-    const [data, setData] = useState<EstateFacResp | null>(null)
-    const [loading, setLoading] = useState(false)
-    const [err, setErr] = useState<string | null>(null)
-
-    useEffect(() => {
-        const api = _normalizeApi(apiBase)
-        if (!api || !ticker) return
-        const ac = new AbortController()
-        setLoading(true)
-        fetch(`${api}/api/estate/landex?ticker=${encodeURIComponent(ticker)}`, { signal: ac.signal })
-            .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
-            .then((d) => { if (!ac.signal.aborted) { setData(d); setErr(null) } })
-            .catch((e) => { if (!ac.signal.aborted) setErr(e.message) })
-            .finally(() => { if (!ac.signal.aborted) setLoading(false) })
-        return () => ac.abort()
-    }, [ticker, apiBase])
-
-    if (loading) return (
-        <div style={subCard}>
-            <span style={{ color: C.textTertiary, fontSize: T.cap }}>부동산 데이터 로딩 중…</span>
-        </div>
-    )
-    if (err) return (
-        <div style={subCard}>
-            <span style={{ color: C.danger, fontSize: T.cap }}>부동산 데이터 실패: {err}</span>
-        </div>
-    )
-    if (!data) return null
-
-    return (
-        <div style={subCard}>
-            <span style={subCardCap}>부동산 자산 (LANDEX)</span>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: S.sm, marginTop: S.sm }}>
-                {data.landex_score != null && (
-                    <MetricCard label="LANDEX 점수" value={String(data.landex_score)} color={scoreColor(data.landex_score)} />
-                )}
-                {data.grade && <MetricCard label="등급" value={data.grade} />}
-                {data.region && <MetricCard label="지역" value={data.region} />}
-                {data.valuation != null && <MetricCard label="평가액" value={fmtLocale(data.valuation)} />}
-                {data.occupancy != null && <MetricCard label="공실률" value={fmtPct(data.occupancy * 100, 1)} />}
-            </div>
-        </div>
-    )
-}
 
 /* ◆ SUB COMPONENTS END ◆ */
 
@@ -3925,10 +3870,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                 </span>
             </div>
 
-            {/* 2. ESTATE LANDEX 가중평균 */}
-            <EstateLandexCard ticker={ticker} apiBase={apiBase} />
-
-            {/* 3. 사업장·해외 거점 블록 */}
+            {/* 사업장·해외 거점 블록 (ESTATE LANDEX 카드는 5/21 폐기로 제거) */}
             {hasFac && (
                 <>
                     <div style={{
