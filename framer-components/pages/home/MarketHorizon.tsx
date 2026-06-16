@@ -364,6 +364,9 @@ export default function MarketHorizon(props: Props) {
                             }}>
                                 점 = median · 박스 = 25-75 percentile · 선 = 5-95 percentile
                             </div>
+                            <div style={{ color: C.textDisabled, fontSize: 10, paddingTop: 2, lineHeight: 1.5 }}>
+                                가설 · V0 추정 (regime lookup, 백테스트 보정 전) — 실측 분포 아님
+                            </div>
                         </div>
                     </div>
 
@@ -405,7 +408,7 @@ export default function MarketHorizon(props: Props) {
                                         color: C.textTertiary, fontSize: 11, lineHeight: 1.5,
                                     }}>
                                         <span style={{ color: C.textSecondary, fontWeight: 700 }}>
-                                            12M 집계
+                                            12M 집계 (N={data.analog_horizons["12m"].n_samples})
                                         </span>
                                         {" — "}
                                         median <span style={{ ...MONO, color: C.textPrimary }}>
@@ -422,6 +425,9 @@ export default function MarketHorizon(props: Props) {
                                         <span style={{ ...MONO, color: C.textPrimary }}>
                                             {data.analog_horizons["12m"].min_pct}% / +{data.analog_horizons["12m"].max_pct}%
                                         </span>
+                                        <div style={{ color: C.textDisabled, fontSize: 10, marginTop: 3, lineHeight: 1.5 }}>
+                                            가설 · 수작업 선별 위기사례 (선택·생존 편향) — 통계 분포 아님
+                                        </div>
                                     </div>
                                 )}
                             </div>
