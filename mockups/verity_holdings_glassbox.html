@@ -97,6 +97,18 @@
   .pnl .amt{font-size:22px;font-weight:800;letter-spacing:-.6px}
   .pnl .pct{font-size:13px;font-weight:800;margin-left:7px}
   .factnote{font-size:11px;color:var(--faint);font-weight:600;margin-top:8px;background:var(--bg);border-radius:8px;padding:7px 10px;line-height:1.5}
+  /* 사실 합성 요약 (결정론·LLM 없음) */
+  .synth{background:var(--card);border-radius:20px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);border:1px solid var(--vgS)}
+  .synth .sl{font-size:11px;font-weight:800;color:var(--vg);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .synth .lead{font-size:15.5px;font-weight:800;color:var(--ink);letter-spacing:-.4px;line-height:1.5;margin-bottom:12px}
+  .synth .fl{display:flex;gap:11px;padding:8px 0;border-top:1px solid var(--line);align-items:baseline}
+  .synth .fl .t{flex-shrink:0;width:40px;font-size:11px;font-weight:800;color:var(--faint)}
+  .synth .fl .v{font-size:13px;font-weight:600;color:var(--sub);line-height:1.55;letter-spacing:-.2px}
+  .synth .fl .v b{color:var(--ink);font-weight:700}
+  .synth .sf{font-size:11px;color:var(--faint);font-weight:600;margin-top:11px;padding-top:9px;border-top:1px solid var(--line);line-height:1.5}
+  /* PDF 추출 */
+  .export{width:100%;background:#0ca678;color:#fff;border:none;border-radius:14px;padding:15px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;margin-top:6px;letter-spacing:-.3px}
+  .exnote{text-align:center;font-size:11px;color:var(--faint);font-weight:600;margin-top:8px;margin-bottom:6px;line-height:1.5}
   .hold{display:none}.hold.on{display:block}
 </style>
 </head>
@@ -133,6 +145,19 @@
           </div>
           <div class="factnote">평가금액 7,120,000원 = 현재가 × 보유수량. 평가손익은 입력한 평단 기준 단순 계산(사실)이며, 매수·매도·추가매수 권유가 아닙니다.</div>
         </div>
+      </div>
+
+      <!-- 사실 합성 요약 (결정론 템플릿, LLM 없음 — 한눈 답) -->
+      <div class="synth">
+        <div class="sl">사실 합성 · 한눈 요약</div>
+        <div class="lead">잠정실적 컨센 상회 · 외인 순매도 · 자사주 소각 진행</div>
+        <div class="fl"><span class="t">실적</span><span class="v">영업이익 <b>9.2조</b> — 컨센 8.7조 <b>+5.7% 상회</b></span></div>
+        <div class="fl"><span class="t">수급</span><span class="v">외국인 <b>3일 순매도 −2,140억</b> · 개인 +1,530억</span></div>
+        <div class="fl"><span class="t">자본</span><span class="v"><b>자사주 3조 소각</b> 공시 (10/2)</span></div>
+        <div class="fl"><span class="t">재무</span><span class="v">부채비율 <b>38%</b>(업종중앙 31%) · Altman-Z <b>3.4</b> · PER 14.2</span></div>
+        <div class="fl"><span class="t">지배</span><span class="v">총수일가·계열 <b>21.2%</b> 보유</span></div>
+        <div class="fl"><span class="t">일정</span><span class="v">확정실적 <b>D-21</b> · 배당락 D-34</span></div>
+        <div class="sf">화면의 사실을 규칙으로 추린 요약 — AI 작문·자체 등급 아님 · 출처 있음 · 판단 없음</div>
       </div>
 
       <!-- 방금 무슨 일 (공시-first 훅 + 연결) -->
@@ -232,6 +257,10 @@
         <div class="cal"><div class="dd">D-21</div><div><div class="ev">3분기 확정실적</div><div class="sub">실적</div></div></div>
         <div class="cal" style="border:none"><div class="dd">D-34</div><div><div class="ev">배당락</div><div class="sub">배당</div></div></div>
       </div>
+
+      <!-- PDF 추출 (전 섹션 한 장 묶음 — 따로 찾지 않게) -->
+      <button class="export" onclick="alert('PDF 추출 (mock)\n\n사실 합성 요약 + 방금 무슨 일 + 리스크 레이더 + 팩트 + 수급 + 지분구조 + 부동산 + 일정\n→ 한 문서로 자동 묶음')">이 보유종목 리포트 추출 (PDF · 한 장)</button>
+      <div class="exnote">사실 합성 요약 · 방금 무슨 일 · 리스크 레이더 · 팩트 · 지분 · 부동산 · 일정을 한 문서로 자동 묶음 (따로 찾지 않게) — AI 작문·자체 등급 아님</div>
     </section>
 
     <!-- ══════════ 보유 2: NVIDIA (US, 영문 뉴스) ══════════ -->
@@ -248,6 +277,19 @@
           </div>
           <div class="factnote">평가금액 $3,448 = 현재가 × 보유수량. 평가손익은 입력한 평단 기준 단순 계산(사실)이며, 투자판단 권유가 아닙니다.</div>
         </div>
+      </div>
+
+      <!-- 사실 합성 요약 (결정론 템플릿, LLM 없음 — 한눈 답) -->
+      <div class="synth">
+        <div class="sl">사실 합성 · 한눈 요약</div>
+        <div class="lead">데이터센터 매출 컨센 상회 · 가이던스 상향 · 밸류 역사적 상단</div>
+        <div class="fl"><span class="t">실적</span><span class="v">데이터센터 매출 <b>$30.8B</b> — 컨센 $28.4B 상회 (<b>+112% YoY</b>)</span></div>
+        <div class="fl"><span class="t">자본</span><span class="v"><b>자사주 $50B 매입</b> 승인 · 가이던스 상향</span></div>
+        <div class="fl"><span class="t">밸류</span><span class="v">PER <b>48.2</b> · 5년 분위 <b>96%ile</b> (역사적 상단)</span></div>
+        <div class="fl"><span class="t">내부자</span><span class="v">Form 4 임원 매도 2건 (10b5-1 정기)</span></div>
+        <div class="fl"><span class="t">재무</span><span class="v">Debt/Equity <b>0.12</b> · F-Score <b>8/9</b></span></div>
+        <div class="fl"><span class="t">일정</span><span class="v">다음 10-Q <b>D-18</b></span></div>
+        <div class="sf">화면의 사실을 규칙으로 추린 요약 — AI 작문·자체 등급 아님 · 출처 있음 · 판단 없음</div>
       </div>
 
       <!-- 방금 무슨 일 — US는 영문 원문 (친구 아이디어: 미국 회사 영문 최신소식) -->
@@ -297,6 +339,10 @@
         <div class="cal"><div class="dd">D-18</div><div><div class="ev">Q3 10-Q filing</div><div class="sub">실적</div></div></div>
         <div class="cal" style="border:none"><div class="dd">D-40</div><div><div class="ev">GTC conference</div><div class="sub">이벤트</div></div></div>
       </div>
+
+      <!-- PDF 추출 (전 섹션 한 장 묶음 — 따로 찾지 않게) -->
+      <button class="export" onclick="alert('PDF 추출 (mock)\n\n사실 합성 요약 + 방금 무슨 일(영문) + 리스크 레이더 + 팩트 + 일정\n→ 한 문서로 자동 묶음')">이 보유종목 리포트 추출 (PDF · 한 장)</button>
+      <div class="exnote">사실 합성 요약 · 방금 무슨 일 · 리스크 레이더 · 팩트 · 일정을 한 문서로 자동 묶음 (따로 찾지 않게) — AI 작문·자체 등급 아님</div>
     </section>
 
     <!-- ══════════ 공통: 시장 맥락 (관측) ══════════ -->
