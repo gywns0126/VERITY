@@ -62,8 +62,12 @@ def _recompute_brain_score(rec: Dict[str, Any], w_fact: float, w_sent: float) ->
     vci_bonus = vb.get("vci_bonus") or 0
     candle_bonus = vb.get("candle_bonus") or 0
     red_flag_penalty = vb.get("red_flag_penalty") or 0
-    raw = fs * w_fact + ss * w_sent + vci_bonus + candle_bonus - red_flag_penalty
-    return max(0, min(100, raw))
+    # 2026-06-17 fix: production raw(verity_brain:1345)의 gs_bonus+inst_bonus 누락 → BUY 모집단 괴리.
+    # 둘 다 snapshot persist(main.py). 옛 스냅샷엔 부재 시 0(연구도구, forward 정합).
+    gs_bonus = vb.get("gs_bonus") or 0
+    inst_bonus = vb.get("inst_13f_bonus") or 0
+    raw = fs * w_fact + ss * w_sent + vci_bonus + gs_bonus + candle_bonus + inst_bonus - red_flag_penalty
+    return round(max(0, min(100, raw)))  # production 은 round(_clip(raw)) — 정수 grading 경계 일치
 
 
 def _backtest_one_candidate(

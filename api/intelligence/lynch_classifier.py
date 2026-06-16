@@ -86,7 +86,7 @@ CLASSES = (
 # AdminDashboard 배지 색 (디자인 토큰 호환 키)
 CLASS_BADGE: Dict[str, Dict[str, str]] = {
     "FAST_GROWER":  {"color": "success", "label": "Fast Grower",  "summary": "매출 15%+ 고성장"},
-    "STALWART":     {"color": "info",    "label": "Stalwart",     "summary": "안정 성장 5~15%"},
+    "STALWART":     {"color": "info",    "label": "Stalwart",     "summary": "안정 성장 8~15%"},
     "TURNAROUND":   {"color": "warn",    "label": "Turnaround",   "summary": "적자→흑자 전환"},
     "CYCLICAL":     {"color": "watch",   "label": "Cyclical",     "summary": "업황 민감"},
     "ASSET_PLAY":   {"color": "purple",  "label": "Asset Play",   "summary": "저PBR 자산 할인"},

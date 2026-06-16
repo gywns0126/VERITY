@@ -1329,9 +1329,13 @@ def analyze_stock(
             ticker_sig = inst_13f.get("ticker_signal", {})
             issuer_key = (stock.get("name") or "").upper()
             matched = ticker_sig.get(issuer_key, {})
-            if not matched:
+            if not matched and issuer_key:
+                # 2026-06-17 fix: 양방향 substring(AMD in AMDOCS / 단일문자 in 다수) 오매칭 →
+                # 보너스 오부여. 종목명을 13F issuer 안에 토큰 경계로만 매칭.
+                import re as _re
                 for k, v in ticker_sig.items():
-                    if v.get("issuer", "").upper() in issuer_key or issuer_key in v.get("issuer", "").upper():
+                    iss = (v.get("issuer") or "").upper()
+                    if iss and _re.search(rf"\b{_re.escape(issuer_key)}\b", iss):
                         matched = v
                         break
             if matched:

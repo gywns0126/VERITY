@@ -54,6 +54,16 @@ def _call(service: str, operation: str, params: Dict[str, Any]) -> Optional[ET.E
             body = r.read().decode("utf-8", "replace")
         root = ET.fromstring(body)
         code = root.findtext("resultCode")
+        # 2026-06-17 fix: data.go.kr 게이트웨이 에러(키 미등록/쿼터)는 resultCode 없이
+        # cmmMsgHeader/returnAuthMsg 봉투로 옴 → None 을 무조건 성공 처리하면 키/쿼터 장애가
+        # '데이터 없음'으로 silent 오귀인. cmmMsgHeader 있으면 에러 로깅 후 None.
+        if code is None:
+            hdr = root.find(".//cmmMsgHeader")
+            if hdr is not None:
+                auth = hdr.findtext("returnAuthMsg") or hdr.findtext("errMsg") or "gateway_error"
+                rc = hdr.findtext("returnReasonCode") or "?"
+                sys.stderr.write(f"[ftc] {operation} 게이트웨이 에러 code={rc} msg={auth}\n")
+                return None
         if code not in (None, "00"):
             # 97 = presentnYear 부적합 등. 호출자가 처리.
             sys.stderr.write(
@@ -96,6 +106,14 @@ def _to_float(v: Any) -> float:
         return round(float(str(v).replace(",", "").strip()), 2)
     except (ValueError, TypeError):
         return 0.0
+
+
+def _to_int(v: Any) -> int:
+    """totalCount 등 안전 int 변환 (공백·비숫자 → 0). 2026-06-17: resolver int() 비가드 fix."""
+    try:
+        return int(str(v).replace(",", "").strip())
+    except (ValueError, TypeError):
+        return 0
 
 
 def fetch_shareholders(presentn_year: str) -> List[Dict[str, Any]]:
@@ -176,7 +194,7 @@ def _resolve_presentn_ym() -> Optional[str]:
                      {"pageNo": 1, "numOfRows": 1, "presentnYm": ym})
         if root is not None and root.findtext("resultCode") == "00":
             total = root.findtext("totalCount")
-            if total and int(total) > 0:
+            if _to_int(total) > 0:
                 return ym
     return None
 
@@ -191,7 +209,7 @@ def _resolve_presentn_year() -> Optional[str]:
                      {"pageNo": 1, "numOfRows": 1, "presentnYear": str(y)})
         if root is not None and root.findtext("resultCode") == "00":
             total = root.findtext("totalCount")
-            if total and int(total) > 0:
+            if _to_int(total) > 0:
                 return str(y)
     return None
 

@@ -3819,6 +3819,9 @@ def main():
                 "vci": br.get("vci", {}),
                 "vci_bonus": br.get("vci_bonus", 0),
                 "candle_bonus": br.get("candle_bonus", 0),
+                # 2026-06-17: brain_weights_cv 재계산 SoT 정합 — production raw 의 두 항 persist
+                "gs_bonus": (stock.get("score_breakdown") or {}).get("gs_bonus", 0),
+                "inst_13f_bonus": br.get("inst_13f_bonus", 0),
                 "brain_weights": br.get("brain_weights", {}),
                 "red_flags": br.get("red_flags", {}),
                 "red_flag_penalty": br.get("red_flag_penalty", 0),

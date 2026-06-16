@@ -124,15 +124,26 @@ def _compute_sentiment_score(
         pos_words = ("rally", "boom", "surge", "growth", "rate cut",
                      "상승", "호조", "낙관", "금리 인하")
         score = 50.0
+        # 2026-06-17 fix: substring 매칭(war in Warner/Aware/Software) → spurious. ASCII 키워드는
+        # 단어경계, 헤드라인당 neg/pos 각 1회만 카운트(중복 가산 제거).
+        import re as _re
+
+        def _kw_hit(words, text):
+            for kw in words:
+                if kw.isascii():
+                    if _re.search(rf"(?<![a-z]){_re.escape(kw)}(?![a-z])", text):
+                        return True
+                elif kw in text:  # 한글은 \b 무효 — substring (복합어 오탐 위험 낮음)
+                    return True
+            return False
+
         # 주의: 함수 scope 의 w (weights dict) 와 변수명 충돌 회피 — kw 사용
         for h in headlines[:20]:
             title = (h.get("title") or "").lower()
-            for kw in neg_words:
-                if kw in title:
-                    score -= 2
-            for kw in pos_words:
-                if kw in title:
-                    score += 2
+            if _kw_hit(neg_words, title):
+                score -= 2
+            if _kw_hit(pos_words, title):
+                score += 2
         macro_headlines = _clip(score)
 
     # 6) market_horizon_link — V2.1 cycle_stage 매핑 (역설적 — euphoria 낮음, panic 높음 = 역발상)

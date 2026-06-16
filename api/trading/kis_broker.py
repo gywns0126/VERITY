@@ -1113,10 +1113,14 @@ class KISBroker:
                 _f = lambda k: float(str(latest.get(k, "0") or "0").replace(",", "") or "0")
                 result["financial_ratio"] = {
                     "roe": _f("roe_val"),
+                    # ⚠️ 2026-06-17(RULE10): bsop_prfi_inrt = 영업이익'증가율'(inrt=증가율)이지
+                    # ROA/영업이익률 아님 — 정확 KIS 필드 verify 전까지 기존 roa 라벨 보존(소비처 영향 회피).
                     "roa": _f("bsop_prfi_inrt"),
                     "debt_ratio": _f("lblt_rate"),
                     "current_ratio": _f("crnt_rate"),
-                    "operating_margin": _f("bsop_prfi_inrt"),
+                    # operating_margin 매핑 제거(2026-06-17): 증가율을 margin 으로 오독해 lynch
+                    # turnaround(흑자전환) 신호 손상. None → lynch 가 top-level(yfinance/DART) 정상 margin fallback.
+                    "operating_income_growth": _f("bsop_prfi_inrt"),
                     "period": latest.get("stac_yymm", ""),
                     "source": "kis",
                 }
