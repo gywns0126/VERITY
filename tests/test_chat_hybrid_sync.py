@@ -53,3 +53,17 @@ def test_file_contents_identical(rel):
         f"api/chat_hybrid/{rel} 와 vercel-api/api/chat_hybrid/{rel} 를 "
         "동일하게 동기화 후 커밋할 것."
     )
+
+
+def test_external_guard_utils_sync():
+    """api/utils/external_guard.py ↔ vercel-api/api/utils/external_guard.py byte 동일.
+
+    chat_hybrid 사본(response_synthesizer 등)이 `from api.utils.external_guard` 를 import 하므로
+    vercel 사본도 동기화돼야 한다. 한쪽만 수정 시 vercel 챗 격리가 silent drift/비활성 (PR #53 검증 빈틈).
+    """
+    a = ROOT / "api" / "utils" / "external_guard.py"
+    b = ROOT / "vercel-api" / "api" / "utils" / "external_guard.py"
+    assert a.exists() and b.exists(), "external_guard.py 양쪽 존재해야"
+    assert a.read_bytes() == b.read_bytes(), (
+        "external_guard.py drift — api/ 와 vercel-api/ 동기화 후 커밋할 것."
+    )

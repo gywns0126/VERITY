@@ -123,3 +123,22 @@ def test_date_dedupe(tmp_path, monkeypatch):
     sd.run_say_do_observation(delay=0, path=out, _fetch=fake_fetch)  # 같은 날 두 번
     lines = [l for l in open(out, encoding="utf-8").read().splitlines() if l.strip()]
     assert len(lines) == 1  # date dedupe — 1줄만
+
+
+def test_logged_reflects_actual_append(tmp_path, monkeypatch):
+    # logged 는 record 생성(rec is not None)이 아니라 실제 디스크 append 여부여야 한다 (P1 버그 fix)
+    monkeypatch.setattr(sd, "REPORT_PATH", str(tmp_path / "rep.json"))
+    monkeypatch.setattr(sd, "CONSENSUS_PATH", str(tmp_path / "cons.json"))
+    (tmp_path / "rep.json").write_text(json.dumps({
+        "summaries": {"005930": {"signal_direction": "bullish"}}
+    }), encoding="utf-8")
+    (tmp_path / "cons.json").write_text(json.dumps({"stocks": []}), encoding="utf-8")
+
+    def fake_fetch(code, sess=None):
+        return [{"date": "2026-06-11", "foreign_net": 1, "inst_net": 1}]
+
+    out = str(tmp_path / "saydo.jsonl")
+    r1 = sd.run_say_do_observation(delay=0, path=out, _fetch=fake_fetch)
+    assert r1["logged"] is True   # 첫 실행 = 실제 append
+    r2 = sd.run_say_do_observation(delay=0, path=out, _fetch=fake_fetch)
+    assert r2["logged"] is False  # 같은 날 재실행 = dedupe skip → logged False (위양성 차단)

@@ -154,20 +154,22 @@ def _build_record(per: Dict[str, Dict[str, Any]], lookback: int) -> Optional[Dic
     }
 
 
-def _append(rec: Optional[Dict[str, Any]], target: str) -> None:
+def _append(rec: Optional[Dict[str, Any]], target: str) -> bool:
+    """실제 디스크 append 시 True, rec None / 같은 날 dedupe skip 시 False."""
     if rec is None:
-        return
+        return False
     os.makedirs(os.path.dirname(target), exist_ok=True)
     # date dedupe — 같은 날 중복 append 차단
     try:
         with open(target, encoding="utf-8") as f:
             seen = {json.loads(line).get("date") for line in f if line.strip()}
         if rec["date"] in seen:
-            return
+            return False
     except OSError:
         pass
     with open(target, "a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    return True
 
 
 def run_say_do_observation(
@@ -216,12 +218,12 @@ def run_say_do_observation(
             time.sleep(delay)
 
     rec = _build_record(per, lookback)
-    _append(rec, target)
+    appended = _append(rec, target)
     return {
         "tickers": len(tickers),
         "flow_ok": flow_ok,
         "divergences": sum(1 for v in per.values() if v["divergence"]),
-        "logged": rec is not None,
+        "logged": appended,  # 실제 append 여부 (date dedupe skip 시 False) — RULE 8 cron audit 정확성
     }
 
 

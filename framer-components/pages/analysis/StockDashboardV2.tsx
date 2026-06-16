@@ -4628,7 +4628,8 @@ function QuantBar({
  * retract (1인 초보 활용 X, 디버그성). G1 / G2 / G4 살림. */
 function GroupTab({ stock }: { stock: any }) {
     const gs = stock?.group_structure
-    if (!gs || (!gs.parent && (!gs.subsidiaries || gs.subsidiaries.length === 0))) {
+    const hasFtc = gs && gs.ftc_official && Array.isArray(gs.ftc_official.shareholders) && gs.ftc_official.shareholders.length > 0
+    if (!gs || (!gs.parent && (!gs.subsidiaries || gs.subsidiaries.length === 0) && !hasFtc)) {
         return (
             <div style={{
                 background: C.bgCard, 
@@ -4869,6 +4870,58 @@ function GroupTab({ stock }: { stock: any }) {
                             </div>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {/* 4. 공정위 공식 주주현황 (as-of 라벨, DART 최대주주와 이중 출처) */}
+            {gs.ftc_official && Array.isArray(gs.ftc_official.shareholders) && gs.ftc_official.shareholders.length > 0 && (
+                <div style={{
+                    background: C.bgCard,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.sm,
+                }}>
+                    <div style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        flexWrap: "wrap", gap: S.xs,
+                    }}>
+                        <span style={subCardCap}>공정위 공식 주주현황</span>
+                        <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                            {gs.ftc_official.group} 그룹 · {gs.ftc_official.as_of_year} 지정 기준
+                        </span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                        {gs.ftc_official.shareholders.slice(0, 8).map((sh: any, i: number, arr: any[]) => {
+                            const t = sh.type || ""
+                            const tc = /동일인|친족/.test(t) ? C.accent
+                                : /소속회사|특수관계/.test(t) ? C.info
+                                : C.textTertiary
+                            const last = Math.min(arr.length, 8) - 1
+                            return (
+                                <div key={i} style={{
+                                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                                    gap: S.sm, padding: `${S.xs}px 0`,
+                                    borderBottom: i < last ? `1px solid ${C.border}` : "none",
+                                }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: S.sm, minWidth: 0 }}>
+                                        <span style={{ color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_med }}>
+                                            {sh.name}
+                                        </span>
+                                        {t && (
+                                            <span style={{ color: tc, fontSize: 9, fontWeight: T.w_bold, letterSpacing: 0.3 }}>
+                                                {t}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span style={{ ...MONO, color: tc, fontSize: T.cap, fontWeight: T.w_bold }}>
+                                        {sh.qota_rate}%
+                                    </span>
+                                </div>
+                            )
+                        })}
+                    </div>
+                    <span style={{ color: C.textTertiary, fontSize: 10, lineHeight: T.lh_normal }}>
+                        출처: 공정거래위원회 기업집단포털 · 연 1회 지정 스냅샷 (DART 최대주주와 이중 출처)
+                    </span>
                 </div>
             )}
         </div>
