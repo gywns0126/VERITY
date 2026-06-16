@@ -19,6 +19,12 @@ MAPPING_PATH = os.path.join(DATA_DIR, "mapping.json")
 # {종목코드: 종목명} — 챗 name_resolver 가 역맵으로 종목명→코드 결정적 변환 (L2, 2026-06-03).
 # corp_list 를 어차피 순회하므로 추가 API 호출 0. 챗(Vercel)은 publish 된 이 파일만 읽음.
 NAME_MAP_PATH = os.path.join(DATA_DIR, "kr_stock_names.json")
+# {종목코드: {"name","market"}} — 현재 상장사만 (corp_cls Y=KOSPI/.KS, K=KOSDAQ/.KQ).
+# 폐지 종목(corp_cls None)·코넥스(N) 제외. group_structure resolver 가 전 KRX
+# 이름→ticker_yf 역맵 빌드에 사용 (NAV listed 매칭 복구, 2026-06-16). kr_stock_names 와
+# 달리 폐지 오염 없음 + market suffix 보유.
+LISTED_MAP_PATH = os.path.join(DATA_DIR, "kr_listed.json")
+_CORP_CLS_TO_SUFFIX = {"Y": "KS", "K": "KQ"}  # Y=유가증권(KOSPI), K=코스닥
 _NAME_MAP_MAX_AGE_S = 30 * 24 * 3600  # 30일 — 신규 상장 흡수 주기 (월1회 갱신 등가)
 
 _mapping_cache: Optional[Dict[str, str]] = None
@@ -35,6 +41,7 @@ def build_mapping() -> Dict[str, str]:
 
     mapping: Dict[str, str] = {}
     names: Dict[str, str] = {}
+    listed: Dict[str, Dict[str, str]] = {}
     for corp in corp_list:
         stock_code = getattr(corp, "stock_code", None)
         corp_code = getattr(corp, "corp_code", None)
@@ -44,12 +51,19 @@ def build_mapping() -> Dict[str, str]:
             nm = (getattr(corp, "corp_name", None) or "").strip()
             if nm:
                 names[sc] = nm
+            # corp_cls Y/K 만 현재 상장 (None=폐지, N=코넥스 제외).
+            cls = (getattr(corp, "corp_cls", None) or "").strip()
+            suffix = _CORP_CLS_TO_SUFFIX.get(cls)
+            if suffix and nm:
+                listed[sc] = {"name": nm, "market": suffix}
 
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(MAPPING_PATH, "w", encoding="utf-8") as f:
         json.dump(mapping, f, ensure_ascii=False, indent=2)
     with open(NAME_MAP_PATH, "w", encoding="utf-8") as f:
         json.dump(names, f, ensure_ascii=False, indent=2)
+    with open(LISTED_MAP_PATH, "w", encoding="utf-8") as f:
+        json.dump(listed, f, ensure_ascii=False, indent=2)
 
     return mapping
 
@@ -69,6 +83,10 @@ def ensure_name_map() -> None:
         need = True
         if os.path.exists(NAME_MAP_PATH):
             need = (_t.time() - os.path.getmtime(NAME_MAP_PATH)) > _NAME_MAP_MAX_AGE_S
+        # kr_listed.json 부재 시에도 재생성 (2026-06-16 신규 파일 self-heal —
+        # 신선한 name_map 만 있고 listed 맵 없는 환경에서 NAV resolver degrade 방지).
+        if not os.path.exists(LISTED_MAP_PATH):
+            need = True
         if need and DART_API_KEY:
             sys.stderr.write("[name_map] kr_stock_names.json 생성/갱신 (dart-fss, ~1분)\n")
             build_mapping()

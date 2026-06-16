@@ -29,19 +29,56 @@ from api.collectors.stock_data import (
 
 GROUP_STRUCTURE_PATH = os.path.join(DATA_DIR, "group_structure.json")
 
+# DART hyslrSttus / otrCprInvstmntSttus 응답에는 합계·계 등 집계행이 섞여 있음.
+# 이를 실제 주주·자회사 엔티티로 오인하면 group_name="계" / 자회사="합계" 이중계산 발생.
+# (2026-06-16 fix — 100840 SNT다이내믹스에서 발견)
+_AGGREGATE_ROW_NAMES = {"계", "합계", "소계", "총계", "합 계", "소 계", "총 계"}
+
+
+def _is_aggregate_row(name: str) -> bool:
+    return re.sub(r"\s+", "", (name or "")) in {re.sub(r"\s+", "", n) for n in _AGGREGATE_ROW_NAMES}
+
 
 # ── 상장사 역매핑 (회사명 → ticker_yf) ───────────────────
 
+_LISTED_MAP_PATH = os.path.join(DATA_DIR, "kr_listed.json")
+
+
 def _build_name_to_ticker() -> Dict[str, str]:
-    """ALL_STOCKS 이름 → yfinance 티커 역매핑.
-    'LG전자' → '066570.KS', '에코프로' → '086520.KQ' 등.
+    """전 KRX 현재 상장사 이름 → yfinance 티커 역매핑.
+    'LG전자' → '066570.KS', '에코프로' → '086520.KQ', 'SNT모티브' → '064960.KS' 등.
+
+    소스 우선순위:
+      1. kr_listed.json (전 KRX 현재상장 ~2,655, corp_cls Y=KS/K=KQ, 폐지 제외)
+      2. ALL_STOCKS (분석 유니버스 45) — 이름 충돌 시 우선 (overlay)
+    kr_listed.json 부재 시 ALL_STOCKS 만으로 graceful degrade (옛 동작).
     """
     out: Dict[str, str] = {}
-    for ticker_yf, name in ALL_STOCKS.items():
+
+    def _add(name: str, ticker_yf: str) -> None:
+        if not name:
+            return
         out[name] = ticker_yf
         cleaned = re.sub(r"\s+", "", name)
         if cleaned != name:
             out[cleaned] = ticker_yf
+
+    # 1. 전 KRX 현재상장 마스터 (폐지 오염 없음 + market suffix)
+    try:
+        if os.path.exists(_LISTED_MAP_PATH):
+            with open(_LISTED_MAP_PATH, "r", encoding="utf-8") as f:
+                listed: Dict[str, Any] = json.load(f)
+            for code, meta in listed.items():
+                name = (meta or {}).get("name") or ""
+                market = (meta or {}).get("market") or "KS"
+                _add(name, f"{code}.{market}")
+    except Exception:
+        pass
+
+    # 2. 분석 유니버스 overlay — 핵심 45 종목 이름 충돌 시 우선
+    for ticker_yf, name in ALL_STOCKS.items():
+        _add(name, ticker_yf)
+
     return out
 
 
@@ -162,7 +199,7 @@ def build_group_structure(
             seen_names: set = set()
             for sh in shareholders:
                 sh_name = (sh.get("nm") or "").strip()
-                if not sh_name or sh_name in seen_names:
+                if not sh_name or sh_name in seen_names or _is_aggregate_row(sh_name):
                     continue
                 seen_names.add(sh_name)
                 sh_relate = (sh.get("relate") or "").strip()
@@ -210,7 +247,7 @@ def build_group_structure(
         investments = fetch_subsidiary_investments(corp_code, bsns_year)
         for inv in investments:
             inv_name = inv.get("inv_corp_name", "")
-            if not inv_name:
+            if not inv_name or _is_aggregate_row(inv_name):
                 continue
             sub_ticker = _resolve_ticker(inv_name)
             sub_market_cap = None
@@ -339,8 +376,17 @@ def _compute_nav_analysis(
 
     sop = round(listed_total + unlisted_total, 1)
 
+    # NAV 신뢰성 가드 (2026-06-16) — 상장 자회사 매칭 0건이면 SoP 가 실제 자산의
+    # 일부만 잡혀 nav_discount 가 무의미(예: 100840 +2443% 할증). discount 산출 보류.
+    # 신뢰 조건: 상장 지분가치가 있고(앵커 존재) + SoP 가 시총의 5% 이상 커버.
+    nav_reliable = (
+        listed_total > 0
+        and my_market_cap is not None and my_market_cap > 0
+        and sop >= my_market_cap * 0.05
+    )
+
     discount_pct = None
-    if my_market_cap and my_market_cap > 0 and sop > 0:
+    if nav_reliable and sop > 0:
         discount_pct = round((my_market_cap - sop) / sop * 100, 1)
 
     sensitivity.sort(key=lambda x: abs(x.get("impact_per_1pct", 0)), reverse=True)
@@ -351,6 +397,7 @@ def _compute_nav_analysis(
         "unlisted_stake_value_억": round(unlisted_total, 1),
         "current_market_cap_억": my_market_cap,
         "nav_discount_pct": discount_pct,
+        "nav_reliable": nav_reliable,
         "sensitivity": sensitivity[:10],
     }
 
