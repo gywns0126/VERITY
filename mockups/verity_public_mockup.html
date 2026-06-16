@@ -136,7 +136,9 @@
   .regime{display:inline-block;font-size:12px;font-weight:800;padding:4px 11px;border-radius:999px;background:var(--amberS);color:var(--amber)}
   .hlist{display:none}.hlist.on{display:block}
   .hdetail{display:none}.hdetail.on{display:block}
-  .backh{background:none;border:none;color:var(--vg);font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;padding:4px 2px 14px}
+  .backh{position:sticky;top:60px;z-index:11;background:var(--bg);border:none;color:var(--vg);font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;text-align:left;width:calc(100% + 28px);margin:0 -14px 4px;padding:11px 14px 11px}
+  .stickysearch{position:sticky;top:60px;z-index:12;margin-bottom:12px}
+  .stickysearch .search{margin-bottom:0}
   .psum{background:var(--card);border-radius:20px;padding:18px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
   .psum .lab{font-size:12px;color:var(--faint);font-weight:700}
   .psum .tot{font-size:27px;font-weight:800;letter-spacing:-1px;margin:3px 0}
@@ -151,8 +153,8 @@
   .hrow .chev{color:var(--faint);font-weight:700;font-size:18px}
   /* bottom nav */
   .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
-  .nav button{flex:1;background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;color:var(--faint);padding:8px 0;text-align:center}
-  
+  .nav button{flex:1;background:none;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;color:var(--faint);padding:5px 0;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .nav button svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
   .nav button.on{color:var(--vg)}
 </style>
 </head>
@@ -493,7 +495,8 @@
     <section class="sec" id="s-stock">
       <div class="h">종목 리포트 <span>이 종목의 모든 것</span></div>
 
-      <!-- 검색 = 콤보박스 (관심종목 흡수, 포커스 시 드롭다운 — 가로 칩 폐기) -->
+      <!-- 검색 = 콤보박스 (관심종목 흡수, 포커스 드롭다운) · 상단 sticky (긴 스크롤 중 전환) -->
+      <div class="stickysearch">
       <div class="search"><span class="mag"></span><input placeholder="종목 검색 · 관심종목 (예: 삼성전자, 005930)" />
         <div class="sugg">
           <div class="sh2">관심종목</div>
@@ -506,6 +509,7 @@
           <div class="add">＋ 검색해서 관심종목 추가 — 속보 피드에 뜸</div>
         </div>
       </div>
+      </div><!-- /stickysearch -->
 
       <!-- 연결된 차트 (가격 + 공시·수급 마커) -->
       <div class="card">
@@ -710,11 +714,11 @@
 
   <!-- bottom nav -->
   <div class="nav">
-    <button class="on" onclick="go(this,'s-feed')">속보</button>
-    <button onclick="go(this,'s-holdings')">보유</button>
-    <button onclick="go(this,'s-stock')">종목</button>
-    <button onclick="go(this,'s-market')">시장</button>
-    <button onclick="go(this,'s-glass')">유리박스</button>
+    <button class="on" onclick="go(this,'s-feed')"><svg viewBox="0 0 24 24"><path d="M13 2L5 13h6l-1 9 8-11h-6l1-9z"/></svg><span>속보</span></button>
+    <button onclick="go(this,'s-holdings')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 12V3.5M12 12l7.4 4.2"/></svg><span>보유</span></button>
+    <button onclick="go(this,'s-stock')"><svg viewBox="0 0 24 24"><path d="M5 21V11M12 21V4M19 21v-6" stroke-width="2.5"/></svg><span>종목</span></button>
+    <button onclick="go(this,'s-market')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 2.6 14.6 0 17M12 3.5c-2.6 2.4-2.6 14.6 0 17"/></svg><span>시장</span></button>
+    <button onclick="go(this,'s-glass')"><svg viewBox="0 0 24 24"><path d="M12 2.5l8.5 4.75v9.5L12 21.5l-8.5-4.75v-9.5L12 2.5z"/><path d="M3.7 7.4l8.3 4.6 8.3-4.6M12 12v9.5"/></svg><span>유리박스</span></button>
   </div>
 </div>
 
