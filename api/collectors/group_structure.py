@@ -300,6 +300,14 @@ def build_group_structure(
     my_market_cap = _get_market_cap(ticker_yf)
     nav_analysis = _compute_nav_analysis(my_market_cap, subsidiaries)
 
+    # 공정위 기업집단 공식 주주현황 (DART 최대주주와 이중 출처 교차검증)
+    ftc_official = None
+    try:
+        from api.collectors.ftc_group_equity import lookup_official_shareholders
+        ftc_official = lookup_official_shareholders(corp_code)
+    except Exception:
+        pass
+
     return {
         "ticker": ticker_6,
         "name": name,
@@ -308,6 +316,7 @@ def build_group_structure(
         "major_shareholders": major_shareholders,
         "subsidiaries": subsidiaries,
         "nav_analysis": nav_analysis,
+        "ftc_official": ftc_official,
         "market_cap_억": my_market_cap,
         "collected_at": now.isoformat(),
     }
@@ -420,6 +429,13 @@ def collect_group_structures(
     results: Dict[str, Dict[str, Any]] = {}
     total = len(candidates)
 
+    # 공정위 기업집단 지분 스냅샷 self-heal (부재/90일 초과 시 재수집)
+    try:
+        from api.collectors.ftc_group_equity import ensure_ftc_group_equity
+        ensure_ftc_group_equity()
+    except Exception:
+        pass
+
     for i, stock in enumerate(candidates, 1):
         ticker_yf = stock.get("ticker_yf", "")
         if not ticker_yf:
@@ -487,6 +503,7 @@ def attach_group_structure_to_candidates(
                 "major_shareholders": gs.get("major_shareholders", []),
                 "subsidiaries": gs.get("subsidiaries", []),
                 "nav_analysis": gs.get("nav_analysis", {}),
+                "ftc_official": gs.get("ftc_official"),
                 "market_cap_억": gs.get("market_cap_억"),
             }
             count += 1
