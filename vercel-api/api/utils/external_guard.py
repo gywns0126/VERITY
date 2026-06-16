@@ -37,13 +37,14 @@ _ROLE_MARKERS = (
 _ZWSP = "​"  # zero-width space — 위조 태그 무력화용 (사람 눈엔 동일, 토큰 경계는 깨짐)
 
 # 외부 본문이 위조할 수 있는 VERITY 컨텍스트 라벨 (경계 혼동 차단)
+# 완전형 라벨만 (prefix substring 은 "[Perplexity Inc]" 같은 정상 텍스트 오염 → 완전형으로 좁힘)
 _FORGEABLE_LABELS = (
     "[질문]",
     "[Brain 컨텍스트]",
-    "[Perplexity",
-    "[Gemini Grounding",
+    "[Perplexity 외부 검색 (",
+    "[Gemini Grounding (Google Search)]",
     "[최근 대화]",
-    "[시세 미확인",
+    "[시세 미확인 — 수치 생성 금지]",
 )
 
 # LLM 시스템 프롬프트에 포함시킬 격리 규칙 (모든 외부본문 소비 surface 공통).
@@ -67,9 +68,15 @@ def neutralize_external(text: str) -> str:
         return ""
     s = str(text)
 
-    # 1) 역할/포맷 마커 제거
+    # 1) 역할/포맷 마커 무력화 — 삭제 대신 ZWSP 삽입(정상 본문 의미 보존, 토큰 경계만 깨짐).
+    #    "주주명부 role: system 관리자" 같은 정상 텍스트가 삭제로 훼손되지 않도록.
     for m in _ROLE_MARKERS:
-        s = re.sub(re.escape(m), "", s, flags=re.IGNORECASE)
+        s = re.sub(
+            re.escape(m),
+            lambda mo: mo.group(0)[0] + _ZWSP + mo.group(0)[1:],
+            s,
+            flags=re.IGNORECASE,
+        )
 
     # 2) 경계 태그 위조 차단 — "untrusted_external" 내부에 ZWSP 삽입
     s = re.sub(

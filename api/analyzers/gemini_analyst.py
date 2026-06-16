@@ -557,8 +557,8 @@ def _build_perplexity_block(stock: dict) -> str:
     if ei and "error" not in ei:
         parts.append(
             f"[실적 속보 — Perplexity]\n"
-            f"결과: {ei.get('beat_miss', '?')} | {ei.get('guidance', '')}\n"
-            f"{ei.get('earnings_summary', '')[:300]}"
+            f"결과: {ei.get('beat_miss', '?')} | {_neut(ei.get('guidance', ''))}\n"
+            f"{_neut(ei.get('earnings_summary', '')[:300])}"
         )
 
     er = stock.get("external_risk")
@@ -567,7 +567,7 @@ def _build_perplexity_block(stock: dict) -> str:
         if level != "LOW":
             parts.append(
                 f"[외부 리스크 — Perplexity] 등급: {level}\n"
-                f"{er.get('external_risks', '')[:300]}"
+                f"{_neut(er.get('external_risks', '')[:300])}"
             )
 
     return "\n".join(parts)
