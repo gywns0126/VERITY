@@ -89,6 +89,19 @@
   .wl .c{background:var(--card);border:none;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:700;color:var(--sub);cursor:pointer}
   .wl .c.act{background:#0ca678;color:#fff;border-color:#0ca678}
   .wlnote{font-size:11px;color:var(--faint);font-weight:600;padding:0 4px 14px}
+  /* 검색 콤보박스 (관심종목 흡수 — 포커스 시 드롭다운) */
+  .search{position:relative}
+  .sugg{display:none;position:absolute;top:54px;left:0;right:0;background:var(--card);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.14);padding:8px;z-index:40}
+  .search:focus-within .sugg{display:block}
+  .sugg .sh2{font-size:11px;font-weight:700;color:var(--faint);padding:8px 8px 4px}
+  .sugg .si{display:flex;align-items:center;gap:8px;padding:10px 9px;border-radius:10px;cursor:pointer}
+  .sugg .si:active{background:var(--bg)}
+  .sugg .si .nm{font-size:13.5px;font-weight:700;color:var(--ink)}
+  .sugg .si .nm small{color:var(--faint);font-weight:600;font-size:11.5px;margin-left:5px}
+  .sugg .si .r{margin-left:auto;text-align:right;display:flex;align-items:baseline;gap:7px}
+  .sugg .si .r .p{font-size:13px;font-weight:800}
+  .sugg .si .r .c{font-size:11.5px;font-weight:800}
+  .sugg .add{text-align:center;color:var(--vg);font-size:12px;font-weight:800;padding:10px;cursor:pointer}
   .px{display:flex;align-items:baseline;gap:9px;margin:4px 2px 8px}
   .px .p{font-size:25px;font-weight:800;letter-spacing:-1px} .px .ch{font-size:13px;font-weight:800}
   .per{display:flex;gap:5px;margin-top:8px}.per b{font-size:12px;font-weight:700;color:var(--faint);padding:5px 12px;border-radius:8px;cursor:pointer}.per b.on{background:var(--vgS);color:var(--vg)}
@@ -101,6 +114,41 @@
   .note{font-size:11px;color:var(--faint);font-weight:600;margin-top:9px;padding:0 2px;line-height:1.5}
   .export{width:100%;background:#0ca678;color:#fff;border:none;border-radius:14px;padding:15px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;margin-top:18px;letter-spacing:-.3px}
   .exnote{text-align:center;font-size:11px;color:var(--faint);font-weight:600;margin-top:8px;line-height:1.5}
+  /* ===== 보유종목 탭 ===== */
+  .hold{display:none}.hold.on{display:block}
+  .holdbar{border-top:1px solid var(--line);margin-top:13px;padding-top:13px}
+  .holdline{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:600;color:var(--sub)}
+  .holdline .edit{font-size:11px;font-weight:700;color:var(--vg);cursor:pointer}
+  .pnl{display:flex;align-items:baseline;justify-content:space-between;margin-top:10px}
+  .pnl .lab{font-size:12px;font-weight:700;color:var(--faint)}
+  .pnl .amt{font-size:22px;font-weight:800;letter-spacing:-.6px}
+  .pnl .pct{font-size:13px;font-weight:800;margin-left:7px}
+  .factnote{font-size:11px;color:var(--faint);font-weight:600;margin-top:8px;background:var(--bg);border-radius:8px;padding:7px 10px;line-height:1.5}
+  .synth{background:var(--card);border-radius:20px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);border:1px solid var(--vgS)}
+  .synth .sl{font-size:11px;font-weight:800;color:var(--vg);margin-bottom:10px}
+  .synth .lead{font-size:15.5px;font-weight:800;color:var(--ink);letter-spacing:-.4px;line-height:1.5;margin-bottom:12px}
+  .synth .fl{display:flex;gap:11px;padding:8px 0;border-top:1px solid var(--line);align-items:baseline}
+  .synth .fl .t{flex-shrink:0;width:40px;font-size:11px;font-weight:800;color:var(--faint)}
+  .synth .fl .v{font-size:13px;font-weight:600;color:var(--sub);line-height:1.55;letter-spacing:-.2px}
+  .synth .fl .v b{color:var(--ink);font-weight:700}
+  .synth .sf{font-size:11px;color:var(--faint);font-weight:600;margin-top:11px;padding-top:9px;border-top:1px solid var(--line);line-height:1.5}
+  .recon{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--blueS);border-radius:9px;padding:8px 11px;margin:10px 0}.recon .a{font-size:12px;font-weight:800;color:var(--blue)}.recon .b{font-size:11.5px;font-weight:600;color:var(--sub)}
+  .regime{display:inline-block;font-size:12px;font-weight:800;padding:4px 11px;border-radius:999px;background:var(--amberS);color:var(--amber)}
+  .hlist{display:none}.hlist.on{display:block}
+  .hdetail{display:none}.hdetail.on{display:block}
+  .backh{background:none;border:none;color:var(--vg);font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;padding:4px 2px 14px}
+  .psum{background:var(--card);border-radius:20px;padding:18px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .psum .lab{font-size:12px;color:var(--faint);font-weight:700}
+  .psum .tot{font-size:27px;font-weight:800;letter-spacing:-1px;margin:3px 0}
+  .psum .pl{font-size:14px;font-weight:800}
+  .psum .meta{font-size:12px;color:var(--faint);font-weight:600;margin-top:6px}
+  .hrow{display:flex;align-items:center;background:var(--card);border-radius:14px;padding:13px 15px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.04);cursor:pointer}
+  .hrow .l .nm{font-size:14.5px;font-weight:700}
+  .hrow .l .sub{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:2px}
+  .hrow .r{text-align:right;margin-left:auto;margin-right:8px}
+  .hrow .r .plr{font-size:14.5px;font-weight:800}
+  .hrow .r .px2{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:2px}
+  .hrow .chev{color:var(--faint);font-weight:700;font-size:18px}
   /* bottom nav */
   .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
   .nav button{flex:1;background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;color:var(--faint);padding:8px 0;text-align:center}
@@ -170,16 +218,294 @@
       <div class="disc">공시-first(DART 원천, 기사보다 빠름) · 우리 데이터로 연결만 · AI 요약 아님</div>
     </section>
 
+    <!-- ───── 탭: 내 보유종목 (holdings glassbox) ───── -->
+    <section class="sec" id="s-holdings">
+      <div class="h">내 보유종목 <span>사실 + 연결</span></div>
+
+      <!-- ═══ 리스트 뷰 (포트폴리오 — 세로 스크롤, 종목 늘어도 OK) ═══ -->
+      <div class="hlist on" id="m-hlist">
+        <div class="psum">
+          <div class="lab">총 평가금액</div>
+          <div class="tot">22,040,000원</div>
+          <div class="pl" style="color:var(--red)">+1,830,000원 · +9.1%</div>
+          <div class="meta">보유 6종목 · 평단 입력 기준(사실) · 점수·추천 아님</div>
+        </div>
+        <div class="search"><span class="mag"></span><input placeholder="보유종목 검색해서 추가 (예: 삼성전자, NVDA)" /></div>
+        <div class="hrow" onclick="openH('h-ssn')"><div class="l"><div class="nm">삼성전자</div><div class="sub">005930 · 100주 · 비중 32%</div></div><div class="r"><div class="plr" style="color:var(--red)">+4.7%</div><div class="px2">7,120,000원</div></div><span class="chev">›</span></div>
+        <div class="hrow" onclick="openH('h-nvda')"><div class="l"><div class="nm">NVIDIA</div><div class="sub">NVDA · 20주 · 비중 21%</div></div><div class="r"><div class="plr" style="color:var(--red)">+43.7%</div><div class="px2">4,700,000원</div></div><span class="chev">›</span></div>
+        <div class="hrow" onclick="openH('h-more')"><div class="l"><div class="nm">SK하이닉스</div><div class="sub">000660 · 15주 · 비중 16%</div></div><div class="r"><div class="plr" style="color:var(--red)">+12.3%</div><div class="px2">3,615,000원</div></div><span class="chev">›</span></div>
+        <div class="hrow" onclick="openH('h-more')"><div class="l"><div class="nm">한미반도체</div><div class="sub">042700 · 30주 · 비중 13%</div></div><div class="r"><div class="plr" style="color:var(--red)">+6.4%</div><div class="px2">2,892,000원</div></div><span class="chev">›</span></div>
+        <div class="hrow" onclick="openH('h-more')"><div class="l"><div class="nm">두산에너빌리티</div><div class="sub">034020 · 120주 · 비중 12%</div></div><div class="r"><div class="plr" style="color:var(--blue)">−3.1%</div><div class="px2">2,574,000원</div></div><span class="chev">›</span></div>
+        <div class="hrow" onclick="openH('h-more')"><div class="l"><div class="nm">에코프로비엠</div><div class="sub">247540 · 8주 · 비중 5%</div></div><div class="r"><div class="plr" style="color:var(--blue)">−8.2%</div><div class="px2">1,138,000원</div></div><span class="chev">›</span></div>
+        <div class="disc">행을 누르면 그 종목 유리박스로 · 평가손익은 입력 평단 기준 단순 계산(사실) · 매수·매도 권유 아님 · 점수 held(2027)</div>
+      </div>
+
+      <!-- ═══ 상세 뷰 (선택 종목 유리박스) ═══ -->
+      <div class="hdetail" id="m-hdetail">
+        <button class="backh" onclick="backH()">← 보유종목 목록</button>
+
+      <!-- ── 보유 1: 삼성전자 (KR) ── -->
+      <div class="hold on" id="h-ssn">
+        <div class="card">
+          <div class="row"><div><span class="name">삼성전자</span><span class="tk">005930 · KOSPI</span></div><span class="ago">지연 15분</span></div>
+          <div class="px"><span class="p">71,200</span><span class="ch" style="color:var(--red)">+1.2% (+850)</span></div>
+          <div class="holdbar">
+            <div class="holdline"><span>보유 100주 · 평단 68,000원</span><span class="edit">수정</span></div>
+            <div class="pnl"><span class="lab">평가손익</span><span><span class="amt" style="color:var(--red)">+320,000원</span><span class="pct" style="color:var(--red)">+4.7%</span></span></div>
+            <div class="factnote">평가금액 7,120,000원 = 현재가 × 보유수량. 평가손익은 입력한 평단 기준 단순 계산(사실)이며, 매수·매도·추가매수 권유가 아닙니다.</div>
+          </div>
+        </div>
+
+        <!-- 연결된 차트 (가격 + 공시·수급 마커 — 복원) -->
+        <div class="card">
+          <div class="row" style="margin-bottom:4px"><span style="font-size:13px;font-weight:800">연결된 차트</span><span class="ago">가격은 캔버스 · 공시·수급 마커</span></div>
+          <svg viewBox="0 0 320 120" width="100%" height="118" preserveAspectRatio="none" style="display:block">
+            <path d="M8,82 L40,78 L72,84 L104,70 L136,74 L168,60 L200,64 L232,52 L264,56 L288,46 L312,42 L312,120 L8,120 Z" fill="rgba(240,68,82,.07)"/>
+            <polyline points="8,82 40,78 72,84 104,70 136,74 168,60 200,64 232,52 264,56 288,46 312,42" fill="none" stroke="#f04452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="264" y1="12" x2="264" y2="112" stroke="#f04452" stroke-width="1" stroke-dasharray="3 3" opacity=".4"/>
+            <circle cx="264" cy="56" r="4.5" fill="#f04452" stroke="#fff" stroke-width="2"/>
+            <circle cx="288" cy="46" r="4.5" fill="#3182f6" stroke="#fff" stroke-width="2"/>
+          </svg>
+          <div class="per"><b>1M</b><b class="on">3M</b><b>1Y</b><b>전체</b></div>
+          <div class="evk"><i><span class="d" style="background:var(--red)"></span>자사주 소각 공시</i><i><span class="d" style="background:var(--blue)"></span>외인 순매도 시작</i></div>
+        </div>
+
+        <!-- 사실 합성 요약 (결정론, LLM 없음 — 한눈 답) -->
+        <div class="synth">
+          <div class="sl">사실 합성 · 한눈 요약</div>
+          <div class="lead">잠정실적 컨센 상회 · 외인 순매도 · 자사주 소각 진행</div>
+          <div class="fl"><span class="t">실적</span><span class="v">영업이익 <b>9.2조</b> — 컨센 8.7조 <b>+5.7% 상회</b></span></div>
+          <div class="fl"><span class="t">수급</span><span class="v">외국인 <b>3일 순매도 −2,140억</b> · 개인 +1,530억</span></div>
+          <div class="fl"><span class="t">자본</span><span class="v"><b>자사주 3조 소각</b> 공시 (10/2)</span></div>
+          <div class="fl"><span class="t">재무</span><span class="v">부채비율 <b>38%</b>(업종중앙 31%) · Altman-Z <b>3.4</b> · PER 14.2</span></div>
+          <div class="fl"><span class="t">지배</span><span class="v">총수일가·계열 <b>21.2%</b> 보유</span></div>
+          <div class="fl"><span class="t">일정</span><span class="v">확정실적 <b>D-21</b> · 배당락 D-34</span></div>
+          <div class="sf">화면의 사실을 규칙으로 추린 요약 — AI 작문·자체 등급 아님 · 출처 있음 · 판단 없음</div>
+        </div>
+
+        <!-- 방금 무슨 일 -->
+        <div class="stitle">방금 무슨 일 <span>공시-first · 연결</span></div>
+        <div class="card">
+          <div class="row"><div><span class="name" style="font-size:15px">삼성전자</span></div><span class="ago">2시간 전</span></div>
+          <div class="hook g">3분기 잠정실적 공시 · 영업이익 9.2조</div>
+          <div class="glance">컨센서스 8.7조 상회 · 외인 3일 순매도 · 자사주 소각 진행</div>
+          <div class="toggle" onclick="tog(this)">연결된 사실 3개 · 어떻게 묶었나 <span class="ar">▾</span></div>
+          <div class="body">
+            <div class="cn"><span class="chip g">실적</span><span class="f">영업이익 9.2조 (컨센 8.7조 +5.7%)</span></div>
+            <div class="cn"><span class="chip b">수급</span><span class="f">외국인 3일 연속 순매도 −2,140억</span></div>
+            <div class="cn"><span class="chip a">일정</span><span class="f">확정실적 발표 D-21</span></div>
+            <div class="srcL">출처</div>
+            <div class="src">· DART 2026-06-17 잠정실적(공정공시)</div>
+            <div class="src">· KRX 투자자별 매매동향</div>
+          </div>
+        </div>
+
+        <!-- 리스크 레이더 -->
+        <div class="stitle">리스크 레이더 <span>사실 · 결론 아님</span></div>
+        <div class="card">
+          <div class="glance" style="padding-top:2px">이 종목의 리스크·호재 사실을 한 화면에. (판단은 본인)</div>
+          <div style="margin-top:12px">
+            <div class="cn"><span class="chip b">수급</span><span class="f">외국인 3일 순매도 −2,140억</span></div>
+            <div class="cn"><span class="chip a">일정</span><span class="f">확정실적 D-21 · 배당락 D-34</span></div>
+            <div class="cn"><span class="chip g">호재</span><span class="f">자사주 3조 소각 공시 (10/2)</span></div>
+            <div class="cn"><span class="chip g">호재</span><span class="f">HBM 공급계약 확대 보도 — DART 교차확인 대기</span></div>
+          </div>
+          <div class="pat" style="margin-top:14px">
+            <div class="t">이 회사 이력 — 자사주 소각 (2015~) · 이게 처음이 아님</div>
+            <div class="mv">
+              <div class="pt"><div class="v" style="color:var(--red)">+6%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'17</div></div>
+              <div class="pt"><div class="v" style="color:var(--red)">+9%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'21</div></div>
+              <div class="pt"><div class="v" style="color:var(--blue)">−3%</div><div class="dot" style="background:var(--blue)"></div><div class="lb">'23</div></div>
+              <div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="srcL" style="margin-top:0">깨끗 (이상 없음 — 사실)</div>
+          <div class="cn"><span class="chip g">정상</span><span class="f">감사의견 적정 · 소송 계류 없음 · 상장폐지 사유 없음</span></div>
+        </div>
+
+        <!-- 팩트 패널 -->
+        <div class="stitle">팩트 패널 <span>DART · 사실</span></div>
+        <div class="grid">
+          <div class="tile"><div class="k">PER</div><div class="val">14.2</div><div class="d">업종 평균 17.8</div></div>
+          <div class="tile"><div class="k">PBR</div><div class="val">1.1</div><div class="d">5년 분위 32%ile</div></div>
+          <div class="tile"><div class="k">ROE</div><div class="val">9.1%</div><div class="d">최근 결산</div></div>
+          <div class="tile"><div class="k">부채비율</div><div class="val">38%</div><div class="d">업종중앙 31%</div></div>
+          <div class="tile"><div class="k">Altman Z</div><div class="val" style="color:var(--green)">3.4</div><div class="d">안전구간(>3)</div></div>
+          <div class="tile"><div class="k">시가총액</div><div class="val">425조</div><div class="d">코스피 1위</div></div>
+        </div>
+
+        <!-- 수급 -->
+        <div class="stitle">수급 — 최근 5일 (사실)</div>
+        <div class="card">
+          <div class="barRow"><span class="lab">외국인</span><span class="track"><span class="fill" style="width:72%;background:var(--blue)"></span></span><span class="amt" style="color:var(--blue)">−2,140억</span></div>
+          <div class="barRow"><span class="lab">기관</span><span class="track"><span class="fill" style="width:30%;background:var(--red)"></span></span><span class="amt" style="color:var(--red)">+610억</span></div>
+          <div class="barRow"><span class="lab">개인</span><span class="track"><span class="fill" style="width:48%;background:var(--red)"></span></span><span class="amt" style="color:var(--red)">+1,530억</span></div>
+        </div>
+
+        <!-- 지분구조 -->
+        <div class="stitle">지분구조 <span>공정위 공식 · 2026 지정</span></div>
+        <div class="card">
+          <div class="px" style="margin:2px 2px 6px"><span class="p" style="color:var(--vt)">21.2%</span><span class="ch" style="color:var(--ink);font-weight:700">총수일가·계열 보유</span></div>
+          <div class="note" style="margin-top:0;padding:0 2px 12px">동일인+친족+소속회사 합산 · 나머지 78.8%는 시장</div>
+          <div class="recon"><span class="a">≈ 두 공식 출처 근사</span><span class="b">최대주주 삼성생명 · DART 8.51% ↔ 공정위 7.49% (시점차)</span></div>
+          <div style="display:flex;width:100%;height:10px;border-radius:5px;overflow:hidden;margin-bottom:14px"><span style="width:78.8%;background:var(--line)"></span><span style="width:20.1%;background:var(--blue)"></span><span style="width:1.1%;background:var(--vt)"></span></div>
+          <div class="cn"><span class="chip b">소속회사</span><span class="f">삼성생명 외 · <b style="color:var(--ink)">20.1%</b></span></div>
+          <div class="cn"><span class="chip" style="background:var(--vtS);color:var(--vt)">동일인·친족</span><span class="f">총수일가 · 1.1%</span></div>
+          <div class="cn"><span class="chip g">기타</span><span class="f">소액주주 등 · 78.8%</span></div>
+          <div class="note">공정거래위원회 기업집단포털 · 법적 강제공시(1차 출처, 나무위키 아님) · 점수·추천 아님</div>
+        </div>
+
+        <!-- 부동산 -->
+        <div class="stitle">부동산 자산 <span>DART · 장부가</span></div>
+        <div class="card">
+          <div class="px" style="margin:2px 2px 6px"><span class="p" style="color:var(--vg)">8.4조</span><span class="ch" style="color:var(--ink);font-weight:700">유형자산 중 토지·건물</span></div>
+          <div class="note" style="margin-top:0;padding:0 2px 12px">재무상태표 공시 장부가 (시가 아님)</div>
+          <div class="barRow"><span class="lab">토지</span><span class="track"><span class="fill" style="width:38%;background:var(--vg)"></span></span><span class="amt" style="color:var(--vg)">3.2조</span></div>
+          <div class="barRow"><span class="lab">건물</span><span class="track"><span class="fill" style="width:62%;background:var(--vg)"></span></span><span class="amt" style="color:var(--vg)">5.2조</span></div>
+          <div class="note">OpenDART 연결재무상태표 · 취득원가 기준 · 미국 종목은 SEC XBRL 장부가</div>
+        </div>
+
+        <!-- 일정 -->
+        <div class="stitle">이 종목 일정</div>
+        <div class="card">
+          <div class="cal"><div class="dd">D-21</div><div><div class="ev">3분기 확정실적</div><div class="sub">실적</div></div></div>
+          <div class="cal" style="border:none"><div class="dd">D-34</div><div><div class="ev">배당락</div><div class="sub">배당</div></div></div>
+        </div>
+
+        <button class="export" onclick="alert('PDF 추출 (mock)\n\n사실 합성 요약 + 연결 차트 + 방금 무슨 일 + 리스크 레이더 + 팩트 + 수급 + 지분구조 + 부동산 + 일정\n→ 한 문서로 자동 묶음')">이 보유종목 리포트 추출 (PDF · 한 장)</button>
+        <div class="exnote">전 섹션을 한 문서로 자동 묶음 (따로 찾지 않게) — AI 작문·자체 등급 아님</div>
+      </div>
+
+      <!-- ── 보유 2: NVIDIA (US, 영문) ── -->
+      <div class="hold" id="h-nvda">
+        <div class="card">
+          <div class="row"><div><span class="name">NVIDIA</span><span class="tk">NVDA · NASDAQ</span></div><span class="ago">delayed 15m</span></div>
+          <div class="px"><span class="p">$172.40</span><span class="ch" style="color:var(--red)">+1.1% (+$1.88)</span></div>
+          <div class="holdbar">
+            <div class="holdline"><span>보유 20주 · 평단 $120.00</span><span class="edit">수정</span></div>
+            <div class="pnl"><span class="lab">평가손익</span><span><span class="amt" style="color:var(--red)">+$1,048</span><span class="pct" style="color:var(--red)">+43.7%</span></span></div>
+            <div class="factnote">평가금액 $3,448 = 현재가 × 보유수량. 평가손익은 입력한 평단 기준 단순 계산(사실)이며, 투자판단 권유가 아닙니다.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row" style="margin-bottom:4px"><span style="font-size:13px;font-weight:800">연결된 차트</span><span class="ago">가격은 캔버스 · 공시 마커</span></div>
+          <svg viewBox="0 0 320 120" width="100%" height="118" preserveAspectRatio="none" style="display:block">
+            <path d="M8,100 L40,94 L72,96 L104,84 L136,78 L168,80 L200,64 L232,56 L264,48 L288,40 L312,34 L312,120 L8,120 Z" fill="rgba(240,68,82,.07)"/>
+            <polyline points="8,100 40,94 72,96 104,84 136,78 168,80 200,64 232,56 264,48 288,40 312,34" fill="none" stroke="#f04452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="264" y1="12" x2="264" y2="112" stroke="#f04452" stroke-width="1" stroke-dasharray="3 3" opacity=".4"/>
+            <circle cx="264" cy="48" r="4.5" fill="#f04452" stroke="#fff" stroke-width="2"/>
+          </svg>
+          <div class="per"><b>1M</b><b class="on">3M</b><b>1Y</b><b>전체</b></div>
+          <div class="evk"><i><span class="d" style="background:var(--red)"></span>Q3 earnings (8-K)</i></div>
+        </div>
+
+        <div class="synth">
+          <div class="sl">사실 합성 · 한눈 요약</div>
+          <div class="lead">데이터센터 매출 컨센 상회 · 가이던스 상향 · 밸류 역사적 상단</div>
+          <div class="fl"><span class="t">실적</span><span class="v">데이터센터 매출 <b>$30.8B</b> — 컨센 $28.4B 상회 (<b>+112% YoY</b>)</span></div>
+          <div class="fl"><span class="t">자본</span><span class="v"><b>자사주 $50B 매입</b> 승인 · 가이던스 상향</span></div>
+          <div class="fl"><span class="t">밸류</span><span class="v">PER <b>48.2</b> · 5년 분위 <b>96%ile</b> (역사적 상단)</span></div>
+          <div class="fl"><span class="t">내부자</span><span class="v">Form 4 임원 매도 2건 (10b5-1 정기)</span></div>
+          <div class="fl"><span class="t">재무</span><span class="v">Debt/Equity <b>0.12</b> · F-Score <b>8/9</b></span></div>
+          <div class="fl"><span class="t">일정</span><span class="v">다음 10-Q <b>D-18</b></span></div>
+          <div class="sf">화면의 사실을 규칙으로 추린 요약 — AI 작문·자체 등급 아님 · 출처 있음 · 판단 없음</div>
+        </div>
+
+        <div class="stitle">방금 무슨 일 <span>SEC-first · English</span></div>
+        <div class="card">
+          <div class="row"><div><span class="name" style="font-size:15px">NVIDIA</span></div><span class="ago">3h ago</span></div>
+          <div class="hook g">Q3 data-center revenue beats: $30.8B (+112% YoY)</div>
+          <div class="glance">Beat consensus $28.4B · gross margin 75% · guidance raised</div>
+          <div class="toggle" onclick="tog(this)">3 connected facts · how it's linked <span class="ar">▾</span></div>
+          <div class="body">
+            <div class="cn"><span class="chip g">Earnings</span><span class="f">Data-center rev $30.8B vs est. $28.4B</span></div>
+            <div class="cn"><span class="chip a">Filing</span><span class="f">8-K filed 2026-06-17 · next 10-Q in 18d</span></div>
+            <div class="cn"><span class="chip b">Insider</span><span class="f">Form 4: 2 sells last 30d (10b5-1 plan)</span></div>
+            <div class="srcL">Sources</div>
+            <div class="src">· SEC EDGAR 8-K · 2026-06-17</div>
+            <div class="src">· Yahoo Finance / Reuters headline</div>
+          </div>
+        </div>
+
+        <div class="stitle">리스크 레이더 <span>facts · not a verdict</span></div>
+        <div class="card">
+          <div class="glance" style="padding-top:2px">리스크·호재 사실을 한 화면에. (판단은 본인)</div>
+          <div style="margin-top:12px">
+            <div class="cn"><span class="chip a">밸류</span><span class="f">PER 5년 분위 96%ile (역사적 상단 — 사실)</span></div>
+            <div class="cn"><span class="chip b">내부자</span><span class="f">Form 4 임원 매도 2건 (10b5-1 정기)</span></div>
+            <div class="cn"><span class="chip g">호재</span><span class="f">데이터센터 매출 +112% YoY</span></div>
+            <div class="cn"><span class="chip g">호재</span><span class="f">가이던스 상향 · 자사주 $50B 매입 승인</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="srcL" style="margin-top:0">깨끗 (이상 없음 — 사실)</div>
+          <div class="cn"><span class="chip g">정상</span><span class="f">going-concern 경고 없음 · 중대 소송 공시 없음</span></div>
+        </div>
+
+        <div class="stitle">팩트 패널 <span>SEC XBRL · 사실</span></div>
+        <div class="grid">
+          <div class="tile"><div class="k">P/E</div><div class="val">48.2</div><div class="d">5년 분위 96%ile</div></div>
+          <div class="tile"><div class="k">ROE</div><div class="val">91%</div><div class="d">TTM</div></div>
+          <div class="tile"><div class="k">Debt/Equity</div><div class="val" style="color:var(--green)">0.12</div><div class="d">낮음</div></div>
+          <div class="tile"><div class="k">Rev YoY</div><div class="val" style="color:var(--red)">+94%</div><div class="d">최근 분기</div></div>
+          <div class="tile"><div class="k">F-Score</div><div class="val" style="color:var(--green)">8/9</div><div class="d">Piotroski</div></div>
+          <div class="tile"><div class="k">Mkt Cap</div><div class="val">$4.2T</div><div class="d">—</div></div>
+        </div>
+
+        <div class="stitle">이 종목 일정</div>
+        <div class="card">
+          <div class="cal"><div class="dd">D-18</div><div><div class="ev">Q3 10-Q filing</div><div class="sub">실적</div></div></div>
+          <div class="cal" style="border:none"><div class="dd">D-40</div><div><div class="ev">GTC conference</div><div class="sub">이벤트</div></div></div>
+        </div>
+
+        <button class="export" onclick="alert('PDF 추출 (mock)\n\n사실 합성 요약 + 연결 차트 + 방금 무슨 일(영문) + 리스크 레이더 + 팩트 + 일정\n→ 한 문서로 자동 묶음')">이 보유종목 리포트 추출 (PDF · 한 장)</button>
+        <div class="exnote">전 섹션을 한 문서로 자동 묶음 (따로 찾지 않게) — AI 작문·자체 등급 아님</div>
+      </div>
+
+      <!-- ── 보유 그 외 (mock: 상세는 삼성·NVDA만 채움) ── -->
+      <div class="hold" id="h-more">
+        <div class="card"><div class="row"><div><span class="name">이 종목</span><span class="tk">보유종목 유리박스</span></div></div>
+          <div class="held" style="margin-top:12px">이 종목도 동일한 유리박스 구조 — 사실 합성 요약 · 연결 차트 · 리스크 레이더 · 팩트 · 지분 · 부동산 · 일정.<br>mock에선 삼성전자·NVIDIA만 상세를 채웠습니다. 실데이터 연결 시 모든 보유종목 동일 적용.</div>
+        </div>
+      </div>
+
+      <!-- 공통: 시장 맥락 (관측) -->
+      <div class="stitle">시장 맥락 <span>관측 · 지시 아님</span></div>
+      <div class="card">
+        <div class="row" style="margin-bottom:10px"><span class="glance" style="padding:0">현재 레짐</span><span class="regime">risk-off 국면</span></div>
+        <div class="note" style="margin-top:0;padding:0 2px 8px">근거 지표 — 사실. "국면이다"까지만, 비중 조절 권유 아님.</div>
+        <div class="grid">
+          <div class="tile"><div class="k">美 10Y-2Y</div><div class="val" style="color:var(--green)">+0.42%p</div><div class="d">정상화</div></div>
+          <div class="tile"><div class="k">Fear &amp; Greed</div><div class="val" style="color:var(--amber)">38</div><div class="d">Fear 구간</div></div>
+          <div class="tile"><div class="k">VIX</div><div class="val" style="color:var(--amber)">22.4</div><div class="d">3개월래 최고</div></div>
+          <div class="tile"><div class="k">반도체 섹터 3M</div><div class="val" style="color:var(--red)">+8.1%</div><div class="d">TOP 섹터</div></div>
+        </div>
+      </div>
+
+      <div class="disc">본 화면은 객관적 사실·일정 정보를 제공하며, 매수·매도·추가매수 등 투자판단(조언)을 제공하지 않습니다. 투자 결정·책임은 전적으로 이용자 본인. 출처: DART·공정위·SEC·KRX·Yahoo · 점수 held(2027)</div>
+      </div><!-- /m-hdetail -->
+    </section>
+
     <!-- ───── 탭2: 종목 (리스크 레이더 — forensics) ───── -->
     <section class="sec" id="s-stock">
       <div class="h">종목 리포트 <span>이 종목의 모든 것</span></div>
 
-      <!-- 검색 + 관심종목 -->
-      <div class="search"><span class="mag"></span><input placeholder="종목명·코드 검색 (예: 삼성전자, 005930)" /></div>
-      <div class="wl">
-        <span class="c act">두산에너빌리티</span><span class="c">에코프로비엠</span><span class="c">엠케이전자</span><span class="c">＋ 관심종목</span>
+      <!-- 검색 = 콤보박스 (관심종목 흡수, 포커스 시 드롭다운 — 가로 칩 폐기) -->
+      <div class="search"><span class="mag"></span><input placeholder="종목 검색 · 관심종목 (예: 삼성전자, 005930)" />
+        <div class="sugg">
+          <div class="sh2">관심종목</div>
+          <div class="si"><span class="nm">두산에너빌리티 <small>034020</small></span><span class="r"><span class="p">21,450</span><span class="c" style="color:var(--blue)">−6.2%</span></span></div>
+          <div class="si"><span class="nm">에코프로비엠 <small>247540</small></span><span class="r"><span class="p">142,300</span><span class="c" style="color:var(--blue)">−3.2%</span></span></div>
+          <div class="si"><span class="nm">엠케이전자 <small>033160</small></span><span class="r"><span class="p">38,900</span><span class="c" style="color:var(--red)">+2.1%</span></span></div>
+          <div class="si"><span class="nm">SK하이닉스 <small>000660</small></span><span class="r"><span class="p">241,000</span><span class="c" style="color:var(--red)">+0.9%</span></span></div>
+          <div class="sh2">추천 · 오늘 공시 활발</div>
+          <div class="si"><span class="nm">한미반도체 <small>042700 · 자사주 취득</small></span><span class="r"><span class="p">96,400</span><span class="c" style="color:var(--red)">+1.4%</span></span></div>
+          <div class="add">＋ 검색해서 관심종목 추가 — 속보 피드에 뜸</div>
+        </div>
       </div>
-      <div class="wlnote">검색 → 관심종목 추가 → 속보 피드에 뜸</div>
 
       <!-- 연결된 차트 (가격 + 공시·수급 마커) -->
       <div class="card">
@@ -385,6 +711,7 @@
   <!-- bottom nav -->
   <div class="nav">
     <button class="on" onclick="go(this,'s-feed')">속보</button>
+    <button onclick="go(this,'s-holdings')">보유</button>
     <button onclick="go(this,'s-stock')">종목</button>
     <button onclick="go(this,'s-market')">시장</button>
     <button onclick="go(this,'s-glass')">유리박스</button>
@@ -410,6 +737,18 @@
     document.getElementById(id).classList.add('on');
     document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('on')});
     btn.classList.add('on');
+    document.querySelector('.scroll').scrollTo(0,0);window.scrollTo(0,0);
+  }
+  function openH(id){
+    document.getElementById('m-hlist').classList.remove('on');
+    document.getElementById('m-hdetail').classList.add('on');
+    document.querySelectorAll('#m-hdetail .hold').forEach(function(s){s.classList.remove('on')});
+    document.getElementById(id).classList.add('on');
+    document.querySelector('.scroll').scrollTo(0,0);window.scrollTo(0,0);
+  }
+  function backH(){
+    document.getElementById('m-hdetail').classList.remove('on');
+    document.getElementById('m-hlist').classList.add('on');
     document.querySelector('.scroll').scrollTo(0,0);window.scrollTo(0,0);
   }
 </script>
