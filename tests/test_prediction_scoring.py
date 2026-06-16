@@ -136,3 +136,21 @@ def test_label_gate():
     assert PS._label_for(50, 0.5) == "예비"
     assert PS._label_for(300, 0.01) == "유의"
     assert PS._label_for(300, 0.5) == "예비"  # N 충분해도 유의성 미달
+
+
+def test_terminal_capture_on_delisting(monkeypatch):
+    """상폐(eval 가격 소멸) 시 드롭 대신 마지막 가용가로 손실 포착 — survivorship-free 교정(2026-06-15)."""
+    import api.intelligence.prediction_scoring as ps
+    avail = ["2026-01-01", "2026-02-01", "2026-03-01"]
+    # base=100(01-01), mid=50(02-01), eval(03-01) 에서는 소멸(=상폐)
+    prices = {"2026-01-01": {"X": 100.0}, "2026-02-01": {"X": 50.0}, "2026-03-01": {}}
+    monkeypatch.setattr(ps, "_find_nearest_snapshot", lambda d, a: "2026-01-01")
+    monkeypatch.setattr(ps, "load_snapshot", lambda d: {"date": d})
+    monkeypatch.setattr(ps, "_get_price_map_from_snapshot", lambda snap: prices[snap["date"]])
+    # 정상 경로는 eval 가격 결손 → None (LOCKED 무변경 확인)
+    assert ps._realized_stock_return("X", "2026-01-01", "2026-03-01", avail) is None
+    # 종결 경로는 마지막 가용가(50)로 -50% 포착
+    assert ps._realized_terminal_return("X", "2026-01-01", "2026-03-01", avail) == -50.0
+    # base 결손이면 종결도 None (날조 금지)
+    monkeypatch.setattr(ps, "_get_price_map_from_snapshot", lambda snap: {})
+    assert ps._realized_terminal_return("X", "2026-01-01", "2026-03-01", avail) is None

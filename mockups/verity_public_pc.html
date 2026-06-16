@@ -14,33 +14,35 @@
   :root{
     --bg:#f2f4f6;--card:#fff;--ink:#191f28;--sub:#4e5968;--faint:#8b95a1;--line:#e8ebed;
     --up:#f04452;--upS:#fff0f1;--down:#3182f6;--downS:#eef4ff;--amber:#ff9500;--amberS:#fff6e9;
-    --green:#15c47e;--greenS:#eafaf3;--violet:#6c5ce7;--violetS:#f0edff;--blue:#3182f6;--blueS:#eef4ff;
+    --green:#15c47e;--greenS:#eafaf3;--vg:#0ca678;--vgS:#e7faf0;--vt:#6c5ce7;--vtS:#f0edff;--blue:#3182f6;--blueS:#eef4ff;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;color:var(--ink)}
   /* 다크 "프로 터미널" 모드 (눈 편의 + 토스로부터 거리두기) — 순흑 아닌 저휘도 */
   body.dark{
-    --bg:#0f1318;--card:#171c23;--ink:#e3e7ec;--sub:#9aa4b1;--faint:#6b7682;--line:#252b34;
-    --upS:#2a1a1d;--downS:#152031;--amberS:#2a2113;--greenS:#0f241c;--violetS:#1e1b30;--blueS:#152031;
+    --bg:#0f1318;--card:#171c23;--ink:#e3e7ec;--sub:#9aa4b1;--faint:#828d9b;--line:#252b34;
+    --upS:#2a1a1d;--downS:#152031;--amberS:#2a2113;--greenS:#0f241c;--vg:#7fffa0;--vgS:#11281d;--vt:#a99bff;--vtS:#241f3a;--blueS:#152031;
   }
   body.dark .nav{background:rgba(18,22,28,.96)}
+  body.dark .search{background:#1c222b}
   body.dark .ftab .rw:hover{background:#1c222b}
   body.dark .ptab .me td{background:#1c222b}
-  body.dark .ix,body.dark .card,body.dark .wcard,body.dark .ftab{box-shadow:0 1px 3px rgba(0,0,0,.35)}
-  .tgl{margin-left:10px;background:var(--bg);border:1px solid var(--line);color:var(--sub);font-family:inherit;font-size:12px;font-weight:700;padding:7px 13px;border-radius:999px;cursor:pointer}
+  body.dark .ix,body.dark .card,body.dark .wcard,body.dark .ftab,body.dark .meta{box-shadow:0 2px 10px rgba(0,0,0,.4)}
+  
+  .tgl{margin-left:10px;background:var(--bg);border:none;color:var(--sub);font-family:inherit;font-size:12px;font-weight:700;padding:7px 13px;border-radius:999px;cursor:pointer}
   .up{color:var(--up)} .down{color:var(--down)}
   /* top nav */
   .nav{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);height:60px;display:flex;align-items:center;gap:28px;padding:0 28px}
-  .logo{font-size:21px;font-weight:900;letter-spacing:-1px}.logo b{color:var(--violet)}
+  .logo{font-size:21px;font-weight:900;letter-spacing:-1px}.logo b{color:var(--vg)}
   .links{display:flex;gap:22px}
   .links button{background:none;border:none;font-family:inherit;font-size:15px;font-weight:700;color:var(--sub);cursor:pointer;padding:6px 0}
   .links button.on{color:var(--ink);position:relative}
-  .links button.on::after{content:"";position:absolute;left:0;right:0;bottom:-19px;height:2.5px;background:var(--violet);border-radius:2px}
-  .search{flex:1;max-width:420px;margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:10px;padding:9px 14px}
+  .links button.on::after{content:"";position:absolute;left:0;right:0;bottom:-19px;height:2.5px;background:var(--vg);border-radius:2px}
+  .search{position:relative;flex:1;max-width:420px;margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:10px;padding:9px 14px}
   .search .mag{width:14px;height:14px;border:2px solid var(--faint);border-radius:50%;flex-shrink:0}
   .search input{border:none;outline:none;background:none;font-family:inherit;font-size:14px;font-weight:600;width:100%;color:var(--ink)}
   .search input::placeholder{color:var(--faint);font-weight:500}
-  .navpill{font-size:11.5px;font-weight:700;color:var(--violet);background:var(--violetS);padding:7px 12px;border-radius:999px;white-space:nowrap}
+  .navpill{font-size:11.5px;font-weight:700;color:var(--vg);background:var(--vgS);padding:7px 12px;border-radius:999px;white-space:nowrap}
   /* layout */
   .layout{max-width:1480px;margin:0 auto;display:flex;gap:20px;padding:20px 28px;align-items:flex-start}
   .main{flex:1;min-width:0}
@@ -54,22 +56,22 @@
   .sh{display:flex;align-items:baseline;justify-content:space-between;padding:4px 2px 14px}
   .sh .t{font-size:20px;font-weight:800;letter-spacing:-.5px} .sh .s{font-size:12.5px;color:var(--faint);font-weight:600}
   .pills{display:flex;gap:7px;margin-bottom:12px}
-  .pills b{font-size:12.5px;font-weight:700;color:var(--sub);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 13px;cursor:pointer}
-  .pills b.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .pills b{font-size:12.5px;font-weight:700;color:var(--sub);background:var(--card);border:none;border-radius:999px;padding:6px 13px;cursor:pointer}
+  .pills b.on{background:#0ca678;color:#fff;border-color:#0ca678}
   /* feed table */
   .ftab{background:var(--card);border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);overflow:hidden}
   .ftab .hd,.ftab .rw{display:grid;grid-template-columns:150px 200px 1fr 130px 70px;gap:14px;align-items:center;padding:13px 18px}
   .ftab .hd{font-size:11.5px;font-weight:700;color:var(--faint);border-bottom:1px solid var(--line)}
   .ftab .rw{border-bottom:1px solid var(--line)} .ftab .rw:last-child{border:none}
   .ftab .rw:hover{background:#fafbfc}
-  .nm{font-size:14.5px;font-weight:800;letter-spacing:-.3px} .nm small{display:block;font-size:11px;color:var(--faint);font-weight:600;margin-top:2px}
+  .nm{font-size:14.5px;font-weight:700;letter-spacing:-.3px} .nm small{display:block;font-size:11px;color:var(--faint);font-weight:600;margin-top:2px}
   .hook{font-size:13px;font-weight:700;padding:7px 10px;border-radius:9px;letter-spacing:-.2px}
   .hook.r{background:var(--upS);color:var(--up)} .hook.g{background:var(--greenS);color:var(--green)} .hook.a{background:var(--amberS);color:var(--amber)}
   .cns{display:flex;gap:6px;flex-wrap:wrap}
-  .chip{font-size:11px;font-weight:800;padding:3px 8px;border-radius:7px}
+  .chip{font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px}
   .chip.r{background:var(--upS);color:var(--up)} .chip.b{background:var(--downS);color:var(--down)} .chip.a{background:var(--amberS);color:var(--amber)} .chip.g{background:var(--greenS);color:var(--green)}
   .mv{display:flex;align-items:flex-end;gap:9px}
-  .mv .pt{display:flex;flex-direction:column;align-items:center;gap:3px}.mv .v{font-size:10px;font-weight:800}.mv .dot{width:9px;height:9px;border-radius:5px}.mv .lb{font-size:9px;color:var(--faint);font-weight:600}
+  .mv .pt{display:flex;flex-direction:column;align-items:center;gap:3px}.mv .v{font-size:10px;font-weight:700}.mv .dot{width:9px;height:9px;border-radius:5px}.mv .lb{font-size:9px;color:var(--faint);font-weight:600}
   .ago{font-size:11.5px;color:var(--faint);font-weight:600;text-align:right}
   .foot{font-size:11.5px;color:var(--faint);font-weight:600;padding:14px 4px 0;line-height:1.6}
   /* watchlist side */
@@ -80,22 +82,23 @@
   .wi .l{font-size:13.5px;font-weight:700} .wi .l small{display:block;font-size:11px;color:var(--faint);font-weight:600}
   .wi .r{text-align:right} .wi .r .p{font-size:13.5px;font-weight:800} .wi .r .c{font-size:11.5px;font-weight:700}
   .addw{margin-top:12px;width:100%;background:var(--bg);border:none;border-radius:10px;padding:11px;font-family:inherit;font-size:13px;font-weight:700;color:var(--sub);cursor:pointer}
-  .honest{background:var(--violetS);border-radius:14px;padding:14px;margin-top:14px;font-size:12px;color:var(--violet);font-weight:700;line-height:1.55}
+  .honest{background:var(--vtS);border-radius:14px;padding:14px;margin-top:14px;font-size:12px;color:var(--vt);font-weight:700;line-height:1.55}
   /* generic cards (other tabs) */
   .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:start}
   .card{background:var(--card);border-radius:16px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:16px}
   .ct{font-size:14px;font-weight:800;margin-bottom:12px;letter-spacing:-.3px}
-  .kv{display:flex;justify-content:space-between;padding:8px 0;font-size:13.5px;border-bottom:1px solid var(--line)}.kv:last-child{border:none}.kv .k{color:var(--sub);font-weight:600}.kv .v{font-weight:800}
+  .kv{display:flex;justify-content:space-between;padding:8px 0;font-size:13.5px;border-bottom:1px solid var(--line)}.kv:last-child{border:none}.kv .k{color:var(--sub);font-weight:600}.kv .v{font-weight:700}
   .tiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
   .tile{background:var(--bg);border-radius:12px;padding:12px 13px}.tile .k{font-size:11.5px;color:var(--faint);font-weight:700}.tile .v{font-size:17px;font-weight:800;letter-spacing:-.4px;margin:3px 0}.tile .d{font-size:11px;color:var(--sub);font-weight:600}
-  .bar{display:flex;align-items:center;gap:9px;margin-bottom:9px}.bar .lab{width:60px;font-size:12.5px;font-weight:700;color:var(--sub)}.bar .tr{flex:1;height:9px;border-radius:5px;background:var(--line);overflow:hidden}.bar .fl{height:100%;border-radius:5px}.bar .am{width:70px;text-align:right;font-size:12.5px;font-weight:800}
-  .cal{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--line)}.cal:last-child{border:none}.cal .dd{width:52px;font-size:12.5px;font-weight:800;color:var(--blue)}.cal .ev{font-size:13.5px;font-weight:700}.cal .sub{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:1px}
-  .gate{height:11px;border-radius:6px;background:var(--line);overflow:hidden;margin:10px 0}.gate .gf{height:100%;background:var(--violet)}
+  .bar{display:flex;align-items:center;gap:9px;margin-bottom:9px}.bar .lab{width:60px;font-size:12.5px;font-weight:700;color:var(--sub)}.bar .tr{flex:1;height:9px;border-radius:5px;background:var(--line);overflow:hidden}.bar .fl{height:100%;border-radius:5px}.bar .am{width:70px;text-align:right;font-size:12.5px;font-weight:700}
+  .cal{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--line)}.cal:last-child{border:none}.cal .dd{width:52px;font-size:12.5px;font-weight:800;color:var(--vg)}.cal .ev{font-size:13.5px;font-weight:700}.cal .sub{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:1px}
+  .gate{height:11px;border-radius:6px;background:var(--line);overflow:hidden;margin:10px 0}.gate .gf{height:100%;background:var(--vt)}
   .pm{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;font-weight:600}.pm:last-child{border:none}
-  .ok{color:var(--green);font-weight:800}.no{color:var(--up);font-weight:800}
-  .held{background:var(--violetS);color:var(--violet);font-size:13px;font-weight:700;padding:13px;border-radius:12px;text-align:center;margin-top:12px;line-height:1.5}
-  .export{background:var(--violet);color:#fff;border:none;border-radius:12px;padding:14px 22px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}
+  .ok{color:var(--green);font-weight:600}.no{color:var(--up);font-weight:600}
+  .held{background:var(--vtS);color:var(--vt);font-size:13px;font-weight:700;padding:13px;border-radius:12px;text-align:center;margin-top:12px;line-height:1.5}
+  
+  .export{background:#0ca678;color:#fff;border:none;border-radius:12px;padding:14px 22px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}
   /* chart */
   .meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 22px;background:var(--card);border-radius:14px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:16px}
   .meta .m{display:flex;justify-content:space-between;font-size:12.5px}.meta .m .k{color:var(--faint);font-weight:600}.meta .m .v{font-weight:700}
@@ -103,10 +106,38 @@
   .ig .ir{display:flex;justify-content:space-between;padding:6px 0;font-size:13px}.ig .ir .k{color:var(--faint);font-weight:600}.ig .ir .v{font-weight:800}
   .ptab{width:100%;border-collapse:collapse}.ptab th,.ptab td{text-align:right;padding:9px 6px;font-size:13px;border-bottom:1px solid var(--line)}.ptab th{color:var(--faint);font-weight:700;font-size:11.5px}.ptab td:first-child,.ptab th:first-child{text-align:left}.ptab .me td{font-weight:800;background:#fafbfc}
   .dz{display:grid;grid-template-columns:64px 1fr;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}.dz:last-child{border:none}.dz .dd{font-size:12.5px;font-weight:700;color:var(--sub)}.dz .ti{font-size:13.5px;font-weight:700}.dz .de{font-size:12px;color:var(--faint);font-weight:500;margin-top:2px}.dtag{font-size:10px;font-weight:800;padding:2px 6px;border-radius:5px;margin-left:7px}
-  .ncard{display:grid;grid-template-columns:1fr 76px;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.ncard:last-child{border:none}.ncard .nti{font-size:13.5px;font-weight:700;letter-spacing:-.2px}.ncard .nmt{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:4px}.ncard .nlk{font-size:11.5px;color:var(--violet);font-weight:700;margin-top:4px}.ncard .nim{width:76px;height:52px;border-radius:8px;background:var(--line)}
+  .ncard{display:grid;grid-template-columns:1fr 76px;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.ncard:last-child{border:none}.ncard .nti{font-size:13.5px;font-weight:700;letter-spacing:-.2px}.ncard .nmt{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:4px}.ncard .nlk{font-size:11.5px;color:var(--vg);font-weight:700;margin-top:4px}.ncard .nim{width:76px;height:52px;border-radius:8px;background:var(--line)}
   svg.chart{display:block;width:100%;height:150px}
-  .per{display:flex;gap:6px;margin-top:8px}.per b{font-size:12px;font-weight:700;color:var(--faint);padding:5px 12px;border-radius:8px;cursor:pointer}.per b.on{background:var(--blueS);color:var(--blue)}
+  .per{display:flex;gap:6px;margin-top:8px}.per b{font-size:12px;font-weight:700;color:var(--faint);padding:5px 12px;border-radius:8px;cursor:pointer}.per b.on{background:var(--vgS);color:var(--vg)}
   .evk{display:flex;gap:16px;margin-top:10px;font-size:11.5px;font-weight:600;color:var(--sub)}.evk i{font-style:normal;display:inline-flex;align-items:center;gap:5px}.evk .d{width:8px;height:8px;border-radius:4px}
+  /* C 검색 드롭다운 + D 빈상태 */
+  .sugg{display:none;position:absolute;top:46px;left:0;right:0;background:var(--card);border:none;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.12);padding:8px;z-index:40}
+  .search:focus-within .sugg{display:block}
+  .sugg .sh2{font-size:11px;font-weight:700;color:var(--faint);padding:7px 8px 4px}
+  .sugg .si{display:flex;gap:7px;align-items:baseline;padding:9px 8px;border-radius:9px;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--ink)}
+  .sugg .si:hover{background:var(--bg)}
+  .sugg .si small{color:var(--faint);font-weight:600;font-size:11.5px}
+  .empty{text-align:center;color:var(--faint);font-size:12px;font-weight:600;padding:14px 10px}
+  /* E hover/focus 접근성 */
+  .links button:hover{color:var(--ink)}
+  .pills b:hover{border-color:var(--vg);color:var(--vg)}
+  .tgl:hover{border-color:var(--vg);color:var(--vg)}
+  .addw:hover{color:var(--vg)}
+  .export:hover{filter:brightness(1.08)}
+  .wi:hover{background:var(--bg);border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px}
+  .search:focus-within{outline:2px solid var(--vg);outline-offset:1px}
+  /* G 시그니처: 과거패턴 점-타임라인 연결선 */
+  .mv{position:relative}
+  .mv::before{content:"";position:absolute;left:7px;right:7px;bottom:16px;height:2px;background:var(--vtS);z-index:0}
+  .mv .pt,.mv .dot{position:relative;z-index:1}
+  /* F 반응형 */
+  @media (max-width:1120px){ .side{display:none} }
+  @media (max-width:980px){
+    .grid2,.grid3{grid-template-columns:1fr}
+    .ftab .hd,.ftab .rw{grid-template-columns:108px 150px 1fr 64px;gap:10px}
+    .ftab .hd>div:nth-child(4),.ftab .rw>div:nth-child(4){display:none}
+    .ixrow{gap:8px}.ix{min-width:108px}
+  }
 </style>
 </head>
 <body>
@@ -118,7 +149,15 @@
       <button onclick="go(this,'p-market')">시장</button>
       <button onclick="go(this,'p-glass')">유리박스</button>
     </nav>
-    <div class="search"><span class="mag"></span><input placeholder="종목·코드 검색 (예: 에코프로비엠, 247540)"></div>
+    <div class="search"><span class="mag"></span><input placeholder="종목·코드 검색 (예: 에코프로비엠, 247540)">
+      <div class="sugg">
+        <div class="sh2">최근 검색</div>
+        <div class="si">에코프로비엠 <small>247540</small></div>
+        <div class="si">두산에너빌리티 <small>034020</small></div>
+        <div class="sh2">추천 · 오늘 공시 활발</div>
+        <div class="si">엠케이전자 <small>033160 · 공급계약</small></div>
+        <div class="empty">더 입력하면 결과가 여기 떠요</div>
+      </div></div>
     <span class="navpill">사실·연결만 · 검증 중</span>
     <button class="tgl" id="tglb" onclick="toggleTheme()">다크</button>
   </header>
@@ -129,11 +168,11 @@
       <!-- ════ 홈: 공시 속보 (토스 home 대응) ════ -->
       <section class="page on" id="p-home">
         <div class="ixrow">
-          <div class="ix"><div class="k">코스피</div><div class="v">2,712.4</div><div class="c up">+0.82%</div></div>
-          <div class="ix"><div class="k">코스닥</div><div class="v">870.3</div><div class="c down">−0.31%</div></div>
-          <div class="ix"><div class="k">S&amp;P 500</div><div class="v">7,568</div><div class="c up">+1.84%</div></div>
-          <div class="ix"><div class="k">USD/KRW</div><div class="v">1,362</div><div class="c down">−0.2%</div></div>
-          <div class="ix"><div class="k">VIX</div><div class="v">16.0</div><div class="c down">−9.5%</div></div>
+          <div class="ix"><div class="k">코스피</div><div class="v">2,712.4</div><div class="c up">▲ 0.82%</div></div>
+          <div class="ix"><div class="k">코스닥</div><div class="v">870.3</div><div class="c down">▼ 0.31%</div></div>
+          <div class="ix"><div class="k">S&amp;P 500</div><div class="v">7,568</div><div class="c up">▲ 1.84%</div></div>
+          <div class="ix"><div class="k">USD/KRW</div><div class="v">1,362</div><div class="c down">▼ 0.2%</div></div>
+          <div class="ix"><div class="k">VIX</div><div class="v">16.0</div><div class="c down">▼ 9.5%</div></div>
         </div>
 
         <div class="sh"><div class="t">공시 속보</div><div class="s">공시-first(DART 원천) · 우리 데이터로 연결 · AI 요약 아님</div></div>
@@ -146,7 +185,7 @@
             <div class="nm">에코프로비엠<small>247540</small></div>
             <div><span class="hook r">유상증자 3,200억</span></div>
             <div class="cns"><span class="chip r">오버행 6.2%</span><span class="chip b">외인 −142만주</span><span class="chip a">CB전환 D-9</span></div>
-            <div class="mv"><div class="pt"><div class="v down">-18%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'18</div></div><div class="pt"><div class="v down">-24%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'21</div></div><div class="pt"><div class="v" style="color:var(--violet)">?</div><div class="dot" style="background:#fff;border:2px solid var(--violet)"></div><div class="lb">현재</div></div></div>
+            <div class="mv"><div class="pt"><div class="v down">-18%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'18</div></div><div class="pt"><div class="v down">-24%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'21</div></div><div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div></div>
             <div class="ago">8분 전</div>
           </div>
 
@@ -154,7 +193,7 @@
             <div class="nm">엠케이전자<small>033160</small></div>
             <div><span class="hook g">공급계약 1,840억</span></div>
             <div class="cns"><span class="chip b">기관 +38만주</span><span class="chip a">실적 D-5</span></div>
-            <div class="mv"><div class="pt"><div class="v up">+8%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'22</div></div><div class="pt"><div class="v up">+5%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'23</div></div><div class="pt"><div class="v up">+6%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'24</div></div><div class="pt"><div class="v" style="color:var(--violet)">?</div><div class="dot" style="background:#fff;border:2px solid var(--violet)"></div><div class="lb">현재</div></div></div>
+            <div class="mv"><div class="pt"><div class="v up">+8%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'22</div></div><div class="pt"><div class="v up">+5%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'23</div></div><div class="pt"><div class="v up">+6%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'24</div></div><div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div></div>
             <div class="ago">23분 전</div>
           </div>
 
@@ -162,7 +201,7 @@
             <div class="nm">두산에너빌리티<small>034020</small></div>
             <div><span class="hook a">최대주주 지분 매도</span></div>
             <div class="cns"><span class="chip a">거버넌스</span><span class="chip b">외인 −920억</span><span class="chip r">정정 90일 3건</span></div>
-            <div class="mv"><div class="pt"><div class="v down">-21%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'17</div></div><div class="pt"><div class="v down">-12%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'20</div></div><div class="pt"><div class="v" style="color:var(--violet)">?</div><div class="dot" style="background:#fff;border:2px solid var(--violet)"></div><div class="lb">현재</div></div></div>
+            <div class="mv"><div class="pt"><div class="v down">-21%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'17</div></div><div class="pt"><div class="v down">-12%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'20</div></div><div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div></div>
             <div class="ago">1시간 전</div>
           </div>
 
@@ -170,7 +209,7 @@
             <div class="nm">한미반도체<small>042700</small></div>
             <div><span class="hook g">자사주 취득 결정</span></div>
             <div class="cns"><span class="chip g">수급 우호</span><span class="chip b">외인 +210억</span></div>
-            <div class="mv"><div class="pt"><div class="v up">+3%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'21</div></div><div class="pt"><div class="v up">+11%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'23</div></div><div class="pt"><div class="v" style="color:var(--violet)">?</div><div class="dot" style="background:#fff;border:2px solid var(--violet)"></div><div class="lb">현재</div></div></div>
+            <div class="mv"><div class="pt"><div class="v up">+3%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'21</div></div><div class="pt"><div class="v up">+11%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'23</div></div><div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div></div>
             <div class="ago">2시간 전</div>
           </div>
         </div>
@@ -277,8 +316,8 @@
             </div>
             <div class="card">
               <div class="ct">관련 뉴스 (공시-first + 연결)</div>
-              <div class="pm" style="display:block"><div style="font-weight:700">두산에너빌리티, 유상증자 3,200억 결정</div><div style="color:var(--violet);font-size:12px;font-weight:600;margin-top:3px">→ 오버행 6.2% · 외인 순매도 연결</div></div>
-              <div class="pm" style="display:block;border:none"><div style="font-weight:700">"대형 원전 수주 기대" 보도</div><div style="color:var(--violet);font-size:12px;font-weight:600;margin-top:3px">→ 공급계약 공시(6/09) 교차</div></div>
+              <div class="pm" style="display:block"><div style="font-weight:700">두산에너빌리티, 유상증자 3,200억 결정</div><div style="color:var(--vg);font-size:12px;font-weight:600;margin-top:3px">→ 오버행 6.2% · 외인 순매도 연결</div></div>
+              <div class="pm" style="display:block;border:none"><div style="font-weight:700">"대형 원전 수주 기대" 보도</div><div style="color:var(--vg);font-size:12px;font-weight:600;margin-top:3px">→ 공급계약 공시(6/09) 교차</div></div>
             </div>
             <div class="card">
               <div class="ct">이 종목 일정 · 유리박스</div>

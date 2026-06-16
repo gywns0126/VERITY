@@ -14,15 +14,19 @@
   :root{
     --bg:#f2f4f6;--card:#fff;--ink:#191f28;--sub:#4e5968;--faint:#8b95a1;--line:#e5e8eb;
     --red:#f04452;--redS:#fff0f1;--amber:#ff9500;--amberS:#fff6e9;--blue:#3182f6;--blueS:#eef4ff;
-    --green:#15c47e;--greenS:#eafaf3;--violet:#6c5ce7;--violetS:#f0edff;
+    --green:#15c47e;--greenS:#eafaf3;--vg:#0ca678;--vgS:#e7faf0;--vt:#6c5ce7;--vtS:#f0edff;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body.dark{--bg:#0f1318;--card:#171c23;--ink:#e3e7ec;--sub:#9aa4b1;--faint:#828d9b;--line:#252b34;--vg:#7fffa0;--vgS:#11281d;--vt:#a99bff;--vtS:#241f3a;--redS:#2a1a1d;--blueS:#152031;--amberS:#2a2113;--greenS:#0f241c}
+  body.dark{background:#000}
+  body.dark .top{background:rgba(18,22,28,.94)}
+  .tgl{position:absolute;top:15px;right:15px;background:var(--card);border:none;color:var(--sub);font-family:inherit;font-size:11px;font-weight:700;padding:6px 11px;border-radius:999px;cursor:pointer}
   body{margin:0;background:#dfe3e8;font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;color:var(--ink)}
   .phone{max-width:420px;margin:0 auto;background:var(--bg);min-height:100vh;position:relative;padding-bottom:74px}
   /* top bar */
   .top{position:sticky;top:0;z-index:10;background:rgba(242,244,246,.92);backdrop-filter:blur(8px);padding:16px 18px 12px;border-bottom:1px solid var(--line)}
   .wordmark{font-size:22px;font-weight:900;letter-spacing:-1px}
-  .wordmark b{color:var(--blue)}
+  .wordmark b{color:var(--vg)}
   .tagline{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:2px}
   /* content */
   .scroll{padding:14px}
@@ -32,19 +36,20 @@
   .h span{font-size:12px;color:var(--faint);font-weight:600}
   .card{background:var(--card);border-radius:20px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
   .row{display:flex;align-items:center;justify-content:space-between}
-  .name{font-size:17px;font-weight:800;letter-spacing:-.3px}
+  .name{font-size:17px;font-weight:700;letter-spacing:-.3px}
   .tk{font-size:12px;color:var(--faint);font-weight:600;margin-left:6px}
   .ago{font-size:12px;color:var(--faint);font-weight:600}
   .hook{border-radius:12px;padding:10px 12px;font-size:14px;font-weight:700;letter-spacing:-.2px;margin-top:10px}
   .hook.r{background:var(--redS);color:var(--red)} .hook.g{background:var(--greenS);color:var(--green)}
   .glance{font-size:13px;color:var(--sub);font-weight:600;padding:11px 2px 2px;letter-spacing:-.2px}
-  .pat{background:var(--violetS);border-radius:12px;padding:11px 12px;margin-top:8px}
-  .pat .t{font-size:11px;font-weight:800;color:var(--violet);margin-bottom:9px}
+  
+  .pat{background:var(--vtS);border-radius:12px;padding:11px 12px;margin-top:8px}
+  .pat .t{font-size:11px;font-weight:700;color:var(--vt);margin-bottom:9px}
   .mv{display:flex;align-items:flex-end;gap:16px;padding:0 2px}
   .mv .pt{display:flex;flex-direction:column;align-items:center;gap:5px}
-  .mv .v{font-size:11px;font-weight:800} .mv .dot{width:11px;height:11px;border-radius:6px} .mv .lb{font-size:10px;color:var(--faint);font-weight:600}
-  .toggle{cursor:pointer;margin-top:12px;font-size:12.5px;font-weight:700;color:var(--blue);display:flex;justify-content:center;align-items:center;gap:5px;padding:8px;border-radius:10px}
-  .toggle.open{background:var(--blueS)}
+  .mv .v{font-size:11px;font-weight:700} .mv .dot{width:11px;height:11px;border-radius:6px} .mv .lb{font-size:10px;color:var(--faint);font-weight:600}
+  .toggle{cursor:pointer;margin-top:12px;font-size:12.5px;font-weight:700;color:var(--vg);display:flex;justify-content:center;align-items:center;gap:5px;padding:8px;border-radius:10px}
+  .toggle.open{background:var(--vgS)}
   .body{display:none;margin-top:4px;padding-top:12px;border-top:1px solid var(--line)}
   .body.open{display:block}
   .cn{display:flex;align-items:center;gap:9px;margin-bottom:7px}
@@ -60,12 +65,12 @@
   .tile .k{font-size:11.5px;color:var(--faint);font-weight:700} .tile .val{font-size:19px;font-weight:800;letter-spacing:-.5px;margin:3px 0} .tile .d{font-size:11.5px;color:var(--sub);font-weight:600}
   .barRow{display:flex;align-items:center;gap:8px;margin-bottom:8px}.barRow .lab{width:62px;font-size:12px;font-weight:700;color:var(--sub)}.barRow .track{flex:1;height:9px;border-radius:5px;background:var(--line);overflow:hidden}.barRow .fill{height:100%;border-radius:5px}.barRow .amt{width:62px;text-align:right;font-size:12px;font-weight:800}
   .cal{display:flex;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line)}
-  .cal .dd{flex-shrink:0;width:50px;font-size:12px;font-weight:800;color:var(--blue)} .cal .ev{font-size:13px;font-weight:600;color:var(--ink)} .cal .sub{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:1px}
+  .cal .dd{flex-shrink:0;width:50px;font-size:12px;font-weight:800;color:var(--vg)} .cal .ev{font-size:13px;font-weight:600;color:var(--ink)} .cal .sub{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:1px}
   .gate{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:8px 0}
-  .gate .gf{height:100%;background:var(--violet);border-radius:5px}
-  .held{background:var(--violetS);color:var(--violet);font-size:12px;font-weight:700;padding:10px 12px;border-radius:12px;text-align:center;margin-top:10px;line-height:1.5}
+  .gate .gf{height:100%;background:var(--vt);border-radius:5px}
+  .held{background:var(--vtS);color:var(--vt);font-size:12px;font-weight:700;padding:10px 12px;border-radius:12px;text-align:center;margin-top:10px;line-height:1.5}
   .pm{display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600}
-  .ok{color:var(--green);font-weight:800} .no{color:var(--red);font-weight:800}
+  .ok{color:var(--green);font-weight:600} .no{color:var(--red);font-weight:600}
   .disc{text-align:center;font-size:11px;color:var(--faint);font-weight:600;padding:14px 16px 4px;line-height:1.6}
   /* search + chart */
   .search{display:flex;align-items:center;gap:9px;background:var(--card);border-radius:14px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px}
@@ -74,32 +79,33 @@
   .search input{border:none;outline:none;font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);width:100%;background:none}
   .search input::placeholder{color:var(--faint);font-weight:500}
   .wl{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px}
-  .wl .c{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:700;color:var(--sub);cursor:pointer}
-  .wl .c.act{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .wl .c{background:var(--card);border:none;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:700;color:var(--sub);cursor:pointer}
+  .wl .c.act{background:#0ca678;color:#fff;border-color:#0ca678}
   .wlnote{font-size:11px;color:var(--faint);font-weight:600;padding:0 4px 14px}
   .px{display:flex;align-items:baseline;gap:9px;margin:4px 2px 8px}
   .px .p{font-size:25px;font-weight:800;letter-spacing:-1px} .px .ch{font-size:13px;font-weight:800}
-  .per{display:flex;gap:5px;margin-top:8px}.per b{font-size:12px;font-weight:700;color:var(--faint);padding:5px 12px;border-radius:8px;cursor:pointer}.per b.on{background:var(--blueS);color:var(--blue)}
+  .per{display:flex;gap:5px;margin-top:8px}.per b{font-size:12px;font-weight:700;color:var(--faint);padding:5px 12px;border-radius:8px;cursor:pointer}.per b.on{background:var(--vgS);color:var(--vg)}
   .evk{display:flex;gap:16px;margin-top:11px;font-size:11px;font-weight:600;color:var(--sub)}.evk i{font-style:normal;display:inline-flex;align-items:center;gap:5px}.evk .d{width:8px;height:8px;border-radius:4px;display:inline-block}
   /* heavy report */
   .stitle{font-size:13px;font-weight:800;color:var(--ink);padding:20px 4px 8px;letter-spacing:-.3px;display:flex;justify-content:space-between;align-items:baseline}
   .stitle span{font-size:11px;color:var(--faint);font-weight:600}
-  .kv{display:flex;justify-content:space-between;padding:8px 2px;font-size:13px;border-bottom:1px solid var(--line)}.kv:last-child{border:none}.kv .k{color:var(--sub);font-weight:600}.kv .v{font-weight:800}
-  .news{padding:9px 2px;border-bottom:1px solid var(--line)}.news:last-child{border:none}.news .ti{font-size:13.5px;font-weight:700;color:var(--ink);letter-spacing:-.2px}.news .lk{font-size:11.5px;font-weight:600;color:var(--violet);margin-top:3px}.news .mt{font-size:11px;color:var(--faint);font-weight:600;margin-top:2px}
+  .kv{display:flex;justify-content:space-between;padding:8px 2px;font-size:13px;border-bottom:1px solid var(--line)}.kv:last-child{border:none}.kv .k{color:var(--sub);font-weight:600}.kv .v{font-weight:700}
+  .news{padding:9px 2px;border-bottom:1px solid var(--line)}.news:last-child{border:none}.news .ti{font-size:13.5px;font-weight:700;color:var(--ink);letter-spacing:-.2px}.news .lk{font-size:11.5px;font-weight:600;color:var(--vt);margin-top:3px}.news .mt{font-size:11px;color:var(--faint);font-weight:600;margin-top:2px}
   .note{font-size:11px;color:var(--faint);font-weight:600;margin-top:9px;padding:0 2px;line-height:1.5}
-  .export{width:100%;background:var(--blue);color:#fff;border:none;border-radius:14px;padding:15px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;margin-top:18px;letter-spacing:-.3px}
+  .export{width:100%;background:#0ca678;color:#fff;border:none;border-radius:14px;padding:15px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;margin-top:18px;letter-spacing:-.3px}
   .exnote{text-align:center;font-size:11px;color:var(--faint);font-weight:600;margin-top:8px;line-height:1.5}
   /* bottom nav */
   .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
-  .nav button{flex:1;background:none;border:none;cursor:pointer;font-family:inherit;font-size:11px;font-weight:700;color:var(--faint);padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:3px}
-  .nav button .ic{width:20px;height:20px;border-radius:6px;border:2px solid currentColor}
-  .nav button.on{color:var(--blue)}
+  .nav button{flex:1;background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;color:var(--faint);padding:8px 0;text-align:center}
+  
+  .nav button.on{color:var(--vg)}
 </style>
 </head>
 <body>
 <div class="phone">
   <div class="top">
     <div class="wordmark">VER<b>I</b>TY</div>
+    <button class="tgl" id="tglb" onclick="toggleTheme()">다크</button>
     <div class="tagline">사실과 연결만 — 점수·추천 아님 · 자체 검증 진행 중</div>
   </div>
 
@@ -118,7 +124,7 @@
           <div class="mv">
             <div class="pt"><div class="v" style="color:var(--red)">-18%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'18</div></div>
             <div class="pt"><div class="v" style="color:var(--red)">-24%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'21</div></div>
-            <div class="pt"><div class="v" style="color:var(--violet)">?</div><div class="dot" style="background:#fff;border:2px solid var(--violet)"></div><div class="lb">현재</div></div>
+            <div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div>
           </div>
         </div>
         <div class="toggle" onclick="tog(this)">근거 3개 · 어떻게 나왔나 <span class="ar">▾</span></div>
@@ -142,7 +148,7 @@
             <div class="pt"><div class="v" style="color:var(--green)">+8%</div><div class="dot" style="background:var(--green)"></div><div class="lb">'22</div></div>
             <div class="pt"><div class="v" style="color:var(--green)">+5%</div><div class="dot" style="background:var(--green)"></div><div class="lb">'23</div></div>
             <div class="pt"><div class="v" style="color:var(--green)">+6%</div><div class="dot" style="background:var(--green)"></div><div class="lb">'24</div></div>
-            <div class="pt"><div class="v" style="color:var(--violet)">?</div><div class="dot" style="background:#fff;border:2px solid var(--violet)"></div><div class="lb">현재</div></div>
+            <div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div>
           </div>
         </div>
         <div class="toggle" onclick="tog(this)">근거 2개 · 어떻게 나왔나 <span class="ar">▾</span></div>
@@ -171,7 +177,7 @@
       <!-- 연결된 차트 (가격 + 공시·수급 마커) -->
       <div class="card">
         <div class="row"><div><span class="name">두산에너빌리티</span><span class="tk">034020</span></div><span class="ago">기준 6/16 장중</span></div>
-        <div class="px"><span class="p">21,450</span><span class="ch" style="color:var(--red)">−6.2% (−1,420)</span></div>
+        <div class="px"><span class="p">21,450</span><span class="ch" style="color:var(--blue)">−6.2% (−1,420)</span></div>
         <svg viewBox="0 0 320 130" width="100%" height="128" preserveAspectRatio="none" style="display:block;margin-top:2px">
           <path d="M10,98 L30,90 L50,93 L70,82 L90,74 L110,78 L130,64 L150,57 L170,60 L190,49 L210,46 L230,53 L250,42 L270,90 L290,84 L310,80 L310,130 L10,130 Z" fill="rgba(49,130,246,.07)" stroke="none"/>
           <polyline points="10,98 30,90 50,93 70,82 90,74 110,78 130,64 150,57 170,60 190,49 210,46 230,53 250,42 270,90 290,84 310,80" fill="none" stroke="#3182f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -198,7 +204,7 @@
       <!-- 수급 (이 종목) -->
       <div class="stitle">수급 — 최근 5일 (사실)</div>
       <div class="card">
-        <div class="barRow"><span class="lab">외국인</span><span class="track"><span class="fill" style="width:62%;background:var(--red)"></span></span><span class="amt" style="color:var(--red)">−920억</span></div>
+        <div class="barRow"><span class="lab">외국인</span><span class="track"><span class="fill" style="width:62%;background:var(--blue)"></span></span><span class="amt" style="color:var(--blue)">−920억</span></div>
         <div class="barRow"><span class="lab">기관</span><span class="track"><span class="fill" style="width:28%;background:var(--blue)"></span></span><span class="amt" style="color:var(--blue)">+340억</span></div>
         <div class="barRow"><span class="lab">개인</span><span class="track"><span class="fill" style="width:40%;background:var(--green)"></span></span><span class="amt" style="color:var(--green)">+580억</span></div>
       </div>
@@ -220,7 +226,7 @@
             <div class="pt"><div class="v" style="color:var(--red)">-21%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'17</div></div>
             <div class="pt"><div class="v" style="color:var(--red)">-12%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'20</div></div>
             <div class="pt"><div class="v" style="color:var(--green)">+4%</div><div class="dot" style="background:var(--green)"></div><div class="lb">'23</div></div>
-            <div class="pt"><div class="v" style="color:var(--violet)">현재</div><div class="dot" style="background:#fff;border:2px solid var(--violet)"></div><div class="lb">D-12</div></div>
+            <div class="pt"><div class="v" style="color:var(--vt)">현재</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">D-12</div></div>
           </div>
         </div>
       </div>
@@ -285,7 +291,7 @@
         <div class="srcL" style="margin-top:0">오늘 수급 — 외국인 순매수 상위 (사실)</div>
         <div class="barRow"><span class="lab">SK하이닉스</span><span class="track"><span class="fill" style="width:90%;background:var(--blue)"></span></span><span class="amt" style="color:var(--blue)">+2,840억</span></div>
         <div class="barRow"><span class="lab">현대차</span><span class="track"><span class="fill" style="width:58%;background:var(--blue)"></span></span><span class="amt" style="color:var(--blue)">+1,210억</span></div>
-        <div class="barRow"><span class="lab">에코프로비엠</span><span class="track"><span class="fill" style="width:44%;background:var(--red)"></span></span><span class="amt" style="color:var(--red)">−920억</span></div>
+        <div class="barRow"><span class="lab">에코프로비엠</span><span class="track"><span class="fill" style="width:44%;background:var(--blue)"></span></span><span class="amt" style="color:var(--blue)">−920억</span></div>
         <div class="srcL">프로그램매매 (차익/비차익, 토스·네이버 얕음)</div>
         <div class="cn"><span class="chip b">차익</span><span class="f">+1,340억 순매수</span></div>
         <div class="cn"><span class="chip r">비차익</span><span class="f">−5,210억 순매도 (장 막판 출회)</span></div>
@@ -339,14 +345,15 @@
 
   <!-- bottom nav -->
   <div class="nav">
-    <button class="on" onclick="go(this,'s-feed')"><span class="ic"></span>속보</button>
-    <button onclick="go(this,'s-stock')"><span class="ic"></span>종목</button>
-    <button onclick="go(this,'s-market')"><span class="ic"></span>시장</button>
-    <button onclick="go(this,'s-glass')"><span class="ic"></span>유리박스</button>
+    <button class="on" onclick="go(this,'s-feed')">속보</button>
+    <button onclick="go(this,'s-stock')">종목</button>
+    <button onclick="go(this,'s-market')">시장</button>
+    <button onclick="go(this,'s-glass')">유리박스</button>
   </div>
 </div>
 
 <script>
+  function toggleTheme(){var d=document.body.classList.toggle('dark');document.getElementById('tglb').textContent=d?'라이트':'다크'}
   function tog(el){el.classList.toggle('open');el.querySelector('.ar').textContent=el.classList.contains('open')?'▴':'▾';el.nextElementSibling.classList.toggle('open')}
   function go(btn,id){
     document.querySelectorAll('.sec').forEach(function(s){s.classList.remove('on')});
