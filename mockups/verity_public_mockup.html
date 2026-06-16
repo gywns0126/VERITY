@@ -72,6 +72,13 @@
   .pm{display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600}
   .ok{color:var(--green);font-weight:600} .no{color:var(--red);font-weight:600}
   .disc{text-align:center;font-size:11px;color:var(--faint);font-weight:600;padding:14px 16px 4px;line-height:1.6}
+  /* 용어 툴팁 병기 (전업 타겟 — 정밀 용어 유지 + 1줄 설명) */
+  .term{border-bottom:1px dashed var(--vt);cursor:pointer}
+  .term::after{content:"ⓘ";font-size:9px;color:var(--vt);vertical-align:super;margin-left:1px}
+  .tip{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);max-width:388px;width:calc(100% - 28px);background:var(--ink);color:var(--card);font-size:12.5px;line-height:1.55;padding:12px 15px;border-radius:13px;box-shadow:0 6px 24px rgba(0,0,0,.28);z-index:60;display:none}
+  .tip.on{display:block}
+  .tip b{color:var(--vg)}
+  body.dark .tip{background:#222a33;color:#e3e7ec}
   /* search + chart */
   .search{display:flex;align-items:center;gap:9px;background:var(--card);border-radius:14px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px}
   .search .mag{width:15px;height:15px;border:2px solid var(--faint);border-radius:50%;flex-shrink:0;position:relative}
@@ -214,8 +221,8 @@
         <div class="glance" style="padding-top:2px">흩어진 공시·일정을 한 화면에. (사실/일정만 — 판단은 사용자)</div>
 
         <div style="margin-top:12px">
-          <div class="cn"><span class="chip r">오버행</span><span class="f">CB 전환가능 D-12 · 유통주식 4.1%</span></div>
-          <div class="cn"><span class="chip r">상습</span><span class="f">정정공시 최근 90일 3건</span></div>
+          <div class="cn"><span class="chip r">오버행</span><span class="f"><span class="term" data-t="오버행" onclick="tip(this)">오버행</span> · CB 전환가능 D-12 · 유통주식 4.1%</span></div>
+          <div class="cn"><span class="chip r">상습</span><span class="f"><span class="term" data-t="정정공시" onclick="tip(this)">정정공시</span> 최근 90일 3건</span></div>
           <div class="cn"><span class="chip a">거버넌스</span><span class="f">최대주주 지분 매도 공시 (6/02)</span></div>
           <div class="cn"><span class="chip g">호재</span><span class="f">대규모 공급계약 1,840억 (매출 12%, 6/09)</span></div>
         </div>
@@ -268,7 +275,7 @@
       <!-- 부동산 (DART 재무상태표 장부가) -->
       <div class="stitle">부동산 자산 <span>DART · 장부가</span></div>
       <div class="card">
-        <div class="px" style="margin:2px 2px 6px"><span class="p" style="color:var(--vg)">2,300억</span><span class="ch" style="color:var(--ink);font-weight:700">투자부동산</span></div>
+        <div class="px" style="margin:2px 2px 6px"><span class="p" style="color:var(--vg)">2,300억</span><span class="ch" style="color:var(--ink);font-weight:700"><span class="term" data-t="투자부동산" onclick="tip(this)">투자부동산</span></span></div>
         <div class="wlnote" style="padding:0 2px 12px">재무상태표 공시 장부가 (시가 아님)</div>
         <div class="barRow"><span class="lab">투자부동산</span><span class="track"><span class="fill" style="width:100%;background:var(--vg)"></span></span><span class="amt" style="color:var(--vg)">2,300억</span></div>
         <div class="note">OpenDART 연결재무상태표 · 취득원가 기준 · 미국 종목은 SEC XBRL 장부가</div>
@@ -373,6 +380,8 @@
 
   </div>
 
+  <div class="tip" id="tipbox" onclick="this.classList.remove('on')"></div>
+
   <!-- bottom nav -->
   <div class="nav">
     <button class="on" onclick="go(this,'s-feed')">속보</button>
@@ -383,6 +392,17 @@
 </div>
 
 <script>
+  // 용어 사전 (전업 타겟 — 정밀 용어 유지 + 1줄 설명 병기). 실제론 constitution dilution_rules 에서 로드.
+  var GLOSS={
+    '오버행':'전환사채·유상증자·BW 등으로 향후 시장에 풀릴 수 있는 잠재 매도물량. 주가 상단을 누름.',
+    '전환사채':'CB. 주식으로 바꿀 수 있는 채권. 전환 시 신주가 늘어 기존 주주 지분이 희석됨.',
+    '계열 지배지분':'동일인(총수)+친족+계열사가 보유한 지분 합. 그룹 지배력 척도(높을수록 외부 영향 적음).',
+    '투자부동산':'영업용이 아니라 임대·시세차익 목적으로 보유한 부동산. 장부가는 취득원가 기준.',
+    '사용권자산':'리스로 빌려 쓰는 자산(매장·건물 등)을 회계상 자산으로 잡은 것(IFRS16).',
+    '정정공시':'이미 낸 공시를 고쳐 다시 내는 것. 잦으면 공시 신뢰성·내부통제 약화 신호.'
+  };
+  function tip(el){var k=el.getAttribute('data-t');var b=document.getElementById('tipbox');if(!GLOSS[k])return;b.innerHTML='<b>'+k+'</b><br>'+GLOSS[k];b.classList.add('on');event.stopPropagation();}
+  document.addEventListener('click',function(e){if(!(e.target.classList&&e.target.classList.contains('term'))){var b=document.getElementById('tipbox');if(b)b.classList.remove('on');}});
   function toggleTheme(){var d=document.body.classList.toggle('dark');document.getElementById('tglb').textContent=d?'라이트':'다크'}
   function tog(el){el.classList.toggle('open');el.querySelector('.ar').textContent=el.classList.contains('open')?'▴':'▾';el.nextElementSibling.classList.toggle('open')}
   function go(btn,id){
