@@ -103,9 +103,12 @@ def _resolve_ticker(name: str) -> Optional[str]:
     stripped = re.sub(r"\(주\)|\(유\)|주식회사", "", name).strip()
     if stripped in n2t:
         return n2t[stripped]
-    for stock_name, ticker in n2t.items():
-        if stripped and stripped in stock_name:
-            return ticker
+    # substring fallback — 2026-06-17 fix: 짧은/모호 이름이 임의 상장사로 오매핑(신한→신한알파리츠
+    # 등)되어 stake_value/NAV 오염. len>=4 + 후보 유일할 때만 채택(2개 이상 = 모호 → None).
+    if stripped and len(stripped) >= 4:
+        cands = {t for sn, t in n2t.items() if stripped in sn}
+        if len(cands) == 1:
+            return next(iter(cands))
     return None
 
 
@@ -196,7 +199,8 @@ def _cross_check_shareholders(
         fn = _xcheck_norm(sh.get("name", ""))
         if not fn:
             continue
-        if fn == dn or dn in fn or fn in dn:
+        # 2026-06-17 fix: 2글자 약칭(SK/LG/DB) substring 오매칭 방지 — 짧으면 정확일치만.
+        if fn == dn or (len(dn) >= 3 and len(fn) >= 3 and (dn in fn or fn in dn)):
             fp = sh.get("qota_rate")
             if fp is None:
                 continue

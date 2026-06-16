@@ -3739,8 +3739,8 @@ function PropertyTabUS({ stock }: { stock: any }) {
                         {re.ppe_net_usd != null && (
                             <BrainKVCell label="유형자산 순액" value={fmtUsdB(re.ppe_net_usd)} color={C.watch} />
                         )}
-                        {re.real_estate_investment_net_usd != null && (
-                            <BrainKVCell label="투자부동산 (REIT)" value={fmtUsdB(re.real_estate_investment_net_usd)} color={C.accent} />
+                        {re.real_estate_investment_usd != null && (
+                            <BrainKVCell label={`투자부동산 (REIT)${re.real_estate_investment_basis === "at_cost" ? " · 취득원가" : ""}`} value={fmtUsdB(re.real_estate_investment_usd)} color={C.accent} />
                         )}
                         {re.operating_lease_rou_usd != null && (
                             <BrainKVCell label="리스 사용권" value={fmtUsdB(re.operating_lease_rou_usd)} color={C.info} />

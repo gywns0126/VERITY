@@ -233,8 +233,11 @@ def compute_altman_z(stock: Dict[str, Any]) -> Dict[str, Any]:
     retained = stock.get("retained_earnings") or 0
     if retained == 0:
         roe = stock.get("roe") or 0
-        equity = total_assets * (1 - (stock.get("debt_ratio") or 50) / 100)
-        retained = equity * (roe / 100) * 3 if roe > 0 else 0
+        # debt_ratio = D/E(부채/자기자본, 한국 관례) → equity = TA/(1+D/E).
+        # 2026-06-17 fix: 기존 TA*(1−D/E/100) 은 D/A 오용 — 레버리지 기업서 equity 음수/0.
+        de = (stock.get("debt_ratio") or 50) / 100
+        equity = total_assets / (1 + de) if de >= 0 else total_assets
+        retained = equity * (roe / 100) * 3 if (roe > 0 and equity > 0) else 0
     x2 = retained / total_assets
 
     # X3: EBIT / 총자산
@@ -247,7 +250,10 @@ def compute_altman_z(stock: Dict[str, Any]) -> Dict[str, Any]:
 
     # X4: 시가총액 / 총부채 (Q-fin-2: 상장사 표준)
     market_cap = stock.get("market_cap") or 0
-    total_debt = stock.get("total_debt") or (total_assets * (stock.get("debt_ratio") or 50) / 100)
+    # debt_ratio = D/E → 총부채 = TA·(D/E)/(1+D/E). 2026-06-17 fix: 기존 TA*D/E/100 은
+    # D/A 오용 — debt_ratio≈100(KR 평균)서 총부채 2배 과대 → x4 축소 → Z 체계 저하(전 KR 종목).
+    _de4 = (stock.get("debt_ratio") or 50) / 100
+    total_debt = stock.get("total_debt") or (total_assets * _de4 / (1 + _de4))
     x4 = market_cap / total_debt if total_debt > 0 else 5.0
 
     # 2) 시장별 산식 dispatch

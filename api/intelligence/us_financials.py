@@ -82,10 +82,9 @@ TAG_ALIASES: Dict[str, List[str]] = {
     #   KR DART 투자부동산과 대칭. ppe=전체 유형자산 net, real_estate=REIT 투자부동산,
     #   rou=운용리스 사용권(임차 부동산). 전부 instant(대차대조표).
     "ppe_net": ["PropertyPlantAndEquipmentNet"],
-    "real_estate_net": [
-        "RealEstateInvestmentPropertyNet",
-        "RealEstateInvestmentPropertyAtCost",
-    ],
+    # 2026-06-17 fix: Net(감가차감)과 AtCost(gross)는 단위가 달라 한 metric_key 로 merge 시
+    # restatement 에서 gross 가 net 슬롯 침투. Net 만 유지(AtCost-only REIT 는 sec_edgar 경로가 basis 명시로 포착).
+    "real_estate_net": ["RealEstateInvestmentPropertyNet"],
     "operating_lease_rou": ["OperatingLeaseRightOfUseAsset"],
 }
 
