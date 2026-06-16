@@ -3674,8 +3674,13 @@ function PropertyTabUS({ stock }: { stock: any }) {
     const leased: any[] = Array.isArray(d.leased_properties) ? d.leased_properties : []
     const hq = d.headquarters || {}
     const fc = d.facility_count || {}
+    const re = stock?.sec_financials?.real_estate || null
+    const fmtUsdB = (v: any) =>
+        v == null || !Number.isFinite(Number(v)) ? "—"
+        : Number(v) >= 1e9 ? `$${(Number(v) / 1e9).toFixed(1)}B`
+        : `$${(Number(v) / 1e6).toFixed(0)}M`
     const hasAny = owned.length > 0 || leased.length > 0
-        || d.total_owned_sqft || d.total_leased_sqft
+        || d.total_owned_sqft || d.total_leased_sqft || re
 
     if (!hasAny) {
         return (
@@ -3712,6 +3717,40 @@ function PropertyTabUS({ stock }: { stock: any }) {
                     </span>
                 )}
             </div>
+
+            {/* 1.5 SEC 공시 장부가 (XBRL 구조화 — 10-K narrative 보완, KR DART 투자부동산 대칭) */}
+            {re && (
+                <div style={{
+                    background: C.bgCard,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.sm,
+                }}>
+                    <div style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        flexWrap: "wrap", gap: S.xs,
+                    }}>
+                        <span style={subCardCap}>SEC 공시 장부가 (XBRL)</span>
+                        <span style={{ color: C.textTertiary, fontSize: T.cap }}>us-gaap companyfacts</span>
+                    </div>
+                    <div style={{
+                        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+                        gap: S.sm,
+                    }}>
+                        {re.ppe_net_usd != null && (
+                            <BrainKVCell label="유형자산 순액" value={fmtUsdB(re.ppe_net_usd)} color={C.watch} />
+                        )}
+                        {re.real_estate_investment_net_usd != null && (
+                            <BrainKVCell label="투자부동산 (REIT)" value={fmtUsdB(re.real_estate_investment_net_usd)} color={C.accent} />
+                        )}
+                        {re.operating_lease_rou_usd != null && (
+                            <BrainKVCell label="리스 사용권" value={fmtUsdB(re.operating_lease_rou_usd)} color={C.info} />
+                        )}
+                    </div>
+                    <span style={{ color: C.textTertiary, fontSize: 10, lineHeight: T.lh_normal }}>
+                        SEC XBRL 연차보고서 장부가 · 아래 10-K Item 2 서술과 상호 보완
+                    </span>
+                </div>
+            )}
 
             {/* 2. 3 metric (소유/임차/자산수) */}
             <div style={{

@@ -188,6 +188,19 @@ def get_financial_facts(ticker: str, user_agent: str) -> Dict:
             if result["total_debt"] and equity > 0:
                 result["debt_ratio"] = round(result["total_debt"] / equity * 100, 1)
 
+        # 2026-06-16 — 부동산 앵커 (XBRL 구조화 장부가, 10-K Item 2 narrative 보완).
+        # KR DART 투자부동산과 대칭. REIT 는 RealEstateInvestmentPropertyNet 사용.
+        ppe = _latest_annual("PropertyPlantAndEquipmentNet")
+        rei = _latest_annual("RealEstateInvestmentPropertyNet") or _latest_annual("RealEstateInvestmentPropertyAtCost")
+        rou = _latest_annual("OperatingLeaseRightOfUseAsset")
+        if any(v is not None for v in (ppe, rei, rou)):
+            result["real_estate"] = {
+                "ppe_net_usd": ppe,
+                "real_estate_investment_net_usd": rei,
+                "operating_lease_rou_usd": rou,
+                "source": "SEC XBRL companyfacts (us-gaap)",
+            }
+
         return result
     except Exception as e:
         logger.warning("SEC financial facts failed for %s: %s", ticker, e)

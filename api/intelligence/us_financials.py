@@ -78,6 +78,15 @@ TAG_ALIASES: Dict[str, List[str]] = {
     "retained_earnings": ["RetainedEarningsAccumulatedDeficit"],
     # v0.4 — F-Score F7 (신주 발행). 희석 가중평균 주식수 (shares unit).
     "diluted_shares": ["WeightedAverageNumberOfDilutedSharesOutstanding"],
+    # 2026-06-16 — 부동산 앵커 (XBRL 구조화, 10-K Item 2 narrative 보완).
+    #   KR DART 투자부동산과 대칭. ppe=전체 유형자산 net, real_estate=REIT 투자부동산,
+    #   rou=운용리스 사용권(임차 부동산). 전부 instant(대차대조표).
+    "ppe_net": ["PropertyPlantAndEquipmentNet"],
+    "real_estate_net": [
+        "RealEstateInvestmentPropertyNet",
+        "RealEstateInvestmentPropertyAtCost",
+    ],
+    "operating_lease_rou": ["OperatingLeaseRightOfUseAsset"],
 }
 
 # v0.3 (5/20) — 금융 sector revenue alias 우선순위 override.
@@ -97,7 +106,8 @@ FINANCIAL_REVENUE_ALIASES: List[str] = [
 # Flow-type vs instant-type metric 구분 — instant 는 balance sheet (start == end).
 INSTANT_METRICS = {"cash", "stockholders_equity", "long_term_debt",
                    "total_assets", "current_assets", "current_liabilities",
-                   "total_liabilities", "retained_earnings"}
+                   "total_liabilities", "retained_earnings",
+                   "ppe_net", "real_estate_net", "operating_lease_rou"}
 
 
 @dataclass(frozen=True)
@@ -633,6 +643,18 @@ def compute_derived(
     out["lynch"] = compute_lynch_us(
         out.get("revenue_yoy_pct_annual"),
         market_cap=ext.get("market_cap"), div_yield_pct=ext.get("div_yield"), sic=ext.get("sic"))
+
+    # 2026-06-16 — 부동산 앵커 (XBRL 구조화 장부가, 10-K Item 2 narrative 보완).
+    _ppe = _latest_annual_val("ppe_net")
+    _rei = _latest_annual_val("real_estate_net")
+    _rou = _latest_annual_val("operating_lease_rou")
+    if any(v is not None for v in (_ppe, _rei, _rou)):
+        out["real_estate"] = {
+            "ppe_net_usd": _ppe,
+            "real_estate_investment_net_usd": _rei,
+            "operating_lease_rou_usd": _rou,
+            "source": "SEC XBRL companyfacts (us-gaap)",
+        }
 
     return out
 
