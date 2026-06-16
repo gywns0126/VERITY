@@ -4928,6 +4928,27 @@ function GroupTab({ stock }: { stock: any }) {
                             {gs.ftc_official.group} 그룹 · {gs.ftc_official.as_of_year} 지정 기준
                         </span>
                     </div>
+                    {/* 교차검증 배지 — DART 최대주주 ↔ 공정위 (이중 공식 출처) */}
+                    {gs.ftc_official.cross_check && (() => {
+                        const x = gs.ftc_official.cross_check
+                        const ok = x.status === "match"
+                        const approx = x.status === "approx"
+                        const col = ok ? C.success : approx ? C.info : C.warn
+                        const label = ok ? "두 공식 출처 일치" : approx ? "두 공식 출처 근사 (시점차)" : "두 공식 출처 차이"
+                        return (
+                            <div style={{
+                                display: "flex", alignItems: "center", gap: S.sm, flexWrap: "wrap",
+                                background: C.bgPage, borderRadius: R.sm, padding: `${S.xs}px ${S.md}px`,
+                            }}>
+                                <span style={{ color: col, fontSize: T.cap, fontWeight: T.w_bold }}>
+                                    {ok ? "✓ " : ""}{label}
+                                </span>
+                                <span style={{ ...MONO, color: C.textTertiary, fontSize: T.cap }}>
+                                    {x.entity} · DART {x.dart_pct}% ↔ 공정위 {x.ftc_pct}%
+                                </span>
+                            </div>
+                        )
+                    })()}
                     <div style={{ display: "flex", flexDirection: "column" }}>
                         {gs.ftc_official.shareholders.slice(0, 8).map((sh: any, i: number, arr: any[]) => {
                             const t = sh.type || ""

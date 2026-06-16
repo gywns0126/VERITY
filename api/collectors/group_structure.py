@@ -156,6 +156,62 @@ def _build_entity_links(name: str, ticker_yf: Optional[str] = None) -> Dict[str,
     return links
 
 
+# ── 교차검증 (DART 최대주주 ↔ 공정위 주주현황) ───────────
+
+# 영문 약칭 ↔ 한글 표기 통일 (DART "SK" vs 공정위 "에스케이" 등)
+_XCHECK_ALIASES = {
+    "에스케이": "SK", "엘지": "LG", "지에스": "GS", "케이티": "KT",
+    "씨제이": "CJ", "엘에스": "LS", "포스코": "POSCO", "에이치디": "HD",
+    "디엘": "DL", "디비": "DB", "케이씨씨": "KCC",
+}
+
+
+def _xcheck_norm(n: str) -> str:
+    s = re.sub(r"\(주\)|㈜|주식회사|보험|\s", "", n or "")
+    for ko, en in _XCHECK_ALIASES.items():
+        s = s.replace(ko, en)
+    return s
+
+
+def _cross_check_shareholders(
+    dart_shareholders: List[Dict[str, Any]],
+    ftc_official: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """DART 최대주주(hyslrSttus) ↔ 공정위 주주현황(지정) 동일 종목 독립 확인.
+
+    단일 조회로 불가능한 이중 공식 출처 일치 신호. 시점차(DART 사업보고서 vs 공정위 지정)로
+    소폭 차이 가능 → match(<0.5%p) / approx(<2%p) / differ.
+    """
+    ftc_list = (ftc_official or {}).get("shareholders") or []
+    if not dart_shareholders or not ftc_list:
+        return None
+    dart_top = dart_shareholders[0]  # aggregate 제거 + 내림차순 정렬됨
+    dn = _xcheck_norm(dart_top.get("name", ""))
+    dp = dart_top.get("ownership_pct")
+    if not dn or dp is None:
+        return None
+    for sh in ftc_list:
+        if sh.get("type") in ("기타", "자기주식"):
+            continue
+        fn = _xcheck_norm(sh.get("name", ""))
+        if not fn:
+            continue
+        if fn == dn or dn in fn or fn in dn:
+            fp = sh.get("qota_rate")
+            if fp is None:
+                continue
+            diff = round(abs(dp - fp), 2)
+            status = "match" if diff < 0.5 else "approx" if diff < 2 else "differ"
+            return {
+                "entity": dart_top.get("name"),
+                "dart_pct": round(dp, 2),
+                "ftc_pct": round(fp, 2),
+                "diff_pp": diff,
+                "status": status,
+            }
+    return None
+
+
 # ── 단일 종목 관계회사 구조 수집 ─────────────────────────
 
 def build_group_structure(
@@ -305,6 +361,10 @@ def build_group_structure(
     try:
         from api.collectors.ftc_group_equity import lookup_official_shareholders
         ftc_official = lookup_official_shareholders(corp_code)
+        if ftc_official and major_shareholders:
+            cc = _cross_check_shareholders(major_shareholders, ftc_official)
+            if cc:
+                ftc_official["cross_check"] = cc
     except Exception:
         pass
 
