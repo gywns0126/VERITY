@@ -221,26 +221,43 @@ def _sharpe_significance(series: List[float]) -> dict:
 def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
     """매매 통계. start_date 이전 SELL은 제외. date 필드는 'YYYY-MM-DD HH:MM' 형식 가정 (앞 10자 파싱)."""
     start_dt = _parse_start_date(start_date)
-    sells = []
+    # 2026-06-17 사전등록 fix (PM 승인): R-multiple 부분익절(PARTIAL_SELL.partial_pnl)을 종목
+    # episode 의 종가 SELL 에 합산 = 1 진입 → 1 trade 통합 실현손익. 기존엔 partial_pnl(키 상이)
+    # + type!=SELL 로 전량 제외돼 승자 이익이 win_rate/expectancy/SQN 서 invisible(게이트 보수 왜곡).
+    # 측정 정의 교정(임계 튜닝 아님). 현 오염 0건(PARTIAL_SELL 0/SELL 13) 상태에서 사전 확정.
+    pnls = []
+    partial_acc = {}  # ticker -> 누적 부분익절 실현손익 (SELL 에서 소비·리셋)
     for h in history:
-        if h.get("type") != "SELL" or h.get("pnl") is None:
+        htype = h.get("type")
+        ticker = str(h.get("ticker", ""))
+        if htype == "PARTIAL_SELL":
+            pp = h.get("partial_pnl")
+            if pp is not None:
+                try:
+                    partial_acc[ticker] = partial_acc.get(ticker, 0.0) + float(pp)
+                except (TypeError, ValueError):
+                    pass
             continue
+        if htype != "SELL" or h.get("pnl") is None:
+            continue
+        acc = partial_acc.pop(ticker, 0.0)  # 이 episode 누적 부분익절 (없으면 0)
         if start_dt is not None:
             date_str = str(h.get("date", ""))[:10]
             try:
-                sell_dt = datetime.strptime(date_str, "%Y-%m-%d")
-                if sell_dt < start_dt:
-                    continue
+                if datetime.strptime(date_str, "%Y-%m-%d") < start_dt:
+                    continue  # 청산 episode 통째 제외 (부분익절도 함께 폐기)
             except ValueError:
                 continue  # 날짜 파싱 실패 시 보수적으로 제외
-        sells.append(h)
-    if not sells:
+        try:
+            pnls.append(float(h["pnl"]) + acc)
+        except (TypeError, ValueError):
+            continue
+    if not pnls:
         return {
             "trades": 0, "wins": 0, "losses": 0,
             "win_rate": None, "avg_win": None, "avg_loss": None, "pl_ratio": None,
             "expectancy_r": None, "sqn": None,
         }
-    pnls = [float(h["pnl"]) for h in sells]
     wins = [p for p in pnls if p > 0]
     losses = [p for p in pnls if p < 0]
     win_rate = len(wins) / len(pnls)
