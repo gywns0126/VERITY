@@ -67,7 +67,7 @@ def _realized_stock_return(
     base = 예측 생성 시점(created) 가격 (forecast 기준), eval = eval_date 최근접 snapshot 가격.
     어느 한쪽 가격 결손 → None (채점 불가, 호출부가 grace 처리).
     """
-    base_snap_date = _find_nearest_snapshot(base_date, available)
+    base_snap_date = _find_nearest_snapshot(base_date, available, backward_only=True)  # base=미래금지(look-ahead)
     eval_snap_date = _find_nearest_snapshot(eval_date, available)
     if not base_snap_date or not eval_snap_date or base_snap_date == eval_snap_date:
         return None
@@ -93,7 +93,7 @@ def _realized_terminal_return(
     base~eval 사이 *마지막 가용* snapshot 가격으로 종결가를 잡아 *드롭 대신 하락을 포착*한다.
     🚨 LOCKED 정상 산식 무변경 — 기존에 *버려지던* 케이스에만 적용(grace 초과 후). base 결손이면 None.
     """
-    base_snap_date = _find_nearest_snapshot(base_date, available)
+    base_snap_date = _find_nearest_snapshot(base_date, available, backward_only=True)  # base=미래금지(look-ahead)
     if not base_snap_date:
         return None
     base_snap = load_snapshot(base_snap_date)
@@ -311,8 +311,10 @@ def score_predictions(
         _rewrite_trail(trail_path, entries)
 
     # 집계: (target_type, horizon) 별 — 전체 scored stock 풀 재계산 후 snapshot append.
+    # 2026-06-17 fix: 신규 채점 0건이면 aggregate 가 직전과 동일 → byte-identical 재append(무한 bloat).
+    # newly_scored 있을 때만 append (값 변동 시에만 새 스냅샷). 소비처는 _latest_per_horizon last-wins.
     groups = _aggregate(entries, today)
-    if groups:
+    if groups and newly_scored:
         os.makedirs(os.path.dirname(ic_history_path), exist_ok=True)
         with open(ic_history_path, "a", encoding="utf-8") as f:
             for g in groups:

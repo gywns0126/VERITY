@@ -1501,6 +1501,13 @@ def analyze_stock(
     return {
         "brain_score": brain_score,
         "raw_brain_score": raw_brain_score,
+        # 2026-06-17 RULE7: 자기 산식 가설/N 단일출처 메타 — UI 하드코딩('N=14d') 의존 제거.
+        # 모든 소비 컴포넌트가 이 플래그로 일관된 '가설' 라벨 렌더(실 N 은 VAMS validation 병합).
+        "validation": {
+            "status": "hypothesis",
+            "ic_gate_n": 252,
+            "note": "자기 산식 가설 — N<252 IC 게이트(2027-05) 미검증, 검증 전",
+        },
         "grade": grade,
         "grade_label": GRADE_LABELS.get(grade, grade),
         # 2026-06-03 P1-3: 정상 경로 confidence/coverage 실측 (이전엔 정상 return 에 부재 →

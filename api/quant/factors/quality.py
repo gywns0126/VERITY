@@ -314,6 +314,11 @@ def compute_altman_z(stock: Dict[str, Any]) -> Dict[str, Any]:
 def annualize_quarterly_cumulative(value: float, reprt_code: str) -> Optional[float]:
     """DART 분기 보고서 누적값 → 연간 환산 (Perplexity Q-fin-3 — TTM 우선 권고, ×4 = 임시 추정치).
 
+    ⚠️ 2026-06-17 미배선(NOT WIRED): 현재 어떤 소비자도 호출 안 함. 라이브 경로는 연간 고정
+    (dart_fundamentals reprt_code=11011)이라 누적값 trap 은 helper 가 아니라 '연간 데이터'로 회피됨.
+    분기 fetch 로 전환하는 소비자 추가 시 = 이 helper 를 Altman/Piotroski flow 입력에 wire 필수
+    (안 하면 1Q 종목 systematic 저평가). 그 전까진 보존만(삭제 시 미래 분기 경로서 재구현 부담).
+
     [WHY] DART fnlttSinglAcntAll 분기 응답 IS/CF 항목 = 누적값.
           1Q=3M / 반기=6M / 3Q=9M / 연간=12M. 미환산 시 1Q 종목이 연간 종목 대비
           1/4 EBIT 로 systematic 저평가 (Altman X3 등).

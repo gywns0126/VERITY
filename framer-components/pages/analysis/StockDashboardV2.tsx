@@ -4463,7 +4463,7 @@ function QuantTab({ stock, data }: { stock: any; data: any }) {
                         )}
                         {lynchKr && lynchKr.label && (
                             <BrainKVCell
-                                label="Lynch 6분류"
+                                label="Lynch 6분류 (가설·검증 전)"
                                 value={`${lynchKr.label}${lynchKr.summary ? ` · ${lynchKr.summary}` : ""}`}
                                 color={lynchColor(lynchKr.color)}
                             />

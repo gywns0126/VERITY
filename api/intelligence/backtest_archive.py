@@ -409,8 +409,13 @@ def generate_verification_report() -> Dict[str, Any]:
     return report
 
 
-def _find_nearest_snapshot(target_date: str, available: List[str]) -> Optional[str]:
-    """target_date에 가장 가까운 스냅샷 날짜 반환 (±2일 범위)."""
+def _find_nearest_snapshot(target_date: str, available: List[str],
+                           backward_only: bool = False) -> Optional[str]:
+    """target_date에 가장 가까운 스냅샷 날짜 반환 (±2일 범위).
+
+    backward_only=True (2026-06-17): base(진입/신호 생성) 가격용 — target_date 이후 미래
+    snapshot 채택 금지(look-ahead 차단). eval(forward) 가격은 기본값(±2 양방향) 유지.
+    """
     if target_date in available:
         return target_date
 
@@ -425,6 +430,8 @@ def _find_nearest_snapshot(target_date: str, available: List[str]) -> Optional[s
     for d_str in available:
         try:
             d = datetime.strptime(d_str, "%Y-%m-%d").date()
+            if backward_only and d > td:
+                continue  # base 는 미래 가격 금지 (look-ahead)
             diff = abs((d - td).days)
             if diff <= 2 and diff < best_diff:
                 best = d_str

@@ -462,6 +462,10 @@ def _compute_nav_analysis(
     if nav_reliable and sop > 0:
         discount_pct = round((my_market_cap - sop) / sop * 100, 1)
 
+    # 2026-06-17: SoP/시총 커버리지 병기 — 1.0 미만일수록 매칭 부족(discount 신뢰 낮음).
+    # 5% 임계는 자기 설정값(가설, 미검증) — coverage_ratio 노출로 PM 이 직접 판단 가능.
+    coverage_ratio = round(sop / my_market_cap, 3) if (my_market_cap and my_market_cap > 0) else None
+
     sensitivity.sort(key=lambda x: abs(x.get("impact_per_1pct", 0)), reverse=True)
 
     return {
@@ -471,6 +475,7 @@ def _compute_nav_analysis(
         "current_market_cap_억": my_market_cap,
         "nav_discount_pct": discount_pct,
         "nav_reliable": nav_reliable,
+        "coverage_ratio": coverage_ratio,
         "sensitivity": sensitivity[:10],
     }
 

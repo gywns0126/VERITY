@@ -3810,6 +3810,7 @@ def main():
             br = brain_stocks.get(stock.get("ticker"), {})
             stock["verity_brain"] = {
                 "brain_score": br.get("brain_score", 0),
+                "validation": br.get("validation", {}),  # RULE7 가설/N 단일출처 라벨
                 "grade": br.get("grade", "WATCH"),
                 "grade_label": br.get("grade_label", "관망"),
                 "grade_confidence": br.get("grade_confidence", "firm"),

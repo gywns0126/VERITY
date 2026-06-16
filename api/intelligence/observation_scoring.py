@@ -81,7 +81,7 @@ def _realized_market_return(
     종목 scorer 의 _realized_stock_return 와 동형 — 종목 가격맵 대신 market_summary level 사용.
     어느 한쪽 결손/동일 snapshot → None (채점 불가, 호출부 grace 처리).
     """
-    base_snap_date = _find_nearest_snapshot(base_date, available)
+    base_snap_date = _find_nearest_snapshot(base_date, available, backward_only=True)  # base=미래금지(look-ahead)
     eval_snap_date = _find_nearest_snapshot(eval_date, available)
     if not base_snap_date or not eval_snap_date or base_snap_date == eval_snap_date:
         return None
@@ -195,8 +195,9 @@ def score_observations(
     if newly_scored or unscoreable:
         _rewrite_trail(trail_path, entries)
 
+    # 2026-06-17 fix: 신규 채점 0건이면 직전과 동일 aggregate → byte-identical 재append(bloat).
     groups = _aggregate(entries)
-    if groups:
+    if groups and newly_scored:
         os.makedirs(os.path.dirname(ic_history_path), exist_ok=True)
         with open(ic_history_path, "a", encoding="utf-8") as f:
             for g in groups:
