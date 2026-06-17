@@ -8,6 +8,7 @@
     "api/chat.py": { "maxDuration": 60 },
     "api/chat_diag.py": { "maxDuration": 5 },
     "api/watchgroups.py": { "maxDuration": 10 },
+    "api/holdings.py": { "maxDuration": 10 },
     "api/order.py": { "maxDuration": 10 },
     "api/chart.py": { "maxDuration": 10 },
     "api/visitor_ping.py": { "maxDuration": 5 },
@@ -40,7 +41,7 @@
   ],
   "headers": [
     {
-      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!reports(?:$|/)).*)",
+      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!holdings(?:$|/))(?!reports(?:$|/)).*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PATCH, DELETE, OPTIONS" },
