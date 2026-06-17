@@ -1497,12 +1497,24 @@ def main():
 
     if _macro_snap and _macro_snap.get("macro"):
         macro = _macro_snap["macro"]
+        if isinstance(macro, dict):
+            macro.setdefault("collected_at", _macro_snap.get("collected_at"))
         print(f"  매크로: snapshot cache hit ({_macro_snap.get('collected_at')})")
     else:
+        # inline fetch — 실패/타임아웃 시 None 반환받아 stale snapshot 으로 degrade.
         macro = safe_collect(
-            get_macro_indicators, name="매크로지표", timeout=45,
-            default=(_macro_stale or {}).get("macro") or {}, notify=_tg_notify,
+            get_macro_indicators, name="매크로지표", timeout=45, default=None, notify=_tg_notify,
         )
+        if not macro and _macro_stale and _macro_stale.get("macro"):
+            # 빈 {} 대신 stale 실데이터 (forward-fill). staleness 표기 의무
+            # (feedback_macro_timestamp_policy: collected_at + _stale 메타 — fresh 처럼 노출 금지).
+            macro = _macro_stale["macro"]
+            if isinstance(macro, dict):
+                macro["_stale"] = True
+                macro["collected_at"] = _macro_stale.get("collected_at")
+            print(f"  ⚠️ 매크로: inline fetch 실패 → stale snapshot degrade ({_macro_stale.get('collected_at')})")
+        elif not macro:
+            macro = {}
     mood = macro.get("market_mood", {})
     fred = macro.get("fred") or {}
     fred_note = ""
@@ -1701,14 +1713,24 @@ def main():
         print(f"\n[1.55] 채권·ETF 데이터 수집 (모드: {effective_mode})")
         if _macro_snap and _macro_snap.get("bonds"):
             bonds_data = _macro_snap["bonds"]
+            if isinstance(bonds_data, dict):
+                bonds_data.setdefault("collected_at", _macro_snap.get("collected_at"))
             print(f"  채권수익률곡선: snapshot cache hit ({_macro_snap.get('collected_at')})")
         else:
             # 타임아웃/실패 시 빈 {} 대신 stale snapshot bonds 로 degrade (실데이터 우위).
             bonds_data = safe_collect(
                 get_full_yield_curve_data,
-                name="채권수익률곡선", timeout=45,
-                default=(_macro_stale or {}).get("bonds") or {}, notify=_tg_notify,
+                name="채권수익률곡선", timeout=45, default=None, notify=_tg_notify,
             )
+            if not bonds_data and _macro_stale and _macro_stale.get("bonds"):
+                # staleness 표기 의무 (feedback_macro_timestamp_policy).
+                bonds_data = _macro_stale["bonds"]
+                if isinstance(bonds_data, dict):
+                    bonds_data["_stale"] = True
+                    bonds_data["collected_at"] = _macro_stale.get("collected_at")
+                print(f"  ⚠️ 채권: inline fetch 실패 → stale snapshot degrade ({_macro_stale.get('collected_at')})")
+            elif not bonds_data:
+                bonds_data = {}
         if bonds_data:
             portfolio["bonds"] = bonds_data
             try:

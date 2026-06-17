@@ -220,6 +220,23 @@ jobs:
           done
           echo "::warning::[lock push] 3회 실패 — 분석 끝 commit step 에서 재시도"
 
+      - name: Refresh macro snapshot (신선도 보장 — GH */30 schedule throttle 우회)
+        # macro_collect cron(*/30) 이 GH schedule throttle 로 실제 ~5h 간격 실행 →
+        # full 분석 시점 snapshot 이 자주 stale (feedback_gh_short_cron_silent_skip).
+        # 분석-크리티컬 경로를 flaky schedule 에서 분리: 읽기 직전 inline 갱신 →
+        # main.py fast-path HIT 보장. 실패해도 main.py 가 stale snapshot 으로 degrade
+        # (commit 9c505e439) → continue-on-error 안전. macro = KIS 무관 (RULE 1 N/A).
+        continue-on-error: true
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY || vars.FRED_API_KEY }}
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || vars.KOSIS_API_KEY }}
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY || vars.ECOS_API_KEY }}
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m api.builders.macro_collect_builder
+
       - name: Run analysis
         env:
           # 2026-05-11: VERITY_MODE 명시 — schedule cron = prod, manual dispatch = input (default staging).
