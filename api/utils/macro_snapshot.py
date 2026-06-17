@@ -95,6 +95,41 @@ def load_macro_snapshot(
     return snap
 
 
+def load_macro_snapshot_stale_ok() -> Optional[Dict[str, Any]]:
+    """신선도 무관하게 디스크 snapshot 을 그대로 반환 (없으면 None).
+
+    용도: strict load 가 stale 로 miss 한 뒤 inline fetch 가 타임아웃/실패할 때의
+    degrade 기본값. 빈 {} 보다 N 시간 stale 한 실데이터가 항상 우위
+    (deadman switch 가 macro 를 검사 — 빈값 = 실데이터 공백).
+
+    GitHub schedule throttle 로 macro_collect cron 이 30분 의도 대비 ~5h 로
+    드물게 실행되는 환경 정합 (feedback_gh_short_cron_silent_skip).
+    """
+    if not os.path.isfile(SNAPSHOT_PATH):
+        return None
+    try:
+        with open(SNAPSHOT_PATH, "r", encoding="utf-8") as f:
+            snap = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        sys.stderr.write(f"[macro_snapshot] stale_ok miss — read 실패: {e}\n")
+        return None
+    age_note = ""
+    collected_at = snap.get("collected_at")
+    if collected_at:
+        try:
+            ts = datetime.fromisoformat(collected_at)
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=KST)
+            age_note = f" age={(_now_kst() - ts).total_seconds() / 60.0:.1f}min"
+        except ValueError:
+            pass
+    sys.stderr.write(
+        f"[macro_snapshot] stale_ok HIT (degrade 기본값용){age_note} "
+        f"collected_at={collected_at}\n"
+    )
+    return snap
+
+
 def reset_cache() -> None:
     """테스트용."""
     global _cache, _loaded

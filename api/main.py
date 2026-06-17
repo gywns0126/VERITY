@@ -1488,16 +1488,20 @@ def main():
 
     # 매크로 / 채권 / 글로벌이벤트 = macro_collect 별도 cron snapshot fast path (2026-05-10).
     # stale 30분+ 또는 file 없음 시 inline fetch fallback.
-    from api.utils.macro_snapshot import load_macro_snapshot
+    from api.utils.macro_snapshot import load_macro_snapshot, load_macro_snapshot_stale_ok
     # 30분 cron + 15분 마진 = 45분 stale 허용 (cron 지연/queue 흡수).
     _macro_snap = load_macro_snapshot(max_stale_minutes=45)
+    # strict miss 시 inline fetch — 타임아웃/실패 시 빈 {} 대신 stale snapshot 으로 degrade.
+    # 빈값 = 실데이터 공백(deadman switch 가 macro 검사), N 시간 stale 실데이터가 항상 우위.
+    _macro_stale = None if (_macro_snap and _macro_snap.get("macro")) else load_macro_snapshot_stale_ok()
 
     if _macro_snap and _macro_snap.get("macro"):
         macro = _macro_snap["macro"]
         print(f"  매크로: snapshot cache hit ({_macro_snap.get('collected_at')})")
     else:
         macro = safe_collect(
-            get_macro_indicators, name="매크로지표", timeout=45, default={}, notify=_tg_notify,
+            get_macro_indicators, name="매크로지표", timeout=45,
+            default=(_macro_stale or {}).get("macro") or {}, notify=_tg_notify,
         )
     mood = macro.get("market_mood", {})
     fred = macro.get("fred") or {}
@@ -1699,9 +1703,11 @@ def main():
             bonds_data = _macro_snap["bonds"]
             print(f"  채권수익률곡선: snapshot cache hit ({_macro_snap.get('collected_at')})")
         else:
+            # 타임아웃/실패 시 빈 {} 대신 stale snapshot bonds 로 degrade (실데이터 우위).
             bonds_data = safe_collect(
                 get_full_yield_curve_data,
-                name="채권수익률곡선", timeout=45, default={}, notify=_tg_notify,
+                name="채권수익률곡선", timeout=45,
+                default=(_macro_stale or {}).get("bonds") or {}, notify=_tg_notify,
             )
         if bonds_data:
             portfolio["bonds"] = bonds_data
