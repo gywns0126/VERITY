@@ -240,7 +240,11 @@ _SWEEP_EXCLUDE = {
 # CI 회귀 = transient cron(KRX hiccup·주말 skip·rate-limit)과 질적으로 다른 실 코드 결함 신호.
 # sweep 의 generic WARNING(noise 차단용)에 묻히면 안 됨 → 이 allowlist 만 FAIL(🔴) 격상.
 # 2026-06-17 학습: tests.yml 5연속 실패가 21h 동안 🟡 로만 떠 frustration. allowlist 격상으로 해소.
-_SWEEP_CI_CRITICAL = {"tests.yml"}
+# 기준 = push/PR 트리거 결정론적 코드/콘텐츠 게이트 (외부 데이터 무의존). schedule data cron 은 제외.
+#   - tests.yml: pytest (코드 회귀)
+#   - rule7_audit.yml: pre_registration_audit.py — RULE 7 자기산식 가설표기 강제 (콘텐츠 위반)
+# 신 push/PR 게이트 추가 시 = 파일명 한 줄 추가.
+_SWEEP_CI_CRITICAL = {"tests.yml", "rule7_audit.yml"}
 
 
 def _sweep_workflow_latest_failures() -> List[Dict[str, Any]]:

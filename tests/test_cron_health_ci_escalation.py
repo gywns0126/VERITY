@@ -53,3 +53,11 @@ def test_mixed_ci_and_non_ci_escalates_to_fail():
 def test_tests_yml_is_in_ci_allowlist_and_not_excluded():
     assert "tests.yml" in m._SWEEP_CI_CRITICAL
     assert "tests.yml" not in m._SWEEP_EXCLUDE
+
+
+def test_rule7_audit_is_ci_critical():
+    # RULE 7 자기산식 가설표기 게이트 = 결정론적 코드/콘텐츠 위반 → FAIL 격상
+    assert "rule7_audit.yml" in m._SWEEP_CI_CRITICAL
+    sev, findings = m._sweep_severity_and_findings([_fail("rule7_audit.yml")], "PASS")
+    assert sev == "FAIL"
+    assert any("🔴" in x and "rule7_audit.yml" in x for x in findings)
