@@ -123,17 +123,21 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
                     "source_url": DART_VIEWER + rcept_no,        # 원문 deep-link
                 }
             )
+        max_sev = max((int(r.get("severity") or 0) for r in rows), default=0)
         items.append(
             {
                 "ticker": ticker,
                 "name": grp["name"],
                 "latest": disclosures[0]["date"] if disclosures else "",
+                "_sev": max_sev,  # 정렬 전용 — 출력 직전 제거 (RULE 7: severity 비노출)
                 "disclosures": disclosures,
             }
         )
 
-    # 종목 정렬: 최근 공시일 desc
-    items.sort(key=lambda it: it["latest"], reverse=True)
+    # 종목 정렬: 임팩트(severity) 큰 종목 먼저, 동급이면 최근 공시일 desc (품질 우선)
+    items.sort(key=lambda it: (it["_sev"], it["latest"]), reverse=True)
+    for it in items:
+        it.pop("_sev", None)  # RULE 7 — 자체 severity 노출 안 함
 
     return {
         "_meta": {

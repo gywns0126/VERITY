@@ -3295,6 +3295,23 @@ def main():
         except Exception as e:
             print(f"  ⚠️ DART catalyst 감지 스킵: {e}")
 
+        # 5.78b: 시장 전체 catalyst (KOSPI+KOSDAQ 전 종목 — 공개 터미널 커버리지 확장 2026-06-18)
+        # 운영풀 수집(위)에 추가. 동일 jsonl 에 dedup(rcept_no) append. brain 산식 영향 0.
+        try:
+            from api.collectors.dart_catalyst import (
+                fetch_catalysts_market_wide, persist_catalyst_alerts as _persist_cat_mw,
+            )
+            print("\n[5.78b] DART 시장 전체 catalyst (KOSPI+KOSDAQ, 직전 7d)")
+            _mw = fetch_catalysts_market_wide(lookback_days=7)
+            _mws = _mw.get("stats", {})
+            _mw_new = _persist_cat_mw(_mw.get("events", []))
+            print(
+                f"  시장전체 {_mws.get('total', 0)}건 / {_mws.get('tickers', 0)}종목 "
+                f"→ {_mw_new} 신규 append"
+            )
+        except Exception as e:
+            print(f"  ⚠️ DART 시장 전체 catalyst 스킵: {e}")
+
     # ── STEP 5.8: 원자재 상관·마진 (기본 full / quick는 COMMODITY_SCOUT_IN_QUICK=1)
     run_commodity = effective_mode == "full" or COMMODITY_SCOUT_IN_QUICK
     run_commodity_narrative = effective_mode == "full" or COMMODITY_NARRATIVE_IN_QUICK

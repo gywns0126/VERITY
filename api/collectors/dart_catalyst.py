@@ -233,6 +233,102 @@ def fetch_catalysts_for_pool(
     }
 
 
+def fetch_catalysts_market_wide(
+    lookback_days: int = 7,
+    corp_cls: tuple = ("Y", "K"),
+    max_pages: int = 20,
+) -> Dict[str, Any]:
+    """시장 전체 catalyst 수집 (corp_code 불필요, corp_cls + 페이지네이션).
+
+    2026-06-18 커버리지 확장 — 운영 풀 종목 한정 대신 KOSPI(Y)+KOSDAQ(K) 전 종목.
+    DART list.json 은 corp_code 없이 bgn_de/end_de/pblntf_ty/corp_cls 만으로 시장 전체
+    공시를 페이지네이션 반환하며, 각 레코드에 stock_code(6자리)+corp_name 이 직접 포함.
+    req = 3 pblntf_ty × len(corp_cls) × pages (7일 ≈ 수십 req, 20K/일 대비 무시).
+
+    산식 동결 가드 정합 — brain 산식 영향 0, 별 reporting 만 (RULE 7 사전등록 불요, 점수 wire 0).
+    Returns: fetch_catalysts_for_pool 과 동일 schema.
+    """
+    end_dt = now_kst().date()
+    bgn_dt = end_dt - timedelta(days=lookback_days)
+    end_de = end_dt.strftime("%Y%m%d")
+    bgn_de = bgn_dt.strftime("%Y%m%d")
+
+    all_events: List[Dict[str, Any]] = []
+    by_ticker: Dict[str, int] = {}
+    by_type: Dict[str, int] = {}
+    corrections = 0
+    seen_rcept: set = set()
+
+    for cls in corp_cls:
+        for ty in ("B", "C", "D"):
+            page = 1
+            while page <= max_pages:
+                try:
+                    data = _call("list.json", {
+                        "bgn_de": bgn_de,
+                        "end_de": end_de,
+                        "pblntf_ty": ty,
+                        "corp_cls": cls,
+                        "page_no": str(page),
+                        "page_count": "100",
+                        "sort": "date",
+                        "sort_mth": "desc",
+                    })
+                except Exception as e:
+                    logger.warning("[dart_catalyst] 시장전체 %s/%s p%d 실패: %s", cls, ty, page, str(e)[:120])
+                    break
+                rows = data.get("list", []) if isinstance(data, dict) else []
+                if not rows:
+                    break
+                for d in rows:
+                    sc = str(d.get("stock_code", "") or "").strip()
+                    if len(sc) != 6 or not sc.isdigit():
+                        continue  # 비상장/채권/스팩 등 stock_code 없는 공시 제외
+                    rno = d.get("rcept_no", "")
+                    if not rno or rno in seen_rcept:
+                        continue
+                    seen_rcept.add(rno)
+                    is_corr = (d.get("corr_yn") == "Y")
+                    severity = _classify_severity(ty, d.get("report_nm", ""), is_corr)
+                    all_events.append({
+                        "ticker": sc,
+                        "name": d.get("corp_name", "") or sc,
+                        "rcept_no": rno,
+                        "report_nm": d.get("report_nm", ""),
+                        "rcept_dt": d.get("rcept_dt", ""),
+                        "flr_nm": d.get("flr_nm", ""),
+                        "pblntf_ty": ty,
+                        "pblntf_label": PBLNTF_LABELS.get(ty, ty),
+                        "severity": severity,
+                        "is_correction": is_corr,
+                        "detected_at": now_kst().isoformat(timespec="seconds"),
+                    })
+                    by_ticker[sc] = by_ticker.get(sc, 0) + 1
+                    by_type[ty] = by_type.get(ty, 0) + 1
+                    if is_corr:
+                        corrections += 1
+                try:
+                    total_page = int(data.get("total_page", 1) or 1)
+                except (TypeError, ValueError):
+                    total_page = 1
+                if page >= total_page:
+                    break
+                page += 1
+
+    return {
+        "events": all_events,
+        "stats": {
+            "total": len(all_events),
+            "tickers": len(by_ticker),
+            "by_type": by_type,
+            "corrections": corrections,
+        },
+        "lookback_days": lookback_days,
+        "window": {"bgn": bgn_dt.strftime("%Y-%m-%d"), "end": end_dt.strftime("%Y-%m-%d")},
+        "fetched_at": now_kst().isoformat(timespec="seconds"),
+    }
+
+
 def persist_catalyst_alerts(events: List[Dict[str, Any]]) -> int:
     """events 를 data/dart_catalyst_alerts.jsonl 에 append.
 
