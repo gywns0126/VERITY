@@ -3139,6 +3139,17 @@ def main():
         except Exception:
             pass
 
+    # [5.76] fair_value_gap 관측 (RIM V/P + implied-g) — 점수 wire 0, 사전등록(~2028-29 검증 대기)
+    if not is_us_mode:
+        try:
+            from api.observability.fair_value_gap import run_fair_value_gap_observation
+            _fvg = run_fair_value_gap_observation(candidates)
+            print(f"  [5.76] fair_value_gap 관측: {_fvg.get('tickers')}종목 "
+                  f"(저평가 {_fvg.get('undervalued')} / trap후보 {_fvg.get('value_trap_candidate')}) "
+                  f"logged={_fvg.get('logged')}")
+        except Exception as _e:
+            print(f"  [5.76] fair_value_gap 관측 스킵: {_e}")
+
     # ── STEP 5.76: full 전용 — ChainScout 주요 매출처/고객사 (KR only) ──
     if effective_mode == "full" and not is_us_mode:
         print("\n[5.76] ChainScout — 주요 매출처/고객사 분석")
