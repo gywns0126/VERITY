@@ -308,6 +308,12 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.public_disclosure_feed_builder
 
+      - name: 공개 종목 리포트 빌드 (public-safe, allowlist)
+        # recommendations.json → RULE7 allowlist strip → data/stock_report_public.json.
+        # 순수 변환 (외부호출/KIS 0). 다음 step git add data/ (broad) 자동 = RULE 4.
+        continue-on-error: true
+        run: python -m api.builders.stock_report_public_builder
+
       - name: Brain audit baseline (PRE/POST 측정 영속화)
         # 2026-05-18 확정 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
         # portfolio.json 의 brain_score 분포 + component fill + grade + quadrant 측정.
