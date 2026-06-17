@@ -237,6 +237,11 @@ _SWEEP_EXCLUDE = {
     "kis_token_refresh.yml", "daily_realtime.yml",         # KIS bespoke + RULE 1
 }
 
+# CI 회귀 = transient cron(KRX hiccup·주말 skip·rate-limit)과 질적으로 다른 실 코드 결함 신호.
+# sweep 의 generic WARNING(noise 차단용)에 묻히면 안 됨 → 이 allowlist 만 FAIL(🔴) 격상.
+# 2026-06-17 학습: tests.yml 5연속 실패가 21h 동안 🟡 로만 떠 frustration. allowlist 격상으로 해소.
+_SWEEP_CI_CRITICAL = {"tests.yml"}
+
 
 def _sweep_workflow_latest_failures() -> List[Dict[str, Any]]:
     """전 workflow 의 최신 완료 run 이 failure 인 것 sweep (윈도우 무관).
@@ -271,6 +276,38 @@ def _sweep_workflow_latest_failures() -> List[Dict[str, Any]]:
                 "title": latest.get("displayTitle", "?"),
             })
     return out
+
+
+def _sweep_severity_and_findings(
+    workflow_failures: List[Dict[str, Any]], base_severity: str
+) -> tuple[str, List[str]]:
+    """sweep 결과 → (severity, findings 추가분).
+
+    CI allowlist(_SWEEP_CI_CRITICAL) 실패 = 실 코드 회귀 → FAIL 격상(🔴).
+    그 외 = generic WARNING(⚠, noise 차단). base_severity 가 이미 FAIL 이면 유지(다운그레이드 X).
+    순수 함수 — I/O 없음, 단위 테스트 대상.
+    """
+    findings: List[str] = []
+    if not workflow_failures:
+        return base_severity, findings
+    has_ci = any(w["workflow"] in _SWEEP_CI_CRITICAL for w in workflow_failures)
+    if has_ci:
+        severity = "FAIL"
+    elif base_severity == "PASS":
+        severity = "WARNING"
+    else:
+        severity = base_severity
+    for wf in workflow_failures[:8]:
+        age_txt = f"{wf['age_h']:.0f}h 전" if wf.get("age_h") is not None else "시점?"
+        if wf["workflow"] in _SWEEP_CI_CRITICAL:
+            findings.append(
+                f"🔴 {wf['workflow']} 최신 run {wf['conclusion']} ({age_txt}) — main CI 회귀 (코드 결함)"
+            )
+        else:
+            findings.append(
+                f"⚠ {wf['workflow']} 최신 run {wf['conclusion']} ({age_txt}) — 감시목록 밖 silent 실패"
+            )
+    return severity, findings
 
 
 def analyze(hours_window: int = 24) -> Dict[str, Any]:
@@ -622,13 +659,8 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
 
     # N) 전 workflow 최신-run 실패 sweep (bespoke 밖 cron silent 실패 포착 — dart_batch 3주 학습)
     workflow_failures = _sweep_workflow_latest_failures()
-    if workflow_failures:
-        severity = "WARNING" if severity == "PASS" else severity
-        for wf in workflow_failures[:8]:
-            age_txt = f"{wf['age_h']:.0f}h 전" if wf.get("age_h") is not None else "시점?"
-            findings.append(
-                f"⚠ {wf['workflow']} 최신 run {wf['conclusion']} ({age_txt}) — 감시목록 밖 silent 실패"
-            )
+    severity, _sweep_findings = _sweep_severity_and_findings(workflow_failures, severity)
+    findings.extend(_sweep_findings)
 
     return {
         "severity": severity,
