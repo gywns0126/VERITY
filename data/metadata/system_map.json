@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-06-17T10:45:29.723546+09:00",
+  "generated_at": "2026-06-17T15:55:08.467435+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 171081,
-    "python_modules": 514,
+    "code_lines_tsx_py": 171153,
+    "python_modules": 515,
     "tsx_components": 50,
     "json_data_files": 241,
     "json_total_tracked": 256,
     "workflows": 41,
     "scheduled_workflows": 32,
     "cron_triggers": 41,
-    "git_tracked_files": 5109
+    "git_tracked_files": 5110
   },
   "subsystems": {
     "ingest": {
@@ -449,29 +449,29 @@
     },
     "validation": {
       "label": "검증",
-      "n_trading_days": 21,
-      "n_calendar_days": 30,
+      "n_trading_days": 22,
+      "n_calendar_days": 31,
       "next_milestone": {
         "next_n": 30,
-        "days_remaining": 9,
+        "days_remaining": 8,
         "label": "통계 무의미 졸업 (메모 project_minimum_n_milestones_2026_05_18)"
       },
-      "as_of": "2026-06-16T14:41:47+09:00"
+      "as_of": "2026-06-17T14:22:17+09:00"
     }
   },
   "python_by_dir": {
     "api": 296,
-    "tests": 113,
+    "tests": 114,
     "scripts": 56,
     "vercel-api": 41,
     "server": 6,
     ".github": 2
   },
   "funnel": {
-    "investable_real": 1729,
+    "investable_real": 1673,
     "cap": 5000,
     "stages": [
-      1729,
+      1673,
       300,
       100,
       25
@@ -482,7 +482,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~1729 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~1673 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
@@ -490,7 +490,7 @@
       "warn": 1,
       "alert": 0
     },
-    "infra_as_of": "2026-06-16T11:36:09+09:00",
+    "infra_as_of": "2026-06-17T11:33:16+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
