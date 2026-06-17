@@ -188,7 +188,18 @@ def _get_token() -> str:
                 "GH Actions 단일 발급원이 아직 발급/publish 안 함 — Railway 발급 금지 (RULE 1)."
             )
 
-        # ── 이하 legacy 롤백 경로 (KIS_SHARED_TOKEN off) — 자체 발급 + 24h 가드 ──
+        # 🚨 RULE 1 fail-closed (2026-06-17 dual-issuer 사고) — KIS_SHARED_TOKEN/SUPABASE env 가
+        #    하나라도 누락되면 _shared_enabled()=False 가 되어 옛 설계는 곧장 self-issue 했다(fail-OPEN).
+        #    env 실수 한 번 = 2토큰 발급 = 계좌 제재. 이제 self-issue 는 명시적 opt-in 일 때만 허용.
+        #    기본 = 발급 금지(fail-CLOSED). 의도적 legacy 롤백 시에만 KIS_ALLOW_SELF_ISSUE=1 설정.
+        if os.environ.get("KIS_ALLOW_SELF_ISSUE", "").strip().lower() not in ("1", "true", "yes", "on"):
+            raise RuntimeError(
+                "KIS REST 발급 금지 (RULE 1 fail-closed). 공유 store/캐시 없음 + "
+                "KIS_ALLOW_SELF_ISSUE 미설정 — Railway self-issue 차단. env 누락이면 "
+                "KIS_SHARED_TOKEN=1 / SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 설정 후 재배포."
+            )
+
+        # ── 이하 legacy 롤백 경로 (KIS_ALLOW_SELF_ISSUE=1 명시 opt-in) — 자체 발급 + 24h 가드 ──
         # 4) ★ 24h minimum interval 가드 — cache 만료 직전이어도 24h 안 지났으면 cache 반환.
         #    2026-05-31 RULE 1 정정: 6h → 24h. _load_cached_token() fail 했지만 disk stale 가능.
         try:
@@ -252,7 +263,8 @@ def token_status() -> dict:
         "has_valid_token": bool(_token and now < _token_expires),
         "remaining_hours": round((_token_expires - now) / 3600, 1) if _token_expires else None,
         "app_key_fp": _app_key_fp(),
-        "rule1_ok": (_token_source != "self_issue") if _shared_enabled() else True,
+        # self_issue 면 shared_flag 무관하게 위반 — env 누락 시 거짓 True 보고 차단 (2026-06-17 사고).
+        "rule1_ok": _token_source != "self_issue",
     }
 
 
