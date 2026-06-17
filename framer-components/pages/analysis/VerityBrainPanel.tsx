@@ -392,8 +392,10 @@ export default function VerityBrainPanel(props: Props) {
     const expiryReason = expiry.reason || ""
     const prog = market.program_trading || data?.program_trading || {}
     const progSignal = String(prog.signal || "NEUTRAL")
-    const progOk = !!prog.ok || prog.signal != null
-    const sellBomb = !!prog.sell_bomb
+    // 2026-06-17 정직화: fallback(unavailable/ok=false)은 NEUTRAL·0 을 실데이터로 노출 금지.
+    const progUnavailable = prog.unavailable === true || prog.ok === false
+    const progOk = !progUnavailable && (!!prog.ok || prog.signal != null)
+    const sellBomb = !progUnavailable && !!prog.sell_bomb
     const hasExpiry = expiry.watch_level != null
     const hasStructureData = hasExpiry || progOk
 

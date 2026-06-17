@@ -129,8 +129,12 @@ def _parse_bn(val: str) -> float:
 
 
 def _fallback(today_str: Optional[str] = None, note: Optional[str] = None) -> dict:
+    # 2026-06-17: 정직 fallback. 0/NEUTRAL 을 실데이터로 오인 노출 금지 — unavailable 플래그로
+    # 프론트가 '일시 불가' 표시. (KRX 프로그램매매 = 안정 API 부재, data.krx bld 점검 중. shelve)
     return {
         "ok": False,
+        "unavailable": True,
+        "status_note": "프로그램매매 일시 불가 (KRX 데이터 소스 점검 중)",
         "date": today_str or date.today().strftime("%Y%m%d"),
         "arb_net_bn": 0,
         "non_arb_net_bn": 0,
