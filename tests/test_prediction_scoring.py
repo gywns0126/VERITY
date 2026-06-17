@@ -144,7 +144,7 @@ def test_terminal_capture_on_delisting(monkeypatch):
     avail = ["2026-01-01", "2026-02-01", "2026-03-01"]
     # base=100(01-01), mid=50(02-01), eval(03-01) 에서는 소멸(=상폐)
     prices = {"2026-01-01": {"X": 100.0}, "2026-02-01": {"X": 50.0}, "2026-03-01": {}}
-    monkeypatch.setattr(ps, "_find_nearest_snapshot", lambda d, a: "2026-01-01")
+    monkeypatch.setattr(ps, "_find_nearest_snapshot", lambda d, a, **kw: "2026-01-01")
     monkeypatch.setattr(ps, "load_snapshot", lambda d: {"date": d})
     monkeypatch.setattr(ps, "_get_price_map_from_snapshot", lambda snap: prices[snap["date"]])
     # 정상 경로는 eval 가격 결손 → None (LOCKED 무변경 확인)
