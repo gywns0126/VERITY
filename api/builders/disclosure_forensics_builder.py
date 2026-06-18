@@ -23,6 +23,7 @@ from typing import Any, Dict, List
 KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 INPUT_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
+BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_catalyst_backfill.jsonl")  # 2015~ 과거 이력(있으면 심화)
 OUTPUT_PATH = os.path.join(_ROOT, "data", "disclosure_forensics.json")
 
 # 주주가치 희석·리스크 이벤트 분류 (report_nm 키워드, 우선순위 순 — 첫 매치 채택). RULE 6 사전 정의.
@@ -59,19 +60,22 @@ def _classify(report_nm: str) -> Dict[str, str] | None:
 def main() -> int:
     ok = False
     try:
-        if not os.path.isfile(INPUT_PATH):
-            print("[disclosure_forensics] alerts.jsonl 부재 — skip", file=sys.stderr)
+        if not os.path.isfile(INPUT_PATH) and not os.path.isfile(BACKFILL_PATH):
+            print("[disclosure_forensics] 입력 jsonl 부재 — skip", file=sys.stderr)
             return 0
         rows: List[Dict[str, Any]] = []
-        with open(INPUT_PATH, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rows.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue
+        for path in (INPUT_PATH, BACKFILL_PATH):  # rolling 최근 + 2015~ 백필 합산
+            if not os.path.isfile(path):
+                continue
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rows.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
 
         # 종목별 집계 (dedup by rcept_no)
         by_ticker: Dict[str, Dict[str, Any]] = {}

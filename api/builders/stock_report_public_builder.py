@@ -212,10 +212,63 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
                 fnote["Altman-Z"] = "안전구간" if altman["zone"] == "safe" else str(altman["zone"])
     if rec.get("market_cap"):
         facts["시가총액"] = _fmt_cap(rec.get("market_cap"))
-    return {
+    # 투자지표 확장 (EPS·배당수익률 — 사실)
+    eps = _num(rec.get("eps"), "원", 0)
+    if eps is not None and str(rec.get("eps") or "0") not in ("0", "0.0"):
+        facts["EPS"] = eps
+    dy = _num(rec.get("div_yield"), "%", 2)
+    if dy is not None and float(rec.get("div_yield") or 0) > 0:
+        facts["배당수익률"] = dy
+
+    # 헤더 메타 (52주 범위·거래대금 — 외부 사실)
+    header: Dict[str, str] = {}
+    hi, lo = rec.get("high_52w"), rec.get("low_52w")
+    try:
+        if hi and lo:
+            header["range_52w"] = f"{float(lo):,.0f}~{float(hi):,.0f}"
+    except (TypeError, ValueError):
+        pass
+    if rec.get("trading_value"):
+        header["trading_value"] = _fmt_cap(rec.get("trading_value"))
+    if rec.get("market_cap"):
+        header["market_cap"] = _fmt_cap(rec.get("market_cap"))
+
+    # 기업 개요 (사실 — tagline/발행주식수/섹터. one_line_summary=자체분석 제외 RULE6)
+    overview: Dict[str, str] = {}
+    if rec.get("company_tagline"):
+        overview["tagline"] = str(rec["company_tagline"])
+    so = rec.get("shares_outstanding")
+    try:
+        if so and float(so) > 0:
+            overview["shares"] = f"{float(so) / 1e8:,.2f}억주" if float(so) >= 1e8 else f"{float(so):,.0f}주"
+    except (TypeError, ValueError):
+        pass
+    if rec.get("sector") or rec.get("company_type"):
+        overview["sector"] = str(rec.get("company_type") or rec.get("sector"))
+
+    # 부동산 자산 (DART 재무상태표 투자부동산 장부가 — 사실, 시가 아님)
+    real_estate = None
+    pa = (rec.get("dart_financials") or {}).get("property_assets") or {}
+    try:
+        tot = float(pa.get("total_current") or 0)
+        if tot > 0:
+            items = []
+            for it in (pa.get("items") or [])[:6]:
+                v = float(it.get("current") or 0)
+                if v > 0:
+                    items.append({"name": str(it.get("account_nm") or it.get("name") or ""), "value": _fmt_cap(v)})
+            real_estate = {"total": _fmt_cap(tot), "items": items,
+                           "note": "재무상태표 장부가(시가 아님) · DART"}
+    except (TypeError, ValueError):
+        real_estate = None
+
+    out = {
         "ticker": ticker, "name": rec.get("name") or ticker, "market": rec.get("market") or "",
         "business": rec.get("company_tagline") or rec.get("company_type") or "",
         "facts": facts, "facts_note": fnote,
+        "header": header or None,
+        "overview": overview or None,
+        "real_estate": real_estate,
         "disclosures": catalyst.get(ticker, [])[:8],
         "ownership": _ownership(rec),
         "consensus": _consensus_from_rec(rec),
@@ -223,6 +276,7 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
                      if (rec.get("earnings") or {}).get("next_earnings") else []),
         "rich": True,
     }
+    return out
 
 
 def build_light(ticker: str, fund: Dict[str, Any], name: str, market: str,
