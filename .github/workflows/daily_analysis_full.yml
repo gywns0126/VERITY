@@ -314,6 +314,12 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.stock_report_public_builder
 
+      - name: 미장 공시속보 빌드 (SEC 8-K)
+        # us_financials 유니버스 8-K 수집 → data/us_disclosure_feed.json. SEC EDGAR(무료·UA 내장, KIS 0).
+        # 외부 fetch. 다음 step git add data/ (broad) 자동 포함 = RULE 4.
+        continue-on-error: true
+        run: python -m api.builders.us_disclosure_feed_builder
+
       - name: Brain audit baseline (PRE/POST 측정 영속화)
         # 2026-05-18 확정 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
         # portfolio.json 의 brain_score 분포 + component fill + grade + quadrant 측정.

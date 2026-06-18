@@ -61,13 +61,18 @@ jobs:
           fi
           python -m api.builders.us_financials_builder $ARGS
 
+      - name: 미장 종목 리포트 public-safe 빌드
+        # us_financials/_summary → RULE7 allowlist → data/us_stock_report_public.json (PublicStockReport 재사용)
+        continue-on-error: true
+        run: python -m api.builders.us_stock_report_public_builder
+
       - name: Commit data/us_financials/
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
         # [[feedback_data_collection_verification_mandatory]] specific path commit.
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/us_financials/
+          git add data/us_financials/ data/us_stock_report_public.json
           if git diff --staged --quiet; then
             echo "[us_financials] no changes"
             exit 0

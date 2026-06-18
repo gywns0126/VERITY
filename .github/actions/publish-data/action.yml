@@ -54,6 +54,8 @@ runs:
                  public_disclosure_feed.json \
                  validation_summary.json \
                  stock_report_public.json \
+                 us_stock_report_public.json \
+                 us_disclosure_feed.json \
                  history.json; do
           if git show "origin/main:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
             echo "  + data/$f"
