@@ -1,21 +1,14 @@
 """stock_report_public_builder — 공개 터미널 "종목 리포트" public-safe 합성 빌더.
 
-배경 (2026-06-18, 멀티에이전트 RULE10 감사 결과):
-  recommendations.json (운영 풀 26 레코드, 종목당 90키) 가 거의 모든 사실의 1차 원천.
-  대부분 사실이 레코드에 임베드 → strip 후 노출. 공시 원문은 dart_catalyst_alerts.jsonl.
+2026-06-18 전종목 확장: 운영풀 10 → KR 전종목(~1,650).
+  - 운영풀(recommendations.json): rich (PER/PBR/ROE/부채/Altman-Z/시총/지분/컨센/일정/공시)
+  - 그 외(dart_fundamentals_kr.json 1,650): light (PER/PBR/ROE/부채/영업이익률 + 공시 + 컨센)
+  - name/market = kr_listed.json (KP/KQ), 보조 kr_stock_names.json
+  - 공시 = dart_catalyst_alerts.jsonl (시장 전체 수집, ticker별)
+  - 컨센서스 = consensus_data.json (증권사 집계 — 자체 의견 아님)
 
-🚨 RULE 7 — **allowlist 방식** (blacklist 아님). 노출 가능 사실 키만 골라 담는다.
-  신규 점수 키가 recommendations 에 추가돼도 자동 누출 안 됨 (안전 방향).
-  비노출(strip): brain_score / grade / recommendation / multi_factor / verity_brain /
-    trade_plan / prediction / timing / lynch_kr / *_score / ai_verdict / sentiment 등 전부.
-  노출(사실): PER/PBR/ROE/부채비율/Altman-Z(zone)/시가총액 / 공시(원문 deep-link) /
-    지분(공정위 총수일가) / 컨센서스(증권사 집계 — 자체 추천 아님) / 일정(실적발표).
-
-  flow(수급): recommendations.flow = 26/26 dead(전부 0), 개인키 부재 → 노출 보류(gap).
-  change_pct: 일간 전일종가 단일 필드 부재 → null (UI 미표시). 신뢰 불가값 노출 금지.
-
-순수 변환 — 외부호출/KIS 0. 입력 read-only.
-publish: data/stock_report_public.json → publish-data action 목록 추가 의무(RULE 4).
+🚨 RULE 7 — **allowlist** (점수/등급/추천/trade_plan/prediction 등 전부 비노출).
+순수 변환 — 외부호출/KIS 0. publish: data/stock_report_public.json (action.yml 목록 등재됨).
 """
 from __future__ import annotations
 
@@ -23,29 +16,40 @@ import json
 import os
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REC_PATH = os.path.join(_ROOT, "data", "recommendations.json")
+FUND_PATH = os.path.join(_ROOT, "data", "dart_fundamentals_kr.json")
+KRLISTED_PATH = os.path.join(_ROOT, "data", "kr_listed.json")
+NAMES_PATH = os.path.join(_ROOT, "data", "kr_stock_names.json")
+CONSENSUS_PATH = os.path.join(_ROOT, "data", "consensus_data.json")
 CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
 DART = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
 
-# 총수일가 = 공정위 분류상 동일인 + 친족 (소속회사는 그룹 지배지분, 별도)
 FAMILY_TYPES = {"동일인", "친족"}
+MARKET_MAP = {"KP": "KOSPI", "KQ": "KOSDAQ", "KN": "KONEX"}
 
 
 def _now_kst() -> datetime:
     return datetime.now(KST)
 
 
+def _load_json(path: str, default):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return default
+
+
 def _is_kr(rec: Dict[str, Any]) -> bool:
-    cur = str(rec.get("currency") or "")
-    mkt = str(rec.get("market") or "")
-    if cur == "USD":
+    if str(rec.get("currency") or "") == "USD":
         return False
-    return "KOSPI" in mkt or "KOSDAQ" in mkt or "KRX" in mkt or bool(rec.get("ticker", "").isdigit())
+    mkt = str(rec.get("market") or "")
+    return "KOSPI" in mkt or "KOSDAQ" in mkt or "KRX" in mkt or str(rec.get("ticker", "")).isdigit()
 
 
 def _fmt_cap(v: Any) -> str:
@@ -62,11 +66,13 @@ def _fmt_cap(v: Any) -> str:
     return f"{x:,.0f}"
 
 
-def _num(v: Any, suffix: str = "", digits: int = 1) -> str:
+def _num(v: Any, suffix: str = "", digits: int = 1) -> Optional[str]:
     try:
         x = float(v)
     except (TypeError, ValueError):
-        return "—"
+        return None
+    if x != x:  # NaN
+        return None
     s = f"{x:.{digits}f}".rstrip("0").rstrip(".") if digits else f"{x:.0f}"
     return f"{s}{suffix}"
 
@@ -105,7 +111,7 @@ def _load_catalyst_by_ticker() -> Dict[str, List[Dict[str, Any]]]:
     return out
 
 
-def _ownership(rec: Dict[str, Any]) -> Dict[str, Any] | None:
+def _ownership(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     ftc = ((rec.get("group_structure") or {}).get("ftc_official") or {})
     sh = ftc.get("shareholders") or []
     if not isinstance(sh, list) or not sh:
@@ -117,28 +123,22 @@ def _ownership(rec: Dict[str, Any]) -> Dict[str, Any] | None:
                 family += float(s.get("qota_rate") or 0)
             except (TypeError, ValueError):
                 pass
-    top = [{"name": s.get("name"), "type": s.get("type"), "qota_rate": s.get("qota_rate")}
-           for s in sh[:5]]
     return {
         "family_pct": round(family, 2),
         "note": "동일인+친족 합산 (소속회사 지배지분 별도) · 공정위 분류",
         "source": "공정거래위원회 기업집단포털" + (f" ({ftc.get('as_of_year')})" if ftc.get("as_of_year") else ""),
-        "top_holders": top,
     }
 
 
-def _consensus(rec: Dict[str, Any]) -> Dict[str, Any] | None:
+def _consensus_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     c = rec.get("consensus") or {}
     if not c.get("consensus_available"):
         return None
     out: Dict[str, Any] = {}
     if c.get("target_price"):
-        try:
-            out["target_price"] = f"{float(c['target_price']):,.0f}원"
-        except (TypeError, ValueError):
-            pass
+        out["target_price"] = _fmt_won(c["target_price"])
     if c.get("investment_opinion"):
-        out["opinion"] = str(c["investment_opinion"])  # 증권사 집계 — 자체 추천 아님
+        out["opinion"] = str(c["investment_opinion"])
     eps = rec.get("eps")
     try:
         if eps and float(eps) != 0:
@@ -148,70 +148,135 @@ def _consensus(rec: Dict[str, Any]) -> Dict[str, Any] | None:
     return out or None
 
 
-def build_stock(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
+def _fmt_won(v: Any) -> Optional[str]:
+    try:
+        return f"{float(v):,.0f}원"
+    except (TypeError, ValueError):
+        return None
+
+
+def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
     ticker = str(rec.get("ticker") or "")
     altman = (((rec.get("quant_factors") or {}).get("quality") or {}).get("altman") or {})
-
     facts: Dict[str, str] = {}
     fnote: Dict[str, str] = {}
-    if rec.get("per") is not None:
-        facts["PER"] = _num(rec.get("per"), digits=1)
-    if rec.get("pbr") is not None:
-        facts["PBR"] = _num(rec.get("pbr"), digits=1)
-    if rec.get("roe") is not None:
-        facts["ROE"] = _num(rec.get("roe"), suffix="%", digits=1)
-    if rec.get("debt_ratio") is not None:
-        facts["부채비율"] = _num(rec.get("debt_ratio"), suffix="%", digits=0)
+    for key, src, suf, dg in [("PER", "per", "", 1), ("PBR", "pbr", "", 1),
+                               ("ROE", "roe", "%", 1), ("부채비율", "debt_ratio", "%", 0)]:
+        val = _num(rec.get(src), suf, dg)
+        if val is not None:
+            facts[key] = val
     if altman.get("z_score") is not None:
-        facts["Altman-Z"] = _num(altman.get("z_score"), digits=1)
-        if altman.get("zone"):
-            fnote["Altman-Z"] = "안전구간" if altman["zone"] == "safe" else str(altman["zone"])
+        az = _num(altman.get("z_score"), digits=1)
+        if az is not None:
+            facts["Altman-Z"] = az
+            if altman.get("zone"):
+                fnote["Altman-Z"] = "안전구간" if altman["zone"] == "safe" else str(altman["zone"])
     if rec.get("market_cap"):
         facts["시가총액"] = _fmt_cap(rec.get("market_cap"))
-
     return {
-        "ticker": ticker,
-        "name": rec.get("name") or ticker,
-        "market": rec.get("market") or "",
+        "ticker": ticker, "name": rec.get("name") or ticker, "market": rec.get("market") or "",
         "business": rec.get("company_tagline") or rec.get("company_type") or "",
-        "price": rec.get("price"),
-        "change_pct": None,  # 일간 전일종가 부재 — 신뢰 불가값 노출 금지
-        "currency": rec.get("currency") or "KRW",
-        "facts": facts,
-        "facts_note": fnote,
-        "flow": None,  # recommendations.flow 26/26 dead — 노출 보류
+        "facts": facts, "facts_note": fnote,
         "disclosures": catalyst.get(ticker, [])[:8],
         "ownership": _ownership(rec),
-        "consensus": _consensus(rec),
-        "calendar": (
-            [{"event": "실적발표", "kind": "실적", "date": (rec.get("earnings") or {}).get("next_earnings")}]
-            if (rec.get("earnings") or {}).get("next_earnings") else []
-        ),
+        "consensus": _consensus_from_rec(rec),
+        "calendar": ([{"event": "실적발표", "kind": "실적", "date": (rec.get("earnings") or {}).get("next_earnings")}]
+                     if (rec.get("earnings") or {}).get("next_earnings") else []),
+        "rich": True,
+    }
+
+
+def build_light(ticker: str, fund: Dict[str, Any], name: str, market: str,
+                catalyst: Dict[str, List[Dict[str, Any]]],
+                consensus_map: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    facts: Dict[str, str] = {}
+    for key, src, suf, dg in [("PER", "per", "", 1), ("PBR", "pbr", "", 1),
+                               ("ROE", "roe", "%", 1), ("부채비율", "debt_ratio", "%", 0),
+                               ("영업이익률", "op_margin", "%", 1)]:
+        val = _num(fund.get(src), suf, dg)
+        if val is not None:
+            facts[key] = val
+    cons = consensus_map.get(ticker)
+    return {
+        "ticker": ticker, "name": name or ticker, "market": market or "",
+        "business": "",
+        "facts": facts, "facts_note": {},
+        "disclosures": catalyst.get(ticker, [])[:8],
+        "ownership": None,
+        "consensus": cons,
+        "calendar": [],
+        "rich": False,
     }
 
 
 def main() -> int:
     ok = False
     try:
-        if not os.path.isfile(REC_PATH):
-            print("[stock_report_public] recommendations.json 부재 — skip", file=sys.stderr)
-            return 0
-        with open(REC_PATH, "r", encoding="utf-8") as f:
-            recs = json.load(f)
+        recs = _load_json(REC_PATH, [])
         if not isinstance(recs, list):
             recs = []
+        fund_doc = _load_json(FUND_PATH, {})
+        fundamentals = (fund_doc.get("fundamentals") if isinstance(fund_doc, dict) else {}) or {}
+        kr_listed = _load_json(KRLISTED_PATH, {}) or {}
+        names = _load_json(NAMES_PATH, {}) or {}
         catalyst = _load_catalyst_by_ticker()
 
-        stocks = [build_stock(r, catalyst) for r in recs if _is_kr(r) and r.get("ticker")]
-        # 시총 큰 순 정렬 (노출 우선순위 — 사실 기반)
-        stocks.sort(key=_capnum, reverse=True)
+        # 컨센서스 map (증권사 집계 — 자체 의견 아님)
+        consensus_map: Dict[str, Dict[str, Any]] = {}
+        cdoc = _load_json(CONSENSUS_PATH, {})
+        cstocks = (cdoc.get("stocks") if isinstance(cdoc, dict) else cdoc) or []
+        for c in (cstocks if isinstance(cstocks, list) else []):
+            tk = str(c.get("ticker") or "")
+            if not tk:
+                continue
+            entry: Dict[str, Any] = {}
+            tp = _fmt_won(c.get("target_price"))
+            if tp:
+                entry["target_price"] = tp
+            if c.get("investment_opinion"):
+                entry["opinion"] = str(c["investment_opinion"])
+            if entry:
+                consensus_map[tk] = entry
+
+        # 운영풀 rich (recommendations)
+        rich_by_ticker: Dict[str, Dict[str, Any]] = {}
+        for r in recs:
+            if _is_kr(r) and r.get("ticker"):
+                t = str(r["ticker"])
+                rich_by_ticker[t] = build_rich(r, catalyst)
+
+        def _name_market(tk: str):
+            li = kr_listed.get(tk) if isinstance(kr_listed, dict) else None
+            if isinstance(li, dict):
+                return li.get("name") or names.get(tk) or tk, MARKET_MAP.get(li.get("market"), li.get("market") or "")
+            return (names.get(tk) or tk), ""
+
+        # universe = fundamentals 1,650 ∪ 운영풀
+        universe = set(fundamentals.keys()) | set(rich_by_ticker.keys())
+        stocks: List[Dict[str, Any]] = []
+        for tk in universe:
+            if tk in rich_by_ticker:
+                stocks.append(rich_by_ticker[tk])
+            else:
+                fund = fundamentals.get(tk) or {}
+                nm, mk = _name_market(tk)
+                light = build_light(tk, fund, nm, mk, catalyst, consensus_map)
+                # 컨센서스 보강만 있고 facts 전무면 노출 가치 낮음 — facts 있을 때만
+                if light["facts"] or light["disclosures"]:
+                    stocks.append(light)
+
+        # 정렬: rich 먼저 → 공시 많은 순 → ticker
+        stocks.sort(key=lambda s: (s.get("rich", False), len(s.get("disclosures", [])), s["ticker"]), reverse=True)
+        for s in stocks:
+            s.pop("rich", None)
 
         out = {
             "_meta": {
                 "generated_at": _now_kst().isoformat(),
-                "source": "DART (전자공시) · 공정위 · FnGuide 집계",
+                "source": "DART(전자공시·재무) · 공정위 · FnGuide 집계 · KRX",
                 "count": len(stocks),
-                "note": "공개 사실만 (RULE 7 allowlist) — 점수·등급·추천 비노출. 컨센서스는 증권사 집계(자체 의견 아님).",
+                "rich_count": len(rich_by_ticker),
+                "note": "공개 사실만 (RULE 7 allowlist) — 점수·등급·추천 비노출. 컨센서스=증권사 집계(자체 의견 아님). 가격은 클라이언트 라이브 조회.",
             },
             "stocks": stocks,
         }
@@ -220,8 +285,8 @@ def main() -> int:
             ok = True
             return 0
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-            json.dump(out, f, ensure_ascii=False, indent=2)
-        print(f"[stock_report_public] logged=True · {len(stocks)} 종목 -> "
+            json.dump(out, f, ensure_ascii=False)
+        print(f"[stock_report_public] logged=True · {len(stocks)} 종목 (rich {len(rich_by_ticker)}) -> "
               f"{os.path.relpath(OUTPUT_PATH, _ROOT)}", file=sys.stderr)
         ok = True
         return 0
@@ -231,18 +296,6 @@ def main() -> int:
     finally:
         if not ok:
             print("[stock_report_public] logged=False", file=sys.stderr)
-
-
-def _capnum(s: Dict[str, Any]) -> float:
-    v = s.get("facts", {}).get("시가총액", "")
-    try:
-        if v.endswith("조"):
-            return float(v[:-1]) * 1e12
-        if v.endswith("억"):
-            return float(v[:-1]) * 1e8
-    except (ValueError, AttributeError):
-        pass
-    return 0.0
 
 
 if __name__ == "__main__":

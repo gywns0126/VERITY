@@ -21,7 +21,9 @@
   body.dark{background:#000}
   body.dark .top{background:rgba(18,22,28,.94)}
   body.dark .nav{background:rgba(18,22,28,.96)}
-  .tgl{position:absolute;top:15px;right:15px;background:var(--card);border:none;color:var(--sub);font-family:inherit;font-size:11px;font-weight:700;padding:6px 11px;border-radius:999px;cursor:pointer}
+  .tglbar{position:absolute;top:13px;right:13px;display:flex;gap:6px;z-index:11}
+  .tgl{background:var(--card);border:none;color:var(--sub);font-family:inherit;font-size:11px;font-weight:700;padding:6px 11px;border-radius:999px;cursor:pointer}
+  .tgl.act{background:var(--vg);color:#fff}
   body{margin:0;background:#dfe3e8;font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;color:var(--ink)}
   .phone{max-width:420px;margin:0 auto;background:var(--bg);min-height:100vh;position:relative;padding-bottom:74px}
   /* top bar */
@@ -60,6 +62,10 @@
   .cn .f{font-size:13.5px;color:var(--sub);font-weight:600;letter-spacing:-.2px}
   .srcL{font-size:11px;font-weight:700;color:var(--faint);margin:10px 0 6px}
   .src{font-size:12px;color:var(--sub);font-weight:600;margin-bottom:3px}
+  a.src{display:block;text-decoration:none}
+  a.src:hover{color:var(--vg)}
+  .srcgo{font-size:10px;font-weight:800;color:var(--vg);background:var(--vgS);border-radius:5px;padding:1px 6px;margin-left:6px;text-decoration:none;white-space:nowrap}
+  .srcgo:hover{text-decoration:underline}
   /* tiles */
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .tile{background:var(--card);border-radius:16px;padding:13px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
@@ -74,8 +80,10 @@
   .ok{color:var(--green);font-weight:600} .no{color:var(--red);font-weight:600}
   .disc{text-align:center;font-size:11px;color:var(--faint);font-weight:600;padding:14px 16px 4px;line-height:1.6}
   /* 용어 툴팁 병기 (전업 타겟 — 정밀 용어 유지 + 1줄 설명) */
-  .term{border-bottom:1px dashed var(--vt);cursor:pointer}
-  .term::after{content:"ⓘ";font-size:9px;color:var(--vt);vertical-align:super;margin-left:1px}
+  .term{cursor:pointer}
+  body.interp .term{border-bottom:1px dashed var(--vt)}
+  .info{cursor:pointer}
+  body.interp .info::after{content:"i";display:inline-flex;align-items:center;justify-content:center;width:1.44em;height:1.44em;margin-left:0.6em;border-radius:50%;background:#6c5ce7;color:#fff;font-family:inherit;font-style:normal;font-size:0.5em;font-weight:700;line-height:1;vertical-align:middle;position:relative;top:-0.2em}
   .tip{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);max-width:388px;width:calc(100% - 28px);background:var(--ink);color:var(--card);font-size:12.5px;line-height:1.55;padding:12px 15px;border-radius:13px;box-shadow:0 6px 24px rgba(0,0,0,.28);z-index:60;display:none}
   .tip.on{display:block}
   .tip b{color:var(--vg)}
@@ -163,7 +171,10 @@
 <div class="phone">
   <div class="top">
     <div class="wordmark">VER<b>I</b>TY</div>
-    <button class="tgl" id="tglb" onclick="toggleTheme()">다크</button>
+    <div class="tglbar">
+      <button class="tgl" id="interpb" onclick="toggleInterp()">해석 꺼짐</button>
+      <button class="tgl" id="tglb" onclick="toggleTheme()">다크</button>
+    </div>
     <div class="tagline">사실과 연결만 — 점수·추천 아님 · 자체 검증 진행 중</div>
   </div>
 
@@ -176,9 +187,9 @@
       <div class="card">
         <div class="row"><div><span class="name">에코프로비엠</span><span class="tk">247540</span></div><span class="ago">8분 전</span></div>
         <div class="hook r">유상증자 결정 · 3,200억</div>
-        <div class="glance">오버행 6.2% · 외인 3일 순매도 · 증자 3번째</div>
+        <div class="glance" data-easy="새 주식을 찍어 3,200억 조달(지분 옅어질 수 있음) · 나중에 풀릴 물량 6.2% · 외국인 3일째 매도">오버행 6.2% · 외인 3일 순매도 · 증자 3번째</div>
         <div class="pat">
-          <div class="t">2015년 이후 유상증자 3번째 — 이게 처음이 아님</div>
+          <div class="t" data-easy="2015년부터 같은 증자가 세 번째 — 과거에도 있었던 일이에요">2015년 이후 유상증자 3번째 — 이게 처음이 아님</div>
           <div class="mv">
             <div class="pt"><div class="v" style="color:var(--red)">-18%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'18</div></div>
             <div class="pt"><div class="v" style="color:var(--red)">-24%</div><div class="dot" style="background:var(--red)"></div><div class="lb">'21</div></div>
@@ -190,18 +201,18 @@
           <div class="cn"><span class="chip r">오버행</span><span class="f">발행주식의 6.2% 희석</span></div>
           <div class="cn"><span class="chip b">수급</span><span class="f">외국인 3일 연속 순매도 −142만주</span></div>
           <div class="cn"><span class="chip a">일정</span><span class="f">전환사채 전환가능 D-9</span></div>
-          <div class="srcL">출처</div>
-          <div class="src">· DART 2026-06-16 유상증자결정</div>
-          <div class="src">· KRX 투자자별 매매동향</div>
+          <div class="srcL">출처 — 누르면 원문</div>
+          <a class="src" href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260616000412" target="_blank" rel="noopener">· DART 2026-06-16 유상증자결정<span class="srcgo">원문</span></a>
+          <a class="src" href="http://data.krx.co.kr" target="_blank" rel="noopener">· KRX 투자자별 매매동향<span class="srcgo">데이터</span></a>
         </div>
       </div>
 
       <div class="card">
         <div class="row"><div><span class="name">엠케이전자</span><span class="tk">033160</span></div><span class="ago">23분 전</span></div>
         <div class="hook g">단일판매·공급계약 · 1,840억(매출 21%)</div>
-        <div class="glance">기관 순매수 · 실적 D-5 · 공급계약 6번째</div>
+        <div class="glance" data-easy="1,840억 납품 계약 수주 · 기관이 매수 중 · 실적 발표 5일 전">기관 순매수 · 실적 D-5 · 공급계약 6번째</div>
         <div class="pat">
-          <div class="t">공급계약 공시 6번째 — 이게 처음이 아님</div>
+          <div class="t" data-easy="납품 계약 공시가 여섯 번째 — 과거에도 있었던 일이에요">공급계약 공시 6번째 — 이게 처음이 아님</div>
           <div class="mv">
             <div class="pt"><div class="v" style="color:var(--green)">+8%</div><div class="dot" style="background:var(--green)"></div><div class="lb">'22</div></div>
             <div class="pt"><div class="v" style="color:var(--green)">+5%</div><div class="dot" style="background:var(--green)"></div><div class="lb">'23</div></div>
@@ -213,9 +224,9 @@
         <div class="body">
           <div class="cn"><span class="chip b">수급</span><span class="f">기관 2일 순매수 +38만주</span></div>
           <div class="cn"><span class="chip a">일정</span><span class="f">실적발표 D-5</span></div>
-          <div class="srcL">출처</div>
-          <div class="src">· DART 2026-06-16 공급계약체결</div>
-          <div class="src">· KRX 투자자별 매매동향</div>
+          <div class="srcL">출처 — 누르면 원문</div>
+          <a class="src" href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260616000731" target="_blank" rel="noopener">· DART 2026-06-16 공급계약체결<span class="srcgo">원문</span></a>
+          <a class="src" href="http://data.krx.co.kr" target="_blank" rel="noopener">· KRX 투자자별 매매동향<span class="srcgo">데이터</span></a>
         </div>
       </div>
       <div class="disc">공시-first(DART 원천, 기사보다 빠름) · 우리 데이터로 연결만 · AI 요약 아님</div>
@@ -334,7 +345,7 @@
           <div class="tile"><div class="k">PER</div><div class="val">14.2</div><div class="d">업종 평균 17.8</div></div>
           <div class="tile"><div class="k">PBR</div><div class="val">1.1</div><div class="d">5년 분위 32%ile</div></div>
           <div class="tile"><div class="k">ROE</div><div class="val">9.1%</div><div class="d">최근 결산</div></div>
-          <div class="tile"><div class="k">부채비율</div><div class="val">38%</div><div class="d">업종중앙 31%</div></div>
+          <div class="tile"><div class="k">부채비율</div><div class="val"><span class="info" data-info="빚이 자기자본의 38% 수준. 업종 중앙값 31%보다 약간 높지만, Altman-Z 3.4와 함께 보면 부도 위험 구간은 아니에요." onclick="tip(this)">38%</span></div><div class="d">업종중앙 31%</div></div>
           <div class="tile"><div class="k">Altman Z</div><div class="val" style="color:var(--green)">3.4</div><div class="d">안전구간(>3)</div></div>
           <div class="tile"><div class="k">시가총액</div><div class="val">425조</div><div class="d">코스피 1위</div></div>
         </div>
@@ -483,7 +494,7 @@
         <div class="grid">
           <div class="tile"><div class="k">美 10Y-2Y</div><div class="val" style="color:var(--green)">+0.42%p</div><div class="d">정상화</div></div>
           <div class="tile"><div class="k">Fear &amp; Greed</div><div class="val" style="color:var(--amber)">38</div><div class="d">Fear 구간</div></div>
-          <div class="tile"><div class="k">VIX</div><div class="val" style="color:var(--amber)">22.4</div><div class="d">3개월래 최고</div></div>
+          <div class="tile"><div class="k">VIX</div><div class="val" style="color:var(--amber)"><span class="info" data-info="VIX 는 시장의 공포 지수예요. 평소 15~20인데 22.4는 그보다 높아, 투자자 불안이 커진 상태라는 뜻이에요." onclick="tip(this)">22.4</span></div><div class="d">3개월래 최고</div></div>
           <div class="tile"><div class="k">반도체 섹터 3M</div><div class="val" style="color:var(--red)">+8.1%</div><div class="d">TOP 섹터</div></div>
         </div>
       </div>
@@ -552,10 +563,10 @@
         <div class="glance" style="padding-top:2px">흩어진 공시·일정을 한 화면에. (사실/일정만 — 판단은 사용자)</div>
 
         <div style="margin-top:12px">
-          <div class="cn"><span class="chip r">오버행</span><span class="f"><span class="term" data-t="오버행" onclick="tip(this)">오버행</span> · CB 전환가능 D-12 · 유통주식 4.1%</span></div>
+          <div class="cn"><span class="chip r">오버행</span><span class="f"><span class="term" data-t="오버행" onclick="tip(this)">오버행</span> · <span class="term" data-t="전환사채" onclick="tip(this)">CB</span> 전환가능 D-12 · 유통주식 4.1%</span></div>
           <div class="cn"><span class="chip r">상습</span><span class="f"><span class="term" data-t="정정공시" onclick="tip(this)">정정공시</span> 최근 90일 3건</span></div>
-          <div class="cn"><span class="chip a">거버넌스</span><span class="f">최대주주 지분 매도 공시 (6/02)</span></div>
-          <div class="cn"><span class="chip g">호재</span><span class="f">대규모 공급계약 1,840억 (매출 12%, 6/09)</span></div>
+          <div class="cn"><span class="chip a">거버넌스</span><span class="f"><span class="term" data-t="최대주주" onclick="tip(this)">최대주주</span> 지분 매도 공시 (6/02)</span></div>
+          <div class="cn"><span class="chip g">호재</span><span class="f"><span class="term" data-t="공급계약" onclick="tip(this)">공급계약</span> 대규모 1,840억 (매출 12%, 6/09)</span></div>
         </div>
 
         <div class="pat" style="margin-top:14px">
@@ -573,7 +584,7 @@
         <div class="cn"><span class="chip g">정상</span><span class="f">감사의견 적정 · 소송 계류 없음 · 상장폐지 사유 없음</span></div>
       </div>
       <!-- 재무 요약 (DART, 사실) -->
-      <div class="stitle">재무 요약 <span>DART · 연간</span></div>
+      <div class="stitle">재무 요약 <span>DART · 연간 <a class="srcgo" href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260331000789" target="_blank" rel="noopener">원문</a></span></div>
       <div class="card">
         <div class="kv"><span class="k">매출 (조)</span><span class="v">16.2 → 17.8 → 19.1</span></div>
         <div class="kv"><span class="k">영업이익 (조)</span><span class="v">1.1 → 1.4 → 1.6</span></div>
@@ -731,11 +742,23 @@
     '계열 지배지분':'동일인(총수)+친족+계열사가 보유한 지분 합. 그룹 지배력 척도(높을수록 외부 영향 적음).',
     '투자부동산':'영업용이 아니라 임대·시세차익 목적으로 보유한 부동산. 장부가는 취득원가 기준.',
     '사용권자산':'리스로 빌려 쓰는 자산(매장·건물 등)을 회계상 자산으로 잡은 것(IFRS16).',
-    '정정공시':'이미 낸 공시를 고쳐 다시 내는 것. 잦으면 공시 신뢰성·내부통제 약화 신호.'
+    '정정공시':'이미 낸 공시를 고쳐 다시 내는 것. 잦으면 공시 신뢰성·내부통제 약화 신호.',
+    '최대주주':'회사 지분을 가장 많이 가진 주주. 이들의 매수·매도는 회사 내부 사정을 비추는 중요한 신호.',
+    '공급계약':'제품·서비스를 납품하기로 맺은 계약. 규모가 매출 대비 크면 향후 실적 기대 요인.'
   };
-  function tip(el){var k=el.getAttribute('data-t');var b=document.getElementById('tipbox');if(!GLOSS[k])return;b.innerHTML='<b>'+k+'</b><br>'+GLOSS[k];b.classList.add('on');event.stopPropagation();}
+  function tip(el){if(!document.body.classList.contains('interp'))return;var b=document.getElementById('tipbox');var info=el.getAttribute('data-info');if(info){b.innerHTML='<b>'+el.textContent+'</b><br>'+info;}else{var k=el.getAttribute('data-t');if(!GLOSS[k])return;b.innerHTML='<b>'+k+'</b><br>'+GLOSS[k];}b.classList.add('on');event.stopPropagation();}
   document.addEventListener('click',function(e){if(!(e.target.classList&&e.target.classList.contains('term'))){var b=document.getElementById('tipbox');if(b)b.classList.remove('on');}});
   function toggleTheme(){var d=document.body.classList.toggle('dark');document.getElementById('tglb').textContent=d?'라이트':'다크'}
+  function toggleInterp(){
+    var on=document.body.classList.toggle('interp');
+    var b=document.getElementById('interpb');
+    b.textContent=on?'해석 켜짐':'해석 꺼짐';
+    b.classList.toggle('act',on);
+    document.querySelectorAll('[data-easy]').forEach(function(el){
+      if(on){ if(el.getAttribute('data-pro')===null) el.setAttribute('data-pro',el.innerHTML); el.innerHTML=el.getAttribute('data-easy'); }
+      else { var p=el.getAttribute('data-pro'); if(p!==null) el.innerHTML=p; }
+    });
+  }
   function tog(el){el.classList.toggle('open');el.querySelector('.ar').textContent=el.classList.contains('open')?'▴':'▾';el.nextElementSibling.classList.toggle('open')}
   function go(btn,id){
     document.querySelectorAll('.sec').forEach(function(s){s.classList.remove('on')});

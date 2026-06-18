@@ -1,0 +1,92 @@
+name: DART Catalyst Pulse (공시속보 신선도)
+
+# 공개 터미널 공시속보 장중 신선도 전용 (2026-06-18).
+# daily_analysis_full(평일 2회)와 별개로 장중~마감후 30분 간격 시장 전체 catalyst 수집
+# + public-safe 피드 빌드 + publish. DART only — KIS 무관(RULE 1), brain 산식 영향 0.
+# 신규 공시 0이면 commit/publish 생략 (timestamp-only commit spam 방지).
+#
+# 7축 audit (CLAUDE.md):
+#  1 env/secret: DART_API_KEY (full 과 동일 secret). publish = VERITY_DATA_PAT + VERCEL_BLOB_TOKEN.
+#  2 push trigger: schedule only — Vercel deploy 무관(vercel-api/ 미변경, ignoreCommand skip, RULE 2).
+#  3 concurrency: group=verity-data-write (full/realtime 공유 직렬화 → commit race 0, WARN-17).
+#  4 cron: 30분 간격(>5분, silent skip 안전) + :13/:43 offset(정각 high-load 회피).
+#  5 KIS: 미사용(DART only) — KIS env/호출 0, RULE 1 안전.
+#  6 pip: requirements.txt (requests 포함).
+#  7 N=2: 추가 후 manual run(N=1) + 다음 scheduled(N=2) 검증 의무.
+
+on:
+  schedule:
+    # KR 장중~마감후 공시 시간대 KST 09:13~18:43 (UTC 00:13~09:43), 평일.
+    - cron: '13,43 0-9 * * 1-5'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  pulse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 시장 전체 catalyst 수집 (DART)
+        id: collect
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: |
+          set +e
+          NEW=$(python -c "from api.collectors.dart_catalyst import fetch_catalysts_market_wide, persist_catalyst_alerts as P; print(P(fetch_catalysts_market_wide(lookback_days=7)['events']))")
+          RC=$?
+          if [ $RC -ne 0 ] || [ -z "$NEW" ]; then
+            echo "::warning::시장전체 catalyst 수집 실패 또는 0 (RC=$RC) — skip"
+            NEW=0
+          fi
+          echo "신규 공시: $NEW"
+          echo "new=$NEW" >> "$GITHUB_OUTPUT"
+
+      - name: 공개 피드 빌드 + commit + push
+        if: steps.collect.outputs.new != '0'
+        run: |
+          python -m api.builders.public_disclosure_feed_builder
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/
+          git diff --staged --quiet && { echo "변경 없음"; exit 0; }
+          git commit -m "📡 공시속보 pulse $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              echo "pushed"; exit 0
+            fi
+            echo "push attempt $i failed, retry in $((i*10))s"; sleep $((i*10))
+          done
+          echo "::error::5회 push 실패"; exit 1
+
+      - name: Publish to VERITY-data + Blob
+        if: steps.collect.outputs.new != '0'
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}

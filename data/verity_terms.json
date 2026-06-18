@@ -5,7 +5,8 @@
     "description": "VERITY 도메인 용어 사전 — TermTooltip hover 시 표시. l3=true 는 외부 공유 금지 내부 자산 (Brain 자체 산출/임계값 등). 각 Framer code component 는 본 사전의 부분집합을 인라인 복붙.",
     "owner": "VERITY 운영자",
     "pattern_ref": "estate/data/terms.json (동일 패턴)",
-    "consumers": ["SiteHeader", "MacroHub", "EventCalendar", "MarketMap", "AlertHub", "ValidationPanel", "StockDashboard", "StockDetailPanel", "VerityBrainPanel", "VerityChat", "VerityReport"]
+    "consumers": ["SiteHeader", "MacroHub", "EventCalendar", "MarketMap", "AlertHub", "ValidationPanel", "StockDashboard", "StockDetailPanel", "VerityBrainPanel", "VerityChat", "VerityReport", "StockRadarProbe"],
+    "public_safe_note": "category=='public' 항목은 일반 금융/공시 교육 용어 (l3=false 전수). 배리티 퍼블릭 probe 의 일반인 '쉬운 말' 모드 hover 사전. 자기 산식/임계 아님 — RULE 7 비노출 대상 아님."
   },
 
   "FACT_SCORE": {
@@ -290,5 +291,96 @@
     "label": "소매판매",
     "category": "concept",
     "definition": "Retail Sales — 매월 미 상무부 발표. 소비 지출 1차 지표. 전월 대비 % 변화 + control group (자동차·휘발유·건자재 제외) 둘 다 추적."
+  },
+
+  "OVERHANG": {
+    "label": "오버행",
+    "category": "public",
+    "definition": "곧 시장에 풀릴 수 있는 대기 매도 물량. 풀리면 주식 수가 늘거나 매도 압력이 생겨 주가에 부담이 될 수 있어요.",
+    "l3": false
+  },
+  "CONVERTIBLE_BOND": {
+    "label": "전환사채 (CB)",
+    "category": "public",
+    "definition": "회사가 빌린 돈(채권)을 정해진 가격에 주식으로 바꿀 수 있는 사채. 주식으로 전환되면 전체 주식 수가 늘어 기존 주주 지분이 옅어질 수 있어요.",
+    "l3": false
+  },
+  "WARRANT_BOND": {
+    "label": "신주인수권부사채 (BW)",
+    "category": "public",
+    "definition": "정해진 가격에 새 주식을 살 권리가 붙은 사채. 그 권리가 행사되면 새 주식이 발행돼 주식 수가 늘고 기존 주주 지분이 옅어져요.",
+    "l3": false
+  },
+  "RIGHTS_OFFERING": {
+    "label": "유상증자",
+    "category": "public",
+    "definition": "회사가 새 주식을 발행해 투자자에게 돈을 받고 파는 것. 자금은 들어오지만 주식 수가 늘어 기존 주주 1주의 몫(지분)이 옅어져요.",
+    "l3": false
+  },
+  "BONUS_ISSUE": {
+    "label": "무상증자",
+    "category": "public",
+    "definition": "기존 주주에게 공짜로 새 주식을 나눠주는 것. 회사 전체 가치는 그대로라 주당 가격은 늘어난 주식 수만큼 자동 조정돼요.",
+    "l3": false
+  },
+  "TREASURY_STOCK": {
+    "label": "자사주",
+    "category": "public",
+    "definition": "회사가 보유하거나 사들이는 자기 회사 주식. 매입하면 시중에 도는 주식 수가 줄어 보통 주주에게 우호적인 사실로 봐요.",
+    "l3": false
+  },
+  "AUDIT_OPINION": {
+    "label": "감사의견",
+    "category": "public",
+    "definition": "회계법인이 재무제표를 믿을 수 있는지 낸 의견. 적정(정상) → 한정 → 부적정 → 의견거절 순으로 나빠지며, '적정'이 아닌 경우 경계 신호예요.",
+    "l3": false
+  },
+  "GOING_CONCERN": {
+    "label": "계속기업 불확실성",
+    "category": "public",
+    "definition": "회사가 앞으로도 정상적으로 영업을 이어갈 수 있을지 의문이 있다는 회계상 경고. 자금난·적자 누적 등이 배경일 수 있어요.",
+    "l3": false
+  },
+  "MAJOR_SHAREHOLDER": {
+    "label": "최대주주",
+    "category": "public",
+    "definition": "회사 지분을 가장 많이 가진 주주. 보통 경영을 좌우하며, 이들의 매수·매도는 회사 내부 사정을 비추는 중요한 신호예요.",
+    "l3": false
+  },
+  "FLOATING_SHARES": {
+    "label": "유통주식",
+    "category": "public",
+    "definition": "시장에서 실제로 거래되는 주식 수. 새 주식이 늘 때 이 수 대비 몇 %인지로 '희석(지분 옅어짐)' 정도를 따져요.",
+    "l3": false
+  },
+  "SUPPLY_CONTRACT": {
+    "label": "공급계약 (수주)",
+    "category": "public",
+    "definition": "제품·서비스를 납품하기로 맺은 계약. 규모가 한 해 매출 대비 크면 앞으로 들어올 실적의 기대 요인이에요.",
+    "l3": false
+  },
+  "AMENDED_DISCLOSURE": {
+    "label": "정정공시",
+    "category": "public",
+    "definition": "이미 낸 공시를 고쳐 다시 내는 것. 잦으면 숫자·내용이 자주 바뀐다는 뜻이라 더 꼼꼼히 확인할 필요가 있어요.",
+    "l3": false
+  },
+  "CAPITAL_REDUCTION": {
+    "label": "감자",
+    "category": "public",
+    "definition": "자본금을 줄이는 것. 주식 수나 액면가를 줄이며, 결손 보전을 위한 무상감자는 보통 주주에게 불리한 신호예요.",
+    "l3": false
+  },
+  "STOCK_SPLIT": {
+    "label": "액면분할",
+    "category": "public",
+    "definition": "1주를 여러 주로 쪼개는 것. 주식 수가 늘고 주당 가격은 그만큼 낮아져요. 회사 가치 자체는 변하지 않아요.",
+    "l3": false
+  },
+  "DIVIDEND": {
+    "label": "배당",
+    "category": "public",
+    "definition": "회사가 번 이익의 일부를 주주에게 나눠주는 것. 현금배당·주식배당이 있고, 꾸준한 배당은 보통 안정성의 신호로 봐요.",
+    "l3": false
   }
 }

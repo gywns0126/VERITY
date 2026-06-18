@@ -175,6 +175,20 @@
     .ftab .hd>div:nth-child(4),.ftab .rw>div:nth-child(4){display:none}
     .ixrow{gap:8px}.ix{min-width:108px}
   }
+  /* 용어 툴팁 — 해석 켜짐(body.interp)에서만 밑줄·호버 노출 */
+  .tgl.act{background:var(--vg);color:#fff}
+  .term,.info{cursor:help;position:relative}
+  body.interp .term{border-bottom:1px dashed var(--vt)}
+  body.interp .info::after{content:"i";display:inline-flex;align-items:center;justify-content:center;width:1.44em;height:1.44em;margin-left:0.6em;border-radius:50%;background:#6c5ce7;color:#fff;font-family:inherit;font-style:normal;font-size:0.5em;font-weight:700;line-height:1;vertical-align:middle;position:relative;top:-0.2em}
+  .term .tip,.info .tip{position:absolute;left:0;bottom:150%;width:250px;background:var(--ink);color:#fff;font-size:12px;font-weight:600;line-height:1.5;padding:10px 12px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.22);display:none;z-index:60;white-space:normal;letter-spacing:-.1px}
+  body.interp .term:hover .tip,body.interp .info:hover .tip{display:block}
+  .term .tip b,.info .tip b{color:var(--vg);display:block;margin-bottom:3px}
+  body.dark .term .tip,body.dark .info .tip{background:#222a33;color:#e3e7ec}
+  /* 원문 출처 링크 (1차 자료 deep-link — 신뢰도). 실연결 시 DART rcpNo 로 교체 */
+  .srcgo{font-size:10.5px;font-weight:800;color:var(--vg);background:var(--vgS);border-radius:6px;padding:2px 8px;margin-left:8px;text-decoration:none;white-space:nowrap;vertical-align:middle}
+  .srcgo:hover{text-decoration:underline}
+  a.srcrow{text-decoration:none;color:var(--ink)}
+  a.srcrow:hover .nti2{color:var(--vg)}
 </style>
 </head>
 <body>
@@ -197,6 +211,7 @@
         <div class="empty">더 입력하면 결과가 여기 떠요</div>
       </div></div>
     <span class="navpill">사실·연결만 · 검증 중</span>
+    <button class="tgl" id="interpb" onclick="toggleInterp()">해석 꺼짐</button>
     <button class="tgl" id="tglb" onclick="toggleTheme()">다크</button>
   </header>
 
@@ -210,7 +225,7 @@
           <div class="ix"><div class="k">코스닥</div><div class="v">870.3</div><div class="c down">▼ 0.31%</div></div>
           <div class="ix"><div class="k">S&amp;P 500</div><div class="v">7,568</div><div class="c up">▲ 1.84%</div></div>
           <div class="ix"><div class="k">USD/KRW</div><div class="v">1,362</div><div class="c down">▼ 0.2%</div></div>
-          <div class="ix"><div class="k">VIX</div><div class="v">16.0</div><div class="c down">▼ 9.5%</div></div>
+          <div class="ix"><div class="k">VIX</div><div class="v"><span class="info" data-info="VIX 는 시장의 공포 지수예요. 16은 낮은 편이라 시장이 비교적 안정적이라는 뜻이에요.">16.0</span></div><div class="c down">▼ 9.5%</div></div>
         </div>
 
         <div class="sh"><div class="t">공시 속보</div><div class="s">공시-first(DART 원천) · 우리 데이터로 연결 · AI 요약 아님</div></div>
@@ -222,7 +237,7 @@
           <div class="rw">
             <div class="nm">에코프로비엠<small>247540</small></div>
             <div><span class="hook r">유상증자 3,200억</span></div>
-            <div class="cns"><span class="chip r">오버행 6.2%</span><span class="chip b">외인 −142만주</span><span class="chip a">CB전환 D-9</span></div>
+            <div class="cns" data-easy="새 주식을 발행해 3,200억 조달(지분 희석 가능) · 나중에 풀릴 물량 6.2% · 외국인 142만주 순매도"><span class="chip r">오버행 6.2%</span><span class="chip b">외인 −142만주</span><span class="chip a">CB전환 D-9</span></div>
             <div class="mv"><div class="pt"><div class="v down">-18%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'18</div></div><div class="pt"><div class="v down">-24%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'21</div></div><div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div></div>
             <div class="ago">8분 전</div>
           </div>
@@ -230,7 +245,7 @@
           <div class="rw">
             <div class="nm">엠케이전자<small>033160</small></div>
             <div><span class="hook g">공급계약 1,840억</span></div>
-            <div class="cns"><span class="chip b">기관 +38만주</span><span class="chip a">실적 D-5</span></div>
+            <div class="cns" data-easy="1,840억 납품 계약 수주 · 기관이 38만주 매수 중 · 실적 발표 5일 전"><span class="chip b">기관 +38만주</span><span class="chip a">실적 D-5</span></div>
             <div class="mv"><div class="pt"><div class="v up">+8%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'22</div></div><div class="pt"><div class="v up">+5%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'23</div></div><div class="pt"><div class="v up">+6%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'24</div></div><div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div></div>
             <div class="ago">23분 전</div>
           </div>
@@ -238,7 +253,7 @@
           <div class="rw">
             <div class="nm">두산에너빌리티<small>034020</small></div>
             <div><span class="hook a">최대주주 지분 매도</span></div>
-            <div class="cns"><span class="chip a">거버넌스</span><span class="chip b">외인 −920억</span><span class="chip r">정정 90일 3건</span></div>
+            <div class="cns" data-easy="회사 1대 주주가 지분 매도 · 외국인 920억 순매도 · 공시 정정 90일간 3번"><span class="chip a">거버넌스</span><span class="chip b">외인 −920억</span><span class="chip r">정정 90일 3건</span></div>
             <div class="mv"><div class="pt"><div class="v down">-21%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'17</div></div><div class="pt"><div class="v down">-12%</div><div class="dot" style="background:var(--down)"></div><div class="lb">'20</div></div><div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div></div>
             <div class="ago">1시간 전</div>
           </div>
@@ -246,7 +261,7 @@
           <div class="rw">
             <div class="nm">한미반도체<small>042700</small></div>
             <div><span class="hook g">자사주 취득 결정</span></div>
-            <div class="cns"><span class="chip g">수급 우호</span><span class="chip b">외인 +210억</span></div>
+            <div class="cns" data-easy="회사가 자기 주식 되사기 결정 · 수급 우호 · 외국인 210억 순매수"><span class="chip g">수급 우호</span><span class="chip b">외인 +210억</span></div>
             <div class="mv"><div class="pt"><div class="v up">+3%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'21</div></div><div class="pt"><div class="v up">+11%</div><div class="dot" style="background:var(--up)"></div><div class="lb">'23</div></div><div class="pt"><div class="v" style="color:var(--vt)">?</div><div class="dot" style="background:#fff;border:2px solid var(--vt)"></div><div class="lb">현재</div></div></div>
             <div class="ago">2시간 전</div>
           </div>
@@ -589,20 +604,20 @@
               <div class="bar"><span class="lab">기관</span><span class="tr"><span class="fl" style="width:28%;background:var(--up)"></span></span><span class="am up">+340억</span></div>
               <div class="bar"><span class="lab">개인</span><span class="tr"><span class="fl" style="width:40%;background:var(--green)"></span></span><span class="am">+580억</span></div>
               <div class="ct" style="margin-top:16px">공시·리스크 (사실/일정)</div>
-              <div class="cns" style="flex-direction:column;gap:8px"><span><span class="chip r">오버행</span> CB 전환가능 D-12 · 유통 4.1%</span><span><span class="chip r">상습</span> 정정공시 90일 3건</span><span><span class="chip a">거버넌스</span> 최대주주 매도 (6/02)</span><span><span class="chip g">호재</span> 공급계약 1,840억 (6/09)</span></div>
+              <div class="cns" style="flex-direction:column;gap:8px"><span><span class="chip r">오버행</span> <span class="term" data-t="전환사채">CB</span> 전환가능 D-12 · 유통 4.1%</span><span><span class="chip r">상습</span> <span class="term" data-t="정정공시">정정공시</span> 90일 3건</span><span><span class="chip a">거버넌스</span> <span class="term" data-t="최대주주">최대주주</span> 매도 (6/02)</span><span><span class="chip g">호재</span> <span class="term" data-t="공급계약">공급계약</span> 1,840억 (6/09)</span></div>
             </div>
           </div>
           <div>
             <div class="card">
-              <div class="ct">재무 요약 (DART · 연간)</div>
+              <div class="ct">재무 요약 (DART · 연간)<a class="srcgo" href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260331000789" target="_blank" rel="noopener">DART 원문</a></div>
               <div class="kv"><span class="k">매출(조)</span><span class="v">16.2→17.8→19.1</span></div>
               <div class="kv"><span class="k">영업이익(조)</span><span class="v">1.1→1.4→1.6</span></div>
               <div class="kv"><span class="k">순이익(조)</span><span class="v">0.6→0.8→0.9</span></div>
-              <div class="kv"><span class="k">부채비율</span><span class="v">124%</span></div>
+              <div class="kv"><span class="k">부채비율</span><span class="v"><span class="info" data-info="빚이 자기자본의 124% — 자기자본보다 빚이 더 많은 편이에요. 다만 최근 추세가 131%→124%로 줄고 있어요.">124%</span></span></div>
               <div class="kv"><span class="k">ROE</span><span class="v">7.2%</span></div>
             </div>
             <div class="card">
-              <div class="ct">지분구조 (공정위 공식 · 2026 지정)</div>
+              <div class="ct">지분구조 (공정위 공식 · 2026 지정)<a class="srcgo" href="https://www.egroup.go.kr" target="_blank" rel="noopener">공정위 원문</a></div>
               <div style="font-size:24px;font-weight:800;color:var(--vt);letter-spacing:-.5px;margin:2px 0">30.7% <span style="font-size:13px;color:var(--ink);font-weight:700">총수일가·계열</span></div>
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--greenS);border-radius:9px;padding:8px 11px;margin:10px 0"><span style="font-size:12px;font-weight:800;color:var(--green)">✓ 두 공식 출처 일치</span><span style="font-size:11.5px;font-weight:600;color:var(--sub)">(주)두산 · DART 30.39% ↔ 공정위 30.39%</span></div>
               <div style="display:flex;width:100%;height:9px;border-radius:5px;overflow:hidden;margin:8px 0 12px"><span style="width:69.3%;background:var(--line)"></span><span style="width:30.39%;background:var(--blue)"></span><span style="width:0.31%;background:var(--vt)"></span></div>
@@ -610,21 +625,21 @@
               <div class="foot">공정위 기업집단포털 · 법적 강제공시(나무위키 아님) · 점수·추천 아님</div>
             </div>
             <div class="card">
-              <div class="ct">부동산 자산 (DART · 장부가)</div>
+              <div class="ct">부동산 자산 (DART · 장부가)<a class="srcgo" href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260331000789" target="_blank" rel="noopener">DART 원문</a></div>
               <div style="font-size:24px;font-weight:800;color:var(--vg);letter-spacing:-.5px;margin:2px 0">2,300억 <span style="font-size:13px;color:var(--ink);font-weight:700">투자부동산</span></div>
               <div class="bar" style="margin-top:8px"><span class="lab">투자부동산</span><span class="tr"><span class="fl" style="width:100%;background:var(--vg)"></span></span><span class="am">2,300억</span></div>
               <div class="foot">재무상태표 장부가(시가 아님) · 美 종목은 SEC XBRL</div>
             </div>
             <div class="card">
-              <div class="ct">애널리스트 컨센서스 (FnGuide 집계)</div>
+              <div class="ct">애널리스트 컨센서스 (FnGuide 집계)<a class="srcgo" href="https://comp.fnguide.com" target="_blank" rel="noopener">FnGuide</a></div>
               <div class="kv"><span class="k">목표주가 평균</span><span class="v">26,000원</span></div>
               <div class="kv"><span class="k">투자의견</span><span class="v">매수 8·중립 3·매도 0</span></div>
               <div class="foot" style="padding-top:10px">애널 집계 사실 — VERITY 자체 의견·등급 아님. 자체 점수는 검증 후(2027).</div>
             </div>
             <div class="card">
               <div class="ct">관련 뉴스 (공시-first + 연결)</div>
-              <div class="pm" style="display:block"><div style="font-weight:700">두산에너빌리티, 유상증자 3,200억 결정</div><div style="color:var(--vg);font-size:12px;font-weight:600;margin-top:3px">→ 오버행 6.2% · 외인 순매도 연결</div></div>
-              <div class="pm" style="display:block;border:none"><div style="font-weight:700">"대형 원전 수주 기대" 보도</div><div style="color:var(--vg);font-size:12px;font-weight:600;margin-top:3px">→ 공급계약 공시(6/09) 교차</div></div>
+              <div class="pm" style="display:block"><a class="srcrow" href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260616000412" target="_blank" rel="noopener"><span class="nti2" style="font-weight:700">두산에너빌리티, 유상증자 3,200억 결정</span><span class="srcgo">DART 원문</span></a><div style="color:var(--vg);font-size:12px;font-weight:600;margin-top:3px">→ 오버행 6.2% · 외인 순매도 연결</div></div>
+              <div class="pm" style="display:block;border:none"><a class="srcrow" href="https://finance.naver.com" target="_blank" rel="noopener"><span class="nti2" style="font-weight:700">"대형 원전 수주 기대" 보도</span><span class="srcgo">기사 원문</span></a><div style="color:var(--vg);font-size:12px;font-weight:600;margin-top:3px">→ 공급계약 공시(6/09) 교차</div></div>
             </div>
             <div class="card">
               <div class="ct">이 종목 일정 · 유리박스</div>
@@ -717,6 +732,34 @@
 
 <script>
   function toggleTheme(){var d=document.body.classList.toggle('dark');document.getElementById('tglb').textContent=d?'라이트':'다크'}
+  var GLOSS={
+    '오버행':'전환사채·유상증자·BW 등으로 나중에 시장에 풀릴 수 있는 잠재 매도물량. 주가 상단을 누를 수 있어요.',
+    '전환사채':'CB. 회사가 빌린 돈을 정해진 가격에 주식으로 바꿀 수 있는 채권. 전환되면 주식 수가 늘어 기존 주주 지분이 옅어져요.',
+    '정정공시':'이미 낸 공시를 고쳐 다시 내는 것. 잦으면 숫자·내용이 자주 바뀐다는 신호예요.',
+    '자사주':'회사가 보유·매입하는 자기 회사 주식. 매입하면 시중 주식 수가 줄어 보통 주주에게 우호적이에요.',
+    '최대주주':'회사 지분을 가장 많이 가진 주주. 이들의 매수·매도는 회사 내부 사정을 비추는 신호예요.',
+    '공급계약':'제품·서비스를 납품하기로 맺은 계약. 규모가 매출 대비 크면 앞으로 들어올 실적의 기대 요인이에요.'
+  };
+  function injectTips(){
+    document.querySelectorAll('.term[data-t],.info[data-info]').forEach(function(el){
+      if(el.querySelector('.tip'))return;
+      var info=el.getAttribute('data-info'),head,body2;
+      if(info){ head=el.textContent.trim(); body2=info; }
+      else { var k=el.getAttribute('data-t'); if(!GLOSS[k])return; head=k; body2=GLOSS[k]; }
+      var t=document.createElement('span'); t.className='tip'; t.innerHTML='<b>'+head+'</b>'+body2; el.appendChild(t);
+    });
+  }
+  injectTips();
+  function toggleInterp(){
+    var on=document.body.classList.toggle('interp');
+    var b=document.getElementById('interpb');
+    b.textContent=on?'해석 켜짐':'해석 꺼짐';
+    b.classList.toggle('act',on);
+    document.querySelectorAll('[data-easy]').forEach(function(el){
+      if(on){ if(el.getAttribute('data-pro')===null) el.setAttribute('data-pro',el.innerHTML); el.innerHTML=el.getAttribute('data-easy'); }
+      else { var p=el.getAttribute('data-pro'); if(p!==null) el.innerHTML=p; }
+    });
+  }
   function go(btn,id){
     document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on')});
     document.getElementById(id).classList.add('on');
