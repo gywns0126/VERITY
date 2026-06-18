@@ -28,6 +28,21 @@ KST = timezone(timedelta(hours=9))
 
 _PROD_URL = "https://openapi.koreainvestment.com:9443"
 
+# ── KIS 연결 circuit breaker (2026-06-18) ─────────────────────────────────────
+# 사고: KIS 외부 불통 시 시세/호가/체결 콜이 각 connect timeout(10s)로 직렬 실패 →
+#   realtime 12종목×3콜 ≈ 6분 + market/overseas overview 소진 → main.py 10분 watchdog
+#   SIGTERM 이 첫 save_portfolio 전 발동 → portfolio 미저장 알림 (6/4·6/10·6/18 재발).
+# 메모리 project_kis_realtime_watchdog_2026_06_04 가 예고한 "재발 시 circuit breaker".
+# 동작: 연속 연결 실패 N회 → process-wide open(차단). open 중 _get/_post 는 네트워크 시도
+#   없이 즉시 raise → 기존 build_*_snapshot except 가 잡아 빠르게 None 반환 → 예산 보호.
+#   cooldown 만료 시 half-open(1회 시도 허용). 성공 1회 = 즉시 close(reset).
+_KIS_CB_FAIL_THRESHOLD = 3      # 연속 연결 실패 N회 → trip
+_KIS_CB_COOLDOWN_S = 60.0       # trip 후 차단 시간 (realtime cron 30분 간격 < cooldown 무관)
+
+
+class KISCircuitOpen(RuntimeError):
+    """KIS 연결 불통 감지 → circuit open. 네트워크 시도 없이 즉시 실패 (watchdog 예산 보호)."""
+
 # 토큰 파일 캐시 경로 — 하루에 1번만 발급받기 위해 디스크에 저장
 # GitHub Actions: workspace 내 경로 우선, 로컬: ~/.cache 폴백
 _TOKEN_CACHE_DIR = os.environ.get(
@@ -167,6 +182,40 @@ class OrderResult:
 
 class KISBroker:
     """한국투자증권 OpenAPI REST 래퍼."""
+
+    # ── 연결 circuit breaker 상태 (process-wide, class var) ──
+    _cb_consecutive_failures: int = 0
+    _cb_open_until: float = 0.0
+
+    @classmethod
+    def _cb_check_open(cls) -> None:
+        """open 이면 즉시 raise. cooldown 만료 시 half-open(reset 후 1회 시도 허용)."""
+        if cls._cb_open_until:
+            remaining = cls._cb_open_until - time.monotonic()
+            if remaining > 0:
+                raise KISCircuitOpen(
+                    f"KIS circuit open — 연결 불통 감지({cls._cb_consecutive_failures}연속), "
+                    f"{remaining:.0f}s 차단 중 (호출 스킵)"
+                )
+            # cooldown 만료 → half-open: 카운터/타이머 reset, 1회 실제 시도 허용
+            cls._cb_open_until = 0.0
+            cls._cb_consecutive_failures = 0
+
+    @classmethod
+    def _cb_record_ok(cls) -> None:
+        cls._cb_consecutive_failures = 0
+        cls._cb_open_until = 0.0
+
+    @classmethod
+    def _cb_record_conn_fail(cls) -> None:
+        cls._cb_consecutive_failures += 1
+        if cls._cb_consecutive_failures >= _KIS_CB_FAIL_THRESHOLD and not cls._cb_open_until:
+            cls._cb_open_until = time.monotonic() + _KIS_CB_COOLDOWN_S
+            logger.warning(
+                "KIS circuit breaker TRIP — %d 연속 연결 실패, %.0fs 차단 "
+                "(외부 불통 추정, watchdog 예산 보호)",
+                cls._cb_consecutive_failures, _KIS_CB_COOLDOWN_S,
+            )
 
     def __init__(self, cache_only: bool = False):
         """
@@ -560,21 +609,33 @@ class KISBroker:
             logger.warning("lock 작성 실패: %s", e)
 
     def _get(self, path: str, tr_id: str, params: Dict[str, str]) -> Dict[str, Any]:
+        self._cb_check_open()
         url = f"{self.base_url}{path}"
         headers = self._auth_headers()
         headers["tr_id"] = self._tr_id(tr_id)
         headers["custtype"] = "P"
-        resp = requests.get(url, headers=headers, params=params, timeout=10)
+        try:
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+        except (requests.ConnectionError, requests.Timeout):
+            self._cb_record_conn_fail()  # connect/read timeout = KIS 불통 신호
+            raise
         resp.raise_for_status()
+        self._cb_record_ok()
         return resp.json()
 
     def _post(self, path: str, tr_id: str, body: Dict[str, str]) -> Dict[str, Any]:
+        self._cb_check_open()
         url = f"{self.base_url}{path}"
         headers = self._auth_headers()
         headers["tr_id"] = self._tr_id(tr_id)
         headers["custtype"] = "P"
-        resp = requests.post(url, headers=headers, json=body, timeout=10)
+        try:
+            resp = requests.post(url, headers=headers, json=body, timeout=10)
+        except (requests.ConnectionError, requests.Timeout):
+            self._cb_record_conn_fail()
+            raise
         resp.raise_for_status()
+        self._cb_record_ok()
         return resp.json()
 
     # ──────────────────────────────────────────────
