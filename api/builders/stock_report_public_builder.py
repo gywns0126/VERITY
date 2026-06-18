@@ -127,22 +127,46 @@ def _load_catalyst_by_ticker() -> Dict[str, List[Dict[str, Any]]]:
 
 
 def _ownership(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    ftc = ((rec.get("group_structure") or {}).get("ftc_official") or {})
+    gs = rec.get("group_structure") or {}
+    ftc = gs.get("ftc_official") or {}
     sh = ftc.get("shareholders") or []
     if not isinstance(sh, list) or not sh:
         return None
     family = 0.0
+    rows: List[Dict[str, Any]] = []
     for s in sh:
-        if str(s.get("type") or "") in FAMILY_TYPES:
-            try:
-                family += float(s.get("qota_rate") or 0)
-            except (TypeError, ValueError):
-                pass
-    return {
+        try:
+            q = float(s.get("qota_rate") or 0)
+        except (TypeError, ValueError):
+            q = 0.0
+        t = str(s.get("type") or "")
+        if t in FAMILY_TYPES:
+            family += q
+        rows.append({"name": str(s.get("name") or t), "type": t, "pct": round(q, 2)})
+    rows.sort(key=lambda x: x["pct"], reverse=True)
+    out: Dict[str, Any] = {
         "family_pct": round(family, 2),
-        "note": "동일인+친족 합산 (소속회사 지배지분 별도) · 공정위 분류",
+        "group": str(ftc.get("group") or gs.get("group_name") or ""),
+        "shareholders": rows[:8],  # 의결권 지분율 상위 (공정위 분류)
+        "note": "동일인+친족 = 총수일가 지배지분 · 공정위 분류(의결권 지분율)",
         "source": "공정거래위원회 기업집단포털" + (f" ({ftc.get('as_of_year')})" if ftc.get("as_of_year") else ""),
     }
+    # DART 최대주주 ↔ 공정위 교차검증 (우리 차별 — 1차 출처 이중확인)
+    cc = ftc.get("cross_check")
+    if isinstance(cc, dict) and cc.get("status"):
+        out["cross_check"] = {
+            "entity": str(cc.get("entity") or ""),
+            "dart_pct": cc.get("dart_pct"),
+            "ftc_pct": cc.get("ftc_pct"),
+            "status": str(cc.get("status")),
+        }
+    parent = gs.get("parent")
+    if isinstance(parent, dict) and parent.get("name"):
+        out["parent"] = str(parent.get("name"))
+    subs = gs.get("subsidiaries")
+    if isinstance(subs, list) and subs:
+        out["sub_count"] = len(subs)
+    return out
 
 
 def _consensus_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:

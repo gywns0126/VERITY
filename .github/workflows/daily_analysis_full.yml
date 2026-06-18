@@ -320,6 +320,12 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.us_disclosure_feed_builder
 
+      - name: 공개 공시 forensics 빌드 (이벤트 이력·빈도, public-safe)
+        # dart_catalyst_alerts.jsonl → 종목별 유상증자/감자/CB/정정 이벤트 빈도·타임라인 → data/disclosure_forensics.json.
+        # 순수 변환(외부호출/KIS 0). RULE 7 = report_nm 사실·빈도만, 자체 위험점수 0. 다음 step git add data/ (broad) = RULE 4.
+        continue-on-error: true
+        run: python -m api.builders.disclosure_forensics_builder
+
       - name: 공개 종목 수급 빌드 (외국인·기관 5일, public-safe)
         # recommendations KR 티커 → 검증된 파서(scripts/kr/flow_observation_logger) 재사용 →
         # data/stock_flow_5d.json. 네이버 frgn 외부 fetch(KIS 0). 결정 파이프라인(market_flow) 무관 — 공개 표시 전용.
