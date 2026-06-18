@@ -204,8 +204,13 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
         val = _num(rec.get(src), suf, dg)
         if val is not None:
             facts[key] = val
-    if altman.get("z_score") is not None:
-        az = _num(altman.get("z_score"), digits=1)
+    # Altman-Z — sanity 가드: 정상 범위 밖(데이터 오류 이상치)는 비노출 (공개 사실 신뢰성)
+    try:
+        zf = float(altman.get("z_score")) if altman.get("z_score") is not None else None
+    except (TypeError, ValueError):
+        zf = None
+    if zf is not None and -20.0 <= zf <= 30.0:
+        az = _num(zf, digits=1)
         if az is not None:
             facts["Altman-Z"] = az
             if altman.get("zone"):
