@@ -320,6 +320,13 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.us_disclosure_feed_builder
 
+      - name: 공개 종목 수급 빌드 (외국인·기관 5일, public-safe)
+        # recommendations KR 티커 → 검증된 파서(scripts/kr/flow_observation_logger) 재사용 →
+        # data/stock_flow_5d.json. 네이버 frgn 외부 fetch(KIS 0). 결정 파이프라인(market_flow) 무관 — 공개 표시 전용.
+        # RULE 7 = 외국인/기관 순매매량(외부 사실)만, 자체 flow_score 비노출. 다음 step git add data/ (broad) = RULE 4.
+        continue-on-error: true
+        run: python api/builders/stock_flow_public_builder.py
+
       - name: Brain audit baseline (PRE/POST 측정 영속화)
         # 2026-05-18 확정 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
         # portfolio.json 의 brain_score 분포 + component fill + grade + quadrant 측정.
