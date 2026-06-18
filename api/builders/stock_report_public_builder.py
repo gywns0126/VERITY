@@ -66,6 +66,21 @@ def _fmt_cap(v: Any) -> str:
     return f"{x:,.0f}"
 
 
+def _financials(fund: Dict[str, Any]) -> Dict[str, Any] | None:
+    """재무 요약 (최근 결산, dart_fundamentals_kr — 단일 연도 실값). 추이 X(KR 소스 단년)."""
+    if not fund:
+        return None
+    out: Dict[str, str] = {}
+    for label, key in [("매출", "revenue"), ("영업이익", "operating_profit"), ("순이익", "net_income")]:
+        v = fund.get(key)
+        if v:
+            out[label] = _fmt_cap(v)
+    if not out:
+        return None
+    yr = fund.get("report_date")
+    return {"values": out, "period": (str(yr) if yr else "최근 결산")}
+
+
 def _num(v: Any, suffix: str = "", digits: int = 1) -> Optional[str]:
     try:
         x = float(v)
@@ -264,6 +279,12 @@ def main() -> int:
                 # 컨센서스 보강만 있고 facts 전무면 노출 가치 낮음 — facts 있을 때만
                 if light["facts"] or light["disclosures"]:
                     stocks.append(light)
+
+        # 재무요약 (최근 결산, dart_fundamentals 실값) 부착
+        for s in stocks:
+            fin = _financials(fundamentals.get(s["ticker"]))
+            if fin:
+                s["financials"] = fin
 
         # 정렬: rich 먼저 → 공시 많은 순 → ticker
         stocks.sort(key=lambda s: (s.get("rich", False), len(s.get("disclosures", [])), s["ticker"]), reverse=True)
