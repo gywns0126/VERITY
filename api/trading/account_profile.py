@@ -13,13 +13,14 @@ VERITY 전용 (골든구스 = 공개 정보사이트, 계좌연동 X). KIS+Toss 
 - 일반(위탁): KR 상장주식 양도세 0% (대주주 제외, 금투세 폐지 2024-12-10) ·
   해외(미국) 양도세 22% (250만 기본공제, 3억 초과분 27.5%) ·
   배당 분리과세 15.4%~ (2026 개정) · 증권거래세 0.20% (KR, 2026).
-- ISA: 국내상장 상품만 (주식/ETF/리츠/펀드 + 국내상장 해외ETF; 미국 직접투자 불가) ·
-  순이익 비과세 한도 초과분 9.9% 저율 분리과세 (지방세 포함) · 3년 주기 손익통산 ·
-  납입 연 4000만/총 2억 (2026 개편) · 의무유지 3년.
+- ISA (조특법 §91의18): 국내상장 상품만 (주식/국내상장 해외ETF/펀드/ELS; 미국 직접투자 불가) ·
+  비과세 한도 초과분 9.9% 저율 분리과세 (지방세 포함) · 3년 주기 손익통산 ·
+  납입 연 2000만/총 1억 + 비과세 일반형 200만/서민형 400만 (상향 개정 미통과 = 현행 유지) ·
+  의무유지 3년.
 
-⚠️ UNVERIFIED — ISA 비과세 한도 = 일반형 200만/서민형 400만 (현행) vs 500만/1000만
-   (개정안). Perplexity/금융위 확정 후 ISA_TAX_FREE_* 갱신 의무
-   ([[feedback_perplexity_collaboration]]). 현재 보수적으로 현행값 사용 + verified=False.
+✅ 확정 2026-06-19 (Perplexity + KPMG 2025 세법개정 cross-source): ISA 한도 상향 개정은
+   미통과 = 현행 유지. 대주주 시총 50억→10억 환원은 통과(2025-12)했으나 시행령 시행일
+   이후 양도분부터 — 공포일 국세청 공고 확인 필요. 고배당 선택 분리과세 특례 신설(2026~2028).
 """
 from __future__ import annotations
 
@@ -43,20 +44,38 @@ class Market(str, Enum):
     US = "us"
 
 
-# ── 세제 상수 (검증된 값) ─────────────────────────────────────────────
-KR_CAPITAL_GAINS_TAX = 0.0          # 상장주식 양도세 (대주주 제외, ~금투세 폐지)
-US_CAPITAL_GAINS_TAX = 0.22         # 해외주식 양도세 (3억 초과분 0.275)
+# ── 세제 상수 (2026 시행값, Perplexity + KPMG 2025 세법개정 cross-source 확정 2026-06-19) ──
+# ⚠️ 세무 전문가 조언 대체 아님 — 실제 납세 판단 시 세무사 확인. 관측/표시 보조용.
+KR_CAPITAL_GAINS_TAX = 0.0          # 국내 상장주식 양도세 = 비과세 (일반 개인, 금투세 폐지 2024-12-10)
+KR_MAJOR_SHAREHOLDER_AMOUNT = 1_000_000_000  # 대주주 종목당 시총 기준 = 10억 (50억서 환원)
+#   ⚠️ 시행령 시행일(2026 상반기 예상) 이후 양도분부터. 공포일 = 국세청 공고 확인 필요.
+KR_TRANSACTION_TAX = 0.0020         # 증권거래세 KOSPI/KOSDAQ (농특세 포함, 2026 0.15%→0.20% 환원)
+US_CAPITAL_GAINS_TAX = 0.22         # 해외주식 양도세 (과표 3억 이하; 소득세20%+지방세2%)
+US_CAPITAL_GAINS_TAX_HIGH = 0.275   # 과표 3억 초과분 (소득세25%+지방세2.5%)
+US_CAPITAL_GAINS_HIGH_THRESHOLD = 300_000_000
 US_CAPITAL_GAINS_DEDUCTION = 2_500_000  # 해외 양도소득 기본공제 (연)
-DIVIDEND_TAX_DEFAULT = 0.154        # 배당 분리과세 (2천만 이하, 2026)
-ISA_EXCESS_TAX = 0.099             # ISA 비과세 한도 초과분 저율 분리과세
-ISA_CONTRIB_LIMIT_ANNUAL = 40_000_000   # 납입 연 한도 (2026 개편)
-ISA_CONTRIB_LIMIT_TOTAL = 200_000_000   # 납입 총 한도
-ISA_LOCKUP_YEARS = 3
+DIVIDEND_TAX_DEFAULT = 0.154        # 배당 분리과세 (2천만 이하; 소득세14%+지방세1.4%)
+FINANCIAL_INCOME_AGGREGATE_THRESHOLD = 20_000_000  # 금융소득종합과세 합산 기준 (초과 시 종합과세)
 
-# ⚠️ UNVERIFIED — 개정안 확정 전까지 현행값. verified=False (라우팅 결정엔 영향 적음).
-ISA_TAX_FREE_GENERAL = 2_000_000    # 일반형 비과세 한도 (현행, 개정안 5,000,000?)
-ISA_TAX_FREE_SERVANT = 4_000_000    # 서민형 비과세 한도 (현행, 개정안 10,000,000?)
-ISA_TAX_FREE_VERIFIED = False
+# ISA (조세특례제한법 §91의18) — 2026 시행값. 상향 개정안(연4000만/총2억, 비과세500/1000)은
+# 2025-12 세법개정에 끝내 미포함 = 미시행 → 현행 유지 확정 (VERIFIED).
+ISA_EXCESS_TAX = 0.099             # 비과세 한도 초과분 저율 분리과세 (지방세 포함)
+ISA_CONTRIB_LIMIT_ANNUAL = 20_000_000   # 납입 연 한도 (현행 유지)
+ISA_CONTRIB_LIMIT_TOTAL = 100_000_000   # 납입 5년 총 한도 (현행 유지)
+ISA_LOCKUP_YEARS = 3
+ISA_TAX_FREE_GENERAL = 2_000_000    # 일반형 비과세 한도 (현행 유지)
+ISA_TAX_FREE_SERVANT = 4_000_000    # 서민형 비과세 한도 (현행 유지)
+ISA_TAX_FREE_VERIFIED = True        # 2026-06-19 Perplexity + KPMG cross-source 확정
+
+# 고배당기업 배당소득 선택적 분리과세 특례 (조특법 §104의27 신설, 2026~2028 한시).
+# 요건: 배당성향 40%↑ OR (25%↑ AND 전전 사업연도 대비 배당 10%↑ 증가). 신청 필요(자동 X).
+# 펀드/리츠/ETF 제외. 종합과세 회피용 — 고배당소득(>2천만) 구간에서 일반계좌 이점 발생.
+HIGH_DIVIDEND_SEPARATE_TAX = {  # 과표 상한: 소득세율 (지방세 별도)
+    20_000_000: 0.14,
+    300_000_000: 0.20,
+    5_000_000_000: 0.25,
+    float("inf"): 0.30,
+}
 
 # ── 브로커별 지원 계좌 유형 (API 검증) ────────────────────────────────
 BROKER_ACCOUNT_SUPPORT = {
