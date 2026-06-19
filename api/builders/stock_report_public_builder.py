@@ -27,10 +27,13 @@ NAMES_PATH = os.path.join(_ROOT, "data", "kr_stock_names.json")
 CONSENSUS_PATH = os.path.join(_ROOT, "data", "consensus_data.json")
 CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
 SECTOR_MAP_PATH = os.path.join(_ROOT, "data", "kr_sector_map.json")
+KRXMKTCAP_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
 
-# 동종업계 비교 = 섹터별 중앙값. yfinance KR PER/PBR=None 이므로 dart_fundamentals 커버리지 지표만.
-PEER_METRICS = [("ROE", "roe", "%", 1), ("부채비율", "debt_ratio", "%", 0), ("영업이익률", "op_margin", "%", 1)]
+# 동종업계 비교 = 섹터별 중앙값. PER/PBR = KRX 시총 ÷ DART 순익·자기자본 자체계산(src="val"),
+# 나머지 = dart_fundamentals 키(src=field). (label, src, suffix, digits)
+PEER_METRICS = [("PER", "PER", "", 1), ("PBR", "PBR", "", 1),
+                ("ROE", "roe", "%", 1), ("부채비율", "debt_ratio", "%", 0), ("영업이익률", "op_margin", "%", 1)]
 DART = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
 
 FAMILY_TYPES = {"동일인", "친족"}
@@ -320,10 +323,56 @@ def _median(vals: List[float]) -> Optional[float]:
     return xs[mid] if n % 2 else (xs[mid - 1] + xs[mid]) / 2.0
 
 
-def _sector_medians(fundamentals: Dict[str, Any], sector_map: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    """섹터(한글)별 ROE/부채비율/영업이익률 중앙값 + N. dart_fundamentals 실값 기준(사실 통계)."""
-    buckets: Dict[str, Dict[str, List[float]]] = {}
+def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
+    """PER/PBR 자체계산: KRX 공식 시총 ÷ DART 순이익·자기자본. (자기자본 = 자산/(1+부채비율/100))."""
+    out: Dict[str, Dict[str, float]] = {}
     for tk, f in fundamentals.items():
+        km = krx_map.get(tk)
+        if not km:
+            continue
+        try:
+            mktcap = float(km.get("mktcap") or 0)
+        except (TypeError, ValueError):
+            mktcap = 0.0
+        if mktcap <= 0:
+            continue
+        v: Dict[str, float] = {}
+        try:
+            ni = float(f.get("net_income")) if f.get("net_income") is not None else None
+            if ni and ni > 0:
+                v["PER"] = round(mktcap / ni, 2)
+        except (TypeError, ValueError):
+            pass
+        try:
+            ta = float(f.get("total_assets")) if f.get("total_assets") is not None else None
+            dr = float(f.get("debt_ratio")) if f.get("debt_ratio") is not None else None
+            if ta and ta > 0 and dr is not None and dr > -100:
+                equity = ta / (1.0 + dr / 100.0)
+                if equity > 0:
+                    v["PBR"] = round(mktcap / equity, 2)
+        except (TypeError, ValueError):
+            pass
+        if v:
+            out[tk] = v
+    return out
+
+
+def _metric_val(tk: str, src: str, fundamentals: Dict[str, Any], valuation: Dict[str, Any]) -> Optional[float]:
+    if src in ("PER", "PBR"):
+        v = (valuation.get(tk) or {}).get(src)
+    else:
+        v = (fundamentals.get(tk) or {}).get(src)
+    try:
+        return float(v) if v is not None and float(v) == float(v) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _sector_medians(fundamentals: Dict[str, Any], sector_map: Dict[str, Any],
+                    valuation: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """섹터(한글)별 PER/PBR(자체계산)·ROE·부채비율·영업이익률 중앙값 + N. 사실 통계."""
+    buckets: Dict[str, Dict[str, List[float]]] = {}
+    for tk in set(fundamentals.keys()):
         smeta = sector_map.get(tk)
         if not smeta:
             continue
@@ -332,28 +381,25 @@ def _sector_medians(fundamentals: Dict[str, Any], sector_map: Dict[str, Any]) ->
             continue
         b = buckets.setdefault(sk, {m[0]: [] for m in PEER_METRICS})
         for label, src, _suf, _dg in PEER_METRICS:
-            v = f.get(src)
-            try:
-                if v is not None and float(v) == float(v):
-                    b[label].append(float(v))
-            except (TypeError, ValueError):
-                pass
+            fv = _metric_val(tk, src, fundamentals, valuation)
+            if fv is not None:
+                b[label].append(fv)
     out: Dict[str, Dict[str, Any]] = {}
     for sk, b in buckets.items():
-        med = {}
-        n_max = 0
+        med: Dict[str, Any] = {}
+        ns: Dict[str, int] = {}
         for label, _src, _suf, _dg in PEER_METRICS:
             m = _median(b[label])
-            if m is not None:
+            if m is not None and len(b[label]) >= 5:  # N≥5 미만 섹터-지표는 중앙값 무의미
                 med[label] = round(m, 2)
-                n_max = max(n_max, len(b[label]))
+                ns[label] = len(b[label])
         if med:
-            out[sk] = {"median": med, "n": n_max}
+            out[sk] = {"median": med, "ns": ns}
     return out
 
 
 def _peer(ticker: str, fundamentals: Dict[str, Any], sector_map: Dict[str, Any],
-          medians: Dict[str, Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+          medians: Dict[str, Dict[str, Any]], valuation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     smeta = sector_map.get(ticker)
     if not smeta:
         return None
@@ -361,17 +407,13 @@ def _peer(ticker: str, fundamentals: Dict[str, Any], sector_map: Dict[str, Any],
     sm = medians.get(sk)
     if not sk or not sm:
         return None
-    f = fundamentals.get(ticker) or {}
     rows = []
+    n_max = 0
     for label, src, suf, dg in PEER_METRICS:
         med = sm["median"].get(label)
         if med is None:
             continue
-        v = f.get(src)
-        try:
-            fv = float(v) if v is not None else None
-        except (TypeError, ValueError):
-            fv = None
+        fv = _metric_val(ticker, src, fundamentals, valuation)
         if fv is None:
             continue
         rows.append({
@@ -380,14 +422,15 @@ def _peer(ticker: str, fundamentals: Dict[str, Any], sector_map: Dict[str, Any],
             "median": _num(med, suf, dg),
             "vs": "above" if fv > med else "below" if fv < med else "equal",
         })
+        n_max = max(n_max, sm.get("ns", {}).get(label, 0))
     if not rows:
         return None
     return {
         "sector": sk,
         "industry": smeta.get("industry") or "",
-        "n": sm["n"],
+        "n": n_max,
         "rows": rows,
-        "note": "같은 섹터 종목들의 중앙값과 비교 (DART 재무 사실 통계) — 자체 등급 아님",
+        "note": "같은 섹터 종목 중앙값과 비교 · PER/PBR=KRX 시총÷DART 재무 자체계산 — 자체 등급 아님",
     }
 
 
@@ -447,17 +490,30 @@ def main() -> int:
                 if light["facts"] or light["disclosures"]:
                     stocks.append(light)
 
-        # 동종업계 비교 (섹터맵 + dart_fundamentals 중앙값) 준비
+        # PER/PBR 자체계산 (KRX 공식 시총 ÷ DART) + 동종업계 비교 준비
+        krx_doc = _load_json(KRXMKTCAP_PATH, {})
+        krx_map = (krx_doc.get("map") if isinstance(krx_doc, dict) else {}) or {}
+        valuation = _valuation_map(fundamentals, krx_map) if krx_map else {}
         sector_doc = _load_json(SECTOR_MAP_PATH, {})
         sector_map = (sector_doc.get("map") if isinstance(sector_doc, dict) else {}) or {}
-        sector_medians = _sector_medians(fundamentals, sector_map) if sector_map else {}
+        sector_medians = _sector_medians(fundamentals, sector_map, valuation) if sector_map else {}
 
-        # 재무요약 + 동종업계 비교 부착
+        # 재무요약 + PER/PBR 자체계산 보강 + 동종업계 비교 부착
         for s in stocks:
-            fin = _financials(fundamentals.get(s["ticker"]))
+            tk = s["ticker"]
+            fin = _financials(fundamentals.get(tk))
             if fin:
                 s["financials"] = fin
-            peer = _peer(s["ticker"], fundamentals, sector_map, sector_medians) if sector_map else None
+            val = valuation.get(tk)
+            if val:
+                fn = s.setdefault("facts_note", {})
+                if val.get("PER") is not None:
+                    s["facts"]["PER"] = _num(val["PER"], "", 1)
+                    fn["PER"] = "자체계산"
+                if val.get("PBR") is not None:
+                    s["facts"]["PBR"] = _num(val["PBR"], "", 1)
+                    fn["PBR"] = "자체계산"
+            peer = _peer(tk, fundamentals, sector_map, sector_medians, valuation) if sector_map else None
             if peer:
                 s["peer"] = peer
 
