@@ -1328,7 +1328,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -1374,7 +1374,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1530.12,
+        "usdkrw": 1527.84,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -1486,11 +1486,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 50,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -1575,6 +1575,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "KR 차익형 — 일반 양도세 0%(대주주 제외)로 ISA 이점 미미, 고빈도=Toss·ISA 여력 보존"
     },
     "lynch_kr": {
       "class": "FAST_GROWER",
@@ -1992,7 +1997,7 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 55.5,
+      "up_probability": 55.4,
       "prediction_std": 9.6,
       "confidence_interval": [
         0.0,
@@ -2071,7 +2076,7 @@
         "RSI 35.12 저평가 구간",
         "MACD 상승반전 신호",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 55.5%"
+        "AI 상승확률 55.4%"
       ]
     },
     "low_52w": 22171.720703125,
@@ -2709,7 +2714,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -2755,7 +2760,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1530.12,
+        "usdkrw": 1527.84,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -2795,7 +2800,7 @@
         "components": {
           "multi_factor": 57.0,
           "consensus": 97.0,
-          "prediction": 55.5,
+          "prediction": 55.4,
           "backtest": 43.8,
           "timing": 65.0,
           "commodity_margin": 65.3,
@@ -2868,11 +2873,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 50,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -2957,6 +2962,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "KR 차익형 — 일반 양도세 0%(대주주 제외)로 ISA 이점 미미, 고빈도=Toss·ISA 여력 보존"
     },
     "lynch_kr": {
       "class": "CYCLICAL",
@@ -3388,41 +3398,41 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 30.2,
-      "prediction_std": 37.6,
+      "up_probability": 29.5,
+      "prediction_std": 37.9,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8223,
+      "conformal_q_hat": 0.8199,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 44.0,
+      "model_accuracy": 44.3,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 45.0,
+          "wf_accuracy": 44.7,
           "val_accuracy": 48.6,
           "wf_folds": 6,
-          "weight": 0.45
+          "weight": 0.4467
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 42.0,
-          "val_accuracy": 45.7,
+          "wf_accuracy": 43.7,
+          "val_accuracy": 48.6,
           "wf_folds": 6,
-          "weight": 0.42
+          "weight": 0.4367
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 42.7,
+          "wf_accuracy": 43.0,
           "val_accuracy": 52.9,
           "wf_folds": 6,
-          "weight": 0.4267
+          "weight": 0.43
         },
         "mlp": {
           "architecture": "neural_net",
@@ -3442,10 +3452,10 @@
       "confidence_level": "low",
       "top_features": {
         "volatility_20d": 33.1674,
-        "drawdown_20d": 22.5098,
-        "macd_hist": 20.5849,
-        "rsi14": 15.1255,
-        "ma5_ratio": 15.0257
+        "macd_hist": 24.2516,
+        "drawdown_20d": 21.1765,
+        "return_5d": 17.8044,
+        "bb_position": 14.6292
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -3464,7 +3474,7 @@
       "label": "매도 고려",
       "color": "#FCA5A5",
       "reasons": [
-        "AI 상승확률 30.2% — 강한 하락 신호"
+        "AI 상승확률 29.5% — 강한 하락 신호"
       ]
     },
     "low_52w": 69396.34375,
@@ -4434,7 +4444,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -4493,7 +4503,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1530.12,
+        "usdkrw": 1527.84,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -4533,7 +4543,7 @@
         "components": {
           "multi_factor": 55.0,
           "consensus": 100.0,
-          "prediction": 30.2,
+          "prediction": 29.5,
           "backtest": 66.2,
           "timing": 40.0,
           "commodity_margin": 83.6,
@@ -4605,11 +4615,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 50,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -4694,6 +4704,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "KR 차익형 — 일반 양도세 0%(대주주 제외)로 ISA 이점 미미, 고빈도=Toss·ISA 여력 보존"
     },
     "lynch_kr": {
       "class": "SLOW_GROWER",
@@ -4891,9 +4906,9 @@
       "talib_observations": {
         "available": true,
         "n": 244,
-        "rsi": 40.57715447914782,
-        "macd_hist": 336.9018960591759,
-        "atr": 1499.2659076753473,
+        "rsi": 40.577154478752576,
+        "macd_hist": 336.9018960605588,
+        "atr": 1499.2659076793448,
         "bb_position": 37.7,
         "stoch_k": 39.70747562296863,
         "candle_patterns": {},
@@ -5112,19 +5127,19 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 28.8,
-      "prediction_std": 17.2,
+      "up_probability": 31.6,
+      "prediction_std": 16.2,
       "confidence_interval": [
         0.0,
-        91.3
+        94.5
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6249,
-      "conformal_width_pct": 91.3,
+      "conformal_q_hat": 0.6284,
+      "conformal_width_pct": 94.5,
       "prediction_set": [
         0
       ],
-      "model_accuracy": 54.7,
+      "model_accuracy": 54.5,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -5142,10 +5157,10 @@
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 53.7,
-          "val_accuracy": 55.7,
+          "wf_accuracy": 52.7,
+          "val_accuracy": 60.0,
           "wf_folds": 6,
-          "weight": 0.5367
+          "weight": 0.5267
         },
         "mlp": {
           "architecture": "neural_net",
@@ -5164,11 +5179,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 30.6331,
-        "return_5d": 27.2884,
-        "macd_hist": 26.5598,
-        "drawdown_20d": 22.1568,
-        "volume_price_trend": 18.3589
+        "volatility_20d": 29.7989,
+        "return_5d": 27.1827,
+        "macd_hist": 26.6044,
+        "drawdown_20d": 22.0887,
+        "volume_price_trend": 19.0897
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -5189,7 +5204,7 @@
       "reasons": [
         "MACD 상승반전 신호",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 28.8% — 강한 하락 신호"
+        "AI 상승확률 31.6% — 강한 하락 신호"
       ]
     },
     "low_52w": 24400.0,
@@ -5817,7 +5832,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -5863,7 +5878,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1530.12,
+        "usdkrw": 1527.84,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -5903,7 +5918,7 @@
         "components": {
           "multi_factor": 51.0,
           "consensus": 70.0,
-          "prediction": 28.8,
+          "prediction": 31.6,
           "backtest": 32.2,
           "timing": 42.0,
           "commodity_margin": 50.0,
@@ -5976,11 +5991,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 50,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -6029,7 +6044,7 @@
         "max_pct": 0,
         "rationale": "Kelly 13.3% → CAUTION 상한 0% 적용"
       },
-      "reasoning": "휴메딕스: 브레인 48점 (팩트 54 / 심리 51 / VCI +3) | 팩트 최강 consensus(70) / 최약 prediction(29) | 퀀트: 모멘텀↓20 | V5: Graham가치↑80 | 지분: 최대주주 ㈜휴온스글로벌 36.08% | NAV +431.6% 할증 | 하향조정: 공매도 비율 주의 8.4% | 매크로 CAPE 버블: Shiller CAPE 41.7 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "휴메딕스: 브레인 48점 (팩트 54 / 심리 51 / VCI +3) | 팩트 최강 consensus(70) / 최약 prediction(32) | 퀀트: 모멘텀↓20 | V5: Graham가치↑80 | 지분: 최대주주 ㈜휴온스글로벌 36.08% | NAV +431.6% 할증 | 하향조정: 공매도 비율 주의 8.4% | 매크로 CAPE 버블: Shiller CAPE 41.7 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -6065,6 +6080,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "isa",
+      "broker": "kis",
+      "rationale": "고배당 — ISA 비과세 한도/초과분 9.9% 가 일반 배당 15.4% 대비 유리"
     },
     "lynch_kr": {
       "class": "SLOW_GROWER",
@@ -6503,20 +6523,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 51.2,
-      "prediction_std": 9.5,
+      "up_probability": 50.5,
+      "prediction_std": 10.3,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6511,
+      "conformal_q_hat": 0.6577,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 45.3,
+      "model_accuracy": 45.9,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -6527,10 +6547,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 43.0,
-          "val_accuracy": 50.0,
+          "wf_accuracy": 46.0,
+          "val_accuracy": 48.6,
           "wf_folds": 6,
-          "weight": 0.43
+          "weight": 0.46
         },
         "catboost": {
           "architecture": "gbdt",
@@ -6556,11 +6576,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "drawdown_20d": 27.1039,
-        "volume_price_trend": 24.2594,
-        "ma20_ratio": 23.5871,
-        "macd_hist": 23.3749,
-        "rsi7": 21.9492
+        "drawdown_20d": 27.7706,
+        "volume_price_trend": 25.5927,
+        "macd_hist": 24.3749,
+        "volatility_20d": 22.91,
+        "rsi7": 22.6159
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -7125,7 +7145,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -7171,7 +7191,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1530.12,
+        "usdkrw": 1527.84,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -7211,7 +7231,7 @@
         "components": {
           "multi_factor": 58.0,
           "consensus": 80.0,
-          "prediction": 51.2,
+          "prediction": 50.5,
           "backtest": 73.0,
           "timing": 58.0,
           "commodity_margin": 50.0,
@@ -7283,11 +7303,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 50,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -7362,6 +7382,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "KR 차익형 — 일반 양도세 0%(대주주 제외)로 ISA 이점 미미, 고빈도=Toss·ISA 여력 보존"
     },
     "lynch_kr": {
       "class": "FAST_GROWER",
@@ -8093,7 +8118,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -8139,7 +8164,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1530.12,
+        "usdkrw": 1527.84,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -8252,11 +8277,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 50,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -8341,6 +8366,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "KR 차익형 — 일반 양도세 0%(대주주 제외)로 ISA 이점 미미, 고빈도=Toss·ISA 여력 보존"
     },
     "lynch_kr": {
       "class": "FAST_GROWER",
@@ -11179,7 +11209,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -11225,7 +11255,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1530.12,
+        "usdkrw": 1527.84,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -11337,11 +11367,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 50,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -11435,6 +11465,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "isa",
+      "broker": "kis",
+      "rationale": "고배당 — ISA 비과세 한도/초과분 9.9% 가 일반 배당 15.4% 대비 유리"
     },
     "lynch_kr": {
       "class": "CYCLICAL",
@@ -13167,7 +13202,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -13213,7 +13248,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1530.12,
+        "usdkrw": 1527.84,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -13324,11 +13359,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 50,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -13422,6 +13457,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "KR 차익형 — 일반 양도세 0%(대주주 제외)로 ISA 이점 미미, 고빈도=Toss·ISA 여력 보존"
     },
     "lynch_kr": {
       "class": "CYCLICAL",
@@ -14456,7 +14496,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -14502,7 +14542,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1530.12,
+        "usdkrw": 1527.84,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -14614,11 +14654,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 50,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -14712,6 +14752,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "KR 차익형 — 일반 양도세 0%(대주주 제외)로 ISA 이점 미미, 고빈도=Toss·ISA 여력 보존"
     },
     "lynch_kr": {
       "class": "CYCLICAL",
@@ -15533,7 +15578,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -15581,7 +15626,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1530.12,
+        "usdkrw": 1527.84,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -15695,11 +15740,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 50,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -15784,6 +15829,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "KR 차익형 — 일반 양도세 0%(대주주 제외)로 ISA 이점 미미, 고빈도=Toss·ISA 여력 보존"
     },
     "lynch_kr": {
       "class": "FAST_GROWER",
@@ -16880,7 +16930,7 @@
       "credit": {
         "debt_ratio_pct": 53.4
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -17048,11 +17098,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 52,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -17154,6 +17204,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "SLOW_GROWER",
@@ -17491,9 +17546,9 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 34.982445805475415,
-        "macd_hist": -5.055685725056231,
-        "atr": 11.908554964939194,
+        "rsi": 34.9824458054776,
+        "macd_hist": -5.055685725055936,
+        "atr": 11.908554964939833,
         "bb_position": 11.0,
         "stoch_k": 26.257724321686297,
         "candle_patterns": {},
@@ -18064,7 +18119,7 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7562,
+      "conformal_q_hat": 0.7561,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -18074,24 +18129,24 @@
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 54.0,
+          "wf_accuracy": 53.7,
           "val_accuracy": 54.8,
           "wf_folds": 7,
-          "weight": 0.54
+          "weight": 0.5371
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 56.9,
+          "wf_accuracy": 57.1,
           "val_accuracy": 47.9,
           "wf_folds": 7,
-          "weight": 0.5686
+          "weight": 0.5714
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 56.6,
+          "wf_accuracy": 56.3,
           "val_accuracy": 46.6,
           "wf_folds": 7,
-          "weight": 0.5657
+          "weight": 0.5629
         },
         "mlp": {
           "architecture": "neural_net",
@@ -18248,7 +18303,7 @@
       "credit": {
         "debt_ratio_pct": 12.6
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -18416,11 +18471,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 60,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -18522,6 +18577,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "FAST_GROWER",
@@ -18805,8 +18865,8 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 57.39538423419197,
-        "macd_hist": 0.2994480397152359,
+        "rsi": 57.39538423419247,
+        "macd_hist": 0.2994480397152318,
         "atr": 2.219616541185437,
         "bb_position": 85.0,
         "stoch_k": 77.32205158831992,
@@ -19381,20 +19441,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 28.6,
+      "up_probability": 28.5,
       "prediction_std": 23.1,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7248,
+      "conformal_q_hat": 0.7213,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 47.7,
+      "model_accuracy": 47.8,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -19405,10 +19465,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 45.7,
-          "val_accuracy": 52.1,
+          "wf_accuracy": 46.3,
+          "val_accuracy": 50.7,
           "wf_folds": 7,
-          "weight": 0.4571
+          "weight": 0.4629
         },
         "catboost": {
           "architecture": "gbdt",
@@ -19435,10 +19495,10 @@
       "confidence_level": "low",
       "top_features": {
         "volatility_20d": 41.6635,
-        "macd_hist": 27.2049,
-        "vol_ratio": 20.432,
-        "rsi14": 18.599,
-        "return_5d": 17.1686
+        "macd_hist": 26.8716,
+        "vol_ratio": 23.0987,
+        "return_5d": 20.8353,
+        "rsi14": 16.9324
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -19459,7 +19519,7 @@
       "reasons": [
         "MACD 골든크로스 — 상승전환",
         "MACD 상승반전 신호",
-        "AI 상승확률 28.6% — 강한 하락 신호",
+        "AI 상승확률 28.5% — 강한 하락 신호",
         "수급 우호적"
       ]
     },
@@ -19569,7 +19629,7 @@
       "credit": {
         "debt_ratio_pct": 38.3
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -19652,7 +19712,7 @@
         "components": {
           "multi_factor": 59.0,
           "consensus": 69.0,
-          "prediction": 28.6,
+          "prediction": 28.5,
           "backtest": 46.5,
           "timing": 64.0,
           "commodity_margin": 50.0,
@@ -19721,11 +19781,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 60,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -19774,7 +19834,7 @@
         "max_pct": 3,
         "rationale": "Kelly 21.7% → WATCH 상한 3% 적용"
       },
-      "reasoning": "DIS: 브레인 53점 (팩트 53 / 심리 54 / VCI -1) | 팩트 최강 consensus(69) / 최약 prediction(29) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 41.7 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "DIS: 브레인 53점 (팩트 53 / 심리 54 / VCI -1) | 팩트 최강 consensus(69) / 최약 prediction(28) | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 41.7 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 59점 (관망) — 관찰 필요",
@@ -19810,6 +19870,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "SLOW_GROWER",
@@ -20079,11 +20144,11 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 55.45128243157465,
-        "macd_hist": -2.9935108507362616,
-        "atr": 16.423721609569046,
+        "rsi": 55.45128243157221,
+        "macd_hist": -2.9935108507726884,
+        "atr": 16.42372160971095,
         "bb_position": 51.5,
-        "stoch_k": 65.64710027399413,
+        "stoch_k": 65.6471002739941,
         "candle_patterns": {},
         "divergence_vs_self": {
           "rsi_abs": 0.0,
@@ -20827,7 +20892,7 @@
         "alert": true,
         "note": "부채비율 322% — 높은 레버리지"
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -20995,11 +21060,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 52,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -21101,6 +21166,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "CYCLICAL",
@@ -21433,9 +21503,9 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 33.251191570660765,
-        "macd_hist": -1.247399727686235,
-        "atr": 4.182936872032962,
+        "rsi": 33.251191570856655,
+        "macd_hist": -1.2473997276875606,
+        "atr": 4.182936872059801,
         "bb_position": -5.1,
         "stoch_k": 21.161415652763626,
         "candle_patterns": {
@@ -22145,7 +22215,7 @@
       "credit": {
         "debt_ratio_pct": 8.9
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -22312,11 +22382,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 55,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -22428,6 +22498,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "CYCLICAL",
@@ -22760,11 +22835,11 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 42.97510135114028,
-        "macd_hist": -1.5288057525010927,
-        "atr": 20.11460613759124,
+        "rsi": 42.9751013513856,
+        "macd_hist": -1.5288057526835903,
+        "atr": 20.11460613734659,
         "bb_position": 25.7,
-        "stoch_k": 49.396984313362275,
+        "stoch_k": 49.39698431336223,
         "candle_patterns": {
           "harami": 100
         },
@@ -23323,20 +23398,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 65.3,
-      "prediction_std": 11.9,
+      "up_probability": 62.9,
+      "prediction_std": 12.8,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7083,
+      "conformal_q_hat": 0.716,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 50.5,
+      "model_accuracy": 51.0,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -23347,10 +23422,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 50.0,
-          "val_accuracy": 32.9,
+          "wf_accuracy": 52.6,
+          "val_accuracy": 34.2,
           "wf_folds": 7,
-          "weight": 0.5
+          "weight": 0.5257
         },
         "catboost": {
           "architecture": "gbdt",
@@ -23376,11 +23451,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 35.5449,
-        "drawdown_20d": 25.5599,
-        "macd_hist": 25.3938,
-        "return_5d": 23.009,
-        "rsi7": 21.499
+        "volatility_20d": 36.8783,
+        "macd_hist": 27.7272,
+        "drawdown_20d": 23.2266,
+        "volume_price_trend": 19.8992,
+        "return_5d": 19.3423
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -23394,13 +23469,13 @@
       "test_samples": 73
     },
     "timing": {
-      "timing_score": 54,
+      "timing_score": 49,
       "action": "HOLD",
       "label": "관망",
       "color": "#888",
       "reasons": [
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 65.3% — 강한 매수 신호"
+        "AI 상승확률 62.9%"
       ]
     },
     "low_52w": 525.233154296875,
@@ -23510,7 +23585,7 @@
       "credit": {
         "debt_ratio_pct": 27.0
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -23593,9 +23668,9 @@
         "components": {
           "multi_factor": 50.0,
           "consensus": 70.0,
-          "prediction": 65.3,
+          "prediction": 62.9,
           "backtest": 31.3,
-          "timing": 54.0,
+          "timing": 49.0,
           "commodity_margin": 50.0,
           "export_trade": 43.0,
           "moat_quality": 70.0,
@@ -23663,11 +23738,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 59,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -23761,6 +23836,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "FAST_GROWER",
@@ -24097,11 +24177,11 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 49.18140693441723,
-        "macd_hist": -1.1014968312253863,
-        "atr": 10.754579459780672,
+        "rsi": 49.18140693449687,
+        "macd_hist": -1.1014968312496456,
+        "atr": 10.754579459855112,
         "bb_position": 42.1,
-        "stoch_k": 70.5611514652605,
+        "stoch_k": 70.56115146526054,
         "candle_patterns": {
           "harami": 100
         },
@@ -24850,7 +24930,7 @@
       "credit": {
         "debt_ratio_pct": 11.8
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -25003,11 +25083,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 60,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -25092,6 +25172,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "FAST_GROWER",
@@ -25412,11 +25497,11 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 59.18701311095397,
-        "macd_hist": 0.7577941632066807,
-        "atr": 2.929211860928762,
+        "rsi": 59.187013110904374,
+        "macd_hist": 0.7577941632060294,
+        "atr": 2.9292118609203324,
         "bb_position": 78.7,
-        "stoch_k": 62.37177947421562,
+        "stoch_k": 62.37177947421558,
         "candle_patterns": {},
         "divergence_vs_self": {
           "rsi_abs": 0.0,
@@ -25997,14 +26082,14 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 34.6,
-      "prediction_std": 7.3,
+      "up_probability": 33.2,
+      "prediction_std": 7.5,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8466,
+      "conformal_q_hat": 0.8427,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -26029,7 +26114,7 @@
         "catboost": {
           "architecture": "gbdt",
           "wf_accuracy": 53.1,
-          "val_accuracy": 50.7,
+          "val_accuracy": 47.9,
           "wf_folds": 7,
           "weight": 0.5314
         },
@@ -26050,11 +26135,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 32.6042,
-        "rsi14": 27.4612,
-        "vol_ratio": 22.2477,
-        "macd_hist": 20.6089,
-        "volume_price_trend": 16.7425
+        "volatility_20d": 32.3185,
+        "rsi14": 27.7259,
+        "vol_ratio": 22.7377,
+        "macd_hist": 19.6942,
+        "volume_price_trend": 16.6176
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -26075,11 +26160,11 @@
       "reasons": [
         "MACD 상승반전 신호",
         "이동평균 정배열 — 상승 추세",
-        "AI 상승확률 34.6% — 강한 하락 신호",
+        "AI 상승확률 33.2% — 강한 하락 신호",
         "수급 우호적"
       ]
     },
-    "low_52w": 136.04241943359375,
+    "low_52w": 136.0424041748047,
     "price_1m": 142.44000244140625,
     "price_3m": 143.20169067382812,
     "price_6m": 145.67103576660156,
@@ -26182,7 +26267,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -26265,7 +26350,7 @@
         "components": {
           "multi_factor": 59.0,
           "consensus": 56.0,
-          "prediction": 34.6,
+          "prediction": 33.2,
           "backtest": 41.6,
           "timing": 58.0,
           "commodity_margin": 77.8,
@@ -26334,11 +26419,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 58,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -26395,7 +26480,7 @@
         "max_pct": 3,
         "rationale": "Kelly 23.3% → WATCH 상한 3% 적용"
       },
-      "reasoning": "PG: 브레인 54점 (팩트 55 / 심리 52 / VCI +3) | 팩트 최강 commodity_margin(78) / 최약 prediction(35) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 41.7 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+      "reasoning": "PG: 브레인 54점 (팩트 55 / 심리 52 / VCI +3) | 팩트 최강 commodity_margin(78) / 최약 prediction(33) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 매크로 CAPE 버블: Shiller CAPE 41.7 > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 59점 (관망) — 관찰 필요",
@@ -26431,6 +26516,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "SLOW_GROWER",
@@ -26764,11 +26854,11 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 55.837201628355324,
-        "macd_hist": -1.711599065861475,
-        "atr": 3.93812985475252,
+        "rsi": 55.83720162835976,
+        "macd_hist": -1.711599065861309,
+        "atr": 3.938129854754359,
         "bb_position": 36.6,
-        "stoch_k": 35.4825416126555,
+        "stoch_k": 35.482541612655545,
         "candle_patterns": {},
         "divergence_vs_self": {
           "rsi_abs": 0.0,
@@ -27324,20 +27414,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 61.0,
-      "prediction_std": 26.3,
+      "up_probability": 59.3,
+      "prediction_std": 24.2,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8126,
+      "conformal_q_hat": 0.8094,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 56.5,
+      "model_accuracy": 56.3,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -27348,17 +27438,17 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.1,
-          "val_accuracy": 34.2,
+          "wf_accuracy": 50.9,
+          "val_accuracy": 31.5,
           "wf_folds": 7,
-          "weight": 0.5114
+          "weight": 0.5086
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 55.4,
+          "wf_accuracy": 55.1,
           "val_accuracy": 34.2,
           "wf_folds": 7,
-          "weight": 0.5543
+          "weight": 0.5514
         },
         "mlp": {
           "architecture": "neural_net",
@@ -27377,11 +27467,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 33.8992,
-        "macd_hist": 26.6361,
-        "ma5_ratio": 20.0335,
-        "return_1d": 19.3866,
-        "vol_ratio": 19.1154
+        "volatility_20d": 32.8992,
+        "macd_hist": 28.3028,
+        "drawdown_20d": 19.4387,
+        "bb_position": 18.7435,
+        "volume_price_trend": 18.6826
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -27400,7 +27490,7 @@
       "label": "매수 고려",
       "color": "#86EFAC",
       "reasons": [
-        "AI 상승확률 61.0%"
+        "AI 상승확률 59.3%"
       ]
     },
     "low_52w": 64.82782745361328,
@@ -27510,7 +27600,7 @@
       "credit": {
         "debt_ratio_pct": 52.6
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "us_fscore": 8,
     "quadrant_info": {
@@ -27593,7 +27683,7 @@
         "components": {
           "multi_factor": 52.0,
           "consensus": 55.0,
-          "prediction": 61.0,
+          "prediction": 59.3,
           "backtest": 75.8,
           "timing": 55.0,
           "commodity_margin": 71.5,
@@ -27663,11 +27753,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 57,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -27779,6 +27869,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "SLOW_GROWER",
@@ -28113,9 +28208,9 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 46.47513094391643,
-        "macd_hist": -0.9954593741093075,
-        "atr": 13.699358687444937,
+        "rsi": 46.4751309435041,
+        "macd_hist": -0.9954593736639599,
+        "atr": 13.699358687617577,
         "bb_position": 36.7,
         "stoch_k": 22.688961088401626,
         "candle_patterns": {},
@@ -28847,7 +28942,7 @@
       "credit": {
         "debt_ratio_pct": 74.6
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -29015,11 +29110,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 59,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -29114,6 +29209,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "SLOW_GROWER",
@@ -29998,7 +30098,7 @@
       "credit": {
         "debt_ratio_pct": 16.9
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -30151,11 +30251,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 60,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -30248,6 +30348,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "FAST_GROWER",
@@ -30580,9 +30685,9 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 45.06831669336409,
-        "macd_hist": 0.022801366915165433,
-        "atr": 4.787412491288749,
+        "rsi": 45.068316703922285,
+        "macd_hist": 0.022801366440708293,
+        "atr": 4.78741248992696,
         "bb_position": 34.4,
         "stoch_k": 25.788252210475775,
         "candle_patterns": {},
@@ -30948,14 +31053,14 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 60.3,
-      "prediction_std": 13.6,
+      "up_probability": 61.4,
+      "prediction_std": 14.2,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.757,
+      "conformal_q_hat": 0.7603,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -30966,7 +31071,7 @@
         "xgboost": {
           "architecture": "gbdt",
           "wf_accuracy": 52.0,
-          "val_accuracy": 46.6,
+          "val_accuracy": 50.7,
           "wf_folds": 7,
           "weight": 0.52
         },
@@ -31001,11 +31106,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 37.433,
-        "vol_ratio": 26.5415,
-        "drawdown_20d": 24.025,
-        "volume_price_trend": 23.6244,
-        "macd_hist": 21.0138
+        "volatility_20d": 37.434,
+        "vol_ratio": 26.5419,
+        "drawdown_20d": 24.0261,
+        "volume_price_trend": 23.6252,
+        "macd_hist": 21.0135
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -31025,13 +31130,13 @@
       "color": "#86EFAC",
       "reasons": [
         "MACD 상승반전 신호",
-        "AI 상승확률 60.3%"
+        "AI 상승확률 61.4%"
       ]
     },
     "low_52w": 146.1385498046875,
     "price_1m": 228.0087127685547,
     "price_3m": 234.02410888671875,
-    "price_6m": 208.0214385986328,
+    "price_6m": 208.02142333984375,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -31133,7 +31238,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -31216,7 +31321,7 @@
         "components": {
           "multi_factor": 53.0,
           "consensus": 55.0,
-          "prediction": 60.3,
+          "prediction": 61.4,
           "backtest": 75.5,
           "timing": 63.0,
           "commodity_margin": 50.0,
@@ -31286,11 +31391,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 57,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -31375,6 +31480,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "SLOW_GROWER",
@@ -32266,7 +32376,7 @@
       "credit": {
         "debt_ratio_pct": 51.8
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -32419,11 +32529,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 55,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -32508,6 +32618,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "SLOW_GROWER",
@@ -32837,11 +32952,11 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 59.785117845944036,
-        "macd_hist": -0.9119464804327144,
-        "atr": 9.483666384123792,
+        "rsi": 59.78511784712606,
+        "macd_hist": -0.9119464804062112,
+        "atr": 9.483666384030897,
         "bb_position": 66.1,
-        "stoch_k": 25.464386124616635,
+        "stoch_k": 25.46438612461667,
         "candle_patterns": {
           "harami": 100
         },
@@ -33239,33 +33354,33 @@
         97.5
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6761,
+      "conformal_q_hat": 0.6759,
       "conformal_width_pct": 97.5,
       "prediction_set": [
         0
       ],
-      "model_accuracy": 50.5,
+      "model_accuracy": 50.3,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.3,
+          "wf_accuracy": 48.6,
           "val_accuracy": 57.5,
           "wf_folds": 7,
-          "weight": 0.4829
+          "weight": 0.4857
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.3,
+          "wf_accuracy": 51.7,
           "val_accuracy": 60.3,
           "wf_folds": 7,
-          "weight": 0.5229
+          "weight": 0.5171
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.7,
+          "wf_accuracy": 51.4,
           "val_accuracy": 43.8,
           "wf_folds": 7,
-          "weight": 0.5171
+          "weight": 0.5143
         },
         "mlp": {
           "architecture": "neural_net",
@@ -33420,7 +33535,7 @@
         "alert": true,
         "note": "부채비율 223% — 높은 레버리지"
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -33572,11 +33687,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 61,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -33671,6 +33786,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "SLOW_GROWER",
@@ -33961,9 +34081,9 @@
       "talib_observations": {
         "available": true,
         "n": 251,
-        "rsi": 38.589809502266256,
-        "macd_hist": 0.26448364643559685,
-        "atr": 2.874294658260826,
+        "rsi": 38.58980951487419,
+        "macd_hist": 0.2644836445798968,
+        "atr": 2.874294661767593,
         "bb_position": 33.6,
         "stoch_k": 27.756665409039687,
         "candle_patterns": {},
@@ -34330,19 +34450,19 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 73.1,
-      "prediction_std": 15.5,
+      "up_probability": 73.4,
+      "prediction_std": 15.8,
       "confidence_interval": [
         1.9,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7121,
+      "conformal_q_hat": 0.7149,
       "conformal_width_pct": 98.1,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 55.7,
+      "model_accuracy": 55.9,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -34353,10 +34473,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 54.0,
-          "val_accuracy": 56.2,
+          "wf_accuracy": 55.4,
+          "val_accuracy": 50.7,
           "wf_folds": 7,
-          "weight": 0.54
+          "weight": 0.5543
         },
         "catboost": {
           "architecture": "gbdt",
@@ -34382,11 +34502,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "rsi14": 35.7437,
-        "macd_hist": 28.8154,
+        "rsi14": 33.0771,
+        "volatility_20d": 25.8486,
         "volume_price_trend": 25.325,
-        "volatility_20d": 22.8486,
-        "vol_ratio": 22.4133
+        "macd_hist": 24.1487,
+        "vol_ratio": 23.4133
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -34408,10 +34528,10 @@
         "RSI 38.59 저평가 구간",
         "MACD 상승반전 신호",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 73.1% — 강한 매수 신호"
+        "AI 상승확률 73.4% — 강한 매수 신호"
       ]
     },
-    "low_52w": 93.61727905273438,
+    "low_52w": 93.6172866821289,
     "price_1m": 130.85000610351562,
     "price_3m": 118.79328918457031,
     "price_6m": 115.2032699584961,
@@ -34516,7 +34636,7 @@
       "credit": {
         "debt_ratio_pct": 44.9
       },
-      "updated_at": "2026-06-19T19:20:27+09:00"
+      "updated_at": "2026-06-19T20:35:21+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -34598,7 +34718,7 @@
         "components": {
           "multi_factor": 49.0,
           "consensus": 61.0,
-          "prediction": 73.1,
+          "prediction": 73.4,
           "backtest": 57.2,
           "timing": 70.0,
           "commodity_margin": 52.4,
@@ -34669,11 +34789,11 @@
           "crypto_macro": 39,
           "market_fear_greed": 37.0,
           "social_sentiment": 59,
-          "fx_sentiment": 45.35,
-          "commodity_sentiment": 54.85,
+          "fx_sentiment": 47.6,
+          "commodity_sentiment": 55.69,
           "global_index_decoupling": 39.8,
           "geopolitical_score": 50,
-          "macro_headlines": 52.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -34776,6 +34896,11 @@
       "expected_return": null,
       "version": "v0_heuristic_v1_prep",
       "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀."
+    },
+    "account_route": {
+      "account_type": "general",
+      "broker": "toss",
+      "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "lynch_kr": {
       "class": "SLOW_GROWER",
