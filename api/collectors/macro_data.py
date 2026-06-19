@@ -172,20 +172,23 @@ def _get_fx(ticker: str, name: str) -> dict:
 
 
 def _get_commodity(ticker: str, name: str) -> dict:
+    """원자재/금리/변동성 시세 + 30일 sparkline(공개 시세 보드 추세선용). change_pct = 직전 종가 대비(기존 동일)."""
     meta = {"source": "yfinance", "as_of": _now_kst_iso()}
     try:
         t = yf.Ticker(ticker)
-        hist = t.history(period="5d")
+        hist = t.history(period="1mo")
         if len(hist) >= 2:
             current = float(hist["Close"].iloc[-1])
             prev = float(hist["Close"].iloc[-2])
             change_pct = round(((current - prev) / prev) * 100, 2)
-            return {"value": round(current, 2), "change_pct": change_pct, **meta, "status": "ok"}
+            sparkline = [round(float(v), 2) for v in hist["Close"].tolist() if v == v][-30:]
+            return {"value": round(current, 2), "change_pct": change_pct, "sparkline": sparkline, **meta, "status": "ok"}
         elif len(hist) == 1:
-            return {"value": round(float(hist["Close"].iloc[-1]), 2), "change_pct": 0, **meta, "status": "ok"}
+            v = round(float(hist["Close"].iloc[-1]), 2)
+            return {"value": v, "change_pct": 0, "sparkline": [v], **meta, "status": "ok"}
     except Exception as e:
         _log_collector_fail("_get_commodity", ticker, e)
-    return {"value": 0, "change_pct": 0, **meta, "status": "fail"}
+    return {"value": 0, "change_pct": 0, "sparkline": [], **meta, "status": "fail"}
 
 
 def _get_commodity_with_history(ticker: str, name: str) -> dict:
@@ -219,18 +222,20 @@ def _get_commodity_with_history(ticker: str, name: str) -> dict:
 
 
 def _get_index_change(ticker: str, name: str) -> dict:
+    """지수 시세 + 30일 sparkline (공개 시세 보드 추세선용). change_pct = 직전 종가 대비(기존 동일)."""
     meta = {"source": "yfinance", "as_of": _now_kst_iso()}
     try:
         t = yf.Ticker(ticker)
-        hist = t.history(period="5d")
+        hist = t.history(period="1mo")
         if len(hist) >= 2:
             current = float(hist["Close"].iloc[-1])
             prev = float(hist["Close"].iloc[-2])
             change_pct = round(((current - prev) / prev) * 100, 2)
-            return {"value": round(current, 2), "change_pct": change_pct, **meta, "status": "ok"}
+            sparkline = [round(float(v), 2) for v in hist["Close"].tolist() if v == v][-30:]
+            return {"value": round(current, 2), "change_pct": change_pct, "sparkline": sparkline, **meta, "status": "ok"}
     except Exception as e:
         _log_collector_fail("_get_index_change", ticker, e)
-    return {"value": 0, "change_pct": 0, **meta, "status": "fail"}
+    return {"value": 0, "change_pct": 0, "sparkline": [], **meta, "status": "fail"}
 
 
 def _calc_yield_spread(data: dict) -> dict:
