@@ -59,6 +59,7 @@ runs:
                  stock_flow_5d.json \
                  disclosure_forensics.json \
                  insider_trades.json \
+                 market_warnings.json \
                  history.json; do
           if git show "origin/main:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
             echo "  + data/$f"
