@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-19T20:42:33+09:00",
+  "updated_at": "2026-06-19T22:02:34+09:00",
   "market_summary": {
     "kospi": {
       "value": 9052.42,
@@ -343,7 +343,7 @@
     }
   },
   "vams": {
-    "total_asset": 9919120.56167608,
+    "total_asset": 9913889.671676079,
     "cash": 5806672.161676079,
     "holdings": [
       {
@@ -451,7 +451,7 @@
         "mode_tag": "moderate"
       }
     ],
-    "total_return_pct": -0.81,
+    "total_return_pct": -0.86,
     "total_realized_pnl": -88234.35159700632,
     "simulation_stats": {
       "total_trades": 15,
@@ -671,9 +671,9 @@
       "entry_usdkrw": 1519.82,
       "usd_value": 1973.9179639694175,
       "entry_date": "2026-05-23",
-      "current_krw": 3019798.4,
-      "pnl_krw": 19798.4,
-      "return_pct": 0.66,
+      "current_krw": 3014567.51,
+      "pnl_krw": 14567.51,
+      "return_pct": 0.49,
       "reason": "β USD ETF FX 헷지 (PM 2026-05-18 결정, 5/22 재진입). USDKRW 1500+ KRW 약세 헷지, 시드 30%. 444460 미존재→455030 실호출 정정. (1차 진입 비-영속 run 소비로 유실 → idempotent fix 후 재시도.)"
     },
     "tier_pnl": {
@@ -893,9 +893,7 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50,
-        "kis_foreign_net": 128556,
-        "kis_institution_net": -159859
+        "flow_score": 50
       },
       "sentiment": {
         "score": 50,
@@ -2045,7 +2043,7 @@
       "name": "XOM",
       "market": "NYSE",
       "currency": "USD",
-      "price": 137.80999755859375,
+      "price": 137.81,
       "volume": 48054600,
       "trading_value": 6622404308,
       "market_cap": 571215183872,
@@ -2376,9 +2374,13 @@
         }
       },
       "flow": {
-        "flow_score": 50,
-        "flow_signals": [],
-        "foreign_net": 0,
+        "flow_score": 52,
+        "flow_signals": [
+          "내부자 대량 매도 (MSPR -100.0)",
+          "애널리스트 매수 우세 (16/31)",
+          "실적 서프라이즈 +14.3%"
+        ],
+        "foreign_net": 18540,
         "institution_net": 0,
         "foreign_5d_sum": 0,
         "institution_5d_sum": 0,
@@ -2388,11 +2390,11 @@
         "inst_consec_buy": 0,
         "inst_consec_sell": 0,
         "_us_flow_detail": {
-          "insider_mspr": 0,
+          "insider_mspr": -100,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": null,
+          "analyst_buy_ratio": 0.52,
           "put_call_ratio": null,
-          "short_pct": null
+          "short_pct": 1.14
         }
       },
       "sentiment": {
@@ -3436,7 +3438,7 @@
       "name": "CSCO",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 119.54000091552734,
+      "price": 119.54,
       "volume": 52273600,
       "trading_value": 6248786191,
       "market_cap": 471159111680,
@@ -4408,7 +4410,7 @@
       "name": "UNH",
       "market": "NYSE",
       "currency": "USD",
-      "price": 400.9599914550781,
+      "price": 400.96,
       "volume": 11895600,
       "trading_value": 4769659674,
       "market_cap": 364129550336,
@@ -6707,7 +6709,7 @@
       "name": "QCOM",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 226.11000061035156,
+      "price": 226.11,
       "volume": 47045900,
       "trading_value": 10637548477,
       "market_cap": 238319943680,
@@ -6972,9 +6974,11 @@
         }
       },
       "flow": {
-        "flow_score": 50,
-        "flow_signals": [],
-        "foreign_net": 0,
+        "flow_score": 40,
+        "flow_signals": [
+          "내부자 대량 매도 (MSPR -362.6)"
+        ],
+        "foreign_net": -20582,
         "institution_net": 0,
         "foreign_5d_sum": 0,
         "institution_5d_sum": 0,
@@ -6984,11 +6988,11 @@
         "inst_consec_buy": 0,
         "inst_consec_sell": 0,
         "_us_flow_detail": {
-          "insider_mspr": 0,
+          "insider_mspr": -362.6143,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": null,
+          "analyst_buy_ratio": 0.37,
           "put_call_ratio": null,
-          "short_pct": null
+          "short_pct": 4.78
         }
       },
       "sentiment": {
@@ -8148,9 +8152,7 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50,
-        "kis_foreign_net": -37680,
-        "kis_institution_net": 10420
+        "flow_score": 50
       },
       "sentiment": {
         "score": 50,
@@ -11036,9 +11038,7 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50,
-        "kis_foreign_net": -3547,
-        "kis_institution_net": 863
+        "flow_score": 50
       },
       "sentiment": {
         "score": 50,
@@ -11811,7 +11811,7 @@
       "name": "MSFT",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 379.3999938964844,
+      "price": 379.4,
       "volume": 59649300,
       "trading_value": 22630944055,
       "market_cap": 2818348154880,
@@ -12146,9 +12146,12 @@
         }
       },
       "flow": {
-        "flow_score": 50,
-        "flow_signals": [],
-        "foreign_net": 0,
+        "flow_score": 51,
+        "flow_signals": [
+          "내부자 대량 매도 (MSPR -156.8)",
+          "애널리스트 강력 매수 (61/66)"
+        ],
+        "foreign_net": -39029,
         "institution_net": 0,
         "foreign_5d_sum": 0,
         "institution_5d_sum": 0,
@@ -12158,11 +12161,11 @@
         "inst_consec_buy": 0,
         "inst_consec_sell": 0,
         "_us_flow_detail": {
-          "insider_mspr": 0,
+          "insider_mspr": -156.7678,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": null,
+          "analyst_buy_ratio": 0.92,
           "put_call_ratio": null,
-          "short_pct": null
+          "short_pct": 1.19
         }
       },
       "sentiment": {
@@ -13122,7 +13125,7 @@
       "name": "META",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 577.219970703125,
+      "price": 577.22,
       "volume": 28791600,
       "trading_value": 16619086508,
       "market_cap": 1465228591104,
@@ -13453,9 +13456,12 @@
         }
       },
       "flow": {
-        "flow_score": 50,
-        "flow_signals": [],
-        "foreign_net": 0,
+        "flow_score": 51,
+        "flow_signals": [
+          "내부자 대량 매도 (MSPR -204.5)",
+          "애널리스트 강력 매수 (63/72)"
+        ],
+        "foreign_net": 3203304,
         "institution_net": 0,
         "foreign_5d_sum": 0,
         "institution_5d_sum": 0,
@@ -13465,11 +13471,11 @@
         "inst_consec_buy": 0,
         "inst_consec_sell": 0,
         "_us_flow_detail": {
-          "insider_mspr": 0,
+          "insider_mspr": -204.5223,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": null,
+          "analyst_buy_ratio": 0.88,
           "put_call_ratio": null,
-          "short_pct": null
+          "short_pct": 1.47
         }
       },
       "sentiment": {
@@ -14404,7 +14410,7 @@
       "name": "JNJ",
       "market": "NYSE",
       "currency": "USD",
-      "price": 228.38999938964844,
+      "price": 228.39,
       "volume": 18988000,
       "trading_value": 4336669308,
       "market_cap": 549784256512,
@@ -16614,7 +16620,7 @@
       "name": "GOOGL",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 368.0299987792969,
+      "price": 368.03,
       "volume": 44428200,
       "trading_value": 16350910391,
       "market_cap": 4490912595968,
@@ -16946,9 +16952,12 @@
         }
       },
       "flow": {
-        "flow_score": 50,
-        "flow_signals": [],
-        "foreign_net": 0,
+        "flow_score": 71,
+        "flow_signals": [
+          "내부자 대량 매수 (MSPR 105.5)",
+          "애널리스트 강력 매수 (61/70)"
+        ],
+        "foreign_net": 339736,
         "institution_net": 0,
         "foreign_5d_sum": 0,
         "institution_5d_sum": 0,
@@ -16958,11 +16967,11 @@
         "inst_consec_buy": 0,
         "inst_consec_sell": 0,
         "_us_flow_detail": {
-          "insider_mspr": 0,
+          "insider_mspr": 105.4878,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": null,
+          "analyst_buy_ratio": 0.87,
           "put_call_ratio": null,
-          "short_pct": null
+          "short_pct": 1.42
         }
       },
       "sentiment": {
@@ -18089,9 +18098,7 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50,
-        "kis_foreign_net": -68106,
-        "kis_institution_net": -17539
+        "flow_score": 50
       },
       "sentiment": {
         "score": 50,
@@ -19056,7 +19063,7 @@
       "name": "ADBE",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 195.16000366210938,
+      "price": 195.16,
       "volume": 15837700,
       "trading_value": 3090885589,
       "market_cap": 77576101888,
@@ -19390,9 +19397,11 @@
         }
       },
       "flow": {
-        "flow_score": 50,
-        "flow_signals": [],
-        "foreign_net": 0,
+        "flow_score": 40,
+        "flow_signals": [
+          "내부자 대량 매도 (MSPR -44.4)"
+        ],
+        "foreign_net": 130831,
         "institution_net": 0,
         "foreign_5d_sum": 0,
         "institution_5d_sum": 0,
@@ -19402,11 +19411,11 @@
         "inst_consec_buy": 0,
         "inst_consec_sell": 0,
         "_us_flow_detail": {
-          "insider_mspr": 0,
+          "insider_mspr": -44.3581,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": null,
+          "analyst_buy_ratio": 0.42,
           "put_call_ratio": null,
-          "short_pct": null
+          "short_pct": 5.16
         }
       },
       "sentiment": {
@@ -20374,7 +20383,7 @@
       "name": "DIS",
       "market": "NYSE",
       "currency": "USD",
-      "price": 103.88999938964844,
+      "price": 103.89,
       "volume": 22939800,
       "trading_value": 2383215807,
       "market_cap": 180406173696,
@@ -20652,9 +20661,12 @@
         }
       },
       "flow": {
-        "flow_score": 50,
-        "flow_signals": [],
-        "foreign_net": 0,
+        "flow_score": 71,
+        "flow_signals": [
+          "내부자 대량 매수 (MSPR 202.0)",
+          "애널리스트 강력 매수 (32/36)"
+        ],
+        "foreign_net": 171510,
         "institution_net": 0,
         "foreign_5d_sum": 0,
         "institution_5d_sum": 0,
@@ -20664,11 +20676,11 @@
         "inst_consec_buy": 0,
         "inst_consec_sell": 0,
         "_us_flow_detail": {
-          "insider_mspr": 0,
+          "insider_mspr": 201.9937,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": null,
+          "analyst_buy_ratio": 0.89,
           "put_call_ratio": null,
-          "short_pct": null
+          "short_pct": 1.53
         }
       },
       "sentiment": {
@@ -21670,7 +21682,7 @@
       "name": "PG",
       "market": "NYSE",
       "currency": "USD",
-      "price": 150.3800048828125,
+      "price": 150.38,
       "volume": 17076100,
       "trading_value": 2567904001,
       "market_cap": 350174740480,
@@ -21986,9 +21998,12 @@
         }
       },
       "flow": {
-        "flow_score": 50,
-        "flow_signals": [],
-        "foreign_net": 0,
+        "flow_score": 67,
+        "flow_signals": [
+          "내부자 대량 매수 (MSPR 131.9)",
+          "애널리스트 매수 우세 (22/36)"
+        ],
+        "foreign_net": -346017,
         "institution_net": 0,
         "foreign_5d_sum": 0,
         "institution_5d_sum": 0,
@@ -21998,11 +22013,11 @@
         "inst_consec_buy": 0,
         "inst_consec_sell": 0,
         "_us_flow_detail": {
-          "insider_mspr": 0,
+          "insider_mspr": 131.9384,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": null,
+          "analyst_buy_ratio": 0.61,
           "put_call_ratio": null,
-          "short_pct": null
+          "short_pct": 1.17
         }
       },
       "sentiment": {
@@ -23173,9 +23188,7 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50,
-        "kis_foreign_net": -36685,
-        "kis_institution_net": 705
+        "flow_score": 50
       },
       "sentiment": {
         "score": 50,
@@ -24306,7 +24319,7 @@
       "name": "TMO",
       "market": "NYSE",
       "currency": "USD",
-      "price": 464.6099853515625,
+      "price": 464.61,
       "volume": 3358500,
       "trading_value": 1560392635,
       "market_cap": 172659048448,
@@ -24638,9 +24651,12 @@
         }
       },
       "flow": {
-        "flow_score": 50,
-        "flow_signals": [],
-        "foreign_net": 0,
+        "flow_score": 71,
+        "flow_signals": [
+          "내부자 대량 매수 (MSPR 44.4)",
+          "애널리스트 강력 매수 (29/34)"
+        ],
+        "foreign_net": 85812,
         "institution_net": 0,
         "foreign_5d_sum": 0,
         "institution_5d_sum": 0,
@@ -24650,11 +24666,11 @@
         "inst_consec_buy": 0,
         "inst_consec_sell": 0,
         "_us_flow_detail": {
-          "insider_mspr": 0,
+          "insider_mspr": 44.3857,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": null,
+          "analyst_buy_ratio": 0.85,
           "put_call_ratio": null,
-          "short_pct": null
+          "short_pct": 1.26
         }
       },
       "sentiment": {
@@ -25569,7 +25585,7 @@
       "name": "WMT",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 117.18000030517578,
+      "price": 117.18,
       "volume": 36500500,
       "trading_value": 4277128601,
       "market_cap": 932527669248,
@@ -26500,7 +26516,7 @@
       "name": "AMZN",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 244.38999938964844,
+      "price": 244.39,
       "volume": 75554600,
       "trading_value": 18464788647,
       "market_cap": 2628929978368,
@@ -26834,9 +26850,12 @@
         }
       },
       "flow": {
-        "flow_score": 50,
-        "flow_signals": [],
-        "foreign_net": 0,
+        "flow_score": 51,
+        "flow_signals": [
+          "내부자 대량 매도 (MSPR -220.4)",
+          "애널리스트 강력 매수 (71/76)"
+        ],
+        "foreign_net": -895824,
         "institution_net": 0,
         "foreign_5d_sum": 0,
         "institution_5d_sum": 0,
@@ -26846,11 +26865,11 @@
         "inst_consec_buy": 0,
         "inst_consec_sell": 0,
         "_us_flow_detail": {
-          "insider_mspr": 0,
+          "insider_mspr": -220.4364,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": null,
+          "analyst_buy_ratio": 0.93,
           "put_call_ratio": null,
-          "short_pct": null
+          "short_pct": 0.94
         }
       },
       "sentiment": {
@@ -27791,7 +27810,7 @@
       "name": "COIN",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 163.25999450683594,
+      "price": 163.26,
       "volume": 9803300,
       "trading_value": 1600486704,
       "market_cap": 43012603904,
@@ -28958,9 +28977,7 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50,
-        "kis_foreign_net": 1435,
-        "kis_institution_net": -11143
+        "flow_score": 50
       },
       "sentiment": {
         "score": 50,
@@ -30217,9 +30234,7 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50,
-        "kis_foreign_net": 63700,
-        "kis_institution_net": 27231
+        "flow_score": 50
       },
       "sentiment": {
         "score": 50,
@@ -31541,7 +31556,7 @@
     {
       "level": "INFO",
       "category": "macro",
-      "message": "원달러 1,530원대 — 고환율 수준(참고). 급변 알림은 전일대비 변동 기준",
+      "message": "원달러 1,527원대 — 고환율 수준(참고). 급변 알림은 전일대비 변동 기준",
       "action": null
     },
     {
@@ -31565,7 +31580,7 @@
     {
       "level": "INFO",
       "category": "strategy",
-      "message": "현재 경기 회복기 — 추천 섹터: 기술, 경기소비재, 게임엔터테인먼트",
+      "message": "현재 경기 회복기 — 추천 섹터: 게임엔터테인먼트, 자동차, 디스플레이패널",
       "action": "포트폴리오 내 경기 회복기 우호 섹터 비중 점검"
     },
     {
@@ -31595,39 +31610,39 @@
   ],
   "macro": {
     "usd_krw": {
-      "value": 1529.85,
-      "change": 4.43,
-      "change_pct": 0.29,
-      "week_high": 1529.85,
+      "value": 1527.2,
+      "change": 1.78,
+      "change_pct": 0.12,
+      "week_high": 1527.2,
       "week_low": 1509.5,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:39+09:00",
+      "as_of": "2026-06-19T22:02:26+09:00",
       "status": "ok"
     },
     "usd_jpy": {
-      "value": 161.26,
-      "change_pct": 0.41,
+      "value": 161.182,
+      "change_pct": 0.36,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:39+09:00",
+      "as_of": "2026-06-19T22:02:26+09:00",
       "status": "ok"
     },
     "eur_usd": {
-      "value": 1.1465,
-      "change_pct": -0.37,
+      "value": 1.1476,
+      "change_pct": -0.27,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:39+09:00",
+      "as_of": "2026-06-19T22:02:26+09:00",
       "status": "ok"
     },
     "wti_oil": {
-      "value": 75.92,
-      "change_pct": -0.89,
+      "value": 75.73,
+      "change_pct": -1.14,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:40+09:00",
+      "as_of": "2026-06-19T22:02:26+09:00",
       "status": "ok"
     },
     "gold": {
-      "value": 4162.3,
-      "change_pct": -1.46,
+      "value": 4184.7,
+      "change_pct": -0.93,
       "sparkline": [
         4506.3,
         4531.3,
@@ -31651,17 +31666,17 @@
         4330.9,
         4358.9,
         4224.1,
-        4162.3
+        4184.7
       ],
       "high_30d": 4560.5,
       "low_30d": 4090.3,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:40+09:00",
+      "as_of": "2026-06-19T22:02:26+09:00",
       "status": "ok"
     },
     "silver": {
-      "value": 64.54,
-      "change_pct": -2.59,
+      "value": 65.14,
+      "change_pct": -1.69,
       "sparkline": [
         74.83,
         75.85,
@@ -31685,26 +31700,26 @@
         69.9,
         70.7,
         66.25,
-        64.54
+        65.14
       ],
       "high_30d": 76.41,
       "low_30d": 63.88,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:40+09:00",
+      "as_of": "2026-06-19T22:02:26+09:00",
       "status": "ok"
     },
     "copper": {
-      "value": 6.35,
-      "change_pct": -0.45,
+      "value": 6.36,
+      "change_pct": -0.2,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:40+09:00",
+      "as_of": "2026-06-19T22:02:26+09:00",
       "status": "ok"
     },
     "vix": {
-      "value": 17.18,
-      "change_pct": -6.83,
+      "value": 17.2,
+      "change_pct": -6.72,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:40+09:00",
+      "as_of": "2026-06-19T22:02:26+09:00",
       "status": "ok"
     },
     "us_10y": {
@@ -31714,52 +31729,52 @@
       "as_of": "2026-06-17"
     },
     "us_2y": {
-      "value": 3.62,
+      "value": 3.66,
       "change_pct": 0,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:40+09:00",
+      "as_of": "2026-06-19T22:02:27+09:00",
       "status": "ok"
     },
     "sp500": {
       "value": null,
       "change_pct": null,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:40+09:00",
+      "as_of": "2026-06-19T22:02:27+09:00",
       "status": "ok"
     },
     "nasdaq": {
       "value": null,
       "change_pct": null,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:40+09:00",
+      "as_of": "2026-06-19T22:02:27+09:00",
       "status": "ok"
     },
     "dji": {
       "value": null,
       "change_pct": null,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:40+09:00",
+      "as_of": "2026-06-19T22:02:27+09:00",
       "status": "ok"
     },
     "nikkei": {
       "value": 71250.06,
       "change_pct": 1.93,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:41+09:00",
+      "as_of": "2026-06-19T22:02:27+09:00",
       "status": "ok"
     },
     "sse": {
       "value": null,
       "change_pct": null,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:41+09:00",
+      "as_of": "2026-06-19T22:02:27+09:00",
       "status": "ok"
     },
     "dax": {
-      "value": 25033.34,
-      "change_pct": 0.4,
+      "value": 24979.29,
+      "change_pct": 0.18,
       "source": "yfinance",
-      "as_of": "2026-06-19T20:41:41+09:00",
+      "as_of": "2026-06-19T22:02:27+09:00",
       "status": "ok"
     },
     "fred": {
@@ -32144,7 +32159,7 @@
       "cape": {
         "value": 41.71,
         "change_from_prev_close": 0.33,
-        "as_of": "2026-06-19T20:41:43+09:00",
+        "as_of": "2026-06-19T22:02:31+09:00",
         "source": "multpl.com (Shiller PE)",
         "series_id": "MULTPL_SHILLER_PE"
       },
@@ -32187,7 +32202,7 @@
       }
     },
     "yield_spread": {
-      "value": 0.87,
+      "value": 0.83,
       "signal": "정상"
     },
     "cross_asset_corr": {
@@ -32205,74 +32220,74 @@
       ],
       "pairs": {
         "stock_bond_yield": -0.015,
-        "stock_gold": 0.22,
-        "stock_usd": 0.065,
-        "stock_oil": 0.257,
-        "stock_btc": 0.041,
-        "bond_yield_gold": 0.098,
-        "bond_yield_usd": -0.267,
+        "stock_gold": 0.205,
+        "stock_usd": 0.075,
+        "stock_oil": 0.26,
+        "stock_btc": 0.035,
+        "bond_yield_gold": 0.104,
+        "bond_yield_usd": -0.274,
         "bond_yield_oil": -0.085,
-        "bond_yield_btc": 0.238,
-        "gold_usd": -0.119,
-        "gold_oil": -0.338,
-        "gold_btc": -0.029,
-        "usd_oil": 0.098,
-        "usd_btc": -0.128,
-        "oil_btc": -0.126
+        "bond_yield_btc": 0.241,
+        "gold_usd": -0.094,
+        "gold_oil": -0.34,
+        "gold_btc": -0.042,
+        "usd_oil": 0.096,
+        "usd_btc": -0.114,
+        "oil_btc": -0.125
       },
       "matrix": {
         "stock": {
           "stock": 1.0,
           "bond_yield": -0.015,
-          "gold": 0.22,
-          "usd": 0.065,
-          "oil": 0.257,
-          "btc": 0.041
+          "gold": 0.205,
+          "usd": 0.075,
+          "oil": 0.26,
+          "btc": 0.035
         },
         "bond_yield": {
           "bond_yield": 1.0,
           "stock": -0.015,
-          "gold": 0.098,
-          "usd": -0.267,
+          "gold": 0.104,
+          "usd": -0.274,
           "oil": -0.085,
-          "btc": 0.238
+          "btc": 0.241
         },
         "gold": {
           "gold": 1.0,
-          "stock": 0.22,
-          "bond_yield": 0.098,
-          "usd": -0.119,
-          "oil": -0.338,
-          "btc": -0.029
+          "stock": 0.205,
+          "bond_yield": 0.104,
+          "usd": -0.094,
+          "oil": -0.34,
+          "btc": -0.042
         },
         "usd": {
           "usd": 1.0,
-          "stock": 0.065,
-          "bond_yield": -0.267,
-          "gold": -0.119,
-          "oil": 0.098,
-          "btc": -0.128
+          "stock": 0.075,
+          "bond_yield": -0.274,
+          "gold": -0.094,
+          "oil": 0.096,
+          "btc": -0.114
         },
         "oil": {
           "oil": 1.0,
-          "stock": 0.257,
+          "stock": 0.26,
           "bond_yield": -0.085,
-          "gold": -0.338,
-          "usd": 0.098,
-          "btc": -0.126
+          "gold": -0.34,
+          "usd": 0.096,
+          "btc": -0.125
         },
         "btc": {
           "btc": 1.0,
-          "stock": 0.041,
-          "bond_yield": 0.238,
-          "gold": -0.029,
-          "usd": -0.128,
-          "oil": -0.126
+          "stock": 0.035,
+          "bond_yield": 0.241,
+          "gold": -0.042,
+          "usd": -0.114,
+          "oil": -0.125
         }
       },
       "max_abs_pair": {
         "pair": "gold_oil",
-        "abs_corr": 0.338
+        "abs_corr": 0.34
       },
       "regime_signal": "normal",
       "interpretation": "혼합 — 일부 자산만 강한 상관",
@@ -32310,7 +32325,7 @@
     "macro_diagnosis": [
       {
         "type": "warning",
-        "text": "원달러 1529.85원 — 원화약세, 수출주 주목"
+        "text": "원달러 1527.2원 — 원화약세, 수출주 주목"
       },
       {
         "type": "warning",
@@ -32324,7 +32339,7 @@
     "macro_diagnosis_us": [
       {
         "type": "warning",
-        "text": "USD/JPY 161.26 — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"
+        "text": "USD/JPY 161.182 — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"
       }
     ],
     "micro_signals": [
@@ -32367,15 +32382,15 @@
     ],
     "capital_flow": {
       "commodities": {
-        "score": 42,
-        "change_pct": -1.347,
+        "score": 45,
+        "change_pct": -0.99,
         "dominant": "silver"
       },
       "bonds": {
         "score": 51,
         "change_pct": -0.66,
         "dominant": "us_10y",
-        "usd_change_pct": 0.29,
+        "usd_change_pct": 0.12,
         "kr_policy_rate": 2.5,
         "kr_10y": 4.171
       },
@@ -32390,113 +32405,112 @@
         "KR10Y_yoy=+1.47pp→bond+6",
         "M2_yoy=6.07%>5→eq+4,comm+3"
       ]
-    },
-    "collected_at": "2026-06-19T20:41:39+09:00"
+    }
   },
   "bloomberg_google_headlines": [
     {
-      "title": "JPMorgan Warns Chip Stock Rally Poses Risk of Market ‘Tantrums’ - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQTWdFNVN4bkk4WEdxWGRIOEFxX3pLVE1XdkR4ZTJJQVpzWEFTem1xd1FZRGpoQmJ1UHZIVW9EZVpmY1doX2FyWjVOU3plWTJYUlF0ck5ldXBSNzllbTJ0cXpfMTRmdXZ1aVNtY1JEWVhuT0NBbV9jMWhrMUREMnNyVHNOdUFCWm9nbnN3QWpLMl9XSWpZLUVtMnRCNW5PbmQ5dldfa3JCdWJLcFkyVmx2VnhR?oc=5",
-      "source": "Bloomberg",
-      "time": "Thu, 18 Jun 2026 08:26:57 GMT",
+      "title": "India Stock Regulator Lets Firms Buy Back Shares From Market - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxQeVNra01tOXo3RjNwVWJNOTR4UHFzUV9VY3lPSG1GLTFvZzY1N3hMTnF2ZE5EcWlpeVBwV2FhNnhwUmpxc1ptUkVMYV9pRGUtc1RGMVpzcXdibHdaUm9Bb21aX2ljMlNYRkJtUGpUUmdvXzhGWVNEd1pzOGxNSXFWdkFsZVoxM1RmWUEybDFTN0xhTVdRaUw4a2FZc3B5dV9PVzRQTV9GZkpMOHhRdTdlTQ?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 19 Jun 2026 12:22:05 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Intel Shares Soar After Trump Says It Struck Apple Chip Deal - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMivwFBVV95cUxNYlM2ZEprdFdVelV2Tkd4NFlubFJYTXFadUxtVXkxSF9scFg5dk91U0dKR3pkWENoXy1CVXppRjZta2hYZS1qa1BsTDJaWTNRR2ZwaVJrNzN0d1BrWlVJQVFOZUZLa1lLTnFVXy1xLXN3Mm1wdnh4RGtiM19vbDgyZzQtZzhqZXRKTkZPbEJyNzNkRHIySl9UZzBpZXJaZUIzdUdEbzQzLUFuVnhhbDFNV0VKOE5hazVGcjRJUHFBaw?oc=5",
-      "source": "Bloomberg",
-      "time": "Thu, 18 Jun 2026 09:35:34 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "A First-Ever Default Shakes an $80 Billion Corner of Muni Market - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNMW9xVDRJZGFSQWoydFJtSTd1LTRWb2haUlFwdlZPQXh6NldabzVhSlNZRWJHd2JmMTU4dEN2LTB5RnV6VEY1cWpKMl9maUZfbDRGV0VVbXQyUVUzejJiTFRlbnFYcVhKNjJ3MzExc045ZFBNZlVtbml4WW5xcjNaeFdEeFdtRkx1ZTJtY3pGRTRMUFN5ZFVxMDdlR1VEQmlTNUJhZ0I1SHMxZU16RXNaOXI2ME4?oc=5",
-      "source": "Bloomberg",
-      "time": "Wed, 17 Jun 2026 17:25:43 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "The Squeeze on Liquidity Is Just Getting Started - Bloomberg",
+      "title": "The Squeeze on Liquidity Is Just Getting Started - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMioAFBVV95cUxNQnlCVVZ5YjdQa1I0eGtybjlkYldSYUhlR0gyNklaSjI4cVV1M2NyY1VySzJxWUtKR0FUZ2lXNk5kc0s0ZHZlQWZObmg5bk1XRGtYWVlJSzZ5WlNFVWpPZ1RxYy10WGlXN2JFRVpHTjU5bHVoallqZzctcGpzWlpkamFyOW55MGcwMWxpRmg0Z0xTQzZnOXRRcUtqUGI0QW1r?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 13:29:40 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "MSCI China Stock Gauge Heads for Bear Market as Tech Weakness Extends - Bloomberg",
+      "title": "JPMorgan Warns Chip Stock Rally Poses Risk of Market ‘Tantrums’ - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQTWdFNVN4bkk4WEdxWGRIOEFxX3pLVE1XdkR4ZTJJQVpzWEFTem1xd1FZRGpoQmJ1UHZIVW9EZVpmY1doX2FyWjVOU3plWTJYUlF0ck5ldXBSNzllbTJ0cXpfMTRmdXZ1aVNtY1JEWVhuT0NBbV9jMWhrMUREMnNyVHNOdUFCWm9nbnN3QWpLMl9XSWpZLUVtMnRCNW5PbmQ5dldfa3JCdWJLcFkyVmx2VnhR?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Thu, 18 Jun 2026 08:26:57 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Intel Shares Soar After Trump Says It Struck Apple Chip Deal - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMivwFBVV95cUxNYlM2ZEprdFdVelV2Tkd4NFlubFJYTXFadUxtVXkxSF9scFg5dk91U0dKR3pkWENoXy1CVXppRjZta2hYZS1qa1BsTDJaWTNRR2ZwaVJrNzN0d1BrWlVJQVFOZUZLa1lLTnFVXy1xLXN3Mm1wdnh4RGtiM19vbDgyZzQtZzhqZXRKTkZPbEJyNzNkRHIySl9UZzBpZXJaZUIzdUdEbzQzLUFuVnhhbDFNV0VKOE5hazVGcjRJUHFBaw?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Thu, 18 Jun 2026 09:35:34 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "A First-Ever Default Shakes an $80 Billion Corner of Muni Market - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNMW9xVDRJZGFSQWoydFJtSTd1LTRWb2haUlFwdlZPQXh6NldabzVhSlNZRWJHd2JmMTU4dEN2LTB5RnV6VEY1cWpKMl9maUZfbDRGV0VVbXQyUVUzejJiTFRlbnFYcVhKNjJ3MzExc045ZFBNZlVtbml4WW5xcjNaeFdEeFdtRkx1ZTJtY3pGRTRMUFN5ZFVxMDdlR1VEQmlTNUJhZ0I1SHMxZU16RXNaOXI2ME4?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Wed, 17 Jun 2026 17:25:43 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "MSCI China Stock Gauge Heads for Bear Market as Tech Weakness Extends - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxQbThWb0ppc3IyczRIaEZXQXhaVkJKV29nbjNCbzR4NjVpRUMyakY2V1ViZWgxRy1NMUVkTlN0MnlNSDNQWUY4elZ3ZEFrOVRFZzNVNFJzM1lTR3ptZTVtc2dacTF4ajR3bjE0dHNfRVRrUkxWbmQwUkMzVHJUSjkyQ0NGc050SEphZlhweHZvbUtaWmFreUtqOTJNT1pxaDVEekJqSlFtXzVyZVRieEhlaVdJSkFndw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 08:24:29 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Stocks, Bonds, Dollar Churn in Countdown to Fed: Markets Wrap - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxQMjZSNjViRXpkcFVCci1GSTdET3doQnlHejZPRGNVYnlrRkZGOGZJdXhELXJpY2hfQ3lWX2EyWlhCQmFWdWE1ZWtzaFIwMmJfZmthVlBSUU1SQlB0XzhtQ0lCZHhwRFFFSTZmR1JXa1A4akR6VDM0ejBCTzdZUzRlVEs0X0VpeldtRDdPS3N6aGhpS1VEa1VRdVpGNzM4RGtBZWFyXzdPRzI3eFRYenVj?oc=5",
-      "source": "Bloomberg",
-      "time": "Tue, 16 Jun 2026 22:06:39 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Fed’s Warsh Rocks Bond Market in Debut, Sparks Surge in Rate-Hike Bets - Bloomberg",
+      "title": "Fed’s Warsh Rocks Bond Market in Debut, Sparks Surge in Rate-Hike Bets - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNb05Tc0xoMlMxcW9teV9EM0xfN1J2RjhrU2hXdmNGa3ZjbkxvN05zU3d3VXhoN2t2QXIxR3NKSnA2bFFfQ3dBdUpvZWdmb3R1WXpkWHA5eXJlckRSUFlHbHZsTlZFdmRnaEQ2UFE5UjRkaEtkdk1LQ0Z1bnQyU09mSkJUZkc0SjEtWnltVU01WVJGN3hoSVZiRjkwbDJhQVJMOVFFTWZWTEpqSG5MSnhBZy13bkY?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Wed, 17 Jun 2026 22:17:32 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Gen-Z Traders Go for Broke in Pursuit of a New American Dream - Bloomberg",
+      "title": "Stocks, Bonds, Dollar Churn in Countdown to Fed: Markets Wrap - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxQMjZSNjViRXpkcFVCci1GSTdET3doQnlHejZPRGNVYnlrRkZGOGZJdXhELXJpY2hfQ3lWX2EyWlhCQmFWdWE1ZWtzaFIwMmJfZmthVlBSUU1SQlB0XzhtQ0lCZHhwRFFFSTZmR1JXa1A4akR6VDM0ejBCTzdZUzRlVEs0X0VpeldtRDdPS3N6aGhpS1VEa1VRdVpGNzM4RGtBZWFyXzdPRzI3eFRYenVj?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Tue, 16 Jun 2026 22:06:39 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Gen-Z Traders Go for Broke in Pursuit of a New American Dream - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxNdk9mcGNXTElKcUhFMjJvT043OWdPT25paC12dklfeUM2M1RfZWVDM3hPaUc3VTQtQkExc3NzNW5Ub1UxTW1KSzFZcVRlZlY0QjhBYk9nZ2tMVjExdDlsVUtnd0JNeGswdE1mM1BLRUphUlNDVUQ1OXR6bmVwZnY2a0NwcDJZMGRkT3NvdW02clhGN3RqMzh6Umh3SGVIQXQxc1pMZTdmbzc3M0E?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Wed, 17 Jun 2026 13:00:15 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "What’s at Stake If Indonesia Loses Its Emerging Market Status - Bloomberg",
+      "title": "What’s at Stake If Indonesia Loses Its Emerging Market Status - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiyAFBVV95cUxOQ2Zia0ZuSmJHX2lUa0hjazZTT09BMTNudGJNaE53aDB0aWNMQWRsRXFaaWxlbFBRM2J5Skx4VTZqLS1QWjRkalNwYzJyRTlzYXA4d2pNLU9LU2E3YnVNdE1ZZFdCbTlzUEx1YlVCRnN0RXF6QllabHg0U0VqOHRuN0VZeEZXSlBWNGpEOXZuM3hNOWtRcFI2d3pBNHVGb1RWRmpJSk5jTnprVWdXcDBtSUlTQ1ptbnNRckhxWU5WYXp4bDBZV2x4Tg?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 19 Jun 2026 05:42:00 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "MSCI Flags Indonesia Market Accessibility Concerns in Review - Bloomberg",
+      "title": "MSCI Flags Indonesia Market Accessibility Concerns in Review - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxPdkV0Y2Q1TkVfUHFFNS1WS1c2NC1CZFRJR2NqUFAyM2l0dFVQNXVDRTBCV3ByTnEyamtiQ2psWExYR3lEbHhmZzdUTXlHeDM5R253MFMyY09Yb2FOaEZwaUtaVTNGWkc0d3RwdjRFOU9qLWtRLVNyUzhTVDRvejhBRTZ6MGFkamdVUWVpdmFNMkxIWnNKUTZSYkptN0M4dkVHN0xLOGk5R1p2QWxwY0RFSTBRYTQzZw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 21:52:14 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "MSCI Says Low Free-Float Among Many Hurdles for Vietnam Stocks - Bloomberg",
+      "title": "MSCI Says Low Free-Float Among Many Hurdles for Vietnam Stocks - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQLU1Ra3FJMWhwVHMtOURyS1ptazhIM1NqN3ktanhRdEhRQjJET2s5SjlTclVheVdiYkhVbWRHQmEyR0hKYkFBdk1wM0JNTG9hSTUtSG5GRFNsb1ctWWNxdGxOWDJ0ODVEY1ZyVlBwY2VwSkwydEpUdDZzM0g5Mk1jWXJJa3MwLWVCRjBtZEVRTHB6VWJLQ0VRdTNxQ3ZGcHdnVGRxSl83aHlVYkc1eEVmOUo2OA?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 19 Jun 2026 05:19:00 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "CFTC Not Ready for Prediction Market Social Cost, State AGs Say - Bloomberg",
+      "title": "CFTC Not Ready for Prediction Market Social Cost, State AGs Say - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOOVVwQXA3OUJOZU1YOWdrMFZTclltNWFjMXlaVGtaLVFyVzJVS05ER3A1M3RNMENRMEJheENYYUJ2RmhvYUpqUndJcVdwRFQ5WWpEakVxZjdSLTNSRFdYc3pnV0VORWI4SkhGLTRxc0RucUZOY0F1eHFSTUJ3MFRXdENtZzFVV3VIQ0phVEFpdF91ZHVPSlczRTZwQi1MbGNIQmtEWmhncW9FTjdlLXlaUDBxdw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 23:18:48 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Watch Market Attuned to UK Political Changes, Wytenus Says - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxORklPVXdTSnVtcFJLcGJQNDRRNkp5OHk0UTF6czBXMXZfRkhSb0lQYmlLZHhOTmFRLURjelJieHFwaUJSanVEcWFBS0xuOFB1eEZuZzVveUZFZkFEdm0zWEpnQm1hYnoyam42WEtSMTZSbG84SFpNTTZUT2p4cEpOVUtNY0pxWjRLZWJMUWFReUdPbmVZaU1EZmEwZC1uOWMzZzBTYVBQRjhYQQ?oc=5",
-      "source": "Bloomberg",
-      "time": "Fri, 19 Jun 2026 08:28:14 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "US Bond Futures Surge to Drive Wagers on a July Fed Rate Hike - Bloomberg",
+      "title": "US Bond Futures Surge to Drive Wagers on a July Fed Rate Hike - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxNaDBFNTZiVlFSSDJ3LWI5eEdPNkF3NzNrT1NmS2M3amhRTlpoSTltSVBFNzdXRUpMWXlkSHZ0emVtcldxSnhoaTJSM2ZkeF8yWGZyTzlXSlNnNG5vdHpXME9SLVhyQzNCZ3c3NWlxX1dkdmhzSXZETTF5ZEVRMDh6U0tMUE84OTZxM09MaXZZSzJBMVlneFBxRmU4LVItZnVHOVU0Y2pCQUZGUkl6OHdMdWFn?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 20:23:25 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "The Dollar Is Riding High Thanks to a Newly Hawkish Fed - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMirgFBVV95cUxQVDF2MUZHSzhUS2JlYUtWeER4MC1BZkJHTHJzN292N3F3WFZuZExEOWZ3WDY2djRBYUtZUmp4d19IYlNiSV81UldxSDVtM0NucXotOEU5c2tJSHdlMm1qM0o3QlJvdUFJdm56cWhKMWxlYzRoRkRFbEtmVW4wOVptX0lNZ1V4R05PZmRGenVJVXE5Zm1rSzRIeUdkRFp5cFVCSFdhUkFBTGMzVXA2enc?oc=5",
-      "source": "Bloomberg",
-      "time": "Fri, 19 Jun 2026 10:26:19 GMT",
+      "title": "US Stocks Draw Record Weekly Inflows as Investors Pile Into Tech - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxPdUxiQUx0bTNINk0wNWlxUzVnSThPcXV4TU5QQ1cyMldqQm94bVhHYnd0WE9oaDFEcHBQOGJldG15QTZiWE4wZE5SRUx2aTdHSWkzUjREbWtfWDlYZFlzRUNpU1ZMYWtzQzIwRGlWZE9QakVaVEhDOHNHdS12VW0wMmk5STFvOG9JM1VTVHVzRlJXWVk5S2lFeDA3VGtGN1M0dFFESElpLVJrMEFxWENaSWs3c2FaQQ?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 19 Jun 2026 09:34:17 GMT",
       "category": "bloomberg_google"
     }
   ],
@@ -32514,15 +32528,15 @@
       "near_duplicate": false
     },
     {
-      "title": "코스피, 소폭 하락 9천선 턱걸이…장중 변동폭 553p '출렁'(종합)",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0016148980&office_id=001&mode=mainnews&type=&date=2026-06-19&page=1",
-      "source": "연합뉴스",
-      "time": "2026-06-19 16:41:07",
+      "title": "‘1만피 시대’ 기대감?…초고수들은 ‘삼전’과 ‘이것’에 베팅했다",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0002659082&office_id=016&mode=mainnews&type=&date=2026-06-19&page=1",
+      "source": "헤럴드경제",
+      "time": "2026-06-19 21:19:12",
       "category": "market",
-      "sentiment": "negative",
-      "credibility": 1.0,
+      "sentiment": "positive",
+      "credibility": 0.6,
       "urgency": 0.5,
-      "composite_score": 0.8500000000000001,
+      "composite_score": 0.69,
       "near_duplicate": false
     },
     {
@@ -32574,6 +32588,30 @@
       "near_duplicate": false
     },
     {
+      "title": "‘1만피 시대’ 기대감?…초고수들은. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0002659082&office_id=016&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999,
+      "near_duplicate": false
+    },
+    {
+      "title": "1분기 매출 성장률 봤더니, 샌디스크. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001256014&office_id=215&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999,
+      "near_duplicate": false
+    },
+    {
       "title": "'비실비실' 비트코인 … SK하이닉스에 시총 역전당하기도",
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0005696304&office_id=009&mode=mainnews&type=&date=2026-06-19&page=1",
       "source": "매일경제",
@@ -32590,18 +32628,6 @@
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0005696303&office_id=009&mode=mainnews&type=&date=2026-06-19&page=1",
       "source": "매일경제",
       "time": "2026-06-19 17:47:19",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64,
-      "near_duplicate": false
-    },
-    {
-      "title": "스페이스X 쏘아올린 공…국내 우주ETF도 뜬다 [미다스의 손]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001255993&office_id=215&mode=mainnews&type=&date=2026-06-19&page=1",
-      "source": "한국경제TV",
-      "time": "2026-06-19 16:41:05",
       "category": "market",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -32682,6 +32708,18 @@
       "near_duplicate": false
     },
     {
+      "title": "국민연금 2026년 하반기 거래증권사 47개사 선정 \"토종證 저력\" [fn마켓워치]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005537341&office_id=014&mode=mainnews&type=&date=2026-06-19&page=1",
+      "source": "파이낸셜뉴스",
+      "time": "2026-06-19 17:15:12",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56,
+      "near_duplicate": false
+    },
+    {
       "title": "중앙일보, CP 부도…한양증권에 \"상환 어렵다\"",
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0005374533&office_id=008&mode=mainnews&type=&date=2026-06-19&page=1",
       "source": "머니투데이",
@@ -32710,30 +32748,6 @@
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0009013824&office_id=421&mode=mainnews&type=&date=2026-06-19&page=1",
       "source": "뉴스1",
       "time": "2026-06-19 19:42:49",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995,
-      "near_duplicate": false
-    },
-    {
-      "title": "AI 인프라 ETF쏟아진다…삼성·한투, 반도체·배터리·전력기기 등 신규 상장",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001148301&office_id=417&mode=mainnews&type=&date=2026-06-19&page=1",
-      "source": "동행미디어 시대",
-      "time": "2026-06-19 17:21:47",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995,
-      "near_duplicate": false
-    },
-    {
-      "title": "메리츠 \"MBK, 홈플러스로 조단위 수익…회생 확신하면 보증 거부할 이유 없어\"",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0014017270&office_id=003&mode=mainnews&type=&date=2026-06-19&page=1",
-      "source": "뉴시스",
-      "time": "2026-06-19 17:20:28",
       "category": "market",
       "sentiment": "neutral",
       "credibility": 0.5,
@@ -34584,80 +34598,80 @@
       "name_en": "Technology",
       "sector_id": "SEC_TECH",
       "market": "US",
-      "change_pct": 3.1,
+      "change_pct": null,
       "top_stocks": [
         {
-          "name": "Intel",
-          "ticker": "INTC",
-          "change_pct": 10.64
+          "name": "Apple",
+          "ticker": "AAPL",
+          "change_pct": null
         },
         {
-          "name": "Super Micro Computer",
-          "ticker": "SMCI",
-          "change_pct": 10.37
+          "name": "Microsoft",
+          "ticker": "MSFT",
+          "change_pct": null
         },
         {
-          "name": "Qualcomm",
-          "ticker": "QCOM",
-          "change_pct": 6.17
+          "name": "NVIDIA",
+          "ticker": "NVDA",
+          "change_pct": null
         }
       ],
       "stock_count": 14,
-      "heat": "hot",
+      "heat": "cold",
       "rank": 1
-    },
-    {
-      "name": "경기소비재",
-      "name_en": "Consumer Cyclical",
-      "sector_id": "SEC_CYCL",
-      "market": "US",
-      "change_pct": 2.01,
-      "top_stocks": [
-        {
-          "name": "Amazon",
-          "ticker": "AMZN",
-          "change_pct": 2.9
-        },
-        {
-          "name": "Home Depot",
-          "ticker": "HD",
-          "change_pct": 2.08
-        },
-        {
-          "name": "Tesla",
-          "ticker": "TSLA",
-          "change_pct": 1.04
-        }
-      ],
-      "stock_count": 3,
-      "heat": "hot",
-      "rank": 2
     },
     {
       "name": "커뮤니케이션",
       "name_en": "Communication Services",
       "sector_id": "SEC_COMM",
       "market": "US",
-      "change_pct": 1.6,
+      "change_pct": null,
       "top_stocks": [
         {
-          "name": "Walt Disney",
-          "ticker": "DIS",
-          "change_pct": 3.0
+          "name": "Alphabet",
+          "ticker": "GOOGL",
+          "change_pct": null
         },
         {
           "name": "Meta Platforms",
           "ticker": "META",
-          "change_pct": 1.7
+          "change_pct": null
         },
         {
-          "name": "Alphabet",
-          "ticker": "GOOGL",
-          "change_pct": 1.17
+          "name": "Netflix",
+          "ticker": "NFLX",
+          "change_pct": null
         }
       ],
       "stock_count": 4,
-      "heat": "hot",
+      "heat": "cold",
+      "rank": 2
+    },
+    {
+      "name": "경기소비재",
+      "name_en": "Consumer Cyclical",
+      "sector_id": "SEC_CYCL",
+      "market": "US",
+      "change_pct": null,
+      "top_stocks": [
+        {
+          "name": "Amazon",
+          "ticker": "AMZN",
+          "change_pct": null
+        },
+        {
+          "name": "Tesla",
+          "ticker": "TSLA",
+          "change_pct": null
+        },
+        {
+          "name": "Home Depot",
+          "ticker": "HD",
+          "change_pct": null
+        }
+      ],
+      "stock_count": 3,
+      "heat": "cold",
       "rank": 3
     },
     {
@@ -34665,96 +34679,96 @@
       "name_en": "Financial Services",
       "sector_id": "SEC_FIN",
       "market": "US",
-      "change_pct": -0.46,
+      "change_pct": null,
       "top_stocks": [
-        {
-          "name": "SoFi Technologies",
-          "ticker": "SOFI",
-          "change_pct": 2.81
-        },
         {
           "name": "Berkshire Hathaway",
           "ticker": "BRK-B",
-          "change_pct": -0.37
+          "change_pct": null
         },
         {
-          "name": "Bank of America",
-          "ticker": "BAC",
-          "change_pct": -0.58
+          "name": "JPMorgan Chase",
+          "ticker": "JPM",
+          "change_pct": null
+        },
+        {
+          "name": "Visa",
+          "ticker": "V",
+          "change_pct": null
         }
       ],
       "stock_count": 7,
-      "heat": "cool",
+      "heat": "cold",
       "rank": 4
-    },
-    {
-      "name": "필수소비재",
-      "name_en": "Consumer Defensive",
-      "sector_id": "SEC_DEFE",
-      "market": "US",
-      "change_pct": -0.55,
-      "top_stocks": [
-        {
-          "name": "PepsiCo",
-          "ticker": "PEP",
-          "change_pct": 0.3
-        },
-        {
-          "name": "Procter & Gamble",
-          "ticker": "PG",
-          "change_pct": -0.12
-        },
-        {
-          "name": "Coca-Cola",
-          "ticker": "KO",
-          "change_pct": -0.68
-        }
-      ],
-      "stock_count": 5,
-      "heat": "cool",
-      "rank": 5
     },
     {
       "name": "헬스케어",
       "name_en": "Healthcare",
       "sector_id": "SEC_HLTH",
       "market": "US",
-      "change_pct": -1.03,
+      "change_pct": null,
       "top_stocks": [
         {
-          "name": "Thermo Fisher",
-          "ticker": "TMO",
-          "change_pct": 0.63
+          "name": "Eli Lilly",
+          "ticker": "LLY",
+          "change_pct": null
         },
         {
           "name": "UnitedHealth",
           "ticker": "UNH",
-          "change_pct": 0.36
+          "change_pct": null
         },
         {
-          "name": "Eli Lilly",
-          "ticker": "LLY",
-          "change_pct": -1.21
+          "name": "Johnson & Johnson",
+          "ticker": "JNJ",
+          "change_pct": null
         }
       ],
       "stock_count": 6,
-      "heat": "cool",
-      "rank": 6
+      "heat": "cold",
+      "rank": 5
     },
     {
       "name": "에너지",
       "name_en": "Energy",
       "sector_id": "SEC_ENGY",
       "market": "US",
-      "change_pct": -2.08,
+      "change_pct": null,
       "top_stocks": [
         {
           "name": "ExxonMobil",
           "ticker": "XOM",
-          "change_pct": -2.08
+          "change_pct": null
         }
       ],
       "stock_count": 1,
+      "heat": "cold",
+      "rank": 6
+    },
+    {
+      "name": "필수소비재",
+      "name_en": "Consumer Defensive",
+      "sector_id": "SEC_DEFE",
+      "market": "US",
+      "change_pct": null,
+      "top_stocks": [
+        {
+          "name": "Costco",
+          "ticker": "COST",
+          "change_pct": null
+        },
+        {
+          "name": "Procter & Gamble",
+          "ticker": "PG",
+          "change_pct": null
+        },
+        {
+          "name": "PepsiCo",
+          "ticker": "PEP",
+          "change_pct": null
+        }
+      ],
+      "stock_count": 5,
       "heat": "cold",
       "rank": 7
     }
@@ -34765,30 +34779,9 @@
     "cycle_desc": "금리 하락 + 경기 반등 → 성장주/기술주 우위",
     "recommended_sectors": [
       {
-        "name": "기술",
-        "sector_id": "SEC_TECH",
-        "change_pct": 3.1,
-        "reason": "경기 회복기에서 반도체 섹터 유리",
-        "theme": "반도체"
-      },
-      {
-        "name": "경기소비재",
-        "sector_id": "SEC_CYCL",
-        "change_pct": 2.01,
-        "reason": "경기 회복기에서 자동차 섹터 유리",
-        "theme": "자동차"
-      },
-      {
         "name": "게임엔터테인먼트",
         "sector_id": "",
         "change_pct": 1.99,
-        "reason": "경기 회복기에서 IT 섹터 유리",
-        "theme": "IT"
-      },
-      {
-        "name": "커뮤니케이션",
-        "sector_id": "SEC_COMM",
-        "change_pct": 1.6,
         "reason": "경기 회복기에서 IT 섹터 유리",
         "theme": "IT"
       },
@@ -34819,6 +34812,27 @@
         "change_pct": -0.16,
         "reason": "경기 회복기에서 자동차 섹터 유리",
         "theme": "자동차"
+      },
+      {
+        "name": "조선",
+        "sector_id": "",
+        "change_pct": -1.15,
+        "reason": "경기 회복기에서 조선 섹터 유리",
+        "theme": "조선"
+      },
+      {
+        "name": "해운사",
+        "sector_id": "",
+        "change_pct": -1.25,
+        "reason": "경기 회복기에서 조선 섹터 유리",
+        "theme": "조선"
+      },
+      {
+        "name": "건축자재",
+        "sector_id": "",
+        "change_pct": -1.95,
+        "reason": "경기 회복기에서 건설 섹터 유리",
+        "theme": "건설"
       }
     ],
     "avoid_sectors": [
@@ -35048,7 +35062,7 @@
       {
         "level": "INFO",
         "category": "macro",
-        "message": "원달러 1,530원대 — 고환율 수준(참고). 급변 알림은 전일대비 변동 기준",
+        "message": "원달러 1,527원대 — 고환율 수준(참고). 급변 알림은 전일대비 변동 기준",
         "action": null
       },
       {
@@ -35072,7 +35086,7 @@
       {
         "level": "INFO",
         "category": "strategy",
-        "message": "현재 경기 회복기 — 추천 섹터: 기술, 경기소비재, 게임엔터테인먼트",
+        "message": "현재 경기 회복기 — 추천 섹터: 게임엔터테인먼트, 자동차, 디스플레이패널",
         "action": "포트폴리오 내 경기 회복기 우호 섹터 비중 점검"
       },
       {
@@ -35105,7 +35119,7 @@
       "BUY → WATCH 강등 적용. 추격매수 완전 중지, 기존 포지션 축소 검토",
       "차익 실현 또는 목표가 상향 여부 검토"
     ],
-    "portfolio_status": "총자산 수익률 -0.8% | 보유 2종목",
+    "portfolio_status": "총자산 수익률 -0.9% | 보유 2종목",
     "alert_counts": {
       "critical": 2,
       "warning": 2,
@@ -35279,13 +35293,12 @@
     "overall_status": "ok"
   },
   "x_sentiment": {
-    "score": 39,
+    "score": 40,
     "positive": 5,
-    "negative": 13,
-    "neutral": 2,
+    "negative": 12,
+    "neutral": 3,
     "tweet_count": 20,
     "tweets": [
-      "이 대통령 &quot;답답해 하는 트럼프에 '핵 동결', '제재 무용' 설명&quot;",
       "\"Trump tariff trade\" - Google News",
       "European parliament finally approves Trump tariff deal - The Guardian",
       "EU approves US trade deal to avert Trump tariffs - Washington Examiner",
@@ -35294,12 +35307,13 @@
       "비트코인 하락 속 거래소 규제 확산…유동성, DEX로 이동하나",
       "[일문일답] 李대통령 &quot;같은 진영서 경쟁해야지, 전쟁하면 되나&quot;-2",
       "WATCH: New Fed chair Kevin Warsh holds first news conference after leaving interest rate unchanged - PBS",
-      "Fed Holds Rates and Leans Toward Fighting Inflation With Future Increases - The New York Times"
+      "Fed Holds Rates and Leans Toward Fighting Inflation With Future Increases - The New York Times",
+      "SpaceX posts first losing day as stock sinks 5%, losing momentum after a multiday rally - CNBC"
     ],
     "key_figures": [
       {
         "name": "트럼프",
-        "mentions": 4,
+        "mentions": 3,
         "mood": "부정"
       },
       {
@@ -35311,14 +35325,14 @@
         "name": "마이클 버리",
         "mentions": 1,
         "mood": "부정"
+      },
+      {
+        "name": "일론 머스크",
+        "mentions": 1,
+        "mood": "중립"
       }
     ],
     "top_signals": [
-      {
-        "text": "이 대통령 &quot;답답해 하는 트럼프에 '핵 동결', '제재 무용' 설명&quot;",
-        "figure": "트럼프",
-        "label": "negative"
-      },
       {
         "text": "\"Trump tariff trade\" - Google News",
         "figure": "트럼프",
@@ -35337,6 +35351,11 @@
       {
         "text": "Warren Buffett Just Tripled Down on the Stock Bill Ackman Is",
         "figure": "빌 애크먼",
+        "label": "negative"
+      },
+      {
+        "text": "마이클 버리 &quot;스페이스X 주가 비상식적...그래도 하락 베팅 안한다&quot;",
+        "figure": "마이클 버리",
         "label": "negative"
       }
     ]
@@ -36457,12 +36476,12 @@
     },
     "btc_nasdaq_corr": {
       "ok": false,
-      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1777981568798&end"
+      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1777986224599&end"
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 261236872472.74884,
-      "total_mcap_b": 261.2,
+      "total_mcap_usd": 261254465036.43146,
+      "total_mcap_b": 261.3,
       "usdt_mcap_b": 186.3,
       "usdc_mcap_b": 74.9
     },
@@ -44236,18 +44255,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "전기제품",
-        "항공화물운송과물류",
         "게임엔터테인먼트",
+        "항공화물운송과물류",
+        "생명보험",
         "석유와가스",
-        "생명보험"
+        "전기제품"
       ],
       "rotation_out": [
-        "소프트웨어",
-        "전자장비와기기",
         "조선",
+        "담배",
         "가정용품",
-        "담배"
+        "전자장비와기기",
+        "소프트웨어"
       ],
       "required_days": 30,
       "actual_span_days": 30,
@@ -44285,18 +44304,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "전기제품",
-        "항공화물운송과물류",
         "게임엔터테인먼트",
+        "항공화물운송과물류",
+        "생명보험",
         "석유와가스",
-        "생명보험"
+        "전기제품"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
-        "조선",
         "무역회사와판매업체",
         "통신장비",
-        "건설"
+        "건설",
+        "에너지장비및서비스",
+        "조선"
       ],
       "required_days": 90,
       "actual_span_days": 75,
@@ -55056,9 +55075,250 @@
     },
     "news": [],
     "breaking": [],
-    "timestamp": "2026-06-19T20:44:58.790740+09:00"
+    "timestamp": "2026-06-19T22:03:06.546645+09:00"
   },
-  "kis_us_snapshots": {},
+  "kis_us_snapshots": {
+    "XOM": {
+      "price": {
+        "current": 0.0,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 0,
+        "amount": 0.0,
+        "high_52w": 0.0,
+        "low_52w": 0.0,
+        "per": 0.0,
+        "pbr": 0.0,
+        "eps": 0.0,
+        "market_cap": 0.0,
+        "source": "kis"
+      }
+    },
+    "CSCO": {
+      "price": {
+        "current": 119.54,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 52284353,
+        "amount": 6230762431.0,
+        "high_52w": 130.3656,
+        "low_52w": 63.909,
+        "per": 38.97,
+        "pbr": 9.64,
+        "eps": 3.07,
+        "market_cap": 471158542200.0,
+        "source": "kis"
+      }
+    },
+    "UNH": {
+      "price": {
+        "current": 0.0,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 0,
+        "amount": 0.0,
+        "high_52w": 0.0,
+        "low_52w": 0.0,
+        "per": 0.0,
+        "pbr": 0.0,
+        "eps": 0.0,
+        "market_cap": 0.0,
+        "source": "kis"
+      }
+    },
+    "QCOM": {
+      "price": {
+        "current": 226.11,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 47081544,
+        "amount": 10604911763.0,
+        "high_52w": 258.9635,
+        "low_52w": 121.5411,
+        "per": 24.59,
+        "pbr": 8.78,
+        "eps": 9.19,
+        "market_cap": 238319940000.0,
+        "source": "kis"
+      }
+    },
+    "MSFT": {
+      "price": {
+        "current": 379.4,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 59714157,
+        "amount": 22588242830.0,
+        "high_52w": 551.0489,
+        "low_52w": 355.5101,
+        "per": 22.6,
+        "pbr": 6.8,
+        "eps": 16.79,
+        "market_cap": 2818346342000.0,
+        "source": "kis"
+      }
+    },
+    "META": {
+      "price": {
+        "current": 577.22,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 28824630,
+        "amount": 16574572978.0,
+        "high_52w": 794.1847,
+        "low_52w": 519.7782,
+        "per": 20.98,
+        "pbr": 6.01,
+        "eps": 27.51,
+        "market_cap": 1267603981000.0,
+        "source": "kis"
+      }
+    },
+    "JNJ": {
+      "price": {
+        "current": 0.0,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 0,
+        "amount": 0.0,
+        "high_52w": 0.0,
+        "low_52w": 0.0,
+        "per": 0.0,
+        "pbr": 0.0,
+        "eps": 0.0,
+        "market_cap": 0.0,
+        "source": "kis"
+      }
+    },
+    "GOOGL": {
+      "price": {
+        "current": 368.03,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 44470070,
+        "amount": 16303362358.0,
+        "high_52w": 408.3661,
+        "low_52w": 161.5391,
+        "per": 28.07,
+        "pbr": 9.31,
+        "eps": 13.11,
+        "market_cap": 2143406720000.0,
+        "source": "kis"
+      }
+    },
+    "ADBE": {
+      "price": {
+        "current": 195.16,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 15852478,
+        "amount": 3085525301.0,
+        "high_52w": 392.58,
+        "low_52w": 190.12,
+        "per": 11.16,
+        "pbr": 6.76,
+        "eps": 17.48,
+        "market_cap": 77576100000.0,
+        "source": "kis"
+      }
+    },
+    "DIS": {
+      "price": {
+        "current": 0.0,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 0,
+        "amount": 0.0,
+        "high_52w": 0.0,
+        "low_52w": 0.0,
+        "per": 0.0,
+        "pbr": 0.0,
+        "eps": 0.0,
+        "market_cap": 0.0,
+        "source": "kis"
+      }
+    },
+    "PG": {
+      "price": {
+        "current": 0.0,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 0,
+        "amount": 0.0,
+        "high_52w": 0.0,
+        "low_52w": 0.0,
+        "per": 0.0,
+        "pbr": 0.0,
+        "eps": 0.0,
+        "market_cap": 0.0,
+        "source": "kis"
+      }
+    },
+    "TMO": {
+      "price": {
+        "current": 0.0,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 0,
+        "amount": 0.0,
+        "high_52w": 0.0,
+        "low_52w": 0.0,
+        "per": 0.0,
+        "pbr": 0.0,
+        "eps": 0.0,
+        "market_cap": 0.0,
+        "source": "kis"
+      }
+    },
+    "WMT": {
+      "price": {
+        "current": 117.18,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 36526766,
+        "amount": 4287473163.0,
+        "high_52w": 135.155,
+        "low_52w": 93.5008,
+        "per": 41.28,
+        "pbr": 9.89,
+        "eps": 2.84,
+        "market_cap": 932527814400.0,
+        "source": "kis"
+      }
+    },
+    "AMZN": {
+      "price": {
+        "current": 244.39,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 75624415,
+        "amount": 18493666317.0,
+        "high_52w": 278.56,
+        "low_52w": 196.0,
+        "per": 29.21,
+        "pbr": 5.95,
+        "eps": 8.37,
+        "market_cap": 2628927669000.0,
+        "source": "kis"
+      }
+    },
+    "COIN": {
+      "price": {
+        "current": 163.26,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "volume": 9826780,
+        "amount": 1612567227.0,
+        "high_52w": 444.645,
+        "low_52w": 139.36,
+        "per": 61.39,
+        "pbr": 3.19,
+        "eps": 2.66,
+        "market_cap": 36313432020.0,
+        "source": "kis"
+      }
+    }
+  },
   "bonds": {
     "yield_curves": {
       "kr": {
@@ -55181,7 +55441,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "229200",
@@ -55198,7 +55458,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "102110",
@@ -55215,7 +55475,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "371460",
@@ -55232,7 +55492,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "305720",
@@ -55249,7 +55509,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "091160",
@@ -55266,7 +55526,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "381180",
@@ -55283,7 +55543,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "379800",
@@ -55300,7 +55560,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "379810",
@@ -55317,7 +55577,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "133690",
@@ -55334,7 +55594,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "148070",
@@ -55351,7 +55611,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "152380",
@@ -55368,7 +55628,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "304660",
@@ -55385,7 +55645,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "261240",
@@ -55402,7 +55662,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "132030",
@@ -55419,7 +55679,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "130680",
@@ -55436,7 +55696,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "122630",
@@ -55453,7 +55713,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "252670",
@@ -55470,7 +55730,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "114800",
@@ -55487,7 +55747,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "091170",
@@ -55504,7 +55764,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "139260",
@@ -55521,7 +55781,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "117700",
@@ -55538,7 +55798,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "143860",
@@ -55555,7 +55815,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "266370",
@@ -55572,7 +55832,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "364690",
@@ -55589,7 +55849,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       }
     ],
     "us_top": [
@@ -55606,7 +55866,7 @@
         },
         "aum": 783796404224,
         "dividend_yield": 0.0098,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "QQQ",
@@ -55621,7 +55881,7 @@
         },
         "aum": 493987528704,
         "dividend_yield": 0.0038,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "IWM",
@@ -55636,7 +55896,7 @@
         },
         "aum": 80933363712,
         "dividend_yield": 0.0087,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "VTI",
@@ -55651,7 +55911,7 @@
         },
         "aum": 2308925030400,
         "dividend_yield": 0.0101,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "EFA",
@@ -55666,7 +55926,7 @@
         },
         "aum": 77424812032,
         "dividend_yield": 0.031,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "EEM",
@@ -55681,7 +55941,7 @@
         },
         "aum": 30325661696,
         "dividend_yield": 0.0177,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "VWO",
@@ -55696,7 +55956,7 @@
         },
         "aum": 162822127616,
         "dividend_yield": 0.0243,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "XLF",
@@ -55711,7 +55971,7 @@
         },
         "aum": 49419214848,
         "dividend_yield": 0.0154,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "XLK",
@@ -55726,7 +55986,7 @@
         },
         "aum": 124515713024,
         "dividend_yield": 0.004,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "XLE",
@@ -55741,7 +56001,7 @@
         },
         "aum": 38671941632,
         "dividend_yield": 0.0265,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "GLD",
@@ -55755,7 +56015,7 @@
           "1Y": null
         },
         "aum": 150367518720,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "SLV",
@@ -55769,7 +56029,7 @@
           "1Y": null
         },
         "aum": 36822409216,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "USO",
@@ -55783,7 +56043,7 @@
           "1Y": null
         },
         "aum": 1705716992,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "DIA",
@@ -55798,7 +56058,7 @@
         },
         "aum": 44786040832,
         "dividend_yield": 0.0137,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       },
       {
         "ticker": "ARKK",
@@ -55812,7 +56072,7 @@
           "1Y": null
         },
         "aum": 7262198784,
-        "updated_at": "2026-06-19T21:58:24+09:00"
+        "updated_at": "2026-06-19T20:42:52+09:00"
       }
     ],
     "us_bond": [
@@ -55829,7 +56089,7 @@
         },
         "aum": 42895949824,
         "dividend_yield": 0.0455,
-        "updated_at": "2026-06-19T21:58:29+09:00"
+        "updated_at": "2026-06-19T20:42:57+09:00"
       },
       {
         "ticker": "IEF",
@@ -55844,7 +56104,7 @@
         },
         "aum": 48318722048,
         "dividend_yield": 0.0387,
-        "updated_at": "2026-06-19T21:58:29+09:00"
+        "updated_at": "2026-06-19T20:42:57+09:00"
       },
       {
         "ticker": "SHY",
@@ -55859,7 +56119,7 @@
         },
         "aum": 25434476544,
         "dividend_yield": 0.0371,
-        "updated_at": "2026-06-19T21:58:29+09:00"
+        "updated_at": "2026-06-19T20:42:57+09:00"
       },
       {
         "ticker": "AGG",
@@ -55874,7 +56134,7 @@
         },
         "aum": 136455700480,
         "dividend_yield": 0.0396,
-        "updated_at": "2026-06-19T21:58:29+09:00"
+        "updated_at": "2026-06-19T20:42:57+09:00"
       },
       {
         "ticker": "BND",
@@ -55889,7 +56149,7 @@
         },
         "aum": 394429661184,
         "dividend_yield": 0.0394,
-        "updated_at": "2026-06-19T21:58:29+09:00"
+        "updated_at": "2026-06-19T20:42:57+09:00"
       },
       {
         "ticker": "LQD",
@@ -55904,7 +56164,7 @@
         },
         "aum": 29782712320,
         "dividend_yield": 0.0452,
-        "updated_at": "2026-06-19T21:58:29+09:00"
+        "updated_at": "2026-06-19T20:42:57+09:00"
       },
       {
         "ticker": "HYG",
@@ -55919,7 +56179,7 @@
         },
         "aum": 16106322944,
         "dividend_yield": 0.0584,
-        "updated_at": "2026-06-19T21:58:29+09:00"
+        "updated_at": "2026-06-19T20:42:57+09:00"
       },
       {
         "ticker": "JNK",
@@ -55934,7 +56194,7 @@
         },
         "aum": 7700293120,
         "dividend_yield": 0.0659,
-        "updated_at": "2026-06-19T21:58:29+09:00"
+        "updated_at": "2026-06-19T20:42:57+09:00"
       },
       {
         "ticker": "TIP",
@@ -55949,7 +56209,7 @@
         },
         "aum": 15087474688,
         "dividend_yield": 0.0281,
-        "updated_at": "2026-06-19T21:58:29+09:00"
+        "updated_at": "2026-06-19T20:42:57+09:00"
       },
       {
         "ticker": "EMB",
@@ -55964,34 +56224,10 @@
         },
         "aum": 14162584576,
         "dividend_yield": 0.0504,
-        "updated_at": "2026-06-19T21:58:29+09:00"
+        "updated_at": "2026-06-19T20:42:57+09:00"
       }
     ],
     "overall_top20": [
-      {
-        "ticker": "XLK",
-        "name": "Technology Select Sector SPDR",
-        "category": "sector_tech",
-        "close": 185.8,
-        "volume": 14396100,
-        "returns": {
-          "1M": 5.41,
-          "3M": 35.99,
-          "1Y": null
-        },
-        "aum": 124515713024,
-        "dividend_yield": 0.004,
-        "updated_at": "2026-06-19T21:58:24+09:00",
-        "factor_scores": {
-          "momentum": 92.99,
-          "value": 50.0,
-          "quality": 85.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 78.8,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505546"
-      },
       {
         "ticker": "069500",
         "name": "KODEX 200",
@@ -56007,16 +56243,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505208"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "229200",
@@ -56033,16 +56260,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505229"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "102110",
@@ -56059,16 +56277,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505242"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "371460",
@@ -56085,16 +56294,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505255"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "305720",
@@ -56111,16 +56311,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505266"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "091160",
@@ -56137,16 +56328,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505277"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "381180",
@@ -56163,16 +56345,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505287"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "379800",
@@ -56189,16 +56362,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505307"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "379810",
@@ -56215,16 +56379,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505319"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "133690",
@@ -56241,16 +56396,41 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
+        "updated_at": "2026-06-19T20:42:51+09:00"
+      },
+      {
+        "ticker": "148070",
+        "name": "KIWOOM 국고채10년",
+        "category": "bond_kr",
+        "close": 105310.0,
+        "change_pct": -0.26,
+        "volume": 7482,
+        "aum": 398808970000,
+        "nav": 105269.79,
+        "returns": {
+          "1M": null,
+          "3M": null,
+          "1Y": null
         },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505330"
+        "bas_dd": "20260618",
+        "updated_at": "2026-06-19T20:42:51+09:00"
+      },
+      {
+        "ticker": "152380",
+        "name": "KODEX 국채선물10년",
+        "category": "bond_kr",
+        "close": 65450.0,
+        "change_pct": -0.24,
+        "volume": 1172,
+        "aum": 24740100000,
+        "nav": 65378.87,
+        "returns": {
+          "1M": null,
+          "3M": null,
+          "1Y": null
+        },
+        "bas_dd": "20260618",
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "304660",
@@ -56267,16 +56447,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505359"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "261240",
@@ -56293,94 +56464,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505369"
-      },
-      {
-        "ticker": "091170",
-        "name": "KODEX 은행",
-        "category": "sector_financial",
-        "close": 15705.0,
-        "change_pct": -0.91,
-        "volume": 1228059,
-        "aum": 557527500000,
-        "nav": 15650.57,
-        "returns": {
-          "1M": null,
-          "3M": null,
-          "1Y": null
-        },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505397"
-      },
-      {
-        "ticker": "139260",
-        "name": "TIGER 200 IT",
-        "category": "sector_tech",
-        "close": 200320.0,
-        "change_pct": 4.53,
-        "volume": 3098145,
-        "aum": 3485568000000,
-        "nav": 200876.61,
-        "returns": {
-          "1M": null,
-          "3M": null,
-          "1Y": null
-        },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505406"
-      },
-      {
-        "ticker": "117700",
-        "name": "KODEX 건설",
-        "category": "sector",
-        "close": 7495.0,
-        "change_pct": -5.01,
-        "volume": 3727014,
-        "aum": 229347000000,
-        "nav": 7469.85,
-        "returns": {
-          "1M": null,
-          "3M": null,
-          "1Y": null
-        },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505414"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "132030",
@@ -56397,42 +56481,7 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 99.6
-        },
-        "verity_etf_score": 76.86,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505379"
-      },
-      {
-        "ticker": "266370",
-        "name": "KODEX IT",
-        "category": "dividend",
-        "close": 97330.0,
-        "change_pct": 4.57,
-        "volume": 76669,
-        "aum": 145995000000,
-        "nav": 97158.33,
-        "returns": {
-          "1M": null,
-          "3M": null,
-          "1Y": null
-        },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 97.69
-        },
-        "verity_etf_score": 76.57,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505432"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
         "ticker": "130680",
@@ -56449,45 +56498,78 @@
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 93.66
-        },
-        "verity_etf_score": 75.95,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505388"
+        "updated_at": "2026-06-19T20:42:51+09:00"
       },
       {
-        "ticker": "143860",
-        "name": "TIGER 헬스케어",
-        "category": "sector",
-        "close": 40775.0,
-        "change_pct": -2.37,
-        "volume": 35641,
-        "aum": 163100000000,
-        "nav": 40751.3,
+        "ticker": "122630",
+        "name": "KODEX 레버리지",
+        "category": "leverage",
+        "close": 234825.0,
+        "change_pct": 7.04,
+        "volume": 13613473,
+        "aum": 11682543750000,
+        "nav": 233365.24,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
         "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 91.04
+        "updated_at": "2026-06-19T20:42:51+09:00"
+      },
+      {
+        "ticker": "252670",
+        "name": "KODEX 200선물인버스2X",
+        "category": "inverse",
+        "close": 64.0,
+        "change_pct": -5.88,
+        "volume": 7331326999,
+        "aum": 768230400000,
+        "nav": 64.42,
+        "returns": {
+          "1M": null,
+          "3M": null,
+          "1Y": null
         },
-        "verity_etf_score": 75.54,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505423"
+        "bas_dd": "20260618",
+        "updated_at": "2026-06-19T20:42:51+09:00"
+      },
+      {
+        "ticker": "114800",
+        "name": "KODEX 인버스",
+        "category": "inverse",
+        "close": 861.0,
+        "change_pct": -3.48,
+        "volume": 696502675,
+        "aum": 873054000000,
+        "nav": 865.89,
+        "returns": {
+          "1M": null,
+          "3M": null,
+          "1Y": null
+        },
+        "bas_dd": "20260618",
+        "updated_at": "2026-06-19T20:42:51+09:00"
+      },
+      {
+        "ticker": "091170",
+        "name": "KODEX 은행",
+        "category": "sector_financial",
+        "close": 15705.0,
+        "change_pct": -0.91,
+        "volume": 1228059,
+        "aum": 557527500000,
+        "nav": 15650.57,
+        "returns": {
+          "1M": null,
+          "3M": null,
+          "1Y": null
+        },
+        "bas_dd": "20260618",
+        "updated_at": "2026-06-19T20:42:51+09:00"
       }
     ],
-    "updated_at": "2026-06-19T21:58:32+09:00"
+    "updated_at": "2026-06-19T20:43:00+09:00"
   },
   "bond_analysis": {
     "analyzed_at": "2026-06-19T20:42:51.029045+09:00",
@@ -56539,45 +56621,44 @@
   "etf_screening": {
     "overall_top20": [
       {
-        "ticker": "XLK",
-        "name": "Technology Select Sector SPDR",
-        "category": "sector_tech",
-        "close": 185.8,
-        "volume": 14396100,
+        "ticker": "USO",
+        "name": "United States Oil Fund",
+        "category": "commodity_oil",
+        "close": 134.97,
+        "volume": 15680300,
         "returns": {
-          "1M": 5.41,
-          "3M": 35.99,
+          "1M": -2.25,
+          "3M": 79.17,
           "1Y": null
         },
-        "aum": 124515713024,
-        "dividend_yield": 0.004,
-        "updated_at": "2026-06-19T21:58:24+09:00",
+        "aum": 1942278400,
+        "updated_at": "2026-05-08T19:52:39+09:00",
         "factor_scores": {
-          "momentum": 92.99,
+          "momentum": 100.0,
           "value": 50.0,
-          "quality": 85.0,
+          "quality": 92.88,
           "liquidity": 100.0
         },
-        "verity_etf_score": 78.8,
+        "verity_etf_score": 83.22,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505546"
+        "screened_at": "2026-05-08T10:52:52.303413"
       },
       {
         "ticker": "069500",
         "name": "KODEX 200",
         "category": "equity_domestic",
-        "close": 146945.0,
-        "change_pct": 3.44,
-        "volume": 20153826,
-        "aum": 32754040500000,
-        "nav": 146823.82,
+        "close": 115620.0,
+        "change_pct": 2.07,
+        "volume": 26974175,
+        "aum": 25014387000000,
+        "nav": 115637.16,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -56586,24 +56667,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505208"
+        "screened_at": "2026-05-08T10:52:52.302930"
       },
       {
         "ticker": "229200",
         "name": "KODEX 코스닥150",
         "category": "equity_domestic",
-        "close": 17650.0,
-        "change_pct": -3.1,
-        "volume": 19545700,
-        "aum": 5153800000000,
-        "nav": 17703.96,
+        "close": 20050.0,
+        "change_pct": -0.91,
+        "volume": 26398107,
+        "aum": 6148332500000,
+        "nav": 20136.43,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -56612,24 +56693,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505229"
+        "screened_at": "2026-05-08T10:52:52.302955"
       },
       {
         "ticker": "102110",
         "name": "TIGER 200",
         "category": "equity_domestic",
-        "close": 146705.0,
-        "change_pct": 3.4,
-        "volume": 3944629,
-        "aum": 12858693250000,
-        "nav": 146922.35,
+        "close": 115630.0,
+        "change_pct": 2.17,
+        "volume": 8845148,
+        "aum": 10111843500000,
+        "nav": 115652.18,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -56638,24 +56719,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505242"
+        "screened_at": "2026-05-08T10:52:52.302971"
       },
       {
         "ticker": "371460",
         "name": "TIGER 차이나전기차SOLACTIVE",
         "category": "equity_foreign",
-        "close": 13000.0,
-        "change_pct": -0.08,
-        "volume": 591534,
-        "aum": 1036880000000,
-        "nav": 13272.32,
+        "close": 14490.0,
+        "change_pct": -0.65,
+        "volume": 635665,
+        "aum": 1322067600000,
+        "nav": 14742.21,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -56664,24 +56745,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505255"
+        "screened_at": "2026-05-08T10:52:52.302986"
       },
       {
         "ticker": "305720",
         "name": "KODEX 2차전지산업",
         "category": "thematic",
-        "close": 17055.0,
-        "change_pct": -4.45,
-        "volume": 3234680,
-        "aum": 1920393000000,
-        "nav": 17039.19,
+        "close": 22700.0,
+        "change_pct": -0.39,
+        "volume": 9350962,
+        "aum": 2601420000000,
+        "nav": 22827.9,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -56690,24 +56771,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505266"
+        "screened_at": "2026-05-08T10:52:52.302999"
       },
       {
         "ticker": "091160",
         "name": "KODEX 반도체",
         "category": "thematic",
-        "close": 182500.0,
-        "change_pct": 3.72,
-        "volume": 4285627,
-        "aum": 7208750000000,
-        "nav": 181800.62,
+        "close": 142100.0,
+        "change_pct": 1.49,
+        "volume": 7158285,
+        "aum": 6209770000000,
+        "nav": 142227.55,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -56716,24 +56797,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505277"
+        "screened_at": "2026-05-08T10:52:52.303012"
       },
       {
         "ticker": "381180",
         "name": "TIGER 미국필라델피아반도체나스닥",
         "category": "equity_foreign",
-        "close": 55030.0,
-        "change_pct": 2.15,
-        "volume": 2952157,
-        "aum": 7030082500000,
-        "nav": 53777.75,
+        "close": 43475.0,
+        "change_pct": 2.29,
+        "volume": 1702337,
+        "aum": 5184393750000,
+        "nav": 43596.49,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -56742,24 +56823,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505287"
+        "screened_at": "2026-05-08T10:52:52.303026"
       },
       {
         "ticker": "379800",
         "name": "KODEX 미국S&P500",
         "category": "equity_foreign",
-        "close": 25830.0,
-        "change_pct": 0.23,
-        "volume": 38393227,
-        "aum": 10040121000000,
-        "nav": 25642.23,
+        "close": 24200.0,
+        "change_pct": 1.06,
+        "volume": 31972834,
+        "aum": 8859620000000,
+        "nav": 24197.77,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -56768,24 +56849,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505307"
+        "screened_at": "2026-05-08T10:52:52.303049"
       },
       {
         "ticker": "379810",
         "name": "KODEX 미국나스닥100",
         "category": "equity_foreign",
-        "close": 30425.0,
-        "change_pct": 0.5,
-        "volume": 19420447,
-        "aum": 8978417500000,
-        "nav": 30061.81,
+        "close": 27560.0,
+        "change_pct": 1.29,
+        "volume": 10176823,
+        "aum": 7154576000000,
+        "nav": 27558.9,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -56794,24 +56875,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505319"
+        "screened_at": "2026-05-08T10:52:52.303064"
       },
       {
         "ticker": "133690",
         "name": "TIGER 미국나스닥100",
         "category": "equity_foreign",
-        "close": 203160.0,
-        "change_pct": 0.49,
-        "volume": 3475919,
-        "aum": 11576056800000,
-        "nav": 200739.46,
+        "close": 184085.0,
+        "change_pct": 1.24,
+        "volume": 1581176,
+        "aum": 9557693200000,
+        "nav": 184116.96,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -56820,24 +56901,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505330"
+        "screened_at": "2026-05-08T10:52:52.303077"
       },
       {
         "ticker": "304660",
         "name": "KODEX 미국30년국채울트라선물(H)",
         "category": "bond_us",
-        "close": 7570.0,
-        "change_pct": 0.46,
-        "volume": 153957,
-        "aum": 158213000000,
-        "nav": 7575.38,
+        "close": 7525.0,
+        "change_pct": 0.4,
+        "volume": 122055,
+        "aum": 177590000000,
+        "nav": 7546.52,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -56846,215 +56927,215 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505359"
-      },
-      {
-        "ticker": "261240",
-        "name": "KODEX 미국달러선물",
-        "category": "bond_us",
-        "close": 15665.0,
-        "change_pct": 0.8,
-        "volume": 343683,
-        "aum": 64069850000,
-        "nav": 15685.51,
-        "returns": {
-          "1M": null,
-          "3M": null,
-          "1Y": null
-        },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505369"
-      },
-      {
-        "ticker": "091170",
-        "name": "KODEX 은행",
-        "category": "sector_financial",
-        "close": 15705.0,
-        "change_pct": -0.91,
-        "volume": 1228059,
-        "aum": 557527500000,
-        "nav": 15650.57,
-        "returns": {
-          "1M": null,
-          "3M": null,
-          "1Y": null
-        },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505397"
-      },
-      {
-        "ticker": "139260",
-        "name": "TIGER 200 IT",
-        "category": "sector_tech",
-        "close": 200320.0,
-        "change_pct": 4.53,
-        "volume": 3098145,
-        "aum": 3485568000000,
-        "nav": 200876.61,
-        "returns": {
-          "1M": null,
-          "3M": null,
-          "1Y": null
-        },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505406"
-      },
-      {
-        "ticker": "117700",
-        "name": "KODEX 건설",
-        "category": "sector",
-        "close": 7495.0,
-        "change_pct": -5.01,
-        "volume": 3727014,
-        "aum": 229347000000,
-        "nav": 7469.85,
-        "returns": {
-          "1M": null,
-          "3M": null,
-          "1Y": null
-        },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
-        "factor_scores": {
-          "momentum": null,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 76.92,
-        "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505414"
+        "screened_at": "2026-05-08T10:52:52.303125"
       },
       {
         "ticker": "132030",
         "name": "KODEX 골드선물(H)",
         "category": "commodity_gold",
-        "close": 24290.0,
-        "change_pct": -0.49,
-        "volume": 95447,
-        "aum": 361921000000,
-        "nav": 24582.7,
+        "close": 26730.0,
+        "change_pct": 1.12,
+        "volume": 147559,
+        "aum": 435699000000,
+        "nav": 26569.85,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
           "quality": 100.0,
-          "liquidity": 99.6
+          "liquidity": 100.0
         },
-        "verity_etf_score": 76.86,
+        "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505379"
+        "screened_at": "2026-05-08T10:52:52.303147"
+      },
+      {
+        "ticker": "091170",
+        "name": "KODEX 은행",
+        "category": "sector_financial",
+        "close": 15830.0,
+        "change_pct": 1.09,
+        "volume": 1436531,
+        "aum": 467776500000,
+        "nav": 15838.42,
+        "returns": {
+          "1M": null,
+          "3M": null,
+          "1Y": null
+        },
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
+        "factor_scores": {
+          "momentum": null,
+          "value": 50.0,
+          "quality": 100.0,
+          "liquidity": 100.0
+        },
+        "verity_etf_score": 76.92,
+        "signal": "STRONG_BUY",
+        "screened_at": "2026-05-08T10:52:52.303169"
+      },
+      {
+        "ticker": "139260",
+        "name": "TIGER 200 IT",
+        "category": "sector_tech",
+        "close": 136325.0,
+        "change_pct": 1.51,
+        "volume": 2247133,
+        "aum": 1668618000000,
+        "nav": 135187.22,
+        "returns": {
+          "1M": null,
+          "3M": null,
+          "1Y": null
+        },
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
+        "factor_scores": {
+          "momentum": null,
+          "value": 50.0,
+          "quality": 100.0,
+          "liquidity": 100.0
+        },
+        "verity_etf_score": 76.92,
+        "signal": "STRONG_BUY",
+        "screened_at": "2026-05-08T10:52:52.303179"
+      },
+      {
+        "ticker": "117700",
+        "name": "KODEX 건설",
+        "category": "sector",
+        "close": 9730.0,
+        "change_pct": 6.34,
+        "volume": 13945944,
+        "aum": 304549000000,
+        "nav": 9724.49,
+        "returns": {
+          "1M": null,
+          "3M": null,
+          "1Y": null
+        },
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
+        "factor_scores": {
+          "momentum": null,
+          "value": 50.0,
+          "quality": 100.0,
+          "liquidity": 100.0
+        },
+        "verity_etf_score": 76.92,
+        "signal": "STRONG_BUY",
+        "screened_at": "2026-05-08T10:52:52.303190"
       },
       {
         "ticker": "266370",
         "name": "KODEX IT",
         "category": "dividend",
-        "close": 97330.0,
-        "change_pct": 4.57,
-        "volume": 76669,
-        "aum": 145995000000,
-        "nav": 97158.33,
+        "close": 68215.0,
+        "change_pct": 1.05,
+        "volume": 202589,
+        "aum": 88679500000,
+        "nav": 68501.2,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
           "quality": 100.0,
-          "liquidity": 97.69
+          "liquidity": 100.0
         },
-        "verity_etf_score": 76.57,
+        "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505432"
+        "screened_at": "2026-05-08T10:52:52.303213"
       },
       {
         "ticker": "130680",
         "name": "TIGER 원유선물Enhanced(H)",
         "category": "commodity",
-        "close": 6000.0,
-        "change_pct": -2.44,
-        "volume": 48218,
-        "aum": 13800000000,
-        "nav": 6207.34,
+        "close": 7170.0,
+        "change_pct": -4.84,
+        "volume": 89808,
+        "aum": 18642000000,
+        "nav": 7174.43,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
           "quality": 100.0,
-          "liquidity": 93.66
+          "liquidity": 99.07
         },
-        "verity_etf_score": 75.95,
+        "verity_etf_score": 76.78,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505388"
+        "screened_at": "2026-05-08T10:52:52.303158"
+      },
+      {
+        "ticker": "261240",
+        "name": "KODEX 미국달러선물",
+        "category": "bond_us",
+        "close": 14885.0,
+        "change_pct": 0.0,
+        "volume": 78790,
+        "aum": 67875600000,
+        "nav": 14863.07,
+        "returns": {
+          "1M": null,
+          "3M": null,
+          "1Y": null
+        },
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
+        "factor_scores": {
+          "momentum": null,
+          "value": 50.0,
+          "quality": 100.0,
+          "liquidity": 97.93
+        },
+        "verity_etf_score": 76.6,
+        "signal": "STRONG_BUY",
+        "screened_at": "2026-05-08T10:52:52.303137"
       },
       {
         "ticker": "143860",
         "name": "TIGER 헬스케어",
         "category": "sector",
-        "close": 40775.0,
-        "change_pct": -2.37,
-        "volume": 35641,
-        "aum": 163100000000,
-        "nav": 40751.3,
+        "close": 45650.0,
+        "change_pct": -0.66,
+        "volume": 76144,
+        "aum": 185339000000,
+        "nav": 45734.77,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
           "quality": 100.0,
-          "liquidity": 91.04
+          "liquidity": 97.63
         },
-        "verity_etf_score": 75.54,
+        "verity_etf_score": 76.56,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505423"
+        "screened_at": "2026-05-08T10:52:52.303201"
       }
     ],
     "kr_equity_top10": [
@@ -57062,18 +57143,18 @@
         "ticker": "069500",
         "name": "KODEX 200",
         "category": "equity_domestic",
-        "close": 146945.0,
-        "change_pct": 3.44,
-        "volume": 20153826,
-        "aum": 32754040500000,
-        "nav": 146823.82,
+        "close": 115620.0,
+        "change_pct": 2.07,
+        "volume": 26974175,
+        "aum": 25014387000000,
+        "nav": 115637.16,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -57082,24 +57163,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505748"
+        "screened_at": "2026-05-08T10:52:52.303633"
       },
       {
         "ticker": "229200",
         "name": "KODEX 코스닥150",
         "category": "equity_domestic",
-        "close": 17650.0,
-        "change_pct": -3.1,
-        "volume": 19545700,
-        "aum": 5153800000000,
-        "nav": 17703.96,
+        "close": 20050.0,
+        "change_pct": -0.91,
+        "volume": 26398107,
+        "aum": 6148332500000,
+        "nav": 20136.43,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -57108,24 +57189,24 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505757"
+        "screened_at": "2026-05-08T10:52:52.303646"
       },
       {
         "ticker": "102110",
         "name": "TIGER 200",
         "category": "equity_domestic",
-        "close": 146705.0,
-        "change_pct": 3.4,
-        "volume": 3944629,
-        "aum": 12858693250000,
-        "nav": 146922.35,
+        "close": 115630.0,
+        "change_pct": 2.17,
+        "volume": 8845148,
+        "aum": 10111843500000,
+        "nav": 115652.18,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
@@ -57134,7 +57215,7 @@
         },
         "verity_etf_score": 76.92,
         "signal": "STRONG_BUY",
-        "screened_at": "2026-06-19T12:58:32.505765"
+        "screened_at": "2026-05-08T10:52:52.303658"
       }
     ],
     "kr_bond_top10": [
@@ -57142,271 +57223,271 @@
         "ticker": "148070",
         "name": "KIWOOM 국고채10년",
         "category": "bond_kr",
-        "close": 105310.0,
-        "change_pct": -0.26,
-        "volume": 7482,
-        "aum": 398808970000,
-        "nav": 105269.79,
+        "close": 106575.0,
+        "change_pct": 0.33,
+        "volume": 69753,
+        "aum": 453263475000,
+        "nav": 106692.06,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
           "quality": 100.0,
-          "liquidity": 77.48
+          "liquidity": 96.87
         },
-        "verity_etf_score": 73.46,
-        "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505780"
+        "verity_etf_score": 76.44,
+        "signal": "STRONG_BUY",
+        "screened_at": "2026-05-08T10:52:52.303676"
       },
       {
         "ticker": "152380",
         "name": "KODEX 국채선물10년",
         "category": "bond_kr",
-        "close": 65450.0,
-        "change_pct": -0.24,
-        "volume": 1172,
-        "aum": 24740100000,
-        "nav": 65378.87,
+        "close": 66225.0,
+        "change_pct": 0.42,
+        "volume": 2247,
+        "aum": 36953550000,
+        "nav": 66303.4,
         "returns": {
           "1M": null,
           "3M": null,
           "1Y": null
         },
-        "bas_dd": "20260618",
-        "updated_at": "2026-06-19T21:58:22+09:00",
+        "bas_dd": "20260507",
+        "updated_at": "2026-05-08T19:52:36+09:00",
         "factor_scores": {
           "momentum": null,
           "value": 50.0,
           "quality": 100.0,
-          "liquidity": 61.38
+          "liquidity": 67.03
         },
-        "verity_etf_score": 70.98,
+        "verity_etf_score": 71.85,
         "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505788"
+        "screened_at": "2026-05-08T10:52:52.303686"
       }
     ],
     "us_bond_top10": [
       {
-        "ticker": "TLT",
-        "name": "iShares 20+ Year Treasury Bond",
-        "category": "bond_us_long",
-        "close": 86.33,
-        "volume": 34507500,
-        "returns": {
-          "1M": 3.6,
-          "3M": 0.92,
-          "1Y": null
-        },
-        "aum": 42895949824,
-        "dividend_yield": 0.0455,
-        "updated_at": "2026-06-19T21:58:29+09:00",
-        "factor_scores": {
-          "momentum": 53.02,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 68.56,
-        "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505805"
-      },
-      {
         "ticker": "HYG",
         "name": "iShares iBoxx $ High Yield Corp",
         "category": "bond_us_hy",
-        "close": 79.73,
-        "volume": 47184800,
+        "close": 79.86,
+        "volume": 44772900,
         "returns": {
-          "1M": 0.85,
-          "3M": 2.21,
+          "1M": 0.7,
+          "3M": 0.36,
           "1Y": null
         },
-        "aum": 16106322944,
-        "dividend_yield": 0.0584,
-        "updated_at": "2026-06-19T21:58:29+09:00",
+        "aum": 16952033280,
+        "dividend_yield": 0.0582,
+        "updated_at": "2026-05-08T19:52:46+09:00",
         "factor_scores": {
-          "momentum": 52.93,
+          "momentum": 50.79,
           "value": 50.0,
           "quality": 100.0,
           "liquidity": 100.0
         },
-        "verity_etf_score": 68.53,
+        "verity_etf_score": 67.78,
         "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505866"
-      },
-      {
-        "ticker": "JNK",
-        "name": "SPDR Bloomberg High Yield Bond",
-        "category": "bond_us_hy",
-        "close": 96.06,
-        "volume": 8763000,
-        "returns": {
-          "1M": 0.9,
-          "3M": 2.52,
-          "1Y": null
-        },
-        "aum": 7700293120,
-        "dividend_yield": 0.0659,
-        "updated_at": "2026-06-19T21:58:29+09:00",
-        "factor_scores": {
-          "momentum": 53.3,
-          "value": 50.0,
-          "quality": 99.24,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 68.47,
-        "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505911"
-      },
-      {
-        "ticker": "LQD",
-        "name": "iShares iBoxx $ IG Corporate",
-        "category": "bond_us_ig",
-        "close": 108.77,
-        "volume": 31079300,
-        "returns": {
-          "1M": 1.23,
-          "3M": 1.75,
-          "1Y": null
-        },
-        "aum": 29782712320,
-        "dividend_yield": 0.0452,
-        "updated_at": "2026-06-19T21:58:29+09:00",
-        "factor_scores": {
-          "momentum": 52.63,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 68.42,
-        "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505856"
-      },
-      {
-        "ticker": "BND",
-        "name": "Vanguard Total Bond Market ETF",
-        "category": "bond_us_total",
-        "close": 73.14,
-        "volume": 8531600,
-        "returns": {
-          "1M": 0.89,
-          "3M": 0.45,
-          "1Y": null
-        },
-        "aum": 394429661184,
-        "dividend_yield": 0.0394,
-        "updated_at": "2026-06-19T21:58:29+09:00",
-        "factor_scores": {
-          "momentum": 50.99,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 67.85,
-        "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505846"
-      },
-      {
-        "ticker": "AGG",
-        "name": "iShares Core US Aggregate Bond",
-        "category": "bond_us_agg",
-        "close": 98.61,
-        "volume": 9348600,
-        "returns": {
-          "1M": 0.94,
-          "3M": 0.4,
-          "1Y": null
-        },
-        "aum": 136455700480,
-        "dividend_yield": 0.0396,
-        "updated_at": "2026-06-19T21:58:29+09:00",
-        "factor_scores": {
-          "momentum": 50.97,
-          "value": 50.0,
-          "quality": 100.0,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 67.84,
-        "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505837"
+        "screened_at": "2026-05-08T10:52:52.303776"
       },
       {
         "ticker": "SHY",
         "name": "iShares 1-3 Year Treasury Bond",
         "category": "bond_us_short",
-        "close": 81.88,
-        "volume": 5236600,
+        "close": 82.23,
+        "volume": 2564800,
         "returns": {
-          "1M": 0.08,
-          "3M": 0.08,
+          "1M": 0.16,
+          "3M": 0.29,
           "1Y": null
         },
-        "aum": 25434476544,
-        "dividend_yield": 0.0371,
-        "updated_at": "2026-06-19T21:58:29+09:00",
+        "aum": 25083643904,
+        "dividend_yield": 0.0372,
+        "updated_at": "2026-05-08T19:52:46+09:00",
         "factor_scores": {
-          "momentum": 50.13,
+          "momentum": 50.41,
           "value": 50.0,
           "quality": 100.0,
           "liquidity": 100.0
         },
-        "verity_etf_score": 67.55,
+        "verity_etf_score": 67.64,
         "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505826"
+        "screened_at": "2026-05-08T10:52:52.303730"
+      },
+      {
+        "ticker": "AGG",
+        "name": "iShares Core US Aggregate Bond",
+        "category": "bond_us_agg",
+        "close": 98.95,
+        "volume": 10903100,
+        "returns": {
+          "1M": 0.11,
+          "3M": 0.24,
+          "1Y": null
+        },
+        "aum": 135366098944,
+        "dividend_yield": 0.0395,
+        "updated_at": "2026-05-08T19:52:46+09:00",
+        "factor_scores": {
+          "momentum": 50.33,
+          "value": 50.0,
+          "quality": 100.0,
+          "liquidity": 100.0
+        },
+        "verity_etf_score": 67.62,
+        "signal": "BUY",
+        "screened_at": "2026-05-08T10:52:52.303742"
+      },
+      {
+        "ticker": "JNK",
+        "name": "SPDR Bloomberg High Yield Bond",
+        "category": "bond_us_hy",
+        "close": 96.2,
+        "volume": 2647800,
+        "returns": {
+          "1M": 0.84,
+          "3M": 0.42,
+          "1Y": null
+        },
+        "aum": 7274746368,
+        "dividend_yield": 0.0659,
+        "updated_at": "2026-05-08T19:52:46+09:00",
+        "factor_scores": {
+          "momentum": 50.93,
+          "value": 50.0,
+          "quality": 99.08,
+          "liquidity": 100.0
+        },
+        "verity_etf_score": 67.6,
+        "signal": "BUY",
+        "screened_at": "2026-05-08T10:52:52.303788"
+      },
+      {
+        "ticker": "BND",
+        "name": "Vanguard Total Bond Market ETF",
+        "category": "bond_us_total",
+        "close": 73.36,
+        "volume": 9776200,
+        "returns": {
+          "1M": 0.03,
+          "3M": 0.23,
+          "1Y": null
+        },
+        "aum": 389703467008,
+        "dividend_yield": 0.0393,
+        "updated_at": "2026-05-08T19:52:46+09:00",
+        "factor_scores": {
+          "momentum": 50.27,
+          "value": 50.0,
+          "quality": 100.0,
+          "liquidity": 100.0
+        },
+        "verity_etf_score": 67.59,
+        "signal": "BUY",
+        "screened_at": "2026-05-08T10:52:52.303753"
       },
       {
         "ticker": "IEF",
         "name": "iShares 7-10 Year Treasury Bond",
         "category": "bond_us_mid",
-        "close": 94.02,
-        "volume": 11508300,
+        "close": 94.71,
+        "volume": 5608400,
         "returns": {
-          "1M": 0.88,
-          "3M": -0.66,
+          "1M": -0.24,
+          "3M": 0.18,
           "1Y": null
         },
-        "aum": 48318722048,
-        "dividend_yield": 0.0387,
-        "updated_at": "2026-06-19T21:58:29+09:00",
+        "aum": 48474525696,
+        "dividend_yield": 0.0385,
+        "updated_at": "2026-05-08T19:52:46+09:00",
         "factor_scores": {
-          "momentum": 49.76,
+          "momentum": 50.07,
           "value": 50.0,
           "quality": 100.0,
           "liquidity": 100.0
         },
-        "verity_etf_score": 67.42,
+        "verity_etf_score": 67.52,
         "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505816"
+        "screened_at": "2026-05-08T10:52:52.303718"
+      },
+      {
+        "ticker": "LQD",
+        "name": "iShares iBoxx $ IG Corporate",
+        "category": "bond_us_ig",
+        "close": 108.74,
+        "volume": 24184900,
+        "returns": {
+          "1M": 0.09,
+          "3M": -0.06,
+          "1Y": null
+        },
+        "aum": 30921228288,
+        "dividend_yield": 0.0455,
+        "updated_at": "2026-05-08T19:52:46+09:00",
+        "factor_scores": {
+          "momentum": 49.98,
+          "value": 50.0,
+          "quality": 100.0,
+          "liquidity": 100.0
+        },
+        "verity_etf_score": 67.49,
+        "signal": "BUY",
+        "screened_at": "2026-05-08T10:52:52.303765"
       },
       {
         "ticker": "TIP",
         "name": "iShares TIPS Bond ETF",
         "category": "bond_us_tips",
-        "close": 109.03,
-        "volume": 2044500,
+        "close": 111.03,
+        "volume": 1529900,
         "returns": {
-          "1M": -0.28,
-          "3M": 0.13,
+          "1M": 0.63,
+          "3M": 1.27,
           "1Y": null
         },
-        "aum": 15087474688,
-        "dividend_yield": 0.0281,
-        "updated_at": "2026-06-19T21:58:29+09:00",
+        "aum": 14751854592,
+        "dividend_yield": 0.0277,
+        "updated_at": "2026-05-08T19:52:46+09:00",
         "factor_scores": {
-          "momentum": 49.99,
+          "momentum": 51.76,
           "value": 50.0,
-          "quality": 97.89,
+          "quality": 97.44,
           "liquidity": 100.0
         },
-        "verity_etf_score": 66.97,
+        "verity_etf_score": 67.48,
         "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505930"
+        "screened_at": "2026-05-08T10:52:52.303800"
+      },
+      {
+        "ticker": "TLT",
+        "name": "iShares 20+ Year Treasury Bond",
+        "category": "bond_us_long",
+        "close": 85.65,
+        "volume": 21156000,
+        "returns": {
+          "1M": -0.78,
+          "3M": 0.05,
+          "1Y": null
+        },
+        "aum": 42905042944,
+        "dividend_yield": 0.0457,
+        "updated_at": "2026-05-08T19:52:46+09:00",
+        "factor_scores": {
+          "momentum": 49.62,
+          "value": 50.0,
+          "quality": 100.0,
+          "liquidity": 100.0
+        },
+        "verity_etf_score": 67.37,
+        "signal": "BUY",
+        "screened_at": "2026-05-08T10:52:52.303706"
       }
     ],
     "us_equity_top10": [
@@ -57414,121 +57495,121 @@
         "ticker": "QQQ",
         "name": "Invesco QQQ Trust",
         "category": "equity_us_tech",
-        "close": 722.51,
-        "volume": 51669300,
+        "close": 694.94,
+        "volume": 43475200,
         "returns": {
-          "1M": 1.92,
-          "3M": 21.85,
+          "1M": 18.07,
+          "3M": 11.13,
           "1Y": null
         },
-        "aum": 493987528704,
-        "dividend_yield": 0.0038,
-        "updated_at": "2026-06-19T21:58:24+09:00",
+        "aum": 440257380352,
+        "dividend_yield": 0.0042,
+        "updated_at": "2026-05-08T19:52:39+09:00",
         "factor_scores": {
-          "momentum": 75.34,
+          "momentum": 72.41,
           "value": 50.0,
-          "quality": 84.92,
+          "quality": 85.08,
           "liquidity": 100.0
         },
-        "verity_etf_score": 72.6,
+        "verity_etf_score": 71.61,
         "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505962"
+        "screened_at": "2026-05-08T10:52:52.303831"
       },
       {
         "ticker": "IWM",
         "name": "iShares Russell 2000 ETF",
         "category": "equity_us_small",
-        "close": 289.88,
-        "volume": 39920100,
+        "close": 282.26,
+        "volume": 28230900,
         "returns": {
-          "1M": 4.67,
-          "3M": 18.04,
+          "1M": 11.6,
+          "3M": 7.85,
           "1Y": null
         },
-        "aum": 80933363712,
-        "dividend_yield": 0.0087,
-        "updated_at": "2026-06-19T21:58:24+09:00",
+        "aum": 76877807616,
+        "dividend_yield": 0.0091,
+        "updated_at": "2026-05-08T19:52:39+09:00",
         "factor_scores": {
-          "momentum": 72.64,
+          "momentum": 65.17,
           "value": 50.0,
-          "quality": 86.96,
+          "quality": 87.12,
           "liquidity": 100.0
         },
-        "verity_etf_score": 72.16,
+        "verity_etf_score": 69.59,
         "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505972"
-      },
-      {
-        "ticker": "DIA",
-        "name": "SPDR Dow Jones Industrial",
-        "category": "equity_us_large",
-        "close": 514.89,
-        "volume": 6563500,
-        "returns": {
-          "1M": 4.23,
-          "3M": 11.04,
-          "1Y": null
-        },
-        "aum": 44786040832,
-        "dividend_yield": 0.0137,
-        "updated_at": "2026-06-19T21:58:24+09:00",
-        "factor_scores": {
-          "momentum": 64.62,
-          "value": 50.0,
-          "quality": 89.04,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 69.88,
-        "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505994"
-      },
-      {
-        "ticker": "VTI",
-        "name": "Vanguard Total Stock Market ETF",
-        "category": "equity_us_total",
-        "close": 365.76,
-        "volume": 4766800,
-        "returns": {
-          "1M": 0.83,
-          "3M": 12.5,
-          "1Y": null
-        },
-        "aum": 2308925030400,
-        "dividend_yield": 0.0101,
-        "updated_at": "2026-06-19T21:58:24+09:00",
-        "factor_scores": {
-          "momentum": 64.35,
-          "value": 50.0,
-          "quality": 87.54,
-          "liquidity": 100.0
-        },
-        "verity_etf_score": 69.41,
-        "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505983"
+        "screened_at": "2026-05-08T10:52:52.303843"
       },
       {
         "ticker": "SPY",
         "name": "SPDR S&P 500 ETF Trust",
         "category": "equity_us_large",
-        "close": 739.06,
-        "volume": 85945200,
+        "close": 731.58,
+        "volume": 51278600,
         "returns": {
-          "1M": 0.24,
-          "3M": 12.18,
+          "1M": 10.98,
+          "3M": 5.49,
           "1Y": null
         },
-        "aum": 783796404224,
-        "dividend_yield": 0.0098,
-        "updated_at": "2026-06-19T21:58:24+09:00",
+        "aum": 735060819968,
+        "dividend_yield": 0.0103,
+        "updated_at": "2026-05-08T19:52:39+09:00",
         "factor_scores": {
-          "momentum": 63.67,
+          "momentum": 62.2,
           "value": 50.0,
-          "quality": 87.42,
+          "quality": 87.62,
           "liquidity": 100.0
         },
-        "verity_etf_score": 69.14,
+        "verity_etf_score": 68.68,
         "signal": "BUY",
-        "screened_at": "2026-06-19T12:58:32.505951"
+        "screened_at": "2026-05-08T10:52:52.303820"
+      },
+      {
+        "ticker": "VTI",
+        "name": "Vanguard Total Stock Market ETF",
+        "category": "equity_us_total",
+        "close": 360.2,
+        "volume": 3497100,
+        "returns": {
+          "1M": 10.68,
+          "3M": 5.5,
+          "1Y": null
+        },
+        "aum": 2202624327680,
+        "dividend_yield": 0.0106,
+        "updated_at": "2026-05-08T19:52:39+09:00",
+        "factor_scores": {
+          "momentum": 62.04,
+          "value": 50.0,
+          "quality": 87.75,
+          "liquidity": 100.0
+        },
+        "verity_etf_score": 68.65,
+        "signal": "BUY",
+        "screened_at": "2026-05-08T10:52:52.303855"
+      },
+      {
+        "ticker": "DIA",
+        "name": "SPDR Dow Jones Industrial",
+        "category": "equity_us_large",
+        "close": 495.91,
+        "volume": 4453400,
+        "returns": {
+          "1M": 6.49,
+          "3M": 0.77,
+          "1Y": null
+        },
+        "aum": 42719600640,
+        "dividend_yield": 0.0142,
+        "updated_at": "2026-05-08T19:52:39+09:00",
+        "factor_scores": {
+          "momentum": 54.46,
+          "value": 50.0,
+          "quality": 89.25,
+          "liquidity": 100.0
+        },
+        "verity_etf_score": 66.37,
+        "signal": "BUY",
+        "screened_at": "2026-05-08T10:52:52.303866"
       }
     ],
     "bond_picks": {
@@ -57537,53 +57618,53 @@
           "ticker": "148070",
           "name": "KIWOOM 국고채10년",
           "category": "bond_kr",
-          "close": 105310.0,
-          "change_pct": -0.26,
-          "volume": 7482,
-          "aum": 398808970000,
-          "nav": 105269.79,
+          "close": 106575.0,
+          "change_pct": 0.33,
+          "volume": 69753,
+          "aum": 453263475000,
+          "nav": 106692.06,
           "returns": {
             "1M": null,
             "3M": null,
             "1Y": null
           },
-          "bas_dd": "20260618",
-          "updated_at": "2026-06-19T21:58:22+09:00",
+          "bas_dd": "20260507",
+          "updated_at": "2026-05-08T19:52:36+09:00",
           "factor_scores": {
             "momentum": null,
             "value": 50.0,
             "quality": 100.0,
-            "liquidity": 77.48
+            "liquidity": 96.87
           },
-          "verity_etf_score": 73.46,
-          "signal": "BUY",
-          "screened_at": "2026-06-19T12:58:32.506012"
+          "verity_etf_score": 76.44,
+          "signal": "STRONG_BUY",
+          "screened_at": "2026-05-08T10:52:52.303885"
         },
         {
           "ticker": "152380",
           "name": "KODEX 국채선물10년",
           "category": "bond_kr",
-          "close": 65450.0,
-          "change_pct": -0.24,
-          "volume": 1172,
-          "aum": 24740100000,
-          "nav": 65378.87,
+          "close": 66225.0,
+          "change_pct": 0.42,
+          "volume": 2247,
+          "aum": 36953550000,
+          "nav": 66303.4,
           "returns": {
             "1M": null,
             "3M": null,
             "1Y": null
           },
-          "bas_dd": "20260618",
-          "updated_at": "2026-06-19T21:58:22+09:00",
+          "bas_dd": "20260507",
+          "updated_at": "2026-05-08T19:52:36+09:00",
           "factor_scores": {
             "momentum": null,
             "value": 50.0,
             "quality": 100.0,
-            "liquidity": 61.38
+            "liquidity": 67.03
           },
-          "verity_etf_score": 70.98,
+          "verity_etf_score": 71.85,
           "signal": "BUY",
-          "screened_at": "2026-06-19T12:58:32.506021"
+          "screened_at": "2026-05-08T10:52:52.303896"
         }
       ],
       "us_bond_top5": [
@@ -57591,18 +57672,18 @@
           "ticker": "304660",
           "name": "KODEX 미국30년국채울트라선물(H)",
           "category": "bond_us",
-          "close": 7570.0,
-          "change_pct": 0.46,
-          "volume": 153957,
-          "aum": 158213000000,
-          "nav": 7575.38,
+          "close": 7525.0,
+          "change_pct": 0.4,
+          "volume": 122055,
+          "aum": 177590000000,
+          "nav": 7546.52,
           "returns": {
             "1M": null,
             "3M": null,
             "1Y": null
           },
-          "bas_dd": "20260618",
-          "updated_at": "2026-06-19T21:58:22+09:00",
+          "bas_dd": "20260507",
+          "updated_at": "2026-05-08T19:52:36+09:00",
           "factor_scores": {
             "momentum": null,
             "value": 50.0,
@@ -57611,112 +57692,112 @@
           },
           "verity_etf_score": 76.92,
           "signal": "STRONG_BUY",
-          "screened_at": "2026-06-19T12:58:32.506037"
+          "screened_at": "2026-05-08T10:52:52.303914"
         },
         {
           "ticker": "261240",
           "name": "KODEX 미국달러선물",
           "category": "bond_us",
-          "close": 15665.0,
-          "change_pct": 0.8,
-          "volume": 343683,
-          "aum": 64069850000,
-          "nav": 15685.51,
+          "close": 14885.0,
+          "change_pct": 0.0,
+          "volume": 78790,
+          "aum": 67875600000,
+          "nav": 14863.07,
           "returns": {
             "1M": null,
             "3M": null,
             "1Y": null
           },
-          "bas_dd": "20260618",
-          "updated_at": "2026-06-19T21:58:22+09:00",
+          "bas_dd": "20260507",
+          "updated_at": "2026-05-08T19:52:36+09:00",
           "factor_scores": {
             "momentum": null,
             "value": 50.0,
             "quality": 100.0,
-            "liquidity": 100.0
+            "liquidity": 97.93
           },
-          "verity_etf_score": 76.92,
+          "verity_etf_score": 76.6,
           "signal": "STRONG_BUY",
-          "screened_at": "2026-06-19T12:58:32.506046"
-        },
-        {
-          "ticker": "TLT",
-          "name": "iShares 20+ Year Treasury Bond",
-          "category": "bond_us_long",
-          "close": 86.33,
-          "volume": 34507500,
-          "returns": {
-            "1M": 3.6,
-            "3M": 0.92,
-            "1Y": null
-          },
-          "aum": 42895949824,
-          "dividend_yield": 0.0455,
-          "updated_at": "2026-06-19T21:58:29+09:00",
-          "factor_scores": {
-            "momentum": 53.02,
-            "value": 50.0,
-            "quality": 100.0,
-            "liquidity": 100.0
-          },
-          "verity_etf_score": 68.56,
-          "signal": "BUY",
-          "screened_at": "2026-06-19T12:58:32.506057"
+          "screened_at": "2026-05-08T10:52:52.303924"
         },
         {
           "ticker": "HYG",
           "name": "iShares iBoxx $ High Yield Corp",
           "category": "bond_us_hy",
-          "close": 79.73,
-          "volume": 47184800,
+          "close": 79.86,
+          "volume": 44772900,
           "returns": {
-            "1M": 0.85,
-            "3M": 2.21,
+            "1M": 0.7,
+            "3M": 0.36,
             "1Y": null
           },
-          "aum": 16106322944,
-          "dividend_yield": 0.0584,
-          "updated_at": "2026-06-19T21:58:29+09:00",
+          "aum": 16952033280,
+          "dividend_yield": 0.0582,
+          "updated_at": "2026-05-08T19:52:46+09:00",
           "factor_scores": {
-            "momentum": 52.93,
+            "momentum": 50.79,
             "value": 50.0,
             "quality": 100.0,
             "liquidity": 100.0
           },
-          "verity_etf_score": 68.53,
+          "verity_etf_score": 67.78,
           "signal": "BUY",
-          "screened_at": "2026-06-19T12:58:32.506118"
+          "screened_at": "2026-05-08T10:52:52.304007"
         },
         {
-          "ticker": "JNK",
-          "name": "SPDR Bloomberg High Yield Bond",
-          "category": "bond_us_hy",
-          "close": 96.06,
-          "volume": 8763000,
+          "ticker": "SHY",
+          "name": "iShares 1-3 Year Treasury Bond",
+          "category": "bond_us_short",
+          "close": 82.23,
+          "volume": 2564800,
           "returns": {
-            "1M": 0.9,
-            "3M": 2.52,
+            "1M": 0.16,
+            "3M": 0.29,
             "1Y": null
           },
-          "aum": 7700293120,
-          "dividend_yield": 0.0659,
-          "updated_at": "2026-06-19T21:58:29+09:00",
+          "aum": 25083643904,
+          "dividend_yield": 0.0372,
+          "updated_at": "2026-05-08T19:52:46+09:00",
           "factor_scores": {
-            "momentum": 53.3,
+            "momentum": 50.41,
             "value": 50.0,
-            "quality": 99.24,
+            "quality": 100.0,
             "liquidity": 100.0
           },
-          "verity_etf_score": 68.47,
+          "verity_etf_score": 67.64,
           "signal": "BUY",
-          "screened_at": "2026-06-19T12:58:32.506128"
+          "screened_at": "2026-05-08T10:52:52.303959"
+        },
+        {
+          "ticker": "AGG",
+          "name": "iShares Core US Aggregate Bond",
+          "category": "bond_us_agg",
+          "close": 98.95,
+          "volume": 10903100,
+          "returns": {
+            "1M": 0.11,
+            "3M": 0.24,
+            "1Y": null
+          },
+          "aum": 135366098944,
+          "dividend_yield": 0.0395,
+          "updated_at": "2026-05-08T19:52:46+09:00",
+          "factor_scores": {
+            "momentum": 50.33,
+            "value": 50.0,
+            "quality": 100.0,
+            "liquidity": 100.0
+          },
+          "verity_etf_score": 67.62,
+          "signal": "BUY",
+          "screened_at": "2026-05-08T10:52:52.303971"
         }
       ],
       "foreign_bond_top5": [],
-      "screened_at": "2026-06-19T12:58:32.506150"
+      "screened_at": "2026-05-08T10:52:52.304044"
     },
     "total_screened": 50,
-    "screened_at": "2026-06-19T12:58:32.506152"
+    "screened_at": "2026-05-08T10:52:52.304046"
   },
   "program_trading": {
     "ok": false,
@@ -57750,9 +57831,9 @@
   },
   "us_headlines": [
     {
-      "title": "JPMorgan Warns Chip Stock Rally Poses Risk of Market ‘Tantrums’ - Bloomberg",
+      "title": "JPMorgan Warns Chip Stock Rally Poses Risk of Market ‘Tantrums’ - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQTWdFNVN4bkk4WEdxWGRIOEFxX3pLVE1XdkR4ZTJJQVpzWEFTem1xd1FZRGpoQmJ1UHZIVW9EZVpmY1doX2FyWjVOU3plWTJYUlF0ck5ldXBSNzllbTJ0cXpfMTRmdXZ1aVNtY1JEWVhuT0NBbV9jMWhrMUREMnNyVHNOdUFCWm9nbnN3QWpLMl9XSWpZLUVtMnRCNW5PbmQ5dldfa3JCdWJLcFkyVmx2VnhR?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 08:26:57 GMT",
       "category": "bloomberg_google",
       "sentiment": "positive",
@@ -57761,9 +57842,9 @@
       "composite_score": 0.8500000000000001
     },
     {
-      "title": "Intel Shares Soar After Trump Says It Struck Apple Chip Deal - Bloomberg",
+      "title": "Intel Shares Soar After Trump Says It Struck Apple Chip Deal - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMivwFBVV95cUxNYlM2ZEprdFdVelV2Tkd4NFlubFJYTXFadUxtVXkxSF9scFg5dk91U0dKR3pkWENoXy1CVXppRjZta2hYZS1qa1BsTDJaWTNRR2ZwaVJrNzN0d1BrWlVJQVFOZUZLa1lLTnFVXy1xLXN3Mm1wdnh4RGtiM19vbDgyZzQtZzhqZXRKTkZPbEJyNzNkRHIySl9UZzBpZXJaZUIzdUdEbzQzLUFuVnhhbDFNV0VKOE5hazVGcjRJUHFBaw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 09:35:34 GMT",
       "category": "bloomberg_google",
       "sentiment": "positive",
@@ -57772,9 +57853,9 @@
       "composite_score": 0.8500000000000001
     },
     {
-      "title": "MSCI China Stock Gauge Heads for Bear Market as Tech Weakness Extends - Bloomberg",
+      "title": "MSCI China Stock Gauge Heads for Bear Market as Tech Weakness Extends - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxQbThWb0ppc3IyczRIaEZXQXhaVkJKV29nbjNCbzR4NjVpRUMyakY2V1ViZWgxRy1NMUVkTlN0MnlNSDNQWUY4elZ3ZEFrOVRFZzNVNFJzM1lTR3ptZTVtc2dacTF4ajR3bjE0dHNfRVRrUkxWbmQwUkMzVHJUSjkyQ0NGc050SEphZlhweHZvbUtaWmFreUtqOTJNT1pxaDVEekJqSlFtXzVyZVRieEhlaVdJSkFndw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 08:24:29 GMT",
       "category": "bloomberg_google",
       "sentiment": "negative",
@@ -57783,9 +57864,9 @@
       "composite_score": 0.8500000000000001
     },
     {
-      "title": "Fed’s Warsh Rocks Bond Market in Debut, Sparks Surge in Rate-Hike Bets - Bloomberg",
+      "title": "Fed’s Warsh Rocks Bond Market in Debut, Sparks Surge in Rate-Hike Bets - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNb05Tc0xoMlMxcW9teV9EM0xfN1J2RjhrU2hXdmNGa3ZjbkxvN05zU3d3VXhoN2t2QXIxR3NKSnA2bFFfQ3dBdUpvZWdmb3R1WXpkWHA5eXJlckRSUFlHbHZsTlZFdmRnaEQ2UFE5UjRkaEtkdk1LQ0Z1bnQyU09mSkJUZkc0SjEtWnltVU01WVJGN3hoSVZiRjkwbDJhQVJMOVFFTWZWTEpqSG5MSnhBZy13bkY?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Wed, 17 Jun 2026 22:17:32 GMT",
       "category": "bloomberg_google",
       "sentiment": "positive",
@@ -57794,9 +57875,9 @@
       "composite_score": 0.8500000000000001
     },
     {
-      "title": "US Bond Futures Surge to Drive Wagers on a July Fed Rate Hike - Bloomberg",
+      "title": "US Bond Futures Surge to Drive Wagers on a July Fed Rate Hike - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxNaDBFNTZiVlFSSDJ3LWI5eEdPNkF3NzNrT1NmS2M3amhRTlpoSTltSVBFNzdXRUpMWXlkSHZ0emVtcldxSnhoaTJSM2ZkeF8yWGZyTzlXSlNnNG5vdHpXME9SLVhyQzNCZ3c3NWlxX1dkdmhzSXZETTF5ZEVRMDh6U0tMUE84OTZxM09MaXZZSzJBMVlneFBxRmU4LVItZnVHOVU0Y2pCQUZGUkl6OHdMdWFn?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 20:23:25 GMT",
       "category": "bloomberg_google",
       "sentiment": "positive",
@@ -57805,10 +57886,10 @@
       "composite_score": 0.8500000000000001
     },
     {
-      "title": "A First-Ever Default Shakes an $80 Billion Corner of Muni Market - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNMW9xVDRJZGFSQWoydFJtSTd1LTRWb2haUlFwdlZPQXh6NldabzVhSlNZRWJHd2JmMTU4dEN2LTB5RnV6VEY1cWpKMl9maUZfbDRGV0VVbXQyUVUzejJiTFRlbnFYcVhKNjJ3MzExc045ZFBNZlVtbml4WW5xcjNaeFdEeFdtRkx1ZTJtY3pGRTRMUFN5ZFVxMDdlR1VEQmlTNUJhZ0I1SHMxZU16RXNaOXI2ME4?oc=5",
-      "source": "Bloomberg",
-      "time": "Wed, 17 Jun 2026 17:25:43 GMT",
+      "title": "India Stock Regulator Lets Firms Buy Back Shares From Market - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxQeVNra01tOXo3RjNwVWJNOTR4UHFzUV9VY3lPSG1GLTFvZzY1N3hMTnF2ZE5EcWlpeVBwV2FhNnhwUmpxc1ptUkVMYV9pRGUtc1RGMVpzcXdibHdaUm9Bb21aX2ljMlNYRkJtUGpUUmdvXzhGWVNEd1pzOGxNSXFWdkFsZVoxM1RmWUEybDFTN0xhTVdRaUw4a2FZc3B5dV9PVzRQTV9GZkpMOHhRdTdlTQ?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 19 Jun 2026 12:22:05 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -57816,9 +57897,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "The Squeeze on Liquidity Is Just Getting Started - Bloomberg",
+      "title": "The Squeeze on Liquidity Is Just Getting Started - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMioAFBVV95cUxNQnlCVVZ5YjdQa1I0eGtybjlkYldSYUhlR0gyNklaSjI4cVV1M2NyY1VySzJxWUtKR0FUZ2lXNk5kc0s0ZHZlQWZObmg5bk1XRGtYWVlJSzZ5WlNFVWpPZ1RxYy10WGlXN2JFRVpHTjU5bHVoallqZzctcGpzWlpkamFyOW55MGcwMWxpRmg0Z0xTQzZnOXRRcUtqUGI0QW1r?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 13:29:40 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -57827,9 +57908,20 @@
       "composite_score": 0.64
     },
     {
-      "title": "Stocks, Bonds, Dollar Churn in Countdown to Fed: Markets Wrap - Bloomberg",
+      "title": "A First-Ever Default Shakes an $80 Billion Corner of Muni Market - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNMW9xVDRJZGFSQWoydFJtSTd1LTRWb2haUlFwdlZPQXh6NldabzVhSlNZRWJHd2JmMTU4dEN2LTB5RnV6VEY1cWpKMl9maUZfbDRGV0VVbXQyUVUzejJiTFRlbnFYcVhKNjJ3MzExc045ZFBNZlVtbml4WW5xcjNaeFdEeFdtRkx1ZTJtY3pGRTRMUFN5ZFVxMDdlR1VEQmlTNUJhZ0I1SHMxZU16RXNaOXI2ME4?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Wed, 17 Jun 2026 17:25:43 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "Stocks, Bonds, Dollar Churn in Countdown to Fed: Markets Wrap - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxQMjZSNjViRXpkcFVCci1GSTdET3doQnlHejZPRGNVYnlrRkZGOGZJdXhELXJpY2hfQ3lWX2EyWlhCQmFWdWE1ZWtzaFIwMmJfZmthVlBSUU1SQlB0XzhtQ0lCZHhwRFFFSTZmR1JXa1A4akR6VDM0ejBCTzdZUzRlVEs0X0VpeldtRDdPS3N6aGhpS1VEa1VRdVpGNzM4RGtBZWFyXzdPRzI3eFRYenVj?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Tue, 16 Jun 2026 22:06:39 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -57838,9 +57930,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "Gen-Z Traders Go for Broke in Pursuit of a New American Dream - Bloomberg",
+      "title": "Gen-Z Traders Go for Broke in Pursuit of a New American Dream - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxNdk9mcGNXTElKcUhFMjJvT043OWdPT25paC12dklfeUM2M1RfZWVDM3hPaUc3VTQtQkExc3NzNW5Ub1UxTW1KSzFZcVRlZlY0QjhBYk9nZ2tMVjExdDlsVUtnd0JNeGswdE1mM1BLRUphUlNDVUQ1OXR6bmVwZnY2a0NwcDJZMGRkT3NvdW02clhGN3RqMzh6Umh3SGVIQXQxc1pMZTdmbzc3M0E?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Wed, 17 Jun 2026 13:00:15 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -57849,9 +57941,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "What’s at Stake If Indonesia Loses Its Emerging Market Status - Bloomberg",
+      "title": "What’s at Stake If Indonesia Loses Its Emerging Market Status - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiyAFBVV95cUxOQ2Zia0ZuSmJHX2lUa0hjazZTT09BMTNudGJNaE53aDB0aWNMQWRsRXFaaWxlbFBRM2J5Skx4VTZqLS1QWjRkalNwYzJyRTlzYXA4d2pNLU9LU2E3YnVNdE1ZZFdCbTlzUEx1YlVCRnN0RXF6QllabHg0U0VqOHRuN0VZeEZXSlBWNGpEOXZuM3hNOWtRcFI2d3pBNHVGb1RWRmpJSk5jTnprVWdXcDBtSUlTQ1ptbnNRckhxWU5WYXp4bDBZV2x4Tg?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 19 Jun 2026 05:42:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -57860,9 +57952,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "MSCI Flags Indonesia Market Accessibility Concerns in Review - Bloomberg",
+      "title": "MSCI Flags Indonesia Market Accessibility Concerns in Review - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxPdkV0Y2Q1TkVfUHFFNS1WS1c2NC1CZFRJR2NqUFAyM2l0dFVQNXVDRTBCV3ByTnEyamtiQ2psWExYR3lEbHhmZzdUTXlHeDM5R253MFMyY09Yb2FOaEZwaUtaVTNGWkc0d3RwdjRFOU9qLWtRLVNyUzhTVDRvejhBRTZ6MGFkamdVUWVpdmFNMkxIWnNKUTZSYkptN0M4dkVHN0xLOGk5R1p2QWxwY0RFSTBRYTQzZw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 21:52:14 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -57871,9 +57963,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "MSCI Says Low Free-Float Among Many Hurdles for Vietnam Stocks - Bloomberg",
+      "title": "MSCI Says Low Free-Float Among Many Hurdles for Vietnam Stocks - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQLU1Ra3FJMWhwVHMtOURyS1ptazhIM1NqN3ktanhRdEhRQjJET2s5SjlTclVheVdiYkhVbWRHQmEyR0hKYkFBdk1wM0JNTG9hSTUtSG5GRFNsb1ctWWNxdGxOWDJ0ODVEY1ZyVlBwY2VwSkwydEpUdDZzM0g5Mk1jWXJJa3MwLWVCRjBtZEVRTHB6VWJLQ0VRdTNxQ3ZGcHdnVGRxSl83aHlVYkc1eEVmOUo2OA?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 19 Jun 2026 05:19:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -57882,9 +57974,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "CFTC Not Ready for Prediction Market Social Cost, State AGs Say - Bloomberg",
+      "title": "CFTC Not Ready for Prediction Market Social Cost, State AGs Say - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOOVVwQXA3OUJOZU1YOWdrMFZTclltNWFjMXlaVGtaLVFyVzJVS05ER3A1M3RNMENRMEJheENYYUJ2RmhvYUpqUndJcVdwRFQ5WWpEakVxZjdSLTNSRFdYc3pnV0VORWI4SkhGLTRxc0RucUZOY0F1eHFSTUJ3MFRXdENtZzFVV3VIQ0phVEFpdF91ZHVPSlczRTZwQi1MbGNIQmtEWmhncW9FTjdlLXlaUDBxdw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 18 Jun 2026 23:18:48 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -57893,21 +57985,10 @@
       "composite_score": 0.64
     },
     {
-      "title": "Watch Market Attuned to UK Political Changes, Wytenus Says - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxORklPVXdTSnVtcFJLcGJQNDRRNkp5OHk0UTF6czBXMXZfRkhSb0lQYmlLZHhOTmFRLURjelJieHFwaUJSanVEcWFBS0xuOFB1eEZuZzVveUZFZkFEdm0zWEpnQm1hYnoyam42WEtSMTZSbG84SFpNTTZUT2p4cEpOVUtNY0pxWjRLZWJMUWFReUdPbmVZaU1EZmEwZC1uOWMzZzBTYVBQRjhYQQ?oc=5",
-      "source": "Bloomberg",
-      "time": "Fri, 19 Jun 2026 08:28:14 GMT",
-      "category": "bloomberg_google",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "The Dollar Is Riding High Thanks to a Newly Hawkish Fed - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMirgFBVV95cUxQVDF2MUZHSzhUS2JlYUtWeER4MC1BZkJHTHJzN292N3F3WFZuZExEOWZ3WDY2djRBYUtZUmp4d19IYlNiSV81UldxSDVtM0NucXotOEU5c2tJSHdlMm1qM0o3QlJvdUFJdm56cWhKMWxlYzRoRkRFbEtmVW4wOVptX0lNZ1V4R05PZmRGenVJVXE5Zm1rSzRIeUdkRFp5cFVCSFdhUkFBTGMzVXA2enc?oc=5",
-      "source": "Bloomberg",
-      "time": "Fri, 19 Jun 2026 10:26:19 GMT",
+      "title": "US Stocks Draw Record Weekly Inflows as Investors Pile Into Tech - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxPdUxiQUx0bTNINk0wNWlxUzVnSThPcXV4TU5QQ1cyMldqQm94bVhHYnd0WE9oaDFEcHBQOGJldG15QTZiWE4wZE5SRUx2aTdHSWkzUjREbWtfWDlYZFlzRUNpU1ZMYWtzQzIwRGlWZE9QakVaVEhDOHNHdS12VW0wMmk5STFvOG9JM1VTVHVzRlJXWVk5S2lFeDA3VGtGN1M0dFFESElpLVJrMEFxWENaSWs3c2FaQQ?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 19 Jun 2026 09:34:17 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -59759,7 +59840,7 @@
   "monthly_report_updated": "2026-06-01T14:09:47+09:00",
   "portfolio_summary": {
     "today_pct": null,
-    "cumulative_pct": -0.81,
+    "cumulative_pct": -0.86,
     "is_paper": true,
     "holdings_count": 2
   },
