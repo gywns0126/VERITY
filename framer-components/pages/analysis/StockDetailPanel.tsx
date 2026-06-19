@@ -898,12 +898,10 @@ function StockDetailPanelInner(props: Props) {
                                         {tfPick === "실시간" && sseConnected && (
                                             <span style={{ fontSize: 12, color: C.success, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "rgba(34,197,94,0.15)", animation: "pulse 2s infinite" }}>● LIVE</span>
                                         )}
-                                        {tfPick === "실시간" && (
-                                            <button type="button" onClick={() => setRtChartMode(prev => prev === "candle" ? "line" : "candle")}
-                                                style={{ border: "none", padding: "3px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: _font, background: "transparent", color: rtChartMode === "candle" ? C.watch : C.info, marginLeft: 2, letterSpacing: 0.3 }}>
-                                                {rtChartMode === "candle" ? "캔들" : "라인"}
-                                            </button>
-                                        )}
+                                        <button type="button" onClick={() => setRtChartMode(prev => prev === "candle" ? "line" : "candle")}
+                                            style={{ border: "none", padding: "3px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: _font, background: "transparent", color: rtChartMode === "candle" ? C.watch : C.info, marginLeft: 2, letterSpacing: 0.3 }}>
+                                            {rtChartMode === "candle" ? "캔들" : "라인"}
+                                        </button>
                                     </div>
                                     <div style={{ display: "flex", gap: 12 }}>
                                         {(["실시간", "1주", "1달", "3달", "1년"] as const).map(tf => (
@@ -916,17 +914,20 @@ function StockDetailPanelInner(props: Props) {
                                 </div>
                                 <div ref={chartBoxRef} style={{ flex: 1, minHeight: 200, width: "100%", position: "relative" as const }}>
                                     {(() => {
-                                        const showCandle = tfPick === "실시간" && rtChartMode === "candle"
-                                        if (showCandle && finalCandles.length >= 2)
-                                            return <CandleChart candles={finalCandles} width={chartBox.w} height={chartBox.h} />
+                                        // 일봉(1주/1달/3달/1년)도 캔들 — chartCandles(일봉 OHLCV) 사용. 실시간만 finalCandles.
+                                        const showCandle = rtChartMode === "candle"
+                                        const cdl = tfPick === "실시간" ? finalCandles : chartCandles
+                                        if (showCandle && cdl.length >= 2)
+                                            return <CandleChart candles={cdl} width={chartBox.w} height={chartBox.h} />
                                         return <LineChart data={chartData} color={dirColor} width={chartBox.w} height={chartBox.h} volumes={chartVolumes.length === chartData.length ? chartVolumes : undefined} />
                                     })()}
                                 </div>
-                                {(chartData.length >= 2 || finalCandles.length >= 2) && (() => {
-                                    const showCandle = tfPick === "실시간" && rtChartMode === "candle"
-                                    const useCandles = showCandle && finalCandles.length >= 2
-                                    const hi = useCandles ? Math.max(...finalCandles.map(c => c.h)) : Math.max(...chartData)
-                                    const lo = useCandles ? Math.min(...finalCandles.map(c => c.l)) : Math.min(...chartData)
+                                {(chartData.length >= 2 || finalCandles.length >= 2 || chartCandles.length >= 2) && (() => {
+                                    const showCandle = rtChartMode === "candle"
+                                    const cdl = tfPick === "실시간" ? finalCandles : chartCandles
+                                    const useCandles = showCandle && cdl.length >= 2
+                                    const hi = useCandles ? Math.max(...cdl.map(c => c.h)) : Math.max(...chartData)
+                                    const lo = useCandles ? Math.min(...cdl.map(c => c.l)) : Math.min(...chartData)
                                     return (
                                         <div style={{ marginTop: 8, display: "flex", gap: 16, flexShrink: 0, alignItems: "center", flexWrap: "wrap" as const }}>
                                             <span style={{ color: UP, fontSize: 12, fontWeight: 600 }}>H {fmtKRW(hi)}</span>
@@ -936,10 +937,10 @@ function StockDetailPanelInner(props: Props) {
                                                     {liveCandles.length > 0 ? `LIVE 1분봉 · ${liveCandles.length}개` : `분봉 · ${kisMinuteCandles.length}개`}
                                                 </span>
                                             )}
-                                            {tfPick === "실시간" && rtChartMode === "candle" && finalCandles.length >= 5 && (
+                                            {useCandles && cdl.length >= 5 && (
                                                 <>
                                                     <span style={{ color: C.watch, fontSize: 12, fontWeight: 600 }}>— MA5</span>
-                                                    {finalCandles.length >= 20 && <span style={{ color: C.info, fontSize: 12, fontWeight: 600 }}>— MA20</span>}
+                                                    {cdl.length >= 20 && <span style={{ color: C.info, fontSize: 12, fontWeight: 600 }}>— MA20</span>}
                                                 </>
                                             )}
                                             {(tfPick === "3달" || tfPick === "1년") && (
