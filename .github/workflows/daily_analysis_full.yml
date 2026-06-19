@@ -332,6 +332,12 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.disclosure_forensics_builder
 
+      - name: 공개 내부자거래 빌드 (DART elestock, 美 Form4 KR판)
+        # recommendations KR → DART elestock.json(임원·주요주주 소유변동) → data/insider_trades.json.
+        # DART 무료 키 재사용(KIS 0). RULE7 = 공시 사실(보고자·증감·날짜·원문)만. 다음 step git add data/ (broad) = RULE 4.
+        continue-on-error: true
+        run: python -m api.builders.insider_trades_public_builder
+
       - name: 공개 종목 수급 빌드 (외국인·기관 5일, public-safe)
         # recommendations KR 티커 → 검증된 파서(scripts/kr/flow_observation_logger) 재사용 →
         # data/stock_flow_5d.json. 네이버 frgn 외부 fetch(KIS 0). 결정 파이프라인(market_flow) 무관 — 공개 표시 전용.
