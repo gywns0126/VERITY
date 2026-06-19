@@ -53,6 +53,8 @@ def get_macro_indicators() -> dict:
         "nikkei": _get_index_change("^N225", "닛케이"),
         "sse": _get_index_change("000001.SS", "상해종합"),
         "dax": _get_index_change("^GDAXI", "DAX"),
+        "sox": _get_index_change("^SOX", "필라델피아 반도체"),
+        "btc": _get_upbit_btc(),
     }
 
     fred = get_fred_macro_block()
@@ -235,6 +237,29 @@ def _get_index_change(ticker: str, name: str) -> dict:
             return {"value": round(current, 2), "change_pct": change_pct, "sparkline": sparkline, **meta, "status": "ok"}
     except Exception as e:
         _log_collector_fail("_get_index_change", ticker, e)
+    return {"value": 0, "change_pct": 0, "sparkline": [], **meta, "status": "fail"}
+
+
+def _get_upbit_btc() -> dict:
+    """비트코인 시세 + 30일 sparkline — 업비트 KRW-BTC 일봉(TIDE 동일 소스 업비트). 추측 0, 공개 시세 보드용."""
+    meta = {"source": "upbit", "currency": "KRW", "as_of": _now_kst_iso()}
+    try:
+        import json as _json
+        import urllib.request
+        req = urllib.request.Request(
+            "https://api.upbit.com/v1/candles/days?market=KRW-BTC&count=30",
+            headers={"User-Agent": "verity"},
+        )
+        with urllib.request.urlopen(req, timeout=15) as r:
+            rows = _json.loads(r.read().decode("utf-8"))
+        closes = [float(x["trade_price"]) for x in rows][::-1]  # 오래된→최신
+        if len(closes) >= 2:
+            current, prev = closes[-1], closes[-2]
+            change_pct = round(((current - prev) / prev) * 100, 2) if prev else 0
+            sparkline = [round(c, 0) for c in closes][-30:]
+            return {"value": round(current, 0), "change_pct": change_pct, "sparkline": sparkline, **meta, "status": "ok"}
+    except Exception as e:  # noqa: BLE001
+        _log_collector_fail("_get_upbit_btc", "KRW-BTC", e)
     return {"value": 0, "change_pct": 0, "sparkline": [], **meta, "status": "fail"}
 
 
