@@ -139,19 +139,38 @@ def recommended_account(
     )
 
 
+# ── 추천 라우팅 부착 (표시용) ─────────────────────────────────────────
+HIGH_DIVIDEND_YIELD_THRESHOLD = 3.0   # div_yield(%) ≥ → 고배당 (ISA 배당 절세 라우팅 기준)
+HAS_KIS_ISA = True   # 사용자 KIS ISA 보유 (확정 2026-06-19). 해지 시 False → 고배당도 일반.
+_US_MARKETS = {"US", "USA", "NASDAQ", "NYSE", "AMEX", "NYSEARCA", "미국"}
+
+
+def _infer_market(rec: dict) -> Market:
+    """추천 dict 에서 시장 추론. currency("USD") 1순위, market 라벨 2순위, 기본 KR."""
+    if str(rec.get("currency", "")).upper() == "USD":
+        return Market.US
+    if str(rec.get("market", "")).upper() in _US_MARKETS:
+        return Market.US
+    return Market.KR
+
+
 def annotate_recommendation(rec: dict) -> dict:
     """추천 dict 에 적합 계좌 라우팅을 부착 (관측/표시용, 자동주문 X).
 
-    rec 기대 키: market("kr"|"us"), is_kr_listed(bool), is_high_dividend(bool).
-    반환: rec 사본 + account_route {account_type, broker, rationale}.
+    실 추천 필드에서 파생: currency/market → 시장, div_yield(%) → 고배당.
+    ISA 보유 = HAS_KIS_ISA (모듈 상수). 반환: rec 사본 + account_route.
     """
-    market = Market(rec.get("market", "kr"))
+    market = _infer_market(rec)
+    try:
+        div_yield = float(rec.get("div_yield", 0) or 0)
+    except (TypeError, ValueError):
+        div_yield = 0.0
     route = recommended_account(
         market,
-        is_kr_listed=bool(rec.get("is_kr_listed", market == Market.KR)),
-        is_high_dividend=bool(rec.get("is_high_dividend", False)),
+        is_kr_listed=(market == Market.KR),
+        is_high_dividend=div_yield >= HIGH_DIVIDEND_YIELD_THRESHOLD,
         isa_capacity_left=bool(rec.get("isa_capacity_left", True)),
-        has_isa=bool(rec.get("has_isa", True)),
+        has_isa=HAS_KIS_ISA,
     )
     out = dict(rec)
     out["account_route"] = {
@@ -160,3 +179,10 @@ def annotate_recommendation(rec: dict) -> dict:
         "rationale": route.rationale,
     }
     return out
+
+
+def annotate_recommendations(recs):
+    """추천 리스트 일괄 라우팅 부착. list 아니면 원본 그대로 반환 (안전)."""
+    if not isinstance(recs, list):
+        return recs
+    return [annotate_recommendation(r) if isinstance(r, dict) else r for r in recs]

@@ -104,6 +104,15 @@ def save_portfolio(portfolio: dict):
     """
     global _latest_portfolio_ref
     _latest_portfolio_ref = portfolio
+    # 계좌 라우팅 부착 (일반 vs ISA 자체 인지, 표시용 — 자동주문 X). 실패해도 저장 영향 X.
+    try:
+        from api.trading.account_profile import annotate_recommendations
+        for _rk in ("recommendations", "safe_recommendations"):
+            if isinstance(portfolio.get(_rk), list):
+                portfolio[_rk] = annotate_recommendations(portfolio[_rk])
+    except Exception as _e:
+        import sys as _sys
+        _sys.stderr.write(f"[account_route] annotate FAIL (무시): {_e}\n")
     rv = _orig_save_portfolio(portfolio)
     # system_health snapshot 별도 publish (SystemHealthBar lite source)
     try:
