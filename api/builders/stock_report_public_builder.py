@@ -26,7 +26,11 @@ KRLISTED_PATH = os.path.join(_ROOT, "data", "kr_listed.json")
 NAMES_PATH = os.path.join(_ROOT, "data", "kr_stock_names.json")
 CONSENSUS_PATH = os.path.join(_ROOT, "data", "consensus_data.json")
 CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
+SECTOR_MAP_PATH = os.path.join(_ROOT, "data", "kr_sector_map.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
+
+# 동종업계 비교 = 섹터별 중앙값. yfinance KR PER/PBR=None 이므로 dart_fundamentals 커버리지 지표만.
+PEER_METRICS = [("ROE", "roe", "%", 1), ("부채비율", "debt_ratio", "%", 0), ("영업이익률", "op_margin", "%", 1)]
 DART = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
 
 FAMILY_TYPES = {"동일인", "친족"}
@@ -307,6 +311,86 @@ def build_light(ticker: str, fund: Dict[str, Any], name: str, market: str,
     }
 
 
+def _median(vals: List[float]) -> Optional[float]:
+    xs = sorted(v for v in vals if isinstance(v, (int, float)) and v == v)
+    n = len(xs)
+    if n == 0:
+        return None
+    mid = n // 2
+    return xs[mid] if n % 2 else (xs[mid - 1] + xs[mid]) / 2.0
+
+
+def _sector_medians(fundamentals: Dict[str, Any], sector_map: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """섹터(한글)별 ROE/부채비율/영업이익률 중앙값 + N. dart_fundamentals 실값 기준(사실 통계)."""
+    buckets: Dict[str, Dict[str, List[float]]] = {}
+    for tk, f in fundamentals.items():
+        smeta = sector_map.get(tk)
+        if not smeta:
+            continue
+        sk = smeta.get("sector_ko") or smeta.get("sector")
+        if not sk:
+            continue
+        b = buckets.setdefault(sk, {m[0]: [] for m in PEER_METRICS})
+        for label, src, _suf, _dg in PEER_METRICS:
+            v = f.get(src)
+            try:
+                if v is not None and float(v) == float(v):
+                    b[label].append(float(v))
+            except (TypeError, ValueError):
+                pass
+    out: Dict[str, Dict[str, Any]] = {}
+    for sk, b in buckets.items():
+        med = {}
+        n_max = 0
+        for label, _src, _suf, _dg in PEER_METRICS:
+            m = _median(b[label])
+            if m is not None:
+                med[label] = round(m, 2)
+                n_max = max(n_max, len(b[label]))
+        if med:
+            out[sk] = {"median": med, "n": n_max}
+    return out
+
+
+def _peer(ticker: str, fundamentals: Dict[str, Any], sector_map: Dict[str, Any],
+          medians: Dict[str, Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    smeta = sector_map.get(ticker)
+    if not smeta:
+        return None
+    sk = smeta.get("sector_ko") or smeta.get("sector")
+    sm = medians.get(sk)
+    if not sk or not sm:
+        return None
+    f = fundamentals.get(ticker) or {}
+    rows = []
+    for label, src, suf, dg in PEER_METRICS:
+        med = sm["median"].get(label)
+        if med is None:
+            continue
+        v = f.get(src)
+        try:
+            fv = float(v) if v is not None else None
+        except (TypeError, ValueError):
+            fv = None
+        if fv is None:
+            continue
+        rows.append({
+            "key": label,
+            "value": _num(fv, suf, dg),
+            "median": _num(med, suf, dg),
+            "vs": "above" if fv > med else "below" if fv < med else "equal",
+        })
+    if not rows:
+        return None
+    return {
+        "sector": sk,
+        "industry": smeta.get("industry") or "",
+        "n": sm["n"],
+        "rows": rows,
+        "note": "같은 섹터 종목들의 중앙값과 비교 (DART 재무 사실 통계) — 자체 등급 아님",
+    }
+
+
 def main() -> int:
     ok = False
     try:
@@ -363,11 +447,19 @@ def main() -> int:
                 if light["facts"] or light["disclosures"]:
                     stocks.append(light)
 
-        # 재무요약 (최근 결산, dart_fundamentals 실값) 부착
+        # 동종업계 비교 (섹터맵 + dart_fundamentals 중앙값) 준비
+        sector_doc = _load_json(SECTOR_MAP_PATH, {})
+        sector_map = (sector_doc.get("map") if isinstance(sector_doc, dict) else {}) or {}
+        sector_medians = _sector_medians(fundamentals, sector_map) if sector_map else {}
+
+        # 재무요약 + 동종업계 비교 부착
         for s in stocks:
             fin = _financials(fundamentals.get(s["ticker"]))
             if fin:
                 s["financials"] = fin
+            peer = _peer(s["ticker"], fundamentals, sector_map, sector_medians) if sector_map else None
+            if peer:
+                s["peer"] = peer
 
         # 정렬: rich 먼저 → 공시 많은 순 → ticker
         stocks.sort(key=lambda s: (s.get("rich", False), len(s.get("disclosures", [])), s["ticker"]), reverse=True)
