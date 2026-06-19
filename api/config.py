@@ -397,6 +397,19 @@ KIS_ENABLED = bool(KIS_APP_KEY and KIS_APP_SECRET)
 # KIS_SHARED_TOKEN=1 일 때만 소비자 모드 활성 (단계적 cutover, 미설정 시 기존 동작).
 KIS_SHARED_TOKEN = os.environ.get("KIS_SHARED_TOKEN", "").strip().lower() in ("1", "true", "yes", "on")
 
+# ── 토스증권 Open API (Toss Securities) — 하이브리드 채택 2026-06-19 ──
+# PM 결정: 고빈도 시세/주문/계좌 = Toss (OAuth2 client_credentials, 24h 토큰).
+#   KIS 1일 1토큰 고통(7+ 사고)을 고빈도 경로에서 제거. KIS 는 1일 1회 리서치/수급 전용 축소 존치.
+# 키 prefix: client=tsck_live_ / secret=tssk_live_ (토스페이먼츠 live_ck_/live_sk_ 와 다름).
+# 토큰 정책: 클라이언트당 유효 토큰 1개 + 재발급 시 기존 즉시 무효화 → 캐시 후 재사용 의무
+#   (캐시 없이 반복 발급 = 403 AUTH 보호, 2026-06-19 검수 중 확인).
+TOSS_API_KEY = os.environ.get("TOSS_API_KEY", "").strip().strip('"')
+TOSS_SECRET_KEY = os.environ.get("TOSS_SECRET_KEY", "").strip().strip('"')
+TOSS_OPENAPI_BASE_URL = os.environ.get(
+    "TOSS_OPENAPI_BASE_URL", "https://openapi.tossinvest.com",
+).strip().strip('"')
+TOSS_ENABLED = bool(TOSS_API_KEY and TOSS_SECRET_KEY)
+
 # ── 미장 확장 API ──
 FINNHUB_API_KEY = os.environ.get("FINNHUB_API_KEY", "")
 POLYGON_API_KEY = os.environ.get("POLYGON_API_KEY", "")
