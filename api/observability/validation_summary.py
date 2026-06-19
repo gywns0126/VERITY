@@ -53,7 +53,9 @@ def _maturity_label(n_eff: Optional[float]) -> str:
         return "통계 무의미 (N<30)"
     if n_eff < _N_PRELIM:
         return "예비 (N<100, 검증 진행 중)"
-    return "유의 표본 도달 (잠정 — N≥100)"
+    # N≥100 = 표본 크기 마일스톤일 뿐 — 신호 유의성과 별개(IC p 로 판정). "유의 표본 도달"
+    # 표현은 신호가 유의한 것으로 오독되어 금지(RULE 7). 2026-06-19 정직화.
+    return "표본 N≥100 누적 (잠정 — 유의성 미검증)"
 
 
 def _gate_status(n_eff: Optional[float], ic_pvalue: Optional[float]) -> str:
