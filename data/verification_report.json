@@ -15,7 +15,7 @@
   },
   "_corrections_meta": {
     "version": "1.0",
-    "applied_at": "2026-06-20 07:26:52.599328+09:00",
+    "applied_at": "2026-06-20 08:19:54.756467+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": -50.0,
     "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
@@ -23,7 +23,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
-      "fixed_at": "2026-06-20 07:26:52.599332+09:00"
+      "fixed_at": "2026-06-20 08:19:54.756472+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -37,27 +37,21 @@
       "perplexity_risk"
     ],
     "decaying": [
+      "fundamental",
       "multi_factor",
       "prediction",
-      "safety_score",
-      "technical",
-      "fundamental",
       "timing",
-      "quality",
+      "brain_score",
+      "technical",
       "consensus",
-      "brain_score"
+      "quality",
+      "safety_score"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "prediction",
-      "multiplier": 0.0,
-      "status": "DEAD",
-      "ic_recent": 0.0
-    },
-    {
-      "factor": "multi_factor",
+      "factor": "consensus",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
@@ -69,12 +63,18 @@
       "ic_recent": 0.0
     },
     {
-      "factor": "consensus",
+      "factor": "multi_factor",
+      "multiplier": 0.0,
+      "status": "DEAD",
+      "ic_recent": 0.0
+    },
+    {
+      "factor": "prediction",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-06-20 07:26:52.614248+09:00"
+  "generated_at": "2026-06-20 08:19:54.769910+09:00"
 }
