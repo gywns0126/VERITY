@@ -1,13 +1,14 @@
-"""account_profile — 계좌 유형 인지 + 세제·적격성 기반 전략 배분 (하이브리드 2026-06-19).
+"""account_profile — 계좌 유형(일반/ISA) 인지 + 세제·적격성 기반 전략 라벨.
 
-VERITY 전용 (골든구스 = 공개 정보사이트, 계좌연동 X). KIS+Toss 이원화에서
-일반(위탁) vs ISA 차이를 VERITY 가 자체 인지하고 추천을 적합 계좌로 라우팅.
+VERITY 전용 (골든구스 = 공개 정보사이트, 계좌연동 X). 추천을 적합 계좌 유형으로
+라우팅하는 표시용 라벨 (자동주문 X). 현 venue = KIS (일반·ISA 모두).
 
-🔒 계좌 토폴로지 제약 (검증 2026-06-19, 공식 OpenAPI 스펙):
-- ISA = 전 금융기관 1인 1계좌 ([[project_kis_isa_constraint]]).
-- Toss Open API accountType enum = BROKERAGE / OVERSEAS_DERIVATIVES /
-  PENSION_SAVINGS / RESHORING_INVESTMENT (ISA 부재, 현재 BROKERAGE 만 노출)
-  → ISA 는 KIS 전용, Toss 는 일반(위탁) 전용.
+배경: 2026-06-19 Toss Open API 평가 → 매매(2027) 외 기능 우위 없음(실시간은 기존 KIS
+WebSocket 이 우위, 캔들 동급) → Toss API 도입 원복, 기존 KIS 유지. 본 모듈의 일반/ISA
+세제 라우팅 라벨만 무료 자산으로 존치 (Toss API 불필요). 2027 매매 단계서 Toss 소수점
+재검토 ([[project_toss_api_watch_2026_06_08]]).
+
+🔒 ISA = 전 금융기관 1인 1계좌 ([[project_kis_isa_constraint]]), KIS 보유.
 
 세제 사실 (2026, 웹 cross-source 검증):
 - 일반(위탁): KR 상장주식 양도세 0% (대주주 제외, 금투세 폐지 2024-12-10) ·
@@ -112,15 +113,15 @@ def recommended_account(
 ) -> AccountRoute:
     """추천 종목을 적합 계좌로 라우팅 + 세제 근거.
 
-    전략 원칙 (검증된 세제 기반):
-    - 미국 직접투자 → 일반(Toss). ISA 불가, 일반에서 양도세 22%/250만공제.
-    - KR 고배당 + ISA 여력 → ISA(KIS). 일반 배당 15.4% vs ISA 비과세/9.9% 이점.
+    전략 원칙 (검증된 세제 기반, venue = KIS):
+    - 미국 직접투자 → 일반. ISA 불가(국내상장만), 일반에서 양도세 22%/250만공제.
+    - KR 고배당 + ISA 여력 → ISA. 일반 배당 15.4% vs ISA 비과세/9.9% 이점.
     - KR 차익형 → 일반. KR 양도세 이미 0% 라 ISA 이점 미미 → ISA 여력은 배당용 보존.
     """
-    # 미국/해외 직접투자: ISA 불가 → 무조건 일반(Toss)
+    # 미국/해외 직접투자: ISA 불가 → 일반
     if market == Market.US and not is_kr_listed:
         return AccountRoute(
-            AccountType.GENERAL, Broker.TOSS,
+            AccountType.GENERAL, Broker.KIS,
             "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)",
         )
 
@@ -131,11 +132,10 @@ def recommended_account(
             "고배당 — ISA 비과세 한도/초과분 9.9% 가 일반 배당 15.4% 대비 유리",
         )
 
-    # KR 차익형: 일반 양도세 0% 라 ISA 이점 없음 → 일반(Toss, 고빈도 거래 = Toss 원칙).
-    # ISA 여력은 배당용으로 보존.
+    # KR 차익형: 일반 양도세 0% 라 ISA 이점 없음 → 일반. ISA 여력은 배당용으로 보존.
     return AccountRoute(
-        AccountType.GENERAL, Broker.TOSS,
-        "KR 차익형 — 일반 양도세 0%(대주주 제외)로 ISA 이점 미미, 고빈도=Toss·ISA 여력 보존",
+        AccountType.GENERAL, Broker.KIS,
+        "KR 차익형 — 일반 양도세 0%(대주주 제외)로 ISA 이점 미미, ISA 여력은 배당용 보존",
     )
 
 
