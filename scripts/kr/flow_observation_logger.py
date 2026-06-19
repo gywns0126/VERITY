@@ -32,6 +32,7 @@ LAKE = os.path.expanduser("~/VERITY_data_lake")
 OUT_PARQUET = os.path.join(LAKE, "kr_flow_observations.parquet")
 KR_PRICES_DB = os.path.join(LAKE, "kr_prices.duckdb")
 NAVER_URL = "https://finance.naver.com/item/frgn.naver?code={code}"
+NAVER_TREND_URL = "https://m.stock.naver.com/api/stock/{code}/trend"  # 모바일 JSON: 개인까지 + 더 견고(2026-06-19)
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
     "Referer": "https://finance.naver.com/",
@@ -75,6 +76,38 @@ def fetch_flow_panel(code: str, session: Optional[requests.Session] = None) -> L
     return rows
 
 
+def fetch_trend_mobile(code: str, session: Optional[requests.Session] = None) -> List[Dict]:
+    """네이버 모바일 trend JSON → 최근 ~60거래일 [{date,ticker,close,volume,inst_net,foreign_net,individual_net}].
+
+    frgn HTML(외인/기관만) 대비 개인(individualPureBuyQuant)까지 포함 + Referer/UA 게이트 낮아 더 견고.
+    🚨 개인 순매매 = 외인/기관의 거의 거울상(zero-sum) — 독립 정보가치 낮음. 관측-only 누적(점수 wire 0).
+    """
+    sess = session or requests.Session()
+    try:
+        r = sess.get(NAVER_TREND_URL.format(code=code), params={"pageSize": 60, "page": 1},
+                     headers=_HEADERS, timeout=20)
+        arr = r.json()
+    except Exception:  # noqa: BLE001
+        return []
+    if not isinstance(arr, list):
+        return []
+    rows: List[Dict] = []
+    for it in arr:
+        bd = str(it.get("bizdate") or "")
+        if len(bd) != 8:
+            continue
+        rows.append({
+            "date": f"{bd[:4]}-{bd[4:6]}-{bd[6:8]}",
+            "ticker": code,
+            "close": _num(it.get("closePrice")),
+            "volume": _num(it.get("accumulatedTradingVolume")),
+            "inst_net": _num(it.get("organPureBuyQuant")),
+            "foreign_net": _num(it.get("foreignerPureBuyQuant")),
+            "individual_net": _num(it.get("individualPureBuyQuant")),
+        })
+    return rows
+
+
 def liquid_universe(top_n: int) -> List[str]:
     """kr_prices 레이크에서 최근 거래일 거래대금 상위 top_n 티커 (anti-bot 위해 스코프)."""
     import duckdb
@@ -102,7 +135,7 @@ def run(top_n: int = 200, delay: float = 0.4, max_tickers: Optional[int] = None,
     ok, fail = 0, 0
     for i, code in enumerate(universe):
         try:
-            rows = fetch_flow_panel(code, sess)
+            rows = fetch_trend_mobile(code, sess) or fetch_flow_panel(code, sess)  # 모바일(개인 포함) 우선, frgn 폴백
             if rows:
                 all_rows.extend(rows)
                 ok += 1
