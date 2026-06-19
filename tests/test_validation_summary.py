@@ -41,7 +41,11 @@ def test_maturity_label_gates():
     assert VS._maturity_label(None) == "데이터 없음"
     assert "통계 무의미" in VS._maturity_label(10)       # N<30
     assert "예비" in VS._maturity_label(50)              # 30<=N<100
-    assert "유의 표본" in VS._maturity_label(120)         # N>=100
+    # N>=100 = 표본 마일스톤일 뿐, 유의성과 별개 (RULE 7, 2026-06-19 정직화)
+    label_100 = VS._maturity_label(120)
+    assert "N≥100" in label_100                          # 마일스톤 도달
+    assert "유의성 미검증" in label_100                  # 유의성 오독 금지
+    assert "유의 표본" not in label_100                  # 과대표현 회귀 차단
 
 
 def test_gate_status_progress_monotone():
