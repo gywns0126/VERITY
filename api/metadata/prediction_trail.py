@@ -37,6 +37,11 @@ REGIME_PATH = os.path.join(DATA_DIR, "metadata", "regime_prediction_trail.jsonl"
 # market-level forward 예측으로 환산 → 별 trail/scorer source 분리. 관측 only — 결정 피드백 0(RULE 7).
 # spec docs/observation_signal_trails_spec_v0_2026_06_13.md.
 OBS_PATH = os.path.join(DATA_DIR, "metadata", "observation_prediction_trail.jsonl")
+# 소형주 코너(골든구스 병렬 트랙) forward trail (물리 분리). 메인 funnel 25 / VAMS 2027 win condition 과
+# 별 풀 — 코너 brain_score 의 forward 예측력을 별도 검증(관측 only, brain_input=False). 데이터 깊이 비대칭
+# (컨센서스/forensic 얇음 → 다수 신호 default 50)으로 메인 IC 와 직접 수치 비교 금지. source 태그 smallcap_corner.v0.
+# spec docs/PREREG_SMALLCAP_CORNER_TRAIL_2026_06_20.md. 관측 only(RULE 7).
+SMALLCAP_PATH = os.path.join(DATA_DIR, "metadata", "smallcap_corner_prediction_trail.jsonl")
 
 # horizon → eval 까지 캘린더 일수 (상한 기준: 단 1주 / 중 3개월 / 장 12개월)
 HORIZON_DAYS = {"short": 7, "mid": 90, "long": 365}

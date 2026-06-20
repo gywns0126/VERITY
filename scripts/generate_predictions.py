@@ -137,6 +137,33 @@ def main() -> int:
     else:
         sys.stderr.write("[predict] us_market_observations 없음/빈값 — obs skip (graceful)\n")
 
+    # 소형주 코너(골든구스 병렬 트랙) → brain analyze_all 별도 호출 → forward 예측
+    # (Smallcap Corner Trail Spec v0 — 별도 trail SMALLCAP_PATH, 메인/섀도우/ML/관측/regime 무오염).
+    # 관측 only — 채점 결과 VAMS/Brain 학습 피드백 0 (RULE 7, brain_input=False).
+    smallcap_out = (args.out + ".smallcap.jsonl") if args.out else None  # 테스트 시에도 격리
+    corner = _load(os.path.join(DATA_DIR, "smallcap_corner.json"))
+    if isinstance(corner, dict) and corner.get("stocks"):
+        # 방치 우량 부분군 멤버십(사실 필터, 점수 아님) — signals 동결 → 부분군 IC 분리 집계.
+        neglected: list = []
+        cf = _load(os.path.join(DATA_DIR, "smallcap_corner_filters.json"))
+        if isinstance(cf, dict):
+            for filt in cf.get("filters") or []:
+                if filt.get("key") == "neglected_quality":
+                    neglected = [t.get("ticker") for t in (filt.get("tickers") or []) if t.get("ticker")]
+                    break
+        sc = PL.generate_smallcap_predictions(corner["stocks"], neglected_tickers=neglected, path=smallcap_out)
+        if sc:
+            print(
+                f"[predict] smallcap logged {len(sc)} "
+                f"({len(sc) // len(PL._HORIZONS)} corner × {len(PL._HORIZONS)}h, "
+                f"neglected={len(neglected)}, source={PL._SMALLCAP_SOURCE}, "
+                f"trail={'smallcap_corner_prediction_trail.jsonl' if not smallcap_out else smallcap_out})"
+            )
+        else:
+            sys.stderr.write("[predict] smallcap 0건 — brain grade/score 결손 (graceful)\n")
+    else:
+        sys.stderr.write("[predict] smallcap_corner.json 없음/빈값 — smallcap skip (graceful)\n")
+
     return 0
 
 

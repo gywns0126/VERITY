@@ -252,6 +252,98 @@ def generate_observation_predictions(
     return out
 
 
+# 소형주 코너(골든구스 병렬 트랙) 예측 source 태그. 메인/섀도우/ML/관측과 분리 집계.
+_SMALLCAP_SOURCE = "smallcap_corner.v0"
+# data_coverage < 게이트 = low_confidence (정의 유도: 신호 절반 미만 present = 신뢰 낮음. hit-rate 튜닝 0).
+_SMALLCAP_COVERAGE_GATE = 0.40
+
+
+def _smallcap_to_candidate(s: Dict[str, Any]) -> Dict[str, Any]:
+    """코너 종목(smallcap_corner.json schema) → analyze_stock 입력 어댑터.
+
+    financials 평탄화 + currency=KRW. 컨센서스/멀티팩터 등 부재 신호는 analyze_stock 내부 default 50
+    (얕은 데이터 정직 반영 — curve-fit surface 0, spec §3)."""
+    fin = s.get("financials") or {}
+    return {
+        "ticker": s.get("ticker"),
+        "name": s.get("name"),
+        "currency": "KRW",
+        "close": s.get("close"),
+        "market": s.get("market"),
+        "mktcap_eok": s.get("mktcap_eok"),
+        "debt_ratio": fin.get("debt_ratio"),
+        "roa": fin.get("roa"),
+        "gross_margin": fin.get("gross_margin"),
+        "net_income": fin.get("net_income"),
+        "has_forensic_depth": s.get("has_forensic_depth"),
+    }
+
+
+def generate_smallcap_predictions(
+    corner_stocks: List[Dict[str, Any]],
+    neglected_tickers: Optional[List[str]] = None,
+    path: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """KR 소형주 코너 brain_score → forward 예측 (Smallcap Corner Trail Spec v0).
+
+    동기: 코너 1,120종목이 census+사실필터까지 완료됐으나 forward 채점 trail 부재 → "신호 갖나" 판정 불가.
+    Brain analyze_all 별도 호출(메인25 무커플링) → 별 trail 에 forward 로깅 → 채점 누적.
+    관측 only — 채점 결과 어떤 verdict/VAMS/Brain 학습에도 피드백 0 (RULE 7, brain_input=False).
+
+    corner_stocks = smallcap_corner.json["stocks"] (ticker/name/market/mktcap_eok/close/financials/...).
+    neglected_tickers = 방치 우량 부분군 멤버십(사실 필터, 점수 아님) → signals 동결 → 부분군 IC 분리.
+    매핑 = production generate_stock_predictions 강제 맵 재사용(_GRADE_DIRECTION). 코너 전용 자유 파라미터 0.
+    data_coverage < 게이트 = low_confidence(얕은 데이터 정직 표기). entry_price = scan 종가 동결(PIT).
+
+    물리 분리: path 미지정 시 PT.SMALLCAP_PATH (메인/섀도우/ML/관측/regime scorer 무오염, 무변경).
+    Gemini AI verdict 미호출(코너 = 로컬 결정 모드) → 메인 trail 과 brain_score 분포 다름 → 직접 비교 금지.
+    """
+    from api.intelligence import verity_brain as VB
+
+    path = path or PT.SMALLCAP_PATH
+    neglected = {str(t) for t in (neglected_tickers or [])}
+    by_ticker = {str(s.get("ticker")): s for s in (corner_stocks or []) if s.get("ticker")}
+    candidates = [_smallcap_to_candidate(s) for s in (corner_stocks or []) if s.get("ticker")]
+    if not candidates:
+        return []
+
+    # 코너 전용 경량 portfolio (메인 portfolio 무공유 — 무오염). 매크로/13F 등 부재 = analyze_stock 내부 default.
+    brain = VB.analyze_all(candidates, {})
+    out: List[Dict[str, Any]] = []
+    for r in brain.get("stocks", []):
+        ticker = str(r.get("ticker") or "")
+        grade = r.get("grade")
+        score = r.get("brain_score")
+        if not ticker or grade is None or score is None:
+            continue  # 결손 = skip (graceful)
+        coverage = float(r.get("data_coverage") or 0.0)
+        low_conf = coverage < _SMALLCAP_COVERAGE_GATE
+        direction = _GRADE_DIRECTION.get(str(grade).upper(), "neutral")
+        conf = _conf_num(r.get("grade_confidence"))
+        src_stock = by_ticker.get(ticker, {})
+        signals = {
+            "brain_score": score,
+            "grade": grade,
+            "data_coverage": round(coverage, 3),
+            "neglected_quality": ticker in neglected,  # 방치 우량 부분군 (사실 필터)
+            "mktcap_eok": src_stock.get("mktcap_eok"),
+            "entry_price": src_stock.get("close"),  # scan 시점 동결 (PIT, pykrx backward-adjust drift 회피)
+            "market": src_stock.get("market"),
+            "source": _SMALLCAP_SOURCE,
+        }
+        for h in _HORIZONS:
+            out.append(
+                PT.log_prediction(
+                    target_type="stock", target=ticker, horizon=h,
+                    direction=direction, pred_score=float(score), confidence=conf,
+                    low_confidence=low_conf, signals=signals,
+                    spec_version="smallcap.v0",
+                    source=_SMALLCAP_SOURCE, path=path,
+                )
+            )
+    return out
+
+
 def generate_sector_predictions(
     macro_alignment: Dict[str, Any], path: Optional[str] = None
 ) -> List[Dict[str, Any]]:
