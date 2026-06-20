@@ -46,18 +46,27 @@ from api.intelligence.prediction_scoring import (
 
 IC_HISTORY_PATH = os.path.join(DATA_DIR, "smallcap_corner_ic_history.jsonl")
 
-# 부분군 정의 (사전등록 spec §5). 멤버십 = 사실(점수 아님) → 자유 선택 surface 0.
-_SUBGROUPS = ("all", "high_conf", "neglected_quality")
+# 부분군 정의 (spec §5). 멤버십 = 사실(점수 아님) → 자유 선택 surface 0.
+# high_conf 제거(2026-06-20 §11): 코너 신호 = quant 팩터 개별, low_confidence 개념 부재.
+_SUBGROUPS = ("all", "neglected_quality")
 
 
 def _in_subgroup(e: Dict[str, Any], subgroup: str) -> bool:
     if subgroup == "all":
         return True
-    if subgroup == "high_conf":
-        return not bool(e.get("low_confidence"))
     if subgroup == "neglected_quality":
         return bool((e.get("signals") or {}).get("neglected_quality"))
     return False
+
+
+def _factor_of(e: Dict[str, Any]) -> str:
+    """예측 엔트리의 팩터 라벨 (signals.factor). source fallback."""
+    fac = (e.get("signals") or {}).get("factor")
+    if fac:
+        return str(fac)
+    src = str(e.get("source") or "")
+    parts = src.split(".")  # smallcap_corner.<factor>.v0
+    return parts[1] if len(parts) >= 3 else "unknown"
 
 
 def _score_trail(entries: List[Dict[str, Any]], available, today) -> Dict[str, int]:
@@ -107,16 +116,20 @@ def _score_trail(entries: List[Dict[str, Any]], available, today) -> Dict[str, i
 
 
 def _aggregate(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """scored 예측을 (subgroup, horizon) 별 집계 → snapshot 레코드 list.
-    prediction_scoring._aggregate 와 동일 stat (subgroup 차원만 추가, survivorship_unadjusted 명시)."""
+    """scored 예측을 (factor, subgroup, horizon) 별 집계 → snapshot 레코드 list.
+    prediction_scoring._aggregate 와 동일 stat (factor/subgroup 차원 추가, survivorship_unadjusted 명시).
+    팩터별 독립 forward IC (PM 결정 §11) — momentum/quality/vol/mr 각각 별 그룹."""
     scored_at = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
     scored = [e for e in entries
               if e.get("scored") and e.get("realized_return") is not None and e.get("target_type") == "stock"]
 
+    factors = sorted({_factor_of(e) for e in scored})
     records: List[Dict[str, Any]] = []
-    for subgroup in _SUBGROUPS:
+    for factor in factors:
+      fac_scored = [e for e in scored if _factor_of(e) == factor]
+      for subgroup in _SUBGROUPS:
         by_h: Dict[str, List[Dict[str, Any]]] = {}
-        for e in scored:
+        for e in fac_scored:
             if _in_subgroup(e, subgroup):
                 by_h.setdefault(str(e.get("horizon")), []).append(e)
         for horizon, preds in by_h.items():
@@ -147,6 +160,7 @@ def _aggregate(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
             records.append({
                 "scored_at": scored_at,
+                "factor": factor,
                 "subgroup": subgroup,
                 "horizon": horizon,
                 "n": n,

@@ -12,21 +12,32 @@ import pytest
 
 from api.intelligence import prediction_layer as PL
 from api.metadata import prediction_trail as PT
+from api.builders import smallcap_corner_enrich as EN
 from scripts import score_smallcap_corner as SC
+
+
+def _enriched(ticker, name, market, mktcap, close, fin, mf_score, neglected_ok=True):
+    """enrich_quant_factors 통과 후 형태(enriched=True + multi_factor)를 시뮬레이트."""
+    return {
+        "ticker": ticker, "name": name, "market": market, "mktcap_eok": mktcap, "close": close,
+        "financials": fin, "has_forensic_depth": False,
+        "enriched": True, "price_points": 250,
+        "multi_factor": {"multi_score": mf_score, "grade": "관망"},
+        "quant_factors": {"momentum_score": mf_score, "quality_score": 50,
+                          "volatility_score": 50, "mean_reversion_score": 50},
+    }
 
 
 @pytest.fixture
 def corner_stocks():
+    # enrich 후 형태 — multi_score 분산(35/55/70)으로 brain_score 분산 유도.
     return [
-        {"ticker": "035460", "name": "기산텔레콤", "market": "KQ", "mktcap_eok": 800, "close": 5000,
-         "financials": {"debt_ratio": 9.0, "roa": 5.0, "gross_margin": 30.0, "net_income": 120, "quarter_end": "2025-12-31"},
-         "has_forensic_depth": True},
-        {"ticker": "232830", "name": "아이티센피엔에스", "market": "KQ", "mktcap_eok": 348, "close": 2105,
-         "financials": {"debt_ratio": 681.15, "roa": None, "gross_margin": 7.31, "net_income": 0, "quarter_end": "2025-12-31"},
-         "has_forensic_depth": False},
-        {"ticker": "000000", "name": "테스트소형", "market": "KS", "mktcap_eok": 1500, "close": 12000,
-         "financials": {"debt_ratio": 50.0, "roa": 8.0, "gross_margin": 40.0, "net_income": 300, "quarter_end": "2025-12-31"},
-         "has_forensic_depth": False},
+        _enriched("035460", "기산텔레콤", "KQ", 800, 5000,
+                  {"debt_ratio": 9.0, "roa": 5.0, "gross_margin": 30.0, "net_income": 120}, 70),
+        _enriched("232830", "아이티센피엔에스", "KQ", 348, 2105,
+                  {"debt_ratio": 681.15, "roa": None, "gross_margin": 7.31, "net_income": 0}, 35),
+        _enriched("000000", "테스트소형", "KS", 1500, 12000,
+                  {"debt_ratio": 50.0, "roa": 8.0, "gross_margin": 40.0, "net_income": 300}, 55),
     ]
 
 
@@ -34,25 +45,29 @@ def _load(path):
     return [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
 
 
-def test_structure_n_times_three_horizons(tmp_path, corner_stocks):
+def test_structure_factor_times_horizon(tmp_path, corner_stocks):
     p = str(tmp_path / "sc.jsonl")
     rows = PL.generate_smallcap_predictions(corner_stocks, path=p)
     written = _load(p)
-    # 3 종목 × 3 horizon = 9 (brain 결손 skip 없을 시). 반환 == 파일 기록.
-    assert len(rows) == len(written) == 9
+    # 3 종목 × 4 팩터 × 3 horizon = 36. 반환 == 파일 기록.
+    assert len(rows) == len(written) == 36
     assert all(r["target_type"] == "stock" for r in written)
-    assert all(r["source"] == "smallcap_corner.v0" for r in written)
+    assert {r["signals"]["factor"] for r in written} == {"momentum", "quality", "vol", "mr"}
+    assert all(r["source"] == f"smallcap_corner.{r['signals']['factor']}.v0" for r in written)
     assert all(r["spec_version"] == "smallcap.v0" for r in written)
     assert {r["horizon"] for r in written} == {"short", "mid", "long"}
 
 
-def test_forced_direction_consistency(tmp_path, corner_stocks):
-    """강제 매핑: direction 은 항상 grade 에서 유도 (코너 전용 자유 flip 0)."""
+def test_face_value_direction(tmp_path, corner_stocks):
+    """강제 매핑: direction = face-value(score>50 up / <50 down / ==50 neutral). 자유 flip 0."""
     p = str(tmp_path / "sc.jsonl")
     PL.generate_smallcap_predictions(corner_stocks, path=p)
     for r in _load(p):
-        grade = str(r["signals"]["grade"]).upper()
-        assert r["direction"] == PL._GRADE_DIRECTION.get(grade, "neutral")
+        sc = r["signals"]["factor_score"]
+        expected = "up" if sc > 50 else "down" if sc < 50 else "neutral"
+        assert r["direction"] == expected
+        assert r["pred_score"] == sc
+        assert r["confidence"] == 0.5
 
 
 def test_entry_price_frozen_pit(tmp_path, corner_stocks):
@@ -73,15 +88,6 @@ def test_neglected_quality_subgroup_tag(tmp_path, corner_stocks):
         assert r["signals"]["neglected_quality"] is expected
 
 
-def test_low_confidence_reflects_coverage_gate(tmp_path, corner_stocks):
-    """low_confidence = (data_coverage < 0.40). 얕은 데이터 정직 표기."""
-    p = str(tmp_path / "sc.jsonl")
-    PL.generate_smallcap_predictions(corner_stocks, path=p)
-    for r in _load(p):
-        cov = r["signals"]["data_coverage"]
-        assert r["low_confidence"] is (cov < PL._SMALLCAP_COVERAGE_GATE)
-
-
 def test_separate_trail_no_main_contamination(tmp_path, corner_stocks):
     """기본 path = SMALLCAP_PATH (메인 trail 과 별 파일). 무오염."""
     assert PT.SMALLCAP_PATH != PT._PATH
@@ -96,38 +102,86 @@ def test_empty_input_graceful():
     assert PL.generate_smallcap_predictions(None) == []
 
 
+def test_non_enriched_skipped(tmp_path):
+    """enriched=False(가격레이크 부재) 종목 = degenerate → trail 제외 (spec §10)."""
+    raw = [{"ticker": "111111", "name": "미enrich", "market": "KQ", "close": 1000,
+            "financials": {"debt_ratio": 30.0, "roa": 5.0, "gross_margin": 20.0}}]  # enriched 키 부재
+    assert PL.generate_smallcap_predictions(raw, path=str(tmp_path / "x.jsonl")) == []
+
+
+def test_rows_carry_factor_and_price_points(tmp_path, corner_stocks):
+    p = str(tmp_path / "sc.jsonl")
+    PL.generate_smallcap_predictions(corner_stocks, path=p)
+    rows = _load(p)
+    assert rows and all(r["signals"].get("factor") in {"momentum", "quality", "vol", "mr"} for r in rows)
+    assert all(r["signals"].get("price_points") is not None for r in rows)
+
+
+# ── Phase 1 enrichment (smallcap_corner_enrich) ──
+
+def test_enrich_no_lake_graceful():
+    """lake 부재 시 전 종목 enriched=False (graceful, CI 안전)."""
+    stocks = [{"ticker": "035460", "name": "기산", "close": 5000,
+               "financials": {"roa": 5.0, "debt_ratio": 9.0, "gross_margin": 30.0}}]
+    out = EN.enrich_quant_factors(stocks, lake_path="/nonexistent/lake.duckdb")
+    assert len(out) == 1
+    assert out[0]["enriched"] is False
+    assert out[0]["multi_factor"]["multi_score"] is not None  # 팩터 계산은 진행(중립)
+
+
+def test_enrich_one_disperses_with_history():
+    """가격 히스토리 충분 시 enriched=True + multi_factor 계산 (분산 lever 검증)."""
+    import math
+    # 우상향 추세 + 저변동 종가 252점 (모멘텀 양호 예상)
+    closes_up = [1000 * (1 + 0.001 * i) for i in range(252)]
+    s = {"ticker": "AAA", "name": "상승주", "close": closes_up[-1],
+         "financials": {"roa": 10.0, "debt_ratio": 20.0, "gross_margin": 45.0}}
+    out = EN._enrich_one(s, closes_up)
+    assert out["enriched"] is True
+    assert out["price_points"] == 252
+    assert isinstance(out["multi_factor"]["multi_score"], int)
+    assert out["quant_factors"]["momentum_score"] is not None
+
+
+def test_enrich_one_short_history_not_enriched():
+    """가격 점수 부족(<60) = enriched=False."""
+    s = {"ticker": "BBB", "name": "신규", "close": 1000, "financials": {"roa": 5.0}}
+    out = EN._enrich_one(s, [1000.0] * 30)  # 30점 < _MIN_HISTORY
+    assert out["enriched"] is False
+
+
 # ── 채점 subgroup 집계 (prediction_scoring stat 헬퍼 재사용) ──
 
-def _scored_entry(ticker, horizon, pred_score, realized, direction="up", low_conf=False, neglected=False):
+def _scored_entry(ticker, horizon, pred_score, realized, factor="momentum", direction="up", neglected=False):
     return {
         "target_type": "stock", "target": ticker, "horizon": horizon,
-        "direction": direction, "pred_score": pred_score, "confidence": 0.7,
-        "low_confidence": low_conf,
-        "signals": {"neglected_quality": neglected, "source": "smallcap_corner.v0"},
+        "direction": direction, "pred_score": pred_score, "confidence": 0.5,
+        "source": f"smallcap_corner.{factor}.v0",
+        "signals": {"factor": factor, "neglected_quality": neglected},
         "scored": True, "realized_return": realized, "hit": None, "ic_contrib": pred_score,
     }
 
 
 def test_in_subgroup_logic():
-    e_hi = _scored_entry("A", "mid", 60, 5.0, low_conf=False, neglected=True)
-    e_lo = _scored_entry("B", "mid", 40, -2.0, low_conf=True, neglected=False)
-    assert SC._in_subgroup(e_hi, "all") and SC._in_subgroup(e_lo, "all")
-    assert SC._in_subgroup(e_hi, "high_conf") and not SC._in_subgroup(e_lo, "high_conf")
-    assert SC._in_subgroup(e_hi, "neglected_quality") and not SC._in_subgroup(e_lo, "neglected_quality")
+    e_neg = _scored_entry("A", "mid", 60, 5.0, neglected=True)
+    e_oth = _scored_entry("B", "mid", 40, -2.0, neglected=False)
+    assert SC._in_subgroup(e_neg, "all") and SC._in_subgroup(e_oth, "all")
+    assert SC._in_subgroup(e_neg, "neglected_quality") and not SC._in_subgroup(e_oth, "neglected_quality")
+    assert SC._SUBGROUPS == ("all", "neglected_quality")  # high_conf 제거 (§11)
 
 
-def test_aggregate_subgroup_counts():
-    """3 부분군 × horizon 집계 — n 카운트 + survivorship 플래그."""
+def test_aggregate_factor_subgroup_counts():
+    """(factor, subgroup, horizon) 집계 — 팩터별 독립 + n 카운트 + survivorship 플래그."""
     entries = [
-        _scored_entry("A", "mid", 70, 6.0, low_conf=False, neglected=True),
-        _scored_entry("B", "mid", 55, 1.0, low_conf=False, neglected=False),
-        _scored_entry("C", "mid", 30, -3.0, low_conf=True, neglected=False),
+        _scored_entry("A", "mid", 70, 6.0, factor="momentum", neglected=True),
+        _scored_entry("B", "mid", 55, 1.0, factor="momentum", neglected=False),
+        _scored_entry("A", "mid", 30, 6.0, factor="quality", neglected=True),
     ]
     recs = SC._aggregate(entries)
-    by_key = {(r["subgroup"], r["horizon"]): r for r in recs}
-    assert by_key[("all", "mid")]["n"] == 3
-    assert by_key[("high_conf", "mid")]["n"] == 2          # A,B (low_conf C 제외)
-    assert by_key[("neglected_quality", "mid")]["n"] == 1  # A
+    by_key = {(r["factor"], r["subgroup"], r["horizon"]): r for r in recs}
+    assert by_key[("momentum", "all", "mid")]["n"] == 2           # A,B
+    assert by_key[("momentum", "neglected_quality", "mid")]["n"] == 1  # A
+    assert by_key[("quality", "all", "mid")]["n"] == 1            # 팩터 분리
     assert all(r["survivorship_unadjusted"] is True for r in recs)
     assert all(r["spec_version"] == "smallcap.v0" for r in recs)
 

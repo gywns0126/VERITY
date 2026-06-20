@@ -151,16 +151,27 @@ def main() -> int:
                 if filt.get("key") == "neglected_quality":
                     neglected = [t.get("ticker") for t in (filt.get("tickers") or []) if t.get("ticker")]
                     break
-        sc = PL.generate_smallcap_predictions(corner["stocks"], neglected_tickers=neglected, path=smallcap_out)
+        # Phase 1 enrichment — 가격레이크 quant 팩터 → brain_score 분산 lever (spec §10).
+        # 로컬 전용(레이크 = repo 밖). CI/lake 부재 = 전 종목 enriched=False → generate 가 graceful skip.
+        try:
+            from api.builders.smallcap_corner_enrich import enrich_quant_factors
+            corner_stocks = enrich_quant_factors(corner["stocks"])
+            n_enriched = sum(1 for s in corner_stocks if s.get("enriched"))
+            sys.stderr.write(f"[predict] smallcap enrich: {n_enriched}/{len(corner_stocks)} (가격레이크 커버)\n")
+        except Exception as e:  # noqa: BLE001 — enrich 실패 = 미enrich 진행 (generate 가 skip)
+            sys.stderr.write(f"[predict] smallcap enrich skip (graceful): {type(e).__name__}: {e}\n")
+            corner_stocks = corner["stocks"]
+        sc = PL.generate_smallcap_predictions(corner_stocks, neglected_tickers=neglected, path=smallcap_out)
         if sc:
+            n_fac = len(PL._SMALLCAP_FACTORS)
             print(
                 f"[predict] smallcap logged {len(sc)} "
-                f"({len(sc) // len(PL._HORIZONS)} corner × {len(PL._HORIZONS)}h, "
-                f"neglected={len(neglected)}, source={PL._SMALLCAP_SOURCE}, "
+                f"({n_enriched} enriched × {n_fac} factor × {len(PL._HORIZONS)}h, "
+                f"neglected={len(neglected)}, source={PL._SMALLCAP_BASE_SOURCE}.*, "
                 f"trail={'smallcap_corner_prediction_trail.jsonl' if not smallcap_out else smallcap_out})"
             )
         else:
-            sys.stderr.write("[predict] smallcap 0건 — brain grade/score 결손 (graceful)\n")
+            sys.stderr.write("[predict] smallcap 0건 — enriched 종목 결손 (graceful)\n")
     else:
         sys.stderr.write("[predict] smallcap_corner.json 없음/빈값 — smallcap skip (graceful)\n")
 
