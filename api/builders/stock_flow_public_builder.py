@@ -98,7 +98,9 @@ def _ordered_universe() -> List[str]:
     priority = [tk for tk, _ in uni if tk in rec]
     rest = [tk for tk, _ in uni if tk not in rec]
     if rest:
-        off = _now_kst().timetuple().tm_yday % len(rest)
+        # 🚨 stride = MAX_TICKERS (일별 캡)만큼 전진 → 하루 1씩이 아니라 캡 단위로 회전 →
+        # 전 종목을 ~ceil(len/캡) 일 내 커버(하루 1 전진이면 len 일 걸리는 버그 수정).
+        off = (_now_kst().timetuple().tm_yday * MAX_TICKERS) % len(rest)
         rest = rest[off:] + rest[:off]
     # 중복 제거 유지 순서
     seen, order = set(), []

@@ -173,6 +173,11 @@ def main() -> int:
                 rate_stop = 1
                 print(f"[insider] DART 020 일일 제한 — 정지 (collected={collected})", file=sys.stderr)
                 break
+            if status not in ("000", "013"):
+                # 🚨 비권위적 응답(ERR·800 점검·021 재발·미상) — 일시 오류이므로 이전 데이터 보존(pop 금지).
+                # 권위적 공백(000 빈 list / 013 데이터없음)만 아래서 aged-out 처리.
+                time.sleep(DELAY)
+                continue
 
             collected += 1
             trades = []

@@ -339,16 +339,18 @@ jobs:
         run: python -m api.builders.market_warnings_public_builder
 
       - name: 공개 내부자거래 빌드 (DART elestock, 美 Form4 KR판)
-        # recommendations KR → DART elestock.json(임원·주요주주 소유변동) → data/insider_trades.json.
-        # DART 무료 키 재사용(KIS 0). RULE7 = 공시 사실(보고자·증감·날짜·원문)만. 다음 step git add data/ (broad) = RULE 4.
+        # 전 종목(stock_report universe 1,635) rotation+carry-forward+rate-limit 가드(020/021)+budget.
+        # DART 무료 키 재사용(KIS 0, ~1.6K 콜 ≪ 20K). RULE7 = 공시 사실만. 다음 step git add data/ (broad) = RULE 4.
         continue-on-error: true
         run: python -m api.builders.insider_trades_public_builder
 
       - name: 공개 종목 수급 빌드 (외국인·기관 5일, public-safe)
-        # recommendations KR 티커 → 검증된 파서(scripts/kr/flow_observation_logger) 재사용 →
-        # data/stock_flow_5d.json. 네이버 frgn 외부 fetch(KIS 0). 결정 파이프라인(market_flow) 무관 — 공개 표시 전용.
-        # RULE 7 = 외국인/기관 순매매량(외부 사실)만, 자체 flow_score 비노출. 다음 step git add data/ (broad) = RULE 4.
+        # 전 종목 시총순 rotation, 일별 캡(FLOW_MAX_TICKERS, anti-bot) + carry-forward → ~6일 내 전 종목.
+        # 검증된 파서(flow_observation_logger: 모바일 trend JSON→frgn HTML 폴백). 네이버 외부 fetch(KIS 0).
+        # RULE 7 = 외국인/기관 순매매량(외부 사실)만. 다음 step git add data/ (broad) = RULE 4.
         continue-on-error: true
+        env:
+          FLOW_MAX_TICKERS: '300'
         run: python api/builders/stock_flow_public_builder.py
 
       - name: Brain audit baseline (PRE/POST 측정 영속화)
