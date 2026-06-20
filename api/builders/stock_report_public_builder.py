@@ -73,8 +73,26 @@ def _fmt_cap(v: Any) -> str:
     return f"{x:,.0f}"
 
 
+def _fmt_won_signed(v: Any) -> Optional[str]:
+    """금액 포매터(부호 유지 — 현금흐름 음수 대응). 조/억/원."""
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return None
+    if x != x:  # NaN
+        return None
+    a = abs(x)
+    sign = "−" if x < 0 else ""
+    if a >= 1e12:
+        return f"{sign}{a / 1e12:.1f}조"
+    if a >= 1e8:
+        return f"{sign}{a / 1e8:.0f}억"
+    return f"{sign}{a:,.0f}"
+
+
 def _financials(fund: Dict[str, Any]) -> Dict[str, Any] | None:
-    """재무 요약 (최근 결산, dart_fundamentals_kr — 단일 연도 실값). 추이 X(KR 소스 단년)."""
+    """재무 요약 + 재무제표 그룹 상세 (최근 결산, dart_fundamentals_kr — 단일 연도 실값). 추이 X(KR 소스 단년).
+    values=상단 3줄(매출/영업이익/순이익, synth 호환), groups=손익·재무상태·현금흐름·비율 전체(탭 상세). 전부 DART 사실."""
     if not fund:
         return None
     out: Dict[str, str] = {}
@@ -84,8 +102,43 @@ def _financials(fund: Dict[str, Any]) -> Dict[str, Any] | None:
             out[label] = _fmt_cap(v)
     if not out:
         return None
+
+    money = _fmt_won_signed
+    pct = lambda v: _num(v, "%", 1)  # noqa: E731
+
+    def grp(title: str, specs) -> Dict[str, Any] | None:
+        rows = []
+        for label, key, fmt in specs:
+            v = fund.get(key)
+            if v is None:
+                continue
+            fv = fmt(v)
+            if fv is None:
+                continue
+            rows.append({"k": label, "v": fv})
+        return {"title": title, "rows": rows} if rows else None
+
+    groups = []
+    for g in (
+        grp("손익계산서", [("매출", "revenue", money), ("매출원가", "cogs", money), ("매출총이익", "gross_profit", money),
+                       ("영업이익", "operating_profit", money), ("순이익", "net_income", money),
+                       ("매출총이익률", "gross_margin", pct), ("영업이익률", "op_margin", pct)]),
+        grp("재무상태표", [("총자산", "total_assets", money), ("유동자산", "current_assets", money),
+                       ("유동부채", "current_liabilities", money), ("이익잉여금", "retained_earnings", money),
+                       ("운전자본", "working_capital", money)]),
+        grp("현금흐름표", [("영업활동", "operating_cashflow", money), ("투자활동", "investing_cashflow", money),
+                       ("재무활동", "financing_cashflow", money), ("잉여현금흐름(FCF)", "free_cashflow", money)]),
+        grp("주요 비율", [("부채비율", "debt_ratio", pct), ("유동비율", "current_ratio", lambda v: _num(float(v) * 100, "%", 1) if v is not None else None),
+                       ("ROE", "roe", pct), ("ROA", "roa", pct), ("자산회전율", "asset_turnover", lambda v: _num(v, "회", 2))]),
+    ):
+        if g:
+            groups.append(g)
+
     yr = fund.get("report_date")
-    return {"values": out, "period": (str(yr) if yr else "최근 결산")}
+    res: Dict[str, Any] = {"values": out, "period": (str(yr) if yr else "최근 결산")}
+    if groups:
+        res["groups"] = groups
+    return res
 
 
 def _num(v: Any, suffix: str = "", digits: int = 1) -> Optional[str]:
