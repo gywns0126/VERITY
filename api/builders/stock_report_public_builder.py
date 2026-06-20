@@ -389,11 +389,12 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any]) -> Dic
             mktcap = 0.0
         if mktcap <= 0:
             continue
-        v: Dict[str, float] = {}
+        v: Dict[str, Any] = {}
         try:
             ni = float(f.get("net_income")) if f.get("net_income") is not None else None
             if ni and ni > 0:
                 v["PER"] = round(mktcap / ni, 2)
+                v["_per_in"] = {"mktcap": mktcap, "net_income": ni}
         except (TypeError, ValueError):
             pass
         try:
@@ -403,6 +404,7 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any]) -> Dic
                 equity = ta / (1.0 + dr / 100.0)
                 if equity > 0:
                     v["PBR"] = round(mktcap / equity, 2)
+                    v["_pbr_in"] = {"mktcap": mktcap, "equity": equity}
         except (TypeError, ValueError):
             pass
         if v:
@@ -560,12 +562,19 @@ def main() -> int:
             val = valuation.get(tk)
             if val:
                 fn = s.setdefault("facts_note", {})
+                fc = s.setdefault("facts_calc", {})
                 if val.get("PER") is not None:
                     s["facts"]["PER"] = _num(val["PER"], "", 1)
                     fn["PER"] = "자체계산"
+                    pin = val.get("_per_in") or {}
+                    if pin:
+                        fc["PER"] = f"시가총액 {_fmt_won_signed(pin.get('mktcap'))} ÷ 순이익 {_fmt_won_signed(pin.get('net_income'))}"
                 if val.get("PBR") is not None:
                     s["facts"]["PBR"] = _num(val["PBR"], "", 1)
                     fn["PBR"] = "자체계산"
+                    qin = val.get("_pbr_in") or {}
+                    if qin:
+                        fc["PBR"] = f"시가총액 {_fmt_won_signed(qin.get('mktcap'))} ÷ 자기자본 {_fmt_won_signed(qin.get('equity'))}"
             peer = _peer(tk, fundamentals, sector_map, sector_medians, valuation) if sector_map else None
             if peer:
                 s["peer"] = peer
