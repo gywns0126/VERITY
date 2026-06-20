@@ -75,6 +75,18 @@ SEVERITY_4_KEYWORDS: tuple = (
 )
 
 
+def _detect_correction(rec: dict) -> bool:
+    """정정공시 여부 — DART corr_yn 우선, list.json 이 corr_yn 미제공 시 report_nm 정정 마커로 보강.
+
+    2026-06-20 버그 fix: list.json 응답에 corr_yn 이 비어(corr_yn=="Y" 항상 False) 제목에 [기재정정]
+    등이 명시된 정정공시 181건이 is_correction=0 으로 누락 → 정정/상습정정 forensic 무력화.
+    DART 정정공시 report_nm 은 "[기재정정]/[첨부정정]/[기타정정]…" 처럼 "정정" 을 포함한다.
+    """
+    if rec.get("corr_yn") == "Y":
+        return True
+    return "정정" in (rec.get("report_nm") or "")
+
+
 def _classify_severity(pblntf_ty: str, report_nm: str, is_correction: bool) -> int:
     """5-tier severity 분류 (2026-05-23 신설).
 
@@ -149,7 +161,7 @@ def fetch_catalysts_for_stock(
         try:
             events = _fetch_catalyst_by_type(corp_code, bgn_de, end_de, ty)
             for e in events:
-                is_corr = (e.get("corr_yn") == "Y")
+                is_corr = _detect_correction(e)
                 severity = _classify_severity(
                     pblntf_ty=ty,
                     report_nm=e.get("report_nm", ""),
@@ -288,7 +300,7 @@ def fetch_catalysts_market_wide(
                     if not rno or rno in seen_rcept:
                         continue
                     seen_rcept.add(rno)
-                    is_corr = (d.get("corr_yn") == "Y")
+                    is_corr = _detect_correction(d)
                     severity = _classify_severity(ty, d.get("report_nm", ""), is_corr)
                     all_events.append({
                         "ticker": sc,
