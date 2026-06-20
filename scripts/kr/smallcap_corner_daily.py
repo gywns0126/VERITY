@@ -31,11 +31,32 @@ from api.config import DATA_DIR, now_kst
 
 LAKE_PATH = os.path.expanduser("~/VERITY_data_lake/kr_prices.duckdb")
 _MARKET_MAP = {"KQ": "KOSDAQ", "KS": "KOSPI", "KOSDAQ": "KOSDAQ", "KOSPI": "KOSPI"}
+# 주기 가드 marker — 마지막 성공 run 시각(epoch). SessionStart hook 이 매 세션 호출하나 N일 미경과 시 skip.
+_MARKER = os.path.expanduser("~/VERITY_data_lake/.smallcap_last_run")
 
 
 def _log(msg: str) -> None:
     sys.stdout.write(f"[smallcap-daily] {msg}\n")
     sys.stdout.flush()
+
+
+def _age_days() -> float:
+    """마지막 성공 run 이후 경과일. marker 부재 = inf(즉시 due)."""
+    try:
+        with open(_MARKER, encoding="utf-8") as f:
+            last = float(f.read().strip())
+    except Exception:  # noqa: BLE001 — marker 부재/손상 = due
+        return float("inf")
+    return (now_kst().timestamp() - last) / 86400.0
+
+
+def _mark_run() -> None:
+    try:
+        os.makedirs(os.path.dirname(_MARKER), exist_ok=True)
+        with open(_MARKER, "w", encoding="utf-8") as f:
+            f.write(str(now_kst().timestamp()))
+    except Exception as e:  # noqa: BLE001
+        _log(f"marker 기록 실패 (graceful): {type(e).__name__}: {e}")
 
 
 def _corner_stocks():
@@ -166,16 +187,28 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-push", action="store_true", help="커밋만, push 생략")
     ap.add_argument("--no-lake-update", action="store_true", help="레이크 증분 top-up 생략")
+    ap.add_argument("--if-due", type=float, default=None, metavar="DAYS",
+                    help="마지막 run 이후 DAYS 미경과 시 즉시 skip (SessionStart hook 주기 가드). 예: --if-due 7")
     args = ap.parse_args()
 
+    # 주기 가드 — hook 이 매 세션 호출하나 cadence(예: 7일) 미경과면 no-op 즉시 종료.
+    if args.if_due is not None:
+        age = _age_days()
+        if age < args.if_due:
+            _log(f"미경과 skip (마지막 {age:.1f}일 전 < {args.if_due:.0f}일) — no-op")
+            return 0
+        _log(f"due (마지막 {age if age != float('inf') else '∞'}일 전 ≥ {args.if_due:.0f}일) — 실행")
+
     _log(f"시작 {now_kst().strftime('%Y-%m-%d %H:%M KST')}")
+    ran_ok = False
     try:
         if not args.no_lake_update:
             update_lake_incremental(_corner_stocks())
     except Exception as e:  # noqa: BLE001 — 단계 실패 = 다음 단계 진행
         _log(f"레이크 증분 실패 (graceful): {type(e).__name__}: {e}")
     try:
-        generate_trail()
+        if generate_trail() > 0:
+            ran_ok = True
     except Exception as e:  # noqa: BLE001
         _log(f"trail 생성 실패 (graceful): {type(e).__name__}: {e}")
     try:
@@ -186,6 +219,8 @@ def main() -> int:
         commit_push(push=not args.no_push)
     except Exception as e:  # noqa: BLE001
         _log(f"커밋/푸시 실패 (graceful): {type(e).__name__}: {e}")
+    if ran_ok:
+        _mark_run()  # 성공 run 만 marker 갱신 (실패 시 다음 세션 재시도)
     _log("완료")
     return 0
 
