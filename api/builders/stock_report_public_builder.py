@@ -489,6 +489,41 @@ def _peer(ticker: str, fundamentals: Dict[str, Any], sector_map: Dict[str, Any],
     }
 
 
+def _ownership_from_official(off: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """공정위 공식 주주현황(ftc_group_equity.lookup_official_shareholders 반환)을 ownership 노출 shape 로.
+    전 종목 확장(2026-06-21) — rec-embedded group_structure 없는 대규모기업집단 소속 상장사 ~346.
+    토스·LLM 못 가진 KR 1차자료(공정위 의결권 지분율) 해자. RULE 7 = 공식 분류 사실만, 자체 점수 0.
+    """
+    if not isinstance(off, dict):
+        return None
+    sh = off.get("shareholders") or []
+    if not isinstance(sh, list) or not sh:
+        return None
+    family = 0.0
+    rows: List[Dict[str, Any]] = []
+    for s in sh:
+        try:
+            q = float(s.get("qota_rate") or 0)
+        except (TypeError, ValueError):
+            q = 0.0
+        t = str(s.get("type") or "")
+        if t in FAMILY_TYPES:
+            family += q
+        rows.append({"name": str(s.get("name") or t), "type": t, "pct": round(q, 2)})
+    rows.sort(key=lambda x: x["pct"], reverse=True)
+    out: Dict[str, Any] = {
+        "family_pct": round(family, 2),
+        "group": str(off.get("group") or ""),
+        "shareholders": rows[:8],
+        "note": "동일인+친족 = 총수일가 지배지분 · 공정위 분류(의결권 지분율)",
+        "source": "공정거래위원회 기업집단포털" + (f" ({off.get('as_of_year')})" if off.get("as_of_year") else ""),
+    }
+    h = off.get("holding")
+    if isinstance(h, dict) and h.get("subsidiaries"):
+        out["sub_count"] = len(h["subsidiaries"])
+    return out
+
+
 def main() -> int:
     ok = False
     try:
@@ -553,6 +588,14 @@ def main() -> int:
         sector_map = (sector_doc.get("map") if isinstance(sector_doc, dict) else {}) or {}
         sector_medians = _sector_medians(fundamentals, sector_map, valuation) if sector_map else {}
 
+        # 공정위 공식 지분/지배구조 (전 종목 — ftc_group_equity 조인, corp_idno 캐시 적재됨 → 네트워크 0/캐시 hit)
+        try:
+            from api.collectors.ftc_group_equity import lookup_official_shareholders as _ftc_lookup
+            from api.collectors.dart_corp_code import get_corp_code as _get_cc
+        except Exception:  # noqa: BLE001
+            _ftc_lookup = None
+            _get_cc = None
+
         # 재무요약 + PER/PBR 자체계산 보강 + 동종업계 비교 부착
         for s in stocks:
             tk = s["ticker"]
@@ -581,6 +624,16 @@ def main() -> int:
             peer = _peer(tk, fundamentals, sector_map, sector_medians, valuation) if sector_map else None
             if peer:
                 s["peer"] = peer
+            # 공정위 공식 지분/지배구조 — rec-embedded 없을 때 ftc 조인 부착(전 종목 ~346 대규모기업집단 소속사)
+            if _ftc_lookup and _get_cc and not s.get("ownership"):
+                try:
+                    cc = _get_cc(tk)
+                    off = _ftc_lookup(cc) if cc else None
+                    own = _ownership_from_official(off) if off else None
+                    if own:
+                        s["ownership"] = own
+                except Exception:  # noqa: BLE001
+                    pass
 
         # 정렬: rich 먼저 → 공시 많은 순 → ticker
         stocks.sort(key=lambda s: (s.get("rich", False), len(s.get("disclosures", [])), s["ticker"]), reverse=True)
