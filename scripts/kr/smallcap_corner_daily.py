@@ -136,26 +136,30 @@ def _git(*args) -> int:
     return subprocess.call(["git", "-C", str(REPO), *args])
 
 
+def _gitp(*args) -> int:
+    # 비공개 보조 repo (.git-private, work-tree=repo root). ic_history(점수 held 2027) 전용.
+    gd = str(REPO / ".git-private")
+    return subprocess.call(["git", f"--git-dir={gd}", f"--work-tree={REPO}", *args])
+
+
 def commit_push(push: bool) -> None:
-    # raw trail = 로컬 레이크(repo 밖, 8MB/run) → 비커밋. git 커밋 = 집계 IC 결과만(작음, 검증 자산).
+    # raw trail = 로컬 레이크(repo 밖, 8MB/run) → 비커밋. ic_history(IC 결과, 점수 held 2027) → **비공개
+    # repo(.git-private)**, 공개 main 무노출(RULE 7, PM 결정 2026-06-20). 공유 .gitignore 차단 → add -f.
     ic = "data/smallcap_corner_ic_history.jsonl"
     if not (REPO / ic).exists():
         _log("커밋 대상 없음 (ic_history 미생성 — 채점 도래 전)")
         return
-    _git("add", ic)
-    # 변경 없으면 commit skip (exit 1 = nothing to commit)
-    if subprocess.call(["git", "-C", str(REPO), "diff", "--cached", "--quiet"]) == 0:
+    _gitp("add", "-f", ic)
+    if _gitp("diff", "--cached", "--quiet") == 0:
         _log("변경 없음 — commit skip")
         return
     stamp = now_kst().strftime("%Y-%m-%dT%H:%M")
-    _git("commit", "-m", f"data(smallcap): 코너 검증 IC 집계 append {stamp} (관측 only, brain_input=False)")
+    _gitp("commit", "-m", f"data(smallcap): 코너 검증 IC 집계 append {stamp} (비공개, 점수 held 2027)")
     if push:
-        # orphan 방지 (feedback_local_commit_orphan_push_mandatory) — rebase 후 push
-        _git("pull", "--rebase")
-        _git("push")
-        _log("커밋/푸시 완료")
+        _gitp("push")
+        _log("ic_history 비공개 커밋/푸시 완료")
     else:
-        _log("커밋 완료 (--no-push)")
+        _log("ic_history 비공개 커밋 완료 (--no-push)")
 
 
 def main() -> int:
