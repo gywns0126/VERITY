@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  소형주 코너 검증 trail 로컬 weekly cron (③). 매주 금 16:30 KST (KRX 종가 후).
+  레이크 = 로컬 자산(repo 밖) → launchd 로컬 실행 (CI 아님).
+
+  설치:
+    cp scripts/kr/com.verity.smallcap-weekly.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.verity.smallcap-weekly.plist
+  해제:
+    launchctl unload ~/Library/LaunchAgents/com.verity.smallcap-weekly.plist
+  즉시 1회 실행(테스트):
+    launchctl start com.verity.smallcap-weekly
+
+  StartCalendarInterval = 지정 시각 도래 시 실행. Mac off 면 누락(장기 trail 허용).
+  로그: /tmp/smallcap_weekly.out / .err.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.verity.smallcap-weekly</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/macbookpro/Desktop/배리티 터미널/scripts/kr/smallcap_corner_daily.py</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/macbookpro/Desktop/배리티 터미널</string>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>5</integer>
+    <key>Hour</key>
+    <integer>16</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/smallcap_weekly.out</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/smallcap_weekly.err</string>
+
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>
