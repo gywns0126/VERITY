@@ -389,7 +389,7 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any]) -> Dic
             mktcap = 0.0
         if mktcap <= 0:
             continue
-        v: Dict[str, Any] = {}
+        v: Dict[str, Any] = {"mktcap": mktcap}  # 시총 항상 보유 (PER/PBR 결측이어도 정렬·필터용)
         try:
             ni = float(f.get("net_income")) if f.get("net_income") is not None else None
             if ni and ni > 0:
@@ -563,6 +563,9 @@ def main() -> int:
             if val:
                 fn = s.setdefault("facts_note", {})
                 fc = s.setdefault("facts_calc", {})
+                mc = val.get("mktcap")
+                if mc and mc > 0:
+                    s["facts"].setdefault("시가총액", _fmt_cap(mc))  # 전 종목 시총 (KRX 공식) — 정렬·필터 언락
                 if val.get("PER") is not None:
                     s["facts"]["PER"] = _num(val["PER"], "", 1)
                     fn["PER"] = "자체계산"
