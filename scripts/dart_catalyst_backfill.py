@@ -25,6 +25,8 @@ if _ROOT not in sys.path:
 
 OUT_PATH = os.path.join(_ROOT, "data", "dart_catalyst_backfill.jsonl")
 RECO_PATH = os.path.join(_ROOT, "data", "recommendations.json")
+CORNER_PATH = os.path.join(_ROOT, "data", "smallcap_corner.json")
+CORNER_FILTERS_PATH = os.path.join(_ROOT, "data", "smallcap_corner_filters.json")
 
 
 def _kr_universe(max_n=None, only=None):
@@ -40,6 +42,38 @@ def _kr_universe(max_n=None, only=None):
             continue
         if tk.isdigit() and len(tk) == 6:
             out.append((tk, r.get("name") or tk))
+    if max_n:
+        out = out[:max_n]
+    return out
+
+
+def _corner_universe(max_n=None, only=None, neglected=False):
+    """소형주 코너 유니버스 (Phase 1 forensic 백필). neglected=True → 방치우량 501 subset."""
+    try:
+        with open(CORNER_PATH, "r", encoding="utf-8") as f:
+            stocks = json.load(f).get("stocks") or []
+    except (OSError, json.JSONDecodeError):
+        stocks = []
+    keep = None
+    if neglected:
+        keep = set()
+        try:
+            with open(CORNER_FILTERS_PATH, "r", encoding="utf-8") as f:
+                for flt in (json.load(f).get("filters") or []):
+                    if flt.get("key") == "neglected_quality":
+                        keep = {str(t.get("ticker")) for t in (flt.get("tickers") or []) if t.get("ticker")}
+                        break
+        except (OSError, json.JSONDecodeError):
+            keep = set()
+    out = []
+    for s in stocks:
+        tk = str(s.get("ticker") or "").strip()
+        if only and tk != only:
+            continue
+        if keep is not None and tk not in keep:
+            continue
+        if tk.isdigit() and len(tk) == 6:
+            out.append((tk, s.get("name") or tk))
     if max_n:
         out = out[:max_n]
     return out
@@ -62,16 +96,26 @@ def main():
     ap.add_argument("--max", type=int, default=None, help="유니버스 상한(테스트)")
     ap.add_argument("--ticker", default=None, help="단일 종목만")
     ap.add_argument("--delay", type=float, default=0.15, help="요청 간 지연(쿼터·anti-bot)")
+    ap.add_argument("--universe", choices=["reco", "corner"], default="reco",
+                    help="reco=추천(기본) / corner=소형주 코너(Phase 1 forensic)")
+    ap.add_argument("--neglected", action="store_true", help="corner 한정 — 방치우량 501 subset")
+    ap.add_argument("--quota-cap", type=int, default=None,
+                    help="이번 run DART 요청 상한(공유 쿼터 throttle, 다일 멱등 분할). 도달 시 중단")
     args = ap.parse_args()
 
     from api.collectors.dart_catalyst import _fetch_catalyst_by_type, _classify_severity, PBLNTF_LABELS
     from api.collectors.dart_corp_code import get_corp_code
     from api.config import now_kst
 
-    universe = _kr_universe(args.max, args.ticker)
+    if args.universe == "corner":
+        universe = _corner_universe(args.max, args.ticker, neglected=args.neglected)
+    else:
+        universe = _kr_universe(args.max, args.ticker)
     if not universe:
         print("[backfill] 유니버스 0 — skip", file=sys.stderr)
         return 0
+    print(f"[backfill] universe={args.universe}{'(neglected)' if args.neglected else ''} "
+          f"종목={len(universe)} start={args.start_year} quota_cap={args.quota_cap}", file=sys.stderr)
 
     # 기존 백필 dedup
     seen = set()
@@ -85,8 +129,14 @@ def main():
 
     windows = list(_quarters(args.start_year))
     new_n, req_n = 0, 0
+    capped = False
     with open(OUT_PATH, "a", encoding="utf-8") as out:
         for tk, name in universe:
+            # 공유 쿼터 throttle — cap 도달 시 종목 경계에서 중단(멱등, 다음 run 이 dedup 으로 이어받음).
+            if args.quota_cap is not None and req_n >= args.quota_cap:
+                capped = True
+                print(f"[backfill] quota-cap {args.quota_cap} 도달 — 중단(다음 run 이 이어받음)", file=sys.stderr)
+                break
             cc = get_corp_code(tk)
             if not cc:
                 print(f"[backfill] {tk} corp_code 없음 — skip", file=sys.stderr)
