@@ -16,7 +16,7 @@ TRACKED_INSTITUTIONS = {
     "1350694":  "Bridgewater Associates",
     "1037389":  "Renaissance Technologies",
     "1336528":  "Pershing Square",
-    "1534492":  "Third Point",
+    "1040273":  "Third Point LLC",   # 2026-06-22 fix: 옛 1534492 = 개인(Lunsford) 오등록
     "1423053":  "Tiger Global",
     "0000102909": "Vanguard Group",
     "0000093751": "BlackRock",
@@ -44,31 +44,100 @@ def get_latest_13f_filing(cik: str) -> Optional[dict]:
         logger.error(f"[13F] 제출 조회 실패 CIK={cik}: {e}")
     return None
 
-def parse_13f_holdings(accession_no: str, cik: str) -> list[dict]:
+def get_recent_13f_filings(cik: str, n: int = 2) -> list[dict]:
+    """최근 n개 13F-HR 제출 (QoQ 비교용 — [0]=최신, [1]=직전 분기).
+
+    13F-HR/A(정정)는 제외 — 정정본은 동일 분기 중복이라 QoQ 분기 비교 왜곡. 원본 HR 만.
+    """
+    url = f"https://data.sec.gov/submissions/CIK{cik.zfill(10)}.json"
+    try:
+        data    = requests.get(url, headers=EDGAR_HEADERS, timeout=15).json()
+        filings = data.get("filings", {}).get("recent", {})
+        forms   = filings.get("form", [])
+        dates   = filings.get("filingDate", [])
+        accnos  = filings.get("accessionNumber", [])
+        out = []
+        for i, form in enumerate(forms):
+            if form == "13F-HR":
+                out.append({
+                    "cik": cik,
+                    "institution": TRACKED_INSTITUTIONS.get(cik, f"CIK_{cik}"),
+                    "filed_at": dates[i] if i < len(dates) else None,
+                    "accession_no": accnos[i] if i < len(accnos) else None,
+                })
+                if len(out) >= n:
+                    break
+        return out
+    except Exception as e:
+        logger.error(f"[13F] 최근 제출 조회 실패 CIK={cik}: {e}")
+        return []
+
+
+def _find_infotable_url(cik: str, accession_no: str) -> Optional[str]:
+    """13F 보유 information table xml 탐색 (파일명 임의 — 예 '53405.xml').
+
+    하드코딩 'infotable.xml' 은 다수 404 (2026-06-22 발견: Berkshire=53405.xml).
+    index.json → primary_doc.xml 제외 최대 xml = 보유 테이블.
+    """
     acc = accession_no.replace("-", "")
-    url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc}/infotable.xml"
+    base = f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc}"
+    try:
+        idx = requests.get(f"{base}/index.json", headers=EDGAR_HEADERS, timeout=15).json()
+    except Exception as e:
+        logger.error(f"[13F] index.json 실패 CIK={cik}: {e}")
+        return None
+    cands = [(it.get("name", ""), int(it.get("size") or 0))
+             for it in idx.get("directory", {}).get("item", [])
+             if it.get("name", "").endswith(".xml") and it.get("name") != "primary_doc.xml"]
+    if not cands:
+        return None
+    cands.sort(key=lambda x: -x[1])   # 최대 = 보유 테이블
+    return f"{base}/{cands[0][0]}"
+
+
+def _strip_ns(xml_text: str) -> str:
+    """namespace 선언·prefix 제거 ('unbound prefix' 파싱 실패 방지).
+
+    태그(<ns:x>) + 속성 prefix(xsi:schemaLocation=) 모두 제거 — 후자 누락 시
+    xmlns 선언만 지워져 prefix 미선언 unbound (2026-06-22 Pershing/Tiger 발견).
+    """
+    x = re.sub(r'\sxmlns(:[\w.]+)?\s*=\s*"[^"]*"', "", xml_text)   # xmlns 선언
+    x = re.sub(r"<(/?)[\w.]+:", r"<\1", x)                          # 태그 prefix
+    x = re.sub(r"\s[\w.]+:([\w.]+\s*=)", r" \1", x)                 # 속성 prefix
+    return x
+
+
+def parse_13f_holdings(accession_no: str, cik: str) -> list[dict]:
+    url = _find_infotable_url(cik, accession_no)
+    if not url:
+        return []
     try:
         resp = requests.get(url, headers=EDGAR_HEADERS, timeout=20)
         if resp.status_code != 200:
             return []
-        xml = re.sub(r' xmlns[^"]*"[^"]*"', '', resp.text)
-        xml = re.sub(r'ns\d+:', '', xml)
-        root = ET.fromstring(xml)
-        holdings = []
+        root = ET.fromstring(_strip_ns(resp.text))
+        # cusip 별 합산 — 한 13F 가 동일 issuer 를 여러 infoTable 행(클래스/투자재량 분리)으로
+        # 보고 → 중복 holder 방지. 🚨 value 는 2023+ 실달러(×1000 폐기 — 2026-06-22 ALLY $39/주 검증).
+        # putCall 행(옵션) = 직접 보유 아님 → 제외.
+        agg: dict = {}
         for info in root.findall(".//infoTable"):
             try:
+                if (info.findtext(".//putCall", "") or "").strip():
+                    continue
+                cusip = (info.findtext(".//cusip", "") or "").strip().upper()
+                if not cusip:
+                    continue
                 value  = float(info.findtext(".//value", "0") or 0)
-                shares = float((info.findtext(".//sshPrnamt","0") or "0").replace(",",""))
-                holdings.append({
-                    "issuer":    info.findtext(".//nameOfIssuer","").strip(),
-                    "cusip":     info.findtext(".//cusip","").strip(),
-                    "value_usd": value * 1000,
-                    "shares":    shares,
-                    "put_call":  info.findtext(".//putCall",""),
-                })
-            except Exception:
+                shares = float((info.findtext(".//sshPrnamt", "0") or "0").replace(",", ""))
+            except (TypeError, ValueError):
                 continue
-        return sorted(holdings, key=lambda x: x["value_usd"], reverse=True)
+            e = agg.setdefault(cusip, {
+                "issuer": (info.findtext(".//nameOfIssuer", "") or "").strip(),
+                "cusip": cusip, "value_usd": 0.0, "shares": 0.0,
+            })
+            e["value_usd"] += value
+            e["shares"] += shares
+        return sorted(agg.values(), key=lambda x: x["value_usd"], reverse=True)
     except Exception as e:
         logger.error(f"[13F] 보유 파싱 실패: {e}")
         return []

@@ -1,0 +1,79 @@
+name: US Smart Money (13F)
+
+# 2026-06-22 신설 — [[project_us_financials_sec_edgar]] (b) 13F 완전판.
+# 집중형 액티브 매니저 13F-HR 보유 → CUSIP→ticker(OpenFIGI) → sp1500 per-stock 스마트머니.
+# 비용: 무료(SEC EDGAR + OpenFIGI no-key). CUSIP 캐시(data/cusip_ticker_map.json)로 재run 경량.
+# 빈도: 월 1회 (13F = 분기말+45일 공시 = mid Feb/May/Aug/Nov 착지 → 20일 갱신 캐치).
+
+on:
+  schedule:
+    - cron: '0 6 20 * *'   # 매월 20일 KST 15:00 (분기 13F 마감 후 착지분 캐치)
+  workflow_dispatch: {}
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-us-smartmoney
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # 첫 run CUSIP 해석(~5분)+13F 파싱. 이후 캐시로 단축. GH 무료(public).
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build US smart money 13F
+        # 집중형 13F → CUSIP→ticker → sp1500 집계. RULE 7 = 보유 사실만(점수 0).
+        run: python -m api.builders.us_smart_money_13f_public_builder
+
+      - name: Commit data (13f + cusip cache)
+        # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com.
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/us_smart_money_13f.json data/cusip_ticker_map.json
+          if git diff --staged --quiet; then
+            echo "[smart_money] no changes"
+            exit 0
+          fi
+          TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git commit -m "💼 us_smart_money_13f ${TODAY_KST}"
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
+            echo "push attempt $i failed, retrying in $((i * 5))s..."
+            sleep $((i * 5))
+          done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::warning::push 5회 실패 — 다음 cron 재시도"
+          fi
+
+      - name: Publish to VERITY-data + Vercel Blob
+        if: always()
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}

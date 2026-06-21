@@ -294,26 +294,29 @@ export default function PublicNewsTab(props: Props) {
                     </span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: C.faint }}>팩트 헤드라인</span>
                     {(us.some((it) => it.title && !/[가-힣]/.test(it.title)) || stocks.some((g) => g.items.some((it) => it.title && !/[가-힣]/.test(it.title)))) && (
-                        <button
-                            type="button"
-                            onClick={() => setShowKo((v) => !v)}
-                            title="영어 헤드라인 한글 번역"
-                            style={{
-                                marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 5,
-                                cursor: "pointer", border: `1px solid ${showKo ? C.accent : C.border}`,
-                                background: showKo ? C.accent : "transparent",
-                                color: showKo ? "#fff" : C.subtext,
-                                fontWeight: 600, fontSize: 11.5, padding: "5px 11px", borderRadius: 999,
-                                transition: "all 140ms ease", lineHeight: 1,
-                            }}
-                        >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M3 12h18" />
-                                <path d="M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18" />
-                            </svg>
-                            {showKo ? "원문" : "한글"}
-                        </button>
+                        <div style={{ marginLeft: "auto", display: "inline-flex", background: C.sub, borderRadius: 10, padding: 3, gap: 2 }}>
+                            {[{ k: false, l: "원문" }, { k: true, l: "한글" }].map((o) => {
+                                const active = showKo === o.k
+                                return (
+                                    <button
+                                        key={String(o.k)}
+                                        type="button"
+                                        onClick={() => setShowKo(o.k)}
+                                        style={{
+                                            border: "none", cursor: "pointer",
+                                            background: active ? C.bg : "transparent",
+                                            color: active ? C.text : C.subtext,
+                                            fontWeight: active ? 700 : 600,
+                                            fontSize: 12.5, padding: "6px 13px", borderRadius: 8,
+                                            boxShadow: active ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                                            transition: "all 140ms ease",
+                                        }}
+                                    >
+                                        {o.l}
+                                    </button>
+                                )
+                            })}
+                        </div>
                     )}
                 </div>
                 {/* 세그먼트 */}
