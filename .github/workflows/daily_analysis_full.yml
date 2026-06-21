@@ -327,6 +327,13 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.public_price_snapshot_builder
 
+      - name: 국민연금 보유종목 집계 (NPS 공개 패널)
+        # portfolio.json institutional_holders(reporter=국민연금공단) + dart_catalyst → data/nps_holdings.json.
+        # 순수 변환(KIS 0). data.go.kr 키(DATA_GO_KR_KEY+NPS_DATA_GO_KR_URL) 있으면 전체 5%+ 확대, 없으면 운영풀 graceful.
+        # RULE 7 = 5%+ 대량보유 공시 사실(지분율)만, 점수·추천 0. 다음 step git add data/ (broad) 자동 = RULE 4. publish allowlist 등재 완료.
+        continue-on-error: true
+        run: python -m api.collectors.nps_holdings
+
       - name: 미장 공시속보 빌드 (SEC 8-K)
         # us_financials 유니버스 8-K 수집 → data/us_disclosure_feed.json. SEC EDGAR(무료·UA 내장, KIS 0).
         # 외부 fetch. 다음 step git add data/ (broad) 자동 포함 = RULE 4.
