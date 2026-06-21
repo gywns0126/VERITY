@@ -359,6 +359,13 @@ jobs:
           FLOW_MAX_TICKERS: '300'
         run: python api/builders/stock_flow_public_builder.py
 
+      - name: KR 종목 관측 신호 raw 적재 (v0, RULE 7 관측 only · 주간)
+        # 내부자·수급·희석·총수일가 raw → data/observations/kr_cross_section_observations.jsonl (금요일만 self-run, 점수 0).
+        # 엔진 미사용 신호 forward IC trail 누적(N≥252 2027 검증용). spec docs/kr_cross_section_observation_spec_v0.
+        # 공개 빌더(insider/flow/forensics/stock_report) 뒤. KIS 0. broad git add data/ = RULE 4(observations 디렉토리 자동).
+        continue-on-error: true
+        run: python -m api.builders.kr_observation_logger
+
       - name: Brain audit baseline (PRE/POST 측정 영속화)
         # 2026-05-18 확정 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
         # portfolio.json 의 brain_score 분포 + component fill + grade + quadrant 측정.
