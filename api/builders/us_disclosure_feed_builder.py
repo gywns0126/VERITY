@@ -98,7 +98,7 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
             "count": len(items),
             "disclosure_count": total,
             "window_days": window_days,
-            "note": "공시 사실·일정만 — 점수·등급·추천 아님 (RULE 7). 제목은 SEC 원문, 링크는 EDGAR. 15 빅캡.",
+            "note": "공시 사실·일정만 — 점수·등급·추천 아님 (RULE 7). 제목은 SEC 원문, 링크는 EDGAR. 유니버스=us_financials _summary(S&P 1500).",
         },
         "items": items,
     }
