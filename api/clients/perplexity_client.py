@@ -34,6 +34,7 @@ def call_perplexity(
     search_mode: Optional[str] = None,
     search_domain_filter: Optional[list] = None,
     search_recency_filter: Optional[str] = None,
+    response_format: Optional[dict] = None,
 ) -> Dict[str, Any]:
     """Perplexity Sonar API 단일 호출.
 
@@ -73,6 +74,8 @@ def call_perplexity(
         payload["search_domain_filter"] = search_domain_filter
     if search_recency_filter:
         payload["search_recency_filter"] = search_recency_filter
+    if response_format:
+        payload["response_format"] = response_format
 
     try:
         resp = requests.post(_API_URL, headers=headers, json=payload, timeout=60)

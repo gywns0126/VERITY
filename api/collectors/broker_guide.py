@@ -59,6 +59,51 @@ _SCHEMA_HINT = """{
 }"""
 
 
+# structured output 강제 (sonar-pro가 산문 대신 JSON만 반환하도록)
+_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "schema": {
+            "type": "object",
+            "properties": {
+                "brokers": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "app": {"type": "string"},
+                            "domestic_fee": {"type": "string"},
+                            "overseas_fee": {"type": "string"},
+                            "isa": {"type": "string"},
+                            "credit_short": {"type": "string"},
+                            "app_rating": {"type": "string"},
+                            "community": {"type": "string"},
+                            "realtime_news": {"type": "string"},
+                            "source_url": {"type": "string"},
+                        },
+                        "required": ["name"],
+                    },
+                },
+                "by_trade_type": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "type": {"type": "string"},
+                            "best": {"type": "string"},
+                            "reason": {"type": "string"},
+                        },
+                        "required": ["type"],
+                    },
+                },
+            },
+            "required": ["brokers", "by_trade_type"],
+        }
+    },
+}
+
+
 def _build_query() -> str:
     today = datetime.now(KST).strftime("%Y년 %m월")
     return (
@@ -121,9 +166,10 @@ def collect(force: bool = False) -> dict:
     res = call_perplexity(
         _build_query(),
         system_prompt=_SYSTEM,
-        max_tokens=2500,
+        max_tokens=4000,
         temperature=0.05,
         search_recency_filter="month",
+        response_format=_RESPONSE_FORMAT,
     )
     if res.get("error"):
         print(f"[broker_guide] Perplexity 실패 — 직전 유지: {res['error']}")
@@ -132,7 +178,9 @@ def collect(force: bool = False) -> dict:
     try:
         parsed = json.loads(_strip_json(res.get("content", "")))
     except Exception as e:
+        raw = (res.get("content", "") or "")[:600]
         print(f"[broker_guide] JSON 파싱 실패 — 직전 유지: {e}")
+        print(f"[broker_guide] raw content[:600]: {raw!r}")
         return {"status": "parse_fail", "kept_prev": prev is not None}
 
     ok, flags = _validate(parsed)
