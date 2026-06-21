@@ -54,7 +54,11 @@ def get_macro_indicators() -> dict:
         "sse": _get_index_change("000001.SS", "상해종합"),
         "dax": _get_index_change("^GDAXI", "DAX"),
         "sox": _get_index_change("^SOX", "필라델피아 반도체"),
-        "btc": _get_upbit_btc(),
+        "btc": _get_upbit_btc(),                 # 디지털 금
+        "eth": _get_upbit("KRW-ETH"),            # 스마트컨트랙트 대장
+        "xrp": _get_upbit("KRW-XRP"),            # 결제 (KR 업비트 거래량 최상위)
+        "sol": _get_upbit("KRW-SOL"),            # 고성능 L1
+        "doge": _get_upbit("KRW-DOGE"),          # 밈 대장
     }
 
     fred = get_fred_macro_block()
@@ -240,14 +244,15 @@ def _get_index_change(ticker: str, name: str) -> dict:
     return {"value": 0, "change_pct": 0, "sparkline": [], **meta, "status": "fail"}
 
 
-def _get_upbit_btc() -> dict:
-    """비트코인 시세 + 30일 sparkline — 업비트 KRW-BTC 일봉(TIDE 동일 소스 업비트). 추측 0, 공개 시세 보드용."""
+def _get_upbit(market: str) -> dict:
+    """업비트 KRW 코인 일봉 시세 + 30일 sparkline (TIDE 동일 소스 업비트). 추측 0, 공개 시세 보드용.
+    소액 코인(도지 등)은 소수점 보존, 고액은 정수 반올림."""
     meta = {"source": "upbit", "currency": "KRW", "as_of": _now_kst_iso()}
     try:
         import json as _json
         import urllib.request
         req = urllib.request.Request(
-            "https://api.upbit.com/v1/candles/days?market=KRW-BTC&count=30",
+            f"https://api.upbit.com/v1/candles/days?market={market}&count=30",
             headers={"User-Agent": "verity"},
         )
         with urllib.request.urlopen(req, timeout=15) as r:
@@ -256,11 +261,17 @@ def _get_upbit_btc() -> dict:
         if len(closes) >= 2:
             current, prev = closes[-1], closes[-2]
             change_pct = round(((current - prev) / prev) * 100, 2) if prev else 0
-            sparkline = [round(c, 0) for c in closes][-30:]
-            return {"value": round(current, 0), "change_pct": change_pct, "sparkline": sparkline, **meta, "status": "ok"}
+            rnd = 0 if current >= 100 else 2  # 도지 등 소액 코인 소수점 보존
+            sparkline = [round(c, rnd) for c in closes][-30:]
+            return {"value": round(current, rnd), "change_pct": change_pct, "sparkline": sparkline, **meta, "status": "ok"}
     except Exception as e:  # noqa: BLE001
-        _log_collector_fail("_get_upbit_btc", "KRW-BTC", e)
+        _log_collector_fail("_get_upbit", market, e)
     return {"value": 0, "change_pct": 0, "sparkline": [], **meta, "status": "fail"}
+
+
+def _get_upbit_btc() -> dict:
+    """비트코인 — 하위호환 wrapper (TIDE/기존 소비처 유지)."""
+    return _get_upbit("KRW-BTC")
 
 
 def _calc_yield_spread(data: dict) -> dict:
