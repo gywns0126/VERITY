@@ -1,5 +1,5 @@
-import { addPropertyControls, ControlType } from "framer"
-import { useMemo, useState } from "react"
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
+import { useEffect, useMemo, useState } from "react"
 
 /**
  * 부동산 유리박스 — 공개 probe (토스 디자인 언어)
@@ -11,10 +11,12 @@ import { useMemo, useState } from "react"
  *    (RULE 7 미검증 산식 비노출 + §3 공개 경계 = L0 공시 사실.)
  *
  * 데이터 = 실호출 검증 장부가 (DART fnlttSinglAcntAll / SEC companyfacts).
+ *
+ * 다크모드 = body[data-framer-theme] 자가감지 (PublicThemeToggle 소스 추종).
  */
 
-// ── 토스 디자인 토큰 (OwnershipProbe 와 동일 언어) ──
-const C = {
+// ── 토스 디자인 토큰 (OwnershipProbe 와 동일 언어) ── (LIGHT / DARK 쌍)
+const LIGHT = {
   bg: "#f2f4f6",
   card: "#ffffff",
   ink: "#191f28",
@@ -27,6 +29,25 @@ const C = {
   greenSoft: "#eafaf3",
   teal: "#12b8a6",
   tealSoft: "#e7faf7",
+}
+const DARK = {
+  bg: "#16181d",
+  card: "#1e2128",
+  ink: "#f0f2f5",
+  sub: "#b0b8c1",
+  faint: "#6b7684",
+  line: "#2b2f37",
+  blue: "#5a9cff",
+  blueSoft: "#1b2740",
+  green: "#3ddc97",
+  greenSoft: "#16322a",
+  teal: "#2fd6c2",
+  tealSoft: "#143430",
+}
+
+function readBodyDark(): boolean {
+  if (typeof document === "undefined" || !document.body) return false
+  return document.body.dataset.framerTheme === "dark"
 }
 
 type Asset = { label: string; value: number; hint?: string }
@@ -74,11 +95,27 @@ const STOCKS: Stock[] = [
 const fmt = (v: number, unit: "조" | "B") =>
   unit === "조" ? `${v.toFixed(2)}조` : `$${v.toFixed(1)}B`
 
-export default function RealtyProbe(props: { width?: number }) {
+export default function RealtyProbe(props: { width?: number; dark?: boolean }) {
+  const onCanvas = RenderTarget.current() === RenderTarget.canvas
+  const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+  const isDark = onCanvas ? !!props.dark : themeDark
+  const C = isDark ? DARK : LIGHT
+
   const [idx, setIdx] = useState(0)
   const s = STOCKS[idx]
   const total = useMemo(() => s.assets.reduce((a, x) => a + x.value, 0), [s])
   const maxv = useMemo(() => Math.max(...s.assets.map((x) => x.value), 0.0001), [s])
+
+  /* 테마 추종 */
+  useEffect(() => {
+    if (onCanvas) return
+    const read = () => setThemeDark(readBodyDark())
+    read()
+    if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+    const obs = new MutationObserver(read)
+    obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+    return () => obs.disconnect()
+  }, [onCanvas])
 
   return (
     <div style={{ width: "100%", background: C.bg, fontFamily: "Pretendard, -apple-system, sans-serif", padding: 16, boxSizing: "border-box" }}>
@@ -90,7 +127,7 @@ export default function RealtyProbe(props: { width?: number }) {
             onClick={() => setIdx(i)}
             style={{
               border: "none", cursor: "pointer", padding: "7px 13px", borderRadius: 999, fontSize: 13, fontWeight: 600,
-              background: i === idx ? C.ink : C.card, color: i === idx ? "#fff" : C.sub,
+              background: i === idx ? C.ink : C.card, color: i === idx ? (isDark ? C.bg : "#fff") : C.sub,
             }}
           >
             {st.name}
@@ -98,7 +135,7 @@ export default function RealtyProbe(props: { width?: number }) {
         ))}
       </div>
 
-      <div style={{ background: C.card, borderRadius: 20, padding: 22, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <div style={{ background: C.card, borderRadius: 20, padding: 22, boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(0,0,0,0.04)" }}>
         {/* 종목명 + 시장 */}
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 18 }}>
           <span style={{ fontSize: 21, fontWeight: 700, color: C.ink, letterSpacing: "-0.4px" }}>{s.name}</span>
@@ -151,4 +188,5 @@ export default function RealtyProbe(props: { width?: number }) {
 
 addPropertyControls(RealtyProbe, {
   width: { type: ControlType.Number, title: "Width", defaultValue: 380, min: 320, max: 720 },
+  dark: { type: ControlType.Boolean, title: "Dark (canvas)", defaultValue: false },
 })

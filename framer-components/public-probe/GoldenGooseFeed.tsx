@@ -1,5 +1,5 @@
-import { addPropertyControls, ControlType } from "framer"
-import { useState } from "react"
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
+import { useEffect, useState } from "react"
 
 /**
  * 골든구스 피드 — 공시-first 연결, 층위 공개(progressive disclosure). 토스 언어, 이모지 0.
@@ -13,11 +13,23 @@ import { useState } from "react"
  * Framer ID pX7cI0P · insertUrl framer.com/m/GoldenGooseFeed-aZ2eF0.js · 생성 2026-06-16.
  */
 
-const C = {
+// ── 토스 디자인 토큰 ── (LIGHT / DARK 쌍)
+const LIGHT = {
   bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
   line: "#e5e8eb", red: "#f04452", redSoft: "#fff0f1", amber: "#ff9500", amberSoft: "#fff6e9",
   blue: "#3182f6", blueSoft: "#eef4ff", green: "#15c47e", greenSoft: "#eafaf3",
   violet: "#6c5ce7", violetSoft: "#f0edff",
+}
+const DARK = {
+  bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
+  line: "#2b2f37", red: "#ff6b76", redSoft: "#3a1f22", amber: "#ffb340", amberSoft: "#3a2e18",
+  blue: "#5a9cff", blueSoft: "#1b2740", green: "#3ddc97", greenSoft: "#16322a",
+  violet: "#a98bff", violetSoft: "#2a2440",
+}
+
+function readBodyDark(): boolean {
+  if (typeof document === "undefined" || !document.body) return false
+  return document.body.dataset.framerTheme === "dark"
 }
 
 type Tone = "risk" | "flow" | "cal" | "good"
@@ -33,9 +45,11 @@ type Item = {
   history: Hist[]
 }
 
-const TONE: Record<Tone, { fg: string; bg: string }> = {
-  risk: { fg: C.red, bg: C.redSoft }, flow: { fg: C.blue, bg: C.blueSoft },
-  cal: { fg: C.amber, bg: C.amberSoft }, good: { fg: C.green, bg: C.greenSoft },
+function toneMap(C: typeof LIGHT): Record<Tone, { fg: string; bg: string }> {
+  return {
+    risk: { fg: C.red, bg: C.redSoft }, flow: { fg: C.blue, bg: C.blueSoft },
+    cal: { fg: C.amber, bg: C.amberSoft }, good: { fg: C.green, bg: C.greenSoft },
+  }
 }
 
 const ITEMS: Item[] = [
@@ -75,7 +89,8 @@ const ITEMS: Item[] = [
   },
 ]
 
-function MiniHistory(props: { history: Hist[] }) {
+function MiniHistory(props: { history: Hist[]; C: typeof LIGHT }) {
+  const C = props.C
   return (
     <div style={{ display: "flex", alignItems: "flex-end", gap: 16, padding: "2px 2px 0" }}>
       {props.history.map((h, k) => {
@@ -87,7 +102,7 @@ function MiniHistory(props: { history: Hist[] }) {
             <div
               style={{
                 width: 11, height: 11, borderRadius: 6,
-                background: h.current ? "#ffffff" : col,
+                background: h.current ? C.card : col,
                 border: h.current ? "2px solid " + C.violet : "none",
                 boxSizing: "border-box",
               }}
@@ -100,9 +115,26 @@ function MiniHistory(props: { history: Hist[] }) {
   )
 }
 
-export default function GoldenGooseFeed(props: { width?: number }) {
+export default function GoldenGooseFeed(props: { width?: number; dark?: boolean; reportPath?: string }) {
   const width = props.width || 380
+  const onCanvas = RenderTarget.current() === RenderTarget.canvas
+  const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+  const isDark = onCanvas ? !!props.dark : themeDark
+  const C = isDark ? DARK : LIGHT
+  const TONE = toneMap(C)
+
   const [open, setOpen] = useState(-1)
+
+  /* 테마 추종 */
+  useEffect(() => {
+    if (onCanvas) return
+    const read = () => setThemeDark(readBodyDark())
+    read()
+    if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+    const obs = new MutationObserver(read)
+    obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+    return () => obs.disconnect()
+  }, [onCanvas])
 
   return (
     <div
@@ -122,12 +154,15 @@ export default function GoldenGooseFeed(props: { width?: number }) {
         return (
           <div
             key={i}
-            style={{ background: C.card, borderRadius: 20, padding: 16, marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+            style={{ background: C.card, borderRadius: 20, padding: 16, marginBottom: 12, boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(0,0,0,0.04)" }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
                 <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.3 }}>{it.name}</span>
                 <span style={{ fontSize: 12, color: C.faint, fontWeight: 600 }}>{it.ticker}</span>
+                {it.ticker && !onCanvas && (
+                  <a href={(props.reportPath || "/stock") + "?q=" + encodeURIComponent(it.ticker)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ fontSize: 11, fontWeight: 700, color: C.blue, textDecoration: "none" }}>분석 ↗</a>
+                )}
               </div>
               <span style={{ fontSize: 12, color: C.faint, fontWeight: 600 }}>{it.ago}</span>
             </div>
@@ -145,7 +180,7 @@ export default function GoldenGooseFeed(props: { width?: number }) {
             {/* 과거패턴 mini-viz — substance 한눈에 */}
             <div style={{ background: C.violetSoft, borderRadius: 12, padding: "11px 12px", marginTop: 6 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: C.violet, marginBottom: 8 }}>{it.patternLabel} — 이게 처음이 아님</div>
-              <MiniHistory history={it.history} />
+              <MiniHistory history={it.history} C={C} />
             </div>
 
             {/* 깊이 신호 = "근거 N개 ▾" (rigor 전달, 안 어지럽게) */}
@@ -197,4 +232,6 @@ export default function GoldenGooseFeed(props: { width?: number }) {
 
 addPropertyControls(GoldenGooseFeed, {
   width: { type: ControlType.Number, title: "Width", defaultValue: 380, min: 320, max: 720 },
+  dark: { type: ControlType.Boolean, title: "Dark (canvas)", defaultValue: false },
+  reportPath: { type: ControlType.String, title: "리포트 경로", defaultValue: "/stock" },
 })

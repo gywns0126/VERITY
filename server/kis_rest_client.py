@@ -347,6 +347,50 @@ def fetch_daily(ticker: str, days: int = 365) -> list:
     return candles
 
 
+def _fetch_period(ticker: str, period_div: str, days: int) -> list:
+    """주봉(W)/월봉(M) 장기 차트 — fetch_daily 와 동일 TR, FID_PERIOD_DIV_CODE 만 변경.
+
+    KIS FHKST03010100 은 호출당 ~100건 캡(연속조회 미사용). 일봉=~5개월, 주봉=~2년, 월봉=~8년.
+    상주 토큰 읽기 재사용 — 신규 토큰 발급 없음(RULE 1). 추가 호출은 사용자가 장기 탭 누를 때만.
+    """
+    now = datetime.now(KST)
+    d = _get(
+        "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+        "FHKST03010100",
+        {
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_INPUT_ISCD": ticker,
+            "FID_INPUT_DATE_1": (now - timedelta(days=days)).strftime("%Y%m%d"),
+            "FID_INPUT_DATE_2": now.strftime("%Y%m%d"),
+            "FID_PERIOD_DIV_CODE": period_div,
+            "FID_ORG_ADJ_PRC": "0",
+        },
+    )
+    candles = []
+    for r in reversed(d.get("output2", [])):
+        o = int(r.get("stck_oprc", 0) or 0)
+        h = int(r.get("stck_hgpr", 0) or 0)
+        l = int(r.get("stck_lwpr", 0) or 0)
+        c = int(r.get("stck_clpr", 0) or 0)
+        v = int(r.get("acml_vol", 0) or 0)
+        if h > 0:
+            candles.append({
+                "date": r.get("stck_bsop_date", ""),
+                "open": o, "high": h, "low": l, "close": c, "volume": v,
+            })
+    return candles
+
+
+def fetch_weekly(ticker: str) -> list:
+    """주봉 ~2년 (100주 캡). 중기 추이."""
+    return _fetch_period(ticker, "W", 365 * 3)
+
+
+def fetch_monthly(ticker: str) -> list:
+    """월봉 ~8년 (100개월 캡). 전체 기간 장기 추이."""
+    return _fetch_period(ticker, "M", 365 * 9)
+
+
 # ── 분봉 ──
 
 def fetch_minute(ticker: str) -> list:

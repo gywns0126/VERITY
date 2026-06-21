@@ -1,5 +1,5 @@
-import { addPropertyControls, ControlType } from "framer"
-import { useState } from "react"
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
+import { useEffect, useState } from "react"
 
 /**
  * 종목 리스크 레이더 — 공개 probe (토스 디자인 언어)
@@ -20,8 +20,8 @@ import { useState } from "react"
  * 무료 Framer 프로젝트에 그대로 붙여 쓰는 자체 데이터(mock) 디자인 probe.
  */
 
-// ── 토스 디자인 토큰 (밝고·부드럽고·큰 글씨) ──
-const C = {
+// ── 토스 디자인 토큰 (밝고·부드럽고·큰 글씨) ── (LIGHT / DARK 쌍)
+const LIGHT = {
   bg: "#f2f4f6",
   card: "#ffffff",
   ink: "#191f28",
@@ -36,6 +36,22 @@ const C = {
   blueSoft: "#eef4ff",
   green: "#15c47e",
   greenSoft: "#eafaf3",
+}
+const DARK = {
+  bg: "#16181d",
+  card: "#1e2128",
+  ink: "#f0f2f5",
+  sub: "#b0b8c1",
+  faint: "#6b7684",
+  line: "#2b2f37",
+  red: "#ff6b76",
+  redSoft: "#3a1f22",
+  amber: "#ffb340",
+  amberSoft: "#3a2e1a",
+  blue: "#5a9cff",
+  blueSoft: "#1b2740",
+  green: "#3ddc97",
+  greenSoft: "#16322a",
 }
 
 // ── 용어 사전 (data/verity_terms.json category=public 부분집합 인라인) ──
@@ -184,7 +200,12 @@ const STOCKS: Stock[] = [
   },
 ]
 
-const toneColor = (t: Flag["tone"]) =>
+function readBodyDark(): boolean {
+  if (typeof document === "undefined" || !document.body) return false
+  return document.body.dataset.framerTheme === "dark"
+}
+
+const toneColor = (C: typeof LIGHT, t: Flag["tone"]) =>
   t === "high"
     ? { fg: C.red, bg: C.redSoft }
     : t === "mid"
@@ -192,7 +213,7 @@ const toneColor = (t: Flag["tone"]) =>
     : { fg: C.blue, bg: C.blueSoft }
 
 // ── 용어 칩 (점선 밑줄 + tap/hover 시 뜻 풀이) ──
-function TermChip({ term }: { term: string }) {
+function TermChip({ term, C }: { term: string; C: typeof LIGHT }) {
   const [open, setOpen] = useState(false)
   const def = GLOSSARY[term]
   if (!def) return <>{term}</>
@@ -236,7 +257,7 @@ function TermChip({ term }: { term: string }) {
               width: 248,
               maxWidth: "78vw",
               background: C.ink,
-              color: "#fff",
+              color: C.card,
               borderRadius: 12,
               padding: "11px 13px",
               fontSize: 12.5,
@@ -260,22 +281,38 @@ function TermChip({ term }: { term: string }) {
 }
 
 // 문자열 안의 알려진 용어를 자동으로 TermChip 으로 감싸기.
-function TermText({ text }: { text: string }) {
+function TermText({ text, C }: { text: string; C: typeof LIGHT }) {
   if (!text) return null
   const parts = text.split(TERM_RE)
   return (
     <>
       {parts.map((p, i) =>
-        GLOSSARY[p] ? <TermChip key={i} term={p} /> : <span key={i}>{p}</span>
+        GLOSSARY[p] ? <TermChip key={i} term={p} C={C} /> : <span key={i}>{p}</span>
       )}
     </>
   )
 }
 
-export default function StockRadarProbe(props: { width?: number }) {
+export default function StockRadarProbe(props: { width?: number; dark?: boolean }) {
+  const onCanvas = RenderTarget.current() === RenderTarget.canvas
+  const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+  const isDark = onCanvas ? !!props.dark : themeDark
+  const C = isDark ? DARK : LIGHT
+
   const [idx, setIdx] = useState(0)
   const [easy, setEasy] = useState(false) // 쉬운 말 모드
   const s = STOCKS[idx]
+
+  /* 테마 추종 */
+  useEffect(() => {
+    if (onCanvas) return
+    const read = () => setThemeDark(readBodyDark())
+    read()
+    if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+    const obs = new MutationObserver(read)
+    obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+    return () => obs.disconnect()
+  }, [onCanvas])
   const risks = s.flags.filter((f) => f.kind === "risk")
   const events = s.flags.filter((f) => f.kind === "event")
 
@@ -328,7 +365,7 @@ export default function StockRadarProbe(props: { width?: number }) {
                 fontSize: 13,
                 fontWeight: 600,
                 background: i === idx ? C.ink : C.card,
-                color: i === idx ? "#fff" : C.sub,
+                color: i === idx ? (isDark ? C.bg : "#fff") : C.sub,
               }}
             >
               {st.name}
@@ -366,7 +403,7 @@ export default function StockRadarProbe(props: { width?: number }) {
           background: C.card,
           borderRadius: 20,
           padding: 22,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(0,0,0,0.04)",
         }}
       >
         {/* 종목명 */}
@@ -395,7 +432,7 @@ export default function StockRadarProbe(props: { width?: number }) {
 
         {/* 리스크 섹션 */}
         {risks.map((f, i) => {
-          const c = toneColor(f.tone)
+          const c = toneColor(C, f.tone)
           return (
             <div
               key={i}
@@ -418,11 +455,11 @@ export default function StockRadarProbe(props: { width?: number }) {
                   borderRadius: 7,
                 }}
               >
-                <TermText text={f.tag} />
+                <TermText text={f.tag} C={C} />
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 15, fontWeight: 600, color: C.ink, marginBottom: 2 }}>
-                  <TermText text={f.title} />
+                  <TermText text={f.title} C={C} />
                 </div>
                 <div
                   style={{
@@ -431,7 +468,7 @@ export default function StockRadarProbe(props: { width?: number }) {
                     lineHeight: easy ? 1.55 : 1.4,
                   }}
                 >
-                  <TermText text={easy ? f.plain : f.detail} />
+                  <TermText text={easy ? f.plain : f.detail} C={C} />
                 </div>
               </div>
               <span
@@ -476,11 +513,11 @@ export default function StockRadarProbe(props: { width?: number }) {
                     borderRadius: 7,
                   }}
                 >
-                  <TermText text={f.tag} />
+                  <TermText text={f.tag} C={C} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 600, color: C.ink, marginBottom: 2 }}>
-                    <TermText text={f.title} />
+                    <TermText text={f.title} C={C} />
                   </div>
                   <div
                     style={{
@@ -489,7 +526,7 @@ export default function StockRadarProbe(props: { width?: number }) {
                       lineHeight: easy ? 1.55 : 1.4,
                     }}
                   >
-                    <TermText text={easy ? f.plain : f.detail} />
+                    <TermText text={easy ? f.plain : f.detail} C={C} />
                   </div>
                 </div>
                 <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 600, color: C.faint }}>
@@ -524,7 +561,7 @@ export default function StockRadarProbe(props: { width?: number }) {
                   fontWeight: 600,
                 }}
               >
-                ✓ <TermText text={c} />
+                ✓ <TermText text={c} C={C} />
               </span>
             ))}
           </div>
@@ -551,4 +588,5 @@ export default function StockRadarProbe(props: { width?: number }) {
 
 addPropertyControls(StockRadarProbe, {
   width: { type: ControlType.Number, title: "Width", defaultValue: 380, min: 320, max: 720 },
+  dark: { type: ControlType.Boolean, title: "Dark (canvas)", defaultValue: false },
 })

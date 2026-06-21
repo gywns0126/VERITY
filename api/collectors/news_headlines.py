@@ -313,4 +313,17 @@ def collect_us_headlines(
         _enrich_item(item)
 
     pool.sort(key=lambda x: x.get("composite_score", 0), reverse=True)
-    return pool[:max_items]
+    result = pool[:max_items]
+
+    # 영어 헤드라인 → 한글 사전번역(build-time) 부착. 실패/키부재 시 title_ko 미부착(컴포넌트 영문 fallback).
+    try:
+        from api.collectors.news_translation import translate_headlines_ko
+        ko_map = translate_headlines_ko([it.get("title", "") for it in result])
+        for it in result:
+            ko = ko_map.get((it.get("title") or "").strip())
+            if ko:
+                it["title_ko"] = ko
+    except Exception:  # noqa: BLE001
+        pass
+
+    return result

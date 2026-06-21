@@ -30,9 +30,9 @@ from server.config import (
     SSE_QUEUE_SIZE,
 )
 from server.kis_rest_client import (
-    fetch_daily, fetch_minute, fetch_orderbook, fetch_price, fetch_trades,
-    fetch_program_trade, place_kr_order, place_us_order, get_balance,
-    token_status,
+    fetch_daily, fetch_minute, fetch_weekly, fetch_monthly, fetch_orderbook,
+    fetch_price, fetch_trades, fetch_program_trade, place_kr_order,
+    place_us_order, get_balance, token_status,
 )
 from server.kis_ws_client import KISWebSocketClient
 
@@ -280,6 +280,12 @@ async def chart(ticker: str, type: str = Query("all")):
         if type == "daily":
             data = await loop.run_in_executor(None, fetch_daily, tk)
             return {"daily": data}
+        if type == "weekly":
+            data = await loop.run_in_executor(None, fetch_weekly, tk)
+            return {"weekly": data}
+        if type == "monthly":
+            data = await loop.run_in_executor(None, fetch_monthly, tk)
+            return {"monthly": data}
         if type == "minute":
             data = await loop.run_in_executor(None, fetch_minute, tk)
             return {"minute": data}

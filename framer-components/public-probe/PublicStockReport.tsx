@@ -74,7 +74,15 @@ const GLOSSARY: Record<string, string> = {
 }
 const GKEYS = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length)
 const DART = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
-const PERIODS = [{ l: "1M", n: 20 }, { l: "3M", n: 60 }, { l: "전체", n: 0 }]
+// g = KIS 차트 granularity(daily/weekly/monthly), n = 슬라이스 캔들 수(0=전체).
+// 주봉=~2년·월봉=~8년(KIS 호출당 100건 캡 우회) — 장기 탭에서만 해당 type fetch.
+const PERIODS = [
+    { l: "1M", n: 20, g: "daily" },
+    { l: "3M", n: 60, g: "daily" },
+    { l: "1Y", n: 52, g: "weekly" },
+    { l: "5Y", n: 60, g: "monthly" },
+    { l: "전체", n: 0, g: "monthly" },
+]
 const DILUTION_CATS = new Set(["유상증자", "전환사채(CB)", "신주인수권부사채(BW)", "교환사채(EB)", "자기주식처분"])
 const RISK_CATS = new Set(["감자", "횡령·배임", "회생·상장폐지", "불성실공시"])
 const FAVORABLE_CATS = new Set(["자기주식취득"])
@@ -285,6 +293,102 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     )
 }
 
+/* 재무 시계열(매출·영업이익·순익) 추이 + 과거 비교 — DART 공시 실값(추이 그래프, 자체 산식 없음) */
+function fmtKRWcompact(v: any): string {
+    if (v == null || isNaN(Number(v))) return "—"
+    const n = Number(v)
+    const neg = n < 0
+    const a = Math.abs(n)
+    let s: string
+    if (a >= 1e12) s = (a / 1e12).toFixed(a >= 1e13 ? 0 : 1) + "조"
+    else if (a >= 1e8) s = Math.round(a / 1e8).toLocaleString() + "억"
+    else if (a >= 1e4) s = Math.round(a / 1e4).toLocaleString() + "만"
+    else s = Math.round(a).toLocaleString()
+    return (neg ? "−" : "") + s
+}
+
+function FinTrend({ series, C }: { series: any[]; C: any }) {
+    const [metric, setMetric] = useState<"revenue" | "op" | "net">("revenue")
+    const METRICS: { k: "revenue" | "op" | "net"; l: string }[] = [
+        { k: "revenue", l: "매출" }, { k: "op", l: "영업이익" }, { k: "net", l: "순이익" },
+    ]
+    const pts = (series || []).filter((p) => p && p.year != null)
+    if (pts.length < 2) return null
+    const last = pts[pts.length - 1]
+    const lastYear = Number(last.year)
+    const valOf = (p: any) => (p && p[metric] != null && !isNaN(Number(p[metric]))) ? Number(p[metric]) : null
+    const vals = pts.map(valOf).filter((v): v is number => v != null)
+    const maxAbs = Math.max(1, ...vals.map((v) => Math.abs(v)))
+    const hasNeg = vals.some((v) => v < 0)
+    const lastVal = valOf(last)
+    const cmp = (n: number) => {
+        const prev = pts.find((p) => Number(p.year) === lastYear - n)
+        const pv = prev ? valOf(prev) : null
+        if (pv == null || lastVal == null || pv === 0) return null
+        return ((lastVal - pv) / Math.abs(pv)) * 100
+    }
+    const COMPARES = [{ n: 1, l: "1년 전" }, { n: 3, l: "3년 전" }, { n: 5, l: "5년 전" }]
+    return (
+        <div style={{ background: C.card, borderRadius: 16, padding: "12px 16px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+            {/* metric 선택 */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                {METRICS.map((m) => (
+                    <button key={m.k} onClick={() => setMetric(m.k)} style={{ flex: 1, border: "none", cursor: "pointer", padding: "7px 0", borderRadius: 9, fontSize: 12, fontWeight: 800, fontFamily: FONT, background: metric === m.k ? C.vt : C.bg, color: metric === m.k ? C.onAccent : C.sub }}>{m.l}</button>
+                ))}
+            </div>
+            {/* 최신값 */}
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontFamily: HEAD, fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.6px" }}>{fmtKRWcompact(lastVal)}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.faint }}>{lastYear} {METRICS.find((m) => m.k === metric)!.l}</span>
+            </div>
+            {/* 과거 비교 칩 */}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                {COMPARES.map((c) => {
+                    const ch = cmp(c.n)
+                    if (ch == null) return null
+                    const col = ch > 0 ? C.up : ch < 0 ? C.down : C.faint
+                    return (
+                        <span key={c.n} style={{ fontSize: 11.5, fontWeight: 700, color: col, background: C.bg, borderRadius: 8, padding: "5px 9px" }}>
+                            {c.l} 대비 {ch > 0 ? "▲" : ch < 0 ? "▼" : ""}{Math.abs(ch).toFixed(0)}%
+                        </span>
+                    )
+                })}
+            </div>
+            {/* 막대 추이 */}
+            <div style={{ display: "flex", alignItems: "stretch", gap: 3, height: 110 }}>
+                {pts.map((p) => {
+                    const v = valOf(p)
+                    const frac = v == null ? 0 : Math.abs(v) / maxAbs
+                    const isLast = Number(p.year) === lastYear
+                    const col = v == null ? C.line : v >= 0 ? C.up : C.down
+                    const bar = (
+                        <div style={{ width: "100%", height: (frac * 100) + "%", background: col, opacity: isLast ? 1 : 0.5, borderRadius: v != null && v < 0 ? "0 0 3px 3px" : "3px 3px 0 0" }} />
+                    )
+                    return (
+                        <div key={p.year} title={`${p.year} · ${fmtKRWcompact(v)}`} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: hasNeg ? "center" : "flex-end" }}>
+                            {hasNeg ? (
+                                <>
+                                    <div style={{ height: "50%", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>{v != null && v >= 0 && bar}</div>
+                                    <div style={{ height: "50%", display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>{v != null && v < 0 && bar}</div>
+                                </>
+                            ) : bar}
+                        </div>
+                    )
+                })}
+            </div>
+            {/* 연도 라벨 */}
+            <div style={{ display: "flex", gap: 3, marginTop: 5 }}>
+                {pts.map((p, i) => (
+                    <div key={p.year} style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 8.5, fontWeight: 700, color: Number(p.year) === lastYear ? C.vt : C.faint }}>
+                        {(i === 0 || i === pts.length - 1 || pts.length <= 7 || i % 2 === 0) ? "'" + String(p.year).slice(2) : ""}
+                    </div>
+                ))}
+            </div>
+            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>DART 전자공시 연간 실값(추이) · 빨강=증가 파랑=감소(한국식) · 점수·추천 아님</div>
+        </div>
+    )
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -330,7 +434,10 @@ export default function PublicStockReport(props: Props) {
     const [openPeer, setOpenPeer] = useState<number>(-1)
     const [openFin, setOpenFin] = useState<boolean>(false)
     const [chartMode, setChartMode] = useState<string>("line")
-    const [chartPeriod, setChartPeriod] = useState<number>(0)
+    const [chartPeriodIdx, setChartPeriodIdx] = useState<number>(1)
+    const _cp = PERIODS[chartPeriodIdx] || PERIODS[0]
+    const chartN = _cp.n
+    const chartGran = _cp.g
     const [showMA, setShowMA] = useState<boolean>(true)
     const [forenAll, setForenAll] = useState(false)
     const [insiderAll, setInsiderAll] = useState(false)
@@ -484,15 +591,15 @@ export default function PublicStockReport(props: Props) {
         if (onCanvas || !s.ticker || !/^\d{6}$/.test(String(s.ticker))) { setChart([]); return }
         let alive = true
         setChart([])
-        fetch(base + "/api/chart?ticker=" + s.ticker + "&type=daily")
+        fetch(base + "/api/chart?ticker=" + s.ticker + "&type=" + chartGran)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                const arr = d && Array.isArray(d.daily) ? d.daily : (Array.isArray(d) ? d : null)
+                const arr = d && Array.isArray(d[chartGran]) ? d[chartGran] : (d && Array.isArray(d.daily) ? d.daily : (Array.isArray(d) ? d : null))
                 if (alive && Array.isArray(arr) && arr.length > 1) setChart(arr)
             })
             .catch(() => {})
         return () => { alive = false }
-    }, [s.ticker, base, onCanvas])
+    }, [s.ticker, base, onCanvas, chartGran])
 
     // 관심종목(별표) — 세션 토큰 추적 + 현재 종목 별표 상태 조회
     useEffect(() => {
@@ -577,7 +684,7 @@ export default function PublicStockReport(props: Props) {
     const cv = useMemo(() => {
         if (!chart || chart.length < 2) return null
         const all = chart
-        const rows = chartPeriod > 0 && chartPeriod < all.length ? all.slice(all.length - chartPeriod) : all
+        const rows = chartN > 0 && chartN < all.length ? all.slice(all.length - chartN) : all
         const n = rows.length
         if (n < 2) return null
         const closes = rows.map((c: any) => Number(c.close))
@@ -636,7 +743,7 @@ export default function PublicStockReport(props: Props) {
         }).filter(Boolean) as any[]
         const tickIdx = [0, Math.round((n - 1) / 3), Math.round((2 * (n - 1)) / 3), n - 1]
         return { rows, n, W, H, Hp, Hv, gap, yVtop, pmin, pmax, xAt, yP, linePath, areaPath, up, ma20Pts, ma60Pts, candles, volBars, cw, dates, markers, tickIdx }
-    }, [chart, disclosures, w, pad, narrow, chartPeriod])
+    }, [chart, disclosures, w, pad, narrow, chartN])
 
     const setHoverFromClientX = (clientX: number) => {
         if (!cv || !svgRef.current) return
@@ -931,7 +1038,7 @@ export default function PublicStockReport(props: Props) {
                 <div style={{ background: C.card, borderRadius: 16, padding: "12px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
                         <div style={{ display: "flex", gap: 4, background: C.bg, borderRadius: 10, padding: 3 }}>
-                            {PERIODS.map((p) => (<button key={p.l} onClick={() => setChartPeriod(p.n)} style={segBtn(chartPeriod === p.n)}>{p.l}</button>))}
+                            {PERIODS.map((p, i) => (<button key={p.l} onClick={() => setChartPeriodIdx(i)} style={segBtn(chartPeriodIdx === i)}>{p.l}</button>))}
                         </div>
                         <div style={{ display: "flex", gap: 4, background: C.bg, borderRadius: 10, padding: 3 }}>
                             <button onClick={() => setChartMode("line")} style={segBtn(chartMode === "line")}>선</button>
@@ -1185,6 +1292,14 @@ export default function PublicStockReport(props: Props) {
                 </>
             )}
 
+            {/* 재무 추이 — 연도별 매출·영업이익·순익 + 과거 비교 (DART 공시 실값) */}
+            {Array.isArray(s.fin_series) && s.fin_series.length >= 2 && (
+                <>
+                    {sectionTitle("재무 추이", "DART · 연간 실값 · 과거(1·3·5년) 비교")}
+                    <FinTrend series={s.fin_series} C={C} />
+                </>
+            )}
+
             {/* 공시·리스크 레이더 */}
             {disclosures.length > 0 && (
                 <>
@@ -1295,18 +1410,28 @@ export default function PublicStockReport(props: Props) {
                         </div>
                         {Array.isArray(ownership.shareholders) && ownership.shareholders.length > 0 && (
                             <div style={{ marginTop: 10 }}>
-                                {ownership.shareholders.map((sh: any, i: number) => (
+                                {ownership.shareholders.map((sh: any, i: number) => {
+                                    const nm = sh.name && sh.name !== sh.type ? String(sh.name) : ""
+                                    const generic = !nm || /기타|소액주주|자기주식|우리사주|^친족$|^동일인$|^임원$|기관투자|외국인|개인투자자|국민연금공단/.test(nm)
+                                    const corp = sh.type === "소속회사" || /(주식회사|\(주\)|㈜|회사|Ltd|LTD|Inc|INC|Limited|Corp|Company|생명|화재|증권|물산|홀딩스|투자|캐피탈|은행|보험|자산운용|전자|중공업|텔레콤|공단|재단)/.test(nm)
+                                    const shUrl = generic ? null : "https://search.naver.com/search.naver?query=" + encodeURIComponent(corp ? nm : nm + " 인물")
+                                    return (
                                     <div key={i} style={{ padding: "7px 0", borderTop: i === 0 ? `1px solid ${C.line}` : "none" }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                             <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: shTypeColor(sh.type), background: C.bg, borderRadius: 6, padding: "2px 7px", minWidth: 52, textAlign: "center" }}>{sh.type}</span>
-                                            <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sh.name && sh.name !== sh.type ? sh.name : ""}</span>
+                                            {shUrl ? (
+                                                <a href={shUrl} target="_blank" rel="noopener noreferrer" title={`${nm} 검색`} style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700, color: C.vg, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: "none" }}>{nm} ↗</a>
+                                            ) : (
+                                                <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nm}</span>
+                                            )}
                                             <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: C.ink }}>{sh.pct}%</span>
                                         </div>
                                         <div style={{ height: 3, borderRadius: 2, background: C.line, marginTop: 4, overflow: "hidden" }}>
                                             <div style={{ width: Math.min(100, Number(sh.pct) || 0) + "%", height: "100%", background: shTypeColor(sh.type) }} />
                                         </div>
                                     </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         )}
                         {ownership.cross_check && ownership.cross_check.status && (

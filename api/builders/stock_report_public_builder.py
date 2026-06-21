@@ -28,6 +28,7 @@ CONSENSUS_PATH = os.path.join(_ROOT, "data", "consensus_data.json")
 CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
 SECTOR_MAP_PATH = os.path.join(_ROOT, "data", "kr_sector_map.json")
 KRXMKTCAP_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
+DART_KR_BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_kr_backfill_result.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
 
 # 동종업계 비교 = 섹터별 중앙값. PER/PBR = KRX 시총 ÷ DART 순익·자기자본 자체계산(src="val"),
@@ -524,6 +525,47 @@ def _ownership_from_official(off: Optional[Dict[str, Any]]) -> Optional[Dict[str
     return out
 
 
+def _load_fin_series() -> Dict[str, List[Dict[str, Any]]]:
+    """DART KR backfill → ticker별 연도 재무 시계열 (매출/영업이익/순익).
+
+    소스 = data/dart_kr_backfill_result.json (DART 원본 연간 실값, fiscal_year 2015~).
+    period == "annual" 만(분기 q1/h1/q3 혼재 제외). 자체 산식·점수 없음 = 공시 사실(RULE 7 allowlist).
+    커버리지는 backfill 적재분만(현재 일부 종목) — 없는 종목은 빈 dict.
+    """
+    doc = _load_json(DART_KR_BACKFILL_PATH, {})
+    rows = (doc.get("rows") if isinstance(doc, dict) else None) or []
+    by_ticker: Dict[str, List[Dict[str, Any]]] = {}
+    for r in rows:
+        if not isinstance(r, dict) or r.get("period") != "annual":
+            continue
+        tk = str(r.get("ticker") or "")
+        fy = r.get("fiscal_year")
+        f = r.get("fundamentals") or {}
+        if not tk or fy is None:
+            continue
+        rev, op, net = f.get("revenue"), f.get("operating_profit"), f.get("net_income")
+        if rev is None and op is None and net is None:
+            continue
+        by_ticker.setdefault(tk, []).append({
+            "year": int(fy),
+            "revenue": rev,
+            "op": op,
+            "net": net,
+        })
+    # 연도 오름차순 정렬 + 종목당 최근 ~12년 cap (JSON size 정합)
+    out: Dict[str, List[Dict[str, Any]]] = {}
+    for tk, pts in by_ticker.items():
+        pts.sort(key=lambda p: p["year"])
+        # 중복 연도 dedup (마지막 우선)
+        seen: Dict[int, Dict[str, Any]] = {}
+        for p in pts:
+            seen[p["year"]] = p
+        ordered = [seen[y] for y in sorted(seen.keys())][-12:]
+        if len(ordered) >= 2:
+            out[tk] = ordered
+    return out
+
+
 def main() -> int:
     ok = False
     try:
@@ -532,6 +574,7 @@ def main() -> int:
             recs = []
         fund_doc = _load_json(FUND_PATH, {})
         fundamentals = (fund_doc.get("fundamentals") if isinstance(fund_doc, dict) else {}) or {}
+        fin_series = _load_fin_series()
         kr_listed = _load_json(KRLISTED_PATH, {}) or {}
         names = _load_json(NAMES_PATH, {}) or {}
         catalyst = _load_catalyst_by_ticker()
@@ -602,6 +645,9 @@ def main() -> int:
             fin = _financials(fundamentals.get(tk))
             if fin:
                 s["financials"] = fin
+            fs = fin_series.get(tk)
+            if fs:
+                s["fin_series"] = fs  # 연도별 매출/영업이익/순익 시계열(DART 공시 실값, 추이 그래프용)
             val = valuation.get(tk)
             if val:
                 fn = s.setdefault("facts_note", {})

@@ -1,0 +1,601 @@
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
+import React, { useEffect, useMemo, useState } from "react"
+
+/**
+ * 골든구스 뉴스 탭 (공개) — 팩트형.
+ *
+ * 우리 종목 연동형: recommendations.json 의 종목별 sentiment.top_headline_links 를
+ * "내 종목 뉴스" 로, portfolio.json 의 headlines / us_headlines 를 "시장 / 미국" 으로 노출.
+ *
+ * RULE 6 (LLM narrative STOP): 제목 + 출처 + 시각 + 원문 링크만. 해설/요약 0.
+ * RULE 7: 호재/악재 칩 = 시장·미국 탭만(portfolio.headlines.sentiment = 키워드 자동분류, "검증 전" 라벨 명시).
+ *   점수·등급·방향성 영향 추론은 미노출. 섹터 = 종목 멤버십 사실(영향·수혜 아님).
+ *
+ * 다크모드: body[data-framer-theme] 추종 (다른 public 컴포넌트와 동일 패턴).
+ *  - 캔버스 에디터: dark prop 정적 프리뷰 (RenderTarget.canvas 가드)
+ */
+
+const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
+
+interface Props {
+    dark: boolean
+    recUrl: string
+    portfolioUrl: string
+    maxPerStock: number
+    maxMarket: number
+    height: number
+    marketCardHeight: number
+    stockCardHeight: number
+    reportPath: string
+}
+
+const LIGHT = {
+    bg: "#ffffff",
+    card: "#f9fafb",
+    sub: "#f2f4f6",
+    text: "#191f28",
+    subtext: "#6b7280",
+    faint: "#8b95a1",
+    border: "#e5e8eb",
+    accent: "#15c47e",
+    chipBg: "#f2f4f6",
+    up: "#f04452",
+    down: "#3182f6",
+    upBg: "#fdecee",
+    downBg: "#eaf1fe",
+}
+const DARK = {
+    bg: "#171c23",
+    card: "#1e242c",
+    sub: "#222933",
+    text: "#f2f4f6",
+    subtext: "#9aa4b1",
+    faint: "#6b7682",
+    border: "#2b3138",
+    accent: "#15c47e",
+    chipBg: "#222933",
+    up: "#f04452",
+    down: "#5b9bff",
+    upBg: "#2a1a1d",
+    downBg: "#17263c",
+}
+
+// GICS/yfinance 섹터 EN→KR (멤버십 사실 라벨). 미스 시 원문.
+const SECTOR_KR: Record<string, string> = {
+    "Basic Materials": "기초소재",
+    "Communication Services": "커뮤니케이션",
+    "Consumer Cyclical": "경기소비재",
+    "Consumer Defensive": "필수소비재",
+    "Energy": "에너지",
+    "Financial Services": "금융",
+    "Financial": "금융",
+    "Healthcare": "헬스케어",
+    "Industrials": "산업재",
+    "Real Estate": "부동산",
+    "Technology": "기술",
+    "Utilities": "유틸리티",
+}
+function sectorLabel(s: string): string {
+    if (!s) return ""
+    return SECTOR_KR[s] || s
+}
+
+type Tab = "stock" | "market" | "us"
+
+interface NewsItem {
+    title: string
+    titleKo?: string
+    url: string
+    source: string
+    time: string
+    sentiment: string
+}
+interface StockGroup {
+    ticker: string
+    name: string
+    market: string
+    sector: string
+    industry: string
+    items: NewsItem[]
+}
+
+function readBodyDark(): boolean {
+    if (typeof document === "undefined" || !document.body) return false
+    return document.body.dataset.framerTheme === "dark"
+}
+
+function hostname(url: string): string {
+    if (!url) return ""
+    try {
+        const m = url.replace(/^https?:\/\//, "").split("/")[0]
+        return m.replace(/^www\./, "")
+    } catch (e) {
+        return ""
+    }
+}
+
+/* "제목 - Yahoo Finance" 형태에서 끝 출처를 분리 */
+function splitSource(title: string): { title: string; source: string } {
+    if (!title) return { title: "", source: "" }
+    const idx = title.lastIndexOf(" - ")
+    if (idx > 8 && idx > title.length - 40) {
+        return { title: title.slice(0, idx).trim(), source: title.slice(idx + 3).trim() }
+    }
+    return { title: title.trim(), source: "" }
+}
+
+function dateOnly(t: string): string {
+    if (!t) return ""
+    const m = String(t).match(/\d{4}-\d{2}-\d{2}/)
+    return m ? m[0] : ""
+}
+
+function asArray(x: any): any[] {
+    return Array.isArray(x) ? x : []
+}
+
+export default function PublicNewsTab(props: Props) {
+    const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const isDark = (onCanvas ? !!props.dark : themeDark)
+    const C = isDark ? DARK : LIGHT
+
+    const [tab, setTab] = useState<Tab>("stock")
+    const [showKo, setShowKo] = useState<boolean>(false)
+    const [stocks, setStocks] = useState<StockGroup[]>([])
+    const [market, setMarket] = useState<NewsItem[]>([])
+    const [us, setUs] = useState<NewsItem[]>([])
+    const [loading, setLoading] = useState<boolean>(true)
+    const [failed, setFailed] = useState<boolean>(false)
+
+    /* 테마 추종 */
+    useEffect(() => {
+        if (onCanvas) return
+        const read = () => setThemeDark(readBodyDark())
+        read()
+        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+        const obs = new MutationObserver(read)
+        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+        return () => obs.disconnect()
+    }, [onCanvas])
+
+    /* 데이터 로드 */
+    useEffect(() => {
+        if (onCanvas) {
+            setLoading(false)
+            return
+        }
+        let alive = true
+        const recUrl = props.recUrl || BLOB + "/recommendations.json"
+        const pfUrl = props.portfolioUrl || BLOB + "/portfolio.json"
+        const maxPer = props.maxPerStock || 3
+        const maxMk = props.maxMarket || 20
+
+        Promise.all([
+            fetch(recUrl).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+            fetch(pfUrl).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ]).then((res) => {
+            if (!alive) return
+            const recRaw = res[0]
+            const pf = res[1]
+
+            // 내 종목 뉴스
+            const recs = Array.isArray(recRaw) ? recRaw : (recRaw && recRaw.recommendations) || []
+            const groups: StockGroup[] = []
+            for (let i = 0; i < recs.length; i++) {
+                const rec = recs[i] || {}
+                const sent = rec.sentiment || {}
+                const links = asArray(sent.top_headline_links)
+                if (!links.length) continue
+                const items: NewsItem[] = []
+                for (let j = 0; j < links.length && items.length < maxPer; j++) {
+                    const h = links[j] || {}
+                    const url = h.url || h.link || ""
+                    const sp = splitSource(h.title || "")
+                    if (!sp.title) continue
+                    items.push({
+                        title: sp.title,
+                        titleKo: h.title_ko ? String(h.title_ko) : "",
+                        url: url,
+                        source: sp.source || hostname(url),
+                        time: "",
+                        sentiment: String(h.label || ""),
+                    })
+                }
+                if (!items.length) continue
+                groups.push({
+                    ticker: rec.ticker || rec.code || "",
+                    name: rec.name || rec.company_name || rec.ticker || "",
+                    market: rec.market || "",
+                    sector: rec.sector || "",
+                    industry: rec.industry || "",
+                    items: items,
+                })
+            }
+
+            // 시장 뉴스 (KR)
+            const mkRaw = pf ? asArray(pf.headlines) : []
+            const mk: NewsItem[] = []
+            for (let i = 0; i < mkRaw.length && mk.length < maxMk; i++) {
+                const h = mkRaw[i] || {}
+                if (!h.title) continue
+                mk.push({
+                    title: String(h.title).trim(),
+                    titleKo: h.title_ko ? String(h.title_ko) : "",
+                    url: h.link || h.url || "",
+                    source: h.source || hostname(h.link || ""),
+                    time: dateOnly(h.time || h.published_at || ""),
+                    sentiment: String(h.sentiment || ""),
+                })
+            }
+
+            // 미국 뉴스
+            const usRaw = pf ? asArray(pf.us_headlines) : []
+            const usArr: NewsItem[] = []
+            for (let i = 0; i < usRaw.length && usArr.length < maxMk; i++) {
+                const h = usRaw[i] || {}
+                const sp = splitSource(h.title || "")
+                if (!sp.title) continue
+                usArr.push({
+                    title: sp.title,
+                    titleKo: h.title_ko ? String(h.title_ko) : "",
+                    url: h.link || h.url || "",
+                    source: sp.source || hostname(h.link || ""),
+                    time: dateOnly(h.time || h.published_at || ""),
+                    sentiment: String(h.sentiment || ""),
+                })
+            }
+
+            setStocks(groups)
+            setMarket(mk)
+            setUs(usArr)
+            setLoading(false)
+            setFailed(!recRaw && !pf)
+        })
+
+        return () => {
+            alive = false
+        }
+    }, [onCanvas, props.recUrl, props.portfolioUrl, props.maxPerStock, props.maxMarket])
+
+    const tabs: { key: Tab; label: string; count: number }[] = useMemo(
+        () => [
+            { key: "stock", label: "내 종목", count: stocks.length },
+            { key: "market", label: "시장", count: market.length },
+            { key: "us", label: "미국", count: us.length },
+        ],
+        [stocks.length, market.length, us.length]
+    )
+
+    const wrap: React.CSSProperties = {
+        width: "100%",
+        maxWidth: 1180,
+        marginLeft: "auto",
+        marginRight: "auto",
+        height: props.height || 720,
+        background: C.bg,
+        borderRadius: 20,
+        border: "1px solid " + C.border,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        fontFamily:
+            "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif",
+        boxSizing: "border-box",
+    }
+
+    return (
+        <div style={wrap}>
+            {/* 헤더 */}
+            <div style={{ padding: "20px 22px 12px 22px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 19, fontWeight: 800, color: C.text, letterSpacing: "-0.02em" }}>
+                        뉴스
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: C.faint }}>팩트 헤드라인</span>
+                    {(us.some((it) => !!it.titleKo) || market.some((it) => !!it.titleKo) || stocks.some((g) => g.items.some((it) => !!it.titleKo))) && (
+                        <button
+                            type="button"
+                            onClick={() => setShowKo((v) => !v)}
+                            title="영어 헤드라인 한글 번역 토글"
+                            style={{
+                                marginLeft: "auto", border: "none", cursor: "pointer",
+                                background: showKo ? C.accent : C.bg, color: showKo ? "#fff" : C.subtext,
+                                fontWeight: 700, fontSize: 12, padding: "6px 12px", borderRadius: 8,
+                            }}
+                        >
+                            {showKo ? "한글 ✓" : "한글 번역"}
+                        </button>
+                    )}
+                </div>
+                {/* 세그먼트 */}
+                <div
+                    style={{
+                        marginTop: 14,
+                        display: "inline-flex",
+                        background: C.sub,
+                        borderRadius: 10,
+                        padding: 3,
+                        gap: 2,
+                    }}
+                >
+                    {tabs.map((t) => {
+                        const active = tab === t.key
+                        return (
+                            <button
+                                key={t.key}
+                                type="button"
+                                onClick={() => setTab(t.key)}
+                                style={{
+                                    border: "none",
+                                    cursor: "pointer",
+                                    background: active ? C.bg : "transparent",
+                                    color: active ? C.text : C.subtext,
+                                    fontWeight: active ? 700 : 600,
+                                    fontSize: 13,
+                                    padding: "7px 14px",
+                                    borderRadius: 8,
+                                    boxShadow: active ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                                    transition: "all 140ms ease",
+                                }}
+                            >
+                                {t.label}
+                                <span style={{ marginLeft: 6, color: active ? C.accent : C.faint, fontWeight: 700 }}>
+                                    {t.count}
+                                </span>
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* 본문 */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "4px 14px 18px 14px" }}>
+                {loading ? (
+                    <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>
+                        뉴스 불러오는 중…
+                    </div>
+                ) : failed ? (
+                    <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>
+                        뉴스를 불러오지 못했어요.
+                    </div>
+                ) : tab === "stock" ? (
+                    <StockNews groups={stocks} C={C} cardH={props.stockCardHeight || 232} showKo={showKo} reportPath={props.reportPath} />
+                ) : tab === "market" ? (
+                    <FlatNews items={market} C={C} empty="시장 뉴스가 없어요." cardH={props.marketCardHeight || 92} showKo={showKo} />
+                ) : (
+                    <FlatNews items={us} C={C} empty="미국 뉴스가 없어요." cardH={props.marketCardHeight || 92} showKo={showKo} />
+                )}
+            </div>
+        </div>
+    )
+}
+
+function MarketBadge(props: { market: string; C: typeof LIGHT }) {
+    const m = (props.market || "").toUpperCase()
+    if (!m) return null
+    const isKR = m.indexOf("KOS") >= 0 || m === "KR" || m.indexOf("KRX") >= 0
+    return (
+        <span
+            style={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                color: props.C.faint,
+                background: props.C.chipBg,
+                borderRadius: 5,
+                padding: "2px 6px",
+            }}
+        >
+            {isKR ? "KR" : m}
+        </span>
+    )
+}
+
+/* 호재/악재 = 위/아래 화살표(텍스트 X). pos/neg 일 때만. 제목 끝(우측). KR 색: 호재 빨강↑ / 악재 파랑↓. */
+function SentChip(props: { s: string; C: typeof LIGHT }) {
+    const s = props.s
+    if (s !== "positive" && s !== "negative") return null
+    const pos = s === "positive"
+    const C = props.C
+    const col = pos ? C.up : C.down
+    const bg = pos ? C.upBg : C.downBg
+    return (
+        <span
+            style={{
+                flexShrink: 0,
+                marginTop: 1,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 20,
+                height: 20,
+                borderRadius: 6,
+                background: bg,
+            }}
+            title={pos ? "호재(키워드 분류)" : "악재(키워드 분류)"}
+            aria-label={pos ? "호재" : "악재"}
+        >
+            <svg width={11} height={11} viewBox="0 0 12 12" fill="none" stroke={col} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                {pos ? (
+                    <>
+                        <line x1="6" y1="10" x2="6" y2="2.6" />
+                        <polyline points="2.8,5.6 6,2.4 9.2,5.6" />
+                    </>
+                ) : (
+                    <>
+                        <line x1="6" y1="2" x2="6" y2="9.4" />
+                        <polyline points="2.8,6.4 6,9.6 9.2,6.4" />
+                    </>
+                )}
+            </svg>
+        </span>
+    )
+}
+
+/* 섹터 배지 — 종목의 섹터(멤버십 사실, 영향·수혜 아님). */
+function SectorBadge(props: { sector: string; industry: string; C: typeof LIGHT }) {
+    const label = sectorLabel(props.sector)
+    if (!label) return null
+    return (
+        <span
+            style={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                color: props.C.accent,
+                background: props.C.chipBg,
+                borderRadius: 5,
+                padding: "2px 7px",
+            }}
+            title={props.industry || props.sector}
+        >
+            {label}
+        </span>
+    )
+}
+
+function NewsRow(props: { item: NewsItem; C: typeof LIGHT; clamp?: number; showKo?: boolean }) {
+    const { item, C } = props
+    const clamp = props.clamp || 2
+    const ko = !!(props.showKo && item.titleKo && item.titleKo !== item.title)
+    const shownTitle = ko ? (item.titleKo as string) : item.title
+    const body = (
+        <div
+            style={{
+                padding: "11px 8px",
+                borderRadius: 10,
+                cursor: item.url ? "pointer" : "default",
+                transition: "background 120ms ease",
+            }}
+            onMouseEnter={(e) => {
+                ;(e.currentTarget as HTMLDivElement).style.background = C.sub
+            }}
+            onMouseLeave={(e) => {
+                ;(e.currentTarget as HTMLDivElement).style.background = "transparent"
+            }}
+        >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                <span
+                    style={{
+                        flex: 1,
+                        minWidth: 0,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: C.text,
+                        lineHeight: 1.45,
+                        letterSpacing: "-0.01em",
+                        display: "-webkit-box",
+                        WebkitLineClamp: clamp,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        overflowWrap: "anywhere",
+                    }}
+                >
+                    {shownTitle}
+                </span>
+                <SentChip s={item.sentiment} C={C} />
+            </div>
+            <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 7 }}>
+                {ko ? (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: C.accent, background: C.bg, borderRadius: 5, padding: "1px 6px" }}>AI 번역</span>
+                ) : null}
+                {item.source ? (
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: C.subtext }}>{item.source}</span>
+                ) : null}
+                {item.time ? (
+                    <>
+                        <span style={{ width: 2, height: 2, borderRadius: 2, background: C.faint }} />
+                        <span style={{ fontSize: 11.5, color: C.faint }}>{item.time}</span>
+                    </>
+                ) : null}
+            </div>
+        </div>
+    )
+    if (!item.url) return body
+    return (
+        <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block" }}>
+            {body}
+        </a>
+    )
+}
+
+function FlatNews(props: { items: NewsItem[]; C: typeof LIGHT; empty: string; cardH: number; showKo?: boolean }) {
+    const { items, C, cardH } = props
+    if (!items.length) {
+        return <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>{props.empty}</div>
+    }
+    return (
+        <div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 8, alignItems: "start" }}>
+                {items.map((it, i) => (
+                    <div key={i} style={{ height: cardH, overflow: "hidden", background: C.card, border: "1px solid " + C.border, borderRadius: 12, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                        <NewsRow item={it} C={C} clamp={2} showKo={props.showKo} />
+                    </div>
+                ))}
+            </div>
+            <div style={{ padding: "12px 8px 2px", fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>
+↑ 호재 / ↓ 악재 = 키워드 자동분류(검증 전 · 중립 다수) · 점수·추천 아님
+            </div>
+        </div>
+    )
+}
+
+function StockNews(props: { groups: StockGroup[]; C: typeof LIGHT; cardH: number; showKo?: boolean; reportPath?: string }) {
+    const { groups, C, cardH } = props
+    if (!groups.length) {
+        return (
+            <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>
+                보유·추천 종목에 걸린 뉴스가 아직 없어요.
+            </div>
+        )
+    }
+    return (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 10, alignItems: "start" }}>
+            {groups.map((g, i) => (
+                <div
+                    key={i}
+                    style={{
+                        height: cardH,
+                        overflow: "hidden",
+                        background: C.card,
+                        border: "1px solid " + C.border,
+                        borderRadius: 14,
+                        padding: "12px 12px 6px 12px",
+                        boxSizing: "border-box",
+                    }}
+                >
+                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 7, padding: "0 8px 4px 8px" }}>
+                        {g.ticker ? (
+                            <a href={(props.reportPath || "/stock") + "?q=" + encodeURIComponent(g.ticker)} target="_blank" rel="noopener noreferrer" title={(g.name || g.ticker) + " 분석"} style={{ fontSize: 14.5, fontWeight: 800, color: C.accent, letterSpacing: "-0.01em", textDecoration: "none" }}>
+                                {g.name || g.ticker} ↗
+                            </a>
+                        ) : (
+                            <span style={{ fontSize: 14.5, fontWeight: 800, color: C.text, letterSpacing: "-0.01em" }}>
+                                {g.name || g.ticker}
+                            </span>
+                        )}
+                        {g.ticker && g.ticker !== g.name ? (
+                            <span style={{ fontSize: 12, fontWeight: 600, color: C.faint }}>{g.ticker}</span>
+                        ) : null}
+                        <MarketBadge market={g.market} C={C} />
+                        <SectorBadge sector={g.sector} industry={g.industry} C={C} />
+                    </div>
+                    {g.items.map((it, j) => (
+                        <NewsRow key={j} item={it} C={C} clamp={1} showKo={props.showKo} />
+                    ))}
+                </div>
+            ))}
+        </div>
+    )
+}
+
+addPropertyControls(PublicNewsTab, {
+    dark: { type: ControlType.Boolean, title: "다크(캔버스)", defaultValue: false },
+    recUrl: { type: ControlType.String, title: "추천 JSON", defaultValue: BLOB + "/recommendations.json" },
+    portfolioUrl: { type: ControlType.String, title: "포트폴리오 JSON", defaultValue: BLOB + "/portfolio.json" },
+    maxPerStock: { type: ControlType.Number, title: "종목당 기사", defaultValue: 3, min: 1, max: 8, step: 1 },
+    maxMarket: { type: ControlType.Number, title: "시장 기사 수", defaultValue: 20, min: 5, max: 60, step: 5 },
+    height: { type: ControlType.Number, title: "높이", defaultValue: 720, min: 320, max: 1600, step: 20, unit: "px" },
+    marketCardHeight: { type: ControlType.Number, title: "시장 카드 높이", defaultValue: 92, min: 72, max: 200, step: 4, unit: "px" },
+    stockCardHeight: { type: ControlType.Number, title: "종목 카드 높이", defaultValue: 232, min: 120, max: 400, step: 4, unit: "px" },
+    reportPath: { type: ControlType.String, title: "리포트 경로", defaultValue: "/stock" },
+})

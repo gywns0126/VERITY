@@ -1,4 +1,4 @@
-import { addPropertyControls, ControlType } from "framer"
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useState, useEffect } from "react"
 
 /**
@@ -16,19 +16,33 @@ import { useState, useEffect } from "react"
 const URL =
   "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/smallcap_corner_filters.json"
 
-const C = {
+// ── 토스 디자인 토큰 ── (LIGHT / DARK 쌍). 다크모드 = body[data-framer-theme] 자가감지.
+const LIGHT = {
   bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
   line: "#e5e8eb", red: "#f04452", redSoft: "#fff0f1", amber: "#ff9500", amberSoft: "#fff6e9",
   blue: "#3182f6", blueSoft: "#eef4ff", green: "#15c47e", greenSoft: "#eafaf3",
   violet: "#6c5ce7", violetSoft: "#f0edff",
 }
+const DARK = {
+  bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
+  line: "#2b2f37", red: "#ff6b76", redSoft: "#3a1f22", amber: "#ffb340", amberSoft: "#3a2c14",
+  blue: "#5a9cff", blueSoft: "#1b2740", green: "#3ddc97", greenSoft: "#16322a",
+  violet: "#a98bff", violetSoft: "#2a2440",
+}
 
-// 필터 key → 배지 색 (tone). 사실 분류만 — 좋고나쁨 점수 아님.
-const TONE: Record<string, { fg: string; bg: string }> = {
-  neglected_quality: { fg: C.green, bg: C.greenSoft },
-  smallcap_dilution: { fg: C.amber, bg: C.amberSoft },
-  smallcap_distress: { fg: C.red, bg: C.redSoft },
-  clean_fin_risky_disc: { fg: C.violet, bg: C.violetSoft },
+// 필터 key → 배지 색 (tone). 사실 분류만 — 좋고나쁨 점수 아님. (C 토큰 참조, 컴포넌트 내 isDark 분기)
+function makeTone(C: typeof LIGHT): Record<string, { fg: string; bg: string }> {
+  return {
+    neglected_quality: { fg: C.green, bg: C.greenSoft },
+    smallcap_dilution: { fg: C.amber, bg: C.amberSoft },
+    smallcap_distress: { fg: C.red, bg: C.redSoft },
+    clean_fin_risky_disc: { fg: C.violet, bg: C.violetSoft },
+  }
+}
+
+function readBodyDark(): boolean {
+  if (typeof document === "undefined" || !document.body) return false
+  return document.body.dataset.framerTheme === "dark"
 }
 
 type Facts = { [k: string]: number }
@@ -44,8 +58,10 @@ function eok(won: number): string {
   return v.toLocaleString() + "억"
 }
 
-function FactRow(props: { t: Ticker }) {
+function FactRow(props: { t: Ticker; C: typeof LIGHT; reportPath?: string }) {
+  const C = props.C
   const f = props.t.facts || {}
+  const url = props.t.ticker ? (props.reportPath || "/stock") + "?q=" + encodeURIComponent(props.t.ticker) : ""
   const bits: string[] = []
   if (f["시총_억"] != null) bits.push("시총 " + Math.round(f["시총_억"]).toLocaleString() + "억")
   if (f["부채비율"] != null) bits.push("부채 " + f["부채비율"].toFixed(0) + "%")
@@ -54,7 +70,11 @@ function FactRow(props: { t: Ticker }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 2px", borderTop: "1px solid " + C.line }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 7, flexShrink: 0 }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: C.ink, letterSpacing: -0.2 }}>{props.t.name}</span>
+        {url ? (
+          <a href={url} target="_blank" rel="noopener noreferrer" title={props.t.name + " 분석"} style={{ fontSize: 14, fontWeight: 700, color: C.blue, letterSpacing: -0.2, textDecoration: "none" }}>{props.t.name} ↗</a>
+        ) : (
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.ink, letterSpacing: -0.2 }}>{props.t.name}</span>
+        )}
         <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{props.t.ticker}</span>
       </div>
       <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, textAlign: "right", letterSpacing: -0.2 }}>
@@ -64,12 +84,29 @@ function FactRow(props: { t: Ticker }) {
   )
 }
 
-export default function SmallcapCornerCard(props: { width?: number }) {
+export default function SmallcapCornerCard(props: { width?: number; dark?: boolean; reportPath?: string }) {
+  const onCanvas = RenderTarget.current() === RenderTarget.canvas
+  const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+  const isDark = onCanvas ? !!props.dark : themeDark
+  const C = isDark ? DARK : LIGHT
+  const TONE = makeTone(C)
+
   const width = props.width || 380
   const [data, setData] = useState<any>(null)
   const [err, setErr] = useState<string>("")
   const [open, setOpen] = useState<number>(-1)
   const [showAll, setShowAll] = useState<number>(-1)
+
+  /* 테마 추종 (fetch useEffect 와 별개) */
+  useEffect(() => {
+    if (onCanvas) return
+    const read = () => setThemeDark(readBodyDark())
+    read()
+    if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+    const obs = new MutationObserver(read)
+    obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+    return () => obs.disconnect()
+  }, [onCanvas])
 
   useEffect(() => {
     let alive = true
@@ -142,7 +179,7 @@ export default function SmallcapCornerCard(props: { width?: number }) {
         return (
           <div
             key={i}
-            style={{ background: C.card, borderRadius: 20, padding: 16, marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+            style={{ background: C.card, borderRadius: 20, padding: 16, marginBottom: 12, boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(0,0,0,0.04)" }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -178,7 +215,7 @@ export default function SmallcapCornerCard(props: { width?: number }) {
             {isOpen ? (
               <div style={{ marginTop: 4 }}>
                 {tickers.slice(0, limit).map(function (tk, j) {
-                  return <FactRow key={j} t={tk} />
+                  return <FactRow key={j} t={tk} C={C} reportPath={props.reportPath} />
                 })}
                 {tickers.length > limit ? (
                   <div
@@ -203,4 +240,6 @@ export default function SmallcapCornerCard(props: { width?: number }) {
 
 addPropertyControls(SmallcapCornerCard, {
   width: { type: ControlType.Number, title: "Width", defaultValue: 380, min: 320, max: 720 },
+  dark: { type: ControlType.Boolean, title: "Dark (canvas)", defaultValue: false },
+  reportPath: { type: ControlType.String, title: "리포트 경로", defaultValue: "/stock" },
 })
