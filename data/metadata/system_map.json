@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-06-21T20:54:28.007525+09:00",
+  "generated_at": "2026-06-21T23:21:40.918108+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 171789,
-    "python_modules": 546,
-    "tsx_components": 50,
-    "json_data_files": 263,
-    "json_total_tracked": 278,
-    "workflows": 42,
-    "scheduled_workflows": 33,
-    "cron_triggers": 42,
+    "code_lines_tsx_py": 176175,
+    "python_modules": 551,
+    "tsx_components": 56,
+    "json_data_files": 250,
+    "json_total_tracked": 265,
+    "workflows": 43,
+    "scheduled_workflows": 34,
+    "cron_triggers": 43,
     "git_tracked_files": 5216
   },
   "subsystems": {
@@ -144,8 +144,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 42,
-      "scheduled": 33,
+      "count": 43,
+      "scheduled": 34,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -162,6 +162,13 @@
           "crons": [
             "7 22 * * 0-4",
             "30 9 * * 1-5"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "broker_guide",
+          "crons": [
+            "17 1 1 * *"
           ],
           "scheduled": true
         },
@@ -436,13 +443,13 @@
     },
     "surface": {
       "label": "출력",
-      "count": 50,
+      "count": 56,
       "by_group": {
+        "framer-components/public-probe": 11,
         "_shared": 10,
         "market": 10,
         "admin": 6,
         "analysis": 5,
-        "framer-components/public-probe": 5,
         "us": 4,
         "home": 3,
         "portfolio": 3,
@@ -453,7 +460,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 263
+      "count": 250
     },
     "validation": {
       "label": "검증",
@@ -468,9 +475,9 @@
     }
   },
   "python_by_dir": {
-    "api": 315,
-    "tests": 119,
-    "scripts": 62,
+    "api": 318,
+    "tests": 120,
+    "scripts": 63,
     "vercel-api": 42,
     "server": 6,
     ".github": 2
