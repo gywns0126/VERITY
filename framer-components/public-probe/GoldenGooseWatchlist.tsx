@@ -1,0 +1,223 @@
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
+import { useCallback, useEffect, useState, type CSSProperties } from "react"
+
+/**
+ * 골든구스 '내 종목' 뷰 — 로그인 사용자의 관심종목 리스트(기기·세션 넘어 유지).
+ *
+ * 데이터 = 기존 백엔드 /api/watchgroups (JWT 인증, 본인 필터·IDOR 안전). DB 변경 0.
+ * 세션 = verity_supabase_session(localStorage, GoldenGooseAuth 가 기록). 미로그인=둘러보기 안내만.
+ * 별표 추가/삭제(PublicStockReport) → window 'verity_watch_change' → 이 뷰 자동 새로고침.
+ * 행 클릭 → reportPath?q=ticker. 삭제(×) → remove_item. 실시간가 = /api/stock 1회 조회.
+ * 다크모드 = body[data-framer-theme] 추종. RULE 7 = 사실(가격·등락률)만, 자체 점수 0.
+ */
+
+const SESSION_KEY = "verity_supabase_session"
+const AUTH_EVENT = "verity_auth_change"
+const WATCH_EVENT = "verity_watch_change"
+const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff" }
+const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34", up: "#f04452", down: "#5b9bff", vg: "#7fffa0", vgS: "#11281d", vt: "#a99bff", vtS: "#241f3a" }
+const DEFAULT_API = "https://project-yw131.vercel.app"
+const DEFAULT_REPORT = "/stock"
+
+interface Props {
+    apiBase: string
+    reportPath: string
+    dark: boolean
+}
+
+function loadToken(): string {
+    if (typeof window === "undefined") return ""
+    try {
+        const raw = localStorage.getItem(SESSION_KEY)
+        if (!raw) return ""
+        const s = JSON.parse(raw)
+        if (s.expires_at && Date.now() / 1000 > s.expires_at) return ""
+        return typeof s.access_token === "string" ? s.access_token : ""
+    } catch { return "" }
+}
+
+function fmtPct(p: any): string {
+    const v = Number(p)
+    if (!isFinite(v)) return ""
+    return (v > 0 ? "+" : "") + v.toFixed(2) + "%"
+}
+
+function Logo({ ticker, name, C }: { ticker: string; name: string; C: any }) {
+    const [err, setErr] = useState(false)
+    const ch = (String(name || "?").trim().charAt(0)) || "?"
+    if (err || !ticker) {
+        return <span style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 9, background: C.vtS, color: C.vt, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800 }}>{ch}</span>
+    }
+    return <img src={LOGO_BASE + ticker + ".png"} alt="" width={30} height={30} onError={() => setErr(true)} style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 9, objectFit: "cover", display: "block", background: C.bg }} />
+}
+
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight any
+ */
+export default function GoldenGooseWatchlist(props: Props) {
+    const { apiBase, reportPath, dark } = props
+    const api = (apiBase || DEFAULT_API).replace(/\/+$/, "")
+    const report = reportPath || DEFAULT_REPORT
+    const onCanvas = RenderTarget.current() === RenderTarget.canvas
+
+    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
+    useEffect(() => {
+        if (onCanvas) return
+        const readTheme = () => {
+            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
+            setThemeDark(t === "dark")
+        }
+        readTheme()
+        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+        const obs = new MutationObserver(readTheme)
+        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+        return () => obs.disconnect()
+    }, [onCanvas])
+
+    const [token, setToken] = useState("")
+    const [items, setItems] = useState<any[]>([])
+    const [prices, setPrices] = useState<Record<string, any>>({})
+    const [loading, setLoading] = useState(false)
+
+    // 세션 토큰 추적(로그인/로그아웃 반영)
+    useEffect(() => {
+        if (onCanvas) return
+        const sync = () => setToken(loadToken())
+        sync()
+        window.addEventListener(AUTH_EVENT, sync)
+        window.addEventListener("storage", sync)
+        return () => { window.removeEventListener(AUTH_EVENT, sync); window.removeEventListener("storage", sync) }
+    }, [onCanvas])
+
+    const fetchWatch = useCallback(() => {
+        if (onCanvas || !token) { setItems([]); return }
+        setLoading(true)
+        fetch(`${api}/api/watchgroups`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((groups) => {
+                if (!Array.isArray(groups)) { setItems([]); return }
+                const flat: any[] = []
+                const seen = new Set<string>()
+                for (const g of groups) {
+                    for (const it of (g.items || [])) {
+                        const tk = String(it.ticker || "").trim()
+                        if (!tk || seen.has(tk)) continue
+                        seen.add(tk)
+                        flat.push({ item_id: it.id, ticker: tk, name: it.name || tk, market: it.market || "" })
+                    }
+                }
+                setItems(flat)
+            })
+            .catch(() => setItems([]))
+            .finally(() => setLoading(false))
+    }, [api, token, onCanvas])
+
+    useEffect(() => { fetchWatch() }, [fetchWatch])
+
+    // 별표 토글 시 새로고침
+    useEffect(() => {
+        if (onCanvas) return
+        const onWatch = () => fetchWatch()
+        window.addEventListener(WATCH_EVENT, onWatch)
+        return () => window.removeEventListener(WATCH_EVENT, onWatch)
+    }, [fetchWatch, onCanvas])
+
+    // 실시간가(1회 조회) — 항목 변동 시
+    useEffect(() => {
+        if (onCanvas || !items.length) return
+        let alive = true
+        items.forEach((it) => {
+            if (prices[it.ticker]) return
+            fetch(`${api}/api/stock?q=${encodeURIComponent(it.ticker)}&market=kr`, { mode: "cors", credentials: "omit" })
+                .then((r) => (r.ok ? r.json() : null))
+                .then((d) => {
+                    if (!alive || !d) return
+                    const price = d.price ?? d.current_price ?? (d.stock && d.stock.price)
+                    const chg = d.price_change_pct ?? d.change_pct
+                    setPrices((prev) => ({ ...prev, [it.ticker]: { price: Number(price), chg: chg != null ? Number(chg) : null } }))
+                })
+                .catch(() => {})
+        })
+        return () => { alive = false }
+    }, [items, api, onCanvas])
+
+    const removeItem = (item_id: any) => {
+        if (!token || !item_id) return
+        setItems((prev) => prev.filter((x) => x.item_id !== item_id))
+        fetch(`${api}/api/watchgroups`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "remove_item", item_id }),
+        }).then(() => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(WATCH_EVENT)) }).catch(() => fetchWatch())
+    }
+
+    const wrap: CSSProperties = { width: "100%", height: "100%", background: C.bg, fontFamily: FONT, boxSizing: "border-box", color: C.ink, padding: 16, overflowY: "auto" }
+    const title = <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px", marginBottom: 10 }}>내 종목</div>
+
+    if (onCanvas) {
+        return <div style={wrap}>{title}<div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>로그인 시 관심종목이 여기 남아요 (Preview/Publish 동작)</div></div>
+    }
+
+    if (!token) {
+        return (
+            <div style={wrap}>
+                {title}
+                <div style={{ background: C.card, borderRadius: 14, padding: "18px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, lineHeight: 1.5 }}>로그인하면 관심종목이 여기 남아요</div>
+                    <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>종목 리포트에서 ☆를 눌러 담으면 기기·세션이 바뀌어도 유지됩니다.</div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div style={wrap}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>내 종목</span>
+                {items.length > 0 && <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{items.length}종목</span>}
+            </div>
+            {items.length === 0 ? (
+                <div style={{ background: C.card, borderRadius: 14, padding: "18px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{loading ? "불러오는 중…" : "아직 관심종목이 없어요"}</div>
+                    {!loading && <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>종목 리포트에서 ☆를 눌러 담아보세요.</div>}
+                </div>
+            ) : (
+                <div style={{ background: C.card, borderRadius: 14, padding: "4px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    {items.map((it, i) => {
+                        const p = prices[it.ticker]
+                        const chg = p && p.chg != null && isFinite(p.chg) ? p.chg : null
+                        const col = chg == null ? C.faint : chg > 0 ? C.up : chg < 0 ? C.down : C.faint
+                        return (
+                            <div key={it.ticker} style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                                <a href={`${report}?q=${encodeURIComponent(it.ticker)}`} style={{ display: "flex", alignItems: "center", gap: 11, flex: 1, minWidth: 0, textDecoration: "none", color: "inherit", cursor: "pointer" }}>
+                                    <Logo ticker={it.ticker} name={it.name} C={C} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.name}</div>
+                                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{it.ticker}{it.market ? " · " + it.market : ""}</div>
+                                    </div>
+                                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                        <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>{p && isFinite(p.price) ? Number(p.price).toLocaleString() : "—"}</div>
+                                        {chg != null && <div style={{ fontSize: 11.5, fontWeight: 800, color: col }}>{fmtPct(chg)}</div>}
+                                    </div>
+                                </a>
+                                <button onClick={() => removeItem(it.item_id)} title="관심종목 해제"
+                                    style={{ flexShrink: 0, border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 16, lineHeight: 1, padding: "4px 6px", fontWeight: 700 }}>×</button>
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>가격·등락률 = 실시간 사실 · 자체 점수 아님 · 점수 held(2027)</div>
+        </div>
+    )
+}
+
+addPropertyControls(GoldenGooseWatchlist, {
+    apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
+    reportPath: { type: ControlType.String, title: "Report Path", defaultValue: DEFAULT_REPORT },
+    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+})
