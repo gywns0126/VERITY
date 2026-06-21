@@ -195,7 +195,7 @@ export default function PublicNewsTab(props: Props) {
                     if (!sp.title) continue
                     items.push({
                         title: sp.title,
-                        titleKo: h.title_ko ? String(h.title_ko) : "",
+                        titleKo: h.title_ko ? splitSource(String(h.title_ko)).title : "",
                         url: url,
                         source: sp.source || hostname(url),
                         time: "",
@@ -221,7 +221,7 @@ export default function PublicNewsTab(props: Props) {
                 if (!h.title) continue
                 mk.push({
                     title: String(h.title).trim(),
-                    titleKo: h.title_ko ? String(h.title_ko) : "",
+                    titleKo: h.title_ko ? splitSource(String(h.title_ko)).title : "",
                     url: h.link || h.url || "",
                     source: h.source || hostname(h.link || ""),
                     time: dateOnly(h.time || h.published_at || ""),
@@ -238,7 +238,7 @@ export default function PublicNewsTab(props: Props) {
                 if (!sp.title) continue
                 usArr.push({
                     title: sp.title,
-                    titleKo: h.title_ko ? String(h.title_ko) : "",
+                    titleKo: h.title_ko ? splitSource(String(h.title_ko)).title : "",
                     url: h.link || h.url || "",
                     source: sp.source || hostname(h.link || ""),
                     time: dateOnly(h.time || h.published_at || ""),
@@ -297,14 +297,22 @@ export default function PublicNewsTab(props: Props) {
                         <button
                             type="button"
                             onClick={() => setShowKo((v) => !v)}
-                            title="영어 헤드라인 한글 번역 토글"
+                            title="영어 헤드라인 한글 번역"
                             style={{
-                                marginLeft: "auto", border: "none", cursor: "pointer",
-                                background: showKo ? C.accent : C.bg, color: showKo ? "#fff" : C.subtext,
-                                fontWeight: 700, fontSize: 12, padding: "6px 12px", borderRadius: 8,
+                                marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 5,
+                                cursor: "pointer", border: `1px solid ${showKo ? C.accent : C.border}`,
+                                background: showKo ? C.accent : "transparent",
+                                color: showKo ? "#fff" : C.subtext,
+                                fontWeight: 600, fontSize: 11.5, padding: "5px 11px", borderRadius: 999,
+                                transition: "all 140ms ease", lineHeight: 1,
                             }}
                         >
-                            {showKo ? "한글 ✓" : "한글 번역"}
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M3 12h18" />
+                                <path d="M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18" />
+                            </svg>
+                            {showKo ? "원문" : "한글"}
                         </button>
                     )}
                 </div>
