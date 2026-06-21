@@ -36,14 +36,42 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", "", str(s or "")).strip()
 
 
+def _strip_corp(s: str) -> str:
+    """법인 접미사 제거 정규화 — '코스맥스(주)'/'(주)케이씨씨' → '코스맥스'/'케이씨씨'."""
+    s = re.sub(r"\(주\)|㈜|\(유\)|\(재\)|\(사\)|주식회사|\(주식회사\)", "", str(s or ""))
+    return _norm(s)
+
+
+# 영문 이니셜 ↔ 한글 음차 (data.go.kr=한글표기 vs kr_stock_names=영문약칭 불일치 해소)
+_INITIALISM = {
+    "LG": "엘지", "SK": "에스케이", "GS": "지에스", "KT": "케이티", "CJ": "씨제이",
+    "OCI": "오씨아이", "HDC": "에이치디씨", "LIG": "엘아이지", "DL": "디엘", "KCC": "케이씨씨",
+    "HD": "에이치디", "HL": "에이치엘", "KB": "케이비", "NH": "엔에이치", "SM": "에스엠",
+    "DB": "디비", "BGF": "비지에프", "DN": "디엔", "HMM": "에이치엠엠", "POSCO": "포스코",
+}
+
+
+def _translit_key(nm: str) -> str:
+    """선두 영문 이니셜을 한글 음차로 치환한 정규화 키 (LG이노텍 → 엘지이노텍)."""
+    s = _strip_corp(nm)
+    for en, ko in _INITIALISM.items():
+        if s.upper().startswith(en):
+            return _norm(ko + s[len(en):])
+    return ""
+
+
 def _name_to_ticker(names: Dict[str, str]) -> Dict[str, str]:
-    """{ticker: name} → {정규화 name: ticker}. 동명 우선순위는 첫 등장."""
+    """{ticker: name} → {정규화 name: ticker}. raw + 접미사제거 + 음차 키 등록. 동명 우선순위 첫 등장."""
     rev: Dict[str, str] = {}
     for tk, nm in (names or {}).items():
-        key = _norm(nm)
-        if key and key not in rev:
-            rev[key] = tk
+        for key in (_norm(nm), _strip_corp(nm), _translit_key(nm)):
+            if key and key not in rev:
+                rev[key] = tk
     return rev
+
+
+def _lookup_ticker(name2tk: Dict[str, str], nm: str) -> str:
+    return name2tk.get(_norm(nm)) or name2tk.get(_strip_corp(nm)) or ""
 
 
 def _from_dart_existing(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
@@ -91,7 +119,7 @@ def _from_dart_existing(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
                 tk = str(o.get("ticker") or "")
                 nm = o.get("corp_name") or o.get("name") or ""
                 if not tk and nm:
-                    tk = name2tk.get(_norm(nm), "")
+                    tk = _lookup_ticker(name2tk, nm)
                 if tk and tk not in out:
                     out[tk] = {
                         "ticker": tk,
@@ -106,23 +134,60 @@ def _from_dart_existing(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
     return out
 
 
-def _from_data_go_kr(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
-    """data.go.kr #15106890 국민연금 대량보유(5%+ ~111종목). 키+URL env 등록 시 unlock.
+# data.go.kr #15106890 국민연금 대량보유 — odcloud OAS(분기별 uddi). 최신=20251231(차기 20260331 등록 2026-06-30).
+ODCLOUD_BASE = "https://api.odcloud.kr/api/15106890/v1/"
+ODCLOUD_DEFAULT_UDDI = "uddi:1f30a355-f5be-4b09-81c1-a09ba1f4e234"  # 20251231 보고기준일
+ODCLOUD_OAS = "https://infuser.odcloud.kr/oas/docs?namespace=15106890/v1"
 
-    fileData 데이터셋은 odcloud API URL(uddi 포함)이 데이터셋별이라 추측 불가 →
-    NPS_DATA_GO_KR_URL(전체 API URL) + DATA_GO_KR_KEY(serviceKey) 둘 다 있을 때만 호출.
-    없으면 {} (DART 경로로 graceful).
+
+def _resolve_latest_url() -> str:
+    """OAS 명세에서 최신 보고기준일 uddi 경로를 자동 발견(분기 갱신 대비). 실패 시 기본 uddi."""
+    env_url = os.environ.get("NPS_DATA_GO_KR_URL", "").strip()
+    if env_url:
+        return env_url
+    try:
+        import re as _re
+        import requests
+        r = requests.get(ODCLOUD_OAS, timeout=12)
+        if r.status_code == 200:
+            spec = r.json()
+            paths = (spec.get("paths") if isinstance(spec, dict) else {}) or {}
+            best_date, best_path = "", ""
+            for p, ops in paths.items():
+                blob = p + " " + json.dumps(ops, ensure_ascii=False)
+                dates = _re.findall(r"20\d{6}", blob)
+                d = max(dates) if dates else ""
+                if "uddi:" in p and d >= best_date:
+                    best_date, best_path = d, p
+            if best_path:
+                return "https://api.odcloud.kr/api" + (best_path if best_path.startswith("/") else "/" + best_path)
+    except Exception:  # noqa: BLE001
+        pass
+    return ODCLOUD_BASE + ODCLOUD_DEFAULT_UDDI
+
+
+def _from_data_go_kr(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
+    """data.go.kr #15106890 국민연금 대량보유(5%+ ~111종목). serviceKey 있으면 unlock.
+
+    serviceKey = PUBLIC_DATA_API_KEY(기존 data.go.kr 계정 키, 활용신청한 전 데이터셋 공통) 또는 DATA_GO_KR_KEY.
+    엔드포인트 = OAS 자동발견 최신 uddi(분기 갱신 대비) 또는 NPS_DATA_GO_KR_URL env override.
+    키 부재/실패 시 {} (DART 경로로 graceful).
     """
-    url = os.environ.get("NPS_DATA_GO_KR_URL", "").strip()
-    key = os.environ.get("DATA_GO_KR_KEY", "").strip()
-    if not url or not key:
+    key = ""
+    try:
+        from api.config import PUBLIC_DATA_API_KEY
+        key = (PUBLIC_DATA_API_KEY or "").strip()
+    except Exception:  # noqa: BLE001
+        key = ""
+    key = key or os.environ.get("DATA_GO_KR_KEY", "").strip() or os.environ.get("PUBLIC_DATA_API_KEY", "").strip()
+    if not key:
         return {}
+
+    url = _resolve_latest_url()
     out: Dict[str, Dict[str, Any]] = {}
     try:
         import requests
-
-        sep = "&" if "?" in url else "?"
-        r = requests.get(f"{url}{sep}serviceKey={key}&page=1&perPage=300&returnType=JSON", timeout=15)
+        r = requests.get(url, params={"serviceKey": key, "page": 1, "perPage": 500, "returnType": "JSON"}, timeout=20)
         if r.status_code != 200:
             return {}
         data = r.json()
@@ -135,15 +200,15 @@ def _from_data_go_kr(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
             asof = None
             for k, v in row.items():
                 kk = str(k)
-                if "발행" in kk or "종목" in kk or "기관명" in kk:
+                if "발행" in kk or "기관명" in kk:
                     nm = str(v)
                 elif "지분" in kk or "보유비율" in kk:
                     pct = v
                 elif "기준일" in kk or "작성" in kk:
                     asof = str(v)
-            tk = name2tk.get(_norm(nm), "")
             if not nm:
                 continue
+            tk = _lookup_ticker(name2tk, nm)
             try:
                 pctf = float(str(pct).replace("%", "").replace(",", "")) if pct is not None else None
             except Exception:  # noqa: BLE001
