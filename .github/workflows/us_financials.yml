@@ -11,8 +11,12 @@ on:
     - cron: '0 0 5 * *'
   workflow_dispatch:
     inputs:
+      universe:
+        description: '유니버스 (sp1500=S&P Composite 1500 기본 / portfolio=추천 US)'
+        required: false
+        default: 'sp1500'
       ticker:
-        description: '단일 ticker (manual test 용, 비우면 portfolio.json US 전체)'
+        description: '단일 ticker (manual test 용 — universe 무시)'
         required: false
         default: ''
       limit:
@@ -33,7 +37,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20   # US15 × ~5초 = 75초, 안전 마진 ~19분
+    timeout-minutes: 180  # sp1500 ~1500종목 SEC fetch(~125분) + Blob 업로드. GH 6h 한도 내·public 무료. (단일 ticker/portfolio 는 수분)
 
     steps:
       - name: Checkout
@@ -51,7 +55,8 @@ jobs:
 
       - name: Build US financials snapshots
         run: |
-          ARGS=""
+          UNIVERSE="${{ github.event.inputs.universe || 'sp1500' }}"   # cron 기본 = sp1500 (자동 리프레시)
+          ARGS="--universe $UNIVERSE"
           if [ -n "${{ github.event.inputs.ticker }}" ]; then
             ARGS="--ticker ${{ github.event.inputs.ticker }}"
           fi
@@ -65,6 +70,22 @@ jobs:
         # us_financials/_summary → RULE7 allowlist → data/us_stock_report_public.json (PublicStockReport 재사용)
         continue-on-error: true
         run: python -m api.builders.us_stock_report_public_builder
+
+      - name: Setup Node (Blob 업로드용)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: per-ticker → Vercel Blob 직업로드 (1500, git-bloat 회피)
+        # data/us_financials/*.json (per-ticker 시계열 87MB, gitignore=git 미커밋) → Blob us_financials/<TICKER>.json.
+        # 엔드포인트 us_financials.py SOURCE_BASE_FALLBACK = blob/us_financials → deep 카드(USFinancialsCard) 1500 fetch.
+        # git 은 _summary + us_stock_report(light) 만 (아래 commit). per-ticker = Blob 단일 소스.
+        continue-on-error: true
+        env:
+          VERCEL_BLOB_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: |
+          npm install @vercel/blob --no-save
+          node scripts/us/upload_us_financials_blob.js
 
       - name: Commit data/us_financials/
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
@@ -95,9 +116,9 @@ jobs:
           fi
 
       - name: Publish to VERITY-data + Vercel Blob
-        # 2026-05-26 박힘 — private 전환 sweep 보완 ([[project_us_financials_sec_edgar]]).
-        # publish-data action 이 _public_dist/us_financials/ stage → VERITY-data + Blob 박음.
-        # endpoint /api/verity/us-financials = Blob source 페치. 503 fix path.
+        # 2026-05-26 확정 — private 전환 sweep 보완 ([[project_us_financials_sec_edgar]]).
+        # publish-data action 이 light 산출(us_stock_report/_summary) → VERITY-data + Blob 발행.
+        # per-ticker 1500 = 위 직업로드 스텝(Blob)이 담당. endpoint /api/verity/us-financials = Blob 페치.
         if: always()
         uses: ./.github/actions/publish-data
         with:
