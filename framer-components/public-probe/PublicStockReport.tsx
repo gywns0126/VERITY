@@ -424,6 +424,8 @@ export default function PublicStockReport(props: Props) {
     const [focused, setFocused] = useState(false)
     const [live, setLive] = useState<{ price?: number; chg?: number }>({})
     const [chart, setChart] = useState<any[]>([])
+    const [chartLoading, setChartLoading] = useState<boolean>(false)
+    const prevTickerRef = useRef<string>("")
     const [openTip, setOpenTip] = useState<string>("")
     const [tipBox, setTipBox] = useState<{ left: number; width: number }>({ left: 0, width: 240 })
     const [hoverCapable, setHoverCapable] = useState(true)
@@ -590,7 +592,12 @@ export default function PublicStockReport(props: Props) {
     useEffect(() => {
         if (onCanvas || !s.ticker || !/^\d{6}$/.test(String(s.ticker))) { setChart([]); return }
         let alive = true
-        setChart([])
+        // 종목 변경 시에만 클리어 — 기간(주봉/월봉) 전환 시엔 이전 차트 유지(깜빡임 방지)
+        if (prevTickerRef.current !== String(s.ticker)) {
+            setChart([])
+            prevTickerRef.current = String(s.ticker)
+        }
+        setChartLoading(true)
         fetch(base + "/api/chart?ticker=" + s.ticker + "&type=" + chartGran)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
@@ -598,6 +605,7 @@ export default function PublicStockReport(props: Props) {
                 if (alive && Array.isArray(arr) && arr.length > 1) setChart(arr)
             })
             .catch(() => {})
+            .finally(() => { if (alive) setChartLoading(false) })
         return () => { alive = false }
     }, [s.ticker, base, onCanvas, chartGran])
 
@@ -1040,6 +1048,7 @@ export default function PublicStockReport(props: Props) {
                         <div style={{ display: "flex", gap: 4, background: C.bg, borderRadius: 10, padding: 3 }}>
                             {PERIODS.map((p, i) => (<button key={p.l} onClick={() => setChartPeriodIdx(i)} style={segBtn(chartPeriodIdx === i)}>{p.l}</button>))}
                         </div>
+                        {chartLoading && <span style={{ fontSize: 10.5, fontWeight: 700, color: C.faint, opacity: 0.8 }}>갱신 중…</span>}
                         <div style={{ display: "flex", gap: 4, background: C.bg, borderRadius: 10, padding: 3 }}>
                             <button onClick={() => setChartMode("line")} style={segBtn(chartMode === "line")}>선</button>
                             <button onClick={() => setChartMode("candle")} style={segBtn(chartMode === "candle")}>캔들</button>
