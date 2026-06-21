@@ -1,0 +1,82 @@
+name: Broker Guide (월 1회 증권사 사실집계)
+
+# 골든구스 공개 터미널 — 증권사 거래유형별 사실 비교(broker-neutral).
+# Perplexity sonar-pro 로 수수료·평점·기능 사실 + 출처 집계 → data/broker_guide.json → Blob 발행.
+# 수수료는 저빈도 변동이라 월 1회면 충분 + Perplexity 비용 최소.
+# 정확도 가드 = collector(api/collectors/broker_guide.py): JSON+출처 강제, 파싱/검증 실패 시 직전 유지.
+
+on:
+  schedule:
+    # 매월 1일 KST 10:17 (UTC 01:17) — 정각/고부하 회피 offset
+    - cron: '17 1 1 * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  # data/* 쓰기 단일 그룹 직렬화 (daily_analysis / bond_etf / export_trade 와 공유)
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  broker-guide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Collect broker guide (Perplexity)
+        env:
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+          PERPLEXITY_MODEL: ${{ vars.PERPLEXITY_MODEL || 'sonar-pro' }}
+        run: python -m api.collectors.broker_guide
+
+      - name: Commit & push broker_guide.json
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/broker_guide.json
+          if git diff --staged --quiet; then
+            echo "변경 없음 (직전 유지 또는 동일) — commit skip"
+            exit 0
+          fi
+          git commit -m "📊 broker_guide 월간 집계 $(TZ=Asia/Seoul date +%Y-%m-%d)"
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::All 5 push attempts failed"
+            exit 1
+          fi
+
+      - name: Publish to VERITY-data + Blob
+        if: always()
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
