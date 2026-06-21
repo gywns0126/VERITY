@@ -242,7 +242,7 @@ def analyze_sentiment(headlines: List, lang: str = "kr") -> Dict:
         "neutral": neutral_count,
         "headline_count": len(headlines),
         "top_headlines": [h["title"] for h in top5],
-        "top_headline_links": [{"title": h["title"], "url": h["url"]} for h in top5],
+        "top_headline_links": [{"title": h["title"], "url": h["url"], "label": h.get("label", "neutral")} for h in top5],
         "detail": top5,
     }
 
