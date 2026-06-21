@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-06-21T23:21:40.918108+09:00",
+  "generated_at": "2026-06-22T01:15:00.974842+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 176175,
-    "python_modules": 551,
+    "code_lines_tsx_py": 176946,
+    "python_modules": 555,
     "tsx_components": 56,
-    "json_data_files": 250,
-    "json_total_tracked": 265,
-    "workflows": 43,
-    "scheduled_workflows": 34,
-    "cron_triggers": 43,
-    "git_tracked_files": 5216
+    "json_data_files": 252,
+    "json_total_tracked": 267,
+    "workflows": 45,
+    "scheduled_workflows": 36,
+    "cron_triggers": 45,
+    "git_tracked_files": 5224
   },
   "subsystems": {
     "ingest": {
@@ -144,8 +144,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 43,
-      "scheduled": 34,
+      "count": 45,
+      "scheduled": 36,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -433,6 +433,20 @@
           "scheduled": true
         },
         {
+          "name": "us_insider_trades",
+          "crons": [
+            "0 4 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "us_major_holdings",
+          "crons": [
+            "0 5 * * 1,3,5"
+          ],
+          "scheduled": true
+        },
+        {
           "name": "us_market_observations",
           "crons": [
             "7 23 * * 4"
@@ -460,7 +474,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 250
+      "count": 252
     },
     "validation": {
       "label": "검증",
@@ -475,8 +489,8 @@
     }
   },
   "python_by_dir": {
-    "api": 318,
-    "tests": 120,
+    "api": 320,
+    "tests": 122,
     "scripts": 63,
     "vercel-api": 42,
     "server": 6,
