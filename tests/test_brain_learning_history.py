@@ -60,8 +60,11 @@ class TestAppendBacktestHistory:
         p = meta / "backtest_stats_history.jsonl"
         monkeypatch.setattr(bl, "_HISTORY_PATH", str(p))
         # 60일치 0.55 (COLD_START_LIMIT=50 초과 → baseline 활성)
+        # base = 오늘 앵커 (compute_baseline 의 lookback_days=90 cutoff = now-90d 가
+        # 흐르는 시간에 따라 하드코딩 과거 base 의 최古 entry 를 잘라내던 시한폭탄 fix:
+        # 60일 역산 < 90일 lookback → 항상 60개 window 내, tz 무관 30일 마진).
         from datetime import datetime, timedelta
-        base = datetime(2026, 5, 21)
+        base = datetime.now()
         for i in range(60):
             d = (base - timedelta(days=i)).strftime("%Y-%m-%d")
             ts = (base - timedelta(days=i)).strftime("%Y-%m-%dT20:00:00+09:00")
