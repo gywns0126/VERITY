@@ -293,7 +293,7 @@ export default function PublicNewsTab(props: Props) {
                         뉴스
                     </span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: C.faint }}>팩트 헤드라인</span>
-                    {(us.some((it) => !!it.titleKo) || market.some((it) => !!it.titleKo) || stocks.some((g) => g.items.some((it) => !!it.titleKo))) && (
+                    {(us.some((it) => it.title && !/[가-힣]/.test(it.title)) || stocks.some((g) => g.items.some((it) => it.title && !/[가-힣]/.test(it.title)))) && (
                         <button
                             type="button"
                             onClick={() => setShowKo((v) => !v)}
