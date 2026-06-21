@@ -66,11 +66,29 @@ def load_us_tickers() -> List[str]:
         t = (r.get("ticker") or "").strip().upper()
         if not t:
             continue
-        # KR ticker = 6자리 숫자
+        # KR ticker = 6자리 숫자 → skip
         if t.isdigit() and len(t) == 6:
             continue
-            us.append(t)
+        us.append(t)  # 2026-06-21 fix: continue 뒤 dead-code 였음(us 항상 빈값→US15 fallback 고착)
     return us or list(DEFAULT_US15)
+
+
+# S&P Composite 1500 정적 유니버스 (scripts/us/fetch_sp1500_universe.py 산출).
+SP1500_PATH = REPO_ROOT / "data" / "us_universe_sp1500.json"
+
+
+def load_sp1500_tickers() -> List[str]:
+    """미장 확대 유니버스 = S&P 500+400+600 (fetch_sp1500_universe.py). 부재/결손 시 DEFAULT_US15 fallback."""
+    if not SP1500_PATH.exists():
+        _logger.warning("us_universe_sp1500.json 부재 — scripts/us/fetch_sp1500_universe.py 먼저 실행. US15 fallback")
+        return list(DEFAULT_US15)
+    try:
+        d = json.loads(SP1500_PATH.read_text(encoding="utf-8"))
+        tickers = [str(t).strip().upper() for t in (d.get("tickers") or []) if str(t).strip()]
+        return tickers or list(DEFAULT_US15)
+    except Exception as e:  # noqa: BLE001
+        _logger.error("us_universe_sp1500.json parse failed: %s — US15 fallback", e)
+        return list(DEFAULT_US15)
 
 
 def load_us_externals() -> Dict[str, Dict[str, Any]]:
@@ -157,12 +175,20 @@ def main() -> int:
     )
     parser.add_argument("--limit", type=int, default=0,
                         help="최대 종목 수 (cost cap, 0=무제한).")
+    parser.add_argument("--universe", choices=["portfolio", "sp1500"], default="portfolio",
+                        help="portfolio=추천 US(기본) / sp1500=S&P Composite 1500(미장 확대, 로컬 1회 적재 권장)")
+    parser.add_argument("--offset", type=int, default=0,
+                        help="유니버스 시작 오프셋 (다일/배치 분할 적재용, 멱등 재개).")
     args = parser.parse_args()
 
     if args.ticker:
         tickers = [args.ticker.upper()]
+    elif args.universe == "sp1500":
+        tickers = load_sp1500_tickers()
     else:
         tickers = load_us_tickers()
+    if args.offset > 0:
+        tickers = tickers[args.offset:]
     if args.limit > 0:
         tickers = tickers[:args.limit]
 
