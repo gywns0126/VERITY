@@ -75,6 +75,8 @@ def load_us_tickers() -> List[str]:
 
 # S&P Composite 1500 정적 유니버스 (scripts/us/fetch_sp1500_universe.py 산출).
 SP1500_PATH = REPO_ROOT / "data" / "us_universe_sp1500.json"
+# 1500 시가총액 (scripts/us/fetch_us_market_caps.py, yfinance fast_info). Lynch size + 원본 Altman X4.
+MARKET_CAPS_PATH = REPO_ROOT / "data" / "us_market_caps.json"
 
 
 def load_sp1500_tickers() -> List[str]:
@@ -91,26 +93,55 @@ def load_sp1500_tickers() -> List[str]:
         return list(DEFAULT_US15)
 
 
-def load_us_externals() -> Dict[str, Dict[str, Any]]:
-    """portfolio.json 에서 US ticker → {market_cap, div_yield} (Lynch/원본 Altman 입력).
+def load_market_caps() -> Dict[str, float]:
+    """data/us_market_caps.json (yfinance fast_info, 1500) → ticker → market_cap(raw USD).
 
-    SEC EDGAR 스냅샷에 없는 시가총액/배당 = portfolio (yfinance/KIS 수집분) wire.
+    sp1500 Lynch size 차원 / 원본 Altman X4 입력. 부재 시 빈 dict (portfolio 15만 wire 됨).
     """
-    if not PORTFOLIO_PATH.exists():
+    if not MARKET_CAPS_PATH.exists():
+        _logger.warning("us_market_caps.json 부재 — scripts/us/fetch_us_market_caps.py 먼저 실행. "
+                        "sp1500 Lynch size 미상(portfolio 15만 wire)")
         return {}
     try:
-        data = json.loads(PORTFOLIO_PATH.read_text(encoding="utf-8"))
-    except Exception:
+        d = json.loads(MARKET_CAPS_PATH.read_text(encoding="utf-8"))
+        mc = d.get("market_caps") or {}
+        return {str(k).upper(): float(v) for k, v in mc.items()
+                if isinstance(v, (int, float)) and v == v and v > 0}
+    except Exception as e:  # noqa: BLE001
+        _logger.error("us_market_caps.json parse failed: %s", e)
         return {}
+
+
+def load_us_externals() -> Dict[str, Dict[str, Any]]:
+    """US ticker → {market_cap, div_yield} (Lynch/원본 Altman 입력).
+
+    SEC EDGAR 스냅샷에 없는 시가총액/배당 wire:
+      - market_cap = us_market_caps.json(yfinance, 1500) 기반 + portfolio(추천 15)가 우선 overlay
+        (portfolio 는 KIS/yfinance 라이브 수집분이라 더 신선).
+      - div_yield = portfolio 만 (1500 배당 수집 = 후속 큐).
+    """
     out: Dict[str, Dict[str, Any]] = {}
-    for r in (data.get("recommendations") or []):
-        t = (r.get("ticker") or "").strip().upper()
-        if not t:
-            continue
-        out[t] = {
-            "market_cap": r.get("market_cap"),
-            "div_yield": r.get("div_yield"),
-        }
+
+    # 1) 1500 base = us_market_caps.json
+    for t, mc in load_market_caps().items():
+        out[t] = {"market_cap": mc, "div_yield": None}
+
+    # 2) portfolio overlay (추천 15 = 라이브 market_cap 우선 + div_yield)
+    if PORTFOLIO_PATH.exists():
+        try:
+            data = json.loads(PORTFOLIO_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+        for r in (data.get("recommendations") or []):
+            t = (r.get("ticker") or "").strip().upper()
+            if not t:
+                continue
+            prev = out.get(t, {})
+            out[t] = {
+                "market_cap": r.get("market_cap") if r.get("market_cap") is not None
+                else prev.get("market_cap"),
+                "div_yield": r.get("div_yield"),
+            }
     return out
 
 
