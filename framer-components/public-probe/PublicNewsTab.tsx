@@ -275,7 +275,6 @@ export default function PublicNewsTab(props: Props) {
         height: props.height || 720,
         background: C.bg,
         borderRadius: 20,
-        border: "1px solid " + C.border,
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
