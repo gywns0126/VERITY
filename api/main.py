@@ -624,26 +624,6 @@ def enrich_with_analysis(candidates: list, macro: dict) -> list:
             stock.setdefault("multi_factor", {"multi_score": 50, "grade": "N/A", "all_signals": []})
             continue
 
-    # 내 종목 탭 뉴스 영어 헤드라인 → 한글 사전번역(build-time) 부착 — 미국 탭(news_headlines.py)과 동일 패턴.
-    # top_headline_links 토글용. 캐시(news_translation_cache.json) miss 만 호출. 실패/키부재 시 미부착(컴포넌트 영문 fallback).
-    try:
-        from api.collectors.news_translation import translate_headlines_ko
-        _link_titles = [
-            (h.get("title") or "")
-            for s in candidates
-            for h in ((s.get("sentiment") or {}).get("top_headline_links") or [])
-            if h.get("title")
-        ]
-        if _link_titles:
-            _ko_map = translate_headlines_ko(_link_titles)
-            for s in candidates:
-                for h in ((s.get("sentiment") or {}).get("top_headline_links") or []):
-                    _ko = _ko_map.get((h.get("title") or "").strip())
-                    if _ko:
-                        h["title_ko"] = _ko
-    except Exception as _tr_err:  # noqa: BLE001
-        print(f"      종목 헤드라인 한글번역 스킵: {_tr_err}")
-
     return candidates
 
 
@@ -2732,6 +2712,27 @@ def main():
             f" {mf['multi_score']}점({mf['grade']}) RSI:{tech['rsi']} "
             f"수급:{flow['flow_score']} 컨센:{cblock.get('consensus_score', '?')}({cblock.get('score_source', '')})"
         )
+
+    # 내 종목 탭 뉴스 영어 헤드라인 → 한글 사전번역(build-time) 부착 — 미국 탭(news_headlines.py)과 동일 배치.
+    # top_headline_links 토글용. 캐시(news_translation_cache.json) miss 만 호출. 실패/키부재 시 미부착(컴포넌트 영문 fallback).
+    try:
+        from api.collectors.news_translation import translate_headlines_ko
+        _link_titles = [
+            (h.get("title") or "")
+            for s in candidates
+            for h in ((s.get("sentiment") or {}).get("top_headline_links") or [])
+            if h.get("title")
+        ]
+        if _link_titles:
+            _ko_map = translate_headlines_ko(_link_titles)
+            for s in candidates:
+                for h in ((s.get("sentiment") or {}).get("top_headline_links") or []):
+                    _ko = _ko_map.get((h.get("title") or "").strip())
+                    if _ko:
+                        h["title_ko"] = _ko
+            print(f"  종목 헤드라인 한글번역 부착: {sum(1 for t in _ko_map.values() if t)}건")
+    except Exception as _tr_err:  # noqa: BLE001
+        print(f"  종목 헤드라인 한글번역 스킵: {_tr_err}")
 
     try:
         save_consensus_batch(consensus_rows, CONSENSUS_DATA_PATH)
