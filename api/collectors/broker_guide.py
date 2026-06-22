@@ -249,8 +249,8 @@ def _fee_pct(s: str) -> float:
     return float(m.group(1)) if m else -1.0
 
 
-# 온라인 위탁수수료 타당 범위 — 이 초과면 영업점(오프라인) 요율 오인 의심.
-FEE_MAX_PCT = 0.1
+# 온라인 위탁수수료 타당 범위 — 이 초과면 영업점/이상치 의심(온라인은 사실상 0.05% 이하).
+FEE_MAX_PCT = 0.05
 
 
 def _fee_query(broker: str) -> str:
