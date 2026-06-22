@@ -25,7 +25,11 @@ def _compute_sentiment_score(
     x_score = x_sent.get("score", 50) if x_sent else 50
 
     macro = portfolio.get("macro", {})
-    mood_score = macro.get("market_mood", {}).get("score", 50)
+    # 2026-06-23 US 스코어 타당성 보정 — sentiment.py 가 전부 KR-매크로 기준이라 US 종목 왜곡.
+    # KR-전용 시그널(market_mood KR판/fx_sentiment/global_index_decoupling/geopolitical)을 US 는 중립화.
+    # market_mood_us(macro_data 가 USD/JPY 기준으로 별도 빌드) 사용. RULE 7 = curve-fit 아닌 KR-편향 결함 제거.
+    is_us = str(stock.get("currency") or "").upper() == "USD"
+    mood_score = macro.get("market_mood_us" if is_us else "market_mood", {}).get("score", 50)
 
     cons = stock.get("consensus", {})
     opinion_num = cons.get("investment_opinion_numeric")
@@ -68,8 +72,8 @@ def _compute_sentiment_score(
     # ── 6 신규 sub-component (Brain Signal Plan v0.2 Phase B, 2026-05-16) ──
     # 32 미반영 시그널 통합. 각 sub 50 = 중립, > 50 = 위험회피·우호 / < 50 = 우려.
 
-    # 1) fx_sentiment — USD/KRW change_pct → 점수 (큰 변동 = 외인 자금 신호 = 낮음)
-    fx_chg = (macro.get("usd_krw") or {}).get("change_pct")
+    # 1) fx_sentiment — USD/KRW change_pct (KR 외인 자금 신호). US 무관 → 중립(2026-06-23 US 보정).
+    fx_chg = None if is_us else (macro.get("usd_krw") or {}).get("change_pct")
     if fx_chg is not None:
         try:
             fx_chg_f = float(fx_chg)
@@ -92,27 +96,33 @@ def _compute_sentiment_score(
     except (TypeError, ValueError):
         commodity_sentiment = 50.0
 
-    # 3) global_index_decoupling — NASDAQ vs KOSPI gap (디커플링 큰 변화 = 낮음)
-    nq_chg = (macro.get("nasdaq") or {}).get("change_pct") or 0
-    kospi_chg = ((portfolio.get("market_summary") or {}).get("kospi") or {}).get("change_pct") or 0
-    try:
-        gap = float(nq_chg) - float(kospi_chg)
-        # gap 0 = 동조화 (50점) / gap +3 (KR 단독 약세) = 30 / gap -3 = 70
-        global_index_decoupling = _clip(50 - gap * 5)
-    except (TypeError, ValueError):
+    # 3) global_index_decoupling — NASDAQ vs KOSPI gap (KR 단독 약세 신호). US 무관 → 중립(2026-06-23 US 보정).
+    if is_us:
         global_index_decoupling = 50.0
+    else:
+        nq_chg = (macro.get("nasdaq") or {}).get("change_pct") or 0
+        kospi_chg = ((portfolio.get("market_summary") or {}).get("kospi") or {}).get("change_pct") or 0
+        try:
+            gap = float(nq_chg) - float(kospi_chg)
+            # gap 0 = 동조화 (50점) / gap +3 (KR 단독 약세) = 30 / gap -3 = 70
+            global_index_decoupling = _clip(50 - gap * 5)
+        except (TypeError, ValueError):
+            global_index_decoupling = 50.0
 
-    # 4) geopolitical_score — geopolitical_hotspots severity 합산 (낮을수록 우호)
-    geo = portfolio.get("geopolitical_hotspots") or {}
-    geo_severity = 0
-    if isinstance(geo, dict):
-        for ev in (geo.get("events") or []):
-            try:
-                geo_severity += int(ev.get("severity") or 0)
-            except (TypeError, ValueError):
-                pass
-    # severity 0=50, severity 5=35, severity 10+=20
-    geopolitical_score = max(20, 50 - geo_severity * 3)
+    # 4) geopolitical_score — 한국 시장 지정학 민감도(코드 명시). US 무관 → 중립(2026-06-23 US 보정).
+    if is_us:
+        geopolitical_score = 50.0
+    else:
+        geo = portfolio.get("geopolitical_hotspots") or {}
+        geo_severity = 0
+        if isinstance(geo, dict):
+            for ev in (geo.get("events") or []):
+                try:
+                    geo_severity += int(ev.get("severity") or 0)
+                except (TypeError, ValueError):
+                    pass
+        # severity 0=50, severity 5=35, severity 10+=20
+        geopolitical_score = max(20, 50 - geo_severity * 3)
 
     # 5) macro_headlines — bloomberg/news headlines sentiment 평균
     macro_headlines = 50.0

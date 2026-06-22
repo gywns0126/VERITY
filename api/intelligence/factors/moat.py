@@ -125,7 +125,8 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
     # 5) §22 — DART 사업보고서 AI 해자 지표 통합
     # dart_report_analyzer 가 추출한 moat_indicators (Gemini 정성 분석) 를
     # 정량 score 에 반영. 개수 + 핵심 키워드 매칭 이중 bonus (최대 +8).
-    dart_moat = (stock.get("dart_business_analysis") or {}).get("moat_indicators")
+    # 2026-06-23 — KR-전용 DART 시그널. US 명시 가드(다른 factor 패턴 정합, US 데이터 부착 시 KR 보너스 누출 차단).
+    dart_moat = None if is_us else (stock.get("dart_business_analysis") or {}).get("moat_indicators")
     if isinstance(dart_moat, list) and dart_moat:
         valid = [m for m in dart_moat if isinstance(m, str) and m.strip()]
         # 해자 개수 보너스

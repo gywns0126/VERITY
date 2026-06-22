@@ -561,7 +561,9 @@ def _compute_fact_score(
     governance_meta: List[str] = []
 
     # 자사주 — 매입 우세 = 주주환원, 처분 우세 = 자금조달/지분매각 의심
-    treasury = stock.get("treasury_stock") or {}
+    # 2026-06-23 — KR-전용 DART 거버넌스. US 명시 가드(US 데이터 부착 시 KR 보너스 누출 차단).
+    _gov_us = stock.get("currency") == "USD"
+    treasury = {} if _gov_us else (stock.get("treasury_stock") or {})
     if isinstance(treasury, dict):
         ts_signal = treasury.get("signal")
         net_change = treasury.get("net_change", 0) or 0
@@ -572,8 +574,8 @@ def _compute_fact_score(
             governance_penalty += 1.0
             governance_meta.append("treasury_net_dsp-1.0")
 
-    # 대주주 변동 — delta_pct_pt 기준 (5%p 이상 감소 = 강한 경고)
-    sh_changes = stock.get("major_shareholder_changes") or []
+    # 대주주 변동 — delta_pct_pt 기준 (5%p 이상 감소 = 강한 경고). US 가드(KR-전용 DART).
+    sh_changes = [] if _gov_us else (stock.get("major_shareholder_changes") or [])
     if isinstance(sh_changes, list):
         for ch in sh_changes:
             if not isinstance(ch, dict):
