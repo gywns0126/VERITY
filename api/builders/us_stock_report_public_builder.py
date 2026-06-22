@@ -54,8 +54,31 @@ def _title(name: str) -> str:
 
 
 CACHE_PATH = os.path.join(_ROOT, "data", "cache", "universe_us.json")
-# ROE 무의미 임계 — |ROE|>100% = 자사주 매입/자본잠식으로 자기자본 과소 → 수익성 신호 아닌 왜곡.
-_ROE_MAX_MEANINGFUL = 100.0
+# display sanity outlier 임계 — 분모(매출/자본) 과소·XBRL 오추출·기간불일치로 폭발한 값 차단.
+# 가짜 숫자 대신 "산정불가" + 사유(정공법). 2026-06-23 정밀검수: net 221640%·Altman 7163 등 70종 노출 발견.
+_ROE_MAX = 100.0       # |ROE|>100% = 자사주/자본잠식 자기자본 과소
+_MARGIN_MAX = 200.0    # |마진|>200% = 매출 분모 과소(금융 순이자·바이오 미미 매출)
+_GROSS_MAX = 100.0     # 매출총이익률>100% = 물리 불가(XBRL 오추출)
+_ALTMAN_MAX = 100.0    # |Z|>100 = BS 항목 stale/기간불일치 명백 오추출(REX 7163 등). 무차입 고시총(NVDA 66)은 실제값 유지
+_GROWTH_MAX = 500.0    # |매출성장|>500% = 전년 매출 ≈0 분모 효과
+_DE_MAX = 50.0         # |D/E|>50 = 자본 과소(ROE 산정불가와 동일 root)
+
+
+def _guarded(v: Any, bound: float, digits: int = 1, signed: bool = False,
+             gross_cap: bool = False) -> tuple:
+    """수치 → (표시값, is_na). |v|>bound(또는 gross>100) 면 ('산정불가', True), 정상이면 (_pct, False).
+
+    None/NaN = (None, False) (미수록).
+    """
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return None, False
+    if x != x:
+        return None, False
+    if abs(x) > bound or (gross_cap and x > _GROSS_MAX):
+        return "산정불가", True
+    return _pct(x, digits=digits, signed=signed), False
 
 
 def _load_universe_caps() -> Dict[str, Dict[str, float]]:
@@ -94,35 +117,44 @@ def _usd_compact(v: Any) -> str | None:
 def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[str, float]]) -> Dict[str, Any]:
     facts: Dict[str, str] = {}
     fnote: Dict[str, str] = {}
-    # ROE — 자기자본 과소(자사주/자본잠식) 시 |ROE| 폭발 → 가짜 숫자 대신 사유 명시 (정공법).
-    try:
-        roe_v = float(row.get("roe_pct"))
-    except (TypeError, ValueError):
-        roe_v = float("nan")
-    if roe_v == roe_v:  # not NaN
-        if abs(roe_v) > _ROE_MAX_MEANINGFUL:
-            facts["ROE"] = "산정불가"
-            fnote["ROE"] = "자사주 매입·자본잠식으로 자기자본 과소 → ROE 왜곡(산정 제외)"
-        else:
-            facts["ROE"] = _pct(roe_v)
-    de = _num(row.get("debt_to_equity"))
-    if de is not None:
-        facts["D/E"] = de  # 부채/자본 비율 (낮을수록 빚 부담 적음)
-    rg = _pct(row.get("revenue_yoy_pct_annual"), signed=True)
-    if rg:
-        facts["매출성장"] = rg
-    gm = _pct(row.get("gross_margin_pct"))
-    if gm:
-        facts["매출총이익률"] = gm
-    om = _pct(row.get("operating_margin_pct"))
-    if om:
-        facts["영업이익률"] = om
-    nm = _pct(row.get("net_margin_pct"))
-    if nm:
-        facts["순이익률"] = nm
-    az = _num(row.get("altman_z"), 1)
-    if az is not None:
-        facts["Altman-Z"] = az
+
+    def _put(label: str, raw: Any, bound: float, na_reason: str,
+             signed: bool = False, gross_cap: bool = False):
+        val, na = _guarded(raw, bound, signed=signed, gross_cap=gross_cap)
+        if val is not None:
+            facts[label] = val
+            if na:
+                fnote[label] = na_reason
+
+    # 전 facts outlier 가드 (분모 과소·XBRL 오추출 → 가짜 숫자 대신 산정불가, 정공법).
+    _put("ROE", row.get("roe_pct"), _ROE_MAX,
+         "자사주 매입·자본잠식으로 자기자본 과소 → ROE 왜곡(산정 제외)")
+    _put("매출성장", row.get("revenue_yoy_pct_annual"), _GROWTH_MAX,
+         "전년 매출 거의 0 → 성장률 분모 효과(산정 제외)", signed=True)
+    _put("매출총이익률", row.get("gross_margin_pct"), 1e9,
+         "매출총이익률>100% 물리 불가 → XBRL 추출 오류(산정 제외)", gross_cap=True)
+    _put("영업이익률", row.get("operating_margin_pct"), _MARGIN_MAX,
+         "매출 분모 과소·미미로 마진 왜곡(산정 제외)")
+    _put("순이익률", row.get("net_margin_pct"), _MARGIN_MAX,
+         "매출 분모 과소(금융 순이자수익 등)로 마진 왜곡(산정 제외)")
+
+    # D/E — 자본 과소 시(ROE 산정불가와 동일 root) 가드, 그 외 그대로.
+    de_val, de_na = _guarded(row.get("debt_to_equity"), _DE_MAX)
+    de_num = _num(row.get("debt_to_equity"))
+    if de_na:
+        facts["D/E"] = "산정불가"
+        fnote["D/E"] = "자기자본 과소(자사주·자본잠식)로 D/E 왜곡(산정 제외)"
+    elif de_num is not None:
+        facts["D/E"] = de_num  # 부채/자본 (낮을수록 빚 부담 적음)
+
+    # Altman-Z — |Z|>20 = BS 항목 기간불일치 추출(원천 버그) → 산정불가, 그 외 zone 병기.
+    az_v, az_na = _guarded(row.get("altman_z"), _ALTMAN_MAX, digits=1)
+    az_num = _num(row.get("altman_z"), 1)
+    if az_na:
+        facts["Altman-Z"] = "산정불가"
+        fnote["Altman-Z"] = "재무항목 기간 불일치 추출로 Z 왜곡(산정 제외)"
+    elif az_num is not None:
+        facts["Altman-Z"] = az_num
         zone = row.get("altman_zone")
         if zone:
             fnote["Altman-Z"] = "안전구간" if zone == "safe" else str(zone)
