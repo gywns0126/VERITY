@@ -243,10 +243,21 @@ _FEE_FORMAT = {
 }
 
 
+def _fee_pct(s: str) -> float:
+    """수수료 문자열에서 % 숫자 추출. 없으면 -1."""
+    m = re.search(r"(\d+(?:\.\d+)?)\s*%", s or "")
+    return float(m.group(1)) if m else -1.0
+
+
+# 온라인 위탁수수료 타당 범위 — 이 초과면 영업점(오프라인) 요율 오인 의심.
+FEE_MAX_PCT = 0.1
+
+
 def _fee_query(broker: str) -> str:
     return (
-        f"{broker} 의 '국내주식 온라인(영업점 외) 위탁수수료율'을 공식 자료 기준 정확히 알려줘. "
-        "채널별로 다르면 '대표 온라인 기준' 하나로 (이벤트·비대면 우대는 basis 에 설명). "
+        f"{broker} 의 국내주식 '온라인(HTS·MTS·홈페이지) 위탁수수료율'을 공식 수수료표 기준 정확히 알려줘. "
+        "⚠ 영업점·전화·오프라인 수수료가 아니라 온라인 기본 수수료율이다. 온라인 요율은 보통 0.001~0.05% 범위. "
+        "채널별로 다르면 대표 온라인 기준 하나로 (이벤트·비대면 신규우대 조건은 basis 에 설명). "
         '숫자는 % 로. JSON: {"fee": "0.0000%", "source": "공식 출처 URL", "basis": "기준/조건"}'
     )
 
@@ -274,13 +285,17 @@ def _fetch_fee(broker: str) -> dict:
         except Exception:
             continue
         fee = str(d.get("fee", "")).strip()
-        if _FEE_RE.search(fee):
+        val = _fee_pct(fee)
+        # 유효 % + 온라인 타당 범위(영업점 요율 오인 거부)
+        if _FEE_RE.search(fee) and 0 < val <= FEE_MAX_PCT:
             return {
                 "fee": fee,
                 "source": str(d.get("source", "")).strip(),
                 "basis": str(d.get("basis", "")).strip(),
                 "official": domains is not None,
             }
+        if val > FEE_MAX_PCT:
+            print(f"[broker_guide] {broker} 수수료 {fee} > {FEE_MAX_PCT}% — 영업점 의심, 거부")
     return {}
 
 
