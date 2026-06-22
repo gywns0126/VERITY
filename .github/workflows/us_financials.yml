@@ -53,17 +53,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Fetch US market caps (yfinance, Lynch size + 원본 Altman X4)
-        # 재무 빌더 앞에 실행 — load_us_externals 가 data/us_market_caps.json 을 읽어 sp1500 size wire.
-        # sp1500 universe 일 때만 (단일 ticker/portfolio 테스트는 portfolio 15 market_cap 으로 충분).
-        # [[project_us_financials_sec_edgar]] (a) market_cap wire.
+      - name: Build US universe cache + market caps (yfinance 1패스)
+        # 재무 빌더 앞에 실행. fast_info 1패스로 (a) us_market_caps.json(Lynch size) +
+        # (b) data/cache/universe_us.json(market_cap+거래대금 → universe_scan US 소스, 국장 parity).
+        # sp1500 universe 일 때만. [[project_us_financials_sec_edgar]] (a)/(parity).
         continue-on-error: true
         run: |
           UNIVERSE="${{ github.event.inputs.universe || 'sp1500' }}"
           if [ "$UNIVERSE" = "sp1500" ] && [ -z "${{ github.event.inputs.ticker }}" ]; then
-            python scripts/us/fetch_us_market_caps.py
+            python scripts/us/build_us_universe_cache.py
           else
-            echo "[us_market_caps] universe=$UNIVERSE / ticker 지정 — skip (portfolio market_cap 사용)"
+            echo "[us_universe] universe=$UNIVERSE / ticker 지정 — skip (portfolio market_cap 사용)"
           fi
 
       - name: Build US financials snapshots
@@ -106,7 +106,7 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/us_financials/ data/us_stock_report_public.json data/us_market_caps.json
+          git add data/us_financials/ data/us_stock_report_public.json data/us_market_caps.json data/cache/universe_us.json
           if git diff --staged --quiet; then
             echo "[us_financials] no changes"
             exit 0

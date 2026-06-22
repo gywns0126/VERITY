@@ -40,7 +40,9 @@ analyst_reports.json
 us_tickers.txt
 
 # OHLCV 분석 캐시 (재실행 시 재생성)
-cache/
+cache/*
+!cache/universe_us.json
+# 예외 위 = US 유니버스 캐시(국장 parity, build_us_universe_cache 생성, universe_scan 소비). 커밋 필요.
 
 # 5r feasibility / ATR Phase 0 일일 분석 산출물 (재실행 시 재생성)
 # 영구 보관 필요한 baseline 은 5/16 verdict 시점에 docs/atr_phase0/ 로 명시 이동

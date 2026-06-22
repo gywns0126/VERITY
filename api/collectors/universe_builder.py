@@ -113,10 +113,52 @@ def build_kr_universe(target_size: int) -> tuple[str, list[dict]]:
     return bas_dd, final
 
 
-def _load_us_static_cache(cache_path: Optional[Path] = None) -> list[dict]:
-    """US universe 정적 캐시 로드. 캐시 부재 시 코어 + S&P 100 fallback 반환.
+def _load_sp1500_universe() -> list[dict]:
+    """data/us_universe_sp1500.json (S&P Composite 1500, us_financials 자동 갱신) → universe entries.
 
-    실제 운영에서는 별도 weekly refresh 스크립트가 cache_path 갱신.
+    2026-06-23 — US 유니버스 ~150 static fallback → 1500 (국장 parity). 부재 시 [] (caller fallback).
+    market_cap/거래대금 = 0 (다운스트림 get_all_stock_data yfinance fast_info 가 보강, KR 패턴 동일).
+    [[project_us_financials_sec_edgar]] (us_universe_sp1500.json 재사용 — 별도 소스 신설 안 함).
+    """
+    p = Path("data/us_universe_sp1500.json")
+    if not p.exists():
+        return []
+    try:
+        doc = json.loads(p.read_text())
+        tickers = [str(t).strip().upper() for t in (doc.get("tickers") or []) if str(t).strip()]
+    except Exception:
+        return []
+    if not tickers:
+        return []
+    _, us_core = _load_core_pools()
+    seen, out = set(), []
+    for t in tickers:
+        if t in seen:
+            continue
+        seen.add(t)
+        out.append({
+            "ticker": t, "name": t, "market": "US", "currency": "USD",
+            "market_cap": 0, "avg_trading_value_30d": 0,
+            "is_core": t in us_core, "is_managed": False, "is_suspended": False,
+            "tier": "core" if t in us_core else "extended",
+            "source": "sp1500",
+        })
+    # 코어 화이트리스트가 sp1500 에 없으면 추가 (항상 포함 보장)
+    for t in list(us_core):
+        if t not in seen:
+            out.append({
+                "ticker": t, "name": t, "market": "US", "currency": "USD",
+                "market_cap": 0, "avg_trading_value_30d": 0,
+                "is_core": True, "is_managed": False, "is_suspended": False,
+                "tier": "core", "source": "core_whitelist",
+            })
+    return out
+
+
+def _load_us_static_cache(cache_path: Optional[Path] = None) -> list[dict]:
+    """US universe 로드 — 우선순위: universe_us.json 캐시 > sp1500(1500) > 코어 fallback(~150).
+
+    2026-06-23 — sp1500 1차 소스 추가(국장 parity). 캐시는 미래 weekly refresh 용 유지.
     """
     if cache_path is None:
         cache_path = Path("data/cache/universe_us.json")
@@ -128,7 +170,12 @@ def _load_us_static_cache(cache_path: Optional[Path] = None) -> list[dict]:
         except Exception:
             pass
 
-    # Fallback — 캐시 부재 시 코어 화이트리스트만 반환.
+    # sp1500 (1500) — 국장 parity 1차 소스.
+    sp1500 = _load_sp1500_universe()
+    if sp1500:
+        return sp1500
+
+    # Fallback — 캐시·sp1500 모두 부재 시 코어 화이트리스트만 반환.
     # 운영 시 별도 weekly refresh 스크립트가 cache_path 갱신해야 함.
     # (Phase 2-A 배포 전 docs/cache_refresh_us_universe.md 참조 — 미작성)
     _, us_core = _load_core_pools()
