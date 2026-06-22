@@ -67,8 +67,8 @@ async function ensureProfile(supabaseUrl: string, anonKey: string, accessToken: 
     } catch { /* no-op */ }
 }
 
-function getGoogleOAuthUrl(supabaseUrl: string, redirectTo: string): string {
-    return `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`
+function getGoogleOAuthUrl(supabaseUrl: string, redirectTo: string, anonKey: string): string {
+    return `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}&apikey=${encodeURIComponent(anonKey)}`
 }
 
 async function refreshSession(supabaseUrl: string, anonKey: string, refreshToken: string): Promise<SupaSession | null> {
@@ -113,6 +113,7 @@ interface Props {
     dark: boolean
 }
 const DEFAULT_SUPABASE_URL = "https://lykqebdcurreppowulsl.supabase.co"
+const DEFAULT_SUPABASE_ANON_KEY = ""
 
 /**
  * @framerSupportedLayoutWidth any
@@ -121,6 +122,7 @@ const DEFAULT_SUPABASE_URL = "https://lykqebdcurreppowulsl.supabase.co"
 export default function GoldenGooseAuth(props: Props) {
     const { supabaseUrl, supabaseAnonKey, redirectUrl, dark } = props
     const url = (supabaseUrl || DEFAULT_SUPABASE_URL).replace(/\/+$/, "")
+    const anonKey = supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY
 
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
     const C = (RenderTarget.current() === RenderTarget.canvas ? !!dark : themeDark) ? DARK : LIGHT
@@ -159,13 +161,13 @@ export default function GoldenGooseAuth(props: Props) {
                 if (!at) return false
                 const expires_at = Number(expRaw) > 1e9 ? Number(expRaw) : Date.now() / 1000 + Number(expRaw || 3600)
                 const ures = await fetch(`${url}/auth/v1/user`, {
-                    headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${at}` },
+                    headers: { apikey: anonKey, Authorization: `Bearer ${at}` },
                 })
                 const u = await ures.json().catch(() => null)
                 if (!ures.ok || !u || !u.id) { setErr("로그인 처리 실패 — 다시 시도해주세요"); return false }
                 const s: SupaSession = { access_token: at, refresh_token: rt, expires_at, user: { id: u.id, email: u.email, user_metadata: u.user_metadata } }
                 saveSession(s)
-                await ensureProfile(url, supabaseAnonKey, at, u.id, u.email || "", u.user_metadata?.name || u.user_metadata?.full_name || "")
+                await ensureProfile(url, anonKey, at, u.id, u.email || "", u.user_metadata?.name || u.user_metadata?.full_name || "")
                 // hash 제거(주소창 토큰 노출 회피)
                 try { window.history.replaceState(null, "", window.location.pathname + window.location.search) } catch { /* no-op */ }
                 if (alive) { setSession(s); emitAuthChange() }
@@ -182,7 +184,7 @@ export default function GoldenGooseAuth(props: Props) {
             let s = loadSession()
             // 만료 임박(5분 이내) 시 갱신
             if (s && s.refresh_token && s.expires_at && Date.now() / 1000 > s.expires_at - 300) {
-                const refreshed = await refreshSession(url, supabaseAnonKey, s.refresh_token)
+                const refreshed = await refreshSession(url, anonKey, s.refresh_token)
                 if (refreshed) s = refreshed
             }
             if (alive) setSession(s)
@@ -198,20 +200,20 @@ export default function GoldenGooseAuth(props: Props) {
         const timer = setInterval(async () => {
             const cur = loadSession()
             if (cur && cur.refresh_token && cur.expires_at && Date.now() / 1000 > cur.expires_at - 300) {
-                const r = await refreshSession(url, supabaseAnonKey, cur.refresh_token)
+                const r = await refreshSession(url, anonKey, cur.refresh_token)
                 if (alive && r) setSession(r)
             }
         }, 60000)
 
         return () => { alive = false; window.removeEventListener(AUTH_EVENT, onAuth); window.removeEventListener("storage", onAuth); clearInterval(timer) }
-    }, [url, supabaseAnonKey, onCanvas])
+    }, [url, anonKey, onCanvas])
 
     const login = () => {
         if (busy) return
         setErr("")
         setBusy(true)
         const back = (redirectUrl || "").trim() || (typeof window !== "undefined" ? window.location.origin + window.location.pathname : "")
-        if (typeof window !== "undefined") window.location.href = getGoogleOAuthUrl(url, back)
+        if (typeof window !== "undefined") window.location.href = getGoogleOAuthUrl(url, back, anonKey)
     }
     const logout = async () => {
         const s = loadSession()
@@ -222,7 +224,7 @@ export default function GoldenGooseAuth(props: Props) {
             try {
                 await fetch(`${url}/auth/v1/logout`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", apikey: supabaseAnonKey, Authorization: `Bearer ${s.access_token}` },
+                    headers: { "Content-Type": "application/json", apikey: anonKey, Authorization: `Bearer ${s.access_token}` },
                 })
             } catch { /* no-op */ }
         }
@@ -271,7 +273,7 @@ export default function GoldenGooseAuth(props: Props) {
 
 addPropertyControls(GoldenGooseAuth, {
     supabaseUrl: { type: ControlType.String, title: "Supabase URL", defaultValue: DEFAULT_SUPABASE_URL },
-    supabaseAnonKey: { type: ControlType.String, title: "Supabase Anon Key", defaultValue: "" },
+    supabaseAnonKey: { type: ControlType.String, title: "Supabase Anon Key", defaultValue: DEFAULT_SUPABASE_ANON_KEY },
     redirectUrl: { type: ControlType.String, title: "Redirect URL", defaultValue: "", placeholder: "비우면 현재 페이지로 복귀" },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

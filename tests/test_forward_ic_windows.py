@@ -46,7 +46,9 @@ def test_exact_horizon_insufficient_history_yields_zero():
 
 def test_factor_decay_none_excludes_long_windows(monkeypatch):
     orig = fd._load_ic_history
-    base = orig()
+    # base 에서 기존 63d entry 제외 — 실 IC history(cron 일별 append)가 63d 를 포함하면
+    # 주입한 20 + 실데이터 = 21 로 시한폭탄(2026-06-23 발견). 주입분만 카운트되도록 결정론화.
+    base = [h for h in (orig() or []) if h.get("forward_days", 7) != 63]
     if not base:
         return  # history 없으면 skip (CI 환경)
     long_entry = dict(base[-1])
