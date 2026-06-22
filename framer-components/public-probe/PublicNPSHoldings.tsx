@@ -56,6 +56,8 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
 
     const [data, setData] = useState<any>(onCanvas ? DEMO : null)
     const [loading, setLoading] = useState<boolean>(!onCanvas)
+    const [query, setQuery] = useState<string>("")
+    const [npsAll, setNpsAll] = useState<boolean>(false)   // 보유종목 더보기 토글
 
     useEffect(() => {
         if (onCanvas) return
@@ -79,6 +81,19 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
     }, [onCanvas, props.dataUrl])
 
     const holdings = useMemo(() => (data && Array.isArray(data.holdings) ? data.holdings : []), [data])
+    // 검색 필터 — 종목명·코드
+    const shownHoldings = useMemo(() => {
+        const q = query.trim().toLowerCase()
+        if (!q) return holdings
+        return holdings.filter((h: any) =>
+            String(h.name || "").toLowerCase().includes(q) ||
+            String(h.ticker || "").toLowerCase().includes(q)
+        )
+    }, [holdings, query])
+    // 더보기 — 검색 중이 아니고 미리보기 초과 시 접힘(너무 많은 종목 정리)
+    const NPS_PREVIEW = 12
+    const npsCollapsed = !npsAll && !query.trim() && shownHoldings.length > NPS_PREVIEW
+    const displayHoldings = npsCollapsed ? shownHoldings.slice(0, NPS_PREVIEW) : shownHoldings
     const fund = data && data.fund ? data.fund : null
     const reportPath = props.reportPath || "/stock"
 
@@ -139,12 +154,39 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
             <div style={{ background: C.card, borderRadius: 16, padding: "8px 16px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "8px 0 4px" }}>
                     <span style={{ fontSize: 13, fontWeight: 800 }}>보유종목 (5%+ 공시)</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: C.accent }}>{holdings.length}종목</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: C.accent }}>
+                        {query.trim() ? `${shownHoldings.length} / ${holdings.length}` : holdings.length}종목
+                    </span>
                 </div>
-                {holdings.length === 0 ? (
-                    <div style={{ padding: "20px 0", textAlign: "center", color: C.faint, fontSize: 13, fontWeight: 600 }}>공시된 5%+ 보유종목 없음</div>
+                {/* 검색 — 종목명·코드 */}
+                <div style={{ position: "relative", margin: "2px 0 8px" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2.4" strokeLinecap="round"
+                        style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                        <circle cx="11" cy="11" r="7" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="종목명·코드 검색"
+                        style={{
+                            width: "100%", boxSizing: "border-box", border: `1px solid ${C.line}`,
+                            background: C.bg, color: C.ink, borderRadius: 10,
+                            padding: "9px 32px 9px 34px", fontSize: 13, fontFamily: "Pretendard, -apple-system, sans-serif", outline: "none",
+                        }}
+                    />
+                    {query && (
+                        <span role="button" tabIndex={0} onClick={() => setQuery("")}
+                            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: C.faint, fontSize: 14, fontWeight: 700, cursor: "pointer", lineHeight: 1 }}>×</span>
+                    )}
+                </div>
+                {shownHoldings.length === 0 ? (
+                    <div style={{ padding: "20px 0", textAlign: "center", color: C.faint, fontSize: 13, fontWeight: 600 }}>
+                        {query.trim() ? `"${query.trim()}" 검색 결과 없음` : "공시된 5%+ 보유종목 없음"}
+                    </div>
                 ) : (
-                    holdings.map((h: any, i: number) => {
+                    displayHoldings.map((h: any, i: number) => {
                         const url = h.ticker ? reportPath + "?q=" + encodeURIComponent(h.ticker) : ""
                         const chg = h.qty_change
                         const chgCol = chg == null ? C.faint : Number(chg) > 0 ? C.up : Number(chg) < 0 ? C.down : C.faint
@@ -166,6 +208,12 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                             </div>
                         )
                     })
+                )}
+                {!query.trim() && shownHoldings.length > NPS_PREVIEW && (
+                    <div role="button" tabIndex={0} onClick={() => setNpsAll((v) => !v)}
+                        style={{ marginTop: 4, padding: "11px 0 5px", textAlign: "center", cursor: "pointer", fontSize: 12.5, fontWeight: 800, color: C.accent, borderTop: `1px solid ${C.line}` }}>
+                        {npsAll ? "접기 ▲" : `더보기 (${shownHoldings.length - NPS_PREVIEW}개 더) ▼`}
+                    </div>
                 )}
             </div>
 
