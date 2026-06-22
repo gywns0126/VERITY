@@ -1,0 +1,72 @@
+# Crypto Collect — TIDE 크립토 공개 표면 데이터 별도 cron (2026-06-23)
+# 산출: data/crypto_macro.json(레짐센서 5종) + crypto_universe.json(코인 시총/sparkline) + crypto_news.json(RSS 헤드라인).
+# Blob publish = main commit 후 기존 publish-data 호출 워크플로(daily_analysis/price_pulse 등)가 파일 목록 업로드 편승
+#   (macro_collect.yml 과 동일 패턴 — crypto_*.json 3개를 publish-data action 목록에 등재 완료).
+#
+# 🚨 신규 yml 7축 audit (feedback_workflow_yml_audit_mandatory / RULE 8):
+#  1. env/secret  — 무인증 공개 API만(Bybit/OKX/CoinGecko/Upbit/RSS + yfinance KRW=X). secret 0.
+#  2. push trigger— push 없음(schedule+dispatch만) → Vercel deploy spam 무관(RULE 2).
+#  3. concurrency — group=crypto-collect 신설(형제 없음, macro-collect 와 별개).
+#  4. cron        — 5,35 * * * * = 30분, macro_collect(*/30=0,30)와 :05/:35 offset 충돌·정각 high-load 회피. >5분이라 silent skip 안전.
+#  5. timeout     — 5분(외부 API 3종, 실측 ~9s).
+#  6. pip         — requirements.txt(feedparser/requests/yfinance 포함).
+#  7. RULE 1 무관(KIS 비참조) · RULE 8 = 신설 후 N=2 실 cron 결과 audit 후 프론트 연결.
+
+name: Crypto Collect
+
+on:
+  schedule:
+    - cron: '5,35 * * * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write   # main 에 crypto_*.json commit
+
+concurrency:
+  group: crypto-collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run crypto collector
+        # 무인증 공개 API만 — secret env 불필요.
+        run: |
+          python -m api.builders.crypto_collect_builder
+
+      - name: Commit data/crypto_*.json
+        # main 영속화 (빌더 산출물 main commit 의무). 빈 변경 시 no-op. push 5회 retry.
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/crypto_macro.json data/crypto_universe.json data/crypto_news.json
+          git diff --staged --quiet && echo "no changes" && exit 0
+          TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
+          git commit -m "🪙 crypto_collect ${TIME_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"

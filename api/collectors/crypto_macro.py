@@ -4,10 +4,12 @@
 
 5대 지표:
   1. BTC Fear & Greed Index  (Alternative.me)
-  2. 바이낸스 펀딩비           (Binance Futures)
-  3. 김치 프리미엄             (업비트 vs 바이낸스)
-  4. BTC-나스닥 상관계수       (바이낸스 BTC + yfinance NQ)
+  2. 펀딩비                   (Bybit 1차 → OKX 폴백)
+  3. 김치 프리미엄             (업비트 vs Bybit/OKX 글로벌가, 환율=yfinance KRW=X)
+  4. BTC-나스닥 상관계수       (Bybit/OKX BTC 일봉 + yfinance NQ)
   5. 스테이블코인 시총         (CoinGecko 무인증)
+
+2026-06 변경: Binance fapi/api 451 지역차단 → 펀딩/김프/상관 소스를 Bybit 1차·OKX 폴백으로 교체.
 """
 from __future__ import annotations
 
@@ -102,45 +104,88 @@ def _fetch_fear_and_greed() -> Dict[str, Any]:
         return {"ok": False, "error": str(e)[:120]}
 
 
+def _funding_payload(rate: float, prev_pct: Optional[float], ts: Any, source: str) -> Dict[str, Any]:
+    rate_pct = round(rate * 100, 4)
+    signal = "neutral"
+    if rate_pct >= CRYPTO_FUNDING_OVERHEAT:
+        signal = "long_overheat"
+    elif rate_pct <= CRYPTO_FUNDING_UNDERHEAT:
+        signal = "short_overheat"
+    return {
+        "ok": True,
+        "rate": rate,
+        "rate_pct": rate_pct,
+        "prev_rate_pct": round(prev_pct, 4) if prev_pct is not None else None,
+        "signal": signal,
+        "timestamp": ts,
+        "source": source,
+    }
+
+
 def _fetch_funding_rate() -> Dict[str, Any]:
-    """바이낸스 BTC/USDT 무기한 선물 펀딩비."""
+    """BTC/USDT 무기한 펀딩비 — Bybit 1차 → OKX 폴백 (Binance fapi 451 차단 대체, 2026-06)."""
+    # 1차: Bybit v5 (history, newest-first)
     try:
         r = requests.get(
-            "https://fapi.binance.com/fapi/v1/fundingRate",
-            params={"symbol": "BTCUSDT", "limit": 3},
+            "https://api.bybit.com/v5/market/funding/history",
+            params={"category": "linear", "symbol": "BTCUSDT", "limit": 3},
             headers=_HEADERS, timeout=_TIMEOUT,
         )
         r.raise_for_status()
-        rows = r.json()
-        if not rows:
-            return {"ok": False, "error": "empty"}
-
-        latest = rows[-1]
-        rate = float(latest["fundingRate"])
-        rate_pct = round(rate * 100, 4)
-
-        signal = "neutral"
-        if rate_pct >= CRYPTO_FUNDING_OVERHEAT:
-            signal = "long_overheat"
-        elif rate_pct <= CRYPTO_FUNDING_UNDERHEAT:
-            signal = "short_overheat"
-
-        prev_rate = float(rows[-2]["fundingRate"]) * 100 if len(rows) >= 2 else None
-
-        return {
-            "ok": True,
-            "rate": rate,
-            "rate_pct": rate_pct,
-            "prev_rate_pct": round(prev_rate, 4) if prev_rate is not None else None,
-            "signal": signal,
-            "timestamp": latest.get("fundingTime"),
-        }
+        rows = ((r.json().get("result") or {}).get("list")) or []
+        if rows:
+            rate = float(rows[0]["fundingRate"])
+            prev = float(rows[1]["fundingRate"]) * 100 if len(rows) >= 2 else None
+            return _funding_payload(rate, prev, rows[0].get("fundingRateTimestamp"), "bybit")
+    except Exception:
+        pass
+    # 폴백: OKX (current funding-rate)
+    try:
+        r = requests.get(
+            "https://www.okx.com/api/v5/public/funding-rate",
+            params={"instId": "BTC-USDT-SWAP"},
+            headers=_HEADERS, timeout=_TIMEOUT,
+        )
+        r.raise_for_status()
+        data = (r.json().get("data")) or []
+        if data:
+            return _funding_payload(float(data[0]["fundingRate"]), None, data[0].get("fundingTime"), "okx")
     except Exception as e:
         return {"ok": False, "error": str(e)[:120]}
+    return {"ok": False, "error": "all_sources_failed"}
+
+
+def _fetch_global_btc_usd() -> Optional[float]:
+    """글로벌 BTC/USDT 현물가 — Bybit 1차 → OKX 폴백 (Binance 451 대체)."""
+    try:
+        r = requests.get(
+            "https://api.bybit.com/v5/market/tickers",
+            params={"category": "spot", "symbol": "BTCUSDT"},
+            headers=_HEADERS, timeout=_TIMEOUT,
+        )
+        r.raise_for_status()
+        lst = ((r.json().get("result") or {}).get("list")) or []
+        if lst and lst[0].get("lastPrice"):
+            return float(lst[0]["lastPrice"])
+    except Exception:
+        pass
+    try:
+        r = requests.get(
+            "https://www.okx.com/api/v5/market/ticker",
+            params={"instId": "BTC-USDT"},
+            headers=_HEADERS, timeout=_TIMEOUT,
+        )
+        r.raise_for_status()
+        data = (r.json().get("data")) or []
+        if data and data[0].get("last"):
+            return float(data[0]["last"])
+    except Exception:
+        pass
+    return None
 
 
 def _fetch_kimchi_premium() -> Dict[str, Any]:
-    """업비트 BTC 원화가 vs 바이낸스 BTC USDT가 → 김프(%)."""
+    """업비트 BTC 원화가 vs 글로벌 BTC USDT가 → 김프(%). 글로벌가=Bybit/OKX(Binance 451 대체), 환율=yfinance KRW=X."""
     try:
         upbit_r = requests.get(
             "https://api.upbit.com/v1/ticker?markets=KRW-BTC",
@@ -149,27 +194,16 @@ def _fetch_kimchi_premium() -> Dict[str, Any]:
         upbit_r.raise_for_status()
         upbit_price = float(upbit_r.json()[0]["trade_price"])
 
-        binance_r = requests.get(
-            "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT",
-            headers=_HEADERS, timeout=_TIMEOUT,
-        )
-        binance_r.raise_for_status()
-        binance_usd = float(binance_r.json()["price"])
+        global_usd = _fetch_global_btc_usd()
+        if not global_usd or global_usd <= 0:
+            return {"ok": False, "error": "global_btc_price_unavailable"}
 
-        fx_r = requests.get(
-            "https://api.binance.com/api/v3/ticker/price?symbol=USDTKRW",
-            headers=_HEADERS, timeout=_TIMEOUT,
-        )
-        if fx_r.status_code == 200:
-            usdt_krw = float(fx_r.json()["price"])
-        else:
-            usdt_krw = _fallback_usd_krw()
-
+        usdt_krw = _fallback_usd_krw()
         if not usdt_krw or usdt_krw <= 0:
-            usdt_krw = _fallback_usd_krw()
+            return {"ok": False, "error": "fx_unavailable"}
 
-        binance_krw = binance_usd * usdt_krw
-        premium_pct = round((upbit_price - binance_krw) / binance_krw * 100, 2) if binance_krw > 0 else 0
+        global_krw = global_usd * usdt_krw
+        premium_pct = round((upbit_price - global_krw) / global_krw * 100, 2) if global_krw > 0 else 0
 
         signal = "normal"
         if premium_pct >= CRYPTO_KIMCHI_PREMIUM_WARN:
@@ -183,9 +217,11 @@ def _fetch_kimchi_premium() -> Dict[str, Any]:
             "ok": True,
             "premium_pct": premium_pct,
             "upbit_krw": upbit_price,
-            "binance_usd": binance_usd,
+            "global_usd": global_usd,
+            "binance_usd": global_usd,  # 레거시 alias (프론트 back-compat) — 값은 글로벌(Bybit/OKX) 가격
             "usdt_krw": usdt_krw,
             "signal": signal,
+            "source": "upbit+bybit/okx",
         }
     except Exception as e:
         return {"ok": False, "error": str(e)[:120]}
@@ -205,29 +241,42 @@ def _fallback_usd_krw() -> float:
     return 1380.0
 
 
-def _fetch_btc_nasdaq_correlation() -> Dict[str, Any]:
-    """최근 30일 BTC-나스닥 상관계수. 바이낸스 일봉 + yfinance NQ."""
+def _fetch_btc_daily_closes(limit: int = 45) -> list:
+    """BTC 일봉 종가(오래된→최신) — Bybit 1차 → OKX 폴백 (Binance klines 451 대체). 둘 다 newest-first라 reverse."""
     try:
-        now_ms = int(time.time() * 1000)
-        start_ms = now_ms - 45 * 24 * 60 * 60 * 1000
-
         r = requests.get(
-            "https://api.binance.com/api/v3/klines",
-            params={
-                "symbol": "BTCUSDT",
-                "interval": "1d",
-                "startTime": start_ms,
-                "endTime": now_ms,
-                "limit": 45,
-            },
+            "https://api.bybit.com/v5/market/kline",
+            params={"category": "spot", "symbol": "BTCUSDT", "interval": "D", "limit": limit},
             headers=_HEADERS, timeout=_TIMEOUT,
         )
         r.raise_for_status()
-        klines = r.json()
-        if len(klines) < 15:
+        lst = ((r.json().get("result") or {}).get("list")) or []
+        if len(lst) >= 15:
+            return [float(k[4]) for k in reversed(lst)]  # [start,o,h,l,c,...] close=idx4
+    except Exception:
+        pass
+    try:
+        r = requests.get(
+            "https://www.okx.com/api/v5/market/candles",
+            params={"instId": "BTC-USDT", "bar": "1D", "limit": str(limit)},
+            headers=_HEADERS, timeout=_TIMEOUT,
+        )
+        r.raise_for_status()
+        data = (r.json().get("data")) or []
+        if len(data) >= 15:
+            return [float(k[4]) for k in reversed(data)]  # [ts,o,h,l,c,...] close=idx4
+    except Exception:
+        pass
+    return []
+
+
+def _fetch_btc_nasdaq_correlation() -> Dict[str, Any]:
+    """최근 30일 BTC-나스닥 상관계수. BTC 일봉=Bybit/OKX(Binance 451 대체) + yfinance NQ."""
+    try:
+        btc_closes = _fetch_btc_daily_closes(45)
+        if len(btc_closes) < 15:
             return {"ok": False, "error": "insufficient_btc_data"}
 
-        btc_closes = [float(k[4]) for k in klines]
         btc_returns = [
             (btc_closes[i] - btc_closes[i - 1]) / btc_closes[i - 1]
             for i in range(1, len(btc_closes))
