@@ -537,7 +537,7 @@ function FlatNews(props: { items: NewsItem[]; C: typeof LIGHT; empty: string; ca
         <div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 8, alignItems: "start" }}>
                 {items.map((it, i) => (
-                    <div key={i} style={{ height: cardH, overflow: "hidden", background: C.card, border: "1px solid " + C.border, borderRadius: 12, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                    <div key={i} style={{ height: cardH, overflow: "hidden", background: C.card, borderRadius: 12, display: "flex", flexDirection: "column", justifyContent: "center" }}>
                         <NewsRow item={it} C={C} clamp={2} showKo={props.showKo} />
                     </div>
                 ))}
@@ -567,7 +567,6 @@ function StockNews(props: { groups: StockGroup[]; C: typeof LIGHT; cardH: number
                         height: cardH,
                         overflow: "hidden",
                         background: C.card,
-                        border: "1px solid " + C.border,
                         borderRadius: 14,
                         padding: "12px 12px 6px 12px",
                         boxSizing: "border-box",
