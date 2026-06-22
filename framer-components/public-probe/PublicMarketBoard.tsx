@@ -151,6 +151,8 @@ export default function PublicMarketBoard(props: Props) {
     const [w, setW] = useState(0)
     const [pulse, setPulse] = useState<any>(null)
     const [macro, setMacro] = useState<any>(null)
+    const [pulseLoaded, setPulseLoaded] = useState(false)   // 최초 성공 로드 여부 — 로딩 중 카드 vanish 대신 스켈레톤
+    const [macroLoaded, setMacroLoaded] = useState(false)   // macro 늦게 와도 원자재·크립토·SOX 등 자리 유지(스켈레톤)
     const [expo, setExpo] = useState<any>(null)
     const [openCommodity, setOpenCommodity] = useState<string>("")
     const [openDetail, setOpenDetail] = useState<string>("")
@@ -190,8 +192,8 @@ export default function PublicMarketBoard(props: Props) {
         if (onCanvas) return
         let alive = true
         const load = () => {
-            fetch(pulseUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) setPulse(d) }).catch(() => {})
-            fetch(macroUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) setMacro(d) }).catch(() => {})
+            fetch(pulseUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) { setPulse(d); setPulseLoaded(true) } }).catch(() => {})
+            fetch(macroUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) { setMacro(d); setMacroLoaded(true) } }).catch(() => {})
         }
         load()
         const sec = Math.max(15, refreshSec || 60)
@@ -231,7 +233,7 @@ export default function PublicMarketBoard(props: Props) {
                 if (onCanvas) {
                     const demo: Record<string, [number, number]> = { kospi: [2950.4, 0.62], kosdaq: [845.1, -0.31], sp500: [7500.58, 1.08], nasdaq: [26517.93, 1.9], dow: [51564.7, 0.14], sox: [14341.78, 1.2], nikkei: [42180.0, 0.4], dax: [24310.5, -0.2], vix: [16.78, 2.31], usdkrw: [1531.5, 0.53], us_10y: [4.213, 0.0], us_2y: [3.842, 0.0], gold: [4174.3, -0.5], silver: [52.1, 0.8], copper: [4.62, 0.3], wti_oil: [78.4, -1.1], btc: [95026000, 0.6], eth: [2632000, -0.11], xrp: [1739, 0.06], sol: [111600, 0.81], doge: [126, 0.0] }
                     const [v, cp] = demo[it.key] || [100, 0]
-                    return { ...it, value: v, change_pct: cp, change: undefined as any, spark: it.spark ? seed(v, 24, cp / 100) : null }
+                    return { ...it, value: v, change_pct: cp, change: undefined as any, spark: it.spark ? seed(v, 24, cp / 100) : null, hasVal: true, pending: false }
                 }
                 const node = it.src === "pulse" ? dig(pulse, "indices." + it.key) : (M ? M[it.key] : undefined)
                 const value = node && node.value
@@ -239,10 +241,13 @@ export default function PublicMarketBoard(props: Props) {
                 const change = node && node.change
                 const sn = it.spark ? dig(M, it.spark) : undefined
                 const arr = sn && Array.isArray(sn.sparkline) ? sn.sparkline.map((x: any) => Number(x)).filter((x: number) => isFinite(x)) : null
-                return { ...it, value, change_pct, change, spark: arr && arr.length >= 2 ? arr : null }
-            }).filter((it) => it.value != null && isFinite(Number(it.value)) && Number(it.value) !== 0),
+                const hasVal = value != null && isFinite(Number(value)) && Number(value) !== 0
+                // 값 소스(pulse=값, macro=값) 아직 안 온 아이템 = pending(스켈레톤). 로드 끝났는데 값 없으면 absent(드롭).
+                const srcLoaded = it.src === "pulse" ? pulseLoaded : macroLoaded
+                return { ...it, value, change_pct, change, spark: arr && arr.length >= 2 ? arr : null, hasVal, pending: !hasVal && !srcLoaded }
+            }).filter((it: any) => it.hasVal || it.pending),
         })).filter((g) => g.items.length > 0)
-    }, [pulse, M, onCanvas])
+    }, [pulse, M, onCanvas, pulseLoaded, macroLoaded])
 
     const narrow = w > 0 && w < 560
     const cols = w <= 0 ? 4 : w < 440 ? 2 : w < 700 ? 3 : w < 1000 ? 4 : 5
@@ -428,6 +433,18 @@ export default function PublicMarketBoard(props: Props) {
         backgroundSize: "800px 100%",
         animation: "vsrShimmer 1.4s ease-in-out infinite",
     })
+    // 단일 스켈레톤 타일 — 로딩 중 아이템 자리(카드와 동일 레이아웃). macro 늦어도 원자재·크립토·SOX 등 자리 유지.
+    const skTile = (key: string) => (
+        <div key={key} style={{ background: C.card, borderRadius: 11, padding: "8px 10px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+            <div style={skBlock(40, 24)} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={skBlock("60%", 11)} />
+                <div style={skBlock("80%", 15, 4)} />
+                <div style={skBlock("40%", 11, 4)} />
+            </div>
+        </div>
+    )
+
     const skeleton = () => {
         const skGroups: number[] = [2, 6, 4]  // 국내 / 해외 지수 / 변동성·환율 카드 수 (12장)
         let n = 0
@@ -471,7 +488,7 @@ export default function PublicMarketBoard(props: Props) {
                             {g.title}{g.title === "원자재" ? <span style={{ marginLeft: 6, fontWeight: 600, color: C.cPos }}>· 누르면 KR 노출 종목</span> : ""}
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: 8 }}>
-                            {g.items.map(card)}
+                            {g.items.map((it: any) => it.pending ? skTile("sk:" + it.key) : card(it))}
                         </div>
                         {g.title === "원자재" && exposurePanel()}
                         {openDetail && g.items.some((it: any) => it.key === openDetail) && detailPanel(g.items.find((it: any) => it.key === openDetail))}
