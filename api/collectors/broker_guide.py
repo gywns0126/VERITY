@@ -29,7 +29,20 @@ DATA_PATH = os.path.abspath(
 BROKERS = ["한국투자증권", "토스증권", "키움증권", "미래에셋증권", "삼성증권", "NH투자증권"]
 TRADE_TYPES = ["소형주(코스닥) 단기", "미국주식 소액", "ISA 장기", "단타/고빈도", "중장기/배당"]
 
-DISCLAIMER = "Perplexity 자동집계 · 수수료·평점은 수시 변동 · 사실 비교일 뿐 권유 아님 · 거래 전 각 사 공식 고지 확인"
+# 🚨 검색 출처 제한 — 일반 블로그/커뮤니티 배제, 공식·준공식만. 출처 신뢰도 확보.
+# 금융투자협회(공시) + 금감원 + 각 사 공식 사이트.
+TRUSTED_DOMAINS = [
+    "kofia.or.kr",      # 금융투자협회 (온라인 수수료 비교 공시)
+    "fss.or.kr",        # 금융감독원
+    "truefriend.com",   # 한국투자증권
+    "tossinvest.com",   # 토스증권
+    "kiwoom.com",       # 키움증권
+    "miraeasset.com",   # 미래에셋증권
+    "samsungpop.com",   # 삼성증권
+    "nhqv.com",         # NH투자증권
+]
+
+DISCLAIMER = "공식·금융투자협회 공시 출처 자동집계 · 수수료는 수시 변동 · 사실 비교일 뿐 권유 아님 · 거래 전 각 사 공식 고지 확인"
 
 _SYSTEM = (
     "너는 한국 증권사의 수수료·기능을 '사실'만 집계하는 리서처다. "
@@ -181,6 +194,7 @@ def collect(force: bool = False) -> dict:
         system_prompt=_SYSTEM,
         max_tokens=4000,
         temperature=0.05,
+        search_domain_filter=TRUSTED_DOMAINS,
         response_format=_RESPONSE_FORMAT,
     )
     if res.get("error"):
