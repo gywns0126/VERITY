@@ -311,7 +311,10 @@ jobs:
       - name: KRX 시총 스냅샷 (PER/PBR 자체계산 입력)
         # KRX OpenAPI 공식 시총·상장주식수 → data/krx_mktcap.json. KIS 무관(KRX_API_KEY). 빌더 직전 실행.
         # 네트워크 호출. 다음 stock_report 빌더가 읽어 PER/PBR=시총÷순익·자본 자체계산.
+        # 🚨 KRX_API_KEY env 필수 — 누락 시 krx_openapi 가 ("",[]) 반환→0행→기존 파일 동결(6/19~6/23 stale 사고). RULE 8.
         continue-on-error: true
+        env:
+          KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
         run: python -m api.builders.krx_mktcap_snapshot
 
       - name: 공개 종목 리포트 빌드 (public-safe, allowlist)
