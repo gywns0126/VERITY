@@ -185,16 +185,115 @@ def _load_prev() -> dict | None:
         return None
 
 
+# 🚨 큐레이션 수수료 (공식 검증 — PM 확정값). LLM 자동집계가 정밀 수수료엔 약해(블로그=숫자있음/공식=추출불가)
+# 이 6개 국내수수료는 큐레이션으로 고정. ISA·신용·거래유형 reason 은 자동(Perplexity) 유지.
+# 형식: 증권사명 substring → (수수료, 공식 출처 URL). 비어있으면 자동값 유지(공란 가능).
+CURATED_FEES: dict = {
+    # PM 공식 검증 후 채움 (예: "한국투자증권": ("0.0140%", "https://www.truefriend.com/..."))
+}
+
+
+def _apply_curated(brokers: list) -> None:
+    """국내수수료 = 큐레이션 값으로 override (있는 종목만). 출처도 공식으로 교체."""
+    for b in brokers:
+        if not isinstance(b, dict):
+            continue
+        nm = b.get("name", "")
+        for key in CURATED_FEES:
+            if key in nm:
+                fee, src = CURATED_FEES[key]
+                b["domestic_fee"] = fee
+                if src:
+                    b["source_url"] = src
+                break
+
+
+# 각 사 공식 도메인 — focused 수수료 쿼리 1차 한정용.
+BROKER_OFFICIAL = {
+    "한국투자": "truefriend.com", "한투": "truefriend.com", "토스": "tossinvest.com",
+    "키움": "kiwoom.com", "미래에셋": "miraeasset.com", "삼성": "samsungpop.com",
+    "NH": "nhqv.com", "농협": "nhqv.com",
+}
+
+
+def _official_domain(broker: str) -> str:
+    for k in BROKER_OFFICIAL:
+        if k in (broker or ""):
+            return BROKER_OFFICIAL[k]
+    return ""
+
+
+_FEE_SYS = (
+    "너는 한국 증권사 수수료를 공식 자료 기준으로 정확히 찾는 리서처다. "
+    "추정·과장 금지. 공식 수수료표/금융투자협회 공시 기준 숫자만. 유효한 JSON 객체 하나만 출력."
+)
+_FEE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "schema": {
+            "type": "object",
+            "properties": {
+                "fee": {"type": "string"},
+                "source": {"type": "string"},
+                "basis": {"type": "string"},
+            },
+            "required": ["fee"],
+        }
+    },
+}
+
+
+def _fee_query(broker: str) -> str:
+    return (
+        f"{broker} 의 '국내주식 온라인(영업점 외) 위탁수수료율'을 공식 자료 기준 정확히 알려줘. "
+        "채널별로 다르면 '대표 온라인 기준' 하나로 (이벤트·비대면 우대는 basis 에 설명). "
+        '숫자는 % 로. JSON: {"fee": "0.0000%", "source": "공식 출처 URL", "basis": "기준/조건"}'
+    )
+
+
+def _fetch_fee(broker: str) -> dict:
+    """focused 단일 종목 수수료 추출. 공식 도메인 1차 → 일반 fallback. 유효 % 만 반환."""
+    dom = _official_domain(broker)
+    attempts: list = []
+    if dom:
+        attempts.append([dom, "kofia.or.kr"])
+    attempts.append(None)  # 무제한 fallback
+    for domains in attempts:
+        res = call_perplexity(
+            _fee_query(broker),
+            system_prompt=_FEE_SYS,
+            max_tokens=600,
+            temperature=0.0,
+            search_domain_filter=domains,
+            response_format=_FEE_FORMAT,
+        )
+        if res.get("error"):
+            continue
+        try:
+            d = json.loads(_strip_json(res.get("content", "")))
+        except Exception:
+            continue
+        fee = str(d.get("fee", "")).strip()
+        if _FEE_RE.search(fee):
+            return {
+                "fee": fee,
+                "source": str(d.get("source", "")).strip(),
+                "basis": str(d.get("basis", "")).strip(),
+                "official": domains is not None,
+            }
+    return {}
+
+
 def collect(force: bool = False) -> dict:
     """Perplexity 호출 → 검증 → broker_guide.json 발행. 실패 시 직전 유지."""
     prev = _load_prev()
     # search_recency_filter 미사용 — 수수료표·앱평점은 상시 참조정보라 "최근 N일" 제한 시 못 찾음.
+    # 메인 호출 = ISA·신용·거래유형(soft). 수수료는 아래 focused 호출이 정밀 override.
     res = call_perplexity(
         _build_query(),
         system_prompt=_SYSTEM,
         max_tokens=4000,
         temperature=0.05,
-        search_domain_filter=TRUSTED_DOMAINS,
         response_format=_RESPONSE_FORMAT,
     )
     if res.get("error"):
@@ -209,6 +308,30 @@ def collect(force: bool = False) -> dict:
         print(f"[broker_guide] raw content[:600]: {raw!r}")
         return {"status": "parse_fail", "kept_prev": prev is not None}
 
+    brokers = parsed.get("brokers", [])
+
+    # 🎯 focused 종목별 수수료 추출 (정밀 + 공식 출처) → domestic_fee/source override
+    fee_sources: list = []
+    fee_ok = 0
+    for b in brokers:
+        if not isinstance(b, dict):
+            continue
+        info = _fetch_fee(b.get("name", ""))
+        if info.get("fee"):
+            b["domestic_fee"] = info["fee"]
+            if info.get("basis"):
+                b["fee_basis"] = info["basis"]
+            if info.get("source"):
+                b["source_url"] = info["source"]
+                if info["source"] not in fee_sources:
+                    fee_sources.append(info["source"])
+            fee_ok += 1
+        else:
+            print(f"[broker_guide] ⚠ 수수료 추출 실패: {b.get('name','?')}")
+
+    # 수동 큐레이션 override (있으면 자동값보다 우선)
+    _apply_curated(brokers)
+
     ok, flags = _validate(parsed)
     if not ok:
         print(f"[broker_guide] 검증 실패 — 직전 유지: {flags}")
@@ -218,9 +341,10 @@ def collect(force: bool = False) -> dict:
         "as_of": datetime.now(KST).isoformat(),
         "source": f"perplexity {res.get('model', 'sonar')} (자동집계)",
         "disclaimer": DISCLAIMER,
-        "brokers": parsed.get("brokers", []),
+        "brokers": brokers,
         "by_trade_type": parsed.get("by_trade_type", []),
-        "citations": res.get("citations", []),
+        # 출처 = focused 수수료 호출의 공식 출처 우선, 없으면 메인 citations
+        "citations": fee_sources or res.get("citations", []),
         "flags": flags,
     }
     os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
