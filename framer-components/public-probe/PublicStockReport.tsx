@@ -279,7 +279,7 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     return (
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
             {!err && ticker ? (
-                <img src={LOGO_BASE + ticker + ".png"} alt="" width={size} height={size}
+                <img src={LOGO_BASE + String(ticker).replace(/-/g, ".") + ".png"} alt="" width={size} height={size}
                     onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: 11, objectFit: "cover", display: "block", background: C.bg }} />
             ) : (
