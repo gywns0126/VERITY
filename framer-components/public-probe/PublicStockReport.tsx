@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 시장경보 = 경보 시 헤더(종목명·가격·메타) 통째 틴트 박스(외곽선 없음)로 감싸 한눈에. 경보 없으면 헤더 평범.
  * 폰트 = Pretendard 단일. 탭→상세 = 기본지표(계산식+실제 투입숫자 facts_calc·출처)/수급(정확 주수)/동종업계(비교)/재무(전체 재무제표 그룹) + 공시·내부자·forensics(원문) — 전업러용 raw 접근. 있는 데이터만(RULE10).
  * 다크모드 = Framer 네이티브 토글(body[data-framer-theme]) 추종 — themeDark + MutationObserver. canvas 에선 dark prop. 사이트 다크모드 버튼과 실시간 연동.
- * 관심종목 = 로그인 시 헤더 ☆ → /api/watchgroups(JWT) 담기/해제. 미로그인=담기 안내. 세션=verity_supabase_session(GoldenGooseAuth).
+ * 관심종목 = 로그인 시 헤더 별(둥근 SVG, 2026-06-22 토스풍 라운드+소프트골드, 미담김도 회색 채움+외곽선) → /api/watchgroups(JWT) 담기/해제. 미로그인=담기 안내. 세션=verity_supabase_session(GoldenGooseAuth).
  */
 
 const LIGHT = {
@@ -420,6 +420,7 @@ export default function PublicStockReport(props: Props) {
     const [insiderMap, setInsiderMap] = useState<Record<string, any>>(SAMPLE_INSIDER)
     const [warnMap, setWarnMap] = useState<Record<string, any>>(SAMPLE_WARN)
     const [selTicker, setSelTicker] = useState<string>(SAMPLE[0].ticker)
+    const [usForen, setUsForen] = useState<any>(null)   // 美 forensics (per-ticker 엔드포인트 집계)
     const [query, setQuery] = useState("")
     const [focused, setFocused] = useState(false)
     const [live, setLive] = useState<{ price?: number; chg?: number }>({})
@@ -548,6 +549,20 @@ export default function PublicStockReport(props: Props) {
             .catch(() => {})
         return () => { alive = false }
     }, [warnUrl, onCanvas])
+
+    // 美 forensics — 종목이 US(비 6자리 ticker)일 때 per-ticker 엔드포인트 집계
+    // (Form4 내부자 · 13D/G 대량보유 · 13F 스마트머니 · 컨센서스). KR 은 skip.
+    useEffect(() => {
+        if (onCanvas) return
+        const t = String(selTicker || "").toUpperCase()
+        if (!t || /^[0-9]{6}$/.test(t)) { setUsForen(null); return }
+        let alive = true
+        fetch(base + "/api/verity/us-forensics?ticker=" + encodeURIComponent(t), { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (alive) setUsForen(d && d.status === "ok" ? (d.sections || null) : null) })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [selTicker, base, onCanvas])
 
     const s = useMemo(() => list.find((x) => x.ticker === selTicker) || list[0] || {}, [list, selTicker])
 
@@ -983,8 +998,11 @@ export default function PublicStockReport(props: Props) {
                     <span style={{ fontFamily: HEAD, fontSize: 23, fontWeight: 800, letterSpacing: "-0.6px" }}>{s.name}</span>
                     <span style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>{s.ticker} · {s.market}</span>
                     <button onClick={toggleStar} title={starItemId ? "관심종목 해제" : "관심종목 담기"} disabled={starBusy}
-                        style={{ flexShrink: 0, border: "none", background: "transparent", cursor: starBusy ? "default" : "pointer", fontSize: 20, lineHeight: 1, padding: "2px 4px", color: starItemId ? "#ffb800" : C.faint }}>
-                        {starItemId ? "★" : "☆"}
+                        aria-label={starItemId ? "관심종목 해제" : "관심종목 담기"}
+                        style={{ flexShrink: 0, border: "none", background: "transparent", cursor: starBusy ? "default" : "pointer", lineHeight: 0, padding: "2px 4px", display: "inline-flex", alignItems: "center" }}>
+                        <svg width={18} height={18} viewBox="0 0 24 24" fill={starItemId ? "#f6b93b" : C.line} stroke={starItemId ? "#f6b93b" : C.faint} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.685 21.5a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.45 10.286a.53.53 0 0 1 .294-.903l5.165-.756a2.122 2.122 0 0 0 1.597-1.16z" />
+                        </svg>
                     </button>
                     {starHint && <span style={{ fontSize: 11, color: C.vg, fontWeight: 700 }}>로그인하면 저장돼요</span>}
                     {warnTop && (
@@ -1400,6 +1418,80 @@ export default function PublicStockReport(props: Props) {
                         {insider.trades.length > 6 && (<button onClick={() => setInsiderAll((v) => !v)} style={{ width: "100%", marginTop: 8, border: "none", cursor: "pointer", padding: "9px 0", borderRadius: 10, fontSize: 12, fontWeight: 800, fontFamily: FONT, background: C.bg, color: C.sub }}>{insiderAll ? "접기" : `거래 ${insider.trades.length}건 전체 보기`}</button>)}
                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>DART 공시 사실(보고자·증감 +매수/−매도)만 · 자체 매매신호 아님 · 토스·네이버엔 없는 내부자 view</div>
                     </div>
+                </>
+            )}
+
+            {/* 美 forensics — Form4 내부자 · 13D/G 대량보유 · 13F 스마트머니 · 컨센서스 (US 종목, RULE 7 사실만) */}
+            {usForen && (
+                <>
+                    {usForen.insider && usForen.insider.trades && usForen.insider.trades.length > 0 && (
+                        <>
+                            {sectionTitle("美 내부자 거래 · SEC Form 4", "임원·이사·10%주주")}
+                            <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                                <div style={{ display: "flex", gap: 14, marginBottom: 10, flexWrap: "wrap" }}>
+                                    <span style={{ fontSize: 12.5, fontWeight: 800, color: C.up }}>매수 {usForen.insider.buy_n || 0}건</span>
+                                    <span style={{ fontSize: 12.5, fontWeight: 800, color: C.down }}>매도 {usForen.insider.sell_n || 0}건</span>
+                                    <span style={{ fontSize: 12.5, fontWeight: 800, color: (usForen.insider.net_change || 0) >= 0 ? C.up : C.down }}>순증감 {fmtShares(usForen.insider.net_change)}</span>
+                                </div>
+                                {usForen.insider.trades.slice(0, 6).map((t, i) => (
+                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
+                                        <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.person || "—"}{t.position ? " · " + t.position : ""}</span>
+                                        <span style={{ fontWeight: 800, color: (t.change || 0) >= 0 ? C.up : C.down, flexShrink: 0 }}>{fmtShares(t.change)} <span style={{ color: C.faint, fontWeight: 600 }}>({t.code || "?"})</span></span>
+                                    </div>
+                                ))}
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>SEC Form 4 공시 사실(취득+/처분−)만 · 자체 매매신호 아님 · 증권사·토스엔 없는 view</div>
+                            </div>
+                        </>
+                    )}
+
+                    {usForen.holdings && usForen.holdings.filings && usForen.holdings.filings.length > 0 && (
+                        <>
+                            {sectionTitle("美 대량보유 · SEC 13D/13G", "5%+ 신고")}
+                            <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                                <div style={{ display: "flex", gap: 14, marginBottom: 10, flexWrap: "wrap" }}>
+                                    {usForen.holdings.latest_pct != null && <span style={{ fontSize: 12.5, fontWeight: 800, color: C.vt }}>최근 {usForen.holdings.latest_pct}%</span>}
+                                    <span style={{ fontSize: 12.5, fontWeight: 800, color: C.amber }}>13D {usForen.holdings.n_13d || 0}</span>
+                                    <span style={{ fontSize: 12.5, fontWeight: 800, color: C.sub }}>13G {usForen.holdings.n_13g || 0}</span>
+                                </div>
+                                {usForen.holdings.filings.slice(0, 5).map((f, i) => (
+                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
+                                        <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.filer || "—"} <span style={{ color: C.faint }}>· {f.date}</span></span>
+                                        <span style={{ fontWeight: 800, flexShrink: 0, color: String(f.type || "").indexOf("13D") === 0 ? C.amber : C.sub }}>{f.type}{f.pct != null ? " · " + f.pct + "%" : ""}</span>
+                                    </div>
+                                ))}
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>SEC 13D(행동주의)/13G(수동) 5%+ 공시 사실만 · 자체 신호 아님</div>
+                            </div>
+                        </>
+                    )}
+
+                    {usForen.smart_money && usForen.smart_money.holders && usForen.smart_money.holders.length > 0 && (
+                        <>
+                            {sectionTitle("美 스마트머니 · 13F", "집중형 액티브 펀드")}
+                            <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 10 }}>보유 펀드 {usForen.smart_money.holder_count || usForen.smart_money.holders.length}곳 <span style={{ color: C.faint, fontWeight: 600 }}>· 합산 ${((usForen.smart_money.total_value_usd || 0) / 1e9).toFixed(1)}B</span></div>
+                                {usForen.smart_money.holders.slice(0, 6).map((h, i) => (
+                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
+                                        <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.fund}</span>
+                                        <span style={{ flexShrink: 0, fontWeight: 800 }}><span style={{ color: (h.change_type === "NEW" || h.change_type === "INCREASED") ? C.vg : h.change_type === "DECREASED" ? C.down : C.faint }}>{h.change_type}</span> <span style={{ color: C.faint, fontWeight: 600 }}>${((h.value_usd || 0) / 1e9).toFixed(1)}B</span></span>
+                                    </div>
+                                ))}
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>유명 집중형 펀드 13F 보유(분기말+45일 지연) · 인덱스펀드 제외 · 자체 점수 아님</div>
+                            </div>
+                        </>
+                    )}
+
+                    {usForen.consensus && (usForen.consensus.num_analysts || usForen.consensus.target_mean != null) && (
+                        <>
+                            {sectionTitle("美 애널리스트 컨센서스", "yfinance 집계")}
+                            <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                                {tipKV("투자의견", String(usForen.consensus.rec_key || "—").replace(/_/g, " "), C.vt)}
+                                {usForen.consensus.num_analysts != null && tipKV("애널리스트", usForen.consensus.num_analysts + "명")}
+                                {usForen.consensus.target_mean != null && tipKV("평균 목표가", "$" + Number(usForen.consensus.target_mean).toLocaleString("en-US"))}
+                                {usForen.consensus.upside_pct != null && tipKV("업사이드", (usForen.consensus.upside_pct >= 0 ? "+" : "") + usForen.consensus.upside_pct + "%", usForen.consensus.upside_pct >= 0 ? C.up : C.down)}
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>외부 애널리스트 집계 사실(yfinance) · 우리 자체 점수 아님</div>
+                            </div>
+                        </>
+                    )}
                 </>
             )}
 
