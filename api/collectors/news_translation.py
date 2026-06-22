@@ -13,7 +13,7 @@ from typing import Dict, List
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CACHE_PATH = os.path.join(_ROOT, "data", "news_translation_cache.json")
-MAX_NEW_PER_RUN = 50  # 신규 번역 cron 당 상한 (비용 가드)
+MAX_NEW_PER_RUN = 100  # 신규 번역 cron 당 상한 (비용 가드). 종목 헤드라인 75개 + 미국 15개를 한 run에 전량 처리(stragglers 방지). Gemini flash-lite 1 batch call 비용 미미.
 CACHE_CAP = 3000  # 캐시 size 상한 (최근 우선 유지)
 
 
