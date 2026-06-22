@@ -23,6 +23,7 @@
     "api/corp_probe.py": { "maxDuration": 10 },
     "api/reports.py": { "maxDuration": 10 },
     "api/us_financials.py": { "maxDuration": 5 },
+    "api/us_forensics.py": { "maxDuration": 5 },
     "api/brain_breakdown.py": { "maxDuration": 10 },
     "api/cron/dispatch_pulse.py": { "maxDuration": 10 }
   },
@@ -37,7 +38,8 @@
     { "source": "/api/estate/corp-disposals",    "destination": "/api/estate_corp_disposals" },
     { "source": "/api/estate/macro-bridge",       "destination": "/api/estate_macro_bridge" },
     { "source": "/api/system/health",            "destination": "/api/system_health" },
-    { "source": "/api/verity/us-financials",     "destination": "/api/us_financials" }
+    { "source": "/api/verity/us-financials",     "destination": "/api/us_financials" },
+    { "source": "/api/verity/us-forensics",      "destination": "/api/us_forensics" }
   ],
   "headers": [
     {
