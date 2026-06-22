@@ -342,7 +342,16 @@ def collect(force: bool = False) -> dict:
                     fee_sources.append(info["source"])
             fee_ok += 1
         else:
-            print(f"[broker_guide] ⚠ 수수료 추출 실패: {b.get('name','?')}")
+            # focused 실패 → 메인 호출값도 크기 가드 통과 못 하면 공란(틀린/영업점 값 노출 차단).
+            mainfee = str(b.get("domestic_fee", ""))
+            mv = _fee_pct(mainfee)
+            if _FEE_RE.search(mainfee) and 0 < mv <= FEE_MAX_PCT:
+                m = re.search(r"\d+(?:\.\d+)?\s*%", mainfee)  # 부가설명 제거, % 토큰만
+                b["domestic_fee"] = m.group(0) if m else mainfee
+                fee_ok += 1
+            else:
+                b["domestic_fee"] = ""
+            print(f"[broker_guide] ⚠ 수수료 추출 실패(메인값 {'채택' if b['domestic_fee'] else '공란'}): {b.get('name','?')}")
 
     # 수동 큐레이션 override (있으면 자동값보다 우선)
     _apply_curated(brokers)
