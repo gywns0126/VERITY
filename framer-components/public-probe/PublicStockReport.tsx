@@ -608,6 +608,7 @@ export default function PublicStockReport(props: Props) {
     }, [selTicker, base, onCanvas])
 
     const s = useMemo(() => list.find((x) => x.ticker === selTicker) || list[0] || {}, [list, selTicker])
+    const isUsTicker = useMemo(() => !/^\d{6}$/.test(String(s.ticker || "")), [s.ticker])  // 6자리=KR / 그 외=US
     // 로딩 중(실데이터 미도착 or 선택 종목 미발견)엔 삼성전자 샘플 폴백 대신 스켈레톤. 160ms 지연 게이트=즉시 로드 깜빡임 차단(토스식).
     const found = useMemo(() => list.some((x) => String(x.ticker) === String(selTicker)), [list, selTicker])
     const showSkeleton = !onCanvas && (!listLoaded || !found)
@@ -1087,7 +1088,7 @@ export default function PublicStockReport(props: Props) {
                 {s.business && <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600, marginTop: 2 }}>{s.business}</div>}
                 {live.price != null && (
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
-                        <span style={{ fontFamily: HEAD, fontSize: 25, fontWeight: 800, letterSpacing: "-0.8px" }}>{Number(live.price).toLocaleString()}원</span>
+                        <span style={{ fontFamily: HEAD, fontSize: 25, fontWeight: 800, letterSpacing: "-0.8px" }}>{isUsTicker ? "$" + Number(live.price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Number(live.price).toLocaleString() + "원"}</span>
                         {live.chg != null && isFinite(live.chg) && (
                             <span style={{ fontSize: 13, fontWeight: 800, color: pctColor(Number(live.chg), C) }}>
                                 {(live.chg > 0 ? "+" : "") + live.chg.toFixed(2)}%
