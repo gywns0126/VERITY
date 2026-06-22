@@ -35,12 +35,25 @@ def test_form_type_labels():
 
 
 def test_parse_13g_structured():
-    filer, pct, shares, cls, ev = b._parse_13dg(DOC_13G)
+    filer, pct, shares, cls, ev, filer_cik = b._parse_13dg(DOC_13G)
     assert filer == "Vanguard Capital Management"
     assert pct == 7.48
     assert shares == 1099168953
     assert cls == "Common Stock"
     assert ev == "03/31/2026"
+
+
+def test_parse_extracts_filer_cik_for_issuer_self_guard():
+    # filer CIK 추출 — 호출자가 대상 CIK 와 비교해 issuer-self 신고 제외(2026-06-23 검수).
+    doc = """<?xml version="1.0"?>
+    <edgarSubmission xmlns="http://www.sec.gov/edgar/schedule13g">
+    <headerData><filerInfo><filer><filerCredentials><cik>0000320193</cik></filerCredentials></filer></filerInfo></headerData>
+    <formData><coverPageHeaderReportingPersonDetails>
+      <reportingPersonName>Apple Inc</reportingPersonName><classPercent>90.0</classPercent>
+    </coverPageHeaderReportingPersonDetails></formData></edgarSubmission>"""
+    filer, pct, shares, cls, ev, filer_cik = b._parse_13dg(doc)
+    assert filer_cik == 320193                 # CIK 정수화(선행 0 제거)
+    assert b._cik_int("0000320193") == 320193  # 대상 CIK 와 동일 → 호출자가 self 판정
 
 
 def test_parse_malformed_returns_none():

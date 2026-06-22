@@ -61,8 +61,16 @@ def _strip_ns(xml_text: str) -> str:
     return x
 
 
-def _parse_13dg(xml_text: str) -> Optional[Tuple[str, Optional[float], int, str, str]]:
-    """primary_doc.xml → (filer, pct, shares, class, event_date). 구조화 부재 시 None."""
+def _cik_int(s: str) -> Optional[int]:
+    s = "".join(ch for ch in str(s or "") if ch.isdigit())
+    return int(s) if s else None
+
+
+def _parse_13dg(xml_text: str) -> Optional[Tuple[str, Optional[float], int, str, str, Optional[int]]]:
+    """primary_doc.xml → (filer, pct, shares, class, event_date, filer_cik). 구조화 부재 시 None.
+
+    filer_cik = 신고자 CIK — 호출자가 대상회사 CIK 와 비교해 issuer-self 신고 제외(2026-06-23 검수).
+    """
     try:
         root = ET.fromstring(_strip_ns(xml_text))
     except ET.ParseError:
@@ -76,9 +84,11 @@ def _parse_13dg(xml_text: str) -> Optional[Tuple[str, Optional[float], int, str,
                          or _txt(root.find(".//amountBeneficiallyOwned"))))
     cls = _txt(root.find(".//securitiesClassTitle"))
     ev = _txt(root.find(".//eventDateRequiresFilingThisStatement"))
+    # 신고자 CIK (headerData/filerInfo/filer/filerCredentials/cik)
+    filer_cik = _cik_int(_txt(root.find(".//filerCredentials/cik")) or _txt(root.find(".//filer/cik")))
     if not (filer or pct is not None or shares):
         return None
-    return filer, pct, shares, cls, ev
+    return filer, pct, shares, cls, ev, filer_cik
 
 
 def _load_prev() -> Dict[str, Dict[str, Any]]:
@@ -148,6 +158,7 @@ def main() -> int:
                 filer = cls = ev = ""
                 pct: Optional[float] = None
                 shares = 0
+                filer_cik: Optional[int] = None
                 try:
                     pr = sess.get(SEC_PRIMARY.format(cik=int(cik), accn_nodash=accn_nodash),
                                   headers={"User-Agent": SEC_UA}, timeout=12)
@@ -157,9 +168,17 @@ def main() -> int:
                     if pr.status_code == 200:
                         parsed = _parse_13dg(pr.text)
                         if parsed:
-                            filer, pct, shares, cls, ev = parsed
+                            filer, pct, shares, cls, ev, filer_cik = parsed
                 except requests.RequestException:
                     pass
+                # issuer-self 제외 — 발행사 본인이 신고자(filer CIK == 대상 CIK)면 외부 5%+ 보유 아님
+                # (2026-06-23 검수: MDT 90%·XOM·JHG 등 가짜 지분율 직격). 카운터도 되돌림.
+                if filer_cik is not None and filer_cik == _cik_int(cik):
+                    if ftype.startswith("13D"):
+                        n_13d -= 1
+                    else:
+                        n_13g -= 1
+                    continue
                 filings.append({
                     "date": dates[i],
                     "event_date": ev,
