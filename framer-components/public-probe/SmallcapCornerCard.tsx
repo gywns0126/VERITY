@@ -147,10 +147,48 @@ export default function SmallcapCornerCard(props: { width?: number; dark?: boole
     )
   }
   if (!data) {
+    const base = isDark ? "#222a33" : "#e9edf1"
+    const hi = isDark ? "#2d3742" : "#f3f5f7"
+    const shimmer = {
+      background: base,
+      backgroundImage: "linear-gradient(90deg, " + base + " 25%, " + hi + " 37%, " + base + " 63%)",
+      backgroundSize: "800px 100%",
+      animation: "vsrShimmer 1.4s ease-in-out infinite",
+    }
+    const bar = function (w: number | string, h: number, r: number) {
+      return { width: w, height: h, borderRadius: r, ...shimmer }
+    }
+    const rows = [0, 1, 2, 3, 4, 5, 6, 7]
     return (
       <div style={shell}>
-        <div style={{ fontSize: 13, color: C.faint, fontWeight: 600, padding: 20, textAlign: "center" }}>
-          불러오는 중…
+        <style>{"@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}"}</style>
+        {/* 헤더 자리 */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 4px 12px" }}>
+          <div style={bar(120, 20, 6)} />
+          <div style={bar(56, 14, 6)} />
+        </div>
+        {/* 필터 카드 자리 */}
+        <div style={{ background: C.card, borderRadius: 20, padding: 16, marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={bar(60, 18, 8)} />
+              <div style={bar(90, 16, 6)} />
+            </div>
+            <div style={bar(28, 16, 6)} />
+          </div>
+          <div style={{ ...bar("70%", 13, 6), marginBottom: 12 }} />
+          {/* 종목 행 자리 (FactRow 6~8개) */}
+          {rows.map(function (k) {
+            return (
+              <div
+                key={k}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 2px", borderTop: "1px solid " + C.line }}
+              >
+                <div style={bar(96, 14, 6)} />
+                <div style={bar(120, 11, 6)} />
+              </div>
+            )
+          })}
         </div>
       </div>
     )

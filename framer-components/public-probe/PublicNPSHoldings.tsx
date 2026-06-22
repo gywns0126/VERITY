@@ -21,8 +21,9 @@ const LIGHT = {
     green: "#15c47e", greenSoft: "#eafaf3", accent: "#0ca678",
 }
 const DARK = {
-    bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
-    line: "#2b2f37", up: "#ff6b76", down: "#5a9cff", blue: "#5a9cff", blueSoft: "#1b2740",
+    // 배경/카드/잉크 = 공시 피드·사이트 PageBg/NavBg 와 통일 (2026-06-22)
+    bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
+    line: "#252b34", up: "#ff6b76", down: "#5a9cff", blue: "#5a9cff", blueSoft: "#1b2740",
     green: "#3ddc97", greenSoft: "#16322a", accent: "#3ddc97",
 }
 
@@ -99,7 +100,30 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
 
     const wrap: any = { width: "100%", background: C.bg, fontFamily: "Pretendard, -apple-system, sans-serif", padding: 16, boxSizing: "border-box", color: C.ink }
 
-    if (loading) return <div style={{ ...wrap, textAlign: "center", color: C.faint, fontSize: 14, padding: 40 }}>국민연금 데이터 불러오는 중…</div>
+    if (loading) {
+        const skBase = isDark ? "#222a33" : "#e9edf1"
+        const skHi = isDark ? "#2d3742" : "#f3f5f7"
+        const sk = (w: any, h: number, r = 8, mt = 0) => ({ width: w, height: h, borderRadius: r, marginTop: mt, background: skBase, backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "vsrShimmer 1.4s ease-in-out infinite" })
+        const skCard: any = { background: C.card, borderRadius: 16, padding: "14px 16px", marginTop: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
+        return (
+            <div style={wrap}>
+                <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+                <div style={sk(120, 18, 6)} />
+                <div style={{ ...skCard, display: "flex", gap: 18, flexWrap: "wrap" }}>
+                    {[0, 1, 2].map((i) => (<div key={i}><div style={sk(70, 11, 4)} /><div style={sk(90, 22, 6, 6)} /></div>))}
+                </div>
+                <div style={skCard}>
+                    <div style={sk(150, 14, 6)} />
+                    {[0, 1, 2, 3, 4].map((i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                            <div style={{ flex: 1 }}><div style={sk(130, 14, 5)} /></div>
+                            <div style={sk(56, 15, 5)} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
+    }
     if (!data) return <div style={{ ...wrap, textAlign: "center", color: C.faint, fontSize: 14, padding: 40 }}>데이터를 불러오지 못했어요.</div>
 
     return (
@@ -161,7 +185,7 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                 {/* 검색 — 종목명·코드 */}
                 <div style={{ position: "relative", margin: "2px 0 8px" }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2.4" strokeLinecap="round"
-                        style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                        style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
                         <circle cx="11" cy="11" r="7" />
                         <line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
@@ -171,9 +195,10 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="종목명·코드 검색"
                         style={{
-                            width: "100%", boxSizing: "border-box", border: `1px solid ${C.line}`,
-                            background: C.bg, color: C.ink, borderRadius: 10,
-                            padding: "9px 32px 9px 34px", fontSize: 13, fontFamily: "Pretendard, -apple-system, sans-serif", outline: "none",
+                            width: "100%", boxSizing: "border-box", border: "none",
+                            background: C.bg, color: C.ink, borderRadius: 12,
+                            padding: "11px 32px 11px 36px", fontSize: 13, fontFamily: "Pretendard, -apple-system, sans-serif", outline: "none",
+                            WebkitAppearance: "none",
                         }}
                     />
                     {query && (

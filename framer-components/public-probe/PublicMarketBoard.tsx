@@ -417,15 +417,53 @@ export default function PublicMarketBoard(props: Props) {
         )
     }
 
+    // 로딩 스켈레톤 — 실제 카드 그리드(지수/환율/원자재/크립토)와 같은 형태. shimmer 회색 카드.
+    const isDark = onCanvas ? !!dark : themeDark
+    const skBase = isDark ? "#222a33" : "#e9edf1"
+    const skHi = isDark ? "#2d3742" : "#f3f5f7"
+    const skBlock = (bw: number | string, bh: number, mt?: number): CSSProperties => ({
+        width: bw, height: bh, marginTop: mt, borderRadius: 5,
+        background: skBase,
+        backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`,
+        backgroundSize: "800px 100%",
+        animation: "vsrShimmer 1.4s ease-in-out infinite",
+    })
+    const skeleton = () => {
+        const skGroups: number[] = [2, 6, 4]  // 국내 / 해외 지수 / 변동성·환율 카드 수 (12장)
+        let n = 0
+        return (
+            <div>
+                {skGroups.map((cnt, gi) => (
+                    <div key={gi} style={{ marginBottom: 12 }}>
+                        <div style={skBlock(54, 11)} />
+                        <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: 8, marginTop: 5 }}>
+                            {Array.from({ length: cnt }).map((_, i) => (
+                                <div key={n++} style={{ background: C.card, borderRadius: 11, padding: "8px 10px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                                    <div style={skBlock(40, 24)} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={skBlock("60%", 11)} />
+                                        <div style={skBlock("80%", 15, 4)} />
+                                        <div style={skBlock("40%", 11, 4)} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )
+    }
+
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px" }}>글로벌 시세</span>
                 <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>지수·환율·원자재·크립토 · 사실(해석·추천 아님)</span>
             </div>
 
             {rows.length === 0 ? (
-                <div style={{ padding: "40px 0", textAlign: "center", fontSize: 12.5, fontWeight: 700, color: C.faint }}>시세 불러오는 중…</div>
+                skeleton()
             ) : (
                 rows.map((g) => (
                     <div key={g.title} style={{ marginBottom: 12 }}>

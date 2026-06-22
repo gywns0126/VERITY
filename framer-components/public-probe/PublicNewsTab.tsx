@@ -285,6 +285,7 @@ export default function PublicNewsTab(props: Props) {
 
     return (
         <div style={wrap}>
+            <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             {/* 헤더 */}
             <div style={{ padding: "20px 22px 12px 22px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -362,9 +363,7 @@ export default function PublicNewsTab(props: Props) {
             {/* 본문 */}
             <div style={{ flex: 1, overflowY: "auto", padding: "4px 14px 18px 14px" }}>
                 {loading ? (
-                    <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>
-                        뉴스 불러오는 중…
-                    </div>
+                    <NewsSkeleton C={C} isDark={isDark} />
                 ) : failed ? (
                     <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>
                         뉴스를 불러오지 못했어요.
@@ -377,6 +376,43 @@ export default function PublicNewsTab(props: Props) {
                     <FlatNews items={us} C={C} empty="미국 뉴스가 없어요." cardH={props.marketCardHeight || 92} showKo={showKo} />
                 )}
             </div>
+        </div>
+    )
+}
+
+/* 로딩 스켈레톤 — 뉴스 카드 그리드 형태(제목 2줄 + 메타 1줄). shimmer. */
+function NewsSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
+    const { C, isDark } = props
+    const base = isDark ? "#222a33" : "#e9edf1"
+    const hi = isDark ? "#2d3742" : "#f3f5f7"
+    const bar = (w: string | number, h: number, mt: number): React.CSSProperties => ({
+        width: w,
+        height: h,
+        marginTop: mt,
+        borderRadius: 5,
+        background: base,
+        backgroundImage: "linear-gradient(90deg, " + base + " 25%, " + hi + " 37%, " + base + " 63%)",
+        backgroundSize: "800px 100%",
+        animation: "vsrShimmer 1.4s ease-in-out infinite",
+    })
+    const cards = [0, 1, 2, 3, 4, 5, 6, 7]
+    return (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 8, alignItems: "start" }}>
+            {cards.map((i) => (
+                <div
+                    key={i}
+                    style={{
+                        background: C.card,
+                        borderRadius: 12,
+                        padding: "14px 16px",
+                        boxSizing: "border-box",
+                    }}
+                >
+                    <div style={bar("92%", 13, 0)} />
+                    <div style={bar("68%", 13, 7)} />
+                    <div style={bar(90, 10, 14)} />
+                </div>
+            ))}
         </div>
     )
 }

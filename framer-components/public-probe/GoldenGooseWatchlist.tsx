@@ -180,10 +180,40 @@ export default function GoldenGooseWatchlist(props: Props) {
                 <span style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>내 종목</span>
                 {items.length > 0 && <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{items.length}종목</span>}
             </div>
-            {items.length === 0 ? (
+            {items.length === 0 && loading ? (
+                <>
+                    <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+                    <div style={{ background: C.card, borderRadius: 14, padding: "4px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                        {[0, 1, 2, 3, 4, 5].map((i) => {
+                            const base = themeDark ? "#222a33" : "#e9edf1"
+                            const hi = themeDark ? "#2d3742" : "#f3f5f7"
+                            const shimmer: CSSProperties = {
+                                background: base,
+                                backgroundImage: `linear-gradient(90deg, ${base} 25%, ${hi} 37%, ${base} 63%)`,
+                                backgroundSize: "800px 100%",
+                                animation: "vsrShimmer 1.4s ease-in-out infinite",
+                                borderRadius: 6,
+                            }
+                            return (
+                                <div key={i} style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                                    <div style={{ ...shimmer, width: 30, height: 30, flexShrink: 0, borderRadius: 9 }} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ ...shimmer, width: "55%", height: 13, marginBottom: 6 }} />
+                                        <div style={{ ...shimmer, width: "32%", height: 10 }} />
+                                    </div>
+                                    <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                                        <div style={{ ...shimmer, width: 56, height: 13 }} />
+                                        <div style={{ ...shimmer, width: 38, height: 11 }} />
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </>
+            ) : items.length === 0 ? (
                 <div style={{ background: C.card, borderRadius: 14, padding: "18px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{loading ? "불러오는 중…" : "아직 관심종목이 없어요"}</div>
-                    {!loading && <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>종목 리포트에서 ☆를 눌러 담아보세요.</div>}
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>아직 관심종목이 없어요</div>
+                    <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>종목 리포트에서 ☆를 눌러 담아보세요.</div>
                 </div>
             ) : (
                 <div style={{ background: C.card, borderRadius: 14, padding: "4px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
