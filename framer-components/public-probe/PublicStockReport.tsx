@@ -393,6 +393,42 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+/* 로딩 스켈레톤 — 토스식: 회색 placeholder가 리포트 레이아웃을 미리 그림 + shimmer.
+ * 삼성전자 샘플 flash 대신 노출. 즉시 로드 깜빡임은 호출부 160ms 지연 게이트로 차단. */
+function StockReportSkeleton({ C, isDark, narrow }: { C: any; isDark: boolean; narrow: boolean }) {
+    const base = isDark ? "#222a33" : "#e9edf1"
+    const hi = isDark ? "#2d3742" : "#f3f5f7"
+    const sk = (w: number | string, h: number, r = 8, mt = 0): CSSProperties => ({
+        width: w, height: h, borderRadius: r, marginTop: mt, background: base,
+        backgroundImage: `linear-gradient(90deg, ${base} 25%, ${hi} 37%, ${base} 63%)`,
+        backgroundSize: "800px 100%", animation: "vsrShimmer 1.4s ease-in-out infinite",
+    })
+    const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "14px 16px", marginTop: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
+    return (
+        <>
+            <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+            <div style={sk("100%", 44, 12)} />
+            <div style={{ ...card, display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={sk(44, 44, 12)} />
+                <div style={{ flex: 1 }}><div style={sk(140, 18, 6)} /><div style={sk(90, 13, 5, 8)} /></div>
+                <div><div style={sk(100, 22, 6)} /><div style={sk(64, 13, 5, 8)} /></div>
+            </div>
+            <div style={{ ...card, display: "flex", gap: 8 }}>
+                {[0, 1, 2, 3].map((i) => <div key={i} style={{ flex: 1 }}><div style={sk("100%", 48, 10)} /></div>)}
+            </div>
+            <div style={card}><div style={sk("100%", narrow ? 200 : 240, 12)} /></div>
+            {[0, 1].map((i) => (
+                <div key={i} style={card}>
+                    <div style={sk(120, 15, 6)} />
+                    <div style={sk("100%", 12, 5, 12)} />
+                    <div style={sk("85%", 12, 5, 8)} />
+                    <div style={sk("60%", 12, 5, 8)} />
+                </div>
+            ))}
+        </>
+    )
+}
+
 export default function PublicStockReport(props: Props) {
     const { stockUrl, flowUrl, forensicsUrl, insiderUrl, warnUrl, apiBase, dark } = props
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
@@ -419,7 +455,14 @@ export default function PublicStockReport(props: Props) {
     const [forensicsMap, setForensicsMap] = useState<Record<string, any>>(SAMPLE_FORENSICS)
     const [insiderMap, setInsiderMap] = useState<Record<string, any>>(SAMPLE_INSIDER)
     const [warnMap, setWarnMap] = useState<Record<string, any>>(SAMPLE_WARN)
-    const [selTicker, setSelTicker] = useState<string>(SAMPLE[0].ticker)
+    const [selTicker, setSelTicker] = useState<string>(() => {
+        if (typeof window !== "undefined") {
+            try { const qp = (new URLSearchParams(window.location.search).get("q") || "").trim(); if (qp) return qp.toUpperCase() } catch (e) {}
+        }
+        return SAMPLE[0].ticker
+    })
+    const [listLoaded, setListLoaded] = useState<boolean>(false)
+    const [skelVisible, setSkelVisible] = useState<boolean>(false)
     const [usForen, setUsForen] = useState<any>(null)   // 美 forensics (per-ticker 엔드포인트 집계)
     const [query, setQuery] = useState("")
     const [focused, setFocused] = useState(false)
@@ -482,7 +525,7 @@ export default function PublicStockReport(props: Props) {
             .then((d) => {
                 const arr = d && (Array.isArray(d) ? d : d.stocks)
                 if (!alive || !Array.isArray(arr) || !arr.length) return
-                setList(arr)
+                setList(arr); setListLoaded(true)
                 let initT = arr[0].ticker
                 if (typeof window !== "undefined") {
                     const qp = (new URLSearchParams(window.location.search).get("q") || "").trim().toLowerCase()
@@ -565,6 +608,14 @@ export default function PublicStockReport(props: Props) {
     }, [selTicker, base, onCanvas])
 
     const s = useMemo(() => list.find((x) => x.ticker === selTicker) || list[0] || {}, [list, selTicker])
+    // 로딩 중(실데이터 미도착 or 선택 종목 미발견)엔 삼성전자 샘플 폴백 대신 스켈레톤. 160ms 지연 게이트=즉시 로드 깜빡임 차단(토스식).
+    const found = useMemo(() => list.some((x) => String(x.ticker) === String(selTicker)), [list, selTicker])
+    const showSkeleton = !onCanvas && (!listLoaded || !found)
+    useEffect(() => {
+        if (!showSkeleton) { setSkelVisible(false); return }
+        const t = setTimeout(() => setSkelVisible(true), 160)
+        return () => clearTimeout(t)
+    }, [showSkeleton])
 
     useEffect(() => { setHoverIdx(null); setOpenDisc(-1); setOpenMetric(""); setOpenFlow(-1); setOpenPeer(-1); setOpenFin(false); setForenAll(false); setInsiderAll(false); setOpenTip("") }, [selTicker])
 
@@ -925,9 +976,12 @@ export default function PublicStockReport(props: Props) {
         </div>
     )
 
+    // 검색 필드 — 공시 페이지(PublicDisclosureFeed)와 동일 토스식 borderless 채움 (테두리 X, 돋보기 아이콘 + 클리어 ×)
     const inputStyle: CSSProperties = {
-        width: "100%", border: `1px solid ${C.line}`, borderRadius: 12, padding: "11px 14px",
-        fontSize: 14, fontFamily: FONT, background: C.card, color: C.ink, outline: "none", boxSizing: "border-box",
+        width: "100%", boxSizing: "border-box", border: "none",
+        background: C.card, color: C.ink, borderRadius: 12,
+        padding: "12px 34px 12px 38px", fontSize: 13.5, fontFamily: FONT, outline: "none",
+        WebkitAppearance: "none",
     }
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
@@ -966,13 +1020,30 @@ export default function PublicStockReport(props: Props) {
         ? { marginTop: 14, background: warnTint, borderRadius: 18, padding: narrow ? "13px 14px" : "15px 17px" }
         : { marginTop: 14, paddingLeft: narrow ? 14 : 17 }
 
+    if (showSkeleton) {
+        return (
+            <div ref={rootRef} style={wrap}>
+                {skelVisible && <StockReportSkeleton C={C} isDark={C === DARK} narrow={narrow} />}
+            </div>
+        )
+    }
+
     return (
         <div ref={rootRef} style={wrap}>
-            {/* 검색 */}
+            {/* 검색 — 공시 페이지와 동일 토스식 borderless 채움 (돋보기 아이콘 + 클리어 ×) */}
             <div style={{ position: "relative" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2.4" strokeLinecap="round"
+                    style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                    <circle cx="11" cy="11" r="7" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
                 <input style={inputStyle} placeholder={`종목 검색 (이름·코드) · 전 종목 ${list.length}개`}
                     value={query} onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 150)} />
+                {query && (
+                    <span role="button" tabIndex={0} onMouseDown={(e) => { e.preventDefault(); setQuery("") }}
+                        style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: C.faint, fontSize: 15, fontWeight: 700, cursor: "pointer", lineHeight: 1 }}>×</span>
+                )}
                 {focused && matches.length > 0 && (
                     <div style={{
                         position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 60,
