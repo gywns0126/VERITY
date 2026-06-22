@@ -1065,7 +1065,11 @@ def _compute_macro_multiplier(stock: Dict[str, Any],
     horizon = portfolio.get("market_horizon") or {}
 
     pbr = _safe_float(stock.get("pbr"), 1.0) or 1.0
-    valuation_penalty = max(0.0, min(0.15, (pbr - 1.0) / 3.0 * 0.15))
+    # 2026-06-23 US baseline 보정(PM 고고) — KR median PBR ~1.0 vs S&P 장기 median P/B ~3.0.
+    # baseline 1.0 고정 시 US(S&P median ~4)는 거의 다 max penalty(0.15) → 사이징 차별력 소실.
+    # KR-baseline 결함 fix(wide_scan sector_thresholds US 분기와 동류, curve-fit 아님). RULE 7 1회.
+    _pbr_base = 3.0 if stock.get("currency") == "USD" else 1.0
+    valuation_penalty = max(0.0, min(0.15, (pbr - _pbr_base) / 3.0 * 0.15))
 
     currency_penalty = 0.0
     usdkrw = None
