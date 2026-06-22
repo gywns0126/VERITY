@@ -237,7 +237,12 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                 {!query.trim() && shownHoldings.length > NPS_PREVIEW && (
                     <div role="button" tabIndex={0} onClick={() => setNpsAll((v) => !v)}
                         style={{ marginTop: 4, padding: "11px 0 5px", textAlign: "center", cursor: "pointer", fontSize: 12.5, fontWeight: 800, color: C.accent, borderTop: `1px solid ${C.line}` }}>
-                        {npsAll ? "접기 ▲" : `더보기 (${shownHoldings.length - NPS_PREVIEW}개 더) ▼`}
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            {npsAll ? "접기" : `더보기 (${shownHoldings.length - NPS_PREVIEW}개 더)`}
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ transform: npsAll ? "rotate(180deg)" : "none", transition: "transform 150ms ease" }}>
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </span>
                     </div>
                 )}
             </div>
