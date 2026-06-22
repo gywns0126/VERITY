@@ -625,7 +625,7 @@ export default function PublicStockReport(props: Props) {
         let alive = true
         setLive({})
         const tick = () => {
-            fetch(base + "/api/stock?q=" + encodeURIComponent(s.ticker) + "&market=kr")
+            fetch(base + "/api/stock?q=" + encodeURIComponent(s.ticker) + "&market=" + (/^\d{6}$/.test(String(s.ticker)) ? "kr" : "us"))
                 .then((r) => (r.ok ? r.json() : null))
                 .then((d) => {
                     if (!alive || !d) return

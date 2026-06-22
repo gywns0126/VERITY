@@ -458,7 +458,7 @@ export default function PublicDiscovery(props: Props) {
         setLivePx({})
         if (onCanvas || !wide || !selected || !base) return
         let alive = true
-        fetch(base + "/api/stock?q=" + encodeURIComponent(selected) + "&market=kr")
+        fetch(base + "/api/stock?q=" + encodeURIComponent(selected) + "&market=" + (/^\d{6}$/.test(String(selected)) ? "kr" : "us"))
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive || !d) return
