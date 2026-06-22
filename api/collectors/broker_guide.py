@@ -189,7 +189,9 @@ def _load_prev() -> dict | None:
 # 이 6개 국내수수료는 큐레이션으로 고정. ISA·신용·거래유형 reason 은 자동(Perplexity) 유지.
 # 형식: 증권사명 substring → (수수료, 공식 출처 URL). 비어있으면 자동값 유지(공란 가능).
 CURATED_FEES: dict = {
-    # PM 공식 검증 후 채움 (예: "한국투자증권": ("0.0140%", "https://www.truefriend.com/..."))
+    # PM 공식 출처 제공 pin (2026-06-22). 자동 추출 불안정 종목만 고정. 값은 draft — 페이지 대조해 수정 가능.
+    "삼성증권": ("0.0147%", "https://www.samsungpop.com/?MENU_CODE=M1454054239846"),
+    "NH투자증권": ("0.0150%", "https://www.nhsec.com"),
 }
 
 
