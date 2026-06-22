@@ -15,6 +15,10 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *
  * 다크모드 = body[data-framer-theme] 추종(다른 public 컴포넌트와 동일 패턴). 캔버스 에디터선 dark prop 정적 프리뷰.
  *
+ * 🚨 카드 선택(2026-06-22) = 상세 펼침 시 초록 외곽선 X → 회색 pressed(배경 chipBg 틴트 + inset 그림자, 눌린 느낌)로 표시.
+ *   상세는 추세선·상관·절대변동 중 추가 정보가 있을 때만 클릭 가능(hasDetail) — 카드와 같은 값 반복 방지.
+ *   2026-06-22: 코스피(^KS11)·코스닥(^KQ11)·달러환율(KRW=X) 30일 sparkline 추가(macro_data.py) → 값은 price_pulse 실시간 유지, 추세선만 macro. 전 카드 추세선·상세 일관.
+ *
  * 🚨 엣지 (토스·증권사 구조적 불가, 2026-06-21):
  *  - 자산 간 상관(30일) = macro.cross_asset_corr — 금·원유 ↔ 코스피/달러/BTC/금리 상관(시세로 계산한 사실). 가격 나열이 아닌 quant 관계.
  *  - 원자재 → KR 노출 = 원자재 카드 클릭 시 원가·매출 연관 KR 산업/종목(commodity_exposure). RULE 7 = 산업 멤버십 사실, 수혜·추천 0(방향 종목별 상이).
@@ -46,8 +50,8 @@ const CORR_PAIRS: [string, string][] = [["gold", "stock"], ["gold", "usd"], ["go
 const GROUPS: { title: string; items: { key: string; name: string; src: "pulse" | "macro"; spark?: string; dec?: number; unit?: string }[] }[] = [
     {
         title: "국내", items: [
-            { key: "kospi", name: "코스피", src: "pulse", dec: 2 },
-            { key: "kosdaq", name: "코스닥", src: "pulse", dec: 2 },
+            { key: "kospi", name: "코스피", src: "pulse", spark: "kospi", dec: 2 },
+            { key: "kosdaq", name: "코스닥", src: "pulse", spark: "kosdaq", dec: 2 },
         ],
     },
     {
@@ -63,7 +67,7 @@ const GROUPS: { title: string; items: { key: string; name: string; src: "pulse" 
     {
         title: "변동성·환율·금리", items: [
             { key: "vix", name: "VIX 공포지수", src: "pulse", spark: "fred.vix_close", dec: 2 },
-            { key: "usdkrw", name: "달러 환율", src: "pulse", dec: 2, unit: "원" },
+            { key: "usdkrw", name: "달러 환율", src: "pulse", spark: "usd_krw", dec: 2, unit: "원" },
             { key: "us_10y", name: "미국 10년물", src: "macro", spark: "us_10y", dec: 3, unit: "%" },
             { key: "us_2y", name: "미국 2년물", src: "macro", spark: "us_2y", dec: 3, unit: "%" },
         ],
@@ -256,13 +260,16 @@ export default function PublicMarketBoard(props: Props) {
         const expoHit = expoData && expoData[it.key] && Number(expoData[it.key].count) > 0
         const open = openCommodity === it.key
         const openD = openDetail === it.key
-        const clickable = expoHit || it.value != null
+        // 상세 패널이 카드보다 더 줄 게 있을 때만 클릭 가능 (추세선·상관·절대변동). 없으면(코스피·코스닥 등) 비활성 — 같은 정보 반복 방지.
+        const hasDetail = !!(it.spark && it.spark.length >= 2) || !!assetCorr(it.key) || (it.change != null && isFinite(Number(it.change)))
+        const detailable = it.value != null && hasDetail
+        const clickable = expoHit || detailable
         const onCardClick = expoHit
             ? () => { setOpenDetail(""); setOpenCommodity(open ? "" : it.key) }
-            : (clickable ? () => { setOpenCommodity(""); setOpenDetail(openD ? "" : it.key) } : undefined)
+            : (detailable ? () => { setOpenCommodity(""); setOpenDetail(openD ? "" : it.key) } : undefined)
         return (
             <div key={it.key} onClick={onCardClick}
-                style={{ background: C.card, borderRadius: 11, padding: "8px 10px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 9, minWidth: 0, cursor: clickable ? "pointer" : "default", outline: (open || openD) ? `1.5px solid ${C.cPos}` : "none" }}>
+                style={{ background: (open || openD) ? C.chipBg : C.card, borderRadius: 11, padding: "8px 10px", boxShadow: (open || openD) ? "inset 0 1px 3px rgba(0,0,0,0.12)" : "0 1px 2px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 9, minWidth: 0, cursor: clickable ? "pointer" : "default", transition: "background 0.12s, box-shadow 0.12s" }}>
                 {it.spark && <Spark data={it.spark} color={col} w={40} h={24} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>

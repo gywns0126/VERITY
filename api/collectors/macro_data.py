@@ -54,6 +54,8 @@ def get_macro_indicators() -> dict:
         "sse": _get_index_change("000001.SS", "상해종합"),
         "dax": _get_index_change("^GDAXI", "DAX"),
         "sox": _get_index_change("^SOX", "필라델피아 반도체"),
+        "kospi": _get_index_change("^KS11", "코스피"),    # 30일 추세선용(값은 price_pulse 실시간 유지)
+        "kosdaq": _get_index_change("^KQ11", "코스닥"),   # 30일 추세선용(값은 price_pulse 실시간 유지)
         "btc": _get_upbit_btc(),                 # 디지털 금
         "eth": _get_upbit("KRW-ETH"),            # 스마트컨트랙트 대장
         "xrp": _get_upbit("KRW-XRP"),            # 결제 (KR 업비트 거래량 최상위)
@@ -142,24 +144,28 @@ def get_macro_indicators() -> dict:
 
 
 def _get_usd_krw() -> dict:
+    # period=1mo: 30일 sparkline(공개 시세 보드 추세선용) + week_high/low 는 최근 5거래일 유지(의미 보존).
     meta = {"source": "yfinance", "as_of": _now_kst_iso()}
     try:
         t = yf.Ticker("KRW=X")
-        hist = t.history(period="5d")
-        if len(hist) >= 2:
-            current = float(hist["Close"].iloc[-1])
-            prev = float(hist["Close"].iloc[-2])
+        hist = t.history(period="1mo")
+        closes = [float(v) for v in hist["Close"].tolist() if v == v]
+        if len(closes) >= 2:
+            current = closes[-1]
+            prev = closes[-2]
             change = round(current - prev, 2)
             pct = round((current - prev) / prev * 100, 2) if prev else 0
-            week_high = round(float(hist["Close"].max()), 2)
-            week_low = round(float(hist["Close"].min()), 2)
-            return {"value": round(current, 2), "change": change, "change_pct": pct, "week_high": week_high, "week_low": week_low, **meta, "status": "ok"}
-        elif len(hist) == 1:
-            v = round(float(hist["Close"].iloc[-1]), 2)
-            return {"value": v, "change": 0, "change_pct": 0, "week_high": v, "week_low": v, **meta, "status": "ok"}
+            recent5 = closes[-5:]
+            week_high = round(max(recent5), 2)
+            week_low = round(min(recent5), 2)
+            sparkline = [round(c, 2) for c in closes][-30:]
+            return {"value": round(current, 2), "change": change, "change_pct": pct, "week_high": week_high, "week_low": week_low, "sparkline": sparkline, **meta, "status": "ok"}
+        elif len(closes) == 1:
+            v = round(closes[0], 2)
+            return {"value": v, "change": 0, "change_pct": 0, "week_high": v, "week_low": v, "sparkline": [v], **meta, "status": "ok"}
     except Exception as e:
         _log_collector_fail("_get_usd_krw", "KRW=X", e)
-    return {"value": 0, "change": 0, "change_pct": 0, "week_high": 0, "week_low": 0, **meta, "status": "fail"}
+    return {"value": 0, "change": 0, "change_pct": 0, "week_high": 0, "week_low": 0, "sparkline": [], **meta, "status": "fail"}
 
 
 def _get_fx(ticker: str, name: str) -> dict:
