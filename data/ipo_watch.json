@@ -1,19 +1,122 @@
 {
-  "updated_at": "2026-06-15T11:02:43.797181+09:00",
+  "updated_at": "2026-06-22T11:07:58.199671+09:00",
   "source": "DART OpenAPI list.json (C001 증권신고서/지분증권, corp_cls=E)",
   "search_window_days": 88,
   "disclaimer": "watch list (후보 신호, 가설 N=0). 추천 아님 — 상장 전은 가격 데이터가 없어 검증 trail 미적용. 상장 후 funnel 편입 시점부터 검증 시작.",
-  "raw_c001_count": 261,
-  "count": 7,
+  "raw_c001_count": 268,
+  "count": 8,
   "watch": [
+    {
+      "corp_name": "스트라드비젼",
+      "corp_code": "01370517",
+      "rcept_no": "20260617000168",
+      "rcept_dt": "20260617",
+      "report_nm": "[발행조건확정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260617000168",
+      "stage": "확정",
+      "offering": {
+        "shares": 7000000,
+        "price_planned": 12000,
+        "total_planned": 84000000000,
+        "payment_date": "2026.06.23",
+        "subscribe_start": "2026.06.18",
+        "subscribe_end": "2026.06.19"
+      },
+      "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": true,
+        "bsns_year": "2025",
+        "total_assets": 51961024650,
+        "total_liabilities": 27820494705,
+        "equity": 24140529945,
+        "debt_ratio_pct": 115.24
+      }
+    },
+    {
+      "corp_name": "져스텍",
+      "corp_code": "00577593",
+      "rcept_no": "20260616000249",
+      "rcept_dt": "20260616",
+      "report_nm": "[발행조건확정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260616000249",
+      "stage": "확정",
+      "offering": {
+        "shares": 1600000,
+        "price_planned": 10500,
+        "payment_date": "2026.06.23",
+        "subscribe_start": "2026.06.18",
+        "subscribe_end": "2026.06.19"
+      },
+      "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
+    {
+      "corp_name": "에이치엘지노믹스",
+      "corp_code": "00624244",
+      "rcept_no": "20260616000156",
+      "rcept_dt": "20260616",
+      "report_nm": "증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260616000156",
+      "stage": "최초",
+      "offering": {
+        "shares": 2565000,
+        "price_planned": 18500,
+        "total_planned": 47452500000,
+        "payment_date": "2026.07.16",
+        "subscribe_start": "2026.07.13",
+        "subscribe_end": "2026.07.14"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "원",
+        "periods": [
+          "2026년 1분기 (제27기)",
+          "2025년 (제26기)",
+          "2024년 (제25기)",
+          "2023년 (제24기)"
+        ],
+        "revenue": [
+          8435361500,
+          28877071351,
+          28166550706,
+          24811218833
+        ],
+        "operating_income": [
+          2890137504,
+          9327922068,
+          8954361655,
+          7666923781
+        ],
+        "net_income": [
+          2675663011,
+          8452467677,
+          8414919262,
+          7158279258
+        ]
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
     {
       "corp_name": "케이앤에스아이앤씨",
       "corp_code": "00920731",
-      "rcept_no": "20260612000596",
-      "rcept_dt": "20260612",
-      "report_nm": "증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260612000596",
-      "stage": "최초",
+      "rcept_no": "20260615000244",
+      "rcept_dt": "20260615",
+      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260615000244",
+      "stage": "정정",
       "offering": {
         "shares": 2400000,
         "price_planned": 9000,
@@ -21,6 +124,31 @@
         "payment_date": "2026.07.30",
         "subscribe_start": "2026.07.27",
         "subscribe_end": "2026.07.28"
+      },
+      "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
+    {
+      "corp_name": "레메디",
+      "corp_code": "01501764",
+      "rcept_no": "20260615000074",
+      "rcept_dt": "20260615",
+      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260615000074",
+      "stage": "정정",
+      "offering": {
+        "shares": 1200000,
+        "price_planned": 17800,
+        "total_planned": 21360000000,
+        "payment_date": "2026.07.06",
+        "subscribe_start": "2026.07.01",
+        "subscribe_end": "2026.07.02"
       },
       "doc_financials": {
         "available": false
@@ -57,90 +185,11 @@
       }
     },
     {
-      "corp_name": "스트라드비젼",
-      "corp_code": "01370517",
-      "rcept_no": "20260611000588",
-      "rcept_dt": "20260611",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260611000588",
-      "stage": "정정",
-      "offering": {
-        "shares": 7000000,
-        "price_planned": 12000,
-        "total_planned": 84000000000,
-        "payment_date": "2026.06.23",
-        "subscribe_start": "2026.06.18",
-        "subscribe_end": "2026.06.19"
-      },
-      "doc_financials": {
-        "available": true,
-        "unit": "백만원",
-        "periods": [
-          "2023년 (제24기)",
-          "2024년 (제25기)",
-          "2025년 (제26기)",
-          "2026년 1분기"
-        ],
-        "revenue": [
-          3065015,
-          3713617,
-          4252067,
-          935709
-        ],
-        "operating_income": [
-          181414,
-          224434,
-          255302,
-          21175
-        ],
-        "net_income": [
-          137764,
-          170788,
-          182484,
-          17904
-        ]
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": true,
-        "bsns_year": "2025",
-        "total_assets": 51961024650,
-        "total_liabilities": 27820494705,
-        "equity": 24140529945,
-        "debt_ratio_pct": 115.24
-      }
-    },
-    {
-      "corp_name": "레메디",
-      "corp_code": "01501764",
-      "rcept_no": "20260610000563",
-      "rcept_dt": "20260610",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260610000563",
-      "stage": "정정",
-      "offering": {
-        "shares": 1200000,
-        "price_planned": 17800,
-        "total_planned": 21360000000,
-        "payment_date": "2026.07.06",
-        "subscribe_start": "2026.07.01",
-        "subscribe_end": "2026.07.02"
-      },
-      "doc_financials": {
-        "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      }
-    },
-    {
       "corp_name": "빅웨이브로보틱스",
       "corp_code": "01722066",
       "rcept_no": "20260522000660",
       "rcept_dt": "20260522",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "report_nm": "[정정제출요구][기재정정]증권신고서(지분증권)",
       "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260522000660",
       "stage": "정정",
       "offering": {
@@ -223,56 +272,6 @@
           7759,
           533
         ]
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      }
-    },
-    {
-      "corp_name": "져스텍",
-      "corp_code": "00577593",
-      "rcept_no": "20260518000304",
-      "rcept_dt": "20260518",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260518000304",
-      "stage": "정정",
-      "offering": {
-        "shares": 1600000,
-        "price_planned": 10500,
-        "payment_date": "2026.06.16",
-        "subscribe_start": "2026.06.11",
-        "subscribe_end": "2026.06.12"
-      },
-      "doc_financials": {
-        "available": true,
-        "unit": "천원",
-        "periods": [
-          "2026년 1분기 (제28기 1분기)",
-          "2025년 1분기 (제27기 1분기)",
-          "2025년 (제27기)",
-          "2024년 (제26기)",
-          "2023년 (제25기)",
-          "2022년 (제24기)"
-        ],
-        "revenue": [
-          3262641,
-          2464896,
-          21343101,
-          19308230,
-          17559573,
-          16490213
-        ],
-        "operating_income": [
-          -609715,
-          -954487,
-          -991877,
-          676085,
-          888466,
-          -3030630
-        ],
-        "net_income": []
       },
       "doc_parse_error": null,
       "financials": {
