@@ -3,17 +3,12 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
  * ETF 자금흐름 렌즈 — VERITY 공개 터미널 (골든구스). 국민연금(PublicNPSHoldings)처럼 독립 "렌즈".
+ * 디자인 = 토스식 미니멀: 무채색 위주 + 방향값만 유입(빨강)/유출(파랑), 얇은 구분선, 색배경·외곽선·이모지 없음.
  *
- * 🚨 차별 각도: 토스/네이버 ETF 화면(보수율·수익률)과 달리 "패시브 자금이 어느 테마로 들어오나/나가나".
- *   진짜 흐름 = Δ상장좌수(설정/환매) = 가격효과 제거. est_flow = Δ좌수 × NAV (그날 설정/환매 자금규모).
- *
- * 🚨 RULE 7 (held-2027 / feedback_scope):
- *  - 상장좌수·NAV·순자산·흐름 = KRX OpenAPI etf_bydd_trd 1차 사실(api/collectors/etf_flow.py 누적). 그대로 노출.
- *  - 점수·추천·등급 0 (RULE 6 통과 — 결정론적 산식 표시일 뿐).
- *  - 흐름 = 일별 누적형. 첫 신호 = 거래일 ≥2 (그 전엔 "집계 중" graceful — N 누적 투명 표기).
- *
- * 데이터 = data/etf_flow.json (단일 writer, publish-data 발행). 새 파이프라인 0.
- * 테마 = body[data-framer-theme] 자가 추종(다른 public-probe 컴포넌트와 동일 규약).
+ * 🚨 차별 각도: 토스/네이버 ETF 화면(보수율·수익률)과 달리 "패시브 자금이 어느 테마로".
+ *   진짜 흐름 = Δ상장좌수(설정/환매) = 가격효과 제거. est_flow = Δ좌수 × NAV.
+ * 🚨 RULE 7: 상장좌수·NAV·순자산·흐름 = KRX OpenAPI 1차 사실. 점수·추천 0. 첫 신호 = 거래일 ≥2(그 전 "집계 중").
+ * 데이터 = data/etf_flow.json (단일 writer, publish-data 발행). 테마 = body[data-framer-theme] 자가 추종.
  */
 
 interface Props {
@@ -24,15 +19,14 @@ const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", in: "#0ca678", inS: "#e7faf0", out: "#f04452", outS: "#ffeef0", accentS: "#eaf3ff",
+    line: "#f0f1f3", up: "#f04452", down: "#3182f6",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
-    line: "#252b34", in: "#34e08a", inS: "#0f241c", out: "#f04452", outS: "#2a1518", accentS: "#15233a",
+    line: "#222730", up: "#f04452", down: "#5b9bff",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
-// category enum → 한글 (etf_flow.py / etfdata.py _KR_TOP_ETFS 와 1:1)
 const CAT: Record<string, string> = {
     equity_domestic: "국내주식", equity_foreign: "해외주식", thematic: "테마",
     bond_kr: "한국채권", bond_us: "미국채권", commodity_gold: "금", commodity: "원자재",
@@ -112,7 +106,6 @@ export default function PublicETFFlow(props: Props) {
     const narrow = w > 0 && w < 560
     const loading = !data
 
-    // 카테고리 집계 (흐름 있는 것만)
     const cats = useMemo(() => {
         if (!data) return [] as any[]
         const m: Record<string, number> = {}
@@ -123,9 +116,9 @@ export default function PublicETFFlow(props: Props) {
         return Object.entries(m).map(([k, v]) => ({ cat: k, flow: v })).sort((a, b) => Math.abs(b.flow) - Math.abs(a.flow))
     }, [data])
 
-    const skBase = isDark ? "#222a33" : "#e9edf1"
-    const skHi = isDark ? "#2d3742" : "#f3f5f7"
-    const skBlock = (bw: any, bh: number, br = 6): CSSProperties => ({
+    const skBase = isDark ? "#1e242c" : "#edeff2"
+    const skHi = isDark ? "#2a313b" : "#f5f6f8"
+    const sk = (bw: any, bh: number, br = 7): CSSProperties => ({
         width: bw, height: bh, borderRadius: br, background: skBase,
         backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`,
         backgroundSize: "800px 100%", animation: "vefShimmer 1.4s ease-in-out infinite", flexShrink: 0,
@@ -133,21 +126,20 @@ export default function PublicETFFlow(props: Props) {
 
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT,
-        padding: narrow ? 14 : 18, boxSizing: "border-box", color: C.ink,
+        padding: narrow ? 16 : 22, boxSizing: "border-box", color: C.ink,
     }
-    const cardStyle: CSSProperties = {
-        background: C.card, borderRadius: 16, padding: narrow ? 14 : 16,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)", boxSizing: "border-box",
+    const card: CSSProperties = {
+        background: C.card, borderRadius: 18, padding: narrow ? 16 : 20, boxSizing: "border-box",
     }
 
     if (loading) {
         return (
             <div ref={rootRef} style={wrap}>
                 <style>{`@keyframes vefShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
-                <div style={{ ...skBlock(140, 13, 6), marginBottom: 10 }} />
-                <div style={{ ...skBlock("60%", 22, 8), marginBottom: 16 }} />
-                <div style={{ ...skBlock("100%", 70, 14), marginBottom: 12 }} />
-                {Array.from({ length: 6 }).map((_, i) => <div key={i} style={{ ...skBlock("100%", 46, 12), marginBottom: 8 }} />)}
+                <div style={{ ...sk(110, 12, 6), marginBottom: 12 }} />
+                <div style={{ ...sk("64%", 24, 8), marginBottom: 22 }} />
+                <div style={{ ...sk("100%", 64, 18), marginBottom: 12 }} />
+                <div style={sk("100%", 240, 18)} />
             </div>
         )
     }
@@ -155,46 +147,42 @@ export default function PublicETFFlow(props: Props) {
     const etfs: any[] = data.etfs || []
     const hasFlow = Number(data.with_flow_count) > 0
     const maxCat = cats.length ? Math.max(...cats.map((c) => Math.abs(c.flow))) : 0
+    const dirColor = (f: number) => (f > 0 ? C.up : C.down)
 
     return (
         <div ref={rootRef} style={wrap}>
             {/* 헤더 */}
-            <div style={{ fontSize: 11.5, fontWeight: 800, color: C.faint, letterSpacing: "0.3px" }}>ETF 자금흐름</div>
-            <div style={{ fontSize: narrow ? 17 : 19, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px", marginTop: 4 }}>
-                패시브 자금이 어디로
-            </div>
-            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 5 }}>
-                설정·환매(Δ상장좌수) · 가격효과 제거 · KRX{data.updated_at ? ` · ${fmtAge(data.updated_at)} 갱신` : ""}
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.faint }}>ETF 자금흐름</div>
+            <div style={{ fontSize: narrow ? 20 : 23, fontWeight: 700, color: C.ink, letterSpacing: "-0.5px", marginTop: 6 }}>패시브 자금이 어디로</div>
+            <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 500, marginTop: 7 }}>
+                설정·환매(상장좌수 변화) 기준 · 가격효과 제거{data.updated_at ? ` · ${fmtAge(data.updated_at)}` : ""}
             </div>
 
-            {/* 집계 중 배너 (거래일 1일차) */}
+            {/* 집계 중 (거래일 1일차) — 클린 안내, 색배경·이모지 없음 */}
             {!hasFlow && (
-                <div style={{ ...cardStyle, marginTop: 12, background: C.accentS, display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 18 }}>⏳</span>
-                    <div>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>자금흐름 집계 중</div>
-                        <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, marginTop: 2, lineHeight: 1.45 }}>
-                            흐름 = 일별 상장좌수 변화. 거래일 2일차부터 순유입/유출 표시. 현재 = 기준 스냅샷({etfs.length}개 ETF) 적재.
-                        </div>
+                <div style={{ ...card, marginTop: 18 }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, color: C.ink }}>자금흐름 집계 중이에요</div>
+                    <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 500, marginTop: 6, lineHeight: 1.55 }}>
+                        흐름은 매일 상장좌수 변화로 계산해요. 거래일 둘째 날부터 순유입·유출이 표시돼요. 지금은 {etfs.length}개 ETF의 기준 스냅샷을 담았어요.
                     </div>
                 </div>
             )}
 
-            {/* 카테고리 흐름 (흐름 있을 때) */}
+            {/* 테마별 순흐름 (흐름 있을 때) */}
             {hasFlow && cats.length > 0 && (
-                <div style={{ ...cardStyle, marginTop: 12 }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 800, color: C.faint, marginBottom: 10 }}>테마별 순흐름</div>
+                <div style={{ ...card, marginTop: 18 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, marginBottom: 14 }}>테마별 순흐름</div>
                     {cats.slice(0, 8).map((c) => {
                         const pos = c.flow > 0
-                        const col = pos ? C.in : C.out
-                        const pct = maxCat ? Math.max(6, (Math.abs(c.flow) / maxCat) * 100) : 0
+                        const col = dirColor(c.flow)
+                        const pct = maxCat ? Math.max(5, (Math.abs(c.flow) / maxCat) * 100) : 0
                         return (
-                            <div key={c.cat} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
-                                <div style={{ width: narrow ? 62 : 76, flexShrink: 0, fontSize: 12, fontWeight: 700, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{CAT[c.cat] || c.cat}</div>
+                            <div key={c.cat} style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
+                                <div style={{ width: narrow ? 58 : 72, flexShrink: 0, fontSize: 12.5, fontWeight: 500, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{CAT[c.cat] || c.cat}</div>
                                 <div style={{ flex: 1, minWidth: 0, display: "flex", justifyContent: pos ? "flex-start" : "flex-end" }}>
-                                    <div style={{ width: `${pct}%`, height: 10, borderRadius: 5, background: col, opacity: 0.85 }} />
+                                    <div style={{ width: `${pct}%`, height: 8, borderRadius: 4, background: col, opacity: 0.9 }} />
                                 </div>
-                                <div style={{ width: narrow ? 72 : 88, flexShrink: 0, textAlign: "right", fontSize: 12, fontWeight: 800, color: col, fontVariantNumeric: "tabular-nums" }}>{fmtKRW(c.flow, true)}원</div>
+                                <div style={{ width: narrow ? 70 : 86, flexShrink: 0, textAlign: "right", fontSize: 12.5, fontWeight: 600, color: col, fontVariantNumeric: "tabular-nums" }}>{fmtKRW(c.flow, true)}</div>
                             </div>
                         )
                     })}
@@ -202,29 +190,25 @@ export default function PublicETFFlow(props: Props) {
             )}
 
             {/* ETF 리스트 */}
-            <div style={{ ...cardStyle, marginTop: 12, padding: "4px 8px" }}>
+            <div style={{ ...card, marginTop: 12, paddingTop: 6, paddingBottom: 6 }}>
                 {etfs.map((e, idx) => {
                     const f = Number(e.est_flow)
                     const has = isFinite(f) && f !== 0
-                    const pos = f > 0
-                    const col = !has ? C.faint : pos ? C.in : C.out
+                    const col = has ? dirColor(f) : C.faint
                     return (
-                        <div key={e.ticker} style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 6px", borderTop: idx === 0 ? "none" : `1px solid ${C.line}` }}>
+                        <div key={e.ticker} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderTop: idx === 0 ? "none" : `1px solid ${C.line}` }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.name}</div>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-                                    <span style={{ fontSize: 10.5, fontWeight: 700, color: C.sub, background: C.bg, borderRadius: 6, padding: "2px 7px" }}>{CAT[e.category] || e.category}</span>
-                                    <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 600 }}>순자산 {fmtKRW(e.netasset)}원</span>
-                                </div>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.name}</div>
+                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 500, marginTop: 2 }}>{CAT[e.category] || e.category} · 순자산 {fmtKRW(e.netasset)}원</div>
                             </div>
                             <div style={{ flexShrink: 0, textAlign: "right" }}>
                                 {has ? (
                                     <>
-                                        <div style={{ fontSize: 13.5, fontWeight: 800, color: col, fontVariantNumeric: "tabular-nums" }}>{fmtKRW(f, true)}원</div>
-                                        <div style={{ fontSize: 10.5, fontWeight: 700, color: col, marginTop: 1 }}>{pos ? "유입" : "유출"}{e.flow_pct != null ? ` ${Number(e.flow_pct) > 0 ? "+" : ""}${Number(e.flow_pct).toFixed(2)}%` : ""}</div>
+                                        <div style={{ fontSize: 14.5, fontWeight: 600, color: col, fontVariantNumeric: "tabular-nums" }}>{fmtKRW(f, true)}원</div>
+                                        <div style={{ fontSize: 11, fontWeight: 500, color: col, marginTop: 2 }}>{f > 0 ? "유입" : "유출"}{e.flow_pct != null ? ` ${Number(e.flow_pct) > 0 ? "+" : ""}${Number(e.flow_pct).toFixed(2)}%` : ""}</div>
                                     </>
                                 ) : (
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: C.faint, background: C.bg, borderRadius: 6, padding: "3px 8px" }}>집계 중</span>
+                                    <span style={{ fontSize: 12, fontWeight: 500, color: C.faint }}>집계 중</span>
                                 )}
                             </div>
                         </div>
@@ -233,8 +217,8 @@ export default function PublicETFFlow(props: Props) {
             </div>
 
             {/* 면책 */}
-            <div style={{ textAlign: "center", fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 18, lineHeight: 1.55 }}>
-                상장좌수·NAV·순자산 = KRX OpenAPI 1차 사실 · 흐름 = Δ상장좌수(설정/환매) × NAV, 가격효과 제거 · 일별 누적(거래일≥2 신호) · 등급·추천 아님 · 자체 점수는 검증 후(2027) 공개
+            <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
+                상장좌수·NAV·순자산은 KRX OpenAPI 사실이에요. 흐름은 상장좌수 변화 × NAV(설정/환매)로, 가격효과를 뺀 값이에요. 매일 누적하며 거래일 둘째 날부터 신호가 잡혀요. 등급·추천이 아니며 자체 점수는 검증 후(2027) 공개해요.
             </div>
         </div>
     )
