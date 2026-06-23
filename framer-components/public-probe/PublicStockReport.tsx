@@ -538,8 +538,8 @@ export default function PublicStockReport(props: Props) {
                     let qp = (new URLSearchParams(window.location.search).get("q") || "").trim().toLowerCase()
                     if (!qp) { try { qp = (window.localStorage.getItem("verity_last_ticker") || "").trim().toLowerCase() } catch (e) {} }
                     if (qp) {
-                        const hit = arr.find((x: any) => String(x.ticker) === qp || String(x.name || "").toLowerCase() === qp || String(x.name_ko || "") === qp)
-                            || arr.find((x: any) => String(x.ticker).includes(qp) || String(x.name || "").toLowerCase().includes(qp) || String(x.name_ko || "").includes(qp))
+                        const hit = arr.find((x: any) => String(x.ticker).toLowerCase() === qp || String(x.name || "").toLowerCase() === qp || String(x.name_ko || "") === qp)
+                            || arr.find((x: any) => String(x.ticker).toLowerCase().includes(qp) || String(x.name || "").toLowerCase().includes(qp) || String(x.name_ko || "").includes(qp))
                         if (hit) initT = hit.ticker
                     }
                 }
@@ -722,7 +722,7 @@ export default function PublicStockReport(props: Props) {
     const matches = useMemo(() => {
         const q = query.trim().toLowerCase()
         if (!q) return []
-        return list.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").includes(q) || String(x.name_ko || "").includes(q)).slice(0, 15)
+        return list.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").toLowerCase().includes(q) || String(x.name_ko || "").includes(q)).slice(0, 15)
     }, [query, list])
 
     const facts = s.facts || {}

@@ -83,8 +83,8 @@ export default function PublicStockSearch(props: Props) {
         const s = text.trim()
         if (!s || !universe.length) return s
         const lower = s.toLowerCase()
-        let hit = universe.find((x) => String(x.ticker) === s || String(x.name || "").toLowerCase() === lower || String((x as any).name_ko || "") === s)
-        if (!hit) hit = universe.find((x) => String(x.ticker).includes(s) || String(x.name || "").toLowerCase().includes(lower) || String((x as any).name_ko || "").includes(s))
+        let hit = universe.find((x) => String(x.ticker).toLowerCase() === lower || String(x.name || "").toLowerCase() === lower || String((x as any).name_ko || "") === s)
+        if (!hit) hit = universe.find((x) => String(x.ticker).toLowerCase().includes(lower) || String(x.name || "").toLowerCase().includes(lower) || String((x as any).name_ko || "").includes(s))
         return hit ? String(hit.ticker) : s
     }
 
