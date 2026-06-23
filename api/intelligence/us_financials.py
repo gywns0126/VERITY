@@ -620,9 +620,12 @@ def compute_derived(
     ext = external or {}
     _ta = _latest_annual_val("total_assets")
     _tl = _latest_annual_val("total_liabilities")
-    # 총부채 fallback = 총자산 - 자기자본 (회계 항등식 — Liabilities tag 미보고 TMO/DIS 등).
-    if _tl is None and _ta is not None and eq is not None:
-        _tl = _ta - eq
+    # 총부채 = 총자산 − 자기자본 (회계 항등식). 보고 Liabilities 태그 미보고(TMO/DIS) 또는
+    # stale·기간불일치(2026-06-23 검수: REX Liabilities 2018 중단 → stale $121K → Altman X4 7163 폭발) 교정.
+    # 보고값이 항등식의 50% 미만 = stale 시그니처 → 항등식 사용 (NCI 차이는 소폭이라 정상 종목 무영향).
+    _tl_identity = (_ta - eq) if (_ta is not None and eq is not None) else None
+    if _tl_identity is not None and _tl_identity > 0 and (_tl is None or _tl < _tl_identity * 0.5):
+        _tl = _tl_identity
     out["altman_z"] = compute_altman_z_us({
         "total_assets": _ta,
         "current_assets": _latest_annual_val("current_assets"),
