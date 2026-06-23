@@ -529,6 +529,16 @@ export default function PublicDiscovery(props: Props) {
         fontFamily: FONT, fontWeight: 700, background: C.card, color: C.ink, outline: "none", boxSizing: "border-box",
     }
 
+    // 로딩 스켈레톤 — 탭/헤더/툴바/결과 전 영역 일관 적용 (list 적재 전 빈 영역 방지). 토스식 shimmer.
+    const loading = list.length === 0
+    const skBase = isDark ? "#222a33" : "#e9edf1"
+    const skHi = isDark ? "#2d3742" : "#f3f5f7"
+    const skBlock = (bw: any, bh: number, br = 6): CSSProperties => ({
+        width: bw, height: bh, borderRadius: br, background: skBase,
+        backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`,
+        backgroundSize: "800px 100%", animation: "vsrShimmer 1.4s ease-in-out infinite", flexShrink: 0,
+    })
+
     const tabButton = (i: number) => {
         const active = i === tab
         if (narrow) {
@@ -692,21 +702,31 @@ export default function PublicDiscovery(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             <div style={{ display: "flex", flexDirection: narrow ? "column" : "row", gap: narrow ? 12 : 20, alignItems: "flex-start" }}>
                 {/* 탭 — 흰박스 없이 회색 배경에 직접, 활성만 흰 알약 */}
                 {narrow ? (
                     <div style={{ display: "flex", gap: 7, overflowX: "auto", paddingTop: 2, paddingBottom: 9, width: "100%", position: "sticky", top: navTop, background: C.bg, zIndex: 5, scrollbarWidth: "none", boxShadow: `0 7px 7px -7px ${isDark ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.14)"}` }}>
-                        {visibleTabs.map((i) => tabButton(i))}
+                        {loading
+                            ? Array.from({ length: 4 }).map((_, i) => <div key={i} style={skBlock(i === 0 ? 76 : 60, 33, 999)} />)
+                            : visibleTabs.map((i) => tabButton(i))}
                     </div>
                 ) : (
                     <div style={{ flexShrink: 0, width: 188, position: "sticky", top: navTop, display: "flex", flexDirection: "column", gap: 2 }}>
-                        {visibleTabs.map((i) => tabButton(i))}
+                        {loading
+                            ? Array.from({ length: 5 }).map((_, i) => <div key={i} style={{ ...skBlock("100%", 40, 10), marginBottom: 2 }} />)
+                            : visibleTabs.map((i) => tabButton(i))}
                     </div>
                 )}
 
                 {/* 콘텐츠 */}
                 <div style={{ flex: 1, minWidth: 0, width: narrow ? "100%" : "auto" }}>
-                    {list.length > 0 && (
+                    {loading ? (
+                        <div style={{ padding: "0 2px 10px" }}>
+                            <div style={skBlock(168, 16, 7)} />
+                            <div style={{ ...skBlock(232, 11, 6), marginTop: 7 }} />
+                        </div>
+                    ) : (
                         <div style={{ padding: "0 2px 10px" }}>
                             <div style={{ fontSize: 15.5, fontWeight: 700, color: C.ink, letterSpacing: "-0.3px" }}>{sc.title}{sector ? ` · ${sector}` : ""}</div>
                             <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3 }}>{sc.rule} · 결과 {sel.total}종목{sel.total > sel.items.length ? ` (상위 ${sel.items.length})` : ""}</div>
@@ -714,7 +734,13 @@ export default function PublicDiscovery(props: Props) {
                     )}
 
                     {/* 도구막대 */}
-                    {list.length > 0 && (
+                    {loading ? (
+                        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+                            {!narrow && <div style={skBlock(92, 34, 10)} />}
+                            <div style={skBlock(104, 34, 9)} />
+                            <div style={skBlock(104, 34, 9)} />
+                        </div>
+                    ) : (
                         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
                             {!narrow && (
                                 <div style={{ display: "flex", gap: 3, background: C.card, borderRadius: 10, padding: 3, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
@@ -748,26 +774,18 @@ export default function PublicDiscovery(props: Props) {
                     {/* 표/리스트 + (넓은 화면) 우측 상세 패널 */}
                     <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                            {list.length === 0 ? (
-                                (() => {
-                                    const skBase = isDark ? "#222a33" : "#e9edf1"
-                                    const skHi = isDark ? "#2d3742" : "#f3f5f7"
-                                    const skb = (bw: any, bh: number, br = 6): CSSProperties => ({ width: bw, height: bh, borderRadius: br, background: skBase, backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "vsrShimmer 1.4s ease-in-out infinite" })
-                                    return (
-                                        <div style={{ background: C.card, borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>
-                                            <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
-                                            {Array.from({ length: 9 }).map((_, i) => (
-                                                <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
-                                                    <div style={skb(20, 20, 6)} />
-                                                    <div style={{ flex: 1, minWidth: 0 }}><div style={skb(i % 3 === 0 ? "52%" : "38%", 13)} /></div>
-                                                    {!narrow && <div style={skb(64, 13)} />}
-                                                    {!narrow && <div style={skb(54, 13)} />}
-                                                    <div style={skb(46, 13)} />
-                                                </div>
-                                            ))}
+                            {loading ? (
+                                <div style={{ background: C.card, borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>
+                                    {Array.from({ length: 9 }).map((_, i) => (
+                                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                                            <div style={skBlock(20, 20, 6)} />
+                                            <div style={{ flex: 1, minWidth: 0 }}><div style={skBlock(i % 3 === 0 ? "52%" : "38%", 13)} /></div>
+                                            {!narrow && <div style={skBlock(64, 13)} />}
+                                            {!narrow && <div style={skBlock(54, 13)} />}
+                                            <div style={skBlock(46, 13)} />
                                         </div>
-                                    )
-                                })()
+                                    ))}
+                                </div>
                             ) : useTable ? (
                                 <div style={{ background: C.card, borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflowX: "auto" }}>
                                     <div style={{ minWidth: TABLE_MIN }}>
@@ -861,6 +879,21 @@ export default function PublicDiscovery(props: Props) {
                                 </div>
                             )}
                         </div>
+                        {wide && loading && (
+                            <div style={{ flexShrink: 0, width: 340, background: C.card, borderRadius: 16, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", boxSizing: "border-box" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                                    <div style={skBlock(40, 40, 12)} />
+                                    <div style={{ flex: 1 }}><div style={skBlock("70%", 15, 7)} /><div style={{ ...skBlock("44%", 11, 6), marginTop: 6 }} /></div>
+                                </div>
+                                <div style={{ ...skBlock("52%", 21, 8), marginTop: 12 }} />
+                                {Array.from({ length: 6 }).map((_, i) => (
+                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0" }}>
+                                        <div style={skBlock(72, 12, 6)} />
+                                        <div style={skBlock(52, 12, 6)} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         {wide && selected && detailPanel()}
                     </div>
                 </div>
