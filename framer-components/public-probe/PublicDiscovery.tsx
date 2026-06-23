@@ -20,6 +20,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 interface Props {
     stockUrl: string
+    usStockUrl: string
     insiderUrl: string
     flowUrl: string
     forensicsUrl: string
@@ -249,7 +250,7 @@ function metricNum(s: any, key: string): number | null {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicDiscovery(props: Props) {
-    const { stockUrl, insiderUrl, flowUrl, forensicsUrl, apiBase, reportPath, dark, perList, topOffset } = props
+    const { stockUrl, usStockUrl, insiderUrl, flowUrl, forensicsUrl, apiBase, reportPath, dark, perList, topOffset } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
@@ -295,6 +296,7 @@ export default function PublicDiscovery(props: Props) {
     const [sortKey, setSortKey] = useState<string>("cap")
     const [sortDir, setSortDir] = useState<number>(-1)
     const [sector, setSector] = useState<string>("")
+    const [mkt, setMkt] = useState<string>("all")   // 전체/국장(kr)/미장(us) 토글
     const [rMetric, setRMetric] = useState<string>("")
     const [rMin, setRMin] = useState<string>("")
     const [rMax, setRMax] = useState<string>("")
@@ -324,15 +326,16 @@ export default function PublicDiscovery(props: Props) {
     useEffect(() => {
         if (!stockUrl) return
         let alive = true
-        fetch(stockUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const arr = d && (Array.isArray(d) ? d : d.stocks)
-                if (alive && Array.isArray(arr) && arr.length) setList(arr)
+        const urls = [stockUrl, usStockUrl].filter(Boolean)
+        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
+            .then((docs) => {
+                if (!alive) return
+                const arr: any[] = []
+                for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) arr.push(...(a as any[])) }
+                if (arr.length) setList(arr)
             })
-            .catch(() => {})
         return () => { alive = false }
-    }, [stockUrl])
+    }, [stockUrl, usStockUrl])
 
     useEffect(() => {
         if (!insiderUrl) return
@@ -411,6 +414,7 @@ export default function PublicDiscovery(props: Props) {
     const sel = useMemo(() => {
         if (!list.length) return { total: 0, items: [] as any[] }
         let hits = list.filter((s) => sc.pred(s, ctx))
+        if (mkt !== "all") hits = hits.filter((s) => (!/^\d{6}$/.test(String(s.ticker || ""))) === (mkt === "us"))
         if (sector) hits = hits.filter((s) => sectorOf(s) === sector)
         if (rMetric && (rMinN != null || rMaxN != null)) {
             hits = hits.filter((s) => {
@@ -442,7 +446,7 @@ export default function PublicDiscovery(props: Props) {
             arr.sort((a, b) => sc.sortBy(a, ctx) - sc.sortBy(b, ctx))
         }
         return { total: hits.length, items: arr.slice(0, cap) }
-    }, [list, sc, ctx, sector, rMetric, rMinN, rMaxN, useTable, sortKey, sortDir, cap])
+    }, [list, sc, ctx, mkt, sector, rMetric, rMinN, rMaxN, useTable, sortKey, sortDir, cap])
 
     // 넓은 화면: 선택 종목 자동 유지(없거나 목록 밖이면 최상단). 좁은 화면: 패널 없음.
     useEffect(() => {
@@ -481,7 +485,7 @@ export default function PublicDiscovery(props: Props) {
         setSortKey(key)
         setSortDir(key === "name" || key === "sector" ? 1 : -1)
     }
-    const resetFilters = () => { setSector(""); setRMetric(""); setRMin(""); setRMax("") }
+    const resetFilters = () => { setMkt("all"); setSector(""); setRMetric(""); setRMin(""); setRMax("") }
 
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%",
@@ -750,6 +754,14 @@ export default function PublicDiscovery(props: Props) {
                                     ))}
                                 </div>
                             )}
+                            <div style={{ display: "flex", gap: 2, background: C.line, borderRadius: 9, padding: 2, flexShrink: 0 }}>
+                                {([["all", "전체"], ["kr", "국장"], ["us", "미장"]] as [string, string][]).map(([m, lbl]) => (
+                                    <button key={m} onClick={() => setMkt(m)}
+                                        style={{ border: "none", cursor: "pointer", padding: "5px 10px", borderRadius: 7, fontSize: 12, fontWeight: 800, fontFamily: "inherit", whiteSpace: "nowrap", background: mkt === m ? C.card : "transparent", color: mkt === m ? C.accent : C.sub }}>
+                                        {lbl}
+                                    </button>
+                                ))}
+                            </div>
                             <select value={sector} onChange={(e) => setSector(e.target.value)} style={selStyle}>
                                 <option value="">섹터 전체</option>
                                 {sectors.map((sec) => (<option key={sec} value={sec}>{sec}</option>))}
@@ -908,6 +920,7 @@ export default function PublicDiscovery(props: Props) {
 
 addPropertyControls(PublicDiscovery, {
     stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEFAULT_URL },
+    usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
     insiderUrl: { type: ControlType.String, title: "Insider URL", defaultValue: DEFAULT_INSIDER },
     flowUrl: { type: ControlType.String, title: "Flow URL", defaultValue: DEFAULT_FLOW },
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: DEFAULT_FORENSICS },
