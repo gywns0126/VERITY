@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-06-23T02:30:36.429747+09:00",
+  "generated_at": "2026-06-23T17:26:43.731696+09:00",
   "spec_version": "v0",
   "gate": {
     "target_n": 252,
     "milestone": "N=252 IC 게이트 (Bailey-López de Prado, 2027-05 목표)",
-    "best_signal_n": 179.4,
-    "progress_pct": 71.2
+    "best_signal_n": 179.8,
+    "progress_pct": 71.3
   },
   "rule7_disclaimer": "모든 항목 = 자기 산식 가설 (관측 only, 결정 피드백 0). N<30 통계 무의미 / N<100 예비. hit_rate 단독 해석 금지 — expectancy + CI95 + N 병기. N=252 게이트(2027-05) 도달 전 통계 판정 무의미.",
   "signals": [
@@ -14,39 +14,39 @@
       "status": "채점 진행 중",
       "source": "prediction_ic_history.jsonl (Brain 종합 verdict, prediction_scoring v0)",
       "representative_horizon": "short",
-      "n": 897,
-      "n_eff": 179.4,
-      "ic": 0.0179,
-      "ic_pvalue": 0.4054,
-      "hit_rate": 0.5276,
-      "expectancy": -0.9802,
+      "n": 899,
+      "n_eff": 179.8,
+      "ic": 0.0134,
+      "ic_pvalue": 0.4288,
+      "hit_rate": 0.526,
+      "expectancy": -0.9921,
       "ci95": [
-        -1.3608,
-        -0.5804
+        -1.3574,
+        -0.6125
       ],
-      "brier_score": 0.2932,
+      "brier_score": 0.293,
       "label": "표본 N≥100 누적 (잠정 — 유의성 미검증)",
-      "gate_status": "가설 (게이트 N≥252 미도달, 진척 71.2%)",
+      "gate_status": "가설 (게이트 N≥252 미도달, 진척 71.3%)",
       "horizons": {
         "short": {
-          "n": 897,
-          "n_eff": 179.4,
+          "n": 899,
+          "n_eff": 179.8,
           "overlap_k": 5,
-          "ic": 0.0179,
-          "ic_tstat": 0.2398,
-          "ic_pvalue": 0.4054,
-          "hit_rate": 0.5276,
-          "hit_n": 671,
-          "hit_pvalue": 0.0823,
-          "expectancy": -0.9802,
+          "ic": 0.0134,
+          "ic_tstat": 0.1797,
+          "ic_pvalue": 0.4288,
+          "hit_rate": 0.526,
+          "hit_n": 673,
+          "hit_pvalue": 0.095,
+          "expectancy": -0.9921,
           "ci95": [
-            -1.3608,
-            -0.5804
+            -1.3574,
+            -0.6125
           ],
-          "brier_score": 0.2932,
+          "brier_score": 0.293,
           "maturity_label": "표본 N≥100 누적 (잠정 — 유의성 미검증)",
-          "gate_status": "가설 (게이트 N≥252 미도달, 진척 71.2%)",
-          "scored_at": "2026-06-23T00:32:36+09:00"
+          "gate_status": "가설 (게이트 N≥252 미도달, 진척 71.3%)",
+          "scored_at": "2026-06-23T17:26:40+09:00"
         }
       },
       "hypothesis_note": "자기 산식 (가설). hit_rate 단독 해석 금지 — expectancy+CI95+N 병기."
@@ -56,39 +56,39 @@
       "status": "채점 진행 중",
       "source": "ml_prediction_ic_history.jsonl (XGB up_probability shadow, source-agnostic scorer 재사용)",
       "representative_horizon": "short",
-      "n": 108,
-      "n_eff": 21.6,
-      "ic": -0.1613,
-      "ic_pvalue": 0.2312,
-      "hit_rate": 0.3611,
-      "expectancy": -1.6612,
+      "n": 110,
+      "n_eff": 22.0,
+      "ic": -0.1114,
+      "ic_pvalue": 0.3035,
+      "hit_rate": 0.3727,
+      "expectancy": -1.746,
       "ci95": [
-        -2.553,
-        -0.8293
+        -2.6377,
+        -0.8736
       ],
-      "brier_score": 0.3178,
+      "brier_score": 0.3123,
       "label": "통계 무의미 (N<30)",
-      "gate_status": "가설 (게이트 N≥252 미도달, 진척 8.6%)",
+      "gate_status": "가설 (게이트 N≥252 미도달, 진척 8.7%)",
       "horizons": {
         "short": {
-          "n": 108,
-          "n_eff": 21.6,
+          "n": 110,
+          "n_eff": 22.0,
           "overlap_k": 5,
-          "ic": -0.1613,
-          "ic_tstat": -0.7497,
-          "ic_pvalue": 0.2312,
-          "hit_rate": 0.3611,
-          "hit_n": 108,
-          "hit_pvalue": 0.9987,
-          "expectancy": -1.6612,
+          "ic": -0.1114,
+          "ic_tstat": -0.5225,
+          "ic_pvalue": 0.3035,
+          "hit_rate": 0.3727,
+          "hit_n": 110,
+          "hit_pvalue": 0.9973,
+          "expectancy": -1.746,
           "ci95": [
-            -2.553,
-            -0.8293
+            -2.6377,
+            -0.8736
           ],
-          "brier_score": 0.3178,
+          "brier_score": 0.3123,
           "maturity_label": "통계 무의미 (N<30)",
-          "gate_status": "가설 (게이트 N≥252 미도달, 진척 8.6%)",
-          "scored_at": "2026-06-23T00:32:39+09:00"
+          "gate_status": "가설 (게이트 N≥252 미도달, 진척 8.7%)",
+          "scored_at": "2026-06-23T17:26:41+09:00"
         }
       },
       "hypothesis_note": "자기 산식 (가설). hit_rate 단독 해석 금지 — expectancy+CI95+N 병기.",
@@ -98,9 +98,9 @@
       "signal": "shadow_funnel",
       "status": "trail 누적 (채점 ic_history 미연결)",
       "source": "shadow_prediction_trail.jsonl (wide_scan 7차원 funnel SHADOW)",
-      "trail_total": 6300,
+      "trail_total": 6600,
       "scored": 0,
-      "pending": 6300,
+      "pending": 6600,
       "n": 0,
       "n_eff": null,
       "label": "데이터 없음",
@@ -119,7 +119,7 @@
       "gate_status": "가설 (게이트 N≥252 미도달, 진척 0.4%)",
       "factors": {
         "multi_factor": {
-          "ic_mean": 0.17157,
+          "ic_mean": 0.07598,
           "icir": 0,
           "sample_count": 1,
           "significant": false,
@@ -127,94 +127,6 @@
           "maturity_label": "통계 무의미 (N<30)"
         },
         "momentum": {
-          "ic_mean": 0.02696,
-          "icir": 0,
-          "sample_count": 1,
-          "significant": false,
-          "decay": false,
-          "maturity_label": "통계 무의미 (N<30)"
-        },
-        "quality": {
-          "ic_mean": -0.21324,
-          "icir": 0,
-          "sample_count": 1,
-          "significant": false,
-          "decay": false,
-          "maturity_label": "통계 무의미 (N<30)"
-        },
-        "volatility": {
-          "ic_mean": 0.01471,
-          "icir": 0,
-          "sample_count": 1,
-          "significant": false,
-          "decay": false,
-          "maturity_label": "통계 무의미 (N<30)"
-        },
-        "mean_reversion": {
-          "ic_mean": -0.31128,
-          "icir": 0,
-          "sample_count": 1,
-          "significant": false,
-          "decay": false,
-          "maturity_label": "통계 무의미 (N<30)"
-        },
-        "fundamental": {
-          "ic_mean": -0.04167,
-          "icir": 0,
-          "sample_count": 1,
-          "significant": false,
-          "decay": false,
-          "maturity_label": "통계 무의미 (N<30)"
-        },
-        "technical": {
-          "ic_mean": 0.25245,
-          "icir": 0,
-          "sample_count": 1,
-          "significant": false,
-          "decay": false,
-          "maturity_label": "통계 무의미 (N<30)"
-        },
-        "flow": {
-          "ic_mean": 0.01471,
-          "icir": 0,
-          "sample_count": 1,
-          "significant": false,
-          "decay": false,
-          "maturity_label": "통계 무의미 (N<30)"
-        },
-        "sentiment": {
-          "ic_mean": 0.35784,
-          "icir": 0,
-          "sample_count": 1,
-          "significant": false,
-          "decay": false,
-          "maturity_label": "통계 무의미 (N<30)"
-        },
-        "consensus": {
-          "ic_mean": 0.26471,
-          "icir": 0,
-          "sample_count": 1,
-          "significant": false,
-          "decay": false,
-          "maturity_label": "통계 무의미 (N<30)"
-        },
-        "prediction": {
-          "ic_mean": -0.32108,
-          "icir": 0,
-          "sample_count": 1,
-          "significant": false,
-          "decay": false,
-          "maturity_label": "통계 무의미 (N<30)"
-        },
-        "timing": {
-          "ic_mean": -0.08823,
-          "icir": 0,
-          "sample_count": 1,
-          "significant": false,
-          "decay": false,
-          "maturity_label": "통계 무의미 (N<30)"
-        },
-        "brain_score": {
           "ic_mean": 0.0098,
           "icir": 0,
           "sample_count": 1,
@@ -222,8 +134,96 @@
           "decay": false,
           "maturity_label": "통계 무의미 (N<30)"
         },
-        "safety_score": {
+        "quality": {
+          "ic_mean": -0.09314,
+          "icir": 0,
+          "sample_count": 1,
+          "significant": false,
+          "decay": false,
+          "maturity_label": "통계 무의미 (N<30)"
+        },
+        "volatility": {
+          "ic_mean": 0.20833,
+          "icir": 0,
+          "sample_count": 1,
+          "significant": false,
+          "decay": false,
+          "maturity_label": "통계 무의미 (N<30)"
+        },
+        "mean_reversion": {
+          "ic_mean": -0.33088,
+          "icir": 0,
+          "sample_count": 1,
+          "significant": false,
+          "decay": false,
+          "maturity_label": "통계 무의미 (N<30)"
+        },
+        "fundamental": {
+          "ic_mean": -0.22794,
+          "icir": 0,
+          "sample_count": 1,
+          "significant": false,
+          "decay": false,
+          "maturity_label": "통계 무의미 (N<30)"
+        },
+        "technical": {
+          "ic_mean": 0.30147,
+          "icir": 0,
+          "sample_count": 1,
+          "significant": false,
+          "decay": false,
+          "maturity_label": "통계 무의미 (N<30)"
+        },
+        "flow": {
+          "ic_mean": 0.20833,
+          "icir": 0,
+          "sample_count": 1,
+          "significant": false,
+          "decay": false,
+          "maturity_label": "통계 무의미 (N<30)"
+        },
+        "sentiment": {
+          "ic_mean": 0.42402,
+          "icir": 0,
+          "sample_count": 1,
+          "significant": false,
+          "decay": false,
+          "maturity_label": "통계 무의미 (N<30)"
+        },
+        "consensus": {
+          "ic_mean": 0.125,
+          "icir": 0,
+          "sample_count": 1,
+          "significant": false,
+          "decay": false,
+          "maturity_label": "통계 무의미 (N<30)"
+        },
+        "prediction": {
+          "ic_mean": -0.37745,
+          "icir": 0,
+          "sample_count": 1,
+          "significant": false,
+          "decay": false,
+          "maturity_label": "통계 무의미 (N<30)"
+        },
+        "timing": {
           "ic_mean": -0.08333,
+          "icir": 0,
+          "sample_count": 1,
+          "significant": false,
+          "decay": false,
+          "maturity_label": "통계 무의미 (N<30)"
+        },
+        "brain_score": {
+          "ic_mean": -0.11765,
+          "icir": 0,
+          "sample_count": 1,
+          "significant": false,
+          "decay": false,
+          "maturity_label": "통계 무의미 (N<30)"
+        },
+        "safety_score": {
+          "ic_mean": -0.26226,
           "icir": 0,
           "sample_count": 1,
           "significant": false,
@@ -237,7 +237,7 @@
       "signal": "sector",
       "status": "채점 DEFERRED (검증된 섹터 index return source 미확정)",
       "source": "prediction_trail.jsonl (target_type=sector)",
-      "trail_total": 2211,
+      "trail_total": 2244,
       "scored": 0,
       "n": 0,
       "n_eff": null,
