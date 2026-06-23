@@ -3208,6 +3208,18 @@ def main():
         except Exception as _e:
             print(f"  [5.76] fair_value_gap 관측 스킵: {_e}")
 
+    # ── STEP 5.77b: full — earnings_surprise 관측 (PEAD, brain_input=0, weight=0) ──
+    # 사전등록 2026-06-23 N=0. 채점=N>=50 달성 후 별도 pre-reg. RULE 7 준수.
+    if effective_mode == "full":
+        try:
+            from api.intelligence.earnings_surprise import run_shadow as _run_es_shadow
+            _es = _run_es_shadow(candidates)
+            portfolio["earnings_surprise"] = _es
+            print(f"  [5.77b] earnings_surprise 관측: {_es.get('n_events', 0)}건 "
+                  f"logged={_es.get('logged')} markets={_es.get('markets')}")
+        except Exception as _e:
+            print(f"  [5.77b] earnings_surprise 관측 스킵: {_e}")
+
     # ── STEP 5.76: full 전용 — ChainScout 주요 매출처/고객사 (KR only) ──
     if effective_mode == "full" and not is_us_mode:
         print("\n[5.76] ChainScout — 주요 매출처/고객사 분석")
