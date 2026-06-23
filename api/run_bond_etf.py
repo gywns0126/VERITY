@@ -98,6 +98,14 @@ def _run_etfs(portfolio: dict) -> dict:
     }
     print(f"[ETF] 스크리닝 완료: TOP 20 = {len(top20)}개")
 
+    # ETF 자금흐름(설정/환매) 일별 누적 — 단일 writer data/etf_flow.json (portfolio race 회피, bonds.json 패턴)
+    try:
+        from api.collectors.etf_flow import build_etf_flow
+        flow_sum = build_etf_flow()
+        print(f"[ETF] 자금흐름 누적: {flow_sum.get('n', 0)}개(흐름 {flow_sum.get('with_flow', 0)}) key={flow_sum.get('field_map', {}).get('list_shrs', '?')}")
+    except Exception as e:  # noqa: BLE001
+        print(f"[ETF] 자금흐름 누적 실패(무시): {e}")
+
     return {
         "kr_count": len(kr_etfs),
         "us_count": len(us_etfs),
