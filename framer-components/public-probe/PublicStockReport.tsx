@@ -457,7 +457,12 @@ export default function PublicStockReport(props: Props) {
     const [warnMap, setWarnMap] = useState<Record<string, any>>(SAMPLE_WARN)
     const [selTicker, setSelTicker] = useState<string>(() => {
         if (typeof window !== "undefined") {
-            try { const qp = (new URLSearchParams(window.location.search).get("q") || "").trim(); if (qp) return qp.toUpperCase() } catch (e) {}
+            try {
+                const qp = (new URLSearchParams(window.location.search).get("q") || "").trim()
+                if (qp) { try { window.localStorage.setItem("verity_last_ticker", qp.toUpperCase()) } catch (e) {} ; return qp.toUpperCase() }
+                const ls = (window.localStorage.getItem("verity_last_ticker") || "").trim()
+                if (ls) return ls.toUpperCase()
+            } catch (e) {}
         }
         return SAMPLE[0].ticker
     })
@@ -528,13 +533,15 @@ export default function PublicStockReport(props: Props) {
                 setList(arr); setListLoaded(true)
                 let initT = arr[0].ticker
                 if (typeof window !== "undefined") {
-                    const qp = (new URLSearchParams(window.location.search).get("q") || "").trim().toLowerCase()
+                    let qp = (new URLSearchParams(window.location.search).get("q") || "").trim().toLowerCase()
+                    if (!qp) { try { qp = (window.localStorage.getItem("verity_last_ticker") || "").trim().toLowerCase() } catch (e) {} }
                     if (qp) {
-                        const hit = arr.find((x: any) => String(x.ticker) === qp || String(x.name || "").toLowerCase() === qp)
-                            || arr.find((x: any) => String(x.ticker).includes(qp) || String(x.name || "").toLowerCase().includes(qp))
+                        const hit = arr.find((x: any) => String(x.ticker) === qp || String(x.name || "").toLowerCase() === qp || String(x.name_ko || "") === qp)
+                            || arr.find((x: any) => String(x.ticker).includes(qp) || String(x.name || "").toLowerCase().includes(qp) || String(x.name_ko || "").includes(qp))
                         if (hit) initT = hit.ticker
                     }
                 }
+                try { window.localStorage.setItem("verity_last_ticker", String(initT)) } catch (e) {}
                 setSelTicker(initT)
             })
             .catch(() => {})
@@ -713,7 +720,7 @@ export default function PublicStockReport(props: Props) {
     const matches = useMemo(() => {
         const q = query.trim().toLowerCase()
         if (!q) return []
-        return list.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").includes(q)).slice(0, 15)
+        return list.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").includes(q) || String(x.name_ko || "").includes(q)).slice(0, 15)
     }, [query, list])
 
     const facts = s.facts || {}
@@ -1053,7 +1060,7 @@ export default function PublicStockReport(props: Props) {
                     }}>
                         {matches.map((m) => (
                             <div key={m.ticker}
-                                onMouseDown={() => { setSelTicker(m.ticker); setQuery(""); setFocused(false) }}
+                                onMouseDown={() => { setSelTicker(m.ticker); try { window.localStorage.setItem("verity_last_ticker", String(m.ticker)); window.history.replaceState(null, "", window.location.pathname + "?q=" + encodeURIComponent(String(m.ticker)) + window.location.hash) } catch (e) {} ; setQuery(""); setFocused(false) }}
                                 style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "9px 10px", borderRadius: 9, cursor: "pointer" }}>
                                 <span style={{ fontFamily: HEAD, fontSize: 13.5, fontWeight: 700, color: C.ink }}>{m.name}</span>
                                 <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{m.ticker} · {m.market}</span>
@@ -1068,6 +1075,7 @@ export default function PublicStockReport(props: Props) {
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <Logo ticker={s.ticker} name={s.name} market={s.market} C={C} size={narrow ? 28 : 32} />
                     <span style={{ fontFamily: HEAD, fontSize: 23, fontWeight: 800, letterSpacing: "-0.6px" }}>{s.name}</span>
+                    {s.name_ko && <span style={{ fontSize: 13.5, color: C.sub, fontWeight: 700 }}>{s.name_ko}</span>}
                     <span style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>{s.ticker} · {s.market}</span>
                     <button onClick={toggleStar} title={starItemId ? "관심종목 해제" : "관심종목 담기"} disabled={starBusy}
                         aria-label={starItemId ? "관심종목 해제" : "관심종목 담기"}

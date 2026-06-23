@@ -55,6 +55,16 @@ def _title(name: str) -> str:
 
 CACHE_PATH = os.path.join(_ROOT, "data", "cache", "universe_us.json")
 SIC_KO_PATH = os.path.join(_ROOT, "data", "us_sic_ko.json")  # SIC 영문업종 → 한글 (정적, 런타임 번역 0)
+NAME_KO_PATH = os.path.join(_ROOT, "data", "us_name_ko.json")  # 주요 종목 ticker → 한글명 (병기·한국어 검색)
+
+
+def _load_name_ko() -> Dict[str, str]:
+    try:
+        with open(NAME_KO_PATH, encoding="utf-8") as f:
+            d = json.load(f)
+        return {str(k).upper(): v for k, v in d.items() if not k.startswith("_")}
+    except (OSError, json.JSONDecodeError):
+        return {}
 
 
 # numeric SIC → 한글 fallback (sic_description meta 결손 시 — MSFT/JPM 등 flagship 19종 빈값 방지).
@@ -139,7 +149,8 @@ def _usd_compact(v: Any) -> str | None:
 
 
 def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[str, float]],
-                sic_ko: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+                sic_ko: Optional[Dict[str, str]] = None,
+                name_ko: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     facts: Dict[str, str] = {}
     fnote: Dict[str, str] = {}
 
@@ -209,6 +220,7 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
         "ticker": row.get("ticker") or "",
         "name": _title(row.get("entity_name") or row.get("ticker")),
         "market": "US",
+        "name_ko": (name_ko or {}).get((row.get("ticker") or "").upper()),  # 주요사 한글명(병기·검색)
         "business": business_ko,
         "business_en": sic_desc if business_ko != sic_desc else None,
         "header": header or None,
@@ -244,8 +256,10 @@ def main() -> int:
                 meta_by_ticker[tk] = {}
 
         caps = _load_universe_caps()   # header 시총·거래대금 (universe 캐시)
-        sic_ko = _load_sic_ko()   # SIC 영문업종 → 한글 (정적 맵)
-        stocks = [build_stock(r, meta_by_ticker.get(r.get("ticker"), {}), caps, sic_ko) for r in rows if r.get("ticker")]
+        sic_ko = _load_sic_ko()    # SIC 영문업종 → 한글 (정적 맵)
+        name_ko = _load_name_ko()  # 주요사 ticker → 한글명
+        stocks = [build_stock(r, meta_by_ticker.get(r.get("ticker"), {}), caps, sic_ko, name_ko)
+                  for r in rows if r.get("ticker")]
         # ROE 큰 순 (사실 정렬)
         def _roe(s):
             v = s.get("facts", {}).get("ROE", "")
