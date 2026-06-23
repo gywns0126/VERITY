@@ -89,6 +89,7 @@ const FAVORABLE_CATS = new Set(["자기주식취득"])
 
 interface Props {
     stockUrl: string
+    usStockUrl: string
     flowUrl: string
     forensicsUrl: string
     insiderUrl: string
@@ -430,7 +431,7 @@ function StockReportSkeleton({ C, isDark, narrow }: { C: any; isDark: boolean; n
 }
 
 export default function PublicStockReport(props: Props) {
-    const { stockUrl, flowUrl, forensicsUrl, insiderUrl, warnUrl, apiBase, dark } = props
+    const { stockUrl, usStockUrl, flowUrl, forensicsUrl, insiderUrl, warnUrl, apiBase, dark } = props
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
     const C = (RenderTarget.current() === RenderTarget.canvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
@@ -525,11 +526,12 @@ export default function PublicStockReport(props: Props) {
     useEffect(() => {
         if (onCanvas || !stockUrl) return
         let alive = true
-        fetch(stockUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const arr = d && (Array.isArray(d) ? d : d.stocks)
-                if (!alive || !Array.isArray(arr) || !arr.length) return
+        const urls = [stockUrl, usStockUrl].filter(Boolean)
+        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
+            .then((docs) => {
+                const arr: any[] = []
+                for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) arr.push(...(a as any[])) }
+                if (!alive || !arr.length) return
                 setList(arr); setListLoaded(true)
                 let initT = arr[0].ticker
                 if (typeof window !== "undefined") {
@@ -546,7 +548,7 @@ export default function PublicStockReport(props: Props) {
             })
             .catch(() => {})
         return () => { alive = false }
-    }, [stockUrl, onCanvas])
+    }, [stockUrl, usStockUrl, onCanvas])
 
     useEffect(() => {
         if (onCanvas || !flowUrl) return
@@ -1693,6 +1695,7 @@ export default function PublicStockReport(props: Props) {
 
 addPropertyControls(PublicStockReport, {
     stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEFAULT_URL },
+    usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
     flowUrl: { type: ControlType.String, title: "Flow URL", defaultValue: DEFAULT_FLOW },
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: DEFAULT_FORENSICS },
     insiderUrl: { type: ControlType.String, title: "Insider URL", defaultValue: DEFAULT_INSIDER },

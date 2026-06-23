@@ -21,6 +21,7 @@ interface Props {
     placeholder: string
     stockPath: string
     stockUrl: string
+    usStockUrl: string
     dark: boolean
 }
 
@@ -29,7 +30,7 @@ interface Props {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicStockSearch(props: Props) {
-    const { placeholder, stockPath, stockUrl, dark } = props
+    const { placeholder, stockPath, stockUrl, usStockUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
@@ -62,15 +63,20 @@ export default function PublicStockSearch(props: Props) {
         return () => ro.disconnect()
     }, [])
 
-    /* 유니버스 로드(코드 정규화용). 리포트/피커와 동일 JSON 이라 브라우저 캐시 공유. */
+    /* 유니버스 로드 — KR + US 동시(국장·미장 통합 검색). 2026-06-23. */
     useEffect(() => {
-        if (onCanvas || !stockUrl) return
+        if (onCanvas) return
         let alive = true
-        fetch(stockUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a)) setUniverse(a) })
-            .catch(() => {})
+        const urls = [stockUrl, usStockUrl].filter(Boolean)
+        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
+            .then((docs) => {
+                if (!alive) return
+                const merged: any[] = []
+                for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) merged.push(...a) }
+                if (merged.length) setUniverse(merged)
+            })
         return () => { alive = false }
-    }, [stockUrl, onCanvas])
+    }, [stockUrl, usStockUrl, onCanvas])
 
     /* 입력 → 종목코드. 코드/이름 정확 → 부분일치 → (실패 시) raw 텍스트. */
     const resolveTicker = (text: string): string => {
@@ -124,5 +130,6 @@ addPropertyControls(PublicStockSearch, {
     placeholder: { type: ControlType.String, title: "Placeholder", defaultValue: "종목 검색 (이름·코드)" },
     stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
     stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEF_STOCK },
+    usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
