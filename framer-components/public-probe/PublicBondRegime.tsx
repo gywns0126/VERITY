@@ -196,7 +196,7 @@ export default function PublicBondRegime(props: Props) {
     }
 
     const renderCurve = () => {
-        const W = 100, H = 42, pX = 2, pY = 6
+        const W = 100, H = 44, pX = 1, pY = 9
         const ys = curve.map((p) => Number(p.yield)).filter((v) => isFinite(v))
         if (curve.length < 2 || !ys.length) return <div style={{ fontSize: 12.5, color: C.faint, padding: "8px 0" }}>곡선 데이터 없음</div>
         const minY = Math.min(...ys), maxY = Math.max(...ys), span = maxY - minY || 1, n = curve.length
@@ -204,14 +204,20 @@ export default function PublicBondRegime(props: Props) {
             x: pX + (i / (n - 1)) * (W - 2 * pX),
             y: pY + (1 - (Number(p.yield) - minY) / span) * (H - 2 * pY),
         }))
-        const path = pts.map((pt, i) => (i === 0 ? "M" : "L") + pt.x.toFixed(1) + " " + pt.y.toFixed(1)).join(" ")
+        // 부드러운 곡선(Catmull-Rom → 베지어). 점 마커는 늘린 좌표에서 타원으로 찌그러져 제거.
+        let line = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`
+        for (let i = 0; i < n - 1; i++) {
+            const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2
+            const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6
+            const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6
+            line += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`
+        }
         const lineCol = recession || cs.warn ? C.up : C.down
         return (
             <div>
-                <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: 88, display: "block" }}>
-                    <path d={`${path} L ${pts[n - 1].x.toFixed(1)} ${H} L ${pts[0].x.toFixed(1)} ${H} Z`} fill={lineCol} opacity={isDark ? 0.1 : 0.06} />
-                    <path d={path} fill="none" stroke={lineCol} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                    {pts.map((pt, i) => <circle key={i} cx={pt.x} cy={pt.y} r={1} fill={lineCol} vectorEffect="non-scaling-stroke" />)}
+                <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: 96, display: "block" }}>
+                    <path d={`${line} L ${pts[n - 1].x.toFixed(2)} ${H} L ${pts[0].x.toFixed(2)} ${H} Z`} fill={lineCol} opacity={isDark ? 0.1 : 0.06} />
+                    <path d={line} fill="none" stroke={lineCol} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                 </svg>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
                     {curve.map((p, i) => (
