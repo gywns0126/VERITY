@@ -84,6 +84,7 @@ export default function PublicETFFlow(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [data, setData] = useState<any>(null)
+    const [showAll, setShowAll] = useState(false)
 
     useEffect(() => {
         const el = rootRef.current
@@ -148,6 +149,7 @@ export default function PublicETFFlow(props: Props) {
     const hasFlow = Number(data.with_flow_count) > 0
     const maxCat = cats.length ? Math.max(...cats.map((c) => Math.abs(c.flow))) : 0
     const dirColor = (f: number) => (f > 0 ? C.up : C.down)
+    const COLLAPSED = 8
 
     return (
         <div ref={rootRef} style={wrap}>
@@ -189,9 +191,9 @@ export default function PublicETFFlow(props: Props) {
                 </div>
             )}
 
-            {/* ETF 리스트 */}
-            <div style={{ ...card, marginTop: 12, paddingTop: 6, paddingBottom: 6 }}>
-                {etfs.map((e, idx) => {
+            {/* ETF 리스트 — 상위 8개 + 더보기 (토스식 길이 절제) */}
+            <div style={{ ...card, marginTop: 12, paddingTop: 6, paddingBottom: showAll || etfs.length <= COLLAPSED ? 6 : 0 }}>
+                {(showAll ? etfs : etfs.slice(0, COLLAPSED)).map((e, idx) => {
                     const f = Number(e.est_flow)
                     const has = isFinite(f) && f !== 0
                     const col = has ? dirColor(f) : C.faint
@@ -214,6 +216,12 @@ export default function PublicETFFlow(props: Props) {
                         </div>
                     )
                 })}
+                {etfs.length > COLLAPSED && (
+                    <button onClick={() => setShowAll((s) => !s)}
+                        style={{ width: "100%", border: "none", cursor: "pointer", fontFamily: FONT, background: "transparent", padding: "13px 0", borderTop: `1px solid ${C.line}`, fontSize: 13, fontWeight: 600, color: C.sub }}>
+                        {showAll ? "접기" : `더보기 (${etfs.length - COLLAPSED}개)`}
+                    </button>
+                )}
             </div>
 
             {/* 면책 */}
