@@ -118,8 +118,20 @@ const DEMO_FLOW = [{ foreign_net: 151302, inst_net: 16724 }]
  */
 export default function PublicDecisionPanel(props: Props) {
     const { ticker, stockUrl, usStockUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, reportPath, discoverPath, dark } = props
-    const C = dark ? DARK : LIGHT
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    // 테마 추종 — 사이트 다크모드(body[data-framer-theme]) 따라감. 캔버스는 dark prop 정적.
+    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    useEffect(() => {
+        if (onCanvas) return
+        const read = () => { const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""; setThemeDark(t === "dark") }
+        read()
+        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+        const obs = new MutationObserver(read)
+        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+        return () => obs.disconnect()
+    }, [onCanvas])
+    const isDark = onCanvas ? !!dark : themeDark
+    const C = isDark ? DARK : LIGHT
 
     const [w, setW] = useState(0)
     const [stock, setStock] = useState<any>(null)
@@ -296,8 +308,8 @@ export default function PublicDecisionPanel(props: Props) {
     }
     if (!s || !model) {
         // 토스식 스켈레톤 — 결정 패널 레이아웃(헤더 + 4축 + 강세약세) 모사 + shimmer. 텍스트 "불러오는 중" 대체.
-        const skBase = dark ? "#222a33" : "#e9edf1"
-        const skHi = dark ? "#2d3742" : "#f3f5f7"
+        const skBase = isDark ? "#222a33" : "#e9edf1"
+        const skHi = isDark ? "#2d3742" : "#f3f5f7"
         const shim: CSSProperties = { background: skBase, backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "vsrShimmer 1.4s ease-in-out infinite", borderRadius: 7 }
         const bar = (bw: number | string, bh: number, mt = 0): CSSProperties => ({ ...shim, width: bw, height: bh, marginTop: mt })
         const skCard = () => (

@@ -66,8 +66,19 @@ const DEMO_THESIS = { stance: "bull", note: "PER·PBR 업종 이하 + 내부자 
  */
 export default function PublicThesisNote(props: Props) {
     const { ticker, apiBase, dark } = props
-    const C = dark ? DARK : LIGHT
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    // 테마 추종 — 사이트 다크모드(body[data-framer-theme]) 따라감. 캔버스는 dark prop 정적.
+    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    useEffect(() => {
+        if (onCanvas) return
+        const read = () => { const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""; setThemeDark(t === "dark") }
+        read()
+        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+        const obs = new MutationObserver(read)
+        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+        return () => obs.disconnect()
+    }, [onCanvas])
+    const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
 
     const resolveTk = (): string => {
