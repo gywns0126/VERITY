@@ -1,0 +1,481 @@
+{
+  "_meta": {
+    "generated_at": "2026-06-20T13:52:29.491699+09:00",
+    "source": "disclosure_forensics.json × dart_quarterly_snapshots.jsonl",
+    "universe": {
+      "disclosure_event_flagged": 149,
+      "with_financials": 81
+    },
+    "disclaimer": "사실·패턴 필터 — 투자 추천/점수/순위 아님. 기준은 각 필터에 투명 동봉. 데이터=DART 공시+분기재무.",
+    "rule": "RULE 7 (사실만, 검증 점수 비공개) / RULE 6 (LLM 0)"
+  },
+  "filters": [
+    {
+      "key": "dilution_watch",
+      "name": "잦은 유상증자",
+      "badge": "희석",
+      "why": "신주 발행이 잦으면 기존 주주 지분이 그만큼 희석된다.",
+      "criteria_text": "최근 공시 유상증자 2건 이상",
+      "count": 13,
+      "tickers": [
+        {
+          "ticker": "214450",
+          "name": "파마리서치",
+          "facts": {
+            "유상증자": 4,
+            "희석성공시_합": 11
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "017960",
+          "name": "한국카본",
+          "facts": {
+            "유상증자": 3,
+            "희석성공시_합": 11
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "483650",
+          "name": "달바글로벌",
+          "facts": {
+            "유상증자": 3,
+            "희석성공시_합": 4
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "028050",
+          "name": "삼성E&A",
+          "facts": {
+            "유상증자": 6,
+            "희석성공시_합": 7
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "011300",
+          "name": "우성머티리얼스",
+          "facts": {
+            "유상증자": 6,
+            "희석성공시_합": 6
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "123010",
+          "name": "알엔티엑스",
+          "facts": {
+            "유상증자": 2,
+            "희석성공시_합": 5
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "096690",
+          "name": "에이루트",
+          "facts": {
+            "유상증자": 2,
+            "희석성공시_합": 4
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "080720",
+          "name": "한국유니온제약",
+          "facts": {
+            "유상증자": 2,
+            "희석성공시_합": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "073640",
+          "name": "테라사이언스",
+          "facts": {
+            "유상증자": 3,
+            "희석성공시_합": 3
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "455180",
+          "name": "케이지에이",
+          "facts": {
+            "유상증자": 2,
+            "희석성공시_합": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "347860",
+          "name": "알체라",
+          "facts": {
+            "유상증자": 2,
+            "희석성공시_합": 2
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "078860",
+          "name": "아이오케이이엔엠",
+          "facts": {
+            "유상증자": 2,
+            "희석성공시_합": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "377030",
+          "name": "비트맥스",
+          "facts": {
+            "유상증자": 2,
+            "희석성공시_합": 2
+          },
+          "has_financials": false
+        }
+      ]
+    },
+    {
+      "key": "convertible_overhang",
+      "name": "전환사채 빈발",
+      "badge": "CB·BW",
+      "why": "전환사채·신주인수권부사채는 향후 주식으로 전환될 잠재 물량(오버행)이다.",
+      "criteria_text": "전환사채(CB)+신주인수권부사채(BW)+교환사채(EB) 공시 2건 이상",
+      "count": 15,
+      "tickers": [
+        {
+          "ticker": "214450",
+          "name": "파마리서치",
+          "facts": {
+            "CB_BW_EB": 4
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "017960",
+          "name": "한국카본",
+          "facts": {
+            "CB_BW_EB": 4
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "123010",
+          "name": "알엔티엑스",
+          "facts": {
+            "CB_BW_EB": 3
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "096690",
+          "name": "에이루트",
+          "facts": {
+            "CB_BW_EB": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "025620",
+          "name": "차AI헬스케어",
+          "facts": {
+            "CB_BW_EB": 4
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "049470",
+          "name": "비트플래닛",
+          "facts": {
+            "CB_BW_EB": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "006740",
+          "name": "블루산업개발",
+          "facts": {
+            "CB_BW_EB": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "351320",
+          "name": "넥사다이내믹스",
+          "facts": {
+            "CB_BW_EB": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "129920",
+          "name": "대성하이텍",
+          "facts": {
+            "CB_BW_EB": 2
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "127120",
+          "name": "제이에스링크",
+          "facts": {
+            "CB_BW_EB": 2
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "142760",
+          "name": "모아라이프플러스",
+          "facts": {
+            "CB_BW_EB": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "288980",
+          "name": "모아데이타",
+          "facts": {
+            "CB_BW_EB": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "393970",
+          "name": "대진첨단소재",
+          "facts": {
+            "CB_BW_EB": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "900100",
+          "name": "파이온엑스",
+          "facts": {
+            "CB_BW_EB": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "210120",
+          "name": "캔버스엔",
+          "facts": {
+            "CB_BW_EB": 2
+          },
+          "has_financials": false
+        }
+      ]
+    },
+    {
+      "key": "buyback_active",
+      "name": "자사주 매입 활발",
+      "badge": "자기주식취득",
+      "why": "자사주 매입은 주주환원 신호일 수 있다(단 소각 여부는 별도 확인 필요).",
+      "criteria_text": "자기주식취득 공시 2건 이상",
+      "count": 10,
+      "tickers": [
+        {
+          "ticker": "214450",
+          "name": "파마리서치",
+          "facts": {
+            "자기주식취득": 6
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "000270",
+          "name": "기아",
+          "facts": {
+            "자기주식취득": 10
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "017960",
+          "name": "한국카본",
+          "facts": {
+            "자기주식취득": 3
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "483650",
+          "name": "달바글로벌",
+          "facts": {
+            "자기주식취득": 7
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "375500",
+          "name": "DL이앤씨",
+          "facts": {
+            "자기주식취득": 9
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "003550",
+          "name": "LG",
+          "facts": {
+            "자기주식취득": 2
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "006800",
+          "name": "미래에셋증권",
+          "facts": {
+            "자기주식취득": 2
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "046390",
+          "name": "삼화네트웍스",
+          "facts": {
+            "자기주식취득": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "310870",
+          "name": "디와이씨",
+          "facts": {
+            "자기주식취득": 2
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "038540",
+          "name": "상상인",
+          "facts": {
+            "자기주식취득": 2
+          },
+          "has_financials": true
+        }
+      ]
+    },
+    {
+      "key": "clean_fin_risky_disc",
+      "name": "재무 양호 · 공시 적신호",
+      "badge": "교차",
+      "why": "실적은 멀쩡한데 희석·구조 공시가 잦은 회사 — 재무 화면만 보면 안 보인다.",
+      "criteria_text": "부채비율 100% 미만 · 순이익 > 0 · (유상증자 2건+ 또는 감자/합병/분할 공시 보유)",
+      "count": 4,
+      "tickers": [
+        {
+          "ticker": "214450",
+          "name": "파마리서치",
+          "facts": {
+            "부채비율": 44.2,
+            "순이익": 168255434874,
+            "유상증자": 4,
+            "구조공시": 2
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "483650",
+          "name": "달바글로벌",
+          "facts": {
+            "부채비율": 28.6,
+            "순이익": 79053534113,
+            "유상증자": 3,
+            "구조공시": 0
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "095660",
+          "name": "네오위즈",
+          "facts": {
+            "부채비율": 22.2,
+            "순이익": 49978518604,
+            "유상증자": 0,
+            "구조공시": 2
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "122450",
+          "name": "KX",
+          "facts": {
+            "부채비율": 92.6,
+            "순이익": 25555907008,
+            "유상증자": 0,
+            "구조공시": 1
+          },
+          "has_financials": true
+        }
+      ]
+    },
+    {
+      "key": "distress_history",
+      "name": "부실 이력 (회생·감자)",
+      "badge": "부실",
+      "why": "회생절차·상장폐지·감자 공시는 자본 구조 위험의 직접 신호다.",
+      "criteria_text": "회생·상장폐지 또는 감자 공시 보유",
+      "count": 7,
+      "tickers": [
+        {
+          "ticker": "017960",
+          "name": "한국카본",
+          "facts": {
+            "회생·상폐·감자": 2
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "003550",
+          "name": "LG",
+          "facts": {
+            "회생·상폐·감자": 1
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "080720",
+          "name": "한국유니온제약",
+          "facts": {
+            "회생·상폐·감자": 1
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "036420",
+          "name": "콘텐트리중앙",
+          "facts": {
+            "회생·상폐·감자": 2
+          },
+          "has_financials": true
+        },
+        {
+          "ticker": "348950",
+          "name": "제이알글로벌리츠",
+          "facts": {
+            "회생·상폐·감자": 1
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "043100",
+          "name": "알파AI",
+          "facts": {
+            "회생·상폐·감자": 1
+          },
+          "has_financials": false
+        },
+        {
+          "ticker": "066790",
+          "name": "씨씨에스",
+          "facts": {
+            "회생·상폐·감자": 1
+          },
+          "has_financials": false
+        }
+      ]
+    }
+  ]
+}
