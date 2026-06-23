@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-06-23T10:29:12.258187+09:00",
+  "generated_at": "2026-06-23T14:50:08.180548+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 180863,
+    "code_lines_tsx_py": 181618,
     "python_modules": 567,
-    "tsx_components": 60,
+    "tsx_components": 64,
     "json_data_files": 266,
     "json_total_tracked": 281,
     "workflows": 48,
     "scheduled_workflows": 39,
     "cron_triggers": 48,
-    "git_tracked_files": 5282
+    "git_tracked_files": 5286
   },
   "subsystems": {
     "ingest": {
@@ -478,11 +478,11 @@
     },
     "surface": {
       "label": "출력",
-      "count": 60,
+      "count": 64,
       "by_group": {
-        "framer-components/public-probe": 15,
+        "framer-components/public-probe": 18,
+        "market": 11,
         "_shared": 10,
-        "market": 10,
         "admin": 6,
         "analysis": 5,
         "us": 4,
@@ -499,14 +499,14 @@
     },
     "validation": {
       "label": "검증",
-      "n_trading_days": 25,
-      "n_calendar_days": 36,
+      "n_trading_days": 26,
+      "n_calendar_days": 37,
       "next_milestone": {
         "next_n": 30,
-        "days_remaining": 5,
+        "days_remaining": 4,
         "label": "통계 무의미 졸업 (메모 project_minimum_n_milestones_2026_05_18)"
       },
-      "as_of": "2026-06-22T14:38:32+09:00"
+      "as_of": "2026-06-23T13:37:01+09:00"
     }
   },
   "python_by_dir": {
@@ -536,11 +536,11 @@
   },
   "health": {
     "infra_summary": {
-      "ok": 6,
-      "warn": 1,
+      "ok": 5,
+      "warn": 2,
       "alert": 0
     },
-    "infra_as_of": "2026-06-22T11:35:01+09:00",
+    "infra_as_of": "2026-06-23T11:01:41+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
