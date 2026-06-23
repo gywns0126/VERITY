@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useRef, useState, type CSSProperties } from "react"
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
  * 종목 검색창 (독립) — VERITY 공개 터미널. Framer 네이티브 nav 안에 끼워 쓰는 검색 전용.
@@ -11,11 +11,38 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
  */
 
-const LIGHT = { ink: "#191f28", faint: "#8b95a1", vg: "#0ca678", field: "#f2f4f6", card: "#ffffff" }
-const DARK = { ink: "#e3e7ec", faint: "#828d9b", vg: "#7fffa0", field: "#0f1318", card: "#171c23" }
+const LIGHT = { ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", vg: "#0ca678", vt: "#6c5ce7", vtS: "#f0edff", field: "#f2f4f6", card: "#ffffff", bg: "#f2f4f6" }
+const DARK = { ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", vg: "#7fffa0", vt: "#a99bff", vtS: "#241f3a", field: "#0f1318", card: "#171c23", bg: "#0f1318" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
 const LAST_TK_KEY = "verity_last_ticker"
+/* 로고 — 토스 종목 CDN(404/차단 시 이니셜 폴백) + circle-flags 원형 국기. ticker 형식으로 국장/미장 판별. */
+const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
+function flagFromTicker(ticker: any): string {
+    return /^\d{6}$/.test(String(ticker || "")) ? "kr" : "us"
+}
+function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
+    const { ticker, name, C } = props
+    const size = props.size || 22
+    const [err, setErr] = useState(false)
+    const ch = (String(name || "?").trim().charAt(0)) || "?"
+    const code = flagFromTicker(ticker)
+    const fsize = Math.round(size * 0.46)
+    return (
+        <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
+            {!err && ticker ? (
+                <img src={LOGO_BASE + String(ticker).replace(/-/g, ".") + ".png"} alt="" width={size} height={size}
+                    onError={() => setErr(true)}
+                    style={{ width: size, height: size, borderRadius: 7, objectFit: "cover", display: "block", background: C.bg }} />
+            ) : (
+                <span style={{ width: size, height: size, borderRadius: 7, background: C.vtS, color: C.vt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
+            )}
+            <img src={FLAG_BASE + code + ".svg"} alt="" width={fsize} height={fsize}
+                style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block", boxShadow: "0 1px 2px rgba(0,0,0,0.18)" }} />
+        </span>
+    )
+}
 
 interface Props {
     placeholder: string
@@ -54,6 +81,7 @@ export default function PublicStockSearch(props: Props) {
     const [w, setW] = useState(0)
     const [q, setQ] = useState("")
     const [universe, setUniverse] = useState<any[]>([])
+    const [focused, setFocused] = useState(false)
 
     useEffect(() => {
         const el = rootRef.current
@@ -88,13 +116,28 @@ export default function PublicStockSearch(props: Props) {
         return hit ? String(hit.ticker) : s
     }
 
-    const go = () => {
-        const raw = q.trim()
-        if (!raw || typeof window === "undefined") return
-        const tk = resolveTicker(raw)
+    /* 라이브 연관검색어 — 코드·영문명·한글명 부분일치, 상위 12. */
+    const matches = useMemo(() => {
+        const s = q.trim().toLowerCase()
+        if (!s || !universe.length) return []
+        return universe.filter((x) =>
+            String(x.ticker).toLowerCase().includes(s) ||
+            String(x.name || "").toLowerCase().includes(s) ||
+            String((x as any).name_ko || "").includes(q.trim())
+        ).slice(0, 12)
+    }, [q, universe])
+
+    const pick = (tk: string) => {
+        if (!tk || typeof window === "undefined") return
         try { window.localStorage.setItem(LAST_TK_KEY, tk) } catch { /* private/quota */ }
         const p = (stockPath || "/stock").replace(/\/+$/, "")
         window.location.href = p + "?q=" + encodeURIComponent(tk)
+    }
+
+    const go = () => {
+        const raw = q.trim()
+        if (!raw) return
+        pick(resolveTicker(raw))
     }
 
     const narrow = w > 0 && w < 200
@@ -108,20 +151,37 @@ export default function PublicStockSearch(props: Props) {
     }
 
     return (
-        <div ref={rootRef} style={wrap}>
-            <span style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid ${C.faint}`, flexShrink: 0, display: "inline-block", position: "relative" }}>
-                <span style={{ position: "absolute", width: 2, height: 6, background: C.faint, right: -3, bottom: -3, transform: "rotate(-45deg)" }} />
-            </span>
-            <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") go() }}
-                placeholder={placeholder || "종목 검색"}
-                style={{
-                    border: "none", outline: "none", background: "transparent", color: C.ink,
-                    fontFamily: FONT, fontSize: narrow ? 13 : 14, fontWeight: 600, width: "100%", minWidth: 0,
-                }}
-            />
+        <div ref={rootRef} style={{ position: "relative", width: "100%", height: "100%", fontFamily: FONT }}>
+            <div style={wrap}>
+                <span style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid ${C.faint}`, flexShrink: 0, display: "inline-block", position: "relative" }}>
+                    <span style={{ position: "absolute", width: 2, height: 6, background: C.faint, right: -3, bottom: -3, transform: "rotate(-45deg)" }} />
+                </span>
+                <input
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { setFocused(false); go() } }}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setTimeout(() => setFocused(false), 140)}
+                    placeholder={placeholder || "종목 검색"}
+                    style={{
+                        border: "none", outline: "none", background: "transparent", color: C.ink,
+                        fontFamily: FONT, fontSize: narrow ? 13 : 14, fontWeight: 600, width: "100%", minWidth: 0,
+                    }}
+                />
+            </div>
+            {!onCanvas && focused && q.trim() && matches.length > 0 && (
+                <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 70, background: C.card, borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.16)", padding: 6, maxHeight: 340, overflowY: "auto" }}>
+                    {matches.map((m) => (
+                        <div key={m.ticker} onMouseDown={() => pick(String(m.ticker))}
+                            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
+                            <Logo ticker={m.ticker} name={m.name} C={C} size={22} />
+                            <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{m.name}</span>
+                            {m.name_ko && <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>{m.name_ko}</span>}
+                            <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginLeft: "auto" }}>{m.ticker}{m.market ? " · " + m.market : ""}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     )
 }
