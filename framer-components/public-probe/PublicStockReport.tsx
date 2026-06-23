@@ -1063,9 +1063,11 @@ export default function PublicStockReport(props: Props) {
                         {matches.map((m) => (
                             <div key={m.ticker}
                                 onMouseDown={() => { setSelTicker(m.ticker); try { window.localStorage.setItem("verity_last_ticker", String(m.ticker)); window.history.replaceState(null, "", window.location.pathname + "?q=" + encodeURIComponent(String(m.ticker)) + window.location.hash) } catch (e) {} ; setQuery(""); setFocused(false) }}
-                                style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "9px 10px", borderRadius: 9, cursor: "pointer" }}>
+                                style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
+                                <Logo ticker={m.ticker} name={m.name} market={m.market} C={C} size={22} />
                                 <span style={{ fontFamily: HEAD, fontSize: 13.5, fontWeight: 700, color: C.ink }}>{m.name}</span>
-                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{m.ticker} · {m.market}</span>
+                                {m.name_ko && <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>{m.name_ko}</span>}
+                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginLeft: "auto" }}>{m.ticker} · {m.market}</span>
                             </div>
                         ))}
                     </div>
