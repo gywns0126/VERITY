@@ -295,7 +295,40 @@ export default function PublicDecisionPanel(props: Props) {
         return <div ref={setRef} style={wrap}>{searchBar}<div style={{ padding: "28px 18px", textAlign: "center", color: C.faint, fontSize: 13, fontWeight: 600 }}>종목을 검색·선택하면 결정 요약이 나와요.</div></div>
     }
     if (!s || !model) {
-        return <div ref={setRef} style={wrap}>{searchBar}<div style={{ padding: "28px 18px", textAlign: "center", color: C.faint, fontSize: 13, fontWeight: 600 }}>결정 요약 불러오는 중…</div></div>
+        // 토스식 스켈레톤 — 결정 패널 레이아웃(헤더 + 4축 + 강세약세) 모사 + shimmer. 텍스트 "불러오는 중" 대체.
+        const skBase = dark ? "#222a33" : "#e9edf1"
+        const skHi = dark ? "#2d3742" : "#f3f5f7"
+        const shim: CSSProperties = { background: skBase, backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "vsrShimmer 1.4s ease-in-out infinite", borderRadius: 7 }
+        const bar = (bw: number | string, bh: number, mt = 0): CSSProperties => ({ ...shim, width: bw, height: bh, marginTop: mt })
+        const skCard = () => (
+            <div style={{ background: C.card, borderRadius: 14, padding: "15px 17px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                <div style={bar(64, 12)} />
+                <div style={bar("82%", 12, 9)} />
+                <div style={bar("62%", 12, 7)} />
+            </div>
+        )
+        return (
+            <div ref={setRef} style={wrap}>
+                {searchBar}
+                <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+                {/* 헤더 스켈레톤 */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, paddingLeft: narrow ? 14 : 17 }}>
+                    <div style={{ ...shim, width: narrow ? 34 : 40, height: narrow ? 34 : 40, borderRadius: 11 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={bar(132, 17)} />
+                        <div style={bar(190, 11, 6)} />
+                    </div>
+                </div>
+                {/* 결정 4축 스켈레톤 */}
+                <div style={{ display: "grid", gridTemplateColumns: narrow ? "1fr" : "1fr 1fr", gap: 12 }}>
+                    {skCard()}{skCard()}{skCard()}{skCard()}
+                </div>
+                {/* 강세 ↔ 약세 스켈레톤 */}
+                <div style={{ display: "grid", gridTemplateColumns: narrow ? "1fr" : "1fr 1fr", gap: 12, marginTop: 18 }}>
+                    {skCard()}{skCard()}
+                </div>
+            </div>
+        )
     }
 
     const vsArrow = (vs: string) => vs === "above" ? "↑" : vs === "below" ? "↓" : "="

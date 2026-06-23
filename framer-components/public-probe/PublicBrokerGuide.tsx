@@ -7,7 +7,8 @@ import React, { useEffect, useMemo, useState } from "react"
  * 데이터 = Blob broker_guide.json (api/collectors/broker_guide.py = Perplexity sonar-pro 월 1회 자동집계).
  *
  * RULE 6/7: 우리 의견·별점·추천 0. 노출은 사실 + 출처만. "자동집계 · 권유 아님 · as-of" 라벨 의무.
- * 신뢰 컬럼만(국내수수료·ISA·신용/대주 + 거래유형별). 평점·커뮤·해외는 LLM 신뢰 약해 보류(collector 는 계속 수집·flag).
+ * 노출 컬럼(2026-06-23 확장) = 국내수수료·해외수수료·ISA·신용대주·실시간뉴스·커뮤니티·앱 (전부 수집된 사실+출처).
+ *   별점(app_rating)만 보류 유지 = 수집값 0/6 + 별점 자체가 RULE7 의견 영역. (PM 요청 "내용 풍부하게" → 사실 컬럼만 추가)
  * 로고 = 증권사 공식 도메인 Clearbit + 구글 파비콘 fallback (상장/비상장 무관 안정).
  * 다크모드: body[data-framer-theme] 추종. 캔버스=dark prop 정적.
  */
@@ -130,8 +131,34 @@ function dateOnly(t: string): string {
     return m ? m[0] : ""
 }
 
+// 인용 마커 [1][2] 제거 + 공백 정리 (Perplexity citation 흔적). 사실 텍스트만 노출.
+function clean(s: any): string {
+    return String(s || "").replace(/\[\d+\]/g, "").replace(/\s+/g, " ").trim()
+}
+// 사실상 "값 없음"인지 (— 로 표시할지)
+function isEmptyVal(s: string): boolean {
+    const v = clean(s)
+    return !v || /^(없음|미제공|정보 ?없음|n\/?a|해당없음|불명)$/i.test(v)
+}
+// 해외수수료 요점만 — 첫 %(range 포함) + "미국" + 이벤트무료 플래그. 전문은 title(hover)/출처.
+function briefOverseas(s: any): string {
+    const v = clean(s)
+    if (!v) return ""
+    const pct = v.match(/\d+(?:\.\d+)?(?:\s*~\s*\d+(?:\.\d+)?)?\s*%/)
+    const us = /미국|미장|US\b|달러/.test(v)
+    const free = /이벤트/.test(v) && /무료/.test(v)
+    if (pct) {
+        let out = (us ? "미국 " : "") + pct[0].replace(/\s+/g, "")
+        if (free) out += " · 이벤트 무료"
+        return out
+    }
+    if (/무료/.test(v)) return us ? "미국 무료" : "무료"
+    const head = v.split(/[/·]/)[0].trim()
+    return head.length > 20 ? head.slice(0, 20) + "…" : head
+}
+
 const DEMO: Guide = {
-    as_of: "2026-06-01T00:00:00+09:00",
+    as_of: "2026-06-22T00:00:00+09:00",
     source: "perplexity sonar-pro (자동집계) · 예시",
     disclaimer: "Perplexity 자동집계 · 수수료는 수시 변동 · 사실 비교일 뿐 권유 아님 · 거래 전 각 사 공식 고지 확인",
     by_trade_type: [
@@ -142,12 +169,12 @@ const DEMO: Guide = {
         { type: "중장기/배당", best: "한국투자증권, NH투자증권", reason: "리서치·정보 제공 + 비대면 우대." },
     ],
     brokers: [
-        { name: "한국투자증권", app: "", domestic_fee: "0.0140%", overseas_fee: "", isa: "지원", credit_short: "지원", app_rating: "", community: "", realtime_news: "", source_url: "" },
-        { name: "토스증권", app: "", domestic_fee: "이벤트 시 무료", overseas_fee: "", isa: "미지원", credit_short: "일부", app_rating: "", community: "", realtime_news: "", source_url: "" },
-        { name: "키움증권", app: "", domestic_fee: "0.015%", overseas_fee: "", isa: "지원", credit_short: "지원", app_rating: "", community: "", realtime_news: "", source_url: "" },
-        { name: "미래에셋증권", app: "", domestic_fee: "0.0036%", overseas_fee: "", isa: "지원", credit_short: "지원", app_rating: "", community: "", realtime_news: "", source_url: "" },
-        { name: "삼성증권", app: "", domestic_fee: "0.0036%", overseas_fee: "", isa: "지원", credit_short: "지원", app_rating: "", community: "", realtime_news: "", source_url: "" },
-        { name: "NH투자증권", app: "", domestic_fee: "0.0036%", overseas_fee: "", isa: "지원", credit_short: "지원", app_rating: "", community: "", realtime_news: "", source_url: "" },
+        { name: "한국투자증권", app: "한국투자 m.Stock · 뱅키스", domestic_fee: "0.0140%", overseas_fee: "미국 0.25% (기본 온라인) · 환전우대 자료 부족", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "실시간시세·속보 제공", source_url: "" },
+        { name: "토스증권", app: "토스", domestic_fee: "이벤트 시 무료", overseas_fee: "미국 0.1% · 이벤트 시 무료", isa: "미지원", credit_short: "일부", app_rating: "", community: "토스 피드", realtime_news: "실시간시세 제공", source_url: "" },
+        { name: "키움증권", app: "영웅문S#", domestic_fee: "0.015%", overseas_fee: "미국 0.07%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "종목토론", realtime_news: "실시간시세·속보 제공", source_url: "" },
+        { name: "미래에셋증권", app: "M-STOCK", domestic_fee: "0.0036%", overseas_fee: "미국 0.07~0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "" },
+        { name: "삼성증권", app: "mPOP", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "" },
+        { name: "NH투자증권", app: "나무증권 · QV", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "" },
     ],
     citations: [],
 }
@@ -211,8 +238,8 @@ function BrokerLogo(props: { name: string; size: number; C: typeof LIGHT }) {
 
 function Chip(props: { label: string; value: string; C: typeof LIGHT }) {
     const { label, C } = props
-    const v = String(props.value || "")
-    const pos = /지원|있음|가능|포함/.test(v) && !/미지원|불가|없음|불가능/.test(v)
+    const v = clean(props.value)
+    const pos = /지원|있음|가능|포함|제공/.test(v) && !/미지원|불가|없음|불가능|미제공/.test(v)
     return (
         <span
             style={{
@@ -227,6 +254,29 @@ function Chip(props: { label: string; value: string; C: typeof LIGHT }) {
             <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>{label}</span>
             <span style={{ fontSize: 11.5, fontWeight: 700, color: pos ? C.good : C.subtext }}>{v || "—"}</span>
         </span>
+    )
+}
+
+/* 라벨 + 사실 텍스트 한 줄 (실시간뉴스·커뮤니티·앱 등 문장형 사실). 2줄 클램프. */
+function InfoLine(props: { label: string; value: string; C: typeof LIGHT }) {
+    const { label, value, C } = props
+    return (
+        <div style={{ display: "flex", gap: 8, fontSize: 11.5, lineHeight: 1.45, alignItems: "baseline" }}>
+            <span style={{ flexShrink: 0, color: C.faint, fontWeight: 700, width: 60 }}>{label}</span>
+            <span
+                style={{
+                    color: C.subtext,
+                    fontWeight: 500,
+                    overflowWrap: "anywhere",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                }}
+            >
+                {value}
+            </span>
+        </div>
     )
 }
 
@@ -257,26 +307,30 @@ function LoadingSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
                     <div
                         key={i}
                         style={{
-                            height: 162,
+                            height: 210,
                             background: C.card,
                             borderRadius: 16,
-                            padding: "15px 16px",
+                            padding: "16px 17px",
                             boxSizing: "border-box",
                         }}
                     >
                         {/* 헤더: 로고 + 증권사명 막대 */}
                         <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
-                            <div style={{ ...shimmer, width: 24, height: 24, borderRadius: 7 }} />
+                            <div style={{ ...shimmer, width: 26, height: 26, borderRadius: 7 }} />
                             <div style={bar(110, 15)} />
                         </div>
-                        {/* 라벨 + 수치 막대 */}
-                        <div style={bar(96, 11)} />
-                        <div style={bar("62%", 18, 7)} />
+                        {/* 수수료 2단 */}
+                        <div style={{ display: "flex", gap: 14 }}>
+                            <div style={{ flex: 1 }}><div style={bar(60, 11)} /><div style={bar("80%", 17, 6)} /></div>
+                            <div style={{ flex: 1 }}><div style={bar(60, 11)} /><div style={bar("90%", 17, 6)} /></div>
+                        </div>
                         {/* 칩 막대 2개 */}
-                        <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
+                        <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
                             <div style={{ ...shimmer, width: 72, height: 24, borderRadius: 8 }} />
                             <div style={{ ...shimmer, width: 92, height: 24, borderRadius: 8 }} />
                         </div>
+                        <div style={bar("100%", 11, 14)} />
+                        <div style={bar("70%", 11, 7)} />
                     </div>
                 ))}
             </div>
@@ -409,7 +463,7 @@ export default function PublicBrokerGuide(props: Props) {
                 ) : tab === "type" ? (
                     <TradeTypeView items={asArray(guide.by_trade_type)} C={C} cardH={props.typeCardHeight || 158} />
                 ) : (
-                    <BrokerTable brokers={asArray(guide.brokers)} C={C} cardH={props.tableCardHeight || 162} />
+                    <BrokerTable brokers={asArray(guide.brokers)} C={C} cardH={props.tableCardHeight || 250} />
                 )}
             </div>
 
@@ -516,51 +570,72 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
         return <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>증권사 데이터가 없어요.</div>
     }
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
-            {brokers.map((b, i) => (
-                <div
-                    key={i}
-                    style={{
-                        height: cardH,
-                        overflow: "hidden",
-                        background: C.card,
-                        borderRadius: 16,
-                        padding: "15px 16px",
-                        boxSizing: "border-box",
-                    }}
-                >
-                    {/* 헤더: 로고 + 이름 */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 11 }}>
-                        <BrokerLogo name={b.name} size={24} C={C} />
-                        <span style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: "-0.01em" }}>{b.name}</span>
-                    </div>
-
-                    {/* 국내 수수료 — 강조 완화 */}
-                    <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: C.faint, marginBottom: 3 }}>국내주식 위탁수수료</div>
-                        <div style={{ fontSize: 16.5, fontWeight: 700, color: C.text, letterSpacing: "-0.01em", overflowWrap: "anywhere" }}>
-                            {b.domestic_fee || "—"}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
+            {brokers.map((b, i) => {
+                const overseas = clean(b.overseas_fee)
+                const overseasBrief = briefOverseas(b.overseas_fee)
+                const news = clean(b.realtime_news)
+                const comm = clean(b.community)
+                const app = clean(b.app)
+                return (
+                    <div
+                        key={i}
+                        style={{
+                            minHeight: cardH,
+                            background: C.card,
+                            borderRadius: 16,
+                            padding: "16px 17px",
+                            boxSizing: "border-box",
+                        }}
+                    >
+                        {/* 헤더: 로고 + 이름 */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 13 }}>
+                            <BrokerLogo name={b.name} size={26} C={C} />
+                            <span style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: "-0.01em" }}>{b.name}</span>
                         </div>
-                    </div>
 
-                    {/* 보조 = ISA / 신용·대주 칩 */}
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        <Chip label="ISA" value={b.isa} C={C} />
-                        <Chip label="신용·대주" value={b.credit_short} C={C} />
-                    </div>
+                        {/* 수수료 2단 (국내 / 해외 요점) — 해외 전문은 hover(title)/출처 */}
+                        <div style={{ display: "flex", gap: 16, marginBottom: 13 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 11, fontWeight: 600, color: C.faint, marginBottom: 3 }}>국내주식</div>
+                                <div style={{ fontSize: 16.5, fontWeight: 700, color: C.text, letterSpacing: "-0.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {clean(b.domestic_fee) || "—"}
+                                </div>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 11, fontWeight: 600, color: C.faint, marginBottom: 3 }}>해외주식</div>
+                                <div title={overseas || ""} style={{ fontSize: 15, fontWeight: 700, color: overseasBrief ? C.text : C.faint, letterSpacing: "-0.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {overseasBrief || "—"}
+                                </div>
+                            </div>
+                        </div>
 
-                    {b.source_url ? (
-                        <a
-                            href={String(b.source_url)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ display: "inline-block", marginTop: 10, fontSize: 11, fontWeight: 600, color: C.accent, textDecoration: "none" }}
-                        >
-                            출처 ↗
-                        </a>
-                    ) : null}
-                </div>
-            ))}
+                        {/* 칩 = ISA / 신용·대주 */}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 11 }}>
+                            <Chip label="ISA" value={b.isa} C={C} />
+                            <Chip label="신용·대주" value={b.credit_short} C={C} />
+                        </div>
+
+                        {/* 사실 라인 = 실시간뉴스 / 커뮤니티 / 앱 */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            {news ? <InfoLine label="실시간뉴스" value={news} C={C} /> : null}
+                            {comm && !isEmptyVal(comm) ? <InfoLine label="커뮤니티" value={comm} C={C} /> : null}
+                            {app ? <InfoLine label="앱" value={app} C={C} /> : null}
+                        </div>
+
+                        {b.source_url ? (
+                            <a
+                                href={String(b.source_url)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ display: "inline-block", marginTop: 11, fontSize: 11, fontWeight: 600, color: C.accent, textDecoration: "none" }}
+                            >
+                                출처 ↗
+                            </a>
+                        ) : null}
+                    </div>
+                )
+            })}
         </div>
     )
 }
@@ -570,5 +645,5 @@ addPropertyControls(PublicBrokerGuide, {
     dataUrl: { type: ControlType.String, title: "데이터 JSON", defaultValue: BLOB + "/broker_guide.json" },
     height: { type: ControlType.Number, title: "높이", defaultValue: 720, min: 320, max: 1600, step: 20, unit: "px" },
     typeCardHeight: { type: ControlType.Number, title: "거래유형 카드 높이", defaultValue: 158, min: 110, max: 320, step: 4, unit: "px" },
-    tableCardHeight: { type: ControlType.Number, title: "증권사 카드 높이", defaultValue: 162, min: 110, max: 320, step: 4, unit: "px" },
+    tableCardHeight: { type: ControlType.Number, title: "증권사 카드 최소높이", defaultValue: 250, min: 140, max: 400, step: 4, unit: "px" },
 })

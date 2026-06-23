@@ -27,7 +27,11 @@ DATA_PATH = os.path.abspath(
 )
 
 BROKERS = ["한국투자증권", "토스증권", "키움증권", "미래에셋증권", "삼성증권", "NH투자증권"]
-TRADE_TYPES = ["소형주(코스닥) 단기", "미국주식 소액", "ISA 장기", "단타/고빈도", "중장기/배당"]
+# 거래유형 = 사실 근거(수수료·기능 유무)로 best 도출 가능한 것만. best 는 우리 추천 아님(권유 아님 라벨).
+TRADE_TYPES = [
+    "소형주(코스닥) 단기", "미국주식 소액", "ISA 장기", "단타/고빈도", "중장기/배당",
+    "해외주식 장기(환전우대)", "공모주(IPO) 청약", "연금저축·IRP", "ETF·지수 투자", "채권 투자",
+]
 
 # 🚨 검색 출처 제한 — 일반 블로그/커뮤니티 배제, 공식·준공식만. 출처 신뢰도 확보.
 # 금융투자협회(공시) + 금감원 + 각 사 공식 사이트.
@@ -309,7 +313,7 @@ def collect(force: bool = False) -> dict:
     res = call_perplexity(
         _build_query(),
         system_prompt=_SYSTEM,
-        max_tokens=4000,
+        max_tokens=5200,
         temperature=0.05,
         response_format=_RESPONSE_FORMAT,
     )
