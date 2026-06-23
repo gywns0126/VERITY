@@ -384,7 +384,7 @@ export default function PublicDecisionPanel(props: Props) {
     )
     const linkChip = (label: string, qs: string) => (
         <button key={qs} onClick={() => goDiscover(qs)}
-            style={{ border: `1px solid ${C.line}`, cursor: "pointer", fontFamily: FONT, background: C.card, color: C.vt, borderRadius: 999, padding: "7px 13px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>{label} →</button>
+            style={{ border: "none", cursor: "pointer", fontFamily: FONT, background: C.card, color: C.vt, borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>{label} →</button>
     )
 
     const m = model
