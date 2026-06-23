@@ -14,7 +14,7 @@ import json
 import os
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -54,6 +54,30 @@ def _title(name: str) -> str:
 
 
 CACHE_PATH = os.path.join(_ROOT, "data", "cache", "universe_us.json")
+SIC_KO_PATH = os.path.join(_ROOT, "data", "us_sic_ko.json")  # SIC 영문업종 → 한글 (정적, 런타임 번역 0)
+
+
+# numeric SIC → 한글 fallback (sic_description meta 결손 시 — MSFT/JPM 등 flagship 19종 빈값 방지).
+_SIC_CODE_KO = {
+    7370: "컴퓨터 서비스", 7371: "SW·데이터 서비스", 7372: "패키지 소프트웨어",
+    7373: "컴퓨터 시스템 설계", 7374: "데이터 처리", 7389: "비즈니스 서비스",
+    2834: "제약", 2836: "바이오 제품", 2840: "화장품·생활용품", 2844: "화장품·향수",
+    3663: "방송·통신 장비", 3576: "컴퓨터 통신장비", 3661: "전화·전신 장비", 3674: "반도체",
+    6021: "전국 상업은행", 6022: "주 상업은행", 6020: "상업은행", 6199: "금융 서비스",
+    3829: "계측·제어 장치", 3826: "실험·분석 기기", 3827: "광학기기·렌즈",
+    7990: "오락·레저", 7900: "오락·엔터", 2911: "석유 정제", 1311: "원유·천연가스",
+    6331: "화재·해상·손해보험", 6311: "생명보험", 4911: "전력", 4931: "전력·복합 유틸리티",
+    5812: "음식점", 3571: "전자 컴퓨터", 3672: "인쇄회로기판",
+}
+
+
+def _load_sic_ko() -> Dict[str, str]:
+    try:
+        with open(SIC_KO_PATH, encoding="utf-8") as f:
+            d = json.load(f)
+        return {k: v for k, v in d.items() if not k.startswith("_")}
+    except (OSError, json.JSONDecodeError):
+        return {}
 # display sanity outlier 임계 — 분모(매출/자본) 과소·XBRL 오추출·기간불일치로 폭발한 값 차단.
 # 가짜 숫자 대신 "산정불가" + 사유(정공법). 2026-06-23 정밀검수: net 221640%·Altman 7163 등 70종 노출 발견.
 _ROE_MAX = 100.0       # |ROE|>100% = 자사주/자본잠식 자기자본 과소
@@ -114,7 +138,8 @@ def _usd_compact(v: Any) -> str | None:
     return f"${x:,.0f}"
 
 
-def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[str, float]]) -> Dict[str, Any]:
+def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[str, float]],
+                sic_ko: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     facts: Dict[str, str] = {}
     fnote: Dict[str, str] = {}
 
@@ -160,6 +185,17 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
             fnote["Altman-Z"] = "안전구간" if zone == "safe" else str(zone)
 
     sic_desc = (meta or {}).get("sic_description") or ""
+    # 업종 한글화 (정적 SIC 맵, 런타임 번역 0). 미매핑 시 영문 유지. 영문은 business_en 보존.
+    sic_ko = sic_ko or {}
+    business_ko = sic_ko.get(sic_desc, sic_desc)
+    # sic_description 결손(MSFT/JPM 등 flagship) 시 numeric SIC fallback.
+    if not business_ko:
+        try:
+            _sic_n = int(row.get("sic")) if row.get("sic") is not None else None
+        except (TypeError, ValueError):
+            _sic_n = None
+        if _sic_n is not None:
+            business_ko = _SIC_CODE_KO.get(_sic_n, "")
     # header — 시총·거래대금 (universe 캐시, USD). 52주 범위는 가격 history 부재로 생략(클라이언트 라이브 가격 보완).
     cap = caps.get((row.get("ticker") or "").upper(), {})
     header: Dict[str, str] = {}
@@ -173,7 +209,8 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
         "ticker": row.get("ticker") or "",
         "name": _title(row.get("entity_name") or row.get("ticker")),
         "market": "US",
-        "business": sic_desc,
+        "business": business_ko,
+        "business_en": sic_desc if business_ko != sic_desc else None,
         "header": header or None,
         "facts": facts,
         "facts_note": fnote,
@@ -207,7 +244,8 @@ def main() -> int:
                 meta_by_ticker[tk] = {}
 
         caps = _load_universe_caps()   # header 시총·거래대금 (universe 캐시)
-        stocks = [build_stock(r, meta_by_ticker.get(r.get("ticker"), {}), caps) for r in rows if r.get("ticker")]
+        sic_ko = _load_sic_ko()   # SIC 영문업종 → 한글 (정적 맵)
+        stocks = [build_stock(r, meta_by_ticker.get(r.get("ticker"), {}), caps, sic_ko) for r in rows if r.get("ticker")]
         # ROE 큰 순 (사실 정렬)
         def _roe(s):
             v = s.get("facts", {}).get("ROE", "")
