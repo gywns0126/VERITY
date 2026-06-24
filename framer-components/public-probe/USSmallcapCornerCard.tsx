@@ -113,7 +113,7 @@ function FactRow(props: { t: Ticker; C: typeof LIGHT; reportPath?: string }) {
   )
 }
 
-export default function USSmallcapCornerCard(props: { width?: number; dark?: boolean; reportPath?: string }) {
+export default function USSmallcapCornerCard(props: { width?: number; dark?: boolean; reportPath?: string; screenerPath?: string }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
   const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
   const isDark = onCanvas ? !!props.dark : themeDark
@@ -239,7 +239,6 @@ export default function USSmallcapCornerCard(props: { width?: number; dark?: boo
         const t = TONE[flt.key] || { fg: C.blue, bg: C.blueSoft }
         const isOpen = open === i
         const tickers = flt.tickers || []
-        const limit = showAll === i ? tickers.length : 8
         return (
           <div
             key={i}
@@ -278,16 +277,17 @@ export default function USSmallcapCornerCard(props: { width?: number; dark?: boo
 
             {isOpen ? (
               <div style={{ marginTop: 4 }}>
-                {tickers.slice(0, limit).map(function (tk, j) {
+                {tickers.slice(0, 8).map(function (tk, j) {
                   return <FactRow key={j} t={tk} C={C} reportPath={props.reportPath} />
                 })}
-                {tickers.length > limit ? (
-                  <div
-                    onClick={function () { setShowAll(i) }}
-                    style={{ cursor: "pointer", textAlign: "center", fontSize: 12, fontWeight: 700, color: C.faint, padding: "10px 0 2px" }}
+                {tickers.length > 8 ? (
+                  <a
+                    href={(props.screenerPath || "/us-smallcap") + "?filter=" + flt.key}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{ display: "block", textAlign: "center", fontSize: 12.5, fontWeight: 700, color: t.fg, padding: "11px 0 3px", textDecoration: "none" }}
                   >
-                    + {tickers.length - limit}개 더보기
-                  </div>
+                    전체 {flt.count}개 보기 →
+                  </a>
                 ) : null}
               </div>
             ) : null}
@@ -306,4 +306,5 @@ addPropertyControls(USSmallcapCornerCard, {
   width: { type: ControlType.Number, title: "Width", defaultValue: 380, min: 320, max: 720 },
   dark: { type: ControlType.Boolean, title: "Dark (canvas)", defaultValue: false },
   reportPath: { type: ControlType.String, title: "리포트 경로", defaultValue: "/us" },
+  screenerPath: { type: ControlType.String, title: "스크리너 경로", defaultValue: "/us-smallcap" },
 })
