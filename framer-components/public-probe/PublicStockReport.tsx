@@ -103,6 +103,12 @@ const DEFAULT_FLOW = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/st
 const DEFAULT_FORENSICS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/disclosure_forensics.json"
 const DEFAULT_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/insider_trades.json"
 const DEFAULT_WARN = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/market_warnings.json"
+const DEFAULT_TRENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/trending_kr.json"
+const RECENTS_KEY = "verity_recent_tickers" // nav 검색(PublicStockSearch)과 공유
+function readRecents(): any[] {
+    if (typeof window === "undefined") return []
+    try { const a = JSON.parse(window.localStorage.getItem(RECENTS_KEY) || "[]"); return Array.isArray(a) ? a.filter((x) => x && x.t) : [] } catch { return [] }
+}
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const WATCH_SESSION_KEY = "verity_supabase_session"
 const WATCH_EVENT = "verity_watch_change"
@@ -473,6 +479,8 @@ export default function PublicStockReport(props: Props) {
     const [usForen, setUsForen] = useState<any>(null)   // 美 forensics (per-ticker 엔드포인트 집계)
     const [query, setQuery] = useState("")
     const [focused, setFocused] = useState(false)
+    const [recents, setRecents] = useState<any[]>([])
+    const [trending, setTrending] = useState<any[]>([])
     const [live, setLive] = useState<{ price?: number; chg?: number }>({})
     const [chart, setChart] = useState<any[]>([])
     const [chartLoading, setChartLoading] = useState<boolean>(false)
@@ -722,6 +730,30 @@ export default function PublicStockReport(props: Props) {
 
     const narrow = w > 0 && w < 560
     const pad = narrow ? 12 : 18
+
+    /* 거래대금 상위(지금 거래 활발) — 사실. trending_kr.json. */
+    useEffect(() => {
+        let alive = true
+        fetch(DEFAULT_TRENDING, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const t = d && Array.isArray(d.top) ? d.top : null; if (alive && t) setTrending(t.slice(0, 6)) })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [])
+    /* 종목 선택 = in-page 전환 + 최근 본 종목 누적(nav 검색과 공유 키). */
+    const goTicker = (tk: any, nm?: any) => {
+        const t = String(tk)
+        setSelTicker(t)
+        try {
+            window.localStorage.setItem("verity_last_ticker", t)
+            const name = nm || (list.find((x: any) => String(x.ticker) === t) || {}).name || t
+            const cur = readRecents().filter((x: any) => String(x.t) !== t)
+            cur.unshift({ t, n: name })
+            window.localStorage.setItem(RECENTS_KEY, JSON.stringify(cur.slice(0, 8)))
+            window.history.replaceState(null, "", window.location.pathname + "?q=" + encodeURIComponent(t) + window.location.hash)
+        } catch (e) {}
+        setQuery(""); setFocused(false)
+    }
 
     const matches = useMemo(() => {
         const q = query.trim().toLowerCase()
@@ -1053,27 +1085,63 @@ export default function PublicStockReport(props: Props) {
                 </svg>
                 <input style={inputStyle} placeholder={`종목 검색 (이름·코드) · 전 종목 ${list.length}개`}
                     value={query} onChange={(e) => setQuery(e.target.value)}
-                    onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 150)} />
+                    onFocus={() => { setRecents(readRecents()); setFocused(true) }} onBlur={() => setTimeout(() => setFocused(false), 150)} />
                 {query && (
                     <span role="button" tabIndex={0} onMouseDown={(e) => { e.preventDefault(); setQuery("") }}
                         style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: C.faint, fontSize: 15, fontWeight: 700, cursor: "pointer", lineHeight: 1 }}>×</span>
                 )}
-                {focused && matches.length > 0 && (
+                {focused && (query.trim() ? matches.length > 0 : (recents.length > 0 || trending.length > 0)) && (
                     <div style={{
                         position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 60,
                         background: C.card, borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.14)",
-                        padding: 6, maxHeight: 320, overflowY: "auto",
+                        padding: 6, maxHeight: 340, overflowY: "auto",
                     }}>
-                        {matches.map((m) => (
-                            <div key={m.ticker}
-                                onMouseDown={() => { setSelTicker(m.ticker); try { window.localStorage.setItem("verity_last_ticker", String(m.ticker)); window.history.replaceState(null, "", window.location.pathname + "?q=" + encodeURIComponent(String(m.ticker)) + window.location.hash) } catch (e) {} ; setQuery(""); setFocused(false) }}
-                                style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
-                                <Logo ticker={m.ticker} name={m.name} market={m.market} C={C} size={22} />
-                                <span style={{ fontFamily: HEAD, fontSize: 13.5, fontWeight: 700, color: C.ink }}>{m.name}</span>
-                                {m.name_ko && <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>{m.name_ko}</span>}
-                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginLeft: "auto" }}>{m.ticker} · {m.market}</span>
-                            </div>
-                        ))}
+                        {query.trim() ? (
+                            matches.map((m) => (
+                                <div key={m.ticker} onMouseDown={() => goTicker(m.ticker, m.name)}
+                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
+                                    <Logo ticker={m.ticker} name={m.name} market={m.market} C={C} size={22} />
+                                    <span style={{ fontFamily: HEAD, fontSize: 13.5, fontWeight: 700, color: C.ink }}>{m.name}</span>
+                                    {m.name_ko && <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>{m.name_ko}</span>}
+                                    <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginLeft: "auto" }}>{m.ticker} · {m.market}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <>
+                                {recents.length > 0 && (
+                                    <>
+                                        <div style={{ fontSize: 11, fontWeight: 800, color: C.faint, padding: "8px 10px 4px" }}>최근 본 종목</div>
+                                        {recents.slice(0, 6).map((r: any) => (
+                                            <div key={"r:" + r.t} onMouseDown={() => goTicker(r.t, r.n)}
+                                                style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
+                                                <Logo ticker={r.t} name={r.n} market={/^\d{6}$/.test(String(r.t)) ? "KOSPI" : "US"} C={C} size={22} />
+                                                <span style={{ fontFamily: HEAD, fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.n}</span>
+                                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginLeft: "auto" }}>{r.t}</span>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+                                {trending.length > 0 && (
+                                    <>
+                                        <div style={{ display: "flex", alignItems: "baseline", gap: 6, padding: "8px 10px 4px" }}>
+                                            <span style={{ fontSize: 11, fontWeight: 800, color: C.faint }}>지금 거래 활발</span>
+                                            <span style={{ fontSize: 10, fontWeight: 500, color: C.faint, opacity: 0.8 }}>거래대금 상위 · 사실</span>
+                                        </div>
+                                        {trending.map((t: any) => {
+                                            const chg = Number(t.chg)
+                                            return (
+                                                <div key={"t:" + t.ticker} onMouseDown={() => goTicker(t.ticker, t.name)}
+                                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
+                                                    <Logo ticker={t.ticker} name={t.name} market="KOSPI" C={C} size={22} />
+                                                    <span style={{ fontFamily: HEAD, fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name}</span>
+                                                    <span style={{ fontSize: 12, fontWeight: 700, color: isFinite(chg) ? pctColor(chg, C) : C.faint, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{isFinite(chg) ? (chg > 0 ? "+" : "") + chg.toFixed(2) + "%" : "—"}</span>
+                                                </div>
+                                            )
+                                        })}
+                                    </>
+                                )}
+                            </>
+                        )}
                     </div>
                 )}
             </div>
