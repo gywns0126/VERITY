@@ -663,7 +663,9 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
                 "distress_n": az_distress_n, "na_n": az_na_n,
             },
         },
-        "note": "step_c/e — F-Score + Altman 게이트 preview(비파괴 측정). cutover=PM 사전등록 후. "
+        "note": "step_c/e — F-Score + Altman 게이트 preview(비파괴 측정). cutover 규칙·게이트 "
+                "= 사전등록 docs/PREREG_WIDE_SCAN_GATE_CUTOVER_2026_06_24.md (applied False→True "
+                "= PM 승인 + forward-IC 비열위 + 90거래일 게이트 후). "
                 "Altman=quality.py SoT 재사용(DART pre-attach 부착필드 소비, 제조-only). "
                 "F partial-data abstain 가드 적용.",
     }
