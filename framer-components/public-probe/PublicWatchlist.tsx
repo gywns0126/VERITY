@@ -1,12 +1,11 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
-import { useStockUniverse, matchStocks, pushRecent, STOCK_UNIVERSE_URL } from "./verityUniverse"
 
 /**
  * 관심종목 — VERITY 공개 터미널 (골든구스) 우측 상시 사이드바.
  *
  * 저장 = localStorage["verity_watchlist"] = [{ticker,name,market}] (로그인 불요·마찰 0).
- * 🔗 검색 universe·매칭·최근목록 = verityUniverse 공유 모듈 (4 검색창 단일 출처 — 전 종목). 가격/등락 = /api/stock 라이브(best-effort).
+ * 검색 universe = stock_report_public.json (nav/리포트/결정 검색과 동일 소스). 가격/등락 = /api/stock 라이브(best-effort).
  * 저장 시 "verity-watchlist-changed" 이벤트 → PublicDisclosureFeed 가 즉시 관심종목 핀 갱신(같은 페이지).
  * 행 탭 → 종목 리포트(stockPath?q=ticker). RULE 7 — 가격·등락(외부 사실)만, 점수·추천 0.
  * 🚨 내 관점 통합(2026-06-21) — localStorage `verity_thesis_v1`(PublicThesisNote) 읽어 각 종목에 관점 배지(강세/관망/약세).
@@ -39,6 +38,7 @@ interface Props {
     stockPath: string
     dark: boolean
 }
+const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 
 const SEED = [
@@ -84,7 +84,7 @@ export default function PublicWatchlist(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [watch, setWatch] = useState<any[]>(SEED)
-    const universe = useStockUniverse({ onCanvas, krUrl: stockUrl })
+    const [universe, setUniverse] = useState<any[]>([])
     const [prices, setPrices] = useState<Record<string, { price?: number; chg?: number }>>({})
     const [theses, setTheses] = useState<Record<string, any>>({})
     const [adding, setAdding] = useState(false)
@@ -133,6 +133,19 @@ export default function PublicWatchlist(props: Props) {
     }, [onCanvas])
 
     useEffect(() => {
+        if (onCanvas || !stockUrl) return
+        let alive = true
+        fetch(stockUrl, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const arr = d && (Array.isArray(d) ? d : d.stocks)
+                if (alive && Array.isArray(arr)) setUniverse(arr)
+            })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [stockUrl, onCanvas])
+
+    useEffect(() => {
         if (onCanvas) return
         let alive = true
         watch.forEach((h) => {
@@ -155,8 +168,12 @@ export default function PublicWatchlist(props: Props) {
     const pad = 13
 
     const matches = useMemo(() => {
+        const q = query.trim().toLowerCase()
+        if (!q) return []
         const have = new Set(watch.map((x) => String(x.ticker)))
-        return matchStocks(universe, query, 60).filter((x) => !have.has(String(x.ticker))).slice(0, 12)
+        return universe
+            .filter((x) => !have.has(String(x.ticker)) && (String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").includes(q)))
+            .slice(0, 12)
     }, [query, universe, watch])
 
     const addStock = useCallback((m: any) => {
@@ -180,7 +197,6 @@ export default function PublicWatchlist(props: Props) {
 
     const goStock = (h: any) => {
         if (typeof window === "undefined") return
-        pushRecent(String(h.ticker || ""), h.name)
         const p = (stockPath || "/stock").replace(/\/+$/, "")
         window.location.href = p + "?q=" + encodeURIComponent(String(h.ticker || "").trim())
     }
@@ -288,7 +304,7 @@ export default function PublicWatchlist(props: Props) {
 }
 
 addPropertyControls(PublicWatchlist, {
-    stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: STOCK_UNIVERSE_URL },
+    stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEFAULT_URL },
     apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
     stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },

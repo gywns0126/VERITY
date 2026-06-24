@@ -1,23 +1,31 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useMemo, useState, type CSSProperties } from "react"
-import {
-    useStockUniverse,
-    matchStocks,
-    pushRecent,
-    STOCK_UNIVERSE_URL,
-    LAST_TICKER_KEY,
-} from "./verityUniverse"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
 
 /**
  * 종목 선택기 (미니) — 현재 페이지의 URL `?q=` 를 바꿔 같은 페이지의 결정 컴포넌트(DecisionPanel/ThesisNote/Report)를 갱신.
  * stockPath 커스텀 prop 불요(MCP 한계 우회) — window.location.pathname 그대로 + ?q=ticker 로 같은 페이지 머묾.
- * 🔗 universe·매칭·최근목록 = verityUniverse 공유 모듈 (4 검색창 단일 출처 — nav/report/decision/watchlist 연동).
+ * 검색 universe = stock_report_public.json (nav/리포트/관심종목 검색과 동일 소스).
+ * 종목 공유 = ?q 1순위 + localStorage `verity_recent_tickers`/`verity_last_ticker`(nav 검색과 공유 — 한 곳서 고르면 최근목록 반영).
  * RULE 7 — 종목 검색 도구일 뿐, 점수·추천 0.
  */
 
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", vt: "#6c5ce7", vtS: "#f0edff" }
 const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34", vt: "#a99bff", vtS: "#241f3a" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
+const LAST_TK_KEY = "verity_last_ticker"
+const RECENTS_KEY = "verity_recent_tickers"
+
+function pushRecent(tk: string, nm?: string) {
+    if (typeof window === "undefined" || !tk) return
+    try {
+        window.localStorage.setItem(LAST_TK_KEY, tk)
+        const a = JSON.parse(window.localStorage.getItem(RECENTS_KEY) || "[]")
+        const cur = (Array.isArray(a) ? a : []).filter((x: any) => x && x.t && String(x.t) !== String(tk))
+        cur.unshift({ t: tk, n: nm || tk })
+        window.localStorage.setItem(RECENTS_KEY, JSON.stringify(cur.slice(0, 12)))
+    } catch {}
+}
 
 interface Props { stockUrl: string; dark: boolean }
 
@@ -30,7 +38,7 @@ export default function PublicTickerPicker(props: Props) {
     const C = dark ? DARK : LIGHT
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const universe = useStockUniverse({ onCanvas, krUrl: stockUrl })
+    const [universe, setUniverse] = useState<any[]>([])
     const [q, setQ] = useState("")
 
     const cur = useMemo(() => {
@@ -38,15 +46,26 @@ export default function PublicTickerPicker(props: Props) {
         try {
             const qp = (new URLSearchParams(window.location.search).get("q") || "").trim()
             if (qp) return qp
-            return (window.localStorage.getItem(LAST_TICKER_KEY) || "").trim()
+            return (window.localStorage.getItem(LAST_TK_KEY) || "").trim()
         } catch { return "" }
     }, [])
+
+    useEffect(() => {
+        if (onCanvas || !stockUrl) return
+        let alive = true
+        fetch(stockUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a)) setUniverse(a) }).catch(() => {})
+        return () => { alive = false }
+    }, [stockUrl, onCanvas])
 
     const curName = useMemo(() => {
         const f = universe.find((x) => String(x.ticker) === cur); return f ? f.name : ""
     }, [universe, cur])
 
-    const matches = useMemo(() => matchStocks(universe, q, 10), [q, universe])
+    const matches = useMemo(() => {
+        const s = q.trim().toLowerCase(); if (!s) return []
+        return universe.filter((x) => String(x.name || "").toLowerCase().includes(s) || String(x.ticker || "").includes(s)).slice(0, 10)
+    }, [q, universe])
 
     const pick = (tk: string, nm?: string) => {
         if (onCanvas || typeof window === "undefined" || !tk) return
@@ -83,6 +102,6 @@ export default function PublicTickerPicker(props: Props) {
 }
 
 addPropertyControls(PublicTickerPicker, {
-    stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: STOCK_UNIVERSE_URL },
+    stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEF_STOCK },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
