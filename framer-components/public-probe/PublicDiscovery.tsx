@@ -702,7 +702,7 @@ export default function PublicDiscovery(props: Props) {
                     </div>
                 )}
 
-                <button onClick={() => go(s.ticker)} style={{ width: "100%", marginTop: 16, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vg, color: "#fff" }}>전체 리포트 보기 →</button>
+                <button onClick={() => go(s.ticker)} style={{ width: "100%", marginTop: 16, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vt, color: "#fff" }}>전체 리포트 보기 →</button>
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5, textAlign: "center" }}>사실만 · 추천·등급 아님 · 차트·심화는 전체 리포트</div>
             </div>
         )
@@ -761,7 +761,7 @@ export default function PublicDiscovery(props: Props) {
                             <div style={{ display: "flex", gap: 2, background: C.line, borderRadius: 9, padding: 2, flexShrink: 0 }}>
                                 {([["all", "전체"], ["kr", "국장"], ["us", "미장"]] as [string, string][]).map(([m, lbl]) => (
                                     <button key={m} onClick={() => setMkt(m)}
-                                        style={{ border: "none", cursor: "pointer", padding: "5px 10px", borderRadius: 7, fontSize: 12, fontWeight: 800, fontFamily: "inherit", whiteSpace: "nowrap", background: mkt === m ? C.card : "transparent", color: mkt === m ? C.accent : C.sub }}>
+                                        style={{ border: "none", cursor: "pointer", padding: "5px 10px", borderRadius: 7, fontSize: 12, fontWeight: 800, fontFamily: "inherit", whiteSpace: "nowrap", background: mkt === m ? C.card : "transparent", color: mkt === m ? C.vt : C.sub }}>
                                         {lbl}
                                     </button>
                                 ))}
