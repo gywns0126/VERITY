@@ -395,68 +395,25 @@ def _fscore_gate_verdict(f_eval: dict) -> str:
 
 
 def _altman_z_score(stock: dict) -> dict:
-    """Q3: Altman Z 5 비율 explicit dict 반환. 제조업 한정 (부도 제거 binary cutoff).
+    """Q3: Altman Z (제조업 한정 강력 게이트). z_value + zone 반환.
 
-    원본 Z (1968 미국 제조업):
-    Z = 1.2*A + 1.4*B + 3.3*C + 0.6*D + 1.0*E
-      A = working capital / total assets
-      B = retained earnings / total assets
-      C = EBIT / total assets
-      D = market cap / total liabilities
-      E = sales / total assets
+    🔧 2026-06-24 step (e): 무조건 None stub → quality.py:compute_altman_z 재사용으로 교체.
+      · DART pre-attach(attach_dart_to_stocks, stock_filter.py) 후 total_assets/working_capital/
+        retained_earnings/operating_profit 가 stock dict 에 부착됨(주1 batch, 커버리지 94~98%)
+        → 실 Z 산출 가능. 이전엔 데이터가 있어도 stub 이 None 반환해 altman_z_full_n=0 이었음.
+      · 산식 SoT = quality.compute_altman_z 단일 (중복 0). 한국 보정 컷(KOSPI제조 2.3 /
+        KOSDAQ Z″ 2.6)·금융 hard exclusion = 2026-05-19 PM 승인 학술 재작성 (RULE 7 prior).
+      · 제조-only 스코프 유지(Q3 설계). 비제조/금융 = applicable False (게이트 비대상).
+      · 데이터 미부착(legacy run_filter_pipeline 경로 등) → z_value None graceful → 게이트 abstain.
 
-    한국 시장 조정 (Perplexity Q1-3, 2026-05-17 학계 자문):
-    - 원본 Z ≥ 1.81 안전 cutoff 는 한국에 부적합 (한국 제조업 D/E 100~150% vs 미국 60~80%).
-    - 한국 KOSPI 제조업: Z ≥ 2.3 (상향)
-    - KOSDAQ 성장주 / 비제조업: Altman Z'' 신흥시장 모델 사용
-        Z″_EM = 3.25 + 6.56*X1 + 3.26*X2 + 6.72*X3 + 1.05*X4 (Altman/Hartzell/Peck 1995)
-          X1 = Working Capital / Total Assets (계수 6.56)
-          X2 = Retained Earnings / Total Assets
-          X3 = EBIT / Total Assets (계수 6.72)
-          X4 = Market Cap / Total Liabilities (상장사 변형, Perplexity Q-fin-2)
-        컷: Safe ≥ 2.6 / Grey 1.1~2.6 / Distress < 1.1
-        (2026-05-20 drift 정정 — 5/14 메모리 + 5/19 commit 28e99a19 X1 6.72 wrong.
-         학술 원전 = X1 6.56. wallstreetprep / stocktitan / 다중 출처 정합.)
-    - 금융업 (KSIC 64~66): applicable=False (Z 모델 적용 불가)
-    - 대기업 계열사 (재벌): Z ≥ 1.5 완화 (계열사 지원으로 부도 적음)
+    decision 영향 0 (wide_scan shadow). 한국 조정 cutoff/산식 상세 = quality.compute_altman_z docstring.
 
     Returns:
-        {
-          "z_value": Optional[float],
-          "z_safe_threshold": float,     # 한국 조정 cutoff (2.3 / 4.5 / 1.5)
-          "model_variant": str,          # "korean_kospi" / "emerging_market_zpp" / "chaebol_relaxed"
-          "applicable": bool,
-          "sector_bucket": str,
-          "ratios": {A~E: float|None},
-          "missing_fields": [list of str],
-          "data_source": "stock_dict_v0",
-        }
-
-    Perplexity Q1-3 ref: docs/MASTER_RULE_DRIFT_AUDIT_v0.1.md.
+        {z_value, zone, z_safe_threshold, model_variant, applicable,
+         sector_bucket, ratios{A~E}, missing_fields, data_source}
     """
     bucket = resolve_sector_bucket(stock)
-    applicable = (bucket == "제조")
-
-    # Perplexity Q1-3 — 한국 조정 cutoff 결정
-    # 1. 금융업 (KSIC 64~66) = applicable False 유지
-    # 2. KOSDAQ 성장주 = Z'' 신흥시장 모델 (4.5 cutoff)
-    # 3. KOSPI 제조업 = Z (2.3 cutoff, 상향)
-    # 4. 대기업 계열사 (재벌) = Z (1.5 완화). 식별 정보 부재시 일반 KOSPI 룰 적용
-    market = str(stock.get("market", "")).upper()
-    if not applicable:
-        model_variant = "not_applicable"
-        z_safe_threshold = 0.0
-    elif market in ("KOSDAQ",):
-        model_variant = "emerging_market_zpp"
-        z_safe_threshold = 2.6  # Z″ EM safe cut (Perplexity Q-fin-1 2026-05-19)
-    else:  # KOSPI 일반 제조업
-        model_variant = "korean_kospi"
-        z_safe_threshold = 2.3  # 한국 제조업 학술 정합 (koreascience 2015 JAKO201535257998954)
-
-    # 현재 stock dict 에서 가능한 ratio 만 계산 — 거의 다 None (시계열 Δ 누적 sprint 후 보강)
-    market_cap = float(stock.get("market_cap") or 0)
-    debt_ratio_pct = stock.get("debt_ratio")  # liabilities/equity %
-    # debt_ratio % 로 D (MC/TL) 추정 불가 (TL 절대값 미가용). 미보강.
+    applicable = (bucket == "제조")   # Q3 — 제조업 한정 게이트
 
     ratios: dict = {
         "A_working_capital_over_assets": None,
@@ -465,20 +422,39 @@ def _altman_z_score(stock: dict) -> dict:
         "D_market_cap_over_liabilities": None,
         "E_sales_over_assets": None,
     }
-    missing_fields = [
-        "working_capital", "retained_earnings", "ebit",
-        "total_assets", "total_liabilities_absolute", "sales",
-    ]
+    if not applicable:
+        return {
+            "z_value": None, "zone": None, "z_safe_threshold": 0.0,
+            "model_variant": "not_applicable", "applicable": False,
+            "sector_bucket": bucket, "ratios": ratios,
+            "missing_fields": [], "data_source": "quality.compute_altman_z",
+        }
 
+    # 제조 → quality.py 단일 SoT 재사용 (DART 부착 필드 소비). 데이터 결손 시 z_score=None graceful.
+    from api.quant.factors.quality import compute_altman_z
+    q = compute_altman_z(stock)
+    z = q.get("z_score")
+    comp = q.get("components") or {}
+    ratios.update({
+        "A_working_capital_over_assets": comp.get("x1_working_capital"),
+        "B_retained_earnings_over_assets": comp.get("x2_retained"),
+        "C_ebit_over_assets": comp.get("x3_ebit"),
+        "D_market_cap_over_liabilities": comp.get("x4_market_debt"),
+        "E_sales_over_assets": comp.get("x5_turnover"),
+    })
+    missing_fields = [] if z is not None else [
+        "total_assets", "working_capital", "retained_earnings", "ebit", "sales",
+    ]
     return {
-        "z_value": None,            # ratio 1+ 결손 → 전체 None (DART 데이터 통합 sprint 후 보강)
-        "z_safe_threshold": z_safe_threshold,  # Perplexity Q1-3 한국 조정
-        "model_variant": model_variant,
-        "applicable": applicable,
+        "z_value": z,
+        "zone": q.get("zone"),
+        "z_safe_threshold": q.get("safe_cut", 2.3),
+        "model_variant": q.get("model_variant", "korean_kospi"),
+        "applicable": True,
         "sector_bucket": bucket,
         "ratios": ratios,
         "missing_fields": missing_fields,
-        "data_source": "stock_dict_v0",
+        "data_source": "quality.compute_altman_z",
     }
 
 
@@ -568,6 +544,7 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
     altman_applicable_n = 0     # 제조업 (Altman Z 적용 가능) 종목 수
     altman_z_full_n = 0         # Z value 계산된 종목 수
     fscore_verdict_by_ticker: dict = {}   # step (c) F-gate verdict (pass/fail/abstain) per ticker
+    altman_zone_by_ticker: dict = {}      # step (c/e) Altman zone (safe/grey/distress/None) per ticker
     # 데이터 가용성 de-silence (설계 audit #8/#9/#11/#14) — 차원 결손/loss/유동성분포 추적, decision 영향 0
     debt_avail_n = 0           # debt_ratio 가용 종목 수 (safety 섹터-aware 입력)
     loss_count = 0             # per <= 0 (적자) 종목 수 — value-trap 모니터 (#9)
@@ -603,6 +580,8 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
             altman_applicable_n += 1
         if z_eval["z_value"] is not None:
             altman_z_full_n += 1
+        altman_zone_by_ticker[s.get("ticker", "?")] = (
+            z_eval.get("zone") if z_eval["z_value"] is not None else None)
 
     # 22% cut — 합산 score 내림차순 상위 target_n
     scored.sort(key=lambda t: t[0], reverse=True)
@@ -613,6 +592,7 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
     # 🚨 비파괴: passed 셋 불변 → d/e/f cascade·shadow_funnel.v0 예측 trail 무영향(RULE 7).
     #    cutover(실제 적용) = PM 사전등록 후 별도. Altman 은 z_full_n=0(DART 미부착) → step (e) 까지 abstain-all.
     gate_pass_n = gate_fail_n = gate_abstain_n = 0
+    az_safe_n = az_grey_n = az_distress_n = az_na_n = 0   # Altman zone 분포 (통과분, step e)
     for _, tkr, _ in passed:
         v = fscore_verdict_by_ticker.get(tkr, "abstain")
         if v == "pass":
@@ -621,6 +601,15 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
             gate_fail_n += 1
         else:
             gate_abstain_n += 1
+        zone = altman_zone_by_ticker.get(tkr)
+        if zone == "safe":
+            az_safe_n += 1
+        elif zone == "grey":
+            az_grey_n += 1
+        elif zone == "distress":
+            az_distress_n += 1
+        else:
+            az_na_n += 1   # 미계산(데이터 결손/비제조) → 게이트 abstain
 
     # run-level jsonl 1줄 적재 (ticker-level 라인은 step d 에서 추가)
     dim_avg = {k: round(dim_sum[k] / max(input_n, 1), 2) for k in DIM_WEIGHTS}
@@ -667,10 +656,16 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
             "would_pass_n": gate_pass_n,
             "would_fail_n": gate_fail_n,
             "abstain_n": gate_abstain_n,   # 가용 항목<min → 판정 보류 (데이터빈약 비처벌)
-            "altman_gate": "blocked_step_e",   # z_full_n=0 (DART 펀더멘털 미부착) → 전원 abstain
+            # Altman zone 분포 (통과분) — step (e) DART pre-attach 후 활성 (제조-only).
+            # distress = "강력 게이트가 제거할 후보". na = 미계산(데이터 결손/비제조) → abstain.
+            "altman_zone": {
+                "safe_n": az_safe_n, "grey_n": az_grey_n,
+                "distress_n": az_distress_n, "na_n": az_na_n,
+            },
         },
-        "note": "step_c — F-Score 게이트 preview(비파괴 측정). cutover=PM 사전등록 후. "
-                "Altman=step e(DART pre-attach) 까지 blocked. F partial-data abstain 가드 적용.",
+        "note": "step_c/e — F-Score + Altman 게이트 preview(비파괴 측정). cutover=PM 사전등록 후. "
+                "Altman=quality.py SoT 재사용(DART pre-attach 부착필드 소비, 제조-only). "
+                "F partial-data abstain 가드 적용.",
     }
     logged = _append_jsonl(entry)
 

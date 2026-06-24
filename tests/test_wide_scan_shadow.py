@@ -267,6 +267,27 @@ def test_altman_z_manufacturing_only():
     assert len(z_manuf["ratios"]) == 5
 
 
+def test_altman_z_computes_with_dart_attached():
+    """step (e) — DART 부착 필드 보유 제조 종목 → z_value 산출 (quality.py SoT 재사용).
+
+    이전 stub 은 데이터가 있어도 무조건 None 이었음 (altman_z_full_n=0 원인). 해금 검증.
+    """
+    from api.analyzers import wide_scan as ws
+    manuf = {
+        "ticker": "005490", "company_type": "철강", "market": "KOSPI",
+        "market_cap": 5e12, "total_assets": 1e13, "working_capital": 2e12,
+        "retained_earnings": 4e12, "operating_income": 8e11, "revenue": 1.2e13,
+        "debt_ratio": 80.0,
+    }
+    z = ws._altman_z_score(manuf)
+    assert z["applicable"] is True
+    assert z["z_value"] is not None, "DART 부착 제조 종목 → Z 산출돼야 함 (stub None 회귀 차단)"
+    assert z["zone"] in ("safe", "grey", "distress")
+    assert z["data_source"] == "quality.compute_altman_z"
+    # ratio A(운전자본/총자산) 채워짐
+    assert z["ratios"]["A_working_capital_over_assets"] is not None
+
+
 def test_jsonl_includes_gate_stats(tmp_path, monkeypatch):
     """step (c) — jsonl 에 gate_stats 필드 + step='c_gate_prep'."""
     log_path = tmp_path / "wide_scan_log.jsonl"
@@ -333,8 +354,11 @@ def test_jsonl_gate_preview_nondestructive(tmp_path, monkeypatch):
     # sample 은 quarterly snapshot 없음 → available_n=3<7 → 전원 abstain (부분데이터 가드)
     assert gp["would_pass_n"] == 0 and gp["would_fail_n"] == 0
     assert gp["abstain_n"] == entry["passed_n"]
-    # Altman = DART 미부착 → step e 까지 blocked
-    assert gp["altman_gate"] == "blocked_step_e"
+    # Altman zone 분포 블록 존재 (sample 은 total_assets 미부착 → 전원 na)
+    az = gp["altman_zone"]
+    assert set(az) == {"safe_n", "grey_n", "distress_n", "na_n"}
+    assert az["safe_n"] + az["grey_n"] + az["distress_n"] + az["na_n"] == entry["passed_n"]
+    assert az["na_n"] == entry["passed_n"]   # DART 미부착 sample → 전원 미계산
     # 비파괴: 게이트가 passed 셋을 줄이지 않음 (22% cut 그대로) → cascade·trail 무영향
     assert entry["passed_n"] == int(len(stocks) * ws.WIDE_SCAN_TARGET_RATIO)
     assert len(result["top_tickers"]) == entry["passed_n"]
