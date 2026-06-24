@@ -91,6 +91,14 @@ def main() -> int:
     forensic_tickers = _forensic_tickers()
     sic_ko = _load_json_map(os.path.join(_ROOT, "data", "us_sic_ko.json"))
     name_ko = _load_json_map(os.path.join(_ROOT, "data", "us_name_ko.json"))
+    # 거래대금/거래량 (Polygon grouped — 소형주 유동성. 부재 시 빈)
+    volumes: Dict[str, Any] = {}
+    _vp = os.path.join(_ROOT, "data", "us_volume.json")
+    if os.path.exists(_vp):
+        try:
+            volumes = json.load(open(_vp, encoding="utf-8")).get("volumes") or {}
+        except Exception:  # noqa: BLE001
+            volumes = {}
 
     stocks = []
     for tk, mc in caps.items():
@@ -119,6 +127,7 @@ def main() -> int:
             "market": "US",
             "business_ko": sic_ko.get(sic_desc) or sic_desc or "",   # 업종 한글(없으면 영문 SIC)
             "mktcap_musd": round(mc / _MUSD),
+            "dollar_volume_musd": (volumes.get(tk) or {}).get("dollar_volume_musd"),  # 유동성
             "financials": {
                 "debt_to_equity": der.get("debt_to_equity"),
                 "net_margin_pct": der.get("net_margin_pct"),

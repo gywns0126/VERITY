@@ -69,6 +69,7 @@ function FactRow(props: { t: Ticker; C: typeof LIGHT; reportPath?: string }) {
   // 정보량 최대화(Everytickr) — 모르는 소형주도 판단 가능하게 metric 풀세트
   const m: string[] = []
   if (f["mktcap_musd"] != null) m.push("시총 " + musd(f["mktcap_musd"]))
+  if (f["dollar_volume_musd"] != null) m.push("거래대금 " + musd(f["dollar_volume_musd"]))
   if (f["revenue_yoy_pct"] != null) m.push("매출 " + (f["revenue_yoy_pct"] >= 0 ? "+" : "") + f["revenue_yoy_pct"].toFixed(0) + "%")
   if (f["operating_margin_pct"] != null) m.push("영업 " + f["operating_margin_pct"].toFixed(0) + "%")
   if (f["net_margin_pct"] != null) m.push("순익 " + f["net_margin_pct"].toFixed(0) + "%")

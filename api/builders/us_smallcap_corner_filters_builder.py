@@ -85,6 +85,7 @@ def _base_facts(st: Dict[str, Any]) -> Dict[str, Any]:
         "name_ko": st.get("name_ko"),
         "business_ko": st.get("business_ko"),
         "mktcap_musd": st.get("mktcap_musd"),
+        "dollar_volume_musd": st.get("dollar_volume_musd"),
         "debt_to_equity": fin.get("debt_to_equity"),
         "net_margin_pct": fin.get("net_margin_pct"),
         "operating_margin_pct": fin.get("operating_margin_pct"),
