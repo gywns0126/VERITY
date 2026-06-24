@@ -1,0 +1,108 @@
+name: US Smallcap Corner (monthly — Polygon universe + 8-K forensics)
+
+# 2026-06-24 신설 — 미장 소형주 트랙 (골든구스). Polygon CS active universe + 시총컷 = 자체
+# 소형주 정의(RULE 7, FTSE 라이선스 회피). 유료 소스 0(Polygon 보유 키 / yfinance / SEC 무료).
+# 파이프라인: universe(Polygon) → market_caps(yfinance) → financials(SEC smallcap backfill)
+#   → corner → forensics(8-K) → filters → publish-data.
+# 빈도: 월 1회 (us_financials 분기 연동 동반, 5일 backfill 후 1일 시차).
+# 자기완결: data/us_financials/ 는 gitignore(checkout 부재)라 매 run financials backfill 로 로컬 생성
+#   → corner 가 같은 run 에서 읽음. SEC rate 0.3s/ticker 안전.
+
+on:
+  schedule:
+    - cron: '0 2 6 * *'   # 매월 6일 KST 11:00 (us_financials 5일 후)
+  workflow_dispatch:
+    inputs:
+      skip_universe:
+        description: 'universe 소싱 skip (Polygon 재사용)'
+        required: false
+        default: 'false'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-us-smallcap
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300  # yfinance(~80분) + SEC smallcap backfill(~90분) + forensics(~3분). GH 6h 한도 내·public 무료.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Universe 소싱 (Polygon CS active)
+        # POLYGON_API_KEY 부재/장애 시 continue — 기존 universe 재사용(< 2000 세이프가드 내장).
+        continue-on-error: true
+        env:
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+        run: |
+          if [ "${{ github.event.inputs.skip_universe }}" != "true" ]; then
+            python scripts/us/fetch_us_smallcap_universe.py
+          else
+            echo "[universe] skip — 기존 us_universe_combined.json 재사용"
+          fi
+
+      - name: 시총 fetch (combined, yfinance)
+        # yfinance rate-safe(429 backoff). delisted=fail=제외(다운스트림 정화). 멱등 merge.
+        continue-on-error: true
+        run: python scripts/us/fetch_us_market_caps.py --universe combined
+
+      - name: 재무 backfill (smallcap, SEC EDGAR XBRL)
+        # combined 중 시총 ≤ $5B → data/us_financials/{ticker}.json(gitignore, 로컬). corner 입력.
+        run: python -m api.builders.us_financials_builder --universe smallcap
+
+      - name: 코너 → forensics(8-K) → filters
+        run: |
+          python -m api.builders.us_smallcap_corner_builder
+          python -m api.builders.us_disclosure_forensics_builder
+          python -m api.builders.us_smallcap_corner_filters_builder
+
+      - name: Commit data/ (broad — RULE 4)
+        # broad git add data/ — us_universe_combined / us_market_caps / us_smallcap_corner* /
+        # us_disclosure_forensics 자동 포함. data/us_financials/(gitignore) 는 자동 제외(87MB bloat 회피).
+        # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com.
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/
+          if git diff --staged --quiet; then
+            echo "[us_smallcap] no changes"
+            exit 0
+          fi
+          TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git commit -m "🪙 us_smallcap_corner ${TODAY_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              break
+            fi
+            echo "push attempt $i failed, retrying in $((i * 5))s..."
+            sleep $((i * 5))
+          done
+
+      - name: Publish to VERITY-data + Vercel Blob
+        # us_smallcap_corner_filters.json (publish-data allowlist 등재 완료) → 카드 fetch URL.
+        if: always()
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
