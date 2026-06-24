@@ -356,6 +356,17 @@ def main() -> int:
     _atomic_write(TRENDS_PATH, trends)
     results["trends"] = trends_ok
 
+    # 종합 레짐 v0 — 위 피드들을 읽어 하나의 판독 + 유리박스 채점 (반드시 collector 뒤).
+    # 산식 사전등록 = api/builders/crypto_regime_synthesis.py (RULE 7). 실패해도 파이프라인 무영향.
+    try:
+        from api.builders import crypto_regime_synthesis as _syn
+        regime, regime_ok = _syn.build_regime()
+        _atomic_write(_syn.REGIME_PATH, regime)
+        results["regime"] = regime_ok
+    except Exception as e:  # noqa: BLE001
+        sys.stderr.write(f"[crypto_collect] regime synthesis fail: {type(e).__name__}:{str(e)[:100]}\n")
+        results["regime"] = False
+
     elapsed = round(time.time() - started, 2)
     sys.stderr.write(f"[crypto_collect] 적재 완료 {results} elapsed={elapsed}s\n")
 
