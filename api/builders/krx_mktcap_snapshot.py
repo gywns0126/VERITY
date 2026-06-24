@@ -20,6 +20,11 @@ from datetime import datetime, timedelta, timezone
 KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUTPUT_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
+# 거래대금 상위(검색창 포커스 "지금 거래 활발") — 같은 KRX rows(이미 거래대금 내림차순) 재사용. 발행 O.
+# 🚨 RULE 7: 사실(거래대금/등락)만. 추천·인기점수 아님. ETF는 stk/ksq 소스라 애초에 제외됨.
+TRENDING_PATH = os.path.join(_ROOT, "data", "trending_kr.json")
+TREND_TOP_N = 30
+_TREND_SKIP = ("스팩", "제spac")  # SPAC 제외(거래대금 큰 합병前 스팩 노이즈 회피)
 
 
 def _int(v):
@@ -84,6 +89,36 @@ def main() -> int:
             json.dump(doc, f, ensure_ascii=False)
         print(f"[krx_mktcap] logged=True · {len(out)} 종목 시총 (basDd {bas_dd}) -> "
               f"{os.path.relpath(OUTPUT_PATH, _ROOT)}", file=sys.stderr)
+
+        # 거래대금 상위 발행 (rows 는 이미 ACC_TRDVAL 내림차순) — 실패해도 mktcap 산출은 보존
+        try:
+            trending = []
+            for r in rows or []:
+                tk = str(r.get("ISU_SRT_CD") or r.get("ISU_CD") or "").strip()
+                if not (len(tk) == 6 and tk.isdigit()):
+                    continue
+                name = str(r.get("ISU_NM") or "").strip()
+                if not name or any(h in name for h in _TREND_SKIP):
+                    continue
+                trdval = _int(r.get("ACC_TRDVAL") or r.get("ACC_TRDVALU"))
+                if trdval <= 0:
+                    continue
+                trending.append({"ticker": tk, "name": name, "trdval": trdval, "close": _int(r.get("TDD_CLSPRC")), "chg": _chg_pct(r)})
+                if len(trending) >= TREND_TOP_N:
+                    break
+            if trending:
+                tdoc = {
+                    "_meta": {"generated_at": datetime.now(KST).isoformat(), "bas_dd": bas_dd, "count": len(trending),
+                              "source": "KRX OpenAPI 거래대금 상위(유가+코스닥) · 사실(거래대금/등락) · 추천 아님"},
+                    "top": trending,
+                }
+                with open(TRENDING_PATH, "w", encoding="utf-8") as f:
+                    json.dump(tdoc, f, ensure_ascii=False)
+                print(f"[krx_mktcap] trending logged=True · {len(trending)} 종목 거래대금 상위 -> "
+                      f"{os.path.relpath(TRENDING_PATH, _ROOT)}", file=sys.stderr)
+        except Exception as te:  # noqa: BLE001
+            print(f"[krx_mktcap] trending FAILED(무시): {te!r}", file=sys.stderr)
+
         ok = True
         return 0
     except Exception as e:  # noqa: BLE001
