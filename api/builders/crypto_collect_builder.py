@@ -34,6 +34,7 @@ ETF_FLOW_PATH = os.path.join(DATA_DIR, "crypto_etf_flow.json")
 OPTIONS_PATH = os.path.join(DATA_DIR, "crypto_options.json")
 STABLECOINS_PATH = os.path.join(DATA_DIR, "crypto_stablecoins.json")
 POSITIONING_PATH = os.path.join(DATA_DIR, "crypto_positioning.json")
+TRENDS_PATH = os.path.join(DATA_DIR, "crypto_trends.json")
 
 KST = timezone(timedelta(hours=9))
 
@@ -288,6 +289,29 @@ def build_positioning() -> tuple[Dict[str, Any], bool]:
     return payload, True
 
 
+# ── 10. 검색 관심도 (crypto_trends.json) ──
+def build_trends() -> tuple[Dict[str, Any], bool]:
+    """Google Trends → 코인 키워드 검색 관심도. 🚨 비공식 스크래퍼 경로(429/형식변경 breakage)
+    → fail 시 직전 산출 보존, 전체 파이프라인 무영향. RULE7: 상대지수(0~100) 사실."""
+    from api.collectors.crypto_trends import collect_crypto_trends
+
+    res, err = _safe_call(collect_crypto_trends, "crypto_trends", timeout_s=30)
+    ok = bool(res and isinstance(res, dict) and res.get("ok"))
+    if not ok:
+        prev = _load_existing(TRENDS_PATH)
+        if prev and prev.get("keywords"):
+            prev.setdefault("diagnostics", {})["used_prev_snapshot"] = True
+            prev["diagnostics"]["last_error"] = err or (res or {}).get("error") or "not_ok"
+            return prev, False
+        return {"collected_at": _now_kst_iso(), "schema_version": "v0", "source": "Google Trends",
+                "keywords": [], "diagnostics": {"error": err or (res or {}).get("error") or "not_ok"}}, False
+    payload = dict(res)
+    payload["collected_at"] = _now_kst_iso()
+    payload["schema_version"] = "v0"
+    payload["diagnostics"] = {"keywords": len(payload.get("keywords") or []), "used_prev_snapshot": False}
+    return payload, True
+
+
 def main() -> int:
     started = time.time()
     results = {}
@@ -327,6 +351,10 @@ def main() -> int:
     positioning, pos_ok = build_positioning()
     _atomic_write(POSITIONING_PATH, positioning)
     results["positioning"] = pos_ok
+
+    trends, trends_ok = build_trends()
+    _atomic_write(TRENDS_PATH, trends)
+    results["trends"] = trends_ok
 
     elapsed = round(time.time() - started, 2)
     sys.stderr.write(f"[crypto_collect] 적재 완료 {results} elapsed={elapsed}s\n")
