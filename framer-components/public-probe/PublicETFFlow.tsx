@@ -19,13 +19,13 @@ const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e3e6ea", up: "#f04452", down: "#3182f6",
+    line: "#f0f1f3", up: "#f04452", down: "#3182f6",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
-    line: "#272d36", up: "#f04452", down: "#5b9bff",
+    line: "#222730", up: "#f04452", down: "#5b9bff",
 }
-const FONT = "inherit"
+const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
 const CAT: Record<string, string> = {
     equity_domestic: "국내주식", equity_foreign: "해외주식", thematic: "테마",
@@ -129,10 +129,8 @@ export default function PublicETFFlow(props: Props) {
         width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT,
         padding: narrow ? 16 : 22, boxSizing: "border-box", color: C.ink,
     }
-    // 플랫 — 흰 카드 박스 제거. 섹션 = 상단 hairline + 여백으로만 구분(외곽선/박스 없음).
     const card: CSSProperties = {
-        background: "transparent", paddingTop: narrow ? 18 : 22, marginTop: narrow ? 16 : 20,
-        borderTop: `1px solid ${C.line}`, boxSizing: "border-box",
+        background: C.card, borderRadius: 18, padding: narrow ? 16 : 20, boxSizing: "border-box",
     }
 
     if (loading) {
