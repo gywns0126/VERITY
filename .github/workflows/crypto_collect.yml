@@ -47,7 +47,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run crypto collector
-        # 무인증 공개 API만 — secret env 불필요.
+        # 대부분 무인증 공개 API. SoSoValue ETF flow 만 무료 key 필요(미등록 시 graceful no_api_key).
+        env:
+          SOSOVALUE_API_KEY: ${{ secrets.SOSOVALUE_API_KEY }}
         run: |
           python -m api.builders.crypto_collect_builder
 
