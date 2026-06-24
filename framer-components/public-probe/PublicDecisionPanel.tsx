@@ -40,6 +40,7 @@ interface Props {
     ticker: string
     stockUrl: string
     usStockUrl: string
+    usSmallcapUrl?: string
     insiderUrl: string
     forensicsUrl: string
     flowUrl: string
@@ -117,7 +118,7 @@ const DEMO_FLOW = [{ foreign_net: 151302, inst_net: 16724 }]
  * @framerSupportedLayoutHeight any
  */
 export default function PublicDecisionPanel(props: Props) {
-    const { ticker, stockUrl, usStockUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, reportPath, discoverPath, dark } = props
+    const { ticker, stockUrl, usStockUrl, usSmallcapUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, reportPath, discoverPath, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     // 테마 추종 — 사이트 다크모드(body[data-framer-theme]) 따라감. 캔버스는 dark prop 정적.
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
@@ -162,16 +163,19 @@ export default function PublicDecisionPanel(props: Props) {
     useEffect(() => {
         if (onCanvas || !stockUrl) return
         let alive = true
-        const urls = [stockUrl, usStockUrl].filter(Boolean)
+        const urls = [stockUrl, usStockUrl, usSmallcapUrl].filter(Boolean)
         Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
             .then((docs) => {
                 if (!alive) return
                 const merged: any[] = []
                 for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) merged.push(...(a as any[])) }
-                if (merged.length) setUniverse(merged)
+                // ticker dedup (smallcap 트랙 ∩ sp600 중복 — 먼저 등장 우선)
+                const seen = new Set<string>()
+                const deduped = merged.filter((s: any) => { const tk2 = String(s.ticker || ""); if (!tk2 || seen.has(tk2)) return false; seen.add(tk2); return true })
+                if (deduped.length) setUniverse(deduped)
             })
         return () => { alive = false }
-    }, [stockUrl, usStockUrl, onCanvas])
+    }, [stockUrl, usStockUrl, usSmallcapUrl, onCanvas])
 
     const matches = useMemo(() => {
         const qq = query.trim().toLowerCase(); if (!qq) return []
@@ -206,13 +210,16 @@ export default function PublicDecisionPanel(props: Props) {
         let alive = true
         const fetchOne = (url: string, find: (d: any) => any) => fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) find(d) }).catch(() => {})
         const isUsT = !/^\d{6}$/.test(String(tk))   // US(비 6자리)면 미장 소스서 상세 fetch
-        fetchOne(isUsT && usStockUrl ? usStockUrl : stockUrl, (d) => { const a = d.stocks || d; if (Array.isArray(a)) setStock(a.find((x: any) => x.ticker === tk) || null) })
+        // 순증 소형주는 usSmallcapUrl, sp1500 은 usStockUrl — 둘 다 시도(매칭될 때만 setStock, null 덮음 방지)
+        const findStock = (d: any) => { const a = d.stocks || d; if (Array.isArray(a)) { const hit = a.find((x: any) => x.ticker === tk); if (hit) setStock(hit) } }
+        if (isUsT) { setStock(null); if (usStockUrl) fetchOne(usStockUrl, findStock); if (usSmallcapUrl) fetchOne(usSmallcapUrl, findStock) }
+        else fetchOne(stockUrl, findStock)
         fetchOne(insiderUrl, (d) => { const a = d.stocks || d; if (Array.isArray(a)) setIns(a.find((x: any) => x.ticker === tk) || null) })
         fetchOne(forensicsUrl, (d) => { const a = d.stocks || d; if (Array.isArray(a)) setForen(a.find((x: any) => x.ticker === tk) || null) })
         fetchOne(flowUrl, (d) => { const f = (d.flows || d) || {}; setFlow(f[tk] || []) })
         fetchOne(warnUrl, (d) => { const wmap = (d.warnings || d) || {}; setWarned(!!wmap[tk]) })
         return () => { alive = false }
-    }, [tk, stockUrl, usStockUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, onCanvas])
+    }, [tk, stockUrl, usStockUrl, usSmallcapUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, onCanvas])
 
     const s = onCanvas ? DEMO : stock
     const insD = onCanvas ? DEMO_INS : ins
@@ -494,6 +501,7 @@ addPropertyControls(PublicDecisionPanel, {
     ticker: { type: ControlType.String, title: "Ticker (빈칸=URL ?q=)", defaultValue: "" },
     stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEF_STOCK },
     usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
+    usSmallcapUrl: { type: ControlType.String, title: "US Smallcap URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_us_smallcap.json" },
     insiderUrl: { type: ControlType.String, title: "Insider URL", defaultValue: DEF_INSIDER },
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: DEF_FORENSICS },
     flowUrl: { type: ControlType.String, title: "Flow URL", defaultValue: DEF_FLOW },
