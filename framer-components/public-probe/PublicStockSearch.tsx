@@ -1,6 +1,7 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom"
+import { useStockUniverse, matchStocks, pushRecent, readRecents, STOCK_UNIVERSE_URL, US_UNIVERSE_URL } from "./verityUniverse"
 
 /**
  * 종목 검색창 (독립) — VERITY 공개 터미널. Framer 네이티브 nav 안에 끼워 쓰는 검색 전용.
@@ -16,11 +17,7 @@ import { createPortal } from "react-dom"
 const LIGHT = { ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", vg: "#0ca678", vt: "#6c5ce7", vtS: "#f0edff", field: "#f2f4f6", card: "#ffffff", bg: "#f2f4f6", line: "#f0f1f3", up: "#f04452", down: "#3182f6" }
 const DARK = { ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", vg: "#7fffa0", vt: "#a99bff", vtS: "#241f3a", field: "#0f1318", card: "#171c23", bg: "#0f1318", line: "#222730", up: "#f04452", down: "#5b9bff" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
 const DEF_TRENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/trending_kr.json"
-const LAST_TK_KEY = "verity_last_ticker"
-const RECENTS_KEY = "verity_recent_tickers"
-const RECENTS_CAP = 8
 /* 로고 — 토스 종목 CDN(404/차단 시 이니셜 폴백) + circle-flags 원형 국기. ticker 형식으로 국장/미장 판별. */
 const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
@@ -47,14 +44,6 @@ function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
                 style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block", boxShadow: "0 1px 2px rgba(0,0,0,0.18)" }} />
         </span>
     )
-}
-
-function readRecents(): any[] {
-    if (typeof window === "undefined") return []
-    try {
-        const a = JSON.parse(window.localStorage.getItem(RECENTS_KEY) || "[]")
-        return Array.isArray(a) ? a.filter((x) => x && x.t) : []
-    } catch { return [] }
 }
 
 interface Props {
@@ -95,7 +84,7 @@ export default function PublicStockSearch(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [q, setQ] = useState("")
-    const [universe, setUniverse] = useState<any[]>([])
+    const universe = useStockUniverse({ onCanvas, urls: [stockUrl, usStockUrl, usSmallcapUrl].filter((u): u is string => Boolean(u)) })
     const [focused, setFocused] = useState(false)
     const [recents, setRecents] = useState<any[]>([])
     const [trending, setTrending] = useState<any[]>([])
@@ -110,23 +99,7 @@ export default function PublicStockSearch(props: Props) {
         return () => ro.disconnect()
     }, [])
 
-    /* 유니버스 로드 — KR + US 동시(국장·미장 통합 검색). 2026-06-23. */
-    useEffect(() => {
-        if (onCanvas) return
-        let alive = true
-        const urls: string[] = [stockUrl, usStockUrl, usSmallcapUrl].filter((u): u is string => Boolean(u))
-        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
-            .then((docs) => {
-                if (!alive) return
-                const merged: any[] = []
-                for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) merged.push(...a) }
-                // ticker dedup (smallcap 트랙 ∩ sp600 중복 — 먼저 등장 우선)
-                const seen = new Set<string>()
-                const deduped = merged.filter((s: any) => { const tk2 = String(s.ticker || ""); if (!tk2 || seen.has(tk2)) return false; seen.add(tk2); return true })
-                if (deduped.length) setUniverse(deduped)
-            })
-        return () => { alive = false }
-    }, [stockUrl, usStockUrl, usSmallcapUrl, onCanvas])
+    /* universe = verityUniverse 공유 훅(KR+US+소형주 머지·dedup·캐시). 위 useStockUniverse 호출. */
 
     /* 거래대금 상위(지금 거래 활발) — 사실. trending_kr.json. */
     useEffect(() => {
@@ -149,26 +122,13 @@ export default function PublicStockSearch(props: Props) {
         return hit ? String(hit.ticker) : s
     }
 
-    /* 라이브 연관검색어 — 코드·영문명·한글명 부분일치, 상위 12. */
-    const matches = useMemo(() => {
-        const s = q.trim().toLowerCase()
-        if (!s || !universe.length) return []
-        return universe.filter((x) =>
-            String(x.ticker).toLowerCase().includes(s) ||
-            String(x.name || "").toLowerCase().includes(s) ||
-            String((x as any).name_ko || "").includes(q.trim())
-        ).slice(0, 12)
-    }, [q, universe])
+    /* 라이브 연관검색어 — 공유 매칭(코드·영문명·한글명 부분일치, 상위 12). */
+    const matches = useMemo(() => matchStocks(universe, q, 12), [q, universe])
 
     const pick = (tk: string, nm?: string) => {
         if (!tk || typeof window === "undefined") return
         const name = nm || (universe.find((x) => String(x.ticker) === String(tk)) || {}).name || tk
-        try {
-            window.localStorage.setItem(LAST_TK_KEY, tk)
-            const cur = readRecents().filter((x) => String(x.t) !== String(tk))
-            cur.unshift({ t: tk, n: name })
-            window.localStorage.setItem(RECENTS_KEY, JSON.stringify(cur.slice(0, RECENTS_CAP)))
-        } catch { /* private/quota */ }
+        pushRecent(tk, name)
         const p = (stockPath || "/stock").replace(/\/+$/, "")
         window.location.href = p + "?q=" + encodeURIComponent(tk)
     }
@@ -293,8 +253,8 @@ export default function PublicStockSearch(props: Props) {
 addPropertyControls(PublicStockSearch, {
     placeholder: { type: ControlType.String, title: "Placeholder", defaultValue: "종목 검색 (이름·코드)" },
     stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
-    stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEF_STOCK },
-    usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
+    stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: STOCK_UNIVERSE_URL },
+    usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: US_UNIVERSE_URL },
     usSmallcapUrl: { type: ControlType.String, title: "US Smallcap URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_us_smallcap.json" },
     trendingUrl: { type: ControlType.String, title: "Trending URL", defaultValue: DEF_TRENDING },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
