@@ -62,6 +62,7 @@ interface Props {
     stockPath: string
     stockUrl: string
     usStockUrl: string
+    usSmallcapUrl?: string
     trendingUrl: string
     dark: boolean
 }
@@ -71,7 +72,7 @@ interface Props {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicStockSearch(props: Props) {
-    const { placeholder, stockPath, stockUrl, usStockUrl, trendingUrl, dark } = props
+    const { placeholder, stockPath, stockUrl, usStockUrl, usSmallcapUrl, trendingUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
@@ -113,16 +114,19 @@ export default function PublicStockSearch(props: Props) {
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        const urls = [stockUrl, usStockUrl].filter(Boolean)
+        const urls: string[] = [stockUrl, usStockUrl, usSmallcapUrl].filter((u): u is string => Boolean(u))
         Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
             .then((docs) => {
                 if (!alive) return
                 const merged: any[] = []
                 for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) merged.push(...a) }
-                if (merged.length) setUniverse(merged)
+                // ticker dedup (smallcap 트랙 ∩ sp600 중복 — 먼저 등장 우선)
+                const seen = new Set<string>()
+                const deduped = merged.filter((s: any) => { const tk2 = String(s.ticker || ""); if (!tk2 || seen.has(tk2)) return false; seen.add(tk2); return true })
+                if (deduped.length) setUniverse(deduped)
             })
         return () => { alive = false }
-    }, [stockUrl, usStockUrl, onCanvas])
+    }, [stockUrl, usStockUrl, usSmallcapUrl, onCanvas])
 
     /* 거래대금 상위(지금 거래 활발) — 사실. trending_kr.json. */
     useEffect(() => {
@@ -291,6 +295,7 @@ addPropertyControls(PublicStockSearch, {
     stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
     stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEF_STOCK },
     usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
+    usSmallcapUrl: { type: ControlType.String, title: "US Smallcap URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_us_smallcap.json" },
     trendingUrl: { type: ControlType.String, title: "Trending URL", defaultValue: DEF_TRENDING },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
