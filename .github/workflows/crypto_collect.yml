@@ -58,7 +58,7 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/crypto_macro.json data/crypto_universe.json data/crypto_news.json data/crypto_defillama.json data/crypto_governance.json data/crypto_etf_flow.json
+          git add data/crypto_macro.json data/crypto_universe.json data/crypto_news.json data/crypto_defillama.json data/crypto_governance.json data/crypto_etf_flow.json data/crypto_options.json data/crypto_stablecoins.json data/crypto_positioning.json
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🪙 crypto_collect ${TIME_KST}"

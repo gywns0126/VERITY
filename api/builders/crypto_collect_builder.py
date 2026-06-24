@@ -31,6 +31,9 @@ NEWS_PATH = os.path.join(DATA_DIR, "crypto_news.json")
 DEFILLAMA_PATH = os.path.join(DATA_DIR, "crypto_defillama.json")
 GOVERNANCE_PATH = os.path.join(DATA_DIR, "crypto_governance.json")
 ETF_FLOW_PATH = os.path.join(DATA_DIR, "crypto_etf_flow.json")
+OPTIONS_PATH = os.path.join(DATA_DIR, "crypto_options.json")
+STABLECOINS_PATH = os.path.join(DATA_DIR, "crypto_stablecoins.json")
+POSITIONING_PATH = os.path.join(DATA_DIR, "crypto_positioning.json")
 
 KST = timezone(timedelta(hours=9))
 
@@ -219,6 +222,72 @@ def build_etf_flow() -> tuple[Dict[str, Any], bool]:
     return payload, True
 
 
+# ── 7. 옵션 지표 (crypto_options.json) ──
+def build_options() -> tuple[Dict[str, Any], bool]:
+    """Deribit 무인증 → BTC/ETH IV(DVOL)·실현변동성·put/call·max pain. fail 시 직전 산출 보존."""
+    from api.collectors.crypto_options import collect_crypto_options
+
+    res, err = _safe_call(collect_crypto_options, "crypto_options", timeout_s=30)
+    ok = bool(res and isinstance(res, dict) and res.get("ok"))
+    if not ok:
+        prev = _load_existing(OPTIONS_PATH)
+        if prev and (prev.get("btc") or prev.get("eth")):
+            prev.setdefault("diagnostics", {})["used_prev_snapshot"] = True
+            prev["diagnostics"]["last_error"] = err or (res or {}).get("error") or "not_ok"
+            return prev, False
+        return {"collected_at": _now_kst_iso(), "schema_version": "v0", "source": "deribit",
+                "btc": None, "eth": None, "diagnostics": {"error": err or (res or {}).get("error") or "not_ok"}}, False
+    payload = dict(res)
+    payload["collected_at"] = _now_kst_iso()
+    payload["schema_version"] = "v0"
+    payload["diagnostics"] = {"ok_count": payload.get("ok_count", 0), "used_prev_snapshot": False}
+    return payload, True
+
+
+# ── 8. 스테이블코인 공급 (crypto_stablecoins.json) ──
+def build_stablecoins() -> tuple[Dict[str, Any], bool]:
+    """Tether/Circle 발행사 직접 → USDT/USDC 체인별 공급. fail 시 직전 산출 보존."""
+    from api.collectors.crypto_stablecoins import collect_crypto_stablecoins
+
+    res, err = _safe_call(collect_crypto_stablecoins, "crypto_stablecoins", timeout_s=25)
+    ok = bool(res and isinstance(res, dict) and res.get("ok"))
+    if not ok:
+        prev = _load_existing(STABLECOINS_PATH)
+        if prev and (prev.get("usdt") or prev.get("usdc")):
+            prev.setdefault("diagnostics", {})["used_prev_snapshot"] = True
+            prev["diagnostics"]["last_error"] = err or (res or {}).get("error") or "not_ok"
+            return prev, False
+        return {"collected_at": _now_kst_iso(), "schema_version": "v0", "source": "tether+circle",
+                "usdt": None, "usdc": None, "diagnostics": {"error": err or (res or {}).get("error") or "not_ok"}}, False
+    payload = dict(res)
+    payload["collected_at"] = _now_kst_iso()
+    payload["schema_version"] = "v0"
+    payload["diagnostics"] = {"ok_count": payload.get("ok_count", 0), "used_prev_snapshot": False}
+    return payload, True
+
+
+# ── 9. 선물 포지셔닝 (crypto_positioning.json) ──
+def build_positioning() -> tuple[Dict[str, Any], bool]:
+    """Bybit+OKX 무인증 → BTC/ETH OI + 롱숏 비율 (Binance 451 회피). fail 시 직전 산출 보존."""
+    from api.collectors.crypto_positioning import collect_crypto_positioning
+
+    res, err = _safe_call(collect_crypto_positioning, "crypto_positioning", timeout_s=25)
+    ok = bool(res and isinstance(res, dict) and res.get("ok"))
+    if not ok:
+        prev = _load_existing(POSITIONING_PATH)
+        if prev and (prev.get("btc") or prev.get("eth")):
+            prev.setdefault("diagnostics", {})["used_prev_snapshot"] = True
+            prev["diagnostics"]["last_error"] = err or (res or {}).get("error") or "not_ok"
+            return prev, False
+        return {"collected_at": _now_kst_iso(), "schema_version": "v0", "source": "bybit+okx",
+                "btc": None, "eth": None, "diagnostics": {"error": err or (res or {}).get("error") or "not_ok"}}, False
+    payload = dict(res)
+    payload["collected_at"] = _now_kst_iso()
+    payload["schema_version"] = "v0"
+    payload["diagnostics"] = {"ok_count": payload.get("ok_count", 0), "used_prev_snapshot": False}
+    return payload, True
+
+
 def main() -> int:
     started = time.time()
     results = {}
@@ -246,6 +315,18 @@ def main() -> int:
     etf_flow, etf_ok = build_etf_flow()
     _atomic_write(ETF_FLOW_PATH, etf_flow)
     results["etf_flow"] = etf_ok
+
+    options, options_ok = build_options()
+    _atomic_write(OPTIONS_PATH, options)
+    results["options"] = options_ok
+
+    stablecoins, stable_ok = build_stablecoins()
+    _atomic_write(STABLECOINS_PATH, stablecoins)
+    results["stablecoins"] = stable_ok
+
+    positioning, pos_ok = build_positioning()
+    _atomic_write(POSITIONING_PATH, positioning)
+    results["positioning"] = pos_ok
 
     elapsed = round(time.time() - started, 2)
     sys.stderr.write(f"[crypto_collect] 적재 완료 {results} elapsed={elapsed}s\n")
