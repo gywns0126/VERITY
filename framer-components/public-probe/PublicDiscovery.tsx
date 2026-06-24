@@ -327,7 +327,7 @@ export default function PublicDiscovery(props: Props) {
     useEffect(() => {
         if (!stockUrl) return
         let alive = true
-        const urls = [stockUrl, usStockUrl, usSmallcapUrl].filter(Boolean) as string[]
+        const urls: string[] = [stockUrl, usStockUrl, usSmallcapUrl].filter((u): u is string => Boolean(u))
         Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
             .then((docs) => {
                 if (!alive) return
@@ -702,7 +702,7 @@ export default function PublicDiscovery(props: Props) {
                     </div>
                 )}
 
-                <button onClick={() => go(s.ticker)} style={{ width: "100%", marginTop: 16, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vg, color: "#fff" }}>전체 리포트 보기 →</button>
+                <button onClick={() => go(s.ticker)} style={{ width: "100%", marginTop: 16, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vt, color: "#fff" }}>전체 리포트 보기 →</button>
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5, textAlign: "center" }}>사실만 · 추천·등급 아님 · 차트·심화는 전체 리포트</div>
             </div>
         )
