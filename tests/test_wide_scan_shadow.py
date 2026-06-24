@@ -295,6 +295,51 @@ def test_jsonl_includes_gate_stats(tmp_path, monkeypatch):
     assert gs["fscore_full_n"] == 5
 
 
+def test_fscore_gate_verdict_partial_data_guard():
+    """step (c) — F-gate verdict: 가용<MIN → abstain, 충분+≥7 → pass, 충분+<7 → fail."""
+    from api.analyzers import wide_scan as ws
+    # 부분 데이터 (available_n=3<7): score 7 이어도 abstain (도달 불가 구간 비처벌)
+    assert ws._fscore_gate_verdict({"score": 3, "available_n": 3}) == "abstain"
+    assert ws._fscore_gate_verdict({"score": None, "available_n": 0}) == "abstain"
+    # 충분 데이터 (available_n≥7): 임계 기준 pass/fail
+    assert ws._fscore_gate_verdict({"score": 7, "available_n": 9}) == "pass"
+    assert ws._fscore_gate_verdict({"score": 8, "available_n": 8}) == "pass"
+    assert ws._fscore_gate_verdict({"score": 6, "available_n": 9}) == "fail"
+
+
+def test_jsonl_gate_preview_nondestructive(tmp_path, monkeypatch):
+    """step (c) — gate_preview 블록: applied=False + verdict 합=passed_n + Altman blocked.
+
+    🚨 비파괴 보장: top_tickers(cascade)가 게이트 미적용 결과와 동일 (RULE 7 trail 무영향).
+    """
+    log_path = tmp_path / "wide_scan_log.jsonl"
+    monkeypatch.setenv("WIDE_SCAN_MODE", "SHADOW")
+    import importlib
+    import api.config as _cfg
+    importlib.reload(_cfg)
+    import api.analyzers.wide_scan as ws
+    importlib.reload(ws)
+    monkeypatch.setattr(ws, "WIDE_SCAN_LOG_PATH", log_path)
+
+    stocks = _sample_stocks()
+    result = ws.run_wide_scan_shadow(stocks, run_at_iso="2026-05-10T18:00:00+09:00")
+    entry = json.loads(log_path.read_text(encoding="utf-8").strip().split("\n")[0])
+
+    gp = entry["gate_preview"]
+    assert gp["applied"] is False, "preview = 비파괴, cascade 적용 금지"
+    assert gp["fscore_threshold"] == 7
+    # verdict 3종 합 = 22% cut 통과 수 (모든 통과 종목이 분류됨)
+    assert gp["would_pass_n"] + gp["would_fail_n"] + gp["abstain_n"] == entry["passed_n"]
+    # sample 은 quarterly snapshot 없음 → available_n=3<7 → 전원 abstain (부분데이터 가드)
+    assert gp["would_pass_n"] == 0 and gp["would_fail_n"] == 0
+    assert gp["abstain_n"] == entry["passed_n"]
+    # Altman = DART 미부착 → step e 까지 blocked
+    assert gp["altman_gate"] == "blocked_step_e"
+    # 비파괴: 게이트가 passed 셋을 줄이지 않음 (22% cut 그대로) → cascade·trail 무영향
+    assert entry["passed_n"] == int(len(stocks) * ws.WIDE_SCAN_TARGET_RATIO)
+    assert len(result["top_tickers"]) == entry["passed_n"]
+
+
 def test_invalid_mode_falls_back_to_disabled(monkeypatch):
     """알 수 없는 WIDE_SCAN_MODE 값 → DISABLED 강제 정합 (config 가드)."""
     monkeypatch.setenv("WIDE_SCAN_MODE", "MAYBE_LATER")

@@ -4,7 +4,10 @@ wide_scan v0_heuristic — Phase 2-B Coarse Filter (5,000 → 1,000)
 설계 근거 (Perplexity 7답 종합 + 메모리 통합, 2026-05-10):
 - Q1: 7차원 = Liquidity(게이트키퍼) / Value / Profitability / Growth / Safety / Payout / Momentum (AQR QMJ + Carhart 정합)
 - Q2: sector_thresholds 의무 (한국 PBR 1.1 vs S&P500 5.3 — 미국 임계값 사용 시 90% false BUY)
-- Q3: F-Score ≥ 7 + Altman Z ≥ 1.81 (제조업) 강력 게이트 — step (c)
+- Q3: F-Score ≥ 7 (Piotroski 2000) + Altman Z 강력 게이트 — step (c)
+       🚨 Altman cut 1.81(원본 1968 미국)은 stale — 한국 보정 zone 컷으로 대체됨
+       (KOSPI제조 2.3 / KOSDAQ·비제조 Z″ 2.6 / 금융 제외, 2026-05-19 PM 승인).
+       실 적용 = quality.py:compute_altman_z 재사용 예정 (step e DART 부착 후).
 - Q4: 22% cut (5,000 → 1,000) 학계/실무 표준 중앙값
 - Q5: DART lag 평균 38일(대) / 43일(중소) — 마감 ±2주 delta pull (후행)
 - Q6: 한국 경기민감재(조선·화학·철강) = 3Y CAGR + Mid-cycle Normalized + GICS Z-score (단년 데이터 한계 명시)
@@ -14,8 +17,11 @@ wide_scan v0_heuristic — Phase 2-B Coarse Filter (5,000 → 1,000)
 Step 진척:
 - (a) 인프라 (jsonl + state machine 진입점) ✓
 - (b1) sector_thresholds 모듈 ✓
-- (b2) 7차원 absolute scoring + 22% cut + run-level jsonl 적재 ← 현재
-- (c) F-Score / Altman Z 강력 게이트
+- (b2) 7차원 absolute scoring + 22% cut + run-level jsonl 적재 ✓
+- (c) F-Score 게이트 PREVIEW (비파괴 측정 — would_pass/fail/abstain 로깅) ✓ ← 현재
+      · F-Score 42% 가용 → 부분데이터 abstain 가드 적용 (가용<7 = 판정 보류)
+      · Altman = z_full_n 0 (DART 미부착) → step (e) 까지 blocked, 전원 abstain
+      · 🚨 cutover(실제 cascade 적용) = shadow_funnel.v0 trail 조성 변경이라 PM 사전등록 후
 - (d) cross-sectional Z-score + ticker-level jsonl + CANARY/PRODUCTION 전환
 
 shadow mode = decision 영향 0. portfolio.json 출력은 production stock_filter 결과 그대로.
@@ -78,6 +84,14 @@ def production_gate_status(log_path: Optional[Path] = None) -> dict:
     }
 WIDE_SCAN_TARGET_RATIO = 0.22  # Q4: 5,000 → 1,000 (22%)
 LABEL = "v0_heuristic"          # 메모리 원칙 2
+
+# ── step (c) 강력 게이트 임계 (Q3) ──
+# F-Score ≥ 7 = Piotroski(2000) 발표 임계 (prior, 자기산식 아님). KOSPI 1995~2016
+# 백테스트 9점 연 21.38% (Perplexity Q3). [[feedback_priors_vs_validation_two_track]]
+# 🚨 부분데이터 함정 가드: _piotroski_f_score.score 는 가용항목 부분합이라 가용 항목이
+#    적으면 7 도달 불가 → MIN_AVAILABLE 미만이면 abstain(판정 보류, 데이터빈약 종목 비처벌).
+FSCORE_GATE_THRESHOLD = 7
+FSCORE_GATE_MIN_AVAILABLE = 7
 
 # 7차원 가중치 (Q1 답 — AQR QMJ 4차원 + Value/Momentum/Liquidity 분산)
 # #3 (2026-06-08 설계 audit, RULE 7): liquidity = 게이트키퍼(hard_floor 가 이미 게이트) →
@@ -366,6 +380,20 @@ def _piotroski_f_score(stock: dict) -> dict:
     }
 
 
+def _fscore_gate_verdict(f_eval: dict) -> str:
+    """step (c) F-Score 강력 게이트 verdict — 'pass' / 'fail' / 'abstain'.
+
+    부분데이터 가드: 가용 항목(available_n)이 MIN_AVAILABLE 미만이면 7 도달 자체가
+    불가하므로 abstain(판정 보류). 충분 가용 시에만 score≥THRESHOLD 로 pass/fail.
+    🚨 비파괴 preview 전용 — funnel cascade 에 적용 안 함(RULE 7: shadow_funnel.v0
+       예측 trail 조성 변경 = 사전등록 의무). cutover 는 별도 PM 사전등록 후.
+    """
+    score = f_eval.get("score")
+    if score is None or f_eval.get("available_n", 0) < FSCORE_GATE_MIN_AVAILABLE:
+        return "abstain"
+    return "pass" if score >= FSCORE_GATE_THRESHOLD else "fail"
+
+
 def _altman_z_score(stock: dict) -> dict:
     """Q3: Altman Z 5 비율 explicit dict 반환. 제조업 한정 (부도 제거 binary cutoff).
 
@@ -539,6 +567,7 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
     fscore_full_n = 0           # F-Score 7+ 항목 계산되어 score 값 산출된 종목 수
     altman_applicable_n = 0     # 제조업 (Altman Z 적용 가능) 종목 수
     altman_z_full_n = 0         # Z value 계산된 종목 수
+    fscore_verdict_by_ticker: dict = {}   # step (c) F-gate verdict (pass/fail/abstain) per ticker
     # 데이터 가용성 de-silence (설계 audit #8/#9/#11/#14) — 차원 결손/loss/유동성분포 추적, decision 영향 0
     debt_avail_n = 0           # debt_ratio 가용 종목 수 (safety 섹터-aware 입력)
     loss_count = 0             # per <= 0 (적자) 종목 수 — value-trap 모니터 (#9)
@@ -562,12 +591,13 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
         _tv = s.get("trading_value")
         if _tv and _tv > 0:
             tv_values.append(float(_tv))
-        # step (c) 게이트 prep — 데이터 가용성 stats 만 누적, decision 영향 0
+        # step (c) 게이트 — 데이터 가용성 stats + F-Score gate verdict 누적, decision 영향 0
         f_eval = _piotroski_f_score(s)
         if f_eval["available_n"] > 0:
             fscore_available_n += 1
         if f_eval["score"] is not None:
             fscore_full_n += 1
+        fscore_verdict_by_ticker[s.get("ticker", "?")] = _fscore_gate_verdict(f_eval)
         z_eval = _altman_z_score(s)
         if z_eval["applicable"]:
             altman_applicable_n += 1
@@ -579,13 +609,26 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
     passed = scored[:target_n] if target_n > 0 else []
     cut_score = passed[-1][0] if passed else 0.0
 
+    # step (c) F-Score 게이트 PREVIEW — 22% cut 통과분에 게이트를 *적용했다면* 결과 (측정 only).
+    # 🚨 비파괴: passed 셋 불변 → d/e/f cascade·shadow_funnel.v0 예측 trail 무영향(RULE 7).
+    #    cutover(실제 적용) = PM 사전등록 후 별도. Altman 은 z_full_n=0(DART 미부착) → step (e) 까지 abstain-all.
+    gate_pass_n = gate_fail_n = gate_abstain_n = 0
+    for _, tkr, _ in passed:
+        v = fscore_verdict_by_ticker.get(tkr, "abstain")
+        if v == "pass":
+            gate_pass_n += 1
+        elif v == "fail":
+            gate_fail_n += 1
+        else:
+            gate_abstain_n += 1
+
     # run-level jsonl 1줄 적재 (ticker-level 라인은 step d 에서 추가)
     dim_avg = {k: round(dim_sum[k] / max(input_n, 1), 2) for k in DIM_WEIGHTS}
     entry = {
         "ts": now_iso,
         "label": LABEL,
         "mode": WIDE_SCAN_MODE,
-        "step": "c_gate_prep",
+        "step": "c_gate_prep",   # 라벨 고정 — system_map.py consumer + jsonl 이력 정합 (rename 금지)
         "input_n": input_n,
         "target_n": target_n,
         "passed_n": len(passed),
@@ -616,7 +659,18 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
             ),
             "data_source": "stock_dict_v0",
         },
-        "note": "step_c — 게이트 구조 prep. 실 데이터 통합은 step e (stock_data 확장 + DART pre-attach).",
+        # step (c) F-Score 게이트 PREVIEW (22% cut 통과 670 에 F≥7 적용 시) — 측정 only, cascade 불변.
+        "gate_preview": {
+            "applied": False,   # 🚨 비파괴 — passed 셋 미변경 (cutover=PM 사전등록 후)
+            "fscore_threshold": FSCORE_GATE_THRESHOLD,
+            "fscore_min_available": FSCORE_GATE_MIN_AVAILABLE,
+            "would_pass_n": gate_pass_n,
+            "would_fail_n": gate_fail_n,
+            "abstain_n": gate_abstain_n,   # 가용 항목<min → 판정 보류 (데이터빈약 비처벌)
+            "altman_gate": "blocked_step_e",   # z_full_n=0 (DART 펀더멘털 미부착) → 전원 abstain
+        },
+        "note": "step_c — F-Score 게이트 preview(비파괴 측정). cutover=PM 사전등록 후. "
+                "Altman=step e(DART pre-attach) 까지 blocked. F partial-data abstain 가드 적용.",
     }
     logged = _append_jsonl(entry)
 
