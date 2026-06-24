@@ -352,6 +352,7 @@ def build_regime() -> Tuple[Dict[str, Any], bool]:
                       "rule": "net≥+2 risk_on / ≤−2 risk_off / else neutral (투명 tally, 가중치 없음)"},
         "dimensions": dims,
         "btc_price_at_call": btc_price,
+        "trail": entries[-90:],  # 최근 90일 판독 history (레짐 추이 라인 차트 소비)
         "track_record": track_record,
         "_disclaimer": "가설 v0 · 자체 기준 · 관측-only · 매매 미연결 · 임계 변경 1회+PM 승인",
     }
