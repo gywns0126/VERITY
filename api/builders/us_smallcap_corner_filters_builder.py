@@ -78,9 +78,28 @@ FILTERS = [
 ]
 
 
+def _base_facts(st: Dict[str, Any]) -> Dict[str, Any]:
+    """정보량 최대화(Everytickr) — 필터 무관 공통 풀세트. 모르는 소형주도 판단 가능하게."""
+    fin = st.get("financials") or {}
+    return {
+        "name_ko": st.get("name_ko"),
+        "business_ko": st.get("business_ko"),
+        "mktcap_musd": st.get("mktcap_musd"),
+        "debt_to_equity": fin.get("debt_to_equity"),
+        "net_margin_pct": fin.get("net_margin_pct"),
+        "operating_margin_pct": fin.get("operating_margin_pct"),
+        "revenue_yoy_pct": fin.get("revenue_yoy_pct"),
+        "roe_pct": fin.get("roe_pct"),
+        "altman_zone": fin.get("altman_zone"),
+        "fscore": fin.get("fscore"),
+        "fscore_label": fin.get("fscore_label"),
+        "lynch_class": fin.get("lynch_class"),
+    }
+
+
 def _match(key: str, st: Dict[str, Any], counts: Dict[str, int]) -> Optional[Dict[str, Any]]:
     fin = st.get("financials") or {}
-    mc = st.get("mktcap_musd")
+    base = _base_facts(st)
     dilution = _c(counts, "dilution")
     distress = _c(counts, "bankruptcy", "delisting_risk", "debt_default")
     structural = _c(counts, "mna", "rights_modification", "control_change")
@@ -89,22 +108,20 @@ def _match(key: str, st: Dict[str, Any], counts: Dict[str, int]) -> Optional[Dic
 
     if key == "neglected_quality":
         if _healthy(fin) and not counts:  # 위험 8-K 신호 0
-            return {"debt_to_equity": fin.get("debt_to_equity"), "net_margin_pct": nm,
-                    "roe_pct": fin.get("roe_pct"), "mktcap_musd": mc}
+            return base
     elif key == "smallcap_dilution":
         if dilution >= 2:
-            return {"dilution_8k": dilution, "mktcap_musd": mc}
+            return {**base, "dilution_8k": dilution}
     elif key == "smallcap_distress":
         if (nm is not None and nm < 0) or distress >= 1:
-            return {"net_margin_pct": nm, "distress_8k": distress, "mktcap_musd": mc}
+            return {**base, "distress_8k": distress}
     elif key == "clean_fin_risky_disc":
         if _healthy(fin) and (dilution >= 2 or structural >= 1):
-            return {"debt_to_equity": fin.get("debt_to_equity"), "net_margin_pct": nm,
-                    "dilution_8k": dilution, "structural_8k": structural}
+            return {**base, "dilution_8k": dilution, "structural_8k": structural}
     elif key == "accounting_red_flag":
         if accounting >= 1:
-            return {"restatement": _c(counts, "restatement"),
-                    "auditor_change": _c(counts, "auditor_change"), "mktcap_musd": mc}
+            return {**base, "restatement": _c(counts, "restatement"),
+                    "auditor_change": _c(counts, "auditor_change")}
     return None
 
 

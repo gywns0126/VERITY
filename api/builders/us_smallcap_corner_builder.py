@@ -71,6 +71,17 @@ def _forensic_tickers() -> set:
         return set()
 
 
+def _load_json_map(path: str) -> Dict[str, str]:
+    """문자열 값 맵 (us_sic_ko: sic설명→한글 / us_name_ko: ticker→한글). _meta 제외."""
+    if not os.path.exists(path):
+        return {}
+    try:
+        d = json.load(open(path, encoding="utf-8"))
+        return {k: v for k, v in d.items() if not k.startswith("_") and isinstance(v, str)}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def main() -> int:
     caps = _load_market_caps()
     if not caps:
@@ -78,6 +89,8 @@ def main() -> int:
         return 0
     names = _load_names()
     forensic_tickers = _forensic_tickers()
+    sic_ko = _load_json_map(os.path.join(_ROOT, "data", "us_sic_ko.json"))
+    name_ko = _load_json_map(os.path.join(_ROOT, "data", "us_name_ko.json"))
 
     stocks = []
     for tk, mc in caps.items():
@@ -93,19 +106,29 @@ def main() -> int:
         der = d.get("derived") or {}
         if der.get("debt_to_equity") is None:  # 재무 floor — Brain fact 최소조건
             continue
+        meta = d.get("meta") or {}
         az = der.get("altman_z") or {}
+        fs = der.get("fscore") or {}
+        ly = der.get("lynch") or {}
+        sic_desc = meta.get("sic_description") or ""
+        # 정보량 최대화 (Everytickr 원칙) — 모르는 소형주라도 판단 가능한 facts 풀세트.
         stocks.append({
             "ticker": tk,
-            "name": names.get(tk) or (d.get("meta") or {}).get("entity_name") or "",
+            "name": names.get(tk) or meta.get("entity_name") or "",  # 영문 항상
+            "name_ko": name_ko.get(tk),                              # 한글명 있으면 병기, 없으면 null
             "market": "US",
+            "business_ko": sic_ko.get(sic_desc) or sic_desc or "",   # 업종 한글(없으면 영문 SIC)
             "mktcap_musd": round(mc / _MUSD),
             "financials": {
                 "debt_to_equity": der.get("debt_to_equity"),
                 "net_margin_pct": der.get("net_margin_pct"),
-                "roe_pct": der.get("roe_pct"),
                 "operating_margin_pct": der.get("operating_margin_pct"),
-                "altman_z": az.get("z_score"),
-                "fscore": der.get("fscore"),
+                "revenue_yoy_pct": der.get("revenue_yoy_pct_annual"),
+                "roe_pct": der.get("roe_pct"),
+                "altman_zone": az.get("zone"),
+                "fscore": fs.get("f_score"),
+                "fscore_label": fs.get("label"),
+                "lynch_class": ly.get("lynch_class"),
                 "fetched_at": d.get("fetched_at"),
             },
             "has_forensic_depth": tk in forensic_tickers,

@@ -47,7 +47,7 @@ function readBodyDark(): boolean {
   return document.body.dataset.framerTheme === "dark"
 }
 
-type Facts = { [k: string]: number }
+type Facts = { [k: string]: any }
 type Ticker = { ticker: string; name: string; market: string; facts: Facts }
 type Filter = {
   key: string; name: string; badge: string; why: string
@@ -60,33 +60,54 @@ function musd(m: number): string {
   return "$" + Math.round(m).toLocaleString() + "M"
 }
 
+const ZONE_KO: Record<string, string> = { safe: "안전", grey: "주의", distress: "위험" }
+
 function FactRow(props: { t: Ticker; C: typeof LIGHT; reportPath?: string }) {
   const C = props.C
   const f = props.t.facts || {}
   const url = props.t.ticker ? (props.reportPath || "/us") + "?q=" + encodeURIComponent(props.t.ticker) : ""
-  const bits: string[] = []
-  if (f["mktcap_musd"] != null) bits.push("시총 " + musd(f["mktcap_musd"]))
-  if (f["debt_to_equity"] != null) bits.push("D/E " + f["debt_to_equity"].toFixed(1))
-  if (f["net_margin_pct"] != null) bits.push("순이익률 " + f["net_margin_pct"].toFixed(0) + "%")
-  if (f["roe_pct"] != null) bits.push("ROE " + f["roe_pct"].toFixed(0) + "%")
-  if (f["dilution_8k"] != null) bits.push("희석 8-K " + f["dilution_8k"] + "건")
-  if (f["distress_8k"] != null && f["distress_8k"] > 0) bits.push("부실 8-K " + f["distress_8k"] + "건")
-  if (f["structural_8k"] != null && f["structural_8k"] > 0) bits.push("구조 8-K " + f["structural_8k"] + "건")
-  if (f["restatement"] != null && f["restatement"] > 0) bits.push("재무재작성 " + f["restatement"])
-  if (f["auditor_change"] != null && f["auditor_change"] > 0) bits.push("회계법인교체 " + f["auditor_change"])
+  // 정보량 최대화(Everytickr) — 모르는 소형주도 판단 가능하게 metric 풀세트
+  const m: string[] = []
+  if (f["mktcap_musd"] != null) m.push("시총 " + musd(f["mktcap_musd"]))
+  if (f["revenue_yoy_pct"] != null) m.push("매출 " + (f["revenue_yoy_pct"] >= 0 ? "+" : "") + f["revenue_yoy_pct"].toFixed(0) + "%")
+  if (f["operating_margin_pct"] != null) m.push("영업 " + f["operating_margin_pct"].toFixed(0) + "%")
+  if (f["net_margin_pct"] != null) m.push("순익 " + f["net_margin_pct"].toFixed(0) + "%")
+  if (f["roe_pct"] != null) m.push("ROE " + f["roe_pct"].toFixed(0) + "%")
+  if (f["debt_to_equity"] != null) m.push("D/E " + f["debt_to_equity"].toFixed(1))
+  if (f["altman_zone"] && ZONE_KO[f["altman_zone"]]) m.push("Altman " + ZONE_KO[f["altman_zone"]])
+  if (f["fscore"] != null) m.push("F " + f["fscore"] + "/9")
+  if (f["lynch_class"]) m.push(String(f["lynch_class"]))
+  // 8-K forensic 신호 (있을 때만)
+  const sig: string[] = []
+  if (f["dilution_8k"]) sig.push("희석 " + f["dilution_8k"])
+  if (f["distress_8k"]) sig.push("부실 " + f["distress_8k"])
+  if (f["structural_8k"]) sig.push("구조 " + f["structural_8k"])
+  if (f["restatement"]) sig.push("재무재작성 " + f["restatement"])
+  if (f["auditor_change"]) sig.push("회계법인교체 " + f["auditor_change"])
+  const nameKo = f["name_ko"]
+  const bizKo = f["business_ko"]
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 2px", borderTop: "1px solid " + C.line }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 7, flexShrink: 0 }}>
-        {url ? (
-          <a href={url} target="_blank" rel="noopener noreferrer" title={props.t.name + " 분석"} style={{ fontSize: 14, fontWeight: 700, color: C.blue, letterSpacing: -0.2, textDecoration: "none" }}>{props.t.name} ↗</a>
-        ) : (
-          <span style={{ fontSize: 14, fontWeight: 700, color: C.ink, letterSpacing: -0.2 }}>{props.t.name}</span>
-        )}
-        <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{props.t.ticker}</span>
+    <div style={{ padding: "10px 2px", borderTop: "1px solid " + C.line }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0, flexWrap: "wrap" }}>
+          {url ? (
+            <a href={url} target="_blank" rel="noopener noreferrer" title={props.t.name + " 분석"} style={{ fontSize: 14, fontWeight: 700, color: C.blue, letterSpacing: -0.2, textDecoration: "none" }}>{props.t.name} ↗</a>
+          ) : (
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.ink, letterSpacing: -0.2 }}>{props.t.name}</span>
+          )}
+          {nameKo ? <span style={{ fontSize: 11.5, color: C.sub, fontWeight: 600 }}>{nameKo}</span> : null}
+          <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{props.t.ticker}</span>
+        </div>
+        {bizKo ? <span style={{ fontSize: 11, color: C.faint, fontWeight: 600, flexShrink: 0, textAlign: "right" }}>{bizKo}</span> : null}
       </div>
-      <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, textAlign: "right", letterSpacing: -0.2 }}>
-        {bits.join(" · ")}
+      <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, letterSpacing: -0.2, lineHeight: 1.55 }}>
+        {m.join(" · ")}
       </div>
+      {sig.length > 0 ? (
+        <div style={{ fontSize: 11, color: C.amber, fontWeight: 700, marginTop: 3, letterSpacing: -0.2 }}>
+          8-K · {sig.join(" · ")}
+        </div>
+      ) : null}
     </div>
   )
 }
