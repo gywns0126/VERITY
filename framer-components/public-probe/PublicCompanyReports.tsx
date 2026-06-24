@@ -42,18 +42,17 @@ function linksFor(tk: string): { label: string; src: string; url: string }[] {
     const isKR = /^\d{6}$/.test(t)
     if (isKR) {
         const c = encodeURIComponent(t)
+        // 전부 ?code=/?itemCode= 로 해당 회사 딥링크 (generic 검색페이지 X). 공시 항목은 클릭 시 DART 원문으로 이어짐.
         return [
+            { label: "공시·정기보고서 (사업·분기보고서)", src: "전자공시 DART · 네이버", url: `https://finance.naver.com/item/news_notice.naver?code=${c}` },
             { label: "증권사 리포트", src: "네이버 금융 리서치", url: `https://finance.naver.com/research/company_list.naver?itemCode=${c}` },
-            { label: "공시·정기보고서", src: "전자공시(DART) · 네이버", url: `https://finance.naver.com/item/news_notice.naver?code=${c}` },
-            { label: "DART 전자공시 원문", src: "금감원 DART", url: `https://dart.fss.or.kr/` },
-            { label: "재무·시세·IR 종합", src: "네이버 금융", url: `https://finance.naver.com/item/main.naver?code=${c}` },
+            { label: "종목 종합 (시세·재무·IR·뉴스)", src: "네이버 금융", url: `https://finance.naver.com/item/main.naver?code=${c}` },
         ]
     }
     const c = encodeURIComponent(t)
     return [
-        { label: "SEC 공시 (10-K·10-Q·8-K)", src: "SEC EDGAR", url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=${c}&type=&dateb=&owner=include&count=40` },
-        { label: "공시 요약", src: "Yahoo Finance · SEC", url: `https://finance.yahoo.com/quote/${c}/sec-filings` },
-        { label: "재무·애널리스트 분석", src: "Yahoo Finance", url: `https://finance.yahoo.com/quote/${c}` },
+        { label: "공시·연차보고서 (10-K·10-Q·8-K)", src: "SEC EDGAR", url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=${c}&type=&dateb=&owner=include&count=40` },
+        { label: "종목·재무·애널리스트 분석", src: "Yahoo Finance", url: `https://finance.yahoo.com/quote/${c}` },
     ]
 }
 
