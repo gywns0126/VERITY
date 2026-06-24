@@ -32,6 +32,7 @@ from api.collectors.yfinance_safe import yf_ticker, safe_yf_call, get_state_snap
 
 KST = timezone(timedelta(hours=9))
 SP1500_PATH = REPO_ROOT / "data" / "us_universe_sp1500.json"
+COMBINED_PATH = REPO_ROOT / "data" / "us_universe_combined.json"
 OUTPUT_PATH = REPO_ROOT / "data" / "us_market_caps.json"
 
 # Lynch DEFAULT_US15 fallback 과 동일 (유니버스 부재 시).
@@ -41,16 +42,16 @@ DEFAULT_US15 = [
 ]
 
 
-def load_sp1500_tickers() -> List[str]:
-    if not SP1500_PATH.exists():
-        print("[us_market_caps] us_universe_sp1500.json 부재 — US15 fallback", file=sys.stderr)
+def load_universe_tickers(path: Path) -> List[str]:
+    if not path.exists():
+        print(f"[us_market_caps] {path.name} 부재 — US15 fallback", file=sys.stderr)
         return list(DEFAULT_US15)
     try:
-        d = json.loads(SP1500_PATH.read_text(encoding="utf-8"))
+        d = json.loads(path.read_text(encoding="utf-8"))
         tickers = [str(t).strip().upper() for t in (d.get("tickers") or []) if str(t).strip()]
         return tickers or list(DEFAULT_US15)
     except Exception as e:  # noqa: BLE001
-        print(f"[us_market_caps] sp1500 parse 실패: {e!r} — US15 fallback", file=sys.stderr)
+        print(f"[us_market_caps] {path.name} parse 실패: {e!r} — US15 fallback", file=sys.stderr)
         return list(DEFAULT_US15)
 
 
@@ -98,12 +99,15 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=0, help="최대 종목 수 (0=무제한).")
     parser.add_argument("--offset", type=int, default=0, help="유니버스 시작 오프셋 (배치 분할).")
     parser.add_argument("--ticker", help="단일 ticker (manual test).")
+    parser.add_argument("--universe", choices=["sp1500", "combined"], default="sp1500",
+                        help="sp1500=S&P 1500 / combined=Polygon CS active ∪ sp1500(소형주 트랙).")
     args = parser.parse_args()
 
     if args.ticker:
         tickers = [args.ticker.upper()]
     else:
-        tickers = load_sp1500_tickers()
+        path = COMBINED_PATH if args.universe == "combined" else SP1500_PATH
+        tickers = load_universe_tickers(path)
         if args.offset > 0:
             tickers = tickers[args.offset:]
         if args.limit > 0:

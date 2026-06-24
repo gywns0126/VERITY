@@ -75,8 +75,12 @@ def load_us_tickers() -> List[str]:
 
 # S&P Composite 1500 정적 유니버스 (scripts/us/fetch_sp1500_universe.py 산출).
 SP1500_PATH = REPO_ROOT / "data" / "us_universe_sp1500.json"
+# 소형주 트랙 universe = Polygon CS active ∪ sp1500 (scripts/us/fetch_us_smallcap_universe.py).
+COMBINED_PATH = REPO_ROOT / "data" / "us_universe_combined.json"
 # 1500 시가총액 (scripts/us/fetch_us_market_caps.py, yfinance fast_info). Lynch size + 원본 Altman X4.
 MARKET_CAPS_PATH = REPO_ROOT / "data" / "us_market_caps.json"
+# 소형주 컷 — 시총 분포 확인 후 조정(잠정). 시총 부재 종목은 제외(RULE 7: 사실 없으면 비노출).
+SMALLCAP_CAP_MAX = 5_000_000_000  # $5B 이하 = 소형주 트랙 backfill 대상
 
 
 def load_sp1500_tickers() -> List[str]:
@@ -91,6 +95,31 @@ def load_sp1500_tickers() -> List[str]:
     except Exception as e:  # noqa: BLE001
         _logger.error("us_universe_sp1500.json parse failed: %s — US15 fallback", e)
         return list(DEFAULT_US15)
+
+
+def load_smallcap_tickers() -> List[str]:
+    """소형주 트랙 universe = combined(Polygon CS ∪ sp1500) 중 시총 ≤ SMALLCAP_CAP_MAX.
+
+    시총 부재 종목은 제외(RULE 7 — 사실 없으면 비노출, delisted 자동 탈락).
+    us_market_caps.json(combined) 선행 필요. 부재/결손 시 sp1500 fallback.
+    """
+    if not COMBINED_PATH.exists():
+        _logger.warning("us_universe_combined.json 부재 — fetch_us_smallcap_universe.py 먼저. sp1500 fallback")
+        return load_sp1500_tickers()
+    try:
+        d = json.loads(COMBINED_PATH.read_text(encoding="utf-8"))
+        universe = [str(t).strip().upper() for t in (d.get("tickers") or []) if str(t).strip()]
+    except Exception as e:  # noqa: BLE001
+        _logger.error("us_universe_combined.json parse failed: %s — sp1500 fallback", e)
+        return load_sp1500_tickers()
+    caps = load_market_caps()
+    small = [t for t in universe if 0 < caps.get(t, 0) <= SMALLCAP_CAP_MAX]
+    if not small:
+        _logger.warning("시총 컷 결과 0 — us_market_caps(combined) 미충전 의심. sp1500 fallback")
+        return load_sp1500_tickers()
+    _logger.info("smallcap universe = %d (combined %d 중 시총 ≤ $%.1fB)",
+                 len(small), len(universe), SMALLCAP_CAP_MAX / 1e9)
+    return small
 
 
 def load_market_caps() -> Dict[str, float]:
@@ -206,14 +235,17 @@ def main() -> int:
     )
     parser.add_argument("--limit", type=int, default=0,
                         help="최대 종목 수 (cost cap, 0=무제한).")
-    parser.add_argument("--universe", choices=["portfolio", "sp1500"], default="portfolio",
-                        help="portfolio=추천 US(기본) / sp1500=S&P Composite 1500(미장 확대, 로컬 1회 적재 권장)")
+    parser.add_argument("--universe", choices=["portfolio", "sp1500", "smallcap"], default="portfolio",
+                        help="portfolio=추천 US(기본) / sp1500=S&P Composite 1500 / "
+                             "smallcap=소형주 트랙(combined 중 시총 ≤ $%dB)" % (SMALLCAP_CAP_MAX // 10**9))
     parser.add_argument("--offset", type=int, default=0,
                         help="유니버스 시작 오프셋 (다일/배치 분할 적재용, 멱등 재개).")
     args = parser.parse_args()
 
     if args.ticker:
         tickers = [args.ticker.upper()]
+    elif args.universe == "smallcap":
+        tickers = load_smallcap_tickers()
     elif args.universe == "sp1500":
         tickers = load_sp1500_tickers()
     else:
