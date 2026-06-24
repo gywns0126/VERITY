@@ -72,8 +72,16 @@ jobs:
         run: python scripts/us/fetch_us_volume.py
 
       - name: 재무 backfill (smallcap, SEC EDGAR XBRL)
-        # combined 중 시총 ≤ $5B → data/us_financials/{ticker}.json(gitignore, 로컬). corner 입력.
+        # combined 중 시총 ≤ $5B → data/us_financials/{ticker}.json(gitignore, 로컬) + _summary_smallcap.json.
         run: python -m api.builders.us_financials_builder --universe smallcap
+
+      - name: 미장 소형주 상세 리포트 (별 파일 — sp1500 무손상)
+        # _summary_smallcap → us_stock_report_us_smallcap.json. PublicStockReport usSmallcapUrl merge.
+        continue-on-error: true
+        run: |
+          python -m api.builders.us_stock_report_public_builder \
+            --summary data/us_financials/_summary_smallcap.json \
+            --output data/us_stock_report_us_smallcap.json
 
       - name: 코너 → forensics(8-K) → filters
         run: |

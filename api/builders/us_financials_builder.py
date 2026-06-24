@@ -36,6 +36,7 @@ KST = timezone(timedelta(hours=9))
 PORTFOLIO_PATH = REPO_ROOT / "data" / "portfolio.json"
 OUTPUT_DIR = REPO_ROOT / "data" / "us_financials"
 SUMMARY_PATH = OUTPUT_DIR / "_summary.json"
+SMALLCAP_SUMMARY_PATH = OUTPUT_DIR / "_summary_smallcap.json"  # smallcap 트랙 별 summary (sp1500 _summary 미덮음)
 
 _logger = logging.getLogger(__name__)
 
@@ -293,7 +294,8 @@ def main() -> int:
 
     summary = _build_summary(snapshots)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    SUMMARY_PATH.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    summary_path = SMALLCAP_SUMMARY_PATH if args.universe == "smallcap" else SUMMARY_PATH
+    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     ok_count = sum(1 for s in snapshots if "_error" not in s)
     print(
         f"[us_financials] DONE — {ok_count}/{len(tickers)} OK, summary saved (logged=True)",

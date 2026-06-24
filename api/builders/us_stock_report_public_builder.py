@@ -234,12 +234,20 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
 
 
 def main() -> int:
+    import argparse
+    _p = argparse.ArgumentParser()
+    _p.add_argument("--summary", default=SUMMARY_PATH,
+                    help="_summary.json 경로 (smallcap 트랙 = data/us_financials/_summary_smallcap.json)")
+    _p.add_argument("--output", default=OUTPUT_PATH,
+                    help="출력 json (smallcap = data/us_stock_report_us_smallcap.json)")
+    _a = _p.parse_args()
+    summary_path, output_path = _a.summary, _a.output
     ok = False
     try:
-        if not os.path.isfile(SUMMARY_PATH):
-            print("[us_stock_report] us_financials/_summary.json 부재 — skip", file=sys.stderr)
+        if not os.path.isfile(summary_path):
+            print(f"[us_stock_report] {os.path.basename(summary_path)} 부재 — skip", file=sys.stderr)
             return 0
-        with open(SUMMARY_PATH, "r", encoding="utf-8") as f:
+        with open(summary_path, "r", encoding="utf-8") as f:
             summary = json.load(f)
         rows = summary.get("rows") or []
         # per-ticker 파일에서 meta(sic_description) 보강
@@ -279,13 +287,13 @@ def main() -> int:
             },
             "stocks": stocks,
         }
-        if not stocks and os.path.isfile(OUTPUT_PATH):
+        if not stocks and os.path.isfile(output_path):
             print("[us_stock_report] 0 stocks — 기존 snapshot 보존", file=sys.stderr)
             ok = True
             return 0
-        with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False)
-        print(f"[us_stock_report] logged=True · {len(stocks)} 종목 -> {os.path.relpath(OUTPUT_PATH, _ROOT)}", file=sys.stderr)
+        print(f"[us_stock_report] logged=True · {len(stocks)} 종목 -> {os.path.relpath(output_path, _ROOT)}", file=sys.stderr)
         ok = True
         return 0
     except Exception as e:  # noqa: BLE001

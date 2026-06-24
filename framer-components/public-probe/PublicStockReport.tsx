@@ -90,6 +90,7 @@ const FAVORABLE_CATS = new Set(["자기주식취득"])
 interface Props {
     stockUrl: string
     usStockUrl: string
+    usSmallcapUrl?: string
     flowUrl: string
     forensicsUrl: string
     insiderUrl: string
@@ -431,7 +432,7 @@ function StockReportSkeleton({ C, isDark, narrow }: { C: any; isDark: boolean; n
 }
 
 export default function PublicStockReport(props: Props) {
-    const { stockUrl, usStockUrl, flowUrl, forensicsUrl, insiderUrl, warnUrl, apiBase, dark } = props
+    const { stockUrl, usStockUrl, usSmallcapUrl, flowUrl, forensicsUrl, insiderUrl, warnUrl, apiBase, dark } = props
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
     const C = (RenderTarget.current() === RenderTarget.canvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
@@ -526,20 +527,23 @@ export default function PublicStockReport(props: Props) {
     useEffect(() => {
         if (onCanvas || !stockUrl) return
         let alive = true
-        const urls = [stockUrl, usStockUrl].filter(Boolean)
+        const urls = [stockUrl, usStockUrl, usSmallcapUrl].filter(Boolean)
         Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
             .then((docs) => {
                 const arr: any[] = []
                 for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) arr.push(...(a as any[])) }
                 if (!alive || !arr.length) return
-                setList(arr); setListLoaded(true)
-                let initT = arr[0].ticker
+                // ticker dedup — smallcap 트랙(us_stock_report_us_smallcap) ∩ sp600 중복. 먼저 등장(sp1500) 우선.
+                const seen = new Set<string>()
+                const deduped = arr.filter((s: any) => { const tk = String(s.ticker || ""); if (!tk || seen.has(tk)) return false; seen.add(tk); return true })
+                setList(deduped); setListLoaded(true)
+                let initT = deduped[0].ticker
                 if (typeof window !== "undefined") {
                     let qp = (new URLSearchParams(window.location.search).get("q") || "").trim().toLowerCase()
                     if (!qp) { try { qp = (window.localStorage.getItem("verity_last_ticker") || "").trim().toLowerCase() } catch (e) {} }
                     if (qp) {
-                        const hit = arr.find((x: any) => String(x.ticker).toLowerCase() === qp || String(x.name || "").toLowerCase() === qp || String(x.name_ko || "") === qp)
-                            || arr.find((x: any) => String(x.ticker).toLowerCase().includes(qp) || String(x.name || "").toLowerCase().includes(qp) || String(x.name_ko || "").includes(qp))
+                        const hit = deduped.find((x: any) => String(x.ticker).toLowerCase() === qp || String(x.name || "").toLowerCase() === qp || String(x.name_ko || "") === qp)
+                            || deduped.find((x: any) => String(x.ticker).toLowerCase().includes(qp) || String(x.name || "").toLowerCase().includes(qp) || String(x.name_ko || "").includes(qp))
                         if (hit) initT = hit.ticker
                     }
                 }
@@ -548,7 +552,7 @@ export default function PublicStockReport(props: Props) {
             })
             .catch(() => {})
         return () => { alive = false }
-    }, [stockUrl, usStockUrl, onCanvas])
+    }, [stockUrl, usStockUrl, usSmallcapUrl, onCanvas])
 
     useEffect(() => {
         if (onCanvas || !flowUrl) return
@@ -1698,6 +1702,7 @@ export default function PublicStockReport(props: Props) {
 addPropertyControls(PublicStockReport, {
     stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEFAULT_URL },
     usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
+    usSmallcapUrl: { type: ControlType.String, title: "US Smallcap URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_us_smallcap.json" },
     flowUrl: { type: ControlType.String, title: "Flow URL", defaultValue: DEFAULT_FLOW },
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: DEFAULT_FORENSICS },
     insiderUrl: { type: ControlType.String, title: "Insider URL", defaultValue: DEFAULT_INSIDER },
