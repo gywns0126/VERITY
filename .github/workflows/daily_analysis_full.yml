@@ -323,6 +323,13 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.stock_report_public_builder
 
+      - name: AI 사실 종합 빌드 (출처 기반, 평가·추천 0)
+        # stock_report_public.json 사실 → Gemini flash-lite 가 자연스럽게 다듬기만(grounded) → data/ai_synthesis.json.
+        # 🚨 RULE 6 escape hatch(자기 trail 위 종합) + RULE 7/유사투자자문: verdict 단어 post-filter, 걸리면 결정론 fallback.
+        # 키 없으면 결정론 종합. 다음 step git add data/ (broad) 자동 = RULE 4. publish-data 등재 완료.
+        continue-on-error: true
+        run: python -m api.builders.ai_synthesis_builder
+
       - name: 공개 가격 스냅샷 빌드 (히트맵 가격% 토글 입력)
         # krx_mktcap.json(당일 등락률 chg) → data/public_price_snapshot.json {prices: {ticker: 등락률}}.
         # 순수 변환(외부호출/KIS 0). krx_mktcap_snapshot(네트워크) 뒤에 실행. RULE 7 = KRX 당일 등락률 사실만.
