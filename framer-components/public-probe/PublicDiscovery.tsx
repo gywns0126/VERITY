@@ -21,6 +21,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 interface Props {
     stockUrl: string
     usStockUrl: string
+    usSmallcapUrl?: string
     insiderUrl: string
     flowUrl: string
     forensicsUrl: string
@@ -250,7 +251,7 @@ function metricNum(s: any, key: string): number | null {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicDiscovery(props: Props) {
-    const { stockUrl, usStockUrl, insiderUrl, flowUrl, forensicsUrl, apiBase, reportPath, dark, perList, topOffset } = props
+    const { stockUrl, usStockUrl, usSmallcapUrl, insiderUrl, flowUrl, forensicsUrl, apiBase, reportPath, dark, perList, topOffset } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
@@ -326,16 +327,19 @@ export default function PublicDiscovery(props: Props) {
     useEffect(() => {
         if (!stockUrl) return
         let alive = true
-        const urls = [stockUrl, usStockUrl].filter(Boolean)
+        const urls = [stockUrl, usStockUrl, usSmallcapUrl].filter(Boolean)
         Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
             .then((docs) => {
                 if (!alive) return
                 const arr: any[] = []
                 for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) arr.push(...(a as any[])) }
-                if (arr.length) setList(arr)
+                // ticker dedup (smallcap 트랙 ∩ sp600 중복 — 먼저 등장 우선)
+                const seen = new Set<string>()
+                const deduped = arr.filter((s: any) => { const tk2 = String(s.ticker || ""); if (!tk2 || seen.has(tk2)) return false; seen.add(tk2); return true })
+                if (deduped.length) setList(deduped)
             })
         return () => { alive = false }
-    }, [stockUrl, usStockUrl])
+    }, [stockUrl, usStockUrl, usSmallcapUrl])
 
     useEffect(() => {
         if (!insiderUrl) return
@@ -921,6 +925,7 @@ export default function PublicDiscovery(props: Props) {
 addPropertyControls(PublicDiscovery, {
     stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEFAULT_URL },
     usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
+    usSmallcapUrl: { type: ControlType.String, title: "US Smallcap URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_us_smallcap.json" },
     insiderUrl: { type: ControlType.String, title: "Insider URL", defaultValue: DEFAULT_INSIDER },
     flowUrl: { type: ControlType.String, title: "Flow URL", defaultValue: DEFAULT_FLOW },
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: DEFAULT_FORENSICS },
