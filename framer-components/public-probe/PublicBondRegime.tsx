@@ -20,13 +20,13 @@ const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/bon
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#f0f1f3", up: "#f04452", down: "#3182f6",
+    line: "#e3e6ea", up: "#f04452", down: "#3182f6",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
-    line: "#222730", up: "#f04452", down: "#5b9bff",
+    line: "#272d36", up: "#f04452", down: "#5b9bff",
 }
-const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+const FONT = "inherit"
 
 const RATE_ENV: Record<string, string> = {
     rate_high_restrictive: "고금리 긴축", rate_elevated: "금리 높음",
@@ -128,8 +128,10 @@ export default function PublicBondRegime(props: Props) {
         width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT,
         padding: narrow ? 16 : 22, boxSizing: "border-box", color: C.ink,
     }
+    // 플랫 — 흰 카드 박스 제거. 섹션 = 상단 hairline + 여백으로만 구분(외곽선/박스 없음).
     const card: CSSProperties = {
-        background: C.card, borderRadius: 18, padding: narrow ? 16 : 20, boxSizing: "border-box",
+        background: "transparent", paddingTop: narrow ? 18 : 22, marginTop: narrow ? 16 : 20,
+        borderTop: `1px solid ${C.line}`, boxSizing: "border-box",
     }
     const secLabel = (t: string, hint?: string) => (
         <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 4 }}>
@@ -250,10 +252,10 @@ export default function PublicBondRegime(props: Props) {
             <div style={{ ...card, marginTop: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: C.ink }}>수익률 곡선</span>
-                    <div style={{ display: "flex", gap: 2, background: C.bg, borderRadius: 9, padding: 2 }}>
+                    <div style={{ display: "flex", gap: 14 }}>
                         {([["us", "미국"], ["kr", "한국"]] as const).map(([k, lb]) => (
                             <button key={k} onClick={() => setMkt(k)}
-                                style={{ border: "none", cursor: "pointer", fontFamily: FONT, padding: "5px 13px", borderRadius: 7, fontSize: 11.5, fontWeight: 600, background: mkt === k ? C.card : "transparent", color: mkt === k ? C.ink : C.faint }}>{lb}</button>
+                                style={{ border: "none", cursor: "pointer", fontFamily: FONT, padding: 0, background: "transparent", fontSize: 12.5, fontWeight: mkt === k ? 700 : 500, color: mkt === k ? C.ink : C.faint }}>{lb}</button>
                         ))}
                     </div>
                 </div>
