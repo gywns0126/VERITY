@@ -28,6 +28,9 @@ DATA_DIR = os.path.join(_REPO_ROOT, "data")
 MACRO_PATH = os.path.join(DATA_DIR, "crypto_macro.json")
 UNIVERSE_PATH = os.path.join(DATA_DIR, "crypto_universe.json")
 NEWS_PATH = os.path.join(DATA_DIR, "crypto_news.json")
+DEFILLAMA_PATH = os.path.join(DATA_DIR, "crypto_defillama.json")
+GOVERNANCE_PATH = os.path.join(DATA_DIR, "crypto_governance.json")
+ETF_FLOW_PATH = os.path.join(DATA_DIR, "crypto_etf_flow.json")
 
 KST = timezone(timedelta(hours=9))
 
@@ -146,6 +149,76 @@ def build_news() -> tuple[Dict[str, Any], bool]:
     }, True
 
 
+# ── 4. 프로토콜 펀더멘털 (crypto_defillama.json) ──
+def build_defillama() -> tuple[Dict[str, Any], bool]:
+    """DefiLlama 무료 API → 프로토콜 매출/수수료 + 체인 TVL (코인별 펀더멘털 = 주식 재무 대응).
+    fail 시 직전 산출 보존."""
+    from api.collectors.crypto_defillama import collect_crypto_defillama
+
+    res, err = _safe_call(lambda: collect_crypto_defillama(25), "crypto_defillama", timeout_s=30)
+    ok = bool(res and isinstance(res, dict) and res.get("ok"))
+    if not ok:
+        prev = _load_existing(DEFILLAMA_PATH)
+        if prev and prev.get("protocols"):
+            prev.setdefault("diagnostics", {})["used_prev_snapshot"] = True
+            prev["diagnostics"]["last_error"] = err or (res or {}).get("error") or "not_ok"
+            return prev, False
+        return {"collected_at": _now_kst_iso(), "schema_version": "v0", "source": "defillama",
+                "protocols": [], "chains": [], "diagnostics": {"error": err or (res or {}).get("error") or "not_ok"}}, False
+    payload = dict(res)
+    payload["collected_at"] = _now_kst_iso()
+    payload["schema_version"] = "v0"
+    payload["diagnostics"] = {"protocols": len(payload.get("protocols") or []), "used_prev_snapshot": False}
+    return payload, True
+
+
+# ── 5. DAO 거버넌스 (crypto_governance.json) ──
+def build_governance() -> tuple[Dict[str, Any], bool]:
+    """Snapshot GraphQL → 주요 DAO 거버넌스 제안/투표 (코인판 공시). fail 시 직전 산출 보존.
+    ok=True + proposals 0건(현재 active 없음)도 정상 — fail 아님."""
+    from api.collectors.crypto_governance import collect_crypto_governance
+
+    res, err = _safe_call(lambda: collect_crypto_governance(25), "crypto_governance", timeout_s=25)
+    ok = bool(res and isinstance(res, dict) and res.get("ok"))
+    if not ok:
+        prev = _load_existing(GOVERNANCE_PATH)
+        if prev and prev.get("proposals"):
+            prev.setdefault("diagnostics", {})["used_prev_snapshot"] = True
+            prev["diagnostics"]["last_error"] = err or (res or {}).get("error") or "not_ok"
+            return prev, False
+        return {"collected_at": _now_kst_iso(), "schema_version": "v0", "source": "snapshot",
+                "proposals": [], "diagnostics": {"error": err or (res or {}).get("error") or "not_ok"}}, False
+    payload = dict(res)
+    payload["collected_at"] = _now_kst_iso()
+    payload["schema_version"] = "v0"
+    payload["diagnostics"] = {"proposals": len(payload.get("proposals") or []), "used_prev_snapshot": False}
+    return payload, True
+
+
+# ── 6. 현물 ETF 자금흐름 (crypto_etf_flow.json) ──
+def build_etf_flow() -> tuple[Dict[str, Any], bool]:
+    """SoSoValue → BTC/ETH 현물 ETF net inflow + AUM (주식 ETFFlow 대응).
+    SOSOVALUE_API_KEY 미등록 시 ok=False(no_api_key) → graceful. fail 시 직전 산출 보존."""
+    from api.collectors.crypto_etf_flow import collect_crypto_etf_flow
+
+    res, err = _safe_call(collect_crypto_etf_flow, "crypto_etf_flow", timeout_s=25)
+    ok = bool(res and isinstance(res, dict) and res.get("ok"))
+    if not ok:
+        prev = _load_existing(ETF_FLOW_PATH)
+        if prev and (prev.get("btc") or prev.get("eth")):
+            prev.setdefault("diagnostics", {})["used_prev_snapshot"] = True
+            prev["diagnostics"]["last_error"] = err or (res or {}).get("error") or "not_ok"
+            return prev, False
+        return {"collected_at": _now_kst_iso(), "schema_version": "v0", "source": "sosovalue",
+                "btc": None, "eth": None,
+                "diagnostics": {"error": err or (res or {}).get("error") or "not_ok"}}, False
+    payload = dict(res)
+    payload["collected_at"] = _now_kst_iso()
+    payload["schema_version"] = "v0"
+    payload["diagnostics"] = {"ok_count": payload.get("ok_count", 0), "used_prev_snapshot": False}
+    return payload, True
+
+
 def main() -> int:
     started = time.time()
     results = {}
@@ -161,6 +234,18 @@ def main() -> int:
     news, news_ok = build_news()
     _atomic_write(NEWS_PATH, news)
     results["news"] = news_ok
+
+    defillama, defillama_ok = build_defillama()
+    _atomic_write(DEFILLAMA_PATH, defillama)
+    results["defillama"] = defillama_ok
+
+    governance, gov_ok = build_governance()
+    _atomic_write(GOVERNANCE_PATH, governance)
+    results["governance"] = gov_ok
+
+    etf_flow, etf_ok = build_etf_flow()
+    _atomic_write(ETF_FLOW_PATH, etf_flow)
+    results["etf_flow"] = etf_ok
 
     elapsed = round(time.time() - started, 2)
     sys.stderr.write(f"[crypto_collect] 적재 완료 {results} elapsed={elapsed}s\n")
