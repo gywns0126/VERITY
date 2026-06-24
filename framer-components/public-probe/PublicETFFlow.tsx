@@ -6,9 +6,10 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 디자인 = 토스식 미니멀: 무채색 위주 + 방향값만 유입(빨강)/유출(파랑), 얇은 구분선, 색배경·외곽선·이모지 없음.
  *
  * 🚨 차별 각도: 토스/네이버 ETF 화면(보수율·수익률)과 달리 "패시브 자금이 어느 테마로".
- *   진짜 흐름 = Δ상장좌수(설정/환매) = 가격효과 제거. est_flow = Δ좌수 × NAV.
- * 🚨 RULE 7: 상장좌수·NAV·순자산·흐름 = KRX OpenAPI 1차 사실. 점수·추천 0. 첫 신호 = 거래일 ≥2(그 전 "집계 중").
- * 데이터 = data/etf_flow.json (단일 writer, publish-data 발행). 테마 = body[data-framer-theme] 자가 추종.
+ *   진짜 흐름 = Δ상장좌수(설정/환매) = 가격효과 제거. 1일 Δ는 노이즈 → 누적 순흐름(최근 N일)이 주신호.
+ *   괴리율 = (시장가 − NAV) / NAV — ETF 프리미엄/디스카운트(수요 쏠림 보조 단서).
+ * 🚨 RULE 7: 상장좌수·NAV·순자산·흐름 = KRX OpenAPI 1차 사실(etf_flow.py 누적). 점수·추천 0. 첫 신호 = 거래일 ≥2.
+ * 데이터 = data/etf_flow.json (단일 writer, publish-data 발행). history(≤40거래일)에서 누적 산출. 테마 = body[data-framer-theme] 자가 추종.
  */
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
     dark: boolean
 }
 const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_flow.json"
+const WINDOW = 20 // 누적 흐름 산출 최대 거래일 창
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
@@ -54,6 +56,23 @@ function fmtAge(iso: any): string {
     } catch {
         return ""
     }
+}
+
+// 누적 순흐름 — history 창에서 Δ상장좌수 × 최근 NAV (가격효과 제거). 거래일 ≥2 필요.
+function cumFlow(series: any[]): { flow: number; days: number; pct: number | null } | null {
+    if (!Array.isArray(series) || series.length < 2) return null
+    const win = series.slice(-WINDOW)
+    const a = win[0], b = win[win.length - 1]
+    const as = Number(a.list_shrs), bs = Number(b.list_shrs), nav = Number(b.nav)
+    if (!isFinite(as) || !isFinite(bs) || !isFinite(nav)) return null
+    const d = bs - as
+    return { flow: d * nav, days: win.length, pct: as ? (d / as) * 100 : null }
+}
+// 괴리율 — (시장가 − NAV) / NAV.
+function premium(close: any, nav: any): number | null {
+    const c = Number(close), n = Number(nav)
+    if (!isFinite(c) || !isFinite(n) || n <= 0) return null
+    return ((c - n) / n) * 100
 }
 
 /**
@@ -107,15 +126,23 @@ export default function PublicETFFlow(props: Props) {
     const narrow = w > 0 && w < 560
     const loading = !data
 
-    const cats = useMemo(() => {
+    // ETF별 누적 흐름·괴리율 부착 + 누적 흐름 절댓값 정렬
+    const rows = useMemo(() => {
         if (!data) return [] as any[]
+        const hist = data.history || {}
+        return (data.etfs || [])
+            .map((e: any) => ({ e, cum: cumFlow(hist[e.ticker]), prem: premium(e.close, e.nav) }))
+            .sort((a: any, b: any) => Math.abs((b.cum && b.cum.flow) || 0) - Math.abs((a.cum && a.cum.flow) || 0))
+    }, [data])
+
+    // 테마별 누적 순흐름 집계
+    const cats = useMemo(() => {
         const m: Record<string, number> = {}
-        for (const e of data.etfs || []) {
-            const f = Number(e.est_flow)
-            if (isFinite(f) && f !== 0) m[e.category] = (m[e.category] || 0) + f
+        for (const r of rows) {
+            if (r.cum && r.cum.flow !== 0) m[r.e.category] = (m[r.e.category] || 0) + r.cum.flow
         }
         return Object.entries(m).map(([k, v]) => ({ cat: k, flow: v })).sort((a, b) => Math.abs(b.flow) - Math.abs(a.flow))
-    }, [data])
+    }, [rows])
 
     const skBase = isDark ? "#1e242c" : "#edeff2"
     const skHi = isDark ? "#2a313b" : "#f5f6f8"
@@ -145,8 +172,8 @@ export default function PublicETFFlow(props: Props) {
         )
     }
 
-    const etfs: any[] = data.etfs || []
-    const hasFlow = Number(data.with_flow_count) > 0
+    const total = rows.length
+    const hasFlow = rows.some((r: any) => r.cum && r.cum.flow !== 0)
     const maxCat = cats.length ? Math.max(...cats.map((c) => Math.abs(c.flow))) : 0
     const dirColor = (f: number) => (f > 0 ? C.up : C.down)
     const COLLAPSED = 8
@@ -157,23 +184,23 @@ export default function PublicETFFlow(props: Props) {
             <div style={{ fontSize: 12, fontWeight: 600, color: C.faint }}>ETF 자금흐름</div>
             <div style={{ fontSize: narrow ? 20 : 23, fontWeight: 700, color: C.ink, letterSpacing: "-0.5px", marginTop: 6 }}>패시브 자금이 어디로</div>
             <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 500, marginTop: 7 }}>
-                설정·환매(상장좌수 변화) 기준 · 가격효과 제거{data.updated_at ? ` · ${fmtAge(data.updated_at)}` : ""}
+                누적 설정·환매(상장좌수 변화) · 가격효과 제거 · KRX{data.updated_at ? ` · ${fmtAge(data.updated_at)}` : ""}
             </div>
 
-            {/* 집계 중 (거래일 1일차) — 클린 안내, 색배경·이모지 없음 */}
+            {/* 집계 중 (거래일 1일차) */}
             {!hasFlow && (
                 <div style={{ ...card, marginTop: 18 }}>
                     <div style={{ fontSize: 14.5, fontWeight: 700, color: C.ink }}>자금흐름 집계 중이에요</div>
                     <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 500, marginTop: 6, lineHeight: 1.55 }}>
-                        흐름은 매일 상장좌수 변화로 계산해요. 거래일 둘째 날부터 순유입·유출이 표시돼요. 지금은 {etfs.length}개 ETF의 기준 스냅샷을 담았어요.
+                        흐름은 매일 상장좌수 변화로 누적 계산해요. 거래일 둘째 날부터 순유입·유출이 표시돼요. 지금은 {total}개 ETF의 기준 스냅샷을 담았어요.
                     </div>
                 </div>
             )}
 
-            {/* 테마별 순흐름 (흐름 있을 때) */}
+            {/* 테마별 누적 순흐름 (흐름 있을 때) */}
             {hasFlow && cats.length > 0 && (
                 <div style={{ ...card, marginTop: 18 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, marginBottom: 14 }}>테마별 순흐름</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, marginBottom: 14 }}>테마별 누적 순흐름</div>
                     {cats.slice(0, 8).map((c) => {
                         const pos = c.flow > 0
                         const col = dirColor(c.flow)
@@ -191,23 +218,24 @@ export default function PublicETFFlow(props: Props) {
                 </div>
             )}
 
-            {/* ETF 리스트 — 상위 8개 + 더보기 (토스식 길이 절제) */}
-            <div style={{ ...card, marginTop: 12, paddingTop: 6, paddingBottom: showAll || etfs.length <= COLLAPSED ? 6 : 0 }}>
-                {(showAll ? etfs : etfs.slice(0, COLLAPSED)).map((e, idx) => {
-                    const f = Number(e.est_flow)
-                    const has = isFinite(f) && f !== 0
-                    const col = has ? dirColor(f) : C.faint
+            {/* ETF 리스트 — 누적 흐름 순 상위 8개 + 더보기 */}
+            <div style={{ ...card, marginTop: 12, paddingTop: 6, paddingBottom: showAll || total <= COLLAPSED ? 6 : 0 }}>
+                {(showAll ? rows : rows.slice(0, COLLAPSED)).map((r: any, idx: number) => {
+                    const e = r.e, cum = r.cum, prem = r.prem
+                    const has = cum && cum.flow !== 0
+                    const col = has ? dirColor(cum.flow) : C.faint
+                    const premStr = prem != null && Math.abs(prem) >= 0.15 ? ` · 괴리 ${prem > 0 ? "+" : ""}${prem.toFixed(2)}%` : ""
                     return (
                         <div key={e.ticker} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderTop: idx === 0 ? "none" : `1px solid ${C.line}` }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 14, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.name}</div>
-                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 500, marginTop: 2 }}>{CAT[e.category] || e.category} · 순자산 {fmtKRW(e.netasset)}원</div>
+                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 500, marginTop: 2 }}>{CAT[e.category] || e.category} · 순자산 {fmtKRW(e.netasset)}원{premStr}</div>
                             </div>
                             <div style={{ flexShrink: 0, textAlign: "right" }}>
                                 {has ? (
                                     <>
-                                        <div style={{ fontSize: 14.5, fontWeight: 600, color: col, fontVariantNumeric: "tabular-nums" }}>{fmtKRW(f, true)}원</div>
-                                        <div style={{ fontSize: 11, fontWeight: 500, color: col, marginTop: 2 }}>{f > 0 ? "유입" : "유출"}{e.flow_pct != null ? ` ${Number(e.flow_pct) > 0 ? "+" : ""}${Number(e.flow_pct).toFixed(2)}%` : ""}</div>
+                                        <div style={{ fontSize: 14.5, fontWeight: 600, color: col, fontVariantNumeric: "tabular-nums" }}>{fmtKRW(cum.flow, true)}원</div>
+                                        <div style={{ fontSize: 11, fontWeight: 500, color: col, marginTop: 2 }}>{cum.flow > 0 ? "유입" : "유출"} · {cum.days}일{cum.pct != null ? ` ${cum.pct > 0 ? "+" : ""}${cum.pct.toFixed(2)}%` : ""}</div>
                                     </>
                                 ) : (
                                     <span style={{ fontSize: 12, fontWeight: 500, color: C.faint }}>집계 중</span>
@@ -216,17 +244,17 @@ export default function PublicETFFlow(props: Props) {
                         </div>
                     )
                 })}
-                {etfs.length > COLLAPSED && (
+                {total > COLLAPSED && (
                     <button onClick={() => setShowAll((s) => !s)}
                         style={{ width: "100%", border: "none", cursor: "pointer", fontFamily: FONT, background: "transparent", padding: "13px 0", borderTop: `1px solid ${C.line}`, fontSize: 13, fontWeight: 600, color: C.sub }}>
-                        {showAll ? "접기" : `더보기 (${etfs.length - COLLAPSED}개)`}
+                        {showAll ? "접기" : `더보기 (${total - COLLAPSED}개)`}
                     </button>
                 )}
             </div>
 
             {/* 면책 */}
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
-                상장좌수·NAV·순자산은 KRX OpenAPI 사실이에요. 흐름은 상장좌수 변화 × NAV(설정/환매)로, 가격효과를 뺀 값이에요. 매일 누적하며 거래일 둘째 날부터 신호가 잡혀요. 등급·추천이 아니며 자체 점수는 검증 후(2027) 공개해요.
+                상장좌수·NAV·순자산·괴리율은 KRX OpenAPI 사실이에요. 흐름은 상장좌수 변화 × NAV(설정/환매)를 최근 {WINDOW}거래일까지 누적한 값으로, 가격효과를 뺀 값이에요. 거래일 둘째 날부터 신호가 잡혀요. 등급·추천이 아니며 자체 점수는 검증 후(2027) 공개해요.
             </div>
         </div>
     )
