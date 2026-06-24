@@ -37,12 +37,12 @@ const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Ne
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", vg: "#0ca678", vgS: "#e7faf0", boardBg: "#eef1f4", grid: "#e1e6ea",
+    line: "#e5e8eb", vg: "#6c5ce7", vgS: "#f0edff", boardBg: "#eef1f4", grid: "#e1e6ea",
     btn: "#ffffff", btnInk: "#191f28", up: "#f04452",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
-    line: "#252b34", vg: "#7fffa0", vgS: "#11281d", boardBg: "#0b0f14", grid: "#1b222b",
+    line: "#252b34", vg: "#a99bff", vgS: "#241f3a", boardBg: "#0b0f14", grid: "#1b222b",
     btn: "#1c232c", btnInk: "#e3e7ec", up: "#f04452",
 }
 

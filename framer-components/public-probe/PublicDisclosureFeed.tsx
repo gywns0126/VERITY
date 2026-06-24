@@ -18,14 +18,14 @@ const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968",
     faint: "#8b95a1", line: "#e5e8eb", red: "#f04452", redS: "#fff0f1",
     amber: "#ff9500", amberS: "#fff6e9", blue: "#3182f6", blueS: "#eef4ff",
-    green: "#15c47e", greenS: "#eafaf3", vg: "#0ca678", vgS: "#e7faf0",
+    green: "#15c47e", greenS: "#eafaf3", vg: "#6c5ce7", vgS: "#f0edff",
     vt: "#6c5ce7", vtS: "#f0edff", tipBg: "#191f28", tipFg: "#ffffff", onAccent: "#ffffff",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1",
     faint: "#828d9b", line: "#252b34", red: "#f04452", redS: "#2a1a1d",
     amber: "#ff9500", amberS: "#2a2113", blue: "#5b9bff", blueS: "#152031",
-    green: "#34e08a", greenS: "#0f241c", vg: "#7fffa0", vgS: "#11281d",
+    green: "#34e08a", greenS: "#0f241c", vg: "#a99bff", vgS: "#241f3a",
     vt: "#a99bff", vtS: "#241f3a", tipBg: "#222a33", tipFg: "#e3e7ec", onAccent: "#0f1318",
 }
 

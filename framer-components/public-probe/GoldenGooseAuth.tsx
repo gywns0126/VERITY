@@ -92,8 +92,8 @@ async function refreshSession(supabaseUrl: string, anonKey: string, refreshToken
 }
 
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const LIGHT = { ink: "#191f28", sub: "#4e5968", line: "#e5e8eb", card: "#ffffff", bg: "#f2f4f6", vg: "#0ca678", vgS: "#e7faf0" }
-const DARK = { ink: "#e3e7ec", sub: "#9aa4b1", line: "#252b34", card: "#171c23", bg: "#0f1318", vg: "#7fffa0", vgS: "#11281d" }
+const LIGHT = { ink: "#191f28", sub: "#4e5968", line: "#e5e8eb", card: "#ffffff", bg: "#f2f4f6", vg: "#6c5ce7", vgS: "#f0edff" }
+const DARK = { ink: "#e3e7ec", sub: "#9aa4b1", line: "#252b34", card: "#171c23", bg: "#0f1318", vg: "#a99bff", vgS: "#241f3a" }
 
 function GoogleG({ size }: { size: number }) {
     return (

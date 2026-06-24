@@ -18,13 +18,13 @@ const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
     line: "#e5e8eb", up: "#f04452", down: "#3182f6", blue: "#3182f6", blueSoft: "#eef4ff",
-    green: "#15c47e", greenSoft: "#eafaf3", accent: "#0ca678",
+    green: "#15c47e", greenSoft: "#eafaf3", accent: "#6c5ce7",
 }
 const DARK = {
     // 배경/카드/잉크 = 공시 피드·사이트 PageBg/NavBg 와 통일 (2026-06-22)
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
     line: "#252b34", up: "#ff6b76", down: "#5a9cff", blue: "#5a9cff", blueSoft: "#1b2740",
-    green: "#3ddc97", greenSoft: "#16322a", accent: "#3ddc97",
+    green: "#3ddc97", greenSoft: "#16322a", accent: "#a99bff",
 }
 
 function readBodyDark(): boolean {
