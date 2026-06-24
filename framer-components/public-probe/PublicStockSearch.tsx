@@ -1,5 +1,6 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
+import { createPortal } from "react-dom"
 
 /**
  * 종목 검색창 (독립) — VERITY 공개 터미널. Framer 네이티브 nav 안에 끼워 쓰는 검색 전용.
@@ -97,6 +98,8 @@ export default function PublicStockSearch(props: Props) {
     const [focused, setFocused] = useState(false)
     const [recents, setRecents] = useState<any[]>([])
     const [trending, setTrending] = useState<any[]>([])
+    // 드롭다운 앵커 — nav 박스 overflow 클리핑 탈출용 fixed 좌표(입력창 rect 기준). null=미측정.
+    const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null)
 
     useEffect(() => {
         const el = rootRef.current
@@ -172,12 +175,30 @@ export default function PublicStockSearch(props: Props) {
         pick(resolveTicker(raw))
     }
 
-    const onFocus = () => { setRecents(readRecents()); setFocused(true) }
+    /* 드롭다운 fixed 좌표 측정 — 입력창 rect 기준(nav overflow:hidden 클리핑 탈출). */
+    const measure = () => {
+        const el = rootRef.current
+        if (!el || typeof window === "undefined") return
+        const r = el.getBoundingClientRect()
+        setAnchor({ top: r.bottom + 6, left: r.left, width: r.width })
+    }
+
+    const onFocus = () => { setRecents(readRecents()); setFocused(true); measure() }
+
+    /* 포커스 동안 scroll/resize 시 좌표 재측정 (fixed 패널이 입력창 따라가게). */
+    useEffect(() => {
+        if (!focused || onCanvas) return
+        const m = () => measure()
+        window.addEventListener("scroll", m, true)
+        window.addEventListener("resize", m)
+        return () => { window.removeEventListener("scroll", m, true); window.removeEventListener("resize", m) }
+    }, [focused, onCanvas])
 
     const narrow = w > 0 && w < 200
     const showQuery = !!q.trim()
-    const showSuggest = !onCanvas && focused && !showQuery && (recents.length > 0 || trending.length > 0)
-    const showMatches = !onCanvas && focused && showQuery && matches.length > 0
+    // anchor 필요 (fixed 좌표). onFocus 가 measure() 동기 호출 → 첫 포커스에도 anchor 존재.
+    const showSuggest = !onCanvas && focused && !!anchor && !showQuery && (recents.length > 0 || trending.length > 0)
+    const showMatches = !onCanvas && focused && !!anchor && showQuery && matches.length > 0
 
     const wrap: CSSProperties = {
         width: "100%", height: "100%", boxSizing: "border-box",
@@ -186,7 +207,16 @@ export default function PublicStockSearch(props: Props) {
         padding: narrow ? "8px 12px" : "9px 14px",
         fontFamily: FONT,
     }
-    const panel: CSSProperties = { position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 70, background: C.card, borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.16)", padding: 6, maxHeight: 360, overflowY: "auto", minWidth: 240 }
+    // fixed + 입력창 rect 좌표 → nav 박스 overflow 에 안 잘림. zIndex 큰 값(nav 위).
+    const panel: CSSProperties = {
+        position: "fixed",
+        top: anchor ? anchor.top : 0,
+        left: anchor ? anchor.left : 0,
+        width: anchor ? anchor.width : "auto",
+        zIndex: 2147483000,
+        background: C.card, borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.16)",
+        padding: 6, maxHeight: 360, overflowY: "auto", minWidth: 240,
+    }
     const secLabel = (t: string, hint?: string) => (
         <div style={{ display: "flex", alignItems: "baseline", gap: 6, padding: "8px 10px 4px" }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: C.faint }}>{t}</span>
@@ -222,16 +252,16 @@ export default function PublicStockSearch(props: Props) {
                 />
             </div>
 
-            {/* 연관검색어 (검색어 있을 때) */}
-            {showMatches && (
+            {/* 드롭다운 = document.body 포털. nav 박스의 overflow:hidden / transform 클리핑을
+                탈출(fixed 좌표는 anchor=입력창 rect). 리포트 페이지는 풀페이지라 안 잘렸고,
+                nav 검색은 잘려 안 보이던 문제 해소. onMouseDown pick 은 포털에서도 React 트리로 동작. */}
+            {typeof document !== "undefined" && showMatches && createPortal(
                 <div style={panel}>
                     {matches.map((m) => itemRow(m.ticker, m.ticker, m.name,
                         <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{m.name_ko ? m.name_ko + " · " : ""}{m.ticker}{m.market ? " · " + m.market : ""}</span>))}
-                </div>
-            )}
+                </div>, document.body)}
 
-            {/* 포커스(빈 검색어) — 최근 본 종목 + 지금 거래 활발(사실) */}
-            {showSuggest && (
+            {typeof document !== "undefined" && showSuggest && createPortal(
                 <div style={panel}>
                     {recents.length > 0 && (
                         <>
@@ -251,8 +281,7 @@ export default function PublicStockSearch(props: Props) {
                             })}
                         </>
                     )}
-                </div>
-            )}
+                </div>, document.body)}
         </div>
     )
 }
