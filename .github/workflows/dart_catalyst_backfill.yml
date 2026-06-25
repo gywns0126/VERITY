@@ -1,0 +1,78 @@
+name: DART Catalyst Backfill (코너 과거이력 누적)
+
+# 소형주 코너 1120종목 과거 카탈리스트 공시(2015~)를 quota-cap 분할로 다일 누적 (2026-06-25).
+# event_study(과거 공시 패턴) 커버리지 확대 입력 = data/dart_catalyst_backfill.jsonl 성장.
+# DART only — KIS 무관(RULE 1). resume marker(dart_catalyst_backfill_done.json)로 스캔 완료 종목 skip(재호출 0).
+# 완주(done=1120) 후 = 매 run 전체 skip → 0콜 무해 no-op. event_study.json 재생성은 로컬(가격레이크 의존) 별도.
+#
+# 7축 audit (CLAUDE.md):
+#  1 env/secret: DART_API_KEY (pulse/full 과 동일 secret). publish 없음(중간 산출물, 프론트 미소비).
+#  2 push trigger: schedule only — Vercel deploy 무관(vercel-api/ 미변경, ignoreCommand skip, RULE 2).
+#  3 concurrency: group=verity-data-write (pulse/full 공유 직렬화 → commit race 0).
+#  4 cron: 2회/일 KST 23:00·03:00(UTC 14:00·18:00) — pulse 시간대(UTC 00:13~09:43) 회피 + 정각 high-load 분산.
+#  5 KIS: 미사용(DART only) — KIS env/호출 0, RULE 1 안전.
+#  6 pip: requirements.txt (requests 포함).
+#  7 N=2: 추가 후 manual run(N=1) + 다음 scheduled(N=2) 검증 의무.
+
+on:
+  schedule:
+    # KST 23:00 / 03:00 = UTC 14:00 / 18:00. pulse(UTC 00:13~09:43 평일) 회피, 쿼터 분산. 주말 포함(주말=pulse 미실행, 쿼터 여유).
+    - cron: '0 14,18 * * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 코너 과거 카탈리스트 백필 (DART, quota-cap 6000)
+        id: backfill
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: |
+          set +e
+          python scripts/dart_catalyst_backfill.py --universe corner --start-year 2015 --quota-cap 6000
+          RC=$?
+          echo "백필 RC=$RC"
+          if [ $RC -ne 0 ]; then echo "::warning::백필 비정상 종료 (RC=$RC) — commit 단계는 변경분만 처리"; fi
+
+      - name: Commit + push (변경 시만)
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/dart_catalyst_backfill.jsonl data/dart_catalyst_backfill_done.json
+          git diff --staged --quiet && { echo "변경 없음 — commit skip"; exit 0; }
+          git commit -m "data(golden-goose): 코너 과거 카탈리스트 백필 누적 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              echo "pushed"; exit 0
+            fi
+            echo "push attempt $i failed, retry in $((i*10))s"; sleep $((i*10))
+          done
+          echo "::error::5회 push 실패"; exit 1

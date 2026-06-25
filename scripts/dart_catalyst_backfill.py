@@ -24,6 +24,8 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 OUT_PATH = os.path.join(_ROOT, "data", "dart_catalyst_backfill.jsonl")
+# resume marker — 완전 스캔 끝낸 ticker(이벤트 0 포함). quota-cap 다일 분할 시 재스캔 방지(쿼터 절약).
+DONE_PATH = os.path.join(_ROOT, "data", "dart_catalyst_backfill_done.json")
 RECO_PATH = os.path.join(_ROOT, "data", "recommendations.json")
 CORNER_PATH = os.path.join(_ROOT, "data", "smallcap_corner.json")
 CORNER_FILTERS_PATH = os.path.join(_ROOT, "data", "smallcap_corner_filters.json")
@@ -79,6 +81,22 @@ def _corner_universe(max_n=None, only=None, neglected=False):
     return out
 
 
+def _load_done():
+    """완전 스캔 끝낸 ticker set (resume). 부재/손상 = 빈 set."""
+    try:
+        with open(DONE_PATH, "r", encoding="utf-8") as f:
+            return set(json.load(f).get("tickers") or [])
+    except (OSError, json.JSONDecodeError):
+        return set()
+
+
+def _save_done(done):
+    tmp = DONE_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"tickers": sorted(done)}, f, ensure_ascii=False)
+    os.replace(tmp, DONE_PATH)
+
+
 def _quarters(start_year):
     """start_year-01-01 ~ 오늘, 3개월 윈도우 (DART list.json 단일쿼리 max 3개월)."""
     cur = date(start_year, 1, 1)
@@ -128,11 +146,17 @@ def main():
                     pass
 
     windows = list(_quarters(args.start_year))
+    done = _load_done()
+    skipped = sum(1 for tk, _ in universe if tk in done)
+    if skipped:
+        print(f"[backfill] resume — 이미 스캔 {skipped}종목 skip(잔여 {len(universe) - skipped})", file=sys.stderr)
     new_n, req_n = 0, 0
     capped = False
     with open(OUT_PATH, "a", encoding="utf-8") as out:
         for tk, name in universe:
-            # 공유 쿼터 throttle — cap 도달 시 종목 경계에서 중단(멱등, 다음 run 이 dedup 으로 이어받음).
+            if tk in done:
+                continue  # 이미 완전 스캔(resume) — 재호출 방지
+            # 공유 쿼터 throttle — cap 도달 시 종목 경계에서 중단(멱등, 다음 run 이 done marker 로 이어받음).
             if args.quota_cap is not None and req_n >= args.quota_cap:
                 capped = True
                 print(f"[backfill] quota-cap {args.quota_cap} 도달 — 중단(다음 run 이 이어받음)", file=sys.stderr)
@@ -171,8 +195,10 @@ def main():
                         new_n += 1
                         tk_n += 1
                     time.sleep(args.delay)
+            done.add(tk)
+            _save_done(done)  # 종목 완전 스캔 완료 — resume marker(crash-safe, 종목당 갱신)
             print(f"[backfill] {name}({tk}) +{tk_n}건", file=sys.stderr)
-    print(f"[backfill] logged=True · 신규 {new_n}건 · req {req_n} · -> {os.path.relpath(OUT_PATH, _ROOT)}", file=sys.stderr)
+    print(f"[backfill] logged=True · 신규 {new_n}건 · req {req_n} · done={len(done)} · capped={capped} · -> {os.path.relpath(OUT_PATH, _ROOT)}", file=sys.stderr)
     return 0
 
 
