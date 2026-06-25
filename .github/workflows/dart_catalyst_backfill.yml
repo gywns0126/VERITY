@@ -9,15 +9,17 @@ name: DART Catalyst Backfill (코너 과거이력 누적)
 #  1 env/secret: DART_API_KEY (pulse/full 과 동일 secret). publish 없음(중간 산출물, 프론트 미소비).
 #  2 push trigger: schedule only — Vercel deploy 무관(vercel-api/ 미변경, ignoreCommand skip, RULE 2).
 #  3 concurrency: group=verity-data-write (pulse/full 공유 직렬화 → commit race 0).
-#  4 cron: 2회/일 KST 23:00·03:00(UTC 14:00·18:00) — pulse 시간대(UTC 00:13~09:43) 회피 + 정각 high-load 분산.
+#  4 cron: 평일 2회(KST 23/03시) + 주말 3회(KST 09/17/01시) — pulse 시간대(UTC 00:13~09:43 평일) 회피. 주말=pulse 0이라 가속.
 #  5 KIS: 미사용(DART only) — KIS env/호출 0, RULE 1 안전.
 #  6 pip: requirements.txt (requests 포함).
 #  7 N=2: 추가 후 manual run(N=1) + 다음 scheduled(N=2) 검증 의무.
 
 on:
   schedule:
-    # KST 23:00 / 03:00 = UTC 14:00 / 18:00. pulse(UTC 00:13~09:43 평일) 회피, 쿼터 분산. 주말 포함(주말=pulse 미실행, 쿼터 여유).
-    - cron: '0 14,18 * * *'
+    # 평일: KST 23:00·03:00 (UTC 14:00·18:00) cap 6000 × 2 = 12K/일. pulse(UTC 00:13~09:43 평일) 시간대 회피, 쿼터 공유.
+    - cron: '0 14,18 * * 1-5'
+    # 주말: pulse 미실행 → DART 20K 거의 전부 백필 가용. KST 09·17·01시 (UTC 00·08·16) cap 6000 × 3 ≈ 18K/일 (가속).
+    - cron: '0 0,8,16 * * 6,0'
   workflow_dispatch:
 
 env:
