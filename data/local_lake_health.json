@@ -1,0 +1,45 @@
+{
+  "heartbeat_at": "2026-06-26T01:35:11.844362+09:00",
+  "host": "maegchaeg-ui-MacBookPro.local",
+  "_meta": {
+    "purpose": "로컬 맥 SPOF 가시화. CI cron_health 가 heartbeat_at 나이로 맥 정지 알람.",
+    "note": "로컬 레이크(.duckdb) 의존 산출물 생존 신호. heartbeat_at stale = 맥 꺼짐 의심."
+  },
+  "artifacts": [
+    {
+      "name": "kr_prices_lake",
+      "last_updated": "2026-06-20T23:02:09.293072+09:00",
+      "age_hours": 122.6,
+      "stale_threshold_hours": 216,
+      "status": "fresh"
+    },
+    {
+      "name": "us_prices_lake",
+      "last_updated": "2026-06-26T01:25:46.809308+09:00",
+      "age_hours": 0.2,
+      "stale_threshold_hours": 336,
+      "status": "fresh"
+    },
+    {
+      "name": "kr_flow_parquet",
+      "last_updated": "2026-06-17T00:19:50.279446+09:00",
+      "age_hours": 217.3,
+      "stale_threshold_hours": 240,
+      "status": "fresh"
+    },
+    {
+      "name": "prediction_trail",
+      "last_updated": "2026-06-20T23:17:11.738380+09:00",
+      "age_hours": 122.3,
+      "stale_threshold_hours": 240,
+      "status": "fresh"
+    },
+    {
+      "name": "event_study",
+      "last_updated": "2026-06-26T01:05:50.596934+09:00",
+      "age_hours": 0.5,
+      "stale_threshold_hours": 240,
+      "status": "fresh"
+    }
+  ]
+}
