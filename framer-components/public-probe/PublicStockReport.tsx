@@ -125,7 +125,7 @@ const SAMPLE = [
         warnings: { labels: [{ label: "단기과열", severity: "warn" }, { label: "투자주의", severity: "caution" }] },
         peer: {
             sector: "IT·기술", industry: "Semiconductors", n: 142,
-            rows: [{ key: "PER", value: "14.2", median: "18.3", vs: "below" }, { key: "PBR", value: "1.1", median: "1.6", vs: "below" }, { key: "ROE", value: "9.1%", median: "7.5%", vs: "above" }, { key: "부채비율", value: "38%", median: "52%", vs: "below" }, { key: "영업이익률", value: "14.3%", median: "8.1%", vs: "above" }],
+            rows: [{ key: "PER", value: "14.2", median: "18.3", vs: "below", pct: 32 }, { key: "PBR", value: "1.1", median: "1.6", vs: "below", pct: 28 }, { key: "ROE", value: "9.1%", median: "7.5%", vs: "above", pct: 68 }, { key: "부채비율", value: "38%", median: "52%", vs: "below", pct: 30 }, { key: "영업이익률", value: "14.3%", median: "8.1%", vs: "above", pct: 81 }],
             note: "같은 섹터 종목 중앙값과 비교 · PER/PBR=KRX 시총÷DART 재무 자체계산 — 자체 등급 아님",
         },
         financials: {
@@ -1432,7 +1432,15 @@ export default function PublicStockReport(props: Props) {
                                             <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, lineHeight: 1.5 }}>
                                                 {r.key} {r.value} · {peer.sector} 중앙값 {r.median} (N={peer.n}) → <span style={{ color: C.vt }}>{dir}</span>
                                             </div>
-                                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>같은 섹터 종목 중앙값과의 사실 비교 — 높다·낮다가 좋다·나쁘다는 아님(판단 X)</div>
+                                            {r.pct != null && (
+                                                <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 1 }}>
+                                                    <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 700 }}>동종 분포 백분위 {r.pct} <span style={{ color: C.faint, fontWeight: 600 }}>(이 값보다 낮은 동종 {r.pct}%)</span></div>
+                                                    <div style={{ position: "relative", height: 6, background: C.bg, borderRadius: 3 }}>
+                                                        <div style={{ position: "absolute", left: `calc(${Math.max(0, Math.min(100, r.pct))}% - 3px)`, top: -2, width: 6, height: 10, borderRadius: 2, background: C.vt }} />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>같은 섹터 종목 중앙값·분포와의 사실 비교 — 높다·낮다가 좋다·나쁘다는 아님(판단 X)</div>
                                         </div>
                                     )}
                                 </div>

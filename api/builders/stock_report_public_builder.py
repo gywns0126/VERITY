@@ -444,13 +444,16 @@ def _sector_medians(fundamentals: Dict[str, Any], sector_map: Dict[str, Any],
     for sk, b in buckets.items():
         med: Dict[str, Any] = {}
         ns: Dict[str, int] = {}
+        dist: Dict[str, List[float]] = {}  # 백분위 계산용 정렬 분포 (빌드시점 only, JSON 미출력)
         for label, _src, _suf, _dg in PEER_METRICS:
-            m = _median(b[label])
-            if m is not None and len(b[label]) >= 5:  # N≥5 미만 섹터-지표는 중앙값 무의미
+            vals = b[label]
+            m = _median(vals)
+            if m is not None and len(vals) >= 5:  # N≥5 미만 섹터-지표는 중앙값 무의미
                 med[label] = round(m, 2)
-                ns[label] = len(b[label])
+                ns[label] = len(vals)
+                dist[label] = sorted(vals)
         if med:
-            out[sk] = {"median": med, "ns": ns}
+            out[sk] = {"median": med, "ns": ns, "dist": dist}
     return out
 
 
@@ -472,11 +475,14 @@ def _peer(ticker: str, fundamentals: Dict[str, Any], sector_map: Dict[str, Any],
         fv = _metric_val(ticker, src, fundamentals, valuation)
         if fv is None:
             continue
+        ds = sm.get("dist", {}).get(label)  # 동종 분포 → 백분위 (사실, 좋다·나쁘다 라벨 없음)
+        pct = round(100.0 * sum(1 for x in ds if x < fv) / len(ds)) if ds else None
         rows.append({
             "key": label,
             "value": _num(fv, suf, dg),
             "median": _num(med, suf, dg),
             "vs": "above" if fv > med else "below" if fv < med else "equal",
+            "pct": pct,
         })
         n_max = max(n_max, sm.get("ns", {}).get(label, 0))
     if not rows:
