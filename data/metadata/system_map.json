@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-06-25T10:53:10.452069+09:00",
+  "generated_at": "2026-06-25T15:09:20.864981+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 191986,
-    "python_modules": 582,
+    "code_lines_tsx_py": 192238,
+    "python_modules": 584,
     "tsx_components": 87,
     "json_data_files": 291,
     "json_total_tracked": 306,
     "workflows": 49,
     "scheduled_workflows": 40,
     "cron_triggers": 49,
-    "git_tracked_files": 5386
+    "git_tracked_files": 5388
   },
   "subsystems": {
     "ingest": {
@@ -83,7 +83,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 55,
+      "count": 56,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -96,6 +96,7 @@
         "api/intelligence/daily_actions.py",
         "api/intelligence/dart_importance_observer.py",
         "api/intelligence/dashboard_summary.py",
+        "api/intelligence/distribution_footprint.py",
         "api/intelligence/equity_research_brief.py",
         "api/intelligence/estimate_revision_scorer.py",
         "api/intelligence/factor.py",
@@ -507,19 +508,19 @@
     },
     "validation": {
       "label": "검증",
-      "n_trading_days": 27,
-      "n_calendar_days": 38,
+      "n_trading_days": 28,
+      "n_calendar_days": 39,
       "next_milestone": {
         "next_n": 30,
-        "days_remaining": 3,
+        "days_remaining": 2,
         "label": "통계 무의미 졸업 (메모 project_minimum_n_milestones_2026_05_18)"
       },
-      "as_of": "2026-06-24T13:44:59+09:00"
+      "as_of": "2026-06-25T13:40:06+09:00"
     }
   },
   "python_by_dir": {
-    "api": 339,
-    "tests": 126,
+    "api": 340,
+    "tests": 127,
     "scripts": 66,
     "vercel-api": 43,
     "server": 6,
@@ -548,7 +549,7 @@
       "warn": 1,
       "alert": 0
     },
-    "infra_as_of": "2026-06-24T11:01:44+09:00",
+    "infra_as_of": "2026-06-25T11:04:04+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
