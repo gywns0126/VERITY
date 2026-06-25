@@ -548,6 +548,32 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
     except Exception as e:
         findings.append(f"fred_health 신선도 점검 실패: {type(e).__name__}: {e}")
 
+    # 6.7) 로컬 맥 하트비트 (2026-06-26 신설 — 로컬 레이크 SPOF 가시화)
+    # event_study/kr_flow/가격레이크 = 로컬 ~/VERITY_data_lake/*.duckdb 의존, CI(GH Actions) 못 닿음.
+    # 맥에서 도는 잡(backup_irreplaceable.sh 주1)이 local_lake_heartbeat.py 로 heartbeat_at 을 gh api
+    # contents 로 main 발행 → 그게 멈추면 = 맥 꺼짐 = 로컬 산출물(event_study 등) 무알람 동결 신호.
+    # graceful: 파일 부재(첫 발행 전) = skip. 임계 = launchd 주1 cadence + 마진 = 10일.
+    hb = _load_json("data/local_lake_health.json")
+    if hb:
+        try:
+            hb_ts = datetime.fromisoformat(hb.get("heartbeat_at", ""))
+            if hb_ts.tzinfo is None:
+                hb_ts = hb_ts.replace(tzinfo=KST)
+            hb_age_h = (_now_kst() - hb_ts).total_seconds() / 3600
+            if hb_age_h > 240:  # 10일 — 주1 하트비트 정지 = 맥 SPOF
+                severity = "WARNING" if severity == "PASS" else severity
+                findings.append(
+                    f"로컬 맥 하트비트 stale {hb_age_h / 24:.1f}일 (>10일) — 맥 꺼짐 의심, "
+                    f"로컬 레이크 산출물(event_study 등) 무알람 동결 위험"
+                )
+            else:
+                stale_arts = [a["name"] for a in hb.get("artifacts", []) if a.get("status") == "stale"]
+                if stale_arts:
+                    severity = "WARNING" if severity == "PASS" else severity
+                    findings.append(f"로컬 아티팩트 stale: {', '.join(stale_arts)} (맥 생존, 로컬 잡 지연)")
+        except ValueError:
+            pass
+
     # 7) Claude final_review (STEP 10.8, 2026-05-11 추가) — 종합 시장 검수 verdict
     #
     # 2026-05-20 PM 결정 (A안 분리) — Claude 검수는 severity (🔴/🟡) 를 흔들지 않는다.

@@ -23,9 +23,6 @@ reports/
 # ReportScout 결과 JSON (매 실행 갱신)
 analyst_reports.json
 
-# 로컬 맥 하트비트 — 발행 home = VERITY-trail-backup repo(health/). main 비추적(cron sweep 방지).
-local_lake_health.json
-
 # report_summarizer Gemini 캐시 + 집계 — 의도적으로 git 추적 (un-ignore).
 # 2026-05-20 fix: gitignore 시 cron clean checkout 마다 _processed_hashes 빈 dict →
 #   run 당 ≤30 만 처리, 누적 0, 같은 PDF Gemini 재과금 → analyst_report 24/25 @50 fallback.

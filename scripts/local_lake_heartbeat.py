@@ -12,8 +12,10 @@
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,6 +23,9 @@ from api.config import DATA_DIR, now_kst  # noqa: E402
 
 LAKE = os.path.expanduser("~/VERITY_data_lake")
 OUT = os.path.join(DATA_DIR, "local_lake_health.json")
+
+REPO = "gywns0126/VERITY"
+REMOTE_PATH = "data/local_lake_health.json"  # CI cron_health 가 체크아웃 로컬파일로 읽음
 
 # (name, 경로, kind) — kind=mtime: 파일 수정시각 / kind=json:<field>: JSON 내부 타임스탬프
 TRACKED = [
@@ -104,6 +109,28 @@ def build() -> dict:
     }
 
 
+def _publish_to_main() -> bool:
+    """gh api contents PUT 로 main 직접 발행 (클론·dirty-tree rebase 회피, gh repo scope).
+    CI cron_health 가 체크아웃 로컬파일로 읽어 heartbeat_at 나이 = 맥 SPOF 판정."""
+    with open(OUT, "rb") as f:
+        content_b64 = base64.b64encode(f.read()).decode()
+    sha = subprocess.run(
+        ["gh", "api", f"repos/{REPO}/contents/{REMOTE_PATH}", "--jq", ".sha"],
+        capture_output=True, text=True,
+    ).stdout.strip()
+    args = ["gh", "api", "--method", "PUT", f"repos/{REPO}/contents/{REMOTE_PATH}",
+            "-f", "message=chore(heartbeat): 로컬 맥 생존 신호 갱신 [skip ci]",
+            "-f", f"content={content_b64}"]
+    if sha and not sha.startswith("{"):
+        args += ["-f", f"sha={sha}"]
+    r = subprocess.run(args, capture_output=True, text=True)
+    if r.returncode == 0:
+        print("[heartbeat] main 발행 완료 (gh api contents)")
+        return True
+    print(f"[heartbeat] main 발행 실패: {r.stderr[:200]}")
+    return False
+
+
 def main() -> int:
     health = build()
     tmp = OUT + ".tmp"
@@ -113,6 +140,8 @@ def main() -> int:
     bad = [a["name"] for a in health["artifacts"] if a["status"] != "fresh"]
     print(f"[heartbeat] {OUT} — {len(health['artifacts'])} 아티팩트, "
           f"stale/missing={bad or '없음'}")
+    if "--publish" in sys.argv:
+        _publish_to_main()
     return 0
 
 
