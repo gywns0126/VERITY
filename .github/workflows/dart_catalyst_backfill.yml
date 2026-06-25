@@ -16,9 +16,9 @@ name: DART Catalyst Backfill (코너 과거이력 누적)
 
 on:
   schedule:
-    # 평일: KST 23:00·03:00 (UTC 14:00·18:00) cap 6000 × 2 = 12K/일. pulse(UTC 00:13~09:43 평일) 시간대 회피, 쿼터 공유.
+    # 평일: KST 23:00·03:00 (UTC 14:00·18:00) cap 4000 × 2 = 8K/일. pulse(UTC 00:13~09:43 평일) 시간대 회피, 쿼터 공유.
     - cron: '0 14,18 * * 1-5'
-    # 주말: pulse 미실행 → DART 20K 거의 전부 백필 가용. KST 09·17·01시 (UTC 00·08·16) cap 6000 × 3 ≈ 18K/일 (가속).
+    # 주말: pulse 미실행 → DART 20K 거의 전부 백필 가용. KST 09·17·01시 (UTC 00·08·16) cap 4000 × 3 = 12K/일 (가속).
     - cron: '0 0,8,16 * * 6,0'
   workflow_dispatch:
 
@@ -51,18 +51,22 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: 코너 과거 카탈리스트 백필 (DART, quota-cap 6000)
+      - name: 코너 과거 카탈리스트 백필 (DART, quota-cap 4000)
         id: backfill
+        # step-level timeout — 잘려도 다음 commit step(if:always)이 per-ticker done.json 진척 보존(job timeout 통째 kill 회피).
+        timeout-minutes: 50
+        continue-on-error: true
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
         run: |
           set +e
-          python scripts/dart_catalyst_backfill.py --universe corner --start-year 2015 --quota-cap 6000
+          python scripts/dart_catalyst_backfill.py --universe corner --start-year 2015 --quota-cap 4000
           RC=$?
           echo "백필 RC=$RC"
           if [ $RC -ne 0 ]; then echo "::warning::백필 비정상 종료 (RC=$RC) — commit 단계는 변경분만 처리"; fi
 
       - name: Commit + push (변경 시만)
+        if: always()   # 백필 timeout/에러여도 부분 진척(done.json) 보존
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
