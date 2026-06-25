@@ -333,15 +333,51 @@ def build_summary() -> Dict[str, Any]:
     }
 
 
+# 공개 발행 허용 signal 필드 화이트리스트 (옵션 B, 2026-06-18 + 2026-06-25 재확인).
+# 과정 투명성 = 신호명·표본·성숙도·출처는 공개. raw 성과(ic/expectancy/hit_rate/ci95/
+# brier/horizons/ic_pvalue 등)는 화이트리스트 밖이라 자동 제외 → 검증(N≥252) 후 공개.
+_PUBLIC_SIGNAL_FIELDS = ("signal", "status", "n", "n_eff", "label", "gate_status", "source")
+
+
+def _sanitize_signal(s: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: s.get(k) for k in _PUBLIC_SIGNAL_FIELDS}
+
+
+def public_slim(summary: Dict[str, Any]) -> Dict[str, Any]:
+    """공개 발행용 slim — 과정·신호명·표본만. raw 성과 필드는 화이트리스트로 제거.
+
+    🚨 옵션 B 를 데이터 레이어에서 강제 (이전엔 UI 만 가렸고 raw JSON 은 ic/expectancy 노출 = leak).
+    공개: gate 진행률 + 신호명 + N/N_eff + 성숙도 label + gate_status + source.
+    비공개: ic·expectancy·hit_rate·ci95·brier·horizons (검증 N≥252 후). PublicGlassboxTab 소비 정합.
+    메인 repo PUBLIC + git add data/ broad 라 full 비영속 (raw 성과 disk 커밋 회피).
+    """
+    return {
+        "generated_at": summary.get("generated_at"),
+        "spec_version": summary.get("spec_version"),
+        "gate": summary.get("gate"),
+        "rule7_disclaimer": summary.get("rule7_disclaimer"),
+        "signals": [_sanitize_signal(s) for s in summary.get("signals", [])],
+        "_note": (
+            "공개 = 과정·신호명·표본·성숙도만. raw 성과(IC·적중률·기댓값·CI) = 검증(N≥252) 후. "
+            "표본 누적 ≠ 신호 검증 (게이트 전 동전던지기와 구별 불가). 점수·등급·종목 추천 아님 (RULE 7 가설)."
+        ),
+    }
+
+
 def write_summary(out_path: Optional[str] = None) -> Dict[str, Any]:
-    """집계 산출 → validation_summary.json 원자적 write. 반환 = 집계 dict."""
+    """집계 산출 → validation_summary.json(공개 slim) 원자적 write. 반환 = full 집계 dict(로그용).
+
+    공개 발행 파일은 핵심 제외 slim 만 (public_slim). full(신호별 IC·expectancy) 은
+    소비처 0 + 공개 repo 노출 회피 위해 disk 영속하지 않음 — 필요 시 *_ic_history 원본 재집계.
+    """
     out_path = out_path or _OUT_PATH
     summary = build_summary()
+    public = public_slim(summary)
     try:
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         tmp = out_path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(summary, f, ensure_ascii=False, indent=2)
+            json.dump(public, f, ensure_ascii=False, indent=2)
         os.replace(tmp, out_path)
     except OSError as e:
         summary["_write_error"] = f"{type(e).__name__}: {e}"
