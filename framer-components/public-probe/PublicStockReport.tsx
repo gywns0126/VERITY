@@ -15,13 +15,13 @@ const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968",
     faint: "#8b95a1", line: "#e5e8eb", grid: "#eef1f4", up: "#f04452", upS: "#fff0f1", down: "#3182f6", downS: "#eef4ff",
     amber: "#ff9500", amberS: "#fff6e9", green: "#15c47e", greenS: "#eafaf3",
-    vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff", tipBg: "#191f28", tipFg: "#ffffff", onAccent: "#ffffff",
+    vg: "#6c5ce7", vgS: "#f0edff", vt: "#6c5ce7", vtS: "#f0edff", tipBg: "#191f28", tipFg: "#ffffff", onAccent: "#ffffff",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1",
     faint: "#828d9b", line: "#252b34", grid: "#1e242c", up: "#f04452", upS: "#2a1a1d", down: "#5b9bff", downS: "#152031",
     amber: "#ff9500", amberS: "#2a2113", green: "#34e08a", greenS: "#0f241c",
-    vg: "#7fffa0", vgS: "#11281d", vt: "#a99bff", vtS: "#241f3a", tipBg: "#222a33", tipFg: "#e3e7ec", onAccent: "#0f1318",
+    vg: "#a99bff", vgS: "#241f3a", vt: "#a99bff", vtS: "#241f3a", tipBg: "#222a33", tipFg: "#e3e7ec", onAccent: "#0f1318",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const HEAD = FONT
@@ -174,6 +174,7 @@ const SAMPLE_FLOW: Record<string, any[]> = {
 const SAMPLE_FORENSICS: Record<string, any> = {
     "005930": {
         counts: { "자기주식취득": 2, "정정공시": 1 }, total: 3, dilution_count: 0,
+        forensics_flags: { correction_count: 1, correction_pct: 33, dilution_12m: 0, dilution_span: "" },
         events: [
             { date: "2026-06-15", category: "자기주식취득", risk: "favorable", title: "주요사항보고서(자기주식취득결정)", is_correction: false, source_url: DART + "20260615000777" },
             { date: "2026-05-30", category: "정정공시", risk: "correction", title: "[기재정정]분기보고서", is_correction: true, source_url: DART + "20260530000111" },
@@ -1049,7 +1050,7 @@ export default function PublicStockReport(props: Props) {
         )
     }
 
-    const catColor = (cat: string) => DILUTION_CATS.has(cat) ? C.amber : RISK_CATS.has(cat) ? C.up : FAVORABLE_CATS.has(cat) ? C.vg : cat === "정정공시" ? C.faint : C.sub
+    const catColor = (cat: string) => DILUTION_CATS.has(cat) ? C.amber : RISK_CATS.has(cat) ? C.up : FAVORABLE_CATS.has(cat) ? C.green : cat === "정정공시" ? C.faint : C.sub
     const shTypeColor = (t: string) => (t === "동일인" || t === "친족") ? C.vt : t === "소속회사" ? C.down : (t === "자기주식" || t === "기타") ? C.faint : C.sub
     const finValColor = (v: any) => (typeof v === "string" && v.trim().charAt(0) === "−") ? C.down : C.ink
 
@@ -1532,6 +1533,16 @@ export default function PublicStockReport(props: Props) {
                             ))}
                         </div>
                         {foren.dilution_count > 0 && (<div style={{ fontSize: 12, color: C.amber, fontWeight: 700, marginTop: 9, lineHeight: 1.5 }}>희석성 공시(유상증자·CB·BW 등) 합 {foren.dilution_count}회 — 사실 빈도일 뿐, 위험 판단 아님</div>)}
+                        {foren.forensics_flags && (foren.forensics_flags.dilution_12m > 0 || foren.forensics_flags.correction_count > 0) && (
+                            <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 9 }}>
+                                {foren.forensics_flags.dilution_12m > 0 && (
+                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.amber, background: C.bg, border: `1px solid ${C.line}`, borderRadius: 8, padding: "4px 9px" }}>최근 12개월 희석 {foren.forensics_flags.dilution_12m}회{foren.forensics_flags.dilution_span ? ` · ${foren.forensics_flags.dilution_span}` : ""}</span>
+                                )}
+                                {foren.forensics_flags.correction_count > 0 && (
+                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, background: C.bg, border: `1px solid ${C.line}`, borderRadius: 8, padding: "4px 9px" }}>정정공시 {foren.forensics_flags.correction_count}회 ({foren.forensics_flags.correction_pct}%)</span>
+                                )}
+                            </div>
+                        )}
                         <div style={{ marginTop: 10 }}>
                             {(forenAll ? foren.events : foren.events.slice(0, 6)).map((e: any, i: number) => (
                                 <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", padding: "9px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
@@ -1628,7 +1639,7 @@ export default function PublicStockReport(props: Props) {
                                 {usForen.smart_money.holders.slice(0, 6).map((h, i) => (
                                     <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
                                         <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.fund}</span>
-                                        <span style={{ flexShrink: 0, fontWeight: 800 }}><span style={{ color: (h.change_type === "NEW" || h.change_type === "INCREASED") ? C.vg : h.change_type === "DECREASED" ? C.down : C.faint }}>{h.change_type}</span> <span style={{ color: C.faint, fontWeight: 600 }}>${((h.value_usd || 0) / 1e9).toFixed(1)}B</span></span>
+                                        <span style={{ flexShrink: 0, fontWeight: 800 }}><span style={{ color: (h.change_type === "NEW" || h.change_type === "INCREASED") ? C.green : h.change_type === "DECREASED" ? C.down : C.faint }}>{h.change_type}</span> <span style={{ color: C.faint, fontWeight: 600 }}>${((h.value_usd || 0) / 1e9).toFixed(1)}B</span></span>
                                     </div>
                                 ))}
                                 <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>유명 집중형 펀드 13F 보유(분기말+45일 지연) · 인덱스펀드 제외 · 자체 점수 아님</div>
@@ -1699,7 +1710,7 @@ export default function PublicStockReport(props: Props) {
                                     {ownership.cross_check.dart_pct != null && <> · DART {ownership.cross_check.dart_pct}%</>}
                                     {ownership.cross_check.ftc_pct != null && <> · 공정위 {ownership.cross_check.ftc_pct}%</>}
                                     {" → "}
-                                    <span style={{ fontWeight: 800, color: ownership.cross_check.status === "match" ? C.vg : C.amber }}>{ownership.cross_check.status === "match" ? "일치" : ownership.cross_check.status === "approx" ? "근사" : "차이"}</span>
+                                    <span style={{ fontWeight: 800, color: ownership.cross_check.status === "match" ? C.green : C.amber }}>{ownership.cross_check.status === "match" ? "일치" : ownership.cross_check.status === "approx" ? "근사" : "차이"}</span>
                                 </div>
                                 <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 5 }}>두 공식 출처(DART 공시·공정위 지정) 비교 — 일반 앱엔 없는 이중확인</div>
                             </div>

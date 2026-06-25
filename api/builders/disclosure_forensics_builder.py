@@ -111,14 +111,26 @@ def main() -> int:
                 "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=" + rc,
             })
 
+        dilution_keys = ("유상증자", "전환사채(CB)", "신주인수권부사채(BW)", "교환사채(EB)", "자기주식처분")
+        cutoff_12m = (_now_kst() - timedelta(days=365)).strftime("%Y-%m-%d")
         stocks: List[Dict[str, Any]] = []
         for tk, slot in by_ticker.items():
             slot["events"].sort(key=lambda e: e["date"], reverse=True)
-            slot["events"] = slot["events"][:30]
+            full_events = slot["events"]  # 캡 전 전체 — 파생 사실 계산용
             slot["total"] = sum(slot["counts"].values())
             # 희석성 이벤트 합 (유상증자/CB/BW/EB/자기주식처분) — 사실 카운트, 점수 아님
-            dilution_keys = ("유상증자", "전환사채(CB)", "신주인수권부사채(BW)", "교환사채(EB)", "자기주식처분")
             slot["dilution_count"] = sum(slot["counts"].get(k, 0) for k in dilution_keys)
+            # ── 파생 포렌식 사실 (체인 깊이) — 순수 카운트/날짜, 판정·점수·추천 0 (RULE 7) ──
+            corr_n = slot["counts"].get("정정공시", 0)
+            dil_dates = sorted([e["date"] for e in full_events
+                                if e["category"] in dilution_keys and e["date"]])
+            slot["forensics_flags"] = {
+                "correction_count": corr_n,                                    # 정정공시 건수 (공시 신뢰도 사실)
+                "correction_pct": round(100.0 * corr_n / slot["total"]) if slot["total"] else 0,
+                "dilution_12m": sum(1 for d in dil_dates if d >= cutoff_12m),   # 최근 12개월 희석 횟수
+                "dilution_span": (dil_dates[0] + " ~ " + dil_dates[-1]) if len(dil_dates) >= 2 else "",
+            }
+            slot["events"] = full_events[:30]
             stocks.append(slot)
         # 총 이벤트 많은 순 (사실 정렬)
         stocks.sort(key=lambda s: s["total"], reverse=True)
