@@ -19,7 +19,8 @@ from typing import Any, Dict, List
 from api.config import now_kst
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SRC_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
+SRC_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")          # KR (DART/KRX/공정위)
+US_SRC_PATH = os.path.join(_ROOT, "data", "us_stock_report_public.json")    # US (SEC EDGAR, sp1500). ticker 영문 → KR 숫자코드와 키 충돌 0.
 OUT_PATH = os.path.join(_ROOT, "data", "ai_synthesis.json")
 CACHE_PATH = os.path.join(_ROOT, "data", "ai_synthesis_cache.json")
 BATCH = 18           # Gemini 1콜당 종목 수
@@ -69,6 +70,28 @@ def _fact_parts(s: Dict[str, Any]) -> List[str]:
     if own.get("family_pct") is not None:
         parts.append(f"총수일가 지분 {own['family_pct']}%")
     ins = s.get("insider")
+    n_disc = len(s.get("disclosures") or [])
+    if n_disc:
+        parts.append(f"최근 공시 {n_disc}건")
+    return parts
+
+
+def _fact_parts_us(s: Dict[str, Any]) -> List[str]:
+    """US(SEC) 결정론 사실 선택 — 평가어 미포함. peer 미존재(US 리포트), 시총·재무비율·공시건수만."""
+    f = s.get("facts") or {}
+    parts: List[str] = []
+    if s.get("business"):
+        parts.append(str(s["business"]))
+    cap = (s.get("header") or {}).get("market_cap")
+    if cap:
+        parts.append(f"시총 {cap}")
+    # US 리포트 facts 키 (PER/PBR/Altman 없음) — 사실만 순서대로.
+    for k in ("ROE", "매출성장", "매출총이익률", "영업이익률", "순이익률", "D/E"):
+        v = f.get(k)
+        # 비계산 placeholder(산정불가/N/A/-) skip — 사실 나열 가독성. 숫자 포함값만.
+        if v in (None, "") or not re.search(r"\d", str(v)) or "산정불가" in str(v):
+            continue
+        parts.append(f"{k} {v}")
     n_disc = len(s.get("disclosures") or [])
     if n_disc:
         parts.append(f"최근 공시 {n_disc}건")
@@ -143,30 +166,40 @@ def build_ai_synthesis() -> Dict[str, Any]:
     logged = False
     summary: Dict[str, Any] = {"status": "skip", "n": 0, "llm": 0}
     try:
-        with open(SRC_PATH, "r", encoding="utf-8") as f:
-            doc = json.load(f)
-        stocks = doc if isinstance(doc, list) else (doc.get("stocks") or [])
-        if not stocks:
-            print("[ai_synth] stock_report_public 비어 — skip", file=sys.stderr)
-            return summary
-
         cache = _load_cache()
         synth: Dict[str, str] = {}
         misses: List[Dict[str, Any]] = []  # {tk, name, fp, parts}
 
-        for s in stocks:
-            tk = str(s.get("ticker") or "").strip()
-            name = str(s.get("name") or "").strip()
-            if not tk or not name:
-                continue
-            parts = _fact_parts(s)
-            if len(parts) < 3:   # 사실 빈약 → 종합 skip
-                continue
-            fp = _fingerprint(name, parts)
-            if fp in cache and cache[fp]:
-                synth[tk] = cache[fp]
-            else:
-                misses.append({"tk": tk, "name": name, "fp": fp, "parts": parts})
+        def _collect(path: str, extractor) -> int:
+            """소스 doc 의 종목 → 캐시 hit 는 synth, miss 는 misses 적재. 처리 종목 수 반환."""
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    doc = json.load(f)
+            except (OSError, json.JSONDecodeError):
+                return 0
+            stocks = doc if isinstance(doc, list) else (doc.get("stocks") or [])
+            n = 0
+            for s in stocks:
+                tk = str(s.get("ticker") or "").strip()
+                name = str(s.get("name") or "").strip()
+                if not tk or not name or tk in synth:  # tk 중복 방지(소스 간)
+                    continue
+                parts = extractor(s)
+                if len(parts) < 3:   # 사실 빈약 → 종합 skip
+                    continue
+                fp = _fingerprint(name, parts)
+                if fp in cache and cache[fp]:
+                    synth[tk] = cache[fp]
+                else:
+                    misses.append({"tk": tk, "name": name, "fp": fp, "parts": parts})
+                n += 1
+            return n
+
+        n_kr = _collect(SRC_PATH, _fact_parts)        # KR (DART/KRX/공정위)
+        n_us = _collect(US_SRC_PATH, _fact_parts_us)  # US (SEC EDGAR)
+        if (n_kr + n_us) == 0:
+            print("[ai_synth] KR/US 소스 모두 비어 — skip", file=sys.stderr)
+            return summary
 
         # LLM 다듬기 (상한 내) — 나머지/실패는 결정론 fallback
         to_llm = misses[:MAX_NEW_PER_RUN]
@@ -190,7 +223,7 @@ def build_ai_synthesis() -> Dict[str, Any]:
         out = {
             "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
             "count": len(synth),
-            "note": "검증 사실(DART/KRX/공정위) 기반 AI 종합 — 평가·추천·등급 0. LLM=사실 다듬기만.",
+            "note": "검증 사실(KR=DART/KRX/공정위 · US=SEC EDGAR) 기반 AI 종합 — 평가·추천·등급 0. LLM=사실 다듬기만.",
             "synth": synth,
         }
         with open(OUT_PATH, "w", encoding="utf-8") as f:
@@ -201,8 +234,8 @@ def build_ai_synthesis() -> Dict[str, Any]:
         with open(CACHE_PATH, "w", encoding="utf-8") as f:
             json.dump(cache, f, ensure_ascii=False)
         logged = True
-        summary = {"status": "ok", "n": len(synth), "llm": llm_done}
-        print(f"[ai_synth] logged=True · {len(synth)}종목 종합(LLM {llm_done}, 캐시/결정론 {len(synth) - llm_done})", file=sys.stderr)
+        summary = {"status": "ok", "n": len(synth), "llm": llm_done, "kr": n_kr, "us": n_us}
+        print(f"[ai_synth] logged=True · {len(synth)}종목 종합(KR {n_kr}/US {n_us}, LLM {llm_done}, 캐시/결정론 {len(synth) - llm_done})", file=sys.stderr)
         return summary
     finally:
         if not logged and summary.get("status") != "ok":
