@@ -42,6 +42,8 @@ OUTPUT_PATH = os.path.join(DATA_DIR, "event_study.json")
 
 # forward return 윈도우 (거래일 오프셋). 이벤트 당일(D, rcept_dt 이상 첫 거래일) 종가 기준.
 WINDOWS = {"ret_1d": 1, "ret_5d": 5, "ret_20d": 20, "ret_60d": 60}
+# 유형별 노출 발생 상한 (UI·payload). 초과분은 count·truncated 로 표기(은닉 방지).
+MAX_OCC = 12
 
 # 공시 유형 매핑 — report_nm 에 키워드 포함 시 분류. tone = PublicDisclosureFeed 와 동일 의미축(희석/우호/주의/중립).
 # 순서 = 우선순위(먼저 매칭되면 확정). 노이즈(임원소유상황/의결권대리/약식/증권발행실적/투자설명서 등)는 매핑 없음 → 제외.
@@ -185,9 +187,15 @@ def build() -> Dict[str, Any]:
     for tic, st in stocks.items():
         ev_list = []
         for grp in st["_by_type"].values():
-            occ = sorted(grp["occurrences"], key=lambda o: o["date"], reverse=True)
-            grp["occurrences"] = occ
-            grp["count"] = len(occ)
+            # 같은 날 복수 공시(정정·분할발행 등)는 forward return 동일 → 날짜당 1행 dedup.
+            by_date: Dict[str, Any] = {}
+            for o in grp["occurrences"]:
+                by_date.setdefault(o["date"], o)
+            occ = sorted(by_date.values(), key=lambda o: o["date"], reverse=True)
+            grp["count"] = len(occ)               # distinct 발생일 수
+            grp["occurrences"] = occ[:MAX_OCC]     # UI·payload 안정 위해 최근 MAX_OCC개만 노출
+            if len(occ) > MAX_OCC:
+                grp["truncated"] = len(occ) - MAX_OCC  # 노출 안 한 과거 발생 수(은닉 방지 — RULE)
             ev_list.append(grp)
         if not ev_list:
             continue

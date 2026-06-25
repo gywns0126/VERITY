@@ -41,7 +41,7 @@ const WINDOWS: { key: string; label: string }[] = [
 ]
 
 interface Occurrence { date: string; report_nm?: string; ret_1d: number | null; ret_5d: number | null; ret_20d: number | null; ret_60d: number | null }
-interface Ev { type: string; tone: string; count: number; occurrences: Occurrence[] }
+interface Ev { type: string; tone: string; count: number; occurrences: Occurrence[]; truncated?: number }
 interface Stock { name: string; events: Ev[] }
 
 function readTickerFromUrl(): string {
@@ -182,6 +182,9 @@ export default function PublicEventHistory(props: Props) {
                                         })}
                                     </div>
                                 ))}
+                                {ev.truncated ? (
+                                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, padding: "6px 2px 0", textAlign: "right" }}>최근 {ev.occurrences.length}건 표시 · 외 {ev.truncated}건 더</div>
+                                ) : null}
                             </div>
                         )
                     })}
