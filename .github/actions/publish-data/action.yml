@@ -86,6 +86,7 @@ runs:
                  trending_kr.json \
                  universe_search_kr.json \
                  ai_synthesis.json \
+                 event_study.json \
                  history.json; do
           if git show "origin/main:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
             echo "  + data/$f"
