@@ -35,9 +35,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from api.config import DATA_DIR, now_kst  # noqa: E402
 
-LAKE_PATH = os.path.expanduser("~/VERITY_data_lake/kr_prices.duckdb")
+KR_LAKE_PATH = os.path.expanduser("~/VERITY_data_lake/kr_prices.duckdb")
+US_LAKE_PATH = os.path.expanduser("~/VERITY_data_lake/us_prices.duckdb")
 BACKFILL_PATH = os.path.join(DATA_DIR, "dart_catalyst_backfill.jsonl")
 ALERTS_PATH = os.path.join(DATA_DIR, "dart_catalyst_alerts.jsonl")
+US_CAT_PATH = os.path.join(DATA_DIR, "us_catalyst_backfill.jsonl")  # SEC 8-K (label/tone 사전분류 by backfill_us_catalyst)
 OUTPUT_PATH = os.path.join(DATA_DIR, "event_study.json")
 
 # forward return 윈도우 (거래일 오프셋). 이벤트 당일(D, rcept_dt 이상 첫 거래일) 종가 기준.
@@ -113,9 +115,43 @@ def _load_events() -> List[Dict[str, Any]]:
     return out
 
 
-def _load_price_series(tickers: List[str]) -> Dict[str, Tuple[List[str], List[float]]]:
+def _load_us_events() -> List[Dict[str, Any]]:
+    """us_catalyst_backfill.jsonl (SEC 8-K, label/tone 사전분류) → 이벤트 dict. accession dedup."""
+    seen = set()
+    out: List[Dict[str, Any]] = []
+    if not os.path.exists(US_CAT_PATH):
+        return out
+    with open(US_CAT_PATH, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            acc = r.get("acc")
+            if acc in seen:
+                continue
+            tic = str(r.get("ticker") or "").strip().upper()
+            dt = str(r.get("date") or "").strip()
+            if not (tic and r.get("label") and len(dt) == 10):
+                continue
+            seen.add(acc)
+            out.append({
+                "ticker": tic,
+                "name": r.get("name") or "",
+                "date": dt,
+                "label": r.get("label"),
+                "tone": r.get("tone") or "neutral",
+                "report_nm": r.get("label"),  # US = 라벨 자체(8-K item 분류)
+            })
+    return out
+
+
+def _load_price_series(tickers: List[str], lake_path: str) -> Dict[str, Tuple[List[str], List[float]]]:
     """레이크에서 종목별 (date 문자열 정렬 리스트, close 리스트). graceful — 부재 시 {}."""
-    if not os.path.exists(LAKE_PATH) or not tickers:
+    if not os.path.exists(lake_path) or not tickers:
         return {}
     try:
         import duckdb
@@ -123,7 +159,7 @@ def _load_price_series(tickers: List[str]) -> Dict[str, Tuple[List[str], List[fl
         return {}
     out: Dict[str, Tuple[List[str], List[float]]] = {}
     try:
-        con = duckdb.connect(LAKE_PATH, read_only=True)
+        con = duckdb.connect(lake_path, read_only=True)
         try:
             rows = con.execute(
                 "SELECT ticker, CAST(date AS VARCHAR), close FROM ohlcv WHERE ticker IN "
@@ -158,59 +194,61 @@ def _forward_returns(dates: List[str], closes: List[float], event_date: str) -> 
     return rec
 
 
-def build() -> Dict[str, Any]:
-    events = _load_events()
+def _build_market(events: List[Dict[str, Any]], lake_path: str) -> Dict[str, Any]:
+    """이벤트 + 레이크 → {ticker: {name, events:[...]}}. KR/US 공통. ticker 키 충돌 0(KR 숫자/US 영문)."""
     tickers = sorted({e["ticker"] for e in events})
-    prices = _load_price_series(tickers)
+    prices = _load_price_series(tickers, lake_path)
 
     stocks: Dict[str, Any] = {}
     for e in events:
-        tic = e["ticker"]
-        series = prices.get(tic)
+        series = prices.get(e["ticker"])
         if not series:
             continue
         fwd = _forward_returns(series[0], series[1], e["date"])
         if fwd is None:
             continue
-        st = stocks.setdefault(tic, {"name": e["name"], "_by_type": {}})
+        st = stocks.setdefault(e["ticker"], {"name": e["name"], "_by_type": {}})
         if e["name"] and not st["name"]:
             st["name"] = e["name"]
         grp = st["_by_type"].setdefault(e["label"], {"type": e["label"], "tone": e["tone"], "occurrences": []})
-        grp["occurrences"].append({
-            "date": e["date"],
-            "report_nm": e["report_nm"],
-            **fwd,
-        })
+        grp["occurrences"].append({"date": e["date"], "report_nm": e["report_nm"], **fwd})
 
-    # _by_type → events 리스트(최신 발생 우선 정렬), count 부착. 빈 종목 제거.
-    out_stocks: Dict[str, Any] = {}
+    out: Dict[str, Any] = {}
     for tic, st in stocks.items():
         ev_list = []
         for grp in st["_by_type"].values():
-            # 같은 날 복수 공시(정정·분할발행 등)는 forward return 동일 → 날짜당 1행 dedup.
+            # 같은 날 복수 공시는 forward return 동일 → 날짜당 1행 dedup.
             by_date: Dict[str, Any] = {}
             for o in grp["occurrences"]:
                 by_date.setdefault(o["date"], o)
             occ = sorted(by_date.values(), key=lambda o: o["date"], reverse=True)
-            grp["count"] = len(occ)               # distinct 발생일 수
-            grp["occurrences"] = occ[:MAX_OCC]     # UI·payload 안정 위해 최근 MAX_OCC개만 노출
+            grp["count"] = len(occ)
+            grp["occurrences"] = occ[:MAX_OCC]
             if len(occ) > MAX_OCC:
-                grp["truncated"] = len(occ) - MAX_OCC  # 노출 안 한 과거 발생 수(은닉 방지 — RULE)
+                grp["truncated"] = len(occ) - MAX_OCC
             ev_list.append(grp)
         if not ev_list:
             continue
-        # 이벤트 유형 = 최근 발생일 내림차순
         ev_list.sort(key=lambda g: g["occurrences"][0]["date"], reverse=True)
-        out_stocks[tic] = {"name": st["name"], "events": ev_list}
+        out[tic] = {"name": st["name"], "events": ev_list}
+    return out
+
+
+def build() -> Dict[str, Any]:
+    kr = _build_market(_load_events(), KR_LAKE_PATH)
+    us = _build_market(_load_us_events(), US_LAKE_PATH)
+    out_stocks = {**kr, **us}  # ticker 키 충돌 0 (KR 숫자코드 / US 영문)
 
     total_occ = sum(len(g["occurrences"]) for s in out_stocks.values() for g in s["events"])
     feed = {
         "_meta": {
             "generated_at": now_kst().isoformat(),
-            "source": "DART 공시이력(2015~) + kr_prices 레이크(OHLCV)",
-            "note": "종목별 자기 과거 카탈리스트 공시 당시 forward return(거래일 +1/+5/+20/+60, 주가 변화·시장 포함). 종목 간 집계 없음 — 과거 사실 비교용.",
+            "source": "KR=DART 공시이력(2015~)+kr_prices · US=SEC 8-K(2015~)+us_prices. forward return(거래일 +1/+5/+20/+60).",
+            "note": "종목별 자기 과거 카탈리스트 공시 당시 주가 변화. 종목 간 집계 없음 — 과거 사실 비교용(예측·신호 아님).",
             "windows": WINDOWS,
             "stock_count": len(out_stocks),
+            "kr_count": len(kr),
+            "us_count": len(us),
             "occurrence_count": total_occ,
         },
         "stocks": out_stocks,
@@ -223,7 +261,7 @@ def main() -> None:
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(feed, f, ensure_ascii=False, indent=2)
     m = feed["_meta"]
-    print(f"[event_study] {m['stock_count']} 종목 · {m['occurrence_count']} 이벤트 -> {os.path.relpath(OUTPUT_PATH, os.path.dirname(DATA_DIR))}")
+    print(f"[event_study] {m['stock_count']} 종목 (KR {m.get('kr_count')}/US {m.get('us_count')}) · {m['occurrence_count']} 이벤트 -> {os.path.relpath(OUTPUT_PATH, os.path.dirname(DATA_DIR))}")
 
 
 if __name__ == "__main__":
