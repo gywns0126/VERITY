@@ -60,6 +60,22 @@ const LABEL_PLAIN: Record<string, string> = {
     "정정공시": "이전에 낸 공시를 고쳐 다시 낸 것",
 }
 
+// 공시 제목 → 유형 성격(사실 기반, 매수·매도 의견 아님). 색은 공시 종류의 일반적 효과만 나타냄.
+// dilution = 주식 수가 늘어 지분이 옅어질 수 있는 공시 · favor = 유통주식 감소·주주환원 등 우호적 효과 · alert = 자본·법적 주의 사건
+// 우선순위: alert > dilution > favor (한 제목에 여러 키워드 시 주의 우선).
+type Tone = "dilution" | "favor" | "alert"
+const TONE_KW: { key: Tone; kw: string[] }[] = [
+    { key: "alert", kw: ["감자", "소송", "횡령", "배임", "상장폐지", "관리종목", "영업정지", "회생절차", "부도", "파산", "감사의견", "거래정지", "불성실공시", "투자주의", "투자경고", "투자위험"] },
+    { key: "dilution", kw: ["유상증자", "전환사채", "신주인수권부사채", "교환사채", "신주인수권", "주식매수선택권"] },
+    { key: "favor", kw: ["자기주식취득", "자기주식 취득", "자기주식소각", "자기주식 소각", "자사주", "무상증자", "단일판매", "공급계약", "현금배당", "현금ㆍ현물배당", "주식배당"] },
+]
+function classifyTone(title: string): Tone | "" {
+    const t = title || ""
+    for (const g of TONE_KW) { if (g.kw.some((k) => t.includes(k))) return g.key }
+    return ""
+}
+const TONE_LABEL: Record<Tone, string> = { dilution: "희석", favor: "우호", alert: "주의" }
+
 const DART = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
 
 interface Disclosure {
@@ -420,6 +436,8 @@ export default function PublicDisclosureFeed(props: Props) {
                             {it.disclosures.map((d, i) => {
                                 const corr = d.is_correction
                                 const chipC = corr ? { fg: C.amber, bg: C.amberS } : { fg: C.blue, bg: C.blueS }
+                                const tone = classifyTone(d.title)
+                                const toneSty = tone === "dilution" ? { fg: C.amber, bg: C.amberS } : tone === "favor" ? { fg: C.green, bg: C.greenS } : tone === "alert" ? { fg: C.red, bg: C.redS } : null
                                 const key = it.ticker + ":" + i
                                 const opened = openKey === key
                                 const chipId = key + ":chip"
@@ -430,20 +448,27 @@ export default function PublicDisclosureFeed(props: Props) {
                                         <div onClick={() => setOpenKey(opened ? "" : key)}
                                             style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "9px 0", cursor: "pointer" }}>
                                             {/* 분류 칩 — hover/탭 시 뜻 팝업 */}
-                                            <span style={{ position: "relative", display: "inline-block", flexShrink: 0, alignSelf: "flex-start" }}>
-                                                <span role="button" tabIndex={0}
-                                                    onClick={(e) => { e.stopPropagation(); if (chipOpen) setOpenTip(""); else openTipAt(e, chipId) }}
-                                                    {...hoverProps(chipId)}
-                                                    style={{ display: "inline-block", fontSize: 11, fontWeight: 800, color: chipC.fg, background: chipC.bg, padding: "3px 8px", borderRadius: 7, whiteSpace: "nowrap", cursor: "help" }}>
-                                                    {corr ? "정정" : d.label}
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 5, flexShrink: 0, alignSelf: "flex-start", alignItems: "flex-start" }}>
+                                                <span style={{ position: "relative", display: "inline-block" }}>
+                                                    <span role="button" tabIndex={0}
+                                                        onClick={(e) => { e.stopPropagation(); if (chipOpen) setOpenTip(""); else openTipAt(e, chipId) }}
+                                                        {...hoverProps(chipId)}
+                                                        style={{ display: "inline-block", fontSize: 11, fontWeight: 800, color: chipC.fg, background: chipC.bg, padding: "3px 8px", borderRadius: 7, whiteSpace: "nowrap", cursor: "help" }}>
+                                                        {corr ? "정정" : d.label}
+                                                    </span>
+                                                    {chipOpen && (
+                                                        <span onClick={(e) => e.stopPropagation()} style={tipStyle()}>
+                                                            <span style={{ fontWeight: 700, display: "block", marginBottom: 3, color: C.vg }}>{corr ? "정정공시" : d.label}</span>
+                                                            {chipMeaning}
+                                                        </span>
+                                                    )}
                                                 </span>
-                                                {chipOpen && (
-                                                    <span onClick={(e) => e.stopPropagation()} style={tipStyle()}>
-                                                        <span style={{ fontWeight: 700, display: "block", marginBottom: 3, color: C.vg }}>{corr ? "정정공시" : d.label}</span>
-                                                        {chipMeaning}
+                                                {tone && toneSty && (
+                                                    <span style={{ display: "inline-block", fontSize: 10.5, fontWeight: 800, color: toneSty.fg, background: toneSty.bg, padding: "2px 7px", borderRadius: 6, whiteSpace: "nowrap" }}>
+                                                        {TONE_LABEL[tone]}
                                                     </span>
                                                 )}
-                                            </span>
+                                            </div>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, lineHeight: 1.45, wordBreak: "break-word" }}>
                                                     {renderTitle(d.title, key)}
@@ -486,7 +511,7 @@ export default function PublicDisclosureFeed(props: Props) {
             </div>
 
             <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 12, lineHeight: 1.5 }}>
-                공시 사실·일정만 · 원문은 DART 전자공시 · 자체 점수·등급은 검증 후(2027) 공개
+                공시 사실·일정만 · 색 표시(희석·우호·주의)는 공시 유형의 일반적 성격일 뿐 매수·매도 의견 아님 · 원문은 DART 전자공시 · 자체 점수·등급은 검증 후(2027) 공개
             </div>
         </div>
     )
