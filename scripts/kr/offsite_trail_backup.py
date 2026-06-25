@@ -104,6 +104,18 @@ def _mirror_parquet() -> None:
     shutil.copy2(PARQUET, os.path.join(fdir, "kr_flow_observations.parquet"))
 
 
+def _mirror_health() -> None:
+    """로컬 하트비트(local_lake_health.json) 동승 미러 → 견고한 push 채널 재사용.
+    CI cron_health 가 이 repo 의 health/local_lake_health.json heartbeat_at 으로 맥 SPOF 알람."""
+    src = os.path.join(os.path.expanduser("~/Desktop/배리티 터미널/data"), "local_lake_health.json")
+    if not os.path.exists(src):
+        _log("local_lake_health.json 부재 — heartbeat 미러 skip")
+        return
+    hdir = os.path.join(WORK, "health")
+    os.makedirs(hdir, exist_ok=True)
+    shutil.copy2(src, os.path.join(hdir, "local_lake_health.json"))
+
+
 def _write_readme(shard_n: int) -> None:
     readme = os.path.join(WORK, "README.md")
     body = (
@@ -111,7 +123,8 @@ def _write_readme(shard_n: int) -> None:
         "재구축 불가 관측 trail 오프사이트 백업 (private). 디스크 고장 보험.\n\n"
         "- `trail/prediction_trail_<ISO주>.jsonl` — smallcap 코너 예측 trail, created_at ISO-주 shard.\n"
         "  복원 = ISO-주 오름차순으로 모든 shard concat.\n"
-        "- `flow/kr_flow_observations.parquet` — KR flow 관측 (최신 통째 미러).\n\n"
+        "- `flow/kr_flow_observations.parquet` — KR flow 관측 (최신 통째 미러).\n"
+        "- `health/local_lake_health.json` — 로컬 맥 하트비트(heartbeat_at). CI 가 맥 SPOF 알람용으로 읽음.\n\n"
         f"shard 수: {shard_n}. 갱신 = 로컬 weekly 잡 (`backup_irreplaceable.sh` 동승).\n"
         "무료 조건: 일반 git (LFS 미사용). shard <50MiB 유지로 100MiB 차단 영구 회피.\n"
     )
@@ -140,6 +153,7 @@ def main() -> int:
     _ensure_clone()
     shard_n = _shard_trail()
     _mirror_parquet()
+    _mirror_health()
     _write_readme(shard_n)
 
     if not _size_guard():
