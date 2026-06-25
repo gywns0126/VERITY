@@ -155,7 +155,7 @@ export default function GoldenGooseWatchlist(props: Props) {
         }).then(() => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(WATCH_EVENT)) }).catch(() => fetchWatch())
     }
 
-    const wrap: CSSProperties = { width: "100%", height: "100%", background: C.bg, fontFamily: FONT, boxSizing: "border-box", color: C.ink, padding: 16, overflowY: "auto" }
+    const wrap: CSSProperties = { width: "100%", height: "100%", background: C.bg, fontFamily: FONT, boxSizing: "border-box", color: C.ink, padding: 0, overflowY: "auto" }
     const title = <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px", marginBottom: 10 }}>내 종목</div>
 
     if (onCanvas) {
