@@ -52,6 +52,19 @@ function fmtSigned(n: number | null, digits = 1): string {
     if (n == null) return "—"
     return (n > 0 ? "+" : "") + n.toFixed(digits) + "%"
 }
+// 적중률 Wilson 95% 신뢰구간 (RULE 7 — hit_rate 단독 게재 금지, CI 병기 의무).
+// 작은 N 에서 구간이 넓게 나오는 것 = 정직성 핵심(동전던지기와 구별 안 됨을 그대로 노출).
+function wilsonCI95(hitRate: number | null, n: number | null): string | null {
+    if (hitRate == null || n == null || n < 1) return null
+    const z = 1.96
+    const p = Math.max(0, Math.min(1, Number(hitRate)))
+    const denom = 1 + (z * z) / n
+    const center = (p + (z * z) / (2 * n)) / denom
+    const half = (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / denom
+    const lo = Math.max(0, center - half) * 100
+    const hi = Math.min(1, center + half) * 100
+    return lo.toFixed(0) + "–" + hi.toFixed(0) + "%p"
+}
 function fmtBig(n: number | null): string {
     if (n == null || n <= 0) return "—"
     if (n >= 1e6) return (n / 1e6).toFixed(2) + "M"
@@ -291,8 +304,8 @@ export default function CryptoRegimeTrail(props: { dataUrl?: string; dark?: bool
                 <span style={SECLABEL}>레짐콜 검증 trail (forward)</span>
                 {bkt ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "11px 14px", flexWrap: "wrap" }}>
-                        <Stat C={C} label="적중률" value={bkt.hit_rate != null ? (Number(bkt.hit_rate) * 100).toFixed(0) + "%" : "—"} />
-                        <Stat C={C} label="평균수익" value={fmtSigned(bkt.mean_realized_return != null ? Number(bkt.mean_realized_return) * 100 : null, 2)} col={bkt.mean_realized_return >= 0 ? C.up : C.down} />
+                        <Stat C={C} label="적중률" value={bkt.hit_rate != null ? (Number(bkt.hit_rate) * 100).toFixed(0) + "%" : "—"} hint={wilsonCI95(bkt.hit_rate, bkt.hit_eligible != null ? bkt.hit_eligible : bkt.n) ? "95% CI " + wilsonCI95(bkt.hit_rate, bkt.hit_eligible != null ? bkt.hit_eligible : bkt.n) : null} />
+                        <Stat C={C} label="기대값(평균수익)" value={fmtSigned(bkt.mean_realized_return != null ? Number(bkt.mean_realized_return) * 100 : null, 2)} col={bkt.mean_realized_return >= 0 ? C.up : C.down} />
                         <Stat C={C} label="표본 N" value={String(bkt.n != null ? bkt.n : "—")} />
                         <Stat C={C} label="기간" value={(bkt.horizon_days || "—") + "일 · " + regimeCallKo(bkt.regime_call)} />
                         <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.warn, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: alpha(C.warn, 0.14) }}>{bkt.label || "검증 진행 중"}</span>
@@ -377,11 +390,12 @@ function SensorRow({ C, name, desc, value, tag, col, bar }: {
 }
 
 /* ── 통계 셀 ── */
-function Stat({ C, label, value, col }: { C: typeof LIGHT; label: string; value: string; col?: string }) {
+function Stat({ C, label, value, col, hint }: { C: typeof LIGHT; label: string; value: string; col?: string; hint?: string | null }) {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
             <span style={{ fontSize: 10, color: C.faint, fontWeight: 700, letterSpacing: "0.2px" }}>{label}</span>
             <span style={{ ...MONO, fontSize: 15, fontWeight: 800, color: col || C.ink }}>{value}</span>
+            {hint ? <span style={{ ...MONO, fontSize: 9.5, color: C.faint, fontWeight: 700 }}>{hint}</span> : null}
         </div>
     )
 }

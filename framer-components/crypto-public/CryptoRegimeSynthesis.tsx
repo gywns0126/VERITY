@@ -29,6 +29,19 @@ const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Ne
 const NUM: CSSProperties = { fontVariantNumeric: "tabular-nums" }
 
 function num(v: any): number | null { const n = Number(v); return isFinite(n) ? n : null }
+// 적중률 Wilson 95% 신뢰구간 (RULE 7 — hit_rate 단독 게재 금지). 작은 N=넓은 구간 그대로 노출.
+function wilsonCI95(hitRate: any, n: any): string | null {
+    const p0 = Number(hitRate), nn = Number(n)
+    if (!isFinite(p0) || !isFinite(nn) || nn < 1) return null
+    const z = 1.96, p = Math.max(0, Math.min(1, p0)), denom = 1 + (z * z) / nn
+    const center = (p + (z * z) / (2 * nn)) / denom
+    const half = (z * Math.sqrt((p * (1 - p)) / nn + (z * z) / (4 * nn * nn))) / denom
+    return (Math.max(0, center - half) * 100).toFixed(0) + "–" + (Math.min(1, center + half) * 100).toFixed(0) + "%p"
+}
+function fmtSignedPct(v: any, digits = 2): string {
+    const n = Number(v); if (!isFinite(n)) return "—"
+    return (n > 0 ? "+" : "") + (n * 100).toFixed(digits) + "%"
+}
 function fmtUsd(v: any): string {
     const n = Number(v)
     if (!isFinite(n) || n === 0) return "—"
@@ -202,6 +215,11 @@ export default function CryptoRegimeSynthesis(props: Props) {
                     <div style={{ textAlign: "right" }}>
                         <div style={{ fontSize: 17, fontWeight: 700, color: C.ink, ...NUM }}>{bkt7 && bkt7.hit_rate != null ? (Number(bkt7.hit_rate) * 100).toFixed(0) + "%" : "—"}</div>
                         <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 2 }}>적중률</div>
+                        {bkt7 && wilsonCI95(bkt7.hit_rate, bkt7.n) ? <div style={{ fontSize: 9.5, color: C.faint, fontWeight: 600, marginTop: 1, ...NUM }}>95% CI {wilsonCI95(bkt7.hit_rate, bkt7.n)}</div> : null}
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 17, fontWeight: 700, color: bkt7 && Number(bkt7.mean_realized_return) < 0 ? C.down : C.ink, ...NUM }}>{bkt7 ? fmtSignedPct(bkt7.mean_realized_return) : "—"}</div>
+                        <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 2 }}>기대값</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
                         <div style={{ fontSize: 17, fontWeight: 700, color: C.ink, ...NUM }}>{bkt7 ? bkt7.n : 0}</div>
