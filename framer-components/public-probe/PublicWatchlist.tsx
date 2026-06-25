@@ -165,7 +165,7 @@ export default function PublicWatchlist(props: Props) {
     }, [watch, base, onCanvas, prices])
 
     const narrow = w > 0 && w < 320
-    const pad = 13
+    const pad = 0
 
     const matches = useMemo(() => {
         const q = query.trim().toLowerCase()
