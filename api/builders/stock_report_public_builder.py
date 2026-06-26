@@ -575,6 +575,33 @@ def _load_fin_series() -> Dict[str, List[Dict[str, Any]]]:
     return out
 
 
+def _load_real_estate_history() -> Dict[str, Dict[str, Any]]:
+    """fin_history 최신연도 투자부동산 장부가 → {ticker: real_estate} (부동산 섹션 부활, 백필 공유)."""
+    hist = _load_json(DART_KR_FIN_HISTORY_PATH, {})
+    rows = (hist.get("rows") if isinstance(hist, dict) else None) or []
+    latest: Dict[str, Tuple[int, float]] = {}
+    for r in rows:
+        if not isinstance(r, dict) or r.get("period") != "annual":
+            continue
+        tk = str(r.get("ticker") or "")
+        fy = r.get("fiscal_year")
+        inv = (r.get("fundamentals") or {}).get("investment_property")
+        try:
+            inv = float(inv) if inv else 0.0
+        except (TypeError, ValueError):
+            inv = 0.0
+        if not tk or fy is None or inv <= 0:
+            continue
+        if tk not in latest or fy > latest[tk][0]:
+            latest[tk] = (int(fy), inv)
+    out: Dict[str, Dict[str, Any]] = {}
+    for tk, (fy, inv) in latest.items():
+        out[tk] = {"total": _fmt_cap(inv),
+                   "items": [{"name": "투자부동산", "value": _fmt_cap(inv)}],
+                   "note": f"재무상태표 투자부동산 장부가({fy}, 시가 아님) · DART"}
+    return out
+
+
 def main() -> int:
     ok = False
     try:
@@ -584,6 +611,7 @@ def main() -> int:
         fund_doc = _load_json(FUND_PATH, {})
         fundamentals = (fund_doc.get("fundamentals") if isinstance(fund_doc, dict) else {}) or {}
         fin_series = _load_fin_series()
+        real_estate_map = _load_real_estate_history()
         kr_listed = _load_json(KRLISTED_PATH, {}) or {}
         names = _load_json(NAMES_PATH, {}) or {}
         catalyst = _load_catalyst_by_ticker()
@@ -705,6 +733,12 @@ def main() -> int:
                     ov["sector"] = str(sk)
             if ov:
                 s["overview"] = ov
+
+            # 부동산 부활 — rec 미보유 시 fin_history 투자부동산 fallback (백필 공유, 사실·장부가)
+            if not s.get("real_estate"):
+                re_fb = real_estate_map.get(tk)
+                if re_fb:
+                    s["real_estate"] = re_fb
 
         # 정렬: rich 먼저 → 공시 많은 순 → ticker
         stocks.sort(key=lambda s: (s.get("rich", False), len(s.get("disclosures", [])), s["ticker"]), reverse=True)

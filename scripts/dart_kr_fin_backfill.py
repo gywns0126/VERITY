@@ -114,11 +114,13 @@ def main() -> int:
                 print(f"[fin-bf] {tk} {y} 실패: {str(e)[:60]}", file=sys.stderr)
                 continue
             rev, op, net = plbs.get("revenue"), plbs.get("operating_profit"), plbs.get("net_income")
+            inv_re = plbs.get("investment_property")
             if not (rev or op or net):
                 continue
             rows.append({
                 "ticker": tk, "name": name, "fiscal_year": y, "period": "annual",
-                "fundamentals": {"revenue": rev or None, "operating_profit": op or None, "net_income": net or None},
+                "fundamentals": {"revenue": rev or None, "operating_profit": op or None,
+                                 "net_income": net or None, "investment_property": inv_re or None},
             })
             seen.add((tk, y))
             new_n += 1; tk_new += 1

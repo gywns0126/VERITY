@@ -73,6 +73,7 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
         "operating_profit": 0,
         "net_income": 0,
         "pretax_income": 0,
+        "investment_property": 0,  # 투자부동산 장부가(BS) — 리포트 '부동산' 섹션용 사실
         "operating_cashflow": 0,
         "investing_cashflow": 0,
         "financing_cashflow": 0,
@@ -95,6 +96,8 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
                 out["retained_earnings"] = amount
             elif acct == "자본금":
                 out["capital"] = amount
+            elif "투자부동산" in acct:
+                out["investment_property"] = amount
         elif sj in ("IS", "CIS"):
             if acct in ("매출액", "영업수익") or "수익(매출액)" in acct:
                 out["revenue"] = max(out["revenue"], amount)
