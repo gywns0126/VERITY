@@ -29,6 +29,7 @@ CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
 SECTOR_MAP_PATH = os.path.join(_ROOT, "data", "kr_sector_map.json")
 KRXMKTCAP_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
 DART_KR_BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_kr_backfill_result.json")
+DART_KR_FIN_HISTORY_PATH = os.path.join(_ROOT, "data", "dart_kr_fin_history.json")  # 광범위 연간재무 백필(재무추이 부활)
 OUTPUT_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
 
 # 동종업계 비교 = 섹터별 중앙값. PER/PBR = KRX 시총 ÷ DART 순익·자기자본 자체계산(src="val"),
@@ -539,7 +540,9 @@ def _load_fin_series() -> Dict[str, List[Dict[str, Any]]]:
     커버리지는 backfill 적재분만(현재 일부 종목) — 없는 종목은 빈 dict.
     """
     doc = _load_json(DART_KR_BACKFILL_PATH, {})
-    rows = (doc.get("rows") if isinstance(doc, dict) else None) or []
+    rows = list((doc.get("rows") if isinstance(doc, dict) else None) or [])
+    hist = _load_json(DART_KR_FIN_HISTORY_PATH, {})  # 광범위 백필 merge (universe 확대)
+    rows += (hist.get("rows") if isinstance(hist, dict) else None) or []
     by_ticker: Dict[str, List[Dict[str, Any]]] = {}
     for r in rows:
         if not isinstance(r, dict) or r.get("period") != "annual":

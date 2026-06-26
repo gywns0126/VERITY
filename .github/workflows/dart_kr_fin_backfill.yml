@@ -1,0 +1,74 @@
+name: DART KR 연간재무 백필 (재무추이 부활)
+
+# stock_report_public universe(~1616) × 2015~ 연간 매출/영업이익/순익 → data/dart_kr_fin_history.json.
+# 빌더 _load_fin_series 가 merge → 리포트 '재무추이' 섹션 대부분 종목 부활 (현 30종목 → universe).
+# DART only — KIS 무관(RULE 1). proven fetcher(dart_fundamentals) 재사용·캐시(dart_kr_cache). resume+quota-cap.
+#
+# 🚨 schedule 없음 = workflow_dispatch 수동 전용. 이유: 카탈리스트 백필이 DART 20K/일 쿼터 소비 중(~2주).
+#    동시 자동가동 = 쿼터 터짐. 카탈리스트 완주 후(또는 여유일) 수동 실행. 멱등(캐시+resume)이라 다회 분할 안전.
+#
+# 7축 audit: env=DART_API_KEY · push=vercel-api 무관(RULE2) · concurrency=verity-data-write(직렬화) ·
+#    cron=없음(수동) · KIS=0(RULE1) · pip=requirements · N=2=manual 다회.
+
+on:
+  workflow_dispatch:
+    inputs:
+      quota_cap:
+        description: '이번 run DART 요청 상한 (쿼터 분할)'
+        required: false
+        default: '6000'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  fin-backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 연간재무 백필 (DART, quota-cap)
+        id: bf
+        timeout-minutes: 55
+        continue-on-error: true
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: |
+          set +e
+          python scripts/dart_kr_fin_backfill.py --start-year 2015 --quota-cap ${{ github.event.inputs.quota_cap || '6000' }}
+          echo "RC=$?"
+
+      - name: Commit + push (변경 시만)
+        if: always()   # 잘려도 부분 진척(done.json+history) 보존
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/dart_kr_fin_history.json data/dart_kr_fin_history_done.json data/dart_kr_cache 2>/dev/null || true
+          git diff --staged --quiet && { echo "변경 없음"; exit 0; }
+          git commit -m "data(golden-goose): KR 연간재무 백필 누적 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') (재무추이)"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              echo "pushed"; exit 0
+            fi
+            echo "push attempt $i failed, retry in $((i*10))s"; sleep $((i*10))
+          done
+          echo "::error::5회 push 실패"; exit 1
