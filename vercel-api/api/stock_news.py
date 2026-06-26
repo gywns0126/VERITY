@@ -1,0 +1,192 @@
+"""
+VERITY 종목별 뉴스 API (정보 밀도형) — GET /api/stock_news?code=005930
+
+네이버 금융 종목 뉴스(finance.naver.com/item/news_news) → 건당 구조적 사실 밀도.
+RULE 6: LLM 해설·요약 0. 전부 사전/사실 (카테고리·신뢰티어·매체수·시각).
+RULE 7: 호재/악재 판단·중요도 랭킹·방향성 0. 사실만.
+self-contained (루트 api/ 미의존 — Vercel 번들 안전). 공시 연결은 프론트 client-side 조인.
+Vercel 10초 제한 — 페이지 동시 fetch(ThreadPool), pages=2.
+"""
+from http.server import BaseHTTPRequestHandler
+import json
+import re
+import logging
+import traceback
+from datetime import datetime, timedelta
+from urllib.parse import parse_qs, urlparse
+from concurrent.futures import ThreadPoolExecutor
+
+import requests
+from bs4 import BeautifulSoup
+
+_logger = logging.getLogger(__name__)
+
+NEWS_URL = "https://finance.naver.com/item/news_news.naver?code={code}&page={page}"
+_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
+
+# 출처 신뢰 사전 (news_headlines.CREDIBLE_SOURCES 동기 — 1차 출처 >=4).
+CREDIBLE_SOURCES = {
+    "한국경제": 5, "매일경제": 5, "서울경제": 4, "조선비즈": 4,
+    "이데일리": 4, "머니투데이": 4, "연합뉴스": 5, "뉴스핌": 3,
+    "파이낸셜뉴스": 4, "헤럴드경제": 3, "아시아경제": 3, "ZDNet": 3,
+    "전자신문": 3, "디지털타임스": 3, "블룸버그": 5, "로이터": 5,
+    "연합인포맥스": 5, "한겨레": 3, "중앙일보": 3, "동아일보": 3,
+}
+
+# 카테고리 사전 (우선순위 순). 제목 키워드 = 사실 분류(LLM 0).
+_CATEGORY_RULES = [
+    ("실적", ["실적", "영업이익", "영업손실", "순이익", "매출", "어닝", "잠정실적", "분기 실적", "적자", "흑자전환"]),
+    ("공시", ["공시", "유상증자", "무상증자", "자사주", "자기주식", "전환사채", "신주인수권", "배당", "감자"]),
+    ("계약·수주", ["수주", "공급계약", "납품", "계약 체결", "수주잔고", "MOU", "협약", "단일판매"]),
+    ("M&A·지분", ["인수", "합병", "지분", "최대주주", "매각", "분할", "출자", "경영권"]),
+    ("인사", ["대표이사", "사장", "임원", "선임", "사임", "CEO", "회장", "내정"]),
+    ("신사업·투자", ["출시", "신제품", "증설", "공장", "개발", "진출", "수출", "특허"]),
+]
+
+
+def _category(title):
+    t = title or ""
+    for label, kws in _CATEGORY_RULES:
+        if any(k in t for k in kws):
+            return label
+    return "시장"
+
+
+def _norm_title(t):
+    t = re.sub(r"\[.*?\]|\(.*?\)|[^가-힣A-Za-z0-9]", "", t or "")
+    return t[:24].lower()
+
+
+def _parse_dt(s):
+    try:
+        return datetime.strptime((s or "").strip(), "%Y.%m.%d %H:%M")
+    except (ValueError, AttributeError):
+        return None
+
+
+def _rel_time(dt, now):
+    if not dt:
+        return ""
+    sec = (now - dt).total_seconds()
+    if sec < 0:
+        return "방금"
+    if sec < 3600:
+        return f"{int(sec // 60)}분 전"
+    if sec < 86400:
+        return f"{int(sec // 3600)}시간 전"
+    return f"{int(sec // 86400)}일 전"
+
+
+def _fetch_page(code, page):
+    try:
+        r = requests.get(NEWS_URL.format(code=code, page=page),
+                         headers={"User-Agent": _UA, "Referer": "https://finance.naver.com/"}, timeout=4)
+        r.encoding = "euc-kr"
+        soup = BeautifulSoup(r.text, "html.parser")
+        out = []
+        for tr in soup.select("table.type5 tr"):
+            a = tr.select_one("td.title a")
+            if not a:
+                continue
+            href = a.get("href") or ""
+            if href and not href.startswith("http"):
+                href = "https://finance.naver.com" + href
+            info = tr.select_one("td.info")
+            date = tr.select_one("td.date")
+            out.append({
+                "title": a.get_text(strip=True),
+                "url": href,
+                "source": info.get_text(strip=True) if info else "",
+                "datetime": date.get_text(strip=True) if date else "",
+            })
+        return out
+    except Exception as e:  # noqa: BLE001
+        _logger.warning("naver news page %s/%s 실패: %s", code, page, e)
+        return []
+
+
+def fetch_stock_news(code, name="", max_items=15, pages=2):
+    now = datetime.now()
+    raw = []
+    with ThreadPoolExecutor(max_workers=pages) as ex:
+        for res in ex.map(lambda p: _fetch_page(code, p), range(1, pages + 1)):
+            raw.extend(res)
+
+    nm = (name or "").strip()
+    # 종목명 핵심 토큰 (접미사 제거) — "JYP Ent."→"JYP", 한국 뉴스 제목 매칭률↑
+    core = re.sub(r"\s*(Ent\.?|Corp\.?|Inc\.?|Co\.?,?\s*Ltd\.?|Ltd\.?|Holdings|홀딩스|그룹|㈜)\s*$",
+                  "", nm, flags=re.IGNORECASE).strip()
+    if " " in core:
+        core = core.split()[0]
+    clusters = {}
+    for it in raw:
+        if not it["title"]:
+            continue
+        key = _norm_title(it["title"])
+        if not key:
+            continue
+        cred = CREDIBLE_SOURCES.get((it["source"] or "").strip(), 2)
+        dt = _parse_dt(it["datetime"])
+        c = clusters.get(key)
+        if c is None:
+            clusters[key] = {"item": it, "cred": cred, "dt": dt, "outlets": {it["source"]}}
+        else:
+            c["outlets"].add(it["source"])
+            if cred > c["cred"]:
+                c["item"], c["cred"], c["dt"] = it, cred, dt
+
+    kept, spill = [], []
+    for c in clusters.values():
+        it, dt = c["item"], c["dt"]
+        cat = _category(it["title"])
+        rec = {
+            "title": it["title"], "url": it["url"], "source": it["source"], "category": cat,
+            "credibility": c["cred"], "credible": c["cred"] >= 4, "outlets": len(c["outlets"]),
+            "datetime": it["datetime"], "rel_time": _rel_time(dt, now),
+            "_sort": dt.timestamp() if dt else 0,
+        }
+        # 노이즈 = '시장'(이벤트 키워드 0) + 종목명 핵심토큰 미포함 → spill(부족 시만 사용)
+        (spill if (cat == "시장" and core and core not in it["title"]) else kept).append(rec)
+
+    kept.sort(key=lambda x: x["_sort"], reverse=True)
+    spill.sort(key=lambda x: x["_sort"], reverse=True)
+    out = kept if len(kept) >= 6 else kept + spill   # soft filter — 과필터로 빈약해지면 노이즈도 보충
+    for o in out:
+        o.pop("_sort", None)
+    return out[:max_items]
+
+
+class handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def do_GET(self):
+        try:
+            qs = parse_qs(urlparse(self.path).query)
+            code = (qs.get("code", [""])[0] or qs.get("q", [""])[0] or "").strip()
+            name = (qs.get("name", [""])[0] or "").strip()
+            if not re.fullmatch(r"\d{6}", code):
+                body = json.dumps({"error": "code=6자리 종목코드 필요", "items": []}, ensure_ascii=False)
+                cache = "no-store"
+            else:
+                items = fetch_stock_news(code, name)
+                body = json.dumps({"code": code, "count": len(items), "items": items,
+                                   "note": "네이버 금융 종목뉴스 · 사실만(점수·추천 아님)"}, ensure_ascii=False)
+                cache = "public, max-age=300, s-maxage=300"  # 5분 — Naver 부하·차단 완화
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Cache-Control", cache)
+            self.end_headers()
+            self.wfile.write(body.encode("utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            _logger.error("stock_news error: %s\n%s", exc, traceback.format_exc())
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "서버 오류", "items": []}, ensure_ascii=False).encode("utf-8"))
