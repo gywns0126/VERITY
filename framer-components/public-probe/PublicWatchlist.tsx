@@ -205,7 +205,7 @@ export default function PublicWatchlist(props: Props) {
 
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
-        background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
+        background: "transparent", fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
     }
     const inputStyle: CSSProperties = {
         width: "100%", border: `1px solid ${C.line}`, borderRadius: 9, padding: "8px 11px",
@@ -290,14 +290,6 @@ export default function PublicWatchlist(props: Props) {
                         + 관심종목 추가
                     </button>
                 )}
-            </div>
-
-            {/* VERITY 공개 레이어 푸터 */}
-            <div style={{ background: C.vtBox, borderRadius: 12, padding: "12px 14px", marginTop: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: C.vt, letterSpacing: "-0.2px" }}>VERITY 공개 레이어</div>
-                <div style={{ fontSize: 11, color: C.vt, fontWeight: 700, lineHeight: 1.55, marginTop: 4, opacity: 0.92 }}>
-                    사실·연결·검증 과정만. 자체 점수·등급·추천은 검증 후(2027) 공개. 투자 권유 아님.
-                </div>
             </div>
         </div>
     )
