@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-06-27T00:57:25.168151+09:00",
+  "generated_at": "2026-06-27T03:00:03.402430+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 194366,
-    "python_modules": 592,
+    "code_lines_tsx_py": 194563,
+    "python_modules": 593,
     "tsx_components": 89,
-    "json_data_files": 301,
-    "json_total_tracked": 316,
-    "workflows": 50,
+    "json_data_files": 303,
+    "json_total_tracked": 318,
+    "workflows": 51,
     "scheduled_workflows": 41,
     "cron_triggers": 51,
-    "git_tracked_files": 5432
+    "git_tracked_files": 5437
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 62,
+      "count": 63,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -73,6 +73,7 @@
         "api/utils/macro_snapshot.py",
         "scripts/dart_catalyst_backfill.py",
         "scripts/dart_kr_backfill.py",
+        "scripts/dart_kr_fin_backfill.py",
         "scripts/hourly_pulse_send.py",
         "scripts/scout_penny.py",
         "server/kis_rest_client.py",
@@ -146,7 +147,7 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 50,
+      "count": 51,
       "scheduled": 41,
       "workflows": [
         {
@@ -253,6 +254,11 @@
             "13,43 0-9 * * 1-5"
           ],
           "scheduled": true
+        },
+        {
+          "name": "dart_kr_fin_backfill",
+          "crons": [],
+          "scheduled": false
         },
         {
           "name": "dart_meta_backfill",
@@ -513,7 +519,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 301
+      "count": 303
     },
     "validation": {
       "label": "검증",
@@ -530,7 +536,7 @@
   "python_by_dir": {
     "api": 342,
     "tests": 127,
-    "scripts": 71,
+    "scripts": 72,
     "vercel-api": 44,
     "server": 6,
     ".github": 2
