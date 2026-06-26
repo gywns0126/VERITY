@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 
 /**
  * 골든구스 뉴스 탭 (공개) — 팩트형.
@@ -27,6 +27,7 @@ interface Props {
     marketCardHeight: number
     stockCardHeight: number
     reportPath: string
+    apiBase: string
 }
 
 const LIGHT = {
@@ -89,6 +90,9 @@ interface NewsItem {
     source: string
     time: string
     sentiment: string
+    category?: string   // Naver 종목뉴스 enrichment (내 종목 탭)
+    outlets?: number    // 같은 사안 보도 매체 수
+    credible?: boolean  // 신뢰 출처(✓)
 }
 interface StockGroup {
     ticker: string
@@ -257,6 +261,38 @@ export default function PublicNewsTab(props: Props) {
             alive = false
         }
     }, [onCanvas, props.recUrl, props.portfolioUrl, props.maxPerStock, props.maxMarket])
+
+    /* 내 종목 — 상위 6 KR 종목 Naver 종목뉴스 라이브 밀도 enrichment (Google RSS 빈약 대체) */
+    const enrichedRef = useRef(false)
+    useEffect(() => {
+        if (onCanvas || enrichedRef.current || !stocks.length) return
+        const api = (props.apiBase || "https://project-yw131.vercel.app").replace(/\/+$/, "")
+        const krGroups = stocks.filter((g) => /^\d{6}$/.test(String(g.ticker || ""))).slice(0, 6)
+        if (!krGroups.length) return
+        enrichedRef.current = true
+        let alive = true
+        Promise.all(krGroups.map((g) =>
+            fetch(`${api}/api/stock_news?code=${encodeURIComponent(g.ticker)}`, { cache: "no-store" })
+                .then((r) => (r.ok ? r.json() : null))
+                .then((d) => ({ ticker: String(g.ticker), items: (d && Array.isArray(d.items)) ? d.items : null }))
+                .catch(() => ({ ticker: String(g.ticker), items: null }))
+        )).then((results) => {
+            if (!alive) return
+            const byTicker: Record<string, any[]> = {}
+            for (const r of results) if (r.items && r.items.length) byTicker[r.ticker] = r.items
+            if (!Object.keys(byTicker).length) return
+            setStocks((prev) => prev.map((g) => {
+                const ni = byTicker[String(g.ticker)]
+                if (!ni) return g
+                const items: NewsItem[] = ni.slice(0, 4).map((n: any) => ({
+                    title: n.title, url: n.url, source: n.source, time: n.rel_time || "",
+                    sentiment: "", category: n.category, outlets: n.outlets, credible: n.credible,
+                }))
+                return { ...g, items }
+            }))
+        })
+        return () => { alive = false }
+    }, [stocks, onCanvas, props.apiBase])
 
     const tabs: { key: Tab; label: string; count: number }[] = useMemo(
         () => [
@@ -540,18 +576,24 @@ function NewsRow(props: { item: NewsItem; C: typeof LIGHT; clamp?: number; showK
                 </span>
                 <SentChip s={item.sentiment} C={C} />
             </div>
-            <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 7 }}>
+            <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                {item.category ? (
+                    <span style={{ fontSize: 10, fontWeight: 800, color: C.accent, background: C.sub, borderRadius: 5, padding: "1px 6px", whiteSpace: "nowrap" }}>{item.category}</span>
+                ) : null}
                 {ko ? (
                     <span style={{ fontSize: 10, fontWeight: 700, color: C.accent, background: C.bg, borderRadius: 5, padding: "1px 6px" }}>AI 번역</span>
                 ) : null}
                 {item.source ? (
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: C.subtext }}>{item.source}</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: C.subtext }}>{item.source}{item.credible ? " ✓" : ""}</span>
                 ) : null}
                 {item.time ? (
                     <>
                         <span style={{ width: 2, height: 2, borderRadius: 2, background: C.faint }} />
                         <span style={{ fontSize: 11.5, color: C.faint }}>{item.time}</span>
                     </>
+                ) : null}
+                {item.outlets && item.outlets > 1 ? (
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: C.faint }}>· {item.outlets}개 매체</span>
                 ) : null}
             </div>
         </div>
@@ -643,4 +685,5 @@ addPropertyControls(PublicNewsTab, {
     marketCardHeight: { type: ControlType.Number, title: "시장 카드 높이", defaultValue: 92, min: 72, max: 200, step: 4, unit: "px" },
     stockCardHeight: { type: ControlType.Number, title: "종목 카드 높이", defaultValue: 232, min: 120, max: 400, step: 4, unit: "px" },
     reportPath: { type: ControlType.String, title: "리포트 경로", defaultValue: "/stock" },
+    apiBase: { type: ControlType.String, title: "API Base", defaultValue: "https://project-yw131.vercel.app" },
 })
