@@ -59,6 +59,12 @@ jobs:
         # 2026-05-11 fix: telegram.py 가 api.config import (dotenv 등) 의존. requirements.txt 일괄 설치.
         run: pip install -r requirements.txt
 
+      - name: Run freshness shadow monitor (관측-only, 알람 없음)
+        # 2026-06-26 신설 — SLA 매니페스트 데이터주도 모니터 SHADOW 롤아웃.
+        # 텔레그램·severity 무관여, data/metadata/freshness_observations.jsonl 에만 관측 append.
+        # 실 CI run 무오발 검증 후 알람 flip (별도 단계). monitor 앞 배치 = P0 exit 무관 항상 실행.
+        run: python scripts/freshness_shadow_monitor.py || echo "shadow monitor 실패(무해)"
+
       - name: Run health monitor
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -85,7 +91,7 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/metadata/cron_health.jsonl 2>/dev/null || true
+          git add data/metadata/cron_health.jsonl data/metadata/freshness_observations.jsonl 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔔 cron_health ${TIME_KST}"
