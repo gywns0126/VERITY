@@ -24,7 +24,7 @@
     {"id": "macro_snapshot", "file": "macro_snapshot.json", "max_age_minutes": 180, "owner": "ci", "schedule": "always", "cadence": "30분 macro_collect.yml (기존 cron_health 3h 임계 정합)", "criticality": "P0"},
     {"id": "news_flash", "file": "news_flash.json", "max_age_minutes": 90, "owner": "ci", "schedule": "market_hours", "cadence": "평일 15~30분 rss_scout.yml", "criticality": "P0"},
     {"id": "price_pulse", "file": "price_pulse.json", "max_age_minutes": 30, "owner": "ci", "schedule": "market_hours", "cadence": "1분 lite (장중만, 장외 정체 정상)", "criticality": "P0"},
-    {"id": "ai_synthesis", "file": "ai_synthesis.json", "max_age_minutes": 1560, "owner": "ci", "schedule": "weekday", "cadence": "일배치 daily_analysis_full.yml", "criticality": "P0", "known_issue": "ai_synthesis_builder 자체 generated_at 미스탬프 — 입력 메타 의존. Tier 2 보강."},
+    {"id": "ai_synthesis", "file": "ai_synthesis.json", "max_age_minutes": 1560, "owner": "ci", "schedule": "weekday", "cadence": "일배치 daily_analysis_full.yml", "criticality": "P0", "ts_field": "updated_at", "resolved_note": "2026-06-26: agent '미스탬프' 플래그 FALSE — ai_synthesis_builder.py:224 가 updated_at 스탬프(generated_at 아닌 이름일 뿐)."},
     {"id": "stock_report_public", "file": "stock_report_public.json", "max_age_minutes": 1560, "owner": "ci", "schedule": "weekday", "cadence": "일배치", "criticality": "P0"},
     {"id": "dart_catalyst_alerts", "file": "dart_catalyst_alerts.jsonl", "max_age_minutes": 120, "owner": "ci", "schedule": "market_hours", "cadence": "30분 증분 dart_catalyst_pulse.yml", "criticality": "P0"},
     {"id": "factor_ic_history", "file": "factor_ic_history.json", "max_age_minutes": 1560, "owner": "ci", "schedule": "weekday", "cadence": "일배치", "criticality": "P1"},
