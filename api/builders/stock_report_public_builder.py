@@ -687,6 +687,22 @@ def main() -> int:
                 except Exception:  # noqa: BLE001
                     pass
 
+            # 기업개요 보강 — shares(KRX 상장주식수)+sector(sector_map) fallback. 죽은섹션(overview 1%) 살림(백필 0, 사실만).
+            ov = s.get("overview") or {}
+            if not ov.get("shares"):
+                shr = (krx_map.get(tk) or {}).get("shares")
+                try:
+                    if shr and float(shr) > 0:
+                        ov["shares"] = f"{float(shr) / 1e8:,.2f}억주" if float(shr) >= 1e8 else f"{float(shr):,.0f}주"
+                except (TypeError, ValueError):
+                    pass
+            if not ov.get("sector"):
+                sk = (sector_map.get(tk) or {}).get("sector_ko")
+                if sk:
+                    ov["sector"] = str(sk)
+            if ov:
+                s["overview"] = ov
+
         # 정렬: rich 먼저 → 공시 많은 순 → ticker
         stocks.sort(key=lambda s: (s.get("rich", False), len(s.get("disclosures", [])), s["ticker"]), reverse=True)
         for s in stocks:
