@@ -9,6 +9,7 @@ Vercel 10초 제한 — 페이지 동시 fetch(ThreadPool), pages=2.
 """
 from http.server import BaseHTTPRequestHandler
 import json
+import os
 import re
 import logging
 import traceback
@@ -42,6 +43,22 @@ _CATEGORY_RULES = [
     ("인사", ["대표이사", "사장", "임원", "선임", "사임", "CEO", "회장", "내정"]),
     ("신사업·투자", ["출시", "신제품", "증설", "공장", "개발", "진출", "수출", "특허"]),
 ]
+
+
+_STOCKS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "krx_stocks.json"))
+_name_map = None
+
+
+def _resolve_name(code):
+    """code → 종목명 (krx_stocks.json, 번들 내). 노이즈 필터 정밀도용. 부재 시 ''."""
+    global _name_map
+    if _name_map is None:
+        try:
+            with open(_STOCKS_PATH, encoding="utf-8") as f:
+                _name_map = {str(s.get("ticker")): s.get("name") or "" for s in json.load(f)}
+        except Exception:  # noqa: BLE001
+            _name_map = {}
+    return _name_map.get(str(code), "")
 
 
 def _category(title):
@@ -168,7 +185,7 @@ class handler(BaseHTTPRequestHandler):
         try:
             qs = parse_qs(urlparse(self.path).query)
             code = (qs.get("code", [""])[0] or qs.get("q", [""])[0] or "").strip()
-            name = (qs.get("name", [""])[0] or "").strip()
+            name = (qs.get("name", [""])[0] or "").strip() or _resolve_name(code)
             if not re.fullmatch(r"\d{6}", code):
                 body = json.dumps({"error": "code=6자리 종목코드 필요", "items": []}, ensure_ascii=False)
                 cache = "no-store"
