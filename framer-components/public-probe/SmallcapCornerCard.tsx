@@ -71,7 +71,7 @@ function FactRow(props: { t: Ticker; C: typeof LIGHT; reportPath?: string }) {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 2px", borderTop: "1px solid " + C.line }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 7, flexShrink: 0 }}>
         {url ? (
-          <a href={url} target="_blank" rel="noopener noreferrer" title={props.t.name + " 분석"} style={{ fontSize: 14, fontWeight: 700, color: C.blue, letterSpacing: -0.2, textDecoration: "none" }}>{props.t.name} ↗</a>
+          <a href={url} target="_blank" rel="noopener noreferrer" title={props.t.name + " 분석"} style={{ fontSize: 14, fontWeight: 700, color: C.violet, letterSpacing: -0.2, textDecoration: "none" }}>{props.t.name} ↗</a>
         ) : (
           <span style={{ fontSize: 14, fontWeight: 700, color: C.ink, letterSpacing: -0.2 }}>{props.t.name}</span>
         )}
@@ -84,7 +84,7 @@ function FactRow(props: { t: Ticker; C: typeof LIGHT; reportPath?: string }) {
   )
 }
 
-export default function SmallcapCornerCard(props: { width?: number; dark?: boolean; reportPath?: string }) {
+export default function SmallcapCornerCard(props: { width?: number; dark?: boolean; reportPath?: string; screenerPath?: string }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
   const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
   const isDark = onCanvas ? !!props.dark : themeDark
@@ -95,7 +95,6 @@ export default function SmallcapCornerCard(props: { width?: number; dark?: boole
   const [data, setData] = useState<any>(null)
   const [err, setErr] = useState<string>("")
   const [open, setOpen] = useState<number>(-1)
-  const [showAll, setShowAll] = useState<number>(-1)
 
   /* 테마 추종 (fetch useEffect 와 별개) */
   useEffect(() => {
@@ -134,7 +133,7 @@ export default function SmallcapCornerCard(props: { width?: number; dark?: boole
 
   const shell = {
     width: width, fontFamily: "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif",
-    background: C.bg, borderRadius: 24, padding: 16, boxSizing: "border-box" as const, color: C.ink,
+    background: "transparent", borderRadius: 24, padding: 16, boxSizing: "border-box" as const, color: C.ink,
   }
 
   if (err && !data) {
@@ -210,10 +209,10 @@ export default function SmallcapCornerCard(props: { width?: number; dark?: boole
       </div>
 
       {filters.map(function (flt, i) {
-        const t = TONE[flt.key] || { fg: C.blue, bg: C.blueSoft }
+        const t = TONE[flt.key] || { fg: C.violet, bg: C.violetSoft }
         const isOpen = open === i
         const tickers = flt.tickers || []
-        const limit = showAll === i ? tickers.length : 8
+        const limit = 8
         return (
           <div
             key={i}
@@ -239,7 +238,7 @@ export default function SmallcapCornerCard(props: { width?: number; dark?: boole
 
             {tickers.length > 0 ? (
               <div
-                onClick={function () { setOpen(isOpen ? -1 : i); setShowAll(-1) }}
+                onClick={function () { setOpen(isOpen ? -1 : i) }}
                 style={{
                   cursor: "pointer", marginTop: 11, fontSize: 12.5, fontWeight: 700, color: t.fg,
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
@@ -256,12 +255,13 @@ export default function SmallcapCornerCard(props: { width?: number; dark?: boole
                   return <FactRow key={j} t={tk} C={C} reportPath={props.reportPath} />
                 })}
                 {tickers.length > limit ? (
-                  <div
-                    onClick={function () { setShowAll(i) }}
-                    style={{ cursor: "pointer", textAlign: "center", fontSize: 12, fontWeight: 700, color: C.faint, padding: "10px 0 2px" }}
+                  <a
+                    href={(props.screenerPath || "/smallcap") + "?filter=" + flt.key}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{ display: "block", cursor: "pointer", textAlign: "center", textDecoration: "none", fontSize: 12, fontWeight: 700, color: t.fg, padding: "10px 0 2px" }}
                   >
-                    + {tickers.length - limit}개 더보기
-                  </div>
+                    전체 {tickers.length}종목 스크리너 (검색·정렬) →
+                  </a>
                 ) : null}
               </div>
             ) : null}
@@ -280,4 +280,5 @@ addPropertyControls(SmallcapCornerCard, {
   width: { type: ControlType.Number, title: "Width", defaultValue: 380, min: 320, max: 720 },
   dark: { type: ControlType.Boolean, title: "Dark (canvas)", defaultValue: false },
   reportPath: { type: ControlType.String, title: "리포트 경로", defaultValue: "/stock" },
+  screenerPath: { type: ControlType.String, title: "스크리너 경로", defaultValue: "/smallcap" },
 })

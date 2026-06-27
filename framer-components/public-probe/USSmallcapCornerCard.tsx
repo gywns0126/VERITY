@@ -37,8 +37,8 @@ function makeTone(C: typeof LIGHT): Record<string, { fg: string; bg: string }> {
     neglected_quality: { fg: C.green, bg: C.greenSoft },
     smallcap_dilution: { fg: C.amber, bg: C.amberSoft },
     smallcap_distress: { fg: C.red, bg: C.redSoft },
-    clean_fin_risky_disc: { fg: C.blue, bg: C.blueSoft },
-    accounting_red_flag: { fg: C.violet, bg: C.violetSoft },
+    clean_fin_risky_disc: { fg: C.violet, bg: C.violetSoft },
+    accounting_red_flag: { fg: C.blue, bg: C.blueSoft },
   }
 }
 
@@ -92,7 +92,7 @@ function FactRow(props: { t: Ticker; C: typeof LIGHT; reportPath?: string }) {
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0, flexWrap: "wrap" }}>
           {url ? (
-            <a href={url} target="_blank" rel="noopener noreferrer" title={props.t.name + " 분석"} style={{ fontSize: 14, fontWeight: 700, color: C.blue, letterSpacing: -0.2, textDecoration: "none" }}>{props.t.name} ↗</a>
+            <a href={url} target="_blank" rel="noopener noreferrer" title={props.t.name + " 분석"} style={{ fontSize: 14, fontWeight: 700, color: C.violet, letterSpacing: -0.2, textDecoration: "none" }}>{props.t.name} ↗</a>
           ) : (
             <span style={{ fontSize: 14, fontWeight: 700, color: C.ink, letterSpacing: -0.2 }}>{props.t.name}</span>
           )}
@@ -163,7 +163,7 @@ export default function USSmallcapCornerCard(props: { width?: number; dark?: boo
 
   const shell = {
     width: width, fontFamily: "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif",
-    background: C.bg, borderRadius: 24, padding: 16, boxSizing: "border-box" as const, color: C.ink,
+    background: "transparent", borderRadius: 24, padding: 16, boxSizing: "border-box" as const, color: C.ink,
   }
 
   if (err && !data) {
@@ -236,7 +236,7 @@ export default function USSmallcapCornerCard(props: { width?: number; dark?: boo
       </div>
 
       {filters.map(function (flt, i) {
-        const t = TONE[flt.key] || { fg: C.blue, bg: C.blueSoft }
+        const t = TONE[flt.key] || { fg: C.violet, bg: C.violetSoft }
         const isOpen = open === i
         const tickers = flt.tickers || []
         return (

@@ -535,7 +535,7 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
     const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: C.faint, marginBottom: 8 }
     const chip: React.CSSProperties = { display: "flex", gap: 9, marginTop: 9, fontSize: 11.5, fontWeight: 700, flexWrap: "wrap" }
     return (
-        <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 12.5, fontWeight: 800, color: C.text, padding: "2px 2px 8px", letterSpacing: "-0.01em" }}>
                 오늘의 뉴스 한눈 <span style={{ color: C.faint, fontWeight: 600 }}>· 사실 집계</span>
             </div>

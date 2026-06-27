@@ -398,6 +398,144 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
     )
 }
 
+/* 분기 재무 추이 — 인라인(2026-06-27, 컴포넌트 import 캐시 회피). 선형 차트 + 영역 + 최고/최저점.
+   데이터 = dart_quarterly_public.json (backfill 누적분). 실데이터 4분기 미만 시 자동 숨김(RULE 7). 캔버스=SAMPLE.
+   필드 = dart_quarterly_snapshots.jsonl 스키마 정합. 색: 라인/영역=vt보라 / 개선=green / 악화=amber. */
+const QT_DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/dart_quarterly_public.json"
+const QT_METRICS: { key: string; label: string; unit: string; better: "up" | "down"; note?: string }[] = [
+    { key: "debt_ratio", label: "부채비율", unit: "%", better: "down" },
+    { key: "roa", label: "ROA", unit: "%", better: "up" },
+    { key: "current_ratio", label: "유동비율", unit: "%", better: "up" },
+    { key: "gross_margin", label: "매출총이익률", unit: "%", better: "up", note: "분기 누적" },
+]
+const QT_SAMPLE = (() => {
+    const qs: any[] = []
+    const ends = ["03-31", "06-30", "09-30", "12-31"]
+    let i = 0
+    for (let y = 2021; y <= 2025; y++) for (const e of ends) {
+        const t = i / 19
+        qs.push({
+            q: `${y}-${e}`,
+            debt_ratio: +(168 - 76 * t + Math.sin(i) * 4).toFixed(1),
+            roa: +(1.2 + 5.6 * t + Math.cos(i * 1.3) * 0.35).toFixed(2),
+            current_ratio: +(98 + 67 * t + Math.sin(i * 0.8) * 5).toFixed(1),
+            gross_margin: +(31 + 11 * t + Math.cos(i) * 0.9).toFixed(1),
+        })
+        i++
+    }
+    return qs
+})()
+function qtLabel(qEnd: string): string {
+    const s = String(qEnd || "")
+    if (s.length < 10) return s
+    const y = s.slice(2, 4); const mm = s.slice(5, 7)
+    const q = mm === "03" ? "1Q" : mm === "06" ? "2Q" : mm === "09" ? "3Q" : mm === "12" ? "4Q" : mm
+    return `${y}.${q}`
+}
+
+function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl = QT_DEFAULT_URL, maxQuarters = 20 }: { ticker: string; C: any; isDark: boolean; showExtremes?: boolean; quarterlyUrl?: string; maxQuarters?: number }) {
+    const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    const ref = useRef<HTMLDivElement>(null)
+    const [w, setW] = useState(0)
+    const [quarters, setQuarters] = useState<any[]>(onCanvas ? QT_SAMPLE : [])
+    useEffect(() => {
+        const el = ref.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((es) => { for (const e of es) setW(e.contentRect.width) })
+        ro.observe(el); return () => ro.disconnect()
+    }, [])
+    useEffect(() => {
+        if (onCanvas || !quarterlyUrl || !ticker) return
+        let alive = true
+        fetch(quarterlyUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => {
+            const rec = d && d.stocks && d.stocks[ticker]
+            const arr = rec && Array.isArray(rec.quarters) ? rec.quarters : null
+            if (alive && arr && arr.length) setQuarters(arr)
+        }).catch(() => {})
+        return () => { alive = false }
+    }, [quarterlyUrl, ticker, onCanvas])
+    const cap = Math.max(4, Math.min(40, maxQuarters || 20))
+    const series = useMemo(() => [...quarters].sort((a, b) => String(a.q).localeCompare(String(b.q))).slice(-cap), [quarters, cap])
+    const narrow = w > 0 && w < 420
+    if (!onCanvas && series.length < 4) return null
+    const CW = Math.max(80, (w || 360) - (narrow ? 28 : 36))
+    const CH = 84, PX = 4, PY = 20   // PY 크게 = 최고/최저 라벨이 라인·상하단과 안 겹침
+    return (
+        <div ref={ref} style={{ background: C.card, borderRadius: 16, padding: narrow ? "15px 14px" : "17px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px", color: C.ink }}>분기 재무 추이</span>
+                <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>최근 {series.length}분기 · DART 분기보고서 · 사실</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 0, marginTop: 10 }}>
+                {QT_METRICS.map((m, mi) => {
+                    const raw = series.map((q) => { const v = q[m.key]; return typeof v === "number" && isFinite(v) ? v : null })
+                    const present = raw.filter((v): v is number => v != null)
+                    if (present.length < 2) return null
+                    const lo = Math.min(...present), hi = Math.max(...present), span = hi - lo || 1
+                    const first = present[0], last = present[present.length - 1], delta = last - first
+                    const improved = m.better === "down" ? delta < 0 : delta > 0
+                    const flat = Math.abs(delta) < span * 0.04
+                    const dirColor = flat ? C.faint : improved ? C.green : C.amber
+                    const dirBg = flat ? C.line : improved ? C.greenS : C.amberS
+                    const lineColor = flat ? C.faint : delta > 0 ? C.up : C.down  // 라인=값 상승(빨강)/하락(파랑), KR 등락식
+                    const dirText = flat ? "보합" : improved ? "개선" : "악화"
+                    const arrow = flat ? "→" : improved ? "▲" : "▼"
+                    const dec = m.key === "roa" ? 2 : 1
+                    const n = raw.length
+                    const xAt = (i: number) => PX + (n <= 1 ? 0 : (i / (n - 1)) * (CW - PX * 2))
+                    const yAt = (v: number) => PY + (1 - (v - lo) / span) * (CH - PY * 2)
+                    const pts = raw.map((v, i) => (v == null ? null : { x: xAt(i), y: yAt(v), v, i })).filter((p): p is { x: number; y: number; v: number; i: number } => p != null)
+                    const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")
+                    const areaPath = `${linePath} L${pts[pts.length - 1].x.toFixed(1)},${CH - 1} L${pts[0].x.toFixed(1)},${CH - 1} Z`
+                    const hiPt = pts.reduce((a, b) => (b.v > a.v ? b : a))
+                    const loPt = pts.reduce((a, b) => (b.v < a.v ? b : a))
+                    const lastPt = pts[pts.length - 1]
+                    const gid = `qtr-${m.key}-${mi}`
+                    const clampX = (x: number) => Math.max(16, Math.min(CW - 16, x))
+                    return (
+                        <div key={m.key} style={{ padding: "20px 0", borderTop: mi === 0 ? "none" : `1px solid ${C.line}` }}>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 12, flexWrap: "wrap" }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{m.label}</span>
+                                {m.note && <span style={{ fontSize: 10, color: C.faint, fontWeight: 600 }}>· {m.note}</span>}
+                                <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 800, letterSpacing: "-0.3px", color: C.ink, fontVariantNumeric: "tabular-nums" }}>{last.toFixed(dec)}{m.unit}</span>
+                                <span style={{ fontSize: 10.5, fontWeight: 800, color: dirColor, background: dirBg, borderRadius: 6, padding: "2px 7px" }}>{arrow} {dirText}</span>
+                            </div>
+                            <svg width={CW} height={CH} style={{ display: "block", width: "100%", overflow: "visible" }} viewBox={`0 0 ${CW} ${CH}`} preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor={lineColor} stopOpacity={isDark ? 0.26 : 0.16} />
+                                        <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <path d={areaPath} fill={`url(#${gid})`} />
+                                <path d={linePath} fill="none" stroke={lineColor} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                                {showExtremes && (
+                                    <>
+                                        <circle cx={hiPt.x} cy={hiPt.y} r={2.6} fill={C.card} stroke={lineColor} strokeWidth={1.4} vectorEffect="non-scaling-stroke" />
+                                        <circle cx={loPt.x} cy={loPt.y} r={2.6} fill={C.card} stroke={lineColor} strokeWidth={1.4} vectorEffect="non-scaling-stroke" />
+                                        <text x={clampX(hiPt.x)} y={Math.max(9, hiPt.y - 8)} textAnchor="middle" fontSize={9} fontWeight={700} fill={C.faint} fontFamily={FONT}>최고 {hiPt.v.toFixed(dec)}</text>
+                                        <text x={clampX(loPt.x)} y={Math.min(CH - 3, loPt.y + 14)} textAnchor="middle" fontSize={9} fontWeight={700} fill={C.faint} fontFamily={FONT}>최저 {loPt.v.toFixed(dec)}</text>
+                                    </>
+                                )}
+                                <circle cx={lastPt.x} cy={lastPt.y} r={3.4} fill={lineColor} stroke={C.card} strokeWidth={1.6} vectorEffect="non-scaling-stroke" />
+                            </svg>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 9 }}>
+                                <span style={{ fontSize: 10, color: C.faint, fontWeight: 600 }}>{qtLabel(series[0].q)}</span>
+                                <span style={{ fontSize: 10, color: dirColor, fontWeight: 700 }}>{(delta > 0 ? "+" : "") + delta.toFixed(dec)}{m.unit} ({series.length}분기)</span>
+                                <span style={{ fontSize: 10, color: C.faint, fontWeight: 600 }}>{qtLabel(series[series.length - 1].q)}</span>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>
+                출처 DART 분기·반기·사업보고서 · 비율 자체계산(사실){showExtremes ? " · ○ 최고·최저점" : ""}
+                {onCanvas && <span style={{ color: C.amber }}> · ⚠ SAMPLE 미리보기(실데이터는 backfill 누적 후)</span>}
+            </div>
+        </div>
+    )
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -1450,6 +1588,12 @@ export default function PublicStockReport(props: Props) {
                     </div>
                 </>
             )}
+
+            {/* 분기 재무 추이 — 한눈 파악 먼저(재무 요약 위). 선형 차트 + 최고/최저점.
+                실데이터(dart_quarterly_public.json) 없으면 자동 숨김(RULE 7). 캔버스=SAMPLE. */}
+            <div style={{ marginTop: 12 }}>
+                <QuarterlyTrend ticker={s.ticker} C={C} isDark={C === DARK} />
+            </div>
 
             {/* 재무 요약 — 탭하면 재무제표 전체(손익/재무상태/현금흐름/비율) */}
             {financials && financials.values && Object.keys(financials.values).length > 0 && (
