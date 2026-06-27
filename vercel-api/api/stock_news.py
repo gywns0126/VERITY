@@ -24,6 +24,10 @@ _logger = logging.getLogger(__name__)
 
 NEWS_URL = "https://finance.naver.com/item/news_news.naver?code={code}&page={page}"
 _UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
+# 짬뽕 — 뉴스×공시 연결. 기업이벤트 카테고리 뉴스 ±2일 내 DART 공시 있으면 link (우리 차별점).
+DISC_FEED_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/public_disclosure_feed.json"
+_EVENT_CATS = {"공시", "실적", "계약·수주", "M&A·지분", "인사"}
+_disc_index = None  # {ticker: {date: {title,url}}} 모듈 캐시(콜드 컨테이너당 1회 fetch)
 
 # 출처 신뢰 사전 (news_headlines.CREDIBLE_SOURCES 동기 — 1차 출처 >=4).
 CREDIBLE_SOURCES = {
@@ -59,6 +63,44 @@ def _resolve_name(code):
         except Exception:  # noqa: BLE001
             _name_map = {}
     return _name_map.get(str(code), "")
+
+
+def _disclosures_for(code):
+    """공시 피드(Blob) 캐시 → 해당 종목 {date(YYYY-MM-DD): {title,url}}. 실패=빈 dict(짬뽕 graceful)."""
+    global _disc_index
+    if _disc_index is None:
+        idx = {}
+        try:
+            r = requests.get(DISC_FEED_URL, timeout=4)
+            for it in (r.json().get("items") or []):
+                tk = str(it.get("ticker") or "")
+                if not tk:
+                    continue
+                dd = {}
+                for d in (it.get("disclosures") or []):
+                    dt = str(d.get("date") or "")
+                    if dt and dt not in dd:
+                        dd[dt] = {"title": d.get("title"), "url": d.get("source_url")}
+                if dd:
+                    idx[tk] = dd
+            _disc_index = idx
+        except Exception as e:  # noqa: BLE001
+            _logger.warning("공시 피드 로드 실패: %s", e)
+            _disc_index = {}
+    return _disc_index.get(str(code), {})
+
+
+def _related_disclosure(disc_by_date, dt):
+    """이벤트 뉴스일(dt) ±2일 내 공시 → {title,url,date} 또는 None."""
+    if not dt or not disc_by_date:
+        return None
+    from datetime import timedelta as _td
+    for off in range(-2, 3):
+        key = (dt + _td(days=off)).strftime("%Y-%m-%d")
+        if key in disc_by_date:
+            d = disc_by_date[key]
+            return {"title": d["title"], "url": d["url"], "date": key}
+    return None
 
 
 def _category(title):
@@ -152,14 +194,17 @@ def fetch_stock_news(code, name="", max_items=15, pages=2):
             if cred > c["cred"]:
                 c["item"], c["cred"], c["dt"] = it, cred, dt
 
+    disc = _disclosures_for(code)  # 짬뽕 — 종목 공시 인덱스
     kept, spill = [], []
     for c in clusters.values():
         it, dt = c["item"], c["dt"]
         cat = _category(it["title"])
+        related = _related_disclosure(disc, dt) if cat in _EVENT_CATS else None
         rec = {
             "title": it["title"], "url": it["url"], "source": it["source"], "category": cat,
             "credibility": c["cred"], "credible": c["cred"] >= 4, "outlets": len(c["outlets"]),
             "datetime": it["datetime"], "rel_time": _rel_time(dt, now),
+            "related_disclosure": related,
             "_sort": dt.timestamp() if dt else 0,
         }
         # 노이즈 = '시장'(이벤트 키워드 0) + 종목명 핵심토큰 미포함 → spill(부족 시만 사용)
