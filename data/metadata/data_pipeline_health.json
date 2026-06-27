@@ -1,11 +1,11 @@
 {
-  "collected_at": "2026-06-27T15:30:21+09:00",
-  "overall_status": "ok",
+  "collected_at": "2026-06-27T18:13:38+09:00",
+  "overall_status": "error",
   "summary": {
-    "fresh": 6,
+    "fresh": 14,
     "stale": 0,
-    "missing": 0,
-    "total": 6
+    "missing": 1,
+    "total": 15
   },
   "items": [
     {
@@ -15,7 +15,8 @@
       "type": "jsonl_run_summary",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-06-27T15:28:30.934956+09:00",
+      "ts_source": "mtime",
+      "last_update_kst": "2026-06-27T18:11:47.796503+09:00",
       "age_hours": 0.03,
       "status": "fresh",
       "line_count": 225,
@@ -34,7 +35,8 @@
       "type": "jsonl_quarter",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-06-27T15:28:30.835958+09:00",
+      "ts_source": "mtime",
+      "last_update_kst": "2026-06-27T18:11:47.696506+09:00",
       "age_hours": 0.03,
       "status": "fresh",
       "line_count": 2214,
@@ -49,8 +51,9 @@
       "type": "json_collected_at",
       "max_fresh_hours": 192.0,
       "exists": true,
+      "ts_source": "content",
       "last_update_kst": "2026-06-22T00:09:41+09:00",
-      "age_hours": 135.34,
+      "age_hours": 138.07,
       "status": "fresh",
       "diagnostics": {
         "ok": true,
@@ -72,11 +75,12 @@
       "type": "json_collected_at",
       "max_fresh_hours": 1.0,
       "exists": true,
-      "last_update_kst": "2026-06-27T15:29:52+09:00",
+      "ts_source": "content",
+      "last_update_kst": "2026-06-27T18:13:09+09:00",
       "age_hours": 0.01,
       "status": "fresh",
       "diagnostics": {
-        "elapsed_s": 28.98,
+        "elapsed_s": 28.76,
         "used_prev_snapshot": []
       }
     },
@@ -87,8 +91,9 @@
       "type": "json_collected_at",
       "max_fresh_hours": 26.0,
       "exists": true,
+      "ts_source": "content",
       "last_update_kst": "2026-06-26T19:00:12+09:00",
-      "age_hours": 20.5,
+      "age_hours": 23.22,
       "status": "fresh",
       "diagnostics": {
         "ok": true,
@@ -106,7 +111,8 @@
       "type": "jsonl_runtime",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-06-27T15:28:30.726960+09:00",
+      "ts_source": "mtime",
+      "last_update_kst": "2026-06-27T18:11:47.591509+09:00",
       "age_hours": 0.03,
       "status": "fresh",
       "line_count": 463,
@@ -117,6 +123,114 @@
         "fail_triggers": [],
         "yfinance_failure_rate": 0.0
       }
+    },
+    {
+      "key": "insider_kr",
+      "label": "내부자거래 KR (DART)",
+      "path": "data/insider_trades.json",
+      "type": "json_content",
+      "max_fresh_hours": 72.0,
+      "exists": true,
+      "ts_source": "content",
+      "last_update_kst": "2026-06-27T16:12:16.311059+09:00",
+      "age_hours": 2.02,
+      "status": "fresh"
+    },
+    {
+      "key": "insider_us",
+      "label": "내부자거래 US (Form4)",
+      "path": "data/us_insider_trades.json",
+      "type": "json_content",
+      "max_fresh_hours": 72.0,
+      "exists": true,
+      "ts_source": "content",
+      "last_update_kst": "2026-06-27T16:25:31.645080+09:00",
+      "age_hours": 1.8,
+      "status": "fresh"
+    },
+    {
+      "key": "stock_report_kr",
+      "label": "종목 리포트 KR",
+      "path": "data/stock_report_public.json",
+      "type": "json_content",
+      "max_fresh_hours": 72.0,
+      "exists": true,
+      "ts_source": "content",
+      "last_update_kst": "2026-06-27T13:15:08.233942+09:00",
+      "age_hours": 4.98,
+      "status": "fresh"
+    },
+    {
+      "key": "stock_report_us",
+      "label": "종목 리포트 US",
+      "path": "data/us_stock_report_public.json",
+      "type": "json_content",
+      "max_fresh_hours": 72.0,
+      "exists": true,
+      "ts_source": "content",
+      "last_update_kst": "2026-06-27T11:53:18.897824+09:00",
+      "age_hours": 6.34,
+      "status": "fresh"
+    },
+    {
+      "key": "flow_kr",
+      "label": "외국인·기관 수급",
+      "path": "data/stock_flow_5d.json",
+      "type": "json_content",
+      "max_fresh_hours": 72.0,
+      "exists": true,
+      "ts_source": "content",
+      "last_update_kst": "2026-06-27T13:25:26.938833+09:00",
+      "age_hours": 4.8,
+      "status": "fresh"
+    },
+    {
+      "key": "forensics_kr",
+      "label": "공시 forensics",
+      "path": "data/disclosure_forensics.json",
+      "type": "json_content",
+      "max_fresh_hours": 72.0,
+      "exists": true,
+      "ts_source": "content",
+      "last_update_kst": "2026-06-27T13:21:57.100013+09:00",
+      "age_hours": 4.86,
+      "status": "fresh"
+    },
+    {
+      "key": "disclosure_feed_kr",
+      "label": "공시 피드 KR",
+      "path": "data/public_disclosure_feed.json",
+      "type": "json_content",
+      "max_fresh_hours": 72.0,
+      "exists": true,
+      "ts_source": "content",
+      "last_update_kst": "2026-06-27T13:15:03.187053+09:00",
+      "age_hours": 4.98,
+      "status": "fresh"
+    },
+    {
+      "key": "broker_guide",
+      "label": "증권사 가이드",
+      "path": "data/broker_guide.json",
+      "type": "json_content",
+      "max_fresh_hours": 960.0,
+      "exists": true,
+      "ts_source": "content",
+      "last_update_kst": "2026-06-27T17:29:13.711973+09:00",
+      "age_hours": 0.74,
+      "status": "fresh"
+    },
+    {
+      "key": "market_warnings",
+      "label": "시장경보 (투자주의/경고)",
+      "path": "data/market_warnings.json",
+      "type": "json_content",
+      "max_fresh_hours": 72.0,
+      "exists": true,
+      "ts_source": "content",
+      "last_update_kst": "2026-06-20T07:27:37.366681+09:00",
+      "age_hours": 178.77,
+      "status": "missing"
     }
   ],
   "schema_version": "v0"
