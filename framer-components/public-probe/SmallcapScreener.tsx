@@ -143,7 +143,38 @@ export default function SmallcapScreener(props: { width?: number; dark?: boolean
   }
 
   if (err && !data) return <div style={shell}><div style={{ fontSize: 13, color: C.faint, fontWeight: 600, padding: 20, textAlign: "center" }}>로드 실패 — {err}</div></div>
-  if (!data) return <div style={shell}><div style={{ fontSize: 13, color: C.faint, fontWeight: 600, padding: 30, textAlign: "center" }}>불러오는 중…</div></div>
+  if (!data) {
+    const skB = isDark ? "#242830" : "#e9edf1"
+    const skH = isDark ? "#2e333c" : "#f3f5f7"
+    const bar = (w: any, h: number, r = 8) => ({
+      width: w, height: h, borderRadius: r, background: skB, flexShrink: 0,
+      backgroundImage: "linear-gradient(90deg, " + skB + " 25%, " + skH + " 37%, " + skB + " 63%)",
+      backgroundSize: "800px 100%", animation: "vssShimmer 1.4s ease-in-out infinite",
+    })
+    return (
+      <div style={shell}>
+        <style>{"@keyframes vssShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}"}</style>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "2px 4px 10px" }}>
+          <div style={bar(120, 20, 6)} /><div style={bar(48, 13, 6)} />
+        </div>
+        <div style={{ display: "flex", gap: 6, paddingBottom: 10 }}>
+          {[64, 52, 48, 56].map((w, i) => <div key={i} style={bar(w, 30, 10)} />)}
+        </div>
+        <div style={{ ...bar("100%", 38, 12), marginBottom: 8 }} />
+        <div style={{ display: "flex", gap: 6, paddingBottom: 10 }}>
+          {[44, 48, 52, 40].map((w, i) => <div key={i} style={bar(w, 26, 9)} />)}
+        </div>
+        <div style={{ background: C.card, borderRadius: 16, padding: "12px 14px" }}>
+          {[0, 1, 2, 3, 4, 5].map((j) => (
+            <div key={j} style={{ padding: "10px 0", borderTop: j === 0 ? "none" : "1px solid " + C.line }}>
+              <div style={{ ...bar(140, 14, 5), marginBottom: 6 }} />
+              <div style={bar("70%", 11, 4)} />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   const shown = rows.slice(0, (page + 1) * PAGE)
   const reportPath = props.reportPath || "/stock"
