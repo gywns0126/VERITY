@@ -52,7 +52,7 @@ const DARK = {
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
-const PANEL_FACTS = ["시가총액", "PER", "PBR", "ROE", "부채비율", "배당수익률", "EPS", "Altman-Z"]
+const PANEL_FACTS = ["시가총액", "PER", "PBR", "ROE", "부채비율", "D/E", "영업이익률", "순이익률", "Altman-Z"]   // 부채비율=국장 / D/E=미장(키 상이, null 아닌 쪽만 노출). 배당수익률·EPS=양쪽 0% 소스부재라 제거
 const DILUTIVE = ["유상증자", "전환사채(CB)", "신주인수권부사채(BW)"]
 
 function num(s: any): number | null {
@@ -242,7 +242,7 @@ const COLS: { key: string; label: string; align: string; w: number; sort: boolea
     { key: "sector", label: "섹터", align: "left", w: 96, sort: true },
 ]
 const TABLE_MIN = 780
-const RANGE_METRICS = ["PER", "PBR", "ROE", "부채비율", "배당수익률"]
+const RANGE_METRICS = ["PER", "PBR", "ROE", "부채비율", "D/E"]   // D/E=미장 부채 필터(부채비율은 국장만). 배당수익률=소스부재 제거
 
 function metricNum(s: any, key: string): number | null {
     const f = s.facts || {}
