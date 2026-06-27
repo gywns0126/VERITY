@@ -285,6 +285,26 @@ def collect_data_pipeline_health() -> Dict[str, Any]:
     }
 
 
+def _alert_egregious_freezes(items: list) -> None:
+    """🚨 egregious freeze(>5일급) = telegram 1회. 2026-06-27 PM 결정(insider/market_warnings 7일 silent rot 재발 차단).
+    트리거 = status 'missing'(age > 2×cadence) + ts_source 'content'(mtime unreliable 제외).
+    cadence-aware 라 주말 휴장(금→월 ~64h) 무관 + broker_guide 월간(80일에야 missing) false-fire 0.
+    dedupe(8h TTL) + 라벨만(age 제외) → stable 메시지 → spam 0. quiet hours 존중(야간 묵음). telegram 미설정/실패 = graceful."""
+    frozen = [it for it in items if it.get("status") == "missing" and it.get("ts_source") == "content"]
+    if not frozen:
+        return
+    try:
+        from api.notifications.telegram import send_message
+        labels = ", ".join(sorted(str(it.get("label") or it.get("key")) for it in frozen))
+        send_message(
+            "🔴 데이터 freeze 감지 (정상 주기 2배 초과 미갱신): " + labels
+            + "\n빌더 step env / 워크플로 점검 필요 (data_pipeline_health).",
+            dedupe=True,
+        )
+    except Exception as e:  # noqa: BLE001 — 알림 실패가 모니터를 깨뜨리지 않도록
+        print(f"[data_pipeline_health] freeze alert skip: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+
+
 def write_data_pipeline_health(*, output_path: Optional[Path] = None) -> Dict[str, Any]:
     """진단 + 파일 적재. silent 실패 차단 (try/finally + stderr)."""
     out = output_path or OUTPUT_PATH
@@ -306,6 +326,8 @@ def write_data_pipeline_health(*, output_path: Optional[Path] = None) -> Dict[st
             f"[data_pipeline_health] FAIL — {type(e).__name__}: {e}",
             file=sys.stderr, flush=True,
         )
+    # 파일 적재 후 egregious freeze 알림 (write 실패와 무관하게 시도, 알림 자체도 graceful)
+    _alert_egregious_freezes(health.get("items", []))
     return health
 
 
