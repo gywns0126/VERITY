@@ -155,7 +155,7 @@ class TestBatch:
 
     @patch("api.collectors.dart_fundamentals._fetch_one_dart_fundamentals")
     def test_batch_calls_each_ticker(self, mock_one):
-        mock_one.side_effect = lambda t, y: {
+        mock_one.side_effect = lambda t, y, reprt="11011": {
             "per": 10.0, "pbr": 1.0, "roe": 12.0,
             "debt_ratio": 25.0, "op_margin": 18.0,
             "report_date": y, "source": "DART+yfinance",
@@ -167,7 +167,7 @@ class TestBatch:
 
     @patch("api.collectors.dart_fundamentals._fetch_one_dart_fundamentals")
     def test_batch_handles_exception_gracefully(self, mock_one):
-        def raise_for_one(t, y):
+        def raise_for_one(t, y, reprt="11011"):
             if t == "999999":
                 raise RuntimeError("DART API down")
             return {"per": 10.0, "pbr": 1.0, "roe": None, "debt_ratio": None,
