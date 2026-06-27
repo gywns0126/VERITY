@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
  * 관심종목 — VERITY 공개 터미널 (골든구스) 우측 상시 사이드바.
  *
  * 저장 = localStorage["verity_watchlist"] = [{ticker,name,market}] (로그인 불요·마찰 0).
- * 검색 universe = universe_search_kr.json (전 종목 ~3.5천, nav/리포트/결정 검색과 동일 소스. 2026-06-27 stock_report_public→교체). 가격/등락 = /api/stock 라이브(best-effort).
+ * 검색 universe = universe_search.json (통합 KR+US ~8.4천, nav/리포트/결정 검색과 동일 단일 소스. 2026-06-27 통일 — 괴리 제거). 가격/등락 = /api/stock 라이브(best-effort).
  * 저장 시 "verity-watchlist-changed" 이벤트 → PublicDisclosureFeed 가 즉시 관심종목 핀 갱신(같은 페이지).
  * 행 탭 → 종목 리포트(stockPath?q=ticker). RULE 7 — 가격·등락(외부 사실)만, 점수·추천 0.
  * 🚨 내 관점 통합(2026-06-21) — localStorage `verity_thesis_v1`(PublicThesisNote) 읽어 각 종목에 관점 배지(강세/관망/약세).
@@ -39,7 +39,7 @@ interface Props {
     stockPath: string
     dark: boolean
 }
-const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search_kr.json"
+const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 
 const SEED = [

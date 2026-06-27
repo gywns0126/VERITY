@@ -10,14 +10,14 @@ import { createPortal } from "react-dom"
  * 🚨 포커스(빈 검색어) = 최근 본 종목(localStorage) + "지금 거래 활발"(거래대금 상위, trending_kr.json) 노출.
  *   RULE 7 / held-2027 / 법률: "인기·추천"이 아니라 사실(거래대금/등락). "이런 종목 어때요" 류 추천 어조 금지.
  * 종목 공유 = ?q + localStorage `verity_last_ticker`/`verity_recent_tickers` 기록. nav 자체는 Framer 네이티브.
- * 검색 universe(KR) = universe_search_kr.json (전 종목 ~3.5천, 2026-06-27 stock_report_public→교체). US = us_stock_report_public 유지(dual load).
+ * 검색 universe = universe_search.json (통합 KR+US ~8.4천, 2026-06-27 검색 4종 단일 소스 통일 — 괴리 제거). US 별도 dual-load 폐기(통합 파일에 포함).
  * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
  */
 
 const LIGHT = { ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", vg: "#0ca678", vt: "#6c5ce7", vtS: "#f0edff", field: "#f2f4f6", card: "#ffffff", bg: "#f2f4f6", line: "#f0f1f3", up: "#f04452", down: "#3182f6" }
 const DARK = { ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", vg: "#7fffa0", vt: "#a99bff", vtS: "#241f3a", field: "#0f1318", card: "#171c23", bg: "#0f1318", line: "#222730", up: "#f04452", down: "#5b9bff" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search_kr.json"
+const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
 const DEF_TRENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/trending_kr.json"
 const LAST_TK_KEY = "verity_last_ticker"
 const RECENTS_KEY = "verity_recent_tickers"
@@ -110,11 +110,11 @@ export default function PublicStockSearch(props: Props) {
         return () => ro.disconnect()
     }, [])
 
-    /* 유니버스 로드 — KR + US 동시(국장·미장 통합 검색). 2026-06-23. */
+    /* 유니버스 로드 — 통합 universe_search.json(KR+US 단일). usStockUrl=레거시(통합 파일에 US 포함, 미사용). */
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        const urls = [stockUrl, usStockUrl].filter(Boolean)
+        const urls = [stockUrl].filter(Boolean)
         Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
             .then((docs) => {
                 if (!alive) return

@@ -99,6 +99,9 @@ interface Props {
     dark: boolean
 }
 const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
+// 검색 universe — 통합 KR+US ~8.4천(검색창 4종 단일 소스). 리포트 DATA(아래 DEFAULT_URL 등)와 분리:
+// 검색은 전 universe, 리포트는 보유 종목만 → 미보유 종목 선택 시 graceful "준비중"(엉뚱 종목 폴백 차단).
+const UNIVERSE_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
 const DEFAULT_FLOW = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json"
 const DEFAULT_FORENSICS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/disclosure_forensics.json"
 const DEFAULT_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/insider_trades.json"
@@ -597,7 +600,8 @@ export default function PublicStockReport(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [list, setList] = useState<any[]>(SAMPLE)
+    const [list, setList] = useState<any[]>(SAMPLE)            // 리포트 DATA 보유 종목(facts/peer/flow)
+    const [searchList, setSearchList] = useState<any[]>(SAMPLE) // 검색 universe(전 종목 KR+US, ticker/name)
     const [flowMap, setFlowMap] = useState<Record<string, any[]>>(SAMPLE_FLOW)
     const [forensicsMap, setForensicsMap] = useState<Record<string, any>>(SAMPLE_FORENSICS)
     const [insiderMap, setInsiderMap] = useState<Record<string, any>>(SAMPLE_INSIDER)
@@ -701,6 +705,16 @@ export default function PublicStockReport(props: Props) {
         return () => { alive = false }
     }, [stockUrl, usStockUrl, usSmallcapUrl, onCanvas])
 
+    /* 검색 universe 로드 — 통합 universe_search.json(전 종목 KR+US). 리포트 DATA(list)와 별개. */
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        fetch(UNIVERSE_URL, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a) && a.length) setSearchList(a) })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [onCanvas])
+
     useEffect(() => {
         if (onCanvas || !flowUrl) return
         let alive = true
@@ -767,7 +781,14 @@ export default function PublicStockReport(props: Props) {
         return () => { alive = false }
     }, [selTicker, base, onCanvas])
 
-    const s = useMemo(() => list.find((x) => x.ticker === selTicker) || list[0] || {}, [list, selTicker])
+    const s = useMemo(() => {
+        const hit = list.find((x) => x.ticker === selTicker)
+        if (hit) return hit
+        // 리포트 미보유 종목 = universe stub(올바른 ticker/name) — list[0] 엉뚱 종목 폴백 차단. _noReport=graceful 안내.
+        const u = searchList.find((x) => String(x.ticker) === String(selTicker))
+        if (u) return { ticker: u.ticker, name: u.name, market: u.market, _noReport: true }
+        return list[0] || {}
+    }, [list, searchList, selTicker])
     const isUsTicker = useMemo(() => !/^\d{6}$/.test(String(s.ticker || "")), [s.ticker])  // 6자리=KR / 그 외=US
     // 로딩 중(실데이터 미도착 or 선택 종목 미발견)엔 삼성전자 샘플 폴백 대신 스켈레톤. 160ms 지연 게이트=즉시 로드 깜빡임 차단(토스식).
     const found = useMemo(() => list.some((x) => String(x.ticker) === String(selTicker)), [list, selTicker])
@@ -897,8 +918,8 @@ export default function PublicStockReport(props: Props) {
     const matches = useMemo(() => {
         const q = query.trim().toLowerCase()
         if (!q) return []
-        return list.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").toLowerCase().includes(q) || String(x.name_ko || "").includes(q)).slice(0, 15)
-    }, [query, list])
+        return searchList.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").toLowerCase().includes(q) || String(x.name_ko || "").includes(q)).slice(0, 15)
+    }, [query, searchList])
 
     const facts = s.facts || {}
     const fnote = s.facts_note || {}
@@ -1222,7 +1243,7 @@ export default function PublicStockReport(props: Props) {
                     <circle cx="11" cy="11" r="7" />
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
-                <input style={inputStyle} placeholder={`종목 검색 (이름·코드) · 전 종목 ${list.length}개`}
+                <input style={inputStyle} placeholder={`종목 검색 (이름·코드) · 전 종목 ${searchList.length}개`}
                     value={query} onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => { setRecents(readRecents()); setFocused(true) }} onBlur={() => setTimeout(() => setFocused(false), 150)} />
                 {query && (
@@ -1284,6 +1305,13 @@ export default function PublicStockReport(props: Props) {
                     </div>
                 )}
             </div>
+
+            {/* 리포트 미보유 종목(검색 universe엔 있으나 정밀 리포트 없음) — graceful 안내. 시세는 아래 라이브. */}
+            {s._noReport && !onCanvas && (
+                <div style={{ background: C.vtS, borderRadius: 12, padding: "11px 14px", marginBottom: 12, fontSize: 12.5, fontWeight: 600, color: C.sub, lineHeight: 1.5 }}>
+                    아직 정밀 리포트가 준비되지 않은 종목이에요. 실시간 시세만 표시돼요 — 리포트는 순차 확대 중이에요.
+                </div>
+            )}
 
             {/* 헤더 (경보 시 종목명까지 감싸는 토스풍 틴트 박스 — 외곽선 없음) */}
             <div style={headerBox}>

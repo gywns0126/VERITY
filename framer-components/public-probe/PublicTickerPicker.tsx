@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react"
 /**
  * 종목 선택기 (미니) — 현재 페이지의 URL `?q=` 를 바꿔 같은 페이지의 결정 컴포넌트(DecisionPanel/ThesisNote/Report)를 갱신.
  * stockPath 커스텀 prop 불요(MCP 한계 우회) — window.location.pathname 그대로 + ?q=ticker 로 같은 페이지 머묾.
- * 검색 universe = universe_search_kr.json (전 종목 ~3.5천, nav/리포트/관심종목 검색과 동일 소스. 2026-06-27 stock_report_public→교체).
+ * 검색 universe = universe_search.json (통합 KR+US ~8.4천, nav/리포트/관심종목 검색과 동일 단일 소스. 2026-06-27 통일 — 괴리 제거).
  * 종목 공유 = ?q 1순위 + localStorage `verity_recent_tickers`/`verity_last_ticker`(nav 검색과 공유 — 한 곳서 고르면 최근목록 반영).
  * RULE 7 — 종목 검색 도구일 뿐, 점수·추천 0.
  */
@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react"
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", vt: "#6c5ce7", vtS: "#f0edff" }
 const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34", vt: "#a99bff", vtS: "#241f3a" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search_kr.json"
+const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
 const LAST_TK_KEY = "verity_last_ticker"
 const RECENTS_KEY = "verity_recent_tickers"
 
