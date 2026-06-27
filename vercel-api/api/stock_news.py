@@ -252,3 +252,5 @@ class handler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(json.dumps({"error": "서버 오류", "items": []}, ensure_ascii=False).encode("utf-8"))
+
+# deploy: 짬뽕 엔드포인트(news×disclosure) 활성화 — HEAD가 vercel-api 변경이라야 ignoreCommand 통과(RULE2)
