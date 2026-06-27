@@ -132,6 +132,84 @@ def _load_universe_caps() -> Dict[str, Dict[str, float]]:
     return out
 
 
+# 동종업계 비교(peer) 메트릭 — (facts 라벨, 접미사, 소수자릿수). KR PEER_METRICS 의 美 짝.
+# 섹터 = business_ko(SIC 한글 업종, sectorOf US 와 동일 grouping). N≥5 섹터-지표만 중앙값.
+US_PEER_METRICS = [("PER", "", 1), ("PBR", "", 1), ("ROE", "%", 1), ("D/E", "", 2), ("영업이익률", "%", 1)]
+
+
+def _median(vals: List[float]) -> Optional[float]:
+    vs = sorted(v for v in vals if v is not None)
+    n = len(vs)
+    if n == 0:
+        return None
+    mid = n // 2
+    return vs[mid] if n % 2 else (vs[mid - 1] + vs[mid]) / 2.0
+
+
+def _us_sector_medians(stocks: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """섹터(business_ko)별 PER/PBR/ROE/D-E/영업이익률 중앙값 + N + 분포(백분위용). 사실 통계."""
+    buckets: Dict[str, Dict[str, List[float]]] = {}
+    for s in stocks:
+        sec = s.get("_sector")
+        pm = s.get("_pm") or {}
+        if not sec:
+            continue
+        b = buckets.setdefault(sec, {m[0]: [] for m in US_PEER_METRICS})
+        for label, _suf, _dg in US_PEER_METRICS:
+            if label in pm:
+                b[label].append(pm[label])
+    out: Dict[str, Dict[str, Any]] = {}
+    for sec, b in buckets.items():
+        med: Dict[str, float] = {}
+        ns: Dict[str, int] = {}
+        dist: Dict[str, List[float]] = {}
+        for label, _suf, _dg in US_PEER_METRICS:
+            vals = b[label]
+            m = _median(vals)
+            if m is not None and len(vals) >= 5:   # N<5 섹터-지표 중앙값 무의미
+                med[label] = round(m, 2)
+                ns[label] = len(vals)
+                dist[label] = sorted(vals)
+        if med:
+            out[sec] = {"median": med, "ns": ns, "dist": dist}
+    return out
+
+
+def _us_peer(s: Dict[str, Any], medians: Dict[str, Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    sec = s.get("_sector")
+    pm = s.get("_pm") or {}
+    sm = medians.get(sec)
+    if not sec or not sm:
+        return None
+    rows = []
+    n_max = 0
+    for label, suf, dg in US_PEER_METRICS:
+        med = sm["median"].get(label)
+        if med is None:
+            continue
+        fv = pm.get(label)
+        if fv is None:
+            continue
+        ds = sm.get("dist", {}).get(label)
+        pct = round(100.0 * sum(1 for x in ds if x < fv) / len(ds)) if ds else None
+        rows.append({
+            "key": label,
+            "value": (_num(fv, dg) or "") + suf,
+            "median": (_num(med, dg) or "") + suf,
+            "vs": "above" if fv > med else "below" if fv < med else "equal",
+            "pct": pct,
+        })
+        n_max = max(n_max, sm.get("ns", {}).get(label, 0))
+    if not rows:
+        return None
+    return {
+        "sector": sec,
+        "n": n_max,
+        "rows": rows,
+        "note": "같은 섹터(SIC 업종) 종목 중앙값과 비교 · PER/PBR=시총÷SEC 재무 자체계산 — 자체 등급 아님",
+    }
+
+
 def _latest_annual(series: Any) -> Optional[float]:
     """series_annual[key] (list of {end,fy,val}) → 가장 최근 end(동률 시 최신 fy)의 val. 없으면 None."""
     if not isinstance(series, list) or not series:
@@ -186,6 +264,16 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
                 fin: Optional[Dict[str, Optional[float]]] = None) -> Dict[str, Any]:
     facts: Dict[str, str] = {}
     fnote: Dict[str, str] = {}
+    pm: Dict[str, float] = {}   # peer 중앙값 산정용 numeric (가드 통과분만)
+
+    def _capn(label: str, raw: Any, bound: float):
+        try:
+            x = float(raw)
+        except (TypeError, ValueError):
+            return
+        if x != x or abs(x) > bound:
+            return
+        pm[label] = x
 
     def _put(label: str, raw: Any, bound: float, na_reason: str,
              signed: bool = False, gross_cap: bool = False):
@@ -260,11 +348,17 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
         if 0 < per <= 1000:  # 음수(적자)·극단치(분모 미미) 제외
             facts["PER"] = _num(per, 1)
             fnote["PER"] = "시가총액 ÷ 최근 연간 순이익(자체계산)"
+            pm["PER"] = per
     if mc_f and eq and eq > 0:
         pbr = mc_f / eq
         if 0 < pbr <= 100:
             facts["PBR"] = _num(pbr, 1)
             fnote["PBR"] = "시가총액 ÷ 자기자본(자체계산)"
+            pm["PBR"] = pbr
+    # peer 중앙값용 numeric 캡처 (facts 와 동일 가드 — ROE/D-E/영업이익률)
+    _capn("ROE", row.get("roe_pct"), _ROE_MAX)
+    _capn("D/E", row.get("debt_to_equity"), _DE_MAX)
+    _capn("영업이익률", row.get("operating_margin_pct"), _MARGIN_MAX)
     tv = _usd_compact(cap.get("adv"))
     if tv:
         header["trading_value"] = tv + "/일"
@@ -278,10 +372,13 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
         "header": header or None,
         "facts": facts,
         "facts_note": fnote,
+        "peer": None,        # main 2-pass 에서 섹터 중앙값 부착
         "disclosures": [],   # 8-K 는 /us/feed (us_disclosure_feed_builder) 담당
         "ownership": None,
         "consensus": None,
         "calendar": [],
+        "_pm": pm,           # peer 산정용 temp (main 에서 제거)
+        "_sector": business_ko or None,
     }
 
 
@@ -321,6 +418,14 @@ def main() -> int:
         stocks = [build_stock(r, meta_by_ticker.get(r.get("ticker"), {}), caps, sic_ko, name_ko,
                               _load_fin_latest(r.get("ticker")))
                   for r in rows if r.get("ticker")]
+        # 동종업계 비교(peer) — 2-pass: 섹터 중앙값 산정 → 종목별 부착. KR stock_report 정합.
+        medians = _us_sector_medians(stocks)
+        for s in stocks:
+            pr = _us_peer(s, medians)
+            if pr:
+                s["peer"] = pr
+            s.pop("_pm", None)
+            s.pop("_sector", None)
         # ROE 큰 순 (사실 정렬)
         def _roe(s):
             v = s.get("facts", {}).get("ROE", "")
