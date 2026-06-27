@@ -388,7 +388,8 @@ export default function PublicHoldingsTab(props: Props) {
 
                     {Tabs}
 
-                    {view === "holdings" ? (
+                    {(() => {
+                    const content = view === "holdings" ? (
                         <>
                             {!isDemo && showAdd && (
                                 <div style={{ background: C.card, borderRadius: 16, padding: "14px 15px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -533,7 +534,21 @@ export default function PublicHoldingsTab(props: Props) {
                                 세율·공제는 2026 시행값(사실). 추정·관측 보조용 — 실제 납세 판단은 세무사 확인. 절세 자문 아님.
                             </div>
                         </>
-                    )}
+                    )
+                    // 데모(미로그인) = 네이버 웨일식 브라우저 창 목업 안에 미리보기(평면, 3D 없음). pointerEvents none.
+                    return isDemo ? (
+                        <div style={{ marginTop: 14, borderRadius: 16, border: `1px solid ${C.line}`, boxShadow: "0 6px 16px rgba(0,0,0,0.08)", overflow: "hidden", background: C.card }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 13px", borderBottom: `1px solid ${C.line}`, background: isDark ? "#1c222b" : "#f7f8fa" }}>
+                                <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#ff5f57", flexShrink: 0 }} />
+                                <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#febc2e", flexShrink: 0 }} />
+                                <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#28c840", flexShrink: 0 }} />
+                                <div style={{ flex: 1, minWidth: 0, margin: "0 6px", background: C.bg, borderRadius: 7, padding: "5px 12px", fontSize: 11.5, color: C.faint, fontWeight: 600, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>verity-terminal.com/holdings</div>
+                                <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 6, padding: "3px 8px" }}>예시</span>
+                            </div>
+                            <div style={{ padding: narrow ? "0 12px 14px" : "0 16px 16px", pointerEvents: "none" }}>{content}</div>
+                        </div>
+                    ) : content
+                    })()}
                 </>
             )}
         </div>
