@@ -308,7 +308,15 @@ export default function PublicHoldingsTab(props: Props) {
                             {loginUrl && (
                                 <a href={loginUrl} style={{ display: "inline-block", marginTop: 14, background: C.vg, color: C.onAccent, borderRadius: 10, padding: "11px 20px", fontSize: 14, fontWeight: 800, textDecoration: "none" }}>로그인하고 시작하기</a>
                             )}
-                            <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 12 }}>아래는 예시 화면이에요 — 로그인하면 내 종목으로 바뀌어요.</div>
+                        </div>
+                    )}
+
+                    {/* 미리보기 구분선 — 데모 = 아래 샘플을 '예시'로 명확 프레임 */}
+                    {isDemo && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 2px 0" }}>
+                            <div style={{ flex: 1, height: 1, background: C.line }} />
+                            <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 700, letterSpacing: "0.2px" }}>미리보기 (예시)</span>
+                            <div style={{ flex: 1, height: 1, background: C.line }} />
                         </div>
                     )}
 
@@ -334,9 +342,11 @@ export default function PublicHoldingsTab(props: Props) {
                         </div>
                     )}
 
+                    {/* 미리보기 콘텐츠 — 데모면 흐리게 + 비활성(순수 예시, 클릭 안 됨) */}
+                    <div style={{ opacity: isDemo ? 0.6 : 1, pointerEvents: isDemo ? "none" : "auto" }}>
                     {/* 요약 */}
                     <div style={{ background: C.card, borderRadius: 16, padding: "18px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }}>
-                        <div style={{ fontSize: 12, color: C.faint, fontWeight: 700 }}>총 평가금액{isDemo ? " · 예시" : ""}</div>
+                        <div style={{ fontSize: 12, color: C.faint, fontWeight: 700 }}>총 평가금액</div>
                         <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: "-1px", margin: "3px 0" }}>{money(totalVal)}</div>
                         <div style={{ fontSize: 14, fontWeight: 800, color: plColor(totalPl) }}>
                             {(totalPl > 0 ? "+" : "") + money(totalPl)} · {(totalPlPct > 0 ? "+" : "") + totalPlPct.toFixed(1)}%
@@ -380,6 +390,7 @@ export default function PublicHoldingsTab(props: Props) {
 
                     <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 14, lineHeight: 1.5 }}>
                         종목 누르면 상세 리포트 · 평가손익 = 현재가 × 보유수량 − 입력 평단 (단순 계산·사실)
+                    </div>
                     </div>
                 </>
             )}
