@@ -111,6 +111,8 @@ interface Props {
     supabaseAnonKey: string
     redirectUrl: string
     dark: boolean
+    termsUrl?: string
+    privacyUrl?: string
 }
 const DEFAULT_SUPABASE_URL = "https://lykqebdcurreppowulsl.supabase.co"
 const DEFAULT_SUPABASE_ANON_KEY = ""
@@ -120,7 +122,7 @@ const DEFAULT_SUPABASE_ANON_KEY = ""
  * @framerSupportedLayoutHeight any
  */
 export default function GoldenGooseAuth(props: Props) {
-    const { supabaseUrl, supabaseAnonKey, redirectUrl, dark } = props
+    const { supabaseUrl, supabaseAnonKey, redirectUrl, dark, termsUrl, privacyUrl } = props
     const url = (supabaseUrl || DEFAULT_SUPABASE_URL).replace(/\/+$/, "")
     const anonKey = supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY
 
@@ -142,6 +144,7 @@ export default function GoldenGooseAuth(props: Props) {
     const [session, setSession] = useState<SupaSession | null>(null)
     const [busy, setBusy] = useState(false)
     const [err, setErr] = useState("")
+    const [agreed, setAgreed] = useState(false)
 
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
@@ -210,6 +213,7 @@ export default function GoldenGooseAuth(props: Props) {
 
     const login = () => {
         if (busy) return
+        if (!agreed) { setErr("이용약관·개인정보처리방침(국외이전 포함) 동의가 필요합니다"); return }
         setErr("")
         setBusy(true)
         const back = (redirectUrl || "").trim() || (typeof window !== "undefined" ? window.location.origin + window.location.pathname : "")
@@ -254,17 +258,27 @@ export default function GoldenGooseAuth(props: Props) {
 
     return (
         <div style={wrap}>
-            <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "stretch", gap: 4 }}>
+            <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "stretch", gap: 7 }}>
                 <button onClick={login} disabled={busy}
                     style={{
                         display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9,
-                        border: `1px solid ${C.line}`, background: C.card, color: C.ink, cursor: busy ? "default" : "pointer",
+                        border: `1px solid ${C.line}`, background: C.card, color: C.ink, cursor: (busy || !agreed) ? "default" : "pointer",
                         fontFamily: FONT, fontSize: 13.5, fontWeight: 700, padding: "9px 16px", borderRadius: 12,
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)", opacity: busy ? 0.6 : 1, whiteSpace: "nowrap",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)", opacity: (busy || !agreed) ? 0.55 : 1, whiteSpace: "nowrap",
                     }}>
                     <GoogleG size={18} />
                     {busy ? "이동 중…" : "구글로 로그인"}
                 </button>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 6, cursor: "pointer", fontSize: 11, color: C.sub, fontWeight: 600, lineHeight: 1.45, maxWidth: 270 }}>
+                    <input type="checkbox" checked={agreed} onChange={(e) => { setAgreed(e.target.checked); if (e.target.checked) setErr("") }}
+                        style={{ marginTop: 1, accentColor: C.vg, cursor: "pointer", flexShrink: 0 }} />
+                    <span>
+                        {termsUrl ? <a href={termsUrl} target="_blank" rel="noopener noreferrer" style={{ color: C.vg, textDecoration: "underline" }}>이용약관</a> : "이용약관"}
+                        {" · "}
+                        {privacyUrl ? <a href={privacyUrl} target="_blank" rel="noopener noreferrer" style={{ color: C.vg, textDecoration: "underline" }}>개인정보처리방침</a> : "개인정보처리방침"}
+                        {" 에 동의하며, 회원정보의 국외 이전(미국)에 동의합니다."}
+                    </span>
+                </label>
                 {err && <span style={{ fontSize: 11, color: "#f04452", fontWeight: 600 }}>{err}</span>}
             </div>
         </div>
@@ -276,4 +290,6 @@ addPropertyControls(GoldenGooseAuth, {
     supabaseAnonKey: { type: ControlType.String, title: "Supabase Anon Key", defaultValue: DEFAULT_SUPABASE_ANON_KEY },
     redirectUrl: { type: ControlType.String, title: "Redirect URL", defaultValue: "", placeholder: "비우면 현재 페이지로 복귀" },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    termsUrl: { type: ControlType.String, title: "이용약관 URL", defaultValue: "/terms" },
+    privacyUrl: { type: ControlType.String, title: "개인정보처리방침 URL", defaultValue: "/privacy" },
 })
