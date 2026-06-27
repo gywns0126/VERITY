@@ -307,7 +307,7 @@ export default function PublicHoldingsTab(props: Props) {
     // 커스텀 chevron — OS 기본 화살표 제거(appearance none), 브랜드 드롭다운 룩. 색=테마 faint.
     const chevronUrl = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='${encodeURIComponent(C.faint)}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`
     const selStyle: CSSProperties = {
-        ...inputStyle, cursor: "pointer", paddingRight: 30,
+        ...inputStyle, cursor: "pointer", paddingRight: 30, border: "none",
         appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
         backgroundImage: chevronUrl, backgroundRepeat: "no-repeat", backgroundPosition: "right 11px center",
     }
