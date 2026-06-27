@@ -367,7 +367,13 @@ jobs:
       - name: 공개 시장경보 빌드 (KRX 투자주의/경고/위험·단기과열·관리종목)
         # recommendations KR → KIS inquire-price output 경보 플래그 → data/market_warnings.json.
         # 🚨 KISBroker(cache_only=True) — 신규 토큰 발급 절대 금지(RULE 1), 공유 토큰 read 전용. RULE7 = KRX 공식 지정 사실만.
+        # 🚨 2026-06-27 P0 fix: KIS env 누락 → cache app_key mismatch(env empty) → 공유토큰 read 실패 → 전종목 skip →
+        #   market_warnings 6/20~6/27 동결(7.4일, 경보 0건). cache_only 라 발급 0(RULE1 안전), env 는 캐시키 매칭용. insider DART 누락과 동일 클래스.
         continue-on-error: true
+        env:
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
         run: python -m api.builders.market_warnings_public_builder
 
       - name: 공개 내부자거래 빌드 (DART elestock, 美 Form4 KR판)

@@ -199,6 +199,7 @@ SOURCES = [
     {"key": "forensics_kr", "label": "공시 forensics", "path": "data/disclosure_forensics.json", "type": "json_content", "max_fresh_hours": 72.0},
     {"key": "disclosure_feed_kr", "label": "공시 피드 KR", "path": "data/public_disclosure_feed.json", "type": "json_content", "max_fresh_hours": 72.0},
     {"key": "broker_guide", "label": "증권사 가이드", "path": "data/broker_guide.json", "type": "json_content", "max_fresh_hours": 40 * 24.0},
+    {"key": "market_warnings", "label": "시장경보 (투자주의/경고)", "path": "data/market_warnings.json", "type": "json_content", "max_fresh_hours": 72.0},
 ]
 
 
