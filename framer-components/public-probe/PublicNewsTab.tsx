@@ -103,7 +103,7 @@ interface StockGroup {
     items: NewsItem[]
 }
 
-/* 오늘의 뉴스 한눈 — 전부 기존 사실 집계(RULE7). 출처신뢰도·신선도(MinHash)·무드(키워드)·종목밀도. */
+/* 오늘의 뉴스 한눈 — 전부 기존 사실 집계(RULE7, LLM 해석 0). 출처신뢰도·신선도·무드·종목밀도·테마빈도. */
 interface TopStock { name: string; ticker: string; n: number }
 interface Insights {
     total: number
@@ -111,7 +111,21 @@ interface Insights {
     fresh: number; dup: number             // 신선도(near_duplicate MinHash)
     pos: number; neg: number; neu: number  // 무드(sentiment 키워드)
     topStocks: TopStock[]                  // 뉴스 많은 종목(라이브 per-stock 건수)
+    themes: { name: string; n: number }[]  // 오늘의 테마(키워드 빈도, 단어 카운트만)
 }
+// 뉴스 테마 사전 — 제목 키워드 매칭으로 "오늘 시장 화두" 집계(LLM 아님, 순수 빈도). 사실 집계 RULE7.
+const THEME_KEYWORDS: [string, string[]][] = [
+    ["반도체", ["반도체", "HBM", "메모리", "D램", "낸드", "파운드리", "엔비디아", "TSMC"]],
+    ["금리·환율", ["금리", "연준", "FOMC", "기준금리", "인하", "인상", "환율", "달러", "원·달러"]],
+    ["AI", ["AI", "인공지능", "데이터센터", "챗GPT"]],
+    ["2차전지", ["2차전지", "배터리", "전기차", "리튬", "양극재"]],
+    ["정책·관세", ["관세", "트럼프", "규제", "대통령", "국회"]],
+    ["실적", ["실적", "영업이익", "어닝", "순이익", "매출"]],
+    ["지수·변동", ["코스피", "코스닥", "지수", "폭락", "급등", "급락"]],
+    ["수급", ["외국인", "기관", "국민연금", "순매수", "순매도", "연기금"]],
+    ["가상자산", ["비트코인", "코인", "가상자산", "이더리움"]],
+    ["부동산", ["부동산", "집값", "분양", "전세"]],
+]
 
 function readBodyDark(): boolean {
     if (typeof document === "undefined" || !document.body) return false
@@ -277,8 +291,17 @@ export default function PublicNewsTab(props: Props) {
                     const s = String(h.sentiment || "neutral")
                     if (s === "positive") pos++; else if (s === "negative") neg++; else neu++
                 }
+                // 오늘의 테마 = 시장 헤드라인(KR+글로벌) 제목 키워드 빈도(LLM 아님)
+                const themeCnt: Record<string, number> = {}
+                for (const it of mk) {
+                    const t = it.title || ""
+                    for (const [name, kws] of THEME_KEYWORDS) {
+                        for (const k of kws) { if (t.indexOf(k) >= 0) { themeCnt[name] = (themeCnt[name] || 0) + 1; break } }
+                    }
+                }
+                const themes = Object.keys(themeCnt).map((name) => ({ name, n: themeCnt[name] })).sort((a, b) => b.n - a.n).slice(0, 6)
                 // 뉴스 많은 종목 = 라이브 per-stock 실제 건수(아래 enrichment effect서 채움). headline_count 는 포화라 미사용.
-                setInsights({ total: rawHl.length, credHi, credLo, fresh, dup, pos, neg, neu, topStocks: [] })
+                setInsights({ total: rawHl.length, credHi, credLo, fresh, dup, pos, neg, neu, topStocks: [], themes })
             }
 
             setStocks(groups)
@@ -556,6 +579,19 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
                                     <span style={{ color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 116 }}>{s.name}</span>
                                     <span style={{ color: C.accent, flexShrink: 0 }}>{s.n}건 ›</span>
                                 </a>
+                            ))}
+                        </div>
+                    </div>
+                ) : null}
+                {/* 오늘의 뉴스 테마 (제목 키워드 빈도 — LLM 아님, 단어 카운트) */}
+                {ins.themes.length ? (
+                    <div style={{ ...tile, flexBasis: 280, minWidth: 236 }}>
+                        <div style={lbl}>오늘의 뉴스 테마 <span style={{ color: C.faint, fontWeight: 500 }}>· 키워드 빈도</span></div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {ins.themes.map((th) => (
+                                <span key={th.name} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: C.subtext, background: C.sub, borderRadius: 8, padding: "4px 9px" }}>
+                                    {th.name} <span style={{ color: C.accent }}>{th.n}</span>
+                                </span>
                             ))}
                         </div>
                     </div>
