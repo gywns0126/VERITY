@@ -7,7 +7,9 @@
 """
 import requests
 import re
+import html
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 from bs4 import BeautifulSoup
 
 import feedparser
@@ -31,6 +33,7 @@ CREDIBLE_SOURCES = {
     "이데일리": 4, "머니투데이": 4, "연합뉴스": 5, "뉴스핌": 3,
     "파이낸셜뉴스": 4, "헤럴드경제": 3, "아시아경제": 3, "ZDNet": 3,
     "전자신문": 3, "디지털타임스": 3, "블룸버그": 5, "로이터": 5,
+    "연합인포맥스": 5, "인포맥스": 5,  # 금융 전문 와이어(1차)
     "Bloomberg": 5, "Reuters": 5, "CNBC": 4, "Yahoo Finance": 3,
     "MarketWatch": 4, "WSJ": 5, "Financial Times": 5, "Barron's": 4,
     "Google News": 2,
@@ -66,6 +69,7 @@ def collect_headlines(max_items: int = 20) -> list:
     raw.extend(_naver_market_news())
     raw.extend(_naver_economy_news())
     raw.extend(_korea_google_news())   # 구글뉴스 KR 다매체 집계(네이버 외 소스 확장, 2026-06-27)
+    raw.extend(_korea_publisher_rss())  # 한국 언론사 공식 RSS 6개(1차 출처, 신뢰도 최상, 2026-06-27)
 
     seen_titles = set()
     unique = []
@@ -206,6 +210,50 @@ def _korea_google_news() -> list:
             items.append({"title": title, "link": link, "source": src, "time": (ent.get("published") or "").strip(), "category": "google_kr"})
             if len(items) >= 50:
                 break
+    except Exception:
+        pass
+    return items
+
+
+# 한국 언론사 공식 RSS (1차 출처 — 신뢰도 최상). 2026-06-27 liveness 검증된 피드만(한경/파이낸셜/서울경제=URL 막힘 제외).
+KR_PUBLISHER_RSS = [
+    ("연합뉴스", "https://www.yna.co.kr/rss/market.xml"),
+    ("매일경제", "https://www.mk.co.kr/rss/50200011/"),
+    ("이데일리", "https://rss.edaily.co.kr/stock_news.xml"),
+    ("머니투데이", "https://rss.mt.co.kr/mt_news_stock.xml"),
+    ("연합인포맥스", "https://news.einfomax.co.kr/rss/allArticle.xml"),
+    ("아시아경제", "https://www.asiae.co.kr/rss/stock.htm"),
+]
+# 비-증시 노이즈 제목 접두 필터(부고/인사/게시판 등).
+_RSS_NOISE_RE = re.compile(r"^\s*\[(부고|부음|인사|동정|게시판|알림|신간|화보|포토|일정|날씨|만평)\]")
+
+
+def _korea_publisher_rss(per_feed: int = 9) -> list:
+    """한국 언론사 공식 RSS 다중 수집(1차 출처). 피드별 상위 N, 병렬 fetch. 노이즈(부고/인사) 제외."""
+    def _fetch(feed):
+        name, url = feed
+        out = []
+        try:
+            resp = requests.get(url, headers={"User-Agent": GOOGLE_NEWS_UA}, timeout=10)
+            resp.raise_for_status()
+            parsed = feedparser.parse(resp.content)
+            for ent in parsed.entries:
+                title = html.unescape((ent.get("title") or "").strip())   # &#039; 등 엔티티 복원
+                if not title or len(title) < 10 or _RSS_NOISE_RE.search(title):
+                    continue
+                out.append({"title": title, "link": (ent.get("link") or "").strip(),
+                            "source": name, "time": (ent.get("published") or "").strip(), "category": "kr_rss"})
+                if len(out) >= per_feed:
+                    break
+        except Exception:
+            pass
+        return out
+
+    items = []
+    try:
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            for r in ex.map(_fetch, KR_PUBLISHER_RSS):
+                items.extend(r)
     except Exception:
         pass
     return items
