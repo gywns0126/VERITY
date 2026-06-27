@@ -1,0 +1,84 @@
+# DART KR 분기재무 백필 (분기추이 viz 토대)
+#
+# stock_report_public universe(~2000) × 2021~2025 × Q1/반기/3Q/연간(20기간) 분기재무비율
+# (ROA/부채비율/유동비율/매출총이익률/자산회전율) → data/dart_quarterly_snapshots.jsonl 누적.
+# 소비처(별도): 슬림 public 빌더 + PublicStockReport '분기추이' 미니차트 (데이터 충분 후).
+# DART only — KIS 무관(RULE 1). proven fetcher(dart_fundamentals, reprt_code 인자화) 재사용. resume+quota-cap.
+#
+# 🚨 schedule 없음 = workflow_dispatch 수동 전용. 이유: 카탈리스트/연간 백필이 DART 20K/일 쿼터 소비 중.
+#    동시 자동가동 = 쿼터 터짐. 형제 backfill 여유일에 수동 실행. 멱등(체크포인트 resume)이라 다회 분할 안전.
+#    완주 추정 = ~2,000종목 × 20기간 = ~40K단위. run당 1,500단위 → ~27 dispatch.
+#
+# 7축 audit: env=DART_API_KEY+UNIVERSE+KRX(universe builder) · push=schedule 없음(RULE2 무관) ·
+#    concurrency=verity-data-write(형제 backfill 직렬화) · cron=없음(수동, 쿼터 충돌 회피) ·
+#    KIS=0(RULE1) · pip=requirements · N=2=manual 다회 dispatch.
+
+name: DART Quarterly Backfill (KR 분기재무)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_units:
+        description: '이번 run 진행 상한 (종목·단위, 쿼터 분할)'
+        required: false
+        default: '1500'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  quarterly-backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 분기재무 백필 (DART, resume + run-cap)
+        id: bf
+        timeout-minutes: 55
+        continue-on-error: true
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY || vars.DART_API_KEY }}
+          UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
+          KRX_OPENAPI_KEY: ${{ secrets.KRX_OPENAPI_KEY || vars.KRX_OPENAPI_KEY }}
+          KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
+          DART_BACKFILL_RUN_UNITS: ${{ github.event.inputs.run_units || '1500' }}
+        run: |
+          set +e
+          python -m api.builders.dart_quarterly_backfill_builder
+          echo "RC=$?"
+
+      - name: Commit + push (변경 시만)
+        if: always()   # 잘려도 부분 진척(progress+jsonl) 보존
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          # RULE 4: 신 체크포인트 파일(.dart_quarterly_backfill_progress.json) + 누적 jsonl 둘 다 명시 add
+          git add data/.dart_quarterly_backfill_progress.json data/dart_quarterly_snapshots.jsonl 2>/dev/null || true
+          git diff --staged --quiet && { echo "변경 없음"; exit 0; }
+          git commit -m "data(golden-goose): KR 분기재무 백필 누적 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') (분기추이)"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              echo "pushed"; exit 0
+            fi
+            echo "push attempt $i failed, retry in $((i*10))s"; sleep $((i*10))
+          done
+          echo "::error::5회 push 실패"; exit 1

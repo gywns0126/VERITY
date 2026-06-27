@@ -199,11 +199,13 @@ def _yf_fallback_for_ticker(ticker: str) -> dict:
 
 
 @functools.lru_cache(maxsize=512)
-def _fetch_fnltt_all_cached(corp_code: str, bsns_year: str, fs_div: str) -> str:
+def _fetch_fnltt_all_cached(corp_code: str, bsns_year: str, fs_div: str, reprt_code: str = "11011") -> str:
     """fnlttSinglAcntAll.json 응답 cache (2026-05-20 신설, fs_div 명시).
 
     fs_div = "CFS" (연결, 한국 상장사 표준) / "OFS" (개별).
     list_n CFS 213 / OFS 131 (005930 2024 audit). 매출원가/CF 섹션 포함.
+    reprt_code = "11011" 연간(default) / "11013" 1Q / "11012" 반기 / "11014" 3Q
+      — 분기 backfill(2026-06-27) 위해 인자화. 미지정 시 연간 = 기존 주간 batch 무변.
 
     2026-05-23 (W3 4/4): record_dart_call(status) 로 dart_metrics 누적.
     lru_cache hit 은 미집계 — 실호출만 측정 정합.
@@ -214,7 +216,7 @@ def _fetch_fnltt_all_cached(corp_code: str, bsns_year: str, fs_div: str) -> str:
     url = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
     params = {
         "crtfc_key": DART_API_KEY, "corp_code": corp_code,
-        "bsns_year": bsns_year, "reprt_code": "11011", "fs_div": fs_div,
+        "bsns_year": bsns_year, "reprt_code": reprt_code, "fs_div": fs_div,
     }
     try:
         resp = requests.get(url, params=params, timeout=(10, 30))
@@ -231,11 +233,11 @@ def _fetch_fnltt_all_cached(corp_code: str, bsns_year: str, fs_div: str) -> str:
         return json.dumps({"status": "error", "message": str(e), "list": []})
 
 
-def _get_fnltt_all_data(corp_code: str, bsns_year: str, fs_div: str = "CFS") -> dict:
-    return json.loads(_fetch_fnltt_all_cached(corp_code, bsns_year, fs_div))
+def _get_fnltt_all_data(corp_code: str, bsns_year: str, fs_div: str = "CFS", reprt_code: str = "11011") -> dict:
+    return json.loads(_fetch_fnltt_all_cached(corp_code, bsns_year, fs_div, reprt_code))
 
 
-def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str) -> dict:
+def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = "11011") -> dict:
     """한 종목 펀더멘털 — DART 우선 (fnlttSinglAcntAll CFS → OFS fallback), yfinance fallback.
 
     2026-05-20 정정 (fs_div audit):
@@ -254,7 +256,7 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str) -> dict:
         "revenue": 0, "cogs": 0, "gross_profit": 0, "net_income": 0,
         "operating_cashflow": 0, "investing_cashflow": 0, "financing_cashflow": 0,
         "free_cashflow": 0,
-        "reprt_code": "11011", "fs_div": None,
+        "reprt_code": reprt_code, "fs_div": None,
         "report_date": None, "source": "none",
     }
 
@@ -267,7 +269,7 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str) -> dict:
     if corp_code:
         for fs_div in ("CFS", "OFS"):  # 연결 우선, fallback 개별
             try:
-                data = _get_fnltt_all_data(corp_code, bsns_year, fs_div=fs_div)
+                data = _get_fnltt_all_data(corp_code, bsns_year, fs_div=fs_div, reprt_code=reprt_code)
                 if data.get("status") != "000":
                     continue
                 pl_bs = _extract_pl_bs_from_dart(data)
@@ -309,6 +311,7 @@ def fetch_dart_fundamentals_batch(
     max_workers: int = DART_BATCH_MAX_WORKERS_DEFAULT,
     timeout_per_ticker: float = DART_PER_TICKER_TIMEOUT_S,
     bsns_year: Optional[str] = None,
+    reprt_code: str = "11011",
 ) -> dict[str, dict]:
     """KR 종목 리스트의 펀더멘털 일괄 수집.
 
@@ -337,7 +340,7 @@ def fetch_dart_fundamentals_batch(
     ex = ThreadPoolExecutor(max_workers=max_workers)
     try:
         futures = {
-            ex.submit(_fetch_one_dart_fundamentals, t, bsns_year): t
+            ex.submit(_fetch_one_dart_fundamentals, t, bsns_year, reprt_code): t
             for t in tickers
         }
         try:
