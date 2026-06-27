@@ -113,6 +113,38 @@ def _load_collected_at(path: Path) -> Optional[datetime]:
     return None
 
 
+# 내용 타임스탬프 후보 키 (top-level + _meta). 파일마다 generated_at/collected_at/as_of/updated_at 혼재.
+_CONTENT_TS_KEYS = ("generated_at", "collected_at", "as_of", "updated_at")
+
+
+def _load_content_ts(path: Path) -> Optional[datetime]:
+    """JSON **내용** 타임스탬프(generated_at/_meta.generated_at/collected_at/as_of/updated_at) → datetime(KST).
+    🚨 mtime 아님 — CI 가 broad `git add data/` 로 mtime 을 매 run 갱신하면 content 가 동결돼도 mtime 은 fresh.
+    insider_trades 6.7일 silent freeze(2026-06-27 P0)가 정확히 이 함정. 내용 시각으로만 freeze 포착."""
+    if not path.exists():
+        return None
+    try:
+        d = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(d, dict):
+        return None
+    meta = d.get("_meta") if isinstance(d.get("_meta"), dict) else {}
+    for scope in (d, meta):
+        for k in _CONTENT_TS_KEYS:
+            v = scope.get(k)
+            if not v:
+                continue
+            try:
+                dt = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=KST)
+                return dt.astimezone(KST)
+            except (ValueError, TypeError):
+                continue
+    return None
+
+
 # 진단 대상 6 아티팩트 (max_fresh_hours = 정상 갱신 주기 + 안전 마진)
 SOURCES = [
     {
@@ -157,6 +189,16 @@ SOURCES = [
         "type": "jsonl_runtime",
         "max_fresh_hours": 26.0,
     },
+    # 🚨 GG 공개 터미널 데이터 (launch-facing) — content generated_at 기반 freeze 포착.
+    # 2026-06-27 추가: insider_trades 6.7일 silent freeze 가 모니터 감시밖이라 미포착(P0). 72h = 주말 휴장(금→월 ~64h) false-stale 회피 + 다일 freeze 포착.
+    {"key": "insider_kr", "label": "내부자거래 KR (DART)", "path": "data/insider_trades.json", "type": "json_content", "max_fresh_hours": 72.0},
+    {"key": "insider_us", "label": "내부자거래 US (Form4)", "path": "data/us_insider_trades.json", "type": "json_content", "max_fresh_hours": 72.0},
+    {"key": "stock_report_kr", "label": "종목 리포트 KR", "path": "data/stock_report_public.json", "type": "json_content", "max_fresh_hours": 72.0},
+    {"key": "stock_report_us", "label": "종목 리포트 US", "path": "data/us_stock_report_public.json", "type": "json_content", "max_fresh_hours": 72.0},
+    {"key": "flow_kr", "label": "외국인·기관 수급", "path": "data/stock_flow_5d.json", "type": "json_content", "max_fresh_hours": 72.0},
+    {"key": "forensics_kr", "label": "공시 forensics", "path": "data/disclosure_forensics.json", "type": "json_content", "max_fresh_hours": 72.0},
+    {"key": "disclosure_feed_kr", "label": "공시 피드 KR", "path": "data/public_disclosure_feed.json", "type": "json_content", "max_fresh_hours": 72.0},
+    {"key": "broker_guide", "label": "증권사 가이드", "path": "data/broker_guide.json", "type": "json_content", "max_fresh_hours": 40 * 24.0},
 ]
 
 
@@ -177,10 +219,13 @@ def _diagnose_one(src: dict) -> dict:
         "exists": path.exists(),
     }
 
-    # collected_at 우선, 없으면 mtime fallback
+    # 내용 타임스탬프 우선, 없으면 mtime fallback (json_content = mtime 절대 신뢰 X, freeze 포착용)
     ts: Optional[datetime] = None
-    if src["type"] == "json_collected_at":
+    if src["type"] == "json_content":
+        ts = _load_content_ts(path)
+    elif src["type"] == "json_collected_at":
         ts = _load_collected_at(path)
+    out["ts_source"] = "content" if ts is not None else ("mtime" if path.exists() else "none")
     if ts is None:
         ts = _file_mtime_kst(path)
 
