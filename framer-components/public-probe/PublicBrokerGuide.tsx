@@ -533,8 +533,7 @@ function TradeTypeView(props: { items: TradeType[]; C: typeof LIGHT; cardH: numb
                 <div
                     key={i}
                     style={{
-                        height: cardH,
-                        overflow: "hidden",
+                        minHeight: cardH,   // 고정→최소높이: best pills 다줄·긴 reason 도 안 잘리게 자동 확장
                         background: C.card,
                         borderRadius: 16,
                         padding: "15px 16px",
@@ -550,13 +549,10 @@ function TradeTypeView(props: { items: TradeType[]; C: typeof LIGHT; cardH: numb
                             color: C.subtext,
                             fontWeight: 500,
                             lineHeight: 1.55,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
+                            overflowWrap: "anywhere",
                         }}
                     >
-                        {it.reason || ""}
+                        {clean(it.reason)}
                     </div>
                 </div>
             ))}
