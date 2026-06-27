@@ -534,9 +534,13 @@ export default function PublicDiscovery(props: Props) {
         )
         return out
     }
+    // 커스텀 chevron (OS 기본 화살표 제거 — appearance none). 색 = 테마 faint.
+    const chevronUrl = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='${encodeURIComponent(C.faint)}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`
     const selStyle: CSSProperties = {
-        border: `1px solid ${C.line}`, borderRadius: 9, padding: "7px 9px", fontSize: 12, fontFamily: FONT,
+        border: `1px solid ${C.line}`, borderRadius: 9, padding: "7px 28px 7px 11px", fontSize: 12, fontFamily: FONT,
         fontWeight: 700, background: C.card, color: C.ink, outline: "none", cursor: "pointer",
+        appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
+        backgroundImage: chevronUrl, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
     }
     const numStyle: CSSProperties = {
         width: 58, border: `1px solid ${C.line}`, borderRadius: 9, padding: "7px 8px", fontSize: 12,

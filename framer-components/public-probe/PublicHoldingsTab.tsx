@@ -304,6 +304,13 @@ export default function PublicHoldingsTab(props: Props) {
         border: `1px solid ${C.line}`, borderRadius: 8, padding: "8px 10px", fontSize: 13,
         fontFamily: FONT, background: C.bg, color: C.ink, outline: "none", minWidth: 0,
     }
+    // 커스텀 chevron — OS 기본 화살표 제거(appearance none), 브랜드 드롭다운 룩. 색=테마 faint.
+    const chevronUrl = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='${encodeURIComponent(C.faint)}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`
+    const selStyle: CSSProperties = {
+        ...inputStyle, cursor: "pointer", paddingRight: 30,
+        appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
+        backgroundImage: chevronUrl, backgroundRepeat: "no-repeat", backgroundPosition: "right 11px center",
+    }
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
         background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
@@ -400,7 +407,7 @@ export default function PublicHoldingsTab(props: Props) {
                                         <input style={inputStyle} placeholder="평단" inputMode="decimal" value={form.avg_cost} onChange={(e) => setForm({ ...form, avg_cost: e.target.value })} />
                                     </div>
                                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                                        <select style={inputStyle} value={form.market} onChange={(e) => setForm({ ...form, market: e.target.value })}>
+                                        <select style={selStyle} value={form.market} onChange={(e) => setForm({ ...form, market: e.target.value })}>
                                             <option value="kr">국내(KR)</option>
                                             <option value="us">미국(US)</option>
                                         </select>
@@ -465,7 +472,7 @@ export default function PublicHoldingsTab(props: Props) {
                             {brokers.length > 0 && (
                                 <div style={{ ...cardS, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                                     <span style={{ fontSize: 12.5, color: C.sub, fontWeight: 700 }}>증권사 (매도 수수료)</span>
-                                    <select value={brokerIdx} onChange={(e) => setBrokerIdx(Number(e.target.value))} style={{ ...inputStyle, fontWeight: 700, maxWidth: "60%" }}>
+                                    <select value={brokerIdx} onChange={(e) => setBrokerIdx(Number(e.target.value))} style={{ ...selStyle, fontWeight: 700, maxWidth: "60%" }}>
                                         {brokers.map((b, i) => (<option key={i} value={i}>{b.name}</option>))}
                                     </select>
                                 </div>
