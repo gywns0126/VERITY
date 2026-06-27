@@ -27,9 +27,11 @@ const DARK = {
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
+interface RelDisc { title: string; url: string; date: string }
 interface NewsItem {
     title: string; url: string; source: string; category: string
     credibility: number; credible: boolean; outlets: number; datetime: string; rel_time: string
+    related_disclosure?: RelDisc | null
 }
 
 function readTickerFromUrl(): string {
@@ -43,7 +45,7 @@ function readTickerFromUrl(): string {
 
 const SAMPLE: NewsItem[] = [
     { title: "삼성전자, 2분기 영업이익 10조 돌파…반도체 회복", url: "#", source: "한국경제", category: "실적", credibility: 5, credible: true, outlets: 8, datetime: "", rel_time: "2시간 전" },
-    { title: "삼성전자, 자기주식 3조원 취득 결정", url: "#", source: "연합뉴스", category: "공시", credibility: 5, credible: true, outlets: 5, datetime: "", rel_time: "5시간 전" },
+    { title: "삼성전자, 자기주식 3조원 취득 결정", url: "#", source: "연합뉴스", category: "공시", credibility: 5, credible: true, outlets: 5, datetime: "", rel_time: "5시간 전", related_disclosure: { title: "주요사항보고서(자기주식취득결정)", url: "#", date: "2026-06-25" } },
     { title: "삼성전자, HBM4 양산 계획 발표", url: "#", source: "전자신문", category: "신사업·투자", credibility: 3, credible: false, outlets: 2, datetime: "", rel_time: "1일 전" },
 ]
 
@@ -138,18 +140,26 @@ export default function PublicStockNews(props: Props) {
                 ) : (
                     <div style={{ display: "flex", flexDirection: "column" }}>
                         {items.map((n, i) => (
-                            <a key={i} href={n.url || "#"} target="_blank" rel="noopener"
-                                style={{ display: "block", textDecoration: "none", color: "inherit", padding: "11px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
-                                    <span style={{ fontSize: 10.5, fontWeight: 800, color: catColor(n.category), background: C.chip, padding: "2px 7px", borderRadius: 6, whiteSpace: "nowrap" }}>{n.category}</span>
-                                    {n.outlets > 1 && <span style={{ fontSize: 10.5, fontWeight: 700, color: C.vt, background: C.vtS, padding: "2px 7px", borderRadius: 6, whiteSpace: "nowrap" }}>{n.outlets}개 매체</span>}
-                                </div>
-                                <div style={{ fontSize: narrow ? 13 : 13.5, fontWeight: 600, color: C.ink, lineHeight: 1.45, wordBreak: "break-word" }}>{n.title}</div>
-                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 4, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-                                    <span style={{ fontWeight: 700, color: n.credible ? C.sub : C.faint }}>{n.source}{n.credible ? " ✓" : ""}</span>
-                                    {n.rel_time && <span>· {n.rel_time}</span>}
-                                </div>
-                            </a>
+                            <div key={i} style={{ padding: "11px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line }}>
+                                <a href={n.url || "#"} target="_blank" rel="noopener" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                                        <span style={{ fontSize: 10.5, fontWeight: 800, color: catColor(n.category), background: C.chip, padding: "2px 7px", borderRadius: 6, whiteSpace: "nowrap" }}>{n.category}</span>
+                                        {n.outlets > 1 && <span style={{ fontSize: 10.5, fontWeight: 700, color: C.vt, background: C.vtS, padding: "2px 7px", borderRadius: 6, whiteSpace: "nowrap" }}>{n.outlets}개 매체</span>}
+                                    </div>
+                                    <div style={{ fontSize: narrow ? 13 : 13.5, fontWeight: 600, color: C.ink, lineHeight: 1.45, wordBreak: "break-word" }}>{n.title}</div>
+                                    <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 4, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                                        <span style={{ fontWeight: 700, color: n.credible ? C.sub : C.faint }}>{n.source}{n.credible ? " ✓" : ""}</span>
+                                        {n.rel_time && <span>· {n.rel_time}</span>}
+                                    </div>
+                                </a>
+                                {n.related_disclosure ? (
+                                    <a href={n.related_disclosure.url} target="_blank" rel="noopener" title={n.related_disclosure.title}
+                                        style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6, maxWidth: "100%", fontSize: 10.5, fontWeight: 800, color: C.vt, background: C.vtS, padding: "3px 8px", borderRadius: 7, textDecoration: "none", boxSizing: "border-box" }}>
+                                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>관련 공시 · {n.related_disclosure.title}</span>
+                                        <span style={{ flexShrink: 0 }}>›</span>
+                                    </a>
+                                ) : null}
+                            </div>
                         ))}
                     </div>
                 )}
