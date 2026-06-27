@@ -24,8 +24,8 @@ OUTPUT_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
 # 🚨 RULE 7: 사실(거래대금/등락)만. 추천·인기점수 아님. ETF는 stk/ksq 소스라 애초에 제외됨.
 TRENDING_PATH = os.path.join(_ROOT, "data", "trending_kr.json")
 TREND_TOP_N = 30
-# 검색 universe (전 종목 ticker+name) — 4 검색창(nav/리포트/결정/관심종목) 공유 소스. 발행 O.
-# equities = 위 rows 재사용(추가 호출 0). ETF = etf_bydd_trd 1콜. 슬림(ticker/name/market). RULE 7 사실만.
+# 검색 universe (전 실상장종목 ticker+name) — 검색창(nav/리포트/결정/관심종목) 공유 소스. 발행 O.
+# equities = 위 rows 재사용(추가 호출 0). ETF/ETN/KONEX = 각 1콜. ELW 제외(파생·노이즈). 슬림(ticker/name/market). RULE 7 사실만.
 UNIVERSE_SEARCH_PATH = os.path.join(_ROOT, "data", "universe_search_kr.json")
 _TREND_SKIP = ("스팩", "제spac")  # SPAC 제외(거래대금 큰 합병前 스팩 노이즈 회피)
 
@@ -56,6 +56,25 @@ def _chg_pct(r):
         if prev:
             return round(diff / prev * 100.0, 2)
     return None
+
+
+def _append_universe(uni, seen, path, bas_dd, label):
+    """KRX OpenAPI 1콜로 검색 universe 에 (ticker/name/market) 추가. 독립 try — 실패 시 0 반환(나머지 소스 보존).
+    엔드포인트는 KRX 규약(sto/ 보드 · etp/ ETP) 추론분 포함 → 실 cron 결과(N=2 audit)로 검증."""
+    n0 = len(uni)
+    try:
+        from api.collectors.krx_openapi import _request_krx
+        res = _request_krx(path, bas_dd)
+        for r in (res.get("rows") or []):
+            tk = str(r.get("ISU_SRT_CD") or r.get("ISU_CD") or "").strip()
+            nm = str(r.get("ISU_NM") or "").strip()
+            if not (len(tk) == 6 and tk.isdigit()) or not nm or tk in seen:
+                continue
+            seen.add(tk)
+            uni.append({"ticker": tk, "name": nm, "market": label})
+    except Exception as ee:  # noqa: BLE001
+        print(f"[krx_mktcap] {label} universe 스킵: {ee!r}", file=sys.stderr)
+    return len(uni) - n0
 
 
 def main() -> int:
@@ -122,7 +141,8 @@ def main() -> int:
         except Exception as te:  # noqa: BLE001
             print(f"[krx_mktcap] trending FAILED(무시): {te!r}", file=sys.stderr)
 
-        # 검색 universe 발행 (전 종목 ticker+name) — equities rows 재사용 + ETF 1콜. 실패해도 mktcap 보존.
+        # 검색 universe 발행 (전 실상장종목 ticker+name) — equities rows 재사용 + ETF/ETN/KONEX 추가콜.
+        # 실패해도 mktcap 보존. 🚫 ELW 제외(파생 워런트·리포트 불가·검색 노이즈, 2026-06-27 PM 결정).
         try:
             uni = []
             seen = set()
@@ -134,29 +154,21 @@ def main() -> int:
                 seen.add(tk)
                 uni.append({"ticker": tk, "name": nm, "market": "KR"})
             eq_n = len(uni)
-            try:
-                from api.collectors.krx_openapi import _request_krx
-                etf_res = _request_krx("etp/etf_bydd_trd", bas_dd)
-                for r in (etf_res.get("rows") or []):
-                    tk = str(r.get("ISU_SRT_CD") or r.get("ISU_CD") or "").strip()
-                    nm = str(r.get("ISU_NM") or "").strip()
-                    if not (len(tk) == 6 and tk.isdigit()) or not nm or tk in seen:
-                        continue
-                    seen.add(tk)
-                    uni.append({"ticker": tk, "name": nm, "market": "ETF"})
-            except Exception as ee:  # noqa: BLE001
-                print(f"[krx_mktcap] ETF universe 스킵(equities만): {ee!r}", file=sys.stderr)
+            # 추가 실상장 소스 — 각 1콜, 독립 try(하나 실패해도 나머지 보존).
+            etf_n = _append_universe(uni, seen, "etp/etf_bydd_trd", bas_dd, "ETF")
+            etn_n = _append_universe(uni, seen, "etp/etn_bydd_trd", bas_dd, "ETN")
+            knx_n = _append_universe(uni, seen, "sto/knx_bydd_trd", bas_dd, "KONEX")
             if uni:
                 udoc = {
                     "_meta": {"generated_at": datetime.now(KST).isoformat(), "bas_dd": bas_dd,
-                              "count": len(uni), "equities": eq_n, "etf": len(uni) - eq_n,
-                              "source": "KRX OpenAPI stk+ksq+etf — 검색 universe(ticker/name) 사실. 점수·추천 0."},
+                              "count": len(uni), "equities": eq_n, "etf": etf_n, "etn": etn_n, "konex": knx_n,
+                              "source": "KRX OpenAPI stk+ksq+etf+etn+knx — 검색 universe(ticker/name) 사실. ELW 제외. 점수·추천 0."},
                     "stocks": uni,
                 }
                 with open(UNIVERSE_SEARCH_PATH, "w", encoding="utf-8") as f:
                     json.dump(udoc, f, ensure_ascii=False)
                 print(f"[krx_mktcap] universe_search logged=True · {len(uni)} 종목"
-                      f"(eq {eq_n}+etf {len(uni) - eq_n}) -> {os.path.relpath(UNIVERSE_SEARCH_PATH, _ROOT)}",
+                      f"(eq {eq_n}+etf {etf_n}+etn {etn_n}+knx {knx_n}) -> {os.path.relpath(UNIVERSE_SEARCH_PATH, _ROOT)}",
                       file=sys.stderr)
         except Exception as ue:  # noqa: BLE001
             print(f"[krx_mktcap] universe_search FAILED(무시): {ue!r}", file=sys.stderr)
