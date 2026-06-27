@@ -333,10 +333,14 @@ export default function PublicHoldingsTab(props: Props) {
                         </div>
                     )}
 
-                    {/* 미리보기 — 데모면 브라우저 창 목업(예시 스크린샷 느낌), 로그인 시 일반 렌더 */}
-                    <div style={isDemo ? { marginTop: 16, borderRadius: 16, border: `1px solid ${C.line}`, boxShadow: "0 12px 34px rgba(0,0,0,0.12)", overflow: "hidden", background: C.card } : undefined}>
+                    {/* 미리보기 — 데모면 브라우저 창 목업(예시 스크린샷, 살짝 기울임+배경창, overflow visible 로 그림자 안 잘림). 로그인 시 일반 렌더 */}
+                    <div style={isDemo ? { position: "relative", marginTop: 18, paddingBottom: 16, perspective: narrow ? undefined : 1100, overflow: "visible" } : undefined}>
+                        {isDemo && !narrow && (
+                            <div aria-hidden style={{ position: "absolute", top: -10, left: -6, right: -6, height: 116, borderRadius: 16, background: C.card, border: `1px solid ${C.line}`, boxShadow: "0 4px 14px rgba(0,0,0,0.05)", opacity: 0.5, zIndex: 0 }} />
+                        )}
+                        <div style={isDemo ? { position: "relative", zIndex: 1, borderRadius: 16, border: `1px solid ${C.line}`, boxShadow: "0 6px 16px rgba(0,0,0,0.08)", overflow: "visible", background: C.card, transform: narrow ? undefined : "rotateX(2deg)", transformOrigin: "center top" } : undefined}>
                         {isDemo && (
-                            <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 13px", borderBottom: `1px solid ${C.line}`, background: isDark ? "#1c222b" : "#f7f8fa" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 13px", borderBottom: `1px solid ${C.line}`, background: isDark ? "#1c222b" : "#f7f8fa", borderRadius: "15px 15px 0 0" }}>
                                 <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#ff5f57", flexShrink: 0 }} />
                                 <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#febc2e", flexShrink: 0 }} />
                                 <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#28c840", flexShrink: 0 }} />
@@ -392,6 +396,7 @@ export default function PublicHoldingsTab(props: Props) {
                     <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 14, lineHeight: 1.5 }}>
                         종목 누르면 상세 리포트 · 평가손익 = 현재가 × 보유수량 − 입력 평단 (단순 계산·사실)
                     </div>
+                        </div>
                         </div>
                     </div>
                 </>
