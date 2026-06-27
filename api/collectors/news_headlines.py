@@ -65,6 +65,7 @@ def collect_headlines(max_items: int = 20) -> list:
     raw = []
     raw.extend(_naver_market_news())
     raw.extend(_naver_economy_news())
+    raw.extend(_korea_google_news())   # 구글뉴스 KR 다매체 집계(네이버 외 소스 확장, 2026-06-27)
 
     seen_titles = set()
     unique = []
@@ -173,6 +174,38 @@ def _naver_economy_news() -> list:
                 items.append({"title": title, "link": link, "source": "", "time": "", "category": "economy"})
                 if len(items) >= 20:   # 10→20 (뉴스 페이지 볼륨↑)
                     break
+    except Exception:
+        pass
+    return items
+
+
+def _korea_google_news() -> list:
+    """구글뉴스 KR 증시·경제 RSS — 다매체 집계(네이버 외 소스 확장). 연합·한경·조선 등 17~21개 매체.
+    제목='제목 - 매체' 포맷 → 매체 분리. 기존 collect_headlines 파이프라인(dedup·sentiment·credibility·novelty)이 처리."""
+    items = []
+    q = urllib.parse.quote("증시 OR 코스피 OR 코스닥 when:1d")
+    url = f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
+    try:
+        resp = requests.get(url, headers={"User-Agent": GOOGLE_NEWS_UA}, timeout=15)
+        resp.raise_for_status()
+        feed = feedparser.parse(resp.content)
+        for ent in feed.entries:
+            title = (ent.get("title") or "").strip()
+            if not title or len(title) < 10:
+                continue
+            src = ""
+            s = ent.get("source")
+            if isinstance(s, dict):
+                src = (s.get("title") or "").strip()
+            elif hasattr(s, "title"):
+                src = (getattr(s, "title", None) or "").strip()
+            if not src and " - " in title:          # 매체가 source 메타에 없으면 제목 끝에서 분리
+                title, src = title.rsplit(" - ", 1)
+                title, src = title.strip(), src.strip()
+            link = (ent.get("link") or "").strip()
+            items.append({"title": title, "link": link, "source": src, "time": (ent.get("published") or "").strip(), "category": "google_kr"})
+            if len(items) >= 50:
+                break
     except Exception:
         pass
     return items
