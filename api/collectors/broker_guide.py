@@ -199,6 +199,8 @@ CURATED_FEES: dict = {
     # PM 공식 출처 제공 pin (2026-06-22). 자동 추출 불안정 종목만 고정. 값은 draft — 페이지 대조해 수정 가능.
     "삼성증권": ("0.0147%", "https://www.samsungpop.com/?MENU_CODE=M1454054239846"),
     "NH투자증권": ("0.0150%", "https://www.nhsec.com"),
+    # 2026-06-27 추가 — 한국투자 focused 추출 간헐 실패(빈값 회귀) 방지. 표준 온라인 요율(직전값 carry, 공식 대조 필요).
+    "한국투자증권": ("0.0140527%", "https://securities.koreainvestment.com"),
 }
 
 
