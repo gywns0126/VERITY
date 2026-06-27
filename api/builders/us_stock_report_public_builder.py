@@ -57,6 +57,25 @@ def _title(name: str) -> str:
 CACHE_PATH = os.path.join(_ROOT, "data", "cache", "universe_us.json")
 SIC_KO_PATH = os.path.join(_ROOT, "data", "us_sic_ko.json")  # SIC 영문업종 → 한글 (정적, 런타임 번역 0)
 NAME_KO_PATH = os.path.join(_ROOT, "data", "us_name_ko.json")  # 주요 종목 ticker → 한글명 (병기·한국어 검색)
+US_DISCLOSURE_FEED_PATH = os.path.join(_ROOT, "data", "us_disclosure_feed.json")  # SEC 8-K 수시공시(S&P1500) — disclosures 섹션 배선
+
+
+def _load_us_disclosures() -> Dict[str, List[Dict[str, Any]]]:
+    """us_disclosure_feed.json (SEC EDGAR 8-K, S&P1500) → {ticker: disclosures[]}.
+    disclosures item shape = KR catalyst 와 동일(date/filer/is_correction/label/source_url/title) → 무변환 주입.
+    RULE 7 = 공시 사실·일정만(점수·등급 0). 리포트 disclosures 섹션 부활(0%→~97%)."""
+    out: Dict[str, List[Dict[str, Any]]] = {}
+    try:
+        with open(US_DISCLOSURE_FEED_PATH, encoding="utf-8") as f:
+            doc = json.load(f)
+        for it in (doc.get("items") or []):
+            tk = str(it.get("ticker") or "").upper()
+            ds = it.get("disclosures") or []
+            if tk and ds:
+                out[tk] = ds
+    except (OSError, json.JSONDecodeError):
+        pass
+    return out
 
 
 def _load_name_ko() -> Dict[str, str]:
@@ -426,6 +445,16 @@ def main() -> int:
                 s["peer"] = pr
             s.pop("_pm", None)
             s.pop("_sector", None)
+        # 8-K 수시공시 부착 (us_disclosure_feed, SEC EDGAR) — disclosures 섹션 배선(0%→~97%). KR catalyst 패턴 미러.
+        us_disc = _load_us_disclosures()
+        if us_disc:
+            n_disc = 0
+            for s in stocks:
+                ds = us_disc.get((s.get("ticker") or "").upper())
+                if ds:
+                    s["disclosures"] = ds[:8]
+                    n_disc += 1
+            print(f"[us_stock_report] disclosures 부착 {n_disc}/{len(stocks)} 종목 (us_disclosure_feed)", file=sys.stderr)
         # ROE 큰 순 (사실 정렬)
         def _roe(s):
             v = s.get("facts", {}).get("ROE", "")
