@@ -4,8 +4,9 @@
 public-safe JSON. 스키마 = KR stock_report_public.json 동일 → PublicStockReport 컴포넌트 재사용
 (/us/stock 페이지에 stockUrl=이 파일).
 
-🚨 RULE 7 — allowlist. 노출: ROE / D/E / 매출성장 / 마진 / Altman-Z(학술).
-  비노출: fscore_grade / lynch_class (자체 등급). 가격/PER/PBR = 컴포넌트 라이브.
+🚨 RULE 7 — allowlist. 노출: ROE / D/E / 매출성장 / 마진 / Altman-Z(학술) / PER·PBR(자체계산, KR 정합).
+  비노출: fscore_grade / lynch_class (자체 등급). 가격 = 컴포넌트 라이브.
+  PER/PBR = 시총(universe 캐시) ÷ SEC 최근 연간 순이익·자기자본 (KR stock_report_public 동일 방식).
 순수 변환 — 외부호출 0. publish: data/us_stock_report_public.json (action.yml 등재 필요).
 """
 from __future__ import annotations
@@ -131,6 +132,37 @@ def _load_universe_caps() -> Dict[str, Dict[str, float]]:
     return out
 
 
+def _latest_annual(series: Any) -> Optional[float]:
+    """series_annual[key] (list of {end,fy,val}) → 가장 최근 end(동률 시 최신 fy)의 val. 없으면 None."""
+    if not isinstance(series, list) or not series:
+        return None
+    best = None
+    for e in series:
+        if not isinstance(e, dict) or e.get("val") is None:
+            continue
+        key = (str(e.get("end") or ""), int(e.get("fy") or 0))
+        if best is None or key > best[0]:
+            best = (key, e.get("val"))
+    if best is None:
+        return None
+    try:
+        return float(best[1])
+    except (TypeError, ValueError):
+        return None
+
+
+def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
+    """per-ticker us_financials/{TK}.json series_annual → 최근 연간 순이익·자기자본 (PER/PBR 자체계산용)."""
+    p = os.path.join(_ROOT, "data", "us_financials", f"{ticker}.json")
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            sa = (json.load(f) or {}).get("series_annual") or {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return {"net_income": _latest_annual(sa.get("net_income")),
+            "equity": _latest_annual(sa.get("stockholders_equity"))}
+
+
 def _usd_compact(v: Any) -> str | None:
     """USD 큰 수 → $X.XXT / $X.XB / $XXXM (US header)."""
     try:
@@ -150,7 +182,8 @@ def _usd_compact(v: Any) -> str | None:
 
 def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[str, float]],
                 sic_ko: Optional[Dict[str, str]] = None,
-                name_ko: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+                name_ko: Optional[Dict[str, str]] = None,
+                fin: Optional[Dict[str, Optional[float]]] = None) -> Dict[str, Any]:
     facts: Dict[str, str] = {}
     fnote: Dict[str, str] = {}
 
@@ -214,6 +247,24 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
     if mc:
         header["market_cap"] = mc
         facts["시가총액"] = mc  # Discovery 표/정렬·리포트 facts 시총 노출(US, KR 정합). header 와 동기.
+    # PER/PBR 자체계산 = 시총(universe 캐시) ÷ SEC 최근 연간 순이익·자기자본 (KR 정합, src=자체계산·RULE7 사실).
+    mc_raw = cap.get("market_cap")
+    fin = fin or {}
+    ni, eq = fin.get("net_income"), fin.get("equity")
+    try:
+        mc_f = float(mc_raw) if mc_raw else None
+    except (TypeError, ValueError):
+        mc_f = None
+    if mc_f and ni and ni > 0:
+        per = mc_f / ni
+        if 0 < per <= 1000:  # 음수(적자)·극단치(분모 미미) 제외
+            facts["PER"] = _num(per, 1)
+            fnote["PER"] = "시가총액 ÷ 최근 연간 순이익(자체계산)"
+    if mc_f and eq and eq > 0:
+        pbr = mc_f / eq
+        if 0 < pbr <= 100:
+            facts["PBR"] = _num(pbr, 1)
+            fnote["PBR"] = "시가총액 ÷ 자기자본(자체계산)"
     tv = _usd_compact(cap.get("adv"))
     if tv:
         header["trading_value"] = tv + "/일"
@@ -267,7 +318,8 @@ def main() -> int:
         caps = _load_universe_caps()   # header 시총·거래대금 (universe 캐시)
         sic_ko = _load_sic_ko()    # SIC 영문업종 → 한글 (정적 맵)
         name_ko = _load_name_ko()  # 주요사 ticker → 한글명
-        stocks = [build_stock(r, meta_by_ticker.get(r.get("ticker"), {}), caps, sic_ko, name_ko)
+        stocks = [build_stock(r, meta_by_ticker.get(r.get("ticker"), {}), caps, sic_ko, name_ko,
+                              _load_fin_latest(r.get("ticker")))
                   for r in rows if r.get("ticker")]
         # ROE 큰 순 (사실 정렬)
         def _roe(s):

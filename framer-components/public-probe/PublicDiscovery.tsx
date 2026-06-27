@@ -768,7 +768,7 @@ export default function PublicDiscovery(props: Props) {
                                     </button>
                                 ))}
                             </div>
-                            <select value={sector} onChange={(e) => setSector(e.target.value)} style={selStyle}>
+                            <select value={sector} onChange={(e) => setSector(e.target.value)} style={{ ...selStyle, maxWidth: 150, textOverflow: "ellipsis" }}>
                                 <option value="">섹터 전체</option>
                                 {sectors.map((sec) => (<option key={sec} value={sec}>{sec}</option>))}
                             </select>
