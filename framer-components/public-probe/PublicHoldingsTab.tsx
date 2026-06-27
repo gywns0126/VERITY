@@ -311,15 +311,6 @@ export default function PublicHoldingsTab(props: Props) {
                         </div>
                     )}
 
-                    {/* 미리보기 구분선 — 데모 = 아래 샘플을 '예시'로 명확 프레임 */}
-                    {isDemo && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 2px 0" }}>
-                            <div style={{ flex: 1, height: 1, background: C.line }} />
-                            <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 700, letterSpacing: "0.2px" }}>미리보기 (예시)</span>
-                            <div style={{ flex: 1, height: 1, background: C.line }} />
-                        </div>
-                    )}
-
                     {/* 추가 폼 */}
                     {!isDemo && showAdd && (
                         <div style={{ background: C.card, borderRadius: 16, padding: "14px 15px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -342,8 +333,18 @@ export default function PublicHoldingsTab(props: Props) {
                         </div>
                     )}
 
-                    {/* 미리보기 콘텐츠 — 데모면 흐리게 + 비활성(순수 예시, 클릭 안 됨) */}
-                    <div style={{ opacity: isDemo ? 0.6 : 1, pointerEvents: isDemo ? "none" : "auto" }}>
+                    {/* 미리보기 — 데모면 브라우저 창 목업(예시 스크린샷 느낌), 로그인 시 일반 렌더 */}
+                    <div style={isDemo ? { marginTop: 16, borderRadius: 16, border: `1px solid ${C.line}`, boxShadow: "0 12px 34px rgba(0,0,0,0.12)", overflow: "hidden", background: C.card } : undefined}>
+                        {isDemo && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 13px", borderBottom: `1px solid ${C.line}`, background: isDark ? "#1c222b" : "#f7f8fa" }}>
+                                <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#ff5f57", flexShrink: 0 }} />
+                                <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#febc2e", flexShrink: 0 }} />
+                                <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#28c840", flexShrink: 0 }} />
+                                <div style={{ flex: 1, minWidth: 0, margin: "0 6px", background: C.bg, borderRadius: 7, padding: "5px 12px", fontSize: 11.5, color: C.faint, fontWeight: 600, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>verity-terminal.com/holdings</div>
+                                <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 6, padding: "3px 8px" }}>예시</span>
+                            </div>
+                        )}
+                        <div style={{ padding: isDemo ? (narrow ? "0 12px 14px" : "0 16px 16px") : 0, pointerEvents: isDemo ? "none" : "auto" }}>
                     {/* 요약 */}
                     <div style={{ background: C.card, borderRadius: 16, padding: "18px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }}>
                         <div style={{ fontSize: 12, color: C.faint, fontWeight: 700 }}>총 평가금액</div>
@@ -391,6 +392,7 @@ export default function PublicHoldingsTab(props: Props) {
                     <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 14, lineHeight: 1.5 }}>
                         종목 누르면 상세 리포트 · 평가손익 = 현재가 × 보유수량 − 입력 평단 (단순 계산·사실)
                     </div>
+                        </div>
                     </div>
                 </>
             )}
