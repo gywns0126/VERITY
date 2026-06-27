@@ -173,7 +173,7 @@ export default function PublicNewsTab(props: Props) {
         const recUrl = props.recUrl || BLOB + "/recommendations.json"
         const pfUrl = props.portfolioUrl || BLOB + "/portfolio.json"
         const maxPer = props.maxPerStock || 3
-        const maxMk = props.maxMarket || 20
+        const maxMk = props.maxMarket || 30
 
         Promise.all([
             fetch(recUrl).then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -217,17 +217,23 @@ export default function PublicNewsTab(props: Props) {
                 })
             }
 
-            // 시장 뉴스 (KR)
-            const mkRaw = pf ? asArray(pf.headlines) : []
+            // 시장 뉴스 (KR 헤드라인 + 글로벌/블룸버그 RSS 합본 — 볼륨↑, 제목 dedup)
+            const mkRaw = pf ? asArray(pf.headlines).concat(asArray(pf.bloomberg_google_headlines)) : []
             const mk: NewsItem[] = []
+            const seenMk = new Set<string>()
             for (let i = 0; i < mkRaw.length && mk.length < maxMk; i++) {
                 const h = mkRaw[i] || {}
-                if (!h.title) continue
+                const sp = splitSource(h.title || "")   // 블룸버그 RSS = "제목 - Bloomberg.com" 포맷이라 출처 분리
+                const t = sp.title || String(h.title || "").trim()
+                if (!t) continue
+                const key = t.slice(0, 32)
+                if (seenMk.has(key)) continue
+                seenMk.add(key)
                 mk.push({
-                    title: String(h.title).trim(),
+                    title: t,
                     titleKo: h.title_ko ? splitSource(String(h.title_ko)).title : "",
                     url: h.link || h.url || "",
-                    source: h.source || hostname(h.link || ""),
+                    source: h.source || sp.source || hostname(h.link || h.url || ""),
                     time: dateOnly(h.time || h.published_at || ""),
                     sentiment: String(h.sentiment || ""),
                 })
@@ -262,12 +268,12 @@ export default function PublicNewsTab(props: Props) {
         }
     }, [onCanvas, props.recUrl, props.portfolioUrl, props.maxPerStock, props.maxMarket])
 
-    /* 내 종목 — 상위 6 KR 종목 Naver 종목뉴스 라이브 밀도 enrichment (Google RSS 빈약 대체) */
+    /* 내 종목 — 상위 10 KR 종목 Naver 종목뉴스 라이브 밀도 enrichment (Google RSS 빈약 대체) */
     const enrichedRef = useRef(false)
     useEffect(() => {
         if (onCanvas || enrichedRef.current || !stocks.length) return
         const api = (props.apiBase || "https://project-yw131.vercel.app").replace(/\/+$/, "")
-        const krGroups = stocks.filter((g) => /^\d{6}$/.test(String(g.ticker || ""))).slice(0, 6)
+        const krGroups = stocks.filter((g) => /^\d{6}$/.test(String(g.ticker || ""))).slice(0, 10)
         if (!krGroups.length) return
         enrichedRef.current = true
         let alive = true
@@ -680,7 +686,7 @@ addPropertyControls(PublicNewsTab, {
     recUrl: { type: ControlType.String, title: "추천 JSON", defaultValue: BLOB + "/recommendations.json" },
     portfolioUrl: { type: ControlType.String, title: "포트폴리오 JSON", defaultValue: BLOB + "/portfolio.json" },
     maxPerStock: { type: ControlType.Number, title: "종목당 기사", defaultValue: 3, min: 1, max: 8, step: 1 },
-    maxMarket: { type: ControlType.Number, title: "시장 기사 수", defaultValue: 20, min: 5, max: 60, step: 5 },
+    maxMarket: { type: ControlType.Number, title: "시장 기사 수", defaultValue: 30, min: 5, max: 60, step: 5 },
     height: { type: ControlType.Number, title: "높이", defaultValue: 720, min: 320, max: 1600, step: 20, unit: "px" },
     marketCardHeight: { type: ControlType.Number, title: "시장 카드 높이", defaultValue: 92, min: 72, max: 200, step: 4, unit: "px" },
     stockCardHeight: { type: ControlType.Number, title: "종목 카드 높이", defaultValue: 232, min: 120, max: 400, step: 4, unit: "px" },

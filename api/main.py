@@ -1969,7 +1969,7 @@ def main():
     # 뉴스 + 섹터 수집 (모든 모드에서 실행)
     print("\n[2] 헤드라인 뉴스 + 섹터 수집")
     headlines = safe_collect(
-        collect_headlines, max_items=20,
+        collect_headlines, max_items=40,   # 20→40 (뉴스 페이지 볼륨↑, PM 2026-06-27 "뉴스량 적어보임")
         name="헤드라인", timeout=30, default=[], notify=_tg_notify,
     )
     portfolio["headlines"] = headlines
@@ -1977,7 +1977,7 @@ def main():
         print(f"  뉴스 {len(headlines)}건")
 
     bb_rss = safe_collect(
-        collect_bloomberg_google_news_rss, max_items=15,
+        collect_bloomberg_google_news_rss, max_items=25,   # 15→25 (글로벌 헤드라인 볼륨↑, 시장 탭 합본)
         name="Bloomberg RSS", timeout=30, default=[], notify=_tg_notify,
     )
     portfolio["bloomberg_google_headlines"] = bb_rss
@@ -1988,7 +1988,7 @@ def main():
         collect_us_headlines,
         kr_headlines=portfolio.get("headlines", []),
         bloomberg_rss=portfolio.get("bloomberg_google_headlines", []),
-        max_items=20,
+        max_items=30,   # 20→30 (미국 탭 볼륨↑)
         name="US헤드라인", timeout=30, default=[], notify=_tg_notify,
     )
     portfolio["us_headlines"] = us_hl

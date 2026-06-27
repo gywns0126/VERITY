@@ -148,7 +148,7 @@ def _naver_market_news() -> list:
                 if title and len(title) > 15 and "news_read" in href:
                     link = href if href.startswith("http") else "https://finance.naver.com" + href
                     items.append({"title": title, "link": link, "source": "", "time": "", "category": "market"})
-                    if len(items) >= 15:
+                    if len(items) >= 25:   # 15→25 (뉴스 페이지 볼륨↑)
                         break
         except Exception:
             pass
@@ -171,7 +171,7 @@ def _naver_economy_news() -> list:
             if title and len(title) > 15 and ("news_read" in href or "article_id" in href):
                 link = href if href.startswith("http") else "https://finance.naver.com" + href
                 items.append({"title": title, "link": link, "source": "", "time": "", "category": "economy"})
-                if len(items) >= 10:
+                if len(items) >= 20:   # 10→20 (뉴스 페이지 볼륨↑)
                     break
     except Exception:
         pass
