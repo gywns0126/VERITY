@@ -103,6 +103,16 @@ interface StockGroup {
     items: NewsItem[]
 }
 
+/* 오늘의 뉴스 한눈 — 전부 기존 사실 집계(RULE7). 출처신뢰도·신선도(MinHash)·무드(키워드)·종목밀도. */
+interface TopStock { name: string; ticker: string; n: number }
+interface Insights {
+    total: number
+    credHi: number; credLo: number         // 출처 신뢰도(credibility>=0.8=신뢰 출처, 자체 점수화)
+    fresh: number; dup: number             // 신선도(near_duplicate MinHash)
+    pos: number; neg: number; neu: number  // 무드(sentiment 키워드)
+    topStocks: TopStock[]                  // 뉴스 많은 종목(라이브 per-stock 건수)
+}
+
 function readBodyDark(): boolean {
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
@@ -149,6 +159,7 @@ export default function PublicNewsTab(props: Props) {
     const [stocks, setStocks] = useState<StockGroup[]>([])
     const [market, setMarket] = useState<NewsItem[]>([])
     const [us, setUs] = useState<NewsItem[]>([])
+    const [insights, setInsights] = useState<Insights | null>(null)
     const [loading, setLoading] = useState<boolean>(true)
     const [failed, setFailed] = useState<boolean>(false)
 
@@ -256,6 +267,20 @@ export default function PublicNewsTab(props: Props) {
                 })
             }
 
+            // 오늘의 뉴스 한눈 — KR headlines(category/near_duplicate/sentiment) + 추천 종목 뉴스량 집계
+            const rawHl = pf ? asArray(pf.headlines) : []
+            if (rawHl.length) {
+                let credHi = 0, credLo = 0, fresh = 0, dup = 0, pos = 0, neg = 0, neu = 0
+                for (const h of rawHl) {
+                    if ((Number(h.credibility) || 0) >= 0.8) credHi++; else credLo++   // 신뢰 출처(자체 점수)
+                    if (h.near_duplicate) dup++; else fresh++
+                    const s = String(h.sentiment || "neutral")
+                    if (s === "positive") pos++; else if (s === "negative") neg++; else neu++
+                }
+                // 뉴스 많은 종목 = 라이브 per-stock 실제 건수(아래 enrichment effect서 채움). headline_count 는 포화라 미사용.
+                setInsights({ total: rawHl.length, credHi, credLo, fresh, dup, pos, neg, neu, topStocks: [] })
+            }
+
             setStocks(groups)
             setMarket(mk)
             setUs(usArr)
@@ -287,6 +312,14 @@ export default function PublicNewsTab(props: Props) {
             const byTicker: Record<string, any[]> = {}
             for (const r of results) if (r.items && r.items.length) byTicker[r.ticker] = r.items
             if (!Object.keys(byTicker).length) return
+            // 뉴스 많은 종목 = 라이브 실제 건수 랭킹(headline_count 포화 대체)
+            const nameOf: Record<string, string> = {}
+            for (const g of krGroups) nameOf[String(g.ticker)] = g.name || String(g.ticker)
+            const top = Object.keys(byTicker)
+                .map((tk) => ({ ticker: tk, name: nameOf[tk] || tk, n: byTicker[tk].length }))
+                .sort((a, b) => b.n - a.n)
+                .slice(0, 4)
+            setInsights((prev) => (prev ? { ...prev, topStocks: top } : prev))
             setStocks((prev) => prev.map((g) => {
                 const ni = byTicker[String(g.ticker)]
                 if (!ni) return g
@@ -404,6 +437,7 @@ export default function PublicNewsTab(props: Props) {
 
             {/* 본문 */}
             <div style={{ flex: 1, overflowY: "auto", padding: "4px 14px 18px 14px" }}>
+                {!loading && !failed && insights ? <NewsInsights ins={insights} C={C} reportPath={props.reportPath} /> : null}
                 {loading ? (
                     <NewsSkeleton C={C} isDark={isDark} />
                 ) : failed ? (
@@ -455,6 +489,78 @@ function NewsSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
                     <div style={bar(90, 10, 14)} />
                 </div>
             ))}
+        </div>
+    )
+}
+
+/* 비율 막대 — 세그먼트 너비 = 건수 비율 (순수 CSS, 외부 lib 0). */
+function InsightBar(props: { segs: { label: string; n: number; color: string }[]; C: typeof LIGHT }) {
+    const total = props.segs.reduce((a, b) => a + b.n, 0) || 1
+    return (
+        <div style={{ display: "flex", width: "100%", height: 8, borderRadius: 5, overflow: "hidden", background: props.C.sub }}>
+            {props.segs.filter((s) => s.n > 0).map((s, i) => (
+                <div key={i} title={s.label + " " + s.n} style={{ width: (s.n / total) * 100 + "%", background: s.color }} />
+            ))}
+        </div>
+    )
+}
+
+/* 오늘의 뉴스 한눈 — 출처 신뢰도 / 신선도(MinHash) / 키워드 무드 / 뉴스 많은 종목. 전부 사실 집계(RULE7). */
+function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: string }) {
+    const { ins, C } = props
+    const tile: React.CSSProperties = { flex: "1 1 190px", minWidth: 168, background: C.card, borderRadius: 12, padding: "12px 14px", boxSizing: "border-box" }
+    const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: C.faint, marginBottom: 8 }
+    const chip: React.CSSProperties = { display: "flex", gap: 9, marginTop: 9, fontSize: 11.5, fontWeight: 700, flexWrap: "wrap" }
+    return (
+        <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: C.text, padding: "2px 2px 8px", letterSpacing: "-0.01em" }}>
+                오늘의 뉴스 한눈 <span style={{ color: C.faint, fontWeight: 600 }}>· 사실 집계</span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {/* 출처 신뢰도 (자체 점수화 — 1차/신뢰 출처 비중) */}
+                <div style={tile}>
+                    <div style={lbl}>출처 신뢰도 · 총 {ins.total}건</div>
+                    <InsightBar segs={[{ label: "신뢰", n: ins.credHi, color: "#0ca678" }, { label: "일반", n: ins.credLo, color: C.border }]} C={C} />
+                    <div style={chip}>
+                        <span style={{ color: "#0ca678" }}>신뢰 출처 {ins.credHi}</span>
+                        <span style={{ color: C.faint }}>일반 {ins.credLo}</span>
+                    </div>
+                </div>
+                {/* 신선도 */}
+                <div style={tile}>
+                    <div style={lbl}>신선도 · 신규 vs 재탕</div>
+                    <InsightBar segs={[{ label: "신규", n: ins.fresh, color: C.accent }, { label: "재탕", n: ins.dup, color: C.border }]} C={C} />
+                    <div style={chip}>
+                        <span style={{ color: C.accent }}>신규 {ins.fresh}</span>
+                        <span style={{ color: C.faint }}>재탕 {ins.dup}</span>
+                    </div>
+                </div>
+                {/* 키워드 무드 */}
+                <div style={tile}>
+                    <div style={lbl}>키워드 무드 <span style={{ color: C.faint, fontWeight: 500 }}>· 검증 전</span></div>
+                    <InsightBar segs={[{ label: "호재", n: ins.pos, color: C.up }, { label: "중립", n: ins.neu, color: C.border }, { label: "악재", n: ins.neg, color: C.down }]} C={C} />
+                    <div style={chip}>
+                        <span style={{ color: C.up }}>호재 {ins.pos}</span>
+                        <span style={{ color: C.faint }}>중립 {ins.neu}</span>
+                        <span style={{ color: C.down }}>악재 {ins.neg}</span>
+                    </div>
+                </div>
+                {/* 뉴스 많은 종목 */}
+                {ins.topStocks.length ? (
+                    <div style={tile}>
+                        <div style={lbl}>뉴스 많은 종목</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            {ins.topStocks.map((s) => (
+                                <a key={s.ticker} href={(props.reportPath || "/stock") + "?q=" + encodeURIComponent(s.ticker)} target="_blank" rel="noopener noreferrer"
+                                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", fontSize: 12, fontWeight: 700 }}>
+                                    <span style={{ color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 116 }}>{s.name}</span>
+                                    <span style={{ color: C.accent, flexShrink: 0 }}>{s.n}건 ›</span>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                ) : null}
+            </div>
         </div>
     )
 }
