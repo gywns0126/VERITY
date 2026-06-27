@@ -171,6 +171,9 @@ def _validate(parsed: dict) -> tuple[bool, list]:
     # 대량 공란 가드 — 수수료가 절반 미만만 채워지면 저품질(검수 필요)
     if fee_filled < max(1, len(brokers) // 2):
         flags.append(f"국내수수료 대량 공란 ({fee_filled}/{len(brokers)}) — 검수 필요")
+    ov_filled = sum(1 for b in brokers if isinstance(b, dict) and _FEE_RE.search(str(b.get("overseas_fee", ""))))
+    if ov_filled < max(1, len(brokers) // 2):
+        flags.append(f"해외수수료 대량 공란 ({ov_filled}/{len(brokers)}) — 검수 필요")
     btt = parsed.get("by_trade_type")
     if not isinstance(btt, list) or not btt:
         flags.append("by_trade_type 비어있음")
@@ -305,6 +308,56 @@ def _fetch_fee(broker: str) -> dict:
     return {}
 
 
+# 미국주식 온라인 위탁수수료 타당 범위 — KR 브로커 미국주식 요율 ≈ 0.07~0.25%(이벤트 0.07%~). 초과=오프라인/환전우대 오인.
+OVERSEAS_FEE_MAX_PCT = 0.5
+
+
+def _overseas_query(broker: str) -> str:
+    return (
+        f"{broker} 의 '미국주식 온라인(HTS·MTS) 위탁거래 수수료율'을 공식 수수료표 기준 정확히 알려줘. "
+        "⚠ 거래수수료율(%)만 fee 에 (예 0.07%~0.25%, 이벤트 평생우대 포함). 최소수수료·환전우대율은 basis 에 설명. "
+        "영업점·전화 요율 아님, 온라인 미국주식 기본 요율. "
+        '숫자는 % 로. JSON: {"fee": "0.00%", "source": "공식 출처 URL", "basis": "최소수수료/환전우대/조건"}'
+    )
+
+
+def _fetch_overseas_fee(broker: str) -> dict:
+    """focused 미국주식 수수료 추출. 공식 도메인 1차 → 일반 fallback. 타당 % 만 반환(국내 _fetch_fee 의 美 짝)."""
+    dom = _official_domain(broker)
+    attempts: list = []
+    if dom:
+        attempts.append([dom, "kofia.or.kr"])
+    attempts.append(None)  # 무제한 fallback
+    for domains in attempts:
+        res = call_perplexity(
+            _overseas_query(broker),
+            system_prompt=_FEE_SYS,
+            max_tokens=600,
+            temperature=0.0,
+            search_domain_filter=domains,
+            response_format=_FEE_FORMAT,
+        )
+        if res.get("error"):
+            continue
+        try:
+            d = json.loads(_strip_json(res.get("content", "")))
+        except Exception:
+            continue
+        fee = str(d.get("fee", "")).strip()
+        val = _fee_pct(fee)
+        if _FEE_RE.search(fee) and 0 < val <= OVERSEAS_FEE_MAX_PCT:
+            m = re.search(r"\d+(?:\.\d+)?\s*%", fee)  # % 토큰만(부가설명 제거)
+            return {
+                "fee": m.group(0) if m else fee,
+                "source": str(d.get("source", "")).strip(),
+                "basis": str(d.get("basis", "")).strip(),
+                "official": domains is not None,
+            }
+        if val > OVERSEAS_FEE_MAX_PCT:
+            print(f"[broker_guide] {broker} 해외수수료 {fee} > {OVERSEAS_FEE_MAX_PCT}% — 환전우대/오프라인 오인 의심, 거부")
+    return {}
+
+
 def collect(force: bool = False) -> dict:
     """Perplexity 호출 → 검증 → broker_guide.json 발행. 실패 시 직전 유지."""
     prev = _load_prev()
@@ -358,6 +411,30 @@ def collect(force: bool = False) -> dict:
             else:
                 b["domestic_fee"] = ""
             print(f"[broker_guide] ⚠ 수수료 추출 실패(메인값 {'채택' if b['domestic_fee'] else '공란'}): {b.get('name','?')}")
+
+    # 🎯 focused 미국주식 수수료 추출 (정밀 + 공식 출처) → overseas_fee/basis override
+    ov_ok = 0
+    for b in brokers:
+        if not isinstance(b, dict):
+            continue
+        info = _fetch_overseas_fee(b.get("name", ""))
+        if info.get("fee"):
+            b["overseas_fee"] = info["fee"]
+            if info.get("basis"):
+                b["overseas_basis"] = info["basis"]
+            if info.get("source") and info["source"] not in fee_sources:
+                fee_sources.append(info["source"])
+            ov_ok += 1
+        else:
+            # focused 실패 → 메인 호출값이 타당 % 면 채택, 아니면 공란(틀린 값 노출 차단)
+            mainov = str(b.get("overseas_fee", ""))
+            mv = _fee_pct(mainov)
+            if _FEE_RE.search(mainov) and 0 < mv <= OVERSEAS_FEE_MAX_PCT:
+                ov_ok += 1
+            else:
+                b["overseas_fee"] = ""
+            print(f"[broker_guide] ⚠ 해외수수료 추출 실패(메인값 {'채택' if b['overseas_fee'] else '공란'}): {b.get('name','?')}")
+    print(f"[broker_guide] 해외수수료 채움 {ov_ok}/{len(brokers)}")
 
     # 수동 큐레이션 override (있으면 자동값보다 우선)
     _apply_curated(brokers)
