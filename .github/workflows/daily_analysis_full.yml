@@ -373,7 +373,11 @@ jobs:
       - name: 공개 내부자거래 빌드 (DART elestock, 美 Form4 KR판)
         # 전 종목(stock_report universe 1,635) rotation+carry-forward+rate-limit 가드(020/021)+budget.
         # DART 무료 키 재사용(KIS 0, ~1.6K 콜 ≪ 20K). RULE7 = 공시 사실만. 다음 step git add data/ (broad) = RULE 4.
+        # 🚨 2026-06-27 P0 fix: DART_API_KEY env 누락으로 builder "부재 — skip" → insider_trades.json 6/20~6/27 동결(6.7일).
+        #   continue-on-error 가 silent 마스킹. krx_mktcap KRX_API_KEY 누락(fab598aa2, 6/19~23 동결)과 동일 클래스.
         continue-on-error: true
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
         run: python -m api.builders.insider_trades_public_builder
 
       - name: 공개 종목 수급 빌드 (외국인·기관 5일, public-safe)
