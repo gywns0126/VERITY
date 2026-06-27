@@ -290,7 +290,12 @@ def _alert_egregious_freezes(items: list) -> None:
     트리거 = status 'missing'(age > 2×cadence) + ts_source 'content'(mtime unreliable 제외).
     cadence-aware 라 주말 휴장(금→월 ~64h) 무관 + broker_guide 월간(80일에야 missing) false-fire 0.
     dedupe(8h TTL) + 라벨만(age 제외) → stable 메시지 → spam 0. quiet hours 존중(야간 묵음). telegram 미설정/실패 = graceful."""
-    frozen = [it for it in items if it.get("status") == "missing" and it.get("ts_source") == "content"]
+    # 🚨 json_content(GG 공개 9파일, 전부 72h+ 임계 = 주말 금→월 ~65h weekend-safe)만 알림.
+    #   백엔드 content 항목(universe_candidates 26h→missing 52h 등)은 주말 갭에 missing 될 수 있어 제외(월요일 false-fire 방지).
+    frozen = [it for it in items
+              if it.get("type") == "json_content"
+              and it.get("status") == "missing"
+              and it.get("ts_source") == "content"]
     if not frozen:
         return
     try:
