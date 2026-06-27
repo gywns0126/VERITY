@@ -27,7 +27,52 @@ TREND_TOP_N = 30
 # 검색 universe (전 실상장종목 ticker+name) — 검색창(nav/리포트/결정/관심종목) 공유 소스. 발행 O.
 # equities = 위 rows 재사용(추가 호출 0). ETF/ETN/KONEX = 각 1콜. ELW 제외(파생·노이즈). 슬림(ticker/name/market). RULE 7 사실만.
 UNIVERSE_SEARCH_PATH = os.path.join(_ROOT, "data", "universe_search_kr.json")
+# 통합 검색 universe (KR + US) — 검색창 4종 단일 소스(괴리 제거). KR=위 universe_search_kr 재사용,
+# US=us_stock_report_public + us_stock_report_us_smallcap 에서 slim(ticker/name/market) 추출. 발행 O.
+UNIVERSE_SEARCH_ALL_PATH = os.path.join(_ROOT, "data", "universe_search.json")
+_US_REPORT_PATHS = (
+    os.path.join(_ROOT, "data", "us_stock_report_public.json"),
+    os.path.join(_ROOT, "data", "us_stock_report_us_smallcap.json"),
+)
 _TREND_SKIP = ("스팩", "제spac")  # SPAC 제외(거래대금 큰 합병前 스팩 노이즈 회피)
+
+
+def _build_unified_universe(kr_uni):
+    """KR universe(이미 구축) + US report 2파일 slim 병합 → 통합 검색 universe 발행.
+    US 파일은 로컬 data/(별 파이프라인 커밋분) 읽기 — 외부호출 0. 실패해도 KR-only 로 발행."""
+    try:
+        uni = list(kr_uni)
+        seen = {str(s.get("ticker") or "") for s in uni}
+        us_n = 0
+        for p in _US_REPORT_PATHS:
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    d = json.load(f)
+            except Exception:  # noqa: BLE001
+                continue
+            arr = d if isinstance(d, list) else (d.get("stocks") or d.get("data") or [])
+            for s in (arr or []):
+                tk = str(s.get("ticker") or "").strip()
+                nm = str(s.get("name") or "").strip()
+                if not tk or not nm or tk in seen:
+                    continue
+                seen.add(tk)
+                uni.append({"ticker": tk, "name": nm, "market": "US"})
+                us_n += 1
+        udoc = {
+            "_meta": {"generated_at": datetime.now(KST).isoformat(),
+                      "count": len(uni), "kr": len(kr_uni), "us": us_n,
+                      "source": "KRX universe(KR/ETF/ETN/KONEX) + SEC EDGAR(US 대형+소형주) slim 병합 — "
+                                "검색창 4종 단일 소스. ticker/name 사실. 점수·추천 0."},
+            "stocks": uni,
+        }
+        with open(UNIVERSE_SEARCH_ALL_PATH, "w", encoding="utf-8") as f:
+            json.dump(udoc, f, ensure_ascii=False)
+        print(f"[krx_mktcap] universe_search(통합) logged=True · {len(uni)} 종목"
+              f"(kr {len(kr_uni)}+us {us_n}) -> {os.path.relpath(UNIVERSE_SEARCH_ALL_PATH, _ROOT)}",
+              file=sys.stderr)
+    except Exception as ue:  # noqa: BLE001
+        print(f"[krx_mktcap] universe_search(통합) FAILED(무시): {ue!r}", file=sys.stderr)
 
 
 def _int(v):
@@ -170,6 +215,8 @@ def main() -> int:
                 print(f"[krx_mktcap] universe_search logged=True · {len(uni)} 종목"
                       f"(eq {eq_n}+etf {etf_n}+etn {etn_n}+knx {knx_n}) -> {os.path.relpath(UNIVERSE_SEARCH_PATH, _ROOT)}",
                       file=sys.stderr)
+            # 통합 universe(KR+US) 발행 — 검색창 4종 단일 소스
+            _build_unified_universe(uni)
         except Exception as ue:  # noqa: BLE001
             print(f"[krx_mktcap] universe_search FAILED(무시): {ue!r}", file=sys.stderr)
 
