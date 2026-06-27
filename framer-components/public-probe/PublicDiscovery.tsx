@@ -23,6 +23,7 @@ interface Props {
     usStockUrl: string
     usSmallcapUrl?: string
     insiderUrl: string
+    usInsiderUrl?: string
     flowUrl: string
     forensicsUrl: string
     apiBase: string
@@ -33,6 +34,7 @@ interface Props {
 }
 const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
 const DEFAULT_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/insider_trades.json"
+const DEFAULT_US_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_insider_trades.json"
 const DEFAULT_FLOW = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json"
 const DEFAULT_FORENSICS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/disclosure_forensics.json"
 const DEFAULT_API = "https://project-yw131.vercel.app"
@@ -253,7 +255,7 @@ function metricNum(s: any, key: string): number | null {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicDiscovery(props: Props) {
-    const { stockUrl, usStockUrl, usSmallcapUrl, insiderUrl, flowUrl, forensicsUrl, apiBase, reportPath, dark, perList, topOffset } = props
+    const { stockUrl, usStockUrl, usSmallcapUrl, insiderUrl, usInsiderUrl, flowUrl, forensicsUrl, apiBase, reportPath, dark, perList, topOffset } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
@@ -346,18 +348,20 @@ export default function PublicDiscovery(props: Props) {
     useEffect(() => {
         if (!insiderUrl) return
         let alive = true
-        fetch(insiderUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const arr = d && (Array.isArray(d) ? d : d.stocks)
-                if (!alive || !Array.isArray(arr)) return
+        // KR(insider_trades, DART) + US(us_insider_trades, SEC Form4) 병합 — schema 동일, 티커 숫자/비숫자라 충돌 0.
+        const urls: string[] = [insiderUrl, usInsiderUrl].filter((u): u is string => Boolean(u))
+        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
+            .then((docs) => {
+                if (!alive) return
                 const m: Record<string, any> = {}
-                for (const x of arr) { if (x && x.ticker) m[String(x.ticker)] = x }
+                for (const d of docs) {
+                    const arr = d && (Array.isArray(d) ? d : d.stocks)
+                    if (Array.isArray(arr)) for (const x of arr) { if (x && x.ticker) m[String(x.ticker)] = x }
+                }
                 setInsiderMap(m)
             })
-            .catch(() => {})
         return () => { alive = false }
-    }, [insiderUrl])
+    }, [insiderUrl, usInsiderUrl])
 
     useEffect(() => {
         if (!flowUrl) return
@@ -647,7 +651,7 @@ export default function PublicDiscovery(props: Props) {
 
                 {ins && (Number(ins.total) > 0) && (
                     <div>
-                        {sub("내부자 거래 (DART)")}
+                        {sub(/^\d{6}$/.test(String(s.ticker || "")) ? "내부자 거래 (DART)" : "내부자 거래 (SEC Form 4)")}
                         {kv("순증감", fmtShares(ins.net_change), Number(ins.net_change) >= 0 ? C.up : C.down)}
                         {kv("매수 / 매도", `${ins.buy_n}건 / ${ins.sell_n}건`)}
                         {(ins.trades || []).slice(0, 2).map((t: any, i: number) => (
@@ -918,7 +922,7 @@ export default function PublicDiscovery(props: Props) {
             </div>
 
             <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 20, lineHeight: 1.5 }}>
-                시총·PER·PBR·ROE = KRX·DART · 내부자=DART 공시 · 외국인 수급=네이버 · 지배구조=공정위 · 공시이력=DART · 사실 정렬·필터일 뿐
+                시총·PER·PBR·ROE = KRX·DART·SEC · 내부자=DART(국장)·SEC Form4(미장) · 외국인 수급=네이버 · 지배구조=공정위 · 공시이력=DART · 사실 정렬·필터일 뿐
             </div>
         </div>
     )
@@ -929,6 +933,7 @@ addPropertyControls(PublicDiscovery, {
     usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
     usSmallcapUrl: { type: ControlType.String, title: "US Smallcap URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_us_smallcap.json" },
     insiderUrl: { type: ControlType.String, title: "Insider URL", defaultValue: DEFAULT_INSIDER },
+    usInsiderUrl: { type: ControlType.String, title: "US Insider URL", defaultValue: DEFAULT_US_INSIDER },
     flowUrl: { type: ControlType.String, title: "Flow URL", defaultValue: DEFAULT_FLOW },
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: DEFAULT_FORENSICS },
     apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
