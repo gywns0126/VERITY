@@ -95,7 +95,9 @@ function pvs(s: any, key: string): string | null {
     return null
 }
 function sectorOf(s: any): string {
-    return (s.peer && s.peer.sector) || (s.overview && s.overview.sector) || ""
+    // KR=peer/overview 섹터. US=business(SIC 업종, 깨끗한 섹터 없음) fallback.
+    return (s.peer && s.peer.sector) || (s.overview && s.overview.sector) ||
+        (!/^\d{6}$/.test(String(s.ticker || "")) ? (s.business || "") : "") || ""
 }
 function flagCode(market: any): string {
     const m = String(market || "").toUpperCase()
@@ -620,7 +622,7 @@ export default function PublicDiscovery(props: Props) {
                 </div>
                 {livePx.price != null && (
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 8 }}>
-                        <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: "-0.5px" }}>{Number(livePx.price).toLocaleString()}원</span>
+                        <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: "-0.5px" }}>{/^\d{6}$/.test(String(s.ticker || "")) ? Number(livePx.price).toLocaleString() + "원" : "$" + Number(livePx.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         {livePx.chg != null && isFinite(livePx.chg) && (
                             <span style={{ fontSize: 13, fontWeight: 800, color: livePx.chg > 0 ? C.up : livePx.chg < 0 ? C.down : C.faint }}>{(livePx.chg > 0 ? "+" : "") + livePx.chg.toFixed(2)}%</span>
                         )}
@@ -703,7 +705,7 @@ export default function PublicDiscovery(props: Props) {
                 )}
 
                 <button onClick={() => go(s.ticker)} style={{ width: "100%", marginTop: 16, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vt, color: "#fff" }}>전체 리포트 보기 →</button>
-                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5, textAlign: "center" }}>사실만 · 추천·등급 아님 · 차트·심화는 전체 리포트</div>
+                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5, textAlign: "center" }}>사실만 · 차트·심화는 전체 리포트</div>
             </div>
         )
     }
@@ -916,7 +918,7 @@ export default function PublicDiscovery(props: Props) {
             </div>
 
             <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 20, lineHeight: 1.5 }}>
-                시총·PER·PBR·ROE = KRX·DART · 내부자=DART 공시 · 외국인 수급=네이버 · 지배구조=공정위 · 공시이력=DART · 사실 정렬·필터일 뿐 등급·추천 아님 · 자체 점수는 검증 후(2027) 공개
+                시총·PER·PBR·ROE = KRX·DART · 내부자=DART 공시 · 외국인 수급=네이버 · 지배구조=공정위 · 공시이력=DART · 사실 정렬·필터일 뿐
             </div>
         </div>
     )

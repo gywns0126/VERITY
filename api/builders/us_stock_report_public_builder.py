@@ -213,6 +213,7 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
     mc = _usd_compact(cap.get("market_cap"))
     if mc:
         header["market_cap"] = mc
+        facts["시가총액"] = mc  # Discovery 표/정렬·리포트 facts 시총 노출(US, KR 정합). header 와 동기.
     tv = _usd_compact(cap.get("adv"))
     if tv:
         header["trading_value"] = tv + "/일"
