@@ -311,6 +311,27 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
     dy = _num(rec.get("div_yield"), "%", 2)
     if dy is not None and float(rec.get("div_yield") or 0) > 0:
         facts["배당수익률"] = dy
+    # BPS = 주가 ÷ PBR (주당순자산 · 사실 계산, 통화 인지)
+    try:
+        px = float(rec.get("price") or 0)
+        pbr_v = float(rec.get("pbr") or 0)
+        if px > 0 and pbr_v > 0:
+            bps_v = px / pbr_v
+            facts["BPS"] = f"${bps_v:,.2f}" if str(rec.get("currency") or "").upper() == "USD" else f"{bps_v:,.0f}원"
+            fnote["BPS"] = "주가 ÷ PBR"
+    except (TypeError, ValueError):
+        pass
+    # PSR = 시가총액 ÷ 매출 (배 · 매출 있을 때만 · sanity 가드로 이상치 비노출)
+    try:
+        mc = float(rec.get("market_cap") or 0)
+        rev = float(rec.get("revenue") or 0)
+        if mc > 0 and rev > 0:
+            psr_v = mc / rev
+            if 0 < psr_v <= 100:
+                facts["PSR"] = f"{psr_v:,.2f}배"
+                fnote["PSR"] = "시가총액 ÷ 매출 (DART)"
+    except (TypeError, ValueError):
+        pass
 
     # 헤더 메타 (52주 범위·거래대금 — 외부 사실)
     header: Dict[str, str] = {}
