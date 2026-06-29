@@ -3219,6 +3219,19 @@ def main():
         except Exception as _e:
             print(f"  [5.77] 분산매도 정황 관측 스킵: {_e}")
 
+    # [5.78] earnings surprise 관측 (PEAD, US Phase 1a) — 점수 wire 0, brain_input=False, 사전등록.
+    #   스펙 docs/earnings_surprise_pead_spec_v0_2026_06_19.md §4(2단계 채점 ①). forward eval=Phase 1b 별도 cron.
+    #   us_candidates_571 = earnings_surprises 부착된 리스트(L3087). 부재 시 run_shadow no-op(안전).
+    #   🚨 KR 경로 = ConsensusScout 연간추정 vs DART 분기actual mismatch → PM 결정 대기(본 step US-only).
+    if effective_mode == "full" and us_candidates_571:
+        try:
+            from api.intelligence.earnings_surprise import run_shadow as _es_run_shadow
+            _es = _es_run_shadow(us_candidates_571)
+            print(f"  [5.78] earnings surprise 관측(US): 신규 {_es.get('new_events')}건 "
+                  f"(중복스킵 {_es.get('skipped_seen')} / universe {_es.get('universe')})")
+        except Exception as _e:
+            print(f"  [5.78] earnings surprise 관측 스킵: {_e}")
+
     # ── STEP 5.76: full 전용 — ChainScout 주요 매출처/고객사 (KR only) ──
     if effective_mode == "full" and not is_us_mode:
         print("\n[5.76] ChainScout — 주요 매출처/고객사 분석")
