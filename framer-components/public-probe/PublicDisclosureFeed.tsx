@@ -13,7 +13,6 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
  *   onAccent = 브랜드 보라(vg) 위 글자색. 라이트=흰색/다크=짙은색(2026-06-21 가독성).
  * 🚨 면책 문구 제거(2026-06-26, PM) — "추천·등급 아님 / 검증 후 2027 / 매수·매도 의견 아님" 류는 사이트 하단 단일 면책으로 통합. 출처·색 의미는 유지.
- * 디자인: 터미널 브리핑(2026-06-29) — 카드앱 탈피. radius↓·그림자 제거·hairline divider·tabular-nums. 컬러 불변(보라).
  */
 
 const LIGHT = {
@@ -329,7 +328,7 @@ export default function PublicDisclosureFeed(props: Props) {
 
     const tipStyle = (): CSSProperties => ({
         position: "absolute", top: "calc(100% + 6px)", left: tipBox.left, zIndex: 50, display: "block",
-        width: tipBox.width, background: C.tipBg, color: C.tipFg, borderRadius: 8,
+        width: tipBox.width, background: C.tipBg, color: C.tipFg, borderRadius: 12,
         padding: "11px 13px", fontSize: 12.5, fontWeight: 500, lineHeight: 1.55, letterSpacing: "-0.1px",
         boxShadow: "0 6px 20px rgba(0,0,0,0.18)", whiteSpace: "normal", textAlign: "left",
     })
@@ -383,7 +382,7 @@ export default function PublicDisclosureFeed(props: Props) {
         <div ref={rootRef} style={wrap}>
             {/* 헤더 */}
             <div style={{ marginBottom: 4 }}>
-                <div style={{ fontSize: narrow ? 16 : 17, fontWeight: 800, letterSpacing: "-0.2px" }}>공시 속보</div>
+                <div style={{ fontSize: narrow ? 18 : 20, fontWeight: 800, letterSpacing: "-0.5px" }}>공시 속보</div>
                 <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 3 }}>
                     공시-first (DART 원천) · 관심종목 공시는 위로
                 </div>
@@ -403,7 +402,7 @@ export default function PublicDisclosureFeed(props: Props) {
                     placeholder="종목명·코드 검색"
                     style={{
                         width: "100%", boxSizing: "border-box", border: "none",
-                        background: C.card, color: C.ink, borderRadius: 8,
+                        background: C.card, color: C.ink, borderRadius: 12,
                         padding: "12px 34px 12px 38px", fontSize: 13.5, fontFamily: FONT, outline: "none",
                         WebkitAppearance: "none",
                     }}
@@ -415,7 +414,7 @@ export default function PublicDisclosureFeed(props: Props) {
             </div>
 
             {/* 종목 카드 리스트 */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
                 {shown.length === 0 ? (
                     <div style={{ textAlign: "center", color: C.faint, fontSize: 13, fontWeight: 600, padding: "30px 0", lineHeight: 1.5 }}>
                         {query.trim() ? `"${query.trim()}" 검색 결과가 없어요` : "공시가 없어요"}
@@ -424,15 +423,15 @@ export default function PublicDisclosureFeed(props: Props) {
                 {shown.map((it) => {
                     const pinned = watchSet.has(String(it.ticker))
                     return (
-                        <div key={it.ticker} style={{ background: C.card, borderRadius: 8, padding: `${cardPadV}px ${cardPadH}px`, border: pinned ? `1px solid ${C.vt}` : `1px solid ${C.line}` }}>
+                        <div key={it.ticker} style={{ background: C.card, borderRadius: 16, padding: `${cardPadV}px ${cardPadH}px`, boxShadow: "0 1px 3px rgba(0,0,0,0.04)", border: pinned ? `1px solid ${C.vtS}` : "1px solid transparent" }}>
                             {/* 종목명 — 탭하면 전체 리포트 */}
                             <div onClick={() => goStock(it.ticker)}
                                 style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6, flexWrap: "wrap", cursor: "pointer" }}>
-                                {pinned && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: C.vt, background: C.vtS, padding: "2px 7px", borderRadius: 4 }}>관심</span>}
-                                <span style={{ fontSize: 14.5, fontWeight: 700, letterSpacing: "-0.2px" }}>{it.name}</span>
-                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{it.ticker}</span>
+                                {pinned && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: C.vt, background: C.vtS, padding: "2px 7px", borderRadius: 6 }}>관심</span>}
+                                <span style={{ fontSize: 15.5, fontWeight: 700, letterSpacing: "-0.3px" }}>{it.name}</span>
+                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{it.ticker}</span>
                                 <span style={{ fontSize: 11, color: C.vg, fontWeight: 800 }}>리포트 ›</span>
-                                <span style={{ marginLeft: "auto", fontSize: 11.5, color: C.faint, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{it.latest}</span>
+                                <span style={{ marginLeft: "auto", fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{it.latest}</span>
                             </div>
 
                             {it.disclosures.map((d, i) => {
@@ -455,7 +454,7 @@ export default function PublicDisclosureFeed(props: Props) {
                                                     <span role="button" tabIndex={0}
                                                         onClick={(e) => { e.stopPropagation(); if (chipOpen) setOpenTip(""); else openTipAt(e, chipId) }}
                                                         {...hoverProps(chipId)}
-                                                        style={{ display: "inline-block", fontSize: 11, fontWeight: 800, color: chipC.fg, background: chipC.bg, padding: "3px 8px", borderRadius: 4, whiteSpace: "nowrap", cursor: "help" }}>
+                                                        style={{ display: "inline-block", fontSize: 11, fontWeight: 800, color: chipC.fg, background: chipC.bg, padding: "3px 8px", borderRadius: 7, whiteSpace: "nowrap", cursor: "help" }}>
                                                         {corr ? "정정" : d.label}
                                                     </span>
                                                     {chipOpen && (
@@ -466,7 +465,7 @@ export default function PublicDisclosureFeed(props: Props) {
                                                     )}
                                                 </span>
                                                 {tone && toneSty && (
-                                                    <span style={{ display: "inline-block", fontSize: 10.5, fontWeight: 800, color: toneSty.fg, background: toneSty.bg, padding: "2px 7px", borderRadius: 4, whiteSpace: "nowrap" }}>
+                                                    <span style={{ display: "inline-block", fontSize: 10.5, fontWeight: 800, color: toneSty.fg, background: toneSty.bg, padding: "2px 7px", borderRadius: 6, whiteSpace: "nowrap" }}>
                                                         {TONE_LABEL[tone]}
                                                     </span>
                                                 )}
@@ -475,7 +474,7 @@ export default function PublicDisclosureFeed(props: Props) {
                                                 <div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, lineHeight: 1.45, wordBreak: "break-word" }}>
                                                     {renderTitle(d.title, key)}
                                                 </div>
-                                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
+                                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3 }}>
                                                     {d.date}{d.filer ? " · " + d.filer : ""}
                                                 </div>
                                             </div>
@@ -492,12 +491,12 @@ export default function PublicDisclosureFeed(props: Props) {
                                                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                                     {d.source_url && (
                                                         <a href={d.source_url} target="_blank" rel="noopener"
-                                                            style={{ fontSize: 12, fontWeight: 800, color: C.onAccent, background: C.vg, borderRadius: 6, padding: "8px 14px", textDecoration: "none" }}>
+                                                            style={{ fontSize: 12, fontWeight: 800, color: C.onAccent, background: C.vg, borderRadius: 9, padding: "8px 14px", textDecoration: "none" }}>
                                                             DART 원문 전체 보기 ↗
                                                         </a>
                                                     )}
                                                     <button onClick={(e) => { e.stopPropagation(); goStock(it.ticker) }}
-                                                        style={{ border: `1px solid ${C.line}`, background: C.card, color: C.ink, cursor: "pointer", fontSize: 12, fontWeight: 800, borderRadius: 6, padding: "8px 14px", fontFamily: FONT }}>
+                                                        style={{ border: `1px solid ${C.line}`, background: C.card, color: C.ink, cursor: "pointer", fontSize: 12, fontWeight: 800, borderRadius: 9, padding: "8px 14px", fontFamily: FONT }}>
                                                         {it.name} 리포트 ›
                                                     </button>
                                                 </div>
