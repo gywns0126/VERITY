@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 종목 발견(Discovery) — VERITY 공개 터미널 (골든구스). 토스 "주식 골라보기"식 좌측 탭 + 정렬표/리스트 + 로고·국기.
+ * 종목 발견(Discovery) — VERITY 공개 터미널 (AlphaNest). 토스 "주식 골라보기"식 좌측 탭 + 정렬표/리스트 + 로고·국기.
  *
  * 🚨 헌법 가드 (RULE 7 / held-2027 / feedback_scope):
  *  - 모든 리스트·표 = 발행된 사실(stock_report_public + insider_trades + stock_flow_5d + disclosure_forensics) 위 결정론적 규칙. 자체 점수 0 (RULE 6 통과).
@@ -925,7 +925,10 @@ export default function PublicDiscovery(props: Props) {
                 </div>
             </div>
 
-            <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 20, lineHeight: 1.5 }}>
+            <div style={{ textAlign: "center", fontSize: 11.5, color: C.sub, fontWeight: 600, marginTop: 20, lineHeight: 1.55 }}>
+                직접 조건검색으로 짜기 어려운 사실 기반 스크린 — 내부자·외국인 수급·지배구조·공시이력
+            </div>
+            <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>
                 시총·PER·PBR·ROE = KRX·DART·SEC · 내부자=DART(국장)·SEC Form4(미장) · 외국인 수급=네이버 · 지배구조=공정위 · 공시이력=DART · 사실 정렬·필터일 뿐
             </div>
         </div>
