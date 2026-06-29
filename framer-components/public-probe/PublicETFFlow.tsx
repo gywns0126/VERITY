@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * ETF 자금흐름 렌즈 — VERITY 공개 터미널 (골든구스). 국민연금(PublicNPSHoldings)처럼 독립 "렌즈".
+ * ETF 자금흐름 렌즈 — VERITY 공개 터미널 (AlphaNest). 국민연금(PublicNPSHoldings)처럼 독립 "렌즈".
  * 디자인 = 토스식 미니멀: 무채색 위주 + 방향값만 유입(빨강)/유출(파랑), 얇은 구분선, 색배경·외곽선·이모지 없음.
  *
  * 🚨 차별 각도: 토스/네이버 ETF 화면(보수율·수익률)과 달리 "패시브 자금이 어느 테마로".

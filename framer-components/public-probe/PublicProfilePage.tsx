@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import React, { useEffect, useState } from "react"
 
 /**
- * 골든구스 내정보 페이지 — 페이지 전체용 컴포넌트 (네브바 버튼 없음, 페이지에 바로 렌더).
+ * AlphaNest 내정보 페이지 — 페이지 전체용 컴포넌트 (네브바 버튼 없음, 페이지에 바로 렌더).
  *
  * 가입 시 입력 정보(이름/이메일/전화/가입일/상태) + 로그아웃 + 회원 탈퇴.
  * 데이터: localStorage("verity_supabase_session") 세션 + Supabase REST `profiles` (PublicAuth 공유 스키마).

@@ -252,7 +252,7 @@ def generate_observation_predictions(
     return out
 
 
-# 소형주 코너(골든구스 병렬 트랙) 검증 신호 = quant 팩터 개별 (PM 결정 2026-06-20, spec §11).
+# 소형주 코너(AlphaNest 병렬 트랙) 검증 신호 = quant 팩터 개별 (PM 결정 2026-06-20, spec §11).
 # brain_score 는 코너에서 degenerate — 15 fact component 중 ~3만 present(나머지 시장신호 default 50)
 # → 평균이 50-51 상수(stdev 0.3). multi_factor 도 시장신호 5개 상수에 압축(stdev 1.79). 실제 분산 신호 =
 # quant 팩터(momentum stdev 13 / quality 11 / vol 8 / mr 5). 각 팩터 별 source 태그 → 팩터별 독립 forward IC

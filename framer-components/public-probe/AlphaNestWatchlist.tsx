@@ -2,10 +2,10 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useCallback, useEffect, useState, type CSSProperties } from "react"
 
 /**
- * 골든구스 '내 종목' 뷰 — 로그인 사용자의 관심종목 리스트(기기·세션 넘어 유지).
+ * AlphaNest '내 종목' 뷰 — 로그인 사용자의 관심종목 리스트(기기·세션 넘어 유지).
  *
  * 데이터 = 기존 백엔드 /api/watchgroups (JWT 인증, 본인 필터·IDOR 안전). DB 변경 0.
- * 세션 = verity_supabase_session(localStorage, GoldenGooseAuth 가 기록). 미로그인=둘러보기 안내만.
+ * 세션 = verity_supabase_session(localStorage, AlphaNestAuth 가 기록). 미로그인=둘러보기 안내만.
  * 별표 추가/삭제(PublicStockReport) → window 'verity_watch_change' → 이 뷰 자동 새로고침.
  * 행 클릭 → reportPath?q=ticker. 삭제(×) → remove_item. 실시간가 = /api/stock 1회 조회.
  * 다크모드 = body[data-framer-theme] 추종. RULE 7 = 사실(가격·등락률)만, 자체 점수 0.
@@ -57,7 +57,7 @@ function Logo({ ticker, name, C }: { ticker: string; name: string; C: any }) {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
-export default function GoldenGooseWatchlist(props: Props) {
+export default function AlphaNestWatchlist(props: Props) {
     const { apiBase, reportPath, dark } = props
     const api = (apiBase || DEFAULT_API).replace(/\/+$/, "")
     const report = reportPath || DEFAULT_REPORT
@@ -246,7 +246,7 @@ export default function GoldenGooseWatchlist(props: Props) {
     )
 }
 
-addPropertyControls(GoldenGooseWatchlist, {
+addPropertyControls(AlphaNestWatchlist, {
     apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
     reportPath: { type: ControlType.String, title: "Report Path", defaultValue: DEFAULT_REPORT },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },

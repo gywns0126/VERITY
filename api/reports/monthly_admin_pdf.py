@@ -845,7 +845,7 @@ def _render_chap6_vams(pdf: VerityPDF, analysis: Dict[str, Any], portfolio: Dict
     else:
         pdf.text_block("자산 추이 데이터 미수집", color=pdf.GRAY)
 
-    # 6-3. Vision Metric — Antifragility + FOMO (2028 Golden Goose 추적, Perplexity Q6)
+    # 6-3. Vision Metric — Antifragility + FOMO (2028 AlphaNest 추적, Perplexity Q6)
     pdf.subsection_title("6-3. 2028 Vision Metric (월간)")
     try:
         from api.quant.antifragility import assess_antifragility

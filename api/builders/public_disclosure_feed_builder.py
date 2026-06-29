@@ -1,7 +1,7 @@
 """public_disclosure_feed_builder — 공개 터미널 "공시 속보" 피드 빌더.
 
 배경 (2026-06-17):
-  골든구스 공개 터미널 1차 슬라이스 = 공시 속보 탭. 기존 수집 자산
+  AlphaNest 공개 터미널 1차 슬라이스 = 공시 속보 탭. 기존 수집 자산
   data/dart_catalyst_alerts.jsonl (api/main.py STEP 5.78, dart_catalyst.py 수집,
   운영풀 KR 종목 직전 N일 공시, dedupe by rcept_no) 을 **public-safe JSON** 으로 변환.
 

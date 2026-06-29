@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
 /**
- * 골든구스 뉴스 탭 (공개) — 팩트형.
+ * AlphaNest 뉴스 탭 (공개) — 팩트형.
  *
  * 우리 종목 연동형: recommendations.json 의 종목별 sentiment.top_headline_links 를
  * "내 종목 뉴스" 로, portfolio.json 의 headlines / us_headlines 를 "시장 / 미국" 으로 노출.

@@ -1,6 +1,6 @@
 """public_price_snapshot_builder — 공개 가격 스냅샷 (히트맵 가격% 토글 입력).
 
-2026-06-21 신설. 골든구스 공개 히트맵(PublicHeatmap) 의 '가격%' 토글은 종목별 당일 등락률을
+2026-06-21 신설. AlphaNest 공개 히트맵(PublicHeatmap) 의 '가격%' 토글은 종목별 당일 등락률을
 필요로 하나, stock_report_public.json 에는 가격/등락률이 없음(시총·재무 사실만). 이 빌더가
 당일 등락률만 추린 경량 스냅샷을 산출 → Blob/VERITY-data 발행 → 히트맵 priceUrl 소비.
 

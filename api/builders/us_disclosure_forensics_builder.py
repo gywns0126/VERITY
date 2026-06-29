@@ -1,4 +1,4 @@
-"""미장(US) 8-K forensics 빌더 — 골든구스 미장 소형주 트랙 (Phase 4).
+"""미장(US) 8-K forensics 빌더 — AlphaNest 미장 소형주 트랙 (Phase 4).
 
 KR disclosure_forensics(DART)의 미장 대응. SEC 8-K item 코드를 카테고리로 집계 —
 소형주 위험 신호(희석/상폐/부실/재무재작성)를 '사실 카운트'. 미장 8-K item 은 표준 분류라

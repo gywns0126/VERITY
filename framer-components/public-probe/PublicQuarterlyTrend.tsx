@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 분기 재무 추이 — VERITY 골든구스 종목 리포트 깊이 섹션.
+ * 분기 재무 추이 — VERITY AlphaNest 종목 리포트 깊이 섹션.
  *
  * 목적 = "재무 단년 스냅샷 1개" → "최근 N분기 흐름(개선/악화)". DART 분기보고서 사실만(RULE 7).
  * 데이터 = dart_quarterly_public.json (Part 2 슬림 빌더 산출, backfill 누적분). {stocks:{ticker:{quarters:[...]}}}.

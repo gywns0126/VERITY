@@ -1,4 +1,4 @@
-"""미장(US) 소형주 코너 유니버스 빌더 — 골든구스 미장 트랙.
+"""미장(US) 소형주 코너 유니버스 빌더 — AlphaNest 미장 트랙.
 
 KR smallcap_corner_builder 의 미장 대응. 방치된 미국 소형주 = sell-side 커버 얇은 구간
 (Finviz/Fintel 이 넓게 커버하나 KR 사용자 접근성·우리 forensics 각이 차별). Russell 2000

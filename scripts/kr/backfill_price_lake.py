@@ -3,7 +3,7 @@
 backfill_price_lake.py — 로컬 가격레이크(kr_prices.duckdb) 코너 미커버 종목 백필.
 
 2026-06-20 신설. 소형주 코너 1,120 중 레이크 미커버(~535)를 pykrx OHLCV 로 채워 enrichment 커버리지 확대
-([[project_golden_goose_smallcap_track]] §10). 레이크 = 로컬 자산(repo 밖, ~/VERITY_data_lake).
+([[project_alpha_nest_smallcap_track]] §10). 레이크 = 로컬 자산(repo 밖, ~/VERITY_data_lake).
 
 idempotent: 이미 ohlcv 에 있는 ticker = skip. graceful: 종목별 fetch 실패 = skip + 로그(전체 막지 않음).
 ingest_log 동시 기록. 1 ticker = pykrx 1 HTTP call(date-range), ~535 call.

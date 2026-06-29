@@ -2,7 +2,7 @@
 
 ⚠️ 관측 ONLY — 점수/등급/결정 wire 0. data/observations/distribution_footprint.jsonl append.
 
-배경 (골든구스 유리박스 mandate): 기관·대주주가 개미를 *출구 유동성(exit liquidity)* 으로
+배경 (AlphaNest 유리박스 mandate): 기관·대주주가 개미를 *출구 유동성(exit liquidity)* 으로
 분산매도하는 정황을 **공개 사실**로 노출하는 역(방어) 렌즈. "기관 따라사기/다음 수 추론"이
 아니다 — 그건 RULE 6(LLM 내러티브) + 거짓(숏/옵션 비공시라 공개정보로 불가) + 법률 저촉.
 

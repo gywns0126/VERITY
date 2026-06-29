@@ -72,7 +72,7 @@ jobs:
           # RULE 4: 신 체크포인트 파일(.dart_quarterly_backfill_progress.json) + 누적 jsonl 둘 다 명시 add
           git add data/.dart_quarterly_backfill_progress.json data/dart_quarterly_snapshots.jsonl 2>/dev/null || true
           git diff --staged --quiet && { echo "변경 없음"; exit 0; }
-          git commit -m "data(golden-goose): KR 분기재무 백필 누적 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') (분기추이)"
+          git commit -m "data(alpha-nest): KR 분기재무 백필 누적 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') (분기추이)"
           BRANCH="${{ github.ref_name }}"
           for i in 1 2 3 4 5; do
             git rebase --abort 2>/dev/null || true

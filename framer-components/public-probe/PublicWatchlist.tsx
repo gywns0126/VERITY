@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 관심종목 — VERITY 공개 터미널 (골든구스) 우측 상시 사이드바.
+ * 관심종목 — VERITY 공개 터미널 (AlphaNest) 우측 상시 사이드바.
  *
  * 저장 = localStorage["verity_watchlist"] = [{ticker,name,market}] (로그인 불요·마찰 0).
  * 검색 universe = universe_search.json (통합 KR+US ~8.4천, nav/리포트/결정 검색과 동일 단일 소스. 2026-06-27 통일 — 괴리 제거). 가격/등락 = /api/stock 라이브(best-effort).

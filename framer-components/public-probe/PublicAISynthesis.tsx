@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * AI 사실 종합 — VERITY 공개 터미널 (골든구스). 검증된 공개 사실(DART/KRX/공정위)을 LLM이 자연스럽게 종합.
+ * AI 사실 종합 — VERITY 공개 터미널 (AlphaNest). 검증된 공개 사실(DART/KRX/공정위)을 LLM이 자연스럽게 종합.
  *
  * 🚨 RULE 6 escape hatch: ungrounded LLM narrative 금지지만 **자기 trail 위 종합 = 권장 방향**. ChatGPT 못 보는 우리 데이터 위.
  * 🚨 RULE 7 / held-2027 / 유사투자자문 법: **사실 종합·연결만**. 평가·의견·추천·등급 0(빌더 post-filter + 결정론 fallback).

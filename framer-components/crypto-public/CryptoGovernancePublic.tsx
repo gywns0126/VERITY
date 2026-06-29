@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * DAO 거버넌스 렌즈 — VERITY 공개 터미널 (골든구스 / TIDE 보조). PublicETFFlow 디자인 정본 복제.
+ * DAO 거버넌스 렌즈 — VERITY 공개 터미널 (AlphaNest / TIDE 보조). PublicETFFlow 디자인 정본 복제.
  * 디자인 = 토스식 미니멀: 무채색(ink/sub/faint) 위주, 색배경·외곽선·이모지 없음, 흰 카드 on 회색 배경.
  *
  * 🚨 차별 각도: 주요 DAO 거버넌스 제안(Snapshot)의 진행 중 투표를 리스트로. 토큰 가격이 아닌 "프로토콜 의사결정".

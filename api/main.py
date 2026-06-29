@@ -3209,7 +3209,7 @@ def main():
             print(f"  [5.76] fair_value_gap 관측 스킵: {_e}")
 
     # [5.77] 분산매도 정황 관측 (외국인/기관 순매도 + DART 5%룰 축소) — 점수 wire 0.
-    # 골든구스 유리박스 역(방어) 렌즈. 사전등록 docs/PREREG_DISTRIBUTION_FOOTPRINT_2026_06_25.md
+    # AlphaNest 유리박스 역(방어) 렌즈. 사전등록 docs/PREREG_DISTRIBUTION_FOOTPRINT_2026_06_25.md
     # (점수화=forward-IC N≥50 게이트 후). flow(KIS)는 종목별 이미 부착(STEP 데이터 보강).
     if not is_us_mode:
         try:

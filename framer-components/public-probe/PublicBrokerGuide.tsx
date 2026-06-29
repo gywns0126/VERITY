@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import React, { useEffect, useMemo, useState } from "react"
 
 /**
- * 골든구스 증권사 가이드 (공개) — broker-neutral 사실 비교.
+ * AlphaNest 증권사 가이드 (공개) — broker-neutral 사실 비교.
  *
  * 데이터 = Blob broker_guide.json (api/collectors/broker_guide.py = Perplexity sonar-pro 월 1회 자동집계).
  *

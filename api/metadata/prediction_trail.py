@@ -37,7 +37,7 @@ REGIME_PATH = os.path.join(DATA_DIR, "metadata", "regime_prediction_trail.jsonl"
 # market-level forward 예측으로 환산 → 별 trail/scorer source 분리. 관측 only — 결정 피드백 0(RULE 7).
 # spec docs/observation_signal_trails_spec_v0_2026_06_13.md.
 OBS_PATH = os.path.join(DATA_DIR, "metadata", "observation_prediction_trail.jsonl")
-# 소형주 코너(골든구스 병렬 트랙) forward trail (물리 분리). 코너 quant 팩터 forward 예측력 검증
+# 소형주 코너(AlphaNest 병렬 트랙) forward trail (물리 분리). 코너 quant 팩터 forward 예측력 검증
 # (관측 only, brain_input=False). 메인 funnel 25 / VAMS 2027 win condition 과 별 풀.
 # 🚨 raw trail = **로컬 레이크 디렉토리(repo 밖, 백업됨)** — 1,117종목×4팩터×3h = 8MB/run → git bloat 회피.
 # git 커밋은 집계 결과 smallcap_corner_ic_history.jsonl(작음) 만 (score_smallcap_corner). 레이크 부재(CI)

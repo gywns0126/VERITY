@@ -137,7 +137,7 @@ def main() -> int:
     else:
         sys.stderr.write("[predict] us_market_observations 없음/빈값 — obs skip (graceful)\n")
 
-    # 소형주 코너(골든구스 병렬 트랙) → brain analyze_all 별도 호출 → forward 예측
+    # 소형주 코너(AlphaNest 병렬 트랙) → brain analyze_all 별도 호출 → forward 예측
     # (Smallcap Corner Trail Spec v0 — 별도 trail SMALLCAP_PATH, 메인/섀도우/ML/관측/regime 무오염).
     # 관측 only — 채점 결과 VAMS/Brain 학습 피드백 0 (RULE 7, brain_input=False).
     smallcap_out = (args.out + ".smallcap.jsonl") if args.out else None  # 테스트 시에도 격리

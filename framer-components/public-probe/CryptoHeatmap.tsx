@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *
  * 🚨 RULE 7: 자체 점수·등급 0 — 시총/변동%/sparkline 사실만 (StockHeatmap의 Brain grade dot 제거).
  * 🚨 RULE 1 무관: KIS·국내증권 비참조. CoinGecko 링크만.
- * 다크모드 = body[data-framer-theme] 자가감지(골든구스 패턴). 로딩 = shimmer 스켈레톤. onCanvas = 데모.
+ * 다크모드 = body[data-framer-theme] 자가감지(AlphaNest 패턴). 로딩 = shimmer 스켈레톤. onCanvas = 데모.
  */
 
 const LIGHT = {

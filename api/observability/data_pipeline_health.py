@@ -189,7 +189,7 @@ SOURCES = [
         "type": "jsonl_runtime",
         "max_fresh_hours": 26.0,
     },
-    # 🚨 GG 공개 터미널 데이터 (launch-facing) — content generated_at 기반 freeze 포착.
+    # 🚨 AlphaNest 공개 터미널 데이터 (launch-facing) — content generated_at 기반 freeze 포착.
     # 2026-06-27 추가: insider_trades 6.7일 silent freeze 가 모니터 감시밖이라 미포착(P0). 72h = 주말 휴장(금→월 ~64h) false-stale 회피 + 다일 freeze 포착.
     {"key": "insider_kr", "label": "내부자거래 KR (DART)", "path": "data/insider_trades.json", "type": "json_content", "max_fresh_hours": 72.0},
     {"key": "insider_us", "label": "내부자거래 US (Form4)", "path": "data/us_insider_trades.json", "type": "json_content", "max_fresh_hours": 72.0},
@@ -290,7 +290,7 @@ def _alert_egregious_freezes(items: list) -> None:
     트리거 = status 'missing'(age > 2×cadence) + ts_source 'content'(mtime unreliable 제외).
     cadence-aware 라 주말 휴장(금→월 ~64h) 무관 + broker_guide 월간(80일에야 missing) false-fire 0.
     dedupe(8h TTL) + 라벨만(age 제외) → stable 메시지 → spam 0. quiet hours 존중(야간 묵음). telegram 미설정/실패 = graceful."""
-    # 🚨 json_content(GG 공개 9파일, 전부 72h+ 임계 = 주말 금→월 ~65h weekend-safe)만 알림.
+    # 🚨 json_content(AlphaNest 공개 9파일, 전부 72h+ 임계 = 주말 금→월 ~65h weekend-safe)만 알림.
     #   백엔드 content 항목(universe_candidates 26h→missing 52h 등)은 주말 갭에 missing 될 수 있어 제외(월요일 false-fire 방지).
     frozen = [it for it in items
               if it.get("type") == "json_content"

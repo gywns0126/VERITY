@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
  * 코인 레짐 종합 — 공개형 TIDE 리드 카드 (10피드 → 하나의 판독 + 유리박스 채점).
- * 골든구스 정본 디자인 결(PublicETFFlow): 무채색 + 얇은 구분선, 색배경·외곽선·이모지 없음.
+ * AlphaNest 정본 디자인 결(PublicETFFlow): 무채색 + 얇은 구분선, 색배경·외곽선·이모지 없음.
  *
  * 우리 엣지 = 데이터 양 아닌 종합. ① 한 판독 + ② 왜(6 드라이버보드) + ③ forward 자가채점 trail.
  * 운영자 TIDE(TSM/포지션)와 분리된 공개 희석 face — 관측-only, 매매 미연결.

@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 코인 레짐 트레일 — 코인 골든구스 유리박스 lead (TIDE 자기 운영 trail 의 공개 표면).
+ * 코인 레짐 트레일 — 코인 AlphaNest 유리박스 lead (TIDE 자기 운영 trail 의 공개 표면).
  *
  * "개미가 손으로 매일 못 모으는 자동화 자산" = 5 온체인/심리 센서 일일 수집 + 레짐 forward 자가채점 + Phase0 백테스트.
  * CoinGecko·LLM 이 못 가지는 view = 우리가 실제 돌린 크립토 레짐 관측의 검증 trail(과정 노출).
@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *            Phase0 = 백테스트(라이브 아님) 명시. paper trades=0(약세장 정상) "검증 진행 중".
  * 🚨 RULE 6: LLM·서술 합성 0. 결정론 표시만.
  * 🚨 관측-only: TIDE 매매 미연결(observation_only). 점수→포지션 경로 없음.
- * 다크모드 = body[data-framer-theme] 자가감지(골든구스 패턴). onCanvas = 데모.
+ * 다크모드 = body[data-framer-theme] 자가감지(AlphaNest 패턴). onCanvas = 데모.
  */
 
 const LIGHT = {

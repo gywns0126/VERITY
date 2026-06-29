@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useState } from "react"
 
 /**
- * 골든구스 피드 — 공시-first 연결, 층위 공개(progressive disclosure). 토스 언어, 이모지 0.
+ * AlphaNest 피드 — 공시-first 연결, 층위 공개(progressive disclosure). 토스 언어, 이모지 0.
  *
  * L0(기본): 답 하나 + 과거패턴 mini-viz(점 타임라인) + "근거 N개 ▾"(깊이 신호).
  * L1(탭): 연결된 사실 전체 + 출처(DART/KRX 원문).  → 표면 심플, 깊이 한 탭 아래.
@@ -10,10 +10,10 @@ import { useEffect, useState } from "react"
  * 🚨 점수·등급·추천·verdict 0(RULE7, 유사투자자문 회피). named 비판 0 — 전부 공시/시세 사실.
  *    "이게 처음 아님" 과거패턴 = 사실 병기(추천 아님). 유리박스 정직 라벨.
  *
- * Framer ID pX7cI0P · insertUrl framer.com/m/GoldenGooseFeed-aZ2eF0.js · 생성 2026-06-16.
+ * Framer ID pX7cI0P · insertUrl framer.com/m/AlphaNestFeed-aZ2eF0.js · 생성 2026-06-16.
  */
 
-// ── 토스 디자인 토큰 ── (LIGHT / DARK 쌍)
+// ── 터미널 브리핑 토큰 ── (LIGHT / DARK 쌍) · 카드앱 탈피: radius↓·그림자 제거·hairline divider·tabular-nums
 const LIGHT = {
   bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
   line: "#e5e8eb", red: "#f04452", redSoft: "#fff0f1", amber: "#ff9500", amberSoft: "#fff6e9",
@@ -98,10 +98,10 @@ function MiniHistory(props: { history: Hist[]; C: typeof LIGHT }) {
         const txt = h.current ? "?" : (h.ret !== null && h.ret > 0 ? "+" + h.ret : "" + h.ret) + "%"
         return (
           <div key={k} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: col }}>{txt}</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: col, fontVariantNumeric: "tabular-nums" }}>{txt}</div>
             <div
               style={{
-                width: 11, height: 11, borderRadius: 6,
+                width: 11, height: 11, borderRadius: 2,
                 background: h.current ? C.card : col,
                 border: h.current ? "2px solid " + C.violet : "none",
                 boxSizing: "border-box",
@@ -115,7 +115,7 @@ function MiniHistory(props: { history: Hist[]; C: typeof LIGHT }) {
   )
 }
 
-export default function GoldenGooseFeed(props: { width?: number; dark?: boolean; reportPath?: string }) {
+export default function AlphaNestFeed(props: { width?: number; dark?: boolean; reportPath?: string }) {
   const width = props.width || 380
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
   const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
@@ -140,11 +140,11 @@ export default function GoldenGooseFeed(props: { width?: number; dark?: boolean;
     <div
       style={{
         width: width, fontFamily: "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif",
-        background: C.bg, borderRadius: 24, padding: 16, boxSizing: "border-box", color: C.ink,
+        background: C.bg, borderRadius: 8, padding: 14, boxSizing: "border-box", color: C.ink,
       }}
     >
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "4px 4px 12px" }}>
-        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.4 }}>내 종목 속보</div>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "2px 2px 10px" }}>
+        <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.2 }}>내 종목 속보</div>
         <div style={{ fontSize: 12, color: C.faint, fontWeight: 600 }}>공시 + 연결</div>
       </div>
 
@@ -154,31 +154,31 @@ export default function GoldenGooseFeed(props: { width?: number; dark?: boolean;
         return (
           <div
             key={i}
-            style={{ background: C.card, borderRadius: 20, padding: 16, marginBottom: 12, boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(0,0,0,0.04)" }}
+            style={{ background: C.card, borderRadius: 8, padding: 13, marginBottom: 8, border: "1px solid " + C.line }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
-                <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.3 }}>{it.name}</span>
-                <span style={{ fontSize: 12, color: C.faint, fontWeight: 600 }}>{it.ticker}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2 }}>{it.name}</span>
+                <span style={{ fontSize: 12, color: C.faint, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{it.ticker}</span>
                 {it.ticker && !onCanvas && (
                   <a href={(props.reportPath || "/stock") + "?q=" + encodeURIComponent(it.ticker)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ fontSize: 11, fontWeight: 700, color: C.blue, textDecoration: "none" }}>분석 ↗</a>
                 )}
               </div>
-              <span style={{ fontSize: 12, color: C.faint, fontWeight: 600 }}>{it.ago}</span>
+              <span style={{ fontSize: 12, color: C.faint, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{it.ago}</span>
             </div>
 
             {/* 공시 = 훅 */}
-            <div style={{ background: dt.bg, color: dt.fg, borderRadius: 12, padding: "10px 12px", fontSize: 14, fontWeight: 700, letterSpacing: -0.2 }}>
+            <div style={{ background: dt.bg, color: dt.fg, borderRadius: 6, padding: "10px 12px", fontSize: 14, fontWeight: 700, letterSpacing: -0.2, fontVariantNumeric: "tabular-nums" }}>
               {it.disclosure}
             </div>
 
             {/* L0 한눈 요약 */}
-            <div style={{ fontSize: 13, color: C.sub, fontWeight: 600, letterSpacing: -0.2, padding: "11px 2px 4px" }}>
+            <div style={{ fontSize: 13, color: C.sub, fontWeight: 600, letterSpacing: -0.2, padding: "10px 2px 4px", fontVariantNumeric: "tabular-nums" }}>
               {it.glance}
             </div>
 
             {/* 과거패턴 mini-viz — substance 한눈에 */}
-            <div style={{ background: C.violetSoft, borderRadius: 12, padding: "11px 12px", marginTop: 6 }}>
+            <div style={{ background: C.violetSoft, borderRadius: 6, padding: "11px 12px", marginTop: 6 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: C.violet, marginBottom: 8 }}>{it.patternLabel} — 이게 처음이 아님</div>
               <MiniHistory history={it.history} C={C} />
             </div>
@@ -189,7 +189,7 @@ export default function GoldenGooseFeed(props: { width?: number; dark?: boolean;
               style={{
                 cursor: "pointer", marginTop: 12, fontSize: 12.5, fontWeight: 700, color: C.blue,
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                padding: "8px", borderRadius: 10, background: isOpen ? C.blueSoft : "transparent",
+                padding: "8px", borderRadius: 6, background: isOpen ? C.blueSoft : "transparent",
               }}
             >
               근거 {it.conns.length}개 · 어떻게 나왔나 {isOpen ? "▴" : "▾"}
@@ -203,10 +203,10 @@ export default function GoldenGooseFeed(props: { width?: number; dark?: boolean;
                     const t = TONE[c.tone]
                     return (
                       <div key={j} style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                        <span style={{ flexShrink: 0, background: t.bg, color: t.fg, fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 7, minWidth: 42, textAlign: "center" }}>
+                        <span style={{ flexShrink: 0, background: t.bg, color: t.fg, fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 4, minWidth: 42, textAlign: "center" }}>
                           {c.tag}
                         </span>
-                        <span style={{ fontSize: 13.5, color: C.sub, fontWeight: 600, letterSpacing: -0.2 }}>{c.fact}</span>
+                        <span style={{ fontSize: 13.5, color: C.sub, fontWeight: 600, letterSpacing: -0.2, fontVariantNumeric: "tabular-nums" }}>{c.fact}</span>
                       </div>
                     )
                   })}
@@ -230,7 +230,7 @@ export default function GoldenGooseFeed(props: { width?: number; dark?: boolean;
   )
 }
 
-addPropertyControls(GoldenGooseFeed, {
+addPropertyControls(AlphaNestFeed, {
   width: { type: ControlType.Number, title: "Width", defaultValue: 380, min: 320, max: 720 },
   dark: { type: ControlType.Boolean, title: "Dark (canvas)", defaultValue: false },
   reportPath: { type: ControlType.String, title: "리포트 경로", defaultValue: "/stock" },

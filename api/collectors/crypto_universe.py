@@ -53,7 +53,7 @@ def collect_crypto_universe(per_page: int = 50) -> List[Dict[str, Any]]:
         circ = c.get("circulating_supply")
         total = c.get("total_supply")
         mx = c.get("max_supply")
-        # 희석 포렌식(골든구스 희석공시 코인판): FDV/MC overhang + 유통비율. 사실만(RULE 7).
+        # 희석 포렌식(AlphaNest 희석공시 코인판): FDV/MC overhang + 유통비율. 사실만(RULE 7).
         fdv_mc = round(fdv / mc, 3) if (fdv and mc and mc > 0) else None
         denom = mx or total
         circ_ratio = round(circ / denom * 100, 1) if (circ and denom and denom > 0) else None

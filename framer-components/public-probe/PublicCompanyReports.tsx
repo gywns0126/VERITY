@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 기업 리포트·자료 — VERITY 공개 터미널 (골든구스). 그 회사가 발행하는 공식 리포트/자료를 한곳에 모아 외부 소스로 딥링크.
+ * 기업 리포트·자료 — VERITY 공개 터미널 (AlphaNest). 그 회사가 발행하는 공식 리포트/자료를 한곳에 모아 외부 소스로 딥링크.
  *
  * 🚨 RULE 7 / held-2027 / feedback_scope: 전부 **외부 소스 링크 모음**(공시·정기보고서·증권사 리포트·IR). VERITY 자체 점수·추천·작문 0.
  *   링크 = 공식/공개 출처(DART·네이버 금융·SEC EDGAR). 클릭 시 원문으로 이동(새 탭).

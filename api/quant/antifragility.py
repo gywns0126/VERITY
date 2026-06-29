@@ -1,7 +1,7 @@
 """
 Antifragility 측정 인프라 v0.1 (2026-05-17, Perplexity Q6 학계 자문 적용).
 
-2028 Vision Anti-fragile + Anti-FOMO 산식 코드. docs/GOLDEN_GOOSE_VISION_2028_v0.1.md SSOT.
+2028 Vision Anti-fragile + Anti-FOMO 산식 코드. docs/ALPHA_NEST_VISION_2028_v0.1.md SSOT.
 
 산식 4종:
 1. Antifragility Index (AI) = E[Gain|Shock] / E[Loss|Shock] > 1

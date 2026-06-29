@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 공시 속보 — VERITY 공개 터미널 (골든구스) 1차 슬라이스.
+ * 공시 속보 — VERITY 공개 터미널 (AlphaNest) 1차 슬라이스.
  *
  * 데이터 = data/public_disclosure_feed.json (public_disclosure_feed_builder.py 산출).
  * RULE 7: 점수·등급·추천 0. 공시 사실(DART 원문 제목·분류·정정여부·접수일) + 원문 deep-link 만.
@@ -11,7 +11,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 관심종목 핀: 로그인 시 Supabase watchgroups(단일 소스 — 리포트 별표와 동기) 종목을 상단 고정 · 미로그인 시 localStorage["verity_watchlist"] 폴백. (2026-06-23 단일화)
  * 검색: 종목명·코드 필터(2026-06-22) — maxStocks 늘려도 스크롤 없이 특정 종목 공시 찾기.
  * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
- *   onAccent = 브랜드 그린(vg) 위 글자색. 라이트=흰색/다크=짙은색(민트 반전 대응, 2026-06-21 가독성).
+ *   onAccent = 브랜드 보라(vg) 위 글자색. 라이트=흰색/다크=짙은색(2026-06-21 가독성).
+ * 🚨 면책 문구 제거(2026-06-26, PM) — "추천·등급 아님 / 검증 후 2027 / 매수·매도 의견 아님" 류는 사이트 하단 단일 면책으로 통합. 출처·색 의미는 유지.
+ * 디자인: 터미널 브리핑(2026-06-29) — 카드앱 탈피. radius↓·그림자 제거·hairline divider·tabular-nums. 컬러 불변(보라).
  */
 
 const LIGHT = {
@@ -31,7 +33,7 @@ const DARK = {
 
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const LS_KEY = "verity_watchlist"
-const SESSION_KEY = "verity_supabase_session"   // GoldenGooseAuth 세션(access_token)
+const SESSION_KEY = "verity_supabase_session"   // AlphaNestAuth 세션(access_token)
 const AUTH_EVENT = "verity_auth_change"          // 로그인/로그아웃 시 dispatch
 const WATCH_EVENT = "verity_watch_change"        // 리포트 별표 담기/해제 시 dispatch
 const DEFAULT_API = "https://project-yw131.vercel.app"
@@ -138,7 +140,7 @@ function readWatchTickers(): string[] {
     }
 }
 
-// 로그인 세션 토큰(GoldenGooseAuth 기록, 만료 체크) — 있으면 Supabase watchgroups 단일 소스 사용.
+// 로그인 세션 토큰(AlphaNestAuth 기록, 만료 체크) — 있으면 Supabase watchgroups 단일 소스 사용.
 function loadToken(): string {
     if (typeof window === "undefined") return ""
     try {
@@ -220,7 +222,7 @@ export default function PublicDisclosureFeed(props: Props) {
         return () => { alive = false }
     }, [feedUrl, onCanvas])
 
-    // 세션 토큰 추적 (로그인/로그아웃 반영) — GoldenGooseWatchlist·PublicStockReport 와 동일 패턴
+    // 세션 토큰 추적 (로그인/로그아웃 반영) — AlphaNestWatchlist·PublicStockReport 와 동일 패턴
     useEffect(() => {
         if (onCanvas) return
         const sync = () => setToken(loadToken())
@@ -327,7 +329,7 @@ export default function PublicDisclosureFeed(props: Props) {
 
     const tipStyle = (): CSSProperties => ({
         position: "absolute", top: "calc(100% + 6px)", left: tipBox.left, zIndex: 50, display: "block",
-        width: tipBox.width, background: C.tipBg, color: C.tipFg, borderRadius: 12,
+        width: tipBox.width, background: C.tipBg, color: C.tipFg, borderRadius: 8,
         padding: "11px 13px", fontSize: 12.5, fontWeight: 500, lineHeight: 1.55, letterSpacing: "-0.1px",
         boxShadow: "0 6px 20px rgba(0,0,0,0.18)", whiteSpace: "normal", textAlign: "left",
     })
@@ -381,9 +383,9 @@ export default function PublicDisclosureFeed(props: Props) {
         <div ref={rootRef} style={wrap}>
             {/* 헤더 */}
             <div style={{ marginBottom: 4 }}>
-                <div style={{ fontSize: narrow ? 18 : 20, fontWeight: 800, letterSpacing: "-0.5px" }}>공시 속보</div>
+                <div style={{ fontSize: narrow ? 16 : 17, fontWeight: 800, letterSpacing: "-0.2px" }}>공시 속보</div>
                 <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 3 }}>
-                    공시-first (DART 원천) · 관심종목 공시는 위로 · 점수·추천 아님
+                    공시-first (DART 원천) · 관심종목 공시는 위로
                 </div>
             </div>
 
@@ -401,7 +403,7 @@ export default function PublicDisclosureFeed(props: Props) {
                     placeholder="종목명·코드 검색"
                     style={{
                         width: "100%", boxSizing: "border-box", border: "none",
-                        background: C.card, color: C.ink, borderRadius: 12,
+                        background: C.card, color: C.ink, borderRadius: 8,
                         padding: "12px 34px 12px 38px", fontSize: 13.5, fontFamily: FONT, outline: "none",
                         WebkitAppearance: "none",
                     }}
@@ -413,7 +415,7 @@ export default function PublicDisclosureFeed(props: Props) {
             </div>
 
             {/* 종목 카드 리스트 */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
                 {shown.length === 0 ? (
                     <div style={{ textAlign: "center", color: C.faint, fontSize: 13, fontWeight: 600, padding: "30px 0", lineHeight: 1.5 }}>
                         {query.trim() ? `"${query.trim()}" 검색 결과가 없어요` : "공시가 없어요"}
@@ -422,15 +424,15 @@ export default function PublicDisclosureFeed(props: Props) {
                 {shown.map((it) => {
                     const pinned = watchSet.has(String(it.ticker))
                     return (
-                        <div key={it.ticker} style={{ background: C.card, borderRadius: 16, padding: `${cardPadV}px ${cardPadH}px`, boxShadow: "0 1px 3px rgba(0,0,0,0.04)", border: pinned ? `1px solid ${C.vtS}` : "1px solid transparent" }}>
+                        <div key={it.ticker} style={{ background: C.card, borderRadius: 8, padding: `${cardPadV}px ${cardPadH}px`, border: pinned ? `1px solid ${C.vt}` : `1px solid ${C.line}` }}>
                             {/* 종목명 — 탭하면 전체 리포트 */}
                             <div onClick={() => goStock(it.ticker)}
                                 style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6, flexWrap: "wrap", cursor: "pointer" }}>
-                                {pinned && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: C.vt, background: C.vtS, padding: "2px 7px", borderRadius: 6 }}>관심</span>}
-                                <span style={{ fontSize: 15.5, fontWeight: 700, letterSpacing: "-0.3px" }}>{it.name}</span>
-                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{it.ticker}</span>
+                                {pinned && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: C.vt, background: C.vtS, padding: "2px 7px", borderRadius: 4 }}>관심</span>}
+                                <span style={{ fontSize: 14.5, fontWeight: 700, letterSpacing: "-0.2px" }}>{it.name}</span>
+                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{it.ticker}</span>
                                 <span style={{ fontSize: 11, color: C.vg, fontWeight: 800 }}>리포트 ›</span>
-                                <span style={{ marginLeft: "auto", fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{it.latest}</span>
+                                <span style={{ marginLeft: "auto", fontSize: 11.5, color: C.faint, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{it.latest}</span>
                             </div>
 
                             {it.disclosures.map((d, i) => {
@@ -453,7 +455,7 @@ export default function PublicDisclosureFeed(props: Props) {
                                                     <span role="button" tabIndex={0}
                                                         onClick={(e) => { e.stopPropagation(); if (chipOpen) setOpenTip(""); else openTipAt(e, chipId) }}
                                                         {...hoverProps(chipId)}
-                                                        style={{ display: "inline-block", fontSize: 11, fontWeight: 800, color: chipC.fg, background: chipC.bg, padding: "3px 8px", borderRadius: 7, whiteSpace: "nowrap", cursor: "help" }}>
+                                                        style={{ display: "inline-block", fontSize: 11, fontWeight: 800, color: chipC.fg, background: chipC.bg, padding: "3px 8px", borderRadius: 4, whiteSpace: "nowrap", cursor: "help" }}>
                                                         {corr ? "정정" : d.label}
                                                     </span>
                                                     {chipOpen && (
@@ -464,7 +466,7 @@ export default function PublicDisclosureFeed(props: Props) {
                                                     )}
                                                 </span>
                                                 {tone && toneSty && (
-                                                    <span style={{ display: "inline-block", fontSize: 10.5, fontWeight: 800, color: toneSty.fg, background: toneSty.bg, padding: "2px 7px", borderRadius: 6, whiteSpace: "nowrap" }}>
+                                                    <span style={{ display: "inline-block", fontSize: 10.5, fontWeight: 800, color: toneSty.fg, background: toneSty.bg, padding: "2px 7px", borderRadius: 4, whiteSpace: "nowrap" }}>
                                                         {TONE_LABEL[tone]}
                                                     </span>
                                                 )}
@@ -473,7 +475,7 @@ export default function PublicDisclosureFeed(props: Props) {
                                                 <div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, lineHeight: 1.45, wordBreak: "break-word" }}>
                                                     {renderTitle(d.title, key)}
                                                 </div>
-                                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3 }}>
+                                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
                                                     {d.date}{d.filer ? " · " + d.filer : ""}
                                                 </div>
                                             </div>
@@ -490,16 +492,16 @@ export default function PublicDisclosureFeed(props: Props) {
                                                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                                     {d.source_url && (
                                                         <a href={d.source_url} target="_blank" rel="noopener"
-                                                            style={{ fontSize: 12, fontWeight: 800, color: C.onAccent, background: C.vg, borderRadius: 9, padding: "8px 14px", textDecoration: "none" }}>
+                                                            style={{ fontSize: 12, fontWeight: 800, color: C.onAccent, background: C.vg, borderRadius: 6, padding: "8px 14px", textDecoration: "none" }}>
                                                             DART 원문 전체 보기 ↗
                                                         </a>
                                                     )}
                                                     <button onClick={(e) => { e.stopPropagation(); goStock(it.ticker) }}
-                                                        style={{ border: `1px solid ${C.line}`, background: C.card, color: C.ink, cursor: "pointer", fontSize: 12, fontWeight: 800, borderRadius: 9, padding: "8px 14px", fontFamily: FONT }}>
+                                                        style={{ border: `1px solid ${C.line}`, background: C.card, color: C.ink, cursor: "pointer", fontSize: 12, fontWeight: 800, borderRadius: 6, padding: "8px 14px", fontFamily: FONT }}>
                                                         {it.name} 리포트 ›
                                                     </button>
                                                 </div>
-                                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>요약·판단 없이 원문 사실만 — 결론은 본인 판단</div>
+                                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>원문 사실만 표시</div>
                                             </div>
                                         )}
                                     </div>
@@ -511,7 +513,7 @@ export default function PublicDisclosureFeed(props: Props) {
             </div>
 
             <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 12, lineHeight: 1.5 }}>
-                공시 사실·일정만 · 색 표시(희석·우호·주의)는 공시 유형의 일반적 성격일 뿐 매수·매도 의견 아님 · 원문은 DART 전자공시 · 자체 점수·등급은 검증 후(2027) 공개
+                공시 사실·일정만 · 색 표시(희석·우호·주의)는 공시 유형의 일반적 성격 · 원문은 DART 전자공시
             </div>
         </div>
     )

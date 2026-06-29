@@ -1,6 +1,6 @@
 """뉴스 영어 헤드라인 → 한글 build-time 사전번역.
 
-골든구스 뉴스탭 '미국' 탭의 영어 헤드라인에 title_ko 를 미리 적재(컴포넌트 ko/en 토글용).
+AlphaNest 뉴스탭 '미국' 탭의 영어 헤드라인에 title_ko 를 미리 적재(컴포넌트 ko/en 토글용).
 - 번역기 = Gemini flash-lite (GEMINI_MODEL_CHAT) — Claude budget guard 회피, 최저비용.
 - 캐시 = data/news_translation_cache.json (영문 title → ko). cache miss 만 호출 → 비용 선형 억제.
 - 실패/키부재 시 graceful: cache hit 만 반환, 신규는 빈값(컴포넌트가 영문 fallback) — 파이프라인 무중단.

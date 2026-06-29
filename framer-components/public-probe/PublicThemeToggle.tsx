@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import React, { useEffect, useState } from "react"
 
 /**
- * 골든구스 다크/라이트 토글 (네이티브) — 방문자용.
+ * AlphaNest 다크/라이트 토글 (네이티브) — 방문자용.
  *
  * Framer 네이티브 테마는 body[data-framer-theme]("light"|"dark") 로 제어됨.
  *  - 클릭 → document.body.dataset.framerTheme 토글 + localStorage("verity_theme") 저장

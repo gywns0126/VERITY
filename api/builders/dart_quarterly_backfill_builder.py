@@ -1,7 +1,7 @@
 """dart_quarterly_backfill_builder — KR universe 분기 재무 시계열 backfill (paced, resumable).
 
 배경 (2026-06-27):
-  골든구스 종목 리포트 깊이 = "재무 단년 스냅샷" 1개뿐 (dart_batch 가 연간 11011 만 fetch).
+  AlphaNest 종목 리포트 깊이 = "재무 단년 스냅샷" 1개뿐 (dart_batch 가 연간 11011 만 fetch).
   분기추이(viz) 노출 위해 5년 × 4분기 = 20기간 backfill 필요. 단 DART rate limit(일 ~1만~2만건)
   + GH IP throttle + GH Actions 6h 한도 때문에 한 run 에 전수 불가 → **체크포인트 paced backfill**.
 

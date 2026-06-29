@@ -1,5 +1,5 @@
 """
-event_study_builder — 종목별 "과거 공시 패턴" 이벤트 스터디 (골든구스 공개 터미널).
+event_study_builder — 종목별 "과거 공시 패턴" 이벤트 스터디 (AlphaNest 공개 터미널).
 
 목적(PM 결정 2026-06-25): 인스타에서 본 "과거 데이터 비교" 류 — 우리는 19년치 가격레이크
 (~/VERITY_data_lake/kr_prices.duckdb, OHLCV 2,477종목 2007~) + DART 11년 공시이력으로 더 깊게.

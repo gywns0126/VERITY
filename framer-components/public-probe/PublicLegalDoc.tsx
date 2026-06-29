@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 약관 문서 — 이용약관 / 개인정보처리방침 (탭 토글). 골든구스 결: 흰 카드/외곽선 없음/토스 미니멀.
+ * 약관 문서 — 이용약관 / 개인정보처리방침 (탭 토글). AlphaNest 결: 흰 카드/외곽선 없음/토스 미니멀.
  * 텍스트 = solo-counsel(law.go.kr) 검토 반영(2026-06-27): 자본시장법 §101·§102, 약관규제법 §6·§9,
  *   개인정보보호법 §30·§28의8·§31. 무료·점수미제공·정보only 포지셔닝.
  * 🚨 보호책임자 연락처·시행일은 prop 으로 주입(실명 아닌 운영 전용 이메일 권장 — 현역 신상 최소화).

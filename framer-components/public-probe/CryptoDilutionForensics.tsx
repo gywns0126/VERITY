@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 코인 희석 포렌식 — 코인 골든구스 엣지 lead (주식 disclosure_forensics 의 코인판).
+ * 코인 희석 포렌식 — 코인 AlphaNest 엣지 lead (주식 disclosure_forensics 의 코인판).
  *
  * 랭킹 = FDV/MC overhang(미유통 언락 대기 물량) + 유통비율. 토스·네이버 코인 화면엔 없는 view.
  * 공급 바 = 유통(초록) vs 미유통/언락대기(amber) — 한눈에 "앞으로 풀릴 물량" 사실.
@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 🚨 RULE 7: 자체 점수·등급·순위판정 0 — FDV/MC·유통비율·시총 사실만(랭킹=정렬, 평가 아님).
  * 🚨 RULE 6: LLM·서술 합성 0. 결정론 계산만.
  * 🚨 RULE 1 무관: KIS·국내증권 비참조. CoinGecko 링크만.
- * 다크모드 = body[data-framer-theme] 자가감지(골든구스 패턴). onCanvas = 데모.
+ * 다크모드 = body[data-framer-theme] 자가감지(AlphaNest 패턴). onCanvas = 데모.
  */
 
 const LIGHT = {
@@ -91,7 +91,7 @@ export default function CryptoDilutionForensics(props: { dataUrl?: string; dark?
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        // cache-fallback: 직전 성공 응답 보존 → fetch 실패 시 stale 표시(빈 화면 회피, 골든구스 패턴)
+        // cache-fallback: 직전 성공 응답 보존 → fetch 실패 시 stale 표시(빈 화면 회피, AlphaNest 패턴)
         if (typeof localStorage !== "undefined") {
             try { const c = localStorage.getItem(CACHE_KEY); if (c) setData(JSON.parse(c)) } catch {}
         }

@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 채권·금리 레짐 — VERITY 공개 터미널 (골든구스). 국민연금(PublicNPSHoldings)처럼 독립 "렌즈".
+ * 채권·금리 레짐 — VERITY 공개 터미널 (AlphaNest). 국민연금(PublicNPSHoldings)처럼 독립 "렌즈".
  * 디자인 = 토스식 미니멀: 무채색 위주 + 방향값만 up(빨강)/down(파랑), 얇은 구분선, 색배경·외곽선·뱃지 없음.
  *
  * 🚨 RULE 7 (held-2027 / feedback_scope / feedback_source_attribution_discipline):

@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 과거 공시 패턴 — VERITY 공개 터미널 (골든구스). 종목별 **자기 과거** 카탈리스트 공시(유상증자/자기주식취득·처분/
+ * 과거 공시 패턴 — VERITY 공개 터미널 (AlphaNest). 종목별 **자기 과거** 카탈리스트 공시(유상증자/자기주식취득·처분/
  * 전환사채/합병/감자/공급계약 등) 당시 종가 대비 +1d/+5d/+20d/+60d 거래일 forward return.
  *
  * 데이터 = data/event_study.json (event_study_builder.py 산출 — DART 공시이력 2015~ + kr_prices 레이크 19년 OHLCV).

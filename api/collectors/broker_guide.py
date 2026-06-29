@@ -1,7 +1,7 @@
 """
 증권사 거래유형별 사실 비교 자동집계 — Perplexity sonar-pro.
 
-골든구스 공개 터미널용. broker-neutral(특정 증권사 편 X) 사실 가이드.
+AlphaNest 공개 터미널용. broker-neutral(특정 증권사 편 X) 사실 가이드.
 
 🚨 RULE 6/7 정합: LLM 자동집계지만 노출은 **사실(수수료율·앱스토어 평점·기능 유무) + 출처**만.
    우리 의견/별점/추천 0. "권유 아님" + as-of + citations 동반 발행.

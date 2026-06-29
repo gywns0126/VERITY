@@ -1,4 +1,4 @@
-"""미장(US) 소형주 코너 특화 필터 — 골든구스 미장 트랙 (Phase 5).
+"""미장(US) 소형주 코너 특화 필터 — AlphaNest 미장 트랙 (Phase 5).
 
 KR smallcap_corner_filters_builder 의 미장 대응. 코너 유니버스(us_smallcap_corner.json) ×
 8-K forensics(us_disclosure_forensics.json) 를 조인해 사실/패턴 필터를 만든다. 점수/랭킹 0.

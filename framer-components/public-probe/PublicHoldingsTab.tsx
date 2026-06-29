@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 내 보유종목 — VERITY 공개 터미널 (골든구스) 탭. [보유종목 | 예상 세금] 2-탭.
+ * 내 보유종목 — VERITY 공개 터미널 (AlphaNest) 탭. [보유종목 | 예상 세금] 2-탭.
  *
  * 인증 — localStorage["verity_supabase_session"].access_token → /api/holdings (user_holdings CRUD).
  *   미로그인/캔버스 = SAMPLE 미리보기 + 로그인 CTA. (StockDashboard getAccessToken 패턴 재사용)

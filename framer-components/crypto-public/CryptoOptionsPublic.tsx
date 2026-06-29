@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 옵션 시장 렌즈 — VERITY 공개 터미널 (골든구스, TIDE 보조). ETF 자금흐름(PublicETFFlow)처럼 독립 "렌즈".
+ * 옵션 시장 렌즈 — VERITY 공개 터미널 (AlphaNest, TIDE 보조). ETF 자금흐름(PublicETFFlow)처럼 독립 "렌즈".
  * 디자인 = 토스식 미니멀: 무채색 위주 + 얇은 구분선, 색배경·외곽선·이모지 없음.
  *
  * 🚨 차별 각도: BTC/ETH 옵션 시장의 내재변동성(DVOL)·실현변동성·풋콜 OI 비율·맥스페인(만기인력 행사가).

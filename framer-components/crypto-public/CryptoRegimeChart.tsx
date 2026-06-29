@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 /**
  * 레짐 추이 라인 — 공개형 TIDE 유리박스 시각화 (우리 엣지의 그림).
  * 종합 판독(net_score)을 시간축으로 + BTC 가격 오버레이 + 판독 색 마커. 누적될수록 강해지는 시계열.
- * 골든구스 결: 흰 카드/얇은 라인/외곽선 없음. 방향색 = 한국 관례(위험선호=빨강/위험회피=파랑).
+ * AlphaNest 결: 흰 카드/얇은 라인/외곽선 없음. 방향색 = 한국 관례(위험선호=빨강/위험회피=파랑).
  *
  * 데이터 = crypto_regime.json (trail[] + track_record). RULE 7: 가설 v0, N<30 통계 무의미.
  * 다크 = body[data-framer-theme] 자가추종. 매매 미연결(관측-only).

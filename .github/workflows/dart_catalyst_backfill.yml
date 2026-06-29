@@ -72,7 +72,7 @@ jobs:
           git config user.email "gywns0126@gmail.com"
           git add data/dart_catalyst_backfill.jsonl data/dart_catalyst_backfill_done.json
           git diff --staged --quiet && { echo "변경 없음 — commit skip"; exit 0; }
-          git commit -m "data(golden-goose): 코너 과거 카탈리스트 백필 누적 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          git commit -m "data(alpha-nest): 코너 과거 카탈리스트 백필 누적 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
           BRANCH="${{ github.ref_name }}"
           for i in 1 2 3 4 5; do
             git rebase --abort 2>/dev/null || true

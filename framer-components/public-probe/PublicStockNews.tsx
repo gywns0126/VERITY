@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 종목 뉴스 (정보 밀도형) — VERITY 공개 터미널 (골든구스).
+ * 종목 뉴스 (정보 밀도형) — VERITY 공개 터미널 (AlphaNest).
  *
  * 데이터 = /api/stock_news?code=종목코드 (네이버 금융 종목뉴스 라이브, 건당 밀도 enrichment).
  * 밀도: 카테고리 칩 · 출처 신뢰티어(✓) · 매체 클러스터 수 · 상대시각. RULE 6: LLM 해설 0. RULE 7: 호재악재·랭킹 0(사실만).

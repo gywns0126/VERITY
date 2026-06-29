@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 스테이블코인 공급 렌즈 — 공개형 TIDE. 골든구스 정본 디자인 결(PublicETFFlow) 복제.
+ * 스테이블코인 공급 렌즈 — 공개형 TIDE. AlphaNest 정본 디자인 결(PublicETFFlow) 복제.
  * 토스식 미니멀: 무채색 위주 + 얇은 구분선, 색배경·외곽선·이모지 없음.
  *
  * 차별 각도: USDT/USDC 발행사 직접 공급 = 크립토 유동성 레짐 1차 신호(스테이블 = dry powder).

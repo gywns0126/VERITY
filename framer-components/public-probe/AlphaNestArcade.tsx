@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 골든구스 아케이드 — '블록 트레이딩'(주식 용어 테마 테트리스) + Supabase 랭킹.
+ * AlphaNest 아케이드 — '블록 트레이딩'(주식 용어 테마 테트리스) + Supabase 랭킹.
  *
  * 이벤트 창에 얹는 자체완결 게임 컴포넌트(마켓플레이스 코드 의존 0, 백엔드 게임로직 0).
  * 데이터 의존 = 랭킹뿐. 게임은 전부 클라이언트.
@@ -10,12 +10,12 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  * 테마: 게임오버=상장폐지 / 라인클리어=체결 / 점수=수익 / 레벨=변동성 / 4줄=상한가 / 다음=예약주문.
  *
  * 랭킹:
- *   - 읽기 = 공개(anon select top). 등록 = 로그인 사용자만(verity_supabase_session 토큰 재사용, GG 철학 동일).
+ *   - 읽기 = 공개(anon select top). 등록 = 로그인 사용자만(verity_supabase_session 토큰 재사용, AlphaNest 철학 동일).
  *   - 미로그인 = 플레이 자유, 등록 시 로그인 유도. 점수는 클라 제출이라 위조 가능(이벤트 v0 허용, 추후 서버 HMAC 여지).
  *   - 테이블 없으면 '랭킹 준비 중'으로 graceful degrade(컴포넌트 안 깨짐).
  *
  * 🚨 수동 선행(Supabase 대시보드 SQL 1회):
- *   create table if not exists golden_goose_arcade_scores (
+ *   create table if not exists alpha_nest_arcade_scores (
  *     id uuid primary key default gen_random_uuid(),
  *     user_id uuid references auth.users(id),
  *     name text not null,
@@ -23,16 +23,16 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  *     lines int not null default 0 check (lines >= 0 and lines < 100000),
  *     created_at timestamptz default now()
  *   );
- *   alter table golden_goose_arcade_scores enable row level security;
- *   create policy "gg arcade public read" on golden_goose_arcade_scores for select using (true);
- *   create policy "gg arcade auth insert own" on golden_goose_arcade_scores for insert with check (auth.uid() = user_id);
- *   create index if not exists gg_arcade_score_idx on golden_goose_arcade_scores (score desc);
+ *   alter table alpha_nest_arcade_scores enable row level security;
+ *   create policy "an arcade public read" on alpha_nest_arcade_scores for select using (true);
+ *   create policy "an arcade auth insert own" on alpha_nest_arcade_scores for insert with check (auth.uid() = user_id);
+ *   create index if not exists an_arcade_score_idx on alpha_nest_arcade_scores (score desc);
  *
  * 다크모드 = body[data-framer-theme] 추종(캔버스는 dark prop). RULE 9 준수(동사 '박-' 0).
  */
 
 const SESSION_KEY = "verity_supabase_session"
-const TABLE = "golden_goose_arcade_scores"
+const TABLE = "alpha_nest_arcade_scores"
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
 const LIGHT = {
@@ -46,7 +46,7 @@ const DARK = {
     btn: "#1c232c", btnInk: "#e3e7ec", up: "#f04452",
 }
 
-// 블록 색(라이트·다크 공용 — 보드 배경만 테마 분리). 골든구스 초록·골드 계열 포함.
+// 블록 색(라이트·다크 공용 — 보드 배경만 테마 분리). AlphaNest 초록·골드 계열 포함.
 const COLORS = ["", "#33d6a6", "#f7b733", "#a78bfa", "#34d399", "#f87171", "#60a5fa", "#fb923c"]
 
 const COLS = 10
@@ -200,7 +200,7 @@ function loadSession(): { token: string; name: string; userId: string } {
         const s = JSON.parse(raw)
         if (s.expires_at && Date.now() / 1000 > s.expires_at) return { token: "", name: "", userId: "" }
         const meta = (s.user && s.user.user_metadata) || {}
-        const name = meta.name || meta.full_name || ((s.user && s.user.email) || "").split("@")[0] || "골든구스"
+        const name = meta.name || meta.full_name || ((s.user && s.user.email) || "").split("@")[0] || "AlphaNest"
         return { token: s.access_token || "", name, userId: (s.user && s.user.id) || "" }
     } catch {
         return { token: "", name: "", userId: "" }
@@ -220,7 +220,7 @@ const DEFAULT_SUPABASE_ANON_KEY = ""
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
-export default function GoldenGooseArcade(props: Props) {
+export default function AlphaNestArcade(props: Props) {
     const { supabaseUrl, supabaseAnonKey, cellSize, dark } = props
     const url = (supabaseUrl || DEFAULT_SUPABASE_URL).replace(/\/+$/, "")
     const anonKey = supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY
@@ -599,7 +599,7 @@ export default function GoldenGooseArcade(props: Props) {
         <div style={wrap}>
             <div style={{ width: COLS * CELL, maxWidth: "100%", display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
                 <div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: C.ink, letterSpacing: "-0.4px" }}>골든구스 아케이드</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: C.ink, letterSpacing: "-0.4px" }}>AlphaNest 아케이드</div>
                     <div style={{ fontSize: 11, color: C.faint, fontWeight: 700, marginTop: 1 }}>블록 트레이딩 · 이벤트</div>
                 </div>
                 <button onClick={() => { setShowRank((v) => !v); if (!ranks) fetchRanks() }}
@@ -713,7 +713,7 @@ export default function GoldenGooseArcade(props: Props) {
     )
 }
 
-addPropertyControls(GoldenGooseArcade, {
+addPropertyControls(AlphaNestArcade, {
     supabaseUrl: { type: ControlType.String, title: "Supabase URL", defaultValue: DEFAULT_SUPABASE_URL },
     supabaseAnonKey: { type: ControlType.String, title: "Supabase Anon Key", defaultValue: DEFAULT_SUPABASE_ANON_KEY },
     cellSize: { type: ControlType.Number, title: "Cell Size", defaultValue: 22, min: 14, max: 30, step: 1 },

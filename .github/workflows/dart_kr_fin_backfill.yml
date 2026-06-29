@@ -62,7 +62,7 @@ jobs:
           git config user.email "gywns0126@gmail.com"
           git add data/dart_kr_fin_history.json data/dart_kr_fin_history_done.json data/dart_kr_cache 2>/dev/null || true
           git diff --staged --quiet && { echo "변경 없음"; exit 0; }
-          git commit -m "data(golden-goose): KR 연간재무 백필 누적 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') (재무추이)"
+          git commit -m "data(alpha-nest): KR 연간재무 백필 누적 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') (재무추이)"
           BRANCH="${{ github.ref_name }}"
           for i in 1 2 3 4 5; do
             git rebase --abort 2>/dev/null || true

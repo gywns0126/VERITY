@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
  * 코인 히트맵 — 공개형 TIDE 시각화. 박스 크기 = 시총, 색 = 변동률(히트맵은 색이 곧 데이터).
- * 골든구스 결: 흰 배경/얇은 라인/외곽선 없음. 트리맵 타일 색만 데이터 인코딩(green=상승/red=하락, 히트맵 관례).
+ * AlphaNest 결: 흰 배경/얇은 라인/외곽선 없음. 트리맵 타일 색만 데이터 인코딩(green=상승/red=하락, 히트맵 관례).
  *
  * 데이터 = crypto_universe.json (CoinGecko 시총상위 50). 탭 → CoinGecko. 다크 = body[data-framer-theme].
  * RULE 7: 시총/변동%/FDV 사실만, 점수·등급 0.

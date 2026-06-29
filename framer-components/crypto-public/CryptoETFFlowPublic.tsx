@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 크립토 ETF 자금흐름 렌즈 — TIDE 공개 보조 카드 (골든구스 정본 디자인 복제).
+ * 크립토 ETF 자금흐름 렌즈 — TIDE 공개 보조 카드 (AlphaNest 정본 디자인 복제).
  * 디자인 = 토스식 미니멀: 무채색 위주 + 방향값만 유입(빨강)/유출(파랑), 얇은 구분선, 색배경·외곽선·이모지 없음.
  *
  * 표시 = BTC·ETH 현물 ETF 일일 순플로(유입/유출) + 누적 순플로 + AUM.

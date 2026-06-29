@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 엣지 히트맵 — VERITY 공개 터미널 (골든구스). 토스/Finviz 가 못 가진 "우리 사실"로 칠한 시장 한눈 뷰.
+ * 엣지 히트맵 — VERITY 공개 터미널 (AlphaNest). 토스/Finviz 가 못 가진 "우리 사실"로 칠한 시장 한눈 뷰.
  *
  * 🚨 차별점: 색 = 가격%(흔함)가 아니라 우리 고유 사실 — 내부자 순매수(DART) / 외국인 수급(네이버 5일) / 희석 공시 빈도(유증·CB).
  *   "어느 섹터에 내부자·외국인 돈이 도나"를 한눈에. 토스 구조적 불가 영역(Discovery 와 동일 해자, 시각화 표면).

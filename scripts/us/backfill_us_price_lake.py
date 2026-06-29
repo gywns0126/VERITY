@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-backfill_us_price_lake.py — 로컬 US 가격레이크(us_prices.duckdb) 구축 (골든구스 미장 강화).
+backfill_us_price_lake.py — 로컬 US 가격레이크(us_prices.duckdb) 구축 (AlphaNest 미장 강화).
 
 2026-06-25 신설 (PM 결정). KR 가격레이크(kr_prices.duckdb)의 US 대응 — US 이벤트스터디(과거 공시 패턴)
 + 모멘텀/변동성 팩터 잠금해제. 레이크 = 로컬 자산(repo 밖, ~/VERITY_data_lake). 소스 = yfinance(무료·키 0).

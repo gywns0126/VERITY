@@ -1,11 +1,11 @@
-"""골든구스 공개 필터 빌더 — 공시 forensics × 재무 교차 (사실/패턴, 점수·랭킹 0).
+"""AlphaNest 공개 필터 빌더 — 공시 forensics × 재무 교차 (사실/패턴, 점수·랭킹 0).
 
 입력 (read-only):
   · data/disclosure_forensics.json   — 위험 공시 이벤트 보유 종목 (유상증자/CB/BW/감자/합병/자기주식/회생 빈도)
   · data/dart_quarterly_snapshots.jsonl — 종목별 재무 (debt_ratio/net_income/roa/gross_margin), 종목당 최신 분기 픽
 
 출력:
-  · data/golden_goose_filters.json — 명명된 필터 그룹 + 종목별 사실. 투명 기준 노출, RULE 7 (추천/점수 아님).
+  · data/alpha_nest_filters.json — 명명된 필터 그룹 + 종목별 사실. 투명 기준 노출, RULE 7 (추천/점수 아님).
 
 설계 규율:
   · 사실/패턴만 ("이 패턴 있다"), 매수/매도/랭킹 없음 (유사투자자문 + RULE 7 안전선).
@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FORENSICS_PATH = os.path.join(_ROOT, "data", "disclosure_forensics.json")
 FINANCIALS_PATH = os.path.join(_ROOT, "data", "dart_quarterly_snapshots.jsonl")
-OUTPUT_PATH = os.path.join(_ROOT, "data", "golden_goose_filters.json")
+OUTPUT_PATH = os.path.join(_ROOT, "data", "alpha_nest_filters.json")
 
 KST = timezone(timedelta(hours=9))
 
@@ -137,7 +137,7 @@ def _match(filter_key: str, st: Dict[str, Any], fin: Optional[Dict[str, Any]]) -
 
 def main() -> int:
     if not os.path.exists(FORENSICS_PATH):
-        print(f"[golden_goose_filters] 입력 부재: {FORENSICS_PATH} — skip")
+        print(f"[alpha_nest_filters] 입력 부재: {FORENSICS_PATH} — skip")
         return 0
     with open(FORENSICS_PATH, encoding="utf-8") as f:
         forensics = json.load(f)
@@ -180,7 +180,7 @@ def main() -> int:
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
     summary = " / ".join(f"{g['name']} {g['count']}" for g in groups)
-    print(f"[golden_goose_filters] 적재 OK at={out['_meta']['generated_at']} | {summary} | out={OUTPUT_PATH}")
+    print(f"[alpha_nest_filters] 적재 OK at={out['_meta']['generated_at']} | {summary} | out={OUTPUT_PATH}")
     return 0
 
 

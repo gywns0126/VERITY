@@ -1,4 +1,4 @@
-"""KR 소형주 코너 유니버스 빌더 (골든구스 병렬 트랙 Phase 0).
+"""KR 소형주 코너 유니버스 빌더 (AlphaNest 병렬 트랙 Phase 0).
 
 방치된 중·소형주 코너 = 애널리스트 0~1명 / 기관 capacity 못 드는 구간 = 우리 홈그라운드 엣지.
 메인 funnel(25) · brain 산식 · VAMS 검증 trail 과 **완전 별개** — 새 파일만 만든다(teardown 0).
