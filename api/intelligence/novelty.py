@@ -28,7 +28,7 @@ from __future__ import annotations
 import math
 import re
 from datetime import datetime, timedelta
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from datasketch import MinHash, MinHashLSH
 
@@ -91,6 +91,10 @@ class NoveltyTracker:
         self._lsh = MinHashLSH(threshold=threshold, num_perm=num_perm)
         self._entries: List[Tuple[str, datetime, MinHash]] = []
         self._counter = 0
+        # 클러스터(같은 스토리 묶음) 추적 — 2026-06-29 재탕 가시화.
+        self._key_group: Dict[str, str] = {}      # entry key → group_id(대표 key)
+        self._group_count: Dict[str, int] = {}    # group_id → 멤버 수
+        self._group_topic: Dict[str, str] = {}    # group_id → 대표(첫 출현) 제목
 
     def _cleanup_expired(self, ref_ts: datetime) -> None:
         """24h 윈도우 밖 entry 제거."""
@@ -139,6 +143,46 @@ class NoveltyTracker:
         self._lsh.insert(key, mh)
         self._entries.append((key, ref_ts, mh))
         return key
+
+    def classify_and_add(self, text: str, ts: Optional[datetime] = None) -> dict:
+        """text 등록 + 클러스터 분류 (재탕 가시화).
+
+        같은 스토리(24h 윈도우 MinHash 근사중복) = 한 group 으로 묶음.
+        반환 {group, rank, near_duplicate}:
+          - group: group_id (대표 entry key). 같은 스토리끼리 동일.
+          - rank: group 내 출현 순서 (1 = 첫 출현 = 원본, 2+ = 재탕).
+          - near_duplicate: rank > 1 (이전 보도의 재탕인가).
+        dup_count(group 총 건수)·대표 제목은 전수 처리 후 group_size()/group_topic() 로.
+        """
+        ref_ts = ts or now_kst()
+        self._cleanup_expired(ref_ts)
+        mh = _minhash(text, self.num_perm, self.shingle_size)
+        match = self._nearest_match(mh, ref_ts)
+        self._counter += 1
+        key = f"n{self._counter}"
+        if match is not None:
+            # 매칭 entry 의 group 으로 합류 (root group 전파)
+            group = self._key_group.get(match[0], match[0])
+        else:
+            group = key  # 신규 스토리 = 자기 자신이 대표
+            self._group_topic[group] = text
+        self._lsh.insert(key, mh)
+        self._entries.append((key, ref_ts, mh))
+        self._key_group[key] = group
+        self._group_count[group] = self._group_count.get(group, 0) + 1
+        return {
+            "group": group,
+            "rank": self._group_count[group],
+            "near_duplicate": self._group_count[group] > 1,
+        }
+
+    def group_size(self, group: str) -> int:
+        """group 총 멤버 수 (전수 처리 후 = dup_count)."""
+        return self._group_count.get(group, 1)
+
+    def group_topic(self, group: str) -> str:
+        """group 대표(첫 출현) 제목 — '어떤 주제가 재탕됐나'."""
+        return self._group_topic.get(group, "")
 
     def novelty_score(self, text: str, ts: Optional[datetime] = None) -> float:
         """novelty score 산식 (산식 layer, 본 sprint 활성 X).

@@ -100,13 +100,24 @@ def collect_headlines(max_items: int = 20) -> list:
             + item["urgency"] * 0.3
             + (1.0 if item["sentiment"] != "neutral" else 0.3) * 0.3
         )
-        # 수집 순서대로 검사→등록 — 첫 출현=False, 이후 의미적 중복=True.
+        # 수집 순서대로 분류→등록 — 같은 스토리 클러스터링(재탕 가시화 2026-06-29).
+        # near_duplicate(rank>1) + dup_group(스토리 묶음)/dup_rank(몇 번째). 첫 출현=rank1=원본.
         if _novelty is not None:
             try:
-                item["near_duplicate"] = _novelty.is_duplicate(item["title"])
-                _novelty.add(item["title"])
+                cls = _novelty.classify_and_add(item["title"])
+                item["near_duplicate"] = cls["near_duplicate"]
+                item["dup_group"] = cls["group"]
+                item["dup_rank"] = cls["rank"]
             except Exception:
                 pass
+
+    # 2차 pass — group 전수 처리 끝나야 dup_count(스토리 총 건수)·대표 주제 확정.
+    if _novelty is not None:
+        for item in unique:
+            g = item.get("dup_group")
+            if g:
+                item["dup_count"] = _novelty.group_size(g)
+                item["dup_topic"] = _novelty.group_topic(g)
 
     unique.sort(key=lambda x: x["composite_score"], reverse=True)
     return unique[:max_items]
