@@ -346,6 +346,15 @@ jobs:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
         run: python -m api.collectors.nps_holdings
 
+      - name: 증권 대차잔고 집계 (공매도 압력 proxy, 금융위 공개패널)
+        # data.go.kr #1160100(금융위 대차거래, serviceKey=PUBLIC_DATA_API_KEY 공통) → 전종목 ~2,769개 대차잔고.
+        # 진짜 공매도잔고=KRX 봇차단으로 free 불가 → 대차잔고(빌려준 주식=공매도 재료) proxy. 키 없으면 graceful skip. → data/securities_lending.json.
+        # 순수 fetch(KIS 0). RULE 7 = 대차잔고 금액·수량 사실만(점수·추천·스퀴즈예측 0). 다음 step git add data/ (broad) 자동 = RULE 4. publish allowlist 등재 완료.
+        continue-on-error: true
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
+        run: python -m api.collectors.securities_lending
+
       - name: 미장 공시속보 빌드 (SEC 8-K)
         # us_financials 유니버스 8-K 수집 → data/us_disclosure_feed.json. SEC EDGAR(무료·UA 내장, KIS 0).
         # 외부 fetch. 다음 step git add data/ (broad) 자동 포함 = RULE 4.
