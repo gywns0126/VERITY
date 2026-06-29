@@ -123,7 +123,10 @@ def _financials(fund: Dict[str, Any]) -> Dict[str, Any] | None:
     groups = []
     for g in (
         grp("손익계산서", [("매출", "revenue", money), ("매출원가", "cogs", money), ("매출총이익", "gross_profit", money),
-                       ("영업이익", "operating_profit", money), ("순이익", "net_income", money),
+                       ("판매비와관리비", "sga", money), ("영업이익", "operating_profit", money),
+                       ("금융수익", "finance_income", money), ("금융원가", "finance_cost", money),
+                       ("법인세차감전순이익", "pretax_income", money), ("법인세비용", "income_tax", money),
+                       ("순이익", "net_income", money),
                        ("매출총이익률", "gross_margin", pct), ("영업이익률", "op_margin", pct)]),
         grp("재무상태표", [("총자산", "total_assets", money), ("유동자산", "current_assets", money),
                        ("유동부채", "current_liabilities", money), ("이익잉여금", "retained_earnings", money),

@@ -73,6 +73,10 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
         "operating_profit": 0,
         "net_income": 0,
         "pretax_income": 0,
+        "sga": 0,             # 판매비와관리비 (IS)
+        "finance_income": 0,  # 금융수익 (IS)
+        "finance_cost": 0,    # 금융원가 (IS) — 이자비용+환차손 등 포함(순수 이자비용 아님)
+        "income_tax": 0,      # 법인세비용 (IS)
         "investment_property": 0,  # 투자부동산 장부가(BS) — 리포트 '부동산' 섹션용 사실
         "operating_cashflow": 0,
         "investing_cashflow": 0,
@@ -111,6 +115,14 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
                 out["net_income"] = max(out["net_income"], amount)
             elif "법인세차감전" in acct or "법인세비용차감전" in acct:
                 out["pretax_income"] = amount
+            elif "판매비와관리비" in acct:
+                out["sga"] = amount
+            elif acct in ("금융수익", "금융이익"):
+                out["finance_income"] = max(out["finance_income"], amount)
+            elif acct in ("금융원가", "금융비용"):
+                out["finance_cost"] = max(out["finance_cost"], amount)
+            elif acct == "법인세비용":
+                out["income_tax"] = amount
         elif sj == "CF":
             if "영업활동현금흐름" in acct or acct == "영업활동으로 인한 현금흐름":
                 out["operating_cashflow"] = amount
@@ -254,6 +266,7 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
         "working_capital": 0, "retained_earnings": 0, "total_assets": 0,
         "current_assets": 0, "current_liabilities": 0, "operating_profit": 0,
         "revenue": 0, "cogs": 0, "gross_profit": 0, "net_income": 0,
+        "pretax_income": 0, "sga": 0, "finance_income": 0, "finance_cost": 0, "income_tax": 0,
         "operating_cashflow": 0, "investing_cashflow": 0, "financing_cashflow": 0,
         "free_cashflow": 0,
         "reprt_code": reprt_code, "fs_div": None,
@@ -280,6 +293,7 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
                 for k in ("working_capital", "retained_earnings", "total_assets",
                           "current_assets", "current_liabilities", "operating_profit",
                           "revenue", "cogs", "gross_profit", "net_income",
+                          "pretax_income", "sga", "finance_income", "finance_cost", "income_tax",
                           "operating_cashflow", "investing_cashflow",
                           "financing_cashflow", "free_cashflow"):
                     base[k] = pl_bs.get(k, 0)
