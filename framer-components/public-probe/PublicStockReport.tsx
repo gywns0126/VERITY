@@ -2,13 +2,13 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 종목 리포트 — VERITY 공개 터미널 (골든구스). 전 종목 검색→선택→리포트.
+ * 종목 리포트 — VERITY 공개 터미널 (AlphaNest). 전 종목 검색→선택→리포트.
  * 데이터 = stock_report_public + flow_5d + disclosure_forensics + insider_trades + market_warnings (Blob). 가격/차트=/api 라이브.
  * 차트 = OHLCV 선(부드러운 곡선+그라데이션, 기본)/캔들 + 거래량 + MA + 기간 + 공시마커 + 라이브 틱(장중 6s) + 토스풍 호버 카드.
  * 시장경보 = 경보 시 헤더(종목명·가격·메타) 통째 틴트 박스(외곽선 없음)로 감싸 한눈에. 경보 없으면 헤더 평범.
  * 폰트 = Pretendard 단일. 탭→상세 = 기본지표(계산식+실제 투입숫자 facts_calc·출처)/수급(정확 주수)/동종업계(비교)/재무(전체 재무제표 그룹) + 공시·내부자·forensics(원문) — 전업러용 raw 접근. 있는 데이터만(RULE10).
  * 다크모드 = Framer 네이티브 토글(body[data-framer-theme]) 추종 — themeDark + MutationObserver. canvas 에선 dark prop. 사이트 다크모드 버튼과 실시간 연동.
- * 관심종목 = 로그인 시 헤더 별(둥근 SVG, 2026-06-22 토스풍 라운드+소프트골드, 미담김도 회색 채움+외곽선) → /api/watchgroups(JWT) 담기/해제. 미로그인=담기 안내. 세션=verity_supabase_session(GoldenGooseAuth).
+ * 관심종목 = 로그인 시 헤더 별(둥근 SVG, 2026-06-22 토스풍 라운드+소프트골드, 미담김도 회색 채움+외곽선) → /api/watchgroups(JWT) 담기/해제. 미로그인=담기 안내. 세션=verity_supabase_session(AlphaNestAuth).
  */
 
 const LIGHT = {
@@ -932,6 +932,7 @@ export default function PublicStockReport(props: Props) {
     const finGroups = (financials && Array.isArray(financials.groups)) ? financials.groups : []
     const disclosures = s.disclosures || []
     const consensus = s.consensus || {}
+    const verityLens = s.verity_lens || null
     const ownership = s.ownership || {}
     const calendar = s.calendar || []
     const flowRows = useMemo(() => (flowMap && flowMap[s.ticker]) || [], [flowMap, s.ticker])
@@ -1921,6 +1922,36 @@ export default function PublicStockReport(props: Props) {
                     </div>
                 </>
             )}
+
+            {/* VERITY 관측 lens — 컨센서스 위에 얹는 차별 view (토스·키움·LLM 미보유). 룰 기반 사실 분류만, 점수·추천 아님(RULE 7) */}
+            {verityLens && verityLens.lynch && (() => {
+                const ln = verityLens.lynch
+                const lc = ln.color === "success" ? C.green : ln.color === "warn" || ln.color === "caution" ? C.amber
+                    : ln.color === "danger" ? C.down : ln.color === "muted" ? C.faint : C.vt
+                const lcS = ln.color === "success" ? C.greenS : ln.color === "warn" || ln.color === "caution" ? C.amberS
+                    : ln.color === "danger" ? C.downS : C.vtS
+                return (
+                    <>
+                        {sectionTitle("VERITY 관측 — 분류 lens", "공개 재무에 룰 적용 · 점수·추천 아님")}
+                        <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
+                                <span style={{ fontSize: 12.5, fontWeight: 800, color: lc, background: lcS, borderRadius: 8, padding: "5px 11px", letterSpacing: "-0.2px" }}>{ln.label || ln.class}</span>
+                                {ln.summary && <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{ln.summary}</span>}
+                            </div>
+                            {Array.isArray(ln.reasons) && ln.reasons.length > 0 && (
+                                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
+                                    {ln.reasons.map((r: string, i: number) => (
+                                        <div key={i} style={{ fontSize: 12, color: C.sub, fontWeight: 600, lineHeight: 1.5, paddingLeft: 12, position: "relative" }}>
+                                            <span style={{ position: "absolute", left: 0, color: lc }}>·</span>{r}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 11, lineHeight: 1.5 }}>{verityLens.note || "Peter Lynch 분류 룰을 공개 재무 사실에 적용한 관측 — 자체 점수·매매의견 아님."}</div>
+                        </div>
+                    </>
+                )
+            })()}
 
             {/* 컨센서스 */}
             {(consensus.target_price || consensus.opinion) && (

@@ -249,6 +249,31 @@ def _consensus_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return out or None
 
 
+def _verity_lens_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """VERITY 관측 lens — '컨센서스 위에 얹는' 차별 view (토스·키움·LLM 미보유).
+    규칙 기반 사실 분류(lynch_kr)만 발행. 자체 산식 점수·등급·매매의견
+    (verity_brain/brain_score/grade, multi_factor grade·multi_score, safety_score,
+    recommendation, confidence)은 RULE 7대로 N≥252 IC 게이트(2027-05) 검증 전까지 발행 제외."""
+    lynch = rec.get("lynch_kr") or {}
+    cls = lynch.get("class")
+    if not cls:
+        return None
+    # 데이터 품질 미달 분류는 숨김 (RULE 7 — 미검증·저신뢰 표시 금지)
+    dq = lynch.get("data_quality")
+    if dq and dq != "ok":
+        return None
+    return {
+        "lynch": {
+            "class": str(cls),
+            "label": str(lynch.get("label") or ""),
+            "summary": str(lynch.get("summary") or ""),
+            "reasons": [str(x) for x in (lynch.get("reasons") or [])][:4],
+            "color": str(lynch.get("color") or "neutral"),
+        },
+        "note": "Peter Lynch 분류 룰을 공개 재무 사실에 적용한 관측 — 자체 점수·매매의견 아님. 종합점수는 검증 후(2027) 공개.",
+    }
+
+
 def _fmt_won(v: Any) -> Optional[str]:
     try:
         return f"{float(v):,.0f}원"
@@ -339,6 +364,7 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
         "disclosures": catalyst.get(ticker, [])[:8],
         "ownership": _ownership(rec),
         "consensus": _consensus_from_rec(rec),
+        "verity_lens": _verity_lens_from_rec(rec),
         "calendar": ([{"event": "실적발표", "kind": "실적", "date": (rec.get("earnings") or {}).get("next_earnings")}]
                      if (rec.get("earnings") or {}).get("next_earnings") else []),
         "rich": True,
