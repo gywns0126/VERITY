@@ -85,6 +85,7 @@ export default function PublicLiveChart(props: Props) {
     const [hoverIdx, setHoverIdx] = useState<number | null>(null)
     const [livePx, setLivePx] = useState<number | null>(null)
     const [pulse, setPulse] = useState(0)
+    const [noData, setNoData] = useState(false)
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
 
     const isDark = onCanvas ? !!dark : themeDark
@@ -104,10 +105,12 @@ export default function PublicLiveChart(props: Props) {
         return () => obs.disconnect()
     }, [onCanvas])
 
+    // 🚨 종목 미지정 시 삼성전자(005930) 등 기본 종목으로 떨어뜨리지 않음 —
+    //    유효 6자리 코드가 없으면 빈 문자열 → '정보 없음' 빈 상태를 표시(엉뚱한 종목 그래프 방지).
     const tk = useMemo(() => {
         let t = String(ticker || "").trim()
         if (!t && typeof window !== "undefined") t = (new URLSearchParams(window.location.search).get("q") || "").trim()
-        return /^\d{6}$/.test(t) ? t : (t || "005930")
+        return /^\d{6}$/.test(t) ? t : ""
     }, [ticker])
 
     const marketOpen = !onCanvas && isKROpen()
@@ -120,24 +123,28 @@ export default function PublicLiveChart(props: Props) {
         return () => ro.disconnect()
     }, [])
 
-    // 데이터 — 캔버스 포함 항상 실제 /api/chart 시도. 캔버스엔 데모 봉 즉시 세팅(빈 화면 방지)→성공 시 실봉 교체.
+    // 데이터 — 실제 /api/chart 시도. 캔버스엔 데모 봉 즉시 세팅(빈 화면 방지)→성공 시 실봉 교체.
+    // 종목 없음/봉 없음/요청 실패 = noData=true → '정보 없음' 빈 상태(런타임). 캔버스는 항상 데모 유지.
     useEffect(() => {
         let alive = true
         if (onCanvas) setCandles(demoCandles())
-        else { setCandles([]); setLivePx(null) }
+        else { setCandles([]); setLivePx(null); setNoData(false) }
+        if (!tk) { if (!onCanvas) setNoData(true); return () => { alive = false } }
         fetch(base + "/api/chart?ticker=" + tk + "&type=daily")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
+                if (!alive) return
                 const arr = d && Array.isArray(d.daily) ? d.daily : (Array.isArray(d) ? d : null)
-                if (alive && Array.isArray(arr) && arr.length > 1) setCandles(arr)
+                if (Array.isArray(arr) && arr.length > 1) setCandles(arr)
+                else if (!onCanvas) setNoData(true)
             })
-            .catch(() => {})
+            .catch(() => { if (alive && !onCanvas) setNoData(true) })
         return () => { alive = false }
     }, [tk, base, onCanvas])
 
-    // 라이브 폴링 — 에디터(canvas) 제외, 장중에만 interval.
+    // 라이브 폴링 — 에디터(canvas)·종목없음 제외, 장중에만 interval.
     useEffect(() => {
-        if (onCanvas) return
+        if (onCanvas || !tk) return
         const sec = Math.max(3, livePollSec || 6)
         let alive = true
         const tick = () => {
@@ -235,6 +242,21 @@ export default function PublicLiveChart(props: Props) {
         </div>
     )
 
+    // 표시할 시세 데이터가 없을 때 — 엉뚱한 종목 그래프 대신 정직한 빈 상태.
+    const renderEmpty = () => {
+        const H = h > 140 ? Math.max(150, h - 64) : Hprop
+        return (
+            <div style={{ height: H, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 7, padding: "0 18px", textAlign: "center", boxSizing: "border-box" }}>
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.45 }}>
+                    <path d="M3 3v18h18" stroke={C.faint} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M7 14l3-3 3 3 4-5" stroke={C.faint} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="2.5 2.5" />
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>표시할 시세 정보가 없습니다</span>
+                <span style={{ fontSize: 11, fontWeight: 500, color: C.faint, lineHeight: 1.5 }}>이 종목은 차트로 표시할 일봉 데이터가 없어요</span>
+            </div>
+        )
+    }
+
     // 로딩 스켈레톤 — 캔들 모양 shimmer 막대 + 날짜축 placeholder (토스식)
     const renderSkeleton = () => {
         const skBase = isDark ? "#222a33" : "#e9edf1"
@@ -266,7 +288,7 @@ export default function PublicLiveChart(props: Props) {
             {/* 헤더 — 현재가 + 정직 장 상태 배지 */}
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "2px 10px 4px", minHeight: 18, flexWrap: "wrap" }}>
                 {livePx != null && <span style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>{won(livePx)}</span>}
-                {!onCanvas && (
+                {!onCanvas && !noData && (
                     <span style={{ fontSize: 11, fontWeight: 700, color: marketOpen ? C.live : C.faint, display: "inline-flex", alignItems: "center", gap: 4 }}>
                         <span style={{ width: 7, height: 7, borderRadius: "50%", background: marketOpen ? C.live : C.faint, display: "inline-block", opacity: marketOpen ? (pulse % 2 ? 1 : 0.4) : 1, transition: "opacity 0.4s" }} />
                         {marketOpen ? "장중 시세" : "장 마감 · 종가"}
@@ -337,6 +359,8 @@ export default function PublicLiveChart(props: Props) {
                         일봉 = KIS 실제 시세 · {marketOpen ? "장중 현재가 갱신(REST·지연 가능)" : "현재 장 마감 — 종가 고정"} · 등락률=전일 종가 대비
                     </div>
                 </>
+            ) : noData ? (
+                renderEmpty()
             ) : (
                 renderSkeleton()
             )}
