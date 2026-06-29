@@ -95,6 +95,17 @@ function getGoogleOAuthUrl(supabaseUrl: string, redirectTo: string, anonKey: str
     return `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}&apikey=${encodeURIComponent(anonKey)}`
 }
 
+// 로그인 성공 후 이동 경로 — URL 의 ?next=/path 우선, 없으면 afterLoginPath prop. (둘 다 없으면 빈 문자열=이동 안 함)
+function resolveNext(afterLoginPath: string): string {
+    if (typeof window !== "undefined") {
+        try {
+            const p = new URLSearchParams(window.location.search).get("next")
+            if (p && p.startsWith("/")) return p
+        } catch { /* ignore */ }
+    }
+    return (afterLoginPath || "").trim()
+}
+
 // 이메일 회원가입(즉시 — 승인 없음). access_token 오면 즉시 로그인, 없으면 이메일 인증 안내.
 async function signUpEmail(supabaseUrl: string, anonKey: string, email: string, password: string, displayName: string, consent: boolean): Promise<{ session: SupaSession | null; needConfirm: boolean }> {
     const body = await supaFetch(`${supabaseUrl}/auth/v1/signup`, anonKey, {
@@ -190,6 +201,7 @@ interface Props {
     supabaseUrl: string
     supabaseAnonKey: string
     redirectUrl: string
+    afterLoginPath: string
     dark: boolean
     termsUrl?: string
     privacyUrl?: string
@@ -202,7 +214,7 @@ const DEFAULT_SUPABASE_ANON_KEY = ""
  * @framerSupportedLayoutHeight any
  */
 export default function AlphaNestAuth(props: Props) {
-    const { supabaseUrl, supabaseAnonKey, redirectUrl, dark, termsUrl, privacyUrl } = props
+    const { supabaseUrl, supabaseAnonKey, redirectUrl, afterLoginPath, dark, termsUrl, privacyUrl } = props
     const url = (supabaseUrl || DEFAULT_SUPABASE_URL).replace(/\/+$/, "")
     const anonKey = supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -255,6 +267,8 @@ export default function AlphaNestAuth(props: Props) {
                 await ensureProfile(url, anonKey, at, u.id, u.email || "", u.user_metadata?.name || u.user_metadata?.full_name || "", true)
                 try { window.history.replaceState(null, "", window.location.pathname + window.location.search) } catch { /* no-op */ }
                 if (alive) { setSession(s); emitAuthChange() }
+                const next = resolveNext(afterLoginPath)
+                if (next && next !== window.location.pathname) window.location.href = next
                 return true
             } catch {
                 if (alive) setErr("로그인 처리 실패")
@@ -305,21 +319,26 @@ export default function AlphaNestAuth(props: Props) {
                     setMode("login")
                 } else {
                     setSession(s); emitAuthChange()
+                    const next = resolveNext(afterLoginPath)
+                    if (next && typeof window !== "undefined" && next !== window.location.pathname) window.location.href = next
                 }
             } else {
                 const s = await signInEmail(url, anonKey, email.trim(), password)
                 setSession(s); emitAuthChange()
+                const next = resolveNext(afterLoginPath)
+                if (next && typeof window !== "undefined" && next !== window.location.pathname) window.location.href = next
             }
         } catch (e: any) {
             setErr(humanError(e?.message || ""))
         } finally {
             setBusy(false)
         }
-    }, [busy, mode, email, password, displayName, agreed, url, anonKey])
+    }, [busy, mode, email, password, displayName, agreed, url, anonKey, afterLoginPath])
 
     const googleLogin = () => {
         if (busy) return
-        if (!agreed) { setErr("이용약관·개인정보처리방침(국외이전 포함) 동의가 필요합니다"); return }
+        // 약관 동의는 회원가입 탭에서만 노출 → 구글도 회원가입 탭일 때만 동의 강제(로그인 탭=기존 회원 재방문)
+        if (mode === "signup" && !agreed) { setErr("이용약관·개인정보처리방침(국외이전 포함) 동의가 필요합니다"); return }
         setErr("")
         setBusy(true)
         const back = (redirectUrl || "").trim() || (typeof window !== "undefined" ? window.location.origin + window.location.pathname : "")
@@ -339,7 +358,7 @@ export default function AlphaNestAuth(props: Props) {
     }
 
     const wrap: CSSProperties = { width: "100%", height: "100%", fontFamily: FONT, display: "flex", alignItems: "center", justifyContent: "center", boxSizing: "border-box", color: C.ink }
-    const card: CSSProperties = { width: "100%", maxWidth: 360, background: C.card, border: `1px solid ${C.line}`, borderRadius: 18, padding: "24px 22px", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", boxSizing: "border-box" }
+    const card: CSSProperties = { width: "100%", maxWidth: 360, background: C.card, borderRadius: 18, padding: "30px 24px", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", boxSizing: "border-box" }
     const inputStyle: CSSProperties = { width: "100%", padding: "11px 13px", borderRadius: 11, border: `1px solid ${C.line}`, background: C.field, color: C.ink, fontSize: 13.5, fontFamily: FONT, outline: "none", boxSizing: "border-box" }
 
     // 로그인 상태 — 컴팩트 프로필
@@ -369,12 +388,14 @@ export default function AlphaNestAuth(props: Props) {
     return (
         <div style={wrap}>
             <div style={card}>
-                {/* 브랜드 lockup — 로고(좌) + ALPHANEST */}
-                <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 4 }}>
-                    <AlphaLogo size={24} />
-                    <span style={{ fontSize: 18, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>ALPHANEST</span>
+                {/* 브랜드 lockup — 로고 + ALPHANEST (가운데 정렬, 여백 확대) */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginBottom: 26 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <AlphaLogo size={26} />
+                        <span style={{ fontSize: 19, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>ALPHANEST</span>
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.faint, lineHeight: 1.55, textAlign: "center" }}>로그인하면 관심종목이 계정에 저장돼요</div>
                 </div>
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: C.faint, marginBottom: 18, lineHeight: 1.5 }}>로그인하면 관심종목이 계정에 저장돼요. 둘러보기는 로그인 없이도 가능합니다.</div>
 
                 {/* 모드 탭 */}
                 <div style={{ display: "flex", gap: 6, background: C.bg, padding: 4, borderRadius: 12, marginBottom: 16 }}>
@@ -389,7 +410,7 @@ export default function AlphaNestAuth(props: Props) {
                     })}
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {mode === "signup" && (
                         <input type="text" placeholder="이름 (선택)" value={displayName} onChange={(e) => setDisplayName(e.target.value)} style={inputStyle} />
                     )}
@@ -397,23 +418,25 @@ export default function AlphaNestAuth(props: Props) {
                     <input type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} placeholder="비밀번호 (6자 이상)" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} style={inputStyle} />
                 </div>
 
-                {/* 약관 동의 — 회원가입·구글 시 필수 */}
-                <label style={{ display: "flex", alignItems: "flex-start", gap: 7, cursor: "pointer", fontSize: 11.5, color: C.sub, fontWeight: 600, lineHeight: 1.45, marginTop: 12 }}>
-                    <input type="checkbox" checked={agreed} onChange={(e) => { setAgreed(e.target.checked); if (e.target.checked) setErr("") }} style={{ marginTop: 1, accentColor: C.vg, cursor: "pointer", flexShrink: 0 }} />
-                    <span>
-                        {termsUrl ? <a href={termsUrl} target="_blank" rel="noopener noreferrer" style={{ color: C.vg, textDecoration: "underline" }}>이용약관</a> : "이용약관"}
-                        {" · "}
-                        {privacyUrl ? <a href={privacyUrl} target="_blank" rel="noopener noreferrer" style={{ color: C.vg, textDecoration: "underline" }}>개인정보처리방침</a> : "개인정보처리방침"}
-                        {" 및 회원정보 국외 이전(미국)에 동의합니다. "}
-                        <span style={{ color: C.faint }}>(회원가입·구글 로그인 시 필수)</span>
-                    </span>
-                </label>
+                {/* 약관 동의 — 회원가입 탭에서만 노출, 필수 */}
+                {mode === "signup" && (
+                    <label style={{ display: "flex", alignItems: "flex-start", gap: 7, cursor: "pointer", fontSize: 11.5, color: C.sub, fontWeight: 600, lineHeight: 1.45, marginTop: 12 }}>
+                        <input type="checkbox" checked={agreed} onChange={(e) => { setAgreed(e.target.checked); if (e.target.checked) setErr("") }} style={{ marginTop: 1, accentColor: C.vg, cursor: "pointer", flexShrink: 0 }} />
+                        <span>
+                            {termsUrl ? <a href={termsUrl} target="_blank" rel="noopener noreferrer" style={{ color: C.vg, textDecoration: "underline" }}>이용약관</a> : "이용약관"}
+                            {" · "}
+                            {privacyUrl ? <a href={privacyUrl} target="_blank" rel="noopener noreferrer" style={{ color: C.vg, textDecoration: "underline" }}>개인정보처리방침</a> : "개인정보처리방침"}
+                            {" 및 회원정보 국외 이전(미국)에 동의합니다 "}
+                            <span style={{ color: C.faint }}>(필수)</span>
+                        </span>
+                    </label>
+                )}
 
                 {err && <div style={{ marginTop: 12, fontSize: 11.5, color: C.danger, fontWeight: 700, lineHeight: 1.5 }}>{err}</div>}
                 {ok && <div style={{ marginTop: 12, fontSize: 11.5, color: C.ok, fontWeight: 700, lineHeight: 1.5 }}>{ok}</div>}
 
                 <button onClick={submit} disabled={busy}
-                    style={{ width: "100%", marginTop: 14, padding: "12px 0", border: "none", borderRadius: 12, cursor: busy ? "default" : "pointer", fontFamily: FONT, fontSize: 14, fontWeight: 800, background: C.vg, color: "#ffffff", opacity: busy ? 0.6 : 1 }}>
+                    style={{ width: "100%", marginTop: 16, padding: "13px 0", border: "none", borderRadius: 12, cursor: busy ? "default" : "pointer", fontFamily: FONT, fontSize: 14, fontWeight: 800, background: C.vg, color: "#ffffff", opacity: busy ? 0.6 : 1 }}>
                     {busy ? "처리 중…" : mode === "login" ? "로그인" : "회원가입"}
                 </button>
 
@@ -439,8 +462,9 @@ export default function AlphaNestAuth(props: Props) {
 addPropertyControls(AlphaNestAuth, {
     supabaseUrl: { type: ControlType.String, title: "Supabase URL", defaultValue: DEFAULT_SUPABASE_URL },
     supabaseAnonKey: { type: ControlType.String, title: "Supabase Anon Key", defaultValue: DEFAULT_SUPABASE_ANON_KEY },
-    redirectUrl: { type: ControlType.String, title: "Redirect URL", defaultValue: "", placeholder: "비우면 현재 페이지로 복귀" },
+    redirectUrl: { type: ControlType.String, title: "OAuth Redirect URL", defaultValue: "", placeholder: "구글 복귀 URL (비우면 현재 페이지)" },
+    afterLoginPath: { type: ControlType.String, title: "로그인 후 이동", defaultValue: "/", placeholder: "예: / (URL ?next= 가 우선, 비우면 그대로)" },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
-    termsUrl: { type: ControlType.String, title: "이용약관 URL", defaultValue: "/terms" },
-    privacyUrl: { type: ControlType.String, title: "개인정보처리방침 URL", defaultValue: "/privacy" },
+    termsUrl: { type: ControlType.String, title: "이용약관 URL", defaultValue: "/policy" },
+    privacyUrl: { type: ControlType.String, title: "개인정보처리방침 URL", defaultValue: "/policy" },
 })
