@@ -423,6 +423,12 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.ranking_board_builder
 
+      - name: 수급 종합 빌드 (공매도·신용잔고, public-safe)
+        # portfolio.json kis_snapshots 추출(공매도 FHPST04830000·신용 FHPST04760000). 🚨 KIS 호출 0=RULE 1 무관(로컬 읽기).
+        # portfolio.json(main 분석 산출) 뒤. RULE 7 = KRX/KIS 외부 사실(공매도 비중·신용율)만. broad git add data/ = RULE 4.
+        continue-on-error: true
+        run: python -m api.builders.supply_demand_public_builder
+
       - name: Brain audit baseline (PRE/POST 측정 영속화)
         # 2026-05-18 확정 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
         # portfolio.json 의 brain_score 분포 + component fill + grade + quadrant 측정.

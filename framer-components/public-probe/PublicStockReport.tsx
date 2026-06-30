@@ -96,6 +96,7 @@ interface Props {
     insiderUrl: string
     warnUrl: string
     lendingUrl?: string
+    supplyUrl?: string
     apiBase: string
     dark: boolean
 }
@@ -108,6 +109,7 @@ const DEFAULT_FORENSICS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.c
 const DEFAULT_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/insider_trades.json"
 const DEFAULT_WARN = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/market_warnings.json"
 const DEFAULT_LENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/securities_lending.json"
+const DEFAULT_SUPPLY = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/supply_demand.json"
 const DEFAULT_TRENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/trending_kr.json"
 const RECENTS_KEY = "verity_recent_tickers" // nav 검색(PublicStockSearch)과 공유
 function readRecents(): any[] {
@@ -589,7 +591,7 @@ function StockReportSkeleton({ C, isDark, narrow }: { C: any; isDark: boolean; n
 }
 
 export default function PublicStockReport(props: Props) {
-    const { stockUrl, usStockUrl, usSmallcapUrl, flowUrl, forensicsUrl, insiderUrl, warnUrl, lendingUrl, apiBase, dark } = props
+    const { stockUrl, usStockUrl, usSmallcapUrl, flowUrl, forensicsUrl, insiderUrl, warnUrl, lendingUrl, supplyUrl, apiBase, dark } = props
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
     const C = (RenderTarget.current() === RenderTarget.canvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
@@ -617,6 +619,7 @@ export default function PublicStockReport(props: Props) {
     const [warnMap, setWarnMap] = useState<Record<string, any>>(SAMPLE_WARN)
     const [lendingMap, setLendingMap] = useState<Record<string, any>>({})
     const [lendAsOf, setLendAsOf] = useState<string>("")
+    const [supplyMap, setSupplyMap] = useState<Record<string, any>>({})
     const [selTicker, setSelTicker] = useState<string>(() => {
         if (typeof window !== "undefined") {
             try {
@@ -753,6 +756,18 @@ export default function PublicStockReport(props: Props) {
             .catch(() => {})
         return () => { alive = false }
     }, [lendingUrl, onCanvas])
+
+    // 수급 종합(공매도·신용잔고) — supply_demand.json (stocks 맵). 스냅샷 universe만, 미보유 graceful.
+    useEffect(() => {
+        const url = supplyUrl || DEFAULT_SUPPLY
+        if (onCanvas || !url) return
+        let alive = true
+        fetch(url, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const m = d && (d.stocks || d); if (alive && m && typeof m === "object") setSupplyMap(m) })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [supplyUrl, onCanvas])
 
     useEffect(() => {
         if (onCanvas || !forensicsUrl) return
@@ -971,6 +986,7 @@ export default function PublicStockReport(props: Props) {
         return mx
     }, [flowRows])
     const lendingRow = useMemo(() => (lendingMap && lendingMap[s.ticker]) || null, [lendingMap, s.ticker])
+    const supplyRow = useMemo(() => (supplyMap && supplyMap[s.ticker]) || null, [supplyMap, s.ticker])
     const foren = useMemo(() => (forensicsMap && forensicsMap[s.ticker]) || null, [forensicsMap, s.ticker])
     const insider = useMemo(() => (insiderMap && insiderMap[s.ticker]) || null, [insiderMap, s.ticker])
     const warn = useMemo(() => (warnMap && warnMap[s.ticker]) || null, [warnMap, s.ticker])
@@ -1590,6 +1606,44 @@ export default function PublicStockReport(props: Props) {
                 </>
             )}
 
+            {/* 공매도·신용 — 스냅샷 universe (graceful 미표시). KRX 무료차단 데이터=KIS */}
+            {supplyRow && (supplyRow.short_ratio_5d != null || (supplyRow.credit_qty || 0) > 0) && (
+                <>
+                    {sectionTitle("공매도·신용", "KRX·KIS 외부 사실 · 스냅샷 종목")}
+                    <div style={{ background: C.card, borderRadius: 16, padding: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                            {supplyRow.short_ratio_5d != null && (
+                                <div>
+                                    <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>공매도 비중 (5일평균)</div>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: C.ink }}>{Number(supplyRow.short_ratio_5d).toFixed(2)}%</div>
+                                </div>
+                            )}
+                            {supplyRow.short_qty != null && (
+                                <div>
+                                    <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>최근 공매도량</div>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: C.ink }}>{fmtVol(supplyRow.short_qty)}</div>
+                                </div>
+                            )}
+                            {(supplyRow.credit_qty || 0) > 0 && (
+                                <div>
+                                    <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>신용잔고</div>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: C.ink }}>{fmtVol(supplyRow.credit_qty)}</div>
+                                </div>
+                            )}
+                            {(supplyRow.credit_rate || 0) > 0 && (
+                                <div>
+                                    <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>신용잔고율</div>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: C.ink }}>{Number(supplyRow.credit_rate).toFixed(2)}%</div>
+                                </div>
+                            )}
+                        </div>
+                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>
+                            공매도 비중·신용잔고 = 외부 사실(KRX·KIS) · 자체 신호 아님
+                        </div>
+                    </div>
+                </>
+            )}
+
             {/* 기본 지표 — 탭하면 계산식·실제 투입 숫자·출처 */}
             {Object.keys(facts).length > 0 && (
                 <>
@@ -2058,6 +2112,7 @@ addPropertyControls(PublicStockReport, {
     insiderUrl: { type: ControlType.String, title: "Insider URL", defaultValue: DEFAULT_INSIDER },
     warnUrl: { type: ControlType.String, title: "Warnings URL", defaultValue: DEFAULT_WARN },
     lendingUrl: { type: ControlType.String, title: "Lending URL", defaultValue: DEFAULT_LENDING },
+    supplyUrl: { type: ControlType.String, title: "Supply/Demand URL", defaultValue: DEFAULT_SUPPLY },
     apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
