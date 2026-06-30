@@ -173,7 +173,7 @@ SOURCES = [
         "label": "매크로 스냅샷",
         "path": "data/macro_snapshot.json",
         "type": "json_collected_at",
-        "max_fresh_hours": 1.0,  # 30분 cron + 30분 마진
+        "max_fresh_hours": 6.0,  # 실 publish ~2-4h(daily_full + macro path). 30분 cron 가정은 과빡=만성 false. 2026-06-30 재보정.
     },
     {
         "key": "universe_candidates",
@@ -194,12 +194,12 @@ SOURCES = [
     {"key": "insider_kr", "label": "내부자거래 KR (DART)", "path": "data/insider_trades.json", "type": "json_content", "max_fresh_hours": 72.0},
     {"key": "insider_us", "label": "내부자거래 US (Form4)", "path": "data/us_insider_trades.json", "type": "json_content", "max_fresh_hours": 72.0},
     {"key": "stock_report_kr", "label": "종목 리포트 KR", "path": "data/stock_report_public.json", "type": "json_content", "max_fresh_hours": 72.0},
-    {"key": "stock_report_us", "label": "종목 리포트 US", "path": "data/us_stock_report_public.json", "type": "json_content", "max_fresh_hours": 72.0},
+    {"key": "stock_report_us", "label": "종목 리포트 US", "path": "data/us_stock_report_public.json", "type": "json_content", "max_fresh_hours": 35 * 24.0},  # us_financials 월간 cron(0 0 5 * *). 72h=daily 가정 오설정→만성 false. 2026-06-30 재보정.
     {"key": "flow_kr", "label": "외국인·기관 수급", "path": "data/stock_flow_5d.json", "type": "json_content", "max_fresh_hours": 72.0},
     {"key": "forensics_kr", "label": "공시 forensics", "path": "data/disclosure_forensics.json", "type": "json_content", "max_fresh_hours": 72.0},
     {"key": "disclosure_feed_kr", "label": "공시 피드 KR", "path": "data/public_disclosure_feed.json", "type": "json_content", "max_fresh_hours": 72.0},
     {"key": "broker_guide", "label": "증권사 가이드", "path": "data/broker_guide.json", "type": "json_content", "max_fresh_hours": 40 * 24.0},
-    {"key": "market_warnings", "label": "시장경보 (투자주의/경고)", "path": "data/market_warnings.json", "type": "json_content", "max_fresh_hours": 72.0},
+    {"key": "market_warnings", "label": "시장경보 (투자주의/경고)", "path": "data/market_warnings.json", "type": "json_content", "max_fresh_hours": 30 * 24.0},  # 경보=드문 이벤트. 빌더 매일 정상(daily_full) but 경보 0건 시 출력 무변화→git 동결=정상. 72h=false-stale. 30일=event-rarity 매치(이상적=빌더 heartbeat 별도). 2026-06-30 재보정.
 ]
 
 
