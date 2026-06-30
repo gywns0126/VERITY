@@ -54,6 +54,9 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python -m api.builders.dart_batch_builder
+          # KR 분기 재무비율 추이 public (dart_quarterly_snapshots.jsonl → dart_quarterly_public.json).
+          # 순수 변환·외부호출 0. backfill 완주 전까지 0종목 = graceful no-op (컴포넌트 series<4 자동숨김).
+          python -m api.builders.dart_quarterly_public_builder
 
       - name: Commit data/dart_fundamentals_kr.json
         run: |
@@ -61,8 +64,10 @@ jobs:
           git config user.email "gywns0126@gmail.com"
           git add data/dart_fundamentals_kr.json
           # CLAUDE.md RULE 4 정합 — F-Score Δ 시계열 누적 jsonl 도 함께 (2026-05-17).
-          # 미박힘 시 매주 entry 박혀도 디스크 ephemeral. fscore_delta YoY 산출 불가.
+          # 누락 시 매주 entry 추가돼도 디스크 ephemeral. fscore_delta YoY 산출 불가.
           git add data/dart_quarterly_snapshots.jsonl 2>/dev/null || true
+          # KR 분기 추이 public 산출물 (위 dart_quarterly_public_builder). RULE 4 정합.
+          git add data/dart_quarterly_public.json 2>/dev/null || true
           # data_pipeline_health.json — write_data_pipeline_health() 편승 (dart_batch_builder.py).
           # CLAUDE.md RULE 4 — 6번째 같은 패턴 (2026-05-17 audit, 5/10 신설 후 7일 stale).
           # SystemHealthBar pipelineUrl source 정합.
