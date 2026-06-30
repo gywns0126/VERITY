@@ -21,6 +21,9 @@ KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SUMMARY_PATH = os.path.join(_ROOT, "data", "us_financials", "_summary.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "us_stock_report_public.json")
+US_CONSENSUS_PATH = os.path.join(_ROOT, "data", "us_analyst_consensus.json")
+# yfinance rec_key → 한글 (외부 집계 사실, 자체 의견 아님 — RULE 7 fact_safe)
+REC_KEY_KO = {"strong_buy": "적극 매수", "buy": "매수", "hold": "중립", "sell": "매도", "strong_sell": "적극 매도"}
 
 
 def _now_kst() -> datetime:
@@ -253,11 +256,15 @@ def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
     p = os.path.join(_ROOT, "data", "us_financials", f"{ticker}.json")
     try:
         with open(p, "r", encoding="utf-8") as f:
-            sa = (json.load(f) or {}).get("series_annual") or {}
+            doc = json.load(f) or {}
     except (OSError, json.JSONDecodeError):
         return {}
+    sa = doc.get("series_annual") or {}
+    der = doc.get("derived") or {}
     return {"net_income": _latest_annual(sa.get("net_income")),
-            "equity": _latest_annual(sa.get("stockholders_equity"))}
+            "equity": _latest_annual(sa.get("stockholders_equity")),
+            "eps_diluted": _latest_annual(sa.get("eps_diluted")),
+            "fcf_usd": der.get("fcf_usd")}
 
 
 def _usd_compact(v: Any) -> str | None:
@@ -277,10 +284,65 @@ def _usd_compact(v: Any) -> str | None:
     return f"${x:,.0f}"
 
 
+def _usd_compact_signed(v: Any) -> str | None:
+    """FCF 등 음수 가능 USD → 부호 보존 compact ($X.XB / -$X.XB). 0/NaN = None."""
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return None
+    if x != x or x == 0:
+        return None
+    s = _usd_compact(abs(x))
+    if s is None:
+        return None
+    return ("-" + s) if x < 0 else s
+
+
+def _load_us_consensus() -> Dict[str, Dict[str, Any]]:
+    """us_analyst_consensus.json(yfinance 외부 집계) → {ticker: 컨센서스 raw}. 자체 의견 아님(RULE 7 fact_safe)."""
+    try:
+        with open(US_CONSENSUS_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f) or {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+    out: Dict[str, Dict[str, Any]] = {}
+    for s in (data.get("stocks") or []):
+        tk = str(s.get("ticker") or "").upper()
+        if tk and s.get("num_analysts"):
+            out[tk] = s
+    return out
+
+
+def _us_consensus_block(cons: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """yfinance 컨센서스 raw → public 블록 (목표가 평균·범위 / 투자의견 / 업사이드 / 의견 분포).
+    외부 애널리스트 집계 사실만 — 자체 점수·등급 0 (RULE 7)."""
+    if not cons or not cons.get("num_analysts"):
+        return None
+
+    def _usd2(v: Any) -> Optional[str]:
+        try:
+            return f"${float(v):,.2f}"
+        except (TypeError, ValueError):
+            return None
+
+    out = {
+        "target_price": _usd2(cons.get("target_mean")),
+        "target_high": _usd2(cons.get("target_high")),
+        "target_low": _usd2(cons.get("target_low")),
+        "opinion": REC_KEY_KO.get(str(cons.get("rec_key") or "")),
+        "upside": _pct(cons.get("upside_pct"), signed=True),
+        "num_analysts": cons.get("num_analysts"),
+        "counts": cons.get("counts") if isinstance(cons.get("counts"), dict) else None,
+        "note": "외부 애널리스트 집계(yfinance) · 자체 의견 아님",
+    }
+    return {k: v for k, v in out.items() if v is not None}
+
+
 def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[str, float]],
                 sic_ko: Optional[Dict[str, str]] = None,
                 name_ko: Optional[Dict[str, str]] = None,
-                fin: Optional[Dict[str, Optional[float]]] = None) -> Dict[str, Any]:
+                fin: Optional[Dict[str, Optional[float]]] = None,
+                consensus_map: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
     facts: Dict[str, str] = {}
     fnote: Dict[str, str] = {}
     pm: Dict[str, float] = {}   # peer 중앙값 산정용 numeric (가드 통과분만)
@@ -374,6 +436,18 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
             facts["PBR"] = _num(pbr, 1)
             fnote["PBR"] = "시가총액 ÷ 자기자본(자체계산)"
             pm["PBR"] = pbr
+    # EPS·FCF — SEC EDGAR 최근 연간 사실 (us_financials series_annual/derived). RULE 7 fact_safe.
+    eps_v = fin.get("eps_diluted")
+    if eps_v is not None:
+        try:
+            facts["EPS"] = f"${float(eps_v):,.2f}"
+            fnote["EPS"] = "희석 주당순이익(SEC 최근 연간)"
+        except (TypeError, ValueError):
+            pass
+    fcf_fmt = _usd_compact_signed(fin.get("fcf_usd"))
+    if fcf_fmt:
+        facts["FCF"] = fcf_fmt
+        fnote["FCF"] = "잉여현금흐름 = 영업현금흐름 − 자본지출(SEC)"
     # peer 중앙값용 numeric 캡처 (facts 와 동일 가드 — ROE/D-E/영업이익률)
     _capn("ROE", row.get("roe_pct"), _ROE_MAX)
     _capn("D/E", row.get("debt_to_equity"), _DE_MAX)
@@ -394,7 +468,7 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
         "peer": None,        # main 2-pass 에서 섹터 중앙값 부착
         "disclosures": [],   # 8-K 는 /us/feed (us_disclosure_feed_builder) 담당
         "ownership": None,
-        "consensus": None,
+        "consensus": _us_consensus_block((consensus_map or {}).get((row.get("ticker") or "").upper())),
         "calendar": [],
         "_pm": pm,           # peer 산정용 temp (main 에서 제거)
         "_sector": business_ko or None,
@@ -434,8 +508,9 @@ def main() -> int:
         caps = _load_universe_caps()   # header 시총·거래대금 (universe 캐시)
         sic_ko = _load_sic_ko()    # SIC 영문업종 → 한글 (정적 맵)
         name_ko = _load_name_ko()  # 주요사 ticker → 한글명
+        us_cons = _load_us_consensus()  # yfinance 애널리스트 컨센서스(외부 집계 사실)
         stocks = [build_stock(r, meta_by_ticker.get(r.get("ticker"), {}), caps, sic_ko, name_ko,
-                              _load_fin_latest(r.get("ticker")))
+                              _load_fin_latest(r.get("ticker")), us_cons)
                   for r in rows if r.get("ticker")]
         # 동종업계 비교(peer) — 2-pass: 섹터 중앙값 산정 → 종목별 부착. KR stock_report 정합.
         medians = _us_sector_medians(stocks)
