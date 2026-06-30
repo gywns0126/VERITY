@@ -1,0 +1,77 @@
+# KR 소형주 코너 주간 리프레시 — 골든구스 병렬 트랙 funnel-top.
+# 2026-07-01 신설: smallcap_corner_builder + filters 가 빌드되는 워크플로 부재 → 06-20 Phase4 이후 동결 사고 해소.
+#   (ftc_group_equity 는 90일 TTL lazy[group_structure→main.py 호출]라 별도 cron 불필요. 이건 진짜 생산자 부재였음.)
+# 빌더 = 로컬 데이터 변환만(krx_mktcap/dart_quarterly_snapshots/kr_listed/disclosure_forensics 읽기). 외부 API·시크릿 0.
+# 주간 cadence — 시총 band 멤버십은 일변동 작음 + commit 부피 절약. 부족하면 빈도↑ 가능.
+name: KR Smallcap Corner (weekly)
+
+on:
+  schedule:
+    # 매주 일 18:17 KST (= 09:17 UTC). 정각 회피(odd minute) → GH silent-skip 완화.
+    - cron: '17 9 * * 0'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-kr-smallcap-corner
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15  # 순수 로컬 변환 2빌더(JSON read→write). 외부 호출 0.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 코너(funnel-top) → 필터
+        # smallcap_corner.json → smallcap_corner_filters.json (순수 변환, 외부 API 0).
+        run: |
+          python -m api.builders.smallcap_corner_builder
+          python -m api.builders.smallcap_corner_filters_builder
+
+      - name: Commit data/ (broad — RULE 4)
+        # 신선 체크아웃 + 위 2빌더만 실행 → data/smallcap_corner.json·smallcap_corner_filters.json 만 변경.
+        # broad add 안전(나머지 data/ 무변경). [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com.
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/
+          if git diff --staged --quiet; then
+            echo "[smallcap_corner] no changes"
+            exit 0
+          fi
+          TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git commit -m "🪙 smallcap_corner ${TODAY_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              break
+            fi
+            echo "push attempt $i failed, retrying in $((i * 5))s..."
+            sleep $((i * 5))
+          done
+
+      - name: Publish to VERITY-data + Vercel Blob
+        # smallcap_corner_filters.json (publish-data allowlist 등재 = Phase4) → Framer 카드 fetch URL.
+        if: always()
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
