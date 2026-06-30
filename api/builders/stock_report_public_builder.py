@@ -411,6 +411,22 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
                 facts[label] = f"{float(hv):.1f}%"
             except (TypeError, ValueError):
                 pass
+    # 52주 고점대비 (사실 — 현재가가 52주 최고가 대비 몇 %)
+    dfh = rec.get("drop_from_high_pct")
+    if dfh not in (None, ""):
+        try:
+            facts["52주 고점대비"] = f"{float(dfh):.1f}%"
+            fnote["52주 고점대비"] = "현재가 ÷ 52주 최고가 − 1"
+        except (TypeError, ValueError):
+            pass
+    # 거래량(평균대비) (사실 — 당일 거래량 ÷ 최근 평균)
+    vr = (rec.get("technical") or {}).get("vol_ratio")
+    if vr not in (None, "", 0):
+        try:
+            facts["거래량(평균대비)"] = f"{float(vr) * 100:.0f}%"
+            fnote["거래량(평균대비)"] = "당일 거래량 ÷ 최근 평균"
+        except (TypeError, ValueError):
+            pass
 
     # 헤더 메타 (52주 범위·거래대금 — 외부 사실)
     header: Dict[str, str] = {}
