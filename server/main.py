@@ -30,7 +30,7 @@ from server.config import (
     SSE_QUEUE_SIZE,
 )
 from server.kis_rest_client import (
-    fetch_daily, fetch_minute, fetch_weekly, fetch_monthly, fetch_orderbook,
+    fetch_daily, fetch_minute, fetch_weekly, fetch_monthly, fetch_full_history, fetch_orderbook,
     fetch_price, fetch_trades, fetch_program_trade, place_kr_order,
     place_us_order, get_balance, token_status,
 )
@@ -286,6 +286,10 @@ async def chart(ticker: str, type: str = Query("all")):
         if type == "monthly":
             data = await loop.run_in_executor(None, fetch_monthly, tk)
             return {"monthly": data}
+        if type == "full":
+            # 전체 상장 기간 월봉 (yfinance, KIS 무관) — IPO 까지. KIS 100건 캡 우회.
+            data = await loop.run_in_executor(None, fetch_full_history, tk)
+            return {"full": data}
         if type == "minute":
             data = await loop.run_in_executor(None, fetch_minute, tk)
             return {"minute": data}

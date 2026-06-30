@@ -78,14 +78,14 @@ const GLOSSARY: Record<string, string> = {
 }
 const GKEYS = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length)
 const DART = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
-// g = KIS 차트 granularity(daily/weekly/monthly), n = 슬라이스 캔들 수(0=전체).
-// 주봉=~2년·월봉=~8년(KIS 호출당 100건 캡 우회) — 장기 탭에서만 해당 type fetch.
+// g = 차트 granularity(daily/weekly/monthly=KIS, full=yfinance 전체 상장기간 월봉), n = 슬라이스 캔들 수(0=전체).
+// 주봉=~2년·월봉=~8년(KIS 호출당 100건 캡) — "전체"는 KIS 한계라 IPO 못 감 → full=yfinance max 월봉(상장 후 전부).
 const PERIODS = [
     { l: "1M", n: 20, g: "daily" },
     { l: "3M", n: 60, g: "daily" },
     { l: "1Y", n: 52, g: "weekly" },
     { l: "5Y", n: 60, g: "monthly" },
-    { l: "전체", n: 0, g: "monthly" },
+    { l: "전체", n: 0, g: "full" },
 ]
 const DILUTION_CATS = new Set(["유상증자", "전환사채(CB)", "신주인수권부사채(BW)", "교환사채(EB)", "자기주식처분"])
 const RISK_CATS = new Set(["감자", "횡령·배임", "회생·상장폐지", "불성실공시"])

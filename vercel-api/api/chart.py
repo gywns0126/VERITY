@@ -29,7 +29,7 @@ _RAILWAY_URL = (
 )
 
 _TICKER_RE = re.compile(r"^[0-9]{6}$")
-_ALLOWED_TYPES = frozenset({"all", "minute", "daily", "weekly", "monthly", "tick", "quote"})
+_ALLOWED_TYPES = frozenset({"all", "minute", "daily", "weekly", "monthly", "full", "tick", "quote"})
 
 
 def _safe_err(exc, public_msg: str = "chart fetch failed") -> str:
@@ -58,7 +58,7 @@ class handler(BaseHTTPRequestHandler):
             ticker = ticker.zfill(6)
 
         # 주봉/월봉은 장기·저빈도 변경 → KIS 호출 절감 위해 1시간 캐시
-        _cache = "s-maxage=3600, stale-while-revalidate=7200" if qtype in ("weekly", "monthly") else "s-maxage=30, stale-while-revalidate=60"
+        _cache = "s-maxage=3600, stale-while-revalidate=7200" if qtype in ("weekly", "monthly", "full") else "s-maxage=30, stale-while-revalidate=60"
 
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")

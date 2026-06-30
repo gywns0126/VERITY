@@ -391,6 +391,45 @@ def fetch_monthly(ticker: str) -> list:
     return _fetch_period(ticker, "M", 365 * 9)
 
 
+def fetch_full_history(ticker: str) -> list:
+    """전체 상장 기간 월봉 — yfinance(KIS 무관·토큰 0). KIS 일/주/월봉은 호출당 100건 캡이라
+    수십 년 전 IPO 까지 못 감 → 장기 '전체' 탭 전용 deep source. KOSPI(.KS)→KOSDAQ(.KQ) 순 시도.
+    yfinance 커버리지(보통 2000년대 초~)만큼, 월봉이라 ~수백 캔들로 가벼움. 실패 시 빈 리스트(graceful)."""
+    try:
+        import yfinance as yf
+    except Exception:
+        return []
+    for suf in (".KS", ".KQ"):
+        try:
+            hist = yf.Ticker(f"{ticker}{suf}").history(
+                period="max", interval="1mo", auto_adjust=False
+            )
+            if hist is None or hist.empty:
+                continue
+            out = []
+            for idx, row in hist.iterrows():
+                try:
+                    o = float(row.get("Open") or 0)
+                    h = float(row.get("High") or 0)
+                    lo = float(row.get("Low") or 0)
+                    c = float(row.get("Close") or 0)
+                    v = int(row.get("Volume") or 0)
+                except Exception:
+                    continue
+                if h <= 0 or c <= 0:
+                    continue
+                out.append({
+                    "date": idx.strftime("%Y%m%d"),
+                    "open": round(o), "high": round(h), "low": round(lo),
+                    "close": round(c), "volume": v,
+                })
+            if out:
+                return out
+        except Exception:
+            continue
+    return []
+
+
 # ── 분봉 ──
 
 def fetch_minute(ticker: str) -> list:
