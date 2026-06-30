@@ -20,14 +20,14 @@
   },
   "streams": [
     {"id": "crypto", "file": "crypto_*.json", "max_age_minutes": 90, "owner": "ci", "schedule": "always", "cadence": "30분(시간당 2회) crypto_collect.yml", "criticality": "P0"},
-    {"id": "etf_flow", "file": "etf_flow.json", "max_age_minutes": 90, "owner": "ci", "schedule": "always", "cadence": "30분 crypto_collect 동승", "criticality": "P1"},
-    {"id": "macro_snapshot", "file": "macro_snapshot.json", "max_age_minutes": 180, "owner": "ci", "schedule": "always", "cadence": "30분 macro_collect.yml (기존 cron_health 3h 임계 정합)", "criticality": "P0"},
+    {"id": "etf_flow", "file": "etf_flow.json", "max_age_minutes": 2880, "owner": "ci", "schedule": "weekday", "cadence": "거래일 ~일1 (KRX ETF; crypto_collect 동승하나 실 갱신은 거래일·git 7d=3커밋)", "criticality": "P1"},
+    {"id": "macro_snapshot", "file": "macro_snapshot.json", "max_age_minutes": 360, "owner": "ci", "schedule": "always", "cadence": "실측 median 100분·max 306분 (manifest 30분 주장 정정 2026-07-01). max_age=360 = 정상최대갭+버퍼", "criticality": "P0"},
     {"id": "news_flash", "file": "news_flash.json", "max_age_minutes": 90, "owner": "ci", "schedule": "market_hours", "cadence": "평일 15~30분 rss_scout.yml", "criticality": "P0"},
     {"id": "price_pulse", "file": "price_pulse.json", "max_age_minutes": 30, "owner": "ci", "schedule": "market_hours", "cadence": "1분 lite (장중만, 장외 정체 정상)", "criticality": "P0"},
-    {"id": "ai_synthesis", "file": "ai_synthesis.json", "max_age_minutes": 1560, "owner": "ci", "schedule": "weekday", "cadence": "일배치 daily_analysis_full.yml", "criticality": "P0", "ts_field": "updated_at", "resolved_note": "2026-06-26: agent '미스탬프' 플래그 FALSE — ai_synthesis_builder.py:224 가 updated_at 스탬프(generated_at 아닌 이름일 뿐)."},
-    {"id": "stock_report_public", "file": "stock_report_public.json", "max_age_minutes": 1560, "owner": "ci", "schedule": "weekday", "cadence": "일배치", "criticality": "P0"},
+    {"id": "ai_synthesis", "file": "ai_synthesis.json", "max_age_minutes": 4320, "owner": "ci", "schedule": "weekday", "cadence": "일배치 daily_analysis_full.yml", "criticality": "P0", "ts_field": "updated_at", "resolved_note": "2026-06-26: agent '미스탬프' 플래그 FALSE — ai_synthesis_builder.py:224 가 updated_at 스탬프(generated_at 아닌 이름일 뿐)."},
+    {"id": "stock_report_public", "file": "stock_report_public.json", "max_age_minutes": 4320, "owner": "ci", "schedule": "weekday", "cadence": "일배치", "criticality": "P0"},
     {"id": "dart_catalyst_alerts", "file": "dart_catalyst_alerts.jsonl", "max_age_minutes": 120, "owner": "ci", "schedule": "market_hours", "cadence": "30분 증분 dart_catalyst_pulse.yml", "criticality": "P0"},
-    {"id": "factor_ic_history", "file": "factor_ic_history.json", "max_age_minutes": 1560, "owner": "ci", "schedule": "weekday", "cadence": "일배치", "criticality": "P1"},
+    {"id": "factor_ic_history", "file": "factor_ic_history.json", "max_age_minutes": 4320, "owner": "ci", "schedule": "weekday", "cadence": "일배치", "criticality": "P1"},
     {"id": "dart_fundamentals_kr", "file": "dart_fundamentals_kr.json", "max_age_minutes": 11520, "owner": "ci", "schedule": "weekly", "cadence": "주1(일) dart_batch.yml", "criticality": "P1"},
     {"id": "dart_quarterly_snapshots", "file": "dart_quarterly_snapshots.jsonl", "max_age_minutes": 11520, "owner": "ci", "schedule": "weekly", "cadence": "주1(일) dart_batch.yml", "criticality": "P1"},
     {"id": "us_analyst_consensus", "file": "us_analyst_consensus.json", "max_age_minutes": 4320, "owner": "ci", "schedule": "weekly", "cadence": "주3(일·화·목) us_analyst_consensus.yml", "criticality": "P1"},
@@ -38,7 +38,7 @@
     {"id": "us_major_holdings", "file": "us_major_holdings.json", "max_age_minutes": 5760, "owner": "ci", "schedule": "weekly", "cadence": "주3(월·수·금) us_major_holdings.yml", "criticality": "P2"},
     {"id": "us_smart_money_13f", "file": "us_smart_money_13f.json", "max_age_minutes": 50400, "owner": "ci", "schedule": "monthly", "cadence": "월1(20일) us_smart_money_13f.yml", "criticality": "P2"},
     {"id": "sec_8k_cache", "file": "sec_8k_cache.json", "max_age_minutes": 2160, "owner": "ci", "schedule": "always", "cadence": "일1 sec_8k_alert.yml", "criticality": "P1"},
-    {"id": "bonds_etfs", "file": "bonds.json", "max_age_minutes": 2160, "owner": "ci", "schedule": "weekday", "cadence": "평일 2회 bond_etf_analysis.yml", "criticality": "P1"},
+    {"id": "bonds_etfs", "file": "bonds.json", "max_age_minutes": 4320, "owner": "ci", "schedule": "weekday", "cadence": "평일 2회 bond_etf_analysis.yml", "criticality": "P1"},
     {"id": "penny_watchlist", "file": "penny_watchlist.json", "max_age_minutes": 2160, "owner": "ci", "schedule": "always", "cadence": "일1 scout_penny.yml", "criticality": "P2"},
     {"id": "trade_analysis", "file": "trade_analysis.json", "max_age_minutes": 5040, "owner": "ci", "schedule": "weekday", "cadence": "평일 1회 export_trade_daily.yml", "criticality": "P2"},
     {"id": "equity_research", "file": "industry_themes_pulse.json", "max_age_minutes": 12960, "owner": "ci", "schedule": "weekly", "cadence": "주1(일) equity_research_brief.yml", "criticality": "P2"},
@@ -50,7 +50,7 @@
 
     {"id": "event_study", "file": "event_study.json", "max_age_minutes": 14400, "owner": "local", "schedule": "weekly", "cadence": "로컬 주간 rebuild 목표(가격레이크 의존). +60d 윈도우=과거형 surface, 주1회 충분.", "criticality": "P1", "known_issue": "로컬 맥 SPOF. CI 못 닿음. 하트비트 감시 필요(Tier 1)."},
     {"id": "kr_flow_observations", "file": "kr_flow_observations.parquet", "max_age_minutes": 7200, "owner": "local", "schedule": "weekly", "cadence": "화·금 launchd krflow.biweekly (거주 IP anti-bot 회피 의도)", "criticality": "P2", "known_issue": "로컬 맥 SPOF + git 미추적. 하트비트 감시 필요."},
-    {"id": "analyst_reports", "file": "analyst_reports.json", "max_age_minutes": 2160, "owner": "ci", "schedule": "weekday", "cadence": "daily_analysis_full(VERITY_MODE=prod) full 모드 scout_reports 재생성. gitignore(저작권)·비발행 입력 — 다운스트림 stock_report_public 으로 노출.", "criticality": "P2", "resolved_note": "2026-06-26 FALSE ALARM 해소: 로컬 5/20 동결은 dev-mode(mock) 아티팩트일 뿐, 프로덕션 prod-mode 는 매일 신선(report_summaries 내부 5/21~6/25, stock_report_public 6/25). 모니터는 이 입력 mtime 아닌 다운스트림 stock_report_public 신선도로 판정."},
+    {"id": "analyst_reports", "active_check": false, "file": "analyst_reports.json", "max_age_minutes": 2160, "owner": "ci", "schedule": "weekday", "cadence": "daily_analysis_full(VERITY_MODE=prod) full 모드 scout_reports 재생성. gitignore(저작권)·비발행 입력 — 다운스트림 stock_report_public 으로 노출.", "criticality": "P2", "resolved_note": "2026-06-26 FALSE ALARM 해소: 로컬 5/20 동결은 dev-mode(mock) 아티팩트일 뿐, 프로덕션 prod-mode 는 매일 신선(report_summaries 내부 5/21~6/25, stock_report_public 6/25). 모니터는 이 입력 mtime 아닌 다운스트림 stock_report_public 신선도로 판정."},
     {"id": "dividends_kr", "file": "dividends_kr.json", "max_age_minutes": 4320, "owner": "ci", "schedule": "weekday", "cadence": "전용 cron 없이 daily_analysis api/main.py 동승", "criticality": "P2", "known_issue": "독립 git add 경로 없음 → 신선도 보장 약함(6/18 이후 정체 흔적)."}
   ]
 }

@@ -26,10 +26,10 @@ KST = timezone(timedelta(hours=9))
 MANIFEST = os.path.join(DATA_DIR, "freshness_sla.json")
 OBS_PATH = os.path.join(DATA_DIR, "metadata", "freshness_observations.jsonl")
 
-TS_FALLBACK = ["collected_at", "generated_at", "updated_at", "as_of", "last_checked_at"]
+TS_FALLBACK = ["collected_at", "generated_at", "updated_at", "as_of", "last_checked_at", "fetched_at"]
 TS_FALLBACK_NESTED = [("_meta", "generated_at"), ("_meta", "collected_at")]
-# list/jsonl 요소에서 ts 찾을 후보 필드
-ITEM_TS = ["date", "collected_at", "created_at", "ts", "ts_utc", "published", "pub_date", "as_of"]
+# list/jsonl 요소에서 ts 찾을 후보 필드 (fetched_at = KR collector 다수 — dart_quarterly_snapshots 등 no_ts 사각 해소)
+ITEM_TS = ["date", "collected_at", "created_at", "ts", "ts_utc", "published", "pub_date", "as_of", "fetched_at"]
 
 
 def _extract_ts(obj, ts_field: str | None):
@@ -105,6 +105,10 @@ def build_observations() -> dict:
     for s in m.get("streams", []):
         if s.get("owner") == "local":
             continue  # heartbeat 가 별도 커버
+        if s.get("active_check") is False:
+            # 비발행 입력(gitignore)·다운스트림으로 신선도 판정하는 스트림 = 능동검사 제외
+            rows.append({"id": s["id"], "status": "skip_inactive"})
+            continue
         f = s.get("file", "")
         sched = s.get("schedule", "always")
         if "*" in f:  # glob v0 skip
