@@ -330,6 +330,25 @@ function fmtKRWcompact(v: any): string {
     return (neg ? "−" : "") + s
 }
 
+// Catmull-Rom → cubic bezier 부드러운 곡선 path (유선형 추이용)
+function smoothLine(p: { x: number; y: number }[]): string {
+    if (!p.length) return ""
+    if (p.length === 1) return `M ${p[0].x} ${p[0].y}`
+    let d = `M ${p[0].x} ${p[0].y}`
+    for (let i = 0; i < p.length - 1; i++) {
+        const p0 = p[i === 0 ? 0 : i - 1]
+        const p1 = p[i]
+        const p2 = p[i + 1]
+        const p3 = p[i + 2 < p.length ? i + 2 : p.length - 1]
+        const c1x = +(p1.x + (p2.x - p0.x) / 6).toFixed(2)
+        const c1y = +(p1.y + (p2.y - p0.y) / 6).toFixed(2)
+        const c2x = +(p2.x - (p3.x - p1.x) / 6).toFixed(2)
+        const c2y = +(p2.y - (p3.y - p1.y) / 6).toFixed(2)
+        d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${p2.x} ${p2.y}`
+    }
+    return d
+}
+
 function FinTrend({ series, C }: { series: any[]; C: any }) {
     const [metric, setMetric] = useState<"revenue" | "op" | "net">("revenue")
     const METRICS: { k: "revenue" | "op" | "net"; l: string }[] = [
@@ -351,6 +370,19 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
         return ((lastVal - pv) / Math.abs(pv)) * 100
     }
     const COMPARES = [{ n: 1, l: "1년 전" }, { n: 3, l: "3년 전" }, { n: 5, l: "5년 전" }]
+    // 유선형 추이 좌표 (viewBox 0~100 × 0~H, preserveAspectRatio none + non-scaling-stroke)
+    const H = 110, PADV = 8
+    const baseY = hasNeg ? H / 2 : H - PADV
+    const ampl = hasNeg ? (H / 2 - PADV) : (H - 2 * PADV)
+    const xy = pts.map((p, i) => {
+        const v = valOf(p)
+        const x = pts.length <= 1 ? 50 : (i / (pts.length - 1)) * 100
+        const y = v == null ? baseY : baseY - (v / maxAbs) * ampl
+        return { x: +x.toFixed(2), y: +y.toFixed(2), v }
+    })
+    const defined = xy.filter((q) => q.v != null)
+    const linePath = smoothLine(defined)
+    const areaPath = defined.length >= 2 ? linePath + ` L ${defined[defined.length - 1].x} ${baseY} L ${defined[0].x} ${baseY} Z` : ""
     return (
         <div style={{ background: C.card, borderRadius: 16, padding: "12px 16px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
             {/* metric 선택 */}
@@ -377,28 +409,12 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
                     )
                 })}
             </div>
-            {/* 막대 추이 */}
-            <div style={{ display: "flex", alignItems: "stretch", gap: 3, height: 110 }}>
-                {pts.map((p) => {
-                    const v = valOf(p)
-                    const frac = v == null ? 0 : Math.abs(v) / maxAbs
-                    const isLast = Number(p.year) === lastYear
-                    const col = v == null ? C.line : v >= 0 ? C.up : C.down
-                    const bar = (
-                        <div style={{ width: "100%", height: (frac * 100) + "%", background: col, opacity: isLast ? 1 : 0.5, borderRadius: v != null && v < 0 ? "0 0 3px 3px" : "3px 3px 0 0" }} />
-                    )
-                    return (
-                        <div key={p.year} title={`${p.year} · ${fmtKRWcompact(v)}`} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: hasNeg ? "center" : "flex-end" }}>
-                            {hasNeg ? (
-                                <>
-                                    <div style={{ height: "50%", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>{v != null && v >= 0 && bar}</div>
-                                    <div style={{ height: "50%", display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>{v != null && v < 0 && bar}</div>
-                                </>
-                            ) : bar}
-                        </div>
-                    )
-                })}
-            </div>
+            {/* 유선형 추이 — 부드러운 곡선(Catmull-Rom) + 영역 */}
+            <svg viewBox={`0 0 100 ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: H, display: "block", overflow: "visible" }}>
+                {hasNeg && <line x1={0} y1={baseY} x2={100} y2={baseY} stroke={C.line} strokeWidth={1} vectorEffect="non-scaling-stroke" />}
+                {areaPath && <path d={areaPath} fill={C.vt} fillOpacity={0.1} stroke="none" />}
+                {linePath && <path d={linePath} fill="none" stroke={C.vt} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+            </svg>
             {/* 연도 라벨 */}
             <div style={{ display: "flex", gap: 3, marginTop: 5 }}>
                 {pts.map((p, i) => (
@@ -407,7 +423,7 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
                     </div>
                 ))}
             </div>
-            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>DART 전자공시 연간 실값(추이) · 빨강=증가 파랑=감소(한국식) · 점수·추천 아님</div>
+            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>DART 전자공시 연간 실값(추이선) · 증감은 위 과거 비교 칩(▲증가 ▼감소) · 점수·추천 아님</div>
         </div>
     )
 }
