@@ -1,9 +1,9 @@
 {
-  "collected_at": "2026-06-30T21:31:18+09:00",
+  "collected_at": "2026-07-01T02:23:32+09:00",
   "overall_status": "error",
   "summary": {
-    "fresh": 13,
-    "stale": 1,
+    "fresh": 14,
+    "stale": 0,
     "missing": 1,
     "total": 15
   },
@@ -16,8 +16,8 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "mtime",
-      "last_update_kst": "2026-06-30T21:29:03.520060+09:00",
-      "age_hours": 0.04,
+      "last_update_kst": "2026-07-01T02:21:47.568964+09:00",
+      "age_hours": 0.03,
       "status": "fresh",
       "line_count": 241,
       "last_entry": {
@@ -31,18 +31,15 @@
     {
       "key": "quarterly_history",
       "label": "분기 시계열 (5,000 raw)",
-      "path": "data/stock_history/2026-Q2.jsonl",
+      "path": "data/stock_history/2026-Q3.jsonl",
       "type": "jsonl_quarter",
       "max_fresh_hours": 26.0,
-      "exists": true,
-      "ts_source": "mtime",
-      "last_update_kst": "2026-06-30T21:29:03.430060+09:00",
-      "age_hours": 0.04,
-      "status": "fresh",
-      "line_count": 2214,
-      "last_entry": {
-        "ts": "2026-05-11T20:12:24.580820+09:00"
-      }
+      "exists": false,
+      "ts_source": "none",
+      "last_update_kst": null,
+      "age_hours": null,
+      "status": "missing",
+      "line_count": 0
     },
     {
       "key": "dart_batch",
@@ -53,7 +50,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-28T23:45:13+09:00",
-      "age_hours": 45.77,
+      "age_hours": 50.64,
       "status": "fresh",
       "diagnostics": {
         "ok": true,
@@ -73,14 +70,14 @@
       "label": "매크로 스냅샷",
       "path": "data/macro_snapshot.json",
       "type": "json_collected_at",
-      "max_fresh_hours": 1.0,
+      "max_fresh_hours": 6.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-06-30T21:30:23+09:00",
-      "age_hours": 0.02,
+      "last_update_kst": "2026-07-01T02:23:06+09:00",
+      "age_hours": 0.01,
       "status": "fresh",
       "diagnostics": {
-        "elapsed_s": 54.72,
+        "elapsed_s": 25.92,
         "used_prev_snapshot": []
       }
     },
@@ -93,7 +90,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-30T19:23:50+09:00",
-      "age_hours": 2.12,
+      "age_hours": 7.0,
       "status": "fresh",
       "diagnostics": {
         "ok": true,
@@ -112,10 +109,10 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "mtime",
-      "last_update_kst": "2026-06-30T21:29:03.320060+09:00",
-      "age_hours": 0.04,
+      "last_update_kst": "2026-07-01T02:21:47.362961+09:00",
+      "age_hours": 0.03,
       "status": "fresh",
-      "line_count": 489,
+      "line_count": 491,
       "last_entry": {
         "mode": "quick",
         "ramp_up_stage": 0,
@@ -133,7 +130,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-30T21:03:31.988677+09:00",
-      "age_hours": 0.46,
+      "age_hours": 5.33,
       "status": "fresh"
     },
     {
@@ -145,7 +142,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-30T17:18:25.200109+09:00",
-      "age_hours": 4.21,
+      "age_hours": 9.09,
       "status": "fresh"
     },
     {
@@ -157,7 +154,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-30T20:40:09.489959+09:00",
-      "age_hours": 0.85,
+      "age_hours": 5.72,
       "status": "fresh"
     },
     {
@@ -165,12 +162,12 @@
       "label": "종목 리포트 US",
       "path": "data/us_stock_report_public.json",
       "type": "json_content",
-      "max_fresh_hours": 72.0,
+      "max_fresh_hours": 840.0,
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-27T11:53:18.897824+09:00",
-      "age_hours": 81.63,
-      "status": "stale"
+      "age_hours": 86.5,
+      "status": "fresh"
     },
     {
       "key": "flow_kr",
@@ -181,7 +178,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-30T21:07:07.213678+09:00",
-      "age_hours": 0.4,
+      "age_hours": 5.27,
       "status": "fresh"
     },
     {
@@ -193,7 +190,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-30T20:46:30.213877+09:00",
-      "age_hours": 0.75,
+      "age_hours": 5.62,
       "status": "fresh"
     },
     {
@@ -205,7 +202,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-30T20:39:57.006065+09:00",
-      "age_hours": 0.86,
+      "age_hours": 5.73,
       "status": "fresh"
     },
     {
@@ -217,7 +214,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-27T17:29:13.711973+09:00",
-      "age_hours": 76.03,
+      "age_hours": 80.91,
       "status": "fresh"
     },
     {
@@ -225,13 +222,14 @@
       "label": "시장경보 (투자주의/경고)",
       "path": "data/market_warnings.json",
       "type": "json_content",
-      "max_fresh_hours": 72.0,
+      "max_fresh_hours": 720.0,
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-20T07:27:37.366681+09:00",
-      "age_hours": 254.06,
-      "status": "missing"
+      "age_hours": 258.93,
+      "status": "fresh"
     }
   ],
+  "persist_frozen": [],
   "schema_version": "v0"
 }
