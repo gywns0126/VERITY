@@ -118,6 +118,12 @@ jobs:
           # 65 거래일 SHADOW 검증 게이트 (TG-1, 8월 말 PRODUCTION) 정합 위해 누적 필수.
           # 5번째 같은 패턴 (KIS lock / fred_health / runtime_load 후속).
           git add data/wide_scan_log.jsonl 2>/dev/null || true
+          # stock_history/YYYY-Qn.jsonl — 분기 시계열 5,000 raw 누적(append_universe_snapshot, wide_scan 옆 hook).
+          # 🚨 7번째 RULE 4 violation (2026-07-01 audit): 05-11 inline scan 제거로 daily_full(broad git add data/)
+          #   → universe_scan(specific add)로 이전될 때 stock_history 누락 → 50일 silent freeze(05-11~06-30).
+          #   F-Score Δ/Magic Formula leading 데이터(8Q/13주 누적) 손실. CI mtime이 모니터 false-GREEN 으로 은폐.
+          #   디렉토리 add = Q2/Q3/미래 분기 파일 자동 커버.
+          git add data/stock_history/ 2>/dev/null || true
           # data_pipeline_health.json — write_data_pipeline_health() 편승 (universe_scan_builder.py).
           # 5/10 신설 후 7일 stale (commit 1건만, autostash 로 영영 stash 후 drop).
           # 6번째 RULE 4 violation 학습 (CLAUDE.md 5번째 명시 후 재발) — 2026-05-17 audit.

@@ -53,6 +53,10 @@ const INFO: Record<string, string> = {
     "시장경보": "KRX가 공식 지정한 투자주의·투자경고·투자위험·단기과열·관리종목 상태예요. 거래소가 위험을 경고한 사실이라 꼭 확인하되, 자체 판단은 아니에요.",
     "컨센 목표가": "증권사들이 제시한 목표주가의 평균이에요. VERITY 자체 의견이 아니라 애널리스트 집계 사실이고, 자체 점수는 검증 후(2027) 공개해요.",
     "재무제표": "DART 전자공시 최근 결산 실값이에요. 손익(번 돈)·재무상태(가진 것/빚)·현금흐름(실제 현금 이동)·비율을 사실 그대로 보여줘요. 단년 기준이라 추이는 아직 없어요.",
+    "대차잔고": "시장에 빌려준 주식 잔고예요(공매도의 재료). 많을수록 공매도 압력이 커질 수 있다는 참고 사실이지, 그 자체가 하락 신호는 아니에요. 진짜 공매도 잔고는 아니에요(KRX 무료 비공개).",
+    "공매도": "전체 거래 중 공매도가 차지한 비중이에요(최근 5일 평균). 높을수록 하락에 베팅한 거래가 많았다는 뜻으로 참고하되, 그 자체가 매도 신호는 아니에요.",
+    "신용잔고": "빚내서(신용융자) 산 주식의 잔고예요. 많을수록 빚으로 산 물량이 많아, 주가가 내리면 반대매매 부담이 커질 수 있다는 참고 사실이에요.",
+    "마진율": "매출에서 해당 이익이 차지하는 비율이에요(영업이익률=영업이익÷매출, 순이익률=순이익÷매출). 높을수록 같은 매출로 더 많이 남긴다는 뜻이에요.",
 }
 const METRIC_FORMULA: Record<string, string> = {
     "PER": "KRX 공식 시가총액 ÷ DART 순이익(최근 결산)",
@@ -330,6 +334,25 @@ function fmtKRWcompact(v: any): string {
     return (neg ? "−" : "") + s
 }
 
+// Catmull-Rom → cubic bezier 부드러운 곡선 path (유선형 추이용)
+function smoothLine(p: { x: number; y: number }[]): string {
+    if (!p.length) return ""
+    if (p.length === 1) return `M ${p[0].x} ${p[0].y}`
+    let d = `M ${p[0].x} ${p[0].y}`
+    for (let i = 0; i < p.length - 1; i++) {
+        const p0 = p[i === 0 ? 0 : i - 1]
+        const p1 = p[i]
+        const p2 = p[i + 1]
+        const p3 = p[i + 2 < p.length ? i + 2 : p.length - 1]
+        const c1x = +(p1.x + (p2.x - p0.x) / 6).toFixed(2)
+        const c1y = +(p1.y + (p2.y - p0.y) / 6).toFixed(2)
+        const c2x = +(p2.x - (p3.x - p1.x) / 6).toFixed(2)
+        const c2y = +(p2.y - (p3.y - p1.y) / 6).toFixed(2)
+        d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${p2.x} ${p2.y}`
+    }
+    return d
+}
+
 function FinTrend({ series, C }: { series: any[]; C: any }) {
     const [metric, setMetric] = useState<"revenue" | "op" | "net">("revenue")
     const METRICS: { k: "revenue" | "op" | "net"; l: string }[] = [
@@ -351,6 +374,36 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
         return ((lastVal - pv) / Math.abs(pv)) * 100
     }
     const COMPARES = [{ n: 1, l: "1년 전" }, { n: 3, l: "3년 전" }, { n: 5, l: "5년 전" }]
+    // 유선형 추이 좌표 (viewBox 0~100 × 0~H, preserveAspectRatio none + non-scaling-stroke)
+    const H = 110, PADV = 8
+    const baseY = hasNeg ? H / 2 : H - PADV
+    const ampl = hasNeg ? (H / 2 - PADV) : (H - 2 * PADV)
+    const xy = pts.map((p, i) => {
+        const v = valOf(p)
+        const x = pts.length <= 1 ? 50 : (i / (pts.length - 1)) * 100
+        const y = v == null ? baseY : baseY - (v / maxAbs) * ampl
+        return { x: +x.toFixed(2), y: +y.toFixed(2), v }
+    })
+    const defined = xy.filter((q) => q.v != null)
+    const linePath = smoothLine(defined)
+    const areaPath = defined.length >= 2 ? linePath + ` L ${defined[defined.length - 1].x} ${baseY} L ${defined[0].x} ${baseY} Z` : ""
+    // 마진율 % 오버레이 (영업이익률/순이익률) — 매출 선택 시 생략. 자체 y-범위(추이 모양용).
+    const revOf = (p: any) => (p && p.revenue != null && !isNaN(Number(p.revenue))) ? Number(p.revenue) : null
+    const showMargin = metric !== "revenue"
+    const marginVals = pts.map((p) => { const v = valOf(p); const r = revOf(p); return (v != null && r && r !== 0) ? (v / r) * 100 : null })
+    const mDef = marginVals.filter((m): m is number => m != null)
+    const mMin = mDef.length ? Math.min(...mDef) : 0
+    const mRange = (mDef.length ? Math.max(...mDef) - mMin : 1) || 1
+    const mXY = pts.map((p, i) => {
+        const m = marginVals[i]
+        if (m == null) return null
+        const x = pts.length <= 1 ? 50 : (i / (pts.length - 1)) * 100
+        const y = (H - PADV) - ((m - mMin) / mRange) * (H - 2 * PADV)
+        return { x: +x.toFixed(2), y: +y.toFixed(2) }
+    }).filter((q): q is { x: number; y: number } => q != null)
+    const marginPath = showMargin && mXY.length >= 2 ? smoothLine(mXY) : ""
+    const lastMargin = [...marginVals].reverse().find((m) => m != null)
+    const marginLabel = metric === "op" ? "영업이익률" : "순이익률"
     return (
         <div style={{ background: C.card, borderRadius: 16, padding: "12px 16px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
             {/* metric 선택 */}
@@ -363,6 +416,9 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
                 <span style={{ fontFamily: HEAD, fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.6px" }}>{fmtKRWcompact(lastVal)}</span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.faint }}>{lastYear} {METRICS.find((m) => m.k === metric)!.l}</span>
+                {showMargin && lastMargin != null && (
+                    <span style={{ fontSize: 11.5, fontWeight: 800, color: C.amber, marginLeft: "auto" }}>{marginLabel} {lastMargin.toFixed(1)}%</span>
+                )}
             </div>
             {/* 과거 비교 칩 */}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
@@ -377,28 +433,19 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
                     )
                 })}
             </div>
-            {/* 막대 추이 */}
-            <div style={{ display: "flex", alignItems: "stretch", gap: 3, height: 110 }}>
-                {pts.map((p) => {
-                    const v = valOf(p)
-                    const frac = v == null ? 0 : Math.abs(v) / maxAbs
-                    const isLast = Number(p.year) === lastYear
-                    const col = v == null ? C.line : v >= 0 ? C.up : C.down
-                    const bar = (
-                        <div style={{ width: "100%", height: (frac * 100) + "%", background: col, opacity: isLast ? 1 : 0.5, borderRadius: v != null && v < 0 ? "0 0 3px 3px" : "3px 3px 0 0" }} />
-                    )
-                    return (
-                        <div key={p.year} title={`${p.year} · ${fmtKRWcompact(v)}`} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: hasNeg ? "center" : "flex-end" }}>
-                            {hasNeg ? (
-                                <>
-                                    <div style={{ height: "50%", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>{v != null && v >= 0 && bar}</div>
-                                    <div style={{ height: "50%", display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>{v != null && v < 0 && bar}</div>
-                                </>
-                            ) : bar}
-                        </div>
-                    )
-                })}
-            </div>
+            {/* 유선형 추이 — 부드러운 곡선(Catmull-Rom) + 영역 + 마진율 오버레이(amber 점선) */}
+            <svg viewBox={`0 0 100 ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: H, display: "block", overflow: "visible" }}>
+                {hasNeg && <line x1={0} y1={baseY} x2={100} y2={baseY} stroke={C.line} strokeWidth={1} vectorEffect="non-scaling-stroke" />}
+                {areaPath && <path d={areaPath} fill={C.vt} fillOpacity={0.1} stroke="none" />}
+                {linePath && <path d={linePath} fill="none" stroke={C.vt} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+                {marginPath && <path d={marginPath} fill="none" stroke={C.amber} strokeWidth={1.6} strokeDasharray="3 2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+            </svg>
+            {showMargin && marginPath && (
+                <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 10.5, fontWeight: 700 }}>
+                    <span style={{ color: C.vt }}>— {METRICS.find((m) => m.k === metric)!.l}</span>
+                    <span style={{ color: C.amber }}>┄ {marginLabel}(매출 대비)</span>
+                </div>
+            )}
             {/* 연도 라벨 */}
             <div style={{ display: "flex", gap: 3, marginTop: 5 }}>
                 {pts.map((p, i) => (
@@ -407,7 +454,7 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
                     </div>
                 ))}
             </div>
-            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>DART 전자공시 연간 실값(추이) · 빨강=증가 파랑=감소(한국식) · 점수·추천 아님</div>
+            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>DART 전자공시 연간 실값(추이선) · 증감은 위 과거 비교 칩(▲증가 ▼감소) · 점수·추천 아님</div>
         </div>
     )
 }
@@ -1579,7 +1626,7 @@ export default function PublicStockReport(props: Props) {
             {/* 대차잔고 — 공매도 압력 proxy (top200 보유 종목만, 미보유 graceful 미표시) */}
             {lendingRow && (
                 <>
-                    {sectionTitle("대차잔고", "공매도 압력 proxy · 금융위 data.go.kr")}
+                    {sectionTitle("대차잔고", "공매도 압력 proxy · 금융위 data.go.kr", "대차잔고")}
                     <div style={{ background: C.card, borderRadius: 16, padding: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                             <div>
@@ -1614,7 +1661,7 @@ export default function PublicStockReport(props: Props) {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                             {supplyRow.short_ratio_5d != null && (
                                 <div>
-                                    <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>공매도 비중 (5일평균)</div>
+                                    <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700, display: "inline-flex", alignItems: "center" }}>공매도 비중 (5일평균)<Info k="공매도" /></div>
                                     <div style={{ fontSize: 16, fontWeight: 800, color: C.ink }}>{Number(supplyRow.short_ratio_5d).toFixed(2)}%</div>
                                 </div>
                             )}
@@ -1626,7 +1673,7 @@ export default function PublicStockReport(props: Props) {
                             )}
                             {(supplyRow.credit_qty || 0) > 0 && (
                                 <div>
-                                    <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>신용잔고</div>
+                                    <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700, display: "inline-flex", alignItems: "center" }}>신용잔고<Info k="신용잔고" /></div>
                                     <div style={{ fontSize: 16, fontWeight: 800, color: C.ink }}>{fmtVol(supplyRow.credit_qty)}</div>
                                 </div>
                             )}
