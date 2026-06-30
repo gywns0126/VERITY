@@ -100,8 +100,10 @@ def main() -> int:
             print(f"[dart_quarterly_public] {INPUT_PATH} 부재 — skip", file=sys.stderr)
             return 0
         out = build()
-        if not out["stocks"] and os.path.isfile(OUTPUT_PATH):
-            print("[dart_quarterly_public] 0 stocks — 기존 snapshot 보존", file=sys.stderr)
+        if not out["stocks"]:
+            # 0종목 = 상류 단일기간(현 dart_quarterly_snapshots 2025-only). 빈 파일 발행 방지 — 아예 안 씀.
+            # 기존 파일 있으면 그대로 보존(덮어쓰지 않음). 상류 분기수집 확장되면 자동으로 실데이터 기록.
+            print("[dart_quarterly_public] 0 stocks — skip(빈 파일 발행 안 함)", file=sys.stderr)
             ok = True
             return 0
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
