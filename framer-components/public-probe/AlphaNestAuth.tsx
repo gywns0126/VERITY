@@ -181,7 +181,7 @@ function AlphaLogo({ size }: { size: number }) {
     return (
         <svg width={(size * 870) / 830} height={size} viewBox="0 0 870 830" fill="none" aria-hidden="true" style={{ display: "block" }}>
             <path d="M74.9999 403.5C74.9999 617 249 754.5 434 754.5C619 754.5 794.5 617 794.5 403.5" stroke="#3A4268" strokeWidth="150" strokeLinecap="round" />
-            <path d="M434.655 0.5C485.932 0.5 539.3 35.3619 579.875 91.4805C620.439 147.583 648.155 224.856 648.155 309.5C648.155 394.17 626.426 466.183 588.754 517.015C551.09 567.837 497.483 597.5 433.655 597.5C371.993 597.5 317.757 564.357 279.48 511.769C241.203 459.179 218.908 387.164 221.155 309.515V309.5C221.155 226.765 248.87 149.491 289.437 92.9092C330.015 36.3099 383.383 0.500043 434.655 0.5Z" fill="#6B51EA" stroke="#3A4268" />
+            <path d="M648.655 309.5C648.655 479 561.655 598 433.655 598C309.943 598 216.155 465 220.655 309.5C220.655 143.815 331.655 0 434.655 0C537.655 0 648.655 140 648.655 309.5Z" fill="#6B51EA" />
         </svg>
     )
 }
@@ -358,8 +358,8 @@ export default function AlphaNestAuth(props: Props) {
     }
 
     const wrap: CSSProperties = { width: "100%", height: "100%", fontFamily: FONT, display: "flex", alignItems: "center", justifyContent: "center", boxSizing: "border-box", color: C.ink }
-    const card: CSSProperties = { width: "100%", maxWidth: 360, background: C.card, borderRadius: 18, padding: "30px 24px", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", boxSizing: "border-box" }
-    const inputStyle: CSSProperties = { width: "100%", padding: "11px 13px", borderRadius: 11, border: `1px solid ${C.line}`, background: C.field, color: C.ink, fontSize: 13.5, fontFamily: FONT, outline: "none", boxSizing: "border-box" }
+    const card: CSSProperties = { width: "100%", maxWidth: 360, background: C.card, borderRadius: 18, padding: "30px 24px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)", boxSizing: "border-box" }
+    const inputStyle: CSSProperties = { width: "100%", padding: "11px 13px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.field, color: C.ink, fontSize: 13.5, fontFamily: FONT, outline: "none", boxSizing: "border-box" }
 
     // 로그인 상태 — 컴팩트 프로필
     if (session && session.user) {
@@ -394,7 +394,6 @@ export default function AlphaNestAuth(props: Props) {
                         <AlphaLogo size={26} />
                         <span style={{ fontSize: 19, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>ALPHANEST</span>
                     </div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: C.faint, lineHeight: 1.55, textAlign: "center" }}>로그인하면 관심종목이 계정에 저장돼요</div>
                 </div>
 
                 {/* 모드 탭 */}
@@ -403,7 +402,7 @@ export default function AlphaNestAuth(props: Props) {
                         const active = mode === m
                         return (
                             <button key={m} onClick={() => { setMode(m); setErr(""); setOk("") }}
-                                style={{ flex: 1, border: "none", padding: "8px 0", borderRadius: 9, cursor: "pointer", fontFamily: FONT, fontSize: 13, fontWeight: 700, background: active ? C.card : "transparent", color: active ? C.vg : C.sub, boxShadow: active ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>
+                                style={{ flex: 1, border: "none", padding: "8px 0", borderRadius: 9, cursor: "pointer", fontFamily: FONT, fontSize: 13, fontWeight: 700, background: active ? C.card : "transparent", color: active ? C.vg : C.sub, boxShadow: active ? "0 1px 3px rgba(0,0,0,0.10)" : "none" }}>
                                 {m === "login" ? "로그인" : "회원가입"}
                             </button>
                         )
@@ -448,7 +447,7 @@ export default function AlphaNestAuth(props: Props) {
                 </div>
 
                 <button onClick={googleLogin} disabled={busy}
-                    style={{ width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9, border: `1px solid ${C.line}`, background: C.card, color: C.ink, cursor: busy ? "default" : "pointer", fontFamily: FONT, fontSize: 13.5, fontWeight: 700, padding: "11px 16px", borderRadius: 12, opacity: busy ? 0.6 : 1 }}>
+                    style={{ width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, cursor: busy ? "default" : "pointer", fontFamily: FONT, fontSize: 13.5, fontWeight: 700, padding: "11px 16px", borderRadius: 12, opacity: busy ? 0.6 : 1 }}>
                     <GoogleG size={18} />
                     Google로 계속하기
                 </button>
