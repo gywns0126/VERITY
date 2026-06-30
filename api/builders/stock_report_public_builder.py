@@ -234,6 +234,53 @@ def _ownership(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return out
 
 
+def _institutional(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """기관·국민연금 5%+ 대량보유 (DART majorstock) — 사실. net_flow_direction(해석) 비노출."""
+    mh = rec.get("dart_major_holders") or {}
+    inst = mh.get("institutional_holders")
+    if not isinstance(inst, list) or not inst:
+        return None
+    holders: List[Dict[str, Any]] = []
+    for h in inst[:6]:
+        if not isinstance(h, dict) or not h.get("reporter"):
+            continue
+        holders.append({
+            "reporter": str(h.get("reporter")),
+            "pct": h.get("pct"),
+            "qty_change": h.get("qty_change"),
+            "date": str(h.get("date") or ""),
+        })
+    if not holders:
+        return None
+    return {
+        "total_pct": mh.get("total_institutional_pct"),
+        "n": mh.get("n_institutions"),
+        "holders": holders,
+        "note": "DART 5%+ 대량보유 보고(기관·국민연금) — 사실, 신호 아님",
+    }
+
+
+def _facilities(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """사업장·설비 현황 (DART 사업보고서 facilities_parser) — 사실."""
+    data = (rec.get("facilities_dart") or {}).get("data") or {}
+    fac = data.get("domestic_facilities")
+    hq = data.get("headquarters")
+    if not (isinstance(fac, list) and fac) and not isinstance(hq, dict):
+        return None
+    items: List[Dict[str, Any]] = []
+    for f in (fac if isinstance(fac, list) else [])[:6]:
+        if not isinstance(f, dict) or not f.get("name"):
+            continue
+        items.append({k: str(f.get(k)) for k in ("name", "location", "use", "segment") if f.get(k)})
+    out: Dict[str, Any] = {"note": "DART 사업보고서 시설 현황 — 사실"}
+    if isinstance(hq, dict) and hq.get("location"):
+        out["headquarters"] = {"location": str(hq.get("location")),
+                               "ownership": str(hq.get("ownership") or "")}
+    if items:
+        out["facilities"] = items
+    return out if (out.get("headquarters") or out.get("facilities")) else None
+
+
 def _consensus_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     c = rec.get("consensus") or {}
     if not c.get("consensus_available"):
@@ -416,6 +463,8 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
         "real_estate": real_estate,
         "disclosures": catalyst.get(ticker, [])[:8],
         "ownership": _ownership(rec),
+        "institutional": _institutional(rec),
+        "facilities": _facilities(rec),
         "consensus": _consensus_from_rec(rec),
         "verity_lens": _verity_lens_from_rec(rec),
         "calendar": ([{"event": "실적발표", "kind": "실적", "date": (rec.get("earnings") or {}).get("next_earnings")}]
