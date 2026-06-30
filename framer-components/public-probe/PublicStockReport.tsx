@@ -95,6 +95,7 @@ interface Props {
     forensicsUrl: string
     insiderUrl: string
     warnUrl: string
+    lendingUrl?: string
     apiBase: string
     dark: boolean
 }
@@ -106,6 +107,7 @@ const DEFAULT_FLOW = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/st
 const DEFAULT_FORENSICS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/disclosure_forensics.json"
 const DEFAULT_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/insider_trades.json"
 const DEFAULT_WARN = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/market_warnings.json"
+const DEFAULT_LENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/securities_lending.json"
 const DEFAULT_TRENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/trending_kr.json"
 const RECENTS_KEY = "verity_recent_tickers" // nav 검색(PublicStockSearch)과 공유
 function readRecents(): any[] {
@@ -229,6 +231,13 @@ function wonStr(v: any): string {
     const x = Number(v)
     if (!isFinite(x)) return "—"
     return x.toLocaleString("en-US") + "원"
+}
+function eokWon(v: any): string {
+    const x = Number(v)
+    if (!isFinite(x) || x <= 0) return "—"
+    if (x >= 1e12) return (x / 1e12).toFixed(1) + "조원"
+    if (x >= 1e8) return Math.round(x / 1e8).toLocaleString("en-US") + "억원"
+    return Math.round(x).toLocaleString("en-US") + "원"
 }
 function fmtVol(v: any): string {
     const x = Number(v)
@@ -580,7 +589,7 @@ function StockReportSkeleton({ C, isDark, narrow }: { C: any; isDark: boolean; n
 }
 
 export default function PublicStockReport(props: Props) {
-    const { stockUrl, usStockUrl, usSmallcapUrl, flowUrl, forensicsUrl, insiderUrl, warnUrl, apiBase, dark } = props
+    const { stockUrl, usStockUrl, usSmallcapUrl, flowUrl, forensicsUrl, insiderUrl, warnUrl, lendingUrl, apiBase, dark } = props
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
     const C = (RenderTarget.current() === RenderTarget.canvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
@@ -606,6 +615,8 @@ export default function PublicStockReport(props: Props) {
     const [forensicsMap, setForensicsMap] = useState<Record<string, any>>(SAMPLE_FORENSICS)
     const [insiderMap, setInsiderMap] = useState<Record<string, any>>(SAMPLE_INSIDER)
     const [warnMap, setWarnMap] = useState<Record<string, any>>(SAMPLE_WARN)
+    const [lendingMap, setLendingMap] = useState<Record<string, any>>({})
+    const [lendAsOf, setLendAsOf] = useState<string>("")
     const [selTicker, setSelTicker] = useState<string>(() => {
         if (typeof window !== "undefined") {
             try {
@@ -724,6 +735,24 @@ export default function PublicStockReport(props: Props) {
             .catch(() => {})
         return () => { alive = false }
     }, [flowUrl, onCanvas])
+
+    // 대차잔고(공매도 압력 proxy) — top200, stocks 배열 → ticker 맵. 미보유 종목은 graceful 미표시.
+    useEffect(() => {
+        const url = lendingUrl || DEFAULT_LENDING
+        if (onCanvas || !url) return
+        let alive = true
+        fetch(url, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!alive || !d || !Array.isArray(d.stocks)) return
+                const m: Record<string, any> = {}
+                for (const row of d.stocks) { if (row && row.ticker) m[String(row.ticker)] = row }
+                setLendingMap(m)
+                setLendAsOf((d._meta && d._meta.as_of) || "")
+            })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [lendingUrl, onCanvas])
 
     useEffect(() => {
         if (onCanvas || !forensicsUrl) return
@@ -941,6 +970,7 @@ export default function PublicStockReport(props: Props) {
         for (const r of flowRows) mx = Math.max(mx, Math.abs(Number(r.foreign_net) || 0), Math.abs(Number(r.inst_net) || 0))
         return mx
     }, [flowRows])
+    const lendingRow = useMemo(() => (lendingMap && lendingMap[s.ticker]) || null, [lendingMap, s.ticker])
     const foren = useMemo(() => (forensicsMap && forensicsMap[s.ticker]) || null, [forensicsMap, s.ticker])
     const insider = useMemo(() => (insiderMap && insiderMap[s.ticker]) || null, [insiderMap, s.ticker])
     const warn = useMemo(() => (warnMap && warnMap[s.ticker]) || null, [warnMap, s.ticker])
@@ -1530,6 +1560,36 @@ export default function PublicStockReport(props: Props) {
                 </>
             )}
 
+            {/* 대차잔고 — 공매도 압력 proxy (top200 보유 종목만, 미보유 graceful 미표시) */}
+            {lendingRow && (
+                <>
+                    {sectionTitle("대차잔고", "공매도 압력 proxy · 금융위 data.go.kr")}
+                    <div style={{ background: C.card, borderRadius: 16, padding: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                            <div>
+                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>대차잔고 금액</div>
+                                <div style={{ fontSize: 16, fontWeight: 800, color: C.ink }}>{eokWon(lendingRow.lending_amt)}</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>대차잔고 수량</div>
+                                <div style={{ fontSize: 16, fontWeight: 800, color: C.ink }}>{fmtVol(lendingRow.lending_qty)}</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>당일 신규체결</div>
+                                <div style={{ fontSize: 14.5, fontWeight: 800, color: C.ink }}>{fmtVol(lendingRow.new_qty)}</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>당일 상환</div>
+                                <div style={{ fontSize: 14.5, fontWeight: 800, color: C.ink }}>{fmtVol(lendingRow.redemption_qty)}</div>
+                            </div>
+                        </div>
+                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>
+                            대차잔고 = 시장에 빌려준 주식(공매도 재료·압력 proxy). 진짜 공매도 잔고 아님 · 외부 사실, 자체 신호 아님{lendAsOf ? " · " + dateDot(lendAsOf) : ""}
+                        </div>
+                    </div>
+                </>
+            )}
+
             {/* 기본 지표 — 탭하면 계산식·실제 투입 숫자·출처 */}
             {Object.keys(facts).length > 0 && (
                 <>
@@ -1997,6 +2057,7 @@ addPropertyControls(PublicStockReport, {
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: DEFAULT_FORENSICS },
     insiderUrl: { type: ControlType.String, title: "Insider URL", defaultValue: DEFAULT_INSIDER },
     warnUrl: { type: ControlType.String, title: "Warnings URL", defaultValue: DEFAULT_WARN },
+    lendingUrl: { type: ControlType.String, title: "Lending URL", defaultValue: DEFAULT_LENDING },
     apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
