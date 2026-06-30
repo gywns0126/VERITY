@@ -84,6 +84,12 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.us_stock_report_public_builder
 
+      - name: 미장 분기 비율 추이 public 빌드
+        # us_financials/{TK} series_quarterly → 분기 비율(부채/ROA/유동/매출총이익률) → data/us_quarterly_public.json (PublicQuarterlyTrend 재사용)
+        # 순수 변환(외부호출 0). RULE 7 = 계산된 사실 비율만, 점수 0.
+        continue-on-error: true
+        run: python -m api.builders.us_quarterly_public_builder
+
       - name: Setup Node (Blob 업로드용)
         uses: actions/setup-node@v4
         with:
@@ -106,7 +112,7 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/us_financials/ data/us_stock_report_public.json data/us_market_caps.json data/cache/universe_us.json
+          git add data/us_financials/ data/us_stock_report_public.json data/us_quarterly_public.json data/us_market_caps.json data/cache/universe_us.json
           if git diff --staged --quiet; then
             echo "[us_financials] no changes"
             exit 0
