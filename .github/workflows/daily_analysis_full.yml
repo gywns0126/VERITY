@@ -367,6 +367,12 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.disclosure_forensics_builder
 
+      - name: 공개 KR forensics 빌드 (특수관계자 거래·우발부채·소송 사실)
+        # dart_related_party_cache + dart_litigation_cache (by_ticker) → data/kr_forensics_public.json.
+        # 순수 변환(외부호출 0). RULE 7/6 = 원문 사실 리스트만, 위험점수·심각도·터널링 의심서술·요약 0. 다음 step git add data/ (broad) = RULE 4.
+        continue-on-error: true
+        run: python -m api.builders.kr_forensics_public_builder
+
       - name: 공개 원자재 노출 빌드 (원자재→KR 노출 산업/종목)
         # kr_sector_map(yfinance industry) ⋈ stock_report_public(name·시총) → data/commodity_exposure.json.
         # 순수 변환(외부호출/KIS 0). RULE 7 = 산업 멤버십 사실만, 수혜·추천·점수 0. 다음 step git add data/ (broad) = RULE 4.
