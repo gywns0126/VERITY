@@ -1,0 +1,126 @@
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
+import { useEffect, useState, type CSSProperties } from "react"
+
+/**
+ * AlphaNest 공개 — 미장 애널리스트 컨센서스 (투자의견 분포 막대 + 목표가 범위). 외부 집계 사실.
+ * 🚨 RULE 7 — yfinance 외부 애널리스트 집계, 자체 의견·점수 아님. 데이터 = us_stock_report_public.json (Blob).
+ * 다크모드 = body[data-framer-theme] 자가감지. 외곽선 없음(소프트 카드).
+ * Framer codeFileId = YfnonVE (insertUrl framer.com/m/PublicConsensus-XYEH4x.js).
+ */
+
+const LIGHT = { card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#f0f1f3", vt: "#6c5ce7", vtS: "#f0edff", up: "#f04452", down: "#3182f6", bg: "#f2f4f6" }
+const DARK = { card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#222730", vt: "#a99bff", vtS: "#241f3a", up: "#f04452", down: "#5b9bff", bg: "#0f1318" }
+const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json"
+
+const CATS: { key: string; label: string }[] = [
+    { key: "strongBuy", label: "적극매수" },
+    { key: "buy", label: "매수" },
+    { key: "hold", label: "중립" },
+    { key: "sell", label: "매도" },
+    { key: "strongSell", label: "적극매도" },
+]
+
+const SAMPLE: any = { target_price: "$312.99", target_high: "$370.00", target_low: "$207.00", opinion: "적극 매수", upside: "+34.5%", num_analysts: 63, counts: { strongBuy: 15, buy: 48, hold: 4, sell: 0, strongSell: 0 }, note: "외부 애널리스트 집계(yfinance) · 자체 의견 아님" }
+
+function readDark(): boolean {
+    if (typeof document === "undefined" || !document.body) return false
+    return document.body.dataset.framerTheme === "dark"
+}
+
+export default function PublicConsensus(props: { ticker?: string; dataUrl?: string; dark?: boolean }) {
+    const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const isDark = onCanvas ? !!props.dark : themeDark
+    const C = isDark ? DARK : LIGHT
+    const [c, setC] = useState<any>(onCanvas ? SAMPLE : null)
+
+    useEffect(() => {
+        if (onCanvas) return
+        const read = () => setThemeDark(readDark())
+        read()
+        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+        const obs = new MutationObserver(read)
+        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+        return () => obs.disconnect()
+    }, [onCanvas])
+
+    useEffect(() => {
+        if (onCanvas || !props.ticker) return
+        let alive = true
+        fetch(props.dataUrl || DEFAULT_URL, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const st = d && d.stocks
+                const rec = Array.isArray(st) ? st.find((x: any) => String(x.ticker).toUpperCase() === String(props.ticker).toUpperCase()) : (st ? st[String(props.ticker)] : null)
+                if (alive) setC(rec && rec.consensus ? rec.consensus : null)
+            })
+            .catch(() => { if (alive) setC(null) })
+        return () => { alive = false }
+    }, [props.ticker, props.dataUrl, onCanvas])
+
+    if (!c || !c.num_analysts) return null
+    const counts = c.counts || {}
+    const vals = CATS.map((x) => Number(counts[x.key] || 0))
+    const maxV = Math.max(1, ...vals)
+    const hasDist = vals.some((v) => v > 0)
+
+    const wrap: CSSProperties = { width: "100%", boxSizing: "border-box", fontFamily: FONT, color: C.ink, display: "flex", flexDirection: "column", gap: 12 }
+    return (
+        <div style={wrap}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px" }}>애널리스트 컨센서스</span>
+                <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{c.num_analysts}명 · 외부 집계</span>
+            </div>
+
+            {/* 투자의견 분포 */}
+            {hasDist && (
+                <div style={{ background: C.card, borderRadius: 16, padding: "16px 16px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    {c.opinion && <div style={{ fontSize: 12.5, fontWeight: 700, color: C.sub, marginBottom: 12 }}>종합 의견 · <span style={{ color: C.vt, fontWeight: 800 }}>{c.opinion}</span></div>}
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 84 }}>
+                        {CATS.map((cat, i) => {
+                            const v = vals[i]
+                            const h = Math.round((v / maxV) * 60)
+                            const dominant = v === maxV && v > 0
+                            return (
+                                <div key={cat.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                                    <span style={{ fontSize: 11, fontWeight: 800, color: dominant ? C.vt : C.faint }}>{v}</span>
+                                    <div style={{ width: "100%", maxWidth: 34, height: Math.max(3, h), borderRadius: 6, background: dominant ? C.vt : v > 0 ? C.vtS : C.line }} />
+                                    <span style={{ fontSize: 9.5, fontWeight: 600, color: C.faint, textAlign: "center", lineHeight: 1.2 }}>{cat.label}</span>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* 목표가 범위 */}
+            {(c.target_price || c.target_high) && (
+                <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.sub }}>평균 목표가</span>
+                        {c.target_price && <span style={{ fontSize: 18, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>{c.target_price}</span>}
+                        {c.upside && <span style={{ fontSize: 12.5, fontWeight: 800, color: String(c.upside).startsWith("-") ? C.down : C.up }}>{c.upside}</span>}
+                    </div>
+                    {(c.target_low || c.target_high) && (
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 11.5, fontWeight: 600, color: C.faint }}>
+                            <span>최저 {c.target_low || "—"}</span>
+                            <span>최고 {c.target_high || "—"}</span>
+                        </div>
+                    )}
+                    {(c.target_low && c.target_high) && (
+                        <div style={{ height: 6, borderRadius: 3, marginTop: 5, background: `linear-gradient(90deg, ${C.down}, ${C.vt}, ${C.up})` }} />
+                    )}
+                </div>
+            )}
+
+            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>{c.note || "외부 애널리스트 집계(yfinance) · 자체 의견 아님"}</div>
+        </div>
+    )
+}
+
+addPropertyControls(PublicConsensus, {
+    ticker: { type: ControlType.String, title: "Ticker", defaultValue: "" },
+    dataUrl: { type: ControlType.String, title: "Data URL", defaultValue: DEFAULT_URL },
+    dark: { type: ControlType.Boolean, title: "Dark (canvas)", defaultValue: false },
+})
