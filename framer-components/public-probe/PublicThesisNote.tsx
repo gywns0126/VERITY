@@ -19,6 +19,22 @@ const DEFAULT_API = "https://project-yw131.vercel.app"
 const STORE_KEY = "verity_thesis_v1"
 const LAST_TK_KEY = "verity_last_ticker"
 const TK_EVENT = "verity-ticker-change"
+const SESSION_KEY = "verity_supabase_session"
+const MIGRATED_KEY = "verity_thesis_migrated_v1"
+
+function loadToken(): string {
+    if (typeof window === "undefined") return ""
+    try {
+        const raw = localStorage.getItem(SESSION_KEY)
+        if (!raw) return ""
+        const s = JSON.parse(raw)
+        return typeof s.access_token === "string" ? s.access_token : ""
+    } catch { return "" }
+}
+function mapServerRow(r: any): any {
+    if (!r) return null
+    return { stance: r.stance || "watch", note: r.note || "", date: (r.created_at || "").slice(0, 10), entryPrice: r.entry_price != null ? Number(r.entry_price) : null, _server: true }
+}
 
 const STANCES: { id: string; label: string; key: "up" | "down" | "faint" }[] = [
     { id: "bull", label: "강세", key: "up" },
@@ -109,17 +125,50 @@ export default function PublicThesisNote(props: Props) {
     const [stance, setStance] = useState("watch")
     const [note, setNote] = useState("")
     const [curPrice, setCurPrice] = useState<number | null>(null)
+    const [token] = useState<string>(loadToken)
+    const [serverTheses, setServerTheses] = useState<Record<string, any> | null>(null)  // null=미로드(로그인 시)
 
-    // 기록 로드
+    // 로그인 시 서버 thesis 전량 로드 + localStorage 1회 마이그레이션 (cross-device)
+    useEffect(() => {
+        if (onCanvas || !token || !base) return
+        let alive = true
+        fetch(base + "/api/thesis", { headers: { Authorization: "Bearer " + token }, cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((rows) => {
+                if (!alive) return
+                if (!Array.isArray(rows)) { setServerTheses({}); return }
+                const map: Record<string, any> = {}
+                for (const r of rows) if (r && r.ticker) map[String(r.ticker)] = mapServerRow(r)
+                try {
+                    if (!localStorage.getItem(MIGRATED_KEY)) {
+                        const local = loadAll()
+                        Object.keys(local).forEach((t) => {
+                            const v = local[t]
+                            if (!map[t] && v) {
+                                fetch(base + "/api/thesis", { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ ticker: t, market: "kr", stance: v.stance, note: v.note, entry_price: v.entryPrice }) }).catch(() => {})
+                                map[t] = { stance: v.stance, note: v.note, date: v.date, entryPrice: v.entryPrice, _server: true }
+                            }
+                        })
+                        localStorage.setItem(MIGRATED_KEY, "1")
+                    }
+                } catch { /* */ }
+                setServerTheses(map)
+            })
+            .catch(() => { if (alive) setServerTheses({}) })
+        return () => { alive = false }
+    }, [token, base, onCanvas])
+
+    // 기록 로드 — dual: 로그인=서버맵 / 익명=localStorage
     useEffect(() => {
         if (onCanvas) { setThesis(DEMO_THESIS); return }
         if (!tk) { setThesis(null); setEditing(false); return }
-        const all = loadAll()
-        const t = all[tk] || null
+        let t: any = null
+        if (token) { if (serverTheses === null) return; t = serverTheses[tk] || null }
+        else { t = loadAll()[tk] || null }
         setThesis(t)
         setEditing(!t)
         if (t) { setStance(t.stance); setNote(t.note || "") } else { setStance("watch"); setNote("") }
-    }, [tk, onCanvas])
+    }, [tk, onCanvas, token, serverTheses])
 
     // 현재가 (재방문 diff용 + 기록 시 entryPrice 동결)
     useEffect(() => {
@@ -140,23 +189,27 @@ export default function PublicThesisNote(props: Props) {
 
     const save = () => {
         if (onCanvas || !tk) return
-        const all = loadAll()
-        const rec = {
-            stance, note: note.trim(),
-            date: (thesis && thesis.date) || todayStr(),
-            entryPrice: (thesis && thesis.entryPrice != null) ? thesis.entryPrice : (curPrice != null ? curPrice : null),
-            updated: todayStr(),
+        const ep = (thesis && thesis.entryPrice != null) ? thesis.entryPrice : (curPrice != null ? curPrice : null)
+        const rec = { stance, note: note.trim(), date: (thesis && thesis.date) || todayStr(), entryPrice: ep, updated: todayStr() }
+        if (token) {
+            fetch(base + "/api/thesis", { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ ticker: tk, market: "kr", stance, note: note.trim(), entry_price: ep }) }).catch(() => {})
+            setServerTheses((m) => ({ ...(m || {}), [tk]: { ...rec, _server: true } }))
+            try { window.dispatchEvent(new Event("verity-thesis-changed")) } catch { /* */ }
+        } else {
+            const all = loadAll(); all[tk] = rec; saveAll(all)
         }
-        all[tk] = rec
-        saveAll(all)
         setThesis(rec)
         setEditing(false)
     }
     const remove = () => {
         if (onCanvas || !tk) return
-        const all = loadAll()
-        delete all[tk]
-        saveAll(all)
+        if (token) {
+            fetch(base + "/api/thesis", { method: "DELETE", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ ticker: tk }) }).catch(() => {})
+            setServerTheses((m) => { const n = { ...(m || {}) }; delete n[tk]; return n })
+            try { window.dispatchEvent(new Event("verity-thesis-changed")) } catch { /* */ }
+        } else {
+            const all = loadAll(); delete all[tk]; saveAll(all)
+        }
         setThesis(null); setEditing(true); setStance("watch"); setNote("")
     }
 
@@ -246,7 +299,7 @@ export default function PublicThesisNote(props: Props) {
                     <button onClick={save} style={{ flex: 1, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vt, color: "#fff" }}>기록</button>
                     {thesis && <button onClick={() => { setEditing(false); setStance(thesis.stance); setNote(thesis.note || "") }} style={{ flexShrink: 0, cursor: "pointer", fontFamily: FONT, padding: "11px 16px", borderRadius: 11, fontSize: 13, fontWeight: 700, background: "transparent", color: C.faint, border: `1px solid ${C.line}` }}>취소</button>}
                 </div>
-                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>이 기기에만 저장(localStorage) · 기록 시점 가격이 동결돼 재방문 시 변화를 보여줘요 · VERITY 의 판단·추천 아님</div>
+                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{token ? "내 계정에 저장 — 어느 기기서나 동일" : "이 기기에 저장 · 로그인하면 계정에 저장돼 어디서나 보여요"} · 기록 시점 가격 동결로 재방문 시 변화 표시 · VERITY 의 판단·추천 아님</div>
             </div>
         </div>
     )
