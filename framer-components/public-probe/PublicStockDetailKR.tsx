@@ -2,33 +2,44 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useState, type CSSProperties } from "react"
 
 /**
- * AlphaNest 공개 — 종목 지분·설비 상세 (기관·국민연금 5%+ 대량보유 + DART 사업장). 사실만.
- * 🚨 RULE 7 — 점수·신호 0. net_flow_direction 등 해석 비노출. 데이터 = stock_report_public.json (Blob).
+ * AlphaNest 공개 — KR 종목 심화 (기관·국민연금 대량보유 + 사업장 + 공시 forensics). DART 사실만.
+ * PublicForensics + PublicHoldingsDetail 통합(2026-07-01) — 배치 1번. 둘은 폐기.
+ * 🚨 RULE 7 — 위험점수·심각도·해석 0. 사실만. 데이터 = stock_report_public.json(지분·사업장) + kr_forensics_public.json(forensics).
  * 다크모드 = body[data-framer-theme] 자가감지. 외곽선 없음(소프트 카드).
- * Framer codeFileId = Do9eiR9 (insertUrl framer.com/m/PublicHoldingsDetail-crn3L8.js).
+ * Framer codeFileId = WNrsqjb (insertUrl framer.com/m/PublicStockDetailKR-RbhPiw.js).
  */
 
 const LIGHT = { card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#f0f1f3", vt: "#6c5ce7", vtS: "#f0edff" }
 const DARK = { card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#222730", vt: "#a99bff", vtS: "#241f3a" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
+const REPORT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
+const FORENSICS_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_forensics_public.json"
 
-const SAMPLE: any = {
+const FSECTIONS: { key: string; label: string }[] = [
+    { key: "related_party_transactions", label: "특수관계자 거래" },
+    { key: "contingent_liabilities", label: "우발부채·보증" },
+    { key: "pending_litigation", label: "진행 중 소송" },
+    { key: "material_sanctions", label: "제재" },
+]
+
+const SAMPLE_REC: any = {
     institutional: { total_pct: 5.18, n: 1, holders: [{ reporter: "국민연금공단", pct: 5.18, qty_change: 108230, date: "2026-04-01" }], note: "DART 5%+ 대량보유 보고(기관·국민연금) — 사실, 신호 아님" },
     facilities: { headquarters: { location: "경상남도 창원시 성산구", ownership: "소유" }, facilities: [{ name: "창원공장", location: "경상남도 창원시", use: "공장", segment: "디펜스솔루션" }], note: "DART 사업보고서 시설 현황 — 사실" },
 }
+const SAMPLE_FOR: any = { related_party_transactions: ["상대방: 계열사 등 / 유형: 제품매출 / 규모: 1,505억원 (영업수익의 약 75%)"], contingent_liabilities: ["금융기관 지급보증 USD 137백만 등"], year: "2025", source_note: "DART 사업보고서 원문 사실 · 자체 위험판단 아님" }
 
 function readDark(): boolean {
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
 }
 
-export default function PublicHoldingsDetail(props: { ticker?: string; dataUrl?: string; dark?: boolean }) {
+export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?: string; forensicsUrl?: string; dark?: boolean }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
-    const [rec, setRec] = useState<any>(onCanvas ? SAMPLE : null)
+    const [rec, setRec] = useState<any>(onCanvas ? SAMPLE_REC : null)
+    const [forensics, setForensics] = useState<any>(onCanvas ? SAMPLE_FOR : null)
 
     useEffect(() => {
         if (onCanvas) return
@@ -43,18 +54,24 @@ export default function PublicHoldingsDetail(props: { ticker?: string; dataUrl?:
     useEffect(() => {
         if (onCanvas || !props.ticker) return
         let alive = true
-        fetch(props.dataUrl || DEFAULT_URL, { cache: "no-store" })
+        const tk = String(props.ticker)
+        fetch(props.reportUrl || REPORT_URL, { cache: "no-store" })
             .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { if (alive) setRec(d && d.stocks ? d.stocks[String(props.ticker)] || null : null) })
+            .then((d) => { if (alive) setRec(d && d.stocks ? d.stocks[tk] || null : null) })
             .catch(() => { if (alive) setRec(null) })
+        fetch(props.forensicsUrl || FORENSICS_URL, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (alive) setForensics(d && d.stocks ? d.stocks[tk] || null : null) })
+            .catch(() => { if (alive) setForensics(null) })
         return () => { alive = false }
-    }, [props.ticker, props.dataUrl, onCanvas])
+    }, [props.ticker, props.reportUrl, props.forensicsUrl, onCanvas])
 
     const inst = rec && rec.institutional
     const fac = rec && rec.facilities
     const hasInst = inst && Array.isArray(inst.holders) && inst.holders.length > 0
     const hasFac = fac && (Array.isArray(fac.facilities) || fac.headquarters)
-    if (!hasInst && !hasFac) return null
+    const hasFor = forensics && FSECTIONS.some((s) => Array.isArray(forensics[s.key]) && forensics[s.key].length)
+    if (!hasInst && !hasFac && !hasFor) return null
 
     const HEAD = "Pretendard, -apple-system, sans-serif"
     const wrap: CSSProperties = { width: "100%", boxSizing: "border-box", fontFamily: FONT, color: C.ink, display: "flex", flexDirection: "column", gap: 14 }
@@ -64,12 +81,14 @@ export default function PublicHoldingsDetail(props: { ticker?: string; dataUrl?:
             <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{sub}</span>
         </div>
     )
+    const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
+
     return (
         <div style={wrap}>
             {hasInst && (
                 <div>
                     {title("기관·국민연금 대량보유", "DART 5%+ 보고 · 사실")}
-                    <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={card}>
                         {inst.total_pct != null && (
                             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
                                 <span style={{ fontFamily: HEAD, fontSize: 22, fontWeight: 800, color: C.vt, letterSpacing: "-0.6px" }}>{inst.total_pct}%</span>
@@ -91,7 +110,7 @@ export default function PublicHoldingsDetail(props: { ticker?: string; dataUrl?:
             {hasFac && (
                 <div>
                     {title("사업장·설비", "DART 사업보고서 · 사실")}
-                    <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={card}>
                         {fac.headquarters && fac.headquarters.location && (
                             <div style={{ fontSize: 12.5, fontWeight: 600, color: C.sub, marginBottom: 8 }}>본사 · {fac.headquarters.location}{fac.headquarters.ownership ? ` (${fac.headquarters.ownership})` : ""}</div>
                         )}
@@ -108,12 +127,37 @@ export default function PublicHoldingsDetail(props: { ticker?: string; dataUrl?:
                     </div>
                 </div>
             )}
+            {hasFor && (
+                <div>
+                    {title("공시 forensics", "DART 사업보고서 · 사실" + (forensics.year ? " · " + forensics.year : ""))}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {FSECTIONS.map((s) => {
+                            const items = Array.isArray(forensics[s.key]) ? forensics[s.key] : []
+                            if (!items.length) return null
+                            return (
+                                <div key={s.key} style={card}>
+                                    <div style={{ fontSize: 12.5, fontWeight: 800, color: C.vt, marginBottom: 8 }}>{s.label}<span style={{ color: C.faint, marginLeft: 6, fontWeight: 600 }}>{items.length}</span></div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                        {items.map((it: string, i: number) => (
+                                            <div key={i} style={{ fontSize: 12, color: C.sub, fontWeight: 500, lineHeight: 1.55, paddingLeft: 11, position: "relative" }}>
+                                                <span style={{ position: "absolute", left: 0, color: C.vt }}>·</span>{String(it)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5, marginTop: 8 }}>{forensics.source_note || "DART 사업보고서 원문 사실 · 자체 위험판단 아님"}</div>
+                </div>
+            )}
         </div>
     )
 }
 
-addPropertyControls(PublicHoldingsDetail, {
+addPropertyControls(PublicStockDetailKR, {
     ticker: { type: ControlType.String, title: "종목코드", defaultValue: "" },
-    dataUrl: { type: ControlType.String, title: "Data URL", defaultValue: DEFAULT_URL },
+    reportUrl: { type: ControlType.String, title: "Report URL", defaultValue: REPORT_URL },
+    forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: FORENSICS_URL },
     dark: { type: ControlType.Boolean, title: "Dark (canvas)", defaultValue: false },
 })
