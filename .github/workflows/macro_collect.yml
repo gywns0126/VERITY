@@ -9,11 +9,12 @@
 name: Macro Collect
 
 on:
-  schedule:
-    # 30분 마다 (UTC). daily_analysis_full schedule 시각과 분산 — 충돌 회피.
-    # 매크로 지표는 일/주 변화 → 30분 stale 허용 (max_stale_minutes=30 정합).
-    # 30분 cron = 48 run/일. main commit 부담 vs 신선도 balance.
-    - cron: '*/30 * * * *'
+  # 2026-07-01 — GH schedule '*/30' 폐기. 대부분 슬롯 silent-skip(+ 큐 cancel) 으로 macro 신선도 8h 갭 사고
+  #   (gh run: 30분 의도인데 실 발화 간격 1.5~4h, 오늘밤 7h 무발화). daily_realtime/price_pulse 와 동일 패턴 —
+  #   schedule + dispatch 동시 = race 라 schedule 폐기, Vercel Cron dispatch 단일통로(silent-skip 회피).
+  # dispatch 발화: vercel-api/api/cron/dispatch_pulse.py 가 매 30분 macro_collect event repository_dispatch.
+  repository_dispatch:
+    types: [macro_collect]
   workflow_dispatch:
 
 env:

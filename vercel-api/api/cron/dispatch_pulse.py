@@ -7,6 +7,7 @@ Vercel Cron → GitHub Actions repository_dispatch (시각별 multi-event)
 시각별 발화 events:
   - price_pulse        — 매 5분 (2026-05-13 매분 → 5분 완화, commit 부피 1/5)
   - daily_realtime     — 매 30분 (5/12 hotfix, ~9m run, brain 분석)
+  - macro_collect      — 매 30분 24/7 (2026-07-01, GH schedule silent-skip 회피, daily_realtime 패턴)
   - daily_analysis_quick — 매시 :07 (시간당 1회 quick 분석)
   - reports_v2         — UTC 13:07 매일 (1일 1회 reports)
   - hourly_pulse       — 한국장 5슬롯 + 미장 3슬롯 (DST 자동, 2026-05-12 신규)
@@ -92,6 +93,12 @@ def _resolve_events(now_utc: datetime) -> list[str]:
         us_session = (13 <= hour <= 20 and is_weekday)  # KST 22-익05 평일
         if kr_pre or kr_session or us_session:
             events.append("daily_realtime")
+
+    # macro_collect — 매 30분 24/7 (글로벌 매크로/환율/금리, freshness_sla schedule="always").
+    # 2026-07-01: GH schedule '*/30' silent-skip 으로 macro 신선도 8h 갭 → schedule 폐기·dispatch 단일통로
+    #   (daily_realtime 패턴). 미장/FX 는 야간(KST)에도 움직이므로 세션 게이트 없이 항상.
+    if minute % 30 == 0:
+        events.append("macro_collect")
 
     # daily_analysis quick — 매시 :07, KR 장외 (UTC 8-15 평일) OR 저녁 (UTC 16-22 Sun-Thu)
     if minute == 7:
