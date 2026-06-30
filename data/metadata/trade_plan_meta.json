@@ -1,11 +1,11 @@
 {
   "version": "v0",
-  "computed_at": "2026-06-30T10:20:00.067844+00:00",
+  "computed_at": "2026-06-30T13:19:28.877315+00:00",
   "status": "insufficient_data",
   "sample_size": {
-    "total": 4,
+    "total": 5,
     "open": 0,
-    "closed": 4,
+    "closed": 5,
     "with_h5": 1,
     "with_h14": 0,
     "with_h30": 0,
@@ -45,8 +45,24 @@
     "n": 0
   },
   "timeseries_baseline": {
-    "status": "insufficient_data",
-    "n": 4
+    "earliest": "2026-06-10T12:03:09.387256+00:00",
+    "windows": {
+      "first_30d": {
+        "n": 0,
+        "hit_rate_pct": null,
+        "median_return_pct": null
+      },
+      "30_60d": {
+        "n": 0,
+        "hit_rate_pct": null,
+        "median_return_pct": null
+      },
+      "60d_plus": {
+        "n": 0,
+        "hit_rate_pct": null,
+        "median_return_pct": null
+      }
+    }
   },
   "policy_note": "종합값 단일 신뢰 금지. horizon/feature/sector 분해 + 시간차 baseline 동시 참조. 30 row 미만은 분해 통계 'insufficient_data'."
 }

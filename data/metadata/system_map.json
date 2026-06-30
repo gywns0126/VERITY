@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-06-30T17:22:29.528096+09:00",
+  "generated_at": "2026-06-30T22:26:00.942131+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 197658,
-    "python_modules": 595,
-    "tsx_components": 93,
-    "json_data_files": 324,
-    "json_total_tracked": 339,
+    "code_lines_tsx_py": 199009,
+    "python_modules": 600,
+    "tsx_components": 95,
+    "json_data_files": 328,
+    "json_total_tracked": 343,
     "workflows": 52,
     "scheduled_workflows": 41,
     "cron_triggers": 51,
-    "git_tracked_files": 5488
+    "git_tracked_files": 5507
   },
   "subsystems": {
     "ingest": {
@@ -86,7 +86,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 56,
+      "count": 57,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -100,6 +100,7 @@
         "api/intelligence/dart_importance_observer.py",
         "api/intelligence/dashboard_summary.py",
         "api/intelligence/distribution_footprint.py",
+        "api/intelligence/earnings_surprise.py",
         "api/intelligence/equity_research_brief.py",
         "api/intelligence/estimate_revision_scorer.py",
         "api/intelligence/factor.py",
@@ -507,9 +508,9 @@
     },
     "surface": {
       "label": "출력",
-      "count": 93,
+      "count": 95,
       "by_group": {
-        "framer-components/public-probe": 40,
+        "framer-components/public-probe": 42,
         "market": 11,
         "_shared": 10,
         "framer-components/crypto-public": 7,
@@ -525,7 +526,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 324
+      "count": 328
     },
     "validation": {
       "label": "검증",
@@ -540,18 +541,18 @@
     }
   },
   "python_by_dir": {
-    "api": 344,
+    "api": 348,
     "tests": 127,
     "scripts": 72,
-    "vercel-api": 44,
+    "vercel-api": 45,
     "server": 6,
     ".github": 2
   },
   "funnel": {
-    "investable_real": 2965,
+    "investable_real": 1281,
     "cap": 5000,
     "stages": [
-      2965,
+      1281,
       300,
       100,
       25
@@ -562,7 +563,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2965 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~1281 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
