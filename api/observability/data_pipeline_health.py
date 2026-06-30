@@ -145,6 +145,88 @@ def _load_content_ts(path: Path) -> Optional[datetime]:
     return None
 
 
+_PERSIST_FREEZE_FACTOR = 4.0  # max_fresh 의 4배 초과 = 명백 동결(주말/월요일 gap false-fire 0)
+
+
+def _committed_content_ts(rel_path: str, *, is_jsonl: bool) -> Optional[datetime]:
+    """HEAD 에 **커밋된** 파일 내용의 타임스탬프 → datetime(KST). 작업본(working copy) 아님.
+
+    🚨 git-add-miss / commit 실패로 영속 안 된 freeze 를 잡는 유일 신호 —
+    in-CI 모니터는 hook 직후 fresh 작업본(mtime·content 둘 다)을 봐서 persistence freeze 를 못 잡는다.
+    모니터는 commit 前 실행 → HEAD = 직전 커밋(동결 상태) → 커밋 content-ts 가 진짜 영속 신선도.
+    git 미가용/파일 미추적 → None (mtime/content fallback, 무해). shallow checkout 라도 HEAD 는 존재."""
+    try:
+        import subprocess
+        r = subprocess.run(
+            ["git", "show", f"HEAD:{rel_path}"],
+            capture_output=True, text=True, timeout=15, cwd=str(_REPO_ROOT),
+        )
+        if r.returncode != 0 or not r.stdout:
+            return None
+        content = r.stdout
+    except Exception:
+        return None
+    try:
+        if is_jsonl:
+            last_line = None
+            for ln in content.splitlines():
+                ln = ln.strip()
+                if ln:
+                    last_line = ln
+            if not last_line:
+                return None
+            obj = json.loads(last_line)
+            keys = ("ts", "ts_kst", "logged_at", "created_at") + _CONTENT_TS_KEYS
+        else:
+            obj = json.loads(content)
+            keys = _CONTENT_TS_KEYS
+    except (json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(obj, dict):
+        return None
+    meta = obj.get("_meta") if isinstance(obj.get("_meta"), dict) else {}
+    for scope in (obj, meta):
+        for k in keys:
+            v = scope.get(k)
+            if not v:
+                continue
+            try:
+                dt = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=KST)
+                return dt.astimezone(KST)
+            except (ValueError, TypeError):
+                continue
+    return None
+
+
+def _persistence_frozen(items: list) -> list:
+    """커밋된 내용(HEAD) 기준 명백 동결 — git-add-miss / commit 실패 포착(working-copy fresh 여도).
+
+    max_fresh × 4 초과만 → 주말·월요일 gap false-fire 0. mtime-기반 jsonl 항목(현 status 사각)도 커버.
+    2026-07-01 학습: quarterly_history 50일 freeze(universe_scan.yml git add 누락 + CI mtime false-GREEN 은폐)."""
+    frozen = []
+    for it in items:
+        rel = it.get("path")
+        if not rel:
+            continue
+        is_jsonl = str(it.get("type", "")).startswith("jsonl")
+        cts = _committed_content_ts(rel, is_jsonl=is_jsonl)
+        if cts is None:
+            continue
+        age = _age_hours(cts)
+        if age is None:
+            continue
+        limit = float(it.get("max_fresh_hours", 26.0)) * _PERSIST_FREEZE_FACTOR
+        if age > limit:
+            frozen.append({
+                "key": it["key"], "label": it.get("label"),
+                "committed_age_hours": round(age, 1), "limit_hours": round(limit, 1),
+                "working_status": it.get("status"),
+            })
+    return frozen
+
+
 # 진단 대상 6 아티팩트 (max_fresh_hours = 정상 갱신 주기 + 안전 마진)
 SOURCES = [
     {
@@ -271,39 +353,49 @@ def collect_data_pipeline_health() -> Dict[str, Any]:
     fresh_n = sum(1 for i in items if i["status"] == "fresh")
     stale_n = sum(1 for i in items if i["status"] == "stale")
     missing_n = sum(1 for i in items if i["status"] == "missing")
+    persist_frozen = _persistence_frozen(items)
     overall = (
         "ok" if missing_n == 0 and stale_n == 0
         else "warn" if missing_n == 0
         else "error"
     )
+    # persist_frozen = working-copy fresh 라도 영속 안 된 freeze (in-CI status 로는 안 잡힘) → 최소 warn 보장
+    if persist_frozen and overall == "ok":
+        overall = "warn"
     return {
         "collected_at": now.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
         "overall_status": overall,
         "summary": {"fresh": fresh_n, "stale": stale_n, "missing": missing_n, "total": len(items)},
         "items": items,
+        "persist_frozen": persist_frozen,
         "schema_version": "v0",
     }
 
 
-def _alert_egregious_freezes(items: list) -> None:
+def _alert_egregious_freezes(health) -> None:
     """🚨 egregious freeze(>5일급) = telegram 1회. 2026-06-27 PM 결정(insider/market_warnings 7일 silent rot 재발 차단).
     트리거 = status 'missing'(age > 2×cadence) + ts_source 'content'(mtime unreliable 제외).
     cadence-aware 라 주말 휴장(금→월 ~64h) 무관 + broker_guide 월간(80일에야 missing) false-fire 0.
     dedupe(8h TTL) + 라벨만(age 제외) → stable 메시지 → spam 0. quiet hours 존중(야간 묵음). telegram 미설정/실패 = graceful."""
     # 🚨 json_content(AlphaNest 공개 9파일, 전부 72h+ 임계 = 주말 금→월 ~65h weekend-safe)만 알림.
     #   백엔드 content 항목(universe_candidates 26h→missing 52h 등)은 주말 갭에 missing 될 수 있어 제외(월요일 false-fire 방지).
+    items = health.get("items", []) if isinstance(health, dict) else (health or [])
     frozen = [it for it in items
               if it.get("type") == "json_content"
               and it.get("status") == "missing"
               and it.get("ts_source") == "content"]
-    if not frozen:
+    persist = health.get("persist_frozen", []) if isinstance(health, dict) else []
+    if not frozen and not persist:
         return
     try:
         from api.notifications.telegram import send_message
-        labels = ", ".join(sorted(str(it.get("label") or it.get("key")) for it in frozen))
+        labels = sorted(set(
+            [str(it.get("label") or it.get("key")) for it in frozen]
+            + [str(p.get("label") or p.get("key")) + "(영속 동결)" for p in persist]
+        ))
         send_message(
-            "🔴 데이터 freeze 감지 (정상 주기 2배 초과 미갱신): " + labels
-            + "\n빌더 step env / 워크플로 점검 필요 (data_pipeline_health).",
+            "🔴 데이터 freeze 감지 (정상 주기 2배 초과 미갱신): " + ", ".join(labels)
+            + "\n빌더 step env / 워크플로 git add 점검 필요 (data_pipeline_health).",
             dedupe=True,
         )
     except Exception as e:  # noqa: BLE001 — 알림 실패가 모니터를 깨뜨리지 않도록
@@ -332,7 +424,7 @@ def write_data_pipeline_health(*, output_path: Optional[Path] = None) -> Dict[st
             file=sys.stderr, flush=True,
         )
     # 파일 적재 후 egregious freeze 알림 (write 실패와 무관하게 시도, 알림 자체도 graceful)
-    _alert_egregious_freezes(health.get("items", []))
+    _alert_egregious_freezes(health)
     return health
 
 
