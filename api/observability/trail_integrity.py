@@ -58,6 +58,17 @@ _SHADOW_GATE_TRAILS = [
     ("wide_scan_log.jsonl", "ts"),                            # wide_scan 7차원 funnel
 ]
 
+# 일일-cadence 트레일 정체(append 멈춤) 검출용 (path, date_key).
+# mtime(CI 리셋)·growth(append-only 비축소)로는 stalled 트레일을 못 잡으므로 last_ts 영업일 staleness 로 보강.
+# 거래일마다 append 되어야 하는 것만(event-driven 트레일 제외). 휴장일 1~2일은 마진으로 흡수.
+_STALE_BIZDAYS_LIMIT = 3
+_DAILY_STALE_TRAILS = [
+    ("metadata/prediction_trail.jsonl", "created_at"),
+    ("metadata/revision_momentum_shadow.jsonl", "ts_kst"),
+    ("metadata/trend_overlay_prediction_trail.jsonl", "ts_kst"),
+    ("wide_scan_log.jsonl", "ts"),
+]
+
 
 def _p(rel: str) -> str:
     return os.path.join(DATA_DIR, rel)
@@ -75,6 +86,65 @@ def _business_day_gaps(dates: List[date]) -> List[str]:
             if d.weekday() < 5:
                 missing.append(d.isoformat())
     return missing
+
+
+def _bizdays_since(last: date, today: date) -> int:
+    """last 다음날부터 today 까지 영업일(월~금) 수. 휴장일 미반영(근사 — 마진으로 흡수)."""
+    n = 0
+    d = last + timedelta(days=1)
+    while d <= today:
+        if d.weekday() < 5:
+            n += 1
+        d += timedelta(days=1)
+    return n
+
+
+def _shadow_staleness() -> List[Dict[str, Any]]:
+    """일일-cadence shadow 트레일이 '정체'(append 멈춤)했는지 — 마지막 엔트리 ts(파일 내부) 기준.
+
+    growth(비축소 통과)·mtime freshness(CI fresh checkout 리셋)로는 stalled append-only
+    트레일을 못 잡는다. last_ts 영업일 staleness 가 진짜 정체(=거래일별 데이터 영구 손실 시작)를
+    잡는 신뢰 신호. 휴장일은 _STALE_BIZDAYS_LIMIT(3) 마진으로 흡수(false 경보 회피)."""
+    out: List[Dict[str, Any]] = []
+    today = now_kst().date()
+    for rel, date_key in _DAILY_STALE_TRAILS:
+        path = _p(rel)
+        last_d: Optional[str] = None
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            obj = json.loads(line)
+                        except Exception:
+                            continue
+                        raw = obj.get(date_key) if isinstance(obj, dict) else None
+                        if isinstance(raw, str) and len(raw) >= 10:
+                            d = raw[:10]
+                            if last_d is None or d > last_d:
+                                last_d = d
+            except Exception:
+                pass
+        stale: Optional[int] = None
+        ok = True
+        if last_d:
+            try:
+                stale = _bizdays_since(date.fromisoformat(last_d), today)
+                ok = stale <= _STALE_BIZDAYS_LIMIT
+            except Exception:
+                pass
+        else:
+            ok = False
+        out.append({
+            "signal": rel.replace("metadata/", "").replace(".jsonl", ""),
+            "last_date": last_d,
+            "stale_bizdays": stale,
+            "ok": ok,
+        })
+    return out
 
 
 def _check_history() -> Dict[str, Any]:
@@ -263,12 +333,24 @@ def audit() -> Dict[str, Any]:
             severity = "FAIL" if crit else ("WARNING" if severity == "PASS" else severity)
             findings.append(f"{t['trail']}: {', '.join(t.get('issues', []))}")
 
+    # shadow 게이트-입력 트레일 정체(append 멈춤) = WARNING (mtime/growth 사각의 silent-loss 모드)
+    staleness = _shadow_staleness()
+    for s in staleness:
+        if not s["ok"]:
+            severity = "WARNING" if severity == "PASS" else severity
+            if s["last_date"] is None:
+                findings.append(f"{s['signal']}: 일일 트레일 비어있음(append 0)")
+            else:
+                findings.append(f"{s['signal']}: append 정체 {s['stale_bizdays']}영업일 "
+                                f"(last={s['last_date']}, 한계 {_STALE_BIZDAYS_LIMIT})")
+
     return {
         "ts_kst": now_kst().isoformat(),
         "severity": severity,
         "findings": findings,
         "history": hist,
         "trails": trails,
+        "shadow_staleness": staleness,
         "gate_progress": _gate_progress(),
     }
 
@@ -307,6 +389,7 @@ def run_and_log() -> Dict[str, Any]:
             "history_snapshots": result["history"].get("snapshot_count"),
             "history_gaps": len(result["history"].get("business_day_gaps") or []),
             "trail_sizes": {t["trail"]: t.get("size") for t in result["trails"]},
+            "shadow_staleness": {s["signal"]: s["stale_bizdays"] for s in result.get("shadow_staleness", [])},
             "gate_progress": {g["signal"]: g["n_trading_days"] for g in result.get("gate_progress", [])},
         }
         with open(log_path, "a", encoding="utf-8") as f:
@@ -329,6 +412,10 @@ if __name__ == "__main__":
         flag = "OK " if t["ok"] else "!! "
         print(f"  {flag}{t['trail']}: size={t.get('size')} age={t.get('age_hours')}h "
               f"{t.get('issues') or ''}")
+    print("  일일 트레일 정체(staleness, 영업일):")
+    for s in r.get("shadow_staleness", []):
+        flag = "OK " if s["ok"] else "!! "
+        print(f"    {flag}{s['signal']:32} stale={s['stale_bizdays']}영업일 last={s['last_date']}")
     print("  N=252 게이트 진행률 (shadow 누적 거래일):")
     for g in r.get("gate_progress", []):
         print(f"    {g['signal']:32} {g['n_trading_days']:>4}/{g['gate_n']}일 "

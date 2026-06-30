@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-06-29T21:14:12.375975+09:00",
+  "generated_at": "2026-06-30T17:22:29.528096+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 197198,
+    "code_lines_tsx_py": 197658,
     "python_modules": 595,
-    "tsx_components": 92,
-    "json_data_files": 321,
-    "json_total_tracked": 336,
+    "tsx_components": 93,
+    "json_data_files": 324,
+    "json_total_tracked": 339,
     "workflows": 52,
     "scheduled_workflows": 41,
     "cron_triggers": 51,
-    "git_tracked_files": 5474
+    "git_tracked_files": 5488
   },
   "subsystems": {
     "ingest": {
@@ -507,9 +507,9 @@
     },
     "surface": {
       "label": "출력",
-      "count": 92,
+      "count": 93,
       "by_group": {
-        "framer-components/public-probe": 39,
+        "framer-components/public-probe": 40,
         "market": 11,
         "_shared": 10,
         "framer-components/crypto-public": 7,
@@ -525,18 +525,18 @@
     },
     "data": {
       "label": "데이터",
-      "count": 321
+      "count": 324
     },
     "validation": {
       "label": "검증",
-      "n_trading_days": 30,
-      "n_calendar_days": 43,
+      "n_trading_days": 31,
+      "n_calendar_days": 44,
       "next_milestone": {
         "next_n": 100,
-        "days_remaining": 70,
+        "days_remaining": 69,
         "label": "예비 결과 (binomial 95% CI ±10%p)"
       },
-      "as_of": "2026-06-29T14:08:08+09:00"
+      "as_of": "2026-06-30T13:40:53+09:00"
     }
   },
   "python_by_dir": {
@@ -548,10 +548,10 @@
     ".github": 2
   },
   "funnel": {
-    "investable_real": 3018,
+    "investable_real": 2965,
     "cap": 5000,
     "stages": [
-      3018,
+      2965,
       300,
       100,
       25
@@ -562,7 +562,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~3018 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2965 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
@@ -570,7 +570,7 @@
       "warn": 1,
       "alert": 0
     },
-    "infra_as_of": "2026-06-29T11:11:12+09:00",
+    "infra_as_of": "2026-06-30T11:05:48+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
