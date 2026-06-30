@@ -1,10 +1,10 @@
 {
-  "collected_at": "2026-06-30T10:34:19+09:00",
+  "collected_at": "2026-06-30T14:52:18+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
-    "call": "neutral",
-    "net_score": -1,
+    "call": "risk_off",
+    "net_score": -2,
     "active_dims": 4,
     "rule": "net≥+2 risk_on / ≤−2 risk_off / else neutral (투명 tally, 가중치 없음)"
   },
@@ -22,13 +22,13 @@
     },
     {
       "name": "포지셔닝",
-      "vote": 0,
-      "read": "neutral",
+      "vote": -1,
+      "read": "off",
       "active": true,
       "drivers": {
         "funding_signal": "neutral",
-        "put_call_oi": 0.58,
-        "long_short_ratio": 1.91
+        "put_call_oi": 0.583,
+        "long_short_ratio": 2.12
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
@@ -38,9 +38,9 @@
       "read": "off",
       "active": true,
       "drivers": {
-        "btc_net_inflow_usd": -444505600.00000006,
-        "eth_net_inflow_usd": -12847952.16,
-        "combined_net_inflow_usd": -457353552.1600001
+        "btc_net_inflow_usd": -4287803204.04,
+        "eth_net_inflow_usd": -501388081.94,
+        "combined_net_inflow_usd": -4789191285.98
       },
       "rule": "ETF(BTC+ETH) 일일 순유입 on / 순유출 off"
     },
@@ -50,7 +50,7 @@
       "read": "off",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": -6.39
+        "btc_change_pct_7d": -6.49
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -60,8 +60,8 @@
       "read": "누적 중",
       "active": false,
       "drivers": {
-        "ssr": 4.65,
-        "stablecoin_supply_usd": 258725543521.77338
+        "ssr": 4.61,
+        "stablecoin_supply_usd": 258624955350.19446
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -73,14 +73,14 @@
       "drivers": {
         "top_protocol_fees_24h": {
           "name": "Tether",
-          "fees_24h": 15995473.0
+          "fees_24h": 15907058.0
         },
         "protocol_count": 25
       },
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 59953.0,
+  "btc_price_at_call": 59494.0,
   "trail": [
     {
       "date": "2026-06-24",
@@ -126,9 +126,9 @@
     },
     {
       "date": "2026-06-30",
-      "call": "neutral",
-      "net_score": -1,
-      "btc_price": 59953.0,
+      "call": "risk_off",
+      "net_score": -2,
+      "btc_price": 59494.0,
       "active_dims": 4
     }
   ],
