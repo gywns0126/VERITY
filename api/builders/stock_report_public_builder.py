@@ -335,6 +335,35 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
                 fnote["PSR"] = "시가총액 ÷ 매출 (DART)"
     except (TypeError, ValueError):
         pass
+    # 배당 상세 (DART 배당 표 — 주당배당금·배당성향, 사실)
+    divs = (rec.get("dart_financials") or {}).get("dividends") or []
+
+    def _div_val(cat_sub: str) -> Optional[str]:
+        for it in divs:
+            v = str(it.get("current") or "").strip()
+            if cat_sub in str(it.get("category") or "") and v and v != "-":
+                return v
+        return None
+
+    dps = _div_val("주당 현금배당금")
+    if dps:
+        facts["주당배당금"] = dps + "원"
+        fnote["주당배당금"] = "DART 배당 — 주당 현금배당금"
+    payout = _div_val("현금배당성향")
+    if payout:
+        try:
+            facts["배당성향"] = f"{float(payout):.1f}%"
+            fnote["배당성향"] = "현금배당성향 (배당금 ÷ 순이익, DART)"
+        except (TypeError, ValueError):
+            pass
+    # 지분 보유율 (기관·내부자 — 사실)
+    for label, key in (("기관 보유율", "held_pct_institutions"), ("내부자 지분", "held_pct_insiders")):
+        hv = rec.get(key)
+        if hv not in (None, "", 0):
+            try:
+                facts[label] = f"{float(hv):.1f}%"
+            except (TypeError, ValueError):
+                pass
 
     # 헤더 메타 (52주 범위·거래대금 — 외부 사실)
     header: Dict[str, str] = {}
