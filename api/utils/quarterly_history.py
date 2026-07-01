@@ -76,7 +76,16 @@ def append_universe_snapshot(
     """
     now = datetime.now(KST)
     ts = run_at_iso or now.isoformat()
-    path = _output_path(now, root=output_root)
+    # 🚨 파일 분기 = 스냅샷 run 시점(ts) 기준 — datetime.now() 아님.
+    #   분기 경계(예: 7/1 Q3 진입)에 run_at_iso(과거 분기)와 파일명이 어긋나 스냅샷이
+    #   엉뚱한 분기 파일에 적재되던 버그 fix (2026-07-01, tests.yml Q3 롤오버 회귀).
+    dt_for_path = now
+    if run_at_iso:
+        try:
+            dt_for_path = datetime.fromisoformat(run_at_iso)
+        except ValueError:
+            dt_for_path = now
+    path = _output_path(dt_for_path, root=output_root)
 
     appended = 0
     skipped = 0
