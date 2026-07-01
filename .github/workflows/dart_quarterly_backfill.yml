@@ -5,17 +5,21 @@
 # 소비처(별도): 슬림 public 빌더 + PublicStockReport '분기추이' 미니차트 (데이터 충분 후).
 # DART only — KIS 무관(RULE 1). proven fetcher(dart_fundamentals, reprt_code 인자화) 재사용. resume+quota-cap.
 #
-# 🚨 schedule 없음 = workflow_dispatch 수동 전용. 이유: 카탈리스트/연간 백필이 DART 20K/일 쿼터 소비 중.
-#    동시 자동가동 = 쿼터 터짐. 형제 backfill 여유일에 수동 실행. 멱등(체크포인트 resume)이라 다회 분할 안전.
-#    완주 추정 = ~2,000종목 × 20기간 = ~40K단위. run당 1,500단위 → ~27 dispatch.
+# 저빈도 자가완주 cron: KST 20:00(UTC 11) 일 1회 drip. run당 1,500 units(=DART call) 상한.
+#    off-peak gap — catalyst pulse(UTC 0-9)·catalyst backfill(평일 14,18/주말 0,8,16 UTC)·dart_batch(일 13 UTC) 모두 회피.
+#    멱등(체크포인트 resume) → 완주 ~21일(31K units 잔여), MIN_QUARTERS=4 게이트 ~3일. done 후 자동 no-op(DART call 0).
+#    쿼터 안전망 = dart_fail_rate>5% P0 monitor. 압박 시 run_units 하향. schedule 은 default 브랜치서만 발화 → 머지 후 활성.
 #
-# 7축 audit: env=DART_API_KEY+UNIVERSE+KRX(universe builder) · push=schedule 없음(RULE2 무관) ·
-#    concurrency=verity-data-write(형제 backfill 직렬화) · cron=없음(수동, 쿼터 충돌 회피) ·
-#    KIS=0(RULE1) · pip=requirements · N=2=manual 다회 dispatch.
+# 7축 audit: env=DART_API_KEY+UNIVERSE+KRX(universe builder) · push=data/ commit(RULE2 ignoreCommand skip) ·
+#    concurrency=verity-data-write(형제 backfill 직렬화, cancel-in-progress:false=큐잉) · cron=일1회 off-peak(쿼터 회피) ·
+#    KIS=0(RULE1) · pip=requirements · N=2=머지 후 manual dispatch(N=1)+익일 scheduled(N=2) 실 audit 의무.
 
 name: DART Quarterly Backfill (KR 분기재무)
 
 on:
+  schedule:
+    # KST 20:00 = UTC 11:00. 일 1회 저빈도 drip (위 7축 audit 참조). scheduled event = run_units default 1500.
+    - cron: '0 11 * * *'
   workflow_dispatch:
     inputs:
       run_units:
