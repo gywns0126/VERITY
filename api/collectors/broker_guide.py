@@ -366,8 +366,45 @@ def _fetch_overseas_fee(broker: str) -> dict:
     return {}
 
 
+def _stale(v) -> bool:
+    s = str(v or "").strip()
+    return not s or s in ("없음", "미제공", "정보없음", "정보 없음", "N/A", "n/a", "해당없음", "불명")
+
+
+# sticky 병합 대상 (event 제외 — 만료 이벤트가 남으면 안 되므로 매 run 갱신)
+_STICKY_BROKER = ("app", "domestic_fee", "overseas_fee", "isa", "credit_short",
+                  "community", "realtime_news", "source_url", "fee_basis", "overseas_basis", "app_rating")
+
+
+def _sticky_merge(brokers: list, btt: list, prev) -> None:
+    """이전 발행값과 필드별 병합 — 새 값이 빈칸/불확실이면 이전 값 유지.
+    LLM run 마다 랜덤 빈칸/churn 방지 → 데이터가 갈수록 안정. event 는 제외(만료 갱신)."""
+    if not isinstance(prev, dict):
+        return
+    prev_b = {b.get("name", ""): b for b in (prev.get("brokers") or []) if isinstance(b, dict)}
+    for b in brokers:
+        if not isinstance(b, dict):
+            continue
+        pv = prev_b.get(b.get("name", ""))
+        if not isinstance(pv, dict):
+            continue
+        for k in _STICKY_BROKER:
+            if _stale(b.get(k)) and not _stale(pv.get(k)):
+                b[k] = pv[k]
+    prev_t = {t.get("type", ""): t for t in (prev.get("by_trade_type") or []) if isinstance(t, dict)}
+    for t in btt:
+        if not isinstance(t, dict):
+            continue
+        pv = prev_t.get(t.get("type", ""))
+        if not isinstance(pv, dict):
+            continue
+        for k in ("best", "reason"):
+            if _stale(t.get(k)) and not _stale(pv.get(k)):
+                t[k] = pv[k]
+
+
 def collect(force: bool = False) -> dict:
-    """Perplexity 호출 → 검증 → broker_guide.json 발행. 실패 시 직전 유지."""
+    """Perplexity 호출 → 검증 → sticky 병합 → broker_guide.json 발행. 실패 시 직전 유지."""
     prev = _load_prev()
     # search_recency_filter 미사용 — 수수료표·앱평점은 상시 참조정보라 "최근 N일" 제한 시 못 찾음.
     # 메인 호출 = ISA·신용·거래유형(soft). 수수료는 아래 focused 호출이 정밀 override.
@@ -447,6 +484,10 @@ def collect(force: bool = False) -> dict:
     # 수동 큐레이션 override (있으면 자동값보다 우선)
     _apply_curated(brokers)
 
+    # 이전 발행값 sticky 병합 (새 run 빈칸/churn → 이전 값 유지, event 제외) — LLM 불안정 완화
+    btt = parsed.get("by_trade_type", [])
+    _sticky_merge(brokers, btt, prev)
+
     ok, flags = _validate(parsed)
     if not ok:
         print(f"[broker_guide] 검증 실패 — 직전 유지: {flags}")
@@ -457,7 +498,7 @@ def collect(force: bool = False) -> dict:
         "source": f"perplexity {res.get('model', 'sonar')} (자동집계)",
         "disclaimer": DISCLAIMER,
         "brokers": brokers,
-        "by_trade_type": parsed.get("by_trade_type", []),
+        "by_trade_type": btt,
         # 출처 = focused 수수료 호출의 공식 출처 우선, 없으면 메인 citations
         "citations": fee_sources or res.get("citations", []),
         "flags": flags,
