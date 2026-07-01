@@ -23,7 +23,8 @@ from bs4 import BeautifulSoup
 _logger = logging.getLogger(__name__)
 
 NEWS_URL = "https://finance.naver.com/item/news_news.naver?code={code}&page={page}"
-_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
+# 정직 식별 UA (브라우저 위장 제거, 2026-07-01 권리감사 — UA/Referer 위장=접근제어 우회 리스크 회피)
+_UA = "VERITY-news-fetcher/1.0 (+https://github.com/gywns0126; 종목 헤드라인 링크아웃)"
 # 짬뽕 — 뉴스×공시 연결. 기업이벤트 카테고리 뉴스 ±2일 내 DART 공시 있으면 link (우리 차별점).
 DISC_FEED_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/public_disclosure_feed.json"
 _EVENT_CATS = {"공시", "실적", "계약·수주", "M&A·지분", "인사"}
@@ -139,7 +140,7 @@ def _rel_time(dt, now):
 def _fetch_page(code, page):
     try:
         r = requests.get(NEWS_URL.format(code=code, page=page),
-                         headers={"User-Agent": _UA, "Referer": "https://finance.naver.com/"}, timeout=4)
+                         headers={"User-Agent": _UA}, timeout=4)  # 가짜 Referer 제거(위장 회피)
         r.encoding = "euc-kr"
         soup = BeautifulSoup(r.text, "html.parser")
         out = []

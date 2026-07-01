@@ -24,7 +24,8 @@ from bs4 import BeautifulSoup
 from api.collectors.news_headlines import CREDIBLE_SOURCES
 
 NEWS_URL = "https://finance.naver.com/item/news_news.naver?code={code}&page={page}"
-_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
+# 정직 식별 UA (브라우저 위장 제거, 2026-07-01 권리감사) — UA/Referer 위장=접근제어 우회 리스크 회피
+_UA = "VERITY-news-fetcher/1.0 (+https://github.com/gywns0126; 종목 헤드라인 링크아웃)"
 
 # 카테고리 사전 (우선순위 순, 첫 매칭 확정). 제목 키워드 = 사실 분류(공시 톤 배지 방식, LLM 0).
 _CATEGORY_RULES: List[tuple] = [
@@ -76,7 +77,7 @@ def _rel_time(dt: Optional[datetime], now: datetime) -> str:
 
 def _fetch_page(code: str, page: int) -> List[Dict[str, Any]]:
     r = requests.get(NEWS_URL.format(code=code, page=page),
-                     headers={"User-Agent": _UA, "Referer": "https://finance.naver.com/"}, timeout=10)
+                     headers={"User-Agent": _UA}, timeout=10)  # 가짜 Referer 제거(위장 회피)
     r.encoding = "euc-kr"
     soup = BeautifulSoup(r.text, "html.parser")
     out: List[Dict[str, Any]] = []
