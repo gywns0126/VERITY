@@ -541,19 +541,27 @@ function TradeTypeView(props: { items: TradeType[]; C: typeof LIGHT; cardH: numb
                     }}
                 >
                     <div style={{ fontSize: 13.5, fontWeight: 800, color: C.text, letterSpacing: "-0.01em", marginBottom: 9 }}>{it.type}</div>
-                    <BrokerPills best={it.best} C={C} />
-                    <div
-                        style={{
-                            marginTop: 10,
-                            fontSize: 12.5,
-                            color: C.subtext,
-                            fontWeight: 500,
-                            lineHeight: 1.55,
-                            overflowWrap: "anywhere",
-                        }}
-                    >
-                        {clean(it.reason)}
-                    </div>
+                    {isEmptyVal(it.best) ? (
+                        <div style={{ fontSize: 12, color: C.faint, fontWeight: 500, lineHeight: 1.55 }}>
+                            공개 출처 기준 뚜렷한 우위 집계 중 — 각 사 공식 수수료 고지를 확인하세요.
+                        </div>
+                    ) : (
+                        <>
+                            <BrokerPills best={it.best} C={C} />
+                            <div
+                                style={{
+                                    marginTop: 10,
+                                    fontSize: 12.5,
+                                    color: C.subtext,
+                                    fontWeight: 500,
+                                    lineHeight: 1.55,
+                                    overflowWrap: "anywhere",
+                                }}
+                            >
+                                {clean(it.reason)}
+                            </div>
+                        </>
+                    )}
                 </div>
             ))}
         </div>
