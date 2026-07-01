@@ -463,6 +463,7 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
    데이터 = dart_quarterly_public.json (backfill 누적분). 실데이터 4분기 미만 시 자동 숨김(RULE 7). 캔버스=SAMPLE.
    필드 = dart_quarterly_snapshots.jsonl 스키마 정합. 색: 라인/영역=vt보라 / 개선=green / 악화=amber. */
 const QT_DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/dart_quarterly_public.json"
+const QT_US_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_quarterly_public.json"  // 미장 분기추이(us_quarterly_public_builder)
 const QT_METRICS: { key: string; label: string; unit: string; better: "up" | "down"; note?: string }[] = [
     { key: "debt_ratio", label: "부채비율", unit: "%", better: "down" },
     { key: "roa", label: "ROA", unit: "%", better: "up" },
@@ -1782,7 +1783,7 @@ export default function PublicStockReport(props: Props) {
             {/* 분기 재무 추이 — 한눈 파악 먼저(재무 요약 위). 선형 차트 + 최고/최저점.
                 실데이터(dart_quarterly_public.json) 없으면 자동 숨김(RULE 7). 캔버스=SAMPLE. */}
             <div style={{ marginTop: 12 }}>
-                <QuarterlyTrend ticker={s.ticker} C={C} isDark={C === DARK} />
+                <QuarterlyTrend ticker={s.ticker} C={C} isDark={C === DARK} quarterlyUrl={/^\d{6}$/.test(String(s.ticker)) ? QT_DEFAULT_URL : QT_US_URL} />
             </div>
 
             {/* 재무 요약 — 탭하면 재무제표 전체(손익/재무상태/현금흐름/비율) */}
