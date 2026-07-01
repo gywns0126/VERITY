@@ -137,40 +137,82 @@ def _rel_time(dt, now):
     return f"{int(sec // 86400)}일 전"
 
 
-def _fetch_page(code, page):
+# ── 네이버 검색 API (공식) — 2026-07-01 권리감사: 스크래핑/위장 탈출 ──
+_NAVER_NEWS_API = "https://openapi.naver.com/v1/search/news.json"
+# originallink 도메인 → 매체명 (CREDIBLE_SOURCES 매칭용). 미매칭 = 도메인 fallback.
+_DOMAIN_SOURCE = {
+    "hankyung.com": "한국경제", "mk.co.kr": "매일경제", "sedaily.com": "서울경제",
+    "chosun.com": "조선비즈", "edaily.co.kr": "이데일리", "mt.co.kr": "머니투데이",
+    "yna.co.kr": "연합뉴스", "newspim.com": "뉴스핌", "fnnews.com": "파이낸셜뉴스",
+    "heraldcorp.com": "헤럴드경제", "asiae.co.kr": "아시아경제", "zdnet.co.kr": "ZDNet",
+    "etnews.com": "전자신문", "dt.co.kr": "디지털타임스", "infomax": "연합인포맥스",
+    "hani.co.kr": "한겨레", "joongang.co.kr": "중앙일보", "donga.com": "동아일보",
+}
+
+
+def _strip_html(s):
+    s = re.sub(r"<[^>]+>", "", s or "")
+    for a, b in (("&quot;", '"'), ("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"), ("&#39;", "'"), ("&apos;", "'")):
+        s = s.replace(a, b)
+    return s.strip()
+
+
+def _source_from_link(link):
     try:
-        r = requests.get(NEWS_URL.format(code=code, page=page),
-                         headers={"User-Agent": _UA}, timeout=4)  # 가짜 Referer 제거(위장 회피)
-        r.encoding = "euc-kr"
-        soup = BeautifulSoup(r.text, "html.parser")
+        host = urlparse(link).netloc.lower().replace("www.", "")
+        for dom, nm in _DOMAIN_SOURCE.items():
+            if dom in host:
+                return nm
+        return host.split(".")[0] if host else ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _fetch_search_api(name, display=30):
+    """네이버 검색 API(공식·ToS-OK) — 종목명 키워드. 스크래핑/UA위장 대체(권리감사 쟁점5).
+    키 = NAVER_Client_ID / NAVER_Client_Secret (Vercel env 등록 필요)."""
+    cid = os.environ.get("NAVER_Client_ID") or os.environ.get("NAVER_CLIENT_ID", "")
+    csec = os.environ.get("NAVER_Client_Secret") or os.environ.get("NAVER_CLIENT_SECRET", "")
+    if not name or not cid or not csec:
+        return []
+    try:
+        r = requests.get(
+            _NAVER_NEWS_API,
+            params={"query": name, "display": display, "sort": "date"},
+            headers={"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": csec},
+            timeout=5,
+        )
+        if not r.ok:
+            _logger.warning("naver search api %s HTTP %s", name, r.status_code)
+            return []
         out = []
-        for tr in soup.select("table.type5 tr"):
-            a = tr.select_one("td.title a")
-            if not a:
-                continue
-            href = a.get("href") or ""
-            if href and not href.startswith("http"):
-                href = "https://finance.naver.com" + href
-            info = tr.select_one("td.info")
-            date = tr.select_one("td.date")
+        for it in r.json().get("items", []):
+            link = it.get("originallink") or it.get("link") or ""
+            dt_s = ""
+            try:
+                from email.utils import parsedate_to_datetime
+                from datetime import timezone as _tz
+                pd = parsedate_to_datetime(it.get("pubDate", ""))
+                if pd:  # now=datetime.now()(UTC) 과 정합 위해 UTC naive 로
+                    dt_s = pd.astimezone(_tz.utc).replace(tzinfo=None).strftime("%Y.%m.%d %H:%M")
+            except Exception:  # noqa: BLE001
+                pass
             out.append({
-                "title": a.get_text(strip=True),
-                "url": href,
-                "source": info.get_text(strip=True) if info else "",
-                "datetime": date.get_text(strip=True) if date else "",
+                "title": _strip_html(it.get("title")),
+                "url": link,
+                "source": _source_from_link(link),
+                "datetime": dt_s,
             })
         return out
     except Exception as e:  # noqa: BLE001
-        _logger.warning("naver news page %s/%s 실패: %s", code, page, e)
+        _logger.warning("naver search api %s 실패: %s", name, e)
         return []
 
 
 def fetch_stock_news(code, name="", max_items=15, pages=2):
-    now = datetime.now()
-    raw = []
-    with ThreadPoolExecutor(max_workers=pages) as ex:
-        for res in ex.map(lambda p: _fetch_page(code, p), range(1, pages + 1)):
-            raw.extend(res)
+    now = datetime.utcnow()  # dt_s(UTC naive)와 정합 (Vercel/로컬 TZ 무관)
+    # 스크래핑 → 네이버 공식 검색 API (2026-07-01 권리감사 쟁점5). 종목명 키워드, 단일 호출.
+    raw = _fetch_search_api(name, display=30)
 
     nm = (name or "").strip()
     # 종목명 핵심 토큰 (접미사 제거) — "JYP Ent."→"JYP", 한국 뉴스 제목 매칭률↑
