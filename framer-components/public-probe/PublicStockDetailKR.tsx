@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useState, type CSSProperties } from "react"
+import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
  * AlphaNest 공개 — KR 종목 심화 (기관·국민연금 대량보유 + 사업장 + 공시 forensics). DART 사실만.
@@ -9,8 +9,8 @@ import { useEffect, useState, type CSSProperties } from "react"
  * Framer codeFileId = WNrsqjb (insertUrl framer.com/m/PublicStockDetailKR-RbhPiw.js).
  */
 
-const LIGHT = { card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#f0f1f3", vt: "#6c5ce7", vtS: "#f0edff" }
-const DARK = { card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#222730", vt: "#a99bff", vtS: "#241f3a" }
+const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#f0f1f3", vt: "#6c5ce7", vtS: "#f0edff" }
+const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#222730", vt: "#a99bff", vtS: "#241f3a" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const REPORT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
 const FORENSICS_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_forensics_public.json"
@@ -40,6 +40,16 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
     const C = isDark ? DARK : LIGHT
     const [rec, setRec] = useState<any>(onCanvas ? SAMPLE_REC : null)
     const [forensics, setForensics] = useState<any>(onCanvas ? SAMPLE_FOR : null)
+    const rootRef = useRef<HTMLDivElement>(null)
+    const [w, setW] = useState(0)
+
+    useEffect(() => {
+        const el = rootRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((entries) => { for (const e of entries) setW(e.contentRect.width) })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
 
     useEffect(() => {
         if (onCanvas) return
@@ -71,10 +81,11 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
     const hasInst = inst && Array.isArray(inst.holders) && inst.holders.length > 0
     const hasFac = fac && (Array.isArray(fac.facilities) || fac.headquarters)
     const hasFor = forensics && FSECTIONS.some((s) => Array.isArray(forensics[s.key]) && forensics[s.key].length)
-    if (!hasInst && !hasFac && !hasFor) return null
+    const narrow = w > 0 && w < 420
+    if (!hasInst && !hasFac && !hasFor) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
 
     const HEAD = "Pretendard, -apple-system, sans-serif"
-    const wrap: CSSProperties = { width: "100%", boxSizing: "border-box", fontFamily: FONT, color: C.ink, display: "flex", flexDirection: "column", gap: 14 }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: narrow ? 14 : 18, display: "flex", flexDirection: "column", gap: 14 }
     const title = (t: string, sub: string) => (
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
             <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px" }}>{t}</span>
@@ -84,7 +95,7 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
 
     return (
-        <div style={wrap}>
+        <div ref={rootRef} style={wrap}>
             {hasInst && (
                 <div>
                     {title("기관·국민연금 대량보유", "DART 5%+ 보고 · 사실")}

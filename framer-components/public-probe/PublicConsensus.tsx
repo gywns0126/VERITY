@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useState, type CSSProperties } from "react"
+import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
  * AlphaNest 공개 — 미장 애널리스트 컨센서스 (투자의견 분포 막대 + 목표가 범위). 외부 집계 사실.
@@ -34,6 +34,16 @@ export default function PublicConsensus(props: { ticker?: string; dataUrl?: stri
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
     const [c, setC] = useState<any>(onCanvas ? SAMPLE : null)
+    const rootRef = useRef<HTMLDivElement>(null)
+    const [w, setW] = useState(0)
+
+    useEffect(() => {
+        const el = rootRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((entries) => { for (const e of entries) setW(e.contentRect.width) })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
 
     useEffect(() => {
         if (onCanvas) return
@@ -59,15 +69,16 @@ export default function PublicConsensus(props: { ticker?: string; dataUrl?: stri
         return () => { alive = false }
     }, [props.ticker, props.dataUrl, onCanvas])
 
-    if (!c || !c.num_analysts) return null
+    const narrow = w > 0 && w < 420
+    if (!c || !c.num_analysts) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
     const counts = c.counts || {}
     const vals = CATS.map((x) => Number(counts[x.key] || 0))
     const maxV = Math.max(1, ...vals)
     const hasDist = vals.some((v) => v > 0)
 
-    const wrap: CSSProperties = { width: "100%", boxSizing: "border-box", fontFamily: FONT, color: C.ink, display: "flex", flexDirection: "column", gap: 12 }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: narrow ? 14 : 18, display: "flex", flexDirection: "column", gap: 12 }
     return (
-        <div style={wrap}>
+        <div ref={rootRef} style={wrap}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px" }}>애널리스트 컨센서스</span>
                 <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{c.num_analysts}명 · 외부 집계</span>

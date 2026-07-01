@@ -138,7 +138,8 @@ export default function PublicQuarterlyTrend(props: Props) {
     const PY = 9   // 상하 여백(라벨 공간)
 
     const wrap: CSSProperties = {
-        width: "100%", background: C.bg, fontFamily: FONT, boxSizing: "border-box", color: C.ink,
+        width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, boxSizing: "border-box", color: C.ink,
+        padding: narrow ? 14 : 18,
     }
 
     return (
