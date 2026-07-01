@@ -75,42 +75,91 @@ def _rel_time(dt: Optional[datetime], now: datetime) -> str:
     return f"{int(sec // 86400)}일 전"
 
 
-def _fetch_page(code: str, page: int) -> List[Dict[str, Any]]:
-    r = requests.get(NEWS_URL.format(code=code, page=page),
-                     headers={"User-Agent": _UA}, timeout=10)  # 가짜 Referer 제거(위장 회피)
-    r.encoding = "euc-kr"
-    soup = BeautifulSoup(r.text, "html.parser")
-    out: List[Dict[str, Any]] = []
-    for tr in soup.select("table.type5 tr"):
-        a = tr.select_one("td.title a")
-        if not a:
-            continue
-        title = a.get_text(strip=True)
-        href = a.get("href") or ""
-        if href and not href.startswith("http"):
-            href = "https://finance.naver.com" + href
-        info = tr.select_one("td.info")
-        date = tr.select_one("td.date")
-        out.append({
-            "title": title,
-            "url": href,
-            "source": info.get_text(strip=True) if info else "",
-            "datetime": date.get_text(strip=True) if date else "",
-        })
-    return out
+# ── 네이버 검색 API (공식) — 2026-07-01 권리감사: 스크래핑/위장 탈출 ──
+import os
+from datetime import timezone
+
+_NAVER_NEWS_API = "https://openapi.naver.com/v1/search/news.json"
+_KST = timezone(timedelta(hours=9))
+_DOMAIN_SOURCE = {
+    "hankyung.com": "한국경제", "mk.co.kr": "매일경제", "sedaily.com": "서울경제",
+    "chosun.com": "조선비즈", "edaily.co.kr": "이데일리", "mt.co.kr": "머니투데이",
+    "yna.co.kr": "연합뉴스", "newspim.com": "뉴스핌", "fnnews.com": "파이낸셜뉴스",
+    "heraldcorp.com": "헤럴드경제", "asiae.co.kr": "아시아경제", "zdnet.co.kr": "ZDNet",
+    "etnews.com": "전자신문", "dt.co.kr": "디지털타임스", "infomax": "연합인포맥스",
+    "hani.co.kr": "한겨레", "joongang.co.kr": "중앙일보", "donga.com": "동아일보",
+}
+
+
+def _strip_html(s: str) -> str:
+    s = re.sub(r"<[^>]+>", "", s or "")
+    for a, b in (("&quot;", '"'), ("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"), ("&#39;", "'"), ("&apos;", "'")):
+        s = s.replace(a, b)
+    return s.strip()
+
+
+def _source_from_link(link: str) -> str:
+    try:
+        from urllib.parse import urlparse
+        host = urlparse(link).netloc.lower().replace("www.", "")
+        for dom, nm in _DOMAIN_SOURCE.items():
+            if dom in host:
+                return nm
+        return host.split(".")[0] if host else ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _fetch_search_api(name: str, display: int = 30) -> List[Dict[str, Any]]:
+    """네이버 검색 API(공식·ToS-OK) — 종목명 키워드. 스크래핑/UA위장 대체(권리감사 쟁점5).
+    키 = NAVER_Client_ID / NAVER_Client_Secret (env)."""
+    cid = os.environ.get("NAVER_Client_ID") or os.environ.get("NAVER_CLIENT_ID", "")
+    csec = os.environ.get("NAVER_Client_Secret") or os.environ.get("NAVER_CLIENT_SECRET", "")
+    if not name or not cid or not csec:
+        return []
+    try:
+        r = requests.get(
+            _NAVER_NEWS_API,
+            params={"query": name, "display": display, "sort": "date"},
+            headers={"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": csec},
+            timeout=6,
+        )
+        if not r.ok:
+            return []
+        from email.utils import parsedate_to_datetime
+        out: List[Dict[str, Any]] = []
+        for it in r.json().get("items", []):
+            link = it.get("originallink") or it.get("link") or ""
+            dt_s = ""
+            try:
+                pd = parsedate_to_datetime(it.get("pubDate", ""))
+                if pd:  # now(KST) 정합
+                    dt_s = pd.astimezone(_KST).replace(tzinfo=None).strftime("%Y.%m.%d %H:%M")
+            except Exception:  # noqa: BLE001
+                pass
+            out.append({
+                "title": _strip_html(it.get("title")),
+                "url": link,
+                "source": _source_from_link(link),
+                "datetime": dt_s,
+            })
+        return out
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def fetch_stock_news(code: str, name: str = "", max_items: int = 15, pages: int = 3,
                      disclosures: Optional[List[Dict[str, Any]]] = None,
                      now: Optional[datetime] = None) -> List[Dict[str, Any]]:
     """종목 뉴스 + 밀도 enrichment. disclosures = 그 종목 공시 list[{title,date,source_url}] (±3일 연결)."""
-    now = now or datetime.now()
-    raw: List[Dict[str, Any]] = []
-    for p in range(1, pages + 1):
+    if now is None:
         try:
-            raw.extend(_fetch_page(code, p))
-        except Exception:  # noqa: BLE001 — 페이지 실패 = 부분 진행
-            break
+            from api.config import now_kst
+            now = now_kst().replace(tzinfo=None)
+        except Exception:  # noqa: BLE001
+            now = datetime.now()
+    # 스크래핑 → 네이버 공식 검색 API (2026-07-01 권리감사 쟁점5). 종목명 키워드, 단일 호출(pages 불요).
+    raw: List[Dict[str, Any]] = _fetch_search_api(name)
 
     # 공시 날짜 인덱스 (±3일 연결)
     disc_by_date: Dict[str, Dict[str, Any]] = {}
