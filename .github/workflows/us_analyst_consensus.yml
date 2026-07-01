@@ -4,9 +4,12 @@ name: US Analyst Consensus (yfinance)
 # 美 애널리스트 컨센서스(등급·목표가·업사이드) = 터미널 기본 메뉴. yfinance 무료(Finnhub rate 회피).
 # 전 종목(sp1500 1505) rotation + carry-forward + budget. RULE 7 = 외부 사실(우리 점수 아님).
 
+# 🚨 2026-07-01 권리감사 — US 애널리스트 컨센서스(yfinance)는 실권리자 Benzinga/S&P IP,
+#   공개 재배포 금지축. 무료 공개 배포 위해 자동 발행 중단(schedule 비활성). PM 결정: 지금은 빼고 KR 홈그라운드 먼저.
+#   재개 = 재배포 허용 유료 벤더(FMP/Finnhub 상업tier) 계약 후. (수동 dispatch 만 유지 — 내부 검토용.)
 on:
-  schedule:
-    - cron: '0 22 * * 0,2,4'   # 월·수·금 KST 07:00 (UTC 22:00 일·화·목) — 미장 마감 후 갱신분
+  # schedule:
+  #   - cron: '0 22 * * 0,2,4'   # 비활성(권리감사 2026-07-01). 재배포-허용 벤더 계약 시 재개.
   workflow_dispatch:
     inputs:
       max_seconds:
