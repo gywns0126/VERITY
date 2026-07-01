@@ -249,7 +249,7 @@ export default function PublicQuarterlyTrend(props: Props) {
 addPropertyControls(PublicQuarterlyTrend, {
     ticker: { type: ControlType.String, title: "Ticker", defaultValue: "005930" },
     quarterlyUrl: { type: ControlType.String, title: "Quarterly URL", defaultValue: DEFAULT_URL },
-    maxQuarters: { type: ControlType.Number, title: "Max Quarters", defaultValue: 20, min: 4, max: 40, step: 1 },
+    maxQuarters: { type: ControlType.Number, title: "Max Quarters", defaultValue: 40, min: 4, max: 40, step: 1 },
     showExtremes: { type: ControlType.Boolean, title: "최고·최저점", defaultValue: true, enabledTitle: "On", disabledTitle: "Off" },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

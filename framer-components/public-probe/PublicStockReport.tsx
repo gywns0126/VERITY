@@ -494,7 +494,7 @@ function qtLabel(qEnd: string): string {
     return `${y}.${q}`
 }
 
-function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl = QT_DEFAULT_URL, maxQuarters = 20 }: { ticker: string; C: any; isDark: boolean; showExtremes?: boolean; quarterlyUrl?: string; maxQuarters?: number }) {
+function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl = QT_DEFAULT_URL, maxQuarters = 40 }: { ticker: string; C: any; isDark: boolean; showExtremes?: boolean; quarterlyUrl?: string; maxQuarters?: number }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const ref = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
