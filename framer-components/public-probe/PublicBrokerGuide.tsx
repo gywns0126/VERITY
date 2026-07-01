@@ -100,6 +100,7 @@ interface Broker {
     app_rating: string
     community: string
     realtime_news: string
+    event: string
     source_url: string
 }
 interface TradeType {
@@ -169,12 +170,12 @@ const DEMO: Guide = {
         { type: "중장기/배당", best: "한국투자증권, NH투자증권", reason: "리서치·정보 제공 + 비대면 우대." },
     ],
     brokers: [
-        { name: "한국투자증권", app: "한국투자 m.Stock · 뱅키스", domestic_fee: "0.0140%", overseas_fee: "미국 0.25% (기본 온라인) · 환전우대 자료 부족", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "실시간시세·속보 제공", source_url: "" },
-        { name: "토스증권", app: "토스", domestic_fee: "이벤트 시 무료", overseas_fee: "미국 0.1% · 이벤트 시 무료", isa: "미지원", credit_short: "일부", app_rating: "", community: "토스 피드", realtime_news: "실시간시세 제공", source_url: "" },
-        { name: "키움증권", app: "영웅문S#", domestic_fee: "0.015%", overseas_fee: "미국 0.07%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "종목토론", realtime_news: "실시간시세·속보 제공", source_url: "" },
-        { name: "미래에셋증권", app: "M-STOCK", domestic_fee: "0.0036%", overseas_fee: "미국 0.07~0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "" },
-        { name: "삼성증권", app: "mPOP", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "" },
-        { name: "NH투자증권", app: "나무증권 · QV", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "" },
+        { name: "한국투자증권", app: "한국투자 m.Stock · 뱅키스", domestic_fee: "0.0140%", overseas_fee: "미국 0.25% (기본 온라인) · 환전우대 자료 부족", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "실시간시세·속보 제공", event: "", source_url: "" },
+        { name: "토스증권", app: "토스", domestic_fee: "이벤트 시 무료", overseas_fee: "미국 0.1% · 이벤트 시 무료", isa: "미지원", credit_short: "일부", app_rating: "", community: "토스 피드", realtime_news: "실시간시세 제공", event: "미국주식 수수료 무료 이벤트 (~2026-07-31)", source_url: "" },
+        { name: "키움증권", app: "영웅문S#", domestic_fee: "0.015%", overseas_fee: "미국 0.07%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "종목토론", realtime_news: "실시간시세·속보 제공", event: "신규 개설 시 해외주식 환전우대 (~2026-08-15)", source_url: "" },
+        { name: "미래에셋증권", app: "M-STOCK", domestic_fee: "0.0036%", overseas_fee: "미국 0.07~0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "" },
+        { name: "삼성증권", app: "mPOP", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "" },
+        { name: "NH투자증권", app: "나무증권 · QV", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "" },
     ],
     citations: [],
 }
@@ -597,6 +598,14 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
                             <BrokerLogo name={b.name} size={26} C={C} />
                             <span style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: "-0.01em" }}>{b.name}</span>
                         </div>
+
+                        {/* 이벤트/할인 (진행 중 사실 · 기간 포함 · 권유 아님) */}
+                        {!isEmptyVal(b.event) ? (
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: C.goodBg, borderRadius: 9, padding: "7px 10px", marginBottom: 13 }}>
+                                <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: C.good, background: C.bg, borderRadius: 5, padding: "1px 6px", marginTop: 1 }}>이벤트</span>
+                                <span style={{ fontSize: 11.5, fontWeight: 600, color: C.text, lineHeight: 1.45, overflowWrap: "anywhere" }}>{clean(b.event)}</span>
+                            </div>
+                        ) : null}
 
                         {/* 수수료 2단 (국내 / 해외 요점) — 해외 전문은 hover(title)/출처 */}
                         <div style={{ display: "flex", gap: 16, marginBottom: 13 }}>

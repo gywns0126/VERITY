@@ -71,6 +71,7 @@ _SCHEMA_HINT = """{
       "app_rating": "iOS x.x / Android x.x (출처)",
       "community": "있음" or "없음",
       "realtime_news": "실시간시세·속보 제공" or "제한",
+      "event": "현재 진행 중인 공식 이벤트/할인 1건 (반드시 기간 포함, 예: '미국주식 수수료 무료 (~2026-07-31)'). 진행 중 확인 안 되면 빈 문자열 — 만료/불확실 이벤트 금지",
       "source_url": "대표 출처 URL"
     }
   ],
@@ -101,6 +102,7 @@ _RESPONSE_FORMAT = {
                             "app_rating": {"type": "string"},
                             "community": {"type": "string"},
                             "realtime_news": {"type": "string"},
+                            "event": {"type": "string"},
                             "source_url": {"type": "string"},
                         },
                         "required": ["name"],
@@ -131,7 +133,8 @@ def _build_query() -> str:
         f"{today} 기준, 다음 한국 증권사를 거래자 관점에서 사실 비교해 아래 JSON 스키마로만 출력해줘.\n"
         f"대상 증권사: {', '.join(BROKERS)}\n"
         f"거래 유형(by_trade_type): {', '.join(TRADE_TYPES)}\n\n"
-        "각 수수료·평점·기능은 출처가 확인되는 사실만. 주관적 추천/별점 금지.\n\n"
+        "각 수수료·평점·기능은 출처가 확인되는 사실만. 주관적 추천/별점 금지.\n"
+        "event 는 오늘 기준 진행 중인 공식 이벤트/할인만 1건, 반드시 기간을 포함하고 확인 안 되면 빈 문자열(만료·불확실 이벤트는 절대 넣지 말 것).\n\n"
         f"JSON 스키마:\n{_SCHEMA_HINT}"
     )
 
