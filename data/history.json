@@ -712,5 +712,43 @@
     "reason": "PBRxPER 12.8 저평가와 내부자 대량 매수는 긍정적. 단, FTC 소송 리스크는 변수.",
     "rule_id": "verdict_BUY",
     "mode_tag": "moderate"
+  },
+  {
+    "type": "PARTIAL_SELL",
+    "target_id": "target_1",
+    "date": "2026-07-01 17:02",
+    "timestamp": "2026-07-01T17:02:40+09:00",
+    "ticker": "EQT",
+    "name": "EQT",
+    "price": 82668.18145309448,
+    "effective_price": 82661.8,
+    "slippage_bps": 0.77,
+    "quantity": 4,
+    "remaining_quantity": 5,
+    "total": 330598.2144403742,
+    "partial_pnl": 9045.49,
+    "r_multiple": 1.0,
+    "reason": "+1.0R reached, lock in gains",
+    "rule_id": "exit_target_target_1",
+    "mode_tag": "moderate"
+  },
+  {
+    "type": "PARTIAL_SELL",
+    "target_id": "target_2",
+    "date": "2026-07-01 17:02",
+    "timestamp": "2026-07-01T17:02:40+09:00",
+    "ticker": "EQT",
+    "name": "EQT",
+    "price": 82668.18145309448,
+    "effective_price": 82664.99,
+    "slippage_bps": 0.39,
+    "quantity": 1,
+    "remaining_quantity": 4,
+    "total": 82652.99253159402,
+    "partial_pnl": 2264.81,
+    "r_multiple": 2.0,
+    "reason": "+2.0R reached, scale out",
+    "rule_id": "exit_target_target_2",
+    "mode_tag": "moderate"
   }
 ]
