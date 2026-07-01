@@ -2,9 +2,10 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * AlphaNest 공개 — 미장 애널리스트 컨센서스 (투자의견 분포 막대 + 목표가 범위). 외부 집계 사실.
- * 🚨 RULE 7 — yfinance 외부 애널리스트 집계, 자체 의견·점수 아님. 데이터 = us_stock_report_public.json (Blob).
- * 다크모드 = body[data-framer-theme] 자가감지. 외곽선 없음(소프트 카드).
+ * AlphaNest 공개 — 미장 투자의견 분포 + 목표가 범위. 외부 집계 사실.
+ * 🚨 StockReport 컨센서스(의견/평균목표가/업사이드)와 중복 회피 — 여기는 분포막대 + 목표가 범위(high/low)만(StockReport에 없는 것).
+ * RULE 7 — yfinance 외부 집계, 자체 의견·점수 아님. 데이터 = us_stock_report_public.json (Blob).
+ * 다크모드 = body[data-framer-theme] 자가감지. 외곽선 없음. 루트 패딩 = /stock 컨벤션(narrow?14:18).
  * Framer codeFileId = YfnonVE (insertUrl framer.com/m/PublicConsensus-XYEH4x.js).
  */
 
@@ -21,7 +22,7 @@ const CATS: { key: string; label: string }[] = [
     { key: "strongSell", label: "적극매도" },
 ]
 
-const SAMPLE: any = { target_price: "$312.99", target_high: "$370.00", target_low: "$207.00", opinion: "적극 매수", upside: "+34.5%", num_analysts: 63, counts: { strongBuy: 15, buy: 48, hold: 4, sell: 0, strongSell: 0 }, note: "외부 애널리스트 집계(yfinance) · 자체 의견 아님" }
+const SAMPLE: any = { target_high: "$370.00", target_low: "$207.00", num_analysts: 63, counts: { strongBuy: 15, buy: 48, hold: 4, sell: 0, strongSell: 0 }, note: "외부 애널리스트 집계(yfinance) · 자체 의견 아님" }
 
 function readDark(): boolean {
     if (typeof document === "undefined" || !document.body) return false
@@ -70,24 +71,24 @@ export default function PublicConsensus(props: { ticker?: string; dataUrl?: stri
     }, [props.ticker, props.dataUrl, onCanvas])
 
     const narrow = w > 0 && w < 420
-    if (!c || !c.num_analysts) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
-    const counts = c.counts || {}
+    const counts = (c && c.counts) || {}
     const vals = CATS.map((x) => Number(counts[x.key] || 0))
     const maxV = Math.max(1, ...vals)
     const hasDist = vals.some((v) => v > 0)
+    const hasRange = !!(c && c.target_low && c.target_high)
+    if (!c || !c.num_analysts || (!hasDist && !hasRange)) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
 
     const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: narrow ? 14 : 18, display: "flex", flexDirection: "column", gap: 12 }
     return (
         <div ref={rootRef} style={wrap}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px" }}>애널리스트 컨센서스</span>
+                <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px" }}>투자의견 분포</span>
                 <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{c.num_analysts}명 · 외부 집계</span>
             </div>
 
-            {/* 투자의견 분포 */}
+            {/* 투자의견 분포 막대 (StockReport에 없는 시각화) */}
             {hasDist && (
                 <div style={{ background: C.card, borderRadius: 16, padding: "16px 16px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                    {c.opinion && <div style={{ fontSize: 12.5, fontWeight: 700, color: C.sub, marginBottom: 12 }}>종합 의견 · <span style={{ color: C.vt, fontWeight: 800 }}>{c.opinion}</span></div>}
                     <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 84 }}>
                         {CATS.map((cat, i) => {
                             const v = vals[i]
@@ -105,23 +106,19 @@ export default function PublicConsensus(props: { ticker?: string; dataUrl?: stri
                 </div>
             )}
 
-            {/* 목표가 범위 */}
-            {(c.target_price || c.target_high) && (
+            {/* 목표가 범위 (최저~최고 — StockReport는 평균만 노출) */}
+            {hasRange && (
                 <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.sub }}>평균 목표가</span>
-                        {c.target_price && <span style={{ fontSize: 18, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>{c.target_price}</span>}
-                        {c.upside && <span style={{ fontSize: 12.5, fontWeight: 800, color: String(c.upside).startsWith("-") ? C.down : C.up }}>{c.upside}</span>}
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: C.sub, marginBottom: 8 }}>목표가 범위</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 800, color: C.ink }}>
+                        <span>{c.target_low}</span>
+                        <span>{c.target_high}</span>
                     </div>
-                    {(c.target_low || c.target_high) && (
-                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 11.5, fontWeight: 600, color: C.faint }}>
-                            <span>최저 {c.target_low || "—"}</span>
-                            <span>최고 {c.target_high || "—"}</span>
-                        </div>
-                    )}
-                    {(c.target_low && c.target_high) && (
-                        <div style={{ height: 6, borderRadius: 3, marginTop: 5, background: `linear-gradient(90deg, ${C.down}, ${C.vt}, ${C.up})` }} />
-                    )}
+                    <div style={{ height: 6, borderRadius: 3, marginTop: 6, background: `linear-gradient(90deg, ${C.down}, ${C.vt}, ${C.up})` }} />
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontWeight: 600, color: C.faint, marginTop: 4 }}>
+                        <span>최저</span>
+                        <span>최고</span>
+                    </div>
                 </div>
             )}
 
