@@ -4,13 +4,14 @@ import React, { useEffect, useMemo, useState } from "react"
 /**
  * AlphaNest 증권사 가이드 (공개) — broker-neutral 사실 비교.
  *
- * 데이터 = Blob broker_guide.json (api/collectors/broker_guide.py = Perplexity sonar-pro 월 1회 자동집계).
+ * 데이터 = Blob broker_guide.json (api/collectors/broker_guide.py = Perplexity sonar-pro 월 1회 자동집계 + sticky merge).
  *
  * RULE 6/7: 우리 의견·별점·추천 0. 노출은 사실 + 출처만. "자동집계 · 권유 아님 · as-of" 라벨 의무.
- * 노출 컬럼(2026-06-23 확장) = 국내수수료·해외수수료·ISA·신용대주·실시간뉴스·커뮤니티·앱 (전부 수집된 사실+출처).
- *   별점(app_rating)만 보류 유지 = 수집값 0/6 + 별점 자체가 RULE7 의견 영역. (PM 요청 "내용 풍부하게" → 사실 컬럼만 추가)
- * 로고 = 증권사 공식 도메인 Clearbit + 구글 파비콘 fallback (상장/비상장 무관 안정).
- * 다크모드: body[data-framer-theme] 추종. 캔버스=dark prop 정적.
+ * 🚨 수수료 = 숫자 assert 금지(자동/큐레이션 모두 진짜 보장 불가·등급/이벤트/온오프라인 상이) → 각 사 공식 고지 deep-link.
+ *   신뢰 정성사실만 노출: ISA·신용대주·실시간뉴스·커뮤니티·앱·이벤트.
+ * 🚨 이벤트 = 진행 중 사실(기간 포함) · 권유 아님. 시효성 → as-of + disclaimer.
+ * 🚨 거래유형 best 공란 = "집계 중" 안내(빈 카드 깨짐 방지).
+ * 로고 = 증권사 공식 도메인 Clearbit + 구글 파비콘 fallback. 다크모드: body[data-framer-theme] 추종.
  */
 
 const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
@@ -50,16 +51,16 @@ const DARK = {
     goodBg: "#16302a",
 }
 
-// 증권사명 substring → 공식 도메인 (로고용). 데이터 명칭 변형 대비 substring 매칭.
+// 증권사명 substring → 공식 도메인 (로고·수수료 링크 fallback). 데이터 명칭 변형 대비 substring 매칭.
 const BROKER_DOMAINS: [string, string][] = [
     ["한국투자", "truefriend.com"],
     ["한투", "truefriend.com"],
     ["토스", "tossinvest.com"],
     ["키움", "kiwoom.com"],
     ["미래에셋", "miraeasset.com"],
-    ["삼성", "samsung.com"],
-    ["NH", "nonghyup.com"],
-    ["농협", "nonghyup.com"],
+    ["삼성", "samsungpop.com"],
+    ["NH", "nhqv.com"],
+    ["농협", "nhqv.com"],
 ]
 function brokerDomain(name: string): string {
     const n = name || ""
@@ -141,41 +142,25 @@ function isEmptyVal(s: string): boolean {
     const v = clean(s)
     return !v || /^(없음|미제공|정보 ?없음|n\/?a|해당없음|불명)$/i.test(v)
 }
-// 해외수수료 요점만 — 첫 %(range 포함) + "미국" + 이벤트무료 플래그. 전문은 title(hover)/출처.
-function briefOverseas(s: any): string {
-    const v = clean(s)
-    if (!v) return ""
-    const pct = v.match(/\d+(?:\.\d+)?(?:\s*~\s*\d+(?:\.\d+)?)?\s*%/)
-    const us = /미국|미장|US\b|달러/.test(v)
-    const free = /이벤트/.test(v) && /무료/.test(v)
-    if (pct) {
-        let out = (us ? "미국 " : "") + pct[0].replace(/\s+/g, "")
-        if (free) out += " · 이벤트 무료"
-        return out
-    }
-    if (/무료/.test(v)) return us ? "미국 무료" : "무료"
-    const head = v.split(/[/·]/)[0].trim()
-    return head.length > 20 ? head.slice(0, 20) + "…" : head
-}
 
 const DEMO: Guide = {
     as_of: "2026-06-22T00:00:00+09:00",
     source: "perplexity sonar-pro (자동집계) · 예시",
-    disclaimer: "Perplexity 자동집계 · 수수료는 수시 변동 · 사실 비교일 뿐 권유 아님 · 거래 전 각 사 공식 고지 확인",
+    disclaimer: "Perplexity 자동집계 · 수수료·이벤트는 수시 변동 · 사실 비교일 뿐 권유 아님 · 거래 전 각 사 공식 고지 확인",
     by_trade_type: [
-        { type: "소형주(코스닥) 단기", best: "미래에셋증권, 삼성증권, NH투자증권", reason: "비대면 국내주식 온라인 위탁수수료가 0.0036%로 최저 구간." },
+        { type: "소형주(코스닥) 단기", best: "미래에셋증권, 삼성증권, NH투자증권", reason: "비대면 국내주식 온라인 위탁수수료가 최저 구간(공식 고지 기준)." },
         { type: "미국주식 소액", best: "토스증권", reason: "최소수수료 부담이 적고 이벤트 시 무료가 확인됨." },
         { type: "ISA 장기", best: "한국투자증권, 키움증권, 미래에셋증권", reason: "ISA 지원 + 운용 상품군." },
-        { type: "단타/고빈도", best: "미래에셋증권, 삼성증권", reason: "비대면 수수료 0.0036% + 반복매매 비용 부담 적음." },
+        { type: "단타/고빈도", best: "미래에셋증권, 삼성증권", reason: "비대면 온라인 수수료 최저 구간 + 반복매매 비용 부담 적음." },
         { type: "중장기/배당", best: "한국투자증권, NH투자증권", reason: "리서치·정보 제공 + 비대면 우대." },
     ],
     brokers: [
-        { name: "한국투자증권", app: "한국투자 m.Stock · 뱅키스", domestic_fee: "0.0140%", overseas_fee: "미국 0.25% (기본 온라인) · 환전우대 자료 부족", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "실시간시세·속보 제공", event: "", source_url: "" },
-        { name: "토스증권", app: "토스", domestic_fee: "이벤트 시 무료", overseas_fee: "미국 0.1% · 이벤트 시 무료", isa: "미지원", credit_short: "일부", app_rating: "", community: "토스 피드", realtime_news: "실시간시세 제공", event: "미국주식 수수료 무료 이벤트 (~2026-07-31)", source_url: "" },
-        { name: "키움증권", app: "영웅문S#", domestic_fee: "0.015%", overseas_fee: "미국 0.07%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "종목토론", realtime_news: "실시간시세·속보 제공", event: "신규 개설 시 해외주식 환전우대 (~2026-08-15)", source_url: "" },
-        { name: "미래에셋증권", app: "M-STOCK", domestic_fee: "0.0036%", overseas_fee: "미국 0.07~0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "" },
-        { name: "삼성증권", app: "mPOP", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "" },
-        { name: "NH투자증권", app: "나무증권 · QV", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "" },
+        { name: "한국투자증권", app: "한국투자 m.Stock · 뱅키스", domestic_fee: "", overseas_fee: "", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "실시간시세·속보 제공", event: "", source_url: "https://securities.koreainvestment.com" },
+        { name: "토스증권", app: "토스", domestic_fee: "", overseas_fee: "", isa: "미지원", credit_short: "일부", app_rating: "", community: "토스 피드", realtime_news: "실시간시세 제공", event: "미국주식 수수료 무료 이벤트 (~2026-07-31)", source_url: "https://tossinvest.com" },
+        { name: "키움증권", app: "영웅문S#", domestic_fee: "", overseas_fee: "", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "종목토론", realtime_news: "실시간시세·속보 제공", event: "신규 개설 시 해외주식 환전우대 (~2026-08-15)", source_url: "https://www.kiwoom.com" },
+        { name: "미래에셋증권", app: "M-STOCK", domestic_fee: "", overseas_fee: "", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "https://securities.miraeasset.com" },
+        { name: "삼성증권", app: "mPOP", domestic_fee: "", overseas_fee: "", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "https://www.samsungpop.com" },
+        { name: "NH투자증권", app: "나무증권 · QV", domestic_fee: "", overseas_fee: "", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "https://www.nhqv.com" },
     ],
     citations: [],
 }
@@ -217,7 +202,6 @@ function BrokerLogo(props: { name: string; size: number; C: typeof LIGHT }) {
             loading="lazy"
             onError={(e) => {
                 const img = e.currentTarget as HTMLImageElement
-                // 1차 실패 → 도메인 파비콘, 그 다음 실패 → 숨김
                 if (img.dataset.fb === "1" || !dom) {
                     img.style.visibility = "hidden"
                     return
@@ -258,7 +242,7 @@ function Chip(props: { label: string; value: string; C: typeof LIGHT }) {
     )
 }
 
-/* 라벨 + 사실 텍스트 한 줄 (실시간뉴스·커뮤니티·앱 등 문장형 사실). 2줄 클램프. */
+/* 라벨 + 사실 텍스트 한 줄 (실시간뉴스·커뮤니티·앱 등 문장형 사실). 3줄 클램프. */
 function InfoLine(props: { label: string; value: string; C: typeof LIGHT }) {
     const { label, value, C } = props
     return (
@@ -281,7 +265,7 @@ function InfoLine(props: { label: string; value: string; C: typeof LIGHT }) {
     )
 }
 
-/* 토스식 shimmer 스켈레톤 — 증권사 비교 카드 레이아웃(로고+이름 막대 + 수치 막대 몇 개) 모사. */
+/* 토스식 shimmer 스켈레톤 */
 function LoadingSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
     const { C, isDark } = props
     const base = isDark ? "#222a33" : "#e9edf1"
@@ -315,17 +299,11 @@ function LoadingSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
                             boxSizing: "border-box",
                         }}
                     >
-                        {/* 헤더: 로고 + 증권사명 막대 */}
                         <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
                             <div style={{ ...shimmer, width: 26, height: 26, borderRadius: 7 }} />
                             <div style={bar(110, 15)} />
                         </div>
-                        {/* 수수료 2단 */}
-                        <div style={{ display: "flex", gap: 14 }}>
-                            <div style={{ flex: 1 }}><div style={bar(60, 11)} /><div style={bar("80%", 17, 6)} /></div>
-                            <div style={{ flex: 1 }}><div style={bar(60, 11)} /><div style={bar("90%", 17, 6)} /></div>
-                        </div>
-                        {/* 칩 막대 2개 */}
+                        <div style={bar("100%", 40, 4)} />
                         <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
                             <div style={{ ...shimmer, width: 72, height: 24, borderRadius: 8 }} />
                             <div style={{ ...shimmer, width: 92, height: 24, borderRadius: 8 }} />
@@ -349,7 +327,6 @@ export default function PublicBrokerGuide(props: Props) {
     const [guide, setGuide] = useState<Guide | null>(onCanvas ? DEMO : null)
     const [loading, setLoading] = useState<boolean>(!onCanvas)
 
-    /* 테마 추종 */
     useEffect(() => {
         if (onCanvas) return
         const read = () => setThemeDark(readBodyDark())
@@ -360,7 +337,6 @@ export default function PublicBrokerGuide(props: Props) {
         return () => obs.disconnect()
     }, [onCanvas])
 
-    /* 데이터 로드 */
     useEffect(() => {
         if (onCanvas) return
         let alive = true
@@ -471,7 +447,7 @@ export default function PublicBrokerGuide(props: Props) {
             {guide ? (
                 <div style={{ padding: "10px 18px 18px 18px", borderTop: "1px solid " + C.border }}>
                     <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>
-                        {guide.disclaimer || "사실 비교일 뿐 권유 아님"}
+                        {guide.disclaimer || "사실 비교일 뿐 권유 아님 · 수수료는 각 사 공식 고지 확인"}
                     </div>
                     {asArray(guide.citations).length ? (
                         <div style={{ marginTop: 5, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
@@ -534,7 +510,7 @@ function TradeTypeView(props: { items: TradeType[]; C: typeof LIGHT; cardH: numb
                 <div
                     key={i}
                     style={{
-                        minHeight: cardH,   // 고정→최소높이: best pills 다줄·긴 reason 도 안 잘리게 자동 확장
+                        minHeight: cardH,
                         background: C.card,
                         borderRadius: 16,
                         padding: "15px 16px",
@@ -632,17 +608,6 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
                             {comm && !isEmptyVal(comm) ? <InfoLine label="커뮤니티" value={comm} C={C} /> : null}
                             {app ? <InfoLine label="앱" value={app} C={C} /> : null}
                         </div>
-
-                        {b.source_url ? (
-                            <a
-                                href={String(b.source_url)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ display: "inline-block", marginTop: 11, fontSize: 11, fontWeight: 600, color: C.accent, textDecoration: "none" }}
-                            >
-                                출처 ↗
-                            </a>
-                        ) : null}
                     </div>
                 )
             })}
