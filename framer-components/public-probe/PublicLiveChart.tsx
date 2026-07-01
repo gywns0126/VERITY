@@ -129,16 +129,18 @@ export default function PublicLiveChart(props: Props) {
         let alive = true
         if (onCanvas) setCandles(demoCandles())
         else { setCandles([]); setLivePx(null); setNoData(false) }
-        if (!tk) { if (!onCanvas) setNoData(true); return () => { alive = false } }
+        // ticker 미준비 = 로딩(스켈레톤) 유지 — 빈 상태로 오판 금지
+        if (!tk) return () => { alive = false }
         fetch(base + "/api/chart?ticker=" + tk + "&type=daily")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive) return
                 const arr = d && Array.isArray(d.daily) ? d.daily : (Array.isArray(d) ? d : null)
                 if (Array.isArray(arr) && arr.length > 1) setCandles(arr)
-                else if (!onCanvas) setNoData(true)
+                else if (!onCanvas) setNoData(true)   // 서버 응답 · 봉 없음 = 진짜 데이터 없음
             })
-            .catch(() => { if (alive && !onCanvas) setNoData(true) })
+            // 네트워크/서버 오류 = 로딩 유지(스켈레톤). '데이터 없음'은 서버가 실제 빈 응답을 준 경우만
+            .catch(() => { /* keep skeleton */ })
         return () => { alive = false }
     }, [tk, base, onCanvas])
 
