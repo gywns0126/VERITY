@@ -46451,42 +46451,30 @@
   },
   "brain_accuracy": {
     "grades": {
-      "AVOID": {
-        "count": 7,
-        "avg_return": 0.0,
-        "hit_rate": 0.0
-      },
       "WATCH": {
-        "count": 8,
+        "count": 18,
         "avg_return": 0.0,
         "hit_rate": 0.0
       },
       "CAUTION": {
-        "count": 10,
-        "avg_return": -1.2,
-        "hit_rate": 10.0
+        "count": 3,
+        "avg_return": 0.0,
+        "hit_rate": 0.0
+      },
+      "AVOID": {
+        "count": 4,
+        "avg_return": 0.0,
+        "hit_rate": 0.0
       }
     },
     "insight": "브레인 강력매수 평균 0% — 팩트 가중치 조정 검토 필요"
   },
   "brain_quality": {
-    "score": 30.0,
-    "status": "ok",
-    "period": "weekly",
-    "components": {
-      "positive_hit_rate_score": 20.0,
-      "avoid_avoidance_score": 10.0,
-      "grade_separation_score": 0.0
-    },
-    "metrics": {
-      "total_samples": 7,
-      "strong_buy_n": 0,
-      "buy_n": 0,
-      "avoid_n": 7,
-      "weighted_positive_hit_rate": 0.0,
-      "avoid_avg_return": 0.0,
-      "grade_spread_pp": null
-    }
+    "score": null,
+    "status": "insufficient_data",
+    "components": {},
+    "period": "monthly",
+    "note": "표본 4건 — 5건 이상 누적 필요"
   },
   "event_insights": [
     {
@@ -47057,224 +47045,85 @@
     }
   },
   "monthly_report": {
-    "title": "월간 분석 리포트",
-    "executive_summary": "지난 기간 실현 0% (적중 0%) / 이번 기대 0% (0종목)",
-    "performance_review": "BUY 추천 0건 중 적중 0%",
-    "sector_analysis": "AI 분석 실패 — 섹터 데이터 참조",
-    "macro_outlook": "AI 분석 실패 — 매크로 데이터 참조",
-    "brain_review": "브레인 강력매수 평균 0% — 팩트 가중치 조정 검토 필요",
-    "meta_insight": "Brain 보조 입력 신호 — 시장 baseline 56.2% 대비 excess. 컨센서스(-6.2%p) 가장 유용 / 뉴스 감성(-18.7%p) 노이즈 가능. Brain 종합 판단 excess -12.4%p (적중률 43.8%) (참고). ※ excess > 0 → 시장 drift 대비 실력 / < 0 → 노이즈 또는 역방향. 단순 accuracy_pct 는 상승장에서 무뇌 'BUY 전부' 와 구분 불가.",
-    "strategy": "데이터 기반 판단 필요",
-    "risk_watch": "AI 리포트 생성 실패 (503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}})",
+    "title": "월간 종합 분석 (2026년 7월)",
+    "executive_summary": "지난 기간 실현 수익률 0%, 이번 리포트 기대수익률 0%로, 유의미한 투자 기회를 포착하지 못했습니다. 원/달러 환율 상승 및 반도체 섹터 자금 유출 등 거시경제 지표 악화로 시장 전반에 걸쳐 위험 회피 심리가 확산되었습니다. 현금 비중을 유지하며 방어적 관점을 지속하는 것이 최우선입니다.",
+    "performance_review": "지난 기간 '매수(BUY)' 추천은 0건이었습니다. 포트폴리오 수익률은 -0.83%를 기록했으며, 이는 시장의 방향성 부재 속에서 적극적인 포지션 구축을 지양한 결과입니다. 기회비용이 발생했으나, '돈을 잃지 않는 것'이 최우선 원칙이므로 불확실성이 높은 국면에서 무리한 진입을 회피한 것은 합리적 판단이었습니다.",
+    "sector_analysis": "생명보험, 백화점 등 경기 방어 및 내수 관련 섹터가 상대적 강세를 보인 반면, 통신장비, IT서비스 등 성장주 섹터는 약세를 면치 못했습니다. 자금 흐름 역시 전기장비, 석유가스 등 전통 산업으로 유입되고 IT, 반도체 등 기술주에서 유출되는 양상을 보였습니다. 이는 시장 참여자들이 인플레이션 및 경기 둔화 우려에 따라 성장주 비중을 축소하고 가치주 및 방어주로 이동하는 전형적인 위험 회피(Risk-off) 현상입니다.",
+    "macro_outlook": "시장 변동성을 나타내는 VIX 지수는 평균 17.7로 안정적이었으나, 장중 21.5까지 상승하는 등 잠재적 불안 요인이 상존합니다. 가장 큰 위험 신호는 원/달러 환율이 2.22% 상승하며 원화 약세가 심화된 점입니다. 이는 외국인 자금 유출을 가속화하고 수입 물가 상승을 유발하여 기업 마진에 부담을 줄 수 있습니다. 반면 금 가격은 10% 이상 급락하여 달러화 초강세 현상을 반영, 안전자산 선호 심리가 복합적인 양상을 띠고 있습니다.",
+    "brain_review": "Verity Brain은 해당 기간 매수 추천을 내지 않았습니다. 시장이 전반적으로 하락 압력을 받은 점을 고려할 때, 이는 손실 회피에 기여한 올바른 판단입니다. WATCH, CAUTION 등급의 평균 수익률이 0%로 집계된 것은 해당 등급의 '매수 보류' 시그널이 유효하게 작동했음을 의미합니다. 시스템의 '팩트 가중치 조정 검토' 의견이 있었으나, 현재와 같이 심리 지표(개선)와 실물 지표(환율 악화)가 괴리되는 구간에서는 사실(Fact) 데이터에 더 높은 가중치를 부여하는 현행 로직이 유효하다고 판단됩니다.",
+    "meta_insight": "이번 기간 보조 입력 신호의 단독 적중률 데이터가 부재하여 개별 신호의 유효성을 계량적으로 검증하기는 어렵습니다. 다만 정성적으로 판단할 때, '개선' 흐름을 보인 매크로 분위기 점수(평균 54.6)는 시장의 실제 방향성과 다소 괴리가 있었습니다. Brain이 이 신호에 과도하게 의존하지 않고, 환율 데이터 및 섹터 자금 흐름과 같은 객관적 데이터를 우선하여 보수적 결론을 내린 것은 긍정적으로 평가됩니다. 이는 개별 신호의 노이즈를 시스템이 성공적으로 필터링했음을 시사합니다.",
+    "strategy": "다음 월간 전략의 핵심은 '자본 보존'입니다. 원화 약세가 진정되기 전까지 신규 매수 진입은 극도로 보수적인 관점을 유지합니다. 포트폴리오 내 현금 비중을 현재 수준 또는 그 이상으로 유지하고, 환율 상승의 피해주(수입 원가 비중이 높은 기업, 외화 부채가 많은 기업)에 대한 비중 축소를 고려해야 합니다. 만약 신규 진입을 고려한다면, 제한적인 환율 영향과 견고한 수요를 가진 필수소비재 섹터 내에서만 안전마진이 확보된 기업을 선별적으로 검토할 것입니다.",
+    "risk_watch": "가장 주의해야 할 리스크는 '원/달러 환율의 추가 상승'입니다. 1550원 선을 상향 돌파할 경우 외국인 자금의 대규모 이탈이 촉발될 수 있습니다. 둘째, '반도체 섹터의 자금 유출 지속' 여부입니다. 국내 증시의 핵심인 반도체 업황 개선 신호가 부재할 경우 지수 전반의 상승 동력 확보가 어렵습니다. 마지막으로 '매크로 지표와 시장 심리의 괴리'가 해소되는 과정에서 발생할 수 있는 변동성 확대에 대비해야 합니다.",
+    "_gemini_model": "gemini-2.5-pro",
     "_period": "monthly",
     "_period_label": "월간",
+    "_date_range": {
+      "start": "2026-06-01",
+      "end": "2026-07-01"
+    },
     "expected_return": {
       "count": 0,
       "avg_upside_pct": 0,
       "median_upside_pct": 0,
       "top_picks": []
     },
-    "brain_accuracy": {
-      "grades": {
-        "WATCH": {
-          "count": 19,
-          "avg_return": -0.6,
-          "hit_rate": 5.3
-        },
-        "CAUTION": {
-          "count": 25,
-          "avg_return": 1.3,
-          "hit_rate": 24.0
-        },
-        "AVOID": {
-          "count": 7,
-          "avg_return": 4.7,
-          "hit_rate": 28.6
-        }
-      },
-      "insight": "브레인 강력매수 평균 0% — 팩트 가중치 조정 검토 필요"
-    },
-    "meta_analysis": {
-      "findings_aux": [
+    "_raw_stats": {
+      "hit_rate_pct": 0,
+      "avg_return_pct": 0,
+      "total_buy_recs": 0,
+      "best_picks": [],
+      "worst_picks": [],
+      "top3_sectors": [
         {
-          "source": "consensus",
-          "accuracy_pct": 50.0,
-          "sample_size": 16,
-          "excess_accuracy_pct": -6.2
+          "name": "생명보험",
+          "avg_change_pct": 1.11
         },
         {
-          "source": "multi_factor",
-          "accuracy_pct": 43.8,
-          "sample_size": 16,
-          "excess_accuracy_pct": -12.4
+          "name": "백화점과일반상점",
+          "avg_change_pct": 0.64
         },
         {
-          "source": "prediction",
-          "accuracy_pct": 43.8,
-          "sample_size": 16,
-          "excess_accuracy_pct": -12.4
-        },
-        {
-          "source": "timing",
-          "accuracy_pct": 37.5,
-          "sample_size": 16,
-          "excess_accuracy_pct": -18.7
-        },
-        {
-          "source": "sentiment",
-          "accuracy_pct": 37.5,
-          "sample_size": 16,
-          "excess_accuracy_pct": -18.7
+          "name": "카드",
+          "avg_change_pct": 0.63
         }
       ],
-      "findings_brain": {
-        "source": "brain",
-        "accuracy_pct": 43.8,
-        "sample_size": 16,
-        "excess_accuracy_pct": -12.4,
-        "label": "Verity Brain (종합 판단)",
-        "note": "보조 신호 ranking 동급 비교 금지 — 종합 판단자 참고치"
+      "brain_grades": {
+        "WATCH": {
+          "count": 18,
+          "avg_return": 0.0,
+          "hit_rate": 0.0
+        },
+        "CAUTION": {
+          "count": 3,
+          "avg_return": 0.0,
+          "hit_rate": 0.0
+        },
+        "AVOID": {
+          "count": 4,
+          "avg_return": 0.0,
+          "hit_rate": 0.0
+        }
       },
-      "aux_labels": {
+      "meta_findings": [],
+      "meta_findings_aux": [],
+      "meta_findings_brain": null,
+      "meta_aux_labels": {
         "multi_factor": "멀티팩터 종합",
         "consensus": "컨센서스",
         "timing": "매매 타이밍",
         "prediction": "AI 예측(XGBoost)",
         "sentiment": "뉴스 감성"
       },
-      "market_drift_pct": 56.2,
-      "sample_size": 16,
-      "findings": [
-        {
-          "source": "consensus",
-          "accuracy_pct": 50.0,
-          "sample_size": 16,
-          "excess_accuracy_pct": -6.2
-        },
-        {
-          "source": "multi_factor",
-          "accuracy_pct": 43.8,
-          "sample_size": 16,
-          "excess_accuracy_pct": -12.4
-        },
-        {
-          "source": "prediction",
-          "accuracy_pct": 43.8,
-          "sample_size": 16,
-          "excess_accuracy_pct": -12.4
-        },
-        {
-          "source": "brain",
-          "accuracy_pct": 43.8,
-          "sample_size": 16,
-          "excess_accuracy_pct": -12.4
-        },
-        {
-          "source": "timing",
-          "accuracy_pct": 37.5,
-          "sample_size": 16,
-          "excess_accuracy_pct": -18.7
-        },
-        {
-          "source": "sentiment",
-          "accuracy_pct": 37.5,
-          "sample_size": 16,
-          "excess_accuracy_pct": -18.7
-        }
-      ],
-      "best_predictor": "Brain 보조 입력 신호 — 시장 baseline 56.2% 대비 excess. 컨센서스(-6.2%p) 가장 유용 / 뉴스 감성(-18.7%p) 노이즈 가능. Brain 종합 판단 excess -12.4%p (적중률 43.8%) (참고). ※ excess > 0 → 시장 drift 대비 실력 / < 0 → 노이즈 또는 역방향. 단순 accuracy_pct 는 상승장에서 무뇌 'BUY 전부' 와 구분 불가."
-    },
-    "news_keywords": {
-      "top_keywords": [
-        {
-          "word": "코스피",
-          "count": 33
-        },
-        {
-          "word": "ETF",
-          "count": 25
-        },
-        {
-          "word": "[투자360]",
-          "count": 21
-        },
-        {
-          "word": "반도체",
-          "count": 17
-        },
-        {
-          "word": "증시",
-          "count": 14
-        },
-        {
-          "word": "개미들",
-          "count": 14
-        },
-        {
-          "word": "개미",
-          "count": 13
-        },
-        {
-          "word": "만에",
-          "count": 13
-        },
-        {
-          "word": "레버리지",
-          "count": 13
-        },
-        {
-          "word": "돌파",
-          "count": 11
-        },
-        {
-          "word": "AI",
-          "count": 10
-        },
-        {
-          "word": "‘이",
-          "count": 10
-        },
-        {
-          "word": "시총",
-          "count": 10
-        },
-        {
-          "word": "시대",
-          "count": 10
-        },
-        {
-          "word": "삼전닉스",
-          "count": 10
-        },
-        {
-          "word": "사상",
-          "count": 9
-        },
-        {
-          "word": "주가",
-          "count": 8
-        },
-        {
-          "word": "주식",
-          "count": 8
-        },
-        {
-          "word": "하루",
-          "count": 8
-        },
-        {
-          "word": "삼성전자",
-          "count": 8
-        }
-      ],
-      "total_headlines": 520
-    },
-    "_raw_stats": {
+      "meta_market_drift_pct": 50.0,
+      "meta_sample_size": 0,
+      "portfolio_return": -0.83,
+      "max_drawdown": -2.73,
       "expected_count": 0,
-      "expected_avg_upside_pct": 0
+      "expected_avg_upside_pct": 0,
+      "expected_top_picks": []
     }
   },
-  "monthly_report_updated": "2026-06-01T14:09:47+09:00",
+  "monthly_report_updated": "2026-07-01T13:50:14+09:00",
   "portfolio_summary": {
     "today_pct": null,
     "cumulative_pct": -0.98,
