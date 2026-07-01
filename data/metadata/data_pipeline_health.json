@@ -1,10 +1,10 @@
 {
-  "collected_at": "2026-07-01T13:49:40+09:00",
-  "overall_status": "error",
+  "collected_at": "2026-07-01T16:06:22+09:00",
+  "overall_status": "ok",
   "summary": {
-    "fresh": 14,
+    "fresh": 15,
     "stale": 0,
-    "missing": 1,
+    "missing": 0,
     "total": 15
   },
   "items": [
@@ -16,16 +16,16 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "mtime",
-      "last_update_kst": "2026-07-01T13:48:12.052996+09:00",
-      "age_hours": 0.02,
+      "last_update_kst": "2026-07-01T16:06:21.739251+09:00",
+      "age_hours": 0.0,
       "status": "fresh",
-      "line_count": 241,
+      "line_count": 245,
       "last_entry": {
-        "ts": "2026-06-30T19:36:04.367538+09:00",
+        "ts": "2026-07-01T16:03:21.496828+09:00",
         "step": "f_sector_diversified",
         "mode": "SHADOW",
         "input_n": 100,
-        "passed_n": 16
+        "passed_n": 25
       }
     },
     {
@@ -34,12 +34,15 @@
       "path": "data/stock_history/2026-Q3.jsonl",
       "type": "jsonl_quarter",
       "max_fresh_hours": 26.0,
-      "exists": false,
-      "ts_source": "none",
-      "last_update_kst": null,
-      "age_hours": null,
-      "status": "missing",
-      "line_count": 0
+      "exists": true,
+      "ts_source": "mtime",
+      "last_update_kst": "2026-07-01T16:06:21.787799+09:00",
+      "age_hours": 0.0,
+      "status": "fresh",
+      "line_count": 2834,
+      "last_entry": {
+        "ts": "2026-07-01T16:06:21.743894+09:00"
+      }
     },
     {
       "key": "dart_batch",
@@ -50,7 +53,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-28T23:45:13+09:00",
-      "age_hours": 62.07,
+      "age_hours": 64.35,
       "status": "fresh",
       "diagnostics": {
         "ok": true,
@@ -74,7 +77,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-07-01T13:49:15+09:00",
-      "age_hours": 0.01,
+      "age_hours": 2.29,
       "status": "fresh",
       "diagnostics": {
         "elapsed_s": 24.85,
@@ -89,15 +92,15 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-06-30T19:23:50+09:00",
-      "age_hours": 18.43,
+      "last_update_kst": "2026-07-01T15:32:23+09:00",
+      "age_hours": 0.57,
       "status": "fresh",
       "diagnostics": {
         "ok": true,
-        "candidates_count": 15,
-        "kr_count": 0,
+        "candidates_count": 25,
+        "kr_count": 10,
         "us_count": 15,
-        "elapsed_s": 801.86,
+        "elapsed_s": 2038.66,
         "used_prev_snapshot": false
       }
     },
@@ -109,16 +112,16 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "mtime",
-      "last_update_kst": "2026-07-01T13:48:11.841997+09:00",
-      "age_hours": 0.02,
+      "last_update_kst": "2026-07-01T16:06:21.832842+09:00",
+      "age_hours": 0.0,
       "status": "fresh",
-      "line_count": 498,
+      "line_count": 499,
       "last_entry": {
-        "mode": "full_us",
+        "mode": "universe_scan",
         "ramp_up_stage": 5000,
-        "execution_time_seconds": 0.0,
+        "execution_time_seconds": 2038.64,
         "fail_triggers": [],
-        "yfinance_failure_rate": 0.0
+        "yfinance_failure_rate": 0.0003
       }
     },
     {
@@ -129,8 +132,8 @@
       "max_fresh_hours": 72.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-07-01T08:29:34.738120+09:00",
-      "age_hours": 5.33,
+      "last_update_kst": "2026-07-01T14:16:17.253044+09:00",
+      "age_hours": 1.83,
       "status": "fresh"
     },
     {
@@ -142,7 +145,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-30T17:18:25.200109+09:00",
-      "age_hours": 20.52,
+      "age_hours": 22.8,
       "status": "fresh"
     },
     {
@@ -153,8 +156,8 @@
       "max_fresh_hours": 72.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-07-01T08:12:30.053815+09:00",
-      "age_hours": 5.62,
+      "last_update_kst": "2026-07-01T13:50:32.296355+09:00",
+      "age_hours": 2.26,
       "status": "fresh"
     },
     {
@@ -166,7 +169,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-27T11:53:18.897824+09:00",
-      "age_hours": 97.94,
+      "age_hours": 100.22,
       "status": "fresh"
     },
     {
@@ -177,8 +180,8 @@
       "max_fresh_hours": 72.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-07-01T08:32:49.424632+09:00",
-      "age_hours": 5.28,
+      "last_update_kst": "2026-07-01T14:19:51.921707+09:00",
+      "age_hours": 1.78,
       "status": "fresh"
     },
     {
@@ -189,8 +192,8 @@
       "max_fresh_hours": 72.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-07-01T08:19:07.199049+09:00",
-      "age_hours": 5.51,
+      "last_update_kst": "2026-07-01T13:56:49.379440+09:00",
+      "age_hours": 2.16,
       "status": "fresh"
     },
     {
@@ -201,8 +204,8 @@
       "max_fresh_hours": 72.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-07-01T08:12:07.173539+09:00",
-      "age_hours": 5.63,
+      "last_update_kst": "2026-07-01T14:24:55.165828+09:00",
+      "age_hours": 1.69,
       "status": "fresh"
     },
     {
@@ -213,8 +216,8 @@
       "max_fresh_hours": 960.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-06-27T17:29:13.711973+09:00",
-      "age_hours": 92.34,
+      "last_update_kst": "2026-07-01T14:58:11.879951+09:00",
+      "age_hours": 1.14,
       "status": "fresh"
     },
     {
@@ -226,7 +229,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-06-20T07:27:37.366681+09:00",
-      "age_hours": 270.37,
+      "age_hours": 272.65,
       "status": "fresh"
     }
   ],
