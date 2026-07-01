@@ -63,59 +63,13 @@
     "validation_sample": 25
   },
   "rule7_quota": {
-    "quarter": "2026Q2",
-    "start": "2026-04-01",
-    "end": "2026-06-30",
-    "count": 9,
+    "quarter": "2026Q3",
+    "start": "2026-07-01",
+    "end": "2026-09-30",
+    "count": 0,
     "limit": 4,
-    "status": "EXCEEDED",
-    "commits": [
-      {
-        "sha": "0c9973a4",
-        "date": "2026-06-09",
-        "subject": "fix(observability): grade drift 모니터 baseline artifact 보정 (cold-start + epoch gua"
-      },
-      {
-        "sha": "987b329a",
-        "date": "2026-06-08",
-        "subject": "feat(shadow-funnel): 즉시-안전 계측 de-silence (gate_stats) + audit 명문화 + RULE9"
-      },
-      {
-        "sha": "3e8583b6",
-        "date": "2026-06-08",
-        "subject": "fix(shadow-funnel): freeze-전 정밀화 #6 safety 섹터-aware + #3 liquidity composite 제거"
-      },
-      {
-        "sha": "6ecf2c59",
-        "date": "2026-06-07",
-        "subject": "refactor(vams): expectancy 게이트 1.2R→0.25R 재보정 + SQN(≥1.7) 추가 (RULE 7, Perplexity"
-      },
-      {
-        "sha": "6dd748e8",
-        "date": "2026-06-07",
-        "subject": "fix(brain): 등급 사다리 CAUTION 임계 25 통일 + constitution 단일출처화"
-      },
-      {
-        "sha": "b47fdc3a",
-        "date": "2026-06-05",
-        "subject": "fix(brain-v2): 전략 진화 N-gate — 종료 거래 N<50 시 가중치 제안 억제 (곡선맞추기 차단)"
-      },
-      {
-        "sha": "65f4467a",
-        "date": "2026-05-24",
-        "subject": "pre-register+impl(brain): USD/KRW Quantile threshold (Q1/Q5/Q95/Q99) 병행 박음"
-      },
-      {
-        "sha": "6a89dd1c",
-        "date": "2026-05-24",
-        "subject": "pre-register+impl(brain): USD/KRW σ EWMA(λ=0.94) RiskMetrics 표준 박음"
-      },
-      {
-        "sha": "e3586cca",
-        "date": "2026-05-18",
-        "subject": "[brain] B-continuous macro_multiplier v0 박음 — soft gate score discount (PM 승인 20"
-      }
-    ],
-    "as_of": "2026-06-30T13:34:49+09:00"
+    "status": "OK",
+    "commits": [],
+    "as_of": "2026-07-01T13:54:49+09:00"
   }
 }
