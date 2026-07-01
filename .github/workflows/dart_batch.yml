@@ -54,6 +54,10 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python -m api.builders.dart_batch_builder
+          # 전방 분기 refresh — backfill(과거 일회성)의 leading edge. 당해년도~ 최신 reportable
+          # 분기 N=2 재fetch → dart_quarterly_snapshots.jsonl append (새 분기 자동 편입+정정 반영).
+          # 실패해도 비차단(P0=연간 build 는 위에서 완료). DART_FORWARD_QUARTERS_N 로 조정.
+          python -m api.builders.dart_batch_builder --forward || echo "[dart_batch] forward refresh 실패(비차단)"
           # KR 분기 재무비율 추이 public (dart_quarterly_snapshots.jsonl → dart_quarterly_public.json).
           # 순수 변환·외부호출 0. backfill 완주 전까지 0종목 = graceful no-op (컴포넌트 series<4 자동숨김).
           python -m api.builders.dart_quarterly_public_builder

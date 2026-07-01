@@ -34,8 +34,9 @@ KST = timezone(timedelta(hours=9))
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROGRESS_PATH = os.path.join(_REPO_ROOT, "data", ".dart_quarterly_backfill_progress.json")
 
-# 5년 × 4분기. reprt_code: 1Q / 반기 / 3Q / 연간 (DART fnlttSinglAcntAll).
-BACKFILL_YEARS = int(os.environ.get("DART_BACKFILL_YEARS", "5"))
+# 10년 × 4분기. reprt_code: 1Q / 반기 / 3Q / 연간 (DART fnlttSinglAcntAll).
+# 10 = PublicQuarterlyTrend 표시 상한(40분기=10년, Math.min(40,...)) 꽉 채움. DART 2015~ 지원.
+BACKFILL_YEARS = int(os.environ.get("DART_BACKFILL_YEARS", "10"))
 REPRT_CODES = ["11013", "11012", "11014", "11011"]  # Q1, H1, Q3, Annual
 CHUNK_TICKERS = int(os.environ.get("DART_BACKFILL_CHUNK", "120"))
 
@@ -179,12 +180,23 @@ def main() -> int:
         from api.builders.dart_batch_builder import _append_quarterly_snapshots
 
         p = _load_progress()
+        target_years = _target_years()
+        prev_years = [int(y) for y in (p.get("years") or [])] if p else []
         if not p or not p.get("universe"):
             p = _init_progress()
             sys.stderr.write(
                 f"[dart_qbackfill] 초기화: {p['n_tickers']}종목 × {p['n_periods']}기간 "
                 f"= {p['units_total']} 단위 (years={p['years']})\n"
             )
+            _save_progress(p)
+        elif prev_years != target_years:
+            # 이력 깊이(BACKFILL_YEARS) 변경 → 진도 재init. 이미 적재된 jsonl 은 dedup 으로 보존,
+            # 재fetch 는 최신 fetched_at 로 갱신될 뿐 손실 0. (5년→10년 확대 등 self-heal.)
+            sys.stderr.write(
+                f"[dart_qbackfill] years 변경 {prev_years}→{target_years} — 진도 재init "
+                f"(적재분 dedup 보존)\n"
+            )
+            p = _init_progress()
             _save_progress(p)
 
         if p.get("done"):

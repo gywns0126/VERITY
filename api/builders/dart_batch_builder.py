@@ -27,7 +27,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 KST = timezone(timedelta(hours=9))
@@ -250,6 +250,66 @@ def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
     return written
 
 
+# ── 전방 분기 refresh (backfill 의 leading edge) ─────────────────────────────
+# backfill(dart_quarterly_backfill) = 과거 완료연도 일회성 소유. 전방 refresh = 당해년도~
+# 최신 reportable 분기만 주간 재fetch → 새 분기 공시 자동 편입 + 정정 반영(dedup).
+# 과거 확정 분기는 재fetch 안 함(backfill 영구 소유) → 주간 비용 = N 기간뿐.
+# 공시 마감 lag: 분기/반기 45일, 연간 90일 (자본시장법) + 미제출 회피 버퍼 15일.
+_FILING_LAG_DAYS = {"11013": 45, "11012": 45, "11014": 45, "11011": 90}
+_FILING_BUFFER_DAYS = 15
+# reprt: 연간(12-31) → 3Q(09-30) → 반기(06-30) → 1Q(03-31), 연내 최신순.
+_REPRT_ORDER = [("12-31", "11011"), ("09-30", "11014"), ("06-30", "11012"), ("03-31", "11013")]
+
+
+def _trailing_reportable_periods(n: int = 2, today: date = None) -> List[Dict[str, str]]:
+    """오늘 기준 마감 지난 최신 reportable (year, reprt_code) 기간 N개 (최신순)."""
+    today = today or _now_kst().date()
+    out: List[Dict[str, str]] = []
+    for y in range(today.year, today.year - 4, -1):
+        for mmdd, code in _REPRT_ORDER:
+            end = date(y, int(mmdd[:2]), int(mmdd[3:]))
+            lag = _FILING_LAG_DAYS.get(code, 45) + _FILING_BUFFER_DAYS
+            if end + timedelta(days=lag) <= today:
+                out.append({"year": str(y), "reprt_code": code})
+                if len(out) >= n:
+                    return out
+    return out
+
+
+def refresh_forward_quarters(n: int = None) -> int:
+    """당해년도~ 최신 reportable 분기 N개 재fetch → dart_quarterly_snapshots.jsonl append.
+    DART 정식분(source DART* + total_assets>0)만 — yfinance fallback 은 분기추이 부적합.
+    """
+    from api.collectors.dart_fundamentals import fetch_dart_fundamentals_batch
+    if n is None:
+        n = int(os.environ.get("DART_FORWARD_QUARTERS_N", "2"))
+    periods = _trailing_reportable_periods(n)
+    if not periods:
+        sys.stderr.write("[dart_forward] logged=True · reportable 기간 0 — skip\n")
+        return 0
+    tickers = _build_kr_universe_tickers()
+    total = 0
+    for prd in periods:
+        funds = fetch_dart_fundamentals_batch(
+            tickers, max_workers=6, bsns_year=prd["year"], reprt_code=prd["reprt_code"]
+        ) or {}
+        dart_funds = {
+            tk: f for tk, f in funds.items()
+            if str(f.get("source", "")).startswith("DART") and (f.get("total_assets") or 0) > 0
+        }
+        appended = _append_quarterly_snapshots({
+            "collected_at": _now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+            "fundamentals": dart_funds,
+        }) if dart_funds else 0
+        total += appended
+        sys.stderr.write(
+            f"[dart_forward] period year={prd['year']} reprt={prd['reprt_code']} "
+            f"dart={len(dart_funds)}/{len(tickers)} appended={appended}\n"
+        )
+    sys.stderr.write(f"[dart_forward] logged=True · {len(periods)}기간 · appended_total={total}\n")
+    return total
+
+
 def main() -> int:
     snapshot = build()
     _atomic_write(OUTPUT_PATH, snapshot)
@@ -276,4 +336,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if "--forward" in sys.argv:
+        refresh_forward_quarters()
+        sys.exit(0)
     sys.exit(main())
