@@ -100,8 +100,12 @@ def _fmt_idx(name: str, idx: Optional[Dict[str, Any]]) -> str:
     return f"{name} {v_str} ({pct:+.2f}%)"
 
 
-def _pick_holding_price(h: Dict[str, Any], pulse_prices: Dict[str, Any]) -> Tuple[float, float]:
-    """fresh price 우선, 못 찾으면 portfolio.json 값. 반환 = (current_price, return_pct)."""
+def _pick_holding_price(h: Dict[str, Any], pulse_prices: Dict[str, Any], fx_rate: float = 0.0) -> Tuple[float, float]:
+    """fresh price 우선, 못 찾으면 portfolio.json 값. 반환 = (current_price, return_pct).
+
+    🚨 US 보유 통화 정합 (2026-07-01 -99.9% 사고): price_pulse 가격은 raw USD 인데
+       buy_price 는 KRW 환산 저장(main.py:2266 current_price = raw × fx_rate). 그대로 (rawUSD - KRWbuy)
+       계산하면 -99.9% 나옴. → US 는 fresh 도 ×fx_rate 로 KRW 정합. fx 없으면 portfolio 저장값(KRW 정합) 폴백."""
     yf_t = h.get("ticker_yf") or ""
     kr_t = h.get("ticker") or ""
     fresh = None
@@ -111,7 +115,11 @@ def _pick_holding_price(h: Dict[str, Any], pulse_prices: Dict[str, Any]) -> Tupl
             break
     buy = h.get("buy_price") or 0
     if fresh is not None and isinstance(fresh, (int, float)):
-        cur = float(fresh)
+        is_us = h.get("currency") == "USD"
+        if is_us and (not fx_rate or fx_rate <= 0):
+            # fx 부재 시 raw USD vs KRW buy_price = 사고 → portfolio 저장값(KRW 정합) 사용
+            return float(h.get("current_price") or 0), float(h.get("return_pct") or 0)
+        cur = float(fresh) * fx_rate if is_us else float(fresh)
         if buy:
             ret = (cur - buy) / buy * 100
         else:
@@ -150,12 +158,17 @@ def _build_message(region: str, label: str, pp: Dict[str, Any], pf: Dict[str, An
     vams = pf.get("vams") or {}
     holdings = vams.get("holdings") or []
     total_ret = vams.get("total_return_pct", 0)
+    # US 보유 통화 정합용 fx (buy_price 가 KRW 환산이라 fresh USD 도 ×fx 필요, main.py:2266 동일 소스)
+    try:
+        fx_rate = float((pf.get("macro") or {}).get("usd_krw", {}).get("value") or 0)
+    except (TypeError, ValueError):
+        fx_rate = 0.0
     if holdings:
         lines.append("─────────────")
         lines.append(f"<b>보유</b> ({len(holdings)}종목, {total_ret:+.2f}%)")
         for h in holdings[:8]:
             name = h.get("name") or h.get("ticker", "?")
-            _, ret_pct = _pick_holding_price(h, pulse_prices)
+            _, ret_pct = _pick_holding_price(h, pulse_prices, fx_rate)
             emoji = "🟢" if ret_pct >= 0 else "🔴"
             lines.append(f" {emoji} {name} {ret_pct:+.1f}%")
 
