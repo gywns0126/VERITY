@@ -1,13 +1,14 @@
 # DART KR 분기재무 백필 (분기추이 viz 토대)
 #
-# stock_report_public universe(~2000) × 2021~2025 × Q1/반기/3Q/연간(20기간) 분기재무비율
+# stock_report_public universe(~1700) × 2016~2025 × Q1/반기/3Q/연간(40기간, BACKFILL_YEARS=10) 분기재무비율
 # (ROA/부채비율/유동비율/매출총이익률/자산회전율) → data/dart_quarterly_snapshots.jsonl 누적.
 # 소비처(별도): 슬림 public 빌더 + PublicStockReport '분기추이' 미니차트 (데이터 충분 후).
 # DART only — KIS 무관(RULE 1). proven fetcher(dart_fundamentals, reprt_code 인자화) 재사용. resume+quota-cap.
 #
 # 저빈도 자가완주 cron: KST 20:00(UTC 11) 일 1회 drip. run당 1,500 units(=DART call) 상한.
 #    off-peak gap — catalyst pulse(UTC 0-9)·catalyst backfill(평일 14,18/주말 0,8,16 UTC)·dart_batch(일 13 UTC) 모두 회피.
-#    멱등(체크포인트 resume) → 완주 ~21일(31K units 잔여), MIN_QUARTERS=4 게이트 ~3일. done 후 자동 no-op(DART call 0).
+#    멱등(체크포인트 resume) → 완주 ~46일(68K units=1712×40, 1500/day), MIN_QUARTERS=4 게이트 ~5일. done 후 자동 no-op(DART call 0).
+#    (2026-07-01 10년 확대 정합: BACKFILL_YEARS 5→10, years 변경 시 진도 자동 재init. 가속=run_units 상향, DART 20K/일 여유.)
 #    쿼터 안전망 = dart_fail_rate>5% P0 monitor. 압박 시 run_units 하향. schedule 은 default 브랜치서만 발화 → 머지 후 활성.
 #
 # 7축 audit: env=DART_API_KEY+UNIVERSE+KRX(universe builder) · push=data/ commit(RULE2 ignoreCommand skip) ·
