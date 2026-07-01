@@ -577,8 +577,7 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
     return (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
             {brokers.map((b, i) => {
-                const overseas = clean(b.overseas_fee)
-                const overseasBrief = briefOverseas(b.overseas_fee)
+                const feeUrl = clean(b.source_url) || (brokerDomain(b.name) ? "https://" + brokerDomain(b.name) : "")
                 const news = clean(b.realtime_news)
                 const comm = clean(b.community)
                 const app = clean(b.app)
@@ -607,21 +606,19 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
                             </div>
                         ) : null}
 
-                        {/* 수수료 2단 (국내 / 해외 요점) — 해외 전문은 hover(title)/출처 */}
-                        <div style={{ display: "flex", gap: 16, marginBottom: 13 }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: C.faint, marginBottom: 3 }}>국내주식</div>
-                                <div style={{ fontSize: 16.5, fontWeight: 700, color: C.text, letterSpacing: "-0.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    {clean(b.domestic_fee) || "—"}
+                        {/* 수수료 = 공식 고지 링크 (자동 숫자 assert 금지 — 등급·이벤트·온오프라인에 따라 상이, 진짜는 공식만) */}
+                        {feeUrl ? (
+                            <a href={feeUrl} target="_blank" rel="noopener noreferrer"
+                                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: C.sub, borderRadius: 10, padding: "10px 12px", marginBottom: 11, textDecoration: "none" }}>
+                                <div>
+                                    <div style={{ fontSize: 11, fontWeight: 600, color: C.faint, marginBottom: 2 }}>수수료</div>
+                                    <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>공식 수수료 고지 확인</div>
                                 </div>
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: C.faint, marginBottom: 3 }}>해외주식</div>
-                                <div title={overseas || ""} style={{ fontSize: 15, fontWeight: 700, color: overseasBrief ? C.text : C.faint, letterSpacing: "-0.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    {overseasBrief || "—"}
-                                </div>
-                            </div>
-                        </div>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: C.accent, flexShrink: 0 }}>→</span>
+                            </a>
+                        ) : (
+                            <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 500, marginBottom: 11, lineHeight: 1.45 }}>수수료는 각 사 공식 고지에서 확인하세요.</div>
+                        )}
 
                         {/* 칩 = ISA / 신용·대주 */}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 11 }}>
