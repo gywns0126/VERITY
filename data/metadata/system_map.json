@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-07-01T19:17:29.490768+09:00",
+  "generated_at": "2026-07-01T22:15:11.407986+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 199674,
-    "python_modules": 602,
+    "code_lines_tsx_py": 199956,
+    "python_modules": 603,
     "tsx_components": 96,
     "json_data_files": 332,
     "json_total_tracked": 347,
-    "workflows": 52,
-    "scheduled_workflows": 41,
-    "cron_triggers": 51,
-    "git_tracked_files": 5527
+    "workflows": 53,
+    "scheduled_workflows": 42,
+    "cron_triggers": 52,
+    "git_tracked_files": 5532
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 64,
+      "count": 65,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -28,6 +28,7 @@
         "api/builders/dart_batch_builder.py",
         "api/builders/dart_meta_backfill_builder.py",
         "api/builders/dart_quarterly_backfill_builder.py",
+        "api/builders/dart_quarterly_public_builder.py",
         "api/builders/industry_themes_pulse_builder.py",
         "api/builders/macro_collect_builder.py",
         "api/chat_hybrid/search/kis_quote.py",
@@ -149,8 +150,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 52,
-      "scheduled": 41,
+      "count": 53,
+      "scheduled": 42,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -271,8 +272,10 @@
         },
         {
           "name": "dart_quarterly_backfill",
-          "crons": [],
-          "scheduled": false
+          "crons": [
+            "0 11 * * *"
+          ],
+          "scheduled": true
         },
         {
           "name": "eps_estimate_snapshot",
@@ -323,10 +326,8 @@
         },
         {
           "name": "macro_collect",
-          "crons": [
-            "*/30 * * * *"
-          ],
-          "scheduled": true
+          "crons": [],
+          "scheduled": false
         },
         {
           "name": "macro_themes_brief",
@@ -426,6 +427,13 @@
           "name": "site_growth_daily",
           "crons": [
             "7 16 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "smallcap_corner",
+          "crons": [
+            "17 9 * * 0"
           ],
           "scheduled": true
         },
@@ -541,7 +549,7 @@
     }
   },
   "python_by_dir": {
-    "api": 350,
+    "api": 351,
     "tests": 127,
     "scripts": 72,
     "vercel-api": 45,
@@ -549,10 +557,10 @@
     ".github": 2
   },
   "funnel": {
-    "investable_real": 2834,
+    "investable_real": 2833,
     "cap": 5000,
     "stages": [
-      2834,
+      2833,
       300,
       100,
       25
@@ -563,7 +571,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2834 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2833 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
