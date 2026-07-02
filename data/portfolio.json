@@ -60750,30 +60750,37 @@
   },
   "brain_accuracy": {
     "grades": {
+      "BUY": {
+        "count": 7,
+        "avg_return": -0.8,
+        "hit_rate": 0.0
+      },
       "WATCH": {
-        "count": 18,
-        "avg_return": 0.0,
-        "hit_rate": 0.0
-      },
-      "CAUTION": {
-        "count": 3,
-        "avg_return": 0.0,
-        "hit_rate": 0.0
-      },
-      "AVOID": {
-        "count": 4,
-        "avg_return": 0.0,
-        "hit_rate": 0.0
+        "count": 23,
+        "avg_return": 0.5,
+        "hit_rate": 4.3
       }
     },
     "insight": "브레인 강력매수 평균 0% — 팩트 가중치 조정 검토 필요"
   },
   "brain_quality": {
-    "score": null,
-    "status": "insufficient_data",
-    "components": {},
-    "period": "monthly",
-    "note": "표본 4건 — 5건 이상 누적 필요"
+    "score": 15.0,
+    "status": "ok",
+    "period": "quarterly",
+    "components": {
+      "positive_hit_rate_score": 0.0,
+      "avoid_avoidance_score": 15.0,
+      "grade_separation_score": 0.0
+    },
+    "metrics": {
+      "total_samples": 7,
+      "strong_buy_n": 0,
+      "buy_n": 7,
+      "avoid_n": 0,
+      "weighted_positive_hit_rate": 0.0,
+      "avoid_avg_return": null,
+      "grade_spread_pp": null
+    }
   },
   "event_insights": [
     {
@@ -61956,10 +61963,10 @@
   "strategy_evolution": {
     "status": "n_gated",
     "reason": "검증 표본 부족 — 종료 거래 17 < 50. 가중치 이론 고정 단계 (가격 스냅샷 기반 재가중 = 곡선맞추기 회피)",
-    "trigger": "full",
+    "trigger": "quarterly",
     "forced": false,
-    "period_end": "",
-    "generated_at": "2026-07-02T08:35:16+09:00",
+    "period_end": "2026Q3",
+    "generated_at": "2026-07-02T14:07:42+09:00",
     "validation_n": 17
   },
   "dart_catalyst_alerts": {
@@ -62603,5 +62610,842 @@
     "_input_tokens": 850,
     "_output_tokens": 1387,
     "_recs_sig": "000240:AVOID|000270:CAUTION|003550:CAUTION|009540:CAUTION|013030:WATCH|035420:WATCH|064400:WATCH|100840:WATCH|114090:AVOID|214450:WATCH|ACN:WATCH|CAG:WATCH|CHRD:CAUTION|CME:AVOID|CTSH:WATCH|EOG:WATCH|EQT:WATCH|EXE:BUY|HLNE:WATCH|INGR:WATCH|KHC:AVOID|MKC:WATCH|NEM:CAUTION|RRC:WATCH|VSNT:WATCH"
+  },
+  "quarterly_report": {
+    "title": "2026년 2분기 시장 복기 및 3분기 전략",
+    "executive_summary": "대표님, 지난 분기 추천 실현 수익률은 0%이며, 현재 추천 포트폴리오의 기대 수익률 또한 0%입니다. 변동성 지수(VIX) 하락에도 불구하고 원화 약세가 심화되는 등 거시 지표의 혼조세 속에서, 포트폴리오는 -11.79%의 최대 낙폭을 기록하며 방어에 실패했습니다. 다음 분기는 Brain 모델 신뢰도 회복과 리스크 관리에 집중하며, 극히 선별적인 기회에만 접근하는 보수적 전략이 필요합니다.",
+    "performance_review": "지난 분기 매수(BUY) 추천은 0건으로, 평균 수익률 및 적중률은 모두 0%입니다. 이는 시장의 하락 추세와 불확실성을 반영하여 공격적인 포지션 확대를 자제한 결과입니다. 그러나, 추천 부재가 자산 방어로 이어지지는 못했습니다. 포트폴리오의 기간 수익률은 -0.12%, 최대 낙폭(MDD)은 -11.79%를 기록했습니다. 10% 이상의 손실은 회복에 비선형적인 노력이 필요함을 시사하며, 이는 기존 보유 자산의 리스크 관리 실패로 귀결됩니다.",
+    "sector_analysis": "분기 중 '전자장비와기기', '전자제품' 섹터가 상대적 강세를 보였으나, 시장 전반을 주도하는 흐름으로 보기엔 상승폭이 제한적이었습니다. 자금 흐름을 보면 '전기장비', '우주항공과국방' 등 특정 산업재와 '인터넷 소매'로의 유입이 관찰된 반면, '무역', '조선', '건설' 등 경기 민감 수출주에서는 뚜렷한 자금 유출이 나타났습니다. 이는 경기 둔화 및 원화 약세에 대한 시장의 우려가 반영된 결과로, 투자자들이 거시 경제의 영향을 덜 받는 특정 테마 및 방어적 성격의 업종으로 이동하고 있음을 시사합니다.",
+    "macro_outlook": "거시 환경은 해석에 극도의 주의가 필요합니다. VIX 지수가 큰 폭으로 하락하며 표면적인 안정세를 보였으나, 원/달러 환율은 급등하며 국내 시장의 외국인 자금 이탈 리스크를 명확히 드러냈습니다. 금 가격의 하락은 높은 실질 금리에 대한 우려를 반영하는 것으로, 이는 안전자산 선호 심리와는 다른 양상입니다. VIX 안정과 원화 약세의 이격(divergence)은 글로벌 시장과 국내 시장의 체감 경기가 다를 수 있음을 의미하며, 환율 리스크가 당분간 국내 증시의 핵심 변수가 될 것임을 경고합니다.",
+    "brain_review": "Verity Brain의 성과 검토 결과, 신뢰성에 심각한 문제가 발견되었습니다. '매수(BUY)' 등급을 부여한 7개 사례에서 평균 수익률 -0.8%, 적중률 0%를 기록하여 자산 보존에 실패했습니다. 이는 Brain 모델이 시장의 하방 리스크를 제대로 측정하지 못했음을 의미합니다. 특히 시장 분위기가 하락하는 국면에서 팩트 기반 분석의 가중치를 높이는 로직이 정상 작동했는지 근본적인 재검토가 시급합니다. 현재의 Brain 모델은 의사결정에 참고하기 어려운 수준으로 판단됩니다.",
+    "meta_insight": "Brain에 투입되는 보조 입력 신호의 유효성을 검증한 결과, '멀티팩터'와 '뉴스감성' 분석은 시장 기준점을 33.4%p 상회하는 높은 초과 적중률을 보여 신뢰할 수 있는 정보임이 확인되었습니다. 반면, '타이밍' 및 'AI예측(XGBoost)' 신호는 오히려 시장보다 -33.3%p 낮은 성과를 기록하며 심각한 노이즈로 작용했습니다. Brain 모델의 성능 저하는 유효 신호보다 노이즈 신호에 과도한 가중치를 부여했을 가능성을 시사합니다. 향후 모델 개선 시, '타이밍'과 'AI예측' 신호의 비중을 축소하거나 제외하고 '멀티팩터'의 가중치를 높이는 방향의 튜닝이 필수적입니다.",
+    "strategy": "다음 분기는 '생존'을 최우선 목표로 하는 극단적인 보수 전략을 제안합니다. 첫째, Brain 모델의 신뢰도가 회복되기 전까지 신규 매수 추천을 전면 중단하고 현금 비중을 유지합니다. 둘째, -11.79%의 최대 낙폭을 기록한 만큼, 성급한 손실 만회 시도를 엄격히 금지하고 원칙 기반의 손절매만 이행합니다. 셋째, 신규 투자를 재개할 경우, 환율 변동에 둔감한 내수주 또는 구조적 성장이 담보된 극소수의 독점 기술 기업으로 대상을 한정하며, 벤저민 그레이엄의 '안전마진 33%' 원칙을 평소보다 더욱 엄격하게 적용할 것입니다.",
+    "risk_watch": "가장 큰 위험 요인은 지속적인 원화 약세입니다. 이는 외국인 자금의 추가 이탈을 촉발하고 수입 물가 상승을 통해 기업 이익을 훼손하는 이중고를 안겨줄 수 있습니다. 또한, 안정된 VIX 지수가 주는 착시 효과에 주의해야 합니다. 글로벌 시장의 평온함이 국내 시장의 개별 리스크를 가려줄 수 없으며, 잠재된 위험이 환율을 통해 한 번에 분출될 수 있습니다. 마지막으로, 내부 리스크인 Brain 모델의 오작동 가능성 자체를 상시 경계해야 합니다.",
+    "_gemini_model": "gemini-2.5-pro",
+    "_period": "quarterly",
+    "_period_label": "분기",
+    "_date_range": {
+      "start": "2026-04-05",
+      "end": "2026-07-02"
+    },
+    "expected_return": {
+      "count": 0,
+      "avg_upside_pct": 0,
+      "median_upside_pct": 0,
+      "top_picks": []
+    },
+    "_raw_stats": {
+      "hit_rate_pct": 0,
+      "avg_return_pct": 0,
+      "total_buy_recs": 0,
+      "best_picks": [],
+      "worst_picks": [],
+      "top3_sectors": [
+        {
+          "name": "전자장비와기기",
+          "avg_change_pct": 2.15
+        },
+        {
+          "name": "전자제품",
+          "avg_change_pct": 1.36
+        },
+        {
+          "name": "복합기업",
+          "avg_change_pct": 1.14
+        }
+      ],
+      "brain_grades": {
+        "BUY": {
+          "count": 7,
+          "avg_return": -0.8,
+          "hit_rate": 0.0
+        },
+        "WATCH": {
+          "count": 23,
+          "avg_return": 0.5,
+          "hit_rate": 4.3
+        }
+      },
+      "meta_findings": [
+        {
+          "source": "multi_factor",
+          "accuracy_pct": 66.7,
+          "sample_size": 3,
+          "excess_accuracy_pct": 33.4
+        },
+        {
+          "source": "sentiment",
+          "accuracy_pct": 66.7,
+          "sample_size": 3,
+          "excess_accuracy_pct": 33.4
+        },
+        {
+          "source": "consensus",
+          "accuracy_pct": 33.3,
+          "sample_size": 3,
+          "excess_accuracy_pct": 0.0
+        },
+        {
+          "source": "timing",
+          "accuracy_pct": 0.0,
+          "sample_size": 3,
+          "excess_accuracy_pct": -33.3
+        },
+        {
+          "source": "prediction",
+          "accuracy_pct": 0.0,
+          "sample_size": 3,
+          "excess_accuracy_pct": -33.3
+        },
+        {
+          "source": "brain",
+          "accuracy_pct": 0.0,
+          "sample_size": 3,
+          "excess_accuracy_pct": -33.3
+        }
+      ],
+      "meta_findings_aux": [
+        {
+          "source": "multi_factor",
+          "accuracy_pct": 66.7,
+          "sample_size": 3,
+          "excess_accuracy_pct": 33.4
+        },
+        {
+          "source": "sentiment",
+          "accuracy_pct": 66.7,
+          "sample_size": 3,
+          "excess_accuracy_pct": 33.4
+        },
+        {
+          "source": "consensus",
+          "accuracy_pct": 33.3,
+          "sample_size": 3,
+          "excess_accuracy_pct": 0.0
+        },
+        {
+          "source": "timing",
+          "accuracy_pct": 0.0,
+          "sample_size": 3,
+          "excess_accuracy_pct": -33.3
+        },
+        {
+          "source": "prediction",
+          "accuracy_pct": 0.0,
+          "sample_size": 3,
+          "excess_accuracy_pct": -33.3
+        }
+      ],
+      "meta_findings_brain": {
+        "source": "brain",
+        "accuracy_pct": 0.0,
+        "sample_size": 3,
+        "excess_accuracy_pct": -33.3,
+        "label": "Verity Brain (종합 판단)",
+        "note": "보조 신호 ranking 동급 비교 금지 — 종합 판단자 참고치"
+      },
+      "meta_aux_labels": {
+        "multi_factor": "멀티팩터 종합",
+        "consensus": "컨센서스",
+        "timing": "매매 타이밍",
+        "prediction": "AI 예측(XGBoost)",
+        "sentiment": "뉴스 감성"
+      },
+      "meta_market_drift_pct": 33.3,
+      "meta_sample_size": 3,
+      "portfolio_return": -0.12,
+      "max_drawdown": -11.79,
+      "expected_count": 0,
+      "expected_avg_upside_pct": 0,
+      "expected_top_picks": []
+    }
+  },
+  "quarterly_report_updated": "2026-07-02T14:07:31+09:00",
+  "institutional_13f": {
+    "institutions_collected": 9,
+    "updated_at": "2026-07-02T14:07:42+09:00",
+    "signal": {
+      "ok": true,
+      "ticker_signal": {
+        "02079K305": {
+          "issuer": "ALPHABET INC",
+          "score": 80,
+          "institution_count": 8,
+          "institutions": [
+            "Berkshire Hathaway",
+            "Bridgewater Associates",
+            "Pershing Square",
+            "Third Point LLC",
+            "Tiger Global",
+            "Vanguard Group",
+            "BlackRock",
+            "State Street"
+          ],
+          "total_value_usd": 250628070179.0,
+          "overlap_pct": 88.9
+        },
+        "67066G104": {
+          "issuer": "NVIDIA CORPORATION",
+          "score": 80,
+          "institution_count": 7,
+          "institutions": [
+            "Bridgewater Associates",
+            "Renaissance Technologies",
+            "Third Point LLC",
+            "Tiger Global",
+            "Vanguard Group",
+            "BlackRock",
+            "State Street"
+          ],
+          "total_value_usd": 609319384767.0,
+          "overlap_pct": 77.8
+        },
+        "023135106": {
+          "issuer": "AMAZON COM INC",
+          "score": 80,
+          "institution_count": 7,
+          "institutions": [
+            "Bridgewater Associates",
+            "Pershing Square",
+            "Third Point LLC",
+            "Tiger Global",
+            "Vanguard Group",
+            "BlackRock",
+            "State Street"
+          ],
+          "total_value_usd": 284986871160.0,
+          "overlap_pct": 77.8
+        },
+        "30303M102": {
+          "issuer": "META PLATFORMS INC",
+          "score": 80,
+          "institution_count": 7,
+          "institutions": [
+            "Bridgewater Associates",
+            "Pershing Square",
+            "Third Point LLC",
+            "Tiger Global",
+            "Vanguard Group",
+            "BlackRock",
+            "State Street"
+          ],
+          "total_value_usd": 187618261514.0,
+          "overlap_pct": 77.8
+        },
+        "037833100": {
+          "issuer": "APPLE INC",
+          "score": 80,
+          "institution_count": 6,
+          "institutions": [
+            "Berkshire Hathaway",
+            "Renaissance Technologies",
+            "Tiger Global",
+            "Vanguard Group",
+            "BlackRock",
+            "State Street"
+          ],
+          "total_value_usd": 606216979668.0,
+          "overlap_pct": 66.7
+        },
+        "594918104": {
+          "issuer": "MICROSOFT CORP",
+          "score": 80,
+          "institution_count": 6,
+          "institutions": [
+            "Bridgewater Associates",
+            "Pershing Square",
+            "Tiger Global",
+            "Vanguard Group",
+            "BlackRock",
+            "State Street"
+          ],
+          "total_value_usd": 470387569917.0,
+          "overlap_pct": 66.7
+        },
+        "02079K107": {
+          "issuer": "ALPHABET INC",
+          "score": 80,
+          "institution_count": 6,
+          "institutions": [
+            "Berkshire Hathaway",
+            "Pershing Square",
+            "Tiger Global",
+            "Vanguard Group",
+            "BlackRock",
+            "State Street"
+          ],
+          "total_value_usd": 189070395962.0,
+          "overlap_pct": 66.7
+        },
+        "11135F101": {
+          "issuer": "BROADCOM INC",
+          "score": 70,
+          "institution_count": 5,
+          "institutions": [
+            "Bridgewater Associates",
+            "Tiger Global",
+            "Vanguard Group",
+            "BlackRock",
+            "State Street"
+          ],
+          "total_value_usd": 230803713421.0,
+          "overlap_pct": 55.6
+        },
+        "88160R101": {
+          "issuer": "TESLA INC",
+          "score": 70,
+          "institution_count": 4,
+          "institutions": [
+            "Tiger Global",
+            "Vanguard Group",
+            "BlackRock",
+            "State Street"
+          ],
+          "total_value_usd": 161778821322.0,
+          "overlap_pct": 44.4
+        },
+        "46625H100": {
+          "issuer": "JPMORGAN CHASE & CO",
+          "score": 70,
+          "institution_count": 4,
+          "institutions": [
+            "Tiger Global",
+            "Vanguard Group",
+            "BlackRock",
+            "State Street"
+          ],
+          "total_value_usd": 124012725935.0,
+          "overlap_pct": 44.4
+        },
+        "595112103": {
+          "issuer": "MICRON TECHNOLOGY INC",
+          "score": 70,
+          "institution_count": 4,
+          "institutions": [
+            "Bridgewater Associates",
+            "Renaissance Technologies",
+            "Tiger Global",
+            "State Street"
+          ],
+          "total_value_usd": 4390497749.0,
+          "overlap_pct": 44.4
+        },
+        "532457108": {
+          "issuer": "ELI LILLY & CO",
+          "score": 60,
+          "institution_count": 3,
+          "institutions": [
+            "Vanguard Group",
+            "BlackRock",
+            "State Street"
+          ],
+          "total_value_usd": 121844577717.0,
+          "overlap_pct": 33.3
+        },
+        "478160104": {
+          "issuer": "JOHNSON & JOHNSON",
+          "score": 60,
+          "institution_count": 3,
+          "institutions": [
+            "Bridgewater Associates",
+            "Vanguard Group",
+            "BlackRock"
+          ],
+          "total_value_usd": 82537652335.0,
+          "overlap_pct": 33.3
+        },
+        "166764100": {
+          "issuer": "CHEVRON CORPORATION",
+          "score": 60,
+          "institution_count": 3,
+          "institutions": [
+            "Berkshire Hathaway",
+            "Renaissance Technologies",
+            "BlackRock"
+          ],
+          "total_value_usd": 49558583669.0,
+          "overlap_pct": 33.3
+        },
+        "874039100": {
+          "issuer": "TAIWAN SEMICONDUCTOR MANUFAC",
+          "score": 60,
+          "institution_count": 3,
+          "institutions": [
+            "Bridgewater Associates",
+            "Third Point LLC",
+            "Tiger Global"
+          ],
+          "total_value_usd": 1820820866.0,
+          "overlap_pct": 33.3
+        },
+        "084670702": {
+          "issuer": "BERKSHIRE HATHAWAY INC DEL",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Vanguard Group",
+            "BlackRock"
+          ],
+          "total_value_usd": 114476191978.0,
+          "overlap_pct": 22.2
+        },
+        "30231G102": {
+          "issuer": "EXXON MOBIL CORP",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Vanguard Group",
+            "BlackRock"
+          ],
+          "total_value_usd": 88008518202.0,
+          "overlap_pct": 22.2
+        },
+        "92826C839": {
+          "issuer": "VISA INC",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Vanguard Group",
+            "BlackRock"
+          ],
+          "total_value_usd": 81332004016.0,
+          "overlap_pct": 22.2
+        },
+        "931142103": {
+          "issuer": "WALMART INC",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Vanguard Group",
+            "BlackRock"
+          ],
+          "total_value_usd": 72168291524.0,
+          "overlap_pct": 22.2
+        },
+        "57636Q104": {
+          "issuer": "MASTERCARD INCORPORATED",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Vanguard Group",
+            "BlackRock"
+          ],
+          "total_value_usd": 63838695364.0,
+          "overlap_pct": 22.2
+        },
+        "69608A108": {
+          "issuer": "PALANTIR TECHNOLOGIES INC",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Renaissance Technologies",
+            "Vanguard Group"
+          ],
+          "total_value_usd": 39317089676.0,
+          "overlap_pct": 22.2
+        },
+        "060505104": {
+          "issuer": "BANK AMERICA CORP",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Berkshire Hathaway",
+            "State Street"
+          ],
+          "total_value_usd": 26988576402.0,
+          "overlap_pct": 22.2
+        },
+        "464287200": {
+          "issuer": "ISHARES TR",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Bridgewater Associates",
+            "Tiger Global"
+          ],
+          "total_value_usd": 4402526968.0,
+          "overlap_pct": 22.2
+        },
+        "78462F103": {
+          "issuer": "STATE STR SPDR S&P 500 ETF T",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Bridgewater Associates",
+            "State Street"
+          ],
+          "total_value_usd": 3899476922.0,
+          "overlap_pct": 22.2
+        },
+        "92343E102": {
+          "issuer": "VERISIGN INC",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Berkshire Hathaway",
+            "Renaissance Technologies"
+          ],
+          "total_value_usd": 2932642579.0,
+          "overlap_pct": 22.2
+        },
+        "007903107": {
+          "issuer": "ADVANCED MICRO DEVICES INC",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Bridgewater Associates",
+            "State Street"
+          ],
+          "total_value_usd": 1505716235.0,
+          "overlap_pct": 22.2
+        },
+        "14040H105": {
+          "issuer": "CAPITAL ONE FINL CORP",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Berkshire Hathaway",
+            "Third Point LLC"
+          ],
+          "total_value_usd": 1329914700.0,
+          "overlap_pct": 22.2
+        },
+        "655844108": {
+          "issuer": "NORFOLK SOUTHN CORP",
+          "score": 60,
+          "institution_count": 2,
+          "institutions": [
+            "Third Point LLC",
+            "Tiger Global"
+          ],
+          "total_value_usd": 780749634.0,
+          "overlap_pct": 22.2
+        },
+        "025816109": {
+          "issuer": "AMERICAN EXPRESS CO",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Berkshire Hathaway"
+          ],
+          "total_value_usd": 45859204536.0,
+          "overlap_pct": 11.1
+        },
+        "00287Y109": {
+          "issuer": "ABBVIE INC",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Vanguard Group"
+          ],
+          "total_value_usd": 41306353424.0,
+          "overlap_pct": 11.1
+        },
+        "22160K105": {
+          "issuer": "COSTCO WHSL CORP NEW",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Vanguard Group"
+          ],
+          "total_value_usd": 37615889097.0,
+          "overlap_pct": 11.1
+        },
+        "191216100": {
+          "issuer": "COCA COLA CO",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Berkshire Hathaway"
+          ],
+          "total_value_usd": 30420000000.0,
+          "overlap_pct": 11.1
+        },
+        "149123101": {
+          "issuer": "CATERPILLAR INC",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "BlackRock"
+          ],
+          "total_value_usd": 24711512710.0,
+          "overlap_pct": 11.1
+        },
+        "539830109": {
+          "issuer": "LOCKHEED MARTIN CORP",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "BlackRock"
+          ],
+          "total_value_usd": 19676271831.0,
+          "overlap_pct": 11.1
+        },
+        "674599105": {
+          "issuer": "OCCIDENTAL PETE CORP",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Berkshire Hathaway"
+          ],
+          "total_value_usd": 17221193015.0,
+          "overlap_pct": 11.1
+        },
+        "H1467J104": {
+          "issuer": "CHUBB LTD SWITZ",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Berkshire Hathaway"
+          ],
+          "total_value_usd": 11162836215.0,
+          "overlap_pct": 11.1
+        },
+        "615369105": {
+          "issuer": "MOODYS CORP",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Berkshire Hathaway"
+          ],
+          "total_value_usd": 10762190653.0,
+          "overlap_pct": 11.1
+        },
+        "500754106": {
+          "issuer": "KRAFT HEINZ CO",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Berkshire Hathaway"
+          ],
+          "total_value_usd": 7323527057.0,
+          "overlap_pct": 11.1
+        },
+        "23918K108": {
+          "issuer": "DAVITA INC",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Berkshire Hathaway"
+          ],
+          "total_value_usd": 4626158909.0,
+          "overlap_pct": 11.1
+        },
+        "501044101": {
+          "issuer": "KROGER CO",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Berkshire Hathaway"
+          ],
+          "total_value_usd": 3618000000.0,
+          "overlap_pct": 11.1
+        },
+        "829933100": {
+          "issuer": "SIRIUSXM HOLDINGS INC",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Berkshire Hathaway"
+          ],
+          "total_value_usd": 2880548260.0,
+          "overlap_pct": 11.1
+        },
+        "247361702": {
+          "issuer": "DELTA AIR LINES INC",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Berkshire Hathaway"
+          ],
+          "total_value_usd": 2646532635.0,
+          "overlap_pct": 11.1
+        },
+        "11271J107": {
+          "issuer": "BROOKFIELD CORP",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Pershing Square"
+          ],
+          "total_value_usd": 2415946008.0,
+          "overlap_pct": 11.1
+        },
+        "90353T100": {
+          "issuer": "UBER TECHNOLOGIES INC",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Pershing Square"
+          ],
+          "total_value_usd": 2154934398.0,
+          "overlap_pct": 11.1
+        },
+        "464287655": {
+          "issuer": "ISHARES TR",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "State Street"
+          ],
+          "total_value_usd": 2100464441.0,
+          "overlap_pct": 11.1
+        },
+        "922908363": {
+          "issuer": "VANGUARD INDEX FDS",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "State Street"
+          ],
+          "total_value_usd": 1860362719.0,
+          "overlap_pct": 11.1
+        },
+        "76131D103": {
+          "issuer": "RESTAURANT BRANDS INTL INC",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Pershing Square"
+          ],
+          "total_value_usd": 1673501194.0,
+          "overlap_pct": 11.1
+        },
+        "46090E103": {
+          "issuer": "INVESCO QQQ TR",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "State Street"
+          ],
+          "total_value_usd": 1556455086.0,
+          "overlap_pct": 11.1
+        },
+        "78467X109": {
+          "issuer": "STATE STR SPDR DOW JONES IND",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "Tiger Global"
+          ],
+          "total_value_usd": 1550013921.0,
+          "overlap_pct": 11.1
+        },
+        "78464A870": {
+          "issuer": "SPDR SERIES TRUST",
+          "score": 50,
+          "institution_count": 1,
+          "institutions": [
+            "State Street"
+          ],
+          "total_value_usd": 1362036593.0,
+          "overlap_pct": 11.1
+        }
+      },
+      "smart_money_consensus": [
+        {
+          "issuer": "ALPHABET INC",
+          "score": 80,
+          "institutions": 8
+        },
+        {
+          "issuer": "NVIDIA CORPORATION",
+          "score": 80,
+          "institutions": 7
+        },
+        {
+          "issuer": "AMAZON COM INC",
+          "score": 80,
+          "institutions": 7
+        },
+        {
+          "issuer": "META PLATFORMS INC",
+          "score": 80,
+          "institutions": 7
+        },
+        {
+          "issuer": "APPLE INC",
+          "score": 80,
+          "institutions": 6
+        },
+        {
+          "issuer": "MICROSOFT CORP",
+          "score": 80,
+          "institutions": 6
+        },
+        {
+          "issuer": "ALPHABET INC",
+          "score": 80,
+          "institutions": 6
+        },
+        {
+          "issuer": "BROADCOM INC",
+          "score": 70,
+          "institutions": 5
+        },
+        {
+          "issuer": "TESLA INC",
+          "score": 70,
+          "institutions": 4
+        },
+        {
+          "issuer": "JPMORGAN CHASE & CO",
+          "score": 70,
+          "institutions": 4
+        },
+        {
+          "issuer": "MICRON TECHNOLOGY INC",
+          "score": 70,
+          "institutions": 4
+        },
+        {
+          "issuer": "ELI LILLY & CO",
+          "score": 60,
+          "institutions": 3
+        },
+        {
+          "issuer": "JOHNSON & JOHNSON",
+          "score": 60,
+          "institutions": 3
+        },
+        {
+          "issuer": "CHEVRON CORPORATION",
+          "score": 60,
+          "institutions": 3
+        },
+        {
+          "issuer": "TAIWAN SEMICONDUCTOR MANUFAC",
+          "score": 60,
+          "institutions": 3
+        },
+        {
+          "issuer": "BERKSHIRE HATHAWAY INC DEL",
+          "score": 60,
+          "institutions": 2
+        },
+        {
+          "issuer": "EXXON MOBIL CORP",
+          "score": 60,
+          "institutions": 2
+        },
+        {
+          "issuer": "VISA INC",
+          "score": 60,
+          "institutions": 2
+        },
+        {
+          "issuer": "WALMART INC",
+          "score": 60,
+          "institutions": 2
+        },
+        {
+          "issuer": "MASTERCARD INCORPORATED",
+          "score": 60,
+          "institutions": 2
+        }
+      ],
+      "total_institutions": 9,
+      "total_tracked_issuers": 97
+    }
   }
 }
