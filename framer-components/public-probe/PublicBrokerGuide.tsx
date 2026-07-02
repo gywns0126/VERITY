@@ -95,12 +95,21 @@ interface Broker {
     app: string
     domestic_fee: string
     overseas_fee: string
+    fx_fee: string
     isa: string
     credit_short: string
     app_rating: string
     community: string
     realtime_news: string
     source_url: string
+    // 수수료 tile 전용 검증 링크 (collector focused 추출 출처). 없으면 source_url fallback.
+    domestic_source: string
+    overseas_source: string
+    fx_source: string
+    // hover 상세 (조건/스프레드 등)
+    fee_basis: string
+    overseas_basis: string
+    fx_basis: string
 }
 interface TradeType {
     type: string
@@ -140,6 +149,19 @@ function isEmptyVal(s: string): boolean {
     const v = clean(s)
     return !v || /^(없음|미제공|정보 ?없음|n\/?a|해당없음|불명)$/i.test(v)
 }
+// 실제 http(s) URL 인지 — collector source 에 산문(설명문)이 섞이는 경우가 있어 링크 렌더 전 가드.
+function isUrl(s: any): boolean {
+    return /^https?:\/\/\S+$/i.test(String(s || "").trim())
+}
+// 환전우대 요점만 — 첫 %(우대율)만. 라벨이 "환전우대"라 값은 % 만. 전문은 title(hover)/출처.
+function briefFx(s: any): string {
+    const v = clean(s)
+    if (!v) return ""
+    const pct = v.match(/\d+(?:\.\d+)?\s*%/)
+    if (pct) return pct[0].replace(/\s+/g, "")
+    if (/무료/.test(v)) return "무료"
+    return ""
+}
 // 해외수수료 요점만 — 첫 %(range 포함) + "미국" + 이벤트무료 플래그. 전문은 title(hover)/출처.
 function briefOverseas(s: any): string {
     const v = clean(s)
@@ -169,12 +191,12 @@ const DEMO: Guide = {
         { type: "중장기/배당", best: "한국투자증권, NH투자증권", reason: "리서치·정보 제공 + 비대면 우대." },
     ],
     brokers: [
-        { name: "한국투자증권", app: "한국투자 m.Stock · 뱅키스", domestic_fee: "0.0140%", overseas_fee: "미국 0.25% (기본 온라인) · 환전우대 자료 부족", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "실시간시세·속보 제공", source_url: "" },
-        { name: "토스증권", app: "토스", domestic_fee: "이벤트 시 무료", overseas_fee: "미국 0.1% · 이벤트 시 무료", isa: "미지원", credit_short: "일부", app_rating: "", community: "토스 피드", realtime_news: "실시간시세 제공", source_url: "" },
-        { name: "키움증권", app: "영웅문S#", domestic_fee: "0.015%", overseas_fee: "미국 0.07%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "종목토론", realtime_news: "실시간시세·속보 제공", source_url: "" },
-        { name: "미래에셋증권", app: "M-STOCK", domestic_fee: "0.0036%", overseas_fee: "미국 0.07~0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "" },
-        { name: "삼성증권", app: "mPOP", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "" },
-        { name: "NH투자증권", app: "나무증권 · QV", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "" },
+        { name: "한국투자증권", app: "한국투자 m.Stock · 뱅키스", domestic_fee: "0.0140%", overseas_fee: "미국 0.25%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "실시간시세·속보 제공", source_url: "https://securities.koreainvestment.com", domestic_source: "https://securities.koreainvestment.com", overseas_source: "", fx_source: "", fee_basis: "온라인 위탁수수료", overseas_basis: "온라인 미국주식 0.25%", fx_basis: "매매기준율 대비 편도 약 1% · 온라인 우대 95%" },
+        { name: "토스증권", app: "토스", domestic_fee: "이벤트 시 무료", overseas_fee: "미국 0.1%", fx_fee: "", isa: "미지원", credit_short: "일부", app_rating: "", community: "토스 피드", realtime_news: "실시간시세 제공", source_url: "https://corp.tossinvest.com/ko/faq", domestic_source: "https://corp.tossinvest.com/ko/faq", overseas_source: "", fx_source: "", fee_basis: "이벤트 무료", overseas_basis: "미국주식 0.1%", fx_basis: "" },
+        { name: "키움증권", app: "영웅문S#", domestic_fee: "0.015%", overseas_fee: "미국 0.07%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "종목토론", realtime_news: "실시간시세·속보 제공", source_url: "https://www.kiwoom.com", domestic_source: "https://www.kiwoom.com", overseas_source: "", fx_source: "", fee_basis: "온라인 위탁수수료", overseas_basis: "미국주식 0.07% (이벤트)", fx_basis: "온라인 환전우대 95%" },
+        { name: "미래에셋증권", app: "M-STOCK", domestic_fee: "0.0036%", overseas_fee: "미국 0.07~0.25%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "https://securities.miraeasset.com", domestic_source: "https://securities.miraeasset.com", overseas_source: "", fx_source: "", fee_basis: "온라인 위탁수수료", overseas_basis: "미국주식 0.07~0.25%", fx_basis: "온라인 환전우대 95%" },
+        { name: "삼성증권", app: "mPOP", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "https://www.samsungpop.com", domestic_source: "https://www.samsungpop.com", overseas_source: "", fx_source: "", fee_basis: "온라인 위탁수수료", overseas_basis: "미국주식 0.25%", fx_basis: "온라인 환전우대 95%" },
+        { name: "NH투자증권", app: "나무증권 · QV", domestic_fee: "0.0036%", overseas_fee: "미국 0.25%", fx_fee: "80%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", source_url: "https://www.nhqv.com", domestic_source: "https://www.nhqv.com", overseas_source: "", fx_source: "", fee_basis: "온라인 위탁수수료", overseas_basis: "미국주식 0.25%", fx_basis: "온라인 환전우대 80%" },
     ],
     citations: [],
 }
@@ -276,6 +298,43 @@ function InfoLine(props: { label: string; value: string; C: typeof LIGHT }) {
             >
                 {value}
             </span>
+        </div>
+    )
+}
+
+/* 대표 수수료 1칸 — 라벨 + 값. 검증 출처(URL)가 있으면 값 자체가 링크(↗). 상세는 title(hover). */
+function FeeTile(props: { label: string; value: string; source?: string; basis?: string; C: typeof LIGHT }) {
+    const { label, value, source, basis, C } = props
+    const v = clean(value)
+    const url = isUrl(source) ? String(source).trim() : ""
+    const has = !!v && v !== "—"
+    const numStyle: React.CSSProperties = {
+        fontSize: 15,
+        fontWeight: 700,
+        letterSpacing: "-0.01em",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+    }
+    return (
+        <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.faint, marginBottom: 3 }}>{label}</div>
+            {has && url ? (
+                <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={(basis ? clean(basis) + " · " : "") + "공식 출처에서 확인 ↗"}
+                    style={{ ...numStyle, display: "flex", alignItems: "center", gap: 3, color: C.text, textDecoration: "none" }}
+                >
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{v}</span>
+                    <span style={{ fontSize: 10, color: C.accent, flexShrink: 0, fontWeight: 700 }}>↗</span>
+                </a>
+            ) : (
+                <div title={basis ? clean(basis) : undefined} style={{ ...numStyle, color: has ? C.text : C.faint }}>
+                    {v || "—"}
+                </div>
+            )}
         </div>
     )
 }
@@ -578,9 +637,14 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
             {brokers.map((b, i) => {
                 const overseas = clean(b.overseas_fee)
                 const overseasBrief = briefOverseas(b.overseas_fee)
+                const fxBrief = briefFx(b.fx_fee)
                 const news = clean(b.realtime_news)
                 const comm = clean(b.community)
                 const app = clean(b.app)
+                // 수수료별 검증 링크 — 전용 출처 우선, 없으면 대표 source_url fallback(URL 인 경우만).
+                const domSrc = isUrl(b.domestic_source) ? b.domestic_source : (isUrl(b.source_url) ? b.source_url : "")
+                const ovSrc = isUrl(b.overseas_source) ? b.overseas_source : ""
+                const fxSrc = isUrl(b.fx_source) ? b.fx_source : ""
                 return (
                     <div
                         key={i}
@@ -598,20 +662,16 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
                             <span style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: "-0.01em" }}>{b.name}</span>
                         </div>
 
-                        {/* 수수료 2단 (국내 / 해외 요점) — 해외 전문은 hover(title)/출처 */}
-                        <div style={{ display: "flex", gap: 16, marginBottom: 13 }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: C.faint, marginBottom: 3 }}>국내주식</div>
-                                <div style={{ fontSize: 16.5, fontWeight: 700, color: C.text, letterSpacing: "-0.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    {clean(b.domestic_fee) || "—"}
-                                </div>
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: C.faint, marginBottom: 3 }}>해외주식</div>
-                                <div title={overseas || ""} style={{ fontSize: 15, fontWeight: 700, color: overseasBrief ? C.text : C.faint, letterSpacing: "-0.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    {overseasBrief || "—"}
-                                </div>
-                            </div>
+                        {/* 대표 수수료 3단 (국내 / 미국 / 환전우대) — 각 값이 공식 출처 링크(↗), 상세는 hover */}
+                        <div style={{ display: "flex", gap: 12, marginBottom: 5 }}>
+                            <FeeTile label="국내주식" value={b.domestic_fee} source={domSrc} basis={b.fee_basis} C={C} />
+                            <FeeTile label="미국주식" value={overseasBrief} source={ovSrc} basis={b.overseas_basis || overseas} C={C} />
+                            {fxBrief ? (
+                                <FeeTile label="환전우대" value={fxBrief} source={fxSrc} basis={b.fx_basis} C={C} />
+                            ) : null}
+                        </div>
+                        <div style={{ fontSize: 9.5, color: C.faint, fontWeight: 500, marginBottom: 12 }}>
+                            수수료 = 온라인 위탁 기준 · 값 클릭 시 공식 출처
                         </div>
 
                         {/* 칩 = ISA / 신용·대주 */}
@@ -627,14 +687,14 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
                             {app ? <InfoLine label="앱" value={app} C={C} /> : null}
                         </div>
 
-                        {b.source_url ? (
+                        {isUrl(b.source_url) ? (
                             <a
                                 href={String(b.source_url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{ display: "inline-block", marginTop: 11, fontSize: 11, fontWeight: 600, color: C.accent, textDecoration: "none" }}
                             >
-                                출처 ↗
+                                증권사 공식 안내 ↗
                             </a>
                         ) : null}
                     </div>

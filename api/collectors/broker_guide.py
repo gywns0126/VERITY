@@ -65,7 +65,8 @@ _SCHEMA_HINT = """{
       "name": "한국투자증권",
       "app": "앱 이름",
       "domestic_fee": "국내주식 온라인 위탁수수료율 (예: 0.0140%)",
-      "overseas_fee": "미국주식 수수료율 + 환전우대 (예: 0.25% / 환전우대 95%)",
+      "overseas_fee": "미국주식 온라인 위탁수수료율 (예: 0.25%)",
+      "fx_fee": "미국주식 온라인 환전우대율 (예: 95%)",
       "isa": "지원" or "미지원",
       "credit_short": "신용/대주 지원" or "미지원",
       "app_rating": "iOS x.x / Android x.x (출처)",
@@ -96,6 +97,7 @@ _RESPONSE_FORMAT = {
                             "app": {"type": "string"},
                             "domestic_fee": {"type": "string"},
                             "overseas_fee": {"type": "string"},
+                            "fx_fee": {"type": "string"},
                             "isa": {"type": "string"},
                             "credit_short": {"type": "string"},
                             "app_rating": {"type": "string"},
@@ -363,6 +365,54 @@ def _fetch_overseas_fee(broker: str) -> dict:
     return {}
 
 
+# 환전 수수료(FX) — KR 브로커의 미국주식 환전 비용. 대표값 = 온라인 환전우대율(리테일이 비교하는 헤드라인),
+# basis 에 기본 스프레드(매매기준율 대비 편도 ~1%)·조건. 우대율 0~100% 범위 밖이면 오인 거부.
+def _fx_query(broker: str) -> str:
+    return (
+        f"{broker} 의 '미국주식(달러) 온라인 환전' 비용을 공식 안내 기준 정확히 알려줘. "
+        "⚠ fee 에는 온라인 기본 '환전우대율'을 % 로 (예: 95%). "
+        "기본 환전 스프레드(원/달러 매매기준율 대비 편도, 보통 약 1%)와 우대 적용 조건·시간대는 basis 에 설명. "
+        "영업점 아님, 온라인(MTS·HTS) 기본 기준. "
+        '숫자는 % 로. JSON: {"fee": "95%", "source": "공식 출처 URL", "basis": "기본 스프레드/우대 조건"}'
+    )
+
+
+def _fetch_fx_fee(broker: str) -> dict:
+    """focused 환전우대율 추출. 공식 도메인 1차 → 일반 fallback. 0~100% 타당값만 반환."""
+    dom = _official_domain(broker)
+    attempts: list = []
+    if dom:
+        attempts.append([dom, "kofia.or.kr"])
+    attempts.append(None)  # 무제한 fallback
+    for domains in attempts:
+        res = call_perplexity(
+            _fx_query(broker),
+            system_prompt=_FEE_SYS,
+            max_tokens=600,
+            temperature=0.0,
+            search_domain_filter=domains,
+            response_format=_FEE_FORMAT,
+        )
+        if res.get("error"):
+            continue
+        try:
+            d = json.loads(_strip_json(res.get("content", "")))
+        except Exception:
+            continue
+        fee = str(d.get("fee", "")).strip()
+        val = _fee_pct(fee)
+        # 환전우대율 타당 범위 0<val<=100 (스프레드가 아니라 우대율)
+        if _FEE_RE.search(fee) and 0 < val <= 100:
+            m = re.search(r"\d+(?:\.\d+)?\s*%", fee)  # % 토큰만
+            return {
+                "fee": m.group(0) if m else fee,
+                "source": str(d.get("source", "")).strip(),
+                "basis": str(d.get("basis", "")).strip(),
+                "official": domains is not None,
+            }
+    return {}
+
+
 def collect(force: bool = False) -> dict:
     """Perplexity 호출 → 검증 → broker_guide.json 발행. 실패 시 직전 유지."""
     prev = _load_prev()
@@ -427,8 +477,10 @@ def collect(force: bool = False) -> dict:
             b["overseas_fee"] = info["fee"]
             if info.get("basis"):
                 b["overseas_basis"] = info["basis"]
-            if info.get("source") and info["source"] not in fee_sources:
-                fee_sources.append(info["source"])
+            if info.get("source"):
+                b["overseas_source"] = info["source"]  # 해외수수료 tile 전용 검증 링크
+                if info["source"] not in fee_sources:
+                    fee_sources.append(info["source"])
             ov_ok += 1
         else:
             # focused 실패 → 메인 호출값이 타당 % 면 채택, 아니면 공란(틀린 값 노출 차단)
@@ -440,6 +492,26 @@ def collect(force: bool = False) -> dict:
                 b["overseas_fee"] = ""
             print(f"[broker_guide] ⚠ 해외수수료 추출 실패(메인값 {'채택' if b['overseas_fee'] else '공란'}): {b.get('name','?')}")
     print(f"[broker_guide] 해외수수료 채움 {ov_ok}/{len(brokers)}")
+
+    # 🎯 focused 환전(FX)우대율 추출 → fx_fee/fx_basis/fx_source (미국주식 실비용의 핵심, 별도 tile)
+    fx_ok = 0
+    for b in brokers:
+        if not isinstance(b, dict):
+            continue
+        info = _fetch_fx_fee(b.get("name", ""))
+        if info.get("fee"):
+            b["fx_fee"] = info["fee"]
+            if info.get("basis"):
+                b["fx_basis"] = info["basis"]
+            if info.get("source"):
+                b["fx_source"] = info["source"]
+                if info["source"] not in fee_sources:
+                    fee_sources.append(info["source"])
+            fx_ok += 1
+        else:
+            b["fx_fee"] = ""  # 실패 = 공란(UI 는 tile 자체를 숨김, 틀린 값 노출 차단)
+            print(f"[broker_guide] ⚠ 환전우대 추출 실패(공란): {b.get('name','?')}")
+    print(f"[broker_guide] 환전우대 채움 {fx_ok}/{len(brokers)}")
 
     # 수동 큐레이션 override (있으면 자동값보다 우선)
     _apply_curated(brokers)
