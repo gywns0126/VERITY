@@ -617,15 +617,15 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
                 const news = clean(b.realtime_news)
                 const comm = clean(b.community)
                 const app = clean(b.app)
-                // 하이브리드 대표 수수료 — 값 + 유효 출처 URL 둘 다 있을 때만 tile (클릭 검증 가능한 것만).
-                const domSrc = isUrl(b.domestic_source) ? b.domestic_source : (isUrl(b.source_url) ? b.source_url : "")
+                // 대표 수수료 — 값이 있으면 항상 tile 노출. 링크 = 전용 출처 우선, 없으면 증권사 공식 페이지(feeUrl).
+                const domSrc = isUrl(b.domestic_source) ? b.domestic_source : feeUrl
                 const feeTiles: { label: string; value: string; url: string; basis: string }[] = []
                 const domV = clean(b.domestic_fee)
-                if (domV && domSrc) feeTiles.push({ label: "국내주식", value: domV, url: domSrc, basis: b.fee_basis })
+                if (domV) feeTiles.push({ label: "국내주식", value: domV, url: domSrc, basis: b.fee_basis })
                 const ovV = briefOverseas(b.overseas_fee)
-                if (ovV && isUrl(b.overseas_source)) feeTiles.push({ label: "미국주식", value: ovV, url: b.overseas_source, basis: b.overseas_basis })
+                if (ovV) feeTiles.push({ label: "미국주식", value: ovV, url: isUrl(b.overseas_source) ? b.overseas_source : feeUrl, basis: b.overseas_basis })
                 const fxV = briefFx(b.fx_fee)
-                if (fxV && isUrl(b.fx_source)) feeTiles.push({ label: "환전우대", value: fxV, url: b.fx_source, basis: b.fx_basis })
+                if (fxV) feeTiles.push({ label: "환전우대", value: fxV, url: isUrl(b.fx_source) ? b.fx_source : feeUrl, basis: b.fx_basis })
                 return (
                     <div
                         key={i}
