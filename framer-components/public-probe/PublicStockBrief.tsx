@@ -1,5 +1,6 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useState } from "react"
+import { Printer, PencilSimpleLine } from "@phosphor-icons/react"
 
 /**
  * 리포트 추출 허브 — AlphaNest /stock. 두 버튼 + AI 브리핑 섹션 = 단일 컴포넌트 (PM 결정 2026-07-03).
@@ -175,12 +176,10 @@ export default function PublicStockBrief(props: {
 
     return (
         <div style={wrap}>
-            {/* ── 버튼 2개 — 상품 구분: 100% 데이터 vs 데이터+AI 해석 ── */}
-            <div data-noprint style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {/* ── 버튼 2개 — 상품 구분: 100% 데이터 vs 데이터+AI 해석. 아이콘 = Phosphor(Framer 네이티브 세트) ── */}
+            <div data-noprint style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
                 <button onClick={() => doPrint(true)} style={{ ...btnBase, cursor: "pointer", background: C.green, color: "#fff" }}>
-                    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" />
-                    </svg>
+                    <Printer size={14} weight="bold" />
                     팩트 리포트 PDF
                 </button>
                 <button onClick={onAiPdf} disabled={!tk || state === "loading"} style={{
@@ -188,13 +187,11 @@ export default function PublicStockBrief(props: {
                     cursor: tk && state !== "loading" ? "pointer" : "default",
                     background: tk ? C.violet : C.line, color: tk ? "#fff" : C.faint,
                 }}>
-                    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
-                    </svg>
+                    <PencilSimpleLine size={14} weight="bold" />
                     {state === "loading" ? "브리핑 생성 중…" : "AI 해석 리포트 PDF"}
                 </button>
             </div>
-            <div data-noprint style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 7, lineHeight: 1.5 }}>
+            <div data-noprint style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 7, lineHeight: 1.5, textAlign: "center" }}>
                 팩트 = 100% 공개 데이터 · AI 해석 = 같은 데이터 위에 요약 서술이 붙어요{state !== "done" ? " (첫 생성 ~10초, 하루 1회 생성 후 캐시)" : ""}
                 {tk && state === "idle" && (
                     <>
