@@ -298,6 +298,36 @@ def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
             "fcf_usd": der.get("fcf_usd")}
 
 
+EARN_PATTERN_PATH = os.path.join(_ROOT, "data", "us_earnings_pattern.json")
+
+
+def _earnings_window(filings: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """10-Q/K filed 이력 → 다음 제출 예상 창 (제출 간격 중앙값). 어닝 캘린더 스프린트 2026-07-04.
+
+    외부 캘린더(Yahoo=권리 blocker) 대체 — 사실(제출일) 파생 계산. 점추정 단정 대신 ±7일 창 표기(RULE 7).
+    실측 근거: 기업별 제출 지연이 기계적으로 안정 (AAPL 6분기 연속 분기말+34일).
+    """
+    from datetime import date, timedelta
+    try:
+        dates = sorted({date.fromisoformat(str(f.get("filed"))) for f in (filings or []) if f.get("filed")})
+    except (ValueError, TypeError):
+        return None
+    if len(dates) < 3:
+        return None
+    gaps = sorted(g for g in ((b - a).days for a, b in zip(dates, dates[1:])) if 20 <= g <= 130)
+    if not gaps:
+        return None
+    med = gaps[len(gaps) // 2]
+    est = dates[-1] + timedelta(days=med)
+    today = date.today()
+    for _ in range(2):  # 이미 지난 예상 창 = 다음 주기 순연
+        if est >= today - timedelta(days=7):
+            break
+        est += timedelta(days=med)
+    return {"event": "다음 실적 공시 예상 창 (±7일)", "kind": "실적", "date": est.isoformat(),
+            "basis": "과거 10-Q/K 제출 패턴 · 자체계산 (확정 공시 시 갱신)"}
+
+
 def _annual_by_year(series: Any) -> Dict[int, float]:
     """series_annual[key] → {연도(end 기준): val} — 연도 중복 시 최신 end 우선."""
     out: Dict[int, Tuple[str, float]] = {}
@@ -667,6 +697,19 @@ def main() -> int:
             if fin:
                 s["financials"] = fin
         print(f"[us_stock_report] fin_series 부착 {n_fs}/{len(stocks)} 종목 (series_annual 10-K)", file=sys.stderr)
+        # 어닝 캘린더 — EDGAR 제출 패턴 자체계산 (us_earnings_pattern.json: 초기 backfill + incremental 일일 유지)
+        try:
+            with open(EARN_PATTERN_PATH, encoding="utf-8") as f:
+                _pats = (json.load(f) or {}).get("patterns") or {}
+        except (OSError, json.JSONDecodeError):
+            _pats = {}
+        n_cal = 0
+        for s in stocks:
+            w = _earnings_window(_pats.get(str(s.get("ticker") or "")))
+            if w:
+                s["calendar"] = [w]
+                n_cal += 1
+        print(f"[us_stock_report] 어닝 캘린더(예상 창) 부착 {n_cal}/{len(stocks)} 종목", file=sys.stderr)
         # ROE 큰 순 (사실 정렬)
         def _roe(s):
             v = s.get("facts", {}).get("ROE", "")

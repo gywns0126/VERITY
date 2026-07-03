@@ -31,6 +31,8 @@ KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _DATA = os.path.join(_ROOT, "data")
 STATE_PATH = os.path.join(_DATA, "metadata", "us_fin_incremental_state.json")
+EARN_PATTERN_PATH = os.path.join(_DATA, "us_earnings_pattern.json")
+PATTERN_KEEP = 10
 SUMMARY_PATHS = [
     os.path.join(_DATA, "us_financials", "_summary.json"),
     os.path.join(_DATA, "us_financials", "_summary_smallcap.json"),
@@ -88,8 +90,8 @@ def _universe_cik_map() -> Dict[int, str]:
     return out
 
 
-def _fetch_day_filers(d: date) -> Optional[Set[int]]:
-    """해당 일 master.idx → 10-K/10-Q 제출 CIK set. 인덱스 미발행(주말·휴장·미완성) = None."""
+def _fetch_day_filers(d: date) -> Optional[List[Tuple[int, str]]]:
+    """해당 일 master.idx → [(CIK, form)] (10-K/10-Q). 인덱스 미발행(주말·휴장·미완성) = None."""
     try:
         r = requests.get(_idx_url(d), headers={"User-Agent": SEC_USER_AGENT}, timeout=IDX_TIMEOUT)
     except requests.RequestException as e:
@@ -97,7 +99,7 @@ def _fetch_day_filers(d: date) -> Optional[Set[int]]:
         return None
     if r.status_code != 200:
         return None
-    ciks: Set[int] = set()
+    out: List[Tuple[int, str]] = []
     for line in r.text.splitlines():
         parts = line.split("|")
         if len(parts) != 5:
@@ -105,10 +107,31 @@ def _fetch_day_filers(d: date) -> Optional[Set[int]]:
         cik_s, _name, form, _filed, _fname = parts
         if form.strip() in TARGET_FORMS:
             try:
-                ciks.add(int(cik_s))
+                out.append((int(cik_s), form.strip()))
             except ValueError:
                 continue
-    return ciks
+    return out
+
+
+def _append_patterns(hits: List[Tuple[str, str, str]]) -> None:
+    """(ticker, form, filed) → us_earnings_pattern.json append (어닝 캘린더 일일 유지 — backfill 이후 무추가비용)."""
+    if not hits:
+        return
+    try:
+        with open(EARN_PATTERN_PATH, encoding="utf-8") as f:
+            doc = json.load(f) or {}
+    except (OSError, json.JSONDecodeError):
+        doc = {"_meta": {}, "patterns": {}}
+    pats = doc.setdefault("patterns", {})
+    for tk, form, filed in hits:
+        rows = pats.setdefault(tk, [])
+        if any(r.get("filed") == filed and r.get("form") == form for r in rows):
+            continue
+        rows.insert(0, {"form": form, "filed": filed})
+        del rows[PATTERN_KEEP:]
+    with open(EARN_PATTERN_PATH, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False)
+    print(f"[us_fin_incr] 어닝 패턴 갱신 {len(hits)}건 → {EARN_PATTERN_PATH}", file=sys.stderr)
 
 
 def main() -> int:
@@ -132,21 +155,26 @@ def main() -> int:
     start = max(last + timedelta(days=1), today_et - timedelta(days=LOOKBACK_MAX_DAYS))
 
     tickers: List[str] = []
+    pattern_hits: List[Tuple[str, str, str]] = []
     processed_through = last
     d = start
     while d < today_et:  # 당일(ET)은 인덱스 미완성 — 전일까지
         if d.weekday() < 5:
-            ciks = _fetch_day_filers(d)
-            if ciks is None:
+            filers = _fetch_day_filers(d)
+            if filers is None:
                 # 영업일인데 인덱스 부재 = 휴장 or 일시 오류 — 오류 가능성 있으므로 state 전진 중단
                 print(f"[us_fin_incr] {d} 인덱스 없음 — 해당 일 이후 보류", file=sys.stderr)
                 break
-            hit = sorted({cik_map[c] for c in ciks if c in cik_map})
-            print(f"[us_fin_incr] {d}: 10-K/Q 제출 {len(ciks)} CIK, 유니버스 교집합 {len(hit)}", file=sys.stderr)
+            hit = sorted({cik_map[c] for c, _f in filers if c in cik_map})
+            pattern_hits.extend((cik_map[c], f, d.isoformat()) for c, f in filers if c in cik_map)
+            print(f"[us_fin_incr] {d}: 10-K/Q 제출 {len(filers)} 건, 유니버스 교집합 {len(hit)}", file=sys.stderr)
             tickers.extend(t for t in hit if t not in tickers)
             time.sleep(THROTTLE_SEC)
         processed_through = d
         d += timedelta(days=1)
+
+    if not args.dry_run:
+        _append_patterns(pattern_hits)  # 어닝 캘린더 패턴 일일 유지 (재수집 성패 무관 — 제출 사실)
 
     if not tickers:
         print(f"[us_fin_incr] 신규 실적 공시 0 — state {processed_through} 전진", file=sys.stderr)
