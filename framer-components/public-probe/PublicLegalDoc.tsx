@@ -93,8 +93,10 @@ export default function PublicLegalDoc(props: { doc?: "terms" | "privacy"; dark?
     return () => obs.disconnect()
   }, [onCanvas])
 
-  const cpo = props.cpoContact || "운영 전용 이메일 (게시 시 기입)"
-  const eff = props.effectiveDate || "(게시 시 기입)"
+  // 미설정 placeholder("게시 시 기입")는 canvas 편집 화면에만 노출 — 라이브엔 중립 fallback(내부 메모 누출 차단).
+  // ⚠ 실제 게시 전 Framer prop 로 시행일·보호책임자 연락처를 반드시 설정할 것.
+  const cpo = props.cpoContact || (onCanvas ? "운영 전용 이메일 (게시 시 기입)" : "사이트 문의 경로로 접수")
+  const eff = props.effectiveDate || (onCanvas ? "(게시 시 기입)" : "게시일 기준")
   const secs = (tab === "privacy" ? PRIVACY : TERMS).map((s) => ({ h: s.h, body: s.body.map((b) => b.replace("__CPO__", "보호책임자 연락처: " + cpo)) }))
 
   const wrap: CSSProperties = { width: "100%", boxSizing: "border-box", fontFamily: FONT, color: C.ink, background: C.bg, borderRadius: 18, padding: 22, display: "flex", flexDirection: "column", gap: 14 }

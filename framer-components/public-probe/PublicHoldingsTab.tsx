@@ -432,7 +432,7 @@ export default function PublicHoldingsTab(props: Props) {
                                 <div style={{ fontSize: 14, fontWeight: 800, color: plColor(totalPl) }}>
                                     {(totalPl > 0 ? "+" : "") + money(totalPl)} · {(totalPlPct > 0 ? "+" : "") + totalPlPct.toFixed(1)}%
                                 </div>
-                                <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 6 }}>보유 {rows.length}종목 · 평단 입력 기준(사실)</div>
+                                <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 6 }}>보유 {rows.length}종목 · 평단 입력 기준(사실){usRows.length ? ` · 미국주식 환율 ${FX}원/$ 가정` : ""}</div>
                             </div>
 
                             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
