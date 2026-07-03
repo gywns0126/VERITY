@@ -306,7 +306,6 @@ export default function PublicDiscovery(props: Props) {
     const [rMin, setRMin] = useState<string>("")
     const [rMax, setRMax] = useState<string>("")
     const [selected, setSelected] = useState<string>("")
-    const [livePx, setLivePx] = useState<{ price?: number; chg?: number }>({})
 
     useEffect(() => {
         const el = rootRef.current
@@ -467,22 +466,7 @@ export default function PublicDiscovery(props: Props) {
 
     const selStock = useMemo(() => list.find((s) => s.ticker === selected) || null, [list, selected])
 
-    // 선택 종목 실시간 가격(넓은 화면 + 패널 열렸을 때만 1회).
-    useEffect(() => {
-        setLivePx({})
-        if (onCanvas || !wide || !selected || !base) return
-        let alive = true
-        fetch(base + "/api/stock?q=" + encodeURIComponent(selected) + "&market=" + (/^\d{6}$/.test(String(selected)) ? "kr" : "us"))
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                if (!alive || !d) return
-                const p = d.price ?? d.current_price ?? (d.stock && d.stock.price)
-                const ch = d.price_change_pct ?? d.change_pct
-                if (p != null) setLivePx({ price: Number(p), chg: ch != null ? Number(ch) : undefined })
-            })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [selected, base, wide, onCanvas])
+    // 선택 종목 실시간가(/api/stock) = 2026-07-03 컴플라이언스로 제거 — 시세는 리포트(네이버 link-out/TV 위젯)에서
 
     const go = (ticker: string) => {
         if (onCanvas || typeof window === "undefined" || !ticker) return
@@ -628,14 +612,6 @@ export default function PublicDiscovery(props: Props) {
                     </div>
                     <button onClick={() => setSelected("")} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 16, color: C.faint, fontWeight: 700, padding: 0, lineHeight: 1 }}>×</button>
                 </div>
-                {livePx.price != null && (
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 8 }}>
-                        <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: "-0.5px" }}>{/^\d{6}$/.test(String(s.ticker || "")) ? Number(livePx.price).toLocaleString() + "원" : "$" + Number(livePx.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        {livePx.chg != null && isFinite(livePx.chg) && (
-                            <span style={{ fontSize: 13, fontWeight: 800, color: livePx.chg > 0 ? C.up : livePx.chg < 0 ? C.down : C.faint }}>{(livePx.chg > 0 ? "+" : "") + livePx.chg.toFixed(2)}%</span>
-                        )}
-                    </div>
-                )}
                 {s.business && <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, marginTop: 6, lineHeight: 1.45 }}>{s.business}</div>}
 
                 <div style={{ marginTop: 6 }}>

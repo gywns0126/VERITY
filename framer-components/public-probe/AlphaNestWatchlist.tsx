@@ -7,8 +7,9 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
  * 데이터 = 기존 백엔드 /api/watchgroups (JWT 인증, 본인 필터·IDOR 안전). DB 변경 0.
  * 세션 = verity_supabase_session(localStorage, AlphaNestAuth 가 기록). 미로그인=둘러보기 안내만.
  * 별표 추가/삭제(PublicStockReport) → window 'verity_watch_change' → 이 뷰 자동 새로고침.
- * 행 클릭 → reportPath?q=ticker. 삭제(×) → remove_item. 실시간가 = /api/stock 1회 조회.
- * 다크모드 = body[data-framer-theme] 추종. RULE 7 = 사실(가격·등락률)만, 자체 점수 0.
+ * 행 클릭 → reportPath?q=ticker. 삭제(×) → remove_item.
+ * 🚨 시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): /api/stock 실시간가 조회 제거 — KIS 시세 회원(제3자) 재배포 불가.
+ *   가격 열 삭제. 시세 = 행 클릭 → 종목 리포트(네이버 link-out + TV 위젯)에서. 다크모드 = body[data-framer-theme] 추종.
  */
 
 const SESSION_KEY = "verity_supabase_session"
@@ -36,12 +37,6 @@ function loadToken(): string {
         if (s.expires_at && Date.now() / 1000 > s.expires_at) return ""
         return typeof s.access_token === "string" ? s.access_token : ""
     } catch { return "" }
-}
-
-function fmtPct(p: any): string {
-    const v = Number(p)
-    if (!isFinite(v)) return ""
-    return (v > 0 ? "+" : "") + v.toFixed(2) + "%"
 }
 
 function Logo({ ticker, name, C }: { ticker: string; name: string; C: any }) {
@@ -80,7 +75,6 @@ export default function AlphaNestWatchlist(props: Props) {
 
     const [token, setToken] = useState("")
     const [items, setItems] = useState<any[]>([])
-    const [prices, setPrices] = useState<Record<string, any>>({})
     const [loading, setLoading] = useState(false)
 
     // 세션 토큰 추적(로그인/로그아웃 반영)
@@ -126,24 +120,7 @@ export default function AlphaNestWatchlist(props: Props) {
         return () => window.removeEventListener(WATCH_EVENT, onWatch)
     }, [fetchWatch, onCanvas])
 
-    // 실시간가(1회 조회) — 항목 변동 시
-    useEffect(() => {
-        if (onCanvas || !items.length) return
-        let alive = true
-        items.forEach((it) => {
-            if (prices[it.ticker]) return
-            fetch(`${api}/api/stock?q=${encodeURIComponent(it.ticker)}&market=kr`, { mode: "cors", credentials: "omit" })
-                .then((r) => (r.ok ? r.json() : null))
-                .then((d) => {
-                    if (!alive || !d) return
-                    const price = d.price ?? d.current_price ?? (d.stock && d.stock.price)
-                    const chg = d.price_change_pct ?? d.change_pct
-                    setPrices((prev) => ({ ...prev, [it.ticker]: { price: Number(price), chg: chg != null ? Number(chg) : null } }))
-                })
-                .catch(() => {})
-        })
-        return () => { alive = false }
-    }, [items, api, onCanvas])
+    // 실시간가 조회 = 2026-07-03 컴플라이언스로 제거 — 시세는 행 클릭 → 리포트에서
 
     const removeItem = (item_id: any) => {
         if (!token || !item_id) return
@@ -218,9 +195,6 @@ export default function AlphaNestWatchlist(props: Props) {
             ) : (
                 <div style={{ background: C.card, borderRadius: 14, padding: "4px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                     {items.map((it, i) => {
-                        const p = prices[it.ticker]
-                        const chg = p && p.chg != null && isFinite(p.chg) ? p.chg : null
-                        const col = chg == null ? C.faint : chg > 0 ? C.up : chg < 0 ? C.down : C.faint
                         return (
                             <div key={it.ticker} style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
                                 <a href={`${report}?q=${encodeURIComponent(it.ticker)}`} style={{ display: "flex", alignItems: "center", gap: 11, flex: 1, minWidth: 0, textDecoration: "none", color: "inherit", cursor: "pointer" }}>
@@ -229,10 +203,7 @@ export default function AlphaNestWatchlist(props: Props) {
                                         <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.name}</div>
                                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{it.ticker}{it.market ? " · " + it.market : ""}</div>
                                     </div>
-                                    <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                        <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>{p && isFinite(p.price) ? Number(p.price).toLocaleString() : "—"}</div>
-                                        {chg != null && <div style={{ fontSize: 11.5, fontWeight: 800, color: col }}>{fmtPct(chg)}</div>}
-                                    </div>
+                                    <span style={{ flexShrink: 0, fontSize: 14, color: C.faint, fontWeight: 700 }}>›</span>
                                 </a>
                                 <button onClick={() => removeItem(it.item_id)} title="관심종목 해제"
                                     style={{ flexShrink: 0, border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 16, lineHeight: 1, padding: "4px 6px", fontWeight: 700 }}>×</button>

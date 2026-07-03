@@ -2,8 +2,10 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useState, useEffect } from "react"
 
 /**
- * 내 관점 복기 — AlphaNest 루프 결정 단계. 기록한 thesis 모음 + 기록 후 가격 변화.
+ * 내 관점 복기 — AlphaNest 루프 결정 단계. 기록한 thesis 모음 + 기록 후 가격(종가) 변화.
  * dual: 로그인(verity_supabase_session) → /api/thesis · 익명 → localStorage verity_thesis_v1 (ThesisNote와 동일 키).
+ * 🚨 시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): /api/stock 실시간가 병렬 조회 제거(KIS 재배포 불가).
+ *   가격 = stock_flow_5d.json 마지막 close(종가·발행 유지 판정) 1회 fetch · 종목명 = universe_search.json. 커버리지 밖 = graceful "—".
  * 행 클릭 → StockReport ?q=. 자가 다크감지.
  *
  * 🚨 RULE 7 = 사용자 자기 저널 복기 — VERITY 채점·정답·점수 0. "스스로 복기" 용도. RULE 6 = LLM 0.
@@ -74,18 +76,22 @@ export default function PublicThesisReview(props: { width?: number; dark?: boole
         const build = (base_list: any[]) => {
             if (!alive) return
             if (!base_list.length) { setItems([]); setLoading(false); return }
-            // 현재가 best-effort 병렬 fetch
-            Promise.all(base_list.map((it) =>
-                fetch(base + "/api/stock?q=" + encodeURIComponent(it.ticker) + "&market=kr")
-                    .then((r) => (r.ok ? r.json() : null))
-                    .then((d) => {
-                        const p = d && (d.price ?? d.current_price ?? (d.stock && d.stock.price))
-                        const nm = d && (d.name || (d.stock && d.stock.name))
-                        return { ...it, curPrice: p != null ? Number(p) : null, name: it.name || nm || it.ticker }
-                    })
-                    .catch(() => ({ ...it, curPrice: null, name: it.name || it.ticker }))
-            )).then((rows) => {
+            // 종가(flow_5d)·종목명(universe) 1회 fetch — 실시간가 조회 아님(컴플라이언스)
+            Promise.all([
+                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+            ]).then(([fd, ud]) => {
                 if (!alive) return
+                const fm = (fd && (fd.flows || fd)) || {}
+                const names: Record<string, string> = {}
+                const uarr = ud && (Array.isArray(ud) ? ud : ud.stocks)
+                if (Array.isArray(uarr)) for (const s of uarr) { if (s && s.ticker) names[String(s.ticker)] = String(s.name || "") }
+                const rows = base_list.map((it) => {
+                    const arr = fm[String(it.ticker)]
+                    const last = Array.isArray(arr) && arr.length ? arr[arr.length - 1] : null
+                    const c = last && Number(last.close)
+                    return { ...it, curPrice: c && isFinite(c) ? c : null, name: it.name || names[String(it.ticker)] || it.ticker }
+                })
                 rows.sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))
                 setItems(rows); setLoading(false)
             })

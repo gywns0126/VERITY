@@ -428,16 +428,10 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
         except (TypeError, ValueError):
             pass
 
-    # 헤더 메타 (52주 범위·거래대금 — 외부 사실)
+    # 헤더 메타 — 🚨 시세 재배포 컴플라이언스(2026-07-03): range_52w(주가 밴드)·trading_value(거래대금 raw) 제거.
+    # market_cap 은 유지 — KRX MKTCAP 파생(PER/PBR 자체계산 입력·자본 규모 사실), sector medians 유지와 동일 논리.
+    # 컴포넌트(StockReport)는 필드 부재 시 자동 미표시(graceful).
     header: Dict[str, str] = {}
-    hi, lo = rec.get("high_52w"), rec.get("low_52w")
-    try:
-        if hi and lo:
-            header["range_52w"] = f"{float(lo):,.0f}~{float(hi):,.0f}"
-    except (TypeError, ValueError):
-        pass
-    if rec.get("trading_value"):
-        header["trading_value"] = _fmt_cap(rec.get("trading_value"))
     if rec.get("market_cap"):
         header["market_cap"] = _fmt_cap(rec.get("market_cap"))
 

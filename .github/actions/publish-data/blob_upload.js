@@ -15,11 +15,16 @@
  * 호출: node blob_upload.js <_public_dist>
  */
 
-const { put } = require("@vercel/blob");
+const { put, del } = require("@vercel/blob");
 const fs = require("fs");
 const path = require("path");
 
 const SKIP_FILES = new Set(["README.md", "_manifest.txt"]);
+// 시세 재배포 컴플라이언스(2026-07-03 Phase 2) — 발행 중단된 KRX-raw 파일의 잔존 blob 스냅샷 삭제(멱등).
+// allowlist 제거만으론 마지막 업로드본이 public URL 에 계속 서빙됨 → 매 run del 로 확정 차단.
+// del 은 blob URL 기준(pathname 은 SDK 버전 의존) — 스토어 host 는 사이트 컴포넌트들이 쓰는 고정 URL.
+const BLOB_HOST = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com";
+const RETIRED_BLOBS = ["public_price_snapshot.json", "ranking_board.json", "trending_kr.json"];
 const CACHE_MAX_AGE = 30; // 30s — Framer 가 매 페이지 진입마다 fresh 받음
 
 async function uploadFile(filePath, blobPath) {
@@ -75,6 +80,15 @@ async function main() {
         } catch (e) {
             console.error(`  ✗ ${blobPath} — ${e.message}`);
             fail++;
+        }
+    }
+    for (const blobPath of RETIRED_BLOBS) {
+        try {
+            await del(`${BLOB_HOST}/${blobPath}`);
+            console.log(`  🗑 ${blobPath} (retired — 컴플라이언스 발행 중단)`);
+        } catch (e) {
+            // 이미 없음(404류) 포함 — 삭제 실패는 발행 성패에 영향 없음
+            console.log(`  🗑 ${blobPath} skip — ${e.message}`);
         }
     }
     console.log(`\nblob_upload: ${ok} ok / ${fail} fail`);

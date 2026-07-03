@@ -5,14 +5,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
  * 관심종목 — VERITY 공개 터미널 (AlphaNest) 우측 상시 사이드바.
  *
  * 저장 = localStorage["verity_watchlist"] = [{ticker,name,market}] (로그인 불요·마찰 0).
- * 검색 universe = universe_search.json (통합 KR+US ~8.4천, nav/리포트/결정 검색과 동일 단일 소스. 2026-06-27 통일 — 괴리 제거). 가격/등락 = /api/stock 라이브(best-effort).
+ * 검색 universe = universe_search.json (통합 KR+US ~8.4천, nav/리포트/결정 검색과 동일 단일 소스. 2026-06-27 통일 — 괴리 제거).
+ * 🚨 시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): /api/stock 실시간가 폴링 제거 — KIS/yfinance 시세를 회원(제3자)에게 재배포 불가.
+ *   가격 열 삭제. 시세·차트 = 행 클릭 → 종목 리포트(네이버 link-out + TV 위젯)에서.
  * 저장 시 "verity-watchlist-changed" 이벤트 → PublicDisclosureFeed 가 즉시 관심종목 핀 갱신(같은 페이지).
  * 행 탭 → 종목 리포트(stockPath?q=ticker). RULE 7 — 가격·등락(외부 사실)만, 점수·추천 0.
  * 🚨 내 관점 통합(2026-06-21) — localStorage `verity_thesis_v1`(PublicThesisNote) 읽어 각 종목에 관점 배지(강세/관망/약세).
  *   = "내가 어떻게 본 종목들" 한눈. *사용자 본인* 저널이지 VERITY 추천 아님. focus/이벤트 시 재읽기(다른 페이지서 기록 반영).
  * 컴팩트 사이징(목업 정합). 반응형 — ResizeObserver. 캔버스 = SEED 데모.
  * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
- * 로딩: 리스트는 즉시(localStorage). 가격 async 도착 전 = 토스식 shimmer 바(— 대신).
  * 🚨 배경 transparent + 하단 면책 푸터 제거(2026-06-26, PM) — 면책은 사이트 하단 단일 통합. 패딩 0(임베드 이중여백 해소).
  */
 
@@ -86,7 +87,6 @@ export default function PublicWatchlist(props: Props) {
     const [w, setW] = useState(0)
     const [watch, setWatch] = useState<any[]>(SEED)
     const [universe, setUniverse] = useState<any[]>([])
-    const [prices, setPrices] = useState<Record<string, { price?: number; chg?: number }>>({})
     const [theses, setTheses] = useState<Record<string, any>>({})
     const [adding, setAdding] = useState(false)
     const [query, setQuery] = useState("")
@@ -94,9 +94,6 @@ export default function PublicWatchlist(props: Props) {
 
     const isDark = onCanvas ? !!dark : themeDark
     const C = isDark ? DARK : LIGHT
-    const skBase = isDark ? "#222a33" : "#e9edf1"
-    const skHi = isDark ? "#2d3742" : "#f3f5f7"
-    const skBar = (bw: number, bh: number): CSSProperties => ({ width: bw, height: bh, borderRadius: 4, marginLeft: "auto", background: skBase, backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "vsrShimmer 1.4s ease-in-out infinite" })
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
     useEffect(() => {
@@ -146,25 +143,6 @@ export default function PublicWatchlist(props: Props) {
         return () => { alive = false }
     }, [stockUrl, onCanvas])
 
-    useEffect(() => {
-        if (onCanvas) return
-        let alive = true
-        watch.forEach((h) => {
-            const tk = String(h.ticker || "")
-            if (!tk || prices[tk] != null) return
-            fetch(base + "/api/stock?q=" + encodeURIComponent(tk) + "&market=" + (h.market || "kr"))
-                .then((r) => (r.ok ? r.json() : null))
-                .then((d) => {
-                    if (!alive || !d) return
-                    const p = d.price ?? d.current_price ?? (d.stock && d.stock.price)
-                    const ch = d.price_change_pct ?? d.change_pct
-                    if (p != null) setPrices((prev) => ({ ...prev, [tk]: { price: Number(p), chg: ch != null ? Number(ch) : undefined } }))
-                })
-                .catch(() => {})
-        })
-        return () => { alive = false }
-    }, [watch, base, onCanvas, prices])
-
     const narrow = w > 0 && w < 320
     const pad = 0
 
@@ -202,7 +180,6 @@ export default function PublicWatchlist(props: Props) {
         window.location.href = p + "?q=" + encodeURIComponent(String(h.ticker || "").trim())
     }
 
-    const chgColor = (v?: number) => (v == null || !isFinite(v) ? C.faint : v > 0 ? C.up : v < 0 ? C.down : C.faint)
 
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
@@ -215,7 +192,6 @@ export default function PublicWatchlist(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
-            <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             {/* 관심종목 카드 */}
             <div style={{ background: C.card, borderRadius: 14, padding: "14px 14px 11px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px" }}>관심종목</div>
@@ -228,8 +204,6 @@ export default function PublicWatchlist(props: Props) {
                         </div>
                     )}
                     {watch.map((h, i) => {
-                        const pr = prices[String(h.ticker)] || {}
-                        const priced = pr.price != null
                         const th = theses[String(h.ticker)]
                         const sm = th ? (STANCE_META[th.stance] || STANCE_META.watch) : null
                         const smCol = sm ? (C as any)[sm.key] : C.faint
@@ -243,21 +217,8 @@ export default function PublicWatchlist(props: Props) {
                                         {sm && <span style={{ fontSize: 9.5, fontWeight: 800, color: smCol, background: C.chip, borderRadius: 5, padding: "1px 6px", letterSpacing: "-0.1px" }}>내 관점 {sm.label}</span>}
                                     </div>
                                 </div>
-                                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                    {priced ? (
-                                        <>
-                                            <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "-0.2px" }}>{Number(pr.price).toLocaleString()}</div>
-                                            <div style={{ fontSize: 11, fontWeight: 800, color: chgColor(pr.chg), marginTop: 1 }}>
-                                                {pr.chg != null && isFinite(pr.chg) ? (pr.chg > 0 ? "+" : "") + pr.chg.toFixed(1) + "%" : ""}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div style={skBar(52, 13)} />
-                                            <div style={{ ...skBar(34, 10), marginTop: 4 }} />
-                                        </>
-                                    )}
-                                </div>
+                                {/* 실시간가·등락 열 제거(2026-07-03 컴플라이언스) — 시세는 행 클릭 → 리포트의 네이버 link-out/TV 위젯 */}
+                                <span style={{ flexShrink: 0, fontSize: 13, color: C.faint, fontWeight: 700 }}>›</span>
                                 <button onClick={(e) => { e.stopPropagation(); removeStock(h.ticker) }} title="삭제"
                                     style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 14, fontWeight: 700, padding: "0 1px", flexShrink: 0 }}>×</button>
                             </div>
