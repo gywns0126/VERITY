@@ -169,6 +169,19 @@ runs:
           fi
         done
 
+        # ── kr_chart_daily/ 디렉토리 publish (2026-07-04 신설) ──
+        # PublicLiveChart(자체 SVG 일봉) 가 Blob /kr_chart_daily/chunk_XX.json fetch.
+        # source = 금융위 공공데이터 (이용허락범위 제한 없음 — 재배포 합법, KRX raw 와 무관).
+        # 청크 40개 + meta.json — kr_chart_daily.yml cron 이 매 평일 갱신.
+        mkdir -p _public_dist/kr_chart_daily
+        for f in $(git ls-tree --name-only origin/main:data/kr_chart_daily 2>/dev/null); do
+          if git show "origin/main:data/kr_chart_daily/$f" > "_public_dist/kr_chart_daily/$f" 2>/dev/null && [ -s "_public_dist/kr_chart_daily/$f" ]; then
+            echo "  + data/kr_chart_daily/$f"
+          else
+            rm -f "_public_dist/kr_chart_daily/$f"
+          fi
+        done
+
         # ── README.md (VERITY-data repo 메타 — 자동 readme) ──
         cat > _public_dist/README.md <<'READMEEOF'
         # VERITY-data
