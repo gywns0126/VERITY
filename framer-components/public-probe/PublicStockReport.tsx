@@ -326,6 +326,18 @@ function fmtKRWcompact(v: any): string {
     else s = Math.round(a).toLocaleString()
     return (neg ? "−" : "") + s
 }
+function fmtUSDcompact(v: any): string {
+    if (v == null || isNaN(Number(v))) return "—"
+    const n = Number(v)
+    const neg = n < 0
+    const a = Math.abs(n)
+    let s: string
+    if (a >= 1e12) s = "$" + (a / 1e12).toFixed(2) + "T"
+    else if (a >= 1e9) s = "$" + (a / 1e9).toFixed(1) + "B"
+    else if (a >= 1e6) s = "$" + (a / 1e6).toFixed(0) + "M"
+    else s = "$" + Math.round(a).toLocaleString("en-US")
+    return (neg ? "−" : "") + s
+}
 
 // Catmull-Rom → cubic bezier 부드러운 곡선 path (유선형 추이용)
 function smoothLine(p: { x: number; y: number }[]): string {
@@ -346,7 +358,7 @@ function smoothLine(p: { x: number; y: number }[]): string {
     return d
 }
 
-function FinTrend({ series, C }: { series: any[]; C: any }) {
+function FinTrend({ series, C, usd }: { series: any[]; C: any; usd?: boolean }) {
     const [metric, setMetric] = useState<"revenue" | "op" | "net">("revenue")
     const METRICS: { k: "revenue" | "op" | "net"; l: string }[] = [
         { k: "revenue", l: "매출" }, { k: "op", l: "영업이익" }, { k: "net", l: "순이익" },
@@ -407,7 +419,7 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
             </div>
             {/* 최신값 */}
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-                <span style={{ fontFamily: HEAD, fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.6px" }}>{fmtKRWcompact(lastVal)}</span>
+                <span style={{ fontFamily: HEAD, fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.6px" }}>{usd ? fmtUSDcompact(lastVal) : fmtKRWcompact(lastVal)}</span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.faint }}>{lastYear} {METRICS.find((m) => m.k === metric)!.l}</span>
                 {showMargin && lastMargin != null && (
                     <span style={{ fontSize: 11.5, fontWeight: 800, color: C.amber, marginLeft: "auto" }}>{marginLabel} {lastMargin.toFixed(1)}%</span>
@@ -447,7 +459,7 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
                     </div>
                 ))}
             </div>
-            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>DART 전자공시 연간 실값(추이선) · 증감은 위 과거 비교 칩(↑증가 ↓감소) · 점수·추천 아님</div>
+            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{usd ? "SEC 10-K" : "DART 전자공시"} 연간 실값(추이선) · 증감은 위 과거 비교 칩(↑증가 ↓감소) · 점수·추천 아님</div>
         </div>
     )
 }
@@ -1573,8 +1585,8 @@ export default function PublicStockReport(props: Props) {
             {/* 재무 추이 — 연도별 매출·영업이익·순익 + 과거 비교 (DART 공시 실값) */}
             {Array.isArray(s.fin_series) && s.fin_series.length >= 2 && (
                 <>
-                    {sectionTitle("재무 추이", "DART · 연간 실값 · 과거(1·3·5년) 비교")}
-                    <FinTrend series={s.fin_series} C={C} />
+                    {sectionTitle("재무 추이", (/^\d{6}$/.test(String(s.ticker || "")) ? "DART" : "SEC 10-K") + " · 연간 실값 · 과거(1·3·5년) 비교")}
+                    <FinTrend series={s.fin_series} C={C} usd={!/^\d{6}$/.test(String(s.ticker || ""))} />
                 </>
             )}
 

@@ -15,7 +15,7 @@ import json
 import os
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -265,6 +265,98 @@ def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
             "equity": _latest_annual(sa.get("stockholders_equity")),
             "eps_diluted": _latest_annual(sa.get("eps_diluted")),
             "fcf_usd": der.get("fcf_usd")}
+
+
+def _annual_by_year(series: Any) -> Dict[int, float]:
+    """series_annual[key] → {연도(end 기준): val} — 연도 중복 시 최신 end 우선."""
+    out: Dict[int, Tuple[str, float]] = {}
+    if not isinstance(series, list):
+        return {}
+    for e in series:
+        if not isinstance(e, dict) or e.get("val") is None:
+            continue
+        end = str(e.get("end") or "")
+        if len(end) < 4 or not end[:4].isdigit():
+            continue
+        try:
+            v = float(e.get("val"))
+        except (TypeError, ValueError):
+            continue
+        y = int(end[:4])
+        if y not in out or end > out[y][0]:
+            out[y] = (end, v)
+    return {y: v for y, (_, v) in out.items()}
+
+
+def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], Optional[Dict[str, Any]]]:
+    """per-ticker series_annual(10-K) → (fin_series, financials) — 연간 재무추이·요약 부활 (2026-07-04 커버리지 스프린트).
+
+    fin_series = KR 스키마 미러 [{year, revenue, op, net}] (USD 원값 — 프론트 FinTrend usd 모드가 $ 포맷).
+    financials = KR 스키마 미러 {period, values, groups} (표시 문자열 = _usd_compact, RULE 7 사실만).
+    캐시 파일 로컬 읽기 — 외부호출 0.
+    """
+    p = os.path.join(_ROOT, "data", "us_financials", f"{ticker}.json")
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            doc = json.load(f) or {}
+    except (OSError, json.JSONDecodeError):
+        return None, None
+    sa = doc.get("series_annual") or {}
+    rev_y = _annual_by_year(sa.get("revenue"))
+    op_y = _annual_by_year(sa.get("operating_income"))
+    net_y = _annual_by_year(sa.get("net_income"))
+
+    years = sorted(set(rev_y) | set(op_y) | set(net_y))[-12:]
+    fin_series = [
+        {"year": y, "revenue": rev_y.get(y), "op": op_y.get(y), "net": net_y.get(y)}
+        for y in years
+        if rev_y.get(y) is not None or op_y.get(y) is not None or net_y.get(y) is not None
+    ]
+    if len(fin_series) < 2:
+        fin_series = None  # 컴포넌트 게이트(>=2) 정합 — 미달 시 섹션 생략
+
+    financials = None
+    if years:
+        y = years[-1]
+        gp_y = _annual_by_year(sa.get("gross_profit"))
+        pre_y = _annual_by_year(sa.get("pretax_income"))
+        eps_y = _annual_by_year(sa.get("eps_diluted"))
+        cash_y = _annual_by_year(sa.get("cash"))
+        eq_y = _annual_by_year(sa.get("stockholders_equity"))
+        rev, gp, op, pre, net = rev_y.get(y), gp_y.get(y), op_y.get(y), pre_y.get(y), net_y.get(y)
+
+        def _row(k: str, v: Optional[float], signed: bool = False) -> Optional[Dict[str, str]]:
+            s = _usd_compact_signed(v) if signed else _usd_compact(v)
+            return {"k": k, "v": s} if s else None
+
+        pl_rows = [r for r in [
+            _row("매출", rev),
+            _row("매출총이익", gp, signed=True),
+            _row("영업이익", op, signed=True),
+            _row("세전이익", pre, signed=True),
+            _row("순이익", net, signed=True),
+            ({"k": "EPS(희석)", "v": f"${eps_y[y]:,.2f}"} if eps_y.get(y) is not None else None),
+            ({"k": "매출총이익률", "v": f"{gp / rev * 100:.1f}%"} if gp is not None and rev else None),
+            ({"k": "영업이익률", "v": f"{op / rev * 100:.1f}%"} if op is not None and rev else None),
+        ] if r]
+        bs_rows = [r for r in [
+            _row("현금성자산", cash_y.get(y)),
+            _row("자기자본", eq_y.get(y), signed=True),
+        ] if r]
+        groups = []
+        if pl_rows:
+            groups.append({"title": "손익계산서 (연간 10-K)", "rows": pl_rows})
+        if bs_rows:
+            groups.append({"title": "재무상태표", "rows": bs_rows})
+        if groups:
+            values = {}
+            if _usd_compact(rev):
+                values["매출"] = _usd_compact(rev)
+            if _usd_compact_signed(net):
+                values["순이익"] = _usd_compact_signed(net)
+            financials = {"period": str(y), "values": values, "groups": groups}
+
+    return fin_series, financials
 
 
 def _usd_compact(v: Any) -> str | None:
@@ -530,6 +622,16 @@ def main() -> int:
                     s["disclosures"] = ds[:8]
                     n_disc += 1
             print(f"[us_stock_report] disclosures 부착 {n_disc}/{len(stocks)} 종목 (us_disclosure_feed)", file=sys.stderr)
+        # 연간 재무추이(fin_series)·재무요약(financials) — series_annual(10-K) 주입 (0%→95%, 커버리지 스프린트)
+        n_fs = 0
+        for s in stocks:
+            fs, fin = _load_us_annual_pack(str(s.get("ticker") or ""))
+            if fs:
+                s["fin_series"] = fs
+                n_fs += 1
+            if fin:
+                s["financials"] = fin
+        print(f"[us_stock_report] fin_series 부착 {n_fs}/{len(stocks)} 종목 (series_annual 10-K)", file=sys.stderr)
         # ROE 큰 순 (사실 정렬)
         def _roe(s):
             v = s.get("facts", {}).get("ROE", "")

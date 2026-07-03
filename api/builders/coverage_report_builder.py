@@ -26,6 +26,7 @@ KST = timezone(timedelta(hours=9))
 
 # 리포트 내 필드 채움율 측정 대상 (PublicStockReport 섹션 렌더 가드와 1:1)
 REPORT_FIELDS = ["facts", "peer", "financials", "fin_series", "overview", "ownership", "real_estate", "consensus", "calendar"]
+US_REPORT_FIELDS = ["facts", "peer", "financials", "fin_series", "consensus", "disclosures"]
 REGRESSION_WARN_PP = 10.0  # 전 스냅샷 대비 하락 경고 임계 (%p)
 
 
@@ -83,6 +84,33 @@ def build() -> Dict[str, Any]:
         "flow_5d": _companion("stock_flow_5d.json", "flows"),
     }
 
+    # 미장 축 (2026-07-04 확대) — us_stock_report + us_quarterly
+    us_doc = _load("us_stock_report_public.json")
+    us = (us_doc or {}).get("stocks") or []
+    us_total = len(us)
+    us_fields: Dict[str, Any] = {}
+    for f in US_REPORT_FIELDS:
+        if us_total == 0:
+            us_fields[f] = None
+            continue
+        filled = sum(1 for s in us if _filled(s.get(f)))
+        us_fields[f] = {"filled": filled, "pct": _pct(filled, us_total)}
+
+    def _us_companion(name: str, key: str = "stocks") -> Optional[Dict[str, Any]]:
+        doc = _load(name)
+        if doc is None:
+            return None
+        v = doc.get(key)
+        cnt = len(v) if isinstance(v, (list, dict)) else None
+        if cnt is None:
+            return None
+        return {"count": cnt, "pct_of_us": _pct(cnt, us_total)}
+
+    us_companions = {
+        "us_quarterly": _us_companion("us_quarterly_public.json"),
+        "us_insider": _us_companion("us_insider_trades.json"),
+    }
+
     return {
         "_meta": {
             "generated_at": datetime.now(KST).isoformat(),
@@ -91,6 +119,9 @@ def build() -> Dict[str, Any]:
         "kr_total": kr_total,
         "fields": fields,
         "companions": companions,
+        "us_total": us_total,
+        "us_fields": us_fields,
+        "us_companions": us_companions,
     }
 
 
@@ -103,6 +134,12 @@ def _flat_pcts(report: Dict[str, Any]) -> Dict[str, float]:
     for k, v in (report.get("companions") or {}).items():
         if isinstance(v, dict) and v.get("pct_of_kr") is not None:
             out[f"companion.{k}"] = v["pct_of_kr"]
+    for k, v in (report.get("us_fields") or {}).items():
+        if isinstance(v, dict) and v.get("pct") is not None:
+            out[f"us.field.{k}"] = v["pct"]
+    for k, v in (report.get("us_companions") or {}).items():
+        if isinstance(v, dict) and v.get("pct_of_us") is not None:
+            out[f"us.companion.{k}"] = v["pct_of_us"]
     return out
 
 
