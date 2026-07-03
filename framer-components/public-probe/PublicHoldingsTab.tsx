@@ -6,8 +6,10 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
  *
  * 인증 — localStorage["verity_supabase_session"].access_token → /api/holdings (user_holdings CRUD).
  *   미로그인/캔버스 = SAMPLE 미리보기 + 로그인 CTA. (StockDashboard getAccessToken 패턴 재사용)
- * RULE 7 — 평가손익 = 현재가 × 수량 − 입력평단 (단순 계산·사실). 매수·매도·추천·점수 0.
- * 현재가 = /api/stock?q=ticker (best-effort). 행 클릭 → 종목 리포트.
+ * RULE 7 — 평가손익 = 종가 × 수량 − 입력평단 (단순 계산·사실). 매수·매도·추천·점수 0.
+ * 🚨 시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): /api/stock 실시간가 폴링 제거 — KIS/yfinance 시세 회원(제3자) 재배포 불가.
+ *   평가 기준가 = stock_flow_5d.json 마지막 close(네이버 소스·발행 유지 판정, KR·커버리지 한정) → h.price → avg_cost 순 graceful.
+ *   실시간 시세 = 행 클릭 → 종목 리포트(네이버 link-out + TV 위젯)에서.
  * 반응형 — ResizeObserver. 테마 = body[data-framer-theme] 자가감지. 브랜드 보라(vg).
  * 🚩 국기 = circle-flags SVG(Logo/FlagIcon) — 이모지 금지(싸구려). 데모 = 단순 CTA(3D목업 X).
  *
@@ -138,7 +140,7 @@ export default function PublicHoldingsTab(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [rows, setRows] = useState<any[]>(SAMPLE)
-    const [prices, setPrices] = useState<Record<string, number>>({})
+    const [closes, setCloses] = useState<Record<string, number>>({})   // KR 종가(stock_flow_5d) — 실시간 아님
     const [isDemo, setIsDemo] = useState(true)
     const [loading, setLoading] = useState<boolean>(() => (onCanvas ? false : !!getToken()))
     const [showAdd, setShowAdd] = useState(false)
@@ -202,22 +204,27 @@ export default function PublicHoldingsTab(props: Props) {
 
     useEffect(() => { loadHoldings() }, [loadHoldings])
 
+    // 평가 기준가 — stock_flow_5d 마지막 close(발행 유지 파일 재사용, 신규 시세 노출 0). 커버리지 밖 = graceful fallback.
     useEffect(() => {
         if (onCanvas || isDemo) return
         let alive = true
-        rows.forEach((h) => {
-            const tk = String(h.ticker || "")
-            if (!tk || prices[tk] != null) return
-            fetch(base + "/api/stock?q=" + encodeURIComponent(tk) + "&market=" + (h.market || "kr"))
-                .then((r) => (r.ok ? r.json() : null))
-                .then((d) => {
-                    const p = d && (d.price ?? d.current_price ?? (d.stock && d.stock.price))
-                    if (alive && p) setPrices((prev) => ({ ...prev, [tk]: Number(p) }))
-                })
-                .catch(() => {})
-        })
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json", { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const fm = d && (d.flows || d)
+                if (!alive || !fm || typeof fm !== "object") return
+                const m: Record<string, number> = {}
+                for (const tk of Object.keys(fm)) {
+                    const arr = fm[tk]
+                    const last = Array.isArray(arr) && arr.length ? arr[arr.length - 1] : null
+                    const c = last && Number(last.close)
+                    if (c && isFinite(c)) m[tk] = c
+                }
+                setCloses(m)
+            })
+            .catch(() => {})
         return () => { alive = false }
-    }, [rows, isDemo, base, onCanvas, prices])
+    }, [isDemo, onCanvas])
 
     const goStock = useCallback((h: any) => {
         if (typeof window === "undefined") return
@@ -268,7 +275,7 @@ export default function PublicHoldingsTab(props: Props) {
     const evald = rows.map((h) => {
         const us = h.market === "us" || h.currency === "USD"
         const fx = us ? FX : 1
-        const cur = prices[String(h.ticker)] != null ? prices[String(h.ticker)] : Number(h.price) || Number(h.avg_cost) || 0
+        const cur = closes[String(h.ticker)] != null ? closes[String(h.ticker)] : Number(h.price) || Number(h.avg_cost) || 0
         const val = (Number(h.shares) || 0) * cur * fx
         const cost = (Number(h.shares) || 0) * (Number(h.avg_cost) || 0) * fx
         const pl = val - cost
@@ -458,7 +465,7 @@ export default function PublicHoldingsTab(props: Props) {
                             </div>
 
                             <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 14, lineHeight: 1.5 }}>
-                                종목 누르면 상세 리포트 · 평가손익 = 현재가 × 보유수량 − 입력 평단 (단순 계산·사실)
+                                종목 누르면 상세 리포트 · 평가손익 = 종가(전일) × 보유수량 − 입력 평단 (단순 계산·사실) · 실시간 시세는 리포트에서
                             </div>
                         </>
                     ) : (

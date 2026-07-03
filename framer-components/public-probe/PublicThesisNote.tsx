@@ -7,7 +7,8 @@ import { useEffect, useState, type CSSProperties } from "react"
  * 🚨 RULE 7 = 이건 **사용자 자기 저널**(관점/메모/날짜)이지 VERITY 의 추천·점수가 아님. 우리는 채점/판단 0.
  * 🚨 RULE 6 = LLM 0. 전부 사용자 입력 + 결정론적 가격 diff.
  * 저장 = localStorage `verity_thesis_v1` + "verity-thesis-changed" 이벤트 → PublicWatchlist 즉시 관점 배지 갱신.
- * 가격 = /api/stock(기록 시점 entryPrice 동결 → 재방문 diff).
+ * 가격 = stock_flow_5d.json 마지막 close(종가, 네이버 소스·발행 유지 판정) — 기록 시점 entryPrice 동결 → 재방문 diff.
+ * 🚨 시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): /api/stock 실시간가 조회 제거(KIS 재배포 불가) → 종가 diff 로 전환. 커버리지 밖 = graceful "—".
  * ticker = prop → URL ?q= → localStorage `verity_last_ticker` 폴백(페이지 토글 시 종목 유지).
  *   + "verity-ticker-change" 이벤트 수신 → 같은 페이지 PublicDecisionPanel(검색 통합)이 종목 바꾸면 리로드 없이 따라옴(2026-06-23).
  */
@@ -170,22 +171,25 @@ export default function PublicThesisNote(props: Props) {
         if (t) { setStance(t.stance); setNote(t.note || "") } else { setStance("watch"); setNote("") }
     }, [tk, onCanvas, token, serverTheses])
 
-    // 현재가 (재방문 diff용 + 기록 시 entryPrice 동결)
+    // 종가 (재방문 diff용 + 기록 시 entryPrice 동결) — stock_flow_5d 마지막 close(실시간 아님, 컴플라이언스)
     useEffect(() => {
         setCurPrice(null)
         if (onCanvas) { setCurPrice(73900); return }
-        if (!tk || !base) return
+        if (!tk) return
         let alive = true
-        fetch(base + "/api/stock?q=" + encodeURIComponent(tk) + "&market=kr")
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json", { cache: "no-store" })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive || !d) return
-                const p = d.price ?? d.current_price ?? (d.stock && d.stock.price)
-                if (p != null) setCurPrice(Number(p))
+                const fm = d.flows || d
+                const arr = fm && fm[tk]
+                const last = Array.isArray(arr) && arr.length ? arr[arr.length - 1] : null
+                const c = last && Number(last.close)
+                if (c && isFinite(c)) setCurPrice(c)
             })
             .catch(() => {})
         return () => { alive = false }
-    }, [tk, base, onCanvas])
+    }, [tk, onCanvas])
 
     const save = () => {
         if (onCanvas || !tk) return
@@ -250,7 +254,7 @@ export default function PublicThesisNote(props: Props) {
                         <div style={{ fontSize: 11, fontWeight: 800, color: C.faint, marginBottom: 5 }}>기록 후 변화</div>
                         {ep != null ? (
                             <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                                <span style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>기록 시 {won(ep)} →</span>
+                                <span style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>기록 시 {won(ep)} → 종가</span>
                                 <span style={{ fontSize: 14.5, fontWeight: 800, color: C.ink }}>{curPrice != null ? won(curPrice) : "—"}</span>
                                 {diffPct != null && isFinite(diffPct) && (
                                     <span style={{ fontSize: 13, fontWeight: 800, color: dCol }}>{(diffPct > 0 ? "+" : "") + diffPct.toFixed(1)}%</span>
