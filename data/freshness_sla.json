@@ -1,8 +1,8 @@
 {
   "_meta": {
     "purpose": "사이트 전체 데이터 신선도 SLA 단일 등록부. 신선도 거버넌스 키스톤.",
-    "last_reviewed": "2026-06-26",
-    "consumer_status": "pending — CI 모니터(cron_health 확장) 배선은 US 커밋 후 Tier 2 (RULE 8 N=2 audit). 현재는 선언적 스펙.",
+    "last_reviewed": "2026-07-03",
+    "consumer_status": "shadow wired — scripts/freshness_shadow_monitor.py (cron_health_monitor.yml 매시, 관측-only). shadow 63 run(6/27~7/3) 보정: weekday 유효 age(주말 제외) 판정. 알람 flip 게이트 = macro_collect dispatch N=2 + 7/6(월) 무오탐 + cron_health 승격 배선(미구현).",
     "field_schema": {
       "id": "스트림 식별자",
       "file": "발행 아티팩트 경로 (data/ 기준)",
@@ -15,12 +15,13 @@
     },
     "monitor_notes": [
       "weekday/market_hours/weekly/monthly 스트림은 주말·장외·비발행일에 자연 정체 → 모니터는 schedule 인지 필수 ([[feedback_weekday_check_mandatory]]).",
-      "owner=local 스트림은 data/metadata/local_lake_health.json 하트비트로 간접 감시(맥 침묵 가시화). 직접 mtime 비교는 CI 가 로컬 파일 못 봐서 발행 시각(커밋/Blob) 기준."
+      "owner=local 스트림은 data/metadata/local_lake_health.json 하트비트로 간접 감시(맥 침묵 가시화). 직접 mtime 비교는 CI 가 로컬 파일 못 봐서 발행 시각(커밋/Blob) 기준.",
+      "주말 carryover (2026-07-03): weekday/market_hours 는 age 에서 토·일 경과분 제외한 유효 age 로 판정 — 게이팅만으로는 월요일 오전 일배치가 확정 오탐 (6/29 ai_synthesis 등 4종 클러스터 학습)."
     ]
   },
   "streams": [
     {"id": "crypto", "file": "crypto_*.json", "max_age_minutes": 90, "owner": "ci", "schedule": "always", "cadence": "30분(시간당 2회) crypto_collect.yml", "criticality": "P0"},
-    {"id": "etf_flow", "file": "etf_flow.json", "max_age_minutes": 2880, "owner": "ci", "schedule": "weekday", "cadence": "거래일 ~일1 (KRX ETF; crypto_collect 동승하나 실 갱신은 거래일·git 7d=3커밋)", "criticality": "P1"},
+    {"id": "etf_flow", "file": "etf_flow.json", "max_age_minutes": 2880, "owner": "ci", "schedule": "weekday", "cadence": "거래일 1회 목표 — bond_etf_analysis.yml etfs 슬롯 KST 18:30 ('crypto_collect 동승' 표기는 오기, 2026-07-03 정정)", "criticality": "P1", "known_issue": "KRX 간헐 무응답 시 '기존 파일 유지 skip'(7/1 run 로그) → 실 갱신 2~3일 간격. 재시도/원인 로깅 보강 큐."},
     {"id": "macro_snapshot", "file": "macro_snapshot.json", "max_age_minutes": 360, "owner": "ci", "schedule": "always", "cadence": "실측 median 100분·max 306분 (manifest 30분 주장 정정 2026-07-01). max_age=360 = 정상최대갭+버퍼", "criticality": "P0"},
     {"id": "news_flash", "file": "news_flash.json", "max_age_minutes": 90, "owner": "ci", "schedule": "market_hours", "cadence": "평일 15~30분 rss_scout.yml", "criticality": "P0"},
     {"id": "price_pulse", "file": "price_pulse.json", "max_age_minutes": 30, "owner": "ci", "schedule": "market_hours", "cadence": "1분 lite (장중만, 장외 정체 정상)", "criticality": "P0"},

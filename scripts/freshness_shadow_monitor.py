@@ -10,6 +10,11 @@ shadow 이므로 ts 추출 불완전(NO_TS)이어도 무해 — 오히려 어느
 ts 추출 = per-stream `ts_field`(매니페스트, 옵션) 우선 → 없으면 fallback 체인 →
 list/jsonl 은 마지막 요소/라인. schedule 게이팅 = weekday(주말 skip)/market_hours(장중만).
 commit-age 미사용(cron_health 체크아웃 shallow). owner=local 은 heartbeat 가 별도 커버 → skip.
+
+주말 carryover 정정 (2026-07-03, shadow 63 run 보정): weekday/market_hours 스트림은 주말에
+생산이 없으므로 age 에서 토·일 경과분을 제외한 유효 age 로 판정. 게이팅만으로는 월요일 오전
+일배치 스트림(금 배치 + 주말 = 72h 초과)이 확정적 오탐 — 6/29(월) ai_synthesis 등 4종 클러스터.
+row 에는 raw(age_min)·유효(age_eff_min) 병기, would_alarm 은 유효 age 기준.
 """
 from __future__ import annotations
 
@@ -78,14 +83,30 @@ def _load_any(path: str):
         return None
 
 
-def _age_minutes(iso: str) -> float | None:
+def _parse_ts_kst(iso: str) -> datetime | None:
     try:
         t = datetime.fromisoformat(iso.replace("Z", "+00:00"))
     except ValueError:
         return None
     if t.tzinfo is None:
         t = t.replace(tzinfo=KST)
-    return (now_kst() - t.astimezone(KST)).total_seconds() / 60
+    return t.astimezone(KST)
+
+
+def _weekend_minutes_between(start: datetime, end: datetime) -> float:
+    """start~end (KST aware) 구간 중 토·일에 속한 경과 분. weekday 스트림 유효 age 계산용."""
+    if start >= end:
+        return 0.0
+    total = 0.0
+    cur = start
+    # 자정 단위 세그먼트 순회 — 구간이 수개월이어도 일 단위 O(days), 모니터 규모에서 무시 가능
+    while cur < end:
+        day_end = datetime.combine(cur.date() + timedelta(days=1), time(0), tzinfo=KST)
+        seg_end = min(day_end, end)
+        if cur.weekday() >= 5:  # 5=토, 6=일
+            total += (seg_end - cur).total_seconds() / 60
+        cur = seg_end
+    return total
 
 
 def _schedule_active(schedule: str, now: datetime) -> bool:
@@ -126,15 +147,20 @@ def build_observations() -> dict:
         if not ts:
             rows.append({"id": s["id"], "status": "no_ts"})
             continue
-        age_m = _age_minutes(ts)
-        if age_m is None:
+        t = _parse_ts_kst(ts)
+        if t is None:
             rows.append({"id": s["id"], "status": "bad_ts", "ts": ts})
             continue
+        age_m = (now - t).total_seconds() / 60
+        # weekday/market_hours = 주말 무생산 스트림 → 토·일 경과분 제외한 유효 age 로 판정
+        age_eff = age_m
+        if sched in ("weekday", "market_hours"):
+            age_eff = age_m - _weekend_minutes_between(t, now)
         maxm = s.get("max_age_minutes")
-        would_alarm = bool(maxm and age_m > maxm)
+        would_alarm = bool(maxm and age_eff > maxm)
         rows.append({
             "id": s["id"], "status": "checked", "schedule": sched,
-            "age_min": round(age_m, 1), "max_age_min": maxm,
+            "age_min": round(age_m, 1), "age_eff_min": round(age_eff, 1), "max_age_min": maxm,
             "would_alarm": would_alarm, "criticality": s.get("criticality"),
         })
     alarms = [r["id"] for r in rows if r.get("would_alarm")]
