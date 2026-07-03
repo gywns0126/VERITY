@@ -43,6 +43,18 @@ function sharesShort(v: any): string {
   if (a >= 1e4) return sign + Math.round(a / 1e4).toLocaleString() + "만주"
   return sign + Math.round(a).toLocaleString() + "주"
 }
+function fmtAge(iso: any): string {
+  if (!iso) return ""
+  try {
+    const mins = Math.max(0, Math.round((Date.now() - new Date(String(iso)).getTime()) / 60000))
+    if (mins < 60) return mins + "분 전"
+    const hrs = Math.round(mins / 60)
+    if (hrs < 24) return hrs + "시간 전"
+    return Math.round(hrs / 24) + "일 전"
+  } catch (e) {
+    return ""
+  }
+}
 
 export default function PublicExploreHub(props: {
   width?: number; dark?: boolean; sectorUrl?: string; discoverPath?: string; stockPath?: string
@@ -56,6 +68,7 @@ export default function PublicExploreHub(props: {
 
   const [tab, setTab] = useState<string>("sector")
   const [sectors, setSectors] = useState<any[]>([])
+  const [asOf, setAsOf] = useState<string>("")
 
   useEffect(() => {
     if (onCanvas) return
@@ -74,6 +87,8 @@ export default function PublicExploreHub(props: {
         .then((d) => {
           const v = d && pick(d)
           if (alive && v) { setter(v); try { sessionStorage.setItem(cacheKey, JSON.stringify(v)) } catch (e) {} }
+          const ts = d && d._meta && d._meta.generated_at
+          if (alive && ts) setAsOf(String(ts))
         })
         .catch(() => {
           try { const c = sessionStorage.getItem(cacheKey); if (alive && c) setter(JSON.parse(c)) } catch (e) {}
@@ -124,6 +139,11 @@ export default function PublicExploreHub(props: {
             </div>
           ))}
           {sectors.length === 0 && <div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>업종 데이터 준비 중…</div>}
+          {asOf && sectors.length > 0 && (
+            <div style={{ gridColumn: "1 / -1", fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 2 }}>
+              데이터 {fmtAge(asOf)} 업데이트
+            </div>
+          )}
         </div>
       )}
 

@@ -3,8 +3,10 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
  * 종목 리포트 — VERITY 공개 터미널 (AlphaNest). 전 종목 검색→선택→리포트.
- * 데이터 = stock_report_public + flow_5d + disclosure_forensics + insider_trades + market_warnings (Blob). 가격/차트=/api 라이브.
- * 차트 = OHLCV 선(부드러운 곡선+그라데이션, 기본)/캔들 + 거래량 + MA + 기간 + 공시마커 + 라이브 틱(장중 6s) + 토스풍 호버 카드.
+ * 데이터 = stock_report_public + flow_5d + disclosure_forensics + insider_trades + market_warnings (Blob).
+ * 🚨 시세 재배포 컴플라이언스(2026-07-03): 내장 차트(/api/chart KIS OHLCV)+실시간 현재가(/api/stock 폴링)+trending_kr
+ *   = KRX/KIS 시세 재배포 → 제거. 차트 = 같은 페이지 형제 PublicLiveChart(TradingView 위젯, verity-ticker-change 추종) 위임.
+ *   실시간 시세 = 네이버 link-out(증권사 서빙 = 재배포 아님). "지금 거래 활발" = 네이버 거래대금 상위 link-out.
  * 시장경보 = 경보 시 헤더(종목명·가격·메타) 통째 틴트 박스(외곽선 없음)로 감싸 한눈에. 경보 없으면 헤더 평범.
  * 폰트 = Pretendard 단일. 탭→상세 = 기본지표(계산식+실제 투입숫자 facts_calc·출처)/수급(정확 주수)/동종업계(비교)/재무(전체 재무제표 그룹) + 공시·내부자·forensics(원문) — 전업러용 raw 접근. 있는 데이터만(RULE10).
  * 다크모드 = Framer 네이티브 토글(body[data-framer-theme]) 추종 — themeDark + MutationObserver. canvas 에선 dark prop. 사이트 다크모드 버튼과 실시간 연동.
@@ -78,15 +80,6 @@ const GLOSSARY: Record<string, string> = {
 }
 const GKEYS = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length)
 const DART = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
-// g = 차트 granularity(daily/weekly/monthly=KIS, full=yfinance 전체 상장기간 월봉), n = 슬라이스 캔들 수(0=전체).
-// 주봉=~2년·월봉=~8년(KIS 호출당 100건 캡) — "전체"는 KIS 한계라 IPO 못 감 → full=yfinance max 월봉(상장 후 전부).
-const PERIODS = [
-    { l: "1M", n: 20, g: "daily" },
-    { l: "3M", n: 60, g: "daily" },
-    { l: "1Y", n: 52, g: "weekly" },
-    { l: "5Y", n: 60, g: "monthly" },
-    { l: "전체", n: 0, g: "full" },
-]
 const DILUTION_CATS = new Set(["유상증자", "전환사채(CB)", "신주인수권부사채(BW)", "교환사채(EB)", "자기주식처분"])
 const RISK_CATS = new Set(["감자", "횡령·배임", "회생·상장폐지", "불성실공시"])
 const FAVORABLE_CATS = new Set(["자기주식취득"])
@@ -114,7 +107,16 @@ const DEFAULT_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com
 const DEFAULT_WARN = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/market_warnings.json"
 const DEFAULT_LENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/securities_lending.json"
 const DEFAULT_SUPPLY = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/supply_demand.json"
-const DEFAULT_TRENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/trending_kr.json"
+// 시세 컴플라이언스 — 실시간 시세·거래대금 상위 = 네이버 link-out(증권사 서빙 = 재배포 아님, 실시간·무료·합법)
+const NAVER_QUANT = "https://finance.naver.com/sise/sise_quant.naver"
+const M_NAVER_QUANT = "https://m.stock.naver.com/sise/trade"
+function naverStockUrl(tk: string): string {
+    if (!/^\d{6}$/.test(String(tk || ""))) return ""
+    const mobile = typeof window !== "undefined" && window.innerWidth < 720
+    return mobile
+        ? "https://m.stock.naver.com/domestic/stock/" + tk + "/total"
+        : "https://finance.naver.com/item/main.naver?code=" + tk
+}
 const RECENTS_KEY = "verity_recent_tickers" // nav 검색(PublicStockSearch)과 공유
 function readRecents(): any[] {
     if (typeof window === "undefined") return []
@@ -195,10 +197,6 @@ const SAMPLE_FORENSICS: Record<string, any> = {
 const SAMPLE_INSIDER: Record<string, any> = { "005930": SAMPLE[0].insider }
 const SAMPLE_WARN: Record<string, any> = { "005930": SAMPLE[0].warnings }
 
-function pctColor(p: number, C: any) {
-    if (!isFinite(p)) return C.faint
-    return p > 0 ? C.up : p < 0 ? C.down : C.faint
-}
 function fmtMan(v: any): string {
     const x = Number(v)
     if (!isFinite(x)) return "—"
@@ -233,6 +231,18 @@ function dateDot(s: any): string {
     const wd = WK[new Date(+x.slice(0, 4), +x.slice(4, 6) - 1, +x.slice(6, 8)).getDay()]
     return `${x.slice(0, 4)}.${x.slice(4, 6)}.${x.slice(6, 8)}(${wd})`
 }
+function fmtAge(iso: any): string {
+    if (!iso) return ""
+    try {
+        const mins = Math.max(0, Math.round((Date.now() - new Date(String(iso)).getTime()) / 60000))
+        if (mins < 60) return mins + "분 전"
+        const hrs = Math.round(mins / 60)
+        if (hrs < 24) return hrs + "시간 전"
+        return Math.round(hrs / 24) + "일 전"
+    } catch (e) {
+        return ""
+    }
+}
 function wonStr(v: any): string {
     const x = Number(v)
     if (!isFinite(x)) return "—"
@@ -251,33 +261,6 @@ function fmtVol(v: any): string {
     if (x >= 1e8) return (x / 1e8).toFixed(2) + "억주"
     if (x >= 1e4) return Math.round(x / 1e4).toLocaleString("en-US") + "만주"
     return Math.round(x).toLocaleString("en-US") + "주"
-}
-function isKROpen(): boolean {
-    const d = new Date()
-    const k = new Date(d.getTime() + (d.getTimezoneOffset() + 540) * 60000)
-    const day = k.getDay()
-    if (day === 0 || day === 6) return false
-    const m = k.getHours() * 60 + k.getMinutes()
-    return m >= 540 && m <= 930
-}
-// 토스풍 부드러운 곡선 — Catmull-Rom → cubic bezier path. pts=[{x,y}].
-function smoothPath(pts: { x: number; y: number }[]): string {
-    if (!pts || pts.length < 2) return ""
-    if (pts.length === 2) return `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)} ${pts[1].y.toFixed(1)}`
-    const t = 0.16
-    let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
-    for (let i = 0; i < pts.length - 1; i++) {
-        const p0 = pts[i - 1] || pts[i]
-        const p1 = pts[i]
-        const p2 = pts[i + 1]
-        const p3 = pts[i + 2] || p2
-        const c1x = p1.x + (p2.x - p0.x) * t
-        const c1y = p1.y + (p2.y - p0.y) * t
-        const c2x = p2.x - (p3.x - p1.x) * t
-        const c2y = p2.y - (p3.y - p1.y) * t
-        d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`
-    }
-    return d
 }
 function loadWatchToken(): string {
     if (typeof window === "undefined") return ""
@@ -657,9 +640,9 @@ export default function PublicStockReport(props: Props) {
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
 
     const rootRef = useRef<HTMLDivElement>(null)
-    const svgRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [list, setList] = useState<any[]>(SAMPLE)            // 리포트 DATA 보유 종목(facts/peer/flow)
+    const [reportAsOf, setReportAsOf] = useState<string>("")   // stock_report_public _meta.generated_at — 신선도 사실 노출
     const [searchList, setSearchList] = useState<any[]>(SAMPLE) // 검색 universe(전 종목 KR+US, ticker/name)
     const [flowMap, setFlowMap] = useState<Record<string, any[]>>(SAMPLE_FLOW)
     const [forensicsMap, setForensicsMap] = useState<Record<string, any>>(SAMPLE_FORENSICS)
@@ -685,29 +668,16 @@ export default function PublicStockReport(props: Props) {
     const [query, setQuery] = useState("")
     const [focused, setFocused] = useState(false)
     const [recents, setRecents] = useState<any[]>([])
-    const [trending, setTrending] = useState<any[]>([])
-    const [live, setLive] = useState<{ price?: number; chg?: number }>({})
-    const [chart, setChart] = useState<any[]>([])
-    const [chartLoading, setChartLoading] = useState<boolean>(false)
-    const prevTickerRef = useRef<string>("")
     const [openTip, setOpenTip] = useState<string>("")
     const [tipBox, setTipBox] = useState<{ left: number; width: number }>({ left: 0, width: 240 })
     const [hoverCapable, setHoverCapable] = useState(true)
-    const [hoverIdx, setHoverIdx] = useState<number | null>(null)
     const [openDisc, setOpenDisc] = useState<number>(-1)
     const [openMetric, setOpenMetric] = useState<string>("")
     const [openFlow, setOpenFlow] = useState<number>(-1)
     const [openPeer, setOpenPeer] = useState<number>(-1)
     const [openFin, setOpenFin] = useState<boolean>(false)
-    const [chartMode, setChartMode] = useState<string>("line")
-    const [chartPeriodIdx, setChartPeriodIdx] = useState<number>(1)
-    const _cp = PERIODS[chartPeriodIdx] || PERIODS[0]
-    const chartN = _cp.n
-    const chartGran = _cp.g
-    const [showMA, setShowMA] = useState<boolean>(true)
     const [forenAll, setForenAll] = useState(false)
     const [insiderAll, setInsiderAll] = useState(false)
-    const [pulse, setPulse] = useState(0)
     const [watchToken, setWatchToken] = useState("")
     const [watchGroupId, setWatchGroupId] = useState<string>("")
     const [starItemId, setStarItemId] = useState<any>(null)
@@ -715,7 +685,6 @@ export default function PublicStockReport(props: Props) {
     const [starHint, setStarHint] = useState(false)
 
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const marketOpen = !onCanvas && isKROpen()
 
     useEffect(() => {
         if (typeof window === "undefined" || !window.matchMedia) return
@@ -746,6 +715,8 @@ export default function PublicStockReport(props: Props) {
                 const arr: any[] = []
                 for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) arr.push(...(a as any[])) }
                 if (!alive || !arr.length) return
+                const ts = docs[0] && (docs[0] as any)._meta && (docs[0] as any)._meta.generated_at
+                if (ts) setReportAsOf(String(ts))
                 // ticker dedup — smallcap 트랙(us_stock_report_us_smallcap) ∩ sp600 중복. 먼저 등장(sp1500) 우선.
                 const seen = new Set<string>()
                 const deduped = arr.filter((s: any) => { const tk = String(s.ticker || ""); if (!tk || seen.has(tk)) return false; seen.add(tk); return true })
@@ -881,7 +852,6 @@ export default function PublicStockReport(props: Props) {
         if (u) return { ticker: u.ticker, name: u.name, market: u.market, _noReport: true }
         return list[0] || {}
     }, [list, searchList, selTicker])
-    const isUsTicker = useMemo(() => !/^\d{6}$/.test(String(s.ticker || "")), [s.ticker])  // 6자리=KR / 그 외=US
     // 로딩 중(실데이터 미도착 or 선택 종목 미발견)엔 삼성전자 샘플 폴백 대신 스켈레톤. 160ms 지연 게이트=즉시 로드 깜빡임 차단(토스식).
     const found = useMemo(() => list.some((x) => String(x.ticker) === String(selTicker)), [list, selTicker])
     const showSkeleton = !onCanvas && (!listLoaded || !found)
@@ -891,63 +861,7 @@ export default function PublicStockReport(props: Props) {
         return () => clearTimeout(t)
     }, [showSkeleton])
 
-    useEffect(() => { setHoverIdx(null); setOpenDisc(-1); setOpenMetric(""); setOpenFlow(-1); setOpenPeer(-1); setOpenFin(false); setForenAll(false); setInsiderAll(false); setOpenTip("") }, [selTicker])
-
-    // 가격 폴링 — live 헤더 + 마지막 차트 봉 갱신(장중 6s). 장외엔 1회(종가).
-    useEffect(() => {
-        if (onCanvas || !s.ticker) { setLive({}); return }
-        let alive = true
-        setLive({})
-        const tick = () => {
-            fetch(base + "/api/stock?q=" + encodeURIComponent(s.ticker) + "&market=" + (/^\d{6}$/.test(String(s.ticker)) ? "kr" : "us"))
-                .then((r) => (r.ok ? r.json() : null))
-                .then((d) => {
-                    if (!alive || !d) return
-                    const p = d.price ?? d.current_price ?? (d.stock && d.stock.price)
-                    const ch = d.price_change_pct ?? d.change_pct
-                    const px = Number(p)
-                    if (p != null) setLive({ price: px, chg: ch != null ? Number(ch) : undefined })
-                    if (isFinite(px) && px > 0) {
-                        setPulse((n) => n + 1)
-                        setChart((prev) => {
-                            if (!prev.length) return prev
-                            const next = prev.slice()
-                            const last = { ...next[next.length - 1] }
-                            last.close = px
-                            last.high = Math.max(Number(last.high) || px, px)
-                            last.low = Math.min(Number(last.low) || px, px)
-                            next[next.length - 1] = last
-                            return next
-                        })
-                    }
-                })
-                .catch(() => {})
-        }
-        tick()
-        let timer: any = null
-        if (isKROpen()) timer = setInterval(tick, 6000)
-        return () => { alive = false; if (timer) clearInterval(timer) }
-    }, [s.ticker, base, onCanvas])
-
-    useEffect(() => {
-        if (onCanvas || !s.ticker || !/^\d{6}$/.test(String(s.ticker))) { setChart([]); return }
-        let alive = true
-        // 종목 변경 시에만 클리어 — 기간(주봉/월봉) 전환 시엔 이전 차트 유지(깜빡임 방지)
-        if (prevTickerRef.current !== String(s.ticker)) {
-            setChart([])
-            prevTickerRef.current = String(s.ticker)
-        }
-        setChartLoading(true)
-        fetch(base + "/api/chart?ticker=" + s.ticker + "&type=" + chartGran)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const arr = d && Array.isArray(d[chartGran]) ? d[chartGran] : (d && Array.isArray(d.daily) ? d.daily : (Array.isArray(d) ? d : null))
-                if (alive && Array.isArray(arr) && arr.length > 1) setChart(arr)
-            })
-            .catch(() => {})
-            .finally(() => { if (alive) setChartLoading(false) })
-        return () => { alive = false }
-    }, [s.ticker, base, onCanvas, chartGran])
+    useEffect(() => { setOpenDisc(-1); setOpenMetric(""); setOpenFlow(-1); setOpenPeer(-1); setOpenFin(false); setForenAll(false); setInsiderAll(false); setOpenTip("") }, [selTicker])
 
     // 관심종목(별표) — 세션 토큰 추적 + 현재 종목 별표 상태 조회
     useEffect(() => {
@@ -983,15 +897,6 @@ export default function PublicStockReport(props: Props) {
     const narrow = w > 0 && w < 560
     const pad = narrow ? 12 : 18
 
-    /* 거래대금 상위(지금 거래 활발) — 사실. trending_kr.json. */
-    useEffect(() => {
-        let alive = true
-        fetch(DEFAULT_TRENDING, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const t = d && Array.isArray(d.top) ? d.top : null; if (alive && t) setTrending(t.slice(0, 6)) })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [])
     /* 종목 선택 = in-page 전환 + 최근 본 종목 누적(nav 검색과 공유 키). */
     const goTicker = (tk: any, nm?: any) => {
         const t = String(tk)
@@ -1056,79 +961,6 @@ export default function PublicStockReport(props: Props) {
         if (consensus && consensus.opinion) f.push("컨센 " + consensus.opinion)
         return f
     }, [s, facts, fnote, financials, disclosures, insider, ownership, consensus])
-
-    const cv = useMemo(() => {
-        if (!chart || chart.length < 2) return null
-        const all = chart
-        const rows = chartN > 0 && chartN < all.length ? all.slice(all.length - chartN) : all
-        const n = rows.length
-        if (n < 2) return null
-        const closes = rows.map((c: any) => Number(c.close))
-        const opens = rows.map((c: any) => Number(c.open != null ? c.open : c.close))
-        const highs = rows.map((c: any) => Number(c.high != null ? c.high : c.close))
-        const lows = rows.map((c: any) => Number(c.low != null ? c.low : c.close))
-        const vols = rows.map((c: any) => Number(c.volume != null ? c.volume : 0))
-        const pmin = Math.min(...lows.filter((x) => isFinite(x)))
-        const pmax = Math.max(...highs.filter((x) => isFinite(x)))
-        if (!isFinite(pmin) || !isFinite(pmax)) return null
-        const prng = (pmax - pmin) || 1
-        const W = Math.max(240, (w || 360) - 2 * pad - 28)
-        const Hp = narrow ? 130 : 150
-        const Hv = 34
-        const gap = 10
-        const H = Hp + gap + Hv
-        const padT = 8, padB = 4
-        const xAt = (i: number) => (n === 1 ? W / 2 : (i / (n - 1)) * W)
-        const yP = (v: number) => padT + (Hp - padT - padB) - ((v - pmin) / prng) * (Hp - padT - padB)
-        const vmax = Math.max(1, ...vols.filter((x) => isFinite(x)))
-        const yVtop = Hp + gap
-        const pts = rows.map((c: any, i: number) => ({ x: xAt(i), y: yP(closes[i]) }))
-        const linePath = smoothPath(pts)
-        const areaPath = linePath ? `${linePath} L ${W.toFixed(1)} ${(Hp - padB).toFixed(1)} L 0 ${(Hp - padB).toFixed(1)} Z` : ""
-        const up = closes[n - 1] >= closes[0]
-        const maAt = (p2: number) => {
-            const out: (number | null)[] = []
-            for (let i = 0; i < n; i++) {
-                if (i < p2 - 1) { out.push(null); continue }
-                let sm = 0
-                for (let j = i - p2 + 1; j <= i; j++) sm += closes[j]
-                out.push(sm / p2)
-            }
-            return out
-        }
-        const maPath = (arr: (number | null)[] | null) => { if (!arr) return ""; const pts: { x: number; y: number }[] = []; for (let i = 0; i < arr.length; i++) { const vv = arr[i]; if (vv != null) pts.push({ x: xAt(i), y: yP(vv) }) } return smoothPath(pts) }
-        const ma20Pts = n >= 20 ? maPath(maAt(20)) : ""
-        const ma60Pts = n >= 60 ? maPath(maAt(60)) : ""
-        const cw = Math.max(1.2, (W / n) * 0.62)
-        const candles = rows.map((c: any, i: number) => {
-            const upDay = closes[i] >= opens[i]
-            return { x: xAt(i), oy: yP(opens[i]), cy: yP(closes[i]), hy: yP(highs[i]), ly: yP(lows[i]), upDay }
-        })
-        const volBars = rows.map((c: any, i: number) => {
-            const upDay = closes[i] >= opens[i]
-            const bh = (vols[i] / vmax) * Hv
-            return { x: xAt(i), top: yVtop + (Hv - bh), h: Math.max(0.5, bh), upDay }
-        })
-        const dates = rows.map((c: any) => String(c.date))
-        const markers = (disclosures || []).map((d: any, di: number) => {
-            const dd = String(d.date || "").replace(/-/g, "")
-            if (!dd) return null
-            const idx = dates.findIndex((x: string) => x >= dd)
-            if (idx < 0) return null
-            return { x: xAt(idx), y: yP(closes[idx]), corr: !!d.is_correction, di }
-        }).filter(Boolean) as any[]
-        const tickIdx = [0, Math.round((n - 1) / 3), Math.round((2 * (n - 1)) / 3), n - 1]
-        return { rows, n, W, H, Hp, Hv, gap, yVtop, pmin, pmax, xAt, yP, linePath, areaPath, up, ma20Pts, ma60Pts, candles, volBars, cw, dates, markers, tickIdx }
-    }, [chart, disclosures, w, pad, narrow, chartN])
-
-    const setHoverFromClientX = (clientX: number) => {
-        if (!cv || !svgRef.current) return
-        const rect = svgRef.current.getBoundingClientRect()
-        if (rect.width <= 0) return
-        let rel = (clientX - rect.left) / rect.width
-        rel = Math.max(0, Math.min(1, rel))
-        setHoverIdx(Math.round(rel * (cv.n - 1)))
-    }
 
     const toggleStar = async () => {
         if (starBusy) return
@@ -1266,10 +1098,6 @@ export default function PublicStockReport(props: Props) {
             <span style={{ fontWeight: 700 }}>{v}</span>
         </div>
     )
-    const segBtn = (active: boolean): CSSProperties => ({
-        border: "none", cursor: "pointer", padding: "5px 10px", borderRadius: 8, fontSize: 11.5, fontWeight: 800,
-        fontFamily: FONT, background: active ? C.card : "transparent", color: active ? C.vg : C.sub, boxShadow: active ? "0 1px 2px rgba(0,0,0,0.18)" : "none",
-    })
     const sevC = (sev: string) => sev === "danger" ? { fg: C.up, bg: C.upS } : sev === "warn" ? { fg: C.amber, bg: C.amberS } : { fg: C.sub, bg: C.bg }
     const tipKV = (label: string, value: any, color?: string) => (
         <div style={{ display: "flex", justifyContent: "space-between", gap: 16, padding: "3px 0" }}>
@@ -1309,12 +1137,6 @@ export default function PublicStockReport(props: Props) {
     const shTypeColor = (t: string) => (t === "동일인" || t === "친족") ? C.vt : t === "소속회사" ? C.down : (t === "자기주식" || t === "기타") ? C.faint : C.sub
     const finValColor = (v: any) => (typeof v === "string" && v.trim().charAt(0) === "−") ? C.down : C.ink
 
-    const hoverRow = hoverIdx != null && cv && hoverIdx >= 0 && hoverIdx < cv.n ? cv.rows[hoverIdx] : null
-    const hoverX = hoverRow && cv ? cv.xAt(hoverIdx as number) : 0
-    const hovPrevClose = (hoverRow && cv && (hoverIdx as number) > 0) ? Number(cv.rows[(hoverIdx as number) - 1].close) : (hoverRow ? Number(hoverRow.open) : NaN)
-    const hovChg = (hoverRow && isFinite(hovPrevClose) && hovPrevClose > 0) ? ((Number(hoverRow.close) - hovPrevClose) / hovPrevClose) * 100 : null
-    const cardFlip = (cv && hoverIdx != null) ? (hoverIdx as number) > cv.n * 0.5 : false
-
     // 토스풍 경보 — 심각도별 부드러운 틴트 배경만(외곽선 없음). 경보 시 헤더 통째 감쌈.
     const warnTint = warnTop === "danger" ? C.upS : warnTop === "warn" ? C.amberS : C.card
     const warnAccent = warnTop === "danger" ? C.up : warnTop === "warn" ? C.amber : C.sub
@@ -1346,7 +1168,7 @@ export default function PublicStockReport(props: Props) {
                     <span role="button" tabIndex={0} onMouseDown={(e) => { e.preventDefault(); setQuery("") }}
                         style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: C.faint, fontSize: 15, fontWeight: 700, cursor: "pointer", lineHeight: 1 }}>×</span>
                 )}
-                {focused && (query.trim() ? matches.length > 0 : (recents.length > 0 || trending.length > 0)) && (
+                {focused && (query.trim() ? matches.length > 0 : true) && (
                     <div style={{
                         position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 60,
                         background: C.card, borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.14)",
@@ -1377,35 +1199,27 @@ export default function PublicStockReport(props: Props) {
                                         ))}
                                     </>
                                 )}
-                                {trending.length > 0 && (
-                                    <>
-                                        <div style={{ display: "flex", alignItems: "baseline", gap: 6, padding: "8px 10px 4px" }}>
-                                            <span style={{ fontSize: 11, fontWeight: 800, color: C.faint }}>지금 거래 활발</span>
-                                            <span style={{ fontSize: 10, fontWeight: 500, color: C.faint, opacity: 0.8 }}>거래대금 상위 · 사실</span>
-                                        </div>
-                                        {trending.map((t: any) => {
-                                            const chg = Number(t.chg)
-                                            return (
-                                                <div key={"t:" + t.ticker} onMouseDown={() => goTicker(t.ticker, t.name)}
-                                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
-                                                    <Logo ticker={t.ticker} name={t.name} market="KOSPI" C={C} size={22} />
-                                                    <span style={{ fontFamily: HEAD, fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name}</span>
-                                                    <span style={{ fontSize: 12, fontWeight: 700, color: isFinite(chg) ? pctColor(chg, C) : C.faint, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{isFinite(chg) ? (chg > 0 ? "+" : "") + chg.toFixed(2) + "%" : "—"}</span>
-                                                </div>
-                                            )
-                                        })}
-                                    </>
-                                )}
+                                {/* 거래대금 상위 = 네이버 link-out — trending_kr(KRX raw) 재배포 중단(컴플라이언스 2026-07-03) */}
+                                <div style={{ display: "flex", alignItems: "baseline", gap: 6, padding: "8px 10px 4px" }}>
+                                    <span style={{ fontSize: 11, fontWeight: 800, color: C.faint }}>지금 거래 활발</span>
+                                    <span style={{ fontSize: 10, fontWeight: 500, color: C.faint, opacity: 0.8 }}>거래대금 상위 · 네이버</span>
+                                </div>
+                                <div onMouseDown={() => { if (typeof window !== "undefined") window.open(window.innerWidth < 720 ? M_NAVER_QUANT : NAVER_QUANT, "_blank", "noopener") }}
+                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
+                                    <span style={{ width: 22, height: 22, borderRadius: 7, background: C.vtS, color: C.vt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>↗</span>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>실시간 거래대금 상위</span>
+                                    <span style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: C.faint }}>네이버 금융 ↗</span>
+                                </div>
                             </>
                         )}
                     </div>
                 )}
             </div>
 
-            {/* 리포트 미보유 종목(검색 universe엔 있으나 정밀 리포트 없음) — graceful 안내. 시세는 아래 라이브. */}
+            {/* 리포트 미보유 종목(검색 universe엔 있으나 정밀 리포트 없음) — graceful 안내. 시세·차트=옆 LiveChart·네이버. */}
             {s._noReport && !onCanvas && (
                 <div style={{ background: C.vtS, borderRadius: 12, padding: "11px 14px", marginBottom: 12, fontSize: 12.5, fontWeight: 600, color: C.sub, lineHeight: 1.5 }}>
-                    아직 정밀 리포트가 준비되지 않은 종목이에요. 실시간 시세만 표시돼요 — 리포트는 순차 확대 중이에요.
+                    아직 정밀 리포트가 준비되지 않은 종목이에요. 시세·차트는 실시간 차트 위젯과 네이버에서 볼 수 있어요 — 리포트는 순차 확대 중이에요.
                 </div>
             )}
 
@@ -1415,7 +1229,7 @@ export default function PublicStockReport(props: Props) {
                     <Logo ticker={s.ticker} name={s.name} market={s.market} C={C} size={narrow ? 28 : 32} />
                     <span style={{ fontFamily: HEAD, fontSize: 23, fontWeight: 800, letterSpacing: "-0.6px" }}>{s.name}</span>
                     {s.name_ko && <span style={{ fontSize: 13.5, color: C.sub, fontWeight: 700 }}>{s.name_ko}</span>}
-                    <span style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>{s.ticker} · {s.market}</span>
+                    <span style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>{s.ticker} · {s.market}{reportAsOf ? " · 리포트 " + fmtAge(reportAsOf) + " 갱신" : ""}</span>
                     <button onClick={toggleStar} title={starItemId ? "관심종목 해제" : "관심종목 담기"} disabled={starBusy}
                         aria-label={starItemId ? "관심종목 해제" : "관심종목 담기"}
                         style={{ flexShrink: 0, border: "none", background: "transparent", cursor: starBusy ? "default" : "pointer", lineHeight: 0, padding: "2px 4px", display: "inline-flex", alignItems: "center" }}>
@@ -1433,18 +1247,13 @@ export default function PublicStockReport(props: Props) {
                     {warnTop && <Info k="시장경보" />}
                 </div>
                 {s.business && <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600, marginTop: 2 }}>{s.business}</div>}
-                {live.price != null && (
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
-                        <span style={{ fontFamily: HEAD, fontSize: 25, fontWeight: 800, letterSpacing: "-0.8px" }}>{isUsTicker ? "$" + Number(live.price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Number(live.price).toLocaleString() + "원"}</span>
-                        {live.chg != null && isFinite(live.chg) && (
-                            <span style={{ fontSize: 13, fontWeight: 800, color: pctColor(Number(live.chg), C) }}>
-                                {(live.chg > 0 ? "+" : "") + live.chg.toFixed(2)}%
-                            </span>
-                        )}
-                        <span style={{ fontSize: 11, fontWeight: 800, color: marketOpen ? C.green : C.faint, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: marketOpen ? C.green : C.faint, display: "inline-block", opacity: marketOpen ? (pulse % 2 ? 1 : 0.4) : 1, transition: "opacity 0.4s" }} />
-                            {marketOpen ? "장중" : "장 마감"}
-                        </span>
+                {/* 실시간 현재가 폴링(/api/stock KIS·yfinance) 제거 — 네이버 link-out(증권사 서빙 = 재배포 아님). KR 6자리만. */}
+                {!onCanvas && naverStockUrl(String(s.ticker || "")) && (
+                    <div style={{ marginTop: 7 }}>
+                        <a href={naverStockUrl(String(s.ticker || ""))} target="_blank" rel="noopener noreferrer"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 800, color: C.vt, background: C.vtS, borderRadius: 9, padding: "6px 11px", textDecoration: "none" }}>
+                            실시간 시세·호가 · 네이버 ↗
+                        </a>
                     </div>
                 )}
                 {(header || consensus.target_price) && (
@@ -1478,110 +1287,7 @@ export default function PublicStockReport(props: Props) {
                 </div>
             )}
 
-            {/* 연결된 차트 (선=부드러운 곡선+그라데이션 기본 / 캔들 + 라이브 틱 + 토스풍 호버 카드) */}
-            {cv && (
-                <div style={{ background: C.card, borderRadius: 16, padding: "12px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-                        <div style={{ display: "flex", gap: 4, background: C.bg, borderRadius: 10, padding: 3 }}>
-                            {PERIODS.map((p, i) => (<button key={p.l} onClick={() => setChartPeriodIdx(i)} style={segBtn(chartPeriodIdx === i)}>{p.l}</button>))}
-                        </div>
-                        {chartLoading && <span style={{ fontSize: 10.5, fontWeight: 700, color: C.faint, opacity: 0.8 }}>갱신 중…</span>}
-                        <div style={{ display: "flex", gap: 4, background: C.bg, borderRadius: 10, padding: 3 }}>
-                            <button onClick={() => setChartMode("line")} style={segBtn(chartMode === "line")}>선</button>
-                            <button onClick={() => setChartMode("candle")} style={segBtn(chartMode === "candle")}>캔들</button>
-                        </div>
-                        <button onClick={() => setShowMA((v) => !v)} style={segBtn(showMA)}>이평선</button>
-                        <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, color: marketOpen ? C.green : C.faint, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: marketOpen ? C.green : C.faint, display: "inline-block", opacity: marketOpen ? (pulse % 2 ? 1 : 0.4) : 1, transition: "opacity 0.4s" }} />
-                            {marketOpen ? "장중 시세" : "장 마감·종가"}
-                        </span>
-                    </div>
-                    <div style={{ minHeight: 16, marginBottom: 2 }}>
-                        <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>차트 위 커서·터치 → 그날 시·고·저·종가·거래량·등락률</span>
-                    </div>
-                    <div ref={svgRef} style={{ position: "relative", width: "100%", touchAction: "pan-y" }}
-                        onMouseMove={(e) => setHoverFromClientX(e.clientX)}
-                        onMouseLeave={() => setHoverIdx(null)}
-                        onTouchStart={(e) => { if (e.touches[0]) setHoverFromClientX(e.touches[0].clientX) }}
-                        onTouchMove={(e) => { if (e.touches[0]) setHoverFromClientX(e.touches[0].clientX) }}>
-                        <svg viewBox={`0 0 ${cv.W} ${cv.H}`} width="100%" height={cv.H} preserveAspectRatio="none" style={{ display: "block" }}>
-                            <defs>
-                                <linearGradient id="psr-area" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor={cv.up ? C.up : C.down} stopOpacity={0.26} />
-                                    <stop offset="100%" stopColor={cv.up ? C.up : C.down} stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <line x1={0} y1={cv.yP(cv.pmax)} x2={cv.W} y2={cv.yP(cv.pmax)} stroke={C.grid} strokeWidth={1} />
-                            <line x1={0} y1={cv.yP(cv.pmin)} x2={cv.W} y2={cv.yP(cv.pmin)} stroke={C.grid} strokeWidth={1} />
-                            {cv.volBars.map((b: any, i: number) => (<rect key={"v" + i} x={b.x - cv.cw / 2} y={b.top} width={cv.cw} height={b.h} fill={b.upDay ? C.up : C.down} fillOpacity={0.5} />))}
-                            {chartMode === "candle" ? (
-                                cv.candles.map((cd: any, i: number) => {
-                                    const bodyTop = Math.min(cd.oy, cd.cy)
-                                    const bodyH = Math.max(0.8, Math.abs(cd.oy - cd.cy))
-                                    const col = cd.upDay ? C.up : C.down
-                                    return (
-                                        <g key={"c" + i}>
-                                            <line x1={cd.x} y1={cd.hy} x2={cd.x} y2={cd.ly} stroke={col} strokeWidth={1} vectorEffect="non-scaling-stroke" />
-                                            <rect x={cd.x - cv.cw / 2} y={bodyTop} width={Math.max(1, cv.cw)} height={bodyH} fill={col} />
-                                        </g>
-                                    )
-                                })
-                            ) : (
-                                <>
-                                    <path d={cv.areaPath} fill="url(#psr-area)" stroke="none" />
-                                    <path d={cv.linePath} fill="none" stroke={cv.up ? C.up : C.down} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                                </>
-                            )}
-                            {showMA && cv.ma20Pts && <path d={cv.ma20Pts} fill="none" stroke={C.amber} strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
-                            {showMA && cv.ma60Pts && <path d={cv.ma60Pts} fill="none" stroke={C.vt} strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
-                            {cv.markers.map((m: any, i: number) => (<circle key={"m" + i} cx={m.x} cy={m.y} r={4.5} fill={m.corr ? C.amber : C.vt} stroke={C.card} strokeWidth={1.5} style={{ cursor: "pointer" }} onClick={() => setOpenDisc(m.di)} />))}
-                            {hoverRow && (
-                                <>
-                                    <line x1={hoverX} y1={0} x2={hoverX} y2={cv.H} stroke={C.faint} strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
-                                    <circle cx={hoverX} cy={cv.yP(Number(hoverRow.close))} r={4} fill={cv.up ? C.up : C.down} stroke={C.card} strokeWidth={1.5} />
-                                </>
-                            )}
-                        </svg>
-                        <span style={{ position: "absolute", top: 2, right: 2, fontSize: 10, fontWeight: 700, color: C.faint, background: C.card, padding: "0 3px", borderRadius: 4 }}>{Number(cv.pmax).toLocaleString()}</span>
-                        <span style={{ position: "absolute", top: (cv.Hp - 14) + "px", right: 2, fontSize: 10, fontWeight: 700, color: C.faint, background: C.card, padding: "0 3px", borderRadius: 4 }}>{Number(cv.pmin).toLocaleString()}</span>
-                        <span style={{ position: "absolute", bottom: 1, left: 2, fontSize: 9.5, fontWeight: 700, color: C.faint }}>거래량</span>
-
-                        {hoverRow && (
-                            <div style={{
-                                position: "absolute", top: 4, left: (hoverX / cv.W) * 100 + "%",
-                                transform: cardFlip ? "translateX(calc(-100% - 12px))" : "translateX(12px)",
-                                background: C.card, border: `1px solid ${C.line}`, borderRadius: 12,
-                                boxShadow: "0 8px 24px rgba(0,0,0,0.14)", padding: "10px 13px", minWidth: 166,
-                                zIndex: 30, pointerEvents: "none",
-                            }}>
-                                <div style={{ fontFamily: HEAD, fontSize: 13, fontWeight: 800, color: C.ink, marginBottom: 6, letterSpacing: "-0.2px" }}>{dateDot(hoverRow.date)}</div>
-                                {tipKV("시작", wonStr(hoverRow.open != null ? hoverRow.open : hoverRow.close))}
-                                {tipKV("마지막", wonStr(hoverRow.close))}
-                                {tipKV("최고", wonStr(hoverRow.high != null ? hoverRow.high : hoverRow.close), C.up)}
-                                {tipKV("최저", wonStr(hoverRow.low != null ? hoverRow.low : hoverRow.close), C.down)}
-                                {tipKV("거래량", fmtVol(hoverRow.volume))}
-                                {hovChg != null && tipKV("등락률", (hovChg > 0 ? "+" : "") + hovChg.toFixed(2) + "%", hovChg > 0 ? C.up : hovChg < 0 ? C.down : C.faint)}
-                            </div>
-                        )}
-                    </div>
-                    <div style={{ position: "relative", height: 14, marginTop: 2 }}>
-                        {cv.tickIdx.map((ti: number, i: number) => {
-                            const lp = (cv.xAt(ti) / cv.W) * 100
-                            const tf = i === 0 ? "translateX(0)" : i === cv.tickIdx.length - 1 ? "translateX(-100%)" : "translateX(-50%)"
-                            return (<span key={i} style={{ position: "absolute", left: lp + "%", transform: tf, fontSize: 10, fontWeight: 600, color: C.faint, whiteSpace: "nowrap" }}>{mmdd(cv.dates[ti])}</span>)
-                        })}
-                    </div>
-                    <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                        {chartMode === "candle" && <span style={{ color: C.up }}>■ 양봉</span>}
-                        {chartMode === "candle" && <span style={{ color: C.down }}>■ 음봉</span>}
-                        <span style={{ color: C.vt }}>● 공시</span>
-                        <span style={{ color: C.amber }}>● 정정</span>
-                        {showMA && cv.ma20Pts && <span style={{ color: C.amber }}>— MA20</span>}
-                        {showMA && cv.ma60Pts && <span style={{ color: C.vt }}>— MA60</span>}
-                        <span>마커 누르면 해당 공시 · {cv.n}일 · {marketOpen ? "장중 갱신" : "종가"}</span>
-                    </div>
-                </div>
-            )}
+            {/* 내장 차트 제거(2026-07-03 컴플라이언스) — 차트 = 같은 페이지 PublicLiveChart(TradingView 위젯)가 담당(verity-ticker-change 추종) */}
 
             {/* 수급 — 탭하면 정확 수치 */}
             {flowRows.length > 0 && (
@@ -2152,7 +1858,7 @@ export default function PublicStockReport(props: Props) {
             )}
 
             <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 16, lineHeight: 1.5 }}>
-                전 종목 사실 · 등급·추천 아님 · 출처 DART·공정위·FnGuide·KRX·네이버 · 가격·차트 실시간 · 점수 held(2027)
+                전 종목 사실 · 등급·추천 아님 · 출처 DART·공정위·FnGuide·KRX·네이버 · 차트·시세 = TradingView 위젯·네이버 · 점수 held(2027)
             </div>
         </div>
     )
