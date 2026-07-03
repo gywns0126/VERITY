@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-07-04T02:53:32.831678+09:00",
+  "generated_at": "2026-07-04T04:26:21.869999+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 200455,
-    "python_modules": 603,
-    "tsx_components": 96,
-    "json_data_files": 377,
-    "json_total_tracked": 392,
-    "workflows": 55,
-    "scheduled_workflows": 44,
-    "cron_triggers": 54,
-    "git_tracked_files": 5616
+    "code_lines_tsx_py": 202420,
+    "python_modules": 610,
+    "tsx_components": 99,
+    "json_data_files": 384,
+    "json_total_tracked": 399,
+    "workflows": 56,
+    "scheduled_workflows": 46,
+    "cron_triggers": 56,
+    "git_tracked_files": 5636
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 65,
+      "count": 66,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -77,6 +77,7 @@
         "scripts/dart_kr_backfill.py",
         "scripts/dart_kr_fin_backfill.py",
         "scripts/hourly_pulse_send.py",
+        "scripts/kr_sector_dart_fallback.py",
         "scripts/scout_penny.py",
         "server/kis_rest_client.py",
         "server/kis_ws_client.py",
@@ -150,8 +151,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 55,
-      "scheduled": 44,
+      "count": 56,
+      "scheduled": 46,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -260,8 +261,10 @@
         },
         {
           "name": "dart_kr_fin_backfill",
-          "crons": [],
-          "scheduled": false
+          "crons": [
+            "30 20 * * *"
+          ],
+          "scheduled": true
         },
         {
           "name": "dart_meta_backfill",
@@ -492,6 +495,13 @@
           "scheduled": true
         },
         {
+          "name": "us_financials_incremental",
+          "crons": [
+            "30 10 * * 1-5"
+          ],
+          "scheduled": true
+        },
+        {
           "name": "us_insider_trades",
           "crons": [
             "0 4 * * *"
@@ -530,9 +540,9 @@
     },
     "surface": {
       "label": "출력",
-      "count": 96,
+      "count": 99,
       "by_group": {
-        "framer-components/public-probe": 43,
+        "framer-components/public-probe": 46,
         "market": 11,
         "_shared": 10,
         "framer-components/crypto-public": 7,
@@ -548,7 +558,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 377
+      "count": 384
     },
     "validation": {
       "label": "검증",
@@ -563,10 +573,10 @@
     }
   },
   "python_by_dir": {
-    "api": 350,
+    "api": 353,
     "tests": 128,
-    "scripts": 72,
-    "vercel-api": 45,
+    "scripts": 75,
+    "vercel-api": 46,
     "server": 6,
     ".github": 2
   },
