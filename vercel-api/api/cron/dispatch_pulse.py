@@ -192,3 +192,6 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(json.dumps(out).encode("utf-8"))
+
+# deploy: 2026-07-03 — 6/27 이후 vercel-api 미배포 해소 (macro_collect dispatch 사망 + thesis 404 + rights fix 미적용).
+# 원인 = push HEAD 가 vercel-api 밖 → ignoreCommand skip (6/27 동일 클래스). HEAD 를 vercel-api 변경으로 올려 배포.
