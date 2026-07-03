@@ -173,6 +173,15 @@ function briefFx(s: any): string {
     if (/무료/.test(v)) return "무료"
     return ""
 }
+// 국내수수료 요점만 — 첫 %(복합 "KRX 0.015%, NXT 0.014%" 등 대비). 전문은 hover. 무료 이벤트 대응.
+function briefDomestic(s: any): string {
+    const v = clean(s)
+    if (!v) return ""
+    const pct = v.match(/\d+(?:\.\d+)?\s*%/)
+    if (pct) return pct[0].replace(/\s+/g, "")
+    if (/무료/.test(v)) return "무료"
+    return v
+}
 
 const DEMO: Guide = {
     as_of: "2026-06-22T00:00:00+09:00",
@@ -620,8 +629,10 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
                 // 대표 수수료 — 값이 있으면 항상 tile 노출. 링크 = 전용 출처 우선, 없으면 증권사 공식 페이지(feeUrl).
                 const domSrc = isUrl(b.domestic_source) ? b.domestic_source : feeUrl
                 const feeTiles: { label: string; value: string; url: string; basis: string }[] = []
-                const domV = clean(b.domestic_fee)
-                if (domV) feeTiles.push({ label: "국내주식", value: domV, url: domSrc, basis: b.fee_basis })
+                const domRaw = clean(b.domestic_fee)
+                const domV = briefDomestic(b.domestic_fee)
+                // 복합값(KRX/NXT 등)은 전문을 hover 로, 아니면 fee_basis
+                if (domV) feeTiles.push({ label: "국내주식", value: domV, url: domSrc, basis: domRaw !== domV ? domRaw : b.fee_basis })
                 const ovV = briefOverseas(b.overseas_fee)
                 if (ovV) feeTiles.push({ label: "미국주식", value: ovV, url: isUrl(b.overseas_source) ? b.overseas_source : feeUrl, basis: b.overseas_basis })
                 const fxV = briefFx(b.fx_fee)
