@@ -243,6 +243,16 @@ function fmtAge(iso: any): string {
         return ""
     }
 }
+/* 등락 화살표 — 뉴스 페이지(PublicNewsTab)와 동일한 라운드 스트로크 화살표. ▲▼ 글리프 대체 (PM 2026-07-04) */
+function TrendArrow({ dir, color, size = 10 }: { dir: "up" | "down" | "flat"; color: string; size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 12 12" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+            {dir === "up" && (<><line x1="6" y1="10" x2="6" y2="2.6" /><polyline points="2.8,5.6 6,2.4 9.2,5.6" /></>)}
+            {dir === "down" && (<><line x1="6" y1="2" x2="6" y2="9.4" /><polyline points="2.8,6.4 6,9.6 9.2,6.4" /></>)}
+            {dir === "flat" && (<><line x1="2" y1="6" x2="9.4" y2="6" /><polyline points="6.4,2.8 9.6,6 6.4,9.2" /></>)}
+        </svg>
+    )
+}
 function wonStr(v: any): string {
     const x = Number(v)
     if (!isFinite(x)) return "—"
@@ -410,8 +420,8 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
                     if (ch == null) return null
                     const col = ch > 0 ? C.up : ch < 0 ? C.down : C.faint
                     return (
-                        <span key={c.n} style={{ fontSize: 11.5, fontWeight: 700, color: col, background: C.bg, borderRadius: 8, padding: "5px 9px" }}>
-                            {c.l} 대비 {ch > 0 ? "▲" : ch < 0 ? "▼" : ""}{Math.abs(ch).toFixed(0)}%
+                        <span key={c.n} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11.5, fontWeight: 700, color: col, background: C.bg, borderRadius: 8, padding: "5px 9px" }}>
+                            {c.l} 대비 {ch !== 0 && <TrendArrow dir={ch > 0 ? "up" : "down"} color={col} />}{Math.abs(ch).toFixed(0)}%
                         </span>
                     )
                 })}
@@ -437,7 +447,7 @@ function FinTrend({ series, C }: { series: any[]; C: any }) {
                     </div>
                 ))}
             </div>
-            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>DART 전자공시 연간 실값(추이선) · 증감은 위 과거 비교 칩(▲증가 ▼감소) · 점수·추천 아님</div>
+            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>DART 전자공시 연간 실값(추이선) · 증감은 위 과거 비교 칩(↑증가 ↓감소) · 점수·추천 아님</div>
         </div>
     )
 }
@@ -524,7 +534,7 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                     const dirBg = flat ? C.line : improved ? C.greenS : C.amberS
                     const lineColor = flat ? C.faint : delta > 0 ? C.up : C.down  // 라인=값 상승(빨강)/하락(파랑), KR 등락식
                     const dirText = flat ? "보합" : improved ? "개선" : "악화"
-                    const arrow = flat ? "→" : improved ? "▲" : "▼"
+                    const arrowDir: "up" | "down" | "flat" = flat ? "flat" : improved ? "up" : "down"
                     const dec = m.key === "roa" ? 2 : 1
                     const n = raw.length
                     const xAt = (i: number) => PX + (n <= 1 ? 0 : (i / (n - 1)) * (CW - PX * 2))
@@ -543,7 +553,7 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                                 <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{m.label}</span>
                                 {m.note && <span style={{ fontSize: 10, color: C.faint, fontWeight: 600 }}>· {m.note}</span>}
                                 <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 800, letterSpacing: "-0.3px", color: C.ink, fontVariantNumeric: "tabular-nums" }}>{last.toFixed(dec)}{m.unit}</span>
-                                <span style={{ fontSize: 10.5, fontWeight: 800, color: dirColor, background: dirBg, borderRadius: 6, padding: "2px 7px" }}>{arrow} {dirText}</span>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10.5, fontWeight: 800, color: dirColor, background: dirBg, borderRadius: 6, padding: "2px 7px" }}><TrendArrow dir={arrowDir} color={dirColor} size={9} /> {dirText}</span>
                             </div>
                             <svg width={CW} height={CH} style={{ display: "block", width: "100%", overflow: "visible" }} viewBox={`0 0 ${CW} ${CH}`} preserveAspectRatio="none">
                                 <defs>
