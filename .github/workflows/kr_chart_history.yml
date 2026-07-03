@@ -1,0 +1,59 @@
+# KR 전체 히스토리 차트 데이터 (금융위 공공데이터) — PublicLiveChart MAX(전체) 탭 소스.
+# 2026-07-04 신설: API 보유 전량(2020-01-02~, ~1,595거래일) per-ticker JSON → Blob 직행.
+#   git 비커밋 (165MB repo 부담 회피) — blob_upload.js 재사용 (kr_chart_history/ 서브디렉토리).
+#   최근 250일 = kr_chart_daily 일일 청크가 fresh 담당 → 히스토리는 월 1회면 충분
+#   (MAX 뷰 = client 에서 히스토리+최근 청크 병합, 히스토리 약간 stale 무해).
+# 트래픽 = ~2,992콜/run (한도 10,000/일 내, 종목당 1콜 + 0.12s 예의) · 런타임 ~20분 + Blob PUT ~2,992.
+# 7축 audit (2026-07-04): env=PUBLIC_DATA_API_KEY+VERCEL_BLOB_TOKEN 기존 등록 / push=0 (커밋 없음,
+#   RULE 2 무관) / concurrency=전용 group / cron=월1회 / KIS 무관 / pip=0 (stdlib) + npm @vercel/blob / RULE 8 N=2 큐(월간).
+name: KR Chart History (monthly)
+
+on:
+  schedule:
+    # 매월 첫 토요일 근사 = 1일 15:37 KST (= 06:37 UTC). 월 1회 — T+1 데이터라 요일 무관.
+    - cron: '37 6 1 * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verity-kr-chart-history
+  cancel-in-progress: false
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90  # ~2,992 API 콜(~20분) + Blob PUT ~2,992(~30분)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 전체 히스토리 수집 (금융위 공공데이터 · 2020~)
+        # 🚨 파일 직접 실행 (module -m 금지 — collectors/__init__ 가 dotenv 요구). 순수 stdlib.
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+        run: python api/collectors/fsc_daily_prices.py --mode history --out _history_dist
+
+      - name: Blob 업로드 (kr_chart_history/{ticker}.json)
+        # publish-data 의 blob_upload.js 재사용 — 1-level 서브디렉토리 지원 확인 완료.
+        # RETIRED_BLOBS del 도 함께 수행 (멱등 — 컴플라이언스 잔존 차단, 부작용 0).
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: |
+          if [ -z "$BLOB_READ_WRITE_TOKEN" ]; then
+            echo "::error::VERCEL_BLOB_TOKEN 없음"
+            exit 1
+          fi
+          cd .github/actions/publish-data
+          npm install --no-save --silent --no-audit --no-fund @vercel/blob@^0.27
+          node blob_upload.js "${{ github.workspace }}/_history_dist"
