@@ -10,24 +10,58 @@ import requests
 from typing import Dict, List
 
 NAVER_SISE_URL = "https://finance.naver.com/item/frgn.naver"
+NAVER_TREND_URL = "https://m.stock.naver.com/api/stock/{code}/trend"  # 모바일 JSON 폴백
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    "Referer": "https://finance.naver.com/",
 }
+
+# frgn 데이터 행 = class="tah" 셀 [날짜,종가,전일비,등락률,거래량,기관(5),외국인(6),보유주수(7),소진율(8)]
+# 원전 = scripts/kr/flow_observation_logger.py 실검증 파서(2026-06-15). 구 class="num" 파서는
+# 매치 0 → 전 종목 flow 0/중립 silent 반환 (2026-07-04 실호출 확정 후 이식).
+_TR = re.compile(r"<tr[^>]*>(.*?)</tr>", re.S)
+_TAH = re.compile(r'<(?:td|span)[^>]*class="tah[^"]*"[^>]*>(.*?)</(?:td|span)>', re.S)
+_DATE = re.compile(r"\d{4}\.\d{2}\.\d{2}")
+
+
+def _num(s: str) -> int:
+    s = re.sub(r"<[^>]+>", "", s).strip().replace(",", "").replace("+", "").replace("%", "")
+    try:
+        return int(float(s))
+    except ValueError:
+        return 0
 
 
 def _parse_flow_table(html: str) -> List[Dict]:
-    """네이버 금융 수급 테이블에서 최근 5일 데이터 파싱"""
-    rows = re.findall(
-        r'<td[^>]*class="num"[^>]*>([^<]*)</td>',
-        html
-    )
-    number_vals = []
-    for raw in rows:
-        cleaned = raw.strip().replace(",", "").replace("+", "")
-        if cleaned and cleaned.lstrip("-").isdigit():
-            number_vals.append(int(cleaned))
-    return number_vals
+    """frgn 페이지 → 최신순 [{foreign, inst, ratio}] (주 단위, ratio=외국인 소진율 %)."""
+    rows: List[Dict] = []
+    for tr in _TR.findall(html):
+        if not _DATE.search(tr):
+            continue
+        cells = [re.sub(r"<[^>]+>", "", c).strip() for c in _TAH.findall(tr)]
+        cells = [c for c in cells if c]
+        if len(cells) < 7 or not _DATE.fullmatch(cells[0]):
+            continue
+        ratio = float(cells[8].replace("%", "")) if len(cells) > 8 and cells[8].endswith("%") else 0.0
+        rows.append({"foreign": _num(cells[6]), "inst": _num(cells[5]), "ratio": ratio})
+    return rows
+
+
+def _fetch_trend_mobile(ticker: str) -> List[Dict]:
+    """모바일 trend JSON 폴백 (frgn HTML 파스 0행 시) — 최신순. ratio 미제공=0."""
+    try:
+        r = requests.get(NAVER_TREND_URL.format(code=ticker), params={"pageSize": 10, "page": 1},
+                         headers=HEADERS, timeout=10)
+        arr = r.json()
+    except Exception:
+        return []
+    if not isinstance(arr, list):
+        return []
+    return [{"foreign": _num(str(it.get("foreignerPureBuyQuant") or "")),
+             "inst": _num(str(it.get("organPureBuyQuant") or "")),
+             "ratio": 0.0}
+            for it in arr if len(str(it.get("bizdate") or "")) == 8]
 
 
 def _count_consecutive(values: List[int], positive: bool) -> int:
@@ -50,21 +84,17 @@ def get_investor_flow(ticker: str) -> Dict:
         params = {"code": ticker}
         resp = requests.get(NAVER_SISE_URL, params=params, headers=HEADERS, timeout=10)
         resp.raise_for_status()
-        html = resp.text
+        resp.encoding = "euc-kr"  # 미설정 시 한글 매칭 전멸 (frgn = EUC-KR)
+        flow_rows = _parse_flow_table(resp.text) or _fetch_trend_mobile(ticker)
 
-        number_vals = _parse_flow_table(html)
+        # 구 '외국인한도소진율' 상단 라벨 = 페이지에서 소멸 (2026-07-04 실호출) → 행 내 소진율 컬럼 사용
+        foreign_ratio = flow_rows[0]["ratio"] if flow_rows else 0.0
 
-        foreign_ratio_match = re.search(
-            r'외국인한도소진율.*?<td[^>]*>([0-9.]+)%',
-            html, re.DOTALL
-        )
-        foreign_ratio = float(foreign_ratio_match.group(1)) if foreign_ratio_match else 0
+        foreign_net = flow_rows[0]["foreign"] if flow_rows else 0
+        institution_net = flow_rows[0]["inst"] if flow_rows else 0
 
-        foreign_net = number_vals[4] if len(number_vals) > 4 else 0
-        institution_net = number_vals[5] if len(number_vals) > 5 else 0
-
-        foreign_5d = [number_vals[i] for i in range(4, min(len(number_vals), 54), 10)][:5]
-        institution_5d = [number_vals[i] for i in range(5, min(len(number_vals), 55), 10)][:5]
+        foreign_5d = [r["foreign"] for r in flow_rows[:5]]
+        institution_5d = [r["inst"] for r in flow_rows[:5]]
 
         foreign_5d_sum = sum(foreign_5d) if foreign_5d else 0
         institution_5d_sum = sum(institution_5d) if institution_5d else 0
