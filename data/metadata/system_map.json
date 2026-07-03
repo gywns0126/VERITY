@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-04T01:15:51.961807+09:00",
+  "generated_at": "2026-07-04T02:53:32.831678+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 199926,
-    "python_modules": 601,
+    "code_lines_tsx_py": 200455,
+    "python_modules": 603,
     "tsx_components": 96,
-    "json_data_files": 336,
-    "json_total_tracked": 351,
-    "workflows": 53,
-    "scheduled_workflows": 42,
-    "cron_triggers": 52,
-    "git_tracked_files": 5571
+    "json_data_files": 377,
+    "json_total_tracked": 392,
+    "workflows": 55,
+    "scheduled_workflows": 44,
+    "cron_triggers": 54,
+    "git_tracked_files": 5616
   },
   "subsystems": {
     "ingest": {
@@ -150,8 +150,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 53,
-      "scheduled": 42,
+      "count": 55,
+      "scheduled": 44,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -321,6 +321,20 @@
           "name": "kis_token_refresh",
           "crons": [
             "45 14 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "kr_chart_daily",
+          "crons": [
+            "23 5 * * 1-5"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "kr_chart_history",
+          "crons": [
+            "37 6 1 * *"
           ],
           "scheduled": true
         },
@@ -534,7 +548,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 336
+      "count": 377
     },
     "validation": {
       "label": "검증",
@@ -549,8 +563,8 @@
     }
   },
   "python_by_dir": {
-    "api": 349,
-    "tests": 127,
+    "api": 350,
+    "tests": 128,
     "scripts": 72,
     "vercel-api": 45,
     "server": 6,
