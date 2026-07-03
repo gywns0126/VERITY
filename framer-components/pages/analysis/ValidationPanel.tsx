@@ -73,6 +73,24 @@ const TERMS: Record<string, Term> = {
         definition:
             "평균 수익 / 평균 손실. 통과 임계 ≥ 1.5 (수익이 손실의 1.5배 이상).",
     },
+    EXPECTANCY: {
+        label: "Expectancy (기대값)",
+        category: "metric",
+        definition:
+            "매매 1건당 평균 기대 수익 (R 배수 — 초기 리스크 대비). 승률과 손익비를 하나로 합친 지표. 통과 임계 ≥ 0.25R (사전등록, N 충분 시 판정 활성).",
+    },
+    SQN: {
+        label: "SQN (System Quality Number)",
+        category: "metric",
+        definition:
+            "Van Tharp 시스템 품질 지수 — 평균 R / R 표준편차 × √N. 매매 시스템의 일관성 측정. 통과 임계 ≥ 1.7 (사전등록, N 충분 시 판정 활성).",
+    },
+    WILSON_CI: {
+        label: "95% 신뢰구간 (Wilson)",
+        category: "metric",
+        definition:
+            "표본 승률의 95% 신뢰구간 — Wilson score interval. 표본이 작을수록 구간이 넓어짐. 구간이 50%를 포함하면 동전던지기와 통계적으로 구분 불가.",
+    },
     SHARPE: {
         label: "Sharpe Ratio",
         category: "metric",
@@ -188,6 +206,17 @@ function fmtPp(n: number | null | undefined, digits = 2): string {
 function fmtRatio(n: number | null | undefined, digits = 2): string {
     if (n == null || !Number.isFinite(n)) return "—"
     return n.toFixed(digits)
+}
+/** Wilson score interval — 소표본에서도 안전한 이항 비율 95% CI */
+function wilsonCI(wins: number, n: number): { lo: number; hi: number } | null {
+    if (!Number.isFinite(wins) || !Number.isFinite(n) || n <= 0) return null
+    const z = 1.96
+    const p = wins / n
+    const z2 = z * z
+    const denom = 1 + z2 / n
+    const center = (p + z2 / (2 * n)) / denom
+    const half = (z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / denom
+    return { lo: Math.max(0, center - half), hi: Math.min(1, center + half) }
 }
 function daysBetween(fromStr: string | null | undefined, toDate: Date): number {
     if (!fromStr) return 0
@@ -458,6 +487,30 @@ export default function ValidationPanel(props: Props) {
     const mRegime = metrics.regime_coverage || {}
     const mCost = metrics.cost_efficiency || {}
 
+    const mExp = metrics.expectancy || {}
+    const mSqn = metrics.sqn || {}
+    const mSortino = metrics.sortino || {}
+    const mCalmar = metrics.calmar || {}
+    const mAlphaBeta = metrics.alpha_beta || {}
+    const mCapture = metrics.capture_ratios || {}
+
+    // RULE 7 — binding N = 매매건(trades), calendar days 아님. 자기산식 site 노출 시 통계 유의성 라벨 의무.
+    const tradeN: number = mWin.trades ?? 0
+    const statMeaningless = tradeN < 30                    // N<30 = 통계 무의미
+    const statPreliminary = tradeN >= 30 && tradeN < 100   // N<100 = 예비 결과
+    const statLabel = statMeaningless
+        ? `통계 무의미 · N=${tradeN} 매매 (가설)`
+        : statPreliminary
+        ? `예비 결과 · 검증 진행 중 · N=${tradeN} 매매`
+        : `N=${tradeN} 매매`
+
+    // RULE 7 — hit rate 단독 게재 금지: 승률 + expectancy + N + CI 병기. CI 는 숨기지 않고 폭으로 보여줌.
+    const winCI = wilsonCI(mWin.wins ?? 0, tradeN)
+    const winCILabel = winCI
+        ? `95% CI ${(winCI.lo * 100).toFixed(0)}~${(winCI.hi * 100).toFixed(0)}%`
+        : null
+    const ciSpansCoin = winCI ? winCI.lo <= 0.5 && winCI.hi >= 0.5 : true
+
     return (
         <div style={{
             fontFamily: FONT, background: C.bgPage, color: C.textPrimary,
@@ -472,11 +525,25 @@ export default function ValidationPanel(props: Props) {
                         <TermTooltip termKey="VAMS">VAMS</TermTooltip> 검증
                     </span>
                     <span style={{ fontSize: T.cap, color: C.textTertiary }}>
-                        {window.days ?? 0}일 · {window.snapshot_count ?? 0}스냅샷
+                        {window.days ?? 0}일 · {tradeN}매매 · {window.snapshot_count ?? 0}스냅샷
                     </span>
                 </div>
                 <Badge verdict={overall} />
             </div>
+
+            {/* RULE 7 — N<100 이면 가설/예비 명시 (자기산식 과신 + 성숙도 과대 차단) */}
+            {(statMeaningless || statPreliminary) && (
+                <div style={{
+                    fontSize: T.cap, color: statMeaningless ? C.warn : C.textSecondary,
+                    ...MONO, letterSpacing: 0.3, lineHeight: 1.5,
+                    padding: `${S.sm}px ${S.md}px`, borderRadius: R.sm,
+                    background: "rgba(245,158,11,0.06)", border: `1px solid ${C.border}`,
+                }}>
+                    {statMeaningless
+                        ? `예비 관측 · ${statLabel}. 아래 수익률·승률·샤프·알파는 전부 가설 — 표본 부족으로 동전던지기와 통계 구분 불가. 365일 trail 전 검증 의미 없음.`
+                        : `${statLabel}. 아래 지표는 예비 결과이며 검증 진행 중 — 최종 판정 아님.`}
+                </div>
+            )}
 
             {/* ── Checkpoint bar (no card) ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
@@ -515,16 +582,23 @@ export default function ValidationPanel(props: Props) {
                 <CostTotalRow label="VAMS 보정 수익률" valuePct={adjusted} accent />
             </div>
 
-            {/* ── ALPHA Spotlight (펜타그램 시안) ── */}
+            {/* ── ALPHA Spotlight (펜타그램 시안) — RULE 7: N<30 매매 시 hero 강등·가설 명시 ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: S.lg }}>
-                {/* 헤더: 작은 라벨 + 큰 숫자 (1색 강조) */}
+                {/* 헤더: 작은 라벨 + 숫자 (통계 유의 시에만 hero 강조) */}
                 <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
                     <span style={{ fontSize: T.cap, color: C.textTertiary, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: T.w_semi }}>
                         <TermTooltip termKey="ALPHA">ALPHA</TermTooltip> · 실질 초과수익률
+                        {(statMeaningless || statPreliminary) && (
+                            <span style={{ color: C.textDisabled, marginLeft: S.sm, textTransform: "none", letterSpacing: 0 }}>
+                                (가설 · N={tradeN} 매매)
+                            </span>
+                        )}
                     </span>
                     <span style={{
-                        fontSize: 44, fontWeight: T.w_bold, ...MONO, lineHeight: 1, letterSpacing: -1,
-                        color: alpha > 0 ? C.accent : alpha < 0 ? C.danger : C.textTertiary,
+                        // N<30 매매 = 노이즈 → hero(44px) 강등 + 부호색(빨강/초록) 죽여 중립 grey (검증된 결과로 오독 차단)
+                        fontSize: statMeaningless ? T.h2 : 44,
+                        fontWeight: T.w_bold, ...MONO, lineHeight: 1, letterSpacing: statMeaningless ? -0.3 : -1,
+                        color: statMeaningless ? C.textTertiary : alpha > 0 ? C.accent : alpha < 0 ? C.danger : C.textTertiary,
                     }}>
                         {fmtPp(alpha)}
                     </span>
@@ -533,12 +607,12 @@ export default function ValidationPanel(props: Props) {
                 {/* 3-bar 비교 — VAMS / KOSPI / ALPHA, ALPHA 만 accent */}
                 <AlphaCompare vams={adjusted} kospi={benchRet} alpha={alpha} />
 
-                {/* Annotation (Claude 톤, 사실 진술) */}
-                <span style={{ fontSize: T.cap, color: C.textTertiary, ...MONO, letterSpacing: 0.3 }}>
-                    N = {window.days ?? 0} / 365 days observed
-                    {(window.days ?? 0) >= 90
-                        ? " · 본판정 가능"
-                        : ` · 본판정 D+${Math.max(0, 90 - (window.days ?? 0))} 후`}
+                {/* Annotation — binding N = 매매건(trades). calendar days 아님(RULE 7 성숙도 과대 차단). CI·expectancy 병기 의무. */}
+                <span style={{ fontSize: T.cap, color: C.textTertiary, ...MONO, letterSpacing: 0.3, lineHeight: 1.5 }}>
+                    {statLabel}
+                    {winCILabel ? ` · 승률 ${winCILabel}` : ""}
+                    {mExp.expectancy_r != null ? ` · 기대값 ${fmtRatio(mExp.expectancy_r)}R` : ""}
+                    {` · 관측 ${window.days ?? 0}일 / 365일 trail`}
                 </span>
             </div>
 
@@ -587,10 +661,14 @@ export default function ValidationPanel(props: Props) {
                     threshold={`통과선: ≤ ${thresholds.mdd_ratio_max ?? 1.0}`}
                 />
                 <MetricCard
-                    title={<TermTooltip termKey="WIN_RATE">승률</TermTooltip>}
+                    title={<><TermTooltip termKey="WIN_RATE">승률</TermTooltip> + <TermTooltip termKey="WILSON_CI">CI</TermTooltip></>}
                     pass={mWin.pass ?? null}
                     primary={mWin.win_rate != null ? `${(mWin.win_rate * 100).toFixed(1)}%` : "—"}
-                    secondary={`${mWin.wins ?? 0}승 ${mWin.losses ?? 0}패 (${mWin.trades ?? 0}건)`}
+                    secondary={[
+                        `${mWin.wins ?? 0}승 ${mWin.losses ?? 0}패 (N=${tradeN})`,
+                        winCILabel,
+                        ciSpansCoin ? "동전과 구분 불가" : null,
+                    ].filter(Boolean).join(" · ")}
                     threshold={`통과선: ≥ ${((thresholds.win_rate_min ?? 0.55) * 100).toFixed(0)}%`}
                 />
                 <MetricCard
@@ -603,6 +681,20 @@ export default function ValidationPanel(props: Props) {
                             : "—"
                     }
                     threshold={`통과선: ≥ ${thresholds.profit_loss_ratio_min ?? 1.5}`}
+                />
+                <MetricCard
+                    title={<><TermTooltip termKey="EXPECTANCY">기대값</TermTooltip> (R)</>}
+                    pass={mExp.pass ?? null}
+                    primary={mExp.expectancy_r != null ? `${fmtRatio(mExp.expectancy_r)}R` : "—"}
+                    secondary={statMeaningless ? `가설 · N=${tradeN} 매매` : undefined}
+                    threshold={`통과선: ≥ ${thresholds.expectancy_r_min ?? 0.25}R (사전등록 · N 충분 시 판정)`}
+                />
+                <MetricCard
+                    title={<TermTooltip termKey="SQN">SQN</TermTooltip>}
+                    pass={mSqn.pass ?? null}
+                    primary={fmtRatio(mSqn.sqn)}
+                    secondary={statMeaningless ? `가설 · N=${tradeN} 매매` : undefined}
+                    threshold={`통과선: ≥ ${thresholds.sqn_min ?? 1.7} (사전등록 · N 충분 시 판정)`}
                 />
                 <MetricCard
                     title={<><TermTooltip termKey="SHARPE">샤프</TermTooltip> (연율)</>}
@@ -627,6 +719,24 @@ export default function ValidationPanel(props: Props) {
                 />
                 </div>
             </div>
+
+            {/* ── 참고 지표 — 판정 미가동(Phase 2), 숫자는 숨기지 않고 전부 공개 ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
+                <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                    참고 지표 <span style={{ color: C.textDisabled, letterSpacing: 0.3 }}>· 판정 미가동 (Phase 2 wire 예정)</span>
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: `${S.xs}px ${S.xl}px`, fontSize: T.cap, color: C.textSecondary, ...MONO, letterSpacing: 0.3, lineHeight: 1.6 }}>
+                    <span>Sortino {fmtRatio(mSortino.annualized)}</span>
+                    <span>Calmar {fmtRatio(mCalmar.annualized)}</span>
+                    <span>α {fmtRatio(mAlphaBeta.alpha, 3)} / β {fmtRatio(mAlphaBeta.beta, 3)}</span>
+                    <span>상방포착 {fmtRatio(mCapture.up_capture)} / 하방포착 {fmtRatio(mCapture.down_capture)}</span>
+                </div>
+            </div>
+
+            {/* ── 검증 무결성 footer — 임계 사전등록 원칙 명시 ── */}
+            <span style={{ fontSize: T.cap, color: C.textDisabled, lineHeight: 1.6 }}>
+                모든 통과 임계는 사전등록 후 고정 — 결과를 본 뒤 바꾸지 않습니다. 승률·기대값·N·신뢰구간을 항상 병기하며, 표본이 부족하면 부족하다고 표시합니다.
+            </span>
         </div>
     )
 }

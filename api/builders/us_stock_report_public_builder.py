@@ -15,7 +15,7 @@ import json
 import os
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -168,11 +168,34 @@ def _median(vals: List[float]) -> Optional[float]:
     return vs[mid] if n % 2 else (vs[mid - 1] + vs[mid]) / 2.0
 
 
-def _us_sector_medians(stocks: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    """섹터(business_ko)별 PER/PBR/ROE/D-E/영업이익률 중앙값 + N + 분포(백분위용). 사실 통계."""
+# SIC 2자리 대분류 → 한글 (표준 SIC major group — 설명 단위 peer 그룹 N<5 시 폴백 버킷).
+# 2026-07-04 peer 조사: 미부착 483/1505 전부 = 설명 단위 버킷 N<5 컷. 대분류 폴백 = 커버리지 구조 보장.
+_SIC_MAJOR_KO: Dict[str, str] = {
+    "01": "농업", "02": "축산", "07": "농업서비스", "08": "임업", "09": "수산",
+    "10": "금속광업", "12": "석탄", "13": "원유·가스", "14": "비금속광물",
+    "15": "건설", "16": "토목건설", "17": "전문건설",
+    "20": "식품", "21": "담배", "22": "섬유", "23": "의류", "24": "목재", "25": "가구",
+    "26": "제지", "27": "인쇄·출판", "28": "화학·제약", "29": "석유정제", "30": "고무·플라스틱",
+    "31": "가죽", "32": "석재·유리", "33": "1차금속", "34": "금속가공",
+    "35": "산업기계·컴퓨터", "36": "전자·전기", "37": "운송장비", "38": "계측·의료기기", "39": "기타 제조",
+    "40": "철도", "41": "여객운송", "42": "화물운송", "44": "해운", "45": "항공",
+    "46": "파이프라인", "47": "운송서비스", "48": "통신", "49": "전기·가스·수도",
+    "50": "도매(내구재)", "51": "도매(비내구재)",
+    "52": "건자재 소매", "53": "종합소매", "54": "식품소매", "55": "자동차 판매",
+    "56": "의류소매", "57": "가구·가전 소매", "58": "외식", "59": "기타 소매",
+    "60": "은행·예금기관", "61": "여신·신용", "62": "증권", "63": "보험", "64": "보험대리",
+    "65": "부동산", "67": "지주·투자",
+    "70": "숙박", "72": "개인서비스", "73": "사업서비스·SW", "75": "자동차 서비스",
+    "78": "영화·미디어", "79": "레저·오락", "80": "의료서비스", "81": "법률",
+    "82": "교육", "83": "사회서비스", "86": "협회·단체", "87": "엔지니어링·연구", "89": "기타 서비스",
+}
+
+
+def _us_sector_medians(stocks: List[Dict[str, Any]], key: str = "_sector") -> Dict[str, Dict[str, Any]]:
+    """섹터(business_ko 또는 SIC 대분류)별 PER/PBR/ROE/D-E/영업이익률 중앙값 + N + 분포(백분위용). 사실 통계."""
     buckets: Dict[str, Dict[str, List[float]]] = {}
     for s in stocks:
-        sec = s.get("_sector")
+        sec = s.get(key)
         pm = s.get("_pm") or {}
         if not sec:
             continue
@@ -197,10 +220,18 @@ def _us_sector_medians(stocks: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]
     return out
 
 
-def _us_peer(s: Dict[str, Any], medians: Dict[str, Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def _us_peer(s: Dict[str, Any], medians: Dict[str, Dict[str, Any]],
+             medians_major: Optional[Dict[str, Dict[str, Any]]] = None) -> Optional[Dict[str, Any]]:
     sec = s.get("_sector")
     pm = s.get("_pm") or {}
-    sm = medians.get(sec)
+    sm = medians.get(sec) if sec else None
+    if not sm and medians_major:
+        # 계층 폴백 — 설명 단위 그룹 N<5 → SIC 2자리 대분류 그룹 비교 (없는 것보다 넓은 peer가 유용, n 병기로 정직)
+        major = s.get("_sector_major")
+        if major:
+            sm = (medians_major or {}).get(major)
+            if sm:
+                sec = major
     if not sec or not sm:
         return None
     rows = []
@@ -265,6 +296,128 @@ def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
             "equity": _latest_annual(sa.get("stockholders_equity")),
             "eps_diluted": _latest_annual(sa.get("eps_diluted")),
             "fcf_usd": der.get("fcf_usd")}
+
+
+EARN_PATTERN_PATH = os.path.join(_ROOT, "data", "us_earnings_pattern.json")
+
+
+def _earnings_window(filings: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """10-Q/K filed 이력 → 다음 제출 예상 창 (제출 간격 중앙값). 어닝 캘린더 스프린트 2026-07-04.
+
+    외부 캘린더(Yahoo=권리 blocker) 대체 — 사실(제출일) 파생 계산. 점추정 단정 대신 ±7일 창 표기(RULE 7).
+    실측 근거: 기업별 제출 지연이 기계적으로 안정 (AAPL 6분기 연속 분기말+34일).
+    """
+    from datetime import date, timedelta
+    try:
+        dates = sorted({date.fromisoformat(str(f.get("filed"))) for f in (filings or []) if f.get("filed")})
+    except (ValueError, TypeError):
+        return None
+    if len(dates) < 3:
+        return None
+    gaps = sorted(g for g in ((b - a).days for a, b in zip(dates, dates[1:])) if 20 <= g <= 130)
+    if not gaps:
+        return None
+    med = gaps[len(gaps) // 2]
+    est = dates[-1] + timedelta(days=med)
+    today = date.today()
+    for _ in range(2):  # 이미 지난 예상 창 = 다음 주기 순연
+        if est >= today - timedelta(days=7):
+            break
+        est += timedelta(days=med)
+    return {"event": "다음 실적 공시 예상 창 (±7일)", "kind": "실적", "date": est.isoformat(),
+            "basis": "과거 10-Q/K 제출 패턴 · 자체계산 (확정 공시 시 갱신)"}
+
+
+def _annual_by_year(series: Any) -> Dict[int, float]:
+    """series_annual[key] → {연도(end 기준): val} — 연도 중복 시 최신 end 우선."""
+    out: Dict[int, Tuple[str, float]] = {}
+    if not isinstance(series, list):
+        return {}
+    for e in series:
+        if not isinstance(e, dict) or e.get("val") is None:
+            continue
+        end = str(e.get("end") or "")
+        if len(end) < 4 or not end[:4].isdigit():
+            continue
+        try:
+            v = float(e.get("val"))
+        except (TypeError, ValueError):
+            continue
+        y = int(end[:4])
+        if y not in out or end > out[y][0]:
+            out[y] = (end, v)
+    return {y: v for y, (_, v) in out.items()}
+
+
+def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], Optional[Dict[str, Any]]]:
+    """per-ticker series_annual(10-K) → (fin_series, financials) — 연간 재무추이·요약 부활 (2026-07-04 커버리지 스프린트).
+
+    fin_series = KR 스키마 미러 [{year, revenue, op, net}] (USD 원값 — 프론트 FinTrend usd 모드가 $ 포맷).
+    financials = KR 스키마 미러 {period, values, groups} (표시 문자열 = _usd_compact, RULE 7 사실만).
+    캐시 파일 로컬 읽기 — 외부호출 0.
+    """
+    p = os.path.join(_ROOT, "data", "us_financials", f"{ticker}.json")
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            doc = json.load(f) or {}
+    except (OSError, json.JSONDecodeError):
+        return None, None
+    sa = doc.get("series_annual") or {}
+    rev_y = _annual_by_year(sa.get("revenue"))
+    op_y = _annual_by_year(sa.get("operating_income"))
+    net_y = _annual_by_year(sa.get("net_income"))
+
+    years = sorted(set(rev_y) | set(op_y) | set(net_y))[-12:]
+    fin_series = [
+        {"year": y, "revenue": rev_y.get(y), "op": op_y.get(y), "net": net_y.get(y)}
+        for y in years
+        if rev_y.get(y) is not None or op_y.get(y) is not None or net_y.get(y) is not None
+    ]
+    if len(fin_series) < 2:
+        fin_series = None  # 컴포넌트 게이트(>=2) 정합 — 미달 시 섹션 생략
+
+    financials = None
+    if years:
+        y = years[-1]
+        gp_y = _annual_by_year(sa.get("gross_profit"))
+        pre_y = _annual_by_year(sa.get("pretax_income"))
+        eps_y = _annual_by_year(sa.get("eps_diluted"))
+        cash_y = _annual_by_year(sa.get("cash"))
+        eq_y = _annual_by_year(sa.get("stockholders_equity"))
+        rev, gp, op, pre, net = rev_y.get(y), gp_y.get(y), op_y.get(y), pre_y.get(y), net_y.get(y)
+
+        def _row(k: str, v: Optional[float], signed: bool = False) -> Optional[Dict[str, str]]:
+            s = _usd_compact_signed(v) if signed else _usd_compact(v)
+            return {"k": k, "v": s} if s else None
+
+        pl_rows = [r for r in [
+            _row("매출", rev),
+            _row("매출총이익", gp, signed=True),
+            _row("영업이익", op, signed=True),
+            _row("세전이익", pre, signed=True),
+            _row("순이익", net, signed=True),
+            ({"k": "EPS(희석)", "v": f"${eps_y[y]:,.2f}"} if eps_y.get(y) is not None else None),
+            ({"k": "매출총이익률", "v": f"{gp / rev * 100:.1f}%"} if gp is not None and rev else None),
+            ({"k": "영업이익률", "v": f"{op / rev * 100:.1f}%"} if op is not None and rev else None),
+        ] if r]
+        bs_rows = [r for r in [
+            _row("현금성자산", cash_y.get(y)),
+            _row("자기자본", eq_y.get(y), signed=True),
+        ] if r]
+        groups = []
+        if pl_rows:
+            groups.append({"title": "손익계산서 (연간 10-K)", "rows": pl_rows})
+        if bs_rows:
+            groups.append({"title": "재무상태표", "rows": bs_rows})
+        if groups:
+            values = {}
+            if _usd_compact(rev):
+                values["매출"] = _usd_compact(rev)
+            if _usd_compact_signed(net):
+                values["순이익"] = _usd_compact_signed(net)
+            financials = {"period": str(y), "values": values, "groups": groups}
+
+    return fin_series, financials
 
 
 def _usd_compact(v: Any) -> str | None:
@@ -472,6 +625,7 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
         "calendar": [],
         "_pm": pm,           # peer 산정용 temp (main 에서 제거)
         "_sector": business_ko or None,
+        "_sector_major": _SIC_MAJOR_KO.get(str(row.get("sic") or "")[:2]),  # 대분류 폴백 버킷 (main 에서 제거)
     }
 
 
@@ -513,13 +667,16 @@ def main() -> int:
                               _load_fin_latest(r.get("ticker")), us_cons)
                   for r in rows if r.get("ticker")]
         # 동종업계 비교(peer) — 2-pass: 섹터 중앙값 산정 → 종목별 부착. KR stock_report 정합.
+        # 계층: 설명 단위(정밀) → N<5 시 SIC 2자리 대분류 폴백 (2026-07-04 peer 조사 — 미부착 483 전부 N<5 컷).
         medians = _us_sector_medians(stocks)
+        medians_major = _us_sector_medians(stocks, key="_sector_major")
         for s in stocks:
-            pr = _us_peer(s, medians)
+            pr = _us_peer(s, medians, medians_major)
             if pr:
                 s["peer"] = pr
             s.pop("_pm", None)
             s.pop("_sector", None)
+            s.pop("_sector_major", None)
         # 8-K 수시공시 부착 (us_disclosure_feed, SEC EDGAR) — disclosures 섹션 배선(0%→~97%). KR catalyst 패턴 미러.
         us_disc = _load_us_disclosures()
         if us_disc:
@@ -530,6 +687,29 @@ def main() -> int:
                     s["disclosures"] = ds[:8]
                     n_disc += 1
             print(f"[us_stock_report] disclosures 부착 {n_disc}/{len(stocks)} 종목 (us_disclosure_feed)", file=sys.stderr)
+        # 연간 재무추이(fin_series)·재무요약(financials) — series_annual(10-K) 주입 (0%→95%, 커버리지 스프린트)
+        n_fs = 0
+        for s in stocks:
+            fs, fin = _load_us_annual_pack(str(s.get("ticker") or ""))
+            if fs:
+                s["fin_series"] = fs
+                n_fs += 1
+            if fin:
+                s["financials"] = fin
+        print(f"[us_stock_report] fin_series 부착 {n_fs}/{len(stocks)} 종목 (series_annual 10-K)", file=sys.stderr)
+        # 어닝 캘린더 — EDGAR 제출 패턴 자체계산 (us_earnings_pattern.json: 초기 backfill + incremental 일일 유지)
+        try:
+            with open(EARN_PATTERN_PATH, encoding="utf-8") as f:
+                _pats = (json.load(f) or {}).get("patterns") or {}
+        except (OSError, json.JSONDecodeError):
+            _pats = {}
+        n_cal = 0
+        for s in stocks:
+            w = _earnings_window(_pats.get(str(s.get("ticker") or "")))
+            if w:
+                s["calendar"] = [w]
+                n_cal += 1
+        print(f"[us_stock_report] 어닝 캘린더(예상 창) 부착 {n_cal}/{len(stocks)} 종목", file=sys.stderr)
         # ROE 큰 순 (사실 정렬)
         def _roe(s):
             v = s.get("facts", {}).get("ROE", "")

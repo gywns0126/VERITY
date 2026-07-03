@@ -814,6 +814,35 @@ def main() -> int:
             _ftc_lookup = None
             _get_cc = None
 
+        # 어닝 캘린더 — DART 제출 패턴 자체계산 (kr_earnings_pattern.json, 어닝 캘린더 스프린트 2026-07-04).
+        # 잠정실적(자율, 대형주) 이력 ≥3 = 정밀 신호 우선 / 아니면 정기보고서 리듬. 파일 부재 = 기존 calendar 유지.
+        earn_pats = (_load_json(os.path.join(_ROOT, "data", "kr_earnings_pattern.json"), {}) or {}).get("patterns") or {}
+
+        def _kr_earnings_window(rows):
+            from datetime import date as _date, timedelta as _td
+            prov = [r for r in (rows or []) if r.get("form") == "잠정실적"]
+            use = prov if len(prov) >= 3 else (rows or [])
+            try:
+                dates = sorted({_date.fromisoformat(str(r.get("filed"))) for r in use if r.get("filed")})
+            except (ValueError, TypeError):
+                return None
+            if len(dates) < 3:
+                return None
+            gaps = sorted(g for g in ((b - a).days for a, b in zip(dates, dates[1:])) if 20 <= g <= 130)
+            if not gaps:
+                return None
+            med = gaps[len(gaps) // 2]
+            est = dates[-1] + _td(days=med)
+            today = _date.today()
+            for _ in range(2):
+                if est >= today - _td(days=7):
+                    break
+                est += _td(days=med)
+            basis = "잠정실적 공시 패턴" if use is prov else "정기보고서 제출 패턴"
+            return {"event": "다음 실적 공시 예상 창 (±7일)", "kind": "실적", "date": est.isoformat(),
+                    "basis": f"과거 {basis} · 자체계산 (확정 공시 시 갱신)"}
+
+        n_cal = 0
         # 재무요약 + PER/PBR 자체계산 보강 + 동종업계 비교 부착
         for s in stocks:
             tk = s["ticker"]
@@ -823,6 +852,11 @@ def main() -> int:
             fs = fin_series.get(tk)
             if fs:
                 s["fin_series"] = fs  # 연도별 매출/영업이익/순익 시계열(DART 공시 실값, 추이 그래프용)
+            if not s.get("calendar"):  # rich 풀(운영풀) 기존 calendar 존중 — 빈 종목만 패턴 창
+                w = _kr_earnings_window(earn_pats.get(tk))
+                if w:
+                    s["calendar"] = [w]
+                    n_cal += 1
             val = valuation.get(tk)
             if val:
                 fn = s.setdefault("facts_note", {})
@@ -899,8 +933,8 @@ def main() -> int:
             return 0
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False)
-        print(f"[stock_report_public] logged=True · {len(stocks)} 종목 (rich {len(rich_by_ticker)}) -> "
-              f"{os.path.relpath(OUTPUT_PATH, _ROOT)}", file=sys.stderr)
+        print(f"[stock_report_public] logged=True · {len(stocks)} 종목 (rich {len(rich_by_ticker)}, "
+              f"어닝캘린더 {n_cal}) -> {os.path.relpath(OUTPUT_PATH, _ROOT)}", file=sys.stderr)
         ok = True
         return 0
     except Exception as e:  # noqa: BLE001

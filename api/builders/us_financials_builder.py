@@ -295,6 +295,21 @@ def main() -> int:
     summary = _build_summary(snapshots)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     summary_path = SMALLCAP_SUMMARY_PATH if args.universe == "smallcap" else SUMMARY_PATH
+    # 🚨 부분 실행(--ticker/--limit/--offset) = 기존 _summary 에 병합 — 통째 덮어쓰면 1,505 rows 가
+    # 소수 rows 로 파괴되고 후속 report 빌더가 그걸 그대로 발행 (2026-07-04 로컬 실사고, coverage WARN 이 탐지).
+    partial = bool(args.ticker) or bool(args.limit) or bool(getattr(args, "offset", 0))
+    if partial and summary_path.exists():
+        try:
+            prev = json.loads(summary_path.read_text(encoding="utf-8"))
+            prev_rows = {str(r.get("ticker")): r for r in (prev.get("rows") or []) if isinstance(r, dict)}
+            for r in summary.get("rows") or []:
+                prev_rows[str(r.get("ticker"))] = r
+            summary["rows"] = sorted(prev_rows.values(), key=lambda r: str(r.get("ticker")))
+            summary["universe_size"] = len(summary["rows"])
+            print(f"[us_financials] 부분 실행 — _summary 병합 (총 {len(summary['rows'])} rows 유지)", file=sys.stderr)
+        except (OSError, json.JSONDecodeError, TypeError) as e:
+            print(f"[us_financials] _summary 병합 실패({e}) — 안전을 위해 덮어쓰기 중단", file=sys.stderr)
+            return 1
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     ok_count = sum(1 for s in snapshots if "_error" not in s)
     print(

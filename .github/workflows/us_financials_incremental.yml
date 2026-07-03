@@ -1,0 +1,89 @@
+name: US Financials Incremental (10-K/Q 이벤트 기반 재무 신선도)
+
+# 미장 재무 신선도: 월 1회 풀 리프레시 → 공시 다음 날 (2026-07-04 신선도 스프린트, PM 지적 해소).
+# EDGAR daily master index 에서 10-K/10-Q 신규 제출 감지 → 유니버스 교집합 종목만 재수집(캡 60)
+# → 리포트/분기/커버리지 재빌드 → publish. state 커서(멱등·이월)로 어닝 피크에도 안전.
+#
+# 7축 audit:
+#  1 env: 없음 (SEC UA 하드코드, EDGAR 키 불요)
+#  2 push trigger: vercel-api/ 미변경 — Vercel deploy 무관 (RULE 2)
+#  3 concurrency: verity-data-write (data commit 직렬화). 평일 UTC 10:30 = KST 19:30 — KST 01시대 러시 회피
+#  4 cron: 평일 1회. EDGAR 일자(ET) 기준 전일 인덱스 완성 후 처리
+#  5 KIS: 0 (RULE 1 무관)
+#  6 pip: requirements.txt
+#  7 N=2: push 후 dispatch(N=1) + main 머지 후 첫 scheduled(N=2) 검증 의무 (RULE 8)
+
+on:
+  schedule:
+    - cron: '30 10 * * 1-5'   # KST 19:30 평일
+  workflow_dispatch:
+    inputs:
+      cap:
+        description: 'run 당 재수집 종목 상한'
+        required: false
+        default: '60'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  incremental:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 10-K/Q 이벤트 감지 + 해당 종목 재수집
+        id: incr
+        run: python -m api.builders.us_financials_incremental --cap ${{ github.event.inputs.cap || '60' }}
+
+      - name: 리포트·분기·커버리지 재빌드 (재수집 반영)
+        # 재수집 per-ticker 는 이 run 로컬에만 존재(gitignore) — 같은 run 안에서 즉시 소비.
+        # fin_series/financials 는 committed 리포트 JSON 에 실림 → CI 재빌드 간 유실 없음.
+        continue-on-error: true
+        run: |
+          python -m api.builders.us_stock_report_public_builder
+          python -m api.builders.us_quarterly_public_builder
+          python -m api.builders.coverage_report_builder
+
+      - name: Publish (VERITY-data + Vercel Blob)
+        continue-on-error: true
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
+
+      - name: Commit + push (변경 시만)
+        if: always()   # 부분 실패에도 state/데이터 진척 보존
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/
+          git diff --staged --quiet && { echo "변경 없음"; exit 0; }
+          git commit -m "data(alpha-nest): 미장 재무 증분 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') (10-K/Q 이벤트)"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              echo "pushed"; exit 0
+            fi
+            echo "push attempt $i failed, retry in $((i*10))s"; sleep $((i*10))
+          done
+          echo "::error::5회 push 실패"; exit 1

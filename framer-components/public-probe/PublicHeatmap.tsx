@@ -8,8 +8,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *   "어느 섹터에 내부자·외국인 돈이 도나"를 한눈에. 토스 구조적 불가 영역(Discovery 와 동일 해자, 시각화 표면).
  * 박스 크기 = 시가총액. 섹터 그룹. 클릭 → 종목 리포트(reportPath?q=ticker). 줌(+/−·더블클릭·드래그) = 좌표만 확대(글자 고정).
  *
- * RULE 7: 자체 점수·등급·verdict 0. 색·크기 = 발행된 사실(시총·내부자·수급·공시)만. 가격% = 토글(스냅샷 연결 시).
- * 데이터 = stock_report_public(시총·섹터) + insider_trades + stock_flow_5d + disclosure_forensics + (옵션)public_price_snapshot. 전부 Blob, 신규 파이프라인 0.
+ * RULE 7: 자체 점수·등급·verdict 0. 색·크기 = 발행된 사실(시총·내부자·수급·공시)만.
+ * 🚨 시세 재배포 컴플라이언스(2026-07-02): public_price_snapshot(당일 등락률%) 소비 제거 — 색 지표는 우리 고유 사실(내부자·외국인·희석)만.
+ * 데이터 = stock_report_public(시총·섹터) + insider_trades + stock_flow_5d + disclosure_forensics. 전부 Blob, 신규 파이프라인 0.
  * 레이아웃 = squarified treemap(순수 JS, 외부 lib 0). 반응형 ResizeObserver. 테마 = body[data-framer-theme] 추종.
  *   onAccent = 보라(vg) 위 글자색(라이트 흰/다크 짙음).
  * 로딩 = 토스식 스켈레톤(트리맵 모양 회색 패치워크 + shimmer).
@@ -35,10 +36,9 @@ const DEFAULT_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/s
 const DEFAULT_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/insider_trades.json"
 const DEFAULT_FLOW = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json"
 const DEFAULT_FORENSICS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/disclosure_forensics.json"
-const DEFAULT_PRICE = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/public_price_snapshot.json"
 const DEFAULT_REPORT = "/stock"
 
-type MetricKey = "insider" | "flow" | "dilution" | "price"
+type MetricKey = "insider" | "flow" | "dilution"
 interface Metric {
     key: MetricKey
     tab: string
@@ -51,7 +51,6 @@ const METRICS: Metric[] = [
     { key: "insider", tab: "내부자", diverging: true, posLabel: "순매수", negLabel: "순매도", desc: "내부자 순매수 · DART" },
     { key: "flow", tab: "외국인", diverging: true, posLabel: "순매수", negLabel: "순매도", desc: "외국인 5일 · 네이버" },
     { key: "dilution", tab: "희석공시", diverging: false, posLabel: "유증·CB 多", negLabel: "", desc: "유증·CB 빈도 · DART" },
-    { key: "price", tab: "가격%", diverging: true, posLabel: "상승", negLabel: "하락", desc: "당일 등락률" },
 ]
 
 interface Props {
@@ -59,7 +58,6 @@ interface Props {
     insiderUrl: string
     flowUrl: string
     forensicsUrl: string
-    priceUrl: string
     reportPath: string
     topN: number
     dark: boolean
@@ -96,6 +94,18 @@ function fmtShares(v: any): string {
     if (a >= 1e8) return sign + (a / 1e8).toFixed(1) + "억"
     if (a >= 1e4) return sign + Math.round(a / 1e4).toLocaleString("en-US") + "만"
     return sign + Math.round(a).toLocaleString("en-US")
+}
+function fmtAge(iso: any): string {
+    if (!iso) return ""
+    try {
+        const mins = Math.max(0, Math.round((Date.now() - new Date(String(iso)).getTime()) / 60000))
+        if (mins < 60) return mins + "분 전"
+        const hrs = Math.round(mins / 60)
+        if (hrs < 24) return hrs + "시간 전"
+        return Math.round(hrs / 24) + "일 전"
+    } catch (e) {
+        return ""
+    }
 }
 
 /* ── squarified treemap (순수 JS) ── items:[{key,value}] → [{key,x,y,w,h,item}] ── */
@@ -151,16 +161,16 @@ function squarify(items: any[], X: number, Y: number, W: number, H: number): any
 }
 
 export default function PublicHeatmap(props: Props) {
-    const { stockUrl, insiderUrl, flowUrl, forensicsUrl, priceUrl, reportPath, topN, dark } = props
+    const { stockUrl, insiderUrl, flowUrl, forensicsUrl, reportPath, topN, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [stocks, setStocks] = useState<any[]>([])
+    const [asOf, setAsOf] = useState<string>("")
     const [insiderMap, setInsiderMap] = useState<Record<string, any>>({})
     const [flowMap, setFlowMap] = useState<Record<string, any[]>>({})
     const [forenMap, setForenMap] = useState<Record<string, any>>({})
-    const [priceMap, setPriceMap] = useState<Record<string, any>>({})
     const [metric, setMetric] = useState<MetricKey>("insider")
     const [hover, setHover] = useState<any>(null)
     const [zoom, setZoom] = useState<{ z: number; tx: number; ty: number }>({ z: 1, tx: 0, ty: 0 })
@@ -195,13 +205,16 @@ export default function PublicHeatmap(props: Props) {
     const SAMPLE = useMemo(() => buildSample(), [])
 
     useEffect(() => {
-        if (onCanvas) { setStocks(SAMPLE.stocks); setInsiderMap(SAMPLE.insider); setFlowMap(SAMPLE.flow); setForenMap(SAMPLE.foren); setPriceMap(SAMPLE.price); return }
+        if (onCanvas) { setStocks(SAMPLE.stocks); setInsiderMap(SAMPLE.insider); setFlowMap(SAMPLE.flow); setForenMap(SAMPLE.foren); return }
         let alive = true
         const jget = (url: string, ok: (d: any) => void) => {
             if (!url) return
             fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) ok(d) }).catch(() => {})
         }
-        jget(stockUrl, (d) => { const a = Array.isArray(d) ? d : d.stocks; if (Array.isArray(a)) setStocks(a) })
+        jget(stockUrl, (d) => {
+            const a = Array.isArray(d) ? d : d.stocks; if (Array.isArray(a)) setStocks(a)
+            const ts = d && d._meta && d._meta.generated_at; if (ts) setAsOf(String(ts))
+        })
         jget(insiderUrl, (d) => {
             const a = Array.isArray(d) ? d : d.stocks
             if (!Array.isArray(a)) return
@@ -213,12 +226,10 @@ export default function PublicHeatmap(props: Props) {
             if (!Array.isArray(a)) return
             const m: Record<string, any> = {}; for (const x of a) if (x && x.ticker) m[String(x.ticker)] = x; setForenMap(m)
         })
-        jget(priceUrl, (d) => { const pm = d.prices || d; if (pm && typeof pm === "object") setPriceMap(pm) })
         return () => { alive = false }
-    }, [stockUrl, insiderUrl, flowUrl, forensicsUrl, priceUrl, onCanvas, SAMPLE])
+    }, [stockUrl, insiderUrl, flowUrl, forensicsUrl, onCanvas, SAMPLE])
 
-    const priceReady = Object.keys(priceMap).length > 0
-    const metricsShown = METRICS.filter((m) => m.key !== "price" || priceReady)
+    const metricsShown = METRICS
     const activeMetric = useMemo(() => METRICS.find((m) => m.key === metric) || METRICS[0], [metric])
 
     const narrow = w > 0 && w < 560
@@ -232,7 +243,6 @@ export default function PublicHeatmap(props: Props) {
         if (metric === "insider") { const e = insiderMap[ticker]; const v = e && Number(e.net_change); return isFinite(v as number) && v !== 0 ? (v as number) : null }
         if (metric === "flow") { const f = flowMap[ticker]; if (f && f.length) { const v = Number(f[f.length - 1].foreign_net); return isFinite(v) && v !== 0 ? v : null } return null }
         if (metric === "dilution") { const fo = forenMap[ticker]; const v = fo && Number(fo.dilution_count); return isFinite(v as number) && (v as number) > 0 ? (v as number) : null }
-        if (metric === "price") { const p = priceMap[ticker]; const v = p && (typeof p === "number" ? p : Number(p.change_pct)); return isFinite(v as number) ? (v as number) : null }
         return null
     }
 
@@ -272,7 +282,7 @@ export default function PublicHeatmap(props: Props) {
         vals.sort((a, b) => a - b)
         const p90 = vals[Math.min(vals.length - 1, Math.floor(vals.length * 0.9))]
         return p90 > 0 ? p90 : (vals[vals.length - 1] || 1)
-    }, [layout.tiles, metric, insiderMap, flowMap, forenMap, priceMap])
+    }, [layout.tiles, metric, insiderMap, flowMap, forenMap])
 
     // 색 — 호버 시 알파 +0.16(색만 살짝 진하게). 효과(lift/그림자/외곽선) 0.
     const tileColor = (v: number | null): { bg: string; bgHover: string; strong: boolean; strongHover: boolean } => {
@@ -351,7 +361,7 @@ export default function PublicHeatmap(props: Props) {
     // 호버 카드 위치 — 클립 밖 외곽 div 기준(타일 좌표와 동일). 우/좌 플립 + 상/하 클램프(하단 근처면 위로).
     const hoverCardPos = () => {
         const hx = hover.x * zoom.z + zoom.tx, hy = hover.y * zoom.z + zoom.ty, hw = hover.w * zoom.z, hh = hover.h * zoom.z
-        const CW = 190, CH = priceReady ? 152 : 132, G = 8
+        const CW = 190, CH = 132, G = 8
         let cl = hx + hw + G
         if (cl + CW > chartW - 6) cl = hx - G - CW
         if (cl < 6) cl = Math.min(Math.max(6, hx + hw / 2 - CW / 2), chartW - CW - 6)
@@ -368,7 +378,7 @@ export default function PublicHeatmap(props: Props) {
                 <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: narrow ? 18 : 20, fontWeight: 800, letterSpacing: "-0.5px" }}>엣지 히트맵</div>
                     <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 3 }}>
-                        박스=시총 · 색=아래 지표 · 탭→리포트
+                        박스=시총 · 색=아래 지표 · 탭→리포트{asOf ? " · 데이터 " + fmtAge(asOf) : ""}
                     </div>
                 </div>
             </div>
@@ -478,7 +488,6 @@ export default function PublicHeatmap(props: Props) {
                             {hoverRow("내부자 순매수", insiderFmt(insiderMap[hover.m.ticker]), C)}
                             {hoverRow("외국인 5일", flowFmt(flowMap[hover.m.ticker]), C)}
                             {hoverRow("희석 공시", dilFmt(forenMap[hover.m.ticker]), C)}
-                            {priceReady && hoverRow("등락률", priceFmt(priceMap[hover.m.ticker]), C)}
                             <div style={{ fontSize: 10, color: C.vg, fontWeight: 800, marginTop: 5 }}>탭 → 전체 리포트 ›</div>
                         </div>
                     )
@@ -501,7 +510,6 @@ function hexA(hex: string, a: number): string {
 function tileValLabel(metric: MetricKey, v: number | null): string {
     if (v == null) return ""
     if (metric === "dilution") return Math.round(v) + "회"
-    if (metric === "price") return (v > 0 ? "+" : "") + v.toFixed(1) + "%"
     return fmtSharesShort(v)
 }
 function fmtSharesShort(v: number): string {
@@ -532,11 +540,6 @@ function dilFmt(fo: any): string {
     const d = Number(fo.dilution_count)
     return isFinite(d) && d > 0 ? d + "회" : "0"
 }
-function priceFmt(p: any): string {
-    const v = p && (typeof p === "number" ? p : Number(p.change_pct))
-    return isFinite(v) ? (v > 0 ? "+" : "") + v.toFixed(2) + "%" : "—"
-}
-
 /* ── 캔버스/데모 샘플 ── */
 function buildSample() {
     const mk = (ticker: string, name: string, sector: string, cap: string) => ({ ticker, name, market: "KOSPI", facts: { 시가총액: cap }, peer: { sector } })
@@ -566,8 +569,7 @@ function buildSample() {
         "247540": { ticker: "247540", dilution_count: 12 }, "034020": { ticker: "034020", dilution_count: 6 },
         "035720": { ticker: "035720", dilution_count: 4 }, "009540": { ticker: "009540", dilution_count: 3 },
     }
-    const price: Record<string, any> = {}
-    return { stocks, insider, flow, foren, price }
+    return { stocks, insider, flow, foren }
 }
 
 addPropertyControls(PublicHeatmap, {
@@ -575,7 +577,6 @@ addPropertyControls(PublicHeatmap, {
     insiderUrl: { type: ControlType.String, title: "Insider URL", defaultValue: DEFAULT_INSIDER },
     flowUrl: { type: ControlType.String, title: "Flow URL", defaultValue: DEFAULT_FLOW },
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: DEFAULT_FORENSICS },
-    priceUrl: { type: ControlType.String, title: "Price Snapshot URL", defaultValue: DEFAULT_PRICE },
     reportPath: { type: ControlType.String, title: "Report Path", defaultValue: DEFAULT_REPORT },
     topN: { type: ControlType.Number, title: "Top N (시총)", defaultValue: 160, min: 40, max: 260, step: 10 },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },

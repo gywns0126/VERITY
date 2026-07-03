@@ -44,6 +44,9 @@ BLOB_BASE = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 ESBUILD = os.path.join(REPO_ROOT, "vercel-api", "node_modules", ".bin", "esbuild")
 FRAMER_GLOB = os.path.join(REPO_ROOT, "framer-components", "**", "*.tsx")
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# 발행 대기(백필 진행 중) URL — 404 를 FAIL 아닌 WARN 으로 강등(추적 유지, red 회피). 데이터 랜딩 시 제거.
+# dart_quarterly_public.json = KR 분기 backfill 완주 전 미발행 (item 2, MIN_QUARTERS=4 게이트). backfill cron 완주 시 자동 200 → 이 set 에서 제거.
+PENDING_PUBLISH = {"dart_quarterly_public.json"}
 
 KST = timezone(timedelta(hours=9))
 PAK_RE = re.compile(r"박[으이아았혀힘은는지하한히음으면혀]")  # RULE 9 금지 동사
@@ -173,13 +176,16 @@ def check_publish(rep: Report) -> None:
     if not urls:
         rep.add("publish.fetch_urls", "WARN", "프론트 fetch URL 0건 검출")
         return
-    broken = []
+    broken, pending = [], []
     for u in sorted(urls):
         st, _ = http(u, timeout=15)
         if st != 200:
-            broken.append(f"{st} {u.split('/')[-1]}")
+            base = u.split("/")[-1]
+            (pending if base in PENDING_PUBLISH else broken).append(f"{st} {base}")
     if broken:
         rep.add("publish.fetch_urls", "FAIL", f"{len(broken)}/{len(urls)} broken: {'; '.join(broken[:4])}")
+    elif pending:
+        rep.add("publish.fetch_urls", "WARN", f"발행대기 {len(pending)}(backfill): {'; '.join(pending[:4])} · {len(urls) - len(pending)}/{len(urls)} = 200")
     else:
         rep.add("publish.fetch_urls", "PASS", f"{len(urls)}/{len(urls)} = 200")
 

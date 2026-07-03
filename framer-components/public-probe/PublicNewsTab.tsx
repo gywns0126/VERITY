@@ -542,7 +542,7 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {/* 출처 신뢰도 (자체 점수화 — 1차/신뢰 출처 비중) */}
                 <div style={tile}>
-                    <div style={lbl}>출처 신뢰도 · 총 {ins.total}건</div>
+                    <div style={lbl}>출처 신뢰도 · 총 {ins.total}건 <span style={{ color: C.faint, fontWeight: 500 }}>· 자체 분류(가설, N={ins.total})</span></div>
                     <InsightBar segs={[{ label: "신뢰", n: ins.credHi, color: "#0ca678" }, { label: "일반", n: ins.credLo, color: C.border }]} C={C} />
                     <div style={chip}>
                         <span style={{ color: "#0ca678" }}>신뢰 출처 {ins.credHi}</span>

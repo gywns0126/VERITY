@@ -31,7 +31,7 @@ KST = timezone(timedelta(hours=9))
 ENDPOINT = ("https://apis.data.go.kr/1160100/GetStocLendBorrInfoService_V2/"
             "getStLendAndBorrItemRank_V2")
 OUTPUT_PATH = _ROOT / "data" / "securities_lending.json"
-TOP_N = 200          # 사이트 노출용 대차잔고 상위
+TOP_N = 1000         # 사이트 노출용 대차잔고 상위 (2026-07-04 커버리지 스프린트 200→1000 — 소스는 전 universe 수집, 노출 컷만 상향. 파일 ~30KB→~150KB)
 PAGE_SIZE = 1000
 
 

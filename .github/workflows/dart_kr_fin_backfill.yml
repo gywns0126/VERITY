@@ -4,13 +4,18 @@ name: DART KR 연간재무 백필 (재무추이 부활)
 # 빌더 _load_fin_series 가 merge → 리포트 '재무추이' 섹션 대부분 종목 부활 (현 30종목 → universe).
 # DART only — KIS 무관(RULE 1). proven fetcher(dart_fundamentals) 재사용·캐시(dart_kr_cache). resume+quota-cap.
 #
-# 🚨 schedule 없음 = workflow_dispatch 수동 전용. 이유: 카탈리스트 백필이 DART 20K/일 쿼터 소비 중(~2주).
-#    동시 자동가동 = 쿼터 터짐. 카탈리스트 완주 후(또는 여유일) 수동 실행. 멱등(캐시+resume)이라 다회 분할 안전.
+# 저빈도 자가완주 cron (2026-07-04, 커버리지 스프린트 — fin_series 4%→95%):
+#    KST 05:30 일 1회 drip, scheduled run cap 3000. 쿼터 산수 = 카탈리스트(평일 8K/주말 12K) +
+#    분기 drip 1.5K + 연간 3K + 일상 ops ≈ 평일 14~16K < 20K. 완주 후 run = done-set skip 무비용 no-op.
+#    🚨 schedule 은 default branch 에서만 발화 — 머지 전엔 workflow_dispatch 로 N=1 검증(RULE 8).
 #
 # 7축 audit: env=DART_API_KEY · push=vercel-api 무관(RULE2) · concurrency=verity-data-write(직렬화) ·
-#    cron=없음(수동) · KIS=0(RULE1) · pip=requirements · N=2=manual 다회.
+#    cron=KST 05:30(카탈리스트 UTC 14/18·00/08/16 과 비충돌) · KIS=0(RULE1) · pip=requirements · N=2=manual+scheduled.
 
 on:
+  schedule:
+    # KST 05:30 (UTC 20:30) 일 1회 — pulse·카탈리스트·분기 drip(KST 20:00) 시간대 회피
+    - cron: '30 20 * * *'
   workflow_dispatch:
     inputs:
       quota_cap:
@@ -52,7 +57,8 @@ jobs:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
         run: |
           set +e
-          python scripts/dart_kr_fin_backfill.py --start-year 2015 --quota-cap ${{ github.event.inputs.quota_cap || '6000' }}
+          # scheduled run = inputs 없음 → fallback 3000 (쿼터 안전). dispatch = UI 기본 6000.
+          python scripts/dart_kr_fin_backfill.py --start-year 2015 --quota-cap ${{ github.event.inputs.quota_cap || '3000' }}
           echo "RC=$?"
 
       - name: Commit + push (변경 시만)

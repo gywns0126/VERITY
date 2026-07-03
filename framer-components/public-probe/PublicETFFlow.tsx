@@ -208,8 +208,9 @@ export default function PublicETFFlow(props: Props) {
                         return (
                             <div key={c.cat} style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
                                 <div style={{ width: narrow ? 58 : 72, flexShrink: 0, fontSize: 12.5, fontWeight: 500, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{CAT[c.cat] || c.cat}</div>
-                                <div style={{ flex: 1, minWidth: 0, display: "flex", justifyContent: pos ? "flex-start" : "flex-end" }}>
-                                    <div style={{ width: `${pct}%`, height: 8, borderRadius: 4, background: col, opacity: 0.9 }} />
+                                {/* 연회색 트랙(레인) + 컬러 막대 — 행 구분·기준선 확보. 양수=좌측/음수=우측 정렬 유지 */}
+                                <div style={{ flex: 1, minWidth: 0, position: "relative", height: 8, borderRadius: 4, background: C.bg }}>
+                                    <div style={{ position: "absolute", top: 0, ...(pos ? { left: 0 } : { right: 0 }), width: `${pct}%`, height: 8, borderRadius: 4, background: col, opacity: 0.9 }} />
                                 </div>
                                 <div style={{ width: narrow ? 70 : 86, flexShrink: 0, textAlign: "right", fontSize: 12.5, fontWeight: 600, color: col, fontVariantNumeric: "tabular-nums" }}>{fmtKRW(c.flow, true)}</div>
                             </div>

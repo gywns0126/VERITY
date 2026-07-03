@@ -161,7 +161,9 @@ export default function PublicDisclosureFeed(props: Props) {
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [items, setItems] = useState<FeedItem[]>(SAMPLE)
+    // SAMPLE 은 canvas 프리뷰 전용 — 라이브는 빈 배열로 시작해 fetch 로만 채운다(실패 시 SAMPLE 오노출 차단).
+    const [items, setItems] = useState<FeedItem[]>(onCanvas ? SAMPLE : [])
+    const [loaded, setLoaded] = useState<boolean>(onCanvas)
     const [openTip, setOpenTip] = useState<string>("")
     const [tipBox, setTipBox] = useState<{ left: number; width: number }>({ left: 0, width: 248 })
     const [hoverCapable, setHoverCapable] = useState(true)
@@ -213,11 +215,12 @@ export default function PublicDisclosureFeed(props: Props) {
         fetch(feedUrl, { cache: "no-store" })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                if (!alive || !d) return
-                const arr = Array.isArray(d) ? d : d.items
+                if (!alive) return
+                const arr = Array.isArray(d) ? d : (d && d.items)
                 if (Array.isArray(arr) && arr.length) setItems(arr)
+                setLoaded(true)
             })
-            .catch(() => {})
+            .catch(() => { if (alive) setLoaded(true) })
         return () => { alive = false }
     }, [feedUrl, onCanvas])
 
@@ -417,7 +420,7 @@ export default function PublicDisclosureFeed(props: Props) {
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
                 {shown.length === 0 ? (
                     <div style={{ textAlign: "center", color: C.faint, fontSize: 13, fontWeight: 600, padding: "30px 0", lineHeight: 1.5 }}>
-                        {query.trim() ? `"${query.trim()}" 검색 결과가 없어요` : "공시가 없어요"}
+                        {!loaded ? "공시를 불러오는 중이에요" : query.trim() ? `"${query.trim()}" 검색 결과가 없어요` : "표시할 공시가 없어요"}
                     </div>
                 ) : null}
                 {shown.map((it) => {
