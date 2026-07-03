@@ -111,6 +111,18 @@ def build() -> Dict[str, Any]:
         "us_insider": _us_companion("us_insider_trades.json"),
     }
 
+    # 미장 스몰캡 트랙 (2026-07-04 S1) — 별도 파일이라 별도 축
+    sc_doc = _load("us_stock_report_us_smallcap.json")
+    sc = (sc_doc or {}).get("stocks") or []
+    sc_total = len(sc)
+    sc_fields: Dict[str, Any] = {}
+    for f in ["facts", "fin_series", "financials"]:
+        if sc_total == 0:
+            sc_fields[f] = None
+            continue
+        filled = sum(1 for s in sc if _filled(s.get(f)))
+        sc_fields[f] = {"filled": filled, "pct": _pct(filled, sc_total)}
+
     return {
         "_meta": {
             "generated_at": datetime.now(KST).isoformat(),
@@ -122,6 +134,8 @@ def build() -> Dict[str, Any]:
         "us_total": us_total,
         "us_fields": us_fields,
         "us_companions": us_companions,
+        "us_smallcap_total": sc_total,
+        "us_smallcap_fields": sc_fields,
     }
 
 
@@ -140,6 +154,9 @@ def _flat_pcts(report: Dict[str, Any]) -> Dict[str, float]:
     for k, v in (report.get("us_companions") or {}).items():
         if isinstance(v, dict) and v.get("pct_of_us") is not None:
             out[f"us.companion.{k}"] = v["pct_of_us"]
+    for k, v in (report.get("us_smallcap_fields") or {}).items():
+        if isinstance(v, dict) and v.get("pct") is not None:
+            out[f"us_smallcap.field.{k}"] = v["pct"]
     return out
 
 
