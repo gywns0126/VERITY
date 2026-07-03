@@ -209,8 +209,9 @@ CURATED_FEES: dict = {
     "NH투자증권": ("0.0150%", "https://www.nhsec.com"),
     # 2026-06-27 추가 — 한국투자 focused 추출 간헐 실패(빈값 회귀) 방지. 표준 온라인 요율(직전값 carry, 공식 대조 필요).
     "한국투자증권": ("0.0140527%", "https://securities.koreainvestment.com"),
-    # 2026-07-03 추가 — focused 추출이 0.0018%(오값) 회귀. 평생우대 온라인 요율 0.0036396% (공식 매매수수료 안내 확인).
-    "미래에셋증권": ("0.0036%", "https://securities.miraeasset.com/public/mw/guide/html/20191119095045.html"),
+    # 2026-07-03 재정정 — 앞선 0.0036%는 유관기관 수수료/평생우대 실효값 오인. 타사와 동일한 '비대면 우대 위탁수수료' 기준
+    # = 다이렉트 0.014% (공식 표준 0.136% / 평생우대 이벤트 시 90일 0% → 이후 유관기관 0.0036%만). 우대가 기준 통일.
+    "미래에셋증권": ("0.014%", "https://securities.miraeasset.com/public/mw/guide/html/20191119095045.html"),
 }
 
 
