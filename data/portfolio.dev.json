@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-04T01:32:02+09:00",
+  "updated_at": "2026-07-04T02:32:14+09:00",
   "market_summary": {
     "kospi": {
       "value": 8088.34,
@@ -343,7 +343,7 @@
     }
   },
   "vams": {
-    "total_asset": 9902822.796825616,
+    "total_asset": 9898179.982814081,
     "cash": 5210679.437481744,
     "holdings": [
       {
@@ -419,11 +419,11 @@
         "asset_class": "US_STOCK",
         "buy_price": 135775.01535167117,
         "buy_price_original": 87.54000091552734,
-        "current_price": 138883.2498687744,
+        "current_price": 138711.7890664673,
         "highest_price": 142119.61880493164,
         "quantity": 3,
         "total_cost": 407385.65,
-        "return_pct": 2.29,
+        "return_pct": 2.16,
         "buy_date": "2026-06-30",
         "buy_reason": "PER 6.5, PBR 1.08의 저평가된 펀더멘털 견조. 하락 추세 유의.",
         "safety_score": 91,
@@ -491,11 +491,11 @@
         "asset_class": "US_STOCK",
         "buy_price": 80376.18076850889,
         "buy_price_original": 52.0,
-        "current_price": 80540.64993438721,
+        "current_price": 80441.21703323364,
         "highest_price": 82865.44214630127,
         "quantity": 4,
         "total_cost": 321552.72,
-        "return_pct": 0.2,
+        "return_pct": 0.08,
         "buy_date": "2026-07-01",
         "buy_reason": "PBRxPER 12.8 저평가와 내부자 대량 매수는 긍정적. 단, FTC 소송 리스크는 변수.",
         "safety_score": 79,
@@ -613,7 +613,7 @@
         "mode_tag": "moderate"
       }
     ],
-    "total_return_pct": -0.97,
+    "total_return_pct": -1.02,
     "total_realized_pnl": -170634.51092241833,
     "simulation_stats": {
       "total_trades": 18,
@@ -833,9 +833,9 @@
       "entry_usdkrw": 1519.82,
       "usd_value": 1973.9179639694175,
       "entry_date": "2026-05-23",
-      "current_krw": 3021871.01,
-      "pnl_krw": 21871.01,
-      "return_pct": 0.73,
+      "current_krw": 3018140.31,
+      "pnl_krw": 18140.31,
+      "return_pct": 0.6,
       "reason": "β USD ETF FX 헷지 (PM 2026-05-18 결정, 5/22 재진입). USDKRW 1500+ KRW 약세 헷지, 시드 30%. 444460 미존재→455030 실호출 정정. (1차 진입 비-영속 run 소비로 유실 → idempotent fix 후 재시도.)"
     },
     "tier_pnl": {
@@ -33751,15 +33751,15 @@
   "alerts": [
     {
       "level": "CRITICAL",
+      "category": "macro",
+      "message": "원달러 급변 — 1,529.01원 (전일대비 -22.80원, -1.47%) 수입물가·외환 리스크 점검",
+      "action": "환헤지·원자재·수입 비중 높은 종목 즉시 점검"
+    },
+    {
+      "level": "CRITICAL",
       "category": "commodity",
       "message": "CL=F가 전월 대비 16.22% 급락하면서 관련주 전반이 부진한 가운데, 마진 빠듯, 가격 결정력 약한 CHRD는 주가 19.41% 급락했고 가격 결정력 좋은 EOG도 7.58% 빠졌어.",
       "action": "해당 섹터 마진·판가전이(컨센서스) 교차 확인"
-    },
-    {
-      "level": "WARNING",
-      "category": "macro",
-      "message": "원달러 변동 확대 — 1,530.90원 (-20.91원, -1.35%)",
-      "action": "수출·수입주 환율 민감도 확인"
     },
     {
       "level": "WARNING",
@@ -33836,11 +33836,11 @@
   ],
   "macro": {
     "usd_krw": {
-      "value": 1530.9,
-      "change": -20.91,
-      "change_pct": -1.35,
+      "value": 1529.01,
+      "change": -22.8,
+      "change_pct": -1.47,
       "week_high": 1551.81,
-      "week_low": 1530.9,
+      "week_low": 1529.01,
       "sparkline": [
         1516.6,
         1530.11,
@@ -33864,29 +33864,29 @@
         1541.73,
         1548.61,
         1551.81,
-        1530.9
+        1529.01
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:15+09:00",
+      "as_of": "2026-07-04T02:32:04+09:00",
       "status": "ok"
     },
     "usd_jpy": {
-      "value": 161.315,
+      "value": 161.323,
       "change_pct": -0.75,
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:16+09:00",
+      "as_of": "2026-07-04T02:32:04+09:00",
       "status": "ok"
     },
     "eur_usd": {
-      "value": 1.1442,
-      "change_pct": 0.56,
+      "value": 1.1443,
+      "change_pct": 0.57,
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:16+09:00",
+      "as_of": "2026-07-04T02:32:04+09:00",
       "status": "ok"
     },
     "wti_oil": {
-      "value": 68.69,
-      "change_pct": 0.0,
+      "value": 68.78,
+      "change_pct": 0.13,
       "sparkline": [
         96.02,
         93.04,
@@ -33909,15 +33909,15 @@
         69.5,
         68.58,
         68.69,
-        68.69
+        68.78
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:16+09:00",
+      "as_of": "2026-07-04T02:32:04+09:00",
       "status": "ok"
     },
     "gold": {
-      "value": 4178.4,
-      "change_pct": 1.6,
+      "value": 4187.3,
+      "change_pct": 1.81,
       "sparkline": [
         4436.7,
         4475.8,
@@ -33940,17 +33940,17 @@
         4022.9,
         4068.3,
         4112.7,
-        4178.4
+        4187.3
       ],
       "high_30d": 4475.8,
       "low_30d": 3990.3,
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:17+09:00",
+      "as_of": "2026-07-04T02:32:04+09:00",
       "status": "ok"
     },
     "silver": {
-      "value": 62.65,
-      "change_pct": 3.31,
+      "value": 62.81,
+      "change_pct": 3.58,
       "sparkline": [
         73.48,
         73.78,
@@ -33973,17 +33973,17 @@
         59.48,
         60.08,
         60.64,
-        62.65
+        62.81
       ],
       "high_30d": 73.78,
       "low_30d": 58.05,
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:17+09:00",
+      "as_of": "2026-07-04T02:32:04+09:00",
       "status": "ok"
     },
     "copper": {
-      "value": 6.21,
-      "change_pct": 1.5,
+      "value": 6.22,
+      "change_pct": 1.79,
       "sparkline": [
         6.48,
         6.51,
@@ -34006,10 +34006,10 @@
         6.19,
         6.12,
         6.11,
-        6.21
+        6.22
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:17+09:00",
+      "as_of": "2026-07-04T02:32:04+09:00",
       "status": "ok"
     },
     "vix": {
@@ -34040,7 +34040,7 @@
         15.81
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:17+09:00",
+      "as_of": "2026-07-04T02:32:04+09:00",
       "status": "ok"
     },
     "us_10y": {
@@ -34073,7 +34073,7 @@
         3.66
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:18+09:00",
+      "as_of": "2026-07-04T02:32:05+09:00",
       "status": "ok"
     },
     "sp500": {
@@ -34103,7 +34103,7 @@
         7483.24
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:18+09:00",
+      "as_of": "2026-07-04T02:32:05+09:00",
       "status": "ok"
     },
     "nasdaq": {
@@ -34133,7 +34133,7 @@
         25832.67
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:18+09:00",
+      "as_of": "2026-07-04T02:32:05+09:00",
       "status": "ok"
     },
     "dji": {
@@ -34163,7 +34163,7 @@
         52900.07
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:18+09:00",
+      "as_of": "2026-07-04T02:32:05+09:00",
       "status": "ok"
     },
     "nikkei": {
@@ -34194,7 +34194,7 @@
         68733.15
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:19+09:00",
+      "as_of": "2026-07-04T02:32:05+09:00",
       "status": "ok"
     },
     "sse": {
@@ -34224,7 +34224,7 @@
         4028.9
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:19+09:00",
+      "as_of": "2026-07-04T02:32:05+09:00",
       "status": "ok"
     },
     "dax": {
@@ -34256,7 +34256,7 @@
         25779.31
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:19+09:00",
+      "as_of": "2026-07-04T02:32:05+09:00",
       "status": "ok"
     },
     "sox": {
@@ -34286,7 +34286,7 @@
         12626.22
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:19+09:00",
+      "as_of": "2026-07-04T02:32:05+09:00",
       "status": "ok"
     },
     "kospi": {
@@ -34316,7 +34316,7 @@
         7648.09
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:20+09:00",
+      "as_of": "2026-07-04T02:32:05+09:00",
       "status": "ok"
     },
     "kosdaq": {
@@ -34346,12 +34346,12 @@
         866.72
       ],
       "source": "yfinance",
-      "as_of": "2026-07-04T01:02:20+09:00",
+      "as_of": "2026-07-04T02:32:05+09:00",
       "status": "ok"
     },
     "btc": {
-      "value": 93300000.0,
-      "change_pct": 0.38,
+      "value": 93700000.0,
+      "change_pct": 0.81,
       "sparkline": [
         95506000.0,
         93000000.0,
@@ -34382,16 +34382,16 @@
         89290000.0,
         91116000.0,
         92950000.0,
-        93300000.0
+        93700000.0
       ],
       "source": "upbit",
       "currency": "KRW",
-      "as_of": "2026-07-04T01:02:20+09:00",
+      "as_of": "2026-07-04T02:32:05+09:00",
       "status": "ok"
     },
     "eth": {
-      "value": 2607000.0,
-      "change_pct": 1.6,
+      "value": 2615000.0,
+      "change_pct": 1.91,
       "sparkline": [
         2649000.0,
         2414000.0,
@@ -34422,11 +34422,11 @@
         2391000.0,
         2444000.0,
         2566000.0,
-        2607000.0
+        2615000.0
       ],
       "source": "upbit",
       "currency": "KRW",
-      "as_of": "2026-07-04T01:02:21+09:00",
+      "as_of": "2026-07-04T02:32:06+09:00",
       "status": "ok"
     },
     "xrp": {
@@ -34466,12 +34466,12 @@
       ],
       "source": "upbit",
       "currency": "KRW",
-      "as_of": "2026-07-04T01:02:21+09:00",
+      "as_of": "2026-07-04T02:32:07+09:00",
       "status": "ok"
     },
     "sol": {
-      "value": 122200.0,
-      "change_pct": 0.33,
+      "value": 123200.0,
+      "change_pct": 1.15,
       "sparkline": [
         102900.0,
         97000.0,
@@ -34502,16 +34502,16 @@
         112000.0,
         117800.0,
         121800.0,
-        122200.0
+        123200.0
       ],
       "source": "upbit",
       "currency": "KRW",
-      "as_of": "2026-07-04T01:02:22+09:00",
+      "as_of": "2026-07-04T02:32:07+09:00",
       "status": "ok"
     },
     "doge": {
-      "value": 115.0,
-      "change_pct": 2.68,
+      "value": 116.0,
+      "change_pct": 3.57,
       "sparkline": [
         132.0,
         124.0,
@@ -34542,11 +34542,11 @@
         110.0,
         110.0,
         112.0,
-        115.0
+        116.0
       ],
       "source": "upbit",
       "currency": "KRW",
-      "as_of": "2026-07-04T01:02:22+09:00",
+      "as_of": "2026-07-04T02:32:08+09:00",
       "status": "ok"
     },
     "fred": {
@@ -34759,30 +34759,30 @@
         "series_id": "UMCSENT"
       },
       "hy_spread": {
-        "pct": 2.74,
-        "date": "2026-07-01",
-        "change_5d_pp": -0.02,
+        "pct": 2.75,
+        "date": "2026-07-02",
+        "change_5d_pp": -0.03,
         "series_id": "BAMLH0A0HYM2",
         "trend": {
           "1m": {
-            "start": 2.72,
-            "end": 2.74,
-            "change": 0.02
+            "start": 2.71,
+            "end": 2.75,
+            "change": 0.04
           },
           "3m": {
-            "start": 3.17,
-            "end": 2.74,
-            "change": -0.43
+            "start": 3.13,
+            "end": 2.75,
+            "change": -0.38
           },
           "6m": {
-            "start": 2.83,
-            "end": 2.74,
-            "change": -0.09
+            "start": 2.81,
+            "end": 2.75,
+            "change": -0.06
           },
           "1y": {
-            "start": 2.92,
-            "end": 2.74,
-            "change": -0.18
+            "start": 2.97,
+            "end": 2.75,
+            "change": -0.22
           }
         },
         "sparkline": [
@@ -34837,7 +34837,7 @@
           2.71,
           2.66,
           2.83,
-          2.74
+          2.75
         ]
       },
       "breakeven_inflation_10y": {
@@ -34931,7 +34931,7 @@
       "cape": {
         "value": 41.6,
         "change_from_prev_close": -0.06,
-        "as_of": "2026-07-04T01:02:27+09:00",
+        "as_of": "2026-07-04T02:32:11+09:00",
         "source": "multpl.com (Shiller PE)",
         "series_id": "MULTPL_SHILLER_PE"
       },
@@ -34992,74 +34992,74 @@
       ],
       "pairs": {
         "stock_bond_yield": 0.116,
-        "stock_gold": 0.308,
+        "stock_gold": 0.306,
         "stock_usd": -0.129,
         "stock_oil": -0.263,
-        "stock_btc": -0.011,
-        "bond_yield_gold": 0.046,
-        "bond_yield_usd": -0.193,
-        "bond_yield_oil": 0.01,
-        "bond_yield_btc": -0.23,
-        "gold_usd": -0.522,
-        "gold_oil": -0.159,
-        "gold_btc": 0.203,
-        "usd_oil": 0.124,
-        "usd_btc": -0.124,
-        "oil_btc": -0.02
+        "stock_btc": -0.012,
+        "bond_yield_gold": 0.044,
+        "bond_yield_usd": -0.192,
+        "bond_yield_oil": 0.009,
+        "bond_yield_btc": -0.232,
+        "gold_usd": -0.523,
+        "gold_oil": -0.155,
+        "gold_btc": 0.212,
+        "usd_oil": 0.122,
+        "usd_btc": -0.126,
+        "oil_btc": -0.016
       },
       "matrix": {
         "stock": {
           "stock": 1.0,
           "bond_yield": 0.116,
-          "gold": 0.308,
+          "gold": 0.306,
           "usd": -0.129,
           "oil": -0.263,
-          "btc": -0.011
+          "btc": -0.012
         },
         "bond_yield": {
           "bond_yield": 1.0,
           "stock": 0.116,
-          "gold": 0.046,
-          "usd": -0.193,
-          "oil": 0.01,
-          "btc": -0.23
+          "gold": 0.044,
+          "usd": -0.192,
+          "oil": 0.009,
+          "btc": -0.232
         },
         "gold": {
           "gold": 1.0,
-          "stock": 0.308,
-          "bond_yield": 0.046,
-          "usd": -0.522,
-          "oil": -0.159,
-          "btc": 0.203
+          "stock": 0.306,
+          "bond_yield": 0.044,
+          "usd": -0.523,
+          "oil": -0.155,
+          "btc": 0.212
         },
         "usd": {
           "usd": 1.0,
           "stock": -0.129,
-          "bond_yield": -0.193,
-          "gold": -0.522,
-          "oil": 0.124,
-          "btc": -0.124
+          "bond_yield": -0.192,
+          "gold": -0.523,
+          "oil": 0.122,
+          "btc": -0.126
         },
         "oil": {
           "oil": 1.0,
           "stock": -0.263,
-          "bond_yield": 0.01,
-          "gold": -0.159,
-          "usd": 0.124,
-          "btc": -0.02
+          "bond_yield": 0.009,
+          "gold": -0.155,
+          "usd": 0.122,
+          "btc": -0.016
         },
         "btc": {
           "btc": 1.0,
-          "stock": -0.011,
-          "bond_yield": -0.23,
-          "gold": 0.203,
-          "usd": -0.124,
-          "oil": -0.02
+          "stock": -0.012,
+          "bond_yield": -0.232,
+          "gold": 0.212,
+          "usd": -0.126,
+          "oil": -0.016
         }
       },
       "max_abs_pair": {
         "pair": "gold_usd",
-        "abs_corr": 0.522
+        "abs_corr": 0.523
       },
       "regime_signal": "normal",
       "interpretation": "혼합 — 일부 자산만 강한 상관",
@@ -35069,9 +35069,9 @@
       }
     },
     "hy_spread": {
-      "value": 2.74,
-      "date": "2026-07-01",
-      "change_5d_pp": -0.02,
+      "value": 2.75,
+      "date": "2026-07-02",
+      "change_5d_pp": -0.03,
       "source": "fred",
       "series_id": "BAMLH0A0HYM2"
     },
@@ -35097,7 +35097,7 @@
     "macro_diagnosis": [
       {
         "type": "warning",
-        "text": "원달러 1530.9원 — 원화약세, 수출주 주목"
+        "text": "원달러 1529.01원 — 원화약세, 수출주 주목"
       },
       {
         "type": "warning",
@@ -35111,7 +35111,7 @@
     "macro_diagnosis_us": [
       {
         "type": "warning",
-        "text": "USD/JPY 161.315 — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"
+        "text": "USD/JPY 161.323 — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"
       }
     ],
     "micro_signals": [
@@ -35154,15 +35154,15 @@
     ],
     "capital_flow": {
       "commodities": {
-        "score": 66,
-        "change_pct": 1.603,
+        "score": 68,
+        "change_pct": 1.828,
         "dominant": "silver"
       },
       "bonds": {
         "score": 61,
         "change_pct": 0.565,
         "dominant": "us_10y",
-        "usd_change_pct": -1.35,
+        "usd_change_pct": -1.47,
         "kr_policy_rate": 2.5,
         "kr_10y": 4.197
       },
@@ -35177,8 +35177,7 @@
         "KR10Y_yoy=+1.38pp→bond+6",
         "M2_yoy=6.48%>5→eq+4,comm+3"
       ]
-    },
-    "collected_at": "2026-07-04T01:02:15+09:00"
+    }
   },
   "bloomberg_google_headlines": [
     {
@@ -35217,13 +35216,6 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "Gold Holds Gains As Weak US Jobs Data Lowers Rate Hike Odds - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxPUUxfd1gtWUE5ZzMwWDlUclJZbjRsNHc0ZllHZ0duX3hnbjE4TE15Zk9QblpkdDAzNHVfbkd1cktmQWpYRGVBRy1fVWZyU2Y1UHZjeUptX1lldHYxQUtUNnhXajJ3dGNaT2hzN21tNE5LaThuOV8ta0VhQ1FqbXJ2UzdJQ0VqcHgzZTBkVzdFYTAtTXhUblFTWkRRLWZISFlVU1hwN2psU19wVzJ3S3pr?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 03 Jul 2026 12:32:34 GMT",
-      "category": "bloomberg_google"
-    },
-    {
       "title": "Oil Steadies as More Supply Flows Through Strait of Hormuz - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMingFBVV95cUxQclJoSHpORTU5ZVc2SVp2SUIwdUJTeVlWaFVvdGpZNFJ0ZTM3NFFyaXVrUjFidGtRSjVWendWTngxRGdEdE1BRnhQNkt1RzZMOTRNQTI1VVV3WGU1UHU5SzJGd0ZfZk9TYjUwbnNPRkVQNVg2bml4ZUp1U1AydmlrMDZpZTJ1ZGNfWi1ZYlh1YUNFb1ZHdXVhbXJIMXNqZw?oc=5",
       "source": "Bloomberg.com",
@@ -35245,17 +35237,17 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "Watch Stock Markets: Allianz's Subran Has Doubts Over Europe's 'AI Dividend' - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMirAFBVV95cUxQdDBwUWJ3am1jVDQySE1DNkNIT3RuZEdUQlI3dER0R1V2b0MtVTI2b0hySkVadVY2aldvcVd3emlHUGU4UmwxTEpaVmlXSm8wSGEyN1RLY3ZfelR5U1VpVGhJdXR3R0VaLUstUzlwY2Y4bFFYUFEzMHdLeWJucWtZUlFFUS1VSHMxQlM3UjZROVVSMDJYVmpyRWJPLWplSGt0ZFl4QVJRaUd3dWU2?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 03 Jul 2026 08:13:08 GMT",
-      "category": "bloomberg_google"
-    },
-    {
       "title": "Canadian Stocks Enjoy Broad Gains After New Pipeline Proposal - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQbm5hRnY1cGp3d3VDNktNMDJNZmpuOTE3aVhPTjA2VnNYTkE4LV9QRmV2YTVOUmlZejVzUXVCSkFCRlZkWWdXcGlWNUR3anpibVV1dVdqejBNQzFqSmR0T2EtRVo5UjNJcGhMcS1XNWdDRUJfX3lfTUNZOGkwU3BwSkpxNHp5ejAyc3VXbXdCOS1mTUVqdEFla0ZzbXFvb0Z5RVl6N0VZV0pPQmVmR0ZibmV3?oc=5",
       "source": "Bloomberg.com",
       "time": "Fri, 03 Jul 2026 14:37:05 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "US Stocks Post Largest Outflows in Over Three Months, BofA Says - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOY0RtcDJFVWdQXzJLazU1TTZzV1laRnVpT3p2Y1ZpblU2V2hnRWlQS3hnSk9xS0FzS1F3YVlSOXpEZXgxOUc5NUxVMEVyMjVjb3B2VWY5Z2phdTVZcVkyN0dJNU1lVzNuUXdlZFNPU1RiNWRYRU95cEg0X3lXNHhtUXRTb01sMVIwQjRISGtlWkR2UW03WlZpbExhS2w3UWRXa0piRXJwa0J6ell0T0hETHRXUQ?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 03 Jul 2026 08:59:10 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -35273,38 +35265,17 @@
       "category": "bloomberg_google"
     },
     {
+      "title": "South Korean Stocks Jump 6% After Turbulent Week on AI Swings - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxPclY2dWtUY2FEZmQtZ29ZUGl4OUdQRExPZVlJd0RuTnlnVlV6MENxTHRuemN4aHVTU2lac2FvSVZPZTJBcjlhdUNYQkpaNlZ0ZDVqLW1FMEx4VENtc0VjOTloQzZxMXM5RzYwUzBhWVlfWEZrU3hvZjZGWEdEbUY2REZodzJjVjNhRW1KN1E1ZENFNHlTTTRndXl0Rjc0cFFCUS04WlF5eVI1ZzhabGF4cA?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 03 Jul 2026 07:13:34 GMT",
+      "category": "bloomberg_google"
+    },
+    {
       "title": "Taiwanese Brokerage Yuanta Taps Banks for $1.3 Billion of Loans - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOVDh1anRmQ3hiTml6MndEcHJ2X3pfOF9RNmZHU09MbTRnTzJoN2ZaM2tYN0M4YklXbEszY0JkR1hGd2VXc01lLXpMUVBPSllmeWZhTzdkTTdvaThJalRWMGdoSGVEaUw3d3VJdHp1d1l4RGt1SUtvMktiSzZ5R1BGZzgxM1lNSmtWSl9QREVfZ2RIazByaS1HWjc5ZlRKeUlpaG9KVkVaWWEwOWlJZllCcDJ5cw?oc=5",
       "source": "Bloomberg.com",
       "time": "Fri, 03 Jul 2026 08:42:33 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "US Stocks Post Largest Outflows in Over Three Months, BofA Says - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOY0RtcDJFVWdQXzJLazU1TTZzV1laRnVpT3p2Y1ZpblU2V2hnRWlQS3hnSk9xS0FzS1F3YVlSOXpEZXgxOUc5NUxVMEVyMjVjb3B2VWY5Z2phdTVZcVkyN0dJNU1lVzNuUXdlZFNPU1RiNWRYRU95cEg0X3lXNHhtUXRTb01sMVIwQjRISGtlWkR2UW03WlZpbExhS2w3UWRXa0piRXJwa0J6ell0T0hETHRXUQ?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 03 Jul 2026 08:59:10 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Investors Are Using Leveraged ETFs to Turbocharge AI Bets - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxNOE9TM3V0NnpWZkV1OUxLQUlNbGNuSkoyVWhDc0VkejNneHlJYThVaUVEQXgxQWZ0Si05eERoWXhPUjduT1VuNVZjemc2WDVHTnRYSnR6NTRjYnpEdXpETnNiVnpydS1JWDRhNHBWcXVDRjBMNGpTN3FYNGxIcWdnWDd5SXZRaDRyU0traVhvYWR1bVNXNjZENjdKTDFVUU9jaXFhR2dGTER3Z1MwNUlJVg?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 02 Jul 2026 21:04:21 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "US Stocks Get Tech Boost After AI-Fueled Selloff: Markets Wrap - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQUzVfczV6S0ZFcXdKcVpWR09wcHR1bnZ3b1BvN2l3dnFnMVM1c0JneHBzQ1F3ejVCWUFrLWNnaTFvOUt3NVhaNmZoaTBNN1M0V3MwQUUzRWgtSTdVOHVHQWdlYkJaanU1Y2oxVUlRc2UzYURFdnlQZmRUNWJuWjllSXc4YjF4cnBGakM4aHRyQTJnNUtiNWVGbXZIc3puVGxkcExkbkVnUUF1aTZ5bVZJOXp4cw?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Sun, 28 Jun 2026 22:15:36 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Chip Industry Urges US to Avoid Moves That Distort Memory Market - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxQSzM0Q2lsMDlJQmo3aFFQRWpzMHlpd2pnYlRVMXZCcEJMcXk1bmdXNklNTlJnelVocWE3UzB1T1gwNzh5N3U3RE8yaHJyZHc1YmtGNFg5Y1NhQkFscmJSSEpkNEx6MlhaaGlUMk9Cb0k0RW91OWtWWFN4bXV2YWNBQzFLZVhUTVpaQVl0X3AzejM4Z3NHa1RLT09OZHBFaVBXc1dCcmZPN3VfcURKbHd4dGJQY0w5dw?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 02 Jul 2026 23:59:59 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -35315,10 +35286,17 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "Watch Pubs to Get Short-Term World Cup Boost - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMimAFBVV95cUxNZTBUUlZ0bHlsNU05QzJxS1k5bl9BUDNNTk56WWtlRDI3dTQwbUhlYWxmX1liMjVHUE1hQlFZampwVC1NZ2ZwSklIS2NpeHJ2NlVuS0lZMGtVOFNjLW5OWW9PRFVmenVhWi0zZzRVeGU0SkpZV2VITDlTOWpUTERNS2d0LWdvSTZOdjFIY0pEd1lkWWhFT09hNg?oc=5",
+      "title": "Investors Are Using Leveraged ETFs to Turbocharge AI Bets - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxNOE9TM3V0NnpWZkV1OUxLQUlNbGNuSkoyVWhDc0VkejNneHlJYThVaUVEQXgxQWZ0Si05eERoWXhPUjduT1VuNVZjemc2WDVHTnRYSnR6NTRjYnpEdXpETnNiVnpydS1JWDRhNHBWcXVDRjBMNGpTN3FYNGxIcWdnWDd5SXZRaDRyU0traVhvYWR1bVNXNjZENjdKTDFVUU9jaXFhR2dGTER3Z1MwNUlJVg?oc=5",
       "source": "Bloomberg.com",
-      "time": "Fri, 03 Jul 2026 12:20:17 GMT",
+      "time": "Thu, 02 Jul 2026 21:04:21 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Chip Industry Urges US to Avoid Moves That Distort Memory Market - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxQSzM0Q2lsMDlJQmo3aFFQRWpzMHlpd2pnYlRVMXZCcEJMcXk1bmdXNklNTlJnelVocWE3UzB1T1gwNzh5N3U3RE8yaHJyZHc1YmtGNFg5Y1NhQkFscmJSSEpkNEx6MlhaaGlUMk9Cb0k0RW91OWtWWFN4bXV2YWNBQzFLZVhUTVpaQVl0X3AzejM4Z3NHa1RLT09OZHBFaVBXc1dCcmZPN3VfcURKbHd4dGJQY0w5dw?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Thu, 02 Jul 2026 23:59:59 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -35326,6 +35304,13 @@
       "link": "https://news.google.com/rss/articles/CBMiogFBVV95cUxOemxseFB4ZHp4clRfYmJpVmR5ZVpIcXFDTER0MG90eUZNQjFsblVIRU5OT1ZtZ2ZKeW1vMDg1NzFRYkUwR2xpN2NHQ2d4LVBsdHJxZFpfeUNSZEZnN2NJb3B6T1U2SHBqOHZ4dXJ6alppTkxfUDdvUjY0dkxvRHB3MUcyN2hzMHhWYkJaQktGbHUzazVjMDhrZlZpb2J3ZmdJSlE?oc=5",
       "source": "Bloomberg.com",
       "time": "Wed, 01 Jul 2026 00:00:00 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Watch Pubs to Get Short-Term World Cup Boost - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMimAFBVV95cUxNZTBUUlZ0bHlsNU05QzJxS1k5bl9BUDNNTk56WWtlRDI3dTQwbUhlYWxmX1liMjVHUE1hQlFZampwVC1NZ2ZwSklIS2NpeHJ2NlVuS0lZMGtVOFNjLW5OWW9PRFVmenVhWi0zZzRVeGU0SkpZV2VITDlTOWpUTERNS2d0LWdvSTZOdjFIY0pEd1lkWWhFT09hNg?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 03 Jul 2026 12:20:17 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -35339,7 +35324,7 @@
       "title": "US Hiring Slows Sharply, Curbing Recent Job-Market Momentum - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxNZWwyTzJIVmNiZUNVbEVhd3E3ZXJlZmtQTFdERXhoVTBMMmljRXVlMzl6d3hnaVpIM0RxWjR2WUFIV0ZoVUZKNnB4LU8ySld0RjRoU3Nyc1NsTThRNF9OdklRbFdZMXhJR2VNeEoybFd1djZrWWpOWk94ZlRkRGY2cjhkUzN0eXFCQjJsV05RWVQtTkkyUjh1Mkk4alBXN0hvZXZFUi1BbVFQLTIzdzhsdWtB?oc=5",
       "source": "Bloomberg.com",
-      "time": "Thu, 02 Jul 2026 12:32:12 GMT",
+      "time": "Thu, 02 Jul 2026 13:47:12 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -35350,10 +35335,24 @@
       "category": "bloomberg_google"
     },
     {
+      "title": "Watch Stock Markets: Allianz's Subran Has Doubts Over Europe's 'AI Dividend' - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirAFBVV95cUxQdDBwUWJ3am1jVDQySE1DNkNIT3RuZEdUQlI3dER0R1V2b0MtVTI2b0hySkVadVY2aldvcVd3emlHUGU4UmwxTEpaVmlXSm8wSGEyN1RLY3ZfelR5U1VpVGhJdXR3R0VaLUstUzlwY2Y4bFFYUFEzMHdLeWJucWtZUlFFUS1VSHMxQlM3UjZROVVSMDJYVmpyRWJPLWplSGt0ZFl4QVJRaUd3dWU2?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 03 Jul 2026 00:00:00 GMT",
+      "category": "bloomberg_google"
+    },
+    {
       "title": "China Services Gauge Fares Better Than Forecast Despite Slip - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPYU1FMDlpak9PRTFPakRLc3AzQmZhRDMyZ1ZoTWEzZ2tETTZQcFJvb3AtMUhjSFJCelZoeHFxalFOTWNLRkFrel91c09FbkZxRmRSRHFpU2Y4a2NRSVVVUm1OMTFDRGptYTdNSTJ4dU5WR3JIMjBkdVk2dTlZcW9DbW45T19hUzVET2x0UkdCbVg4TWVFa2t4UEhGelp4SUJ5WkhjNnU2SExTZ2laa3N2WkE3djA?oc=5",
       "source": "Bloomberg.com",
       "time": "Fri, 03 Jul 2026 02:39:00 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Russia Hikes June Subsidies to Refiners as Fuel Shortages Bite - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOdWVRVGdEM2VadHRNU092N0dIM1pISXNlLXBiYW1ZVm5jTU5Kb3RjX0dhZkdudmEzNXg2NGoyNHBzR1g4WmFuOEhBN2hyb0l2SlU2ajI5UGZSNzY2bFFIMlRPRmN4WmNfZDREM0pmN05zMm9zanpmOFE1T2pGd2NnMGFqZGNvUjlrdDk3U1hnVUJTczhYeDg0ckphY3JQamxuZV9EMFBNbDNOVUpiS2M4c0UtZw?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 03 Jul 2026 12:08:09 GMT",
       "category": "bloomberg_google"
     }
   ],
@@ -35369,7 +35368,7 @@
       "urgency": 0.8999999999999999,
       "composite_score": 0.97,
       "near_duplicate": false,
-      "dup_group": "n40",
+      "dup_group": "n43",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "[속보] 코스피, 장중 8,000선 회복…4%대 급등 - 연합뉴스"
@@ -35385,7 +35384,7 @@
       "urgency": 0.7,
       "composite_score": 0.9099999999999999,
       "near_duplicate": false,
-      "dup_group": "n24",
+      "dup_group": "n25",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "코스피, 5.76% 급반등 8,000선 회복…장중 변동폭 역대 2위(종합) - 연합뉴스"
@@ -35417,7 +35416,7 @@
       "urgency": 0.7,
       "composite_score": 0.9099999999999999,
       "near_duplicate": true,
-      "dup_group": "n45",
+      "dup_group": "n58",
       "dup_rank": 2,
       "dup_count": 2,
       "dup_topic": "코스피 5%대 급등, 다시 8000선 회복…삼전·닉스 8∼9%대 급반등 - 한겨레"
@@ -35449,7 +35448,7 @@
       "urgency": 0.5,
       "composite_score": 0.8500000000000001,
       "near_duplicate": false,
-      "dup_group": "n48",
+      "dup_group": "n47",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "코스닥 신속퇴출 속도전…상폐기업 거래 지원도 검토 - 연합인포맥스"
@@ -35465,7 +35464,7 @@
       "urgency": 0.5,
       "composite_score": 0.8500000000000001,
       "near_duplicate": false,
-      "dup_group": "n50",
+      "dup_group": "n51",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "코스피, 7,800선 회복…삼전·닉스 반등 - 연합뉴스"
@@ -35481,7 +35480,7 @@
       "urgency": 0.5,
       "composite_score": 0.8500000000000001,
       "near_duplicate": false,
-      "dup_group": "n57",
+      "dup_group": "n59",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "코스피 반도체株 투심 회복하며 2% 넘게 반등…7,800대 중반 - 연합인포맥스"
@@ -35513,7 +35512,7 @@
       "urgency": 0.5,
       "composite_score": 0.8500000000000001,
       "near_duplicate": false,
-      "dup_group": "n68",
+      "dup_group": "n70",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "AI 과잉투자 우려 완화되나…불안해진 투자심리에 연일 널뛰기(종합) - 연합뉴스"
@@ -35641,7 +35640,7 @@
       "urgency": 0.8999999999999999,
       "composite_score": 0.77,
       "near_duplicate": false,
-      "dup_group": "n42",
+      "dup_group": "n38",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "코스피, 장중 3% 급락 뒤 극적 반등…반도체 급등에 8000선 회복 - v.daum.net"
@@ -35657,7 +35656,7 @@
       "urgency": 0.7,
       "composite_score": 0.75,
       "near_duplicate": false,
-      "dup_group": "n51",
+      "dup_group": "n53",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "코스피 8000선 회복…급등세에 매수 사이드카 발동 - 전자신문"
@@ -35769,10 +35768,26 @@
       "urgency": 0.7,
       "composite_score": 0.71,
       "near_duplicate": false,
-      "dup_group": "n22",
+      "dup_group": "n23",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "[속보]코스피, 급반등에 매수 사이드카 발동 - 중앙일보"
+    },
+    {
+      "title": "코스피 급등세에 매수 사이드카 발동 - KBS 뉴스",
+      "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTFBaLXlBcXdGdFlRZ011WXNaY3pmbU9YMFlHS2l6YlVJWGZaR3R5eFh3Wnc1b3pCQXAyVlNvMXNOdGtka3FxRDVtOFIweEJSTjlDaW41WVJxdU9rMjA?oc=5",
+      "source": "KBS 뉴스",
+      "time": "Fri, 03 Jul 2026 05:13:00 GMT",
+      "category": "google_kr",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.7,
+      "composite_score": 0.71,
+      "near_duplicate": false,
+      "dup_group": "n35",
+      "dup_rank": 1,
+      "dup_count": 1,
+      "dup_topic": "코스피 급등세에 매수 사이드카 발동 - KBS 뉴스"
     },
     {
       "title": "코스피 5% 급등해 8,000선 회복...매수 사이드카 발동 - YTN",
@@ -35801,42 +35816,10 @@
       "urgency": 0.7,
       "composite_score": 0.71,
       "near_duplicate": false,
-      "dup_group": "n38",
+      "dup_group": "n39",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "속보 기관 4.5조 순매수에 코스피 5.8%↑...8,000선 회복 - YTN"
-    },
-    {
-      "title": "코스피 5%대 급등, 다시 8000선 회복…삼전·닉스 8∼9%대 급반등 - 한겨레",
-      "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5IY2g1SjZZRjAtdjFZYVpzWVlES3hZcHd1RmVLbFdubDEwdlFQVUlyWEhfTDhiV253TjREMVFpcVRVR19BUlBNajZ4S3NNaEwyZkVDZ0NiM2twTTNfY1ZLbTEzcTk3X1RUUXJwZ2E3QVpFUQ?oc=5",
-      "source": "한겨레",
-      "time": "Fri, 03 Jul 2026 09:04:00 GMT",
-      "category": "google_kr",
-      "sentiment": "positive",
-      "credibility": 0.5,
-      "urgency": 0.7,
-      "composite_score": 0.71,
-      "near_duplicate": false,
-      "dup_group": "n45",
-      "dup_rank": 1,
-      "dup_count": 2,
-      "dup_topic": "코스피 5%대 급등, 다시 8000선 회복…삼전·닉스 8∼9%대 급반등 - 한겨레"
-    },
-    {
-      "title": "코스피 급등세에 매수 사이드카 발동 - KBS 뉴스",
-      "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTFBaLXlBcXdGdFlRZ011WXNaY3pmbU9YMFlHS2l6YlVJWGZaR3R5eFh3Wnc1b3pCQXAyVlNvMXNOdGtka3FxRDVtOFIweEJSTjlDaW41WVJxdU9rMjA?oc=5",
-      "source": "KBS 뉴스",
-      "time": "Fri, 03 Jul 2026 05:13:00 GMT",
-      "category": "google_kr",
-      "sentiment": "positive",
-      "credibility": 0.5,
-      "urgency": 0.7,
-      "composite_score": 0.71,
-      "near_duplicate": false,
-      "dup_group": "n47",
-      "dup_rank": 1,
-      "dup_count": 1,
-      "dup_topic": "코스피 급등세에 매수 사이드카 발동 - KBS 뉴스"
     },
     {
       "title": "코스피 +5%대 급등! 8,000선 탈환 - KB Think",
@@ -35849,10 +35832,26 @@
       "urgency": 0.7,
       "composite_score": 0.71,
       "near_duplicate": false,
-      "dup_group": "n49",
+      "dup_group": "n50",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "코스피 +5%대 급등! 8,000선 탈환 - KB Think"
+    },
+    {
+      "title": "코스피 5%대 급등, 다시 8000선 회복…삼전·닉스 8∼9%대 급반등 - 한겨레",
+      "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5IY2g1SjZZRjAtdjFZYVpzWVlES3hZcHd1RmVLbFdubDEwdlFQVUlyWEhfTDhiV253TjREMVFpcVRVR19BUlBNajZ4S3NNaEwyZkVDZ0NiM2twTTNfY1ZLbTEzcTk3X1RUUXJwZ2E3QVpFUQ?oc=5",
+      "source": "한겨레",
+      "time": "Fri, 03 Jul 2026 09:04:00 GMT",
+      "category": "google_kr",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.7,
+      "composite_score": 0.71,
+      "near_duplicate": false,
+      "dup_group": "n58",
+      "dup_rank": 1,
+      "dup_count": 2,
+      "dup_topic": "코스피 5%대 급등, 다시 8000선 회복…삼전·닉스 8∼9%대 급반등 - 한겨레"
     },
     {
       "title": "코스피, 급락 하루만에 급반등…5.76% 상승 8,000선 회복 - 연합뉴스",
@@ -35864,11 +35863,11 @@
       "credibility": 1.0,
       "urgency": 0.7,
       "composite_score": 0.7,
-      "near_duplicate": false,
-      "dup_group": "n33",
-      "dup_rank": 1,
-      "dup_count": 1,
-      "dup_topic": "코스피, 급락 하루만에 급반등…5.76% 상승 8,000선 회복 - 연합뉴스"
+      "near_duplicate": true,
+      "dup_group": "n24",
+      "dup_rank": 2,
+      "dup_count": 2,
+      "dup_topic": "코스피, 급락 하루 만에 급반등...5.76% 상승 8,000선 회복 - KBC광주방송"
     },
     {
       "title": "[증시-마감] 반도체株 반발매수에 '8천피' 회복…기관 역대 최대매수 | - 연합인포맥스",
@@ -35881,7 +35880,7 @@
       "urgency": 0.7,
       "composite_score": 0.7,
       "near_duplicate": false,
-      "dup_group": "n61",
+      "dup_group": "n64",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "[증시-마감] 반도체株 반발매수에 '8천피' 회복…기관 역대 최대매수 | - 연합인포맥스"
@@ -35945,10 +35944,26 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n26",
+      "dup_group": "n27",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "'삼전·닉스 급반등' 멀미 나는 증시...서학개미 다시 증가 - YTN"
+    },
+    {
+      "title": "[증시 인사이트] 삼성전자·SK하이닉스 반등에 코스피 8000선 회복 - v.daum.net",
+      "link": "https://news.google.com/rss/articles/CBMiT0FVX3lxTE5xT3ZpbUkwdHp2NEgtT0VMM1FYOVV6WmVxUlBKLUk5b2VjbWE4UlZvNnd2REw5eFVLNFI1eVVyVjR2M3dRREhBZVNMX0pILUU?oc=5",
+      "source": "v.daum.net",
+      "time": "Fri, 03 Jul 2026 07:43:11 GMT",
+      "category": "google_kr",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999,
+      "near_duplicate": false,
+      "dup_group": "n31",
+      "dup_rank": 1,
+      "dup_count": 1,
+      "dup_topic": "[증시 인사이트] 삼성전자·SK하이닉스 반등에 코스피 8000선 회복 - v.daum.net"
     },
     {
       "title": "[집중진단] 삼전닉스 반등에 코스피 8000 탈환…금융투자 매수가 구원투수? - v.daum.net",
@@ -35961,7 +35976,7 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n30",
+      "dup_group": "n34",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "[집중진단] 삼전닉스 반등에 코스피 8000 탈환…금융투자 매수가 구원투수? - v.daum.net"
@@ -35977,26 +35992,10 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n31",
+      "dup_group": "n41",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "[마켓뷰] 700포인트 널뛴 코스피, 8100선 눈앞…기관 4.5조 순매수 - Chosunbiz"
-    },
-    {
-      "title": "코스피, ‘반도체 쇼크’ 딛고 하루만에 8000선 안착…‘삼전닉스’ 10%대 급반등 - 경향신문",
-      "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE1YRFhCamEzMUIwckhUbWROaTFxMk0wX1pwUklPczMwR3JYZ3V2TE8yYjA4SzNWNUg1b0NhSnBYbVVxNzRDSXpXRC10OGx4SEhZSlJIVlQ0RjVGQdIBX0FVX3lxTE1hd3VtY1NrZ0hia3NzRmdiRExiczhyZWk0Y081QTYzNDhvSUxuX2dtUWFqQllSNnFqMkpiZ1h5czNvOWg5alhLY1U1S0J6dUpEQTFwTFBQcmtyYzRPUWhV?oc=5",
-      "source": "경향신문",
-      "time": "Fri, 03 Jul 2026 06:59:00 GMT",
-      "category": "google_kr",
-      "sentiment": "positive",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.6499999999999999,
-      "near_duplicate": false,
-      "dup_group": "n32",
-      "dup_rank": 1,
-      "dup_count": 1,
-      "dup_topic": "코스피, ‘반도체 쇼크’ 딛고 하루만에 8000선 안착…‘삼전닉스’ 10%대 급반등 - 경향신문"
     }
   ],
   "sectors": [
@@ -38291,20 +38290,20 @@
     }
   ],
   "briefing": {
-    "headline": "CL=F가 전월 대비 16.22% 급락하면서 관련주 전반이 부진한 가운데, 마진 빠듯, 가격 결정력 약한 CHRD는 주가 19.41% 급락했고 가격 결정력 좋은 EOG도 7.58% 빠졌어.",
+    "headline": "원달러 급변 — 1,529.01원 (전일대비 -22.80원, -1.47%) 수입물가·외환 리스크 점검",
     "tone": "urgent",
     "alerts": [
+      {
+        "level": "CRITICAL",
+        "category": "macro",
+        "message": "원달러 급변 — 1,529.01원 (전일대비 -22.80원, -1.47%) 수입물가·외환 리스크 점검",
+        "action": "환헤지·원자재·수입 비중 높은 종목 즉시 점검"
+      },
       {
         "level": "CRITICAL",
         "category": "commodity",
         "message": "CL=F가 전월 대비 16.22% 급락하면서 관련주 전반이 부진한 가운데, 마진 빠듯, 가격 결정력 약한 CHRD는 주가 19.41% 급락했고 가격 결정력 좋은 EOG도 7.58% 빠졌어.",
         "action": "해당 섹터 마진·판가전이(컨센서스) 교차 확인"
-      },
-      {
-        "level": "WARNING",
-        "category": "macro",
-        "message": "원달러 변동 확대 — 1,530.90원 (-20.91원, -1.35%)",
-        "action": "수출·수입주 환율 민감도 확인"
       },
       {
         "level": "WARNING",
@@ -38380,14 +38379,14 @@
       }
     ],
     "action_items": [
+      "환헤지·원자재·수입 비중 높은 종목 즉시 점검",
       "해당 섹터 마진·판가전이(컨센서스) 교차 확인",
-      "수출·수입주 환율 민감도 확인",
       "신규 매수 자제, 뉴스 동향 모니터링"
     ],
     "portfolio_status": "총자산 수익률 -1.0% | 보유 4종목",
     "alert_counts": {
-      "critical": 1,
-      "warning": 2,
+      "critical": 2,
+      "warning": 1,
       "info": 9
     }
   },
@@ -38559,27 +38558,32 @@
     "overall_status": "ok"
   },
   "x_sentiment": {
-    "score": 45,
-    "positive": 4,
-    "negative": 5,
-    "neutral": 11,
+    "score": 43,
+    "positive": 6,
+    "negative": 7,
+    "neutral": 7,
     "tweet_count": 20,
     "tweets": [
+      "[김대호 인물] 마이클 버리 &quot;외눈박이 공매도 저승사자&quot;",
+      "Trump trusts Fed Chair Kevin Warsh. It matters for more than interest rates - CNBC",
       "\"Trump tariff trade\" - Google News",
       "Trump discloses 327 unreported stock trades made a day before his first tariff pause - NBC News",
       "코스피, 반도체 대형주 저가 매수세로 8,000선 회복",
       "[에디터스 노트] 버블 붕괴 예측이 어려운 이유",
+      "비트코인(BTC), 쌍바닥 딛고 회복...&quot;국제유가 약세가 반등 촉매제&quot;",
       "WATCH: New Fed chair Kevin Warsh holds first news conference after leaving interest rate unchanged - PBS",
-      "Warren Buffett's Successor, Greg Abel, Started His Tenure With a Bang by Dumping Domino's and Making a Virtual Monopoly Berkshire's New No. 5 Holding ",
-      "Cathie Wood’s Palantir Buy Might Be a Signal to Buy the Dip - 24/7 Wall St.",
-      "비트코인(BTC), 6만 달러 탈환으로 반등 시동...강달러·롱 포지션 청산...",
-      "'삼전·닉스 급반등' 멀미 나는 증시...서학개미 다시 증가",
-      "일론 머스크 &quot;죽을 준비가 됐다면 당신은 화성행 후보&quot;…위험성 재조명"
+      "Why Warren Buffett’s Successor Is Bailing on the Restaurant Chain His Mentor Loved - inc.com",
+      "Cathie Wood’s Palantir Buy Might Be a Signal to Buy the Dip - 24/7 Wall St."
     ],
     "key_figures": [
       {
         "name": "트럼프",
-        "mentions": 4,
+        "mentions": 5,
+        "mood": "부정"
+      },
+      {
+        "name": "마이클 버리",
+        "mentions": 1,
         "mood": "부정"
       },
       {
@@ -38589,6 +38593,16 @@
       }
     ],
     "top_signals": [
+      {
+        "text": "[김대호 인물] 마이클 버리 &quot;외눈박이 공매도 저승사자&quot;",
+        "figure": "마이클 버리",
+        "label": "negative"
+      },
+      {
+        "text": "Trump trusts Fed Chair Kevin Warsh. It matters for more than",
+        "figure": "트럼프",
+        "label": "negative"
+      },
       {
         "text": "\"Trump tariff trade\" - Google News",
         "figure": "트럼프",
@@ -38603,16 +38617,6 @@
         "text": "코스피, 반도체 대형주 저가 매수세로 8,000선 회복",
         "figure": null,
         "label": "positive"
-      },
-      {
-        "text": "[에디터스 노트] 버블 붕괴 예측이 어려운 이유",
-        "figure": null,
-        "label": "negative"
-      },
-      {
-        "text": "WATCH: New Fed chair Kevin Warsh holds first news conference",
-        "figure": null,
-        "label": "negative"
       }
     ]
   },
@@ -39822,8 +39826,8 @@
     },
     "funding_rate": {
       "ok": true,
-      "rate": 5.14041316509e-05,
-      "rate_pct": 0.0051,
+      "rate": 4.96204686296e-05,
+      "rate_pct": 0.005,
       "prev_rate_pct": null,
       "signal": "neutral",
       "timestamp": "1783123200000",
@@ -39831,24 +39835,24 @@
     },
     "kimchi_premium": {
       "ok": true,
-      "premium_pct": -1.55,
-      "upbit_krw": 93443000.0,
-      "global_usd": 62027.9,
-      "binance_usd": 62027.9,
-      "usdt_krw": 1530.239990234375,
+      "premium_pct": -1.44,
+      "upbit_krw": 93747000.0,
+      "global_usd": 62178.4,
+      "binance_usd": 62178.4,
+      "usdt_krw": 1529.6800537109375,
       "signal": "discount",
       "source": "upbit+bybit/okx"
     },
     "btc_nasdaq_corr": {
       "ok": true,
-      "correlation": 0.266,
+      "correlation": 0.264,
       "period_days": 30,
       "signal": "decoupled",
-      "btc_last_price": 62028.0
+      "btc_last_price": 62178.4
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 257101540034.68347,
+      "total_mcap_usd": 257122017180.78796,
       "total_mcap_b": 257.1,
       "usdt_mcap_b": 184.1,
       "usdc_mcap_b": 73.0
@@ -48377,18 +48381,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "증권",
-        "반도체와반도체장비",
-        "레저용장비와제품",
         "우주항공과국방",
+        "반도체와반도체장비",
+        "증권",
+        "레저용장비와제품",
         "문구류"
       ],
       "rotation_out": [
-        "백화점과일반상점",
-        "손해보험",
         "통신장비",
+        "손해보험",
+        "복합기업",
         "은행",
-        "복합기업"
+        "백화점과일반상점"
       ],
       "required_days": 30,
       "actual_span_days": 30,
@@ -48426,18 +48430,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "증권",
-        "반도체와반도체장비",
-        "레저용장비와제품",
         "우주항공과국방",
+        "반도체와반도체장비",
+        "증권",
+        "레저용장비와제품",
         "문구류"
       ],
       "rotation_out": [
+        "건설",
         "에너지장비및서비스",
-        "조선",
         "무역회사와판매업체",
         "통신장비",
-        "건설"
+        "조선"
       ],
       "required_days": 90,
       "actual_span_days": 90,
@@ -48475,18 +48479,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "증권",
-        "반도체와반도체장비",
-        "레저용장비와제품",
         "우주항공과국방",
+        "반도체와반도체장비",
+        "증권",
+        "레저용장비와제품",
         "문구류"
       ],
       "rotation_out": [
+        "건설",
         "에너지장비및서비스",
-        "조선",
         "무역회사와판매업체",
         "통신장비",
-        "건설"
+        "조선"
       ],
       "required_days": 180,
       "actual_span_days": 90,
@@ -52473,24 +52477,6 @@
           "e_ordyn": "○"
         },
         {
-          "rsym": "DNASLHSW",
-          "excd": "NAS",
-          "symb": "LHSW",
-          "knam": "롄허 소웰 인터내셔널 그룹",
-          "last": "1.8000",
-          "sign": "2",
-          "diff": "0.0300",
-          "rate": "+1.69",
-          "tvol": "14073561",
-          "pask": "0.0000",
-          "pbid": "0.0000",
-          "n_base": "2.7000",
-          "n_diff": "0.9000",
-          "n_rate": "-33.33",
-          "enam": "LIANHE SOWELL INTL GROUP LTD",
-          "e_ordyn": "○"
-        },
-        {
           "rsym": "DNASSEER",
           "excd": "NAS",
           "symb": "SEER",
@@ -52506,6 +52492,24 @@
           "n_diff": "0.6700",
           "n_rate": "-29.26",
           "enam": "SEER INC",
+          "e_ordyn": "○"
+        },
+        {
+          "rsym": "DNASLHSW",
+          "excd": "NAS",
+          "symb": "LHSW",
+          "knam": "롄허 소웰 인터내셔널 그룹",
+          "last": "1.8000",
+          "sign": "2",
+          "diff": "0.0300",
+          "rate": "+1.69",
+          "tvol": "14073561",
+          "pask": "0.0000",
+          "pbid": "0.0000",
+          "n_base": "2.5000",
+          "n_diff": "0.7000",
+          "n_rate": "-28.00",
+          "enam": "LIANHE SOWELL INTL GROUP LTD",
           "e_ordyn": "○"
         },
         {
@@ -52592,9 +52596,9 @@
           "tvol": "88538476",
           "pask": "0.0000",
           "pbid": "0.0000",
-          "n_base": "7.5300",
-          "n_diff": "1.0500",
-          "n_rate": "-13.94",
+          "n_base": "7.5800",
+          "n_diff": "1.1000",
+          "n_rate": "-14.51",
           "enam": "CLEARONE INC",
           "e_ordyn": "○"
         },
@@ -54794,25 +54798,6 @@
           "e_ordyn": "○"
         },
         {
-          "rsym": "DHKS08366",
-          "excd": "HKS",
-          "symb": "08366",
-          "name": "저장연합투자",
-          "last": "0.025",
-          "sign": "5",
-          "diff": "0.005",
-          "rate": "-16.67",
-          "tvol": "2200000",
-          "pask": "0.029",
-          "pbid": "0.025",
-          "n_base": "0.030",
-          "n_diff": "0.005",
-          "n_rate": "-16.67",
-          "rank": "11",
-          "ename": "ZJ UNITED INV",
-          "e_ordyn": "○"
-        },
-        {
           "rsym": "DHKS08446",
           "excd": "HKS",
           "symb": "08446",
@@ -54827,8 +54812,27 @@
           "n_base": "0.096",
           "n_diff": "0.016",
           "n_rate": "-16.67",
-          "rank": "12",
+          "rank": "11",
           "ename": "BRIGHTSTAR TECH",
+          "e_ordyn": "○"
+        },
+        {
+          "rsym": "DHKS08366",
+          "excd": "HKS",
+          "symb": "08366",
+          "name": "저장연합투자",
+          "last": "0.025",
+          "sign": "5",
+          "diff": "0.005",
+          "rate": "-16.67",
+          "tvol": "2200000",
+          "pask": "0.029",
+          "pbid": "0.025",
+          "n_base": "0.030",
+          "n_diff": "0.005",
+          "n_rate": "-16.67",
+          "rank": "12",
+          "ename": "ZJ UNITED INV",
           "e_ordyn": "○"
         },
         {
@@ -57172,25 +57176,6 @@
           "e_ordyn": ""
         },
         {
-          "rsym": "DSHS600630",
-          "excd": "SHS",
-          "symb": "600630",
-          "name": "룽터우",
-          "last": "9.620",
-          "sign": "4",
-          "diff": "1.070",
-          "rate": "-10.01",
-          "tvol": "26719100",
-          "pask": "9.620",
-          "pbid": "0.000",
-          "n_base": "10.690",
-          "n_diff": "1.070",
-          "n_rate": "-10.01",
-          "rank": "7",
-          "ename": "SHANGHAI DRAGON CO. LTD.",
-          "e_ordyn": ""
-        },
-        {
           "rsym": "DSHS600707",
           "excd": "SHS",
           "symb": "600707",
@@ -57205,9 +57190,28 @@
           "n_base": "16.690",
           "n_diff": "1.670",
           "n_rate": "-10.01",
-          "rank": "8",
+          "rank": "7",
           "ename": "IRICO DISPLAY DEVICES",
           "e_ordyn": "○"
+        },
+        {
+          "rsym": "DSHS600630",
+          "excd": "SHS",
+          "symb": "600630",
+          "name": "룽터우",
+          "last": "9.620",
+          "sign": "4",
+          "diff": "1.070",
+          "rate": "-10.01",
+          "tvol": "26719100",
+          "pask": "9.620",
+          "pbid": "0.000",
+          "n_base": "10.690",
+          "n_diff": "1.070",
+          "n_rate": "-10.01",
+          "rank": "8",
+          "ename": "SHANGHAI DRAGON CO. LTD.",
+          "e_ordyn": ""
         },
         {
           "rsym": "DSHS605358",
@@ -57229,25 +57233,6 @@
           "e_ordyn": "○"
         },
         {
-          "rsym": "DSHS600184",
-          "excd": "SHS",
-          "symb": "600184",
-          "name": "베이팡광전",
-          "last": "25.830",
-          "sign": "4",
-          "diff": "2.870",
-          "rate": "-10.00",
-          "tvol": "44433964",
-          "pask": "25.830",
-          "pbid": "0.000",
-          "n_base": "28.700",
-          "n_diff": "2.870",
-          "n_rate": "-10.00",
-          "rank": "10",
-          "ename": "NORTH ELECTRO-OPTIC CO LTD",
-          "e_ordyn": "○"
-        },
-        {
           "rsym": "DSHS600397",
           "excd": "SHS",
           "symb": "600397",
@@ -57262,7 +57247,7 @@
           "n_base": "28.500",
           "n_diff": "2.850",
           "n_rate": "-10.00",
-          "rank": "11",
+          "rank": "10",
           "ename": "JIANGXI TUNGSTEN RARE & PRECIOUS EQ",
           "e_ordyn": "○"
         },
@@ -57281,8 +57266,27 @@
           "n_base": "7.700",
           "n_diff": "0.770",
           "n_rate": "-10.00",
-          "rank": "12",
+          "rank": "11",
           "ename": "BEFAR GROUP CO LTD",
+          "e_ordyn": "○"
+        },
+        {
+          "rsym": "DSHS603978",
+          "excd": "SHS",
+          "symb": "603978",
+          "name": "신싱경합금재료",
+          "last": "30.160",
+          "sign": "4",
+          "diff": "3.350",
+          "rate": "-10.00",
+          "tvol": "23336530",
+          "pask": "30.170",
+          "pbid": "30.160",
+          "n_base": "33.510",
+          "n_diff": "3.350",
+          "n_rate": "-10.00",
+          "rank": "12",
+          "ename": "SHENZHENSUNXING LIGHT ALLOYS MATERI",
           "e_ordyn": "○"
         },
         {
@@ -57305,25 +57309,6 @@
           "e_ordyn": "○"
         },
         {
-          "rsym": "DSHS603978",
-          "excd": "SHS",
-          "symb": "603978",
-          "name": "신싱경합금재료",
-          "last": "30.160",
-          "sign": "4",
-          "diff": "3.350",
-          "rate": "-10.00",
-          "tvol": "23336530",
-          "pask": "30.170",
-          "pbid": "30.160",
-          "n_base": "33.510",
-          "n_diff": "3.350",
-          "n_rate": "-10.00",
-          "rank": "14",
-          "ename": "SHENZHENSUNXING LIGHT ALLOYS MATERI",
-          "e_ordyn": "○"
-        },
-        {
           "rsym": "DSHS605580",
           "excd": "SHS",
           "symb": "605580",
@@ -57338,8 +57323,27 @@
           "n_base": "29.300",
           "n_diff": "2.930",
           "n_rate": "-10.00",
-          "rank": "15",
+          "rank": "14",
           "ename": "HENGSHENG ENERGY CO LTD",
+          "e_ordyn": "○"
+        },
+        {
+          "rsym": "DSHS600184",
+          "excd": "SHS",
+          "symb": "600184",
+          "name": "베이팡광전",
+          "last": "25.830",
+          "sign": "4",
+          "diff": "2.870",
+          "rate": "-10.00",
+          "tvol": "44433964",
+          "pask": "25.830",
+          "pbid": "0.000",
+          "n_base": "28.700",
+          "n_diff": "2.870",
+          "n_rate": "-10.00",
+          "rank": "15",
+          "ename": "NORTH ELECTRO-OPTIC CO LTD",
           "e_ordyn": "○"
         }
       ],
@@ -58513,25 +58517,6 @@
           "e_ordyn": "○"
         },
         {
-          "rsym": "DSZS001399",
-          "excd": "SZS",
-          "symb": "001399",
-          "name": "HKC CORPORATION LTD",
-          "last": "42.140",
-          "sign": "4",
-          "diff": "4.680",
-          "rate": "-10.00",
-          "tvol": "26486700",
-          "pask": "42.140",
-          "pbid": "0.000",
-          "n_base": "46.820",
-          "n_diff": "4.680",
-          "n_rate": "-10.00",
-          "rank": "13",
-          "ename": "HKC CORPORATION LTD",
-          "e_ordyn": ""
-        },
-        {
           "rsym": "DSZS000892",
           "excd": "SZS",
           "symb": "000892",
@@ -58546,28 +58531,47 @@
           "n_base": "3.800",
           "n_diff": "0.380",
           "n_rate": "-10.00",
-          "rank": "14",
+          "rank": "13",
           "ename": "H AND R CENTURY UNION CORPORATION",
           "e_ordyn": "○"
         },
         {
-          "rsym": "DSZS300071",
+          "rsym": "DSZS001399",
           "excd": "SZS",
-          "symb": "300071",
-          "name": "푸스홀딩스개발",
-          "last": "3.960",
-          "sign": "5",
-          "diff": "0.440",
+          "symb": "001399",
+          "name": "HKC CORPORATION LTD",
+          "last": "42.140",
+          "sign": "4",
+          "diff": "4.680",
           "rate": "-10.00",
-          "tvol": "161404731",
-          "pask": "3.970",
-          "pbid": "3.960",
-          "n_base": "4.400",
-          "n_diff": "0.440",
+          "tvol": "26486700",
+          "pask": "42.140",
+          "pbid": "0.000",
+          "n_base": "46.820",
+          "n_diff": "4.680",
+          "n_rate": "-10.00",
+          "rank": "14",
+          "ename": "HKC CORPORATION LTD",
+          "e_ordyn": ""
+        },
+        {
+          "rsym": "DSZS002407",
+          "excd": "SZS",
+          "symb": "002407",
+          "name": "다불다화학",
+          "last": "49.340",
+          "sign": "4",
+          "diff": "5.480",
+          "rate": "-10.00",
+          "tvol": "238669933",
+          "pask": "49.340",
+          "pbid": "0.000",
+          "n_base": "54.820",
+          "n_diff": "5.480",
           "n_rate": "-10.00",
           "rank": "15",
-          "ename": "FS DEVELOPMENT INVESTMENT HOLDINGS",
-          "e_ordyn": ""
+          "ename": "DO-FLUORIDE NEW MATERIALS CO LTD",
+          "e_ordyn": "○"
         }
       ],
       "price_fluct": [
@@ -59239,7 +59243,7 @@
     },
     "news": [],
     "breaking": [],
-    "timestamp": "2026-07-04T01:32:35.653676+09:00"
+    "timestamp": "2026-07-04T02:32:41.777160+09:00"
   },
   "kis_us_snapshots": {
     "LEN": {
@@ -62051,18 +62055,6 @@
       "title_ko": "AI 랠리, 너무 멀리 너무 빨리 갔나? - Bloomberg.com"
     },
     {
-      "title": "Gold Holds Gains As Weak US Jobs Data Lowers Rate Hike Odds - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxPUUxfd1gtWUE5ZzMwWDlUclJZbjRsNHc0ZllHZ0duX3hnbjE4TE15Zk9QblpkdDAzNHVfbkd1cktmQWpYRGVBRy1fVWZyU2Y1UHZjeUptX1lldHYxQUtUNnhXajJ3dGNaT2hzN21tNE5LaThuOV8ta0VhQ1FqbXJ2UzdJQ0VqcHgzZTBkVzdFYTAtTXhUblFTWkRRLWZISFlVU1hwN2psU19wVzJ3S3pr?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 03 Jul 2026 12:32:34 GMT",
-      "category": "bloomberg_google",
-      "sentiment": "positive",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.8500000000000001,
-      "title_ko": "미국 고용 데이터 부진으로 금리 인상 가능성 낮아지면서 금값 상승세 유지 - 블룸버그"
-    },
-    {
       "title": "Wall Street Bets Rallying Markets Will Absorb Every Market Blow - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPRWlGa2VFZEtfUjBPVDJKZUVxOHUtTDVqN21tVTNyWHdscnR6YVExWTFGU0htYjBDZDltUVBCVkpNT0oyaWZsd01Xc2hDeUU4cDdmb0hBY0Q2dnRGUmYzMGY5c2psLUx5ckNmdFJPX2lpa3plRF8yTEtYak1tOURwMEFRZ1gxeUpuYTdRbVoyQWpZOEdOQTZnRjNObGMxY0lobHZpLUJWMi01dGJCVEJtRUdpUXE?oc=5",
       "source": "Bloomberg.com",
@@ -62087,18 +62079,6 @@
       "title_ko": "새 파이프라인 제안 후 캐나다 증시 전반적으로 상승 - 블룸버그"
     },
     {
-      "title": "US Stocks Get Tech Boost After AI-Fueled Selloff: Markets Wrap - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQUzVfczV6S0ZFcXdKcVpWR09wcHR1bnZ3b1BvN2l3dnFnMVM1c0JneHBzQ1F3ejVCWUFrLWNnaTFvOUt3NVhaNmZoaTBNN1M0V3MwQUUzRWgtSTdVOHVHQWdlYkJaanU1Y2oxVUlRc2UzYURFdnlQZmRUNWJuWjllSXc4YjF4cnBGakM4aHRyQTJnNUtiNWVGbXZIc3puVGxkcExkbkVnUUF1aTZ5bVZJOXp4cw?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Sun, 28 Jun 2026 22:15:36 GMT",
-      "category": "bloomberg_google",
-      "sentiment": "negative",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.8500000000000001,
-      "title_ko": "AI 주도 매도세 이후 기술주 상승에 힘입어 미국 증시 반등: 시장 마감 - Bloomberg.com"
-    },
-    {
       "title": "'삼전·닉스 급반등' 멀미 나는 증시...서학개미 다시 증가 - YTN",
       "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE1fdkJQZmVBRThhQmFSVzNPTXBUemF3Q29OYm14VGtXaWJ0TkJtdnd4LUpRd0dfSlBQRnFqaW9ZRGg2VTVwT254UmQ2cFhjS2lpTS1uVTVFdGxMUXdLYVE?oc=5",
       "source": "YTN",
@@ -62109,7 +62089,7 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n26",
+      "dup_group": "n27",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "'삼전·닉스 급반등' 멀미 나는 증시...서학개미 다시 증가 - YTN",
@@ -62176,16 +62156,16 @@
       "title_ko": "AI 공장, 전력 장비 시장에서 승자와 패자를 가르다 - Bloomberg.com"
     },
     {
-      "title": "Watch Stock Markets: Allianz's Subran Has Doubts Over Europe's 'AI Dividend' - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMirAFBVV95cUxQdDBwUWJ3am1jVDQySE1DNkNIT3RuZEdUQlI3dER0R1V2b0MtVTI2b0hySkVadVY2aldvcVd3emlHUGU4UmwxTEpaVmlXSm8wSGEyN1RLY3ZfelR5U1VpVGhJdXR3R0VaLUstUzlwY2Y4bFFYUFEzMHdLeWJucWtZUlFFUS1VSHMxQlM3UjZROVVSMDJYVmpyRWJPLWplSGt0ZFl4QVJRaUd3dWU2?oc=5",
+      "title": "US Stocks Post Largest Outflows in Over Three Months, BofA Says - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOY0RtcDJFVWdQXzJLazU1TTZzV1laRnVpT3p2Y1ZpblU2V2hnRWlQS3hnSk9xS0FzS1F3YVlSOXpEZXgxOUc5NUxVMEVyMjVjb3B2VWY5Z2phdTVZcVkyN0dJNU1lVzNuUXdlZFNPU1RiNWRYRU95cEg0X3lXNHhtUXRTb01sMVIwQjRISGtlWkR2UW03WlZpbExhS2w3UWRXa0piRXJwa0J6ell0T0hETHRXUQ?oc=5",
       "source": "Bloomberg.com",
-      "time": "Fri, 03 Jul 2026 08:13:08 GMT",
+      "time": "Fri, 03 Jul 2026 08:59:10 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
       "urgency": 0.5,
       "composite_score": 0.64,
-      "title_ko": "증시 주시: Allianz의 Subran, 유럽의 'AI 배당'에 의구심 가져 - Bloomberg.com"
+      "title_ko": "BofA: 미국 주식, 3개월여 만에 최대 자금 유출 기록 - Bloomberg.com"
     },
     {
       "title": "Watch It's All Going Beautifully for Warsh: 3-Minutes MLIV - Bloomberg.com",
@@ -62212,6 +62192,18 @@
       "title_ko": "ECB, 6월 금리 인상 후 '좋은 위치'에 있다고 Moulin 말해 - Bloomberg.com"
     },
     {
+      "title": "South Korean Stocks Jump 6% After Turbulent Week on AI Swings - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxPclY2dWtUY2FEZmQtZ29ZUGl4OUdQRExPZVlJd0RuTnlnVlV6MENxTHRuemN4aHVTU2lac2FvSVZPZTJBcjlhdUNYQkpaNlZ0ZDVqLW1FMEx4VENtc0VjOTloQzZxMXM5RzYwUzBhWVlfWEZrU3hvZjZGWEdEbUY2REZodzJjVjNhRW1KN1E1ZENFNHlTTTRndXl0Rjc0cFFCUS04WlF5eVI1ZzhabGF4cA?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 03 Jul 2026 07:13:34 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64,
+      "title_ko": "AI 변동성에 격동의 한 주 보낸 후 한국 증시 6% 급등 - Bloomberg.com"
+    },
+    {
       "title": "Taiwanese Brokerage Yuanta Taps Banks for $1.3 Billion of Loans - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOVDh1anRmQ3hiTml6MndEcHJ2X3pfOF9RNmZHU09MbTRnTzJoN2ZaM2tYN0M4YklXbEszY0JkR1hGd2VXc01lLXpMUVBPSllmeWZhTzdkTTdvaThJalRWMGdoSGVEaUw3d3VJdHp1d1l4RGt1SUtvMktiSzZ5R1BGZzgxM1lNSmtWSl9QREVfZ2RIazByaS1HWjc5ZlRKeUlpaG9KVkVaWWEwOWlJZllCcDJ5cw?oc=5",
       "source": "Bloomberg.com",
@@ -62224,16 +62216,16 @@
       "title_ko": "대만 증권사 위안타, 13억 달러 대출 위해 은행 접촉 - Bloomberg.com"
     },
     {
-      "title": "US Stocks Post Largest Outflows in Over Three Months, BofA Says - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOY0RtcDJFVWdQXzJLazU1TTZzV1laRnVpT3p2Y1ZpblU2V2hnRWlQS3hnSk9xS0FzS1F3YVlSOXpEZXgxOUc5NUxVMEVyMjVjb3B2VWY5Z2phdTVZcVkyN0dJNU1lVzNuUXdlZFNPU1RiNWRYRU95cEg0X3lXNHhtUXRTb01sMVIwQjRISGtlWkR2UW03WlZpbExhS2w3UWRXa0piRXJwa0J6ell0T0hETHRXUQ?oc=5",
+      "title": "Cboe Seeks to List Prediction Market Type Options on Earnings Metrics - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMivAFBVV95cUxQbXZPR1hsQ2xuaHZkQ0tNY3hJd2c0UGNaV3Jqd2JYa29YT0VMemRlcG56bjRVN0F2c3ZFbm4zV3JLdkdaWVhGU3piVG4tamhEUERPcnQ4YmVvUkQ1bUZxX18zRjVSaFZZdUlQODVUSTdPLTdmWUp4SjVlaThZOG83Y3VtLTZ2VnhwRGhfUGRtenN0SHNpWFZVdDdlMVBmNzV5SEpaOWpGRnNkalNWVEFvM281amxtUF9keHY3cg?oc=5",
       "source": "Bloomberg.com",
-      "time": "Fri, 03 Jul 2026 08:59:10 GMT",
+      "time": "Wed, 01 Jul 2026 21:53:03 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
       "urgency": 0.5,
       "composite_score": 0.64,
-      "title_ko": "BofA: 미국 주식, 3개월여 만에 최대 자금 유출 기록 - Bloomberg.com"
+      "title_ko": "Cboe, 실적 지표에 대한 예측 시장형 옵션 상장 추진 - Bloomberg.com"
     },
     {
       "title": "Investors Are Using Leveraged ETFs to Turbocharge AI Bets - Bloomberg.com",
@@ -62260,16 +62252,16 @@
       "title_ko": "칩 산업, 메모리 시장 왜곡할 조치 자제해달라고 미국에 촉구 - 블룸버그"
     },
     {
-      "title": "Cboe Seeks to List Prediction Market Type Options on Earnings Metrics - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMivAFBVV95cUxQbXZPR1hsQ2xuaHZkQ0tNY3hJd2c0UGNaV3Jqd2JYa29YT0VMemRlcG56bjRVN0F2c3ZFbm4zV3JLdkdaWVhGU3piVG4tamhEUERPcnQ4YmVvUkQ1bUZxX18zRjVSaFZZdUlQODVUSTdPLTdmWUp4SjVlaThZOG83Y3VtLTZ2VnhwRGhfUGRtenN0SHNpWFZVdDdlMVBmNzV5SEpaOWpGRnNkalNWVEFvM281amxtUF9keHY3cg?oc=5",
+      "title": "Watch Goldman Sachs Says Capital Spending Is Powering the Bull Market - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiogFBVV95cUxOemxseFB4ZHp4clRfYmJpVmR5ZVpIcXFDTER0MG90eUZNQjFsblVIRU5OT1ZtZ2ZKeW1vMDg1NzFRYkUwR2xpN2NHQ2d4LVBsdHJxZFpfeUNSZEZnN2NJb3B6T1U2SHBqOHZ4dXJ6alppTkxfUDdvUjY0dkxvRHB3MUcyN2hzMHhWYkJaQktGbHUzazVjMDhrZlZpb2J3ZmdJSlE?oc=5",
       "source": "Bloomberg.com",
-      "time": "Wed, 01 Jul 2026 21:53:03 GMT",
+      "time": "Wed, 01 Jul 2026 00:00:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
       "urgency": 0.5,
       "composite_score": 0.64,
-      "title_ko": "Cboe, 실적 지표에 대한 예측 시장형 옵션 상장 추진 - Bloomberg.com"
+      "title_ko": "골드만삭스, 자본 지출이 강세장을 이끌고 있다고 밝혀 - 블룸버그"
     },
     {
       "title": "Watch Pubs to Get Short-Term World Cup Boost - Bloomberg.com",
@@ -62282,18 +62274,6 @@
       "urgency": 0.5,
       "composite_score": 0.64,
       "title_ko": "월드컵 기간 중 단기적인 매출 증대를 기대하는 술집들 - 블룸버그"
-    },
-    {
-      "title": "Watch Goldman Sachs Says Capital Spending Is Powering the Bull Market - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiogFBVV95cUxOemxseFB4ZHp4clRfYmJpVmR5ZVpIcXFDTER0MG90eUZNQjFsblVIRU5OT1ZtZ2ZKeW1vMDg1NzFRYkUwR2xpN2NHQ2d4LVBsdHJxZFpfeUNSZEZnN2NJb3B6T1U2SHBqOHZ4dXJ6alppTkxfUDdvUjY0dkxvRHB3MUcyN2hzMHhWYkJaQktGbHUzazVjMDhrZlZpb2J3ZmdJSlE?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Wed, 01 Jul 2026 00:00:00 GMT",
-      "category": "bloomberg_google",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64,
-      "title_ko": "골드만삭스, 자본 지출이 강세장을 이끌고 있다고 밝혀 - 블룸버그"
     },
     {
       "title": "South Korean Banks Expand Trading Floors for 24-Hour Won Market - Bloomberg.com",
@@ -62311,7 +62291,7 @@
       "title": "US Hiring Slows Sharply, Curbing Recent Job-Market Momentum - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxNZWwyTzJIVmNiZUNVbEVhd3E3ZXJlZmtQTFdERXhoVTBMMmljRXVlMzl6d3hnaVpIM0RxWjR2WUFIV0ZoVUZKNnB4LU8ySld0RjRoU3Nyc1NsTThRNF9OdklRbFdZMXhJR2VNeEoybFd1djZrWWpOWk94ZlRkRGY2cjhkUzN0eXFCQjJsV05RWVQtTkkyUjh1Mkk4alBXN0hvZXZFUi1BbVFQLTIzdzhsdWtB?oc=5",
       "source": "Bloomberg.com",
-      "time": "Thu, 02 Jul 2026 12:32:12 GMT",
+      "time": "Thu, 02 Jul 2026 13:47:12 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -62332,6 +62312,18 @@
       "title_ko": "월스트리트, 연준의 발언 부족이 시장 변동성 부추길까 우려 - Bloomberg.com"
     },
     {
+      "title": "Watch Stock Markets: Allianz's Subran Has Doubts Over Europe's 'AI Dividend' - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirAFBVV95cUxQdDBwUWJ3am1jVDQySE1DNkNIT3RuZEdUQlI3dER0R1V2b0MtVTI2b0hySkVadVY2aldvcVd3emlHUGU4UmwxTEpaVmlXSm8wSGEyN1RLY3ZfelR5U1VpVGhJdXR3R0VaLUstUzlwY2Y4bFFYUFEzMHdLeWJucWtZUlFFUS1VSHMxQlM3UjZROVVSMDJYVmpyRWJPLWplSGt0ZFl4QVJRaUd3dWU2?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 03 Jul 2026 00:00:00 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64,
+      "title_ko": "증시 주시: Allianz의 Subran, 유럽의 'AI 배당'에 의구심 가져 - Bloomberg.com"
+    },
+    {
       "title": "China Services Gauge Fares Better Than Forecast Despite Slip - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPYU1FMDlpak9PRTFPakRLc3AzQmZhRDMyZ1ZoTWEzZ2tETTZQcFJvb3AtMUhjSFJCelZoeHFxalFOTWNLRkFrel91c09FbkZxRmRSRHFpU2Y4a2NRSVVVUm1OMTFDRGptYTdNSTJ4dU5WR3JIMjBkdVk2dTlZcW9DbW45T19hUzVET2x0UkdCbVg4TWVFa2t4UEhGelp4SUJ5WkhjNnU2SExTZ2laa3N2WkE3djA?oc=5",
       "source": "Bloomberg.com",
@@ -62342,6 +62334,18 @@
       "urgency": 0.5,
       "composite_score": 0.64,
       "title_ko": "중국 서비스 지표, 하락에도 불구하고 예상보다 선방 - Bloomberg.com"
+    },
+    {
+      "title": "Russia Hikes June Subsidies to Refiners as Fuel Shortages Bite - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOdWVRVGdEM2VadHRNU092N0dIM1pISXNlLXBiYW1ZVm5jTU5Kb3RjX0dhZkdudmEzNXg2NGoyNHBzR1g4WmFuOEhBN2hyb0l2SlU2ajI5UGZSNzY2bFFIMlRPRmN4WmNfZDREM0pmN05zMm9zanpmOFE1T2pGd2NnMGFqZGNvUjlrdDk3U1hnVUJTczhYeDg0ckphY3JQamxuZV9EMFBNbDNOVUpiS2M4c0UtZw?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 03 Jul 2026 12:08:09 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64,
+      "title_ko": "블룸버그: 러시아, 연료 부족 심화에 6월 정유업체 보조금 인상"
     }
   ],
   "market_fear_greed": {
@@ -64026,7 +64030,7 @@
   "monthly_report_updated": "2026-07-01T13:50:14+09:00",
   "portfolio_summary": {
     "today_pct": null,
-    "cumulative_pct": -0.97,
+    "cumulative_pct": -1.02,
     "is_paper": true,
     "holdings_count": 4
   },
@@ -64034,16 +64038,16 @@
     {
       "source": "alert",
       "level": "CRITICAL",
-      "category": "commodity",
-      "message": "CL=F가 전월 대비 16.22% 급락하면서 관련주 전반이 부진한 가운데, 마진 빠듯, 가격 결정력 약한 CHRD는 주가 19.41% 급락했고 가격 결정력 좋은 EOG도 7.58% 빠졌어.",
-      "action": "해당 섹터 마진·판가전이(컨센서스) 교차 확인"
+      "category": "macro",
+      "message": "원달러 급변 — 1,529.01원 (전일대비 -22.80원, -1.47%) 수입물가·외환 리스크 점검",
+      "action": "환헤지·원자재·수입 비중 높은 종목 즉시 점검"
     },
     {
       "source": "alert",
-      "level": "WARNING",
-      "category": "macro",
-      "message": "원달러 변동 확대 — 1,530.90원 (-20.91원, -1.35%)",
-      "action": "수출·수입주 환율 민감도 확인"
+      "level": "CRITICAL",
+      "category": "commodity",
+      "message": "CL=F가 전월 대비 16.22% 급락하면서 관련주 전반이 부진한 가운데, 마진 빠듯, 가격 결정력 약한 CHRD는 주가 19.41% 급락했고 가격 결정력 좋은 EOG도 7.58% 빠졌어.",
+      "action": "해당 섹터 마진·판가전이(컨센서스) 교차 확인"
     },
     {
       "source": "alert",
@@ -64380,202 +64384,6 @@
       "outlier_threshold_pct": 30.0,
       "version": "v0"
     }
-  },
-  "postmortem": {
-    "status": "analyzed",
-    "failures": [
-      {
-        "type": "unflagged_opportunity",
-        "ticker": "035900",
-        "name": "JYP Ent.",
-        "original_rec": "WATCH",
-        "actual_return": 10.65,
-        "buy_price": 47900.0,
-        "current_price": 53000.0,
-        "multi_score": 56,
-        "brain_score": 53,
-        "brain_grade": "WATCH",
-        "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
-        "risk_flags": [],
-        "technical_rsi": 31.16,
-        "flow_score": 50,
-        "consensus_score": 74,
-        "prediction_up": 69.2,
-        "analyst_sentiment": null,
-        "analyst_count": 0,
-        "dart_health": 88,
-        "governance_summary": "변화없음",
-        "postmortem": "RSI 31 과매도 + 컨센서스 74 + 예측상승률 69% 강신호를 멀티팩터 56점이 희석, 브레인이 종합 판단 과소평가",
-        "misleading_factor": "brain",
-        "unforeseeable": false,
-        "lesson": "리스크플래그 없고 RSI<35 + 컨센서스>70 + AI상승률>60% 동시 충족 시, 멀티팩터 중간값(50~60)이어도 BUY 상향 검토 룰 적용"
-      }
-    ],
-    "analyzed_count": 1,
-    "period": "최근 7일",
-    "misleading_factors": {
-      "brain": 1
-    },
-    "misleading_factors_confidence": "low",
-    "confidence": "low",
-    "requested_days": 7,
-    "actual_span_days": 7,
-    "coverage_ratio": 1.0,
-    "quality_label": "OK",
-    "trail_sufficient": true,
-    "summary": "AI 오심 WATCH→큰상승 1건",
-    "lesson": "개별 강세 시그널(극단적 과매도+높은 컨센서스+높은 예측치)이 복수 공존할 때, 브레인이 멀티팩터 중간값에 과도하게 앵커링되어 기회를 묻어버리는 패턴",
-    "system_suggestion": "RSI<35 & 컨센서스>70 & AI상승률>60% & 리스크플래그 없음 조건 동시 충족 시, 멀티팩터 점수와 무관하게 브레인 판정을 WATCH→BUY로 강제 재검토하는 오버라이드 룰 추가",
-    "generated_at": "2026-07-03T20:13:52+09:00",
-    "_tokens": 1469,
-    "primary_window": "7d",
-    "windows": {
-      "7d": {
-        "failures": [
-          {
-            "type": "unflagged_opportunity",
-            "ticker": "035900",
-            "name": "JYP Ent.",
-            "original_rec": "WATCH",
-            "actual_return": 10.65,
-            "buy_price": 47900.0,
-            "current_price": 53000.0,
-            "multi_score": 56,
-            "brain_score": 53,
-            "brain_grade": "WATCH",
-            "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
-            "risk_flags": [],
-            "technical_rsi": 31.16,
-            "flow_score": 50,
-            "consensus_score": 74,
-            "prediction_up": 69.2,
-            "analyst_sentiment": null,
-            "analyst_count": 0,
-            "dart_health": 88,
-            "governance_summary": "변화없음",
-            "postmortem": "RSI 31 과매도 + 컨센서스 74 + 예측상승률 69% 강신호를 멀티팩터 56점이 희석, 브레인이 종합 판단 과소평가",
-            "misleading_factor": "brain",
-            "unforeseeable": false,
-            "lesson": "리스크플래그 없고 RSI<35 + 컨센서스>70 + AI상승률>60% 동시 충족 시, 멀티팩터 중간값(50~60)이어도 BUY 상향 검토 룰 적용"
-          }
-        ],
-        "analyzed_count": 1,
-        "period": "최근 7일",
-        "misleading_factors": {
-          "brain": 1
-        },
-        "misleading_factors_confidence": "low",
-        "confidence": "low",
-        "requested_days": 7,
-        "actual_span_days": 7,
-        "coverage_ratio": 1.0,
-        "quality_label": "OK",
-        "trail_sufficient": true
-      },
-      "14d": {
-        "failures": [
-          {
-            "type": "unflagged_opportunity",
-            "ticker": "214450",
-            "name": "파마리서치",
-            "original_rec": "WATCH",
-            "actual_return": 16.33,
-            "buy_price": 294000.0,
-            "current_price": 342000.0,
-            "multi_score": 55,
-            "brain_score": 58,
-            "brain_grade": "WATCH",
-            "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
-            "risk_flags": [],
-            "technical_rsi": 48.07,
-            "flow_score": 50,
-            "consensus_score": 84,
-            "prediction_up": 42.7,
-            "analyst_sentiment": null,
-            "analyst_count": 0,
-            "dart_health": 70,
-            "governance_summary": "변화없음"
-          }
-        ],
-        "analyzed_count": 1,
-        "period": "최근 14일",
-        "misleading_factors": {},
-        "misleading_factors_confidence": "low",
-        "confidence": "low",
-        "requested_days": 14,
-        "actual_span_days": 14,
-        "coverage_ratio": 1.0,
-        "quality_label": "OK",
-        "trail_sufficient": true
-      },
-      "30d": {
-        "failures": [
-          {
-            "type": "unflagged_risk",
-            "ticker": "100840",
-            "name": "SNT에너지",
-            "original_rec": "WATCH",
-            "actual_return": -22.0,
-            "buy_price": 35000.0,
-            "current_price": 27300.0,
-            "multi_score": 53,
-            "brain_score": 51,
-            "brain_grade": "WATCH",
-            "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
-            "risk_flags": [],
-            "technical_rsi": 27.54,
-            "flow_score": 50,
-            "consensus_score": 72,
-            "prediction_up": 88.4,
-            "analyst_sentiment": null,
-            "analyst_count": 0,
-            "dart_health": 60,
-            "governance_summary": "변화없음"
-          },
-          {
-            "type": "unflagged_opportunity",
-            "ticker": "214450",
-            "name": "파마리서치",
-            "original_rec": "WATCH",
-            "actual_return": 17.73,
-            "buy_price": 290500.0,
-            "current_price": 342000.0,
-            "multi_score": 52,
-            "brain_score": 48,
-            "brain_grade": "CAUTION",
-            "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
-            "risk_flags": [],
-            "technical_rsi": 41.9,
-            "flow_score": 50,
-            "consensus_score": 84,
-            "prediction_up": 75.4,
-            "analyst_sentiment": null,
-            "analyst_count": 0,
-            "dart_health": 70,
-            "governance_summary": "변화없음"
-          }
-        ],
-        "analyzed_count": 2,
-        "period": "최근 30일",
-        "misleading_factors": {},
-        "misleading_factors_confidence": "low",
-        "confidence": "low",
-        "requested_days": 30,
-        "actual_span_days": 30,
-        "coverage_ratio": 1.0,
-        "quality_label": "OK",
-        "trail_sufficient": true
-      }
-    }
-  },
-  "strategy_evolution": {
-    "status": "n_gated",
-    "reason": "검증 표본 부족 — 종료 거래 18 < 50. 가중치 이론 고정 단계 (가격 스냅샷 기반 재가중 = 곡선맞추기 회피)",
-    "trigger": "full",
-    "forced": false,
-    "period_end": "",
-    "generated_at": "2026-07-03T20:13:53+09:00",
-    "validation_n": 18
   },
   "dart_catalyst_alerts": {
     "events": [
