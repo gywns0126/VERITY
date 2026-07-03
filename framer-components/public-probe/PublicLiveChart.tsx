@@ -2,31 +2,37 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 시세 차트 — VERITY 공개 터미널. TradingView Advanced Chart 위젯(20분 지연) 임베드 + 네이버 실시간 link-out.
+ * 시세 차트 — VERITY 공개 터미널. TradingView Symbol Overview 미니 위젯(20분 지연) + 네이버 실시간 link-out.
  *
  * 🚨 시세 재배포 컴플라이언스(2026-07-02): 이전 자체 SVG 차트(/api/chart KIS OHLCV + /api/stock 실시간 폴링)
  *   = KRX/KIS 시세 시계열을 익명 공개에 재배포 → 개인 비사업자는 제3자 재배포 불가(코스콤/KRX 계약 필요). 중단.
  *   TradingView 임베드 위젯 = 데이터 라이선스 책임을 TV가 부담 → 임베드 사이트는 별도 계약 불요(20분 지연 무료).
  *   · §non-display: 위젯 데이터는 display 전용. 브레인/스코어링에 사용 금지(우리 브레인은 KRX own-use 직접 사용, 위젯 격리).
- *   · attribution(TradingView 링크) 유지 의무 · 위젯 코드 변형 금지.
+ *   · attribution(TradingView 링크) 유지 의무 · 위젯 코드 변형 금지(공식 config 파라미터만 사용).
  *   · 🚨 유료 구독 티어 전환 시 = TV 상업 라이선스 별도 계약 필요(platforms@tradingview.com). 현 무료 공개는 OK.
  *   상세 = docs/MIGRATION_KRX_QUOTE_REDISTRIBUTION_2026_07.md.
  *
- * 종목 = prop → URL ?q=. verity-ticker-change(StockReport/검색 in-page 전환)·popstate 수신해 리로드 없이 추종.
- * 심볼 = 6자리 KR 코드 → KRX:{code}(코스피·코스닥 공통 프리픽스). 6자리 아니면 빈 상태(엉뚱한 종목 방지).
- * 테마 = body[data-framer-theme] 추종(위젯 theme 파라미터). 캔버스(에디터)는 위젯 미로드 → 플레이스홀더.
+ * 🚨 위젯 = Symbol Overview(미니)로 전환 (2026-07-04, PM 결정):
+ *   Advanced Chart 는 280px 사이드 패널에 과밀(툴바·볼륨·호가축) + 좌하단 TV 로고 배너가 큼.
+ *   Symbol Overview = 라인차트+기간탭만, 브랜딩 소형 — 사이드 패널 밀도 정합. 큰 차트 욕구 = 네이버 딥링크가 담당.
+ *   로고/attribution 자체는 무료 위젯 라이선스 의무 — 숨김/제거 = 약관 위반이라 불가, 소형화만 가능.
+ *
+ * 종목 = prop → URL ?q= → localStorage verity_last_ticker (StockReport 가 기록·URL 갱신·이벤트 발행).
+ *   verity-ticker-change·popstate 수신해 리로드 없이 추종. URL 없는 경로(에디터 프리뷰)도 localStorage 로 이어짐.
+ * 심볼 = 6자리 KR 코드 → KRX:{code}(코스피·코스닥 공통 프리픽스). 6자리 아니면 빈 상태
+ *   (🚨 빈/무효 심볼로 위젯 로드 시 TV 가 기본 AAPL 로 fallback → 엉뚱한 애플 차트. 반드시 가드).
+ * 테마 = body[data-framer-theme] 추종(colorTheme 파라미터). 캔버스(에디터)는 위젯 미로드 → 플레이스홀더.
  */
 
 interface Props {
     ticker: string
-    interval: string
     height: number
     dark: boolean
 }
 const LIGHT = { bg: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", vg: "#6c5ce7" }
 const DARK = { bg: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34", vg: "#a99bff" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
-const TV_SCRIPT = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js"
+const TV_SCRIPT = "https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js"
 
 function isMobileWidth(): boolean {
     if (typeof window === "undefined") return false
@@ -41,7 +47,7 @@ function naverUrl(tk: string): string {
 }
 
 export default function PublicLiveChart(props: Props) {
-    const { ticker, interval, height, dark } = props
+    const { ticker, height, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const Hprop = height || 340
 
@@ -64,10 +70,13 @@ export default function PublicLiveChart(props: Props) {
     }, [onCanvas])
 
     // 🚨 종목 미지정 시 삼성전자(005930) 등 기본 종목으로 떨어뜨리지 않음 — 유효 6자리 없으면 빈 상태.
-    // 종목 = prop → URL ?q=. verity-ticker-change(StockReport/검색 in-page 전환)·popstate 수신해 리로드 없이 추종.
+    // 종목 = prop → URL ?q= → localStorage(StockReport 가 기록). 이벤트·popstate 수신해 리로드 없이 추종.
     const resolveTk = (): string => {
         let t = String(ticker || "").trim()
-        if (!t && typeof window !== "undefined") t = (new URLSearchParams(window.location.search).get("q") || "").trim()
+        if (!t && typeof window !== "undefined") {
+            t = (new URLSearchParams(window.location.search).get("q") || "").trim()
+            if (!t) { try { t = (window.localStorage.getItem("verity_last_ticker") || "").trim() } catch (e) { t = "" } }
+        }
         return /^\d{6}$/.test(t) ? t : ""
     }
     const [tk, setTk] = useState<string>(resolveTk)
@@ -82,7 +91,8 @@ export default function PublicLiveChart(props: Props) {
 
     const tvSymbol = tk ? "KRX:" + tk : ""
 
-    /* TradingView Advanced Chart 위젯 임베드 — 심볼/테마 변경 시 재주입. 캔버스는 스킵. */
+    /* TradingView Symbol Overview 위젯 임베드 — 심볼/테마 변경 시 재주입. 캔버스는 스킵.
+       🚨 tvSymbol 빈 값이면 절대 로드 금지 — TV 기본 AAPL fallback 방지. */
     const containerRef = useRef<HTMLDivElement>(null)
     useEffect(() => {
         if (onCanvas || !tvSymbol) return
@@ -98,23 +108,35 @@ export default function PublicLiveChart(props: Props) {
         script.src = TV_SCRIPT
         script.type = "text/javascript"
         script.async = true
-        // 위젯 코드 변형 금지 — 공식 config 그대로. autosize=프레임 채움.
+        // 위젯 코드 변형 금지 — 공식 config 파라미터만. autosize=프레임 채움.
         script.innerHTML = JSON.stringify({
-            autosize: true,
-            symbol: tvSymbol,
-            interval: interval || "D",
-            timezone: "Asia/Seoul",
-            theme: isDark ? "dark" : "light",
-            style: "1",
+            symbols: [[tvSymbol + "|1D"]],
+            chartOnly: false,
+            width: "100%",
+            height: "100%",
             locale: "kr",
-            hide_side_toolbar: true,
-            allow_symbol_change: false,
-            save_image: false,
-            support_host: "https://www.tradingview.com",
+            colorTheme: isDark ? "dark" : "light",
+            autosize: true,
+            showVolume: false,
+            showMA: false,
+            hideDateRanges: false,
+            hideMarketStatus: true,
+            hideSymbolLogo: false,
+            scalePosition: "right",
+            scaleMode: "Normal",
+            fontFamily: "-apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif",
+            fontSize: "10",
+            noTimeScale: false,
+            valuesTracking: "1",
+            changeMode: "price-and-percent",
+            chartType: "area",
+            lineWidth: 2,
+            lineType: 0,
+            dateRanges: ["1d|1", "1m|30", "3m|60", "12m|1D", "60m|1W"],
         })
         container.appendChild(script)
         return () => { if (container) container.innerHTML = "" }
-    }, [tvSymbol, isDark, interval, onCanvas])
+    }, [tvSymbol, isDark, onCanvas])
 
     const wrap: CSSProperties = {
         width: "100%", height: "100%", minHeight: Math.max(180, Hprop), position: "relative",
@@ -125,7 +147,7 @@ export default function PublicLiveChart(props: Props) {
         display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
         padding: "6px 12px", flexShrink: 0, borderTop: `1px solid ${C.line}`, flexWrap: "wrap",
     }
-    // attribution — TradingView 링크 유지 의무(≥13px, 은폐 금지).
+    // attribution — TradingView 링크 유지 의무(은폐 금지).
     const attribution = (
         <span style={{ fontSize: 11.5, fontWeight: 600, color: C.faint }}>
             차트 제공 · <a href="https://www.tradingview.com/" target="_blank" rel="noopener nofollow" style={{ color: C.faint, textDecoration: "underline" }}>TradingView</a> · 20분 지연
@@ -147,7 +169,7 @@ export default function PublicLiveChart(props: Props) {
                         <path d="M3 3v18h18" stroke={C.faint} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                         <path d="M7 13l3-4 3 3 4-6" stroke={C.vg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: C.sub }}>TradingView 차트 (게시 시 표시)</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: C.sub }}>TradingView 미니 차트 (게시 시 표시)</span>
                     <span style={{ fontSize: 11, fontWeight: 500, color: C.faint }}>{tvSymbol || "종목 미지정"}</span>
                 </div>
                 <div style={footer}>{attribution}{naverLink}</div>
@@ -155,7 +177,7 @@ export default function PublicLiveChart(props: Props) {
         )
     }
 
-    // 종목 미지정 — 정직한 빈 상태
+    // 종목 미지정 — 정직한 빈 상태 (TV 기본 AAPL fallback 차단)
     if (!tk) {
         return (
             <div style={wrap}>
@@ -181,7 +203,6 @@ export default function PublicLiveChart(props: Props) {
 
 addPropertyControls(PublicLiveChart, {
     ticker: { type: ControlType.String, title: "Ticker", defaultValue: "" },
-    interval: { type: ControlType.Enum, title: "Interval", defaultValue: "D", options: ["1", "5", "15", "60", "D", "W", "M"], optionTitles: ["1분", "5분", "15분", "60분", "일", "주", "월"] },
     height: { type: ControlType.Number, title: "Height(min)", defaultValue: 340, min: 160, max: 720, step: 10 },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
