@@ -1,6 +1,22 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useState } from "react"
-import { Printer, PencilSimpleLine } from "@phosphor-icons/react"
+
+/* 아이콘 = Phosphor 공식 path 원본 인라인 (printer-bold / pencil-simple-line-bold, MIT).
+ * npm import 는 Framer typecheck 에서 모듈 해석 실패(2307) — publish 리스크라 원본 데이터 직접 사용. 자작 SVG 아님. */
+function PhPrinter({ size }: { size: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 256 256" fill="currentColor">
+            <path d="M214.67,68H204V40a12,12,0,0,0-12-12H64A12,12,0,0,0,52,40V68H41.33C25.16,68,12,80.56,12,96v80a12,12,0,0,0,12,12H52v28a12,12,0,0,0,12,12H192a12,12,0,0,0,12-12V188h28a12,12,0,0,0,12-12V96C244,80.56,230.84,68,214.67,68ZM76,52H180V68H76ZM180,204H76V172H180Zm40-40H204v-4a12,12,0,0,0-12-12H64a12,12,0,0,0-12,12v4H36V96c0-2.17,2.44-4,5.33-4H214.67c2.89,0,5.33,1.83,5.33,4Zm-16-44a16,16,0,1,1-16-16A16,16,0,0,1,204,120Z" />
+        </svg>
+    )
+}
+function PhPencilLine({ size }: { size: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 256 256" fill="currentColor">
+            <path d="M230.15,70.54,185.46,25.86a20,20,0,0,0-28.28,0L33.86,149.17A19.86,19.86,0,0,0,28,163.31V208a20,20,0,0,0,20,20H216a12,12,0,0,0,0-24H125L230.15,98.83A20,20,0,0,0,230.15,70.54ZM91,204H52V165l84-84,39,39ZM192,103,153,64l18.34-18.34,39,39Z" />
+        </svg>
+    )
+}
 
 /**
  * 리포트 추출 허브 — AlphaNest /stock. 두 버튼 + AI 브리핑 섹션 = 단일 컴포넌트 (PM 결정 2026-07-03).
@@ -178,8 +194,8 @@ export default function PublicStockBrief(props: {
         <div style={wrap}>
             {/* ── 버튼 2개 — 상품 구분: 100% 데이터 vs 데이터+AI 해석. 아이콘 = Phosphor(Framer 네이티브 세트) ── */}
             <div data-noprint style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-                <button onClick={() => doPrint(true)} style={{ ...btnBase, cursor: "pointer", background: C.green, color: "#fff" }}>
-                    <Printer size={14} weight="bold" />
+                <button onClick={() => doPrint(true)} style={{ ...btnBase, cursor: "pointer", background: C.violetSoft, color: C.violet }}>
+                    <PhPrinter size={14} />
                     팩트 리포트 PDF
                 </button>
                 <button onClick={onAiPdf} disabled={!tk || state === "loading"} style={{
@@ -187,7 +203,7 @@ export default function PublicStockBrief(props: {
                     cursor: tk && state !== "loading" ? "pointer" : "default",
                     background: tk ? C.violet : C.line, color: tk ? "#fff" : C.faint,
                 }}>
-                    <PencilSimpleLine size={14} weight="bold" />
+                    <PhPencilLine size={14} />
                     {state === "loading" ? "브리핑 생성 중…" : "AI 해석 리포트 PDF"}
                 </button>
             </div>
