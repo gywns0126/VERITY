@@ -7,8 +7,9 @@ import { createPortal } from "react-dom"
  * Enter → 입력 텍스트를 유니버스에서 *종목코드*로 정규화 → /stock?q=<코드> 이동.
  *   (정규화 이유: 결정 페이지 컴포넌트는 ticker 정확매칭만 함. 종목명 ?q 는 빈 화면이 됨.)
  *   코드/이름 매칭 실패 시에만 raw 텍스트 fallback(리포트가 자체 이름매칭 시도).
- * 🚨 포커스(빈 검색어) = 최근 본 종목(localStorage) + "지금 거래 활발"(거래대금 상위, trending_kr.json) 노출.
- *   RULE 7 / held-2027 / 법률: "인기·추천"이 아니라 사실(거래대금/등락). "이런 종목 어때요" 류 추천 어조 금지.
+ * 🚨 포커스(빈 검색어) = 최근 본 종목(localStorage) + "지금 거래 활발"(네이버 거래대금 상위 link-out).
+ *   시세 재배포 컴플라이언스(2026-07-02): trending_kr(KRX raw) 자체 발행 중단 → 네이버가 서빙(재배포 아님).
+ *   RULE 7 / held-2027 / 법률: "인기·추천"이 아니라 사실(거래대금). "이런 종목 어때요" 류 추천 어조 금지.
  * 종목 공유 = ?q + localStorage `verity_last_ticker`/`verity_recent_tickers` 기록. nav 자체는 Framer 네이티브.
  * 검색 universe = universe_search.json (통합 KR+US ~8.4천, 2026-06-27 검색 4종 단일 소스 통일 — 괴리 제거). US 별도 dual-load 폐기(통합 파일에 포함).
  * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
@@ -18,7 +19,10 @@ const LIGHT = { ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", vg: "#0ca678",
 const DARK = { ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", vg: "#7fffa0", vt: "#a99bff", vtS: "#241f3a", field: "#0f1318", card: "#171c23", bg: "#0f1318", line: "#222730", up: "#f04452", down: "#5b9bff" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
-const DEF_TRENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/trending_kr.json"
+// 🚨 시세 재배포 컴플라이언스(2026-07-02): trending_kr(KRX 거래대금·등락·종가 raw) 자체 발행 중단.
+//   "지금 거래 활발" = 네이버 거래대금 상위 페이지로 link-out(네이버가 서빙 = 재배포 아님, 실시간·무료·합법).
+const NAVER_QUANT = "https://finance.naver.com/sise/sise_quant.naver"
+const M_NAVER_QUANT = "https://m.stock.naver.com/sise/trade"
 const LAST_TK_KEY = "verity_last_ticker"
 const RECENTS_KEY = "verity_recent_tickers"
 const RECENTS_CAP = 8
@@ -50,6 +54,10 @@ function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
     )
 }
 
+function isMobileWidth(): boolean {
+    if (typeof window === "undefined") return false
+    return window.innerWidth > 0 && window.innerWidth < 560
+}
 function readRecents(): any[] {
     if (typeof window === "undefined") return []
     try {
@@ -63,7 +71,6 @@ interface Props {
     stockPath: string
     stockUrl: string
     usStockUrl: string
-    trendingUrl: string
     dark: boolean
 }
 
@@ -72,7 +79,7 @@ interface Props {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicStockSearch(props: Props) {
-    const { placeholder, stockPath, stockUrl, usStockUrl, trendingUrl, dark } = props
+    const { placeholder, stockPath, stockUrl, usStockUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
@@ -98,7 +105,6 @@ export default function PublicStockSearch(props: Props) {
     const [universe, setUniverse] = useState<any[]>([])
     const [focused, setFocused] = useState(false)
     const [recents, setRecents] = useState<any[]>([])
-    const [trending, setTrending] = useState<any[]>([])
     // 드롭다운 앵커 — nav 박스 overflow 클리핑 탈출용 fixed 좌표(입력창 rect 기준). null=미측정.
     const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null)
 
@@ -124,17 +130,6 @@ export default function PublicStockSearch(props: Props) {
             })
         return () => { alive = false }
     }, [stockUrl, usStockUrl, onCanvas])
-
-    /* 거래대금 상위(지금 거래 활발) — 사실. trending_kr.json. */
-    useEffect(() => {
-        if (onCanvas || !trendingUrl) return
-        let alive = true
-        fetch(trendingUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const t = d && Array.isArray(d.top) ? d.top : null; if (alive && t) setTrending(t.slice(0, 6)) })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [trendingUrl, onCanvas])
 
     /* 입력 → 종목코드. 코드/이름 정확 → 부분일치 → (실패 시) raw 텍스트. */
     const resolveTicker = (text: string): string => {
@@ -198,7 +193,7 @@ export default function PublicStockSearch(props: Props) {
     const narrow = w > 0 && w < 200
     const showQuery = !!q.trim()
     // anchor 필요 (fixed 좌표). onFocus 가 measure() 동기 호출 → 첫 포커스에도 anchor 존재.
-    const showSuggest = !onCanvas && focused && !!anchor && !showQuery && (recents.length > 0 || trending.length > 0)
+    const showSuggest = !onCanvas && focused && !!anchor && !showQuery
     const showMatches = !onCanvas && focused && !!anchor && showQuery && matches.length > 0
 
     const wrap: CSSProperties = {
@@ -271,17 +266,13 @@ export default function PublicStockSearch(props: Props) {
                                 <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{r.t}</span>))}
                         </>
                     )}
-                    {trending.length > 0 && (
-                        <>
-                            {secLabel("지금 거래 활발", "거래대금 상위 · 사실")}
-                            {trending.map((t) => {
-                                const chg = Number(t.chg)
-                                const col = !isFinite(chg) ? C.faint : chg > 0 ? C.up : chg < 0 ? C.down : C.faint
-                                return itemRow("t:" + t.ticker, t.ticker, t.name,
-                                    <span style={{ fontSize: 12, fontWeight: 700, color: col, fontVariantNumeric: "tabular-nums" }}>{isFinite(chg) ? (chg > 0 ? "+" : "") + chg.toFixed(2) + "%" : "—"}</span>)
-                            })}
-                        </>
-                    )}
+                    {secLabel("지금 거래 활발", "거래대금 상위 · 네이버")}
+                    <div onMouseDown={() => { if (typeof window !== "undefined") window.open(isMobileWidth() ? M_NAVER_QUANT : NAVER_QUANT, "_blank", "noopener") }}
+                        style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 9, cursor: "pointer" }}>
+                        <span style={{ width: 22, height: 22, borderRadius: 7, background: C.vtS, color: C.vt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>↗</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>실시간 거래대금 상위</span>
+                        <span style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: C.faint }}>네이버 금융 ↗</span>
+                    </div>
                 </div>, document.body)}
         </div>
     )
@@ -292,6 +283,5 @@ addPropertyControls(PublicStockSearch, {
     stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
     stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEF_STOCK },
     usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
-    trendingUrl: { type: ControlType.String, title: "Trending URL", defaultValue: DEF_TRENDING },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
