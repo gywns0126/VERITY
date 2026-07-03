@@ -168,11 +168,34 @@ def _median(vals: List[float]) -> Optional[float]:
     return vs[mid] if n % 2 else (vs[mid - 1] + vs[mid]) / 2.0
 
 
-def _us_sector_medians(stocks: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    """섹터(business_ko)별 PER/PBR/ROE/D-E/영업이익률 중앙값 + N + 분포(백분위용). 사실 통계."""
+# SIC 2자리 대분류 → 한글 (표준 SIC major group — 설명 단위 peer 그룹 N<5 시 폴백 버킷).
+# 2026-07-04 peer 조사: 미부착 483/1505 전부 = 설명 단위 버킷 N<5 컷. 대분류 폴백 = 커버리지 구조 보장.
+_SIC_MAJOR_KO: Dict[str, str] = {
+    "01": "농업", "02": "축산", "07": "농업서비스", "08": "임업", "09": "수산",
+    "10": "금속광업", "12": "석탄", "13": "원유·가스", "14": "비금속광물",
+    "15": "건설", "16": "토목건설", "17": "전문건설",
+    "20": "식품", "21": "담배", "22": "섬유", "23": "의류", "24": "목재", "25": "가구",
+    "26": "제지", "27": "인쇄·출판", "28": "화학·제약", "29": "석유정제", "30": "고무·플라스틱",
+    "31": "가죽", "32": "석재·유리", "33": "1차금속", "34": "금속가공",
+    "35": "산업기계·컴퓨터", "36": "전자·전기", "37": "운송장비", "38": "계측·의료기기", "39": "기타 제조",
+    "40": "철도", "41": "여객운송", "42": "화물운송", "44": "해운", "45": "항공",
+    "46": "파이프라인", "47": "운송서비스", "48": "통신", "49": "전기·가스·수도",
+    "50": "도매(내구재)", "51": "도매(비내구재)",
+    "52": "건자재 소매", "53": "종합소매", "54": "식품소매", "55": "자동차 판매",
+    "56": "의류소매", "57": "가구·가전 소매", "58": "외식", "59": "기타 소매",
+    "60": "은행·예금기관", "61": "여신·신용", "62": "증권", "63": "보험", "64": "보험대리",
+    "65": "부동산", "67": "지주·투자",
+    "70": "숙박", "72": "개인서비스", "73": "사업서비스·SW", "75": "자동차 서비스",
+    "78": "영화·미디어", "79": "레저·오락", "80": "의료서비스", "81": "법률",
+    "82": "교육", "83": "사회서비스", "86": "협회·단체", "87": "엔지니어링·연구", "89": "기타 서비스",
+}
+
+
+def _us_sector_medians(stocks: List[Dict[str, Any]], key: str = "_sector") -> Dict[str, Dict[str, Any]]:
+    """섹터(business_ko 또는 SIC 대분류)별 PER/PBR/ROE/D-E/영업이익률 중앙값 + N + 분포(백분위용). 사실 통계."""
     buckets: Dict[str, Dict[str, List[float]]] = {}
     for s in stocks:
-        sec = s.get("_sector")
+        sec = s.get(key)
         pm = s.get("_pm") or {}
         if not sec:
             continue
@@ -197,10 +220,18 @@ def _us_sector_medians(stocks: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]
     return out
 
 
-def _us_peer(s: Dict[str, Any], medians: Dict[str, Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def _us_peer(s: Dict[str, Any], medians: Dict[str, Dict[str, Any]],
+             medians_major: Optional[Dict[str, Dict[str, Any]]] = None) -> Optional[Dict[str, Any]]:
     sec = s.get("_sector")
     pm = s.get("_pm") or {}
-    sm = medians.get(sec)
+    sm = medians.get(sec) if sec else None
+    if not sm and medians_major:
+        # 계층 폴백 — 설명 단위 그룹 N<5 → SIC 2자리 대분류 그룹 비교 (없는 것보다 넓은 peer가 유용, n 병기로 정직)
+        major = s.get("_sector_major")
+        if major:
+            sm = (medians_major or {}).get(major)
+            if sm:
+                sec = major
     if not sec or not sm:
         return None
     rows = []
@@ -564,6 +595,7 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
         "calendar": [],
         "_pm": pm,           # peer 산정용 temp (main 에서 제거)
         "_sector": business_ko or None,
+        "_sector_major": _SIC_MAJOR_KO.get(str(row.get("sic") or "")[:2]),  # 대분류 폴백 버킷 (main 에서 제거)
     }
 
 
@@ -605,13 +637,16 @@ def main() -> int:
                               _load_fin_latest(r.get("ticker")), us_cons)
                   for r in rows if r.get("ticker")]
         # 동종업계 비교(peer) — 2-pass: 섹터 중앙값 산정 → 종목별 부착. KR stock_report 정합.
+        # 계층: 설명 단위(정밀) → N<5 시 SIC 2자리 대분류 폴백 (2026-07-04 peer 조사 — 미부착 483 전부 N<5 컷).
         medians = _us_sector_medians(stocks)
+        medians_major = _us_sector_medians(stocks, key="_sector_major")
         for s in stocks:
-            pr = _us_peer(s, medians)
+            pr = _us_peer(s, medians, medians_major)
             if pr:
                 s["peer"] = pr
             s.pop("_pm", None)
             s.pop("_sector", None)
+            s.pop("_sector_major", None)
         # 8-K 수시공시 부착 (us_disclosure_feed, SEC EDGAR) — disclosures 섹션 배선(0%→~97%). KR catalyst 패턴 미러.
         us_disc = _load_us_disclosures()
         if us_disc:
