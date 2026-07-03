@@ -261,10 +261,59 @@ def run_backfill(target_days: int = KEEP_DAYS) -> bool:
     return True
 
 
+def run_history(out_dir: str) -> bool:
+    """전 종목 전체 히스토리 (2020-01-02~, API 보유 전량) → per-ticker JSON.
+
+    소비 = PublicLiveChart MAX(전체) 탭 lazy fetch. git 비커밋 — Blob 직행
+    (repo 165MB 부담 회피). 월 1회 갱신 (최근 250일은 일일 청크가 fresh 담당,
+    MAX 뷰는 client 에서 히스토리+최근 청크 병합 → 히스토리 파일 약간 stale 무해).
+    유니버스 = data/kr_chart_daily/ 청크의 종목 목록. 종목당 1콜 (numOfRows=5000
+    ≥ 보유 1,595행), ~2,992콜 (한도 10,000/일 내).
+    """
+    chunks = _load_chunks()
+    tickers = sorted(code for ch in chunks for code in ch["stocks"].keys())
+    if len(tickers) < 500:
+        print(f"[fsc_daily_prices] 유니버스 부족 ({len(tickers)}) — 청크 먼저 backfill", file=sys.stderr)
+        return False
+    dest = os.path.join(out_dir, "kr_chart_history")
+    os.makedirs(dest, exist_ok=True)
+    ok_n = 0
+    for i, code in enumerate(tickers):
+        body = _call({"numOfRows": _BULK_ROWS, "pageNo": 1, "likeSrtnCd": code})
+        items = ((body or {}).get("items") or {}).get("item") or []
+        candles: List[List[int]] = []
+        name, mkt = code, ""
+        for row in items:  # like 매칭 방어 — 정확 코드만
+            if str(row.get("srtnCd") or "").strip().upper() != code:
+                continue
+            cd = _row_to_candle(row)
+            if cd:
+                candles.append(cd)
+            name = str(row.get("itmsNm") or name)
+            mkt = str(row.get("mrktCtg") or mkt)
+        if len(candles) < 2:
+            continue
+        candles.sort(key=lambda x: x[0])
+        with open(os.path.join(dest, f"{code}.json"), "w", encoding="utf-8") as f:
+            json.dump({"t": code, "n": name, "m": mkt, "c": candles}, f, ensure_ascii=False, separators=(",", ":"))
+        ok_n += 1
+        if ok_n % 200 == 0:
+            print(f"[fsc_daily_prices] history {ok_n}/{len(tickers)} (~{code})", flush=True)
+        time.sleep(0.12)  # 공용 키 쿼터 예의 (~2,992콜, ~15분)
+    print(f"[fsc_daily_prices] history 완료 — {ok_n}/{len(tickers)} 종목 → {dest}")
+    return ok_n >= 500
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", choices=["daily", "backfill"], default="daily")
+    ap.add_argument("--mode", choices=["daily", "backfill", "history"], default="daily")
     ap.add_argument("--days", type=int, default=KEEP_DAYS)
+    ap.add_argument("--out", default="_history_dist", help="history 모드 산출 디렉토리 (git 비커밋)")
     args = ap.parse_args()
-    ok = run_backfill(args.days) if args.mode == "backfill" else run_daily()
+    if args.mode == "backfill":
+        ok = run_backfill(args.days)
+    elif args.mode == "history":
+        ok = run_history(args.out)
+    else:
+        ok = run_daily()
     sys.exit(0 if ok else 1)

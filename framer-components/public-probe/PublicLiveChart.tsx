@@ -14,7 +14,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 데이터 = Blob /kr_chart_daily/chunk_XX.json (청크 = parseInt(code,36)%40 — collector 와 동일 산식).
  *   종목당 최근 250거래일 [basDt,시,고,저,종,거래량] 오름차순. 평일 14:23 KST cron 갱신.
  * 정보량 = 캔들+거래량+MA(5/20/60)+52주 고저선+전일比 헤더+크로스헤어 카드(시고저종·거래량·등락률).
- * 편의성 = 기간탭(1M/3M/6M/1Y)+터치 대응+종목연동(prop→URL ?q=→localStorage, verity-ticker-change·popstate).
+ * 편의성 = 기간탭(1M/3M/6M/1Y/전체)+터치 대응+종목연동(prop→URL ?q=→localStorage, verity-ticker-change·popstate).
+ * 전체(MAX) 탭 = /kr_chart_history/{code}.json lazy fetch(2020~, 월간 cron) + 최근 청크 병합 → 320봉 초과 시 주봉 자동 전환.
  * KR 색 = 상승 빨강 / 하락 파랑. 테마 = body[data-framer-theme]. 캔버스 = 데모 봉. 로딩 = shimmer 스켈레톤.
  */
 
@@ -36,6 +37,7 @@ const RANGES = [
     { key: "3M", days: 66 },
     { key: "6M", days: 132 },
     { key: "1Y", days: 250 },
+    { key: "전체", days: 0 },   // MAX — 히스토리 lazy fetch + 주봉 자동 전환
 ]
 
 function isMobileWidth(): boolean {
@@ -82,6 +84,42 @@ function sma(closes: number[], period: number): (number | null)[] {
     }
     return out
 }
+// 일봉 → 주봉 (주 키 = 월요일). [주 마지막날, 첫 시가, max 고, min 저, 마지막 종가, 합 거래량]
+function toWeekly(cs: number[][]): number[][] {
+    const out: number[][] = []
+    let cur: number[] | null = null
+    let curKey = ""
+    for (const c of cs) {
+        const str = String(c[0])
+        if (str.length !== 8) continue
+        const dt = new Date(+str.slice(0, 4), +str.slice(4, 6) - 1, +str.slice(6, 8))
+        const day = (dt.getDay() + 6) % 7
+        const mon = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() - day)
+        const key = String(mon.getFullYear() * 10000 + (mon.getMonth() + 1) * 100 + mon.getDate())
+        if (key !== curKey) {
+            if (cur) out.push(cur)
+            cur = [c[0], c[1], c[2], c[3], c[4], c[5]]
+            curKey = key
+        } else if (cur) {
+            cur[0] = c[0]
+            cur[2] = Math.max(cur[2], c[2])
+            cur[3] = Math.min(cur[3], c[3])
+            cur[4] = c[4]
+            cur[5] += c[5]
+        }
+    }
+    if (cur) out.push(cur)
+    return out
+}
+// 히스토리(월간 stale 가능) + 최근 청크(fresh) 병합 — 같은 날은 최근 청크 우선
+function mergeHist(hist: number[][] | null, recent: number[][]): number[][] {
+    if (!hist || !hist.length) return recent
+    const m: Record<number, number[]> = {}
+    for (const c of hist) m[c[0]] = c
+    for (const c of recent) m[c[0]] = c
+    return Object.keys(m).map((k) => m[+k]).sort((a, b) => a[0] - b[0])
+}
+
 function demoCandles(): number[][] {
     const demo: number[][] = []
     let p = 70000
@@ -192,13 +230,34 @@ export default function PublicLiveChart(props: Props) {
         return () => { alive = false }
     }, [tk, base, onCanvas])
 
+    /* 전체(MAX) 탭 — 히스토리 lazy fetch (탭 선택 시에만 1회). [] = 미보유(최근 청크만으로 표시). */
+    const [histFull, setHistFull] = useState<number[][] | null>(null)
+    useEffect(() => { setHistFull(null) }, [tk])
+    useEffect(() => {
+        if (onCanvas || range !== "전체" || !tk || histFull) return
+        let alive = true
+        fetch(base + "/kr_chart_history/" + tk + ".json", { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (alive) setHistFull(d && Array.isArray(d.c) && d.c.length > 1 ? d.c : []) })
+            .catch(() => { if (alive) setHistFull([]) })
+        return () => { alive = false }
+    }, [range, tk, base, onCanvas, histFull])
+
     /* 파생 — 52주(전체 250d) 고저 + MA 는 full 기준 계산 후 range 슬라이스 (경계 왜곡 방지) */
     const view = useMemo(() => {
         if (!full || full.length < 2) return null
-        const closesAll = full.map((c) => c[4])
-        const ma5All = sma(closesAll, 5), ma20All = sma(closesAll, 20), ma60All = sma(closesAll, 60)
         const hi52 = Math.max(...full.map((c) => c[2]))
         const lo52 = Math.min(...full.map((c) => c[3]))
+        if (range === "전체") {
+            const merged = mergeHist(histFull, full)
+            const isWeekly = merged.length > 320
+            const candles = isWeekly ? toWeekly(merged) : merged
+            const none: (number | null)[] = []
+            // MAX = 주봉·수년 스팬 — MA(일봉 산식)·52주선 비표시 (오독 방지)
+            return { candles, ma5: none, ma20: none, ma60: none, hi52, lo52, prevClose: null, isMax: true, isWeekly }
+        }
+        const closesAll = full.map((c) => c[4])
+        const ma5All = sma(closesAll, 5), ma20All = sma(closesAll, 20), ma60All = sma(closesAll, 60)
         const days = (RANGES.find((r) => r.key === range) || RANGES[1]).days
         const start = Math.max(0, full.length - days)
         return {
@@ -206,8 +265,9 @@ export default function PublicLiveChart(props: Props) {
             ma5: ma5All.slice(start), ma20: ma20All.slice(start), ma60: ma60All.slice(start),
             hi52, lo52,
             prevClose: start > 0 ? full[start - 1][4] : null,
+            isMax: false, isWeekly: false,
         }
-    }, [full, range])
+    }, [full, range, histFull])
 
     /* 좌표 — 프레임 실측 높이 안을 꽉 채움 (헤더/탭/축/푸터 크롬 ≈ 118px 제외) */
     const cv = useMemo(() => {
@@ -216,9 +276,11 @@ export default function PublicLiveChart(props: Props) {
         const his = candles.map((c) => c[2]), los = candles.map((c) => c[3])
         // 52주 고저선은 시야 밖일 수 있음 — 가격축은 현 range + (근접 시) 52주선 포함
         let pmin = Math.min(...los), pmax = Math.max(...his)
-        const prng0 = (pmax - pmin) || 1
-        if (view.hi52 <= pmax + prng0 * 0.25) pmax = Math.max(pmax, view.hi52)
-        if (view.lo52 >= pmin - prng0 * 0.25) pmin = Math.min(pmin, view.lo52)
+        if (!view.isMax) {
+            const prng0 = (pmax - pmin) || 1
+            if (view.hi52 <= pmax + prng0 * 0.25) pmax = Math.max(pmax, view.hi52)
+            if (view.lo52 >= pmin - prng0 * 0.25) pmin = Math.min(pmin, view.lo52)
+        }
         const prng = (pmax - pmin) || 1
         const W = Math.max(240, (w || 800) - 4)
         const chartH = h > 200 ? Math.max(180, h - 118) : Hprop - 118
@@ -347,6 +409,7 @@ export default function PublicLiveChart(props: Props) {
                             </span>
                         )}
                         <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>{dateDot(last[0])} 종가</span>
+                        {view && view.isWeekly && <span style={{ fontSize: 10, fontWeight: 700, color: C.vg }}>주봉</span>}
                         {view && (
                             <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>
                                 52주 <span style={{ color: C.hi52 }}>{Number(view.hi52).toLocaleString()}</span> / <span style={{ color: C.lo52 }}>{Number(view.lo52).toLocaleString()}</span>
@@ -368,11 +431,11 @@ export default function PublicLiveChart(props: Props) {
                             <line x1={0} y1={cv.yP(cv.pmax)} x2={cv.W} y2={cv.yP(cv.pmax)} stroke={C.grid} strokeWidth={1} />
                             <line x1={0} y1={cv.yP((cv.pmax + cv.pmin) / 2)} x2={cv.W} y2={cv.yP((cv.pmax + cv.pmin) / 2)} stroke={C.grid} strokeWidth={1} />
                             <line x1={0} y1={cv.yP(cv.pmin)} x2={cv.W} y2={cv.yP(cv.pmin)} stroke={C.grid} strokeWidth={1} />
-                            {/* 52주 고저 점선 (가격축 범위 안일 때만 시각화) */}
-                            {view.hi52 <= cv.pmax && view.hi52 >= cv.pmin && (
+                            {/* 52주 고저 점선 (가격축 범위 안 + MAX 아님) */}
+                            {!view.isMax && view.hi52 <= cv.pmax && view.hi52 >= cv.pmin && (
                                 <line x1={0} y1={cv.yP(view.hi52)} x2={cv.W} y2={cv.yP(view.hi52)} stroke={C.hi52} strokeWidth={1} strokeOpacity={0.5} strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
                             )}
-                            {view.lo52 <= cv.pmax && view.lo52 >= cv.pmin && (
+                            {!view.isMax && view.lo52 <= cv.pmax && view.lo52 >= cv.pmin && (
                                 <line x1={0} y1={cv.yP(view.lo52)} x2={cv.W} y2={cv.yP(view.lo52)} stroke={C.lo52} strokeWidth={1} strokeOpacity={0.5} strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
                             )}
                             {/* 캔들 + 거래량 */}
@@ -431,8 +494,10 @@ export default function PublicLiveChart(props: Props) {
                     </div>
                     {/* 푸터 — MA 범례 + 정직 라벨 + 네이버 실시간 */}
                     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 10px 4px", flexWrap: "wrap" }}>
-                        {maChip("MA5", C.ma5)}{maChip("MA20", C.ma20)}{maChip("MA60", C.ma60)}
-                        <span style={{ fontSize: 10, color: C.faint, fontWeight: 500 }}>일봉 · 전일까지 · 금융위 공공데이터 (T+1)</span>
+                        {!view.isMax && <>{maChip("MA5", C.ma5)}{maChip("MA20", C.ma20)}{maChip("MA60", C.ma60)}</>}
+                        <span style={{ fontSize: 10, color: C.faint, fontWeight: 500 }}>
+                            {view.isMax ? (view.isWeekly ? "주봉 · 전체 기간 (2020~)" : "일봉 · 전체 기간") : "일봉"} · 전일까지 · 금융위 공공데이터 (T+1)
+                        </span>
                         {tk && (
                             <a href={naverUrl(tk)} target="_blank" rel="noopener noreferrer"
                                 style={{ marginLeft: "auto", fontSize: 11, fontWeight: 800, color: C.vg, textDecoration: "none" }}>
