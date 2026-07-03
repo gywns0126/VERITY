@@ -653,6 +653,7 @@ export default function PublicStockReport(props: Props) {
     const [w, setW] = useState(0)
     const [list, setList] = useState<any[]>(SAMPLE)            // 리포트 DATA 보유 종목(facts/peer/flow)
     const [reportAsOf, setReportAsOf] = useState<string>("")   // stock_report_public _meta.generated_at — 신선도 사실 노출
+    const [tocSecs, setTocSecs] = useState<string[]>([])       // 미니 목차 — 렌더된 섹션 헤더(data-sec) DOM 스캔 결과
     const [searchList, setSearchList] = useState<any[]>(SAMPLE) // 검색 universe(전 종목 KR+US, ticker/name)
     const [flowMap, setFlowMap] = useState<Record<string, any[]>>(SAMPLE_FLOW)
     const [forensicsMap, setForensicsMap] = useState<Record<string, any>>(SAMPLE_FORENSICS)
@@ -1089,8 +1090,17 @@ export default function PublicStockReport(props: Props) {
         return <>{parts}</>
     }
 
+    // 미니 목차 — 실제 렌더된 섹션(data-sec)만 스캔 (섹션별 빈 데이터 가드 자동 반영). 렌더마다 재스캔, 변화 시에만 set.
+    useEffect(() => {
+        const el = rootRef.current
+        if (!el) return
+        const secs = Array.from(el.querySelectorAll("[data-sec]")).map((n) => n.getAttribute("data-sec") || "").filter(Boolean)
+        const key = secs.join("|")
+        setTocSecs((prev) => (prev.join("|") === key ? prev : secs))
+    })
+
     const sectionTitle = (t: string, sub?: string, infoKey?: string) => (
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "18px 2px 8px" }}>
+        <div data-sec={t} style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "18px 2px 8px", scrollMarginTop: 70 }}>
             <span style={{ fontFamily: HEAD, fontSize: 14, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px", display: "inline-flex", alignItems: "center" }}>{t}{infoKey ? <Info k={infoKey} /> : null}</span>
             {sub && <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{sub}</span>}
         </div>
@@ -1294,6 +1304,24 @@ export default function PublicStockReport(props: Props) {
                         ))}
                     </div>
                     <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10 }}>화면의 사실을 규칙으로 추린 요약 — AI 작문·자체 등급 아님</div>
+                </div>
+            )}
+
+            {/* 미니 목차 — 렌더된 섹션 자동 구성, 탭=해당 섹션 스크롤. sticky/fixed 없이 in-flow (하드코드 position 금지 정합) */}
+            {tocSecs.length >= 4 && (
+                <div data-noprint style={{ display: "flex", gap: 6, overflowX: "auto", padding: "10px 2px 2px", WebkitOverflowScrolling: "touch" }}>
+                    {tocSecs.map((t) => (
+                        <button key={t}
+                            onClick={() => {
+                                try {
+                                    const n = rootRef.current && rootRef.current.querySelector(`[data-sec="${t.replace(/"/g, '\\"')}"]`)
+                                    if (n) n.scrollIntoView({ behavior: "smooth", block: "start" })
+                                } catch (e) {}
+                            }}
+                            style={{ flexShrink: 0, border: "none", cursor: "pointer", fontFamily: FONT, fontSize: 11.5, fontWeight: 700, color: C.sub, background: C.card, borderRadius: 999, padding: "6px 11px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+                            {t.split(" — ")[0].split(" · ")[0]}
+                        </button>
+                    ))}
                 </div>
             )}
 
