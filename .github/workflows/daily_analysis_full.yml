@@ -435,6 +435,12 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.supply_demand_public_builder
 
+      - name: 입구 지도 빌드 (공개 자산 count·기준시각 집계, public-safe)
+        # 발행 중 공개 JSON 들의 count/generated_at 만 추출한 초경량 지도(~1KB). 외부호출/KIS 0 (로컬 읽기).
+        # 위 빌더 step 들 전부 뒤(당일 산출 집계). RULE 7 = 사실(개수·시각)만. broad git add data/ = RULE 4. publish-data 등재 완료.
+        continue-on-error: true
+        run: python -m api.builders.entrance_map_builder
+
       - name: Brain audit baseline (PRE/POST 측정 영속화)
         # 2026-05-18 확정 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
         # portfolio.json 의 brain_score 분포 + component fill + grade + quadrant 측정.
