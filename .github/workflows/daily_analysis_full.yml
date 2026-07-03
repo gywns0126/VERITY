@@ -330,12 +330,7 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.ai_synthesis_builder
 
-      - name: 공개 가격 스냅샷 빌드 (히트맵 가격% 토글 입력)
-        # krx_mktcap.json(당일 등락률 chg) → data/public_price_snapshot.json {prices: {ticker: 등락률}}.
-        # 순수 변환(외부호출/KIS 0). krx_mktcap_snapshot(네트워크) 뒤에 실행. RULE 7 = KRX 당일 등락률 사실만.
-        # 다음 step git add data/ (broad) 자동 = RULE 4. publish-data allowlist 등재 완료.
-        continue-on-error: true
-        run: python -m api.builders.public_price_snapshot_builder
+      # 공개 가격 스냅샷·랭킹 보드 빌드 step = 2026-07-03 시세 재배포 컴플라이언스 Phase 2 로 은퇴 (KRX raw 발행 중단, 네이버 link-out/TV 위젯 대체)
 
       - name: 국민연금 보유종목 집계 (NPS 공개 패널)
         # data.go.kr #15106890(국민연금 대량보유, serviceKey=PUBLIC_DATA_API_KEY 공통) → 전체 5%+ ~114종목.
@@ -423,11 +418,6 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.sector_overview_builder
 
-      - name: 랭킹 보드 빌드 (거래대금·등락·수급·시총, public-safe)
-        # trending+krx_mktcap+stock_flow_5d+universe_search_kr 순수 transform (KIS 0). 위 step 뒤.
-        # RULE 7 = 외부 사실 랭킹(자체 점수 0). broad git add data/ = RULE 4.
-        continue-on-error: true
-        run: python -m api.builders.ranking_board_builder
 
       - name: 수급 종합 빌드 (공매도·신용잔고, public-safe)
         # portfolio.json kis_snapshots 추출(공매도 FHPST04830000·신용 FHPST04760000). 🚨 KIS 호출 0=RULE 1 무관(로컬 읽기).
