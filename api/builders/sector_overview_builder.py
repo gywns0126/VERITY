@@ -80,7 +80,7 @@ def main() -> int:
         sector = (s.get("peer") or {}).get("sector") or (smap.get(tk) or {}).get("sector_ko")
         if not sector:
             continue
-        b = buckets.setdefault(sector, {"per": [], "pbr": [], "roe": [], "chg": [],
+        b = buckets.setdefault(sector, {"per": [], "pbr": [], "roe": [],
                                         "foreign": 0.0, "inst": 0.0, "members": []})
         facts = s.get("facts") or {}
         b["per"].append(_num(facts.get("PER")))
@@ -88,9 +88,6 @@ def main() -> int:
         b["roe"].append(_num(facts.get("ROE")))
 
         mrow = mkt.get(tk) or {}
-        chg = mrow.get("chg")
-        if chg is not None:
-            b["chg"].append(float(chg))
 
         frow = (flows.get(tk) or [])
         if frow:
@@ -100,7 +97,7 @@ def main() -> int:
 
         b["members"].append({"ticker": tk, "name": s.get("name") or "",
                              "market": s.get("market") or "",
-                             "mktcap": int(mrow.get("mktcap") or 0), "chg": chg})
+                             "mktcap": int(mrow.get("mktcap") or 0)})
 
     sectors = []
     for name, b in buckets.items():
@@ -114,10 +111,11 @@ def main() -> int:
             "median_per": _med(b["per"]),
             "median_pbr": _med(b["pbr"]),
             "median_roe": _med(b["roe"]),
-            "avg_chg": round(sum(b["chg"]) / len(b["chg"]), 2) if b["chg"] else None,
+            # avg_chg(KRX 당일 등락 평균) + leaders[].chg = 2026-07-03 컴플라이언스 필드수술로 제거 — KRX raw 재배포.
+            # DART 파생 medians·수급(flow)은 유지. ExploreHub 표시도 이미 제거됨.
             "flow_foreign": round(b["foreign"]),    # 외국인 순매매 합(최근일, 주)
             "flow_inst": round(b["inst"]),          # 기관 순매매 합
-            "leaders": [{"ticker": m["ticker"], "name": m["name"], "chg": m["chg"]} for m in leaders],
+            "leaders": [{"ticker": m["ticker"], "name": m["name"]} for m in leaders],
         })
     sectors.sort(key=lambda x: x["n"], reverse=True)
 
