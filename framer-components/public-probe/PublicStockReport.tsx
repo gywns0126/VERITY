@@ -1003,6 +1003,7 @@ export default function PublicStockReport(props: Props) {
             cur.unshift({ t, n: name })
             window.localStorage.setItem(RECENTS_KEY, JSON.stringify(cur.slice(0, 8)))
             window.history.replaceState(null, "", window.location.pathname + "?q=" + encodeURIComponent(t) + window.location.hash)
+            window.dispatchEvent(new Event("verity-ticker-change"))  // 같은 페이지 LiveChart/ThesisNote/DecisionPanel 종목 추종
         } catch (e) {}
         setQuery(""); setFocused(false)
     }
@@ -1706,6 +1707,12 @@ export default function PublicStockReport(props: Props) {
                                         <span style={{ fontSize: 12, color: C.faint, fontWeight: 700, transform: opened ? "rotate(90deg)" : "none", transition: "transform 0.12s" }}>›</span>
                                     </div>
                                     <div style={{ fontFamily: HEAD, fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px", margin: "3px 0" }}>{facts[k]}</div>
+                                    {(() => {
+                                        // 기준점 = 업종 중앙값 대비(peer). 외부 사실 비교일 뿐 좋다·나쁘다 판단 아님(RULE 7).
+                                        const pr = peer && peer.rows ? peer.rows.find((r: any) => r.key === k) : null
+                                        if (!pr || (pr.vs !== "above" && pr.vs !== "below")) return null
+                                        return <div style={{ fontSize: 10.5, fontWeight: 700, color: C.vt, marginBottom: 2 }}>업종 {pr.vs === "above" ? "↑ 높음" : "↓ 낮음"}<span style={{ color: C.faint, fontWeight: 600 }}> · 중앙값 {pr.median}</span></div>
+                                    })()}
                                     {fnote[k] && <div style={{ fontSize: 11, color: C.sub, fontWeight: 600 }}>{fnote[k]}</div>}
                                     {opened && (
                                         <div style={{ marginTop: 9, paddingTop: 9, borderTop: `1px solid ${C.line}`, display: "flex", flexDirection: "column", gap: 6 }}>
