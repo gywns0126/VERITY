@@ -3,7 +3,8 @@
 #   git 비커밋 (165MB repo 부담 회피) — blob_upload.js 재사용 (kr_chart_history/ 서브디렉토리).
 #   최근 250일 = kr_chart_daily 일일 청크가 fresh 담당 → 히스토리는 월 1회면 충분
 #   (MAX 뷰 = client 에서 히스토리+최근 청크 병합, 히스토리 약간 stale 무해).
-# 트래픽 = ~2,992콜/run (한도 10,000/일 내, 종목당 1콜 + 0.12s 예의) · 런타임 ~20분 + Blob PUT ~2,992.
+# 트래픽 = ~2,992콜/run (한도 10,000/일 내, 종목당 1콜, 8병렬) · 런타임 ~10분 + Blob PUT ~2,992 (~20분).
+#   🚨 N=1 학습(2026-07-04): GH 러너→data.go.kr RTT ~1.2s/콜 — 직렬 = 60분+ timeout 취소 → 8병렬 전환.
 # 7축 audit (2026-07-04): env=PUBLIC_DATA_API_KEY+VERCEL_BLOB_TOKEN 기존 등록 / push=0 (커밋 없음,
 #   RULE 2 무관) / concurrency=전용 group / cron=월1회 / KIS 무관 / pip=0 (stdlib) + npm @vercel/blob / RULE 8 N=2 큐(월간).
 name: KR Chart History (monthly)
@@ -27,7 +28,7 @@ concurrency:
 jobs:
   history:
     runs-on: ubuntu-latest
-    timeout-minutes: 90  # ~2,992 API 콜(~20분) + Blob PUT ~2,992(~30분)
+    timeout-minutes: 150  # N=1 실측 81분 (8병렬 수집 28분 + Blob PUT 직렬 53분) — 여유 ~2배
 
     steps:
       - name: Checkout

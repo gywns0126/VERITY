@@ -28,6 +28,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import os
 import sys
@@ -277,8 +278,10 @@ def run_history(out_dir: str) -> bool:
         return False
     dest = os.path.join(out_dir, "kr_chart_history")
     os.makedirs(dest, exist_ok=True)
-    ok_n = 0
-    for i, code in enumerate(tickers):
+
+    # 🚨 병렬 8스레드 (2026-07-04 N=1 audit 학습) — GH 러너(해외)→data.go.kr RTT ~1.2s/콜.
+    #   직렬 2,992콜 = 60분+ → timeout 90분 초과 취소. 8병렬 ≈ 8분 (~8tps, 게이트웨이 한도 내).
+    def _one(code: str) -> bool:
         body = _call({"numOfRows": _BULK_ROWS, "pageNo": 1, "likeSrtnCd": code})
         items = ((body or {}).get("items") or {}).get("item") or []
         candles: List[List[int]] = []
@@ -292,15 +295,22 @@ def run_history(out_dir: str) -> bool:
             name = str(row.get("itmsNm") or name)
             mkt = str(row.get("mrktCtg") or mkt)
         if len(candles) < 2:
-            continue
+            return False
         candles.sort(key=lambda x: x[0])
         with open(os.path.join(dest, f"{code}.json"), "w", encoding="utf-8") as f:
             json.dump({"t": code, "n": name, "m": mkt, "c": candles}, f, ensure_ascii=False, separators=(",", ":"))
-        ok_n += 1
-        if ok_n % 200 == 0:
-            print(f"[fsc_daily_prices] history {ok_n}/{len(tickers)} (~{code})", flush=True)
-        time.sleep(0.12)  # 공용 키 쿼터 예의 (~2,992콜, ~15분)
-    print(f"[fsc_daily_prices] history 완료 — {ok_n}/{len(tickers)} 종목 → {dest}")
+        return True
+
+    ok_n = 0
+    done = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+        for ok in ex.map(_one, tickers):
+            done += 1
+            if ok:
+                ok_n += 1
+            if done % 200 == 0:
+                print(f"[fsc_daily_prices] history {done}/{len(tickers)} (ok {ok_n})", flush=True)
+    print(f"[fsc_daily_prices] history 완료 — {ok_n}/{len(tickers)} 종목 → {dest}", flush=True)
     return ok_n >= 500
 
 

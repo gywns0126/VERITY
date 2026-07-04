@@ -327,3 +327,6 @@ class handler(BaseHTTPRequestHandler):
         except Exception:
             _logger.exception("stock_brief 처리 실패")
             return self._send(500, {"error": "internal"})
+
+# deploy-marker 2026-07-04: 머지(ce5fa7350) 직후 데이터 커밋들이 HEAD 를 덮어 ignoreCommand 가
+# vercel-api 무변경으로 판단 → 배포 skip. 본 커밋 = 배포 트리거 (stock-brief/vercel.json rewrite 활성).
