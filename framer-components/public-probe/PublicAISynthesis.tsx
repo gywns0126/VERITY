@@ -60,6 +60,7 @@ export default function PublicAISynthesis(props: Props) {
     const [w, setW] = useState(0)
     const [tk, setTk] = useState<string>(() => String(ticker || "").trim().toUpperCase())
     const [synth, setSynth] = useState<Record<string, string>>({})
+    const [loaded, setLoaded] = useState<boolean>(onCanvas)   // ai_synthesis.json 로드 완료 여부 (스켈레톤 게이트)
 
     useEffect(() => {
         const el = rootRef.current
@@ -87,8 +88,8 @@ export default function PublicAISynthesis(props: Props) {
         let alive = true
         fetch(dataUrl, { cache: "no-store" })
             .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const m = d && d.synth && typeof d.synth === "object" ? d.synth : null; if (alive && m) setSynth(m) })
-            .catch(() => {})
+            .then((d) => { const m = d && d.synth && typeof d.synth === "object" ? d.synth : null; if (alive) { if (m) setSynth(m); setLoaded(true) } })
+            .catch(() => { if (alive) setLoaded(true) })
         return () => { alive = false }
     }, [dataUrl, onCanvas])
 
@@ -102,8 +103,29 @@ export default function PublicAISynthesis(props: Props) {
         padding: narrow ? 14 : 18, boxSizing: "border-box", color: C.ink,
     }
 
-    // 데이터 없으면 숨김(빈 카드 방지)
-    if (!text) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
+    // 텍스트 없음: (1) 로드 중 + 종목 있음 → 스켈레톤, (2) 로드 완료 후 해당 종목 종합 없음/종목 없음 → 숨김
+    if (!text) {
+        if (loaded || !tk) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
+        const base = isDark ? "#222a33" : "#e9edf1"
+        const hiC = isDark ? "#2d3742" : "#f3f5f7"
+        const bar = (wd: any, h: number, mt: number): CSSProperties => ({
+            width: wd, height: h, marginTop: mt, borderRadius: 6, background: base,
+            backgroundImage: `linear-gradient(90deg, ${base} 25%, ${hiC} 37%, ${base} 63%)`,
+            backgroundSize: "800px 100%", animation: "vasShimmer 1.4s ease-in-out infinite",
+        })
+        return (
+            <div ref={rootRef} style={wrap}>
+                <style>{`@keyframes vasShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+                <div style={{ background: C.card, borderRadius: 16, padding: narrow ? 14 : 18, boxSizing: "border-box", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={bar(64, 18, 0)} />
+                    <div style={bar("100%", 13, 12)} />
+                    <div style={bar("96%", 13, 7)} />
+                    <div style={bar("86%", 13, 7)} />
+                    <div style={bar("42%", 11, 14)} />
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div ref={rootRef} style={wrap}>
