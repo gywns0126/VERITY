@@ -106,15 +106,12 @@ const ICONS: Record<IconKey, { solid: (a: string) => any; glass: string }> = {
     treasury: {
         solid: (a) => (
             <g>
-                <g fill="none" stroke={a} strokeWidth={3.4} strokeLinecap="round">
-                    <circle cx={24} cy={23} r={8.5} />
-                    <line x1={24} y1={11.5} x2={24} y2={34.5} />
-                    <line x1={12.5} y1={23} x2={35.5} y2={23} />
-                </g>
-                <circle cx={24} cy={23} r={2.6} fill={a} />
+                <path d="M30.5 27.5 V23.5 a4.75 4.75 0 0 1 9.5 0 V27.5" fill="none" stroke={a} strokeWidth={3.2} strokeLinecap="round" />
+                <path d="M31 27 H40 Q43.5 27 43.5 30.5 V37 Q43.5 40.5 40 40.5 H31 Q27.5 40.5 27.5 37 V30.5 Q27.5 27 31 27 Z" fill={a} />
+                <circle cx={35.5} cy={33.5} r={2.2} fill="#ffffff" fillOpacity={0.92} />
             </g>
         ),
-        glass: rr(6, 6, 36, 34, 6) + " " + rr(11, 40, 8, 4.5, 2) + " " + rr(29, 40, 8, 4.5, 2),
+        glass: rr(6, 5, 34, 36, 6) + " " + rr(10.5, 41.5, 8, 3.5, 1.75) + " " + rr(27.5, 41.5, 8, 3.5, 1.75),
     },
     // 13. 꾸준한 매입 — 코인 스택 3단(glass) + 굵은 상향 화살표(solid)
     buySteady: {
