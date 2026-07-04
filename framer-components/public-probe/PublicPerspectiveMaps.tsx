@@ -55,12 +55,15 @@ const GICONS: Record<string, { solid: (a: string) => any; glass: string }> = {
     buyback: {
         solid: (a) => (
             <g>
-                <circle cx={24} cy={24} r={7.5} fill={a} />
-                <circle cx={24} cy={24} r={2.4} fill="#ffffff" fillOpacity={0.92} />
-                <path d="M31 22.5 H41.5 Q43 22.5 43 24 Q43 25.5 41.5 25.5 H31 Z" fill={a} />
+                <g fill="none" stroke={a} strokeWidth={3.4} strokeLinecap="round">
+                    <circle cx={24} cy={23} r={8.5} />
+                    <line x1={24} y1={11.5} x2={24} y2={34.5} />
+                    <line x1={12.5} y1={23} x2={35.5} y2={23} />
+                </g>
+                <circle cx={24} cy={23} r={2.6} fill={a} />
             </g>
         ),
-        glass: _rr(5, 8, 38, 32, 6),
+        glass: _rr(6, 6, 36, 34, 6) + " " + _rr(11, 40, 8, 4.5, 2) + " " + _rr(29, 40, 8, 4.5, 2),
     },
     // 욕구 6계층 — 생존/심리·안전·소속/연결·존중/과시·자아실현·기반/인프라
     survival: {
