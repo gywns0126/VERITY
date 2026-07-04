@@ -101,7 +101,7 @@ export default function PublicAISynthesis(props: Props) {
 
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT,
-        padding: narrow ? "0 14px" : "0 18px", boxSizing: "border-box", color: C.ink,
+        padding: 0, boxSizing: "border-box", color: C.ink,  // 좌우 0 = 카드 모서리를 이웃(라이브차트 등) 카드와 정렬 (PM 2026-07-05)
     }
 
     // 텍스트 없음: (1) 로드 중 + 종목 있음 → 스켈레톤, (2) 로드 완료 후 해당 종목 종합 없음/종목 없음 → 숨김
