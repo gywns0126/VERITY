@@ -2,12 +2,14 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 종목 뉴스 (정보 밀도형) — VERITY 공개 터미널 (AlphaNest).
+ * 종목 뉴스 (정보 밀도형) — VERITY 공개 터미널 (골든구스).
  *
  * 데이터 = /api/stock_news?code=종목코드 (네이버 금융 종목뉴스 라이브, 건당 밀도 enrichment).
- * 밀도: 카테고리 칩 · 출처 신뢰티어(✓) · 매체 클러스터 수 · 상대시각. RULE 6: LLM 해설 0. RULE 7: 호재악재·랭킹 0(사실만).
+ * 밀도: 카테고리 칩 · 출처 신뢰티어(✓) · 매체 클러스터 수 · 상대시각 · 관련 공시(뉴스×DART 연결, 우리 차별점).
+ * RULE 6: LLM 해설 0. RULE 7: 호재악재·랭킹 0(사실만).
  * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page 전환 추종 1s 폴링. 테마 = body[data-framer-theme] 추종.
  * 데이터 없으면 graceful 숨김.
+ * 🚨 외곽 padding·narrow 브레이크포인트 = PublicStockReport 와 동일(w<560, 12/18) — /stock 좌측 열 카드 인셋 정렬(2026-07-04).
  */
 
 interface Props {
@@ -116,13 +118,13 @@ export default function PublicStockNews(props: Props) {
         return () => { alive = false }
     }, [tk, api, onCanvas])
 
-    const narrow = w > 0 && w < 460
+    const narrow = w > 0 && w < 560   // PublicStockReport 와 동일 브레이크포인트 (좌측 인셋 정렬)
     const catColor = (cat: string) =>
         cat === "실적" || cat === "공시" ? C.vt
             : cat === "계약·수주" || cat === "M&A·지분" ? C.green
                 : C.faint
 
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: narrow ? 14 : 18, boxSizing: "border-box", color: C.ink }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: narrow ? "0 12px" : "0 18px", boxSizing: "border-box", color: C.ink }   // 외곽 pad = PublicStockReport 동일(12/18)
 
     // 로딩 중 빈 화면 방지: 아무것도 없고 로딩도 끝났으면 숨김
     if (!items.length && !loading) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
@@ -165,7 +167,7 @@ export default function PublicStockNews(props: Props) {
                 )}
 
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 13, lineHeight: 1.55 }}>
-                    네이버 금융 종목 뉴스 · 매체·시각·출처는 사실, ✓=신뢰 출처 · 호재·악재 판단 아님(점수·추천 아님)
+                    네이버 금융 종목 뉴스 · 매체·시각·출처는 사실, ✓=신뢰 출처 · 관련 공시는 ±2일 DART 매칭
                 </div>
             </div>
         </div>

@@ -13,6 +13,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
  *   onAccent = 브랜드 보라(vg) 위 글자색. 라이트=흰색/다크=짙은색(2026-06-21 가독성).
  * 🚨 면책 문구 제거(2026-06-26, PM) — "추천·등급 아님 / 검증 후 2027 / 매수·매도 의견 아님" 류는 사이트 하단 단일 면책으로 통합. 출처·색 의미는 유지.
+ * 🚨 SAMPLE = canvas 프리뷰 전용(2026-07-04, 사이트 감사 P1) — 라이브 초기 state 는 빈 배열, fetch 실패 시 가짜 공시 오노출 차단.
+ * 로딩 스켈레톤(2026-07-04) — 토스식 shimmer 가 리포트 레이아웃 미리 그림 + 160ms 지연 게이트(즉시 로드 깜빡임 차단).
  */
 
 const LIGHT = {
@@ -151,6 +153,43 @@ function loadToken(): string {
     } catch { return "" }
 }
 
+/* 로딩 스켈레톤 — 토스식 shimmer. 실제 레이아웃(종목 카드 = 종목명 헤더 + 칩·제목 공시 행) 미리 그림.
+ * 호출부 160ms 지연 게이트 = 즉시 로드 깜빡임 차단(StockReportSkeleton 관례). */
+function DisclosureFeedSkeleton({ C, isDark }: { C: any; isDark: boolean }) {
+    const base = isDark ? "#222a33" : "#e9edf1"
+    const hi = isDark ? "#2d3742" : "#f3f5f7"
+    const sk = (w: number | string, h: number, r = 6, mt = 0): CSSProperties => ({
+        width: w, height: h, borderRadius: r, marginTop: mt, background: base,
+        backgroundImage: `linear-gradient(90deg, ${base} 25%, ${hi} 37%, ${base} 63%)`,
+        backgroundSize: "800px 100%", animation: "vdfShimmer 1.4s ease-in-out infinite", flexShrink: 0,
+    })
+    return (
+        <>
+            <style>{`@keyframes vdfShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+            {[0, 1, 2, 3].map((card) => (
+                <div key={card} style={{ background: C.card, borderRadius: 16, padding: "13px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    {/* 종목명 헤더 줄 */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                        <div style={sk(card % 2 ? 96 : 128, 16, 6)} />
+                        <div style={sk(44, 11, 5)} />
+                        <div style={{ ...sk(58, 11, 5), marginLeft: "auto" }} />
+                    </div>
+                    {/* 공시 행 (칩 + 제목 + 메타) */}
+                    {[0, 1, 2].slice(0, card === 3 ? 2 : 3).map((row) => (
+                        <div key={row} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 0", borderTop: `1px solid ${C.line}` }}>
+                            <div style={sk(46, 20, 7)} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={sk(row % 2 ? "72%" : "88%", 13, 5)} />
+                                <div style={sk(84, 10, 5, 7)} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ))}
+        </>
+    )
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -164,6 +203,7 @@ export default function PublicDisclosureFeed(props: Props) {
     // SAMPLE 은 canvas 프리뷰 전용 — 라이브는 빈 배열로 시작해 fetch 로만 채운다(실패 시 SAMPLE 오노출 차단).
     const [items, setItems] = useState<FeedItem[]>(onCanvas ? SAMPLE : [])
     const [loaded, setLoaded] = useState<boolean>(onCanvas)
+    const [skelVisible, setSkelVisible] = useState<boolean>(false)   // 160ms 게이트 — 즉시 로드 깜빡임 차단
     const [openTip, setOpenTip] = useState<string>("")
     const [tipBox, setTipBox] = useState<{ left: number; width: number }>({ left: 0, width: 248 })
     const [hoverCapable, setHoverCapable] = useState(true)
@@ -172,6 +212,11 @@ export default function PublicDisclosureFeed(props: Props) {
     const [token, setToken] = useState<string>("")
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
     const [query, setQuery] = useState<string>("")
+    useEffect(() => {
+        if (loaded) { setSkelVisible(false); return }
+        const t = setTimeout(() => setSkelVisible(true), 160)
+        return () => clearTimeout(t)
+    }, [loaded])
 
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
 
@@ -378,7 +423,7 @@ export default function PublicDisclosureFeed(props: Props) {
 
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
-        background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
+        background: C.bg, fontFamily: FONT, padding: `0 ${pad}px`, boxSizing: "border-box", color: C.ink,
     }
 
     return (
@@ -418,9 +463,10 @@ export default function PublicDisclosureFeed(props: Props) {
 
             {/* 종목 카드 리스트 */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-                {shown.length === 0 ? (
+                {!loaded && skelVisible && <DisclosureFeedSkeleton C={C} isDark={themeDark} />}
+                {loaded && shown.length === 0 ? (
                     <div style={{ textAlign: "center", color: C.faint, fontSize: 13, fontWeight: 600, padding: "30px 0", lineHeight: 1.5 }}>
-                        {!loaded ? "공시를 불러오는 중이에요" : query.trim() ? `"${query.trim()}" 검색 결과가 없어요` : "표시할 공시가 없어요"}
+                        {query.trim() ? `"${query.trim()}" 검색 결과가 없어요` : "표시할 공시가 없어요"}
                     </div>
                 ) : null}
                 {shown.map((it) => {

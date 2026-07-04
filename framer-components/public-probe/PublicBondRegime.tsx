@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 채권·금리 레짐 — VERITY 공개 터미널 (AlphaNest). 국민연금(PublicNPSHoldings)처럼 독립 "렌즈".
+ * 채권·금리 레짐 — VERITY 공개 터미널 (골든구스). 국민연금(PublicNPSHoldings)처럼 독립 "렌즈".
  * 디자인 = 토스식 미니멀: 무채색 위주 + 방향값만 up(빨강)/down(파랑), 얇은 구분선, 색배경·외곽선·뱃지 없음.
  *
  * 🚨 RULE 7 (held-2027 / feedback_scope / feedback_source_attribution_discipline):
@@ -10,6 +10,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  *  - 레짐 분류(금리환경 / 곡선 / 신용사이클) = 자체 기준 v0 = 가설 (bondanalyzer.py). 섹션·푸터에 명시.
  *  - recession_signal(3M-10Y < -10bp) = Fed 표준. 점수·추천 0 (RULE 6 통과 — 결정론 산출 표시).
  * 데이터 = data/bonds.json (단일 writer, publish-data 발행). 테마 = body[data-framer-theme] 자가 추종.
+ * 🚨 면책 문구 제거(2026-06-26, PM) — "등급·추천 아님 / 검증 후 2027" 류는 사이트 하단 단일 면책으로 통합. 출처·분류 기준 설명은 유지.
  */
 
 interface Props {
@@ -126,7 +127,7 @@ export default function PublicBondRegime(props: Props) {
 
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT,
-        padding: narrow ? 16 : 22, boxSizing: "border-box", color: C.ink,
+        padding: narrow ? "0 16px" : "0 22px", boxSizing: "border-box", color: C.ink,
     }
     const card: CSSProperties = {
         background: C.card, borderRadius: 18, padding: narrow ? 16 : 20, boxSizing: "border-box",
@@ -301,9 +302,9 @@ export default function PublicBondRegime(props: Props) {
                 </div>
             )}
 
-            {/* 면책 */}
+            {/* 출처·분류 기준 */}
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
-                수익률·스프레드·OAS는 ECOS(한국)·FRED(미국) 사실. 레짐 분류(금리환경·곡선·신용사이클)는 자체 기준 v0이고, 침체신호는 Fed 표준이에요. 등급·추천이 아니며 자체 점수는 검증 후(2027) 공개해요.
+                수익률·스프레드·OAS는 ECOS(한국)·FRED(미국) 사실. 레짐 분류(금리환경·곡선·신용사이클)는 자체 기준 v0이고, 침체신호는 Fed 표준이에요.
             </div>
         </div>
     )

@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  *   = "사세요/저평가/유망" 절대 없음. 이 컴포넌트는 ai_synthesis.json(빌더 산출) 텍스트를 표시만.
  * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page replaceState 추종 1s 폴링.
  * 데이터 = data/ai_synthesis.json (단일 writer, publish 발행). 없으면 graceful 숨김. 테마 = body[data-framer-theme] 추종.
+ * 🚨 로딩 스켈레톤(2026-07-04): 데이터 로드 전 + 종목 있음 = shimmer. 로드 후 해당 종목 종합 없으면 숨김(팝인 방지).
  */
 
 interface Props {
@@ -60,6 +61,7 @@ export default function PublicAISynthesis(props: Props) {
     const [w, setW] = useState(0)
     const [tk, setTk] = useState<string>(() => String(ticker || "").trim().toUpperCase())
     const [synth, setSynth] = useState<Record<string, string>>({})
+    const [loaded, setLoaded] = useState<boolean>(onCanvas)   // ai_synthesis.json 로드 완료 여부 (스켈레톤 게이트)
 
     useEffect(() => {
         const el = rootRef.current
@@ -87,8 +89,8 @@ export default function PublicAISynthesis(props: Props) {
         let alive = true
         fetch(dataUrl, { cache: "no-store" })
             .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const m = d && d.synth && typeof d.synth === "object" ? d.synth : null; if (alive && m) setSynth(m) })
-            .catch(() => {})
+            .then((d) => { const m = d && d.synth && typeof d.synth === "object" ? d.synth : null; if (alive) { if (m) setSynth(m); setLoaded(true) } })
+            .catch(() => { if (alive) setLoaded(true) })
         return () => { alive = false }
     }, [dataUrl, onCanvas])
 
@@ -99,22 +101,43 @@ export default function PublicAISynthesis(props: Props) {
 
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT,
-        padding: narrow ? 14 : 18, boxSizing: "border-box", color: C.ink,
+        padding: narrow ? "0 14px" : "0 18px", boxSizing: "border-box", color: C.ink,
     }
 
-    // 데이터 없으면 숨김(빈 카드 방지)
-    if (!text) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
+    // 텍스트 없음: (1) 로드 중 + 종목 있음 → 스켈레톤, (2) 로드 완료 후 해당 종목 종합 없음/종목 없음 → 숨김
+    if (!text) {
+        if (loaded || !tk) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
+        const base = isDark ? "#222a33" : "#e9edf1"
+        const hiC = isDark ? "#2d3742" : "#f3f5f7"
+        const bar = (wd: any, h: number, mt: number): CSSProperties => ({
+            width: wd, height: h, marginTop: mt, borderRadius: 6, background: base,
+            backgroundImage: `linear-gradient(90deg, ${base} 25%, ${hiC} 37%, ${base} 63%)`,
+            backgroundSize: "800px 100%", animation: "vasShimmer 1.4s ease-in-out infinite",
+        })
+        return (
+            <div ref={rootRef} style={wrap}>
+                <style>{`@keyframes vasShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+                <div style={{ background: C.card, borderRadius: 16, padding: narrow ? 14 : 18, boxSizing: "border-box", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={bar(64, 18, 0)} />
+                    <div style={bar("100%", 13, 12)} />
+                    <div style={bar("96%", 13, 7)} />
+                    <div style={bar("86%", 13, 7)} />
+                    <div style={bar("42%", 11, 14)} />
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div ref={rootRef} style={wrap}>
             <div style={{ background: C.card, borderRadius: 16, padding: narrow ? 14 : 18, boxSizing: "border-box", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
                     <span style={{ fontSize: 10.5, fontWeight: 800, color: C.vt, background: C.vtS, borderRadius: 7, padding: "3px 8px", letterSpacing: "-0.2px" }}>AI 종합</span>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>검증 사실 기반 · 의견·추천 아님</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>검증 사실 기반</span>
                 </div>
                 <div style={{ fontSize: narrow ? 13.5 : 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.62, letterSpacing: "-0.2px" }}>{text}</div>
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 12, lineHeight: 1.55 }}>
-                    DART·KRX·공정위 검증 사실을 AI가 종합(다듬기만, 새 숫자·전망·매수의견 0). 등급·추천 아니며 자체 점수는 검증 후(2027) 공개.
+                    DART·KRX·공정위 검증 사실을 AI가 종합 (다듬기만, 새 숫자·전망·매수의견 0)
                 </div>
             </div>
         </div>

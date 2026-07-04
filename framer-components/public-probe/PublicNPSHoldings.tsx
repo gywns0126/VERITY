@@ -5,12 +5,13 @@ import { useEffect, useMemo, useState } from "react"
  * 국민연금(NPS) 보유종목 + 운용현황 — 공개 probe.
  *
  * "국민연금이 어디에 투자하나 / 수익은 얼마나" 를 공시 사실로 한 화면에.
- * 🚨 점수·추천 없음. 지분율·수익률 = 공시 사실, 판단은 사용자 (RULE 7).
+ * 🚨 점수·추천 없음. 지분율·수익률 = 공시 사실 (RULE 7).
  *
  * 데이터 = data/nps_holdings.json (DART 5% 대량보유 공시 + data.go.kr 국민연금 대량보유).
  *   한계 = 5% 이상 보유 기준(전체 ~1,200종목 아님) · 분기 지연. 컴포넌트가 라벨로 명시.
  *
  * 다크모드 = body[data-framer-theme] 자가감지. 회사명 누르면 리포트(reportPath?q=ticker).
+ * 🚨 면책 문구 제거(2026-06-26, PM) — "점수·추천 아님 / 판단은 직접" 류는 사이트 하단 단일 면책으로 통합. 출처·데이터 한계(전체 아님·분기지연)는 유지.
  */
 
 const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
@@ -40,7 +41,7 @@ function fmtPct(v: any): string {
 
 const DEMO = {
     coverage: "operating_pool", count: 3, source: "DART 5% 대량보유 공시",
-    note: "국민연금 5% 이상 대량보유 공시 기준 — 전체 보유종목 아님 · 분기 지연 · 점수·추천 아님.",
+    note: "국민연금 5% 이상 대량보유 공시 기준 — 전체 보유종목 아님 · 분기 지연.",
     fund: { as_of: "2026-03-31", aum_krw_trillion: 1526.1, return_total_pct: 18.82, return_total_note: "2025년 전체(잠정)", return_cumulative_annualized_pct: 8.04, asset_returns_pct: { "국내주식": 8.24, "해외주식": 19.74, "국내채권": 0.84, "해외채권": 3.77, "대체투자": 8.03 }, source: "국민연금기금운용본부 운용현황 공시" },
     holdings: [
         { ticker: "017960", name: "한국카본", pct: 10.49, qty_change: 521052, date: "2026-04-01", src: "DART majorstock" },
@@ -98,7 +99,7 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
     const fund = data && data.fund ? data.fund : null
     const reportPath = props.reportPath || "/stock"
 
-    const wrap: any = { width: "100%", background: C.bg, fontFamily: "Pretendard, -apple-system, sans-serif", padding: 16, boxSizing: "border-box", color: C.ink }
+    const wrap: any = { width: "100%", background: C.bg, fontFamily: "Pretendard, -apple-system, sans-serif", padding: "0 16px", boxSizing: "border-box", color: C.ink }
 
     if (loading) {
         const skBase = isDark ? "#222a33" : "#e9edf1"
@@ -130,7 +131,7 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
         <div style={wrap}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>국민연금 투자</span>
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: C.faint }}>공시 사실 · 점수·추천 아님</span>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: C.faint }}>공시 사실</span>
             </div>
 
             {/* 운용현황 카드 */}
@@ -247,7 +248,7 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                 )}
             </div>
 
-            {/* 한계 라벨 (RULE 7) */}
+            {/* 한계 라벨 — 데이터 커버리지 사실 */}
             <div style={{ marginTop: 12, padding: "11px 13px", background: C.card, borderRadius: 12, border: `1px solid ${C.line}` }}>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, lineHeight: 1.55 }}>
                     ⓘ {data.note || "국민연금 5% 이상 대량보유 공시 기준 — 전체 보유종목 아님 · 분기 지연."}
@@ -260,7 +261,7 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
             </div>
 
             <div style={{ textAlign: "center", fontSize: 10.5, color: C.faint, marginTop: 10, fontWeight: 600 }}>
-                {data.source || "DART·data.go.kr"} · 공시 사실(지분율) · 판단은 직접
+                {data.source || "DART·data.go.kr"} · 공시 사실(지분율)
             </div>
         </div>
     )

@@ -22,7 +22,7 @@ const CATS: { key: string; label: string }[] = [
     { key: "strongSell", label: "적극매도" },
 ]
 
-const SAMPLE: any = { target_high: "$370.00", target_low: "$207.00", num_analysts: 63, counts: { strongBuy: 15, buy: 48, hold: 4, sell: 0, strongSell: 0 }, note: "외부 애널리스트 집계(yfinance) · 자체 의견 아님" }
+const SAMPLE: any = { target_high: "$370.00", target_low: "$207.00", num_analysts: 63, counts: { strongBuy: 15, buy: 48, hold: 4, sell: 0, strongSell: 0 }, note: "외부 애널리스트 집계 · yfinance" }
 
 function readDark(): boolean {
     if (typeof document === "undefined" || !document.body) return false
@@ -78,7 +78,7 @@ export default function PublicConsensus(props: { ticker?: string; dataUrl?: stri
     const hasRange = !!(c && c.target_low && c.target_high)
     if (!c || !c.num_analysts || (!hasDist && !hasRange)) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
 
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: narrow ? 14 : 18, display: "flex", flexDirection: "column", gap: 12 }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: narrow ? "0 14px" : "0 18px", display: "flex", flexDirection: "column", gap: 12 }
     return (
         <div ref={rootRef} style={wrap}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
@@ -122,7 +122,7 @@ export default function PublicConsensus(props: { ticker?: string; dataUrl?: stri
                 </div>
             )}
 
-            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>{c.note || "외부 애널리스트 집계(yfinance) · 자체 의견 아님"}</div>
+            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>{c.note || "외부 애널리스트 집계 · yfinance"}</div>
         </div>
     )
 }

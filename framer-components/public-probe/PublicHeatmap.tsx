@@ -95,18 +95,6 @@ function fmtShares(v: any): string {
     if (a >= 1e4) return sign + Math.round(a / 1e4).toLocaleString("en-US") + "만"
     return sign + Math.round(a).toLocaleString("en-US")
 }
-function fmtAge(iso: any): string {
-    if (!iso) return ""
-    try {
-        const mins = Math.max(0, Math.round((Date.now() - new Date(String(iso)).getTime()) / 60000))
-        if (mins < 60) return mins + "분 전"
-        const hrs = Math.round(mins / 60)
-        if (hrs < 24) return hrs + "시간 전"
-        return Math.round(hrs / 24) + "일 전"
-    } catch (e) {
-        return ""
-    }
-}
 
 /* ── squarified treemap (순수 JS) ── items:[{key,value}] → [{key,x,y,w,h,item}] ── */
 function worst(row: any[], side: number, sum: number): number {
@@ -167,7 +155,6 @@ export default function PublicHeatmap(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [stocks, setStocks] = useState<any[]>([])
-    const [asOf, setAsOf] = useState<string>("")
     const [insiderMap, setInsiderMap] = useState<Record<string, any>>({})
     const [flowMap, setFlowMap] = useState<Record<string, any[]>>({})
     const [forenMap, setForenMap] = useState<Record<string, any>>({})
@@ -211,10 +198,7 @@ export default function PublicHeatmap(props: Props) {
             if (!url) return
             fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) ok(d) }).catch(() => {})
         }
-        jget(stockUrl, (d) => {
-            const a = Array.isArray(d) ? d : d.stocks; if (Array.isArray(a)) setStocks(a)
-            const ts = d && d._meta && d._meta.generated_at; if (ts) setAsOf(String(ts))
-        })
+        jget(stockUrl, (d) => { const a = Array.isArray(d) ? d : d.stocks; if (Array.isArray(a)) setStocks(a) })
         jget(insiderUrl, (d) => {
             const a = Array.isArray(d) ? d : d.stocks
             if (!Array.isArray(a)) return
@@ -317,7 +301,7 @@ export default function PublicHeatmap(props: Props) {
     const resetZoom = () => setZoom({ z: 1, tx: 0, ty: 0 })
 
     const wrap: CSSProperties = {
-        width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
+        width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: `0 ${pad}px`, boxSizing: "border-box", color: C.ink,
     }
     const tabBtn = (m: Metric): CSSProperties => {
         const active = m.key === metric
@@ -378,7 +362,7 @@ export default function PublicHeatmap(props: Props) {
                 <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: narrow ? 18 : 20, fontWeight: 800, letterSpacing: "-0.5px" }}>엣지 히트맵</div>
                     <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 3 }}>
-                        박스=시총 · 색=아래 지표 · 탭→리포트{asOf ? " · 데이터 " + fmtAge(asOf) : ""}
+                        박스=시총 · 색=아래 지표 · 탭→리포트
                     </div>
                 </div>
             </div>

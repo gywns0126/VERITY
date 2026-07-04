@@ -154,7 +154,7 @@ export default function PublicETFFlow(props: Props) {
 
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT,
-        padding: narrow ? 16 : 22, boxSizing: "border-box", color: C.ink,
+        padding: narrow ? "0 16px" : "0 22px", boxSizing: "border-box", color: C.ink,
     }
     const card: CSSProperties = {
         background: C.card, borderRadius: 18, padding: narrow ? 16 : 20, boxSizing: "border-box",
@@ -255,7 +255,7 @@ export default function PublicETFFlow(props: Props) {
 
             {/* 면책 */}
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
-                상장좌수·NAV·순자산·괴리율은 KRX OpenAPI 사실이에요. 흐름은 상장좌수 변화 × NAV(설정/환매)를 최근 {WINDOW}거래일까지 누적한 값으로, 가격효과를 뺀 값이에요. 거래일 둘째 날부터 신호가 잡혀요. 등급·추천이 아니며 자체 점수는 검증 후(2027) 공개해요.
+                상장좌수·NAV·순자산·괴리율은 KRX OpenAPI 사실이에요. 흐름은 상장좌수 변화 × NAV(설정/환매)를 최근 {WINDOW}거래일까지 누적한 값으로, 가격효과를 뺀 값이에요. 거래일 둘째 날부터 신호가 잡혀요. 자체 점수는 검증 후(2027) 공개해요.
             </div>
         </div>
     )

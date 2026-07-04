@@ -18,10 +18,12 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 🚨 카드 선택(2026-06-22) = 상세 펼침 시 초록 외곽선 X → 회색 pressed(배경 chipBg 틴트 + inset 그림자, 눌린 느낌)로 표시.
  *   상세는 추세선·상관·절대변동 중 추가 정보가 있을 때만 클릭 가능(hasDetail) — 카드와 같은 값 반복 방지.
  *   2026-06-22: 코스피(^KS11)·코스닥(^KQ11)·달러환율(KRW=X) 30일 sparkline 추가(macro_data.py) → 값은 price_pulse 실시간 유지, 추세선만 macro. 전 카드 추세선·상세 일관.
+ *   2026-06-23: per-아이템 스켈레톤 — macro가 pulse보다 늦게 와도 원자재·크립토·SOX·금리 카드가 vanish 대신 스켈레톤 자리 유지(pulseLoaded/macroLoaded).
  *
  * 🚨 엣지 (토스·증권사 구조적 불가, 2026-06-21):
  *  - 자산 간 상관(30일) = macro.cross_asset_corr — 금·원유 ↔ 코스피/달러/BTC/금리 상관(시세로 계산한 사실). 가격 나열이 아닌 quant 관계.
- *  - 원자재 → KR 노출 = 원자재 카드 클릭 시 원가·매출 연관 KR 산업/종목(commodity_exposure). RULE 7 = 산업 멤버십 사실, 수혜·추천 0(방향 종목별 상이).
+ *  - 원자재 → KR 노출 = 원자재 카드 클릭 시 원가·매출 연관 KR 산업/종목(commodity_exposure). RULE 7 = 산업 멤버십 사실(방향 종목별 상이).
+ * 🚨 면책 문구 제거(2026-06-26, PM) — "수혜·추천 아님 / 점수·추천 아님 / 2027 검증" 류는 사이트 하단 단일 면책으로 통합. 출처·색 의미·산출방식은 유지.
  */
 
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#6b7684", faint: "#8b95a1", line: "#eef1f4", up: "#f04452", down: "#3182f6", flat: "#8b95a1", cPos: "#0ca678", cNeg: "#6c5ce7", chipBg: "#f2f4f6", tipBg: "#191f28" }
@@ -255,7 +257,7 @@ export default function PublicMarketBoard(props: Props) {
 
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%", overflowX: "hidden",
-        background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
+        background: C.bg, fontFamily: FONT, padding: `0 ${pad}px`, boxSizing: "border-box", color: C.ink,
     }
 
     const card = (it: any) => {
@@ -315,7 +317,7 @@ export default function PublicMarketBoard(props: Props) {
                         ))}
                     </div>
                 )}
-                <div style={{ fontSize: 9.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.45 }}>산업 멤버십 사실 · 시총순 · 수혜·추천 아님 · 누르면 리포트</div>
+                <div style={{ fontSize: 9.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.45 }}>산업 멤버십 사실 · 시총순 · 누르면 리포트</div>
             </div>
         )
     }
@@ -334,7 +336,7 @@ export default function PublicMarketBoard(props: Props) {
         return best
     }
 
-    // 시세 카드 상세 — 큰 추세선 + 절대변동 + 시계열 파생 사실 1줄 (자체 계산, 해석·추천 아님)
+    // 시세 카드 상세 — 큰 추세선 + 절대변동 + 시계열 파생 사실 1줄 (자체 계산)
     const detailPanel = (it: any) => {
         const cp = Number(it.change_pct)
         const col = !isFinite(cp) ? C.flat : cp > 0 ? C.up : cp < 0 ? C.down : C.flat
@@ -373,7 +375,7 @@ export default function PublicMarketBoard(props: Props) {
                         {(cac.window_days || 30)}일 상관 최대 · {CORR_LABELS[corr.k]} {corr.v > 0 ? "+" : ""}{corr.v.toFixed(2)} ({corr.v >= 0 ? "동행" : "역행"})
                     </div>
                 )}
-                <div style={{ fontSize: 9.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.45 }}>시세 시계열로 계산한 사실 · 해석·추천 아님(2027 검증 후)</div>
+                <div style={{ fontSize: 9.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.45 }}>시세 시계열로 계산한 사실</div>
             </div>
         )
     }
@@ -476,7 +478,7 @@ export default function PublicMarketBoard(props: Props) {
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px" }}>글로벌 시세</span>
-                <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>지수·환율·원자재·크립토 · 사실(해석·추천 아님)</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>지수·환율·원자재·크립토 · 사실</span>
             </div>
 
             {rows.length === 0 ? (
@@ -499,7 +501,7 @@ export default function PublicMarketBoard(props: Props) {
             {corrSection()}
 
             <div style={{ fontSize: 10, color: C.faint, fontWeight: 600, marginTop: 2, lineHeight: 1.5 }}>
-                추세선 = 실제 30일 시계열 보유 지표만 · 상관 = 가격 시계열로 계산한 사실 · 원자재 노출 = 산업 멤버십(수혜 아님) · 상승 빨강/하락 파랑 · 출처 yfinance·FRED·KIS·업비트 · 점수·추천 아님(2027 검증 후)
+                추세선 = 실제 30일 시계열 보유 지표만 · 상관 = 가격 시계열로 계산한 사실 · 원자재 노출 = 산업 멤버십 · 상승 빨강/하락 파랑 · 출처 yfinance·FRED·KIS·업비트
             </div>
         </div>
     )

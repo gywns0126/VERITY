@@ -519,7 +519,7 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
     const narrow = w > 0 && w < 420
     if (!onCanvas && series.length < 4) return null
     const CW = Math.max(80, (w || 360) - (narrow ? 28 : 36))
-    const CH = 84, PX = 4, PY = 20   // PY 크게 = 최고/최저 라벨이 라인·상하단과 안 겹침
+    const CH = 72, PX = 4, PY = 16   // 세로 압축(2026-07-05 PM) — 라벨 겹침 없는 최소 여백
     return (
         <div ref={ref} style={{ background: C.card, borderRadius: 16, padding: narrow ? "15px 14px" : "17px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
@@ -553,8 +553,8 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                     const gid = `qtr-${m.key}-${mi}`
                     const clampX = (x: number) => Math.max(16, Math.min(CW - 16, x))
                     return (
-                        <div key={m.key} style={{ padding: "20px 0", borderTop: mi === 0 ? "none" : `1px solid ${C.line}` }}>
-                            <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 12, flexWrap: "wrap" }}>
+                        <div key={m.key} style={{ padding: "12px 0", borderTop: mi === 0 ? "none" : `1px solid ${C.line}` }}>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 8, flexWrap: "wrap" }}>
                                 <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{m.label}</span>
                                 {m.note && <span style={{ fontSize: 10, color: C.faint, fontWeight: 600 }}>· {m.note}</span>}
                                 <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 800, letterSpacing: "-0.3px", color: C.ink, fontVariantNumeric: "tabular-nums" }}>{last.toFixed(dec)}{m.unit}</span>
@@ -580,7 +580,7 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                                 )}
                                 <circle cx={lastPt.x} cy={lastPt.y} r={3.4} fill={lineColor} stroke={C.card} strokeWidth={1.6} vectorEffect="non-scaling-stroke" />
                             </svg>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 9 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
                                 <span style={{ fontSize: 10, color: C.faint, fontWeight: 600 }}>{qtLabel(series[0].q)}</span>
                                 <span style={{ fontSize: 10, color: dirColor, fontWeight: 700 }}>{(delta > 0 ? "+" : "") + delta.toFixed(dec)}{m.unit} ({series.length}분기)</span>
                                 <span style={{ fontSize: 10, color: C.faint, fontWeight: 600 }}>{qtLabel(series[series.length - 1].q)}</span>
@@ -1141,7 +1141,7 @@ export default function PublicStockReport(props: Props) {
     }
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
-        background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
+        background: C.bg, fontFamily: FONT, padding: `0 ${pad}px`, boxSizing: "border-box", color: C.ink,
     }
 
     const flowBar = (v: any, label: string) => {

@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 과거 공시 패턴 — VERITY 공개 터미널 (AlphaNest). 종목별 **자기 과거** 카탈리스트 공시(유상증자/자기주식취득·처분/
+ * 과거 공시 패턴 — VERITY 공개 터미널 (골든구스). 종목별 **자기 과거** 카탈리스트 공시(유상증자/자기주식취득·처분/
  * 전환사채/합병/감자/공급계약 등) 당시 종가 대비 +1d/+5d/+20d/+60d 거래일 forward return.
  *
  * 데이터 = data/event_study.json (event_study_builder.py 산출 — DART 공시이력 2015~ + kr_prices 레이크 19년 OHLCV).
@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *   LLM·네이버 못 가지는 자기 데이터 자산(RULE 6 escape — 자기 trail, narrative 아님). 점수·등급·추천 0.
  * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page 전환 추종 1s 폴링. 테마 = body[data-framer-theme] 추종.
  * 데이터 없으면 graceful 숨김(빈 카드 방지).
+ * 🚨 면책 문구 제거(2026-06-26, PM) — "점수·추천 아님" 류는 사이트 하단 단일 면책으로 통합. 출처·과거사실 설명은 유지.
  */
 
 interface Props {
@@ -140,7 +141,7 @@ export default function PublicEventHistory(props: Props) {
     const retColor = (v: number | null) => v == null ? C.faint : v > 0 ? C.up : v < 0 ? C.down : C.sub
     const fmt = (v: number | null) => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(1) + "%"
 
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: narrow ? 14 : 18, boxSizing: "border-box", color: C.ink }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: narrow ? "0 14px" : "0 18px", boxSizing: "border-box", color: C.ink }
 
     // 데이터 없으면 숨김(빈 카드 방지)
     if (!stock) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
@@ -191,7 +192,7 @@ export default function PublicEventHistory(props: Props) {
                 </div>
 
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 13, lineHeight: 1.55 }}>
-                    이 종목의 과거 공시 당시 주가 변화(거래일 기준, 시장 포함) — 과거 사실이며 미래를 보장하지 않아요. 출처 DART 공시이력 + 자체 가격 데이터. 점수·추천 아님.
+                    이 종목의 과거 공시 당시 주가 변화(거래일 기준, 시장 포함) — 과거 사실이며 미래를 보장하지 않아요. 출처 DART 공시이력 + 자체 가격 데이터.
                 </div>
             </div>
         </div>

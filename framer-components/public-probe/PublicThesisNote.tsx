@@ -217,7 +217,7 @@ export default function PublicThesisNote(props: Props) {
         setThesis(null); setEditing(true); setStance("watch"); setNote("")
     }
 
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: 16, boxSizing: "border-box", color: C.ink }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: "0 16px", boxSizing: "border-box", color: C.ink }
     const stanceColor = (id: string) => { const s = STANCES.find((x) => x.id === id); return s ? (C as any)[s.key] : C.faint }
     const stanceLabel = (id: string) => { const s = STANCES.find((x) => x.id === id); return s ? s.label : "관망" }
 
@@ -229,7 +229,7 @@ export default function PublicThesisNote(props: Props) {
     const title = (
         <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 10 }}>
             <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>내 관점</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>· 본인 결정 저널 (AlphaNest 추천 아님)</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>· 본인 결정 저널</span>
         </div>
     )
 
@@ -263,7 +263,7 @@ export default function PublicThesisNote(props: Props) {
                         ) : (
                             <div style={{ fontSize: 12, color: C.faint, fontWeight: 600 }}>기록 시 가격 미저장 (다음 기록부터 추적)</div>
                         )}
-                        <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>내 thesis 가 맞았는지 *스스로* 복기하는 용도 · 점수·정답 제공 아님 · 사실(공시·수급·내부자) 변화는 아래 리포트에서</div>
+                        <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>내 thesis 가 맞았는지 *스스로* 복기하는 용도 · 사실(공시·수급·내부자) 변화는 아래 리포트에서</div>
                     </div>
 
                     <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
@@ -303,7 +303,7 @@ export default function PublicThesisNote(props: Props) {
                     <button onClick={save} style={{ flex: 1, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vt, color: "#fff" }}>기록</button>
                     {thesis && <button onClick={() => { setEditing(false); setStance(thesis.stance); setNote(thesis.note || "") }} style={{ flexShrink: 0, cursor: "pointer", fontFamily: FONT, padding: "11px 16px", borderRadius: 11, fontSize: 13, fontWeight: 700, background: "transparent", color: C.faint, border: `1px solid ${C.line}` }}>취소</button>}
                 </div>
-                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{token ? "내 계정에 저장 — 어느 기기서나 동일" : "이 기기에 저장 · 로그인하면 계정에 저장돼 어디서나 보여요"} · 기록 시점 가격 동결로 재방문 시 변화 표시 · AlphaNest 의 판단·추천 아님</div>
+                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{token ? "내 계정에 저장 — 어느 기기서나 동일" : "이 기기에 저장 · 로그인하면 계정에 저장돼 어디서나 보여요"} · 기록 시점 가격 동결로 재방문 시 변화 표시</div>
             </div>
         </div>
     )

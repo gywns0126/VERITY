@@ -376,7 +376,7 @@ export default function PublicHoldingsTab(props: Props) {
     }
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
-        background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
+        background: C.bg, fontFamily: FONT, padding: `0 ${pad}px`, boxSizing: "border-box", color: C.ink,
     }
     const cardS: CSSProperties = { background: C.card, borderRadius: 16, padding: "16px 17px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }
 

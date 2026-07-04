@@ -283,7 +283,7 @@ export default function PublicDecisionPanel(props: Props) {
         return { facts, rows, insNet, foreignNet, instNet, dil, risk, bull, bear, valRows, qualRows, discN, sector }
     }, [s, insD, forD, flowD, warned])
 
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: `0 ${pad}px`, boxSizing: "border-box", color: C.ink }
     const setRef = (el: HTMLDivElement | null) => { if (el && rootRef[0] !== el) rootRef[1](el) }
 
     // 검색창 — 리포트 본문 검색과 동일(토스식 borderless 채움 · 돋보기 · 클리어 × · 드롭다운)

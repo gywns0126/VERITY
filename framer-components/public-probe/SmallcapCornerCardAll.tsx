@@ -57,7 +57,7 @@ const MARKETS: Record<"kr" | "us", MarketCfg> = {
     label: "한국", flag: "kr",
     url: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/smallcap_corner_filters.json",
     cacheKey: "smallcap_corner_filters_cache", reportPath: "/stock", screenerPath: "/smallcap",
-    subtitle: "시총 300~3000억 · 애널리스트·기관이 안 보는 코너. 사실·패턴만, 추천 아님.",
+    subtitle: "시총 300~3000억 · 애널리스트·기관이 안 보는 코너. 사실·패턴만.",
     sigLabel: "공시",
     factBits: (f) => {
       const m: string[] = []
@@ -78,7 +78,7 @@ const MARKETS: Record<"kr" | "us", MarketCfg> = {
     label: "미국", flag: "us",
     url: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/us_smallcap_corner_filters.json",
     cacheKey: "us_smallcap_corner_filters_cache", reportPath: "/us", screenerPath: "/us-smallcap",
-    subtitle: "시총 $50M~$5B · sell-side 가 안 보는 미국 소형주. SEC 8-K 사실·패턴만, 추천 아님.",
+    subtitle: "시총 $50M~$5B · sell-side 가 안 보는 미국 소형주. SEC 8-K 사실·패턴만.",
     sigLabel: "8-K",
     factBits: (f) => {
       const m: string[] = []
@@ -179,7 +179,7 @@ export default function SmallcapCornerCardAll(props: { width?: number; dark?: bo
 
   const shell = {
     width, fontFamily: "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif",
-    background: "transparent", borderRadius: 24, padding: 16, boxSizing: "border-box" as const, color: C.ink,
+    background: "transparent", borderRadius: 24, padding: "0 16px", boxSizing: "border-box" as const, color: C.ink,
   }
   const flagBtn = (mk: "kr" | "us") => {
     const active = market === mk
@@ -269,7 +269,7 @@ export default function SmallcapCornerCardAll(props: { width?: number; dark?: bo
           })}
 
           <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, padding: "6px 8px 2px", lineHeight: 1.5 }}>
-            {meta.disclaimer || "사실·패턴만 — 점수·추천 아님 · VERITY 검증 진행 중"}
+            {meta.disclaimer || "사실·패턴만 — 알파네스트 검증 진행 중"}
           </div>
         </>
       )}
@@ -283,6 +283,6 @@ addPropertyControls(SmallcapCornerCardAll, {
   market: { type: ControlType.Enum, title: "기본 시장", options: ["kr", "us"], optionTitles: ["한국", "미국"], defaultValue: "kr" },
   krReportPath: { type: ControlType.String, title: "KR 리포트 경로", defaultValue: "/stock" },
   usReportPath: { type: ControlType.String, title: "US 리포트 경로", defaultValue: "/us" },
-  krScreenerPath: { type: ControlType.String, title: "KR 스크리너 경로", defaultValue: "/smallcap" },
+  krScreenerPath: { type: ControlType.String, title: "US 스크리너 경로", defaultValue: "/smallcap" },
   usScreenerPath: { type: ControlType.String, title: "US 스크리너 경로", defaultValue: "/us-smallcap" },
 })

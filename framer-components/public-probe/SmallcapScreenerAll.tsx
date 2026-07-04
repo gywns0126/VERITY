@@ -187,7 +187,7 @@ export default function SmallcapScreenerAll(props: { width?: number; dark?: bool
 
   const shell = {
     width, fontFamily: "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif",
-    background: "transparent", borderRadius: 24, padding: 16, boxSizing: "border-box" as const, color: C.ink,
+    background: "transparent", borderRadius: 24, padding: "0 16px", boxSizing: "border-box" as const, color: C.ink,
   }
   const flagBtn = (mk: "kr" | "us") => {
     const active = market === mk
@@ -300,10 +300,7 @@ export default function SmallcapScreenerAll(props: { width?: number; dark?: bool
             ) : null}
           </div>
 
-          <div style={{ textAlign: "center", fontSize: 11.5, color: C.sub, fontWeight: 600, padding: "10px 8px 0", lineHeight: 1.55 }}>
-            직접 조건검색으로 짜기 어려운 — 소형주 사실 스크린
-          </div>
-          <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, padding: "5px 8px 2px", lineHeight: 1.5 }}>
+          <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, padding: "10px 8px 2px", lineHeight: 1.5 }}>
             {(data._meta || {}).disclaimer || "사실·패턴만 · 정렬=메트릭 정렬"}
           </div>
         </>
