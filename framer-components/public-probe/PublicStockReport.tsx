@@ -341,19 +341,12 @@ function fmtUSDcompact(v: any): string {
 
 // Catmull-Rom → cubic bezier 부드러운 곡선 path (유선형 추이용)
 function smoothLine(p: { x: number; y: number }[]): string {
+    // 직선 꺾은선(선형) — 곡선 보간은 실측값 사이를 지어내는 인상 (PM 2026-07-04 '그래프 선형으로')
     if (!p.length) return ""
     if (p.length === 1) return `M ${p[0].x} ${p[0].y}`
     let d = `M ${p[0].x} ${p[0].y}`
-    for (let i = 0; i < p.length - 1; i++) {
-        const p0 = p[i === 0 ? 0 : i - 1]
-        const p1 = p[i]
-        const p2 = p[i + 1]
-        const p3 = p[i + 2 < p.length ? i + 2 : p.length - 1]
-        const c1x = +(p1.x + (p2.x - p0.x) / 6).toFixed(2)
-        const c1y = +(p1.y + (p2.y - p0.y) / 6).toFixed(2)
-        const c2x = +(p2.x - (p3.x - p1.x) / 6).toFixed(2)
-        const c2y = +(p2.y - (p3.y - p1.y) / 6).toFixed(2)
-        d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${p2.x} ${p2.y}`
+    for (let i = 1; i < p.length; i++) {
+        d += ` L ${p[i].x} ${p[i].y}`
     }
     return d
 }
@@ -567,7 +560,8 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                                 <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 800, letterSpacing: "-0.3px", color: C.ink, fontVariantNumeric: "tabular-nums" }}>{last.toFixed(dec)}{m.unit}</span>
                                 <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10.5, fontWeight: 800, color: dirColor, background: dirBg, borderRadius: 6, padding: "2px 7px" }}><TrendArrow dir={arrowDir} color={dirColor} size={9} /> {dirText}</span>
                             </div>
-                            <svg width={CW} height={CH} style={{ display: "block", width: "100%", overflow: "visible" }} viewBox={`0 0 ${CW} ${CH}`} preserveAspectRatio="none">
+                            {/* 측정폭(CW) 고정 렌더 — width:100% 스트레치는 svg 내부 텍스트·원을 가로로 왜곡 (PM 2026-07-04) */}
+                            <svg width={CW} height={CH} style={{ display: "block", overflow: "visible" }} viewBox={`0 0 ${CW} ${CH}`}>
                                 <defs>
                                     <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stopColor={lineColor} stopOpacity={isDark ? 0.26 : 0.16} />
