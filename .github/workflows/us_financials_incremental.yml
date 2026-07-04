@@ -55,7 +55,8 @@ jobs:
 
       - name: 리포트·분기·커버리지 재빌드 (재수집 반영)
         # 재수집 per-ticker 는 이 run 로컬에만 존재(gitignore) — 같은 run 안에서 즉시 소비.
-        # fin_series/financials 는 committed 리포트 JSON 에 실림 → CI 재빌드 간 유실 없음.
+        # fin_series/financials = us_fin_annual_compact.json(커밋 폴백) 로 CI 캐시 부재에도 보존
+        # (2026-07-04 실사고 수리 — 이전 주석 '유실 없음' 은 오판이었음, 압축본 도입으로 실제 보장).
         continue-on-error: true
         run: |
           python -m api.builders.us_stock_report_public_builder
