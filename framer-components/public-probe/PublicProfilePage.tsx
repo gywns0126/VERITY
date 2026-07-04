@@ -17,12 +17,12 @@ import React, { useEffect, useState } from "react"
  */
 
 const LIGHT = {
-    bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
+    bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", violet: "#6c5ce7",
     line: "#e5e8eb", field: "#f7f8fa", red: "#f04452", redSoft: "#fff0f1",
     green: "#15c47e", greenSoft: "#eafaf3", blue: "#3182f6", blueSoft: "#eef4ff",
 }
 const DARK = {
-    bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
+    bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", violet: "#a98bff",
     line: "#252b34", field: "#0f1318", red: "#f04452", redSoft: "#2a1a1d",
     green: "#34e08a", greenSoft: "#0f241c", blue: "#5b9bff", blueSoft: "#152031",
 }
@@ -383,7 +383,7 @@ function InfoRow(props: { C: typeof LIGHT; label: string; value: string; mono?: 
 function btnSolid(C: typeof LIGHT, loading: boolean): React.CSSProperties {
     return {
         width: "100%", padding: "13px 0", marginTop: 14, border: "none", borderRadius: 14,
-        background: C.ink, color: C.card, fontSize: 14.5, fontWeight: 800, fontFamily: FONT,
+        background: C.violet, color: "#fff", fontSize: 14.5, fontWeight: 800, fontFamily: FONT,  // 브랜드 보라 (PM 2026-07-04 — 검정 버튼 교체)
         cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1,
     }
 }
