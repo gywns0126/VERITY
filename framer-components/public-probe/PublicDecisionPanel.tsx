@@ -10,10 +10,11 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react"
  * 검색창 디자인 = PublicStockReport 본문 검색과 동일(토스식 borderless 채움 · 돋보기 · 클리어 × · 드롭다운).
  *
  * 🚨 목표 = 사용자가 *자기* 매매 결정을 내리도록 사실을 결정 축으로 재구성 (결정-support, 결정-making 아님).
- * 🚨 RULE 7 = 사실 재배열 + 교과서적 일반 방향만. 자체 점수·가중·종합·추천 0. "가중·종합·판단은 본인" 면책 의무.
+ * 🚨 RULE 7 = 사실 재배열 + 교과서적 일반 방향만. 자체 점수·가중·종합·추천 0.
  * 🚨 RULE 6 = LLM 내러티브 0 (전부 결정론적 규칙 + 발행 사실). 산식/엔진 비노출(공개 희석 VERITY).
  * 데이터(5 발행 피드) = stock_report_public(facts/peer/ownership·검색 universe) + insider_trades + disclosure_forensics + stock_flow_5d + market_warnings.
  * 🚨 결정 동선 링킹 = "관련 탐색" → /discover?sector=·?screen= 딥링크. 강세=빨강/약세=파랑(KR 관례).
+ * 🚨 면책 문구 제거(2026-06-26, PM) — "판단은 본인 / 추천 아님 / 검증 후 2027" 류는 사이트 하단 단일 면책으로 통합. 방향=교과서 일반론 설명은 유지.
  */
 
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff", amber: "#ff9500", amberS: "#fff4e0", redS: "#fdecee", upS: "#fdecee", downS: "#eaf1fe" }
@@ -26,6 +27,7 @@ const LAST_TK_KEY = "verity_last_ticker"
 const TK_EVENT = "verity-ticker-change"
 
 const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
+const DEF_SEARCH = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"  // 검색 단일 소스 (KR+US 통합 — 리포트/네브와 동일)
 const DEF_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/insider_trades.json"
 const DEF_FORENSICS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/disclosure_forensics.json"
 const DEF_FLOW = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json"
@@ -41,6 +43,7 @@ interface Props {
     stockUrl: string
     usStockUrl: string
     usSmallcapUrl?: string
+    searchUrl?: string
     insiderUrl: string
     forensicsUrl: string
     flowUrl: string
@@ -118,7 +121,7 @@ const DEMO_FLOW = [{ foreign_net: 151302, inst_net: 16724 }]
  * @framerSupportedLayoutHeight any
  */
 export default function PublicDecisionPanel(props: Props) {
-    const { ticker, stockUrl, usStockUrl, usSmallcapUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, reportPath, discoverPath, dark } = props
+    const { ticker, stockUrl, usStockUrl, usSmallcapUrl, searchUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, reportPath, discoverPath, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     // 테마 추종 — 사이트 다크모드(body[data-framer-theme]) 따라감. 캔버스는 dark prop 정적.
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
@@ -159,23 +162,33 @@ export default function PublicDecisionPanel(props: Props) {
     })
     const tk = selTk
 
-    // 검색 universe 로드 — KR + US 동시(국장·미장 통합). 2026-06-23.
+    // 검색 universe = universe_search.json 단일 (KR+US 통합 ~8.9천 — 리포트·네브 검색과 동일 소스.
+    // 2026-07-05 괴리 제거: 구 3종 합산 6.4천 → 통합 파일. 통합 파일 장애 시에만 구 3종 폴백.)
     useEffect(() => {
-        if (onCanvas || !stockUrl) return
+        if (onCanvas) return
         let alive = true
-        const urls = [stockUrl, usStockUrl, usSmallcapUrl].filter(Boolean)
-        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
-            .then((docs) => {
-                if (!alive) return
-                const merged: any[] = []
-                for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) merged.push(...(a as any[])) }
-                // ticker dedup (smallcap 트랙 ∩ sp600 중복 — 먼저 등장 우선)
-                const seen = new Set<string>()
-                const deduped = merged.filter((s: any) => { const tk2 = String(s.ticker || ""); if (!tk2 || seen.has(tk2)) return false; seen.add(tk2); return true })
-                if (deduped.length) setUniverse(deduped)
+        const loadLegacy = () => {
+            const urls = [stockUrl, usStockUrl, usSmallcapUrl].filter(Boolean)
+            Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
+                .then((docs) => {
+                    if (!alive) return
+                    const merged: any[] = []
+                    for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) merged.push(...(a as any[])) }
+                    const seen = new Set<string>()
+                    const deduped = merged.filter((s: any) => { const tk2 = String(s.ticker || ""); if (!tk2 || seen.has(tk2)) return false; seen.add(tk2); return true })
+                    if (deduped.length) setUniverse(deduped)
+                })
+        }
+        fetch(searchUrl || DEF_SEARCH, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const a = d && (Array.isArray(d) ? d : d.stocks)
+                if (alive && Array.isArray(a) && a.length) setUniverse(a)
+                else loadLegacy()
             })
+            .catch(loadLegacy)
         return () => { alive = false }
-    }, [stockUrl, usStockUrl, usSmallcapUrl, onCanvas])
+    }, [searchUrl, stockUrl, usStockUrl, usSmallcapUrl, onCanvas])
 
     const matches = useMemo(() => {
         const qq = query.trim().toLowerCase(); if (!qq) return []
@@ -414,7 +427,7 @@ export default function PublicDecisionPanel(props: Props) {
                         <span style={{ fontSize: narrow ? 17 : 19, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>{s.name}</span>
                         <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{s.ticker} · {s.market}</span>
                     </div>
-                    <div style={{ fontSize: 11.5, fontWeight: 800, color: C.vt, marginTop: 1 }}>결정 요약 <span style={{ color: C.faint, fontWeight: 600 }}>· 사실을 결정 축으로 · 판단은 본인</span></div>
+                    <div style={{ fontSize: 11.5, fontWeight: 800, color: C.vt, marginTop: 1 }}>결정 요약 <span style={{ color: C.faint, fontWeight: 600 }}>· 사실을 결정 축으로</span></div>
                 </div>
             </div>
 
@@ -491,7 +504,7 @@ export default function PublicDecisionPanel(props: Props) {
             )}
 
             <div style={{ textAlign: "center", fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 18, lineHeight: 1.55 }}>
-                방향(↑↓/강세·약세)은 <b>교과서적 일반론</b>(저PER=상대적 저렴 등)일 뿐 · <b>가중·종합·매수/매도 판단은 본인</b> · 자체 점수·등급·추천 아님(검증 후 2027) · 상세 근거는 아래 전체 리포트
+                방향(↑↓/강세·약세)은 <b>교과서적 일반론</b>(저PER=상대적 저렴 등)일 뿐 · 상세 근거는 아래 전체 리포트
             </div>
         </div>
     )
@@ -502,6 +515,7 @@ addPropertyControls(PublicDecisionPanel, {
     stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEF_STOCK },
     usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
     usSmallcapUrl: { type: ControlType.String, title: "US Smallcap URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_us_smallcap.json" },
+    searchUrl: { type: ControlType.String, title: "Search URL (통합)", defaultValue: DEF_SEARCH },
     insiderUrl: { type: ControlType.String, title: "Insider URL", defaultValue: DEF_INSIDER },
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: DEF_FORENSICS },
     flowUrl: { type: ControlType.String, title: "Flow URL", defaultValue: DEF_FLOW },

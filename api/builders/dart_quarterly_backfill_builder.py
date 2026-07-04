@@ -52,13 +52,33 @@ def _target_years() -> List[int]:
     return list(range(last_complete - BACKFILL_YEARS + 1, last_complete + 1))
 
 
-def _periods() -> List[Dict[str, str]]:
-    """(year, reprt_code) 기간 리스트 — 최신 연도부터, 각 연도 연간→Q1 순 (최신 기간 우선)."""
+def _current_year_periods() -> List[Dict[str, str]]:
+    """당해년도 filable 분기 (법정 제출기한 경과분만, 최신 먼저) — 새 분기 공시철이 지나면
+    periods 에 자동 편입 → done 상태에서도 main() 이 자동 재개 (v3, PM 2026-07-05 "자동으로")."""
+    now = _now_kst()
+    y = str(now.year)
+    md = (now.month, now.day)
     out: List[Dict[str, str]] = []
+    if md >= (11, 16):
+        out.append({"year": y, "reprt_code": "11014"})  # Q3 (기한 11/14)
+    if md >= (8, 16):
+        out.append({"year": y, "reprt_code": "11012"})  # 반기 (기한 8/14)
+    if md >= (5, 17):
+        out.append({"year": y, "reprt_code": "11013"})  # Q1 (기한 5/15)
+    return out
+
+
+def _periods() -> List[Dict[str, str]]:
+    """(year, reprt_code) 기간 리스트 — 당해년도 filable 분기 → 최신 연도부터 연간→Q1 순."""
+    out: List[Dict[str, str]] = list(_current_year_periods())
     for y in sorted(_target_years(), reverse=True):
         for code in REPRT_CODES:
             out.append({"year": str(y), "reprt_code": code})
     return out
+
+
+def _pkey(q: Dict[str, str]) -> str:
+    return f"{q['year']}|{q['reprt_code']}"
 
 
 def _build_universe() -> List[str]:
@@ -104,7 +124,7 @@ def _init_progress() -> Dict[str, Any]:
     universe = _build_universe()
     periods = _periods()
     return {
-        "schema": "v2",  # v2 = 최신 기간 우선 순회
+        "schema": "v3",  # v3 = key 커서 (skip_keys=완료 set + cur_key) — 기간 목록이 자라도 안전
         "created_at": _now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
         "years": _target_years(),
         "reprt_codes": REPRT_CODES,
@@ -112,8 +132,8 @@ def _init_progress() -> Dict[str, Any]:
         "n_tickers": len(universe),
         "n_periods": len(periods),
         "units_total": len(universe) * len(periods),
-        # cursor = 다음 처리할 (period_idx, ticker_idx)
-        "period_idx": 0,
+        "skip_keys": [],   # 완료한 (year|reprt) — 순서 무관 set
+        "cur_key": None,   # 진행 중 기간
         "ticker_idx": 0,
         "units_done": 0,
         "done": False,
@@ -131,24 +151,23 @@ def _process_chunk(p: Dict[str, Any], periods: List[Dict[str, str]], universe: L
     from api.collectors.dart_fundamentals import fetch_dart_fundamentals_batch
 
     n_tk = len(universe)
-    pidx = int(p.get("period_idx", 0))
-    tidx = int(p.get("ticker_idx", 0))
-    # v1→v2 이관분: 구(오래된 연도 우선) 순서에서 이미 완료한 period 는 건너뜀
     skip = set(p.get("skip_keys") or [])
-    while pidx < len(periods) and f"{periods[pidx]['year']}|{periods[pidx]['reprt_code']}" in skip:
-        pidx += 1
-        tidx = 0
-        p["period_idx"] = pidx
-        p["ticker_idx"] = 0
-    if pidx >= len(periods):
+    pending = [q for q in periods if _pkey(q) not in skip]
+    if not pending:
         p["done"] = True
         _save_progress(p)
         return 0
+    cur = next((q for q in pending if _pkey(q) == p.get("cur_key")), None)
+    if cur is None:
+        cur = pending[0]
+        p["cur_key"] = _pkey(cur)
+        p["ticker_idx"] = 0
+    tidx = int(p.get("ticker_idx", 0))
 
-    period = periods[pidx]
+    period = cur
     chunk = universe[tidx: tidx + CHUNK_TICKERS]
     sys.stderr.write(
-        f"[dart_qbackfill] period {pidx+1}/{len(periods)} "
+        f"[dart_qbackfill] period {periods.index(cur)+1}/{len(periods)} (남은 {len(pending)}) "
         f"(year={period['year']} reprt={period['reprt_code']}) ticker {tidx}~{tidx+len(chunk)}/{n_tk}\n"
     )
     funds = fetch_dart_fundamentals_batch(
@@ -167,14 +186,15 @@ def _process_chunk(p: Dict[str, Any], periods: List[Dict[str, str]], universe: L
 
     tidx_next = tidx + len(chunk)
     if tidx_next >= n_tk:
-        pidx += 1
+        skip.add(_pkey(cur))
+        p["skip_keys"] = sorted(skip)
+        p["cur_key"] = None
         tidx_next = 0
-    p["period_idx"] = pidx
     p["ticker_idx"] = tidx_next
     p["units_done"] = int(p.get("units_done", 0)) + len(chunk)
     p["last_run_at"] = _now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
     p["last_chunk_appended"] = appended
-    if pidx >= len(periods):
+    if not [q for q in periods if _pkey(q) not in skip]:
         p["done"] = True
     _save_progress(p)  # 청크마다 저장 → run 중 잘려도 재개
     return len(chunk)
@@ -207,23 +227,40 @@ def main() -> int:
             p = _init_progress()
             _save_progress(p)
 
-        if p.get("universe") and not p.get("done") and p.get("schema") != "v2":
-            # v1(오래된 연도 우선) → v2(최신 우선) 이관: 완료 prefix 를 skip_keys 로 보존, 커서 리셋.
-            # 부분 진행 중이던 period 는 재수집 (jsonl dedup 무해 — 손실 0).
+        if p.get("universe") and p.get("schema") != "v3":
+            # v1(오래된 연도 우선)/v2(최신 우선, 인덱스 커서) → v3(key 커서) 이관 — 진도 무손실.
+            schema = str(p.get("schema") or "v1")
             old_codes = [str(c) for c in (p.get("reprt_codes") or [])] or ["11013", "11012", "11014", "11011"]
-            old_keys: List[str] = []
-            for y in (p.get("years") or []):
-                for code in old_codes:
-                    old_keys.append(f"{y}|{code}")
-            done_keys = old_keys[: int(p.get("period_idx", 0))]
+            yrs = [int(y) for y in (p.get("years") or [])]
+            if schema == "v2":
+                yrs = sorted(yrs, reverse=True)
+            old_keys = [f"{y}|{c}" for y in yrs for c in old_codes]
+            pi = int(p.get("period_idx", 0))
+            done_keys = sorted(set(p.get("skip_keys") or []) | set(old_keys[:pi]))
             p["skip_keys"] = done_keys
-            p["schema"] = "v2"
+            if schema == "v2" and pi < len(old_keys):
+                p["cur_key"] = old_keys[pi]  # 진행 중 기간 이어감 (ticker_idx 유지)
+            else:
+                p["cur_key"] = None
+                p["ticker_idx"] = 0
+            p["schema"] = "v3"
             p["reprt_codes"] = REPRT_CODES
-            p["period_idx"] = 0
-            p["ticker_idx"] = 0
+            p.pop("period_idx", None)
             sys.stderr.write(
-                f"[dart_qbackfill] v1→v2 이관: 최신 기간 우선 순회로 전환 · 완료 {len(done_keys)}기간 skip 보존\n"
+                f"[dart_qbackfill] {schema}→v3 이관: key 커서 전환 · 완료 {len(done_keys)}기간 보존 "
+                f"· cur={p.get('cur_key')}\n"
             )
+            _save_progress(p)
+
+        # 기간 목록 갱신 (당해년도 filable 분기 자동 편입) — done 이어도 신규 기간이 생기면 자동 재개
+        periods_now = _periods()
+        skip_now = set(p.get("skip_keys") or [])
+        pending_n = sum(1 for q in periods_now if _pkey(q) not in skip_now)
+        p["n_periods"] = len(periods_now)
+        p["units_total"] = len(p.get("universe") or []) * len(periods_now)
+        if p.get("done") and pending_n:
+            p["done"] = False
+            sys.stderr.write(f"[dart_qbackfill] 신규 filable 기간 {pending_n}개 감지 — 자동 재개\n")
             _save_progress(p)
 
         if p.get("done"):
