@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useState, type CSSProperties } from "react"
 
 /**
- * 관점 지도 — AlphaNest 탐색. 욕구 · 경기 체질 · 자사주 3탭.
+ * 관점 지도 — AlphaNest 탐색. 욕구 · 매출 안정성 · 자사주 3탭.
  * 데이터(Blob): perspective_maps.json (분류·집계 사실만).
  *
  * 🚨 재설계(2026-07-04): 깔끔·심플 — 카테고리 pill(얇은 라인 아이콘) 선택 → 종목 그리드(로고+국기, 최대 15개 5×3, 더보기).
@@ -288,7 +288,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
 
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
                 {tabBtn("desire", "욕구")}
-                {tabBtn("cycle", "경기 체질")}
+                {tabBtn("cycle", "매출 안정성")}
                 {tabBtn("buyback", "자사주")}
             </div>
 
