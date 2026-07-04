@@ -250,7 +250,7 @@ export default function PublicStockBrief(props: {
                         )}
                     </div>
                     <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>
-                        {data.disclaimer || "공개 데이터 사실 기반 자동 생성 · 점수·등급·종목 추천 아님"}
+                        {data.disclaimer || "공개 데이터 사실 기반 자동 생성"}
                     </div>
                 </div>
             )}
