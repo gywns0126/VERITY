@@ -116,13 +116,13 @@ export default function PublicStockNews(props: Props) {
         return () => { alive = false }
     }, [tk, api, onCanvas])
 
-    const narrow = w > 0 && w < 460
+    const narrow = w > 0 && w < 560   // PublicStockReport 와 동일 브레이크포인트 (좌측 인셋 정렬)
     const catColor = (cat: string) =>
         cat === "실적" || cat === "공시" ? C.vt
             : cat === "계약·수주" || cat === "M&A·지분" ? C.green
                 : C.faint
 
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: narrow ? 14 : 18, boxSizing: "border-box", color: C.ink }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: narrow ? 12 : 18, boxSizing: "border-box", color: C.ink }   // 외곽 pad = PublicStockReport 동일(12/18)
 
     // 로딩 중 빈 화면 방지: 아무것도 없고 로딩도 끝났으면 숨김
     if (!items.length && !loading) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
