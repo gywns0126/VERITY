@@ -191,7 +191,7 @@ export default function PublicEventHistory(props: Props) {
                 </div>
 
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 13, lineHeight: 1.55 }}>
-                    이 종목의 과거 공시 당시 주가 변화(거래일 기준, 시장 포함) — 과거 사실이며 미래를 보장하지 않아요. 출처 DART 공시이력 + 자체 가격 데이터. 점수·추천 아님.
+                    이 종목의 과거 공시 당시 주가 변화(거래일 기준, 시장 포함) — 과거 사실이며 미래를 보장하지 않아요 · 출처 DART 공시이력 + 가격 데이터
                 </div>
             </div>
         </div>

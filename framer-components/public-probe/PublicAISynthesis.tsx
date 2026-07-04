@@ -132,11 +132,11 @@ export default function PublicAISynthesis(props: Props) {
             <div style={{ background: C.card, borderRadius: 16, padding: narrow ? 14 : 18, boxSizing: "border-box", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
                     <span style={{ fontSize: 10.5, fontWeight: 800, color: C.vt, background: C.vtS, borderRadius: 7, padding: "3px 8px", letterSpacing: "-0.2px" }}>AI 종합</span>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>검증 사실 기반 · 의견·추천 아님</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>검증 사실 기반</span>
                 </div>
                 <div style={{ fontSize: narrow ? 13.5 : 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.62, letterSpacing: "-0.2px" }}>{text}</div>
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 12, lineHeight: 1.55 }}>
-                    DART·KRX·공정위 검증 사실을 AI가 종합(다듬기만, 새 숫자·전망·매수의견 0). 등급·추천 아니며 자체 점수는 검증 후(2027) 공개.
+                    DART·KRX·공정위 검증 사실을 AI가 종합 (다듬기만, 새 숫자·전망·매수의견 0)
                 </div>
             </div>
         </div>

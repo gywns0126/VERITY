@@ -165,7 +165,7 @@ export default function PublicStockNews(props: Props) {
                 )}
 
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 13, lineHeight: 1.55 }}>
-                    네이버 금융 종목 뉴스 · 매체·시각·출처는 사실, ✓=신뢰 출처 · 호재·악재 판단 아님(점수·추천 아님)
+                    네이버 금융 종목 뉴스 · 매체·시각·출처는 사실 · ✓=신뢰 출처
                 </div>
             </div>
         </div>
