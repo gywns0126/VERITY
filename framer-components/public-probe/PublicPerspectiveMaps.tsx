@@ -134,22 +134,26 @@ const GICONS: Record<string, { solid: (a: string) => any; glass: string }> = {
         glass: _COIN,
     },
 }
-function GIcon(props: { k: string; size: number; a: string; g: string }) {
+function GIcon(props: { k: string; size: number; a: string; g: string; float?: boolean }) {
     const def = GICONS[props.k]
     if (!def) return null
     // 같은 k 다중 렌더 = 동일 defs 중복(무해). 색은 defs 밖이라 활성/비활성 공존 OK.
     const fid = "vpmf-" + props.k
     const cid = "vpmc-" + props.k
+    // key=색 — 활성 전환(색 변경) 시 그룹 재마운트 → 팝/상승 애니메이션 재생 (키프레임 = 컴포넌트 루트 <style>)
     return (
-        <svg width={props.size} height={props.size} viewBox="0 0 48 48" fill="none" style={{ display: "block", flexShrink: 0 }}>
+        <svg width={props.size} height={props.size} viewBox="0 0 48 48" fill="none"
+            style={{ display: "block", flexShrink: 0, overflow: "visible", animation: props.float ? "vpmFloat 3.4s ease-in-out infinite" : undefined }}>
             <defs>
                 <filter id={fid} x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.1" /></filter>
                 <clipPath id={cid}><path d={def.glass} /></clipPath>
             </defs>
-            {def.solid(props.a)}
-            <g clipPath={`url(#${cid})`}>
-                <g filter={`url(#${fid})`} opacity={0.85}>{def.solid(props.a)}</g>
-                <path d={def.glass} fill={props.g} />
+            <g key={"s" + props.a} className="vpmGiS">{def.solid(props.a)}</g>
+            <g key={"g" + props.a} className="vpmGiG">
+                <g clipPath={`url(#${cid})`}>
+                    <g filter={`url(#${fid})`} opacity={0.85}>{def.solid(props.a)}</g>
+                    <path d={def.glass} fill={props.g} />
+                </g>
             </g>
         </svg>
     )
@@ -387,7 +391,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                 : { big: n0(totalCount) + "종목", small: "자기주식 공시 흐름 · 매입 ↔ 처분" }
 
     const tabBtn = (v: string, lb: string) => (
-        <button key={v} onClick={() => setTab(v)} style={{
+        <button key={v} className="vpmBtn" onClick={() => setTab(v)} style={{
             border: "none", cursor: "pointer", fontFamily: FONT, padding: "8px 14px", borderRadius: 10,
             fontSize: 13, fontWeight: 800, background: tab === v ? C.violet : C.card, color: tab === v ? "#fff" : C.sub,
             display: "inline-flex", alignItems: "center", gap: 6,
@@ -399,6 +403,19 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
 
     return (
         <div style={wrap}>
+            {/* 글래스 아이콘 애니메이션 — 토스식 스프링 팝(solid) + 글래스 상승, pill hover 부상, 헤더 둥실.
+                재생 트리거 = GIcon 내부 key(활성 색 전환 시 재마운트). prefers-reduced-motion 존중. */}
+            <style>{`
+                .vpmGiS{animation:vpmPop .5s cubic-bezier(.34,1.6,.64,1) both;transform-box:fill-box;transform-origin:center}
+                .vpmGiG{animation:vpmRise .45s ease-out both}
+                @keyframes vpmPop{0%{transform:scale(.45) rotate(-10deg);opacity:0}100%{transform:scale(1) rotate(0deg);opacity:1}}
+                @keyframes vpmRise{0%{transform:translateY(5px);opacity:0}100%{transform:translateY(0);opacity:1}}
+                @keyframes vpmFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+                .vpmBtn svg{transition:transform .18s ease}
+                .vpmBtn:hover svg{transform:translateY(-1.5px) scale(1.08)}
+                .vpmBtn:active svg{transform:scale(.94)}
+                @media (prefers-reduced-motion: reduce){.vpmGiS,.vpmGiG{animation:none}.vpmBtn svg{transition:none}svg{animation:none!important}}
+            `}</style>
             <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-0.4px" }}>관점 지도</div>
                 <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3, lineHeight: 1.5 }}>
@@ -445,7 +462,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                 {items.map((x) => {
                     const active = x.key === selKey
                     return (
-                        <button key={x.key} onClick={() => setSel((s) => ({ ...s, [tab]: x.key }))}
+                        <button key={x.key} className="vpmBtn" onClick={() => setSel((s) => ({ ...s, [tab]: x.key }))}
                             style={{
                                 border: "none", cursor: "pointer", fontFamily: FONT, display: "inline-flex", alignItems: "center", gap: 6,
                                 padding: "8px 12px", borderRadius: 11, fontSize: 12.5, fontWeight: 800,
@@ -464,7 +481,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
             {item ? (
                 <div style={{ marginTop: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ display: "inline-flex", flexShrink: 0 }}><GIcon k={item.key} size={32} a={C.violet} g={C.gTint} /></span>
+                        <span style={{ display: "inline-flex", flexShrink: 0 }}><GIcon key={item.key} k={item.key} size={32} a={C.violet} g={C.gTint} float /></span>
                         <div style={{ minWidth: 0 }}>
                             <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>{item.label}</div>
                             <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 1 }}>{cfg.meta(item)}{item.cap_sum ? " · 규모 " + capJo(item.cap_sum) : ""}</div>

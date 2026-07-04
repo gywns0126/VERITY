@@ -21,6 +21,7 @@ interface Props {
     icon: IconKey
     size: number
     dark: boolean
+    anim: string
 }
 
 const ACCENT_LIGHT = "#6c5ce7"
@@ -149,7 +150,7 @@ const ICONS: Record<IconKey, { solid: (a: string) => any; glass: string }> = {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicGlassIcon(props: Props) {
-    const { icon, size, dark } = props
+    const { icon, size, dark, anim } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
@@ -176,8 +177,21 @@ export default function PublicGlassIcon(props: Props) {
     const fid = "gbf-" + icon
     const cid = "gbc-" + icon
 
+    // 애니메이션 — pop(등장 스프링) / float(둥실 루프) / both / none. 재생 = icon·테마 전환 시 key 재마운트.
+    const mode = anim || "pop"
+    const doPop = mode === "pop" || mode === "both"
+    const doFloat = mode === "float" || mode === "both"
     return (
-        <svg width={S} height={S} viewBox="0 0 48 48" fill="none" style={{ display: "block" }}>
+        <svg width={S} height={S} viewBox="0 0 48 48" fill="none"
+            style={{ display: "block", overflow: "visible", animation: doFloat && !onCanvas ? "pgiFloat 3.4s ease-in-out infinite" : undefined }}>
+            <style>{`
+                .pgiS{animation:pgiPop .5s cubic-bezier(.34,1.6,.64,1) both;transform-box:fill-box;transform-origin:center}
+                .pgiG{animation:pgiRise .45s ease-out both}
+                @keyframes pgiPop{0%{transform:scale(.45) rotate(-10deg);opacity:0}100%{transform:scale(1) rotate(0deg);opacity:1}}
+                @keyframes pgiRise{0%{transform:translateY(5px);opacity:0}100%{transform:translateY(0);opacity:1}}
+                @keyframes pgiFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+                @media (prefers-reduced-motion: reduce){.pgiS,.pgiG{animation:none}svg{animation:none!important}}
+            `}</style>
             <defs>
                 <filter id={fid} x="-40%" y="-40%" width="180%" height="180%">
                     <feGaussianBlur stdDeviation="2.1" />
@@ -187,11 +201,13 @@ export default function PublicGlassIcon(props: Props) {
                 </clipPath>
             </defs>
             {/* 선명 레이어 */}
-            {def.solid(a)}
+            <g key={"s" + icon + a} className={doPop ? "pgiS" : undefined}>{def.solid(a)}</g>
             {/* 글래스 영역 — 겹치는 solid 는 블러 복제 + 반투명 틴트 (프로스트) */}
-            <g clipPath={`url(#${cid})`}>
-                <g filter={`url(#${fid})`} opacity={0.85}>{def.solid(a)}</g>
-                <path d={def.glass} fill={gl} />
+            <g key={"g" + icon + a} className={doPop ? "pgiG" : undefined}>
+                <g clipPath={`url(#${cid})`}>
+                    <g filter={`url(#${fid})`} opacity={0.85}>{def.solid(a)}</g>
+                    <path d={def.glass} fill={gl} />
+                </g>
             </g>
         </svg>
     )
@@ -214,5 +230,12 @@ addPropertyControls(PublicGlassIcon, {
         ],
     },
     size: { type: ControlType.Number, title: "Size", defaultValue: 48, min: 16, max: 200, step: 2 },
+    anim: {
+        type: ControlType.Enum,
+        title: "Anim",
+        defaultValue: "pop",
+        options: ["pop", "float", "both", "none"],
+        optionTitles: ["등장 팝", "둥실", "팝+둥실", "없음"],
+    },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
