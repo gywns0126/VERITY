@@ -40279,224 +40279,171 @@
     "updated_at": "2026-07-04T08:24:37+09:00"
   },
   "weekly_report": {
-    "title": "주간 분석 리포트",
-    "executive_summary": "지난 기간 실현 0% (적중 0%) / 이번 기대 0% (0종목)",
-    "performance_review": "BUY 추천 0건 중 적중 0%",
-    "sector_analysis": "AI 분석 실패 — 섹터 데이터 참조",
-    "macro_outlook": "AI 분석 실패 — 매크로 데이터 참조",
-    "brain_review": "브레인 강력매수 평균 0% — 팩트 가중치 조정 검토 필요",
-    "meta_insight": "Brain 보조 입력 신호 — 시장 baseline 33.3% 대비 excess. 멀티팩터 종합(+33.4%p) 가장 유용 / AI 예측(XGBoost)(+0.0%p) 노이즈 가능. Brain 종합 판단 excess +33.4%p (적중률 66.7%) (참고). ※ excess > 0 → 시장 drift 대비 실력 / < 0 → 노이즈 또는 역방향. 단순 accuracy_pct 는 상승장에서 무뇌 'BUY 전부' 와 구분 불가.",
-    "strategy": "데이터 기반 판단 필요",
-    "risk_watch": "AI 리포트 생성 실패 (503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}})",
+    "title": "주간 종합 분석: 시장 안정 속 옥석 가리기",
+    "executive_summary": "지난 기간 실현 수익률 0.0%, 금번 리포트 기대 수익률 0.0%입니다. VIX 지수 하락으로 시장 변동성은 완화되었으나, 브레인 시스템의 유효성은 검증이 필요한 구간입니다. 자금은 반도체, 레저 섹터로 유입된 반면 내수 소비재からは 유출되는 양상이 뚜렷했습니다. 다음 주간은 선별적 접근과 리스크 관리에 집중해야 합니다.",
+    "performance_review": "지난 주 추천 종목은 1개(티쓰리)였으며, 주간 수익률 0.0%를 기록하여 실질적인 성과를 내지 못했습니다. 추천 종목 수가 적었던 점은 시장에 대한 보수적 관점이 반영된 결과이나, 유일한 추천 종목의 성과가 부재했던 점은 아쉽습니다. 이는 브레인 시스템의 단기 모멘텀 포착 능력에 대한 검토가 필요함을 시사합니다.",
+    "sector_analysis": "레저용 장비와 제품, 우주항공과 국방, 반도체 섹터로의 자금 유입이 확인됩니다. 특히 반도체는 시장의 핵심 주도주로서의 지위를 유지하는 모습입니다. 반면, 백화점, 카드, 통신 등 내수 소비 및 방어주 성격의 섹터에서는 자금이 유출되었습니다. 이는 경기 방어적 포지션에서 성장주 중심으로 자금이 이동하는 초기 신호일 수 있으나, 아직 추세로 판단하기는 이릅니다. 섹터별 차별화가 심화될 가능성이 높습니다.",
+    "macro_outlook": "VIX 지수가 14% 이상 하락하며 15.81로 마감, 시장의 공포 심리가 상당 부분 완화되었음을 나타냅니다. 원/달러 환율 또한 소폭 하락하며 안정세를 보인 점은 긍정적입니다. 그러나 안전자산인 금 가격이 2% 이상 상승한 점은 VIX 지수 하락과 상반되는 신호입니다. 이는 시장 참여자들이 표면적인 안정 속에서도 잠재적 인플레이션이나 지정학적 리스크에 대한 헤지를 지속하고 있음을 의미하므로, 안심하기에는 이른 국면입니다.",
+    "brain_review": "브레인 시스템의 최종 판단 정확도는 26.3%로, 시장 기준점 대비 유의미한 성과를 보이지 못했습니다. 특히 'WATCH', 'CAUTION', 'AVOID' 등급의 적중률이 모두 50% 수준으로 나타나, 사실상 변별력이 없었습니다. 추천 포트폴리오에 'BUY' 등급 이상의 종목이 없었던 점을 고려하면, 시스템이 명확한 기회를 포착하지 못하고 있음을 보여줍니다. 내부 모델의 팩트(Fact) 데이터 가중치를 상향 조정하여, 감성(Sentiment) 등 노이즈성 데이터의 영향을 줄이는 방향의 튜닝이 시급합니다.",
+    "meta_insight": "브레인 판단의 기초가 되는 보조 입력 신호의 품질 편차가 극심했습니다. AI 예측(prediction) 모델은 73.7%의 높은 정확도로 시장 기준점에 부합하는 유용한 정보를 제공했습니다. 반면, 뉴스 감성(sentiment)과 멀티팩터(multi_factor) 모델은 26.3%의 저조한 정확도를 기록하며 오히려 판단에 노이즈로 작용했을 가능성이 큽니다. 이는 브레인이 종합 판단을 내리는 과정에서 AI 예측 모델의 비중을 높이고, 감성 분석 결과는 교차 검증 용도로만 제한적으로 활용해야 함을 시사합니다.",
+    "strategy": "다음 주간은 보수적인 관점을 유지하며 포트폴리오를 운영할 것을 제안합니다. 브레인 시스템의 신뢰도가 회복되기 전까지는 신규 'BUY' 추천에 신중해야 합니다. 자금 흐름이 명확히 확인된 반도체 섹터 내 저평가 종목 위주로 제한적인 탐색을 진행하되, 전체 포트폴리오의 현금 비중을 일정 수준 이상으로 유지하는 것이 바람직합니다. 수익률 극대화보다는 최대낙폭(MDD) 관리에 집중하는 구간입니다.",
+    "risk_watch": "첫째, 모델 리스크입니다. 브레인 시스템의 최근 성과 부진은 가장 큰 내부 리스크입니다. 시스템의 판단을 맹신하지 말고, 모든 투자 결정은 추가적인 정성적 판단을 거쳐야 합니다. 둘째, 매크로 신호의 혼재입니다. VIX 하락과 금 가격 상승의 동시 발생은 시장 방향성에 대한 불확실성을 증폭시킵니다. 셋째, '급등', '급락' 등 뉴스 키워드에서 확인되듯 개별 종목의 높은 변동성 리스크에 대비하여 명확한 손절 원칙을 반드시 준수해야 합니다.",
+    "_gemini_model": "gemini-2.5-pro",
     "_period": "weekly",
     "_period_label": "주간",
+    "_date_range": {
+      "start": "2026-06-27",
+      "end": "2026-07-04"
+    },
     "expected_return": {
       "count": 0,
       "avg_upside_pct": 0,
       "median_upside_pct": 0,
       "top_picks": []
     },
-    "brain_accuracy": {
-      "grades": {
-        "AVOID": {
-          "count": 7,
-          "avg_return": 0.0,
-          "hit_rate": 0.0
+    "_raw_stats": {
+      "hit_rate_pct": 0.0,
+      "avg_return_pct": 0.0,
+      "total_buy_recs": 1,
+      "best_picks": [
+        {
+          "ticker": "204610",
+          "name": "티쓰리",
+          "buy_price": 2510.0,
+          "current_price": 2510.0,
+          "return_pct": 0.0,
+          "orig_multi_score": 60,
+          "orig_brain_score": 55,
+          "hit": false
+        }
+      ],
+      "worst_picks": [],
+      "top3_sectors": [
+        {
+          "name": "레저용장비와제품",
+          "avg_change_pct": 3.65
         },
+        {
+          "name": "문구류",
+          "avg_change_pct": 2.47
+        },
+        {
+          "name": "은행",
+          "avg_change_pct": 1.97
+        }
+      ],
+      "brain_grades": {
         "WATCH": {
-          "count": 8,
-          "avg_return": 0.0,
-          "hit_rate": 0.0
+          "count": 18,
+          "avg_return": 1.6,
+          "hit_rate": 50.0
+        },
+        "AVOID": {
+          "count": 2,
+          "avg_return": 1.1,
+          "hit_rate": 50.0
         },
         "CAUTION": {
-          "count": 10,
-          "avg_return": -1.2,
-          "hit_rate": 10.0
+          "count": 8,
+          "avg_return": 1.6,
+          "hit_rate": 50.0
         }
       },
-      "insight": "브레인 강력매수 평균 0% — 팩트 가중치 조정 검토 필요"
-    },
-    "meta_analysis": {
-      "findings_aux": [
+      "meta_findings": [
         {
-          "source": "multi_factor",
-          "accuracy_pct": 66.7,
-          "sample_size": 3,
-          "excess_accuracy_pct": 33.4
+          "source": "prediction",
+          "accuracy_pct": 73.7,
+          "sample_size": 19,
+          "excess_accuracy_pct": 0.0
         },
         {
           "source": "timing",
-          "accuracy_pct": 66.7,
-          "sample_size": 3,
-          "excess_accuracy_pct": 33.4
-        },
-        {
-          "source": "sentiment",
-          "accuracy_pct": 66.7,
-          "sample_size": 3,
-          "excess_accuracy_pct": 33.4
+          "accuracy_pct": 52.6,
+          "sample_size": 19,
+          "excess_accuracy_pct": -21.1
         },
         {
           "source": "consensus",
-          "accuracy_pct": 33.3,
-          "sample_size": 3,
+          "accuracy_pct": 42.1,
+          "sample_size": 19,
+          "excess_accuracy_pct": -31.6
+        },
+        {
+          "source": "multi_factor",
+          "accuracy_pct": 26.3,
+          "sample_size": 19,
+          "excess_accuracy_pct": -47.4
+        },
+        {
+          "source": "sentiment",
+          "accuracy_pct": 26.3,
+          "sample_size": 19,
+          "excess_accuracy_pct": -47.4
+        },
+        {
+          "source": "brain",
+          "accuracy_pct": 26.3,
+          "sample_size": 19,
+          "excess_accuracy_pct": -47.4
+        }
+      ],
+      "meta_findings_aux": [
+        {
+          "source": "prediction",
+          "accuracy_pct": 73.7,
+          "sample_size": 19,
           "excess_accuracy_pct": 0.0
         },
         {
-          "source": "prediction",
-          "accuracy_pct": 33.3,
-          "sample_size": 3,
-          "excess_accuracy_pct": 0.0
+          "source": "timing",
+          "accuracy_pct": 52.6,
+          "sample_size": 19,
+          "excess_accuracy_pct": -21.1
+        },
+        {
+          "source": "consensus",
+          "accuracy_pct": 42.1,
+          "sample_size": 19,
+          "excess_accuracy_pct": -31.6
+        },
+        {
+          "source": "multi_factor",
+          "accuracy_pct": 26.3,
+          "sample_size": 19,
+          "excess_accuracy_pct": -47.4
+        },
+        {
+          "source": "sentiment",
+          "accuracy_pct": 26.3,
+          "sample_size": 19,
+          "excess_accuracy_pct": -47.4
         }
       ],
-      "findings_brain": {
+      "meta_findings_brain": {
         "source": "brain",
-        "accuracy_pct": 66.7,
-        "sample_size": 3,
-        "excess_accuracy_pct": 33.4,
+        "accuracy_pct": 26.3,
+        "sample_size": 19,
+        "excess_accuracy_pct": -47.4,
         "label": "Verity Brain (종합 판단)",
         "note": "보조 신호 ranking 동급 비교 금지 — 종합 판단자 참고치"
       },
-      "aux_labels": {
+      "meta_aux_labels": {
         "multi_factor": "멀티팩터 종합",
         "consensus": "컨센서스",
         "timing": "매매 타이밍",
         "prediction": "AI 예측(XGBoost)",
         "sentiment": "뉴스 감성"
       },
-      "market_drift_pct": 33.3,
-      "sample_size": 3,
-      "findings": [
-        {
-          "source": "multi_factor",
-          "accuracy_pct": 66.7,
-          "sample_size": 3,
-          "excess_accuracy_pct": 33.4
-        },
-        {
-          "source": "timing",
-          "accuracy_pct": 66.7,
-          "sample_size": 3,
-          "excess_accuracy_pct": 33.4
-        },
-        {
-          "source": "sentiment",
-          "accuracy_pct": 66.7,
-          "sample_size": 3,
-          "excess_accuracy_pct": 33.4
-        },
-        {
-          "source": "brain",
-          "accuracy_pct": 66.7,
-          "sample_size": 3,
-          "excess_accuracy_pct": 33.4
-        },
-        {
-          "source": "consensus",
-          "accuracy_pct": 33.3,
-          "sample_size": 3,
-          "excess_accuracy_pct": 0.0
-        },
-        {
-          "source": "prediction",
-          "accuracy_pct": 33.3,
-          "sample_size": 3,
-          "excess_accuracy_pct": 0.0
-        }
-      ],
-      "best_predictor": "Brain 보조 입력 신호 — 시장 baseline 33.3% 대비 excess. 멀티팩터 종합(+33.4%p) 가장 유용 / AI 예측(XGBoost)(+0.0%p) 노이즈 가능. Brain 종합 판단 excess +33.4%p (적중률 66.7%) (참고). ※ excess > 0 → 시장 drift 대비 실력 / < 0 → 노이즈 또는 역방향. 단순 accuracy_pct 는 상승장에서 무뇌 'BUY 전부' 와 구분 불가."
-    },
-    "news_keywords": {
-      "top_keywords": [
-        {
-          "word": "반도체",
-          "count": 11
-        },
-        {
-          "word": "[투자360]",
-          "count": 8
-        },
-        {
-          "word": "실적",
-          "count": 7
-        },
-        {
-          "word": "ETF",
-          "count": 6
-        },
-        {
-          "word": "10%",
-          "count": 6
-        },
-        {
-          "word": "코스피",
-          "count": 5
-        },
-        {
-          "word": "[B급기자의",
-          "count": 5
-        },
-        {
-          "word": "B급리포트]",
-          "count": 5
-        },
-        {
-          "word": "역대급",
-          "count": 5
-        },
-        {
-          "word": "상장",
-          "count": 4
-        },
-        {
-          "word": "삼전",
-          "count": 4
-        },
-        {
-          "word": "[반도체",
-          "count": 4
-        },
-        {
-          "word": "간다”",
-          "count": 4
-        },
-        {
-          "word": "삼전닉스",
-          "count": 4
-        },
-        {
-          "word": "홈플러스",
-          "count": 3
-        },
-        {
-          "word": "넘으면",
-          "count": 3
-        },
-        {
-          "word": "절대",
-          "count": 3
-        },
-        {
-          "word": "하루",
-          "count": 3
-        },
-        {
-          "word": "올라탄",
-          "count": 3
-        },
-        {
-          "word": "수혜",
-          "count": 3
-        }
-      ],
-      "total_headlines": 154
-    },
-    "_raw_stats": {
+      "meta_market_drift_pct": 73.7,
+      "meta_sample_size": 19,
+      "portfolio_return": 0.98,
+      "max_drawdown": -0.78,
       "expected_count": 0,
-      "expected_avg_upside_pct": 0
+      "expected_avg_upside_pct": 0,
+      "expected_top_picks": []
     }
   },
-  "weekly_report_updated": "2026-06-27T13:15:02+09:00",
+  "weekly_report_updated": "2026-07-04T12:59:37+09:00",
   "kis_snapshots": {
     "214450": {
       "price": {
@@ -63828,37 +63775,30 @@
   },
   "brain_accuracy": {
     "grades": {
-      "BUY": {
-        "count": 7,
-        "avg_return": -0.9,
-        "hit_rate": 14.3
-      },
       "WATCH": {
-        "count": 23,
-        "avg_return": 0.6,
-        "hit_rate": 4.3
+        "count": 18,
+        "avg_return": 1.6,
+        "hit_rate": 50.0
+      },
+      "AVOID": {
+        "count": 2,
+        "avg_return": 1.1,
+        "hit_rate": 50.0
+      },
+      "CAUTION": {
+        "count": 8,
+        "avg_return": 1.6,
+        "hit_rate": 50.0
       }
     },
     "insight": "브레인 강력매수 평균 0% — 팩트 가중치 조정 검토 필요"
   },
   "brain_quality": {
-    "score": 20.7,
-    "status": "ok",
-    "period": "semi",
-    "components": {
-      "positive_hit_rate_score": 5.7,
-      "avoid_avoidance_score": 15.0,
-      "grade_separation_score": 0.0
-    },
-    "metrics": {
-      "total_samples": 7,
-      "strong_buy_n": 0,
-      "buy_n": 7,
-      "avoid_n": 0,
-      "weighted_positive_hit_rate": 14.3,
-      "avoid_avg_return": null,
-      "grade_spread_pp": null
-    }
+    "score": null,
+    "status": "insufficient_data",
+    "components": {},
+    "period": "weekly",
+    "note": "표본 2건 — 5건 이상 누적 필요"
   },
   "event_insights": [
     {
@@ -65541,10 +65481,10 @@
   "strategy_evolution": {
     "status": "n_gated",
     "reason": "검증 표본 부족 — 종료 거래 18 < 50. 가중치 이론 고정 단계 (가격 스냅샷 기반 재가중 = 곡선맞추기 회피)",
-    "trigger": "full",
+    "trigger": "weekly",
     "forced": false,
-    "period_end": "",
-    "generated_at": "2026-07-04T08:24:34+09:00",
+    "period_end": "2026-W27",
+    "generated_at": "2026-07-04T12:59:37+09:00",
     "validation_n": 18
   },
   "dart_catalyst_alerts": {
