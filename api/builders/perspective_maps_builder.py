@@ -138,6 +138,28 @@ def _cap_of(s: Dict[str, Any]) -> float:
     return 0.0
 
 
+# cross-market 합산·share 시각화용 시총 정규화 (억원). _cap_of 는 정렬 전용이라 KR억 vs US$ 를
+# 통일 안 함 → 합산 시 US 크게 왜곡. 여기선 US$ 를 FX 로 억원 환산해 카테고리별 cap_sum 산출.
+FX_USD_KRW = 1350.0  # 근사 환율 (규모 분포 share 용 — 정밀치 아님, 상대 비교 목적)
+
+
+def _cap_krw(s: Dict[str, Any]) -> float:
+    t = str((s.get("facts") or {}).get("시가총액") or "")
+    try:
+        if "조" in t:
+            return float(t.replace("조", "").replace(",", "")) * 1e4      # 조 → 억
+        if "억" in t:
+            return float(t.replace("억", "").replace(",", ""))
+        if t.startswith("$"):
+            x = t.replace("$", "").replace(",", "")
+            mult = 1e12 if x.endswith("T") else (1e9 if x.endswith("B") else (1e6 if x.endswith("M") else 1.0))
+            usd = float(x.rstrip("TBM")) * mult                            # 절대 USD (T=1e12·B=1e9·M=1e6)
+            return usd * FX_USD_KRW / 1e8                                  # KRW → 억원
+    except ValueError:
+        return 0.0
+    return 0.0
+
+
 def _rev_latest(s: Dict[str, Any]) -> Optional[float]:
     """최근 연도 매출 (KR=억원 / US=$M 원 단위 — 분류·탐색용, 랭킹 아님). fin_series 최신 연도."""
     rev = [(p.get("year"), p.get("revenue")) for p in (s.get("fin_series") or []) if p.get("revenue")]
@@ -217,6 +239,7 @@ def build() -> Dict[str, Any]:
             "n_kr": sum(1 for s in members if s["_mkt"] == "KR"),
             "n_us": sum(1 for s in members if s["_mkt"] == "US"),
             "median_op_margin": round(median(margins), 1) if margins else None,
+            "cap_sum": round(sum(_cap_krw(s) for s in members)),   # 카테고리 합산 시총(억원, FX 정규화) — 규모 분포 share 용
             "leaders": [_leader(s) for s in members[:LEADERS_N]],
         })
 
@@ -240,6 +263,7 @@ def build() -> Dict[str, Any]:
                 "key": key, "label": label, "desc": desc,
                 "n": len(grp),
                 "vol_range": [grp[0][0], grp[-1][0]] if grp else None,
+                "cap_sum": round(sum(_cap_krw(s) for s in members)),
                 "leaders": [_leader(s) for s in members[:LEADERS_N]],
             })
 
@@ -258,6 +282,7 @@ def build() -> Dict[str, Any]:
         grp = [(b, sl, s) for b, sl, s in buy_rows if pred(b, sl)]
         members = sorted((s for _b, _s, s in grp), key=_cap_of, reverse=True)
         return {"key": key, "label": label, "desc": desc, "n": len(grp),
+                "cap_sum": round(sum(_cap_krw(s) for s in members)),
                 "leaders": [_leader(s) for s in members[:LEADERS_N]]}
     buyback_buckets = [
         _bucketize(lambda b, sl: b >= 2 and b > sl, "steady_buy", "꾸준히 매입", "수집 창 내 자기주식취득 공시 2건 이상 · 취득 > 처분"),
