@@ -27,7 +27,9 @@ permissions:
   contents: write
 
 concurrency:
-  group: verity-data-write
+  # 전용 그룹 (2026-07-04) — verity-data-write 공유 시 pending 축출로 scheduled run 취소 반복
+  # (7/4 05:30 N=2 취소 실사고). push 충돌은 자체 pull-rebase 재시도 x5 가 방어.
+  group: verity-us-incremental
   cancel-in-progress: false
 
 jobs:
