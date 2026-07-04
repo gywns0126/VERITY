@@ -33,12 +33,13 @@ MIN_TIER_N = 3         # 표시 최소 종목 수
 
 # ── 욕구 계층 정의 ──────────────────────────────────────────────
 TIERS = [
-    ("survival", "생존·생리", "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐"),
-    ("safety", "안전", "지키고 대비하는 수요 — 보험·방산·보안"),
-    ("belonging", "소속·연결", "잇고 어울리는 수요 — 통신·콘텐츠·모임"),
-    ("esteem", "존중·과시", "돋보이고 싶은 수요 — 명품·뷰티·프리미엄"),
-    ("growth", "자아실현", "배우고 성장하는 수요 — 교육·자기계발"),
-    ("infra", "기반·인프라", "욕구를 직접 팔진 않지만 위 전부를 떠받치는 산업 — B2B·부품·장비"),
+    # label = 사용자 친화 간결 명사형(2026-07-04). key/분류 로직 불변, 표시 라벨만 자연스럽게.
+    ("survival", "필수·건강", "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐"),
+    ("safety", "안전·보장", "지키고 대비하는 수요 — 보험·방산·보안"),
+    ("belonging", "관계·연결", "잇고 어울리는 수요 — 통신·콘텐츠·모임"),
+    ("esteem", "프리미엄·품격", "돋보이고 싶은 수요 — 명품·뷰티·프리미엄"),
+    ("growth", "성장·배움", "배우고 성장하는 수요 — 교육·자기계발"),
+    ("infra", "산업 기반", "욕구를 직접 팔진 않지만 위 전부를 떠받치는 산업 — B2B·부품·장비"),
 ]
 
 # yfinance industry(영문) 키워드 규칙 — 위에서부터 첫 매치. 업종 사실 → 계층 분류 (주관 최소화, 기준 공개)
@@ -229,9 +230,9 @@ def build() -> Dict[str, Any]:
     if len(vols) >= 30:
         vols.sort(key=lambda x: x[0])
         n = len(vols)
-        cuts = [(0, n // 3, "steady", "매출 흔들림 작음", "실측 변동성 하위 1/3"),
+        cuts = [(0, n // 3, "steady", "매출 꾸준", "실측 변동성 하위 1/3"),
                 (n // 3, 2 * n // 3, "middle", "중간", "중위 1/3"),
-                (2 * n // 3, n, "swing", "매출 흔들림 큼", "상위 1/3")]
+                (2 * n // 3, n, "swing", "매출 출렁", "상위 1/3")]
         for a, b, key, label, desc in cuts:
             grp = vols[a:b]
             members = sorted((s for _v, s in grp), key=_cap_of, reverse=True)
@@ -259,9 +260,9 @@ def build() -> Dict[str, Any]:
         return {"key": key, "label": label, "desc": desc, "n": len(grp),
                 "leaders": [_leader(s) for s in members[:LEADERS_N]]}
     buyback_buckets = [
-        _bucketize(lambda b, sl: b >= 2 and b > sl, "steady_buy", "꾸준한 매입", "수집 창 내 자기주식취득 공시 2건 이상 · 취득 > 처분"),
-        _bucketize(lambda b, sl: b == 1 and b >= sl, "some_buy", "매입 있음", "취득 공시 1건"),
-        _bucketize(lambda b, sl: sl > b, "net_sell", "처분 우위", "처분 공시가 취득보다 많음"),
+        _bucketize(lambda b, sl: b >= 2 and b > sl, "steady_buy", "꾸준히 매입", "수집 창 내 자기주식취득 공시 2건 이상 · 취득 > 처분"),
+        _bucketize(lambda b, sl: b == 1 and b >= sl, "some_buy", "가끔 매입", "취득 공시 1건"),
+        _bucketize(lambda b, sl: sl > b, "net_sell", "처분 많음", "처분 공시가 취득보다 많음"),
     ]
 
     return {
