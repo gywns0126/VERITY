@@ -37,7 +37,8 @@ PROGRESS_PATH = os.path.join(_REPO_ROOT, "data", ".dart_quarterly_backfill_progr
 # 10년 × 4분기. reprt_code: 1Q / 반기 / 3Q / 연간 (DART fnlttSinglAcntAll).
 # 10 = PublicQuarterlyTrend 표시 상한(40분기=10년, Math.min(40,...)) 꽉 채움. DART 2015~ 지원.
 BACKFILL_YEARS = int(os.environ.get("DART_BACKFILL_YEARS", "10"))
-REPRT_CODES = ["11013", "11012", "11014", "11011"]  # Q1, H1, Q3, Annual
+# 최신 기간 우선 (PM 2026-07-04 "최신 연도부터") — 사용자 체감 = 최근 분기가 먼저 채워짐.
+REPRT_CODES = ["11011", "11014", "11012", "11013"]  # Annual, Q3, H1, Q1 (연도 내 최신→과거)
 CHUNK_TICKERS = int(os.environ.get("DART_BACKFILL_CHUNK", "120"))
 
 
@@ -52,9 +53,9 @@ def _target_years() -> List[int]:
 
 
 def _periods() -> List[Dict[str, str]]:
-    """(year, reprt_code) 기간 리스트 — 오래된 연도부터, 각 연도 Q1→연간 순."""
+    """(year, reprt_code) 기간 리스트 — 최신 연도부터, 각 연도 연간→Q1 순 (최신 기간 우선)."""
     out: List[Dict[str, str]] = []
-    for y in _target_years():
+    for y in sorted(_target_years(), reverse=True):
         for code in REPRT_CODES:
             out.append({"year": str(y), "reprt_code": code})
     return out
@@ -103,7 +104,7 @@ def _init_progress() -> Dict[str, Any]:
     universe = _build_universe()
     periods = _periods()
     return {
-        "schema": "v1",
+        "schema": "v2",  # v2 = 최신 기간 우선 순회
         "created_at": _now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
         "years": _target_years(),
         "reprt_codes": REPRT_CODES,
@@ -132,6 +133,13 @@ def _process_chunk(p: Dict[str, Any], periods: List[Dict[str, str]], universe: L
     n_tk = len(universe)
     pidx = int(p.get("period_idx", 0))
     tidx = int(p.get("ticker_idx", 0))
+    # v1→v2 이관분: 구(오래된 연도 우선) 순서에서 이미 완료한 period 는 건너뜀
+    skip = set(p.get("skip_keys") or [])
+    while pidx < len(periods) and f"{periods[pidx]['year']}|{periods[pidx]['reprt_code']}" in skip:
+        pidx += 1
+        tidx = 0
+        p["period_idx"] = pidx
+        p["ticker_idx"] = 0
     if pidx >= len(periods):
         p["done"] = True
         _save_progress(p)
@@ -197,6 +205,25 @@ def main() -> int:
                 f"(적재분 dedup 보존)\n"
             )
             p = _init_progress()
+            _save_progress(p)
+
+        if p.get("universe") and not p.get("done") and p.get("schema") != "v2":
+            # v1(오래된 연도 우선) → v2(최신 우선) 이관: 완료 prefix 를 skip_keys 로 보존, 커서 리셋.
+            # 부분 진행 중이던 period 는 재수집 (jsonl dedup 무해 — 손실 0).
+            old_codes = [str(c) for c in (p.get("reprt_codes") or [])] or ["11013", "11012", "11014", "11011"]
+            old_keys: List[str] = []
+            for y in (p.get("years") or []):
+                for code in old_codes:
+                    old_keys.append(f"{y}|{code}")
+            done_keys = old_keys[: int(p.get("period_idx", 0))]
+            p["skip_keys"] = done_keys
+            p["schema"] = "v2"
+            p["reprt_codes"] = REPRT_CODES
+            p["period_idx"] = 0
+            p["ticker_idx"] = 0
+            sys.stderr.write(
+                f"[dart_qbackfill] v1→v2 이관: 최신 기간 우선 순회로 전환 · 완료 {len(done_keys)}기간 skip 보존\n"
+            )
             _save_progress(p)
 
         if p.get("done"):
