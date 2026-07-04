@@ -205,6 +205,9 @@ export default function PublicGlassboxTab(props: Props) {
     const targetN = Number(gate.target_n) || 252
     // 표본 게이트 도달 = 판정 "시작선" 도달일 뿐, 유의성 통과(검증 완료) 아님. 프레이밍 전환용.
     const gateReached = curN >= targetN
+    // 도달 후엔 "다음 관문"(다음 미도달 마일스톤)으로 진행률 재타겟 → 정체/방치 느낌 제거, 계속 climbing.
+    const nextMs = MILESTONES.find((m) => curN < m.n)
+    const nextPct = nextMs ? Math.max(0, Math.min(100, (curN / nextMs.n) * 100)) : 100
 
     const bestSig = useMemo(() => {
         let best: Sig | null = null
@@ -316,12 +319,12 @@ export default function PublicGlassboxTab(props: Props) {
             {/* 1) 게이트 진행률 / 도달 시 판정 단계 (표본 크기 진척 — 시간 진척 아님) */}
             <div style={{ ...card, padding: "16px 16px", marginTop: 12 }}>
                 <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 700, marginBottom: 2 }}>
-                    {gateReached ? "표본 게이트 도달 — 유의성 판정 단계" : "검증 진행률 — 통계 유의 최소표본까지"}
+                    {gateReached ? (nextMs ? `다음 관문 — N≥${nextMs.n} · ${nextMs.label}` : "전 표본 관문 통과 — 최종 판정 단계") : "검증 진행률 — 통계 유의 최소표본까지"}
                 </div>
                 <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.6px", display: "inline-flex", alignItems: "center", flexWrap: "wrap" }}>
-                    <span>N_eff = {f2(gate.best_signal_n, 0)} / {targetN}</span>
+                    <span>N_eff = {f2(gate.best_signal_n, 0)}{gateReached && nextMs ? " / " + nextMs.n : " / " + targetN}</span>
                     {gateReached ? (
-                        <span style={{ fontSize: 11.5, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 6, padding: "2px 8px", marginLeft: 8 }}>표본 도달</span>
+                        <span style={{ fontSize: 11.5, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 6, padding: "2px 8px", marginLeft: 8 }}>IC 게이트({targetN}) 도달 ✓</span>
                     ) : null}
                     <Info k="표본 N" uid="gate" />
                 </div>
@@ -329,11 +332,13 @@ export default function PublicGlassboxTab(props: Props) {
                     관측 {bestSig && bestSig.n != null ? f2(bestSig.n, 0) : "—"}건 누적 → 중첩보정 유효표본 {f2(gate.best_signal_n, 0)} · 달력 일수 아님
                 </div>
                 <div style={{ height: 10, borderRadius: 5, background: C.line, overflow: "hidden", margin: "10px 0 6px" }}>
-                    <div style={{ width: (gateReached ? 100 : progress) + "%", height: "100%", background: gateReached ? C.vg : C.vt, borderRadius: 5 }} />
+                    <div style={{ width: (gateReached ? nextPct : progress) + "%", height: "100%", background: gateReached ? C.vg : C.vt, borderRadius: 5 }} />
                 </div>
                 <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>
                     {gateReached
-                        ? `표본이 판정 시작선 도달(${f2(gate.best_signal_n, 0)} ≥ ${targetN}) · 유의성(IC) 판정 진행 중 · 검증 완료 아님`
+                        ? nextMs
+                            ? `IC 게이트(N≥${targetN}) 도달 ✓ · 다음 ${nextMs.label}(N≥${nextMs.n})까지 ${f2(nextPct, 0)}% · 유의성 판정은 표본 쌓이며 진행 · 검증 완료 아님`
+                            : `전 표본 관문(N≥684) 통과 · 유의성·DSR 최종 판정 단계 · 검증 완료 아님`
                         : `유효표본이 통계 유의 최소선(N≥${targetN})에 닿은 정도 ${f2(progress, 1)}% · 관측 횟수 기반(시간 진척 아님)`}
                 </div>
             </div>
