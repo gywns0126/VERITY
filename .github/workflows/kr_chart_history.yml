@@ -28,7 +28,7 @@ concurrency:
 jobs:
   history:
     runs-on: ubuntu-latest
-    timeout-minutes: 90  # 8병렬 수집 ~10분 + Blob PUT ~20분 (직렬 60분+ 사고 여유 2배)
+    timeout-minutes: 150  # N=1 실측 81분 (8병렬 수집 28분 + Blob PUT 직렬 53분) — 여유 ~2배
 
     steps:
       - name: Checkout
