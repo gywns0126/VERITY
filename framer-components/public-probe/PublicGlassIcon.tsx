@@ -74,10 +74,16 @@ const ICONS: Record<IconKey, { solid: (a: string) => any; glass: string }> = {
         solid: (a) => <path d="M34 6 L36.4 11.6 L42 14 L36.4 16.4 L34 22 L31.6 16.4 L26 14 L31.6 11.6 Z" fill={a} />,
         glass: "M22 12 L25.4 20.2 L34.2 20.8 L27.4 26.5 L29.6 35 L22 30.2 L14.4 35 L16.6 26.5 L9.8 20.8 L18.6 20.2 Z",
     },
-    // 7. 기반/인프라 — 페디먼트(solid) + 기둥·기단(glass)
+    // 7. 기반/인프라 — 공장: 굴뚝·연기(solid) + 톱니 지붕 몸체(glass)
     infra: {
-        solid: (a) => <path d="M8 15 L24 6 L40 15 Q41 17.5 38 17.5 H10 Q7 17.5 8 15 Z" fill={a} />,
-        glass: rr(6, 38, 36, 4.5, 2.25) + " M11 16 H16 V36 H11 Z M21.5 16 H26.5 V36 H21.5 Z M32 16 H37 V36 H32 Z",
+        solid: (a) => (
+            <g fill={a}>
+                <path d="M9.5 6.5 Q9.5 5 11 5 H14 Q15.5 5 15.5 6.5 V22 H9.5 Z" />
+                <circle cx={19.5} cy={5.5} r={2.7} />
+                <circle cx={25} cy={3.8} r={1.9} />
+            </g>
+        ),
+        glass: "M7 39 V23.5 L17.5 17 V23.5 L28 17 V23.5 L38.5 17 V39 Q38.5 41.5 36 41.5 H9.5 Q7 41.5 7 39 Z",
     },
     // 8. 매출 안정성 — 카드(glass) + 완만한 우상향 라인(solid)
     revStable: {

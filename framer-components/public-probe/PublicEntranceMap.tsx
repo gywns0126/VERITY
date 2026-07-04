@@ -90,10 +90,16 @@ const GICONS: Record<string, { solid: (a: string) => any; glass: string }> = {
         ),
         glass: _circ(20, 26, 13),
     },
-    // 업종 지도 = 기둥 건물 (infra)
+    // 업종 지도 = 공장 (굴뚝·연기 solid + 톱니 지붕 glass)
     sector: {
-        solid: (a) => <path d="M8 15 L24 6 L40 15 Q41 17.5 38 17.5 H10 Q7 17.5 8 15 Z" fill={a} />,
-        glass: _rr(6, 38, 36, 4.5, 2.25) + " M11 16 H16 V36 H11 Z M21.5 16 H26.5 V36 H21.5 Z M32 16 H37 V36 H32 Z",
+        solid: (a) => (
+            <g fill={a}>
+                <path d="M9.5 6.5 Q9.5 5 11 5 H14 Q15.5 5 15.5 6.5 V22 H9.5 Z" />
+                <circle cx={19.5} cy={5.5} r={2.7} />
+                <circle cx={25} cy={3.8} r={1.9} />
+            </g>
+        ),
+        glass: "M7 39 V23.5 L17.5 17 V23.5 L28 17 V23.5 L38.5 17 V39 Q38.5 41.5 36 41.5 H9.5 Q7 41.5 7 39 Z",
     },
     // 검증 원장 = 금고 (treasury)
     vault: {
