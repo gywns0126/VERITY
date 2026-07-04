@@ -187,60 +187,42 @@ export default function PublicStockBrief(props: {
 
     const wrap: any = { width: props.width || 380, fontFamily: FONT, background: C.bg, color: C.ink, padding: 14, boxSizing: "border-box" }
     const sections = data ? parseBrief(data.brief) : []
-    const greenSoft = isDark ? "rgba(62,207,142,0.16)" : "#e7f7ef"
-    // 리포트 카드 공통 (토스식 소프트 카드) — 아이콘 사각 + 제목/설명 + › CTA
-    const cardBase: any = {
-        border: "none", fontFamily: FONT, textAlign: "left", width: "100%",
-        background: C.card, borderRadius: 14, padding: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-        display: "flex", alignItems: "center", gap: 12,
+    const btnBase: any = {
+        border: "none", fontFamily: FONT, padding: "10px 15px", borderRadius: 11,
+        fontSize: 13, fontWeight: 800, lineHeight: 1, display: "inline-flex", alignItems: "center", gap: 6,
     }
-    const iconSq = (bg: string, fg: string): any => ({
-        width: 42, height: 42, borderRadius: 12, background: bg, color: fg, flexShrink: 0,
-        display: "flex", alignItems: "center", justifyContent: "center",
-    })
-    const chip = (bg: string, fg: string): any => ({ fontSize: 10, fontWeight: 800, color: fg, background: bg, borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" })
 
     return (
         <div style={wrap}>
-            {/* ── 리포트 카드 2종 (미리보기·설명 리치 카드) — 상품 구분: 100% 데이터 vs 데이터+AI 해석 ── */}
-            <div data-noprint style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {/* 팩트 리포트 — 즉시·무료 */}
-                <button onClick={() => doPrint(true)} style={{ ...cardBase, cursor: "pointer" }}>
-                    <span style={iconSq(C.violetSoft, C.violet)}><PhPrinter size={21} /></span>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>팩트 리포트 PDF</span>
-                            <span style={chip(greenSoft, C.green)}>즉시 · 무료</span>
-                        </div>
-                        <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3, lineHeight: 1.45 }}>
-                            100% 공개 데이터 — 시세·재무·수급·공시·내부자를 한 장으로
-                        </div>
-                    </div>
-                    <span style={{ fontSize: 17, color: C.faint, flexShrink: 0, fontWeight: 700 }}>›</span>
+            {/* ── 버튼 2개 — 상품 구분: 100% 데이터 vs 데이터+AI 해석. 아이콘 = Phosphor(Framer 네이티브 세트) ── */}
+            <div data-noprint style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+                <button onClick={() => doPrint(true)} style={{ ...btnBase, cursor: "pointer", background: C.violetSoft, color: C.violet }}>
+                    <PhPrinter size={14} />
+                    팩트 리포트 PDF
                 </button>
-
-                {/* AI 해석 리포트 — 팩트 위 AI 요약 서술 */}
-                <button onClick={onAiPdf} disabled={!tk || state === "loading"}
-                    style={{ ...cardBase, cursor: tk && state !== "loading" ? "pointer" : "default", opacity: tk ? 1 : 0.6 }}>
-                    <span style={iconSq(tk ? C.violet : C.line, tk ? "#fff" : C.faint)}><PhPencilLine size={21} /></span>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>AI 해석 리포트 PDF</span>
-                            <span style={chip(C.violetSoft, C.violet)}>{data && data.cached ? "오늘 생성분" : "첫 생성 ~10초"}</span>
-                        </div>
-                        <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3, lineHeight: 1.45 }}>
-                            {state === "loading"
-                                ? "브리핑 생성 중… 완료되면 인쇄 창이 열려요"
-                                : !tk
-                                    ? "종목을 먼저 선택하면 만들 수 있어요"
-                                    : "같은 데이터 위에 AI가 요약 서술을 더한 리포트 (하루 1회 캐시)"}
-                        </div>
-                    </div>
-                    <span style={{ fontSize: 17, color: C.faint, flexShrink: 0, fontWeight: 700 }}>{state === "loading" ? "…" : "›"}</span>
+                <button onClick={onAiPdf} disabled={!tk || state === "loading"} style={{
+                    ...btnBase,
+                    cursor: tk && state !== "loading" ? "pointer" : "default",
+                    background: tk ? C.violet : C.line, color: tk ? "#fff" : C.faint,
+                }}>
+                    <PhPencilLine size={14} />
+                    {state === "loading" ? "브리핑 생성 중…" : "AI 해석 리포트 PDF"}
                 </button>
             </div>
+            <div data-noprint style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 7, lineHeight: 1.5, textAlign: "center" }}>
+                팩트 = 100% 공개 데이터 · AI 해석 = 같은 데이터 위에 요약 서술이 붙어요{state !== "done" ? " (첫 생성 ~10초, 하루 1회 생성 후 캐시)" : ""}
+            </div>
 
-            {/* ── 상태별 본문 (에러만 화면 노출 · 로딩은 카드가 표시) ── */}
+            {/* ── 상태별 본문 ── */}
+            {state === "loading" && (
+                <div data-noprint style={{ marginTop: 12 }}>
+                    {[86, 100, 94].map((w, i) => (
+                        <div key={i} style={{ height: 12, width: w + "%", background: C.line, borderRadius: 6, marginTop: i ? 8 : 0 }} />
+                    ))}
+                    <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 10 }}>공개 데이터 조립 중 — 완료되면 인쇄 창이 열려요</div>
+                </div>
+            )}
+
             {state === "error" && (
                 <div data-noprint style={{ fontSize: 12.5, color: C.red, fontWeight: 600, marginTop: 12, lineHeight: 1.6 }}>{errMsg}</div>
             )}
@@ -268,7 +250,7 @@ export default function PublicStockBrief(props: {
                         )}
                     </div>
                     <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>
-                        {data.disclaimer || "공개 데이터 사실 기반 자동 생성"}
+                        {data.disclaimer || "공개 데이터 사실 기반 자동 생성 · 점수·등급·종목 추천 아님"}
                     </div>
                 </div>
             )}
