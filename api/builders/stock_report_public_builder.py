@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -189,6 +191,72 @@ def _load_catalyst_by_ticker() -> Dict[str, List[Dict[str, Any]]]:
     for tk in out:
         out[tk].sort(key=lambda d: d["date"], reverse=True)
     return out
+
+
+# ─── 지분구조 인물 링크 생존성 (2026-07-04 PM) ─────────────────────────────
+# 문제: 비유명 임원·친족 = 네이버 검색 결과 0 → 죽은 링크. 빌더가 "회사명 이름" 뉴스
+# 건수를 네이버 공식 API 로 실검증해 결과 있는 인물만 link_ok 노출 (컴포넌트가 링크 조건으로 사용).
+# 키 = NAVER_Client_ID/Secret (naver_stock_news 동일). 키/네트워크 부재 = 플래그 생략(링크 없음) 안전 강등.
+# 캐시 = data/metadata/person_link_cache.json — 인물·회사 조합은 공정위 연 1회 갱신이라 사실상 영구.
+_PERSON_LINK_CACHE_PATH = os.path.join(_ROOT, "data", "metadata", "person_link_cache.json")
+_PERSON_LINK_MIN_NEWS = 5  # 최소 뉴스 건수 — 링크 클릭 화면에 결과 존재 보장선
+_SH_GENERIC_RE = re.compile(r"기타|소액주주|자기주식|우리사주|^친족$|^동일인$|^임원$|기관투자|외국인|개인투자자|국민연금공단")
+_SH_CORP_RE = re.compile(r"주식회사|\(주\)|㈜|회사|Ltd|LTD|Inc|INC|Limited|Corp|Company|생명|화재|증권|물산|홀딩스|투자|캐피탈|은행|보험|자산운용|전자|중공업|텔레콤|공단|재단")
+_person_link_cache: Optional[Dict[str, Any]] = None
+_person_link_dirty = False
+
+
+def _naver_news_total(query: str) -> Optional[int]:
+    cid = os.environ.get("NAVER_Client_ID") or os.environ.get("NAVER_CLIENT_ID", "")
+    csec = os.environ.get("NAVER_Client_Secret") or os.environ.get("NAVER_CLIENT_SECRET", "")
+    if not cid or not csec:
+        return None
+    import urllib.parse
+    import urllib.request
+    try:
+        req = urllib.request.Request(
+            "https://openapi.naver.com/v1/search/news.json?display=1&query=" + urllib.parse.quote(query),
+            headers={"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": csec},
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            d = json.loads(r.read().decode("utf-8", "replace"))
+        time.sleep(0.08)
+        return int(d.get("total") or 0)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _annotate_person_links(own: Optional[Dict[str, Any]], corp_name: str) -> None:
+    """shareholders 인물 행에 link_ok 부여 — 검증된(뉴스 결과 있는) 인물만. in-place."""
+    global _person_link_cache, _person_link_dirty
+    if not isinstance(own, dict) or not corp_name:
+        return
+    if _person_link_cache is None:
+        _person_link_cache = _load_json(_PERSON_LINK_CACHE_PATH, {}) or {}
+    for row in own.get("shareholders") or []:
+        nm = str(row.get("name") or "")
+        if not nm or nm == str(row.get("type") or "") or _SH_GENERIC_RE.search(nm):
+            continue
+        if str(row.get("type") or "") == "소속회사" or _SH_CORP_RE.search(nm):
+            continue  # 법인·재단 = 컴포넌트 자체 링크 (검색 결과 상시 존재)
+        key = f"{corp_name}|{nm}"
+        ent = _person_link_cache.get(key)
+        if not isinstance(ent, dict):
+            total = _naver_news_total(f"{corp_name} {nm}")
+            if total is None:
+                continue
+            ent = {"total": total, "checked": datetime.now(KST).strftime("%Y-%m-%d")}
+            _person_link_cache[key] = ent
+            _person_link_dirty = True
+        if int(ent.get("total") or 0) >= _PERSON_LINK_MIN_NEWS:
+            row["link_ok"] = True
+
+
+def _save_person_link_cache() -> None:
+    if _person_link_dirty and isinstance(_person_link_cache, dict):
+        os.makedirs(os.path.dirname(_PERSON_LINK_CACHE_PATH), exist_ok=True)
+        with open(_PERSON_LINK_CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump(_person_link_cache, f, ensure_ascii=False)
 
 
 def _ownership(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -890,6 +958,10 @@ def main() -> int:
                 except Exception:  # noqa: BLE001
                     pass
 
+            # 인물 링크 생존성 — 검증된 인물만 link_ok (죽은 링크 0, PM 2026-07-04)
+            if s.get("ownership"):
+                _annotate_person_links(s["ownership"], str(s.get("name") or ""))
+
             # 기업개요 보강 — shares(KRX 상장주식수)+sector(sector_map) fallback. 죽은섹션(overview 1%) 살림(백필 0, 사실만).
             ov = s.get("overview") or {}
             if not ov.get("shares"):
@@ -931,6 +1003,7 @@ def main() -> int:
             print("[stock_report_public] 0 stocks — 기존 snapshot 보존", file=sys.stderr)
             ok = True
             return 0
+        _save_person_link_cache()
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False)
         print(f"[stock_report_public] logged=True · {len(stocks)} 종목 (rich {len(rich_by_ticker)}, "

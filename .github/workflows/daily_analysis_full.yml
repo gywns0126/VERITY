@@ -320,7 +320,12 @@ jobs:
       - name: 공개 종목 리포트 빌드 (public-safe, allowlist)
         # recommendations.json → RULE7 allowlist strip → data/stock_report_public.json.
         # 순수 변환 (krx_mktcap.json·sector_map 읽음, KIS 0). 다음 step git add data/ (broad) 자동 = RULE 4.
+        # NAVER_* = 지분구조 인물 링크 생존성 검증 (빌더 _naver_news_total — 신규 인물만,
+        # person_link_cache.json 커밋 캐시 1차 · 키 부재 = 플래그 생략 안전 강등).
         continue-on-error: true
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
         run: python -m api.builders.stock_report_public_builder
 
       - name: AI 사실 종합 빌드 (출처 기반, 평가·추천 0)
