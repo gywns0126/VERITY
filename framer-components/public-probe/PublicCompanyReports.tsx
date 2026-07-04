@@ -173,7 +173,7 @@ export default function PublicCompanyReports(props: Props) {
                 </div>
 
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 12, lineHeight: 1.55 }}>
-                    공식·공개 출처(DART·네이버 금융·SEC EDGAR) 링크 모음 · 원문은 각 기관 발행
+                    공식·공개 출처(DART·네이버 금융·SEC EDGAR) 링크 모음. 원문은 각 기관 발행.
                 </div>
             </div>
         </div>

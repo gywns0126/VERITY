@@ -165,7 +165,7 @@ export default function PublicStockNews(props: Props) {
                 )}
 
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 13, lineHeight: 1.55 }}>
-                    네이버 금융 종목 뉴스 · 매체·시각·출처는 사실 · ✓=신뢰 출처
+                    네이버 금융 종목 뉴스 · 매체·시각·출처는 사실, ✓=신뢰 출처 · 관련 공시는 ±2일 DART 매칭
                 </div>
             </div>
         </div>
