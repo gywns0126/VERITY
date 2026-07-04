@@ -92,8 +92,8 @@ export default function PublicEntranceMap(props: {
     const C = isDark ? DARK : LIGHT
     const stockPath = props.stockPath || "/stock"
     const discoverPath = props.discoverPath || "/discover"
-    const explorePath = props.explorePath || "/explore"
-    const validationPath = props.validationPath || "/validation"
+    const explorePath = props.explorePath || "/market"
+    const validationPath = props.validationPath || "/glassbox"
 
     const go = (path: string) => {
         if (onCanvas || typeof window === "undefined") return
@@ -185,6 +185,6 @@ addPropertyControls(PublicEntranceMap, {
     dataUrl: { type: ControlType.String, title: "Data URL", defaultValue: DATA_URL },
     stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
     discoverPath: { type: ControlType.String, title: "Discover Path", defaultValue: "/discover" },
-    explorePath: { type: ControlType.String, title: "Explore Path", defaultValue: "/explore" },
-    validationPath: { type: ControlType.String, title: "Validation Path", defaultValue: "/validation" },
+    explorePath: { type: ControlType.String, title: "Explore Path", defaultValue: "/market" },
+    validationPath: { type: ControlType.String, title: "Validation Path", defaultValue: "/glassbox" },
 })
