@@ -202,6 +202,7 @@ interface Props {
     supabaseAnonKey: string
     redirectUrl: string
     afterLoginPath: string
+    hideWhenAuthed: boolean
     dark: boolean
     termsUrl?: string
     privacyUrl?: string
@@ -215,6 +216,7 @@ const DEFAULT_SUPABASE_ANON_KEY = ""
  */
 export default function AlphaNestAuth(props: Props) {
     const { supabaseUrl, supabaseAnonKey, redirectUrl, afterLoginPath, dark, termsUrl, privacyUrl } = props
+    const hideWhenAuthed = props.hideWhenAuthed !== false  // 기본 true — 같은 페이지의 ProfilePage 가 로그인 상태 담당 (페이지 결합)
     const url = (supabaseUrl || DEFAULT_SUPABASE_URL).replace(/\/+$/, "")
     const anonKey = supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -269,6 +271,7 @@ export default function AlphaNestAuth(props: Props) {
                 if (alive) { setSession(s); emitAuthChange() }
                 const next = resolveNext(afterLoginPath)
                 if (next && next !== window.location.pathname) window.location.href = next
+                else window.location.reload()  // 페이지 결합 — 동거 ProfilePage 가 세션을 읽도록
                 return true
             } catch {
                 if (alive) setErr("로그인 처리 실패")
@@ -321,12 +324,14 @@ export default function AlphaNestAuth(props: Props) {
                     setSession(s); emitAuthChange()
                     const next = resolveNext(afterLoginPath)
                     if (next && typeof window !== "undefined" && next !== window.location.pathname) window.location.href = next
+                    else if (typeof window !== "undefined") window.location.reload()
                 }
             } else {
                 const s = await signInEmail(url, anonKey, email.trim(), password)
                 setSession(s); emitAuthChange()
                 const next = resolveNext(afterLoginPath)
                 if (next && typeof window !== "undefined" && next !== window.location.pathname) window.location.href = next
+                else if (typeof window !== "undefined") window.location.reload()
             }
         } catch (e: any) {
             setErr(humanError(e?.message || ""))
@@ -361,8 +366,9 @@ export default function AlphaNestAuth(props: Props) {
     const card: CSSProperties = { width: "100%", maxWidth: 360, background: C.card, borderRadius: 18, padding: "30px 24px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)", boxSizing: "border-box" }
     const inputStyle: CSSProperties = { width: "100%", padding: "11px 13px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.field, color: C.ink, fontSize: 13.5, fontFamily: FONT, outline: "none", boxSizing: "border-box" }
 
-    // 로그인 상태 — 컴팩트 프로필
+    // 로그인 상태 — 페이지 결합 모드(기본)에선 자체 숨김(동거 ProfilePage 담당), 단독 배치 시 컴팩트 프로필
     if (session && session.user) {
+        if (hideWhenAuthed && !onCanvas) return null
         const meta = session.user.user_metadata || {}
         const avatar = meta.avatar_url || meta.picture
         const name = meta.name || meta.full_name || (session.user.email || "").split("@")[0]
@@ -462,7 +468,8 @@ addPropertyControls(AlphaNestAuth, {
     supabaseUrl: { type: ControlType.String, title: "Supabase URL", defaultValue: DEFAULT_SUPABASE_URL },
     supabaseAnonKey: { type: ControlType.String, title: "Supabase Anon Key", defaultValue: DEFAULT_SUPABASE_ANON_KEY },
     redirectUrl: { type: ControlType.String, title: "OAuth Redirect URL", defaultValue: "", placeholder: "구글 복귀 URL (비우면 현재 페이지)" },
-    afterLoginPath: { type: ControlType.String, title: "로그인 후 이동", defaultValue: "/", placeholder: "예: / (URL ?next= 가 우선, 비우면 그대로)" },
+    afterLoginPath: { type: ControlType.String, title: "로그인 후 이동", defaultValue: "", placeholder: "비우면 현재 페이지 새로고침 (?next= 우선)" },
+    hideWhenAuthed: { type: ControlType.Boolean, title: "로그인 시 숨김(프로필과 한 페이지)", defaultValue: true, enabledTitle: "On", disabledTitle: "Off" },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
     termsUrl: { type: ControlType.String, title: "이용약관 URL", defaultValue: "/policy" },
     privacyUrl: { type: ControlType.String, title: "개인정보처리방침 URL", defaultValue: "/policy" },

@@ -157,6 +157,7 @@ interface Props {
     profileTable: string
     loginRedirect: string
     logoutRedirect: string
+    hideLoggedOut: boolean
     dark: boolean
 }
 
@@ -168,7 +169,8 @@ export default function PublicProfilePage(props: Props) {
     const supabaseAnonKey = props.supabaseAnonKey || ""
     const profileTable = props.profileTable || "profiles"
     const loginRedirect = props.loginRedirect || "/login"
-    const logoutRedirect = props.logoutRedirect || "/login"
+    const logoutRedirect = (props.logoutRedirect ?? "").trim()  // 비우면 제자리 새로고침 (로그인 폼과 한 페이지 결합 기본)
+    const hideLoggedOut = props.hideLoggedOut !== false          // 기본 true — 같은 페이지의 AlphaNestAuth 가 폼 담당
 
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
 
@@ -231,8 +233,9 @@ export default function PublicProfilePage(props: Props) {
 
     const go = (path: string) => {
         if (typeof window !== "undefined") {
-            const dest = path && path.trim() ? path.trim() : "/login"
-            window.location.assign(dest)
+            const dest = path && path.trim()
+            if (dest) window.location.assign(dest)
+            else window.location.reload()  // 빈 경로 = 제자리 새로고침 → 같은 페이지 로그인 폼 표시 (페이지 결합)
         }
     }
 
@@ -291,6 +294,8 @@ export default function PublicProfilePage(props: Props) {
     }
 
     if (phase === "guest") {
+        // 페이지 결합 모드(기본): 같은 페이지의 AlphaNestAuth 폼이 보이므로 스텁 없이 자체 숨김
+        if (hideLoggedOut && !isCanvas) return null
         return (
             <div style={wrap}>
                 <div style={{ ...cardStyle, textAlign: "center" }}>
@@ -415,6 +420,7 @@ addPropertyControls(PublicProfilePage, {
     supabaseAnonKey: { type: ControlType.String, title: "Supabase Anon Key", defaultValue: "" },
     profileTable: { type: ControlType.String, title: "프로필 테이블", defaultValue: "profiles" },
     loginRedirect: { type: ControlType.String, title: "로그인 경로", defaultValue: "/login" },
-    logoutRedirect: { type: ControlType.String, title: "로그아웃/탈퇴 후 이동", defaultValue: "/login" },
+    logoutRedirect: { type: ControlType.String, title: "로그아웃/탈퇴 후 이동", defaultValue: "", placeholder: "비우면 현재 페이지 새로고침" },
+    hideLoggedOut: { type: ControlType.Boolean, title: "미로그인 시 숨김(폼과 한 페이지)", defaultValue: true, enabledTitle: "On", disabledTitle: "Off" },
     dark: { type: ControlType.Boolean, title: "Dark (정적)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
