@@ -533,14 +533,15 @@ export default function PublicProfilePage(props: Props) {
     /* ─── 스타일 ─── */
     const wrap: React.CSSProperties = {
         width: "100%",
-        minHeight: "100vh",
+        // 네브(56)+페이지 상하 여백(60+100) 감안한 가시 영역 기준 수직 중앙 (상단 붙음 어색 — PM 2026-07-04)
+        minHeight: "calc(100vh - 280px)",
         background: C.bg,
         fontFamily: FONT,
         color: C.ink,
         display: "flex",
-        alignItems: "flex-start",
+        alignItems: "center",
         justifyContent: "center",
-        padding: "40px 20px 64px",
+        padding: "20px",
         boxSizing: "border-box",
     }
     const cardStyle: React.CSSProperties = {
