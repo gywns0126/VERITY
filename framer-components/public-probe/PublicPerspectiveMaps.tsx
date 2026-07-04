@@ -9,7 +9,8 @@ import { useEffect, useState, type CSSProperties } from "react"
  *   복잡한 피라미드/스펙트럼 제거. 종목이 주인공(크게). shimmer 스켈레톤.
  * 🚨 RULE 7 — 점수·랭킹·추천 0. 분류 기준 공개. 카운트=사실. "관점 = 탐색 렌즈". RULE 6 — LLM narrative 0.
  * 다크모드 자가감지. cache-fallback. 토스 소프트 유지.
- * ※ 데이터 leaders = 카테고리당 현재 6개 (빌더 미발견 → 더보기는 데이터 확장 시 자동 활성).
+ * ※ leaders = 카테고리당 최대 20개(빌더 LEADERS_N), 시총·마진·섹터 enrich → 규모순/수익순 정렬 + 카드 요약.
+ *   구 blob(필드 부재) 폴백 시 정렬 UI 자동 숨김(hasSummary 가드).
  */
 
 const LIGHT = {
@@ -72,15 +73,39 @@ function n0(v: any): string {
     return isFinite(x) ? Math.round(x).toLocaleString("en-US") : "—"
 }
 
-// 종목 카드 (그리드 아이템) — 로고 + 국기 배지 + 이름. 로고 실패 시 이니셜.
-function StockCard(props: { ticker: string; name: string; C: any; onGo: (t: string) => void }) {
-    const { ticker, name, C, onGo } = props
+// leaders 정렬·요약 헬퍼 (전부 사실값 나열 — 점수·랭킹 아님, RULE 7)
+function marginOf(l: any): number | null {
+    if (l && l.op_margin != null && isFinite(Number(l.op_margin))) return Number(l.op_margin)
+    if (l && l.net_margin != null && isFinite(Number(l.net_margin))) return Number(l.net_margin)
+    return null
+}
+function marginLabel(l: any): string {
+    if (l && l.op_margin != null) return "영업 " + l.op_margin + "%"
+    if (l && l.net_margin != null) return "순익 " + l.net_margin + "%"
+    return ""
+}
+function metricOf(l: any, sortKey: string): string {
+    return sortKey === "profit" ? marginLabel(l) : (l && l.cap_disp ? String(l.cap_disp) : "")
+}
+// 카드에 정렬 가능한 요약 필드(시총/마진)가 하나라도 있으면 정렬 UI 노출 (구 blob 폴백 시 숨김)
+function hasSummary(list: any[]): boolean {
+    return (list || []).some((l) => (l && l.cap_disp) || marginOf(l) != null)
+}
+
+// 종목 카드 (그리드 아이템) — 로고 + 국기 배지 + 이름 + 요약(규모/수익). 로고 실패 시 이니셜.
+function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) => void }) {
+    const { l, C, sortKey, onGo } = props
+    const ticker = String((l && l.ticker) || "")
+    const name = (l && l.name) || ""
     const [err, setErr] = useState(false)
     const kr = isKR(ticker)
     const initial = ((name || "?").trim().charAt(0)) || "?"
+    const metric = metricOf(l, sortKey)
+    const sector = (l && l.sector) || ""
+    const tip = name + (sector ? " · " + sector : "")
     return (
-        <div onClick={() => onGo(ticker)} role="button" tabIndex={0} title={name}
-            style={{ background: C.card, borderRadius: 12, padding: "12px 8px", height: 90, boxSizing: "border-box", cursor: "pointer", textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, minWidth: 0 }}>
+        <div onClick={() => onGo(ticker)} role="button" tabIndex={0} title={tip}
+            style={{ background: C.card, borderRadius: 12, padding: "12px 8px", height: 108, boxSizing: "border-box", cursor: "pointer", textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 7, minWidth: 0 }}>
             <div style={{ position: "relative", width: 34, height: 34, flexShrink: 0 }}>
                 {!err && ticker ? (
                     <img src={STK_LOGO + ticker + ".png"} alt="" width={34} height={34} loading="lazy" onError={() => setErr(true)}
@@ -91,8 +116,12 @@ function StockCard(props: { ticker: string; name: string; C: any; onGo: (t: stri
                 <img src={FLAG + (kr ? "kr" : "us") + ".svg"} alt="" width={14} height={14}
                     style={{ position: "absolute", right: -3, bottom: -3, width: 14, height: 14, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block" }} />
             </div>
-            {/* 이름 = 1줄 말줄임 + hover 풀네임(title). 길면 "삼성바이오로…" 식으로 잘림. */}
+            {/* 이름 = 1줄 말줄임 + hover 풀네임+섹터(title). 길면 "삼성바이오로…" 식으로 잘림. */}
             <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink, lineHeight: 1.3, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+            {/* 요약 = 활성 정렬값(규모=시총 / 수익=마진). 사실값, 없으면 섹터, 둘 다 없으면 미표시 */}
+            {metric || sector ? (
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: metric ? C.violet : C.faint, lineHeight: 1.2, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontVariantNumeric: "tabular-nums" }}>{metric || sector}</div>
+            ) : null}
         </div>
     )
 }
@@ -102,7 +131,7 @@ const SAMPLE = {
     _meta: { generated_at: "2026-07-04T13:20:05+09:00" },
     desire: {
         tiers: [
-            { key: "survival", label: "생존·생리", n_kr: 397, n_us: 250, median_op_margin: 6.8, desc: "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐", leaders: [{ ticker: "005930", name: "삼성전자" }, { ticker: "000660", name: "SK하이닉스" }, { ticker: "LLY", name: "일라이릴리" }, { ticker: "JNJ", name: "존슨앤존슨" }, { ticker: "068270", name: "셀트리온" }, { ticker: "207940", name: "삼성바이오로직스" }] },
+            { key: "survival", label: "생존·생리", n_kr: 397, n_us: 250, median_op_margin: 6.8, desc: "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐", leaders: [{ ticker: "005930", name: "삼성전자", mkt: "KR", cap: 5000000, cap_disp: "500조", op_margin: 10.2, sector: "IT" }, { ticker: "000660", name: "SK하이닉스", mkt: "KR", cap: 1500000, cap_disp: "150조", op_margin: 20.5, sector: "IT" }, { ticker: "LLY", name: "일라이릴리", mkt: "US", cap: 982800, cap_disp: "$982.8B", net_margin: 31.7, sector: "제약", revenue: 65179000000 }, { ticker: "JNJ", name: "존슨앤존슨", mkt: "US", cap: 556800, cap_disp: "$556.8B", net_margin: 22.9, sector: "제약", revenue: 94193000000 }, { ticker: "068270", name: "셀트리온", mkt: "KR", cap: 400000, cap_disp: "40조", op_margin: 20.1, sector: "헬스케어" }, { ticker: "207940", name: "삼성바이오로직스", mkt: "KR", cap: 658000, cap_disp: "65.8조", op_margin: 3.7, sector: "헬스케어" }] },
             { key: "safety", label: "안전", n_kr: 67, n_us: 232, median_op_margin: 11.6, desc: "지키고 대비하는 수요 — 보험·방산·보안", leaders: [{ ticker: "012450", name: "한화에어로" }, { ticker: "032830", name: "삼성생명" }] },
             { key: "belonging", label: "소속·연결", n_kr: 98, n_us: 76, median_op_margin: 7.0, desc: "잇고 어울리는 수요 — 통신·콘텐츠·모임", leaders: [{ ticker: "035420", name: "NAVER" }, { ticker: "035720", name: "카카오" }] },
             { key: "esteem", label: "존중·과시", n_kr: 43, n_us: 33, median_op_margin: 6.0, desc: "돋보이고 싶은 수요 — 명품·뷰티·프리미엄", leaders: [{ ticker: "090430", name: "아모레퍼시픽" }] },
@@ -135,6 +164,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
     const [tab, setTab] = useState<string>("desire")
     const [sel, setSel] = useState<Record<string, string>>({})
     const [showAll, setShowAll] = useState<Record<string, boolean>>({})
+    const [sortKey, setSortKey] = useState<string>("cap") // cap=규모순 / profit=수익순
 
     useEffect(() => {
         if (onCanvas) return
@@ -224,7 +254,12 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
     const items = cfg.items
     const selKey = (sel[tab] && items.some((x) => x.key === sel[tab])) ? sel[tab] : (items[0] ? items[0].key : "")
     const item = items.find((x) => x.key === selKey) || items[0]
-    const leaders: any[] = (item && item.leaders) || []
+    const leadersRaw: any[] = (item && item.leaders) || []
+    const canSort = hasSummary(leadersRaw)
+    // 정렬 = 사실값 나열(규모=시총 / 수익=마진). 값 없는 종목은 뒤로. cap순은 빌더가 이미 정렬(안정 유지).
+    const leaders = (canSort && sortKey === "profit")
+        ? [...leadersRaw].sort((a, b) => (marginOf(b) ?? -1e12) - (marginOf(a) ?? -1e12))
+        : (canSort ? [...leadersRaw].sort((a, b) => (Number(b.cap) || 0) - (Number(a.cap) || 0)) : leadersRaw)
     const seeAll = !!showAll[tab]
     const shown = seeAll ? leaders : leaders.slice(0, LIMIT)
     const totalCount = items.reduce((a, x) => a + cfg.count(x), 0)
@@ -295,10 +330,25 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                     </div>
                     {item.desc ? <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>{item.desc}</div> : null}
 
+                    {/* 정렬 (규모순 / 수익순) — 요약 필드 있을 때만 */}
+                    {canSort ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12 }}>
+                            <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 700, marginRight: 1 }}>정렬</span>
+                            {[{ k: "cap", lb: "규모순" }, { k: "profit", lb: "수익순" }].map((o) => {
+                                const on = sortKey === o.k
+                                return (
+                                    <button key={o.k} onClick={() => setSortKey(o.k)}
+                                        style={{ border: "none", cursor: "pointer", fontFamily: FONT, padding: "5px 11px", borderRadius: 8, fontSize: 11.5, fontWeight: 800, background: on ? C.violetSoft : C.card, color: on ? C.violet : C.faint, boxShadow: on ? "none" : "0 1px 2px rgba(0,0,0,0.04)" }}>{o.lb}</button>
+                                )
+                            })}
+                            <span style={{ fontSize: 10, color: C.faint, fontWeight: 600, marginLeft: "auto" }}>사실값 · 랭킹 아님</span>
+                        </div>
+                    ) : null}
+
                     {/* 종목 그리드 (5×3, 초과 더보기) */}
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(108px, 1fr))", gap: 8, marginTop: 12 }}>
                         {shown.map((l: any, i: number) => (
-                            <StockCard key={(l.ticker || "") + i} ticker={String(l.ticker || "")} name={l.name} C={C} onGo={go} />
+                            <StockCard key={(l.ticker || "") + i} l={l} C={C} sortKey={sortKey} onGo={go} />
                         ))}
                     </div>
                     {leaders.length > LIMIT ? (
