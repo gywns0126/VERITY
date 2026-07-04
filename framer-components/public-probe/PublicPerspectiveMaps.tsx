@@ -31,7 +31,7 @@ const ICON: Record<string, string[]> = {
     safety: ["M12 3l7 2.5V11c0 4.2-2.9 7.4-7 8.8C7.9 18.4 5 15.2 5 11V5.5L12 3z", "M9 11l2 2 4-4"], // 안전 = 방패+체크
     belonging: ["M5 5h14v9H8l-3 3V5z"],                                                          // 관계·연결 = 말풍선
     esteem: ["M4 9l3.5 3L12 6l4.5 6L20 9l-1.5 9h-13L4 9z"],                                       // 프리미엄·품격 = 왕관
-    growth: ["M4 14l5-5 3 3 7-7", "M17 5h4v4"],                                                   // 성장·배움 = 상승 추세
+    growth: ["M12 4l9 4-9 4-9-4 9-4z", "M21 8v4.5", "M7 11v3c0 1.66 2.24 3 5 3s5-1.34 5-3v-3"],    // 성장·교육 = 졸업모(학사모)
     infra: ["M12 4l8 4-8 4-8-4 8-4z", "M4 12l8 4 8-4", "M4 16l8 4 8-4"],                          // 산업 기반 = 레이어
     steady: ["M12 6v14", "M6 13a6 6 0 0012 0", "M4.5 13H7", "M17 13h2.5", "M9.2 5a3 3 0 015.6 0"], // 안정 = 앵커
     middle: ["M12 4v15", "M7 8h10", "M6 20h12", "M7 8l-3 6a3 3 0 006 0z", "M17 8l-3 6a3 3 0 006 0z"], // 중간 = 저울
@@ -135,7 +135,7 @@ const SAMPLE = {
             { key: "safety", label: "안전·보장", n_kr: 67, n_us: 232, median_op_margin: 11.6, desc: "지키고 대비하는 수요 — 보험·방산·보안", leaders: [{ ticker: "012450", name: "한화에어로" }, { ticker: "032830", name: "삼성생명" }] },
             { key: "belonging", label: "관계·연결", n_kr: 98, n_us: 76, median_op_margin: 7.0, desc: "잇고 어울리는 수요 — 통신·콘텐츠·모임", leaders: [{ ticker: "035420", name: "NAVER" }, { ticker: "035720", name: "카카오" }] },
             { key: "esteem", label: "프리미엄·품격", n_kr: 43, n_us: 33, median_op_margin: 6.0, desc: "돋보이고 싶은 수요 — 명품·뷰티·프리미엄", leaders: [{ ticker: "090430", name: "아모레퍼시픽" }] },
-            { key: "growth", label: "성장·배움", n_kr: 10, n_us: 14, median_op_margin: 11.7, desc: "배우고 성장하는 수요 — 교육·자기계발", leaders: [{ ticker: "095720", name: "웅진씽크빅" }] },
+            { key: "growth", label: "성장·교육", n_kr: 10, n_us: 14, median_op_margin: 11.7, desc: "배우고 성장하는 수요 — 교육·자기계발", leaders: [{ ticker: "095720", name: "웅진씽크빅" }] },
             { key: "infra", label: "산업 기반", n_kr: 1006, n_us: 900, median_op_margin: 6.0, desc: "욕구를 직접 팔진 않지만 위 전부를 떠받치는 산업 — B2B·부품·장비", leaders: [{ ticker: "042700", name: "한미반도체" }, { ticker: "373220", name: "LG에너지솔루션" }] },
         ],
     },
