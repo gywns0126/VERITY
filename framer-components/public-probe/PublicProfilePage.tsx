@@ -141,8 +141,12 @@ function afterLoginNavigate() {
 }
 
 // 이메일 회원가입(즉시 — 승인 없음). access_token 오면 즉시 로그인, 없으면 이메일 인증 안내.
+// redirect_to = 현재 페이지 — 인증 메일 링크가 Site URL(VERITY 터미널)이 아닌 이 페이지로 복귀.
+// 🚨 Supabase 대시보드 Redirect URLs 허용 목록에 이 도메인 와일드카드가 있어야 유효 (미등록 시 Site URL 폴백).
 async function signUpEmail(supabaseUrl: string, anonKey: string, email: string, password: string, displayName: string, consent: boolean): Promise<{ session: SupaSession | null; needConfirm: boolean }> {
-    const body = await supaFetch(`${supabaseUrl}/auth/v1/signup`, anonKey, {
+    const back = typeof window !== "undefined" ? window.location.origin + window.location.pathname : ""
+    const q = back ? `?redirect_to=${encodeURIComponent(back)}` : ""
+    const body = await supaFetch(`${supabaseUrl}/auth/v1/signup${q}`, anonKey, {
         method: "POST",
         body: JSON.stringify({ email, password, data: { name: displayName || email.split("@")[0], consent } }),
     })
