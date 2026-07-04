@@ -303,7 +303,7 @@ export default function PublicBondRegime(props: Props) {
 
             {/* 면책 */}
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
-                수익률·스프레드·OAS는 ECOS(한국)·FRED(미국) 사실. 레짐 분류(금리환경·곡선·신용사이클)는 자체 기준 v0이고, 침체신호는 Fed 표준이에요. 자체 점수는 검증 후(2027) 공개해요.
+                수익률·스프레드·OAS는 ECOS(한국)·FRED(미국) 사실. 레짐 분류(금리환경·곡선·신용사이클)는 자체 기준 v0이고, 침체신호는 Fed 표준이에요.
             </div>
         </div>
     )

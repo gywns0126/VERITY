@@ -499,7 +499,7 @@ export default function PublicMarketBoard(props: Props) {
             {corrSection()}
 
             <div style={{ fontSize: 10, color: C.faint, fontWeight: 600, marginTop: 2, lineHeight: 1.5 }}>
-                추세선 = 실제 30일 시계열 보유 지표만 · 상관 = 가격 시계열로 계산한 사실 · 원자재 노출 = 산업 멤버십(수혜 아님) · 상승 빨강/하락 파랑 · 출처 yfinance·FRED·KIS·업비트
+                추세선 = 실제 30일 시계열 보유 지표만 · 상관 = 가격 시계열로 계산한 사실 · 원자재 노출 = 산업 멤버십 · 상승 빨강/하락 파랑 · 출처 yfinance·FRED·KIS·업비트
             </div>
         </div>
     )

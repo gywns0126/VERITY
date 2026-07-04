@@ -269,7 +269,7 @@ export default function SmallcapCornerCardAll(props: { width?: number; dark?: bo
           })}
 
           <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, padding: "6px 8px 2px", lineHeight: 1.5 }}>
-            {meta.disclaimer || "사실·패턴만 — VERITY 검증 진행 중"}
+            {meta.disclaimer || "사실·패턴만 — 알파네스트 검증 진행 중"}
           </div>
         </>
       )}
