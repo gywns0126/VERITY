@@ -214,7 +214,7 @@ export default function PublicEntranceMap(props: {
         try { window.location.href = path } catch (e) {}
     }
 
-    const wrap: any = { width: props.width || 380, fontFamily: FONT, background: C.bg, color: C.ink, padding: "0 14px", boxSizing: "border-box" }
+    const wrap: any = { width: props.width || 380, maxWidth: "100%", fontFamily: FONT, background: C.bg, color: C.ink, padding: "0 14px", boxSizing: "border-box" }
     if (!data) return <div style={wrap}><div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>지도 준비 중…</div></div>
 
     const byId: Record<string, any> = {}

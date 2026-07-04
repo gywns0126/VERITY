@@ -185,7 +185,7 @@ export default function PublicStockBrief(props: {
         else generate(true)
     }
 
-    const wrap: any = { width: props.width || 380, fontFamily: FONT, background: C.bg, color: C.ink, padding: "0 14px", boxSizing: "border-box" }
+    const wrap: any = { width: props.width || 380, maxWidth: "100%", fontFamily: FONT, background: C.bg, color: C.ink, padding: "0 14px", boxSizing: "border-box" }
     const sections = data ? parseBrief(data.brief) : []
     const btnBase: any = {
         border: "none", fontFamily: FONT, padding: "10px 15px", borderRadius: 11,
