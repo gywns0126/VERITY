@@ -5,7 +5,7 @@ import { useEffect, useState, type CSSProperties } from "react"
  * 관점 지도 — AlphaNest 탐색. 욕구 · 경기 체질 · 자사주 3탭.
  * 데이터(Blob): perspective_maps.json (분류·집계 사실만).
  *
- * 🚨 재설계(2026-07-04): 깔끔·심플 — 카테고리 pill(플랫 2D 이모지 Twemoji) 선택 → 종목 그리드(로고+국기, 최대 15개 5×3, 더보기).
+ * 🚨 재설계(2026-07-04): 깔끔·심플 — 카테고리 pill(얇은 라인 아이콘) 선택 → 종목 그리드(로고+국기, 최대 15개 5×3, 더보기).
  *   복잡한 피라미드/스펙트럼 제거. 종목이 주인공(크게). shimmer 스켈레톤.
  * 🚨 RULE 7 — 점수·랭킹·추천 0. 분류 기준 공개. 카운트=사실. "관점 = 탐색 렌즈". RULE 6 — LLM narrative 0.
  * 다크모드 자가감지. cache-fallback. 토스 소프트 유지.
@@ -24,17 +24,29 @@ const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Ne
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/perspective_maps.json"
 const LIMIT = 15 // 기본 노출 (5×3), 초과분 더보기
 
-// 카테고리 → 플랫 2D 이모지 (Twemoji SVG · 깔끔 심플, OS 3D 글로시 아님)
-const TW = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/"
-const CODE: Record<string, string> = {
-    survival: "1f35a", safety: "1f6e1", belonging: "1f4ac", esteem: "1f451", growth: "1f393", infra: "1f3d7",
-    steady: "2693", middle: "2696", swing: "1f3a2",
-    steady_buy: "1f501", some_buy: "1f6d2", net_sell: "1f4e4",
+// 카테고리 → 얇은 라인 아이콘 (모노크롬 · currentColor 상속, 이모지 아님). 24x24 stroke path.
+const ICON: Record<string, string[]> = {
+    survival: ["M12 21C7 17 4 13.5 4 10a4 4 0 018-1 4 4 0 018 1c0 3.5-3 7-8 11z"],           // 생존·생리 = 하트(생명)
+    safety: ["M12 3l7 2.5V11c0 4.2-2.9 7.4-7 8.8C7.9 18.4 5 15.2 5 11V5.5L12 3z", "M9 11l2 2 4-4"], // 안전 = 방패+체크
+    belonging: ["M5 5h14v9H8l-3 3V5z"],                                                          // 소속·연결 = 말풍선
+    esteem: ["M4 9l3.5 3L12 6l4.5 6L20 9l-1.5 9h-13L4 9z"],                                       // 존중·과시 = 왕관
+    growth: ["M4 14l5-5 3 3 7-7", "M17 5h4v4"],                                                   // 자아실현 = 상승 추세
+    infra: ["M12 4l8 4-8 4-8-4 8-4z", "M4 12l8 4 8-4", "M4 16l8 4 8-4"],                          // 기반·인프라 = 레이어
+    steady: ["M12 6v14", "M6 13a6 6 0 0012 0", "M4.5 13H7", "M17 13h2.5", "M9.2 5a3 3 0 015.6 0"], // 안정 = 앵커
+    middle: ["M12 4v15", "M7 8h10", "M6 20h12", "M7 8l-3 6a3 3 0 006 0z", "M17 8l-3 6a3 3 0 006 0z"], // 중간 = 저울
+    swing: ["M3 12h4l3-8 4 16 3-8h4"],                                                            // 민감 = 변동 파형
+    steady_buy: ["M17.7 7A7 7 0 006 8", "M17 4v3h-3", "M6.3 17A7 7 0 0018 16", "M7 20v-3h3"],     // 꾸준 매입 = 순환
+    some_buy: ["M12 4v9", "M8.5 9.5L12 13l3.5-3.5", "M5 15v4h14v-4"],                             // 매입 = 담기(↓)
+    net_sell: ["M12 13V4", "M8.5 7.5L12 4l3.5 3.5", "M5 15v4h14v-4"],                             // 처분 = 내보내기(↑)
 }
-function Emoji(props: { k: string; size: number }) {
-    const c = CODE[props.k]
-    if (!c) return null
-    return <img src={TW + c + ".svg"} alt="" width={props.size} height={props.size} loading="lazy" style={{ width: props.size, height: props.size, verticalAlign: "middle", flexShrink: 0, display: "block" }} />
+function Icon(props: { k: string; size: number }) {
+    const paths = ICON[props.k]
+    if (!paths) return null
+    return (
+        <svg width={props.size} height={props.size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flexShrink: 0 }}>
+            {paths.map((d, i) => <path key={i} d={d} />)}
+        </svg>
+    )
 }
 
 const FLAG = "https://hatscripts.github.io/circle-flags/flags/"
@@ -67,8 +79,8 @@ function StockCard(props: { ticker: string; name: string; C: any; onGo: (t: stri
     const kr = isKR(ticker)
     const initial = ((name || "?").trim().charAt(0)) || "?"
     return (
-        <div onClick={() => onGo(ticker)} role="button" tabIndex={0}
-            style={{ background: C.card, borderRadius: 12, padding: "12px 8px 11px", cursor: "pointer", textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, minWidth: 0 }}>
+        <div onClick={() => onGo(ticker)} role="button" tabIndex={0} title={name}
+            style={{ background: C.card, borderRadius: 12, padding: "12px 8px", height: 90, boxSizing: "border-box", cursor: "pointer", textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, minWidth: 0 }}>
             <div style={{ position: "relative", width: 34, height: 34, flexShrink: 0 }}>
                 {!err && ticker ? (
                     <img src={STK_LOGO + ticker + ".png"} alt="" width={34} height={34} loading="lazy" onError={() => setErr(true)}
@@ -79,7 +91,8 @@ function StockCard(props: { ticker: string; name: string; C: any; onGo: (t: stri
                 <img src={FLAG + (kr ? "kr" : "us") + ".svg"} alt="" width={14} height={14}
                     style={{ position: "absolute", right: -3, bottom: -3, width: 14, height: 14, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block" }} />
             </div>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink, lineHeight: 1.3, width: "100%", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", wordBreak: "keep-all" }}>{name}</div>
+            {/* 이름 = 1줄 말줄임 + hover 풀네임(title). 길면 "삼성바이오로…" 식으로 잘림. */}
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink, lineHeight: 1.3, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
         </div>
     )
 }
@@ -250,7 +263,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                 <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 2 }}>{hero.small}</div>
             </div>
 
-            {/* 카테고리 pill 선택 (플랫 이모지) */}
+            {/* 카테고리 pill 선택 (얇은 라인 아이콘) */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                 {items.map((x) => {
                     const active = x.key === selKey
@@ -262,7 +275,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                                 background: active ? C.violet : C.card, color: active ? "#fff" : C.ink,
                                 boxShadow: active ? "none" : "0 1px 2px rgba(0,0,0,0.04)",
                             }}>
-                            <Emoji k={x.key} size={16} />
+                            <Icon k={x.key} size={15} />
                             {x.label}
                             <span style={{ fontWeight: 700, opacity: 0.75, fontVariantNumeric: "tabular-nums" }}>{n0(cfg.count(x))}</span>
                         </button>
@@ -274,7 +287,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
             {item ? (
                 <div style={{ marginTop: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <Emoji k={item.key} size={26} />
+                        <span style={{ color: C.violet, background: C.violetSoft, borderRadius: 10, padding: 7, display: "inline-flex", flexShrink: 0 }}><Icon k={item.key} size={22} /></span>
                         <div style={{ minWidth: 0 }}>
                             <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>{item.label}</div>
                             <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 1 }}>{cfg.meta(item)}</div>
