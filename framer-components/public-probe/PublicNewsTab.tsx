@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
  * RULE 6 (LLM narrative STOP): 제목 + 출처 + 시각 + 원문 링크만. 해설/요약 0.
  * RULE 7: 호재/악재 칩 = 시장·미국 탭만(portfolio.headlines.sentiment = 키워드 자동분류, "검증 전" 라벨 명시).
  *   점수·등급·방향성 영향 추론은 미노출. 섹터 = 종목 멤버십 사실(영향·수혜 아님).
+ *   출처 신뢰도(credibility≥0.8 자체 분류)도 "가설/N=" 표기(2026-07-04 사이트 감사 P1).
  *
  * 다크모드: body[data-framer-theme] 추종 (다른 public 컴포넌트와 동일 패턴).
  *  - 캔버스 에디터: dark prop 정적 프리뷰 (RenderTarget.canvas 가드)
@@ -30,6 +31,64 @@ interface Props {
     apiBase: string
 }
 
+/* 글래스 아이콘 3종 (토스식, 2026-07-04) — 뉴스 탭 3분류 전용(내 종목=북마크·별 / 시장=캔들 / 미국=지구본).
+   solid(선명)+glass(반투명) 2레이어, 겹침부 블러 프로스트. 다른 컴포넌트와 동일 문법, 자립 인라인. */
+const _rr = (x: number, y: number, w: number, h: number, r: number): string =>
+    `M${x + r} ${y} H${x + w - r} Q${x + w} ${y} ${x + w} ${y + r} V${y + h - r} Q${x + w} ${y + h} ${x + w - r} ${y + h} H${x + r} Q${x} ${y + h} ${x} ${y + h - r} V${y + r} Q${x} ${y} ${x + r} ${y} Z`
+const _circ = (cx: number, cy: number, r: number): string =>
+    `M${cx - r} ${cy} a${r} ${r} 0 1 0 ${r * 2} 0 a${r} ${r} 0 1 0 ${-r * 2} 0 Z`
+const NEWS_GICONS: Record<string, { solid: (a: string) => any; glass: string }> = {
+    // 내 종목 = 북마크(glass) + 별(solid) — 관심·저장
+    stock: {
+        solid: (a) => <path d="M24 14 L25.7 18.3 L30.3 18.6 L26.8 21.6 L27.9 26 L24 23.5 L20.1 26 L21.2 21.6 L17.7 18.6 L22.3 18.3 Z" fill={a} />,
+        glass: "M14 7 H34 V42 L24 34.5 L14 42 Z",
+    },
+    // 시장 = 카드(glass) + 캔들 2봉(solid)
+    market: {
+        solid: (a) => (
+            <g stroke={a} strokeLinecap="round">
+                <line x1={16.5} y1={13} x2={16.5} y2={35} strokeWidth={2.4} />
+                <rect x={13.5} y={18} width={6} height={11} rx={1.5} fill={a} stroke="none" />
+                <line x1={31.5} y1={15} x2={31.5} y2={33} strokeWidth={2.4} />
+                <rect x={28.5} y={20} width={6} height={8} rx={1.5} fill={a} stroke="none" />
+            </g>
+        ),
+        glass: _rr(5, 9, 38, 30, 5),
+    },
+    // 미국 = 지구본(glass 원 + solid 위경도 격자)
+    us: {
+        solid: (a) => (
+            <g fill="none" stroke={a} strokeWidth={2.4}>
+                <line x1={10} y1={24} x2={38} y2={24} />
+                <path d="M24 9 a6.5 15 0 0 0 0 30 a6.5 15 0 0 0 0 -30 Z" />
+            </g>
+        ),
+        glass: _circ(24, 24, 15),
+    },
+}
+function NewsGIcon(props: { k: string; size: number; a: string; g: string }) {
+    const def = NEWS_GICONS[props.k]
+    if (!def) return null
+    const fid = "ntf-" + props.k
+    const cid = "ntc-" + props.k
+    // key=색 → 활성 전환 시 재마운트로 팝 애니메이션 재생 (키프레임 = 탭바 인접 <style>)
+    return (
+        <svg width={props.size} height={props.size} viewBox="0 0 48 48" fill="none" style={{ display: "block", flexShrink: 0, overflow: "visible" }}>
+            <defs>
+                <filter id={fid} x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.1" /></filter>
+                <clipPath id={cid}><path d={def.glass} /></clipPath>
+            </defs>
+            <g key={"s" + props.a} className="ntGiS">{def.solid(props.a)}</g>
+            <g key={"g" + props.a} className="ntGiG">
+                <g clipPath={`url(#${cid})`}>
+                    <g filter={`url(#${fid})`} opacity={0.85}>{def.solid(props.a)}</g>
+                    <path d={def.glass} fill={props.g} />
+                </g>
+            </g>
+        </svg>
+    )
+}
+
 const LIGHT = {
     bg: "#ffffff",
     card: "#f9fafb",
@@ -39,6 +98,7 @@ const LIGHT = {
     faint: "#8b95a1",
     border: "#e5e8eb",
     accent: "#6c5ce7",
+    gTint: "rgba(108,92,231,0.22)",
     chipBg: "#f2f4f6",
     up: "#f04452",
     down: "#3182f6",
@@ -54,6 +114,7 @@ const DARK = {
     faint: "#6b7682",
     border: "#2b3138",
     accent: "#a99bff",
+    gTint: "rgba(169,155,255,0.26)",
     chipBg: "#222933",
     up: "#f04452",
     down: "#5b9bff",
@@ -418,6 +479,13 @@ export default function PublicNewsTab(props: Props) {
                     )}
                 </div>
                 {/* 세그먼트 */}
+                <style>{`
+                    .ntGiS{animation:ntPop .5s cubic-bezier(.34,1.6,.64,1) both;transform-box:fill-box;transform-origin:center}
+                    .ntGiG{animation:ntRise .45s ease-out both}
+                    @keyframes ntPop{0%{transform:scale(.5) rotate(-8deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+                    @keyframes ntRise{0%{transform:translateY(4px);opacity:0}100%{transform:translateY(0);opacity:1}}
+                    @media (prefers-reduced-motion: reduce){.ntGiS,.ntGiG{animation:none}}
+                `}</style>
                 <div
                     style={{
                         marginTop: 14,
@@ -442,12 +510,16 @@ export default function PublicNewsTab(props: Props) {
                                     color: active ? C.text : C.subtext,
                                     fontWeight: active ? 700 : 600,
                                     fontSize: 13,
-                                    padding: "7px 14px",
+                                    padding: "7px 13px",
                                     borderRadius: 8,
                                     boxShadow: active ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
                                     transition: "all 140ms ease",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 5,
                                 }}
                             >
+                                <NewsGIcon k={t.key} size={15} a={active ? C.accent : C.faint} g={active ? (C as any).gTint : "transparent"} />
                                 {t.label}
                                 <span style={{ marginLeft: 6, color: active ? C.accent : C.faint, fontWeight: 700 }}>
                                     {t.count}
