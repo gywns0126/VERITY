@@ -27,12 +27,12 @@ const LIMIT = 15 // 기본 노출 (5×3), 초과분 더보기
 
 // 카테고리 → 얇은 라인 아이콘 (모노크롬 · currentColor 상속, 이모지 아님). 24x24 stroke path.
 const ICON: Record<string, string[]> = {
-    survival: ["M12 21C7 17 4 13.5 4 10a4 4 0 018-1 4 4 0 018 1c0 3.5-3 7-8 11z"],           // 생존·생리 = 하트(생명)
+    survival: ["M12 21C7 17 4 13.5 4 10a4 4 0 018-1 4 4 0 018 1c0 3.5-3 7-8 11z"],           // 필수·건강 = 하트(생명)
     safety: ["M12 3l7 2.5V11c0 4.2-2.9 7.4-7 8.8C7.9 18.4 5 15.2 5 11V5.5L12 3z", "M9 11l2 2 4-4"], // 안전 = 방패+체크
-    belonging: ["M5 5h14v9H8l-3 3V5z"],                                                          // 소속·연결 = 말풍선
-    esteem: ["M4 9l3.5 3L12 6l4.5 6L20 9l-1.5 9h-13L4 9z"],                                       // 존중·과시 = 왕관
-    growth: ["M4 14l5-5 3 3 7-7", "M17 5h4v4"],                                                   // 자아실현 = 상승 추세
-    infra: ["M12 4l8 4-8 4-8-4 8-4z", "M4 12l8 4 8-4", "M4 16l8 4 8-4"],                          // 기반·인프라 = 레이어
+    belonging: ["M5 5h14v9H8l-3 3V5z"],                                                          // 관계·연결 = 말풍선
+    esteem: ["M4 9l3.5 3L12 6l4.5 6L20 9l-1.5 9h-13L4 9z"],                                       // 프리미엄·품격 = 왕관
+    growth: ["M4 14l5-5 3 3 7-7", "M17 5h4v4"],                                                   // 성장·배움 = 상승 추세
+    infra: ["M12 4l8 4-8 4-8-4 8-4z", "M4 12l8 4 8-4", "M4 16l8 4 8-4"],                          // 산업 기반 = 레이어
     steady: ["M12 6v14", "M6 13a6 6 0 0012 0", "M4.5 13H7", "M17 13h2.5", "M9.2 5a3 3 0 015.6 0"], // 안정 = 앵커
     middle: ["M12 4v15", "M7 8h10", "M6 20h12", "M7 8l-3 6a3 3 0 006 0z", "M17 8l-3 6a3 3 0 006 0z"], // 중간 = 저울
     swing: ["M3 12h4l3-8 4 16 3-8h4"],                                                            // 민감 = 변동 파형
@@ -131,28 +131,28 @@ const SAMPLE = {
     _meta: { generated_at: "2026-07-04T13:20:05+09:00" },
     desire: {
         tiers: [
-            { key: "survival", label: "생존·생리", n_kr: 397, n_us: 250, median_op_margin: 6.8, desc: "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐", leaders: [{ ticker: "005930", name: "삼성전자", mkt: "KR", cap: 5000000, cap_disp: "500조", op_margin: 10.2, sector: "IT" }, { ticker: "000660", name: "SK하이닉스", mkt: "KR", cap: 1500000, cap_disp: "150조", op_margin: 20.5, sector: "IT" }, { ticker: "LLY", name: "일라이릴리", mkt: "US", cap: 982800, cap_disp: "$982.8B", net_margin: 31.7, sector: "제약", revenue: 65179000000 }, { ticker: "JNJ", name: "존슨앤존슨", mkt: "US", cap: 556800, cap_disp: "$556.8B", net_margin: 22.9, sector: "제약", revenue: 94193000000 }, { ticker: "068270", name: "셀트리온", mkt: "KR", cap: 400000, cap_disp: "40조", op_margin: 20.1, sector: "헬스케어" }, { ticker: "207940", name: "삼성바이오로직스", mkt: "KR", cap: 658000, cap_disp: "65.8조", op_margin: 3.7, sector: "헬스케어" }] },
-            { key: "safety", label: "안전", n_kr: 67, n_us: 232, median_op_margin: 11.6, desc: "지키고 대비하는 수요 — 보험·방산·보안", leaders: [{ ticker: "012450", name: "한화에어로" }, { ticker: "032830", name: "삼성생명" }] },
-            { key: "belonging", label: "소속·연결", n_kr: 98, n_us: 76, median_op_margin: 7.0, desc: "잇고 어울리는 수요 — 통신·콘텐츠·모임", leaders: [{ ticker: "035420", name: "NAVER" }, { ticker: "035720", name: "카카오" }] },
-            { key: "esteem", label: "존중·과시", n_kr: 43, n_us: 33, median_op_margin: 6.0, desc: "돋보이고 싶은 수요 — 명품·뷰티·프리미엄", leaders: [{ ticker: "090430", name: "아모레퍼시픽" }] },
-            { key: "growth", label: "자아실현", n_kr: 10, n_us: 14, median_op_margin: 11.7, desc: "배우고 성장하는 수요 — 교육·자기계발", leaders: [{ ticker: "095720", name: "웅진씽크빅" }] },
-            { key: "infra", label: "기반·인프라", n_kr: 1006, n_us: 900, median_op_margin: 6.0, desc: "욕구를 직접 팔진 않지만 위 전부를 떠받치는 산업 — B2B·부품·장비", leaders: [{ ticker: "042700", name: "한미반도체" }, { ticker: "373220", name: "LG에너지솔루션" }] },
+            { key: "survival", label: "필수·건강", n_kr: 397, n_us: 250, median_op_margin: 6.8, desc: "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐", leaders: [{ ticker: "005930", name: "삼성전자", mkt: "KR", cap: 5000000, cap_disp: "500조", op_margin: 10.2, sector: "IT" }, { ticker: "000660", name: "SK하이닉스", mkt: "KR", cap: 1500000, cap_disp: "150조", op_margin: 20.5, sector: "IT" }, { ticker: "LLY", name: "일라이릴리", mkt: "US", cap: 982800, cap_disp: "$982.8B", net_margin: 31.7, sector: "제약", revenue: 65179000000 }, { ticker: "JNJ", name: "존슨앤존슨", mkt: "US", cap: 556800, cap_disp: "$556.8B", net_margin: 22.9, sector: "제약", revenue: 94193000000 }, { ticker: "068270", name: "셀트리온", mkt: "KR", cap: 400000, cap_disp: "40조", op_margin: 20.1, sector: "헬스케어" }, { ticker: "207940", name: "삼성바이오로직스", mkt: "KR", cap: 658000, cap_disp: "65.8조", op_margin: 3.7, sector: "헬스케어" }] },
+            { key: "safety", label: "안전·보장", n_kr: 67, n_us: 232, median_op_margin: 11.6, desc: "지키고 대비하는 수요 — 보험·방산·보안", leaders: [{ ticker: "012450", name: "한화에어로" }, { ticker: "032830", name: "삼성생명" }] },
+            { key: "belonging", label: "관계·연결", n_kr: 98, n_us: 76, median_op_margin: 7.0, desc: "잇고 어울리는 수요 — 통신·콘텐츠·모임", leaders: [{ ticker: "035420", name: "NAVER" }, { ticker: "035720", name: "카카오" }] },
+            { key: "esteem", label: "프리미엄·품격", n_kr: 43, n_us: 33, median_op_margin: 6.0, desc: "돋보이고 싶은 수요 — 명품·뷰티·프리미엄", leaders: [{ ticker: "090430", name: "아모레퍼시픽" }] },
+            { key: "growth", label: "성장·배움", n_kr: 10, n_us: 14, median_op_margin: 11.7, desc: "배우고 성장하는 수요 — 교육·자기계발", leaders: [{ ticker: "095720", name: "웅진씽크빅" }] },
+            { key: "infra", label: "산업 기반", n_kr: 1006, n_us: 900, median_op_margin: 6.0, desc: "욕구를 직접 팔진 않지만 위 전부를 떠받치는 산업 — B2B·부품·장비", leaders: [{ ticker: "042700", name: "한미반도체" }, { ticker: "373220", name: "LG에너지솔루션" }] },
         ],
     },
     cycle: {
         basis: "연간 매출 YoY 변동성(≥4년 실측 종목만)",
         buckets: [
-            { key: "steady", label: "매출 흔들림 작음", n: 503, vol_range: [0.1, 5.3], desc: "경기와 덜 흔들리는 매출", leaders: [{ ticker: "033780", name: "KT&G" }, { ticker: "AAPL", name: "애플" }, { ticker: "MSFT", name: "마이크로소프트" }] },
+            { key: "steady", label: "매출 꾸준", n: 503, vol_range: [0.1, 5.3], desc: "경기와 덜 흔들리는 매출", leaders: [{ ticker: "033780", name: "KT&G" }, { ticker: "AAPL", name: "애플" }, { ticker: "MSFT", name: "마이크로소프트" }] },
             { key: "middle", label: "중간", n: 503, vol_range: [5.3, 12.7], desc: "중간 변동", leaders: [{ ticker: "005380", name: "현대차" }] },
-            { key: "swing", label: "매출 흔들림 큼", n: 504, vol_range: [12.7, 10074.7], desc: "경기·업황에 크게 흔들리는 매출", leaders: [{ ticker: "000660", name: "SK하이닉스" }] },
+            { key: "swing", label: "매출 출렁", n: 504, vol_range: [12.7, 10074.7], desc: "경기·업황에 크게 흔들리는 매출", leaders: [{ ticker: "000660", name: "SK하이닉스" }] },
         ],
     },
     buyback: {
         basis: "DART 자기주식 취득·처분 공시 건수",
         buckets: [
-            { key: "steady_buy", label: "꾸준한 매입", n: 137, desc: "자기주식을 반복 취득", leaders: [{ ticker: "000270", name: "기아" }, { ticker: "005930", name: "삼성전자" }] },
-            { key: "some_buy", label: "매입 있음", n: 52, desc: "취득 공시 확인", leaders: [{ ticker: "175330", name: "JB금융지주" }] },
-            { key: "net_sell", label: "처분 우위", n: 81, desc: "처분이 취득보다 많음", leaders: [{ ticker: "028050", name: "삼성E&A" }] },
+            { key: "steady_buy", label: "꾸준히 매입", n: 137, desc: "자기주식을 반복 취득", leaders: [{ ticker: "000270", name: "기아" }, { ticker: "005930", name: "삼성전자" }] },
+            { key: "some_buy", label: "가끔 매입", n: 52, desc: "취득 공시 확인", leaders: [{ ticker: "175330", name: "JB금융지주" }] },
+            { key: "net_sell", label: "처분 많음", n: 81, desc: "처분이 취득보다 많음", leaders: [{ ticker: "028050", name: "삼성E&A" }] },
         ],
     },
 }
