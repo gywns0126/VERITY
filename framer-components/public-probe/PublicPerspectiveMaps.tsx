@@ -5,7 +5,7 @@ import { useEffect, useState, type CSSProperties } from "react"
  * 관점 지도 — AlphaNest 탐색. 욕구 · 매출 안정성 · 자사주 3탭.
  * 데이터(Blob): perspective_maps.json (분류·집계 사실만).
  *
- * 🚨 재설계(2026-07-04): 깔끔·심플 — 카테고리 pill(얇은 라인 아이콘) 선택 → 종목 그리드(로고+국기, 최대 15개 5×3, 더보기).
+ * 🚨 재설계(2026-07-04): 깔끔·심플 — 카테고리 pill(얇은 라인 아이콘) 선택 → 종목 그리드(로고+국기, 기본 10개 5×2, 더보기=전량 20).
  *   복잡한 피라미드/스펙트럼 제거. 종목이 주인공(크게). shimmer 스켈레톤.
  * 🚨 RULE 7 — 점수·랭킹·추천 0. 분류 기준 공개. 카운트=사실. "관점 = 탐색 렌즈". RULE 6 — LLM narrative 0.
  * 다크모드 자가감지. cache-fallback. 토스 소프트 유지.
@@ -23,7 +23,7 @@ const DARK = {
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/perspective_maps.json"
-const LIMIT = 15 // 기본 노출 (5×3), 초과분 더보기
+const LIMIT = 10 // 기본 노출 (5×2), 초과분 더보기 — 10개 기본 (PM 2026-07-05)
 // 규모 분포 바 세그먼트 색 (카테고리 구분용 임의 팔레트 — 우열·랭킹 의미 아님)
 const CAP_COLORS = ["#6c5ce7", "#00b8d4", "#12b76a", "#f5a623", "#ec4899", "#8b95a1"]
 
