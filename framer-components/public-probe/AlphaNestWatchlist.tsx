@@ -212,7 +212,7 @@ export default function AlphaNestWatchlist(props: Props) {
                     })}
                 </div>
             )}
-            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>가격·등락률 = 실시간 사실 · 자체 점수 아님 · 점수 held(2027)</div>
+            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>가격·등락률 = 실시간 사실 · 점수 held(2027)</div>
         </div>
     )
 }

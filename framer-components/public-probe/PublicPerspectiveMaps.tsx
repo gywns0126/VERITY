@@ -527,7 +527,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
             ) : null}
 
             <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 16, lineHeight: 1.5 }}>
-                분류 = 탐색용 관점(기준 공개) · 집계 = 공시 사실 · 종목은 대표 예시 · 점수·등급·추천 아님
+                분류 = 탐색용 관점(기준 공개) · 집계 = 공시 사실 · 종목은 대표 예시
             </div>
         </div>
     )

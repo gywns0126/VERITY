@@ -112,7 +112,7 @@ export default function CryptoNews(props: { dataUrl?: string; dark?: boolean; ca
                     })}
                 </div>
             )}
-            <div style={{ padding: "12px 4px 2px", fontSize: 10.5, color: C.faint, fontWeight: 600 }}>출처 RSS(Cointelegraph·Google News) · 제목·출처·시각·원문만 · 해설·추천 아님</div>
+            <div style={{ padding: "12px 4px 2px", fontSize: 10.5, color: C.faint, fontWeight: 600 }}>출처 RSS(Cointelegraph·Google News) · 제목·출처·시각·원문만</div>
         </div>
     )
 }

@@ -221,7 +221,7 @@ export default function CryptoGovernancePublic(props: Props) {
 
             {/* 면책 */}
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
-                제안·투표수는 Snapshot 사실이에요. 점수·추천 아니에요.
+                제안·투표수는 Snapshot 사실이에요.
             </div>
         </div>
     )

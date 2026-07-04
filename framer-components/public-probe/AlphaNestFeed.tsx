@@ -224,7 +224,7 @@ export default function AlphaNestFeed(props: { width?: number; dark?: boolean; r
       })}
 
       <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, padding: "6px 8px 2px", lineHeight: 1.5 }}>
-        사실·연결만 — 점수·추천 아님 · VERITY 검증 진행 중
+        사실·연결만 — VERITY 검증 진행 중
       </div>
     </div>
   )

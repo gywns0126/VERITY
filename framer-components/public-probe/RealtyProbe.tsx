@@ -174,7 +174,7 @@ export default function RealtyProbe(props: { width?: number; dark?: boolean }) {
         <div style={{ marginTop: 18, padding: "12px 14px", background: C.bg, borderRadius: 12 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: C.sub, marginBottom: 3 }}>ⓘ {s.source}</div>
           <div style={{ fontSize: 12.5, color: C.faint, lineHeight: 1.5 }}>
-            장부가(취득원가 기준) · 시가 아님 · 점수·추천 아님, 판단은 직접.
+            장부가(취득원가 기준) · 시가 아님
           </div>
         </div>
       </div>

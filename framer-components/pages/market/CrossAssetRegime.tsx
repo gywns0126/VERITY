@@ -162,7 +162,7 @@ export default function CrossAssetRegime(props: { portfolioUrl?: string; cryptoU
             </div>
 
             <div style={{ textAlign: "center", fontSize: 10, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>
-                운영자 단일 북 · 레짐 읽기(가설, 검증 전) · 신호·포지션·매매 추천 아님 · 점수 = 기존 지표 표시용 결합
+                운영자 단일 북 · 레짐 읽기(가설, 검증 전) · 점수 = 기존 지표 표시용 결합
             </div>
         </div>
     )

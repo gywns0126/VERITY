@@ -225,7 +225,7 @@ export default function CryptoDilutionForensics(props: { dataUrl?: string; dark?
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 10.5, color: C.faint, fontWeight: 600 }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 11, height: 11, borderRadius: 2, background: C.up }} /> 유통</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 11, height: 11, borderRadius: 2, background: C.warn }} /> 미유통(언락 대기)</span>
-                <span style={{ marginLeft: "auto" }}>FDV/MC = 완전희석가치÷시총(미유통 물량 배수) · CoinGecko 공급 사실 · 점수·추천 아님</span>
+                <span style={{ marginLeft: "auto" }}>FDV/MC = 완전희석가치÷시총(미유통 물량 배수) · CoinGecko 공급 사실</span>
             </div>
         </div>
     )

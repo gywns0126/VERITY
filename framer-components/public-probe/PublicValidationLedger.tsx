@@ -154,7 +154,7 @@ export default function PublicValidationLedger(props: {
 
       {/* RULE 7 disclaimer */}
       <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 12, lineHeight: 1.5 }}>
-        전 항목 가설 · 관측 전용 · 점수·등급·종목 추천 아님 · 성과 원본은 게이트 도달 후 공개
+        전 항목 가설 · 관측 전용 · 성과 원본은 게이트 도달 후 공개
       </div>
     </div>
   )

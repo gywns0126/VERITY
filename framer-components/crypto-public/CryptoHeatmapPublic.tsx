@@ -186,13 +186,13 @@ export default function CryptoHeatmapPublic(props: { dataUrl?: string; dark?: bo
                 {metric === "dilution" ? (
                     <>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 2, background: C.warn }} /> 미유통 overhang</span>
-                        <span style={{ marginLeft: "auto" }}>FDV/MC = 공급 희석 사실(미유통=언락 대기) · 점수·추천 아님</span>
+                        <span style={{ marginLeft: "auto" }}>FDV/MC = 공급 희석 사실(미유통=언락 대기)</span>
                     </>
                 ) : (
                     <>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 2, background: C.up }} /> 상승</span>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 2, background: C.down }} /> 하락</span>
-                        <span style={{ marginLeft: "auto" }}>CoinGecko · {metric} 변동률 사실 · 점수·추천 아님</span>
+                        <span style={{ marginLeft: "auto" }}>CoinGecko · {metric} 변동률 사실</span>
                     </>
                 )}
             </div>

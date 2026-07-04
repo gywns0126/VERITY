@@ -315,7 +315,7 @@ export default function PublicMarketBoard(props: Props) {
                         ))}
                     </div>
                 )}
-                <div style={{ fontSize: 9.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.45 }}>산업 멤버십 사실 · 시총순 · 수혜·추천 아님 · 누르면 리포트</div>
+                <div style={{ fontSize: 9.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.45 }}>산업 멤버십 사실 · 시총순 · 누르면 리포트</div>
             </div>
         )
     }
@@ -373,7 +373,7 @@ export default function PublicMarketBoard(props: Props) {
                         {(cac.window_days || 30)}일 상관 최대 · {CORR_LABELS[corr.k]} {corr.v > 0 ? "+" : ""}{corr.v.toFixed(2)} ({corr.v >= 0 ? "동행" : "역행"})
                     </div>
                 )}
-                <div style={{ fontSize: 9.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.45 }}>시세 시계열로 계산한 사실 · 해석·추천 아님(2027 검증 후)</div>
+                <div style={{ fontSize: 9.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.45 }}>시세 시계열로 계산한 사실</div>
             </div>
         )
     }
@@ -476,7 +476,7 @@ export default function PublicMarketBoard(props: Props) {
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px" }}>글로벌 시세</span>
-                <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>지수·환율·원자재·크립토 · 사실(해석·추천 아님)</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>지수·환율·원자재·크립토 · 사실</span>
             </div>
 
             {rows.length === 0 ? (
@@ -499,7 +499,7 @@ export default function PublicMarketBoard(props: Props) {
             {corrSection()}
 
             <div style={{ fontSize: 10, color: C.faint, fontWeight: 600, marginTop: 2, lineHeight: 1.5 }}>
-                추세선 = 실제 30일 시계열 보유 지표만 · 상관 = 가격 시계열로 계산한 사실 · 원자재 노출 = 산업 멤버십(수혜 아님) · 상승 빨강/하락 파랑 · 출처 yfinance·FRED·KIS·업비트 · 점수·추천 아님(2027 검증 후)
+                추세선 = 실제 30일 시계열 보유 지표만 · 상관 = 가격 시계열로 계산한 사실 · 원자재 노출 = 산업 멤버십(수혜 아님) · 상승 빨강/하락 파랑 · 출처 yfinance·FRED·KIS·업비트
             </div>
         </div>
     )

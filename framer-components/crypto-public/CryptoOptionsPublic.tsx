@@ -239,7 +239,7 @@ export default function CryptoOptionsPublic(props: Props) {
 
             {/* 면책 */}
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
-                DVOL·풋콜·맥스페인은 Deribit 사실이에요(풋콜·맥스페인은 자체 산출). 점수·추천 아니에요.
+                DVOL·풋콜·맥스페인은 Deribit 사실이에요(풋콜·맥스페인은 자체 산출).
             </div>
         </div>
     )

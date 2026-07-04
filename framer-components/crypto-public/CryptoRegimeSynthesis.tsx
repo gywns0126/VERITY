@@ -230,7 +230,7 @@ export default function CryptoRegimeSynthesis(props: Props) {
 
             {/* 면책 */}
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
-                종합은 6개 차원을 가중치 없이 투명하게 합산해요(곡선맞추기 없음). 드라이버 수치는 사실, 판독은 자체 기준 v0(가설)이에요. {bkt7 ? bkt7.label || "" : ""} · 등급·추천이 아니며 매매와 연결되지 않아요. 자체 채점은 표본이 쌓인 뒤(N≥30) 의미가 생겨요.
+                종합은 6개 차원을 가중치 없이 투명하게 합산해요(곡선맞추기 없음). 드라이버 수치는 사실, 판독은 자체 기준 v0(가설)이에요. {bkt7 ? bkt7.label || "" : ""} · 자체 채점은 표본이 쌓인 뒤(N≥30) 의미가 생겨요.
             </div>
         </div>
     )

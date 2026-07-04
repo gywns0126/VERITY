@@ -210,7 +210,7 @@ export default function CryptoETFFlowPublic(props: Props) {
 
             {/* 면책 */}
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
-                ETF 순유입·AUM은 SoSoValue 사실이에요. 점수·추천 아니에요. 자체 채점은 검증 후(2027) 공개해요.
+                ETF 순유입·AUM은 SoSoValue 사실이에요. 자체 채점은 검증 후(2027) 공개해요.
             </div>
         </div>
     )

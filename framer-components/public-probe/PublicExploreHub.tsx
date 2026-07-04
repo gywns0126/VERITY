@@ -239,7 +239,7 @@ export default function PublicExploreHub(props: {
       )}
 
       <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 12, lineHeight: 1.5 }}>
-        외부 사실(DART 중앙값·수급)만 · 랭킹=네이버 금융 · 자체 점수/추천 아님
+        외부 사실(DART 중앙값·수급)만 · 랭킹=네이버 금융
       </div>
     </div>
   )

@@ -331,7 +331,7 @@ export default function CryptoRegimeTrail(props: { dataUrl?: string; dark?: bool
             {/* 푸터 — RULE 7 disclaimer (TIDE 내장 문구 우선) */}
             <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5, borderTop: `1px solid ${C.line}`, paddingTop: 10 }}>
                 {regime._disclaimer || "가설 · 관측-only · 매매 미연결 · N<30 통계 무의미"}
-                <br />레짐 score·분류 = 자체 기준 v0 (가설). 센서 raw 값 = 사실, 색 해석 = 가설. 점수·추천 아님.
+                <br />레짐 score·분류 = 자체 기준 v0 (가설). 센서 raw 값 = 사실, 색 해석 = 가설.
             </div>
         </div>
     )

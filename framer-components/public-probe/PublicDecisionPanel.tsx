@@ -491,7 +491,7 @@ export default function PublicDecisionPanel(props: Props) {
             )}
 
             <div style={{ textAlign: "center", fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 18, lineHeight: 1.55 }}>
-                방향(↑↓/강세·약세)은 <b>교과서적 일반론</b>(저PER=상대적 저렴 등)일 뿐 · <b>가중·종합·매수/매도 판단은 본인</b> · 자체 점수·등급·추천 아님(검증 후 2027) · 상세 근거는 아래 전체 리포트
+                방향(↑↓/강세·약세)은 <b>교과서적 일반론</b>(저PER=상대적 저렴 등)일 뿐 · 상세 근거는 아래 전체 리포트
             </div>
         </div>
     )

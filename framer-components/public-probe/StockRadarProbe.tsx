@@ -573,7 +573,7 @@ export default function StockRadarProbe(props: { width?: number; dark?: boolean 
             ⓘ 이건 '팔아라/사라'가 아닙니다
           </div>
           <div style={{ fontSize: 12.5, color: C.faint, lineHeight: 1.5 }}>
-            점수·추천 아님 · 공시 사실과 일정만 · 판단은 직접. 검증된 신호는 별도.
+            공시 사실과 일정만. 검증된 신호는 별도.
             {easy && " · 밑줄 친 용어는 누르면 뜻이 나와요."}
           </div>
         </div>

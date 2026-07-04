@@ -207,7 +207,7 @@ export default function IpoWatchCard(props: Props) {
 
             {/* RULE 7 disclaimer 배너 (상시) */}
             <div style={disclaimerBox}>
-                관찰 watch list · <b style={{ color: C.textSecondary }}>가설 (N=0)</b> · 추천 아님 — 상장 후 검증 시작
+                관찰 watch list · <b style={{ color: C.textSecondary }}>가설 (N=0)</b> — 상장 후 검증 시작
             </div>
 
             <div style={hr} />

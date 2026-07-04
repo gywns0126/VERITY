@@ -169,7 +169,7 @@ export default function CryptoStablecoinsPublic(props: Props) {
 
             {/* 면책 */}
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
-                공급량은 Tether·Circle 발행사 사실이에요. 스테이블 공급은 크립토 매수 여력(dry powder)의 1차 단서예요. 등급·추천이 아니며 자체 점수는 검증 후(2027) 공개해요.
+                공급량은 Tether·Circle 발행사 사실이에요. 스테이블 공급은 크립토 매수 여력(dry powder)의 1차 단서예요. 자체 점수는 검증 후(2027) 공개해요.
             </div>
         </div>
     )

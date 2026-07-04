@@ -298,7 +298,7 @@ export default function PublicEntranceMap(props: {
 
             {/* RULE 7 footer */}
             <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 12, lineHeight: 1.5 }}>
-                개수·기준시각 = 실측 사실 · 점수·등급·종목 추천 아님
+                개수·기준시각 = 실측 사실
             </div>
         </div>
     )

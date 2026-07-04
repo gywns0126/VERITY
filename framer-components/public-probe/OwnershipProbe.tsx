@@ -218,7 +218,7 @@ export default function OwnershipProbe(props: { width?: number; dark?: boolean }
         <div style={{ marginTop: 18, padding: "12px 14px", background: C.bg, borderRadius: 12 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: C.sub, marginBottom: 3 }}>ⓘ 공정거래위원회 공식 공시</div>
           <div style={{ fontSize: 12.5, color: C.faint, lineHeight: 1.5 }}>
-            기업집단포털 2026 지정 기준 · 법적 강제공시 사실 · 점수·추천 아님, 판단은 직접.
+            기업집단포털 2026 지정 기준 · 법적 강제공시 사실
           </div>
         </div>
       </div>

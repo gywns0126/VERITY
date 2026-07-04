@@ -40,7 +40,7 @@ function fmtPct(v: any): string {
 
 const DEMO = {
     coverage: "operating_pool", count: 3, source: "DART 5% 대량보유 공시",
-    note: "국민연금 5% 이상 대량보유 공시 기준 — 전체 보유종목 아님 · 분기 지연 · 점수·추천 아님.",
+    note: "국민연금 5% 이상 대량보유 공시 기준 — 전체 보유종목 아님 · 분기 지연.",
     fund: { as_of: "2026-03-31", aum_krw_trillion: 1526.1, return_total_pct: 18.82, return_total_note: "2025년 전체(잠정)", return_cumulative_annualized_pct: 8.04, asset_returns_pct: { "국내주식": 8.24, "해외주식": 19.74, "국내채권": 0.84, "해외채권": 3.77, "대체투자": 8.03 }, source: "국민연금기금운용본부 운용현황 공시" },
     holdings: [
         { ticker: "017960", name: "한국카본", pct: 10.49, qty_change: 521052, date: "2026-04-01", src: "DART majorstock" },
@@ -130,7 +130,7 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
         <div style={wrap}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>국민연금 투자</span>
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: C.faint }}>공시 사실 · 점수·추천 아님</span>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: C.faint }}>공시 사실</span>
             </div>
 
             {/* 운용현황 카드 */}

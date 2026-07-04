@@ -191,7 +191,7 @@ export default function CryptoRegimeChart(props: Props) {
                 <span style={{ fontSize: 11, color: C.faint, fontWeight: 500 }}>{bkt7 ? bkt7.label || "" : ""}</span>
             </div>
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 10, lineHeight: 1.6 }}>
-                판독은 자체 기준 v0(가설)이에요. 적중은 판독 후 BTC 실현수익과 대조해 매기며, 표본이 쌓인 뒤(N≥30) 의미가 생겨요. 등급·추천이 아니며 매매와 연결되지 않아요.
+                판독은 자체 기준 v0(가설)이에요. 적중은 판독 후 BTC 실현수익과 대조해 매기며, 표본이 쌓인 뒤(N≥30) 의미가 생겨요.
             </div>
         </div>
     )
