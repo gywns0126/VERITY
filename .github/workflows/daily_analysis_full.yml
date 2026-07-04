@@ -437,6 +437,12 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.coverage_report_builder
 
+      - name: 관점 지도 빌드 (욕구·경기 체질·자사주 — 분류·집계 사실)
+        # 업종 사실→욕구 계층 / 매출 YoY 변동성 실측 3분위 / 자기주식 공시 건수. 외부호출 0.
+        # RULE 7 = 점수·랭킹 0, 기준 공개. broad git add data/ = RULE 4. publish-data 등재 완료.
+        continue-on-error: true
+        run: python -m api.builders.perspective_maps_builder
+
       - name: Brain audit baseline (PRE/POST 측정 영속화)
         # 2026-05-18 확정 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
         # portfolio.json 의 brain_score 분포 + component fill + grade + quadrant 측정.
