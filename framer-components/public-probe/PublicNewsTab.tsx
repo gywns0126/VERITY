@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
  * RULE 6 (LLM narrative STOP): 제목 + 출처 + 시각 + 원문 링크만. 해설/요약 0.
  * RULE 7: 호재/악재 칩 = 시장·미국 탭만(portfolio.headlines.sentiment = 키워드 자동분류, "검증 전" 라벨 명시).
  *   점수·등급·방향성 영향 추론은 미노출. 섹터 = 종목 멤버십 사실(영향·수혜 아님).
+ *   출처 신뢰도(credibility≥0.8 자체 분류)도 "가설/N=" 표기(2026-07-04 사이트 감사 P1).
  *
  * 다크모드: body[data-framer-theme] 추종 (다른 public 컴포넌트와 동일 패턴).
  *  - 캔버스 에디터: dark prop 정적 프리뷰 (RenderTarget.canvas 가드)
