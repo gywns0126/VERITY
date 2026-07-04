@@ -487,8 +487,8 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                         </div>
                     ) : null}
 
-                    {/* 종목 그리드 (5×3, 초과 더보기) */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8, marginTop: 12  // 셀 108→150 (PM 2026-07-05 — 이름·수치 여유, 데스크톱 5~6열/모바일 2열) }}>
+                    {/* 종목 그리드 — 셀 최소 150px(이름·수치 여유, PM 2026-07-05) · 초과 더보기 */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8, marginTop: 12 }}>
                         {shown.map((l: any, i: number) => (
                             <StockCard key={(l.ticker || "") + i} l={l} C={C} sortKey={sortKey} onGo={go} />
                         ))}
