@@ -1788,8 +1788,9 @@ export default function PublicStockReport(props: Props) {
                                     const nm = sh.name && sh.name !== sh.type ? String(sh.name) : ""
                                     const generic = !nm || /기타|소액주주|자기주식|우리사주|^친족$|^동일인$|^임원$|기관투자|외국인|개인투자자|국민연금공단/.test(nm)
                                     const corp = sh.type === "소속회사" || /(주식회사|\(주\)|㈜|회사|Ltd|LTD|Inc|INC|Limited|Corp|Company|생명|화재|증권|물산|홀딩스|투자|캐피탈|은행|보험|자산운용|전자|중공업|텔레콤|공단|재단)/.test(nm)
-                                    // 인물 = "회사명 이름" 검색 — "이름 인물" 은 비유명 임원이면 네이버 인물정보 부재로 빈 결과 (PM 2026-07-04)
-                                    const shUrl = generic ? null : "https://search.naver.com/search.naver?query=" + encodeURIComponent(corp ? nm : ((s.name || "") + " " + nm).trim())
+                                    // 인물 링크 제거 — 비유명 임원·친족은 웹에 정보 원천 부재, 어떤 검색도 결과 보장 불가 (PM 2026-07-04).
+                                    // 법인·재단만 네이버 검색 링크 유지 = 죽은 링크 0.
+                                    const shUrl = generic || !corp ? null : "https://search.naver.com/search.naver?query=" + encodeURIComponent(nm)
                                     return (
                                     <div key={i} style={{ padding: "7px 0", borderTop: i === 0 ? `1px solid ${C.line}` : "none" }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
