@@ -326,6 +326,14 @@ export default function PublicLiveChart(props: Props) {
     const last = candles.length ? candles[candles.length - 1] : null
     const prevOfLast = candles.length > 1 ? candles[candles.length - 2][4] : (view && view.prevClose) || null
     const lastChg = last && prevOfLast ? ((last[4] - prevOfLast) / prevOfLast) * 100 : null
+    // 로딩 = 종목 있고 데이터 아직 없음(빈 상태 아님) → 헤더 가격 + 차트 바 스켈레톤 동시 표시
+    const loading = !view && !noData && !!tk
+    const skBase = isDark ? "#222a33" : "#e9edf1"
+    const skHi = isDark ? "#2d3742" : "#f3f5f7"
+    const shim = (extra: CSSProperties): CSSProperties => ({
+        background: skBase, backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`,
+        backgroundSize: "800px 100%", animation: "plcShimmer 1.4s ease-in-out infinite", ...extra,
+    })
 
     const hov = hoverIdx != null && cv && hoverIdx >= 0 && hoverIdx < cv.n ? candles[hoverIdx] : null
     const hovX = hov && cv ? cv.xAt(hoverIdx as number) : 0
@@ -373,12 +381,7 @@ export default function PublicLiveChart(props: Props) {
         </div>
     )
     const renderSkeleton = () => {
-        const skBase = isDark ? "#222a33" : "#e9edf1"
-        const skHi = isDark ? "#2d3742" : "#f3f5f7"
-        const sh: CSSProperties = {
-            background: skBase, backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`,
-            backgroundSize: "800px 100%", animation: "plcShimmer 1.4s ease-in-out infinite",
-        }
+        const sh: CSSProperties = shim({})
         const n = 40
         return (
             <div style={{ flex: 1, padding: "8px 10px 0", display: "flex", flexDirection: "column" }}>
@@ -415,6 +418,12 @@ export default function PublicLiveChart(props: Props) {
                                 52주 <span style={{ color: C.hi52 }}>{Number(view.hi52).toLocaleString()}</span> / <span style={{ color: C.lo52 }}>{Number(view.lo52).toLocaleString()}</span>
                             </span>
                         )}
+                    </>
+                )}
+                {!last && loading && (
+                    <>
+                        <span style={shim({ width: 92, height: 18, borderRadius: 6 })} />
+                        <span style={shim({ width: 52, height: 12, borderRadius: 5 })} />
                     </>
                 )}
                 <span style={{ marginLeft: "auto", display: "inline-flex", gap: 2 }}>{RANGES.map(rangeTab)}</span>
