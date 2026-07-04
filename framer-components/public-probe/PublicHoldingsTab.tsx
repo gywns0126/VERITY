@@ -2,7 +2,8 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 내 보유종목 — VERITY 공개 터미널 (AlphaNest) 탭. [보유종목 | 예상 세금] 2-탭.
+ * 내 보유종목 — VERITY 공개 터미널 (AlphaNest) 탭. [보유종목 | 분산 | 예상 세금] 3-탭.
+ * 🚨 분산 탭(2026-07-04) = 사실 계산기(추천 아님): 지역 비중·집중도(사실 산술) + 목표 갭(100% 사용자 설정) + 보유 자산군 ETF 자금(etf_flow 사실). 조합 추천·점수 0 (RULE 6/7·유사투자자문 회피).
  *
  * 인증 — localStorage["verity_supabase_session"].access_token → /api/holdings (user_holdings CRUD).
  *   미로그인/캔버스 = SAMPLE 미리보기 + 로그인 CTA. (StockDashboard getAccessToken 패턴 재사용)
@@ -10,6 +11,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
  * 🚨 시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): /api/stock 실시간가 폴링 제거 — KIS/yfinance 시세 회원(제3자) 재배포 불가.
  *   평가 기준가 = stock_flow_5d.json 마지막 close(네이버 소스·발행 유지 판정, KR·커버리지 한정) → h.price → avg_cost 순 graceful.
  *   실시간 시세 = 행 클릭 → 종목 리포트(네이버 link-out + TV 위젯)에서.
+ * 🚨 US 평가액 환율 = FX=1380 고정 가정. 총 평가금액·세금탭 모두 "환율 가정" 라벨 노출(2026-07-04 사이트 감사 P1).
  * 반응형 — ResizeObserver. 테마 = body[data-framer-theme] 자가감지. 브랜드 보라(vg).
  * 🚩 국기 = circle-flags SVG(Logo/FlagIcon) — 이모지 금지(싸구려). 데모 = 단순 CTA(3D목업 X).
  *
@@ -89,6 +91,25 @@ function parseFee(s: any): number {
     const n = parseFloat(String(s || "").replace(/[%\s]/g, ""))
     return isFinite(n) ? n / 100 : 0
 }
+
+// ETF 누적 순흐름(Δ상장좌수 × NAV, 가격효과 제거) — /etf 페이지 cumFlow 와 동일 로직. 자산군 자금 방향(사실) 참조용.
+const ETF_WINDOW = 20
+function etfCumFlow(series: any[]): number | null {
+    if (!Array.isArray(series) || series.length < 2) return null
+    const win = series.slice(-ETF_WINDOW)
+    const a = win[0], b = win[win.length - 1]
+    const as = Number(a.list_shrs), bs = Number(b.list_shrs), nav = Number(b.nav)
+    if (!isFinite(as) || !isFinite(bs) || !isFinite(nav)) return null
+    return (bs - as) * nav
+}
+// 조/억 부호 포맷 (자금흐름용)
+function fmtFlow(v: number): string {
+    if (!isFinite(v) || v === 0) return "0"
+    const a = Math.abs(v), s = v > 0 ? "+" : "−"
+    if (a >= 1e12) return s + (a / 1e12).toFixed(2) + "조"
+    if (a >= 1e8) return s + Math.round(a / 1e8).toLocaleString("en-US") + "억"
+    return s + Math.round(a / 1e4).toLocaleString("en-US") + "만"
+}
 function flagCode(market: any): string {
     const m = String(market || "").toUpperCase()
     if (KR_MK.indexOf(m) >= 0 || m.indexOf("KOS") >= 0 || m.indexOf("KONEX") >= 0) return "kr"
@@ -147,9 +168,11 @@ export default function PublicHoldingsTab(props: Props) {
     const [form, setForm] = useState({ ticker: "", name: "", shares: "", avg_cost: "", market: "kr" })
     const [busy, setBusy] = useState(false)
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
-    const [view, setView] = useState<"holdings" | "tax">("holdings")
+    const [view, setView] = useState<"holdings" | "mix" | "tax">("holdings")
     const [brokers, setBrokers] = useState<any[]>([])
     const [brokerIdx, setBrokerIdx] = useState(0)
+    const [catFlow, setCatFlow] = useState<Record<string, number>>({})   // etf_flow 자산군 누적 흐름(사실, 분산 탭)
+    const [targetKr, setTargetKr] = useState<number | null>(null)        // 목표 국내 비중 %(사용자 설정, null=현재값)
 
     const isDark = onCanvas ? !!dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -185,6 +208,26 @@ export default function PublicHoldingsTab(props: Props) {
             .then((d) => {
                 const bs = (d && (d.brokers || d.items)) || []
                 if (alive && Array.isArray(bs) && bs.length) setBrokers(bs)
+            })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [onCanvas])
+
+    // ETF 자산군 자금흐름 (분산 탭 — 보유 자산군에 패시브 자금 유입/유출 사실. /etf 와 동일 cumFlow).
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_flow.json", { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!alive || !d || !Array.isArray(d.etfs)) return
+                const hist = d.history || {}
+                const m: Record<string, number> = {}
+                for (const e of d.etfs) {
+                    const cf = etfCumFlow(hist[e.ticker])
+                    if (cf != null) m[e.category] = (m[e.category] || 0) + cf
+                }
+                setCatFlow(m)
             })
             .catch(() => {})
         return () => { alive = false }
@@ -307,6 +350,19 @@ export default function PublicHoldingsTab(props: Props) {
     const totalCommission = krCommission + usCommission
     const krMajorRows = krRows.filter((h) => h._val >= TAX.KR_MAJOR_AMT)
 
+    // ── 분산(조합) 사실 계산 — 비중·집중도·목표갭 ──
+    const krVal = krRows.reduce((a, b) => a + b._val, 0)
+    const usVal = usRows.reduce((a, b) => a + b._val, 0)
+    const krPct = totalVal > 0 ? (krVal / totalVal) * 100 : 0
+    const usPct = totalVal > 0 ? (usVal / totalVal) * 100 : 0
+    const byVal = [...evald].sort((a, b) => b._val - a._val)
+    const topName = byVal[0] ? (byVal[0].name || byVal[0].ticker) : ""
+    const topPct = totalVal > 0 && byVal[0] ? (byVal[0]._val / totalVal) * 100 : 0
+    const top3Pct = totalVal > 0 ? (byVal.slice(0, 3).reduce((a, b) => a + b._val, 0) / totalVal) * 100 : 0
+    const concentrated = topPct >= 40 || top3Pct >= 70
+    const tgtKr = targetKr == null ? Math.round(krPct) : targetKr
+    const gapKr = Math.round(krPct - tgtKr)
+
     const inputStyle: CSSProperties = {
         border: `1px solid ${C.line}`, borderRadius: 8, padding: "8px 10px", fontSize: 13,
         fontFamily: FONT, background: C.bg, color: C.ink, outline: "none", minWidth: 0,
@@ -339,7 +395,7 @@ export default function PublicHoldingsTab(props: Props) {
 
     const Tabs = (
         <div style={{ display: "flex", gap: 4, background: C.bg, borderRadius: 11, padding: 3, marginTop: 12 }}>
-            {([["holdings", "보유종목"], ["tax", "예상 세금"]] as const).map(([k, label]) => (
+            {([["holdings", "보유종목"], ["mix", "분산"], ["tax", "예상 세금"]] as const).map(([k, label]) => (
                 <div key={k} onClick={() => setView(k)} style={{
                     flex: 1, textAlign: "center", cursor: "pointer", fontSize: 13, fontWeight: 800, padding: "8px 0", borderRadius: 8,
                     background: view === k ? C.card : "transparent", color: view === k ? C.ink : C.faint,
@@ -468,6 +524,77 @@ export default function PublicHoldingsTab(props: Props) {
                                 종목 누르면 상세 리포트 · 평가손익 = 종가(전일) × 보유수량 − 입력 평단 (단순 계산·사실) · 실시간 시세는 리포트에서
                             </div>
                         </>
+                    ) : view === "mix" ? (
+                        <>
+                            {/* 자산 구성 (사실) — 지역 비중 + 집중도 */}
+                            <div style={{ ...cardS, padding: "18px 18px" }}>
+                                <div style={{ fontSize: 12, color: C.faint, fontWeight: 700, marginBottom: 12 }}>자산 구성 · 사실(평가금액 기준)</div>
+                                <div style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", background: C.bg, marginBottom: 9 }}>
+                                    {krPct > 0 ? <div style={{ width: krPct + "%", background: C.vg }} /> : null}
+                                    {usPct > 0 ? <div style={{ width: usPct + "%", background: C.warn }} /> : null}
+                                </div>
+                                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12.5, fontWeight: 800 }}>
+                                    <span style={{ color: C.vg }}>국내 {krPct.toFixed(0)}% <span style={{ color: C.faint, fontWeight: 600 }}>{wonCompact(krVal)}</span></span>
+                                    <span style={{ color: C.warn }}>해외 {usPct.toFixed(0)}% <span style={{ color: C.faint, fontWeight: 600 }}>{wonCompact(usVal)}</span></span>
+                                </div>
+                                <div style={{ borderTop: `1px solid ${C.line}`, marginTop: 12, paddingTop: 8 }}>
+                                    {kv("보유 종목 수", rows.length + "종목")}
+                                    {topName ? kv("최대 비중", topName + " " + topPct.toFixed(0) + "%") : null}
+                                    {kv("상위 3 비중", top3Pct.toFixed(0) + "%")}
+                                    {concentrated && (
+                                        <div style={{ background: C.warnS, color: C.warn, borderRadius: 10, padding: "9px 11px", fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, marginTop: 8 }}>
+                                            집중 — 최대 비중 {topPct.toFixed(0)}%{top3Pct >= 70 ? ` · 상위3 ${top3Pct.toFixed(0)}%` : ""}. 분산 여부는 본인 판단(사실 표시일 뿐).
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 목표 갭 (사용자 설정) */}
+                            <div style={cardS}>
+                                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
+                                    <span style={{ fontSize: 12, color: C.faint, fontWeight: 700 }}>내 목표 비중 · 직접 설정</span>
+                                    <span style={{ fontSize: 11.5, color: C.sub, fontWeight: 700 }}>국내 {tgtKr}% · 해외 {100 - tgtKr}%</span>
+                                </div>
+                                <input type="range" min={0} max={100} step={5} value={tgtKr}
+                                    onChange={(e) => setTargetKr(Number(e.target.value))}
+                                    style={{ width: "100%", accentColor: C.vg, cursor: "pointer" }} />
+                                <div style={{ borderTop: `1px solid ${C.line}`, marginTop: 8, paddingTop: 8 }}>
+                                    {kv("국내 현재 → 목표", krPct.toFixed(0) + "% → " + tgtKr + "%", Math.abs(gapKr) < 5 ? C.faint : C.ink)}
+                                    <div style={{ textAlign: "right", fontSize: 11.5, fontWeight: 800, color: Math.abs(gapKr) < 5 ? C.faint : C.warn }}>
+                                        {gapKr === 0 ? "목표 일치" : `갭 국내 ${gapKr > 0 ? "+" : ""}${gapKr}%p`}
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>목표는 직접 설정한 값 · 추천·권유 아님. 슬라이더로 조정하세요.</div>
+                            </div>
+
+                            {/* 보유 자산군 ETF 자금 (etf_flow, 참고 사실) */}
+                            {(krVal > 0 || usVal > 0) && (catFlow.equity_domestic != null || catFlow.equity_foreign != null) ? (
+                                <div style={cardS}>
+                                    <div style={{ fontSize: 12, color: C.faint, fontWeight: 700, marginBottom: 8 }}>보유 자산군 ETF 자금 · 최근 20거래일 (KRX 사실)</div>
+                                    {krVal > 0 && catFlow.equity_domestic != null ? (
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", gap: 10 }}>
+                                            <span style={{ fontSize: 13, fontWeight: 700 }}>국내주식 ETF</span>
+                                            <span style={{ fontSize: 13.5, fontWeight: 800, color: catFlow.equity_domestic > 0 ? C.up : C.down, fontVariantNumeric: "tabular-nums" }}>
+                                                {catFlow.equity_domestic > 0 ? "유입 " : "유출 "}{fmtFlow(catFlow.equity_domestic)}
+                                            </span>
+                                        </div>
+                                    ) : null}
+                                    {usVal > 0 && catFlow.equity_foreign != null ? (
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", gap: 10, borderTop: krVal > 0 && catFlow.equity_domestic != null ? `1px solid ${C.line}` : "none" }}>
+                                            <span style={{ fontSize: 13, fontWeight: 700 }}>해외주식 ETF</span>
+                                            <span style={{ fontSize: 13.5, fontWeight: 800, color: catFlow.equity_foreign > 0 ? C.up : C.down, fontVariantNumeric: "tabular-nums" }}>
+                                                {catFlow.equity_foreign > 0 ? "유입 " : "유출 "}{fmtFlow(catFlow.equity_foreign)}
+                                            </span>
+                                        </div>
+                                    ) : null}
+                                    <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>내 종목이 아닌 같은 자산군 ETF의 설정·환매 흐름 · 참고 사실 · 추천 아님</div>
+                                </div>
+                            ) : null}
+
+                            <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 13, lineHeight: 1.5 }}>
+                                비중·집중도 = 평가금액 기준 사실 산술 · 목표는 직접 설정 · 자산군 자금은 KRX ETF 사실 · 투자자문·추천 아님
+                            </div>
+                        </>
                     ) : (
                         <>
                             <div style={{ ...cardS, padding: "18px 18px" }}>
@@ -556,7 +683,7 @@ export default function PublicHoldingsTab(props: Props) {
                                 <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#ff5f57", flexShrink: 0 }} />
                                 <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#febc2e", flexShrink: 0 }} />
                                 <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#28c840", flexShrink: 0 }} />
-                                <div style={{ flex: 1, minWidth: 0, margin: "0 6px", background: C.bg, borderRadius: 7, padding: "5px 12px", fontSize: 11.5, color: C.faint, fontWeight: 600, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>verity-terminal.com/holdings</div>
+                                <div style={{ flex: 1, minWidth: 0, margin: "0 6px", background: C.bg, borderRadius: 7, padding: "5px 12px", fontSize: 11.5, color: C.faint, fontWeight: 600, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>alphanest.app/holdings</div>
                                 <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 6, padding: "3px 8px" }}>예시</span>
                             </div>
                             <div style={{ padding: narrow ? "0 12px 14px" : "0 16px 16px", pointerEvents: "none" }}>{content}</div>

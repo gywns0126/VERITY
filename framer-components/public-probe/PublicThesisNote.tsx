@@ -229,7 +229,7 @@ export default function PublicThesisNote(props: Props) {
     const title = (
         <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 10 }}>
             <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>내 관점</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>· 본인 결정 저널 (VERITY 추천 아님)</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>· 본인 결정 저널 (AlphaNest 추천 아님)</span>
         </div>
     )
 
@@ -303,7 +303,7 @@ export default function PublicThesisNote(props: Props) {
                     <button onClick={save} style={{ flex: 1, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vt, color: "#fff" }}>기록</button>
                     {thesis && <button onClick={() => { setEditing(false); setStance(thesis.stance); setNote(thesis.note || "") }} style={{ flexShrink: 0, cursor: "pointer", fontFamily: FONT, padding: "11px 16px", borderRadius: 11, fontSize: 13, fontWeight: 700, background: "transparent", color: C.faint, border: `1px solid ${C.line}` }}>취소</button>}
                 </div>
-                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{token ? "내 계정에 저장 — 어느 기기서나 동일" : "이 기기에 저장 · 로그인하면 계정에 저장돼 어디서나 보여요"} · 기록 시점 가격 동결로 재방문 시 변화 표시 · VERITY 의 판단·추천 아님</div>
+                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{token ? "내 계정에 저장 — 어느 기기서나 동일" : "이 기기에 저장 · 로그인하면 계정에 저장돼 어디서나 보여요"} · 기록 시점 가격 동결로 재방문 시 변화 표시 · AlphaNest 의 판단·추천 아님</div>
             </div>
         </div>
     )

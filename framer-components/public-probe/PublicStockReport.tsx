@@ -53,7 +53,7 @@ const INFO: Record<string, string> = {
     "동종업계": "같은 섹터 종목들의 중앙값과 이 종목을 비교한 거예요. PER/PBR은 KRX 공식 시총÷DART 재무로 직접 계산했어요. 업종 대비 높은지/낮은지 사실 비교일 뿐, 판단은 아니에요.",
     "내부자": "임원·주요주주가 자기 회사 주식을 사고(+, 빨강)·팔았는지(−, 파랑)예요. 내부 사정을 아는 사람의 매매라 참고하되, 그 자체가 매수·매도 신호는 아니에요.",
     "시장경보": "KRX가 공식 지정한 투자주의·투자경고·투자위험·단기과열·관리종목 상태예요. 거래소가 위험을 경고한 사실이라 꼭 확인하되, 자체 판단은 아니에요.",
-    "컨센 목표가": "증권사들이 제시한 목표주가의 평균이에요. VERITY 자체 의견이 아니라 애널리스트 집계 사실이고, 자체 점수는 검증 후(2027) 공개해요.",
+    "컨센 목표가": "증권사들이 제시한 목표주가의 평균이에요. AlphaNest 자체 의견이 아니라 애널리스트 집계 사실이고, 자체 점수는 검증 후(2027) 공개해요.",
     "재무제표": "DART 전자공시 최근 결산 실값이에요. 손익(번 돈)·재무상태(가진 것/빚)·현금흐름(실제 현금 이동)·비율을 사실 그대로 보여줘요. 단년 기준이라 추이는 아직 없어요.",
     "대차잔고": "시장에 빌려준 주식 잔고예요(공매도의 재료). 많을수록 공매도 압력이 커질 수 있다는 참고 사실이지, 그 자체가 하락 신호는 아니에요. 진짜 공매도 잔고는 아니에요(KRX 무료 비공개).",
     "공매도": "전체 거래 중 공매도가 차지한 비중이에요(최근 5일 평균). 높을수록 하락에 베팅한 거래가 많았다는 뜻으로 참고하되, 그 자체가 매도 신호는 아니에요.",
@@ -1475,7 +1475,7 @@ export default function PublicStockReport(props: Props) {
                                             {INFO[k] && <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, lineHeight: 1.5 }}>{INFO[k]}</div>}
                                             {METRIC_FORMULA[k] && (
                                                 <div style={{ fontSize: 11.5, fontWeight: 700, color: C.vt, lineHeight: 1.45 }}>
-                                                    계산 · {METRIC_FORMULA[k]}{fnote[k] === "자체계산" ? " (VERITY 직접 계산)" : ""}
+                                                    계산 · {METRIC_FORMULA[k]}{fnote[k] === "자체계산" ? " (AlphaNest 직접 계산)" : ""}
                                                 </div>
                                             )}
                                             {factsCalc[k] && (
@@ -1857,7 +1857,7 @@ export default function PublicStockReport(props: Props) {
                     : ln.color === "danger" ? C.downS : C.vtS
                 return (
                     <>
-                        {sectionTitle("VERITY 관측 — 분류 lens", "공개 재무에 룰 적용 · 점수·추천 아님")}
+                        {sectionTitle("AlphaNest 관측 — 분류 lens", "공개 재무에 룰 적용 · 점수·추천 아님")}
                         <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
                                 <span style={{ fontSize: 12.5, fontWeight: 800, color: lc, background: lcS, borderRadius: 8, padding: "5px 11px", letterSpacing: "-0.2px" }}>{ln.label || ln.class}</span>
@@ -1881,7 +1881,7 @@ export default function PublicStockReport(props: Props) {
             {/* 컨센서스 */}
             {(consensus.target_price || consensus.opinion) && (
                 <>
-                    {sectionTitle("애널리스트 컨센서스", "집계 · VERITY 의견 아님")}
+                    {sectionTitle("애널리스트 컨센서스", "집계 · AlphaNest 의견 아님")}
                     <div style={{ background: C.card, borderRadius: 16, padding: "6px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         {[["목표주가 평균", consensus.target_price], ["투자의견", consensus.opinion], ["추정 EPS", consensus.eps]].map(([k, v]: any, i) => v ? kvRow(k, v, i) : null)}
                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "4px 0 10px", lineHeight: 1.5 }}>증권사 집계 사실 — 자체 등급·점수는 검증 후(2027) 공개</div>

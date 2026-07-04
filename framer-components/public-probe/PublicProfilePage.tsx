@@ -637,7 +637,7 @@ export default function PublicProfilePage(props: Props) {
                         Google로 계속하기
                     </button>
 
-                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 16, lineHeight: 1.5, textAlign: "center" }}>AlphaNest 계정은 공개 터미널 전용입니다 · VERITY 운영 시스템과 별개</div>
+                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 16, lineHeight: 1.5, textAlign: "center" }}>AlphaNest 계정은 공개 터미널 전용입니다</div>
                 </div>
             </div>
         )
