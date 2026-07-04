@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useMemo, useState, type CSSProperties } from "react"
+import { useEffect, useState, type CSSProperties } from "react"
 
 /**
  * 관점 지도 — AlphaNest 탐색. 욕구(매슬로우 피라미드) · 경기 체질(매출 변동성 스펙트럼) · 자사주(강도 바) 3탭.
@@ -42,6 +42,37 @@ function fmtAge(iso: any): string {
 function n0(v: any): string {
     const x = Number(v)
     return isFinite(x) ? Math.round(x).toLocaleString("en-US") : "—"
+}
+
+// 카테고리 → 대표 이모지 (탐색 anchor · 사실 분류 시각화). RULE: 장식 아님, 계층 식별용.
+const EMOJI: Record<string, string> = {
+    survival: "🍚", safety: "🛡️", belonging: "💬", esteem: "👑", growth: "🎓", infra: "🏗️",
+    steady: "⚓", middle: "⚖️", swing: "🎢",
+    steady_buy: "🔁", some_buy: "🛒", net_sell: "📤",
+}
+const FLAG = "https://hatscripts.github.io/circle-flags/flags/"
+const STK_LOGO = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+function isKR(tk: any): boolean { return /^\d{6}$/.test(String(tk || "")) }
+
+// 대표 종목 = 로고 + 이름 + 국기 (텍스트 나열 X). 로고 실패 시 이니셜 원. 탭 → 리포트.
+function Leader(props: { ticker: string; name: string; C: any; onGo: (t: string) => void }) {
+    const { ticker, name, C, onGo } = props
+    const [err, setErr] = useState(false)
+    const kr = isKR(ticker)
+    const initial = ((name || "?").trim().charAt(0)) || "?"
+    return (
+        <span onClick={(e) => { e.stopPropagation(); onGo(String(ticker || "")) }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.violetSoft, borderRadius: 10, padding: "4px 10px 4px 4px", cursor: "pointer" }}>
+            {!err && ticker ? (
+                <img src={STK_LOGO + ticker + ".png"} alt="" width={18} height={18} loading="lazy" onError={() => setErr(true)}
+                    style={{ width: 18, height: 18, borderRadius: 5, objectFit: "cover", background: "#fff", flexShrink: 0 }} />
+            ) : (
+                <span style={{ width: 18, height: 18, borderRadius: 5, background: C.violet, color: "#fff", fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{initial}</span>
+            )}
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: C.violet }}>{name}</span>
+            <img src={FLAG + (kr ? "kr" : "us") + ".svg"} alt="" width={12} height={12} style={{ width: 12, height: 12, borderRadius: "50%", flexShrink: 0 }} />
+        </span>
+    )
 }
 
 // 캔버스 프리뷰 전용 SAMPLE (라이브는 fetch). 시각 구조 확인용 축약본.
@@ -127,21 +158,23 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
     const pick = (k: string) => setSel((s) => ({ ...s, [tab]: k }))
 
     const leaderChips = (leaders: any[]) => (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 8 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 9 }}>
             {(leaders || []).slice(0, 8).map((l: any, i: number) => (
-                <span key={(l.ticker || "") + i} onClick={(e) => { e.stopPropagation(); go(String(l.ticker || "")) }}
-                    style={{ cursor: "pointer", fontSize: 10.5, fontWeight: 700, padding: "3px 8px", borderRadius: 7, background: C.violetSoft, color: C.violet }}>{l.name}</span>
+                <Leader key={(l.ticker || "") + i} ticker={String(l.ticker || "")} name={l.name} C={C} onGo={go} />
             ))}
         </div>
     )
 
-    // 선택 항목 상세 패널 (히어로 비주얼 아래 공통)
+    // 선택 항목 상세 패널 (히어로 비주얼 아래 공통) — 큰 이모지 anchor + 대표 종목(로고·국기)
     const detailPanel = (item: any, metaLine: string) => {
         if (!item) return null
         return (
             <div style={{ background: C.card, borderRadius: 14, padding: 14, marginTop: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 14.5, fontWeight: 800, color: C.ink }}>{item.label}</span>
+                    <span style={{ fontSize: 14.5, fontWeight: 800, color: C.ink, display: "inline-flex", alignItems: "center", gap: 8 }}>
+                        {EMOJI[item.key] ? <span style={{ fontSize: 22, lineHeight: 1 }}>{EMOJI[item.key]}</span> : null}
+                        {item.label}
+                    </span>
                     <span style={{ fontSize: 10.5, fontWeight: 700, color: C.faint }}>{metaLine}</span>
                 </div>
                 {item.desc ? <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, marginTop: 5, lineHeight: 1.5 }}>{item.desc}</div> : null}
@@ -263,7 +296,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                                         borderRadius: 9, padding: "9px 12px", display: "flex", alignItems: "center",
                                         justifyContent: "space-between", gap: 8, transition: "all 120ms ease",
                                     }}>
-                                    <span style={{ fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.label}</span>
+                                    <span style={{ fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{EMOJI[t.key] || "•"} {t.label}</span>
                                     <span style={{ fontSize: 11.5, fontWeight: 800, flexShrink: 0, fontVariantNumeric: "tabular-nums", opacity: active ? 1 : 0.85 }}>{n0(c)}</span>
                                 </div>
                             )
@@ -277,7 +310,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                                 background: infra.key === desireActive ? C.violet : C.line, color: infra.key === desireActive ? "#fff" : C.sub,
                                 borderRadius: 9, padding: "9px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
                             }}>
-                            <span style={{ fontSize: 12, fontWeight: 800 }}>▁ 기반·인프라</span>
+                            <span style={{ fontSize: 12, fontWeight: 800 }}>🏗️ 기반·인프라 <span style={{ fontWeight: 600, opacity: 0.8 }}>· 토대</span></span>
                             <span style={{ fontSize: 11.5, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{n0(cnt(infra))}</span>
                         </div>
                     ) : null}
@@ -294,18 +327,19 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                         {data.cycle && data.cycle.basis} — 남의 "방어주" 라벨이 아니라 공시 매출로 직접 잰 흔들림.
                     </div>
                     {/* 안정 ↔ 민감 스펙트럼 (세그먼트 = 3분위) */}
-                    <div style={{ display: "flex", height: 46, borderRadius: 11, overflow: "hidden", gap: 2 }}>
+                    <div style={{ display: "flex", height: 58, borderRadius: 11, overflow: "hidden", gap: 2 }}>
                         {cycleBuckets.map((b, i) => {
                             const active = b.key === cycleActive
                             return (
                                 <div key={b.key} onClick={() => pick(b.key)} role="button" tabIndex={0}
                                     style={{
                                         flex: Math.max(1, Number(b.n) || 1), cursor: "pointer", background: cycleTint(i),
-                                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
                                         color: i >= cycleBuckets.length - 1 ? "#fff" : C.ink, padding: "0 6px",
-                                        outline: active ? `2px solid ${C.violet}` : "none", outlineOffset: -2,
+                                        boxShadow: active ? `inset 0 0 0 2.5px ${C.violet}` : "none",
                                     }}>
-                                    <span style={{ fontSize: 10.5, fontWeight: 800, textAlign: "center", lineHeight: 1.2 }}>{b.label}</span>
+                                    <span style={{ fontSize: 15, lineHeight: 1 }}>{EMOJI[b.key]}</span>
+                                    <span style={{ fontSize: 10, fontWeight: 800, textAlign: "center", lineHeight: 1.15 }}>{b.label}</span>
                                     <span style={{ fontSize: 11, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{n0(b.n)}</span>
                                 </div>
                             )
@@ -333,7 +367,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                             return (
                                 <div key={b.key} onClick={() => pick(b.key)} role="button" tabIndex={0} style={{ cursor: "pointer" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
-                                        <span style={{ fontSize: 12.5, fontWeight: 800, color: active ? C.violet : C.ink }}>{b.label}</span>
+                                        <span style={{ fontSize: 12.5, fontWeight: 800, color: active ? C.violet : C.ink }}>{EMOJI[b.key] || ""} {b.label}</span>
                                         <span style={{ fontSize: 11.5, fontWeight: 800, color: C.faint, fontVariantNumeric: "tabular-nums" }}>{n0(b.n)}종목</span>
                                     </div>
                                     <div style={{ height: 12, borderRadius: 6, background: C.track, overflow: "hidden" }}>
