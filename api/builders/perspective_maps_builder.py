@@ -27,7 +27,7 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 _DATA = os.path.join(_ROOT, "data")
 OUTPUT_PATH = os.path.join(_DATA, "perspective_maps.json")
 
-LEADERS_N = 6
+LEADERS_N = 20         # 프런트 기본 15개(5×3) 노출 + 더보기 여유 (2026-07-04 enrich)
 MIN_YEARS = 4          # 경기 체질 측정 최소 연수
 MIN_TIER_N = 3         # 표시 최소 종목 수
 
@@ -137,8 +137,47 @@ def _cap_of(s: Dict[str, Any]) -> float:
     return 0.0
 
 
+def _rev_latest(s: Dict[str, Any]) -> Optional[float]:
+    """최근 연도 매출 (KR=억원 / US=$M 원 단위 — 분류·탐색용, 랭킹 아님). fin_series 최신 연도."""
+    rev = [(p.get("year"), p.get("revenue")) for p in (s.get("fin_series") or []) if p.get("revenue")]
+    if not rev:
+        return None
+    rev.sort()
+    try:
+        return float(rev[-1][1])
+    except (TypeError, ValueError):
+        return None
+
+
+def _pct_fact(facts: Dict[str, Any], key: str) -> Optional[float]:
+    v = facts.get(key)
+    try:
+        return float(str(v).rstrip("%").lstrip("+"))
+    except (TypeError, ValueError):
+        return None
+
+
 def _leader(s: Dict[str, Any]) -> Dict[str, Any]:
-    return {"ticker": s.get("ticker"), "name": s.get("name_ko") or s.get("name")}
+    # 카드 요약 enrich (2026-07-04): 규모(시총)·수익성(마진)·섹터·매출 — 프런트 커스텀 정렬(규모/수익)용.
+    # 전부 이미 발행 산출물의 사실. 점수·랭킹 아님(RULE 7) — 정렬은 탐색 편의(사실값 나열).
+    # KR=영업이익률·overview.sector / US=순이익률·peer.sector (시장별 필드 위치 상이 → 폴백으로 커버리지 확보).
+    mkt = s.get("_mkt") or ("KR" if str(s.get("ticker", "")).isdigit() else "US")
+    facts = s.get("facts") or {}
+    d: Dict[str, Any] = {
+        "ticker": s.get("ticker"),
+        "name": s.get("name_ko") or s.get("name"),
+        "mkt": mkt,
+        "cap": round(_cap_of(s)),                              # 규모 정렬 키 (억원 정규화)
+        "cap_disp": facts.get("시가총액") or "",               # 표시용 원문
+        "op_margin": _op_margin(s),                            # 영업이익률 % (KR)
+        "net_margin": _pct_fact(facts, "순이익률"),            # 순이익률 % (US·일부 KR)
+        "sector": (s.get("overview") or {}).get("sector")
+                  or (s.get("peer") or {}).get("sector") or facts.get("업종") or "",
+    }
+    rev = _rev_latest(s)
+    if rev is not None:
+        d["revenue"] = round(rev)
+    return d
 
 
 def _op_margin(s: Dict[str, Any]) -> Optional[float]:
