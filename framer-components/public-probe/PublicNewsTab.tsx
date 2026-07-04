@@ -770,7 +770,7 @@ function FlatNews(props: { items: NewsItem[]; C: typeof LIGHT; empty: string; ca
                 ))}
             </div>
             <div style={{ padding: "12px 8px 2px", fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>
-↑ 호재 / ↓ 악재 = 키워드 자동분류(검증 전 · 중립 다수) · 점수·추천 아님
+↑ 호재 / ↓ 악재 = 키워드 자동분류(검증 전 · 중립 다수)
             </div>
         </div>
     )
