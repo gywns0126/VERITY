@@ -256,17 +256,17 @@ const SAMPLE = {
     cycle: {
         basis: "연간 매출 YoY 변동성(≥4년 실측 종목만)",
         buckets: [
-            { key: "steady", label: "매출 꾸준", n: 503, vol_range: [0.1, 5.3], desc: "경기와 덜 흔들리는 매출", leaders: [{ ticker: "033780", name: "KT&G" }, { ticker: "AAPL", name: "애플" }, { ticker: "MSFT", name: "마이크로소프트" }] },
-            { key: "middle", label: "중간", n: 503, vol_range: [5.3, 12.7], desc: "중간 변동", leaders: [{ ticker: "005380", name: "현대차" }] },
-            { key: "swing", label: "매출 출렁", n: 504, vol_range: [12.7, 10074.7], desc: "경기·업황에 크게 흔들리는 매출", leaders: [{ ticker: "000660", name: "SK하이닉스" }] },
+            { key: "steady", label: "매출 꾸준", n: 503, vol_range: [0.1, 5.3], cap_sum: 497760000, desc: "경기와 덜 흔들리는 매출", leaders: [{ ticker: "033780", name: "KT&G" }, { ticker: "AAPL", name: "애플" }, { ticker: "MSFT", name: "마이크로소프트" }] },
+            { key: "middle", label: "중간", n: 503, vol_range: [5.3, 12.7], cap_sum: 252810000, desc: "중간 변동", leaders: [{ ticker: "005380", name: "현대차" }] },
+            { key: "swing", label: "매출 출렁", n: 504, vol_range: [12.7, 10074.7], cap_sum: 324900000, desc: "경기·업황에 크게 흔들리는 매출", leaders: [{ ticker: "000660", name: "SK하이닉스" }] },
         ],
     },
     buyback: {
         basis: "DART 자기주식 취득·처분 공시 건수",
         buckets: [
-            { key: "steady_buy", label: "꾸준히 매입", n: 137, desc: "자기주식을 반복 취득", leaders: [{ ticker: "000270", name: "기아" }, { ticker: "005930", name: "삼성전자" }] },
-            { key: "some_buy", label: "가끔 매입", n: 52, desc: "취득 공시 확인", leaders: [{ ticker: "175330", name: "JB금융지주" }] },
-            { key: "net_sell", label: "처분 많음", n: 81, desc: "처분이 취득보다 많음", leaders: [{ ticker: "028050", name: "삼성E&A" }] },
+            { key: "steady_buy", label: "꾸준히 매입", n: 137, cap_sum: 1180000, desc: "자기주식을 반복 취득", leaders: [{ ticker: "000270", name: "기아" }, { ticker: "005930", name: "삼성전자" }] },
+            { key: "some_buy", label: "가끔 매입", n: 52, cap_sum: 240000, desc: "취득 공시 확인", leaders: [{ ticker: "175330", name: "JB금융지주" }] },
+            { key: "net_sell", label: "처분 많음", n: 81, cap_sum: 240000, desc: "처분이 취득보다 많음", leaders: [{ ticker: "028050", name: "삼성E&A" }] },
         ],
     },
 }
