@@ -45,6 +45,8 @@ const DEFAULT_API = "https://project-yw131.vercel.app"
 const PRINT_CSS_ID = "verity-print-facts-css"
 const FACTS_CLASS = "verity-print-facts"
 const PRINT_CSS =
+    // 화면에선 인라인 AI 브리핑 숨김(2026-07-04, PM: 요약 브리핑 제거·버튼만 노출) — 인쇄엔 유지(AI PDF 내용용)
+    "@media screen { [data-aibrief] { display: none !important; } } " +
     "@media print { @page { size: A4 portrait; margin: 10mm; } [data-noprint] { display: none !important; } " +
     `body.${FACTS_CLASS} [data-aibrief] { display: none !important; } }`
 
@@ -209,14 +211,6 @@ export default function PublicStockBrief(props: {
             </div>
             <div data-noprint style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 7, lineHeight: 1.5, textAlign: "center" }}>
                 팩트 = 100% 공개 데이터 · AI 해석 = 같은 데이터 위에 요약 서술이 붙어요{state !== "done" ? " (첫 생성 ~10초, 하루 1회 생성 후 캐시)" : ""}
-                {tk && state === "idle" && (
-                    <>
-                        {" · "}
-                        <span onClick={() => generate(false)} style={{ color: C.violet, cursor: "pointer", fontWeight: 700 }}>
-                            PDF 없이 화면에서 브리핑 보기
-                        </span>
-                    </>
-                )}
             </div>
 
             {/* ── 상태별 본문 ── */}
