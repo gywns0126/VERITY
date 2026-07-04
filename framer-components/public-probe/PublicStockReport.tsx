@@ -53,7 +53,7 @@ const INFO: Record<string, string> = {
     "동종업계": "같은 섹터 종목들의 중앙값과 이 종목을 비교한 거예요. PER/PBR은 KRX 공식 시총÷DART 재무로 직접 계산했어요. 업종 대비 높은지/낮은지 사실 비교일 뿐, 판단은 아니에요.",
     "내부자": "임원·주요주주가 자기 회사 주식을 사고(+, 빨강)·팔았는지(−, 파랑)예요. 내부 사정을 아는 사람의 매매라 참고하되, 그 자체가 매수·매도 신호는 아니에요.",
     "시장경보": "KRX가 공식 지정한 투자주의·투자경고·투자위험·단기과열·관리종목 상태예요. 거래소가 위험을 경고한 사실이라 꼭 확인하되, 자체 판단은 아니에요.",
-    "컨센 목표가": "증권사들이 제시한 목표주가의 평균이에요. VERITY 자체 의견이 아니라 애널리스트 집계 사실이고, 자체 점수는 검증 후(2027) 공개해요.",
+    "컨센 목표가": "증권사들이 제시한 목표주가의 평균이에요. AlphaNest 자체 의견이 아니라 애널리스트 집계 사실이고, 자체 점수는 검증 후(2027) 공개해요.",
     "재무제표": "DART 전자공시 최근 결산 실값이에요. 손익(번 돈)·재무상태(가진 것/빚)·현금흐름(실제 현금 이동)·비율을 사실 그대로 보여줘요. 단년 기준이라 추이는 아직 없어요.",
     "대차잔고": "시장에 빌려준 주식 잔고예요(공매도의 재료). 많을수록 공매도 압력이 커질 수 있다는 참고 사실이지, 그 자체가 하락 신호는 아니에요. 진짜 공매도 잔고는 아니에요(KRX 무료 비공개).",
     "공매도": "전체 거래 중 공매도가 차지한 비중이에요(최근 5일 평균). 높을수록 하락에 베팅한 거래가 많았다는 뜻으로 참고하되, 그 자체가 매도 신호는 아니에요.",
@@ -341,19 +341,12 @@ function fmtUSDcompact(v: any): string {
 
 // Catmull-Rom → cubic bezier 부드러운 곡선 path (유선형 추이용)
 function smoothLine(p: { x: number; y: number }[]): string {
+    // 직선 꺾은선(선형) — 곡선 보간은 실측값 사이를 지어내는 인상 (PM 2026-07-04 '그래프 선형으로')
     if (!p.length) return ""
     if (p.length === 1) return `M ${p[0].x} ${p[0].y}`
     let d = `M ${p[0].x} ${p[0].y}`
-    for (let i = 0; i < p.length - 1; i++) {
-        const p0 = p[i === 0 ? 0 : i - 1]
-        const p1 = p[i]
-        const p2 = p[i + 1]
-        const p3 = p[i + 2 < p.length ? i + 2 : p.length - 1]
-        const c1x = +(p1.x + (p2.x - p0.x) / 6).toFixed(2)
-        const c1y = +(p1.y + (p2.y - p0.y) / 6).toFixed(2)
-        const c2x = +(p2.x - (p3.x - p1.x) / 6).toFixed(2)
-        const c2y = +(p2.y - (p3.y - p1.y) / 6).toFixed(2)
-        d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${p2.x} ${p2.y}`
+    for (let i = 1; i < p.length; i++) {
+        d += ` L ${p[i].x} ${p[i].y}`
     }
     return d
 }
@@ -567,7 +560,8 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                                 <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 800, letterSpacing: "-0.3px", color: C.ink, fontVariantNumeric: "tabular-nums" }}>{last.toFixed(dec)}{m.unit}</span>
                                 <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10.5, fontWeight: 800, color: dirColor, background: dirBg, borderRadius: 6, padding: "2px 7px" }}><TrendArrow dir={arrowDir} color={dirColor} size={9} /> {dirText}</span>
                             </div>
-                            <svg width={CW} height={CH} style={{ display: "block", width: "100%", overflow: "visible" }} viewBox={`0 0 ${CW} ${CH}`} preserveAspectRatio="none">
+                            {/* 측정폭(CW) 고정 렌더 — width:100% 스트레치는 svg 내부 텍스트·원을 가로로 왜곡 (PM 2026-07-04) */}
+                            <svg width={CW} height={CH} style={{ display: "block", overflow: "visible" }} viewBox={`0 0 ${CW} ${CH}`}>
                                 <defs>
                                     <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stopColor={lineColor} stopOpacity={isDark ? 0.26 : 0.16} />
@@ -1475,7 +1469,7 @@ export default function PublicStockReport(props: Props) {
                                             {INFO[k] && <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, lineHeight: 1.5 }}>{INFO[k]}</div>}
                                             {METRIC_FORMULA[k] && (
                                                 <div style={{ fontSize: 11.5, fontWeight: 700, color: C.vt, lineHeight: 1.45 }}>
-                                                    계산 · {METRIC_FORMULA[k]}{fnote[k] === "자체계산" ? " (VERITY 직접 계산)" : ""}
+                                                    계산 · {METRIC_FORMULA[k]}{fnote[k] === "자체계산" ? " (AlphaNest 직접 계산)" : ""}
                                                 </div>
                                             )}
                                             {factsCalc[k] && (
@@ -1788,7 +1782,12 @@ export default function PublicStockReport(props: Props) {
                                     const nm = sh.name && sh.name !== sh.type ? String(sh.name) : ""
                                     const generic = !nm || /기타|소액주주|자기주식|우리사주|^친족$|^동일인$|^임원$|기관투자|외국인|개인투자자|국민연금공단/.test(nm)
                                     const corp = sh.type === "소속회사" || /(주식회사|\(주\)|㈜|회사|Ltd|LTD|Inc|INC|Limited|Corp|Company|생명|화재|증권|물산|홀딩스|투자|캐피탈|은행|보험|자산운용|전자|중공업|텔레콤|공단|재단)/.test(nm)
-                                    const shUrl = generic ? null : "https://search.naver.com/search.naver?query=" + encodeURIComponent(corp ? nm : nm + " 인물")
+                                    // 인물 = 빌더가 네이버 뉴스 건수 실검증한 link_ok 만 "회사명 이름" 검색 링크 (결과 보장, PM 2026-07-04).
+                                    // 법인·재단 = 상시 링크. 검증 안 된 인물 = 일반 텍스트 = 죽은 링크 0.
+                                    const shUrl = generic ? null
+                                        : corp ? "https://search.naver.com/search.naver?query=" + encodeURIComponent(nm)
+                                        : sh.link_ok ? "https://search.naver.com/search.naver?query=" + encodeURIComponent(((s.name || "") + " " + nm).trim())
+                                        : null
                                     return (
                                     <div key={i} style={{ padding: "7px 0", borderTop: i === 0 ? `1px solid ${C.line}` : "none" }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1881,7 +1880,7 @@ export default function PublicStockReport(props: Props) {
             {/* 컨센서스 */}
             {(consensus.target_price || consensus.opinion) && (
                 <>
-                    {sectionTitle("애널리스트 컨센서스", "집계 · VERITY 의견 아님")}
+                    {sectionTitle("애널리스트 컨센서스", "집계 · AlphaNest 의견 아님")}
                     <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         {[["목표주가 평균", consensus.target_price], ["투자의견", consensus.opinion], ["추정 EPS", consensus.eps]].map(([k, v]: any, i) => v ? kvRow(k, v, i) : null)}
                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "4px 0 10px", lineHeight: 1.5 }}>증권사 집계 사실</div>
