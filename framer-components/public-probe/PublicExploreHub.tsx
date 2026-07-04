@@ -14,21 +14,87 @@ import { useState, useEffect } from "react"
 
 const LIGHT = {
   bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-  line: "#e5e8eb", red: "#f04452", blue: "#3182f6", violet: "#6c5ce7", violetSoft: "#f0edff",
+  line: "#e5e8eb", red: "#f04452", blue: "#3182f6", violet: "#6c5ce7", violetSoft: "#f0edff", gTint: "rgba(108,92,231,0.22)",
 }
 const DARK = {
   bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
-  line: "#2b2f37", red: "#ff6b76", blue: "#5a9cff", violet: "#a98bff", violetSoft: "#2a2440",
+  line: "#2b2f37", red: "#ff6b76", blue: "#5a9cff", violet: "#a98bff", violetSoft: "#2a2440", gTint: "rgba(169,155,255,0.26)",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
 const SECTOR_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/sector_overview.json"
 // 랭킹 = 네이버 금융 link-out(네이버가 서빙 = 재배포 아님, 실시간·무료·합법). KRX raw 자체 발행 중단.
 const NAVER_RANK = [
-  { label: "거래대금 상위", url: "https://finance.naver.com/sise/sise_quant.naver" },
-  { label: "상승률 상위", url: "https://finance.naver.com/sise/sise_rise.naver" },
-  { label: "하락률 상위", url: "https://finance.naver.com/sise/sise_fall.naver" },
-  { label: "시가총액 상위", url: "https://finance.naver.com/sise/sise_market_sum.naver" },
+  { k: "quant", label: "거래대금 상위", url: "https://finance.naver.com/sise/sise_quant.naver" },
+  { k: "rise", label: "상승률 상위", url: "https://finance.naver.com/sise/sise_rise.naver" },
+  { k: "fall", label: "하락률 상위", url: "https://finance.naver.com/sise/sise_fall.naver" },
+  { k: "mcap", label: "시가총액 상위", url: "https://finance.naver.com/sise/sise_market_sum.naver" },
 ]
+
+/* 글래스 아이콘 (토스식, 2026-07-04) — PublicGlassIcon 세트 재사용 4종 (코인스택↑/코인↑/코인↓/금고). 인라인 자립. */
+const _rr = (x: number, y: number, w: number, h: number, r: number): string =>
+  `M${x + r} ${y} H${x + w - r} Q${x + w} ${y} ${x + w} ${y + r} V${y + h - r} Q${x + w} ${y + h} ${x + w - r} ${y + h} H${x + r} Q${x} ${y + h} ${x} ${y + h - r} V${y + r} Q${x} ${y} ${x + r} ${y} Z`
+const _circ = (cx: number, cy: number, r: number): string =>
+  `M${cx - r} ${cy} a${r} ${r} 0 1 0 ${r * 2} 0 a${r} ${r} 0 1 0 ${-r * 2} 0 Z`
+const GICONS: Record<string, { solid: (a: string) => any; glass: string }> = {
+  quant: {
+    solid: (a) => (
+      <g fill="none" stroke={a} strokeWidth={4.5} strokeLinecap="round" strokeLinejoin="round">
+        <line x1={36} y1={36} x2={36} y2={16} />
+        <polyline points="29,22 36,14.5 43,22" />
+      </g>
+    ),
+    glass: _rr(7.5, 19, 28, 5.5, 2.75) + " " + _rr(7.5, 26, 28, 5.5, 2.75) + " " + _rr(7.5, 33, 28, 5.5, 2.75),
+  },
+  rise: {
+    solid: (a) => (
+      <g fill="none" stroke={a} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round">
+        <line x1={36} y1={30} x2={36} y2={18} />
+        <polyline points="31,23 36,17.5 41,23" />
+      </g>
+    ),
+    glass: _circ(20, 26, 13),
+  },
+  fall: {
+    solid: (a) => (
+      <g fill="none" stroke={a} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round">
+        <line x1={36} y1={18} x2={36} y2={30} />
+        <polyline points="31,25 36,30.5 41,25" />
+      </g>
+    ),
+    glass: _circ(20, 26, 13),
+  },
+  mcap: {
+    solid: (a) => (
+      <g>
+        <circle cx={24} cy={24} r={7.5} fill={a} />
+        <circle cx={24} cy={24} r={2.4} fill="#ffffff" fillOpacity={0.92} />
+        <path d="M31 22.5 H41.5 Q43 22.5 43 24 Q43 25.5 41.5 25.5 H31 Z" fill={a} />
+      </g>
+    ),
+    glass: _rr(5, 8, 38, 32, 6),
+  },
+}
+function GIcon(props: { k: string; size: number; a: string; g: string }) {
+  const def = GICONS[props.k]
+  if (!def) return null
+  const fid = "xhf-" + props.k
+  const cid = "xhc-" + props.k
+  return (
+    <svg width={props.size} height={props.size} viewBox="0 0 48 48" fill="none" style={{ display: "block", flexShrink: 0, overflow: "visible" }}>
+      <defs>
+        <filter id={fid} x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.1" /></filter>
+        <clipPath id={cid}><path d={def.glass} /></clipPath>
+      </defs>
+      <g className="xhGiS">{def.solid(props.a)}</g>
+      <g className="xhGiG">
+        <g clipPath={`url(#${cid})`}>
+          <g filter={`url(#${fid})`} opacity={0.85}>{def.solid(props.a)}</g>
+          <path d={def.glass} fill={props.g} />
+        </g>
+      </g>
+    </svg>
+  )
+}
 
 function readBodyDark(): boolean {
   if (typeof document === "undefined" || !document.body) return false
@@ -149,13 +215,23 @@ export default function PublicExploreHub(props: {
 
       {tab === "ranking" && (
         <div>
+          <style>{`
+            .xhGiS{animation:xhPop .5s cubic-bezier(.34,1.6,.64,1) both;transform-box:fill-box;transform-origin:center}
+            .xhGiG{animation:xhRise .45s ease-out both}
+            @keyframes xhPop{0%{transform:scale(.45) rotate(-10deg);opacity:0}100%{transform:scale(1) rotate(0deg);opacity:1}}
+            @keyframes xhRise{0%{transform:translateY(5px);opacity:0}100%{transform:translateY(0);opacity:1}}
+            .xhCard svg{transition:transform .18s ease}
+            .xhCard:hover svg{transform:translateY(-1.5px) scale(1.08)}
+            @media (prefers-reduced-motion: reduce){.xhGiS,.xhGiG{animation:none}.xhCard svg{transition:none}}
+          `}</style>
           <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginBottom: 10, lineHeight: 1.5 }}>실시간 랭킹은 네이버 금융에서 · 클릭 시 새 탭</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(168px, 1fr))", gap: 10 }}>
             {NAVER_RANK.map((r) => (
-              <div key={r.url} onClick={() => { if (typeof window !== "undefined") window.open(r.url, "_blank", "noopener") }}
-                style={{ background: C.card, borderRadius: 14, padding: 15, boxShadow: "0 1px 3px rgba(0,0,0,0.04)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <div key={r.url} className="xhCard" onClick={() => { if (typeof window !== "undefined") window.open(r.url, "_blank", "noopener") }}
+                style={{ background: C.card, borderRadius: 14, padding: 15, boxShadow: "0 1px 3px rgba(0,0,0,0.04)", cursor: "pointer", display: "flex", alignItems: "center", gap: 9 }}>
+                <GIcon k={(r as any).k} size={22} a={C.violet} g={C.gTint} />
                 <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>{r.label}</span>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: C.violet }}>네이버 ↗</span>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: C.violet, marginLeft: "auto" }}>네이버 ↗</span>
               </div>
             ))}
           </div>
