@@ -15,37 +15,142 @@ import { useEffect, useState, type CSSProperties } from "react"
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", track: "#eef0f3", hi: "#f6f7f9",
+    line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", track: "#eef0f3", hi: "#f6f7f9", gTint: "rgba(108,92,231,0.22)",
 }
 const DARK = {
     bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
-    line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", track: "#242830", hi: "#2e333c",
+    line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", track: "#242830", hi: "#2e333c", gTint: "rgba(169,155,255,0.26)",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/perspective_maps.json"
 const LIMIT = 15 // 기본 노출 (5×3), 초과분 더보기
+// 규모 분포 바 세그먼트 색 (카테고리 구분용 임의 팔레트 — 우열·랭킹 의미 아님)
+const CAP_COLORS = ["#6c5ce7", "#00b8d4", "#12b76a", "#f5a623", "#ec4899", "#8b95a1"]
 
-// 카테고리 → 얇은 라인 아이콘 (모노크롬 · currentColor 상속, 이모지 아님). 24x24 stroke path.
-const ICON: Record<string, string[]> = {
-    survival: ["M12 21C7 17 4 13.5 4 10a4 4 0 018-1 4 4 0 018 1c0 3.5-3 7-8 11z"],           // 필수·건강 = 하트(생명)
-    safety: ["M12 3l7 2.5V11c0 4.2-2.9 7.4-7 8.8C7.9 18.4 5 15.2 5 11V5.5L12 3z", "M9 11l2 2 4-4"], // 안전 = 방패+체크
-    belonging: ["M5 5h14v9H8l-3 3V5z"],                                                          // 관계·연결 = 말풍선
-    esteem: ["M4 9l3.5 3L12 6l4.5 6L20 9l-1.5 9h-13L4 9z"],                                       // 프리미엄·품격 = 왕관
-    growth: ["M12 4l9 4-9 4-9-4 9-4z", "M21 8v4.5", "M7 11v3c0 1.66 2.24 3 5 3s5-1.34 5-3v-3"],    // 성장·교육 = 졸업모(학사모)
-    infra: ["M12 4l8 4-8 4-8-4 8-4z", "M4 12l8 4 8-4", "M4 16l8 4 8-4"],                          // 산업 기반 = 레이어
-    steady: ["M12 6v14", "M6 13a6 6 0 0012 0", "M4.5 13H7", "M17 13h2.5", "M9.2 5a3 3 0 015.6 0"], // 안정 = 앵커
-    middle: ["M12 4v15", "M7 8h10", "M6 20h12", "M7 8l-3 6a3 3 0 006 0z", "M17 8l-3 6a3 3 0 006 0z"], // 중간 = 저울
-    swing: ["M3 12h4l3-8 4 16 3-8h4"],                                                            // 민감 = 변동 파형
-    steady_buy: ["M17.7 7A7 7 0 006 8", "M17 4v3h-3", "M6.3 17A7 7 0 0018 16", "M7 20v-3h3"],     // 꾸준 매입 = 순환
-    some_buy: ["M12 4v9", "M8.5 9.5L12 13l3.5-3.5", "M5 15v4h14v-4"],                             // 매입 = 담기(↓)
-    net_sell: ["M12 13V4", "M8.5 7.5L12 4l3.5 3.5", "M5 15v4h14v-4"],                             // 처분 = 내보내기(↑)
+/* 글래스 아이콘 (토스식 glassmorphism, 2026-07-04 교체) — solid(선명 보라) + glass(반투명 틴트) 2레이어.
+   glass 겹침부 = 블러 복제(clipPath+feGaussianBlur) 프로스트. 배경 없음 — pill/카드 어디서든 동작.
+   도안 = PublicGlassIcon.tsx 와 동일 15종 (컴포넌트 자립 원칙으로 인라인). 활성 pill 은 흰색 오버라이드. */
+const _rr = (x: number, y: number, w: number, h: number, r: number): string =>
+    `M${x + r} ${y} H${x + w - r} Q${x + w} ${y} ${x + w} ${y + r} V${y + h - r} Q${x + w} ${y + h} ${x + w - r} ${y + h} H${x + r} Q${x} ${y + h} ${x} ${y + h - r} V${y + r} Q${x} ${y} ${x + r} ${y} Z`
+const _circ = (cx: number, cy: number, r: number): string =>
+    `M${cx - r} ${cy} a${r} ${r} 0 1 0 ${r * 2} 0 a${r} ${r} 0 1 0 ${-r * 2} 0 Z`
+const _CARD = _rr(4, 9, 40, 30, 5)
+const _COIN = _circ(20, 26, 13)
+const _bar = (y: number): string => _rr(7.5, y, 28, 5.5, 2.75)
+const GICONS: Record<string, { solid: (a: string) => any; glass: string }> = {
+    // 탭 3종 — 욕구(피라미드) / 매출 안정성(카드+라인) / 자사주(금고)
+    desire: {
+        solid: (a) => <path d="M24 6 L35 25 Q36.5 28 33 28 H15 Q11.5 28 13 25 Z" fill={a} />,
+        glass: "M12.5 24 H35.5 L41.5 38.5 Q43 42 39.5 42 H8.5 Q5 42 6.5 38.5 Z",
+    },
+    cycle: {
+        solid: (a) => (
+            <g>
+                <polyline points="4,31 16,26 28,27.5 44,19" fill="none" stroke={a} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx={44} cy={19} r={3.2} fill={a} />
+            </g>
+        ),
+        glass: _CARD,
+    },
+    buyback: {
+        solid: (a) => (
+            <g>
+                <circle cx={24} cy={24} r={7.5} fill={a} />
+                <circle cx={24} cy={24} r={2.4} fill="#ffffff" fillOpacity={0.92} />
+                <path d="M31 22.5 H41.5 Q43 22.5 43 24 Q43 25.5 41.5 25.5 H31 Z" fill={a} />
+            </g>
+        ),
+        glass: _rr(5, 8, 38, 32, 6),
+    },
+    // 욕구 6계층 — 생존/심리·안전·소속/연결·존중/과시·자아실현·기반/인프라
+    survival: {
+        solid: (a) => <polyline points="5,24 14,24 18.5,16.5 25,31.5 29,24 43,24" fill="none" stroke={a} strokeWidth={3.6} strokeLinecap="round" strokeLinejoin="round" />,
+        glass: "M24 41 C10 32 6 22 10.5 15.5 C14.5 10 21 11 24 16 C27 11 33.5 10 37.5 15.5 C42 22 38 32 24 41 Z",
+    },
+    safety: {
+        solid: (a) => <polyline points="16,24 22,30 33,17" fill="none" stroke={a} strokeWidth={4.5} strokeLinecap="round" strokeLinejoin="round" />,
+        glass: "M24 5 L39 11 V22 C39 32 33 38.5 24 43 C15 38.5 9 32 9 22 V11 Z",
+    },
+    belonging: {
+        solid: (a) => (
+            <g fill={a}>
+                <circle cx={31} cy={14} r={5.5} />
+                <path d="M22 34 Q22 24 31 24 Q40 24 40 34 Q40 36 38 36 H24 Q22 36 22 34 Z" />
+            </g>
+        ),
+        glass: _circ(18, 18, 7) + " M6 40 Q6 27 18 27 Q30 27 30 40 Q30 42.5 27.5 42.5 H8.5 Q6 42.5 6 40 Z",
+    },
+    esteem: {
+        solid: (a) => <circle cx={38} cy={12} r={6} fill={a} />,
+        glass: "M10 36 L12 17 L20 25 L24 12.5 L28 25 L36 17 L38 36 Q38 38.5 35.5 38.5 H12.5 Q10 38.5 10 36 Z",
+    },
+    growth: {
+        solid: (a) => <path d="M34 6 L36.4 11.6 L42 14 L36.4 16.4 L34 22 L31.6 16.4 L26 14 L31.6 11.6 Z" fill={a} />,
+        glass: "M22 12 L25.4 20.2 L34.2 20.8 L27.4 26.5 L29.6 35 L22 30.2 L14.4 35 L16.6 26.5 L9.8 20.8 L18.6 20.2 Z",
+    },
+    infra: {
+        solid: (a) => <path d="M8 15 L24 6 L40 15 Q41 17.5 38 17.5 H10 Q7 17.5 8 15 Z" fill={a} />,
+        glass: _rr(6, 38, 36, 4.5, 2.25) + " M11 16 H16 V36 H11 Z M21.5 16 H26.5 V36 H21.5 Z M32 16 H37 V36 H32 Z",
+    },
+    // 매출 흔들림 3분위 — 같은 카드 + 진폭 S/M/L (세트 일관성)
+    steady: {
+        solid: (a) => <polyline points="4,25.5 11,22.5 18,25.5 25,22.5 32,25.5 39,22.5 44,24.5" fill="none" stroke={a} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />,
+        glass: _CARD,
+    },
+    middle: {
+        solid: (a) => <polyline points="4,28 11,20 18,28 25,20 32,28 39,20 44,26" fill="none" stroke={a} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />,
+        glass: _CARD,
+    },
+    swing: {
+        solid: (a) => <polyline points="4,33 11,14 18,33 25,14 32,33 39,14 44,30" fill="none" stroke={a} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />,
+        glass: _CARD,
+    },
+    // 자사주 3분류 — 코인 스택+↑ / 코인+↑ / 코인+↓
+    steady_buy: {
+        solid: (a) => (
+            <g fill="none" stroke={a} strokeWidth={4.5} strokeLinecap="round" strokeLinejoin="round">
+                <line x1={36} y1={36} x2={36} y2={16} />
+                <polyline points="29,22 36,14.5 43,22" />
+            </g>
+        ),
+        glass: _bar(19) + " " + _bar(26) + " " + _bar(33),
+    },
+    some_buy: {
+        solid: (a) => (
+            <g fill="none" stroke={a} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round">
+                <line x1={36} y1={30} x2={36} y2={18} />
+                <polyline points="31,23 36,17.5 41,23" />
+            </g>
+        ),
+        glass: _COIN,
+    },
+    net_sell: {
+        solid: (a) => (
+            <g fill="none" stroke={a} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round">
+                <line x1={36} y1={18} x2={36} y2={30} />
+                <polyline points="31,25 36,30.5 41,25" />
+            </g>
+        ),
+        glass: _COIN,
+    },
 }
-function Icon(props: { k: string; size: number }) {
-    const paths = ICON[props.k]
-    if (!paths) return null
+function GIcon(props: { k: string; size: number; a: string; g: string }) {
+    const def = GICONS[props.k]
+    if (!def) return null
+    // 같은 k 다중 렌더 = 동일 defs 중복(무해). 색은 defs 밖이라 활성/비활성 공존 OK.
+    const fid = "vpmf-" + props.k
+    const cid = "vpmc-" + props.k
     return (
-        <svg width={props.size} height={props.size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flexShrink: 0 }}>
-            {paths.map((d, i) => <path key={i} d={d} />)}
+        <svg width={props.size} height={props.size} viewBox="0 0 48 48" fill="none" style={{ display: "block", flexShrink: 0 }}>
+            <defs>
+                <filter id={fid} x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.1" /></filter>
+                <clipPath id={cid}><path d={def.glass} /></clipPath>
+            </defs>
+            {def.solid(props.a)}
+            <g clipPath={`url(#${cid})`}>
+                <g filter={`url(#${fid})`} opacity={0.85}>{def.solid(props.a)}</g>
+                <path d={def.glass} fill={props.g} />
+            </g>
         </svg>
     )
 }
@@ -91,6 +196,15 @@ function metricOf(l: any, sortKey: string): string {
 function hasSummary(list: any[]): boolean {
     return (list || []).some((l) => (l && l.cap_disp) || marginOf(l) != null)
 }
+// 카테고리 합산 시총(억원, FX 환산) → "12,341조" 표기. 규모 분포용.
+function capJo(v: any): string {
+    const x = Number(v)
+    if (!isFinite(x) || x <= 0) return ""
+    return Math.round(x / 1e4).toLocaleString("en-US") + "조"
+}
+function hasCapSum(list: any[]): boolean {
+    return (list || []).some((i) => Number(i && i.cap_sum) > 0)
+}
 
 // 종목 카드 (그리드 아이템) — 로고 + 국기 배지 + 이름 + 요약(규모/수익). 로고 실패 시 이니셜.
 function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) => void }) {
@@ -131,12 +245,12 @@ const SAMPLE = {
     _meta: { generated_at: "2026-07-04T13:20:05+09:00" },
     desire: {
         tiers: [
-            { key: "survival", label: "필수·건강", n_kr: 397, n_us: 250, median_op_margin: 6.8, desc: "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐", leaders: [{ ticker: "005930", name: "삼성전자", mkt: "KR", cap: 5000000, cap_disp: "500조", op_margin: 10.2, sector: "IT" }, { ticker: "000660", name: "SK하이닉스", mkt: "KR", cap: 1500000, cap_disp: "150조", op_margin: 20.5, sector: "IT" }, { ticker: "LLY", name: "일라이릴리", mkt: "US", cap: 982800, cap_disp: "$982.8B", net_margin: 31.7, sector: "제약", revenue: 65179000000 }, { ticker: "JNJ", name: "존슨앤존슨", mkt: "US", cap: 556800, cap_disp: "$556.8B", net_margin: 22.9, sector: "제약", revenue: 94193000000 }, { ticker: "068270", name: "셀트리온", mkt: "KR", cap: 400000, cap_disp: "40조", op_margin: 20.1, sector: "헬스케어" }, { ticker: "207940", name: "삼성바이오로직스", mkt: "KR", cap: 658000, cap_disp: "65.8조", op_margin: 3.7, sector: "헬스케어" }] },
-            { key: "safety", label: "안전·보장", n_kr: 67, n_us: 232, median_op_margin: 11.6, desc: "지키고 대비하는 수요 — 보험·방산·보안", leaders: [{ ticker: "012450", name: "한화에어로" }, { ticker: "032830", name: "삼성생명" }] },
-            { key: "belonging", label: "관계·연결", n_kr: 98, n_us: 76, median_op_margin: 7.0, desc: "잇고 어울리는 수요 — 통신·콘텐츠·모임", leaders: [{ ticker: "035420", name: "NAVER" }, { ticker: "035720", name: "카카오" }] },
-            { key: "esteem", label: "프리미엄·품격", n_kr: 43, n_us: 33, median_op_margin: 6.0, desc: "돋보이고 싶은 수요 — 명품·뷰티·프리미엄", leaders: [{ ticker: "090430", name: "아모레퍼시픽" }] },
-            { key: "growth", label: "성장·교육", n_kr: 10, n_us: 14, median_op_margin: 11.7, desc: "배우고 성장하는 수요 — 교육·자기계발", leaders: [{ ticker: "095720", name: "웅진씽크빅" }] },
-            { key: "infra", label: "산업 기반", n_kr: 1006, n_us: 900, median_op_margin: 6.0, desc: "욕구를 직접 팔진 않지만 위 전부를 떠받치는 산업 — B2B·부품·장비", leaders: [{ ticker: "042700", name: "한미반도체" }, { ticker: "373220", name: "LG에너지솔루션" }] },
+            { key: "survival", label: "필수·건강", n_kr: 397, n_us: 250, median_op_margin: 6.8, cap_sum: 123410000, desc: "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐", leaders: [{ ticker: "005930", name: "삼성전자", mkt: "KR", cap: 5000000, cap_disp: "500조", op_margin: 10.2, sector: "IT" }, { ticker: "000660", name: "SK하이닉스", mkt: "KR", cap: 1500000, cap_disp: "150조", op_margin: 20.5, sector: "IT" }, { ticker: "LLY", name: "일라이릴리", mkt: "US", cap: 982800, cap_disp: "$982.8B", net_margin: 31.7, sector: "제약", revenue: 65179000000 }, { ticker: "JNJ", name: "존슨앤존슨", mkt: "US", cap: 556800, cap_disp: "$556.8B", net_margin: 22.9, sector: "제약", revenue: 94193000000 }, { ticker: "068270", name: "셀트리온", mkt: "KR", cap: 400000, cap_disp: "40조", op_margin: 20.1, sector: "헬스케어" }, { ticker: "207940", name: "삼성바이오로직스", mkt: "KR", cap: 658000, cap_disp: "65.8조", op_margin: 3.7, sector: "헬스케어" }] },
+            { key: "safety", label: "안전·보장", n_kr: 67, n_us: 232, median_op_margin: 11.6, cap_sum: 117170000, desc: "지키고 대비하는 수요 — 보험·방산·보안", leaders: [{ ticker: "012450", name: "한화에어로" }, { ticker: "032830", name: "삼성생명" }] },
+            { key: "belonging", label: "관계·연결", n_kr: 98, n_us: 76, median_op_margin: 7.0, cap_sum: 31720000, desc: "잇고 어울리는 수요 — 통신·콘텐츠·모임", leaders: [{ ticker: "035420", name: "NAVER" }, { ticker: "035720", name: "카카오" }] },
+            { key: "esteem", label: "프리미엄·품격", n_kr: 43, n_us: 33, median_op_margin: 6.0, cap_sum: 8890000, desc: "돋보이고 싶은 수요 — 명품·뷰티·프리미엄", leaders: [{ ticker: "090430", name: "아모레퍼시픽" }] },
+            { key: "growth", label: "성장·교육", n_kr: 10, n_us: 14, median_op_margin: 11.7, cap_sum: 980000, desc: "배우고 성장하는 수요 — 교육·자기계발", leaders: [{ ticker: "095720", name: "웅진씽크빅" }] },
+            { key: "infra", label: "산업 기반", n_kr: 1006, n_us: 900, median_op_margin: 6.0, cap_sum: 840610000, desc: "욕구를 직접 팔진 않지만 위 전부를 떠받치는 산업 — B2B·부품·장비", leaders: [{ ticker: "042700", name: "한미반도체" }, { ticker: "373220", name: "LG에너지솔루션" }] },
         ],
     },
     cycle: {
@@ -263,6 +377,9 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
     const seeAll = !!showAll[tab]
     const shown = seeAll ? leaders : leaders.slice(0, LIMIT)
     const totalCount = items.reduce((a, x) => a + cfg.count(x), 0)
+    // 규모 분포 = 카테고리별 합산 시총(cap_sum, 억원 FX 환산) share. 구 blob 폴백 시 바 숨김.
+    const capTotal = items.reduce((a, x) => a + (Number(x.cap_sum) || 0), 0)
+    const showCapBar = hasCapSum(items) && capTotal > 0
 
     const hero =
         tab === "desire" ? { big: n0(totalCount) + "종목", small: "인간 욕구 6계층으로 분류 · 탐색 렌즈" }
@@ -271,9 +388,13 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
 
     const tabBtn = (v: string, lb: string) => (
         <button key={v} onClick={() => setTab(v)} style={{
-            border: "none", cursor: "pointer", fontFamily: FONT, padding: "8px 15px", borderRadius: 10,
+            border: "none", cursor: "pointer", fontFamily: FONT, padding: "8px 14px", borderRadius: 10,
             fontSize: 13, fontWeight: 800, background: tab === v ? C.violet : C.card, color: tab === v ? "#fff" : C.sub,
-        }}>{lb}</button>
+            display: "inline-flex", alignItems: "center", gap: 6,
+        }}>
+            <GIcon k={v} size={17} a={tab === v ? "#ffffff" : C.violet} g={tab === v ? "rgba(255,255,255,0.38)" : C.gTint} />
+            {lb}
+        </button>
     )
 
     return (
@@ -298,6 +419,27 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                 <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 2 }}>{hero.small}</div>
             </div>
 
+            {/* 시총 규모 분포 — 카테고리별 합산 시총(국내+해외 환산) share. 사실, 랭킹 아님. 세그먼트 클릭=선택 */}
+            {showCapBar ? (
+                <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 700, marginBottom: 6 }}>
+                        시총 규모 분포 <span style={{ fontWeight: 600 }}>· 국내+해외 환산(근사) · 우열 아님</span>
+                    </div>
+                    <div style={{ display: "flex", width: "100%", height: 12, borderRadius: 6, overflow: "hidden", background: C.track }}>
+                        {items.map((x, i) => {
+                            const share = (Number(x.cap_sum) || 0) / capTotal
+                            if (share <= 0) return null
+                            const on = x.key === selKey
+                            return (
+                                <div key={x.key} onClick={() => setSel((s) => ({ ...s, [tab]: x.key }))}
+                                    title={`${x.label} · ${capJo(x.cap_sum)} · ${(share * 100).toFixed(1)}%`}
+                                    style={{ width: (share * 100) + "%", background: CAP_COLORS[i % CAP_COLORS.length], opacity: on ? 1 : 0.5, cursor: "pointer", transition: "opacity 0.15s" }} />
+                            )
+                        })}
+                    </div>
+                </div>
+            ) : null}
+
             {/* 카테고리 pill 선택 (얇은 라인 아이콘) */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                 {items.map((x) => {
@@ -310,7 +452,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                                 background: active ? C.violet : C.card, color: active ? "#fff" : C.ink,
                                 boxShadow: active ? "none" : "0 1px 2px rgba(0,0,0,0.04)",
                             }}>
-                            <Icon k={x.key} size={15} />
+                            <GIcon k={x.key} size={17} a={active ? "#ffffff" : C.violet} g={active ? "rgba(255,255,255,0.38)" : C.gTint} />
                             {x.label}
                             <span style={{ fontWeight: 700, opacity: 0.75, fontVariantNumeric: "tabular-nums" }}>{n0(cfg.count(x))}</span>
                         </button>
@@ -322,10 +464,10 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
             {item ? (
                 <div style={{ marginTop: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: C.violet, background: C.violetSoft, borderRadius: 10, padding: 7, display: "inline-flex", flexShrink: 0 }}><Icon k={item.key} size={22} /></span>
+                        <span style={{ display: "inline-flex", flexShrink: 0 }}><GIcon k={item.key} size={32} a={C.violet} g={C.gTint} /></span>
                         <div style={{ minWidth: 0 }}>
                             <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>{item.label}</div>
-                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 1 }}>{cfg.meta(item)}</div>
+                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 1 }}>{cfg.meta(item)}{item.cap_sum ? " · 규모 " + capJo(item.cap_sum) : ""}</div>
                         </div>
                     </div>
                     {item.desc ? <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>{item.desc}</div> : null}
