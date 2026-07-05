@@ -4,23 +4,21 @@ import { useEffect, useState, type CSSProperties } from "react"
 /**
  * 퀵바 — 홈 3층 구조의 2·3층 (PM 2026-07-05): [최근 본 종목(자동)] + [고정 바로가기 4].
  *
- * 개인화 = 설정 0: localStorage("verity_recent_tickers") 최근 본 종목 칩 (없으면 행 숨김).
- * 이름 조인 = universe_search.json (sessionStorage 캐시). 커스텀 편집은 보류 (사용 데이터 후 판단).
+ * 최근 본 종목 행 = 제거 (PM 2026-07-05 "별로네"). 고정 바로가기 4버튼만. 커스텀 편집 = 보류.
  * 아이콘 = Phosphor 정식 도안(regular, unpkg 추출 — 자작 SVG 금지 규칙) + GIcon 계열 glass 틴트 레이어.
  * RULE 7 — 동선 버튼만, 종목 나열 = 사용자 본인 방문 기록 (추천 아님).
  */
 
+// 무채색 전환 (PM 2026-07-05 '홈 보라 난무') — violet 키 이름 유지, 값만 뉴트럴
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", gTint: "rgba(108,92,231,0.22)",
+    line: "#e5e8eb", violet: "#333d4b", violetSoft: "#eef0f3", gTint: "rgba(51,61,75,0.14)",
 }
 const DARK = {
     bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
-    line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", gTint: "rgba(169,155,255,0.26)",
+    line: "#2b2f37", violet: "#d0d6dd", violetSoft: "#262b33", gTint: "rgba(208,214,221,0.18)",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const SEARCH_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
-const RECENT_KEY = "verity_recent_tickers"
 
 /* ─── 아이콘 (GIcon 도안 언어 — solid stroke + glass 소프트 셰이프) ─── */
 const _rr = (x: number, y: number, w: number, h: number, r: number): string =>
@@ -64,12 +62,6 @@ const LINKS = [
     { k: "discover", label: "발견", path: "/discover" },
 ]
 
-const SAMPLE_RECENT = [
-    { ticker: "005930", name: "삼성전자" },
-    { ticker: "000660", name: "SK하이닉스" },
-    { ticker: "NVDA", name: "NVIDIA" },
-]
-
 function readBodyDark(): boolean {
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
@@ -80,11 +72,10 @@ function readBodyDark(): boolean {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicQuickBar(props: {
-    width?: number; dark?: boolean; stockPath?: string; maxRecent?: number
+    width?: number; dark?: boolean; stockPath?: string
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
-    const [recent, setRecent] = useState<{ ticker: string; name: string }[]>(onCanvas ? SAMPLE_RECENT : [])
 
     useEffect(() => {
         if (onCanvas) return
@@ -93,37 +84,6 @@ export default function PublicQuickBar(props: {
         if (document.body) obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
         return () => obs.disconnect()
     }, [onCanvas])
-
-    useEffect(() => {
-        if (onCanvas || typeof window === "undefined") return
-        let alive = true
-        let tickers: string[] = []
-        try {
-            const raw = window.localStorage.getItem(RECENT_KEY)
-            const arr = raw ? JSON.parse(raw) : []
-            if (Array.isArray(arr)) tickers = arr.map((t) => String(t)).filter(Boolean).slice(0, Math.max(1, props.maxRecent || 5))
-        } catch (e) { /* ignore */ }
-        if (!tickers.length) return
-        const apply = (nameMap: Record<string, string>) => {
-            if (!alive) return
-            setRecent(tickers.map((t) => ({ ticker: t, name: nameMap[t] || t })))
-        }
-        try {
-            const c = sessionStorage.getItem("universe_search_names")
-            if (c) { apply(JSON.parse(c)); return }
-        } catch (e) { /* ignore */ }
-        fetch(SEARCH_URL, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const rows = (d && d.stocks) || []
-                const m: Record<string, string> = {}
-                for (const s of rows) { if (s && s.ticker) m[String(s.ticker)] = String(s.name || s.ticker) }
-                try { sessionStorage.setItem("universe_search_names", JSON.stringify(m)) } catch (e) { /* ignore */ }
-                apply(m)
-            })
-            .catch(() => apply({}))
-        return () => { alive = false }
-    }, [onCanvas, props.maxRecent])
 
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -141,19 +101,6 @@ export default function PublicQuickBar(props: {
 
     return (
         <div style={wrap}>
-            {/* 최근 본 종목 — 본인 방문 기록 (자동, 설정 0) */}
-            {recent.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: C.faint, flexShrink: 0 }}>최근 본</span>
-                    {recent.map((r) => (
-                        <span key={r.ticker} onClick={() => go(`${stockPath}?q=${encodeURIComponent(r.ticker)}`)}
-                            style={{ cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: C.violet, background: C.violetSoft, borderRadius: 8, padding: "4px 10px" }}>
-                            {r.name}
-                        </span>
-                    ))}
-                </div>
-            )}
-
             {/* 고정 바로가기 4 */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
                 {LINKS.map((l) => (
@@ -172,5 +119,4 @@ addPropertyControls(PublicQuickBar, {
     width: { type: ControlType.Number, title: "Width", defaultValue: 380 },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
     stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
-    maxRecent: { type: ControlType.Number, title: "최근 본 최대", defaultValue: 5 },
 })
