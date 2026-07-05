@@ -108,14 +108,12 @@ interface StockGroup {
 // 오늘 핫한 종목 — recommendations[].sentiment.headline_count(종목별 뉴스량) 순. 사실(뉴스 건수), 추천·등급 아님.
 interface HotStock { ticker: string; name: string; market: string; count: number; score: number }
 
-/* 오늘의 뉴스 한눈 — 전부 기존 사실 집계(RULE7, LLM 해석 0). 출처신뢰도·신선도·무드·종목밀도·테마빈도. */
-interface TopStock { name: string; ticker: string; n: number }
+/* 오늘의 뉴스 한눈 — 전부 기존 사실 집계(RULE7, LLM 해석 0). 출처신뢰도·신선도·무드·테마빈도. */
 interface Insights {
     total: number
     credHi: number; credLo: number         // 출처 신뢰도(credibility>=0.8=신뢰 출처, 자체 점수화)
     fresh: number; dup: number             // 신선도(near_duplicate MinHash)
     pos: number; neg: number; neu: number  // 무드(sentiment 키워드)
-    topStocks: TopStock[]                  // 뉴스 많은 종목(라이브 per-stock 건수)
     themes: { name: string; n: number }[]  // 오늘의 테마(키워드 빈도, 단어 카운트만)
 }
 // 뉴스 테마 사전 — 제목 키워드 매칭으로 "오늘 시장 화두" 집계(LLM 아님, 순수 빈도). 사실 집계 RULE7.
@@ -392,7 +390,7 @@ export default function PublicNewsTab(props: Props) {
                 }
                 const themes = Object.keys(themeCnt).map((name) => ({ name, n: themeCnt[name] })).sort((a, b) => b.n - a.n).slice(0, 6)
                 // 뉴스 많은 종목 = 라이브 per-stock 실제 건수(아래 enrichment effect서 채움). headline_count 는 포화라 미사용.
-                setInsights({ total: rawHl.length, credHi, credLo, fresh, dup, pos, neg, neu, topStocks: [], themes })
+                setInsights({ total: rawHl.length, credHi, credLo, fresh, dup, pos, neg, neu, themes })
             }
 
             // 오늘 핫한 종목 — 종목별 뉴스량(headline_count) 순 (KR+US, 뉴스 있는 것만 top 8). 사실.
