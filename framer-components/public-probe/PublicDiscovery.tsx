@@ -39,6 +39,19 @@ const DEFAULT_FLOW = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/st
 const DEFAULT_FORENSICS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/disclosure_forensics.json"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const DEFAULT_REPORT = "/stock"
+// 데이터 신선도 — ISO → 상대시각(다른 public 컴포넌트와 동일 패턴).
+function fmtAge(iso: any): string {
+    if (!iso) return ""
+    try {
+        const mins = Math.max(0, Math.round((Date.now() - new Date(String(iso)).getTime()) / 60000))
+        if (mins < 60) return mins + "분 전"
+        const hrs = Math.round(mins / 60)
+        if (hrs < 24) return hrs + "시간 전"
+        return Math.round(hrs / 24) + "일 전"
+    } catch {
+        return ""
+    }
+}
 const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 
@@ -293,6 +306,7 @@ export default function PublicDiscovery(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [list, setList] = useState<any[]>([])
+    const [genAt, setGenAt] = useState<string>("")
     const [insiderMap, setInsiderMap] = useState<Record<string, any>>({})
     const [flowMap, setFlowMap] = useState<Record<string, any[]>>({})
     const [forensicsMap, setForensicsMap] = useState<Record<string, any>>({})
@@ -340,6 +354,7 @@ export default function PublicDiscovery(props: Props) {
                 const seen = new Set<string>()
                 const deduped = arr.filter((s: any) => { const tk2 = String(s.ticker || ""); if (!tk2 || seen.has(tk2)) return false; seen.add(tk2); return true })
                 if (deduped.length) setList(deduped)
+                setGenAt(docs[0] && docs[0]._meta && docs[0]._meta.generated_at ? docs[0]._meta.generated_at : "")
             })
         return () => { alive = false }
     }, [stockUrl, usStockUrl, usSmallcapUrl])
@@ -519,7 +534,8 @@ export default function PublicDiscovery(props: Props) {
         return out
     }
     // 커스텀 chevron (OS 기본 화살표 제거 — appearance none). 색 = 테마 faint.
-    const chevronUrl = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='${encodeURIComponent(C.faint)}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`
+    // data URI 전체 encodeURIComponent — 공백/따옴표 raw 상태면 Safari·Framer 퍼블리시에서 파싱 실패 → placeholder 텍스처 노출 (다크에서만 도드라짐).
+    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='${C.faint}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
     const selStyle: CSSProperties = {
         border: "none", borderRadius: 9, padding: "7px 28px 7px 11px", fontSize: 12, fontFamily: FONT,
         fontWeight: 700, background: C.card, color: C.ink, outline: "none", cursor: "pointer",
@@ -723,7 +739,7 @@ export default function PublicDiscovery(props: Props) {
                     ) : (
                         <div style={{ padding: "0 2px 10px" }}>
                             <div style={{ fontSize: 15.5, fontWeight: 700, color: C.ink, letterSpacing: "-0.3px" }}>{sc.title}{sector ? ` · ${sector}` : ""}</div>
-                            <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3 }}>{sc.rule} · 결과 {sel.total}종목{sel.total > sel.items.length ? ` (상위 ${sel.items.length})` : ""}</div>
+                            <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3 }}>{sc.rule} · 결과 {sel.total}종목{sel.total > sel.items.length ? ` (상위 ${sel.items.length})` : ""}{genAt ? ` · ${fmtAge(genAt)} 갱신` : ""}</div>
                         </div>
                     )}
 
