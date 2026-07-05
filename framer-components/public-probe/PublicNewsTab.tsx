@@ -170,10 +170,7 @@ function fmtWhen(t: string): string {
     if (mins < 60) return mins + "분 전"
     const hrs = Math.round(mins / 60)
     if (hrs < 24) return hrs + "시간 전"
-    const days = Math.round(hrs / 24)
-    if (days <= 7) return days + "일 전"
-    const d = new Date(ms)
-    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`
+    return Math.round(hrs / 24) + "일 전"   // 오래돼도 날짜 대신 항상 '일 전'(PM 2026-07-05)
 }
 
 function asArray(x: any): any[] {
