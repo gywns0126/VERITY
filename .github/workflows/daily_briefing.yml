@@ -1,0 +1,70 @@
+name: Daily Briefing (모닝 브리핑 — 홈 카드)
+
+# 데일리 브리핑 v0 (PM 2026-07-05, project_daily_briefing_design): 기존 발행 피드 재조립만
+# (신규 수집 0 · LLM 0 · RULE 6/7 — 사실+예정 사실, 판단 동사 금지) → daily_briefing.json → 홈 최상단 카드.
+#
+# 7축 audit:
+#  1 env: 없음 (순수 변환 — 로컬 data/ 만 읽음)
+#  2 push trigger: vercel-api/ 미변경 — Vercel deploy 무관 (RULE 2)
+#  3 concurrency: 전용 그룹 (verity-data-write 공유 시 pending 축출 — 7/4 학습)
+#  4 cron: UTC 22:30 = KST 07:30 일 1회 (아침 브리핑). gh cron 지연 수 분 허용 범위
+#  5 KIS: 0 (RULE 1 무관)
+#  6 pip: 불요 (stdlib only) — setup-python 만
+#  7 N=2: push 후 dispatch(N=1) + 익일 scheduled(N=2) 검증 의무 (RULE 8)
+# RULE 4: 산출 daily_briefing.json + daily_briefing_history.jsonl = git add data/ (broad) 커버.
+
+on:
+  schedule:
+    - cron: '30 22 * * *'   # KST 07:30 매일
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-daily-briefing
+  cancel-in-progress: false
+
+jobs:
+  briefing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 브리핑 조립 (순수 변환)
+        run: python -m api.builders.daily_briefing_builder
+
+      - name: Publish (VERITY-data + Vercel Blob)
+        continue-on-error: true
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
+
+      - name: Commit + push (변경 시만)
+        if: always()
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/
+          git diff --staged --quiet && { echo "변경 없음"; exit 0; }
+          git commit -m "data(alpha-nest): 모닝 브리핑 $(TZ=Asia/Seoul date '+%Y-%m-%d')"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              echo "pushed"; exit 0
+            fi
+            echo "push attempt $i failed, retry in $((i*10))s"; sleep $((i*10))
+          done
+          echo "::error::5회 push 실패"; exit 1
