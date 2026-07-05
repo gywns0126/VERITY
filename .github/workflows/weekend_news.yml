@@ -1,0 +1,83 @@
+name: Weekend News Refresh (주말 뉴스 전용 경량 갱신)
+
+# AlphaNest 공개 터미널 — 주말 뉴스 신선도 (PM 결정 2026-07-05, 옵션 B).
+# daily_analysis_full / rss_scout 는 평일(월-금) cron → 주말엔 뉴스가 금요일 밤에 정지.
+# 뉴스는 주말·장외에도 흐르고 월요일 장전 갭·장후 반응에 영향 → 헤드라인만 4시간 간격 재수집.
+# 전체 분석·수급·재무 파이프라인은 안 돌림(장 세션 필요) — portfolio.json headline 필드만 패치 → 비용 최소.
+# 수집기 = api/collectors/news_headlines (public RSS·Naver, secret 불필요).
+
+on:
+  schedule:
+    # 토·일(UTC 6,0) 4시간 간격 :13 offset — KST 토 09시 ~ 월 08시(장전) 커버. 정각·고부하 회피.
+    - cron: '13 */4 * * 6,0'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  # data/* 쓰기 단일 그룹 직렬화 (daily_analysis / broker_guide / bond_etf / export_trade 와 공유)
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  weekend-news:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Refresh weekend headlines (portfolio.json)
+        # 🚨 VERITY_MODE=prod 필수 — default 'dev' 면 load/save_portfolio 가 portfolio.dev.json 에 씀(진짜 파일 미갱신)
+        env:
+          VERITY_MODE: prod
+        run: python -m api.collectors.weekend_news_refresh
+
+      - name: Commit & push portfolio.json
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/portfolio.json
+          if git diff --staged --quiet; then
+            echo "변경 없음 (수집 실패 또는 동일) — commit skip"
+            exit 0
+          fi
+          git commit -m "📰 weekend_news 헤드라인 갱신 $(TZ=Asia/Seoul date +%Y-%m-%d\ %H:%M)"
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::All 5 push attempts failed"
+            exit 1
+          fi
+
+      - name: Publish to VERITY-data + Blob
+        if: always()
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
