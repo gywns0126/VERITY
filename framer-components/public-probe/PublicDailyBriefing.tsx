@@ -11,14 +11,14 @@ import { useEffect, useState, type CSSProperties } from "react"
  * 종목 클릭 → /stock?q= (리포트 딥링크).
  */
 
-// 무채색 전환 (PM 2026-07-05 '홈 보라 난무') — violet 키 이름 유지, 값만 뉴트럴
+// 보라 = 기능 액센트만 (활성 상태·클릭 단서·아이콘). 텍스트·수치·라벨 = 무채 (PM 2026-07-05 '적절하게')
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", violet: "#333d4b", violetSoft: "#eef0f3",
+    line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff",
 }
 const DARK = {
     bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
-    line: "#2b2f37", violet: "#d0d6dd", violetSoft: "#262b33",
+    line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/daily_briefing.json"
@@ -123,7 +123,7 @@ export default function PublicDailyBriefing(props: {
                 {/* 헤더 */}
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-0.4px" }}>모닝 브리핑</span>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.violet, background: C.violetSoft, borderRadius: 6, padding: "2px 8px" }}>{dateLabel}</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, background: C.bg, borderRadius: 6, padding: "2px 8px" }}>{dateLabel}</span>
                     {Number(data.warnings_n) > 0 && (
                         <span style={{ fontSize: 11, fontWeight: 700, color: C.faint }}>시장경보 {data.warnings_n}종목</span>
                     )}
@@ -156,7 +156,7 @@ export default function PublicDailyBriefing(props: {
                             </div>
                             {extra > 0 && (
                                 <button onClick={() => setOpenSec((o) => ({ ...o, [s.title]: !open }))}
-                                    style={{ border: "none", background: "transparent", cursor: "pointer", fontFamily: FONT, fontSize: 11, fontWeight: 700, color: C.violet, padding: "5px 0 0", }}>
+                                    style={{ border: "none", background: "transparent", cursor: "pointer", fontFamily: FONT, fontSize: 11, fontWeight: 700, color: C.sub, padding: "5px 0 0", }}>
                                     {open ? "접기" : `+${extra}건 더보기`}
                                 </button>
                             )}

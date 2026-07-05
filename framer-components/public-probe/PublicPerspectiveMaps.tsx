@@ -13,14 +13,14 @@ import { useEffect, useState, type CSSProperties } from "react"
  *   구 blob(필드 부재) 폴백 시 정렬 UI 자동 숨김(hasSummary 가드).
  */
 
-// 무채색 전환 (PM 2026-07-05 '홈 보라 난무') — violet 키 이름 유지, 값만 뉴트럴
+// 보라 = 기능 액센트만 (활성 상태·클릭 단서·아이콘). 텍스트·수치·라벨 = 무채 (PM 2026-07-05 '적절하게')
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", violet: "#333d4b", violetSoft: "#eef0f3", track: "#eef0f3", hi: "#f6f7f9", gTint: "rgba(51,61,75,0.14)",
+    line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", track: "#eef0f3", hi: "#f6f7f9", gTint: "rgba(108,92,231,0.22)",
 }
 const DARK = {
     bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
-    line: "#2b2f37", violet: "#d0d6dd", violetSoft: "#262b33", track: "#242830", hi: "#2e333c", gTint: "rgba(208,214,221,0.18)",
+    line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", track: "#242830", hi: "#2e333c", gTint: "rgba(169,155,255,0.26)",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/perspective_maps.json"
@@ -246,7 +246,7 @@ function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) =
             <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink, lineHeight: 1.3, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
             {/* 요약 = 활성 정렬값(규모=시총 / 수익=마진). 사실값, 없으면 섹터, 둘 다 없으면 미표시 */}
             {metric || sector ? (
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: metric ? C.violet : C.faint, lineHeight: 1.2, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontVariantNumeric: "tabular-nums" }}>{metric || sector}</div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: metric ? C.ink : C.faint, lineHeight: 1.2, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontVariantNumeric: "tabular-nums" }}>{metric || sector}</div>
             ) : null}
         </div>
     )
@@ -401,7 +401,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
             fontSize: 13, fontWeight: 800, background: tab === v ? C.violet : C.card, color: tab === v ? "#fff" : C.sub,
             display: "inline-flex", alignItems: "center", gap: 6,
         }}>
-            <GIcon k={v} size={17} a={tab === v ? "#ffffff" : C.violet} g={tab === v ? "rgba(255,255,255,0.38)" : C.gTint} />
+            <GIcon k={v} size={17} a={tab === v ? "#ffffff" : C.sub} g={tab === v ? "rgba(255,255,255,0.38)" : C.gTint} />
             {lb}
         </button>
     )
@@ -453,7 +453,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                                 background: active ? C.violet : C.card, color: active ? "#fff" : C.ink,
                                 boxShadow: active ? "none" : "0 1px 2px rgba(0,0,0,0.04)",
                             }}>
-                            <GIcon k={x.key} size={17} a={active ? "#ffffff" : C.violet} g={active ? "rgba(255,255,255,0.38)" : C.gTint} />
+                            <GIcon k={x.key} size={17} a={active ? "#ffffff" : C.sub} g={active ? "rgba(255,255,255,0.38)" : C.gTint} />
                             {x.label}
                             <span style={{ fontWeight: 700, opacity: 0.75, fontVariantNumeric: "tabular-nums" }}>{n0(cfg.count(x))}</span>
                         </button>
@@ -496,7 +496,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                     </div>
                     {leaders.length > LIMIT ? (
                         <button onClick={() => setShowAll((s) => ({ ...s, [tab]: !seeAll }))}
-                            style={{ width: "100%", marginTop: 10, border: "none", cursor: "pointer", fontFamily: FONT, background: C.card, color: C.violet, borderRadius: 10, padding: "10px 0", fontSize: 12.5, fontWeight: 800, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+                            style={{ width: "100%", marginTop: 10, border: "none", cursor: "pointer", fontFamily: FONT, background: C.card, color: C.sub, borderRadius: 10, padding: "10px 0", fontSize: 12.5, fontWeight: 800, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
                             {seeAll ? "접기" : `더보기 (${leaders.length - LIMIT}개)`}
                         </button>
                     ) : null}

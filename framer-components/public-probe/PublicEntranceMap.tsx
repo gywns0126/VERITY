@@ -11,14 +11,14 @@ import { useState, useEffect } from "react"
  * 네비 아님 — 데이터 카드 그리드 (사이트 nav 는 Framer 네이티브, 사용자 영역).
  */
 
-// 무채색 전환 (PM 2026-07-05 '홈 보라 난무') — violet 키 이름 유지, 값만 뉴트럴
+// 보라 = 기능 액센트만 (활성 상태·클릭 단서·아이콘). 텍스트·수치·라벨 = 무채 (PM 2026-07-05 '적절하게')
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", violet: "#333d4b", violetSoft: "#eef0f3", green: "#12b76a", gTint: "rgba(51,61,75,0.14)",
+    line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", green: "#12b76a", gTint: "rgba(108,92,231,0.22)",
 }
 const DARK = {
     bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
-    line: "#2b2f37", violet: "#d0d6dd", violetSoft: "#262b33", green: "#3ecf8e", gTint: "rgba(208,214,221,0.18)",
+    line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", green: "#3ecf8e", gTint: "rgba(169,155,255,0.26)",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/entrance_map.json"
@@ -268,7 +268,7 @@ export default function PublicEntranceMap(props: {
                             <span style={{ fontSize: 12, fontWeight: 700, color: C.faint, marginLeft: "auto" }}>›</span>
                         </div>
                         <div style={{ marginTop: 6 }}>
-                            <span style={{ fontSize: 20, fontWeight: 800, color: C.violet, letterSpacing: "-0.4px" }}>{c.n}</span>
+                            <span style={{ fontSize: 20, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>{c.n}</span>
                             <span style={{ fontSize: 11, fontWeight: 700, color: C.faint, marginLeft: 3 }}>{c.u}</span>
                         </div>
                         <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 4, lineHeight: 1.45 }}>
@@ -283,11 +283,11 @@ export default function PublicEntranceMap(props: {
                         style={{ background: C.violetSoft, borderRadius: 14, padding: 13, cursor: "pointer" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                             <GIcon k="vault" size={21} a={C.violet} g={C.gTint} />
-                            <span style={{ fontSize: 13.5, fontWeight: 800, color: C.violet }}>검증 원장</span>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: C.violet, marginLeft: "auto" }}>›</span>
+                            <span style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>검증 원장</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginLeft: "auto" }}>›</span>
                         </div>
                         <div style={{ marginTop: 6 }}>
-                            <span style={{ fontSize: 20, fontWeight: 800, color: C.violet, letterSpacing: "-0.4px" }}>
+                            <span style={{ fontSize: 20, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>
                                 {gate.progress_pct != null ? gate.progress_pct.toFixed(1) + "%" : "—"}
                             </span>
                         </div>
