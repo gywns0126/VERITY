@@ -6,8 +6,7 @@ import { useEffect, useState, type CSSProperties } from "react"
  *
  * 개인화 = 설정 0: localStorage("verity_recent_tickers") 최근 본 종목 칩 (없으면 행 숨김).
  * 이름 조인 = universe_search.json (sessionStorage 캐시). 커스텀 편집은 보류 (사용 데이터 후 판단).
- * 아이콘 = PublicPerspectiveMaps GIcon 도안 언어 동일(투톤 solid stroke + glass blur, 48 viewBox) —
- *   자작 이모지·外部 아이콘 금지 방침 정합, 퀵바 4종 신규 도안. 컴포넌트 자립 원칙으로 인라인.
+ * 아이콘 = Phosphor 정식 도안(regular, unpkg 추출 — 자작 SVG 금지 규칙) + GIcon 계열 glass 틴트 레이어.
  * RULE 7 — 동선 버튼만, 종목 나열 = 사용자 본인 방문 기록 (추천 아님).
  */
 
@@ -29,42 +28,12 @@ const _rr = (x: number, y: number, w: number, h: number, r: number): string =>
 const _circ = (cx: number, cy: number, r: number): string =>
     `M${cx - r} ${cy} A${r} ${r} 0 1 0 ${cx + r} ${cy} A${r} ${r} 0 1 0 ${cx - r} ${cy} Z`
 
-const QICONS: Record<string, { solid: (a: string) => any; glass: string }> = {
-    search: {
-        solid: (a) => (
-            <g fill="none" stroke={a} strokeWidth={4} strokeLinecap="round">
-                <circle cx={21} cy={21} r={10.5} />
-                <line x1={29.5} y1={29.5} x2={40} y2={40} />
-            </g>
-        ),
-        glass: _circ(21, 21, 13),
-    },
-    watch: {
-        solid: (a) => (
-            <path d="M15 7 H33 Q35.5 7 35.5 9.5 V41 L24 33 L12.5 41 V9.5 Q12.5 7 15 7 Z"
-                fill="none" stroke={a} strokeWidth={4} strokeLinejoin="round" />
-        ),
-        glass: _rr(10, 5, 28, 38, 5),
-    },
-    filing: {
-        solid: (a) => (
-            <g fill="none" stroke={a} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 8 H29 L37 16 V40 Q37 42 35 42 H11 Q9 42 9 40 V10 Q9 8 11 8 Z" />
-                <line x1={16} y1={22} x2={30} y2={22} />
-                <line x1={16} y1={30} x2={30} y2={30} />
-            </g>
-        ),
-        glass: _rr(6, 6, 34, 38, 5),
-    },
-    discover: {
-        solid: (a) => (
-            <g fill="none" stroke={a} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx={24} cy={24} r={16} />
-                <path d="M30 18 L26.5 26.5 L18 30 L21.5 21.5 Z" />
-            </g>
-        ),
-        glass: _circ(24, 24, 18),
-    },
+// Phosphor 정식 도안 (regular, viewBox 256 — feedback_framer_icons_use_phosphor: 자작 SVG 금지) + glass 틴트 레이어
+const QICONS: Record<string, { d: string; glass: string }> = {
+    search: { d: "M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z", glass: _circ(112, 112, 76) },
+    watch: { d: "M184,32H72A16,16,0,0,0,56,48V224a8,8,0,0,0,12.24,6.78L128,193.43l59.77,37.35A8,8,0,0,0,200,224V48A16,16,0,0,0,184,32Zm0,177.57-51.77-32.35a8,8,0,0,0-8.48,0L72,209.57V48H184Z", glass: _rr(56, 28, 144, 200, 16) },
+    filing: { d: "M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-32-80a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,136Zm0,32a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,168Z", glass: _rr(48, 24, 160, 208, 16) },
+    discover: { d: "M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216ZM172.42,72.84l-64,32a8.05,8.05,0,0,0-3.58,3.58l-32,64A8,8,0,0,0,80,184a8.1,8.1,0,0,0,3.58-.84l64-32a8.05,8.05,0,0,0,3.58-3.58l32-64a8,8,0,0,0-10.74-10.74ZM138,138,97.89,158.11,118,118l40.15-20.07Z", glass: _circ(128, 128, 100) },
 }
 
 function QIcon(props: { k: string; size: number; a: string; g: string }) {
@@ -73,17 +42,17 @@ function QIcon(props: { k: string; size: number; a: string; g: string }) {
     const fid = "vqbf-" + props.k
     const cid = "vqbc-" + props.k
     return (
-        <svg width={props.size} height={props.size} viewBox="0 0 48 48" fill="none"
+        <svg width={props.size} height={props.size} viewBox="0 0 256 256" fill="none"
             style={{ display: "block", flexShrink: 0, overflow: "visible" }}>
             <defs>
-                <filter id={fid} x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.1" /></filter>
+                <filter id={fid} x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="11" /></filter>
                 <clipPath id={cid}><path d={def.glass} /></clipPath>
             </defs>
             <g clipPath={`url(#${cid})`}>
-                <g filter={`url(#${fid})`} opacity={0.85}>{def.solid(props.a)}</g>
+                <g filter={`url(#${fid})`} opacity={0.85}><path d={def.d} fill={props.a} /></g>
                 <path d={def.glass} fill={props.g} />
             </g>
-            <g>{def.solid(props.a)}</g>
+            <path d={def.d} fill={props.a} />
         </svg>
     )
 }
