@@ -105,6 +105,8 @@ interface StockGroup {
     industry: string
     items: NewsItem[]
 }
+// 오늘 핫한 종목 — recommendations[].sentiment.headline_count(종목별 뉴스량) 순. 사실(뉴스 건수), 추천·등급 아님.
+interface HotStock { ticker: string; name: string; market: string; count: number; score: number }
 
 /* 오늘의 뉴스 한눈 — 전부 기존 사실 집계(RULE7, LLM 해석 0). 출처신뢰도·신선도·무드·종목밀도·테마빈도. */
 interface TopStock { name: string; ticker: string; n: number }
@@ -203,6 +205,7 @@ export default function PublicNewsTab(props: Props) {
     const [stocks, setStocks] = useState<StockGroup[]>([])
     const [market, setMarket] = useState<NewsItem[]>([])
     const [us, setUs] = useState<NewsItem[]>([])
+    const [hotStocks, setHotStocks] = useState<HotStock[]>([])
     const [insights, setInsights] = useState<Insights | null>(null)
     const [loading, setLoading] = useState<boolean>(true)
     const [failed, setFailed] = useState<boolean>(false)
@@ -338,6 +341,17 @@ export default function PublicNewsTab(props: Props) {
                 // 뉴스 많은 종목 = 라이브 per-stock 실제 건수(아래 enrichment effect서 채움). headline_count 는 포화라 미사용.
                 setInsights({ total: rawHl.length, credHi, credLo, fresh, dup, pos, neg, neu, topStocks: [], themes })
             }
+
+            // 오늘 핫한 종목 — 종목별 뉴스량(headline_count) 순 (KR+US, 뉴스 있는 것만 top 8). 사실.
+            const hot: HotStock[] = (recs as any[])
+                .map((r) => {
+                    const s = r.sentiment || {}
+                    return { ticker: r.ticker || r.code || "", name: r.name || r.company_name || r.ticker || "", market: r.market || "", count: Number(s.headline_count) || 0, score: Number(s.score) || 0 }
+                })
+                .filter((x) => x.count > 0 && x.ticker)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 8)
+            setHotStocks(hot)
 
             setStocks(groups)
             setMarket(mk)
@@ -495,6 +509,32 @@ export default function PublicNewsTab(props: Props) {
 
             {/* 본문 */}
             <div style={{ flex: 1, overflowY: "auto", padding: "4px 14px 18px 14px" }}>
+                {/* 오늘 핫한 종목 — 종목별 뉴스량 순(headline_count). 사실, 추천·등급 아님. 가로 스크롤. */}
+                {!loading && !failed && hotStocks.length ? (
+                    <div style={{ marginBottom: 20 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 800, color: C.text, padding: "2px 2px 8px", letterSpacing: "-0.01em" }}>
+                            오늘 핫한 종목 <span style={{ color: C.faint, fontWeight: 600 }}>· 뉴스량 많은 순 · 추천·등급 아님</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                            {hotStocks.map((s, i) => {
+                                const mk = String(s.market || "").toUpperCase()
+                                const mkLabel = mk ? (mk.indexOf("KOS") >= 0 || mk === "KR" || mk.indexOf("KRX") >= 0 ? "KR" : mk) : ""
+                                return (
+                                    <a key={s.ticker} href={(props.reportPath || "/stock") + "?q=" + encodeURIComponent(s.ticker)} target="_blank" rel="noopener noreferrer"
+                                        style={{ flexShrink: 0, minWidth: 132, textDecoration: "none", background: C.card, borderRadius: 12, padding: "10px 13px", boxSizing: "border-box" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                            <span style={{ fontSize: 11, fontWeight: 800, color: C.accent }}>{i + 1}</span>
+                                            <span style={{ fontSize: 13, fontWeight: 800, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 92 }}>{s.name}</span>
+                                        </div>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, marginTop: 4 }}>
+                                            뉴스 <span style={{ color: C.accent }}>{s.count}건</span>{mkLabel ? " · " + mkLabel : ""}
+                                        </div>
+                                    </a>
+                                )
+                            })}
+                        </div>
+                    </div>
+                ) : null}
                 {!loading && !failed && insights ? <NewsInsights ins={insights} C={C} reportPath={props.reportPath} /> : null}
                 {/* 정렬 세그먼트 — 시장·미국 탭만(직교). 최신/핫/언론사그룹. 조회수 없음(데이터 부재). */}
                 {!loading && !failed && (tab === "market" || tab === "us") ? (
@@ -621,21 +661,7 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
                         <span style={{ color: C.down }}>악재 {ins.neg}</span>
                     </div>
                 </div>
-                {/* 뉴스 많은 종목 */}
-                {ins.topStocks.length ? (
-                    <div style={tile}>
-                        <div style={lbl}>뉴스 많은 종목</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                            {ins.topStocks.map((s) => (
-                                <a key={s.ticker} href={(props.reportPath || "/stock") + "?q=" + encodeURIComponent(s.ticker)} target="_blank" rel="noopener noreferrer"
-                                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", fontSize: 12, fontWeight: 700 }}>
-                                    <span style={{ color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 116 }}>{s.name}</span>
-                                    <span style={{ color: C.accent, flexShrink: 0 }}>{s.n}건 ›</span>
-                                </a>
-                            ))}
-                        </div>
-                    </div>
-                ) : null}
+                {/* '뉴스 많은 종목' 타일 → 상단 '오늘 핫한 종목' 스트립으로 이전(중복 제거, 2026-07-05) */}
                 {/* 오늘의 뉴스 테마 (제목 키워드 빈도 — LLM 아님, 단어 카운트) */}
                 {ins.themes.length ? (
                     <div style={{ ...tile, flexBasis: 280, minWidth: 236 }}>
