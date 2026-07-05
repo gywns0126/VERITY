@@ -480,7 +480,12 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                         const total = items.reduce((acc: number, x: any) => acc + capOf(x), 0)
                         if (!mine || !total) return null
                         const pct = (mine / total) * 100
-                        const disp = mine >= 1e4 ? (mine / 1e4).toFixed(mine >= 1e5 ? 0 : 1) + "조원" : Math.round(mine).toLocaleString() + "억원"
+                        // 억원 입력 기준: ≥1e8억(=1경원) → 경원 / ≥1e4억 → 콤마 조원 / 그 외 콤마 억원 (PM 2026-07-05 가독성)
+                        const disp = mine >= 1e8
+                            ? ((mine / 1e8).toFixed(1).replace(/\.0$/, "") + "경원")
+                            : mine >= 1e4
+                                ? (Math.round(mine / 1e4).toLocaleString() + "조원")
+                                : (Math.round(mine).toLocaleString() + "억원")
                         return (
                             <div style={{ marginTop: 10 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
