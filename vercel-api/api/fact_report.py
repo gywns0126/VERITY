@@ -1,6 +1,6 @@
 """GET /api/verity/fact-report?ticker= — 팩트 리포트 PDF (Typst 조판, 다운로드 파일).
 
-(deploy marker 2026-07-05: 데이터 커밋이 평가 HEAD 를 덮어 최초 배포 skip — 재트리거)
+(deploy marker v2 2026-07-05: 머지-후-커밋 선형 push — ignoreCommand 1차부모 diff 정합)
 
 브라우저 print 다이얼로그(페이지 덤프) 대체 (PM 2026-07-05) — 서버에서 발행 사실 데이터를
 조판한 진짜 PDF 파일. 엔진 = typst-py (Apache-2.0, ms 컴파일 — Zerodha 야간 150만장 실사례).
