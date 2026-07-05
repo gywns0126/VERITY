@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 
 /**
  * AlphaNest 뉴스 탭 (공개) — 팩트형.
@@ -202,7 +202,10 @@ export default function PublicNewsTab(props: Props) {
     const [tab, setTab] = useState<Tab>("stock")
     const [showKo, setShowKo] = useState<boolean>(false)
     const [mktSort, setMktSort] = useState<string>("recent")   // 시장·미국 정렬: recent/hot/outlet
-    const [stocks, setStocks] = useState<StockGroup[]>([])
+    const [recGroups, setRecGroups] = useState<StockGroup[]>([])        // recommendations(뉴스 있는 것) — 관심종목 없을 때 폴백
+    const [recMap, setRecMap] = useState<Record<string, StockGroup>>({}) // 전 rec: ticker → 메타+뉴스(뉴스 소스 lookup)
+    const [naverNews, setNaverNews] = useState<Record<string, NewsItem[]>>({})  // KR 종목 라이브 뉴스(네이버 enrich)
+    const [watch, setWatch] = useState<{ ticker: string; name: string; market: string }[]>([])  // 둥지/관심종목(로그인 watchgroups + localStorage)
     const [market, setMarket] = useState<NewsItem[]>([])
     const [us, setUs] = useState<NewsItem[]>([])
     const [hotStocks, setHotStocks] = useState<HotStock[]>([])
@@ -220,6 +223,52 @@ export default function PublicNewsTab(props: Props) {
         obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
         return () => obs.disconnect()
     }, [onCanvas])
+
+    /* 둥지/관심종목 읽기 — localStorage(verity_watchlist, 무로그인 별표) + 로그인(/api/watchgroups) 병합.
+       별표 토글/로그인 변경 이벤트 추종해 자동 갱신. 비어 있으면 아래 stocks 가 추천으로 폴백. */
+    useEffect(() => {
+        if (onCanvas) return
+        const api = (props.apiBase || "https://project-yw131.vercel.app").replace(/\/+$/, "")
+        let alive = true
+        const load = () => {
+            const m = new Map<string, { ticker: string; name: string; market: string }>()
+            try {
+                const r = typeof localStorage !== "undefined" ? localStorage.getItem("verity_watchlist") : null
+                const a = r ? JSON.parse(r) : []
+                if (Array.isArray(a)) for (const w of a) {
+                    const tk = String((w && w.ticker) || "").trim()
+                    if (tk && !m.has(tk.toUpperCase())) m.set(tk.toUpperCase(), { ticker: tk, name: (w && w.name) || tk, market: (w && w.market) || "" })
+                }
+            } catch (e) {}
+            let token = ""
+            try { const s = JSON.parse((typeof localStorage !== "undefined" && localStorage.getItem("verity_supabase_session")) || "null"); token = (s && s.access_token) || "" } catch (e) {}
+            const finish = () => { if (alive) setWatch(Array.from(m.values())) }
+            if (token) {
+                fetch(`${api}/api/watchgroups`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+                    .then((r) => (r.ok ? r.json() : null))
+                    .then((groups) => {
+                        if (Array.isArray(groups)) for (const g of groups) for (const it of (g.items || [])) {
+                            const tk = String((it && it.ticker) || "").trim()
+                            if (tk && !m.has(tk.toUpperCase())) m.set(tk.toUpperCase(), { ticker: tk, name: (it && it.name) || tk, market: (it && it.market) || "" })
+                        }
+                    })
+                    .catch(() => {})
+                    .finally(finish)
+            } else finish()
+        }
+        load()
+        window.addEventListener("verity-watchlist-changed", load)   // PublicWatchlist(localStorage) 별표
+        window.addEventListener("verity_watch_change", load)         // AlphaNestWatchlist(로그인) 별표
+        window.addEventListener("verity-auth-change", load)          // 로그인/로그아웃
+        window.addEventListener("storage", load)
+        return () => {
+            alive = false
+            window.removeEventListener("verity-watchlist-changed", load)
+            window.removeEventListener("verity_watch_change", load)
+            window.removeEventListener("verity-auth-change", load)
+            window.removeEventListener("storage", load)
+        }
+    }, [onCanvas, props.apiBase])
 
     /* 데이터 로드 */
     useEffect(() => {
@@ -240,14 +289,16 @@ export default function PublicNewsTab(props: Props) {
             const recRaw = res[0]
             const pf = res[1]
 
-            // 내 종목 뉴스
+            // recommendations → recMap(전체, 뉴스 소스 lookup) + recGroups(뉴스 있는 것, 관심종목 없을 때 폴백)
             const recs = Array.isArray(recRaw) ? recRaw : (recRaw && recRaw.recommendations) || []
-            const groups: StockGroup[] = []
+            const recGroupsArr: StockGroup[] = []
+            const rmap: Record<string, StockGroup> = {}
             for (let i = 0; i < recs.length; i++) {
                 const rec = recs[i] || {}
+                const tk = String(rec.ticker || rec.code || "").trim()
+                if (!tk) continue
                 const sent = rec.sentiment || {}
                 const links = asArray(sent.top_headline_links)
-                if (!links.length) continue
                 const items: NewsItem[] = []
                 for (let j = 0; j < links.length && items.length < maxPer; j++) {
                     const h = links[j] || {}
@@ -263,15 +314,17 @@ export default function PublicNewsTab(props: Props) {
                         sentiment: String(h.label || ""),
                     })
                 }
-                if (!items.length) continue
-                groups.push({
-                    ticker: rec.ticker || rec.code || "",
-                    name: rec.name || rec.company_name || rec.ticker || "",
+                const grp: StockGroup = {
+                    ticker: tk,
+                    name: rec.name || rec.company_name || tk,
                     market: rec.market || "",
                     sector: rec.sector || "",
                     industry: rec.industry || "",
                     items: items,
-                })
+                }
+                rmap[tk] = grp
+                rmap[tk.toUpperCase()] = grp
+                if (items.length) recGroupsArr.push(grp)
             }
 
             // 시장 뉴스 (KR 헤드라인 + 글로벌/블룸버그 RSS 합본 — 볼륨↑, 제목 dedup)
@@ -353,7 +406,8 @@ export default function PublicNewsTab(props: Props) {
                 .slice(0, 8)
             setHotStocks(hot)
 
-            setStocks(groups)
+            setRecGroups(recGroupsArr)
+            setRecMap(rmap)
             setMarket(mk)
             setUs(usArr)
             setLoading(false)
@@ -365,45 +419,62 @@ export default function PublicNewsTab(props: Props) {
         }
     }, [onCanvas, props.recUrl, props.portfolioUrl, props.maxPerStock, props.maxMarket])
 
-    /* 내 종목 — 상위 10 KR 종목 Naver 종목뉴스 라이브 밀도 enrichment (Google RSS 빈약 대체) */
-    const enrichedRef = useRef(false)
+    /* 표시할 내 종목 = 관심종목(watch) 있으면 그 종목, 없으면 추천(recGroups). 뉴스 = KR 라이브(naverNews) 우선, 없으면 recMap. */
+    const stocks = useMemo<StockGroup[]>(() => {
+        const withLive = (g: StockGroup): StockGroup => {
+            const live = naverNews[g.ticker] || naverNews[String(g.ticker).toUpperCase()]
+            return live && live.length ? { ...g, items: live } : g
+        }
+        if (watch.length) {
+            return watch.map((w) => {
+                const rm = recMap[w.ticker] || recMap[String(w.ticker).toUpperCase()]
+                const g: StockGroup = {
+                    ticker: w.ticker,
+                    name: w.name || (rm ? rm.name : w.ticker),
+                    market: w.market || (rm ? rm.market : ""),
+                    sector: rm ? rm.sector : "",
+                    industry: rm ? rm.industry : "",
+                    items: rm ? rm.items : [],
+                }
+                return withLive(g)
+            })
+        }
+        return recGroups.map(withLive)
+    }, [watch, recMap, recGroups, naverNews])
+
+    /* KR 종목(관심 or 추천) 라이브 뉴스 enrich — 목록 바뀔 때(관심종목 변경 포함) 재수집. 최대 15. */
+    const krKey = useMemo(() => {
+        const src = watch.length ? watch.map((w) => w.ticker) : recGroups.map((g) => g.ticker)
+        const out: string[] = []
+        for (const tk of src) { const t = String(tk || ""); if (/^\d{6}$/.test(t) && out.indexOf(t) < 0) out.push(t) }
+        return out.slice(0, 15).join(",")
+    }, [watch, recGroups])
+
     useEffect(() => {
-        if (onCanvas || enrichedRef.current || !stocks.length) return
+        if (onCanvas || !krKey) return
         const api = (props.apiBase || "https://project-yw131.vercel.app").replace(/\/+$/, "")
-        const krGroups = stocks.filter((g) => /^\d{6}$/.test(String(g.ticker || ""))).slice(0, 10)
-        if (!krGroups.length) return
-        enrichedRef.current = true
+        const krs = krKey.split(",").filter(Boolean)
         let alive = true
-        Promise.all(krGroups.map((g) =>
-            fetch(`${api}/api/stock_news?code=${encodeURIComponent(g.ticker)}`, { cache: "no-store" })
+        Promise.all(krs.map((tk) =>
+            fetch(`${api}/api/stock_news?code=${encodeURIComponent(tk)}`, { cache: "no-store" })
                 .then((r) => (r.ok ? r.json() : null))
-                .then((d) => ({ ticker: String(g.ticker), items: (d && Array.isArray(d.items)) ? d.items : null }))
-                .catch(() => ({ ticker: String(g.ticker), items: null }))
+                .then((d) => ({ tk, items: (d && Array.isArray(d.items)) ? d.items : null }))
+                .catch(() => ({ tk, items: null }))
         )).then((results) => {
             if (!alive) return
-            const byTicker: Record<string, any[]> = {}
-            for (const r of results) if (r.items && r.items.length) byTicker[r.ticker] = r.items
-            if (!Object.keys(byTicker).length) return
-            // 뉴스 많은 종목 = 라이브 실제 건수 랭킹(headline_count 포화 대체)
-            const nameOf: Record<string, string> = {}
-            for (const g of krGroups) nameOf[String(g.ticker)] = g.name || String(g.ticker)
-            const top = Object.keys(byTicker)
-                .map((tk) => ({ ticker: tk, name: nameOf[tk] || tk, n: byTicker[tk].length }))
-                .sort((a, b) => b.n - a.n)
-                .slice(0, 4)
-            setInsights((prev) => (prev ? { ...prev, topStocks: top } : prev))
-            setStocks((prev) => prev.map((g) => {
-                const ni = byTicker[String(g.ticker)]
-                if (!ni) return g
-                const items: NewsItem[] = ni.slice(0, 4).map((n: any) => ({
-                    title: n.title, url: n.url, source: n.source, time: n.rel_time || "",
-                    sentiment: "", category: n.category, outlets: n.outlets, credible: n.credible,
-                }))
-                return { ...g, items }
-            }))
+            setNaverNews((prev) => {
+                const next = { ...prev }
+                for (const r of results) if (r.items && r.items.length) {
+                    next[r.tk] = r.items.slice(0, 4).map((n: any) => ({
+                        title: n.title, url: n.url, source: n.source, time: n.rel_time || "",
+                        sentiment: "", category: n.category, outlets: n.outlets, credible: n.credible,
+                    }))
+                }
+                return next
+            })
         })
         return () => { alive = false }
-    }, [stocks, onCanvas, props.apiBase])
+    }, [krKey, props.apiBase, onCanvas])
 
     const tabs: { key: Tab; label: string; count: number }[] = useMemo(
         () => [
@@ -561,7 +632,12 @@ export default function PublicNewsTab(props: Props) {
                         뉴스를 불러오지 못했어요.
                     </div>
                 ) : tab === "stock" ? (
-                    <StockNews groups={stocks} C={C} cardH={props.stockCardHeight || 232} showKo={showKo} reportPath={props.reportPath} />
+                    <>
+                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "0 6px 10px" }}>
+                            {watch.length ? `내 관심종목 ${watch.length}개 연동 · 별표 추가하면 자동 반영` : "관심종목을 별표하면 여기 연동돼요 · 지금은 추천 종목 뉴스"}
+                        </div>
+                        <StockNews groups={stocks} C={C} cardH={props.stockCardHeight || 232} showKo={showKo} reportPath={props.reportPath} />
+                    </>
                 ) : tab === "market" ? (
                     <FlatNews key={"market-" + mktSort} items={market} C={C} empty="시장 뉴스가 없어요." cardH={props.marketCardHeight || 92} showKo={showKo} sortMode={mktSort} />
                 ) : (
@@ -934,9 +1010,11 @@ function StockNews(props: { groups: StockGroup[]; C: typeof LIGHT; cardH: number
                         <MarketBadge market={g.market} C={C} />
                         <SectorBadge sector={g.sector} industry={g.industry} C={C} />
                     </div>
-                    {g.items.map((it, j) => (
-                        <NewsRow key={j} item={it} C={C} clamp={1} showKo={props.showKo} />
-                    ))}
+                    {g.items.length ? (
+                        g.items.map((it, j) => <NewsRow key={j} item={it} C={C} clamp={1} showKo={props.showKo} />)
+                    ) : (
+                        <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, padding: "10px 8px" }}>최근 관련 뉴스가 없어요</div>
+                    )}
                 </div>
             ))}
         </div>
