@@ -45,8 +45,8 @@ ESBUILD = os.path.join(REPO_ROOT, "vercel-api", "node_modules", ".bin", "esbuild
 FRAMER_GLOB = os.path.join(REPO_ROOT, "framer-components", "**", "*.tsx")
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 # 발행 대기(백필 진행 중) URL — 404 를 FAIL 아닌 WARN 으로 강등(추적 유지, red 회피). 데이터 랜딩 시 제거.
-# dart_quarterly_public.json = KR 분기 backfill 완주 전 미발행 (item 2, MIN_QUARTERS=4 게이트). backfill cron 완주 시 자동 200 → 이 set 에서 제거.
-PENDING_PUBLISH = {"dart_quarterly_public.json"}
+# 2026-07-05: dart_quarterly_public.json 제거 — 632735a0b 로 발행 개시(200 확인). 빈 set 유지(향후 신규 백필 파일용).
+PENDING_PUBLISH: set[str] = set()
 
 KST = timezone(timedelta(hours=9))
 PAK_RE = re.compile(r"박[으이아았혀힘은는지하한히음으면혀]")  # RULE 9 금지 동사
