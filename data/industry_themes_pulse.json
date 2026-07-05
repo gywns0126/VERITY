@@ -1,7 +1,7 @@
 {
   "schema_version": "v0.1",
-  "generated_at": "2026-06-29T06:56:55+09:00",
-  "universe_size": 35,
+  "generated_at": "2026-07-06T06:51:14+09:00",
+  "universe_size": 39,
   "universe_tickers": [
     "ACN",
     "ADBE",
@@ -19,8 +19,10 @@
     "EOG",
     "EQT",
     "EXE",
+    "FSLR",
     "GOOGL",
     "HLNE",
+    "INGR",
     "IVZ",
     "JNJ",
     "JPM",
@@ -28,10 +30,12 @@
     "LEN",
     "META",
     "MKC",
+    "MLI",
     "MSFT",
     "NEM",
     "PG",
     "QCOM",
+    "RRC",
     "SOFI",
     "TMO",
     "UNH",
@@ -41,42 +45,9 @@
   ],
   "themes": [
     {
-      "theme": "인건비 인플레",
-      "ticker_count": 5,
-      "frequency": 0.143,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "인건비 인플레"
-      ],
-      "evidences": [
-        {
-          "ticker": "ACN",
-          "evidence": "SeekingAlpha 분석에서 글로벌 SI·컨설팅 업계가 고급 기술 인력 확보 경쟁과 임금 상승 압력에 직면해 있으며, 이는 업계 전반의 마진 방어와 가격 전가 능력을 시험하는 요인으로 지적됨[4][7]."
-        },
-        {
-          "ticker": "CTSH",
-          "evidence": "인도 및 글로벌 딜리버리 센터에서 기술 인력 확보 경쟁과 임금 상승 압력이 지속되고 있다는 점이 IT 서비스 업계 공통 논점으로 언급되며, 이는 가격 협상과 자동화·오프쇼어 확대를 통해 일부 상쇄되나 마진에 구조적 부담 요인으로 작용함."
-        },
-        {
-          "ticker": "KHC",
-          "evidence": "식품 제조업체들은 생산·물류 관련 인건비 상승이 지속되고 있다고 컨콜에서 강조하며, 생산성 개선으로 일부 상쇄하겠지만 마진 압력 요인으로 인식하고 있음[1]."
-        },
-        {
-          "ticker": "MKC",
-          "evidence": "식품 및 외식 산업 전반에서 인건비와 운영비 상승이 지속되고 있다는 점이 언급되었으며, 이는 제조 및 공급망 전반의 비용 구조에 상방 압력을 주는 요인으로 지목됨[8][9]."
-        },
-        {
-          "ticker": "WMT",
-          "evidence": "미국 리테일 업계 전반에서 최저 임금 상승과 인력 확보 경쟁이 지속되고 있으며, 동사 컨콜에서도 임금·복지 투자 확대가 단기 마진에 부담이 되나 자동화·생산성 개선으로 상쇄를 시도하고 있다고 설명했음.[3]"
-        }
-      ]
-    },
-    {
       "theme": "소비 둔화",
-      "ticker_count": 5,
-      "frequency": 0.143,
+      "ticker_count": 6,
+      "frequency": 0.154,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -93,23 +64,85 @@
           "evidence": "Bloomberg 및 Reuters 등 주요 매체에서는 경기 둔화와 실질 소득 압박으로 소비자가 가격에 더욱 민감해지고 있으며, 패키지 식품 카테고리에서 프로모션 의존도가 높아지고 있다고 언급함[2][11]."
         },
         {
+          "ticker": "INGR",
+          "evidence": "유럽 및 일부 신흥국 식품 업체들은 컨콜에서 경기 둔화와 소비자 다운트레이딩으로 프리미엄 제품 성장세가 둔화되고 있다고 언급하며, 기본 스테이플 수요를 제외한 카테고리에서 성장률 둔화를 경고함[13][16]."
+        },
+        {
           "ticker": "KHC",
           "evidence": "최근 패키지 식품 업계 컨콜에서 여러 기업들이 볼륨 성장 둔화와 프로모션 강화 필요성을 언급하며, 물가·금리 환경이 소비자 지출을 압박하고 있음을 지적했음[9]."
         },
         {
           "ticker": "MKC",
           "evidence": "최근 컨콜에서 관리층은 일부 선진국 소매 채널에서 가격 민감도가 높아지고 프로모션 의존도가 커지고 있다고 언급하며, 전반적인 소비 환경이 여전히 완전히 정상화되지 않았다고 평가했음[9]."
+        }
+      ]
+    },
+    {
+      "theme": "인건비 인플레",
+      "ticker_count": 5,
+      "frequency": 0.128,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인건비 인플레"
+      ],
+      "evidences": [
+        {
+          "ticker": "ACN",
+          "evidence": "고급 클라우드·데이터·AI 인력 수요가 급증하는 가운데 주요 IT 서비스 기업들이 경쟁적으로 채용·보상 수준을 높이고 있어, 업계 전반적으로 인건비 상승과 마진 압력에 대한 언급이 이어지고 있음."
         },
         {
-          "ticker": "PG",
-          "evidence": "최근 컨콜에서 북미·유럽 일부 카테고리에서 소비자 트래픽과 볼륨 성장률이 둔화되고 있다고 언급하며, 프로모션과 혁신 제품으로 수요를 방어하고 있다고 설명함."
+          "ticker": "KHC",
+          "evidence": "식품 제조업체들은 생산·물류 관련 인건비 상승이 지속되고 있다고 컨콜에서 강조하며, 생산성 개선으로 일부 상쇄하겠지만 마진 압력 요인으로 인식하고 있음[1]."
+        },
+        {
+          "ticker": "MKC",
+          "evidence": "식품 및 외식 산업 전반에서 인건비와 운영비 상승이 지속되고 있다는 점이 언급되었으며, 이는 제조 및 공급망 전반의 비용 구조에 상방 압력을 주는 요인으로 지목됨[8][9]."
+        },
+        {
+          "ticker": "MLI",
+          "evidence": "전반적인 제조업 인건비 상승과 숙련 인력 확보 부담이 존재한다고 언급하며 생산 효율화와 자동화를 통해 이를 상쇄하려는 노력이 필요하다고 설명함."
+        },
+        {
+          "ticker": "WMT",
+          "evidence": "미국 리테일 업계 전반에서 최저 임금 상승과 인력 확보 경쟁이 지속되고 있으며, 동사 컨콜에서도 임금·복지 투자 확대가 단기 마진에 부담이 되나 자동화·생산성 개선으로 상쇄를 시도하고 있다고 설명했음.[3]"
+        }
+      ]
+    },
+    {
+      "theme": "규제 리스크",
+      "ticker_count": 4,
+      "frequency": 0.103,
+      "sentiment": -0.833,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "규제 리스크"
+      ],
+      "evidences": [
+        {
+          "ticker": "ACN",
+          "evidence": "데이터 보호, AI 윤리, 크로스보더 데이터 이전 등 규제 논의가 강화되면서, 글로벌 IT·컨설팅 업계에서 규제 대응 비용 증가와 일부 서비스 제공 방식 조정 가능성이 언급되고 있음."
+        },
+        {
+          "ticker": "HLNE",
+          "evidence": "최근 10-K 및 컨콜에서 동사는 공시·투명성·수수료 구조와 관련된 규제 논의가 이어지고 있으나, 현재까지 사업 모델에 근본적인 변화를 요구하는 수준의 규제는 아니라고 언급했으며, 향후 정책 변화 가능성을 모니터링 중이라고 밝혔다.[1]"
+        },
+        {
+          "ticker": "MSFT",
+          "evidence": "미·EU 규제 당국이 클라우드, 앱스토어, AI 경쟁 환경에 대한 조사 및 제도 정비를 진행 중이라고 언급되며, 빅테크 중심의 시장지배력과 데이터 활용 방식에 대한 규제가 강화될 수 있다는 우려가 커지고 있음."
+        },
+        {
+          "ticker": "VSNT",
+          "evidence": "SEC 필링과 IR 업데이트가 부족한 종목의 경우 향후 공시 요구 강화, 상장 요건 점검 등 규제 리스크가 산업 전반과 무관하게 개별 종목 차원의 중요한 변수로 작용할 수 있음[3][5][6]."
         }
       ]
     },
     {
       "theme": "디지털 전환",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -119,7 +152,7 @@
       "evidences": [
         {
           "ticker": "ACN",
-          "evidence": "최근 실적·가이던스에서 일부 단기 둔화에도 불구하고 클라우드 마이그레이션, 데이터 분석, 사이버보안 등 디지털 전환 관련 장기 수요는 견조하다고 강조되며, 컨설팅·IT 서비스 업계 전반의 구조적 성장 축으로 인식되고 있음[4][5][7]."
+          "evidence": "글로벌 IT 서비스·컨설팅 업계에서 클라우드, 데이터, 애플리케이션 현대화 중심의 디지털 전환 수요가 구조적으로 지속되고 있어, 대형 컨설팅·SI 업체들의 중장기 성장 기반을 뒷받침하고 있음."
         },
         {
           "ticker": "SOFI",
@@ -128,9 +161,30 @@
       ]
     },
     {
+      "theme": "ai 투자",
+      "ticker_count": 2,
+      "frequency": 0.051,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "AI 투자"
+      ],
+      "evidences": [
+        {
+          "ticker": "ACN",
+          "evidence": "Generative AI 및 머신러닝을 활용한 자동화·고도 분석 솔루션 수요가 빠르게 확대되면서, 주요 고객들이 컨설팅·시스템 통합 파트너에 대한 투자 의지를 강화하고 있는 점이 업계 전반 공통된 메시지로 나타나고 있음."
+        },
+        {
+          "ticker": "GOOGL",
+          "evidence": "최근 실적 컨콜에서 주요 하이퍼스케일러들이 GenAI 수요 대응을 위해 데이터센터·GPU·전용칩 투자를 공격적으로 확대하겠다고 언급하며 향후 수년간 클라우드·AI 인프라 Capex 사이클이 이어질 것임을 시사함."
+        }
+      ]
+    },
+    {
       "theme": "genai 수요",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -151,7 +205,7 @@
     {
       "theme": "신용비용",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -172,7 +226,7 @@
     {
       "theme": "자본규제",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -191,114 +245,72 @@
       ]
     },
     {
-      "theme": "인플레 비용",
+      "theme": "규제 강화",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "인플레 비용"
-      ],
-      "evidences": [
-        {
-          "ticker": "CAG",
-          "evidence": "포장식품 업계 전반에서 원재료와 인건비 인플레이션이 지속적으로 보고되고 있으며, Bernstein는 이러한 비용 압력이 패키지 식품 기업 수익성에 부정적으로 작용한다고 지적함[2]."
-        },
-        {
-          "ticker": "NEM",
-          "evidence": "금광 업종 전반의 최근 실적 및 코멘터리에서 에너지·노동·장비 비용 상승이 채굴 단가를 끌어올리고 있어 금 가격이 상승해도 마진 확대 폭을 제약하는 요인으로 반복 언급됨[7][9]."
-        }
-      ]
-    },
-    {
-      "theme": "현금흐름",
-      "ticker_count": 2,
-      "frequency": 0.057,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "현금흐름"
-      ],
-      "evidences": [
-        {
-          "ticker": "CHRD",
-          "evidence": "고유가 환경에서 자유현금흐름이 크게 확대될 수 있다는 점이 최근 강세 논거로 제시됨[3]."
-        },
-        {
-          "ticker": "EXE",
-          "evidence": "저가 가스 환경에서도 잉여현금흐름 창출이 가능하다는 평가가 시장에서 제기됨."
-        }
-      ]
-    },
-    {
-      "theme": "ai 투자",
-      "ticker_count": 2,
-      "frequency": 0.057,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "AI 투자"
-      ],
-      "evidences": [
-        {
-          "ticker": "CTSH",
-          "evidence": "최근 실적 컨퍼런스콜에서 Cognizant는 AI 기반 대형 딜이 가속되고 있으며 2025년 매출과 EPS 가이던스 상향의 핵심 동인으로 언급하는 등 엔터프라이즈 IT 서비스 업계 전반에서 데이터·AI 프로젝트 투자가 구조적으로 확대되고 있음을 강조했음[1][3]."
-        },
-        {
-          "ticker": "GOOGL",
-          "evidence": "최근 실적 컨콜에서 주요 하이퍼스케일러들이 GenAI 수요 대응을 위해 데이터센터·GPU·전용칩 투자를 공격적으로 확대하겠다고 언급하며 향후 수년간 클라우드·AI 인프라 Capex 사이클이 이어질 것임을 시사함."
-        }
-      ]
-    },
-    {
-      "theme": "규제 리스크",
-      "ticker_count": 2,
-      "frequency": 0.057,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "규제 리스크"
+        "규제 강화"
       ],
       "evidences": [
         {
           "ticker": "EOG",
-          "evidence": "미국 및 주요 생산 지역에서 메탄 배출, 플레어링 규제 등 환경기준 강화 논의가 이어지고 있어 중장기적으로 석유·가스 개발 비용 구조를 악화시킬 수 있다는 점이 업계 공통 리스크로 언급되고 있음."
+          "evidence": "업계 컨콜에서 메탄 배출 및 환경 규제 강화로 인한 컴플라이언스 비용 증가가 반복적으로 언급되고 있으며, 신규 파이프라인·인프라 인허가 리스크가 업스트림 기업들의 중장기 전략 변수로 지적됨."
         },
         {
-          "ticker": "MSFT",
-          "evidence": "미·EU 규제 당국이 클라우드, 앱스토어, AI 경쟁 환경에 대한 조사 및 제도 정비를 진행 중이라고 언급되며, 빅테크 중심의 시장지배력과 데이터 활용 방식에 대한 규제가 강화될 수 있다는 우려가 커지고 있음."
+          "ticker": "META",
+          "evidence": "미국과 유럽의 빅테크 관련 청문회·조사, 디지털 서비스 법(DSA)·디지털 마켓 법(DMA) 등 규제 언급이 실적 발표 리스크 요인 섹션과 컨콜 Q&A에서 빈번히 제기되고 있음."
         }
       ]
     },
     {
-      "theme": "규제강화",
+      "theme": "주주환원",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "주주환원"
+      ],
+      "evidences": [
+        {
+          "ticker": "EOG",
+          "evidence": "대형 EP 기업들은 잉여현금을 활용한 기본·특별 배당과 자사주 매입을 지속적인 자본 배분 우선순위로 제시하고 있으며, 이는 업계 전체 밸류에이션과 투자 매력도를 지지하는 핵심 테마로 반복 언급됨."
+        },
+        {
+          "ticker": "EQT",
+          "evidence": "업스트림 기업들은 배당과 자사주매입 등 주주환원 강화를 통해 밸류에이션 재평가를 노리는 경향이 있음."
+        }
+      ]
+    },
+    {
+      "theme": "금리 환경",
+      "ticker_count": 2,
+      "frequency": 0.051,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "규제강화"
+        "금리 환경"
       ],
       "evidences": [
         {
-          "ticker": "EQT",
-          "evidence": "메탄 배출·환경 보호 관련 규제 강화 논의가 계속되며, 향후 천연가스 개발 기업들의 운영비 상승과 프로젝트 승인 리스크로 작용할 수 있다는 점이 업계 리포트에서 지적되고 있음."
+          "ticker": "FSLR",
+          "evidence": "태양광 업계 컨콜에서는 여전히 높은 금리 수준이 유틸리티급 프로젝트의 자본비용을 높여 개발 일정과 파이낸싱 구조에 부담을 주고 있으며, 일부 프로젝트 지연 사례가 존재한다고 설명함."
         },
         {
-          "ticker": "GOOGL",
-          "evidence": "미국·EU·인도 등 주요 지역에서 대형 플랫폼의 시장 지배력, 앱스토어 수수료, 사용자 데이터 활용에 대한 조사와 잠정 시정조치 논의가 확대되고 있다는 점이 컨콜 및 공시에서 반복적으로 언급되고 있음."
+          "ticker": "HLNE",
+          "evidence": "컨콜 및 IR 자료에서 고금리·자본비용 상승이 레버리지 딜 구조와 밸류에이션에 부담을 주며, 일부 투자자와 GP가 거래 속도를 늦추고 있다는 점을 리스크로 지적했음.[3]"
         }
       ]
     },
     {
       "theme": "가격 인상",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -319,7 +331,7 @@
     {
       "theme": "프라이빗라벨",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -338,30 +350,9 @@
       ]
     },
     {
-      "theme": "규제 강화",
-      "ticker_count": 2,
-      "frequency": 0.057,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "규제 강화"
-      ],
-      "evidences": [
-        {
-          "ticker": "META",
-          "evidence": "미국과 유럽의 빅테크 관련 청문회·조사, 디지털 서비스 법(DSA)·디지털 마켓 법(DMA) 등 규제 언급이 실적 발표 리스크 요인 섹션과 컨콜 Q&A에서 빈번히 제기되고 있음."
-        },
-        {
-          "ticker": "NEM",
-          "evidence": "최근 금광 관련 업계 코멘터리에서 환경·사회 규제와 일부 산지국의 자원민족주의 강화로 개발 프로젝트 인허가와 로열티·세제 리스크가 확대되고 있다는 언급이 지속됨[7][9]."
-        }
-      ]
-    },
-    {
       "theme": "환율 역풍",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -380,9 +371,30 @@
       ]
     },
     {
+      "theme": "비용 절감",
+      "ticker_count": 2,
+      "frequency": 0.051,
+      "sentiment": 0.625,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "비용 절감"
+      ],
+      "evidences": [
+        {
+          "ticker": "ACN",
+          "evidence": "클라이언트 기업들이 경기·금리 환경을 고려해 IT·컨설팅 예산 집행을 보다 신중하게 검토하면서, 효율화·비용 절감 목적의 프로젝트는 유지하되 신규 대형 변혁 프로젝트는 일부 지연되는 흐름이 관측되고 있음."
+        },
+        {
+          "ticker": "DIS",
+          "evidence": "최근 가이던스에서 회사는 조직 슬림화, 마케팅 효율화, 기술·플랫폼 통합 등을 통해 수십억 달러 규모의 구조적 비용 절감을 추진 중이며, 향후 몇 년간 마진 개선에 기여할 것이라고 설명함."
+        }
+      ]
+    },
+    {
       "theme": "에너지 전환",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": -0.625,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -403,7 +415,7 @@
     {
       "theme": "재고 조정",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": -0.625,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -422,9 +434,30 @@
       ]
     },
     {
+      "theme": "규제 환경",
+      "ticker_count": 2,
+      "frequency": 0.051,
+      "sentiment": -0.5,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "규제 환경"
+      ],
+      "evidences": [
+        {
+          "ticker": "MLI",
+          "evidence": "환경 및 제품 안전 규제 변화가 지속되고 있으나, 현재까지는 기존 컴플라이언스 체계를 통해 대응 가능하다고 보며 향후 규제 강화 가능성을 모니터링하고 있다고 언급함."
+        },
+        {
+          "ticker": "QCOM",
+          "evidence": "글로벌 빅테크 및 통신 특허 사업자에 대한 반독점·공정 경쟁 규제가 강화되는 추세로, 라이선스 비즈니스 및 대형 인수합병에 대한 정책 불확실성이 지속된다는 언급이 있었음."
+        }
+      ]
+    },
+    {
       "theme": "고금리 환경",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -445,7 +478,7 @@
     {
       "theme": "환율 변동",
       "ticker_count": 2,
-      "frequency": 0.057,
+      "frequency": 0.051,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -464,60 +497,9 @@
       ]
     },
     {
-      "theme": "gen ai 수요",
-      "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "Gen AI 수요"
-      ],
-      "evidences": [
-        {
-          "ticker": "ACN",
-          "evidence": "Q3 2026 컨퍼런스콜과 SeekingAlpha 리포트에서 Gen AI 및 Reinvention Services 관련 프로젝트 파이프라인이 강하게 증가하고 있다고 언급되며, 업계 전반에서 기업들의 AI 기반 업무 재설계·자동화 투자가 가속화되는 흐름이 확인됨[2][5][7]."
-        }
-      ]
-    },
-    {
-      "theme": "it 지출 둔화",
-      "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "IT 지출 둔화"
-      ],
-      "evidences": [
-        {
-          "ticker": "ACN",
-          "evidence": "Reuters와 CNBC 보도에서 Accenture의 연간 매출 성장 가이던스 하향 이후 인도 IT 및 글로벌 IT 서비스 섹터 주가가 동반 약세를 보이며, 기업들의 단기 IT·컨설팅 지출이 보수적으로 조정되고 있다는 시장 인식이 강화된 것으로 설명됨[3][9][12][14]."
-        }
-      ]
-    },
-    {
-      "theme": "m&a 통한 역량확대",
-      "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "M&A 통한 역량확대"
-      ],
-      "evidences": [
-        {
-          "ticker": "ACN",
-          "evidence": "Reuters는 이탈리아 Engineering의 두 사업부를 Accenture가 인수한 거래를 보도하며, 디지털·클라우드 역량 및 유럽 현지 고객 기반 확대를 위한 업계 전반의 M&A 전략이 지속되고 있다고 설명함[6]."
-        }
-      ]
-    },
-    {
       "theme": "생성형 ai",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -534,7 +516,7 @@
     {
       "theme": "구독화",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -551,7 +533,7 @@
     {
       "theme": "콘텐츠 수요",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -566,11 +548,28 @@
       ]
     },
     {
+      "theme": "리튬가격",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "리튬가격"
+      ],
+      "evidences": [
+        {
+          "ticker": "ALB",
+          "evidence": "제공된 검색 결과가 없어 최신 컨콜 인용은 불가하나, ALB 투자 논의의 핵심 업황 변수는 리튬 가격 약세와 변동성임."
+        }
+      ]
+    },
+    {
       "theme": "ev수요",
       "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": 1.0,
-      "direction_label": "positive",
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
         "EV수요"
@@ -578,48 +577,48 @@
       "evidences": [
         {
           "ticker": "ALB",
-          "evidence": "전기차 침투율은 전년 대비 여전히 상승세를 유지하고 있으며, Albemarle 및 업계 코멘트에서 중장기적으로 EV 배터리용 리튬 수요는 증가 추세가 명확하다는 점을 재확인했으나 OEM 재고 조정과 지역별 성장 격차로 단기 변동성은 존재한다고 언급됨[3][6][12]."
+          "evidence": "전기차 수요 둔화는 리튬 소비 증가율을 낮춰 업황 회복 속도를 제한하는 핵심 테마임."
         }
       ]
     },
     {
-      "theme": "공급증가",
+      "theme": "공급과잉",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "공급증가"
+        "공급과잉"
       ],
       "evidences": [
         {
           "ticker": "ALB",
-          "evidence": "리튬 업종 뉴스와 Albemarle 의 시장 전망에서 중국 및 기타 지역 신규 프로젝트로 단기 공급 증가가 두드러지며, 이로 인해 2024~2026년 리튬 가격이 압박받고 일부 생산자들의 CapEx 조정과 프로젝트 리스케줄링이 이어지고 있다는 지적이 반복되고 있음[3][6][12]."
+          "evidence": "리튬 산업은 증설 부담이 가격에 압력을 주는 전형적 사이클 산업으로, 공급과잉 우려가 투자심리에 직접 영향을 줌."
         }
       ]
     },
     {
-      "theme": "capex사이클",
+      "theme": "원가절감",
       "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": -1.0,
-      "direction_label": "negative",
+      "frequency": 0.026,
+      "sentiment": 1.0,
+      "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "CapEx사이클"
+        "원가절감"
       ],
       "evidences": [
         {
           "ticker": "ALB",
-          "evidence": "리튬 가격 조정 국면에서 대부분의 리튬 업체가 성장 CapEx를 재검토하고 있으며, Albemarle 도 프로젝트 타이밍과 투자 규모를 조정하겠다고 밝힌 바 있어 업계 전체적으로 투자 사이클이 다소 둔화된 상태로 평가됨[6][12]."
+          "evidence": "가격 사이클이 약할수록 생산 최적화와 비용 절감이 현금창출 방어에 중요해지는 환경임."
         }
       ]
     },
     {
       "theme": "클라우드 재가속",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -636,7 +635,7 @@
     {
       "theme": "디지털 광고 회복",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -653,7 +652,7 @@
     {
       "theme": "보험가격 사이클",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -670,7 +669,7 @@
     {
       "theme": "규제·거버넌스 이슈",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -685,9 +684,26 @@
       ]
     },
     {
+      "theme": "인플레 비용",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인플레 비용"
+      ],
+      "evidences": [
+        {
+          "ticker": "CAG",
+          "evidence": "포장식품 업계 전반에서 원재료와 인건비 인플레이션이 지속적으로 보고되고 있으며, Bernstein는 이러한 비용 압력이 패키지 식품 기업 수익성에 부정적으로 작용한다고 지적함[2]."
+        }
+      ]
+    },
+    {
       "theme": "가격 전략",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -702,43 +718,77 @@
       ]
     },
     {
-      "theme": "가이던스",
+      "theme": "유가 레벨",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "가이던스"
+        "유가 레벨"
       ],
       "evidences": [
         {
           "ticker": "CHRD",
-          "evidence": "2026년 추정치와 FCF 가이던스 상향 인식이 유지되며 업황 기대가 방어되고 있음[2][3]."
+          "evidence": "최근 컨퍼런스콜에서 경영진은 현재 WTI 가격 레벨이 북미 셰일 E&P의 FCF 창출에 우호적인 환경을 제공하고 있으며, 중립~강세 구간의 유가 시나리오를 전제해 자본 배분과 주주환원 계획을 설정하고 있다고 언급했음."
         }
       ]
     },
     {
-      "theme": "공급과잉",
+      "theme": "서비스비용",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "공급과잉"
+        "서비스비용"
       ],
       "evidences": [
         {
           "ticker": "CHRD",
-          "evidence": "미국 셰일 증산과 OPEC+ 공급정책 변화 가능성은 업종 전반의 마진과 밸류에이션에 부담 요인임[3]."
+          "evidence": "업계 전반적으로 드릴링 및 완결(Completion) 서비스 업체들의 가격 인상 압력이 지속되고 있다는 언급이 있었으며, 이는 향후 개발 CAPEX 상승과 비용 구조 악화 가능성으로 연결될 수 있다고 경영진이 지적했음."
+        }
+      ]
+    },
+    {
+      "theme": "규제·환경",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "규제·환경"
+      ],
+      "evidences": [
+        {
+          "ticker": "CHRD",
+          "evidence": "최근 컨콜에서 미국 내 메탄 배출 규제 강화, 플레어링 제한 등 환경 관련 정책 변화가 업계 전반에 추가적인 컴플라이언스 비용과 운영 제약을 야기할 수 있다는 코멘트가 있었음."
+        }
+      ]
+    },
+    {
+      "theme": "가스·ngl 수요",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "가스·NGL 수요"
+      ],
+      "evidences": [
+        {
+          "ticker": "CHRD",
+          "evidence": "최근 컨콜에서 장기적으로 미국 내 천연가스 및 NGL 수요가 LNG 수출 확대와 석유화학 수요 회복에 힘입어 개선될 수 있다는 업계 전망을 공유했으나, 단기적으로는 변동성이 크다는 점을 함께 언급했음."
         }
       ]
     },
     {
       "theme": "비트코인 사이클",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -755,7 +805,7 @@
     {
       "theme": "온체인 경제",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -772,7 +822,7 @@
     {
       "theme": "수익 다각화",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -789,7 +839,7 @@
     {
       "theme": "ai adoption",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -806,7 +856,7 @@
     {
       "theme": "data platform consolidation",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -823,7 +873,7 @@
     {
       "theme": "cloud optimization",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -840,7 +890,7 @@
     {
       "theme": "digital transformation",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -857,7 +907,7 @@
     {
       "theme": "ai 인프라",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -874,7 +924,7 @@
     {
       "theme": "it지출 신중",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -891,7 +941,7 @@
     {
       "theme": "보안 수요",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -908,7 +958,7 @@
     {
       "theme": "구독전환",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -923,43 +973,60 @@
       ]
     },
     {
-      "theme": "디지털전환",
+      "theme": "ai전환",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "디지털전환"
+        "AI전환"
       ],
       "evidences": [
         {
           "ticker": "CTSH",
-          "evidence": "회사 및 동종사들은 애플리케이션 현대화, 클라우드 마이그레이션, 경험·데이터 플랫폼 구축 등 디지털 전환 관련 서비스 수요가 경기 변동에도 비교적 견조하게 유지되고 있다고 언급하며 중기적인 성장 축으로 제시하고 있음[10]."
+          "evidence": "AI 도입이 컨설팅, 데이터, 애플리케이션 현대화 수요를 자극해 IT 서비스 업계의 중장기 매출 기회를 넓히는 흐름이 이어지고 있음."
         }
       ]
     },
     {
-      "theme": "클라우드 채택",
+      "theme": "클라우드",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "클라우드 채택"
+        "클라우드"
       ],
       "evidences": [
         {
           "ticker": "CTSH",
-          "evidence": "최근 업계 컨콜과 가이던스에서 대형 엔터프라이즈 고객들의 하이브리드·멀티 클라우드 전략과 관련된 마이그레이션 및 관리 서비스 지출이 꾸준히 증가한다는 언급이 이어지며, 이를 기반으로 2025년 이후 매출 성장률 5~6% 수준을 기대하는 시각이 확대되고 있음[1][3]."
+          "evidence": "레거시 시스템의 클라우드 이전과 운영 최적화 수요가 계속되면서 대형 IT 서비스 업체의 프로젝트 파이프라인을 지지하는 환경임."
+        }
+      ]
+    },
+    {
+      "theme": "인건비",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인건비"
+      ],
+      "evidences": [
+        {
+          "ticker": "CTSH",
+          "evidence": "서비스 산업 특성상 인건비 인플레이션과 인력 확보 경쟁이 마진에 부담을 주는 구조가 지속됨."
         }
       ]
     },
     {
       "theme": "스트리밍 경쟁",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -976,7 +1043,7 @@
     {
       "theme": "소비·여행 수요",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -993,7 +1060,7 @@
     {
       "theme": "콘텐츠 비용",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1008,179 +1075,94 @@
       ]
     },
     {
-      "theme": "비용 절감",
+      "theme": "가스 가격",
       "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "비용 절감"
-      ],
-      "evidences": [
-        {
-          "ticker": "DIS",
-          "evidence": "최근 가이던스에서 회사는 조직 슬림화, 마케팅 효율화, 기술·플랫폼 통합 등을 통해 수십억 달러 규모의 구조적 비용 절감을 추진 중이며, 향후 몇 년간 마진 개선에 기여할 것이라고 설명함."
-        }
-      ]
-    },
-    {
-      "theme": "서비스 비용",
-      "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "서비스 비용"
+        "가스 가격"
       ],
       "evidences": [
         {
           "ticker": "EOG",
-          "evidence": "E&P 기업들의 최근 실적발표에서 시추·완결 서비스, 장비 및 인건비 인플레이션이 지속되고 있어 개발 단가 상승과 마진 압력이 이어지고 있다는 언급이 반복되고 있음."
+          "evidence": "미국 내 천연가스 재고가 높은 수준을 유지하고 있어 Henry Hub 가격이 압박받고 있으며, 업계 전반에서 가스 비중이 높은 자산에 대한 개발 속도 조절 기조가 언급됨."
         }
       ]
     },
     {
-      "theme": "주주환원",
+      "theme": "공급규율",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "주주환원"
+        "공급규율"
       ],
       "evidences": [
         {
-          "ticker": "EOG",
-          "evidence": "최근 주요 E&P 기업들은 강한 자유현금흐름을 기반으로 기본·특별배당 및 자사주 매입을 확대하는 정책을 유지하고 있으며, 에너지 섹터의 핵심 투자 매력으로 주주환원 강화가 반복적으로 강조되고 있음."
+          "ticker": "EQT",
+          "evidence": "업계는 자본지출 규율과 생산 성장 속도 조절을 통해 현금흐름 방어를 우선하는 흐름이 강함."
         }
       ]
     },
     {
-      "theme": "가스가격",
+      "theme": "ira 수혜",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "IRA 수혜"
+      ],
+      "evidences": [
+        {
+          "ticker": "FSLR",
+          "evidence": "최근 실적 컨콜에서 미국 IRA 제조 세액공제가 향후 수년간 마진과 캐시플로우 개선에 핵심적인 역할을 할 것이라고 업계 전반이 강조하며, 미국 내 국산 모듈 선호가 구조적 수요를 지지한다고 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "중국 경쟁",
+      "ticker_count": 1,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "가스가격"
+        "중국 경쟁"
       ],
       "evidences": [
         {
-          "ticker": "EQT",
-          "evidence": "최근 천연가스 가격 약세가 북미 E&P 기업들의 단기 수익성과 주가 상방을 제약하는 요인으로 컨콜 및 애널리스트 리포트에서 반복적으로 언급되고 있음."
+          "ticker": "FSLR",
+          "evidence": "글로벌 모듈 시장에서 중국 업체들의 증설과 공격적인 가격 정책이 계속되면서, 유럽·기타 지역에서 실리콘 모듈 중심의 과잉공급과 가격 압력이 심화되고 있다는 점을 여러 태양광 기업들이 컨콜에서 지적함."
         }
       ]
     },
     {
-      "theme": "lng증설",
+      "theme": "유틸리티 수요",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "LNG증설"
+        "유틸리티 수요"
       ],
       "evidences": [
         {
-          "ticker": "EQT",
-          "evidence": "미국 및 글로벌 LNG 수출 터미널 증설 계획이 중장기적으로 북미 천연가스 수요를 견인할 것이라는 점이 업계 컨퍼런스와 이익 전망 논의에서 강조되고 있음."
-        }
-      ]
-    },
-    {
-      "theme": "ai전력수요",
-      "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "AI전력수요"
-      ],
-      "evidences": [
-        {
-          "ticker": "EQT",
-          "evidence": "데이터센터 및 AI 워크로드 확대에 따른 전력 수요 증가가 천연가스 발전 수요를 지지할 것이라는 전망이 EQT 등 업계 경영진 발언에서 구체적으로 언급되고 있음."
-        }
-      ]
-    },
-    {
-      "theme": "인허가지연",
-      "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "인허가지연"
-      ],
-      "evidences": [
-        {
-          "ticker": "EQT",
-          "evidence": "파이프라인·LNG 등 에너지 인프라 프로젝트의 인허가 기간이 길어지면서 미국이 에너지·AI 경쟁에서 뒤처질 수 있다는 경고가 경영진 및 산업 단체에서 반복적으로 나오고 있음."
-        }
-      ]
-    },
-    {
-      "theme": "가스수요",
-      "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "가스수요"
-      ],
-      "evidences": [
-        {
-          "ticker": "EXE",
-          "evidence": "시장 해설에서 데이터센터 전력 수요와 전력 인프라 확대가 천연가스 수요를 지지할 수 있다는 인식이 반영됨."
-        }
-      ]
-    },
-    {
-      "theme": "밸류에이션",
-      "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "밸류에이션"
-      ],
-      "evidences": [
-        {
-          "ticker": "EXE",
-          "evidence": "최근 시장 코멘터리에서 천연가스 섹터의 디스카운트가 가치기회로 해석되는 흐름이 확인됨."
-        }
-      ]
-    },
-    {
-      "theme": "가격변동",
-      "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "가격변동"
-      ],
-      "evidences": [
-        {
-          "ticker": "EXE",
-          "evidence": "천연가스 가격 변동성이 섹터 전반의 실적과 멀티플에 직접적인 압박으로 작용함."
+          "ticker": "FSLR",
+          "evidence": "전력회사·IPP 들의 컨콜에서는 재생에너지 포트폴리오 확대와 장기 PPA 기반 태양광 프로젝트 계획을 재확인하며, 유틸리티급 태양광 설비의 중장기 수요가 견조하게 유지될 것이라는 업계 공감대가 형성되어 있다고 설명함."
         }
       ]
     },
     {
       "theme": "디지털광고",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1197,7 +1179,7 @@
     {
       "theme": "genai 도입",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1212,60 +1194,111 @@
       ]
     },
     {
-      "theme": "사모시장 비중 확대",
+      "theme": "규제강화",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "규제강화"
+      ],
+      "evidences": [
+        {
+          "ticker": "GOOGL",
+          "evidence": "미국·EU·인도 등 주요 지역에서 대형 플랫폼의 시장 지배력, 앱스토어 수수료, 사용자 데이터 활용에 대한 조사와 잠정 시정조치 논의가 확대되고 있다는 점이 컨콜 및 공시에서 반복적으로 언급되고 있음."
+        }
+      ]
+    },
+    {
+      "theme": "세컨더리 수요",
+      "ticker_count": 1,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "사모시장 비중 확대"
+        "세컨더리 수요"
       ],
       "evidences": [
         {
           "ticker": "HLNE",
-          "evidence": "최근 전략 자산배분 논의와 리서치에서 향후 10년간 공·사모 자산 간 비중 조정이 필요하며 사모 및 기타 대체자산의 역할이 강화될 것이라는 견해가 강화되고 있어, Hamilton Lane 과 같은 사모 플랫폼의 장기 성장 모멘텀이 뒷받침되고 있음[9][15]."
+          "evidence": "동사는 최근 실적 코멘트에서 LP 포트폴리오 리밸런싱과 유동성 확보 니즈 확대에 따라 세컨더리·LP 포지션 거래 수요가 증가하고 있으며, 이는 사모시장 내 구조적 성장 영역이라고 강조했음.[3]"
         }
       ]
     },
     {
-      "theme": "성과보수 변동성",
+      "theme": "개인투자자 채널",
       "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": -1.0,
-      "direction_label": "negative",
+      "frequency": 0.026,
+      "sentiment": 1.0,
+      "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "성과보수 변동성"
+        "개인투자자 채널"
       ],
       "evidences": [
         {
           "ticker": "HLNE",
-          "evidence": "사모·대체자산 운용사의 실적에서 성과보수는 공모시장 밸류에이션과 엑시트 환경에 크게 좌우되며, 최근 글로벌 IPO·M&A 사이클 불확실성으로 성과보수 인식 타이밍과 규모에 대한 변동성이 확대된다는 지적이 이어지고 있음[9][15]."
+          "evidence": "경영진은 에버그린·개인 대상 비상장 투자 솔루션에 대한 관심이 지속적으로 늘고 있다고 언급하며, 장기적으로 리테일·웰스 채널이 사모시장 성장을 견인할 수 있다고 설명했음.[2][3]"
         }
       ]
     },
     {
-      "theme": "규제·투명성 요구",
+      "theme": "설탕 저감",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "설탕 저감"
+      ],
+      "evidences": [
+        {
+          "ticker": "INGR",
+          "evidence": "최근 식품·음료 업체 컨콜에서 설탕 저감 및 칼로리 축소 요구가 지속적으로 언급되며, 대체 스위트너와 기능성 성분에 대한 수요가 구조적으로 확대되고 있다는 점이 강조됨[14][16]."
+        }
+      ]
+    },
+    {
+      "theme": "클린 라벨",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "클린 라벨"
+      ],
+      "evidences": [
+        {
+          "ticker": "INGR",
+          "evidence": "글로벌 식품 원료 기업들은 첨가물 축소, 천연 이미지 강화 등 클린 라벨 트렌드에 맞춘 텍스처링·전분 솔루션 수요 증가를 언급하며 제품 개발 파이프라인을 확대하고 있다고 설명함[11][14]."
+        }
+      ]
+    },
+    {
+      "theme": "원가 변동",
+      "ticker_count": 1,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "규제·투명성 요구"
+        "원가 변동"
       ],
       "evidences": [
         {
-          "ticker": "HLNE",
-          "evidence": "사모·대체자산에 대한 수수료 구조, 리스크 공시, ESG 관련 규제 논의가 지속되면서 운용·자문사 전반에 추가 컴플라이언스 비용과 구조 조정 요구가 발생할 수 있다는 점이 업계 전반의 잠재 부담 요인으로 언급되고 있음[1][9]."
+          "ticker": "INGR",
+          "evidence": "최근 실적 발표에서 옥수수 등 농산물 가격과 에너지·물류비 변동성이 마진과 가격 전략에 직접적인 영향을 미치며, 일부 지역에서 원가 상승 압력이 지속되고 있다고 지적됨[13][16]."
         }
       ]
     },
     {
       "theme": "자금유입",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1282,7 +1315,7 @@
     {
       "theme": "수수료압박",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1299,7 +1332,7 @@
     {
       "theme": "비용절감",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1316,7 +1349,7 @@
     {
       "theme": "약가 압력",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1333,7 +1366,7 @@
     {
       "theme": "바이오시밀러",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1350,7 +1383,7 @@
     {
       "theme": "수술 회복",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1367,7 +1400,7 @@
     {
       "theme": "로봇수술",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1384,7 +1417,7 @@
     {
       "theme": "자본시장",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1399,77 +1432,60 @@
       ]
     },
     {
-      "theme": "금리환경",
+      "theme": "주택수급불균형",
       "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "금리환경"
-      ],
-      "evidences": [
-        {
-          "ticker": "LEN",
-          "evidence": "최근 10년물 국채금리와 모기지 금리가 상대적으로 높은 수준을 유지하며 주택 구매 여력에 부담을 주고 있고, 홈빌더 심리지수 하락에도 금리 요인이 주요 원인으로 언급되는 등 섹터 전체에 금리 환경이 부정적 요인으로 작용하고 있음[8][9]."
-        }
-      ]
-    },
-    {
-      "theme": "마진압력",
-      "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "마진압력"
-      ],
-      "evidences": [
-        {
-          "ticker": "LEN",
-          "evidence": "Lennar의 2026년 2분기 홈빌딩 매출 총마진이 15.6%로 전년 17.8%에서 하락했으며, 자재·인건비 상승과 분양가 조정이 겹쳐 홈빌더 전반의 마진 압력이 커지고 있다는 점이 실적 및 애널리스트 코멘트에서 반복적으로 지적되고 있음[2][1]."
-        }
-      ]
-    },
-    {
-      "theme": "규제·정책",
-      "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "규제·정책"
+        "주택수급불균형"
       ],
       "evidences": [
         {
           "ticker": "LEN",
-          "evidence": "미 의회가 서민 주거안정 및 저렴한 주택 공급 확대를 위한 법안을 통과시키며 홈빌더 주가가 동반 강세를 보였다는 보도가 있었고, 이는 장기적으로 저가 주택·입지가 좋은 프로젝트에 대한 수요·지원 확대 요인으로 작용할 수 있어 섹터에 정책 수혜 기대를 제공함[6]."
+          "evidence": "최근 주요 홈빌더 컨퍼런스콜에서 기존 주택 매물 부족과 인구·가구 수 증가로 인한 주택 수급 불균형이 지속되고 있어 신규주택에 대한 구조적 수요가 유지된다고 언급함."
         }
       ]
     },
     {
-      "theme": "m&a·섹터재평가",
+      "theme": "건설비용압력",
       "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": 1.0,
-      "direction_label": "positive",
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "M&A·섹터재평가"
+        "건설비용압력"
       ],
       "evidences": [
         {
           "ticker": "LEN",
-          "evidence": "Berkshire Hathaway가 Taylor Morrison 인수를 발표하는 등 대형 투자자의 홈빌더 섹터 진입 사례가 나타나면서, 장기적으로 주택 건설 업종에 대한 자본시장 내 섹터 재평가 가능성을 시사하는 이벤트가 관측되고 있음[11]."
+          "evidence": "최근 실적 발표에서 자재비와 인건비가 과거 대비 안정화되고 있으나, 특정 지역에서는 인건비와 인허가 관련 비용 상승이 마진에 부담 요인으로 계속 지적되고 있음."
+        }
+      ]
+    },
+    {
+      "theme": "옵션토지전략",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "옵션토지전략"
+      ],
+      "evidences": [
+        {
+          "ticker": "LEN",
+          "evidence": "주요 홈빌더들은 자본 효율성 제고를 위해 옵션 토지 비중을 확대하고 있으며, 이를 통해 사이클 변동 시 리스크를 줄이는 전략이 컨콜에서 반복적으로 언급되고 있음."
         }
       ]
     },
     {
       "theme": "ai 광고효율",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1486,7 +1502,7 @@
     {
       "theme": "디지털광고 회복",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1503,7 +1519,7 @@
     {
       "theme": "메타버스 냉각",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1518,9 +1534,43 @@
       ]
     },
     {
+      "theme": "건설 둔화",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "건설 둔화"
+      ],
+      "evidences": [
+        {
+          "ticker": "MLI",
+          "evidence": "최근 컨콜에서 일부 지역의 주택 및 비주택 건설 활동이 둔화되고 있어 단기 수요 변동성이 커질 수 있다고 언급하며 보수적인 수요 전망을 제시함."
+        }
+      ]
+    },
+    {
+      "theme": "hvac/r 수요",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "HVAC/R 수요"
+      ],
+      "evidences": [
+        {
+          "ticker": "MLI",
+          "evidence": "노후 설비 교체와 에너지 효율 개선 요구로 HVAC/R 관련 부품과 배관 수요가 꾸준히 유지될 것이라는 전망을 제시하며 중기적으로 안정적 성장 기대를 강조함."
+        }
+      ]
+    },
+    {
       "theme": "클라우드 전환",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1535,26 +1585,60 @@
       ]
     },
     {
-      "theme": "헤지 수요",
+      "theme": "금가격 강세",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "헤지 수요"
+        "금가격 강세"
       ],
       "evidences": [
         {
           "ticker": "NEM",
-          "evidence": "글로벌 거시 불확실성과 지정학 리스크가 지속되면서 자산배분 관점에서 금 및 금광주를 활용한 포트폴리오 헤지 수요가 유지되고 있다는 분석이 Newmont 관련 리서치에서 제시됨[7]."
+          "evidence": "최근 컨퍼런스콜에서 경영진은 지정학적 리스크와 중앙은행의 순매수 지속으로 금 가격이 역사적 고점 부근에서 지지되고 있다고 언급하며 중장기 수요 강세를 강조했음."
+        }
+      ]
+    },
+    {
+      "theme": "비용 인플레",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "비용 인플레"
+      ],
+      "evidences": [
+        {
+          "ticker": "NEM",
+          "evidence": "광산업 전반에서 에너지·노동·소재 비용이 상승하고 있고 회사도 AISC 가이던스를 상향 조정하며 업계 전반적인 비용 인플레이션 압력을 인정했음."
+        }
+      ]
+    },
+    {
+      "theme": "자원민족주의",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "자원민족주의"
+      ],
+      "evidences": [
+        {
+          "ticker": "NEM",
+          "evidence": "최근 실적 발표에서 경영진은 일부 생산국의 로열티·세율 인상과 허가 조건 변경 가능성을 리스크 요인으로 지적하며 글로벌 광산업에 자원민족주의 압력이 커지고 있다고 설명했음."
         }
       ]
     },
     {
       "theme": "원가 안정",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1571,7 +1655,7 @@
     {
       "theme": "프리미엄화",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1588,7 +1672,7 @@
     {
       "theme": "스마트폰 회복",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1605,7 +1689,7 @@
     {
       "theme": "ai 단말",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1622,7 +1706,7 @@
     {
       "theme": "자동차 전장화",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1637,26 +1721,77 @@
       ]
     },
     {
-      "theme": "규제 환경",
+      "theme": "가스가격 회복",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "가스가격 회복"
+      ],
+      "evidences": [
+        {
+          "ticker": "RRC",
+          "evidence": "최근 컨콜에서 경영진은 2024년 저점 대비 천연가스 가격이 점진적으로 회복되고 있으며, LNG 수출 확대와 전력·산업 수요가 중기적으로 수급을 개선할 것으로 기대한다고 언급했음[3]."
+        }
+      ]
+    },
+    {
+      "theme": "lng 수출증설",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "LNG 수출증설"
+      ],
+      "evidences": [
+        {
+          "ticker": "RRC",
+          "evidence": "미국 걸프 코스트를 중심으로 신규 LNG 터미널이 순차적으로 상업가동될 예정이라는 점을 강조하며, 애팔래치아 가스가 장기적으로 글로벌 수요 증가의 수혜를 볼 것이라는 업계 공통 논조가 존재함[3]."
+        }
+      ]
+    },
+    {
+      "theme": "환경규제 강화",
+      "ticker_count": 1,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "규제 환경"
+        "환경규제 강화"
       ],
       "evidences": [
         {
-          "ticker": "QCOM",
-          "evidence": "글로벌 빅테크 및 통신 특허 사업자에 대한 반독점·공정 경쟁 규제가 강화되는 추세로, 라이선스 비즈니스 및 대형 인수합병에 대한 정책 불확실성이 지속된다는 언급이 있었음."
+          "ticker": "RRC",
+          "evidence": "최근 업계 실적발표에서는 메탄 배출 규제, 수압파쇄 관련 환경 규제, 탄소 정책 변화가 셰일 개발 프로젝트 승인 리드타임과 운영비용 상승 요인으로 반복적으로 지적되고 있음[2]."
+        }
+      ]
+    },
+    {
+      "theme": "인프라 제약",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인프라 제약"
+      ],
+      "evidences": [
+        {
+          "ticker": "RRC",
+          "evidence": "애팔래치아 지역 파이프라인 신규 승인 지연과 지역사회·환경단체의 반대는 생산 증가를 제약하고 베이시스 스프레드를 확대시키는 요인으로 업계 컨콜에서 자주 언급되고 있음[2]."
         }
       ]
     },
     {
       "theme": "소비 신용",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1673,7 +1808,7 @@
     {
       "theme": "핀테크 규제",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1690,7 +1825,7 @@
     {
       "theme": "예금 경쟁",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1707,7 +1842,7 @@
     {
       "theme": "바이오파마 아웃소싱",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1724,7 +1859,7 @@
     {
       "theme": "중국 수요",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1741,7 +1876,7 @@
     {
       "theme": "장비 교체",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1758,7 +1893,7 @@
     {
       "theme": "의료비상승",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1775,7 +1910,7 @@
     {
       "theme": "규제압박",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1792,7 +1927,7 @@
     {
       "theme": "인플레이션",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1807,9 +1942,43 @@
       ]
     },
     {
+      "theme": "정보 공백",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "정보 공백"
+      ],
+      "evidences": [
+        {
+          "ticker": "VSNT",
+          "evidence": "최근 60일 내 VSNT 관련 실적 발표, 가이던스, 업종 전망 코멘트가 확인되지 않아, 동사가 속한 산업·마크로 환경에 대해 회사 관점의 인사이트를 얻기 어려운 상황임[3][5][6]."
+        }
+      ]
+    },
+    {
+      "theme": "유동성 부족",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "유동성 부족"
+      ],
+      "evidences": [
+        {
+          "ticker": "VSNT",
+          "evidence": "주요 금융매체와 애널리스트 커버리지가 거의 없는 소형·정보 빈약 종목은 일반적으로 거래대금·호가 스프레드 측면에서 유동성 리스크가 높게 나타나는 경향이 있음[3][5][6]."
+        }
+      ]
+    },
+    {
       "theme": "전자상거래 전환",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1826,7 +1995,7 @@
     {
       "theme": "광고 수익화",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1843,7 +2012,7 @@
     {
       "theme": "정제 마진",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1860,7 +2029,7 @@
     {
       "theme": "저탄소 투자",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1877,7 +2046,7 @@
     {
       "theme": "자본 규율",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1894,7 +2063,7 @@
     {
       "theme": "it지출 재편",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -1911,7 +2080,7 @@
     {
       "theme": "마케팅 예산",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -1926,43 +2095,9 @@
       ]
     },
     {
-      "theme": "리튬가격",
-      "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "리튬가격"
-      ],
-      "evidences": [
-        {
-          "ticker": "ALB",
-          "evidence": "최근 컨콜·업종 리포트에서 리튬 가격이 저점 권역에서 안정화되고 있으나 공급과잉 및 중국 변수로 단기 방향성은 뚜렷하지 않다고 언급되며, Albemarle 도 당분간 균형 혹은 소규모 적자 수준의 시장을 예상한다고 밝힘[3][12]."
-        }
-      ]
-    },
-    {
-      "theme": "규제리스크",
-      "ticker_count": 1,
-      "frequency": 0.029,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "규제리스크"
-      ],
-      "evidences": [
-        {
-          "ticker": "ALB",
-          "evidence": "칠레 등 산지국의 자원 국유화 논의, 환경·수자원 규제 강화 이슈가 지속적으로 언급되지만 Albemarle 등 주요 플레이어는 정부와 협의를 통해 장기 계약 및 프로젝트 지속성을 확보하려 노력하고 있어 업계 전반에서는 중기 관리가능한 리스크로 인식하는 분위기임."
-        }
-      ]
-    },
-    {
       "theme": "투자 capex 확대",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -1979,7 +2114,7 @@
     {
       "theme": "금리민감",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -1996,7 +2131,7 @@
     {
       "theme": "거래변동",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2013,7 +2148,7 @@
     {
       "theme": "미국 소비·산업 사이클",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2030,7 +2165,7 @@
     {
       "theme": "브랜드 경쟁",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2047,7 +2182,7 @@
     {
       "theme": "채널 믹스",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2062,26 +2197,26 @@
       ]
     },
     {
-      "theme": "유가변동",
+      "theme": "m&a 통합",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "유가변동"
+        "M&A 통합"
       ],
       "evidences": [
         {
           "ticker": "CHRD",
-          "evidence": "에너지 업종 전반은 실적보다 유가와 실현가가 주가를 좌우하는 구간이 지속되고 있음[3]."
+          "evidence": "경영진은 북미 E&P 업계에서 포트폴리오 재편 및 규모의 경제 확보를 위한 추가 M&A 활동이 이어질 가능성을 언급하면서도, 현재로서는 신중한 접근을 유지하며 밸류에이션과 자본규율을 최우선 고려하겠다고 밝혔음."
         }
       ]
     },
     {
       "theme": "규제 명확성",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2098,7 +2233,7 @@
     {
       "theme": "거시·리스크 선호",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2115,7 +2250,7 @@
     {
       "theme": "enterprise it spending",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2130,26 +2265,26 @@
       ]
     },
     {
-      "theme": "매크로둔화",
+      "theme": "it지출",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "매크로둔화"
+        "IT지출"
       ],
       "evidences": [
         {
           "ticker": "CTSH",
-          "evidence": "글로벌 경기 및 고객 IT 예산의 변동성이 존재함에도 불구하고 IT 서비스 기업들은 방어적 성격의 런-더-비즈니스 유지보수와 필수적인 규제·보안 프로젝트 비중이 높아 완만한 성장세를 유지할 것으로 보지만, 대형 변환 프로젝트 타이밍은 매크로 상황에 따라 조정될 수 있다고 언급함[10]."
+          "evidence": "기업들의 재량적 IT 지출은 경기와 예산 사이클에 따라 변동성이 커서 서비스 업체 전반의 성장률을 좌우하는 핵심 변수임."
         }
       ]
     },
     {
       "theme": "광고 경기",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2166,7 +2301,7 @@
     {
       "theme": "유가 변동",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2176,31 +2311,82 @@
       "evidences": [
         {
           "ticker": "EOG",
-          "evidence": "최근 컨퍼런스콜 및 IR 코멘트에서 업계 전반이 중기적으로 균형 잡힌 수급을 예상하면서도 OPEC+ 정책, 지정학적 리스크에 따라 WTI 가격 변동성이 커질 수 있음을 언급했음."
+          "evidence": "최근 실적 컨콜에서 경영진은 중동 지정학 리스크와 OPEC+ 정책에 따른 단기 유가 변동성을 인정하면서도, 장기적으로는 수요·공급 균형이 유지되는 범위 내에서 보수적 계획을 유지하겠다고 언급함."
         }
       ]
     },
     {
-      "theme": "셰일 자산",
+      "theme": "서비스 비용",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "셰일 자산"
+        "서비스 비용"
       ],
       "evidences": [
         {
           "ticker": "EOG",
-          "evidence": "미국 온쇼어 셰일 플레이에서 Tier-1 위치 감소와 자산 고갈 우려에도 불구하고, 기술 개선 및 효율성 향상을 통해 일정 수준의 생산 성장을 유지할 수 있다는 코멘트가 다수 E&P 컨콜에서 나타나고 있음."
+          "evidence": "최근 실적 발표에서 일부 EP 기업들은 드릴링·완결 서비스 비용이 전년 대비 안정화됐으나 여전히 역사적 고점 수준에 근접해 있어, 향후 비용 추이가 마진에 중요한 변수라고 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "가스가격",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "가스가격"
+      ],
+      "evidences": [
+        {
+          "ticker": "EQT",
+          "evidence": "E&P 업종 전반은 천연가스 가격 방향성에 실적 민감도가 높아 가격 변동이 투자심리를 좌우함."
+        }
+      ]
+    },
+    {
+      "theme": "인프라제약",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인프라제약"
+      ],
+      "evidences": [
+        {
+          "ticker": "EQT",
+          "evidence": "가스 생산 확대는 파이프라인과 처리 인프라 가용성에 영향을 받는다는 점이 업계 공통 제약임."
+        }
+      ]
+    },
+    {
+      "theme": "정책 불확실",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "정책 불확실"
+      ],
+      "evidences": [
+        {
+          "ticker": "FSLR",
+          "evidence": "미국·유럽 재생에너지 정책과 관세, 무역 규제 관련 논의가 계속되면서 향후 3~5년의 인센티브 구조가 아직 완전히 확정되지 않았고, 업계는 장기 투자 결정 시 정책 리스크를 고려해야 한다고 언급함."
         }
       ]
     },
     {
       "theme": "클라우드 경쟁",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2215,43 +2401,43 @@
       ]
     },
     {
-      "theme": "공제금·연기금 자산배분",
+      "theme": "사모펀드 모멘텀",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "공제금·연기금 자산배분"
+        "사모펀드 모멘텀"
       ],
       "evidences": [
         {
           "ticker": "HLNE",
-          "evidence": "연기금·공제금 등 기관투자자는 인플레이션·저금리 환경 이후에도 장기 수익률 제고와 분산을 위해 사모 및 대체자산 비중을 일정 수준 유지·확대하려는 경향을 보이지만, 일부 규제·건전성 이슈로 증가 속도가 완만해지는 움직임도 관찰되고 있음[9]."
+          "evidence": "경영진은 최근 컨콜에서 금리 환경과 매크로 불확실성으로 딜·엑싯 타이밍이 신중해졌다고 언급하면서도, 기관투자자 대체투자 비중 확대 추세는 유지되고 있어 사모시장 수요는 구조적으로 견조하다고 평가했음.[3]"
         }
       ]
     },
     {
-      "theme": "대체운용 경쟁",
+      "theme": "환율 영향",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "대체운용 경쟁"
+        "환율 영향"
       ],
       "evidences": [
         {
-          "ticker": "HLNE",
-          "evidence": "StepStone, GCM Grosvenor 등 복수의 사모·대체자산 플랫폼들이 Evergreen, 세컨더리, 솔루션 비즈니스를 공격적으로 확장하고 있어 기관투자자 대상 멀티플랫폼 경쟁이 심화되는 한편, 고객 입장에서는 선택지가 확대되며 수수료 압력이 점진적으로 커지는 환경임[12][6][15]."
+          "ticker": "INGR",
+          "evidence": "다국적 식품 원료 회사들은 실적에서 강달러 및 일부 통화 약세로 환산 효과가 매출·이익에 혼재된 영향을 주고 있다고 설명하며, 지역별 헤지 전략과 가격 조정을 병행하고 있다고 언급함[13][16]."
         }
       ]
     },
     {
       "theme": "시장변동",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2268,7 +2454,7 @@
     {
       "theme": "금리정점",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2283,26 +2469,43 @@
       ]
     },
     {
-      "theme": "주택수요",
+      "theme": "금리변동성",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "주택수요"
+        "금리변동성"
       ],
       "evidences": [
         {
           "ticker": "LEN",
-          "evidence": "미국 내 구조적인 주택 공급 부족과 인구·가구수 증가로 신규 주택 수요는 중장기적으로 존재하지만, 6월 홈빌더 심리지수가 금리 및 비용 부담으로 하락한 점을 감안하면 단기 수요 모멘텀은 제한적인 중립 국면으로 판단됨[2][9]."
+          "evidence": "업계 전반에서 모기지 금리 변동성이 구매자 심리에 큰 영향을 미치고 있다는 점을 강조하며, 빌더들이 금리 buydown 인센티브와 가격 조정으로 이를 일부 상쇄하고 있다고 설명함."
+        }
+      ]
+    },
+    {
+      "theme": "인센티브확대",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인센티브확대"
+      ],
+      "evidences": [
+        {
+          "ticker": "LEN",
+          "evidence": "업계에서는 구매자 부담을 완화하기 위해 금리 buydown, 클로징 비용 지원 등 다양한 인센티브를 제공하고 있으며, 이는 판매 속도 유지에는 도움이 되나 장기적으로 마진 희석 가능성이 존재한다고 설명함."
         }
       ]
     },
     {
       "theme": "인건비·capex",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2319,7 +2522,7 @@
     {
       "theme": "원재료 변동성",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2334,9 +2537,26 @@
       ]
     },
     {
+      "theme": "원자재 변동성",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "원자재 변동성"
+      ],
+      "evidences": [
+        {
+          "ticker": "MLI",
+          "evidence": "구리 가격 변동성이 여전히 높은 환경으로, 회사는 가격 연동 메커니즘과 헤지 전략을 통해 리스크를 관리하고 있으나 원자재 시장 흐름이 실적에 영향을 줄 수 있음을 명시함."
+        }
+      ]
+    },
+    {
       "theme": "ai capex 확대",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2353,7 +2573,7 @@
     {
       "theme": "it 예산 재조정",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2368,26 +2588,43 @@
       ]
     },
     {
-      "theme": "금 가격",
+      "theme": "esg 규제",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "금 가격"
+        "ESG 규제"
       ],
       "evidences": [
         {
           "ticker": "NEM",
-          "evidence": "최근 Q1 2026 코멘터리와 금 관련 펀드 리포트에서 금 가격은 지정학 리스크와 중앙은행 매수로 지지되나 실질금리와 달러 강세 요인으로 방향성이 혼조라는 평가가 제시됨[7][9]."
+          "evidence": "업계 전반에서 환경·안전·커뮤니티 관련 규제가 강화되는 추세이며, 경영진은 신규 프로젝트 승인과 운영에 있어 ESG 기준이 점점 더 중요한 제약요인이 되고 있다고 언급했음."
+        }
+      ]
+    },
+    {
+      "theme": "m&a 재편",
+      "ticker_count": 1,
+      "frequency": 0.026,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "M&A 재편"
+      ],
+      "evidences": [
+        {
+          "ticker": "NEM",
+          "evidence": "최근 금광 업계에서는 대형 M&A와 자산 포트폴리오 재편이 활발하며, 회사도 비핵심 자산 매각과 통합 시너지를 통해 업계 내 구조조정 흐름에 동참하고 있다고 설명했음."
         }
       ]
     },
     {
       "theme": "자본규율",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2396,15 +2633,15 @@
       ],
       "evidences": [
         {
-          "ticker": "NEM",
-          "evidence": "최근 금광 메이저들의 실적 발표에서 배당, 자사주 매입, 선택적 성장 투자 등 자본규율을 중시하는 전략이 강조되지만, 대형 프로젝트와 M&A 가능성으로 투자자 입장에서는 경계와 기대가 공존한다는 평가가 나옴[7][9]."
+          "ticker": "RRC",
+          "evidence": "E&P 업계 전반에서 과거와 달리 공격적 생산 확대보다 FCF 창출과 주주환원에 초점을 맞추는 자본규율 강화 기조가 최근 실적발표와 IR 프레젠테이션에서 일관되게 확인되고 있음[1][3]."
         }
       ]
     },
     {
       "theme": "연구비 예산",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2421,7 +2658,7 @@
     {
       "theme": "금리·자본시장",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2438,7 +2675,7 @@
     {
       "theme": "방어소비",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2455,7 +2692,7 @@
     {
       "theme": "소비 양극화",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2472,7 +2709,7 @@
     {
       "theme": "식료품 디플레/인플레",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -2489,7 +2726,7 @@
     {
       "theme": "유가 변동성",
       "ticker_count": 1,
-      "frequency": 0.029,
+      "frequency": 0.026,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
