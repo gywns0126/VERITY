@@ -15,6 +15,11 @@ factor_gauntlet.py — 팩터/신호 검증 관문(gauntlet). 2026-06-15 멀티�
   6 subperiod  — 전/후반 스프레드(단일 레짐 의존). [자산성장 닷컴 killer]
   7 mean_median— 평균 vs 중앙값(우편향 lottery 환상). [저변동성 nuance]
   8 placebo    — 신호 셔플 → 스프레드 ~0 기대(허위 검출).
+
+관측 전용 추가 (2026-07 — self 검증수학 연결. flags/PASS·FAIL 미반영, RULE 7):
+  9 purged_cv  — tscv.purged_kfold_split 로 형성일 fold 분할 → held-out OOS 스프레드 분포(embargo 분리).
+  10 pbo       — pbo.cscv_pbo(CSCV) 분위 수익행렬 → 분위 랭킹 OOS 안정성(과최적 확률).
+     🚨 PBO cutoff 로 cycle reject 게이트화 시 = pbo.py 명시대로 PM 사전등록 별도 의무. 여기선 진단값만.
 """
 from __future__ import annotations
 
@@ -25,6 +30,20 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+
+# ── self 검증수학 연결 (관측 전용) ──────────────────────────────────
+# pbo.py(CSCV PBO) + tscv.py(purged k-fold) = 자체구현됐으나 미연결이던 것 (2026-07 연결).
+# import 실패(경로/미설치) 시 관측 체크만 skip — 게이트는 무중단(형제 스크립트 패턴 = _ROOT 삽입).
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.abspath(os.path.join(_HERE, "..", ".."))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+try:
+    from api.quant.alpha.pbo import cscv_pbo             # noqa: E402
+    from api.predictors.tscv import purged_kfold_split   # noqa: E402
+    _HAS_CV = True
+except Exception:  # noqa: BLE001
+    _HAS_CV = False
 
 L = os.path.expanduser("~/VERITY_data_lake")
 RETURNS = os.path.join(L, "features", "monthly_returns.parquet")
@@ -85,6 +104,64 @@ def _pooled_mean_median(panel: pd.DataFrame) -> Dict[str, float]:
     T = pd.concat(tops); B = pd.concat(bots)
     return {"mean_spread": round(float(T.mean() - B.mean()), 4),
             "median_spread": round(float(T.median() - B.median()), 4)}
+
+
+# ─── 관측 전용: self 검증수학(purged-CV OOS + CSCV PBO) 헬퍼 ───
+def _decile_matrix(panel: pd.DataFrame) -> tuple:
+    """base_panel → (형성일 × 10분위) fwd 평균 행렬 M + 형성일 리스트.
+
+    각 행=한 형성일, 각 열 d=그 시점 d분위(0=최저,9=최고)의 fwd 평균.
+    _spread 와 동일 필터(고유값≥10 & 이름≥30)로 유효 형성일만, nan 행 제외.
+    반환 M = cscv_pbo 의 (T, N=10) 입력 — '분위 랭킹이 OOS 에서 안정한가' 관측용.
+    """
+    rows, dates = [], []
+    for f, g in panel.groupby("formation_date"):
+        g = g.dropna(subset=["value", "fwd"])
+        if g["value"].nunique() < 10 or len(g) < 30:
+            continue
+        d = pd.qcut(g["value"].rank(method="first"), 10, labels=False)
+        means = g.groupby(d)["fwd"].mean()
+        if len(means) < 10 or means.isna().any():
+            continue
+        rows.append([float(means.get(k, np.nan)) for k in range(10)])
+        dates.append(f)
+    M = np.asarray(rows, dtype=float)
+    return M, dates
+
+
+def _purged_oos_spread(panel: pd.DataFrame, n_splits: int, embargo_pct: float = 0.01) -> Dict[str, object]:
+    """tscv.purged_kfold_split 로 형성일을 fold 분할 → held-out fold 별 top-bottom 스프레드 관측.
+
+    모델 학습이 없어 purge/embargo 의 leakage 차단 효과는 제한적이나, embargo-분리된
+    비중첩 test fold 별 OOS 스프레드 분포로 '샘플 구간 의존'을 leak-guard 하에 재측정
+    (check 6 subperiod 의 강화판). flags 미반영.
+    """
+    periods = sorted(panel["formation_date"].unique())
+    n = len(periods)
+    if not _HAS_CV or n < 6:
+        return {"skipped": f"형성일 {n}개(<6) 또는 CV 모듈 부재", "oos_spread_mean": None}
+    parr = np.array(periods)
+    fold_spreads = []
+    for _tr, te in purged_kfold_split(n, n_splits=n_splits, embargo_pct=embargo_pct):
+        if len(te) == 0:
+            continue
+        sub = panel[panel["formation_date"].isin(set(parr[te]))]
+        r = _spread(sub)
+        if r["spread"] is not None:
+            fold_spreads.append(r["spread"])
+    if not fold_spreads:
+        return {"skipped": "유효 fold 스프레드 0", "oos_spread_mean": None}
+    fs = np.array(fold_spreads, dtype=float)
+    base_sp = _spread(panel)["spread"]
+    same_sign = float(np.mean(np.sign(fs) == np.sign(base_sp))) if base_sp else None
+    return {
+        "oos_spread_mean": round(float(fs.mean()), 4),
+        "oos_spread_std": round(float(fs.std(ddof=1)), 4) if len(fs) > 1 else None,
+        "n_folds": int(len(fs)),
+        "embargo_pct": embargo_pct,
+        "same_sign_frac": round(same_sign, 2) if same_sign is not None else None,
+        "in_sample_spread": base_sp,
+    }
 
 
 # ─────────────────────────── 8 체크 ───────────────────────────
@@ -177,6 +254,35 @@ def run_gauntlet(
     if (base["spread"] and placebo["spread"] is not None
             and abs(placebo["spread"]) > 0.4 * abs(base["spread"])):
         flags.append("placebo_leak")
+
+    # ── 관측 전용 (self 검증수학 연결) — flags/verdict 미반영, RULE 7 ──
+    # 9 purged-CV OOS 스프레드 (tscv.purged_kfold_split)
+    try:
+        n_periods_u = base_panel["formation_date"].nunique()
+        nsp = 5 if n_periods_u >= 10 else 3
+        out["checks"]["9_purged_cv"] = _purged_oos_spread(base_panel, n_splits=nsp)
+    except Exception as e:  # noqa: BLE001 — 관측 체크 실패는 게이트 무중단
+        out["checks"]["9_purged_cv"] = {"error": f"{type(e).__name__}: {e}"}
+
+    # 10 CSCV PBO (pbo.cscv_pbo, 분위 랭킹 OOS 안정성)
+    try:
+        if not _HAS_CV:
+            out["checks"]["10_pbo"] = {"skipped": "CV 모듈 부재"}
+        else:
+            M, _mdates = _decile_matrix(base_panel)
+            T = M.shape[0] if M.ndim == 2 else 0
+            S = next((s for s in (8, 6, 4) if T >= 2 * s), None)
+            if S is None:
+                out["checks"]["10_pbo"] = {"skipped": f"형성일 {T}개(<8) — CSCV 표본 부족"}
+            else:
+                pbo_res = cscv_pbo(M, n_partitions=S)
+                pbo_res["interpretation"] = ("높을수록 in-sample 최적 분위가 OOS 에서 유지 안 됨 = "
+                                             "분위 랭킹이 구간 특이(과최적 위험). 관측 only")
+                out["checks"]["10_pbo"] = pbo_res
+    except Exception as e:  # noqa: BLE001
+        out["checks"]["10_pbo"] = {"error": f"{type(e).__name__}: {e}"}
+
+    out["observation_only"] = ["9_purged_cv", "10_pbo"]  # RULE 7: PASS/FAIL 미반영
 
     out["flags"] = flags
     out["verdict"] = ("PASS (강건)" if not flags else f"FLAG ×{len(flags)}: {', '.join(flags)}")
