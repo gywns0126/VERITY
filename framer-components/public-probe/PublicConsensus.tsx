@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  * 🚨 StockReport 컨센서스(의견/평균목표가/업사이드)와 중복 회피 — 여기는 분포막대 + 목표가 범위(high/low)만(StockReport에 없는 것).
  * RULE 7 — yfinance 외부 집계, 자체 의견·점수 아님. 데이터 = us_stock_report_public.json (Blob).
  * 다크모드 = body[data-framer-theme] 자가감지. 외곽선 없음. 루트 패딩 = /stock 컨벤션(narrow?14:18).
+ * 신선도 = _meta.generated_at(리포트 생성 시각) → footer 상대시각(2026-07-05).
  * Framer codeFileId = YfnonVE (insertUrl framer.com/m/PublicConsensus-XYEH4x.js).
  */
 
@@ -28,6 +29,19 @@ function readDark(): boolean {
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
 }
+// 데이터 신선도 — ISO → 상대시각(다른 public 컴포넌트와 동일 패턴).
+function fmtAge(iso: any): string {
+    if (!iso) return ""
+    try {
+        const mins = Math.max(0, Math.round((Date.now() - new Date(String(iso)).getTime()) / 60000))
+        if (mins < 60) return mins + "분 전"
+        const hrs = Math.round(mins / 60)
+        if (hrs < 24) return hrs + "시간 전"
+        return Math.round(hrs / 24) + "일 전"
+    } catch {
+        return ""
+    }
+}
 
 export default function PublicConsensus(props: { ticker?: string; dataUrl?: string; dark?: boolean }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -35,6 +49,7 @@ export default function PublicConsensus(props: { ticker?: string; dataUrl?: stri
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
     const [c, setC] = useState<any>(onCanvas ? SAMPLE : null)
+    const [genAt, setGenAt] = useState<string>("")
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
 
@@ -64,7 +79,10 @@ export default function PublicConsensus(props: { ticker?: string; dataUrl?: stri
             .then((d) => {
                 const st = d && d.stocks
                 const rec = Array.isArray(st) ? st.find((x: any) => String(x.ticker).toUpperCase() === String(props.ticker).toUpperCase()) : (st ? st[String(props.ticker)] : null)
-                if (alive) setC(rec && rec.consensus ? rec.consensus : null)
+                if (alive) {
+                    setC(rec && rec.consensus ? rec.consensus : null)
+                    setGenAt(d && d._meta && d._meta.generated_at ? d._meta.generated_at : "")
+                }
             })
             .catch(() => { if (alive) setC(null) })
         return () => { alive = false }
@@ -78,7 +96,9 @@ export default function PublicConsensus(props: { ticker?: string; dataUrl?: stri
     const hasRange = !!(c && c.target_low && c.target_high)
     if (!c || !c.num_analysts || (!hasDist && !hasRange)) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
 
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: narrow ? 14 : 18, display: "flex", flexDirection: "column", gap: 12 }
+    const ageStr = onCanvas ? "1일 전" : fmtAge(genAt)
+
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: narrow ? "0 14px" : "0 18px", display: "flex", flexDirection: "column", gap: 12 }
     return (
         <div ref={rootRef} style={wrap}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
@@ -122,7 +142,7 @@ export default function PublicConsensus(props: { ticker?: string; dataUrl?: stri
                 </div>
             )}
 
-            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>{c.note || "외부 애널리스트 집계 · yfinance"}</div>
+            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>{c.note || "외부 애널리스트 집계 · yfinance"}{ageStr ? " · " + ageStr + " 갱신" : ""}</div>
         </div>
     )
 }
