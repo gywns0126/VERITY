@@ -425,15 +425,18 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
     macro_runs = _gh_run_list("macro_collect.yml", limit=10)
     macro_recent = _filter_recent(macro_runs, hours_window)
     macro_completed = [r for r in macro_recent if r.get("status") == "completed"]
-    macro_fail_rate = (
-        len([r for r in macro_completed if r.get("conclusion") != "success"]) / len(macro_completed)
-        if macro_completed else 0.0
-    )
+    # cancelled = 공유 concurrency 그룹 pending 축출(동시성 양보) — 결함 아님 (다음 30분 run 이 메꿔 신선도 무영향,
+    # 2026-07-05 오탐: cancelled 4건 → fail_rate 30% FAIL). 실 결함(failure/timed_out)만 분자.
+    macro_real_fail = [r for r in macro_completed if r.get("conclusion") in ("failure", "timed_out", "startup_failure")]
+    macro_cancelled = [r for r in macro_completed if r.get("conclusion") == "cancelled"]
+    macro_effective = [r for r in macro_completed if r.get("conclusion") != "cancelled"]
+    macro_fail_rate = len(macro_real_fail) / len(macro_effective) if macro_effective else 0.0
     macro_summary = {
         "total": len(macro_completed),
         "fail_rate": round(macro_fail_rate, 3),
+        "cancelled": len(macro_cancelled),
     }
-    if macro_fail_rate > 0.2 and len(macro_completed) >= 5:
+    if macro_fail_rate > 0.2 and len(macro_effective) >= 5:
         severity = "WARNING" if severity == "PASS" else severity
         findings.append(f"macro_collect fail_rate {macro_fail_rate:.0%} (≥20%)")
 
