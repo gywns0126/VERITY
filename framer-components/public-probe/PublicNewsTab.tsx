@@ -159,6 +159,23 @@ function dateOnly(t: string): string {
     return m ? m[0] : ""
 }
 
+// 발행 시각 → 상대시각(방금/N분·시간·일 전), 7일 초과는 날짜. RFC-2822("Fri, 03 Jul 2026 04:43:16 GMT")·ISO 모두 파싱.
+function fmtWhen(t: string): string {
+    if (!t) return ""
+    const ms = new Date(String(t)).getTime()
+    if (!isFinite(ms)) return dateOnly(t)   // 파싱 실패 = 날짜 부분만 폴백
+    const mins = Math.round((Date.now() - ms) / 60000)
+    if (mins < 0) return dateOnly(t)
+    if (mins < 1) return "방금"
+    if (mins < 60) return mins + "분 전"
+    const hrs = Math.round(mins / 60)
+    if (hrs < 24) return hrs + "시간 전"
+    const days = Math.round(hrs / 24)
+    if (days <= 7) return days + "일 전"
+    const d = new Date(ms)
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`
+}
+
 function asArray(x: any): any[] {
     return Array.isArray(x) ? x : []
 }
@@ -260,7 +277,7 @@ export default function PublicNewsTab(props: Props) {
                     titleKo: h.title_ko ? splitSource(String(h.title_ko)).title : "",
                     url: h.link || h.url || "",
                     source: h.source || sp.source || hostname(h.link || h.url || ""),
-                    time: dateOnly(h.time || h.published_at || ""),
+                    time: fmtWhen(h.time || h.published_at || ""),
                     sentiment: String(h.sentiment || ""),
                 })
             }
@@ -277,7 +294,7 @@ export default function PublicNewsTab(props: Props) {
                     titleKo: h.title_ko ? splitSource(String(h.title_ko)).title : "",
                     url: h.link || h.url || "",
                     source: sp.source || hostname(h.link || ""),
-                    time: dateOnly(h.time || h.published_at || ""),
+                    time: fmtWhen(h.time || h.published_at || ""),
                     sentiment: String(h.sentiment || ""),
                 })
             }
