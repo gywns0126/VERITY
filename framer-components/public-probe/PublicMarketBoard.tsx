@@ -18,10 +18,13 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 🚨 카드 선택(2026-06-22) = 상세 펼침 시 초록 외곽선 X → 회색 pressed(배경 chipBg 틴트 + inset 그림자, 눌린 느낌)로 표시.
  *   상세는 추세선·상관·절대변동 중 추가 정보가 있을 때만 클릭 가능(hasDetail) — 카드와 같은 값 반복 방지.
  *   2026-06-22: 코스피(^KS11)·코스닥(^KQ11)·달러환율(KRW=X) 30일 sparkline 추가(macro_data.py) → 값은 price_pulse 실시간 유지, 추세선만 macro. 전 카드 추세선·상세 일관.
+ *   2026-06-23: per-아이템 스켈레톤 — macro가 pulse보다 늦게 와도 원자재·크립토·SOX·금리 카드가 vanish 대신 스켈레톤 자리 유지(pulseLoaded/macroLoaded).
+ *   2026-07-05: 헤더 신선도 라벨(pulse.updated_at 우선·macro.collected_at 폴백) — "언제 데이터인지" 노출.
  *
  * 🚨 엣지 (토스·증권사 구조적 불가, 2026-06-21):
  *  - 자산 간 상관(30일) = macro.cross_asset_corr — 금·원유 ↔ 코스피/달러/BTC/금리 상관(시세로 계산한 사실). 가격 나열이 아닌 quant 관계.
- *  - 원자재 → KR 노출 = 원자재 카드 클릭 시 원가·매출 연관 KR 산업/종목(commodity_exposure). RULE 7 = 산업 멤버십 사실, 수혜·추천 0(방향 종목별 상이).
+ *  - 원자재 → KR 노출 = 원자재 카드 클릭 시 원가·매출 연관 KR 산업/종목(commodity_exposure). RULE 7 = 산업 멤버십 사실(방향 종목별 상이).
+ * 🚨 면책 문구 제거(2026-06-26, PM) — "수혜·추천 아님 / 점수·추천 아님 / 2027 검증" 류는 사이트 하단 단일 면책으로 통합. 출처·색 의미·산출방식은 유지.
  */
 
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#6b7684", faint: "#8b95a1", line: "#eef1f4", up: "#f04452", down: "#3182f6", flat: "#8b95a1", cPos: "#0ca678", cNeg: "#6c5ce7", chipBg: "#f2f4f6", tipBg: "#191f28" }
@@ -99,6 +102,19 @@ function fmtNum(v: any, dec: number): string {
     const x = Number(v)
     if (!isFinite(x)) return "—"
     return x.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec })
+}
+// 데이터 신선도 — ISO → 상대시각(다른 public 컴포넌트와 동일 패턴).
+function fmtAge(iso: any): string {
+    if (!iso) return ""
+    try {
+        const mins = Math.max(0, Math.round((Date.now() - new Date(String(iso)).getTime()) / 60000))
+        if (mins < 60) return mins + "분 전"
+        const hrs = Math.round(mins / 60)
+        if (hrs < 24) return hrs + "시간 전"
+        return Math.round(hrs / 24) + "일 전"
+    } catch {
+        return ""
+    }
 }
 
 function Spark({ data, color, w, h }: { data: number[]; color: string; w: number; h: number }) {
@@ -253,9 +269,13 @@ export default function PublicMarketBoard(props: Props) {
     const cols = w <= 0 ? 4 : w < 440 ? 2 : w < 700 ? 3 : w < 1000 ? 4 : 5
     const pad = narrow ? 11 : 15
 
+    // 데이터 신선도 — price_pulse(1분) 우선, macro_snapshot 폴백. 캔버스는 정적 미리보기.
+    const freshIso = (pulse && pulse.updated_at) || (macro && macro.collected_at) || null
+    const ageStr = onCanvas ? "1분 전" : fmtAge(freshIso)
+
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%", overflowX: "hidden",
-        background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
+        background: C.bg, fontFamily: FONT, padding: `0 ${pad}px`, boxSizing: "border-box", color: C.ink,
     }
 
     const card = (it: any) => {
@@ -334,7 +354,7 @@ export default function PublicMarketBoard(props: Props) {
         return best
     }
 
-    // 시세 카드 상세 — 큰 추세선 + 절대변동 + 시계열 파생 사실 1줄 (자체 계산, 해석·추천 아님)
+    // 시세 카드 상세 — 큰 추세선 + 절대변동 + 시계열 파생 사실 1줄 (자체 계산)
     const detailPanel = (it: any) => {
         const cp = Number(it.change_pct)
         const col = !isFinite(cp) ? C.flat : cp > 0 ? C.up : cp < 0 ? C.down : C.flat
@@ -476,7 +496,7 @@ export default function PublicMarketBoard(props: Props) {
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px" }}>글로벌 시세</span>
-                <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>지수·환율·원자재·크립토 · 사실</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>지수·환율·원자재·크립토 · 사실{ageStr ? " · " + ageStr + " 갱신" : ""}</span>
             </div>
 
             {rows.length === 0 ? (
