@@ -26,6 +26,7 @@
     "api/us_financials.py": { "maxDuration": 5 },
     "api/us_forensics.py": { "maxDuration": 5 },
     "api/stock_brief.py": { "maxDuration": 60 },
+    "api/fact_report.py": { "maxDuration": 30 },
     "api/brain_breakdown.py": { "maxDuration": 10 },
     "api/cron/dispatch_pulse.py": { "maxDuration": 10 }
   },
@@ -42,7 +43,8 @@
     { "source": "/api/system/health",            "destination": "/api/system_health" },
     { "source": "/api/verity/us-financials",     "destination": "/api/us_financials" },
     { "source": "/api/verity/us-forensics",      "destination": "/api/us_forensics" },
-    { "source": "/api/verity/stock-brief",       "destination": "/api/stock_brief" }
+    { "source": "/api/verity/stock-brief",       "destination": "/api/stock_brief" },
+    { "source": "/api/verity/fact-report",       "destination": "/api/fact_report" }
   ],
   "headers": [
     {

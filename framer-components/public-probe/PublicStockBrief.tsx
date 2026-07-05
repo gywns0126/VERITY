@@ -20,7 +20,7 @@ function PhPencilLine({ size }: { size: number }) {
 
 /**
  * 리포트 추출 허브 — AlphaNest /stock. 두 버튼 + AI 브리핑 섹션 = 단일 컴포넌트 (PM 결정 2026-07-03).
- *   [팩트 리포트 PDF]     = 즉시 window.print(), AI 브리핑 섹션은 제외(body.verity-print-facts) — 100% 데이터
+ *   [팩트 리포트 PDF]     = 서버 Typst 조판 PDF (/api/verity/fact-report) — 100% 데이터, 새 탭 미리보기+저장
  *   [AI 해석 리포트 PDF]  = 브리핑 있으면 포함 인쇄 / 없으면 생성(~10s) 후 자동 인쇄 — 명시적 의도라 대기 결합 OK
  * 종목 진입 시 mode=cached 자동 조회(생성 비용 0) — 오늘 생성분 있으면 브리핑이 미리 떠 있음.
  * 기존 PublicPrintButton 은 타 페이지용으로 존치 — /stock 인스턴스는 이 컴포넌트로 대체.
@@ -180,6 +180,12 @@ export default function PublicStockBrief(props: {
             .catch(() => { setErrMsg("연결이 불안정해요. 잠시 후 다시 시도해 주세요."); setState("error") })
     }
 
+    // 팩트 리포트 = 서버 Typst 조판 PDF (fact_report.py — 발행 사실 데이터 정렬·표 조판. print 덤프 대체, PM 2026-07-05)
+    const openFactPdf = () => {
+        if (!tk || onCanvas || typeof window === "undefined") return
+        try { window.open(`${base}/api/verity/fact-report?ticker=${encodeURIComponent(tk)}`, "_blank", "noopener") } catch (e) { /* ignore */ }
+    }
+
     const onAiPdf = () => {
         if (state === "done" && data) doPrint(false)
         else generate(true)
@@ -196,7 +202,7 @@ export default function PublicStockBrief(props: {
         <div style={wrap}>
             {/* ── 버튼 2개 — 상품 구분: 100% 데이터 vs 데이터+AI 해석. 아이콘 = Phosphor(Framer 네이티브 세트) ── */}
             <div data-noprint style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-                <button onClick={() => doPrint(true)} style={{ ...btnBase, cursor: "pointer", background: C.violetSoft, color: C.violet }}>
+                <button onClick={openFactPdf} disabled={!tk} style={{ ...btnBase, cursor: tk ? "pointer" : "default", background: C.violetSoft, color: tk ? C.violet : C.faint }}>
                     <PhPrinter size={14} />
                     팩트 리포트 PDF
                 </button>
