@@ -257,28 +257,28 @@ const SAMPLE = {
     _meta: { generated_at: "2026-07-04T13:20:05+09:00" },
     desire: {
         tiers: [
-            { key: "survival", label: "필수·건강", n_kr: 397, n_us: 250, median_op_margin: 6.8, desc: "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐", leaders: [{ ticker: "005930", name: "삼성전자", mkt: "KR", cap: 5000000, cap_disp: "500조", op_margin: 10.2, sector: "IT" }, { ticker: "000660", name: "SK하이닉스", mkt: "KR", cap: 1500000, cap_disp: "150조", op_margin: 20.5, sector: "IT" }, { ticker: "LLY", name: "일라이릴리", mkt: "US", cap: 982800, cap_disp: "$982.8B", net_margin: 31.7, sector: "제약", revenue: 65179000000 }, { ticker: "JNJ", name: "존슨앤존슨", mkt: "US", cap: 556800, cap_disp: "$556.8B", net_margin: 22.9, sector: "제약", revenue: 94193000000 }, { ticker: "068270", name: "셀트리온", mkt: "KR", cap: 400000, cap_disp: "40조", op_margin: 20.1, sector: "헬스케어" }, { ticker: "207940", name: "삼성바이오로직스", mkt: "KR", cap: 658000, cap_disp: "65.8조", op_margin: 3.7, sector: "헬스케어" }] },
-            { key: "safety", label: "안전·보장", n_kr: 67, n_us: 232, median_op_margin: 11.6, desc: "지키고 대비하는 수요 — 보험·방산·보안", leaders: [{ ticker: "012450", name: "한화에어로" }, { ticker: "032830", name: "삼성생명" }] },
-            { key: "belonging", label: "관계·연결", n_kr: 98, n_us: 76, median_op_margin: 7.0, desc: "잇고 어울리는 수요 — 통신·콘텐츠·모임", leaders: [{ ticker: "035420", name: "NAVER" }, { ticker: "035720", name: "카카오" }] },
-            { key: "esteem", label: "프리미엄·품격", n_kr: 43, n_us: 33, median_op_margin: 6.0, desc: "돋보이고 싶은 수요 — 명품·뷰티·프리미엄", leaders: [{ ticker: "090430", name: "아모레퍼시픽" }] },
-            { key: "growth", label: "성장·교육", n_kr: 10, n_us: 14, median_op_margin: 11.7, desc: "배우고 성장하는 수요 — 교육·자기계발", leaders: [{ ticker: "095720", name: "웅진씽크빅" }] },
-            { key: "infra", label: "산업 기반", n_kr: 1006, n_us: 900, median_op_margin: 6.0, desc: "욕구를 직접 팔진 않지만 위 전부를 떠받치는 산업 — B2B·부품·장비", leaders: [{ ticker: "042700", name: "한미반도체" }, { ticker: "373220", name: "LG에너지솔루션" }] },
+            { key: "survival", cap_sum: 123400000, label: "필수·건강", n_kr: 397, n_us: 250, median_op_margin: 6.8, desc: "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐", leaders: [{ ticker: "005930", name: "삼성전자", mkt: "KR", cap: 5000000, cap_disp: "500조", op_margin: 10.2, sector: "IT" }, { ticker: "000660", name: "SK하이닉스", mkt: "KR", cap: 1500000, cap_disp: "150조", op_margin: 20.5, sector: "IT" }, { ticker: "LLY", name: "일라이릴리", mkt: "US", cap: 982800, cap_disp: "$982.8B", net_margin: 31.7, sector: "제약", revenue: 65179000000 }, { ticker: "JNJ", name: "존슨앤존슨", mkt: "US", cap: 556800, cap_disp: "$556.8B", net_margin: 22.9, sector: "제약", revenue: 94193000000 }, { ticker: "068270", name: "셀트리온", mkt: "KR", cap: 400000, cap_disp: "40조", op_margin: 20.1, sector: "헬스케어" }, { ticker: "207940", name: "삼성바이오로직스", mkt: "KR", cap: 658000, cap_disp: "65.8조", op_margin: 3.7, sector: "헬스케어" }] },
+            { key: "safety", cap_sum: 117200000, label: "안전·보장", n_kr: 67, n_us: 232, median_op_margin: 11.6, desc: "지키고 대비하는 수요 — 보험·방산·보안", leaders: [{ ticker: "012450", name: "한화에어로" }, { ticker: "032830", name: "삼성생명" }] },
+            { key: "belonging", cap_sum: 31700000, label: "관계·연결", n_kr: 98, n_us: 76, median_op_margin: 7.0, desc: "잇고 어울리는 수요 — 통신·콘텐츠·모임", leaders: [{ ticker: "035420", name: "NAVER" }, { ticker: "035720", name: "카카오" }] },
+            { key: "esteem", cap_sum: 8100000, label: "프리미엄·품격", n_kr: 43, n_us: 33, median_op_margin: 6.0, desc: "돋보이고 싶은 수요 — 명품·뷰티·프리미엄", leaders: [{ ticker: "090430", name: "아모레퍼시픽" }] },
+            { key: "growth", cap_sum: 1500000, label: "성장·교육", n_kr: 10, n_us: 14, median_op_margin: 11.7, desc: "배우고 성장하는 수요 — 교육·자기계발", leaders: [{ ticker: "095720", name: "웅진씽크빅" }] },
+            { key: "infra", cap_sum: 291000000, label: "산업 기반", n_kr: 1006, n_us: 900, median_op_margin: 6.0, desc: "욕구를 직접 팔진 않지만 위 전부를 떠받치는 산업 — B2B·부품·장비", leaders: [{ ticker: "042700", name: "한미반도체" }, { ticker: "373220", name: "LG에너지솔루션" }] },
         ],
     },
     cycle: {
         basis: "연간 매출 YoY 변동성(≥4년 실측 종목만)",
         buckets: [
-            { key: "steady", label: "매출 꾸준", n: 503, vol_range: [0.1, 5.3], desc: "경기와 덜 흔들리는 매출", leaders: [{ ticker: "033780", name: "KT&G" }, { ticker: "AAPL", name: "애플" }, { ticker: "MSFT", name: "마이크로소프트" }] },
-            { key: "middle", label: "중간", n: 503, vol_range: [5.3, 12.7], desc: "중간 변동", leaders: [{ ticker: "005380", name: "현대차" }] },
-            { key: "swing", label: "매출 출렁", n: 504, vol_range: [12.7, 10074.7], desc: "경기·업황에 크게 흔들리는 매출", leaders: [{ ticker: "000660", name: "SK하이닉스" }] },
+            { key: "steady", cap_sum: 497800000, label: "매출 꾸준", n: 503, vol_range: [0.1, 5.3], desc: "경기와 덜 흔들리는 매출", leaders: [{ ticker: "033780", name: "KT&G" }, { ticker: "AAPL", name: "애플" }, { ticker: "MSFT", name: "마이크로소프트" }] },
+            { key: "middle", cap_sum: 252800000, label: "중간", n: 503, vol_range: [5.3, 12.7], desc: "중간 변동", leaders: [{ ticker: "005380", name: "현대차" }] },
+            { key: "swing", cap_sum: 324900000, label: "매출 출렁", n: 504, vol_range: [12.7, 10074.7], desc: "경기·업황에 크게 흔들리는 매출", leaders: [{ ticker: "000660", name: "SK하이닉스" }] },
         ],
     },
     buyback: {
         basis: "DART 자기주식 취득·처분 공시 건수",
         buckets: [
-            { key: "steady_buy", label: "꾸준히 매입", n: 137, desc: "자기주식을 반복 취득", leaders: [{ ticker: "000270", name: "기아" }, { ticker: "005930", name: "삼성전자" }] },
-            { key: "some_buy", label: "가끔 매입", n: 52, desc: "취득 공시 확인", leaders: [{ ticker: "175330", name: "JB금융지주" }] },
-            { key: "net_sell", label: "처분 많음", n: 81, desc: "처분이 취득보다 많음", leaders: [{ ticker: "028050", name: "삼성E&A" }] },
+            { key: "steady_buy", cap_sum: 1188000, label: "꾸준히 매입", n: 137, desc: "자기주식을 반복 취득", leaders: [{ ticker: "000270", name: "기아" }, { ticker: "005930", name: "삼성전자" }] },
+            { key: "some_buy", cap_sum: 243000, label: "가끔 매입", n: 52, desc: "취득 공시 확인", leaders: [{ ticker: "175330", name: "JB금융지주" }] },
+            { key: "net_sell", cap_sum: 241000, label: "처분 많음", n: 81, desc: "처분이 취득보다 많음", leaders: [{ ticker: "028050", name: "삼성E&A" }] },
         ],
     },
 }
@@ -472,6 +472,27 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                         </div>
                     </div>
                     {item.desc ? <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>{item.desc}</div> : null}
+
+                    {/* 시총 비중 바 — cap_sum(빌더 FX 정규화 합산) / 이 지도 분류 전체. 사실 집계 (구 blob 필드 부재 시 자동 숨김) */}
+                    {(() => {
+                        const capOf = (x: any) => (x && typeof x.cap_sum === "number" && x.cap_sum > 0 ? x.cap_sum : 0)
+                        const mine = capOf(item)
+                        const total = items.reduce((acc: number, x: any) => acc + capOf(x), 0)
+                        if (!mine || !total) return null
+                        const pct = (mine / total) * 100
+                        const disp = mine >= 1e4 ? (mine / 1e4).toFixed(mine >= 1e5 ? 0 : 1) + "조원" : Math.round(mine).toLocaleString() + "억원"
+                        return (
+                            <div style={{ marginTop: 10 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                                    <span style={{ fontSize: 10.5, fontWeight: 700, color: C.faint }}>시총 비중 · 이 지도 분류 전체 대비</span>
+                                    <span style={{ fontSize: 11.5, fontWeight: 800, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{disp} · {pct < 1 ? pct.toFixed(1) : Math.round(pct)}%</span>
+                                </div>
+                                <div style={{ height: 6, borderRadius: 3, background: C.track, overflow: "hidden", marginTop: 5 }}>
+                                    <div style={{ width: Math.max(1.5, Math.min(100, pct)) + "%", height: "100%", borderRadius: 3, background: C.violet }} />
+                                </div>
+                            </div>
+                        )
+                    })()}
 
                     {/* 정렬 (규모순 / 수익순) — 요약 필드 있을 때만 */}
                     {canSort ? (
