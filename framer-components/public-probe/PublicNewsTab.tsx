@@ -94,6 +94,8 @@ interface NewsItem {
     category?: string   // Naver 종목뉴스 enrichment (내 종목 탭)
     outlets?: number    // 같은 사안 보도 매체 수
     credible?: boolean  // 신뢰 출처(✓)
+    ts?: number         // 정렬용 발행시각(ms) — 0=시각없음(뒤로)
+    score?: number      // composite_score (핫 정렬 · 매체동시보도+긴급 자체 산출)
 }
 interface StockGroup {
     ticker: string
@@ -173,6 +175,18 @@ function fmtWhen(t: string): string {
     return Math.round(hrs / 24) + "일 전"   // 오래돼도 날짜 대신 항상 '일 전'(PM 2026-07-05)
 }
 
+// 정렬용 발행시각 ms (파싱 실패=0 → 뒤로)
+function toMs(t: string): number {
+    const ms = new Date(String(t || "")).getTime()
+    return isFinite(ms) ? ms : 0
+}
+const NEWS_LOAD_CAP = 60   // 로드 상한(더보기용 여유). display 는 FlatNews 가 페이지네이션
+const NEWS_SORTS: { k: string; label: string }[] = [
+    { k: "recent", label: "최신" },
+    { k: "hot", label: "핫" },
+    { k: "outlet", label: "언론사" },
+]
+
 function asArray(x: any): any[] {
     return Array.isArray(x) ? x : []
 }
@@ -185,6 +199,7 @@ export default function PublicNewsTab(props: Props) {
 
     const [tab, setTab] = useState<Tab>("stock")
     const [showKo, setShowKo] = useState<boolean>(false)
+    const [mktSort, setMktSort] = useState<string>("recent")   // 시장·미국 정렬: recent/hot/outlet
     const [stocks, setStocks] = useState<StockGroup[]>([])
     const [market, setMarket] = useState<NewsItem[]>([])
     const [us, setUs] = useState<NewsItem[]>([])
@@ -213,7 +228,6 @@ export default function PublicNewsTab(props: Props) {
         const recUrl = props.recUrl || BLOB + "/recommendations.json"
         const pfUrl = props.portfolioUrl || BLOB + "/portfolio.json"
         const maxPer = props.maxPerStock || 3
-        const maxMk = props.maxMarket || 30
 
         Promise.all([
             fetch(recUrl).then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -261,7 +275,7 @@ export default function PublicNewsTab(props: Props) {
             const mkRaw = pf ? asArray(pf.headlines).concat(asArray(pf.bloomberg_google_headlines)) : []
             const mk: NewsItem[] = []
             const seenMk = new Set<string>()
-            for (let i = 0; i < mkRaw.length && mk.length < maxMk; i++) {
+            for (let i = 0; i < mkRaw.length && mk.length < NEWS_LOAD_CAP; i++) {
                 const h = mkRaw[i] || {}
                 const sp = splitSource(h.title || "")   // 블룸버그 RSS = "제목 - Bloomberg.com" 포맷이라 출처 분리
                 const t = sp.title || String(h.title || "").trim()
@@ -269,30 +283,36 @@ export default function PublicNewsTab(props: Props) {
                 const key = t.slice(0, 32)
                 if (seenMk.has(key)) continue
                 seenMk.add(key)
+                const rawT = h.time || h.published_at || ""
                 mk.push({
                     title: t,
                     titleKo: h.title_ko ? splitSource(String(h.title_ko)).title : "",
                     url: h.link || h.url || "",
                     source: h.source || sp.source || hostname(h.link || h.url || ""),
-                    time: fmtWhen(h.time || h.published_at || ""),
+                    time: fmtWhen(rawT),
                     sentiment: String(h.sentiment || ""),
+                    ts: toMs(rawT),
+                    score: Number(h.composite_score) || 0,
                 })
             }
 
             // 미국 뉴스
             const usRaw = pf ? asArray(pf.us_headlines) : []
             const usArr: NewsItem[] = []
-            for (let i = 0; i < usRaw.length && usArr.length < maxMk; i++) {
+            for (let i = 0; i < usRaw.length && usArr.length < NEWS_LOAD_CAP; i++) {
                 const h = usRaw[i] || {}
                 const sp = splitSource(h.title || "")
                 if (!sp.title) continue
+                const rawT = h.time || h.published_at || ""
                 usArr.push({
                     title: sp.title,
                     titleKo: h.title_ko ? splitSource(String(h.title_ko)).title : "",
                     url: h.link || h.url || "",
                     source: sp.source || hostname(h.link || ""),
-                    time: fmtWhen(h.time || h.published_at || ""),
+                    time: fmtWhen(rawT),
                     sentiment: String(h.sentiment || ""),
+                    ts: toMs(rawT),
+                    score: Number(h.composite_score) || 0,
                 })
             }
 
@@ -476,6 +496,24 @@ export default function PublicNewsTab(props: Props) {
             {/* 본문 */}
             <div style={{ flex: 1, overflowY: "auto", padding: "4px 14px 18px 14px" }}>
                 {!loading && !failed && insights ? <NewsInsights ins={insights} C={C} reportPath={props.reportPath} /> : null}
+                {/* 정렬 세그먼트 — 시장·미국 탭만(직교). 최신/핫/언론사그룹. 조회수 없음(데이터 부재). */}
+                {!loading && !failed && (tab === "market" || tab === "us") ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 6px 10px", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: C.faint }}>정렬</span>
+                        <div style={{ display: "inline-flex", background: C.sub, borderRadius: 9, padding: 3, gap: 2 }}>
+                            {NEWS_SORTS.map((o) => {
+                                const on = mktSort === o.k
+                                return (
+                                    <button key={o.k} type="button" onClick={() => setMktSort(o.k)}
+                                        style={{ border: "none", cursor: "pointer", background: on ? C.bg : "transparent", color: on ? C.text : C.subtext, fontWeight: on ? 700 : 600, fontSize: 12, padding: "5px 12px", borderRadius: 7, boxShadow: on ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>{o.label}</button>
+                                )
+                            })}
+                        </div>
+                        {mktSort === "hot" ? (
+                            <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 600 }}>핫 = 매체 동시보도 + 긴급(자체 산출) · 조회수 아님</span>
+                        ) : null}
+                    </div>
+                ) : null}
                 {loading ? (
                     <NewsSkeleton C={C} isDark={isDark} />
                 ) : failed ? (
@@ -485,9 +523,9 @@ export default function PublicNewsTab(props: Props) {
                 ) : tab === "stock" ? (
                     <StockNews groups={stocks} C={C} cardH={props.stockCardHeight || 232} showKo={showKo} reportPath={props.reportPath} />
                 ) : tab === "market" ? (
-                    <FlatNews items={market} C={C} empty="시장 뉴스가 없어요." cardH={props.marketCardHeight || 92} showKo={showKo} />
+                    <FlatNews key={"market-" + mktSort} items={market} C={C} empty="시장 뉴스가 없어요." cardH={props.marketCardHeight || 92} showKo={showKo} sortMode={mktSort} />
                 ) : (
-                    <FlatNews items={us} C={C} empty="미국 뉴스가 없어요." cardH={props.marketCardHeight || 92} showKo={showKo} />
+                    <FlatNews key={"us-" + mktSort} items={us} C={C} empty="미국 뉴스가 없어요." cardH={props.marketCardHeight || 92} showKo={showKo} sortMode={mktSort} />
                 )}
             </div>
         </div>
@@ -769,23 +807,64 @@ function NewsRow(props: { item: NewsItem; C: typeof LIGHT; clamp?: number; showK
     )
 }
 
-function FlatNews(props: { items: NewsItem[]; C: typeof LIGHT; empty: string; cardH: number; showKo?: boolean }) {
-    const { items, C, cardH } = props
+function FlatNews(props: { items: NewsItem[]; C: typeof LIGHT; empty: string; cardH: number; showKo?: boolean; sortMode: string }) {
+    const { items, C, cardH, sortMode } = props
+    const [shown, setShown] = useState(15)   // 초기 노출, 더보기 +15 (key=탭+정렬 로 모드 바뀌면 리셋)
     if (!items.length) {
         return <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>{props.empty}</div>
     }
+    const foot = (
+        <div style={{ padding: "12px 8px 2px", fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>
+            ↑ 호재 / ↓ 악재 = 키워드 자동분류(검증 전 · 중립 다수)
+        </div>
+    )
+    const moreBtn = (total: number, unit: string) =>
+        total > shown ? (
+            <button type="button" onClick={() => setShown((s) => s + 15)}
+                style={{ width: "100%", marginTop: 10, border: "none", cursor: "pointer", background: C.card, color: C.accent, borderRadius: 10, padding: "11px 0", fontSize: 12.5, fontWeight: 800 }}>
+                더보기 ({total - shown}개 {unit})
+            </button>
+        ) : null
+
+    // 언론사 그룹 모드 — 정렬 아니라 언론사로 묶어 보기(많이 보도한 순)
+    if (sortMode === "outlet") {
+        const bySrc: Record<string, NewsItem[]> = {}
+        for (const it of items) { const s = it.source || "기타"; (bySrc[s] = bySrc[s] || []).push(it) }
+        const groups = Object.keys(bySrc)
+            .map((s) => ({ source: s, items: bySrc[s].slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)) }))
+            .sort((a, b) => b.items.length - a.items.length || a.source.localeCompare(b.source))
+        return (
+            <div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 10, alignItems: "start" }}>
+                    {groups.slice(0, shown).map((g, i) => (
+                        <div key={i} style={{ background: C.card, borderRadius: 14, padding: "12px 12px 6px 12px", boxSizing: "border-box" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 8px 4px 8px" }}>
+                                <span style={{ fontSize: 13.5, fontWeight: 800, color: C.text, letterSpacing: "-0.01em" }}>{g.source}</span>
+                                <span style={{ fontSize: 11.5, fontWeight: 700, color: C.accent }}>{g.items.length}</span>
+                            </div>
+                            {g.items.slice(0, 4).map((it, j) => <NewsRow key={j} item={it} C={C} clamp={1} showKo={props.showKo} />)}
+                        </div>
+                    ))}
+                </div>
+                {moreBtn(groups.length, "언론사")}
+                {foot}
+            </div>
+        )
+    }
+
+    // 최신(발행시각) / 핫(composite_score) 정렬
+    const sorted = items.slice().sort((a, b) => (sortMode === "hot" ? (b.score || 0) - (a.score || 0) : (b.ts || 0) - (a.ts || 0)))
     return (
         <div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 8, alignItems: "start" }}>
-                {items.map((it, i) => (
+                {sorted.slice(0, shown).map((it, i) => (
                     <div key={i} style={{ height: cardH, overflow: "hidden", background: C.card, borderRadius: 12, display: "flex", flexDirection: "column", justifyContent: "center" }}>
                         <NewsRow item={it} C={C} clamp={2} showKo={props.showKo} />
                     </div>
                 ))}
             </div>
-            <div style={{ padding: "12px 8px 2px", fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>
-↑ 호재 / ↓ 악재 = 키워드 자동분류(검증 전 · 중립 다수)
-            </div>
+            {moreBtn(sorted.length, "뉴스")}
+            {foot}
         </div>
     )
 }
