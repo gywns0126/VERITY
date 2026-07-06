@@ -220,6 +220,92 @@ def _from_data_go_kr(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
     return out
 
 
+FULL_OAS = "https://infuser.odcloud.kr/oas/docs?namespace=3070507/v1"
+
+
+def _from_full_list(name2tk: Dict[str, str]) -> List[Dict[str, Any]]:
+    """국민연금 국내주식 전체 투자현황 (data.go.kr 3070507, 연말 기준 ~1,400종목 · 평가액·지분율).
+
+    🚨 계정 활용신청 필요 (2026-07-07 실측: 미신청 = 401 '유효하지 않은 인증키') — 신청 즉시 자동 활성.
+    반환 = [{ticker, name, pct, eval_amt_100m, as_of}] · 실패/미신청 = [] (기존 5%+ 경로 무영향).
+    용도 = 공개 패널 '내 종목 겹침(5% 미만 포함)' — 리스트 전체 노출은 5%+ 유지(볼륨).
+    """
+    key = ""
+    try:
+        from api.config import PUBLIC_DATA_API_KEY
+        key = (PUBLIC_DATA_API_KEY or "").strip()
+    except Exception:  # noqa: BLE001
+        key = ""
+    key = key or os.environ.get("PUBLIC_DATA_API_KEY", "").strip()
+    if not key:
+        return []
+    try:
+        import requests
+        spec = requests.get(FULL_OAS, timeout=15).json()
+        paths = list(((spec.get("paths") if isinstance(spec, dict) else {}) or {}).keys())
+        if not paths:
+            return []
+        # 각 uddi 의 데이터 기준일은 경로로 판별 불가 → 첫 200 응답 중 '기준일' 최댓값 path 선택
+        best_rows, best_asof = [], ""
+        for p in paths:
+            try:
+                r = requests.get("https://api.odcloud.kr/api" + p,
+                                 params={"serviceKey": key, "page": 1, "perPage": 3, "returnType": "JSON"}, timeout=15)
+                if r.status_code != 200:
+                    continue
+                sample = (r.json().get("data") or [])
+                if not sample:
+                    continue
+                asof = ""
+                for k, v in sample[0].items():
+                    if "기준" in str(k) or "년도" in str(k):
+                        asof = str(v)
+                asof = asof or p[-12:]
+                if asof >= best_asof:
+                    best_asof, best_path = asof, p
+                    best_rows = [1]  # 존재 표식
+            except Exception:  # noqa: BLE001
+                continue
+        if not best_rows:
+            return []
+        rows: List[Dict[str, Any]] = []
+        page = 1
+        while page <= 6:  # ~1,400행 = perPage 500 × 3 (여유 6)
+            r = requests.get("https://api.odcloud.kr/api" + best_path,
+                             params={"serviceKey": key, "page": page, "perPage": 500, "returnType": "JSON"}, timeout=25)
+            if r.status_code != 200:
+                break
+            batch = r.json().get("data") or []
+            if not batch:
+                break
+            for row in batch:
+                nm, pct, amt, asof = "", None, None, best_asof
+                for k, v in row.items():
+                    kk = str(k)
+                    if "종목명" in kk or "종목" == kk:
+                        nm = str(v)
+                    elif "지분율" in kk or "지분" in kk:
+                        try:
+                            pct = float(str(v).replace("%", "").replace(",", ""))
+                        except (TypeError, ValueError):
+                            pct = None
+                    elif "평가액" in kk:
+                        try:
+                            amt = float(str(v).replace(",", ""))
+                        except (TypeError, ValueError):
+                            amt = None
+                if not nm:
+                    continue
+                tk = _lookup_ticker(name2tk, nm)
+                if not tk:
+                    continue
+                rows.append({"ticker": tk, "name": nm, "pct": pct, "eval_amt_100m": amt, "as_of": asof})
+            page += 1
+        return rows
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def build_nps_holdings() -> Dict[str, Any]:
     from datetime import datetime, timezone, timedelta
     kst = timezone(timedelta(hours=9))
@@ -238,6 +324,7 @@ def build_nps_holdings() -> Dict[str, Any]:
 
     fund = _load_json(FUND_OVERVIEW_PATH, None)
 
+    full_rows = _from_full_list(name2tk)
     has_full = any(h.get("src", "").startswith("data.go.kr") for h in holdings)
     return {
         "generated_at": datetime.now(kst).isoformat(),
@@ -245,6 +332,8 @@ def build_nps_holdings() -> Dict[str, Any]:
         "coverage": "full_5pct" if has_full else "operating_pool",
         "count": len(holdings),
         "holdings": holdings,
+        "full": full_rows,          # 전체 투자현황(연말) — 활용신청 후 채워짐. 겹침 검사용 (5% 미만 포함)
+        "full_n": len(full_rows),
         "fund": fund,  # 운용수익률/AUM (data/nps_fund_overview.json, 수기·분기 갱신). 없으면 null
         "note": "국민연금 5% 이상 대량보유 공시 기준 — 전체 보유종목(약 1,200) 아님 · 분기 지연 · 지분율은 법적 강제공시 사실, 점수·추천 아님.",
     }
