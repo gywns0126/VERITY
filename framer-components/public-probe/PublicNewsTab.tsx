@@ -217,6 +217,33 @@ function Logo(props: { ticker: any; name: any; C: typeof LIGHT; size?: number })
     )
 }
 
+/* 언론사 favicon — 매체명→도메인 맵(Google News 리다이렉트 URL 대비) + url 도메인 폴백. 미매칭=로고 생략(텍스트만). */
+const OUTLET_DOMAIN: Record<string, string> = {
+    "한국경제": "hankyung.com", "매일경제": "mk.co.kr", "서울경제": "sedaily.com", "조선비즈": "chosun.com",
+    "이데일리": "edaily.co.kr", "머니투데이": "mt.co.kr", "연합뉴스": "yna.co.kr", "뉴스핌": "newspim.com",
+    "파이낸셜뉴스": "fnnews.com", "헤럴드경제": "heraldcorp.com", "아시아경제": "asiae.co.kr", "전자신문": "etnews.com",
+    "연합인포맥스": "einfomax.co.kr", "한겨레": "hani.co.kr", "중앙일보": "joongang.co.kr", "동아일보": "donga.com",
+    "YTN": "ytn.co.kr", "뉴시스": "newsis.com", "뉴스1": "news1.kr", "이투데이": "etoday.co.kr",
+    "블룸버그": "bloomberg.com", "로이터": "reuters.com", "조선일보": "chosun.com", "국민일보": "kmib.co.kr",
+    "서울신문": "seoul.co.kr", "경향신문": "khan.co.kr", "디지털타임스": "dt.co.kr", "ZDNet": "zdnet.co.kr",
+}
+function faviconFor(source: string, url: string): string {
+    let dom = OUTLET_DOMAIN[(source || "").trim()] || ""
+    if (!dom) {
+        const h = hostname(url)   // 네이버 원문링크 = 진짜 매체 도메인. google/naver 리다이렉트는 제외.
+        if (h && h.indexOf("google") < 0 && h.indexOf("naver") < 0) dom = h
+    }
+    return dom ? "https://icons.duckduckgo.com/ip3/" + dom + ".ico" : ""
+}
+/* 언론사 로고(favicon 16px). 실패/미매칭 = null → NewsRow 는 텍스트 매체명만 노출. */
+function OutletLogo(props: { source: string; url: string }) {
+    const src = faviconFor(props.source, props.url)
+    const [err, setErr] = useState(false)
+    if (!src || err) return null
+    return <img src={src} alt="" width={14} height={14} onError={() => setErr(true)}
+        style={{ width: 14, height: 14, borderRadius: 3, objectFit: "cover", flexShrink: 0, display: "block" }} />
+}
+
 export default function PublicNewsTab(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
@@ -852,14 +879,21 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
                 {/* '뉴스 많은 종목' 타일 → 상단 '오늘 핫한 종목' 스트립으로 이전(중복 제거, 2026-07-05) */}
                 {/* 오늘의 뉴스 테마 (제목 키워드 빈도 — LLM 아님, 단어 카운트) */}
                 {ins.themes.length ? (
-                    <div style={{ ...tile, flexBasis: 280, minWidth: 236 }}>
-                        <div style={lbl}>오늘의 뉴스 테마 <span style={{ color: C.faint, fontWeight: 500 }}>· 키워드 빈도</span></div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                            {ins.themes.map((th) => (
-                                <span key={th.name} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: C.subtext, background: C.sub, borderRadius: 8, padding: "4px 9px" }}>
-                                    {th.name} <span style={{ color: C.accent }}>{th.n}</span>
-                                </span>
-                            ))}
+                    <div style={{ ...tile, flexBasis: 320, minWidth: 248 }}>
+                        <div style={lbl}>오늘의 뉴스 테마 <span style={{ color: C.faint, fontWeight: 500 }}>· 키워드 빈도(막대 = 언급 수)</span></div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
+                            {ins.themes.map((th) => {
+                                const mx = Math.max.apply(null, ins.themes.map((t) => t.n).concat([1]))
+                                return (
+                                    <div key={th.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                        <span style={{ width: 62, flexShrink: 0, fontSize: 11.5, fontWeight: 700, color: C.subtext, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{th.name}</span>
+                                        <div style={{ flex: 1, height: 9, borderRadius: 5, background: C.sub, overflow: "hidden" }}>
+                                            <div style={{ width: (th.n / mx) * 100 + "%", height: "100%", background: C.accent, borderRadius: 5 }} />
+                                        </div>
+                                        <span style={{ width: 18, flexShrink: 0, textAlign: "right", fontSize: 11.5, fontWeight: 800, color: C.accent }}>{th.n}</span>
+                                    </div>
+                                )
+                            })}
                         </div>
                     </div>
                 ) : null}
@@ -999,7 +1033,10 @@ function NewsRow(props: { item: NewsItem; C: typeof LIGHT; clamp?: number; showK
                     <span style={{ fontSize: 10, fontWeight: 700, color: C.accent, background: C.bg, borderRadius: 5, padding: "1px 6px" }}>AI 번역</span>
                 ) : null}
                 {item.source ? (
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: C.subtext }}>{item.source}{item.credible ? " ✓" : ""}</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <OutletLogo source={item.source} url={item.url} />
+                        <span style={{ fontSize: 11.5, fontWeight: 600, color: C.subtext }}>{item.source}{item.credible ? " ✓" : ""}</span>
+                    </span>
                 ) : null}
                 {item.time ? (
                     <>
