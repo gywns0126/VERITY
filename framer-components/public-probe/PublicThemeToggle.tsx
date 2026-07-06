@@ -34,6 +34,7 @@ const THEME_CSS =
     "--token-633070ef-c72c-4d61-8127-69b2f746f38f:#545454;" + // IconMuted
     "--token-464a4386-16cc-4626-97c4-e6b0fcc2fa01:#6b7280;" + // MenuText
     "--token-a8427b85-996c-4c32-93b4-222935fc2f01:#6c5ce7;" + // MenuHover
+    "--token-17d84716-89a0-4724-8331-39a778f7dcc5:#fff3;" + // 모바일 상단 bg (흰색 0.2)
     "}" +
     'body[data-framer-theme="dark"]{' +
     "--token-ffcc4fd8-58d0-45dc-a259-50e9f47bc8db:#0f1318;" +
@@ -43,6 +44,7 @@ const THEME_CSS =
     "--token-633070ef-c72c-4d61-8127-69b2f746f38f:#9aa4b1;" +
     "--token-464a4386-16cc-4626-97c4-e6b0fcc2fa01:#9aa4b1;" +
     "--token-a8427b85-996c-4c32-93b4-222935fc2f01:#a99bff;" +
+    "--token-17d84716-89a0-4724-8331-39a778f7dcc5:#0003;" + // 모바일 상단 bg (검정 0.2)
     "}"
 
 function injectOverrideStyle() {
