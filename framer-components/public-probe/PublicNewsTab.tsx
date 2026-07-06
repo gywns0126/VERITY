@@ -17,6 +17,10 @@ import React, { useEffect, useMemo, useState } from "react"
  */
 
 const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
+// 종목 검색 = 표준 검색창(PublicStockSearch)과 동기 — 동일 유니버스·로고·국기.
+const UNIVERSE_URL = BLOB + "/universe_search.json"
+const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 
 interface Props {
     dark: boolean
@@ -191,6 +195,28 @@ function asArray(x: any): any[] {
     return Array.isArray(x) ? x : []
 }
 
+/* 종목 로고 — 표준 검색창(PublicStockSearch)과 동일: 토스 CDN(404 시 이니셜) + circle-flags 원형 국기. */
+function Logo(props: { ticker: any; name: any; C: typeof LIGHT; size?: number }) {
+    const { ticker, name, C } = props
+    const size = props.size || 22
+    const [err, setErr] = useState(false)
+    const ch = (String(name || "?").trim().charAt(0)) || "?"
+    const code = /^\d{6}$/.test(String(ticker || "")) ? "kr" : "us"
+    const fsize = Math.round(size * 0.46)
+    return (
+        <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
+            {!err && ticker ? (
+                <img src={LOGO_BASE + String(ticker).replace(/-/g, ".") + ".png"} alt="" width={size} height={size} onError={() => setErr(true)}
+                    style={{ width: size, height: size, borderRadius: 7, objectFit: "cover", display: "block", background: C.bg }} />
+            ) : (
+                <span style={{ width: size, height: size, borderRadius: 7, background: C.sub, color: C.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
+            )}
+            <img src={FLAG_BASE + code + ".svg"} alt="" width={fsize} height={fsize}
+                style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block" }} />
+        </span>
+    )
+}
+
 export default function PublicNewsTab(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
@@ -210,6 +236,12 @@ export default function PublicNewsTab(props: Props) {
     const [insights, setInsights] = useState<Insights | null>(null)
     const [loading, setLoading] = useState<boolean>(true)
     const [failed, setFailed] = useState<boolean>(false)
+    const [q, setQ] = useState<string>("")                                    // 종목 뉴스 검색어(이름/코드)
+    const [uni, setUni] = useState<any[]>([])                                 // 종목 유니버스(표준 universe_search.json — 검색창 전역 동기)
+    const [focused, setFocused] = useState<boolean>(false)
+    const [searchGroup, setSearchGroup] = useState<StockGroup | null>(null)   // 검색된 종목 뉴스(온디맨드)
+    const [searching, setSearching] = useState<boolean>(false)
+    const [searchMsg, setSearchMsg] = useState<string>("")
 
     /* 테마 추종 */
     useEffect(() => {
@@ -483,6 +515,47 @@ export default function PublicNewsTab(props: Props) {
         [stocks.length, market.length, us.length]
     )
 
+    /* 종목 뉴스 검색 — 표준 검색창(PublicStockSearch)과 동일 UX: universe_search.json 유니버스 + 로고 autocomplete.
+       차이 = 액션만(리포트 이동 대신 그 종목 뉴스를 인라인 표시). 종목 뉴스 API 는 국내(6자리) 지원. */
+    const ensureUni = () => {
+        if (uni.length || onCanvas) return
+        fetch(UNIVERSE_URL, { cache: "force-cache" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) setUni(a) })
+            .catch(() => {})
+    }
+    // 라이브 연관검색어 — 코드·이름 부분일치 상위 8 (표준과 동일 매칭).
+    const matches = useMemo(() => {
+        const s = q.trim().toLowerCase()
+        if (!s || !uni.length) return []
+        return uni.filter((x) => String(x.ticker).toLowerCase().includes(s) || String(x.name || "").toLowerCase().includes(s)).slice(0, 8)
+    }, [q, uni])
+    const pickNews = async (tk: string, nm: string) => {
+        const code = String(tk || "").trim()
+        setFocused(false); setQ(nm || code)
+        if (!/^\d{6}$/.test(code)) { setSearchGroup(null); setSearchMsg("종목 뉴스는 현재 국내 종목만 지원해요 (미국 종목은 리포트에서)"); return }
+        setSearching(true); setSearchMsg("")
+        try {
+            const api = (props.apiBase || "https://project-yw131.vercel.app").replace(/\/+$/, "")
+            const res = await fetch(`${api}/api/stock_news?code=${encodeURIComponent(code)}${nm ? "&name=" + encodeURIComponent(nm) : ""}`, { cache: "no-store" })
+            const d = res.ok ? await res.json() : null
+            const items: NewsItem[] = (d && Array.isArray(d.items) ? d.items.slice(0, 6) : []).map((n: any) => ({
+                title: n.title, url: n.url, source: n.source, time: n.rel_time || "",
+                sentiment: "", category: n.category, outlets: n.outlets, credible: n.credible,
+            }))
+            const rm = recMap[code]
+            setSearchGroup({ ticker: code, name: nm || (rm ? rm.name : code), market: rm ? rm.market : "KR", sector: rm ? rm.sector : "", industry: rm ? rm.industry : "", items })
+            if (!items.length) setSearchMsg("최근 뉴스가 없어요")
+        } catch { setSearchMsg("검색 중 오류가 났어요") } finally { setSearching(false) }
+    }
+    const goSearch = () => {
+        const s = q.trim()
+        if (!s || searching) return
+        if (matches.length) { pickNews(String(matches[0].ticker), String(matches[0].name || "")); return }
+        if (/^\d{6}$/.test(s)) { pickNews(s, ""); return }
+        setSearchGroup(null); setSearchMsg("‘" + s + "’ 종목을 못 찾았어요 (국내 종목명·6자리 코드)")
+    }
+
     const wrap: React.CSSProperties = {
         width: "100%",
         maxWidth: 1180,
@@ -631,6 +704,47 @@ export default function PublicNewsTab(props: Props) {
                     </div>
                 ) : tab === "stock" ? (
                     <>
+                        {/* 종목 뉴스 검색 — 표준 검색창(알약+돋보기+로고 autocomplete)과 동기. 픽 → 인라인 뉴스. */}
+                        <div style={{ position: "relative", padding: "0 6px 10px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, background: C.sub, borderRadius: 999, padding: "9px 14px", boxSizing: "border-box" }}>
+                                <span style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid ${C.faint}`, flexShrink: 0, position: "relative", display: "inline-block" }}>
+                                    <span style={{ position: "absolute", width: 2, height: 6, background: C.faint, right: -3, bottom: -3, transform: "rotate(-45deg)" }} />
+                                </span>
+                                <input value={q}
+                                    onChange={(e) => { setQ(e.target.value); ensureUni() }}
+                                    onFocus={() => { setFocused(true); ensureUni() }}
+                                    onBlur={() => setTimeout(() => setFocused(false), 160)}
+                                    onKeyDown={(e) => { if (e.key === "Enter") { setFocused(false); goSearch() } }}
+                                    placeholder="종목 뉴스 검색 (이름·코드)"
+                                    style={{ border: "none", outline: "none", background: "transparent", color: C.text, fontFamily: "inherit", fontSize: 14, fontWeight: 600, width: "100%", minWidth: 0 }} />
+                                {searching ? <span style={{ fontSize: 11, color: C.faint, fontWeight: 700, flexShrink: 0 }}>검색 중</span> : null}
+                            </div>
+                            {focused && !!q.trim() && matches.length > 0 ? (
+                                <div style={{ position: "absolute", top: "100%", left: 6, right: 6, marginTop: -2, zIndex: 50, background: C.card, borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.16)", padding: 6, maxHeight: 320, overflowY: "auto" }}>
+                                    {matches.map((m) => (
+                                        <div key={m.ticker} onMouseDown={() => pickNews(String(m.ticker), String(m.name || ""))}
+                                            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
+                                            <Logo ticker={m.ticker} name={m.name} C={C} size={22} />
+                                            <span style={{ fontSize: 13.5, fontWeight: 700, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</span>
+                                            <span style={{ marginLeft: "auto", flexShrink: 0, fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{m.ticker}{m.market ? " · " + m.market : ""}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
+                        {searchMsg ? (
+                            <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, padding: "0 6px 10px" }}>{searchMsg}</div>
+                        ) : null}
+                        {searchGroup ? (
+                            <div style={{ marginBottom: 18 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 6px 8px" }}>
+                                    <span style={{ fontSize: 12, fontWeight: 800, color: C.text }}>검색 결과 · {searchGroup.name}</span>
+                                    <button onClick={() => { setSearchGroup(null); setQ(""); setSearchMsg("") }}
+                                        style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 12, fontWeight: 700, fontFamily: "inherit", padding: 0 }}>지우기 ×</button>
+                                </div>
+                                <StockNews groups={[searchGroup]} C={C} cardH={344} showKo={showKo} reportPath={props.reportPath} />
+                            </div>
+                        ) : null}
                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "0 6px 10px" }}>
                             {watch.length ? `내 관심종목 ${watch.length}개 연동 · 별표 추가하면 자동 반영` : "관심종목을 별표하면 여기 연동돼요 · 지금은 추천 종목 뉴스"}
                         </div>
