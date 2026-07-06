@@ -88,10 +88,14 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
         acct = item.get("account_nm", "")
         amount = _parse_int(item.get("thstrm_amount"))
         if sj == "BS":
-            if "자산총계" in acct:
+            # 🚨 총계류 = 정확일치 필수 — '자본과부채총계'(=자산총계) 가 '부채총계' 부분일치에 걸려
+            #   부채총계를 자산총계로 오염 (2026-07-06 실증, 분기 부채비율 5.8% 사고 근원)
+            if acct == "자산총계":
                 out["total_assets"] = amount
-            elif "부채총계" in acct:
+            elif acct == "부채총계":
                 out["total_liabilities"] = amount
+            elif acct == "자본총계":
+                out["equity"] = amount
             elif acct == "유동자산":
                 out["current_assets"] = amount
             elif acct == "유동부채":
@@ -109,7 +113,9 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
                 out["cogs"] = amount
             elif acct == "매출총이익" or "매출총이익" in acct:
                 out["gross_profit"] = amount
-            elif acct == "영업이익" or "영업이익(손실)" in acct:
+            elif acct in ("영업이익", "영업이익(손실)"):
+                # 🚨 정확일치 필수 — 부분일치는 '계속영업이익(손실)'(세후, ≈순이익)에 걸려 영업이익을 덮어씀
+                #   (2026-07-06 실증: 삼성 2018 op 58.9조 → 44.3조 오염, fin_series 전 연도 op==net 사고)
                 out["operating_profit"] = amount
             elif "당기순이익" in acct:
                 out["net_income"] = max(out["net_income"], amount)
