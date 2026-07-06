@@ -134,14 +134,16 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
     _VS = {"above": "높음", "below": "낮음", "similar": "비슷"}
     rows = []
     for r in (peer.get("rows") or []):
+        pct = r.get("pct")
         rows.append([str(r.get("key") or ""), str(r.get("value") or "—"), str(r.get("median") or "—"),
-                     _VS.get(str(r.get("vs") or ""), "—")])
+                     _VS.get(str(r.get("vs") or ""), "—"),
+                     f"{pct}%" if isinstance(pct, (int, float)) else "—"])
     if not rows:
-        facts = s.get("facts") or {}
-        rows = [[k, str(v), "—", "—"] for k, v in list(facts.items())[:8] if v not in (None, "")]
+        facts0 = s.get("facts") or {}
+        rows = [[k, str(v), "—", "—", "—"] for k, v in list(facts0.items())[:8] if v not in (None, "")]
     sections.append(_sec(
-        "밸류에이션 팩트", f"업종 비교 = {peer.get('sector') or '—'} · 같은 섹터 중앙값 · 대비 = 사실 비교(평가 아님)",
-        ["지표", "값", "업종 중앙값", "업종 대비"], ["l", "r", "r", "c"], [1.4, 0.9, 0.9, 0.7], rows))
+        "밸류에이션 팩트", f"업종 비교 = {peer.get('sector') or '—'} · 중앙값·백분위 = 같은 섹터 내 위치(사실 · 평가 아님)",
+        ["지표", "값", "업종 중앙값", "업종 대비", "업종 백분위"], ["l", "r", "r", "c", "r"], [1.3, 0.85, 0.9, 0.6, 0.8], rows))
 
     # 재무 요약 — 최근 결산 재무제표 그룹 전체 (손익·재무상태·현금흐름 등)
     fin = s.get("financials") or {}
@@ -191,7 +193,8 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
     note = f"총수일가 지배지분 {_num(own.get('family_pct'), 2, '%')} · {own.get('source') or '공정거래위원회'}" if own else ""
     sections.append(_sec("지분구조", note, ["유형", "주주", "의결권 지분율"], ["l", "l", "r"], [0.9, 1.8, 0.9], rows))
 
-    # 내부자 거래 (최근)
+    # 내부자 거래 (최근) — 타임라인에도 합류 (_insider_rows_cache)
+    _insider_rows_cache: List[List[str]] = []
     try:
         idoc = _fetch("insider_trades.json" if kr else "us_insider_trades.json")
         irec = _stock_of(idoc, ticker) or {}
@@ -199,8 +202,10 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
         for t in (irec.get("trades") or [])[:10]:
             ch = t.get("change")
             side = "매수" if isinstance(ch, (int, float)) and ch > 0 else "매도"
-            rows.append([str(t.get("date") or ""), str(t.get("person") or ""),
-                         f"{abs(float(ch)):,.0f}주 {side}" if isinstance(ch, (int, float)) else "—"])
+            desc = f"{abs(float(ch)):,.0f}주 {side}" if isinstance(ch, (int, float)) else "—"
+            rows.append([str(t.get("date") or ""), str(t.get("person") or ""), desc])
+            if str(t.get("date") or "") >= (now - timedelta(days=365)).strftime("%Y-%m-%d"):
+                _insider_rows_cache.append([str(t.get("date") or ""), "내부자", f"{t.get('person') or ''} {desc}"])
         sections.append(_sec("내부자 거래", "임원·주요주주 보고 사실 (증감 주식수)",
                              ["보고일", "보고자", "증감"], ["l", "l", "r"], [0.9, 1.6, 1.1], rows))
     except Exception:  # noqa: BLE001
@@ -224,15 +229,131 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
         except Exception:  # noqa: BLE001
             pass
 
-    # 최근 공시
-    rows = []
-    for d in (s.get("disclosures") or [])[:10]:
+    # ── 최근 1년 타임라인 (공시 + 내부자 + 포렌식 이벤트 + 실적 제출 통합 연표) ──
+    lo1y = (now - timedelta(days=365)).strftime("%Y-%m-%d")
+    tl: List[List[str]] = []
+    for d in (s.get("disclosures") or []):
         dt = str(d.get("rcept_dt") or d.get("date") or "")
         if len(dt) == 8:
             dt = f"{dt[:4]}-{dt[4:6]}-{dt[6:]}"
-        rows.append([dt, str(d.get("pblntf_label") or d.get("kind") or ""), str(d.get("report_nm") or d.get("title") or "")])
-    sections.append(_sec("최근 공시", "DART 접수" if kr else "SEC 제출",
-                         ["접수일", "유형", "제목"], ["l", "l", "l"], [0.85, 0.8, 2.4], rows))
+        if dt:
+            tl.append([dt, str(d.get("pblntf_label") or d.get("kind") or "공시"),
+                       str(d.get("report_nm") or d.get("title") or "")[:56]])
+    foren = None
+    try:
+        fdoc = _fetch("disclosure_forensics.json" if kr else "us_disclosure_feed.json")
+        foren = _stock_of(fdoc, ticker)
+    except Exception:  # noqa: BLE001
+        foren = None
+    for e in ((foren or {}).get("events") or [])[:12]:
+        dt = str(e.get("date") or "")
+        if dt >= lo1y:
+            tl.append([dt, str(e.get("category") or "이벤트"), str(e.get("title") or "")[:56]])
+    for t in _insider_rows_cache or []:
+        tl.append(t)
+    try:
+        pdoc = _fetch("kr_earnings_pattern.json" if kr else "us_earnings_pattern.json")
+        for pr in ((pdoc.get("patterns") or {}).get(ticker) or [])[:5]:
+            dt = str(pr.get("filed") or "")
+            if dt >= lo1y:
+                tl.append([dt, "실적 공시", str(pr.get("form") or "")])
+    except Exception:  # noqa: BLE001
+        pass
+    seen_tl = set()
+    tl2 = []
+    for r in sorted(tl, key=lambda x: x[0], reverse=True):
+        key = (r[0], r[2][:30])
+        if key in seen_tl:
+            continue
+        seen_tl.add(key)
+        tl2.append(r)
+    sections.append(_sec("최근 1년 타임라인", "공시·내부자·이벤트·실적 제출 통합 (사실 연표)",
+                         ["일자", "유형", "내용"], ["l", "l", "l"], [0.75, 0.95, 2.4], tl2[:18]))
+
+    # ── 외인·기관 수급 (최근 5거래일) ──
+    if kr:
+        try:
+            fdoc2 = _fetch("stock_flow_5d.json")
+            frows = (fdoc2.get("flows") or {}).get(ticker) or []
+            rows = []
+            for r in frows[-5:]:
+                fn, inn, close = r.get("foreign_net"), r.get("inst_net"), r.get("close")
+                rows.append([str(r.get("date") or "")[5:],
+                             _num(fn, 0, "주") if isinstance(fn, (int, float)) else "—",
+                             _num(inn, 0, "주") if isinstance(inn, (int, float)) else "—",
+                             _num(close, 0, "원") if isinstance(close, (int, float)) else "—"])
+            sections.append(_sec("외인·기관 수급", "최근 5거래일 순매매(주식수) · 종가",
+                                 ["일자", "외국인", "기관", "종가"], ["l", "r", "r", "r"], [0.6, 1.1, 1.1, 0.9], rows))
+        except Exception:  # noqa: BLE001
+            pass
+
+    # ── 공시 포렌식 요약 (유형별 건수 — 수집창 내 사실) ──
+    if kr and foren and (foren.get("counts") or {}):
+        rows = [[k2, _num(v2, 0, "건")] for k2, v2 in sorted((foren.get("counts") or {}).items(), key=lambda x: -x[1])]
+        sections.append(_sec("공시 이벤트 유형 집계", "DART 원문 제목 기준 · 현재 수집창 한정 · 위험점수 아님",
+                             ["유형", "건수"], ["l", "r"], [2.0, 0.6], rows[:10]))
+
+    # ── 국민연금 보유 (공시 사실) ──
+    if kr:
+        try:
+            ndoc = _fetch("nps_holdings.json")
+            nrec = next((h for h in (ndoc.get("holdings") or []) if str(h.get("ticker")) == ticker), None)
+            if nrec and nrec.get("pct") is not None:
+                rows = [["보유 지분율", _num(nrec.get("pct"), 2, "%")], ["기준일", str(nrec.get("date") or "—")]]
+                sections.append(_sec("국민연금 보유", str(nrec.get("src") or "공공데이터포털"),
+                                     ["항목", "값"], ["l", "r"], [1.2, 1.2], rows))
+        except Exception:  # noqa: BLE001
+            pass
+
+    # ── (미장) 13F 스마트머니 · 13D/G 대량보유 ──
+    if not kr:
+        try:
+            mdoc = _fetch("us_smart_money_13f.json")
+            mrec = (mdoc.get("stocks") or {}).get(ticker)
+            rows = []
+            for h in ((mrec or {}).get("holders") or [])[:8]:
+                ct = {"INCREASED": "확대", "DECREASED": "축소", "NEW": "신규", "UNCHANGED": "유지"}.get(str(h.get("change_type") or ""), "")
+                rows.append([str(h.get("fund") or ""), _usd(h.get("value_usd")), ct])
+            if rows:
+                sections.append(_sec("13F 기관 보유 (스마트머니)", "SEC 13F 분기 공시 사실 · 보유가치 기준",
+                                     ["펀드", "보유가치", "직전 대비"], ["l", "r", "c"], [1.7, 0.9, 0.6], rows))
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            hdoc = _fetch("us_major_holdings.json")
+            hrec = (hdoc.get("stocks") or {}).get(ticker)
+            rows = []
+            for f2 in ((hrec or {}).get("filings") or [])[:6]:
+                rows.append([str(f2.get("date") or ""), str(f2.get("type") or ""), str(f2.get("filer") or "")[:36],
+                             _num(f2.get("pct"), 1, "%") if f2.get("pct") is not None else "—"])
+            if rows:
+                sections.append(_sec("대량보유 공시 (13D/G)", "SEC Schedule 13D/G 사실",
+                                     ["제출일", "유형", "보고자", "지분"], ["l", "l", "l", "r"], [0.8, 0.6, 1.6, 0.6], rows))
+        except Exception:  # noqa: BLE001
+            pass
+
+    # ── 실적 제출 이력 (자체계산 캘린더 근거) ──
+    try:
+        pdoc = _fetch("kr_earnings_pattern.json" if kr else "us_earnings_pattern.json")
+        prs = ((pdoc.get("patterns") or {}).get(ticker) or [])[:6]
+        rows = [[str(p2.get("filed") or ""), str(p2.get("form") or "")] for p2 in prs]
+        sections.append(_sec("실적 공시 제출 이력", "제출 리듬 = 다음 예상 창의 계산 근거 (자체계산)",
+                             ["제출일", "보고서"], ["l", "l"], [0.9, 1.5], rows))
+    except Exception:  # noqa: BLE001
+        pass
+
+    # ── 시장경보 (KRX 플래그) ──
+    if kr:
+        try:
+            wdoc = _fetch("market_warnings.json")
+            wrec = (wdoc.get("warnings") or {}).get(ticker)
+            labels = (wrec or {}).get("labels") if isinstance(wrec, dict) else wrec
+            if labels:
+                rows = [[str(l2.get("label") if isinstance(l2, dict) else l2), str(l2.get("severity") or "") if isinstance(l2, dict) else ""] for l2 in labels]
+                sections.append(_sec("시장경보", "KRX 시장경보·종목상태 공식 플래그",
+                                     ["구분", "수준"], ["l", "l"], [1.4, 0.8], rows))
+        except Exception:  # noqa: BLE001
+            pass
 
     # 컨센서스 + 캘린더 (집계 사실)
     con = s.get("consensus") or {}
