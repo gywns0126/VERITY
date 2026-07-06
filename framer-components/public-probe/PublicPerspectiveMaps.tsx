@@ -391,6 +391,16 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
     // 규모 분포 = 카테고리별 합산 시총(cap_sum, 억원 FX 환산) share. 구 blob 폴백 시 바 숨김.
     const capTotal = items.reduce((a, x) => a + (Number(x.cap_sum) || 0), 0)
     const showCapBar = hasCapSum(items) && capTotal > 0
+    // 규모 바 세그먼트 + 누적 offset(콜아웃 위치용). 선택 세그먼트 중심 %로 콜아웃 배치.
+    let _acc = 0
+    const capSegs = items.map((x) => {
+        const share = (Number(x.cap_sum) || 0) / capTotal
+        const s = { key: x.key, label: x.label, cap_sum: x.cap_sum, share, left: _acc }
+        _acc += share
+        return s
+    }).filter((s) => s.share > 0)
+    const selSeg = capSegs.find((s) => s.key === selKey) || capSegs[0]
+    const calloutLeft = selSeg ? Math.min(93, Math.max(7, (selSeg.left + selSeg.share / 2) * 100)) : 50
 
     const hero =
         tab === "desire" ? { big: n0(totalCount) + "종목", small: "인간 욕구 6계층으로 분류 · 탐색 렌즈" }
@@ -418,10 +428,12 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                 @keyframes vpmPop{0%{transform:scale(.45) rotate(-10deg);opacity:0}100%{transform:scale(1) rotate(0deg);opacity:1}}
                 @keyframes vpmRise{0%{transform:translateY(5px);opacity:0}100%{transform:translateY(0);opacity:1}}
                 @keyframes vpmFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+                .vpmCallout{animation:vpmCalloutPop .34s cubic-bezier(.34,1.7,.5,1) both}
+                @keyframes vpmCalloutPop{0%{transform:translateX(-50%) translateY(7px) scale(.6);opacity:0}60%{opacity:1}100%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
                 .vpmBtn svg{transition:transform .18s ease}
                 .vpmBtn:hover svg{transform:translateY(-1.5px) scale(1.08)}
                 .vpmBtn:active svg{transform:scale(.94)}
-                @media (prefers-reduced-motion: reduce){.vpmGiS,.vpmGiG{animation:none}.vpmBtn svg{transition:none}svg{animation:none!important}}
+                @media (prefers-reduced-motion: reduce){.vpmGiS,.vpmGiG,.vpmCallout{animation:none}.vpmBtn svg{transition:none}svg{animation:none!important}}
             `}</style>
             <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-0.4px" }}>관점 지도</div>
@@ -443,26 +455,31 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                 <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 2 }}>{hero.small}</div>
             </div>
 
-            {/* 시총 규모 분포 — 카테고리별 합산 시총(국내+해외 환산) share. 사실, 랭킹 아님. 세그먼트 클릭=선택 */}
-            {showCapBar ? (
+            {/* 시총 규모 분포 — 카테고리별 합산 시총(국내+해외 환산) share. 사실, 랭킹 아님. 칸 클릭 → 바 위로 % 콜아웃 팝 */}
+            {showCapBar && selSeg ? (
                 <div style={{ marginBottom: 14 }}>
                     <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 700, marginBottom: 6 }}>
-                        시총 규모 분포 <span style={{ fontWeight: 600 }}>· 국내+해외 환산(근사) · 선택 카테고리 강조(우열 아님)</span>
+                        시총 규모 분포 <span style={{ fontWeight: 600 }}>· 국내+해외 환산(근사) · 칸 눌러 비중 확인(우열 아님)</span>
                     </div>
-                    <div style={{ display: "flex", width: "100%", height: 15, borderRadius: 6, overflow: "hidden", background: C.track }}>
-                        {items.map((x) => {
-                            const share = (Number(x.cap_sum) || 0) / capTotal
-                            if (share <= 0) return null
-                            const on = x.key === selKey
-                            const pct = Math.round(share * 100)
-                            return (
-                                <div key={x.key} onClick={() => setSel((s) => ({ ...s, [tab]: x.key }))}
-                                    title={`${x.label} · ${capJo(x.cap_sum)} · ${(share * 100).toFixed(1)}%`}
-                                    style={{ width: (share * 100) + "%", background: on ? C.violet : C.segIdle, borderRight: `1.5px solid ${C.card}`, boxSizing: "border-box", cursor: "pointer", transition: "background-color 0.15s", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                                    {share >= 0.08 && <span style={{ fontSize: 9, fontWeight: 700, color: on ? "#ffffff" : C.sub, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{pct}%</span>}
-                                </div>
-                            )
-                        })}
+                    {/* relative 래퍼 — 콜아웃(바 위) + 바. paddingTop 으로 콜아웃 공간 확보 */}
+                    <div style={{ position: "relative", paddingTop: 28 }}>
+                        <div key={selKey} className="vpmCallout"
+                            style={{ position: "absolute", left: calloutLeft + "%", top: 0, transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none", zIndex: 2 }}>
+                            <span style={{ fontSize: 10.5, fontWeight: 800, color: "#ffffff", background: C.violet, borderRadius: 8, padding: "3px 9px", whiteSpace: "nowrap", boxShadow: "0 3px 10px rgba(108,92,231,0.4)", fontVariantNumeric: "tabular-nums" }}>
+                                {selSeg.label} <span style={{ opacity: 0.92 }}>{(selSeg.share * 100).toFixed(1)}%</span>
+                            </span>
+                            <span style={{ width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: `6px solid ${C.violet}` }} />
+                        </div>
+                        <div style={{ display: "flex", width: "100%", height: 12, borderRadius: 6, overflow: "hidden", background: C.track }}>
+                            {capSegs.map((s) => {
+                                const on = s.key === selKey
+                                return (
+                                    <div key={s.key} onClick={() => setSel((v) => ({ ...v, [tab]: s.key }))}
+                                        title={`${s.label} · ${capJo(s.cap_sum)} · ${(s.share * 100).toFixed(1)}%`}
+                                        style={{ width: (s.share * 100) + "%", background: on ? C.violet : C.segIdle, borderRight: `1.5px solid ${C.card}`, boxSizing: "border-box", cursor: "pointer", transition: "background-color 0.15s" }} />
+                                )
+                            })}
+                        </div>
                     </div>
                 </div>
             ) : null}
