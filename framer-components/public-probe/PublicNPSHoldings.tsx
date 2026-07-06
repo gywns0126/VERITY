@@ -125,13 +125,24 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
             </div>
         )
     }
+    // 국민연금공단 로고 — 공단 파비콘 핫링크(구글 s2, 로고 소싱 관례=핫링크) + 실패 시 NPS 배지 폴백
+    const [logoErr, setLogoErr] = useState(false)
+    const NpsLogo = () => logoErr ? (
+        <span style={{ width: 26, height: 26, borderRadius: 8, background: "#0B5FAE", color: "#fff", fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>NPS</span>
+    ) : (
+        <img src="https://www.google.com/s2/favicons?domain=nps.or.kr&sz=64" alt="국민연금공단" width={26} height={26}
+            onError={() => setLogoErr(true)}
+            style={{ width: 26, height: 26, borderRadius: 8, background: "#fff", padding: 2, boxSizing: "border-box", display: "block", flexShrink: 0 }} />
+    )
+
     if (!data) return <div style={{ ...wrap, textAlign: "center", color: C.faint, fontSize: 14, padding: 40 }}>데이터를 불러오지 못했어요.</div>
 
     return (
         <div style={wrap}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>국민연금 투자</span>
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: C.faint }}>공시 사실</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12, flexWrap: "wrap" }}>
+                <NpsLogo />
+                <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>국민연금공단 보유종목</span>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: C.faint }}>공단 공시 사실</span>
             </div>
 
             {/* 운용현황 카드 */}
