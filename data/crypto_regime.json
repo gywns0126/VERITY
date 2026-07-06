@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-07-06T08:40:58+09:00",
+  "collected_at": "2026-07-06T13:23:16+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
@@ -15,8 +15,8 @@
       "read": "on",
       "active": true,
       "drivers": {
-        "fng": 23.0,
-        "search_trend_pct": -7.1
+        "fng": 24.0,
+        "search_trend_pct": -10.2
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -27,8 +27,8 @@
       "active": true,
       "drivers": {
         "funding_signal": "neutral",
-        "put_call_oi": 0.556,
-        "long_short_ratio": 1.46
+        "put_call_oi": 0.557,
+        "long_short_ratio": 1.5
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
@@ -50,7 +50,7 @@
       "read": "on",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": 7.23
+        "btc_change_pct_7d": 5.61
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -60,8 +60,8 @@
       "read": "누적 중",
       "active": false,
       "drivers": {
-        "ssr": 4.96,
-        "stablecoin_supply_usd": 257281528812.3413
+        "ssr": 4.94,
+        "stablecoin_supply_usd": 257111294893.9032
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -73,14 +73,14 @@
       "drivers": {
         "top_protocol_fees_24h": {
           "name": "Tether",
-          "fees_24h": 16003130.0
+          "fees_24h": 16003226.0
         },
         "protocol_count": 25
       },
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 63602.0,
+  "btc_price_at_call": 63285.0,
   "trail": [
     {
       "date": "2026-06-24",
@@ -170,7 +170,7 @@
       "date": "2026-07-06",
       "call": "neutral",
       "net_score": 1,
-      "btc_price": 63602.0,
+      "btc_price": 63285.0,
       "active_dims": 4
     }
   ],
@@ -180,7 +180,7 @@
         "horizon_days": 7,
         "n": 2,
         "hit_rate": 0.0,
-        "mean_realized_return": 0.084249,
+        "mean_realized_return": 0.078845,
         "label": "통계 무의미 (N<30)"
       },
       {
