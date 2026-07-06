@@ -57,11 +57,11 @@ const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", up: "#f04452", down: "#3182f6", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff",
+    line: "#e5e8eb", up: "#f04452", down: "#3182f6", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff", glass: "rgba(242,244,246,0.7)",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
-    line: "#252b34", up: "#f04452", down: "#5b9bff", vg: "#34e08a", vgS: "#0f241c", vt: "#a99bff", vtS: "#241f3a",
+    line: "#252b34", up: "#f04452", down: "#5b9bff", vg: "#34e08a", vgS: "#0f241c", vt: "#a99bff", vtS: "#241f3a", glass: "rgba(15,19,24,0.7)",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
@@ -716,7 +716,7 @@ export default function PublicDiscovery(props: Props) {
             <div style={{ display: "flex", flexDirection: narrow ? "column" : "row", gap: narrow ? 12 : 20, alignItems: "flex-start" }}>
                 {/* 탭 — 흰박스 없이 회색 배경에 직접, 활성만 흰 알약 */}
                 {narrow ? (
-                    <div style={{ display: "flex", gap: 7, overflowX: "auto", paddingTop: 2, paddingBottom: 9, width: "100%", position: "sticky", top: navTop, background: C.bg, zIndex: 5, scrollbarWidth: "none", boxShadow: `0 7px 7px -7px ${isDark ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.14)"}` }}>
+                    <div style={{ display: "flex", gap: 7, overflowX: "auto", padding: `10px ${pad}px`, width: `calc(100% + ${pad * 2}px)`, marginLeft: -pad, position: "sticky", top: navTop, background: C.glass, backdropFilter: "saturate(1.4) blur(14px)", WebkitBackdropFilter: "saturate(1.4) blur(14px)", zIndex: 5, scrollbarWidth: "none", boxShadow: `0 8px 8px -7px ${isDark ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.14)"}` }}>
                         {loading
                             ? Array.from({ length: 4 }).map((_, i) => <div key={i} style={skBlock(i === 0 ? 76 : 60, 33, 999)} />)
                             : visibleTabs.map((i) => tabButton(i))}
