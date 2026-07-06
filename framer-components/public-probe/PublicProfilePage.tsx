@@ -363,9 +363,10 @@ export default function PublicProfilePage(props: Props) {
                         </div>
                     </div>
                 )}
+
+                {/* 이용약관(/policy) 링크 — 회원 탈퇴 아래, 카드 내부 */}
+                <a href="/policy" style={{ display: "block", textAlign: "center", marginTop: 18, color: C.faint, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>이용약관 · 개인정보처리방침</a>
             </div>
-            {/* 이용약관(/policy) 링크 — 내부 이동 */}
-            <a href="/policy" style={{ display: "block", textAlign: "center", marginTop: 16, color: C.faint, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>이용약관 · 개인정보처리방침</a>
         </div>
     )
 }
