@@ -1,0 +1,322 @@
+{
+ "_meta": {
+  "generated_at": "2026-07-07T00:30:08.377580+09:00",
+  "count": 27,
+  "source": "freshness_sla 매니페스트 매시 능동검사 (실측 나이 vs SLA 임계)",
+  "note": "상태 = 마지막 갱신 시각 실측 비교 사실만. 주말·장외 무생산 구간은 유효 나이에서 제외하며 paused 로 표시. 점수·예측 아님."
+ },
+ "summary": {
+  "fresh": 23,
+  "stale": 1,
+  "paused": 3,
+  "p0": {
+   "total": 6,
+   "fresh": 3
+  },
+  "p1": {
+   "total": 11,
+   "fresh": 10
+  },
+  "p2": {
+   "total": 10,
+   "fresh": 10
+  }
+ },
+ "streams": [
+  {
+   "id": "ai_synthesis",
+   "label": "AI 종합 브리핑",
+   "criticality": "P0",
+   "schedule": "weekday",
+   "cadence": "매일 1회",
+   "age_eff_min": 148.9,
+   "max_age_min": 4320,
+   "last_ts": "2026-07-06T22:01:17+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "crypto",
+   "label": "크립토 시세·파생",
+   "criticality": "P0",
+   "schedule": "always",
+   "cadence": "30분 목표",
+   "age_eff_min": 152.0,
+   "max_age_min": 90,
+   "last_ts": "2026-07-06T21:58:09+09:00",
+   "status": "stale"
+  },
+  {
+   "id": "dart_catalyst_alerts",
+   "label": "DART 공시 알림",
+   "criticality": "P0",
+   "schedule": "market_hours",
+   "cadence": "30분 증분",
+   "age_eff_min": 173.5,
+   "max_age_min": 120,
+   "last_ts": "2026-07-06T21:36:36+09:00",
+   "status": "paused"
+  },
+  {
+   "id": "macro_snapshot",
+   "label": "매크로 스냅샷",
+   "criticality": "P0",
+   "schedule": "always",
+   "cadence": "1~2시간 주기",
+   "age_eff_min": 27.7,
+   "max_age_min": 360,
+   "last_ts": "2026-07-07T00:02:26+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "price_pulse",
+   "label": "실시간 가격 펄스",
+   "criticality": "P0",
+   "schedule": "market_hours",
+   "cadence": "장중 1분",
+   "age_eff_min": 18.4,
+   "max_age_min": 30,
+   "last_ts": "2026-07-07T00:11:46+09:00",
+   "status": "paused"
+  },
+  {
+   "id": "stock_report_public",
+   "label": "KR 종목 리포트",
+   "criticality": "P0",
+   "schedule": "weekday",
+   "cadence": "매일 1회",
+   "age_eff_min": 148.9,
+   "max_age_min": 4320,
+   "last_ts": "2026-07-06T22:01:15.824562+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "bonds_etfs",
+   "label": "채권·ETF 시장",
+   "criticality": "P1",
+   "schedule": "weekday",
+   "cadence": "평일 2회",
+   "age_eff_min": 982.5,
+   "max_age_min": 4320,
+   "last_ts": "2026-07-06T08:07:36+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "dart_fundamentals_kr",
+   "label": "KR 재무 원장 (DART)",
+   "criticality": "P1",
+   "schedule": "weekly",
+   "cadence": "주 1회",
+   "age_eff_min": 1502.7,
+   "max_age_min": 11520,
+   "last_ts": "2026-07-05T23:27:28+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "dart_quarterly_snapshots",
+   "label": "KR 분기 스냅샷 원장",
+   "criticality": "P1",
+   "schedule": "weekly",
+   "cadence": "주 1회",
+   "age_eff_min": 53.1,
+   "max_age_min": 11520,
+   "last_ts": "2026-07-06T23:37:05+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "eps_estimates",
+   "label": "EPS 추정 스냅샷",
+   "criticality": "P1",
+   "schedule": "always",
+   "cadence": "매일 1회",
+   "age_eff_min": 975.3,
+   "max_age_min": 2160,
+   "last_ts": "2026-07-06T08:14:53+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "etf_flow",
+   "label": "ETF 자금 흐름",
+   "criticality": "P1",
+   "schedule": "weekday",
+   "cadence": "거래일 1회",
+   "age_eff_min": 1661.1,
+   "max_age_min": 2880,
+   "last_ts": "2026-07-03T20:49:00+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "factor_ic_history",
+   "label": "팩터 IC 검증 트레일",
+   "criticality": "P1",
+   "schedule": "weekday",
+   "cadence": "매일 1회",
+   "age_eff_min": 149.9,
+   "max_age_min": 4320,
+   "last_ts": "2026-07-06T22:00:17+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "sec_8k_cache",
+   "label": "SEC 8-K 공시",
+   "criticality": "P1",
+   "schedule": "always",
+   "cadence": "매일 1회",
+   "age_eff_min": 1017.0,
+   "max_age_min": 2160,
+   "last_ts": "2026-07-06T07:33:11+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "us_analyst_consensus",
+   "label": "US 애널리스트 컨센서스",
+   "criticality": "P1",
+   "schedule": "weekly",
+   "cadence": "수집 중단 — 재배포 권리 검토 중",
+   "status": "paused"
+  },
+  {
+   "id": "us_financials",
+   "label": "US 재무 (SEC EDGAR)",
+   "criticality": "P1",
+   "schedule": "monthly",
+   "cadence": "월 1회",
+   "age_eff_min": 2091.1,
+   "max_age_min": 50400,
+   "last_ts": "2026-07-05T13:39:02+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "us_insider_trades",
+   "label": "US 내부자 거래 (Form 4)",
+   "criticality": "P1",
+   "schedule": "always",
+   "cadence": "매일 1회",
+   "age_eff_min": 401.8,
+   "max_age_min": 2160,
+   "last_ts": "2026-07-06T17:48:23.106521+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "us_stock_report_public",
+   "label": "US 종목 리포트",
+   "criticality": "P1",
+   "schedule": "monthly",
+   "cadence": "월 1회",
+   "age_eff_min": 80.2,
+   "max_age_min": 50400,
+   "last_ts": "2026-07-06T23:09:58.055900+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "broker_guide",
+   "label": "증권사 가이드",
+   "criticality": "P2",
+   "schedule": "monthly",
+   "cadence": "월 1회",
+   "age_eff_min": 4433.2,
+   "max_age_min": 50400,
+   "last_ts": "2026-07-03T22:36:55.482630+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "dart_quarterly_public",
+   "label": "KR 분기 추이",
+   "criticality": "P2",
+   "schedule": "weekly",
+   "cadence": "주 1회",
+   "age_eff_min": 1482.3,
+   "max_age_min": 11520,
+   "last_ts": "2026-07-05T23:47:48.517558+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "equity_research",
+   "label": "산업 테마 리서치",
+   "criticality": "P2",
+   "schedule": "weekly",
+   "cadence": "주 1회",
+   "age_eff_min": 1058.9,
+   "max_age_min": 12960,
+   "last_ts": "2026-07-06T06:51:14+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "ipo_watch",
+   "label": "IPO 워치",
+   "criticality": "P2",
+   "schedule": "weekly",
+   "cadence": "주 1회",
+   "age_eff_min": 847.6,
+   "max_age_min": 12960,
+   "last_ts": "2026-07-06T10:22:34.388324+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "macro_themes",
+   "label": "매크로 테마 브리프",
+   "criticality": "P2",
+   "schedule": "weekly",
+   "cadence": "주 1회",
+   "age_eff_min": 953.0,
+   "max_age_min": 12960,
+   "last_ts": "2026-07-06T08:37:11+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "penny_watchlist",
+   "label": "저가주 워치리스트",
+   "criticality": "P2",
+   "schedule": "always",
+   "cadence": "매일 1회",
+   "age_eff_min": 1016.2,
+   "max_age_min": 2160,
+   "last_ts": "2026-07-06T07:33:56+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "trade_analysis",
+   "label": "거래 분석 원장",
+   "criticality": "P2",
+   "schedule": "weekday",
+   "cadence": "평일 1회",
+   "age_eff_min": 304.5,
+   "max_age_min": 5040,
+   "last_ts": "2026-07-06T19:25:41.347957+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "us_major_holdings",
+   "label": "US 대량보유 (13D/G)",
+   "criticality": "P2",
+   "schedule": "weekly",
+   "cadence": "주 3회",
+   "age_eff_min": 357.7,
+   "max_age_min": 5760,
+   "last_ts": "2026-07-06T18:32:23.587220+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "us_smallcap_report",
+   "label": "US 소형주 리포트",
+   "criticality": "P2",
+   "schedule": "monthly",
+   "cadence": "월 1회",
+   "age_eff_min": 414.4,
+   "max_age_min": 50400,
+   "last_ts": "2026-07-06T17:35:42.787301+09:00",
+   "status": "fresh"
+  },
+  {
+   "id": "us_smart_money_13f",
+   "label": "US 스마트머니 (13F)",
+   "criticality": "P2",
+   "schedule": "monthly",
+   "cadence": "월 1회",
+   "age_eff_min": 21544.3,
+   "max_age_min": 50400,
+   "last_ts": "2026-06-22T01:25:52.657182+09:00",
+   "status": "fresh"
+  }
+ ],
+ "_skipped_count": 3
+}

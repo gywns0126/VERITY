@@ -65,6 +65,12 @@ jobs:
         # 실 CI run 무오발 검증 후 알람 flip (별도 단계). monitor 앞 배치 = P0 exit 무관 항상 실행.
         run: python scripts/freshness_shadow_monitor.py || echo "shadow monitor 실패(무해)"
 
+      - name: Build public freshness board
+        # 2026-07-07 신설 — 신선도 SLA 공개 board (나박 대응 잔여 큐).
+        # shadow monitor 와 동일 헬퍼로 판정 → data/freshness_board.json 화이트리스트 발행.
+        # crypto_collect 30분 사이클 publish-data 가 main HEAD 에서 Blob 반영.
+        run: python api/builders/freshness_board_builder.py || echo "board build 실패(무해)"
+
       - name: Run health monitor
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -91,7 +97,7 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/metadata/cron_health.jsonl data/metadata/freshness_observations.jsonl 2>/dev/null || true
+          git add data/metadata/cron_health.jsonl data/metadata/freshness_observations.jsonl data/freshness_board.json 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔔 cron_health ${TIME_KST}"
