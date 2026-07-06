@@ -695,9 +695,48 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
     severity, _sweep_findings = _sweep_severity_and_findings(workflow_failures, severity)
     findings.extend(_sweep_findings)
 
+    # O) freshness SLA 능동 판정 (2026-07-06 flip — shadow 관측 6/27~7/6 게이트 통과 후 승격)
+    # 게이트 trail: macro dispatch N=2(7/3) + 월요일 9 run 무오탐(7/6, 주말 유효 age 검증).
+    # 판정 = freshness_sla.json 매니페스트 × schedule-aware 유효 age (shadow 와 동일 산정 재사용).
+    # P0 stale = FAIL + critical(즉시 빨강) / P1·P2 stale = WARNING. shadow jsonl 관측 병행 유지.
+    freshness_summary: Dict[str, Any] = {}
+    try:
+        if _REPO_ROOT not in sys.path:  # `python scripts/...` 실행 시 sys.path[0]=scripts/ — repo root 필요
+            sys.path.insert(0, _REPO_ROOT)
+        from scripts.freshness_shadow_monitor import build_observations
+        _fresh_obs = build_observations()
+        _stale_rows = [r for r in _fresh_obs.get("rows", []) if r.get("would_alarm")]
+        freshness_summary = {
+            "checked": _fresh_obs.get("checked"),
+            "stale_ids": [r["id"] for r in _stale_rows],
+        }
+        _stale_p0 = [r for r in _stale_rows if r.get("criticality") == "P0"]
+        _stale_rest = [r for r in _stale_rows if r.get("criticality") != "P0"]
+        if _stale_p0:
+            severity = "FAIL"
+            findings.append(
+                "freshness P0 stale: " + ", ".join(
+                    f"{r['id']} {r.get('age_eff_min', 0) / 60:.1f}h>{(r.get('max_age_min') or 0) / 60:.0f}h"
+                    for r in _stale_p0
+                )
+            )
+        if _stale_rest:
+            severity = "WARNING" if severity == "PASS" else severity
+            findings.append(
+                "freshness stale(P1+): " + ", ".join(
+                    f"{r['id']} {r.get('age_eff_min', 0) / 60:.1f}h"
+                    for r in _stale_rest
+                )
+            )
+    except Exception as e:  # 판정 실패 = 모니터 결함 가시화 (silent pass 금지)
+        freshness_summary = {"error": f"{type(e).__name__}: {e}"[:150]}
+        severity = "WARNING" if severity == "PASS" else severity
+        findings.append(f"freshness 판정 실패: {type(e).__name__}")
+
     return {
         "severity": severity,
         "findings": findings,
+        "freshness_summary": freshness_summary,
         "workflow_latest_failures": workflow_failures,
         "daily_summary": daily_summary,
         "universe_scan_summary": uni_summary,
@@ -764,6 +803,13 @@ def _format_summary(report: Dict[str, Any]) -> List[str]:
         )
     if report.get("macro_age_h") is not None:
         lines.append(f"<b>macro 신선도</b>: {report['macro_age_h']}h")
+    fs = report.get("freshness_summary") or {}
+    if fs.get("checked") is not None:
+        _stale_ids = fs.get("stale_ids") or []
+        lines.append(
+            f"<b>freshness SLA</b>: checked {fs['checked']}, stale "
+            + (", ".join(_stale_ids) if _stale_ids else "0")
+        )
     rm = report["runtime_metrics"]
     lines.append(f"<b>yf_fail_max</b>: {rm['yf_fail_max']:.1%} / <b>rate_limit_max</b>: {rm['rate_limit_max']}")
 
@@ -824,6 +870,7 @@ def _persist_report(report: Dict[str, Any]) -> None:
             "dispatch_chain_summary": report.get("dispatch_chain_summary"),
             "macro_age_h": report.get("macro_age_h"),
             "fred_age_h": report.get("fred_age_h"),
+            "freshness_summary": report.get("freshness_summary"),
         }
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
@@ -858,6 +905,7 @@ def _has_critical_signal(report: Dict[str, Any]) -> bool:
       - kis_lock_commits_24h == 0 (KIS 토큰 발급 누락, RULE 1 위반 위험)
       - fred_age_h > 24 (매크로 trail 단절)
       - KIS 관련 FAIL ("KIS ABSOLUTE", "≥3회") = RULE 1 P0
+      - freshness P0 stale (핵심 노출 데이터 SLA 위반 — 2026-07-06 flip)
     """
     findings = report.get("findings") or []
     for f in findings:
@@ -868,6 +916,8 @@ def _has_critical_signal(report: Dict[str, Any]) -> bool:
         if "universe_scan fail" in f:
             return True
         if "KIS" in f and ("ABSOLUTE" in f or "≥3회" in f or "토큰 발급" in f):
+            return True
+        if "freshness P0 stale" in f:
             return True
     kis = report.get("kis_lock_commits_24h")
     if isinstance(kis, int) and kis == 0:

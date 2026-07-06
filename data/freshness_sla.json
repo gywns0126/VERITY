@@ -2,7 +2,7 @@
   "_meta": {
     "purpose": "사이트 전체 데이터 신선도 SLA 단일 등록부. 신선도 거버넌스 키스톤.",
     "last_reviewed": "2026-07-03",
-    "consumer_status": "shadow wired — scripts/freshness_shadow_monitor.py (cron_health_monitor.yml 매시, 관측-only). shadow 63 run(6/27~7/3) 보정: weekday 유효 age(주말 제외) 판정. 알람 flip 게이트 = macro_collect dispatch N=2 + 7/6(월) 무오탐 + cron_health 승격 배선(미구현).",
+    "consumer_status": "ACTIVE (2026-07-06 flip) — cron_health_monitor.analyze() 가 build_observations() 로 승격 판정: P0 stale=FAIL+즉시 빨강, P1+=WARNING. 게이트 통과 trail = dispatch N=2(7/3) + 월요일 9 run 무오탐(7/6, 주말 유효 age 검증). shadow jsonl 관측은 병행 유지.",
     "field_schema": {
       "id": "스트림 식별자",
       "file": "발행 아티팩트 경로 (data/ 기준)",
@@ -32,7 +32,7 @@
     {"id": "dart_fundamentals_kr", "file": "dart_fundamentals_kr.json", "max_age_minutes": 11520, "owner": "ci", "schedule": "weekly", "cadence": "주1(일) dart_batch.yml", "criticality": "P1"},
     {"id": "dart_quarterly_snapshots", "file": "dart_quarterly_snapshots.jsonl", "max_age_minutes": 11520, "owner": "ci", "schedule": "weekly", "cadence": "주1(일) dart_batch.yml", "criticality": "P1"},
     {"id": "dart_quarterly_public", "file": "dart_quarterly_public.json", "max_age_minutes": 11520, "owner": "ci", "schedule": "weekly", "cadence": "주1(일) dart_batch.yml (snapshots→public 순수변환)", "criticality": "P2", "known_issue": "분기수집 backfill 완주 전 0종목=정상(컴포넌트 series<4 자동숨김). backfill drip-fill 완료 후 활성."},
-    {"id": "us_analyst_consensus", "file": "us_analyst_consensus.json", "max_age_minutes": 4320, "owner": "ci", "schedule": "weekly", "cadence": "주3(일·화·목) us_analyst_consensus.yml", "criticality": "P1"},
+    {"id": "us_analyst_consensus", "active_check": false, "file": "us_analyst_consensus.json", "max_age_minutes": 4320, "owner": "ci", "schedule": "weekly", "cadence": "중단 — 권리감사(2026-07-01)로 schedule 비활성 (마지막 run 6/30). 재배포 허용 벤더 계약 시 재개 + active_check 복원", "criticality": "P1"},
     {"id": "us_financials", "file": "us_financials/*.json", "max_age_minutes": 50400, "owner": "ci", "schedule": "monthly", "cadence": "월1(5일) us_financials.yml", "criticality": "P1", "known_issue": "Blob 발행 = 로컬 전용 scripts/us/upload_us_financials_blob.js (gitignore). CI 발행 불가 → 수동 누락 시 silent stale."},
     {"id": "us_stock_report_public", "file": "us_stock_report_public.json", "max_age_minutes": 50400, "owner": "ci", "schedule": "monthly", "cadence": "월1 us_financials.yml", "criticality": "P1"},
     {"id": "us_smallcap_report", "file": "us_stock_report_us_smallcap.json", "max_age_minutes": 50400, "owner": "ci", "schedule": "monthly", "cadence": "월1(6일) us_smallcap.yml", "criticality": "P2"},
