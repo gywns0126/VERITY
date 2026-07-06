@@ -55,6 +55,32 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
     const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
     // 국민연금공단 로고 — 파비콘 핫링크 + 실패 시 NPS 배지. 🚨 훅은 조건부 return 위 (framer_hooks_top_level — 스켈레톤 return 뒤에 두면 라이브 크래시, 2026-07-07 실사고)
     const [logoErr, setLogoErr] = useState(false)
+    // 내 종목 교집합 (PM 2026-07-07) — 관심 = localStorage(로그인 불요) / 보유 = /api/holdings(로그인 시)
+    const [myWatch, setMyWatch] = useState<Set<string>>(new Set())
+    const [myHold, setMyHold] = useState<Set<string>>(new Set())
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        try {
+            const raw = window.localStorage.getItem("verity_watchlist")
+            const arr = raw ? JSON.parse(raw) : []
+            if (Array.isArray(arr)) setMyWatch(new Set(arr.map((x: any) => String(x && x.ticker || x)).filter(Boolean)))
+        } catch (e) { /* ignore */ }
+        let alive = true
+        try {
+            const sraw = window.localStorage.getItem("verity_supabase_session")
+            const token = sraw ? (JSON.parse(sraw) || {}).access_token : ""
+            if (token) {
+                fetch("https://project-yw131.vercel.app/api/holdings", { headers: { Authorization: "Bearer " + token } })
+                    .then((r) => (r.ok ? r.json() : null))
+                    .then((d) => {
+                        const hs = (d && (d.holdings || d.rows || d)) || []
+                        if (alive && Array.isArray(hs)) setMyHold(new Set(hs.map((x: any) => String(x && x.ticker || "")).filter(Boolean)))
+                    })
+                    .catch(() => {})
+            }
+        } catch (e) { /* ignore */ }
+        return () => { alive = false }
+    }, [onCanvas])
     const NpsLogo = () => logoErr ? (
         <span style={{ width: 26, height: 26, borderRadius: 8, background: "#0B5FAE", color: "#fff", fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>NPS</span>
     ) : (
@@ -135,6 +161,13 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
             </div>
         )
     }
+    // 최근 공시 판정 = 최신 기준일 - 90일 · 겹침 집계 (전부 사실)
+    const allRows: any[] = (data && (data.holdings || [])) || []
+    const maxDate = allRows.reduce((m: string, r: any) => (String(r.date || "") > m ? String(r.date || "") : m), "")
+    const recentCut = maxDate ? (new Date(new Date(maxDate + "T00:00:00+09:00").getTime() - 90 * 86400000)).toISOString().slice(0, 10) : "9999"
+    const overlapHold = allRows.filter((r: any) => myHold.has(String(r.ticker))).length
+    const overlapWatch = allRows.filter((r: any) => !myHold.has(String(r.ticker)) && myWatch.has(String(r.ticker))).length
+
     if (!data) return <div style={{ ...wrap, textAlign: "center", color: C.faint, fontSize: 14, padding: 40 }}>데이터를 불러오지 못했어요.</div>
 
     return (
@@ -144,6 +177,14 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                 <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>국민연금공단 보유종목</span>
                 <span style={{ fontSize: 11.5, fontWeight: 600, color: C.faint }}>공단 공시 사실</span>
             </div>
+            {(overlapHold > 0 || overlapWatch > 0) && (
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, background: C.card, borderRadius: 12, padding: "9px 13px", marginBottom: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    {overlapHold > 0 && <>내 보유 중 <b style={{ color: C.ink }}>{overlapHold}종목</b>이 국민연금 보유와 겹칩니다</>}
+                    {overlapHold > 0 && overlapWatch > 0 && " · "}
+                    {overlapWatch > 0 && <>관심종목 겹침 <b style={{ color: C.ink }}>{overlapWatch}</b></>}
+                    <span style={{ color: C.faint, fontWeight: 600 }}> — 보유 사실 비교(추천 아님)</span>
+                </div>
+            )}
 
             {/* 운용현황 카드 */}
             {fund && (
@@ -236,6 +277,15 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                                         <span style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>{h.name}</span>
                                     )}
                                     <span style={{ fontSize: 11, fontWeight: 600, color: C.faint, marginLeft: 6 }}>{h.ticker}</span>
+                                    {myHold.has(String(h.ticker)) && (
+                                        <span style={{ fontSize: 9.5, fontWeight: 800, color: C.green || "#0ca678", background: C.greenSoft || "rgba(18,183,106,0.12)", borderRadius: 5, padding: "1.5px 6px", marginLeft: 6, verticalAlign: "1px" }}>내 보유</span>
+                                    )}
+                                    {!myHold.has(String(h.ticker)) && myWatch.has(String(h.ticker)) && (
+                                        <span style={{ fontSize: 9.5, fontWeight: 800, color: C.blue, background: C.blueSoft || "rgba(49,130,246,0.10)", borderRadius: 5, padding: "1.5px 6px", marginLeft: 6, verticalAlign: "1px" }}>관심</span>
+                                    )}
+                                    {String(h.date || "") >= recentCut && (
+                                        <span style={{ fontSize: 9.5, fontWeight: 800, color: "#b26a00", background: "rgba(255,149,0,0.12)", borderRadius: 5, padding: "1.5px 6px", marginLeft: 6, verticalAlign: "1px" }}>최근 공시</span>
+                                    )}
                                     {h.date && <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 1 }}>{h.date} · {h.src || "DART"}</div>}
                                 </div>
                                 {chg != null && Number(chg) !== 0 && (
