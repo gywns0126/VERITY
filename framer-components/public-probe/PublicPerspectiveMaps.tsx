@@ -15,17 +15,16 @@ import { useEffect, useState, type CSSProperties } from "react"
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", track: "#eef0f3", hi: "#f6f7f9", gTint: "rgba(108,92,231,0.22)",
+    line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", track: "#eef0f3", hi: "#f6f7f9", gTint: "rgba(108,92,231,0.22)", segIdle: "#d6dae0",
 }
 const DARK = {
     bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
-    line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", track: "#242830", hi: "#2e333c", gTint: "rgba(169,155,255,0.26)",
+    line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", track: "#242830", hi: "#2e333c", gTint: "rgba(169,155,255,0.26)", segIdle: "#3a3f49",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/perspective_maps.json"
 const LIMIT = 15 // 기본 노출 (5×3), 초과분 더보기
-// 규모 분포 바 세그먼트 색 (카테고리 구분용 임의 팔레트 — 우열·랭킹 의미 아님)
-const CAP_COLORS = ["#6c5ce7", "#00b8d4", "#12b76a", "#f5a623", "#ec4899", "#8b95a1"]
+// 규모 분포 바 = 칸 너비만 시총 비중(share). 색은 무채(연회색), 선택 카테고리만 보라 강조.
 
 /* 글래스 아이콘 (토스식 glassmorphism, 2026-07-04 교체) — solid(선명 보라) + glass(반투명 틴트) 2레이어.
    glass 겹침부 = 블러 복제(clipPath+feGaussianBlur) 프로스트. 배경 없음 — pill/카드 어디서든 동작.
@@ -325,7 +324,8 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
         try { window.location.href = `${stockPath}?q=${encodeURIComponent(tk)}` } catch (e) {}
     }
 
-    const wrap: CSSProperties = { width: props.width || 380, maxWidth: "100%", fontFamily: FONT, background: C.bg, color: C.ink, padding: 16, boxSizing: "border-box" }
+    // 배경 transparent — 홈 페이지 위 섹션. 자기 bg hex 칠하면 Framer 페이지 dark bg(#0f1318)와 어긋나 밝은 사각형으로 튐.
+    const wrap: CSSProperties = { width: props.width || 380, maxWidth: "100%", fontFamily: FONT, background: "transparent", color: C.ink, padding: 16, boxSizing: "border-box" }
 
     /* ── 스켈레톤 ── */
     if (!data) {
@@ -447,17 +447,20 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
             {showCapBar ? (
                 <div style={{ marginBottom: 14 }}>
                     <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 700, marginBottom: 6 }}>
-                        시총 규모 분포 <span style={{ fontWeight: 600 }}>· 국내+해외 환산(근사) · 우열 아님</span>
+                        시총 규모 분포 <span style={{ fontWeight: 600 }}>· 국내+해외 환산(근사) · 선택 카테고리 강조(우열 아님)</span>
                     </div>
-                    <div style={{ display: "flex", width: "100%", height: 12, borderRadius: 6, overflow: "hidden", background: C.track }}>
-                        {items.map((x, i) => {
+                    <div style={{ display: "flex", width: "100%", height: 15, borderRadius: 6, overflow: "hidden", background: C.track }}>
+                        {items.map((x) => {
                             const share = (Number(x.cap_sum) || 0) / capTotal
                             if (share <= 0) return null
                             const on = x.key === selKey
+                            const pct = Math.round(share * 100)
                             return (
                                 <div key={x.key} onClick={() => setSel((s) => ({ ...s, [tab]: x.key }))}
                                     title={`${x.label} · ${capJo(x.cap_sum)} · ${(share * 100).toFixed(1)}%`}
-                                    style={{ width: (share * 100) + "%", background: CAP_COLORS[i % CAP_COLORS.length], opacity: on ? 1 : 0.5, cursor: "pointer", transition: "opacity 0.15s" }} />
+                                    style={{ width: (share * 100) + "%", background: on ? C.violet : C.segIdle, borderRight: `1.5px solid ${C.card}`, boxSizing: "border-box", cursor: "pointer", transition: "background-color 0.15s", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                                    {share >= 0.08 && <span style={{ fontSize: 9, fontWeight: 700, color: on ? "#ffffff" : C.sub, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{pct}%</span>}
+                                </div>
                             )
                         })}
                     </div>
