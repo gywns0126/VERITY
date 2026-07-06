@@ -53,6 +53,16 @@ const DEMO = {
 export default function PublicNPSHoldings(props: { width?: number; dark?: boolean; dataUrl?: string; reportPath?: string }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    // 국민연금공단 로고 — 파비콘 핫링크 + 실패 시 NPS 배지. 🚨 훅은 조건부 return 위 (framer_hooks_top_level — 스켈레톤 return 뒤에 두면 라이브 크래시, 2026-07-07 실사고)
+    const [logoErr, setLogoErr] = useState(false)
+    const NpsLogo = () => logoErr ? (
+        <span style={{ width: 26, height: 26, borderRadius: 8, background: "#0B5FAE", color: "#fff", fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>NPS</span>
+    ) : (
+        <img src="https://www.google.com/s2/favicons?domain=nps.or.kr&sz=64" alt="국민연금공단" width={26} height={26}
+            onError={() => setLogoErr(true)}
+            style={{ width: 26, height: 26, borderRadius: 8, background: "#fff", padding: 2, boxSizing: "border-box", display: "block", flexShrink: 0 }} />
+    )
+
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
 
@@ -125,16 +135,6 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
             </div>
         )
     }
-    // 국민연금공단 로고 — 공단 파비콘 핫링크(구글 s2, 로고 소싱 관례=핫링크) + 실패 시 NPS 배지 폴백
-    const [logoErr, setLogoErr] = useState(false)
-    const NpsLogo = () => logoErr ? (
-        <span style={{ width: 26, height: 26, borderRadius: 8, background: "#0B5FAE", color: "#fff", fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>NPS</span>
-    ) : (
-        <img src="https://www.google.com/s2/favicons?domain=nps.or.kr&sz=64" alt="국민연금공단" width={26} height={26}
-            onError={() => setLogoErr(true)}
-            style={{ width: 26, height: 26, borderRadius: 8, background: "#fff", padding: 2, boxSizing: "border-box", display: "block", flexShrink: 0 }} />
-    )
-
     if (!data) return <div style={{ ...wrap, textAlign: "center", color: C.faint, fontSize: 14, padding: 40 }}>데이터를 불러오지 못했어요.</div>
 
     return (
