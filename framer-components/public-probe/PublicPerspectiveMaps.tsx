@@ -244,7 +244,7 @@ function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) =
             <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink, lineHeight: 1.3, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
             {/* 요약 = 활성 정렬값(규모=시총 / 수익=마진). 사실값, 없으면 섹터, 둘 다 없으면 미표시 */}
             {metric || sector ? (
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: metric ? C.violet : C.faint, lineHeight: 1.2, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontVariantNumeric: "tabular-nums" }}>{metric || sector}</div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: metric ? C.sub : C.faint, lineHeight: 1.2, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontVariantNumeric: "tabular-nums" }}>{metric || sector}</div>
             ) : null}
         </div>
     )
@@ -413,7 +413,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
             fontSize: 13, fontWeight: 800, background: tab === v ? C.violet : C.card, color: tab === v ? "#fff" : C.sub,
             display: "inline-flex", alignItems: "center", gap: 6,
         }}>
-            <GIcon k={v} size={17} a={tab === v ? "#ffffff" : C.violet} g={tab === v ? "rgba(255,255,255,0.38)" : C.gTint} />
+            <GIcon k={v} size={17} a={tab === v ? "#ffffff" : C.sub} g={tab === v ? "rgba(255,255,255,0.38)" : "rgba(139,149,161,0.18)"} />
             {lb}
         </button>
     )
@@ -496,7 +496,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                                 background: active ? C.violet : C.card, color: active ? "#fff" : C.ink,
                                 boxShadow: active ? "none" : "0 1px 2px rgba(0,0,0,0.04)",
                             }}>
-                            <GIcon k={x.key} size={17} a={active ? "#ffffff" : C.violet} g={active ? "rgba(255,255,255,0.38)" : C.gTint} />
+                            <GIcon k={x.key} size={17} a={active ? "#ffffff" : C.sub} g={active ? "rgba(255,255,255,0.38)" : "rgba(139,149,161,0.18)"} />
                             {x.label}
                             <span style={{ fontWeight: 700, opacity: 0.75, fontVariantNumeric: "tabular-nums" }}>{n0(cfg.count(x))}</span>
                         </button>
