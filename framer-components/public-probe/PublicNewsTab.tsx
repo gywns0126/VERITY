@@ -217,33 +217,6 @@ function Logo(props: { ticker: any; name: any; C: typeof LIGHT; size?: number })
     )
 }
 
-/* 언론사 favicon — 매체명→도메인 맵(Google News 리다이렉트 URL 대비) + url 도메인 폴백. 미매칭=로고 생략(텍스트만). */
-const OUTLET_DOMAIN: Record<string, string> = {
-    "한국경제": "hankyung.com", "매일경제": "mk.co.kr", "서울경제": "sedaily.com", "조선비즈": "chosun.com",
-    "이데일리": "edaily.co.kr", "머니투데이": "mt.co.kr", "연합뉴스": "yna.co.kr", "뉴스핌": "newspim.com",
-    "파이낸셜뉴스": "fnnews.com", "헤럴드경제": "heraldcorp.com", "아시아경제": "asiae.co.kr", "전자신문": "etnews.com",
-    "연합인포맥스": "einfomax.co.kr", "한겨레": "hani.co.kr", "중앙일보": "joongang.co.kr", "동아일보": "donga.com",
-    "YTN": "ytn.co.kr", "뉴시스": "newsis.com", "뉴스1": "news1.kr", "이투데이": "etoday.co.kr",
-    "블룸버그": "bloomberg.com", "로이터": "reuters.com", "조선일보": "chosun.com", "국민일보": "kmib.co.kr",
-    "서울신문": "seoul.co.kr", "경향신문": "khan.co.kr", "디지털타임스": "dt.co.kr", "ZDNet": "zdnet.co.kr",
-}
-function faviconFor(source: string, url: string): string {
-    let dom = OUTLET_DOMAIN[(source || "").trim()] || ""
-    if (!dom) {
-        const h = hostname(url)   // 네이버 원문링크 = 진짜 매체 도메인. google/naver 리다이렉트는 제외.
-        if (h && h.indexOf("google") < 0 && h.indexOf("naver") < 0) dom = h
-    }
-    return dom ? "https://icons.duckduckgo.com/ip3/" + dom + ".ico" : ""
-}
-/* 언론사 로고(favicon 16px). 실패/미매칭 = null → NewsRow 는 텍스트 매체명만 노출. */
-function OutletLogo(props: { source: string; url: string }) {
-    const src = faviconFor(props.source, props.url)
-    const [err, setErr] = useState(false)
-    if (!src || err) return null
-    return <img src={src} alt="" width={14} height={14} onError={() => setErr(true)}
-        style={{ width: 14, height: 14, borderRadius: 3, objectFit: "cover", flexShrink: 0, display: "block" }} />
-}
-
 export default function PublicNewsTab(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
@@ -259,7 +232,6 @@ export default function PublicNewsTab(props: Props) {
     const [watch, setWatch] = useState<{ ticker: string; name: string; market: string }[]>([])  // 둥지/관심종목(로그인 watchgroups + localStorage)
     const [market, setMarket] = useState<NewsItem[]>([])
     const [us, setUs] = useState<NewsItem[]>([])
-    const [hotStocks, setHotStocks] = useState<HotStock[]>([])
     const [insights, setInsights] = useState<Insights | null>(null)
     const [loading, setLoading] = useState<boolean>(true)
     const [failed, setFailed] = useState<boolean>(false)
@@ -452,16 +424,7 @@ export default function PublicNewsTab(props: Props) {
                 setInsights({ total: rawHl.length, credHi, credLo, fresh, dup, pos, neg, neu, themes })
             }
 
-            // 오늘 핫한 종목 — 종목별 뉴스량(headline_count) 순 (KR+US, 뉴스 있는 것만 top 8). 사실.
-            const hot: HotStock[] = (recs as any[])
-                .map((r) => {
-                    const s = r.sentiment || {}
-                    return { ticker: r.ticker || r.code || "", name: r.name || r.company_name || r.ticker || "", market: r.market || "", count: Number(s.headline_count) || 0, score: Number(s.score) || 0 }
-                })
-                .filter((x) => x.count > 0 && x.ticker)
-                .sort((a, b) => b.count - a.count)
-                .slice(0, 8)
-            setHotStocks(hot)
+            // 오늘 화제 종목 = 실제 헤드라인 언급 tally(아래 useMemo). recommendations.headline_count 편향 폐기(2026-07-07).
 
             setRecGroups(recGroupsArr)
             setRecMap(rmap)
@@ -542,15 +505,42 @@ export default function PublicNewsTab(props: Props) {
         [stocks.length, market.length, us.length]
     )
 
-    /* 종목 뉴스 검색 — 표준 검색창(PublicStockSearch)과 동일 UX: universe_search.json 유니버스 + 로고 autocomplete.
-       차이 = 액션만(리포트 이동 대신 그 종목 뉴스를 인라인 표시). 종목 뉴스 API 는 국내(6자리) 지원. */
-    const ensureUni = () => {
-        if (uni.length || onCanvas) return
+    /* 유니버스 로드(마운트) — 표준 검색창 autocomplete + '오늘 화제 종목' 언급 tally 공용(universe_search.json). */
+    useEffect(() => {
+        if (onCanvas || uni.length) return
         fetch(UNIVERSE_URL, { cache: "force-cache" })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) setUni(a) })
             .catch(() => {})
-    }
+    }, [onCanvas, uni.length])
+
+    /* 오늘 화제 종목 = KR 헤드라인 제목에 언급된 종목명 tally (객관·언급 수). recommendations 편향 폐기.
+       US 티커는 흔한 단어 충돌(IT/ALL/NOW…)로 노이즈 → KR 종목명(한글, 충돌 적음)만 집계. */
+    const krNames = useMemo(() => {
+        const arr: { name: string; ticker: string }[] = []
+        for (const x of uni) {
+            const tk = String(x.ticker || ""); const nm = String(x.name || "")
+            if (/^\d{6}$/.test(tk) && nm.length >= 2) arr.push({ name: nm, ticker: tk })
+        }
+        arr.sort((a, b) => b.name.length - a.name.length)   // 최장 우선(삼성전자 > 삼성, 부분일치 회피)
+        return arr
+    }, [uni])
+    const hotStocks = useMemo<HotStock[]>(() => {
+        if (!krNames.length || !market.length) return []
+        const tally: Record<string, HotStock> = {}
+        for (const it of market) {
+            const t = it.title || ""
+            if (!/[가-힣]/.test(t)) continue   // 한글 제목만(글로벌 RSS 제외)
+            for (const s of krNames) {
+                if (t.indexOf(s.name) >= 0) {
+                    if (!tally[s.ticker]) tally[s.ticker] = { ticker: s.ticker, name: s.name, market: "KR", count: 0, score: 0 }
+                    tally[s.ticker].count++
+                    break   // 헤드라인당 1종목(최장 일치)
+                }
+            }
+        }
+        return Object.values(tally).sort((a, b) => b.count - a.count).slice(0, 8)
+    }, [krNames, market])
     // 라이브 연관검색어 — 코드·이름 부분일치 상위 8 (표준과 동일 매칭).
     const matches = useMemo(() => {
         const s = q.trim().toLowerCase()
@@ -678,29 +668,28 @@ export default function PublicNewsTab(props: Props) {
 
             {/* 본문 */}
             <div style={{ flex: 1, overflowY: "auto", padding: "4px 14px 18px 14px" }}>
-                {/* 오늘 핫한 종목 — 종목별 뉴스량 순(headline_count). 사실, 추천·등급 아님. 가로 스크롤. */}
+                {/* 오늘 화제 종목 — KR 헤드라인에 언급된 종목(언급 수). 객관·추천 아님. 로고+국기. 가로 스크롤. */}
                 {!loading && !failed && hotStocks.length ? (
                     <div style={{ marginBottom: 20 }}>
                         <div style={{ fontSize: 12.5, fontWeight: 800, color: C.text, padding: "2px 2px 8px", letterSpacing: "-0.01em" }}>
-                            오늘 핫한 종목 <span style={{ color: C.faint, fontWeight: 600 }}>· 뉴스량 많은 순 · 추천·등급 아님</span>
+                            오늘 화제 종목 <span style={{ color: C.faint, fontWeight: 600 }}>· 오늘 뉴스 헤드라인 언급 수 · 추천 아님</span>
                         </div>
                         <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
-                            {hotStocks.map((s, i) => {
-                                const mk = String(s.market || "").toUpperCase()
-                                const mkLabel = mk ? (mk.indexOf("KOS") >= 0 || mk === "KR" || mk.indexOf("KRX") >= 0 ? "KR" : mk) : ""
-                                return (
-                                    <a key={s.ticker} href={(props.reportPath || "/stock") + "?q=" + encodeURIComponent(s.ticker)} target="_blank" rel="noopener noreferrer"
-                                        style={{ flexShrink: 0, minWidth: 132, textDecoration: "none", background: C.card, borderRadius: 12, padding: "10px 13px", boxSizing: "border-box" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            {hotStocks.map((s, i) => (
+                                <a key={s.ticker} href={(props.reportPath || "/stock") + "?q=" + encodeURIComponent(s.ticker)} target="_blank" rel="noopener noreferrer"
+                                    style={{ flexShrink: 0, minWidth: 150, textDecoration: "none", background: C.card, borderRadius: 12, padding: "10px 12px", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 9 }}>
+                                    <Logo ticker={s.ticker} name={s.name} C={C} size={26} />
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                                             <span style={{ fontSize: 11, fontWeight: 800, color: C.accent }}>{i + 1}</span>
-                                            <span style={{ fontSize: 13, fontWeight: 800, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 92 }}>{s.name}</span>
+                                            <span style={{ fontSize: 13, fontWeight: 800, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 88 }}>{s.name}</span>
                                         </div>
-                                        <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, marginTop: 4 }}>
-                                            뉴스 <span style={{ color: C.accent }}>{s.count}건</span>{mkLabel ? " · " + mkLabel : ""}
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, marginTop: 2 }}>
+                                            언급 <span style={{ color: C.accent }}>{s.count}회</span>
                                         </div>
-                                    </a>
-                                )
-                            })}
+                                    </div>
+                                </a>
+                            ))}
                         </div>
                     </div>
                 ) : null}
@@ -738,8 +727,8 @@ export default function PublicNewsTab(props: Props) {
                                     <span style={{ position: "absolute", width: 2, height: 6, background: C.faint, right: -3, bottom: -3, transform: "rotate(-45deg)" }} />
                                 </span>
                                 <input value={q}
-                                    onChange={(e) => { setQ(e.target.value); ensureUni() }}
-                                    onFocus={() => { setFocused(true); ensureUni() }}
+                                    onChange={(e) => setQ(e.target.value)}
+                                    onFocus={() => setFocused(true)}
                                     onBlur={() => setTimeout(() => setFocused(false), 160)}
                                     onKeyDown={(e) => { if (e.key === "Enter") { setFocused(false); goSearch() } }}
                                     placeholder="종목 뉴스 검색 (이름·코드)"
@@ -839,7 +828,7 @@ function InsightBar(props: { segs: { label: string; n: number; color: string }[]
 /* 오늘의 뉴스 한눈 — 출처 신뢰도 / 신선도(MinHash) / 키워드 무드 / 뉴스 많은 종목. 전부 사실 집계(RULE7). */
 function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: string }) {
     const { ins, C } = props
-    const tile: React.CSSProperties = { flex: "1 1 190px", minWidth: 168, background: C.card, borderRadius: 12, padding: "12px 14px", boxSizing: "border-box" }
+    const tile: React.CSSProperties = { flex: "1 1 190px", minWidth: 168, minHeight: 104, background: C.card, borderRadius: 12, padding: "12px 14px", boxSizing: "border-box" }
     const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: C.faint, marginBottom: 8 }
     const chip: React.CSSProperties = { display: "flex", gap: 9, marginTop: 9, fontSize: 11.5, fontWeight: 700, flexWrap: "wrap" }
     return (
@@ -847,7 +836,7 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
             <div style={{ fontSize: 12.5, fontWeight: 800, color: C.text, padding: "2px 2px 8px", letterSpacing: "-0.01em" }}>
                 오늘의 뉴스 한눈 <span style={{ color: C.faint, fontWeight: 600 }}>· 사실 집계</span>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-start" }}>
                 {/* 출처 신뢰도 (자체 점수화 — 1차/신뢰 출처 비중) */}
                 <div style={tile}>
                     <div style={lbl}>출처 신뢰도 · 총 {ins.total}건 <span style={{ color: C.faint, fontWeight: 500 }}>· 자체 분류(가설, N={ins.total})</span></div>
@@ -882,7 +871,7 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
                     <div style={{ ...tile, flexBasis: 320, minWidth: 248 }}>
                         <div style={lbl}>오늘의 뉴스 테마 <span style={{ color: C.faint, fontWeight: 500 }}>· 키워드 빈도(막대 = 언급 수)</span></div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
-                            {ins.themes.map((th) => {
+                            {ins.themes.slice(0, 5).map((th) => {
                                 const mx = Math.max.apply(null, ins.themes.map((t) => t.n).concat([1]))
                                 return (
                                     <div key={th.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1033,10 +1022,7 @@ function NewsRow(props: { item: NewsItem; C: typeof LIGHT; clamp?: number; showK
                     <span style={{ fontSize: 10, fontWeight: 700, color: C.accent, background: C.bg, borderRadius: 5, padding: "1px 6px" }}>AI 번역</span>
                 ) : null}
                 {item.source ? (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        <OutletLogo source={item.source} url={item.url} />
-                        <span style={{ fontSize: 11.5, fontWeight: 600, color: C.subtext }}>{item.source}{item.credible ? " ✓" : ""}</span>
-                    </span>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: C.subtext }}>{item.source}{item.credible ? " ✓" : ""}</span>
                 ) : null}
                 {item.time ? (
                     <>
