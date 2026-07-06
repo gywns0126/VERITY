@@ -236,6 +236,42 @@ def _from_full_list(name2tk: Dict[str, str]) -> List[Dict[str, Any]]:
         key = (PUBLIC_DATA_API_KEY or "").strip()
     except Exception:  # noqa: BLE001
         key = ""
+    # 경로 A: 수동 CSV 시드 (data/nps_full_holdings.csv — data.go.kr 파일 다운로드 그대로 투입, 연 1회)
+    csv_path = os.path.join(_ROOT, "data", "nps_full_holdings.csv")
+    if os.path.isfile(csv_path):
+        try:
+            import csv as _csv
+            rows: List[Dict[str, Any]] = []
+            with open(csv_path, encoding="utf-8-sig", newline="") as f:
+                for row in _csv.DictReader(f):
+                    nm, pct, amt, asof = "", None, None, ""
+                    for k, v in row.items():
+                        kk = str(k or "")
+                        if "종목명" in kk or kk == "종목":
+                            nm = str(v or "").strip()
+                        elif "지분율" in kk or "지분" in kk:
+                            try:
+                                pct = float(str(v).replace("%", "").replace(",", ""))
+                            except (TypeError, ValueError):
+                                pct = None
+                        elif "평가액" in kk:
+                            try:
+                                amt = float(str(v).replace(",", ""))
+                            except (TypeError, ValueError):
+                                amt = None
+                        elif "기준" in kk or "년도" in kk:
+                            asof = str(v or "").strip()
+                    if not nm:
+                        continue
+                    tk = _lookup_ticker(name2tk, nm)
+                    if tk:
+                        rows.append({"ticker": tk, "name": nm, "pct": pct, "eval_amt_100m": amt, "as_of": asof or "csv"})
+            if rows:
+                return rows
+        except Exception:  # noqa: BLE001
+            pass
+
+    # 경로 B: odcloud API (활용신청 후 활성)
     key = key or os.environ.get("PUBLIC_DATA_API_KEY", "").strip()
     if not key:
         return []
