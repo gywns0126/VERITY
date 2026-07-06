@@ -129,24 +129,45 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
     now = datetime.now(KST)
     sections: List[Optional[Dict[str, Any]]] = []
 
-    # 밸류에이션 팩트 (지표 | 값 | 업종 중앙값)
+    # 밸류에이션 팩트 (지표 | 값 | 업종 중앙값 | 업종 대비) — 값은 빌더 포맷 문자열 그대로 (단위 포함)
     peer = s.get("peer") or {}
+    _VS = {"above": "높음", "below": "낮음", "similar": "비슷"}
     rows = []
     for r in (peer.get("rows") or []):
-        rows.append([str(r.get("key") or ""), _num(r.get("value"), 1), _num(r.get("median"), 1)])
+        rows.append([str(r.get("key") or ""), str(r.get("value") or "—"), str(r.get("median") or "—"),
+                     _VS.get(str(r.get("vs") or ""), "—")])
     if not rows:
         facts = s.get("facts") or {}
-        rows = [[k, str(v), "—"] for k, v in list(facts.items())[:8] if v not in (None, "")]
+        rows = [[k, str(v), "—", "—"] for k, v in list(facts.items())[:8] if v not in (None, "")]
     sections.append(_sec(
-        "밸류에이션 팩트", f"업종 비교 = {peer.get('sector') or '—'} · 같은 섹터 중앙값",
-        ["지표", "값", "업종 중앙값"], ["l", "r", "r"], [1.6, 1.0, 1.0], rows))
+        "밸류에이션 팩트", f"업종 비교 = {peer.get('sector') or '—'} · 같은 섹터 중앙값 · 대비 = 사실 비교(평가 아님)",
+        ["지표", "값", "업종 중앙값", "업종 대비"], ["l", "r", "r", "c"], [1.4, 0.9, 0.9, 0.7], rows))
 
-    # 연간 재무 추이
+    # 재무 요약 — 최근 결산 재무제표 그룹 전체 (손익·재무상태·현금흐름 등)
+    fin = s.get("financials") or {}
+    rows = []
+    for g in (fin.get("groups") or []):
+        gt = str(g.get("title") or "")
+        for i, kv2 in enumerate(g.get("rows") or []):
+            rows.append([gt if i == 0 else "", str(kv2.get("k") or ""), str(kv2.get("v") or "")])
+    if rows:
+        sections.append(_sec(
+            "재무 요약", f"{fin.get('period') or ''} 결산 · DART" if kr else f"{fin.get('period') or ''} · SEC",
+            ["구분", "항목", "값"], ["l", "l", "r"], [0.8, 1.4, 1.0], rows))
+
+    # 연간 재무 추이 — 과거 백필분 순이익=영업이익 복제(수집 결함, 보강 큐) → 동일값은 "—" 정직 표기
     fs = s.get("fin_series") or []
-    rows = [[str(r.get("year") or ""), money(r.get("revenue")), money(r.get("op")), money(r.get("net"))]
-            for r in fs[-8:]]
+    rows = []
+    net_gap = False
+    for r in fs[-10:]:
+        op, net = r.get("op"), r.get("net")
+        dup = op is not None and net is not None and op == net
+        if dup:
+            net_gap = True
+        rows.append([str(r.get("year") or ""), money(r.get("revenue")), money(op), "—" if dup else money(net)])
+    note = ("DART 사업보고서" if kr else "SEC 10-K") + (" · 순이익 — = 과거분 보강 수집 중" if net_gap else "")
     sections.append(_sec(
-        "연간 재무 추이", "DART 사업보고서" if kr else "SEC 10-K",
+        "연간 재무 추이", note,
         ["연도", "매출", "영업이익", "순이익"], ["l", "r", "r", "r"], [0.7, 1.2, 1.2, 1.2], rows))
 
     # 분기 재무 비율 (최근 8)
@@ -157,7 +178,7 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
         rows = [[str(q.get("q") or "")[:7], _num(q.get("debt_ratio"), 1, "%"), _num(q.get("roa"), 2, "%"),
                  _num(q.get("current_ratio"), 2), _num(q.get("gross_margin"), 1, "%")] for q in qs]
         sections.append(_sec(
-            "분기 재무 비율", "분기·반기·사업보고서 · 비율 자체계산",
+            "분기 재무 비율", "분기·반기·사업보고서 · 비율 자체계산 · 과거 분기 = 최신 연도부터 백필 진행 중",
             ["분기", "부채비율", "ROA", "유동비율", "매출총이익률"],
             ["l", "r", "r", "r", "r"], [0.9, 1.0, 0.8, 0.9, 1.1], rows))
     except Exception:  # noqa: BLE001
@@ -185,6 +206,24 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
     except Exception:  # noqa: BLE001
         pass
 
+    # 대차잔고 (KRX 사실)
+    if kr:
+        try:
+            ldoc = _fetch("securities_lending.json")
+            arr = ldoc.get("stocks") or ldoc
+            lrec = arr.get(ticker) if isinstance(arr, dict) else next((x for x in arr if str(x.get("ticker")) == ticker), None)
+            if lrec and lrec.get("lending_amt"):
+                rows = [
+                    ["대차잔고 금액", _krw(lrec.get("lending_amt"))],
+                    ["대차잔고 수량", _num(lrec.get("lending_qty"), 0, "주")],
+                    ["신규 대차", _num(lrec.get("new_qty"), 0, "주")],
+                    ["상환", _num(lrec.get("redemption_qty"), 0, "주")],
+                ]
+                sections.append(_sec("대차잔고", "KRX 대차거래 사실 (공매도 선행지표 아님 — 해석 없음)",
+                                     ["항목", "값"], ["l", "r"], [1.2, 1.4], rows))
+        except Exception:  # noqa: BLE001
+            pass
+
     # 최근 공시
     rows = []
     for d in (s.get("disclosures") or [])[:10]:
@@ -208,7 +247,10 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
                          ["항목", "내용"], ["l", "l"], [1.2, 2.2], rows))
 
     ov = s.get("overview") or {}
+    facts = s.get("facts") or {}
     kv = [["시장", str(s.get("market") or ("KR" if kr else "US"))]]
+    if facts.get("시가총액"):
+        kv.append(["시가총액", str(facts.get("시가총액"))])
     if ov.get("sector"):
         kv.append(["섹터", str(ov.get("sector"))])
     if ov.get("shares"):
