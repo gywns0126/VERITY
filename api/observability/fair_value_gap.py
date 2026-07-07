@@ -35,6 +35,19 @@ R_E_DEFAULT = 0.085
 OMEGA = 0.62
 
 
+def rim_value(bv: float, earnings: float, r_e: float = R_E_DEFAULT, omega: float = OMEGA) -> float:
+    """1-stage 잔여이익모형(RIM, Frankel-Lee 1998) 내재가치. 산식 단일 출처.
+
+    V = BV + RI·ω/(1+r_e−ω),  RI = earnings − r_e·BV.
+    **scale-invariant** — 총액(equity, NI) 또는 주당(BVPS, EPS) 어느 입력이든 동일 결과
+    → KR(총액, fair_value_gap) 와 US(주당, fair_value_gap_us) 가 이 함수를 공유(drift 0).
+    denom≤0(r_e≤ω−1, 비현실) 시 BV 로 폴백.
+    """
+    ri = earnings - r_e * bv
+    denom = 1.0 + r_e - omega
+    return bv + ri * (omega / denom) if denom > 0 else bv
+
+
 def _f(v: Any) -> Optional[float]:
     try:
         x = float(v)
@@ -58,11 +71,9 @@ def _compute_one(stock: Dict[str, Any], r_e: float = R_E_DEFAULT) -> Optional[Di
         return None
     roe_frac = ni / equity  # raw 기반 ROE (스냅샷 stale roe 대신)
 
-    # RIM: V = BV + RI·ω/(1+r_e−ω), RI = NI − r_e·BV
-    ri = ni - r_e * equity
-    denom = 1 + r_e - OMEGA
-    rim_value = equity + ri * (OMEGA / denom) if denom > 0 else equity
-    v_over_p = rim_value / mc
+    # RIM V = BV + RI·ω/denom (공용 rim_value, scale-invariant). 로컬명 rim_v = 헬퍼와 구분.
+    rim_v = rim_value(equity, ni, r_e)
+    v_over_p = rim_v / mc
 
     # 신호2: implied perpetual FCF 성장 (fcf_yield 있을 때만). g=(r_e−fy)/(1+fy).
     fy = _f(stock.get("fcf_yield"))
