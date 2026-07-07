@@ -813,24 +813,72 @@ function NewsSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
     )
 }
 
-/* 비율 막대 — 세그먼트 너비 = 건수 비율 (순수 CSS, 외부 lib 0). */
-function InsightBar(props: { segs: { label: string; n: number; color: string }[]; C: typeof LIGHT }) {
+/* 도넛 차트 — 세그먼트 = 건수 비율 (순수 SVG, 외부 lib 0). 중앙 = 주요 비율/총계. */
+function Donut(props: {
+    segs: { label: string; n: number; color: string }[]
+    C: typeof LIGHT
+    size?: number
+    thickness?: number
+    centerTop?: string
+    centerSub?: string
+}) {
+    const size = props.size || 72
+    const th = props.thickness || 11
+    const r = (size - th) / 2
+    const cx = size / 2
+    const circ = 2 * Math.PI * r
     const total = props.segs.reduce((a, b) => a + b.n, 0) || 1
+    const topY = props.centerSub ? cx - Math.round(size * 0.08) : cx
+    let acc = 0
     return (
-        <div style={{ display: "flex", width: "100%", height: 8, borderRadius: 5, overflow: "hidden", background: props.C.sub }}>
-            {props.segs.filter((s) => s.n > 0).map((s, i) => (
-                <div key={i} title={s.label + " " + s.n} style={{ width: (s.n / total) * 100 + "%", background: s.color }} />
-            ))}
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0, display: "block" }}>
+            <circle cx={cx} cy={cx} r={r} fill="none" stroke={props.C.sub} strokeWidth={th} />
+            <g transform={`rotate(-90 ${cx} ${cx})`}>
+                {props.segs.filter((s) => s.n > 0).map((s, i) => {
+                    const len = (s.n / total) * circ
+                    const el = (
+                        <circle key={i} cx={cx} cy={cx} r={r} fill="none" stroke={s.color}
+                            strokeWidth={th} strokeDasharray={`${len} ${circ - len}`} strokeDashoffset={-acc}>
+                            <title>{s.label + " " + s.n}</title>
+                        </circle>
+                    )
+                    acc += len
+                    return el
+                })}
+            </g>
+            {props.centerTop ? (
+                <text x={cx} y={topY} textAnchor="middle" dominantBaseline="central"
+                    style={{ fontSize: Math.round(size * 0.26), fontWeight: 800, fill: props.C.text }}>{props.centerTop}</text>
+            ) : null}
+            {props.centerSub ? (
+                <text x={cx} y={cx + Math.round(size * 0.17)} textAnchor="middle" dominantBaseline="central"
+                    style={{ fontSize: Math.round(size * 0.135), fontWeight: 700, fill: props.C.faint }}>{props.centerSub}</text>
+            ) : null}
+        </svg>
+    )
+}
+
+/* 도넛 범례 한 줄 — 색점 + 라벨 + 건수. */
+function LegendRow(props: { color: string; label: string; n: number; C: typeof LIGHT }) {
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%" }}>
+            <span style={{ width: 8, height: 8, borderRadius: 3, background: props.color, flexShrink: 0 }} />
+            <span style={{ color: props.C.subtext, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{props.label}</span>
+            <span style={{ marginLeft: "auto", paddingLeft: 6, color: props.C.text, fontWeight: 800, flexShrink: 0 }}>{props.n}</span>
         </div>
     )
 }
 
+const _pct = (n: number, t: number) => (t > 0 ? Math.round((n / t) * 100) : 0) + "%"
+const THEME_COLORS = ["#6c5ce7", "#0ca678", "#f59f00", "#e64980", "#4dabf7", "#7048e8"]
+
 /* 오늘의 뉴스 한눈 — 출처 신뢰도 / 신선도(MinHash) / 키워드 무드 / 뉴스 많은 종목. 전부 사실 집계(RULE7). */
 function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: string }) {
     const { ins, C } = props
-    const tile: React.CSSProperties = { flex: "1 1 190px", minWidth: 168, minHeight: 104, background: C.card, borderRadius: 12, padding: "12px 14px", boxSizing: "border-box" }
+    const tile: React.CSSProperties = { flex: "1 1 190px", minWidth: 168, minHeight: 130, background: C.card, borderRadius: 12, padding: "12px 14px", boxSizing: "border-box" }
     const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: C.faint, marginBottom: 8 }
-    const chip: React.CSSProperties = { display: "flex", gap: 9, marginTop: 9, fontSize: 11.5, fontWeight: 700, flexWrap: "wrap" }
+    const row: React.CSSProperties = { display: "flex", alignItems: "center", gap: 12, marginTop: 4 }
+    const leg: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 5, fontSize: 11.5, fontWeight: 700, minWidth: 74 }
     return (
         <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 12.5, fontWeight: 800, color: C.text, padding: "2px 2px 8px", letterSpacing: "-0.01em" }}>
@@ -840,49 +888,53 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
                 {/* 출처 신뢰도 (자체 점수화 — 1차/신뢰 출처 비중) */}
                 <div style={tile}>
                     <div style={lbl}>출처 신뢰도 · 총 {ins.total}건 <span style={{ color: C.faint, fontWeight: 500 }}>· 자체 분류(가설, N={ins.total})</span></div>
-                    <InsightBar segs={[{ label: "신뢰", n: ins.credHi, color: "#0ca678" }, { label: "일반", n: ins.credLo, color: C.border }]} C={C} />
-                    <div style={chip}>
-                        <span style={{ color: "#0ca678" }}>신뢰 출처 {ins.credHi}</span>
-                        <span style={{ color: C.faint }}>일반 {ins.credLo}</span>
+                    <div style={row}>
+                        <Donut C={C} centerTop={_pct(ins.credHi, ins.total)} centerSub="신뢰"
+                            segs={[{ label: "신뢰", n: ins.credHi, color: "#0ca678" }, { label: "일반", n: ins.credLo, color: C.border }]} />
+                        <div style={leg}>
+                            <LegendRow color="#0ca678" label="신뢰 출처" n={ins.credHi} C={C} />
+                            <LegendRow color={C.border} label="일반" n={ins.credLo} C={C} />
+                        </div>
                     </div>
                 </div>
                 {/* 신선도 */}
                 <div style={tile}>
                     <div style={lbl}>신선도 · 신규 vs 재탕</div>
-                    <InsightBar segs={[{ label: "신규", n: ins.fresh, color: C.accent }, { label: "재탕", n: ins.dup, color: C.border }]} C={C} />
-                    <div style={chip}>
-                        <span style={{ color: C.accent }}>신규 {ins.fresh}</span>
-                        <span style={{ color: C.faint }}>재탕 {ins.dup}</span>
+                    <div style={row}>
+                        <Donut C={C} centerTop={_pct(ins.fresh, ins.fresh + ins.dup)} centerSub="신규"
+                            segs={[{ label: "신규", n: ins.fresh, color: C.accent }, { label: "재탕", n: ins.dup, color: C.border }]} />
+                        <div style={leg}>
+                            <LegendRow color={C.accent} label="신규" n={ins.fresh} C={C} />
+                            <LegendRow color={C.border} label="재탕" n={ins.dup} C={C} />
+                        </div>
                     </div>
                 </div>
                 {/* 키워드 무드 */}
                 <div style={tile}>
                     <div style={lbl}>키워드 무드 <span style={{ color: C.faint, fontWeight: 500 }}>· 검증 전</span></div>
-                    <InsightBar segs={[{ label: "호재", n: ins.pos, color: C.up }, { label: "중립", n: ins.neu, color: C.border }, { label: "악재", n: ins.neg, color: C.down }]} C={C} />
-                    <div style={chip}>
-                        <span style={{ color: C.up }}>호재 {ins.pos}</span>
-                        <span style={{ color: C.faint }}>중립 {ins.neu}</span>
-                        <span style={{ color: C.down }}>악재 {ins.neg}</span>
+                    <div style={row}>
+                        <Donut C={C} centerTop={_pct(ins.pos, ins.pos + ins.neu + ins.neg)} centerSub="호재"
+                            segs={[{ label: "호재", n: ins.pos, color: C.up }, { label: "중립", n: ins.neu, color: C.border }, { label: "악재", n: ins.neg, color: C.down }]} />
+                        <div style={leg}>
+                            <LegendRow color={C.up} label="호재" n={ins.pos} C={C} />
+                            <LegendRow color={C.border} label="중립" n={ins.neu} C={C} />
+                            <LegendRow color={C.down} label="악재" n={ins.neg} C={C} />
+                        </div>
                     </div>
                 </div>
                 {/* '뉴스 많은 종목' 타일 → 상단 '오늘 핫한 종목' 스트립으로 이전(중복 제거, 2026-07-05) */}
-                {/* 오늘의 뉴스 테마 (제목 키워드 빈도 — LLM 아님, 단어 카운트) */}
+                {/* 오늘의 뉴스 테마 (제목 키워드 빈도 — LLM 아님, 단어 카운트) → 도넛 */}
                 {ins.themes.length ? (
-                    <div style={{ ...tile, flexBasis: 320, minWidth: 248 }}>
-                        <div style={lbl}>오늘의 뉴스 테마 <span style={{ color: C.faint, fontWeight: 500 }}>· 키워드 빈도(막대 = 언급 수)</span></div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
-                            {ins.themes.slice(0, 5).map((th) => {
-                                const mx = Math.max.apply(null, ins.themes.map((t) => t.n).concat([1]))
-                                return (
-                                    <div key={th.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <span style={{ width: 62, flexShrink: 0, fontSize: 11.5, fontWeight: 700, color: C.subtext, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{th.name}</span>
-                                        <div style={{ flex: 1, height: 9, borderRadius: 5, background: C.sub, overflow: "hidden" }}>
-                                            <div style={{ width: (th.n / mx) * 100 + "%", height: "100%", background: C.accent, borderRadius: 5 }} />
-                                        </div>
-                                        <span style={{ width: 18, flexShrink: 0, textAlign: "right", fontSize: 11.5, fontWeight: 800, color: C.accent }}>{th.n}</span>
-                                    </div>
-                                )
-                            })}
+                    <div style={{ ...tile, flexBasis: 300, minWidth: 236 }}>
+                        <div style={lbl}>오늘의 뉴스 테마 <span style={{ color: C.faint, fontWeight: 500 }}>· 키워드 빈도(도넛 = 언급 수)</span></div>
+                        <div style={row}>
+                            <Donut C={C} size={78} centerTop={String(ins.themes.slice(0, 6).reduce((a, b) => a + b.n, 0))} centerSub="언급"
+                                segs={ins.themes.slice(0, 6).map((th, i) => ({ label: th.name, n: th.n, color: THEME_COLORS[i % THEME_COLORS.length] }))} />
+                            <div style={{ ...leg, flex: 1 }}>
+                                {ins.themes.slice(0, 5).map((th, i) => (
+                                    <LegendRow key={th.name} color={THEME_COLORS[i % THEME_COLORS.length]} label={th.name} n={th.n} C={C} />
+                                ))}
+                            </div>
                         </div>
                     </div>
                 ) : null}
