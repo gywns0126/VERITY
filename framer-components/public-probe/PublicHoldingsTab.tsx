@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
  * 내 보유종목 — VERITY 공개 터미널 (AlphaNest) 탭. [보유종목 | 분산 | 예상 세금] 3-탭.
@@ -172,6 +172,9 @@ export default function PublicHoldingsTab(props: Props) {
     const [brokerIdx, setBrokerIdx] = useState(0)
     const [catFlow, setCatFlow] = useState<Record<string, number>>({})   // etf_flow 자산군 누적 흐름(사실, 분산 탭)
     const [targetKr, setTargetKr] = useState<number | null>(null)        // 목표 국내 비중 %(사용자 설정, null=현재값)
+    const [universe, setUniverse] = useState<any[]>([])                  // 검색 유니버스(universe_search, KR+US)
+    const [q, setQ] = useState("")                                       // 종목 검색어
+    const [pop, setPop] = useState<any>(null)                            // 추가/수정 팝업 {id?, ticker, name, market, shares, avg_cost}
 
     const isDark = onCanvas ? !!dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -246,6 +249,17 @@ export default function PublicHoldingsTab(props: Props) {
 
     useEffect(() => { loadHoldings() }, [loadHoldings])
 
+    // 검색 유니버스(KR+US ~8.9천, universe_search) — 추가 패널 열 때 1회 lazy 로드.
+    useEffect(() => {
+        if (onCanvas || !showAdd || universe.length) return
+        let alive = true
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json", { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a)) setUniverse(a) })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [onCanvas, showAdd, universe.length])
+
     // 평가 기준가 — stock_flow_5d 마지막 close(발행 유지 파일 재사용, 신규 시세 노출 0). 커버리지 밖 = graceful fallback.
     useEffect(() => {
         if (onCanvas || isDemo) return
@@ -300,6 +314,40 @@ export default function PublicHoldingsTab(props: Props) {
             .catch(() => {})
             .finally(() => setBusy(false))
     }, [form, base, loginUrl, loadHoldings])
+
+    // 검색 결과 — universe_search 필터 + 이미 보유 표시. 상위 8개.
+    const matches = useMemo(() => {
+        const s = q.trim().toLowerCase()
+        if (!s || !universe.length) return []
+        const held = new Set(rows.map((r: any) => String(r.ticker)))
+        return universe.filter((x: any) =>
+            String(x.ticker).toLowerCase().includes(s) ||
+            String(x.name || "").toLowerCase().includes(s) ||
+            String(x.name_ko || "").includes(q.trim())
+        ).slice(0, 8).map((x: any) => ({ ...x, _held: held.has(String(x.ticker)) }))
+    }, [q, universe, rows])
+
+    // ★ 클릭 = 추가 팝업(수량·평단 수동 입력) / 리스트 수정 = 기존값 프리필 팝업
+    const openAdd = (x: any) => { setPop({ ticker: String(x.ticker), name: x.name || "", market: String(x.market || "kr").toLowerCase(), shares: "", avg_cost: "" }); setQ("") }
+    const openEdit = (h: any) => { setPop({ id: h.id, ticker: h.ticker, name: h.name || "", market: h.market || "kr", shares: String(h.shares ?? ""), avg_cost: String(h.avg_cost ?? "") }) }
+    const savePop = useCallback(() => {
+        const token = getToken()
+        if (!token || !pop) return
+        setBusy(true)
+        const isEdit = !!pop.id
+        const body = isEdit
+            ? { id: pop.id, shares: Number(pop.shares) || 0, avg_cost: Number(pop.avg_cost) || 0 }
+            : { ticker: String(pop.ticker).trim(), name: String(pop.name).trim(), market: pop.market, shares: Number(pop.shares) || 0, avg_cost: Number(pop.avg_cost) || 0 }
+        fetch(base + "/api/holdings", {
+            method: isEdit ? "PATCH" : "POST",
+            headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+        })
+            .then((r) => r.json().catch(() => ({})))
+            .then(() => { setPop(null); loadHoldings() })
+            .catch(() => {})
+            .finally(() => setBusy(false))
+    }, [pop, base, loadHoldings])
 
     const delHolding = useCallback((id: string) => {
         const token = getToken()
@@ -367,7 +415,8 @@ export default function PublicHoldingsTab(props: Props) {
         fontFamily: FONT, background: C.bg, color: C.ink, outline: "none", minWidth: 0,
     }
     // 커스텀 chevron — OS 기본 화살표 제거(appearance none), 브랜드 드롭다운 룩. 색=테마 faint.
-    const chevronUrl = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='${encodeURIComponent(C.faint)}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`
+    // data URI 전체 encodeURIComponent — 공백/따옴표 raw 상태면 Safari·Framer 퍼블리시에서 파싱 실패 → placeholder 텍스처 노출 (다크에서만 도드라짐).
+    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='${C.faint}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
     const selStyle: CSSProperties = {
         ...inputStyle, cursor: "pointer", paddingRight: 30, border: "none",
         appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
@@ -406,6 +455,36 @@ export default function PublicHoldingsTab(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            {/* 추가/수정 팝업 — ★(추가) 또는 행 '수정' 클릭 시. 수량·평단 수동 입력 → POST(신규)/PATCH(수정). */}
+            {pop && (
+                <div onClick={() => setPop(null)}
+                    style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.42)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+                    <div onClick={(e) => e.stopPropagation()}
+                        style={{ width: "100%", maxWidth: 320, background: C.card, borderRadius: 18, padding: "18px 18px 16px", boxShadow: "0 14px 44px rgba(0,0,0,0.28)", fontFamily: FONT, boxSizing: "border-box" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                            <Logo ticker={pop.ticker} name={pop.name} market={pop.market} C={C} size={34} />
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{pop.name || pop.ticker}</div>
+                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{pop.ticker} · {String(pop.market).toUpperCase()} · {pop.id ? "수정" : "추가"}</div>
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                            <div>
+                                <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 4 }}>수량</div>
+                                <input autoFocus style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} inputMode="decimal" placeholder="예: 10" value={pop.shares} onChange={(e) => setPop({ ...pop, shares: e.target.value })} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 4 }}>평단 (평균 매입가)</div>
+                                <input style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} inputMode="decimal" placeholder={pop.market === "us" ? "예: 150 ($)" : "예: 68000 (원)"} value={pop.avg_cost} onChange={(e) => setPop({ ...pop, avg_cost: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") savePop() }} />
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                            <button onClick={() => setPop(null)} style={{ flex: 1, border: `1px solid ${C.line}`, background: "transparent", cursor: "pointer", color: C.sub, borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, fontFamily: FONT }}>취소</button>
+                            <button onClick={savePop} disabled={busy} style={{ flex: 2, border: "none", cursor: "pointer", background: C.vg, color: C.onAccent, borderRadius: 10, padding: "10px 0", fontSize: 13.5, fontWeight: 800, fontFamily: FONT, opacity: busy ? 0.6 : 1 }}>{busy ? "저장 중…" : (pop.id ? "저장" : "추가")}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                 <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: narrow ? 18 : 20, fontWeight: 800, letterSpacing: "-0.5px" }}>내 보유종목</div>
@@ -461,23 +540,33 @@ export default function PublicHoldingsTab(props: Props) {
                     const content = view === "holdings" ? (
                         <>
                             {!isDemo && showAdd && (
-                                <div style={{ background: C.card, borderRadius: 16, padding: "14px 15px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                                    <div style={{ display: "grid", gridTemplateColumns: narrow ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: 8 }}>
-                                        <input style={inputStyle} placeholder="종목코드 (005930)" value={form.ticker} onChange={(e) => setForm({ ...form, ticker: e.target.value })} />
-                                        <input style={inputStyle} placeholder="종목명" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                                        <input style={inputStyle} placeholder="수량" inputMode="decimal" value={form.shares} onChange={(e) => setForm({ ...form, shares: e.target.value })} />
-                                        <input style={inputStyle} placeholder="평단" inputMode="decimal" value={form.avg_cost} onChange={(e) => setForm({ ...form, avg_cost: e.target.value })} />
-                                    </div>
-                                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                                        <select style={selStyle} value={form.market} onChange={(e) => setForm({ ...form, market: e.target.value })}>
-                                            <option value="kr">국내(KR)</option>
-                                            <option value="us">미국(US)</option>
-                                        </select>
-                                        <button onClick={addHolding} disabled={busy}
-                                            style={{ border: "none", cursor: "pointer", padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: 800, fontFamily: FONT, background: C.vg, color: C.onAccent, opacity: busy ? 0.6 : 1 }}>
-                                            {busy ? "저장 중…" : "저장"}
-                                        </button>
-                                    </div>
+                                <div style={{ background: C.card, borderRadius: 16, padding: "14px 15px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }}>
+                                    <input style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="종목 검색 (이름·코드)" value={q} onChange={(e) => setQ(e.target.value)} />
+                                    {q.trim() && matches.length > 0 && (
+                                        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2 }}>
+                                            {matches.map((m: any) => (
+                                                <div key={m.ticker} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 6px", borderRadius: 10 }}>
+                                                    <Logo ticker={m.ticker} name={m.name} market={String(m.market).toLowerCase()} C={C} size={26} />
+                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                        <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name || m.ticker}</div>
+                                                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{m.ticker} · {String(m.market).toUpperCase()}</div>
+                                                    </div>
+                                                    {m._held ? (
+                                                        <span style={{ fontSize: 11, fontWeight: 700, color: C.faint, flexShrink: 0, paddingRight: 4 }}>보유중</span>
+                                                    ) : (
+                                                        <button onClick={() => openAdd(m)} title="보유종목 추가"
+                                                            style={{ border: "none", background: C.vgS, cursor: "pointer", color: C.vg, borderRadius: 999, width: 30, height: 30, fontSize: 15, fontWeight: 800, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>★</button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {q.trim() && matches.length === 0 && (
+                                        <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, padding: "8px 4px" }}>{universe.length ? "검색 결과 없음" : "불러오는 중…"}</div>
+                                    )}
+                                    {!q.trim() && (
+                                        <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, padding: "8px 4px 2px", lineHeight: 1.5 }}>종목을 검색해 ★ 를 누르면 수량·평단 입력 후 바로 추가돼요.</div>
+                                    )}
                                 </div>
                             )}
 
@@ -511,6 +600,10 @@ export default function PublicHoldingsTab(props: Props) {
                                             <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 2 }}>{money(h._val)}</div>
                                         </div>
                                         <span style={{ flexShrink: 0, fontSize: 16, color: C.faint, fontWeight: 700, lineHeight: 1 }}>›</span>
+                                        {!isDemo && h.id && (
+                                            <button onClick={(e) => { e.stopPropagation(); openEdit(h) }} title="수량·평단 수정"
+                                                style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 12, fontWeight: 700, padding: "0 2px", flexShrink: 0 }}>수정</button>
+                                        )}
                                         {!isDemo && h.id && (
                                             <button onClick={(e) => { e.stopPropagation(); delHolding(h.id) }} title="삭제"
                                                 style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 16, fontWeight: 700, padding: "0 2px", flexShrink: 0 }}>×</button>
