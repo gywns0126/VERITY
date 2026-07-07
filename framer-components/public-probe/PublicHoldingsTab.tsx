@@ -164,7 +164,6 @@ export default function PublicHoldingsTab(props: Props) {
     const [isDemo, setIsDemo] = useState(true)
     const [loading, setLoading] = useState<boolean>(() => (onCanvas ? false : !!getToken()))
     const [showAdd, setShowAdd] = useState(false)
-    const [form, setForm] = useState({ ticker: "", name: "", shares: "", avg_cost: "", market: "kr" })
     const [busy, setBusy] = useState(false)
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
     const [view, setView] = useState<"holdings" | "mix" | "tax">("holdings")
@@ -291,30 +290,6 @@ export default function PublicHoldingsTab(props: Props) {
         window.location.href = path + "?q=" + encodeURIComponent(tk)
     }, [stockPath, usStockPath])
 
-    const addHolding = useCallback(() => {
-        const token = getToken()
-        if (!token) { if (loginUrl && typeof window !== "undefined") window.location.href = loginUrl; return }
-        const tk = form.ticker.trim()
-        if (!tk) return
-        setBusy(true)
-        fetch(base + "/api/holdings", {
-            method: "POST",
-            headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                ticker: tk, name: form.name.trim(), market: form.market,
-                shares: Number(form.shares) || 0, avg_cost: Number(form.avg_cost) || 0,
-            }),
-        })
-            .then((r) => r.json().catch(() => ({})))
-            .then(() => {
-                setShowAdd(false)
-                setForm({ ticker: "", name: "", shares: "", avg_cost: "", market: "kr" })
-                loadHoldings()
-            })
-            .catch(() => {})
-            .finally(() => setBusy(false))
-    }, [form, base, loginUrl, loadHoldings])
-
     // 검색 결과 — universe_search 필터 + 이미 보유 표시. 상위 8개.
     const matches = useMemo(() => {
         const s = q.trim().toLowerCase()
@@ -415,16 +390,16 @@ export default function PublicHoldingsTab(props: Props) {
         fontFamily: FONT, background: C.bg, color: C.ink, outline: "none", minWidth: 0,
     }
     // 커스텀 chevron — OS 기본 화살표 제거(appearance none), 브랜드 드롭다운 룩. 색=테마 faint.
-    // data URI 전체 encodeURIComponent — 공백/따옴표 raw 상태면 Safari·Framer 퍼블리시에서 파싱 실패 → placeholder 텍스처 노출 (다크에서만 도드라짐).
-    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='${C.faint}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
+    // data URI 전체 encodeURIComponent + viewBox + backgroundSize/no-repeat 로 타일링 차단 — 부분인코딩/viewBox누락 시 Safari·Framer 퍼블리시에서 chevron 이 버튼 전체로 반복(지그재그)됨.
+    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='${C.faint}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
     const selStyle: CSSProperties = {
         ...inputStyle, cursor: "pointer", paddingRight: 30, border: "none",
         appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
-        backgroundImage: chevronUrl, backgroundRepeat: "no-repeat", backgroundPosition: "right 11px center",
+        backgroundImage: chevronUrl, backgroundRepeat: "no-repeat", backgroundPosition: "right 11px center", backgroundSize: "10px 6px",
     }
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
-        background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
+        background: C.bg, fontFamily: FONT, padding: `0 ${pad}px`, boxSizing: "border-box", color: C.ink,
     }
     const cardS: CSSProperties = { background: C.card, borderRadius: 16, padding: "16px 17px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }
 
@@ -487,7 +462,7 @@ export default function PublicHoldingsTab(props: Props) {
             )}
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                 <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: narrow ? 18 : 20, fontWeight: 800, letterSpacing: "-0.5px" }}>내 보유종목</div>
+                    <div style={{ fontSize: narrow ? 18 : 20, fontWeight: 800, letterSpacing: "-0.5px" }}>나만의 둥지</div>
                     <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 3 }}>평단 입력 기준</div>
                 </div>
                 {!loading && !isDemo && view === "holdings" && (
@@ -526,7 +501,7 @@ export default function PublicHoldingsTab(props: Props) {
                 <>
                     {isDemo && (
                         <div style={{ background: C.vgS, color: C.ink, borderRadius: 16, padding: narrow ? "16px 15px" : "20px 18px", marginTop: 12 }}>
-                            <div style={{ fontSize: narrow ? 15 : 16, fontWeight: 800, letterSpacing: "-0.3px" }}>로그인하고 내 보유종목 관리하기</div>
+                            <div style={{ fontSize: narrow ? 15 : 16, fontWeight: 800, letterSpacing: "-0.3px" }}>로그인하고 나만의 둥지 관리하기</div>
                             <div style={{ fontSize: 13, color: C.sub, fontWeight: 600, lineHeight: 1.6, marginTop: 7 }}>종목·수량·평단만 입력하면 평가손익·예상 세금을 한눈에. 기기·세션이 바뀌어도 그대로 유지돼요.</div>
                             {loginUrl && (
                                 <a href={loginUrl} style={{ display: "inline-block", marginTop: 14, background: C.vg, color: C.onAccent, borderRadius: 10, padding: "11px 20px", fontSize: 14, fontWeight: 800, textDecoration: "none" }}>로그인하고 시작하기</a>
@@ -775,7 +750,7 @@ export default function PublicHoldingsTab(props: Props) {
                                 <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#ff5f57", flexShrink: 0 }} />
                                 <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#febc2e", flexShrink: 0 }} />
                                 <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#28c840", flexShrink: 0 }} />
-                                <div style={{ flex: 1, minWidth: 0, margin: "0 6px", background: C.bg, borderRadius: 7, padding: "5px 12px", fontSize: 11.5, color: C.faint, fontWeight: 600, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>verity-terminal.com/holdings</div>
+                                <div style={{ flex: 1, minWidth: 0, margin: "0 6px", background: C.bg, borderRadius: 7, padding: "5px 12px", fontSize: 11.5, color: C.faint, fontWeight: 600, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>alphanest.app/holdings</div>
                                 <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 6, padding: "3px 8px" }}>예시</span>
                             </div>
                             <div style={{ padding: narrow ? "0 12px 14px" : "0 16px 16px", pointerEvents: "none" }}>{content}</div>
