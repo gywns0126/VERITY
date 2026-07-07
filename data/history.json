@@ -1101,5 +1101,43 @@
     "reason": "고정 손절 (-5.8% ≤ -5.0%) [profile_cap]",
     "rule_id": null,
     "mode_tag": "moderate"
+  },
+  {
+    "type": "PARTIAL_SELL",
+    "target_id": "target_1",
+    "date": "2026-07-07 18:19",
+    "timestamp": "2026-07-07T18:19:04+09:00",
+    "ticker": "EQT",
+    "name": "EQT",
+    "price": 78685.55430686951,
+    "effective_price": 78679.63,
+    "slippage_bps": 0.75,
+    "quantity": 4,
+    "remaining_quantity": 5,
+    "total": 314671.5270261012,
+    "partial_pnl": -1391.01,
+    "r_multiple": 1.0,
+    "reason": "+1.0R reached, lock in gains",
+    "rule_id": "exit_target_target_1",
+    "mode_tag": "moderate"
+  },
+  {
+    "type": "PARTIAL_SELL",
+    "target_id": "target_2",
+    "date": "2026-07-07 18:19",
+    "timestamp": "2026-07-07T18:19:04+09:00",
+    "ticker": "EQT",
+    "name": "EQT",
+    "price": 78685.55430686951,
+    "effective_price": 78682.59,
+    "slippage_bps": 0.38,
+    "quantity": 1,
+    "remaining_quantity": 4,
+    "total": 78671.5930316974,
+    "partial_pnl": -344.04,
+    "r_multiple": 2.0,
+    "reason": "+2.0R reached, scale out",
+    "rule_id": "exit_target_target_2",
+    "mode_tag": "moderate"
   }
 ]
