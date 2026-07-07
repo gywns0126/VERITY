@@ -813,8 +813,8 @@ function NewsSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
     )
 }
 
-/* 도넛 차트 — 세그먼트 = 건수 비율 (순수 SVG, 외부 lib 0).
-   중앙 텍스트 = HTML 플렉스 오버레이(SVG baseline 계산 대신 완전 가운데 정렬 + 폰트 축소). */
+/* 도넛 차트 — conic-gradient 링 + 중앙 구멍(외부 lib 0). SVG stroke-dash 이음새 아티팩트 제거.
+   중앙 텍스트 = HTML 플렉스 오버레이(완전 가운데 정렬 + 폰트 축소). */
 function Donut(props: {
     segs: { label: string; n: number; color: string }[]
     C: typeof LIGHT
@@ -825,29 +825,24 @@ function Donut(props: {
 }) {
     const size = props.size || 72
     const th = props.thickness || 11
-    const r = (size - th) / 2
-    const cx = size / 2
-    const circ = 2 * Math.PI * r
-    const total = props.segs.reduce((a, b) => a + b.n, 0) || 1
+    const hole = size - th * 2
+    const active = props.segs.filter((s) => s.n > 0)
+    const total = active.reduce((a, b) => a + b.n, 0) || 1
+    // conic-gradient 세그먼트 stops — 누적 비율, 하드 경계(이음새 없는 연속 링).
     let acc = 0
+    const stops: string[] = []
+    for (const s of active) {
+        const start = (acc / total) * 100
+        acc += s.n
+        const end = (acc / total) * 100
+        stops.push(`${s.color} ${start}% ${end}%`)
+    }
+    const ring = stops.length ? `conic-gradient(${stops.join(", ")})` : props.C.sub
     return (
-        <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block" }}>
-                <circle cx={cx} cy={cx} r={r} fill="none" stroke={props.C.sub} strokeWidth={th} />
-                <g transform={`rotate(-90 ${cx} ${cx})`}>
-                    {props.segs.filter((s) => s.n > 0).map((s, i) => {
-                        const len = (s.n / total) * circ
-                        const el = (
-                            <circle key={i} cx={cx} cy={cx} r={r} fill="none" stroke={s.color}
-                                strokeWidth={th} strokeDasharray={`${len} ${circ - len}`} strokeDashoffset={-acc}>
-                                <title>{s.label + " " + s.n}</title>
-                            </circle>
-                        )
-                        acc += len
-                        return el
-                    })}
-                </g>
-            </svg>
+        <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}
+            title={active.map((s) => s.label + " " + s.n).join(" · ")}>
+            <div style={{ width: size, height: size, borderRadius: "50%", background: ring }} />
+            <div style={{ position: "absolute", top: th, left: th, width: hole, height: hole, borderRadius: "50%", background: props.C.card }} />
             {(props.centerTop || props.centerSub) ? (
                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", lineHeight: 1.05, pointerEvents: "none" }}>
                     {props.centerTop ? (
