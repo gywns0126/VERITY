@@ -175,18 +175,13 @@ runs:
           fi
         done
 
-        # ── kr_chart_daily/ 디렉토리 publish (2026-07-04 신설) ──
-        # PublicLiveChart(자체 SVG 일봉) 가 Blob /kr_chart_daily/chunk_XX.json fetch.
-        # source = 금융위 공공데이터 (이용허락범위 제한 없음 — 재배포 합법, KRX raw 와 무관).
-        # 청크 40개 + meta.json — kr_chart_daily.yml cron 이 매 평일 갱신.
-        mkdir -p _public_dist/kr_chart_daily
-        for f in $(git ls-tree --name-only origin/main:data/kr_chart_daily 2>/dev/null); do
-          if git show "origin/main:data/kr_chart_daily/$f" > "_public_dist/kr_chart_daily/$f" 2>/dev/null && [ -s "_public_dist/kr_chart_daily/$f" ]; then
-            echo "  + data/kr_chart_daily/$f"
-          else
-            rm -f "_public_dist/kr_chart_daily/$f"
-          fi
-        done
+        # ── kr_chart_daily/ = 공용 staging 제외 (2026-07-07 구조 변경) ──
+        # 옛 구조(7/4~7/7): 여기서 41파일 28MB 를 매 호출자마다 직렬 Blob PUT
+        # → price_pulse publish +68s → run 6분 > dispatch 간격 5분 → 큐 취소 연쇄
+        # (cron_health dispatch_chain ratio 22% FAIL, 2026-07-07 진단).
+        # 새 구조: kr_chart_daily.yml 이 갱신 시점(평일 1회)에만 Blob 직행 업로드
+        # (kr_chart_history.yml 과 동일 패턴). 소비자 = PublicLiveChart Blob fetch only —
+        # VERITY-data 사본은 force_orphan 에서 자연 제거 (raw 소비자 0 확인, 무해).
 
         # ── README.md (VERITY-data repo 메타 — 자동 readme) ──
         cat > _public_dist/README.md <<'READMEEOF'
