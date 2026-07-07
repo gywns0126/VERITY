@@ -288,6 +288,35 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                             </div>
                         )}
                     </div>
+
+                    {/* 자산배분 스택 바 (기금 포트폴리오 현황 CSV — 분기 사실) */}
+                    {(() => {
+                        const am = (data && data.asset_mix && data.asset_mix[0]) || null
+                        const mix = ((am && am.mix) || []).filter((m: any) => (m.pct || 0) >= 0.5)
+                        if (!mix.length) return null
+                        const PAL = ["#f04452", "#3182f6", "#0ca678", "#ff9500", "#6c5ce7", "#8b95a1"]
+                        return (
+                            <div style={{ marginTop: 14 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: C.faint }}>자산배분 · {am.as_of} 기준</span>
+                                    {am.total_bil && <span style={{ fontSize: 10.5, fontWeight: 700, color: C.faint }}>전체 {(am.total_bil / 1000).toFixed(0)}조원</span>}
+                                </div>
+                                <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", marginTop: 6 }}>
+                                    {mix.map((m: any, i: number) => (
+                                        <div key={m.name} title={`${m.name} ${m.pct}%`} style={{ width: m.pct + "%", background: PAL[i % PAL.length], opacity: 0.85 }} />
+                                    ))}
+                                </div>
+                                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
+                                    {mix.map((m: any, i: number) => (
+                                        <span key={m.name} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, color: C.sub }}>
+                                            <span style={{ width: 8, height: 8, borderRadius: 2, background: PAL[i % PAL.length], opacity: 0.85 }} />
+                                            {m.name} {m.pct}%
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )
+                    })()}
                     {fund.asset_returns_pct && (
                         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 11 }}>
                             {Object.keys(fund.asset_returns_pct).map((k) => {

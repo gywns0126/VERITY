@@ -409,6 +409,79 @@ def _from_full_overseas() -> List[Dict[str, Any]]:
     return out
 
 
+def _from_major_csv(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
+    """대량보유(5%+) CSV 시드 (data/nps_major_holdings.csv, data.go.kr 15106890 파일판 — 분기 확정본).
+
+    API/DART 경로보다 권위(최신 기준일 확정) — build 병합에서 마지막 덮어쓰기.
+    """
+    csv_path = os.path.join(_ROOT, "data", "nps_major_holdings.csv")
+    if not os.path.isfile(csv_path):
+        return {}
+    out: Dict[str, Dict[str, Any]] = {}
+    try:
+        import csv as _csv
+        with open(csv_path, encoding="utf-8-sig", newline="") as f:
+            for row in _csv.DictReader(f):
+                nm, pct, dt = "", None, ""
+                for k, v in row.items():
+                    kk = str(k or "").strip()
+                    if "발행기관" in kk or "종목명" in kk:
+                        nm = str(v or "").strip()
+                    elif "지분율" in kk:
+                        try:
+                            pct = float(str(v).replace(",", ""))
+                        except (TypeError, ValueError):
+                            pct = None
+                    elif "기준일" in kk:
+                        dt = str(v or "").strip()
+                if not nm or pct is None:
+                    continue
+                tk = _lookup_ticker(name2tk, nm)
+                if tk:
+                    out[tk] = {"ticker": tk, "name": _strip_corp(nm), "pct": pct, "qty_change": None,
+                               "date": dt, "src": "data.go.kr #15106890 (분기 확정 CSV)"}
+    except Exception:  # noqa: BLE001
+        return {}
+    return out
+
+
+def _asset_mix() -> List[Dict[str, Any]]:
+    """기금 포트폴리오 현황 CSV (data/nps_portfolio_mix.csv) → 자산군 비중 (최신 열 기준, 사실)."""
+    csv_path = os.path.join(_ROOT, "data", "nps_portfolio_mix.csv")
+    if not os.path.isfile(csv_path):
+        return []
+    try:
+        import csv as _csv
+        rows = list(_csv.reader(open(csv_path, encoding="utf-8-sig", newline="")))
+        if len(rows) < 3:
+            return []
+        header = rows[0]
+        # 최신 데이터 열 = 3번째(현황 다음, 'YYYY년 M월' 형식) — as_of 라벨로 사용
+        col = 2
+        as_of = str(header[col]).split("(")[0].strip()
+        total = None
+        mix: List[Dict[str, Any]] = []
+        for r in rows[1:]:
+            if len(r) <= col or not r[0].strip():
+                continue
+            name = r[0].strip()
+            try:
+                amt = float(str(r[col]).replace(",", ""))
+            except (TypeError, ValueError):
+                continue
+            if name.startswith("전체"):
+                total = amt
+                continue
+            label = name.replace("금융부문(", "").replace(")", "").replace("부문", "")
+            mix.append({"name": label, "amount_bil": amt})
+        if total:
+            for m in mix:
+                m["pct"] = round(m["amount_bil"] / total * 100, 1)
+        return [{"as_of": as_of, "total_bil": total, "mix": mix}]
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def build_nps_holdings() -> Dict[str, Any]:
     from datetime import datetime, timezone, timedelta
     kst = timezone(timedelta(hours=9))
@@ -421,6 +494,9 @@ def build_nps_holdings() -> Dict[str, Any]:
     # data.go.kr 가 더 권위(전체 5%+) — 같은 ticker 면 덮어씀
     for k, v in _from_data_go_kr(name2tk).items():
         merged[v.get("ticker") or k] = v
+    # 분기 확정 CSV 시드가 최종 권위 (있을 때)
+    for k, v in _from_major_csv(name2tk).items():
+        merged[k] = v
 
     holdings = [h for h in merged.values() if h.get("pct") is not None]
     holdings.sort(key=lambda h: (-(h.get("pct") or 0), h.get("ticker") or ""))
@@ -440,6 +516,7 @@ def build_nps_holdings() -> Dict[str, Any]:
         "full_n": len(full_rows),
         "full_us": full_us_rows,    # 해외(미장 매칭분) 전체 투자현황 — 미장 겹침 검사용
         "full_us_n": len(full_us_rows),
+        "asset_mix": _asset_mix(),  # 자산군 비중 (기금 포트폴리오 현황 CSV, 분기)
         "fund": fund,  # 운용수익률/AUM (data/nps_fund_overview.json, 수기·분기 갱신). 없으면 null
         "note": "국민연금 5% 이상 대량보유 공시 기준 — 전체 보유종목(약 1,200) 아님 · 분기 지연 · 지분율은 법적 강제공시 사실, 점수·추천 아님.",
     }
