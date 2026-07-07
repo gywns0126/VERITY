@@ -66,11 +66,21 @@ jobs:
             sleep $((i * 5))
           done
 
-      - name: Publish to VERITY-data + Vercel Blob
-        # kr_chart_daily/ 디렉토리 = publish-data action 등재 (chunk_00..39 + meta).
-        if: always()
-        uses: ./.github/actions/publish-data
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          personal_token: ${{ secrets.VERITY_DATA_PAT }}
-          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
+      - name: Blob 업로드 (kr_chart_daily/chunk_XX.json + meta)
+        # 2026-07-07 구조 변경 — 공용 publish-data staging 제외, 갱신 시점 Blob 직행.
+        # 옛 구조: 28MB 가 모든 publish-data 호출자(price_pulse 5분 주기 포함)에서
+        # 재업로드 → price_pulse run 6분 > dispatch 5분 → 큐 취소 연쇄 (ratio 22% FAIL).
+        # kr_chart_history.yml 과 동일 패턴 (blob_upload.js 재사용, 1-level 서브디렉토리).
+        # 소비자 = PublicLiveChart Blob fetch only (raw.githubusercontent 소비자 0 확인).
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: |
+          if [ -z "$BLOB_READ_WRITE_TOKEN" ]; then
+            echo "::error::VERCEL_BLOB_TOKEN 없음"
+            exit 1
+          fi
+          mkdir -p _chart_dist/kr_chart_daily
+          cp data/kr_chart_daily/*.json _chart_dist/kr_chart_daily/
+          cd .github/actions/publish-data
+          npm install --no-save --silent --no-audit --no-fund @vercel/blob@^0.27
+          node blob_upload.js "${{ github.workspace }}/_chart_dist"
