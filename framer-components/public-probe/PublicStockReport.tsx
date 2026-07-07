@@ -107,6 +107,7 @@ const DEFAULT_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com
 const DEFAULT_WARN = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/market_warnings.json"
 const DEFAULT_LENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/securities_lending.json"
 const DEFAULT_SUPPLY = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/supply_demand.json"
+const DEFAULT_EMPLOYMENT = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nps_employment.json"
 // 시세 컴플라이언스 — 실시간 시세·거래대금 상위 = 네이버 link-out(증권사 서빙 = 재배포 아님, 실시간·무료·합법)
 const NAVER_QUANT = "https://finance.naver.com/sise/sise_quant.naver"
 const M_NAVER_QUANT = "https://m.stock.naver.com/sise/trade"
@@ -341,20 +342,12 @@ function fmtUSDcompact(v: any): string {
 
 // Catmull-Rom → cubic bezier 부드러운 곡선 path (유선형 추이용)
 function smoothLine(p: { x: number; y: number }[]): string {
-    // 유선형(Catmull-Rom, 텐션 1/4.5 — PM '곡선 강도 조금 더') — 7/5 직선 지시 번복 확정
+    // 직선 꺾은선(선형) — 곡선 보간은 실측값 사이를 지어내는 인상 (PM 2026-07-04 '그래프 선형으로')
     if (!p.length) return ""
     if (p.length === 1) return `M ${p[0].x} ${p[0].y}`
     let d = `M ${p[0].x} ${p[0].y}`
-    for (let i = 0; i < p.length - 1; i++) {
-        const p0 = p[i === 0 ? 0 : i - 1]
-        const p1 = p[i]
-        const p2 = p[i + 1]
-        const p3 = p[i + 2 < p.length ? i + 2 : p.length - 1]
-        const c1x = +(p1.x + (p2.x - p0.x) / 4.5).toFixed(2)
-        const c1y = +(p1.y + (p2.y - p0.y) / 4.5).toFixed(2)
-        const c2x = +(p2.x - (p3.x - p1.x) / 4.5).toFixed(2)
-        const c2y = +(p2.y - (p3.y - p1.y) / 4.5).toFixed(2)
-        d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${p2.x} ${p2.y}`
+    for (let i = 1; i < p.length; i++) {
+        d += ` L ${p[i].x} ${p[i].y}`
     }
     return d
 }
@@ -460,7 +453,7 @@ function FinTrend({ series, C, usd }: { series: any[]; C: any; usd?: boolean }) 
                     </div>
                 ))}
             </div>
-            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{usd ? "SEC 10-K" : "DART 전자공시"} 연간 실값(추이선) · 증감은 위 과거 비교 칩(↑증가 ↓감소) · 점수·추천 아님</div>
+            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{usd ? "SEC 10-K" : "DART 전자공시"} 연간 실값(추이선) · 증감은 위 과거 비교 칩(↑증가 ↓감소)</div>
         </div>
     )
 }
@@ -527,7 +520,7 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
     const narrow = w > 0 && w < 420
     if (!onCanvas && series.length < 4) return null
     const CW = Math.max(80, (w || 360) - (narrow ? 28 : 36))
-    const CH = 72, PX = 4, PY = 16   // 세로 압축(2026-07-05 PM) — 라벨 겹침 없는 최소 여백
+    const CH = 84, PX = 4, PY = 20   // PY 크게 = 최고/최저 라벨이 라인·상하단과 안 겹침
     return (
         <div ref={ref} style={{ background: C.card, borderRadius: 16, padding: narrow ? "15px 14px" : "17px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
@@ -553,7 +546,7 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                     const xAt = (i: number) => PX + (n <= 1 ? 0 : (i / (n - 1)) * (CW - PX * 2))
                     const yAt = (v: number) => PY + (1 - (v - lo) / span) * (CH - PY * 2)
                     const pts = raw.map((v, i) => (v == null ? null : { x: xAt(i), y: yAt(v), v, i })).filter((p): p is { x: number; y: number; v: number; i: number } => p != null)
-                    const linePath = smoothLine(pts)  // 유선형 (PM 2026-07-07)
+                    const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")
                     const areaPath = `${linePath} L${pts[pts.length - 1].x.toFixed(1)},${CH - 1} L${pts[0].x.toFixed(1)},${CH - 1} Z`
                     const hiPt = pts.reduce((a, b) => (b.v > a.v ? b : a))
                     const loPt = pts.reduce((a, b) => (b.v < a.v ? b : a))
@@ -561,8 +554,8 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                     const gid = `qtr-${m.key}-${mi}`
                     const clampX = (x: number) => Math.max(16, Math.min(CW - 16, x))
                     return (
-                        <div key={m.key} style={{ padding: "12px 0", borderTop: mi === 0 ? "none" : `1px solid ${C.line}` }}>
-                            <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 8, flexWrap: "wrap" }}>
+                        <div key={m.key} style={{ padding: "20px 0", borderTop: mi === 0 ? "none" : `1px solid ${C.line}` }}>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 12, flexWrap: "wrap" }}>
                                 <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{m.label}</span>
                                 {m.note && <span style={{ fontSize: 10, color: C.faint, fontWeight: 600 }}>· {m.note}</span>}
                                 <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 800, letterSpacing: "-0.3px", color: C.ink, fontVariantNumeric: "tabular-nums" }}>{last.toFixed(dec)}{m.unit}</span>
@@ -588,7 +581,7 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                                 )}
                                 <circle cx={lastPt.x} cy={lastPt.y} r={3.4} fill={lineColor} stroke={C.card} strokeWidth={1.6} vectorEffect="non-scaling-stroke" />
                             </svg>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 9 }}>
                                 <span style={{ fontSize: 10, color: C.faint, fontWeight: 600 }}>{qtLabel(series[0].q)}</span>
                                 <span style={{ fontSize: 10, color: dirColor, fontWeight: 700 }}>{(delta > 0 ? "+" : "") + delta.toFixed(dec)}{m.unit} ({series.length}분기)</span>
                                 <span style={{ fontSize: 10, color: C.faint, fontWeight: 600 }}>{qtLabel(series[series.length - 1].q)}</span>
@@ -676,6 +669,7 @@ export default function PublicStockReport(props: Props) {
     const [lendingMap, setLendingMap] = useState<Record<string, any>>({})
     const [lendAsOf, setLendAsOf] = useState<string>("")
     const [supplyMap, setSupplyMap] = useState<Record<string, any>>({})
+    const [empMap, setEmpMap] = useState<Record<string, any>>({})
     const [selTicker, setSelTicker] = useState<string>(() => {
         if (typeof window !== "undefined") {
             try {
@@ -812,6 +806,17 @@ export default function PublicStockReport(props: Props) {
             .catch(() => {})
         return () => { alive = false }
     }, [supplyUrl, onCanvas])
+
+    // 고용 동향 — 국민연금 가입 사업장 (nps_employment.json, 월 1회). 미보유 종목 graceful 숨김.
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        fetch(DEFAULT_EMPLOYMENT, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const m = d && d.stocks; if (alive && m && typeof m === "object") setEmpMap(m) })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [onCanvas])
 
     useEffect(() => {
         if (onCanvas || !forensicsUrl) return
@@ -966,6 +971,7 @@ export default function PublicStockReport(props: Props) {
     }, [flowRows])
     const lendingRow = useMemo(() => (lendingMap && lendingMap[s.ticker]) || null, [lendingMap, s.ticker])
     const supplyRow = useMemo(() => (supplyMap && supplyMap[s.ticker]) || null, [supplyMap, s.ticker])
+    const empRow = useMemo(() => (empMap && empMap[s.ticker]) || null, [empMap, s.ticker])
     const foren = useMemo(() => (forensicsMap && forensicsMap[s.ticker]) || null, [forensicsMap, s.ticker])
     const insider = useMemo(() => (insiderMap && insiderMap[s.ticker]) || null, [insiderMap, s.ticker])
     const warn = useMemo(() => (warnMap && warnMap[s.ticker]) || null, [warnMap, s.ticker])
@@ -1149,7 +1155,7 @@ export default function PublicStockReport(props: Props) {
     }
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
-        background: C.bg, fontFamily: FONT, padding: `0 ${pad}px`, boxSizing: "border-box", color: C.ink,
+        background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
     }
 
     const flowBar = (v: any, label: string) => {
@@ -1407,7 +1413,7 @@ export default function PublicStockReport(props: Props) {
                             </div>
                         </div>
                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>
-                            대차잔고 = 시장에 빌려준 주식(공매도 재료·압력 proxy). 진짜 공매도 잔고 아님 · 외부 사실, 자체 신호 아님{lendAsOf ? " · " + dateDot(lendAsOf) : ""}
+                            대차잔고 = 시장에 빌려준 주식(공매도 재료·압력 proxy). 진짜 공매도 잔고 아님 · 외부 사실{lendAsOf ? " · " + dateDot(lendAsOf) : ""}
                         </div>
                     </div>
                 </>
@@ -1445,7 +1451,7 @@ export default function PublicStockReport(props: Props) {
                             )}
                         </div>
                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>
-                            공매도 비중·신용잔고 = 외부 사실(KRX·KIS) · 자체 신호 아님
+                            공매도 비중·신용잔고 = 외부 사실(KRX·KIS)
                         </div>
                     </div>
                 </>
@@ -1485,7 +1491,7 @@ export default function PublicStockReport(props: Props) {
                                                     = {factsCalc[k]}
                                                 </div>
                                             )}
-                                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>출처 · DART·KRX 공식 사실 · 자체 등급·점수 아님</div>
+                                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>출처 · DART·KRX 공식 사실</div>
                                         </div>
                                     )}
                                 </div>
@@ -1499,7 +1505,7 @@ export default function PublicStockReport(props: Props) {
             {overview && (overview.sector || overview.shares || overview.tagline) && (
                 <>
                     {sectionTitle("기업 개요", "DART·IR · 사실")}
-                    <div style={{ background: C.card, borderRadius: 16, padding: "6px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         {[["사업", overview.tagline], ["업종", overview.sector], ["발행주식수", overview.shares]].filter((x) => x[1]).map(([k, v]: any, i) => kvRow(k, v, i))}
                     </div>
                 </>
@@ -1596,7 +1602,7 @@ export default function PublicStockReport(props: Props) {
             {disclosures.length > 0 && (
                 <>
                     {sectionTitle("공시·리스크 레이더", "사실 · 탭=상세")}
-                    <div style={{ background: C.card, borderRadius: 16, padding: "6px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         {disclosures.map((d: any, i: number) => {
                             const corr = d.is_correction
                             const chipC = corr ? { fg: C.amber, bg: C.amberS } : { fg: C.down, bg: C.downS }
@@ -1634,7 +1640,7 @@ export default function PublicStockReport(props: Props) {
             {foren && foren.events && foren.events.length > 0 && (
                 <>
                     {sectionTitle("공시 이력·빈도", "DART 원문 기준 · 사실", "공시이력")}
-                    <div style={{ background: C.card, borderRadius: 16, padding: "12px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                             {Object.keys(foren.counts || {}).sort((a, b) => (foren.counts[b] - foren.counts[a])).map((cat) => (
                                 <span key={cat} style={{ fontSize: 11.5, fontWeight: 800, color: catColor(cat), background: C.bg, border: `1px solid ${C.line}`, borderRadius: 8, padding: "4px 9px" }}>{cat} {foren.counts[cat]}회</span>
@@ -1662,7 +1668,7 @@ export default function PublicStockReport(props: Props) {
                             ))}
                         </div>
                         {foren.events.length > 6 && (<button onClick={() => setForenAll((v) => !v)} style={{ width: "100%", marginTop: 8, border: "none", cursor: "pointer", padding: "9px 0", borderRadius: 10, fontSize: 12, fontWeight: 800, fontFamily: FONT, background: C.bg, color: C.sub }}>{forenAll ? "접기" : `이력 ${foren.events.length}건 전체 보기`}</button>)}
-                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>DART 원문 제목 기준 이벤트 빈도(사실) — 자체 위험점수·등급 아님. 현재 수집창 한정(과거 백필 시 심화).</div>
+                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>DART 원문 제목 기준 이벤트 빈도(사실) · 현재 수집창 한정(과거 백필 시 심화)</div>
                     </div>
                 </>
             )}
@@ -1671,7 +1677,7 @@ export default function PublicStockReport(props: Props) {
             {insider && insider.trades && insider.trades.length > 0 && (
                 <>
                     {sectionTitle("내부자 거래 · 임원·주요주주", "DART · 美 Form4 KR판", "내부자")}
-                    <div style={{ background: C.card, borderRadius: 16, padding: "12px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "baseline" }}>
                             <span style={{ fontSize: 12.5, fontWeight: 800, color: C.up }}>매수 {insider.buy_n}건</span>
                             <span style={{ fontSize: 12.5, fontWeight: 800, color: C.down }}>매도 {insider.sell_n}건</span>
@@ -1734,7 +1740,7 @@ export default function PublicStockReport(props: Props) {
                                         <span style={{ fontWeight: 800, flexShrink: 0, color: String(f.type || "").indexOf("13D") === 0 ? C.amber : C.sub }}>{f.type}{f.pct != null ? " · " + f.pct + "%" : ""}</span>
                                     </div>
                                 ))}
-                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>SEC 13D(행동주의)/13G(수동) 5%+ 공시 사실만 · 자체 신호 아님</div>
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>SEC 13D(행동주의)/13G(수동) 5%+ 공시 사실</div>
                             </div>
                         </>
                     )}
@@ -1750,7 +1756,7 @@ export default function PublicStockReport(props: Props) {
                                         <span style={{ flexShrink: 0, fontWeight: 800 }}><span style={{ color: (h.change_type === "NEW" || h.change_type === "INCREASED") ? C.green : h.change_type === "DECREASED" ? C.down : C.faint }}>{h.change_type}</span> <span style={{ color: C.faint, fontWeight: 600 }}>${((h.value_usd || 0) / 1e9).toFixed(1)}B</span></span>
                                     </div>
                                 ))}
-                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>유명 집중형 펀드 13F 보유(분기말+45일 지연) · 인덱스펀드 제외 · 자체 점수 아님</div>
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>유명 집중형 펀드 13F 보유(분기말+45일 지연) · 인덱스펀드 제외</div>
                             </div>
                         </>
                     )}
@@ -1763,7 +1769,7 @@ export default function PublicStockReport(props: Props) {
                                 {usForen.consensus.num_analysts != null && tipKV("애널리스트", usForen.consensus.num_analysts + "명")}
                                 {usForen.consensus.target_mean != null && tipKV("평균 목표가", "$" + Number(usForen.consensus.target_mean).toLocaleString("en-US"))}
                                 {usForen.consensus.upside_pct != null && tipKV("업사이드", (usForen.consensus.upside_pct >= 0 ? "+" : "") + usForen.consensus.upside_pct + "%", usForen.consensus.upside_pct >= 0 ? C.up : C.down)}
-                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>외부 애널리스트 집계 사실(yfinance) · 우리 자체 점수 아님</div>
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>외부 애널리스트 집계 사실(yfinance)</div>
                             </div>
                         </>
                     )}
@@ -1840,6 +1846,38 @@ export default function PublicStockReport(props: Props) {
                 </>
             )}
 
+            {/* 고용 동향 — 국민연금 가입 사업장 (공단 공시 사실, 월 단위. 사업보고서보다 빠른 고용 흐름) */}
+            {empRow && empRow.jnngp_cnt > 0 && (() => {
+                const ymTxt = empRow.ym && String(empRow.ym).length === 6 ? String(empRow.ym).slice(2, 4) + "." + Number(String(empRow.ym).slice(4)) + "월" : ""
+                const net = Number(empRow.net) || 0
+                const netColor = net > 0 ? C.green : net < 0 ? C.down : C.faint
+                const stat = (label: string, val: any, color: string) => (
+                    <div style={{ flex: 1, minWidth: 80, background: C.bg, borderRadius: 12, padding: "10px 12px" }}>
+                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 700 }}>{label}</div>
+                        <div style={{ fontFamily: HEAD, fontSize: 17, fontWeight: 800, color, letterSpacing: "-0.4px", marginTop: 2 }}>{val}</div>
+                    </div>
+                )
+                return (
+                    <>
+                        {sectionTitle("고용 동향", "국민연금 가입 기준" + (ymTxt ? " · " + ymTxt : ""))}
+                        <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                                <span style={{ fontFamily: HEAD, fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.6px" }}>{Number(empRow.jnngp_cnt).toLocaleString()}명</span>
+                                <span style={{ fontSize: 12.5, fontWeight: 700 }}>국민연금 가입 임직원</span>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                                {stat("월 입사", (Number(empRow.hire) || 0).toLocaleString() + "명", C.ink)}
+                                {stat("월 퇴사", (Number(empRow.leave) || 0).toLocaleString() + "명", C.ink)}
+                                {stat("순증감", (net > 0 ? "+" : "") + net.toLocaleString() + "명", netColor)}
+                            </div>
+                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>
+                                국민연금공단 가입 사업장 공시 · 사업장명 정확일치 매칭 (고용 프록시 — 가입 제외 인원은 미포함) · 사업보고서(분기)보다 빠른 월 단위 관측
+                            </div>
+                        </div>
+                    </>
+                )
+            })()}
+
             {/* 부동산 자산 */}
             {realEstate && realEstate.total && (
                 <>
@@ -1864,10 +1902,10 @@ export default function PublicStockReport(props: Props) {
                     : ln.color === "danger" ? C.downS : C.vtS
                 return (
                     <>
-                        {sectionTitle("AlphaNest 관측 — 분류 lens", "공개 재무에 룰 적용 · 점수·추천 아님")}
+                        {sectionTitle("투자 스타일 진단", "피터 린치 6분류 · 공개 재무에 룰 적용")}
                         <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
-                                <span style={{ fontSize: 12.5, fontWeight: 800, color: lc, background: lcS, borderRadius: 8, padding: "5px 11px", letterSpacing: "-0.2px" }}>{ln.label || ln.class}</span>
+                                <span style={{ fontSize: 12.5, fontWeight: 800, color: "#ffffff", background: lc, borderRadius: 8, padding: "5px 11px", letterSpacing: "-0.2px" }}>{ln.label || ln.class}</span>
                                 {ln.summary && <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{ln.summary}</span>}
                             </div>
                             {Array.isArray(ln.reasons) && ln.reasons.length > 0 && (
@@ -1879,7 +1917,7 @@ export default function PublicStockReport(props: Props) {
                                     ))}
                                 </div>
                             )}
-                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 11, lineHeight: 1.5 }}>{verityLens.note || "Peter Lynch 분류 룰을 공개 재무 사실에 적용한 관측 — 자체 점수·매매의견 아님."}</div>
+                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 11, lineHeight: 1.5 }}>{verityLens.note || "피터 린치 6분류를 공개 재무 사실에 적용"}</div>
                         </div>
                     </>
                 )
@@ -1889,9 +1927,9 @@ export default function PublicStockReport(props: Props) {
             {(consensus.target_price || consensus.opinion) && (
                 <>
                     {sectionTitle("애널리스트 컨센서스", "집계 · AlphaNest 의견 아님")}
-                    <div style={{ background: C.card, borderRadius: 16, padding: "6px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         {[["목표주가 평균", consensus.target_price], ["투자의견", consensus.opinion], ["추정 EPS", consensus.eps]].map(([k, v]: any, i) => v ? kvRow(k, v, i) : null)}
-                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "4px 0 10px", lineHeight: 1.5 }}>증권사 집계 사실 — 자체 등급·점수는 검증 후(2027) 공개</div>
+                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "4px 0 10px", lineHeight: 1.5 }}>증권사 집계 사실</div>
                     </div>
                 </>
             )}
@@ -1900,7 +1938,7 @@ export default function PublicStockReport(props: Props) {
             {calendar.length > 0 && (
                 <>
                     {sectionTitle("이 종목 일정")}
-                    <div style={{ background: C.card, borderRadius: 16, padding: "6px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         {calendar.map((c: any, i: number) => (
                             <div key={i} style={{ display: "flex", gap: 12, padding: "11px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}`, alignItems: "baseline" }}>
                                 <span style={{ minWidth: 64, flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: C.vg }}>{c.date || ""}</span>
