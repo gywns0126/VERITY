@@ -63,6 +63,7 @@ def _quarters_for(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
     sq = doc.get("series_quarterly") or {}
     rev = _by_end(sq.get("revenue"))
     ni = _by_end(sq.get("net_income"))
+    oi = _by_end(sq.get("operating_income"))
     ta = _by_end(sq.get("total_assets"))
     ca = _by_end(sq.get("current_assets"))
     cl = _by_end(sq.get("current_liabilities"))
@@ -75,13 +76,18 @@ def _quarters_for(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
         q: Dict[str, Any] = {"q": end}
         # 부채비율 = 총부채÷자기자본 ×100 / ROA = 순이익÷총자산 ×100 / 유동비율 = 유동자산÷유동부채 ×100
         # 매출총이익률 = 매출총이익÷매출 ×100 / 자산회전율 = 매출÷총자산 (회)
+        # 영업이익률 = 영업이익÷매출 ×100 / 순이익률 = 순이익÷매출 ×100 / ROE = 순이익÷자기자본 ×100 (분기, 사실)
         dr = _ratio(tl.get(end), eq.get(end), 100.0, 0, 100000)
         roa = _ratio(ni.get(end), ta.get(end), 100.0, -500, 500)
         cr = _ratio(ca.get(end), cl.get(end), 100.0, 0, 100000)
         gm = _ratio(gp.get(end), rev.get(end), 100.0, -1000, 100)
         at = _ratio(rev.get(end), ta.get(end), 1.0, 0, 100)
+        om = _ratio(oi.get(end), rev.get(end), 100.0, -1000, 100)
+        nm = _ratio(ni.get(end), rev.get(end), 100.0, -1000, 100)
+        roe = _ratio(ni.get(end), eq.get(end), 100.0, -500, 500)
         for k, v in (("debt_ratio", dr), ("roa", roa), ("current_ratio", cr),
-                     ("gross_margin", gm), ("asset_turnover", at)):
+                     ("gross_margin", gm), ("asset_turnover", at),
+                     ("operating_margin", om), ("net_margin", nm), ("roe", roe)):
             if v is not None:
                 q[k] = v
         # 적어도 1개 비율이 있어야 분기 수록
@@ -110,7 +116,7 @@ def build() -> Dict[str, Any]:
             "generated_at": _now_kst().isoformat(),
             "source": "SEC EDGAR XBRL (us_financials series_quarterly)",
             "count": len(stocks),
-            "note": "분기 재무 비율 사실(부채비율/ROA/유동비율/매출총이익률/자산회전율) — 점수·등급 0 (RULE 7).",
+            "note": "분기 재무 비율 사실(부채비율/ROA/유동비율/매출총이익률/자산회전율/영업이익률/순이익률/ROE) — 점수·등급 0 (RULE 7).",
         },
         "stocks": stocks,
     }
