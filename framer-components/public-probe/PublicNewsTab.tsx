@@ -814,14 +814,18 @@ function NewsSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
 }
 
 /* 도넛 차트 — conic-gradient 링 + 중앙 구멍(외부 lib 0). SVG stroke-dash 이음새 아티팩트 제거.
-   중앙 텍스트 = HTML 플렉스 오버레이(완전 가운데 정렬 + 폰트 축소). */
+   애니: 마운트 시 링을 시계방향 draw-in(마스크 스윕) + 중앙 숫자 카운트업. RAF 구동.
+   세션 1회만 재생(sessionStorage) + prefers-reduced-motion 정적. 중앙 = HTML 플렉스 오버레이. */
+const DONUT_ANIM_KEY = "news_donut_anim_v1"
 function Donut(props: {
     segs: { label: string; n: number; color: string }[]
     C: typeof LIGHT
     size?: number
     thickness?: number
-    centerTop?: string
+    centerValue?: number    // 중앙 숫자(카운트업 대상)
+    centerSuffix?: string   // "%" | ""
     centerSub?: string
+    index?: number          // stagger 지연용
 }) {
     const size = props.size || 72
     const th = props.thickness || 11
@@ -838,15 +842,53 @@ function Donut(props: {
         stops.push(`${s.color} ${start}% ${end}%`)
     }
     const ring = stops.length ? `conic-gradient(${stops.join(", ")})` : props.C.sub
+
+    // 진행도 p (0→1). 기본 1(정적) — 애니 조건 충족 시 0부터 RAF 구동.
+    const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    const [p, setP] = useState<number>(1)
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+        let played = false
+        try { played = sessionStorage.getItem(DONUT_ANIM_KEY) === "1" } catch (e) {}
+        if (onCanvas || reduce || played) { setP(1); return }
+        const delay = (props.index || 0) * 90   // 카드별 시차(stagger)
+        const dur = 700
+        let raf = 0
+        let start = 0
+        setP(0)
+        const tick = (t: number) => {
+            if (!start) start = t
+            const elapsed = t - start - delay
+            if (elapsed < 0) { raf = requestAnimationFrame(tick); return }
+            const prog = Math.min(1, elapsed / dur)
+            setP(1 - Math.pow(1 - prog, 3))   // ease-out cubic
+            if (prog < 1) { raf = requestAnimationFrame(tick) }
+            else { try { sessionStorage.setItem(DONUT_ANIM_KEY, "1") } catch (e) {} }
+        }
+        raf = requestAnimationFrame(tick)
+        return () => cancelAnimationFrame(raf)
+    }, [onCanvas, props.index])
+
+    // 링 시계방향 공개 마스크(top=0deg 기준, conic 기본 시작점과 정합). p=0 숨김 → p=1 전체.
+    const ang = Math.round(p * 3600) / 10   // deg, 소수 1자리
+    const mask = `conic-gradient(#000 ${ang}deg, transparent ${ang}deg)`
+    const centerText = props.centerValue != null
+        ? Math.round(props.centerValue * p) + (props.centerSuffix || "")
+        : undefined
+
     return (
         <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}
             title={active.map((s) => s.label + " " + s.n).join(" · ")}>
-            <div style={{ width: size, height: size, borderRadius: "50%", background: ring }} />
+            <div style={{
+                width: size, height: size, borderRadius: "50%", background: ring,
+                WebkitMaskImage: mask, maskImage: mask,
+            }} />
             <div style={{ position: "absolute", top: th, left: th, width: hole, height: hole, borderRadius: "50%", background: props.C.card }} />
-            {(props.centerTop || props.centerSub) ? (
+            {(centerText || props.centerSub) ? (
                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", lineHeight: 1.05, pointerEvents: "none" }}>
-                    {props.centerTop ? (
-                        <span style={{ fontSize: Math.round(size * 0.22), fontWeight: 800, color: props.C.text, letterSpacing: "-0.03em" }}>{props.centerTop}</span>
+                    {centerText ? (
+                        <span style={{ fontSize: Math.round(size * 0.22), fontWeight: 800, color: props.C.text, letterSpacing: "-0.03em" }}>{centerText}</span>
                     ) : null}
                     {props.centerSub ? (
                         <span style={{ fontSize: Math.round(size * 0.13), fontWeight: 700, color: props.C.faint, marginTop: 2 }}>{props.centerSub}</span>
@@ -868,7 +910,7 @@ function LegendRow(props: { color: string; label: string; n: number; C: typeof L
     )
 }
 
-const _pct = (n: number, t: number) => (t > 0 ? Math.round((n / t) * 100) : 0) + "%"
+const _pctN = (n: number, t: number) => (t > 0 ? Math.round((n / t) * 100) : 0)
 const THEME_COLORS = ["#6c5ce7", "#0ca678", "#f59f00", "#e64980", "#4dabf7", "#7048e8"]
 
 /* 오늘의 뉴스 한눈 — 출처 신뢰도 / 신선도(MinHash) / 키워드 무드 / 뉴스 많은 종목. 전부 사실 집계(RULE7). */
@@ -888,7 +930,7 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
                 <div style={tile}>
                     <div style={lbl}>출처 신뢰도 · 총 {ins.total}건 <span style={{ color: C.faint, fontWeight: 500 }}>· 자체 분류(가설, N={ins.total})</span></div>
                     <div style={row}>
-                        <Donut C={C} centerTop={_pct(ins.credHi, ins.total)} centerSub="신뢰"
+                        <Donut C={C} index={0} centerValue={_pctN(ins.credHi, ins.total)} centerSuffix="%" centerSub="신뢰"
                             segs={[{ label: "신뢰", n: ins.credHi, color: "#0ca678" }, { label: "일반", n: ins.credLo, color: C.border }]} />
                         <div style={leg}>
                             <LegendRow color="#0ca678" label="신뢰 출처" n={ins.credHi} C={C} />
@@ -900,7 +942,7 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
                 <div style={tile}>
                     <div style={lbl}>신선도 · 신규 vs 재탕</div>
                     <div style={row}>
-                        <Donut C={C} centerTop={_pct(ins.fresh, ins.fresh + ins.dup)} centerSub="신규"
+                        <Donut C={C} index={1} centerValue={_pctN(ins.fresh, ins.fresh + ins.dup)} centerSuffix="%" centerSub="신규"
                             segs={[{ label: "신규", n: ins.fresh, color: C.accent }, { label: "재탕", n: ins.dup, color: C.border }]} />
                         <div style={leg}>
                             <LegendRow color={C.accent} label="신규" n={ins.fresh} C={C} />
@@ -912,7 +954,7 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
                 <div style={tile}>
                     <div style={lbl}>키워드 무드 <span style={{ color: C.faint, fontWeight: 500 }}>· 검증 전</span></div>
                     <div style={row}>
-                        <Donut C={C} centerTop={_pct(ins.pos, ins.pos + ins.neu + ins.neg)} centerSub="호재"
+                        <Donut C={C} index={2} centerValue={_pctN(ins.pos, ins.pos + ins.neu + ins.neg)} centerSuffix="%" centerSub="호재"
                             segs={[{ label: "호재", n: ins.pos, color: C.up }, { label: "중립", n: ins.neu, color: C.border }, { label: "악재", n: ins.neg, color: C.down }]} />
                         <div style={leg}>
                             <LegendRow color={C.up} label="호재" n={ins.pos} C={C} />
@@ -927,7 +969,7 @@ function NewsInsights(props: { ins: Insights; C: typeof LIGHT; reportPath?: stri
                     <div style={{ ...tile, flexBasis: 300, minWidth: 236 }}>
                         <div style={lbl}>오늘의 뉴스 테마 <span style={{ color: C.faint, fontWeight: 500 }}>· 키워드 빈도(도넛 = 언급 수)</span></div>
                         <div style={row}>
-                            <Donut C={C} size={78} centerTop={String(ins.themes.slice(0, 6).reduce((a, b) => a + b.n, 0))} centerSub="언급"
+                            <Donut C={C} size={78} index={3} centerValue={ins.themes.slice(0, 6).reduce((a, b) => a + b.n, 0)} centerSuffix="" centerSub="언급"
                                 segs={ins.themes.slice(0, 6).map((th, i) => ({ label: th.name, n: th.n, color: THEME_COLORS[i % THEME_COLORS.length] }))} />
                             <div style={{ ...leg, flex: 1 }}>
                                 {ins.themes.slice(0, 5).map((th, i) => (
