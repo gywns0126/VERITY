@@ -58,6 +58,8 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
     // 내 종목 교집합 (PM 2026-07-07) — 관심 = localStorage(로그인 불요) / 보유 = /api/holdings(로그인 시)
     const [myWatch, setMyWatch] = useState<Set<string>>(new Set())
     const [myHold, setMyHold] = useState<Set<string>>(new Set())
+    // 연도별 운용수익률 (1988~, 공단 성과현황 공시 시드 — PM 2026-07-07 가시화)
+    const [returns, setReturns] = useState<any>(null)
     useEffect(() => {
         if (onCanvas || typeof window === "undefined") return
         try {
@@ -105,6 +107,16 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
         const obs = new MutationObserver(read)
         obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
         return () => obs.disconnect()
+    }, [onCanvas])
+
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        fetch(BLOB + "/nps_fund_returns.json", { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (alive && d && Array.isArray(d.annual)) setReturns(d) })
+            .catch(() => {})
+        return () => { alive = false }
     }, [onCanvas])
 
     useEffect(() => {
@@ -206,6 +218,52 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                     <div style={{ fontSize: 10, color: C.faint, fontWeight: 600, marginTop: 4 }}>전체 투자현황 연말 기준({(fullRows[0] || {}).as_of || "연 1회 공시"}) · 사실</div>
                 </div>
             )}
+
+            {/* 연도별 운용수익률 차트 (1988~ 공단 공시 실값) */}
+            {returns && Array.isArray(returns.annual) && returns.annual.length > 5 && (() => {
+                const ann: any[] = returns.annual
+                const vmax = Math.max(...ann.map((a: any) => a.return_pct || 0), 1)
+                const vmin = Math.min(...ann.map((a: any) => a.return_pct || 0), 0)
+                const span = vmax - vmin || 1
+                const H = 110
+                const zeroY = (vmax / span) * H
+                return (
+                    <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 12 }}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 13.5, fontWeight: 800 }}>연도별 운용수익률</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>1988~{ann[ann.length - 1].year} · 공단 공시 실값</span>
+                            <span style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 800, color: C.ink }}>연평균 {returns.cumulative_avg_pct}%</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: H, marginTop: 12, position: "relative" }}>
+                            <div style={{ position: "absolute", left: 0, right: 0, top: zeroY, height: 1, background: C.line }} />
+                            {ann.map((a: any) => {
+                                const v = a.return_pct || 0
+                                const h = Math.max(2, (Math.abs(v) / span) * H)
+                                const up = v >= 0
+                                return (
+                                    <div key={a.year} title={`${a.year}: ${v}%${a.provisional ? " (잠정)" : ""}`}
+                                        style={{ flex: 1, minWidth: 0, height: H, position: "relative" }}>
+                                        <div style={{ position: "absolute", left: 0, right: 0, borderRadius: 2,
+                                            top: up ? zeroY - h : zeroY, height: h,
+                                            background: up ? C.up : C.down, opacity: a.provisional ? 0.55 : 0.9 }} />
+                                    </div>
+                                )
+                            })}
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 9.5, color: C.faint, fontWeight: 700 }}>
+                            {ann.filter((a: any) => a.year % 5 === 0 || a.year === ann[ann.length - 1].year).map((a: any) => (
+                                <span key={a.year}>{"'" + String(a.year).slice(2)}</span>
+                            ))}
+                        </div>
+                        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 8, fontSize: 11, color: C.sub, fontWeight: 600 }}>
+                            <span>최고 {vmax.toFixed(1)}%</span>
+                            <span>최저 {vmin.toFixed(1)}%</span>
+                            {returns.cumulative_profit_bil != null && <span>누적 수익금 {(returns.cumulative_profit_bil / 1000).toFixed(0)}조원</span>}
+                            <span style={{ color: C.faint }}>{returns.note || ""}</span>
+                        </div>
+                    </div>
+                )
+            })()}
 
             {/* 운용현황 카드 */}
             {fund && (
