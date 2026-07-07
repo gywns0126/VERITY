@@ -1,30 +1,31 @@
 {
   "version": "v0",
-  "computed_at": "2026-07-07T11:24:50.500981+00:00",
+  "computed_at": "2026-07-07T12:19:07.135002+00:00",
   "status": "insufficient_data",
   "sample_size": {
     "total": 11,
-    "open": 2,
-    "closed": 9,
-    "with_h5": 1,
-    "with_h14": 0,
+    "open": 1,
+    "closed": 10,
+    "with_h5": 3,
+    "with_h14": 1,
     "with_h30": 0,
     "min_for_decompose": 30
   },
   "horizon_summary": {
     "h5": {
       "horizon_days": 5,
-      "n": 1,
-      "hit_rate_pct": 100.0,
-      "median_return_pct": 12.25,
-      "mean_return_pct": 12.25,
+      "n": 3,
+      "hit_rate_pct": 33.33,
+      "median_return_pct": -2.52,
+      "mean_return_pct": 2.33,
       "ic": null
     },
     "h14": {
       "horizon_days": 14,
-      "n": 0,
-      "hit_rate_pct": null,
-      "median_return_pct": null,
+      "n": 1,
+      "hit_rate_pct": 0.0,
+      "median_return_pct": -21.59,
+      "mean_return_pct": -21.59,
       "ic": null
     },
     "h30": {
@@ -37,20 +38,26 @@
   },
   "feature_decomposition": {
     "status": "insufficient_data",
-    "n": 0
+    "n": 1,
+    "need_more_rows": 29
   },
-  "sector_breakdown": {},
+  "sector_breakdown": {
+    "Industrials": {
+      "n": 1,
+      "status": "insufficient_data"
+    }
+  },
   "verdict_strength": {
     "status": "insufficient_data",
-    "n": 0
+    "n": 1
   },
   "timeseries_baseline": {
     "earliest": "2026-06-10T12:03:09.387256+00:00",
     "windows": {
       "first_30d": {
-        "n": 0,
-        "hit_rate_pct": null,
-        "median_return_pct": null
+        "n": 1,
+        "hit_rate_pct": 0.0,
+        "median_return_pct": -21.59
       },
       "30_60d": {
         "n": 0,
