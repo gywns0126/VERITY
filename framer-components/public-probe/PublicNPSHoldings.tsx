@@ -233,7 +233,7 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                 let d = `M ${pts[0].x} ${pts[0].y}`
                 for (let i = 0; i < pts.length - 1; i++) {
                     const p0 = pts[i === 0 ? 0 : i - 1], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2 < pts.length ? i + 2 : pts.length - 1]
-                    d += ` C ${(p1.x + (p2.x - p0.x) / 6).toFixed(2)} ${(p1.y + (p2.y - p0.y) / 6).toFixed(2)} ${(p2.x - (p3.x - p1.x) / 6).toFixed(2)} ${(p2.y - (p3.y - p1.y) / 6).toFixed(2)} ${p2.x} ${p2.y}`
+                    d += ` C ${(p1.x + (p2.x - p0.x) / 4.5).toFixed(2)} ${(p1.y + (p2.y - p0.y) / 4.5).toFixed(2)} ${(p2.x - (p3.x - p1.x) / 4.5).toFixed(2)} ${(p2.y - (p3.y - p1.y) / 4.5).toFixed(2)} ${p2.x} ${p2.y}`
                 }
                 const area = d + ` L ${pts[pts.length - 1].x} ${yOf(0)} L ${pts[0].x} ${yOf(0)} Z`
                 const zeroY = yOf(0)

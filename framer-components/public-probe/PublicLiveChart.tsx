@@ -364,9 +364,9 @@ export default function PublicLiveChart(props: Props) {
 
     const renderEmpty = () => (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 7, padding: "0 18px", textAlign: "center" }}>
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.45 }}>
-                <path d="M3 3v18h18" stroke={C.faint} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M7 14l3-3 3 3 4-5" stroke={C.faint} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="2.5 2.5" />
+            {/* Phosphor chart-line (regular) — 자작 점선 아이콘의 끊김 인상 교체 (PM 2026-07-07) */}
+            <svg width="30" height="30" viewBox="0 0 256 256" style={{ opacity: 0.5 }}>
+                <path d="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V48a8,8,0,0,1,16,0v94.37L90.73,98a8,8,0,0,1,10.07-.38l58.81,44.11L218.73,90a8,8,0,1,1,10.54,12l-64,56a8,8,0,0,1-10.07.38L96.39,114.29,40,163.63V200H224A8,8,0,0,1,232,208Z" fill={C.faint} />
             </svg>
             <span style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>{tk ? "표시할 시세 정보가 없습니다" : "표시할 종목이 없습니다"}</span>
             <span style={{ fontSize: 11, fontWeight: 500, color: C.faint, lineHeight: 1.5 }}>{tk ? "이 종목은 차트로 표시할 일봉 데이터가 없어요" : "종목을 선택하면 차트가 표시돼요"}</span>

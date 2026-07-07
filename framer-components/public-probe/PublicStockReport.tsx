@@ -341,7 +341,7 @@ function fmtUSDcompact(v: any): string {
 
 // Catmull-Rom → cubic bezier 부드러운 곡선 path (유선형 추이용)
 function smoothLine(p: { x: number; y: number }[]): string {
-    // 유선형(Catmull-Rom 곡선) — PM 2026-07-07 '유선형으로' (7/5 직선 지시 번복 확정)
+    // 유선형(Catmull-Rom, 텐션 1/4.5 — PM '곡선 강도 조금 더') — 7/5 직선 지시 번복 확정
     if (!p.length) return ""
     if (p.length === 1) return `M ${p[0].x} ${p[0].y}`
     let d = `M ${p[0].x} ${p[0].y}`
@@ -350,10 +350,10 @@ function smoothLine(p: { x: number; y: number }[]): string {
         const p1 = p[i]
         const p2 = p[i + 1]
         const p3 = p[i + 2 < p.length ? i + 2 : p.length - 1]
-        const c1x = +(p1.x + (p2.x - p0.x) / 6).toFixed(2)
-        const c1y = +(p1.y + (p2.y - p0.y) / 6).toFixed(2)
-        const c2x = +(p2.x - (p3.x - p1.x) / 6).toFixed(2)
-        const c2y = +(p2.y - (p3.y - p1.y) / 6).toFixed(2)
+        const c1x = +(p1.x + (p2.x - p0.x) / 4.5).toFixed(2)
+        const c1y = +(p1.y + (p2.y - p0.y) / 4.5).toFixed(2)
+        const c2x = +(p2.x - (p3.x - p1.x) / 4.5).toFixed(2)
+        const c2y = +(p2.y - (p3.y - p1.y) / 4.5).toFixed(2)
         d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${p2.x} ${p2.y}`
     }
     return d
