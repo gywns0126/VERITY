@@ -793,7 +793,7 @@ function NewsSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
     })
     const cards = [0, 1, 2, 3, 4, 5, 6, 7]
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 8, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(340px, 100%), 1fr))", gap: 8, alignItems: "start" }}>
             {cards.map((i) => (
                 <div
                     key={i}
@@ -813,7 +813,8 @@ function NewsSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
     )
 }
 
-/* 도넛 차트 — 세그먼트 = 건수 비율 (순수 SVG, 외부 lib 0). 중앙 = 주요 비율/총계. */
+/* 도넛 차트 — 세그먼트 = 건수 비율 (순수 SVG, 외부 lib 0).
+   중앙 텍스트 = HTML 플렉스 오버레이(SVG baseline 계산 대신 완전 가운데 정렬 + 폰트 축소). */
 function Donut(props: {
     segs: { label: string; n: number; color: string }[]
     C: typeof LIGHT
@@ -828,33 +829,36 @@ function Donut(props: {
     const cx = size / 2
     const circ = 2 * Math.PI * r
     const total = props.segs.reduce((a, b) => a + b.n, 0) || 1
-    const topY = props.centerSub ? cx - Math.round(size * 0.08) : cx
     let acc = 0
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0, display: "block" }}>
-            <circle cx={cx} cy={cx} r={r} fill="none" stroke={props.C.sub} strokeWidth={th} />
-            <g transform={`rotate(-90 ${cx} ${cx})`}>
-                {props.segs.filter((s) => s.n > 0).map((s, i) => {
-                    const len = (s.n / total) * circ
-                    const el = (
-                        <circle key={i} cx={cx} cy={cx} r={r} fill="none" stroke={s.color}
-                            strokeWidth={th} strokeDasharray={`${len} ${circ - len}`} strokeDashoffset={-acc}>
-                            <title>{s.label + " " + s.n}</title>
-                        </circle>
-                    )
-                    acc += len
-                    return el
-                })}
-            </g>
-            {props.centerTop ? (
-                <text x={cx} y={topY} textAnchor="middle" dominantBaseline="central"
-                    style={{ fontSize: Math.round(size * 0.26), fontWeight: 800, fill: props.C.text }}>{props.centerTop}</text>
+        <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block" }}>
+                <circle cx={cx} cy={cx} r={r} fill="none" stroke={props.C.sub} strokeWidth={th} />
+                <g transform={`rotate(-90 ${cx} ${cx})`}>
+                    {props.segs.filter((s) => s.n > 0).map((s, i) => {
+                        const len = (s.n / total) * circ
+                        const el = (
+                            <circle key={i} cx={cx} cy={cx} r={r} fill="none" stroke={s.color}
+                                strokeWidth={th} strokeDasharray={`${len} ${circ - len}`} strokeDashoffset={-acc}>
+                                <title>{s.label + " " + s.n}</title>
+                            </circle>
+                        )
+                        acc += len
+                        return el
+                    })}
+                </g>
+            </svg>
+            {(props.centerTop || props.centerSub) ? (
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", lineHeight: 1.05, pointerEvents: "none" }}>
+                    {props.centerTop ? (
+                        <span style={{ fontSize: Math.round(size * 0.22), fontWeight: 800, color: props.C.text, letterSpacing: "-0.03em" }}>{props.centerTop}</span>
+                    ) : null}
+                    {props.centerSub ? (
+                        <span style={{ fontSize: Math.round(size * 0.13), fontWeight: 700, color: props.C.faint, marginTop: 2 }}>{props.centerSub}</span>
+                    ) : null}
+                </div>
             ) : null}
-            {props.centerSub ? (
-                <text x={cx} y={cx + Math.round(size * 0.17)} textAnchor="middle" dominantBaseline="central"
-                    style={{ fontSize: Math.round(size * 0.135), fontWeight: 700, fill: props.C.faint }}>{props.centerSub}</text>
-            ) : null}
-        </svg>
+        </div>
     )
 }
 
@@ -1124,7 +1128,7 @@ function FlatNews(props: { items: NewsItem[]; C: typeof LIGHT; empty: string; ca
             .sort((a, b) => b.items.length - a.items.length || a.source.localeCompare(b.source))
         return (
             <div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 10, alignItems: "start" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(330px, 100%), 1fr))", gap: 10, alignItems: "start" }}>
                     {groups.slice(0, shown).map((g, i) => (
                         <div key={i} style={{ background: C.card, borderRadius: 14, padding: "12px 12px 6px 12px", boxSizing: "border-box" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 8px 4px 8px" }}>
@@ -1145,7 +1149,7 @@ function FlatNews(props: { items: NewsItem[]; C: typeof LIGHT; empty: string; ca
     const sorted = items.slice().sort((a, b) => (sortMode === "hot" ? (b.score || 0) - (a.score || 0) : (b.ts || 0) - (a.ts || 0)))
     return (
         <div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 8, alignItems: "start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(340px, 100%), 1fr))", gap: 8, alignItems: "start" }}>
                 {sorted.slice(0, shown).map((it, i) => (
                     <div key={i} style={{ height: cardH, overflow: "hidden", background: C.card, borderRadius: 12, display: "flex", flexDirection: "column", justifyContent: "center" }}>
                         <NewsRow item={it} C={C} clamp={2} showKo={props.showKo} />
@@ -1168,7 +1172,7 @@ function StockNews(props: { groups: StockGroup[]; C: typeof LIGHT; cardH: number
         )
     }
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 10, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(330px, 100%), 1fr))", gap: 10, alignItems: "start" }}>
             {groups.map((g, i) => (
                 <div
                     key={i}
