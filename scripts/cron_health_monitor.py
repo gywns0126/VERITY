@@ -196,6 +196,50 @@ def _count_expected_price_pulse_in_window(now_utc: datetime, hours: int = 24) ->
     return count
 
 
+def _is_price_pulse_slot_active(now_utc: datetime) -> bool:
+    """현재 시각이 price_pulse 발화 슬롯(장중)인지 — 위 simulate 게이트의 '현재 1슬롯' 판.
+
+    2026-07-07 추가 — dispatch_chain 건강도를 GH run success 수가 아니라
+    산출물 신선도로 판정하기 위한 '지금 장중인가' 게이트.
+    """
+    py_wd = now_utc.weekday()
+    is_weekday = py_wd <= 4
+    is_sun_thu = py_wd in (6, 0, 1, 2, 3)
+    hour = now_utc.hour
+    minute = now_utc.minute
+    kr_pre = (hour == 23 and minute >= 30 and is_sun_thu)
+    kr_main = ((hour <= 5) or (hour == 6 and minute <= 40)) and is_weekday
+    us_main = (
+        (hour == 13 and minute >= 30) or
+        (14 <= hour <= 19) or
+        (hour == 20 and minute == 0)
+    ) and is_weekday
+    return bool(kr_pre or kr_main or us_main)
+
+
+def _price_pulse_output_stale_min(now_utc: datetime) -> Optional[float]:
+    """data/price_pulse.json updated_at 기준 stale 분(minutes). 못 읽으면 None.
+
+    2026-07-07 추가 — dispatch_chain 건강도의 ground truth = 산출물 실 갱신 신선도.
+    price_pulse.yml 은 cancel-in-progress:false 큐잉 → 다수 run 이 cancelled/superseded
+    되나 각 run 은 이 파일을 실제 갱신함(24h 갱신 131회 실측). 따라서 GH run
+    conclusion=="success" 카운트는 undercount(오탐). 신선도가 진짜 판정 기준.
+    """
+    path = os.path.join(_REPO_ROOT, "data", "price_pulse.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+        raw = d.get("updated_at")
+        if not raw:
+            return None
+        ts = datetime.fromisoformat(raw)
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return (now_utc - ts.astimezone(timezone.utc)).total_seconds() / 60.0
+    except Exception:
+        return None
+
+
 def _count_expected_daily_full_in_window(now_utc: datetime, hours: int = 24) -> int:
     """직전 N시간 윈도우 내 daily_analysis_full 발화 예상 슬롯 수 (UTC schedule 기준).
 
@@ -630,36 +674,54 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
     # 9) 🌀 dispatch_chain 안정성 (2026-05-17 P3-3 신설, 2026-05-18 expected-slot 정합 fix)
     # Vercel cron → repository_dispatch → 4 워크플로 chain. slot drop rate detect.
     #
-    # 2026-05-18 fix — 옛 logic = 현재 weekday 만 검사 (is_weekend=True → skip).
-    # Mon 00:00~09:00 KST = is_weekend=False 인데 직전 24h = 일+토 후반 = 시장 0 → false FAIL.
-    # 정공법 = 윈도우 내 dispatch_pulse._resolve_events 슬롯 simulate → 예상 발화 수 산출.
-    # expected=0 → skip alarm (정상 baseline), actual<expected*0.5 → FAIL, *0.8 → WARNING.
+    # 2026-07-07 fix — 옛 logic = conclusion=="success" GH run 만 카운트 → 매일 false FAIL.
+    # price_pulse.yml = cancel-in-progress:false 큐잉 → 다수 run 이 cancelled/superseded 되나
+    # 각 run 은 data/price_pulse.json 을 실제 갱신함 (24h 산출물 갱신 131회 실측, expected≈135).
+    # success-only 카운트 = undercount → 매일 오탐 → cron_health fail_rate 부풀림 →
+    # self_assets_weekly ALERT exit1 캐스케이드. 정공법 = 산출물 신선도(ground truth) 를 FAIL
+    # 권위로, GH run-ratio 는 참고(WARNING)로만. (2026-05-18 expected-slot simulate 유지)
+    now_utc = datetime.now(timezone.utc)
     price_pulse_runs = _gh_run_list("price_pulse.yml", limit=200)
     price_pulse_24h = _filter_recent(price_pulse_runs, 24)
     price_pulse_success = [r for r in price_pulse_24h if r.get("conclusion") == "success"]
-    pp_n_24h = len(price_pulse_success)
-    now_utc = datetime.now(timezone.utc)
+    # 실 발화(dispatched) = success + cancelled/superseded + in-progress — 모두 산출물 갱신함
+    pp_dispatched = [
+        r for r in price_pulse_24h
+        if r.get("conclusion") in ("success", "cancelled", "", None)
+    ]
+    pp_n_24h = len(pp_dispatched)
     pp_expected_24h = _count_expected_price_pulse_in_window(now_utc, hours=24)
+    pp_stale_min = _price_pulse_output_stale_min(now_utc)
+    pp_slot_active = _is_price_pulse_slot_active(now_utc)
     pp_dispatch_summary = {
         "total_24h": len(price_pulse_24h),
-        "success_24h": pp_n_24h,
+        "dispatched_24h": pp_n_24h,
+        "success_24h": len(price_pulse_success),
         "expected_24h": pp_expected_24h,
+        "output_stale_min": round(pp_stale_min, 1) if pp_stale_min is not None else None,
+        "slot_active": pp_slot_active,
     }
-    if pp_expected_24h > 0:
-        ratio = pp_n_24h / pp_expected_24h
-        if ratio < 0.5:
+    # 1차 판정 = 산출물 신선도 (ground truth). 장중(slot_active)인데 갱신 끊김 = 진짜 outage.
+    if pp_slot_active and pp_stale_min is not None:
+        if pp_stale_min > 25:
             severity = "FAIL"
             findings.append(
-                f"🌀 dispatch_chain price_pulse {pp_n_24h}/{pp_expected_24h}회/24h "
-                f"(ratio {ratio:.0%} <50%, FAIL 임계)"
+                f"🌀 price_pulse 산출물 stale {pp_stale_min:.0f}분 "
+                f"(장중인데 data/price_pulse.json 갱신 끊김 — 실 outage)"
             )
-        elif ratio < 0.8:
+        elif pp_stale_min > 12:
             severity = "WARNING" if severity == "PASS" else severity
             findings.append(
-                f"⚠ dispatch_chain price_pulse {pp_n_24h}/{pp_expected_24h}회/24h "
-                f"(ratio {ratio:.0%} <80%, silent skip 의심)"
+                f"⚠ price_pulse 산출물 {pp_stale_min:.0f}분 stale (장중, 지연 의심)"
             )
-    # expected=0 = 직전 24h 시장 시간 부재 (주말 + 월 09:00 전 + 시장 마감 후 = 정상 baseline)
+    # 2차 참고 = dispatched-ratio. 신선도 판정이 우선이라 FAIL 승격 X, ratio 극저 시 WARNING 만.
+    elif pp_expected_24h > 0 and pp_n_24h / pp_expected_24h < 0.5:
+        severity = "WARNING" if severity == "PASS" else severity
+        findings.append(
+            f"⚠ dispatch_chain price_pulse dispatched {pp_n_24h}/{pp_expected_24h}회/24h "
+            f"(ratio {pp_n_24h / pp_expected_24h:.0%}, 산출물 신선도 별도 확인)"
+        )
+    # slot_active=False = 현재 시장 시간 부재 (주말/장 마감 후 = 정상 baseline, skip)
 
     # 10) 2028 Vision metric — Antifragility + FOMO Score 분기별 측정
     # (Perplexity Q6 학계 자문 정합). 운영 누적 부족 시 산식 산출 못 함 — 정상.
