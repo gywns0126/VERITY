@@ -256,6 +256,23 @@ export default function SmallcapScreenerAll(props: { width?: number; dark?: bool
             ))}
           </div>
 
+          {/* 선택 필터 설명 — 데이터 기반(빌더 단일 출처, CornerCard와 동일 필드). 무엇을·왜·기준. */}
+          {cur ? (
+            <div style={{ background: C.card, borderRadius: 12, padding: "11px 13px", marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, letterSpacing: -0.2, marginBottom: cur.why || cur.criteria_text ? 5 : 0 }}>
+                {cur.badge} · {cur.name}
+              </div>
+              {cur.why ? (
+                <div style={{ fontSize: 11.5, fontWeight: 600, color: C.sub, lineHeight: 1.5, marginBottom: cur.criteria_text ? 6 : 0 }}>{cur.why}</div>
+              ) : null}
+              {cur.criteria_text ? (
+                <div style={{ background: C.bg, borderRadius: 9, padding: "7px 10px", fontSize: 11, fontWeight: 700, color: C.faint, lineHeight: 1.45, letterSpacing: -0.2 }}>
+                  <span style={{ color: C.violet }}>기준</span> · {cur.criteria_text}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {/* 검색 + 정렬 */}
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={cfg.placeholder}
             style={{ width: "100%", boxSizing: "border-box", fontSize: 13, fontWeight: 600, padding: "10px 12px", borderRadius: 12, border: "none", background: C.card, color: C.ink, marginBottom: 8, outline: "none" }} />
