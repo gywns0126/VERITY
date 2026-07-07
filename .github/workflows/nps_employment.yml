@@ -1,0 +1,54 @@
+name: nps-employment
+
+# 상장사 고용 동향 (국민연금 가입 사업장) — 매월 16일 KST 05:00 (공단 갱신 = 매월 15일 이후)
+# 데이터 = 최근 1년 창만 제공 → 월 1회 스냅샷 누적이 시계열 자산 (history.jsonl)
+# 콜 ≈ 3.5K/run (dev 한도 10K/일 내) · 런타임 ~30분
+
+on:
+  schedule:
+    - cron: '0 20 15 * *'   # UTC 15일 20:00 = KST 16일 05:00
+  workflow_dispatch:
+
+concurrency:
+  group: verity-nps-employment
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Collect NPS employment
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+        run: python api/collectors/nps_employment.py
+
+      - name: Commit data
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "actions@github.com"
+          git pull --rebase --autostash origin main || true
+          git add data/
+          git diff --cached --quiet && echo "no changes" && exit 0
+          git commit -m "📊 nps_employment 월간 수집 $(date -u -d '+9 hours' +%Y-%m-%d)"
+          git push origin main
+
+      - name: Publish (VERITY-data + Vercel Blob)
+        continue-on-error: true
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
