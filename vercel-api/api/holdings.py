@@ -183,19 +183,12 @@ class handler(BaseHTTPRequestHandler):
             "avg_cost": avg_cost,
             "memo": str(body.get("memo", "")),
         }
+        payload["user_id"] = user_id  # 서버 검증 user_id 만 (body user_id 무시 — IDOR 차단)
         try:
-            # upsert — 동일 (user_id, ticker) 있으면 갱신, 없으면 삽입
-            existing = sb.select("user_holdings", {
-                "user_id": f"eq.{user_id}", "ticker": f"eq.{ticker}",
-                "select": "id", "limit": "1",
-            }, user_jwt=jwt)
-            if existing:
-                rows = sb.update("user_holdings", {"id": existing[0]["id"], "user_id": user_id},
-                                 payload, user_jwt=jwt)
-                return _json_response(self, rows[0] if rows else {}, 200)
-            payload["user_id"] = user_id  # 서버 검증 user_id 만
-            row = sb.insert("user_holdings", payload, user_jwt=jwt)
-            _json_response(self, row, 201)
+            # 원자적 upsert — (user_id, ticker) 충돌 시 갱신, 없으면 삽입.
+            # check-then-insert 경쟁(동시 동일 키 → UNIQUE 위반 500) 제거. UNIQUE idx_uh_uniq 정합.
+            row = sb.upsert("user_holdings", payload, "user_id,ticker", user_jwt=jwt)
+            _json_response(self, row, 200)
         except Exception as e:
             _json_response(self, {"error": _safe_err(e, "DB 쓰기 실패")}, 500)
 

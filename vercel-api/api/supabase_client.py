@@ -72,6 +72,26 @@ def insert(table: str, data: Dict[str, Any], user_jwt: Optional[str] = None) -> 
     return rows[0] if isinstance(rows, list) and rows else rows
 
 
+def upsert(
+    table: str,
+    data: Dict[str, Any],
+    on_conflict: str,
+    user_jwt: Optional[str] = None,
+) -> Dict[str, Any]:
+    """원자적 INSERT ... ON CONFLICT DO UPDATE (PostgREST merge-duplicates).
+
+    check-then-insert 경쟁(동시 동일 키 → UNIQUE 위반 500)을 제거한다.
+    on_conflict = 유니크 제약 컬럼(예: "user_id,ticker"). RLS 는 INSERT/UPDATE
+    양쪽 정책이 모두 걸려있어야 통과(둘 다 auth.uid()=user_id 이면 OK).
+    """
+    h = _headers(user_jwt)
+    h["Prefer"] = "return=representation,resolution=merge-duplicates"
+    r = requests.post(f"{_rest(table)}?on_conflict={on_conflict}", headers=h, json=data, timeout=8)
+    r.raise_for_status()
+    rows = r.json()
+    return rows[0] if isinstance(rows, list) and rows else rows
+
+
 def update(
     table: str,
     match: Dict[str, str],
