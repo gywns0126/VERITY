@@ -219,47 +219,49 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                 </div>
             )}
 
-            {/* 연도별 운용수익률 차트 (1988~ 공단 공시 실값) */}
+            {/* 연도별 운용수익률 — 유선형 곡선 (1988~ 공단 공시 실값, PM 2026-07-07) */}
             {returns && Array.isArray(returns.annual) && returns.annual.length > 5 && (() => {
                 const ann: any[] = returns.annual
                 const vmax = Math.max(...ann.map((a: any) => a.return_pct || 0), 1)
                 const vmin = Math.min(...ann.map((a: any) => a.return_pct || 0), 0)
                 const span = vmax - vmin || 1
-                const H = 110
-                const zeroY = (vmax / span) * H
+                const H = 110, PADV = 8
+                const yOf = (v: number) => PADV + (1 - (v - vmin) / span) * (H - 2 * PADV)
+                const xOf = (i: number) => (i / (ann.length - 1)) * 100
+                const pts = ann.map((a: any, i: number) => ({ x: +xOf(i).toFixed(2), y: +yOf(a.return_pct || 0).toFixed(2) }))
+                // Catmull-Rom 곡선
+                let d = `M ${pts[0].x} ${pts[0].y}`
+                for (let i = 0; i < pts.length - 1; i++) {
+                    const p0 = pts[i === 0 ? 0 : i - 1], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2 < pts.length ? i + 2 : pts.length - 1]
+                    d += ` C ${(p1.x + (p2.x - p0.x) / 6).toFixed(2)} ${(p1.y + (p2.y - p0.y) / 6).toFixed(2)} ${(p2.x - (p3.x - p1.x) / 6).toFixed(2)} ${(p2.y - (p3.y - p1.y) / 6).toFixed(2)} ${p2.x} ${p2.y}`
+                }
+                const area = d + ` L ${pts[pts.length - 1].x} ${yOf(0)} L ${pts[0].x} ${yOf(0)} Z`
+                const zeroY = yOf(0)
+                const best = ann.reduce((a: any, b: any) => ((b.return_pct || 0) > (a.return_pct || 0) ? b : a))
+                const worst = ann.reduce((a: any, b: any) => ((b.return_pct || 0) < (a.return_pct || 0) ? b : a))
+                const last = ann[ann.length - 1]
                 return (
                     <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 12 }}>
                         <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 13.5, fontWeight: 800 }}>연도별 운용수익률</span>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>1988~{ann[ann.length - 1].year} · 공단 공시 실값</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>1988~{last.year} · 공단 공시 실값</span>
                             <span style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 800, color: C.ink }}>연평균 {returns.cumulative_avg_pct}%</span>
                         </div>
-                        <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: H, marginTop: 12, position: "relative" }}>
-                            <div style={{ position: "absolute", left: 0, right: 0, top: zeroY, height: 1, background: C.line }} />
-                            {ann.map((a: any) => {
-                                const v = a.return_pct || 0
-                                const h = Math.max(2, (Math.abs(v) / span) * H)
-                                const up = v >= 0
-                                return (
-                                    <div key={a.year} title={`${a.year}: ${v}%${a.provisional ? " (잠정)" : ""}`}
-                                        style={{ flex: 1, minWidth: 0, height: H, position: "relative" }}>
-                                        <div style={{ position: "absolute", left: 0, right: 0, borderRadius: 2,
-                                            top: up ? zeroY - h : zeroY, height: h,
-                                            background: up ? C.up : C.down, opacity: a.provisional ? 0.55 : 0.9 }} />
-                                    </div>
-                                )
-                            })}
-                        </div>
+                        <svg viewBox={`0 0 100 ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: H, display: "block", marginTop: 10, overflow: "visible" }}>
+                            <line x1={0} y1={zeroY} x2={100} y2={zeroY} stroke={C.line} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                            <path d={area} fill={C.accent || "#6c5ce7"} fillOpacity={0.08} stroke="none" />
+                            <path d={d} fill="none" stroke={C.accent || "#6c5ce7"} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                        </svg>
                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 9.5, color: C.faint, fontWeight: 700 }}>
-                            {ann.filter((a: any) => a.year % 5 === 0 || a.year === ann[ann.length - 1].year).map((a: any) => (
+                            {ann.filter((a: any) => a.year % 5 === 0 || a.year === last.year).map((a: any) => (
                                 <span key={a.year}>{"'" + String(a.year).slice(2)}</span>
                             ))}
                         </div>
                         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 8, fontSize: 11, color: C.sub, fontWeight: 600 }}>
-                            <span>최고 {vmax.toFixed(1)}%</span>
-                            <span>최저 {vmin.toFixed(1)}%</span>
+                            <span>최고 <b style={{ color: C.up }}>{best.year} +{Number(best.return_pct).toFixed(1)}%</b></span>
+                            <span>최저 <b style={{ color: C.down }}>{worst.year} {Number(worst.return_pct).toFixed(1)}%</b></span>
+                            <span>최근 {last.year} {Number(last.return_pct) >= 0 ? "+" : ""}{Number(last.return_pct).toFixed(1)}%{last.provisional ? " (잠정)" : ""}</span>
                             {returns.cumulative_profit_bil != null && <span>누적 수익금 {(returns.cumulative_profit_bil / 1000).toFixed(0)}조원</span>}
-                            <span style={{ color: C.faint }}>{returns.note || ""}</span>
                         </div>
                     </div>
                 )

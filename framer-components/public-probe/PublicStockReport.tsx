@@ -341,12 +341,20 @@ function fmtUSDcompact(v: any): string {
 
 // Catmull-Rom → cubic bezier 부드러운 곡선 path (유선형 추이용)
 function smoothLine(p: { x: number; y: number }[]): string {
-    // 직선 꺾은선(선형) — 곡선 보간은 실측값 사이를 지어내는 인상 (PM 2026-07-04 '그래프 선형으로')
+    // 유선형(Catmull-Rom 곡선) — PM 2026-07-07 '유선형으로' (7/5 직선 지시 번복 확정)
     if (!p.length) return ""
     if (p.length === 1) return `M ${p[0].x} ${p[0].y}`
     let d = `M ${p[0].x} ${p[0].y}`
-    for (let i = 1; i < p.length; i++) {
-        d += ` L ${p[i].x} ${p[i].y}`
+    for (let i = 0; i < p.length - 1; i++) {
+        const p0 = p[i === 0 ? 0 : i - 1]
+        const p1 = p[i]
+        const p2 = p[i + 1]
+        const p3 = p[i + 2 < p.length ? i + 2 : p.length - 1]
+        const c1x = +(p1.x + (p2.x - p0.x) / 6).toFixed(2)
+        const c1y = +(p1.y + (p2.y - p0.y) / 6).toFixed(2)
+        const c2x = +(p2.x - (p3.x - p1.x) / 6).toFixed(2)
+        const c2y = +(p2.y - (p3.y - p1.y) / 6).toFixed(2)
+        d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${p2.x} ${p2.y}`
     }
     return d
 }
@@ -545,7 +553,7 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                     const xAt = (i: number) => PX + (n <= 1 ? 0 : (i / (n - 1)) * (CW - PX * 2))
                     const yAt = (v: number) => PY + (1 - (v - lo) / span) * (CH - PY * 2)
                     const pts = raw.map((v, i) => (v == null ? null : { x: xAt(i), y: yAt(v), v, i })).filter((p): p is { x: number; y: number; v: number; i: number } => p != null)
-                    const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")
+                    const linePath = smoothLine(pts)  // 유선형 (PM 2026-07-07)
                     const areaPath = `${linePath} L${pts[pts.length - 1].x.toFixed(1)},${CH - 1} L${pts[0].x.toFixed(1)},${CH - 1} Z`
                     const hiPt = pts.reduce((a, b) => (b.v > a.v ? b : a))
                     const loPt = pts.reduce((a, b) => (b.v < a.v ? b : a))
