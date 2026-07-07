@@ -165,14 +165,15 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
     const allRows: any[] = (data && (data.holdings || [])) || []
     // 겹침 검사 = 전체 투자현황(full, 연말 ~1,400종목 — 5% 미만 포함) 우선, 부재 시 5%+ 리스트 (PM 2026-07-07)
     const fullRows: any[] = (data && (data.full || [])) || []
-    const overlapBase: any[] = fullRows.length ? fullRows : allRows
+    const fullUsRows: any[] = (data && (data.full_us || [])) || []
+    const overlapBase: any[] = (fullRows.length ? fullRows : allRows).concat(fullUsRows)
     const maxDate = allRows.reduce((m: string, r: any) => (String(r.date || "") > m ? String(r.date || "") : m), "")
     const recentCut = maxDate ? (new Date(new Date(maxDate + "T00:00:00+09:00").getTime() - 90 * 86400000)).toISOString().slice(0, 10) : "9999"
     const overlapHold = overlapBase.filter((r: any) => myHold.has(String(r.ticker))).length
     const overlapWatch = overlapBase.filter((r: any) => !myHold.has(String(r.ticker)) && myWatch.has(String(r.ticker))).length
     const in5p = new Set(allRows.map((r: any) => String(r.ticker)))
     // 5%+ 리스트 밖(=5% 미만)인데 내 보유/관심과 겹치는 전체 투자현황 행
-    const myBelow5: any[] = fullRows.filter((r: any) => !in5p.has(String(r.ticker)) && (myHold.has(String(r.ticker)) || myWatch.has(String(r.ticker))))
+    const myBelow5: any[] = fullRows.concat(fullUsRows).filter((r: any) => !in5p.has(String(r.ticker)) && (myHold.has(String(r.ticker)) || myWatch.has(String(r.ticker))))
 
     if (!data) return <div style={{ ...wrap, textAlign: "center", color: C.faint, fontSize: 14, padding: 40 }}>데이터를 불러오지 못했어요.</div>
 
@@ -188,12 +189,12 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                     {overlapHold > 0 && <>내 보유 중 <b style={{ color: C.ink }}>{overlapHold}종목</b>이 국민연금 보유와 겹칩니다</>}
                     {overlapHold > 0 && overlapWatch > 0 && " · "}
                     {overlapWatch > 0 && <>관심종목 겹침 <b style={{ color: C.ink }}>{overlapWatch}</b></>}
-                    <span style={{ color: C.faint, fontWeight: 600 }}> — {fullRows.length ? "전체 투자현황(연말 기준, 5% 미만 포함)" : "5%+ 대량보유 공시"} 대조 · 사실 비교(추천 아님)</span>
+                    <span style={{ color: C.faint, fontWeight: 600 }}> — {fullRows.length ? "전체 투자현황(연말 기준 · 국내+해외 · 5% 미만 포함)" : "5%+ 대량보유 공시"} 대조 · 사실 비교(추천 아님)</span>
                 </div>
             )}
             {myBelow5.length > 0 && (
                 <div style={{ background: C.card, borderRadius: 12, padding: "10px 13px", marginBottom: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 800, color: C.sub, marginBottom: 5 }}>내 종목 중 국민연금 보유 (5% 미만 — 아래 리스트 밖)</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 800, color: C.sub, marginBottom: 5 }}>내 종목 중 국민연금 보유 (5% 미만 · 해외 포함)</div>
                     {myBelow5.slice(0, 8).map((r: any, i: number) => (
                         <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "4px 0", fontSize: 12.5 }}>
                             <span style={{ fontWeight: 700, color: C.ink }}>{r.name}</span>

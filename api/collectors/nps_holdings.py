@@ -267,6 +267,12 @@ def _from_full_list(name2tk: Dict[str, str]) -> List[Dict[str, Any]]:
                     if tk:
                         rows.append({"ticker": tk, "name": nm, "pct": pct, "eval_amt_100m": amt, "as_of": asof or "csv"})
             if rows:
+                meta = _load_json(os.path.join(_ROOT, "data", "nps_full_holdings.meta.json"), {}) or {}
+                asof2 = str(meta.get("as_of") or "")
+                if asof2:
+                    for r0 in rows:
+                        if r0.get("as_of") in ("", "csv"):
+                            r0["as_of"] = asof2
                 return rows
         except Exception:  # noqa: BLE001
             pass
@@ -342,6 +348,67 @@ def _from_full_list(name2tk: Dict[str, str]) -> List[Dict[str, Any]]:
         return []
 
 
+def _norm_us(nm: str) -> str:
+    """미장 영문 종목명 정규화 — 'APPLE INC' ↔ 'Apple Inc.' 매칭용."""
+    s = re.sub(r"[^A-Z0-9 ]", " ", str(nm or "").upper())
+    for suf in (" INCORPORATED", " CORPORATION", " COMPANY", " HOLDINGS", " HOLDING", " GROUP",
+                " INC", " CORP", " LTD", " PLC", " CO", " SA", " NV", " AG", " ADR", " CL A", " CL B", " CLASS A", " CLASS B"):
+        while s.endswith(suf):
+            s = s[: -len(suf)]
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _from_full_overseas() -> List[Dict[str, Any]]:
+    """해외주식 전체 투자현황 CSV (data/nps_full_holdings_overseas.csv) → 미국 티커 매칭 행만.
+
+    매칭 = us_stock_report_public(+smallcap) 종목명 정규화 사전. 미매칭(비미국·매핑실패) = 제외(사실만).
+    """
+    csv_path = os.path.join(_ROOT, "data", "nps_full_holdings_overseas.csv")
+    if not os.path.isfile(csv_path):
+        return []
+    name2tk: Dict[str, str] = {}
+    for fn in ("us_stock_report_public.json", "us_stock_report_us_smallcap.json"):
+        doc = _load_json(os.path.join(_ROOT, "data", fn), {}) or {}
+        arr = doc.get("stocks") or []
+        rows0 = arr if isinstance(arr, list) else list(arr.values())
+        for s in rows0:
+            tk = str(s.get("ticker") or "")
+            for cand in (s.get("name"), s.get("name_en")):
+                key = _norm_us(cand or "")
+                if tk and key and key not in name2tk:
+                    name2tk[key] = tk
+    if not name2tk:
+        return []
+    meta = _load_json(os.path.join(_ROOT, "data", "nps_full_holdings.meta.json"), {}) or {}
+    asof = str(meta.get("as_of") or "")
+    out: List[Dict[str, Any]] = []
+    try:
+        import csv as _csv
+        with open(csv_path, encoding="utf-8-sig", newline="") as f:
+            for row in _csv.DictReader(f):
+                nm, pct, amt = "", None, None
+                for k, v in row.items():
+                    kk = str(k or "")
+                    if "종목명" in kk:
+                        nm = str(v or "").strip()
+                    elif "지분율" in kk:
+                        try:
+                            pct = float(str(v).replace(",", ""))
+                        except (TypeError, ValueError):
+                            pct = None
+                    elif "평가액" in kk:
+                        try:
+                            amt = float(str(v).replace(",", ""))
+                        except (TypeError, ValueError):
+                            amt = None
+                tk = name2tk.get(_norm_us(nm))
+                if tk:
+                    out.append({"ticker": tk, "name": nm, "pct": pct, "eval_amt_100m": amt, "as_of": asof or "csv"})
+    except Exception:  # noqa: BLE001
+        return []
+    return out
+
+
 def build_nps_holdings() -> Dict[str, Any]:
     from datetime import datetime, timezone, timedelta
     kst = timezone(timedelta(hours=9))
@@ -361,6 +428,7 @@ def build_nps_holdings() -> Dict[str, Any]:
     fund = _load_json(FUND_OVERVIEW_PATH, None)
 
     full_rows = _from_full_list(name2tk)
+    full_us_rows = _from_full_overseas()
     has_full = any(h.get("src", "").startswith("data.go.kr") for h in holdings)
     return {
         "generated_at": datetime.now(kst).isoformat(),
@@ -368,8 +436,10 @@ def build_nps_holdings() -> Dict[str, Any]:
         "coverage": "full_5pct" if has_full else "operating_pool",
         "count": len(holdings),
         "holdings": holdings,
-        "full": full_rows,          # 전체 투자현황(연말) — 활용신청 후 채워짐. 겹침 검사용 (5% 미만 포함)
+        "full": full_rows,          # 전체 투자현황(연말, KR ~1,200) — 겹침 검사용 (5% 미만 포함)
         "full_n": len(full_rows),
+        "full_us": full_us_rows,    # 해외(미장 매칭분) 전체 투자현황 — 미장 겹침 검사용
+        "full_us_n": len(full_us_rows),
         "fund": fund,  # 운용수익률/AUM (data/nps_fund_overview.json, 수기·분기 갱신). 없으면 null
         "note": "국민연금 5% 이상 대량보유 공시 기준 — 전체 보유종목(약 1,200) 아님 · 분기 지연 · 지분율은 법적 강제공시 사실, 점수·추천 아님.",
     }
