@@ -725,37 +725,47 @@ export default function PublicStockReport(props: Props) {
         return () => document.removeEventListener("click", close)
     }, [])
 
+    // 종목 상세 = 슬라이스 API 1콜(~11KB) — 전 종목 맵 로드(≈16MB) 대체 (로딩 극단 경량화 2026-07-08).
+    //   report + flow/forensics/insider/warn/lending/supply/employment 를 한 번에 슬라이스 반환.
+    //   검색 목록(searchList)은 universe_search.json 로 별도(경량) — 아래 effect. 상세는 선택 종목만.
     useEffect(() => {
-        if (onCanvas || !stockUrl) return
+        if (onCanvas) return
+        const t = String(selTicker || "").trim().toUpperCase()
+        if (!t) return
         let alive = true
-        const urls = [stockUrl, usStockUrl, usSmallcapUrl].filter(Boolean)
-        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
-            .then((docs) => {
-                const arr: any[] = []
-                for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) arr.push(...(a as any[])) }
-                if (!alive || !arr.length) return
-                const ts = docs[0] && (docs[0] as any)._meta && (docs[0] as any)._meta.generated_at
-                if (ts) setReportAsOf(String(ts))
-                // ticker dedup — smallcap 트랙(us_stock_report_us_smallcap) ∩ sp600 중복. 먼저 등장(sp1500) 우선.
-                const seen = new Set<string>()
-                const deduped = arr.filter((s: any) => { const tk = String(s.ticker || ""); if (!tk || seen.has(tk)) return false; seen.add(tk); return true })
-                setList(deduped); setListLoaded(true)
-                let initT = deduped[0].ticker
-                if (typeof window !== "undefined") {
-                    let qp = (new URLSearchParams(window.location.search).get("q") || "").trim().toLowerCase()
-                    if (!qp) { try { qp = (window.localStorage.getItem("verity_last_ticker") || "").trim().toLowerCase() } catch (e) {} }
-                    if (qp) {
-                        const hit = deduped.find((x: any) => String(x.ticker).toLowerCase() === qp || String(x.name || "").toLowerCase() === qp || String(x.name_ko || "") === qp)
-                            || deduped.find((x: any) => String(x.ticker).toLowerCase().includes(qp) || String(x.name || "").toLowerCase().includes(qp) || String(x.name_ko || "").includes(qp))
-                        if (hit) initT = hit.ticker
-                    }
-                }
-                try { window.localStorage.setItem("verity_last_ticker", String(initT)) } catch (e) {}
-                setSelTicker(initT)
+        fetch(base + "/api/stock_slice?ticker=" + encodeURIComponent(t))
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!alive) return
+                if (!d || d.status !== "ok") { setListLoaded(true); return }
+                const rep = d.report
+                if (rep && rep.ticker) setList([rep])
+                else setList([])   // 리포트 미보유 = s memo 가 searchList stub 으로 안내(_noReport)
+                if (d.report_as_of) setReportAsOf(String(d.report_as_of))
+                const merge = (setter: any, sec: any) => { if (sec != null) setter((prev: any) => ({ ...prev, [t]: sec })) }
+                if (d.flow != null) setFlowMap((p: any) => ({ ...p, [t]: d.flow }))
+                merge(setForensicsMap, d.forensics)
+                merge(setInsiderMap, d.insider)
+                merge(setWarnMap, d.warn)
+                merge(setLendingMap, d.lending); if (d.lend_as_of) setLendAsOf(String(d.lend_as_of))
+                merge(setSupplyMap, d.supply)
+                merge(setEmpMap, d.employment)
+                setListLoaded(true)
             })
-            .catch(() => {})
+            .catch(() => { if (alive) setListLoaded(true) })
         return () => { alive = false }
-    }, [stockUrl, usStockUrl, usSmallcapUrl, onCanvas])
+    }, [selTicker, base, onCanvas])
+
+    // ?q= 가 종목명(비 티커)일 때 → 티커로 해석. 검색 universe 로드 후 1회 (딥링크 보존).
+    useEffect(() => {
+        if (onCanvas || !searchList.length) return
+        const t = String(selTicker || "").trim()
+        if (!t || searchList.some((x: any) => String(x.ticker).toUpperCase() === t.toUpperCase())) return
+        const low = t.toLowerCase()
+        const hit = searchList.find((x: any) => String(x.name || "").toLowerCase() === low || String(x.name_ko || "") === t)
+            || searchList.find((x: any) => String(x.name || "").toLowerCase().includes(low) || String(x.name_ko || "").includes(t))
+        if (hit) setSelTicker(String(hit.ticker).toUpperCase())
+    }, [searchList, selTicker, onCanvas])
 
     /* 검색 universe 로드 — 통합 universe_search.json(전 종목 KR+US). 리포트 DATA(list)와 별개. */
     useEffect(() => {
@@ -767,98 +777,8 @@ export default function PublicStockReport(props: Props) {
         return () => { alive = false }
     }, [onCanvas])
 
-    useEffect(() => {
-        if (onCanvas || !flowUrl) return
-        let alive = true
-        fetch(flowUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const fm = d && (d.flows || d); if (alive && fm && typeof fm === "object") setFlowMap(fm) })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [flowUrl, onCanvas])
-
-    // 대차잔고(공매도 압력 proxy) — top200, stocks 배열 → ticker 맵. 미보유 종목은 graceful 미표시.
-    useEffect(() => {
-        const url = lendingUrl || DEFAULT_LENDING
-        if (onCanvas || !url) return
-        let alive = true
-        fetch(url, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                if (!alive || !d || !Array.isArray(d.stocks)) return
-                const m: Record<string, any> = {}
-                for (const row of d.stocks) { if (row && row.ticker) m[String(row.ticker)] = row }
-                setLendingMap(m)
-                setLendAsOf((d._meta && d._meta.as_of) || "")
-            })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [lendingUrl, onCanvas])
-
-    // 수급 종합(공매도·신용잔고) — supply_demand.json (stocks 맵). 스냅샷 universe만, 미보유 graceful.
-    useEffect(() => {
-        const url = supplyUrl || DEFAULT_SUPPLY
-        if (onCanvas || !url) return
-        let alive = true
-        fetch(url, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const m = d && (d.stocks || d); if (alive && m && typeof m === "object") setSupplyMap(m) })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [supplyUrl, onCanvas])
-
-    // 고용 동향 — 국민연금 가입 사업장 (nps_employment.json, 월 1회). 미보유 종목 graceful 숨김.
-    useEffect(() => {
-        if (onCanvas) return
-        let alive = true
-        fetch(DEFAULT_EMPLOYMENT, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const m = d && d.stocks; if (alive && m && typeof m === "object") setEmpMap(m) })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [onCanvas])
-
-    useEffect(() => {
-        if (onCanvas || !forensicsUrl) return
-        let alive = true
-        fetch(forensicsUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const arr = d && (Array.isArray(d) ? d : d.stocks)
-                if (!alive || !Array.isArray(arr)) return
-                const m: Record<string, any> = {}
-                for (const x of arr) { if (x && x.ticker) m[String(x.ticker)] = x }
-                setForensicsMap(m)
-            })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [forensicsUrl, onCanvas])
-
-    useEffect(() => {
-        if (onCanvas || !insiderUrl) return
-        let alive = true
-        fetch(insiderUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const arr = d && (Array.isArray(d) ? d : d.stocks)
-                if (!alive || !Array.isArray(arr)) return
-                const m: Record<string, any> = {}
-                for (const x of arr) { if (x && x.ticker) m[String(x.ticker)] = x }
-                setInsiderMap(m)
-            })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [insiderUrl, onCanvas])
-
-    useEffect(() => {
-        if (onCanvas || !warnUrl) return
-        let alive = true
-        fetch(warnUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const wm = d && (d.warnings || d); if (alive && wm && typeof wm === "object") setWarnMap(wm) })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [warnUrl, onCanvas])
+    // (flow·대차·수급·고용·포렌식·내부자·경보 전 종목 맵 fetch 는 슬라이스 API 로 통합 — 위 effect 참조.
+    //  종목별 ~11KB 슬라이스로 대체해 페이지당 ≈16MB 다운로드 제거. 2026-07-08.)
 
     // 美 forensics — 종목이 US(비 6자리 ticker)일 때 per-ticker 엔드포인트 집계
     // (Form4 내부자 · 13D/G 대량보유 · 13F 스마트머니 · 컨센서스). KR 은 skip.
@@ -883,7 +803,8 @@ export default function PublicStockReport(props: Props) {
         return list[0] || {}
     }, [list, searchList, selTicker])
     // 로딩 중(실데이터 미도착 or 선택 종목 미발견)엔 삼성전자 샘플 폴백 대신 스켈레톤. 160ms 지연 게이트=즉시 로드 깜빡임 차단(토스식).
-    const found = useMemo(() => list.some((x) => String(x.ticker) === String(selTicker)), [list, selTicker])
+    // 리포트 보유(list) 또는 universe 확인(searchList) 시 종목 확정 — 슬라이스 미보유 종목도 stub 안내로 스켈레톤 탈출
+    const found = useMemo(() => list.some((x) => String(x.ticker) === String(selTicker)) || searchList.some((x) => String(x.ticker) === String(selTicker)), [list, searchList, selTicker])
     const showSkeleton = !onCanvas && (!listLoaded || !found)
     useEffect(() => {
         if (!showSkeleton) { setSkelVisible(false); return }

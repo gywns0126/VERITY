@@ -1,9 +1,10 @@
 {
   "cleanUrls": true,
-  "ignoreCommand": "bash -c 'cd .. || exit 0; N=50; git rev-parse HEAD~$N >/dev/null 2>&1 || N=1; git rev-parse HEAD~$N >/dev/null 2>&1 || exit 1; git diff --quiet HEAD~$N HEAD -- vercel-api/ && exit 0; exit 1'",
+  "ignoreCommand": "bash -c 'cd .. || exit 0; git rev-parse HEAD^ >/dev/null 2>&1 || exit 0; git diff --quiet HEAD^ HEAD -- vercel-api/ && exit 0; exit 1'",
   "functions": {
     "api/stock.py": { "maxDuration": 30 },
     "api/stock_detail.py": { "maxDuration": 30 },
+    "api/stock_slice.py": { "maxDuration": 30 },
     "api/search.py": { "maxDuration": 5 },
     "api/chat.py": { "maxDuration": 60 },
     "api/chat_diag.py": { "maxDuration": 5 },
@@ -26,7 +27,6 @@
     "api/us_financials.py": { "maxDuration": 5 },
     "api/us_forensics.py": { "maxDuration": 5 },
     "api/stock_brief.py": { "maxDuration": 60 },
-    "api/fact_report.py": { "maxDuration": 30 },
     "api/brain_breakdown.py": { "maxDuration": 10 },
     "api/cron/dispatch_pulse.py": { "maxDuration": 10 }
   },
@@ -43,8 +43,7 @@
     { "source": "/api/system/health",            "destination": "/api/system_health" },
     { "source": "/api/verity/us-financials",     "destination": "/api/us_financials" },
     { "source": "/api/verity/us-forensics",      "destination": "/api/us_forensics" },
-    { "source": "/api/verity/stock-brief",       "destination": "/api/stock_brief" },
-    { "source": "/api/verity/fact-report",       "destination": "/api/fact_report" }
+    { "source": "/api/verity/stock-brief",       "destination": "/api/stock_brief" }
   ],
   "headers": [
     {
