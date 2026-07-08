@@ -546,7 +546,20 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                     const xAt = (i: number) => PX + (n <= 1 ? 0 : (i / (n - 1)) * (CW - PX * 2))
                     const yAt = (v: number) => PY + (1 - (v - lo) / span) * (CH - PY * 2)
                     const pts = raw.map((v, i) => (v == null ? null : { x: xAt(i), y: yAt(v), v, i })).filter((p): p is { x: number; y: number; v: number; i: number } => p != null)
-                    const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")
+                    // 유선형(Catmull-Rom→베지어) — 2026-07-08 PM 승인: 7/4 '그래프 선형' 결정 override.
+                    //   장력 1/6(표준, BondRegime 동일) = 실측점 밖 overshoot 최소화(분기 사이 값 지어냄 인상 억제).
+                    const linePath = pts.length < 2
+                        ? (pts.length ? `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}` : "")
+                        : (() => {
+                            let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`
+                            for (let i = 0; i < pts.length - 1; i++) {
+                                const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2
+                                const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6
+                                const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6
+                                d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
+                            }
+                            return d
+                        })()
                     const areaPath = `${linePath} L${pts[pts.length - 1].x.toFixed(1)},${CH - 1} L${pts[0].x.toFixed(1)},${CH - 1} Z`
                     const hiPt = pts.reduce((a, b) => (b.v > a.v ? b : a))
                     const loPt = pts.reduce((a, b) => (b.v < a.v ? b : a))
@@ -867,7 +880,7 @@ export default function PublicStockReport(props: Props) {
     const matches = useMemo(() => {
         const q = query.trim().toLowerCase()
         if (!q) return []
-        return searchList.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").toLowerCase().includes(q) || String(x.name_ko || "").includes(q)).slice(0, 15)
+        return searchList.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").toLowerCase().includes(q) || String(x.name_ko || "").includes(q) || String(x.kw || "").toLowerCase().includes(q)).slice(0, 15)
     }, [query, searchList])
 
     const facts = s.facts || {}
@@ -1104,6 +1117,11 @@ export default function PublicStockReport(props: Props) {
     const headerBox: CSSProperties = warnTop
         ? { marginTop: 14, background: warnTint, borderRadius: 18, padding: narrow ? "13px 14px" : "15px 17px" }
         : { marginTop: 14, paddingLeft: narrow ? 14 : 17 }
+
+    // 🔎 채권·금리 검색 진입(RATES_*) = 종목 리포트가 아니라 PublicBondRegime(searchMode)이 표시.
+    //   이 컴포넌트는 렌더 양보(null) — 같은 /stock 페이지에서 채권이면 BondRegime, 종목이면 이 리포트.
+    //   (2026-07-08 통합 검색·리포트. 미지 티커 "준비중" stub 이 채권에 뜨는 것 방지.)
+    if (String(selTicker || "").toUpperCase().startsWith("RATES_")) return null
 
     if (showSkeleton) {
         return (
@@ -1844,16 +1862,57 @@ export default function PublicStockReport(props: Props) {
                 )
             })()}
 
-            {/* 컨센서스 */}
-            {(consensus.target_price || consensus.opinion) && (
-                <>
-                    {sectionTitle("애널리스트 컨센서스", "집계 · AlphaNest 의견 아님")}
-                    <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                        {[["목표주가 평균", consensus.target_price], ["투자의견", consensus.opinion], ["추정 EPS", consensus.eps]].map(([k, v]: any, i) => v ? kvRow(k, v, i) : null)}
-                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "4px 0 10px", lineHeight: 1.5 }}>증권사 집계 사실</div>
-                    </div>
-                </>
-            )}
+            {/* 컨센서스 — 평균/의견 + 목표가 고저 범위 + 투자의견 분포막대 (PublicConsensus 흡수 2026-07-08) */}
+            {(consensus.target_price || consensus.opinion || consensus.counts) && (() => {
+                const cc = consensus.counts || null
+                const CATS: [string, string][] = [["strongBuy", "적극매수"], ["buy", "매수"], ["hold", "중립"], ["sell", "매도"], ["strongSell", "적극매도"]]
+                const vals = cc ? CATS.map(([k]) => Number(cc[k]) || 0) : []
+                const maxV = Math.max(1, ...vals)
+                const hasDist = !!cc && vals.some((v) => v > 0)
+                const hasRange = !!(consensus.target_high && consensus.target_low)
+                return (
+                    <>
+                        {sectionTitle("애널리스트 컨센서스", "집계 · AlphaNest 의견 아님")}
+                        <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                            {[["목표주가 평균", consensus.target_price], ["투자의견", consensus.opinion], ["추정 EPS", consensus.eps]].map(([k, v]: any, i) => v ? kvRow(k, v, i) : null)}
+                            {hasRange && (
+                                <div style={{ marginTop: 12 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 800, color: C.ink }}>
+                                        <span>{consensus.target_low}</span><span>{consensus.target_high}</span>
+                                    </div>
+                                    <div style={{ height: 6, borderRadius: 3, marginTop: 6, background: `linear-gradient(90deg, ${C.down}, ${C.vt}, ${C.up})` }} />
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontWeight: 600, color: C.faint, marginTop: 4 }}>
+                                        <span>최저 목표가</span><span>최고 목표가</span>
+                                    </div>
+                                </div>
+                            )}
+                            {hasDist && (
+                                <div style={{ marginTop: 14 }}>
+                                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+                                        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.sub }}>투자의견 분포</span>
+                                        {consensus.num_analysts && <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{consensus.num_analysts}명 집계</span>}
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 84 }}>
+                                        {CATS.map(([k, label], i) => {
+                                            const v = vals[i]
+                                            const h = Math.round((v / maxV) * 60)
+                                            const dominant = v === maxV && v > 0
+                                            return (
+                                                <div key={k} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                                                    <span style={{ fontSize: 11, fontWeight: 800, color: dominant ? C.vt : C.faint }}>{v}</span>
+                                                    <div style={{ width: "100%", maxWidth: 34, height: Math.max(3, h), borderRadius: 6, background: dominant ? C.vt : v > 0 ? C.vtS : C.line }} />
+                                                    <span style={{ fontSize: 9.5, fontWeight: 600, color: C.faint, textAlign: "center", lineHeight: 1.2 }}>{label}</span>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "10px 0 0", lineHeight: 1.5 }}>증권사·애널리스트 집계 사실 · AlphaNest 의견 아님</div>
+                        </div>
+                    </>
+                )
+            })()}
 
             {/* 일정 */}
             {calendar.length > 0 && (
