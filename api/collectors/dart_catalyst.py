@@ -347,7 +347,19 @@ def persist_catalyst_alerts(events: List[Dict[str, Any]]) -> int:
     중복 회피 (rcept_no 기준) — 같은 공시 다시 처리 X.
     Returns: 신규 append 한 entry 수.
     """
+    # 하트비트 — 이벤트 유무와 무관하게 매 실행 last_run_at 기록(freshness 라이브니스 신호).
+    # 조용한 장(신규 catalyst 0)에도 pulse 생존 증명 → detected_at 이벤트-기반 stale 오탐 방지.
+    def _hb(n: int) -> None:
+        try:
+            hb_dir = os.path.join(DATA_DIR, "metadata")
+            os.makedirs(hb_dir, exist_ok=True)
+            with open(os.path.join(hb_dir, "dart_catalyst_heartbeat.json"), "w", encoding="utf-8") as hf:
+                json.dump({"last_run_at": now_kst().isoformat(timespec="seconds"), "new_events": n}, hf, ensure_ascii=False)
+        except OSError as e:
+            logger.warning("[dart_catalyst] heartbeat 쓰기 실패: %s", e)
+
     if not events:
+        _hb(0)
         return 0
 
     # 기존 rcept_no 로드 (dedupe)
@@ -377,4 +389,5 @@ def persist_catalyst_alerts(events: List[Dict[str, Any]]) -> int:
     except OSError as e:
         logger.error("[dart_catalyst] persist 실패: %s", e)
 
+    _hb(new_count)
     return new_count
