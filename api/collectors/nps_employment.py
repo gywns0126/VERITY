@@ -34,7 +34,7 @@ HIST_PATH = os.path.join(_ROOT, "data", "nps_employment_history.jsonl")
 REPORT_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
 
 BASE = "http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2"
-THROTTLE = 0.06          # 초당 30tx 제한 대비 보수
+THROTTLE = 0.0           # 병렬화(8워커)가 동시성 상한 = rate 제어. 워커당 추가 sleep 불필요
 MAX_MATCH_DETAIL = 4     # 동명 사업장 상세 조회 상한 (다지점 합산)
 
 
@@ -85,7 +85,58 @@ def _candidates(name: str) -> set:
     return {n, f"{n}(주)", f"(주){n}", f"주식회사{n}", f"{n}주식회사"}
 
 
+def _one(tk: str, name: str, key: str, ym: str) -> Optional[Dict[str, Any]]:
+    """단일 종목 매칭·집계 — 스레드풀 워커 (콜당 네트워크 지연이 지배 → 병렬화로 6h→~40m)."""
+    cands = _candidates(name)
+    body = _get("getBassInfoSearchV2", {"wkplNm": name, "numOfRows": 60, "pageNo": 1}, key)
+    raw_matches = [it for it in _items(body)
+                   if _norm(it.get("wkplNm")) in cands and str(it.get("wkplStylDvcd")) == "1"
+                   and str(it.get("wkplJnngStcd")) == "1"]  # 법인 + 가입 상태만
+    # 🚨 검색 결과 = 같은 사업장의 월별 스냅샷 중복 (1년 창) — (사업장명+시군구) 그룹당 최신 월 1건만
+    #   (미수리 시 가입자수 N개월 합산 과대 — 2026-07-08 스모크에서 현대로템 4배 실측)
+    grp: Dict[str, Dict[str, Any]] = {}
+    for it in raw_matches:
+        gkey = _norm(it.get("wkplNm")) + "|" + str(it.get("ldongAddrMgplSgguCd") or "")
+        prev = grp.get(gkey)
+        if prev is None or str(it.get("dataCrtYm") or "") > str(prev.get("dataCrtYm") or ""):
+            grp[gkey] = it
+    matches = list(grp.values())
+    if not matches:
+        return None
+    total_cnt, total_amt, hire, leave = 0, 0.0, 0, 0
+    seqs = []
+    for m in matches[:MAX_MATCH_DETAIL]:
+        seq = m.get("seq")
+        if seq is None:
+            continue
+        det = _items(_get("getDetailInfoSearchV2", {"seq": seq}, key))
+        d0 = det[0] if det else {}
+        try:
+            total_cnt += int(d0.get("jnngpCnt") or 0)
+            total_amt += float(d0.get("crrmmNtcAmt") or 0)
+        except (TypeError, ValueError):
+            pass
+        rec_ym = str(m.get("dataCrtYm") or ym)  # 레코드 자체의 기준월 (당월 조회 = 빈 응답)
+        pd = _items(_get("getPdAcctoSttusInfoSearchV2", {"seq": seq, "dataCrtYm": rec_ym}, key))
+        for p in pd:
+            try:
+                hire += int(p.get("nwAcqzrCnt") or 0)
+                leave += int(p.get("lssJnngpCnt") or 0)
+            except (TypeError, ValueError):
+                pass
+        seqs.append(seq)
+    if total_cnt <= 0:
+        return None
+    data_ym = max((str(m.get("dataCrtYm") or "") for m in matches), default=ym)
+    return {
+        "name": name, "jnngp_cnt": total_cnt, "ntc_amt": round(total_amt),
+        "hire": hire, "leave": leave, "net": hire - leave,
+        "wkpl_n": len(seqs), "ym": data_ym,
+    }
+
+
 def collect(limit: int = 0) -> Dict[str, Any]:
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     key = _key()
     if not key:
         print("[nps_emp] PUBLIC_DATA_API_KEY 없음 — skip", file=sys.stderr)
@@ -95,63 +146,24 @@ def collect(limit: int = 0) -> Dict[str, Any]:
                 if re.match(r"^\d{6}$", str(s.get("ticker") or "")) and s.get("name")]
     if limit:
         universe = universe[:limit]
-    now = datetime.now(KST)
-    ym = now.strftime("%Y%m")
+    ym = datetime.now(KST).strftime("%Y%m")
     out: Dict[str, Any] = {}
-    n_call = 0
-    for i, (tk, name) in enumerate(universe, 1):
-        cands = _candidates(name)
-        body = _get("getBassInfoSearchV2", {"wkplNm": name, "numOfRows": 60, "pageNo": 1}, key)
-        n_call += 1
-        raw_matches = [it for it in _items(body)
-                       if _norm(it.get("wkplNm")) in cands and str(it.get("wkplStylDvcd")) == "1"
-                       and str(it.get("wkplJnngStcd")) == "1"]  # 법인 + 가입 상태만
-        # 🚨 검색 결과 = 같은 사업장의 월별 스냅샷 중복 (1년 창) — (사업장명+시군구) 그룹당 최신 월 1건만
-        #   (미수리 시 가입자수 N개월 합산 과대 — 2026-07-08 스모크에서 현대로템 4배 실측)
-        grp: Dict[str, Dict[str, Any]] = {}
-        for it in raw_matches:
-            gkey = _norm(it.get("wkplNm")) + "|" + str(it.get("ldongAddrMgplSgguCd") or "")
-            prev = grp.get(gkey)
-            if prev is None or str(it.get("dataCrtYm") or "") > str(prev.get("dataCrtYm") or ""):
-                grp[gkey] = it
-        matches = list(grp.values())
-        if not matches:
-            continue
-        total_cnt, total_amt, hire, leave = 0, 0.0, 0, 0
-        seqs = []
-        for m in matches[:MAX_MATCH_DETAIL]:
-            seq = m.get("seq")
-            if seq is None:
-                continue
-            det = _items(_get("getDetailInfoSearchV2", {"seq": seq}, key))
-            n_call += 1
-            d0 = det[0] if det else {}
+    done = 0
+    # API 한도 30tx/초 · 콜당 ~4초 지연 → 8워커 = 최대 8 동시(<<30), 순차 대비 ~8배
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        futs = {ex.submit(_one, tk, name, key, ym): tk for tk, name in universe}
+        for fut in as_completed(futs):
+            tk = futs[fut]
+            done += 1
             try:
-                total_cnt += int(d0.get("jnngpCnt") or 0)
-                total_amt += float(d0.get("crrmmNtcAmt") or 0)
-            except (TypeError, ValueError):
+                row = fut.result()
+                if row:
+                    out[tk] = row
+            except Exception:  # noqa: BLE001
                 pass
-            rec_ym = str(m.get("dataCrtYm") or ym)  # 레코드 자체의 기준월 (당월 조회 = 빈 응답)
-            pd = _items(_get("getPdAcctoSttusInfoSearchV2", {"seq": seq, "dataCrtYm": rec_ym}, key))
-            n_call += 1
-            for p in pd:
-                try:
-                    hire += int(p.get("nwAcqzrCnt") or 0)
-                    leave += int(p.get("lssJnngpCnt") or 0)
-                except (TypeError, ValueError):
-                    pass
-            seqs.append(seq)
-        if total_cnt <= 0:
-            continue
-        data_ym = max((str(m.get("dataCrtYm") or "") for m in matches), default=ym)
-        out[tk] = {
-            "name": name, "jnngp_cnt": total_cnt, "ntc_amt": round(total_amt),
-            "hire": hire, "leave": leave, "net": hire - leave,
-            "wkpl_n": len(seqs), "ym": data_ym,
-        }
-        if i % 100 == 0:
-            print(f"[nps_emp] 진행 {i}/{len(universe)} · 매칭 {len(out)} · 콜 {n_call}", file=sys.stderr)
-    print(f"[nps_emp] 완료 — 유니버스 {len(universe)} · 매칭 {len(out)} · 콜 {n_call}", file=sys.stderr)
+            if done % 200 == 0:
+                print(f"[nps_emp] 진행 {done}/{len(universe)} · 매칭 {len(out)}", file=sys.stderr)
+    print(f"[nps_emp] 완료 — 유니버스 {len(universe)} · 매칭 {len(out)}", file=sys.stderr)
     return out
 
 
