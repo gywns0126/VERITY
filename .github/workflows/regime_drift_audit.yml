@@ -1,0 +1,54 @@
+name: Regime Drift Audit (weekly)
+
+# 하드코딩된 시장값 임계(지수/환율/금리 sanity·페널티·신호 밴드)가 현 시장 레짐에서
+# stale(포화/사멸/BREACH)한지 주1 점검. 2026-07-08 KOSPI 5000 sanity 오탐 사고 재발 방지 가드.
+# 관측-only: scripts/regime_drift_audit.py 는 항상 exit 0, jsonl 기록만. 알람은 cron_health 소비(후속).
+# 순수 stdlib → pip 불필요. secret 없음(체크아웃된 data/macro_snapshot.json 만 읽음).
+
+on:
+  schedule:
+    - cron: '30 0 * * 1'   # 매주 월 UTC 00:30 = KST 09:30
+  workflow_dispatch:
+
+concurrency:
+  group: regime-drift-audit
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run regime drift audit
+        run: python scripts/regime_drift_audit.py
+
+      - name: Commit audit jsonl
+        # if: always() — 관측 기록은 항상 persist (self_assets exit1 trail 유실 학습).
+        if: always()
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/metadata/regime_drift_audit.jsonl 2>/dev/null || true
+          git diff --staged --quiet && echo "변경 없음" && exit 0
+          TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
+          git commit -m "regime_drift_audit ${TIME_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 주 cron 에서 재시도"

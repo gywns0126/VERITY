@@ -413,9 +413,11 @@ def _build_diagnosis(data: dict, market: str = "kr") -> list:
             diags.append({"type": "positive", "text": f"USD/JPY {uj_val} — 달러 부담 완화, 위험자산 선호 우호"})
     else:
         usd = data.get("usd_krw", {})
-        if usd.get("value", 0) > 1400:
+        # 2026-07-08 레짐 재캘리(PM 승인) — 옛 1400/1250 은 원화 ~1500대 레짐에서 경고
+        # 상시발화 + 긍정 사멸. 현 레짐 기준 밴드로 상향(경고>1550 / 긍정<1450). RULE 7 1회.
+        if usd.get("value", 0) > 1550:
             diags.append({"type": "warning", "text": f"원달러 {usd['value']}원 — 원화약세, 수출주 주목"})
-        elif usd.get("value", 0) < 1250:
+        elif 0 < usd.get("value", 0) < 1450:
             diags.append({"type": "positive", "text": f"원달러 {usd['value']}원 — 원화강세, 내수/수입주 유리"})
 
     spread = data.get("yield_spread", {})
