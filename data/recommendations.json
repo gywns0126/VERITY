@@ -601,177 +601,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 40,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 53.3
-        },
-        "signals": [
-          "52주 고점 대비 39% 하락"
-        ],
-        "returns": {
-          "1m": -13.7,
-          "3m": -22.7,
-          "6m": -7.98,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 49,
-        "piotroski_f": 6,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.248,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 23.3,
-          "gross_profit_pts": 20,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 0
-        },
-        "signals": [
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 38,
-        "components": {
-          "realized_vol": 15,
-          "vol_trend": 50,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 59.6% 초고변동"
-        ],
-        "metrics": {
-          "vol_20d": 0.037525,
-          "vol_60d": 0.040235,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 55,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 75,
-          "bollinger": 8,
-          "ma_deviation": 90,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 29.48 과매도 구간",
-          "볼린저 상단 이탈 — 과열",
-          "MA60 대비 -22.7% 급괴리"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 29.48,
-          "bb_position": 14.7,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 27,
-      "win_count": 16,
-      "loss_count": 11,
-      "win_rate": 59.3,
-      "avg_return": 0.39,
-      "best_trade": 16.86,
-      "worst_trade": -16.31,
-      "total_return": 10.61,
-      "max_drawdown": 42.2,
-      "sharpe_ratio": 0.33,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-10",
-          "exit_date": "2026-06-17",
-          "entry_price": 147.0,
-          "exit_price": 167.0,
-          "return_pct": 13.43,
-          "win": true
-        },
-        {
-          "entry_date": "2026-06-17",
-          "exit_date": "2026-06-25",
-          "entry_price": 167.0,
-          "exit_price": 141.0,
-          "return_pct": -15.32,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-25",
-          "exit_date": "2026-07-02",
-          "entry_price": 141.0,
-          "exit_price": 136.0,
-          "return_pct": -3.89,
-          "win": false
-        }
-      ],
-      "volatility_20d": 0.03752541712600425,
-      "volatility_60d": 0.04023541447906984
-    },
     "volatility_20d": 0.03752541712600425,
     "volatility_60d": 0.04023541447906984,
     "earnings": {
       "next_earnings": "2026-08-05",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-09-13",
-          "amount": 0.405
-        },
-        {
-          "date": "2024-12-13",
-          "amount": 0.405
-        },
-        {
-          "date": "2025-03-14",
-          "amount": 0.405
-        },
-        {
-          "date": "2025-06-13",
-          "amount": 0.405
-        },
-        {
-          "date": "2025-09-12",
-          "amount": 0.405
-        },
-        {
-          "date": "2025-12-12",
-          "amount": 0.405
-        },
-        {
-          "date": "2026-03-13",
-          "amount": 0.405
-        },
-        {
-          "date": "2026-06-12",
-          "amount": 0.405
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 17,
@@ -1351,6 +1185,20 @@
         "ROE 음수 + 영업이익률 양수 (반등 신호)"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 27,
+      "win_count": 16,
+      "loss_count": 11,
+      "win_rate": 59.3,
+      "avg_return": 0.39,
+      "best_trade": 16.86,
+      "worst_trade": -16.31,
+      "total_return": 10.61,
+      "max_drawdown": 42.2,
+      "sharpe_ratio": 0.33,
+      "volatility_20d": 0.03752541712600425,
+      "volatility_60d": 0.04023541447906984
     }
   },
   {
@@ -1994,173 +1842,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 60,
-        "components": {
-          "tsmom": 60,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 80.0
-        },
-        "signals": [
-          "교차 모멘텀 상위 20%"
-        ],
-        "returns": {
-          "1m": -4.35,
-          "3m": -15.48,
-          "6m": 8.03,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 60,
-        "piotroski_f": 5,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.443,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 19.4,
-          "gross_profit_pts": 25,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 10
-        },
-        "signals": [
-          "총이익률/자산 44.3% 고수익",
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 52,
-        "components": {
-          "realized_vol": 55,
-          "vol_trend": 50,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": 0.019411,
-          "vol_60d": 0.018196,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 46,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 62,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 48.62,
-          "bb_position": 62.8,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 29,
-      "win_count": 14,
-      "loss_count": 15,
-      "win_rate": 48.3,
-      "avg_return": 0.72,
-      "best_trade": 7.59,
-      "worst_trade": -7.22,
-      "total_return": 20.97,
-      "max_drawdown": 14.29,
-      "sharpe_ratio": 1.28,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-05",
-          "exit_date": "2026-06-12",
-          "entry_price": 39.0,
-          "exit_price": 39.0,
-          "return_pct": -1.04,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-15",
-          "exit_date": "2026-06-23",
-          "entry_price": 37.0,
-          "exit_price": 37.0,
-          "return_pct": -1.98,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-23",
-          "exit_date": "2026-06-30",
-          "entry_price": 37.0,
-          "exit_price": 37.0,
-          "return_pct": 1.28,
-          "win": true
-        }
-      ],
-      "volatility_20d": 0.01941068717611814,
-      "volatility_60d": 0.018195811396747374
-    },
     "volatility_20d": 0.01941068717611814,
     "volatility_60d": 0.018195811396747374,
     "earnings": {
       "next_earnings": "2026-07-21",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-09-13",
-          "amount": 0.08
-        },
-        {
-          "date": "2024-12-13",
-          "amount": 0.08
-        },
-        {
-          "date": "2025-03-14",
-          "amount": 0.09
-        },
-        {
-          "date": "2025-06-13",
-          "amount": 0.09
-        },
-        {
-          "date": "2025-09-12",
-          "amount": 0.09
-        },
-        {
-          "date": "2025-12-12",
-          "amount": 0.09
-        },
-        {
-          "date": "2026-03-13",
-          "amount": 0.1
-        },
-        {
-          "date": "2026-06-12",
-          "amount": 0.1
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 10,
@@ -2741,6 +2427,20 @@
         "sector keyword match: Energy"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 29,
+      "win_count": 14,
+      "loss_count": 15,
+      "win_rate": 48.3,
+      "avg_return": 0.72,
+      "best_trade": 7.59,
+      "worst_trade": -7.22,
+      "total_return": 20.97,
+      "max_drawdown": 14.29,
+      "sharpe_ratio": 1.28,
+      "volatility_20d": 0.01941068717611814,
+      "volatility_60d": 0.018195811396747374
     }
   },
   {
@@ -3380,175 +3080,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 22,
-        "components": {
-          "tsmom": 15,
-          "high_proximity": 15,
-          "acceleration": 50.0,
-          "cross_sectional": 13.3
-        },
-        "signals": [
-          "52주 고점 대비 55% 급락",
-          "교차 모멘텀 하위 13%"
-        ],
-        "returns": {
-          "1m": -23.16,
-          "3m": -29.99,
-          "6m": -47.68,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 44,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.17,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 12,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 10
-        },
-        "signals": [
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 26,
-        "components": {
-          "realized_vol": 5,
-          "vol_trend": 15,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 78.0% 초고변동",
-          "변동성 급확대 — 경계"
-        ],
-        "metrics": {
-          "vol_20d": 0.049166,
-          "vol_60d": 0.037106,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 49,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 58,
-          "bollinger": 8,
-          "ma_deviation": 75,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 44.11,
-          "bb_position": 46.2,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 31,
-      "win_count": 15,
-      "loss_count": 16,
-      "win_rate": 48.4,
-      "avg_return": -1.27,
-      "best_trade": 10.09,
-      "worst_trade": -23.6,
-      "total_return": -39.39,
-      "max_drawdown": 57.73,
-      "sharpe_ratio": -1.42,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-11",
-          "exit_date": "2026-06-18",
-          "entry_price": 168.0,
-          "exit_price": 128.0,
-          "return_pct": -23.6,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-18",
-          "exit_date": "2026-06-26",
-          "entry_price": 128.0,
-          "exit_price": 129.0,
-          "return_pct": 0.78,
-          "win": true
-        },
-        {
-          "entry_date": "2026-06-26",
-          "exit_date": "2026-07-06",
-          "entry_price": 129.0,
-          "exit_price": 137.0,
-          "return_pct": 6.19,
-          "win": true
-        }
-      ],
-      "volatility_20d": 0.04916616574831663,
-      "volatility_60d": 0.03710644626300809
-    },
     "volatility_20d": 0.04916616574831663,
     "volatility_60d": 0.03710644626300809,
     "earnings": {
       "next_earnings": "2026-06-18",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-01-17",
-          "amount": 1.29
-        },
-        {
-          "date": "2024-04-10",
-          "amount": 1.29
-        },
-        {
-          "date": "2024-07-11",
-          "amount": 1.29
-        },
-        {
-          "date": "2024-10-10",
-          "amount": 1.48
-        },
-        {
-          "date": "2025-01-16",
-          "amount": 1.48
-        },
-        {
-          "date": "2025-04-10",
-          "amount": 1.48
-        },
-        {
-          "date": "2025-07-10",
-          "amount": 1.48
-        },
-        {
-          "date": "2026-04-09",
-          "amount": 1.63
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 19,
@@ -4188,6 +3724,20 @@
         "div_yield 4.76% ≥ 3.0% (전형 배당주)"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 31,
+      "win_count": 15,
+      "loss_count": 16,
+      "win_rate": 48.4,
+      "avg_return": -1.27,
+      "best_trade": 10.09,
+      "worst_trade": -23.6,
+      "total_return": -39.39,
+      "max_drawdown": 57.73,
+      "sharpe_ratio": -1.42,
+      "volatility_20d": 0.04916616574831663,
+      "volatility_60d": 0.03710644626300809
     }
   },
   {
@@ -4788,176 +4338,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 20,
-        "components": {
-          "tsmom": 15,
-          "high_proximity": 15,
-          "acceleration": 50.0,
-          "cross_sectional": 6.7
-        },
-        "signals": [
-          "52주 고점 대비 52% 급락",
-          "교차 모멘텀 하위 7%"
-        ],
-        "returns": {
-          "1m": -22.25,
-          "3m": -32.25,
-          "6m": -48.7,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 44,
-        "piotroski_f": 5,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.156,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 19.4,
-          "gross_profit_pts": 12,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 7
-        },
-        "signals": [
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 29,
-        "components": {
-          "realized_vol": 5,
-          "vol_trend": 30,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 61.3% 초고변동",
-          "변동성 확대 추세"
-        ],
-        "metrics": {
-          "vol_20d": 0.038584,
-          "vol_60d": 0.031573,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 49,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 58,
-          "bollinger": 8,
-          "ma_deviation": 75,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 44.58,
-          "bb_position": 44.1,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 32,
-      "win_count": 16,
-      "loss_count": 16,
-      "win_rate": 50.0,
-      "avg_return": -0.81,
-      "best_trade": 12.71,
-      "worst_trade": -19.81,
-      "total_return": -25.95,
-      "max_drawdown": 55.97,
-      "sharpe_ratio": -0.88,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-08",
-          "exit_date": "2026-06-15",
-          "entry_price": 53.0,
-          "exit_price": 51.0,
-          "return_pct": -4.1,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-17",
-          "exit_date": "2026-06-25",
-          "entry_price": 49.0,
-          "exit_price": 39.0,
-          "return_pct": -19.81,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-25",
-          "exit_date": "2026-07-02",
-          "entry_price": 39.0,
-          "exit_price": 42.0,
-          "return_pct": 7.25,
-          "win": true
-        }
-      ],
-      "volatility_20d": 0.03858404843749964,
-      "volatility_60d": 0.03157272262803102
-    },
     "volatility_20d": 0.03858404843749964,
     "volatility_60d": 0.03157272262803102,
     "earnings": {
       "next_earnings": "2026-07-29",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-08-20",
-          "amount": 0.3
-        },
-        {
-          "date": "2024-11-19",
-          "amount": 0.3
-        },
-        {
-          "date": "2025-02-18",
-          "amount": 0.31
-        },
-        {
-          "date": "2025-05-19",
-          "amount": 0.31
-        },
-        {
-          "date": "2025-08-18",
-          "amount": 0.31
-        },
-        {
-          "date": "2025-11-18",
-          "amount": 0.31
-        },
-        {
-          "date": "2026-02-18",
-          "amount": 0.33
-        },
-        {
-          "date": "2026-05-18",
-          "amount": 0.33
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 19,
@@ -5586,6 +4971,20 @@
         "div_yield 3.19% ≥ 3.0% (전형 배당주)"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 32,
+      "win_count": 16,
+      "loss_count": 16,
+      "win_rate": 50.0,
+      "avg_return": -0.81,
+      "best_trade": 12.71,
+      "worst_trade": -19.81,
+      "total_return": -25.95,
+      "max_drawdown": 55.97,
+      "sharpe_ratio": -0.88,
+      "volatility_20d": 0.03858404843749964,
+      "volatility_60d": 0.03157272262803102
     }
   },
   {
@@ -6153,174 +5552,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 41,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 33.3
-        },
-        "signals": [],
-        "returns": {
-          "1m": -3.45,
-          "3m": -12.27,
-          "6m": -15.82,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 60,
-        "piotroski_f": 5,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.34,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 19.4,
-          "gross_profit_pts": 25,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 10
-        },
-        "signals": [
-          "총이익률/자산 34.0% 고수익",
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 62,
-        "components": {
-          "realized_vol": 85,
-          "vol_trend": 50,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 24.8% 저변동",
-          "유니버스 대비 저변동"
-        ],
-        "metrics": {
-          "vol_20d": 0.015619,
-          "vol_60d": 0.015683,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 46,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 62,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 47.18,
-          "bb_position": 68.5,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 31,
-      "win_count": 13,
-      "loss_count": 18,
-      "win_rate": 41.9,
-      "avg_return": -0.52,
-      "best_trade": 6.56,
-      "worst_trade": -8.2,
-      "total_return": -16.07,
-      "max_drawdown": 19.93,
-      "sharpe_ratio": -1.01,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-12",
-          "exit_date": "2026-06-22",
-          "entry_price": 89.0,
-          "exit_price": 88.0,
-          "return_pct": -0.38,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-22",
-          "exit_date": "2026-06-29",
-          "entry_price": 88.0,
-          "exit_price": 88.0,
-          "return_pct": -1.02,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-29",
-          "exit_date": "2026-07-07",
-          "entry_price": 88.0,
-          "exit_price": 90.0,
-          "return_pct": 2.31,
-          "win": true
-        }
-      ],
-      "volatility_20d": 0.015619333997736635,
-      "volatility_60d": 0.01568338414838817
-    },
     "volatility_20d": 0.015619333997736635,
     "volatility_60d": 0.01568338414838817,
     "earnings": {
       "next_earnings": "2026-07-28",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-08-15",
-          "amount": 0.575
-        },
-        {
-          "date": "2024-11-14",
-          "amount": 0.575
-        },
-        {
-          "date": "2025-03-11",
-          "amount": 0.575
-        },
-        {
-          "date": "2025-05-15",
-          "amount": 0.575
-        },
-        {
-          "date": "2025-08-14",
-          "amount": 1.465
-        },
-        {
-          "date": "2025-11-13",
-          "amount": 0.575
-        },
-        {
-          "date": "2026-03-05",
-          "amount": 0.575
-        },
-        {
-          "date": "2026-05-14",
-          "amount": 0.575
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 26,
@@ -6917,6 +6153,20 @@
         "sector keyword match: Energy"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 31,
+      "win_count": 13,
+      "loss_count": 18,
+      "win_rate": 41.9,
+      "avg_return": -0.52,
+      "best_trade": 6.56,
+      "worst_trade": -8.2,
+      "total_return": -16.07,
+      "max_drawdown": 19.93,
+      "sharpe_ratio": -1.01,
+      "volatility_20d": 0.015619333997736635,
+      "volatility_60d": 0.01568338414838817
     }
   },
   {
@@ -7568,174 +6818,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 44,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 46.7
-        },
-        "signals": [],
-        "returns": {
-          "1m": 0.18,
-          "3m": -11.62,
-          "6m": -8.62,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 47,
-        "piotroski_f": 5,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.119,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 19.4,
-          "gross_profit_pts": 12,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 10
-        },
-        "signals": [
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 57,
-        "components": {
-          "realized_vol": 85,
-          "vol_trend": 30,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 20.7% 저변동",
-          "유니버스 대비 저변동",
-          "변동성 확대 추세"
-        ],
-        "metrics": {
-          "vol_20d": 0.013022,
-          "vol_60d": 0.011355,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 49.02,
-          "bb_position": 56.1,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 33,
-      "win_count": 12,
-      "loss_count": 21,
-      "win_rate": 36.4,
-      "avg_return": -0.54,
-      "best_trade": 5.92,
-      "worst_trade": -6.0,
-      "total_return": -17.78,
-      "max_drawdown": 18.56,
-      "sharpe_ratio": -1.65,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-08",
-          "exit_date": "2026-06-15",
-          "entry_price": 99.0,
-          "exit_price": 101.0,
-          "return_pct": 1.86,
-          "win": true
-        },
-        {
-          "entry_date": "2026-06-15",
-          "exit_date": "2026-06-23",
-          "entry_price": 101.0,
-          "exit_price": 97.0,
-          "return_pct": -3.48,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-23",
-          "exit_date": "2026-06-30",
-          "entry_price": 97.0,
-          "exit_price": 94.0,
-          "return_pct": -3.34,
-          "win": false
-        }
-      ],
-      "volatility_20d": 0.013022162023709824,
-      "volatility_60d": 0.011354514262605772
-    },
     "volatility_20d": 0.013022162023709824,
     "volatility_60d": 0.011354514262605772,
     "earnings": {
       "next_earnings": "2026-08-04",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-10-01",
-          "amount": 0.8
-        },
-        {
-          "date": "2025-01-02",
-          "amount": 0.8
-        },
-        {
-          "date": "2025-04-01",
-          "amount": 0.8
-        },
-        {
-          "date": "2025-07-01",
-          "amount": 0.8
-        },
-        {
-          "date": "2025-10-01",
-          "amount": 0.82
-        },
-        {
-          "date": "2026-01-02",
-          "amount": 0.82
-        },
-        {
-          "date": "2026-04-01",
-          "amount": 0.82
-        },
-        {
-          "date": "2026-07-01",
-          "amount": 0.82
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 6,
@@ -8675,6 +7762,20 @@
         "div_yield 3.30% ≥ 3.0% (전형 배당주)"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 33,
+      "win_count": 12,
+      "loss_count": 21,
+      "win_rate": 36.4,
+      "avg_return": -0.54,
+      "best_trade": 5.92,
+      "worst_trade": -6.0,
+      "total_return": -17.78,
+      "max_drawdown": 18.56,
+      "sharpe_ratio": -1.65,
+      "volatility_20d": 0.013022162023709824,
+      "volatility_60d": 0.011354514262605772
     }
   },
   {
@@ -9327,174 +8428,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 38,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 40.0
-        },
-        "signals": [
-          "52주 고점 대비 30% 하락"
-        ],
-        "returns": {
-          "1m": 6.0,
-          "3m": -8.73,
-          "6m": -15.59,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 34,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.106,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 12,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 0
-        },
-        "signals": [
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 40,
-        "components": {
-          "realized_vol": 35,
-          "vol_trend": 30,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 40.2% 고변동",
-          "변동성 확대 추세"
-        ],
-        "metrics": {
-          "vol_20d": 0.02533,
-          "vol_60d": 0.021387,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 54.78,
-          "bb_position": 76.4,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 31,
-      "win_count": 17,
-      "loss_count": 14,
-      "win_rate": 54.8,
-      "avg_return": -0.23,
-      "best_trade": 8.79,
-      "worst_trade": -8.36,
-      "total_return": -7.18,
-      "max_drawdown": 23.99,
-      "sharpe_ratio": -0.45,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-10",
-          "exit_date": "2026-06-17",
-          "entry_price": 13.0,
-          "exit_price": 13.0,
-          "return_pct": -1.35,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-22",
-          "exit_date": "2026-06-29",
-          "entry_price": 13.0,
-          "exit_price": 14.0,
-          "return_pct": 8.79,
-          "win": true
-        },
-        {
-          "entry_date": "2026-06-29",
-          "exit_date": "2026-07-07",
-          "entry_price": 14.0,
-          "exit_price": 14.0,
-          "return_pct": 0.36,
-          "win": true
-        }
-      ],
-      "volatility_20d": 0.025329568664543077,
-      "volatility_60d": 0.021386600298139373
-    },
     "volatility_20d": 0.025329568664543077,
     "volatility_60d": 0.021386600298139373,
     "earnings": {
       "next_earnings": "2026-07-15",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-08-01",
-          "amount": 0.35
-        },
-        {
-          "date": "2024-10-31",
-          "amount": 0.35
-        },
-        {
-          "date": "2025-01-27",
-          "amount": 0.35
-        },
-        {
-          "date": "2025-04-28",
-          "amount": 0.35
-        },
-        {
-          "date": "2025-07-30",
-          "amount": 0.35
-        },
-        {
-          "date": "2025-10-30",
-          "amount": 0.35
-        },
-        {
-          "date": "2026-01-27",
-          "amount": 0.35
-        },
-        {
-          "date": "2026-04-30",
-          "amount": 0.35
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 1,
@@ -10127,6 +9065,20 @@
         "div_yield 10.15% ≥ 3.0% (전형 배당주)"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 31,
+      "win_count": 17,
+      "loss_count": 14,
+      "win_rate": 54.8,
+      "avg_return": -0.23,
+      "best_trade": 8.79,
+      "worst_trade": -8.36,
+      "total_return": -7.18,
+      "max_drawdown": 23.99,
+      "sharpe_ratio": -0.45,
+      "volatility_20d": 0.025329568664543077,
+      "volatility_60d": 0.021386600298139373
     }
   },
   {
@@ -10727,174 +9679,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 49,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 73.3
-        },
-        "signals": [],
-        "returns": {
-          "1m": -3.8,
-          "3m": -14.56,
-          "6m": -2.53,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 57,
-        "piotroski_f": 5,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.574,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 19.4,
-          "gross_profit_pts": 25,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 7
-        },
-        "signals": [
-          "총이익률/자산 57.4% 고수익",
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 62,
-        "components": {
-          "realized_vol": 85,
-          "vol_trend": 50,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 22.9% 저변동",
-          "유니버스 대비 저변동"
-        ],
-        "metrics": {
-          "vol_20d": 0.014415,
-          "vol_60d": 0.015846,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 47,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 58,
-          "bollinger": 8,
-          "ma_deviation": 62,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 42.35,
-          "bb_position": 44.4,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 31,
-      "win_count": 15,
-      "loss_count": 16,
-      "win_rate": 48.4,
-      "avg_return": 0.29,
-      "best_trade": 11.61,
-      "worst_trade": -7.7,
-      "total_return": 8.92,
-      "max_drawdown": 15.72,
-      "sharpe_ratio": 0.5,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-10",
-          "exit_date": "2026-06-17",
-          "entry_price": 53.0,
-          "exit_price": 51.0,
-          "return_pct": -2.81,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-17",
-          "exit_date": "2026-06-25",
-          "entry_price": 51.0,
-          "exit_price": 52.0,
-          "return_pct": 1.02,
-          "win": true
-        },
-        {
-          "entry_date": "2026-06-25",
-          "exit_date": "2026-07-02",
-          "entry_price": 52.0,
-          "exit_price": 53.0,
-          "return_pct": 1.86,
-          "win": true
-        }
-      ],
-      "volatility_20d": 0.014414870974823744,
-      "volatility_60d": 0.015845786333518054
-    },
     "volatility_20d": 0.014414870974823744,
     "volatility_60d": 0.015845786333518054,
     "earnings": {
       "next_earnings": "2026-07-21",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-08-07",
-          "amount": 0.158
-        },
-        {
-          "date": "2024-11-06",
-          "amount": 0.158
-        },
-        {
-          "date": "2025-02-18",
-          "amount": 0.158
-        },
-        {
-          "date": "2025-05-07",
-          "amount": 0.158
-        },
-        {
-          "date": "2025-08-06",
-          "amount": 0.158
-        },
-        {
-          "date": "2025-11-05",
-          "amount": 0.165
-        },
-        {
-          "date": "2026-02-17",
-          "amount": 0.165
-        },
-        {
-          "date": "2026-05-06",
-          "amount": 0.165
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 23,
@@ -11529,6 +10318,20 @@
         "sector keyword match: Energy"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 31,
+      "win_count": 15,
+      "loss_count": 16,
+      "win_rate": 48.4,
+      "avg_return": 0.29,
+      "best_trade": 11.61,
+      "worst_trade": -7.7,
+      "total_return": 8.92,
+      "max_drawdown": 15.72,
+      "sharpe_ratio": 0.5,
+      "volatility_20d": 0.014414870974823744,
+      "volatility_60d": 0.015845786333518054
     }
   },
   {
@@ -12172,174 +10975,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 73,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 86.7
-        },
-        "signals": [
-          "교차 모멘텀 상위 13%"
-        ],
-        "returns": {
-          "1m": -6.09,
-          "3m": -9.59,
-          "6m": 23.95,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 64,
-        "piotroski_f": 6,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.379,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 23.3,
-          "gross_profit_pts": 25,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 10
-        },
-        "signals": [
-          "총이익률/자산 37.9% 고수익",
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 52,
-        "components": {
-          "realized_vol": 55,
-          "vol_trend": 50,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": 0.019069,
-          "vol_60d": 0.018876,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 51.43,
-          "bb_position": 57.2,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 31,
-      "win_count": 16,
-      "loss_count": 15,
-      "win_rate": 51.6,
-      "avg_return": 0.66,
-      "best_trade": 6.12,
-      "worst_trade": -5.01,
-      "total_return": 20.61,
-      "max_drawdown": 11.79,
-      "sharpe_ratio": 1.59,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-03",
-          "exit_date": "2026-06-10",
-          "entry_price": 142.0,
-          "exit_price": 140.0,
-          "return_pct": -0.86,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-10",
-          "exit_date": "2026-06-17",
-          "entry_price": 140.0,
-          "exit_price": 133.0,
-          "return_pct": -5.01,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-18",
-          "exit_date": "2026-06-26",
-          "entry_price": 130.0,
-          "exit_price": 133.0,
-          "return_pct": 2.02,
-          "win": true
-        }
-      ],
-      "volatility_20d": 0.019068501289441497,
-      "volatility_60d": 0.018876128119780088
-    },
     "volatility_20d": 0.019068501289441497,
     "volatility_60d": 0.018876128119780088,
     "earnings": {
       "next_earnings": "2026-08-04",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-07-17",
-          "amount": 0.91
-        },
-        {
-          "date": "2024-10-17",
-          "amount": 0.91
-        },
-        {
-          "date": "2025-01-17",
-          "amount": 0.975
-        },
-        {
-          "date": "2025-04-16",
-          "amount": 0.975
-        },
-        {
-          "date": "2025-07-17",
-          "amount": 0.975
-        },
-        {
-          "date": "2025-10-17",
-          "amount": 1.02
-        },
-        {
-          "date": "2026-01-16",
-          "amount": 1.02
-        },
-        {
-          "date": "2026-04-16",
-          "amount": 1.02
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 19,
@@ -12994,6 +11634,20 @@
         "sector keyword match: Energy"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 31,
+      "win_count": 16,
+      "loss_count": 15,
+      "win_rate": 51.6,
+      "avg_return": 0.66,
+      "best_trade": 6.12,
+      "worst_trade": -5.01,
+      "total_return": 20.61,
+      "max_drawdown": 11.79,
+      "sharpe_ratio": 1.59,
+      "volatility_20d": 0.019068501289441497,
+      "volatility_60d": 0.018876128119780088
     }
   },
   {
@@ -13607,151 +12261,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 42,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 60.0
-        },
-        "signals": [
-          "52주 고점 대비 36% 하락"
-        ],
-        "returns": {
-          "1m": -6.42,
-          "3m": -1.1,
-          "6m": -6.34,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 53,
-        "piotroski_f": 6,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.262,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 23.3,
-          "gross_profit_pts": 20,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 4
-        },
-        "signals": [
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 45,
-        "components": {
-          "realized_vol": 35,
-          "vol_trend": 50,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 38.3% 고변동"
-        ],
-        "metrics": {
-          "vol_20d": 0.024107,
-          "vol_60d": 0.023265,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 46,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 62,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 45.2,
-          "bb_position": 42.7,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 9,
-      "win_count": 1,
-      "loss_count": 8,
-      "win_rate": 11.1,
-      "avg_return": -2.25,
-      "best_trade": 7.93,
-      "worst_trade": -7.35,
-      "total_return": -20.27,
-      "max_drawdown": 22.47,
-      "sharpe_ratio": -3.89,
-      "recent_trades": [
-        {
-          "entry_date": "2026-05-27",
-          "exit_date": "2026-06-03",
-          "entry_price": 43.0,
-          "exit_price": 40.0,
-          "return_pct": -7.35,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-15",
-          "exit_date": "2026-06-23",
-          "entry_price": 39.0,
-          "exit_price": 37.0,
-          "return_pct": -2.72,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-23",
-          "exit_date": "2026-06-30",
-          "entry_price": 37.0,
-          "exit_price": 36.0,
-          "return_pct": -4.94,
-          "win": false
-        }
-      ],
-      "volatility_20d": 0.024106567593947772,
-      "volatility_60d": 0.023264608021172205
-    },
     "volatility_20d": 0.024106567593947772,
     "volatility_60d": 0.023264608021172205,
     "earnings": {
       "next_earnings": "2026-08-06",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2026-04-01",
-          "amount": 0.375
-        },
-        {
-          "date": "2026-07-01",
-          "amount": 0.375
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 2,
@@ -14362,6 +12876,20 @@
         "PBR 0.52 < 0.7"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 9,
+      "win_count": 1,
+      "loss_count": 8,
+      "win_rate": 11.1,
+      "avg_return": -2.25,
+      "best_trade": 7.93,
+      "worst_trade": -7.35,
+      "total_return": -20.27,
+      "max_drawdown": 22.47,
+      "sharpe_ratio": -3.89,
+      "volatility_20d": 0.024106567593947772,
+      "volatility_60d": 0.023264608021172205
     }
   },
   {
@@ -15015,174 +13543,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 48,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 66.7
-        },
-        "signals": [],
-        "returns": {
-          "1m": -1.51,
-          "3m": -14.15,
-          "6m": -4.73,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 64,
-        "piotroski_f": 6,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.614,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 23.3,
-          "gross_profit_pts": 25,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 10
-        },
-        "signals": [
-          "총이익률/자산 61.4% 고수익",
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 45,
-        "components": {
-          "realized_vol": 35,
-          "vol_trend": 50,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 49.4% 고변동"
-        ],
-        "metrics": {
-          "vol_20d": 0.031106,
-          "vol_60d": 0.032664,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 47,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 58,
-          "bollinger": 8,
-          "ma_deviation": 62,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 41.69,
-          "bb_position": 31.6,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 26,
-      "win_count": 13,
-      "loss_count": 13,
-      "win_rate": 50.0,
-      "avg_return": -0.37,
-      "best_trade": 10.97,
-      "worst_trade": -13.28,
-      "total_return": -9.67,
-      "max_drawdown": 41.01,
-      "sharpe_ratio": -0.38,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-05",
-          "exit_date": "2026-06-12",
-          "entry_price": 100.0,
-          "exit_price": 100.0,
-          "return_pct": 0.52,
-          "win": true
-        },
-        {
-          "entry_date": "2026-06-16",
-          "exit_date": "2026-06-24",
-          "entry_price": 108.0,
-          "exit_price": 94.0,
-          "return_pct": -13.28,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-24",
-          "exit_date": "2026-07-01",
-          "entry_price": 94.0,
-          "exit_price": 93.0,
-          "return_pct": -0.79,
-          "win": false
-        }
-      ],
-      "volatility_20d": 0.031105934112419086,
-      "volatility_60d": 0.03266426499778788
-    },
     "volatility_20d": 0.031105934112419086,
     "volatility_60d": 0.03266426499778788,
     "earnings": {
       "next_earnings": "2026-07-23",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-09-05",
-          "amount": 0.25
-        },
-        {
-          "date": "2024-11-27",
-          "amount": 0.25
-        },
-        {
-          "date": "2025-03-04",
-          "amount": 0.25
-        },
-        {
-          "date": "2025-05-27",
-          "amount": 0.25
-        },
-        {
-          "date": "2025-09-04",
-          "amount": 0.25
-        },
-        {
-          "date": "2025-11-26",
-          "amount": 0.25
-        },
-        {
-          "date": "2026-03-03",
-          "amount": 0.26
-        },
-        {
-          "date": "2026-05-27",
-          "amount": 0.26
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 26,
@@ -15951,6 +14316,20 @@
         "sector keyword match: Basic Materials"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 26,
+      "win_count": 13,
+      "loss_count": 13,
+      "win_rate": 50.0,
+      "avg_return": -0.37,
+      "best_trade": 10.97,
+      "worst_trade": -13.28,
+      "total_return": -9.67,
+      "max_drawdown": 41.01,
+      "sharpe_ratio": -0.38,
+      "volatility_20d": 0.031105934112419086,
+      "volatility_60d": 0.03266426499778788
     }
   },
   {
@@ -16445,175 +14824,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 23,
-        "components": {
-          "tsmom": 15,
-          "high_proximity": 15,
-          "acceleration": 50.0,
-          "cross_sectional": 20.0
-        },
-        "signals": [
-          "52주 고점 대비 47% 급락",
-          "교차 모멘텀 하위 20%"
-        ],
-        "returns": {
-          "1m": -0.42,
-          "3m": -33.38,
-          "6m": -34.75,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 41,
-        "piotroski_f": -1,
-        "piotroski_details": [
-          "F-Score 미적용 (금융/리츠 — CAMELS/BIS 별도)"
-        ],
-        "gross_profitability": 0.439,
-        "altman": {
-          "z_score": null,
-          "zone": "not_applicable",
-          "label": "금융/리츠 — CAMELS/BIS 별도 평가",
-          "model_variant": "excluded_financial",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 0,
-          "gross_profit_pts": 25,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 10
-        },
-        "signals": [
-          "F-Score 미적용 (금융/리츠)",
-          "총이익률/자산 43.9% 고수익",
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 40,
-        "components": {
-          "realized_vol": 35,
-          "vol_trend": 30,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 38.8% 고변동",
-          "변동성 확대 추세"
-        ],
-        "metrics": {
-          "vol_20d": 0.024416,
-          "vol_60d": 0.020287,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 47,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 75,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 46.0,
-          "bb_position": 63.1,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 33,
-      "win_count": 13,
-      "loss_count": 20,
-      "win_rate": 39.4,
-      "avg_return": -0.67,
-      "best_trade": 10.63,
-      "worst_trade": -8.31,
-      "total_return": -22.03,
-      "max_drawdown": 47.23,
-      "sharpe_ratio": -0.96,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-11",
-          "exit_date": "2026-06-18",
-          "entry_price": 116.0,
-          "exit_price": 120.0,
-          "return_pct": 3.44,
-          "win": true
-        },
-        {
-          "entry_date": "2026-06-18",
-          "exit_date": "2026-06-26",
-          "entry_price": 120.0,
-          "exit_price": 113.0,
-          "return_pct": -6.47,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-26",
-          "exit_date": "2026-07-06",
-          "entry_price": 113.0,
-          "exit_price": 116.0,
-          "return_pct": 3.47,
-          "win": true
-        }
-      ],
-      "volatility_20d": 0.024415791435077345,
-      "volatility_60d": 0.02028723608738475
-    },
     "volatility_20d": 0.024415791435077345,
     "volatility_60d": 0.02028723608738475,
     "earnings": {
       "next_earnings": "2026-08-06",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-08-21",
-          "amount": 0.74
-        },
-        {
-          "date": "2024-11-20",
-          "amount": 0.74
-        },
-        {
-          "date": "2025-02-19",
-          "amount": 0.76
-        },
-        {
-          "date": "2025-05-21",
-          "amount": 0.76
-        },
-        {
-          "date": "2025-08-20",
-          "amount": 0.76
-        },
-        {
-          "date": "2025-11-19",
-          "amount": 0.76
-        },
-        {
-          "date": "2026-02-18",
-          "amount": 0.78
-        },
-        {
-          "date": "2026-05-20",
-          "amount": 0.78
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 9,
@@ -17168,6 +15383,20 @@
         "나머지 분류 미충족 (default)"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 33,
+      "win_count": 13,
+      "loss_count": 20,
+      "win_rate": 39.4,
+      "avg_return": -0.67,
+      "best_trade": 10.63,
+      "worst_trade": -8.31,
+      "total_return": -22.03,
+      "max_drawdown": 47.23,
+      "sharpe_ratio": -0.96,
+      "volatility_20d": 0.024415791435077345,
+      "volatility_60d": 0.02028723608738475
     }
   },
   {
@@ -17825,173 +16054,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 69,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 93.3
-        },
-        "signals": [
-          "교차 모멘텀 상위 7%"
-        ],
-        "returns": {
-          "1m": -17.21,
-          "3m": -22.57,
-          "6m": 25.51,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 27,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.058,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 5,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 0
-        },
-        "signals": [
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 45,
-        "components": {
-          "realized_vol": 35,
-          "vol_trend": 50,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 40.8% 고변동"
-        ],
-        "metrics": {
-          "vol_20d": 0.025723,
-          "vol_60d": 0.026884,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 49,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 58,
-          "bollinger": 8,
-          "ma_deviation": 75,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 38.56,
-          "bb_position": 30.8,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 28,
-      "win_count": 18,
-      "loss_count": 10,
-      "win_rate": 64.3,
-      "avg_return": 0.82,
-      "best_trade": 13.2,
-      "worst_trade": -8.15,
-      "total_return": 22.92,
-      "max_drawdown": 25.07,
-      "sharpe_ratio": 1.15,
-      "recent_trades": [
-        {
-          "entry_date": "2026-05-29",
-          "exit_date": "2026-06-05",
-          "entry_price": 132.0,
-          "exit_price": 135.0,
-          "return_pct": 2.21,
-          "win": true
-        },
-        {
-          "entry_date": "2026-06-15",
-          "exit_date": "2026-06-23",
-          "entry_price": 128.0,
-          "exit_price": 124.0,
-          "return_pct": -2.48,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-23",
-          "exit_date": "2026-06-30",
-          "entry_price": 124.0,
-          "exit_price": 114.0,
-          "return_pct": -8.15,
-          "win": false
-        }
-      ],
-      "volatility_20d": 0.025723071363176888,
-      "volatility_60d": 0.026884378587498352
-    },
     "volatility_20d": 0.025723071363176888,
     "volatility_60d": 0.026884378587498352,
     "earnings": {
       "next_earnings": "2026-08-05",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-08-21",
-          "amount": 2.52
-        },
-        {
-          "date": "2024-11-27",
-          "amount": 1.44
-        },
-        {
-          "date": "2025-03-11",
-          "amount": 1.3
-        },
-        {
-          "date": "2025-05-21",
-          "amount": 1.3
-        },
-        {
-          "date": "2025-08-21",
-          "amount": 1.3
-        },
-        {
-          "date": "2025-11-19",
-          "amount": 1.3
-        },
-        {
-          "date": "2026-03-12",
-          "amount": 1.3
-        },
-        {
-          "date": "2026-05-20",
-          "amount": 1.3
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 19,
@@ -18573,6 +16640,20 @@
         "ROE 음수 + 영업이익률 양수 (반등 신호)"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 28,
+      "win_count": 18,
+      "loss_count": 10,
+      "win_rate": 64.3,
+      "avg_return": 0.82,
+      "best_trade": 13.2,
+      "worst_trade": -8.15,
+      "total_return": 22.92,
+      "max_drawdown": 25.07,
+      "sharpe_ratio": 1.15,
+      "volatility_20d": 0.025723071363176888,
+      "volatility_60d": 0.026884378587498352
     }
   },
   {
@@ -19068,133 +17149,6 @@
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
-    },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 19,
-        "components": {
-          "tsmom": 15,
-          "high_proximity": 15,
-          "acceleration": 50.0,
-          "cross_sectional": 0
-        },
-        "signals": [
-          "52주 고점 대비 61% 급락",
-          "교차 모멘텀 하위 0%"
-        ],
-        "returns": {
-          "1m": -11.41,
-          "3m": -35.29,
-          "6m": -57.96,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 37,
-        "piotroski_f": 5,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.095,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 19.4,
-          "gross_profit_pts": 5,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 7
-        },
-        "signals": [
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 29,
-        "components": {
-          "realized_vol": 5,
-          "vol_trend": 30,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 65.8% 초고변동",
-          "변동성 확대 추세"
-        ],
-        "metrics": {
-          "vol_20d": 0.041455,
-          "vol_60d": 0.033886,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 47,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 75,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 50.11,
-          "bb_position": 61.7,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 30,
-      "win_count": 14,
-      "loss_count": 16,
-      "win_rate": 46.7,
-      "avg_return": -0.96,
-      "best_trade": 13.7,
-      "worst_trade": -21.82,
-      "total_return": -28.92,
-      "max_drawdown": 74.91,
-      "sharpe_ratio": -0.88,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-09",
-          "exit_date": "2026-06-16",
-          "entry_price": 96.0,
-          "exit_price": 93.0,
-          "return_pct": -2.43,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-16",
-          "exit_date": "2026-06-24",
-          "entry_price": 93.0,
-          "exit_price": 78.0,
-          "return_pct": -16.01,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-24",
-          "exit_date": "2026-07-01",
-          "entry_price": 78.0,
-          "exit_price": 85.0,
-          "return_pct": 8.74,
-          "win": true
-        }
-      ],
-      "volatility_20d": 0.04145475218895802,
-      "volatility_60d": 0.03388644290976647
     },
     "volatility_20d": 0.04145475218895802,
     "volatility_60d": 0.03388644290976647,
@@ -19767,6 +17721,20 @@
         "나머지 분류 미충족 (default)"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 30,
+      "win_count": 14,
+      "loss_count": 16,
+      "win_rate": 46.7,
+      "avg_return": -0.96,
+      "best_trade": 13.7,
+      "worst_trade": -21.82,
+      "total_return": -28.92,
+      "max_drawdown": 74.91,
+      "sharpe_ratio": -0.88,
+      "volatility_20d": 0.04145475218895802,
+      "volatility_60d": 0.03388644290976647
     }
   },
   {
@@ -20404,175 +18372,11 @@
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
     },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 35,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 26.7
-        },
-        "signals": [
-          "52주 고점 대비 38% 하락"
-        ],
-        "returns": {
-          "1m": -3.14,
-          "3m": 2.91,
-          "6m": -16.03,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 34,
-        "piotroski_f": 5,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F2: 영업CF 양수",
-          "F4: CF 양수 / 순손실",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.053,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족",
-          "applicable": false
-        },
-        "components": {
-          "f_score_pts": 19.4,
-          "gross_profit_pts": 5,
-          "altman_pts": 0,
-          "earning_quality_pts": 6,
-          "stability_pts": 4
-        },
-        "signals": [
-          "Altman 미적용 (금융/리츠)"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 40,
-        "components": {
-          "realized_vol": 35,
-          "vol_trend": 30,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [
-          "연 변동성 47.6% 고변동",
-          "변동성 확대 추세"
-        ],
-        "metrics": {
-          "vol_20d": 0.029993,
-          "vol_60d": 0.024458,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 45,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 58,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 43.77,
-          "bb_position": 17.8,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {
-      "total_trades": 31,
-      "win_count": 13,
-      "loss_count": 18,
-      "win_rate": 41.9,
-      "avg_return": -0.82,
-      "best_trade": 14.42,
-      "worst_trade": -9.84,
-      "total_return": -25.45,
-      "max_drawdown": 33.97,
-      "sharpe_ratio": -1.04,
-      "recent_trades": [
-        {
-          "entry_date": "2026-06-05",
-          "exit_date": "2026-06-12",
-          "entry_price": 90.0,
-          "exit_price": 90.0,
-          "return_pct": -0.21,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-12",
-          "exit_date": "2026-06-22",
-          "entry_price": 90.0,
-          "exit_price": 87.0,
-          "return_pct": -3.17,
-          "win": false
-        },
-        {
-          "entry_date": "2026-06-25",
-          "exit_date": "2026-07-02",
-          "entry_price": 94.0,
-          "exit_price": 88.0,
-          "return_pct": -6.02,
-          "win": false
-        }
-      ],
-      "volatility_20d": 0.02999328165103564,
-      "volatility_60d": 0.024457664702868972
-    },
     "volatility_20d": 0.02999328165103564,
     "volatility_60d": 0.024457664702868972,
     "earnings": {
       "next_earnings": "2026-06-11",
       "source": "calendar"
-    },
-    "yf_extended": {
-      "quarterly_earnings": [],
-      "dividend_history": [
-        {
-          "date": "2024-07-05",
-          "amount": 0.484
-        },
-        {
-          "date": "2024-10-09",
-          "amount": 0.484
-        },
-        {
-          "date": "2025-01-29",
-          "amount": 0.5
-        },
-        {
-          "date": "2025-04-23",
-          "amount": 0.5
-        },
-        {
-          "date": "2025-07-03",
-          "amount": 0.5
-        },
-        {
-          "date": "2025-10-10",
-          "amount": 0.5
-        },
-        {
-          "date": "2026-02-04",
-          "amount": 0.5
-        },
-        {
-          "date": "2026-04-22",
-          "amount": 0.5
-        }
-      ],
-      "sustainability": {}
     },
     "analyst_consensus": {
       "buy": 2,
@@ -21181,6 +18985,20 @@
         "sector keyword match: Consumer Cyclical"
       ],
       "data_quality": "ok"
+    },
+    "backtest": {
+      "total_trades": 31,
+      "win_count": 13,
+      "loss_count": 18,
+      "win_rate": 41.9,
+      "avg_return": -0.82,
+      "best_trade": 14.42,
+      "worst_trade": -9.84,
+      "total_return": -25.45,
+      "max_drawdown": 33.97,
+      "sharpe_ratio": -1.04,
+      "volatility_20d": 0.02999328165103564,
+      "volatility_60d": 0.024457664702868972
     }
   }
 ]
