@@ -45,11 +45,19 @@ jobs:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
         run: python api/collectors/fsc_daily_prices.py --mode daily
 
-      - name: Commit data/kr_chart_daily/
+      - name: 지수 일봉 수집 (금융위 지수시세정보 · T+1)
+        # 2026-07-08 신설 — 지수 소스 yfinance(Yahoo, 재배포 법률큐) → 금융위 공공데이터로 청정화.
+        # 주식시세(15094808)의 형제 API(15094807), 같은 키·같은 "이용허락범위 제한 없음".
+        # 같은 T+1 타이밍이라 이 슬롯 동승. 순수 stdlib (pip 0). 실패해도 차트 발행 무관(|| true).
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+        run: python api/collectors/fsc_index_prices.py --mode daily || echo "지수 수집 실패(무해)"
+
+      - name: Commit data/kr_chart_daily/ + kr_index_daily.json
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/kr_chart_daily/
+          git add data/kr_chart_daily/ data/kr_index_daily.json
           if git diff --staged --quiet; then
             echo "[kr_chart_daily] no changes"
             exit 0
