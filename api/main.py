@@ -3197,16 +3197,10 @@ def main():
         except Exception:
             pass
 
-    # [5.76] fair_value_gap 관측 (RIM V/P + implied-g) — 점수 wire 0, 사전등록(~2028-29 검증 대기)
-    if not is_us_mode:
-        try:
-            from api.observability.fair_value_gap import run_fair_value_gap_observation
-            _fvg = run_fair_value_gap_observation(candidates)
-            print(f"  [5.76] fair_value_gap 관측: {_fvg.get('tickers')}종목 "
-                  f"(저평가 {_fvg.get('undervalued')} / trap후보 {_fvg.get('value_trap_candidate')}) "
-                  f"logged={_fvg.get('logged')}")
-        except Exception as _e:
-            print(f"  [5.76] fair_value_gap 관측 스킵: {_e}")
+    # [5.76] fair_value_gap 관측 = 폐기 (2026-07-08, 소급 스크린 falsification):
+    #   RIM V/P ≡ 0.887·(book/price) + 1.325·(earnings/price) 고정 블렌드(corr 1.0, 오차 1e-10) +
+    #   implied-g ≡ FCF-yield 1:1 단조변환 → 둘 다 기존 value 비율 재표현, incremental IC = 0.
+    #   관측-only(wire 0)라 제거 영향 0. 상세 = memory project_observation_scoring_prereg_queue C-fv.
 
     # [5.77] 분산매도 정황 관측 (외국인/기관 순매도 + DART 5%룰 축소) — 점수 wire 0.
     # AlphaNest 유리박스 역(방어) 렌즈. 사전등록 docs/PREREG_DISTRIBUTION_FOOTPRINT_2026_06_25.md
