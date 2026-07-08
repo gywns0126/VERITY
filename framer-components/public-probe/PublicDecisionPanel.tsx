@@ -10,11 +10,10 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react"
  * 검색창 디자인 = PublicStockReport 본문 검색과 동일(토스식 borderless 채움 · 돋보기 · 클리어 × · 드롭다운).
  *
  * 🚨 목표 = 사용자가 *자기* 매매 결정을 내리도록 사실을 결정 축으로 재구성 (결정-support, 결정-making 아님).
- * 🚨 RULE 7 = 사실 재배열 + 교과서적 일반 방향만. 자체 점수·가중·종합·추천 0.
+ * 🚨 RULE 7 = 사실 재배열 + 교과서적 일반 방향만. 자체 점수·가중·종합·추천 0. "가중·종합·판단은 본인" 면책 의무.
  * 🚨 RULE 6 = LLM 내러티브 0 (전부 결정론적 규칙 + 발행 사실). 산식/엔진 비노출(공개 희석 VERITY).
  * 데이터(5 발행 피드) = stock_report_public(facts/peer/ownership·검색 universe) + insider_trades + disclosure_forensics + stock_flow_5d + market_warnings.
  * 🚨 결정 동선 링킹 = "관련 탐색" → /discover?sector=·?screen= 딥링크. 강세=빨강/약세=파랑(KR 관례).
- * 🚨 면책 문구 제거(2026-06-26, PM) — "판단은 본인 / 추천 아님 / 검증 후 2027" 류는 사이트 하단 단일 면책으로 통합. 방향=교과서 일반론 설명은 유지.
  */
 
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff", amber: "#ff9500", amberS: "#fff4e0", redS: "#fdecee", upS: "#fdecee", downS: "#eaf1fe" }
@@ -27,11 +26,12 @@ const LAST_TK_KEY = "verity_last_ticker"
 const TK_EVENT = "verity-ticker-change"
 
 const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
-const DEF_SEARCH = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"  // 검색 단일 소스 (KR+US 통합 — 리포트/네브와 동일)
 const DEF_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/insider_trades.json"
 const DEF_FORENSICS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/disclosure_forensics.json"
 const DEF_FLOW = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json"
 const DEF_WARN = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/market_warnings.json"
+const DEF_UNIVERSE = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
+const DEF_API = "https://project-yw131.vercel.app"
 
 const VALUE_KEYS = ["PER", "PBR"]
 const QUALITY_KEYS = ["ROE", "영업이익률"]
@@ -43,7 +43,6 @@ interface Props {
     stockUrl: string
     usStockUrl: string
     usSmallcapUrl?: string
-    searchUrl?: string
     insiderUrl: string
     forensicsUrl: string
     flowUrl: string
@@ -121,7 +120,7 @@ const DEMO_FLOW = [{ foreign_net: 151302, inst_net: 16724 }]
  * @framerSupportedLayoutHeight any
  */
 export default function PublicDecisionPanel(props: Props) {
-    const { ticker, stockUrl, usStockUrl, usSmallcapUrl, searchUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, reportPath, discoverPath, dark } = props
+    const { ticker, stockUrl, usStockUrl, usSmallcapUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, reportPath, discoverPath, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     // 테마 추종 — 사이트 다크모드(body[data-framer-theme]) 따라감. 캔버스는 dark prop 정적.
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
@@ -162,33 +161,15 @@ export default function PublicDecisionPanel(props: Props) {
     })
     const tk = selTk
 
-    // 검색 universe = universe_search.json 단일 (KR+US 통합 ~8.9천 — 리포트·네브 검색과 동일 소스.
-    // 2026-07-05 괴리 제거: 구 3종 합산 6.4천 → 통합 파일. 통합 파일 장애 시에만 구 3종 폴백.)
+    // 검색 universe = 경량 인덱스(universe_search.json ~621KB) — 전 종목 리포트(9.2MB) 로드 제거. 2026-07-08.
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        const loadLegacy = () => {
-            const urls = [stockUrl, usStockUrl, usSmallcapUrl].filter(Boolean)
-            Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
-                .then((docs) => {
-                    if (!alive) return
-                    const merged: any[] = []
-                    for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) merged.push(...(a as any[])) }
-                    const seen = new Set<string>()
-                    const deduped = merged.filter((s: any) => { const tk2 = String(s.ticker || ""); if (!tk2 || seen.has(tk2)) return false; seen.add(tk2); return true })
-                    if (deduped.length) setUniverse(deduped)
-                })
-        }
-        fetch(searchUrl || DEF_SEARCH, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const a = d && (Array.isArray(d) ? d : d.stocks)
-                if (alive && Array.isArray(a) && a.length) setUniverse(a)
-                else loadLegacy()
-            })
-            .catch(loadLegacy)
+        fetch(DEF_UNIVERSE, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a) && a.length) setUniverse(a) })
+            .catch(() => {})
         return () => { alive = false }
-    }, [searchUrl, stockUrl, usStockUrl, usSmallcapUrl, onCanvas])
+    }, [onCanvas])
 
     const matches = useMemo(() => {
         const qq = query.trim().toLowerCase(); if (!qq) return []
@@ -218,21 +199,25 @@ export default function PublicDecisionPanel(props: Props) {
         return () => ro.disconnect()
     }, [rootRef[0]])
 
+    // 종목 상세 = 슬라이스 API 1콜(~11KB) — 전 종목 맵 5개(≈11MB) 로드 대체. 2026-07-08.
     useEffect(() => {
         if (onCanvas || !tk) return
         let alive = true
-        const fetchOne = (url: string, find: (d: any) => any) => fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) find(d) }).catch(() => {})
-        const isUsT = !/^\d{6}$/.test(String(tk))   // US(비 6자리)면 미장 소스서 상세 fetch
-        // 순증 소형주는 usSmallcapUrl, sp1500 은 usStockUrl — 둘 다 시도(매칭될 때만 setStock, null 덮음 방지)
-        const findStock = (d: any) => { const a = d.stocks || d; if (Array.isArray(a)) { const hit = a.find((x: any) => x.ticker === tk); if (hit) setStock(hit) } }
-        if (isUsT) { setStock(null); if (usStockUrl) fetchOne(usStockUrl, findStock); if (usSmallcapUrl) fetchOne(usSmallcapUrl, findStock) }
-        else fetchOne(stockUrl, findStock)
-        fetchOne(insiderUrl, (d) => { const a = d.stocks || d; if (Array.isArray(a)) setIns(a.find((x: any) => x.ticker === tk) || null) })
-        fetchOne(forensicsUrl, (d) => { const a = d.stocks || d; if (Array.isArray(a)) setForen(a.find((x: any) => x.ticker === tk) || null) })
-        fetchOne(flowUrl, (d) => { const f = (d.flows || d) || {}; setFlow(f[tk] || []) })
-        fetchOne(warnUrl, (d) => { const wmap = (d.warnings || d) || {}; setWarned(!!wmap[tk]) })
+        const t = String(tk).toUpperCase()
+        setStock(null); setIns(null); setForen(null); setFlow([]); setWarned(false)
+        fetch(DEF_API + "/api/stock_slice?ticker=" + encodeURIComponent(t))
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!alive || !d || d.status !== "ok") return
+                if (d.report) setStock(d.report)
+                setIns(d.insider || null)
+                setForen(d.forensics || null)
+                setFlow(Array.isArray(d.flow) ? d.flow : [])
+                setWarned(!!d.warn)
+            })
+            .catch(() => {})
         return () => { alive = false }
-    }, [tk, stockUrl, usStockUrl, usSmallcapUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, onCanvas])
+    }, [tk, onCanvas])
 
     const s = onCanvas ? DEMO : stock
     const insD = onCanvas ? DEMO_INS : ins
@@ -283,7 +268,7 @@ export default function PublicDecisionPanel(props: Props) {
         return { facts, rows, insNet, foreignNet, instNet, dil, risk, bull, bear, valRows, qualRows, discN, sector }
     }, [s, insD, forD, flowD, warned])
 
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: `0 ${pad}px`, boxSizing: "border-box", color: C.ink }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink }
     const setRef = (el: HTMLDivElement | null) => { if (el && rootRef[0] !== el) rootRef[1](el) }
 
     // 검색창 — 리포트 본문 검색과 동일(토스식 borderless 채움 · 돋보기 · 클리어 × · 드롭다운)
@@ -427,7 +412,7 @@ export default function PublicDecisionPanel(props: Props) {
                         <span style={{ fontSize: narrow ? 17 : 19, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>{s.name}</span>
                         <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{s.ticker} · {s.market}</span>
                     </div>
-                    <div style={{ fontSize: 11.5, fontWeight: 800, color: C.vt, marginTop: 1 }}>결정 요약 <span style={{ color: C.faint, fontWeight: 600 }}>· 사실을 결정 축으로</span></div>
+                    <div style={{ fontSize: 11.5, fontWeight: 800, color: C.vt, marginTop: 1 }}>결정 요약 <span style={{ color: C.faint, fontWeight: 600 }}>· 사실을 결정 축으로 · 판단은 본인</span></div>
                 </div>
             </div>
 
@@ -515,7 +500,6 @@ addPropertyControls(PublicDecisionPanel, {
     stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEF_STOCK },
     usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
     usSmallcapUrl: { type: ControlType.String, title: "US Smallcap URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_us_smallcap.json" },
-    searchUrl: { type: ControlType.String, title: "Search URL (통합)", defaultValue: DEF_SEARCH },
     insiderUrl: { type: ControlType.String, title: "Insider URL", defaultValue: DEF_INSIDER },
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: DEF_FORENSICS },
     flowUrl: { type: ControlType.String, title: "Flow URL", defaultValue: DEF_FLOW },
