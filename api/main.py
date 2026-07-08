@@ -2992,9 +2992,14 @@ def main():
                         fac_ok += 1
                     else:
                         from api.analyzers.facilities_parser import parse_business_facilities
+                        # 유형자산 주석(토지·건물 장부금액) additive 피드 — 본문 재무제표엔 유형자산 총계만.
+                        _fac_rt = raw.get("raw_text") or ""
+                        _fac_ppe = raw.get("ppe_note_text") or ""
+                        if _fac_ppe:
+                            _fac_rt = _fac_rt + "\n\n=== 유형자산 주석 ===\n" + _fac_ppe
                         parsed = safe_collect(
                             parse_business_facilities,
-                            stock.get("name", ticker_yf), stock.get("ticker"), raw["raw_text"],
+                            stock.get("name", ticker_yf), stock.get("ticker"), _fac_rt,
                             name=f"DART-FacilParse({stock.get('name')})",
                             timeout=90, default={},
                         )

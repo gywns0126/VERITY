@@ -78,6 +78,10 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
         "finance_cost": 0,    # 금융원가 (IS) — 이자비용+환차손 등 포함(순수 이자비용 아님)
         "income_tax": 0,      # 법인세비용 (IS)
         "investment_property": 0,  # 투자부동산 장부가(BS) — 리포트 '부동산' 섹션용 사실
+        "tangible_assets": 0,      # 유형자산 장부가(BS) — 부동산 프록시 상한(토지·건물 미분리 기업 커버)
+        "land": 0,                 # 토지 장부가(BS) — 감가 없는 취득원가, 숨은자산 핵심(BS 면 노출 기업만)
+        "buildings": 0,            # 건물 장부가(BS)
+        "real_estate_book": 0,     # 토지+건물+투자부동산 (소유 부동산 장부가 · 사용권자산 제외) — NAV 프록시 원천
         "operating_cashflow": 0,
         "investing_cashflow": 0,
         "financing_cashflow": 0,
@@ -105,7 +109,13 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
             elif acct == "자본금":
                 out["capital"] = amount
             elif "투자부동산" in acct:
-                out["investment_property"] = amount
+                out["investment_property"] = max(out["investment_property"], amount)
+            elif acct.strip() == "유형자산" or item.get("account_id") == "ifrs-full_PropertyPlantAndEquipment":
+                out["tangible_assets"] = max(out["tangible_assets"], amount)
+            elif acct.strip() == "토지":
+                out["land"] = max(out["land"], amount)
+            elif acct.strip() in ("건물", "건물및구축물"):
+                out["buildings"] = max(out["buildings"], amount)
         elif sj in ("IS", "CIS"):
             if acct in ("매출액", "영업수익") or "수익(매출액)" in acct:
                 out["revenue"] = max(out["revenue"], amount)
@@ -139,6 +149,9 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
     out["equity"] = out["total_assets"] - out["total_liabilities"]
     out["working_capital"] = out["current_assets"] - out["current_liabilities"]
     out["free_cashflow"] = out["operating_cashflow"] + out["investing_cashflow"]
+    # 소유 부동산 장부가 = 토지+건물+투자부동산 (사용권자산=리스라 제외). 토지·건물 미분리 기업은
+    # investment_property 만 반영(과소계상) → 광의 상한은 tangible_assets 로 별도 노출.
+    out["real_estate_book"] = out["land"] + out["buildings"] + out["investment_property"]
     # gross_profit fallback — 매출 - 매출원가 (account_nm 직접 매칭 부재 시)
     if out["gross_profit"] == 0 and out["revenue"] > 0 and out["cogs"] > 0:
         out["gross_profit"] = out["revenue"] - out["cogs"]
@@ -155,6 +168,8 @@ def _compute_ratios(pl_bs: dict) -> dict:
         "debt_ratio": None, "roe": None, "roa": None,
         "op_margin": None, "current_ratio": None, "asset_turnover": None,
         "gross_margin": None,
+        # NAV 프록시(장부가 기반, 시가 아님) — 자산주/숨은부동산 스크리닝. 시총 대비는 다운스트림(시총 보유) 산출.
+        "real_estate_to_equity": None, "real_estate_to_assets": None, "land_to_equity": None,
     }
     eq = pl_bs.get("equity", 0)
     ta = pl_bs.get("total_assets", 0)
@@ -179,6 +194,16 @@ def _compute_ratios(pl_bs: dict) -> dict:
             out["gross_margin"] = round(gp / rev * 100, 2)
     if cur_l > 0 and cur_a > 0:
         out["current_ratio"] = round(cur_a / cur_l, 4)
+    # NAV 프록시 — 소유 부동산 장부가 대비 자본/자산. 토지 단독은 취득원가라 시가 갭이 가장 큼.
+    re_book = pl_bs.get("real_estate_book", 0)
+    land = pl_bs.get("land", 0)
+    if re_book > 0:
+        if eq > 0:
+            out["real_estate_to_equity"] = round(re_book / eq * 100, 2)
+        if ta > 0:
+            out["real_estate_to_assets"] = round(re_book / ta * 100, 2)
+    if land > 0 and eq > 0:
+        out["land_to_equity"] = round(land / eq * 100, 2)
     return out
 
 
@@ -273,6 +298,8 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
         "current_assets": 0, "current_liabilities": 0, "operating_profit": 0,
         "revenue": 0, "cogs": 0, "gross_profit": 0, "net_income": 0,
         "pretax_income": 0, "sga": 0, "finance_income": 0, "finance_cost": 0, "income_tax": 0,
+        "investment_property": 0, "tangible_assets": 0, "land": 0, "buildings": 0, "real_estate_book": 0,
+        "real_estate_to_equity": None, "real_estate_to_assets": None, "land_to_equity": None,
         "operating_cashflow": 0, "investing_cashflow": 0, "financing_cashflow": 0,
         "free_cashflow": 0,
         "reprt_code": reprt_code, "fs_div": None,
@@ -300,6 +327,7 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
                           "current_assets", "current_liabilities", "operating_profit",
                           "revenue", "cogs", "gross_profit", "net_income",
                           "pretax_income", "sga", "finance_income", "finance_cost", "income_tax",
+                          "investment_property", "tangible_assets", "land", "buildings", "real_estate_book",
                           "operating_cashflow", "investing_cashflow",
                           "financing_cashflow", "free_cashflow"):
                     base[k] = pl_bs.get(k, 0)
