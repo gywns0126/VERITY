@@ -28,6 +28,8 @@ from typing import Any, Dict, List, Optional, Tuple
 KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SP1500_PATH = os.path.join(_ROOT, "data", "us_universe_sp1500.json")
+# 통합 유니버스(sp1500 + Polygon 소형주 ~5,313, tier_map 포함). 심화데이터를 소형주까지 확장(2026-07-09).
+COMBINED_PATH = os.path.join(_ROOT, "data", "us_universe_combined.json")
 PORTFOLIO_PATH = os.path.join(_ROOT, "data", "portfolio.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "us_insider_trades.json")
 
@@ -62,15 +64,18 @@ def _float(v) -> float:
 
 
 def _universe() -> List[str]:
-    """sp1500 유니버스. 부재 시 US15 fallback."""
-    try:
-        with open(SP1500_PATH, encoding="utf-8") as f:
-            d = json.load(f)
-        out = [str(t).strip().upper() for t in (d.get("tickers") or []) if str(t).strip()]
-        if out:
-            return out
-    except (OSError, ValueError):
-        pass
+    """전체 US 유니버스 = combined(sp1500 + Polygon 소형주 ~5,313). 부재 시 sp1500 → US15 fallback.
+    심화데이터(내부자·13F·대량보유·컨센서스) 소형주 확장 (2026-07-09). budget+rotation+carry-forward 로
+    회당 예산 내 rotating 커버 — 대형주 데이터는 carry-forward 보존, 소형주는 사이클로 순차 채움."""
+    for path in (COMBINED_PATH, SP1500_PATH):
+        try:
+            with open(path, encoding="utf-8") as f:
+                d = json.load(f)
+            out = [str(t).strip().upper() for t in (d.get("tickers") or []) if str(t).strip()]
+            if out:
+                return out
+        except (OSError, ValueError):
+            continue
     return list(DEFAULT_US15)
 
 
@@ -92,15 +97,21 @@ def _rec_us_set() -> set:
     return out
 
 
+_ROTATION_CYCLE_DAYS = 7  # 확장 유니버스(소형주 포함 ~5,313) 전 커버 목표 사이클
+
+
 def _ordered_universe() -> List[str]:
-    """rec 우선풀 먼저 + 나머지를 day-of-year offset 으로 회전(전 종목 순차 커버)."""
+    """rec 우선풀 먼저 + 나머지를 페이지 단위 회전(~7일 1사이클, 전 종목 순차 커버).
+    day-of-year 를 페이지 단위로 회전 — 소형주 확장(5,313)으로 하루 1칸 회전은 꼬리 종목이 수천일
+    대기 → 페이지(≈len/7)씩 전진해 대형·소형 모두 주 단위 커버 (2026-07-09)."""
     uni = _universe()
     rec = _rec_us_set()
     priority = [t for t in uni if t in rec]
     rest = [t for t in uni if t not in rec]
     if rest:
-        off = _now_kst().timetuple().tm_yday % len(rest)
-        rest = rest[off:] + rest[:off]
+        page = max(1, len(rest) // _ROTATION_CYCLE_DAYS)
+        start = (_now_kst().timetuple().tm_yday % _ROTATION_CYCLE_DAYS) * page
+        rest = rest[start:] + rest[:start]
     return priority + rest
 
 
