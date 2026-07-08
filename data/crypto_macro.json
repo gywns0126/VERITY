@@ -10,49 +10,51 @@
   },
   "funding_rate": {
     "ok": true,
-    "rate": 4.15493596863e-05,
-    "rate_pct": 0.0042,
+    "rate": 2.27129819355e-05,
+    "rate_pct": 0.0023,
     "prev_rate_pct": null,
     "signal": "neutral",
-    "timestamp": "1783497600000",
+    "timestamp": "1783526400000",
     "source": "okx"
   },
   "kimchi_premium": {
     "ok": true,
-    "premium_pct": 8.0,
-    "upbit_krw": 93212000.0,
-    "global_usd": 62543.1,
-    "binance_usd": 62543.1,
-    "usdt_krw": 1380.0,
-    "signal": "overheated",
+    "premium_pct": -1.16,
+    "upbit_krw": 92682000.0,
+    "global_usd": 62062.1,
+    "binance_usd": 62062.1,
+    "usdt_krw": 1510.9300537109375,
+    "signal": "discount",
     "source": "upbit+bybit/okx"
   },
   "btc_nasdaq_corr": {
-    "ok": false,
-    "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'fc.yahoo.com'. See h"
+    "ok": true,
+    "correlation": 0.26,
+    "period_days": 30,
+    "signal": "decoupled",
+    "btc_last_price": 62063.4
   },
   "stablecoin_mcap": {
     "ok": true,
-    "total_mcap_usd": 257497683100.50854,
-    "total_mcap_b": 257.5,
+    "total_mcap_usd": 257379199758.03906,
+    "total_mcap_b": 257.4,
     "usdt_mcap_b": 184.2,
-    "usdc_mcap_b": 73.3
+    "usdc_mcap_b": 73.2
   },
-  "ok_count": 4,
+  "ok_count": 5,
   "total": 5,
   "composite": {
-    "score": 51,
-    "label": "중립",
-    "risk_level": "normal",
+    "score": 36,
+    "label": "비관",
+    "risk_level": "low",
     "signals": [
-      "크립토 극단적 공포",
-      "김프 +8.0% 과열"
+      "크립토 극단적 공포"
     ]
   },
-  "collected_at": "2026-07-08T15:37:11+09:00",
+  "collected_at": "2026-07-08T18:32:14+09:00",
   "schema_version": "v0",
   "diagnostics": {
-    "ok_count": 4,
+    "ok_count": 5,
     "used_prev_snapshot": false
   }
 }
