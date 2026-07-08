@@ -71,6 +71,13 @@ def _build_unified_universe(kr_uni):
                 seen.add(tk)
                 uni.append({"ticker": tk, "name": nm, "market": "US"})
                 us_n += 1
+        # 채권·금리 리포트 진입 항목 (2026-07-08) — 검색으로 PublicBondRegime 도달(통합 리포트).
+        #   type=rates → PublicStockReport 는 렌더 생략(가드), PublicBondRegime(searchMode)이 표시.
+        #   kw = 검색 키워드(비표시 필드, 두 검색창이 kw 도 매칭). ticker RATES_* = 가상 id(실 종목 아님).
+        uni.append({"ticker": "RATES_KR", "name": "한국 국채·금리", "market": "채권", "type": "rates",
+                    "kw": "채권 국채 금리 수익률 수익률곡선 장단기 스프레드 한국 국고채 bond rates yield"})
+        uni.append({"ticker": "RATES_US", "name": "미국 국채·금리", "market": "채권", "type": "rates",
+                    "kw": "채권 국채 금리 수익률 수익률곡선 스프레드 미국 미국채 treasury bond rates yield"})
         udoc = {
             "_meta": {"generated_at": datetime.now(KST).isoformat(),
                       "count": len(uni), "kr": len(kr_uni) + kr_rep_n, "us": us_n, "kr_report_union": kr_rep_n,
