@@ -14,16 +14,20 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SUMMARY_PATH = os.path.join(_ROOT, "data", "us_financials", "_summary.json")
+COMBINED_PATH = os.path.join(_ROOT, "data", "us_universe_combined.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "us_disclosure_feed.json")
 
 WINDOW_DAYS = 60        # 8-K 산발적 → 윈도우 넉넉히
 MAX_PER_TICKER = 5
+# 🚨 예산 가드 — 무가드 1,505 SEC 순회가 daily_analysis_full 에서 완주 못 해 2건만 남던 사고(2026-07-09) 방지.
+MAX_SECONDS = int(os.environ.get("US_DISCLOSURE_MAX_SECONDS", "1800"))
 
 
 def _now_kst() -> datetime:
@@ -34,18 +38,44 @@ def _title(name: str) -> str:
     return " ".join(w.capitalize() for w in str(name or "").split())
 
 
-def _universe() -> List[Dict[str, str]]:
+def _name_map() -> Dict[str, str]:
+    """ticker→표시명 — combined names(전 US, 소형주 포함) + summary entity_name 병합."""
+    out: Dict[str, str] = {}
     try:
-        with open(SUMMARY_PATH, "r", encoding="utf-8") as f:
-            rows = (json.load(f) or {}).get("rows") or []
+        with open(COMBINED_PATH, encoding="utf-8") as f:
+            names = (json.load(f) or {}).get("names") or {}
+        if isinstance(names, dict):
+            for tk, nm in names.items():
+                if tk and nm:
+                    out[str(tk).upper()] = _title(nm)
     except (OSError, json.JSONDecodeError):
-        rows = []
-    out = []
-    for r in rows:
-        tk = r.get("ticker")
-        if tk:
-            out.append({"ticker": tk, "name": _title(r.get("entity_name") or tk)})
+        pass
+    try:
+        with open(SUMMARY_PATH, encoding="utf-8") as f:
+            for r in ((json.load(f) or {}).get("rows") or []):
+                tk = r.get("ticker")
+                if tk and r.get("entity_name"):
+                    out[str(tk).upper()] = _title(r.get("entity_name"))
+    except (OSError, json.JSONDecodeError):
+        pass
     return out
+
+
+def _universe() -> List[str]:
+    """전체 US 유니버스(combined, 소형주 포함) — 심화 파이프라인 공유 rotation 재사용(rec 우선+페이지 회전).
+    부재 시 summary(S&P1500) fallback."""
+    try:
+        from api.builders.us_insider_trades_public_builder import _ordered_universe
+        uni = _ordered_universe()
+        if uni:
+            return [str(t).upper() for t in uni]
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        with open(SUMMARY_PATH, encoding="utf-8") as f:
+            return [str(r["ticker"]).upper() for r in ((json.load(f) or {}).get("rows") or []) if r.get("ticker")]
+    except (OSError, json.JSONDecodeError, KeyError):
+        return []
 
 
 def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
@@ -53,16 +83,32 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
     from api.intelligence.us_financials import SEC_USER_AGENT
 
     cutoff = (_now_kst().date() - timedelta(days=window_days)).strftime("%Y-%m-%d")
-    items: List[Dict[str, Any]] = []
-    total = 0
+    names = _name_map()
 
-    for u in _universe():
-        tk, name = u["ticker"], u["name"]
+    # carry-forward — 이전 스냅샷(이번 회전서 안 건드린 종목 보존). 예산 완주 실패해도 누적.
+    prev: Dict[str, Dict[str, Any]] = {}
+    try:
+        with open(OUTPUT_PATH, encoding="utf-8") as f:
+            for it in ((json.load(f) or {}).get("items") or []):
+                if it.get("ticker"):
+                    prev[str(it["ticker"]).upper()] = it
+    except (OSError, json.JSONDecodeError):
+        pass
+    merged: Dict[str, Dict[str, Any]] = dict(prev)
+
+    t0 = time.monotonic()
+    covered = 0
+    for tk in _universe():
+        if time.monotonic() - t0 > MAX_SECONDS:
+            print(f"[us_disclosure_feed] budget 도달 ({int(time.monotonic()-t0)}s, {covered}종목) — 나머지 carry-forward", file=sys.stderr)
+            break
+        name = names.get(tk, tk)
         try:
             filings = get_recent_filings(tk, SEC_USER_AGENT, ["8-K"]) or []
         except Exception as e:  # noqa: BLE001
             print(f"[us_disclosure_feed] {tk} 8-K fetch 실패: {e!r}", file=sys.stderr)
             continue
+        covered += 1
         discs = []
         for fl in filings:
             d = str(fl.get("filed_date") or "")
@@ -78,18 +124,16 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
             })
             if len(discs) >= MAX_PER_TICKER:
                 break
-        if not discs:
-            continue
-        discs.sort(key=lambda x: x["date"], reverse=True)
-        items.append({
-            "ticker": tk,
-            "name": name,
-            "latest": discs[0]["date"],
-            "disclosures": discs,
-        })
-        total += len(discs)
+        if discs:
+            discs.sort(key=lambda x: x["date"], reverse=True)
+            merged[tk] = {"ticker": tk, "name": name, "latest": discs[0]["date"], "disclosures": discs}
+        else:
+            merged.pop(tk, None)  # 이번 커버됐는데 윈도우 내 8-K 없음 → 오래된 항목 제거(신선도)
 
+    # 윈도우 밖으로 밀린 carry-forward 항목 정리
+    items = [it for it in merged.values() if str(it.get("latest", "")) >= cutoff]
     items.sort(key=lambda it: it["latest"], reverse=True)
+    total = sum(len(it.get("disclosures") or []) for it in items)
     return {
         "_meta": {
             "generated_at": _now_kst().isoformat(),
@@ -98,7 +142,9 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
             "count": len(items),
             "disclosure_count": total,
             "window_days": window_days,
-            "note": "공시 사실·일정만 — 점수·등급·추천 아님 (RULE 7). 제목은 SEC 원문, 링크는 EDGAR. 유니버스=us_financials _summary(S&P 1500).",
+            "covered_this_run": covered,
+            "note": "공시 사실·일정만 — 점수·등급·추천 아님 (RULE 7). 제목은 SEC 원문, 링크는 EDGAR. "
+                    "유니버스=combined(S&P 1500 + Polygon 소형주), 페이지 회전+carry-forward 누적.",
         },
         "items": items,
     }
