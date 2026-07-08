@@ -10,8 +10,8 @@
   },
   "funding_rate": {
     "ok": true,
-    "rate": 4.58625865034e-05,
-    "rate_pct": 0.0046,
+    "rate": 4.15493596863e-05,
+    "rate_pct": 0.0042,
     "prev_rate_pct": null,
     "signal": "neutral",
     "timestamp": "1783497600000",
@@ -19,42 +19,40 @@
   },
   "kimchi_premium": {
     "ok": true,
-    "premium_pct": -0.9,
-    "upbit_krw": 93939000.0,
-    "global_usd": 62766.3,
-    "binance_usd": 62766.3,
-    "usdt_krw": 1510.280029296875,
-    "signal": "normal",
+    "premium_pct": 8.0,
+    "upbit_krw": 93212000.0,
+    "global_usd": 62543.1,
+    "binance_usd": 62543.1,
+    "usdt_krw": 1380.0,
+    "signal": "overheated",
     "source": "upbit+bybit/okx"
   },
   "btc_nasdaq_corr": {
-    "ok": true,
-    "correlation": 0.252,
-    "period_days": 30,
-    "signal": "decoupled",
-    "btc_last_price": 62766.3
+    "ok": false,
+    "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'fc.yahoo.com'. See h"
   },
   "stablecoin_mcap": {
     "ok": true,
-    "total_mcap_usd": 257534888631.60062,
+    "total_mcap_usd": 257497683100.50854,
     "total_mcap_b": 257.5,
     "usdt_mcap_b": 184.2,
     "usdc_mcap_b": 73.3
   },
-  "ok_count": 5,
+  "ok_count": 4,
   "total": 5,
   "composite": {
-    "score": 41,
+    "score": 51,
     "label": "중립",
     "risk_level": "normal",
     "signals": [
-      "크립토 극단적 공포"
+      "크립토 극단적 공포",
+      "김프 +8.0% 과열"
     ]
   },
-  "collected_at": "2026-07-08T12:58:16+09:00",
+  "collected_at": "2026-07-08T15:37:11+09:00",
   "schema_version": "v0",
   "diagnostics": {
-    "ok_count": 5,
+    "ok_count": 4,
     "used_prev_snapshot": false
   }
 }
