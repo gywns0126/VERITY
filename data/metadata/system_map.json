@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-08T20:31:55.489818+09:00",
+  "generated_at": "2026-07-08T22:14:08.264688+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 207601,
-    "python_modules": 619,
+    "code_lines_tsx_py": 208148,
+    "python_modules": 621,
     "tsx_components": 105,
-    "json_data_files": 402,
-    "json_total_tracked": 417,
-    "workflows": 59,
-    "scheduled_workflows": 49,
-    "cron_triggers": 59,
-    "git_tracked_files": 5724
+    "json_data_files": 403,
+    "json_total_tracked": 418,
+    "workflows": 60,
+    "scheduled_workflows": 50,
+    "cron_triggers": 60,
+    "git_tracked_files": 5731
   },
   "subsystems": {
     "ingest": {
@@ -151,8 +151,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 59,
-      "scheduled": 49,
+      "count": 60,
+      "scheduled": 50,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -406,6 +406,13 @@
           "scheduled": true
         },
         {
+          "name": "regime_drift_audit",
+          "crons": [
+            "30 0 * * 1"
+          ],
+          "scheduled": true
+        },
+        {
           "name": "reports_v2_cron",
           "crons": [],
           "scheduled": false
@@ -580,7 +587,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 402
+      "count": 403
     },
     "validation": {
       "label": "검증",
@@ -595,9 +602,9 @@
     }
   },
   "python_by_dir": {
-    "api": 358,
+    "api": 359,
     "tests": 128,
-    "scripts": 77,
+    "scripts": 78,
     "vercel-api": 48,
     "server": 6,
     ".github": 2
