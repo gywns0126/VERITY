@@ -26,8 +26,10 @@ TABLES = ["SF1", "SEP", "DAILY", "SF3A", "SF3B", "SF2", "SP500", "TICKERS", "ACT
 
 
 def _find_csv(raw_dir: str, table: str) -> Optional[str]:
-    hits = sorted(glob.glob(os.path.join(raw_dir, f"SHARADAR_{table}_*.csv")))
-    return hits[0] if hits else None
+    hits = glob.glob(os.path.join(raw_dir, f"SHARADAR_{table}_*.csv"))
+    # 최신 mtime 선택 — 구 번들이 남아있어도 최신 다운로드 사용.
+    # (구: sorted[0]=알파벳/해시순 임의 → 새 번들 추가 시 old 를 silent 선택하는 stale 버그)
+    return max(hits, key=os.path.getmtime) if hits else None
 
 
 def connect(raw_dir: str = RAW_DIR_DEFAULT, db_path: str = DB_PATH_DEFAULT):
