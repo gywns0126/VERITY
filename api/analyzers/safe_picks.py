@@ -117,8 +117,10 @@ def assess_parking_options(macro: dict) -> Dict:
             "est_yield": round(us_2y, 2),
             "risk": "매우 낮음 (환위험 존재)",
             "liquidity": "높음",
-            "suitable": usd_krw < 1400,
-            "note": f"환율 {usd_krw:,.0f}원" + (" — 원화 강세 시 유리" if usd_krw < 1300 else " — 환헤지 고려"),
+            # 2026-07-08 레짐 재캘리(PM 승인) — 옛 1400/1300 은 원화 ~1500대 레짐에서 상시
+            # "부적합" + 강세문구 사멸. 현 레짐 기준 상향(suitable<1500 / 강세<1450). RULE 7 1회.
+            "suitable": usd_krw < 1500,
+            "note": f"환율 {usd_krw:,.0f}원" + (" — 원화 강세 시 유리" if usd_krw < 1450 else " — 환헤지 고려"),
         })
 
     options.append({

@@ -1075,8 +1075,11 @@ def _compute_macro_multiplier(stock: Dict[str, Any],
     usdkrw = None
     if stock.get("currency") == "KRW":
         usdkrw = _safe_float((macro.get("usd_krw") or {}).get("value"), 0.0) or 0.0
-        if usdkrw >= 1400:
-            currency_penalty = max(0.0, min(0.075, (usdkrw - 1400) / 200 * 0.15))
+        # 2026-07-08 레짐 재캘리(PM 승인) — 원화 구조적 ~1500대. 옛 1400 앵커는 밴드가
+        # 1400→1500(100폭)이라 1514 에서 이미 cap 포화 → 전 KR 종목 균일 7.5% 페널티(차등 소실).
+        # 현 레짐 기준: 1450 이상부터 시작, 1750 에서 cap 도달(300폭) → 차등 복원. RULE 7 1회.
+        if usdkrw >= 1450:
+            currency_penalty = max(0.0, min(0.075, (usdkrw - 1450) / 300 * 0.075))
 
     cape_pct = _safe_float(horizon.get("cape_percentile"), 50.0) or 50.0
     cape_penalty = 0.0
