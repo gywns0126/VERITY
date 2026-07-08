@@ -1,31 +1,31 @@
 {
   "system_health": {
-    "status": "error",
-    "checked_at": "2026-07-08T16:15:33+09:00",
+    "status": "ok",
+    "checked_at": "2026-07-08T17:10:17+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 87488,
+    "elapsed_ms": 34380,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 39449,
+        "latency_ms": 8968,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 334,
+        "latency_ms": 288,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 319,
+        "latency_ms": 462,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 133,
+        "latency_ms": 164,
         "detail": "정상",
         "attempts": 1
       },
@@ -37,49 +37,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 1189,
+        "latency_ms": 888,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 3716,
+        "latency_ms": 1082,
         "detail": "정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 22983,
+        "latency_ms": 18365,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260707)",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1871,
+        "latency_ms": 1795,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "ecos": {
-        "status": "error",
-        "latency_ms": 16540,
-        "detail": "HTTPSConnectionPool(host='ecos.bok.or.kr', port=443): Max retries exceeded with url: /api/StatisticSearch/8BT2P4G4NSU61M",
-        "attempts": 2
+        "status": "ok",
+        "latency_ms": 622,
+        "detail": "정상",
+        "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 175,
+        "latency_ms": 306,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 207,
+        "latency_ms": 430,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 113,
+        "latency_ms": 273,
         "detail": "정상",
         "attempts": 1
       },
@@ -93,55 +93,55 @@
     "github_worker": {
       "status": "running",
       "conclusion": "in_progress",
-      "workflow": "Cockpit Aggregate (5분 cron)",
-      "started_at": "2026-07-08T07:12:32Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/28924581953",
-      "detail": "Cockpit Aggregate (5분 cron): in_progress"
+      "workflow": "Stock Analysis Pipeline (Quick — Off-hours)",
+      "started_at": "2026-07-08T08:07:32Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/28927546254",
+      "detail": "Stock Analysis Pipeline (Quick — Off-hours): in_progress"
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-07-08T07:39:57+09:00",
+      "updated_at": "2026-07-08T16:15:37+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-07-08 16:08",
-          "age_hours": 0.12,
+          "last_updated": "2026-07-08 17:08",
+          "age_hours": 0.03,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-07-08 16:08",
-          "age_hours": 0.12,
+          "last_updated": "2026-07-08 17:08",
+          "age_hours": 0.03,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-07-08 16:08",
-          "age_hours": 0.12,
+          "last_updated": "2026-07-08 17:08",
+          "age_hours": 0.03,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-07-08 16:08",
-          "age_hours": 0.12,
+          "last_updated": "2026-07-08 17:08",
+          "age_hours": 0.03,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-07-08 16:08",
-          "age_hours": 0.12,
+          "last_updated": "2026-07-08 17:08",
+          "age_hours": 0.03,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-07-08 16:08",
-          "age_hours": 0.12,
+          "last_updated": "2026-07-08 17:08",
+          "age_hours": 0.03,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-07-08 16:11",
-          "age_hours": 0.07,
+          "last_updated": "2026-07-08 17:08",
+          "age_hours": 0.03,
           "threshold_hours": 1
         }
       }
@@ -149,18 +149,23 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "de52da2",
-      "remote_message": "🎯 cockpit 2026-07-08T16:13",
-      "remote_date": "2026-07-08T07:13:13Z",
-      "local_sha": "307f296",
-      "detail": "cron 자동 갱신 — 🎯 cockpit 2026-07-08T16:13"
+      "remote_sha": "8e92a2d",
+      "remote_message": "📊 macro_snapshot 2026-07-08T17:02",
+      "remote_date": "2026-07-08T08:02:56Z",
+      "local_sha": "8e92a2d"
     },
-    "errors": [
-      "ecos API 오류 — HTTPSConnectionPool(host='ecos.bok.or.kr', port=443): Max retries exceeded with url: /api/StatisticSearch/8BT2P4G4NSU61M"
-    ],
-    "warnings": []
+    "errors": [],
+    "warnings": [],
+    "apis": {
+      "kis_openapi": {
+        "status": "ok",
+        "count": 2,
+        "total": 2
+      }
+    },
+    "overall_status": "ok"
   },
-  "updated_at": "2026-07-08T16:15:37+09:00",
+  "updated_at": "2026-07-08T17:10:23+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
