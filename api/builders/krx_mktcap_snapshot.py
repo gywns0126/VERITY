@@ -27,16 +27,34 @@ UNIVERSE_SEARCH_PATH = os.path.join(_ROOT, "data", "universe_search_kr.json")
 # 통합 검색 universe (KR + US) — 검색창 4종 단일 소스(괴리 제거). KR=위 universe_search_kr 재사용,
 # US=us_stock_report_public + us_stock_report_us_smallcap 에서 slim(ticker/name/market) 추출. 발행 O.
 UNIVERSE_SEARCH_ALL_PATH = os.path.join(_ROOT, "data", "universe_search.json")
+_KR_REPORT_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
 _US_REPORT_PATHS = (
     os.path.join(_ROOT, "data", "us_stock_report_public.json"),
     os.path.join(_ROOT, "data", "us_stock_report_us_smallcap.json"),
 )
 def _build_unified_universe(kr_uni):
-    """KR universe(이미 구축) + US report 2파일 slim 병합 → 통합 검색 universe 발행.
-    US 파일은 로컬 data/(별 파이프라인 커밋분) 읽기 — 외부호출 0. 실패해도 KR-only 로 발행."""
+    """KR universe(KRX) + KR/US report slim 병합 → 통합 검색 universe 발행.
+    🚨 KRX universe 콜이 메인보드 대형주(삼성전자·SK하이닉스 등)를 누락 → 리포트 보유 종목 union 으로 보강
+       (2026-07-08: 페이지가 있는 종목은 정의상 검색돼야 함. universe_search 에 005930 부재 사고).
+    US·KR report 파일은 로컬 data/ 읽기 — 외부호출 0. 실패해도 가능한 만큼 발행."""
     try:
         uni = list(kr_uni)
         seen = {str(s.get("ticker") or "") for s in uni}
+        # KR 리포트 보유 종목 union (KRX universe 누락분 보강)
+        kr_rep_n = 0
+        try:
+            with open(_KR_REPORT_PATH, "r", encoding="utf-8") as f:
+                kd = json.load(f)
+            for s in (kd.get("stocks") or []):
+                tk = str(s.get("ticker") or "").strip()
+                nm = str(s.get("name") or "").strip()
+                if not tk or not nm or tk in seen:
+                    continue
+                seen.add(tk)
+                uni.append({"ticker": tk, "name": nm, "market": "KR"})
+                kr_rep_n += 1
+        except Exception:  # noqa: BLE001
+            pass
         us_n = 0
         for p in _US_REPORT_PATHS:
             try:
@@ -55,8 +73,8 @@ def _build_unified_universe(kr_uni):
                 us_n += 1
         udoc = {
             "_meta": {"generated_at": datetime.now(KST).isoformat(),
-                      "count": len(uni), "kr": len(kr_uni), "us": us_n,
-                      "source": "KRX universe(KR/ETF/ETN/KONEX) + SEC EDGAR(US 대형+소형주) slim 병합 — "
+                      "count": len(uni), "kr": len(kr_uni) + kr_rep_n, "us": us_n, "kr_report_union": kr_rep_n,
+                      "source": "KRX universe(KR/ETF/ETN/KONEX) + KR/US report(보유 종목 union) slim 병합 — "
                                 "검색창 4종 단일 소스. ticker/name 사실. 점수·추천 0."},
             "stocks": uni,
         }
