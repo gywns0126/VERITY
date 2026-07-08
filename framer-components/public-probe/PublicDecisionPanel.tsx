@@ -171,6 +171,17 @@ export default function PublicDecisionPanel(props: Props) {
         return () => { alive = false }
     }, [onCanvas])
 
+    // ?q= 가 종목명(비 티커)일 때 → 티커로 해석. universe 로드 후 1회 (딥링크 보존, StockReport 와 동일).
+    useEffect(() => {
+        if (onCanvas || !universe.length) return
+        const t = String(tk || "").trim()
+        if (!t || universe.some((x) => String(x.ticker).toUpperCase() === t.toUpperCase())) return
+        const low = t.toLowerCase()
+        const hit = universe.find((x) => String(x.name || "").toLowerCase() === low || String((x as any).name_ko || "") === t)
+            || universe.find((x) => String(x.name || "").toLowerCase().includes(low) || String((x as any).name_ko || "").includes(t))
+        if (hit) setSelTk(String(hit.ticker))
+    }, [universe, tk, onCanvas])
+
     const matches = useMemo(() => {
         const qq = query.trim().toLowerCase(); if (!qq) return []
         return universe.filter((x) => String(x.name || "").toLowerCase().includes(qq) || String(x.ticker || "").toLowerCase().includes(qq) || String((x as any).name_ko || "").includes(qq)).slice(0, 10)
