@@ -618,6 +618,59 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         except ValueError:
             pass
 
+    # 6.8) regime_drift 가드 소비 (2026-07-08 신설, shadow→active flip)
+    # scripts/regime_drift_audit.py (주1) 가 하드코딩 시장값 임계(sanity 경계·페널티·신호 밴드)를
+    # 실 macro 와 대조 → regime_drift_audit.jsonl 에 flag 적재. KOSPI 5000 sanity 오탐(분석 오중단)
+    # 계열 재발 방지. BREACH(실값이 sanity 밖 = 임박 오탐/오중단) = FAIL, SATURATED/NEAR_CAP
+    # (캘리 드리프트) = WARNING. 가드 자체 stale(>10일 = 주1+마진) = 가드 정지 알람.
+    # graceful: 파일 부재(첫 run 전) = skip. RULE 4 = 읽기만(jsonl 은 regime_drift_audit.yml 이 발행).
+    rd_path = os.path.join(_REPO_ROOT, "data", "metadata", "regime_drift_audit.jsonl")
+    try:
+        rd_last = None
+        with open(rd_path, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except (ValueError, TypeError):
+                    continue
+                if rd_last is None or (obj.get("ts_kst") or "") > (rd_last.get("ts_kst") or ""):
+                    rd_last = obj
+        if rd_last:
+            # 가드 자체 신선도 (주1 감사 정지 = 하드코딩 임계 무감시 복귀)
+            try:
+                rd_ts = datetime.fromisoformat(rd_last.get("ts_kst", ""))
+                if rd_ts.tzinfo is None:
+                    rd_ts = rd_ts.replace(tzinfo=KST)
+                rd_age_d = (_now_kst() - rd_ts.astimezone(KST)).total_seconds() / 86400
+                if rd_age_d > 10:
+                    severity = "WARNING" if severity == "PASS" else severity
+                    findings.append(f"regime_drift 가드 stale {rd_age_d:.1f}일 (>10일, 주1 감사 정지 의심)")
+            except (ValueError, TypeError):
+                pass
+            # flag 소비 (status=="flag" = BREACH/NEAR_CAP/SATURATED 만, WARN_ON/UNSUITABLE 은 정보성 제외)
+            flagged_rows = [r for r in rd_last.get("rows", []) if r.get("status") == "flag"]
+            if flagged_rows:
+                has_breach = any("BREACH" in str(fl) for r in flagged_rows for fl in r.get("flags", []))
+                names = ", ".join(r.get("name", "?") for r in flagged_rows)
+                if has_breach:
+                    severity = "FAIL"
+                    findings.append(
+                        f"🚨 regime_drift BREACH — 하드코딩 임계가 실값 밖: {names} "
+                        f"(KOSPI 5000 오탐 계열 — sanity 상/하한 즉시 상향)"
+                    )
+                else:
+                    severity = "WARNING" if severity == "PASS" else severity
+                    findings.append(
+                        f"regime_drift 캘리 드리프트: {names} (밴드 포화/cap 근접 — 재캘리 검토)"
+                    )
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        findings.append(f"regime_drift 가드 점검 실패: {type(e).__name__}: {e}")
+
     # 7) Claude final_review (STEP 10.8, 2026-05-11 추가) — 종합 시장 검수 verdict
     #
     # 2026-05-20 PM 결정 (A안 분리) — Claude 검수는 severity (🔴/🟡) 를 흔들지 않는다.
