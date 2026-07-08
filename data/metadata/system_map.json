@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-09T00:38:23.102180+09:00",
+  "generated_at": "2026-07-09T02:09:39.372472+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 208091,
+    "code_lines_tsx_py": 208137,
     "python_modules": 621,
     "tsx_components": 104,
-    "json_data_files": 403,
-    "json_total_tracked": 418,
-    "workflows": 60,
-    "scheduled_workflows": 50,
-    "cron_triggers": 60,
-    "git_tracked_files": 5732
+    "json_data_files": 406,
+    "json_total_tracked": 421,
+    "workflows": 61,
+    "scheduled_workflows": 51,
+    "cron_triggers": 61,
+    "git_tracked_files": 5738
   },
   "subsystems": {
     "ingest": {
@@ -151,8 +151,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 60,
-      "scheduled": 50,
+      "count": 61,
+      "scheduled": 51,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -509,6 +509,13 @@
           "scheduled": true
         },
         {
+          "name": "us_disclosure_feed",
+          "crons": [
+            "0 5 * * *"
+          ],
+          "scheduled": true
+        },
+        {
           "name": "us_financials",
           "crons": [
             "0 0 5 * *"
@@ -587,7 +594,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 403
+      "count": 406
     },
     "validation": {
       "label": "검증",
