@@ -50,6 +50,19 @@ FEATURE_KEYS = (
     "news_sentiment_avg",
 )
 
+# 알람 제외 — 매 거래일 자연 변동하는 feature(시장이 움직이는 것 = 파이프라인 이상 아님).
+# 2026-07-09: day-over-day PSI 추이가 격일로 0.2 임계 초과(0.10~0.26) = cry-wolf critical 의
+# 주범이자 사용자 알람 피로 근원. 이들은 관측(feature_drifts, alarm:False)엔 남기되 overall/
+# drifted(알람)에서 제외. 알람은 "우리 파이프라인 출력이 예기치 않게 변했나"만 —
+# avg_brain_score·grade_distribution_buy_pct·vci_avg(우리 산출). 시장 rate 는 별도 regime_drift 가드.
+_ALARM_EXCLUDE = frozenset({
+    "vix_avg", "mood_score", "sp500_change_pct",       # 매크로 시장 관측(일 변동 자연)
+    "usd_krw", "us_10y",                                # 매크로 rate(regime_drift 가드가 별도 커버)
+    "foreign_net_avg", "institution_net_avg",           # 일별 수급(고변동)
+    "news_sentiment_avg",                               # 뉴스 감성(고변동)
+    "avg_per", "avg_pbr", "avg_roe", "avg_debt_ratio",  # rec 구성 로테이션 평균(종목 바뀌면 변동)
+})
+
 
 def extract_features(portfolio: Optional[dict]) -> Dict[str, float]:
     """
@@ -265,8 +278,11 @@ def compute_drift(yesterday: Optional[Dict[str, float]] = None,
             continue
         psi = _psi_single(y, t, feature_name=k)
         level = _psi_level(psi)
-        drifts[k] = {"psi": psi, "level": level,
-                     "yesterday": round(y, 4), "today": round(t, 4)}
+        alarm = k not in _ALARM_EXCLUDE
+        drifts[k] = {"psi": psi, "level": level, "yesterday": round(y, 4),
+                     "today": round(t, 4), "alarm": alarm}
+        if not alarm:
+            continue  # 관측만 — 시장/수급/rec 자연변동은 overall/drifted(알람)에서 제외
         psi_values.append(psi)
         if level in ("warning", "critical"):
             drifted.append(k)
@@ -279,9 +295,12 @@ def compute_drift(yesterday: Optional[Dict[str, float]] = None,
     # 자가진단 신호 의미가 약화됨 (실제 측정: 11회 중 8회 critical, overall=0.09 인데도).
     # 새 룰: critical 비율 ≥ 50% OR overall ≥ PSI_WARN(0.2) 일 때만 overall critical.
     # 단발 critical 은 drifted_features 로 노출되되 overall_level 은 _psi_level(overall) 따름.
-    crit_count = sum(1 for d in drifts.values() if d["level"] == "critical")
-    if drifts:
-        crit_ratio = crit_count / len(drifts)
+    # 2026-07-09: alarm 대상(관측-only 제외)만 crit_ratio 계산 — 시장 feature 가 crit_count 를
+    # 부풀려 overall critical 로 오승격하던 것 차단(관측 feature 는 drifts 엔 남되 알람 미반영).
+    alarm_drifts = {k: d for k, d in drifts.items() if d.get("alarm")}
+    crit_count = sum(1 for d in alarm_drifts.values() if d["level"] == "critical")
+    if alarm_drifts:
+        crit_ratio = crit_count / len(alarm_drifts)
         if crit_ratio >= 0.5 or overall >= PSI_WARN:
             overall_level = "critical"
         elif crit_count >= 1 and overall_level == "ok":
