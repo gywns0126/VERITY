@@ -102,6 +102,9 @@ def test_ordered_universe_priority_first(tmp_path, monkeypatch):
     uni.write_text(json.dumps({"tickers": ["AAA", "MSFT", "BBB", "CCC"]}), encoding="utf-8")
     pf = tmp_path / "pf.json"
     pf.write_text(json.dumps({"recommendations": [{"ticker": "MSFT", "currency": "USD"}]}), encoding="utf-8")
+    # _universe() 는 COMBINED_PATH(소형주 5,313 확장, 2026-07-09) 를 SP1500_PATH 보다 먼저 읽음 →
+    # mock 유니버스가 무시돼 실 5,313종목 누출되던 회귀. COMBINED_PATH 도 mock 으로 지정.
+    monkeypatch.setattr(b, "COMBINED_PATH", str(uni))
     monkeypatch.setattr(b, "SP1500_PATH", str(uni))
     monkeypatch.setattr(b, "PORTFOLIO_PATH", str(pf))
     order = b._ordered_universe()
