@@ -13,6 +13,10 @@ def _wire(monkeypatch, titles):
              for t in titles]
     monkeypatch.setattr(nh, "_naver_market_news", lambda: items)
     monkeypatch.setattr(nh, "_naver_economy_news", lambda: [])
+    # collect_headlines 는 구글뉴스 KR·언론사 RSS 도 집계(2026-06-27 소스 확장) → 미mock 시
+    # 실 헤드라인 누출로 near_dup 변별 테스트가 깨짐. 전 소스 mock 으로 3건만 격리.
+    monkeypatch.setattr(nh, "_korea_google_news", lambda: [])
+    monkeypatch.setattr(nh, "_korea_publisher_rss", lambda: [])
     return nh.collect_headlines(max_items=20)
 
 
