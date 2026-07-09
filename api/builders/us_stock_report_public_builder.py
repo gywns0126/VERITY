@@ -282,6 +282,34 @@ def _latest_annual(series: Any) -> Optional[float]:
         return None
 
 
+# 통화 심볼 — 비USD 보고(외국 상장) 재무 표시용 (2026-07-09). 미등록 통화는 코드 프리픽스.
+_CCY_SYM = {"USD": "$", "CAD": "C$", "AUD": "A$", "EUR": "€", "GBP": "£", "JPY": "¥",
+            "HKD": "HK$", "CNY": "¥", "CHF": "CHF ", "ILS": "₪", "SGD": "S$", "NZD": "NZ$", "BRL": "R$"}
+
+
+def _ccy_sym(ccy: Any) -> str:
+    c = str(ccy or "USD").upper()
+    return _CCY_SYM.get(c, c + " ")
+
+
+def _money_compact(v: Any, ccy: Any = "USD") -> str | None:
+    s = _usd_compact(v)  # "$X.XB"
+    if s is None:
+        return None
+    return s if str(ccy or "USD").upper() == "USD" else _ccy_sym(ccy) + s[1:]
+
+
+def _money_compact_signed(v: Any, ccy: Any = "USD") -> str | None:
+    s = _usd_compact_signed(v)  # "$X.XB" or "-$X.XB"
+    if s is None or str(ccy or "USD").upper() == "USD":
+        return s
+    if s.startswith("-$"):
+        return "-" + _ccy_sym(ccy) + s[2:]
+    if s.startswith("$"):
+        return _ccy_sym(ccy) + s[1:]
+    return s
+
+
 def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
     """per-ticker us_financials/{TK}.json series_annual → 최근 연간 순이익·자기자본 (PER/PBR 자체계산용)."""
     p = os.path.join(_ROOT, "data", "us_financials", f"{ticker}.json")
@@ -289,6 +317,10 @@ def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
         with open(p, "r", encoding="utf-8") as f:
             doc = json.load(f) or {}
     except (OSError, json.JSONDecodeError):
+        return {}
+    # 🚨 비USD 보고(외국 상장, CAD 등) — 시총(USD)÷native 이익 = 통화혼용이라 PER/PBR·EPS·FCF 자체계산
+    #   억제(RULE 7, 틀린 배수 노출 금지). 재무제표(financials.groups)는 native 통화로 별도 표시.
+    if str((doc.get("meta") or {}).get("currency") or "USD").upper() != "USD":
         return {}
     sa = doc.get("series_annual") or {}
     der = doc.get("derived") or {}
@@ -363,13 +395,14 @@ def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], O
     except (OSError, json.JSONDecodeError):
         return None, None
     sa = doc.get("series_annual") or {}
+    ccy = str((doc.get("meta") or {}).get("currency") or "USD").upper()  # 보고 통화(USD/CAD 등)
     rev_y = _annual_by_year(sa.get("revenue"))
     op_y = _annual_by_year(sa.get("operating_income"))
     net_y = _annual_by_year(sa.get("net_income"))
 
     years = sorted(set(rev_y) | set(op_y) | set(net_y))[-12:]
     fin_series = [
-        {"year": y, "revenue": rev_y.get(y), "op": op_y.get(y), "net": net_y.get(y)}
+        {"year": y, "revenue": rev_y.get(y), "op": op_y.get(y), "net": net_y.get(y), "currency": ccy}
         for y in years
         if rev_y.get(y) is not None or op_y.get(y) is not None or net_y.get(y) is not None
     ]
@@ -387,16 +420,17 @@ def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], O
         rev, gp, op, pre, net = rev_y.get(y), gp_y.get(y), op_y.get(y), pre_y.get(y), net_y.get(y)
 
         def _row(k: str, v: Optional[float], signed: bool = False) -> Optional[Dict[str, str]]:
-            s = _usd_compact_signed(v) if signed else _usd_compact(v)
+            s = _money_compact_signed(v, ccy) if signed else _money_compact(v, ccy)
             return {"k": k, "v": s} if s else None
 
+        annual_label = "연간 10-K" if ccy == "USD" else "연간 40-F/20-F"  # 외국 상장 = 외국 연차 폼
         pl_rows = [r for r in [
             _row("매출", rev),
             _row("매출총이익", gp, signed=True),
             _row("영업이익", op, signed=True),
             _row("세전이익", pre, signed=True),
             _row("순이익", net, signed=True),
-            ({"k": "EPS(희석)", "v": f"${eps_y[y]:,.2f}"} if eps_y.get(y) is not None else None),
+            ({"k": "EPS(희석)", "v": f"{_ccy_sym(ccy)}{eps_y[y]:,.2f}"} if eps_y.get(y) is not None else None),
             ({"k": "매출총이익률", "v": f"{gp / rev * 100:.1f}%"} if gp is not None and rev else None),
             ({"k": "영업이익률", "v": f"{op / rev * 100:.1f}%"} if op is not None and rev else None),
         ] if r]
@@ -406,16 +440,18 @@ def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], O
         ] if r]
         groups = []
         if pl_rows:
-            groups.append({"title": "손익계산서 (연간 10-K)", "rows": pl_rows})
+            groups.append({"title": f"손익계산서 ({annual_label})", "rows": pl_rows})
         if bs_rows:
             groups.append({"title": "재무상태표", "rows": bs_rows})
         if groups:
             values = {}
-            if _usd_compact(rev):
-                values["매출"] = _usd_compact(rev)
-            if _usd_compact_signed(net):
-                values["순이익"] = _usd_compact_signed(net)
+            if _money_compact(rev, ccy):
+                values["매출"] = _money_compact(rev, ccy)
+            if _money_compact_signed(net, ccy):
+                values["순이익"] = _money_compact_signed(net, ccy)
             financials = {"period": str(y), "values": values, "groups": groups}
+            if ccy != "USD":
+                financials["currency"] = ccy  # 프론트 통화 라벨(단위: CAD 등)
 
     return fin_series, financials
 

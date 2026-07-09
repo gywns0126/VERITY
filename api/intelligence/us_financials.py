@@ -34,6 +34,8 @@ SUBMISSIONS_URL_TEMPLATE = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 # Period 분류 — span days
 QUARTER_MIN_DAYS, QUARTER_MAX_DAYS = 80, 100
 ANNUAL_MIN_DAYS, ANNUAL_MAX_DAYS = 350, 380
+# 연차보고서 폼 — 10-K(국내) + 40-F·20-F(외국 사기업, 캐나다·유럽 등). 외국 상장 재무 추출용.
+_ANNUAL_FORMS = ("10-K", "10-K/A", "40-F", "40-F/A", "20-F", "20-F/A")
 
 # Tag alias 매핑 (5/20 실측 검증 — MSFT 정합).
 # 산업별 (특히 금융/REIT) 별도 tag 가능 — v0.1 별도 sprint.
@@ -204,8 +206,9 @@ def _classify_period(
         return None
     fy = fy_hint or e.year
 
+    # 40-F/20-F = 외국 사기업(캐나다·유럽 등) 연차보고서 = 10-K 짝. 외국 상장 종목 재무 추출 (2026-07-09).
     if is_instant or (s and s == e):
-        if form in ("10-K", "10-K/A"):
+        if form in _ANNUAL_FORMS:
             is_annual = True
             fp_out = "FY"
         elif form in ("10-Q", "10-Q/A"):
@@ -218,17 +221,37 @@ def _classify_period(
     if not s:
         return None
     span = (e - s).days
-    if form in ("10-K", "10-K/A") and ANNUAL_MIN_DAYS <= span <= ANNUAL_MAX_DAYS:
+    if form in _ANNUAL_FORMS and ANNUAL_MIN_DAYS <= span <= ANNUAL_MAX_DAYS:
         return Period(fy, "FY", end, form, True)
     if form in ("10-Q", "10-Q/A") and QUARTER_MIN_DAYS <= span <= QUARTER_MAX_DAYS:
         return Period(fy, fp if fp in ("Q1", "Q2", "Q3", "Q4") else "Q?", end, form, False)
     return None
 
 
+_CURRENCY_PROBE_TAGS = ["Assets", "Revenues", "NetIncomeLoss", "StockholdersEquity", "Liabilities"]
+
+
+def _detect_currency(facts: Dict[str, Any]) -> str:
+    """회사 보고 통화 감지 — 주요 화폐 태그 units 에서 USD 우선, 없으면 최다 비USD 통화.
+    🚨 비USD 보고(CAD 등) 외국 상장 종목 재무 추출 위함 (2026-07-09). USD-only 추출이 캐나다 등
+    외국 상장사(NOA=CAD 등) 재무를 통째 드롭 → 소형주 리포트 groups 결손 원인."""
+    us_gaap = (facts.get("facts") or {}).get("us-gaap") or {}
+    from collections import Counter
+    ccy: Counter = Counter()
+    for tag in _CURRENCY_PROBE_TAGS:
+        for unit in (us_gaap.get(tag, {}).get("units") or {}):
+            if unit == "USD":
+                return "USD"
+            if "/" not in unit and unit != "shares":  # 화폐 단위만 (USD/shares·shares 제외)
+                ccy[unit] += 1
+    return ccy.most_common(1)[0][0] if ccy else "USD"
+
+
 def extract_metric_series(
     facts: Dict[str, Any],
     metric_key: str,
     aliases: Optional[List[str]] = None,
+    currency: str = "USD",
 ) -> List[Dict[str, Any]]:
     """단일 metric 의 표준화 시계열 — **모든 alias tag 의 rows 를 merge**.
 
@@ -249,7 +272,9 @@ def extract_metric_series(
             continue
         matched_tags.append(tag)
         units = us_gaap[tag].get("units") or {}
-        if "USD" in units:
+        if currency in units:                     # 보고 통화 우선 (USD 또는 감지된 CAD 등)
+            unit_rows = units[currency]
+        elif "USD" in units:
             unit_rows = units["USD"]
         elif "USD/shares" in units:
             unit_rows = units["USD/shares"]
@@ -315,17 +340,19 @@ def fetch_all_metrics(cik: int) -> Dict[str, Any]:
     sic, sic_desc = fetch_sic(cik)
     time.sleep(0.15)
     is_fin = is_financial_sic(sic)
+    ccy = _detect_currency(facts)  # 보고 통화 (USD 또는 CAD 등 외국 상장 native)
     # v0.3 — 금융은 revenue 만 FINANCIAL_REVENUE_ALIASES (총수익 우선) 로 추출.
     out_metrics: Dict[str, List[Dict[str, Any]]] = {}
     for k in TAG_ALIASES.keys():
         if k == "revenue" and is_fin:
-            out_metrics[k] = extract_metric_series(facts, k, aliases=FINANCIAL_REVENUE_ALIASES)
+            out_metrics[k] = extract_metric_series(facts, k, aliases=FINANCIAL_REVENUE_ALIASES, currency=ccy)
         else:
-            out_metrics[k] = extract_metric_series(facts, k)
+            out_metrics[k] = extract_metric_series(facts, k, currency=ccy)
     meta = get_entity_meta(facts)
     meta["sic"] = sic
     meta["sic_description"] = sic_desc
     meta["is_financial"] = is_fin
+    meta["currency"] = ccy
     return {
         "meta": meta,
         "metrics": out_metrics,
