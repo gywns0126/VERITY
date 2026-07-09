@@ -20,8 +20,24 @@ const DARK = { bg: "#16181d", ink: "#9aa4b1", faint: "#6b7684", line: "#2b2f37",
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
 function readBodyDark(): boolean {
-    if (typeof document === "undefined" || !document.body) return false
-    return document.body.dataset.framerTheme === "dark"
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
 }
 
 export default function PublicSourceNote(props: {
@@ -32,7 +48,8 @@ export default function PublicSourceNote(props: {
     dark?: boolean
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    // 첫 페인트부터 실제 테마로 시작(캔버스는 prop) — 반대색 flash 제거.
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
     useEffect(() => {
         if (onCanvas) return
         setThemeDark(readBodyDark())
@@ -49,7 +66,8 @@ export default function PublicSourceNote(props: {
 
     const wrap: CSSProperties = {
         width: props.width || "100%", maxWidth: "100%", boxSizing: "border-box",
-        fontFamily: FONT, background: C.bg, color: C.ink,
+        // 배경 = transparent: 하단 노트 스트립. 자기 bg hex 칠하면 Framer 네이티브 페이지 dark bg 와 어긋나 튐(다크 #0f1318 vs 하드코딩 #16181d). 상단 구분선만 유지.
+        fontFamily: FONT, background: "transparent", color: C.ink,
         padding: "14px 16px", borderTop: `1px solid ${C.line}`,
         display: "flex", flexDirection: "column", gap: 4,
     }

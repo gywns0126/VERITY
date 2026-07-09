@@ -170,8 +170,24 @@ const STK_LOGO = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
 function isKR(tk: any): boolean { return /^\d{6}$/.test(String(tk || "")) }
 
 function readBodyDark(): boolean {
-    if (typeof document === "undefined" || !document.body) return false
-    return document.body.dataset.framerTheme === "dark"
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
 }
 function fmtAge(iso: any): string {
     if (!iso) return ""
@@ -283,7 +299,8 @@ const SAMPLE = {
 
 export default function PublicPerspectiveMaps(props: { width?: number; dark?: boolean; dataUrl?: string; stockPath?: string }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    // 첫 페인트부터 실제 테마로 시작(캔버스는 prop) — 반대색 스켈레톤 flash 제거.
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
     const [tab, setTab] = useState<string>("desire")
     const [sel, setSel] = useState<Record<string, string>>({})
@@ -400,7 +417,9 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
         return s
     }).filter((s) => s.share > 0)
     const selSeg = capSegs.find((s) => s.key === selKey) || capSegs[0]
-    const calloutLeft = selSeg ? Math.min(93, Math.max(7, (selSeg.left + selSeg.share / 2) * 100)) : 50
+    const calloutLeft = selSeg ? (selSeg.left + selSeg.share / 2) * 100 : 50
+    // 말풍선 폭 추정(글자수 기반) — CSS clamp 로 컨테이너 안에 고정 (모바일 좌/우 잘림 방지). % clamp 는 좁은 화면서 말풍선 절반폭보다 작아 잘렸음.
+    const calloutW = selSeg ? Math.round(selSeg.label.length * 11 + 58) : 120
 
     const hero =
         tab === "desire" ? { big: n0(totalCount) + "종목", small: "인간 욕구 6계층으로 분류 · 탐색 렌즈" }
@@ -429,7 +448,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                 @keyframes vpmRise{0%{transform:translateY(5px);opacity:0}100%{transform:translateY(0);opacity:1}}
                 @keyframes vpmFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
                 .vpmCallout{animation:vpmCalloutPop .34s cubic-bezier(.34,1.7,.5,1) both}
-                @keyframes vpmCalloutPop{0%{transform:translateX(-50%) translateY(7px) scale(.6);opacity:0}60%{opacity:1}100%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
+                @keyframes vpmCalloutPop{0%{transform:translateY(7px) scale(.6);opacity:0}60%{opacity:1}100%{transform:translateY(0) scale(1);opacity:1}}
                 .vpmBtn svg{transition:transform .18s ease}
                 .vpmBtn:hover svg{transform:translateY(-1.5px) scale(1.08)}
                 .vpmBtn:active svg{transform:scale(.94)}
@@ -464,19 +483,20 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                     {/* relative 래퍼 — 콜아웃(바 위) + 바. paddingTop 으로 콜아웃 공간 확보 */}
                     <div style={{ position: "relative", paddingTop: 28 }}>
                         <div key={selKey} className="vpmCallout"
-                            style={{ position: "absolute", left: calloutLeft + "%", top: 0, transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none", zIndex: 2 }}>
+                            style={{ position: "absolute", left: `clamp(0px, calc(${calloutLeft}% - ${Math.round(calloutW / 2)}px), calc(100% - ${calloutW}px))`, top: 0, display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none", zIndex: 2 }}>
                             <span style={{ fontSize: 10.5, fontWeight: 800, color: "#ffffff", background: C.violet, borderRadius: 8, padding: "3px 9px", whiteSpace: "nowrap", boxShadow: "0 3px 10px rgba(108,92,231,0.4)", fontVariantNumeric: "tabular-nums" }}>
                                 {selSeg.label} <span style={{ opacity: 0.92 }}>{(selSeg.share * 100).toFixed(1)}%</span>
                             </span>
                             <span style={{ width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: `6px solid ${C.violet}` }} />
                         </div>
                         <div style={{ display: "flex", width: "100%", height: 12, borderRadius: 6, overflow: "hidden", background: C.track }}>
-                            {capSegs.map((s) => {
+                            {capSegs.map((s, i) => {
                                 const on = s.key === selKey
+                                // flex-grow=share = % 반올림 틈 없이 100% 채움 · 마지막 칸 borderRight 제거(우측 슬릿 방지)
                                 return (
                                     <div key={s.key} onClick={() => setSel((v) => ({ ...v, [tab]: s.key }))}
                                         title={`${s.label} · ${capJo(s.cap_sum)} · ${(s.share * 100).toFixed(1)}%`}
-                                        style={{ width: (s.share * 100) + "%", background: on ? C.violet : C.segIdle, borderRight: `1.5px solid ${C.card}`, boxSizing: "border-box", cursor: "pointer", transition: "background-color 0.15s" }} />
+                                        style={{ flex: `${s.share} 1 0%`, background: on ? C.violet : C.segIdle, borderRight: i === capSegs.length - 1 ? "none" : `1.5px solid ${C.card}`, boxSizing: "border-box", cursor: "pointer", transition: "background-color 0.15s" }} />
                                 )
                             })}
                         </div>

@@ -136,8 +136,24 @@ function GIcon(props: { k: string; size: number; a: string; g: string }) {
 }
 
 function readBodyDark(): boolean {
-    if (typeof document === "undefined" || !document.body) return false
-    return document.body.dataset.framerTheme === "dark"
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
 }
 function fmtAge(iso: any): string {
     if (!iso) return ""
@@ -173,7 +189,8 @@ export default function PublicEntranceMap(props: {
     stockPath?: string; discoverPath?: string; explorePath?: string; validationPath?: string
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    // 첫 페인트부터 실제 테마로 시작(캔버스는 prop) — 반대색 flash 제거.
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
 
     useEffect(() => {
