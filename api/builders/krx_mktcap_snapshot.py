@@ -74,6 +74,19 @@ def _build_unified_universe(kr_uni):
         # 🚨 combined 유니버스 union (2026-07-09) — 리포트 미보유 US 보통주(WULF 등 신규·외국 상장)도
         #   검색 가능하게. 리포트는 없어도 검색→클릭 시 slice stub 안내(리포트 채워지면 자동 상세).
         #   combined = Polygon CS active ∪ sp1500 = 미국 보통주 사실상 전체(~5,313). names 맵 사용.
+        # US 한글명 맵 (네이버 autocomplete 수집) — 한글 검색("테라울프") 매칭용 name_ko.
+        ko_map = {}
+        try:
+            ko_map = json.loads(open(os.path.join(_ROOT, "data", "us_stock_names_ko.json"),
+                                     encoding="utf-8").read()).get("names") or {}
+        except (OSError, ValueError):
+            pass
+        # 기존 US 엔트리(리포트 유래)에도 name_ko 소급 주입
+        for s in uni:
+            if s.get("market") == "US" and not s.get("name_ko"):
+                k = ko_map.get(str(s.get("ticker") or "").upper())
+                if k:
+                    s["name_ko"] = k
         us_comb_n = 0
         try:
             cdoc = json.loads(open(os.path.join(_ROOT, "data", "us_universe_combined.json"), encoding="utf-8").read())
@@ -89,7 +102,10 @@ def _build_unified_universe(kr_uni):
                         nm = nm[: -len(suf)].strip()
                         break
                 seen.add(tk)
-                uni.append({"ticker": tk, "name": nm or tk, "market": "US"})
+                entry = {"ticker": tk, "name": nm or tk, "market": "US"}
+                if ko_map.get(tk):
+                    entry["name_ko"] = ko_map[tk]  # 한글 검색 매칭
+                uni.append(entry)
                 us_comb_n += 1
         except Exception:  # noqa: BLE001
             pass
