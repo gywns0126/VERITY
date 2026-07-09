@@ -71,6 +71,29 @@ def _build_unified_universe(kr_uni):
                 seen.add(tk)
                 uni.append({"ticker": tk, "name": nm, "market": "US"})
                 us_n += 1
+        # 🚨 combined 유니버스 union (2026-07-09) — 리포트 미보유 US 보통주(WULF 등 신규·외국 상장)도
+        #   검색 가능하게. 리포트는 없어도 검색→클릭 시 slice stub 안내(리포트 채워지면 자동 상세).
+        #   combined = Polygon CS active ∪ sp1500 = 미국 보통주 사실상 전체(~5,313). names 맵 사용.
+        us_comb_n = 0
+        try:
+            cdoc = json.loads(open(os.path.join(_ROOT, "data", "us_universe_combined.json"), encoding="utf-8").read())
+            cnames = cdoc.get("names") or {}
+            for tk in (cdoc.get("tickers") or []):
+                tk = str(tk).strip().upper()
+                if not tk or tk in seen:
+                    continue
+                nm = str(cnames.get(tk) or tk).strip()
+                # 표시명 정리 — "XXX Inc. Common Stock" → "XXX Inc." (검색·표시 간결)
+                for suf in (" Common Stock", " Common Shares", " Ordinary Shares", " Class A Common Stock"):
+                    if nm.endswith(suf):
+                        nm = nm[: -len(suf)].strip()
+                        break
+                seen.add(tk)
+                uni.append({"ticker": tk, "name": nm or tk, "market": "US"})
+                us_comb_n += 1
+        except Exception:  # noqa: BLE001
+            pass
+        us_n += us_comb_n
         # 채권·금리 리포트 진입 항목 (2026-07-08) — 검색으로 PublicBondRegime 도달(통합 리포트).
         #   type=rates → PublicStockReport 는 렌더 생략(가드), PublicBondRegime(searchMode)이 표시.
         #   kw = 검색 키워드(비표시 필드, 두 검색창이 kw 도 매칭). ticker RATES_* = 가상 id(실 종목 아님).
