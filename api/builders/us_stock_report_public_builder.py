@@ -331,6 +331,9 @@ def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
 
 
 EARN_PATTERN_PATH = os.path.join(_ROOT, "data", "us_earnings_pattern.json")
+# 연간 재무 압축본 (커밋됨) — CI 재빌드에서 per-ticker 캐시(gitignore) 부재 시 폴백 소스.
+# 🚨 2026-07-04·07-09 실사고 재발 방지: 캐시 있으면 계산+압축본 갱신, 없으면 압축본 사용.
+FIN_COMPACT_PATH = os.path.join(_ROOT, "data", "us_fin_annual_compact.json")
 
 
 def _earnings_window(filings: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -726,15 +729,37 @@ def main() -> int:
                     n_disc += 1
             print(f"[us_stock_report] disclosures 부착 {n_disc}/{len(stocks)} 종목 (us_disclosure_feed)", file=sys.stderr)
         # 연간 재무추이(fin_series)·재무요약(financials) — series_annual(10-K) 주입 (0%→95%, 커버리지 스프린트)
-        n_fs = 0
+        # 🚨 소스 계층: per-ticker 캐시(신선) → us_fin_annual_compact(커밋 폴백). 캐시 계산분은 압축본에 저장(자가 유지).
+        #   per-ticker 캐시는 gitignore(CI 부재) → 압축본 폴백 없으면 CI 재빌드 시 재무 전량 유실(2026-07-04·07-09 실사고).
+        try:
+            with open(FIN_COMPACT_PATH, encoding="utf-8") as _f:
+                _compact = (json.load(_f) or {}).get("stocks") or {}
+        except (OSError, json.JSONDecodeError):
+            _compact = {}
+        n_fs = n_from_cache = 0
         for s in stocks:
-            fs, fin = _load_us_annual_pack(str(s.get("ticker") or ""))
+            tk = str(s.get("ticker") or "")
+            fs, fin = _load_us_annual_pack(tk)
+            if fs or fin:
+                _compact[tk] = {"fs": fs, "fin": fin}
+                n_from_cache += 1
+            else:
+                c = _compact.get(tk) or {}
+                fs, fin = c.get("fs"), c.get("fin")
             if fs:
                 s["fin_series"] = fs
                 n_fs += 1
             if fin:
                 s["financials"] = fin
-        print(f"[us_stock_report] fin_series 부착 {n_fs}/{len(stocks)} 종목 (series_annual 10-K)", file=sys.stderr)
+        try:
+            with open(FIN_COMPACT_PATH, "w", encoding="utf-8") as _f:
+                json.dump({"_meta": {"generated_at": _now_kst().isoformat(),
+                                     "source": "series_annual(10-K) 압축본 — CI 캐시 부재 폴백",
+                                     "count": len(_compact)}, "stocks": _compact}, _f, ensure_ascii=False)
+        except OSError as _e:
+            print(f"[us_stock_report] 압축본 저장 실패: {_e}", file=sys.stderr)
+        print(f"[us_stock_report] fin_series 부착 {n_fs}/{len(stocks)} 종목 "
+              f"(캐시 {n_from_cache} · 폴백 {n_fs - n_from_cache if n_fs >= n_from_cache else 0})", file=sys.stderr)
         # 어닝 캘린더 — EDGAR 제출 패턴 자체계산 (us_earnings_pattern.json: 초기 backfill + incremental 일일 유지)
         try:
             with open(EARN_PATTERN_PATH, encoding="utf-8") as f:
