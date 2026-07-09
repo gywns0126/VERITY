@@ -57,7 +57,7 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/kr_chart_daily/ data/kr_index_daily.json
+          git add data/kr_chart_daily/ data/kr_index_daily.json data/hot_stock.json
           if git diff --staged --quiet; then
             echo "[kr_chart_daily] no changes"
             exit 0

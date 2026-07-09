@@ -44,7 +44,13 @@ BASE_URL = (
 )
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT_DIR = os.path.join(_REPO_ROOT, "data", "kr_chart_daily")
+HOT_PATH = os.path.join(_REPO_ROOT, "data", "hot_stock.json")
 N_CHUNKS = 40
+
+# 거래대금 상위 = "그날 핫한 종목" 후보. ETF/ETN 제외(개별 종목만) — mrktCtg 에 ETF 플래그 없어 발행사 prefix 로 배제.
+_ETF_PREFIXES = ("KODEX", "TIGER", "KBSTAR", "ARIRANG", "ACE", "SOL", "PLUS", "HANARO",
+                 "KOSEF", "TIMEFOLIO", "RISE", "WOORI", "히어로즈", "마이다스", "파워",
+                 "1Q", "BNK", "FOCUS", "KCGI", "TREX", "KIWOOM")
 KEEP_DAYS = 250          # ~1년 거래일 (52주 고저 계산 가능)
 _BULK_ROWS = 5000        # 전 종목 ~2,900 → 1콜 (실측 2026-07-04: 2,873건 0.3s)
 _REQ_TIMEOUT = 60
@@ -208,6 +214,58 @@ def _append_rows(chunks: List[Dict[str, Any]], rows: List[Dict[str, Any]]) -> No
             ent["c"] = ent["c"][-KEEP_DAYS:]
 
 
+def _is_etf_like(name: str) -> bool:
+    n = str(name or "").upper()
+    if any(n.startswith(p) for p in _ETF_PREFIXES):
+        return True
+    return ("레버리지" in name) or ("인버스" in name) or ("선물" in name) or ("ETN" in n)
+
+
+def emit_hot_stock(rows: List[Dict[str, Any]], as_of: str) -> None:
+    """전 종목 rows → 거래대금(trPrc) 상위 개별종목 = '그날 핫한 종목'.
+    source = 금융위 공공데이터(공공누리, 재배포 합법 — KRX OpenAPI 와 무관). EOD(전 거래일) 사실.
+    """
+    cand: List[Dict[str, Any]] = []
+    for r in rows:
+        mk = str(r.get("mrktCtg") or "")
+        if mk not in ("KOSPI", "KOSDAQ"):
+            continue
+        cd = str(r.get("srtnCd") or "").strip().upper()
+        nm = str(r.get("itmsNm") or "")
+        if len(cd) != 6 or _is_etf_like(nm):
+            continue
+        tp = _to_int(r.get("trPrc"))
+        if tp <= 0:
+            continue
+        fl = None
+        try:
+            fl = round(float(str(r.get("fltRt")).replace(",", "")), 2)
+        except (TypeError, ValueError):
+            fl = None
+        cand.append({"ticker": cd, "name": nm, "market": mk, "trPrc": tp, "fltRt": fl})
+    if not cand:
+        print("[fsc_daily_prices] hot_stock 후보 0 — skip", file=sys.stderr)
+        return
+    cand.sort(key=lambda x: -x["trPrc"])
+    top = cand[:5]
+    hot = {"ticker": top[0]["ticker"], "name": top[0]["name"], "market": top[0]["market"],
+           "label": "거래대금 1위"}
+    doc = {
+        "_meta": {
+            "as_of": as_of,
+            "source": "금융위원회_주식시세정보 (data.go.kr/data/15094808 · 거래대금 상위 · 이용허락범위 제한 없음)",
+            "basis": "직전 거래일 거래대금(trPrc) 순 — 사실. 추천 아님.",
+            "generated_at": datetime.now(_KST).isoformat(timespec="seconds"),
+        },
+        "hot": hot,
+        "top": top,
+    }
+    with open(HOT_PATH, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"[fsc_daily_prices] hot_stock as_of={as_of} → {hot['name']}({hot['ticker']}) "
+          f"거래대금={top[0]['trPrc'] / 1e8:.0f}억")
+
+
 def run_daily() -> bool:
     latest = latest_available_date()
     if not latest:
@@ -224,6 +282,7 @@ def run_daily() -> bool:
         return False
     _append_rows(chunks, rows)
     _save_chunks(chunks, latest)
+    emit_hot_stock(rows, latest)  # 거래대금 1위 = 리포트 콜드 랜딩 디폴트
     return True
 
 
