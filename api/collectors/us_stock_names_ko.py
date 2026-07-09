@@ -70,7 +70,7 @@ def main() -> int:
         t0 = time.monotonic()
         fetched = 0
         for tk in tickers:
-            if tk in cache:  # 증분 — 이미 수집분 skip (빈 문자열도 '시도함'으로 간주)
+            if cache.get(tk):  # 증분 — 한글명 확보분만 skip. 빈값(""=일시실패 or 한글명無)은 재시도(rate-limit 복구)
                 continue
             if time.monotonic() - t0 > MAX_SECONDS:
                 print(f"[us_names_ko] budget 도달 ({int(time.monotonic()-t0)}s) — 나머지 다음 회차", file=sys.stderr)
