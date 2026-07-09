@@ -485,6 +485,10 @@ def snapshot_company(ticker: str, bsns_year: int) -> dict:
     if len(raw_text) < 300:
         result["ok"] = bool(result["holdings_saved"])
         return result
+    # 유형자산 주석(토지·건물 장부금액) additive 피드 — 본문 재무제표엔 유형자산 총계만, 세부는 주석에만.
+    _ppe = raw.get("ppe_note_text") or ""
+    if _ppe:
+        raw_text = raw_text + "\n\n=== 유형자산 주석 ===\n" + _ppe
 
     try:
         parsed = parse_business_facilities(company_name, bare_ticker, raw_text)
@@ -497,6 +501,27 @@ def snapshot_company(ticker: str, bsns_year: int) -> dict:
         log.info("facilities parse skipped %s: %s", ticker, parsed["error"])
         result["ok"] = bool(result["holdings_saved"])
         return result
+
+    # 유형자산 주석 LLM 토지·건물 장부가 → holding_row 보강 (API 미노출 시만).
+    # fnlttSinglAcntAll 본문은 유형자산 총계만 → land_krw 대부분 결측 → 주석 LLM 로 채움.
+    try:
+        _ta = parsed.get("tangible_assets") or {}
+        _lb = _ta.get("land_book_value_krw")
+        _bb = _ta.get("buildings_book_value_krw")
+        _enrich = {}
+        if _lb and not holding_row.get("land_krw"):
+            _enrich["land_krw"] = int(float(_lb))
+        if _bb and not holding_row.get("buildings_krw"):
+            _enrich["buildings_krw"] = int(float(_bb))
+        if _enrich:
+            if _ta.get("revaluation_used"):
+                _enrich["revaluation_flag"] = True
+            holding_row.update(_enrich)
+            if supabase_upsert("estate_corp_holdings", [holding_row],
+                                "corp_code,bsns_year,reprt_code"):
+                result["holdings_land_enriched"] = 1
+    except (TypeError, ValueError) as e:
+        log.info("tangible_assets enrich %s skip: %s", ticker, e)
 
     common = {
         "corp_code": corp_code,

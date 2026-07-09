@@ -818,6 +818,21 @@ def main() -> int:
         fundamentals = (fund_doc.get("fundamentals") if isinstance(fund_doc, dict) else {}) or {}
         fin_series = _load_fin_series()
         real_estate_map = _load_real_estate_history()
+        # 유형자산 주석 LLM 토지·건물 장부가 map — recommendations facilities_parser(고빈도) 유래.
+        # 본문 재무제표엔 유형자산 총계만 → 토지 세부는 주석에만 → NAV 프록시 정밀화 입력.
+        land_map: Dict[str, Tuple[int, int]] = {}
+        for _rec in (recs if isinstance(recs, list) else []):
+            if not isinstance(_rec, dict):
+                continue
+            _tk = str(_rec.get("ticker") or _rec.get("code") or "")
+            _ta = ((_rec.get("facilities_dart") or {}).get("data") or {}).get("tangible_assets") or {}
+            try:
+                _lk = int(float(_ta.get("land_book_value_krw") or 0))
+                _bk = int(float(_ta.get("buildings_book_value_krw") or 0))
+            except (TypeError, ValueError):
+                _lk = _bk = 0
+            if _tk and (_lk > 0 or _bk > 0):
+                land_map[_tk] = (_lk, _bk)
         kr_listed = _load_json(KRLISTED_PATH, {}) or {}
         names = _load_json(NAMES_PATH, {}) or {}
         catalyst = _load_catalyst_by_ticker()
@@ -978,11 +993,61 @@ def main() -> int:
             if ov:
                 s["overview"] = ov
 
-            # 부동산 부활 — rec 미보유 시 fin_history 투자부동산 fallback (백필 공유, 사실·장부가)
+            # 부동산 부활 — rec 미보유 시 fallback: fin_history → dart_fundamentals 투자부동산 + 유형자산 주석 토지 (사실·장부가)
+            _f = fundamentals.get(tk) or {}
+            _ll_land, _ll_bld = land_map.get(tk, (0, 0))
             if not s.get("real_estate"):
                 re_fb = real_estate_map.get(tk)
                 if re_fb:
                     s["real_estate"] = re_fb
+                else:
+                    try:
+                        inv = float(_f.get("investment_property") or 0)
+                    except (TypeError, ValueError):
+                        inv = 0.0
+                    base_re = inv + _ll_land + _ll_bld
+                    if base_re > 0:
+                        _mk = []
+                        if _ll_land > 0:
+                            _mk.append({"name": "토지(주석)", "value": _fmt_cap(_ll_land)})
+                        if _ll_bld > 0:
+                            _mk.append({"name": "건물(주석)", "value": _fmt_cap(_ll_bld)})
+                        if inv > 0:
+                            _mk.append({"name": "투자부동산", "value": _fmt_cap(inv)})
+                        s["real_estate"] = {"total": _fmt_cap(base_re), "items": _mk,
+                                            "note": "재무상태표·유형자산 주석 장부가(시가 아님) · DART"}
+            elif _ll_land > 0 or _ll_bld > 0:
+                # 이미 real_estate 있음(투자부동산 등) — 주석 토지/건물을 item 으로 보강
+                _exist = s["real_estate"].setdefault("items", [])
+                if isinstance(_exist, list):
+                    if _ll_land > 0:
+                        _exist.append({"name": "토지(주석)", "value": _fmt_cap(_ll_land)})
+                    if _ll_bld > 0:
+                        _exist.append({"name": "건물(주석)", "value": _fmt_cap(_ll_bld)})
+            # NAV 프록시 — 소유 부동산 장부가(투자부동산 + 주석 토지·건물) ÷ 시총 (장부가·가설, 시가 아님).
+            #   토지 취득원가라 실제 시가는 더 높을 수 있음 → 자산주/숨은부동산 스크리닝.
+            if s.get("real_estate"):
+                try:
+                    _mc = float((valuation.get(tk) or {}).get("mktcap") or 0)
+                    _api_reb = float(_f.get("real_estate_book") or _f.get("investment_property") or 0)
+                    _inv = float(_f.get("investment_property") or 0)
+                except (TypeError, ValueError):
+                    _mc = _api_reb = _inv = 0.0
+                _reb = max(_api_reb, _inv + _ll_land + _ll_bld)  # 주석 토지 반영분과 본문분 중 큰 값(중복 회피)
+                if _mc > 0 and _reb > 0:
+                    _pct = round(_reb / _mc * 100, 1)
+                    _re = s["real_estate"]
+                    # 기존 렌더러(realEstate.items → kvRow)가 그대로 표시 → Framer 변경 없이 사이트 노출.
+                    _items = _re.get("items")
+                    if not isinstance(_items, list):
+                        _items = []
+                        _re["items"] = _items
+                    _items.append({"name": "부동산 장부가 ÷ 시총", "value": f"{_pct}%"})
+                    # 구조화 소비용(향후 전용 렌더/스크리닝)
+                    _re["nav_proxy"] = {"re_book": _fmt_cap(_reb), "mktcap_pct": _pct,
+                                        "land_from_note": bool(_ll_land)}
+                    _re["note"] = ("장부가 ÷ 시총 (가설 · 시가 아님 · 토지 취득원가라 실제 시가는 "
+                                   "더 높을 수 있음) · DART")
 
         # 정렬: rich 먼저 → 공시 많은 순 → ticker
         stocks.sort(key=lambda s: (s.get("rich", False), len(s.get("disclosures", [])), s["ticker"]), reverse=True)

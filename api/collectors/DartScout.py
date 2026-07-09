@@ -501,6 +501,23 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
     if litigation and len(litigation) > 30000:
         litigation = litigation[:30000]
 
+    # 2026-07-09 유형자산 주석 슬라이스 — 토지·건물 장부금액(재무제표 주석).
+    # fnlttSinglAcntAll(본문 재무제표)엔 '유형자산' 총계만 실리고 토지·건물 세부는 주석에만 있음
+    # (자산주 15종 실측: 본문 토지 노출 0/15). 숨은부동산 NAV 프록시용 additive 슬라이스 → LLM 파싱 입력.
+    # 정밀 우선: '토지' 토큰 포함 + 150자↑ 만 채택(잘못된 경계 garbage 회피), 14K cap.
+    ppe_patterns = [
+        r"(?is)유형자산[^\n]{0,24}?(?:증감|변동|명세|내역|장부금액|취득원가)(.*?)(?:무형자산|투자부동산|사용권자산|리스|재고자산|매출채권|주석\s*\d+\s*[\.\)])",
+        r"(?is)(?:주석\s*)?\d{0,2}[\.\s]*유형자산\s*\n(.*?)(?:무형자산|투자부동산|사용권자산|영업권|주석\s*\d+\s*[\.\)])",
+    ]
+    ppe_note = ""
+    for pat in ppe_patterns:
+        pm = re.findall(pat, cleaned)
+        if pm:
+            best = max(pm, key=len).strip()
+            if len(best) > 150 and ("토지" in best or "건물" in best):
+                ppe_note = best[:14000]
+                break
+
     # 2026-06-04 going-concern/강조사항 — 감사보고서가 같은 ZIP 번들 시 포착.
     # doubt 전용 구문만 (정상 boilerplate "계속기업을 전제로" 회피, false-positive 차단).
     try:
@@ -521,6 +538,8 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
         "related_party_char_count": len(related_party),
         "litigation_text": litigation,
         "litigation_char_count": len(litigation),
+        "ppe_note_text": ppe_note,
+        "ppe_note_char_count": len(ppe_note),
         "going_concern_doubt": _gc["going_concern_doubt"],
         "emphasis_of_matter": _gc["emphasis_of_matter"],
         "going_concern_severity": _gc["severity"],
