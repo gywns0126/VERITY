@@ -1,10 +1,10 @@
 {
-  "collected_at": "2026-07-09T08:43:20+09:00",
+  "collected_at": "2026-07-09T13:07:18+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
-    "call": "risk_on",
-    "net_score": 2,
+    "call": "neutral",
+    "net_score": 0,
     "active_dims": 4,
     "rule": "net≥+2 risk_on / ≤−2 risk_off / else neutral (투명 tally, 가중치 없음)"
   },
@@ -15,8 +15,8 @@
       "read": "on",
       "active": true,
       "drivers": {
-        "fng": 20.0,
-        "search_trend_pct": -10.7
+        "fng": 22.0,
+        "search_trend_pct": -11.3
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -27,20 +27,20 @@
       "active": true,
       "drivers": {
         "funding_signal": "neutral",
-        "put_call_oi": 0.561,
-        "long_short_ratio": 1.61
+        "put_call_oi": 0.562,
+        "long_short_ratio": 1.58
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
     {
       "name": "자금흐름",
-      "vote": 1,
-      "read": "on",
+      "vote": -1,
+      "read": "off",
       "active": true,
       "drivers": {
-        "btc_net_inflow_usd": 21435004.250000004,
-        "eth_net_inflow_usd": 26925212.0,
-        "combined_net_inflow_usd": 48360216.25
+        "btc_net_inflow_usd": -84860056.0,
+        "eth_net_inflow_usd": 70477304.5,
+        "combined_net_inflow_usd": -14382751.5
       },
       "rule": "ETF(BTC+ETH) 일일 순유입 on / 순유출 off"
     },
@@ -50,7 +50,7 @@
       "read": "neutral",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": 2.91
+        "btc_change_pct_7d": 2.68
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -60,8 +60,8 @@
       "read": "누적 중",
       "active": false,
       "drivers": {
-        "ssr": 4.84,
-        "stablecoin_supply_usd": 257573971066.53198
+        "ssr": 4.83,
+        "stablecoin_supply_usd": 257540840895.34268
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -73,14 +73,14 @@
       "drivers": {
         "top_protocol_fees_24h": {
           "name": "Tether",
-          "fees_24h": 16139673.0
+          "fees_24h": 15990570.0
         },
         "protocol_count": 25
       },
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 62172.0,
+  "btc_price_at_call": 62002.0,
   "trail": [
     {
       "date": "2026-06-24",
@@ -189,9 +189,9 @@
     },
     {
       "date": "2026-07-09",
-      "call": "risk_on",
-      "net_score": 2,
-      "btc_price": 62172.0,
+      "call": "neutral",
+      "net_score": 0,
+      "btc_price": 62002.0,
       "active_dims": 4
     }
   ],
