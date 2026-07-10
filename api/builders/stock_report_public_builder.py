@@ -231,36 +231,21 @@ def _ownership(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     subs = gs.get("subsidiaries")
     if isinstance(subs, list) and subs:
         out["sub_count"] = len(subs)
-        # 자회사 출자 트리 (사실: 지분율·지분가치) — 지분가치 상위 노출. RULE 7 = 점수 0.
+        # 자회사 출자 트리 = 지분율·상장여부만 (DART 타법인출자현황/공정위 = 재배포 클린).
+        # 🚨 시가총액·지분가치(stake_value)·현재가·NAV = KRX/pykrx 파생(get_equity_last_price)
+        #    → §11② 재배포 제한 ([[project_score_publication_legal_2026_06_22]] KRX 소스감사).
+        #    공개 발행 비노출. 금융위 공공데이터 재소싱 또는 법률 verdict 후 재검토.
         slim: List[Dict[str, Any]] = []
         for sub in subs:
             if not isinstance(sub, dict) or not sub.get("name"):
                 continue
             slim.append({
                 "name": " ".join(str(sub.get("name")).split()),  # 개행·중복공백 정리
-                "symbol": sub.get("symbol") or None,
                 "is_listed": bool(sub.get("is_listed")),
-                "ownership_pct": sub.get("ownership_pct"),
-                "stake_value_억": sub.get("stake_value_억"),
-                "market_cap_억": sub.get("market_cap_억"),
+                "ownership_pct": sub.get("ownership_pct"),  # DART 지분율(공시 사실)
             })
-        slim.sort(key=lambda x: (x.get("stake_value_억") or 0), reverse=True)
+        slim.sort(key=lambda x: (x.get("ownership_pct") or 0), reverse=True)
         out["subsidiaries"] = slim[:8]
-        # NAV Sum-of-Parts (지주사 표준 산식) — 할인율은 collector 의 nav_reliable 게이트
-        # 통과 시만 노출(미달 시 구성만 표기, 오도 방지). 비상장 자회사=장부가 기준.
-        nav = gs.get("nav_analysis")
-        if isinstance(nav, dict) and nav.get("sum_of_parts_억"):
-            nav_out: Dict[str, Any] = {
-                "sum_of_parts_억": nav.get("sum_of_parts_억"),
-                "listed_stake_value_억": nav.get("listed_stake_value_억"),
-                "unlisted_stake_value_억": nav.get("unlisted_stake_value_억"),
-                "current_market_cap_억": nav.get("current_market_cap_억"),
-                "coverage_ratio": nav.get("coverage_ratio"),
-                "reliable": bool(nav.get("nav_reliable")),
-            }
-            if nav.get("nav_reliable"):
-                nav_out["discount_pct"] = nav.get("nav_discount_pct")
-            out["nav"] = nav_out
     return out
 
 
