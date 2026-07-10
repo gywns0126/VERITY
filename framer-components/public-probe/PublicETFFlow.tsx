@@ -229,8 +229,8 @@ export default function PublicETFFlow(props: Props) {
                     const premStr = prem != null && Math.abs(prem) >= 0.15 ? ` · 괴리 ${prem > 0 ? "+" : ""}${prem.toFixed(2)}%` : ""
                     return (
                         <div key={e.ticker} role="link" tabIndex={0}
-                            onClick={() => { if (typeof window !== "undefined") window.location.href = `${(props.reportPath || "/etf").replace(/\/$/, "")}?q=${e.ticker}` }}
-                            onKeyDown={(ev) => { if (ev.key === "Enter" && typeof window !== "undefined") window.location.href = `${(props.reportPath || "/etf").replace(/\/$/, "")}?q=${e.ticker}` }}
+                            onClick={() => { if (typeof window !== "undefined") window.location.href = `${(props.reportPath || "/stock").replace(/\/$/, "")}?q=${e.ticker}` }}
+                            onKeyDown={(ev) => { if (ev.key === "Enter" && typeof window !== "undefined") window.location.href = `${(props.reportPath || "/stock").replace(/\/$/, "")}?q=${e.ticker}` }}
                             style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderTop: idx === 0 ? "none" : `1px solid ${C.line}`, cursor: "pointer" }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 14, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.name}</div>
@@ -266,7 +266,7 @@ export default function PublicETFFlow(props: Props) {
 }
 
 addPropertyControls(PublicETFFlow, {
-    reportPath: { type: ControlType.String, title: "Report Path", defaultValue: "/etf" },
+    reportPath: { type: ControlType.String, title: "Report Path", defaultValue: "/stock" },
     dataUrl: { type: ControlType.String, title: "ETF Flow URL", defaultValue: DEFAULT_URL },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
