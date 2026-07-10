@@ -22,6 +22,7 @@ KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RELATED_PATH = os.path.join(_ROOT, "data", "dart_related_party_cache.json")
 LITIGATION_PATH = os.path.join(_ROOT, "data", "dart_litigation_cache.json")
+CB_BW_PATH = os.path.join(_ROOT, "data", "dart_cb_bw_cache.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "kr_forensics_public.json")
 
 
@@ -90,7 +91,8 @@ def _litig_str(v: Any, cap: int = 8) -> List[str]:
 def build() -> Dict[str, Any]:
     related = _load(RELATED_PATH)
     litig = _load(LITIGATION_PATH)
-    tickers = set(related.keys()) | set(litig.keys())
+    cbw = _load(CB_BW_PATH)
+    tickers = set(related.keys()) | set(litig.keys()) | set(cbw.keys())
     stocks: Dict[str, Any] = {}
     for tk in tickers:
         block: Dict[str, Any] = {}
@@ -116,14 +118,26 @@ def build() -> Dict[str, Any]:
                 block["material_sanctions"] = ms
             if cl or pl or ms:
                 years.add(yr)
+        cb = cbw.get(tk) or {}
+        if cb.get("n_instruments"):
+            block["cb_bw"] = {
+                "n_instruments": cb.get("n_instruments"),
+                "dilution_pct": cb.get("dilution_pct"),
+                "total_issuable_shares": cb.get("total_issuable_shares"),
+                "instruments": [
+                    {k: ins.get(k) for k in ("type", "bond_kind", "issue_amount", "strike", "issuable_shares", "resolved_date")}
+                    for ins in (cb.get("instruments") or [])[:6] if isinstance(ins, dict)
+                ],
+                "note": "DART 주요사항보고 발행 기준(전환·상환 미반영) · 희석률=발행가능÷발행주식",
+            }
         if block:
             block["year"] = sorted(years)[-1] if years else None
-            block["source_note"] = "DART 사업보고서 원문 사실(특수관계자 거래·우발부채·소송) · 자체 위험판단 아님"
+            block["source_note"] = "DART 공시 원문 사실(특수관계자·우발부채·소송·CB/BW) · 자체 위험판단 아님"
             stocks[tk] = block
     return {
         "_meta": {
             "generated_at": _now_kst().isoformat(),
-            "source": "DART 사업보고서 (dart_related_party / dart_litigation)",
+            "source": "DART 사업보고서·주요사항 (dart_related_party / dart_litigation / dart_cb_bw)",
             "count": len(stocks),
             "note": "공개 사실만 (RULE 7) — 위험점수·심각도·터널링 의심서술·요약 비노출. 원문 인용.",
         },
