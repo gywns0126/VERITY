@@ -149,10 +149,14 @@ export default function PublicWatchlist(props: Props) {
     const matches = useMemo(() => {
         const q = query.trim().toLowerCase()
         if (!q) return []
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
+            return t === q ? 0 : (n === q || k === q) ? 1 : t.indexOf(q) === 0 ? 2 : (n.indexOf(q) === 0 || (k && k.indexOf(q) === 0)) ? 3 : 4
+        }
         const have = new Set(watch.map((x) => String(x.ticker)))
         return universe
             .filter((x) => !have.has(String(x.ticker)) && (String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").includes(q)))
-            .slice(0, 12)
+            .sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 12)
     }, [query, universe, watch])
 
     const addStock = useCallback((m: any) => {
@@ -173,6 +177,43 @@ export default function PublicWatchlist(props: Props) {
             return next
         })
     }, [])
+
+    /* 스와이프 삭제 (2026-07-10 PM — 유튜브뮤직식): 행을 왼쪽으로 드래그 → 빨간 삭제 영역 노출,
+       임계(72px) 넘겨 놓으면 슬라이드아웃 후 삭제, 못 미치면 스프링백. Pointer Events = 마우스·터치 공통.
+       touchAction pan-y = 세로 스크롤은 살리고 가로 드래그만 캡처. 드래그(>6px) 후엔 행 클릭(리포트 이동) 억제. */
+    const SW_TH = 72
+    const [sw, setSw] = useState<{ t: string; dx: number; anim: boolean }>({ t: "", dx: 0, anim: false })
+    const swRef = useRef<{ startX: number; active: string; moved: boolean; width: number }>({ startX: 0, active: "", moved: false, width: 320 })
+    const swDown = (e: any, t: string) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return
+        swRef.current = { startX: e.clientX, active: t, moved: false, width: (e.currentTarget && e.currentTarget.offsetWidth) || 320 }
+        try { e.currentTarget.setPointerCapture(e.pointerId) } catch (err) {}
+    }
+    const swMove = (e: any, t: string) => {
+        const r = swRef.current
+        if (r.active !== t) return
+        const dx = Math.min(0, e.clientX - r.startX)
+        if (dx < -6) r.moved = true
+        if (r.moved) setSw({ t, dx: Math.max(dx, -r.width), anim: false })
+    }
+    const swEnd = (e: any, t: string) => {
+        const r = swRef.current
+        if (r.active !== t) return
+        r.active = ""
+        const dx = Math.min(0, e.clientX - r.startX)
+        if (dx <= -SW_TH) {
+            setSw({ t, dx: -Math.round(r.width * 1.1), anim: true })   // 슬라이드아웃
+            setTimeout(() => { removeStock(t); setSw({ t: "", dx: 0, anim: false }) }, 190)
+        } else if (r.moved) {
+            setSw({ t, dx: 0, anim: true })   // 스프링백
+            setTimeout(() => setSw((p) => (p.t === t ? { t: "", dx: 0, anim: false } : p)), 220)
+        }
+    }
+    const swCancel = (t: string) => {
+        if (swRef.current.active !== t) return
+        swRef.current.active = ""
+        setSw({ t: "", dx: 0, anim: false })
+    }
 
     const goStock = (h: any) => {
         if (typeof window === "undefined") return
@@ -207,20 +248,49 @@ export default function PublicWatchlist(props: Props) {
                         const th = theses[String(h.ticker)]
                         const sm = th ? (STANCE_META[th.stance] || STANCE_META.watch) : null
                         const smCol = sm ? (C as any)[sm.key] : C.faint
+                        const tk = String(h.ticker)
+                        const on = sw.t === tk
+                        const dx = on ? sw.dx : 0
+                        const armed = on && dx <= -SW_TH   // 임계 도달 = 삭제 확정 시각 피드백
                         return (
-                            <div key={h.ticker} onClick={() => goStock(h)} role="link" tabIndex={0}
-                                style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}`, cursor: "pointer" }}>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.name || h.ticker}</div>
-                                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 1, display: "flex", alignItems: "center", gap: 5 }}>
-                                        <span>{h.ticker}</span>
-                                        {sm && <span style={{ fontSize: 9.5, fontWeight: 800, color: smCol, background: C.chip, borderRadius: 5, padding: "1px 6px", letterSpacing: "-0.1px" }}>내 관점 {sm.label}</span>}
+                            <div key={h.ticker} style={{ position: "relative", overflow: "hidden", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                                {/* 뒤 레이어 — 스와이프로 드러나는 삭제 영역 (유튜브뮤직식) */}
+                                {on && dx < 0 && (
+                                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 14, background: armed ? "#f04452" : C.chip, transition: "background 140ms ease" }}>
+                                        <span style={{ fontSize: 12, fontWeight: 800, color: armed ? "#ffffff" : C.faint, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                                            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={armed ? "#fff" : C.faint} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                            </svg>
+                                            삭제
+                                        </span>
                                     </div>
+                                )}
+                                {/* 앞 레이어 — 원래 행. 드래그 시 translateX, card 배경으로 뒤 레이어 가림 */}
+                                <div role="link" tabIndex={0}
+                                    onClick={() => { if (swRef.current.moved) { swRef.current.moved = false; return } goStock(h) }}
+                                    onPointerDown={(e) => swDown(e, tk)}
+                                    onPointerMove={(e) => swMove(e, tk)}
+                                    onPointerUp={(e) => swEnd(e, tk)}
+                                    onPointerCancel={() => swCancel(tk)}
+                                    style={{
+                                        display: "flex", alignItems: "center", gap: 8, padding: "9px 0", cursor: "pointer",
+                                        background: C.card, position: "relative",
+                                        transform: `translateX(${dx}px)`,
+                                        transition: on && sw.anim ? "transform 190ms ease" : "none",
+                                        touchAction: "pan-y",
+                                    }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.name || h.ticker}</div>
+                                        <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 1, display: "flex", alignItems: "center", gap: 5 }}>
+                                            <span>{h.ticker}</span>
+                                            {sm && <span style={{ fontSize: 9.5, fontWeight: 800, color: smCol, background: C.chip, borderRadius: 5, padding: "1px 6px", letterSpacing: "-0.1px" }}>내 관점 {sm.label}</span>}
+                                        </div>
+                                    </div>
+                                    {/* 실시간가·등락 열 제거(2026-07-03 컴플라이언스) — 시세는 행 클릭 → 리포트의 네이버 link-out/TV 위젯 */}
+                                    <span style={{ flexShrink: 0, fontSize: 13, color: C.faint, fontWeight: 700 }}>›</span>
+                                    <button onClick={(e) => { e.stopPropagation(); removeStock(h.ticker) }} title="삭제"
+                                        style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 14, fontWeight: 700, padding: "0 1px", flexShrink: 0 }}>×</button>
                                 </div>
-                                {/* 실시간가·등락 열 제거(2026-07-03 컴플라이언스) — 시세는 행 클릭 → 리포트의 네이버 link-out/TV 위젯 */}
-                                <span style={{ flexShrink: 0, fontSize: 13, color: C.faint, fontWeight: 700 }}>›</span>
-                                <button onClick={(e) => { e.stopPropagation(); removeStock(h.ticker) }} title="삭제"
-                                    style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 14, fontWeight: 700, padding: "0 1px", flexShrink: 0 }}>×</button>
                             </div>
                         )
                     })}
