@@ -88,9 +88,10 @@ async function fetchProfile(
             const rows = await res.json()
             return Array.isArray(rows) && rows[0] ? rows[0] : null
         }
-        return (await get("display_name,email,phone,status,nickname,avatar,bio"))
-            || (await get("display_name,email,phone,status,nickname,avatar"))
-            || (await get("display_name,email,phone,status"))
+        // created_at 포함 — OAuth 세션은 user.created_at 를 저장하지 않아 가입일이 비므로 profiles 행에서 채움
+        return (await get("display_name,email,phone,status,created_at,nickname,avatar,bio"))
+            || (await get("display_name,email,phone,status,created_at,nickname,avatar"))
+            || (await get("display_name,email,phone,status,created_at"))
     } catch (e) {
         return null
     }
@@ -338,7 +339,7 @@ export default function PublicProfilePage(props: Props) {
         if (v && !NICK_RE.test(v)) { setEditMsg("별명은 2~16자, 한글·영문·숫자(._- 허용) · 공백 불가예요"); return }
         const s = loadSession()
         if (!s || !s.access_token || !s.user) return
-        setEditMsg("저장 중…")
+        setEditMsg("")
         const patch = (body: Record<string, string>) =>
             patchProfile(supabaseUrl, supabaseAnonKey, s.access_token, profileTable, s.user.id, body)
         let r = await patch({ nickname: v, bio: b })
@@ -493,7 +494,7 @@ export default function PublicProfilePage(props: Props) {
                             </div>
                         </div>
                         {editMsg ? (
-                            <div style={{ marginTop: 10, fontSize: 11.5, fontWeight: 700, color: editMsg === "저장 중…" ? C.faint : C.red }}>{editMsg}</div>
+                            <div style={{ marginTop: 10, fontSize: 11.5, fontWeight: 700, color: C.red }}>{editMsg}</div>
                         ) : null}
                         <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 14 }}>
                             <button type="button" onClick={() => { setEditMode(false); setEditMsg("") }}
@@ -504,9 +505,9 @@ export default function PublicProfilePage(props: Props) {
                     </div>
                 )}
 
-                {/* 가입 정보 */}
+                {/* 가입 정보 — 빈 값 행은 숨김 (구글 OAuth = 전화번호 미수집) */}
                 <div style={{ marginTop: 22, borderTop: `1px solid ${C.line}`, paddingTop: 4 }}>
-                    <InfoRow C={C} label="전화번호" value={profile && profile.phone ? profile.phone : "—"} mono />
+                    {profile && profile.phone ? <InfoRow C={C} label="전화번호" value={profile.phone} mono /> : null}
                     <InfoRow C={C} label="가입일" value={fmtDate(profile ? profile.created_at : "")} />
                 </div>
 
