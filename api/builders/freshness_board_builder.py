@@ -77,6 +77,7 @@ PUBLIC_LABELS = {
     "new_listings": ("신규 상장", "주 1회"),
     "broker_guide": ("증권사 가이드", "월 1회"),
     "dividends_kr": ("KR 배당", "매일 1회"),
+    "market_warnings": ("KRX 시장경보", "매일 1회"),
 }
 
 _CRIT_ORDER = {"P0": 0, "P1": 1, "P2": 2}
