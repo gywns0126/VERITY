@@ -65,7 +65,7 @@ function bfLogoBg(ticker: any): string {
     // 토스식 넉아웃 (기본): 브랜드색 솔리드 배경 + 로고 흰 실루엣(bfLogoFilter). 조건 미충족 = 솔리드 파스텔.
     // style.mode 노브: "knockout"(기본) | "pastel". mixPct = 파스텔 혼합비(기본 30).
     const p2 = (__bfMap && (__bfMap[tk] || __bfMap[tk.replace(/\./g, "-")])) || ""
-    if (c && p2 && p2.indexOf("http") !== 0 && (__bfStyle.mode || "knockout") === "knockout") return c  // 솔리드 브랜드색
+    if (c && p2 && p2.indexOf("http") !== 0 && (__bfStyle.mode || "pastel") === "knockout") return c  // 솔리드 브랜드색
     if (!c) return "#ffffff"
     const mix = Number(__bfStyle.mixPct || 30)
     try { if (typeof CSS !== "undefined" && CSS.supports && CSS.supports("color", "color-mix(in srgb, red 50%, white)")) return `color-mix(in srgb, ${c} ${mix}%, #ffffff)` } catch (e2) {}
@@ -76,7 +76,7 @@ function bfLogoFilter(ticker: any): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
     const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
     const p2 = (__bfMap && (__bfMap[tk] || __bfMap[tk.replace(/\./g, "-")])) || ""
-    return (c && p2 && p2.indexOf("http") !== 0 && (__bfStyle.mode || "knockout") === "knockout") ? "brightness(0) invert(1)" : "none"
+    return (c && p2 && p2.indexOf("http") !== 0 && (__bfStyle.mode || "pastel") === "knockout") ? "brightness(0) invert(1)" : "none"
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
