@@ -10,7 +10,7 @@ name: Price Pulse (1m KR/US 지수 + 보유 + 추천)
 
 on:
   # 발화 = Vercel Cron 매분 → /api/cron/dispatch_pulse → repository_dispatch 단일 통로.
-  # 2026-05-16 5분 KIS 폭주 사고 후 broker cache_only=True 모드 박음 → 신규 발급 절대 불가.
+  # 2026-05-16 5분 KIS 폭주 사고 후 broker cache_only=True 모드 적용 → 신규 발급 절대 불가.
   # 새 토큰 발급 source = kis_token_refresh (KST 23:45) / daily_realtime backup.
   repository_dispatch:
     types: [price_pulse]
