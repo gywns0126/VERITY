@@ -218,6 +218,7 @@ def main() -> int:
             doc = json.load(open(OUT_PATH, encoding="utf-8"))
             logos = doc.get("logos") or {}
             colors = doc.get("colors") or {}
+            shapes = doc.get("shapes") or {}
             t0 = time.monotonic()
             done = 0
             for tk, path in logos.items():
@@ -226,15 +227,27 @@ def main() -> int:
                 if time.monotonic() - t0 > MAX_SECONDS:
                     print("[logo_map] 색 백필 budget 도달", file=sys.stderr)
                     break
+                okf, b = _logo_fetch(path, cid)
+                # 모양(가로세로비) — 심볼(≈1.0) vs 워드마크(>2). 컴포넌트 패딩 적응용
+                if okf:
+                    try:
+                        from PIL import Image
+                        import io as _io
+                        w2, h2 = Image.open(_io.BytesIO(b)).size
+                        shapes[tk] = round(w2 / h2, 2) if h2 else 0
+                    except Exception:  # noqa: BLE001
+                        pass
                 if tk in BRAND_COLOR_OVERRIDE:
                     colors[tk] = BRAND_COLOR_OVERRIDE[tk]
                 else:
-                    okf, b = _logo_fetch(path, cid)
                     c = _dominant_color(b) if okf else None
                     colors[tk] = c or ""
                 done += 1
                 time.sleep(THROTTLE)
             doc["colors"] = colors
+            doc["shapes"] = shapes
+            # 표시 튜닝 노브 (발행 데이터 — Framer 수정 없이 조절): padS=심볼 패딩% padW=워드마크 wideRatio=기준
+            doc["style"] = doc.get("style") or {"padS": 8, "padW": 15, "wideRatio": 2.2}
             doc["_meta"]["colors_n"] = sum(1 for v in colors.values() if v)
             json.dump(doc, open(OUT_PATH, "w", encoding="utf-8"), ensure_ascii=False)
             print(f"[logo_map] 색 백필 logged=True · 이번 {done} · 색 보유 {doc['_meta']['colors_n']}/{len(logos)}", file=sys.stderr)

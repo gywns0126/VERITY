@@ -25,16 +25,24 @@ const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link �
 const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
 let __bfMap: Record<string, string> | null = null
 let __bfColors: Record<string, string> = {}
+let __bfShapes: Record<string, number> = {}
+let __bfStyle: any = { padS: 8, padW: 15, wideRatio: 2.2 }  // 발행 데이터(style)로 조절 — 코드 수정 불요
 let __bfP: Promise<Record<string, string>> | null = null
 function fetchBfMap(): Promise<Record<string, string>> {
     if (__bfMap) return Promise.resolve(__bfMap)
-    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; __bfColors = (d && d.colors) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; __bfColors = (d && d.colors) || {}; __bfShapes = (d && d.shapes) || {}; __bfStyle = (d && d.style) || __bfStyle; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
     return __bfP
 }
 function useBfLogoMap(): Record<string, string> | null {
     const [m, setM] = useState<Record<string, string> | null>(__bfMap)
     useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
     return m
+}
+function bfLogoPad(ticker: any): string {
+    // 모양 적응 패딩 — 심볼(정사각)은 크게, 워드마크(가로 김)는 여백 확보 (토스식 가시성)
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const r = __bfShapes[tk] || __bfShapes[tk.replace(/\./g, "-")] || 1
+    return (r > (__bfStyle.wideRatio || 2.2) ? (__bfStyle.padW || 15) : (__bfStyle.padS || 8)) + "%"
 }
 function bfLogoBg(ticker: any): string {
     // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
@@ -238,9 +246,9 @@ function Logo(props: { ticker: any; name: any; C: typeof LIGHT; size?: number })
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
             {!err && bfSrc ? (
                 <img src={bfSrc} alt="" width={size} height={size} onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: 7, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
+                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
-                <span style={{ width: size, height: size, borderRadius: 7, background: C.sub, color: C.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
+                <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: C.sub, color: C.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
             <img src={FLAG_BASE + code + ".svg"} alt="" width={fsize} height={fsize}
                 style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block" }} />
@@ -800,7 +808,7 @@ export default function PublicNewsTab(props: Props) {
                                     {matches.map((m) => (
                                         <div key={m.ticker} onMouseDown={() => pickNews(String(m.ticker), String(m.name || ""))}
                                             style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
-                                            <Logo ticker={m.ticker} name={m.name} C={C} size={22} />
+                                            <Logo ticker={m.ticker} name={m.name} C={C} size={28} />
                                             <span style={{ fontSize: 13.5, fontWeight: 700, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</span>
                                             <span style={{ marginLeft: "auto", flexShrink: 0, fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{m.ticker}{m.market ? " · " + m.market : ""}</span>
                                         </div>

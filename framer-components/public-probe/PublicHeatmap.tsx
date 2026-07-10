@@ -36,16 +36,24 @@ const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link �
 const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
 let __bfMap: Record<string, string> | null = null
 let __bfColors: Record<string, string> = {}
+let __bfShapes: Record<string, number> = {}
+let __bfStyle: any = { padS: 8, padW: 15, wideRatio: 2.2 }  // 발행 데이터(style)로 조절 — 코드 수정 불요
 let __bfP: Promise<Record<string, string>> | null = null
 function fetchBfMap(): Promise<Record<string, string>> {
     if (__bfMap) return Promise.resolve(__bfMap)
-    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; __bfColors = (d && d.colors) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; __bfColors = (d && d.colors) || {}; __bfShapes = (d && d.shapes) || {}; __bfStyle = (d && d.style) || __bfStyle; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
     return __bfP
 }
 function useBfLogoMap(): Record<string, string> | null {
     const [m, setM] = useState<Record<string, string> | null>(__bfMap)
     useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
     return m
+}
+function bfLogoPad(ticker: any): string {
+    // 모양 적응 패딩 — 심볼(정사각)은 크게, 워드마크(가로 김)는 여백 확보 (토스식 가시성)
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const r = __bfShapes[tk] || __bfShapes[tk.replace(/\./g, "-")] || 1
+    return (r > (__bfStyle.wideRatio || 2.2) ? (__bfStyle.padW || 15) : (__bfStyle.padS || 8)) + "%"
 }
 function bfLogoBg(ticker: any): string {
     // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
@@ -503,7 +511,7 @@ export default function PublicHeatmap(props: Props) {
                                         }}>
                                         {big && (
                                             <>
-                                                {tw > 52 && th > 50 && bfLogoSrc(t.m.ticker, __lmH, 16) ? (<img src={bfLogoSrc(t.m.ticker, __lmH, 16)} alt="" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 4, marginBottom: 2, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: bfLogoBg(t.m.ticker) }} />) : null}
+                                                {tw > 52 && th > 50 && bfLogoSrc(t.m.ticker, __lmH, 16) ? (<img src={bfLogoSrc(t.m.ticker, __lmH, 16)} alt="" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 5, marginBottom: 2, objectFit: "contain", padding: bfLogoPad(t.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(t.m.ticker) }} />) : null}
                                                 <span style={{ fontSize: tw > 130 ? 13 : tw > 80 ? 12 : 10.5, fontWeight: 800, color: txt, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", letterSpacing: "-0.3px", textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.35)" : "none" }}>{t.m.name}</span>
                                                 {th > 42 && <span style={{ fontSize: 10.5, fontWeight: 700, color: txt, opacity: 0.92, marginTop: 1, textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.3)" : "none" }}>{tileValLabel(metric, v)}</span>}
                                             </>
@@ -531,7 +539,7 @@ export default function PublicHeatmap(props: Props) {
                             boxShadow: "0 8px 26px rgba(0,0,0,0.22)", padding: "9px 11px", zIndex: 20, pointerEvents: "none", boxSizing: "border-box",
                         }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                {bfLogoSrc(hover.m.ticker, __lmH, 18) ? (<img src={bfLogoSrc(hover.m.ticker, __lmH, 18)} alt="" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: bfLogoBg(hover.m.ticker) }} />) : null}
+                                {bfLogoSrc(hover.m.ticker, __lmH, 18) ? (<img src={bfLogoSrc(hover.m.ticker, __lmH, 18)} alt="" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 6, flexShrink: 0, objectFit: "contain", padding: bfLogoPad(hover.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(hover.m.ticker) }} />) : null}
                                 <span style={{ fontSize: 13, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{hover.m.name}</span>
                                 <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, flexShrink: 0 }}>{hover.m.ticker}</span>
                             </div>
