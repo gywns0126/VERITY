@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 /**
  * AlphaNest 내정보 페이지 — 페이지 전체용 컴포넌트 (네브바 버튼 없음, 페이지에 바로 렌더).
@@ -43,6 +43,8 @@ interface Profile {
     phone: string
     status: string
     created_at: string
+    nickname: string   // 커뮤니티 표시명 (019 마이그레이션, 유일)
+    avatar: string     // 128px JPEG base64 data-URL (~10KB, 인라인 저장)
 }
 
 const SAMPLE: Profile = {
@@ -51,6 +53,8 @@ const SAMPLE: Profile = {
     phone: "010-1234-5678",
     status: "approved",
     created_at: "2026-04-01T00:00:00Z",
+    nickname: "길동무",
+    avatar: "",
 }
 
 function loadSession(): SupaSession | null {
@@ -72,17 +76,70 @@ async function fetchProfile(
 ): Promise<Partial<Profile> | null> {
     if (!url || !anon || !token || !userId) return null
     try {
-        const sel = "display_name,email,phone,status"
-        const res = await fetch(
-            `${url}/rest/v1/${table}?id=eq.${userId}&select=${sel}`,
-            { headers: { apikey: anon, Authorization: `Bearer ${token}`, Accept: "application/json" } }
-        )
-        if (!res.ok) return null
-        const rows = await res.json()
-        return Array.isArray(rows) && rows[0] ? rows[0] : null
+        // nickname/avatar = 019 마이그레이션 컬럼 — 미적용 DB 면 400 → 레거시 sel 로 폴백(기존 표시 유지)
+        const get = async (sel: string) => {
+            const res = await fetch(
+                `${url}/rest/v1/${table}?id=eq.${userId}&select=${sel}`,
+                { headers: { apikey: anon, Authorization: `Bearer ${token}`, Accept: "application/json" } }
+            )
+            if (!res.ok) return null
+            const rows = await res.json()
+            return Array.isArray(rows) && rows[0] ? rows[0] : null
+        }
+        return (await get("display_name,email,phone,status,nickname,avatar"))
+            || (await get("display_name,email,phone,status"))
     } catch (e) {
         return null
     }
+}
+
+/* 프로필 부분 수정(별명·사진) — profiles_update_own RLS(003). 409 = 별명 중복(019 unique index). */
+async function patchProfile(
+    url: string, anon: string, token: string, table: string, userId: string, body: Record<string, string>
+): Promise<{ ok: boolean; status: number }> {
+    if (!url || !anon || !token || !userId) return { ok: false, status: 0 }
+    try {
+        const res = await fetch(`${url}/rest/v1/${table}?id=eq.${userId}`, {
+            method: "PATCH",
+            headers: {
+                apikey: anon,
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+                Prefer: "return=minimal",
+            },
+            body: JSON.stringify(body),
+        })
+        return { ok: res.ok, status: res.status }
+    } catch (e) {
+        return { ok: false, status: 0 }
+    }
+}
+
+/* 이미지 파일 → 128×128 중앙 크롭 JPEG data-URL (~10KB) — Storage 없이 인라인 저장(019 설계). */
+function fileToAvatar(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const fr = new FileReader()
+        fr.onerror = () => reject(new Error("read"))
+        fr.onload = () => {
+            const img = new Image()
+            img.onerror = () => reject(new Error("img"))
+            img.onload = () => {
+                try {
+                    const S = 128
+                    const cv = document.createElement("canvas")
+                    cv.width = S; cv.height = S
+                    const ctx = cv.getContext("2d")
+                    if (!ctx) { reject(new Error("ctx")); return }
+                    const side = Math.min(img.width, img.height)
+                    const sx = (img.width - side) / 2, sy = (img.height - side) / 2
+                    ctx.drawImage(img, sx, sy, side, side, 0, 0, S, S)
+                    resolve(cv.toDataURL("image/jpeg", 0.82))
+                } catch (e) { reject(e as Error) }
+            }
+            img.src = String(fr.result)
+        }
+        fr.readAsDataURL(file)
+    })
 }
 
 async function markWithdrawn(
@@ -177,6 +234,12 @@ export default function PublicProfilePage(props: Props) {
     const [confirming, setConfirming] = useState(false)
     const [busy, setBusy] = useState<Busy>("")
     const [profile, setProfile] = useState<Profile | null>(isCanvas ? SAMPLE : null)
+    // 프로필 편집(별명·사진, 2026-07-10) — 커뮤니티 표시명 선행
+    const fileRef = useRef<HTMLInputElement>(null)
+    const [nickEditing, setNickEditing] = useState(false)
+    const [nickDraft, setNickDraft] = useState("")
+    const [nickMsg, setNickMsg] = useState("")
+    const [avatarBusy, setAvatarBusy] = useState(false)
 
     const C = dark ? DARK : LIGHT
 
@@ -209,6 +272,8 @@ export default function PublicProfilePage(props: Props) {
             phone: meta.phone || "",
             status: "",
             created_at: s.user.created_at || meta.created_at || "",
+            nickname: "",
+            avatar: "",
         }
         setProfile(base)
         setPhase("member")
@@ -222,6 +287,8 @@ export default function PublicProfilePage(props: Props) {
                 phone: row.phone || base.phone,
                 status: row.status || base.status,
                 created_at: row.created_at || base.created_at,
+                nickname: (row as any).nickname || "",
+                avatar: (row as any).avatar || "",
             })
         })
         return () => {
@@ -255,6 +322,42 @@ export default function PublicProfilePage(props: Props) {
         }
         clearSession()
         go(logoutRedirect)
+    }
+
+    /* 별명 저장 — 2~16자 한글·영문·숫자(._- 허용). 409 = 유일 인덱스 충돌(이미 사용 중). */
+    const NICK_RE = /^[가-힣A-Za-z0-9._-]{2,16}$/
+    const saveNick = async () => {
+        const v = nickDraft.trim()
+        if (!NICK_RE.test(v)) { setNickMsg("2~16자, 한글·영문·숫자(._- 허용) · 공백 불가예요"); return }
+        const s = loadSession()
+        if (!s || !s.access_token || !s.user) return
+        setNickMsg("저장 중…")
+        const r = await patchProfile(supabaseUrl, supabaseAnonKey, s.access_token, profileTable, s.user.id, { nickname: v })
+        if (r.ok) {
+            setProfile((p) => (p ? { ...p, nickname: v } : p))
+            setNickEditing(false)
+            setNickMsg("")
+        } else {
+            setNickMsg(r.status === 409 ? "이미 사용 중인 별명이에요" : "저장에 실패했어요 — 잠시 후 다시 시도해 주세요")
+        }
+    }
+
+    /* 프로필 사진 — 파일 선택 → 128px 크롭 JPEG → PATCH. 실패 시 기존 유지(조용히). */
+    const pickAvatar = () => { if (!avatarBusy && fileRef.current) fileRef.current.click() }
+    const onAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const f = e.target.files && e.target.files[0]
+        e.target.value = ""
+        if (!f) return
+        const s = loadSession()
+        if (!s || !s.access_token || !s.user) return
+        setAvatarBusy(true)
+        try {
+            const dataUrl = await fileToAvatar(f)
+            if (dataUrl.length > 120000) throw new Error("too_big")   // DB CHECK(150K) 전 클라이언트 상한
+            const r = await patchProfile(supabaseUrl, supabaseAnonKey, s.access_token, profileTable, s.user.id, { avatar: dataUrl })
+            if (r.ok) setProfile((p) => (p ? { ...p, avatar: dataUrl } : p))
+        } catch (err) { /* 기존 아바타 유지 */ }
+        setAvatarBusy(false)
     }
 
     const wrap: React.CSSProperties = {
@@ -317,12 +420,56 @@ export default function PublicProfilePage(props: Props) {
     return (
         <div style={wrap}>
             <div style={cardStyle}>
-                {/* 헤더: 큰 아바타 + 이름 + 이메일 + 상태 */}
+                {/* 헤더: 아바타(탭=사진 변경) + 별명(수정 가능) + 이름 + 이메일 + 상태 */}
+                <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onAvatarFile} />
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-                    <div style={{ width: 80, height: 80, borderRadius: 26, background: C.field, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-                        <BustAvatar size={50} color={C.sub} />
-                    </div>
-                    <div style={{ color: C.ink, fontSize: 20, fontWeight: 800, letterSpacing: -0.4 }}>{name}</div>
+                    <button type="button" onClick={pickAvatar} title="프로필 사진 변경" aria-label="프로필 사진 변경"
+                        style={{ position: "relative", width: 80, height: 80, borderRadius: 26, background: C.field, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14, border: "none", padding: 0, cursor: avatarBusy ? "wait" : "pointer", opacity: avatarBusy ? 0.55 : 1 }}>
+                        {profile && profile.avatar ? (
+                            <img src={profile.avatar} alt="" width={80} height={80}
+                                style={{ width: 80, height: 80, borderRadius: 26, objectFit: "cover", display: "block" }} />
+                        ) : (
+                            <BustAvatar size={50} color={C.sub} />
+                        )}
+                        {/* 카메라 배지 — 사진 변경 가능 힌트 */}
+                        <span style={{ position: "absolute", right: -4, bottom: -4, width: 26, height: 26, borderRadius: "50%", background: C.card, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
+                            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                <circle cx="12" cy="13" r="4" />
+                            </svg>
+                        </span>
+                    </button>
+                    {/* 별명 (커뮤니티 표시명) — 없으면 이름 표시 + '별명 설정' */}
+                    {!nickEditing ? (
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 7, justifyContent: "center" }}>
+                            <span style={{ color: C.ink, fontSize: 20, fontWeight: 800, letterSpacing: -0.4 }}>
+                                {profile && profile.nickname ? profile.nickname : name}
+                            </span>
+                            <button type="button"
+                                onClick={() => { setNickDraft((profile && profile.nickname) || ""); setNickEditing(true); setNickMsg("") }}
+                                style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 11.5, fontWeight: 700, fontFamily: FONT, padding: 0 }}>
+                                {profile && profile.nickname ? "수정" : "별명 설정"}
+                            </button>
+                        </div>
+                    ) : (
+                        <div style={{ width: "100%", maxWidth: 260 }}>
+                            <input value={nickDraft} autoFocus maxLength={16} placeholder="별명 (2~16자)"
+                                onChange={(e) => setNickDraft(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") saveNick() }}
+                                style={{ width: "100%", boxSizing: "border-box", textAlign: "center", border: `1px solid ${C.line}`, borderRadius: 12, padding: "9px 12px", fontSize: 15, fontWeight: 800, fontFamily: FONT, background: C.field, color: C.ink, outline: "none" }} />
+                            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                                <button type="button" onClick={() => { setNickEditing(false); setNickMsg("") }} style={btnFlatHalf(C)}>취소</button>
+                                <button type="button" onClick={saveNick}
+                                    style={{ flex: 1, padding: "11px 0", border: "none", borderRadius: 12, background: C.ink, color: C.card, fontSize: 13.5, fontWeight: 800, fontFamily: FONT, cursor: "pointer" }}>저장</button>
+                            </div>
+                        </div>
+                    )}
+                    {nickMsg ? (
+                        <div style={{ marginTop: 6, fontSize: 11.5, fontWeight: 700, color: nickMsg === "저장 중…" ? C.faint : C.red }}>{nickMsg}</div>
+                    ) : null}
+                    {profile && profile.nickname ? (
+                        <div style={{ color: C.sub, fontSize: 12.5, fontWeight: 600, marginTop: 4 }}>{name}</div>
+                    ) : null}
                     <div style={{ color: C.faint, fontSize: 12.5, fontFamily: FONT_MONO, marginTop: 4 }}>
                         {profile ? profile.email : ""}
                     </div>
