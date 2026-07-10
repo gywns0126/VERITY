@@ -43,14 +43,6 @@ jobs:
       - name: 브리핑 조립 (순수 변환)
         run: python -m api.builders.daily_briefing_builder
 
-      - name: Publish (VERITY-data + Vercel Blob)
-        continue-on-error: true
-        uses: ./.github/actions/publish-data
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          personal_token: ${{ secrets.VERITY_DATA_PAT }}
-          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
-
       - name: Commit + push (변경 시만)
         if: always()
         run: |
@@ -68,3 +60,15 @@ jobs:
             echo "push attempt $i failed, retry in $((i*10))s"; sleep $((i*10))
           done
           echo "::error::5회 push 실패"; exit 1
+
+      - name: Publish (VERITY-data + Vercel Blob)
+        # 🚨 2026-07-11 순서 fix — 옛 순서(Publish→Commit)는 publish-data 가 origin/main HEAD
+        #   에서 추출하므로 자기 run 산출물이 아직 push 전 = 매번 직전 run 분을 발행(한 사이클
+        #   지연, 7/10 v2 가 2시간+ Blob 미도달 실측). commit push 후 publish 로 교체.
+        if: always()
+        continue-on-error: true
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}

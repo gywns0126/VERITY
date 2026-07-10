@@ -15,9 +15,10 @@ import { useEffect, useState, type CSSProperties } from "react"
  *   창은 테마 추종(다크모드 존중). 보라 = 기능 링크만. 텍스트·수치 = 무채 (PM 2026-07-05).
  *   폰트 = Pretendard 단일 (사이트 표준 통일 · EntranceMap 정합, mono/serif 미사용).
  *
- * 📰 recap hero (2026-07-11) — 섹션에 recap 구조체(빌더 v2)가 있으면 '지수/흐름' 행 대신
- *   큰 등락색 숫자(코스피·코스닥) + 흐름 한 줄(사실 파생 문장) hero 로 렌더. 등락 = KR 관례
- *   상승 빨강/하락 파랑. 병기(mover) 행은 '같은 날 공시와 함께 움직인 종목' 서브라벨로 그루핑.
+ * 📰 1면 배너 (2026-07-11 PM "더 강조") — 첫 섹션의 recap(빌더 v2)을 섹션 목록 위
+ *   제호 직하 배너로 승격: 지수 레벨(금융위 공공데이터, 청정) + 큰 등락%(KR 관례
+ *   상승 빨강/하락 파랑) + 흐름 한 줄(breadth 사실 파생 문장, 인과 0). 섹터·병기
+ *   상세는 섹션 01 에 유지. recap 없으면(구 데이터) 배너 생략 — 하위호환.
  */
 const LIGHT = {
     page: "#f2f4f6", chrome: "#e9ebee", chromeLine: "#d8dbe0", addr: "#ffffff", addrInk: "#8b95a1",
@@ -39,7 +40,8 @@ const SAMPLE = {
     date: "2026-07-05", weekday: "일", warnings_n: 0,
     sections: [
         { title: "지난 거래일 시장", note: "기준 07/09 · 금융위 공공데이터 · 공시 병기 = 사실, 인과 해석 아님",
-          recap: { date: "07/09", kospi: 0.62, kosdaq: 1.15, headline: "코스피는 올랐지만 종목 2,633개 중 1,587개는 내렸어요" },
+          recap: { date: "07/09", kospi: 0.62, kosdaq: 1.15, kospi_close: 7291.91, kosdaq_close: 794.0,
+                   headline: "코스피는 올랐지만 종목 2,633개 중 1,587개는 내렸어요" },
           items: [
             { name: "내린 쪽", text: "경기소비재 -4.5% · 생활소비재 -4.3%" },
             { name: "올린 쪽", text: "정보기술 +1.9%" },
@@ -139,7 +141,7 @@ export default function PublicDailyBriefing(props: {
         if (!wantAnim || !data || onCanvas) return
         try { sessionStorage.setItem(ANIM_KEY, "1") } catch (e) { /* ignore */ }
         setStreaming(true)
-        const rows = (data.sections || []).reduce((n: number, s: any) => n + 1 + Math.min((s.items || []).length, PER_SECTION), 0) + 1
+        const rows = (data.sections || []).reduce((n: number, s: any) => n + 1 + Math.min((s.items || []).length, PER_SECTION), 0) + 2
         const t = setTimeout(() => setStreaming(false), rows * STEP + 420)
         return () => clearTimeout(t)
     }, [wantAnim, data, onCanvas])
@@ -160,6 +162,7 @@ export default function PublicDailyBriefing(props: {
     // 등락 색 (KR 관례: 상승 빨강 / 하락 파랑 / 보합 무채)
     const pctColor = (v: number) => (v > 0 ? C.up : v < 0 ? C.down : C.sub)
     const fmtPct = (v: number) => `${v > 0 ? "+" : ""}${Number(v).toFixed(2)}%`
+    const fmtLevel = (v: any) => (typeof v === "number" && isFinite(v) ? v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "")
 
     // 배경 transparent — 홈 최상단 카드. 자기 page hex 칠하면 Framer 페이지 dark bg(#0f1318)와 어긋나 밝은 사각형으로 튐(윈도우 목업만 남기고 프레임은 페이지에 블렌드).
     const wrap: CSSProperties = {
@@ -208,9 +211,12 @@ export default function PublicDailyBriefing(props: {
         ? `${String(data.date).replace(/-/g, ".")} (${data.weekday || ""}) · 오전 07:30 발행`
         : "매일 아침 07:30 발행"
 
-    // 섹션별 스트림 시작 순번 (접힘 기준 가시 줄 수 누적)
     const secs: any[] = data.sections || []
-    let base = 0
+    // 📰 1면 배너 = 첫 섹션의 recap (있을 때만). 배너 승격 시 그 섹션 items 에서 지수/흐름 행 제외.
+    const banner = secs.length && secs[0].recap && typeof secs[0].recap.kospi === "number" ? secs[0].recap : null
+
+    // 섹션별 스트림 시작 순번 (배너 2줄 + 접힘 기준 가시 줄 수 누적)
+    let base = banner ? 2 : 0
     const secBase: number[] = []
     for (const s of secs) { secBase.push(base); base += 1 + Math.min((s.items || []).length, PER_SECTION) }
 
@@ -246,13 +252,34 @@ export default function PublicDailyBriefing(props: {
                         <div style={{ marginTop: 5, fontSize: 11, fontWeight: 600, color: C.faint, letterSpacing: "0.2px" }}>{dateLine}</div>
                         <div style={{ marginTop: 13, borderTop: `2px solid ${C.ink}` }} />
                         <div style={{ marginTop: 2, borderTop: `1px solid ${C.line}` }} />
+
+                        {/* 📰 1면 배너 — 지수 레벨+등락%(금융위 공공데이터 사실) + 흐름 한 줄 */}
+                        {banner && (
+                            <div style={{ padding: "14px 0 13px", borderBottom: `1px solid ${C.line}` }}>
+                                <div style={{ display: "flex", gap: 26, alignItems: "flex-end", ...sIn(0) }}>
+                                    {[["코스피", banner.kospi, banner.kospi_close], ["코스닥", banner.kosdaq, banner.kosdaq_close]].map(([lb, pct, lv]: any) => (
+                                        <div key={lb}>
+                                            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                                                <span style={{ fontSize: 11.5, fontWeight: 800, color: C.ink }}>{lb}</span>
+                                                {fmtLevel(lv) && <span style={{ fontSize: 11, fontWeight: 600, color: C.faint, fontVariantNumeric: "tabular-nums" }}>{fmtLevel(lv)}</span>}
+                                            </div>
+                                            <div style={{ marginTop: 2, fontSize: 27, fontWeight: 800, letterSpacing: "-0.8px", color: pctColor(pct), fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{fmtPct(pct)}</div>
+                                        </div>
+                                    ))}
+                                    <div style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, color: C.faint, whiteSpace: "nowrap" }}>기준 {banner.date} 종가</div>
+                                </div>
+                                {banner.headline && (
+                                    <div style={{ marginTop: 9, fontSize: 14, fontWeight: 800, letterSpacing: "-0.2px", color: C.ink, lineHeight: 1.45, ...sIn(1) }}>{banner.headline}</div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* 섹션 — 줄 순차 스트림 등장 */}
                     <div style={{ padding: "0 18px 16px" }}>
                         {secs.map((s: any, si: number) => {
-                            const recap = s.recap && typeof s.recap.kospi === "number" ? s.recap : null
-                            const allItems: any[] = (s.items || []).filter((it: any) => !recap || (it.name !== "지수" && it.name !== "흐름"))
+                            const isBannerSec = si === 0 && !!banner
+                            const allItems: any[] = (s.items || []).filter((it: any) => !isBannerSec || (it.name !== "지수" && it.name !== "흐름"))
                             const open = !!openSec[s.title]
                             const items = open ? allItems : allItems.slice(0, PER_SECTION)
                             const extra = allItems.length - PER_SECTION
@@ -262,30 +289,17 @@ export default function PublicDailyBriefing(props: {
                                     <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", ...sIn(secBase[si]) }}>
                                         <span style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: "0.5px", fontVariantNumeric: "tabular-nums" }}>{String(si + 1).padStart(2, "0")}</span>
                                         <span style={{ fontSize: 13, fontWeight: 800, color: C.ink, letterSpacing: "-0.2px" }}>{s.title}</span>
-                                        {recap && <span style={{ fontSize: 10, fontWeight: 600, color: C.faint }}>기준 {recap.date}</span>}
+                                        {isBannerSec ? (
+                                            <span style={{ fontSize: 10, fontWeight: 600, color: C.faint }}>섹터 · 거래대금 · 같은 날 공시</span>
+                                        ) : (
+                                            <span style={{ fontSize: 10, fontWeight: 600, color: C.faint }}>{s.note}</span>
+                                        )}
                                     </div>
-
-                                    {/* 📰 recap hero — 큰 등락색 숫자 + 흐름 한 줄 (사실 파생 문장) */}
-                                    {recap && (
-                                        <div style={{ marginTop: 10, paddingLeft: 26, ...sIn(secBase[si] + 1) }}>
-                                            <div style={{ display: "flex", gap: 22 }}>
-                                                {[["코스피", recap.kospi], ["코스닥", recap.kosdaq]].map(([lb, v]: any) => (
-                                                    <div key={lb}>
-                                                        <div style={{ fontSize: 10.5, fontWeight: 700, color: C.faint }}>{lb}</div>
-                                                        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px", color: pctColor(v), fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>{fmtPct(v)}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            {recap.headline && (
-                                                <div style={{ marginTop: 7, fontSize: 12.5, fontWeight: 700, color: C.ink, lineHeight: 1.5 }}>{recap.headline}</div>
-                                            )}
-                                        </div>
-                                    )}
 
                                     <div style={{ marginTop: 7, paddingLeft: 26, display: "flex", flexDirection: "column", gap: 5 }}>
                                         {items.map((it: any, i: number) => (
                                             <div key={i}>
-                                                {recap && it.mover && i === firstMover && (
+                                                {isBannerSec && it.mover && i === firstMover && (
                                                     <div style={{ fontSize: 10, fontWeight: 700, color: C.faint, letterSpacing: "0.3px", margin: "7px 0 5px", paddingTop: 8, borderTop: `1px dashed ${C.line}` }}>
                                                         같은 날 공시와 함께 움직인 종목
                                                     </div>

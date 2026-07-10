@@ -300,7 +300,8 @@ def _sec_market_recap(names: Dict[str, str]) -> Dict[str, Any]:
 
     d = f"{anchor[4:6]}/{anchor[6:8]}"
     return {"title": "지난 거래일 시장", "items": items,
-            "recap": {"date": d, "kospi": ks_chg, "kosdaq": kq_chg, "headline": headline},
+            "recap": {"date": d, "kospi": ks_chg, "kosdaq": kq_chg,
+                      "kospi_close": ks[-1][1], "kosdaq_close": kq[-1][1], "headline": headline},
             "note": f"기준 {d} · 지수·섹터·등락 = 금융위 공공데이터(전 거래일) · 공시 병기 = 사실, 인과 해석 아님"}
 
 
