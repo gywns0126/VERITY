@@ -76,10 +76,12 @@ def main() -> int:
         broker = KISBroker(cache_only=True)  # 🚨 발급 금지, cache read 전용
         warnings: Dict[str, Any] = {}
         n_warn = 0
+        n_checked = 0  # 조회 성공 수 — 0 = 토큰사(침묵 실패), >0 이고 경보 0 = clean 사실
         for u in _kr_tickers():
             tk, name = u["ticker"], u["name"]
             try:
                 o = broker.get_current_price(tk) or {}
+                n_checked += 1
             except Exception as e:  # noqa: BLE001 (cache 토큰 없으면 여기서 skip — RULE1 안전)
                 print(f"[market_warnings] {tk} skip: {str(e)[:80]}", file=sys.stderr)
                 time.sleep(DELAY)
@@ -93,12 +95,12 @@ def main() -> int:
                 n_warn += 1
             time.sleep(DELAY)
 
-        # 빈 결과라도 publish (경보 0 = clean 신호) — 단 token 부재로 0종목 조회면 보존
-        if not warnings and os.path.isfile(OUTPUT_PATH) and n_warn == 0:
-            # 조회 자체가 안 됐을 수 있음(토큰 부재) → 기존 보존
-            print("[market_warnings] 경보 0 또는 조회불가 — 기존 snapshot 보존", file=sys.stderr)
-            ok = True
-            return 0
+        # 🚨 2026-07-10 침묵 실패 차단 — "조회 0건(토큰사)" 과 "경보 0건(clean)" 구분.
+        #   옛 로직 = 둘 다 조용히 return 0 → 6/20~7/10 3주 동결에도 run success (사용자 발견 사고).
+        if n_checked == 0:
+            print("[market_warnings] 전량 조회 실패 (토큰/네트워크) — exit 1 (침묵 금지)", file=sys.stderr)
+            return 1
+        # n_checked > 0 이고 경보 0 = clean 사실 → 빈 결과도 publish (generated_at 갱신 = 신선도 추적 가능)
 
         out = {
             "_meta": {

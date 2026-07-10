@@ -389,6 +389,11 @@ jobs:
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
           KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
+          # 🚨 2026-07-10 진짜 fix — 공유 토큰 read 는 SUPABASE 2종 필수(_kis_shared_enabled).
+          #   6/27 fix 가 KIS 키만 추가하고 이 2종 누락 → file cache stale 시 전량 skip 지속
+          #   (6/20~7/10 3주 동결, run 은 success = 침묵 실패). preflight step 과 동일 세트.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python -m api.builders.market_warnings_public_builder
 
       - name: 공개 내부자거래 빌드 (DART elestock, 美 Form4 KR판)
