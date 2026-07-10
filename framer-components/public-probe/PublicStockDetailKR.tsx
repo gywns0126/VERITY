@@ -33,9 +33,41 @@ function readDark(): boolean {
     return document.body.dataset.framerTheme === "dark"
 }
 
+function readBodyDark(): boolean {
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?: string; forensicsUrl?: string; dark?: boolean }) {
+    // ETF/ETN 선택 시 자기 숨김 — StockReport 가 body[data-verity-asset-kind] 신호 발행 (2026-07-10)
+    const [assetKind, setAssetKind] = useState<string>("stock")
+    useEffect(() => {
+        if (typeof document === "undefined" || !document.body) return
+        const read = () => setAssetKind(document.body.dataset.verityAssetKind || "stock")
+        read()
+        if (typeof MutationObserver === "undefined") return
+        const obs = new MutationObserver(read)
+        obs.observe(document.body, { attributes: true, attributeFilter: ["data-verity-asset-kind"] })
+        return () => obs.disconnect()
+    }, [])
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
     const [rec, setRec] = useState<any>(onCanvas ? SAMPLE_REC : null)
@@ -93,6 +125,8 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
         </div>
     )
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
+
+    if (assetKind === "etf") return null  // ETF/ETN = 기업 전용 섹션 숨김
 
     return (
         <div ref={rootRef} style={wrap}>

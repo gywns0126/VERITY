@@ -68,15 +68,47 @@ const SAMPLE: Record<string, Stock> = {
     },
 }
 
+function readBodyDark(): boolean {
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
 export default function PublicEventHistory(props: Props) {
+    // ETF/ETN 선택 시 자기 숨김 — StockReport 가 body[data-verity-asset-kind] 신호 발행 (2026-07-10)
+    const [assetKind, setAssetKind] = useState<string>("stock")
+    useEffect(() => {
+        if (typeof document === "undefined" || !document.body) return
+        const read = () => setAssetKind(document.body.dataset.verityAssetKind || "stock")
+        read()
+        if (typeof MutationObserver === "undefined") return
+        const obs = new MutationObserver(read)
+        obs.observe(document.body, { attributes: true, attributeFilter: ["data-verity-asset-kind"] })
+        return () => obs.disconnect()
+    }, [])
     const { ticker, dataUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!dark : readBodyDark()))
     useEffect(() => {
         if (onCanvas) return
         const read = () => {
@@ -144,6 +176,8 @@ export default function PublicEventHistory(props: Props) {
 
     // 데이터 없으면 숨김(빈 카드 방지)
     if (!stock) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
+
+    if (assetKind === "etf") return null  // ETF/ETN = 기업 전용 섹션 숨김
 
     return (
         <div ref={rootRef} style={wrap}>
