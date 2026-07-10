@@ -51,13 +51,18 @@ jobs:
           US_INSIDER_MAX_SECONDS: ${{ github.event.inputs.max_seconds || '2400' }}
         run: python -m api.builders.us_insider_trades_public_builder
 
-      - name: Commit data/us_insider_trades.json
+      - name: Build US short interest (yfinance rotation)
+        # 2026-07-10 신설. 전 유니버스 capped 회전(150/run)+캐시 slow-fill(FRESH_DAYS=14).
+        # yfinance 무료. RULE 7 = 공매도 잔고 사실만(점수 0). us_forensics 6번째 소스.
+        run: python -m api.builders.us_short_interest_public_builder
+
+      - name: Commit data (US insider + short interest)
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
-        # [[feedback_data_collection_verification_mandatory]] specific path commit.
+        # [[feedback_data_collection_verification_mandatory]] specific path commit — 신규 빌더 산출물 명시 추가(RULE 4).
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/us_insider_trades.json
+          git add data/us_insider_trades.json data/us_short_interest.json data/us_short_interest_cache.json
           if git diff --staged --quiet; then
             echo "[us_insider] no changes"
             exit 0
