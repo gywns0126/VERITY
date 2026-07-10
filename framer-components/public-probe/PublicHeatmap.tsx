@@ -55,6 +55,12 @@ function bfLogoPad(ticker: any): string {
     const r = __bfShapes[tk] || __bfShapes[tk.replace(/\./g, "-")] || 1
     return (r > (__bfStyle.wideRatio || 2.2) ? (__bfStyle.padW || 15) : (__bfStyle.padS || 8)) + "%"
 }
+function bfInitialBg(ticker: any): string {
+    // 이니셜 타일 — 티커 해시 투톤 그라데이션 (미보유 4.6K 도 디자인 자산화, 종목별 고정색)
+    let h = 0; const s = String(ticker || "?")
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360
+    return "linear-gradient(135deg, hsl(" + h + ",62%,55%), hsl(" + ((h + 42) % 360) + ",68%,42%))"
+}
 function bfLogoBg(ticker: any): string {
     // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")

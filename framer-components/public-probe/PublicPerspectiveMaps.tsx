@@ -191,6 +191,12 @@ function bfLogoPad(ticker: any): string {
     const r = __bfShapes[tk] || __bfShapes[tk.replace(/\./g, "-")] || 1
     return (r > (__bfStyle.wideRatio || 2.2) ? (__bfStyle.padW || 15) : (__bfStyle.padS || 8)) + "%"
 }
+function bfInitialBg(ticker: any): string {
+    // 이니셜 타일 — 티커 해시 투톤 그라데이션 (미보유 4.6K 도 디자인 자산화, 종목별 고정색)
+    let h = 0; const s = String(ticker || "?")
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360
+    return "linear-gradient(135deg, hsl(" + h + ",62%,55%), hsl(" + ((h + 42) % 360) + ",68%,42%))"
+}
 function bfLogoBg(ticker: any): string {
     // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
@@ -290,7 +296,7 @@ function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) =
                     <img src={bfSrc} alt="" width={34} height={34} loading="lazy" onError={() => setErr(true)}
                         style={{ width: 34, height: 34, borderRadius: 11, objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker), background: "#fff", display: "block" }} />
                 ) : (
-                    <span style={{ width: 34, height: 34, borderRadius: 11, background: C.violetSoft, color: C.violet, fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initial}</span>
+                    <span style={{ width: 34, height: 34, borderRadius: 11, background: bfInitialBg(ticker), color: "#ffffff", fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initial}</span>
                 )}
                 <img src={FLAG + (kr ? "kr" : "us") + ".svg"} alt="" width={14} height={14}
                     style={{ position: "absolute", right: -3, bottom: -3, width: 14, height: 14, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block" }} />
