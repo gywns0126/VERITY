@@ -171,16 +171,23 @@ const FLAG = "https://hatscripts.github.io/circle-flags/flags/"
 const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
 const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
 let __bfMap: Record<string, string> | null = null
+let __bfColors: Record<string, string> = {}
 let __bfP: Promise<Record<string, string>> | null = null
 function fetchBfMap(): Promise<Record<string, string>> {
     if (__bfMap) return Promise.resolve(__bfMap)
-    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; __bfColors = (d && d.colors) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
     return __bfP
 }
 function useBfLogoMap(): Record<string, string> | null {
     const [m, setM] = useState<Record<string, string> | null>(__bfMap)
     useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
     return m
+}
+function bfLogoBg(ticker: any): string {
+    // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
+    return c ? c + "26" : "#ffffff"  // 15% 알파 틴트, 무채색/미보유 = 흰 타일
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
@@ -271,7 +278,7 @@ function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) =
             <div style={{ position: "relative", width: 34, height: 34, flexShrink: 0 }}>
                 {!err && bfSrc ? (
                     <img src={bfSrc} alt="" width={34} height={34} loading="lazy" onError={() => setErr(true)}
-                        style={{ width: 34, height: 34, borderRadius: 9, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: "#ffffff", background: "#fff", display: "block" }} />
+                        style={{ width: 34, height: 34, borderRadius: 9, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: bfLogoBg(ticker), background: "#fff", display: "block" }} />
                 ) : (
                     <span style={{ width: 34, height: 34, borderRadius: 9, background: C.violetSoft, color: C.violet, fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initial}</span>
                 )}

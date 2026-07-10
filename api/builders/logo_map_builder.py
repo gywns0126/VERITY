@@ -31,17 +31,16 @@ UNIVERSE_SEARCH = os.path.join(_ROOT, "data", "universe_search.json")
 # ETF 운용사 · ETN 발행 증권사 브랜드 → 도메인 (2026-07-10 Brandfetch 실검증 — 전부 실로고 확인).
 # 이름 프리픽스 startswith 매칭. 네트워크 0콜 즉시 배정.
 BRAND_DOMAINS = [
-    ("KODEX", "samsungfund.com"), ("TIGER", "tigeretf.com"), ("RISE", "kbam.co.kr"),
-    ("KBSTAR", "kbam.co.kr"), ("ACE ", "aceetf.co.kr"), ("PLUS", "hanwhafund.co.kr"),
-    ("ARIRANG", "hanwhafund.co.kr"), ("KIWOOM", "kiwoomam.com"), ("SOL ", "soletf.com"),
-    ("HANARO", "nh-amundi.com"), ("TIMEFOLIO", "timefolio.co.kr"), ("TIME", "timefolio.co.kr"),
-    ("WON ", "wooriib.com"), ("KoAct", "samsungactive.co.kr"), ("에셋플러스", "assetplus.co.kr"),
-    ("1Q", "hanafn.com"), ("파워", "kyobo.com"), ("BNK", "bnkasset.co.kr"),
-    ("UNICORN", "hdfund.co.kr"), ("MIDAS", "midasasset.com"), ("마이다스", "midasasset.com"),
-    # ETN 증권사
-    ("메리츠", "meritzsec.com"), ("한투", "truefriend.com"), ("KB ", "kbsec.com"),
-    ("삼성 ", "samsungpop.com"), ("미래에셋", "securities.miraeasset.com"), ("신한", "shinhansec.com"),
-    ("키움", "kiwoom.com"), ("N2", "nhqv.com"), ("하나 ", "hanaw.com"), ("대신", "daishin.com"),
+    ("KODEX", "samsungfund.com"), ("TIGER", "investments.miraeasset.com"),
+    ("RISE", "kbfg.com"), ("KBSTAR", "kbfg.com"), ("PLUS", "hanwhafund.co.kr"),
+    ("ARIRANG", "hanwhafund.co.kr"), ("KIWOOM", "kiwoom.com"), ("SOL ", "shinhangroup.com"),
+    ("HANARO", "nonghyup.com"), ("TIMEFOLIO", "timefolio.co.kr"), ("TIME", "timefolio.co.kr"),
+    ("WON ", "woorifg.com"), ("KoAct", "samsungactive.co.kr"), ("에셋플러스", "assetplus.co.kr"),
+    ("1Q", "hanafn.com"), ("파워", "kyobo.com"), ("BNK", "bnkfg.com"),
+    # ETN 증권사 (Brandfetch 실로고 검증 통과만 — 미보유 브랜드(ACE·한투·메리츠·UNICORN·MIDAS)는 이니셜)
+    ("KB ", "kbfg.com"), ("삼성 ", "samsung.com"), ("미래에셋", "securities.miraeasset.com"),
+    ("신한", "shinhangroup.com"), ("키움", "kiwoom.com"), ("N2", "nhqv.com"),
+    ("하나 ", "hanafn.com"), ("대신", "daishin.com"),
 ]
 
 
@@ -54,7 +53,6 @@ def _brand_domain(name: str) -> str:
 KR_DOMAINS = os.path.join(_ROOT, "data", "kr_corp_domains.json")
 US_COMBINED = os.path.join(_ROOT, "data", "us_universe_combined.json")
 
-REAL_LOGO_MIN = 1000   # >1KB = 실로고, ≤ = Brandfetch 글자아이콘(이니셜과 동급 → 도메인 재시도)
 MAX_SECONDS = int(os.environ.get("LOGO_MAP_MAX_SECONDS", "2400"))
 THROTTLE = 0.12
 HDR = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
@@ -73,35 +71,78 @@ def _cid() -> str:
         return ""
 
 
-def _logo_size(path: str, cid: str) -> int:
-    """Brandfetch 경로 → 이미지 바이트 수 (0=미보유/실패)."""
-    url = f"https://cdn.brandfetch.io/{path}?c={cid}&fallback=404"
+# 🚨 Brandfetch 는 미보유 브랜드에 404 대신 자사 'B' 플레이스홀더 이미지를 반환 (fallback=404 무시,
+#   2026-07-10 실측 — 크기 기준(1KB) 판별이 뚫려 'B' 로고 대량 채택 사고). 콘텐츠 md5 로 판별.
+import hashlib
+_PLACEHOLDER_MD5 = {"ad18dbe2ba", "38926c4ecb"}  # w미지정 310B / w=76 2588B 두 변형
+
+
+# 아이덴티티 색 (2026-07-10 PM — 토스식 타일 배경). 로고 대표색 자동 추출 + 주요 브랜드 공식 색 오버라이드.
+# 오버라이드 = 공개된 브랜드 컬러(사실). 흑백 로고(삼성·애플 등)는 추출색이 검정 → 공식 색으로 보정.
+BRAND_COLOR_OVERRIDE = {
+    "005930": "#1428a0", "005935": "#1428a0",  # 삼성전자 블루
+    "000660": "#ec1b23",  # SK하이닉스 레드
+    "005380": "#002c5f", "000270": "#05141f",  # 현대차 네이비 · 기아 미드나잇
+    "051910": "#a50034", "066570": "#a50034", "373220": "#a50034", "003550": "#a50034",  # LG 레드
+    "035420": "#03c75a",  # 네이버 그린
+    "035720": "#fee500",  # 카카오 옐로
+    "005490": "#00477f",  # 포스코 블루
+    "105560": "#ffbc00", "055550": "#0046ff",  # KB 옐로 · 신한 블루
+    "034730": "#ec1b23", "017670": "#ec1b23", "096770": "#ec1b23",  # SK 계열 레드
+    "AAPL": "#555555", "MSFT": "#0078d4", "GOOGL": "#4285f4", "GOOG": "#4285f4",
+    "AMZN": "#ff9900", "META": "#0866ff", "TSLA": "#e82127", "NVDA": "#76b900",
+    "NFLX": "#e50914", "AMD": "#000000", "INTC": "#0068b5", "KO": "#f40009",
+}
+
+
+def _dominant_color(img_bytes: bytes):
+    """로고 바이트 → 대표색 hex (저채도·흰색 제외 평균). 실패/무채색뿐 = None."""
+    try:
+        from PIL import Image
+        import io as _io
+        im = Image.open(_io.BytesIO(img_bytes)).convert("RGBA").resize((24, 24))
+        px = [(r, g, b) for r, g, b, a in im.getdata() if a > 200 and not (r > 235 and g > 235 and b > 235)]
+        if not px:
+            return None
+        sat = [(r, g, b) for r, g, b in px if max(r, g, b) - min(r, g, b) > 30]
+        if not sat:
+            return None  # 무채색 로고 — 틴트 없이 중립 타일
+        n = len(sat)
+        r = sum(q[0] for q in sat) // n; g = sum(q[1] for q in sat) // n; b = sum(q[2] for q in sat) // n
+        return f"#{r:02x}{g:02x}{b:02x}"
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _logo_fetch(path: str, cid: str):
+    """Brandfetch 경로 → (실로고 여부, bytes). 플레이스홀더 해시 제외."""
+    url = f"https://cdn.brandfetch.io/{path}?c={cid}"
     try:
         r = urllib.request.urlopen(urllib.request.Request(url, headers=HDR), timeout=12)
         if "image" not in (r.headers.get("content-type") or ""):
-            return 0
-        return len(r.read())
+            return False, b""
+        b = r.read()
+        ok = len(b) > 0 and hashlib.md5(b).hexdigest()[:10] not in _PLACEHOLDER_MD5
+        return ok, b
     except Exception:  # noqa: BLE001
-        return 0
+        return False, b""
+
+
+def _logo_real(path: str, cid: str) -> bool:
+    return _logo_fetch(path, cid)[0]
 
 
 def _resolve_kr(tk: str, market: str, domain: str, cid: str) -> Optional[str]:
     mk = (market or "").upper()
     sufs = ["KQ"] if "KOSDAQ" in mk else (["KS"] if mk else ["KS", "KQ"])  # 미상 = 양쪽 시도
-    best_letter = None
     for suf in sufs:
         p = f"ticker/{tk}.{suf}"
-        n = _logo_size(p, cid)
-        if n > REAL_LOGO_MIN:
+        if _logo_real(p, cid):
             return p
-        if n > 0 and not best_letter:
-            best_letter = p
         time.sleep(THROTTLE)
-    if domain:
-        p2 = f"domain/{domain}"
-        if _logo_size(p2, cid) > REAL_LOGO_MIN:
-            return p2
-    return best_letter  # 글자아이콘이라도 Brandfetch 통일감 — 실측 310B
+    if domain and _logo_real(f"domain/{domain}", cid):
+        return f"domain/{domain}"
+    return None  # 플레이스홀더/미보유 = 이니셜 (B 로고 채택 금지)
 
 
 def main() -> int:
@@ -110,6 +151,32 @@ def main() -> int:
         cid = _cid()
         if not cid:
             print("[logo_map] BRANDFETCH_CLIENT_ID 없음 — skip", file=sys.stderr)
+            return 0
+        # ── 컬러 백필 모드 (LOGO_COLOR_BACKFILL=1): 확정 map 의 로고들 대표색만 채움 ──
+        if os.environ.get("LOGO_COLOR_BACKFILL") == "1":
+            doc = json.load(open(OUT_PATH, encoding="utf-8"))
+            logos = doc.get("logos") or {}
+            colors = doc.get("colors") or {}
+            t0 = time.monotonic()
+            done = 0
+            for tk, path in logos.items():
+                if tk in colors:
+                    continue
+                if time.monotonic() - t0 > MAX_SECONDS:
+                    print("[logo_map] 색 백필 budget 도달", file=sys.stderr)
+                    break
+                if tk in BRAND_COLOR_OVERRIDE:
+                    colors[tk] = BRAND_COLOR_OVERRIDE[tk]
+                else:
+                    okf, b = _logo_fetch(path, cid)
+                    c = _dominant_color(b) if okf else None
+                    colors[tk] = c or ""
+                done += 1
+                time.sleep(THROTTLE)
+            doc["colors"] = colors
+            doc["_meta"]["colors_n"] = sum(1 for v in colors.values() if v)
+            json.dump(doc, open(OUT_PATH, "w", encoding="utf-8"), ensure_ascii=False)
+            print(f"[logo_map] 색 백필 logged=True · 이번 {done} · 색 보유 {doc['_meta']['colors_n']}/{len(logos)}", file=sys.stderr)
             return 0
         try:
             _prev = json.load(open(OUT_PATH, encoding="utf-8"))
@@ -163,8 +230,7 @@ def main() -> int:
             if time.monotonic() - t0 > MAX_SECONDS:
                 print("[logo_map] budget 도달 — 나머지 다음 회차", file=sys.stderr)
                 break
-            n = _logo_size(f"ticker/{tk}", cid)
-            cache[tk] = f"ticker/{tk}" if n > 0 else ""
+            cache[tk] = f"ticker/{tk}" if _logo_real(f"ticker/{tk}", cid) else ""
             fetched += 1
             time.sleep(THROTTLE)
 
