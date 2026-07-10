@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-07-10T21:37:51.467440+09:00",
+  "generated_at": "2026-07-11T08:21:07.236463+09:00",
   "spec_version": "v0",
   "gate": {
     "target_n": 252,
     "milestone": "N=252 IC 게이트 (Bailey-López de Prado, 2027-05 목표)",
-    "best_signal_n": 386.2,
+    "best_signal_n": 420.0,
     "progress_pct": 99.9
   },
   "rule7_disclaimer": "모든 항목 = 자기 산식 가설 (관측 only, 결정 피드백 0). N<30 통계 무의미 / N<100 예비. hit_rate 단독 해석 금지 — expectancy + CI95 + N 병기. N=252 게이트(2027-05) 도달 전 통계 판정 무의미.",
@@ -12,8 +12,8 @@
     {
       "signal": "brain_production",
       "status": "채점 진행 중",
-      "n": 1931,
-      "n_eff": 386.2,
+      "n": 2100,
+      "n_eff": 420.0,
       "label": "표본 N≥100 누적 (잠정 — 유의성 미검증)",
       "gate_status": "게이트 도달 (유의성 미달 — 가설 유지)",
       "source": "prediction_ic_history.jsonl (Brain 종합 verdict, prediction_scoring v0)"
@@ -21,10 +21,10 @@
     {
       "signal": "xgb_ml",
       "status": "채점 진행 중",
-      "n": 1020,
-      "n_eff": 204.0,
+      "n": 1189,
+      "n_eff": 237.8,
       "label": "표본 N≥100 누적 (잠정 — 유의성 미검증)",
-      "gate_status": "가설 (게이트 N≥252 미도달, 진척 81.0%)",
+      "gate_status": "가설 (게이트 N≥252 미도달, 진척 94.4%)",
       "source": "ml_prediction_ic_history.jsonl (XGB up_probability shadow, source-agnostic scorer 재사용)"
     },
     {
@@ -39,10 +39,10 @@
     {
       "signal": "factor",
       "status": "IC 시계열 누적 중",
-      "n": 5,
+      "n": 6,
       "n_eff": null,
       "label": "통계 무의미 (N<30)",
-      "gate_status": "가설 (게이트 N≥252 미도달, 진척 2.0%)",
+      "gate_status": "가설 (게이트 N≥252 미도달, 진척 2.4%)",
       "source": "factor_ic_history.json (ic_stats machinery, forward_days 63)"
     },
     {
