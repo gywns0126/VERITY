@@ -344,7 +344,7 @@ function fmtUSDcompact(v: any): string {
 // Catmull-Rom → cubic bezier 부드러운 곡선 path (유선형 추이용)
 /* 🧺 ETF/ETN 구성 블록 — etf_flow.json(KRX 공시 사실). 기업 리포트 대신 렌더 (2026-07-10 PM).
    흐름 = Δ상장좌수×NAV(설정/환매, 가격효과 제거). RULE 7 — 관측 사실만, 미추적 = 안내(가짜 데이터 0). */
-function EtfReportBlock({ C, isDark, narrow, ticker, name, market, doc }: any) {
+function EtfReportBlock({ C, isDark, narrow, ticker, name, market, doc, onPick }: any) {
     const CATL: Record<string, string> = {
         equity_domestic: "국내주식", equity_foreign: "해외주식", thematic: "테마", bond_kr: "한국채권",
         bond_us: "미국채권", commodity_gold: "금", commodity: "원자재", leverage: "레버리지",
@@ -433,10 +433,36 @@ function EtfReportBlock({ C, isDark, narrow, ticker, name, market, doc }: any) {
                             {kv("상장좌수", Number(e.list_shrs).toLocaleString() + "좌")}
                             {kv("오늘 순설정", fmtF(e.est_flow, true), Number(e.est_flow) > 0 ? C.up : Number(e.est_flow) < 0 ? C.down : undefined)}
                         </div>
+                        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+                            {e.ter ? kv("총보수 (연)", String(e.ter)) : null}
+                            {e.manager ? kv("운용사", String(e.manager)) : null}
+                            {e.base_index ? kv("기초지수", String(e.base_index)) : null}
+                        </div>
                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 12, lineHeight: 1.5 }}>
                             괴리율 = (종가 − NAV) ÷ NAV — 프리미엄(+)/디스카운트(−){doc && doc.bas_dd ? ` · 기준일 ${ds(String(doc.bas_dd))}` : ""}
                         </div>
                     </div>
+                    {Array.isArray(e.top_holdings) && e.top_holdings.length > 0 && (
+                        <div style={card}>
+                            <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 4 }}>구성종목 상위 {e.top_holdings.length}</div>
+                            {e.top_holdings.map((h: any, i2: number) => {
+                                const maxW = Math.max(...e.top_holdings.map((x: any) => Number(x.w) || 0), 1)
+                                return (
+                                    <div key={h.t} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i2 === 0 ? "none" : `1px solid ${C.line}` }}>
+                                        <span style={{ flexShrink: 0, minWidth: 130, maxWidth: 170, fontSize: 13, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer" }}
+                                            onClick={() => { if (onPick) onPick(String(h.t), String(h.n)) }}>{h.n}</span>
+                                        <div style={{ flex: 1, height: 7, borderRadius: 4, background: C.grid, overflow: "hidden" }}>
+                                            <div style={{ width: `${Math.max(3, (Number(h.w) / maxW) * 100)}%`, height: "100%", borderRadius: 4, background: C.vt }} />
+                                        </div>
+                                        <span style={{ flexShrink: 0, minWidth: 52, textAlign: "right", fontFamily: HEAD, fontSize: 12.5, fontWeight: 800, color: C.sub }}>{Number(h.w).toFixed(2)}%</span>
+                                    </div>
+                                )
+                            })}
+                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>
+                                1CU 기준 상위 구성 (네이버 금융 집계) · 종목명 클릭 = 해당 종목 리포트
+                            </div>
+                        </div>
+                    )}
                     {series.length > 0 && (
                         <div style={card}>
                             <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 4 }}>일별 순설정</div>
@@ -890,6 +916,11 @@ export default function PublicStockReport(props: Props) {
         return (mk === "ETF" || mk === "ETN") ? "etf" : "stock"
     }, [searchList, selTicker])
     const [etfDoc, setEtfDoc] = useState<any>(null)
+    // 형제 컴포넌트(기업 전용: 뉴스 외 상세·이벤트·증권사리포트·브리핑)가 타입을 알 수 있게 body 신호 발행
+    useEffect(() => {
+        if (onCanvas || typeof document === "undefined" || !document.body) return
+        document.body.dataset.verityAssetKind = kind
+    }, [kind, onCanvas])
     useEffect(() => {
         if (onCanvas || kind !== "etf" || etfDoc) return
         let alive = true
@@ -1362,7 +1393,7 @@ export default function PublicStockReport(props: Props) {
             <div ref={rootRef} style={wrap}>
                 {searchBox}
                 <EtfReportBlock C={C} isDark={C === DARK} narrow={narrow} ticker={String(selTicker)}
-                    name={String(uEnt.name || selTicker)} market={String(uEnt.market || "ETF")} doc={etfDoc} />
+                    name={String(uEnt.name || selTicker)} market={String(uEnt.market || "ETF")} doc={etfDoc} onPick={goTicker} />
             </div>
         )
     }
@@ -1904,6 +1935,35 @@ export default function PublicStockReport(props: Props) {
                             </div>
                         </>
                     )}
+
+                    {usForen.disclosure_forensics && usForen.disclosure_forensics.counts && Object.keys(usForen.disclosure_forensics.counts).length > 0 && (() => {
+                        const FLBL: any = {
+                            dilution: "희석성 증자(3.02)", delisting_risk: "상장폐지 위험(3.01)", bankruptcy: "파산(1.03)",
+                            debt_default: "채무불이행(2.04)", impairment: "자산손상(2.06)", restatement: "재무제표 정정(4.02)",
+                            auditor_change: "감사인 교체(4.01)", mna: "인수·합병(2.01)", rights_modification: "주주권리 변경(3.03)",
+                            control_change: "지배권 변경(5.01)", restructuring: "구조조정(2.05)",
+                        }
+                        const df = usForen.disclosure_forensics
+                        const adverse = (k: string) => /delisting_risk|bankruptcy|debt_default|restatement|impairment/.test(k)
+                        return (
+                            <>
+                                {sectionTitle("美 공시 이상신호 · SEC 8-K", "중요사건 보고 유형별 건수")}
+                                <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                                    <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 10 }}>
+                                        최근 2년 8-K {df.n_8k || 0}건{df.latest_8k ? <span style={{ color: C.faint, fontWeight: 600 }}> · 최근 {df.latest_8k}</span> : null}
+                                    </div>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                                        {Object.entries(df.counts).sort((a: any, b: any) => b[1] - a[1]).map(([k, n]: any) => (
+                                            <span key={k} style={{ fontSize: 12, fontWeight: 700, color: adverse(k) ? C.up : C.sub, background: adverse(k) ? C.upS : C.bg, borderRadius: 8, padding: "5px 10px" }}>
+                                                {FLBL[k] || k} <span style={{ fontWeight: 800 }}>{n}</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>SEC EDGAR 8-K item 사실 카운트 · 점수·추천 아님 · 증권사·토스엔 없는 view</div>
+                                </div>
+                            </>
+                        )
+                    })()}
 
                 </>
             )}

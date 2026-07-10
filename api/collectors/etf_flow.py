@@ -65,6 +65,43 @@ def _load_existing() -> Dict[str, Any]:
         return {}
 
 
+# ── ETF 부가정보 (보수율·기초지수·운용사·구성종목 top10) — 네이버 금융 (2026-07-10 PM) ──
+# 모바일 integration API totalInfos(펀드보수·기초지수·운용사) + PC CU 표(구성 상위 10, 비중%).
+# 사실 metadata (시세 재배포 아님). 실패 시 이전 값 carry(graceful). 25종 × 2콜/일.
+import re as _re
+import time as _time
+import urllib.request as _ur
+
+def _fetch_etf_extras(ticker: str) -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+    hdr = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
+    try:
+        d = json.loads(_ur.urlopen(_ur.Request(
+            f"https://m.stock.naver.com/api/stock/{ticker}/integration", headers=hdr), timeout=10).read())
+        for it in (d.get("totalInfos") or []):
+            k, v = str(it.get("key") or ""), str(it.get("value") or "")
+            if k == "펀드보수" and v:
+                out["ter"] = v
+            elif k == "기초지수" and v:
+                out["base_index"] = v
+            elif k == "운용사" and v:
+                out["manager"] = v.replace("(ETF)", "").strip()
+    except Exception:  # noqa: BLE001
+        pass
+    _time.sleep(0.25)
+    try:
+        html = _ur.urlopen(_ur.Request(
+            f"https://finance.naver.com/item/main.naver?code={ticker}", headers=hdr), timeout=12).read().decode("utf-8", "replace")
+        i = html.find("1CU")
+        seg = html[max(0, i - 9000):i] if i > 0 else ""
+        rows = _re.findall(r'code=(\d{6})[^>]*>([^<]{1,40})</a>\s*</td>\s*<td>\s*[\d,]+\s*</td>\s*<td class="per">\s*([\d.]+)%', seg)
+        if rows:
+            out["top_holdings"] = [{"t": tk2, "n": nm.strip(), "w": float(w)} for tk2, nm, w in rows[:10]]
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
 def build_etf_flow() -> Dict[str, Any]:
     """KRX etf_bydd_trd 에서 상장좌수/NAV/순자산 추출 → 일별 누적 + Δ좌수 흐름 산출 → data/etf_flow.json.
 
@@ -149,6 +186,13 @@ def build_etf_flow() -> Dict[str, Any]:
                 rec["est_flow"] = round(d_shrs * nav, 0) if nav is not None else None  # 원
                 if d_shrs != 0:
                     with_flow += 1
+            # 부가정보 — 신규 수집 성공분만 갱신, 실패 시 이전 값 carry
+            prev_rec = next((x for x in (existing.get("etfs") or []) if str(x.get("ticker")) == ticker), {})
+            extras = _fetch_etf_extras(ticker)
+            for k2 in ("ter", "base_index", "manager", "top_holdings"):
+                v2 = extras.get(k2) or prev_rec.get(k2)
+                if v2:
+                    rec[k2] = v2
             etfs.append(rec)
 
         # 흐름 큰 순(절대값) 정렬 — 흐름 있는 것 우선

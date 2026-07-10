@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  * AlphaNest 공개 — KR 종목 심화 (기관·국민연금 대량보유 + 사업장 + 공시 forensics). DART 사실만.
  * PublicForensics + PublicHoldingsDetail 통합(2026-07-01) — 배치 1번. 둘은 폐기.
  * 🚨 RULE 7 — 위험점수·심각도·해석 0. 사실만. 데이터 = stock_report_public.json(지분·사업장) + kr_forensics_public.json(forensics).
- * 다크모드 = body[data-framer-theme] 자가감지. 외곽선 없음(소프트 카드). 루트 패딩 = /stock 컨벤션(narrow?14:18).
+ * 다크모드 = body[data-framer-theme] 자가감지. 외곽선 없음(소프트 카드).
  * Framer codeFileId = WNrsqjb (insertUrl framer.com/m/PublicStockDetailKR-RbhPiw.js).
  */
 
@@ -34,6 +34,17 @@ function readDark(): boolean {
 }
 
 export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?: string; forensicsUrl?: string; dark?: boolean }) {
+    // ETF/ETN 선택 시 자기 숨김 — StockReport 가 body[data-verity-asset-kind] 신호 발행 (2026-07-10)
+    const [assetKind, setAssetKind] = useState<string>("stock")
+    useEffect(() => {
+        if (typeof document === "undefined" || !document.body) return
+        const read = () => setAssetKind(document.body.dataset.verityAssetKind || "stock")
+        read()
+        if (typeof MutationObserver === "undefined") return
+        const obs = new MutationObserver(read)
+        obs.observe(document.body, { attributes: true, attributeFilter: ["data-verity-asset-kind"] })
+        return () => obs.disconnect()
+    }, [])
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
     const isDark = onCanvas ? !!props.dark : themeDark
@@ -85,7 +96,7 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
     if (!hasInst && !hasFac && !hasFor) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
 
     const HEAD = "Pretendard, -apple-system, sans-serif"
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: narrow ? "0 14px" : "0 18px", display: "flex", flexDirection: "column", gap: 14 }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: narrow ? 14 : 18, display: "flex", flexDirection: "column", gap: 14 }
     const title = (t: string, sub: string) => (
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
             <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px" }}>{t}</span>
@@ -93,6 +104,8 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
         </div>
     )
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
+
+    if (assetKind === "etf") return null  // ETF/ETN = 기업 전용 섹션 숨김
 
     return (
         <div ref={rootRef} style={wrap}>

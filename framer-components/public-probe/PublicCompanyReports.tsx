@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 기업 리포트·자료 — VERITY 공개 터미널 (골든구스). 그 회사가 발행하는 공식 리포트/자료를 한곳에 모아 외부 소스로 딥링크.
+ * 기업 리포트·자료 — VERITY 공개 터미널 (AlphaNest). 그 회사가 발행하는 공식 리포트/자료를 한곳에 모아 외부 소스로 딥링크.
  *
  * 🚨 RULE 7 / held-2027 / feedback_scope: 전부 **외부 소스 링크 모음**(공시·정기보고서·증권사 리포트·IR). VERITY 자체 점수·추천·작문 0.
  *   링크 = 공식/공개 출처(DART·네이버 금융·SEC EDGAR). 클릭 시 원문으로 이동(새 탭).
@@ -10,7 +10,6 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *   리포트 페이지 in-page 전환(replaceState) 추종 위해 ?q 폴링(1s)으로 종목 동기화.
  * 이름 = stock_report_public(KR)/us_stock_report_public(US)에서 ticker→name 매핑(있으면). 없어도 링크는 ticker로 동작.
  * 테마 = body[data-framer-theme] 자가 추종.
- * 🚨 면책 문구 제거(2026-06-26, PM) — "VERITY 자체 점수·추천·작성 아님" 류는 사이트 하단 단일 면책으로 통합. 출처 표기는 유지.
  */
 
 interface Props {
@@ -62,6 +61,17 @@ function linksFor(tk: string): { label: string; src: string; url: string }[] {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicCompanyReports(props: Props) {
+    // ETF/ETN 선택 시 자기 숨김 — StockReport 가 body[data-verity-asset-kind] 신호 발행 (2026-07-10)
+    const [assetKind, setAssetKind] = useState<string>("stock")
+    useEffect(() => {
+        if (typeof document === "undefined" || !document.body) return
+        const read = () => setAssetKind(document.body.dataset.verityAssetKind || "stock")
+        read()
+        if (typeof MutationObserver === "undefined") return
+        const obs = new MutationObserver(read)
+        obs.observe(document.body, { attributes: true, attributeFilter: ["data-verity-asset-kind"] })
+        return () => obs.disconnect()
+    }, [])
     const { ticker, krUniverseUrl, usUniverseUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
@@ -131,7 +141,7 @@ export default function PublicCompanyReports(props: Props) {
 
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT,
-        padding: narrow ? "0 14px" : "0 18px", boxSizing: "border-box", color: C.ink,
+        padding: narrow ? 14 : 18, boxSizing: "border-box", color: C.ink,
     }
     const card: CSSProperties = {
         background: C.card, borderRadius: 16, padding: narrow ? 14 : 18, boxSizing: "border-box",
@@ -145,6 +155,8 @@ export default function PublicCompanyReports(props: Props) {
             </div>
         )
     }
+
+    if (assetKind === "etf") return null  // ETF/ETN = 기업 전용 섹션 숨김
 
     return (
         <div ref={rootRef} style={wrap}>
