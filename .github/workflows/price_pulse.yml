@@ -110,3 +110,13 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           personal_token: ${{ secrets.VERITY_DATA_PAT }}
           blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
+
+      - name: Warm stock_slice (콜드 스타트 제거)
+        # 5분 주기 핑으로 슬라이스 함수 인스턴스+모듈캐시(30분 TTL) 상시 웜 유지 (2026-07-10).
+        # 웜 인스턴스 = 임의 티커 조회도 메모리 슬라이스(~0.2s). 콜드(첫 요청 8소스 로드 ~2.8s) 사용자 노출 차단.
+        if: always()
+        continue-on-error: true
+        run: |
+          for tk in 005930 AAPL; do
+            curl -s -o /dev/null -m 20 "https://project-yw131.vercel.app/api/stock_slice?ticker=$tk" || true
+          done
