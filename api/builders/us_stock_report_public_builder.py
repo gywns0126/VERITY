@@ -22,6 +22,9 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 SUMMARY_PATH = os.path.join(_ROOT, "data", "us_financials", "_summary.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "us_stock_report_public.json")
 US_CONSENSUS_PATH = os.path.join(_ROOT, "data", "us_analyst_consensus.json")
+# 무료 티어: 애널리스트 컨센서스(yfinance 경유 · 목표가/의견 실권리 = Benzinga/S&P) 공개 재배포 비노출.
+# 유료 라이선스(Polygon×Benzinga 등) 후 PUBLIC_CONSENSUS=1 로 flip. (권리감사 쟁점3)
+_PUBLIC_CONSENSUS = os.environ.get("PUBLIC_CONSENSUS", "0") == "1"
 # yfinance rec_key → 한글 (외부 집계 사실, 자체 의견 아님 — RULE 7 fact_safe)
 REC_KEY_KO = {"strong_buy": "적극 매수", "buy": "매수", "hold": "중립", "sell": "매도", "strong_sell": "적극 매도"}
 
@@ -282,13 +285,61 @@ def _latest_annual(series: Any) -> Optional[float]:
         return None
 
 
+# 통화 심볼 — 비USD 보고(외국 상장) 재무 표시용 (2026-07-09). 미등록 통화는 코드 프리픽스.
+_CCY_SYM = {"USD": "$", "CAD": "C$", "AUD": "A$", "EUR": "€", "GBP": "£", "JPY": "¥",
+            "HKD": "HK$", "CNY": "¥", "CHF": "CHF ", "ILS": "₪", "SGD": "S$", "NZD": "NZ$", "BRL": "R$"}
+
+
+def _ccy_sym(ccy: Any) -> str:
+    c = str(ccy or "USD").upper()
+    return _CCY_SYM.get(c, c + " ")
+
+
+def _money_compact(v: Any, ccy: Any = "USD") -> str | None:
+    s = _usd_compact(v)  # "$X.XB"
+    if s is None:
+        return None
+    return s if str(ccy or "USD").upper() == "USD" else _ccy_sym(ccy) + s[1:]
+
+
+def _money_compact_signed(v: Any, ccy: Any = "USD") -> str | None:
+    s = _usd_compact_signed(v)  # "$X.XB" or "-$X.XB"
+    if s is None or str(ccy or "USD").upper() == "USD":
+        return s
+    if s.startswith("-$"):
+        return "-" + _ccy_sym(ccy) + s[2:]
+    if s.startswith("$"):
+        return _ccy_sym(ccy) + s[1:]
+    return s
+
+
+_COMPACT_CACHE = None
+
+
+def _compact_store() -> Dict[str, Any]:
+    """us_fin_annual_compact 커밋 폴백 (모듈 1회 로드). CI per-ticker 부재 시 PER/PBR·fin_series 소스."""
+    global _COMPACT_CACHE
+    if _COMPACT_CACHE is None:
+        try:
+            _COMPACT_CACHE = (json.load(open(FIN_COMPACT_PATH, encoding="utf-8")) or {}).get("stocks") or {}
+        except (OSError, json.JSONDecodeError):
+            _COMPACT_CACHE = {}
+    return _COMPACT_CACHE
+
+
 def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
-    """per-ticker us_financials/{TK}.json series_annual → 최근 연간 순이익·자기자본 (PER/PBR 자체계산용)."""
+    """per-ticker us_financials/{TK}.json → 최근 연간 순이익·자기자본 (PER/PBR 자체계산용).
+    🚨 per-ticker 부재(CI 재빌드) 시 압축본 fl 폴백 — PER/PBR 유실 방지 (2026-07-10)."""
     p = os.path.join(_ROOT, "data", "us_financials", f"{ticker}.json")
     try:
         with open(p, "r", encoding="utf-8") as f:
             doc = json.load(f) or {}
     except (OSError, json.JSONDecodeError):
+        fl = (_compact_store().get(ticker) or {}).get("fl")  # 압축본 폴백
+        return dict(fl) if isinstance(fl, dict) else {}
+    # 🚨 비USD 보고(외국 상장, CAD 등) — 시총(USD)÷native 이익 = 통화혼용이라 PER/PBR·EPS·FCF 자체계산
+    #   억제(RULE 7, 틀린 배수 노출 금지). 재무제표(financials.groups)는 native 통화로 별도 표시.
+    if str((doc.get("meta") or {}).get("currency") or "USD").upper() != "USD":
         return {}
     sa = doc.get("series_annual") or {}
     der = doc.get("derived") or {}
@@ -299,6 +350,9 @@ def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
 
 
 EARN_PATTERN_PATH = os.path.join(_ROOT, "data", "us_earnings_pattern.json")
+# 연간 재무 압축본 (커밋됨) — CI 재빌드에서 per-ticker 캐시(gitignore) 부재 시 폴백 소스.
+# 🚨 2026-07-04·07-09 실사고 재발 방지: 캐시 있으면 계산+압축본 갱신, 없으면 압축본 사용.
+FIN_COMPACT_PATH = os.path.join(_ROOT, "data", "us_fin_annual_compact.json")
 
 
 def _earnings_window(filings: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -363,13 +417,14 @@ def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], O
     except (OSError, json.JSONDecodeError):
         return None, None
     sa = doc.get("series_annual") or {}
+    ccy = str((doc.get("meta") or {}).get("currency") or "USD").upper()  # 보고 통화(USD/CAD 등)
     rev_y = _annual_by_year(sa.get("revenue"))
     op_y = _annual_by_year(sa.get("operating_income"))
     net_y = _annual_by_year(sa.get("net_income"))
 
     years = sorted(set(rev_y) | set(op_y) | set(net_y))[-12:]
     fin_series = [
-        {"year": y, "revenue": rev_y.get(y), "op": op_y.get(y), "net": net_y.get(y)}
+        {"year": y, "revenue": rev_y.get(y), "op": op_y.get(y), "net": net_y.get(y), "currency": ccy}
         for y in years
         if rev_y.get(y) is not None or op_y.get(y) is not None or net_y.get(y) is not None
     ]
@@ -387,16 +442,17 @@ def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], O
         rev, gp, op, pre, net = rev_y.get(y), gp_y.get(y), op_y.get(y), pre_y.get(y), net_y.get(y)
 
         def _row(k: str, v: Optional[float], signed: bool = False) -> Optional[Dict[str, str]]:
-            s = _usd_compact_signed(v) if signed else _usd_compact(v)
+            s = _money_compact_signed(v, ccy) if signed else _money_compact(v, ccy)
             return {"k": k, "v": s} if s else None
 
+        annual_label = "연간 10-K" if ccy == "USD" else "연간 40-F/20-F"  # 외국 상장 = 외국 연차 폼
         pl_rows = [r for r in [
             _row("매출", rev),
             _row("매출총이익", gp, signed=True),
             _row("영업이익", op, signed=True),
             _row("세전이익", pre, signed=True),
             _row("순이익", net, signed=True),
-            ({"k": "EPS(희석)", "v": f"${eps_y[y]:,.2f}"} if eps_y.get(y) is not None else None),
+            ({"k": "EPS(희석)", "v": f"{_ccy_sym(ccy)}{eps_y[y]:,.2f}"} if eps_y.get(y) is not None else None),
             ({"k": "매출총이익률", "v": f"{gp / rev * 100:.1f}%"} if gp is not None and rev else None),
             ({"k": "영업이익률", "v": f"{op / rev * 100:.1f}%"} if op is not None and rev else None),
         ] if r]
@@ -406,16 +462,18 @@ def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], O
         ] if r]
         groups = []
         if pl_rows:
-            groups.append({"title": "손익계산서 (연간 10-K)", "rows": pl_rows})
+            groups.append({"title": f"손익계산서 ({annual_label})", "rows": pl_rows})
         if bs_rows:
             groups.append({"title": "재무상태표", "rows": bs_rows})
         if groups:
             values = {}
-            if _usd_compact(rev):
-                values["매출"] = _usd_compact(rev)
-            if _usd_compact_signed(net):
-                values["순이익"] = _usd_compact_signed(net)
+            if _money_compact(rev, ccy):
+                values["매출"] = _money_compact(rev, ccy)
+            if _money_compact_signed(net, ccy):
+                values["순이익"] = _money_compact_signed(net, ccy)
             financials = {"period": str(y), "values": values, "groups": groups}
+            if ccy != "USD":
+                financials["currency"] = ccy  # 프론트 통화 라벨(단위: CAD 등)
 
     return fin_series, financials
 
@@ -453,6 +511,8 @@ def _usd_compact_signed(v: Any) -> str | None:
 
 def _load_us_consensus() -> Dict[str, Dict[str, Any]]:
     """us_analyst_consensus.json(yfinance 외부 집계) → {ticker: 컨센서스 raw}. 자체 의견 아님(RULE 7 fact_safe)."""
+    if not _PUBLIC_CONSENSUS:
+        return {}  # 무료 티어 = 컨센서스 재배포 비노출 → 전 종목 consensus 블록 None (PUBLIC_CONSENSUS=1 로 flip)
     try:
         with open(US_CONSENSUS_PATH, "r", encoding="utf-8") as f:
             data = json.load(f) or {}
@@ -554,14 +614,16 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
     # 업종 한글화 (정적 SIC 맵, 런타임 번역 0). 미매핑 시 영문 유지. 영문은 business_en 보존.
     sic_ko = sic_ko or {}
     business_ko = sic_ko.get(sic_desc, sic_desc)
-    # sic_description 결손(MSFT/JPM 등 flagship) 시 numeric SIC fallback.
+    # sic_description 결손 시 numeric SIC fallback. 🚨 대형주 입력은 sic_description 0%·numeric sic 99%
+    #   (2026-07-09 실측) → 정밀 4자리 맵(_SIC_CODE_KO 32종) 우선, 미매핑 시 2자리 대분류(_SIC_MAJOR_KO,
+    #   전 SIC 커버)로 폴백해 business 33%→~99% 채움.
     if not business_ko:
         try:
             _sic_n = int(row.get("sic")) if row.get("sic") is not None else None
         except (TypeError, ValueError):
             _sic_n = None
         if _sic_n is not None:
-            business_ko = _SIC_CODE_KO.get(_sic_n, "")
+            business_ko = _SIC_CODE_KO.get(_sic_n, "") or _SIC_MAJOR_KO.get(str(_sic_n // 100).zfill(2), "")
     # header — 시총·거래대금 (universe 캐시, USD). 52주 범위는 가격 history 부재로 생략(클라이언트 라이브 가격 보완).
     cap = caps.get((row.get("ticker") or "").upper(), {})
     header: Dict[str, str] = {}
@@ -688,15 +750,39 @@ def main() -> int:
                     n_disc += 1
             print(f"[us_stock_report] disclosures 부착 {n_disc}/{len(stocks)} 종목 (us_disclosure_feed)", file=sys.stderr)
         # 연간 재무추이(fin_series)·재무요약(financials) — series_annual(10-K) 주입 (0%→95%, 커버리지 스프린트)
-        n_fs = 0
+        # 🚨 소스 계층: per-ticker 캐시(신선) → us_fin_annual_compact(커밋 폴백). 캐시 계산분은 압축본에 저장(자가 유지).
+        #   per-ticker 캐시는 gitignore(CI 부재) → 압축본 폴백 없으면 CI 재빌드 시 재무 전량 유실(2026-07-04·07-09 실사고).
+        try:
+            with open(FIN_COMPACT_PATH, encoding="utf-8") as _f:
+                _compact = (json.load(_f) or {}).get("stocks") or {}
+        except (OSError, json.JSONDecodeError):
+            _compact = {}
+        n_fs = n_from_cache = 0
         for s in stocks:
-            fs, fin = _load_us_annual_pack(str(s.get("ticker") or ""))
+            tk = str(s.get("ticker") or "")
+            fs, fin = _load_us_annual_pack(tk)
+            if fs or fin:
+                _cache_p = os.path.join(_ROOT, "data", "us_financials", f"{tk}.json")
+                fl = _load_fin_latest(tk) if os.path.exists(_cache_p) else (_compact.get(tk) or {}).get("fl")
+                _compact[tk] = {"fs": fs, "fin": fin, "fl": fl or None}  # fl = PER/PBR 입력(압축본 자가유지)
+                n_from_cache += 1
+            else:
+                c = _compact.get(tk) or {}
+                fs, fin = c.get("fs"), c.get("fin")
             if fs:
                 s["fin_series"] = fs
                 n_fs += 1
             if fin:
                 s["financials"] = fin
-        print(f"[us_stock_report] fin_series 부착 {n_fs}/{len(stocks)} 종목 (series_annual 10-K)", file=sys.stderr)
+        try:
+            with open(FIN_COMPACT_PATH, "w", encoding="utf-8") as _f:
+                json.dump({"_meta": {"generated_at": _now_kst().isoformat(),
+                                     "source": "series_annual(10-K) 압축본 — CI 캐시 부재 폴백",
+                                     "count": len(_compact)}, "stocks": _compact}, _f, ensure_ascii=False)
+        except OSError as _e:
+            print(f"[us_stock_report] 압축본 저장 실패: {_e}", file=sys.stderr)
+        print(f"[us_stock_report] fin_series 부착 {n_fs}/{len(stocks)} 종목 "
+              f"(캐시 {n_from_cache} · 폴백 {n_fs - n_from_cache if n_fs >= n_from_cache else 0})", file=sys.stderr)
         # 어닝 캘린더 — EDGAR 제출 패턴 자체계산 (us_earnings_pattern.json: 초기 backfill + incremental 일일 유지)
         try:
             with open(EARN_PATTERN_PATH, encoding="utf-8") as f:
