@@ -179,7 +179,25 @@ class handler(BaseHTTPRequestHandler):
             "note": str(body.get("note", "")),
             "entry_price": _num(body.get("entry_price")),  # None 허용(기록 시 가격 미저장)
         }
-        try:
+        # 커뮤니티 공개 토글(020) — 키가 온 요청만 반영. 공개 전환 = 별명 필수(피드 표시명).
+        # 별명 없으면 거부 대신 비공개로 저장 + 플래그 반환 (메모 유실 방지).
+        is_public = None
+        nickname_required = False
+        if "is_public" in body:
+            is_public = bool(body.get("is_public"))
+            if is_public:
+                try:
+                    prof = sb.select("public_profiles", {
+                        "id": f"eq.{user_id}", "select": "id", "limit": "1",
+                    })
+                    if not prof:
+                        is_public = False
+                        nickname_required = True
+                except Exception:
+                    pass  # 020 미적용 DB — view 부재. 아래 폴백에서 is_public 자체가 제거됨
+            payload["is_public"] = is_public
+
+        def _write(p):
             # upsert — 동일 (user_id, ticker) 있으면 갱신, 없으면 삽입
             existing = sb.select("user_thesis", {
                 "user_id": f"eq.{user_id}", "ticker": f"eq.{ticker}",
@@ -187,12 +205,24 @@ class handler(BaseHTTPRequestHandler):
             }, user_jwt=jwt)
             if existing:
                 rows = sb.update("user_thesis", {"id": existing[0]["id"], "user_id": user_id},
-                                 payload, user_jwt=jwt)
-                return _json_response(self, rows[0] if rows else {}, 200)
-            payload["user_id"] = user_id  # 서버 검증 user_id 만
-            row = sb.insert("user_thesis", payload, user_jwt=jwt)
-            _json_response(self, row, 201)
+                                 p, user_jwt=jwt)
+                return (rows[0] if rows else {}), 200
+            row = sb.insert("user_thesis", {**p, "user_id": user_id}, user_jwt=jwt)  # 서버 검증 user_id 만
+            return row, 201
+
+        try:
+            data, status = _write(payload)
+            if nickname_required and isinstance(data, dict):
+                data["nickname_required"] = True
+            _json_response(self, data, status)
         except Exception as e:
+            # 020 미적용 DB(is_public 컬럼 부재) 폴백 — 저널 저장은 무회귀
+            if is_public is not None:
+                try:
+                    data, status = _write({k: v for k, v in payload.items() if k != "is_public"})
+                    return _json_response(self, data, status)
+                except Exception as e2:
+                    return _json_response(self, {"error": _safe_err(e2, "DB 쓰기 실패")}, 500)
             _json_response(self, {"error": _safe_err(e, "DB 쓰기 실패")}, 500)
 
     def do_DELETE(self):
