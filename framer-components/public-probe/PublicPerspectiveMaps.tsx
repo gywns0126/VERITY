@@ -294,7 +294,7 @@ function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) =
             <div style={{ position: "relative", width: 34, height: 34, flexShrink: 0 }}>
                 {!err && bfSrc ? (
                     <img src={bfSrc} alt="" width={34} height={34} loading="lazy" onError={() => setErr(true)}
-                        style={{ width: 34, height: 34, borderRadius: 11, objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker), background: "#fff", display: "block" }} />
+                        style={{ width: 34, height: 34, borderRadius: 11, objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker), display: "block" }} />
                 ) : (
                     <span style={{ width: 34, height: 34, borderRadius: 11, background: bfInitialBg(ticker), color: "#ffffff", fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initial}</span>
                 )}
