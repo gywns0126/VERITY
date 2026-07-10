@@ -1703,7 +1703,7 @@ export default function PublicStockReport(props: Props) {
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: C.down }}>매도 {usForen.insider.sell_n || 0}건</span>
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: (usForen.insider.net_change || 0) >= 0 ? C.up : C.down }}>순증감 {fmtShares(usForen.insider.net_change)}</span>
                                 </div>
-                                {usForen.insider.trades.slice(0, 6).map((t, i) => (
+                                {usForen.insider.trades.slice(0, 6).map((t: any, i: number) => (
                                     <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
                                         <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.person || "—"}{t.position ? " · " + t.position : ""}</span>
                                         <span style={{ fontWeight: 800, color: (t.change || 0) >= 0 ? C.up : C.down, flexShrink: 0 }}>{fmtShares(t.change)} <span style={{ color: C.faint, fontWeight: 600 }}>({t.code || "?"})</span></span>
@@ -1723,7 +1723,7 @@ export default function PublicStockReport(props: Props) {
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: C.amber }}>13D {usForen.holdings.n_13d || 0}</span>
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: C.sub }}>13G {usForen.holdings.n_13g || 0}</span>
                                 </div>
-                                {usForen.holdings.filings.slice(0, 5).map((f, i) => (
+                                {usForen.holdings.filings.slice(0, 5).map((f: any, i: number) => (
                                     <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
                                         <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.filer || "—"} <span style={{ color: C.faint }}>· {f.date}</span></span>
                                         <span style={{ fontWeight: 800, flexShrink: 0, color: String(f.type || "").indexOf("13D") === 0 ? C.amber : C.sub }}>{f.type}{f.pct != null ? " · " + f.pct + "%" : ""}</span>
@@ -1739,7 +1739,7 @@ export default function PublicStockReport(props: Props) {
                             {sectionTitle("美 스마트머니 · 13F", "집중형 액티브 펀드")}
                             <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                                 <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 10 }}>보유 펀드 {usForen.smart_money.holder_count || usForen.smart_money.holders.length}곳 <span style={{ color: C.faint, fontWeight: 600 }}>· 합산 ${((usForen.smart_money.total_value_usd || 0) / 1e9).toFixed(1)}B</span></div>
-                                {usForen.smart_money.holders.slice(0, 6).map((h, i) => (
+                                {usForen.smart_money.holders.slice(0, 6).map((h: any, i: number) => (
                                     <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
                                         <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.fund}</span>
                                         <span style={{ flexShrink: 0, fontWeight: 800 }}><span style={{ color: (h.change_type === "NEW" || h.change_type === "INCREASED") ? C.green : h.change_type === "DECREASED" ? C.down : C.faint }}>{h.change_type}</span> <span style={{ color: C.faint, fontWeight: 600 }}>${((h.value_usd || 0) / 1e9).toFixed(1)}B</span></span>
