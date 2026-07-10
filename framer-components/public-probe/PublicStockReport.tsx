@@ -870,6 +870,7 @@ function readBodyDark(): boolean {
 
 export default function PublicStockReport(props: Props) {
     const { stockUrl, usStockUrl, usSmallcapUrl, flowUrl, forensicsUrl, insiderUrl, warnUrl, lendingUrl, supplyUrl, apiBase, dark } = props
+    const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!dark : readBodyDark()))
     const C = (RenderTarget.current() === RenderTarget.canvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
@@ -935,8 +936,6 @@ export default function PublicStockReport(props: Props) {
     const [starItemId, setStarItemId] = useState<any>(null)
     const [starBusy, setStarBusy] = useState(false)
     const [starHint, setStarHint] = useState(false)
-
-    const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     useEffect(() => {
         if (typeof window === "undefined" || !window.matchMedia) return
