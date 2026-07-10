@@ -42,6 +42,11 @@ runs:
         # history / metadata/cron_health.jsonl / metadata/data_pipeline_health.json).
         # 기존엔 Framer 가 VERITY 본 repo public 으로 직접 페치. private 전환 후 죽기 때문에
         # publish-data 에 합쳐 Blob + VERITY-data 양쪽 모두 publish.
+        # 🚫 us_analyst_consensus.json 재추가 금지 (PM 확정 2026-07-10) — 컨센서스 = 발행 제외.
+        #   yfinance 목표가·투자의견 = Benzinga/S&P 실권리(재배포 blocker, 권리감사 쟁점3).
+        #   대체 = 리포트 내 출처 링크아웃(구현 완료) · 숫자 부활 = 유료 티어 Polygon×Benzinga
+        #   정식 라이선스($99/월) 계약 후에만. 세션 간 재추가 핑퐁 2회(9c8397eea·414ff9431) —
+        #   이 결정 변경 = PM 재승인 + memory(project_kr_index_public_data_2026_07_08) 갱신 필수.
         for f in portfolio.json recommendations.json consensus_data.json \
                  system_health_snapshot.json \
                  macro_snapshot.json \
