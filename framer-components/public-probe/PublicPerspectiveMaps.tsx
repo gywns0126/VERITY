@@ -201,7 +201,12 @@ function bfLogoBg(ticker: any): string {
     // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
     const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
-    return c ? c + (__bfStyle.tintA || "40") : "#ffffff"  // 기본 25% 알파 틴트 (style.tintA 노브로 조절), 무채색/미보유 = 흰 타일
+    // 솔리드 파스텔 (투명도 0%) — 브랜드색을 흰색과 혼합한 불투명 타일 (다크모드에서도 탁해지지 않음, 토스식).
+    // 혼합 비율 = style.mixPct 노브 (기본 30% 브랜드색 + 70% 흰색). 구형 브라우저 폴백 = 알파 틴트.
+    if (!c) return "#ffffff"
+    const mix = Number(__bfStyle.mixPct || 30)
+    try { if (typeof CSS !== "undefined" && CSS.supports && CSS.supports("color", "color-mix(in srgb, red 50%, white)")) return `color-mix(in srgb, ${c} ${mix}%, #ffffff)` } catch (e2) {}
+    return c + (__bfStyle.tintA || "4D")
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
