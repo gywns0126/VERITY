@@ -2987,7 +2987,8 @@ def main():
                     name=f"DART-Facil({stock.get('name')})", timeout=60, default={},
                 )
                 if raw and not raw.get("error") and raw.get("char_count", 0) > 300:
-                    if prev_fac.get("rcept_no") == raw.get("rcept_no") and prev_fac.get("data"):
+                    # tangible_assets 키 있는 신 스키마 파싱만 재사용 — 구 캐시(토지 필드 부재)는 1회 재파싱(자가치유).
+                    if prev_fac.get("rcept_no") == raw.get("rcept_no") and prev_fac.get("data") and "tangible_assets" in prev_fac["data"]:
                         stock["facilities_dart"] = prev_fac
                         fac_ok += 1
                     else:
