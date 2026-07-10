@@ -359,7 +359,7 @@ export default function AlphaNestAuth(props: Props) {
         } finally {
             setBusy(false)
         }
-    }, [busy, mode, email, password, displayName, agreed, url, anonKey, afterLoginPath])
+    }, [busy, mode, email, password, displayName, agreed, url, anonKey, afterLoginPath, redirectUrl])
 
     const googleLogin = () => {
         if (busy) return
