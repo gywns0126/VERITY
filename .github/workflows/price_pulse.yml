@@ -117,6 +117,10 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
-          for tk in 005930 AAPL; do
-            curl -s -o /dev/null -m 20 "https://project-yw131.vercel.app/api/stock_slice?ticker=$tk" || true
+          # 인기 상위 20 (KR 시총상위 10 + US 10) — CDN 캐시 매 5분 갱신 유지 → 상시 ~0.05s.
+          # 미워밍 티커도 웜 인스턴스 도달 시 ~0.7s (모듈캐시). curl 병렬(-Z 미지원 환경 고려 백그라운드).
+          for tk in 005930 000660 373220 207940 005380 000270 068270 005490 035420 051910 \
+                    AAPL MSFT NVDA GOOGL AMZN TSLA META AVGO BRK-B WULF; do
+            curl -s -o /dev/null -m 20 "https://project-yw131.vercel.app/api/stock_slice?ticker=$tk" &
           done
+          wait || true
