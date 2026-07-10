@@ -1,6 +1,6 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useState, type CSSProperties } from "react"
-import { Heart, User } from "@phosphor-icons/react"
+import { DotsThree, Heart, User } from "@phosphor-icons/react"
 
 /**
  * 내 관점(thesis) 노트 — VERITY 공개 터미널. 종목 페이지에서 *사용자 본인*의 매매 결정 thesis 를 기록·재방문.
@@ -142,6 +142,7 @@ export default function PublicThesisNote(props: Props) {
     const [feedMsg, setFeedMsg] = useState("")   // 피드 영역 메시지(좋아요/신고 로그인 안내)
     const [feed, setFeed] = useState<any[]>([])
     const [reported, setReported] = useState<Record<string, boolean>>({})
+    const [menuId, setMenuId] = useState("")   // ⋯ 메뉴가 열린 피드 아이템 id (인스타식 신고 접기)
 
     const loadFeed = (t: string) => {
         if (onCanvas || !t) return
@@ -155,6 +156,7 @@ export default function PublicThesisNote(props: Props) {
     useEffect(() => {
         setFeed([])
         setReported({})
+        setMenuId("")
         setPubMsg("")
         setFeedMsg("")
         if (onCanvas) { setFeed(DEMO_FEED); return }
@@ -265,7 +267,7 @@ export default function PublicThesisNote(props: Props) {
         if (token) setTimeout(() => loadFeed(tk), 600)  // 내 공개 관점이 있었다면 피드에서 제거 반영
     }
 
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: 16, boxSizing: "border-box", color: C.ink }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: "0 16px", boxSizing: "border-box", color: C.ink }
     const stanceColor = (id: string) => { const s = STANCES.find((x) => x.id === id); return s ? (C as any)[s.key] : C.faint }
     const stanceLabel = (id: string) => { const s = STANCES.find((x) => x.id === id); return s ? s.label : "관망" }
 
@@ -291,12 +293,15 @@ export default function PublicThesisNote(props: Props) {
     }
     const reportItem = (it: any) => {
         if (onCanvas || reported[it.id]) return
-        if (!token) { setFeedMsg("신고는 로그인 후 가능해요"); return }
+        if (!token) { setMenuId(""); setFeedMsg("신고는 로그인 후 가능해요"); return }
         setReported((m) => ({ ...m, [it.id]: true }))
+        setMenuId("")
         fetch(base + "/api/thesis_feed", { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ action: "report", thesis_id: it.id, reason: "" }) }).catch(() => {})
     }
     const feedSection = (
         <div style={{ ...card, marginTop: 10 }}>
+            {/* ⋯ 메뉴 바깥 클릭 닫기 — 투명 backdrop (메뉴 zIndex 30 아래) */}
+            {menuId && <div onClick={() => setMenuId("")} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
             <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
                 <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>공개 관점</span>
                 <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>· 이 종목을 기록한 사람들{feed.length ? ` ${feed.length}` : ""}</span>
@@ -321,6 +326,22 @@ export default function PublicThesisNote(props: Props) {
                             <span style={{ fontSize: 12.5, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.nickname}{it.mine ? " (나)" : ""}</span>
                             <span style={{ fontSize: 11, fontWeight: 800, color: stanceColor(it.stance), flexShrink: 0 }}>{stanceLabel(it.stance)}</span>
                             <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginLeft: "auto", flexShrink: 0 }}>{(it.created_at || "").slice(0, 10)}</span>
+                            {!it.mine && (
+                                <span style={{ position: "relative", flexShrink: 0, display: "inline-flex" }}>
+                                    <button onClick={() => setMenuId(menuId === it.id ? "" : it.id)} aria-label="더보기"
+                                        style={{ border: "none", background: "transparent", cursor: "pointer", padding: 2, margin: -2, display: "inline-flex", alignItems: "center", color: C.faint }}>
+                                        <DotsThree size={18} weight="bold" color={C.faint} />
+                                    </button>
+                                    {menuId === it.id && (
+                                        <div style={{ position: "absolute", top: 22, right: 0, zIndex: 30, background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, boxShadow: "0 4px 14px rgba(0,0,0,0.12)", overflow: "hidden", minWidth: 104 }}>
+                                            <button onClick={() => reportItem(it)} disabled={!!reported[it.id]}
+                                                style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "transparent", cursor: reported[it.id] ? "default" : "pointer", padding: "10px 14px", fontFamily: FONT, fontSize: 12, fontWeight: 700, color: reported[it.id] ? C.faint : C.up, whiteSpace: "nowrap" }}>
+                                                {reported[it.id] ? "신고 접수됨" : "신고하기"}
+                                            </button>
+                                        </div>
+                                    )}
+                                </span>
+                            )}
                         </div>
                         {it.note && <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 500, lineHeight: 1.5, marginTop: 6, whiteSpace: "pre-wrap" }}>{it.note}</div>}
                         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 7 }}>
@@ -329,12 +350,6 @@ export default function PublicThesisNote(props: Props) {
                                 <Heart size={14} weight={it.liked ? "fill" : "regular"} color={it.liked ? C.up : C.faint} />
                                 {it.likes > 0 ? it.likes : "좋아요"}
                             </button>
-                            {!it.mine && (
-                                <button onClick={() => reportItem(it)}
-                                    style={{ border: "none", background: "transparent", cursor: reported[it.id] ? "default" : "pointer", padding: 0, fontFamily: FONT, fontSize: 10.5, fontWeight: 600, color: C.faint }}>
-                                    {reported[it.id] ? "신고 접수됨" : "신고"}
-                                </button>
-                            )}
                         </div>
                     </div>
                 ))
