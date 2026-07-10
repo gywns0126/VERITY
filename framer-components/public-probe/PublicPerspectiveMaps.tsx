@@ -184,7 +184,7 @@ function useBfLogoMap(): Record<string, string> | null {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
     return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
 }
 function isKR(tk: any): boolean { return /^\d{6}$/.test(String(tk || "")) }
@@ -271,7 +271,7 @@ function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) =
             <div style={{ position: "relative", width: 34, height: 34, flexShrink: 0 }}>
                 {!err && bfSrc ? (
                     <img src={bfSrc} alt="" width={34} height={34} loading="lazy" onError={() => setErr(true)}
-                        style={{ width: 34, height: 34, borderRadius: 9, objectFit: "cover", background: "#fff", display: "block" }} />
+                        style={{ width: 34, height: 34, borderRadius: 9, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: "#ffffff", background: "#fff", display: "block" }} />
                 ) : (
                     <span style={{ width: 34, height: 34, borderRadius: 9, background: C.violetSoft, color: C.violet, fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initial}</span>
                 )}

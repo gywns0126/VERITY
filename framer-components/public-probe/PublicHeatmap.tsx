@@ -48,7 +48,7 @@ function useBfLogoMap(): Record<string, string> | null {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
     return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
 }
 
@@ -473,7 +473,7 @@ export default function PublicHeatmap(props: Props) {
                                         }}>
                                         {big && (
                                             <>
-                                                {tw > 52 && th > 50 && (<img src={bfLogoSrc(t.m.ticker, __lmH, 16) || "data:,"} alt="" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 4, marginBottom: 2, background: "#ffffff", objectFit: "cover", display: "block" }} />)}
+                                                {tw > 52 && th > 50 && (<img src={bfLogoSrc(t.m.ticker, __lmH, 16) || "data:,"} alt="" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 4, marginBottom: 2, background: "#ffffff", objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: "#ffffff", display: "block" }} />)}
                                                 <span style={{ fontSize: tw > 130 ? 13 : tw > 80 ? 12 : 10.5, fontWeight: 800, color: txt, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", letterSpacing: "-0.3px", textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.35)" : "none" }}>{t.m.name}</span>
                                                 {th > 42 && <span style={{ fontSize: 10.5, fontWeight: 700, color: txt, opacity: 0.92, marginTop: 1, textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.3)" : "none" }}>{tileValLabel(metric, v)}</span>}
                                             </>
@@ -501,7 +501,7 @@ export default function PublicHeatmap(props: Props) {
                             boxShadow: "0 8px 26px rgba(0,0,0,0.22)", padding: "9px 11px", zIndex: 20, pointerEvents: "none", boxSizing: "border-box",
                         }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <img src={bfLogoSrc(hover.m.ticker, __lmH, 18) || "data:,"} alt="" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 5, background: "#ffffff", flexShrink: 0, objectFit: "cover" }} />
+                                <img src={bfLogoSrc(hover.m.ticker, __lmH, 18) || "data:,"} alt="" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 5, background: "#ffffff", flexShrink: 0, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: "#ffffff" }} />
                                 <span style={{ fontSize: 13, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{hover.m.name}</span>
                                 <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, flexShrink: 0 }}>{hover.m.ticker}</span>
                             </div>

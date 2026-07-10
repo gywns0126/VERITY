@@ -33,7 +33,7 @@ function useBfLogoMap(): Record<string, string> | null {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
     return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
@@ -67,7 +67,7 @@ function Logo({ ticker, name, C }: { ticker: string; name: string; C: any }) {
     if (err || !ticker || !bfSrc) {
         return <span style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 9, background: C.vtS, color: C.vt, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800 }}>{ch}</span>
     }
-    return <img src={bfSrc} alt="" width={30} height={30} onError={() => setErr(true)} style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 9, objectFit: "cover", display: "block", background: C.bg }} />
+    return <img src={bfSrc} alt="" width={30} height={30} onError={() => setErr(true)} style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 9, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: "#ffffff"}} />
 }
 
 /**
