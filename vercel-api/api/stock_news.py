@@ -209,17 +209,87 @@ def _fetch_search_api(name, display=30):
         return []
 
 
+# ── Google News RSS (종목명 키워드, 무료·헤드라인+링크아웃) — 2번째 온디맨드 소스 (2026-07-06 소스확장) ──
+# 네이버 검색 API 미인덱스분 + 비네이버 매체 보강. RSS=헤드라인+링크아웃(권리 안전, news_headlines 동일 관행).
+_GOOGLE_NEWS_RSS = "https://news.google.com/rss/search"
+_GN_ITEM_RE = re.compile(r"<item>(.*?)</item>", re.DOTALL)
+_GN_TITLE_RE = re.compile(r"<title>(.*?)</title>", re.DOTALL)
+_GN_LINK_RE = re.compile(r"<link>(.*?)</link>", re.DOTALL)
+_GN_DATE_RE = re.compile(r"<pubDate>(.*?)</pubDate>", re.DOTALL)
+_GN_SRC_RE = re.compile(r"<source[^>]*>(.*?)</source>", re.DOTALL)
+
+
+def _fetch_google_news(query, limit=20):
+    """Google News RSS(종목명 키워드) — 헤드라인+링크아웃. 정규식 파싱(lxml 미의존)."""
+    q = (query or "").strip()
+    if not q:
+        return []
+    try:
+        r = requests.get(_GOOGLE_NEWS_RSS,
+                         params={"q": q, "hl": "ko", "gl": "KR", "ceid": "KR:ko"},
+                         headers={"User-Agent": "VERITY-news-fetcher/1.0 (+https://github.com/gywns0126)"}, timeout=5)
+        if not r.ok:
+            return []
+        out = []
+        for block in _GN_ITEM_RE.findall(r.text)[:limit]:
+            tm = _GN_TITLE_RE.search(block)
+            title = _strip_html(tm.group(1)) if tm else ""
+            if not title:
+                continue
+            sm = _GN_SRC_RE.search(block)
+            source = _strip_html(sm.group(1)) if sm else ""
+            if source:  # Google title 끝 " - 매체" 접미사 제거 (하이픈/대시 변형 flex)
+                title = re.sub(r"\s*[-–—]\s*" + re.escape(source) + r"\s*$", "", title).strip()
+            lm = _GN_LINK_RE.search(block)
+            url = _strip_html(lm.group(1)) if lm else ""
+            dt_s = ""
+            dm = _GN_DATE_RE.search(block)
+            if dm:
+                try:
+                    from email.utils import parsedate_to_datetime
+                    from datetime import timezone as _tz
+                    pd = parsedate_to_datetime(dm.group(1).strip())
+                    if pd:
+                        dt_s = pd.astimezone(_tz.utc).replace(tzinfo=None).strftime("%Y.%m.%d %H:%M")
+                except Exception:  # noqa: BLE001
+                    pass
+            out.append({"title": title, "url": url, "source": source, "datetime": dt_s})
+        return out
+    except Exception as e:  # noqa: BLE001
+        _logger.warning("google news %s 실패: %s", query, e)
+        return []
+
+
+def _name_in_title(name, title):
+    """종목명이 제목에 '단어 경계'로 등장하는지 — 앞 글자가 한글/영숫자면 다른 단어의 꼬리.
+    예: '하이닉스' 제목에 '이닉스' 검색 = 하[이닉스] 부분매칭 → 오매칭(2026-07-10 사용자 보고).
+    한국어는 조사(가/는/도)가 이름 뒤에 바로 붙으므로 뒤 경계는 검사하지 않음."""
+    if not name or not title:
+        return False
+    try:
+        return re.search(r"(?<![가-힣A-Za-z0-9])" + re.escape(name), title) is not None
+    except re.error:
+        return name in title
+
+
 def fetch_stock_news(code, name="", max_items=15, pages=2):
     now = datetime.utcnow()  # dt_s(UTC naive)와 정합 (Vercel/로컬 TZ 무관)
-    # 스크래핑 → 네이버 공식 검색 API (2026-07-01 권리감사 쟁점5). 종목명 키워드, 단일 호출.
-    raw = _fetch_search_api(name, display=30)
-
     nm = (name or "").strip()
     # 종목명 핵심 토큰 (접미사 제거) — "JYP Ent."→"JYP", 한국 뉴스 제목 매칭률↑
     core = re.sub(r"\s*(Ent\.?|Corp\.?|Inc\.?|Co\.?,?\s*Ltd\.?|Ltd\.?|Holdings|홀딩스|그룹|㈜)\s*$",
                   "", nm, flags=re.IGNORECASE).strip()
     if " " in core:
         core = core.split()[0]
+    # 온디맨드 2소스 병렬 (네이버 검색 API + Google News RSS) — 10초 예산 내, 커버리지·화제성↑
+    raw = []
+    try:
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            f_naver = ex.submit(_fetch_search_api, nm, 30)
+            f_google = ex.submit(_fetch_google_news, core or nm)
+            raw = (f_naver.result() or []) + (f_google.result() or [])
+    except Exception as e:  # noqa: BLE001
+        _logger.warning("news 병렬 fetch 실패: %s", e)
+        raw = _fetch_search_api(nm, 30)
     clusters = {}
     for it in raw:
         if not it["title"]:
@@ -250,8 +320,13 @@ def fetch_stock_news(code, name="", max_items=15, pages=2):
             "related_disclosure": related,
             "_sort": dt.timestamp() if dt else 0,
         }
-        # 노이즈 = '시장'(이벤트 키워드 0) + 종목명 핵심토큰 미포함 → spill(부족 시만 사용)
-        (spill if (cat == "시장" and core and core not in it["title"]) else kept).append(rec)
+        # 노이즈 판정 (2026-07-10 경계매칭 강화 — 이닉스 페이지에 하이닉스 기사 유입 fix):
+        #  · 제목에 핵심토큰이 '부분매칭으로만' 존재(하[이닉스]) = 다른 종목 기사 강신호 → 카테고리 무관 spill
+        #  · '시장' 카테고리 + 경계매칭 없음 → spill (기존 룰의 경계 강화)
+        #  · 제목에 토큰 자체가 없는 비'시장' 기사 = 검색 질의 연관성 신뢰(기존 동작 유지)
+        _embedded_only = bool(core) and (core in it["title"]) and not _name_in_title(core, it["title"])
+        _market_nomatch = cat == "시장" and bool(core) and not _name_in_title(core, it["title"])
+        (spill if (_embedded_only or _market_nomatch) else kept).append(rec)
 
     kept.sort(key=lambda x: x["_sort"], reverse=True)
     spill.sort(key=lambda x: x["_sort"], reverse=True)
