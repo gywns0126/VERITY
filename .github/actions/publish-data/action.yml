@@ -42,7 +42,7 @@ runs:
         # history / metadata/cron_health.jsonl / metadata/data_pipeline_health.json).
         # 기존엔 Framer 가 VERITY 본 repo public 으로 직접 페치. private 전환 후 죽기 때문에
         # publish-data 에 합쳐 Blob + VERITY-data 양쪽 모두 publish.
-        for f in portfolio.json recommendations.json consensus_data.json \
+        for f in portfolio.json recommendations.json \
                  system_health_snapshot.json \
                  macro_snapshot.json \
                  crypto_macro.json \
@@ -81,7 +81,6 @@ runs:
                  us_insider_trades.json \
                  us_major_holdings.json \
                  us_smart_money_13f.json \
-                 us_analyst_consensus.json \
                  us_disclosure_forensics.json \
                  commodity_exposure.json \
                  market_warnings.json \

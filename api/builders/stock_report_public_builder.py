@@ -25,6 +25,9 @@ FUND_PATH = os.path.join(_ROOT, "data", "dart_fundamentals_kr.json")
 KRLISTED_PATH = os.path.join(_ROOT, "data", "kr_listed.json")
 NAMES_PATH = os.path.join(_ROOT, "data", "kr_stock_names.json")
 CONSENSUS_PATH = os.path.join(_ROOT, "data", "consensus_data.json")
+# 무료 티어: 증권사 컨센서스(네이버 경유·증권사 리서치 저작물 = 이중 IP) 공개 재배포 비노출.
+# 유료 라이선스(Fnguide 리셀러 등) 후 PUBLIC_CONSENSUS=1 로 flip. (권리감사 쟁점4)
+_PUBLIC_CONSENSUS = os.environ.get("PUBLIC_CONSENSUS", "0") == "1"
 CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
 SECTOR_MAP_PATH = os.path.join(_ROOT, "data", "kr_sector_map.json")
 KRXMKTCAP_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
@@ -301,10 +304,11 @@ def _consensus_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not c.get("consensus_available"):
         return None
     out: Dict[str, Any] = {}
-    if c.get("target_price"):
-        out["target_price"] = _fmt_won(c["target_price"])
-    if c.get("investment_opinion"):
-        out["opinion"] = str(c["investment_opinion"])
+    if _PUBLIC_CONSENSUS:  # 무료 = 컨센서스(증권사·이중 IP) 비노출 · 유료 flip
+        if c.get("target_price"):
+            out["target_price"] = _fmt_won(c["target_price"])
+        if c.get("investment_opinion"):
+            out["opinion"] = str(c["investment_opinion"])
     eps = rec.get("eps")
     try:
         if eps and float(eps) != 0:
@@ -778,11 +782,12 @@ def main() -> int:
             if not tk:
                 continue
             entry: Dict[str, Any] = {}
-            tp = _fmt_won(c.get("target_price"))
-            if tp:
-                entry["target_price"] = tp
-            if c.get("investment_opinion"):
-                entry["opinion"] = str(c["investment_opinion"])
+            if _PUBLIC_CONSENSUS:  # 무료 = 컨센서스 비노출 · 유료 flip
+                tp = _fmt_won(c.get("target_price"))
+                if tp:
+                    entry["target_price"] = tp
+                if c.get("investment_opinion"):
+                    entry["opinion"] = str(c["investment_opinion"])
             if entry:
                 consensus_map[tk] = entry
 
