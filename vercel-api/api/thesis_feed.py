@@ -1,7 +1,8 @@
 """
 Thesis 커뮤니티 피드 API — 종목별 공개 관점 + 좋아요 + 신고 (thesis.py 형제, 020 migration).
 
-GET  /api/thesis_feed?ticker=005930          → 공개 관점 목록 (익명 가능, JWT 있으면 liked/mine 플래그)
+GET  /api/thesis_feed?ticker=005930          → 종목별 공개 관점 목록 (익명 가능, JWT 있으면 liked/mine 플래그)
+GET  /api/thesis_feed?limit=30               → ticker 생략 = 전 종목 최신 글로벌 피드 (커뮤니티 페이지, 2026-07-10)
 POST /api/thesis_feed { action, thesis_id, reason? }  → like | unlike | report (로그인 필수)
 
 데이터 경계:
@@ -33,6 +34,7 @@ _GLOBAL_MAX_PER_HOUR = int(os.environ.get("THESIS_GLOBAL_HOURLY_LIMIT", "10000")
 
 _logger = logging.getLogger(__name__)
 _FEED_LIMIT = 20
+_FEED_LIMIT_MAX = 50
 _ACTIONS = {"like", "unlike", "report"}
 
 
@@ -121,8 +123,10 @@ class handler(BaseHTTPRequestHandler):
 
         qs = parse_qs(urlparse(self.path).query)
         ticker = (qs.get("ticker", [""])[0] or "").strip()
-        if not ticker:
-            return _json_response(self, {"error": "ticker 필요"}, 400)
+        try:
+            limit = max(1, min(_FEED_LIMIT_MAX, int(qs.get("limit", ["0"])[0] or 0))) or _FEED_LIMIT
+        except Exception:
+            limit = _FEED_LIMIT
 
         # 익명 조회 가능 — JWT 는 liked/mine 플래그용(검증 실패 = 익명 취급)
         viewer_id = None
@@ -130,15 +134,18 @@ class handler(BaseHTTPRequestHandler):
         if jwt:
             viewer_id = sb.verify_jwt(jwt)
 
+        # ticker 지정 = 종목 피드 / 생략 = 전 종목 글로벌 피드 (RLS ut_select_public 은 양쪽 동일 적용)
+        filters = {
+            "is_public": "eq.true",
+            "hidden": "eq.false",
+            "select": "id,user_id,ticker,stance,note,created_at,updated_at",
+            "order": "created_at.desc",
+            "limit": str(limit),
+        }
+        if ticker:
+            filters["ticker"] = f"eq.{ticker}"
         try:
-            rows = sb.select("user_thesis", {
-                "ticker": f"eq.{ticker}",
-                "is_public": "eq.true",
-                "hidden": "eq.false",
-                "select": "id,user_id,stance,note,created_at,updated_at",
-                "order": "created_at.desc",
-                "limit": str(_FEED_LIMIT),
-            })
+            rows = sb.select("user_thesis", filters)
         except Exception:
             return _json_response(self, {"items": []})  # 020 미적용 DB — 컬럼 부재
 
@@ -170,6 +177,7 @@ class handler(BaseHTTPRequestHandler):
             prof = profiles.get(r.get("user_id"), {})
             items.append({
                 "id": r.get("id"),
+                "ticker": r.get("ticker") or "",
                 "nickname": prof.get("nickname") or "익명",
                 "avatar": prof.get("avatar") or "",
                 "stance": r.get("stance") or "watch",
