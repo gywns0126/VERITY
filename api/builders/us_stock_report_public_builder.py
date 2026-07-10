@@ -310,14 +310,30 @@ def _money_compact_signed(v: Any, ccy: Any = "USD") -> str | None:
     return s
 
 
+_COMPACT_CACHE = None
+
+
+def _compact_store() -> Dict[str, Any]:
+    """us_fin_annual_compact 커밋 폴백 (모듈 1회 로드). CI per-ticker 부재 시 PER/PBR·fin_series 소스."""
+    global _COMPACT_CACHE
+    if _COMPACT_CACHE is None:
+        try:
+            _COMPACT_CACHE = (json.load(open(FIN_COMPACT_PATH, encoding="utf-8")) or {}).get("stocks") or {}
+        except (OSError, json.JSONDecodeError):
+            _COMPACT_CACHE = {}
+    return _COMPACT_CACHE
+
+
 def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
-    """per-ticker us_financials/{TK}.json series_annual → 최근 연간 순이익·자기자본 (PER/PBR 자체계산용)."""
+    """per-ticker us_financials/{TK}.json → 최근 연간 순이익·자기자본 (PER/PBR 자체계산용).
+    🚨 per-ticker 부재(CI 재빌드) 시 압축본 fl 폴백 — PER/PBR 유실 방지 (2026-07-10)."""
     p = os.path.join(_ROOT, "data", "us_financials", f"{ticker}.json")
     try:
         with open(p, "r", encoding="utf-8") as f:
             doc = json.load(f) or {}
     except (OSError, json.JSONDecodeError):
-        return {}
+        fl = (_compact_store().get(ticker) or {}).get("fl")  # 압축본 폴백
+        return dict(fl) if isinstance(fl, dict) else {}
     # 🚨 비USD 보고(외국 상장, CAD 등) — 시총(USD)÷native 이익 = 통화혼용이라 PER/PBR·EPS·FCF 자체계산
     #   억제(RULE 7, 틀린 배수 노출 금지). 재무제표(financials.groups)는 native 통화로 별도 표시.
     if str((doc.get("meta") or {}).get("currency") or "USD").upper() != "USD":
@@ -741,7 +757,9 @@ def main() -> int:
             tk = str(s.get("ticker") or "")
             fs, fin = _load_us_annual_pack(tk)
             if fs or fin:
-                _compact[tk] = {"fs": fs, "fin": fin}
+                _cache_p = os.path.join(_ROOT, "data", "us_financials", f"{tk}.json")
+                fl = _load_fin_latest(tk) if os.path.exists(_cache_p) else (_compact.get(tk) or {}).get("fl")
+                _compact[tk] = {"fs": fs, "fin": fin, "fl": fl or None}  # fl = PER/PBR 입력(압축본 자가유지)
                 n_from_cache += 1
             else:
                 c = _compact.get(tk) or {}
