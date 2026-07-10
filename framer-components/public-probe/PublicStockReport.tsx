@@ -27,7 +27,27 @@ const DARK = {
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const HEAD = FONT
-const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
 const WK = ["일", "월", "화", "수", "목", "금", "토"]
@@ -295,13 +315,15 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     const { ticker, name, market, C } = props
     const size = props.size || 38
     const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const bfSrc = bfLogoSrc(ticker, lm, size)
     const ch = (String(name || "?").trim().charAt(0)) || "?"
     const code = flagCode(market)
     const fsize = Math.round(size * 0.46)
     return (
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
-            {!err && ticker ? (
-                <img src={LOGO_BASE + String(ticker).replace(/-/g, ".") + ".png"} alt="" width={size} height={size}
+            {!err && bfSrc ? (
+                <img src={bfSrc} alt="" width={size} height={size}
                     onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: 11, objectFit: "cover", display: "block", background: C.bg }} />
             ) : (
@@ -2059,6 +2081,19 @@ export default function PublicStockReport(props: Props) {
                             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11.5, color: C.sub, fontWeight: 600, marginTop: 11 }}>
                                 {ownership.parent && <span>모회사 · {ownership.parent}</span>}
                                 {ownership.sub_count != null && <span>계열사 · {ownership.sub_count}개</span>}
+                            </div>
+                        )}
+                        {Array.isArray(ownership.subsidiaries) && ownership.subsidiaries.length > 0 && (
+                            <div style={{ marginTop: 14 }}>
+                                <div style={{ fontSize: 12, fontWeight: 800, color: C.ink, marginBottom: 8 }}>주요 자회사 출자 <span style={{ color: C.faint, fontWeight: 600 }}>· 지분율 상위</span></div>
+                                {ownership.subsidiaries.map((sub: any, i: number) => (
+                                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                                        <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: sub.is_listed ? C.vt : C.faint, background: sub.is_listed ? C.vtS : C.bg, borderRadius: 6, padding: "2px 7px" }}>{sub.is_listed ? "상장" : "비상장"}</span>
+                                        <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub.name}</span>
+                                        {sub.ownership_pct != null ? <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: C.ink }}>{sub.ownership_pct}%</span> : null}
+                                    </div>
+                                ))}
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>DART 타법인출자현황·공정위 = 출자 지분율 사실 · 점수·추천 아님</div>
                             </div>
                         )}
                         <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, lineHeight: 1.5, marginTop: 9 }}>{ownership.note}</div>

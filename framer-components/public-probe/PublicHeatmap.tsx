@@ -30,7 +30,27 @@ const DARK = {
     vg: "#a99bff", vgS: "#241f3a", vt: "#a99bff", neutral: "#222a33", neutralHover: "#2b3440", onAccent: "#0f1318", tileInk: "#ffffff",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 
 const DEFAULT_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
 const DEFAULT_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/insider_trades.json"
@@ -95,6 +115,18 @@ function fmtShares(v: any): string {
     if (a >= 1e4) return sign + Math.round(a / 1e4).toLocaleString("en-US") + "만"
     return sign + Math.round(a).toLocaleString("en-US")
 }
+function fmtAge(iso: any): string {
+    if (!iso) return ""
+    try {
+        const mins = Math.max(0, Math.round((Date.now() - new Date(String(iso)).getTime()) / 60000))
+        if (mins < 60) return mins + "분 전"
+        const hrs = Math.round(mins / 60)
+        if (hrs < 24) return hrs + "시간 전"
+        return Math.round(hrs / 24) + "일 전"
+    } catch (e) {
+        return ""
+    }
+}
 
 /* ── squarified treemap (순수 JS) ── items:[{key,value}] → [{key,x,y,w,h,item}] ── */
 function worst(row: any[], side: number, sum: number): number {
@@ -149,12 +181,14 @@ function squarify(items: any[], X: number, Y: number, W: number, H: number): any
 }
 
 export default function PublicHeatmap(props: Props) {
+    const __lmH = useBfLogoMap()
     const { stockUrl, insiderUrl, flowUrl, forensicsUrl, reportPath, topN, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [stocks, setStocks] = useState<any[]>([])
+    const [asOf, setAsOf] = useState<string>("")
     const [insiderMap, setInsiderMap] = useState<Record<string, any>>({})
     const [flowMap, setFlowMap] = useState<Record<string, any[]>>({})
     const [forenMap, setForenMap] = useState<Record<string, any>>({})
@@ -198,7 +232,10 @@ export default function PublicHeatmap(props: Props) {
             if (!url) return
             fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) ok(d) }).catch(() => {})
         }
-        jget(stockUrl, (d) => { const a = Array.isArray(d) ? d : d.stocks; if (Array.isArray(a)) setStocks(a) })
+        jget(stockUrl, (d) => {
+            const a = Array.isArray(d) ? d : d.stocks; if (Array.isArray(a)) setStocks(a)
+            const ts = d && d._meta && d._meta.generated_at; if (ts) setAsOf(String(ts))
+        })
         jget(insiderUrl, (d) => {
             const a = Array.isArray(d) ? d : d.stocks
             if (!Array.isArray(a)) return
@@ -301,7 +338,7 @@ export default function PublicHeatmap(props: Props) {
     const resetZoom = () => setZoom({ z: 1, tx: 0, ty: 0 })
 
     const wrap: CSSProperties = {
-        width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: `0 ${pad}px`, boxSizing: "border-box", color: C.ink,
+        width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
     }
     const tabBtn = (m: Metric): CSSProperties => {
         const active = m.key === metric
@@ -362,7 +399,7 @@ export default function PublicHeatmap(props: Props) {
                 <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: narrow ? 18 : 20, fontWeight: 800, letterSpacing: "-0.5px" }}>엣지 히트맵</div>
                     <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 3 }}>
-                        박스=시총 · 색=아래 지표 · 탭→리포트
+                        박스=시총 · 색=아래 지표 · 탭→리포트{asOf ? " · 데이터 " + fmtAge(asOf) : ""}
                     </div>
                 </div>
             </div>
@@ -436,7 +473,7 @@ export default function PublicHeatmap(props: Props) {
                                         }}>
                                         {big && (
                                             <>
-                                                {tw > 52 && th > 50 && (<img src={LOGO_BASE + t.m.ticker + ".png"} alt="" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 4, marginBottom: 2, background: "#ffffff", objectFit: "cover", display: "block" }} />)}
+                                                {tw > 52 && th > 50 && (<img src={bfLogoSrc(t.m.ticker, __lmH, 16) || "data:,"} alt="" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 4, marginBottom: 2, background: "#ffffff", objectFit: "cover", display: "block" }} />)}
                                                 <span style={{ fontSize: tw > 130 ? 13 : tw > 80 ? 12 : 10.5, fontWeight: 800, color: txt, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", letterSpacing: "-0.3px", textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.35)" : "none" }}>{t.m.name}</span>
                                                 {th > 42 && <span style={{ fontSize: 10.5, fontWeight: 700, color: txt, opacity: 0.92, marginTop: 1, textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.3)" : "none" }}>{tileValLabel(metric, v)}</span>}
                                             </>
@@ -464,7 +501,7 @@ export default function PublicHeatmap(props: Props) {
                             boxShadow: "0 8px 26px rgba(0,0,0,0.22)", padding: "9px 11px", zIndex: 20, pointerEvents: "none", boxSizing: "border-box",
                         }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <img src={LOGO_BASE + hover.m.ticker + ".png"} alt="" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 5, background: "#ffffff", flexShrink: 0, objectFit: "cover" }} />
+                                <img src={bfLogoSrc(hover.m.ticker, __lmH, 18) || "data:,"} alt="" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 5, background: "#ffffff", flexShrink: 0, objectFit: "cover" }} />
                                 <span style={{ fontSize: 13, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{hover.m.name}</span>
                                 <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, flexShrink: 0 }}>{hover.m.ticker}</span>
                             </div>

@@ -20,7 +20,27 @@ const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", 
 const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34", up: "#f04452", down: "#5b9bff", vg: "#34e08a", vgS: "#11281d", vt: "#a99bff", vtS: "#241f3a", amber: "#ffb340", amberS: "#2a2113", redS: "#2a1518", upS: "#2a1a1d", downS: "#17263c" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
-const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 const LAST_TK_KEY = "verity_last_ticker"
 const TK_EVENT = "verity-ticker-change"
@@ -71,13 +91,15 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     const { ticker, name, market, C } = props
     const size = props.size || 38
     const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const bfSrc = bfLogoSrc(ticker, lm, size)
     const ch = (String(name || "?").trim().charAt(0)) || "?"
     const code = flagCode(market)
     const fsize = Math.round(size * 0.46)
     return (
         <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-            {!err && ticker ? (
-                <img src={LOGO_BASE + ticker + ".png"} alt="" width={size} height={size}
+            {!err && bfSrc ? (
+                <img src={bfSrc} alt="" width={size} height={size}
                     onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: 11, objectFit: "cover", display: "block", background: C.bg }} />
             ) : (

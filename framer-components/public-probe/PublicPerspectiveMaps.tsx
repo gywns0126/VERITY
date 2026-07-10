@@ -5,7 +5,7 @@ import { useEffect, useState, type CSSProperties } from "react"
  * 관점 지도 — AlphaNest 탐색. 욕구 · 매출 안정성 · 자사주 3탭.
  * 데이터(Blob): perspective_maps.json (분류·집계 사실만).
  *
- * 🚨 재설계(2026-07-04): 깔끔·심플 — 카테고리 pill(얇은 라인 아이콘) 선택 → 종목 그리드(로고+국기, 기본 10개 5×2, 더보기=전량 20).
+ * 🚨 재설계(2026-07-04): 깔끔·심플 — 카테고리 pill(얇은 라인 아이콘) 선택 → 종목 그리드(로고+국기, 최대 15개 5×3, 더보기).
  *   복잡한 피라미드/스펙트럼 제거. 종목이 주인공(크게). shimmer 스켈레톤.
  * 🚨 RULE 7 — 점수·랭킹·추천 0. 분류 기준 공개. 카운트=사실. "관점 = 탐색 렌즈". RULE 6 — LLM narrative 0.
  * 다크모드 자가감지. cache-fallback. 토스 소프트 유지.
@@ -13,20 +13,18 @@ import { useEffect, useState, type CSSProperties } from "react"
  *   구 blob(필드 부재) 폴백 시 정렬 UI 자동 숨김(hasSummary 가드).
  */
 
-// 보라 = 기능 액센트만 (활성 상태·클릭 단서·아이콘). 텍스트·수치·라벨 = 무채 (PM 2026-07-05 '적절하게')
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", track: "#eef0f3", hi: "#f6f7f9", gTint: "rgba(108,92,231,0.22)",
+    line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", track: "#eef0f3", hi: "#f6f7f9", gTint: "rgba(108,92,231,0.22)", segIdle: "#d6dae0",
 }
 const DARK = {
     bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
-    line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", track: "#242830", hi: "#2e333c", gTint: "rgba(169,155,255,0.26)",
+    line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", track: "#242830", hi: "#2e333c", gTint: "rgba(169,155,255,0.26)", segIdle: "#3a3f49",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/perspective_maps.json"
-const LIMIT = 10 // 기본 노출 (5×2), 초과분 더보기 — 10개 기본 (PM 2026-07-05)
-// 규모 분포 바 세그먼트 색 (카테고리 구분용 임의 팔레트 — 우열·랭킹 의미 아님)
-const CAP_COLORS = ["#6c5ce7", "#00b8d4", "#12b76a", "#f5a623", "#ec4899", "#8b95a1"]
+const LIMIT = 15 // 기본 노출 (5×3), 초과분 더보기
+// 규모 분포 바 = 칸 너비만 시총 비중(share). 색은 무채(연회색), 선택 카테고리만 보라 강조.
 
 /* 글래스 아이콘 (토스식 glassmorphism, 2026-07-04 교체) — solid(선명 보라) + glass(반투명 틴트) 2레이어.
    glass 겹침부 = 블러 복제(clipPath+feGaussianBlur) 프로스트. 배경 없음 — pill/카드 어디서든 동작.
@@ -39,7 +37,7 @@ const _CARD = _rr(4, 9, 40, 30, 5)
 const _COIN = _circ(20, 26, 13)
 const _bar = (y: number): string => _rr(7.5, y, 28, 5.5, 2.75)
 const GICONS: Record<string, { solid: (a: string) => any; glass: string }> = {
-    // 탭 3종 — 욕구(피라미드) / 매출 안정성(카드+라인) / 자사주(잠긴 금고)
+    // 탭 3종 — 욕구(피라미드) / 매출 안정성(카드+라인) / 자사주(금고)
     desire: {
         solid: (a) => <path d="M24 6 L35 25 Q36.5 28 33 28 H15 Q11.5 28 13 25 Z" fill={a} />,
         glass: "M12.5 24 H35.5 L41.5 38.5 Q43 42 39.5 42 H8.5 Q5 42 6.5 38.5 Z",
@@ -168,12 +166,48 @@ function GIcon(props: { k: string; size: number; a: string; g: string; float?: b
 }
 
 const FLAG = "https://hatscripts.github.io/circle-flags/flags/"
-const STK_LOGO = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 function isKR(tk: any): boolean { return /^\d{6}$/.test(String(tk || "")) }
 
 function readBodyDark(): boolean {
-    if (typeof document === "undefined" || !document.body) return false
-    return document.body.dataset.framerTheme === "dark"
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
 }
 function fmtAge(iso: any): string {
     if (!iso) return ""
@@ -224,6 +258,8 @@ function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) =
     const ticker = String((l && l.ticker) || "")
     const name = (l && l.name) || ""
     const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const bfSrc = bfLogoSrc(ticker, lm, 34)
     const kr = isKR(ticker)
     const initial = ((name || "?").trim().charAt(0)) || "?"
     const metric = metricOf(l, sortKey)
@@ -233,8 +269,8 @@ function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) =
         <div onClick={() => onGo(ticker)} role="button" tabIndex={0} title={tip}
             style={{ background: C.card, borderRadius: 12, padding: "12px 8px", height: 108, boxSizing: "border-box", cursor: "pointer", textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 7, minWidth: 0 }}>
             <div style={{ position: "relative", width: 34, height: 34, flexShrink: 0 }}>
-                {!err && ticker ? (
-                    <img src={STK_LOGO + ticker + ".png"} alt="" width={34} height={34} loading="lazy" onError={() => setErr(true)}
+                {!err && bfSrc ? (
+                    <img src={bfSrc} alt="" width={34} height={34} loading="lazy" onError={() => setErr(true)}
                         style={{ width: 34, height: 34, borderRadius: 9, objectFit: "cover", background: "#fff", display: "block" }} />
                 ) : (
                     <span style={{ width: 34, height: 34, borderRadius: 9, background: C.violetSoft, color: C.violet, fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initial}</span>
@@ -246,7 +282,7 @@ function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) =
             <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink, lineHeight: 1.3, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
             {/* 요약 = 활성 정렬값(규모=시총 / 수익=마진). 사실값, 없으면 섹터, 둘 다 없으면 미표시 */}
             {metric || sector ? (
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: metric ? C.ink : C.faint, lineHeight: 1.2, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontVariantNumeric: "tabular-nums" }}>{metric || sector}</div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: metric ? C.sub : C.faint, lineHeight: 1.2, width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontVariantNumeric: "tabular-nums" }}>{metric || sector}</div>
             ) : null}
         </div>
     )
@@ -257,35 +293,36 @@ const SAMPLE = {
     _meta: { generated_at: "2026-07-04T13:20:05+09:00" },
     desire: {
         tiers: [
-            { key: "survival", cap_sum: 123400000, label: "필수·건강", n_kr: 397, n_us: 250, median_op_margin: 6.8, desc: "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐", leaders: [{ ticker: "005930", name: "삼성전자", mkt: "KR", cap: 5000000, cap_disp: "500조", op_margin: 10.2, sector: "IT" }, { ticker: "000660", name: "SK하이닉스", mkt: "KR", cap: 1500000, cap_disp: "150조", op_margin: 20.5, sector: "IT" }, { ticker: "LLY", name: "일라이릴리", mkt: "US", cap: 982800, cap_disp: "$982.8B", net_margin: 31.7, sector: "제약", revenue: 65179000000 }, { ticker: "JNJ", name: "존슨앤존슨", mkt: "US", cap: 556800, cap_disp: "$556.8B", net_margin: 22.9, sector: "제약", revenue: 94193000000 }, { ticker: "068270", name: "셀트리온", mkt: "KR", cap: 400000, cap_disp: "40조", op_margin: 20.1, sector: "헬스케어" }, { ticker: "207940", name: "삼성바이오로직스", mkt: "KR", cap: 658000, cap_disp: "65.8조", op_margin: 3.7, sector: "헬스케어" }] },
-            { key: "safety", cap_sum: 117200000, label: "안전·보장", n_kr: 67, n_us: 232, median_op_margin: 11.6, desc: "지키고 대비하는 수요 — 보험·방산·보안", leaders: [{ ticker: "012450", name: "한화에어로" }, { ticker: "032830", name: "삼성생명" }] },
-            { key: "belonging", cap_sum: 31700000, label: "관계·연결", n_kr: 98, n_us: 76, median_op_margin: 7.0, desc: "잇고 어울리는 수요 — 통신·콘텐츠·모임", leaders: [{ ticker: "035420", name: "NAVER" }, { ticker: "035720", name: "카카오" }] },
-            { key: "esteem", cap_sum: 8100000, label: "프리미엄·품격", n_kr: 43, n_us: 33, median_op_margin: 6.0, desc: "돋보이고 싶은 수요 — 명품·뷰티·프리미엄", leaders: [{ ticker: "090430", name: "아모레퍼시픽" }] },
-            { key: "growth", cap_sum: 1500000, label: "성장·교육", n_kr: 10, n_us: 14, median_op_margin: 11.7, desc: "배우고 성장하는 수요 — 교육·자기계발", leaders: [{ ticker: "095720", name: "웅진씽크빅" }] },
-            { key: "infra", cap_sum: 291000000, label: "산업 기반", n_kr: 1006, n_us: 900, median_op_margin: 6.0, desc: "욕구를 직접 팔진 않지만 위 전부를 떠받치는 산업 — B2B·부품·장비", leaders: [{ ticker: "042700", name: "한미반도체" }, { ticker: "373220", name: "LG에너지솔루션" }] },
+            { key: "survival", label: "필수·건강", n_kr: 397, n_us: 250, median_op_margin: 6.8, cap_sum: 123410000, desc: "먹고 마시고 아프지 않게 — 수요가 유행을 안 탐", leaders: [{ ticker: "005930", name: "삼성전자", mkt: "KR", cap: 5000000, cap_disp: "500조", op_margin: 10.2, sector: "IT" }, { ticker: "000660", name: "SK하이닉스", mkt: "KR", cap: 1500000, cap_disp: "150조", op_margin: 20.5, sector: "IT" }, { ticker: "LLY", name: "일라이릴리", mkt: "US", cap: 982800, cap_disp: "$982.8B", net_margin: 31.7, sector: "제약", revenue: 65179000000 }, { ticker: "JNJ", name: "존슨앤존슨", mkt: "US", cap: 556800, cap_disp: "$556.8B", net_margin: 22.9, sector: "제약", revenue: 94193000000 }, { ticker: "068270", name: "셀트리온", mkt: "KR", cap: 400000, cap_disp: "40조", op_margin: 20.1, sector: "헬스케어" }, { ticker: "207940", name: "삼성바이오로직스", mkt: "KR", cap: 658000, cap_disp: "65.8조", op_margin: 3.7, sector: "헬스케어" }] },
+            { key: "safety", label: "안전·보장", n_kr: 67, n_us: 232, median_op_margin: 11.6, cap_sum: 117170000, desc: "지키고 대비하는 수요 — 보험·방산·보안", leaders: [{ ticker: "012450", name: "한화에어로" }, { ticker: "032830", name: "삼성생명" }] },
+            { key: "belonging", label: "관계·연결", n_kr: 98, n_us: 76, median_op_margin: 7.0, cap_sum: 31720000, desc: "잇고 어울리는 수요 — 통신·콘텐츠·모임", leaders: [{ ticker: "035420", name: "NAVER" }, { ticker: "035720", name: "카카오" }] },
+            { key: "esteem", label: "프리미엄·품격", n_kr: 43, n_us: 33, median_op_margin: 6.0, cap_sum: 8890000, desc: "돋보이고 싶은 수요 — 명품·뷰티·프리미엄", leaders: [{ ticker: "090430", name: "아모레퍼시픽" }] },
+            { key: "growth", label: "성장·교육", n_kr: 10, n_us: 14, median_op_margin: 11.7, cap_sum: 980000, desc: "배우고 성장하는 수요 — 교육·자기계발", leaders: [{ ticker: "095720", name: "웅진씽크빅" }] },
+            { key: "infra", label: "산업 기반", n_kr: 1006, n_us: 900, median_op_margin: 6.0, cap_sum: 840610000, desc: "욕구를 직접 팔진 않지만 위 전부를 떠받치는 산업 — B2B·부품·장비", leaders: [{ ticker: "042700", name: "한미반도체" }, { ticker: "373220", name: "LG에너지솔루션" }] },
         ],
     },
     cycle: {
         basis: "연간 매출 YoY 변동성(≥4년 실측 종목만)",
         buckets: [
-            { key: "steady", cap_sum: 497800000, label: "매출 꾸준", n: 503, vol_range: [0.1, 5.3], desc: "경기와 덜 흔들리는 매출", leaders: [{ ticker: "033780", name: "KT&G" }, { ticker: "AAPL", name: "애플" }, { ticker: "MSFT", name: "마이크로소프트" }] },
-            { key: "middle", cap_sum: 252800000, label: "중간", n: 503, vol_range: [5.3, 12.7], desc: "중간 변동", leaders: [{ ticker: "005380", name: "현대차" }] },
-            { key: "swing", cap_sum: 324900000, label: "매출 출렁", n: 504, vol_range: [12.7, 10074.7], desc: "경기·업황에 크게 흔들리는 매출", leaders: [{ ticker: "000660", name: "SK하이닉스" }] },
+            { key: "steady", label: "매출 꾸준", n: 503, vol_range: [0.1, 5.3], cap_sum: 497760000, desc: "경기와 덜 흔들리는 매출", leaders: [{ ticker: "033780", name: "KT&G" }, { ticker: "AAPL", name: "애플" }, { ticker: "MSFT", name: "마이크로소프트" }] },
+            { key: "middle", label: "중간", n: 503, vol_range: [5.3, 12.7], cap_sum: 252810000, desc: "중간 변동", leaders: [{ ticker: "005380", name: "현대차" }] },
+            { key: "swing", label: "매출 출렁", n: 504, vol_range: [12.7, 10074.7], cap_sum: 324900000, desc: "경기·업황에 크게 흔들리는 매출", leaders: [{ ticker: "000660", name: "SK하이닉스" }] },
         ],
     },
     buyback: {
         basis: "DART 자기주식 취득·처분 공시 건수",
         buckets: [
-            { key: "steady_buy", cap_sum: 1188000, label: "꾸준히 매입", n: 137, desc: "자기주식을 반복 취득", leaders: [{ ticker: "000270", name: "기아" }, { ticker: "005930", name: "삼성전자" }] },
-            { key: "some_buy", cap_sum: 243000, label: "가끔 매입", n: 52, desc: "취득 공시 확인", leaders: [{ ticker: "175330", name: "JB금융지주" }] },
-            { key: "net_sell", cap_sum: 241000, label: "처분 많음", n: 81, desc: "처분이 취득보다 많음", leaders: [{ ticker: "028050", name: "삼성E&A" }] },
+            { key: "steady_buy", label: "꾸준히 매입", n: 137, cap_sum: 1180000, desc: "자기주식을 반복 취득", leaders: [{ ticker: "000270", name: "기아" }, { ticker: "005930", name: "삼성전자" }] },
+            { key: "some_buy", label: "가끔 매입", n: 52, cap_sum: 240000, desc: "취득 공시 확인", leaders: [{ ticker: "175330", name: "JB금융지주" }] },
+            { key: "net_sell", label: "처분 많음", n: 81, cap_sum: 240000, desc: "처분이 취득보다 많음", leaders: [{ ticker: "028050", name: "삼성E&A" }] },
         ],
     },
 }
 
 export default function PublicPerspectiveMaps(props: { width?: number; dark?: boolean; dataUrl?: string; stockPath?: string }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    // 첫 페인트부터 실제 테마로 시작(캔버스는 prop) — 반대색 스켈레톤 flash 제거.
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
     const [tab, setTab] = useState<string>("desire")
     const [sel, setSel] = useState<Record<string, string>>({})
@@ -326,7 +363,8 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
         try { window.location.href = `${stockPath}?q=${encodeURIComponent(tk)}` } catch (e) {}
     }
 
-    const wrap: CSSProperties = { width: props.width || 380, maxWidth: "100%", fontFamily: FONT, background: C.bg, color: C.ink, padding: "0 16px", boxSizing: "border-box" }
+    // 배경 transparent — 홈 페이지 위 섹션. 자기 bg hex 칠하면 Framer 페이지 dark bg(#0f1318)와 어긋나 밝은 사각형으로 튐.
+    const wrap: CSSProperties = { width: props.width || 380, maxWidth: "100%", fontFamily: FONT, background: "transparent", color: C.ink, padding: 16, boxSizing: "border-box" }
 
     /* ── 스켈레톤 ── */
     if (!data) {
@@ -389,6 +427,21 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
     const seeAll = !!showAll[tab]
     const shown = seeAll ? leaders : leaders.slice(0, LIMIT)
     const totalCount = items.reduce((a, x) => a + cfg.count(x), 0)
+    // 규모 분포 = 카테고리별 합산 시총(cap_sum, 억원 FX 환산) share. 구 blob 폴백 시 바 숨김.
+    const capTotal = items.reduce((a, x) => a + (Number(x.cap_sum) || 0), 0)
+    const showCapBar = hasCapSum(items) && capTotal > 0
+    // 규모 바 세그먼트 + 누적 offset(콜아웃 위치용). 선택 세그먼트 중심 %로 콜아웃 배치.
+    let _acc = 0
+    const capSegs = items.map((x) => {
+        const share = (Number(x.cap_sum) || 0) / capTotal
+        const s = { key: x.key, label: x.label, cap_sum: x.cap_sum, share, left: _acc }
+        _acc += share
+        return s
+    }).filter((s) => s.share > 0)
+    const selSeg = capSegs.find((s) => s.key === selKey) || capSegs[0]
+    const calloutLeft = selSeg ? (selSeg.left + selSeg.share / 2) * 100 : 50
+    // 말풍선 폭 추정(글자수 기반) — CSS clamp 로 컨테이너 안에 고정 (모바일 좌/우 잘림 방지). % clamp 는 좁은 화면서 말풍선 절반폭보다 작아 잘렸음.
+    const calloutW = selSeg ? Math.round(selSeg.label.length * 11 + 58) : 120
 
     const hero =
         tab === "desire" ? { big: n0(totalCount) + "종목", small: "인간 욕구 6계층으로 분류 · 탐색 렌즈" }
@@ -401,7 +454,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
             fontSize: 13, fontWeight: 800, background: tab === v ? C.violet : C.card, color: tab === v ? "#fff" : C.sub,
             display: "inline-flex", alignItems: "center", gap: 6,
         }}>
-            <GIcon k={v} size={17} a={tab === v ? "#ffffff" : C.sub} g={tab === v ? "rgba(255,255,255,0.38)" : C.gTint} />
+            <GIcon k={v} size={17} a={tab === v ? "#ffffff" : C.sub} g={tab === v ? "rgba(255,255,255,0.38)" : "rgba(139,149,161,0.18)"} />
             {lb}
         </button>
     )
@@ -416,10 +469,12 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                 @keyframes vpmPop{0%{transform:scale(.45) rotate(-10deg);opacity:0}100%{transform:scale(1) rotate(0deg);opacity:1}}
                 @keyframes vpmRise{0%{transform:translateY(5px);opacity:0}100%{transform:translateY(0);opacity:1}}
                 @keyframes vpmFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+                .vpmCallout{animation:vpmCalloutPop .34s cubic-bezier(.34,1.7,.5,1) both}
+                @keyframes vpmCalloutPop{0%{transform:translateY(7px) scale(.6);opacity:0}60%{opacity:1}100%{transform:translateY(0) scale(1);opacity:1}}
                 .vpmBtn svg{transition:transform .18s ease}
                 .vpmBtn:hover svg{transform:translateY(-1.5px) scale(1.08)}
                 .vpmBtn:active svg{transform:scale(.94)}
-                @media (prefers-reduced-motion: reduce){.vpmGiS,.vpmGiG{animation:none}.vpmBtn svg{transition:none}svg{animation:none!important}}
+                @media (prefers-reduced-motion: reduce){.vpmGiS,.vpmGiG,.vpmCallout{animation:none}.vpmBtn svg{transition:none}svg{animation:none!important}}
             `}</style>
             <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-0.4px" }}>관점 지도</div>
@@ -441,6 +496,36 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                 <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 2 }}>{hero.small}</div>
             </div>
 
+            {/* 시총 규모 분포 — 카테고리별 합산 시총(국내+해외 환산) share. 사실, 랭킹 아님. 칸 클릭 → 바 위로 % 콜아웃 팝 */}
+            {showCapBar && selSeg ? (
+                <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 700, marginBottom: 6 }}>
+                        시총 규모 분포 <span style={{ fontWeight: 600 }}>· 국내+해외 환산(근사) · 칸 눌러 비중 확인(우열 아님)</span>
+                    </div>
+                    {/* relative 래퍼 — 콜아웃(바 위) + 바. paddingTop 으로 콜아웃 공간 확보 */}
+                    <div style={{ position: "relative", paddingTop: 28 }}>
+                        <div key={selKey} className="vpmCallout"
+                            style={{ position: "absolute", left: `clamp(0px, calc(${calloutLeft}% - ${Math.round(calloutW / 2)}px), calc(100% - ${calloutW}px))`, top: 0, display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none", zIndex: 2 }}>
+                            <span style={{ fontSize: 10.5, fontWeight: 800, color: "#ffffff", background: C.violet, borderRadius: 8, padding: "3px 9px", whiteSpace: "nowrap", boxShadow: "0 3px 10px rgba(108,92,231,0.4)", fontVariantNumeric: "tabular-nums" }}>
+                                {selSeg.label} <span style={{ opacity: 0.92 }}>{(selSeg.share * 100).toFixed(1)}%</span>
+                            </span>
+                            <span style={{ width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: `6px solid ${C.violet}` }} />
+                        </div>
+                        <div style={{ display: "flex", width: "100%", height: 12, borderRadius: 6, overflow: "hidden", background: C.track }}>
+                            {capSegs.map((s, i) => {
+                                const on = s.key === selKey
+                                // flex-grow=share = % 반올림 틈 없이 100% 채움 · 마지막 칸 borderRight 제거(우측 슬릿 방지)
+                                return (
+                                    <div key={s.key} onClick={() => setSel((v) => ({ ...v, [tab]: s.key }))}
+                                        title={`${s.label} · ${capJo(s.cap_sum)} · ${(s.share * 100).toFixed(1)}%`}
+                                        style={{ flex: `${s.share} 1 0%`, background: on ? C.violet : C.segIdle, borderRight: i === capSegs.length - 1 ? "none" : `1.5px solid ${C.card}`, boxSizing: "border-box", cursor: "pointer", transition: "background-color 0.15s" }} />
+                                )
+                            })}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
             {/* 카테고리 pill 선택 (얇은 라인 아이콘) */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                 {items.map((x) => {
@@ -453,7 +538,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                                 background: active ? C.violet : C.card, color: active ? "#fff" : C.ink,
                                 boxShadow: active ? "none" : "0 1px 2px rgba(0,0,0,0.04)",
                             }}>
-                            <GIcon k={x.key} size={17} a={active ? "#ffffff" : C.sub} g={active ? "rgba(255,255,255,0.38)" : C.gTint} />
+                            <GIcon k={x.key} size={17} a={active ? "#ffffff" : C.sub} g={active ? "rgba(255,255,255,0.38)" : "rgba(139,149,161,0.18)"} />
                             {x.label}
                             <span style={{ fontWeight: 700, opacity: 0.75, fontVariantNumeric: "tabular-nums" }}>{n0(cfg.count(x))}</span>
                         </button>
@@ -468,36 +553,10 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                         <span style={{ display: "inline-flex", flexShrink: 0 }}><GIcon key={item.key} k={item.key} size={32} a={C.violet} g={C.gTint} float /></span>
                         <div style={{ minWidth: 0 }}>
                             <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>{item.label}</div>
-                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 1 }}>{cfg.meta(item)}</div>
+                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 1 }}>{cfg.meta(item)}{item.cap_sum ? " · 규모 " + capJo(item.cap_sum) : ""}</div>
                         </div>
                     </div>
                     {item.desc ? <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>{item.desc}</div> : null}
-
-                    {/* 시총 비중 바 — cap_sum(빌더 FX 정규화 합산) / 이 지도 분류 전체. 사실 집계 (구 blob 필드 부재 시 자동 숨김) */}
-                    {(() => {
-                        const capOf = (x: any) => (x && typeof x.cap_sum === "number" && x.cap_sum > 0 ? x.cap_sum : 0)
-                        const mine = capOf(item)
-                        const total = items.reduce((acc: number, x: any) => acc + capOf(x), 0)
-                        if (!mine || !total) return null
-                        const pct = (mine / total) * 100
-                        // 억원 입력 기준: ≥1e8억(=1경원) → 경원 / ≥1e4억 → 콤마 조원 / 그 외 콤마 억원 (PM 2026-07-05 가독성)
-                        const disp = mine >= 1e8
-                            ? ((mine / 1e8).toFixed(1).replace(/\.0$/, "") + "경원")
-                            : mine >= 1e4
-                                ? (Math.round(mine / 1e4).toLocaleString() + "조원")
-                                : (Math.round(mine).toLocaleString() + "억원")
-                        return (
-                            <div style={{ marginTop: 10 }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                                    <span style={{ fontSize: 10.5, fontWeight: 700, color: C.faint }}>시총 비중 · 이 지도 분류 전체 대비</span>
-                                    <span style={{ fontSize: 11.5, fontWeight: 800, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{disp} · {pct < 1 ? pct.toFixed(1) : Math.round(pct)}%</span>
-                                </div>
-                                <div style={{ height: 6, borderRadius: 3, background: C.track, overflow: "hidden", marginTop: 5 }}>
-                                    <div style={{ width: Math.max(1.5, Math.min(100, pct)) + "%", height: "100%", borderRadius: 3, background: C.violet }} />
-                                </div>
-                            </div>
-                        )
-                    })()}
 
                     {/* 정렬 (규모순 / 수익순) — 요약 필드 있을 때만 */}
                     {canSort ? (
@@ -514,15 +573,15 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
                         </div>
                     ) : null}
 
-                    {/* 종목 그리드 — 셀 최소 150px(이름·수치 여유, PM 2026-07-05) · 초과 더보기 */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8, marginTop: 12 }}>
+                    {/* 종목 그리드 (5×3, 초과 더보기) */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(108px, 1fr))", gap: 8, marginTop: 12 }}>
                         {shown.map((l: any, i: number) => (
                             <StockCard key={(l.ticker || "") + i} l={l} C={C} sortKey={sortKey} onGo={go} />
                         ))}
                     </div>
                     {leaders.length > LIMIT ? (
                         <button onClick={() => setShowAll((s) => ({ ...s, [tab]: !seeAll }))}
-                            style={{ width: "100%", marginTop: 10, border: "none", cursor: "pointer", fontFamily: FONT, background: C.card, color: C.sub, borderRadius: 10, padding: "10px 0", fontSize: 12.5, fontWeight: 800, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+                            style={{ width: "100%", marginTop: 10, border: "none", cursor: "pointer", fontFamily: FONT, background: C.card, color: C.violet, borderRadius: 10, padding: "10px 0", fontSize: 12.5, fontWeight: 800, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
                             {seeAll ? "접기" : `더보기 (${leaders.length - LIMIT}개)`}
                         </button>
                     ) : null}

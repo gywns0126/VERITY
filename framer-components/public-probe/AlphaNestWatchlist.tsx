@@ -15,7 +15,27 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
 const SESSION_KEY = "verity_supabase_session"
 const AUTH_EVENT = "verity_auth_change"
 const WATCH_EVENT = "verity_watch_change"
-const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff" }
 const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34", up: "#f04452", down: "#5b9bff", vg: "#7fffa0", vgS: "#11281d", vt: "#a99bff", vtS: "#241f3a" }
@@ -41,11 +61,13 @@ function loadToken(): string {
 
 function Logo({ ticker, name, C }: { ticker: string; name: string; C: any }) {
     const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const bfSrc = bfLogoSrc(ticker, lm, 30)
     const ch = (String(name || "?").trim().charAt(0)) || "?"
-    if (err || !ticker) {
+    if (err || !ticker || !bfSrc) {
         return <span style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 9, background: C.vtS, color: C.vt, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800 }}>{ch}</span>
     }
-    return <img src={LOGO_BASE + ticker + ".png"} alt="" width={30} height={30} onError={() => setErr(true)} style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 9, objectFit: "cover", display: "block", background: C.bg }} />
+    return <img src={bfSrc} alt="" width={30} height={30} onError={() => setErr(true)} style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 9, objectFit: "cover", display: "block", background: C.bg }} />
 }
 
 /**
@@ -212,7 +234,7 @@ export default function AlphaNestWatchlist(props: Props) {
                     })}
                 </div>
             )}
-            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>가격·등락률 = 실시간 사실 · 자체 점수 아님 · 점수 held(2027)</div>
+            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>가격·등락률 = 실시간 사실 · 점수 held(2027)</div>
         </div>
     )
 }

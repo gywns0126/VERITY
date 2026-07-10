@@ -19,7 +19,27 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 // 종목 검색 = 표준 검색창(PublicStockSearch)과 동기 — 동일 유니버스·로고·국기.
 const UNIVERSE_URL = BLOB + "/universe_search.json"
-const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 
 interface Props {
@@ -200,13 +220,15 @@ function Logo(props: { ticker: any; name: any; C: typeof LIGHT; size?: number })
     const { ticker, name, C } = props
     const size = props.size || 22
     const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const bfSrc = bfLogoSrc(ticker, lm, size)
     const ch = (String(name || "?").trim().charAt(0)) || "?"
     const code = /^\d{6}$/.test(String(ticker || "")) ? "kr" : "us"
     const fsize = Math.round(size * 0.46)
     return (
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
-            {!err && ticker ? (
-                <img src={LOGO_BASE + String(ticker).replace(/-/g, ".") + ".png"} alt="" width={size} height={size} onError={() => setErr(true)}
+            {!err && bfSrc ? (
+                <img src={bfSrc} alt="" width={size} height={size} onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: 7, objectFit: "cover", display: "block", background: C.bg }} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: 7, background: C.sub, color: C.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
@@ -529,29 +551,43 @@ export default function PublicNewsTab(props: Props) {
        US 티커는 흔한 단어 충돌(IT/ALL/NOW…)로 노이즈 → KR 종목명(한글, 충돌 적음)만 집계. */
     const krNames = useMemo(() => {
         const arr: { name: string; ticker: string }[] = []
+        const have = new Set<string>()
         for (const x of uni) {
             const tk = String(x.ticker || ""); const nm = String(x.name || "")
-            if (/^\d{6}$/.test(tk) && nm.length >= 2) arr.push({ name: nm, ticker: tk })
+            if (/^\d{6}$/.test(tk) && nm.length >= 2) { arr.push({ name: nm, ticker: tk }); have.add(tk) }
         }
+        // 통칭 별칭 — 뉴스 제목 관행상 그룹 접두 생략 표기(최소만, 하드코딩 사유 주석).
+        // '하이닉스'(SK 생략)가 별칭 없으면 경계매칭 후 어느 종목에도 안 잡혀 SK하이닉스 언급이 유실됨.
+        if (have.has("000660")) arr.push({ name: "하이닉스", ticker: "000660" })
         arr.sort((a, b) => b.name.length - a.name.length)   // 최장 우선(삼성전자 > 삼성, 부분일치 회피)
         return arr
     }, [uni])
     const hotStocks = useMemo<HotStock[]>(() => {
         if (!krNames.length || !market.length) return []
+        // 한글 단어경계 매칭 — 앞 글자가 한글/영숫자면 다른 단어의 꼬리(하[이닉스]→이닉스 오매칭, 2026-07-10 fix).
+        // 뒤는 조사(가/는/도)가 바로 붙는 한국어 특성상 검사 안 함. lookbehind 대신 그룹(구형 Safari 호환).
+        const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        const nameHit = (title: string, name: string): boolean => {
+            try { return new RegExp("(^|[^가-힣A-Za-z0-9])" + esc(name)).test(title) } catch (e) { return title.indexOf(name) >= 0 }
+        }
         const tally: Record<string, HotStock> = {}
         for (const it of market) {
             const t = it.title || ""
             if (!/[가-힣]/.test(t)) continue   // 한글 제목만(글로벌 RSS 제외)
             for (const s of krNames) {
-                if (t.indexOf(s.name) >= 0) {
-                    if (!tally[s.ticker]) tally[s.ticker] = { ticker: s.ticker, name: s.name, market: "KR", count: 0, score: 0 }
+                if (nameHit(t, s.name)) {
+                    if (!tally[s.ticker]) {
+                        // 별칭 매칭이어도 표시명은 공식명(uni) 우선
+                        const off = uni.find((x: any) => String(x.ticker) === s.ticker)
+                        tally[s.ticker] = { ticker: s.ticker, name: (off && off.name) || s.name, market: "KR", count: 0, score: 0 }
+                    }
                     tally[s.ticker].count++
                     break   // 헤드라인당 1종목(최장 일치)
                 }
             }
         }
         return Object.values(tally).sort((a, b) => b.count - a.count).slice(0, 8)
-    }, [krNames, market])
+    }, [krNames, market, uni])
     // 라이브 연관검색어 — 코드·이름 부분일치 상위 8 (표준과 동일 매칭).
     const matches = useMemo(() => {
         const s = q.trim().toLowerCase()

@@ -27,7 +27,27 @@ const LAST_TK_KEY = "verity_last_ticker"
 const RECENTS_KEY = "verity_recent_tickers"
 const RECENTS_CAP = 8
 /* 로고 — 토스 종목 CDN(404/차단 시 이니셜 폴백) + circle-flags 원형 국기. ticker 형식으로 국장/미장 판별. */
-const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 function flagFromTicker(ticker: any): string {
     return /^\d{6}$/.test(String(ticker || "")) ? "kr" : "us"
@@ -36,13 +56,15 @@ function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
     const { ticker, name, C } = props
     const size = props.size || 22
     const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const bfSrc = bfLogoSrc(ticker, lm, size)
     const ch = (String(name || "?").trim().charAt(0)) || "?"
     const code = flagFromTicker(ticker)
     const fsize = Math.round(size * 0.46)
     return (
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
-            {!err && ticker ? (
-                <img src={LOGO_BASE + String(ticker).replace(/-/g, ".") + ".png"} alt="" width={size} height={size}
+            {!err && bfSrc ? (
+                <img src={bfSrc} alt="" width={size} height={size}
                     onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: 7, objectFit: "cover", display: "block", background: C.bg }} />
             ) : (

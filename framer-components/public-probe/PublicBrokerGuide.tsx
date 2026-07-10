@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 /**
  * AlphaNest 증권사 가이드 (공개) — broker-neutral 사실 비교.
@@ -7,8 +7,8 @@ import React, { useEffect, useMemo, useState } from "react"
  * 데이터 = Blob broker_guide.json (api/collectors/broker_guide.py = Perplexity sonar-pro 월 1회 자동집계 + sticky merge).
  *
  * RULE 6/7: 우리 의견·별점·추천 0. 노출은 사실 + 출처만. "자동집계 · 권유 아님 · as-of" 라벨 의무.
- * 🚨 수수료 = 숫자 assert 금지(자동/큐레이션 모두 진짜 보장 불가·등급/이벤트/온오프라인 상이) → 각 사 공식 고지 deep-link.
- *   신뢰 정성사실만 노출: ISA·신용대주·실시간뉴스·커뮤니티·앱·이벤트.
+ * 🚨 대표 수수료(국내·미국·환전우대) = 값 있으면 카드에 노출(대표 % 만, 전문은 hover), 클릭 시 공식 출처.
+ *   국내수수료 = 비대면 우대가 기준 통일(조건부 우대라 표준과 다를 수 있음, 상세는 hover/공식).
  * 🚨 이벤트 = 진행 중 사실(기간 포함) · 권유 아님. 시효성 → as-of + disclaimer.
  * 🚨 거래유형 best 공란 = "집계 중" 안내(빈 카드 깨짐 방지).
  * 로고 = 증권사 공식 도메인 Clearbit + 구글 파비콘 fallback. 다크모드: body[data-framer-theme] 추종.
@@ -71,11 +71,32 @@ function brokerDomain(name: string): string {
 }
 
 // 직접 로고 URL override — Clearbit 저화질/오로고 사인 곳만. 삼성·NH = 상장사라 토스 종목아이콘(증권사 로고)이 고해상도.
-const TOSS_SEC = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
+// 증권사 도메인 override — Brandfetch 실검증 도메인 (2026-07-10, 토스/Clearbit 제거)
 const BROKER_LOGO_OVERRIDE: [string, string][] = [
-    ["삼성", TOSS_SEC + "016360.png"], // 삼성증권 016360
-    ["NH", TOSS_SEC + "005940.png"], // NH투자증권 005940
-    ["농협", TOSS_SEC + "005940.png"],
+    ["삼성", "samsungpop.com"],
+    ["NH", "nhqv.com"],
+    ["농협", "nhqv.com"],
 ]
 function brokerLogoOverride(name: string): string {
     const n = name || ""
@@ -104,7 +125,7 @@ interface Broker {
     realtime_news: string
     event: string
     source_url: string
-    // 수수료 tile 전용 검증 링크 (collector focused 추출 출처). 하이브리드 = 출처 있는 값만 tile 노출.
+    // 수수료 tile 전용 검증 링크 (collector focused 추출 출처).
     domestic_source: string
     overseas_source: string
     fx_source: string
@@ -195,12 +216,12 @@ const DEMO: Guide = {
         { type: "중장기/배당", best: "한국투자증권, NH투자증권", reason: "리서치·정보 제공 + 비대면 우대." },
     ],
     brokers: [
-        { name: "한국투자증권", app: "한국투자 m.Stock · 뱅키스", domestic_fee: "0.0140%", overseas_fee: "0.25%", fx_fee: "", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "실시간시세·속보 제공", event: "", source_url: "https://securities.koreainvestment.com", domestic_source: "https://securities.koreainvestment.com", overseas_source: "https://securities.koreainvestment.com", fx_source: "", fee_basis: "온라인 위탁수수료", overseas_basis: "온라인 미국주식 0.25%", fx_basis: "" },
-        { name: "토스증권", app: "토스", domestic_fee: "0.015%", overseas_fee: "0.1%", fx_fee: "", isa: "미지원", credit_short: "일부", app_rating: "", community: "토스 피드", realtime_news: "실시간시세 제공", event: "미국주식 수수료 무료 이벤트 (~2026-07-31)", source_url: "https://tossinvest.com", domestic_source: "https://tossinvest.com", overseas_source: "", fx_source: "https://tossinvest.com", fee_basis: "온라인 위탁수수료", overseas_basis: "미국주식 0.1%", fx_basis: "매매기준율 대비 편도 1% · 온라인 우대 95%" },
-        { name: "키움증권", app: "영웅문S#", domestic_fee: "0.015%", overseas_fee: "0.07%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "종목토론", realtime_news: "실시간시세·속보 제공", event: "신규 개설 시 해외주식 환전우대 (~2026-08-15)", source_url: "https://www.kiwoom.com", domestic_source: "https://www.kiwoom.com", overseas_source: "https://www.kiwoom.com", fx_source: "https://www.kiwoom.com", fee_basis: "온라인 위탁수수료", overseas_basis: "미국주식 0.07% (이벤트)", fx_basis: "온라인 환전우대 95%" },
-        { name: "미래에셋증권", app: "M-STOCK", domestic_fee: "0.0140%", overseas_fee: "0.25%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "https://securities.miraeasset.com", domestic_source: "https://securities.miraeasset.com", overseas_source: "https://securities.miraeasset.com", fx_source: "", fee_basis: "온라인 위탁수수료", overseas_basis: "미국주식 0.25%", fx_basis: "온라인 환전우대 95%" },
-        { name: "삼성증권", app: "mPOP", domestic_fee: "0.0147%", overseas_fee: "0.25%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "https://www.samsungpop.com", domestic_source: "https://www.samsungpop.com", overseas_source: "https://www.samsungpop.com", fx_source: "https://www.samsungpop.com", fee_basis: "온라인 위탁수수료", overseas_basis: "미국주식 0.25%", fx_basis: "온라인 환전우대 95%" },
-        { name: "NH투자증권", app: "나무증권 · QV", domestic_fee: "0.015%", overseas_fee: "0.198%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "https://www.nhqv.com", domestic_source: "https://www.nhqv.com", overseas_source: "https://www.nhqv.com", fx_source: "", fee_basis: "온라인 위탁수수료", overseas_basis: "미국주식 0.198%", fx_basis: "온라인 환전우대 95%" },
+        { name: "한국투자증권", app: "한국투자 m.Stock · 뱅키스", domestic_fee: "0.0140527%", overseas_fee: "0.25%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "실시간시세·속보 제공", event: "", source_url: "https://securities.koreainvestment.com", domestic_source: "https://securities.koreainvestment.com", overseas_source: "https://securities.koreainvestment.com", fx_source: "", fee_basis: "비대면 우대 위탁수수료", overseas_basis: "온라인 미국주식 0.25%", fx_basis: "온라인 환전우대 95%" },
+        { name: "토스증권", app: "토스", domestic_fee: "KRX 0.015%, NXT 0.014%", overseas_fee: "0.1%", fx_fee: "95%", isa: "미지원", credit_short: "일부", app_rating: "", community: "토스 피드", realtime_news: "실시간시세 제공", event: "미국주식 수수료 무료 이벤트 (~2026-07-31)", source_url: "https://tossinvest.com", domestic_source: "https://tossinvest.com", overseas_source: "", fx_source: "https://tossinvest.com", fee_basis: "온라인 위탁수수료", overseas_basis: "미국주식 0.1%", fx_basis: "매매기준율 대비 편도 1% · 온라인 우대 95%" },
+        { name: "키움증권", app: "영웅문S#", domestic_fee: "0.015%", overseas_fee: "0.07%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "종목토론", realtime_news: "실시간시세·속보 제공", event: "신규 개설 시 해외주식 환전우대 (~2026-08-15)", source_url: "https://www.kiwoom.com", domestic_source: "https://www.kiwoom.com", overseas_source: "https://www.kiwoom.com", fx_source: "https://www.kiwoom.com", fee_basis: "비대면 우대 위탁수수료", overseas_basis: "미국주식 0.07% (이벤트)", fx_basis: "온라인 환전우대 95%" },
+        { name: "미래에셋증권", app: "M-STOCK", domestic_fee: "0.014%", overseas_fee: "0.25%", fx_fee: "90%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "https://securities.miraeasset.com/public/mw/guide/html/20191119095045.html", domestic_source: "https://securities.miraeasset.com/public/mw/guide/html/20191119095045.html", overseas_source: "https://securities.miraeasset.com", fx_source: "", fee_basis: "다이렉트(비대면) 우대 위탁수수료 (표준 0.136% / 평생우대 이벤트 시 0%)", overseas_basis: "미국주식 0.25%", fx_basis: "온라인 환전우대 90%" },
+        { name: "삼성증권", app: "mPOP", domestic_fee: "0.0147%", overseas_fee: "0.25%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "https://www.samsungpop.com", domestic_source: "https://www.samsungpop.com", overseas_source: "https://www.samsungpop.com", fx_source: "https://www.samsungpop.com", fee_basis: "비대면 우대 위탁수수료", overseas_basis: "미국주식 0.25%", fx_basis: "온라인 환전우대 95%" },
+        { name: "NH투자증권", app: "나무증권 · QV", domestic_fee: "0.015%", overseas_fee: "0.198%", fx_fee: "95%", isa: "지원", credit_short: "신용·대주 지원", app_rating: "", community: "없음", realtime_news: "리서치·속보 제공", event: "", source_url: "https://www.nhqv.com", domestic_source: "https://www.nhqv.com", overseas_source: "https://www.nhqv.com", fx_source: "", fee_basis: "비대면 우대 위탁수수료", overseas_basis: "미국주식 0.198%", fx_basis: "온라인 환전우대 95%" },
     ],
     citations: [],
 }
@@ -211,7 +232,8 @@ function BrokerLogo(props: { name: string; size: number; C: typeof LIGHT }) {
     const override = brokerLogoOverride(name)
     const dom = brokerDomain(name)
     const initial = (name || "?").slice(0, 1)
-    const primary = override || (dom ? "https://logo.clearbit.com/" + dom + "?size=128" : "")
+    const domFinal = override || dom
+    const primary = domFinal ? "https://cdn.brandfetch.io/domain/" + domFinal + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
     if (!primary) {
         return (
             <span
@@ -327,7 +349,7 @@ function LoadingSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
     return (
         <div>
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(300px, 100%), 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
                 {rows.map((i) => (
                     <div
                         key={i}
@@ -366,6 +388,17 @@ export default function PublicBrokerGuide(props: Props) {
     const [tab, setTab] = useState<"type" | "table">("type")
     const [guide, setGuide] = useState<Guide | null>(onCanvas ? DEMO : null)
     const [loading, setLoading] = useState<boolean>(!onCanvas)
+    // 반응형 — 컨테이너 폭 감지(아이폰 미니 등 좁은 화면 패딩 축소·카드 min() 가드). 다른 public 컴포넌트 동일 패턴.
+    const rootRef = useRef<HTMLDivElement>(null)
+    const [w, setW] = useState(0)
+    const narrow = w > 0 && w < 480
+    useEffect(() => {
+        const el = rootRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((entries) => { for (const e of entries) setW(e.contentRect.width) })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
 
     useEffect(() => {
         if (onCanvas) return
@@ -418,8 +451,8 @@ export default function PublicBrokerGuide(props: Props) {
     ]
 
     return (
-        <div style={wrap}>
-            <div style={{ padding: "20px 22px 12px 22px" }}>
+        <div ref={rootRef} style={wrap}>
+            <div style={{ padding: narrow ? "16px 13px 10px 13px" : "20px 22px 12px 22px" }}>
                 <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                     <span style={{ fontSize: 19, fontWeight: 800, color: C.text, letterSpacing: "-0.02em" }}>
                         증권사 가이드
@@ -468,7 +501,7 @@ export default function PublicBrokerGuide(props: Props) {
                 </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: "auto", padding: "4px 16px 18px 16px" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: narrow ? "4px 11px 16px 11px" : "4px 16px 18px 16px" }}>
                 {loading ? (
                     <LoadingSkeleton C={C} isDark={isDark} />
                 ) : !guide ? (
@@ -485,7 +518,7 @@ export default function PublicBrokerGuide(props: Props) {
             </div>
 
             {guide ? (
-                <div style={{ padding: "10px 18px 18px 18px", borderTop: "1px solid " + C.border }}>
+                <div style={{ padding: narrow ? "10px 12px 16px 12px" : "10px 18px 18px 18px", borderTop: "1px solid " + C.border }}>
                     <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>
                         {guide.disclaimer || "사실 비교일 뿐 권유 아님 · 수수료는 각 사 공식 고지 확인"}
                     </div>
@@ -545,7 +578,7 @@ function TradeTypeView(props: { items: TradeType[]; C: typeof LIGHT; cardH: numb
         return <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>거래유형 데이터가 없어요.</div>
     }
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 10, alignItems: "start", paddingTop: 6 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(340px, 100%), 1fr))", gap: 10, alignItems: "start", paddingTop: 6 }}>
             {items.map((it, i) => (
                 <div
                     key={i}
@@ -585,7 +618,7 @@ function TradeTypeView(props: { items: TradeType[]; C: typeof LIGHT; cardH: numb
     )
 }
 
-/* 대표 수수료 1칸 — 라벨 + 값(공식 출처 링크 ↗). 상세는 title(hover). 하이브리드 = 호출측에서 값+출처 있을 때만 렌더. */
+/* 대표 수수료 1칸 — 라벨 + 값(공식 출처 링크 ↗). 상세는 title(hover). */
 function FeeTile(props: { label: string; value: string; url: string; basis?: string; C: typeof LIGHT }) {
     const { label, value, url, basis, C } = props
     const v = clean(value)
@@ -620,7 +653,7 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
         return <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>증권사 데이터가 없어요.</div>
     }
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(320px, 100%), 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
             {brokers.map((b, i) => {
                 const feeUrl = clean(b.source_url) || (brokerDomain(b.name) ? "https://" + brokerDomain(b.name) : "")
                 const news = clean(b.realtime_news)
@@ -662,8 +695,7 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
                             </div>
                         ) : null}
 
-                        {/* 대표 수수료 — 하이브리드: 공식 출처 링크가 붙은 값만 tile(클릭 검증). 없으면 공식 고지 링크 fallback. */}
-                        {/* 자동 숫자 단독 assert 금지(등급·이벤트·온오프라인 상이) → 반드시 출처 동반 값만 노출. */}
+                        {/* 대표 수수료 — 값 있으면 카드에 노출(국내·미국·환전우대). 클릭 시 공식 출처. 값 0개면 공식 고지 링크. */}
                         {feeTiles.length ? (
                             <div style={{ marginBottom: 11 }}>
                                 <div style={{ display: "flex", gap: 12 }}>
@@ -672,7 +704,7 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
                                     ))}
                                 </div>
                                 <div style={{ fontSize: 9.5, color: C.faint, fontWeight: 500, marginTop: 6 }}>
-                                    온라인 위탁 기준 · 값 클릭 시 공식 출처
+                                    온라인 비대면 우대 기준 · 값 클릭 시 공식 출처
                                 </div>
                             </div>
                         ) : feeUrl ? (

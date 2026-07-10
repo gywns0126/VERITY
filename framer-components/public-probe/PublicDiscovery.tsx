@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 레이아웃 = 페이지 분할 + 넓은 화면(≥980)만 master-detail(표 좌 + 클릭 종목 우측 패널). 그 외 = 행 클릭 시 reportPath?q=ticker.
  * 🚨 모바일(narrow<620): 표는 카드 리스트 강제(8컬럼 가로스크롤 회피) + 표/리스트 토글 숨김. 상단 탭 바 = sticky + 하단 그림자(카드가 밑으로 미끄러지는 토스식 경계).
  * 🚨 sticky: 탭/패널 = wrap(자연흐름) → 뷰포트 기준 top=navTop(네브바 회피). 표헤더 = overflowX:auto 표카드가 스크롤 컨테이너라 top=0.
- *   좌측 탭 = 흰박스 없이 회색 배경에 직접(활성만 흰 알약). 전체 패딩 X(PM "탭만").
+ *   좌측 탭 = 흰박스 없이 회색 배경에 직접(활성만 흰 알약). 모바일 탭바 = full-bleed(좌우 -pad) + 상하 여백 균형 + 프로스트 글래스(반투명 0.7 + backdrop blur, 스크롤 콘텐츠가 뿌옇게 밑으로 사라짐, PM "탭만" 유지).
  * 🚨 TABLE_MIN ≥ 컬럼 최소폭 합(≈776) — 작으면 선택행 배경이 마지막 컬럼서 끊김.
  */
 
@@ -39,16 +39,49 @@ const DEFAULT_FLOW = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/st
 const DEFAULT_FORENSICS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/disclosure_forensics.json"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const DEFAULT_REPORT = "/stock"
-const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+// 데이터 신선도 — ISO → 상대시각(다른 public 컴포넌트와 동일 패턴).
+function fmtAge(iso: any): string {
+    if (!iso) return ""
+    try {
+        const mins = Math.max(0, Math.round((Date.now() - new Date(String(iso)).getTime()) / 60000))
+        if (mins < 60) return mins + "분 전"
+        const hrs = Math.round(mins / 60)
+        if (hrs < 24) return hrs + "시간 전"
+        return Math.round(hrs / 24) + "일 전"
+    } catch {
+        return ""
+    }
+}
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || (tk && !/^\d{6}$/.test(tk) && tk.indexOf("RATES") !== 0 ? "ticker/" + tk : "")
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", up: "#f04452", down: "#3182f6", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff",
+    line: "#e5e8eb", up: "#f04452", down: "#3182f6", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff", glass: "rgba(242,244,246,0.7)",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
-    line: "#252b34", up: "#f04452", down: "#5b9bff", vg: "#34e08a", vgS: "#0f241c", vt: "#a99bff", vtS: "#241f3a",
+    line: "#252b34", up: "#f04452", down: "#5b9bff", vg: "#34e08a", vgS: "#0f241c", vt: "#a99bff", vtS: "#241f3a", glass: "rgba(15,19,24,0.7)",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
@@ -112,13 +145,15 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     const { ticker, name, market, C } = props
     const size = props.size || 32
     const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const bfSrc = bfLogoSrc(ticker, lm, size)
     const ch = (String(name || "?").trim().charAt(0)) || "?"
     const code = flagCode(market)
     const fsize = Math.round(size * 0.46)
     return (
         <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-            {!err && ticker ? (
-                <img src={LOGO_BASE + String(ticker).replace(/-/g, ".") + ".png"} alt="" width={size} height={size}
+            {!err && bfSrc ? (
+                <img src={bfSrc} alt="" width={size} height={size}
                     onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: 10, objectFit: "cover", display: "block", background: C.bg }} />
             ) : (
@@ -293,6 +328,7 @@ export default function PublicDiscovery(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [list, setList] = useState<any[]>([])
+    const [genAt, setGenAt] = useState<string>("")
     const [insiderMap, setInsiderMap] = useState<Record<string, any>>({})
     const [flowMap, setFlowMap] = useState<Record<string, any[]>>({})
     const [forensicsMap, setForensicsMap] = useState<Record<string, any>>({})
@@ -340,6 +376,7 @@ export default function PublicDiscovery(props: Props) {
                 const seen = new Set<string>()
                 const deduped = arr.filter((s: any) => { const tk2 = String(s.ticker || ""); if (!tk2 || seen.has(tk2)) return false; seen.add(tk2); return true })
                 if (deduped.length) setList(deduped)
+                setGenAt(docs[0] && docs[0]._meta && docs[0]._meta.generated_at ? docs[0]._meta.generated_at : "")
             })
         return () => { alive = false }
     }, [stockUrl, usStockUrl, usSmallcapUrl])
@@ -484,6 +521,8 @@ export default function PublicDiscovery(props: Props) {
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%",
         background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
+        // 🚨 스태킹 격리 — 내부 sticky(zIndex)가 페이지 fixed 네브바 위로 그려지는 사고 원천 차단 (2026-07-08, /discover nav zIndex 부재 사고. 페이지 nav zIndex 10 + 여기 격리 이중 방어).
+        position: "relative", zIndex: 0, isolation: "isolate",
     }
     const chipFor = (s: any, key: string) => {
         const v = (s.facts || {})[key]
@@ -519,12 +558,13 @@ export default function PublicDiscovery(props: Props) {
         return out
     }
     // 커스텀 chevron (OS 기본 화살표 제거 — appearance none). 색 = 테마 faint.
-    const chevronUrl = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='${encodeURIComponent(C.faint)}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`
+    // data URI 전체 encodeURIComponent — 공백/따옴표 raw 상태면 Safari·Framer 퍼블리시에서 파싱 실패 → placeholder 텍스처 노출 (다크에서만 도드라짐).
+    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='${C.faint}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
     const selStyle: CSSProperties = {
         border: "none", borderRadius: 9, padding: "7px 28px 7px 11px", fontSize: 12, fontFamily: FONT,
-        fontWeight: 700, background: C.card, color: C.ink, outline: "none", cursor: "pointer",
+        fontWeight: 700, backgroundColor: C.card, color: C.ink, outline: "none", cursor: "pointer",
         appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
-        backgroundImage: chevronUrl, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
+        backgroundImage: chevronUrl, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", backgroundSize: "10px 6px",
     }
     const numStyle: CSSProperties = {
         width: 58, border: `1px solid ${C.line}`, borderRadius: 9, padding: "7px 8px", fontSize: 12,
@@ -592,7 +632,6 @@ export default function PublicDiscovery(props: Props) {
         const flow = flowMap[s.ticker] || []
         const flast = flow.length ? flow[flow.length - 1] : null
         const peerRows = (s.peer && s.peer.rows) || []
-        const cons = s.consensus || {}
         const own = s.ownership || null
         const foren = forensicsMap[s.ticker] || null
         const kv = (k: string, v: any, color?: string) => (
@@ -680,13 +719,9 @@ export default function PublicDiscovery(props: Props) {
                     </div>
                 )}
 
-                {(cons.target_price || cons.opinion) && (
-                    <div>
-                        {sub("애널리스트 컨센서스 (집계)")}
-                        {cons.target_price && kv("목표주가 평균", cons.target_price, C.vt)}
-                        {cons.opinion && kv("투자의견", cons.opinion)}
-                    </div>
-                )}
+                {/* 애널리스트 컨센서스(목표주가·투자의견) 인라인 노출 제거 — 2026-07-10 컴플라이언스:
+                    증권사 컨센서스 재배포(이중 IP: 네이버 ToS + 증권사 리서치 저작물) 소지.
+                    PublicStockReport 의 출처 link-out 패턴과 정합 — 상세는 전체 리포트에서 출처 연결. */}
 
                 <button onClick={() => go(s.ticker)} style={{ width: "100%", marginTop: 16, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vt, color: "#fff" }}>전체 리포트 보기 →</button>
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5, textAlign: "center" }}>사실만 · 차트·심화는 전체 리포트</div>
@@ -700,7 +735,7 @@ export default function PublicDiscovery(props: Props) {
             <div style={{ display: "flex", flexDirection: narrow ? "column" : "row", gap: narrow ? 12 : 20, alignItems: "flex-start" }}>
                 {/* 탭 — 흰박스 없이 회색 배경에 직접, 활성만 흰 알약 */}
                 {narrow ? (
-                    <div style={{ display: "flex", gap: 7, overflowX: "auto", paddingTop: 2, paddingBottom: 9, width: "100%", position: "sticky", top: navTop, background: C.bg, zIndex: 5, scrollbarWidth: "none", boxShadow: `0 7px 7px -7px ${isDark ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.14)"}` }}>
+                    <div style={{ display: "flex", gap: 7, overflowX: "auto", padding: `10px ${pad}px`, width: `calc(100% + ${pad * 2}px)`, marginLeft: -pad, position: "sticky", top: navTop, background: C.glass, backdropFilter: "saturate(1.4) blur(14px)", WebkitBackdropFilter: "saturate(1.4) blur(14px)", zIndex: 5, scrollbarWidth: "none", boxShadow: `0 8px 8px -7px ${isDark ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.14)"}` }}>
                         {loading
                             ? Array.from({ length: 4 }).map((_, i) => <div key={i} style={skBlock(i === 0 ? 76 : 60, 33, 999)} />)
                             : visibleTabs.map((i) => tabButton(i))}
@@ -723,7 +758,7 @@ export default function PublicDiscovery(props: Props) {
                     ) : (
                         <div style={{ padding: "0 2px 10px" }}>
                             <div style={{ fontSize: 15.5, fontWeight: 700, color: C.ink, letterSpacing: "-0.3px" }}>{sc.title}{sector ? ` · ${sector}` : ""}</div>
-                            <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3 }}>{sc.rule} · 결과 {sel.total}종목{sel.total > sel.items.length ? ` (상위 ${sel.items.length})` : ""}</div>
+                            <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3 }}>{sc.rule} · 결과 {sel.total}종목{sel.total > sel.items.length ? ` (상위 ${sel.items.length})` : ""}{genAt ? ` · ${fmtAge(genAt)} 갱신` : ""}</div>
                         </div>
                     )}
 
