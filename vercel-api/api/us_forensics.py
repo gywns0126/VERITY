@@ -1,19 +1,20 @@
 """
-GET /api/verity/us-forensics?ticker=MSFT  — 단일 ticker 美 forensics 통합 (4 소스 집계)
+GET /api/verity/us-forensics?ticker=MSFT  — 단일 ticker 美 forensics 통합 (5 소스 집계)
 
 집계 소스 (Blob, publish-data 발행):
-  insider     = us_insider_trades.json    (SEC Form4 내부자)
-  holdings    = us_major_holdings.json     (SEC 13D/13G 5%+ 대량보유)
-  smart_money = us_smart_money_13f.json    (집중형 13F 스마트머니)
-  consensus   = us_analyst_consensus.json  (yfinance 애널리스트 컨센서스)
+  insider              = us_insider_trades.json       (SEC Form4 내부자)
+  holdings             = us_major_holdings.json        (SEC 13D/13G 5%+ 대량보유)
+  smart_money          = us_smart_money_13f.json       (집중형 13F 스마트머니)
+  consensus            = us_analyst_consensus.json     (yfinance 애널리스트 컨센서스)
+  disclosure_forensics = us_disclosure_forensics.json  (SEC 8-K item 이상신호 카운트 — 상장폐지/희석/파산 등)
 
 [[project_us_financials_sec_edgar]] (b). 프런트(PublicStockReport 등)가 per-ticker 1콜로 소비.
-4 소스 병렬 fetch(maxDuration 5s 내). RULE 7 = 공시/외부 사실만(우리 자체 점수 0).
+5 소스 병렬 fetch(maxDuration 5s 내). RULE 7 = 공시/외부 사실만(우리 자체 점수 0).
 
 거짓말 트랩:
   소스 fetch 실패 → 해당 섹션 null + sources[k].status="unavailable" (가짜 X).
   ticker 가 소스에 없음 → 섹션 null (유효 공백 — 그 종목에 해당 공시 없음, 에러 아님).
-  4 소스 전부 실패 → 503.
+  5 소스 전부 실패 → 503.
 """
 from __future__ import annotations
 
@@ -38,6 +39,7 @@ SOURCES = {
     "holdings": "us_major_holdings.json",
     "smart_money": "us_smart_money_13f.json",
     "consensus": "us_analyst_consensus.json",
+    "disclosure_forensics": "us_disclosure_forensics.json",
 }
 
 TIMEOUT_SEC = 4          # vercel.json maxDuration=5 안전 마진 (병렬이라 벽시계 ≈ 1 fetch)
@@ -121,6 +123,6 @@ class handler(BaseHTTPRequestHandler):
         self._send(200, {
             "status": "ok",
             "ticker": ticker,
-            "sections": sections,          # insider / holdings / smart_money / consensus
+            "sections": sections,          # insider / holdings / smart_money / consensus / disclosure_forensics
             "sources": sources,            # 소스별 status + generated_at (신선도 투명)
         }, cache=True)
