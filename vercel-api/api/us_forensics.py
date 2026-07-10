@@ -124,3 +124,5 @@ class handler(BaseHTTPRequestHandler):
             "sections": sections,          # insider / holdings / smart_money
             "sources": sources,            # 소스별 status + generated_at (신선도 투명)
         }, cache=True)
+
+# redeploy-bump 2026-07-10 — dd5066df7 이 봇커밋 87개에 묻혀 ignoreCommand 창(50) 밖 = deploy skip 재발(3차). fresh HEAD 재트리거.
