@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 레이아웃 = 페이지 분할 + 넓은 화면(≥980)만 master-detail(표 좌 + 클릭 종목 우측 패널). 그 외 = 행 클릭 시 reportPath?q=ticker.
  * 🚨 모바일(narrow<620): 표는 카드 리스트 강제(8컬럼 가로스크롤 회피) + 표/리스트 토글 숨김. 상단 탭 바 = sticky + 하단 그림자(카드가 밑으로 미끄러지는 토스식 경계).
  * 🚨 sticky: 탭/패널 = wrap(자연흐름) → 뷰포트 기준 top=navTop(네브바 회피). 표헤더 = overflowX:auto 표카드가 스크롤 컨테이너라 top=0.
- *   좌측 탭 = 흰박스 없이 회색 배경에 직접(활성만 흰 알약). 전체 패딩 X(PM "탭만").
+ *   좌측 탭 = 흰박스 없이 회색 배경에 직접(활성만 흰 알약). 모바일 탭바 = full-bleed(좌우 -pad) + 상하 여백 균형 + 프로스트 글래스(반투명 0.7 + backdrop blur, 스크롤 콘텐츠가 뿌옇게 밑으로 사라짐, PM "탭만" 유지).
  * 🚨 TABLE_MIN ≥ 컬럼 최소폭 합(≈776) — 작으면 선택행 배경이 마지막 컬럼서 끊김.
  */
 
@@ -52,7 +52,34 @@ function fmtAge(iso: any): string {
         return ""
     }
 }
-const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfColors: Record<string, string> = {}
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; __bfColors = (d && d.colors) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoBg(ticker: any): string {
+    // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
+    return c ? c + "26" : "#ffffff"  // 15% 알파 틴트, 무채색/미보유 = 흰 타일
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 
 const LIGHT = {
@@ -125,15 +152,17 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     const { ticker, name, market, C } = props
     const size = props.size || 32
     const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const bfSrc = bfLogoSrc(ticker, lm, size)
     const ch = (String(name || "?").trim().charAt(0)) || "?"
     const code = flagCode(market)
     const fsize = Math.round(size * 0.46)
     return (
         <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-            {!err && ticker ? (
-                <img src={LOGO_BASE + String(ticker).replace(/-/g, ".") + ".png"} alt="" width={size} height={size}
+            {!err && bfSrc ? (
+                <img src={bfSrc} alt="" width={size} height={size}
                     onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: 10, objectFit: "cover", display: "block", background: C.bg }} />
+                    style={{ width: size, height: size, borderRadius: 10, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <div style={{ width: size, height: size, borderRadius: 10, background: C.vtS, color: C.vt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</div>
             )}
@@ -263,6 +292,27 @@ function metricNum(s: any, key: string): number | null {
     return num(f[key])
 }
 
+function readBodyDark(): boolean {
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -272,7 +322,7 @@ export default function PublicDiscovery(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
     useEffect(() => {
         if (onCanvas) return
         const read = () => {
@@ -499,6 +549,8 @@ export default function PublicDiscovery(props: Props) {
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%",
         background: C.bg, fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
+        // 🚨 스태킹 격리 — 내부 sticky(zIndex)가 페이지 fixed 네브바 위로 그려지는 사고 원천 차단 (2026-07-08, /discover nav zIndex 부재 사고. 페이지 nav zIndex 10 + 여기 격리 이중 방어).
+        position: "relative", zIndex: 0, isolation: "isolate",
     }
     const chipFor = (s: any, key: string) => {
         const v = (s.facts || {})[key]
@@ -535,12 +587,12 @@ export default function PublicDiscovery(props: Props) {
     }
     // 커스텀 chevron (OS 기본 화살표 제거 — appearance none). 색 = 테마 faint.
     // data URI 전체 encodeURIComponent — 공백/따옴표 raw 상태면 Safari·Framer 퍼블리시에서 파싱 실패 → placeholder 텍스처 노출 (다크에서만 도드라짐).
-    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='${C.faint}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
+    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='${C.faint}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
     const selStyle: CSSProperties = {
         border: "none", borderRadius: 9, padding: "7px 28px 7px 11px", fontSize: 12, fontFamily: FONT,
-        fontWeight: 700, background: C.card, color: C.ink, outline: "none", cursor: "pointer",
+        fontWeight: 700, backgroundColor: C.card, color: C.ink, outline: "none", cursor: "pointer",
         appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
-        backgroundImage: chevronUrl, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
+        backgroundImage: chevronUrl, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", backgroundSize: "10px 6px",
     }
     const numStyle: CSSProperties = {
         width: 58, border: `1px solid ${C.line}`, borderRadius: 9, padding: "7px 8px", fontSize: 12,
@@ -608,7 +660,6 @@ export default function PublicDiscovery(props: Props) {
         const flow = flowMap[s.ticker] || []
         const flast = flow.length ? flow[flow.length - 1] : null
         const peerRows = (s.peer && s.peer.rows) || []
-        const cons = s.consensus || {}
         const own = s.ownership || null
         const foren = forensicsMap[s.ticker] || null
         const kv = (k: string, v: any, color?: string) => (
@@ -696,13 +747,9 @@ export default function PublicDiscovery(props: Props) {
                     </div>
                 )}
 
-                {(cons.target_price || cons.opinion) && (
-                    <div>
-                        {sub("애널리스트 컨센서스 (집계)")}
-                        {cons.target_price && kv("목표주가 평균", cons.target_price, C.vt)}
-                        {cons.opinion && kv("투자의견", cons.opinion)}
-                    </div>
-                )}
+                {/* 애널리스트 컨센서스(목표주가·투자의견) 인라인 노출 제거 — 2026-07-10 컴플라이언스:
+                    증권사 컨센서스 재배포(이중 IP: 네이버 ToS + 증권사 리서치 저작물) 소지.
+                    PublicStockReport 의 출처 link-out 패턴과 정합 — 상세는 전체 리포트에서 출처 연결. */}
 
                 <button onClick={() => go(s.ticker)} style={{ width: "100%", marginTop: 16, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vt, color: "#fff" }}>전체 리포트 보기 →</button>
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5, textAlign: "center" }}>사실만 · 차트·심화는 전체 리포트</div>

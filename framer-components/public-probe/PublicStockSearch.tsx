@@ -27,7 +27,34 @@ const LAST_TK_KEY = "verity_last_ticker"
 const RECENTS_KEY = "verity_recent_tickers"
 const RECENTS_CAP = 8
 /* 로고 — 토스 종목 CDN(404/차단 시 이니셜 폴백) + circle-flags 원형 국기. ticker 형식으로 국장/미장 판별. */
-const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfColors: Record<string, string> = {}
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; __bfColors = (d && d.colors) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoBg(ticker: any): string {
+    // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
+    return c ? c + "26" : "#ffffff"  // 15% 알파 틴트, 무채색/미보유 = 흰 타일
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 function flagFromTicker(ticker: any): string {
     return /^\d{6}$/.test(String(ticker || "")) ? "kr" : "us"
@@ -36,15 +63,17 @@ function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
     const { ticker, name, C } = props
     const size = props.size || 22
     const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const bfSrc = bfLogoSrc(ticker, lm, size)
     const ch = (String(name || "?").trim().charAt(0)) || "?"
     const code = flagFromTicker(ticker)
     const fsize = Math.round(size * 0.46)
     return (
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
-            {!err && ticker ? (
-                <img src={LOGO_BASE + String(ticker).replace(/-/g, ".") + ".png"} alt="" width={size} height={size}
+            {!err && bfSrc ? (
+                <img src={bfSrc} alt="" width={size} height={size}
                     onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: 7, objectFit: "cover", display: "block", background: C.bg }} />
+                    style={{ width: size, height: size, borderRadius: 7, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: 7, background: C.vtS, color: C.vt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
@@ -74,6 +103,27 @@ interface Props {
     dark: boolean
 }
 
+function readBodyDark(): boolean {
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -83,7 +133,7 @@ export default function PublicStockSearch(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
     useEffect(() => {
         if (onCanvas) return
         const read = () => {
@@ -145,11 +195,15 @@ export default function PublicStockSearch(props: Props) {
     const matches = useMemo(() => {
         const s = q.trim().toLowerCase()
         if (!s || !universe.length) return []
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
+            return t === s ? 0 : (n === s || k === s) ? 1 : t.indexOf(s) === 0 ? 2 : (n.indexOf(s) === 0 || (k && k.indexOf(s) === 0)) ? 3 : 4
+        }
         return universe.filter((x) =>
             String(x.ticker).toLowerCase().includes(s) ||
             String(x.name || "").toLowerCase().includes(s) ||
             String((x as any).name_ko || "").includes(q.trim())
-        ).slice(0, 12)
+        ).sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 12)
     }, [q, universe])
 
     const pick = (tk: string, nm?: string) => {
@@ -267,11 +321,23 @@ export default function PublicStockSearch(props: Props) {
                         </>
                     )}
                     {secLabel("지금 거래 활발", "거래대금 상위 · 네이버")}
+                    {/* 화살표 = SVG (텍스트 "↗" 는 iOS 에서 이모지 렌더 → 어색. PC 텍스트 글리프와 동일 룩 통일) · 좁은 화면 줄바꿈 방지 */}
                     <div onMouseDown={() => { if (typeof window !== "undefined") window.open(isMobileWidth() ? M_NAVER_QUANT : NAVER_QUANT, "_blank", "noopener") }}
                         style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 9, cursor: "pointer" }}>
-                        <span style={{ width: 22, height: 22, borderRadius: 7, background: C.vtS, color: C.vt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>↗</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>실시간 거래대금 상위</span>
-                        <span style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: C.faint }}>네이버 금융 ↗</span>
+                        <span style={{ width: 22, height: 22, borderRadius: 7, background: C.vtS, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width={11} height={11} viewBox="0 0 12 12" fill="none" stroke={C.vt} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <line x1="2.5" y1="9.5" x2="9" y2="3" />
+                                <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
+                            </svg>
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>실시간 거래대금 상위</span>
+                        <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11.5, fontWeight: 700, color: C.faint, whiteSpace: "nowrap" }}>
+                            네이버 금융
+                            <svg width={9} height={9} viewBox="0 0 12 12" fill="none" stroke={C.faint} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <line x1="2.5" y1="9.5" x2="9" y2="3" />
+                                <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
+                            </svg>
+                        </span>
                     </div>
                 </div>, document.body)}
         </div>

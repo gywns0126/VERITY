@@ -32,7 +32,34 @@ const DARK = {
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const FX = 1380
-const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfColors: Record<string, string> = {}
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; __bfColors = (d && d.colors) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoBg(ticker: any): string {
+    // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
+    return c ? c + "26" : "#ffffff"  // 15% 알파 틴트, 무채색/미보유 = 흰 타일
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
 const BROKER_URL = "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/broker_guide.json"
@@ -129,15 +156,17 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     const { ticker, name, market, C } = props
     const size = props.size || 32
     const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const bfSrc = bfLogoSrc(ticker, lm, size)
     const ch = (String(name || "?").trim().charAt(0)) || "?"
     const code = flagCode(market)
     const fsize = Math.round(size * 0.46)
     return (
         <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-            {!err && ticker ? (
-                <img src={LOGO_BASE + ticker + ".png"} alt="" width={size} height={size}
+            {!err && bfSrc ? (
+                <img src={bfSrc} alt="" width={size} height={size}
                     onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: 10, objectFit: "cover", display: "block", background: C.bg }} />
+                    style={{ width: size, height: size, borderRadius: 10, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <div style={{ width: size, height: size, borderRadius: 10, background: C.vtS, color: C.vt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</div>
             )}
@@ -147,6 +176,27 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
             )}
         </div>
     )
+}
+
+function readBodyDark(): boolean {
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
 }
 
 /**
@@ -165,7 +215,7 @@ export default function PublicHoldingsTab(props: Props) {
     const [loading, setLoading] = useState<boolean>(() => (onCanvas ? false : !!getToken()))
     const [showAdd, setShowAdd] = useState(false)
     const [busy, setBusy] = useState(false)
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
     const [view, setView] = useState<"holdings" | "mix" | "tax">("holdings")
     const [brokers, setBrokers] = useState<any[]>([])
     const [brokerIdx, setBrokerIdx] = useState(0)
@@ -294,12 +344,16 @@ export default function PublicHoldingsTab(props: Props) {
     const matches = useMemo(() => {
         const s = q.trim().toLowerCase()
         if (!s || !universe.length) return []
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
+            return t === s ? 0 : (n === s || k === s) ? 1 : t.indexOf(s) === 0 ? 2 : (n.indexOf(s) === 0 || (k && k.indexOf(s) === 0)) ? 3 : 4
+        }
         const held = new Set(rows.map((r: any) => String(r.ticker)))
         return universe.filter((x: any) =>
             String(x.ticker).toLowerCase().includes(s) ||
             String(x.name || "").toLowerCase().includes(s) ||
             String(x.name_ko || "").includes(q.trim())
-        ).slice(0, 8).map((x: any) => ({ ...x, _held: held.has(String(x.ticker)) }))
+        ).sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 8).map((x: any) => ({ ...x, _held: held.has(String(x.ticker)) }))
     }, [q, universe, rows])
 
     // ★ 클릭 = 추가 팝업(수량·평단 수동 입력) / 리스트 수정 = 기존값 프리필 팝업

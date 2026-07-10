@@ -20,7 +20,34 @@ const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", 
 const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34", up: "#f04452", down: "#5b9bff", vg: "#34e08a", vgS: "#11281d", vt: "#a99bff", vtS: "#241f3a", amber: "#ffb340", amberS: "#2a2113", redS: "#2a1518", upS: "#2a1a1d", downS: "#17263c" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
-const LOGO_BASE = "https://static.toss.im/png-icons/securities/icn-sec-fill-"
+
+// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+let __bfMap: Record<string, string> | null = null
+let __bfColors: Record<string, string> = {}
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; __bfColors = (d && d.colors) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoBg(ticker: any): string {
+    // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
+    return c ? c + "26" : "#ffffff"  // 15% 알파 틴트, 무채색/미보유 = 흰 타일
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
+    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+}
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 const LAST_TK_KEY = "verity_last_ticker"
 const TK_EVENT = "verity-ticker-change"
@@ -30,6 +57,8 @@ const DEF_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/ins
 const DEF_FORENSICS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/disclosure_forensics.json"
 const DEF_FLOW = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json"
 const DEF_WARN = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/market_warnings.json"
+const DEF_UNIVERSE = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
+const DEF_API = "https://project-yw131.vercel.app"
 
 const VALUE_KEYS = ["PER", "PBR"]
 const QUALITY_KEYS = ["ROE", "영업이익률"]
@@ -69,15 +98,17 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     const { ticker, name, market, C } = props
     const size = props.size || 38
     const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const bfSrc = bfLogoSrc(ticker, lm, size)
     const ch = (String(name || "?").trim().charAt(0)) || "?"
     const code = flagCode(market)
     const fsize = Math.round(size * 0.46)
     return (
         <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-            {!err && ticker ? (
-                <img src={LOGO_BASE + ticker + ".png"} alt="" width={size} height={size}
+            {!err && bfSrc ? (
+                <img src={bfSrc} alt="" width={size} height={size}
                     onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: 11, objectFit: "cover", display: "block", background: C.bg }} />
+                    style={{ width: size, height: size, borderRadius: 11, objectFit: "contain", padding: "13%", boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <div style={{ width: size, height: size, borderRadius: 11, background: C.vtS, color: C.vt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</div>
             )}
@@ -113,6 +144,27 @@ const DEMO_INS = { net_change: 15816598, buy_n: 9, sell_n: 3, total: 12 }
 const DEMO_FOR = { counts: { 무상증자: 1, 자기주식취득: 9, "전환사채(CB)": 2, 유상증자: 1 } }
 const DEMO_FLOW = [{ foreign_net: 151302, inst_net: 16724 }]
 
+function readBodyDark(): boolean {
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -121,7 +173,7 @@ export default function PublicDecisionPanel(props: Props) {
     const { ticker, stockUrl, usStockUrl, usSmallcapUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, reportPath, discoverPath, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     // 테마 추종 — 사이트 다크모드(body[data-framer-theme]) 따라감. 캔버스는 dark prop 정적.
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
     useEffect(() => {
         if (onCanvas) return
         const read = () => { const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""; setThemeDark(t === "dark") }
@@ -159,27 +211,34 @@ export default function PublicDecisionPanel(props: Props) {
     })
     const tk = selTk
 
-    // 검색 universe 로드 — KR + US 동시(국장·미장 통합). 2026-06-23.
+    // 검색 universe = 경량 인덱스(universe_search.json ~621KB) — 전 종목 리포트(9.2MB) 로드 제거. 2026-07-08.
     useEffect(() => {
-        if (onCanvas || !stockUrl) return
+        if (onCanvas) return
         let alive = true
-        const urls = [stockUrl, usStockUrl, usSmallcapUrl].filter(Boolean)
-        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
-            .then((docs) => {
-                if (!alive) return
-                const merged: any[] = []
-                for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) merged.push(...(a as any[])) }
-                // ticker dedup (smallcap 트랙 ∩ sp600 중복 — 먼저 등장 우선)
-                const seen = new Set<string>()
-                const deduped = merged.filter((s: any) => { const tk2 = String(s.ticker || ""); if (!tk2 || seen.has(tk2)) return false; seen.add(tk2); return true })
-                if (deduped.length) setUniverse(deduped)
-            })
+        fetch(DEF_UNIVERSE, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a) && a.length) setUniverse(a) })
+            .catch(() => {})
         return () => { alive = false }
-    }, [stockUrl, usStockUrl, usSmallcapUrl, onCanvas])
+    }, [onCanvas])
+
+    // ?q= 가 종목명(비 티커)일 때 → 티커로 해석. universe 로드 후 1회 (딥링크 보존, StockReport 와 동일).
+    useEffect(() => {
+        if (onCanvas || !universe.length) return
+        const t = String(tk || "").trim()
+        if (!t || universe.some((x) => String(x.ticker).toUpperCase() === t.toUpperCase())) return
+        const low = t.toLowerCase()
+        const hit = universe.find((x) => String(x.name || "").toLowerCase() === low || String((x as any).name_ko || "") === t)
+            || universe.find((x) => String(x.name || "").toLowerCase().includes(low) || String((x as any).name_ko || "").includes(t))
+        if (hit) setSelTk(String(hit.ticker))
+    }, [universe, tk, onCanvas])
 
     const matches = useMemo(() => {
         const qq = query.trim().toLowerCase(); if (!qq) return []
-        return universe.filter((x) => String(x.name || "").toLowerCase().includes(qq) || String(x.ticker || "").toLowerCase().includes(qq) || String((x as any).name_ko || "").includes(qq)).slice(0, 10)
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
+            return t === qq ? 0 : (n === qq || k === qq) ? 1 : t.indexOf(qq) === 0 ? 2 : (n.indexOf(qq) === 0 || (k && k.indexOf(qq) === 0)) ? 3 : 4
+        }
+        return universe.filter((x) => String(x.name || "").toLowerCase().includes(qq) || String(x.ticker || "").toLowerCase().includes(qq) || String((x as any).name_ko || "").includes(qq)).sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 10)
     }, [query, universe])
 
     // 선택 = 내부 state 즉시 갱신 + localStorage·?q 기록 + 이벤트(ThesisNote 추종)
@@ -205,21 +264,25 @@ export default function PublicDecisionPanel(props: Props) {
         return () => ro.disconnect()
     }, [rootRef[0]])
 
+    // 종목 상세 = 슬라이스 API 1콜(~11KB) — 전 종목 맵 5개(≈11MB) 로드 대체. 2026-07-08.
     useEffect(() => {
         if (onCanvas || !tk) return
         let alive = true
-        const fetchOne = (url: string, find: (d: any) => any) => fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) find(d) }).catch(() => {})
-        const isUsT = !/^\d{6}$/.test(String(tk))   // US(비 6자리)면 미장 소스서 상세 fetch
-        // 순증 소형주는 usSmallcapUrl, sp1500 은 usStockUrl — 둘 다 시도(매칭될 때만 setStock, null 덮음 방지)
-        const findStock = (d: any) => { const a = d.stocks || d; if (Array.isArray(a)) { const hit = a.find((x: any) => x.ticker === tk); if (hit) setStock(hit) } }
-        if (isUsT) { setStock(null); if (usStockUrl) fetchOne(usStockUrl, findStock); if (usSmallcapUrl) fetchOne(usSmallcapUrl, findStock) }
-        else fetchOne(stockUrl, findStock)
-        fetchOne(insiderUrl, (d) => { const a = d.stocks || d; if (Array.isArray(a)) setIns(a.find((x: any) => x.ticker === tk) || null) })
-        fetchOne(forensicsUrl, (d) => { const a = d.stocks || d; if (Array.isArray(a)) setForen(a.find((x: any) => x.ticker === tk) || null) })
-        fetchOne(flowUrl, (d) => { const f = (d.flows || d) || {}; setFlow(f[tk] || []) })
-        fetchOne(warnUrl, (d) => { const wmap = (d.warnings || d) || {}; setWarned(!!wmap[tk]) })
+        const t = String(tk).toUpperCase()
+        setStock(null); setIns(null); setForen(null); setFlow([]); setWarned(false)
+        fetch(DEF_API + "/api/stock_slice?ticker=" + encodeURIComponent(t))
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!alive || !d || d.status !== "ok") return
+                if (d.report) setStock(d.report)
+                setIns(d.insider || null)
+                setForen(d.forensics || null)
+                setFlow(Array.isArray(d.flow) ? d.flow : [])
+                setWarned(!!d.warn)
+            })
+            .catch(() => {})
         return () => { alive = false }
-    }, [tk, stockUrl, usStockUrl, usSmallcapUrl, insiderUrl, forensicsUrl, flowUrl, warnUrl, onCanvas])
+    }, [tk, onCanvas])
 
     const s = onCanvas ? DEMO : stock
     const insD = onCanvas ? DEMO_INS : ins

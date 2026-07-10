@@ -224,6 +224,27 @@ interface Props {
 type Busy = "" | "logout" | "withdraw"
 type Phase = "loading" | "guest" | "member"
 
+function readBodyDark(): boolean {
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 export default function PublicProfilePage(props: Props) {
     const supabaseUrl = (props.supabaseUrl || "").replace(/\/+$/, "")
     const supabaseAnonKey = props.supabaseAnonKey || ""
@@ -233,7 +254,7 @@ export default function PublicProfilePage(props: Props) {
 
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [dark, setDark] = useState<boolean>(!!props.dark)
+    const [dark, setDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : readBodyDark()))
     const [phase, setPhase] = useState<Phase>(isCanvas ? "member" : "loading")
     const [confirming, setConfirming] = useState(false)
     const [busy, setBusy] = useState<Busy>("")

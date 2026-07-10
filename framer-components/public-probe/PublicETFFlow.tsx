@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  */
 
 interface Props {
+    reportPath: string
     dataUrl: string
     dark: boolean
 }
@@ -75,6 +76,27 @@ function premium(close: any, nav: any): number | null {
     return ((c - n) / n) * 100
 }
 
+function readBodyDark(): boolean {
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -83,7 +105,7 @@ export default function PublicETFFlow(props: Props) {
     const { dataUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
     useEffect(() => {
         if (onCanvas) return
         const read = () => {
@@ -227,7 +249,10 @@ export default function PublicETFFlow(props: Props) {
                     const col = has ? dirColor(cum.flow) : C.faint
                     const premStr = prem != null && Math.abs(prem) >= 0.15 ? ` · 괴리 ${prem > 0 ? "+" : ""}${prem.toFixed(2)}%` : ""
                     return (
-                        <div key={e.ticker} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderTop: idx === 0 ? "none" : `1px solid ${C.line}` }}>
+                        <div key={e.ticker} role="link" tabIndex={0}
+                            onClick={() => { if (typeof window !== "undefined") window.location.href = `${(props.reportPath || "/stock").replace(/\/$/, "")}?q=${e.ticker}` }}
+                            onKeyDown={(ev) => { if (ev.key === "Enter" && typeof window !== "undefined") window.location.href = `${(props.reportPath || "/stock").replace(/\/$/, "")}?q=${e.ticker}` }}
+                            style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderTop: idx === 0 ? "none" : `1px solid ${C.line}`, cursor: "pointer" }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 14, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.name}</div>
                                 <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 500, marginTop: 2 }}>{CAT[e.category] || e.category} · 순자산 {fmtKRW(e.netasset)}원{premStr}</div>
@@ -262,6 +287,7 @@ export default function PublicETFFlow(props: Props) {
 }
 
 addPropertyControls(PublicETFFlow, {
+    reportPath: { type: ControlType.String, title: "Report Path", defaultValue: "/stock" },
     dataUrl: { type: ControlType.String, title: "ETF Flow URL", defaultValue: DEFAULT_URL },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

@@ -13,7 +13,9 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
  *
  * 목적 = 로그인하면 관심종목 등 '내 데이터'가 계정에 남음(미로그인=둘러보기 허용).
  * 회원가입(이메일) = Supabase signup. 이메일 인증이 켜져 있으면 인증 메일 안내, 꺼져 있으면 즉시 로그인.
- * 약관·개인정보·국외이전(미국) 동의 = 회원가입·구글 로그인 시 필수(개인정보보호법 §28의8 국외이전 동의).
+ *   이메일 인증 링크는 signup ?redirect_to= 로 AlphaNest 로 복귀(미지정 시 Site URL=VERITY 폴백 방지).
+ * 약관·개인정보·국외이전(미국) 동의 = 회원가입 시 필수(개인정보보호법 §28의8 국외이전 동의).
+ * 로그인 성공 후 = afterLoginPath(또는 URL ?next=) 로 이동.
  * 세션 변경 시 window 'verity_auth_change' dispatch — 다른 AlphaNest 컴포넌트(관심종목)가 구독.
  *
  * 🚨 수동 선행(Supabase 대시보드): AlphaNest 도메인을 Auth → URL Configuration → Redirect URLs 추가 + Google provider enable.
@@ -107,8 +109,10 @@ function resolveNext(afterLoginPath: string): string {
 }
 
 // 이메일 회원가입(즉시 — 승인 없음). access_token 오면 즉시 로그인, 없으면 이메일 인증 안내.
-async function signUpEmail(supabaseUrl: string, anonKey: string, email: string, password: string, displayName: string, consent: boolean): Promise<{ session: SupaSession | null; needConfirm: boolean }> {
-    const body = await supaFetch(`${supabaseUrl}/auth/v1/signup`, anonKey, {
+async function signUpEmail(supabaseUrl: string, anonKey: string, email: string, password: string, displayName: string, consent: boolean, redirectTo: string): Promise<{ session: SupaSession | null; needConfirm: boolean }> {
+    // 인증 메일의 복귀 URL = redirect_to (미지정 시 Site URL=VERITY 로 폴백됨 → AlphaNest 로 명시).
+    const q = redirectTo ? `?redirect_to=${encodeURIComponent(redirectTo)}` : ""
+    const body = await supaFetch(`${supabaseUrl}/auth/v1/signup${q}`, anonKey, {
         method: "POST",
         body: JSON.stringify({ email, password, data: { name: displayName || email.split("@")[0], consent } }),
     })
@@ -209,6 +213,27 @@ interface Props {
 const DEFAULT_SUPABASE_URL = "https://lykqebdcurreppowulsl.supabase.co"
 const DEFAULT_SUPABASE_ANON_KEY = ""
 
+function readBodyDark(): boolean {
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -219,7 +244,7 @@ export default function AlphaNestAuth(props: Props) {
     const anonKey = supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
         if (onCanvas) return
@@ -312,7 +337,8 @@ export default function AlphaNestAuth(props: Props) {
         setBusy(true)
         try {
             if (mode === "signup") {
-                const { session: s, needConfirm } = await signUpEmail(url, anonKey, email.trim(), password, displayName.trim(), agreed)
+                const back = (redirectUrl || "").trim() || (typeof window !== "undefined" ? window.location.origin + window.location.pathname : "")
+                const { session: s, needConfirm } = await signUpEmail(url, anonKey, email.trim(), password, displayName.trim(), agreed, back)
                 if (needConfirm || !s) {
                     setOk("인증 메일을 보냈어요. 메일의 링크를 누른 뒤 로그인해주세요.")
                     setPassword("")
@@ -451,8 +477,6 @@ export default function AlphaNestAuth(props: Props) {
                     <GoogleG size={18} />
                     Google로 계속하기
                 </button>
-
-                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 16, lineHeight: 1.5, textAlign: "center" }}>AlphaNest 계정은 공개 터미널 전용입니다 · VERITY 운영 시스템과 별개</div>
             </div>
         </div>
     )
