@@ -107,6 +107,7 @@ const DEFAULT_INSIDER = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com
 const DEFAULT_WARN = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/market_warnings.json"
 const DEFAULT_LENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/securities_lending.json"
 const DEFAULT_SUPPLY = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/supply_demand.json"
+const DEFAULT_EMPLOYMENT = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nps_employment.json"
 // 시세 컴플라이언스 — 실시간 시세·거래대금 상위 = 네이버 link-out(증권사 서빙 = 재배포 아님, 실시간·무료·합법)
 const NAVER_QUANT = "https://finance.naver.com/sise/sise_quant.naver"
 const M_NAVER_QUANT = "https://m.stock.naver.com/sise/trade"
@@ -493,7 +494,7 @@ function qtLabel(qEnd: string): string {
     return `${y}.${q}`
 }
 
-function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl = QT_DEFAULT_URL, maxQuarters = 40 }: { ticker: string; C: any; isDark: boolean; showExtremes?: boolean; quarterlyUrl?: string; maxQuarters?: number }) {
+function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl = QT_DEFAULT_URL, maxQuarters = 40, embedded = false, onCount }: { ticker: string; C: any; isDark: boolean; showExtremes?: boolean; quarterlyUrl?: string; maxQuarters?: number; embedded?: boolean; onCount?: (n: number) => void }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const ref = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -516,6 +517,8 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
     }, [quarterlyUrl, ticker, onCanvas])
     const cap = Math.max(4, Math.min(40, maxQuarters || 20))
     const series = useMemo(() => [...quarters].sort((a, b) => String(a.q).localeCompare(String(b.q))).slice(-cap), [quarters, cap])
+    // 병합 '재무 추이' 탭 가용성 보고 — 부모가 '분기 건전성' 탭 노출 여부 판단 (2026-07-10)
+    useEffect(() => { if (onCount) onCount(series.length) }, [series.length])
     const narrow = w > 0 && w < 420
     if (!onCanvas && series.length < 4) return null
     const CW = Math.max(80, (w || 360) - (narrow ? 28 : 36))
@@ -523,8 +526,9 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
     return (
         <div ref={ref} style={{ background: C.card, borderRadius: 16, padding: narrow ? "15px 14px" : "17px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px", color: C.ink }}>분기 재무 추이</span>
-                <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>최근 {series.length}분기 · DART 분기보고서 · 사실</span>
+                {/* embedded = 병합 '재무 추이' 섹션 안 탭 콘텐츠 — 섹션 제목과 중복되는 자체 제목 생략 */}
+                {!embedded && <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px", color: C.ink }}>분기 재무 추이</span>}
+                <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{embedded ? `최근 ${series.length}분기 · 실값` : `최근 ${series.length}분기 · DART 분기보고서 · 사실`}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 0, marginTop: 10 }}>
                 {QT_METRICS.map((m, mi) => {
@@ -545,7 +549,25 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                     const xAt = (i: number) => PX + (n <= 1 ? 0 : (i / (n - 1)) * (CW - PX * 2))
                     const yAt = (v: number) => PY + (1 - (v - lo) / span) * (CH - PY * 2)
                     const pts = raw.map((v, i) => (v == null ? null : { x: xAt(i), y: yAt(v), v, i })).filter((p): p is { x: number; y: number; v: number; i: number } => p != null)
-                    const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")
+                    // 유선형(Catmull-Rom→베지어) — 2026-07-08 PM 승인: 7/4 '그래프 선형' 결정 override.
+                    //   장력 1/6(표준, BondRegime 동일) = 실측점 밖 overshoot 최소화(분기 사이 값 지어냄 인상 억제).
+                    const linePath = pts.length < 2
+                        ? (pts.length ? `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}` : "")
+                        : (() => {
+                            let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`
+                            for (let i = 0; i < pts.length - 1; i++) {
+                                const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2
+                                const c1x = p1.x + (p2.x - p0.x) / 6, c2x = p2.x - (p3.x - p1.x) / 6
+                                // control point y 를 세그먼트 두 끝점 범위로 clamp → 큐빅 베지어가 그 y-band 안에
+                                //   갇혀 실측 min/max 밖으로 overshoot 0 (2026-07-09: '최저 1.82보다 밑으로 내려감'
+                                //   괴리 해소. 곡선 유지하되 분기 사이 값 지어냄 인상 차단).
+                                const loY = Math.min(p1.y, p2.y), hiY = Math.max(p1.y, p2.y)
+                                const c1y = Math.max(loY, Math.min(hiY, p1.y + (p2.y - p0.y) / 6))
+                                const c2y = Math.max(loY, Math.min(hiY, p2.y - (p3.y - p1.y) / 6))
+                                d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
+                            }
+                            return d
+                        })()
                     const areaPath = `${linePath} L${pts[pts.length - 1].x.toFixed(1)},${CH - 1} L${pts[0].x.toFixed(1)},${CH - 1} Z`
                     const hiPt = pts.reduce((a, b) => (b.v > a.v ? b : a))
                     const loPt = pts.reduce((a, b) => (b.v < a.v ? b : a))
@@ -668,6 +690,7 @@ export default function PublicStockReport(props: Props) {
     const [lendingMap, setLendingMap] = useState<Record<string, any>>({})
     const [lendAsOf, setLendAsOf] = useState<string>("")
     const [supplyMap, setSupplyMap] = useState<Record<string, any>>({})
+    const [empMap, setEmpMap] = useState<Record<string, any>>({})
     const [selTicker, setSelTicker] = useState<string>(() => {
         if (typeof window !== "undefined") {
             try {
@@ -693,6 +716,9 @@ export default function PublicStockReport(props: Props) {
     const [openFlow, setOpenFlow] = useState<number>(-1)
     const [openPeer, setOpenPeer] = useState<number>(-1)
     const [openFin, setOpenFin] = useState<boolean>(false)
+    // 병합 '재무 추이' 탭 (2026-07-10 PM — 연간 손익 vs 분기 건전성, 두 추이 섹션 이름 혼동 해소)
+    const [trendTab, setTrendTab] = useState<"annual" | "q">("annual")
+    const [qtN, setQtN] = useState<number>(0)   // 분기 추이 로드된 분기 수 (≥4 = 탭 노출)
     const [forenAll, setForenAll] = useState(false)
     const [insiderAll, setInsiderAll] = useState(false)
     const [watchToken, setWatchToken] = useState("")
@@ -707,6 +733,23 @@ export default function PublicStockReport(props: Props) {
         if (typeof window === "undefined" || !window.matchMedia) return
         try { setHoverCapable(window.matchMedia("(hover: hover) and (pointer: fine)").matches) } catch { /* keep default */ }
     }, [])
+
+    /* 콜드 랜딩 디폴트 = 그날 거래대금 1위 (2026-07-09) — ?q·최근본 이력 둘 다 없을 때만.
+       명시 쿼리/최근 종목이 있으면 유지(연속성). hot_stock.json = 금융위 공공데이터(거래대금, 청정·EOD 사실). */
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        try {
+            const qp = (new URLSearchParams(window.location.search).get("q") || "").trim()
+            const ls = (window.localStorage.getItem("verity_last_ticker") || "").trim()
+            if (qp || ls) return
+        } catch (e) { return }
+        let alive = true
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json", { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const t = d && d.hot && d.hot.ticker; if (alive && t) setSelTicker(String(t).toUpperCase()) })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [onCanvas])
 
     useEffect(() => {
         const el = rootRef.current
@@ -723,37 +766,47 @@ export default function PublicStockReport(props: Props) {
         return () => document.removeEventListener("click", close)
     }, [])
 
+    // 종목 상세 = 슬라이스 API 1콜(~11KB) — 전 종목 맵 로드(≈16MB) 대체 (로딩 극단 경량화 2026-07-08).
+    //   report + flow/forensics/insider/warn/lending/supply/employment 를 한 번에 슬라이스 반환.
+    //   검색 목록(searchList)은 universe_search.json 로 별도(경량) — 아래 effect. 상세는 선택 종목만.
     useEffect(() => {
-        if (onCanvas || !stockUrl) return
+        if (onCanvas) return
+        const t = String(selTicker || "").trim().toUpperCase()
+        if (!t) return
         let alive = true
-        const urls = [stockUrl, usStockUrl, usSmallcapUrl].filter(Boolean)
-        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
-            .then((docs) => {
-                const arr: any[] = []
-                for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) arr.push(...(a as any[])) }
-                if (!alive || !arr.length) return
-                const ts = docs[0] && (docs[0] as any)._meta && (docs[0] as any)._meta.generated_at
-                if (ts) setReportAsOf(String(ts))
-                // ticker dedup — smallcap 트랙(us_stock_report_us_smallcap) ∩ sp600 중복. 먼저 등장(sp1500) 우선.
-                const seen = new Set<string>()
-                const deduped = arr.filter((s: any) => { const tk = String(s.ticker || ""); if (!tk || seen.has(tk)) return false; seen.add(tk); return true })
-                setList(deduped); setListLoaded(true)
-                let initT = deduped[0].ticker
-                if (typeof window !== "undefined") {
-                    let qp = (new URLSearchParams(window.location.search).get("q") || "").trim().toLowerCase()
-                    if (!qp) { try { qp = (window.localStorage.getItem("verity_last_ticker") || "").trim().toLowerCase() } catch (e) {} }
-                    if (qp) {
-                        const hit = deduped.find((x: any) => String(x.ticker).toLowerCase() === qp || String(x.name || "").toLowerCase() === qp || String(x.name_ko || "") === qp)
-                            || deduped.find((x: any) => String(x.ticker).toLowerCase().includes(qp) || String(x.name || "").toLowerCase().includes(qp) || String(x.name_ko || "").includes(qp))
-                        if (hit) initT = hit.ticker
-                    }
-                }
-                try { window.localStorage.setItem("verity_last_ticker", String(initT)) } catch (e) {}
-                setSelTicker(initT)
+        fetch(base + "/api/stock_slice?ticker=" + encodeURIComponent(t))
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!alive) return
+                if (!d || d.status !== "ok") { setListLoaded(true); return }
+                const rep = d.report
+                if (rep && rep.ticker) setList([rep])
+                else setList([])   // 리포트 미보유 = s memo 가 searchList stub 으로 안내(_noReport)
+                if (d.report_as_of) setReportAsOf(String(d.report_as_of))
+                const merge = (setter: any, sec: any) => { if (sec != null) setter((prev: any) => ({ ...prev, [t]: sec })) }
+                if (d.flow != null) setFlowMap((p: any) => ({ ...p, [t]: d.flow }))
+                merge(setForensicsMap, d.forensics)
+                merge(setInsiderMap, d.insider)
+                merge(setWarnMap, d.warn)
+                merge(setLendingMap, d.lending); if (d.lend_as_of) setLendAsOf(String(d.lend_as_of))
+                merge(setSupplyMap, d.supply)
+                merge(setEmpMap, d.employment)
+                setListLoaded(true)
             })
-            .catch(() => {})
+            .catch(() => { if (alive) setListLoaded(true) })
         return () => { alive = false }
-    }, [stockUrl, usStockUrl, usSmallcapUrl, onCanvas])
+    }, [selTicker, base, onCanvas])
+
+    // ?q= 가 종목명(비 티커)일 때 → 티커로 해석. 검색 universe 로드 후 1회 (딥링크 보존).
+    useEffect(() => {
+        if (onCanvas || !searchList.length) return
+        const t = String(selTicker || "").trim()
+        if (!t || searchList.some((x: any) => String(x.ticker).toUpperCase() === t.toUpperCase())) return
+        const low = t.toLowerCase()
+        const hit = searchList.find((x: any) => String(x.name || "").toLowerCase() === low || String(x.name_ko || "") === t)
+            || searchList.find((x: any) => String(x.name || "").toLowerCase().includes(low) || String(x.name_ko || "").includes(t))
+        if (hit) setSelTicker(String(hit.ticker).toUpperCase())
+    }, [searchList, selTicker, onCanvas])
 
     /* 검색 universe 로드 — 통합 universe_search.json(전 종목 KR+US). 리포트 DATA(list)와 별개. */
     useEffect(() => {
@@ -765,87 +818,8 @@ export default function PublicStockReport(props: Props) {
         return () => { alive = false }
     }, [onCanvas])
 
-    useEffect(() => {
-        if (onCanvas || !flowUrl) return
-        let alive = true
-        fetch(flowUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const fm = d && (d.flows || d); if (alive && fm && typeof fm === "object") setFlowMap(fm) })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [flowUrl, onCanvas])
-
-    // 대차잔고(공매도 압력 proxy) — top200, stocks 배열 → ticker 맵. 미보유 종목은 graceful 미표시.
-    useEffect(() => {
-        const url = lendingUrl || DEFAULT_LENDING
-        if (onCanvas || !url) return
-        let alive = true
-        fetch(url, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                if (!alive || !d || !Array.isArray(d.stocks)) return
-                const m: Record<string, any> = {}
-                for (const row of d.stocks) { if (row && row.ticker) m[String(row.ticker)] = row }
-                setLendingMap(m)
-                setLendAsOf((d._meta && d._meta.as_of) || "")
-            })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [lendingUrl, onCanvas])
-
-    // 수급 종합(공매도·신용잔고) — supply_demand.json (stocks 맵). 스냅샷 universe만, 미보유 graceful.
-    useEffect(() => {
-        const url = supplyUrl || DEFAULT_SUPPLY
-        if (onCanvas || !url) return
-        let alive = true
-        fetch(url, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const m = d && (d.stocks || d); if (alive && m && typeof m === "object") setSupplyMap(m) })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [supplyUrl, onCanvas])
-
-    useEffect(() => {
-        if (onCanvas || !forensicsUrl) return
-        let alive = true
-        fetch(forensicsUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const arr = d && (Array.isArray(d) ? d : d.stocks)
-                if (!alive || !Array.isArray(arr)) return
-                const m: Record<string, any> = {}
-                for (const x of arr) { if (x && x.ticker) m[String(x.ticker)] = x }
-                setForensicsMap(m)
-            })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [forensicsUrl, onCanvas])
-
-    useEffect(() => {
-        if (onCanvas || !insiderUrl) return
-        let alive = true
-        fetch(insiderUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const arr = d && (Array.isArray(d) ? d : d.stocks)
-                if (!alive || !Array.isArray(arr)) return
-                const m: Record<string, any> = {}
-                for (const x of arr) { if (x && x.ticker) m[String(x.ticker)] = x }
-                setInsiderMap(m)
-            })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [insiderUrl, onCanvas])
-
-    useEffect(() => {
-        if (onCanvas || !warnUrl) return
-        let alive = true
-        fetch(warnUrl, { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const wm = d && (d.warnings || d); if (alive && wm && typeof wm === "object") setWarnMap(wm) })
-            .catch(() => {})
-        return () => { alive = false }
-    }, [warnUrl, onCanvas])
+    // (flow·대차·수급·고용·포렌식·내부자·경보 전 종목 맵 fetch 는 슬라이스 API 로 통합 — 위 effect 참조.
+    //  종목별 ~11KB 슬라이스로 대체해 페이지당 ≈16MB 다운로드 제거. 2026-07-08.)
 
     // 美 forensics — 종목이 US(비 6자리 ticker)일 때 per-ticker 엔드포인트 집계
     // (Form4 내부자 · 13D/G 대량보유 · 13F 스마트머니 · 컨센서스). KR 은 skip.
@@ -870,7 +844,8 @@ export default function PublicStockReport(props: Props) {
         return list[0] || {}
     }, [list, searchList, selTicker])
     // 로딩 중(실데이터 미도착 or 선택 종목 미발견)엔 삼성전자 샘플 폴백 대신 스켈레톤. 160ms 지연 게이트=즉시 로드 깜빡임 차단(토스식).
-    const found = useMemo(() => list.some((x) => String(x.ticker) === String(selTicker)), [list, selTicker])
+    // 리포트 보유(list) 또는 universe 확인(searchList) 시 종목 확정 — 슬라이스 미보유 종목도 stub 안내로 스켈레톤 탈출
+    const found = useMemo(() => list.some((x) => String(x.ticker) === String(selTicker)) || searchList.some((x) => String(x.ticker) === String(selTicker)), [list, searchList, selTicker])
     const showSkeleton = !onCanvas && (!listLoaded || !found)
     useEffect(() => {
         if (!showSkeleton) { setSkelVisible(false); return }
@@ -933,7 +908,7 @@ export default function PublicStockReport(props: Props) {
     const matches = useMemo(() => {
         const q = query.trim().toLowerCase()
         if (!q) return []
-        return searchList.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").toLowerCase().includes(q) || String(x.name_ko || "").includes(q)).slice(0, 15)
+        return searchList.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").toLowerCase().includes(q) || String(x.name_ko || "").includes(q) || String(x.kw || "").toLowerCase().includes(q)).slice(0, 15)
     }, [query, searchList])
 
     const facts = s.facts || {}
@@ -958,6 +933,7 @@ export default function PublicStockReport(props: Props) {
     }, [flowRows])
     const lendingRow = useMemo(() => (lendingMap && lendingMap[s.ticker]) || null, [lendingMap, s.ticker])
     const supplyRow = useMemo(() => (supplyMap && supplyMap[s.ticker]) || null, [supplyMap, s.ticker])
+    const empRow = useMemo(() => (empMap && empMap[s.ticker]) || null, [empMap, s.ticker])
     const foren = useMemo(() => (forensicsMap && forensicsMap[s.ticker]) || null, [forensicsMap, s.ticker])
     const insider = useMemo(() => (insiderMap && insiderMap[s.ticker]) || null, [insiderMap, s.ticker])
     const warn = useMemo(() => (warnMap && warnMap[s.ticker]) || null, [warnMap, s.ticker])
@@ -1169,6 +1145,11 @@ export default function PublicStockReport(props: Props) {
     const headerBox: CSSProperties = warnTop
         ? { marginTop: 14, background: warnTint, borderRadius: 18, padding: narrow ? "13px 14px" : "15px 17px" }
         : { marginTop: 14, paddingLeft: narrow ? 14 : 17 }
+
+    // 🔎 채권·금리 검색 진입(RATES_*) = 종목 리포트가 아니라 PublicBondRegime(searchMode)이 표시.
+    //   이 컴포넌트는 렌더 양보(null) — 같은 /stock 페이지에서 채권이면 BondRegime, 종목이면 이 리포트.
+    //   (2026-07-08 통합 검색·리포트. 미지 티커 "준비중" stub 이 채권에 뜨는 것 방지.)
+    if (String(selTicker || "").toUpperCase().startsWith("RATES_")) return null
 
     if (showSkeleton) {
         return (
@@ -1537,11 +1518,39 @@ export default function PublicStockReport(props: Props) {
                 </>
             )}
 
-            {/* 분기 재무 추이 — 한눈 파악 먼저(재무 요약 위). 선형 차트 + 최고/최저점.
-                실데이터(dart_quarterly_public.json) 없으면 자동 숨김(RULE 7). 캔버스=SAMPLE. */}
-            <div style={{ marginTop: 12 }}>
-                <QuarterlyTrend ticker={s.ticker} C={C} isDark={C === DARK} quarterlyUrl={/^\d{6}$/.test(String(s.ticker)) ? QT_DEFAULT_URL : QT_US_URL} />
-            </div>
+            {/* 재무 추이 — 연간 손익(fin_series) / 분기 건전성(dart_quarterly) 탭 병합.
+                2026-07-10 PM: "재무 추이"·"분기 재무 추이" 두 섹션이 같은 걸로 보임(이름 혼동) → 한 섹션 탭 2개.
+                데이터는 직교 — 연간 = 매출·영업이익·순익 절대 규모 + 1·3·5년 비교 / 분기 = 부채·ROA·유동·마진 건전성 비율.
+                QuarterlyTrend 는 항상 mount(숨김) — fetch 1회 유지 + onCount 로 탭 노출 판단. 둘 다 없으면 섹션 자동 숨김(RULE 7). */}
+            {(() => {
+                const onCv = RenderTarget.current() === RenderTarget.canvas
+                const isKRt = /^\d{6}$/.test(String(s.ticker || ""))
+                const hasAnnual = Array.isArray(s.fin_series) && s.fin_series.length >= 2
+                const hasQ = onCv || qtN >= 4
+                const both = hasAnnual && hasQ
+                const tab = trendTab === "q" ? (hasQ ? "q" : "annual") : (hasAnnual ? "annual" : "q")
+                const show = hasAnnual || hasQ
+                return (
+                    <>
+                        {show && sectionTitle("재무 추이", tab === "annual"
+                            ? (isKRt ? "DART" : "SEC 10-K") + " · 연간 손익 실값 · 과거(1·3·5년) 비교"
+                            : (isKRt ? "DART 분기보고서" : "SEC 10-Q") + " · 건전성 비율(부채·ROA·유동·마진)")}
+                        {both && (
+                            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                                {[{ k: "annual", l: "연간 손익" }, { k: "q", l: "분기 건전성" }].map((t) => (
+                                    <button key={t.k} onClick={() => setTrendTab(t.k as "annual" | "q")}
+                                        style={{ flex: 1, border: "none", cursor: "pointer", padding: "8px 0", borderRadius: 10, fontSize: 12.5, fontWeight: 800, fontFamily: FONT, background: tab === t.k ? C.vt : C.card, color: tab === t.k ? C.onAccent : C.sub, boxShadow: tab === t.k ? "none" : "0 1px 3px rgba(0,0,0,0.04)" }}>{t.l}</button>
+                                ))}
+                            </div>
+                        )}
+                        {show && tab === "annual" && hasAnnual && <FinTrend series={s.fin_series} C={C} usd={!isKRt} />}
+                        {/* 항상 mount — display 토글만 (탭 전환마다 재fetch 방지, ResizeObserver 가 표시 시 폭 재측정) */}
+                        <div style={{ display: show && tab === "q" ? "block" : "none" }}>
+                            <QuarterlyTrend ticker={s.ticker} C={C} isDark={C === DARK} quarterlyUrl={isKRt ? QT_DEFAULT_URL : QT_US_URL} embedded onCount={setQtN} />
+                        </div>
+                    </>
+                )
+            })()}
 
             {/* 재무 요약 — 탭하면 재무제표 전체(손익/재무상태/현금흐름/비율) */}
             {financials && financials.values && Object.keys(financials.values).length > 0 && (
@@ -1576,13 +1585,7 @@ export default function PublicStockReport(props: Props) {
                 </>
             )}
 
-            {/* 재무 추이 — 연도별 매출·영업이익·순익 + 과거 비교 (DART 공시 실값) */}
-            {Array.isArray(s.fin_series) && s.fin_series.length >= 2 && (
-                <>
-                    {sectionTitle("재무 추이", (/^\d{6}$/.test(String(s.ticker || "")) ? "DART" : "SEC 10-K") + " · 연간 실값 · 과거(1·3·5년) 비교")}
-                    <FinTrend series={s.fin_series} C={C} usd={!/^\d{6}$/.test(String(s.ticker || ""))} />
-                </>
-            )}
+            {/* (구 '재무 추이' 연간 블록 = 위 병합 섹션 '연간 손익' 탭으로 이동, 2026-07-10) */}
 
             {/* 공시·리스크 레이더 */}
             {disclosures.length > 0 && (
@@ -1832,6 +1835,38 @@ export default function PublicStockReport(props: Props) {
                 </>
             )}
 
+            {/* 고용 동향 — 국민연금 가입 사업장 (공단 공시 사실, 월 단위. 사업보고서보다 빠른 고용 흐름) */}
+            {empRow && empRow.jnngp_cnt > 0 && (() => {
+                const ymTxt = empRow.ym && String(empRow.ym).length === 6 ? String(empRow.ym).slice(2, 4) + "." + Number(String(empRow.ym).slice(4)) + "월" : ""
+                const net = Number(empRow.net) || 0
+                const netColor = net > 0 ? C.green : net < 0 ? C.down : C.faint
+                const stat = (label: string, val: any, color: string) => (
+                    <div style={{ flex: 1, minWidth: 80, background: C.bg, borderRadius: 12, padding: "10px 12px" }}>
+                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 700 }}>{label}</div>
+                        <div style={{ fontFamily: HEAD, fontSize: 17, fontWeight: 800, color, letterSpacing: "-0.4px", marginTop: 2 }}>{val}</div>
+                    </div>
+                )
+                return (
+                    <>
+                        {sectionTitle("고용 동향", "국민연금 가입 기준" + (ymTxt ? " · " + ymTxt : ""))}
+                        <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                                <span style={{ fontFamily: HEAD, fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.6px" }}>{Number(empRow.jnngp_cnt).toLocaleString()}명</span>
+                                <span style={{ fontSize: 12.5, fontWeight: 700 }}>국민연금 가입 임직원</span>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                                {stat("월 입사", (Number(empRow.hire) || 0).toLocaleString() + "명", C.ink)}
+                                {stat("월 퇴사", (Number(empRow.leave) || 0).toLocaleString() + "명", C.ink)}
+                                {stat("순증감", (net > 0 ? "+" : "") + net.toLocaleString() + "명", netColor)}
+                            </div>
+                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>
+                                국민연금공단 가입 사업장 공시 · 사업장명 정확일치 매칭 (고용 프록시 — 가입 제외 인원은 미포함) · 사업보고서(분기)보다 빠른 월 단위 관측
+                            </div>
+                        </div>
+                    </>
+                )
+            })()}
+
             {/* 부동산 자산 */}
             {realEstate && realEstate.total && (
                 <>
@@ -1877,16 +1912,57 @@ export default function PublicStockReport(props: Props) {
                 )
             })()}
 
-            {/* 컨센서스 */}
-            {(consensus.target_price || consensus.opinion) && (
-                <>
-                    {sectionTitle("애널리스트 컨센서스", "집계 · AlphaNest 의견 아님")}
-                    <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                        {[["목표주가 평균", consensus.target_price], ["투자의견", consensus.opinion], ["추정 EPS", consensus.eps]].map(([k, v]: any, i) => v ? kvRow(k, v, i) : null)}
-                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "4px 0 10px", lineHeight: 1.5 }}>증권사 집계 사실</div>
-                    </div>
-                </>
-            )}
+            {/* 컨센서스 — 평균/의견 + 목표가 고저 범위 + 투자의견 분포막대 (PublicConsensus 흡수 2026-07-08) */}
+            {(consensus.target_price || consensus.opinion || consensus.counts) && (() => {
+                const cc = consensus.counts || null
+                const CATS: [string, string][] = [["strongBuy", "적극매수"], ["buy", "매수"], ["hold", "중립"], ["sell", "매도"], ["strongSell", "적극매도"]]
+                const vals = cc ? CATS.map(([k]) => Number(cc[k]) || 0) : []
+                const maxV = Math.max(1, ...vals)
+                const hasDist = !!cc && vals.some((v) => v > 0)
+                const hasRange = !!(consensus.target_high && consensus.target_low)
+                return (
+                    <>
+                        {sectionTitle("애널리스트 컨센서스", "집계 · AlphaNest 의견 아님")}
+                        <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                            {[["목표주가 평균", consensus.target_price], ["투자의견", consensus.opinion], ["추정 EPS", consensus.eps]].map(([k, v]: any, i) => v ? kvRow(k, v, i) : null)}
+                            {hasRange && (
+                                <div style={{ marginTop: 12 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 800, color: C.ink }}>
+                                        <span>{consensus.target_low}</span><span>{consensus.target_high}</span>
+                                    </div>
+                                    <div style={{ height: 6, borderRadius: 3, marginTop: 6, background: `linear-gradient(90deg, ${C.down}, ${C.vt}, ${C.up})` }} />
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontWeight: 600, color: C.faint, marginTop: 4 }}>
+                                        <span>최저 목표가</span><span>최고 목표가</span>
+                                    </div>
+                                </div>
+                            )}
+                            {hasDist && (
+                                <div style={{ marginTop: 14 }}>
+                                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+                                        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.sub }}>투자의견 분포</span>
+                                        {consensus.num_analysts && <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{consensus.num_analysts}명 집계</span>}
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 84 }}>
+                                        {CATS.map(([k, label], i) => {
+                                            const v = vals[i]
+                                            const h = Math.round((v / maxV) * 60)
+                                            const dominant = v === maxV && v > 0
+                                            return (
+                                                <div key={k} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                                                    <span style={{ fontSize: 11, fontWeight: 800, color: dominant ? C.vt : C.faint }}>{v}</span>
+                                                    <div style={{ width: "100%", maxWidth: 34, height: Math.max(3, h), borderRadius: 6, background: dominant ? C.vt : v > 0 ? C.vtS : C.line }} />
+                                                    <span style={{ fontSize: 9.5, fontWeight: 600, color: C.faint, textAlign: "center", lineHeight: 1.2 }}>{label}</span>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "10px 0 0", lineHeight: 1.5 }}>증권사·애널리스트 집계 사실 · AlphaNest 의견 아님</div>
+                        </div>
+                    </>
+                )
+            })()}
 
             {/* 일정 */}
             {calendar.length > 0 && (
