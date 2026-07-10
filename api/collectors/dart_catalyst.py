@@ -45,7 +45,12 @@ PBLNTF_LABELS: Dict[str, str] = {
     "B": "주요사항보고",
     "C": "발행공시",
     "D": "지분공시",
+    "I": "거래소공시",  # 2026-07-11 확대 — 공급계약·수주 키워드 한정 수집 (아래 I_KEYWORDS)
 }
+
+# I(거래소공시) = 조회공시·풍문해명 등 노이즈가 많아 사업 실체 공시만 키워드 화이트리스트 수집.
+# 결정론 필터 (편집 판단 0) — 브리핑 '급등락×공시 병기'의 납품·수주 축 재료 (PM 2026-07-11).
+I_KEYWORDS: tuple = ("단일판매", "공급계약", "수주")
 
 # catalyst 강도 5-tier (2026-05-23 PM 사전등록, RULE 7).
 # Perplexity 자문 정합 ([[2026-05-23_Track1_자문_batch2_A4A5A6A7.md]] §A4):
@@ -58,6 +63,7 @@ CATALYST_SEVERITY: Dict[str, int] = {
     "B": 3,           # 주주환원 = 자사주/배당 (B default, 5/4 미해당)
     "C": 2,           # 발행공시 = CB/BW (dilution risk)
     "D": 2,           # 지분공시 = 5% 변동
+    "I": 3,           # 거래소공시 = 공급계약·수주 한정 수집 (I_KEYWORDS) — 사업 catalyst, B default 급
     "corr": 1,        # 정정공시
 }
 
@@ -94,7 +100,7 @@ def _classify_severity(pblntf_ty: str, report_nm: str, is_correction: bool) -> i
     """
     if is_correction:
         return CATALYST_SEVERITY["corr"]
-    if pblntf_ty in ("C", "D"):
+    if pblntf_ty in ("C", "D", "I"):
         return CATALYST_SEVERITY[pblntf_ty]
     if pblntf_ty != "B":
         return 1  # unknown ty fallback
@@ -157,10 +163,12 @@ def fetch_catalysts_for_stock(
     bgn_de = bgn_dt.strftime("%Y%m%d")
 
     all_events: List[Dict[str, Any]] = []
-    for ty in ("B", "C", "D"):
+    for ty in ("B", "C", "D", "I"):
         try:
             events = _fetch_catalyst_by_type(corp_code, bgn_de, end_de, ty)
             for e in events:
+                if ty == "I" and not any(k in e.get("report_nm", "") for k in I_KEYWORDS):
+                    continue  # 거래소공시 = 공급계약·수주만 (조회공시·풍문 등 노이즈 제외)
                 is_corr = _detect_correction(e)
                 severity = _classify_severity(
                     pblntf_ty=ty,
@@ -272,7 +280,7 @@ def fetch_catalysts_market_wide(
     seen_rcept: set = set()
 
     for cls in corp_cls:
-        for ty in ("B", "C", "D"):
+        for ty in ("B", "C", "D", "I"):
             page = 1
             while page <= max_pages:
                 try:
@@ -296,6 +304,8 @@ def fetch_catalysts_market_wide(
                     sc = str(d.get("stock_code", "") or "").strip()
                     if len(sc) != 6 or not sc.isdigit():
                         continue  # 비상장/채권/스팩 등 stock_code 없는 공시 제외
+                    if ty == "I" and not any(k in str(d.get("report_nm", "")) for k in I_KEYWORDS):
+                        continue  # 거래소공시 = 공급계약·수주만
                     rno = d.get("rcept_no", "")
                     if not rno or rno in seen_rcept:
                         continue
