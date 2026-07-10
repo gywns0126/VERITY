@@ -26,7 +26,7 @@ const SAMPLE_REC: any = {
     institutional: { total_pct: 5.18, n: 1, holders: [{ reporter: "국민연금공단", pct: 5.18, qty_change: 108230, date: "2026-04-01" }], note: "DART 5%+ 대량보유 보고(기관·국민연금) — 사실, 신호 아님" },
     facilities: { headquarters: { location: "경상남도 창원시 성산구", ownership: "소유" }, facilities: [{ name: "창원공장", location: "경상남도 창원시", use: "공장", segment: "디펜스솔루션" }], note: "DART 사업보고서 시설 현황 — 사실" },
 }
-const SAMPLE_FOR: any = { related_party_transactions: ["상대방: 계열사 등 / 유형: 제품매출 / 규모: 1,505억원 (영업수익의 약 75%)"], contingent_liabilities: ["금융기관 지급보증 USD 137백만 등"], year: "2025", source_note: "DART 사업보고서 원문 사실 · 자체 위험판단 아님" }
+const SAMPLE_FOR: any = { related_party_transactions: ["상대방: 계열사 등 / 유형: 제품매출 / 규모: 1,505억원 (영업수익의 약 75%)"], contingent_liabilities: ["금융기관 지급보증 USD 137백만 등"], cb_bw: { n_instruments: 2, dilution_pct: 12.5, instruments: [{ type: "CB", issue_amount: 50000000000, strike: 50000, resolved_date: "20250601" }, { type: "BW", issue_amount: 10000000000, strike: 40000, resolved_date: "20240301" }], note: "DART 주요사항보고 발행 기준(전환·상환 미반영) · 희석률=발행가능÷발행주식" }, year: "2025", source_note: "DART 사업보고서 원문 사실 · 자체 위험판단 아님" }
 
 function readDark(): boolean {
     if (typeof document === "undefined" || !document.body) return false
@@ -112,7 +112,7 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
     const fac = rec && rec.facilities
     const hasInst = inst && Array.isArray(inst.holders) && inst.holders.length > 0
     const hasFac = fac && (Array.isArray(fac.facilities) || fac.headquarters)
-    const hasFor = forensics && FSECTIONS.some((s) => Array.isArray(forensics[s.key]) && forensics[s.key].length)
+    const hasFor = forensics && (FSECTIONS.some((s) => Array.isArray(forensics[s.key]) && forensics[s.key].length) || (forensics.cb_bw && forensics.cb_bw.n_instruments > 0))
     const narrow = w > 0 && w < 420
     if (!hasInst && !hasFac && !hasFor) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
 
@@ -192,6 +192,34 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
                                 </div>
                             )
                         })}
+                        {forensics.cb_bw && forensics.cb_bw.n_instruments > 0 && (() => {
+                            const cb = forensics.cb_bw
+                            const eok = (v: any) => {
+                                const n = Number(v)
+                                if (!isFinite(n) || n <= 0) return "—"
+                                return n >= 1e12 ? (n / 1e12).toFixed(1) + "조" : n >= 1e8 ? Math.round(n / 1e8).toLocaleString() + "억" : Math.round(n).toLocaleString() + "원"
+                            }
+                            const won = (v: any) => { const n = Number(v); return isFinite(n) && n > 0 ? Math.round(n).toLocaleString() + "원" : "—" }
+                            return (
+                                <div style={card}>
+                                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                                        <span style={{ fontSize: 12.5, fontWeight: 800, color: C.vt }}>CB·BW 희석 오버행</span>
+                                        {cb.dilution_pct != null ? <span style={{ fontSize: 13, fontWeight: 800, color: C.vt }}>전환·행사 시 +{cb.dilution_pct}%</span> : null}
+                                        <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{cb.n_instruments}건</span>
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                        {(cb.instruments || []).map((ins: any, i: number) => (
+                                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5 }}>
+                                                <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: C.vt, background: C.vtS, borderRadius: 5, padding: "2px 6px" }}>{ins.type}</span>
+                                                <span style={{ flex: 1, minWidth: 0, color: C.sub, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{eok(ins.issue_amount)} · 전환가 {won(ins.strike)}</span>
+                                                <span style={{ flexShrink: 0, color: C.faint, fontWeight: 600 }}>{ins.resolved_date && String(ins.resolved_date).length >= 6 ? String(ins.resolved_date).slice(2, 4) + "." + String(ins.resolved_date).slice(4, 6) : ""}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5, marginTop: 7 }}>{cb.note}</div>
+                                </div>
+                            )
+                        })()}
                     </div>
                     <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5, marginTop: 8 }}>{forensics.source_note || "DART 사업보고서 원문 사실 · 자체 위험판단 아님"}</div>
                 </div>
