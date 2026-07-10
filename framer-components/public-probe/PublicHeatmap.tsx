@@ -65,7 +65,7 @@ function bfLogoBg(ticker: any): string {
     // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
     const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
-    return c ? c + "26" : "#ffffff"  // 15% 알파 틴트, 무채색/미보유 = 흰 타일
+    return c ? c + (__bfStyle.tintA || "40") : "#ffffff"  // 기본 25% 알파 틴트 (style.tintA 노브로 조절), 무채색/미보유 = 흰 타일
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
