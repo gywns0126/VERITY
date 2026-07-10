@@ -5,7 +5,8 @@ GET /api/verity/us-forensics?ticker=MSFT  — 단일 ticker 美 forensics 통합
   insider     = us_insider_trades.json    (SEC Form4 내부자)
   holdings    = us_major_holdings.json     (SEC 13D/13G 5%+ 대량보유)
   smart_money = us_smart_money_13f.json    (집중형 13F 스마트머니)
-  consensus   = us_analyst_consensus.json  (yfinance 애널리스트 컨센서스)
+  (consensus 섹션 = 2026-07-10 제거 — yfinance 목표가·투자의견은 Benzinga/S&P 실권리,
+   재배포 blocker. 표시 = 출처 링크아웃 대체, 숫자 부활 = 유료 티어 Polygon×Benzinga 정식 라이선스.)
 
 [[project_us_financials_sec_edgar]] (b). 프런트(PublicStockReport 등)가 per-ticker 1콜로 소비.
 4 소스 병렬 fetch(maxDuration 5s 내). RULE 7 = 공시/외부 사실만(우리 자체 점수 0).
@@ -37,7 +38,6 @@ SOURCES = {
     "insider": "us_insider_trades.json",
     "holdings": "us_major_holdings.json",
     "smart_money": "us_smart_money_13f.json",
-    "consensus": "us_analyst_consensus.json",
 }
 
 TIMEOUT_SEC = 4          # vercel.json maxDuration=5 안전 마진 (병렬이라 벽시계 ≈ 1 fetch)
@@ -121,6 +121,6 @@ class handler(BaseHTTPRequestHandler):
         self._send(200, {
             "status": "ok",
             "ticker": ticker,
-            "sections": sections,          # insider / holdings / smart_money / consensus
+            "sections": sections,          # insider / holdings / smart_money
             "sources": sources,            # 소스별 status + generated_at (신선도 투명)
         }, cache=True)

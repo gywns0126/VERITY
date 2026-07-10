@@ -543,7 +543,8 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
         "ownership": _ownership(rec),
         "institutional": _institutional(rec),
         "facilities": _facilities(rec),
-        "consensus": _consensus_from_rec(rec),
+        # consensus 미부착 (2026-07-10) — 쟁점4 이중IP(네이버 ToS+증권사 리서치). 표시=출처 링크아웃 대체.
+        "consensus": None,
         "verity_lens": _verity_lens_from_rec(rec),
         "calendar": ([{"event": "실적발표", "kind": "실적", "date": (rec.get("earnings") or {}).get("next_earnings")}]
                      if (rec.get("earnings") or {}).get("next_earnings") else []),
@@ -569,7 +570,7 @@ def build_light(ticker: str, fund: Dict[str, Any], name: str, market: str,
         "facts": facts, "facts_note": {},
         "disclosures": catalyst.get(ticker, [])[:8],
         "ownership": None,
-        "consensus": cons,
+        "consensus": None,  # 쟁점4 봉인 (2026-07-10) — cons map 은 내부 관측용으로만 유지
         "calendar": [],
         "rich": False,
     }
