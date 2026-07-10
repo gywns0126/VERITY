@@ -52,9 +52,16 @@ def main() -> int:
         from api.collectors.dart_corp_code import load_mapping
         code_map = load_mapping()  # ticker → corp_code
 
-        rep = json.load(open(REPORT_PATH, encoding="utf-8"))
-        tickers = [str(s.get("ticker")) for s in rep.get("stocks", [])
-                   if re.match(r"^\d{6}$", str(s.get("ticker") or ""))]
+        # 유니버스 = universe_search KR+KONEX 전체 (리포트 밖 종목 포함 — 9K 전량 커버 2026-07-10)
+        uni_path = os.path.join(_ROOT, "data", "universe_search.json")
+        try:
+            uni = json.load(open(uni_path, encoding="utf-8")).get("stocks", [])
+            tickers = [str(x.get("ticker")) for x in uni if x.get("market") in ("KR", "KONEX")
+                       and re.match(r"^\d{6}$", str(x.get("ticker") or ""))]
+        except (OSError, ValueError):
+            rep = json.load(open(REPORT_PATH, encoding="utf-8"))
+            tickers = [str(s.get("ticker")) for s in rep.get("stocks", [])
+                       if re.match(r"^\d{6}$", str(s.get("ticker") or ""))]
 
         try:
             cache: Dict[str, str] = json.load(open(OUT_PATH, encoding="utf-8")).get("domains", {})

@@ -26,6 +26,31 @@ KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT_PATH = os.path.join(_ROOT, "data", "logo_map.json")
 KR_REPORT = os.path.join(_ROOT, "data", "stock_report_public.json")
+UNIVERSE_SEARCH = os.path.join(_ROOT, "data", "universe_search.json")
+
+# ETF 운용사 · ETN 발행 증권사 브랜드 → 도메인 (2026-07-10 Brandfetch 실검증 — 전부 실로고 확인).
+# 이름 프리픽스 startswith 매칭. 네트워크 0콜 즉시 배정.
+BRAND_DOMAINS = [
+    ("KODEX", "samsungfund.com"), ("TIGER", "tigeretf.com"), ("RISE", "kbam.co.kr"),
+    ("KBSTAR", "kbam.co.kr"), ("ACE ", "aceetf.co.kr"), ("PLUS", "hanwhafund.co.kr"),
+    ("ARIRANG", "hanwhafund.co.kr"), ("KIWOOM", "kiwoomam.com"), ("SOL ", "soletf.com"),
+    ("HANARO", "nh-amundi.com"), ("TIMEFOLIO", "timefolio.co.kr"), ("TIME", "timefolio.co.kr"),
+    ("WON ", "wooriib.com"), ("KoAct", "samsungactive.co.kr"), ("에셋플러스", "assetplus.co.kr"),
+    ("1Q", "hanafn.com"), ("파워", "kyobo.com"), ("BNK", "bnkasset.co.kr"),
+    ("UNICORN", "hdfund.co.kr"), ("MIDAS", "midasasset.com"), ("마이다스", "midasasset.com"),
+    # ETN 증권사
+    ("메리츠", "meritzsec.com"), ("한투", "truefriend.com"), ("KB ", "kbsec.com"),
+    ("삼성 ", "samsungpop.com"), ("미래에셋", "securities.miraeasset.com"), ("신한", "shinhansec.com"),
+    ("키움", "kiwoom.com"), ("N2", "nhqv.com"), ("하나 ", "hanaw.com"), ("대신", "daishin.com"),
+]
+
+
+def _brand_domain(name: str) -> str:
+    nm = str(name or "").strip()
+    for pref, dom in BRAND_DOMAINS:
+        if nm.startswith(pref.strip()) and (len(pref.strip()) > 2 or nm.startswith(pref)):
+            return dom
+    return ""
 KR_DOMAINS = os.path.join(_ROOT, "data", "kr_corp_domains.json")
 US_COMBINED = os.path.join(_ROOT, "data", "us_universe_combined.json")
 
@@ -61,20 +86,22 @@ def _logo_size(path: str, cid: str) -> int:
 
 
 def _resolve_kr(tk: str, market: str, domain: str, cid: str) -> Optional[str]:
-    suf = "KQ" if "KOSDAQ" in (market or "").upper() else "KS"
-    p = f"ticker/{tk}.{suf}"
-    n = _logo_size(p, cid)
-    if n > REAL_LOGO_MIN:
-        return p
-    time.sleep(THROTTLE)
+    mk = (market or "").upper()
+    sufs = ["KQ"] if "KOSDAQ" in mk else (["KS"] if mk else ["KS", "KQ"])  # 미상 = 양쪽 시도
+    best_letter = None
+    for suf in sufs:
+        p = f"ticker/{tk}.{suf}"
+        n = _logo_size(p, cid)
+        if n > REAL_LOGO_MIN:
+            return p
+        if n > 0 and not best_letter:
+            best_letter = p
+        time.sleep(THROTTLE)
     if domain:
         p2 = f"domain/{domain}"
-        n2 = _logo_size(p2, cid)
-        if n2 > REAL_LOGO_MIN:
+        if _logo_size(p2, cid) > REAL_LOGO_MIN:
             return p2
-    if n > 0:
-        return p  # 글자아이콘이라도 Brandfetch 통일감 (이니셜보다 균일) — 실측 310B 글자아이콘
-    return None
+    return best_letter  # 글자아이콘이라도 Brandfetch 통일감 — 실측 310B
 
 
 def main() -> int:
@@ -91,21 +118,34 @@ def main() -> int:
         except (OSError, ValueError):
             cache = {}
 
+        # 유니버스 = universe_search 전체 (KR+ETF+ETN+KONEX+US ≈ 9,363) — 검색되는 종목 전부 커버.
+        uni = json.load(open(UNIVERSE_SEARCH, encoding="utf-8")).get("stocks", [])
+        # KR 주식 시장구분(KS/KQ)은 리포트 market 사용, 미상은 domain-first + 양쪽 시도
         rep = json.load(open(KR_REPORT, encoding="utf-8"))
-        kr = [(str(s.get("ticker")), str(s.get("market") or "")) for s in rep.get("stocks", [])
-              if re.match(r"^\d{6}$", str(s.get("ticker") or ""))]
+        mk_map = {str(s.get("ticker")): str(s.get("market") or "") for s in rep.get("stocks", [])}
+        kr = [(str(x.get("ticker")), mk_map.get(str(x.get("ticker")), ""))
+              for x in uni if x.get("market") in ("KR", "KONEX")
+              and re.match(r"^\d{6}$", str(x.get("ticker") or ""))]
+        etfn = [(str(x.get("ticker")), str(x.get("name") or "")) for x in uni
+                if x.get("market") in ("ETF", "ETN")]
         try:
             domains = json.load(open(KR_DOMAINS, encoding="utf-8")).get("domains", {})
         except (OSError, ValueError):
             domains = {}
-        us = []
-        try:
-            us = [str(t).upper() for t in json.load(open(US_COMBINED, encoding="utf-8")).get("tickers", [])]
-        except (OSError, ValueError):
-            pass
+        us = [str(x.get("ticker")).upper() for x in uni if x.get("market") == "US"]
 
         t0 = time.monotonic()
         fetched = 0
+        # ETF/ETN — 브랜드 프리픽스 → 운용사/증권사 도메인 (네트워크 0콜, 실검증 맵)
+        n_brand = 0
+        for tk, nm in etfn:
+            if tk in cache:
+                continue
+            d = _brand_domain(nm)
+            cache[tk] = f"domain/{d}" if d else ""
+            n_brand += 1
+        if n_brand:
+            print(f"[logo_map] ETF/ETN 브랜드 배정 {n_brand}", file=sys.stderr)
         # KR — 티커 조회 → 도메인 재시도
         for tk, mk in kr:
             if tk in cache:
