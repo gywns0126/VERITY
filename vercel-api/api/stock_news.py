@@ -260,6 +260,18 @@ def _fetch_google_news(query, limit=20):
         return []
 
 
+def _name_in_title(name, title):
+    """종목명이 제목에 '단어 경계'로 등장하는지 — 앞 글자가 한글/영숫자면 다른 단어의 꼬리.
+    예: '하이닉스' 제목에 '이닉스' 검색 = 하[이닉스] 부분매칭 → 오매칭(2026-07-10 사용자 보고).
+    한국어는 조사(가/는/도)가 이름 뒤에 바로 붙으므로 뒤 경계는 검사하지 않음."""
+    if not name or not title:
+        return False
+    try:
+        return re.search(r"(?<![가-힣A-Za-z0-9])" + re.escape(name), title) is not None
+    except re.error:
+        return name in title
+
+
 def fetch_stock_news(code, name="", max_items=15, pages=2):
     now = datetime.utcnow()  # dt_s(UTC naive)와 정합 (Vercel/로컬 TZ 무관)
     nm = (name or "").strip()
@@ -308,8 +320,13 @@ def fetch_stock_news(code, name="", max_items=15, pages=2):
             "related_disclosure": related,
             "_sort": dt.timestamp() if dt else 0,
         }
-        # 노이즈 = '시장'(이벤트 키워드 0) + 종목명 핵심토큰 미포함 → spill(부족 시만 사용)
-        (spill if (cat == "시장" and core and core not in it["title"]) else kept).append(rec)
+        # 노이즈 판정 (2026-07-10 경계매칭 강화 — 이닉스 페이지에 하이닉스 기사 유입 fix):
+        #  · 제목에 핵심토큰이 '부분매칭으로만' 존재(하[이닉스]) = 다른 종목 기사 강신호 → 카테고리 무관 spill
+        #  · '시장' 카테고리 + 경계매칭 없음 → spill (기존 룰의 경계 강화)
+        #  · 제목에 토큰 자체가 없는 비'시장' 기사 = 검색 질의 연관성 신뢰(기존 동작 유지)
+        _embedded_only = bool(core) and (core in it["title"]) and not _name_in_title(core, it["title"])
+        _market_nomatch = cat == "시장" and bool(core) and not _name_in_title(core, it["title"])
+        (spill if (_embedded_only or _market_nomatch) else kept).append(rec)
 
     kept.sort(key=lambda x: x["_sort"], reverse=True)
     spill.sort(key=lambda x: x["_sort"], reverse=True)

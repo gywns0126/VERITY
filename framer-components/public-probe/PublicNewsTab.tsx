@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 
 /**
  * AlphaNest 뉴스 탭 (공개) — 팩트형.
@@ -234,6 +234,17 @@ export default function PublicNewsTab(props: Props) {
     const [us, setUs] = useState<NewsItem[]>([])
     const [insights, setInsights] = useState<Insights | null>(null)
     const [loading, setLoading] = useState<boolean>(true)
+    // 반응형 — 컨테이너 폭 감지(좁은 화면 패딩 축소). 다른 public 컴포넌트 동일 패턴.
+    const rootRef = useRef<HTMLDivElement>(null)
+    const [w, setW] = useState(0)
+    const narrow = w > 0 && w < 480
+    useEffect(() => {
+        const el = rootRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((entries) => { for (const e of entries) setW(e.contentRect.width) })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
     const [failed, setFailed] = useState<boolean>(false)
     const [q, setQ] = useState<string>("")                                    // 종목 뉴스 검색어(이름/코드)
     const [uni, setUni] = useState<any[]>([])                                 // 종목 유니버스(표준 universe_search.json — 검색창 전역 동기)
@@ -518,34 +529,52 @@ export default function PublicNewsTab(props: Props) {
        US 티커는 흔한 단어 충돌(IT/ALL/NOW…)로 노이즈 → KR 종목명(한글, 충돌 적음)만 집계. */
     const krNames = useMemo(() => {
         const arr: { name: string; ticker: string }[] = []
+        const have = new Set<string>()
         for (const x of uni) {
             const tk = String(x.ticker || ""); const nm = String(x.name || "")
-            if (/^\d{6}$/.test(tk) && nm.length >= 2) arr.push({ name: nm, ticker: tk })
+            if (/^\d{6}$/.test(tk) && nm.length >= 2) { arr.push({ name: nm, ticker: tk }); have.add(tk) }
         }
+        // 통칭 별칭 — 뉴스 제목 관행상 그룹 접두 생략 표기(최소만, 하드코딩 사유 주석).
+        // '하이닉스'(SK 생략)가 별칭 없으면 경계매칭 후 어느 종목에도 안 잡혀 SK하이닉스 언급이 유실됨.
+        if (have.has("000660")) arr.push({ name: "하이닉스", ticker: "000660" })
         arr.sort((a, b) => b.name.length - a.name.length)   // 최장 우선(삼성전자 > 삼성, 부분일치 회피)
         return arr
     }, [uni])
     const hotStocks = useMemo<HotStock[]>(() => {
         if (!krNames.length || !market.length) return []
+        // 한글 단어경계 매칭 — 앞 글자가 한글/영숫자면 다른 단어의 꼬리(하[이닉스]→이닉스 오매칭, 2026-07-10 fix).
+        // 뒤는 조사(가/는/도)가 바로 붙는 한국어 특성상 검사 안 함. lookbehind 대신 그룹(구형 Safari 호환).
+        const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        const nameHit = (title: string, name: string): boolean => {
+            try { return new RegExp("(^|[^가-힣A-Za-z0-9])" + esc(name)).test(title) } catch (e) { return title.indexOf(name) >= 0 }
+        }
         const tally: Record<string, HotStock> = {}
         for (const it of market) {
             const t = it.title || ""
             if (!/[가-힣]/.test(t)) continue   // 한글 제목만(글로벌 RSS 제외)
             for (const s of krNames) {
-                if (t.indexOf(s.name) >= 0) {
-                    if (!tally[s.ticker]) tally[s.ticker] = { ticker: s.ticker, name: s.name, market: "KR", count: 0, score: 0 }
+                if (nameHit(t, s.name)) {
+                    if (!tally[s.ticker]) {
+                        // 별칭 매칭이어도 표시명은 공식명(uni) 우선
+                        const off = uni.find((x: any) => String(x.ticker) === s.ticker)
+                        tally[s.ticker] = { ticker: s.ticker, name: (off && off.name) || s.name, market: "KR", count: 0, score: 0 }
+                    }
                     tally[s.ticker].count++
                     break   // 헤드라인당 1종목(최장 일치)
                 }
             }
         }
         return Object.values(tally).sort((a, b) => b.count - a.count).slice(0, 8)
-    }, [krNames, market])
+    }, [krNames, market, uni])
     // 라이브 연관검색어 — 코드·이름 부분일치 상위 8 (표준과 동일 매칭).
     const matches = useMemo(() => {
         const s = q.trim().toLowerCase()
         if (!s || !uni.length) return []
-        return uni.filter((x) => String(x.ticker).toLowerCase().includes(s) || String(x.name || "").toLowerCase().includes(s)).slice(0, 8)
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
+            return t === s ? 0 : (n === s || k === s) ? 1 : t.indexOf(s) === 0 ? 2 : (n.indexOf(s) === 0 || (k && k.indexOf(s) === 0)) ? 3 : 4
+        }
+        return uni.filter((x) => String(x.ticker).toLowerCase().includes(s) || String(x.name || "").toLowerCase().includes(s) || String((x as any).name_ko || "").includes(s)).sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 8)
     }, [q, uni])
     const pickNews = async (tk: string, nm: string) => {
         const code = String(tk || "").trim()
@@ -590,10 +619,10 @@ export default function PublicNewsTab(props: Props) {
     }
 
     return (
-        <div style={wrap}>
+        <div ref={rootRef} style={wrap}>
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             {/* 헤더 */}
-            <div style={{ padding: "20px 22px 12px 22px" }}>
+            <div style={{ padding: narrow ? "16px 13px 10px 13px" : "20px 22px 12px 22px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 19, fontWeight: 800, color: C.text, letterSpacing: "-0.02em" }}>
                         뉴스
@@ -667,7 +696,7 @@ export default function PublicNewsTab(props: Props) {
             </div>
 
             {/* 본문 */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "4px 14px 18px 14px" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: narrow ? "4px 10px 16px 10px" : "4px 14px 18px 14px" }}>
                 {/* 오늘 화제 종목 — KR 헤드라인에 언급된 종목(언급 수). 객관·추천 아님. 로고+국기. 가로 스크롤. */}
                 {!loading && !failed && hotStocks.length ? (
                     <div style={{ marginBottom: 20 }}>
