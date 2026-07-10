@@ -1,20 +1,14 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useState, type CSSProperties } from "react"
-import { DotsThree, Heart, User } from "@phosphor-icons/react"
+// Framer 코드파일 간 참조 = insertURL import (상대경로 미지원 — exports 인식 깨짐 실측 2026-07-10)
+import PublicThesisFeed from "https://framer.com/m/PublicThesisFeed-Uc8EeK.js"
 
 /**
- * 내 관점(thesis) 노트 — VERITY 공개 터미널. 종목 페이지에서 *사용자 본인*의 매매 결정 thesis 를 기록·재방문.
- *
- * 🚨 RULE 7 = 이건 **사용자 자기 저널**(관점/메모/날짜)이지 VERITY 의 추천·점수가 아님. 우리는 채점/판단 0.
- * 🚨 RULE 6 = LLM 0. 전부 사용자 입력 + 결정론적 가격 diff.
- * 저장 = localStorage `verity_thesis_v1` + "verity-thesis-changed" 이벤트 → PublicWatchlist 즉시 관점 배지 갱신.
- * 가격 = stock_flow_5d.json 마지막 close(종가, 네이버 소스·발행 유지 판정) — 기록 시점 entryPrice 동결 → 재방문 diff.
- * 🚨 시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): /api/stock 실시간가 조회 제거(KIS 재배포 불가) → 종가 diff 로 전환. 커버리지 밖 = graceful "—".
- * ticker = prop → URL ?q= → localStorage `verity_last_ticker` 폴백(페이지 토글 시 종목 유지).
- *   + "verity-ticker-change" 이벤트 수신 → 같은 페이지 PublicDecisionPanel(검색 통합)이 종목 바꾸면 리로드 없이 따라옴(2026-06-23).
- * 커뮤니티 v1(2026-07-10, 020 migration): 공개 토글(기본 비공개·별명 필수) + 종목별 공개 관점 피드 + 좋아요 + 신고.
- *   피드 = /api/thesis_feed (익명 조회 가능, 별명·아바타만 노출 — 실명/이메일/기록가 비노출).
- *   🚨 피드 내용 = 이용자 개인 의견 라벨 필수 (AlphaNest 분석·판단 아님).
+ * 내 관점(thesis) 노트 — 사용자 본인 결정 저널 + 커뮤니티 v1(2026-07-10, 020 migration).
+ * 🚨 RULE 7 = 자기 저널(채점/판단 0) · RULE 6 = LLM 0. 가격 = stock_flow_5d 종가(컴플라이언스, 실시간 X).
+ * 저장 = localStorage + 로그인 시 서버(user_thesis). "verity-thesis-changed" → Watchlist 배지 갱신.
+ * ticker = prop → URL ?q= → verity_last_ticker 폴백 + "verity-ticker-change" 이벤트 추종.
+ * 커뮤니티 = 공개 토글 + 공개 피드(/api/thesis_feed) + 좋아요 + ⋯신고. 🚨 개인 의견 라벨 필수.
  */
 
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", upS: "#fdecee", downS: "#eaf1fe", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff", chipBg: "#f2f4f6" }
@@ -80,10 +74,6 @@ function won(v: any): string {
 }
 
 const DEMO_THESIS = { stance: "bull", note: "PER·PBR 업종 이하 + 내부자 순매수. 부채 낮음. 실적발표 후 재검토.", date: "2026-06-14", entryPrice: 71200, name: "DL이앤씨", isPublic: true }
-const DEMO_FEED = [
-    { id: "d1", nickname: "길동무", avatar: "", stance: "bull", note: "수주 잔고 증가 + 부채비율 하향 추세. 다음 분기 마진 확인 후 재검토.", created_at: "2026-07-08", likes: 3, liked: false, mine: false },
-    { id: "d2", nickname: "가치사냥", avatar: "", stance: "watch", note: "밸류는 싼데 거래량이 죽어 있음. 수급 돌아서면 다시 본다.", created_at: "2026-07-05", likes: 1, liked: true, mine: false },
-]
 
 /**
  * @framerSupportedLayoutWidth any
@@ -92,7 +82,6 @@ const DEMO_FEED = [
 export default function PublicThesisNote(props: Props) {
     const { ticker, apiBase, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    // 테마 추종 — 사이트 다크모드(body[data-framer-theme]) 따라감. 캔버스는 dark prop 정적.
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
     useEffect(() => {
         if (onCanvas) return
@@ -119,7 +108,6 @@ export default function PublicThesisNote(props: Props) {
     }
     const [tk, setTk] = useState<string>(resolveTk)
 
-    // 통합 DecisionPanel 이 종목 바꾸면(이벤트) / 뒤로가기(popstate) 시 리로드 없이 추종
     useEffect(() => {
         if (onCanvas) return
         const reread = () => setTk(resolveTk())
@@ -136,34 +124,13 @@ export default function PublicThesisNote(props: Props) {
     const [curPrice, setCurPrice] = useState<number | null>(null)
     const [token] = useState<string>(loadToken)
     const [serverTheses, setServerTheses] = useState<Record<string, any> | null>(null)  // null=미로드(로그인 시)
-    // 커뮤니티 v1 — 공개 토글 + 종목별 공개 피드 + 좋아요/신고
+    // 커뮤니티 v1 — 공개 토글 (피드 = PublicThesisFeed 분리, refreshKey 로 재조회 신호)
     const [isPublic, setIsPublic] = useState(false)
-    const [pubMsg, setPubMsg] = useState("")     // 토글/저장 영역 메시지
-    const [feedMsg, setFeedMsg] = useState("")   // 피드 영역 메시지(좋아요/신고 로그인 안내)
-    const [feed, setFeed] = useState<any[]>([])
-    const [reported, setReported] = useState<Record<string, boolean>>({})
-    const [menuId, setMenuId] = useState("")   // ⋯ 메뉴가 열린 피드 아이템 id (인스타식 신고 접기)
+    const [pubMsg, setPubMsg] = useState("")
+    const [feedRefresh, setFeedRefresh] = useState(0)
+    useEffect(() => { setPubMsg("") }, [tk])
 
-    const loadFeed = (t: string) => {
-        if (onCanvas || !t) return
-        const h: Record<string, string> = {}
-        if (token) h.Authorization = "Bearer " + token
-        fetch(base + "/api/thesis_feed?ticker=" + encodeURIComponent(t), { headers: h, cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { if (d && Array.isArray(d.items)) setFeed(d.items) })
-            .catch(() => {})
-    }
-    useEffect(() => {
-        setFeed([])
-        setReported({})
-        setMenuId("")
-        setPubMsg("")
-        setFeedMsg("")
-        if (onCanvas) { setFeed(DEMO_FEED); return }
-        loadFeed(tk)
-    }, [tk, onCanvas])
-
-    // 로그인 시 서버 thesis 전량 로드 + localStorage 1회 마이그레이션 (cross-device)
+    // 로그인 시 서버 thesis 로드 + localStorage 1회 마이그레이션
     useEffect(() => {
         if (onCanvas || !token || !base) return
         let alive = true
@@ -205,7 +172,7 @@ export default function PublicThesisNote(props: Props) {
         if (t) { setStance(t.stance); setNote(t.note || ""); setIsPublic(!!t.isPublic) } else { setStance("watch"); setNote(""); setIsPublic(false) }
     }, [tk, onCanvas, token, serverTheses])
 
-    // 종가 (재방문 diff용 + 기록 시 entryPrice 동결) — stock_flow_5d 마지막 close(실시간 아님, 컴플라이언스)
+    // 종가 — stock_flow_5d 마지막 close (entryPrice 동결용)
     useEffect(() => {
         setCurPrice(null)
         if (onCanvas) { setCurPrice(73900); return }
@@ -236,13 +203,12 @@ export default function PublicThesisNote(props: Props) {
                     if (!r.ok) return
                     const d = await r.json().catch(() => null)
                     if (d && d.nickname_required) {
-                        // 별명 없이 공개 시도 → 서버가 비공개로 저장. 안내 + 로컬 상태 정합.
                         setIsPublic(false)
                         setPubMsg("공개하려면 별명이 필요해요 — 내정보에서 별명을 설정해 주세요")
                         setThesis((t: any) => (t ? { ...t, isPublic: false } : t))
                         setServerTheses((m) => (m && m[tk] ? { ...m, [tk]: { ...m[tk], isPublic: false } } : m))
                     } else {
-                        loadFeed(tk)
+                        setFeedRefresh((k) => k + 1)
                     }
                 })
                 .catch(() => {})
@@ -264,7 +230,7 @@ export default function PublicThesisNote(props: Props) {
             const all = loadAll(); delete all[tk]; saveAll(all)
         }
         setThesis(null); setEditing(true); setStance("watch"); setNote(""); setIsPublic(false)
-        if (token) setTimeout(() => loadFeed(tk), 600)  // 내 공개 관점이 있었다면 피드에서 제거 반영
+        if (token) setTimeout(() => setFeedRefresh((k) => k + 1), 600)
     }
 
     const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: "0 16px", boxSizing: "border-box", color: C.ink }
@@ -280,80 +246,6 @@ export default function PublicThesisNote(props: Props) {
         <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 10 }}>
             <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>내 관점</span>
             <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>· 본인 결정 저널</span>
-        </div>
-    )
-
-    // ─── 커뮤니티: 좋아요 토글(낙관 갱신) / 신고 / 피드 섹션 ───
-    const toggleLike = (it: any) => {
-        if (onCanvas) return
-        if (!token) { setFeedMsg("좋아요는 로그인 후 가능해요"); return }
-        const liked = !it.liked
-        setFeed((f) => f.map((x) => (x.id === it.id ? { ...x, liked, likes: Math.max(0, x.likes + (liked ? 1 : -1)) } : x)))
-        fetch(base + "/api/thesis_feed", { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ action: liked ? "like" : "unlike", thesis_id: it.id }) }).catch(() => {})
-    }
-    const reportItem = (it: any) => {
-        if (onCanvas || reported[it.id]) return
-        if (!token) { setMenuId(""); setFeedMsg("신고는 로그인 후 가능해요"); return }
-        setReported((m) => ({ ...m, [it.id]: true }))
-        setMenuId("")
-        fetch(base + "/api/thesis_feed", { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ action: "report", thesis_id: it.id, reason: "" }) }).catch(() => {})
-    }
-    const feedSection = (
-        <div style={{ ...card, marginTop: 10 }}>
-            {/* ⋯ 메뉴 바깥 클릭 닫기 — 투명 backdrop (메뉴 zIndex 30 아래) */}
-            {menuId && <div onClick={() => setMenuId("")} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
-            <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>공개 관점</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>· 이 종목을 기록한 사람들{feed.length ? ` ${feed.length}` : ""}</span>
-            </div>
-            <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5, marginTop: 4, marginBottom: 6 }}>
-                이용자 개인 의견이며 AlphaNest 의 분석·판단·추천이 아니에요.
-            </div>
-            {feedMsg && <div style={{ fontSize: 11.5, fontWeight: 700, color: C.up, marginBottom: 6 }}>{feedMsg}</div>}
-            {feed.length === 0 ? (
-                <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, padding: "6px 0 2px" }}>아직 공개된 관점이 없어요. 위에서 내 관점을 공개해 보세요.</div>
-            ) : (
-                feed.map((it) => (
-                    <div key={it.id} style={{ padding: "10px 0 8px", borderTop: `1px solid ${C.line}` }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            {it.avatar ? (
-                                <img src={it.avatar} alt="" width={26} height={26} style={{ width: 26, height: 26, borderRadius: 9, objectFit: "cover", flexShrink: 0 }} />
-                            ) : (
-                                <div style={{ width: 26, height: 26, borderRadius: 9, background: C.chipBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                    <User size={14} color={C.faint} weight="fill" />
-                                </div>
-                            )}
-                            <span style={{ fontSize: 12.5, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.nickname}{it.mine ? " (나)" : ""}</span>
-                            <span style={{ fontSize: 11, fontWeight: 800, color: stanceColor(it.stance), flexShrink: 0 }}>{stanceLabel(it.stance)}</span>
-                            <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginLeft: "auto", flexShrink: 0 }}>{(it.created_at || "").slice(0, 10)}</span>
-                            {!it.mine && (
-                                <span style={{ position: "relative", flexShrink: 0, display: "inline-flex" }}>
-                                    <button onClick={() => setMenuId(menuId === it.id ? "" : it.id)} aria-label="더보기"
-                                        style={{ border: "none", background: "transparent", cursor: "pointer", padding: 2, margin: -2, display: "inline-flex", alignItems: "center", color: C.faint }}>
-                                        <DotsThree size={18} weight="bold" color={C.faint} />
-                                    </button>
-                                    {menuId === it.id && (
-                                        <div style={{ position: "absolute", top: 22, right: 0, zIndex: 30, background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, boxShadow: "0 4px 14px rgba(0,0,0,0.12)", overflow: "hidden", minWidth: 104 }}>
-                                            <button onClick={() => reportItem(it)} disabled={!!reported[it.id]}
-                                                style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "transparent", cursor: reported[it.id] ? "default" : "pointer", padding: "10px 14px", fontFamily: FONT, fontSize: 12, fontWeight: 700, color: reported[it.id] ? C.faint : C.up, whiteSpace: "nowrap" }}>
-                                                {reported[it.id] ? "신고 접수됨" : "신고하기"}
-                                            </button>
-                                        </div>
-                                    )}
-                                </span>
-                            )}
-                        </div>
-                        {it.note && <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 500, lineHeight: 1.5, marginTop: 6, whiteSpace: "pre-wrap" }}>{it.note}</div>}
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 7 }}>
-                            <button onClick={() => toggleLike(it)}
-                                style={{ display: "inline-flex", alignItems: "center", gap: 4, border: "none", background: "transparent", cursor: "pointer", padding: 0, fontFamily: FONT, fontSize: 11.5, fontWeight: 700, color: it.liked ? C.up : C.faint }}>
-                                <Heart size={14} weight={it.liked ? "fill" : "regular"} color={it.liked ? C.up : C.faint} />
-                                {it.likes > 0 ? it.likes : "좋아요"}
-                            </button>
-                        </div>
-                    </div>
-                ))
-            )}
         </div>
     )
 
@@ -396,7 +288,7 @@ export default function PublicThesisNote(props: Props) {
                         <button onClick={remove} style={{ flexShrink: 0, cursor: "pointer", fontFamily: FONT, padding: "9px 16px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, background: "transparent", color: C.faint, border: `1px solid ${C.line}` }}>삭제</button>
                     </div>
                 </div>
-                {feedSection}
+                <PublicThesisFeed tk={tk} base={base} token={token} C={C} refreshKey={feedRefresh} />
             </div>
         )
     }
@@ -411,7 +303,6 @@ export default function PublicThesisNote(props: Props) {
                     {STANCES.map((st) => {
                         const on = stance === st.id
                         const col = (C as any)[st.key]
-                        // 선택 시 외곽선 없음 + 연한 파스텔 칩(강세=연빨강 / 약세=연파랑 / 관망=중립)
                         const softBg = st.key === "up" ? C.upS : st.key === "down" ? C.downS : C.chipBg
                         return (
                             <button key={st.id} onClick={() => setStance(st.id)}
@@ -425,7 +316,7 @@ export default function PublicThesisNote(props: Props) {
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
                     placeholder="예: PER·PBR 업종 이하 + 내부자 순매수. 부채 낮음. 다음 실적발표 후 재검토."
                     style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, fontFamily: FONT, fontWeight: 500, background: C.bg, color: C.ink, outline: "none", resize: "vertical", lineHeight: 1.5 }} />
-                {/* 커뮤니티 공개 토글 — 기본 비공개. 익명(로컬 저장)은 서버행이 없어 공개 불가. */}
+                {/* 공개 토글 — 기본 비공개. 익명(로컬 저장) = 공개 불가 */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, paddingTop: 11, borderTop: `1px solid ${C.line}` }}>
                     <button onClick={() => { if (onCanvas) return; if (!token) { setPubMsg("로그인하면 공개할 수 있어요"); return } setIsPublic(!isPublic); setPubMsg("") }}
                         aria-label="커뮤니티에 공개" role="switch" aria-checked={isPublic}
@@ -444,7 +335,7 @@ export default function PublicThesisNote(props: Props) {
                 </div>
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{token ? "내 계정에 저장 — 어느 기기서나 동일" : "이 기기에 저장 · 로그인하면 계정에 저장돼 어디서나 보여요"} · 기록 시점 가격 동결로 재방문 시 변화 표시</div>
             </div>
-            {feedSection}
+            <PublicThesisFeed tk={tk} base={base} token={token} C={C} refreshKey={feedRefresh} />
         </div>
     )
 }
