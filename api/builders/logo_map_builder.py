@@ -115,8 +115,8 @@ def _dominant_color(img_bytes: bytes):
 
 
 def _logo_fetch(path: str, cid: str):
-    """Brandfetch 경로 → (실로고 여부, bytes). 플레이스홀더 해시 제외."""
-    url = f"https://cdn.brandfetch.io/{path}?c={cid}"
+    """로고 경로 → (실로고 여부, bytes). Brandfetch 상대경로 또는 절대 URL(폴백 소스). 플레이스홀더 해시 제외."""
+    url = path if path.startswith("http") else f"https://cdn.brandfetch.io/{path}?c={cid}"
     try:
         r = urllib.request.urlopen(urllib.request.Request(url, headers=HDR), timeout=12)
         if "image" not in (r.headers.get("content-type") or ""):
@@ -152,6 +152,67 @@ def main() -> int:
         if not cid:
             print("[logo_map] BRANDFETCH_CLIENT_ID 없음 — skip", file=sys.stderr)
             return 0
+        # ── 폴백 백필 모드 (LOGO_FALLBACK_BACKFILL=1): 미보유(_tried) → nvstly(US)·공식 파비콘(KR) ──
+        #   커버리지 최대화 (PM 2026-07-10 "토스 이상"). 가독성 게이트 = PIL 해상도 ≥40px (저질 파비콘 = 이니셜 유지).
+        #   구글 s2 = 미보유 시 404 (플레이스홀더 無) · nvstly = MIT 계열 공개 아이콘 repo (US 소형주 커버).
+        if os.environ.get("LOGO_FALLBACK_BACKFILL") == "1":
+            doc = json.load(open(OUT_PATH, encoding="utf-8"))
+            logos = doc.get("logos") or {}
+            tried = doc.get("_tried") or {}
+            try:
+                domains = json.load(open(KR_DOMAINS, encoding="utf-8")).get("domains", {})
+            except (OSError, ValueError):
+                domains = {}
+
+            def _img_wh(b: bytes):
+                try:
+                    from PIL import Image
+                    import io as _io
+                    return Image.open(_io.BytesIO(b)).size
+                except Exception:  # noqa: BLE001
+                    return (0, 0)
+
+            def _grab(u: str):
+                try:
+                    r = urllib.request.urlopen(urllib.request.Request(u, headers=HDR), timeout=10)
+                    if "image" not in (r.headers.get("content-type") or "") and not u.endswith(".png"):
+                        return b""
+                    return r.read()
+                except Exception:  # noqa: BLE001
+                    return b""
+
+            t0 = time.monotonic()
+            added_us = added_kr = 0
+            for tk in list(tried.keys()):
+                if time.monotonic() - t0 > MAX_SECONDS:
+                    print("[logo_map] 폴백 budget 도달", file=sys.stderr)
+                    break
+                if tk in logos:
+                    tried.pop(tk, None)
+                    continue
+                if not tk.isdigit():  # US → nvstly
+                    b = _grab(f"https://raw.githubusercontent.com/nvstly/icons/main/ticker_icons/{tk}.png")
+                    if len(b) > 500 and _img_wh(b)[0] >= 40:
+                        logos[tk] = f"https://raw.githubusercontent.com/nvstly/icons/main/ticker_icons/{tk}.png"
+                        tried.pop(tk, None)
+                        added_us += 1
+                else:  # KR → 공식 파비콘 (구글 s2 프록시, 도메인 필요)
+                    dom = domains.get(tk)
+                    if dom:
+                        u = f"https://www.google.com/s2/favicons?domain={dom}&sz=128"
+                        b = _grab(u)
+                        if len(b) > 900 and _img_wh(b)[0] >= 40:  # 저해상(16px 업스케일 등) = 이니셜 유지
+                            logos[tk] = u
+                            tried.pop(tk, None)
+                            added_kr += 1
+                time.sleep(THROTTLE)
+            doc["logos"] = logos
+            doc["_tried"] = tried
+            doc["_meta"]["with_logo"] = len(logos)
+            json.dump(doc, open(OUT_PATH, "w", encoding="utf-8"), ensure_ascii=False)
+            print(f"[logo_map] 폴백 logged=True · +US {added_us} +KR {added_kr} → 총 {len(logos)}", file=sys.stderr)
+            return 0
+
         # ── 컬러 백필 모드 (LOGO_COLOR_BACKFILL=1): 확정 map 의 로고들 대표색만 채움 ──
         if os.environ.get("LOGO_COLOR_BACKFILL") == "1":
             doc = json.load(open(OUT_PATH, encoding="utf-8"))

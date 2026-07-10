@@ -56,7 +56,9 @@ function bfLogoBg(ticker: any): string {
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
     const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
-    return p ? "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2 : ""
+    if (!p) return ""
+    if (p.indexOf("http") === 0) return p  // 폴백 소스(nvstly·공식 파비콘) = 절대 URL 그대로
+    return "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2
 }
 
 const DEFAULT_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
@@ -187,6 +189,27 @@ function squarify(items: any[], X: number, Y: number, W: number, H: number): any
     return out
 }
 
+function readBodyDark(): boolean {
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 export default function PublicHeatmap(props: Props) {
     const __lmH = useBfLogoMap()
     const { stockUrl, insiderUrl, flowUrl, forensicsUrl, reportPath, topN, dark } = props
@@ -203,7 +226,7 @@ export default function PublicHeatmap(props: Props) {
     const [hover, setHover] = useState<any>(null)
     const [zoom, setZoom] = useState<{ z: number; tx: number; ty: number }>({ z: 1, tx: 0, ty: 0 })
     const dragRef = useRef<{ on: boolean; x: number; y: number; tx: number; ty: number; moved: boolean }>({ on: false, x: 0, y: 0, tx: 0, ty: 0, moved: false })
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
 
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
     const isDark = C === DARK
