@@ -452,15 +452,16 @@ export default function PublicProfilePage(props: Props) {
                             </button>
                         </div>
                     ) : (
-                        <div style={{ width: "100%", maxWidth: 260 }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginTop: 2 }}>
                             <input value={nickDraft} autoFocus maxLength={16} placeholder="별명 (2~16자)"
                                 onChange={(e) => setNickDraft(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === "Enter") saveNick() }}
-                                style={{ width: "100%", boxSizing: "border-box", textAlign: "center", border: `1px solid ${C.line}`, borderRadius: 12, padding: "9px 12px", fontSize: 15, fontWeight: 800, fontFamily: FONT, background: C.field, color: C.ink, outline: "none" }} />
-                            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                                <button type="button" onClick={() => { setNickEditing(false); setNickMsg("") }} style={btnFlatHalf(C)}>취소</button>
+                                style={{ width: 172, boxSizing: "border-box", textAlign: "center", border: "none", borderRadius: 10, padding: "9px 14px", fontSize: 14, fontWeight: 700, fontFamily: FONT, background: C.field, color: C.ink, outline: "none" }} />
+                            <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                                <button type="button" onClick={() => { setNickEditing(false); setNickMsg("") }}
+                                    style={{ border: "none", background: "transparent", cursor: "pointer", padding: "7px 14px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, fontFamily: FONT, color: C.faint }}>취소</button>
                                 <button type="button" onClick={saveNick}
-                                    style={{ flex: 1, padding: "11px 0", border: "none", borderRadius: 12, background: C.ink, color: C.card, fontSize: 13.5, fontWeight: 800, fontFamily: FONT, cursor: "pointer" }}>저장</button>
+                                    style={{ border: "none", background: C.ink, color: C.card, cursor: "pointer", padding: "7px 18px", borderRadius: 999, fontSize: 12.5, fontWeight: 800, fontFamily: FONT }}>저장</button>
                             </div>
                         </div>
                     )}
