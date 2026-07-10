@@ -10,6 +10,29 @@ import { DotsThree, Heart, User } from "@phosphor-icons/react"
 
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
+// 폴백 팔레트 — 캔버스/페이지에 단독 삽입돼 부모 C prop 이 없을 때 사용 (undefined.card 크래시 방지, 2026-07-10)
+const FB_LIGHT = { card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", chipBg: "#f2f4f6" }
+const FB_DARK = { card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34", up: "#f04452", down: "#5b9bff", chipBg: "#1e242c" }
+
+function readBodyDark(): boolean {
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 const DEMO_FEED = [
     { id: "d1", nickname: "길동무", avatar: "", stance: "bull", note: "수주 잔고 증가 + 부채비율 하향 추세. 다음 분기 마진 확인 후 재검토.", created_at: "2026-07-08", likes: 3, liked: false, mine: false },
     { id: "d2", nickname: "가치사냥", avatar: "", stance: "watch", note: "밸류는 싼데 거래량이 죽어 있음. 수급 돌아서면 다시 본다.", created_at: "2026-07-05", likes: 1, liked: true, mine: false },
@@ -21,14 +44,30 @@ interface Props {
     tk: string
     base: string
     token: string
-    C: any            // 부모(PublicThesisNote) 테마 팔레트 공유
+    C?: any           // 부모(PublicThesisNote) 테마 팔레트 공유 — 없으면 자체 폴백(body 테마 추종)
     refreshKey?: number
 }
 
 export default function PublicThesisFeed(props: Props) {
-    const { tk, base, token, C } = props
+    const { tk, base, token } = props
     const refreshKey = props.refreshKey || 0
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
+
+    // C prop 없이 단독 삽입된 경우 폴백 — hooks 는 무조건 호출(조건부 금지), 사용만 조건부
+    const [fbDark, setFbDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? false : readBodyDark()))
+    useEffect(() => {
+        if (onCanvas || props.C) return
+        const read = () => {
+            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
+            setFbDark(t === "dark")
+        }
+        read()
+        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+        const obs = new MutationObserver(read)
+        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+        return () => obs.disconnect()
+    }, [onCanvas, props.C])
+    const C = props.C || (fbDark ? FB_DARK : FB_LIGHT)
 
     const [feed, setFeed] = useState<any[]>([])
     const [feedMsg, setFeedMsg] = useState("")
