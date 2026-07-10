@@ -494,7 +494,7 @@ function qtLabel(qEnd: string): string {
     return `${y}.${q}`
 }
 
-function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl = QT_DEFAULT_URL, maxQuarters = 40 }: { ticker: string; C: any; isDark: boolean; showExtremes?: boolean; quarterlyUrl?: string; maxQuarters?: number }) {
+function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl = QT_DEFAULT_URL, maxQuarters = 40, embedded = false, onCount }: { ticker: string; C: any; isDark: boolean; showExtremes?: boolean; quarterlyUrl?: string; maxQuarters?: number; embedded?: boolean; onCount?: (n: number) => void }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const ref = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -517,6 +517,8 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
     }, [quarterlyUrl, ticker, onCanvas])
     const cap = Math.max(4, Math.min(40, maxQuarters || 20))
     const series = useMemo(() => [...quarters].sort((a, b) => String(a.q).localeCompare(String(b.q))).slice(-cap), [quarters, cap])
+    // 병합 '재무 추이' 탭 가용성 보고 — 부모가 '분기 건전성' 탭 노출 여부 판단 (2026-07-10)
+    useEffect(() => { if (onCount) onCount(series.length) }, [series.length])
     const narrow = w > 0 && w < 420
     if (!onCanvas && series.length < 4) return null
     const CW = Math.max(80, (w || 360) - (narrow ? 28 : 36))
@@ -524,8 +526,9 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
     return (
         <div ref={ref} style={{ background: C.card, borderRadius: 16, padding: narrow ? "15px 14px" : "17px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px", color: C.ink }}>분기 재무 추이</span>
-                <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>최근 {series.length}분기 · DART 분기보고서 · 사실</span>
+                {/* embedded = 병합 '재무 추이' 섹션 안 탭 콘텐츠 — 섹션 제목과 중복되는 자체 제목 생략 */}
+                {!embedded && <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px", color: C.ink }}>분기 재무 추이</span>}
+                <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{embedded ? `최근 ${series.length}분기 · 실값` : `최근 ${series.length}분기 · DART 분기보고서 · 사실`}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 0, marginTop: 10 }}>
                 {QT_METRICS.map((m, mi) => {
@@ -554,8 +557,13 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
                             let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`
                             for (let i = 0; i < pts.length - 1; i++) {
                                 const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2
-                                const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6
-                                const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6
+                                const c1x = p1.x + (p2.x - p0.x) / 6, c2x = p2.x - (p3.x - p1.x) / 6
+                                // control point y 를 세그먼트 두 끝점 범위로 clamp → 큐빅 베지어가 그 y-band 안에
+                                //   갇혀 실측 min/max 밖으로 overshoot 0 (2026-07-09: '최저 1.82보다 밑으로 내려감'
+                                //   괴리 해소. 곡선 유지하되 분기 사이 값 지어냄 인상 차단).
+                                const loY = Math.min(p1.y, p2.y), hiY = Math.max(p1.y, p2.y)
+                                const c1y = Math.max(loY, Math.min(hiY, p1.y + (p2.y - p0.y) / 6))
+                                const c2y = Math.max(loY, Math.min(hiY, p2.y - (p3.y - p1.y) / 6))
                                 d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
                             }
                             return d
@@ -708,6 +716,9 @@ export default function PublicStockReport(props: Props) {
     const [openFlow, setOpenFlow] = useState<number>(-1)
     const [openPeer, setOpenPeer] = useState<number>(-1)
     const [openFin, setOpenFin] = useState<boolean>(false)
+    // 병합 '재무 추이' 탭 (2026-07-10 PM — 연간 손익 vs 분기 건전성, 두 추이 섹션 이름 혼동 해소)
+    const [trendTab, setTrendTab] = useState<"annual" | "q">("annual")
+    const [qtN, setQtN] = useState<number>(0)   // 분기 추이 로드된 분기 수 (≥4 = 탭 노출)
     const [forenAll, setForenAll] = useState(false)
     const [insiderAll, setInsiderAll] = useState(false)
     const [watchToken, setWatchToken] = useState("")
@@ -722,6 +733,23 @@ export default function PublicStockReport(props: Props) {
         if (typeof window === "undefined" || !window.matchMedia) return
         try { setHoverCapable(window.matchMedia("(hover: hover) and (pointer: fine)").matches) } catch { /* keep default */ }
     }, [])
+
+    /* 콜드 랜딩 디폴트 = 그날 거래대금 1위 (2026-07-09) — ?q·최근본 이력 둘 다 없을 때만.
+       명시 쿼리/최근 종목이 있으면 유지(연속성). hot_stock.json = 금융위 공공데이터(거래대금, 청정·EOD 사실). */
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        try {
+            const qp = (new URLSearchParams(window.location.search).get("q") || "").trim()
+            const ls = (window.localStorage.getItem("verity_last_ticker") || "").trim()
+            if (qp || ls) return
+        } catch (e) { return }
+        let alive = true
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json", { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const t = d && d.hot && d.hot.ticker; if (alive && t) setSelTicker(String(t).toUpperCase()) })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [onCanvas])
 
     useEffect(() => {
         const el = rootRef.current
@@ -880,7 +908,11 @@ export default function PublicStockReport(props: Props) {
     const matches = useMemo(() => {
         const q = query.trim().toLowerCase()
         if (!q) return []
-        return searchList.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").toLowerCase().includes(q) || String(x.name_ko || "").includes(q) || String(x.kw || "").toLowerCase().includes(q)).slice(0, 15)
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
+            return t === q ? 0 : (n === q || k === q) ? 1 : t.indexOf(q) === 0 ? 2 : (n.indexOf(q) === 0 || (k && k.indexOf(q) === 0)) ? 3 : 4
+        }
+        return searchList.filter((x) => String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").toLowerCase().includes(q) || String(x.name_ko || "").includes(q) || String(x.kw || "").toLowerCase().includes(q)).sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 15)
     }, [query, searchList])
 
     const facts = s.facts || {}
@@ -923,7 +955,6 @@ export default function PublicStockReport(props: Props) {
         if (disclosures.length) f.push("최근 공시 " + disclosures.length + "건")
         if (insider && insider.total) f.push("내부자 거래 " + insider.total + "건")
         if (ownership && ownership.family_pct != null) f.push("총수일가 " + ownership.family_pct + "%")
-        if (consensus && consensus.opinion) f.push("컨센 " + consensus.opinion)
         return f
     }, [s, facts, fnote, financials, disclosures, insider, ownership, consensus])
 
@@ -1235,12 +1266,11 @@ export default function PublicStockReport(props: Props) {
                         </a>
                     </div>
                 )}
-                {(header || consensus.target_price) && (
+                {header && (
                     <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 9 }}>
                         {header && header.range_52w && metaItem("52주", header.range_52w)}
                         {header && header.trading_value && metaItem("거래대금", header.trading_value)}
                         {header && header.market_cap && metaItem("시총", header.market_cap)}
-                        {consensus.target_price && metaItem("컨센 목표가", consensus.target_price, true, C.vt)}
                     </div>
                 )}
                 {warnTop && (
@@ -1490,11 +1520,39 @@ export default function PublicStockReport(props: Props) {
                 </>
             )}
 
-            {/* 분기 재무 추이 — 한눈 파악 먼저(재무 요약 위). 선형 차트 + 최고/최저점.
-                실데이터(dart_quarterly_public.json) 없으면 자동 숨김(RULE 7). 캔버스=SAMPLE. */}
-            <div style={{ marginTop: 12 }}>
-                <QuarterlyTrend ticker={s.ticker} C={C} isDark={C === DARK} quarterlyUrl={/^\d{6}$/.test(String(s.ticker)) ? QT_DEFAULT_URL : QT_US_URL} />
-            </div>
+            {/* 재무 추이 — 연간 손익(fin_series) / 분기 건전성(dart_quarterly) 탭 병합.
+                2026-07-10 PM: "재무 추이"·"분기 재무 추이" 두 섹션이 같은 걸로 보임(이름 혼동) → 한 섹션 탭 2개.
+                데이터는 직교 — 연간 = 매출·영업이익·순익 절대 규모 + 1·3·5년 비교 / 분기 = 부채·ROA·유동·마진 건전성 비율.
+                QuarterlyTrend 는 항상 mount(숨김) — fetch 1회 유지 + onCount 로 탭 노출 판단. 둘 다 없으면 섹션 자동 숨김(RULE 7). */}
+            {(() => {
+                const onCv = RenderTarget.current() === RenderTarget.canvas
+                const isKRt = /^\d{6}$/.test(String(s.ticker || ""))
+                const hasAnnual = Array.isArray(s.fin_series) && s.fin_series.length >= 2
+                const hasQ = onCv || qtN >= 4
+                const both = hasAnnual && hasQ
+                const tab = trendTab === "q" ? (hasQ ? "q" : "annual") : (hasAnnual ? "annual" : "q")
+                const show = hasAnnual || hasQ
+                return (
+                    <>
+                        {show && sectionTitle("재무 추이", tab === "annual"
+                            ? (isKRt ? "DART" : "SEC 10-K") + " · 연간 손익 실값 · 과거(1·3·5년) 비교"
+                            : (isKRt ? "DART 분기보고서" : "SEC 10-Q") + " · 건전성 비율(부채·ROA·유동·마진)")}
+                        {both && (
+                            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                                {[{ k: "annual", l: "연간 손익" }, { k: "q", l: "분기 건전성" }].map((t) => (
+                                    <button key={t.k} onClick={() => setTrendTab(t.k as "annual" | "q")}
+                                        style={{ flex: 1, border: "none", cursor: "pointer", padding: "8px 0", borderRadius: 10, fontSize: 12.5, fontWeight: 800, fontFamily: FONT, background: tab === t.k ? C.vt : C.card, color: tab === t.k ? C.onAccent : C.sub, boxShadow: tab === t.k ? "none" : "0 1px 3px rgba(0,0,0,0.04)" }}>{t.l}</button>
+                                ))}
+                            </div>
+                        )}
+                        {show && tab === "annual" && hasAnnual && <FinTrend series={s.fin_series} C={C} usd={!isKRt} />}
+                        {/* 항상 mount — display 토글만 (탭 전환마다 재fetch 방지, ResizeObserver 가 표시 시 폭 재측정) */}
+                        <div style={{ display: show && tab === "q" ? "block" : "none" }}>
+                            <QuarterlyTrend ticker={s.ticker} C={C} isDark={C === DARK} quarterlyUrl={isKRt ? QT_DEFAULT_URL : QT_US_URL} embedded onCount={setQtN} />
+                        </div>
+                    </>
+                )
+            })()}
 
             {/* 재무 요약 — 탭하면 재무제표 전체(손익/재무상태/현금흐름/비율) */}
             {financials && financials.values && Object.keys(financials.values).length > 0 && (
@@ -1529,13 +1587,7 @@ export default function PublicStockReport(props: Props) {
                 </>
             )}
 
-            {/* 재무 추이 — 연도별 매출·영업이익·순익 + 과거 비교 (DART 공시 실값) */}
-            {Array.isArray(s.fin_series) && s.fin_series.length >= 2 && (
-                <>
-                    {sectionTitle("재무 추이", (/^\d{6}$/.test(String(s.ticker || "")) ? "DART" : "SEC 10-K") + " · 연간 실값 · 과거(1·3·5년) 비교")}
-                    <FinTrend series={s.fin_series} C={C} usd={!/^\d{6}$/.test(String(s.ticker || ""))} />
-                </>
-            )}
+            {/* (구 '재무 추이' 연간 블록 = 위 병합 섹션 '연간 손익' 탭으로 이동, 2026-07-10) */}
 
             {/* 공시·리스크 레이더 */}
             {disclosures.length > 0 && (
@@ -1653,7 +1705,7 @@ export default function PublicStockReport(props: Props) {
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: C.down }}>매도 {usForen.insider.sell_n || 0}건</span>
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: (usForen.insider.net_change || 0) >= 0 ? C.up : C.down }}>순증감 {fmtShares(usForen.insider.net_change)}</span>
                                 </div>
-                                {usForen.insider.trades.slice(0, 6).map((t, i) => (
+                                {usForen.insider.trades.slice(0, 6).map((t: any, i: number) => (
                                     <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
                                         <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.person || "—"}{t.position ? " · " + t.position : ""}</span>
                                         <span style={{ fontWeight: 800, color: (t.change || 0) >= 0 ? C.up : C.down, flexShrink: 0 }}>{fmtShares(t.change)} <span style={{ color: C.faint, fontWeight: 600 }}>({t.code || "?"})</span></span>
@@ -1673,7 +1725,7 @@ export default function PublicStockReport(props: Props) {
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: C.amber }}>13D {usForen.holdings.n_13d || 0}</span>
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: C.sub }}>13G {usForen.holdings.n_13g || 0}</span>
                                 </div>
-                                {usForen.holdings.filings.slice(0, 5).map((f, i) => (
+                                {usForen.holdings.filings.slice(0, 5).map((f: any, i: number) => (
                                     <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
                                         <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.filer || "—"} <span style={{ color: C.faint }}>· {f.date}</span></span>
                                         <span style={{ fontWeight: 800, flexShrink: 0, color: String(f.type || "").indexOf("13D") === 0 ? C.amber : C.sub }}>{f.type}{f.pct != null ? " · " + f.pct + "%" : ""}</span>
@@ -1689,7 +1741,7 @@ export default function PublicStockReport(props: Props) {
                             {sectionTitle("美 스마트머니 · 13F", "집중형 액티브 펀드")}
                             <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                                 <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 10 }}>보유 펀드 {usForen.smart_money.holder_count || usForen.smart_money.holders.length}곳 <span style={{ color: C.faint, fontWeight: 600 }}>· 합산 ${((usForen.smart_money.total_value_usd || 0) / 1e9).toFixed(1)}B</span></div>
-                                {usForen.smart_money.holders.slice(0, 6).map((h, i) => (
+                                {usForen.smart_money.holders.slice(0, 6).map((h: any, i: number) => (
                                     <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
                                         <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.fund}</span>
                                         <span style={{ flexShrink: 0, fontWeight: 800 }}><span style={{ color: (h.change_type === "NEW" || h.change_type === "INCREASED") ? C.green : h.change_type === "DECREASED" ? C.down : C.faint }}>{h.change_type}</span> <span style={{ color: C.faint, fontWeight: 600 }}>${((h.value_usd || 0) / 1e9).toFixed(1)}B</span></span>
@@ -1700,18 +1752,35 @@ export default function PublicStockReport(props: Props) {
                         </>
                     )}
 
-                    {usForen.consensus && (usForen.consensus.num_analysts || usForen.consensus.target_mean != null) && (
-                        <>
-                            {sectionTitle("美 애널리스트 컨센서스", "yfinance 집계")}
-                            <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                                {tipKV("투자의견", String(usForen.consensus.rec_key || "—").replace(/_/g, " "), C.vt)}
-                                {usForen.consensus.num_analysts != null && tipKV("애널리스트", usForen.consensus.num_analysts + "명")}
-                                {usForen.consensus.target_mean != null && tipKV("평균 목표가", "$" + Number(usForen.consensus.target_mean).toLocaleString("en-US"))}
-                                {usForen.consensus.upside_pct != null && tipKV("업사이드", (usForen.consensus.upside_pct >= 0 ? "+" : "") + usForen.consensus.upside_pct + "%", usForen.consensus.upside_pct >= 0 ? C.up : C.down)}
-                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>외부 애널리스트 집계 사실(yfinance)</div>
-                            </div>
-                        </>
-                    )}
+                </>
+            )}
+
+            {/* 컨센서스 = 출처 링크아웃 (2026-07-10) — 목표가·투자의견 숫자는 제공사(Benzinga/S&P) 소유라
+                온사이트 재배포 대신 출처 연결(KRX→네이버 패턴). 실매매(내부자·13F)는 위 SEC 섹션이 담당.
+                유료 티어 시 Polygon×Benzinga 정식 라이선스($99/월)로 숫자 부활 큐. */}
+            {!onCanvas && s.ticker && (
+                <>
+                    {sectionTitle("애널리스트 컨센서스", "출처 바로가기")}
+                    <div style={{ background: C.card, borderRadius: 16, padding: "6px 8px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                        {(/^[0-9]{6}$/.test(String(s.ticker))
+                            ? [{ label: "네이버 증권 · 종목분석", url: `https://finance.naver.com/item/coinfo.naver?code=${s.ticker}` }]
+                            : [
+                                { label: "StockAnalysis · 목표가·의견", url: `https://stockanalysis.com/stocks/${String(s.ticker).toLowerCase()}/forecast/` },
+                                { label: "Yahoo Finance", url: `https://finance.yahoo.com/quote/${s.ticker}` },
+                            ]
+                        ).map((l) => (
+                            <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
+                                style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none", padding: "10px 9px", borderRadius: 10 }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: C.ink, flex: 1, minWidth: 0 }}>{l.label}</span>
+                                <svg width={10} height={10} viewBox="0 0 12 12" fill="none" stroke={C.faint} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <line x1="2.5" y1="9.5" x2="9" y2="3" /><polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
+                                </svg>
+                            </a>
+                        ))}
+                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "4px 9px 8px", lineHeight: 1.5 }}>
+                            목표가·의견은 출처에서 · 실제 매매는 위 내부자·기관 섹션
+                        </div>
+                    </div>
                 </>
             )}
 
@@ -1862,57 +1931,8 @@ export default function PublicStockReport(props: Props) {
                 )
             })()}
 
-            {/* 컨센서스 — 평균/의견 + 목표가 고저 범위 + 투자의견 분포막대 (PublicConsensus 흡수 2026-07-08) */}
-            {(consensus.target_price || consensus.opinion || consensus.counts) && (() => {
-                const cc = consensus.counts || null
-                const CATS: [string, string][] = [["strongBuy", "적극매수"], ["buy", "매수"], ["hold", "중립"], ["sell", "매도"], ["strongSell", "적극매도"]]
-                const vals = cc ? CATS.map(([k]) => Number(cc[k]) || 0) : []
-                const maxV = Math.max(1, ...vals)
-                const hasDist = !!cc && vals.some((v) => v > 0)
-                const hasRange = !!(consensus.target_high && consensus.target_low)
-                return (
-                    <>
-                        {sectionTitle("애널리스트 컨센서스", "집계 · AlphaNest 의견 아님")}
-                        <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                            {[["목표주가 평균", consensus.target_price], ["투자의견", consensus.opinion], ["추정 EPS", consensus.eps]].map(([k, v]: any, i) => v ? kvRow(k, v, i) : null)}
-                            {hasRange && (
-                                <div style={{ marginTop: 12 }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 800, color: C.ink }}>
-                                        <span>{consensus.target_low}</span><span>{consensus.target_high}</span>
-                                    </div>
-                                    <div style={{ height: 6, borderRadius: 3, marginTop: 6, background: `linear-gradient(90deg, ${C.down}, ${C.vt}, ${C.up})` }} />
-                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontWeight: 600, color: C.faint, marginTop: 4 }}>
-                                        <span>최저 목표가</span><span>최고 목표가</span>
-                                    </div>
-                                </div>
-                            )}
-                            {hasDist && (
-                                <div style={{ marginTop: 14 }}>
-                                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
-                                        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.sub }}>투자의견 분포</span>
-                                        {consensus.num_analysts && <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{consensus.num_analysts}명 집계</span>}
-                                    </div>
-                                    <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 84 }}>
-                                        {CATS.map(([k, label], i) => {
-                                            const v = vals[i]
-                                            const h = Math.round((v / maxV) * 60)
-                                            const dominant = v === maxV && v > 0
-                                            return (
-                                                <div key={k} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                                                    <span style={{ fontSize: 11, fontWeight: 800, color: dominant ? C.vt : C.faint }}>{v}</span>
-                                                    <div style={{ width: "100%", maxWidth: 34, height: Math.max(3, h), borderRadius: 6, background: dominant ? C.vt : v > 0 ? C.vtS : C.line }} />
-                                                    <span style={{ fontSize: 9.5, fontWeight: 600, color: C.faint, textAlign: "center", lineHeight: 1.2 }}>{label}</span>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, padding: "10px 0 0", lineHeight: 1.5 }}>증권사·애널리스트 집계 사실 · AlphaNest 의견 아님</div>
-                        </div>
-                    </>
-                )
-            })()}
+            {/* KR 컨센서스 숫자 카드 제거 (2026-07-10) — 권리감사 쟁점4(네이버 ToS + 증권사 리서치 이중 IP).
+                컨센 접근 = 위 '애널리스트 컨센서스 · 출처 바로가기' 링크아웃 섹션이 담당. */}
 
             {/* 일정 */}
             {calendar.length > 0 && (

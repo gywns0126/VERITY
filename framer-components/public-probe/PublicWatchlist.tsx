@@ -149,10 +149,14 @@ export default function PublicWatchlist(props: Props) {
     const matches = useMemo(() => {
         const q = query.trim().toLowerCase()
         if (!q) return []
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
+            return t === q ? 0 : (n === q || k === q) ? 1 : t.indexOf(q) === 0 ? 2 : (n.indexOf(q) === 0 || (k && k.indexOf(q) === 0)) ? 3 : 4
+        }
         const have = new Set(watch.map((x) => String(x.ticker)))
         return universe
             .filter((x) => !have.has(String(x.ticker)) && (String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").includes(q)))
-            .slice(0, 12)
+            .sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 12)
     }, [query, universe, watch])
 
     const addStock = useCallback((m: any) => {

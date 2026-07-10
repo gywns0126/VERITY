@@ -64,7 +64,11 @@ export default function PublicTickerPicker(props: Props) {
 
     const matches = useMemo(() => {
         const s = q.trim().toLowerCase(); if (!s) return []
-        return universe.filter((x) => String(x.name || "").toLowerCase().includes(s) || String(x.ticker || "").includes(s)).slice(0, 10)
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
+            return t === s ? 0 : (n === s || k === s) ? 1 : t.indexOf(s) === 0 ? 2 : (n.indexOf(s) === 0 || (k && k.indexOf(s) === 0)) ? 3 : 4
+        }
+        return universe.filter((x) => String(x.name || "").toLowerCase().includes(s) || String(x.ticker || "").toLowerCase().includes(s) || String((x as any).name_ko || "").includes(s)).sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 10)
     }, [q, universe])
 
     const pick = (tk: string, nm?: string) => {

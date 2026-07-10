@@ -145,11 +145,15 @@ export default function PublicStockSearch(props: Props) {
     const matches = useMemo(() => {
         const s = q.trim().toLowerCase()
         if (!s || !universe.length) return []
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
+            return t === s ? 0 : (n === s || k === s) ? 1 : t.indexOf(s) === 0 ? 2 : (n.indexOf(s) === 0 || (k && k.indexOf(s) === 0)) ? 3 : 4
+        }
         return universe.filter((x) =>
             String(x.ticker).toLowerCase().includes(s) ||
             String(x.name || "").toLowerCase().includes(s) ||
             String((x as any).name_ko || "").includes(q.trim())
-        ).slice(0, 12)
+        ).sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 12)
     }, [q, universe])
 
     const pick = (tk: string, nm?: string) => {
@@ -267,11 +271,23 @@ export default function PublicStockSearch(props: Props) {
                         </>
                     )}
                     {secLabel("지금 거래 활발", "거래대금 상위 · 네이버")}
+                    {/* 화살표 = SVG (텍스트 "↗" 는 iOS 에서 이모지 렌더 → 어색. PC 텍스트 글리프와 동일 룩 통일) · 좁은 화면 줄바꿈 방지 */}
                     <div onMouseDown={() => { if (typeof window !== "undefined") window.open(isMobileWidth() ? M_NAVER_QUANT : NAVER_QUANT, "_blank", "noopener") }}
                         style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 9, cursor: "pointer" }}>
-                        <span style={{ width: 22, height: 22, borderRadius: 7, background: C.vtS, color: C.vt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>↗</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>실시간 거래대금 상위</span>
-                        <span style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: C.faint }}>네이버 금융 ↗</span>
+                        <span style={{ width: 22, height: 22, borderRadius: 7, background: C.vtS, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width={11} height={11} viewBox="0 0 12 12" fill="none" stroke={C.vt} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <line x1="2.5" y1="9.5" x2="9" y2="3" />
+                                <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
+                            </svg>
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>실시간 거래대금 상위</span>
+                        <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11.5, fontWeight: 700, color: C.faint, whiteSpace: "nowrap" }}>
+                            네이버 금융
+                            <svg width={9} height={9} viewBox="0 0 12 12" fill="none" stroke={C.faint} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <line x1="2.5" y1="9.5" x2="9" y2="3" />
+                                <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
+                            </svg>
+                        </span>
                     </div>
                 </div>, document.body)}
         </div>

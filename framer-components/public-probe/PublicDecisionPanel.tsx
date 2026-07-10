@@ -184,7 +184,11 @@ export default function PublicDecisionPanel(props: Props) {
 
     const matches = useMemo(() => {
         const qq = query.trim().toLowerCase(); if (!qq) return []
-        return universe.filter((x) => String(x.name || "").toLowerCase().includes(qq) || String(x.ticker || "").toLowerCase().includes(qq) || String((x as any).name_ko || "").includes(qq)).slice(0, 10)
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
+            return t === qq ? 0 : (n === qq || k === qq) ? 1 : t.indexOf(qq) === 0 ? 2 : (n.indexOf(qq) === 0 || (k && k.indexOf(qq) === 0)) ? 3 : 4
+        }
+        return universe.filter((x) => String(x.name || "").toLowerCase().includes(qq) || String(x.ticker || "").toLowerCase().includes(qq) || String((x as any).name_ko || "").includes(qq)).sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 10)
     }, [query, universe])
 
     // 선택 = 내부 state 즉시 갱신 + localStorage·?q 기록 + 이벤트(ThesisNote 추종)
