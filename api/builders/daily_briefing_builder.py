@@ -34,6 +34,9 @@ CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
 INSIDER_PATH = os.path.join(_ROOT, "data", "insider_trades.json")
 WARN_PATH = os.path.join(_ROOT, "data", "market_warnings.json")
 FLOW_PATH = os.path.join(_ROOT, "data", "stock_flow_5d.json")
+INDEX_PATH = os.path.join(_ROOT, "data", "kr_index_daily.json")
+CHART_DIR = os.path.join(_ROOT, "data", "kr_chart_daily")
+HOT_PATH = os.path.join(_ROOT, "data", "hot_stock.json")
 US_STATE_PATH = os.path.join(_ROOT, "data", "metadata", "us_fin_incremental_state.json")
 KR_REPORT_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
 US_REPORT_PATH = os.path.join(_ROOT, "data", "us_stock_report_public.json")
@@ -175,6 +178,112 @@ def _sec_flow(names: Dict[str, str]) -> Dict[str, Any]:
             "note": f"거래일 {d} · 추정금액 = 순매수주수×종가 (자체계산)"}
 
 
+def _sec_market_recap(names: Dict[str, str]) -> Dict[str, Any]:
+    """전 거래일 시장 분해 — 지수·섹터 breadth + 급등락×당일공시 병기 (PM 2026-07-11).
+
+    전부 사실: 지수/섹터 등락(금융위 지수시세정보) · 등락 상위(금융위 주식시세) ·
+    당일 DART 공시 병기. 흐름 한 줄 = breadth 개수 조건 템플릿 (LLM 0, 결정론).
+    🚨 인과 단어 금지 — "때문/영향/재료" 표현 없이 병렬 사실만. 인과 조립 = 독자.
+    """
+    idx_doc = _load(INDEX_PATH, {})
+    indices = idx_doc.get("indices") or {}
+    anchor = str((idx_doc.get("_meta") or {}).get("as_of") or "")
+    ks = (indices.get("코스피") or {}).get("c") or []
+    kq = (indices.get("코스닥") or {}).get("c") or []
+    if not (anchor and ks and kq):
+        return {"title": "지난 거래일 시장", "items": []}
+    ks_chg, kq_chg = ks[-1][2], kq[-1][2]
+
+    # 코스피200 섹터 breadth — 파생 변형(비중상한/TOP/테마) 제외한 순수 섹터만
+    _EXCL = ("비중상한", "TOP", "제외", "ESG", "기후", "고배당", "중소형")
+    sect = []
+    for n, e in indices.items():
+        if not n.startswith("코스피 200 ") or any(x in n for x in _EXCL):
+            continue
+        c = e.get("c") or []
+        if c and c[-1][2] is not None:
+            sect.append((n.replace("코스피 200 ", ""), c[-1][2]))
+    up = sorted([x for x in sect if x[1] > 0], key=lambda x: -x[1])
+    down = sorted([x for x in sect if x[1] < 0], key=lambda x: x[1])
+    n_s, n_u, n_d = len(sect), len(up), len(down)
+
+    # 흐름 한 줄 — breadth 개수 조건 템플릿 (사실 파생 문장, 인과 0)
+    if ks_chg is None or n_s == 0:
+        headline = ""
+    elif ks_chg > 0 and n_d >= n_s * 2 / 3:
+        headline = f"코스피는 올랐지만 {n_s}개 섹터 중 {n_d}개는 내렸어요"
+    elif ks_chg < 0 and n_d >= n_s * 2 / 3:
+        headline = f"{n_s}개 섹터 중 {n_d}개가 내린 넓은 하락이었어요"
+    elif ks_chg > 0 and n_u >= n_s * 2 / 3:
+        headline = f"{n_s}개 섹터 중 {n_u}개가 오른 넓은 상승이었어요"
+    elif ks_chg < 0 and n_u >= n_s * 2 / 3:
+        headline = f"코스피는 내렸지만 {n_s}개 섹터 중 {n_u}개는 올랐어요"
+    else:
+        headline = f"섹터가 오르내림 섞인 혼조였어요 (상승 {n_u} · 하락 {n_d})"
+
+    items: List[Dict[str, Any]] = [
+        {"name": "지수", "text": f"코스피 {ks_chg:+.2f}% · 코스닥 {kq_chg:+.2f}%"},
+    ]
+    if headline:
+        items.append({"name": "흐름", "text": headline})
+    if down:
+        items.append({"name": "내린 쪽", "text": " · ".join(f"{n} {v:+.1f}%" for n, v in down[:2])})
+    if up:
+        items.append({"name": "올린 쪽", "text": " · ".join(f"{n} {v:+.1f}%" for n, v in up[:2])})
+    hot = (_load(HOT_PATH, {}) or {}).get("hot") or {}
+    if hot.get("ticker") and str((_load(HOT_PATH, {}).get("_meta") or {}).get("as_of")) == anchor:
+        items.append({"ticker": hot["ticker"], "name": hot.get("name", hot["ticker"]),
+                      "text": "거래대금 1위"})
+
+    # 급등락 × 당일 공시 병기 — 등락 상위 ∩ 당일 DART 공시 (기계적 교집합, 편집 판단 0)
+    cat: Dict[str, str] = {}
+    try:
+        with open(CATALYST_PATH, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    r = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if str(r.get("rcept_dt") or "") == anchor and r.get("ticker"):
+                    nm = str(r.get("report_nm") or "").strip()
+                    for pre in ("[기재정정]", "[첨부정정]", "[첨부추가]"):
+                        if nm.startswith(pre):
+                            nm = nm[len(pre):]
+                    cat.setdefault(str(r["ticker"]), nm[:26])
+    except OSError:
+        pass
+    movers: List[Dict[str, Any]] = []
+    if cat:
+        try:
+            for i in range(40):
+                ch = _load(os.path.join(CHART_DIR, f"chunk_{i:02d}.json"), {})
+                for tk, ent in (ch.get("stocks") or {}).items():
+                    if tk not in cat:
+                        continue
+                    c = ent.get("c") or []
+                    if len(c) < 2 or str(c[-1][0]) != anchor or not c[-2][4]:
+                        continue
+                    if c[-1][4] * c[-1][5] < 3e9:  # 거래대금 30억 미만 = 표시 노이즈 제외 (display 필터)
+                        continue
+                    chg = (c[-1][4] / c[-2][4] - 1) * 100
+                    movers.append({"ticker": tk, "name": ent.get("n") or names.get(tk, tk), "chg": chg})
+        except OSError:
+            pass
+        movers.sort(key=lambda x: -abs(x["chg"]))
+        for m in movers[:3]:
+            if abs(m["chg"]) < 3:  # 등락 3% 미만 = 병기 생략 (움직임 자체가 미미)
+                break
+            items.append({"ticker": m["ticker"], "name": m["name"],
+                          "text": f"{m['chg']:+.1f}% · 당일 공시: {cat[m['ticker']]}"})
+
+    d = f"{anchor[4:6]}/{anchor[6:8]}"
+    return {"title": "지난 거래일 시장", "items": items,
+            "note": f"기준 {d} · 지수·섹터·등락 = 금융위 공공데이터(전 거래일) · 공시 병기 = 사실, 인과 해석 아님"}
+
+
 def main() -> int:
     ok = False
     try:
@@ -183,6 +292,7 @@ def main() -> int:
         warn_doc = _load(WARN_PATH, {})
         warnings = warn_doc.get("warnings") or {}
         sections = [
+            _sec_market_recap(names),
             _sec_us_filings(names),
             _sec_earnings(names, now),
             _sec_disclosures(),
