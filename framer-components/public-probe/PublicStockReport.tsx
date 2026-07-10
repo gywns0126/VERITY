@@ -981,6 +981,8 @@ export default function PublicStockReport(props: Props) {
         return (mk === "ETF" || mk === "ETN") ? "etf" : "stock"
     }, [searchList, selTicker])
     const [etfDoc, setEtfDoc] = useState<any>(null)
+    const [noReportTk, setNoReportTk] = useState<string>("")   // 슬라이스 확정 미보유 티커
+    const lastGoodRef = useRef<any>(null)                       // 전환 중 이전 화면 유지 (깜빡임 제거)
     // 형제 컴포넌트(기업 전용: 뉴스 외 상세·이벤트·증권사리포트·브리핑)가 타입을 알 수 있게 body 신호 발행
     useEffect(() => {
         if (onCanvas || typeof document === "undefined" || !document.body) return
@@ -1011,8 +1013,8 @@ export default function PublicStockReport(props: Props) {
                 if (!alive) return
                 if (!d || d.status !== "ok") { setListLoaded(true); return }
                 const rep = d.report
-                if (rep && rep.ticker) setList([rep])
-                else setList([])   // 리포트 미보유 = s memo 가 searchList stub 으로 안내(_noReport)
+                if (rep && rep.ticker) { setList([rep]); setNoReportTk("") }
+                else { setList([]); setNoReportTk(t) }   // 확정 미보유만 stub (전환 중 깜빡임 방지)
                 if (d.report_as_of) setReportAsOf(String(d.report_as_of))
                 // 항상 반영 (null 포함) — 슬라이스 성공 = 그 종목의 확정 답. null 을 skip 하면
                 // SAMPLE placeholder 가 안 지워져 데모 라벨이 실 화면에 잔존 (2026-07-10 삼성전자
@@ -1071,16 +1073,22 @@ export default function PublicStockReport(props: Props) {
 
     const s = useMemo(() => {
         const hit = list.find((x) => x.ticker === selTicker)
-        if (hit) return hit
-        // 리포트 미보유 종목 = universe stub(올바른 ticker/name) — list[0] 엉뚱 종목 폴백 차단. _noReport=graceful 안내.
-        const u = searchList.find((x) => String(x.ticker) === String(selTicker))
-        if (u) return { ticker: u.ticker, name: u.name, market: u.market, _noReport: true }
+        if (hit) { lastGoodRef.current = hit; return hit }
+        // 확정 미보유(슬라이스 응답 완료) = stub 안내. 응답 대기 중엔 이전 종목 화면 유지(깜빡임 제거 2026-07-10).
+        if (String(noReportTk) === String(selTicker)) {
+            const u = searchList.find((x) => String(x.ticker) === String(selTicker))
+            if (u) return { ticker: u.ticker, name: u.name, market: u.market, _noReport: true }
+        }
+        if (lastGoodRef.current) return lastGoodRef.current
+        const u2 = searchList.find((x) => String(x.ticker) === String(selTicker))
+        if (u2) return { ticker: u2.ticker, name: u2.name, market: u2.market, _noReport: true }
         return list[0] || {}
-    }, [list, searchList, selTicker])
+    }, [list, searchList, selTicker, noReportTk])
     // 로딩 중(실데이터 미도착 or 선택 종목 미발견)엔 삼성전자 샘플 폴백 대신 스켈레톤. 160ms 지연 게이트=즉시 로드 깜빡임 차단(토스식).
     // 리포트 보유(list) 또는 universe 확인(searchList) 시 종목 확정 — 슬라이스 미보유 종목도 stub 안내로 스켈레톤 탈출
     const found = useMemo(() => list.some((x) => String(x.ticker) === String(selTicker)) || searchList.some((x) => String(x.ticker) === String(selTicker)), [list, searchList, selTicker])
-    const showSkeleton = !onCanvas && (!listLoaded || !found)
+    // 스켈레톤 = 최초 로드에서만. 종목 전환 중엔 이전 화면 유지 → 깜빡임 제거 (2026-07-10)
+    const showSkeleton = !onCanvas && !listLoaded && !lastGoodRef.current && !found
     useEffect(() => {
         if (!showSkeleton) { setSkelVisible(false); return }
         const t = setTimeout(() => setSkelVisible(true), 160)
@@ -2029,6 +2037,25 @@ export default function PublicStockReport(props: Props) {
                             </>
                         )
                     })()}
+
+                    {usForen.short_interest && usForen.short_interest.short_pct != null && (
+                        <>
+                            {sectionTitle("美 공매도 잔고 · Short Interest", "yfinance · 월 2회 공시")}
+                            <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                                <div style={{ display: "flex", gap: 12, marginBottom: 8, flexWrap: "wrap", alignItems: "baseline" }}>
+                                    <span style={{ fontSize: 20, fontWeight: 800, color: C.ink }}>{usForen.short_interest.short_pct}%</span>
+                                    <span style={{ fontSize: 12, color: C.faint, fontWeight: 600 }}>float 대비 공매도 비중</span>
+                                    {usForen.short_interest.short_pct_prior != null ? <span style={{ fontSize: 12, fontWeight: 700, color: C.sub }}>전기 {usForen.short_interest.short_pct_prior}% {(usForen.short_interest.short_pct - usForen.short_interest.short_pct_prior) >= 0 ? "▲" : "▼"}</span> : null}
+                                </div>
+                                <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12.5, color: C.sub, fontWeight: 600 }}>
+                                    {usForen.short_interest.days_to_cover != null ? <span>숏커버 {usForen.short_interest.days_to_cover}일</span> : null}
+                                    {usForen.short_interest.shares_short != null ? <span>공매도 {fmtShares(usForen.short_interest.shares_short)}주</span> : null}
+                                    {usForen.short_interest.report_date ? <span style={{ color: C.faint }}>{usForen.short_interest.report_date} 기준</span> : null}
+                                </div>
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>NYSE/NASDAQ 공매도 잔고 사실 · 많음=하락 신호 아님(참고) · 증권사·토스엔 없는 view</div>
+                            </div>
+                        </>
+                    )}
 
                 </>
             )}
