@@ -45,6 +45,7 @@ interface Profile {
     created_at: string
     nickname: string   // 커뮤니티 표시명 (019 마이그레이션, 유일)
     avatar: string     // 128px JPEG base64 data-URL (~10KB, 인라인 저장)
+    bio: string        // 한 줄 소개 (021 마이그레이션, ≤40자)
 }
 
 const SAMPLE: Profile = {
@@ -55,6 +56,7 @@ const SAMPLE: Profile = {
     created_at: "2026-04-01T00:00:00Z",
     nickname: "길동무",
     avatar: "",
+    bio: "저평가 가치주 장기 보유",
 }
 
 function loadSession(): SupaSession | null {
@@ -76,7 +78,7 @@ async function fetchProfile(
 ): Promise<Partial<Profile> | null> {
     if (!url || !anon || !token || !userId) return null
     try {
-        // nickname/avatar = 019 마이그레이션 컬럼 — 미적용 DB 면 400 → 레거시 sel 로 폴백(기존 표시 유지)
+        // nickname/avatar(019)·bio(021) = 마이그레이션 컬럼 — 미적용 DB 면 400 → 단계 폴백(기존 표시 유지)
         const get = async (sel: string) => {
             const res = await fetch(
                 `${url}/rest/v1/${table}?id=eq.${userId}&select=${sel}`,
@@ -86,7 +88,8 @@ async function fetchProfile(
             const rows = await res.json()
             return Array.isArray(rows) && rows[0] ? rows[0] : null
         }
-        return (await get("display_name,email,phone,status,nickname,avatar"))
+        return (await get("display_name,email,phone,status,nickname,avatar,bio"))
+            || (await get("display_name,email,phone,status,nickname,avatar"))
             || (await get("display_name,email,phone,status"))
     } catch (e) {
         return null
@@ -234,11 +237,12 @@ export default function PublicProfilePage(props: Props) {
     const [confirming, setConfirming] = useState(false)
     const [busy, setBusy] = useState<Busy>("")
     const [profile, setProfile] = useState<Profile | null>(isCanvas ? SAMPLE : null)
-    // 프로필 편집(별명·사진, 2026-07-10) — 커뮤니티 표시명 선행
+    // 프로필 편집 — 인스타식 보기/편집 분리 (2026-07-10 PM 선택). 편집 = 사진/별명/소개 필드 리스트.
     const fileRef = useRef<HTMLInputElement>(null)
-    const [nickEditing, setNickEditing] = useState(false)
+    const [editMode, setEditMode] = useState(false)
     const [nickDraft, setNickDraft] = useState("")
-    const [nickMsg, setNickMsg] = useState("")
+    const [bioDraft, setBioDraft] = useState("")
+    const [editMsg, setEditMsg] = useState("")
     const [avatarBusy, setAvatarBusy] = useState(false)
 
     const C = dark ? DARK : LIGHT
@@ -274,6 +278,7 @@ export default function PublicProfilePage(props: Props) {
             created_at: s.user.created_at || meta.created_at || "",
             nickname: "",
             avatar: "",
+            bio: "",
         }
         setProfile(base)
         setPhase("member")
@@ -289,6 +294,7 @@ export default function PublicProfilePage(props: Props) {
                 created_at: row.created_at || base.created_at,
                 nickname: (row as any).nickname || "",
                 avatar: (row as any).avatar || "",
+                bio: (row as any).bio || "",
             })
         })
         return () => {
@@ -324,21 +330,25 @@ export default function PublicProfilePage(props: Props) {
         go(logoutRedirect)
     }
 
-    /* 별명 저장 — 2~16자 한글·영문·숫자(._- 허용). 409 = 유일 인덱스 충돌(이미 사용 중). */
+    /* 프로필 저장(별명+소개) — 별명 2~16자 한글·영문·숫자(._- 허용). 409 = 유일 인덱스 충돌(이미 사용 중). */
     const NICK_RE = /^[가-힣A-Za-z0-9._-]{2,16}$/
-    const saveNick = async () => {
+    const saveProfile = async () => {
         const v = nickDraft.trim()
-        if (!NICK_RE.test(v)) { setNickMsg("2~16자, 한글·영문·숫자(._- 허용) · 공백 불가예요"); return }
+        const b = bioDraft.trim().slice(0, 40)
+        if (v && !NICK_RE.test(v)) { setEditMsg("별명은 2~16자, 한글·영문·숫자(._- 허용) · 공백 불가예요"); return }
         const s = loadSession()
         if (!s || !s.access_token || !s.user) return
-        setNickMsg("저장 중…")
-        const r = await patchProfile(supabaseUrl, supabaseAnonKey, s.access_token, profileTable, s.user.id, { nickname: v })
+        setEditMsg("저장 중…")
+        const patch = (body: Record<string, string>) =>
+            patchProfile(supabaseUrl, supabaseAnonKey, s.access_token, profileTable, s.user.id, body)
+        let r = await patch({ nickname: v, bio: b })
+        if (!r.ok && r.status === 400) r = await patch({ nickname: v })   // 021 미적용 DB(bio 컬럼 부재) 폴백
         if (r.ok) {
-            setProfile((p) => (p ? { ...p, nickname: v } : p))
-            setNickEditing(false)
-            setNickMsg("")
+            setProfile((p) => (p ? { ...p, nickname: v, bio: b } : p))
+            setEditMode(false)
+            setEditMsg("")
         } else {
-            setNickMsg(r.status === 409 ? "이미 사용 중인 별명이에요" : "저장에 실패했어요 — 잠시 후 다시 시도해 주세요")
+            setEditMsg(r.status === 409 ? "이미 사용 중인 별명이에요" : "저장에 실패했어요 — 잠시 후 다시 시도해 주세요")
         }
     }
 
@@ -420,64 +430,79 @@ export default function PublicProfilePage(props: Props) {
     return (
         <div style={wrap}>
             <div style={cardStyle}>
-                {/* 헤더: 아바타(탭=사진 변경) + 별명(수정 가능) + 이름 + 이메일 + 상태 */}
+                {/* 헤더 — 인스타식 보기/편집 분리: 보기 = 표시 전용, 편집 = 사진/별명/소개 필드 리스트 */}
                 <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onAvatarFile} />
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-                    <button type="button" onClick={pickAvatar} title="프로필 사진 변경" aria-label="프로필 사진 변경"
-                        style={{ position: "relative", width: 80, height: 80, borderRadius: 26, background: C.field, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14, border: "none", padding: 0, cursor: avatarBusy ? "wait" : "pointer", opacity: avatarBusy ? 0.55 : 1 }}>
-                        {profile && profile.avatar ? (
-                            <img src={profile.avatar} alt="" width={80} height={80}
-                                style={{ width: 80, height: 80, borderRadius: 26, objectFit: "cover", display: "block" }} />
-                        ) : (
-                            <BustAvatar size={50} color={C.sub} />
-                        )}
-                        {/* 카메라 배지 — 사진 변경 가능 힌트 */}
-                        <span style={{ position: "absolute", right: -4, bottom: -4, width: 26, height: 26, borderRadius: "50%", background: C.card, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
-                            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                                <circle cx="12" cy="13" r="4" />
-                            </svg>
-                        </span>
-                    </button>
-                    {/* 별명 (커뮤니티 표시명) — 없으면 이름 표시 + '별명 설정' */}
-                    {!nickEditing ? (
-                        <div style={{ display: "flex", alignItems: "baseline", gap: 7, justifyContent: "center" }}>
-                            <span style={{ color: C.ink, fontSize: 20, fontWeight: 800, letterSpacing: -0.4 }}>
-                                {profile && profile.nickname ? profile.nickname : name}
-                            </span>
-                            <button type="button"
-                                onClick={() => { setNickDraft((profile && profile.nickname) || ""); setNickEditing(true); setNickMsg("") }}
-                                style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 11.5, fontWeight: 700, fontFamily: FONT, padding: 0 }}>
-                                {profile && profile.nickname ? "수정" : "별명 설정"}
-                            </button>
+                {!editMode ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+                        <div style={{ width: 80, height: 80, borderRadius: 26, background: C.field, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14, overflow: "hidden" }}>
+                            {profile && profile.avatar ? (
+                                <img src={profile.avatar} alt="" width={80} height={80}
+                                    style={{ width: 80, height: 80, objectFit: "cover", display: "block" }} />
+                            ) : (
+                                <BustAvatar size={50} color={C.sub} />
+                            )}
                         </div>
-                    ) : (
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginTop: 2 }}>
-                            <input value={nickDraft} autoFocus maxLength={16} placeholder="별명 (2~16자)"
-                                onChange={(e) => setNickDraft(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === "Enter") saveNick() }}
-                                style={{ width: 172, boxSizing: "border-box", textAlign: "center", border: "none", borderRadius: 10, padding: "9px 14px", fontSize: 14, fontWeight: 700, fontFamily: FONT, background: C.field, color: C.ink, outline: "none" }} />
-                            <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
-                                <button type="button" onClick={() => { setNickEditing(false); setNickMsg("") }}
-                                    style={{ border: "none", background: "transparent", cursor: "pointer", padding: "7px 14px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, fontFamily: FONT, color: C.faint }}>취소</button>
-                                <button type="button" onClick={saveNick}
-                                    style={{ border: "none", background: C.ink, color: C.card, cursor: "pointer", padding: "7px 18px", borderRadius: 999, fontSize: 12.5, fontWeight: 800, fontFamily: FONT }}>저장</button>
+                        <div style={{ color: C.ink, fontSize: 20, fontWeight: 800, letterSpacing: -0.4 }}>
+                            {profile && profile.nickname ? profile.nickname : name}
+                        </div>
+                        {profile && profile.bio ? (
+                            <div style={{ color: C.sub, fontSize: 12.5, fontWeight: 500, marginTop: 5, lineHeight: 1.4 }}>{profile.bio}</div>
+                        ) : null}
+                        <div style={{ color: C.faint, fontSize: 12.5, fontFamily: FONT_MONO, marginTop: 5 }}>
+                            {profile ? profile.email : ""}
+                        </div>
+                        <span style={{ marginTop: 12, display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: 999, background: sm.bg, color: sm.fg, fontSize: 11.5, fontWeight: 700 }}>
+                            {sm.label}
+                        </span>
+                        <button type="button"
+                            onClick={() => { setNickDraft((profile && profile.nickname) || ""); setBioDraft((profile && profile.bio) || ""); setEditMode(true); setEditMsg("") }}
+                            style={{ marginTop: 16, border: "none", cursor: "pointer", background: C.field, color: C.ink, fontSize: 12.5, fontWeight: 700, fontFamily: FONT, padding: "8px 20px", borderRadius: 999 }}>
+                            프로필 편집
+                        </button>
+                    </div>
+                ) : (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <button type="button" onClick={pickAvatar} title="프로필 사진 변경" aria-label="프로필 사진 변경"
+                            style={{ position: "relative", width: 80, height: 80, borderRadius: 26, background: C.field, display: "flex", alignItems: "center", justifyContent: "center", border: "none", padding: 0, cursor: avatarBusy ? "wait" : "pointer", opacity: avatarBusy ? 0.55 : 1 }}>
+                            {profile && profile.avatar ? (
+                                <img src={profile.avatar} alt="" width={80} height={80}
+                                    style={{ width: 80, height: 80, borderRadius: 26, objectFit: "cover", display: "block" }} />
+                            ) : (
+                                <BustAvatar size={50} color={C.sub} />
+                            )}
+                        </button>
+                        <button type="button" onClick={pickAvatar}
+                            style={{ marginTop: 10, border: "none", background: "transparent", cursor: "pointer", color: C.blue, fontSize: 12.5, fontWeight: 700, fontFamily: FONT, padding: 0 }}>
+                            {avatarBusy ? "업로드 중…" : "사진 변경"}
+                        </button>
+                        {/* 필드 리스트 — 라벨 + 밑줄 입력 행 */}
+                        <div style={{ width: "100%", marginTop: 14 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: `1px solid ${C.line}` }}>
+                                <span style={{ width: 44, flexShrink: 0, color: C.faint, fontSize: 12.5, fontWeight: 600 }}>별명</span>
+                                <input value={nickDraft} autoFocus maxLength={16} placeholder="2~16자"
+                                    onChange={(e) => setNickDraft(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === "Enter") saveProfile() }}
+                                    style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 14, fontWeight: 700, fontFamily: FONT, color: C.ink, padding: 0 }} />
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: `1px solid ${C.line}` }}>
+                                <span style={{ width: 44, flexShrink: 0, color: C.faint, fontSize: 12.5, fontWeight: 600 }}>소개</span>
+                                <input value={bioDraft} maxLength={40} placeholder="한 줄 소개 (선택)"
+                                    onChange={(e) => setBioDraft(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === "Enter") saveProfile() }}
+                                    style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 14, fontWeight: 500, fontFamily: FONT, color: C.ink, padding: 0 }} />
                             </div>
                         </div>
-                    )}
-                    {nickMsg ? (
-                        <div style={{ marginTop: 6, fontSize: 11.5, fontWeight: 700, color: nickMsg === "저장 중…" ? C.faint : C.red }}>{nickMsg}</div>
-                    ) : null}
-                    {profile && profile.nickname ? (
-                        <div style={{ color: C.sub, fontSize: 12.5, fontWeight: 600, marginTop: 4 }}>{name}</div>
-                    ) : null}
-                    <div style={{ color: C.faint, fontSize: 12.5, fontFamily: FONT_MONO, marginTop: 4 }}>
-                        {profile ? profile.email : ""}
+                        {editMsg ? (
+                            <div style={{ marginTop: 10, fontSize: 11.5, fontWeight: 700, color: editMsg === "저장 중…" ? C.faint : C.red }}>{editMsg}</div>
+                        ) : null}
+                        <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 14 }}>
+                            <button type="button" onClick={() => { setEditMode(false); setEditMsg("") }}
+                                style={{ border: "none", background: "transparent", cursor: "pointer", padding: "7px 14px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, fontFamily: FONT, color: C.faint }}>취소</button>
+                            <button type="button" onClick={saveProfile}
+                                style={{ border: "none", background: C.ink, color: C.card, cursor: "pointer", padding: "7px 18px", borderRadius: 999, fontSize: 12.5, fontWeight: 800, fontFamily: FONT }}>저장</button>
+                        </div>
                     </div>
-                    <span style={{ marginTop: 12, display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: 999, background: sm.bg, color: sm.fg, fontSize: 11.5, fontWeight: 700 }}>
-                        {sm.label}
-                    </span>
-                </div>
+                )}
 
                 {/* 가입 정보 */}
                 <div style={{ marginTop: 22, borderTop: `1px solid ${C.line}`, paddingTop: 4 }}>
