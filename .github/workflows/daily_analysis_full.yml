@@ -441,9 +441,11 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.entrance_map_builder
 
-      - name: 커버리지(채움율) 감사 — 백필 회귀 감시
-        # 리포트 필드·동반 파일 채움율 일일 측정 → data/metadata/coverage_report.json(+history.jsonl).
-        # 신선도 감사와 직교("얼마나 채워져 있나"). 회귀 >10%p = WARN 로그. 외부호출 0. broad git add data/ = RULE 4.
+      - name: 커버리지(채움율) 감사 — 회귀 감시 + 핵심 필드 fail-closed 게이트
+        id: coverage_gate
+        # 리포트 필드·동반 파일 채움율 측정. 핵심 배수(PER/PBR)·재무·동반 급락(>30%p) 또는 절대 붕괴(<5%, N≥100)
+        #   = exit 1 → 이 step outcome=failure. 아래 commit/publish step 이 outcome 검사로 차단(fail-closed).
+        #   continue-on-error 유지 = job 은 계속(진단·telegram step 실행)하되 outcome 은 failure 로 남음. 2026-07-12.
         continue-on-error: true
         run: python -m api.builders.coverage_report_builder
 
@@ -521,6 +523,8 @@ jobs:
           python -m api.arena.berserker_shadow
 
       - name: Commit & push results
+        # 핵심 데이터 붕괴 시 커밋 차단 (coverage_gate fail-closed) — 결함본이 repo·사이트로 안 나감. 2026-07-12.
+        if: success() && steps.coverage_gate.outcome != 'failure'
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
@@ -553,7 +557,8 @@ jobs:
       - name: Publish hot data to VERITY-data
         # Phase A: dual-write — main 에도 commit (위), gh-pages 에도 force-orphan push.
         # 검증 후 Phase B 에서 fetch URL 마이그레이션, Phase C 에서 main commit 제거.
-        if: always()
+        # 핵심 데이터 붕괴 시 발행 차단 (coverage_gate fail-closed) — 결함 Blob 이 CDN 으로 안 나감. 2026-07-12.
+        if: always() && steps.coverage_gate.outcome != 'failure'
         uses: ./.github/actions/publish-data
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

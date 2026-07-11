@@ -33,6 +33,10 @@ FACTS_SUBFIELDS = ["PER", "PBR"]
 REGRESSION_WARN_PP = 10.0  # 전 스냅샷 대비 하락 경고 임계 (%p)
 # 핵심 지표 급락 = 결함 확률 압도적 (유기적 감소로 30%p 불가) → exit 1 로 같은 run 의 publish 차단.
 CORE_FAIL_PP = 30.0
+# 절대 하한 — baseline 무관. 유니버스 충분(≥MIN_UNIVERSE)한 핵심 필드가 이 밑 = 붕괴.
+#   회귀 게이트의 사각(초기 run·만성 결손·baseline 오염 = 급락으로 안 잡힘) 보완. 2026-07-12.
+CORE_FLOOR_PCT = 5.0
+MIN_UNIVERSE = 100
 CORE_PREFIXES = ("field.facts", "us.field.facts", "us_smallcap.field.facts",
                  "field.financials", "us.field.financials",
                  # 동반 파일 붕괴도 게이트 (2026-07-11 us_quarterly 1,494→10종 실사고)
@@ -187,6 +191,15 @@ def _flat_pcts(report: Dict[str, Any]) -> Dict[str, float]:
     return out
 
 
+def _universe_for(key: str, report: Dict[str, Any]) -> int:
+    """flat 지표 키의 유니버스 총수 (절대 하한 게이트용)."""
+    if key.startswith("us_smallcap."):
+        return int(report.get("us_smallcap_total") or 0)
+    if key.startswith("us."):
+        return int(report.get("us_total") or 0)
+    return int(report.get("kr_total") or 0)
+
+
 def main() -> None:
     prev = None
     try:
@@ -197,14 +210,12 @@ def main() -> None:
 
     report = build()
     os.makedirs(_META, exist_ok=True)
-    with open(REPORT_PATH, "w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=1)
-
     now = _flat_pcts(report)
-    with open(HISTORY_PATH, "a", encoding="utf-8") as f:
-        f.write(json.dumps({"date": datetime.now(KST).strftime("%Y-%m-%d"), "kr_total": report["kr_total"], **now}, ensure_ascii=False) + "\n")
 
     warns = fails = 0
+    reasons = []
+
+    # 1) 회귀 게이트 — 마지막 GOOD baseline(REPORT_PATH) 대비 핵심 필드 급락(>30%p)
     if prev:
         before = _flat_pcts(prev)
         for k, pct in now.items():
@@ -212,16 +223,49 @@ def main() -> None:
             if old is None or old - pct <= REGRESSION_WARN_PP:
                 continue
             if old - pct > CORE_FAIL_PP and k.startswith(CORE_PREFIXES):
-                print(f"[coverage] FAIL {k} 핵심 급락: {old}% → {pct}% (-{round(old - pct, 1)}%p) — publish 차단")
+                msg = f"{k} 핵심 급락 {old}%→{pct}% (-{round(old - pct, 1)}%p)"
+                print(f"[coverage] FAIL {msg} — publish 차단")
+                reasons.append(msg)
                 fails += 1
             else:
                 print(f"[coverage] WARN {k} 회귀: {old}% → {pct}% (-{round(old - pct, 1)}%p)")
                 warns += 1
-    print(f"[coverage] logged=True · kr={report['kr_total']} · 지표 {len(now)}개 · 회귀경고 {warns}건 · 핵심급락 {fails}건 → {REPORT_PATH}")
-    if fails:
-        # 핵심 필드 급락 = 결함 산출물. 같은 run 의 publish/commit step 진행 차단 (2026-07-11 PM
-        # "기본 데이터는 확실히" — 로고 순백 7건·미장 PER 전량 공백이 초록 CI 로 하루 노출된 사고).
+
+    # 2) 절대 하한 게이트 — baseline 무관. 유니버스 충분한 핵심 필드가 바닥 = 붕괴.
+    #    회귀 게이트가 못 잡는 초기 run·만성 결손·baseline 오염 케이스 포착 (fail-closed 보강).
+    for k, pct in now.items():
+        if not k.startswith(CORE_PREFIXES):
+            continue
+        uni = _universe_for(k, report)
+        if uni >= MIN_UNIVERSE and pct < CORE_FLOOR_PCT:
+            msg = f"{k} 절대 붕괴 {pct}% < {CORE_FLOOR_PCT}% (N={uni})"
+            print(f"[coverage] FLOOR {msg} — publish 차단")
+            reasons.append(msg)
+            fails += 1
+
+    blocked = fails > 0
+
+    # history 는 항상 기록(추이) — blocked 플래그 포함. broad git add data/ = RULE 4 (commit step 등재).
+    with open(HISTORY_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"date": datetime.now(KST).strftime("%Y-%m-%d"),
+                            "ts": datetime.now(KST).isoformat(),
+                            "kr_total": report["kr_total"], "blocked": blocked,
+                            "fails": fails, "warns": warns, **now}, ensure_ascii=False) + "\n")
+
+    if blocked:
+        # 결함 산출물 = GOOD baseline(REPORT_PATH) 덮지 않음 → 다음 run 도 급락/붕괴 계속 탐지(지속 fail-closed).
+        #   진단본만 별도 기록. 워크플로가 이 step outcome=failure 로 commit/publish 차단 (2026-07-12 배선).
+        blocked_path = os.path.join(_META, "coverage_report.blocked.json")
+        with open(blocked_path, "w", encoding="utf-8") as f:
+            json.dump({"blocked_at": datetime.now(KST).isoformat(), "reasons": reasons, "report": report},
+                      f, ensure_ascii=False, indent=1)
+        print(f"[coverage] BLOCKED · 핵심결함 {fails}건 · baseline 보존 · 진단={blocked_path}")
         raise SystemExit(1)
+
+    # 통과 = 새 GOOD baseline 확정
+    with open(REPORT_PATH, "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=1)
+    print(f"[coverage] OK · kr={report['kr_total']} · 지표 {len(now)}개 · 회귀경고 {warns}건 · 핵심결함 0건 → {REPORT_PATH}")
 
 
 if __name__ == "__main__":

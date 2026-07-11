@@ -71,6 +71,17 @@ jobs:
         # crypto_collect 30분 사이클 publish-data 가 main HEAD 에서 Blob 반영.
         run: python api/builders/freshness_board_builder.py || echo "board build 실패(무해)"
 
+      - name: 발행 후 실물 검증 (P2 — 배달 채움율 + CDN age)
+        # 2026-07-12 신설 — 업로드된 실제 Blob 재fetch 해 핵심 배수(PER/PBR) 채움율 단언 + CDN age 수집.
+        # 발행 성공≠배달 정합 갭 감시. 결과 = data/metadata/publish_verify.json(+jsonl). 외부호출 = Blob GET only.
+        # graceful — 일시 네트워크 실패 무해(다음 시각 재측정). || echo = monitor/commit step 항상 실행.
+        run: python scripts/publish_verify.py || echo "publish_verify 실패(무해, 다음 시각 재측정)"
+
+      - name: 데이터-헬스 집계 (관리자 감시 SoT)
+        # 2026-07-12 신설 — 가드 HOLD + 배달검증 + 커버리지 회귀 + 신선도를 data/metadata/data_health.json 단일 SoT 로.
+        # 텔레그램 대신 관리자 사이트 컴포넌트가 읽을 피드. read-only 집계(판정·수정 0, RULE 7).
+        run: python -m api.builders.data_health_builder || echo "data_health 집계 실패(무해)"
+
       - name: Run health monitor
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -97,7 +108,7 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/metadata/cron_health.jsonl data/metadata/freshness_observations.jsonl data/freshness_board.json 2>/dev/null || true
+          git add data/metadata/cron_health.jsonl data/metadata/freshness_observations.jsonl data/freshness_board.json data/metadata/publish_verify.json data/metadata/publish_verify.jsonl data/metadata/data_health.json 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔔 cron_health ${TIME_KST}"
