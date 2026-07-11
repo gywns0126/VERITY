@@ -10,6 +10,7 @@
     "api/chat_diag.py": { "maxDuration": 5 },
     "api/watchgroups.py": { "maxDuration": 10 },
     "api/holdings.py": { "maxDuration": 10 },
+    "api/trades.py": { "maxDuration": 10 },
     "api/thesis.py": { "maxDuration": 10 },
     "api/thesis_feed.py": { "maxDuration": 10 },
     "api/order.py": { "maxDuration": 10 },
@@ -48,7 +49,7 @@
   ],
   "headers": [
     {
-      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!holdings(?:$|/))(?!thesis(?:$|/))(?!thesis_feed(?:$|/))(?!reports(?:$|/)).*)",
+      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!holdings(?:$|/))(?!trades(?:$|/))(?!thesis(?:$|/))(?!thesis_feed(?:$|/))(?!reports(?:$|/)).*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PATCH, DELETE, OPTIONS" },

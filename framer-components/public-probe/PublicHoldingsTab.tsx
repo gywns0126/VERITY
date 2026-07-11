@@ -121,6 +121,20 @@ const SAMPLE = [
     { ticker: "AAPL", name: "Apple", shares: 30, avg_cost: 150, price: 214.3, market: "us" },
 ]
 
+// 거래 기록(실현손익) 데모 — 미로그인/캔버스 미리보기. 실제 데이터는 /api/trades 가 서버 이동평균 요약 반환.
+const SAMPLE_TRADES = [
+    { ticker: "005930", name: "삼성전자", market: "kr", side: "buy", shares: 100, price: 68000, traded_at: "2026-03-04" },
+    { ticker: "005930", name: "삼성전자", market: "kr", side: "sell", shares: 40, price: 81200, traded_at: "2026-06-18" },
+    { ticker: "NVDA", name: "NVIDIA", market: "us", side: "buy", shares: 20, price: 120, traded_at: "2026-02-11" },
+]
+const SAMPLE_TRADE_SUMMARY = {
+    by_ticker: [
+        { ticker: "005930", name: "삼성전자", market: "kr", realized_pnl: 528000, open_shares: 60, open_avg_cost: 68000 },
+        { ticker: "NVDA", name: "NVIDIA", market: "us", realized_pnl: 0, open_shares: 20, open_avg_cost: 120 },
+    ],
+    total_realized_pnl: 528000,
+}
+
 function getToken(): string {
     if (typeof window === "undefined") return ""
     try {
@@ -147,6 +161,20 @@ function wonCompact(v: number): string {
 function parseFee(s: any): number {
     const n = parseFloat(String(s || "").replace(/[%\s]/g, ""))
     return isFinite(n) ? n / 100 : 0
+}
+// 통화 표기 — US=$, KR=원 (거래 원장·종목별 실현손익은 네이티브 통화. 합계만 FX 환산=holdings 관행).
+function px(v: number, us: boolean): string {
+    if (!isFinite(v)) return "—"
+    return us ? "$" + v.toLocaleString("en-US", { maximumFractionDigits: 2 }) : Math.round(v).toLocaleString("en-US") + "원"
+}
+// 오늘 날짜(로컬 기준 YYYY-MM-DD) — 거래일 기본값. 자정 근처 UTC 밀림 방지 위해 tz offset 보정.
+function todayISO(): string {
+    try {
+        const d = new Date()
+        return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+    } catch {
+        return ""
+    }
 }
 
 // ETF 누적 순흐름(Δ상장좌수 × NAV, 가격효과 제거) — /etf 페이지 cumFlow 와 동일 로직. 자산군 자금 방향(사실) 참조용.
@@ -178,7 +206,7 @@ function flagCode(market: any): string {
 function FlagIcon(props: { code: string; size?: number }) {
     const size = props.size || 15
     return (
-        <img src={FLAG_BASE + props.code + ".svg"} alt="" width={size} height={size}
+        <img src={FLAG_BASE + props.code + ".svg"} alt="" loading="lazy" decoding="async" width={size} height={size}
             style={{ width: size, height: size, borderRadius: "50%", display: "inline-block", verticalAlign: "-2px", flexShrink: 0 }} />
     )
 }
@@ -195,14 +223,14 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     return (
         <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
             {!err && bfSrc ? (
-                <img src={bfSrc} alt="" width={size} height={size}
+                <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size}
                     onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</div>
             )}
             {code && (
-                <img src={FLAG_BASE + code + ".svg"} alt="" width={fsize} height={fsize}
+                <img src={FLAG_BASE + code + ".svg"} alt="" loading="lazy" decoding="async" width={fsize} height={fsize}
                     style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block", boxShadow: "0 1px 2px rgba(0,0,0,0.18)" }} />
             )}
         </div>
@@ -247,7 +275,7 @@ export default function PublicHoldingsTab(props: Props) {
     const [showAdd, setShowAdd] = useState(false)
     const [busy, setBusy] = useState(false)
     const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
-    const [view, setView] = useState<"holdings" | "mix" | "tax">("holdings")
+    const [view, setView] = useState<"holdings" | "mix" | "tax" | "trades">("holdings")
     const [brokers, setBrokers] = useState<any[]>([])
     const [brokerIdx, setBrokerIdx] = useState(0)
     const [catFlow, setCatFlow] = useState<Record<string, number>>({})   // etf_flow 자산군 누적 흐름(사실, 분산 탭)
@@ -255,6 +283,12 @@ export default function PublicHoldingsTab(props: Props) {
     const [universe, setUniverse] = useState<any[]>([])                  // 검색 유니버스(universe_search, KR+US)
     const [q, setQ] = useState("")                                       // 종목 검색어
     const [pop, setPop] = useState<any>(null)                            // 추가/수정 팝업 {id?, ticker, name, market, shares, avg_cost}
+    // 거래 기록(실현손익) — 본인 매매 이력. RULE 7 사실 기록, 순위·배지·공개 없음. /api/trades.
+    const [tradeData, setTradeData] = useState<{ trades: any[]; summary: any }>(() => ({ trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY }))
+    const [showTAdd, setShowTAdd] = useState(false)                      // 거래 추가 검색 패널
+    const [tq, setTq] = useState("")                                     // 거래 추가 종목 검색어
+    const [tPop, setTPop] = useState<any>(null)                          // 거래 팝업 {id?, ticker, name, market, side, shares, price, traded_at}
+    const [tBusy, setTBusy] = useState(false)
 
     const isDark = onCanvas ? !!dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -329,16 +363,16 @@ export default function PublicHoldingsTab(props: Props) {
 
     useEffect(() => { loadHoldings() }, [loadHoldings])
 
-    // 검색 유니버스(KR+US ~8.9천, universe_search) — 추가 패널 열 때 1회 lazy 로드.
+    // 검색 유니버스(KR+US ~8.9천, universe_search) — 보유/거래 추가 패널 열 때 1회 lazy 로드.
     useEffect(() => {
-        if (onCanvas || !showAdd || universe.length) return
+        if (onCanvas || (!showAdd && !showTAdd) || universe.length) return
         let alive = true
         fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json", { cache: "no-store" })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a)) setUniverse(a) })
             .catch(() => {})
         return () => { alive = false }
-    }, [onCanvas, showAdd, universe.length])
+    }, [onCanvas, showAdd, showTAdd, universe.length])
 
     // 평가 기준가 — stock_flow_5d 마지막 close(발행 유지 파일 재사용, 신규 시세 노출 0). 커버리지 밖 = graceful fallback.
     useEffect(() => {
@@ -419,6 +453,68 @@ export default function PublicHoldingsTab(props: Props) {
         }).then(() => loadHoldings()).catch(() => {})
     }, [base, loadHoldings])
 
+    // ── 거래 기록 로드 — 미로그인/캔버스 = 샘플. 서버가 이동평균 실현손익 요약(summary) 동봉. ──
+    const loadTrades = useCallback(() => {
+        if (onCanvas) return
+        const token = getToken()
+        if (!token) { setTradeData({ trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY }); return }
+        fetch(base + "/api/trades", { headers: { Authorization: "Bearer " + token } })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (d && Array.isArray(d.trades)) setTradeData({ trades: d.trades, summary: d.summary || { by_ticker: [], total_realized_pnl: 0 } }) })
+            .catch(() => {})
+    }, [base, onCanvas])
+
+    // 거래 탭 최초 진입 시 lazy 로드(안 여는 사용자 API 호출 절약).
+    useEffect(() => { if (view === "trades") loadTrades() }, [view, loadTrades])
+
+    // 거래 추가 검색 — universe_search 필터(보유 여부 표시 불필요). 상위 8개.
+    const tMatches = useMemo(() => {
+        const s = tq.trim().toLowerCase()
+        if (!s || !universe.length) return []
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
+            return t === s ? 0 : (n === s || k === s) ? 1 : t.indexOf(s) === 0 ? 2 : (n.indexOf(s) === 0 || (k && k.indexOf(s) === 0)) ? 3 : 4
+        }
+        return universe.filter((x: any) =>
+            String(x.ticker).toLowerCase().includes(s) ||
+            String(x.name || "").toLowerCase().includes(s) ||
+            String(x.name_ko || "").includes(tq.trim())
+        ).sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 8)
+    }, [tq, universe])
+
+    const openTAdd = (x: any) => { setTPop({ ticker: String(x.ticker), name: x.name || "", market: String(x.market || "kr").toLowerCase(), side: "buy", shares: "", price: "", traded_at: todayISO() }); setTq(""); setShowTAdd(false) }
+    const openTEdit = (t: any) => { setTPop({ id: t.id, ticker: t.ticker, name: t.name || "", market: t.market || "kr", side: t.side || "buy", shares: String(t.shares ?? ""), price: String(t.price ?? ""), traded_at: t.traded_at || todayISO() }) }
+    const saveTPop = useCallback(() => {
+        const token = getToken()
+        if (!token || !tPop) return
+        const sh = Number(tPop.shares) || 0
+        const pr = Number(tPop.price)
+        if (sh <= 0 || !isFinite(pr) || pr < 0) return
+        setTBusy(true)
+        const isEdit = !!tPop.id
+        const body = isEdit
+            ? { id: tPop.id, side: tPop.side, shares: sh, price: pr, traded_at: tPop.traded_at }
+            : { ticker: String(tPop.ticker).trim(), name: String(tPop.name).trim(), market: tPop.market, side: tPop.side, shares: sh, price: pr, traded_at: tPop.traded_at }
+        fetch(base + "/api/trades", {
+            method: isEdit ? "PATCH" : "POST",
+            headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+        })
+            .then((r) => r.json().catch(() => ({})))
+            .then(() => { setTPop(null); loadTrades() })
+            .catch(() => {})
+            .finally(() => setTBusy(false))
+    }, [tPop, base, loadTrades])
+    const delTrade = useCallback((id: string) => {
+        const token = getToken()
+        if (!token || !id) return
+        fetch(base + "/api/trades", {
+            method: "DELETE",
+            headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
+        }).then(() => loadTrades()).catch(() => {})
+    }, [base, loadTrades])
+
     const narrow = w > 0 && w < 560
     const pad = narrow ? 12 : 18
 
@@ -470,6 +566,12 @@ export default function PublicHoldingsTab(props: Props) {
     const tgtKr = targetKr == null ? Math.round(krPct) : targetKr
     const gapKr = Math.round(krPct - tgtKr)
 
+    // ── 거래 기록(실현손익) 파생 — 종목별 실현손익은 네이티브 통화, 합계만 FX 환산(holdings 관행). ──
+    const tByTicker: any[] = (tradeData.summary && Array.isArray(tradeData.summary.by_ticker)) ? tradeData.summary.by_ticker : []
+    const realizedKrw = tByTicker.reduce((a, b) => a + (Number(b.realized_pnl) || 0) * (String(b.market) === "us" ? FX : 1), 0)
+    const tLedger = [...(tradeData.trades || [])].reverse()   // 최신 거래 먼저
+    const tHasUs = (tradeData.trades || []).some((t: any) => String(t.market) === "us")
+
     const inputStyle: CSSProperties = {
         border: `1px solid ${C.line}`, borderRadius: 8, padding: "8px 10px", fontSize: 13,
         fontFamily: FONT, background: C.bg, color: C.ink, outline: "none", minWidth: 0,
@@ -503,7 +605,7 @@ export default function PublicHoldingsTab(props: Props) {
 
     const Tabs = (
         <div style={{ display: "flex", gap: 4, background: C.bg, borderRadius: 11, padding: 3, marginTop: 12 }}>
-            {([["holdings", "보유종목"], ["mix", "분산"], ["tax", "예상 세금"]] as const).map(([k, label]) => (
+            {([["holdings", "보유종목"], ["mix", "분산"], ["trades", "거래 기록"], ["tax", "예상 세금"]] as const).map(([k, label]) => (
                 <div key={k} onClick={() => setView(k)} style={{
                     flex: 1, textAlign: "center", cursor: "pointer", fontSize: 13, fontWeight: 800, padding: "8px 0", borderRadius: 8,
                     background: view === k ? C.card : "transparent", color: view === k ? C.ink : C.faint,
@@ -545,6 +647,50 @@ export default function PublicHoldingsTab(props: Props) {
                     </div>
                 </div>
             )}
+            {/* 거래 기록 팝업 — 매수/매도 · 수량 · 체결가 · 거래일 → POST/PATCH /api/trades. 실현손익 서버 이동평균 재계산. */}
+            {tPop && (
+                <div onClick={() => setTPop(null)}
+                    style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.42)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+                    <div onClick={(e) => e.stopPropagation()}
+                        style={{ width: "100%", maxWidth: 320, background: C.card, borderRadius: 18, padding: "18px 18px 16px", boxShadow: "0 14px 44px rgba(0,0,0,0.28)", fontFamily: FONT, boxSizing: "border-box" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                            <Logo ticker={tPop.ticker} name={tPop.name} market={tPop.market} C={C} size={34} />
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tPop.name || tPop.ticker}</div>
+                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{tPop.ticker} · {String(tPop.market).toUpperCase()} · {tPop.id ? "거래 수정" : "거래 기록"}</div>
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 11 }}>
+                            {(["buy", "sell"] as const).map((sd) => (
+                                <div key={sd} onClick={() => setTPop({ ...tPop, side: sd })} style={{
+                                    flex: 1, textAlign: "center", cursor: "pointer", fontSize: 13, fontWeight: 800, padding: "9px 0", borderRadius: 10,
+                                    border: `1px solid ${tPop.side === sd ? (sd === "buy" ? C.down : C.up) : C.line}`,
+                                    color: tPop.side === sd ? (sd === "buy" ? C.down : C.up) : C.faint,
+                                    background: tPop.side === sd ? (sd === "buy" ? (isDark ? "#152238" : "#eaf2ff") : (isDark ? "#3a1a1e" : "#ffeaec")) : "transparent",
+                                }}>{sd === "buy" ? "매수" : "매도"}</div>
+                            ))}
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                            <div>
+                                <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 4 }}>수량</div>
+                                <input autoFocus style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} inputMode="decimal" placeholder="예: 10" value={tPop.shares} onChange={(e) => setTPop({ ...tPop, shares: e.target.value })} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 4 }}>체결가 ({tPop.market === "us" ? "$" : "원"})</div>
+                                <input style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} inputMode="decimal" placeholder={tPop.market === "us" ? "예: 150" : "예: 68000"} value={tPop.price} onChange={(e) => setTPop({ ...tPop, price: e.target.value })} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 4 }}>거래일</div>
+                                <input type="date" style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} value={tPop.traded_at} onChange={(e) => setTPop({ ...tPop, traded_at: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") saveTPop() }} />
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                            <button onClick={() => setTPop(null)} style={{ flex: 1, border: `1px solid ${C.line}`, background: "transparent", cursor: "pointer", color: C.sub, borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, fontFamily: FONT }}>취소</button>
+                            <button onClick={saveTPop} disabled={tBusy} style={{ flex: 2, border: "none", cursor: "pointer", background: tPop.side === "sell" ? C.up : C.vg, color: C.onAccent, borderRadius: 10, padding: "10px 0", fontSize: 13.5, fontWeight: 800, fontFamily: FONT, opacity: tBusy ? 0.6 : 1 }}>{tBusy ? "저장 중…" : (tPop.id ? "저장" : (tPop.side === "sell" ? "매도 기록" : "매수 기록"))}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                 <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: narrow ? 18 : 20, fontWeight: 800, letterSpacing: "-0.5px" }}>나만의 둥지</div>
@@ -554,6 +700,12 @@ export default function PublicHoldingsTab(props: Props) {
                     <button onClick={() => setShowAdd((v) => !v)}
                         style={{ border: "none", cursor: "pointer", padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, fontFamily: FONT, flexShrink: 0, background: C.vg, color: C.onAccent }}>
                         {showAdd ? "닫기" : "+ 종목 추가"}
+                    </button>
+                )}
+                {!loading && !isDemo && view === "trades" && (
+                    <button onClick={() => setShowTAdd((v) => !v)}
+                        style={{ border: "none", cursor: "pointer", padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, fontFamily: FONT, flexShrink: 0, background: C.vg, color: C.onAccent }}>
+                        {showTAdd ? "닫기" : "+ 거래 추가"}
                     </button>
                 )}
             </div>
@@ -747,7 +899,7 @@ export default function PublicHoldingsTab(props: Props) {
                                 비중·집중도 = 평가금액 기준 사실 산술 · 목표는 직접 설정 · 자산군 자금은 KRX ETF 사실 · 투자자문·추천 아님
                             </div>
                         </>
-                    ) : (
+                    ) : view === "tax" ? (
                         <>
                             <div style={{ ...cardS, padding: "18px 18px" }}>
                                 <div style={{ fontSize: 12, color: C.faint, fontWeight: 700 }}>매도 가정 시 예상 비용 (세금 + 수수료)</div>
@@ -825,6 +977,102 @@ export default function PublicHoldingsTab(props: Props) {
 
                             <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 13, lineHeight: 1.5 }}>
                                 세율·공제는 2026 시행값(사실). 추정·관측 보조용 — 실제 납세 판단은 세무사 확인. 절세 자문 아님.
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            {/* 거래 검색/추가 패널 (매수·매도 기록) */}
+                            {!isDemo && showTAdd && (
+                                <div style={{ background: C.card, borderRadius: 16, padding: "14px 15px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }}>
+                                    <input style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="종목 검색 (이름·코드)" value={tq} onChange={(e) => setTq(e.target.value)} />
+                                    {tq.trim() && tMatches.length > 0 && (
+                                        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2 }}>
+                                            {tMatches.map((m: any) => (
+                                                <div key={m.ticker} onClick={() => openTAdd(m)}
+                                                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 6px", borderRadius: 10, cursor: "pointer" }}>
+                                                    <Logo ticker={m.ticker} name={m.name} market={String(m.market).toLowerCase()} C={C} size={26} />
+                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                        <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name || m.ticker}</div>
+                                                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{m.ticker} · {String(m.market).toUpperCase()}</div>
+                                                    </div>
+                                                    <span style={{ border: "none", background: C.vgS, color: C.vg, borderRadius: 999, width: 30, height: 30, fontSize: 15, fontWeight: 800, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>+</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {tq.trim() && tMatches.length === 0 && (
+                                        <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, padding: "8px 4px" }}>{universe.length ? "검색 결과 없음" : "불러오는 중…"}</div>
+                                    )}
+                                    {!tq.trim() && (
+                                        <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, padding: "8px 4px 2px", lineHeight: 1.5 }}>종목을 검색해 선택하면 매수·매도·체결가·거래일을 입력해 기록해요.</div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* 실현손익 합계 (매도 확정분) */}
+                            <div style={{ ...cardS, padding: "18px 18px" }}>
+                                <div style={{ fontSize: 12, color: C.faint, fontWeight: 700 }}>실현손익 합계 · 매도 확정분(사실)</div>
+                                <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: "-1px", margin: "3px 0", color: plColor(realizedKrw) }}>{(realizedKrw > 0 ? "+" : "") + money(realizedKrw)}</div>
+                                <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 4 }}>이동평균 매입가 차감(사실) · 거래 {(tradeData.trades || []).length}건{tHasUs ? ` · 미국주식 환율 ${FX}원/$ 가정` : ""}</div>
+                            </div>
+
+                            {/* 종목별 실현손익 + 잔여 보유 */}
+                            {tByTicker.length > 0 && (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+                                    {tByTicker.map((s: any) => {
+                                        const us = String(s.market) === "us"
+                                        return (
+                                            <div key={s.ticker} onClick={() => goStock(s)} role="link" tabIndex={0}
+                                                style={{ display: "flex", alignItems: "center", gap: 12, background: C.card, borderRadius: 16, padding: "13px 15px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", cursor: "pointer" }}>
+                                                <Logo ticker={s.ticker} name={s.name} market={s.market} C={C} size={36} />
+                                                <div style={{ minWidth: 0, flex: 1 }}>
+                                                    <div style={{ fontSize: 14.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name || s.ticker}</div>
+                                                    <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 2 }}>{Number(s.open_shares) > 0 ? `보유 ${s.open_shares}주 · 평단 ${px(Number(s.open_avg_cost) || 0, us)}` : "전량 매도"}</div>
+                                                </div>
+                                                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                                    <div style={{ fontSize: 14.5, fontWeight: 800, color: plColor(Number(s.realized_pnl) || 0) }}>{((Number(s.realized_pnl) || 0) > 0 ? "+" : "") + px(Number(s.realized_pnl) || 0, us)}</div>
+                                                    <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 2 }}>실현손익</div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+
+                            {/* 거래 이력 (원장) */}
+                            <div style={{ ...cardS, padding: "16px 17px" }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 6 }}>거래 이력</div>
+                                {tLedger.length === 0 ? (
+                                    <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, padding: "10px 2px" }}>아직 기록한 거래가 없어요. {isDemo ? "로그인하면" : "+ 거래 추가로"} 매수·매도를 남겨보세요.</div>
+                                ) : tLedger.map((t: any, i: number) => {
+                                    const us = String(t.market) === "us"
+                                    const isBuy = t.side === "buy"
+                                    return (
+                                        <div key={t.id || i} style={{ display: "flex", alignItems: "center", gap: 11, padding: "10px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line }}>
+                                            <Logo ticker={t.ticker} name={t.name} market={t.market} C={C} size={30} />
+                                            <div style={{ minWidth: 0, flex: 1 }}>
+                                                <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 6 }}>
+                                                    <span style={{ fontSize: 10.5, fontWeight: 800, color: isBuy ? C.down : C.up, background: isBuy ? (isDark ? "#152238" : "#eaf2ff") : (isDark ? "#3a1a1e" : "#ffeaec"), borderRadius: 6, padding: "2px 6px", flexShrink: 0 }}>{isBuy ? "매수" : "매도"}</span>
+                                                    <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name || t.ticker}</span>
+                                                </div>
+                                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 2 }}>{t.traded_at || "—"} · {Number(t.shares) || 0}주 @ {px(Number(t.price) || 0, us)}</div>
+                                            </div>
+                                            <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, fontVariantNumeric: "tabular-nums", flexShrink: 0, textAlign: "right" }}>{px((Number(t.shares) || 0) * (Number(t.price) || 0), us)}</div>
+                                            {!isDemo && t.id && (
+                                                <button onClick={() => openTEdit(t)} title="거래 수정"
+                                                    style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 12, fontWeight: 700, padding: "0 2px", flexShrink: 0 }}>수정</button>
+                                            )}
+                                            {!isDemo && t.id && (
+                                                <button onClick={() => delTrade(t.id)} title="삭제"
+                                                    style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 16, fontWeight: 700, padding: "0 2px", flexShrink: 0 }}>×</button>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+
+                            <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 13, lineHeight: 1.5 }}>
+                                실현손익 = 매도가 − 이동평균 매입가 (단순 계산·사실) · 본인 기록용 · 순위·배지·공개 없음 · 투자자문 아님
                             </div>
                         </>
                     )
