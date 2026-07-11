@@ -29,6 +29,7 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 OUTPUT_PATH = os.path.join(_ROOT, "data", "etf_flow.json")
 
 HISTORY_CAP = 40  # 티커당 보관 거래일 수 (≈2개월)
+EXTRAS_TOP_N = 200  # 부가정보(네이버) 신규수집 상한 — 순자산 상위 N (레이트리밋). 나머지=이전 값 carry.
 
 # KRX etf_bydd_trd 응답 키 후보 (표준 우선, 변형 fallback) — 매칭 키는 field_map 으로 기록
 _SHRS_KEYS = ["LIST_SHRS", "LISTSHRS", "LIST_SHRS_CO", "INVSTASST_LIST_SHRS"]
@@ -65,6 +66,63 @@ def _load_existing() -> Dict[str, Any]:
         return {}
 
 
+# ── ETF 부가정보 (보수율·기초지수·운용사·구성종목 top10) — 네이버 금융 (2026-07-10 PM) ──
+# 모바일 integration API totalInfos(펀드보수·기초지수·운용사) + PC CU 표(구성 상위 10, 비중%).
+# 사실 metadata (시세 재배포 아님). 실패 시 이전 값 carry(graceful). 25종 × 2콜/일.
+import re as _re
+import time as _time
+import urllib.request as _ur
+
+def _fetch_etf_extras(ticker: str) -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+    hdr = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
+    try:
+        d = json.loads(_ur.urlopen(_ur.Request(
+            f"https://m.stock.naver.com/api/stock/{ticker}/integration", headers=hdr), timeout=10).read())
+        for it in (d.get("totalInfos") or []):
+            k, v = str(it.get("key") or ""), str(it.get("value") or "")
+            if k == "펀드보수" and v:
+                out["ter"] = v
+            elif k == "기초지수" and v:
+                out["base_index"] = v
+            elif k == "운용사" and v:
+                out["manager"] = v.replace("(ETF)", "").strip()
+    except Exception:  # noqa: BLE001
+        pass
+    _time.sleep(0.25)
+    try:
+        html = _ur.urlopen(_ur.Request(
+            f"https://finance.naver.com/item/main.naver?code={ticker}", headers=hdr), timeout=12).read().decode("utf-8", "replace")
+        i = html.find("1CU")
+        seg = html[max(0, i - 9000):i] if i > 0 else ""
+        rows = _re.findall(r'code=(\d{6})[^>]*>([^<]{1,40})</a>\s*</td>\s*<td>\s*[\d,]+\s*</td>\s*<td class="per">\s*([\d.]+)%', seg)
+        if rows:
+            out["top_holdings"] = [{"t": tk2, "n": nm.strip(), "w": float(w)} for tk2, nm, w in rows[:10]]
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
+def _infer_category(name: str) -> str:
+    """비curated ETF 카테고리 추론(이름 기반). curated 25는 _TICKER_META 명시값 우선."""
+    n = name or ""
+    if "레버리지" in n or "2X" in n or "2x" in n:
+        return "leverage"
+    if "인버스" in n:
+        return "inverse"
+    if any(x in n for x in ("국고채", "회사채", "채권", "크레딧", "단기통안", "통안채", "금리", "머니마켓", "MMF", "CD")):
+        return "bond_us" if "미국" in n or "달러" in n else "bond_kr"
+    if any(x in n for x in ("골드", "은선물", "원유", "구리", "농산물", "원자재", "팔라듐", "천연가스", "금선물", "WTI")):
+        return "commodity"
+    if any(x in n for x in ("리츠", "REIT", "부동산", "인프라")):
+        return "reit"
+    if any(x in n for x in ("미국", "나스닥", "S&P", "해외", "글로벌", "차이나", "중국", "일본", "유럽", "베트남", "인도", "선진", "신흥", "필라델피아", "MSCI")):
+        return "equity_foreign"
+    if any(x in n for x in ("배당", "고배당")):
+        return "dividend"
+    return "equity_domestic"  # 기본 = 국내주식
+
+
 def build_etf_flow() -> Dict[str, Any]:
     """KRX etf_bydd_trd 에서 상장좌수/NAV/순자산 추출 → 일별 누적 + Δ좌수 흐름 산출 → data/etf_flow.json.
 
@@ -96,10 +154,10 @@ def build_etf_flow() -> Dict[str, Any]:
         etfs: List[Dict[str, Any]] = []
         with_flow = 0
 
-        for ticker, (name_fallback, category) in _TICKER_META.items():
-            row = rows.get(ticker)
-            if not row:
-                continue
+        prev_etfs = {str(x.get("ticker")): x for x in (existing.get("etfs") or [])}
+
+        # 1차: 전 ETF 흐름/시계열 — KRX rows 전량(이미 fetch = 무비용). 25 curated → 전 상장 ETF 확대.
+        for ticker, row in rows.items():
             if not sample_keys:
                 sample_keys = sorted(row.keys())
 
@@ -108,14 +166,16 @@ def build_etf_flow() -> Dict[str, Any]:
             nav, _ = _pick(row, _NAV_KEYS)
             close, _ = _pick(row, _CLOSE_KEYS)
             row_basdd = _pick_str(row, _BASDD_KEYS) or bas_dd_used
-            name = _pick_str(row, ["ISU_NM"]) or name_fallback
+            meta = _TICKER_META.get(ticker)
+            name = _pick_str(row, ["ISU_NM"]) or (meta[0] if meta else ticker)
+            category = meta[1] if meta else _infer_category(name)
 
             if k_shrs and "list_shrs" not in field_map:
                 field_map["list_shrs"] = k_shrs
             if k_net and "netasset" not in field_map:
                 field_map["netasset"] = k_net
 
-            # 상장좌수 없으면 흐름 산출 불가 — 그래도 history 는 NAV/순자산만이라도 적재 skip (좌수 핵심)
+            # 상장좌수 없으면 흐름 산출 불가 (좌수 핵심) — skip
             if list_shrs is None:
                 continue
 
@@ -149,7 +209,20 @@ def build_etf_flow() -> Dict[str, Any]:
                 rec["est_flow"] = round(d_shrs * nav, 0) if nav is not None else None  # 원
                 if d_shrs != 0:
                     with_flow += 1
+            # 부가정보 이전 값 carry (2차에서 상위 N 신규 갱신)
+            pr = prev_etfs.get(ticker) or {}
+            for k2 in ("ter", "base_index", "manager", "top_holdings"):
+                if pr.get(k2):
+                    rec[k2] = pr[k2]
             etfs.append(rec)
+
+        # 2차: 부가정보(보수율·기초지수·운용사·구성종목 top10) — 순자산 상위 N만 신규 수집(네이버 레이트리밋).
+        #   나머지는 1차의 carry 값 유지 = 전 ETF 흐름 + 상위 ETF 리치 메타.
+        for rec in sorted(etfs, key=lambda e: (e.get("netasset") or 0), reverse=True)[:EXTRAS_TOP_N]:
+            extras = _fetch_etf_extras(rec["ticker"])
+            for k2 in ("ter", "base_index", "manager", "top_holdings"):
+                if extras.get(k2):
+                    rec[k2] = extras[k2]
 
         # 흐름 큰 순(절대값) 정렬 — 흐름 있는 것 우선
         etfs.sort(key=lambda e: abs(e.get("est_flow") or 0), reverse=True)
