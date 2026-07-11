@@ -556,7 +556,7 @@ function FinTrend({ series, C, usd }: { series: any[]; C: any; usd?: boolean }) 
         return { x: +x.toFixed(2), y: +y.toFixed(2), v }
     })
     const defined = xy.filter((q) => q.v != null)
-    const linePath = smoothLine(defined)
+    const linePath = curveLine(defined)
     const areaPath = defined.length >= 2 ? linePath + ` L ${defined[defined.length - 1].x} ${baseY} L ${defined[0].x} ${baseY} Z` : ""
     // 마진율 % 오버레이 (영업이익률/순이익률) — 매출 선택 시 생략. 자체 y-범위(추이 모양용).
     const revOf = (p: any) => (p && p.revenue != null && !isNaN(Number(p.revenue))) ? Number(p.revenue) : null
@@ -572,7 +572,7 @@ function FinTrend({ series, C, usd }: { series: any[]; C: any; usd?: boolean }) 
         const y = (H - PADV) - ((m - mMin) / mRange) * (H - 2 * PADV)
         return { x: +x.toFixed(2), y: +y.toFixed(2) }
     }).filter((q): q is { x: number; y: number } => q != null)
-    const marginPath = showMargin && mXY.length >= 2 ? smoothLine(mXY) : ""
+    const marginPath = showMargin && mXY.length >= 2 ? curveLine(mXY) : ""
     const lastMargin = [...marginVals].reverse().find((m) => m != null)
     const marginLabel = metric === "op" ? "영업이익률" : "순이익률"
     return (
@@ -626,6 +626,7 @@ function FinTrend({ series, C, usd }: { series: any[]; C: any; usd?: boolean }) 
                 ))}
             </div>
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{usd ? "SEC 10-K" : "DART 전자공시"} 연간 실값(추이선) · 증감은 위 과거 비교 칩(↑증가 ↓감소)</div>
+    // ETF 자금흐름(EtfReportBlock) 등 관측 시계열은 선형 유지. 연간 손익만 curveLine(유선형) 사용.
         </div>
     )
 }
@@ -635,6 +636,28 @@ function FinTrend({ series, C, usd }: { series: any[]; C: any; usd?: boolean }) 
    필드 = dart_quarterly_snapshots.jsonl 스키마 정합. 색: 라인/영역=vt보라 / 개선=green / 악화=amber. */
 const QT_DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/dart_quarterly_public.json"
 const QT_US_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_quarterly_public.json"  // 미장 분기추이(us_quarterly_public_builder)
+// Catmull-Rom → cubic bezier 유선형 곡선 (PM 2026-07-11 '연간 손익 유선형으로'). 연간 손익 추이 전용.
+// 실측값(연도별 정점)은 그대로 통과 — 곡선은 정점 사이 보간만 부드럽게. 점 2개 이하는 직선 폴백.
+// TENS = 곡률(control point 오프셋). 표준 Catmull-Rom = 1/6(0.167). 낮출수록 정점 쪽으로 당겨져
+//   급한 곡률(직선에 가까움) → 정점 사이 보정(interpolation) 인상 축소 (PM 2026-07-11 '곡률 급하게').
+const CURVE_TENS = 0.09
+function curveLine(p: { x: number; y: number }[]): string {
+    if (!p.length) return ""
+    if (p.length === 1) return `M ${p[0].x} ${p[0].y}`
+    if (p.length === 2) return `M ${p[0].x} ${p[0].y} L ${p[1].x} ${p[1].y}`
+    let d = `M ${p[0].x.toFixed(2)} ${p[0].y.toFixed(2)}`
+    for (let i = 0; i < p.length - 1; i++) {
+        const p0 = p[i - 1] || p[i]
+        const p1 = p[i]
+        const p2 = p[i + 1]
+        const p3 = p[i + 2] || p2
+        const c1x = p1.x + (p2.x - p0.x) * CURVE_TENS, c1y = p1.y + (p2.y - p0.y) * CURVE_TENS
+        const c2x = p2.x - (p3.x - p1.x) * CURVE_TENS, c2y = p2.y - (p3.y - p1.y) * CURVE_TENS
+        d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`
+    }
+    return d
+}
+
 const QT_METRICS: { key: string; label: string; unit: string; better: "up" | "down"; note?: string }[] = [
     { key: "debt_ratio", label: "부채비율", unit: "%", better: "down" },
     { key: "roa", label: "ROA", unit: "%", better: "up" },
