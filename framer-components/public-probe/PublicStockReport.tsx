@@ -2028,17 +2028,17 @@ export default function PublicStockReport(props: Props) {
                     <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                             {Object.keys(foren.counts || {}).sort((a, b) => (foren.counts[b] - foren.counts[a])).map((cat) => (
-                                <span key={cat} style={{ fontSize: 11.5, fontWeight: 800, color: catColor(cat), background: C.bg, border: `1px solid ${C.line}`, borderRadius: 8, padding: "4px 9px" }}>{cat} {foren.counts[cat]}회</span>
+                                <span key={cat} style={{ fontSize: 11.5, fontWeight: 800, color: catColor(cat), background: C.bg, borderRadius: 8, padding: "4px 9px" }}>{cat} {foren.counts[cat]}회</span>
                             ))}
                         </div>
                         {foren.dilution_count > 0 && (<div style={{ fontSize: 12, color: C.amber, fontWeight: 700, marginTop: 9, lineHeight: 1.5 }}>희석성 공시(유상증자·CB·BW 등) 합 {foren.dilution_count}회 — 사실 빈도일 뿐, 위험 판단 아님</div>)}
                         {foren.forensics_flags && (foren.forensics_flags.dilution_12m > 0 || foren.forensics_flags.correction_count > 0) && (
                             <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 9 }}>
                                 {foren.forensics_flags.dilution_12m > 0 && (
-                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.amber, background: C.bg, border: `1px solid ${C.line}`, borderRadius: 8, padding: "4px 9px" }}>최근 12개월 희석 {foren.forensics_flags.dilution_12m}회{foren.forensics_flags.dilution_span ? ` · ${foren.forensics_flags.dilution_span}` : ""}</span>
+                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.amber, background: C.bg, borderRadius: 8, padding: "4px 9px" }}>최근 12개월 희석 {foren.forensics_flags.dilution_12m}회{foren.forensics_flags.dilution_span ? ` · ${foren.forensics_flags.dilution_span}` : ""}</span>
                                 )}
                                 {foren.forensics_flags.correction_count > 0 && (
-                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, background: C.bg, border: `1px solid ${C.line}`, borderRadius: 8, padding: "4px 9px" }}>정정공시 {foren.forensics_flags.correction_count}회 ({foren.forensics_flags.correction_pct}%)</span>
+                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, background: C.bg, borderRadius: 8, padding: "4px 9px" }}>정정공시 {foren.forensics_flags.correction_count}회 ({foren.forensics_flags.correction_pct}%)</span>
                                 )}
                             </div>
                         )}
