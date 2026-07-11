@@ -34,7 +34,9 @@ REGRESSION_WARN_PP = 10.0  # 전 스냅샷 대비 하락 경고 임계 (%p)
 # 핵심 지표 급락 = 결함 확률 압도적 (유기적 감소로 30%p 불가) → exit 1 로 같은 run 의 publish 차단.
 CORE_FAIL_PP = 30.0
 CORE_PREFIXES = ("field.facts", "us.field.facts", "us_smallcap.field.facts",
-                 "field.financials", "us.field.financials")
+                 "field.financials", "us.field.financials",
+                 # 동반 파일 붕괴도 게이트 (2026-07-11 us_quarterly 1,494→10종 실사고)
+                 "companion.quarterly", "us.companion.us_quarterly")
 
 
 def _load(name: str) -> Optional[Dict[str, Any]]:

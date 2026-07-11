@@ -133,6 +133,21 @@ def main() -> int:
             print("[us_quarterly_public] 0 stocks — 기존 snapshot 보존", file=sys.stderr)
             ok = True
             return 0
+        # sticky merge — CI per-ticker 캐시는 그 run 재수집분만 존재. 부분 재빌드가 전량본을
+        # 덮어쓴 실사고(2026-07-11 incremental: 1,494→10종, 분기추이 카드 전멸). 기존 유지 + 신규만 갱신.
+        if os.path.isfile(OUTPUT_PATH):
+            try:
+                with open(OUTPUT_PATH, encoding="utf-8") as _f:
+                    prev = (json.load(_f) or {}).get("stocks") or {}
+            except (OSError, ValueError):
+                prev = {}
+            fresh = out["stocks"]
+            kept = sum(1 for t in prev if t not in fresh)
+            out["stocks"] = {**prev, **fresh}
+            out["_meta"]["count"] = len(out["stocks"])
+            out["_meta"]["fresh_this_run"] = len(fresh)
+            if kept:
+                print(f"[us_quarterly_public] sticky merge — 기존 {kept} 유지 + 신규 {len(fresh)}", file=sys.stderr)
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False)
         print(f"[us_quarterly_public] logged=True · {len(out['stocks'])} 종목 -> "
