@@ -1,10 +1,10 @@
 {
-  "collected_at": "2026-07-11T10:04:51+09:00",
+  "collected_at": "2026-07-11T13:22:57+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
     "call": "neutral",
-    "net_score": -1,
+    "net_score": 1,
     "active_dims": 4,
     "rule": "net≥+2 risk_on / ≤−2 risk_off / else neutral (투명 tally, 가중치 없음)"
   },
@@ -16,7 +16,7 @@
       "active": true,
       "drivers": {
         "fng": 26.0,
-        "search_trend_pct": -7.0
+        "search_trend_pct": -9.1
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -27,20 +27,20 @@
       "active": true,
       "drivers": {
         "funding_signal": "neutral",
-        "put_call_oi": 0.545,
+        "put_call_oi": 0.546,
         "long_short_ratio": 1.22
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
     {
       "name": "자금흐름",
-      "vote": -1,
-      "read": "off",
+      "vote": 1,
+      "read": "on",
       "active": true,
       "drivers": {
-        "btc_net_inflow_usd": -95301696.51,
-        "eth_net_inflow_usd": -52080427.85,
-        "combined_net_inflow_usd": -147382124.36
+        "btc_net_inflow_usd": 90439970.0,
+        "eth_net_inflow_usd": 18433378.275,
+        "combined_net_inflow_usd": 108873348.275
       },
       "rule": "ETF(BTC+ETH) 일일 순유입 on / 순유출 off"
     },
@@ -50,7 +50,7 @@
       "read": "neutral",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": 2.18
+        "btc_change_pct_7d": 2.56
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -61,7 +61,7 @@
       "active": false,
       "drivers": {
         "ssr": 4.99,
-        "stablecoin_supply_usd": 257592019759.6788
+        "stablecoin_supply_usd": 257658169799.4231
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -80,7 +80,7 @@
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 64068.0,
+  "btc_price_at_call": 64085.0,
   "trail": [
     {
       "date": "2026-06-24",
@@ -204,8 +204,8 @@
     {
       "date": "2026-07-11",
       "call": "neutral",
-      "net_score": -1,
-      "btc_price": 64068.0,
+      "net_score": 1,
+      "btc_price": 64085.0,
       "active_dims": 4
     }
   ],
