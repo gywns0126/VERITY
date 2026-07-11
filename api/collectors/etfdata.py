@@ -4,6 +4,8 @@
   - 카테고리 분류 (국내주식 / 해외주식 / 채권 / 원자재 / 레버리지·인버스 / 섹터)
   - 기간별 수익률: KRX가 단일 일자 스냅샷이므로 당일 등락률만 제공 (1M/3M/1Y는 None)
 """
+import sys
+import time
 from datetime import timedelta
 from typing import Any, Dict, List, Optional
 
@@ -61,27 +63,40 @@ def _recent_business_day(offset: int = 0) -> str:
 
 
 def _fetch_etf_day(bas_dd: str) -> Dict[str, Dict[str, Any]]:
-    """KRX etf_bydd_trd 조회 → {ticker: row_dict}"""
-    if not KRX_API_KEY:
-        return {}
-    try:
-        resp = requests.get(
-            f"{_BASE_URL}/etp/etf_bydd_trd",
-            params={"AUTH_KEY": KRX_API_KEY, "basDd": bas_dd},
-            timeout=_TIMEOUT,
-        )
-        if resp.status_code != 200:
-            return {}
-        rows = resp.json().get("OutBlock_1", [])
-    except Exception:
-        return {}
+    """KRX etf_bydd_trd 조회 → {ticker: row_dict}.
 
-    result: Dict[str, Dict[str, Any]] = {}
-    for row in rows:
-        raw_cd = str(row.get("ISU_CD") or "").strip()
-        ticker = raw_cd[-6:].zfill(6) if len(raw_cd) >= 6 else raw_cd
-        result[ticker] = row
-    return result
+    KRX 간헐 무응답(status/네트워크) = etf_flow 2-3일 갱신 갭 근원 → transient 재시도(백오프)
+    + 실패 원인 로깅(status/예외). 200+빈 OutBlock(비거래일)은 재시도 없이 즉시 {} (정상).
+    반환 시그니처 불변 — 타 소비자(get_top_etf_summary/etfscreener) 무영향.
+    """
+    if not KRX_API_KEY:
+        print(f"[etf_bydd_trd] KRX_API_KEY 미설정 — {bas_dd} skip", file=sys.stderr)
+        return {}
+    last_reason = ""
+    for attempt in range(3):
+        try:
+            resp = requests.get(
+                f"{_BASE_URL}/etp/etf_bydd_trd",
+                params={"AUTH_KEY": KRX_API_KEY, "basDd": bas_dd},
+                timeout=_TIMEOUT,
+            )
+            if resp.status_code == 200:
+                rows = resp.json().get("OutBlock_1", [])
+                result: Dict[str, Dict[str, Any]] = {}
+                for row in rows:
+                    raw_cd = str(row.get("ISU_CD") or "").strip()
+                    ticker = raw_cd[-6:].zfill(6) if len(raw_cd) >= 6 else raw_cd
+                    result[ticker] = row
+                return result  # 200(빈 OutBlock=비거래일 포함) = 즉시 반환, 재시도 X
+            last_reason = f"HTTP {resp.status_code}"
+        except Exception as e:  # noqa: BLE001 — 네트워크/파싱 transient
+            last_reason = type(e).__name__
+        if attempt < 2:
+            time.sleep(1.5 * (attempt + 1))  # 백오프 1.5s → 3s
+
+    print(f"[etf_bydd_trd] {bas_dd} 조회 실패 ({last_reason}, 재시도 3회 소진) — KRX 간헐 무응답",
+          file=sys.stderr)
+    return {}
 
 
 def _parse_float(v: Any) -> Optional[float]:
