@@ -50,6 +50,7 @@ function bfLogoPad(ticker: any): string {
     // 모양 적응 패딩 — 심볼(정사각)은 크게, 워드마크(가로 김)는 여백 확보 (토스식 가시성)
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
     const r = __bfShapes[tk] || __bfShapes[tk.replace(/\./g, "-")] || 1
+    if (r === 0) return "0%"  // 큐레이션 풀블리드 아이콘(자체 배경 포함) = 타일 꽉 채움
     return (r > (__bfStyle.wideRatio || 2.2) ? (__bfStyle.padW || 15) : (__bfStyle.padS || 8)) + "%"
 }
 function bfInitialBg(ticker: any): string {
