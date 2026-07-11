@@ -138,7 +138,7 @@ export default function PublicETFFlow(props: Props) {
     useEffect(() => {
         if (!dataUrl) return
         let alive = true
-        fetch(dataUrl, { cache: "no-store" })
+        fetch(dataUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive && d && Array.isArray(d.etfs)) setData(d) })
             .catch(() => {})

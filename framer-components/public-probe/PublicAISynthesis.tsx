@@ -107,7 +107,7 @@ export default function PublicAISynthesis(props: Props) {
     useEffect(() => {
         if (onCanvas || !dataUrl) return
         let alive = true
-        fetch(dataUrl, { cache: "no-store" })
+        fetch(dataUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { const m = d && d.synth && typeof d.synth === "object" ? d.synth : null; if (alive) { if (m) setSynth(m); setLoaded(true) } })
             .catch(() => { if (alive) setLoaded(true) })

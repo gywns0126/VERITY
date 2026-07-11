@@ -175,7 +175,7 @@ export default function CryptoRegimeTrail(props: { dataUrl?: string; dark?: bool
             } catch {}
         }
         const url = props.dataUrl || BLOB + "/tide/dashboard.json"
-        fetch(url, { cache: "no-store" })
+        fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive || !d) return

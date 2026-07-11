@@ -143,7 +143,7 @@ export default function PublicCompanyReports(props: Props) {
         if (onCanvas) return
         let alive = true
         const urls = [krUniverseUrl, usUniverseUrl].filter(Boolean)
-        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
+        Promise.all(urls.map((u) => fetch(u).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
             .then((docs) => {
                 if (!alive) return
                 const m: Record<string, string> = {}

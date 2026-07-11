@@ -278,7 +278,7 @@ export default function PublicDisclosureFeed(props: Props) {
     useEffect(() => {
         if (onCanvas || !feedUrl) return
         let alive = true
-        fetch(feedUrl, { cache: "no-store" })
+        fetch(feedUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive) return

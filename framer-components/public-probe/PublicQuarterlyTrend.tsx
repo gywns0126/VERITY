@@ -132,7 +132,7 @@ export default function PublicQuarterlyTrend(props: Props) {
     useEffect(() => {
         if (onCanvas || !quarterlyUrl || !ticker) return
         let alive = true
-        fetch(quarterlyUrl, { cache: "no-store" })
+        fetch(quarterlyUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const rec = d && d.stocks && d.stocks[ticker]

@@ -74,7 +74,7 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
         if (onCanvas) return
         let alive = true
         const url = props.dataUrl || BLOB + "/nps_holdings.json"
-        fetch(url, { cache: "no-store" })
+        fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive) { setData(d); setLoading(false) } })
             .catch(() => { if (alive) setLoading(false) })

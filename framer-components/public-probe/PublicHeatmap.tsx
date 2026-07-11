@@ -258,7 +258,7 @@ export default function PublicHeatmap(props: Props) {
         let alive = true
         const jget = (url: string, ok: (d: any) => void) => {
             if (!url) return
-            fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) ok(d) }).catch(() => {})
+            fetch(url).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) ok(d) }).catch(() => {})
         }
         jget(stockUrl, (d) => {
             const a = Array.isArray(d) ? d : d.stocks; if (Array.isArray(a)) setStocks(a)

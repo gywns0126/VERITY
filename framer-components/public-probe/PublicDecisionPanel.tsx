@@ -215,7 +215,7 @@ export default function PublicDecisionPanel(props: Props) {
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch(DEF_UNIVERSE, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+        fetch(DEF_UNIVERSE).then((r) => (r.ok ? r.json() : null))
             .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a) && a.length) setUniverse(a) })
             .catch(() => {})
         return () => { alive = false }

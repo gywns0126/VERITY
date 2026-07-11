@@ -199,7 +199,7 @@ export default function PublicThesisNote(props: Props) {
         if (onCanvas) { setCurPrice(73900); return }
         if (!tk) return
         let alive = true
-        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json", { cache: "no-store" })
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive || !d) return

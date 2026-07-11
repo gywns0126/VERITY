@@ -154,7 +154,7 @@ export default function PublicEventHistory(props: Props) {
     useEffect(() => {
         if (onCanvas || !dataUrl) return
         let alive = true
-        fetch(dataUrl, { cache: "no-store" })
+        fetch(dataUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { const m = d && d.stocks && typeof d.stocks === "object" ? d.stocks : null; if (alive && m) setData(m) })
             .catch(() => {})

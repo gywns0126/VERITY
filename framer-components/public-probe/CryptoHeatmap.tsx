@@ -106,7 +106,7 @@ export default function CryptoHeatmap(props: { dataUrl?: string; dark?: boolean;
         if (onCanvas) return
         let alive = true
         const url = props.dataUrl || BLOB + "/crypto_universe.json"
-        fetch(url, { cache: "no-store" })
+        fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive && d) setData(d) })
             .catch(() => {})

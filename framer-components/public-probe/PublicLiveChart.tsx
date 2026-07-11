@@ -234,7 +234,7 @@ export default function PublicLiveChart(props: Props) {
             }
             return false
         }
-        fetch(url, { cache: "no-store" })
+        fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((doc) => {
                 if (!alive) return
@@ -257,7 +257,7 @@ export default function PublicLiveChart(props: Props) {
     useEffect(() => {
         if (onCanvas || range !== "전체" || !tk || histFull) return
         let alive = true
-        fetch(base + "/kr_chart_history/" + tk + ".json", { cache: "no-store" })
+        fetch(base + "/kr_chart_history/" + tk + ".json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive) setHistFull(d && Array.isArray(d.c) && d.c.length > 1 ? d.c : []) })
             .catch(() => { if (alive) setHistFull([]) })

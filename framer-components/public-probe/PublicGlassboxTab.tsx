@@ -202,7 +202,7 @@ export default function PublicGlassboxTab(props: Props) {
     useEffect(() => {
         if (onCanvas || !validationUrl) return
         let alive = true
-        fetch(validationUrl, { cache: "no-store" })
+        fetch(validationUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (alive && d && d.gate) setData(d)

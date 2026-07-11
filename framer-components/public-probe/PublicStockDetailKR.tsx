@@ -97,11 +97,11 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
         if (onCanvas || !props.ticker) return
         let alive = true
         const tk = String(props.ticker)
-        fetch(props.reportUrl || REPORT_URL, { cache: "no-store" })
+        fetch(props.reportUrl || REPORT_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive) setRec(d && d.stocks ? d.stocks[tk] || null : null) })
             .catch(() => { if (alive) setRec(null) })
-        fetch(props.forensicsUrl || FORENSICS_URL, { cache: "no-store" })
+        fetch(props.forensicsUrl || FORENSICS_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive) setForensics(d && d.stocks ? d.stocks[tk] || null : null) })
             .catch(() => { if (alive) setForensics(null) })

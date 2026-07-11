@@ -158,7 +158,7 @@ export default function PublicCommunityPage(props: Props) {
     useEffect(() => {
         if (onCanvas) { setNames({ "005930": "삼성전자", "000660": "SK하이닉스", NVDA: "NVIDIA", "035720": "카카오" }); return }
         let alive = true
-        fetch(UNIVERSE_URL, { cache: "no-store" })
+        fetch(UNIVERSE_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const a = d && (Array.isArray(d) ? d : d.stocks)

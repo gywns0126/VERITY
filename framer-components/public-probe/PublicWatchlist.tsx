@@ -154,7 +154,7 @@ export default function PublicWatchlist(props: Props) {
     useEffect(() => {
         if (onCanvas || !stockUrl) return
         let alive = true
-        fetch(stockUrl, { cache: "no-store" })
+        fetch(stockUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const arr = d && (Array.isArray(d) ? d : d.stocks)

@@ -680,7 +680,7 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
     useEffect(() => {
         if (onCanvas || !quarterlyUrl || !ticker) return
         let alive = true
-        fetch(quarterlyUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => {
+        fetch(quarterlyUrl).then((r) => (r.ok ? r.json() : null)).then((d) => {
             const rec = d && d.stocks && d.stocks[ticker]
             const arr = rec && Array.isArray(rec.quarters) ? rec.quarters : null
             if (alive && arr && arr.length) setQuarters(arr)
@@ -937,7 +937,7 @@ export default function PublicStockReport(props: Props) {
             if (qp || ls) return
         } catch (e) { return }
         let alive = true
-        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json", { cache: "no-store" })
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { const t = d && d.hot && d.hot.ticker; if (alive && t) setSelTicker(String(t).toUpperCase()) })
             .catch(() => {})
@@ -974,7 +974,7 @@ export default function PublicStockReport(props: Props) {
     useEffect(() => {
         if (onCanvas || kind !== "etf" || etfDoc) return
         let alive = true
-        fetch(ETF_FLOW_URL, { cache: "no-store" })
+        fetch(ETF_FLOW_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive && d) setEtfDoc(d) })
             .catch(() => {})
@@ -1031,7 +1031,7 @@ export default function PublicStockReport(props: Props) {
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch(UNIVERSE_URL, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+        fetch(UNIVERSE_URL).then((r) => (r.ok ? r.json() : null))
             .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a) && a.length) setSearchList(a) })
             .catch(() => {})
         return () => { alive = false }

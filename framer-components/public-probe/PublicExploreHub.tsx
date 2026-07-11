@@ -148,7 +148,7 @@ export default function PublicExploreHub(props: {
     if (onCanvas) return
     let alive = true
     const load = (url: string, cacheKey: string, setter: (v: any) => void, pick: (d: any) => any) => {
-      fetch(url, { cache: "no-store" })
+      fetch(url)
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           const v = d && pick(d)

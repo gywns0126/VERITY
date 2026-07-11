@@ -78,8 +78,8 @@ export default function PublicThesisReview(props: { width?: number; dark?: boole
             if (!base_list.length) { setItems([]); setLoading(false); return }
             // 종가(flow_5d)·종목명(universe) 1회 fetch — 실시간가 조회 아님(컴플라이언스)
             Promise.all([
-                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
             ]).then(([fd, ud]) => {
                 if (!alive) return
                 const fm = (fd && (fd.flows || fd)) || {}

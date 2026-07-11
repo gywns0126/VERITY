@@ -96,7 +96,7 @@ export default function CryptoDilutionForensics(props: { dataUrl?: string; dark?
             try { const c = localStorage.getItem(CACHE_KEY); if (c) setData(JSON.parse(c)) } catch {}
         }
         const url = props.dataUrl || BLOB + "/crypto_universe.json"
-        fetch(url, { cache: "no-store" })
+        fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive || !d) return

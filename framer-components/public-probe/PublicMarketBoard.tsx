@@ -229,8 +229,8 @@ export default function PublicMarketBoard(props: Props) {
         if (onCanvas) return
         let alive = true
         const load = () => {
-            fetch(pulseUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) { setPulse(d); setPulseLoaded(true) } }).catch(() => {})
-            fetch(macroUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) { setMacro(d); setMacroLoaded(true) } }).catch(() => {})
+            fetch(pulseUrl).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) { setPulse(d); setPulseLoaded(true) } }).catch(() => {})
+            fetch(macroUrl).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) { setMacro(d); setMacroLoaded(true) } }).catch(() => {})
         }
         load()
         const sec = Math.max(15, refreshSec || 60)
@@ -241,7 +241,7 @@ export default function PublicMarketBoard(props: Props) {
     useEffect(() => {
         if (onCanvas || !commodityUrl) return
         let alive = true
-        fetch(commodityUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+        fetch(commodityUrl).then((r) => (r.ok ? r.json() : null))
             .then((d) => { const c = d && (d.commodities || d); if (alive && c && typeof c === "object") setExpo(c) }).catch(() => {})
         return () => { alive = false }
     }, [commodityUrl, onCanvas])

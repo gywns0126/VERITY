@@ -318,7 +318,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch(props.dataUrl || DATA_URL, { cache: "no-store" })
+        fetch(props.dataUrl || DATA_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (alive && d && d.desire) {

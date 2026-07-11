@@ -53,7 +53,7 @@ export default function CryptoNews(props: { dataUrl?: string; dark?: boolean; ca
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch(props.dataUrl || BLOB + "/crypto_news.json", { cache: "no-store" })
+        fetch(props.dataUrl || BLOB + "/crypto_news.json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive && d) setData(d) })
             .catch(() => {})
