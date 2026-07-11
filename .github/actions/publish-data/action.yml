@@ -122,8 +122,10 @@ runs:
         # ── metadata/ subdir (SystemHealthBar / OperatorCockpitBar 의 source) ──
         # 2026-05-27: cockpit_state.json 추가 (Cockpit Phase 0 산출 SoT, 5분 cron).
         # 2026-06-07: system_map.json 추가 (SystemMap "한눈에 보기" 구조 SoT, cockpit cron 동반 생성).
+        # 2026-07-12: data_health.json 추가 (데이터 무결 SoT — 발행 가드/배달 검증/커버리지/신선도 집계.
+        #   관리자 감시 사이트 DataIntegrityMonitor 가 metadata/data_health.json fetch. 페이지 AuthGate 로 가림).
         mkdir -p _public_dist/metadata
-        for f in data_pipeline_health.json cron_health.jsonl cockpit_state.json system_map.json; do
+        for f in data_pipeline_health.json cron_health.jsonl cockpit_state.json system_map.json data_health.json; do
           if git show "origin/main:data/metadata/$f" > "_public_dist/metadata/$f" 2>/dev/null && [ -s "_public_dist/metadata/$f" ]; then
             echo "  + data/metadata/$f"
           else
