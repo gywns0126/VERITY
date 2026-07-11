@@ -27,7 +27,14 @@ KST = timezone(timedelta(hours=9))
 # 리포트 내 필드 채움율 측정 대상 (PublicStockReport 섹션 렌더 가드와 1:1)
 REPORT_FIELDS = ["facts", "peer", "financials", "fin_series", "overview", "ownership", "real_estate", "consensus", "calendar"]
 US_REPORT_FIELDS = ["facts", "peer", "financials", "fin_series", "consensus", "disclosures"]
+# facts 통짜 측정의 사각 — 2026-07-11 사고: 미장 PER/PBR 전량 공백에도 facts 100% 유지(다른 키 잔존).
+# 핵심 배수는 서브키 단위로 별도 측정.
+FACTS_SUBFIELDS = ["PER", "PBR"]
 REGRESSION_WARN_PP = 10.0  # 전 스냅샷 대비 하락 경고 임계 (%p)
+# 핵심 지표 급락 = 결함 확률 압도적 (유기적 감소로 30%p 불가) → exit 1 로 같은 run 의 publish 차단.
+CORE_FAIL_PP = 30.0
+CORE_PREFIXES = ("field.facts", "us.field.facts", "us_smallcap.field.facts",
+                 "field.financials", "us.field.financials")
 
 
 def _load(name: str) -> Optional[Dict[str, Any]]:
@@ -65,6 +72,12 @@ def build() -> Dict[str, Any]:
             continue
         filled = sum(1 for s in kr if _filled(s.get(f)))
         fields[f] = {"filled": filled, "pct": _pct(filled, kr_total)}
+    for sub in FACTS_SUBFIELDS:
+        if kr_total == 0:
+            fields[f"facts.{sub}"] = None
+            continue
+        filled = sum(1 for s in kr if _filled((s.get("facts") or {}).get(sub)))
+        fields[f"facts.{sub}"] = {"filled": filled, "pct": _pct(filled, kr_total)}
 
     def _companion(name: str, key: str = "stocks") -> Optional[Dict[str, Any]]:
         doc = _load(name)
@@ -95,6 +108,12 @@ def build() -> Dict[str, Any]:
             continue
         filled = sum(1 for s in us if _filled(s.get(f)))
         us_fields[f] = {"filled": filled, "pct": _pct(filled, us_total)}
+    for sub in FACTS_SUBFIELDS:
+        if us_total == 0:
+            us_fields[f"facts.{sub}"] = None
+            continue
+        filled = sum(1 for s in us if _filled((s.get("facts") or {}).get(sub)))
+        us_fields[f"facts.{sub}"] = {"filled": filled, "pct": _pct(filled, us_total)}
 
     def _us_companion(name: str, key: str = "stocks") -> Optional[Dict[str, Any]]:
         doc = _load(name)
@@ -122,6 +141,12 @@ def build() -> Dict[str, Any]:
             continue
         filled = sum(1 for s in sc if _filled(s.get(f)))
         sc_fields[f] = {"filled": filled, "pct": _pct(filled, sc_total)}
+    for sub in FACTS_SUBFIELDS:
+        if sc_total == 0:
+            sc_fields[f"facts.{sub}"] = None
+            continue
+        filled = sum(1 for s in sc if _filled((s.get("facts") or {}).get(sub)))
+        sc_fields[f"facts.{sub}"] = {"filled": filled, "pct": _pct(filled, sc_total)}
 
     return {
         "_meta": {
@@ -177,15 +202,24 @@ def main() -> None:
     with open(HISTORY_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps({"date": datetime.now(KST).strftime("%Y-%m-%d"), "kr_total": report["kr_total"], **now}, ensure_ascii=False) + "\n")
 
-    warns = 0
+    warns = fails = 0
     if prev:
         before = _flat_pcts(prev)
         for k, pct in now.items():
             old = before.get(k)
-            if old is not None and old - pct > REGRESSION_WARN_PP:
+            if old is None or old - pct <= REGRESSION_WARN_PP:
+                continue
+            if old - pct > CORE_FAIL_PP and k.startswith(CORE_PREFIXES):
+                print(f"[coverage] FAIL {k} 핵심 급락: {old}% → {pct}% (-{round(old - pct, 1)}%p) — publish 차단")
+                fails += 1
+            else:
                 print(f"[coverage] WARN {k} 회귀: {old}% → {pct}% (-{round(old - pct, 1)}%p)")
                 warns += 1
-    print(f"[coverage] logged=True · kr={report['kr_total']} · 지표 {len(now)}개 · 회귀경고 {warns}건 → {REPORT_PATH}")
+    print(f"[coverage] logged=True · kr={report['kr_total']} · 지표 {len(now)}개 · 회귀경고 {warns}건 · 핵심급락 {fails}건 → {REPORT_PATH}")
+    if fails:
+        # 핵심 필드 급락 = 결함 산출물. 같은 run 의 publish/commit step 진행 차단 (2026-07-11 PM
+        # "기본 데이터는 확실히" — 로고 순백 7건·미장 PER 전량 공백이 초록 CI 로 하루 노출된 사고).
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
