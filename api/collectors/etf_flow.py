@@ -29,7 +29,7 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 OUTPUT_PATH = os.path.join(_ROOT, "data", "etf_flow.json")
 
 HISTORY_CAP = 40  # 티커당 보관 거래일 수 (≈2개월)
-EXTRAS_TOP_N = 200  # 부가정보(네이버) 신규수집 상한 — 순자산 상위 N (레이트리밋). 나머지=이전 값 carry.
+EXTRAS_TOP_N = 80  # 부가정보(네이버) 신규수집 상한 — 순자산 상위 N (레이트리밋·시간예산). 나머지=이전 값 carry.
 
 # KRX etf_bydd_trd 응답 키 후보 (표준 우선, 변형 fallback) — 매칭 키는 field_map 으로 기록
 _SHRS_KEYS = ["LIST_SHRS", "LISTSHRS", "LIST_SHRS_CO", "INVSTASST_LIST_SHRS"]
@@ -68,7 +68,7 @@ def _load_existing() -> Dict[str, Any]:
 
 # ── ETF 부가정보 (보수율·기초지수·운용사·구성종목 top10) — 네이버 금융 (2026-07-10 PM) ──
 # 모바일 integration API totalInfos(펀드보수·기초지수·운용사) + PC CU 표(구성 상위 10, 비중%).
-# 사실 metadata (시세 재배포 아님). 실패 시 이전 값 carry(graceful). 25종 × 2콜/일.
+# 사실 metadata (시세 재배포 아님). 실패 시 이전 값 carry(graceful). 순자산 상위 EXTRAS_TOP_N 종 × 2콜/run.
 import re as _re
 import time as _time
 import urllib.request as _ur

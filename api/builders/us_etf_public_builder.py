@@ -86,11 +86,14 @@ def _fetch_one(ticker: str) -> Dict[str, Any]:
         holdings = []
         for sym, row in th.head(10).iterrows():
             pct = row.get("Holding Percent")
-            holdings.append({
-                "t": str(sym),
-                "n": str(row.get("Name") or ""),
-                "w": round(float(pct) * 100, 2) if pct is not None and float(pct) < 1 else (round(float(pct), 2) if pct is not None else None),
-            })
+            w = None
+            try:
+                fp = float(pct)
+                if fp == fp:  # NaN 가드 (NaN != NaN) — json.dump 의 NaN 리터럴 = JS JSON.parse 깨짐
+                    w = round(fp * 100, 2) if fp < 1 else round(fp, 2)  # funds_data=분수(0.075=7.5%)
+            except (TypeError, ValueError):
+                pass
+            holdings.append({"t": str(sym), "n": str(row.get("Name") or ""), "w": w})
         if holdings:
             out["top_holdings"] = holdings
     except Exception:  # noqa: BLE001 — funds_data 없는 ETF (채권/원자재 등) graceful

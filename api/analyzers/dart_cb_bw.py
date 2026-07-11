@@ -154,6 +154,11 @@ def analyze_all_cb_bw(
         instruments = _extract_instruments(cb_bw or {})
         rec = {"ticker": ticker, "as_of": now.isoformat(), "window": f"{bgn_de}~{end_de}"}
         rec.update(_summarize(instruments, shares))
+        # transient DART 빈응답(200-empty, 예외 아님)이 기존 오버행 사실을 덮어쓰지 않게:
+        #   신규 0건 + 직전 보유분 있으면 직전 유지(발행 사실=전환·상환 전까지 존속). as_of 만 갱신.
+        if not rec.get("n_instruments") and (prev or {}).get("n_instruments"):
+            prev["as_of"] = now.isoformat()
+            rec = prev
         by_ticker[ticker] = rec
         if rec.get("n_instruments"):
             out[ticker] = rec

@@ -48,25 +48,38 @@ def main(path: str) -> int:
         print(f"sanitize_recommendations: 로드 실패({e}) — 원본 유지, skip")
         return 0
 
+    stripped_total = 0
+    n_recs = 0
     if isinstance(doc, list):
         recs = doc
     elif isinstance(doc, dict) and isinstance(doc.get("recommendations"), list):
         recs = doc["recommendations"]
+    elif isinstance(doc, dict):
+        # ticker-keyed dict {TICKER:{...}} — 값이 rec dict 면 sanitize (fail-CLOSED, IP 누출 방지).
+        # 🚨 형식 미인지로 skip = fail-open = held 점수 raw 발행 = 스크립트 존재 이유 위배.
+        recs = None
+        for k, v in list(doc.items()):
+            if isinstance(v, dict):
+                before = len(v)
+                doc[k] = _sanitize_rec(v)
+                stripped_total += before - len(doc[k])
+                n_recs += 1
     else:
-        print("sanitize_recommendations: 예상 형식 아님 — 원본 유지, skip")
+        print("sanitize_recommendations: list/dict 아님 — 원본 유지, skip")
         return 0
 
-    stripped_total = 0
-    for i, r in enumerate(recs):
-        if isinstance(r, dict):
-            before = len(r)
-            recs[i] = _sanitize_rec(r)
-            stripped_total += before - len(recs[i])
+    if recs is not None:
+        for i, r in enumerate(recs):
+            if isinstance(r, dict):
+                before = len(r)
+                recs[i] = _sanitize_rec(r)
+                stripped_total += before - len(recs[i])
+        n_recs = len(recs)
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
 
-    print(f"sanitize_recommendations: {len(recs)} recs · held/IP 키 {stripped_total}개 strip 완료")
+    print(f"sanitize_recommendations: {n_recs} recs · held/IP 키 {stripped_total}개 strip 완료")
     return 0
 
 

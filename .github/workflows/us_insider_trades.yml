@@ -56,13 +56,18 @@ jobs:
         # yfinance 무료. RULE 7 = 공매도 잔고 사실만(점수 0). us_forensics 6번째 소스.
         run: python -m api.builders.us_short_interest_public_builder
 
-      - name: Commit data (US insider + short interest)
+      - name: Build US ETF facts (yfinance)
+        # 2026-07-11 신설. 주요 US ETF(VOO/SPY/QQQ 등) 큐레이션 ~70 회전(40/run, FRESH_DAYS=5).
+        # yfinance 무료. RULE 7 = 카테고리·AUM·운용사·보수·보유종목 사실만(점수 0).
+        run: python -m api.builders.us_etf_public_builder
+
+      - name: Commit data (US insider + short interest + etf)
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
         # [[feedback_data_collection_verification_mandatory]] specific path commit — 신규 빌더 산출물 명시 추가(RULE 4).
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/us_insider_trades.json data/us_short_interest.json data/us_short_interest_cache.json
+          git add data/us_insider_trades.json data/us_short_interest.json data/us_short_interest_cache.json data/us_etf.json data/us_etf_cache.json
           if git diff --staged --quiet; then
             echo "[us_insider] no changes"
             exit 0
