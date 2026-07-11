@@ -211,7 +211,7 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
                                         {(cb.instruments || []).map((ins: any, i: number) => (
                                             <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5 }}>
                                                 <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: C.vt, background: C.vtS, borderRadius: 5, padding: "2px 6px" }}>{ins.type}</span>
-                                                <span style={{ flex: 1, minWidth: 0, color: C.sub, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{eok(ins.issue_amount)} · 전환가 {won(ins.strike)}</span>
+                                                <span style={{ flex: 1, minWidth: 0, color: C.sub, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{eok(ins.issue_amount)} · {ins.type === "BW" ? "행사가" : "전환가"} {won(ins.strike)}</span>
                                                 <span style={{ flexShrink: 0, color: C.faint, fontWeight: 600 }}>{ins.resolved_date && String(ins.resolved_date).length >= 6 ? String(ins.resolved_date).slice(2, 4) + "." + String(ins.resolved_date).slice(4, 6) : ""}</span>
                                             </div>
                                         ))}
