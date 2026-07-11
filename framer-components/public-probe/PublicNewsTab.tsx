@@ -19,6 +19,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 // 종목 검색 = 표준 검색창(PublicStockSearch)과 동기 — 동일 유니버스·로고·국기.
 const UNIVERSE_URL = BLOB + "/universe_search.json"
+// '오늘 화제 종목' 자동집계 제외 — 이름 자체가 흔한 일반어라 헤드라인 오탐(예: '지원 대상', '태양광 발전').
+// substring 충돌(왼쪽경계·최장우선으로 해결)과 별개인 '의미 충돌'. 등록 2글자명 중 명백 일반어만 — 편집 자유(2026-07-11).
+const HOT_NAME_BLOCKLIST = new Set(["대상", "태양", "남성", "신원", "동양", "동서", "진도", "선진", "전방", "서한", "삼일"])
 
 // ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
 const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
@@ -592,7 +595,7 @@ export default function PublicNewsTab(props: Props) {
         const have = new Set<string>()
         for (const x of uni) {
             const tk = String(x.ticker || ""); const nm = String(x.name || "")
-            if (/^\d{6}$/.test(tk) && nm.length >= 2) { arr.push({ name: nm, ticker: tk }); have.add(tk) }
+            if (/^\d{6}$/.test(tk) && nm.length >= 2 && !HOT_NAME_BLOCKLIST.has(nm)) { arr.push({ name: nm, ticker: tk }); have.add(tk) }
         }
         // 통칭 별칭 — 뉴스 제목 관행상 그룹 접두 생략 표기(최소만, 하드코딩 사유 주석).
         // '하이닉스'(SK 생략)가 별칭 없으면 경계매칭 후 어느 종목에도 안 잡혀 SK하이닉스 언급이 유실됨.

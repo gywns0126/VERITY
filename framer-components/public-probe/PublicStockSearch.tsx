@@ -102,13 +102,13 @@ function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
     return (
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
             {!err && bfSrc ? (
-                <img src={bfSrc} alt="" width={size} height={size}
+                <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size}
                     onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
-            <img src={FLAG_BASE + code + ".svg"} alt="" width={fsize} height={fsize}
+            <img src={FLAG_BASE + code + ".svg"} alt="" loading="lazy" decoding="async" width={fsize} height={fsize}
                 style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block", boxShadow: "0 1px 2px rgba(0,0,0,0.18)" }} />
         </span>
     )
@@ -202,7 +202,7 @@ export default function PublicStockSearch(props: Props) {
         if (onCanvas) return
         let alive = true
         const urls = [stockUrl].filter(Boolean)
-        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
+        Promise.all(urls.map((u) => fetch(u).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
             .then((docs) => {
                 if (!alive) return
                 const merged: any[] = []

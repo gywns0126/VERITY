@@ -309,7 +309,7 @@ function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) =
             <div style={{ position: "relative", width: 34, height: 34, flexShrink: 0 }}>
                 {!err && bfSrc ? (
                     <img src={bfSrc} alt="" width={34} height={34} loading="lazy" onError={() => setErr(true)}
-                        style={{ width: 34, height: 34, borderRadius: 11, filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker), display: "block" }} />
+                        style={{ width: 34, height: 34, borderRadius: 11, filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker) }} />
                 ) : (
                     <span style={{ width: 34, height: 34, borderRadius: 11, background: bfInitialBg(ticker), color: "#ffffff", fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initial}</span>
                 )}
@@ -378,7 +378,7 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch(props.dataUrl || DATA_URL, { cache: "no-store" })
+        fetch(props.dataUrl || DATA_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (alive && d && d.desire) {

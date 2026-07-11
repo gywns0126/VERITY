@@ -117,6 +117,37 @@ def _build_unified_universe(kr_uni):
                     "kw": "채권 국채 금리 수익률 수익률곡선 장단기 스프레드 한국 국고채 bond rates yield"})
         uni.append({"ticker": "RATES_US", "name": "미국 국채·금리", "market": "채권", "type": "rates",
                     "kw": "채권 국채 금리 수익률 수익률곡선 스프레드 미국 미국채 treasury bond rates yield"})
+        # US ETF (VOO/SPY/QQQ 등) 병합 (2026-07-11) — us_etf.json. KRX 미상장(yfinance) → 검색 유니버스 부재였음.
+        #   market=ETF → 컴포넌트 kind=etf, type=us_etf → PublicStockReport 가 etf_flow(KR) 대신 us_etf.json 라우팅.
+        try:
+            _uni_tk = {str(x.get("ticker") or "").upper() for x in uni}
+            _us_etf_doc = json.loads(open(os.path.join(_ROOT, "data", "us_etf.json"), encoding="utf-8").read())
+            _us_etf_n = 0
+            for e in (_us_etf_doc.get("etfs") or []):
+                tk = str(e.get("ticker") or "").strip().upper()
+                if not tk or tk in _uni_tk:
+                    continue
+                _uni_tk.add(tk)
+                uni.append({"ticker": tk, "name": e.get("name") or tk, "market": "ETF", "type": "us_etf"})
+                _us_etf_n += 1
+            us_n += _us_etf_n
+        except Exception:  # noqa: BLE001 — us_etf.json 부재(첫 us_insider cron 전) graceful
+            pass
+        # KR 지수 (코스피/코스닥/200/섹터 등 159) 병합 (2026-07-11) — kr_index_daily.json (금융위 공공데이터).
+        #   market=지수, type=index → PublicStockReport 지수 뷰(레벨·추이) 렌더. ticker=IDX_<name>(합성 id).
+        try:
+            _idx_uni_tk = {str(x.get("ticker") or "") for x in uni}
+            _idx_doc = json.loads(open(os.path.join(_ROOT, "data", "kr_index_daily.json"), encoding="utf-8").read())
+            _idx_n = 0
+            for _nm in (_idx_doc.get("indices") or {}):
+                _t = "IDX_" + str(_nm)
+                if _t in _idx_uni_tk:
+                    continue
+                _idx_uni_tk.add(_t)
+                uni.append({"ticker": _t, "name": str(_nm), "market": "지수", "type": "index"})
+                _idx_n += 1
+        except Exception:  # noqa: BLE001 — kr_index_daily 부재 graceful
+            pass
         udoc = {
             "_meta": {"generated_at": datetime.now(KST).isoformat(),
                       "count": len(uni), "kr": len(kr_uni) + kr_rep_n, "us": us_n, "kr_report_union": kr_rep_n,

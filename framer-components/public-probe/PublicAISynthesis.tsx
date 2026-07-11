@@ -9,7 +9,6 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  *   = "사세요/저평가/유망" 절대 없음. 이 컴포넌트는 ai_synthesis.json(빌더 산출) 텍스트를 표시만.
  * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page replaceState 추종 1s 폴링.
  * 데이터 = data/ai_synthesis.json (단일 writer, publish 발행). 없으면 graceful 숨김. 테마 = body[data-framer-theme] 추종.
- * 🚨 로딩 스켈레톤(2026-07-04): 데이터 로드 전 + 종목 있음 = shimmer. 로드 후 해당 종목 종합 없으면 숨김(팝인 방지).
  */
 
 interface Props {
@@ -32,6 +31,27 @@ function readTickerFromUrl(): string {
     } catch { return "" }
 }
 
+function readBodyDark(): boolean {
+    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
+    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    try {
+        if (typeof document !== "undefined" && document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof localStorage !== "undefined") {
+            const s = localStorage.getItem("verity_theme")
+            if (s === "dark") return true
+            if (s === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -40,7 +60,7 @@ export default function PublicAISynthesis(props: Props) {
     const { ticker, dataUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!dark : readBodyDark()))
     useEffect(() => {
         if (onCanvas) return
         const read = () => {
@@ -87,7 +107,7 @@ export default function PublicAISynthesis(props: Props) {
     useEffect(() => {
         if (onCanvas || !dataUrl) return
         let alive = true
-        fetch(dataUrl, { cache: "no-store" })
+        fetch(dataUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { const m = d && d.synth && typeof d.synth === "object" ? d.synth : null; if (alive) { if (m) setSynth(m); setLoaded(true) } })
             .catch(() => { if (alive) setLoaded(true) })
@@ -101,7 +121,7 @@ export default function PublicAISynthesis(props: Props) {
 
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT,
-        padding: 0, boxSizing: "border-box", color: C.ink,  // 좌우 0 = 카드 모서리를 이웃(라이브차트 등) 카드와 정렬 (PM 2026-07-05)
+        padding: 0, boxSizing: "border-box", color: C.ink,
     }
 
     // 텍스트 없음: (1) 로드 중 + 종목 있음 → 스켈레톤, (2) 로드 완료 후 해당 종목 종합 없음/종목 없음 → 숨김

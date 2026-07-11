@@ -191,14 +191,14 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     return (
         <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
             {!err && bfSrc ? (
-                <img src={bfSrc} alt="" width={size} height={size}
+                <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size}
                     onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</div>
             )}
             {code && (
-                <img src={FLAG_BASE + code + ".svg"} alt="" width={fsize} height={fsize}
+                <img src={FLAG_BASE + code + ".svg"} alt="" loading="lazy" decoding="async" width={fsize} height={fsize}
                     style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block", boxShadow: "0 1px 2px rgba(0,0,0,0.18)" }} />
             )}
         </div>
@@ -426,7 +426,7 @@ export default function PublicDiscovery(props: Props) {
         if (!stockUrl) return
         let alive = true
         const urls: string[] = [stockUrl, usStockUrl, usSmallcapUrl].filter((u): u is string => Boolean(u))
-        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
+        Promise.all(urls.map((u) => fetch(u).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
             .then((docs) => {
                 if (!alive) return
                 const arr: any[] = []
@@ -445,7 +445,7 @@ export default function PublicDiscovery(props: Props) {
         let alive = true
         // KR(insider_trades, DART) + US(us_insider_trades, SEC Form4) 병합 — schema 동일, 티커 숫자/비숫자라 충돌 0.
         const urls: string[] = [insiderUrl, usInsiderUrl].filter((u): u is string => Boolean(u))
-        Promise.all(urls.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
+        Promise.all(urls.map((u) => fetch(u).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
             .then((docs) => {
                 if (!alive) return
                 const m: Record<string, any> = {}
@@ -461,7 +461,7 @@ export default function PublicDiscovery(props: Props) {
     useEffect(() => {
         if (!flowUrl) return
         let alive = true
-        fetch(flowUrl, { cache: "no-store" })
+        fetch(flowUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { const fm = d && (d.flows || d); if (alive && fm && typeof fm === "object") setFlowMap(fm) })
             .catch(() => {})
@@ -471,7 +471,7 @@ export default function PublicDiscovery(props: Props) {
     useEffect(() => {
         if (!forensicsUrl) return
         let alive = true
-        fetch(forensicsUrl, { cache: "no-store" })
+        fetch(forensicsUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const arr = d && (Array.isArray(d) ? d : d.stocks)
