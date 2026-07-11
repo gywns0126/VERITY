@@ -438,15 +438,17 @@ export default function PublicHeatmap(props: Props) {
     const skHi = isDark ? "#2d3742" : "#f3f5f7"
     const SKEL_W = [34, 22, 22, 14, 30, 16, 18, 12, 24, 16, 14, 10, 20, 12, 16, 10, 14, 22, 12, 16]
 
-    // 호버 카드 위치 — 클립 밖 외곽 div 기준(타일 좌표와 동일). 우/좌 플립 + 상/하 클램프(하단 근처면 위로).
+    // 호버 카드 위치 — 클립 밖 외곽 div 기준(타일 좌표와 동일). 우/좌 플립 + 상/하 클램프.
+    // 🚨 상단 타일(2026-07-12): 카드를 타일 '아래'로 anchor — 위로 펼치면 스크롤 시 sticky 네브바를 덮음(사용자 제보).
     const hoverCardPos = () => {
         const hx = hover.x * zoom.z + zoom.tx, hy = hover.y * zoom.z + zoom.ty, hw = hover.w * zoom.z, hh = hover.h * zoom.z
         const CW = 190, CH = 132, G = 8
         let cl = hx + hw + G
         if (cl + CW > chartW - 6) cl = hx - G - CW
         if (cl < 6) cl = Math.min(Math.max(6, hx + hw / 2 - CW / 2), chartW - CW - 6)
-        let ct = hy + hh / 2 - CH / 2
-        if (ct + CH > chartH - 6) ct = chartH - CH - 6   // 하단 넘치면 위로 밀기
+        // 상단 영역(카드 높이+여백 이내) 타일 = 카드 아래로 anchor(네브바 침범 방지). 그 외 = 타일 중앙 정렬.
+        let ct = hy < (CH + G) ? (hy + hh + G) : (hy + hh / 2 - CH / 2)
+        if (ct + CH > chartH - 6) ct = chartH - CH - 6    // 하단 넘치면 위로 밀기
         if (ct < 6) ct = 6
         return { cl, ct, CW }
     }
