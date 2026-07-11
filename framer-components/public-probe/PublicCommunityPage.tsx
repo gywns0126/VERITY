@@ -17,7 +17,7 @@ const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Ne
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
     line: "#e5e8eb", up: "#f04452", upS: "#fdecee", down: "#3182f6", downS: "#e8f1fe",
-    vg: "#6c5ce7", vgS: "#f0edff", chipBg: "#f2f4f6", onAccent: "#ffffff",
+    vg: "#6c5ce7", vgS: "#f0edff", chipBg: "#e8ebef", onAccent: "#ffffff",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
@@ -94,6 +94,52 @@ function readBodyDark(): boolean {
     return false
 }
 
+// ── 종목 로고(Brandfetch logo_map) + 원형 국기(circle-flags) — 뉴스탭과 동일 소스 ──
+const BF_CID = "1idalDez9T7KlggM8qX"
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
+let __bfMap: Record<string, string> | null = null
+let __bfP: Promise<Record<string, string>> | null = null
+function fetchBfMap(): Promise<Record<string, string>> {
+    if (__bfMap) return Promise.resolve(__bfMap)
+    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    return __bfP
+}
+function useBfLogoMap(): Record<string, string> | null {
+    const [m, setM] = useState<Record<string, string> | null>(__bfMap)
+    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    return m
+}
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const pth = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""
+    if (!pth) return ""
+    if (pth.indexOf("http") === 0) return pth
+    return "https://cdn.brandfetch.io/" + pth + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2
+}
+function StockLogo(props: { ticker: any; name: any; C: any; size?: number }) {
+    const { ticker, name, C } = props
+    const size = props.size || 22
+    const [err, setErr] = useState(false)
+    const lm = useBfLogoMap()
+    const src = bfLogoSrc(ticker, lm, size)
+    const ch = (String(name || "?").trim().charAt(0)) || "?"
+    const code = /^\d{6}$/.test(String(ticker || "")) ? "kr" : "us"
+    const f = Math.round(size * 0.46)
+    return (
+        <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
+            {!err && src ? (
+                <img src={src} alt="" width={size} height={size} onError={() => setErr(true)}
+                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), objectFit: "contain", background: "#ffffff", display: "block" }} />
+            ) : (
+                <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), background: C.chipBg, color: C.faint, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
+            )}
+            <img src={FLAG_BASE + code + ".svg"} alt="" width={f} height={f}
+                style={{ position: "absolute", right: -3, bottom: -3, width: f, height: f, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block" }} />
+        </span>
+    )
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -129,6 +175,8 @@ export default function PublicCommunityPage(props: Props) {
     const [menuId, setMenuId] = useState("")
     const [reported, setReported] = useState<Record<string, boolean>>({})
     const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+    const [q, setQ] = useState("")            // 종목 검색어(이름/코드)
+    const [focused, setFocused] = useState(false)
 
     // 세션 토큰 추적(로그인/로그아웃 반영 — AlphaNestAuth 가 dispatch)
     useEffect(() => {
@@ -158,7 +206,7 @@ export default function PublicCommunityPage(props: Props) {
     useEffect(() => {
         if (onCanvas) { setNames({ "005930": "삼성전자", "000660": "SK하이닉스", NVDA: "NVIDIA", "035720": "카카오" }); return }
         let alive = true
-        fetch(UNIVERSE_URL, { cache: "no-store" })
+        fetch(UNIVERSE_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const a = d && (Array.isArray(d) ? d : d.stocks)
@@ -185,6 +233,20 @@ export default function PublicCommunityPage(props: Props) {
         for (const it of feed) { const tk = String(it.ticker || ""); if (tk) cnt[tk] = (cnt[tk] || 0) + 1 }
         return Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 12)
     }, [feed])
+
+    // 종목 검색 autocomplete — names(universe) 맵 재사용. 코드/이름 부분일치 상위 8, prefix 우선.
+    const matches = useMemo(() => {
+        const key = q.trim().toLowerCase()
+        if (!key) return [] as [string, string][]
+        const out: [string, string][] = []
+        for (const tk in names) {
+            const nm = String(names[tk] || "")
+            if (tk.toLowerCase().indexOf(key) >= 0 || nm.toLowerCase().indexOf(key) >= 0) out.push([tk, nm])
+            if (out.length > 60) break
+        }
+        const rk = (e: [string, string]) => (e[0].toLowerCase() === key ? 0 : e[0].toLowerCase().indexOf(key) === 0 ? 1 : e[1].toLowerCase().indexOf(key) === 0 ? 2 : 3)
+        return out.sort((a, b) => rk(a) - rk(b)).slice(0, 8)
+    }, [q, names])
 
     const shown = useMemo(() => {
         let arr = filterTk ? feed.filter((it) => it.ticker === filterTk) : feed.slice()
@@ -236,6 +298,31 @@ export default function PublicCommunityPage(props: Props) {
                     종목 관점을 나누는 공간 · 모든 글은 이용자 개인 의견이며 AlphaNest 의 분석·판단·추천이 아니에요
                 </div>
 
+                {/* 종목 검색 — 아무 종목이나 검색해 그 종목 관점만 필터(상위 칩 밖 종목 접근) */}
+                <div style={{ position: "relative", marginTop: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7, background: C.card, borderRadius: 999, padding: "9px 14px", boxSizing: "border-box" }}>
+                        <span style={{ width: 13, height: 13, borderRadius: "50%", border: `2px solid ${C.faint}`, flexShrink: 0, position: "relative", display: "inline-block" }}>
+                            <span style={{ position: "absolute", width: 2, height: 6, background: C.faint, right: -3, bottom: -3, transform: "rotate(-45deg)" }} />
+                        </span>
+                        <input value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 160)}
+                            placeholder="종목 검색 (이름·코드)"
+                            style={{ border: "none", outline: "none", background: "transparent", color: C.ink, fontFamily: FONT, fontSize: 13.5, fontWeight: 600, width: "100%", minWidth: 0 }} />
+                        {q ? <button onMouseDown={(e) => { e.preventDefault(); setQ("") }} style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 16, lineHeight: 1, flexShrink: 0, fontFamily: FONT }}>×</button> : null}
+                    </div>
+                    {focused && !!q.trim() && matches.length > 0 ? (
+                        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: 4, zIndex: 30, background: C.card, borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.16)", padding: 6, maxHeight: 300, overflowY: "auto" }}>
+                            {matches.map(([tk, nm]) => (
+                                <div key={tk} onMouseDown={() => { setFilterTk(tk); setQ(""); setFocused(false) }}
+                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
+                                    <StockLogo ticker={tk} name={nm || tk} C={C} size={24} />
+                                    <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nm || tk}</span>
+                                    <span style={{ marginLeft: "auto", flexShrink: 0, fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{tk}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
+                </div>
+
                 {/* 정렬 세그먼트 + 종목 칩 (토스식) */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
                     <div style={{ display: "flex", gap: 2, background: C.chipBg, borderRadius: 10, padding: 3, flexShrink: 0 }}>
@@ -247,7 +334,7 @@ export default function PublicCommunityPage(props: Props) {
                     <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", minWidth: 0, flex: 1 }}>
                         <button onClick={() => setFilterTk("")}
                             style={{ flexShrink: 0, border: "none", cursor: "pointer", fontFamily: FONT, padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, background: !filterTk ? C.vg : C.card, color: !filterTk ? C.onAccent : C.sub }}>전체</button>
-                        {tickers.map((tk) => (
+                        {(filterTk && tickers.indexOf(filterTk) < 0 ? [filterTk, ...tickers] : tickers).map((tk) => (
                             <button key={tk} onClick={() => setFilterTk(filterTk === tk ? "" : tk)}
                                 style={{ flexShrink: 0, border: "none", cursor: "pointer", fontFamily: FONT, padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, background: filterTk === tk ? C.vg : C.card, color: filterTk === tk ? C.onAccent : C.sub, whiteSpace: "nowrap" }}>{tkName(tk)}</button>
                         ))}
@@ -320,7 +407,8 @@ export default function PublicCommunityPage(props: Props) {
                                 {it.ticker && (
                                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
                                         <button onClick={() => goStock(it.ticker)}
-                                            style={{ border: "none", cursor: "pointer", fontFamily: FONT, display: "inline-flex", alignItems: "center", gap: 5, background: C.chipBg, borderRadius: 8, padding: "4px 9px", fontSize: 11.5, fontWeight: 800, color: C.ink }}>
+                                            style={{ border: "none", cursor: "pointer", fontFamily: FONT, display: "inline-flex", alignItems: "center", gap: 6, background: C.chipBg, borderRadius: 8, padding: "4px 9px 4px 5px", fontSize: 11.5, fontWeight: 800, color: C.ink }}>
+                                            <StockLogo ticker={it.ticker} name={tkName(it.ticker)} C={C} size={20} />
                                             {tkName(it.ticker)}
                                             <span style={{ color: C.faint, fontWeight: 600 }}>{it.ticker} ›</span>
                                         </button>

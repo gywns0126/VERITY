@@ -137,14 +137,14 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     return (
         <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
             {!err && bfSrc ? (
-                <img src={bfSrc} alt="" width={size} height={size}
+                <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size}
                     onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</div>
             )}
             {code && (
-                <img src={FLAG_BASE + code + ".svg"} alt="" width={fsize} height={fsize}
+                <img src={FLAG_BASE + code + ".svg"} alt="" loading="lazy" decoding="async" width={fsize} height={fsize}
                     style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block" }} />
             )}
         </div>
@@ -246,7 +246,7 @@ export default function PublicDecisionPanel(props: Props) {
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch(DEF_UNIVERSE, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+        fetch(DEF_UNIVERSE).then((r) => (r.ok ? r.json() : null))
             .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a) && a.length) setUniverse(a) })
             .catch(() => {})
         return () => { alive = false }

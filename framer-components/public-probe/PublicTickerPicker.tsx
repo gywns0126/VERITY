@@ -53,7 +53,7 @@ export default function PublicTickerPicker(props: Props) {
     useEffect(() => {
         if (onCanvas || !stockUrl) return
         let alive = true
-        fetch(stockUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+        fetch(stockUrl).then((r) => (r.ok ? r.json() : null))
             .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a)) setUniverse(a) }).catch(() => {})
         return () => { alive = false }
     }, [stockUrl, onCanvas])

@@ -289,7 +289,7 @@ export default function PublicHeatmap(props: Props) {
         let alive = true
         const jget = (url: string, ok: (d: any) => void) => {
             if (!url) return
-            fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) ok(d) }).catch(() => {})
+            fetch(url).then((r) => (r.ok ? r.json() : null)).then((d) => { if (alive && d) ok(d) }).catch(() => {})
         }
         jget(stockUrl, (d) => {
             const a = Array.isArray(d) ? d : d.stocks; if (Array.isArray(a)) setStocks(a)
@@ -532,7 +532,7 @@ export default function PublicHeatmap(props: Props) {
                                         }}>
                                         {big && (
                                             <>
-                                                {tw > 52 && th > 50 && bfLogoSrc(t.m.ticker, __lmH, 16) ? (<img src={bfLogoSrc(t.m.ticker, __lmH, 16)} alt="" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 5, marginBottom: 2, filter: bfLogoFilter(t.m.ticker), objectFit: "contain", padding: bfLogoPad(t.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(t.m.ticker) }} />) : null}
+                                                {tw > 52 && th > 50 && bfLogoSrc(t.m.ticker, __lmH, 16) ? (<img src={bfLogoSrc(t.m.ticker, __lmH, 16)} alt="" loading="lazy" decoding="async" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 5, marginBottom: 2, filter: bfLogoFilter(t.m.ticker), objectFit: "contain", padding: bfLogoPad(t.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(t.m.ticker) }} />) : null}
                                                 <span style={{ fontSize: tw > 130 ? 13 : tw > 80 ? 12 : 10.5, fontWeight: 800, color: txt, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", letterSpacing: "-0.3px", textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.35)" : "none" }}>{t.m.name}</span>
                                                 {th > 42 && <span style={{ fontSize: 10.5, fontWeight: 700, color: txt, opacity: 0.92, marginTop: 1, textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.3)" : "none" }}>{tileValLabel(metric, v)}</span>}
                                             </>
@@ -560,7 +560,7 @@ export default function PublicHeatmap(props: Props) {
                             boxShadow: "0 8px 26px rgba(0,0,0,0.22)", padding: "9px 11px", zIndex: 20, pointerEvents: "none", boxSizing: "border-box",
                         }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                {bfLogoSrc(hover.m.ticker, __lmH, 18) ? (<img src={bfLogoSrc(hover.m.ticker, __lmH, 18)} alt="" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 6, flexShrink: 0, filter: bfLogoFilter(hover.m.ticker), objectFit: "contain", padding: bfLogoPad(hover.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(hover.m.ticker) }} />) : null}
+                                {bfLogoSrc(hover.m.ticker, __lmH, 18) ? (<img src={bfLogoSrc(hover.m.ticker, __lmH, 18)} alt="" loading="lazy" decoding="async" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 6, flexShrink: 0, filter: bfLogoFilter(hover.m.ticker), objectFit: "contain", padding: bfLogoPad(hover.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(hover.m.ticker) }} />) : null}
                                 <span style={{ fontSize: 13, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{hover.m.name}</span>
                                 <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, flexShrink: 0 }}>{hover.m.ticker}</span>
                             </div>

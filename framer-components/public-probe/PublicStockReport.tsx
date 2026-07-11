@@ -167,9 +167,12 @@ const DEFAULT_LENDING = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com
 const DEFAULT_SUPPLY = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/supply_demand.json"
 const DEFAULT_EMPLOYMENT = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nps_employment.json"
 const ETF_FLOW_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_flow.json"
+const US_ETF_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_etf.json"
+const KR_INDEX_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_index_daily.json"
 // 시세 컴플라이언스 — 실시간 시세·거래대금 상위 = 네이버 link-out(증권사 서빙 = 재배포 아님, 실시간·무료·합법)
 const NAVER_QUANT = "https://finance.naver.com/sise/sise_quant.naver"
-const M_NAVER_QUANT = "https://m.stock.naver.com/sise/trade"
+// 2026-07-11 정정 — 옛 /sise/trade = 404(네이버 경로 변경). 모바일/PC UA 양쪽 200 실측.
+const M_NAVER_QUANT = "https://m.stock.naver.com/domestic/home/trading/KOSPI"
 function naverStockUrl(tk: string): string {
     if (!/^\d{6}$/.test(String(tk || ""))) return ""
     const mobile = typeof window !== "undefined" && window.innerWidth < 720
@@ -361,14 +364,14 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
     return (
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
             {!err && bfSrc ? (
-                <img src={bfSrc} alt="" width={size} height={size}
+                <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size}
                     onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
             {code && (
-                <img src={FLAG_BASE + code + ".svg"} alt="" width={fsize} height={fsize}
+                <img src={FLAG_BASE + code + ".svg"} alt="" loading="lazy" decoding="async" width={fsize} height={fsize}
                     style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block", boxShadow: "0 1px 2px rgba(0,0,0,0.18)" }} />
             )}
         </span>
@@ -404,11 +407,63 @@ function fmtUSDcompact(v: any): string {
 // Catmull-Rom → cubic bezier 부드러운 곡선 path (유선형 추이용)
 /* 🧺 ETF/ETN 구성 블록 — etf_flow.json(KRX 공시 사실). 기업 리포트 대신 렌더 (2026-07-10 PM).
    흐름 = Δ상장좌수×NAV(설정/환매, 가격효과 제거). RULE 7 — 관측 사실만, 미추적 = 안내(가짜 데이터 0). */
+/* 📈 지수 뷰 — kr_index_daily.json(금융위 공공데이터). 레벨·추이 차트·기간수익률. 사실만(RULE 7). */
+function IndexReportBlock({ C, narrow, name, doc }: any) {
+    const HEAD = "Pretendard, -apple-system, sans-serif"
+    const card: any = { background: C.card, borderRadius: 16, padding: "16px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
+    const idx = doc && doc.indices ? doc.indices[name] : null
+    const ser: any[] = (idx && Array.isArray(idx.c)) ? idx.c : []
+    const dd = (n: any) => { const s = String(n); return s.length === 8 ? s.slice(2, 4) + "." + s.slice(4, 6) + "." + s.slice(6, 8) : s }
+    const head = (
+        <div style={{ display: "flex", alignItems: "baseline", gap: 9, flexWrap: "wrap", marginBottom: 4 }}>
+            <span style={{ fontFamily: HEAD, fontSize: narrow ? 20 : 23, fontWeight: 800, letterSpacing: "-0.5px" }}>{name}</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: C.vt, background: C.vtS, borderRadius: 7, padding: "3px 9px" }}>지수{idx && idx.csf ? " · " + idx.csf : ""}</span>
+        </div>
+    )
+    if (!idx || ser.length === 0) {
+        return <div style={{ marginTop: 14 }}>{head}<div style={card}><div style={{ fontSize: 13, color: C.sub, fontWeight: 600 }}>지수 데이터를 불러오지 못했어요</div></div></div>
+    }
+    const last = ser[ser.length - 1]
+    const level = Number(last[1]), chg = Number(last[2])
+    const periodPct = Number(ser[0][1]) ? (level - Number(ser[0][1])) / Number(ser[0][1]) * 100 : null
+    const closes = ser.map((s) => Number(s[1]))
+    const mn = Math.min(...closes), mx = Math.max(...closes), rng = (mx - mn) || 1
+    const CW = 320, CH = 90, PX = 4, PY = 8
+    const pts = ser.map((s, i) => ({ x: PX + (i / Math.max(1, ser.length - 1)) * (CW - PX * 2), y: PY + (1 - (Number(s[1]) - mn) / rng) * (CH - PY * 2) }))
+    const linePath = pts.map((p, i) => (i === 0 ? "M" : "L") + p.x.toFixed(1) + " " + p.y.toFixed(1)).join(" ")
+    const upC = chg >= 0 ? C.up : C.down
+    return (
+        <div style={{ marginTop: 14 }}>
+            {head}
+            <div style={card}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontFamily: HEAD, fontSize: 30, fontWeight: 800, color: C.ink, letterSpacing: "-1px" }}>{level.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: upC }}>{chg >= 0 ? "+" : ""}{chg}%</span>
+                </div>
+                {pts.length >= 2 && (
+                    <svg width="100%" viewBox={`0 0 ${CW} ${CH}`} style={{ display: "block", marginTop: 10 }}>
+                        <path d={linePath} fill="none" stroke={upC} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r={3.4} fill={upC} />
+                    </svg>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 2 }}>
+                    <span>{dd(ser[0][0])}</span><span>{dd(last[0])}</span>
+                </div>
+                <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 700, marginTop: 8 }}>
+                    최근 {ser.length}거래일 · 기간 <span style={{ color: periodPct != null && periodPct >= 0 ? C.up : C.down }}>{periodPct != null ? (periodPct >= 0 ? "+" : "") + periodPct.toFixed(1) + "%" : "—"}</span>
+                </div>
+                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>금융위 공공데이터 · T+1 EOD(전일 종가) · KRX 지수 사실 · 점수·추천 아님</div>
+            </div>
+        </div>
+    )
+}
+
 function EtfReportBlock({ C, isDark, narrow, ticker, name, market, doc, onPick }: any) {
     const CATL: Record<string, string> = {
         equity_domestic: "국내주식", equity_foreign: "해외주식", thematic: "테마", bond_kr: "한국채권",
         bond_us: "미국채권", commodity_gold: "금", commodity: "원자재", leverage: "레버리지",
         inverse: "인버스", sector_financial: "금융", sector_tech: "IT", sector: "섹터", dividend: "배당",
+        reit: "리츠",
     }
     const fmtF = (won: any, signed = false) => {
         const n = Number(won)
@@ -421,6 +476,7 @@ function EtfReportBlock({ C, isDark, narrow, ticker, name, market, doc, onPick }
     const ds = (d: string) => { const s = String(d || ""); return s.length === 8 ? `${s.slice(4, 6)}.${s.slice(6)}` : s }
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "14px 16px", marginTop: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
     const e = (doc && Array.isArray(doc.etfs)) ? doc.etfs.find((x: any) => String(x.ticker) === String(ticker)) : null
+    const isUs = !/^[0-9]{6}$/.test(String(ticker))  // 알파벳 티커=US ETF(us_etf.json) / 6자리=KR(etf_flow)
     const hist = (doc && doc.history && doc.history[ticker]) || []
     const series: any[] = []
     let cum = 0
@@ -459,6 +515,30 @@ function EtfReportBlock({ C, isDark, narrow, ticker, name, market, doc, onPick }
                         흐름 렌즈는 순자산 상위 ETF부터 순차 확대 중이에요. 시세·구성종목은 증권사 앱이 정확해요.
                     </div>
                 </div>
+            ) : isUs ? (
+                <>
+                    <div style={card}>
+                        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                            {e.category ? kv("카테고리", String(e.category)) : null}
+                            {e.aum_usd ? kv("순자산(AUM)", "$" + (Number(e.aum_usd) / 1e9).toFixed(1) + "B") : null}
+                            {e.expense != null ? kv("총보수 (연)", e.expense + "%") : null}
+                            {e.family ? kv("운용사", String(e.family)) : null}
+                        </div>
+                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>미국 상장 ETF · yfinance 사실(카테고리·순자산·보수·구성) · 시세는 증권사 앱 · 점수·추천 아님</div>
+                    </div>
+                    {Array.isArray(e.top_holdings) && e.top_holdings.length > 0 && (
+                        <div style={card}>
+                            <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 4 }}>구성종목 상위 {e.top_holdings.length}</div>
+                            {e.top_holdings.map((h: any, i2: number) => (
+                                <div key={i2} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderTop: i2 === 0 ? "none" : "1px solid " + C.line }}>
+                                    <span style={{ flexShrink: 0, width: 54, fontSize: 12, fontWeight: 800, color: C.vt }}>{h.t}</span>
+                                    <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: C.sub, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.n}</span>
+                                    <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 800 }}>{h.w != null ? h.w + "%" : ""}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
             ) : (
                 <>
                     <div style={card}>
@@ -546,11 +626,34 @@ function EtfReportBlock({ C, isDark, narrow, ticker, name, market, doc, onPick }
 
 function smoothLine(p: { x: number; y: number }[]): string {
     // 직선 꺾은선(선형) — 곡선 보간은 실측값 사이를 지어내는 인상 (PM 2026-07-04 '그래프 선형으로')
+    // ETF 자금흐름(EtfReportBlock) 등 관측 시계열은 선형 유지. 연간 손익만 curveLine(유선형) 사용.
     if (!p.length) return ""
     if (p.length === 1) return `M ${p[0].x} ${p[0].y}`
     let d = `M ${p[0].x} ${p[0].y}`
     for (let i = 1; i < p.length; i++) {
         d += ` L ${p[i].x} ${p[i].y}`
+    }
+    return d
+}
+
+// Catmull-Rom → cubic bezier 유선형 곡선 (PM 2026-07-11 '연간 손익 유선형으로'). 연간 손익 추이 전용.
+// 실측값(연도별 정점)은 그대로 통과 — 곡선은 정점 사이 보간만 부드럽게. 점 2개 이하는 직선 폴백.
+// TENS = 곡률(control point 오프셋). 표준 Catmull-Rom = 1/6(0.167). 낮출수록 정점 쪽으로 당겨져
+//   급한 곡률(직선에 가까움) → 정점 사이 보정(interpolation) 인상 축소 (PM 2026-07-11 '곡률 급하게').
+const CURVE_TENS = 0.09
+function curveLine(p: { x: number; y: number }[]): string {
+    if (!p.length) return ""
+    if (p.length === 1) return `M ${p[0].x} ${p[0].y}`
+    if (p.length === 2) return `M ${p[0].x} ${p[0].y} L ${p[1].x} ${p[1].y}`
+    let d = `M ${p[0].x.toFixed(2)} ${p[0].y.toFixed(2)}`
+    for (let i = 0; i < p.length - 1; i++) {
+        const p0 = p[i - 1] || p[i]
+        const p1 = p[i]
+        const p2 = p[i + 1]
+        const p3 = p[i + 2] || p2
+        const c1x = p1.x + (p2.x - p0.x) * CURVE_TENS, c1y = p1.y + (p2.y - p0.y) * CURVE_TENS
+        const c2x = p2.x - (p3.x - p1.x) * CURVE_TENS, c2y = p2.y - (p3.y - p1.y) * CURVE_TENS
+        d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`
     }
     return d
 }
@@ -587,7 +690,7 @@ function FinTrend({ series, C, usd }: { series: any[]; C: any; usd?: boolean }) 
         return { x: +x.toFixed(2), y: +y.toFixed(2), v }
     })
     const defined = xy.filter((q) => q.v != null)
-    const linePath = smoothLine(defined)
+    const linePath = curveLine(defined)
     const areaPath = defined.length >= 2 ? linePath + ` L ${defined[defined.length - 1].x} ${baseY} L ${defined[0].x} ${baseY} Z` : ""
     // 마진율 % 오버레이 (영업이익률/순이익률) — 매출 선택 시 생략. 자체 y-범위(추이 모양용).
     const revOf = (p: any) => (p && p.revenue != null && !isNaN(Number(p.revenue))) ? Number(p.revenue) : null
@@ -603,7 +706,7 @@ function FinTrend({ series, C, usd }: { series: any[]; C: any; usd?: boolean }) 
         const y = (H - PADV) - ((m - mMin) / mRange) * (H - 2 * PADV)
         return { x: +x.toFixed(2), y: +y.toFixed(2) }
     }).filter((q): q is { x: number; y: number } => q != null)
-    const marginPath = showMargin && mXY.length >= 2 ? smoothLine(mXY) : ""
+    const marginPath = showMargin && mXY.length >= 2 ? curveLine(mXY) : ""
     const lastMargin = [...marginVals].reverse().find((m) => m != null)
     const marginLabel = metric === "op" ? "영업이익률" : "순이익률"
     return (
@@ -711,7 +814,7 @@ function QuarterlyTrend({ ticker, C, isDark, showExtremes = true, quarterlyUrl =
     useEffect(() => {
         if (onCanvas || !quarterlyUrl || !ticker) return
         let alive = true
-        fetch(quarterlyUrl, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => {
+        fetch(quarterlyUrl).then((r) => (r.ok ? r.json() : null)).then((d) => {
             const rec = d && d.stocks && d.stocks[ticker]
             const arr = rec && Array.isArray(rec.quarters) ? rec.quarters : null
             if (alive && arr && arr.length) setQuarters(arr)
@@ -904,14 +1007,17 @@ export default function PublicStockReport(props: Props) {
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [list, setList] = useState<any[]>(SAMPLE)            // 리포트 DATA 보유 종목(facts/peer/flow)
+    const [list, setList] = useState<any[]>(onCanvas ? SAMPLE : [])   // 리포트 DATA(캔버스=SAMPLE 미리보기, 라이브=빈 값 → 슬라이스 로드 전 스켈레톤, SAMPLE flash 차단)
     const [reportAsOf, setReportAsOf] = useState<string>("")   // stock_report_public _meta.generated_at — 신선도 사실 노출
     const [tocSecs, setTocSecs] = useState<string[]>([])       // 미니 목차 — 렌더된 섹션 헤더(data-sec) DOM 스캔 결과
-    const [searchList, setSearchList] = useState<any[]>(SAMPLE) // 검색 universe(전 종목 KR+US, ticker/name)
-    const [flowMap, setFlowMap] = useState<Record<string, any[]>>(SAMPLE_FLOW)
-    const [forensicsMap, setForensicsMap] = useState<Record<string, any>>(SAMPLE_FORENSICS)
-    const [insiderMap, setInsiderMap] = useState<Record<string, any>>(SAMPLE_INSIDER)
-    const [warnMap, setWarnMap] = useState<Record<string, any>>(SAMPLE_WARN)
+    // 캔버스만 SAMPLE(에디터 미리보기). 라이브는 빈 값 → 슬라이스 로드 전까지 스켈레톤 노출.
+    // 콜드 랜딩 시 selTicker=005930(SAMPLE[0]) + list=SAMPLE 라 sliceReady 즉시 true → SAMPLE 삼성전자 리포트가
+    // 찰나 렌더(초록 자기주식취득·내부자 순매수 배지 포함)되던 flash 차단. 라이브는 SAMPLE 절대 미노출.
+    const [searchList, setSearchList] = useState<any[]>(onCanvas ? SAMPLE : []) // 검색 universe(전 종목 KR+US, ticker/name)
+    const [flowMap, setFlowMap] = useState<Record<string, any[]>>(onCanvas ? SAMPLE_FLOW : {})
+    const [forensicsMap, setForensicsMap] = useState<Record<string, any>>(onCanvas ? SAMPLE_FORENSICS : {})
+    const [insiderMap, setInsiderMap] = useState<Record<string, any>>(onCanvas ? SAMPLE_INSIDER : {})
+    const [warnMap, setWarnMap] = useState<Record<string, any>>(onCanvas ? SAMPLE_WARN : {})
     const [lendingMap, setLendingMap] = useState<Record<string, any>>({})
     const [lendAsOf, setLendAsOf] = useState<string>("")
     const [supplyMap, setSupplyMap] = useState<Record<string, any>>({})
@@ -967,7 +1073,7 @@ export default function PublicStockReport(props: Props) {
             if (qp || ls) return
         } catch (e) { return }
         let alive = true
-        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json", { cache: "no-store" })
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { const t = d && d.hot && d.hot.ticker; if (alive && t) setSelTicker(String(t).toUpperCase()) })
             .catch(() => {})
@@ -993,7 +1099,9 @@ export default function PublicStockReport(props: Props) {
     const kind = useMemo(() => {
         const u = searchList.find((x: any) => String(x.ticker) === String(selTicker))
         const mk = String((u && u.market) || "").toUpperCase()
-        return (mk === "ETF" || mk === "ETN") ? "etf" : "stock"
+        if (mk === "ETF" || mk === "ETN") return "etf"
+        if (mk === "지수") return "index"   // KR 지수(코스피/코스닥/200 등) — 지수 뷰 렌더
+        return "stock"
     }, [searchList, selTicker])
     const [etfDoc, setEtfDoc] = useState<any>(null)
     const [noReportTk, setNoReportTk] = useState<string>("")   // 슬라이스 확정 미보유 티커
@@ -1003,22 +1111,24 @@ export default function PublicStockReport(props: Props) {
         if (onCanvas || typeof document === "undefined" || !document.body) return
         document.body.dataset.verityAssetKind = kind
     }, [kind, onCanvas])
+    const isUsEtf = kind === "etf" && !/^[0-9]{6}$/.test(String(selTicker))
     useEffect(() => {
-        if (onCanvas || kind !== "etf" || etfDoc) return
+        if (onCanvas || (kind !== "etf" && kind !== "index")) return
         let alive = true
-        fetch(ETF_FLOW_URL, { cache: "no-store" })
+        const url = kind === "index" ? KR_INDEX_URL : (isUsEtf ? US_ETF_URL : ETF_FLOW_URL)  // 지수 / US·KR ETF
+        fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive && d) setEtfDoc(d) })
             .catch(() => {})
         return () => { alive = false }
-    }, [kind, etfDoc, onCanvas])
+    }, [kind, isUsEtf, onCanvas])
 
     // 종목 상세 = 슬라이스 API 1콜(~11KB) — 전 종목 맵 로드(≈16MB) 대체 (로딩 극단 경량화 2026-07-08).
     //   report + flow/forensics/insider/warn/lending/supply/employment 를 한 번에 슬라이스 반환.
     //   검색 목록(searchList)은 universe_search.json 로 별도(경량) — 아래 effect. 상세는 선택 종목만.
     useEffect(() => {
         if (onCanvas) return
-        if (kind === "etf") { setListLoaded(true); return }
+        if (kind === "etf" || kind === "index") { setListLoaded(true); return }
         const t = String(selTicker || "").trim().toUpperCase()
         if (!t) return
         let alive = true
@@ -1063,7 +1173,7 @@ export default function PublicStockReport(props: Props) {
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch(UNIVERSE_URL, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+        fetch(UNIVERSE_URL).then((r) => (r.ok ? r.json() : null))
             .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a) && a.length) setSearchList(a) })
             .catch(() => {})
         return () => { alive = false }
@@ -1094,16 +1204,17 @@ export default function PublicStockReport(props: Props) {
             const u = searchList.find((x) => String(x.ticker) === String(selTicker))
             if (u) return { ticker: u.ticker, name: u.name, market: u.market, _noReport: true }
         }
-        if (lastGoodRef.current) return lastGoodRef.current
+        if (lastGoodRef.current && String(lastGoodRef.current.ticker) === String(selTicker)) return lastGoodRef.current
         const u2 = searchList.find((x) => String(x.ticker) === String(selTicker))
         if (u2) return { ticker: u2.ticker, name: u2.name, market: u2.market, _noReport: true }
         return list[0] || {}
     }, [list, searchList, selTicker, noReportTk])
     // 로딩 중(실데이터 미도착 or 선택 종목 미발견)엔 삼성전자 샘플 폴백 대신 스켈레톤. 160ms 지연 게이트=즉시 로드 깜빡임 차단(토스식).
-    // 리포트 보유(list) 또는 universe 확인(searchList) 시 종목 확정 — 슬라이스 미보유 종목도 stub 안내로 스켈레톤 탈출
-    const found = useMemo(() => list.some((x) => String(x.ticker) === String(selTicker)) || searchList.some((x) => String(x.ticker) === String(selTicker)), [list, searchList, selTicker])
-    // 스켈레톤 = 최초 로드에서만. 종목 전환 중엔 이전 화면 유지 → 깜빡임 제거 (2026-07-10)
-    const showSkeleton = !onCanvas && !listLoaded && !lastGoodRef.current && !found
+    // 스켈레톤 = 현재 선택 종목의 슬라이스가 아직 도착 안 함(전환 중 포함). 2026-07-11 수리:
+    //   옛 로직(!lastGoodRef.current)은 종목 전환 시 이전 종목(네이버 등)을 계속 노출 → 잘못된 종목 깜빡임.
+    //   list=현재 종목 슬라이스만 보유(누적 X)이므로 selTicker 미포함 = 로딩 중 = 스켈레톤. 160ms 게이트로 빠른 로드는 무깜빡.
+    const sliceReady = list.some((x: any) => String(x.ticker) === String(selTicker)) || String(noReportTk) === String(selTicker)
+    const showSkeleton = !onCanvas && !sliceReady
     useEffect(() => {
         if (!showSkeleton) { setSkelVisible(false); return }
         const t = setTimeout(() => setSkelVisible(true), 160)
@@ -1431,12 +1542,13 @@ export default function PublicStockReport(props: Props) {
                 }}>
                     {query.trim() ? (
                         matches.map((m) => (
-                            <div key={m.ticker} onMouseDown={() => goTicker(m.ticker, m.name)}
+                            /* 한글명 = 주 이름(있으면), 메타 = 티커·시장만 — 긴 한글 메타가 주 이름을
+                               뭉개던 레이아웃 fix (2026-07-11 'The…/S' 스크린샷). 주 이름 flex+ellipsis. */
+                            <div key={m.ticker} onMouseDown={() => goTicker(m.ticker, m.name_ko || m.name)}
                                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
-                                <Logo ticker={m.ticker} name={m.name} market={m.market} C={C} size={28} />
-                                <span style={{ fontFamily: HEAD, fontSize: 13.5, fontWeight: 700, color: C.ink }}>{m.name}</span>
-                                {m.name_ko && <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>{m.name_ko}</span>}
-                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginLeft: "auto" }}>{m.ticker} · {m.market}</span>
+                                <Logo ticker={m.ticker} name={m.name_ko || m.name} market={m.market} C={C} size={28} />
+                                <span style={{ fontFamily: HEAD, fontSize: 13.5, fontWeight: 700, color: C.ink, flex: "1 1 auto", minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name_ko || m.name}</span>
+                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginLeft: "auto", flexShrink: 0 }}>{m.ticker} · {m.market}</span>
                             </div>
                         ))
                     ) : (
@@ -1448,8 +1560,8 @@ export default function PublicStockReport(props: Props) {
                                         <div key={"r:" + r.t} onMouseDown={() => goTicker(r.t, r.n)}
                                             style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
                                             <Logo ticker={r.t} name={r.n} market={/^\d{6}$/.test(String(r.t)) ? "KOSPI" : "US"} C={C} size={28} />
-                                            <span style={{ fontFamily: HEAD, fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.n}</span>
-                                            <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginLeft: "auto" }}>{r.t}</span>
+                                            <span style={{ fontFamily: HEAD, fontSize: 13.5, fontWeight: 700, color: C.ink, flex: "1 1 auto", minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.n}</span>
+                                            <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginLeft: "auto", flexShrink: 0 }}>{r.t}</span>
                                         </div>
                                     ))}
                                 </>
@@ -1482,6 +1594,16 @@ export default function PublicStockReport(props: Props) {
                 {searchBox}
                 <EtfReportBlock C={C} isDark={C === DARK} narrow={narrow} ticker={String(selTicker)}
                     name={String(uEnt.name || selTicker)} market={String(uEnt.market || "ETF")} doc={etfDoc} onPick={goTicker} />
+            </div>
+        )
+    }
+
+    if (kind === "index") {
+        const uEntI = searchList.find((x: any) => String(x.ticker) === String(selTicker)) || {}
+        return (
+            <div ref={rootRef} style={wrap}>
+                {searchBox}
+                <IndexReportBlock C={C} narrow={narrow} name={String(uEntI.name || selTicker)} doc={etfDoc} />
             </div>
         )
     }

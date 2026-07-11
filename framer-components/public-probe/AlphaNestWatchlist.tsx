@@ -105,7 +105,7 @@ function Logo({ ticker, name, C }: { ticker: string; name: string; C: any }) {
     if (err || !ticker || !bfSrc) {
         return <span style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 10, background: bfInitialBg(ticker), color: "#ffffff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800 }}>{ch}</span>
     }
-    return <img src={bfSrc} alt="" width={30} height={30} onError={() => setErr(true)} style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 10, filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
+    return <img src={bfSrc} alt="" loading="lazy" decoding="async" width={30} height={30} onError={() => setErr(true)} style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 10, filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
 }
 
 function readBodyDark(): boolean {
