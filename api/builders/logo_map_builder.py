@@ -77,6 +77,19 @@ import hashlib
 _PLACEHOLDER_MD5 = {"ad18dbe2ba", "38926c4ecb"}  # w미지정 310B / w=76 2588B 두 변형
 
 
+def _is_blank(img_bytes: bytes) -> bool:
+    """단색(순백 등) 균일 이미지 판별 — 2026-07-11 전수 실측에서 순백 로고 7건 발견 (md5 는
+    요청 파라미터별로 달라져 가드 불가 → 콘텐츠 기반). PIL 실패 = 판별 불가로 통과."""
+    try:
+        from PIL import Image
+        import io as _io
+        im = Image.open(_io.BytesIO(img_bytes)).convert("RGBA").resize((16, 16))
+        ext = im.getextrema()  # 채널별 (min, max)
+        return all(mn == mx for mn, mx in ext)
+    except Exception:  # noqa: BLE001
+        return False
+
+
 # 아이덴티티 색 (2026-07-10 PM — 토스식 타일 배경). 로고 대표색 자동 추출 + 주요 브랜드 공식 색 오버라이드.
 # 오버라이드 = 공개된 브랜드 컬러(사실). 흑백 로고(삼성·애플 등)는 추출색이 검정 → 공식 색으로 보정.
 BRAND_COLOR_OVERRIDE = {
@@ -123,7 +136,7 @@ def _logo_fetch(path: str, cid: str):
         if "image" not in (r.headers.get("content-type") or ""):
             return False, b""
         b = r.read()
-        ok = len(b) > 0 and hashlib.md5(b).hexdigest()[:10] not in _PLACEHOLDER_MD5
+        ok = len(b) > 0 and hashlib.md5(b).hexdigest()[:10] not in _PLACEHOLDER_MD5 and not _is_blank(b)
         return ok, b
     except Exception:  # noqa: BLE001
         return False, b""
