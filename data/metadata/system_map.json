@@ -1,25 +1,26 @@
 {
-  "generated_at": "2026-07-11T23:10:12.527511+09:00",
+  "generated_at": "2026-07-12T00:17:21.564696+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 212446,
-    "python_modules": 626,
-    "tsx_components": 106,
+    "code_lines_tsx_py": 214713,
+    "python_modules": 629,
+    "tsx_components": 112,
     "json_data_files": 414,
     "json_total_tracked": 429,
     "workflows": 62,
     "scheduled_workflows": 52,
     "cron_triggers": 62,
-    "git_tracked_files": 5786
+    "git_tracked_files": 5795
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 66,
+      "count": 67,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
+        "api/analyzers/dart_cb_bw.py",
         "api/analyzers/dart_disclosure_events.py",
         "api/analyzers/dart_litigation.py",
         "api/analyzers/dart_related_party.py",
@@ -582,9 +583,9 @@
     },
     "surface": {
       "label": "출력",
-      "count": 106,
+      "count": 112,
       "by_group": {
-        "framer-components/public-probe": 52,
+        "framer-components/public-probe": 58,
         "market": 11,
         "_shared": 10,
         "framer-components/crypto-public": 7,
@@ -616,12 +617,12 @@
     }
   },
   "python_by_dir": {
-    "api": 362,
+    "api": 364,
     "tests": 128,
     "scripts": 78,
     "vercel-api": 50,
     "server": 6,
-    ".github": 2
+    ".github": 3
   },
   "funnel": {
     "investable_real": 2936,
