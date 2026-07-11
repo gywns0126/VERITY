@@ -51,6 +51,12 @@ jobs:
           US_INSIDER_MAX_SECONDS: ${{ github.event.inputs.max_seconds || '2400' }}
         run: python -m api.builders.us_insider_trades_public_builder
 
+      - name: Build US short interest (short% / days-to-cover)
+        # RULE 7 = 사실만 (점수·추천 0). 수집원 = stock_data.get_short_interest_yf (무료).
+        # 소비자 = PublicStockReport usForen.short_interest 카드 (main 에 이미 렌더 존재).
+        continue-on-error: true
+        run: python -m api.builders.us_short_interest_public_builder
+
       - name: Commit data/us_insider_trades.json
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
         # [[feedback_data_collection_verification_mandatory]] specific path commit.
@@ -58,6 +64,11 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/us_insider_trades.json
+          # short_interest = continue-on-error 스텝 산출. 첫 실행/실패 시 파일 부재 → add 실패로
+          # 워크플로가 죽지 않도록 존재할 때만 stage ([[feedback_data_collection_verification_mandatory]]).
+          for f in data/us_short_interest.json data/us_short_interest_cache.json; do
+            if [ -f "$f" ]; then git add "$f"; fi
+          done
           if git diff --staged --quiet; then
             echo "[us_insider] no changes"
             exit 0

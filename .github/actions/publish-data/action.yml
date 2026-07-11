@@ -96,6 +96,8 @@ runs:
                  us_insider_trades.json \
                  us_major_holdings.json \
                  us_smart_money_13f.json \
+                 us_short_interest.json \
+                 us_disclosure_forensics.json \
                  commodity_exposure.json \
                  market_warnings.json \
                  smallcap_corner_filters.json \
@@ -160,6 +162,14 @@ runs:
         if [ -s "_public_dist/bonds.json" ] && [ -s "_public_dist/portfolio.json" ]; then
           python3 "${{ github.action_path }}/merge_bonds.py" \
             _public_dist/portfolio.json _public_dist/bonds.json
+        fi
+
+        # ── recommendations.json held-2027 점수·산식 strip (2026-07-10 RULE 7 / 유리박스) ──
+        # 공개 Blob = 팩트+뉴스+recommendation+consensus 만. brain_score/score_breakdown(가중치 실값)/
+        # ai_verdict 등 자체 IP 제거. 원본 data/ 는 무변경(내부·비공개용). 소비자 3종 무손상 사전검증.
+        if [ -s "_public_dist/recommendations.json" ]; then
+          python3 "${{ github.action_path }}/sanitize_recommendations.py" \
+            _public_dist/recommendations.json
         fi
 
         # ── equity_research/ 디렉토리 publish (2026-05-16) ──
