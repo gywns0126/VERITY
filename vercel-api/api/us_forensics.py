@@ -34,10 +34,14 @@ _logger = logging.getLogger(__name__)
 SOURCE_BASE_ENV = "US_FORENSICS_SOURCE_BASE"
 SOURCE_BASE_FALLBACK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 
+# 🚫 "consensus": us_analyst_consensus.json 재추가 금지 (PM 확정 2026-07-10).
+#    컨센서스 = 발행 제외 (Benzinga/S&P 실권리). 세션 간 재추가 핑퐁 2회 — 이 결정 변경 = PM 재승인 필수.
 SOURCES = {
     "insider": "us_insider_trades.json",
     "holdings": "us_major_holdings.json",
     "smart_money": "us_smart_money_13f.json",
+    "short_interest": "us_short_interest.json",
+    "disclosure_forensics": "us_disclosure_forensics.json",
 }
 
 TIMEOUT_SEC = 4          # vercel.json maxDuration=5 안전 마진 (병렬이라 벽시계 ≈ 1 fetch)

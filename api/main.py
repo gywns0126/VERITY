@@ -3662,6 +3662,27 @@ def main():
                 except Exception as e:
                     print(f"  ⚠️ 소송·우발부채 분석 스킵: {e}")
 
+                # ── DART 주요사항: CB/BW 전환·행사 오버행(잠재 희석) ──
+                # 2026-07-10. 🚨 관측 only · 사실만 — 발행규모·전환가·발행가능주식수·희석률.
+                # 구조화 파싱(LLM 0) · 자체 점수 0(RULE 7). dart_cb_bw 필드로만 부착.
+                try:
+                    from api.analyzers.dart_cb_bw import analyze_all_cb_bw
+                    cbw_result = analyze_all_cb_bw(stocks_dict)
+                    cbw_attached = 0
+                    for stock in candidates:
+                        t = stock.get("ticker")
+                        if not t:
+                            continue
+                        t6 = str(t).split(".")[0].zfill(6)
+                        cbw = cbw_result.get(t6)
+                        if cbw and cbw.get("n_instruments"):
+                            stock["dart_cb_bw"] = cbw
+                            cbw_attached += 1
+                    if cbw_attached:
+                        print(f"  ✓ {cbw_attached}개 종목에 dart_cb_bw 부착 (CB/BW 오버행, 관측 only)")
+                except Exception as e:
+                    print(f"  ⚠️ CB/BW 오버행 분석 스킵: {e}")
+
                 # ── DART 공시 이벤트 스캔: 유상증자/정정/불성실/distress ──
                 # 2026-06-04. 키워드 분류(LLM 0). 🚨 distress/불성실 = 2026-06-05 점수 사전등록
                 # (factors/red_flags.py, RULE 7 PM 승인). 유상증자/정정/올빼미 = 관측 only(임계 fit 대기).
