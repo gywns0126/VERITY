@@ -7,11 +7,16 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
  *   🚨 2026-07-11 PM: 사파리 창/신문 제호 목업 제거 — 토스식 플랫 카드, 정보 가독성 우선.
  *      기존 PublicDailyBriefing(s1NvKbN) 데이터 로직(1면 배너·섹션·mover·접힘·cache-fallback) 이식,
  *      연출(스트림 애니·창 크롬·마스트헤드)만 제거. s1NvKbN 인스턴스는 홈에서 제거(코드파일 보존).
- *   🚨 2026-07-11 PM 가독성 — 통합 카드 1장(블록 7개) = 섹션 경계 소실. 처방 3종:
+ *   🚨 2026-07-11 PM 가독성 1차 — 통합 카드 1장(블록 7개) = 섹션 경계 소실. 처방 3종:
  *      (a) 카드 2장 분할 — 개인(자산) / 시장 = 성격이 다름. 중첩 tint 박스는 카드로 승격.
  *      (b) 보라(C.vg) = 액션 전용 — 종목명 보라 800 이 섹션 제목(검정 800)보다 튀어 위계가 역전됨.
  *          종목명 = C.ink 700 + 흐린 밑줄(클릭 어포던스). 보라는 버튼/CTA 에만.
  *      (c) 섹션 경계 = hairline + 여백. 섹션 사이:안 = 32:7 (기존 15:7 = 근접성 대비 부족).
+ *   🚨 2026-07-11 PM 가독성 2차 — 보라 회수 후 "전부 검정, 폰트 크기만 다름" = 위계 축이 1개뿐.
+ *      처방 = 명도 위계. 검정 = 희소 자원으로 회수.
+ *      · 라벨(섹션 제목 · 코스피/코스닥 지수명) = 회색 캡션 (C.sub / C.faint + letterSpacing) 으로 후퇴.
+ *      · 검정(C.ink) = 콘텐츠에만 — 1면 헤드라인 · 종목명 · 자산 총액.
+ *      · 숫자(등락%) = 이미 등락색(빨강/파랑) 보유 → 라벨이 물러날수록 대비가 살아남.
  *
  * ① 내 자산 — 사용자 개인 보유종목 (VERITY 시스템 성과 아님). PublicHoldingsTab 계산 재사용.
  *   인증 — localStorage["verity_supabase_session"].access_token → /api/holdings.
@@ -336,8 +341,11 @@ export default function PublicMorningBriefing(props: Props) {
         ...card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
         padding: narrow ? "15px 16px" : "16px 18px", cursor: "pointer",
     }
-    const secTitle: CSSProperties = { fontSize: narrow ? 14 : 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.2px" }
+    // 명도 위계 — 라벨(섹션 제목·지수명)은 회색 캡션으로 물러나고, 검정은 콘텐츠(헤드라인·종목명)에만.
+    // 크기만 다른 검정 일색 = 위계 축이 1개뿐 → 안 읽힘 (PM 2026-07-11 2차 지적).
+    const secTitle: CSSProperties = { fontSize: 11.5, fontWeight: 800, color: C.sub, letterSpacing: "0.6px" }
     const secNote: CSSProperties = { fontSize: 11, fontWeight: 600, color: C.faint }
+    const idxLabel: CSSProperties = { fontSize: 11.5, fontWeight: 700, color: C.faint, letterSpacing: "0.4px" }
 
     return (
         <div ref={rootRef} style={shell}>
@@ -419,7 +427,7 @@ export default function PublicMorningBriefing(props: Props) {
                                     {[["코스피", banner.kospi, banner.kospi_close], ["코스닥", banner.kosdaq, banner.kosdaq_close]].map(([lb, pct, lv]: any) => (
                                         <div key={lb}>
                                             <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                                                <span style={{ fontSize: 12.5, fontWeight: 800, color: C.ink }}>{lb}</span>
+                                                <span style={idxLabel}>{lb}</span>
                                                 {fmtLevel(lv) && <span style={{ fontSize: 11.5, fontWeight: 600, color: C.faint, fontVariantNumeric: "tabular-nums" }}>{fmtLevel(lv)}</span>}
                                             </div>
                                             <div style={{ marginTop: 2, fontSize: narrow ? 22 : 25, fontWeight: 800, letterSpacing: "-0.7px", color: pctColor(pct), fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{fmtPct(pct)}</div>
