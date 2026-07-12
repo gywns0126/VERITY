@@ -15,9 +15,11 @@ name: DART Catalyst Pulse (공시속보 신선도)
 #  7 N=2: 추가 후 manual run(N=1) + 다음 scheduled(N=2) 검증 의무.
 
 on:
-  schedule:
-    # KR 장중~마감후 공시 시간대 KST 09:13~18:43 (UTC 00:13~09:43), 평일.
-    - cron: '13,43 0-9 * * 1-5'
+  # 2026-07-12: GH schedule(30분) silent-skip 으로 실제 간격 3~4h > SLA 120분(dart_catalyst_alerts P0)
+  #   → Vercel Cron dispatch 단일통로 이전(crypto/macro 패턴). dispatch_pulse 가 평일 UTC 0-9 매 30분
+  #   dart_catalyst_pulse event repository_dispatch (KR 장중~마감 KST 09-18 창 보존).
+  repository_dispatch:
+    types: [dart_catalyst_pulse]
   workflow_dispatch:
 
 env:

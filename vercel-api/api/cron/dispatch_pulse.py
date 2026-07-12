@@ -103,6 +103,15 @@ def _resolve_events(now_utc: datetime) -> list[str]:
         # 2026-07-12: GH schedule '5,35' silent-skip 으로 최대 3~4h 갭 → dispatch 단일통로 이전(macro 패턴).
         events.append("crypto_collect")
 
+    # rss_scout(뉴스속보) / dart_catalyst(공시알림) — 시장시간 P0(SLA 90 / 120분).
+    # 2026-07-12: GH schedule silent-skip 실측(뉴스 15분→실제 1~2.75h · 공시 30분→실제 3~4h > SLA)
+    #   → Vercel dispatch 30분 이전(crypto/macro 패턴). 원 수집 창 보존:
+    #   뉴스 = 평일 UTC 0-23(KR+US·저녁) · 공시 = 평일 UTC 0-9(KR 장중~마감 KST 09-18).
+    if minute % 30 == 0 and is_weekday:
+        events.append("rss_scout")
+        if hour <= 9:
+            events.append("dart_catalyst_pulse")
+
     # daily_analysis quick — 매시 :07, KR 장외 (UTC 8-15 평일) OR 저녁 (UTC 16-22 Sun-Thu)
     if minute == 7:
         if (8 <= hour <= 15 and is_weekday) or (16 <= hour <= 22 and is_sun_thu):

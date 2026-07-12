@@ -4,13 +4,11 @@
 name: RSS Scout
 
 on:
-  schedule:
-    # 장중: 15분 간격 (UTC 00:00~05:45 → KST 09:00~14:45)
-    - cron: '0,15,30,45 0-5 * * 1-5'
-    # 장 마감 전후 보정: UTC 06:00~06:30 → KST 15:00~15:30
-    - cron: '0,15,30 6 * * 1-5'
-    # 장외·야간: 30분 간격 (UTC 07~23, 월~금)
-    - cron: '0,30 7-23 * * 1-5'
+  # 2026-07-12: GH schedule(15/30분) silent-skip 으로 실제 간격 1~2.75h > SLA 90분(news_flash P0)
+  #   → Vercel Cron dispatch 단일통로 이전(crypto/macro 패턴). dispatch_pulse 가 평일 UTC 0-23 매 30분
+  #   rss_scout event repository_dispatch (원 수집 창 = 평일 전시간 보존, KR+US·저녁 뉴스).
+  repository_dispatch:
+    types: [rss_scout]
   workflow_dispatch:
 
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)
