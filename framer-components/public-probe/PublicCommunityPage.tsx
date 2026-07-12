@@ -129,12 +129,12 @@ function StockLogo(props: { ticker: any; name: any; C: any; size?: number }) {
     return (
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
             {!err && src ? (
-                <img src={src} alt="" width={size} height={size} onError={() => setErr(true)}
+                <img src={src} alt="" loading="lazy" decoding="async" width={size} height={size} onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), objectFit: "contain", background: "#ffffff", display: "block" }} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), background: C.chipBg, color: C.faint, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
-            <img src={FLAG_BASE + code + ".svg"} alt="" width={f} height={f}
+            <img src={FLAG_BASE + code + ".svg"} alt="" loading="lazy" decoding="async" width={f} height={f}
                 style={{ position: "absolute", right: -3, bottom: -3, width: f, height: f, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block" }} />
         </span>
     )
@@ -375,7 +375,7 @@ export default function PublicCommunityPage(props: Props) {
                                 {/* 헤더 행 (인스타 틀: 아바타 + 별명 + 시간 + ⋯) */}
                                 <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                                     {it.avatar ? (
-                                        <img src={it.avatar} alt="" width={36} height={36} style={{ width: 36, height: 36, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+                                        <img src={it.avatar} alt="" loading="lazy" decoding="async" width={36} height={36} style={{ width: 36, height: 36, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
                                     ) : (
                                         <div style={{ width: 36, height: 36, borderRadius: 12, background: C.chipBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                             <User size={18} color={C.faint} weight="fill" />

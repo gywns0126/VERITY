@@ -281,12 +281,12 @@ function Logo(props: { ticker: any; name: any; C: typeof LIGHT; size?: number })
     return (
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
             {!err && bfSrc ? (
-                <img src={bfSrc} alt="" width={size} height={size} onError={() => setErr(true)}
+                <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size} onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: C.sub, color: C.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
-            <img src={FLAG_BASE + code + ".svg"} alt="" width={fsize} height={fsize}
+            <img src={FLAG_BASE + code + ".svg"} alt="" loading="lazy" decoding="async" width={fsize} height={fsize}
                 style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block" }} />
         </span>
     )

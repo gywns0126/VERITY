@@ -313,7 +313,7 @@ function StockCard(props: { l: any; C: any; sortKey: string; onGo: (t: string) =
                 ) : (
                     <span style={{ width: 34, height: 34, borderRadius: 11, background: bfInitialBg(ticker), color: "#ffffff", fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initial}</span>
                 )}
-                <img src={FLAG + (kr ? "kr" : "us") + ".svg"} alt="" width={14} height={14}
+                <img src={FLAG + (kr ? "kr" : "us") + ".svg"} alt="" loading="lazy" decoding="async" width={14} height={14}
                     style={{ position: "absolute", right: -3, bottom: -3, width: 14, height: 14, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block" }} />
             </div>
             {/* 이름 = 1줄 말줄임 + hover 풀네임+섹터(title). 길면 "삼성바이오로…" 식으로 잘림. */}
