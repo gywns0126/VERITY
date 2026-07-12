@@ -70,6 +70,8 @@ jobs:
         if: steps.collect.outputs.new != '0'
         run: |
           python -m api.builders.public_disclosure_feed_builder
+          # 투자 캘린더 = 공시피드+배당락+IPO 재배열 (2026-07-12, KIS 무관·신규수집 0). git add data/ 로 자동 포함.
+          python -m api.builders.calendar_public_builder || echo "[calendar] build 실패(비차단)"
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/
