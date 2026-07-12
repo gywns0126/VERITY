@@ -1,60 +1,159 @@
 {
   "cleanUrls": true,
-  "_ignoreCommand_note": "🚨 RULE 2 — 이 값을 약화/축소하지 말 것. 창 N=50 + fail-open 유지. 변경 전 memory project_vercel_deploy_spam_ticket_2026_05_13 재독. 회귀 이력: 46da2c1f2(7/06 N=50 확립) → 7b3da3de0(7/08 슬라이스 API 가 낡은 base 에서 N=1·fail-closed 로 덮음) → 624791d92(7/10 '창 밖 skip 재발 3차' 수동 bump) → 본 복원. 회귀 방지 = scripts/check_vercel_ignore_guard.py (Tests CI).",
   "ignoreCommand": "bash -c 'cd .. || exit 1; git fetch --deepen=60 -q >/dev/null 2>&1 || true; N=50; git cat-file -e \"HEAD~$N^{commit}\" 2>/dev/null || N=1; git cat-file -e \"HEAD~$N^{commit}\" 2>/dev/null || exit 1; git diff --quiet \"HEAD~$N\" HEAD -- vercel-api/ 2>/dev/null || exit 1; exit 0'",
   "functions": {
-    "api/stock.py": { "maxDuration": 30 },
-    "api/stock_detail.py": { "maxDuration": 30 },
-    "api/stock_slice.py": { "maxDuration": 30 },
-    "api/search.py": { "maxDuration": 5 },
-    "api/chat.py": { "maxDuration": 60 },
-    "api/chat_diag.py": { "maxDuration": 5 },
-    "api/watchgroups.py": { "maxDuration": 10 },
-    "api/holdings.py": { "maxDuration": 10 },
-    "api/trades.py": { "maxDuration": 10 },
-    "api/thesis.py": { "maxDuration": 10 },
-    "api/thesis_feed.py": { "maxDuration": 10 },
-    "api/order.py": { "maxDuration": 10 },
-    "api/chart.py": { "maxDuration": 10 },
-    "api/visitor_ping.py": { "maxDuration": 5 },
-    "api/admin.py": { "maxDuration": 15 },
-    "api/system_health.py": { "maxDuration": 5 },
-    "api/estate_corp_holdings.py": { "maxDuration": 5 },
-    "api/estate_corp_by_region.py": { "maxDuration": 8 },
-    "api/estate_corp_asset_discount.py": { "maxDuration": 8 },
-    "api/estate_corp_facilities.py": { "maxDuration": 8 },
-    "api/estate_corp_disposals.py": { "maxDuration": 10 },
-    "api/estate_macro_bridge.py": { "maxDuration": 5 },
-    "api/corp_probe.py": { "maxDuration": 10 },
-    "api/reports.py": { "maxDuration": 10 },
-    "api/us_financials.py": { "maxDuration": 5 },
-    "api/us_forensics.py": { "maxDuration": 5 },
-    "api/stock_brief.py": { "maxDuration": 60 },
-    "api/brain_breakdown.py": { "maxDuration": 10 },
-    "api/cron/dispatch_pulse.py": { "maxDuration": 10 }
+    "api/stock.py": {
+      "maxDuration": 30
+    },
+    "api/stock_detail.py": {
+      "maxDuration": 30
+    },
+    "api/stock_slice.py": {
+      "maxDuration": 30
+    },
+    "api/search.py": {
+      "maxDuration": 5
+    },
+    "api/chat.py": {
+      "maxDuration": 60
+    },
+    "api/chat_diag.py": {
+      "maxDuration": 5
+    },
+    "api/watchgroups.py": {
+      "maxDuration": 10
+    },
+    "api/holdings.py": {
+      "maxDuration": 10
+    },
+    "api/trades.py": {
+      "maxDuration": 10
+    },
+    "api/thesis.py": {
+      "maxDuration": 10
+    },
+    "api/thesis_feed.py": {
+      "maxDuration": 10
+    },
+    "api/order.py": {
+      "maxDuration": 10
+    },
+    "api/chart.py": {
+      "maxDuration": 10
+    },
+    "api/visitor_ping.py": {
+      "maxDuration": 5
+    },
+    "api/admin.py": {
+      "maxDuration": 15
+    },
+    "api/system_health.py": {
+      "maxDuration": 5
+    },
+    "api/estate_corp_holdings.py": {
+      "maxDuration": 5
+    },
+    "api/estate_corp_by_region.py": {
+      "maxDuration": 8
+    },
+    "api/estate_corp_asset_discount.py": {
+      "maxDuration": 8
+    },
+    "api/estate_corp_facilities.py": {
+      "maxDuration": 8
+    },
+    "api/estate_corp_disposals.py": {
+      "maxDuration": 10
+    },
+    "api/estate_macro_bridge.py": {
+      "maxDuration": 5
+    },
+    "api/corp_probe.py": {
+      "maxDuration": 10
+    },
+    "api/reports.py": {
+      "maxDuration": 10
+    },
+    "api/us_financials.py": {
+      "maxDuration": 5
+    },
+    "api/us_forensics.py": {
+      "maxDuration": 5
+    },
+    "api/stock_brief.py": {
+      "maxDuration": 60
+    },
+    "api/brain_breakdown.py": {
+      "maxDuration": 10
+    },
+    "api/cron/dispatch_pulse.py": {
+      "maxDuration": 10
+    }
   },
   "crons": [
-    { "path": "/api/cron/dispatch_pulse", "schedule": "* * * * *" }
+    {
+      "path": "/api/cron/dispatch_pulse",
+      "schedule": "* * * * *"
+    }
   ],
   "rewrites": [
-    { "source": "/api/estate/corp-holdings",     "destination": "/api/estate_corp_holdings" },
-    { "source": "/api/estate/corp-by-region",    "destination": "/api/estate_corp_by_region" },
-    { "source": "/api/estate/corp-asset-discount", "destination": "/api/estate_corp_asset_discount" },
-    { "source": "/api/estate/corp-facilities",   "destination": "/api/estate_corp_facilities" },
-    { "source": "/api/estate/corp-disposals",    "destination": "/api/estate_corp_disposals" },
-    { "source": "/api/estate/macro-bridge",       "destination": "/api/estate_macro_bridge" },
-    { "source": "/api/system/health",            "destination": "/api/system_health" },
-    { "source": "/api/verity/us-financials",     "destination": "/api/us_financials" },
-    { "source": "/api/verity/us-forensics",      "destination": "/api/us_forensics" },
-    { "source": "/api/verity/stock-brief",       "destination": "/api/stock_brief" }
+    {
+      "source": "/api/estate/corp-holdings",
+      "destination": "/api/estate_corp_holdings"
+    },
+    {
+      "source": "/api/estate/corp-by-region",
+      "destination": "/api/estate_corp_by_region"
+    },
+    {
+      "source": "/api/estate/corp-asset-discount",
+      "destination": "/api/estate_corp_asset_discount"
+    },
+    {
+      "source": "/api/estate/corp-facilities",
+      "destination": "/api/estate_corp_facilities"
+    },
+    {
+      "source": "/api/estate/corp-disposals",
+      "destination": "/api/estate_corp_disposals"
+    },
+    {
+      "source": "/api/estate/macro-bridge",
+      "destination": "/api/estate_macro_bridge"
+    },
+    {
+      "source": "/api/system/health",
+      "destination": "/api/system_health"
+    },
+    {
+      "source": "/api/verity/us-financials",
+      "destination": "/api/us_financials"
+    },
+    {
+      "source": "/api/verity/us-forensics",
+      "destination": "/api/us_forensics"
+    },
+    {
+      "source": "/api/verity/stock-brief",
+      "destination": "/api/stock_brief"
+    }
   ],
   "headers": [
     {
       "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!holdings(?:$|/))(?!trades(?:$|/))(?!thesis(?:$|/))(?!thesis_feed(?:$|/))(?!reports(?:$|/)).*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PATCH, DELETE, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Admin-Token" }
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PATCH, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, X-Admin-Token"
+        }
       ]
     }
   ]
