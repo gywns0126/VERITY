@@ -1,16 +1,18 @@
 {
  "_meta": {
-  "generated_at": "2026-07-12T08:50:30.831526+09:00",
+  "generated_at": "2026-07-12T11:09:04.401855+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "green",
- "reasons": [],
+ "status": "red",
+ "reasons": [
+  "P0 stale 1건"
+ ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-07-12T08:50:30.788353+09:00",
+  "generated_at": "2026-07-12T11:09:04.357442+09:00",
   "ok": true,
   "failed": 0,
   "max_cdn_age_s": 0,
@@ -65,14 +67,14 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-07-12T08:50:20.901488+09:00",
+  "generated_at": "2026-07-12T11:08:53.251660+09:00",
   "summary": {
-   "fresh": 19,
-   "stale": 0,
+   "fresh": 18,
+   "stale": 1,
    "paused": 10,
    "p0": {
     "total": 6,
-    "fresh": 2
+    "fresh": 1
    },
    "p1": {
     "total": 11,
@@ -83,7 +85,13 @@
     "fresh": 10
    }
   },
-  "stale_p0": [],
+  "stale_p0": [
+   {
+    "id": "crypto",
+    "label": "크립토 시세·파생",
+    "age_min": 124.5
+   }
+  ],
   "stale_other": []
  }
 }
