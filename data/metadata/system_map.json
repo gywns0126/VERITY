@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-12T14:28:16.212749+09:00",
+  "generated_at": "2026-07-12T16:19:02.689323+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 215310,
-    "python_modules": 631,
+    "code_lines_tsx_py": 215660,
+    "python_modules": 632,
     "tsx_components": 113,
     "json_data_files": 418,
     "json_total_tracked": 433,
     "workflows": 62,
-    "scheduled_workflows": 52,
-    "cron_triggers": 62,
-    "git_tracked_files": 5803
+    "scheduled_workflows": 49,
+    "cron_triggers": 57,
+    "git_tracked_files": 5804
   },
   "subsystems": {
     "ingest": {
@@ -153,7 +153,7 @@
     "automation": {
       "label": "자동화",
       "count": 62,
-      "scheduled": 52,
+      "scheduled": 49,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -210,10 +210,8 @@
         },
         {
           "name": "crypto_collect",
-          "crons": [
-            "5,35 * * * *"
-          ],
-          "scheduled": true
+          "crons": [],
+          "scheduled": false
         },
         {
           "name": "daily_analysis",
@@ -262,10 +260,8 @@
         },
         {
           "name": "dart_catalyst_pulse",
-          "crons": [
-            "13,43 0-9 * * 1-5"
-          ],
-          "scheduled": true
+          "crons": [],
+          "scheduled": false
         },
         {
           "name": "dart_kr_fin_backfill",
@@ -420,12 +416,8 @@
         },
         {
           "name": "rss_scout",
-          "crons": [
-            "0,15,30,45 0-5 * * 1-5",
-            "0,15,30 6 * * 1-5",
-            "0,30 7-23 * * 1-5"
-          ],
-          "scheduled": true
+          "crons": [],
+          "scheduled": false
         },
         {
           "name": "rule7_audit",
@@ -617,7 +609,7 @@
     }
   },
   "python_by_dir": {
-    "api": 365,
+    "api": 366,
     "tests": 128,
     "scripts": 79,
     "vercel-api": 50,
