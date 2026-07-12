@@ -2068,6 +2068,24 @@ export default function PublicStockReport(props: Props) {
                             <span style={{ fontSize: 12.5, fontWeight: 800, color: C.down }}>매도 {insider.sell_n}건</span>
                             <span style={{ fontSize: 12.5, fontWeight: 800, color: (insider.net_change || 0) >= 0 ? C.up : C.down }}>순증감 {fmtShares(insider.net_change)}</span>
                         </div>
+                        {/* 내부자 군집(사실) — 최근 90일 서로 다른 매수/매도 임원 수. 여러 임원 동시 매수 = 관측 강신호(교과서 일반론), 자체 점수 아님(RULE 7). */}
+                        {(() => {
+                            const tr: any[] = insider.trades || []
+                            const cutoff = Date.now() - 90 * 86400000
+                            const parseD = (s: any) => { const t = new Date(String(s || "")).getTime(); return isFinite(t) ? t : 0 }
+                            const recent = tr.filter((t) => parseD(t.date) >= cutoff)
+                            const buyers = new Set(recent.filter((t) => Number(t.change) > 0).map((t) => t.person))
+                            const sellers = new Set(recent.filter((t) => Number(t.change) < 0).map((t) => t.person))
+                            if (!buyers.size && !sellers.size) return null
+                            return (
+                                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 9, paddingTop: 9, borderTop: `1px solid ${C.line}` }}>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: C.faint }}>최근 90일 군집</span>
+                                    {buyers.size > 0 && <span style={{ fontSize: 11.5, fontWeight: 800, color: C.up }}>서로 다른 임원 {buyers.size}명 매수</span>}
+                                    {sellers.size > 0 && <span style={{ fontSize: 11.5, fontWeight: 800, color: C.down }}>{sellers.size}명 매도</span>}
+                                    {buyers.size >= 3 && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#ffffff", background: C.up, borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>매수 집중</span>}
+                                </div>
+                            )
+                        })()}
                         <div style={{ marginTop: 10 }}>
                             {(insiderAll ? insider.trades : insider.trades.slice(0, 6)).map((t: any, i: number) => (
                                 <div key={i} style={{ display: "flex", gap: 9, alignItems: "center", padding: "9px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
@@ -2099,6 +2117,24 @@ export default function PublicStockReport(props: Props) {
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: C.down }}>매도 {usForen.insider.sell_n || 0}건</span>
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: (usForen.insider.net_change || 0) >= 0 ? C.up : C.down }}>순증감 {fmtShares(usForen.insider.net_change)}</span>
                                 </div>
+                                {/* 내부자 군집(사실) — 최근 90일 서로 다른 매수/매도 임원 수. Form4 취득/처분 기준. 점수 아님(RULE 7). */}
+                                {(() => {
+                                    const tr: any[] = usForen.insider.trades || []
+                                    const cutoff = Date.now() - 90 * 86400000
+                                    const parseD = (s: any) => { const t = new Date(String(s || "")).getTime(); return isFinite(t) ? t : 0 }
+                                    const recent = tr.filter((t) => parseD(t.date) >= cutoff)
+                                    const buyers = new Set(recent.filter((t) => Number(t.change) > 0).map((t) => t.person))
+                                    const sellers = new Set(recent.filter((t) => Number(t.change) < 0).map((t) => t.person))
+                                    if (!buyers.size && !sellers.size) return null
+                                    return (
+                                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+                                            <span style={{ fontSize: 11, fontWeight: 700, color: C.faint }}>최근 90일 군집</span>
+                                            {buyers.size > 0 && <span style={{ fontSize: 11.5, fontWeight: 800, color: C.up }}>서로 다른 임원 {buyers.size}명 매수</span>}
+                                            {sellers.size > 0 && <span style={{ fontSize: 11.5, fontWeight: 800, color: C.down }}>{sellers.size}명 매도</span>}
+                                            {buyers.size >= 3 && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#ffffff", background: C.up, borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>매수 집중</span>}
+                                        </div>
+                                    )
+                                })()}
                                 {usForen.insider.trades.slice(0, 6).map((t: any, i: number) => (
                                     <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
                                         <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.person || "—"}{t.position ? " · " + t.position : ""}</span>
