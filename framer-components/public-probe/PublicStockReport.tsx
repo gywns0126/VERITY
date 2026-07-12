@@ -83,10 +83,9 @@ function bfLogoFilter(ticker: any): string {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
-    if (!p) return ""
-    if (p.indexOf("http") === 0) return p  // 폴백 소스(nvstly·공식 파비콘) = 절대 URL 그대로
-    return "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2
+    if (!tk) return ""
+    // 로고 = 토스 종목 CDN (PM 결정: 완전 공개[런칭] 전까지 토스 사용, 2026-07-12). 404/차단 시 onError → 이니셜 폴백. lm 미사용.
+    return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
 }
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
@@ -371,7 +370,7 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
             {!err && bfSrc ? (
                 <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size}
                     onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
+                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), objectFit: "cover", display: "block", background: "transparent" }} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
