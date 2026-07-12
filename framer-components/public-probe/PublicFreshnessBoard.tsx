@@ -172,8 +172,7 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
 
             {/* 휴장 안내 — 주말·장 마감이라 무생산인 스트림이 있을 때만. "고장" 오해 차단(정상 · 개장 시 재개) */}
             {((Number(sum.closed) || 0) + (Number(sum.paused) || 0)) > 0 && (
-                <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: C.closedSoft, borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
-                    <span style={{ fontSize: 13, lineHeight: 1.3, flexShrink: 0 }}>🌙</span>
+                <div style={{ background: C.closedSoft, borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
                     <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, lineHeight: 1.5 }}>
                         <b style={{ color: C.ink, fontWeight: 800 }}>휴장</b> = 주말·장 마감이라 새 데이터가 없는 <b style={{ color: C.ink, fontWeight: 700 }}>정상</b> 상태예요. 시세·공시 스트림은 개장(평일 09:00) 시 자동 재개됩니다.
                     </div>
