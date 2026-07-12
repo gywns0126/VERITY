@@ -1,6 +1,7 @@
 {
   "cleanUrls": true,
-  "ignoreCommand": "bash -c 'cd .. || exit 0; git rev-parse HEAD^ >/dev/null 2>&1 || exit 0; git diff --quiet HEAD^ HEAD -- vercel-api/ && exit 0; exit 1'",
+  "_ignoreCommand_note": "🚨 RULE 2 — 이 값을 약화/축소하지 말 것. 창 N=50 + fail-open 유지. 변경 전 memory project_vercel_deploy_spam_ticket_2026_05_13 재독. 회귀 이력: 46da2c1f2(7/06 N=50 확립) → 7b3da3de0(7/08 슬라이스 API 가 낡은 base 에서 N=1·fail-closed 로 덮음) → 624791d92(7/10 '창 밖 skip 재발 3차' 수동 bump) → 본 복원. 회귀 방지 = scripts/check_vercel_ignore_guard.py (Tests CI).",
+  "ignoreCommand": "bash -c 'cd .. || exit 1; git fetch --deepen=60 -q >/dev/null 2>&1 || true; N=50; git cat-file -e \"HEAD~$N^{commit}\" 2>/dev/null || N=1; git cat-file -e \"HEAD~$N^{commit}\" 2>/dev/null || exit 1; git diff --quiet \"HEAD~$N\" HEAD -- vercel-api/ 2>/dev/null || exit 1; exit 0'",
   "functions": {
     "api/stock.py": { "maxDuration": 30 },
     "api/stock_detail.py": { "maxDuration": 30 },
