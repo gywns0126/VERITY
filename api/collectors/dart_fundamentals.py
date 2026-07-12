@@ -90,23 +90,27 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
     for item in data.get("list", []):
         sj = item.get("sj_div", "")
         acct = item.get("account_nm", "")
+        aid = item.get("account_id", "")
         amount = _parse_int(item.get("thstrm_amount"))
         if sj == "BS":
-            # 🚨 총계류 = 정확일치 필수 — '자본과부채총계'(=자산총계) 가 '부채총계' 부분일치에 걸려
-            #   부채총계를 자산총계로 오염 (2026-07-06 실증, 분기 부채비율 5.8% 사고 근원)
-            if acct == "자산총계":
+            # 🚨 총계류 = account_id(IFRS 표준) 우선 매칭 + 한글 exact fallback.
+            #   한글명 exact 만 하면 공백 변형('자산 총계')을 미스 → total_assets=0 → source:none 사고
+            #   (2026-07-12 고영 등 21종목 실증: DART 정상 174항목인데 파서 미스). id 는 공백·표기 불변.
+            #   부분일치 금지 유지 — '자본과부채총계'(=ifrs-full_EquityAndLiabilities, 별 id) 오염 0
+            #   (2026-07-06 부채비율 5.8% 사고 가드 계승).
+            if aid == "ifrs-full_Assets" or acct == "자산총계":
                 out["total_assets"] = amount
-            elif acct == "부채총계":
+            elif aid == "ifrs-full_Liabilities" or acct == "부채총계":
                 out["total_liabilities"] = amount
-            elif acct == "자본총계":
+            elif aid == "ifrs-full_Equity" or acct == "자본총계":
                 out["equity"] = amount
-            elif acct == "유동자산":
+            elif aid == "ifrs-full_CurrentAssets" or acct == "유동자산":
                 out["current_assets"] = amount
-            elif acct == "유동부채":
+            elif aid == "ifrs-full_CurrentLiabilities" or acct == "유동부채":
                 out["current_liabilities"] = amount
-            elif "이익잉여금" in acct:
+            elif aid == "ifrs-full_RetainedEarnings" or "이익잉여금" in acct:
                 out["retained_earnings"] = amount
-            elif acct == "자본금":
+            elif aid == "ifrs-full_IssuedCapital" or acct == "자본금":
                 out["capital"] = amount
             elif "투자부동산" in acct:
                 out["investment_property"] = max(out["investment_property"], amount)
