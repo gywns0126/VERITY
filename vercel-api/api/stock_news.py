@@ -331,6 +331,11 @@ def fetch_stock_news(code, name="", max_items=15, pages=2):
     kept.sort(key=lambda x: x["_sort"], reverse=True)
     spill.sort(key=lambda x: x["_sort"], reverse=True)
     out = kept if len(kept) >= 6 else kept + spill   # soft filter — 과필터로 빈약해지면 노이즈도 보충
+    # 30일 표시 창(PM 2026-07-12) — 종목 뉴스는 드물어 최근 30일 우선. now/_sort 모두 UTC-naive .timestamp()라 상대비교 정합.
+    #   soft — 30일 내가 6건 미만이면 오래된 것도 유지(빈약 방지). 시장 플래시(7일)보다 김: 한 종목 뉴스 발생 저빈도.
+    cutoff = now.timestamp() - 30 * 86400
+    recent = [o for o in out if o.get("_sort", 0) >= cutoff]
+    out = recent if len(recent) >= 6 else out
     for o in out:
         o.pop("_sort", None)
     return out[:max_items]

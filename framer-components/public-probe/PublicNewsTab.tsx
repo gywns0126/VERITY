@@ -246,6 +246,18 @@ function toMs(t: string): number {
     return isFinite(ms) ? ms : 0
 }
 const NEWS_LOAD_CAP = 60   // 로드 상한(더보기용 여유). display 는 FlatNews 가 페이지네이션
+// 표시 창(PM 2026-07-12) — 시장 플래시=최근 7일, 저밀도(2~8건/일)·주말 공백이라 바닥 20건으로 빈 피드 방지.
+//   저장(소스)이 아니라 화면 노출만 제어 — stale 헤드라인(수개월 전) 차단.
+//   종목별 뉴스는 발생이 훨씬 드물어 30일 창 — /api/stock_news 서버에서 강제(여기 아님).
+const FLASH_WINDOW_DAYS = 7
+const FLASH_FLOOR = 20
+// 최근 N일만 남기되, 창이 floor 미만이면 최신순으로 floor 개까지 채움(빈 피드 방지). ts=0(파싱실패)은 최신 취급 안 함.
+function windowNews<T extends { ts?: number }>(arr: T[], days: number, floor: number): T[] {
+    const cutoff = Date.now() - days * 86400000
+    const byTs = arr.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0))
+    const recent = byTs.filter((it) => (it.ts || 0) >= cutoff)
+    return recent.length >= floor ? recent : byTs.slice(0, floor)
+}
 const NEWS_SORTS: { k: string; label: string }[] = [
     { k: "recent", label: "최신" },
     { k: "hot", label: "핫" },
@@ -269,12 +281,12 @@ function Logo(props: { ticker: any; name: any; C: typeof LIGHT; size?: number })
     return (
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
             {!err && bfSrc ? (
-                <img src={bfSrc} alt="" width={size} height={size} onError={() => setErr(true)}
+                <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size} onError={() => setErr(true)}
                     style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: C.sub, color: C.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
-            <img src={FLAG_BASE + code + ".svg"} alt="" width={fsize} height={fsize}
+            <img src={FLAG_BASE + code + ".svg"} alt="" loading="lazy" decoding="async" width={fsize} height={fsize}
                 style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block" }} />
         </span>
     )
@@ -487,7 +499,7 @@ export default function PublicNewsTab(props: Props) {
                 }
                 // 오늘의 테마 = 시장 헤드라인(KR+글로벌) 제목 키워드 빈도(LLM 아님)
                 const themeCnt: Record<string, number> = {}
-                for (const it of mk) {
+                for (const it of windowNews(mk, FLASH_WINDOW_DAYS, FLASH_FLOOR)) {
                     const t = it.title || ""
                     for (const [name, kws] of THEME_KEYWORDS) {
                         for (const k of kws) { if (t.indexOf(k) >= 0) { themeCnt[name] = (themeCnt[name] || 0) + 1; break } }
@@ -502,8 +514,8 @@ export default function PublicNewsTab(props: Props) {
 
             setRecGroups(recGroupsArr)
             setRecMap(rmap)
-            setMarket(mk)
-            setUs(usArr)
+            setMarket(windowNews(mk, FLASH_WINDOW_DAYS, FLASH_FLOOR))
+            setUs(windowNews(usArr, FLASH_WINDOW_DAYS, FLASH_FLOOR))
             setLoading(false)
             setFailed(!recRaw && !pf)
         })
