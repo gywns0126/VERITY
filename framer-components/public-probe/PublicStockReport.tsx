@@ -1177,6 +1177,29 @@ function CashflowWaterfall({ group, C, narrow }: { group: any; C: any; narrow: b
     )
 }
 
+/* 동종업계 백분위 스트립 (2026-07-12) — 이 종목이 같은 섹터 분포 안에서 어디쯤인가.
+   데이터의 일 = 단일 값의 '분포 내 위치' → 0~100 트랙 위의 점 (막대 아님. 크기가 아니라 위치가 정보).
+   기존엔 탭해야 나오는 6px 마커라 사실상 안 보였음 → 항상 노출.
+   🚨 색: 이 차트엔 등락 파랑이 없으므로 보라(C.vt) 마크 사용 가능 (보라↔파랑 deutan ΔE 6.6 충돌 회피 규칙 정합).
+   RULE 7 = 위치는 사실. 높다·낮다가 좋다·나쁘다 아님 — 좋음/나쁨 색(빨강·초록) 절대 사용 안 함. */
+function PeerStrip({ pct, C }: { pct: number; C: any }) {
+    const p = Math.max(0, Math.min(100, Number(pct)))
+    const TRACK = 7, DOT = 9   // 마커 ≥8px (dataviz 마크 스펙)
+    return (
+        <div style={{ position: "relative", height: DOT + 2, marginTop: 7, marginBottom: 2 }}>
+            {/* 트랙 — recessive */}
+            <div style={{ position: "absolute", left: 0, right: 0, top: (DOT + 2 - TRACK) / 2, height: TRACK, borderRadius: TRACK / 2, background: C.bg }} />
+            {/* 업종 중앙값 = 정의상 50번째 백분위 — 기준 눈금 */}
+            <div style={{ position: "absolute", left: "50%", top: 0, width: 1.5, height: DOT + 2, marginLeft: -0.75, borderRadius: 1, background: C.line }} />
+            {/* 이 종목 — 표면 링 2px (겹침 대비, 마크 스펙) */}
+            <div style={{
+                position: "absolute", left: `${p}%`, top: 1, width: DOT, height: DOT, marginLeft: -DOT / 2,
+                borderRadius: "50%", background: C.vt, boxShadow: `0 0 0 2px ${C.card}`,
+            }} />
+        </div>
+    )
+}
+
 function readBodyDark(): boolean {
     // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
     // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
@@ -2114,24 +2137,24 @@ export default function PublicStockReport(props: Props) {
                             const dir = r.vs === "above" ? "업종 중앙값보다 높음" : r.vs === "below" ? "업종 중앙값보다 낮음" : "업종 중앙값과 비슷"
                             return (
                                 <div key={i} style={{ borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
-                                    <div onClick={() => setOpenPeer(opened ? -1 : i)} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 0", cursor: "pointer" }}>
-                                        <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.sub, fontWeight: 600 }}>{r.key}</span>
-                                        <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: C.ink, minWidth: 56, textAlign: "right" }}>{r.value}</span>
-                                        <span style={{ flexShrink: 0, fontSize: 11.5, color: C.faint, fontWeight: 600, minWidth: 70, textAlign: "right" }}>업종 {r.median}</span>
-                                        <span style={{ flexShrink: 0, width: 16, textAlign: "center", fontSize: 13, fontWeight: 800, color: C.vt }}>{r.vs === "above" ? "↑" : r.vs === "below" ? "↓" : "="}</span>
+                                    <div onClick={() => setOpenPeer(opened ? -1 : i)} style={{ padding: "11px 0 9px", cursor: "pointer" }}>
+                                        <div style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                                            <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.sub, fontWeight: 600 }}>{r.key}</span>
+                                            <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: C.ink }}>{r.value}</span>
+                                            <span style={{ flexShrink: 0, fontSize: 11.5, color: C.faint, fontWeight: 600 }}>업종 {r.median}</span>
+                                            <span style={{ flexShrink: 0, width: 12, textAlign: "center", fontSize: 12, color: C.faint, fontWeight: 700, transform: opened ? "rotate(90deg)" : "none", transition: "transform 0.12s" }}>›</span>
+                                        </div>
+                                        {/* 백분위 스트립 — 분포 내 위치(항상 노출). 옛 ↑/↓ 화살표는 위치가 대신하므로 제거 */}
+                                        {r.pct != null && <PeerStrip pct={r.pct} C={C} />}
                                     </div>
                                     {opened && (
                                         <div style={{ padding: "2px 0 12px", display: "flex", flexDirection: "column", gap: 5 }}>
                                             <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, lineHeight: 1.5 }}>
                                                 {r.key} {r.value} · {peer.sector} 중앙값 {r.median} (N={peer.n}) → <span style={{ color: C.vt }}>{dir}</span>
                                             </div>
+                                            {/* 스트립은 접힌 행에 항상 노출 — 여기선 숫자로만 보강(중복 차트 금지) */}
                                             {r.pct != null && (
-                                                <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 1 }}>
-                                                    <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 700 }}>동종 분포 백분위 {r.pct} <span style={{ color: C.faint, fontWeight: 600 }}>(이 값보다 낮은 동종 {r.pct}%)</span></div>
-                                                    <div style={{ position: "relative", height: 6, background: C.bg, borderRadius: 3 }}>
-                                                        <div style={{ position: "absolute", left: `calc(${Math.max(0, Math.min(100, r.pct))}% - 3px)`, top: -2, width: 6, height: 10, borderRadius: 2, background: C.vt }} />
-                                                    </div>
-                                                </div>
+                                                <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 700 }}>동종 분포 백분위 {r.pct} <span style={{ color: C.faint, fontWeight: 600 }}>(이 값보다 낮은 동종 {r.pct}%)</span></div>
                                             )}
                                             <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>같은 섹터 종목 중앙값·분포와의 사실 비교 — 높다·낮다가 좋다·나쁘다는 아님(판단 X)</div>
                                         </div>
@@ -2139,6 +2162,18 @@ export default function PublicStockReport(props: Props) {
                                 </div>
                             )
                         })}
+                        {/* 범례 — 단일 계열이라 범례 박스 대신 마크 설명 한 줄 (카드당 1회) */}
+                        {peer.rows.some((r: any) => r.pct != null) && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 10, paddingTop: 9, borderTop: `1px solid ${C.line}` }}>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: C.sub }}>
+                                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: C.vt }} />이 종목
+                                </span>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: C.sub }}>
+                                    <span style={{ width: 1.5, height: 10, background: C.line }} />업종 중앙값
+                                </span>
+                                <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 600, color: C.faint }}>← 낮음 · 높음 →</span>
+                            </div>
+                        )}
                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>{peer.note}</div>
                     </div>
                 </>
