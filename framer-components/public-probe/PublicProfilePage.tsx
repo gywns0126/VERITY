@@ -387,7 +387,6 @@ export default function PublicProfilePage(props: Props) {
         width: "100%",
         maxWidth: 460,
         background: C.card,
-        border: `1px solid ${C.line}`,
         borderRadius: 22,
         boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
         padding: 28,
@@ -477,15 +476,15 @@ export default function PublicProfilePage(props: Props) {
                             {avatarBusy ? "업로드 중…" : "사진 변경"}
                         </button>
                         {/* 필드 리스트 — 라벨 + 밑줄 입력 행 */}
-                        <div style={{ width: "100%", marginTop: 14 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: `1px solid ${C.line}` }}>
+                        <div style={{ width: "100%", marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "11px 14px", background: C.field, borderRadius: 12 }}>
                                 <span style={{ width: 44, flexShrink: 0, color: C.faint, fontSize: 12.5, fontWeight: 600 }}>별명</span>
                                 <input value={nickDraft} autoFocus maxLength={16} placeholder="2~16자"
                                     onChange={(e) => setNickDraft(e.target.value)}
                                     onKeyDown={(e) => { if (e.key === "Enter") saveProfile() }}
                                     style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 14, fontWeight: 700, fontFamily: FONT, color: C.ink, padding: 0 }} />
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: `1px solid ${C.line}` }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "11px 14px", background: C.field, borderRadius: 12 }}>
                                 <span style={{ width: 44, flexShrink: 0, color: C.faint, fontSize: 12.5, fontWeight: 600 }}>소개</span>
                                 <input value={bioDraft} maxLength={40} placeholder="한 줄 소개 (선택)"
                                     onChange={(e) => setBioDraft(e.target.value)}
@@ -506,7 +505,7 @@ export default function PublicProfilePage(props: Props) {
                 )}
 
                 {/* 가입 정보 — 빈 값 행은 숨김 (구글 OAuth = 전화번호 미수집) */}
-                <div style={{ marginTop: 22, borderTop: `1px solid ${C.line}`, paddingTop: 4 }}>
+                <div style={{ marginTop: 20 }}>
                     {profile && profile.phone ? <InfoRow C={C} label="전화번호" value={profile.phone} mono /> : null}
                     <InfoRow C={C} label="가입일" value={fmtDate(profile ? profile.created_at : "")} />
                 </div>
@@ -522,7 +521,7 @@ export default function PublicProfilePage(props: Props) {
                         </button>
                     </div>
                 ) : (
-                    <div style={{ marginTop: 22, background: C.redSoft, border: `1px solid ${C.red}`, borderRadius: 16, padding: 16 }}>
+                    <div style={{ marginTop: 22, background: C.redSoft, borderRadius: 16, padding: 16 }}>
                         <div style={{ color: C.ink, fontSize: 14, fontWeight: 800 }}>정말 탈퇴할까요?</div>
                         <div style={{ color: C.sub, fontSize: 12.5, lineHeight: 1.5, marginTop: 6 }}>
                             탈퇴 시 계정이 비활성화되고 다시 로그인할 수 없어요. 관리자 확인 후 정보가 삭제돼요.
@@ -548,7 +547,7 @@ export default function PublicProfilePage(props: Props) {
 function InfoRow(props: { C: typeof LIGHT; label: string; value: string; mono?: boolean }) {
     const C = props.C
     return (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${C.line}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0" }}>
             <span style={{ color: C.faint, fontSize: 12.5 }}>{props.label}</span>
             <span style={{ color: C.ink, fontSize: 13.5, fontWeight: 600, fontFamily: props.mono ? FONT_MONO : FONT, fontVariantNumeric: "tabular-nums" }}>
                 {props.value}
@@ -574,8 +573,8 @@ function btnGhostDanger(C: typeof LIGHT): React.CSSProperties {
 
 function btnFlatHalf(C: typeof LIGHT): React.CSSProperties {
     return {
-        flex: 1, padding: "11px 0", border: `1px solid ${C.line}`, borderRadius: 12,
-        background: C.card, color: C.sub, fontSize: 13.5, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
+        flex: 1, padding: "11px 0", border: "none", borderRadius: 12,
+        background: C.field, color: C.sub, fontSize: 13.5, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
     }
 }
 
