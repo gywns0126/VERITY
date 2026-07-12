@@ -1,22 +1,19 @@
 {
  "_meta": {
-  "generated_at": "2026-07-12T14:25:38.810451+09:00",
+  "generated_at": "2026-07-12T14:53:45.431633+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "red",
- "reasons": [
-  "P0 stale 1건",
-  "CDN age 1974s > 120s(스테일 서빙)"
- ],
+ "status": "green",
+ "reasons": [],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-07-12T14:25:38.759033+09:00",
+  "generated_at": "2026-07-12T14:53:45.375750+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 1974,
+  "max_cdn_age_s": 0,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -26,7 +23,7 @@
      "PBR": 97.7
     },
     "total": 1599,
-    "cdn_age_s": 1974,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -68,15 +65,15 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-07-12T14:25:34.684774+09:00",
+  "generated_at": "2026-07-12T14:53:33.325772+09:00",
   "summary": {
-   "fresh": 18,
-   "stale": 1,
+   "fresh": 19,
+   "stale": 0,
    "closed": 9,
    "discontinued": 1,
    "p0": {
     "total": 6,
-    "fresh": 1,
+    "fresh": 2,
     "closed": 4,
     "active": 2
    },
@@ -93,13 +90,7 @@
     "active": 10
    }
   },
-  "stale_p0": [
-   {
-    "id": "crypto",
-    "label": "크립토 시세·파생",
-    "age_min": 96.4
-   }
-  ],
+  "stale_p0": [],
   "stale_other": []
  }
 }
