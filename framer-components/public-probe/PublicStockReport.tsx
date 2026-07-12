@@ -21,7 +21,9 @@ const LIGHT = {
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1",
-    faint: "#828d9b", line: "#252b34", grid: "#1e242c", up: "#f04452", upS: "#2a1a1d", down: "#5b9bff", downS: "#152031",
+    // down = #4a90f0 (2026-07-12) — 옛 #5b9bff 는 다크 표면 대비 OKLCH L=0.693 으로 다크 밴드(0.48~0.67)
+    //   이탈 FAIL (dataviz validator). 교체값은 등락쌍 전 항목 PASS (protan ΔE 79.8).
+    faint: "#828d9b", line: "#252b34", grid: "#1e242c", up: "#f04452", upS: "#2a1a1d", down: "#4a90f0", downS: "#152031",
     amber: "#ff9500", amberS: "#2a2113", green: "#34e08a", greenS: "#0f241c",
     vg: "#a99bff", vgS: "#241f3a", vt: "#a99bff", vtS: "#241f3a", tipBg: "#222a33", tipFg: "#e3e7ec", onAccent: "#0f1318",
 }
@@ -968,6 +970,213 @@ function StockReportSkeleton({ C, isDark, narrow }: { C: any; isDark: boolean; n
     )
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+   데이터 시각화 (2026-07-12) — dataviz 가이드 정합. 형태는 데이터의 '일'이 결정.
+
+   🚨 색 규칙 (validator 실측, 눈대중 아님):
+     · 등락 빨강(#f04452) / 파랑(#3182f6·다크 #4a90f0) = 다이버징 쌍. 전 항목 PASS (protan ΔE 80).
+     · 🚨 보라(C.vt) 는 차트 계열색 금지 — 파랑과 deutan ΔE 6.6 (안전 하한 8 미달, 적록색약 구분 불가).
+       보라 = UI 액센트(버튼·칩) 전용. 아래 두 차트는 등락색 + 중립 회색만 사용.
+     · 곡선 보간 금지(PM 2026-07-04) — 아래는 둘 다 막대(보간 자체가 없음).
+   RULE 7 = 사실만. 자체 점수·추천 0. 데이터 없으면 렌더 자체를 안 함(가짜 추세 0).
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* 한글 축약 금액 문자열 → 숫자 (예 "9043억" → 9.043e11, "−2318억" → −2.318e11, "3.1조" → 3.1e12).
+   음수 = U+2212(−) 또는 ASCII(-) 양쪽. 파싱 실패 = null (차트 미렌더 → 가짜 값 0). */
+function parseKRWCompact(v: any): number | null {
+    if (typeof v === "number") return isFinite(v) ? v : null
+    const raw = String(v == null ? "" : v).trim().replace(/,/g, "").replace(/\s/g, "")
+    if (!raw) return null
+    const neg = raw.charAt(0) === "−" || raw.charAt(0) === "-" || raw.charAt(0) === "△"
+    const body = neg ? raw.slice(1) : raw
+    const m = body.match(/^([0-9]*\.?[0-9]+)(조|억|만)?원?$/)
+    if (!m) return null
+    const n = parseFloat(m[1])
+    if (!isFinite(n)) return null
+    const unit = m[2]
+    const mul = unit === "조" ? 1e12 : unit === "억" ? 1e8 : unit === "만" ? 1e4 : 1
+    return (neg ? -1 : 1) * n * mul
+}
+
+/* 수급 — 외국인·기관 5일 순매매 다이버징 막대.
+   데이터의 일 = 부호 있는 크기 비교(사자/팔자) → 0 기준선 다이버징 막대. 색 = 등락 관례(+빨강/−파랑).
+   계열 2개(외국인·기관) = 범례 필수 + 직접 라벨. 호버 = 막대별 정확 주수 툴팁. */
+function FlowDivergingChart({ rows, C, narrow }: { rows: any[]; C: any; narrow: boolean }) {
+    const [hov, setHov] = useState<string>("")
+    // 🚨 측정폭 고정 렌더 — preserveAspectRatio="none" + width:100% 스트레치는 rect 의 rx(라운드)를
+    //    가로로 늘려 타원으로 왜곡 (PM 2026-07-04 QuarterlyTrend 학습). 실측 폭으로 그린다.
+    const boxRef = useRef<HTMLDivElement>(null)
+    const [bw, setBw] = useState(0)
+    useEffect(() => {
+        const el = boxRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((es) => { for (const e of es) setBw(e.contentRect.width) })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+    const data = (rows || []).filter((r) => r && (r.foreign_net != null || r.inst_net != null))
+    const maxAbs = Math.max(1, ...data.map((r) => Math.max(Math.abs(Number(r.foreign_net) || 0), Math.abs(Number(r.inst_net) || 0))))
+    const H = 132, MID = H / 2, AMP = MID - 16   // 상하 여백 = 직접 라벨 자리
+    const CW = Math.max(60, bw || 300)
+    const COLS = Math.max(1, data.length)
+    const colW = CW / COLS
+    const barW = Math.max(4, Math.min(14, colW * 0.3))   // 얇은 마크
+    const gap = Math.max(2, colW * 0.06)                 // 계열 사이 표면 간격
+    const SERIES = [
+        { key: "foreign_net", label: "외국인", off: -(barW / 2 + gap / 2) },
+        { key: "inst_net", label: "기관", off: (barW / 2 + gap / 2) },
+    ]
+    if (data.length < 2) return null
+    return (
+        <div ref={boxRef} style={{ position: "relative", padding: "4px 2px 0" }}>
+            {/* 범례 — 계열 2개 = 필수 (색 단독 식별 금지). 텍스트는 ink 토큰, 마크가 정체성 운반 */}
+            <div style={{ display: "flex", gap: 12, marginBottom: 6 }}>
+                {SERIES.map((s2) => (
+                    <span key={s2.key} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: C.sub }}>
+                        <span style={{ width: 9, height: 9, borderRadius: 3, background: s2.key === "foreign_net" ? C.ink : C.faint }} />
+                        {s2.label}
+                    </span>
+                ))}
+                <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 600, color: C.faint }}>위=순매수 · 아래=순매도</span>
+            </div>
+            <svg width={CW} height={H} viewBox={`0 0 ${CW} ${H}`} style={{ display: "block", overflow: "visible" }}>
+                <line x1={0} y1={MID} x2={CW} y2={MID} stroke={C.line} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                {data.map((r, i) => {
+                    const cx = colW * (i + 0.5)
+                    return SERIES.map((s2) => {
+                        const v = Number(r[s2.key]) || 0
+                        const h = (Math.abs(v) / maxAbs) * AMP
+                        const pos = v >= 0
+                        const col = pos ? C.up : C.down
+                        const x = cx + s2.off - barW / 2
+                        const y = pos ? MID - h : MID
+                        const id = i + ":" + s2.key
+                        // 4px 라운드 데이터 엔드 = 기준선에서 먼 쪽만. 최소 높이 1.5 (0 도 존재 표시)
+                        const hh = Math.max(1.5, h)
+                        return (
+                            <rect key={id} x={x} y={pos ? MID - hh : MID} width={barW} height={hh}
+                                rx={2} fill={col} opacity={hov && hov !== id ? 0.35 : 1}
+                                onMouseEnter={() => setHov(id)} onMouseLeave={() => setHov("")}
+                                style={{ cursor: "pointer", transition: "opacity 0.12s" }} />
+                        )
+                    })
+                })}
+            </svg>
+            {/* 날짜 축 — 직접 라벨(모든 점에 숫자 X) */}
+            <div style={{ display: "flex", marginTop: 4 }}>
+                {data.map((r, i) => (
+                    <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 10, fontWeight: 700, color: C.faint }}>{mmdd(r.date)}</div>
+                ))}
+            </div>
+            {/* 호버 툴팁 — 정확 주수(사실). 막대보다 큰 히트 타깃은 rect 자체 */}
+            {hov && (() => {
+                const [ii, key] = hov.split(":")
+                const r = data[Number(ii)]
+                if (!r) return null
+                const v = Number(r[key]) || 0
+                const lbl = key === "foreign_net" ? "외국인" : "기관"
+                return (
+                    <div style={{ marginTop: 6, background: C.tipBg, color: C.tipFg, borderRadius: 10, padding: "8px 11px", fontSize: 12, fontWeight: 600, lineHeight: 1.5 }}>
+                        <b>{dateDot(r.date)}</b> · {lbl} <span style={{ fontWeight: 800, color: v >= 0 ? "#ff8f97" : "#9fc6ff" }}>{fmtSharesExact(v)}</span>
+                        {r.close != null ? <span style={{ color: C.faint }}> · 종가 {wonStr(r.close)}</span> : null}
+                    </div>
+                )
+            })()}
+        </div>
+    )
+}
+
+/* 현금흐름 워터폴 — 영업 → 투자 → 재무 → 순증감.
+   데이터의 일 = 부호 있는 구성요소가 누적되어 합계를 이룸 → 워터폴(막대의 정석 용례).
+   토스·네이버·증권사 앱 어디에도 없는 뷰. 자체 산식 0 — DART 실값을 더하기만 함(RULE 7).
+   파싱 실패 항목이 하나라도 있으면 렌더 안 함(가짜 숫자 0). */
+function CashflowWaterfall({ group, C, narrow }: { group: any; C: any; narrow: boolean }) {
+    const [hov, setHov] = useState<number>(-1)
+    // 측정폭 고정 렌더 (PM 2026-07-04) — 스트레치 시 rx 라운드가 타원으로 왜곡됨
+    const boxRef = useRef<HTMLDivElement>(null)
+    const [bw, setBw] = useState(0)
+    useEffect(() => {
+        const el = boxRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((es) => { for (const e of es) setBw(e.contentRect.width) })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+    const rows: any[] = (group && Array.isArray(group.rows)) ? group.rows : []
+    const pick = (k: string) => { const r = rows.find((x: any) => String(x.k || "").indexOf(k) === 0); return r ? parseKRWCompact(r.v) : null }
+    const op = pick("영업활동"), inv = pick("투자활동"), fin = pick("재무활동")
+    if (op == null || inv == null || fin == null) return null
+    const steps = [
+        { label: "영업활동", v: op, note: "본업이 벌어들인 현금" },
+        { label: "투자활동", v: inv, note: "설비·지분 등에 쓴 현금" },
+        { label: "재무활동", v: fin, note: "차입·배당 등 자금 조달/상환" },
+    ]
+    const net = op + inv + fin
+    // 누적 경로 — 각 막대는 이전 누적에서 시작해 v 만큼 이동. 마지막 = 합계(0 기준 전체 막대).
+    let run = 0
+    const bars = steps.map((s2) => { const from = run; run += s2.v; return { ...s2, from, to: run } })
+    const all = [0, ...bars.map((b) => b.from), ...bars.map((b) => b.to), net]
+    const lo = Math.min(...all), hi = Math.max(...all)
+    const span = (hi - lo) || 1
+    const H = 150, PY = 22
+    const yAt = (v: number) => PY + (1 - (v - lo) / span) * (H - PY * 2)
+    const CW = Math.max(60, bw || 300)
+    const COLS = bars.length + 1
+    const colW = CW / COLS
+    const barW = Math.max(8, Math.min(34, colW * 0.44))
+    const zeroY = yAt(0)
+    const cells = [
+        ...bars.map((b, i) => ({ ...b, i, isTotal: false, top: Math.min(yAt(b.from), yAt(b.to)), bot: Math.max(yAt(b.from), yAt(b.to)) })),
+        { label: "순증감", v: net, note: "영업 + 투자 + 재무", from: 0, to: net, i: bars.length, isTotal: true, top: Math.min(zeroY, yAt(net)), bot: Math.max(zeroY, yAt(net)) },
+    ]
+    return (
+        <div ref={boxRef} style={{ position: "relative" }}>
+            <svg width={CW} height={H} viewBox={`0 0 ${CW} ${H}`} style={{ display: "block", overflow: "visible" }}>
+                <line x1={0} y1={zeroY} x2={CW} y2={zeroY} stroke={C.line} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                {cells.map((c) => {
+                    const cx = colW * (c.i + 0.5)
+                    const x = cx - barW / 2
+                    const h = Math.max(1.5, c.bot - c.top)
+                    // 합계 = 중립 회색(구성요소가 아니라 결과 — 색으로 계열 오인 방지). 구성 = 등락색.
+                    const col = c.isTotal ? C.faint : (c.v >= 0 ? C.up : C.down)
+                    return (
+                        <g key={c.i}>
+                            {/* 연결선 — 누적 흐름 (recessive) */}
+                            {c.i > 0 && !c.isTotal && (
+                                <line x1={colW * (c.i - 0.5) + barW / 2} x2={x} y1={yAt(c.from)} y2={yAt(c.from)}
+                                    stroke={C.line} strokeWidth={1} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+                            )}
+                            <rect x={x} y={c.top} width={barW} height={h} rx={2} fill={col}
+                                opacity={hov >= 0 && hov !== c.i ? 0.35 : 1}
+                                onMouseEnter={() => setHov(c.i)} onMouseLeave={() => setHov(-1)}
+                                style={{ cursor: "pointer", transition: "opacity 0.12s" }} />
+                        </g>
+                    )
+                })}
+            </svg>
+            {/* 라벨 + 값 — 직접 라벨(4개뿐이라 전부 표기 가능). 텍스트는 ink 토큰, 값만 등락색 */}
+            <div style={{ display: "flex", marginTop: 6 }}>
+                {cells.map((c) => (
+                    <div key={c.i} style={{ flex: 1, textAlign: "center", minWidth: 0 }}>
+                        <div style={{ fontSize: 10.5, fontWeight: 700, color: c.isTotal ? C.ink : C.faint, whiteSpace: "nowrap" }}>{c.label}</div>
+                        <div style={{ fontSize: narrow ? 11 : 12, fontWeight: 800, color: c.isTotal ? C.ink : (c.v >= 0 ? C.up : C.down), fontVariantNumeric: "tabular-nums" }}>
+                            {(c.v >= 0 ? "+" : "−") + fmtKRWcompact(Math.abs(c.v))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+            {hov >= 0 && cells[hov] && (
+                <div style={{ marginTop: 8, background: C.tipBg, color: C.tipFg, borderRadius: 10, padding: "8px 11px", fontSize: 12, fontWeight: 600, lineHeight: 1.5 }}>
+                    <b>{cells[hov].label}</b> · {cells[hov].note}
+                </div>
+            )}
+            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 10, lineHeight: 1.5 }}>
+                DART 현금흐름표 실값을 순서대로 누적 · 순증감 = 영업+투자+재무 (더하기만, 자체 산식 0) · 점수·추천 아님
+            </div>
+        </div>
+    )
+}
+
 function readBodyDark(): boolean {
     // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
     // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
@@ -1733,6 +1942,9 @@ export default function PublicStockReport(props: Props) {
                 <>
                     {sectionTitle("수급 — 외국인·기관 5일", "순매매량(주) · 네이버 · 탭=정확 수치", "수급")}
                     <div style={{ background: C.card, borderRadius: 16, padding: "8px 14px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                        {/* 다이버징 막대 — 외국인·기관 엇갈림을 한눈에. 아래 행 리스트는 정확 수치용으로 유지 */}
+                        <FlowDivergingChart rows={flowRows} C={C} narrow={narrow} />
+                        <div style={{ height: 1, background: C.line, margin: "12px 0 2px" }} />
                         {flowRows.map((r: any, i: number) => {
                             const opened = openFlow === i
                             return (
@@ -2042,6 +2254,26 @@ export default function PublicStockReport(props: Props) {
             )}
 
             {/* (구 '재무 추이' 연간 블록 = 위 병합 섹션 '연간 손익' 탭으로 이동, 2026-07-10) */}
+
+            {/* 현금흐름 워터폴 (2026-07-12) — 영업→투자→재무→순증감. DART 현금흐름표 실값 누적.
+                파싱 실패 시 컴포넌트가 null 반환 → 섹션 자동 숨김(가짜 숫자 0). KR 한정(미장은 현금흐름 그룹 부재). */}
+            {(() => {
+                const cf = finGroups.find((g: any) => String(g && g.title || "").indexOf("현금흐름") >= 0)
+                if (!cf) return null
+                // 🚨 파싱 가능 여부를 섹션 밖에서 먼저 판정 — JSX 엘리먼트는 항상 truthy 라
+                //    컴포넌트의 null 반환만으로는 섹션 제목·빈 카드가 남음.
+                const cfRows: any[] = Array.isArray(cf.rows) ? cf.rows : []
+                const pk = (k: string) => { const r = cfRows.find((x: any) => String(x.k || "").indexOf(k) === 0); return r ? parseKRWCompact(r.v) : null }
+                if (pk("영업활동") == null || pk("투자활동") == null || pk("재무활동") == null) return null
+                return (
+                    <>
+                        {sectionTitle("현금흐름", "DART · " + (financials.period || "최근 결산") + " · 실제 현금 이동")}
+                        <div style={{ background: C.card, borderRadius: 16, padding: narrow ? "16px 14px 14px" : "18px 18px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                            <CashflowWaterfall group={cf} C={C} narrow={narrow} />
+                        </div>
+                    </>
+                )
+            })()}
 
             {/* 공시·리스크 레이더 */}
             {disclosures.length > 0 && (
