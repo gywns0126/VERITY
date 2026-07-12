@@ -69,9 +69,33 @@ def test_guard_deepens_shallow_clone(ignore_cmd: str):
     )
 
 
-def test_guard_note_present():
-    """변경자가 회귀 이력을 보게 하는 인라인 경고 주석 (7/08 사고 재발 방지)."""
+def test_vercel_json_has_no_unknown_top_level_keys():
+    """🚨 vercel.json 은 스키마 밖 최상위 키를 넣으면 **배포가 통째로 FAIL** 한다.
+
+    실사고 2026-07-13: 가드 복원 PR 이 회귀 경고용으로 `_ignoreCommand_note` 키를 추가 →
+    프로덕션 배포가 config 검증 단계에서 즉시 실패(dpl_5gaCLRPMigoz…). 라이브는 직전 배포가
+    서빙 중이라 무사했으나 main 이 배포 불가 상태가 됨.
+    → vercel.json 에 주석·메모를 넣지 말 것. 설명은 vercel-api/IGNORE_COMMAND.md 에.
+    """
     with open(_VERCEL_JSON, encoding="utf-8") as f:
         doc = json.load(f)
-    note = doc.get("_ignoreCommand_note", "")
-    assert "RULE 2" in note, "_ignoreCommand_note 경고 소실 — 다음 편집자가 회귀 이력을 못 봄"
+    # Vercel 이 허용하는 최상위 키만 (현재 사용 중인 것 + 표준 스펙 일부)
+    allowed = {
+        "$schema", "cleanUrls", "ignoreCommand", "functions", "crons", "rewrites", "redirects",
+        "headers", "regions", "trailingSlash", "framework", "buildCommand", "installCommand",
+        "outputDirectory", "devCommand", "public", "github", "images",
+    }
+    unknown = sorted(k for k in doc if k not in allowed)
+    assert not unknown, (
+        f"vercel.json 스키마 밖 최상위 키: {unknown} — Vercel 이 거부해 **배포 전체가 FAIL** 함. "
+        "설명·경고는 vercel-api/IGNORE_COMMAND.md 에 둘 것 (2026-07-13 실사고)."
+    )
+
+
+def test_guard_doc_exists():
+    """회귀 이력·불변식 문서가 vercel.json 옆에 존재해야 함 (7/08 회귀 재발 방지)."""
+    doc_path = os.path.join(_ROOT, "vercel-api", "IGNORE_COMMAND.md")
+    assert os.path.isfile(doc_path), "vercel-api/IGNORE_COMMAND.md 소실 — 다음 편집자가 회귀 이력을 못 봄"
+    with open(doc_path, encoding="utf-8") as f:
+        body = f.read()
+    assert "RULE 2" in body and "N=50" in body, "IGNORE_COMMAND.md 에 RULE 2 / N=50 불변식 설명이 없음"
