@@ -296,12 +296,12 @@ export default function PublicPerspectiveMaps(props: { width?: number; dark?: bo
         return (
             <div style={{ position: "relative" }} onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => setDdOpen(on ? "" : key)}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${on ? C.violet : C.line}`, background: C.card, color: on ? C.violet : C.ink, fontFamily: FONT, fontSize: 12, fontWeight: 700, padding: "8px 11px", borderRadius: 11, cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, border: "none", background: on ? C.violetSoft : C.card, color: on ? C.violet : C.ink, fontFamily: FONT, fontSize: 12, fontWeight: 700, padding: "8px 11px", borderRadius: 11, cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                     <span style={{ color: C.faint, fontWeight: 600 }}>{label}</span>{cur ? cur.lb : val}
                     <CaretDown size={12} weight="bold" color={on ? C.violet : C.faint} style={{ transform: on ? "rotate(180deg)" : "none", transition: "transform .18s" }} />
                 </button>
                 {on ? (
-                    <div style={{ position: "absolute", top: "calc(100% + 5px)", left: 0, zIndex: 30, minWidth: 132, background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, boxShadow: "0 8px 22px rgba(0,0,0,0.16)", padding: 5 }}>
+                    <div style={{ position: "absolute", top: "calc(100% + 5px)", left: 0, zIndex: 30, minWidth: 132, background: C.card, borderRadius: 12, boxShadow: "0 8px 22px rgba(0,0,0,0.18)", padding: 5 }}>
                         {opts.map((o) => {
                             const s = o.k === val
                             return (
