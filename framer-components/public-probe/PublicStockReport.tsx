@@ -109,6 +109,7 @@ const INFO: Record<string, string> = {
     "공시이력": "이 종목이 유상증자·전환사채·감자 같은 주주가치 희석·리스크 공시를 언제 몇 번 냈는지의 사실 빈도예요. 반복이 잦을수록 참고하되, 그 자체가 좋다·나쁘다 판단은 아니에요.",
     "교차검증": "같은 지분율을 DART 공시와 공정거래위원회 공식 자료 두 곳에서 비교한 거예요. 일치하면 신뢰도가 높고, 차이가 나면 기준·시점 차이일 수 있어요.",
     "동종업계": "같은 섹터 종목들의 중앙값과 이 종목을 비교한 거예요. PER/PBR은 KRX 공식 시총÷DART 재무로 직접 계산했어요. 업종 대비 높은지/낮은지 사실 비교일 뿐, 판단은 아니에요.",
+    "교차피어": "이 종목을 반대 시장(국장↔미장)의 같은 GICS 섹터 종목 중앙값과 비교한 거예요. 어느 MTS도 잘 안 주는 교차시장 비교라 참고하되, 높다·낮다가 좋다·나쁘다 판단은 아니에요.",
     "내부자": "임원·주요주주가 자기 회사 주식을 사고(+, 빨강)·팔았는지(−, 파랑)예요. 내부 사정을 아는 사람의 매매라 참고하되, 그 자체가 매수·매도 신호는 아니에요.",
     "시장경보": "KRX가 공식 지정한 투자주의·투자경고·투자위험·단기과열·관리종목 상태예요. 거래소가 위험을 경고한 사실이라 꼭 확인하되, 자체 판단은 아니에요.",
     "컨센 목표가": "증권사들이 제시한 목표주가의 평균이에요. AlphaNest 자체 의견이 아니라 애널리스트 집계 사실이고, 자체 점수는 검증 후(2027) 공개해요.",
@@ -169,6 +170,8 @@ const DEFAULT_EMPLOYMENT = "https://rte5guenhonw9fzn.public.blob.vercel-storage.
 const ETF_FLOW_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_flow.json"
 const US_ETF_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_etf.json"
 const KR_INDEX_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_index_daily.json"
+const CROSS_KR_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/cross_gics_kr.json"  // KR↔US 교차피어: KR 섹터 중앙값
+const CROSS_US_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/cross_gics_us.json"  // KR↔US 교차피어: US 섹터 중앙값
 // 시세 컴플라이언스 — 실시간 시세·거래대금 상위 = 네이버 link-out(증권사 서빙 = 재배포 아님, 실시간·무료·합법)
 const NAVER_QUANT = "https://finance.naver.com/sise/sise_quant.naver"
 // 2026-07-11 정정 — 옛 /sise/trade = 404(네이버 경로 변경). 모바일/PC UA 양쪽 200 실측.
@@ -1022,6 +1025,7 @@ export default function PublicStockReport(props: Props) {
     const [lendAsOf, setLendAsOf] = useState<string>("")
     const [supplyMap, setSupplyMap] = useState<Record<string, any>>({})
     const [empMap, setEmpMap] = useState<Record<string, any>>({})
+    const [crossMed, setCrossMed] = useState<{ KR: Record<string, any>; US: Record<string, any> }>({ KR: {}, US: {} })
     const [selTicker, setSelTicker] = useState<string>(() => {
         if (typeof window !== "undefined") {
             try {
@@ -1176,6 +1180,20 @@ export default function PublicStockReport(props: Props) {
         fetch(UNIVERSE_URL).then((r) => (r.ok ? r.json() : null))
             .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a) && a.length) setSearchList(a) })
             .catch(() => {})
+        return () => { alive = false }
+    }, [onCanvas])
+
+    /* KR↔US 교차피어 (Tier B B-5) — 반대 시장 GICS 섹터 중앙값 테이블(전역·소형). 1회 로드. */
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        Promise.all([
+            fetch(CROSS_KR_URL).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+            fetch(CROSS_US_URL).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ]).then(([kr, us]: any[]) => {
+            if (!alive) return
+            setCrossMed({ KR: (kr && kr.medians) || {}, US: (us && us.medians) || {} })
+        })
         return () => { alive = false }
     }, [onCanvas])
 
@@ -1913,6 +1931,48 @@ export default function PublicStockReport(props: Props) {
                     </div>
                 </>
             )}
+
+            {/* KR↔US 교차피어 (Tier B B-5) — 반대 시장 동일 GICS 섹터 중앙값 비교. 어느 MTS도 안 주는 교차시장 사실(RULE 7) */}
+            {(() => {
+                const gics = s.gics
+                if (!gics) return null
+                const isKR = s.market !== "US"
+                const other = isKR ? crossMed.US : crossMed.KR
+                const om = other && other[gics]
+                if (!om || !om.median) return null
+                const otherLabel = isKR ? "미국" : "한국"
+                const secKo = s.gics_ko || om.sector_ko || gics
+                const KEYS = ["PER", "PBR", "ROE", "영업이익률"]
+                const rows = KEYS.map((k: string) => {
+                    const med = om.median[k]
+                    if (med == null) return null
+                    const pr = peer && peer.rows ? peer.rows.find((r: any) => r.key === k) : null
+                    if (!pr || pr.value == null) return null
+                    const own = parseFloat(String(pr.value).replace(/[%,\s]/g, ""))
+                    if (!isFinite(own)) return null
+                    const suf = k === "ROE" || k === "영업이익률" ? "%" : ""
+                    return { key: k, own: pr.value, med: med + suf, vs: own > med ? "above" : own < med ? "below" : "equal", n: (om.ns && om.ns[k]) || 0 }
+                }).filter(Boolean) as any[]
+                if (!rows.length) return null
+                return (
+                    <>
+                        {sectionTitle("KR↔US 교차피어 · " + secKo, otherLabel + " 동종 섹터 중앙값 비교", "교차피어")}
+                        <div style={{ background: C.card, borderRadius: 16, padding: "8px 16px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                            {rows.map((r: any, i: number) => (
+                                <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                                    <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.sub, fontWeight: 600 }}>{r.key}</span>
+                                    <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: C.ink, minWidth: 56, textAlign: "right" }}>{r.own}</span>
+                                    <span style={{ flexShrink: 0, fontSize: 11.5, color: C.faint, fontWeight: 600, minWidth: 96, textAlign: "right" }}>{otherLabel} {r.med}{r.n ? " (N=" + r.n + ")" : ""}</span>
+                                    <span style={{ flexShrink: 0, width: 16, textAlign: "center", fontSize: 13, fontWeight: 800, color: C.vt }}>{r.vs === "above" ? "↑" : r.vs === "below" ? "↓" : "="}</span>
+                                </div>
+                            ))}
+                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>
+                                {otherLabel} 상장사 중 같은 GICS 섹터(<b style={{ color: C.sub }}>{secKo}</b>) 종목의 중앙값과 비교 · 어느 MTS도 안 주는 교차시장 사실 — 높다·낮다가 좋다·나쁘다는 아님(RULE 7). 섹터=yfinance GICS(미상장분 SIC 근사).
+                            </div>
+                        </div>
+                    </>
+                )
+            })()}
 
             {/* 재무 추이 — 연간 손익(fin_series) / 분기 건전성(dart_quarterly) 탭 병합.
                 2026-07-10 PM: "재무 추이"·"분기 재무 추이" 두 섹션이 같은 걸로 보임(이름 혼동) → 한 섹션 탭 2개.

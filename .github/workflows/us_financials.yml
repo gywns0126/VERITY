@@ -112,7 +112,7 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/us_financials/ data/us_stock_report_public.json data/us_quarterly_public.json data/us_market_caps.json data/cache/universe_us.json
+          git add data/us_financials/ data/us_stock_report_public.json data/us_quarterly_public.json data/us_market_caps.json data/cache/universe_us.json data/cross_gics_us.json
           if git diff --staged --quiet; then
             echo "[us_financials] no changes"
             exit 0
