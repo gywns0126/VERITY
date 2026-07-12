@@ -1,21 +1,19 @@
 {
  "_meta": {
-  "generated_at": "2026-07-12T23:51:59.317229+09:00",
+  "generated_at": "2026-07-13T00:55:31.850916+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "amber",
- "reasons": [
-  "CDN age 3276s > 120s(스테일 서빙)"
- ],
+ "status": "green",
+ "reasons": [],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-07-12T23:51:59.264299+09:00",
+  "generated_at": "2026-07-13T00:55:31.797269+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 3276,
+  "max_cdn_age_s": 0,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -25,7 +23,7 @@
      "PBR": 99.4
     },
     "total": 1581,
-    "cdn_age_s": 3276,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -67,29 +65,29 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-07-12T23:51:52.203599+09:00",
+  "generated_at": "2026-07-13T00:55:23.620553+09:00",
   "summary": {
-   "fresh": 19,
+   "fresh": 26,
    "stale": 0,
-   "closed": 9,
+   "closed": 2,
    "discontinued": 1,
    "p0": {
     "total": 6,
-    "fresh": 2,
-    "closed": 4,
-    "active": 2
+    "fresh": 4,
+    "closed": 2,
+    "active": 4
    },
    "p1": {
     "total": 11,
-    "fresh": 7,
-    "closed": 3,
-    "active": 7
+    "fresh": 10,
+    "closed": 0,
+    "active": 10
    },
    "p2": {
     "total": 12,
-    "fresh": 10,
-    "closed": 2,
-    "active": 10
+    "fresh": 12,
+    "closed": 0,
+    "active": 12
    }
   },
   "stale_p0": [],
