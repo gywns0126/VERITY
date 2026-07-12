@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 /**
  * 데이터 신선도 board — 전 공개 스트림의 SLA 실측 상태 페이지 (나박 대응, 2026-07-07).
  * 데이터(Blob): freshness_board.json (freshness_board_builder — 매시 cron_health 사이클 갱신).
- * 행 = 스트림 한글명 + 갱신 주기 + 상태점(신선/지연/휴지) + 마지막 갱신 나이 + SLA 임계.
+ * 행 = 스트림 한글명 + 갱신 주기 + 상태점(신선/지연/휴장/중단) + 마지막 갱신 나이 + SLA 임계.
+ *   휴장 = 주말·장 마감 무생산(정상, 개장 시 재개) · 중단 = 수집 정지(은퇴·권리검토). "휴지"→"휴장" 정정 2026-07-12.
  *
  * 🚨 RULE 7 — 사실만: 상태 = 마지막 갱신 시각 실측 vs SLA 임계 비교. 점수/예측 0.
  * RULE 6 — LLM narrative 0. 다크모드 자가감지(body[data-framer-theme]). cache-fallback(sessionStorage).
@@ -14,16 +15,20 @@ import { useState, useEffect } from "react"
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
     line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", green: "#12b76a", red: "#f04438", gray: "#98a2b3",
+    // 휴장(장 마감 정상) = 차분한 슬레이트(알람 아님, 개장 시 재개) · 배너 소프트 배경
+    closed: "#7e8db3", closedSoft: "#eef1f8",
 }
 const DARK = {
     bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
     line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", green: "#3ecf8e", red: "#f97066", gray: "#667085",
+    closed: "#8b97bd", closedSoft: "#222738",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/freshness_board.json"
 
 const CRIT_LABEL: Record<string, string> = { P0: "핵심 데이터", P1: "보조 데이터", P2: "배경 데이터" }
-const STATUS_LABEL: Record<string, string> = { fresh: "신선", stale: "지연", paused: "휴지" }
+// 휴장 = 주말·장 마감 무생산(정상, 개장 시 재개) · 중단 = 수집 정지(은퇴·권리검토). paused 는 구 데이터 폴백.
+const STATUS_LABEL: Record<string, string> = { fresh: "신선", stale: "지연", closed: "휴장", discontinued: "중단", paused: "휴장" }
 
 function readBodyDark(): boolean {
     if (typeof document === "undefined" || !document.body) return false
@@ -48,14 +53,15 @@ function fmtAge(iso: any): string {
 
 const SAMPLE = {
     _meta: { generated_at: "", count: 27, note: "" },
-    summary: { fresh: 23, stale: 1, paused: 3 },
+    summary: { fresh: 22, stale: 1, closed: 2, discontinued: 1 },
     streams: [
-        { id: "price_pulse", label: "실시간 가격 펄스", criticality: "P0", cadence: "장중 1분", age_eff_min: 3, max_age_min: 30, status: "fresh" },
+        // 주말 프리뷰 — 시세·공시류가 휴장으로 뜨는 정상 케이스를 보이게
+        { id: "price_pulse", label: "실시간 가격 펄스", criticality: "P0", cadence: "장중 1분", age_eff_min: 3, max_age_min: 30, status: "closed" },
         { id: "macro_snapshot", label: "매크로 스냅샷", criticality: "P0", cadence: "1~2시간 주기", age_eff_min: 21, max_age_min: 360, status: "fresh" },
         { id: "crypto", label: "크립토 시세·파생", criticality: "P0", cadence: "30분 목표", age_eff_min: 145, max_age_min: 90, status: "stale" },
-        { id: "stock_report_public", label: "KR 종목 리포트", criticality: "P0", cadence: "매일 1회", age_eff_min: 142, max_age_min: 4320, status: "fresh" },
+        { id: "stock_report_public", label: "KR 종목 리포트", criticality: "P0", cadence: "매일 1회", age_eff_min: 142, max_age_min: 4320, status: "closed" },
         { id: "us_insider_trades", label: "US 내부자 거래 (Form 4)", criticality: "P1", cadence: "매일 1회", age_eff_min: 610, max_age_min: 2160, status: "fresh" },
-        { id: "us_analyst_consensus", label: "US 애널리스트 컨센서스", criticality: "P1", cadence: "수집 중단 — 재배포 권리 검토 중", status: "paused" },
+        { id: "us_analyst_consensus", label: "US 애널리스트 컨센서스", criticality: "P1", cadence: "수집 중단 — 재배포 권리 검토 중", status: "discontinued" },
         { id: "broker_guide", label: "증권사 가이드", criticality: "P2", cadence: "월 1회", age_eff_min: 8000, max_age_min: 50400, status: "fresh" },
     ],
 }
@@ -100,7 +106,7 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
     const meta = data._meta || {}
     const sum = data.summary || {}
     const streams: any[] = data.streams || []
-    const dotColor = (st: string) => (st === "fresh" ? C.green : st === "stale" ? C.red : C.gray)
+    const dotColor = (st: string) => (st === "fresh" ? C.green : st === "stale" ? C.red : (st === "closed" || st === "paused") ? C.closed : C.gray)
 
     const row = (s: any) => (
         <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 0", borderBottom: "1px solid " + C.line }}>
@@ -126,6 +132,10 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 0 6px" }}>
                 <span style={{ fontSize: 12, fontWeight: 800, color: C.sub }}>{CRIT_LABEL[crit] || crit}</span>
                 <span style={{ fontSize: 10.5, fontWeight: 700, color: C.faint }}>{rows.length}개</span>
+                {(() => {
+                    const nClosed = rows.filter((r) => r.status === "closed" || r.status === "paused").length
+                    return nClosed > 0 ? <span style={{ fontSize: 10.5, fontWeight: 700, color: C.closed }}>· 휴장 {nClosed}</span> : null
+                })()}
             </div>
             {rows.map(row)}
             <div style={{ height: 6 }} />
@@ -148,8 +158,10 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
                     {[
                         { t: "신선", n: sum.fresh, c: C.green },
                         { t: "지연", n: sum.stale, c: C.red },
-                        { t: "휴지", n: sum.paused, c: C.gray },
-                    ].map((x) => (
+                        // 휴장(정상) — 구 board(paused) 폴백 합산. 중단은 있을 때만 별도 노출.
+                        { t: "휴장", n: (Number(sum.closed) || 0) + (Number(sum.paused) || 0), c: C.closed },
+                        { t: "중단", n: sum.discontinued, c: C.gray },
+                    ].filter((x) => Number(x.n) > 0 || x.t === "신선" || x.t === "지연").map((x) => (
                         <span key={x.t} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: C.card, borderRadius: 999, padding: "4px 10px", fontSize: 11, fontWeight: 800, color: C.sub, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                             <span style={{ width: 6, height: 6, borderRadius: "50%", background: x.c }} />
                             {x.t} {Number(x.n) >= 0 ? x.n : "—"}
@@ -157,6 +169,16 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
                     ))}
                 </div>
             </div>
+
+            {/* 휴장 안내 — 주말·장 마감이라 무생산인 스트림이 있을 때만. "고장" 오해 차단(정상 · 개장 시 재개) */}
+            {((Number(sum.closed) || 0) + (Number(sum.paused) || 0)) > 0 && (
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: C.closedSoft, borderRadius: 12, padding: "10px 12px", marginTop: 10 }}>
+                    <span style={{ fontSize: 13, lineHeight: 1.3, flexShrink: 0 }}>🌙</span>
+                    <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, lineHeight: 1.5 }}>
+                        <b style={{ color: C.ink, fontWeight: 800 }}>휴장</b> = 주말·장 마감이라 새 데이터가 없는 <b style={{ color: C.ink, fontWeight: 700 }}>정상</b> 상태예요. 시세·공시 스트림은 개장(평일 09:00) 시 자동 재개됩니다.
+                    </div>
+                </div>
+            )}
 
             {p0.length > 0 && group("P0", p0)}
             {p1.length > 0 && group("P1", p1)}
@@ -173,8 +195,8 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
 
             {/* RULE 7 footer */}
             <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 12, lineHeight: 1.55 }}>
-                상태 = 마지막 갱신 시각 실측을 스트림별 SLA 임계와 비교한 사실 · 주말·장외 무생산 구간은
-                유효 나이에서 제외 (휴지) · 지연도 그대로 표시
+                상태 = 마지막 갱신 시각 실측을 스트림별 SLA 임계와 비교한 사실 · 주말·장 마감 무생산 구간은
+                유효 나이에서 제외 (휴장 = 정상, 개장 시 재개) · 수집 정지 스트림은 중단 · 지연도 그대로 표시
             </div>
         </div>
     )
