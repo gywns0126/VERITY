@@ -52,21 +52,30 @@ def test_guard_window_is_wide_enough(ignore_cmd: str):
 
 def test_guard_is_fail_open_on_missing_history(ignore_cmd: str):
     """히스토리 확보 실패 시 BUILD(exit 1). SKIP(exit 0) 은 배포 누락 = 더 나쁜 실패."""
-    # 객체 존재를 rev-parse 가 아니라 cat-file -e 로 검증해야 정확 (rev-parse 는 참조 해석만 하므로
-    # 얕은 클론에서 부모 SHA 가 '있는데 객체는 없는' 상태를 통과시킬 수 있음).
-    assert "cat-file -e" in ignore_cmd, (
-        "객체 존재 검증이 rev-parse 로 되어 있음 — rev-parse 성공 != 객체 존재. cat-file -e 사용 필요"
-    )
     assert "|| exit 1" in ignore_cmd, "fail-open(exit 1) 분기 소실 — 히스토리 부족 시 조용히 SKIP 될 위험"
-    # 마지막 판단은 '변경 없음 → SKIP'
-    assert ignore_cmd.rstrip().rstrip("'").endswith("exit 0"), "정상 경로(변경 없음)의 종료가 exit 0(SKIP) 이 아님"
 
 
-def test_guard_deepens_shallow_clone(ignore_cmd: str):
-    """Vercel 은 얕은 클론을 함 — 창을 계산하려면 먼저 히스토리를 깊게 파야 함."""
-    assert "--deepen" in ignore_cmd, (
-        "git fetch --deepen 이 없음 — 얕은 클론에서 N=50 창을 계산할 수 없어 매번 fail-open(빌드)로 떨어짐"
+def test_guard_has_no_double_quotes(ignore_cmd: str):
+    """🚨 ignoreCommand 에 이중따옴표를 넣지 말 것.
+
+    실사고 2026-07-13: 가드를 '개선'하며 `git cat-file -e "HEAD~$N^{commit}"` 처럼 이중따옴표를
+    넣었다가 **프로덕션 배포 전부 FAIL** (f33f90457 / ded9c8a3d). Vercel 이 ignoreCommand 를
+    셸에 넘길 때의 인용 처리와 충돌. 검증된 형태는 이중따옴표 0개.
+    """
+    assert '"' not in ignore_cmd, (
+        "ignoreCommand 에 이중따옴표가 있음 — 2026-07-13 배포 전면 FAIL 사고. 따옴표 없이 작성할 것."
     )
+
+
+def test_guard_does_not_network(ignore_cmd: str):
+    """🚨 ignoreCommand 안에서 네트워크 git 명령(fetch/clone/pull) 금지.
+
+    실사고 2026-07-13: `git fetch --deepen=60` 을 넣었다가 배포 FAIL. 빌드 컨테이너에서 자격증명이
+    없으면 fetch 가 프롬프트를 기다리며 hang → ignore 스텝 타임아웃 → 배포 실패.
+    로컬 히스토리만으로 판정할 것 (없으면 fail-open).
+    """
+    for bad in ("git fetch", "git clone", "git pull"):
+        assert bad not in ignore_cmd, f"ignoreCommand 에 네트워크 명령({bad}) — hang → 배포 FAIL 위험"
 
 
 def test_vercel_json_has_no_unknown_top_level_keys():
