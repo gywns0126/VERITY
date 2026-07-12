@@ -438,15 +438,17 @@ export default function PublicHeatmap(props: Props) {
     const skHi = isDark ? "#2d3742" : "#f3f5f7"
     const SKEL_W = [34, 22, 22, 14, 30, 16, 18, 12, 24, 16, 14, 10, 20, 12, 16, 10, 14, 22, 12, 16]
 
-    // 호버 카드 위치 — 클립 밖 외곽 div 기준(타일 좌표와 동일). 우/좌 플립 + 상/하 클램프(하단 근처면 위로).
+    // 호버 카드 위치 — 클립 밖 외곽 div 기준(타일 좌표와 동일). 우/좌 플립 + 상/하 클램프.
+    // 🚨 상단 타일(2026-07-12): 카드를 타일 '아래'로 anchor — 위로 펼치면 스크롤 시 sticky 네브바를 덮음(사용자 제보).
     const hoverCardPos = () => {
         const hx = hover.x * zoom.z + zoom.tx, hy = hover.y * zoom.z + zoom.ty, hw = hover.w * zoom.z, hh = hover.h * zoom.z
         const CW = 190, CH = 132, G = 8
         let cl = hx + hw + G
         if (cl + CW > chartW - 6) cl = hx - G - CW
         if (cl < 6) cl = Math.min(Math.max(6, hx + hw / 2 - CW / 2), chartW - CW - 6)
-        let ct = hy + hh / 2 - CH / 2
-        if (ct + CH > chartH - 6) ct = chartH - CH - 6   // 하단 넘치면 위로 밀기
+        // 상단 영역(카드 높이+여백 이내) 타일 = 카드 아래로 anchor(네브바 침범 방지). 그 외 = 타일 중앙 정렬.
+        let ct = hy < (CH + G) ? (hy + hh + G) : (hy + hh / 2 - CH / 2)
+        if (ct + CH > chartH - 6) ct = chartH - CH - 6    // 하단 넘치면 위로 밀기
         if (ct < 6) ct = 6
         return { cl, ct, CW }
     }
@@ -532,7 +534,7 @@ export default function PublicHeatmap(props: Props) {
                                         }}>
                                         {big && (
                                             <>
-                                                {tw > 52 && th > 50 && bfLogoSrc(t.m.ticker, __lmH, 16) ? (<img src={bfLogoSrc(t.m.ticker, __lmH, 16)} alt="" loading="lazy" decoding="async" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 5, marginBottom: 2, filter: bfLogoFilter(t.m.ticker), objectFit: "contain", padding: bfLogoPad(t.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(t.m.ticker) }} />) : null}
+                                                {tw > 52 && th > 50 ? (bfLogoSrc(t.m.ticker, __lmH, 16) ? (<img src={bfLogoSrc(t.m.ticker, __lmH, 16)} alt="" loading="lazy" decoding="async" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 5, marginBottom: 2, filter: bfLogoFilter(t.m.ticker), objectFit: "contain", padding: bfLogoPad(t.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(t.m.ticker) }} />) : (<span style={{ width: 16, height: 16, borderRadius: 5, marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: txt, background: col.strong ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.06)", boxSizing: "border-box" }}>{String(t.m.name || t.m.ticker).trim().charAt(0)}</span>)) : null}
                                                 <span style={{ fontSize: tw > 130 ? 13 : tw > 80 ? 12 : 10.5, fontWeight: 800, color: txt, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", letterSpacing: "-0.3px", textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.35)" : "none" }}>{t.m.name}</span>
                                                 {th > 42 && <span style={{ fontSize: 10.5, fontWeight: 700, color: txt, opacity: 0.92, marginTop: 1, textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.3)" : "none" }}>{tileValLabel(metric, v)}</span>}
                                             </>
@@ -560,7 +562,7 @@ export default function PublicHeatmap(props: Props) {
                             boxShadow: "0 8px 26px rgba(0,0,0,0.22)", padding: "9px 11px", zIndex: 20, pointerEvents: "none", boxSizing: "border-box",
                         }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                {bfLogoSrc(hover.m.ticker, __lmH, 18) ? (<img src={bfLogoSrc(hover.m.ticker, __lmH, 18)} alt="" loading="lazy" decoding="async" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 6, flexShrink: 0, filter: bfLogoFilter(hover.m.ticker), objectFit: "contain", padding: bfLogoPad(hover.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(hover.m.ticker) }} />) : null}
+                                {bfLogoSrc(hover.m.ticker, __lmH, 18) ? (<img src={bfLogoSrc(hover.m.ticker, __lmH, 18)} alt="" loading="lazy" decoding="async" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 6, flexShrink: 0, filter: bfLogoFilter(hover.m.ticker), objectFit: "contain", padding: bfLogoPad(hover.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(hover.m.ticker) }} />) : (<span style={{ width: 18, height: 18, borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: C.sub, background: C.bg, boxSizing: "border-box" }}>{String(hover.m.name || hover.m.ticker).trim().charAt(0)}</span>)}
                                 <span style={{ fontSize: 13, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{hover.m.name}</span>
                                 <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, flexShrink: 0 }}>{hover.m.ticker}</span>
                             </div>
