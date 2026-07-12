@@ -99,6 +99,9 @@ def _resolve_events(now_utc: datetime) -> list[str]:
     #   (daily_realtime 패턴). 미장/FX 는 야간(KST)에도 움직이므로 세션 게이트 없이 항상.
     if minute % 30 == 0:
         events.append("macro_collect")
+        # crypto_collect — 매 30분 24/7 (크립토 시세·파생, freshness_sla schedule="always", SLA 90분).
+        # 2026-07-12: GH schedule '5,35' silent-skip 으로 최대 3~4h 갭 → dispatch 단일통로 이전(macro 패턴).
+        events.append("crypto_collect")
 
     # daily_analysis quick — 매시 :07, KR 장외 (UTC 8-15 평일) OR 저녁 (UTC 16-22 Sun-Thu)
     if minute == 7:
