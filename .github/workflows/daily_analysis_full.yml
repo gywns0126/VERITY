@@ -71,6 +71,15 @@ jobs:
         with:
           # B-3: brain_evolution.collect_evolution_log 가 git log 30 commit 분석 필요
           fetch-depth: 100
+          # 🚨 2026-07-13 — pin 된 SHA 가 아니라 job 시작 시점의 main tip 을 받는다.
+          #   스케줄 run 은 트리거 시각의 SHA(github.sha)에 고정된다. universe_scan(UTC 06:30 시작)과
+          #   이 워크플로(UTC 07:07)는 같은 concurrency group(verity-data-write, cancel-in-progress:false)
+          #   이라 큐로 직렬화되지만, checkout 이 pin 된 SHA 를 쓰면 스캔이 그 뒤에 커밋한 신 스냅샷을
+          #   못 본다. 실사고 2026-07-13(월): scan 이 43분 걸려 07:13:50 커밋(ee9761bfe) → daily_analysis
+          #   는 07:07:50 의 SHA(c413cf5a3)를 체크아웃 → 금요일 candidates(68.8h) → 26h 게이트 abort
+          #   → 하위 빌더 24개 전부 skip. (스캔 소요가 35분→43분으로 늘며 37분 오프셋을 추월)
+          #   ref=main → 큐 대기 후 실행되므로 스캔 커밋이 반드시 포함된다. 요일 무관하게 경합 소멸.
+          ref: main
 
       - name: Setup Python
         uses: actions/setup-python@v5

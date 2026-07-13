@@ -2460,7 +2460,12 @@ def main():
     #   is_weekend(토/일)만 96h 적용 시 월요일 새벽(평일 취급)은 26h 게이트에 걸려 abort + 시간당
     #   텔레그램 알림 폭주 (5/30~6/1 사고: daily_analysis 월요일 장전 5연속 실패). markets closed →
     #   주말~월요일 scan 전까지 universe 불변이므로 금요일 candidates 재사용이 정합 (RULE 8 / [[feedback_weekday_check_mandatory]]).
-    is_pre_scan_monday = _wd == 0 and _now_kst_dt.hour < 16
+    # 2026-07-13: 경계 16 → 17. universe_scan 은 KST 15:30 시작이지만 소요가 35→43분으로 늘어
+    #   실착지가 16:05~16:15 KST. daily_analysis_full 은 KST 16:07 트리거라 hour==16 구간에 들어오는데
+    #   옛 경계(hour < 16)는 그 구간을 못 덮어 월요일에 26h 게이트로 abort 했다(7/13 실사고).
+    #   주 수리는 checkout ref=main(경합 소멸). 이 관용창은 scan 이 아예 실패했을 때의 안전망 —
+    #   중단(하위 빌더 24개 skip) 대신 금요일 candidates 로 degrade. markets closed 구간이라 정합.
+    is_pre_scan_monday = _wd == 0 and _now_kst_dt.hour < 17
     max_stale_hours = 96 if (is_weekend or is_pre_scan_monday) else 26
     try:
         from api.utils.universe_candidates import load_universe_candidates
