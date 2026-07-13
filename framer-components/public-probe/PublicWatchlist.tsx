@@ -51,6 +51,23 @@ const SEED = [
     { ticker: "000660", name: "SK하이닉스", market: "kr" },
 ]
 
+// 🚨 익명 로컬 스크래치 세션 초기화 (2026-07-13) — 공개 페이지는 로그인 없이 접근 → 공유기기 익명 누출 차단.
+//   새 브라우저 세션(새 방문)마다 1회. 로그인 회원 = 서버(/api/watchgroups) 저장이라 로컬=스크래치 →
+//   유효 세션 있으면 skip(회원 보존), 없으면 clear(익명 초기화). verity_theme(기기설정)은 유지.
+function sessionResetScratch() {
+    if (typeof window === "undefined") return
+    try {
+        if (sessionStorage.getItem("verity_session_init")) return
+        sessionStorage.setItem("verity_session_init", "1")
+        let member = false
+        try {
+            const s = JSON.parse(localStorage.getItem("verity_supabase_session") || "null")
+            member = !!(s && s.access_token && (!s.expires_at || Date.now() / 1000 < s.expires_at))
+        } catch (e) {}
+        if (member) return
+        for (const k of ["verity_watchlist", "verity_last_ticker", "verity_recent_tickers", "verity_thesis_v1", "verity_thesis_migrated_v1"]) localStorage.removeItem(k)
+    } catch (e) {}
+}
 function loadWatch(): any[] {
     if (typeof window === "undefined") return SEED
     try {
@@ -117,7 +134,7 @@ export default function PublicWatchlist(props: Props) {
         return () => ro.disconnect()
     }, [])
 
-    useEffect(() => { if (!onCanvas) setWatch(loadWatch()) }, [onCanvas])
+    useEffect(() => { if (!onCanvas) { sessionResetScratch(); setWatch(loadWatch()) } }, [onCanvas])
 
     /* 내 관점(thesis) 로드 — mount + focus/이벤트 재읽기(다른 페이지서 기록 반영) */
     useEffect(() => {
