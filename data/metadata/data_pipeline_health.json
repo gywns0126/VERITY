@@ -2,9 +2,9 @@
   "collected_at": "2026-07-13T16:03:20+09:00",
   "overall_status": "error",
   "summary": {
-    "fresh": 14,
+    "fresh": 15,
     "stale": 0,
-    "missing": 1,
+    "missing": 0,
     "total": 15
   },
   "items": [
@@ -19,9 +19,9 @@
       "last_update_kst": "2026-07-13T16:01:24.113924+09:00",
       "age_hours": 0.03,
       "status": "fresh",
-      "line_count": 305,
+      "line_count": 309,
       "last_entry": {
-        "ts": "2026-07-10T19:32:31.408965+09:00",
+        "ts": "2026-07-13T16:05:33.061834+09:00",
         "step": "f_sector_diversified",
         "mode": "SHADOW",
         "input_n": 100,
@@ -39,9 +39,9 @@
       "last_update_kst": "2026-07-13T16:01:23.958923+09:00",
       "age_hours": 0.03,
       "status": "fresh",
-      "line_count": 41950,
+      "line_count": 44839,
       "last_entry": {
-        "ts": "2026-07-10T19:38:26.929461+09:00"
+        "ts": "2026-07-13T16:13:46.914472+09:00"
       }
     },
     {
@@ -100,7 +100,7 @@
         "candidates_count": 25,
         "kr_count": 10,
         "us_count": 15,
-        "elapsed_s": 2158.62,
+        "elapsed_s": 2186.22,
         "used_prev_snapshot": false
       }
     },
@@ -115,13 +115,15 @@
       "last_update_kst": "2026-07-13T16:01:23.758923+09:00",
       "age_hours": 0.03,
       "status": "fresh",
-      "line_count": 619,
+      "line_count": 620,
       "last_entry": {
-        "mode": "quick",
-        "ramp_up_stage": 0,
-        "execution_time_seconds": 0.0,
-        "fail_triggers": [],
-        "yfinance_failure_rate": 0.0
+        "mode": "universe_scan",
+        "ramp_up_stage": 5000,
+        "execution_time_seconds": 2185.31,
+        "fail_triggers": [
+          "execution_time_50pct_overrun"
+        ],
+        "yfinance_failure_rate": 0.0006
       }
     },
     {
