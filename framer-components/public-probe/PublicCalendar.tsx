@@ -64,19 +64,6 @@ function StockDot(props: { ticker: any; name: any; size?: number }) {
         style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), objectFit: "contain", display: "block", flexShrink: 0 }} />
 }
 
-// 날짜 셀용 초미니 로고 — 카테고리 색 링으로 '무슨 이벤트'까지 전달. 티커 없으면(IPO 등) 색 점.
-function DayLogo(props: { ev: any; size: number; ringOnDark?: boolean }) {
-    const { ev, size } = props
-    const [err, setErr] = useState(false)
-    const src = tossLogo(ev.ticker)
-    const c = CAT[ev.cat] ? CAT[ev.cat].c : "#8b95a1"
-    if (!ev.ticker || err || !src) {
-        return <span style={{ width: size, height: size, borderRadius: "50%", background: c, flexShrink: 0, display: "block" }} />
-    }
-    return <img src={src} alt="" width={size} height={size} loading="lazy" decoding="async" onError={() => setErr(true)}
-        style={{ width: size, height: size, borderRadius: Math.round(size * 0.28), objectFit: "contain", display: "block", flexShrink: 0, boxShadow: "0 0 0 1.5px " + c }} />
-}
-
 function readBodyDark(): boolean {
     try {
         if (typeof document !== "undefined" && document.body) {
@@ -292,7 +279,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                             const evs = byDate[ds] || []
                             const isToday = ds === todayStr
                             const isSel = ds === selDate
-                            const maxLogos = narrow ? 2 : 3
+                            const cats = Array.from(new Set(evs.map((e: any) => e.cat))).slice(0, 3)
                             return (
                                 <button key={i} onClick={() => setSelDate(isSel ? "" : ds)} disabled={!inMonth && evs.length === 0}
                                     style={{
@@ -306,9 +293,9 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                                         {isToday && !isSel && <span style={{ position: "absolute", left: "50%", bottom: -3, transform: "translateX(-50%)", width: 3, height: 3, borderRadius: "50%", background: C.vt }} />}
                                     </span>
                                     {evs.length > 0 && (
-                                        <span style={{ display: "flex", gap: 2, alignItems: "center", maxWidth: "100%" }}>
-                                            {evs.slice(0, maxLogos).map((e, j) => <DayLogo key={j} ev={e} size={narrow ? 11 : 14} />)}
-                                            {evs.length > maxLogos && <span style={{ fontSize: 8.5, fontWeight: 800, color: isSel ? C.todayInk : C.faint, marginLeft: 1 }}>+{evs.length - maxLogos}</span>}
+                                        <span style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                                            {cats.map((cat, j) => <span key={j} style={{ width: 5, height: 5, borderRadius: "50%", background: isSel ? C.todayInk : (CAT[cat] ? CAT[cat].c : C.faint) }} />)}
+                                            {evs.length > 3 && <span style={{ fontSize: 8.5, fontWeight: 800, color: isSel ? C.todayInk : C.faint, marginLeft: 1 }}>+{evs.length - 3}</span>}
                                         </span>
                                     )}
                                 </button>
