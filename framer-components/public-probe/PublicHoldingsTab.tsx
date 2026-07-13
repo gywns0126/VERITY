@@ -353,15 +353,25 @@ export default function PublicHoldingsTab(props: Props) {
         if (onCanvas) return
         const token = getToken()
         if (!token) { setIsDemo(true); setRows(SAMPLE); setLoading(false); return }
+        // 🚨 토큰 있으면 즉시 로그인 화면 전환 (API 응답 기다리지 않음 — 로그인했는데 CTA 뜨는 사고 방지, 2026-07-13)
+        setIsDemo(false)
         setLoading(true)
         fetch(base + "/api/holdings", { headers: { Authorization: "Bearer " + token } })
             .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { if (Array.isArray(d)) { setIsDemo(false); setRows(d) } })
+            .then((d) => { if (Array.isArray(d)) setRows(d); else if (d && Array.isArray(d.holdings)) setRows(d.holdings) })
             .catch(() => {})
             .finally(() => setLoading(false))
     }, [base, onCanvas])
 
-    useEffect(() => { loadHoldings() }, [loadHoldings])
+    // 마운트 + 로그인/로그아웃(verity_auth_change·다른 탭 storage) 시 재평가 → 로그인 상태 자동 전환.
+    useEffect(() => {
+        loadHoldings()
+        if (onCanvas || typeof window === "undefined") return
+        const onAuth = () => loadHoldings()
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => { window.removeEventListener("verity_auth_change", onAuth); window.removeEventListener("storage", onAuth) }
+    }, [loadHoldings])
 
     // 검색 유니버스(KR+US ~8.9천, universe_search) — 보유/거래 추가 패널 열 때 1회 lazy 로드.
     useEffect(() => {
