@@ -121,6 +121,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
     const [selDate, setSelDate] = useState<string>("")
     const [catFilter, setCatFilter] = useState<string>("")
     const [w, setW] = useState(0)
+    const [listOpen, setListOpen] = useState(false)   // 모바일 리스트 더보기 펼침
     const rootRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -154,6 +155,9 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
             .catch(() => { try { const c = sessionStorage.getItem("calendar_public"); if (alive && c) setData(JSON.parse(c)) } catch (e) {} })
         return () => { alive = false }
     }, [onCanvas, props.dataUrl])
+
+    // 리스트 더보기 = 달/선택일/필터가 바뀌면 다시 접기
+    useEffect(() => { setListOpen(false) }, [selDate, cur, catFilter])
 
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -209,6 +213,11 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
         return rows
     }, [events, cur, catFilter])
     const listShown = selDate ? selEvents : monthList
+    // 🚨 모바일 = 이벤트가 많으면 나열이 길어 불편 → 6건 컷 + 더보기. 데스크톱은 스크롤 카드라 전량.
+    // 🔔 향후: 보유종목(holdings) 연동 시 = 사용자 보유 종목 이벤트 우선/필터 (개인화). 지금은 전 종목.
+    const LIST_CAP = 6
+    const listCapped = narrow && !listOpen && listShown.length > LIST_CAP
+    const listRows = listCapped ? listShown.slice(0, LIST_CAP) : listShown
 
     const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: narrow ? 14 : 20, boxSizing: "border-box", color: C.ink }
     const cardS: CSSProperties = { background: C.card, borderRadius: 18, padding: narrow ? "16px 14px" : "22px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }
@@ -322,7 +331,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                         </div>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            {listShown.map((e, i) => {
+                            {listRows.map((e, i) => {
                                 const cat = CAT[e.cat] || { label: e.cat, c: C.faint, s: C.track }
                                 return (
                                     <div key={i} onClick={() => goStock(e.ticker)} role={e.ticker ? "button" : undefined}
@@ -343,6 +352,12 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                                     </div>
                                 )
                             })}
+                            {narrow && listShown.length > LIST_CAP ? (
+                                <button onClick={() => setListOpen((v) => !v)}
+                                    style={{ width: "100%", marginTop: 2, border: "none", cursor: "pointer", fontFamily: FONT, background: C.hi, color: C.vt, borderRadius: 12, padding: "11px 0", fontSize: 12.5, fontWeight: 800 }}>
+                                    {listOpen ? "접기" : `더보기 (${listShown.length - LIST_CAP}건 더)`}
+                                </button>
+                            ) : null}
                         </div>
                     )}
                 </div>
