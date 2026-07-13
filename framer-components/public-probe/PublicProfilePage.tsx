@@ -70,7 +70,13 @@ function loadSession(): SupaSession | null {
 }
 
 function clearSession() {
-    if (typeof window !== "undefined") localStorage.removeItem(SESSION_KEY)
+    if (typeof window === "undefined") return
+    localStorage.removeItem(SESSION_KEY)
+    // 🚨 로그아웃 = 기기 초기화(다음 사용자 익명 누출 차단) — 로컬 스크래치 클리어. verity_theme(기기설정) 유지.
+    for (const k of ["verity_watchlist", "verity_last_ticker", "verity_recent_tickers", "verity_thesis_v1", "verity_thesis_migrated_v1"]) {
+        try { localStorage.removeItem(k) } catch (e) {}
+    }
+    try { sessionStorage.removeItem("verity_session_init") } catch (e) {}   // 세션 가드 재평가 허용
 }
 
 async function fetchProfile(
