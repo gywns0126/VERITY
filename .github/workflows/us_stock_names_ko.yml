@@ -36,7 +36,12 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - name: Install deps
-        run: pip install requests
+        # 🚨 `pip install requests` 만으로는 죽는다 — `python -m api.collectors.<x>` 는 패키지
+        #    __init__.py 를 실행하고, 그게 bonddata → api/config.py → `from dotenv import load_dotenv`
+        #    를 끌어온다. 첫 실행(2026-07-12)이 ModuleNotFoundError: No module named 'dotenv' 로 실패.
+        #    2026-05-27 cockpit dotenv 사고와 동일 패턴 (워크플로 7축 audit 6번: pip/requirements 정합).
+        #    다른 워크플로 관례도 전부 -r requirements.txt (cache-dependency-path 도 이미 그걸 가리킴).
+        run: pip install -r requirements.txt
 
       - name: Collect US Korean names (Naver autocomplete)
         env:
