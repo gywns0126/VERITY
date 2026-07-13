@@ -1,19 +1,19 @@
 {
-  "updated_at": "2026-07-06T10:22:34.388324+09:00",
+  "updated_at": "2026-07-13T10:11:03.377177+09:00",
   "source": "DART OpenAPI list.json (C001 증권신고서/지분증권, corp_cls=E)",
   "search_window_days": 88,
   "disclaimer": "watch list (후보 신호, 가설 N=0). 추천 아님 — 상장 전은 가격 데이터가 없어 검증 trail 미적용. 상장 후 funnel 편입 시점부터 검증 시작.",
-  "raw_c001_count": 282,
+  "raw_c001_count": 288,
   "count": 8,
   "watch": [
     {
       "corp_name": "에이치엘지노믹스",
       "corp_code": "00624244",
-      "rcept_no": "20260702000548",
-      "rcept_dt": "20260702",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260702000548",
-      "stage": "정정",
+      "rcept_no": "20260710000294",
+      "rcept_dt": "20260710",
+      "report_nm": "[발행조건확정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260710000294",
+      "stage": "확정",
       "offering": {
         "shares": 2565000,
         "price_planned": 18500,
@@ -23,31 +23,85 @@
         "subscribe_end": "2026.07.14"
       },
       "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
+    {
+      "corp_name": "케이앤에스아이앤씨",
+      "corp_code": "00920731",
+      "rcept_no": "20260708000575",
+      "rcept_dt": "20260708",
+      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260708000575",
+      "stage": "정정",
+      "offering": {
+        "shares": 2400000,
+        "price_planned": 9000,
+        "total_planned": 21600000000,
+        "payment_date": "2026.07.30",
+        "subscribe_start": "2026.07.27",
+        "subscribe_end": "2026.07.28"
+      },
+      "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
+    {
+      "corp_name": "스카이랩스",
+      "corp_code": "01586923",
+      "rcept_no": "20260707000316",
+      "rcept_dt": "20260707",
+      "report_nm": "증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260707000316",
+      "stage": "최초",
+      "offering": {
+        "shares": 2000000,
+        "price_planned": 13000,
+        "total_planned": 26000000000,
+        "payment_date": "2026.08.19",
+        "subscribe_start": "2026.08.13",
+        "subscribe_end": "2026.08.13"
+      },
+      "doc_financials": {
         "available": true,
-        "unit": "원",
+        "unit": "백만원",
         "periods": [
-          "2026년 1분기(제27기)",
-          "2025년(제26기)",
-          "2024년(제25기)",
-          "2023년(제24기)"
+          "2026년(E) (제12기)",
+          "2027년(E) (제13기)",
+          "2028년(E) (제14기)",
+          "2029년(E) (제15기)",
+          "2030년(E) (제16기)"
         ],
         "revenue": [
-          8435361500,
-          28877071351,
-          28166550706,
-          24811218833
+          10207,
+          18765,
+          38706,
+          57029,
+          77973
         ],
         "operating_income": [
-          2890137504,
-          9327922068,
-          8954361655,
-          7666923781
+          -15439,
+          -10418,
+          4686,
+          16976,
+          30540
         ],
         "net_income": [
-          2675663011,
-          8452467677,
-          8414919262,
-          7158279258
+          -15181,
+          -10136,
+          4967,
+          17258,
+          30822
         ]
       },
       "doc_parse_error": null,
@@ -173,31 +227,6 @@
       }
     },
     {
-      "corp_name": "레메디",
-      "corp_code": "01501764",
-      "rcept_no": "20260626000241",
-      "rcept_dt": "20260626",
-      "report_nm": "[발행조건확정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260626000241",
-      "stage": "확정",
-      "offering": {
-        "shares": 1200000,
-        "price_planned": 17800,
-        "total_planned": 21360000000,
-        "payment_date": "2026.07.06",
-        "subscribe_start": "2026.07.01",
-        "subscribe_end": "2026.07.02"
-      },
-      "doc_financials": {
-        "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      }
-    },
-    {
       "corp_name": "니어스랩",
       "corp_code": "01588897",
       "rcept_no": "20260625000626",
@@ -256,31 +285,6 @@
         "payment_date": "2026.08.06",
         "subscribe_start": "2026.08.03",
         "subscribe_end": "2026.08.04"
-      },
-      "doc_financials": {
-        "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      }
-    },
-    {
-      "corp_name": "케이앤에스아이앤씨",
-      "corp_code": "00920731",
-      "rcept_no": "20260615000244",
-      "rcept_dt": "20260615",
-      "report_nm": "[정정제출요구][기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260615000244",
-      "stage": "정정",
-      "offering": {
-        "shares": 2400000,
-        "price_planned": 9000,
-        "total_planned": 21600000000,
-        "payment_date": "2026.07.30",
-        "subscribe_start": "2026.07.27",
-        "subscribe_end": "2026.07.28"
       },
       "doc_financials": {
         "available": false
