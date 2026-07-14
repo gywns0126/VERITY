@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-07-14T10:33:02+09:00",
+  "collected_at": "2026-07-14T11:32:50+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
@@ -16,7 +16,7 @@
       "active": true,
       "drivers": {
         "fng": 22.0,
-        "search_trend_pct": -7.6
+        "search_trend_pct": -9.0
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -27,8 +27,8 @@
       "active": true,
       "drivers": {
         "funding_signal": "neutral",
-        "put_call_oi": 0.548,
-        "long_short_ratio": 1.77
+        "put_call_oi": 0.547,
+        "long_short_ratio": 1.75
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
@@ -50,7 +50,7 @@
       "read": "neutral",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": -2.66
+        "btc_change_pct_7d": -2.86
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -61,7 +61,7 @@
       "active": false,
       "drivers": {
         "ssr": 4.86,
-        "stablecoin_supply_usd": 257450644615.89566
+        "stablecoin_supply_usd": 257347056827.87946
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -73,14 +73,14 @@
       "drivers": {
         "top_protocol_fees_24h": {
           "name": "Tether",
-          "fees_24h": 15919132.0
+          "fees_24h": 16004633.0
         },
         "protocol_count": 25
       },
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 62449.0,
+  "btc_price_at_call": 62324.0,
   "trail": [
     {
       "date": "2026-06-24",
@@ -226,7 +226,7 @@
       "date": "2026-07-14",
       "call": "risk_on",
       "net_score": 2,
-      "btc_price": 62449.0,
+      "btc_price": 62324.0,
       "active_dims": 4
     }
   ],
@@ -236,7 +236,7 @@
         "horizon_days": 7,
         "n": 4,
         "hit_rate": 0.25,
-        "mean_realized_return": 0.032491,
+        "mean_realized_return": 0.031494,
         "label": "통계 무의미 (N<30)"
       },
       {
