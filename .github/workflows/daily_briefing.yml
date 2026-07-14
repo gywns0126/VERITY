@@ -7,15 +7,18 @@ name: Daily Briefing (모닝 브리핑 — 홈 카드)
 #  1 env: 없음 (순수 변환 — 로컬 data/ 만 읽음)
 #  2 push trigger: vercel-api/ 미변경 — Vercel deploy 무관 (RULE 2)
 #  3 concurrency: 전용 그룹 (verity-data-write 공유 시 pending 축출 — 7/4 학습)
-#  4 cron: UTC 22:30 = KST 07:30 일 1회 (아침 브리핑). gh cron 지연 수 분 허용 범위
+#  4 cron: UTC 22:30 = KST 07:30 아침 발행 + workflow_run 체인(kr_chart_daily 완료 시 = 지수 kr_index_daily 최신화 직후 오후 자동 재발행 → 시장 recap 을 어제 종가로 갱신). 2026-07-14 신설: 아침엔 FSC T+1 지연으로 recap 이 직전 영업일 이전에 머무는 문제 해소. gh cron 지연은 컴포넌트 generated_at 표시로 흡수(고정 시각 표기 폐기).
 #  5 KIS: 0 (RULE 1 무관)
 #  6 pip: 불요 (stdlib only) — setup-python 만
-#  7 N=2: push 후 dispatch(N=1) + 익일 scheduled(N=2) 검증 의무 (RULE 8)
+#  7 N=2: push 후 dispatch(N=1) + 익 kr_chart_daily 체인/scheduled(N=2) 실 결과 검증 의무 (RULE 8)
 # RULE 4: 산출 daily_briefing.json + daily_briefing_history.jsonl = git add data/ (broad) 커버.
 
 on:
   schedule:
-    - cron: '30 22 * * *'   # KST 07:30 매일
+    - cron: '30 21 * * *'   # KST 06:30 생성 — 컴포넌트가 07:30 에 embargo 노출(교체)하므로, gh cron 지연을 흡수해 07:30 전 콘텐츠 준비 완료 보장
+  workflow_run:
+    workflows: ["KR Chart Daily (FSC public data)"]   # 지수(kr_index_daily) 최신화 완료 직후 자동 재발행 → recap 어제 종가 반영
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -27,6 +30,8 @@ concurrency:
 
 jobs:
   briefing:
+    # 체인(workflow_run) 은 소스(kr_chart_daily) 성공 시에만 — schedule/workflow_dispatch 는 항상 실행.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
