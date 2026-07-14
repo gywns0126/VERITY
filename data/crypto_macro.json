@@ -2,41 +2,41 @@
   "available": true,
   "fear_and_greed": {
     "ok": true,
-    "value": 28,
-    "label": "Fear",
-    "prev_value": 26,
-    "change": 2,
-    "signal": "fear"
+    "value": 22,
+    "label": "Extreme Fear",
+    "prev_value": 28,
+    "change": -6,
+    "signal": "extreme_fear"
   },
   "funding_rate": {
     "ok": true,
-    "rate": 7.37294314122e-05,
-    "rate_pct": 0.0074,
+    "rate": 6.45896266171e-05,
+    "rate_pct": 0.0065,
     "prev_rate_pct": null,
     "signal": "neutral",
-    "timestamp": "1783987200000",
+    "timestamp": "1784016000000",
     "source": "okx"
   },
   "kimchi_premium": {
     "ok": true,
-    "premium_pct": -0.74,
-    "upbit_krw": 92260000.0,
-    "global_usd": 62125.6,
-    "binance_usd": 62125.6,
-    "usdt_krw": 1496.1099853515625,
-    "signal": "normal",
+    "premium_pct": -1.19,
+    "upbit_krw": 92360000.0,
+    "global_usd": 62388.7,
+    "binance_usd": 62388.7,
+    "usdt_krw": 1498.280029296875,
+    "signal": "discount",
     "source": "upbit+bybit/okx"
   },
   "btc_nasdaq_corr": {
     "ok": true,
-    "correlation": -0.011,
+    "correlation": -0.018,
     "period_days": 30,
     "signal": "decoupled",
-    "btc_last_price": 62125.6
+    "btc_last_price": 62388.7
   },
   "stablecoin_mcap": {
     "ok": true,
-    "total_mcap_usd": 257122020636.95392,
+    "total_mcap_usd": 257077952483.8629,
     "total_mcap_b": 257.1,
     "usdt_mcap_b": 184.1,
     "usdc_mcap_b": 73.0
@@ -44,12 +44,14 @@
   "ok_count": 5,
   "total": 5,
   "composite": {
-    "score": 43,
-    "label": "중립",
-    "risk_level": "normal",
-    "signals": []
+    "score": 37,
+    "label": "비관",
+    "risk_level": "low",
+    "signals": [
+      "크립토 극단적 공포"
+    ]
   },
-  "collected_at": "2026-07-14T08:32:38+09:00",
+  "collected_at": "2026-07-14T09:32:44+09:00",
   "schema_version": "v0",
   "diagnostics": {
     "ok_count": 5,
