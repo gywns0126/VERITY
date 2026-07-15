@@ -1,16 +1,18 @@
 {
  "_meta": {
-  "generated_at": "2026-07-15T20:27:42.260124+09:00",
+  "generated_at": "2026-07-15T22:24:58.531108+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "green",
- "reasons": [],
+ "status": "amber",
+ "reasons": [
+  "비P0 stale 1건"
+ ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-07-15T20:27:42.207542+09:00",
+  "generated_at": "2026-07-15T22:24:58.493303+09:00",
   "ok": true,
   "failed": 0,
   "max_cdn_age_s": 0,
@@ -51,7 +53,7 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-07-15T08:02:18.003722+09:00",
+  "generated_at": "2026-07-15T21:03:26.161045+09:00",
   "kr_total": 1624,
   "us_total": 1505,
   "core_fill_pct": {
@@ -65,10 +67,10 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-07-15T20:27:34.268736+09:00",
+  "generated_at": "2026-07-15T22:24:47.441050+09:00",
   "summary": {
-   "fresh": 26,
-   "stale": 0,
+   "fresh": 25,
+   "stale": 1,
    "closed": 2,
    "discontinued": 1,
    "p0": {
@@ -79,7 +81,7 @@
    },
    "p1": {
     "total": 11,
-    "fresh": 10,
+    "fresh": 9,
     "closed": 0,
     "active": 10
    },
@@ -91,6 +93,8 @@
    }
   },
   "stale_p0": [],
-  "stale_other": []
+  "stale_other": [
+   "etf_flow"
+  ]
  }
 }
