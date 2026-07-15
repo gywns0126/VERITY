@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-07-16T04:02:35+09:00",
+  "collected_at": "2026-07-16T04:32:17+09:00",
   "macro": {
     "usd_krw": {
       "value": 1485.94,
@@ -1463,21 +1463,6 @@
       "d_day": -1
     },
     {
-      "name": "미국 소매판매",
-      "severity": "medium",
-      "impact_area": [
-        "소비",
-        "경기"
-      ],
-      "impact": "미국 소비 강도 지표. 전체 GDP 70%가 소비",
-      "action": "소비재 섹터 판단 자료",
-      "date": "2026-07-16",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 9,
-      "d_day": 0
-    },
-    {
       "name": "미국 주간 실업수당 청구",
       "severity": "medium",
       "impact_area": [
@@ -1613,12 +1598,18 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 31.62
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 145.65
   },
   "schema_version": "v0"
 }
