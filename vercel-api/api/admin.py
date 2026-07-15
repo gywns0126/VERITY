@@ -39,6 +39,8 @@ PORTFOLIO_URL = os.environ.get(
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 ADMIN_BYPASS_TOKEN = os.environ.get("ADMIN_BYPASS_TOKEN", "")
+# service_role = 관리자 운영 변경(회원 제재·삭제·글 삭제) 서버 실행용. RLS 우회 — authorize() 통과 후에만 사용.
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
 _PORTFOLIO_CACHE: Dict[str, Any] = {"data": None, "fetched_at": 0}
 _PORTFOLIO_TTL = 60
@@ -120,7 +122,7 @@ def write_response(handler, status: int, body: dict, cache: str = "no-store") ->
     handler.send_header("Content-Type", "application/json; charset=utf-8")
     handler.send_header("Cache-Control", cache)
     handler.send_header("Access-Control-Allow-Origin", "*")
-    handler.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+    handler.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
     handler.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Token")
     handler.end_headers()
     handler.wfile.write(payload)
@@ -129,7 +131,7 @@ def write_response(handler, status: int, body: dict, cache: str = "no-store") ->
 def write_options(handler) -> None:
     handler.send_response(200)
     handler.send_header("Access-Control-Allow-Origin", "*")
-    handler.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+    handler.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
     handler.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Token")
     handler.end_headers()
 
@@ -621,6 +623,197 @@ def handle_explain(request_handler) -> dict:
     }}
 
 
+# ══════════════════════════════════════════════════════════════════════
+# 관리자 운영 (회원 관리 + 커뮤니티 모더레이션) — service_role 실행
+# authorize()(is_admin/bypass) 통과 후에만 도달. 모든 변경 = admin_audit_log 기록.
+# 제재(ban) = 쓰기 차단(023 트리거). 삭제 = UI 2단계 확인 후 auth 계정 제거(cascade). (PM 2026-07-15)
+# ══════════════════════════════════════════════════════════════════════
+
+def _now_iso() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _svc_headers(extra: Optional[dict] = None) -> Dict[str, str]:
+    h = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+    }
+    if extra:
+        h.update(extra)
+    return h
+
+
+def _svc_ready() -> bool:
+    return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+
+
+def _read_body(handler) -> dict:
+    try:
+        n = int(handler.headers.get("Content-Length", 0) or 0)
+        if n <= 0:
+            return {}
+        raw = handler.rfile.read(n)
+        return json.loads(raw.decode("utf-8")) if raw else {}
+    except (ValueError, json.JSONDecodeError):
+        return {}
+
+
+def _caller_identity(headers_dict: Dict[str, str]) -> Dict[str, Optional[str]]:
+    # 감사 로그 actor — Bearer JWT 경로면 id/email, bypass_token 경로면 unknown.
+    auth = headers_dict.get("authorization") or ""
+    if not auth.lower().startswith("bearer ") or not SUPABASE_URL:
+        return {"id": None, "email": None}
+    jwt = auth.split(" ", 1)[1].strip()
+    try:
+        r = requests.get(f"{SUPABASE_URL}/auth/v1/user",
+                         headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"}, timeout=5)
+        if r.status_code == 200:
+            u = r.json()
+            return {"id": u.get("id"), "email": u.get("email")}
+    except (requests.RequestException, ValueError):
+        pass
+    return {"id": None, "email": None}
+
+
+def _audit(actor: dict, action: str, target_type: str, target_id: Optional[str], detail: Optional[dict] = None) -> None:
+    if not _svc_ready():
+        return
+    try:
+        requests.post(f"{SUPABASE_URL}/rest/v1/admin_audit_log",
+                      headers=_svc_headers({"Prefer": "return=minimal"}),
+                      json={"actor_id": actor.get("id"), "actor_email": actor.get("email"),
+                            "action": action, "target_type": target_type,
+                            "target_id": str(target_id) if target_id else None,
+                            "detail": detail or {}}, timeout=6)
+    except requests.RequestException as e:
+        _logger.warning("audit write failed: %s", e)
+
+
+def handle_member_management(handler, method: str, body: dict) -> dict:
+    if not _svc_ready():
+        return {"_status": 503, "_body": {"error": "service_role_unconfigured"}}
+    actor = _caller_identity(headers_to_dict(handler))
+
+    if method == "GET":
+        params = parse_qs(urlparse(handler.path).query)
+        q = (params.get("q", [""])[0] or "").strip()
+        limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
+        offset = max(0, int((params.get("offset", ["0"])[0] or "0")))
+        sel = "id,email,display_name,nickname,status,is_admin,is_banned,ban_reason,banned_at,created_at"
+        qp = {"select": sel, "order": "created_at.desc", "limit": str(limit), "offset": str(offset)}
+        if q:
+            qp["or"] = f"(email.ilike.*{q}*,nickname.ilike.*{q}*,display_name.ilike.*{q}*)"
+        r = requests.get(f"{SUPABASE_URL}/rest/v1/profiles",
+                         headers=_svc_headers({"Prefer": "count=exact"}), params=qp, timeout=10)
+        if r.status_code != 200:
+            return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
+        total = None
+        cr = r.headers.get("Content-Range", "")
+        if "/" in cr:
+            try:
+                total = int(cr.split("/")[-1])
+            except ValueError:
+                pass
+        return {"_status": 200, "_body": {"members": r.json(), "total": total}}
+
+    if method == "POST":
+        action = str(body.get("action", "")).strip()
+        uid = str(body.get("user_id", "")).strip()
+        if not uid:
+            return {"_status": 400, "_body": {"error": "user_id_required"}}
+        if action == "ban":
+            patch = {"is_banned": True, "ban_reason": str(body.get("reason", "")).strip()[:500], "banned_at": _now_iso()}
+            audit_action = "ban_user"
+        elif action == "unban":
+            patch = {"is_banned": False, "ban_reason": None, "banned_at": None}
+            audit_action = "unban_user"
+        elif action == "update":
+            patch = {}
+            for k in ("nickname", "status", "bio", "display_name"):
+                if k in body:
+                    patch[k] = body[k]
+            if "is_admin" in body:
+                patch["is_admin"] = bool(body["is_admin"])
+            if not patch:
+                return {"_status": 400, "_body": {"error": "no_fields"}}
+            audit_action = "update_profile"
+        else:
+            return {"_status": 400, "_body": {"error": "unknown_action", "valid": ["ban", "unban", "update"]}}
+        r = requests.patch(f"{SUPABASE_URL}/rest/v1/profiles",
+                           headers=_svc_headers({"Prefer": "return=representation"}),
+                           params={"id": f"eq.{uid}"}, json=patch, timeout=10)
+        if r.status_code not in (200, 204):
+            return {"_status": 502, "_body": {"error": "update_failed", "detail": r.text[:200]}}
+        _audit(actor, audit_action, "user", uid, patch)
+        rows = r.json() if r.text else []
+        return {"_status": 200, "_body": {"ok": True, "member": rows[0] if rows else None}}
+
+    if method == "DELETE":
+        # 완전 삭제 = auth 계정 제거 → profiles·user_thesis cascade. UI 2단계 확인(confirm) 후 호출.
+        uid = str(body.get("user_id", "")).strip()
+        if not uid or not body.get("confirm"):
+            return {"_status": 400, "_body": {"error": "user_id_and_confirm_required"}}
+        r = requests.delete(f"{SUPABASE_URL}/auth/v1/admin/users/{uid}", headers=_svc_headers(), timeout=10)
+        if r.status_code not in (200, 204):
+            return {"_status": 502, "_body": {"error": "delete_failed", "detail": r.text[:200]}}
+        _audit(actor, "delete_user", "user", uid, {"email": body.get("email")})
+        return {"_status": 200, "_body": {"ok": True, "deleted": uid}}
+
+    return {"_status": 405, "_body": {"error": "method_not_allowed"}}
+
+
+def handle_community_moderation(handler, method: str, body: dict) -> dict:
+    if not _svc_ready():
+        return {"_status": 503, "_body": {"error": "service_role_unconfigured"}}
+    actor = _caller_identity(headers_to_dict(handler))
+
+    if method == "GET":
+        params = parse_qs(urlparse(handler.path).query)
+        view = (params.get("view", ["reports"])[0] or "reports").strip()
+        limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
+        if view == "reports":
+            sel = "id,reason,created_at,reporter_id,thesis:thesis_id(id,user_id,ticker,stance,note,is_public,hidden,created_at)"
+            r = requests.get(f"{SUPABASE_URL}/rest/v1/thesis_reports", headers=_svc_headers(),
+                             params={"select": sel, "order": "created_at.desc", "limit": str(limit)}, timeout=10)
+        else:  # posts — 전체 공개 글
+            sel = "id,user_id,ticker,market,stance,note,is_public,hidden,created_at"
+            r = requests.get(f"{SUPABASE_URL}/rest/v1/user_thesis", headers=_svc_headers(),
+                             params={"select": sel, "order": "created_at.desc", "limit": str(limit), "is_public": "eq.true"}, timeout=10)
+        if r.status_code != 200:
+            return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
+        return {"_status": 200, "_body": {"items": r.json(), "view": view}}
+
+    if method == "POST":
+        action = str(body.get("action", "")).strip()
+        tid = str(body.get("thesis_id", "")).strip()
+        if not tid:
+            return {"_status": 400, "_body": {"error": "thesis_id_required"}}
+        if action in ("hide", "unhide"):
+            r = requests.patch(f"{SUPABASE_URL}/rest/v1/user_thesis",
+                               headers=_svc_headers({"Prefer": "return=minimal"}),
+                               params={"id": f"eq.{tid}"}, json={"hidden": action == "hide"}, timeout=10)
+            if r.status_code not in (200, 204):
+                return {"_status": 502, "_body": {"error": "update_failed", "detail": r.text[:200]}}
+            _audit(actor, action + "_post", "thesis", tid, None)
+            return {"_status": 200, "_body": {"ok": True}}
+        return {"_status": 400, "_body": {"error": "unknown_action", "valid": ["hide", "unhide"]}}
+
+    if method == "DELETE":
+        tid = str(body.get("thesis_id", "")).strip()
+        if not tid:
+            return {"_status": 400, "_body": {"error": "thesis_id_required"}}
+        r = requests.delete(f"{SUPABASE_URL}/rest/v1/user_thesis",
+                            headers=_svc_headers({"Prefer": "return=minimal"}), params={"id": f"eq.{tid}"}, timeout=10)
+        if r.status_code not in (200, 204):
+            return {"_status": 502, "_body": {"error": "delete_failed", "detail": r.text[:200]}}
+        _audit(actor, "delete_post", "thesis", tid, None)
+        return {"_status": 200, "_body": {"ok": True, "deleted": tid}}
+
+    return {"_status": 405, "_body": {"error": "method_not_allowed"}}
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Router
 # ──────────────────────────────────────────────────────────────────────
@@ -633,10 +826,41 @@ ROUTES = {
     "explain": handle_explain,
 }
 
+# 운영 변경(POST/DELETE) + 목록(GET) 라우트 — method-aware.
+MOD_ROUTES = {
+    "member_management": handle_member_management,
+    "community_moderation": handle_community_moderation,
+}
+
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         write_options(self)
+
+    def _mod_dispatch(self, method: str):
+        # 운영 변경/목록 (member_management · community_moderation) — 공통 인증 + method-aware.
+        ok, reason = authorize(headers_to_dict(self))
+        if not ok:
+            write_response(self, 401, {"error": "unauthorized", "reason": reason})
+            return
+        endpoint = (parse_qs(urlparse(self.path).query).get("type", [""])[0] or "").strip()
+        fn = MOD_ROUTES.get(endpoint)
+        if not fn:
+            write_response(self, 400, {"error": "unknown_endpoint", "valid": list(MOD_ROUTES.keys())})
+            return
+        body = _read_body(self) if method in ("POST", "DELETE") else {}
+        try:
+            result = fn(self, method, body)
+            write_response(self, result.get("_status", 200), result.get("_body") or {})
+        except Exception as e:  # noqa: BLE001
+            _logger.error("admin mod %s %s error: %s", method, endpoint, e, exc_info=True)
+            write_response(self, 500, {"error": "internal", "endpoint": endpoint})
+
+    def do_POST(self):
+        self._mod_dispatch("POST")
+
+    def do_DELETE(self):
+        self._mod_dispatch("DELETE")
 
     def do_GET(self):
         ok, reason = authorize(headers_to_dict(self))
@@ -648,12 +872,17 @@ class handler(BaseHTTPRequestHandler):
         params = parse_qs(parsed.query)
         endpoint = (params.get("type", [""])[0] or "").strip()
 
+        # 운영 목록(회원/모더레이션)은 method-aware 핸들러로 위임
+        if endpoint in MOD_ROUTES:
+            self._mod_dispatch("GET")
+            return
+
         fn = ROUTES.get(endpoint)
         if not fn:
             write_response(self, 400, {
                 "error": "unknown_endpoint",
-                "valid": list(ROUTES.keys()),
-                "hint": "use ?type=brain_health|data_health|drift|trust|explain",
+                "valid": list(ROUTES.keys()) + list(MOD_ROUTES.keys()),
+                "hint": "use ?type=brain_health|data_health|drift|trust|explain|member_management|community_moderation",
             })
             return
 
