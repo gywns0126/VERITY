@@ -1,31 +1,31 @@
 {
   "system_health": {
-    "status": "ok",
-    "checked_at": "2026-07-16T02:03:01+09:00",
+    "status": "error",
+    "checked_at": "2026-07-16T02:10:10+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 31984,
+    "elapsed_ms": 42122,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 7498,
+        "latency_ms": 7695,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 2088,
+        "latency_ms": 4335,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 551,
+        "latency_ms": 458,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 164,
+        "latency_ms": 97,
         "detail": "정상",
         "attempts": 1
       },
@@ -37,49 +37,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 797,
+        "latency_ms": 833,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 4957,
+        "latency_ms": 1174,
         "detail": "정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 12936,
+        "latency_ms": 13472,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260714)",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1085,
+        "latency_ms": 1775,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 491,
+        "latency_ms": 528,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 256,
+        "latency_ms": 223,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
-        "status": "ok",
-        "latency_ms": 252,
-        "detail": "정상",
-        "attempts": 1
+        "status": "error",
+        "latency_ms": 10537,
+        "detail": "HTTPSConnectionPool(host='api.polygon.io', port=443): Max retries exceeded with url: /v2/aggs/ticker/AAPL/prev?apiKey=8V",
+        "attempts": 2
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 240,
+        "latency_ms": 180,
         "detail": "정상",
         "attempts": 1
       },
@@ -93,10 +93,10 @@
     "github_worker": {
       "status": "running",
       "conclusion": "in_progress",
-      "workflow": "Stock Analysis Pipeline (Realtime — KR & US)",
-      "started_at": "2026-07-15T17:00:32Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/29434748840",
-      "detail": "Stock Analysis Pipeline (Realtime — KR & US): in_progress"
+      "workflow": "Cron Health Monitor",
+      "started_at": "2026-07-15T17:10:01Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/29435381048",
+      "detail": "Cron Health Monitor: in_progress"
     },
     "data_recency": {
       "status": "ok",
@@ -104,44 +104,44 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-07-16 02:01",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-16 02:08",
+          "age_hours": 0.04,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-07-16 02:01",
+          "last_updated": "2026-07-16 02:08",
           "age_hours": 0.03,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-07-16 02:01",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-16 02:08",
+          "age_hours": 0.04,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-07-16 02:01",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-16 02:08",
+          "age_hours": 0.04,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-07-16 02:01",
+          "last_updated": "2026-07-16 02:08",
           "age_hours": 0.03,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-07-16 02:01",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-16 02:08",
+          "age_hours": 0.04,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-07-16 02:01",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-16 02:08",
+          "age_hours": 0.04,
           "threshold_hours": 1
         }
       }
@@ -149,17 +149,26 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "8feb3a5",
-      "remote_message": "💓 price_pulse 02:02",
-      "remote_date": "2026-07-15T17:02:41Z",
-      "local_sha": "b070f53",
-      "detail": "cron 자동 갱신 — 💓 price_pulse 02:02"
+      "remote_sha": "99a7382",
+      "remote_message": "💓 price_pulse 02:07",
+      "remote_date": "2026-07-15T17:07:55Z",
+      "local_sha": "62f08fa",
+      "detail": "cron 자동 갱신 — 💓 price_pulse 02:07"
     },
-    "errors": [],
+    "errors": [
+      "polygon API 오류 — HTTPSConnectionPool(host='api.polygon.io', port=443): Max retries exceeded with url: /v2/aggs/ticker/AAPL/prev?apiKey=8V"
+    ],
     "warnings": [],
-    "overall_status": "ok"
+    "apis": {
+      "kis_openapi": {
+        "status": "ok",
+        "count": 12,
+        "total": 12
+      }
+    },
+    "overall_status": "error"
   },
-  "updated_at": "2026-07-16T02:03:06+09:00",
+  "updated_at": "2026-07-16T02:10:16+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
