@@ -51,6 +51,40 @@ CREATE TRIGGER trg_block_banned_report
     BEFORE INSERT ON public.thesis_reports
     FOR EACH ROW EXECUTE FUNCTION public.block_banned_write();
 
+-- ── 2.5) 🚨 자가 권한상승/제재해제 차단 ─────────────────────────────
+-- 008 트리거는 status 만 막아 is_admin 자가 PATCH 구멍이 있었음(profiles_update_own RLS = 본인 행 수정 허용).
+-- → 유저가 자기 is_admin=true 승격 / 제재 유저가 is_banned=false 셀프 해제 가능 = 권한상승 취약점.
+-- 023 에서 봉인: is_admin·is_banned·ban_reason·banned_at 변경은 admin 또는 service_role 만. (2026-07-15)
+CREATE OR REPLACE FUNCTION public.profiles_block_privileged_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+    v_admin BOOLEAN;
+BEGIN
+    IF auth.role() = 'service_role' THEN
+        RETURN NEW;
+    END IF;
+    IF NEW.is_admin   IS DISTINCT FROM OLD.is_admin
+       OR NEW.is_banned  IS DISTINCT FROM OLD.is_banned
+       OR NEW.ban_reason IS DISTINCT FROM OLD.ban_reason
+       OR NEW.banned_at  IS DISTINCT FROM OLD.banned_at THEN
+        SELECT COALESCE(p.is_admin, FALSE) INTO v_admin
+          FROM public.profiles p WHERE p.id = auth.uid();
+        IF NOT COALESCE(v_admin, FALSE) THEN
+            RAISE EXCEPTION 'is_admin / 제재 필드는 관리자만 변경할 수 있습니다.';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_block_privileged_profile ON public.profiles;
+CREATE TRIGGER trg_block_privileged_profile
+    BEFORE UPDATE ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION public.profiles_block_privileged_change();
+
 -- ── 3) 관리자 모더레이션 RLS (방어층) ────────────────────────────────
 -- 관리자 = 전체 글 조회·수정·삭제 (숨김/삭제 모더레이션).
 DROP POLICY IF EXISTS ut_admin_all ON public.user_thesis;
