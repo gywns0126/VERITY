@@ -1,15 +1,15 @@
 {
-  "as_of": "2026-07-15 08:03",
+  "as_of": "2026-07-16 08:24",
   "validation_start": "2026-05-17",
   "validation_overall": "INSUFFICIENT_DATA",
-  "validation_progress": 0.4708,
-  "validation_progress_pct": 47.1,
+  "validation_progress": 0.475,
+  "validation_progress_pct": 47.5,
   "gates": {
     "days": {
-      "current": 53,
+      "current": 54,
       "target": 60,
-      "progress": 0.8833333333333333,
-      "remaining": 7,
+      "progress": 0.9,
+      "remaining": 6,
       "unit": "거래일"
     },
     "trades": {
@@ -34,9 +34,9 @@
       "unit": "SQN"
     }
   },
-  "days_eta_calendar_days_est": 10,
+  "days_eta_calendar_days_est": 8,
   "aggression": {
-    "multiplier": 0.4708,
+    "multiplier": 0.475,
     "mode": "준비 (검증 누적 중)",
     "note": "공격성 = 검증 진행도의 함수. 풀 Kelly 사이징은 PASS 후 활성 (현재 shadow)."
   },
@@ -46,7 +46,7 @@
       "label": "레버리지 (일일 L배)",
       "status": "LOCKED",
       "unlock_condition": "VAMS 검증 overall == PASS",
-      "countdown": "7 거래일 + expectancy -0.926/0.25 + sqn -10.569/1.7",
+      "countdown": "6 거래일 + expectancy -0.926/0.25 + sqn -10.569/1.7",
       "note": "모델 존재 (scripts/arena_sim_prototype.py). 해제 후 PM 수동 활성."
     },
     {
@@ -54,7 +54,7 @@
       "label": "숏 / 인버스",
       "status": "LOCKED",
       "unlock_condition": "VAMS PASS + 수동 venue 결정 (별도)",
-      "countdown": "7 거래일 + expectancy -0.926/0.25 + sqn -10.569/1.7",
+      "countdown": "6 거래일 + expectancy -0.926/0.25 + sqn -10.569/1.7",
       "note": "현물 거래소(업비트/KIS) 부재 — 해외 파생·인버스 ETF venue 결정 필요. Tier-up 큐."
     }
   ],
