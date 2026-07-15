@@ -764,6 +764,22 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
     return {"_status": 405, "_body": {"error": "method_not_allowed"}}
 
 
+def handle_audit_log(handler, method: str, body: dict) -> dict:
+    # 관리자 조치 로그 조회 (제재·삭제·수정 이력). GET only.
+    if not _svc_ready():
+        return {"_status": 503, "_body": {"error": "service_role_unconfigured"}}
+    if method != "GET":
+        return {"_status": 405, "_body": {"error": "method_not_allowed"}}
+    params = parse_qs(urlparse(handler.path).query)
+    limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
+    sel = "id,actor_email,action,target_type,target_id,detail,created_at"
+    r = requests.get(f"{SUPABASE_URL}/rest/v1/admin_audit_log", headers=_svc_headers(),
+                     params={"select": sel, "order": "created_at.desc", "limit": str(limit)}, timeout=10)
+    if r.status_code != 200:
+        return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
+    return {"_status": 200, "_body": {"items": r.json()}}
+
+
 def handle_community_moderation(handler, method: str, body: dict) -> dict:
     if not _svc_ready():
         return {"_status": 503, "_body": {"error": "service_role_unconfigured"}}
@@ -830,6 +846,7 @@ ROUTES = {
 MOD_ROUTES = {
     "member_management": handle_member_management,
     "community_moderation": handle_community_moderation,
+    "audit_log": handle_audit_log,
 }
 
 
