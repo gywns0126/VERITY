@@ -128,9 +128,14 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
 
     now = datetime.now(KST)
     sections: List[Optional[Dict[str, Any]]] = []
+    # 한눈에(glance) 파생용 누적기 — 아래 섹션 사실에서 결정론적 조립 (RULE 6/7: LLM 0 · 점수 0)
+    _ins_buy = _ins_sell = 0
+    _foreign5d: Optional[float] = None
+    _foren_top: Optional[str] = None
 
     # 밸류에이션 팩트 (지표 | 값 | 업종 중앙값 | 업종 대비) — 값은 빌더 포맷 문자열 그대로 (단위 포함)
     peer = s.get("peer") or {}
+    peer_by_key: Dict[str, Any] = {str(r.get("key")): r for r in (peer.get("rows") or [])}
     _VS = {"above": "높음", "below": "낮음", "similar": "비슷"}
     rows = []
     for r in (peer.get("rows") or []):
@@ -143,7 +148,7 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
         rows = [[k, str(v), "—", "—", "—"] for k, v in list(facts0.items())[:8] if v not in (None, "")]
     sections.append(_sec(
         "밸류에이션 팩트", f"업종 비교 = {peer.get('sector') or '—'} · 중앙값·백분위 = 같은 섹터 내 위치(사실 · 평가 아님)",
-        ["지표", "값", "업종 중앙값", "업종 대비", "업종 백분위"], ["l", "r", "r", "c", "r"], [1.3, 0.85, 0.9, 0.6, 0.8], rows))
+        ["지표", "값", "업종 중앙값", "업종 대비", "업종 백분위"], ["l", "r", "r", "r", "r"], [1.3, 0.85, 0.9, 0.7, 0.8], rows))
 
     # 재무 요약 — 최근 결산 재무제표 그룹 전체 (손익·재무상태·현금흐름 등)
     fin = s.get("financials") or {}
@@ -201,6 +206,11 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
         rows = []
         for t in (irec.get("trades") or [])[:10]:
             ch = t.get("change")
+            if isinstance(ch, (int, float)):
+                if ch > 0:
+                    _ins_buy += 1
+                elif ch < 0:
+                    _ins_sell += 1
             side = "매수" if isinstance(ch, (int, float)) and ch > 0 else "매도"
             desc = f"{abs(float(ch)):,.0f}주 {side}" if isinstance(ch, (int, float)) else "—"
             rows.append([str(t.get("date") or ""), str(t.get("person") or ""), desc])
@@ -243,6 +253,9 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
     try:
         fdoc = _fetch("disclosure_forensics.json" if kr else "us_disclosure_feed.json")
         foren = _stock_of(fdoc, ticker)
+        if foren and (foren.get("counts") or {}):
+            _tp = max((foren.get("counts") or {}).items(), key=lambda x: x[1])
+            _foren_top = f"공시 {_tp[0]} {int(_tp[1])}건"
     except Exception:  # noqa: BLE001
         foren = None
     for e in ((foren or {}).get("events") or [])[:12]:
@@ -276,12 +289,19 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
             fdoc2 = _fetch("stock_flow_5d.json")
             frows = (fdoc2.get("flows") or {}).get(ticker) or []
             rows = []
+            _f5 = 0.0
+            _hasf = False
             for r in frows[-5:]:
                 fn, inn, close = r.get("foreign_net"), r.get("inst_net"), r.get("close")
+                if isinstance(fn, (int, float)):
+                    _f5 += fn
+                    _hasf = True
                 rows.append([str(r.get("date") or "")[5:],
                              _num(fn, 0, "주") if isinstance(fn, (int, float)) else "—",
                              _num(inn, 0, "주") if isinstance(inn, (int, float)) else "—",
                              _num(close, 0, "원") if isinstance(close, (int, float)) else "—"])
+            if _hasf:
+                _foreign5d = _f5
             sections.append(_sec("외인·기관 수급", "최근 5거래일 순매매(주식수) · 종가",
                                  ["일자", "외국인", "기관", "종가"], ["l", "r", "r", "r"], [0.6, 1.1, 1.1, 0.9], rows))
         except Exception:  # noqa: BLE001
@@ -380,6 +400,66 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
     if hd.get("tagline"):
         kv.append(["사업", str(hd.get("tagline"))])
 
+    # ── 한눈에(glance) — 위 섹션 사실에서 결정론적 파생 (RULE 6/7: LLM 0 · 점수 0 · 사실만) ──
+    def _prow(k: str) -> Dict[str, Any]:
+        return peer_by_key.get(k) or {}
+
+    def _band(vs: str) -> str:
+        return {"above": "상위구간", "below": "하위구간", "similar": "업종 수준"}.get(str(vs), "")
+
+    gcards: List[Dict[str, str]] = []
+    pr = _prow("PER") or _prow("PBR")
+    if pr.get("value"):
+        sb = []
+        if pr.get("median"):
+            sb.append(f"업종 {pr.get('median')}")
+        if isinstance(pr.get("pct"), (int, float)):
+            sb.append(f"상위 {int(round(pr['pct']))}%")
+        gcards.append({"q": "지금 싸 보이나?", "a": f"{pr.get('key')} {pr.get('value')}", "s": " · ".join(sb)})
+    rr = _prow("ROE")
+    if rr.get("value"):
+        sb = []
+        if rr.get("median"):
+            sb.append(f"업종 {rr.get('median')}")
+        opr = _prow("영업이익률")
+        if opr.get("value"):
+            sb.append(f"마진 {opr.get('value')}")
+        gcards.append({"q": "돈 잘 버나?", "a": f"ROE {rr.get('value')}", "s": " · ".join(sb)})
+    if _ins_buy or _ins_sell:
+        head = "내부자 매수 우세" if _ins_buy > _ins_sell else "내부자 매도 우세" if _ins_sell > _ins_buy else "내부자 매수·매도 혼조"
+        sb = [f"매수 {_ins_buy}·매도 {_ins_sell}건"]
+        if _foreign5d is not None:
+            sb.append("외인 순매수" if _foreign5d > 0 else "외인 순매도" if _foreign5d < 0 else "외인 보합")
+        gcards.append({"q": "큰손이 사나?", "a": head, "s": " · ".join(sb)})
+    elif _foreign5d is not None:
+        gcards.append({"q": "큰손이 사나?", "a": "외인 5일 " + ("순매수" if _foreign5d > 0 else "순매도" if _foreign5d < 0 else "보합"),
+                       "s": "내부자 보고 없음(수집창)"})
+    dr = _prow("부채비율")
+    if dr.get("value"):
+        sb = []
+        if dr.get("median"):
+            sb.append(f"업종 {dr.get('median')}")
+        if _foren_top:
+            sb.append(_foren_top)
+        gcards.append({"q": "망가질 유의사항?", "a": f"부채 {dr.get('value')}", "s": " · ".join(sb)})
+
+    gfrag: List[str] = []
+    if _prow("PER").get("vs") and _prow("PBR").get("vs") and _prow("PER")["vs"] == _prow("PBR")["vs"]:
+        gfrag.append(f"PER·PBR 업종 {_band(_prow('PER')['vs'])}")
+    elif _prow("PER").get("vs"):
+        gfrag.append(f"PER 업종 {_band(_prow('PER')['vs'])}")
+    if rr.get("vs"):
+        gfrag.append("ROE 업종 " + {"above": "상회", "below": "하회", "similar": "수준"}.get(str(rr["vs"]), ""))
+    if dr.get("vs"):
+        gfrag.append("부채 업종 " + {"below": "하위", "above": "상위", "similar": "수준"}.get(str(dr["vs"]), ""))
+    if _ins_buy or _ins_sell:
+        gfrag.append("최근 내부자 " + ("매수 우세" if _ins_buy > _ins_sell else "매도 우세" if _ins_sell > _ins_buy else "매수·매도 혼조"))
+    glance = {
+        "cards": gcards,
+        "summary": " · ".join([f for f in gfrag if f]) or "공시·수집 사실 요약",
+        "note": "전부 공시·수집 사실 · 점수·평가·추천 아님 · 판단은 본인",
+    } if gcards else None
+
     return {
         "name": str(s.get("name_ko") or s.get("name") or ticker),
         "ticker": ticker,
@@ -387,6 +467,7 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
         "business": str(s.get("business") or "")[:120],
         "generated": now.strftime("%Y-%m-%d %H:%M KST"),
         "kv": kv[:8],
+        "glance": glance,
         "sections": [x for x in sections if x],
         "disclaimer": "전부 공시·수집 사실과 자체계산(라벨 명시) · 점수·등급·추천·매매의견 아님 · AlphaNest 팩트 리포트",
         "source_line": ("DART 전자공시 · KRX 정보데이터시스템 · 공정거래위원회 기업집단포털 · 비율 일부 자체계산(라벨 표기)"
