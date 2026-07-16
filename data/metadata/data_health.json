@@ -1,16 +1,18 @@
 {
  "_meta": {
-  "generated_at": "2026-07-17T06:01:45.068033+09:00",
+  "generated_at": "2026-07-17T07:10:06.012376+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "green",
- "reasons": [],
+ "status": "amber",
+ "reasons": [
+  "비P0 stale 1건"
+ ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-07-17T06:01:45.019773+09:00",
+  "generated_at": "2026-07-17T07:10:05.948351+09:00",
   "ok": true,
   "failed": 0,
   "max_cdn_age_s": 0,
@@ -65,10 +67,10 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-07-17T06:01:35.965083+09:00",
+  "generated_at": "2026-07-17T07:09:55.121008+09:00",
   "summary": {
-   "fresh": 26,
-   "stale": 0,
+   "fresh": 25,
+   "stale": 1,
    "closed": 2,
    "discontinued": 1,
    "p0": {
@@ -85,12 +87,14 @@
    },
    "p2": {
     "total": 12,
-    "fresh": 12,
+    "fresh": 11,
     "closed": 0,
     "active": 12
    }
   },
   "stale_p0": [],
-  "stale_other": []
+  "stale_other": [
+   "trade_analysis"
+  ]
  }
 }
