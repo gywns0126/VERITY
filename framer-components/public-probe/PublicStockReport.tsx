@@ -21,7 +21,9 @@ const LIGHT = {
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1",
-    faint: "#828d9b", line: "#252b34", grid: "#1e242c", up: "#f04452", upS: "#2a1a1d", down: "#5b9bff", downS: "#152031",
+    // down = #4a90f0 (2026-07-12) — 옛 #5b9bff 는 다크 표면 대비 OKLCH L=0.693 으로 다크 밴드(0.48~0.67)
+    //   이탈 FAIL (dataviz validator). 교체값은 등락쌍 전 항목 PASS (protan ΔE 79.8).
+    faint: "#828d9b", line: "#252b34", grid: "#1e242c", up: "#f04452", upS: "#2a1a1d", down: "#4a90f0", downS: "#152031",
     amber: "#ff9500", amberS: "#2a2113", green: "#34e08a", greenS: "#0f241c",
     vg: "#a99bff", vgS: "#241f3a", vt: "#a99bff", vtS: "#241f3a", tipBg: "#222a33", tipFg: "#e3e7ec", onAccent: "#0f1318",
 }
@@ -81,9 +83,10 @@ function bfLogoFilter(ticker: any): string {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    if (!tk) return ""
-    // 로고 = 토스 종목 CDN (PM 결정: 완전 공개[런칭] 전까지 토스 사용, 2026-07-12). 404/차단 시 onError → 이니셜 폴백. lm 미사용.
-    return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
+    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
+    if (!p) return ""
+    if (p.indexOf("http") === 0) return p  // 폴백 소스(nvstly·공식 파비콘) = 절대 URL 그대로
+    return "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2
 }
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
@@ -108,6 +111,7 @@ const INFO: Record<string, string> = {
     "공시이력": "이 종목이 유상증자·전환사채·감자 같은 주주가치 희석·리스크 공시를 언제 몇 번 냈는지의 사실 빈도예요. 반복이 잦을수록 참고하되, 그 자체가 좋다·나쁘다 판단은 아니에요.",
     "교차검증": "같은 지분율을 DART 공시와 공정거래위원회 공식 자료 두 곳에서 비교한 거예요. 일치하면 신뢰도가 높고, 차이가 나면 기준·시점 차이일 수 있어요.",
     "동종업계": "같은 섹터 종목들의 중앙값과 이 종목을 비교한 거예요. PER/PBR은 KRX 공식 시총÷DART 재무로 직접 계산했어요. 업종 대비 높은지/낮은지 사실 비교일 뿐, 판단은 아니에요.",
+    "교차피어": "이 종목을 반대 시장(국장↔미장)의 같은 GICS 섹터 종목 중앙값과 비교한 거예요. 어느 MTS도 잘 안 주는 교차시장 비교라 참고하되, 높다·낮다가 좋다·나쁘다 판단은 아니에요.",
     "내부자": "임원·주요주주가 자기 회사 주식을 사고(+, 빨강)·팔았는지(−, 파랑)예요. 내부 사정을 아는 사람의 매매라 참고하되, 그 자체가 매수·매도 신호는 아니에요.",
     "시장경보": "KRX가 공식 지정한 투자주의·투자경고·투자위험·단기과열·관리종목 상태예요. 거래소가 위험을 경고한 사실이라 꼭 확인하되, 자체 판단은 아니에요.",
     "컨센 목표가": "증권사들이 제시한 목표주가의 평균이에요. AlphaNest 자체 의견이 아니라 애널리스트 집계 사실이고, 자체 점수는 검증 후(2027) 공개해요.",
@@ -168,6 +172,8 @@ const DEFAULT_EMPLOYMENT = "https://rte5guenhonw9fzn.public.blob.vercel-storage.
 const ETF_FLOW_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_flow.json"
 const US_ETF_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_etf.json"
 const KR_INDEX_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_index_daily.json"
+const CROSS_KR_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/cross_gics_kr.json"  // KR↔US 교차피어: KR 섹터 중앙값
+const CROSS_US_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/cross_gics_us.json"  // KR↔US 교차피어: US 섹터 중앙값
 // 시세 컴플라이언스 — 실시간 시세·거래대금 상위 = 네이버 link-out(증권사 서빙 = 재배포 아님, 실시간·무료·합법)
 const NAVER_QUANT = "https://finance.naver.com/sise/sise_quant.naver"
 // 2026-07-11 정정 — 옛 /sise/trade = 404(네이버 경로 변경). 모바일/PC UA 양쪽 200 실측.
@@ -365,7 +371,7 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
             {!err && bfSrc ? (
                 <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size}
                     onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), objectFit: "cover", display: "block", background: "transparent" }} />
+                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
@@ -1171,6 +1177,29 @@ function CashflowWaterfall({ group, C, narrow }: { group: any; C: any; narrow: b
     )
 }
 
+/* 동종업계 백분위 스트립 (2026-07-12) — 이 종목이 같은 섹터 분포 안에서 어디쯤인가.
+   데이터의 일 = 단일 값의 '분포 내 위치' → 0~100 트랙 위의 점 (막대 아님. 크기가 아니라 위치가 정보).
+   기존엔 탭해야 나오는 6px 마커라 사실상 안 보였음 → 항상 노출.
+   🚨 색: 이 차트엔 등락 파랑이 없으므로 보라(C.vt) 마크 사용 가능 (보라↔파랑 deutan ΔE 6.6 충돌 회피 규칙 정합).
+   RULE 7 = 위치는 사실. 높다·낮다가 좋다·나쁘다 아님 — 좋음/나쁨 색(빨강·초록) 절대 사용 안 함. */
+function PeerStrip({ pct, C }: { pct: number; C: any }) {
+    const p = Math.max(0, Math.min(100, Number(pct)))
+    const TRACK = 7, DOT = 9   // 마커 ≥8px (dataviz 마크 스펙)
+    return (
+        <div style={{ position: "relative", height: DOT + 2, marginTop: 7, marginBottom: 2 }}>
+            {/* 트랙 — recessive */}
+            <div style={{ position: "absolute", left: 0, right: 0, top: (DOT + 2 - TRACK) / 2, height: TRACK, borderRadius: TRACK / 2, background: C.bg }} />
+            {/* 업종 중앙값 = 정의상 50번째 백분위 — 기준 눈금 */}
+            <div style={{ position: "absolute", left: "50%", top: 0, width: 1.5, height: DOT + 2, marginLeft: -0.75, borderRadius: 1, background: C.line }} />
+            {/* 이 종목 — 표면 링 2px (겹침 대비, 마크 스펙) */}
+            <div style={{
+                position: "absolute", left: `${p}%`, top: 1, width: DOT, height: DOT, marginLeft: -DOT / 2,
+                borderRadius: "50%", background: C.vt, boxShadow: `0 0 0 2px ${C.card}`,
+            }} />
+        </div>
+    )
+}
+
 function readBodyDark(): boolean {
     // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
     // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
@@ -1228,6 +1257,7 @@ export default function PublicStockReport(props: Props) {
     const [lendAsOf, setLendAsOf] = useState<string>("")
     const [supplyMap, setSupplyMap] = useState<Record<string, any>>({})
     const [empMap, setEmpMap] = useState<Record<string, any>>({})
+    const [crossMed, setCrossMed] = useState<{ KR: Record<string, any>; US: Record<string, any> }>({ KR: {}, US: {} })
     const [selTicker, setSelTicker] = useState<string>(() => {
         if (typeof window !== "undefined") {
             try {
@@ -1281,18 +1311,7 @@ export default function PublicStockReport(props: Props) {
         let alive = true
         fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json")
             .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const t = d && d.hot && d.hot.ticker
-                if (!alive || !t) return
-                const up = String(t).toUpperCase()
-                setSelTicker(up)
-                // 🔗 형제 컴포넌트(LiveChart·AISynthesis) 동기화 — 콜드 기본값을 URL ?q= 에 반영 + 이벤트 발행.
-                //   verity_last_ticker(localStorage)는 미기록 → "그날 거래대금 1위" 신선도 보존(다음 콜드 방문 시 재조회, 1281~1282 가드).
-                try {
-                    window.history.replaceState(null, "", window.location.pathname + "?q=" + encodeURIComponent(up) + window.location.hash)
-                    window.dispatchEvent(new Event("verity-ticker-change"))
-                } catch (e) {}
-            })
+            .then((d) => { const t = d && d.hot && d.hot.ticker; if (alive && t) setSelTicker(String(t).toUpperCase()) })
             .catch(() => {})
         return () => { alive = false }
     }, [onCanvas])
@@ -1393,6 +1412,20 @@ export default function PublicStockReport(props: Props) {
         fetch(UNIVERSE_URL).then((r) => (r.ok ? r.json() : null))
             .then((d) => { const a = d && (Array.isArray(d) ? d : d.stocks); if (alive && Array.isArray(a) && a.length) setSearchList(a) })
             .catch(() => {})
+        return () => { alive = false }
+    }, [onCanvas])
+
+    /* KR↔US 교차피어 (Tier B B-5) — 반대 시장 GICS 섹터 중앙값 테이블(전역·소형). 1회 로드. */
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        Promise.all([
+            fetch(CROSS_KR_URL).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+            fetch(CROSS_US_URL).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ]).then(([kr, us]: any[]) => {
+            if (!alive) return
+            setCrossMed({ KR: (kr && kr.medians) || {}, US: (us && us.medians) || {} })
+        })
         return () => { alive = false }
     }, [onCanvas])
 
@@ -1907,6 +1940,42 @@ export default function PublicStockReport(props: Props) {
                 </div>
             )}
 
+            {/* 초보 Q&A 요약 (2026-07-16) — 우리 사실을 질문으로 재배치. 결정론·점수 0·중립색·"판단은 직접"(RULE 7). PlainRatio 스캐폴딩 정공법(LLM narrative 아님). */}
+            {(() => {
+                const rowOf = (k: string) => (peer && peer.rows) ? peer.rows.find((r: any) => r.key === k) : null
+                const arr = (vs: string) => vs === "above" ? " ↑" : vs === "below" ? " ↓" : ""
+                const cards: any[] = []
+                const per = rowOf("PER")
+                if (per) cards.push({ q: "지금 싸 보이나?", a: "PER " + per.value, sub: "섹터 중앙값 " + per.median + arr(per.vs) })
+                const roe = rowOf("ROE")
+                if (roe) cards.push({ q: "돈 잘 버나?", a: "ROE " + roe.value, sub: "섹터 " + roe.median + arr(roe.vs) })
+                if (insider && insider.trades && insider.trades.length) {
+                    const cutoff = Date.now() - 90 * 86400000
+                    const parseD = (x: any) => { const t = new Date(String(x || "")).getTime(); return isFinite(t) ? t : 0 }
+                    const recent = insider.trades.filter((t: any) => parseD(t.date) >= cutoff)
+                    const buyers = new Set(recent.filter((t: any) => Number(t.change) > 0).map((t: any) => t.person))
+                    const sellers = new Set(recent.filter((t: any) => Number(t.change) < 0).map((t: any) => t.person))
+                    if (buyers.size || sellers.size) cards.push({ q: "큰손이 사나?", a: "내부자 " + (buyers.size >= sellers.size ? buyers.size + "명 매수" : sellers.size + "명 매도"), sub: "최근 90일 서로 다른 임원" })
+                }
+                const debt = rowOf("부채비율")
+                if (debt || disclosures.length) cards.push({ q: "망가질 유의사항?", a: debt ? "부채비율 " + debt.value : "최근 공시 " + disclosures.length + "건", sub: disclosures.length ? "최근 공시 " + disclosures.length + "건" : (debt ? "섹터 " + debt.median + arr(debt.vs) : "") })
+                if (cards.length < 2) return null
+                return (
+                    <div style={{ margin: "6px 0 2px" }}>
+                        <div style={{ fontSize: 11.5, fontWeight: 700, color: C.faint, marginBottom: 6, paddingLeft: 2 }}>먼저 볼 것 · 사실만 · 판단은 직접</div>
+                        <div style={{ display: "grid", gridTemplateColumns: narrow ? "1fr 1fr" : "repeat(4, 1fr)", gap: 8 }}>
+                            {cards.map((c: any, i: number) => (
+                                <div key={i} style={{ background: C.card, borderRadius: 14, padding: "11px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                                    <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 5 }}>{c.q}</div>
+                                    <div style={{ fontSize: 14.5, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>{c.a}</div>
+                                    {c.sub && <div style={{ fontSize: 10.5, fontWeight: 600, color: C.faint, marginTop: 3 }}>{c.sub}</div>}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )
+            })()}
+
             {/* 미니 목차 — 렌더된 섹션 자동 구성, 탭=해당 섹션 스크롤. sticky/fixed 없이 in-flow (하드코드 position 금지 정합) */}
             {tocSecs.length >= 4 && (
                 <div data-noprint style={{ display: "flex", gap: 6, overflowX: "auto", padding: "10px 2px 2px", WebkitOverflowScrolling: "touch" }}>
@@ -1932,6 +2001,9 @@ export default function PublicStockReport(props: Props) {
                 <>
                     {sectionTitle("수급 — 외국인·기관 5일", "순매매량(주) · 네이버 · 탭=정확 수치", "수급")}
                     <div style={{ background: C.card, borderRadius: 16, padding: "8px 14px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                        {/* 다이버징 막대 — 외국인·기관 엇갈림을 한눈에. 아래 행 리스트는 정확 수치용으로 유지 */}
+                        <FlowDivergingChart rows={flowRows} C={C} narrow={narrow} />
+                        <div style={{ height: 1, background: C.line, margin: "12px 0 2px" }} />
                         {flowRows.map((r: any, i: number) => {
                             const opened = openFlow === i
                             return (
@@ -2101,24 +2173,24 @@ export default function PublicStockReport(props: Props) {
                             const dir = r.vs === "above" ? "업종 중앙값보다 높음" : r.vs === "below" ? "업종 중앙값보다 낮음" : "업종 중앙값과 비슷"
                             return (
                                 <div key={i} style={{ borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
-                                    <div onClick={() => setOpenPeer(opened ? -1 : i)} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 0", cursor: "pointer" }}>
-                                        <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.sub, fontWeight: 600 }}>{r.key}</span>
-                                        <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: C.ink, minWidth: 56, textAlign: "right" }}>{r.value}</span>
-                                        <span style={{ flexShrink: 0, fontSize: 11.5, color: C.faint, fontWeight: 600, minWidth: 70, textAlign: "right" }}>업종 {r.median}</span>
-                                        <span style={{ flexShrink: 0, width: 16, textAlign: "center", fontSize: 13, fontWeight: 800, color: C.vt }}>{r.vs === "above" ? "↑" : r.vs === "below" ? "↓" : "="}</span>
+                                    <div onClick={() => setOpenPeer(opened ? -1 : i)} style={{ padding: "11px 0 9px", cursor: "pointer" }}>
+                                        <div style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                                            <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.sub, fontWeight: 600 }}>{r.key}</span>
+                                            <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: C.ink }}>{r.value}</span>
+                                            <span style={{ flexShrink: 0, fontSize: 11.5, color: C.faint, fontWeight: 600 }}>업종 {r.median}</span>
+                                            <span style={{ flexShrink: 0, width: 12, textAlign: "center", fontSize: 12, color: C.faint, fontWeight: 700, transform: opened ? "rotate(90deg)" : "none", transition: "transform 0.12s" }}>›</span>
+                                        </div>
+                                        {/* 백분위 스트립 — 분포 내 위치(항상 노출). 옛 ↑/↓ 화살표는 위치가 대신하므로 제거 */}
+                                        {r.pct != null && <PeerStrip pct={r.pct} C={C} />}
                                     </div>
                                     {opened && (
                                         <div style={{ padding: "2px 0 12px", display: "flex", flexDirection: "column", gap: 5 }}>
                                             <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, lineHeight: 1.5 }}>
                                                 {r.key} {r.value} · {peer.sector} 중앙값 {r.median} (N={peer.n}) → <span style={{ color: C.vt }}>{dir}</span>
                                             </div>
+                                            {/* 스트립은 접힌 행에 항상 노출 — 여기선 숫자로만 보강(중복 차트 금지) */}
                                             {r.pct != null && (
-                                                <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 1 }}>
-                                                    <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 700 }}>동종 분포 백분위 {r.pct} <span style={{ color: C.faint, fontWeight: 600 }}>(이 값보다 낮은 동종 {r.pct}%)</span></div>
-                                                    <div style={{ position: "relative", height: 6, background: C.bg, borderRadius: 3 }}>
-                                                        <div style={{ position: "absolute", left: `calc(${Math.max(0, Math.min(100, r.pct))}% - 3px)`, top: -2, width: 6, height: 10, borderRadius: 2, background: C.vt }} />
-                                                    </div>
-                                                </div>
+                                                <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 700 }}>동종 분포 백분위 {r.pct} <span style={{ color: C.faint, fontWeight: 600 }}>(이 값보다 낮은 동종 {r.pct}%)</span></div>
                                             )}
                                             <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>같은 섹터 종목 중앙값·분포와의 사실 비교 — 높다·낮다가 좋다·나쁘다는 아님(판단 X)</div>
                                         </div>
@@ -2126,10 +2198,64 @@ export default function PublicStockReport(props: Props) {
                                 </div>
                             )
                         })}
+                        {/* 범례 — 단일 계열이라 범례 박스 대신 마크 설명 한 줄 (카드당 1회) */}
+                        {peer.rows.some((r: any) => r.pct != null) && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 10, paddingTop: 9, borderTop: `1px solid ${C.line}` }}>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: C.sub }}>
+                                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: C.vt }} />이 종목
+                                </span>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: C.sub }}>
+                                    <span style={{ width: 1.5, height: 10, background: C.line }} />업종 중앙값
+                                </span>
+                                <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 600, color: C.faint }}>← 낮음 · 높음 →</span>
+                            </div>
+                        )}
                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>{peer.note}</div>
                     </div>
                 </>
             )}
+
+            {/* KR↔US 교차피어 (Tier B B-5) — 반대 시장 동일 GICS 섹터 중앙값 비교. 어느 MTS도 안 주는 교차시장 사실(RULE 7) */}
+            {(() => {
+                const gics = s.gics
+                if (!gics) return null
+                const isKR = s.market !== "US"
+                const other = isKR ? crossMed.US : crossMed.KR
+                const om = other && other[gics]
+                if (!om || !om.median) return null
+                const otherLabel = isKR ? "미국" : "한국"
+                const secKo = s.gics_ko || om.sector_ko || gics
+                const KEYS = ["PER", "PBR", "ROE", "영업이익률"]
+                const rows = KEYS.map((k: string) => {
+                    const med = om.median[k]
+                    if (med == null) return null
+                    const pr = peer && peer.rows ? peer.rows.find((r: any) => r.key === k) : null
+                    if (!pr || pr.value == null) return null
+                    const own = parseFloat(String(pr.value).replace(/[%,\s]/g, ""))
+                    if (!isFinite(own)) return null
+                    const suf = k === "ROE" || k === "영업이익률" ? "%" : ""
+                    return { key: k, own: pr.value, med: med + suf, vs: own > med ? "above" : own < med ? "below" : "equal", n: (om.ns && om.ns[k]) || 0 }
+                }).filter(Boolean) as any[]
+                if (!rows.length) return null
+                return (
+                    <>
+                        {sectionTitle("KR↔US 교차피어 · " + secKo, otherLabel + " 동종 섹터 중앙값 비교", "교차피어")}
+                        <div style={{ background: C.card, borderRadius: 16, padding: "8px 16px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                            {rows.map((r: any, i: number) => (
+                                <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                                    <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.sub, fontWeight: 600 }}>{r.key}</span>
+                                    <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 800, color: C.ink, minWidth: 56, textAlign: "right" }}>{r.own}</span>
+                                    <span style={{ flexShrink: 0, fontSize: 11.5, color: C.faint, fontWeight: 600, minWidth: 96, textAlign: "right" }}>{otherLabel} {r.med}{r.n ? " (N=" + r.n + ")" : ""}</span>
+                                    <span style={{ flexShrink: 0, width: 16, textAlign: "center", fontSize: 13, fontWeight: 800, color: C.vt }}>{r.vs === "above" ? "↑" : r.vs === "below" ? "↓" : "="}</span>
+                                </div>
+                            ))}
+                            <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>
+                                {otherLabel} 상장사 중 같은 GICS 섹터(<b style={{ color: C.sub }}>{secKo}</b>) 종목의 중앙값과 비교 · 어느 MTS도 안 주는 교차시장 사실 — 높다·낮다가 좋다·나쁘다는 아님(RULE 7). 섹터=yfinance GICS(미상장분 SIC 근사).
+                            </div>
+                        </div>
+                    </>
+                )
+            })()}
 
             {/* 재무 추이 — 연간 손익(fin_series) / 분기 건전성(dart_quarterly) 탭 병합.
                 2026-07-10 PM: "재무 추이"·"분기 재무 추이" 두 섹션이 같은 걸로 보임(이름 혼동) → 한 섹션 탭 2개.
@@ -2199,6 +2325,26 @@ export default function PublicStockReport(props: Props) {
             )}
 
             {/* (구 '재무 추이' 연간 블록 = 위 병합 섹션 '연간 손익' 탭으로 이동, 2026-07-10) */}
+
+            {/* 현금흐름 워터폴 (2026-07-12) — 영업→투자→재무→순증감. DART 현금흐름표 실값 누적.
+                파싱 실패 시 컴포넌트가 null 반환 → 섹션 자동 숨김(가짜 숫자 0). KR 한정(미장은 현금흐름 그룹 부재). */}
+            {(() => {
+                const cf = finGroups.find((g: any) => String(g && g.title || "").indexOf("현금흐름") >= 0)
+                if (!cf) return null
+                // 🚨 파싱 가능 여부를 섹션 밖에서 먼저 판정 — JSX 엘리먼트는 항상 truthy 라
+                //    컴포넌트의 null 반환만으로는 섹션 제목·빈 카드가 남음.
+                const cfRows: any[] = Array.isArray(cf.rows) ? cf.rows : []
+                const pk = (k: string) => { const r = cfRows.find((x: any) => String(x.k || "").indexOf(k) === 0); return r ? parseKRWCompact(r.v) : null }
+                if (pk("영업활동") == null || pk("투자활동") == null || pk("재무활동") == null) return null
+                return (
+                    <>
+                        {sectionTitle("현금흐름", "DART · " + (financials.period || "최근 결산") + " · 실제 현금 이동")}
+                        <div style={{ background: C.card, borderRadius: 16, padding: narrow ? "16px 14px 14px" : "18px 18px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                            <CashflowWaterfall group={cf} C={C} narrow={narrow} />
+                        </div>
+                    </>
+                )
+            })()}
 
             {/* 공시·리스크 레이더 */}
             {disclosures.length > 0 && (
@@ -2285,6 +2431,24 @@ export default function PublicStockReport(props: Props) {
                             <span style={{ fontSize: 12.5, fontWeight: 800, color: C.down }}>매도 {insider.sell_n}건</span>
                             <span style={{ fontSize: 12.5, fontWeight: 800, color: (insider.net_change || 0) >= 0 ? C.up : C.down }}>순증감 {fmtShares(insider.net_change)}</span>
                         </div>
+                        {/* 내부자 군집(사실) — 최근 90일 서로 다른 매수/매도 임원 수. 여러 임원 동시 매수 = 관측 강신호(교과서 일반론), 자체 점수 아님(RULE 7). */}
+                        {(() => {
+                            const tr: any[] = insider.trades || []
+                            const cutoff = Date.now() - 90 * 86400000
+                            const parseD = (s: any) => { const t = new Date(String(s || "")).getTime(); return isFinite(t) ? t : 0 }
+                            const recent = tr.filter((t) => parseD(t.date) >= cutoff)
+                            const buyers = new Set(recent.filter((t) => Number(t.change) > 0).map((t) => t.person))
+                            const sellers = new Set(recent.filter((t) => Number(t.change) < 0).map((t) => t.person))
+                            if (!buyers.size && !sellers.size) return null
+                            return (
+                                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 9, paddingTop: 9, borderTop: `1px solid ${C.line}` }}>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: C.faint }}>최근 90일 군집</span>
+                                    {buyers.size > 0 && <span style={{ fontSize: 11.5, fontWeight: 800, color: C.up }}>서로 다른 임원 {buyers.size}명 매수</span>}
+                                    {sellers.size > 0 && <span style={{ fontSize: 11.5, fontWeight: 800, color: C.down }}>{sellers.size}명 매도</span>}
+                                    {buyers.size >= 3 && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#ffffff", background: C.up, borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>매수 집중</span>}
+                                </div>
+                            )
+                        })()}
                         <div style={{ marginTop: 10 }}>
                             {(insiderAll ? insider.trades : insider.trades.slice(0, 6)).map((t: any, i: number) => (
                                 <div key={i} style={{ display: "flex", gap: 9, alignItems: "center", padding: "9px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
@@ -2316,6 +2480,24 @@ export default function PublicStockReport(props: Props) {
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: C.down }}>매도 {usForen.insider.sell_n || 0}건</span>
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: (usForen.insider.net_change || 0) >= 0 ? C.up : C.down }}>순증감 {fmtShares(usForen.insider.net_change)}</span>
                                 </div>
+                                {/* 내부자 군집(사실) — 최근 90일 서로 다른 매수/매도 임원 수. Form4 취득/처분 기준. 점수 아님(RULE 7). */}
+                                {(() => {
+                                    const tr: any[] = usForen.insider.trades || []
+                                    const cutoff = Date.now() - 90 * 86400000
+                                    const parseD = (s: any) => { const t = new Date(String(s || "")).getTime(); return isFinite(t) ? t : 0 }
+                                    const recent = tr.filter((t) => parseD(t.date) >= cutoff)
+                                    const buyers = new Set(recent.filter((t) => Number(t.change) > 0).map((t) => t.person))
+                                    const sellers = new Set(recent.filter((t) => Number(t.change) < 0).map((t) => t.person))
+                                    if (!buyers.size && !sellers.size) return null
+                                    return (
+                                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+                                            <span style={{ fontSize: 11, fontWeight: 700, color: C.faint }}>최근 90일 군집</span>
+                                            {buyers.size > 0 && <span style={{ fontSize: 11.5, fontWeight: 800, color: C.up }}>서로 다른 임원 {buyers.size}명 매수</span>}
+                                            {sellers.size > 0 && <span style={{ fontSize: 11.5, fontWeight: 800, color: C.down }}>{sellers.size}명 매도</span>}
+                                            {buyers.size >= 3 && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#ffffff", background: C.up, borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>매수 집중</span>}
+                                        </div>
+                                    )
+                                })()}
                                 {usForen.insider.trades.slice(0, 6).map((t: any, i: number) => (
                                     <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line, fontSize: 12.5 }}>
                                         <span style={{ color: C.sub, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.person || "—"}{t.position ? " · " + t.position : ""}</span>
