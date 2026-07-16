@@ -324,6 +324,9 @@ def main() -> int:
         out = {
             "date": now.strftime("%Y-%m-%d"),
             "generated_at": now.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+            # 고정 조간 발행 시각(embargo·표시용) — 컴포넌트가 이 시각을 고정 노출하고 클라 시계로 그 시각에 교체.
+            # gh cron 지연/오후 체인 재발행과 무관하게 07:30 고정(2026-07-14). generated_at(실 빌드 시각)과 별개.
+            "publish_at": now.strftime("%Y-%m-%d") + "T07:30:00+09:00",
             "weekday": ["월", "화", "수", "목", "금", "토", "일"][now.weekday()],
             "warnings_n": len(warnings),
             "sections": sections,
