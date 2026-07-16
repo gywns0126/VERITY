@@ -764,6 +764,66 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
     return {"_status": 405, "_body": {"error": "method_not_allowed"}}
 
 
+def handle_growth_stats(handler, method: str, body: dict) -> dict:
+    # 성장·사용 통계 (AlphaNest 자체 데이터) — 가입 추이·회원·커뮤니티 활동. GET only.
+    # Framer 애널리틱스(방문자/페이지뷰)는 API 부재로 별개 — 여기선 전환·활동(product growth) 집계.
+    if not _svc_ready():
+        return {"_status": 503, "_body": {"error": "service_role_unconfigured"}}
+    if method != "GET":
+        return {"_status": 405, "_body": {"error": "method_not_allowed"}}
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+    d1 = (now - timedelta(days=1)).isoformat()
+    d7 = (now - timedelta(days=7)).isoformat()
+    d30 = (now - timedelta(days=30)).isoformat()
+
+    def _count(table: str, extra=None):
+        params = {"select": "id", "limit": "1"}
+        if extra:
+            params.update(extra)
+        try:
+            r = requests.get(f"{SUPABASE_URL}/rest/v1/{table}", headers=_svc_headers({"Prefer": "count=exact"}), params=params, timeout=10)
+            cr = r.headers.get("Content-Range", "")
+            if "/" in cr:
+                return int(cr.split("/")[-1])
+        except (requests.RequestException, ValueError):
+            pass
+        return None
+
+    members = {
+        "total": _count("profiles"),
+        "d1": _count("profiles", {"created_at": f"gte.{d1}"}),
+        "d7": _count("profiles", {"created_at": f"gte.{d7}"}),
+        "d30": _count("profiles", {"created_at": f"gte.{d30}"}),
+        "pending": _count("profiles", {"status": "eq.pending"}),
+        "banned": _count("profiles", {"is_banned": "eq.true"}),
+    }
+    community = {
+        "total": _count("user_thesis"),
+        "public": _count("user_thesis", {"is_public": "eq.true", "hidden": "eq.false"}),
+        "d7": _count("user_thesis", {"created_at": f"gte.{d7}"}),
+    }
+
+    # 최근 30일 일별 가입 (created_at 버킷팅)
+    daily: Dict[str, int] = {}
+    try:
+        r = requests.get(f"{SUPABASE_URL}/rest/v1/profiles", headers=_svc_headers(),
+                         params={"select": "created_at", "created_at": f"gte.{d30}", "limit": "5000"}, timeout=10)
+        if r.status_code == 200:
+            for row in r.json():
+                ca = str(row.get("created_at", ""))[:10]
+                if ca:
+                    daily[ca] = daily.get(ca, 0) + 1
+    except requests.RequestException:
+        pass
+    series = []
+    for i in range(29, -1, -1):
+        day = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+        series.append({"date": day, "count": daily.get(day, 0)})
+
+    return {"_status": 200, "_body": {"members": members, "community": community, "signups_daily": series}}
+
+
 def handle_audit_log(handler, method: str, body: dict) -> dict:
     # 관리자 조치 로그 조회 (제재·삭제·수정 이력). GET only.
     if not _svc_ready():
@@ -847,6 +907,7 @@ MOD_ROUTES = {
     "member_management": handle_member_management,
     "community_moderation": handle_community_moderation,
     "audit_log": handle_audit_log,
+    "growth_stats": handle_growth_stats,
 }
 
 
