@@ -47,9 +47,9 @@ def get_macro_indicators() -> dict:
         "vix": _get_commodity("^VIX", "VIX 공포지수"),
         "us_10y": _get_commodity("^TNX", "미국 10년물"),
         "us_2y": _get_commodity("^IRX", "미국 2년물"),
-        "sp500": _get_index_change("^GSPC", "S&P500"),
-        "nasdaq": _get_index_change("^IXIC", "나스닥"),
-        "dji": _get_index_change("^DJI", "다우"),
+        "sp500": _get_index_change_fred("SP500", "S&P500"),      # yfinance→FRED 공식 소스(야후 ToS 회색 제거, 2026-07-16). 지수 레벨=사실
+        "nasdaq": _get_index_change_fred("NASDAQCOM", "나스닥"),   # 신선도 동일(둘 다 daily). S&P/DJIA 저작권=법률 큐
+        "dji": _get_index_change_fred("DJIA", "다우"),
         "nikkei": _get_index_change("^N225", "닛케이"),
         "sse": _get_index_change("000001.SS", "상해종합"),
         "dax": _get_index_change("^GDAXI", "DAX"),
@@ -231,6 +231,31 @@ def _get_commodity_with_history(ticker: str, name: str) -> dict:
     except Exception as e:
         _log_collector_fail("_get_commodity_with_history", ticker, e)
     return {"value": 0, "change_pct": 0, "sparkline": [], "high_30d": 0, "low_30d": 0, **meta, "status": "fail"}
+
+
+def _get_index_change_fred(series_id: str, name: str) -> dict:
+    """지수 시세 + 30일 sparkline — FRED(세인트루이스 연준) 일별 종가. yfinance 대체(공식 무료 소스, 야후 ToS 회색 제거, 2026-07-16).
+    yfinance 도 daily(history 1mo) 였어 신선도 동일. 지수 레벨 = 사실. S&P/DJIA 저작권('Pre-Approval')은 소스 무관 = 법률 큐(권리감사 B1)."""
+    meta = {"source": "fred", "as_of": _now_kst_iso()}
+    try:
+        from api.config import FRED_API_KEY
+        r = requests.get(
+            "https://api.stlouisfed.org/fred/series/observations",
+            params={"series_id": series_id, "api_key": FRED_API_KEY, "file_type": "json",
+                    "sort_order": "desc", "limit": 40},
+            timeout=15,
+        )
+        r.raise_for_status()
+        obs = r.json().get("observations", []) or []
+        closes = [float(o["value"]) for o in obs if o.get("value") not in (".", "", None)][::-1]  # 오래된→최신
+        if len(closes) >= 2:
+            current, prev = closes[-1], closes[-2]
+            change_pct = round(((current - prev) / prev) * 100, 2) if prev else 0
+            sparkline = [round(c, 2) for c in closes][-30:]
+            return {"value": round(current, 2), "change_pct": change_pct, "sparkline": sparkline, **meta, "status": "ok"}
+    except Exception as e:  # noqa: BLE001
+        _log_collector_fail("_get_index_change_fred", series_id, e)
+    return {"value": 0, "change_pct": 0, "sparkline": [], **meta, "status": "fail"}
 
 
 def _get_index_change(ticker: str, name: str) -> dict:
