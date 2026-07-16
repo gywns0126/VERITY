@@ -1,31 +1,31 @@
 {
   "system_health": {
-    "status": "ok",
-    "checked_at": "2026-07-17T08:02:30+09:00",
+    "status": "error",
+    "checked_at": "2026-07-17T06:33:18+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 26887,
+    "elapsed_ms": 35648,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 7521,
+        "latency_ms": 7572,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 246,
+        "latency_ms": 610,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
-        "status": "ok",
-        "latency_ms": 566,
-        "detail": "@verity_stock_bot",
-        "attempts": 1
+        "status": "error",
+        "latency_ms": 11212,
+        "detail": "HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=5)",
+        "attempts": 2
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 107,
+        "latency_ms": 123,
         "detail": "정상",
         "attempts": 1
       },
@@ -37,49 +37,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 1093,
+        "latency_ms": 818,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 697,
+        "latency_ms": 1131,
         "detail": "정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 12534,
-        "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260716)",
+        "latency_ms": 10856,
+        "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260715)",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1779,
+        "latency_ms": 1388,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 549,
+        "latency_ms": 506,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 285,
+        "latency_ms": 187,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 346,
+        "latency_ms": 252,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 203,
+        "latency_ms": 245,
         "detail": "정상",
         "attempts": 1
       },
@@ -92,11 +92,11 @@
     },
     "github_worker": {
       "status": "running",
-      "conclusion": "pending",
-      "workflow": "Bond & ETF Analysis",
-      "started_at": "2026-07-16T23:01:54Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/29541170083",
-      "detail": "Bond & ETF Analysis: pending"
+      "conclusion": "in_progress",
+      "workflow": "Stock Analysis Pipeline (Full & Periodic)",
+      "started_at": "2026-07-16T21:30:14Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/29536277378",
+      "detail": "Stock Analysis Pipeline (Full & Periodic): in_progress"
     },
     "data_recency": {
       "status": "ok",
@@ -104,56 +104,56 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-07-17 08:00",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-17 06:30",
+          "age_hours": 0.04,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-07-17 08:00",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-17 06:30",
+          "age_hours": 0.04,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-07-17 08:00",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-17 06:30",
+          "age_hours": 0.04,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-07-17 08:00",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-17 06:30",
+          "age_hours": 0.04,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-07-17 08:00",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-17 06:30",
+          "age_hours": 0.04,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-07-17 08:00",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-17 06:30",
+          "age_hours": 0.04,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-07-17 08:00",
-          "age_hours": 0.03,
+          "last_updated": "2026-07-17 06:32",
+          "age_hours": 0.01,
           "threshold_hours": 1
         }
       }
     },
     "version_sync": {
       "local_version": "v8.2.0",
-      "status": "update_available",
-      "remote_sha": "726a067",
-      "remote_message": "🪙 crypto_collect 2026-07-17T08:02",
-      "remote_date": "2026-07-16T23:02:16Z",
-      "local_sha": "e6103e2",
-      "detail": "새로운 커밋이 원격에 존재합니다"
+      "status": "ok",
+      "remote_sha": "ca16ff7",
+      "remote_message": "📊 macro_snapshot 2026-07-17T06:32",
+      "remote_date": "2026-07-16T21:32:46Z",
+      "local_sha": "66d4753",
+      "detail": "cron 자동 갱신 — 📊 macro_snapshot 2026-07-17T06:32"
     },
     "errors": [
       "Telegram 알림 API 오류 — HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=5)"
@@ -168,7 +168,7 @@
     },
     "overall_status": "error"
   },
-  "updated_at": "2026-07-17T08:02:35+09:00",
+  "updated_at": "2026-07-17T08:32:26+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
