@@ -46,6 +46,11 @@ SUMMARIES_PATH = os.path.join(DATA_DIR, "report_summaries.json")
 MAX_DAILY_REPORTS = 30
 MIN_TEXT_LENGTH = 200
 MAX_TEXT_FOR_AI = 30000
+# 🚨 2026-07-16 — Gemini 호출 per-request 타임아웃(ms). 옛날엔 무제한이라 한 리포트 연결이
+#   멈추면 파이프라인 전체가 매달림(7/16 daily_analysis: 리포트 [30/30]가 19분 무응답 → 총
+#   소요를 120분 천장까지 밀어올림). 정상 호출은 15~40초라 60초는 정상분 미절단 + 행 차단.
+#   🔔 후속 — 코드베이스에 무제한 genai.Client 총 10곳. 공유 팩토리로 일괄 캡 검토.
+GEMINI_TIMEOUT_MS = 60_000
 AGGREGATION_LOOKBACK_DAYS = 7
 # 2026-05-20 — _processed_hashes git 추적 후 무한 증가 방지 prune 보존 윈도우.
 # 집계 lookback(7d) 의 5× 버퍼 — 최근 본 PDF dedup 절감은 유지하되 git 비대화 bound.
@@ -129,7 +134,11 @@ def _summarize_with_gemini(text: str, firm: str, company_name: str) -> Optional[
         return None
     try:
         from google import genai
-        client = genai.Client(api_key=GEMINI_API_KEY)
+        from google.genai import types as genai_types
+        client = genai.Client(
+            api_key=GEMINI_API_KEY,
+            http_options=genai_types.HttpOptions(timeout=GEMINI_TIMEOUT_MS),
+        )
         prompt = PROMPT_TEMPLATE.format(
             firm=firm or "?",
             company_name=company_name or "?",

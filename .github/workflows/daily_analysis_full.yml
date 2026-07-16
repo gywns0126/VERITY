@@ -63,7 +63,12 @@ concurrency:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # 🚨 2026-07-16 안전변 120 → 150. 평일 baseline 이 ~100~120분(고정, 크립 아님 — 프로파일 확인)
+    #   이라 120 천장에 붙어 있어, 외부 API 무제한 호출이 가끔 멈추면 슬롯이 천장을 넘어 SIGTERM.
+    #   실사고: 7/16 Gemini 리포트요약 19분 행(→ 동봉 report_summarizer 타임아웃 캡으로 근본 수리),
+    #   7/14 DART 재시도 폭주. 150 은 응급 헤드룸일 뿐 — 근본은 무제한 외부호출 캡. 150 초과 시
+    #   이 값을 더 올리지 말 것(무료 분 소진·크립 은폐). 남은 무제한 genai.Client 9곳 = 후속 캡.
+    timeout-minutes: 150
 
     steps:
       - name: Checkout
