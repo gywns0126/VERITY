@@ -8,6 +8,11 @@ Brain Observatory admin API — 단일 파일 통합 (Hobby 12 함수 제한 회
   /api/admin?type=explain        ← explain.py
   /api/admin?type=trust          ← trust.py
 
+추가 라우트:
+  /api/admin?type=member_management  ← 회원 관리(부관리자 지정=최종 관리자만, 2026-07-17)
+  /api/admin?type=community_moderation · audit_log · growth_stats
+  /api/admin?type=security           ← IP 침입 추적·차단 (Railway 미들웨어와 blocked_ips 공유)
+
 인증: X-Admin-Token 또는 Bearer JWT (profiles.is_admin=true)
 """
 from __future__ import annotations
