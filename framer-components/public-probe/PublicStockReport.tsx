@@ -255,7 +255,7 @@ const SAMPLE_FLOW: Record<string, any[]> = {
 const SAMPLE_FORENSICS: Record<string, any> = {
     "005930": {
         counts: { "자기주식취득": 2, "정정공시": 1 }, total: 3, dilution_count: 0,
-        forensics_flags: { correction_count: 1, correction_pct: 33, dilution_12m: 0, dilution_span: "" },
+        forensics_flags: { correction_count: 1, correction_pct: 33, dilution_12m: 0, dilution_span: "", dilution_annual_avg_prior: 0, dilution_history_from: "" },
         events: [
             { date: "2026-06-15", category: "자기주식취득", risk: "favorable", title: "주요사항보고서(자기주식취득결정)", is_correction: false, source_url: DART + "20260615000777" },
             { date: "2026-05-30", category: "정정공시", risk: "correction", title: "[기재정정]분기보고서", is_correction: true, source_url: DART + "20260530000111" },
@@ -2362,7 +2362,7 @@ export default function PublicStockReport(props: Props) {
                         {foren.forensics_flags && (foren.forensics_flags.dilution_12m > 0 || foren.forensics_flags.correction_count > 0) && (
                             <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 9 }}>
                                 {foren.forensics_flags.dilution_12m > 0 && (
-                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.amber, background: C.bg, borderRadius: 8, padding: "4px 9px" }}>최근 12개월 희석 {foren.forensics_flags.dilution_12m}회{foren.forensics_flags.dilution_span ? ` · ${foren.forensics_flags.dilution_span}` : ""}</span>
+                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.amber, background: C.bg, borderRadius: 8, padding: "4px 9px" }}>최근 12개월 희석 {foren.forensics_flags.dilution_12m}회{foren.forensics_flags.dilution_annual_avg_prior > 0 ? ` (직전 연평균 ${foren.forensics_flags.dilution_annual_avg_prior}회)` : ""}{foren.forensics_flags.dilution_span ? ` · ${foren.forensics_flags.dilution_span}` : ""}</span>
                                 )}
                                 {foren.forensics_flags.correction_count > 0 && (
                                     <span style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, background: C.bg, borderRadius: 8, padding: "4px 9px" }}>정정공시 {foren.forensics_flags.correction_count}회 ({foren.forensics_flags.correction_pct}%)</span>

@@ -124,11 +124,25 @@ def main() -> int:
             corr_n = slot["counts"].get("정정공시", 0)
             dil_dates = sorted([e["date"] for e in full_events
                                 if e["category"] in dilution_keys and e["date"]])
+            # 직전(12개월 이전) 희석 이벤트 = baseline 사실. "최근 12개월 N회 (직전 연평균 M회)" 병기용.
+            # 🚨 RULE 7 — 두 raw 사실만. "급증/이상" 판정·boolean·점수 0. 독자가 두 숫자 보고 판단.
+            prior_dates = [d for d in dil_dates if d < cutoff_12m]
+            prior_avg = 0.0
+            if prior_dates:
+                try:
+                    _d0 = datetime.strptime(prior_dates[0][:10], "%Y-%m-%d")
+                    _dc = datetime.strptime(cutoff_12m[:10], "%Y-%m-%d")
+                    _span_years = max(1.0, (_dc - _d0).days / 365.0)  # 관측 기간(년), 최소 1
+                    prior_avg = round(len(prior_dates) / _span_years, 1)
+                except (ValueError, TypeError):
+                    prior_avg = 0.0
             slot["forensics_flags"] = {
                 "correction_count": corr_n,                                    # 정정공시 건수 (공시 신뢰도 사실)
                 "correction_pct": round(100.0 * corr_n / slot["total"]) if slot["total"] else 0,
                 "dilution_12m": sum(1 for d in dil_dates if d >= cutoff_12m),   # 최근 12개월 희석 횟수
                 "dilution_span": (dil_dates[0] + " ~ " + dil_dates[-1]) if len(dil_dates) >= 2 else "",
+                "dilution_annual_avg_prior": prior_avg,                         # 직전(12m 이전) 연평균 희석 횟수 (baseline 사실)
+                "dilution_history_from": prior_dates[0] if prior_dates else "", # 관측 시작일 (사실, 맥락)
             }
             slot["events"] = full_events[:30]
             stocks.append(slot)
