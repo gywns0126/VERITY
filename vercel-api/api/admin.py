@@ -727,7 +727,8 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
             qp["or"] = f"(email.ilike.*{q}*,nickname.ilike.*{q}*,display_name.ilike.*{q}*)"
         r = requests.get(f"{SUPABASE_URL}/rest/v1/profiles",
                          headers=_svc_headers({"Prefer": "count=exact"}), params=qp, timeout=10)
-        if r.status_code != 200:
+        # PostgREST count=exact + 부분범위(limit<total) = 206 Partial Content(정상). 206 도 성공으로 수용.
+        if r.status_code not in (200, 206):
             return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
         total = None
         cr = r.headers.get("Content-Range", "")
