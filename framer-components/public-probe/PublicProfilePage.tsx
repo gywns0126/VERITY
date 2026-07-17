@@ -46,6 +46,7 @@ interface Profile {
     nickname: string   // 커뮤니티 표시명 (019 마이그레이션, 유일)
     avatar: string     // 128px JPEG base64 data-URL (~10KB, 인라인 저장)
     bio: string        // 한 줄 소개 (021 마이그레이션, ≤40자)
+    is_admin: boolean  // 008 컬럼 — 관리자 버튼 노출 게이트(실제 차단은 /admin AdminGate + 서버)
 }
 
 const SAMPLE: Profile = {
@@ -57,6 +58,7 @@ const SAMPLE: Profile = {
     nickname: "길동무",
     avatar: "",
     bio: "저평가 가치주 장기 보유",
+    is_admin: true,
 }
 
 function loadSession(): SupaSession | null {
@@ -95,8 +97,9 @@ async function fetchProfile(
             return Array.isArray(rows) && rows[0] ? rows[0] : null
         }
         // created_at 포함 — OAuth 세션은 user.created_at 를 저장하지 않아 가입일이 비므로 profiles 행에서 채움
-        return (await get("display_name,email,phone,status,created_at,nickname,avatar,bio"))
-            || (await get("display_name,email,phone,status,created_at,nickname,avatar"))
+        return (await get("display_name,email,phone,status,created_at,nickname,avatar,bio,is_admin"))
+            || (await get("display_name,email,phone,status,created_at,nickname,avatar,is_admin"))
+            || (await get("display_name,email,phone,status,created_at,is_admin"))
             || (await get("display_name,email,phone,status,created_at"))
     } catch (e) {
         return null
@@ -224,7 +227,6 @@ interface Props {
     profileTable: string
     loginRedirect: string
     logoutRedirect: string
-    adminEmail: string
     adminPath: string
     dark: boolean
 }
@@ -238,8 +240,8 @@ export default function PublicProfilePage(props: Props) {
     const profileTable = props.profileTable || "profiles"
     const loginRedirect = props.loginRedirect || "/login"
     const logoutRedirect = props.logoutRedirect || "/login"
-    // 관리자 버튼 = 지정 이메일 계정에만 노출(UI 편의). 실제 접근 차단은 /admin AdminGate + 서버(admin.py).
-    const adminEmail = (props.adminEmail || "gywns0126@gmail.com").trim().toLowerCase()
+    // 관리자 버튼 = profiles.is_admin 계정에만 노출(UI 편의). 실제 접근 차단은 /admin AdminGate + 서버(admin.py).
+    // is_admin 기반 → 관리자 추가 = DB(is_admin=true)만, 코드/이메일 하드코딩 불필요.
     const adminPath = props.adminPath || "/admin"
 
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -291,6 +293,7 @@ export default function PublicProfilePage(props: Props) {
             nickname: "",
             avatar: "",
             bio: "",
+            is_admin: false,
         }
         setProfile(base)
         setPhase("member")
@@ -307,6 +310,7 @@ export default function PublicProfilePage(props: Props) {
                 nickname: (row as any).nickname || "",
                 avatar: (row as any).avatar || "",
                 bio: (row as any).bio || "",
+                is_admin: (row as any).is_admin === true,
             })
         })
         return () => {
@@ -470,7 +474,7 @@ export default function PublicProfilePage(props: Props) {
                             style={{ marginTop: 16, border: "none", cursor: "pointer", background: C.field, color: C.ink, fontSize: 12.5, fontWeight: 700, fontFamily: FONT, padding: "8px 20px", borderRadius: 999 }}>
                             프로필 편집
                         </button>
-                        {profile && profile.email && profile.email.trim().toLowerCase() === adminEmail ? (
+                        {profile && profile.is_admin === true ? (
                             <button type="button"
                                 onClick={() => go(adminPath)}
                                 style={{ marginTop: 18, marginBottom: 10, border: "none", cursor: "pointer", background: "#ffffff", color: "#191f28", fontSize: 12.5, fontWeight: 700, fontFamily: FONT, padding: "8px 20px", borderRadius: 999 }}>
@@ -610,7 +614,6 @@ addPropertyControls(PublicProfilePage, {
     profileTable: { type: ControlType.String, title: "프로필 테이블", defaultValue: "profiles" },
     loginRedirect: { type: ControlType.String, title: "로그인 경로", defaultValue: "/login" },
     logoutRedirect: { type: ControlType.String, title: "로그아웃/탈퇴 후 이동", defaultValue: "/login" },
-    adminEmail: { type: ControlType.String, title: "관리자 이메일", defaultValue: "gywns0126@gmail.com", description: "이 이메일 계정에만 관리자 버튼 노출" },
     adminPath: { type: ControlType.String, title: "관리자 경로", defaultValue: "/admin" },
     dark: { type: ControlType.Boolean, title: "Dark (정적)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
