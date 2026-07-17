@@ -42,7 +42,6 @@ const INFO: Record<string, string> = {
 const SIGNAL_NAME: Record<string, string> = {
     brain_production: "Brain 종합 판정",
     xgb_ml: "XGB 머신러닝 (shadow)",
-    shadow_funnel: "Wide-scan 펀널 (shadow)",
     factor: "팩터 IC",
     sector: "섹터 로테이션",
 }
@@ -103,11 +102,6 @@ const SAMPLE = {
             label: "예비 (N<100, 검증 진행 중)",
             gate_status: "가설 (게이트 N≥252 미도달, 진척 21.0%)",
             source: "factor_ic_history.json (ic_stats machinery, forward_days 30)",
-        },
-        {
-            signal: "shadow_funnel", status: "trail 누적 (채점 미연결)", n: 0, n_eff: null,
-            label: "데이터 없음", gate_status: "가설 (관측 0)",
-            source: "shadow_prediction_trail.jsonl (wide_scan 7차원 funnel SHADOW)",
         },
         {
             signal: "sector", status: "채점 DEFERRED (return source 미확정)", n: 0, n_eff: null,
@@ -213,7 +207,9 @@ export default function PublicGlassboxTab(props: Props) {
     const gate: Gate = (data && data.gate) || {}
     const signals: Sig[] = useMemo(() => {
         const s = (data && data.signals) || []
-        return Array.isArray(s) ? s : []
+        if (!Array.isArray(s)) return []
+        // VERITY wide-scan funnel = 비공개 자산 → 공개 유리박스 노출 금지 (feedback_verity_vs_alphanest_identity)
+        return s.filter((x: any) => x && String(x.signal || "").indexOf("funnel") === -1)
     }, [data])
     const progress = Math.max(0, Math.min(100, Number(gate.progress_pct) || 0))
     const curN = Number(gate.best_signal_n) || 0
