@@ -151,6 +151,22 @@ def _load_universe_caps() -> Dict[str, Dict[str, float]]:
         if tk:
             out[tk] = {"market_cap": float(e.get("market_cap") or 0),
                        "adv": float(e.get("avg_trading_value_30d") or 0)}
+    # 소형주 시총 병합 — us_market_caps.json(combined, data/). us_smallcap.yml 이 리포트 빌드 직전
+    # fetch_us_market_caps --universe combined 로 ~5,200종(소형주 포함) 채워둠. universe_us(sp1500)만
+    # 읽던 탓에 소형주 3,375종 시총 공백 → PER/PBR/시총 3필드 전량 미산출이던 것 복원. sp1500 값 무손상.
+    try:
+        _mc_path = os.path.join(os.path.dirname(os.path.dirname(CACHE_PATH)), "us_market_caps.json")
+        _mc = (json.load(open(_mc_path, encoding="utf-8")) or {}).get("market_caps") or {}
+        for _tk, _v in _mc.items():
+            _tk = str(_tk).upper()
+            try:
+                _fv = float(_v or 0)
+            except (TypeError, ValueError):
+                continue
+            if _tk and _fv > 0 and out.get(_tk, {}).get("market_cap", 0) <= 0:
+                out.setdefault(_tk, {"market_cap": 0.0, "adv": 0.0})["market_cap"] = _fv
+    except (OSError, json.JSONDecodeError):
+        pass
     return out
 
 
