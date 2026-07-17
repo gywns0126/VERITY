@@ -88,6 +88,7 @@ interface Disclosure {
     is_correction: boolean
     filer: string
     source_url: string
+    why_it_matters?: string   // 백엔드 결정론 dict(disclosure_why_templates) 산출. 사실+단계 caveat, 판정 0.
 }
 interface FeedItem {
     ticker: string
@@ -100,7 +101,7 @@ const SAMPLE: FeedItem[] = [
     {
         ticker: "247540", name: "에코프로비엠", latest: "2026-06-16",
         disclosures: [
-            { title: "주요사항보고서(유상증자결정)", label: "주요사항", date: "2026-06-16", is_correction: false, filer: "에코프로비엠", source_url: DART + "20260616000412" },
+            { title: "주요사항보고서(유상증자결정)", label: "주요사항", date: "2026-06-16", is_correction: false, filer: "에코프로비엠", source_url: DART + "20260616000412", why_it_matters: "새 주식을 발행해 자금을 조달한다. 발행이 끝나면 총 주식 수가 늘어 기존 주주 지분율은 그만큼 낮아진다. (사실 · 발행 규모·방식은 공시 원문 확인)" },
             { title: "단일판매ㆍ공급계약체결", label: "주요사항", date: "2026-06-09", is_correction: false, filer: "에코프로비엠", source_url: DART + "20260609000231" },
             { title: "[기재정정]분기보고서", label: "정정공시", date: "2026-06-02", is_correction: true, filer: "에코프로비엠", source_url: DART + "20260602000118" },
         ],
@@ -532,6 +533,12 @@ export default function PublicDisclosureFeed(props: Props) {
                                         {opened && (
                                             <div style={{ padding: "2px 0 11px 0", display: "flex", flexDirection: "column", gap: 8 }}>
                                                 <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, lineHeight: 1.5, wordBreak: "break-word" }}>{d.title}</div>
+                                                {/* 왜 중요한가 — 백엔드 결정론 문구(사실+단계 caveat). 판정·색 강조 없음. 미매핑 = 미표시 */}
+                                                {d.why_it_matters && (
+                                                    <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 500, lineHeight: 1.55, background: C.bg, borderRadius: 9, padding: "9px 11px" }}>
+                                                        {d.why_it_matters}
+                                                    </div>
+                                                )}
                                                 <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 11.5, color: C.sub, fontWeight: 600 }}>
                                                     <span>구분 · {corr ? "정정공시" : (LABEL_PLAIN[d.label] || d.label)}</span>
                                                     <span>접수 · {d.date}</span>
