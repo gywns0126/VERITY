@@ -131,12 +131,18 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
                 # 🚨 정확일치 필수 — 부분일치는 '계속영업이익(손실)'(세후, ≈순이익)에 걸려 영업이익을 덮어씀
                 #   (2026-07-06 실증: 삼성 2018 op 58.9조 → 44.3조 오염, fin_series 전 연도 op==net 사고)
                 out["operating_profit"] = amount
-            elif "당기순이익" in acct or "분기순이익" in acct or "반기순이익" in acct:
-                # 🚨 분기/반기보고서 순이익 라벨 = '분기순이익'/'반기순이익' (연간만 '당기순이익').
-                #   2026-07-17 실증: 삼성 2025-Q1 CFS = '분기순이익' 8.2조 → 기존 '당기순이익' 단독
-                #   매칭이 분기 순이익 전량 누락 → 분기 roa 36.6% 공백 근원. '법인세비용차감전순이익'
-                #   (pretax)은 위 3라벨 미포함이라 오염 없음.
-                out["net_income"] = max(out["net_income"], amount)
+            elif item.get("account_id") == "ifrs-full_ProfitLoss":
+                # 🚨 순이익 총계 정본 = account_id ifrs-full_ProfitLoss (NCI 포함 총계). 부호 보존
+                #   (손실=음수), max 제거. 이전 max(0,음수) 클램프가 적자기업 순이익을 0으로 왜곡 →
+                #   roa/roe null + LG화학류 wrong-sign. eq=자산-부채(NCI 포함) 분모와 정합.
+                #   (2026-07-17: 분기순이익/반기순이익 라벨도 이 정본에 흡수 — 분기 roa 복원 유지)
+                out["net_income"] = amount
+            elif out["net_income"] == 0 and "지분" not in acct and "차감전" not in acct and (
+                    "당기순이익" in acct or "당기순손실" in acct or "당기순손익" in acct
+                    or "분기순이익" in acct or "분기순손실" in acct or "분기순손익" in acct
+                    or "반기순이익" in acct or "반기순손실" in acct or "반기순손익" in acct):
+                # account_id 부재(구 K-GAAP/비표준) fallback. '지분'(지배/비지배 소분해)·'차감전'(pretax) 배제.
+                out["net_income"] = amount
             elif "법인세차감전" in acct or "법인세비용차감전" in acct:
                 out["pretax_income"] = amount
             elif "판매비와관리비" in acct:
