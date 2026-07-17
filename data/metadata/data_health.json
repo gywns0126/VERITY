@@ -1,11 +1,10 @@
 {
  "_meta": {
-  "generated_at": "2026-07-17T14:37:20.855960+09:00",
+  "generated_at": "2026-07-17T17:00:32.654070+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "red",
+ "status": "amber",
  "reasons": [
-  "P0 stale 1건",
   "비P0 stale 1건"
  ],
  "publish_guard": {
@@ -13,7 +12,7 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-07-17T14:37:20.799641+09:00",
+  "generated_at": "2026-07-17T17:00:32.597617+09:00",
   "ok": true,
   "failed": 0,
   "max_cdn_age_s": 0,
@@ -68,17 +67,17 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-07-17T14:37:13.206593+09:00",
+  "generated_at": "2026-07-17T17:00:24.217868+09:00",
   "summary": {
-   "fresh": 26,
-   "stale": 2,
-   "closed": 0,
+   "fresh": 25,
+   "stale": 1,
+   "closed": 2,
    "discontinued": 1,
    "p0": {
     "total": 6,
-    "fresh": 5,
-    "closed": 0,
-    "active": 6
+    "fresh": 4,
+    "closed": 2,
+    "active": 4
    },
    "p1": {
     "total": 11,
@@ -93,13 +92,7 @@
     "active": 12
    }
   },
-  "stale_p0": [
-   {
-    "id": "dart_catalyst_alerts",
-    "label": "DART 공시 알림",
-    "age_min": 467.1
-   }
-  ],
+  "stale_p0": [],
   "stale_other": [
    "trade_analysis"
   ]
