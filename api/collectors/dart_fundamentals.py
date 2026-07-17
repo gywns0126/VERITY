@@ -131,7 +131,11 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
                 # 🚨 정확일치 필수 — 부분일치는 '계속영업이익(손실)'(세후, ≈순이익)에 걸려 영업이익을 덮어씀
                 #   (2026-07-06 실증: 삼성 2018 op 58.9조 → 44.3조 오염, fin_series 전 연도 op==net 사고)
                 out["operating_profit"] = amount
-            elif "당기순이익" in acct:
+            elif "당기순이익" in acct or "분기순이익" in acct or "반기순이익" in acct:
+                # 🚨 분기/반기보고서 순이익 라벨 = '분기순이익'/'반기순이익' (연간만 '당기순이익').
+                #   2026-07-17 실증: 삼성 2025-Q1 CFS = '분기순이익' 8.2조 → 기존 '당기순이익' 단독
+                #   매칭이 분기 순이익 전량 누락 → 분기 roa 36.6% 공백 근원. '법인세비용차감전순이익'
+                #   (pretax)은 위 3라벨 미포함이라 오염 없음.
                 out["net_income"] = max(out["net_income"], amount)
             elif "법인세차감전" in acct or "법인세비용차감전" in acct:
                 out["pretax_income"] = amount
