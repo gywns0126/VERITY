@@ -259,20 +259,28 @@ def _get_index_change_fred(series_id: str, name: str) -> dict:
 
 
 def _get_index_change(ticker: str, name: str) -> dict:
-    """지수 시세 + 30일 sparkline (공개 시세 보드 추세선용). change_pct = 직전 종가 대비(기존 동일)."""
+    """지수 시세 + 30일 sparkline (공개 시세 보드 추세선용). change_pct = 직전 종가 대비(기존 동일).
+
+    data_date = 실제 종가 봉 날짜(YYYYMMDD, 거래소 tz) — as_of(수집 시각)와 분리.
+    프론트가 '언제 종가'인지 정직 라벨 가능(수집 시각을 데이터 날짜로 오인 방지, 2026-07-17).
+    NaN 종가(yfinance 반환)는 dropna 로 선제거 = value/change_pct NaN 전파 차단.
+    """
     meta = {"source": "yfinance", "as_of": _now_kst_iso()}
     try:
         t = yf.Ticker(ticker)
         hist = t.history(period="1mo")
-        if len(hist) >= 2:
-            current = float(hist["Close"].iloc[-1])
-            prev = float(hist["Close"].iloc[-2])
-            change_pct = round(((current - prev) / prev) * 100, 2)
-            sparkline = [round(float(v), 2) for v in hist["Close"].tolist() if v == v][-30:]
-            return {"value": round(current, 2), "change_pct": change_pct, "sparkline": sparkline, **meta, "status": "ok"}
+        closes = hist["Close"].dropna()
+        if len(closes) >= 2:
+            current = float(closes.iloc[-1])
+            prev = float(closes.iloc[-2])
+            change_pct = round(((current - prev) / prev) * 100, 2) if prev else 0
+            sparkline = [round(float(v), 2) for v in closes.tolist()][-30:]
+            data_date = closes.index[-1].strftime("%Y%m%d")
+            return {"value": round(current, 2), "change_pct": change_pct, "sparkline": sparkline,
+                    "data_date": data_date, **meta, "status": "ok"}
     except Exception as e:
         _log_collector_fail("_get_index_change", ticker, e)
-    return {"value": 0, "change_pct": 0, "sparkline": [], **meta, "status": "fail"}
+    return {"value": 0, "change_pct": 0, "sparkline": [], "data_date": None, **meta, "status": "fail"}
 
 
 def _get_upbit(market: str) -> dict:
