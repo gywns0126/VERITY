@@ -12,6 +12,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
  * 행 탭 → 종목 리포트(stockPath?q=ticker). RULE 7 — 가격·등락(외부 사실)만, 점수·추천 0.
  * 🚨 내 관점 통합(2026-06-21) — localStorage `verity_thesis_v1`(PublicThesisNote) 읽어 각 종목에 관점 배지(강세/관망/약세).
  *   = "내가 어떻게 본 종목들" 한눈. *사용자 본인* 저널이지 VERITY 추천 아님. focus/이벤트 시 재읽기(다른 페이지서 기록 반영).
+ * 🚨 둥지(보유) 연동(2026-07-18) — 로그인 시 /api/holdings 읽어 보유종목을 관심종목에 합쳐 '보유' 배지 표시.
+ *   verity_holdings_change/verity_auth_change 시 재조회. 보유-only 종목은 × 없음(해제는 둥지에서).
  * 컴팩트 사이징(목업 정합). 반응형 — ResizeObserver. 캔버스 = SEED 데모.
  * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
  * 🚨 배경 transparent + 하단 면책 푸터 제거(2026-06-26, PM) — 면책은 사이트 하단 단일 통합. 패딩 0(임베드 이중여백 해소).
@@ -90,6 +92,16 @@ function loadTheses(): Record<string, any> {
     if (typeof window === "undefined") return {}
     try { return JSON.parse(localStorage.getItem(THESIS_KEY) || "{}") || {} } catch { return {} }
 }
+const SESSION_KEY = "verity_supabase_session"
+function loadToken(): string {
+    if (typeof window === "undefined") return ""
+    try {
+        const s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null")
+        if (!s || typeof s.access_token !== "string") return ""
+        if (s.expires_at && Date.now() / 1000 > s.expires_at) return ""
+        return s.access_token
+    } catch { return "" }
+}
 
 /**
  * @framerSupportedLayoutWidth any
@@ -103,6 +115,7 @@ export default function PublicWatchlist(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [watch, setWatch] = useState<any[]>(SEED)
+    const [held, setHeld] = useState<any[]>([])
     const [universe, setUniverse] = useState<any[]>([])
     const [theses, setTheses] = useState<Record<string, any>>({})
     const [adding, setAdding] = useState(false)
@@ -135,6 +148,25 @@ export default function PublicWatchlist(props: Props) {
     }, [])
 
     useEffect(() => { if (!onCanvas) { sessionResetScratch(); setWatch(loadWatch()) } }, [onCanvas])
+
+    /* 보유종목(둥지, /api/holdings) — 로그인 시 관심종목에 합쳐 '보유' 표시. 로그인/보유변경 시 재조회. */
+    useEffect(() => {
+        if (onCanvas) { setHeld([{ ticker: "000660", name: "SK하이닉스", market: "kr" }]); return }
+        const load = () => {
+            const token = loadToken()
+            if (!token) { setHeld([]); return }
+            fetch(base + "/api/holdings", { headers: { Authorization: "Bearer " + token }, cache: "no-store" })
+                .then((r) => (r.ok ? r.json() : null))
+                .then((d) => { const a = Array.isArray(d) ? d : (d && Array.isArray(d.holdings) ? d.holdings : []); setHeld(Array.isArray(a) ? a : []) })
+                .catch(() => {})
+        }
+        load()
+        if (typeof window === "undefined") return
+        window.addEventListener("verity_auth_change", load)
+        window.addEventListener("verity_holdings_change", load)
+        window.addEventListener("storage", load)
+        return () => { window.removeEventListener("verity_auth_change", load); window.removeEventListener("verity_holdings_change", load); window.removeEventListener("storage", load) }
+    }, [onCanvas, base])
 
     /* 내 관점(thesis) 로드 — mount + focus/이벤트 재읽기(다른 페이지서 기록 반영) */
     useEffect(() => {
@@ -201,6 +233,26 @@ export default function PublicWatchlist(props: Props) {
         window.location.href = p + "?q=" + encodeURIComponent(String(h.ticker || "").trim())
     }
 
+    /* 관심(로컬) ∪ 보유(둥지) 합집합 — 보유는 '보유' 배지, 관심(로컬)만 × 해제 가능 */
+    const rows = useMemo(() => {
+        const byTk = new Map<string, any>()
+        for (const h of watch) {
+            const tk = String(h.ticker || "").trim()
+            if (!tk) continue
+            byTk.set(tk, { ...h, ticker: tk, _watched: true, _held: false })
+        }
+        for (const h of held) {
+            const tk = String(h.ticker || "").trim()
+            if (!tk) continue
+            const cur = byTk.get(tk)
+            if (cur) cur._held = true
+            else byTk.set(tk, { ticker: tk, name: h.name || tk, market: h.market || "", _watched: false, _held: true })
+        }
+        const arr = Array.from(byTk.values())
+        arr.sort((a, b) => (b._held ? 1 : 0) - (a._held ? 1 : 0))
+        return arr
+    }, [watch, held])
+
 
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
@@ -216,15 +268,15 @@ export default function PublicWatchlist(props: Props) {
             {/* 관심종목 카드 */}
             <div style={{ background: C.card, borderRadius: 14, padding: "14px 14px 11px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px" }}>관심종목</div>
-                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 3 }}>검색 → 추가 · 내 관점 기록한 종목엔 배지</div>
+                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 3 }}>검색 → 추가 · 보유종목 자동 표시 · 내 관점 배지</div>
 
                 <div style={{ marginTop: 9 }}>
-                    {watch.length === 0 && (
+                    {rows.length === 0 && (
                         <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, padding: "13px 0", textAlign: "center", lineHeight: 1.6 }}>
                             아직 관심종목이 없어요.<br />아래에서 추가해 보세요.
                         </div>
                     )}
-                    {watch.map((h, i) => {
+                    {rows.map((h, i) => {
                         const th = theses[String(h.ticker)]
                         const sm = th ? (STANCE_META[th.stance] || STANCE_META.watch) : null
                         const smCol = sm ? (C as any)[sm.key] : C.faint
@@ -233,15 +285,20 @@ export default function PublicWatchlist(props: Props) {
                                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}`, cursor: "pointer" }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.name || h.ticker}</div>
-                                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 1, display: "flex", alignItems: "center", gap: 5 }}>
+                                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 1, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
                                         <span>{h.ticker}</span>
+                                        {h._held && <span style={{ fontSize: 9.5, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 5, padding: "1px 6px", letterSpacing: "-0.1px" }}>보유</span>}
                                         {sm && <span style={{ fontSize: 9.5, fontWeight: 800, color: smCol, background: C.chip, borderRadius: 5, padding: "1px 6px", letterSpacing: "-0.1px" }}>내 관점 {sm.label}</span>}
                                     </div>
                                 </div>
                                 {/* 실시간가·등락 열 제거(2026-07-03 컴플라이언스) — 시세는 행 클릭 → 리포트의 네이버 link-out/TV 위젯 */}
                                 <span style={{ flexShrink: 0, fontSize: 13, color: C.faint, fontWeight: 700 }}>›</span>
-                                <button onClick={(e) => { e.stopPropagation(); removeStock(h.ticker) }} title="삭제"
-                                    style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 14, fontWeight: 700, padding: "0 1px", flexShrink: 0 }}>×</button>
+                                {h._watched ? (
+                                    <button onClick={(e) => { e.stopPropagation(); removeStock(h.ticker) }} title="관심종목 삭제"
+                                        style={{ border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 14, fontWeight: 700, padding: "0 1px", flexShrink: 0 }}>×</button>
+                                ) : (
+                                    <span style={{ flexShrink: 0, width: 9 }} />
+                                )}
                             </div>
                         )
                     })}
