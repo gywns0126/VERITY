@@ -677,6 +677,21 @@ def _caller_identity(headers_dict: Dict[str, str]) -> Dict[str, Optional[str]]:
     return {"id": None, "email": None}
 
 
+def _is_super_admin(user_id: Optional[str]) -> bool:
+    # 최종 관리자(super) 여부 — profiles.is_super_admin. 부관리자 지정/해제 권한 게이트.
+    if not user_id or not _svc_ready():
+        return False
+    try:
+        r = requests.get(f"{SUPABASE_URL}/rest/v1/profiles", headers=_svc_headers(),
+                         params={"id": f"eq.{user_id}", "select": "is_super_admin"}, timeout=6)
+        if r.status_code == 200:
+            rows = r.json()
+            return bool(rows and rows[0].get("is_super_admin") is True)
+    except requests.RequestException:
+        pass
+    return False
+
+
 def _audit(actor: dict, action: str, target_type: str, target_id: Optional[str], detail: Optional[dict] = None) -> None:
     if not _svc_ready():
         return
@@ -701,7 +716,7 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
         q = (params.get("q", [""])[0] or "").strip()
         limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
         offset = max(0, int((params.get("offset", ["0"])[0] or "0")))
-        sel = "id,email,display_name,nickname,status,is_admin,is_banned,ban_reason,banned_at,created_at"
+        sel = "id,email,display_name,nickname,status,is_admin,is_super_admin,is_banned,ban_reason,banned_at,created_at"
         qp = {"select": sel, "order": "created_at.desc", "limit": str(limit), "offset": str(offset)}
         if q:
             qp["or"] = f"(email.ilike.*{q}*,nickname.ilike.*{q}*,display_name.ilike.*{q}*)"
@@ -716,7 +731,7 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
                 total = int(cr.split("/")[-1])
             except ValueError:
                 pass
-        return {"_status": 200, "_body": {"members": r.json(), "total": total}}
+        return {"_status": 200, "_body": {"members": r.json(), "total": total, "caller_is_super": _is_super_admin(actor.get("id"))}}
 
     if method == "POST":
         action = str(body.get("action", "")).strip()
@@ -735,7 +750,11 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
                 if k in body:
                     patch[k] = body[k]
             if "is_admin" in body:
+                # 부관리자 지정/해제 = 최종 관리자(super)만. (부관리자는 나머지 권한 동일하나 이것만 불가.)
+                if not _is_super_admin(actor.get("id")):
+                    return {"_status": 403, "_body": {"error": "super_admin_only", "detail": "부관리자 지정/해제는 최종 관리자만 가능해요"}}
                 patch["is_admin"] = bool(body["is_admin"])
+            # is_super_admin 은 API 로 변경 불가 (마이그레이션/DB 콘솔 전용) — 화이트리스트에 없어 자동 차단.
             if not patch:
                 return {"_status": 400, "_body": {"error": "no_fields"}}
             audit_action = "update_profile"
