@@ -83,10 +83,9 @@ function bfLogoFilter(ticker: any): string {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
-    if (!p) return ""
-    if (p.indexOf("http") === 0) return p  // 폴백 소스(nvstly·공식 파비콘) = 절대 URL 그대로
-    return "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2
+    if (!tk) return ""
+    // 로고 = 토스 종목 CDN (PM 결정: 완전 공개[런칭] 전까지 토스 사용, 2026-07-12). 404/차단 시 onError → 이니셜 폴백. lm 미사용.
+    return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
 }
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
@@ -255,7 +254,7 @@ const SAMPLE_FLOW: Record<string, any[]> = {
 const SAMPLE_FORENSICS: Record<string, any> = {
     "005930": {
         counts: { "자기주식취득": 2, "정정공시": 1 }, total: 3, dilution_count: 0,
-        forensics_flags: { correction_count: 1, correction_pct: 33, dilution_12m: 0, dilution_span: "" },
+        forensics_flags: { correction_count: 1, correction_pct: 33, dilution_12m: 0, dilution_span: "", dilution_annual_avg_prior: 0, dilution_history_from: "" },
         events: [
             { date: "2026-06-15", category: "자기주식취득", risk: "favorable", title: "주요사항보고서(자기주식취득결정)", is_correction: false, source_url: DART + "20260615000777" },
             { date: "2026-05-30", category: "정정공시", risk: "correction", title: "[기재정정]분기보고서", is_correction: true, source_url: DART + "20260530000111" },
@@ -371,7 +370,7 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
             {!err && bfSrc ? (
                 <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size}
                     onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
+                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), objectFit: "cover", display: "block", background: "transparent" }} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
@@ -2398,7 +2397,7 @@ export default function PublicStockReport(props: Props) {
                         {foren.forensics_flags && (foren.forensics_flags.dilution_12m > 0 || foren.forensics_flags.correction_count > 0) && (
                             <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 9 }}>
                                 {foren.forensics_flags.dilution_12m > 0 && (
-                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.amber, background: C.bg, borderRadius: 8, padding: "4px 9px" }}>최근 12개월 희석 {foren.forensics_flags.dilution_12m}회{foren.forensics_flags.dilution_span ? ` · ${foren.forensics_flags.dilution_span}` : ""}</span>
+                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.amber, background: C.bg, borderRadius: 8, padding: "4px 9px" }}>최근 12개월 희석 {foren.forensics_flags.dilution_12m}회{foren.forensics_flags.dilution_annual_avg_prior > 0 ? ` (직전 연평균 ${foren.forensics_flags.dilution_annual_avg_prior}회)` : ""}{foren.forensics_flags.dilution_span ? ` · ${foren.forensics_flags.dilution_span}` : ""}</span>
                                 )}
                                 {foren.forensics_flags.correction_count > 0 && (
                                     <span style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, background: C.bg, borderRadius: 8, padding: "4px 9px" }}>정정공시 {foren.forensics_flags.correction_count}회 ({foren.forensics_flags.correction_pct}%)</span>

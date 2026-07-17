@@ -112,10 +112,9 @@ function useBfLogoMap(): Record<string, string> | null {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    const pth = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""
-    if (!pth) return ""
-    if (pth.indexOf("http") === 0) return pth
-    return "https://cdn.brandfetch.io/" + pth + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2
+    if (!tk) return ""
+    // 로고 = 토스 종목 CDN (PM 결정: 완전 공개[런칭] 전까지 토스 사용, 2026-07-12). 404/차단 시 onError → 이니셜 폴백.
+    return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
 }
 function StockLogo(props: { ticker: any; name: any; C: any; size?: number }) {
     const { ticker, name, C } = props
@@ -130,7 +129,7 @@ function StockLogo(props: { ticker: any; name: any; C: any; size?: number }) {
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
             {!err && src ? (
                 <img src={src} alt="" loading="lazy" decoding="async" width={size} height={size} onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), objectFit: "contain", background: "#ffffff", display: "block" }} />
+                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), objectFit: "cover", background: "transparent", display: "block" }} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), background: C.chipBg, color: C.faint, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}

@@ -84,10 +84,9 @@ function bfLogoFilter(ticker: any): string {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
-    if (!p) return ""
-    if (p.indexOf("http") === 0) return p  // 폴백 소스(nvstly·공식 파비콘) = 절대 URL 그대로
-    return "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2
+    if (!tk) return ""
+    // 로고 = 토스 종목 CDN (PM 결정: 완전 공개[런칭] 전까지 토스 사용, 2026-07-12). 404/차단 시 onError → 이니셜 폴백.
+    return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
 }
 
 const DEFAULT_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
@@ -534,7 +533,7 @@ export default function PublicHeatmap(props: Props) {
                                         }}>
                                         {big && (
                                             <>
-                                                {tw > 52 && th > 50 ? (bfLogoSrc(t.m.ticker, __lmH, 16) ? (<img src={bfLogoSrc(t.m.ticker, __lmH, 16)} alt="" loading="lazy" decoding="async" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 5, marginBottom: 2, filter: bfLogoFilter(t.m.ticker), objectFit: "contain", padding: bfLogoPad(t.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(t.m.ticker) }} />) : (<span style={{ width: 16, height: 16, borderRadius: 5, marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: txt, background: col.strong ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.06)", boxSizing: "border-box" }}>{String(t.m.name || t.m.ticker).trim().charAt(0)}</span>)) : null}
+                                                {tw > 52 && th > 50 ? (bfLogoSrc(t.m.ticker, __lmH, 16) ? (<img src={bfLogoSrc(t.m.ticker, __lmH, 16)} alt="" loading="lazy" decoding="async" width={16} height={16} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 16, height: 16, borderRadius: 5, marginBottom: 2, objectFit: "cover", display: "block", background: "transparent" }} />) : (<span style={{ width: 16, height: 16, borderRadius: 5, marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: txt, background: col.strong ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.06)", boxSizing: "border-box" }}>{String(t.m.name || t.m.ticker).trim().charAt(0)}</span>)) : null}
                                                 <span style={{ fontSize: tw > 130 ? 13 : tw > 80 ? 12 : 10.5, fontWeight: 800, color: txt, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", letterSpacing: "-0.3px", textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.35)" : "none" }}>{t.m.name}</span>
                                                 {th > 42 && <span style={{ fontSize: 10.5, fontWeight: 700, color: txt, opacity: 0.92, marginTop: 1, textShadow: col.strong ? "0 1px 2px rgba(0,0,0,0.3)" : "none" }}>{tileValLabel(metric, v)}</span>}
                                             </>
@@ -562,7 +561,7 @@ export default function PublicHeatmap(props: Props) {
                             boxShadow: "0 8px 26px rgba(0,0,0,0.22)", padding: "9px 11px", zIndex: 20, pointerEvents: "none", boxSizing: "border-box",
                         }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                {bfLogoSrc(hover.m.ticker, __lmH, 18) ? (<img src={bfLogoSrc(hover.m.ticker, __lmH, 18)} alt="" loading="lazy" decoding="async" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 6, flexShrink: 0, filter: bfLogoFilter(hover.m.ticker), objectFit: "contain", padding: bfLogoPad(hover.m.ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(hover.m.ticker) }} />) : (<span style={{ width: 18, height: 18, borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: C.sub, background: C.bg, boxSizing: "border-box" }}>{String(hover.m.name || hover.m.ticker).trim().charAt(0)}</span>)}
+                                {bfLogoSrc(hover.m.ticker, __lmH, 18) ? (<img src={bfLogoSrc(hover.m.ticker, __lmH, 18)} alt="" loading="lazy" decoding="async" width={18} height={18} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} style={{ width: 18, height: 18, borderRadius: 6, flexShrink: 0, objectFit: "cover", display: "block", background: "transparent" }} />) : (<span style={{ width: 18, height: 18, borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: C.sub, background: C.bg, boxSizing: "border-box" }}>{String(hover.m.name || hover.m.ticker).trim().charAt(0)}</span>)}
                                 <span style={{ fontSize: 13, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{hover.m.name}</span>
                                 <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, flexShrink: 0 }}>{hover.m.ticker}</span>
                             </div>

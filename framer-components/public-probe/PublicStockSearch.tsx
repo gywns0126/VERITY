@@ -26,6 +26,23 @@ const M_NAVER_QUANT = "https://m.stock.naver.com/sise/trade"
 const LAST_TK_KEY = "verity_last_ticker"
 const RECENTS_KEY = "verity_recent_tickers"
 const RECENTS_CAP = 8
+
+// 🚨 익명 로컬 스크래치 세션 초기화 (2026-07-13) — 공개 페이지 로그인 없이 접근 → 공유기기 익명 누출 차단.
+//   새 브라우저 세션(새 방문)마다 1회. 유효 로그인 세션 있으면 skip(회원 보존, 서버 저장), 없으면 clear(익명).
+function sessionResetScratch() {
+    if (typeof window === "undefined") return
+    try {
+        if (sessionStorage.getItem("verity_session_init")) return
+        sessionStorage.setItem("verity_session_init", "1")
+        let member = false
+        try {
+            const s = JSON.parse(localStorage.getItem("verity_supabase_session") || "null")
+            member = !!(s && s.access_token && (!s.expires_at || Date.now() / 1000 < s.expires_at))
+        } catch (e) {}
+        if (member) return
+        for (const k of ["verity_watchlist", "verity_last_ticker", "verity_recent_tickers", "verity_thesis_v1", "verity_thesis_migrated_v1"]) localStorage.removeItem(k)
+    } catch (e) {}
+}
 /* 로고 — 토스 종목 CDN(404/차단 시 이니셜 폴백) + circle-flags 원형 국기. ticker 형식으로 국장/미장 판별. */
 
 // ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
@@ -81,10 +98,9 @@ function bfLogoFilter(ticker: any): string {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
-    if (!p) return ""
-    if (p.indexOf("http") === 0) return p  // 폴백 소스(nvstly·공식 파비콘) = 절대 URL 그대로
-    return "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2
+    if (!tk) return ""
+    // 로고 = 토스 종목 CDN (PM 결정: 완전 공개[런칭] 전까지 토스 사용, 2026-07-12). 404/차단 시 onError → 이니셜 폴백.
+    return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
 }
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 function flagFromTicker(ticker: any): string {
@@ -104,7 +120,7 @@ function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
             {!err && bfSrc ? (
                 <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size}
                     onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
+                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), objectFit: "cover", display: "block", background: "transparent"}} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
@@ -162,6 +178,9 @@ function readBodyDark(): boolean {
 export default function PublicStockSearch(props: Props) {
     const { placeholder, stockPath, stockUrl, usStockUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
+
+    /* 익명 로컬 스크래치 세션 초기화 — 검색 recents 읽기 전에 1회(공유기기 누출 차단, 회원은 skip) */
+    useEffect(() => { if (!onCanvas) sessionResetScratch() }, [onCanvas])
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
     const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))

@@ -31,7 +31,9 @@ const DARK = {
     vg: "#a99bff", vgS: "#241f3a", vt: "#a99bff", vtS: "#241f3a", danger: "#f04452", warn: "#ffb340", warnS: "#3a2c14", onAccent: "#0f1318",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const FX = 1380
+// 미국주식 KRW 환산 — 실시간 usd_krw(price_pulse.indices.usdkrw, 1분 fresh) 조회. 폴백 = 최근 근사값(로드 실패 시만).
+const FX_FALLBACK = 1500
+const PULSE_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/price_pulse.json"
 
 // ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
 const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
@@ -86,10 +88,9 @@ function bfLogoFilter(ticker: any): string {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
-    if (!p) return ""
-    if (p.indexOf("http") === 0) return p  // 폴백 소스(nvstly·공식 파비콘) = 절대 URL 그대로
-    return "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2
+    if (!tk) return ""
+    // 로고 = 토스 종목 CDN (PM 결정: 완전 공개[런칭] 전까지 토스 사용, 2026-07-12). 404/차단 시 onError → 이니셜 폴백.
+    return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
 }
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
@@ -141,7 +142,11 @@ function getToken(): string {
         const r = localStorage.getItem("verity_supabase_session")
         if (!r) return ""
         const s = JSON.parse(r)
-        return (s && typeof s.access_token === "string") ? s.access_token : ""
+        if (!s || typeof s.access_token !== "string") return ""
+        // 🚨 만료 토큰 = 미로그인 취급 (2026-07-14). 만료 토큰을 그대로 보내면 /api/holdings 401 → 빈 결과인데,
+        //   공개 페이지(/, /nest)엔 토큰 refresh 주체가 없어(=/login 만) 만료가 방치됨 → 죽은 토큰 대신 정직한 로그인 CTA.
+        if (s.expires_at && Date.now() / 1000 > s.expires_at) return ""
+        return s.access_token
     } catch {
         return ""
     }
@@ -225,7 +230,7 @@ function Logo(props: { ticker: string; name: string; market: string; C: any; siz
             {!err && bfSrc ? (
                 <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size}
                     onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
+                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), objectFit: "cover", display: "block", background: "transparent"}} />
             ) : (
                 <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</div>
             )}
@@ -289,6 +294,7 @@ export default function PublicHoldingsTab(props: Props) {
     const [tq, setTq] = useState("")                                     // 거래 추가 종목 검색어
     const [tPop, setTPop] = useState<any>(null)                          // 거래 팝업 {id?, ticker, name, market, side, shares, price, traded_at}
     const [tBusy, setTBusy] = useState(false)
+    const [fxRate, setFxRate] = useState<number>(FX_FALLBACK)             // 실시간 usd_krw(price_pulse). 폴백=FX_FALLBACK.
 
     const isDark = onCanvas ? !!dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -329,6 +335,20 @@ export default function PublicHoldingsTab(props: Props) {
         return () => { alive = false }
     }, [onCanvas])
 
+    // 실시간 환율(usd_krw) — price_pulse.indices.usdkrw. 실패 시 폴백 유지(무해). 캔버스 = 폴백.
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        fetch(PULSE_URL, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const v = d && d.indices && d.indices.usdkrw && Number(d.indices.usdkrw.value)
+                if (alive && v && isFinite(v) && v > 0) setFxRate(v)
+            })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [onCanvas])
+
     // ETF 자산군 자금흐름 (분산 탭 — 보유 자산군에 패시브 자금 유입/유출 사실. /etf 와 동일 cumFlow).
     useEffect(() => {
         if (onCanvas) return
@@ -353,15 +373,26 @@ export default function PublicHoldingsTab(props: Props) {
         if (onCanvas) return
         const token = getToken()
         if (!token) { setIsDemo(true); setRows(SAMPLE); setLoading(false); return }
+        // 🚨 토큰 있으면 즉시 로그인 화면 전환 + SAMPLE 즉시 비움 (API 응답/실패와 무관하게 데모 종목이 실보유로 노출되는 사고 방지, 2026-07-14)
+        setIsDemo(false)
+        setRows([])
         setLoading(true)
         fetch(base + "/api/holdings", { headers: { Authorization: "Bearer " + token } })
             .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { if (Array.isArray(d)) { setIsDemo(false); setRows(d) } })
-            .catch(() => {})
+            .then((d) => { setRows(Array.isArray(d) ? d : (d && Array.isArray(d.holdings) ? d.holdings : [])) })
+            .catch(() => setRows([]))
             .finally(() => setLoading(false))
     }, [base, onCanvas])
 
-    useEffect(() => { loadHoldings() }, [loadHoldings])
+    // 마운트 + 로그인/로그아웃(verity_auth_change·다른 탭 storage) 시 재평가 → 로그인 상태 자동 전환.
+    useEffect(() => {
+        loadHoldings()
+        if (onCanvas || typeof window === "undefined") return
+        const onAuth = () => loadHoldings()
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => { window.removeEventListener("verity_auth_change", onAuth); window.removeEventListener("storage", onAuth) }
+    }, [loadHoldings])
 
     // 검색 유니버스(KR+US ~8.9천, universe_search) — 보유/거래 추가 패널 열 때 1회 lazy 로드.
     useEffect(() => {
@@ -458,6 +489,8 @@ export default function PublicHoldingsTab(props: Props) {
         if (onCanvas) return
         const token = getToken()
         if (!token) { setTradeData({ trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY }); return }
+        // 🚨 토큰 있으면 데모 거래(SAMPLE_TRADES) 즉시 비움 — fetch 실패(만료 401 등) 시 데모가 실거래로 노출되는 사고 방지 (loadHoldings 동기, 2026-07-14).
+        setTradeData({ trades: [], summary: { by_ticker: [], total_realized_pnl: 0 } })
         fetch(base + "/api/trades", { headers: { Authorization: "Bearer " + token } })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (d && Array.isArray(d.trades)) setTradeData({ trades: d.trades, summary: d.summary || { by_ticker: [], total_realized_pnl: 0 } }) })
@@ -520,7 +553,7 @@ export default function PublicHoldingsTab(props: Props) {
 
     const evald = rows.map((h) => {
         const us = h.market === "us" || h.currency === "USD"
-        const fx = us ? FX : 1
+        const fx = us ? fxRate : 1
         const cur = closes[String(h.ticker)] != null ? closes[String(h.ticker)] : Number(h.price) || Number(h.avg_cost) || 0
         const val = (Number(h.shares) || 0) * cur * fx
         const cost = (Number(h.shares) || 0) * (Number(h.avg_cost) || 0) * fx
@@ -529,7 +562,7 @@ export default function PublicHoldingsTab(props: Props) {
         return { ...h, _us: us, _val: val, _pl: pl, _plPct: plPct }
     })
     const totalVal = evald.reduce((a, b) => a + b._val, 0)
-    const totalCost = evald.reduce((a, b) => a + (Number(b.shares) || 0) * (Number(b.avg_cost) || 0) * (b._us ? FX : 1), 0)
+    const totalCost = evald.reduce((a, b) => a + (Number(b.shares) || 0) * (Number(b.avg_cost) || 0) * (b._us ? fxRate : 1), 0)
     const totalPl = totalVal - totalCost
     const totalPlPct = totalCost > 0 ? (totalPl / totalCost) * 100 : 0
     const withWeight = evald.map((h) => ({ ...h, _weight: totalVal > 0 ? (h._val / totalVal) * 100 : 0 })).sort((a, b) => b._val - a._val)
@@ -568,7 +601,7 @@ export default function PublicHoldingsTab(props: Props) {
 
     // ── 거래 기록(실현손익) 파생 — 종목별 실현손익은 네이티브 통화, 합계만 FX 환산(holdings 관행). ──
     const tByTicker: any[] = (tradeData.summary && Array.isArray(tradeData.summary.by_ticker)) ? tradeData.summary.by_ticker : []
-    const realizedKrw = tByTicker.reduce((a, b) => a + (Number(b.realized_pnl) || 0) * (String(b.market) === "us" ? FX : 1), 0)
+    const realizedKrw = tByTicker.reduce((a, b) => a + (Number(b.realized_pnl) || 0) * (String(b.market) === "us" ? fxRate : 1), 0)
     const tLedger = [...(tradeData.trades || [])].reverse()   // 최신 거래 먼저
     const tHasUs = (tradeData.trades || []).some((t: any) => String(t.market) === "us")
 
@@ -782,13 +815,21 @@ export default function PublicHoldingsTab(props: Props) {
                                 </div>
                             )}
 
+                            {!isDemo && rows.length === 0 ? (
+                              <div style={{ ...cardS, textAlign: "center", padding: "34px 18px" }}>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>아직 등록한 종목이 없어요</div>
+                                <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600, marginTop: 7, lineHeight: 1.6 }}>종목·수량·평단만 입력하면 평가손익·분산·예상 세금이 한눈에 정리돼요.</div>
+                                <button onClick={() => setShowAdd(true)} style={{ marginTop: 15, border: "none", cursor: "pointer", background: C.vg, color: C.onAccent, borderRadius: 10, padding: "11px 22px", fontSize: 13.5, fontWeight: 800, fontFamily: FONT }}>+ 첫 종목 추가</button>
+                              </div>
+                            ) : (
+                             <>
                             <div style={{ ...cardS, padding: "18px 18px" }}>
                                 <div style={{ fontSize: 12, color: C.faint, fontWeight: 700 }}>총 평가금액</div>
                                 <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: "-1px", margin: "3px 0" }}>{money(totalVal)}</div>
                                 <div style={{ fontSize: 14, fontWeight: 800, color: plColor(totalPl) }}>
                                     {(totalPl > 0 ? "+" : "") + money(totalPl)} · {(totalPlPct > 0 ? "+" : "") + totalPlPct.toFixed(1)}%
                                 </div>
-                                <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 6 }}>보유 {rows.length}종목 · 평단 입력 기준(사실){usRows.length ? ` · 미국주식 환율 ${FX}원/$ 가정` : ""}</div>
+                                <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 6 }}>보유 {rows.length}종목 · 평단 입력 기준(사실){usRows.length ? ` · 미국주식 환율 ${Math.round(fxRate).toLocaleString("en-US")}원/$` : ""}</div>
                             </div>
 
                             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
@@ -827,6 +868,8 @@ export default function PublicHoldingsTab(props: Props) {
                             <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 14, lineHeight: 1.5 }}>
                                 종목 누르면 상세 리포트 · 평가손익 = 종가(전일) × 보유수량 − 입력 평단 (단순 계산·사실) · 실시간 시세는 리포트에서
                             </div>
+                             </>
+                            )}
                         </>
                     ) : view === "mix" ? (
                         <>
@@ -942,7 +985,7 @@ export default function PublicHoldingsTab(props: Props) {
                                 {kv("과세표준", wonCompact(usTaxable))}
                                 {kv("예상 양도세", won(usCgt), usCgt > 0 ? C.ink : C.vg)}
                                 {broker ? kv("매도 수수료 (" + (broker.overseas_fee || "—") + ")", won(usCommission)) : null}
-                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>22%(과표 3억↓)·27.5%(초과) · 손실 연내통산(이월 없음) · 환율 {FX}원/$ 가정</div>
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>22%(과표 3억↓)·27.5%(초과) · 손실 연내통산(이월 없음) · 환율 {Math.round(fxRate).toLocaleString("en-US")}원/$</div>
                             </div>
 
                             <div style={cardS}>
@@ -1013,7 +1056,7 @@ export default function PublicHoldingsTab(props: Props) {
                             <div style={{ ...cardS, padding: "18px 18px" }}>
                                 <div style={{ fontSize: 12, color: C.faint, fontWeight: 700 }}>실현손익 합계 · 매도 확정분(사실)</div>
                                 <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: "-1px", margin: "3px 0", color: plColor(realizedKrw) }}>{(realizedKrw > 0 ? "+" : "") + money(realizedKrw)}</div>
-                                <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 4 }}>이동평균 매입가 차감(사실) · 거래 {(tradeData.trades || []).length}건{tHasUs ? ` · 미국주식 환율 ${FX}원/$ 가정` : ""}</div>
+                                <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 4 }}>이동평균 매입가 차감(사실) · 거래 {(tradeData.trades || []).length}건{tHasUs ? ` · 미국주식 환율 ${Math.round(fxRate).toLocaleString("en-US")}원/$` : ""}</div>
                             </div>
 
                             {/* 종목별 실현손익 + 잔여 보유 */}
