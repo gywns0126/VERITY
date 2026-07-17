@@ -35,6 +35,7 @@ from server.kis_rest_client import (
     place_us_order, get_balance, token_status,
 )
 from server.kis_ws_client import KISWebSocketClient
+from server.security import start_security
 
 logging.basicConfig(
     level=logging.INFO,
@@ -212,6 +213,10 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# IP 침입 시도 추적 · 자동 차단 (방어층). CORS 뒤 등록 = 스캔/차단을 바깥에서 먼저 처리.
+# Supabase blocked_ips 공유(Vercel 과 단일 블록리스트). SEC_DISABLED=1 이면 관측만.
+start_security(app)
 
 
 # ── 엔드포인트 ──
