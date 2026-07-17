@@ -26,6 +26,11 @@ const CRIT_LABEL: Record<string, string> = { P0: "핵심 데이터", P1: "보조
 const STATUS_LABEL: Record<string, string> = { fresh: "신선", stale: "지연", paused: "휴지" }
 
 function readBodyDark(): boolean {
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
 }

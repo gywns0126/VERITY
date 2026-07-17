@@ -69,10 +69,9 @@ function bfLogoFilter(ticker: any): string {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""  // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
-    if (!p) return ""
-    if (p.indexOf("http") === 0) return p  // 폴백 소스(nvstly·공식 파비콘) = 절대 URL 그대로
-    return "https://cdn.brandfetch.io/" + p + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2
+    if (!tk) return ""
+    // 로고 = 토스 종목 CDN (PM 결정: 완전 공개[런칭] 전까지 토스 사용, 2026-07-12). 404/차단 시 onError → 이니셜 폴백.
+    return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff" }
@@ -105,13 +104,16 @@ function Logo({ ticker, name, C }: { ticker: string; name: string; C: any }) {
     if (err || !ticker || !bfSrc) {
         return <span style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 10, background: bfInitialBg(ticker), color: "#ffffff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800 }}>{ch}</span>
     }
-    return <img src={bfSrc} alt="" loading="lazy" decoding="async" width={30} height={30} onError={() => setErr(true)} style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 10, filter: bfLogoFilter(ticker), objectFit: "contain", padding: bfLogoPad(ticker), boxSizing: "border-box", display: "block", background: bfLogoBg(ticker)}} />
+    return <img src={bfSrc} alt="" loading="lazy" decoding="async" width={30} height={30} onError={() => setErr(true)} style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 10, objectFit: "cover", display: "block", background: "transparent"}} />
 }
 
 function readBodyDark(): boolean {
     // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
     // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
     try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
         if (typeof document !== "undefined" && document.body) {
             const a = document.body.dataset.framerTheme
             if (a === "dark") return true

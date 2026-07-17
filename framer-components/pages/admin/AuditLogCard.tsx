@@ -30,6 +30,9 @@ const ACTIONS: Record<string, { t: string; c: string }> = {
 
 function readBodyDark(): boolean {
     try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
         if (typeof document !== "undefined" && document.body) {
             const a = document.body.dataset.framerTheme
             if (a === "dark") return true

@@ -45,11 +45,13 @@ const DARK = {
     vg: "#a99bff", vgS: "#241f3a", warn: "#ffb340", onAccent: "#0f1318",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const FX = 1380  // 미국주식 KRW 환산 가정 (PublicHoldingsTab 동기)
+// 미국주식 KRW 환산 — 실시간 usd_krw(price_pulse) 조회. 폴백=근사값(PublicHoldingsTab 동기).
+const FX_FALLBACK = 1500
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const FLOW_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json"
+const PULSE_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/price_pulse.json"
 const BRIEF_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/daily_briefing.json"
 const PER_SECTION = 3  // 섹션당 기본 노출, 초과 = "+N건" 접힘
 
@@ -98,7 +100,11 @@ function getToken(): string {
         const r = localStorage.getItem("verity_supabase_session")
         if (!r) return ""
         const s = JSON.parse(r)
-        return (s && typeof s.access_token === "string") ? s.access_token : ""
+        if (!s || typeof s.access_token !== "string") return ""
+        // 🚨 만료 토큰 = 미로그인 취급 (2026-07-14). 공개 페이지엔 refresh 주체가 없어(=/login 만) 만료 방치 →
+        //   죽은 토큰으로 401·빈 결과 대신 정직한 로그인 CTA. HoldingsTab getToken 과 동기.
+        if (s.expires_at && Date.now() / 1000 > s.expires_at) return ""
+        return s.access_token
     } catch {
         return ""
     }
@@ -132,6 +138,9 @@ function FlagIcon(props: { code: string; size?: number }) {
 }
 function readBodyDark(): boolean {
     try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
         if (typeof document !== "undefined" && document.body) {
             const a = document.body.dataset.framerTheme
             if (a === "dark") return true
@@ -166,11 +175,13 @@ export default function PublicMorningBriefing(props: Props) {
     const [closes, setCloses] = useState<Record<string, { last: number; prev: number | null }>>({})
     const [isDemo, setIsDemo] = useState(true)
     const [loading, setLoading] = useState<boolean>(() => (onCanvas ? false : !!getToken()))
+    const [fxRate, setFxRate] = useState<number>(FX_FALLBACK)   // 실시간 usd_krw(price_pulse). 폴백=FX_FALLBACK.
 
     // ② 시장 브리핑 상태
     const [brief, setBrief] = useState<any>(onCanvas ? SAMPLE_BRIEF : null)
     const [briefFailed, setBriefFailed] = useState(false)
     const [openSec, setOpenSec] = useState<Record<string, boolean>>({})
+    const [, setNowTick] = useState(0)   // embargo 해제 시각에 재렌더 트리거
 
     const isDark = onCanvas ? !!dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -201,14 +212,37 @@ export default function PublicMorningBriefing(props: Props) {
         if (onCanvas) return
         const token = getToken()
         if (!token) { setIsDemo(true); setRows(SAMPLE_HOLD); setLoading(false); return }
+        // 🚨 토큰 있으면 즉시 로그인 상태 확정 (isDemo=false) — API 실패해도 "로그인하면…" CTA 뜨는 사고 방지(2026-07-14). SAMPLE 즉시 비움.
+        setIsDemo(false)
+        setRows([])
         setLoading(true)
         fetch(base + "/api/holdings", { headers: { Authorization: "Bearer " + token } })
             .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { if (Array.isArray(d)) { setIsDemo(false); setRows(d) } })
-            .catch(() => {})
+            .then((d) => { setRows(Array.isArray(d) ? d : (d && Array.isArray(d.holdings) ? d.holdings : [])) })
+            .catch(() => setRows([]))
             .finally(() => setLoading(false))
     }, [base, onCanvas])
-    useEffect(() => { loadHoldings() }, [loadHoldings])
+    // 마운트 + 로그인/로그아웃(verity_auth_change · 다른 탭 storage) 재평가 → 로그인 상태 자동 전환 (HoldingsTab 동기, 2026-07-14).
+    // 🚨 홈 마운트가 세션 기록보다 앞서거나 홈에서 로그인 시, 리스너 없으면 데모/CTA 상태에 남음 (본 버그 root cause — HoldingsTab 은 리스너 보유로 정상, MorningBriefing 만 누락).
+    useEffect(() => {
+        loadHoldings()
+        if (onCanvas || typeof window === "undefined") return
+        const onAuth = () => loadHoldings()
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => { window.removeEventListener("verity_auth_change", onAuth); window.removeEventListener("storage", onAuth) }
+    }, [loadHoldings])
+
+    // 실시간 환율(usd_krw) — price_pulse.indices.usdkrw. 실패 시 폴백 유지(무해).
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        fetch(PULSE_URL, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { const v = d && d.indices && d.indices.usdkrw && Number(d.indices.usdkrw.value); if (alive && v && isFinite(v) && v > 0) setFxRate(v) })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [onCanvas])
 
     // 종가(마지막·직전) — stock_flow_5d 재사용. 실시간 아님, 신규 시세 노출 0.
     useEffect(() => {
@@ -258,13 +292,22 @@ export default function PublicMorningBriefing(props: Props) {
         return () => { alive = false }
     }, [onCanvas, briefUrl])
 
+    // embargo 해제 타이머 — publish_at 시각에 재렌더(콘텐츠 교체). 이미 지난 시각이면 no-op.
+    useEffect(() => {
+        if (onCanvas || !brief || !brief.publish_at) return
+        const ms = Date.parse(brief.publish_at) - Date.now()
+        if (!isFinite(ms) || ms <= 0) return
+        const id = setTimeout(() => setNowTick((t) => t + 1), Math.min(ms + 800, 2100000000))
+        return () => clearTimeout(id)
+    }, [brief, onCanvas])
+
     // ── 내 자산 계산 ──
     const asset = useMemo(() => {
         const usePrev = isDemo ? SAMPLE_PREV : null
         const evald = rows.map((h) => {
             const tk = String(h.ticker)
             const us = isUsMkt(h)
-            const fx = us ? FX : 1
+            const fx = us ? fxRate : 1
             const shares = Number(h.shares) || 0
             const q = closes[tk]
             const last = q ? q.last : (Number(h.price) || Number(h.avg_cost) || 0)
@@ -283,7 +326,7 @@ export default function PublicMorningBriefing(props: Props) {
         const hasUncovered = evald.length > covered.length
         const movers = covered.slice().sort((a, b) => Math.abs(b._day || 0) - Math.abs(a._day || 0)).slice(0, 3)
         return { totalVal, dayChange, dayPct, movers, hasUncovered, count: evald.length }
-    }, [rows, closes, isDemo])
+    }, [rows, closes, isDemo, fxRate])
 
     const noLogin = !onCanvas && isDemo
     const upC = (v: number) => (v >= 0 ? C.up : C.down)
@@ -324,8 +367,14 @@ export default function PublicMorningBriefing(props: Props) {
     }
     const secs: any[] = (brief && brief.sections) || []
     const banner = secs.length && secs[0].recap && typeof secs[0].recap.kospi === "number" ? secs[0].recap : null
+    // 발행 시각 = JSON publish_at(고정 조간 07:30) 우선, 없으면 generated_at(실 빌드시각) 폴백. "07:30" 하드코딩 폐기 — gh cron 지연 부정확 방지(2026-07-14).
+    const pubHM = (iso: any) => { const m = String(iso || "").match(/T(\d{2}:\d{2})/); return m ? m[1] : "" }
+    const pubTime = brief ? (pubHM(brief.publish_at) || pubHM(brief.generated_at)) : ""
+    // embargo — publish_at(고정 발행시각) 전에는 ② 시장 브리핑을 노출하지 않고 "발행 예정" 표시. 클라 시계로 그 시각에 교체.
+    const embargoTs = brief && brief.publish_at ? Date.parse(brief.publish_at) : 0
+    const embargoed = !onCanvas && isFinite(embargoTs) && embargoTs > 0 && Date.now() < embargoTs
     const dateLine = brief && brief.date
-        ? String(brief.date).replace(/-/g, ".").slice(5) + " (" + (brief.weekday || "") + ") · 07:30 발행"
+        ? String(brief.date).replace(/-/g, ".").slice(5) + " (" + (brief.weekday || "") + ")" + (pubTime ? " · " + pubTime + " 발행" : "")
         : "매일 아침 07:30 발행"
 
     // 카드 밖 제호 + 형제 카드 2장 (개인 / 시장). 중첩 카드 회피.
@@ -417,6 +466,10 @@ export default function PublicMorningBriefing(props: Props) {
                 {!brief ? (
                     <div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>
                         {briefFailed ? "시장 브리핑 준비 중 — 매일 아침 07:30 발행돼요" : "시장 브리핑 수신 중…"}
+                    </div>
+                ) : embargoed ? (
+                    <div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600, lineHeight: 1.6 }}>
+                        오늘 시장 브리핑은 <span style={{ color: C.ink, fontWeight: 800 }}>{pubTime || "07:30"}</span> 에 발행돼요
                     </div>
                 ) : (
                     <div>

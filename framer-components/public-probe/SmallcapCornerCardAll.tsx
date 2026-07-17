@@ -34,8 +34,13 @@ function makeTone(C: typeof LIGHT): Record<string, { fg: string; bg: string }> {
   }
 }
 function readBodyDark(): boolean {
-  if (typeof document === "undefined" || !document.body) return false
-  return document.body.dataset.framerTheme === "dark"
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
+    if (typeof document === "undefined" || !document.body) return false
+    return document.body.dataset.framerTheme === "dark"
 }
 function eok(won: number): string { return Math.round(won / 1e8).toLocaleString() + "억" }
 function musd(m: number): string {

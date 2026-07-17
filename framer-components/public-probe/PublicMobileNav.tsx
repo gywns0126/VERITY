@@ -18,6 +18,11 @@ const DARK = { bar: "#171c23", ink: "#e3e7ec", faint: "#828d9b", line: "#252b34"
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
 function readBodyDark(): boolean {
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
 }

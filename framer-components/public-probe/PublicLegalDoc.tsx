@@ -14,8 +14,13 @@ const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", f
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
 function readBodyDark(): boolean {
-  if (typeof document === "undefined" || !document.body) return false
-  return document.body.dataset.framerTheme === "dark"
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
+    if (typeof document === "undefined" || !document.body) return false
+    return document.body.dataset.framerTheme === "dark"
 }
 
 type Sec = { h: string; body: string[] }

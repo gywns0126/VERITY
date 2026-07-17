@@ -22,6 +22,11 @@ const STANCES: Record<string, { label: string; key: "up" | "down" | "faint" }> =
 }
 
 function readBodyDark(): boolean {
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
 }
