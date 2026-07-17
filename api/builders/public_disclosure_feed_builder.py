@@ -30,6 +30,10 @@ import sys
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
+# 공시 분류 재사용 (재구현 금지) + '왜 중요한가' 결정론 템플릿. 둘 다 런타임 LLM 0.
+from api.builders.disclosure_forensics_builder import _classify
+from api.builders.disclosure_why_templates import why_for_kr
+
 KST = timezone(timedelta(hours=9))
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -113,14 +117,19 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
         disclosures = []
         for r in rows[:MAX_PER_TICKER]:
             rcept_no = str(r.get("rcept_no") or "").strip()
+            # '왜 중요한가' — 카테고리 분류(재사용) → 결정론 dict lookup. LLM 0. 미매핑 = 빈 문자열.
+            _is_corr = bool(r.get("is_correction"))
+            _cls = _classify(r.get("report_nm") or "")
+            _cat = "정정공시" if _is_corr else (_cls["category"] if _cls else None)
             disclosures.append(
                 {
                     "title": r.get("report_nm") or "",          # DART 원문 제목 (사실)
                     "label": r.get("pblntf_label") or "",       # DART 분류 (사실)
                     "date": _fmt_date(r.get("rcept_dt")),       # 접수일 (사실)
-                    "is_correction": bool(r.get("is_correction")),
+                    "is_correction": _is_corr,
                     "filer": r.get("flr_nm") or "",             # 제출인 (사실)
                     "source_url": DART_VIEWER + rcept_no,        # 원문 deep-link
+                    "why_it_matters": why_for_kr(_cat),          # 결정론 사실 설명 (사실+단계 caveat, 판정 0)
                 }
             )
         max_sev = max((int(r.get("severity") or 0) for r in rows), default=0)
