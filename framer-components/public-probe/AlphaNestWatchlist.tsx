@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
 const SESSION_KEY = "verity_supabase_session"
 const AUTH_EVENT = "verity_auth_change"
 const WATCH_EVENT = "verity_watch_change"
+const HOLDINGS_EVENT = "verity_holdings_change"
 
 // ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
 const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
@@ -145,10 +146,7 @@ export default function AlphaNestWatchlist(props: Props) {
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
         if (onCanvas) return
-        const readTheme = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
+        const readTheme = () => setThemeDark(readBodyDark())
         readTheme()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(readTheme)
@@ -173,21 +171,37 @@ export default function AlphaNestWatchlist(props: Props) {
     const fetchWatch = useCallback(() => {
         if (onCanvas || !token) { setItems([]); return }
         setLoading(true)
-        fetch(`${api}/api/watchgroups`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((groups) => {
-                if (!Array.isArray(groups)) { setItems([]); return }
-                const flat: any[] = []
-                const seen = new Set<string>()
-                for (const g of groups) {
-                    for (const it of (g.items || [])) {
-                        const tk = String(it.ticker || "").trim()
-                        if (!tk || seen.has(tk)) continue
-                        seen.add(tk)
-                        flat.push({ item_id: it.id, ticker: tk, name: it.name || tk, market: it.market || "" })
+        const H = { Authorization: `Bearer ${token}` }
+        Promise.all([
+            fetch(`${api}/api/watchgroups`, { headers: H, cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+            fetch(`${api}/api/holdings`, { headers: H, cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ])
+            .then(([groups, hold]) => {
+                const byTk = new Map<string, any>()
+                // 관심(별표) — item_id 있으면 워치리스트에서 해제(×) 가능
+                if (Array.isArray(groups)) {
+                    for (const g of groups) {
+                        for (const it of (g.items || [])) {
+                            const tk = String(it.ticker || "").trim()
+                            if (!tk) continue
+                            const cur = byTk.get(tk)
+                            if (cur) { cur.item_id = it.id }
+                            else byTk.set(tk, { ticker: tk, name: it.name || tk, market: it.market || "", item_id: it.id, held: false })
+                        }
                     }
                 }
-                setItems(flat)
+                // 보유(둥지) — 관심에 없으면 새로 추가, 있으면 held 표시
+                const holdArr = Array.isArray(hold) ? hold : (hold && Array.isArray(hold.holdings) ? hold.holdings : [])
+                for (const h of holdArr) {
+                    const tk = String(h.ticker || "").trim()
+                    if (!tk) continue
+                    const cur = byTk.get(tk)
+                    if (cur) { cur.held = true; if (!cur.name || cur.name === tk) cur.name = h.name || cur.name; if (!cur.market) cur.market = h.market || "" }
+                    else byTk.set(tk, { ticker: tk, name: h.name || tk, market: h.market || "", item_id: null, held: true })
+                }
+                const arr = Array.from(byTk.values())
+                arr.sort((a, b) => (b.held ? 1 : 0) - (a.held ? 1 : 0))  // 보유 먼저
+                setItems(arr)
             })
             .catch(() => setItems([]))
             .finally(() => setLoading(false))
@@ -195,12 +209,13 @@ export default function AlphaNestWatchlist(props: Props) {
 
     useEffect(() => { fetchWatch() }, [fetchWatch])
 
-    // 별표 토글 시 새로고침
+    // 별표 토글 / 둥지 보유 변경 시 새로고침
     useEffect(() => {
         if (onCanvas) return
-        const onWatch = () => fetchWatch()
-        window.addEventListener(WATCH_EVENT, onWatch)
-        return () => window.removeEventListener(WATCH_EVENT, onWatch)
+        const onChange = () => fetchWatch()
+        window.addEventListener(WATCH_EVENT, onChange)
+        window.addEventListener(HOLDINGS_EVENT, onChange)
+        return () => { window.removeEventListener(WATCH_EVENT, onChange); window.removeEventListener(HOLDINGS_EVENT, onChange) }
     }, [fetchWatch, onCanvas])
 
     // 실시간가 조회 = 2026-07-03 컴플라이언스로 제거 — 시세는 행 클릭 → 리포트에서
@@ -272,8 +287,8 @@ export default function AlphaNestWatchlist(props: Props) {
                 </>
             ) : items.length === 0 ? (
                 <div style={{ background: C.card, borderRadius: 14, padding: "18px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>아직 관심종목이 없어요</div>
-                    <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>종목 리포트에서 ☆를 눌러 담아보세요.</div>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>아직 내 종목이 없어요</div>
+                    <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>종목 리포트에서 ☆를 눌러 담거나, 둥지에 보유종목을 추가하면 여기 모여요.</div>
                 </div>
             ) : (
                 <div style={{ background: C.card, borderRadius: 14, padding: "4px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
@@ -283,13 +298,20 @@ export default function AlphaNestWatchlist(props: Props) {
                                 <a href={`${report}?q=${encodeURIComponent(it.ticker)}`} style={{ display: "flex", alignItems: "center", gap: 11, flex: 1, minWidth: 0, textDecoration: "none", color: "inherit", cursor: "pointer" }}>
                                     <Logo ticker={it.ticker} name={it.name} C={C} />
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.name}</div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                                            <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.name}</span>
+                                            {it.held && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 5, padding: "1px 6px" }}>보유</span>}
+                                        </div>
                                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{it.ticker}{it.market ? " · " + it.market : ""}</div>
                                     </div>
                                     <span style={{ flexShrink: 0, fontSize: 14, color: C.faint, fontWeight: 700 }}>›</span>
                                 </a>
-                                <button onClick={() => removeItem(it.item_id)} title="관심종목 해제"
-                                    style={{ flexShrink: 0, border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 16, lineHeight: 1, padding: "4px 6px", fontWeight: 700 }}>×</button>
+                                {it.item_id ? (
+                                    <button onClick={() => removeItem(it.item_id)} title="관심종목 해제"
+                                        style={{ flexShrink: 0, border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 16, lineHeight: 1, padding: "4px 6px", fontWeight: 700 }}>×</button>
+                                ) : (
+                                    <span style={{ flexShrink: 0, width: 22 }} />
+                                )}
                             </div>
                         )
                     })}

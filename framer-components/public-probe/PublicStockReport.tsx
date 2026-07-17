@@ -1230,10 +1230,7 @@ export default function PublicStockReport(props: Props) {
     const C = (RenderTarget.current() === RenderTarget.canvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
         if (RenderTarget.current() === RenderTarget.canvas) return
-        const readTheme = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
+        const readTheme = () => setThemeDark(readBodyDark())
         readTheme()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(readTheme)

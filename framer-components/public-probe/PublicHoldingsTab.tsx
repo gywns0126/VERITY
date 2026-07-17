@@ -305,10 +305,7 @@ export default function PublicHoldingsTab(props: Props) {
 
     useEffect(() => {
         if (onCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
+        const read = () => setThemeDark(readBodyDark())
         read()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(read)
@@ -472,7 +469,7 @@ export default function PublicHoldingsTab(props: Props) {
             body: JSON.stringify(body),
         })
             .then((r) => r.json().catch(() => ({})))
-            .then(() => { setPop(null); loadHoldings() })
+            .then(() => { setPop(null); loadHoldings(); if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("verity_holdings_change")) })
             .catch(() => {})
             .finally(() => setBusy(false))
     }, [pop, base, loadHoldings])
@@ -484,7 +481,7 @@ export default function PublicHoldingsTab(props: Props) {
             method: "DELETE",
             headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
             body: JSON.stringify({ id }),
-        }).then(() => loadHoldings()).catch(() => {})
+        }).then(() => { loadHoldings(); if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("verity_holdings_change")) }).catch(() => {})
     }, [base, loadHoldings])
 
     // ── 거래 기록 로드 — 미로그인/캔버스 = 샘플. 서버가 이동평균 실현손익 요약(summary) 동봉. ──
