@@ -70,7 +70,13 @@ function loadSession(): SupaSession | null {
 }
 
 function clearSession() {
-    if (typeof window !== "undefined") localStorage.removeItem(SESSION_KEY)
+    if (typeof window === "undefined") return
+    localStorage.removeItem(SESSION_KEY)
+    // 🚨 로그아웃 = 기기 초기화(다음 사용자 익명 누출 차단) — 로컬 스크래치 클리어. verity_theme(기기설정) 유지.
+    for (const k of ["verity_watchlist", "verity_last_ticker", "verity_recent_tickers", "verity_thesis_v1", "verity_thesis_migrated_v1"]) {
+        try { localStorage.removeItem(k) } catch (e) {}
+    }
+    try { sessionStorage.removeItem("verity_session_init") } catch (e) {}   // 세션 가드 재평가 허용
 }
 
 async function fetchProfile(
@@ -218,6 +224,8 @@ interface Props {
     profileTable: string
     loginRedirect: string
     logoutRedirect: string
+    adminEmail: string
+    adminPath: string
     dark: boolean
 }
 
@@ -230,6 +238,9 @@ export default function PublicProfilePage(props: Props) {
     const profileTable = props.profileTable || "profiles"
     const loginRedirect = props.loginRedirect || "/login"
     const logoutRedirect = props.logoutRedirect || "/login"
+    // 관리자 버튼 = 지정 이메일 계정에만 노출(UI 편의). 실제 접근 차단은 /admin AdminGate + 서버(admin.py).
+    const adminEmail = (props.adminEmail || "gywns0126@gmail.com").trim().toLowerCase()
+    const adminPath = props.adminPath || "/admin"
 
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
 
@@ -387,7 +398,6 @@ export default function PublicProfilePage(props: Props) {
         width: "100%",
         maxWidth: 460,
         background: C.card,
-        border: `1px solid ${C.line}`,
         borderRadius: 22,
         boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
         padding: 28,
@@ -460,6 +470,13 @@ export default function PublicProfilePage(props: Props) {
                             style={{ marginTop: 16, border: "none", cursor: "pointer", background: C.field, color: C.ink, fontSize: 12.5, fontWeight: 700, fontFamily: FONT, padding: "8px 20px", borderRadius: 999 }}>
                             프로필 편집
                         </button>
+                        {profile && profile.email && profile.email.trim().toLowerCase() === adminEmail ? (
+                            <button type="button"
+                                onClick={() => go(adminPath)}
+                                style={{ marginTop: 18, marginBottom: 10, border: "none", cursor: "pointer", background: "#ffffff", color: "#191f28", fontSize: 12.5, fontWeight: 700, fontFamily: FONT, padding: "8px 20px", borderRadius: 999 }}>
+                            관리자
+                        </button>
+                        ) : null}
                     </div>
                 ) : (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -477,15 +494,15 @@ export default function PublicProfilePage(props: Props) {
                             {avatarBusy ? "업로드 중…" : "사진 변경"}
                         </button>
                         {/* 필드 리스트 — 라벨 + 밑줄 입력 행 */}
-                        <div style={{ width: "100%", marginTop: 14 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: `1px solid ${C.line}` }}>
+                        <div style={{ width: "100%", marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "11px 14px", background: C.field, borderRadius: 12 }}>
                                 <span style={{ width: 44, flexShrink: 0, color: C.faint, fontSize: 12.5, fontWeight: 600 }}>별명</span>
                                 <input value={nickDraft} autoFocus maxLength={16} placeholder="2~16자"
                                     onChange={(e) => setNickDraft(e.target.value)}
                                     onKeyDown={(e) => { if (e.key === "Enter") saveProfile() }}
                                     style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 14, fontWeight: 700, fontFamily: FONT, color: C.ink, padding: 0 }} />
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: `1px solid ${C.line}` }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "11px 14px", background: C.field, borderRadius: 12 }}>
                                 <span style={{ width: 44, flexShrink: 0, color: C.faint, fontSize: 12.5, fontWeight: 600 }}>소개</span>
                                 <input value={bioDraft} maxLength={40} placeholder="한 줄 소개 (선택)"
                                     onChange={(e) => setBioDraft(e.target.value)}
@@ -506,7 +523,7 @@ export default function PublicProfilePage(props: Props) {
                 )}
 
                 {/* 가입 정보 — 빈 값 행은 숨김 (구글 OAuth = 전화번호 미수집) */}
-                <div style={{ marginTop: 22, borderTop: `1px solid ${C.line}`, paddingTop: 4 }}>
+                <div style={{ marginTop: 20 }}>
                     {profile && profile.phone ? <InfoRow C={C} label="전화번호" value={profile.phone} mono /> : null}
                     <InfoRow C={C} label="가입일" value={fmtDate(profile ? profile.created_at : "")} />
                 </div>
@@ -522,7 +539,7 @@ export default function PublicProfilePage(props: Props) {
                         </button>
                     </div>
                 ) : (
-                    <div style={{ marginTop: 22, background: C.redSoft, border: `1px solid ${C.red}`, borderRadius: 16, padding: 16 }}>
+                    <div style={{ marginTop: 22, background: C.redSoft, borderRadius: 16, padding: 16 }}>
                         <div style={{ color: C.ink, fontSize: 14, fontWeight: 800 }}>정말 탈퇴할까요?</div>
                         <div style={{ color: C.sub, fontSize: 12.5, lineHeight: 1.5, marginTop: 6 }}>
                             탈퇴 시 계정이 비활성화되고 다시 로그인할 수 없어요. 관리자 확인 후 정보가 삭제돼요.
@@ -548,7 +565,7 @@ export default function PublicProfilePage(props: Props) {
 function InfoRow(props: { C: typeof LIGHT; label: string; value: string; mono?: boolean }) {
     const C = props.C
     return (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${C.line}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0" }}>
             <span style={{ color: C.faint, fontSize: 12.5 }}>{props.label}</span>
             <span style={{ color: C.ink, fontSize: 13.5, fontWeight: 600, fontFamily: props.mono ? FONT_MONO : FONT, fontVariantNumeric: "tabular-nums" }}>
                 {props.value}
@@ -574,8 +591,8 @@ function btnGhostDanger(C: typeof LIGHT): React.CSSProperties {
 
 function btnFlatHalf(C: typeof LIGHT): React.CSSProperties {
     return {
-        flex: 1, padding: "11px 0", border: `1px solid ${C.line}`, borderRadius: 12,
-        background: C.card, color: C.sub, fontSize: 13.5, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
+        flex: 1, padding: "11px 0", border: "none", borderRadius: 12,
+        background: C.field, color: C.sub, fontSize: 13.5, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
     }
 }
 
@@ -593,5 +610,7 @@ addPropertyControls(PublicProfilePage, {
     profileTable: { type: ControlType.String, title: "프로필 테이블", defaultValue: "profiles" },
     loginRedirect: { type: ControlType.String, title: "로그인 경로", defaultValue: "/login" },
     logoutRedirect: { type: ControlType.String, title: "로그아웃/탈퇴 후 이동", defaultValue: "/login" },
+    adminEmail: { type: ControlType.String, title: "관리자 이메일", defaultValue: "gywns0126@gmail.com", description: "이 이메일 계정에만 관리자 버튼 노출" },
+    adminPath: { type: ControlType.String, title: "관리자 경로", defaultValue: "/admin" },
     dark: { type: ControlType.Boolean, title: "Dark (정적)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
