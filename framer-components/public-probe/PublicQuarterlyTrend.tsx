@@ -84,7 +84,7 @@ export default function PublicQuarterlyTrend(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [quarters, setQuarters] = useState<any[]>(onCanvas ? SAMPLE_QUARTERS : [])
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
 
     useEffect(() => {

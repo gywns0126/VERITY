@@ -62,7 +62,7 @@ const SAMPLE = {
 
 export default function PublicFreshnessBoard(props: { width?: number; dark?: boolean; dataUrl?: string }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
     const [showP2, setShowP2] = useState<boolean>(false)
 

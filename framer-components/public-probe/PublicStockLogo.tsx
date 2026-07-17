@@ -40,7 +40,7 @@ export default function PublicStockLogo(props: Props) {
     const { ticker, name, showFlag, clickable, stockPath, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     useEffect(() => {
         if (onCanvas) return
         const read = () => {

@@ -246,7 +246,7 @@ export default function PublicProfilePage(props: Props) {
 
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [dark, setDark] = useState<boolean>(!!props.dark)
+    const [dark, setDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const [phase, setPhase] = useState<Phase>(isCanvas ? "member" : "loading")
     const [confirming, setConfirming] = useState(false)
     const [busy, setBusy] = useState<Busy>("")

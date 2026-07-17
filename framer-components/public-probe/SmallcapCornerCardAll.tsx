@@ -137,7 +137,7 @@ function FactRow(props: { t: Ticker; C: typeof LIGHT; market: "kr" | "us"; cfg: 
 
 export default function SmallcapCornerCardAll(props: { width?: number; dark?: boolean; market?: string; krReportPath?: string; usReportPath?: string; krScreenerPath?: string; usScreenerPath?: string }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
-  const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+  const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
   const isDark = onCanvas ? !!props.dark : themeDark
   const C = isDark ? DARK : LIGHT
   const TONE = makeTone(C)

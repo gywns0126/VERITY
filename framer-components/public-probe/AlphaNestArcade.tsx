@@ -228,7 +228,7 @@ export default function AlphaNestArcade(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     // 다크모드 추종
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
         if (onCanvas) return

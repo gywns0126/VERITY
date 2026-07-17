@@ -56,7 +56,7 @@ export default function PublicMobileNav(props: {
     dark?: boolean; activePath?: string
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const [moreOpen, setMoreOpen] = useState(false)
     const [path, setPath] = useState<string>(props.activePath || "/")
 

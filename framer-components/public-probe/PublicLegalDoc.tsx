@@ -83,7 +83,7 @@ const PRIVACY: Sec[] = [
 
 export default function PublicLegalDoc(props: { doc?: "terms" | "privacy"; dark?: boolean; cpoContact?: string; effectiveDate?: string }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
-  const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+  const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
   const isDark = onCanvas ? !!props.dark : themeDark
   const C = isDark ? DARK : LIGHT
   const [tab, setTab] = useState<"terms" | "privacy">(props.doc === "privacy" ? "privacy" : "terms")

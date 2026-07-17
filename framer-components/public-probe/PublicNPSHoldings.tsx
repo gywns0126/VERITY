@@ -52,7 +52,7 @@ const DEMO = {
 
 export default function PublicNPSHoldings(props: { width?: number; dark?: boolean; dataUrl?: string; reportPath?: string }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     // 국민연금공단 로고 — 파비콘 핫링크 + 실패 시 NPS 배지. 🚨 훅은 조건부 return 위 (framer_hooks_top_level — 스켈레톤 return 뒤에 두면 라이브 크래시, 2026-07-07 실사고)
     const [logoErr, setLogoErr] = useState(false)
     // 내 종목 교집합 (PM 2026-07-07) — 관심 = localStorage(로그인 불요) / 보유 = /api/holdings(로그인 시)
@@ -62,16 +62,19 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
     const [returns, setReturns] = useState<any>(null)
     useEffect(() => {
         if (onCanvas || typeof window === "undefined") return
-        try {
-            const raw = window.localStorage.getItem("verity_watchlist")
-            const arr = raw ? JSON.parse(raw) : []
-            if (Array.isArray(arr)) setMyWatch(new Set(arr.map((x: any) => String(x && x.ticker || x)).filter(Boolean)))
-        } catch (e) { /* ignore */ }
         let alive = true
-        try {
-            const sraw = window.localStorage.getItem("verity_supabase_session")
-            const token = sraw ? (JSON.parse(sraw) || {}).access_token : ""
-            if (token) {
+        const syncMine = () => {
+            try {
+                const raw = window.localStorage.getItem("verity_watchlist")
+                const arr = raw ? JSON.parse(raw) : []
+                if (alive && Array.isArray(arr)) setMyWatch(new Set(arr.map((x: any) => String(x && x.ticker || x)).filter(Boolean)))
+            } catch (e) { /* ignore */ }
+            try {
+                const sraw = window.localStorage.getItem("verity_supabase_session")
+                const sess = sraw ? JSON.parse(sraw) : null
+                // 만료 토큰 = 미로그인 취급 (2026-07-14, getToken 동기) — 공개 페이지 refresh 부재로 만료 방치.
+                const token = (sess && typeof sess.access_token === "string" && !(sess.expires_at && Date.now() / 1000 > sess.expires_at)) ? sess.access_token : ""
+                if (!token) { if (alive) setMyHold(new Set()); return }
                 fetch("https://project-yw131.vercel.app/api/holdings", { headers: { Authorization: "Bearer " + token } })
                     .then((r) => (r.ok ? r.json() : null))
                     .then((d) => {
@@ -79,9 +82,14 @@ export default function PublicNPSHoldings(props: { width?: number; dark?: boolea
                         if (alive && Array.isArray(hs)) setMyHold(new Set(hs.map((x: any) => String(x && x.ticker || "")).filter(Boolean)))
                     })
                     .catch(() => {})
-            }
-        } catch (e) { /* ignore */ }
-        return () => { alive = false }
+            } catch (e) { /* ignore */ }
+        }
+        syncMine()
+        // 로그인/로그아웃 재평가(verity_auth_change · 다른 탭 storage) — 리스너 없으면 로그인 후 "내 보유 겹침" 하이라이트가 재방문 전까지 미표시 (MorningBriefing 동일 버그 클래스, 2026-07-14).
+        const onAuth = () => syncMine()
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => { alive = false; window.removeEventListener("verity_auth_change", onAuth); window.removeEventListener("storage", onAuth) }
     }, [onCanvas])
     const NpsLogo = () => logoErr ? (
         <span style={{ width: 26, height: 26, borderRadius: 8, background: "#0B5FAE", color: "#fff", fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>NPS</span>

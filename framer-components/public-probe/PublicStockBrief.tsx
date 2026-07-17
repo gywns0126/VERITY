@@ -128,7 +128,7 @@ export default function PublicStockBrief(props: {
         return () => obs.disconnect()
     }, [])
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const [tk, setTk] = useState<string>("")
     const [state, setState] = useState<string>("idle") // idle | loading | done | error
     const [data, setData] = useState<any>(null)
@@ -210,7 +210,7 @@ export default function PublicStockBrief(props: {
         <div style={wrap}>
             {/* ── 버튼 2개 — 상품 구분: 100% 데이터 vs 데이터+AI 해석. 아이콘 = Phosphor(Framer 네이티브 세트) ── */}
             <div data-noprint style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-                <button onClick={() => doPrint(true)} style={{ ...btnBase, cursor: "pointer", background: C.violetSoft, color: C.violet }}>
+                <button onClick={() => { if (tk && typeof window !== "undefined") window.open(base + "/api/fact_report?ticker=" + encodeURIComponent(tk), "_blank", "noopener") }} disabled={!tk} style={{ ...btnBase, cursor: tk ? "pointer" : "default", opacity: tk ? 1 : 0.5, background: C.violetSoft, color: C.violet }}>
                     <PhPrinter size={14} />
                     팩트 리포트 PDF
                 </button>

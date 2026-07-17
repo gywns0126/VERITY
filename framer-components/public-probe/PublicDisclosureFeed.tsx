@@ -210,7 +210,7 @@ export default function PublicDisclosureFeed(props: Props) {
     const [openKey, setOpenKey] = useState<string>("")
     const [watchKey, setWatchKey] = useState<string>("")
     const [token, setToken] = useState<string>("")
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const [query, setQuery] = useState<string>("")
     useEffect(() => {
         if (loaded) { setSkelVisible(false); return }

@@ -82,7 +82,7 @@ function dilutionBg(fdvMc: number | null, warn: string): { bg: string; strong: b
 
 export default function CryptoHeatmap(props: { dataUrl?: string; dark?: boolean; metric?: Metric }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
 

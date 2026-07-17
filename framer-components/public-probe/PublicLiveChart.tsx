@@ -150,7 +150,7 @@ export default function PublicLiveChart(props: Props) {
     const [range, setRange] = useState("3M")
     const [hoverIdx, setHoverIdx] = useState<number | null>(null)
     const [noData, setNoData] = useState(false)
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
 
     const isDark = onCanvas ? !!dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -408,7 +408,7 @@ export default function PublicLiveChart(props: Props) {
                                 {(lastChg > 0 ? "▲ +" : lastChg < 0 ? "▼ " : "") + lastChg.toFixed(2) + "%"}
                             </span>
                         )}
-                        <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>{dateDot(last[0])} 종가</span>
+                        <span style={{ fontSize: 10.5, fontWeight: 700, color: C.faint, background: C.grid, padding: "1px 6px", borderRadius: 5 }}>전일 종가 · {dateDot(last[0])}</span>
                         {view && view.isWeekly && <span style={{ fontSize: 10, fontWeight: 700, color: C.vg }}>주봉</span>}
                         {view && (
                             <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>

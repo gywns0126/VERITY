@@ -74,7 +74,7 @@ export default function PublicBondRegime(props: Props) {
     const { dataUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     useEffect(() => {
         if (onCanvas) return
         const read = () => {

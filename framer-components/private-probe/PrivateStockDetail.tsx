@@ -81,7 +81,7 @@ export default function PrivateStockDetail(props: {
     dataUrl?: string; dark?: boolean; width?: number; height?: number
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
     const [ov, setOv] = useState<string>("bvps_band")   // BANDS key | off
     const [showAux, setShowAux] = useState<boolean>(true)

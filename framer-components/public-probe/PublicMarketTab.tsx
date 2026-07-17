@@ -95,7 +95,7 @@ export default function PublicMarketTab(props: Props) {
     const [openTip, setOpenTip] = useState<string>("")
     const [tipBox, setTipBox] = useState<{ left: number; width: number }>({ left: 0, width: 240 })
     const [hoverCapable, setHoverCapable] = useState(true)
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
 
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
 

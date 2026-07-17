@@ -327,7 +327,7 @@ function LoadingSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
     return (
         <div>
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
                 {rows.map((i) => (
                     <div
                         key={i}
@@ -357,9 +357,13 @@ function LoadingSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
     )
 }
 
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight any
+ */
 export default function PublicBrokerGuide(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
 
@@ -545,7 +549,7 @@ function TradeTypeView(props: { items: TradeType[]; C: typeof LIGHT; cardH: numb
         return <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>거래유형 데이터가 없어요.</div>
     }
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 10, alignItems: "start", paddingTop: 6 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: 10, alignItems: "start", paddingTop: 6 }}>
             {items.map((it, i) => (
                 <div
                     key={i}
@@ -620,7 +624,7 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
         return <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>증권사 데이터가 없어요.</div>
     }
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 320px), 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
             {brokers.map((b, i) => {
                 const feeUrl = clean(b.source_url) || (brokerDomain(b.name) ? "https://" + brokerDomain(b.name) : "")
                 const news = clean(b.realtime_news)

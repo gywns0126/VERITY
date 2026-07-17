@@ -60,7 +60,7 @@ export default function PublicStockNews(props: Props) {
     const api = (apiBase || DEFAULT_API).replace(/\/+$/, "")
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     useEffect(() => {
         if (onCanvas) return
         const read = () => {

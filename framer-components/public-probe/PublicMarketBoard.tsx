@@ -146,7 +146,7 @@ function CorrBar({ v, C }: { v: number; C: any }) {
 export default function PublicMarketBoard(props: Props) {
     const { pulseUrl, macroUrl, commodityUrl, reportPath, dark, refreshSec } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
 
     const rootRef = useRef<HTMLDivElement>(null)
