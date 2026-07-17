@@ -16,6 +16,7 @@ Brain Observatory admin API — 단일 파일 통합 (Hobby 12 함수 제한 회
 인증: X-Admin-Token 또는 Bearer JWT (profiles.is_admin=true)
 """
 from __future__ import annotations
+# deploy-marker: 206 fix (2026-07-17)
 
 import json
 import logging
