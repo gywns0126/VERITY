@@ -1,6 +1,6 @@
 {
   "cleanUrls": true,
-  "ignoreCommand": "bash -c 'cd .. || exit 0; B=\"$VERCEL_GIT_PREVIOUS_SHA\"; if [ -n \"$B\" ]; then git cat-file -e \"$B\" 2>/dev/null || git fetch -q --depth=250 origin \"$B\" 2>/dev/null || true; fi; if [ -n \"$B\" ] && git cat-file -e \"$B\" 2>/dev/null; then git diff --quiet \"$B\" HEAD -- vercel-api/ && exit 0 || exit 1; fi; N=50; git rev-parse HEAD~$N >/dev/null 2>&1 || N=1; git rev-parse HEAD~$N >/dev/null 2>&1 || exit 1; git diff --quiet HEAD~$N HEAD -- vercel-api/ && exit 0; exit 1'",
+  "ignoreCommand": "bash -c 'cd .. || exit 0; N=50; git rev-parse HEAD~$N >/dev/null 2>&1 || N=1; git rev-parse HEAD~$N >/dev/null 2>&1 || exit 1; git diff --quiet HEAD~$N HEAD -- vercel-api/ && exit 0; exit 1'",
   "functions": {
     "api/stock.py": { "maxDuration": 30 },
     "api/stock_detail.py": { "maxDuration": 30 },
