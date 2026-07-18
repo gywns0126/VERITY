@@ -71,14 +71,23 @@ function sessionResetScratch() {
     } catch (e) {}
 }
 function loadWatch(): any[] {
-    if (typeof window === "undefined") return SEED
+    // 디폴트(SEED) 없음 — 라이브는 빈 상태로 시작. 추가분만 localStorage 저장, 새 세션 = sessionResetScratch 로 리셋(익명).
+    if (typeof window === "undefined") return []
     try {
         const r = localStorage.getItem(LS_KEY)
-        if (!r) return SEED
+        if (!r) return []
         const a = JSON.parse(r)
-        return Array.isArray(a) ? a : SEED
+        if (!Array.isArray(a)) return []
+        // 구버전 SEED 목업이 그대로 저장돼 있으면(사용자 미변경) 1회 자동 정리 — 목업 잔존 제거
+        const seedSet = SEED.map((x) => String(x.ticker)).sort().join(",")
+        const curSet = a.map((x: any) => String(x && x.ticker)).sort().join(",")
+        if (a.length === SEED.length && curSet === seedSet) {
+            try { localStorage.removeItem(LS_KEY) } catch (e) {}
+            return []
+        }
+        return a
     } catch {
-        return SEED
+        return []
     }
 }
 function saveWatch(list: any[]) {
@@ -114,7 +123,7 @@ export default function PublicWatchlist(props: Props) {
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [watch, setWatch] = useState<any[]>(SEED)
+    const [watch, setWatch] = useState<any[]>([])
     const [held, setHeld] = useState<any[]>([])
     const [universe, setUniverse] = useState<any[]>([])
     const [theses, setTheses] = useState<Record<string, any>>({})
@@ -151,7 +160,7 @@ export default function PublicWatchlist(props: Props) {
 
     /* 보유종목(둥지, /api/holdings) — 로그인 시 관심종목에 합쳐 '보유' 표시. 로그인/보유변경 시 재조회. */
     useEffect(() => {
-        if (onCanvas) { setHeld([{ ticker: "000660", name: "SK하이닉스", market: "kr" }]); return }
+        if (onCanvas) { setHeld([]); return }
         const load = () => {
             const token = loadToken()
             if (!token) { setHeld([]); return }

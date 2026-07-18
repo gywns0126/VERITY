@@ -1310,7 +1310,16 @@ export default function PublicStockReport(props: Props) {
         let alive = true
         fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json")
             .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const t = d && d.hot && d.hot.ticker; if (alive && t) setSelTicker(String(t).toUpperCase()) })
+            .then((d) => {
+            const t = d && d.hot && d.hot.ticker
+            if (!alive || !t) return
+            const tk = String(t).toUpperCase()
+            setSelTicker(tk)
+            // 콜드 디폴트도 형제·타 페이지 전파 — verity_last_ticker + ?q + 이벤트 (차트·요약·PDF·결정 연동, 2026-07-18)
+            try { window.localStorage.setItem("verity_last_ticker", tk) } catch (e) {}
+            try { const pr = new URLSearchParams(window.location.search); pr.set("q", tk); window.history.replaceState(null, "", window.location.pathname + "?" + pr.toString() + window.location.hash) } catch (e) {}
+            try { window.dispatchEvent(new CustomEvent("verity-ticker-change")) } catch (e) {}
+        })
             .catch(() => {})
         return () => { alive = false }
     }, [onCanvas])
