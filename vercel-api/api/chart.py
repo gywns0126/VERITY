@@ -57,8 +57,9 @@ class handler(BaseHTTPRequestHandler):
         if ticker.isdigit() and len(ticker) < 6:
             ticker = ticker.zfill(6)
 
-        # 주봉/월봉은 장기·저빈도 변경 → KIS 호출 절감 위해 1시간 캐시
-        _cache = "s-maxage=3600, stale-while-revalidate=7200" if qtype in ("weekly", "monthly", "full") else "s-maxage=30, stale-while-revalidate=60"
+        # 주봉/월봉 = 1시간 캐시. 일/분봉도 origin transfer 절감 위해 30s→5분(2026-07-20 비용).
+        #   시세 재배포 컴플라이언스상 어차피 지연/EOD 이라 5분 엣지캐시 무해(신선도 영향 X).
+        _cache = "s-maxage=3600, stale-while-revalidate=7200" if qtype in ("weekly", "monthly", "full") else "s-maxage=300, stale-while-revalidate=600"
 
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
