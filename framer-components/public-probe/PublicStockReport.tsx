@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 시장경보 = 경보 시 헤더(종목명·가격·메타) 통째 틴트 박스(외곽선 없음)로 감싸 한눈에. 경보 없으면 헤더 평범.
  * 폰트 = Pretendard 단일. 탭→상세 = 기본지표(계산식+실제 투입숫자 facts_calc·출처)/수급(정확 주수)/동종업계(비교)/재무(전체 재무제표 그룹) + 공시·내부자·forensics(원문) — 전업러용 raw 접근. 있는 데이터만(RULE10).
  * 다크모드 = Framer 네이티브 토글(body[data-framer-theme]) 추종 — themeDark + MutationObserver. canvas 에선 dark prop. 사이트 다크모드 버튼과 실시간 연동.
- * 관심종목 = 로그인 시 헤더 별(둥근 SVG, 2026-06-22 토스풍 라운드+소프트골드, 미담김도 회색 채움+외곽선) → /api/watchgroups(JWT) 담기/해제. 미로그인=담기 안내. 세션=verity_supabase_session(AlphaNestAuth).
+ * 관심종목 = 로그인 시 헤더 별(둥근 SVG, 2026-06-22 토스풍 라운드+소프트골드, 미담김=회색 솔리드·외곽선 없음 2026-07-19) → /api/watchgroups(JWT) 담기/해제. 미로그인=담기 안내. 세션=verity_supabase_session(AlphaNestAuth).
  */
 
 const LIGHT = {
@@ -1200,25 +1200,23 @@ function PeerStrip({ pct, C }: { pct: number; C: any }) {
 }
 
 function readBodyDark(): boolean {
-    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
-    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    // 기본 = 라이트(사이트 첫 시작 라이트 결정, 2026-07-19). 명시적 'dark' 신호가 있을 때만 다크.
+    //   판독 순서 = html[data-an-theme](Custom Code 헤드/보디 스크립트가 페인트 전 세팅, 레이스 제거)
+    //   → body[data-framer-theme](토글) → localStorage. OS 설정은 안 봄(로드마다 뒤집힘 방지).
+    //   ⚠ useState init 은 false(SSG 라이트와 동일) → 이 함수는 effect 에서만 실제 테마 교정에 사용.
     try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
+        if (typeof document !== "undefined") {
+            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+            if (h === "dark") return true
+            if (h === "light") return false
+            if (document.body) {
+                const a = document.body.dataset.framerTheme
+                if (a === "dark") return true
+                if (a === "light") return false
+            }
         }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
+        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (s === "dark") return true
     } catch (e) {}
     return false
 }
@@ -1226,7 +1224,7 @@ function readBodyDark(): boolean {
 export default function PublicStockReport(props: Props) {
     const { stockUrl, usStockUrl, usSmallcapUrl, flowUrl, forensicsUrl, insiderUrl, warnUrl, lendingUrl, supplyUrl, apiBase, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!dark : readBodyDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!dark : false))
     const C = (RenderTarget.current() === RenderTarget.canvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
         if (RenderTarget.current() === RenderTarget.canvas) return
@@ -1895,7 +1893,7 @@ export default function PublicStockReport(props: Props) {
                     <button onClick={toggleStar} title={starItemId ? "관심종목 해제" : "관심종목 담기"} disabled={starBusy}
                         aria-label={starItemId ? "관심종목 해제" : "관심종목 담기"}
                         style={{ flexShrink: 0, border: "none", background: "transparent", cursor: starBusy ? "default" : "pointer", lineHeight: 0, padding: "2px 4px", display: "inline-flex", alignItems: "center" }}>
-                        <svg width={18} height={18} viewBox="0 0 24 24" fill={starItemId ? "#f6b93b" : C.line} stroke={starItemId ? "#f6b93b" : C.faint} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <svg width={18} height={18} viewBox="0 0 24 24" fill={starItemId ? "#f6b93b" : C.faint} stroke={starItemId ? "#f6b93b" : C.faint} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
                             <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.685 21.5a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.45 10.286a.53.53 0 0 1 .294-.903l5.165-.756a2.122 2.122 0 0 0 1.597-1.16z" />
                         </svg>
                     </button>
