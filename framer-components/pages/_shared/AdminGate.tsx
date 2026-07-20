@@ -110,6 +110,26 @@ export default function AdminGate(props: Props) {
         return () => { cancelled = true }
     }, [supabaseUrl, anon, loginPath, homePath, isCanvas])
 
+    // 테마 적용 — /admin 엔 토글이 없으므로 verity_theme(사이트 토글 선호) → body[data-framer-theme] 세팅.
+    //   Framer 페이지 배경·Color Styles·네이티브가 이걸 따라야 페이지 전체가 토글을 따라감
+    //   (관리자 카드들은 이미 verity_theme 읽고 MutationObserver 로 반응 → data-framer-theme 세팅 시 연쇄 정합).
+    useEffect(() => {
+        if (isCanvas || typeof document === "undefined" || !document.body) return
+        const apply = () => {
+            try {
+                let pref = localStorage.getItem("verity_theme")
+                if (pref !== "dark" && pref !== "light") {
+                    pref = (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"
+                }
+                if (document.body) document.body.dataset.framerTheme = pref
+            } catch (e) {}
+        }
+        apply()
+        window.addEventListener("storage", apply)
+        window.addEventListener("verity-theme-changed", apply as any)
+        return () => { window.removeEventListener("storage", apply); window.removeEventListener("verity-theme-changed", apply as any) }
+    }, [isCanvas])
+
     const dark = bodyDark()
     const bg = dark ? C.bgDark : C.bg
     const ink = dark ? C.inkDark : C.ink
