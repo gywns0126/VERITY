@@ -127,7 +127,27 @@ export default function GrowthCard(props: Props) {
     const num: CSSProperties = { fontVariantNumeric: "tabular-nums" }
 
     if (err && !st) return <div style={wrap}><div style={{ ...card, color: C.up, fontSize: 13, fontWeight: 700 }}>성장 통계 로드 실패: {err.slice(0, 90)}</div></div>
-    if (!st) return <div style={wrap}><div style={{ ...card, color: C.faint, fontSize: 13, fontWeight: 600 }}>성장 통계 로딩…</div></div>
+    if (!st) {
+        // 스켈레톤 — 헤더 + 핵심 타일 4 + 차트 형태를 본떠 표시(텍스트 한 줄=오류처럼 보임 회피).
+        const dk = onCanvas ? !!props.dark : themeDark
+        const skBase = dk ? "#232a33" : "#e7eaee", skHi = dk ? "#2f3742" : "#f3f5f8"
+        const shim: CSSProperties = { background: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "gcShimmer 1.4s ease-in-out infinite" }
+        return (
+            <div style={wrap}>
+                <style>{`@keyframes gcShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+                <div style={card} aria-busy="true" aria-label="성장 통계 불러오는 중">
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+                        <div style={{ ...shim, width: 96, height: 18, borderRadius: 6 }} />
+                        <div style={{ ...shim, width: 52, height: 12, borderRadius: 6, marginLeft: "auto" }} />
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {[0, 1, 2, 3].map((i) => <div key={i} style={{ ...shim, flex: "1 1 90px", height: 62, borderRadius: 12 }} />)}
+                    </div>
+                    <div style={{ ...shim, width: "100%", height: 90, borderRadius: 12, marginTop: 12 }} />
+                </div>
+            </div>
+        )
+    }
 
     const m = st.members || {}
     const c = st.community || {}

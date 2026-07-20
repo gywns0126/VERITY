@@ -143,6 +143,23 @@ export default function MemberAdminCard(props: Props) {
     const chip = (bg: string, fg: string): CSSProperties => ({ fontSize: 11, fontWeight: 800, color: fg, background: bg, borderRadius: 7, padding: "2px 8px" })
     const btn = (bg: string, fg: string): CSSProperties => ({ border: "none", cursor: "pointer", fontFamily: FONT, fontSize: 12, fontWeight: 800, background: bg, color: fg, borderRadius: 9, padding: "7px 12px" })
 
+    // 스켈레톤 — 최초 로딩(회원 fetch) 동안 리스트 행 형태를 본떠 표시(빈 카드=오류처럼 보임 회피).
+    const dk = onCanvas ? !!props.dark : themeDark
+    const skBase = dk ? "#232a33" : "#e7eaee", skHi = dk ? "#2f3742" : "#f3f5f8"
+    const shim: CSSProperties = { background: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "macShimmer 1.4s ease-in-out infinite" }
+    const skRows = (
+        <>
+            <style>{`@keyframes macShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+            {[0, 1, 2, 3].map((i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12, borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                    <div style={{ ...shim, width: 110, height: 15, borderRadius: 6 }} />
+                    <div style={{ ...shim, width: 40, height: 16, borderRadius: 7 }} />
+                    <div style={{ ...shim, width: 24, height: 14, borderRadius: 6, marginLeft: "auto" }} />
+                </div>
+            ))}
+        </>
+    )
+
     return (
         <div style={wrap}>
             {/* 헤더 + 검색 */}
@@ -164,7 +181,8 @@ export default function MemberAdminCard(props: Props) {
 
             {/* 회원 리스트 */}
             <div style={card}>
-                {members.length === 0 && !loading ? (
+                {members.length === 0 && loading ? skRows
+                 : members.length === 0 && !loading ? (
                     <div style={{ fontSize: 13, color: C.faint, fontWeight: 600 }}>회원이 없어요</div>
                 ) : members.map((m, i) => {
                     const opened = openId === m.id

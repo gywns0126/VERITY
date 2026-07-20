@@ -113,6 +113,25 @@ export default function AuditLogCard(props: Props) {
     const colorOf = (k?: string) => (k === "up" ? C.up : k === "green" ? C.green : k === "amber" ? C.amber : C.vt)
     const bgOf = (k?: string) => (k === "up" ? C.grid : k === "green" ? C.greenS : k === "amber" ? C.amberS : C.vtS)
 
+    // 스켈레톤 — 최초 로딩(조치 로그 fetch) 동안 로그 행 형태를 본떠 표시.
+    const dk = onCanvas ? !!props.dark : themeDark
+    const skBase = dk ? "#232a33" : "#e7eaee", skHi = dk ? "#2f3742" : "#f3f5f8"
+    const shim: CSSProperties = { background: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "alcShimmer 1.4s ease-in-out infinite" }
+    const skRows = (
+        <>
+            <style>{`@keyframes alcShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+            {[0, 1, 2, 3].map((i) => (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", paddingTop: i === 0 ? 0 : 11, marginTop: i === 0 ? 0 : 11, borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                    <div style={{ ...shim, width: 48, height: 20, borderRadius: 7, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ ...shim, width: "70%", height: 13, borderRadius: 6 }} />
+                        <div style={{ ...shim, width: 130, height: 11, borderRadius: 6, marginTop: 4 }} />
+                    </div>
+                </div>
+            ))}
+        </>
+    )
+
     return (
         <div style={wrap}>
             <div style={card}>
@@ -124,7 +143,8 @@ export default function AuditLogCard(props: Props) {
             </div>
 
             <div style={card}>
-                {rows.length === 0 && !loading ? (
+                {rows.length === 0 && loading ? skRows
+                 : rows.length === 0 && !loading ? (
                     <div style={{ fontSize: 13, color: C.faint, fontWeight: 600 }}>기록된 조치가 없어요</div>
                 ) : rows.map((r, i) => {
                     const a = ACTIONS[r.action || ""] || { t: r.action || "조치", c: "vt" }
