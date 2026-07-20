@@ -262,6 +262,10 @@ def attach_classifications(portfolio: Dict[str, Any]) -> Dict[str, Any]:
     counter: Dict[str, int] = {c: 0 for c in CLASSES}
     low_quality = 0   # data_quality=low 카운트 — 분류 통계 왜곡 방지
     for stock in recs:
+        # 2026-07-20 감사 P1: lynch 임계는 KRW 시총(FAST_GROWER 5조·STALWART 1조). US(USD 시총) 적용 시
+        # 오분류(41/41 US 공개 lens 오염) → US skip (classify_lynch_kr = KR 전용, multibagger_watch 패턴 정합).
+        if (stock.get("currency") or "").upper() == "USD":
+            continue
         try:
             res = classify_lynch_kr(stock)
             stock["lynch_kr"] = res
