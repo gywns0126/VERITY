@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-12T10:11:34.333686+09:00",
+  "generated_at": "2026-07-20T19:29:33.947208+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 215279,
-    "python_modules": 631,
-    "tsx_components": 113,
-    "json_data_files": 418,
-    "json_total_tracked": 433,
-    "workflows": 62,
-    "scheduled_workflows": 52,
-    "cron_triggers": 62,
-    "git_tracked_files": 5803
+    "code_lines_tsx_py": 218023,
+    "python_modules": 637,
+    "tsx_components": 116,
+    "json_data_files": 441,
+    "json_total_tracked": 456,
+    "workflows": 63,
+    "scheduled_workflows": 49,
+    "cron_triggers": 59,
+    "git_tracked_files": 5897
   },
   "subsystems": {
     "ingest": {
@@ -152,8 +152,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 62,
-      "scheduled": 52,
+      "count": 63,
+      "scheduled": 49,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -210,10 +210,8 @@
         },
         {
           "name": "crypto_collect",
-          "crons": [
-            "5,35 * * * *"
-          ],
-          "scheduled": true
+          "crons": [],
+          "scheduled": false
         },
         {
           "name": "daily_analysis",
@@ -236,7 +234,7 @@
         {
           "name": "daily_briefing",
           "crons": [
-            "30 22 * * *"
+            "30 21 * * *"
           ],
           "scheduled": true
         },
@@ -262,10 +260,8 @@
         },
         {
           "name": "dart_catalyst_pulse",
-          "crons": [
-            "13,43 0-9 * * 1-5"
-          ],
-          "scheduled": true
+          "crons": [],
+          "scheduled": false
         },
         {
           "name": "dart_kr_fin_backfill",
@@ -338,7 +334,9 @@
         {
           "name": "kr_chart_daily",
           "crons": [
-            "23 5 * * 1-5"
+            "23 5 * * 1-5",
+            "23 8 * * 1-5",
+            "23 11 * * 1-5"
           ],
           "scheduled": true
         },
@@ -420,12 +418,8 @@
         },
         {
           "name": "rss_scout",
-          "crons": [
-            "0,15,30,45 0-5 * * 1-5",
-            "0,15,30 6 * * 1-5",
-            "0,30 7-23 * * 1-5"
-          ],
-          "scheduled": true
+          "crons": [],
+          "scheduled": false
         },
         {
           "name": "rule7_audit",
@@ -447,6 +441,11 @@
             "30 21 * * *"
           ],
           "scheduled": true
+        },
+        {
+          "name": "securities_lending_refresh",
+          "crons": [],
+          "scheduled": false
         },
         {
           "name": "self_assets_weekly",
@@ -583,13 +582,13 @@
     },
     "surface": {
       "label": "출력",
-      "count": 113,
+      "count": 116,
       "by_group": {
-        "framer-components/public-probe": 58,
+        "framer-components/public-probe": 59,
         "market": 11,
         "_shared": 10,
+        "admin": 9,
         "framer-components/crypto-public": 7,
-        "admin": 7,
         "analysis": 5,
         "us": 4,
         "home": 3,
@@ -602,33 +601,33 @@
     },
     "data": {
       "label": "데이터",
-      "count": 418
+      "count": 441
     },
     "validation": {
       "label": "검증",
-      "n_trading_days": 39,
-      "n_calendar_days": 55,
+      "n_trading_days": 45,
+      "n_calendar_days": 64,
       "next_milestone": {
         "next_n": 100,
-        "days_remaining": 61,
+        "days_remaining": 55,
         "label": "예비 결과 (binomial 95% CI ±10%p)"
       },
-      "as_of": "2026-07-11T12:49:40+09:00"
+      "as_of": "2026-07-20T13:12:20+09:00"
     }
   },
   "python_by_dir": {
-    "api": 365,
-    "tests": 128,
+    "api": 369,
+    "tests": 129,
     "scripts": 79,
     "vercel-api": 50,
-    "server": 6,
+    "server": 7,
     ".github": 3
   },
   "funnel": {
-    "investable_real": 2936,
+    "investable_real": 1289,
     "cap": 5000,
     "stages": [
-      2936,
+      1289,
       300,
       100,
       25
@@ -639,7 +638,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2936 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~1289 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
@@ -647,7 +646,7 @@
       "warn": 1,
       "alert": 0
     },
-    "infra_as_of": "2026-07-11T10:24:50+09:00",
+    "infra_as_of": "2026-07-20T10:28:25+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,

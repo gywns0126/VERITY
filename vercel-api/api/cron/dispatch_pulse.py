@@ -10,7 +10,7 @@ Vercel Cron → GitHub Actions repository_dispatch (시각별 multi-event)
   - macro_collect      — 매 30분 24/7 (2026-07-01, GH schedule silent-skip 회피, daily_realtime 패턴)
   - daily_analysis_quick — 매시 :07 (시간당 1회 quick 분석)
   - reports_v2         — UTC 13:07 매일 (1일 1회 reports)
-  - hourly_pulse       — 한국장 5슬롯 + 미장 3슬롯 (DST 자동, 2026-05-12 신규)
+  - hourly_pulse       — 한국장 4슬롯 + 미장 3슬롯 (DST 자동, 2026-05-12 · 17:00 장후 제거 2026-07-17)
 
 필요 env:
   - GH_DISPATCH_PAT: GitHub PAT (Contents: Read and write)
@@ -99,6 +99,18 @@ def _resolve_events(now_utc: datetime) -> list[str]:
     #   (daily_realtime 패턴). 미장/FX 는 야간(KST)에도 움직이므로 세션 게이트 없이 항상.
     if minute % 30 == 0:
         events.append("macro_collect")
+        # crypto_collect — 매 30분 24/7 (크립토 시세·파생, freshness_sla schedule="always", SLA 90분).
+        # 2026-07-12: GH schedule '5,35' silent-skip 으로 최대 3~4h 갭 → dispatch 단일통로 이전(macro 패턴).
+        events.append("crypto_collect")
+
+    # rss_scout(뉴스속보) / dart_catalyst(공시알림) — 시장시간 P0(SLA 90 / 120분).
+    # 2026-07-12: GH schedule silent-skip 실측(뉴스 15분→실제 1~2.75h · 공시 30분→실제 3~4h > SLA)
+    #   → Vercel dispatch 30분 이전(crypto/macro 패턴). 원 수집 창 보존:
+    #   뉴스 = 평일 UTC 0-23(KR+US·저녁) · 공시 = 평일 UTC 0-9(KR 장중~마감 KST 09-18).
+    if minute % 30 == 0 and is_weekday:
+        events.append("rss_scout")
+        if hour <= 9:
+            events.append("dart_catalyst_pulse")
 
     # daily_analysis quick — 매시 :07, KR 장외 (UTC 8-15 평일) OR 저녁 (UTC 16-22 Sun-Thu)
     if minute == 7:
@@ -123,7 +135,7 @@ def _resolve_events(now_utc: datetime) -> list[str]:
         events.append("universe_scan")
 
     # hourly_pulse — 시간별 정기 시황 (사용자 spam 호소 후속, 2026-05-12)
-    # 한국장 5슬롯 (KST 09:30/11:30/14:30/15:30/17:00) + 미장 3슬롯 (ET 09:30/11:30/16:00, DST 자동).
+    # 한국장 4슬롯 (KST 09:30/11:30/14:30/15:30) + 미장 3슬롯 (ET 09:30/11:30/16:00, DST 자동).
     # 매크로 fact-check: project_market_info_density_map (★★★★★ 윈도우 정합).
     if _is_hourly_pulse_slot(now_utc):
         events.append("hourly_pulse")
@@ -146,7 +158,7 @@ def _is_hourly_pulse_slot(now_utc: datetime) -> bool:
     kst = now_utc + timedelta(hours=9)
     kst_wd = kst.weekday()  # 0=Mon..6=Sun
     if kst_wd <= 4:  # 평일 한국장 슬롯
-        kr_slots = [(9, 30), (11, 30), (14, 30), (15, 30), (17, 0)]
+        kr_slots = [(9, 30), (11, 30), (14, 30), (15, 30)]  # 17:00 장후 시간외 제거(사용자 "장후 싫다", 2026-07-17)
         if (kst.hour, kst.minute) in kr_slots:
             return True
 

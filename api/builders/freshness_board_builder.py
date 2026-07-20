@@ -6,13 +6,13 @@
 
 화이트리스트 발행 (유리박스 교훈 — [[project_glassbox_public_contract_2026_06_25]]):
   id / label(한글) / criticality / schedule / cadence(공개용 고정 문구) / age_eff_min
-  / max_age_min / status(fresh|stale|paused) / last_ts(KST)
+  / max_age_min / status(fresh|stale|closed|discontinued) / last_ts(KST)
 제외: file 경로, known_issue, 매니페스트 cadence 원문(내부 워크플로명·정정 remark 포함),
   owner=local 스트림(로컬 레이크 — heartbeat 별도), 비발행 내부 입력(analyst_reports).
 
 status 규칙:
-  active_check=false          → paused (검사 중단 — 사유는 공개용 cadence 문구로)
-  schedule 비활성 구간(주말/장외) → paused (무생산 정상 — stale 오탐 방지)
+  active_check=false          → discontinued (수집 중단 — 사유는 공개용 cadence 문구로)
+  schedule 비활성 구간(주말/장 마감) → closed (휴장 = 무생산 정상, 개장 시 재개 — stale 오탐 방지)
   age_eff <= max_age          → fresh, 초과 → stale
   missing/no_ts/bad_ts        → 발행 제외 (내부 진단은 shadow jsonl 몫)
 
@@ -116,7 +116,7 @@ def build_board() -> dict:
             row["cadence"] = cadence
 
         if s.get("active_check") is False:
-            row["status"] = "paused"
+            row["status"] = "discontinued"  # 수집 중단(은퇴·권리검토 등) — 주말 휴장과 구분
             rows.append(row)
             continue
 
@@ -141,7 +141,7 @@ def build_board() -> dict:
         row["max_age_min"] = maxm
         row["last_ts"] = t.isoformat()
         if not _schedule_active(sched, now):
-            row["status"] = "paused"  # 주말/장외 무생산 정상 구간
+            row["status"] = "closed"  # 주말/장 마감 무생산 = 정상(개장 시 재개). stale 오탐 방지
         else:
             row["status"] = "stale" if (maxm and age_eff > maxm) else "fresh"
         rows.append(row)
@@ -150,21 +150,28 @@ def build_board() -> dict:
     summary = {
         "fresh": sum(1 for r in rows if r["status"] == "fresh"),
         "stale": sum(1 for r in rows if r["status"] == "stale"),
-        "paused": sum(1 for r in rows if r["status"] == "paused"),
+        "closed": sum(1 for r in rows if r["status"] == "closed"),          # 휴장(장 마감 정상)
+        "discontinued": sum(1 for r in rows if r["status"] == "discontinued"),  # 수집 중단
     }
     for crit in ("P0", "P1", "P2"):
         crit_rows = [r for r in rows if r.get("criticality") == crit]
+        n_fresh = sum(1 for r in crit_rows if r["status"] == "fresh")
+        n_closed = sum(1 for r in crit_rows if r["status"] == "closed")
+        n_disc = sum(1 for r in crit_rows if r["status"] == "discontinued")
+        # active = 지금 생산돼야 하는 스트림(휴장·중단 제외) → 신선도 비율 분모(주말 오해 방지)
         summary[crit.lower()] = {
             "total": len(crit_rows),
-            "fresh": sum(1 for r in crit_rows if r["status"] == "fresh"),
+            "fresh": n_fresh,
+            "closed": n_closed,
+            "active": len(crit_rows) - n_closed - n_disc,
         }
     return {
         "_meta": {
             "generated_at": now.isoformat(),
             "count": len(rows),
             "source": "freshness_sla 매니페스트 매시 능동검사 (실측 나이 vs SLA 임계)",
-            "note": "상태 = 마지막 갱신 시각 실측 비교 사실만. 주말·장외 무생산 구간은 "
-                    "유효 나이에서 제외하며 paused 로 표시. 점수·예측 아님.",
+            "note": "상태 = 마지막 갱신 시각 실측 비교 사실만. 주말·장 마감 무생산 구간은 "
+                    "유효 나이에서 제외하며 closed(휴장, 정상)로 표시. 수집 중단은 discontinued. 점수·예측 아님.",
         },
         "summary": summary,
         "streams": rows,

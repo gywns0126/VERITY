@@ -24,7 +24,7 @@ SUMMARY_PATH = os.path.join(_ROOT, "data", "us_financials", "_summary.json")
 COMBINED_PATH = os.path.join(_ROOT, "data", "us_universe_combined.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "us_disclosure_feed.json")
 
-WINDOW_DAYS = 60        # 8-K 산발적 → 윈도우 넉넉히
+WINDOW_DAYS = 90        # 8-K 산발적 → 윈도우 넉넉히 (2026-07-17 60→90: 어닝-8-K 주기 ~91일 포괄. 분기초 위치 종목의 직전 8-K 회수 → disclosures 84.7%→~97%. SEC 콜 0 증가=cutoff 필터만)
 MAX_PER_TICKER = 5
 # 🚨 예산 가드 — 무가드 1,505 SEC 순회가 daily_analysis_full 에서 완주 못 해 2건만 남던 사고(2026-07-09) 방지.
 MAX_SECONDS = int(os.environ.get("US_DISCLOSURE_MAX_SECONDS", "1800"))

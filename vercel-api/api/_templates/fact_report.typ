@@ -10,6 +10,13 @@
 #let faint = rgb("#8b95a1")
 #let hair = rgb("#e5e8eb")
 #let accent = rgb("#6c5ce7")
+#let up = rgb("#f04452")
+#let down = rgb("#3182f6")
+#let fill = rgb("#f5f6f8")
+
+// 방향 셀 색 (KR 관례: 높음=빨강 / 낮음=파랑 / 비슷=회색 · 사실 방향 표시 · 판단 아님)
+#let cfill(c) = if c == "높음" { up } else if c == "낮음" { down } else if c == "비슷" { faint } else { ink }
+#let cwt(c) = if c == "높음" or c == "낮음" { 800 } else { 400 }
 
 #set page(
   paper: "a4",
@@ -58,6 +65,36 @@
   )
 }
 
+// ─── 한눈에 (glance): 4 카드 + 요약 밴드 ───
+#if ("glance" in D) and (D.glance != none) {
+  v(4mm)
+  block[
+    #text(size: 10.5pt, weight: 800)[한눈에]
+    #h(2mm) #text(size: 7.2pt, fill: faint)[사실만 · 판단은 직접]
+  ]
+  v(1.6mm)
+  grid(
+    columns: D.glance.cards.map(c => 1fr),
+    rows: 18mm,
+    column-gutter: 2.2mm,
+    ..D.glance.cards.map(c => block(
+      fill: fill, radius: 5pt, inset: (x: 3mm, y: 2.8mm), width: 100%, height: 100%,
+    )[
+      #text(size: 8pt, weight: 700, fill: sub)[#c.q]
+      #v(1.2mm)
+      #text(size: 11pt, weight: 800)[#c.a]
+      #v(0.7mm)
+      #text(size: 7pt, fill: faint)[#c.s]
+    ])
+  )
+  v(2.2mm)
+  block(fill: accent, radius: 5pt, inset: (x: 4mm, y: 3mm), width: 100%)[
+    #text(size: 8.7pt, weight: 800, fill: white)[#D.glance.summary]
+    #linebreak()
+    #text(size: 7.4pt, fill: white.transparentize(24%))[#D.glance.note]
+  ]
+}
+
 // ─── 섹션 (제네릭 테이블) ───
 #let alignof(a) = if a == "r" { right } else if a == "c" { center } else { left }
 
@@ -76,7 +113,7 @@
     stroke: (x, y) => if y == 0 { (bottom: 0.5pt + hair) } else { (bottom: 0.3pt + rgb("#f1f3f5")) },
     inset: (x: 1.5pt, y: 3pt),
     ..s.headers.map(h => text(size: 7.6pt, weight: 700, fill: faint)[#h]),
-    ..s.rows.flatten().map(c => text(size: 8.4pt)[#c]),
+    ..s.rows.flatten().map(c => text(size: 8.4pt, fill: cfill(c), weight: cwt(c))[#c]),
   )
 }
 

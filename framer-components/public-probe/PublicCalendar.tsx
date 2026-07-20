@@ -66,9 +66,6 @@ function StockDot(props: { ticker: any; name: any; size?: number }) {
 
 function readBodyDark(): boolean {
     try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
         if (typeof document !== "undefined" && document.body) {
             const a = document.body.dataset.framerTheme
             if (a === "dark") return true
@@ -103,24 +100,9 @@ const DEMO = {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
-
 export default function PublicCalendar(props: { dataUrl?: string; stockPath?: string; dark?: boolean }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : anReadDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
     const [data, setData] = useState<any>(onCanvas ? DEMO : null)
     const [cur, setCur] = useState<{ y: number; m: number }>(() => ({ y: 2026, m: 6 })) // m=0-index (6=July)
     const [selDate, setSelDate] = useState<string>("")
@@ -128,8 +110,6 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
     const [w, setW] = useState(0)
     const [listOpen, setListOpen] = useState(false)   // 모바일 리스트 더보기 펼침
     const rootRef = useRef<HTMLDivElement>(null)
-    const calRef = useRef<HTMLDivElement>(null)       // 캘린더 카드 높이 측정 → 이벤트 리스트 높이 매칭
-    const [calH, setCalH] = useState(0)
 
     useEffect(() => {
         if (onCanvas) return
@@ -145,15 +125,6 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
         const el = rootRef.current
         if (!el || typeof ResizeObserver === "undefined") return
         const ro = new ResizeObserver((e) => { for (const x of e) setW(x.contentRect.width) })
-        ro.observe(el)
-        return () => ro.disconnect()
-    }, [])
-
-    // 캘린더 카드 높이 → 옆 이벤트 리스트 maxHeight 매칭 (좌우 균형: 캘린더=폭, 리스트=높이 스크롤)
-    useEffect(() => {
-        const el = calRef.current
-        if (!el || typeof ResizeObserver === "undefined") return
-        const ro = new ResizeObserver(() => { if (calRef.current) setCalH(calRef.current.offsetHeight) })
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
@@ -209,13 +180,6 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
         for (const d in byDate) { const dt = new Date(d); if (dt.getFullYear() === cur.y && dt.getMonth() === cur.m) n += byDate[d].length }
         return n
     }, [byDate, cur])
-
-    // 이 달 카테고리별 건수 (필터 무시 — 범례는 항상 전체 분포) → 캘린더 하단 범례/요약
-    const monthCatCounts = useMemo(() => {
-        const c: Record<string, number> = {}
-        for (const e of events) { const dt = new Date(e.date); if (dt.getFullYear() === cur.y && dt.getMonth() === cur.m) c[e.cat] = (c[e.cat] || 0) + 1 }
-        return c
-    }, [events, cur])
 
     const shiftMonth = (delta: number) => {
         setSelDate("")
@@ -286,9 +250,9 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                 })}
             </div>
 
-            <div style={{ display: narrow ? "block" : "grid", gridTemplateColumns: narrow ? undefined : "1.5fr 1fr", gap: 16, alignItems: "start" }}>
+            <div style={{ display: narrow ? "block" : "grid", gridTemplateColumns: narrow ? undefined : "1.35fr 1fr", gap: 16, alignItems: "start" }}>
                 {/* 월 그리드 */}
-                <div ref={calRef} style={cardS}>
+                <div style={cardS}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                         <div>
                             <span style={{ fontSize: narrow ? 18 : 21, fontWeight: 800, letterSpacing: "-0.4px" }}>
@@ -320,7 +284,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                                 <button key={i} onClick={() => setSelDate(isSel ? "" : ds)} disabled={!inMonth && evs.length === 0}
                                     style={{
                                         position: "relative", border: "none", cursor: inMonth || evs.length ? "pointer" : "default", fontFamily: FONT,
-                                        height: narrow ? 44 : 60, borderRadius: 12, background: isSel ? C.today : (evs.length ? C.hi : "transparent"),
+                                        height: narrow ? 44 : 56, borderRadius: 12, background: isSel ? C.today : (evs.length ? C.hi : "transparent"),
                                         color: isSel ? C.todayInk : inMonth ? C.ink : C.faint, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
                                         fontWeight: isToday ? 800 : 600, transition: "background 0.12s",
                                     }}>
@@ -338,21 +302,10 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                             )
                         })}
                     </div>
-                    {!narrow && Object.keys(monthCatCounts).length > 0 ? (
-                        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid " + C.line, display: "flex", flexWrap: "wrap", gap: "8px 12px" }}>
-                            {Object.keys(CAT).filter((k) => (monthCatCounts[k] || 0) > 0).map((k) => (
-                                <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: C.sub }}>
-                                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: CAT[k].c }} />
-                                    {CAT[k].label}
-                                    <span style={{ color: C.faint, fontWeight: 800 }}>{monthCatCounts[k]}</span>
-                                </span>
-                            ))}
-                        </div>
-                    ) : null}
                 </div>
 
                 {/* 이벤트 리스트 (선택일 or 이 달 전체) */}
-                <div style={{ ...cardS, marginTop: narrow ? 16 : 0, padding: narrow ? "14px 14px" : "18px 18px", maxHeight: narrow ? undefined : (calH || 560), overflowY: narrow ? undefined : "auto" }}>
+                <div style={{ ...cardS, marginTop: narrow ? 16 : 0, padding: narrow ? "14px 14px" : "18px 18px", maxHeight: narrow ? undefined : 560, overflowY: narrow ? undefined : "auto" }}>
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
                         <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>
                             {selDate ? selDate.slice(5).replace("-", "/") + " 이벤트" : "이 달 이벤트"}

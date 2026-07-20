@@ -262,6 +262,8 @@ def build() -> Dict[str, Any]:
             cycle_buckets.append({
                 "key": key, "label": label, "desc": desc,
                 "n": len(grp),
+                "n_kr": sum(1 for s in members if str(s.get("ticker", "")).isdigit()),
+                "n_us": sum(1 for s in members if not str(s.get("ticker", "")).isdigit()),
                 "vol_range": [grp[0][0], grp[-1][0]] if grp else None,
                 "cap_sum": round(sum(_cap_krw(s) for s in members)),
                 "leaders": [_leader(s) for s in members[:LEADERS_N]],
@@ -282,6 +284,7 @@ def build() -> Dict[str, Any]:
         grp = [(b, sl, s) for b, sl, s in buy_rows if pred(b, sl)]
         members = sorted((s for _b, _s, s in grp), key=_cap_of, reverse=True)
         return {"key": key, "label": label, "desc": desc, "n": len(grp),
+                "n_kr": len(grp), "n_us": 0,  # 자사주 지도 = KR 포렌식 전용
                 "cap_sum": round(sum(_cap_krw(s) for s in members)),
                 "leaders": [_leader(s) for s in members[:LEADERS_N]]}
     buyback_buckets = [

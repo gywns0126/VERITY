@@ -57,6 +57,14 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.us_short_interest_public_builder
 
+      - name: Build US ETF facts (category / AUM / expense / holdings)
+        # RULE 7 = 사실만 (카테고리·순자산·운용사·보수율·구성종목). 소스 = yfinance(무료).
+        # 🚨 소비자 = PublicStockReport 의 US_ETF_URL — 2026-07-11 PR #81 이 컴포넌트만 main 에 올리고
+        #    데이터·빌더·publish 목록을 두고 와서 us_etf.json 이 Blob 404 → 미장 ETF 패널 파손 +
+        #    site_audit RED. 갱신 경로(이 스텝) + publish 등재 + 데이터 3종을 함께 둔다.
+        continue-on-error: true
+        run: python -m api.builders.us_etf_public_builder
+
       - name: Commit data/us_insider_trades.json
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
         # [[feedback_data_collection_verification_mandatory]] specific path commit.
@@ -66,7 +74,8 @@ jobs:
           git add data/us_insider_trades.json
           # short_interest = continue-on-error 스텝 산출. 첫 실행/실패 시 파일 부재 → add 실패로
           # 워크플로가 죽지 않도록 존재할 때만 stage ([[feedback_data_collection_verification_mandatory]]).
-          for f in data/us_short_interest.json data/us_short_interest_cache.json; do
+          for f in data/us_short_interest.json data/us_short_interest_cache.json \
+                   data/us_etf.json data/us_etf_cache.json; do
             if [ -f "$f" ]; then git add "$f"; fi
           done
           if git diff --staged --quiet; then

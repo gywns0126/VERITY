@@ -2,16 +2,20 @@
 # 2026-07-04 신설: TradingView KRX 임베드 표시 제한 확인 → 자체 SVG 차트 복원.
 #   source = 금융위원회_주식시세정보 (data.go.kr/data/15094808) — "이용허락범위 제한 없음"(재배포 합법).
 #   KRX/KIS raw 재배포 컴플라이언스와 무관 (공공데이터 경유). T+1 전일 종가까지.
-# 갱신 = 익영업일 13시 이후 → 평일 14:23 KST 1회 (정각 회피 odd minute — GH silent-skip 완화).
-# 트래픽 = 2콜/일 (한도 10,000). 의존성 = 순수 stdlib (pip 불필요).
-# 7축 audit (2026-07-04): env=PUBLIC_DATA_API_KEY(collector)+VERITY_DATA_PAT/VERCEL_BLOB_TOKEN(publish) 기존 등록 /
-#   push=data/ 만(RULE 2 Vercel 무관) / concurrency=전용 group / cron=일1회 / KIS 무관 / pip=0 / RULE 8 N=2 큐.
+# 갱신 = 실측상 금융위 KRX 일별시세는 전일치를 오후(≈16:00~16:30 KST) 갱신 (2026-07-17 실측: 15:55 시점 미갱신, 16:30경 착지).
+#   → 오후·저녁 다중 슬롯으로 GH cron 지연/silent-skip 에도 당일 착지 보장. collector 는 이미 최신이면 no-op(커밋 0)이라 과다 스케줄 안전.
+# 트래픽 = 최대 6콜/일 (한도 10,000, no-op 포함). 의존성 = 순수 stdlib (pip 불필요).
+# 7축 audit (2026-07-04, 2026-07-17 갱신): env=PUBLIC_DATA_API_KEY(collector)+VERITY_DATA_PAT/VERCEL_BLOB_TOKEN(publish) 기존 등록 /
+#   push=data/ 만(RULE 2 Vercel 무관) / concurrency=전용 group / cron=오후 다중(no-op 가드) / KIS 무관 / pip=0 / RULE 8 N=2 큐.
 name: KR Chart Daily (FSC public data)
 
 on:
   schedule:
-    # 평일 14:23 KST (= 05:23 UTC) — 금융위 데이터 익영업일 13시 이후 갱신 반영
-    - cron: '23 5 * * 1-5'
+    # 금융위 전일치 오후 갱신(≈16:00~16:30 KST) — GH cron 지연/skip 대비 다중 슬롯. odd minute(정각 회피).
+    # collector no-op(이미 최신=커밋 0) 이라 중복 실행 무해. workflow_run 체인이 새 데이터 착지 시 브리핑 자동 재발행.
+    - cron: '23 5 * * 1-5'    # 14:23 KST (조기 — 갱신 전이면 no-op)
+    - cron: '23 8 * * 1-5'    # 17:23 KST — FSC 오후 갱신 직후 재당김 (주 착지 슬롯)
+    - cron: '23 11 * * 1-5'   # 20:23 KST — 저녁 안전망 (지연/skip 대비)
   workflow_dispatch:
 
 env:

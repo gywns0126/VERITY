@@ -153,6 +153,7 @@ def check_cron_health() -> Dict[str, Any]:
     cutoff = datetime.now(timezone.utc) - timedelta(days=7)
     total = 0
     fail = 0
+    warn = 0
     try:
         with path.open("r", encoding="utf-8") as f:
             for line in f:
@@ -178,16 +179,25 @@ def check_cron_health() -> Dict[str, Any]:
                 except (ValueError, TypeError):
                     continue
                 total += 1
-                # severity / status 들어간 부분 FAIL/WARNING 감지
+                # 🚨 WARNING 을 fail 로 세지 않는다 (2026-07-13 정정).
+                #   cron_health.jsonl 행 = 모니터의 시간당 자체 판정이지 run 결과가 아님. 상시 경고가
+                #   하나만 있어도 전 행이 WARNING 이 되어 fail_rate 가 100% 에 고정 → 영구 ALERT →
+                #   self_assets_weekly 가 2주 연속 red(exit 1). "경고 하나"와 "전부 고장"이 구분 불가.
+                #   실측(7일 83행): WARNING 62 · FAIL 21 · OK 0 → 옛 식 100.0% / 새 식 25.3%.
+                #   WARNING 은 warn_7d 로 따로 노출 — 삼키지 않되 알람을 포화시키지 않는다.
                 sev = (entry.get("severity") or entry.get("status") or "").upper()
-                if sev in ("FAIL", "WARNING", "ERROR"):
+                if sev in ("FAIL", "ERROR"):
                     fail += 1
+                elif sev == "WARNING":
+                    warn += 1
     except OSError as e:
         return {"asset": "cron_health", "status": "WARN", "detail": f"read fail: {e}"}
     fail_rate = round(fail / total * 100, 1) if total > 0 else 0.0
+    warn_rate = round(warn / total * 100, 1) if total > 0 else 0.0
     status = "OK" if fail_rate < 10.0 else ("WARN" if fail_rate < 30.0 else "ALERT")
     return {"asset": "cron_health", "path": str(path.relative_to(_ROOT)),
-            "total_7d": total, "fail_7d": fail, "fail_rate_pct": fail_rate, "status": status}
+            "total_7d": total, "fail_7d": fail, "fail_rate_pct": fail_rate,
+            "warn_7d": warn, "warn_rate_pct": warn_rate, "status": status}
 
 
 def _previous_snapshot() -> Dict[str, Any]:

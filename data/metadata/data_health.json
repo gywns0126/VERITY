@@ -1,18 +1,16 @@
 {
  "_meta": {
-  "generated_at": "2026-07-12T11:09:04.401855+09:00",
+  "generated_at": "2026-07-20T18:55:29.693935+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "red",
- "reasons": [
-  "P0 stale 1건"
- ],
+ "status": "green",
+ "reasons": [],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-07-12T11:09:04.357442+09:00",
+  "generated_at": "2026-07-20T18:55:29.630475+09:00",
   "ok": true,
   "failed": 0,
   "max_cdn_age_s": 0,
@@ -21,10 +19,10 @@
     "file": "stock_report_public.json",
     "ok": true,
     "pct": {
-     "PER": 74.2,
-     "PBR": 97.7
+     "PER": 75.5,
+     "PBR": 99.4
     },
-    "total": 1599,
+    "total": 1545,
     "cdn_age_s": 0,
     "error": null
    },
@@ -43,22 +41,22 @@
     "file": "us_stock_report_us_smallcap.json",
     "ok": true,
     "pct": {
-     "PER": 11.7,
-     "PBR": 14.2
+     "PER": 37.8,
+     "PBR": 73.7
     },
-    "total": 3964,
+    "total": 3951,
     "cdn_age_s": 0,
     "error": null
    }
   ]
  },
  "coverage": {
-  "generated_at": "2026-07-11T20:46:34.094294+09:00",
-  "kr_total": 1599,
+  "generated_at": "2026-07-20T18:21:36.548460+09:00",
+  "kr_total": 1545,
   "us_total": 1505,
   "core_fill_pct": {
-   "fields.facts.PBR": 97.7,
-   "fields.facts.PER": 74.2,
+   "fields.facts.PBR": 99.4,
+   "fields.facts.PER": 75.5,
    "us_fields.facts.PBR": 94.9,
    "us_fields.facts.PER": 86.2
   },
@@ -67,31 +65,32 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-07-12T11:08:53.251660+09:00",
+  "generated_at": "2026-07-20T18:55:19.512153+09:00",
   "summary": {
-   "fresh": 18,
-   "stale": 1,
-   "paused": 10,
+   "fresh": 26,
+   "stale": 0,
+   "closed": 2,
+   "discontinued": 1,
    "p0": {
     "total": 6,
-    "fresh": 1
+    "fresh": 4,
+    "closed": 2,
+    "active": 4
    },
    "p1": {
     "total": 11,
-    "fresh": 7
+    "fresh": 10,
+    "closed": 0,
+    "active": 10
    },
    "p2": {
     "total": 12,
-    "fresh": 10
+    "fresh": 12,
+    "closed": 0,
+    "active": 12
    }
   },
-  "stale_p0": [
-   {
-    "id": "crypto",
-    "label": "크립토 시세·파생",
-    "age_min": 124.5
-   }
-  ],
+  "stale_p0": [],
   "stale_other": []
  }
 }

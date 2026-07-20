@@ -7,7 +7,7 @@
     "오전 첫 30분 거래량 25%" 확인 → ★★★★★ 윈도우 정합 슬롯 선정
 
 슬롯 (Vercel dispatch_pulse._is_hourly_pulse_slot 와 동일 정의):
-  KR (KST): 09:30 / 11:30 / 14:30 / 15:30 / 17:00 — 평일
+  KR (KST): 09:30 / 11:30 / 14:30 / 15:30 — 평일 (17:00 장후 제거 2026-07-17)
   US (ET) : 09:30 / 11:30 / 16:00 — 평일 (DST 자동)
 
 발화 경로:
@@ -56,26 +56,39 @@ def _is_us_dst(now_utc: datetime) -> bool:
     return second_sun_mar <= now_utc < first_sun_nov
 
 
+SLOT_TOL_MIN = 15  # gh dispatch→run 지연 흡수 창(분). 초과 지연 = stale 시황이라 발송 안 함.
+
+
+def _is_trading_day(d, region: str) -> bool:
+    """KRX/US 거래일 여부 (휴장·주말 스킵). market_calendar 실패 시 = 평일만(폴백)."""
+    try:
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        from api.utils.market_calendar import is_trading_day
+        return bool(is_trading_day(d, region))  # type: ignore[arg-type]
+    except Exception as e:
+        sys.stderr.write(f"[hourly_pulse] market_calendar 실패({region}): {e} — 평일 폴백\n")
+        return d.weekday() <= 4
+
+
 def _resolve_slot(now_utc: datetime) -> Tuple[str, str]:
-    """현재 시각이 어느 슬롯인지 식별. 반환 = (region, label).
+    """현재(또는 직전 SLOT_TOL_MIN 분 내) 슬롯 식별. 반환 = (region, label).
 
-    region: 'KR' | 'US' | 'NONE'
-    label : 'KST HH:MM' or 'ET HH:MM' (사용자 가독성)
+    region: 'KR' | 'US' | 'NONE'. label = 'KST HH:MM'.
+    🚨 gh dispatch→run 지연 대응 = 직전 SLOT_TOL_MIN 분 역탐색(정확 분 매칭 실패 흡수).
+       + KRX/US 휴장 스킵. 슬롯 아니면 ('NONE','') → 발송 안 함(오발송·휴장·새벽 오라벨 차단, 2026-07-17).
     """
-    kst = now_utc + timedelta(hours=9)
-    if kst.weekday() <= 4:
-        kr_slots = [(9, 30), (11, 30), (14, 30), (15, 30), (17, 0)]
-        if (kst.hour, kst.minute) in kr_slots:
-            return "KR", f"{kst.hour:02d}:{kst.minute:02d}"
-
+    kr_slots = [(9, 30), (11, 30), (14, 30), (15, 30)]  # 17:00 장후 시간외 제거(사용자 "장후 싫다", 2026-07-17). 15:30=마감 종가 결산은 유지.
+    us_slots = [(9, 30), (11, 30), (16, 0)]
     et_offset = -4 if _is_us_dst(now_utc) else -5
-    et = now_utc + timedelta(hours=et_offset)
-    if et.weekday() <= 4:
-        us_slots = [(9, 30), (11, 30), (16, 0)]
-        if (et.hour, et.minute) in us_slots:
-            kst_label = f"{kst.hour:02d}:{kst.minute:02d}"
-            return "US", kst_label
-
+    for back in range(0, SLOT_TOL_MIN + 1):
+        t = now_utc - timedelta(minutes=back)
+        tk = t + timedelta(hours=9)              # KST
+        te = t + timedelta(hours=et_offset)      # ET
+        if tk.weekday() <= 4 and (tk.hour, tk.minute) in kr_slots and _is_trading_day(tk.date(), "KR"):
+            return "KR", f"{tk.hour:02d}:{tk.minute:02d}"
+        if te.weekday() <= 4 and (te.hour, te.minute) in us_slots and _is_trading_day(te.date(), "US"):
+            return "US", f"{tk.hour:02d}:{tk.minute:02d}"
     return "NONE", ""
 
 
@@ -181,13 +194,11 @@ def main() -> int:
     now_utc = datetime.now(timezone.utc)
     region, label = _resolve_slot(now_utc)
     if region == "NONE":
-        # workflow 가 슬롯 매처 거치고 부르므로 정상 케이스에는 도달 X. 보호용 fallback.
-        # dispatch_pulse 와 1분 race 또는 수동 dispatch 시 region NONE 발생 가능.
-        # 그래도 가장 가까운 KST 시각으로 라벨 박고 전송 (운영 누락보다 한 통 발송이 안전).
-        kst = now_utc + timedelta(hours=9)
-        region = "KR" if 0 <= kst.hour < 17 else "US"
-        label = f"{kst.hour:02d}:{kst.minute:02d}"
-        sys.stderr.write(f"[hourly_pulse] no exact slot; fallback region={region} label={label}\n")
+        # 슬롯 아님(gh 지연 SLOT_TOL_MIN 초과=stale / 휴장 / 수동 dispatch) → 오발송 방지로 skip.
+        # 구 fallback('가장 가까운 시각 라벨 붙여 전송')은 US 새벽 슬롯을 '한국장'으로 오라벨링 +
+        # 휴장 발송 사고 원인 → 폐기 (2026-07-17, 사용자 spam 호소 후속).
+        sys.stderr.write("[hourly_pulse] 슬롯 아님 — 발송 skip (휴장/지연초과/수동)\n")
+        return 0
 
     pp = _load_json(PRICE_PULSE)
     pf = _load_json(PORTFOLIO)

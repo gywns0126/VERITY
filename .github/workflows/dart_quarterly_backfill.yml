@@ -63,7 +63,7 @@ jobs:
           UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
           KRX_OPENAPI_KEY: ${{ secrets.KRX_OPENAPI_KEY || vars.KRX_OPENAPI_KEY }}
           KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
-          DART_BACKFILL_RUN_UNITS: ${{ github.event.inputs.run_units || '1500' }}
+          DART_BACKFILL_RUN_UNITS: ${{ github.event.inputs.run_units || '8000' }}   # 2026-07-17 1500→8000: H2 순이익 정본 재수집(최근 5기간 ~7,895 units)을 1 off-peak scheduled run 완주용. 완주 후 no-op(신 분기만 재수집, bounded)이라 상시 안전.
         run: |
           set +e
           python -m api.builders.dart_quarterly_backfill_builder

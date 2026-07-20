@@ -151,6 +151,22 @@ def _load_universe_caps() -> Dict[str, Dict[str, float]]:
         if tk:
             out[tk] = {"market_cap": float(e.get("market_cap") or 0),
                        "adv": float(e.get("avg_trading_value_30d") or 0)}
+    # 소형주 시총 병합 — us_market_caps.json(combined, data/). us_smallcap.yml 이 리포트 빌드 직전
+    # fetch_us_market_caps --universe combined 로 ~5,200종(소형주 포함) 채워둠. universe_us(sp1500)만
+    # 읽던 탓에 소형주 3,375종 시총 공백 → PER/PBR/시총 3필드 전량 미산출이던 것 복원. sp1500 값 무손상.
+    try:
+        _mc_path = os.path.join(os.path.dirname(os.path.dirname(CACHE_PATH)), "us_market_caps.json")
+        _mc = (json.load(open(_mc_path, encoding="utf-8")) or {}).get("market_caps") or {}
+        for _tk, _v in _mc.items():
+            _tk = str(_tk).upper()
+            try:
+                _fv = float(_v or 0)
+            except (TypeError, ValueError):
+                continue
+            if _tk and _fv > 0 and out.get(_tk, {}).get("market_cap", 0) <= 0:
+                out.setdefault(_tk, {"market_cap": 0.0, "adv": 0.0})["market_cap"] = _fv
+    except (OSError, json.JSONDecodeError):
+        pass
     return out
 
 
@@ -683,6 +699,7 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
         "_pm": pm,           # peer 산정용 temp (main 에서 제거)
         "_sector": business_ko or None,
         "_sector_major": _SIC_MAJOR_KO.get(str(row.get("sic") or "")[:2]),  # 대분류 폴백 버킷 (main 에서 제거)
+        "_sic": row.get("sic"),   # 교차피어 GICS 산정용 temp (main 에서 제거)
     }
 
 
@@ -727,13 +744,38 @@ def main() -> int:
         # 계층: 설명 단위(정밀) → N<5 시 SIC 2자리 대분류 폴백 (2026-07-04 peer 조사 — 미부착 483 전부 N<5 컷).
         medians = _us_sector_medians(stocks)
         medians_major = _us_sector_medians(stocks, key="_sector_major")
+        # KR↔US 교차피어 (Tier B B-5) — GICS 태그 + 자기 시장(US) GICS 섹터 중앙값 헬퍼 (로컬 import)
+        from api.builders.cross_sector_peer import (
+            GICS_KO as _GICS_KO,
+            compute_gics_medians as _xpeer_medians,
+            us_ticker_gics as _us_gics,
+            write_medians as _xpeer_write,
+        )
+        _xrecs: List[Dict[str, Any]] = []
         for s in stocks:
             pr = _us_peer(s, medians, medians_major)
             if pr:
                 s["peer"] = pr
+            _g = _us_gics(s.get("ticker"), s.get("_sic"))
+            if _g:
+                s["gics"] = _g
+                s["gics_ko"] = _GICS_KO.get(_g, _g)
+                _pm = s.get("_pm") or {}
+                _xrecs.append({"gics": _g, "metrics": {
+                    "PER": _pm.get("PER"), "PBR": _pm.get("PBR"),
+                    "ROE": _pm.get("ROE"), "영업이익률": _pm.get("영업이익률"),
+                }})
             s.pop("_pm", None)
             s.pop("_sector", None)
             s.pop("_sector_major", None)
+            s.pop("_sic", None)
+        if output_path == OUTPUT_PATH:  # 메인 US 유니버스만 교차 중앙값 소유 (smallcap 트랙은 덮어쓰지 않음)
+            try:
+                _nsec = _xpeer_write(os.path.join(_ROOT, "data", "cross_gics_us.json"), "US",
+                                     _xpeer_medians(_xrecs), _now_kst().isoformat())
+                print(f"[us_stock_report] 교차피어 US GICS 중앙값 {_nsec}섹터 -> cross_gics_us.json", file=sys.stderr)
+            except Exception as _xe:  # noqa: BLE001
+                print(f"[us_stock_report] 교차피어 US 중앙값 출력 실패: {_xe}", file=sys.stderr)
         # 8-K 수시공시 부착 (us_disclosure_feed, SEC EDGAR) — disclosures 섹션 배선(0%→~97%). KR catalyst 패턴 미러.
         us_disc = _load_us_disclosures()
         if us_disc:

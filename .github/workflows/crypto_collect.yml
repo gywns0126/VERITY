@@ -15,8 +15,10 @@
 name: Crypto Collect
 
 on:
-  schedule:
-    - cron: '5,35 * * * *'
+  # 2026-07-12: GH schedule '5,35' silent-skip 으로 크립토(24/7, SLA 90분) 신선도 갭 최대 3~4h
+  #   (00:02→03:47 UTC 등) → schedule 폐기, Vercel Cron dispatch 단일통로(macro_collect 패턴).
+  repository_dispatch:
+    types: [crypto_collect]
   workflow_dispatch:
 
 env:

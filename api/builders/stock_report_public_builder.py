@@ -889,6 +889,13 @@ def main() -> int:
         sector_doc = _load_json(SECTOR_MAP_PATH, {})
         sector_map = (sector_doc.get("map") if isinstance(sector_doc, dict) else {}) or {}
         sector_medians = _sector_medians(fundamentals, sector_map, valuation) if sector_map else {}
+        # KR↔US 교차피어 (Tier B B-5) — GICS 공통축 헬퍼 (로컬 import, 파일 관례 정합)
+        from api.builders.cross_sector_peer import (
+            GICS_KO as _GICS_KO,
+            compute_gics_medians as _xpeer_medians,
+            normalize_gics as _norm_gics,
+            write_medians as _xpeer_write,
+        )
 
         # 공정위 공식 지분/지배구조 (전 종목 — ftc_group_equity 조인, corp_idno 캐시 적재됨 → 네트워크 0/캐시 hit)
         try:
@@ -963,6 +970,11 @@ def main() -> int:
             peer = _peer(tk, fundamentals, sector_map, sector_medians, valuation) if sector_map else None
             if peer:
                 s["peer"] = peer
+            # 교차피어용 GICS 섹터 태그 (표준 11 섹터만; KSIC-* 폴백 제외)
+            _g = _norm_gics((sector_map.get(tk) or {}).get("sector"))
+            if _g:
+                s["gics"] = _g
+                s["gics_ko"] = _GICS_KO.get(_g, _g)
             # 공정위 공식 지분/지배구조 — rec-embedded 없을 때 ftc 조인 부착(전 종목 ~346 대규모기업집단 소속사)
             if _ftc_lookup and _get_cc and not s.get("ownership"):
                 try:
@@ -1054,6 +1066,20 @@ def main() -> int:
         stocks.sort(key=lambda s: (s.get("rich", False), len(s.get("disclosures", [])), s["ticker"]), reverse=True)
         for s in stocks:
             s.pop("rich", None)
+
+        # KR↔US 교차피어 (Tier B B-5) — 자기 시장(KR) GICS 섹터 중앙값 출력. 프론트가 US 종목 비교용으로 읽음.
+        try:
+            _xrecs = [{"gics": s["gics"], "metrics": {
+                "PER": _metric_val(s["ticker"], "PER", fundamentals, valuation),
+                "PBR": _metric_val(s["ticker"], "PBR", fundamentals, valuation),
+                "ROE": _metric_val(s["ticker"], "roe", fundamentals, valuation),
+                "영업이익률": _metric_val(s["ticker"], "op_margin", fundamentals, valuation),
+            }} for s in stocks if s.get("gics")]
+            _nsec = _xpeer_write(os.path.join(_ROOT, "data", "cross_gics_kr.json"), "KR",
+                                 _xpeer_medians(_xrecs), _now_kst().isoformat())
+            print(f"[stock_report_public] 교차피어 KR GICS 중앙값 {_nsec}섹터 -> cross_gics_kr.json", file=sys.stderr)
+        except Exception as _xe:  # noqa: BLE001
+            print(f"[stock_report_public] 교차피어 KR 중앙값 출력 실패: {_xe}", file=sys.stderr)
 
         out = {
             "_meta": {

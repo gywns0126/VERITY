@@ -8,9 +8,15 @@ Brain Observatory admin API — 단일 파일 통합 (Hobby 12 함수 제한 회
   /api/admin?type=explain        ← explain.py
   /api/admin?type=trust          ← trust.py
 
+추가 라우트:
+  /api/admin?type=member_management  ← 회원 관리(부관리자 지정=최종 관리자만, 2026-07-17)
+  /api/admin?type=community_moderation · audit_log · growth_stats
+  /api/admin?type=security           ← IP 침입 추적·차단 (Railway 미들웨어와 blocked_ips 공유)
+
 인증: X-Admin-Token 또는 Bearer JWT (profiles.is_admin=true)
 """
 from __future__ import annotations
+# deploy-marker: 206 fix (2026-07-17)
 
 import json
 import logging
@@ -677,6 +683,21 @@ def _caller_identity(headers_dict: Dict[str, str]) -> Dict[str, Optional[str]]:
     return {"id": None, "email": None}
 
 
+def _is_super_admin(user_id: Optional[str]) -> bool:
+    # 최종 관리자(super) 여부 — profiles.is_super_admin. 부관리자 지정/해제 권한 게이트.
+    if not user_id or not _svc_ready():
+        return False
+    try:
+        r = requests.get(f"{SUPABASE_URL}/rest/v1/profiles", headers=_svc_headers(),
+                         params={"id": f"eq.{user_id}", "select": "is_super_admin"}, timeout=6)
+        if r.status_code == 200:
+            rows = r.json()
+            return bool(rows and rows[0].get("is_super_admin") is True)
+    except requests.RequestException:
+        pass
+    return False
+
+
 def _audit(actor: dict, action: str, target_type: str, target_id: Optional[str], detail: Optional[dict] = None) -> None:
     if not _svc_ready():
         return
@@ -701,13 +722,14 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
         q = (params.get("q", [""])[0] or "").strip()
         limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
         offset = max(0, int((params.get("offset", ["0"])[0] or "0")))
-        sel = "id,email,display_name,nickname,status,is_admin,is_banned,ban_reason,banned_at,created_at"
+        sel = "id,email,display_name,nickname,status,is_admin,is_super_admin,is_banned,ban_reason,banned_at,created_at"
         qp = {"select": sel, "order": "created_at.desc", "limit": str(limit), "offset": str(offset)}
         if q:
             qp["or"] = f"(email.ilike.*{q}*,nickname.ilike.*{q}*,display_name.ilike.*{q}*)"
         r = requests.get(f"{SUPABASE_URL}/rest/v1/profiles",
                          headers=_svc_headers({"Prefer": "count=exact"}), params=qp, timeout=10)
-        if r.status_code != 200:
+        # PostgREST count=exact + 부분범위(limit<total) = 206 Partial Content(정상). 206 도 성공으로 수용.
+        if r.status_code not in (200, 206):
             return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
         total = None
         cr = r.headers.get("Content-Range", "")
@@ -716,7 +738,7 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
                 total = int(cr.split("/")[-1])
             except ValueError:
                 pass
-        return {"_status": 200, "_body": {"members": r.json(), "total": total}}
+        return {"_status": 200, "_body": {"members": r.json(), "total": total, "caller_is_super": _is_super_admin(actor.get("id"))}}
 
     if method == "POST":
         action = str(body.get("action", "")).strip()
@@ -735,7 +757,11 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
                 if k in body:
                     patch[k] = body[k]
             if "is_admin" in body:
+                # 부관리자 지정/해제 = 최종 관리자(super)만. (부관리자는 나머지 권한 동일하나 이것만 불가.)
+                if not _is_super_admin(actor.get("id")):
+                    return {"_status": 403, "_body": {"error": "super_admin_only", "detail": "부관리자 지정/해제는 최종 관리자만 가능해요"}}
                 patch["is_admin"] = bool(body["is_admin"])
+            # is_super_admin 은 API 로 변경 불가 (마이그레이션/DB 콘솔 전용) — 화이트리스트에 없어 자동 차단.
             if not patch:
                 return {"_status": 400, "_body": {"error": "no_fields"}}
             audit_action = "update_profile"
@@ -891,6 +917,150 @@ def handle_community_moderation(handler, method: str, body: dict) -> dict:
 
 
 # ──────────────────────────────────────────────────────────────────────
+# 보안 — IP 침입 시도 추적 · 차단 (방어층). Railway 미들웨어와 blocked_ips 공유.
+# 민감 데이터는 이미 인증+RLS로 잠김. 이건 그 위 스캐너 소음↓·가시성·악성 IP 속도저하.
+# ──────────────────────────────────────────────────────────────────────
+
+_SEC_BLOCK_ENABLED = os.environ.get("SEC_DISABLED", "").strip() not in ("1", "true", "True")
+_SEC_THRESHOLD = int(os.environ.get("SEC_BLOCK_THRESHOLD", "5") or "5")
+_SEC_TTL = int(os.environ.get("SEC_BLOCK_TTL_SEC", str(24 * 3600)) or str(24 * 3600))
+_sec_blocked: set = set()
+_sec_blocked_ts = 0.0
+
+
+def _sec_iso(ts: float) -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(ts))
+
+
+def _sec_client_ip(headers_dict: Dict[str, str]) -> str:
+    xff = (headers_dict.get("x-forwarded-for") or "").strip()
+    if xff:
+        return xff.split(",")[0].strip()
+    return (headers_dict.get("x-real-ip") or "").strip()
+
+
+def _sec_refresh_blocklist() -> None:
+    global _sec_blocked, _sec_blocked_ts
+    if not _svc_ready():
+        return
+    if _sec_blocked_ts and time.time() - _sec_blocked_ts < 60:
+        return
+    try:
+        r = requests.get(f"{SUPABASE_URL}/rest/v1/blocked_ips", headers=_svc_headers(),
+                         params={"select": "ip", "or": f"(expires_at.is.null,expires_at.gt.{_sec_iso(time.time())})"},
+                         timeout=4)
+        if r.status_code == 200:
+            _sec_blocked = {row["ip"] for row in r.json() if row.get("ip")}
+            _sec_blocked_ts = time.time()
+    except requests.RequestException:
+        pass
+
+
+def _sec_is_blocked(ip: str) -> bool:
+    if not (_SEC_BLOCK_ENABLED and ip):
+        return False
+    _sec_refresh_blocklist()
+    return ip in _sec_blocked
+
+
+def _sec_note_unauthorized(ip: str, path: str, method: str, ua: str, reason: str = "admin_unauth") -> None:
+    """무단 접근(어드민 인증 실패) 로깅 + 30분 내 임계 초과 시 자동 차단."""
+    if not (ip and _svc_ready()):
+        return
+    try:
+        requests.post(f"{SUPABASE_URL}/rest/v1/security_probe_log",
+                      headers=_svc_headers({"Prefer": "return=minimal"}),
+                      json={"ip": ip, "path": (path or "")[:400], "method": method,
+                            "user_agent": (ua or "")[:400], "reason": reason, "surface": "vercel"},
+                      timeout=4)
+    except requests.RequestException:
+        pass
+    if not _SEC_BLOCK_ENABLED:
+        return
+    try:
+        since = _sec_iso(time.time() - 1800)
+        r = requests.get(f"{SUPABASE_URL}/rest/v1/security_probe_log",
+                         headers=_svc_headers({"Prefer": "count=exact"}),
+                         params={"select": "id", "ip": f"eq.{ip}", "created_at": f"gte.{since}"}, timeout=4)
+        cr = r.headers.get("Content-Range", "")
+        tail = cr.split("/")[-1] if "/" in cr else ""
+        cnt = int(tail) if tail.isdigit() else 0
+        if cnt >= _SEC_THRESHOLD:
+            requests.post(f"{SUPABASE_URL}/rest/v1/blocked_ips",
+                          headers=_svc_headers({"Prefer": "resolution=merge-duplicates,return=minimal"}),
+                          json={"ip": ip, "reason": reason, "hits": cnt, "auto": True,
+                                "surface": "vercel", "created_by": "auto",
+                                "expires_at": _sec_iso(time.time() + _SEC_TTL)}, timeout=4)
+            _sec_blocked.add(ip)
+    except requests.RequestException:
+        pass
+
+
+def handle_security(handler, method: str, body: dict) -> dict:
+    """IP 침입 시도 추적 + 차단 관리 (어드민 가시화 + 수동 차단/해제)."""
+    if not _svc_ready():
+        return {"_status": 503, "_body": {"error": "service_role_unconfigured"}}
+
+    if method == "GET":
+        probes = []
+        try:
+            r = requests.get(f"{SUPABASE_URL}/rest/v1/security_probe_log", headers=_svc_headers(),
+                             params={"select": "ip,path,method,user_agent,country,reason,surface,created_at",
+                                     "order": "created_at.desc", "limit": "200"}, timeout=10)
+            if r.status_code == 200:
+                probes = r.json()
+        except requests.RequestException:
+            pass
+        blocked = []
+        try:
+            r = requests.get(f"{SUPABASE_URL}/rest/v1/blocked_ips", headers=_svc_headers(),
+                             params={"select": "ip,reason,hits,auto,surface,created_by,created_at,expires_at",
+                                     "or": f"(expires_at.is.null,expires_at.gt.{_sec_iso(time.time())})",
+                                     "order": "created_at.desc", "limit": "500"}, timeout=10)
+            if r.status_code == 200:
+                blocked = r.json()
+        except requests.RequestException:
+            pass
+        counter = Counter(p.get("ip") for p in probes if p.get("ip"))
+        blocked_set = {b.get("ip") for b in blocked}
+        top_ips = [{"ip": ip, "count": n, "blocked": ip in blocked_set} for ip, n in counter.most_common(10)]
+        return {"_status": 200, "_body": {
+            "probes": probes, "blocked": blocked, "top_ips": top_ips,
+            "stats": {"probes_recent": len(probes), "blocked_active": len(blocked)},
+        }}
+
+    if method == "POST":
+        actor = _caller_identity(headers_to_dict(handler))
+        action = str(body.get("action", "")).strip()
+        ip = str(body.get("ip", "")).strip()
+        if not ip:
+            return {"_status": 400, "_body": {"error": "ip_required"}}
+        if action == "block":
+            reason = str(body.get("reason", "manual"))[:200]
+            r = requests.post(f"{SUPABASE_URL}/rest/v1/blocked_ips",
+                              headers=_svc_headers({"Prefer": "resolution=merge-duplicates,return=minimal"}),
+                              json={"ip": ip, "reason": reason, "auto": False, "surface": "manual",
+                                    "created_by": actor.get("email") or "admin", "expires_at": None}, timeout=10)
+            if r.status_code not in (200, 201, 204):
+                return {"_status": 502, "_body": {"error": "block_failed", "detail": r.text[:200]}}
+            _sec_blocked.add(ip)
+            _audit(actor, "block_ip", "ip", ip, {"reason": reason})
+            return {"_status": 200, "_body": {"ok": True, "ip": ip, "blocked": True}}
+        if action == "unblock":
+            r = requests.delete(f"{SUPABASE_URL}/rest/v1/blocked_ips",
+                                headers=_svc_headers({"Prefer": "return=minimal"}),
+                                params={"ip": f"eq.{ip}"}, timeout=10)
+            if r.status_code not in (200, 204):
+                return {"_status": 502, "_body": {"error": "unblock_failed", "detail": r.text[:200]}}
+            _sec_blocked.discard(ip)
+            _audit(actor, "unblock_ip", "ip", ip, {})
+            return {"_status": 200, "_body": {"ok": True, "ip": ip, "blocked": False}}
+        return {"_status": 400, "_body": {"error": "unknown_action", "valid": ["block", "unblock"]}}
+
+    return {"_status": 405, "_body": {"error": "method_not_allowed"}}
+
+
+# ──────────────────────────────────────────────────────────────────────
 # Router
 # ──────────────────────────────────────────────────────────────────────
 
@@ -908,6 +1078,7 @@ MOD_ROUTES = {
     "community_moderation": handle_community_moderation,
     "audit_log": handle_audit_log,
     "growth_stats": handle_growth_stats,
+    "security": handle_security,
 }
 
 
@@ -917,8 +1088,14 @@ class handler(BaseHTTPRequestHandler):
 
     def _mod_dispatch(self, method: str):
         # 운영 변경/목록 (member_management · community_moderation) — 공통 인증 + method-aware.
-        ok, reason = authorize(headers_to_dict(self))
+        hdrs = headers_to_dict(self)
+        ip = _sec_client_ip(hdrs)
+        if _sec_is_blocked(ip):
+            write_response(self, 403, {"error": "forbidden"})
+            return
+        ok, reason = authorize(hdrs)
         if not ok:
+            _sec_note_unauthorized(ip, self.path, method, hdrs.get("user-agent", ""))
             write_response(self, 401, {"error": "unauthorized", "reason": reason})
             return
         endpoint = (parse_qs(urlparse(self.path).query).get("type", [""])[0] or "").strip()
@@ -941,8 +1118,14 @@ class handler(BaseHTTPRequestHandler):
         self._mod_dispatch("DELETE")
 
     def do_GET(self):
-        ok, reason = authorize(headers_to_dict(self))
+        hdrs = headers_to_dict(self)
+        ip = _sec_client_ip(hdrs)
+        if _sec_is_blocked(ip):
+            write_response(self, 403, {"error": "forbidden"})
+            return
+        ok, reason = authorize(hdrs)
         if not ok:
+            _sec_note_unauthorized(ip, self.path, "GET", hdrs.get("user-agent", ""))
             write_response(self, 401, {"error": "unauthorized", "reason": reason})
             return
 

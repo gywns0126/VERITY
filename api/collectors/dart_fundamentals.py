@@ -90,23 +90,27 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
     for item in data.get("list", []):
         sj = item.get("sj_div", "")
         acct = item.get("account_nm", "")
+        aid = item.get("account_id", "")
         amount = _parse_int(item.get("thstrm_amount"))
         if sj == "BS":
-            # 🚨 총계류 = 정확일치 필수 — '자본과부채총계'(=자산총계) 가 '부채총계' 부분일치에 걸려
-            #   부채총계를 자산총계로 오염 (2026-07-06 실증, 분기 부채비율 5.8% 사고 근원)
-            if acct == "자산총계":
+            # 🚨 총계류 = account_id(IFRS 표준) 우선 매칭 + 한글 exact fallback.
+            #   한글명 exact 만 하면 공백 변형('자산 총계')을 미스 → total_assets=0 → source:none 사고
+            #   (2026-07-12 고영 등 21종목 실증: DART 정상 174항목인데 파서 미스). id 는 공백·표기 불변.
+            #   부분일치 금지 유지 — '자본과부채총계'(=ifrs-full_EquityAndLiabilities, 별 id) 오염 0
+            #   (2026-07-06 부채비율 5.8% 사고 가드 계승).
+            if aid == "ifrs-full_Assets" or acct == "자산총계":
                 out["total_assets"] = amount
-            elif acct == "부채총계":
+            elif aid == "ifrs-full_Liabilities" or acct == "부채총계":
                 out["total_liabilities"] = amount
-            elif acct == "자본총계":
+            elif aid == "ifrs-full_Equity" or acct == "자본총계":
                 out["equity"] = amount
-            elif acct == "유동자산":
+            elif aid == "ifrs-full_CurrentAssets" or acct == "유동자산":
                 out["current_assets"] = amount
-            elif acct == "유동부채":
+            elif aid == "ifrs-full_CurrentLiabilities" or acct == "유동부채":
                 out["current_liabilities"] = amount
-            elif "이익잉여금" in acct:
+            elif aid == "ifrs-full_RetainedEarnings" or "이익잉여금" in acct:
                 out["retained_earnings"] = amount
-            elif acct == "자본금":
+            elif aid == "ifrs-full_IssuedCapital" or acct == "자본금":
                 out["capital"] = amount
             elif "투자부동산" in acct:
                 out["investment_property"] = max(out["investment_property"], amount)
@@ -127,8 +131,18 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
                 # 🚨 정확일치 필수 — 부분일치는 '계속영업이익(손실)'(세후, ≈순이익)에 걸려 영업이익을 덮어씀
                 #   (2026-07-06 실증: 삼성 2018 op 58.9조 → 44.3조 오염, fin_series 전 연도 op==net 사고)
                 out["operating_profit"] = amount
-            elif "당기순이익" in acct:
-                out["net_income"] = max(out["net_income"], amount)
+            elif item.get("account_id") == "ifrs-full_ProfitLoss":
+                # 🚨 순이익 총계 정본 = account_id ifrs-full_ProfitLoss (NCI 포함 총계). 부호 보존
+                #   (손실=음수), max 제거. 이전 max(0,음수) 클램프가 적자기업 순이익을 0으로 왜곡 →
+                #   roa/roe null + LG화학류 wrong-sign. eq=자산-부채(NCI 포함) 분모와 정합.
+                #   (2026-07-17: 분기순이익/반기순이익 라벨도 이 정본에 흡수 — 분기 roa 복원 유지)
+                out["net_income"] = amount
+            elif out["net_income"] == 0 and "지분" not in acct and "차감전" not in acct and (
+                    "당기순이익" in acct or "당기순손실" in acct or "당기순손익" in acct
+                    or "분기순이익" in acct or "분기순손실" in acct or "분기순손익" in acct
+                    or "반기순이익" in acct or "반기순손실" in acct or "반기순손익" in acct):
+                # account_id 부재(구 K-GAAP/비표준) fallback. '지분'(지배/비지배 소분해)·'차감전'(pretax) 배제.
+                out["net_income"] = amount
             elif "법인세차감전" in acct or "법인세비용차감전" in acct:
                 out["pretax_income"] = amount
             elif "판매비와관리비" in acct:
