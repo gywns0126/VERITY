@@ -434,6 +434,7 @@ export default function PublicHeatmap(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     const rootRef = useRef<HTMLDivElement>(null)
+    const chartRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [stocks, setStocks] = useState<any[]>([])
     const [asOf, setAsOf] = useState<string>("")
@@ -828,22 +829,22 @@ export default function PublicHeatmap(props: Props) {
 
     // 호버 카드 위치 — 클립 밖 외곽 div 기준(타일 좌표와 동일). 우/좌 플립 + 상/하 클램프.
     // 🚨 상단 타일(2026-07-12): 카드를 타일 '아래'로 anchor — 위로 펼치면 스크롤 시 sticky 네브바를 덮음(사용자 제보).
+    // 호버 카드 위치 — 커서 기준(2026-07-20). 타일 앵커는 대형 히어로 타일 호버 시 카드가
+    // 타일 모서리로 튀어 커서에서 멀어짐(사용자 제보). 커서 우하단 배치 → 경계 넘치면 반대쪽 플립
+    // → 차트 안으로 클램프. 커서 미포착(mx null)이면 타일 좌표 폴백. 카드는 차트 컨테이너(네브바 아래)
+    // 안에만 = 네브바 침범 0.
     const hoverCardPos = () => {
-        const hx = hover.x * zoom.z + zoom.tx,
-            hy = hover.y * zoom.z + zoom.ty,
-            hw = hover.w * zoom.z,
-            hh = hover.h * zoom.z
         const CW = 190,
             CH = 132,
-            G = 8
-        let cl = hx + hw + G
-        if (cl + CW > chartW - 6) cl = hx - G - CW
-        if (cl < 6)
-            cl = Math.min(Math.max(6, hx + hw / 2 - CW / 2), chartW - CW - 6)
-        // 상단 영역(카드 높이+여백 이내) 타일 = 카드 아래로 anchor(네브바 침범 방지). 그 외 = 타일 중앙 정렬.
-        let ct = hy < CH + G ? hy + hh + G : hy + hh / 2 - CH / 2
-        if (ct + CH > chartH - 6) ct = chartH - CH - 6 // 하단 넘치면 위로 밀기
-        if (ct < 6) ct = 6
+            G = 14
+        const px = hover.mx != null ? hover.mx : hover.x * zoom.z + zoom.tx + hover.w * zoom.z,
+            py = hover.my != null ? hover.my : hover.y * zoom.z + zoom.ty
+        let cl = px + G
+        if (cl + CW > chartW - 6) cl = px - G - CW
+        cl = Math.min(Math.max(6, cl), Math.max(6, chartW - CW - 6))
+        let ct = py + G
+        if (ct + CH > chartH - 6) ct = py - G - CH
+        ct = Math.min(Math.max(6, ct), Math.max(6, chartH - CH - 6))
         return { cl, ct, CW }
     }
 
@@ -909,6 +910,7 @@ export default function PublicHeatmap(props: Props) {
 
             {/* 트리맵 외곽 (클립 X — 호버 카드가 잘리지 않도록) */}
             <div
+                ref={chartRef}
                 style={{ position: "relative", width: "100%", height: chartH }}
             >
                 {/* 타일 클립 레이어 (overflow hidden = 줌/팬 타일만 가둠) */}
@@ -1092,9 +1094,27 @@ export default function PublicHeatmap(props: Props) {
                                             if (!dragRef.current.moved)
                                                 go(t.m.ticker)
                                         }}
-                                        onMouseEnter={() =>
-                                            setHover({ ...t, v })
-                                        }
+                                        onMouseEnter={(e) => {
+                                            const r = chartRef.current
+                                                ? chartRef.current.getBoundingClientRect()
+                                                : null
+                                            setHover({
+                                                ...t,
+                                                v,
+                                                mx: r ? e.clientX - r.left : undefined,
+                                                my: r ? e.clientY - r.top : undefined,
+                                            })
+                                        }}
+                                        onMouseMove={(e) => {
+                                            if (dragRef.current.on || !chartRef.current)
+                                                return
+                                            const r = chartRef.current.getBoundingClientRect()
+                                            setHover((h) =>
+                                                h && h.key === t.key
+                                                    ? { ...h, mx: e.clientX - r.left, my: e.clientY - r.top }
+                                                    : h
+                                            )
+                                        }}
                                         role="button"
                                         tabIndex={0}
                                         style={{
