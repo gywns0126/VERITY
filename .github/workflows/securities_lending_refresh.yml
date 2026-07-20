@@ -1,0 +1,55 @@
+name: securities-lending-refresh
+
+# 대차잔고 온디맨드 재수집 (금융위 공개패널, TOP_N 노출 상향 등 즉시 반영용).
+# 🚨 daily_analysis_full 은 KIS 토큰 발급 스텝 포함이라 수동 트리거 금지(RULE 1 = 1일 1토큰).
+#    이 워크플로 = KIS 0, 대차잔고 콜렉터(api.collectors.securities_lending)만 단독 실행 → publish.
+# 정기 수집은 daily_analysis_full(스케줄) 이 계속 담당 — 이건 온디맨드 전용(schedule 없음).
+# concurrency = 전용 그룹(공유 verity-data-write 미사용 → 취소 회피). RULE 2 = data/ commit(ignoreCommand skip).
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: verity-securities-lending
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: 대차잔고 재수집 (금융위 공개패널, KIS 0)
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
+        run: python -m api.collectors.securities_lending
+
+      - name: Commit (data/securities_lending.json)
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git pull --rebase --autostash origin main || true
+          git add data/securities_lending.json
+          git diff --cached --quiet && echo "변경 없음" && exit 0
+          git commit -m "📊 securities_lending 온디맨드 재수집 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') (TOP_N 3000)"
+          git push origin main
+
+      - name: Publish (VERITY-data + Vercel Blob)
+        continue-on-error: true
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
