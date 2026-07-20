@@ -356,6 +356,11 @@ def _aggregate(entries: List[Dict[str, Any]], today) -> List[Dict[str, Any]]:
     for e in entries:
         if not e.get("scored") or e.get("realized_return") is None:
             continue
+        # 2026-07-20 감사: realized_return 은 퍼센트 단위. |r|>300% = 가격맵 통화오염(미장 +158,816% 등,
+        # backtest_archive fix 전 저장분 35건, 전부 미장). 감사 클린측정 방법(|r|≤300%)과 동일 — 집계 모집단서
+        # 제외(신규는 통화 fix 로 청정, 이 가드는 과거 저장 오염 배제 + 영구 sanity). 트레일 원본은 보존.
+        if abs(float(e.get("realized_return") or 0.0)) > 300.0:
+            continue
         if e.get("target_type") != "stock":
             continue  # 섹터 채점 보류 — 집계 제외
         key = (e.get("target_type"), e.get("horizon"))
