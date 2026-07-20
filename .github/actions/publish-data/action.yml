@@ -193,6 +193,8 @@ runs:
         mkdir -p _public_dist/equity_research
         for f in $(git ls-tree --name-only origin/main:data/equity_research 2>/dev/null); do
           if git show "origin/main:data/equity_research/$f" > "_public_dist/equity_research/$f" 2>/dev/null && [ -s "_public_dist/equity_research/$f" ]; then
+            # 2026-07-21 감사: analyst_consensus(yfinance 목표가) strip = us_analyst_consensus 재배포 금지(7/10)
+            python3 "${{ github.action_path }}/sanitize_equity_brief.py" "_public_dist/equity_research/$f"
             echo "  + data/equity_research/$f"
           else
             rm -f "_public_dist/equity_research/$f"
