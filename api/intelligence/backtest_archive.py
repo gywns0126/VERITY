@@ -75,8 +75,17 @@ def _get_price_map_from_snapshot(snap: dict) -> Dict[str, float]:
                 pass
     for h in (snap.get("vams") or {}).get("holdings") or []:
         ticker = h.get("ticker", "")
+        # 2026-07-20 감사 P0: recommendations(native 통화)가 이미 있으면 우선.
+        # holdings.current_price 는 미장 종목서 KRW 환산가를 currency=USD 로 오표기 →
+        # USD 가격을 KRW 값으로 덮어쓰면 forward return +158,816% 급 오염 (측정 근원 P0).
+        if not ticker or ticker in prices:
+            continue
+        # holdings-only 티커: KR(6자리 숫자코드)만 KRW-native 로 신뢰.
+        # 미장(비숫자)은 통화 오표기라 채점 제외(가격 미상 → 오염보다 미채점이 안전).
+        if not str(ticker).isdigit():
+            continue
         price = h.get("current_price") or h.get("price")
-        if ticker and price:
+        if price:
             try:
                 prices[ticker] = float(price)
             except (TypeError, ValueError):
