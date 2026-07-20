@@ -1,72 +1,80 @@
 {
   "version": "v0",
-  "computed_at": "2026-07-20T11:01:18.424618+00:00",
+  "computed_at": "2026-07-20T12:14:16.215237+00:00",
   "status": "insufficient_data",
   "sample_size": {
     "total": 22,
-    "open": 1,
-    "closed": 21,
-    "with_h5": 10,
-    "with_h14": 4,
-    "with_h30": 1,
+    "open": 0,
+    "closed": 22,
+    "with_h5": 15,
+    "with_h14": 8,
+    "with_h30": 3,
     "min_for_decompose": 30
   },
   "horizon_summary": {
     "h5": {
       "horizon_days": 5,
-      "n": 10,
+      "n": 15,
       "hit_rate_pct": 40.0,
-      "median_return_pct": -1.44,
-      "mean_return_pct": 0.16,
-      "ic": -0.624
+      "median_return_pct": -0.94,
+      "mean_return_pct": -0.48,
+      "ic": -0.361
     },
     "h14": {
       "horizon_days": 14,
-      "n": 4,
+      "n": 8,
       "hit_rate_pct": 25.0,
-      "median_return_pct": -5.1,
-      "mean_return_pct": -7.31,
-      "ic": null
+      "median_return_pct": -4.87,
+      "mean_return_pct": -5.52,
+      "ic": 0.0
     },
     "h30": {
       "horizon_days": 30,
-      "n": 1,
-      "hit_rate_pct": 0.0,
-      "median_return_pct": -20.37,
-      "mean_return_pct": -20.37,
+      "n": 3,
+      "hit_rate_pct": 33.33,
+      "median_return_pct": -9.68,
+      "mean_return_pct": -9.16,
       "ic": null
     }
   },
   "feature_decomposition": {
     "status": "insufficient_data",
-    "n": 4,
-    "need_more_rows": 26
+    "n": 8,
+    "need_more_rows": 22
   },
   "sector_breakdown": {
     "Industrials": {
-      "n": 1,
+      "n": 3,
       "status": "insufficient_data"
     },
     "Communication Services": {
       "n": 1,
       "status": "insufficient_data"
     },
+    "Consumer Cyclical": {
+      "n": 1,
+      "status": "insufficient_data"
+    },
     "Energy": {
       "n": 2,
+      "status": "insufficient_data"
+    },
+    "Technology": {
+      "n": 1,
       "status": "insufficient_data"
     }
   },
   "verdict_strength": {
     "status": "insufficient_data",
-    "n": 4
+    "n": 8
   },
   "timeseries_baseline": {
     "earliest": "2026-06-10T12:03:09.387256+00:00",
     "windows": {
       "first_30d": {
-        "n": 4,
+        "n": 8,
         "hit_rate_pct": 25.0,
-        "median_return_pct": -5.1
+        "median_return_pct": -4.87
       },
       "30_60d": {
         "n": 0,
