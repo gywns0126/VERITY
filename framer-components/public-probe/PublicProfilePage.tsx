@@ -248,6 +248,29 @@ function anReadDark(): boolean {
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
 
+// 마운트/토글 재판독 SoT — verity_theme(localStorage) 우선 → html[data-an-theme] → body[data-framer-theme].
+// 791d29f7e 에서 8개 컴포넌트에 적용된 패턴(effect 가 body 만 읽어 다크에서 배경이 라이트로 고정되던 버그) — 이 파일이 누락돼 있었음.
+function readBodyDark(): boolean {
+    if (typeof document === "undefined") return false
+    try {
+        const pref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (pref === "dark") return true
+        if (pref === "light") return false
+        const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+        if (h === "dark") return true
+        if (h === "light") return false
+        if (document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 
 export default function PublicProfilePage(props: Props) {
     const supabaseUrl = (props.supabaseUrl || "").replace(/\/+$/, "")
@@ -279,10 +302,7 @@ export default function PublicProfilePage(props: Props) {
     /* 사이트 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 props.dark 정적 프리뷰) */
     useEffect(() => {
         if (isCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setDark(t === "dark")
-        }
+        const read = () => setDark(readBodyDark())
         read()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(read)
