@@ -135,6 +135,21 @@ function demoCandles(): number[][] {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicLiveChart(props: Props) {
     const { ticker, chartBase, height, dark, showVolume } = props
     const base = (chartBase || DEFAULT_BASE).replace(/\/+$/, "")
@@ -150,7 +165,7 @@ export default function PublicLiveChart(props: Props) {
     const [range, setRange] = useState("3M")
     const [hoverIdx, setHoverIdx] = useState<number | null>(null)
     const [noData, setNoData] = useState(false)
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
 
     const isDark = onCanvas ? !!dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -213,7 +228,7 @@ export default function PublicLiveChart(props: Props) {
             }
             return false
         }
-        fetch(url, { cache: "no-store" })
+        fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((doc) => {
                 if (!alive) return
@@ -236,7 +251,7 @@ export default function PublicLiveChart(props: Props) {
     useEffect(() => {
         if (onCanvas || range !== "전체" || !tk || histFull) return
         let alive = true
-        fetch(base + "/kr_chart_history/" + tk + ".json", { cache: "no-store" })
+        fetch(base + "/kr_chart_history/" + tk + ".json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive) setHistFull(d && Array.isArray(d.c) && d.c.length > 1 ? d.c : []) })
             .catch(() => { if (alive) setHistFull([]) })

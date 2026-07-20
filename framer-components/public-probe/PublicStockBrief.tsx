@@ -118,6 +118,21 @@ function parseBrief(text: string): { title: string; body: string }[] {
     return out
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicStockBrief(props: {
     width?: number; dark?: boolean; apiBase?: string
 }) {
@@ -133,7 +148,7 @@ export default function PublicStockBrief(props: {
         return () => obs.disconnect()
     }, [])
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
     const [tk, setTk] = useState<string>("")
     const [state, setState] = useState<string>("idle") // idle | loading | done | error
     const [data, setData] = useState<any>(null)

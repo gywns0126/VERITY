@@ -43,6 +43,21 @@ function prettyHost(u: any) {
     }
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function AlphaNestSafariMockup(props: any) {
     const url = props.url || "https://www.alphanest.kr/"
     const width = props.width > 0 ? props.width : 900
@@ -56,7 +71,7 @@ export default function AlphaNestSafariMockup(props: any) {
     const caption = props.caption || "실제 사이트가 이 안에서 구동됩니다"
 
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [dark, setDark] = useState(isCanvas ? !!props.dark : readBodyDark())
+    const [dark, setDark] = useState(isCanvas ? !!props.dark : anReadDark())
     const [active, setActive] = useState(mode === "eager")
     const [loaded, setLoaded] = useState(false)
 

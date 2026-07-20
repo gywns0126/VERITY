@@ -89,12 +89,27 @@ const SAMPLE = {
     validation_gate: { target_n: 252, progress_pct: 98.7, signals: 5, as_of: "" },
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicEntranceMap(props: {
     width?: number; dark?: boolean; dataUrl?: string
     stockPath?: string; discoverPath?: string; explorePath?: string; validationPath?: string
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : anReadDark()))
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
 
     useEffect(() => {

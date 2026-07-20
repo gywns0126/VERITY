@@ -146,13 +146,28 @@ function StockLogo(props: { ticker: any; name: any; C: any; size?: number }) {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicCommunityPage(props: Props) {
     const { apiBase, stockPath, usStockPath, limit, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
     const cap = Math.max(5, Math.min(50, limit || 30))
 
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
         if (onCanvas) return
@@ -292,7 +307,7 @@ export default function PublicCommunityPage(props: Props) {
             {menuId && <div onClick={() => setMenuId("")} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
             <div style={col}>
                 {/* 헤더 */}
-                <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px" }}>커뮤니티</div>
+                <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>커뮤니티</div>
                 <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 3, lineHeight: 1.5 }}>
                     종목 관점을 나누는 공간 · 모든 글은 이용자 개인 의견이며 AlphaNest 의 분석·판단·추천이 아니에요
                 </div>

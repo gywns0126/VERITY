@@ -55,9 +55,24 @@ const DEMO = [
     { ticker: "035420", name: "NAVER", stance: "watch", note: "실적발표 후 재검토.", date: "2026-06-20", entryPrice: 198000, curPrice: 191500 },
 ]
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicThesisReview(props: { width?: number; dark?: boolean; apiBase?: string; stockPath?: string }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
     const base = (props.apiBase || DEFAULT_API).replace(/\/+$/, "")
@@ -83,8 +98,8 @@ export default function PublicThesisReview(props: { width?: number; dark?: boole
             if (!base_list.length) { setItems([]); setLoading(false); return }
             // 종가(flow_5d)·종목명(universe) 1회 fetch — 실시간가 조회 아님(컴플라이언스)
             Promise.all([
-                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
             ]).then(([fd, ud]) => {
                 if (!alive) return
                 const fm = (fd && (fd.flows || fd)) || {}

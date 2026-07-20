@@ -84,6 +84,21 @@ function fmtDate(s: any): string {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicMarketTab(props: Props) {
     const { snapshotUrl, ipoUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -95,7 +110,7 @@ export default function PublicMarketTab(props: Props) {
     const [openTip, setOpenTip] = useState<string>("")
     const [tipBox, setTipBox] = useState<{ left: number; width: number }>({ left: 0, width: 240 })
     const [hoverCapable, setHoverCapable] = useState(true)
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
 
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
 

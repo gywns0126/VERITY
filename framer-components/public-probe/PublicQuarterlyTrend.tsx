@@ -77,6 +77,21 @@ function qLabel(qEnd: string): string {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicQuarterlyTrend(props: Props) {
     const { ticker, quarterlyUrl, maxQuarters, showExtremes, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -84,7 +99,7 @@ export default function PublicQuarterlyTrend(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [quarters, setQuarters] = useState<any[]>(onCanvas ? SAMPLE_QUARTERS : [])
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
 
     useEffect(() => {
@@ -111,7 +126,7 @@ export default function PublicQuarterlyTrend(props: Props) {
     useEffect(() => {
         if (onCanvas || !quarterlyUrl || !ticker) return
         let alive = true
-        fetch(quarterlyUrl, { cache: "no-store" })
+        fetch(quarterlyUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const rec = d && d.stocks && d.stocks[ticker]

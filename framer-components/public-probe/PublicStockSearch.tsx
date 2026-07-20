@@ -151,25 +151,22 @@ interface Props {
 }
 
 function readBodyDark(): boolean {
-    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
-    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    // 기본 = 라이트(사이트 첫 시작 라이트 결정, 2026-07-19). 명시적 'dark' 신호가 있을 때만 다크.
+    //   판독 순서 = html[data-an-theme](Custom Code 헤드 스크립트가 페인트 전 동기 세팅, 레이스 제거)
+    //   → body[data-framer-theme](토글) → localStorage. OS 설정은 안 봄(로드마다 뒤집힘 방지).
     try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
+        if (typeof document !== "undefined") {
+            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+            if (h === "dark") return true
+            if (h === "light") return false
+            if (document.body) {
+                const a = document.body.dataset.framerTheme
+                if (a === "dark") return true
+                if (a === "light") return false
+            }
         }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
+        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (s === "dark") return true
     } catch (e) {}
     return false
 }
@@ -178,6 +175,21 @@ function readBodyDark(): boolean {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicStockSearch(props: Props) {
     const { placeholder, stockPath, stockUrl, usStockUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -186,7 +198,7 @@ export default function PublicStockSearch(props: Props) {
     useEffect(() => { if (!onCanvas) sessionResetScratch() }, [onCanvas])
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     useEffect(() => {
         if (onCanvas) return
         const read = () => setThemeDark(readBodyDark())
@@ -197,6 +209,8 @@ export default function PublicStockSearch(props: Props) {
         return () => obs.disconnect()
     }, [onCanvas])
 
+    // 색 = self-contained 하드코딩(DARK/LIGHT) — Custom Code 변수 의존 제거(2026-07-19 검색창 복구).
+    //   readBodyDark 가 html[data-an-theme](페인트 전 세팅)를 1순위로 판독 = 첫 페인트부터 정합.
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
 
     const rootRef = useRef<HTMLDivElement>(null)
@@ -375,7 +389,7 @@ export default function PublicStockSearch(props: Props) {
                     <div onMouseDown={() => { if (typeof window !== "undefined") window.open(isMobileWidth() ? M_NAVER_QUANT : NAVER_QUANT, "_blank", "noopener") }}
                         style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 9, cursor: "pointer" }}>
                         <span style={{ width: 22, height: 22, borderRadius: 7, background: C.vtS, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <svg width={11} height={11} viewBox="0 0 12 12" fill="none" stroke={C.vt} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <svg width={11} height={11} viewBox="0 0 12 12" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ stroke: C.vt }}>
                                 <line x1="2.5" y1="9.5" x2="9" y2="3" />
                                 <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
                             </svg>
@@ -383,7 +397,7 @@ export default function PublicStockSearch(props: Props) {
                         <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>실시간 거래대금 상위</span>
                         <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11.5, fontWeight: 700, color: C.faint, whiteSpace: "nowrap" }}>
                             네이버 금융
-                            <svg width={9} height={9} viewBox="0 0 12 12" fill="none" stroke={C.faint} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <svg width={9} height={9} viewBox="0 0 12 12" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ stroke: C.faint }}>
                                 <line x1="2.5" y1="9.5" x2="9" y2="3" />
                                 <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
                             </svg>

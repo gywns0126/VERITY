@@ -116,6 +116,21 @@ function loadToken(): string {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicWatchlist(props: Props) {
     const { stockUrl, apiBase, stockPath, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -129,7 +144,7 @@ export default function PublicWatchlist(props: Props) {
     const [theses, setTheses] = useState<Record<string, any>>({})
     const [adding, setAdding] = useState(false)
     const [query, setQuery] = useState("")
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
 
     const isDark = onCanvas ? !!dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -276,7 +291,7 @@ export default function PublicWatchlist(props: Props) {
         <div ref={rootRef} style={wrap}>
             {/* 관심종목 카드 */}
             <div style={{ background: C.card, borderRadius: 14, padding: "14px 14px 11px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px" }}>관심종목</div>
+                <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>관심종목</div>
                 <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 3 }}>검색 → 추가 · 보유종목 자동 표시 · 내 관점 배지</div>
 
                 <div style={{ marginTop: 9 }}>

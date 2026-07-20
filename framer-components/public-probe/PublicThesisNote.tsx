@@ -89,11 +89,26 @@ const DEMO_FEED = [
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicThesisNote(props: Props) {
     const { ticker, apiBase, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     // 테마 추종 — 사이트 다크모드(body[data-framer-theme]) 따라감. 캔버스는 dark prop 정적.
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     useEffect(() => {
         if (onCanvas) return
         const read = () => { const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""; setThemeDark(t === "dark") }
@@ -209,7 +224,7 @@ export default function PublicThesisNote(props: Props) {
         if (onCanvas) { setCurPrice(73900); return }
         if (!tk) return
         let alive = true
-        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json", { cache: "no-store" })
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive || !d) return

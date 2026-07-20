@@ -61,11 +61,26 @@ function fmtAge(iso: any): string {
   }
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicExploreHub(props: {
   width?: number; dark?: boolean; sectorUrl?: string; discoverPath?: string; stockPath?: string
 }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
-  const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
+  const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
   const isDark = onCanvas ? !!props.dark : themeDark
   const C = isDark ? DARK : LIGHT
   const discoverPath = props.discoverPath || "/discover"
@@ -87,7 +102,7 @@ export default function PublicExploreHub(props: {
     if (onCanvas) return
     let alive = true
     const load = (url: string, cacheKey: string, setter: (v: any) => void, pick: (d: any) => any) => {
-      fetch(url, { cache: "no-store" })
+      fetch(url)
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           const v = d && pick(d)

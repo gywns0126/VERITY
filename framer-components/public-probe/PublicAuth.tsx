@@ -247,7 +247,7 @@ export default function AlphaNestAuth(props: Props) {
     const anonKey = supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : false))
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
         if (onCanvas) return

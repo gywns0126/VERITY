@@ -234,6 +234,21 @@ interface Props {
 type Busy = "" | "logout" | "withdraw"
 type Phase = "loading" | "guest" | "member"
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicProfilePage(props: Props) {
     const supabaseUrl = (props.supabaseUrl || "").replace(/\/+$/, "")
     const supabaseAnonKey = props.supabaseAnonKey || ""
@@ -246,7 +261,7 @@ export default function PublicProfilePage(props: Props) {
 
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [dark, setDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
+    const [dark, setDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
     const [phase, setPhase] = useState<Phase>(isCanvas ? "member" : "loading")
     const [confirming, setConfirming] = useState(false)
     const [busy, setBusy] = useState<Busy>("")
@@ -295,27 +310,32 @@ export default function PublicProfilePage(props: Props) {
             bio: "",
             is_admin: false,
         }
-        setProfile(base)
-        setPhase("member")
-        if (!s.access_token) return
+        setProfile(base)   // 폴백 준비 — fetch 실패/지연 시 이거라도 표시
+        if (!s.access_token) { setPhase("member"); return }   // 토큰 없으면 보강 불가 → 즉시 표시
+        // 🚨 phase="member" 를 fetchProfile 완료까지 미룸 — 로딩 스켈레톤이 실제 느린 구간(profiles+is_admin fetch)
+        //   동안 보이게(2026-07-18, "로딩이 오류처럼 보임"). 안전 타임아웃(6s)으로 무한 스켈레톤 방지.
         let alive = true
+        const settle = () => { if (alive) setPhase("member") }
+        const to = setTimeout(settle, 6000)
         fetchProfile(supabaseUrl, supabaseAnonKey, s.access_token, profileTable, s.user.id).then((row) => {
-            if (!alive || !row) return
-            setProfile({
-                display_name: row.display_name || base.display_name,
-                email: row.email || base.email,
-                phone: row.phone || base.phone,
-                status: row.status || base.status,
-                created_at: row.created_at || base.created_at,
-                nickname: (row as any).nickname || "",
-                avatar: (row as any).avatar || "",
-                bio: (row as any).bio || "",
-                is_admin: (row as any).is_admin === true,
-            })
+            if (!alive) return
+            clearTimeout(to)
+            if (row) {
+                setProfile({
+                    display_name: row.display_name || base.display_name,
+                    email: row.email || base.email,
+                    phone: row.phone || base.phone,
+                    status: row.status || base.status,
+                    created_at: row.created_at || base.created_at,
+                    nickname: (row as any).nickname || "",
+                    avatar: (row as any).avatar || "",
+                    bio: (row as any).bio || "",
+                    is_admin: (row as any).is_admin === true,
+                })
+            }
+            setPhase("member")
         })
-        return () => {
-            alive = false
-        }
+        return () => { alive = false; clearTimeout(to) }
     }, [isCanvas, supabaseUrl, supabaseAnonKey, profileTable])
 
     const go = (path: string) => {
@@ -409,10 +429,36 @@ export default function PublicProfilePage(props: Props) {
     }
 
     if (phase === "loading") {
+        // 스켈레톤 — 최초 로딩(세션+profiles+is_admin fetch) 동안 카드 형태를 본떠 표시.
+        //   빈 화면/텍스트 한 줄 = 오류처럼 보이던 문제 해소(2026-07-18). 관리자든 아니든 로딩 phase 공통.
+        const skBase = dark ? "#232a33" : "#e7eaee"
+        const skHi = dark ? "#2f3742" : "#f3f5f8"
+        const skBar = (w: number | string, h: number, r: number = 8, mt: number = 0): React.CSSProperties => ({
+            width: w, height: h, borderRadius: r, marginTop: mt, flexShrink: 0,
+            background: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`,
+            backgroundSize: "800px 100%",
+            animation: "ppShimmer 1.4s ease-in-out infinite",
+        })
         return (
             <div style={wrap}>
-                <div style={{ ...cardStyle, textAlign: "center", color: C.faint, fontSize: 13, fontWeight: 600 }}>
-                    불러오는 중...
+                <style>{`@keyframes ppShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+                <div style={cardStyle} aria-busy="true" aria-label="프로필 불러오는 중">
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div style={{ ...skBar(80, 80, 26), marginBottom: 14 }} />
+                        <div style={skBar(120, 20, 7)} />
+                        <div style={skBar(172, 13, 6, 10)} />
+                        <div style={skBar(76, 24, 20, 16)} />
+                        <div style={skBar(96, 34, 18, 16)} />
+                        <div style={skBar(72, 30, 16, 10)} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 26 }}>
+                        <div style={skBar(48, 13, 6)} />
+                        <div style={skBar(112, 15, 6)} />
+                    </div>
+                    <div style={skBar("100%", 52, 14, 24)} />
+                    <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+                        <div style={skBar(64, 13, 6)} />
+                    </div>
                 </div>
             </div>
         )

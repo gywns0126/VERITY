@@ -86,12 +86,27 @@ function readBodyDark(): boolean {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicDailyBriefing(props: {
     width?: number; dark?: boolean; dataUrl?: string; stockPath?: string
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     // 첫 페인트부터 실제 테마로 시작(캔버스는 prop) — 로딩 창 반대색 flash 제거.
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : anReadDark()))
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
     const [failed, setFailed] = useState(false)
     const [openSec, setOpenSec] = useState<Record<string, boolean>>({})
