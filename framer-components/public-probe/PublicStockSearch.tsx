@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom"
 
 /**
@@ -222,9 +222,13 @@ export default function PublicStockSearch(props: Props) {
     // 드롭다운 앵커 — nav 박스 overflow 클리핑 탈출용 fixed 좌표(입력창 rect 기준). null=미측정.
     const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null)
 
-    useEffect(() => {
+    // 폭 측정 = 첫 페인트 전 동기(useLayoutEffect) — w:0→실측 사이 narrow 플립(패딩·폰트 움찔) 제거.
+    // 페이지 이동마다 마운트 시 검색창 크기가 움찔하던 원인 (2026-07-20).
+    useLayoutEffect(() => {
         const el = rootRef.current
-        if (!el || typeof ResizeObserver === "undefined") return
+        if (!el) return
+        setW(el.getBoundingClientRect().width)
+        if (typeof ResizeObserver === "undefined") return
         const ro = new ResizeObserver((entries) => { for (const e of entries) setW(e.contentRect.width) })
         ro.observe(el)
         return () => ro.disconnect()
