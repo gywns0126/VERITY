@@ -2650,7 +2650,9 @@ def main():
 
         if effective_mode == "full":
             try:
-                code_6 = str(ticker).zfill(6) if not str(ticker_yf).startswith(str(ticker)) else None
+                # 2026-07-20 감사 P1: 기존 `not ticker_yf.startswith(ticker)` = KR('005930.KS'.startswith('005930')=True)
+                # 도 US 도 항상 None → KR naver_community 영구 skip(30% 감성가중 KR 변별력 0). currency 로 정정.
+                code_6 = None if stock.get("currency") == "USD" else str(ticker).zfill(6)
                 social = compute_social_sentiment(
                     name=name, ticker_yf=ticker_yf,
                     stock_code=code_6, existing_news=sentiment,

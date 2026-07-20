@@ -113,16 +113,20 @@ def _compute_sentiment_score(
     if is_us:
         geopolitical_score = 50.0
     else:
+        # 2026-07-20 감사 P1: 기존 geo.get("events")는 생산자(alert_engine.build_geopolitical_hotspots)
+        # 스키마에 없는 키 → geo_severity 항상 0 → 전 종목 영구 50(최대 신규가중 0.060 무효·타 신호 희석).
+        # 생산자의 실제 per-ticker 분류(sanctioned_exposure/china_high_exposure)를 조회해 교정.
+        # 새 severity 산식이 아니라 생산자 기존 분류 flag 를 score 밴드로 매핑(band 값은 잠정, RULE7 큐).
         geo = portfolio.get("geopolitical_hotspots") or {}
-        geo_severity = 0
-        if isinstance(geo, dict):
-            for ev in (geo.get("events") or []):
-                try:
-                    geo_severity += int(ev.get("severity") or 0)
-                except (TypeError, ValueError):
-                    pass
-        # severity 0=50, severity 5=35, severity 10+=20
-        geopolitical_score = max(20, 50 - geo_severity * 3)
+        tk = str(stock.get("ticker") or "")
+        sanctioned = {str(x.get("ticker")) for x in (geo.get("sanctioned_exposure") or []) if isinstance(x, dict)}
+        china_high = {str(x.get("ticker")) for x in (geo.get("china_high_exposure") or []) if isinstance(x, dict)}
+        if tk and tk in sanctioned:
+            geopolitical_score = 30.0   # 제재국 노출 flagged
+        elif tk and tk in china_high:
+            geopolitical_score = 40.0   # 중국 고노출 flagged
+        else:
+            geopolitical_score = 50.0   # 중립
 
     # 5) macro_headlines — bloomberg/news headlines sentiment 평균
     macro_headlines = 50.0
