@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-20T09:14:48.453686+09:00",
+  "generated_at": "2026-07-20T13:10:54.061758+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
@@ -8,10 +8,10 @@
     "tsx_components": 116,
     "json_data_files": 441,
     "json_total_tracked": 456,
-    "workflows": 62,
+    "workflows": 63,
     "scheduled_workflows": 49,
     "cron_triggers": 59,
-    "git_tracked_files": 5894
+    "git_tracked_files": 5895
   },
   "subsystems": {
     "ingest": {
@@ -152,7 +152,7 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 62,
+      "count": 63,
       "scheduled": 49,
       "workflows": [
         {
@@ -443,6 +443,11 @@
           "scheduled": true
         },
         {
+          "name": "securities_lending_refresh",
+          "crons": [],
+          "scheduled": false
+        },
+        {
           "name": "self_assets_weekly",
           "crons": [
             "0 0 * * 1"
@@ -641,7 +646,7 @@
       "warn": 1,
       "alert": 0
     },
-    "infra_as_of": "2026-07-19T10:24:23+09:00",
+    "infra_as_of": "2026-07-20T10:28:25+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
