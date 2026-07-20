@@ -83,7 +83,7 @@ export default function CommunityModerationCard(props: Props) {
     const [tab, setTab] = useState<"reports" | "posts">("reports")
     const [reports, setReports] = useState<Report[]>(onCanvas ? SAMPLE_REPORTS : [])
     const [posts, setPosts] = useState<Thesis[]>(onCanvas ? SAMPLE_POSTS : [])
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(!onCanvas)  // 초기 = 로딩(스켈레톤 첫 페인트부터, "없어요" 번쩍임 제거)
     const [err, setErr] = useState("")
     const [msg, setMsg] = useState("")
     const [busy, setBusy] = useState("")

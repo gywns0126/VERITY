@@ -80,7 +80,7 @@ export default function MemberAdminCard(props: Props) {
     const [members, setMembers] = useState<Member[]>(onCanvas ? SAMPLE : [])
     const [total, setTotal] = useState<number | null>(onCanvas ? SAMPLE.length : null)
     const [q, setQ] = useState("")
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(!onCanvas)  // 초기 = 로딩(스켈레톤 첫 페인트부터, "없어요" 번쩍임 제거)
     const [err, setErr] = useState("")
     const [msg, setMsg] = useState("")
     const [openId, setOpenId] = useState("")           // 행 액션 펼침

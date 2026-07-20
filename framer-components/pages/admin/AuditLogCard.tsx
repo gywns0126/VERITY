@@ -81,7 +81,7 @@ export default function AuditLogCard(props: Props) {
     const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
     const C = (onCanvas ? !!props.dark : themeDark) ? DARK : LIGHT
     const [rows, setRows] = useState<Row[]>(onCanvas ? SAMPLE : [])
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(!onCanvas)  // 초기 = 로딩(스켈레톤 첫 페인트부터, "없어요" 번쩍임 제거)
     const [err, setErr] = useState("")
 
     useEffect(() => {
