@@ -101,18 +101,20 @@ def compute_mean_reversion_score(stock: Dict[str, Any]) -> Dict[str, Any]:
     # --- 3. 볼린저 밴드 위치 ---
     bb_score = 50.0
     if bb_pos is not None:
-        if bb_pos <= 0.05:
+        # 2026-07-20 감사 P0: bb_pos(technical.py:376 = (price-lower)/range*100) = 0~100 스케일.
+        # 기존 임계(0.05~0.95 분수)는 스케일 불일치로 전 종목 bb_score=8 상수·허위 '과열' → 0~100 으로 교정.
+        if bb_pos <= 5:
             bb_score = 92
             signals.append("볼린저 하단 이탈 — 반등 기대")
-        elif bb_pos <= 0.2:
+        elif bb_pos <= 20:
             bb_score = 75
-        elif bb_pos <= 0.4:
+        elif bb_pos <= 40:
             bb_score = 60
-        elif bb_pos <= 0.6:
+        elif bb_pos <= 60:
             bb_score = 50
-        elif bb_pos <= 0.8:
+        elif bb_pos <= 80:
             bb_score = 40
-        elif bb_pos <= 0.95:
+        elif bb_pos <= 95:
             bb_score = 25
         else:
             bb_score = 8

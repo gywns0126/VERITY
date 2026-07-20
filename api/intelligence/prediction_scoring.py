@@ -300,6 +300,24 @@ def score_predictions(
                 pending += 1
             continue
 
+        if ret == 0.0:
+            # 2026-07-20 감사 P1: 정확히 0.0 = base==eval 스냅샷 미갱신(주로 미장 stale 가격) 아티팩트.
+            # 이를 방향 '미스'로 계상하면 hit_rate 5~9%p 하향 왜곡 → hit/IC 모집단서 제외.
+            # grace 내 = 보류(가격 갱신 시 재시도), 초과 = 종결 제외.
+            try:
+                ed0 = datetime.strptime(eval_date, "%Y-%m-%d").date()
+            except ValueError:
+                ed0 = today
+            if (today - ed0).days > GRACE_DAYS:
+                e["scored"] = True
+                e["realized_return"] = None
+                e["hit"] = None
+                e["_skip_reason"] = "stale_price_zero_return"
+                unscoreable += 1
+            else:
+                pending += 1
+            continue
+
         hit = _is_hit(str(e.get("direction")), ret)
         e["scored"] = True
         e["realized_return"] = ret
@@ -334,12 +352,20 @@ def _aggregate(entries: List[Dict[str, Any]], today) -> List[Dict[str, Any]]:
     """전체 scored stock 예측을 (target_type, horizon) 별 집계 → snapshot 레코드 list."""
     scored_at = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
     by_group: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    _seen_pred_ids: Dict[Tuple[str, str], set] = {}
     for e in entries:
         if not e.get("scored") or e.get("realized_return") is None:
             continue
         if e.get("target_type") != "stock":
             continue  # 섹터 채점 보류 — 집계 제외
         key = (e.get("target_type"), e.get("horizon"))
+        # 2026-07-20 감사 P1: pred_id 중복(일 2~6회 run 재로깅, 최대 6중복) dedup — 동일 pred_id 1회만 집계.
+        pid = e.get("pred_id")
+        if pid is not None:
+            seen = _seen_pred_ids.setdefault(key, set())
+            if pid in seen:
+                continue
+            seen.add(pid)
         by_group.setdefault(key, []).append(e)
 
     records: List[Dict[str, Any]] = []
@@ -350,7 +376,10 @@ def _aggregate(entries: List[Dict[str, Any]], today) -> List[Dict[str, Any]]:
 
         ic = _spearman_ic(pred_scores, realized)
         k = HORIZON_OVERLAP_K.get(horizon, 1)
-        effective_n = max(1.0, n / k)  # N_eff = T/k (v0 lock)
+        # 2026-07-20 감사 P1: N_eff = 독립 시간축(distinct created 일수)/k. 기존 n(종목 횡단면×일중 중복 run)은
+        # 모듈 docstring lock('breadth 는 N_eff 가산 않음') 위반 → t-stat 74× 과대. IC 점추정엔 pooled n 유지.
+        distinct_days = len({str(p.get("created_at", ""))[:10] for p in preds}) or 1
+        effective_n = max(1.0, distinct_days / k)  # N_eff = T/k (v0 lock)
         ic_tstat, ic_pvalue = _ic_tstat_pvalue(ic, effective_n)
 
         # 방향 hit (up/down 만)
