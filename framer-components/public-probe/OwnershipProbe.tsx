@@ -86,8 +86,13 @@ const STOCKS: Stock[] = [
 ]
 
 function readBodyDark(): boolean {
-  if (typeof document === "undefined" || !document.body) return false
-  return document.body.dataset.framerTheme === "dark"
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
+    if (typeof document === "undefined" || !document.body) return false
+    return document.body.dataset.framerTheme === "dark"
 }
 
 // 제네릭 구분명(특정 주체 아님) = 링크 없음
@@ -108,7 +113,7 @@ function entityUrl(name: string, type: Holder["type"]): string | null {
 
 export default function OwnershipProbe(props: { width?: number; dark?: boolean }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
-  const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+  const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
   const isDark = onCanvas ? !!props.dark : themeDark
   const C = isDark ? DARK : LIGHT
 

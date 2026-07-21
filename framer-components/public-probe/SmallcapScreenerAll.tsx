@@ -26,8 +26,13 @@ const DARK = {
 const FLAG = "https://hatscripts.github.io/circle-flags/flags/"
 
 function readBodyDark(): boolean {
-  if (typeof document === "undefined" || !document.body) return false
-  return document.body.dataset.framerTheme === "dark"
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
+    if (typeof document === "undefined" || !document.body) return false
+    return document.body.dataset.framerTheme === "dark"
 }
 function eok(won: number): string {
   const v = Math.round(won / 1e8)
@@ -119,7 +124,7 @@ const MARKETS: Record<"kr" | "us", MarketCfg> = {
 
 export default function SmallcapScreenerAll(props: { width?: number; dark?: boolean; market?: string; krReportPath?: string; usReportPath?: string; initialFilter?: string }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
-  const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+  const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
   const isDark = onCanvas ? !!props.dark : themeDark
   const C = isDark ? DARK : LIGHT
   const width = props.width || 380

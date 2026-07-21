@@ -46,6 +46,7 @@ interface Profile {
     nickname: string   // 커뮤니티 표시명 (019 마이그레이션, 유일)
     avatar: string     // 128px JPEG base64 data-URL (~10KB, 인라인 저장)
     bio: string        // 한 줄 소개 (021 마이그레이션, ≤40자)
+    is_admin: boolean  // 008 컬럼 — 관리자 버튼 노출 게이트(실제 차단은 /admin AdminGate + 서버)
 }
 
 const SAMPLE: Profile = {
@@ -57,6 +58,7 @@ const SAMPLE: Profile = {
     nickname: "길동무",
     avatar: "",
     bio: "저평가 가치주 장기 보유",
+    is_admin: true,
 }
 
 function loadSession(): SupaSession | null {
@@ -95,8 +97,9 @@ async function fetchProfile(
             return Array.isArray(rows) && rows[0] ? rows[0] : null
         }
         // created_at 포함 — OAuth 세션은 user.created_at 를 저장하지 않아 가입일이 비므로 profiles 행에서 채움
-        return (await get("display_name,email,phone,status,created_at,nickname,avatar,bio"))
-            || (await get("display_name,email,phone,status,created_at,nickname,avatar"))
+        return (await get("display_name,email,phone,status,created_at,nickname,avatar,bio,is_admin"))
+            || (await get("display_name,email,phone,status,created_at,nickname,avatar,is_admin"))
+            || (await get("display_name,email,phone,status,created_at,is_admin"))
             || (await get("display_name,email,phone,status,created_at"))
     } catch (e) {
         return null
@@ -224,11 +227,50 @@ interface Props {
     profileTable: string
     loginRedirect: string
     logoutRedirect: string
+    adminPath: string
     dark: boolean
 }
 
 type Busy = "" | "logout" | "withdraw"
 type Phase = "loading" | "guest" | "member"
+
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+// 마운트/토글 재판독 SoT — verity_theme(localStorage) 우선 → html[data-an-theme] → body[data-framer-theme].
+// 791d29f7e 에서 8개 컴포넌트에 적용된 패턴(effect 가 body 만 읽어 다크에서 배경이 라이트로 고정되던 버그) — 이 파일이 누락돼 있었음.
+function readBodyDark(): boolean {
+    if (typeof document === "undefined") return false
+    try {
+        const pref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (pref === "dark") return true
+        if (pref === "light") return false
+        const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+        if (h === "dark") return true
+        if (h === "light") return false
+        if (document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 
 export default function PublicProfilePage(props: Props) {
     const supabaseUrl = (props.supabaseUrl || "").replace(/\/+$/, "")
@@ -236,10 +278,13 @@ export default function PublicProfilePage(props: Props) {
     const profileTable = props.profileTable || "profiles"
     const loginRedirect = props.loginRedirect || "/login"
     const logoutRedirect = props.logoutRedirect || "/login"
+    // 관리자 버튼 = profiles.is_admin 계정에만 노출(UI 편의). 실제 접근 차단은 /admin AdminGate + 서버(admin.py).
+    // is_admin 기반 → 관리자 추가 = DB(is_admin=true)만, 코드/이메일 하드코딩 불필요.
+    const adminPath = props.adminPath || "/admin"
 
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [dark, setDark] = useState<boolean>(!!props.dark)
+    const [dark, setDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
     const [phase, setPhase] = useState<Phase>(isCanvas ? "member" : "loading")
     const [confirming, setConfirming] = useState(false)
     const [busy, setBusy] = useState<Busy>("")
@@ -257,10 +302,7 @@ export default function PublicProfilePage(props: Props) {
     /* 사이트 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 props.dark 정적 프리뷰) */
     useEffect(() => {
         if (isCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setDark(t === "dark")
-        }
+        const read = () => setDark(readBodyDark())
         read()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(read)
@@ -286,27 +328,34 @@ export default function PublicProfilePage(props: Props) {
             nickname: "",
             avatar: "",
             bio: "",
+            is_admin: false,
         }
-        setProfile(base)
-        setPhase("member")
-        if (!s.access_token) return
+        setProfile(base)   // 폴백 준비 — fetch 실패/지연 시 이거라도 표시
+        if (!s.access_token) { setPhase("member"); return }   // 토큰 없으면 보강 불가 → 즉시 표시
+        // 🚨 phase="member" 를 fetchProfile 완료까지 미룸 — 로딩 스켈레톤이 실제 느린 구간(profiles+is_admin fetch)
+        //   동안 보이게(2026-07-18, "로딩이 오류처럼 보임"). 안전 타임아웃(6s)으로 무한 스켈레톤 방지.
         let alive = true
+        const settle = () => { if (alive) setPhase("member") }
+        const to = setTimeout(settle, 6000)
         fetchProfile(supabaseUrl, supabaseAnonKey, s.access_token, profileTable, s.user.id).then((row) => {
-            if (!alive || !row) return
-            setProfile({
-                display_name: row.display_name || base.display_name,
-                email: row.email || base.email,
-                phone: row.phone || base.phone,
-                status: row.status || base.status,
-                created_at: row.created_at || base.created_at,
-                nickname: (row as any).nickname || "",
-                avatar: (row as any).avatar || "",
-                bio: (row as any).bio || "",
-            })
+            if (!alive) return
+            clearTimeout(to)
+            if (row) {
+                setProfile({
+                    display_name: row.display_name || base.display_name,
+                    email: row.email || base.email,
+                    phone: row.phone || base.phone,
+                    status: row.status || base.status,
+                    created_at: row.created_at || base.created_at,
+                    nickname: (row as any).nickname || "",
+                    avatar: (row as any).avatar || "",
+                    bio: (row as any).bio || "",
+                    is_admin: (row as any).is_admin === true,
+                })
+            }
+            setPhase("member")
         })
-        return () => {
-            alive = false
-        }
+        return () => { alive = false; clearTimeout(to) }
     }, [isCanvas, supabaseUrl, supabaseAnonKey, profileTable])
 
     const go = (path: string) => {
@@ -400,10 +449,36 @@ export default function PublicProfilePage(props: Props) {
     }
 
     if (phase === "loading") {
+        // 스켈레톤 — 최초 로딩(세션+profiles+is_admin fetch) 동안 카드 형태를 본떠 표시.
+        //   빈 화면/텍스트 한 줄 = 오류처럼 보이던 문제 해소(2026-07-18). 관리자든 아니든 로딩 phase 공통.
+        const skBase = dark ? "#232a33" : "#e7eaee"
+        const skHi = dark ? "#2f3742" : "#f3f5f8"
+        const skBar = (w: number | string, h: number, r: number = 8, mt: number = 0): React.CSSProperties => ({
+            width: w, height: h, borderRadius: r, marginTop: mt, flexShrink: 0,
+            background: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`,
+            backgroundSize: "800px 100%",
+            animation: "ppShimmer 1.4s ease-in-out infinite",
+        })
         return (
             <div style={wrap}>
-                <div style={{ ...cardStyle, textAlign: "center", color: C.faint, fontSize: 13, fontWeight: 600 }}>
-                    불러오는 중...
+                <style>{`@keyframes ppShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+                <div style={cardStyle} aria-busy="true" aria-label="프로필 불러오는 중">
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div style={{ ...skBar(80, 80, 26), marginBottom: 14 }} />
+                        <div style={skBar(120, 20, 7)} />
+                        <div style={skBar(172, 13, 6, 10)} />
+                        <div style={skBar(76, 24, 20, 16)} />
+                        <div style={skBar(96, 34, 18, 16)} />
+                        <div style={skBar(72, 30, 16, 10)} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 26 }}>
+                        <div style={skBar(48, 13, 6)} />
+                        <div style={skBar(112, 15, 6)} />
+                    </div>
+                    <div style={skBar("100%", 52, 14, 24)} />
+                    <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+                        <div style={skBar(64, 13, 6)} />
+                    </div>
                 </div>
             </div>
         )
@@ -465,6 +540,13 @@ export default function PublicProfilePage(props: Props) {
                             style={{ marginTop: 16, border: "none", cursor: "pointer", background: C.field, color: C.ink, fontSize: 12.5, fontWeight: 700, fontFamily: FONT, padding: "8px 20px", borderRadius: 999 }}>
                             프로필 편집
                         </button>
+                        {profile && profile.is_admin === true ? (
+                            <button type="button"
+                                onClick={() => go(adminPath)}
+                                style={{ marginTop: 18, marginBottom: 10, border: "none", cursor: "pointer", background: "#ffffff", color: "#191f28", fontSize: 12.5, fontWeight: 700, fontFamily: FONT, padding: "8px 20px", borderRadius: 999 }}>
+                            관리자
+                        </button>
+                        ) : null}
                     </div>
                 ) : (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -598,5 +680,6 @@ addPropertyControls(PublicProfilePage, {
     profileTable: { type: ControlType.String, title: "프로필 테이블", defaultValue: "profiles" },
     loginRedirect: { type: ControlType.String, title: "로그인 경로", defaultValue: "/login" },
     logoutRedirect: { type: ControlType.String, title: "로그아웃/탈퇴 후 이동", defaultValue: "/login" },
+    adminPath: { type: ControlType.String, title: "관리자 경로", defaultValue: "/admin" },
     dark: { type: ControlType.Boolean, title: "Dark (정적)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

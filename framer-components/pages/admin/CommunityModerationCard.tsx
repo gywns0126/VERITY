@@ -83,7 +83,7 @@ export default function CommunityModerationCard(props: Props) {
     const [tab, setTab] = useState<"reports" | "posts">("reports")
     const [reports, setReports] = useState<Report[]>(onCanvas ? SAMPLE_REPORTS : [])
     const [posts, setPosts] = useState<Thesis[]>(onCanvas ? SAMPLE_POSTS : [])
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(!onCanvas)  // 초기 = 로딩(스켈레톤 첫 페인트부터, "없어요" 번쩍임 제거)
     const [err, setErr] = useState("")
     const [msg, setMsg] = useState("")
     const [busy, setBusy] = useState("")
@@ -180,6 +180,26 @@ export default function CommunityModerationCard(props: Props) {
         </div>
     )
 
+    // 스켈레톤 — 최초 로딩 동안 신고/글 행 형태를 본떠 표시(빈 카드=오류처럼 보임 회피).
+    const dk = onCanvas ? !!props.dark : themeDark
+    const skBase = dk ? "#232a33" : "#e7eaee", skHi = dk ? "#2f3742" : "#f3f5f8"
+    const shim: CSSProperties = { background: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "cmcShimmer 1.4s ease-in-out infinite" }
+    const skRows = (
+        <>
+            <style>{`@keyframes cmcShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+            {[0, 1, 2].map((i) => (
+                <div key={i} style={{ paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12, borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ ...shim, width: 36, height: 16, borderRadius: 7 }} />
+                        <div style={{ ...shim, width: 120, height: 13, borderRadius: 6 }} />
+                        <div style={{ ...shim, width: 44, height: 12, borderRadius: 6, marginLeft: "auto" }} />
+                    </div>
+                    <div style={{ ...shim, width: "100%", height: 44, borderRadius: 10, marginTop: 8 }} />
+                </div>
+            ))}
+        </>
+    )
+
     return (
         <div style={wrap}>
             {/* 탭 */}
@@ -206,7 +226,8 @@ export default function CommunityModerationCard(props: Props) {
             {/* 콘텐츠 */}
             <div style={card}>
                 {tab === "reports" ? (
-                    reports.length === 0 && !loading ? (
+                    reports.length === 0 && loading ? skRows
+                    : reports.length === 0 && !loading ? (
                         <div style={{ fontSize: 13, color: C.faint, fontWeight: 600 }}>처리할 신고가 없어요</div>
                     ) : reports.map((rp, i) => (
                         <div key={rp.id} style={{ paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12, borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
@@ -219,7 +240,8 @@ export default function CommunityModerationCard(props: Props) {
                         </div>
                     ))
                 ) : (
-                    posts.length === 0 && !loading ? (
+                    posts.length === 0 && loading ? skRows
+                    : posts.length === 0 && !loading ? (
                         <div style={{ fontSize: 13, color: C.faint, fontWeight: 600 }}>공개 글이 없어요</div>
                     ) : posts.map((t, i) => (
                         <div key={t.id} style={{ paddingTop: i === 0 ? 0 : 4, marginTop: i === 0 ? 0 : 4 }}>

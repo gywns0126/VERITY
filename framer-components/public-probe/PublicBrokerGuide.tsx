@@ -26,7 +26,7 @@ interface Props {
 
 const LIGHT = {
     bg: "#ffffff",
-    card: "#f9fafb",
+    card: "#ffffff",
     sub: "#f2f4f6",
     text: "#191f28",
     subtext: "#6b7280",
@@ -128,6 +128,11 @@ interface Guide {
 }
 
 function readBodyDark(): boolean {
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
 }
@@ -327,7 +332,7 @@ function LoadingSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
     return (
         <div>
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
                 {rows.map((i) => (
                     <div
                         key={i}
@@ -337,6 +342,7 @@ function LoadingSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
                             borderRadius: 16,
                             padding: "16px 17px",
                             boxSizing: "border-box",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                         }}
                     >
                         <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
@@ -357,9 +363,28 @@ function LoadingSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
     )
 }
 
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight any
+ */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicBrokerGuide(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
 
@@ -396,20 +421,23 @@ export default function PublicBrokerGuide(props: Props) {
         }
     }, [onCanvas, props.dataUrl])
 
+    // 🚨 2026-07-19 재테마 — root 흰 카드 감싸기 제거. 표준 회색페이지 규약(다른 페이지 컴포넌트 동일):
+    //   root=투명·자연 흐름(고정높이/내부스크롤 제거 → 프레임 hug-content 로 설정) + 헤더·아이템을 개별 흰 카드로.
+    //   props.height = 최소 높이 floor(페이지 높이 산정용). 프레임=hug-content, 콘텐츠는 이 floor 이상으로 자연히 늘어남(내부 스크롤 없음).
     const wrap: React.CSSProperties = {
         width: "100%",
         maxWidth: 1180,
         marginLeft: "auto",
         marginRight: "auto",
-        height: props.height || 720,
-        background: C.bg,
-        borderRadius: 20,
-        overflow: "hidden",
+        minHeight: props.height || 720,
+        background: "transparent",
         display: "flex",
         flexDirection: "column",
+        gap: 12,
         fontFamily:
             "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif",
         boxSizing: "border-box",
+        color: C.text,
     }
 
     const tabs: { key: "type" | "table"; label: string }[] = [
@@ -419,9 +447,10 @@ export default function PublicBrokerGuide(props: Props) {
 
     return (
         <div style={wrap}>
-            <div style={{ padding: "20px 22px 12px 22px" }}>
+            {/* 헤더 = 카드 아님. 페이지 위 담백 텍스트(마켓보드 등 타 페이지와 동일). */}
+            <div style={{ padding: "16px 14px 12px" }}>
                 <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-                    <span style={{ fontSize: 19, fontWeight: 800, color: C.text, letterSpacing: "-0.02em" }}>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: C.text, letterSpacing: "-0.4px" }}>
                         증권사 가이드
                     </span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: C.faint }}>거래유형별 · 사실 비교</span>
@@ -433,12 +462,9 @@ export default function PublicBrokerGuide(props: Props) {
                 </div>
                 <div
                     style={{
-                        marginTop: 14,
+                        marginTop: 13,
                         display: "inline-flex",
-                        background: C.sub,
-                        borderRadius: 10,
-                        padding: 3,
-                        gap: 2,
+                        gap: 6,
                     }}
                 >
                     {tabs.map((t) => {
@@ -451,13 +477,12 @@ export default function PublicBrokerGuide(props: Props) {
                                 style={{
                                     border: "none",
                                     cursor: "pointer",
-                                    background: active ? C.bg : "transparent",
-                                    color: active ? C.text : C.subtext,
+                                    background: active ? "#6c5ce7" : "transparent",
+                                    color: active ? "#ffffff" : C.subtext,
                                     fontWeight: active ? 700 : 600,
                                     fontSize: 13,
-                                    padding: "7px 14px",
-                                    borderRadius: 8,
-                                    boxShadow: active ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                                    padding: "7px 15px",
+                                    borderRadius: 9,
                                     transition: "all 140ms ease",
                                 }}
                             >
@@ -468,7 +493,7 @@ export default function PublicBrokerGuide(props: Props) {
                 </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: "auto", padding: "4px 16px 18px 16px" }}>
+            <div style={{ padding: "4px 14px 18px" }}>
                 {loading ? (
                     <LoadingSkeleton C={C} isDark={isDark} />
                 ) : !guide ? (
@@ -485,7 +510,7 @@ export default function PublicBrokerGuide(props: Props) {
             </div>
 
             {guide ? (
-                <div style={{ padding: "10px 18px 18px 18px", borderTop: "1px solid " + C.border }}>
+                <div style={{ padding: "2px 14px 12px" }}>
                     <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.5 }}>
                         {guide.disclaimer || "사실 비교일 뿐 권유 아님 · 수수료는 각 사 공식 고지 확인"}
                     </div>
@@ -545,7 +570,7 @@ function TradeTypeView(props: { items: TradeType[]; C: typeof LIGHT; cardH: numb
         return <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>거래유형 데이터가 없어요.</div>
     }
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 10, alignItems: "start", paddingTop: 6 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: 10, alignItems: "start", paddingTop: 6 }}>
             {items.map((it, i) => (
                 <div
                     key={i}
@@ -555,6 +580,7 @@ function TradeTypeView(props: { items: TradeType[]; C: typeof LIGHT; cardH: numb
                         borderRadius: 16,
                         padding: "15px 16px",
                         boxSizing: "border-box",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                     }}
                 >
                     <div style={{ fontSize: 13.5, fontWeight: 800, color: C.text, letterSpacing: "-0.01em", marginBottom: 9 }}>{it.type}</div>
@@ -620,7 +646,7 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
         return <div style={{ padding: 40, textAlign: "center", color: C.faint, fontSize: 14 }}>증권사 데이터가 없어요.</div>
     }
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 320px), 1fr))", gap: 12, alignItems: "start", paddingTop: 6 }}>
             {brokers.map((b, i) => {
                 const feeUrl = clean(b.source_url) || (brokerDomain(b.name) ? "https://" + brokerDomain(b.name) : "")
                 const news = clean(b.realtime_news)
@@ -646,6 +672,7 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
                             borderRadius: 16,
                             padding: "16px 17px",
                             boxSizing: "border-box",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                         }}
                     >
                         {/* 헤더: 로고 + 이름 */}
@@ -710,7 +737,7 @@ function BrokerTable(props: { brokers: Broker[]; C: typeof LIGHT; cardH: number 
 addPropertyControls(PublicBrokerGuide, {
     dark: { type: ControlType.Boolean, title: "다크(캔버스)", defaultValue: false },
     dataUrl: { type: ControlType.String, title: "데이터 JSON", defaultValue: BLOB + "/broker_guide.json" },
-    height: { type: ControlType.Number, title: "높이", defaultValue: 720, min: 320, max: 1600, step: 20, unit: "px" },
+    height: { type: ControlType.Number, title: "최소 높이", defaultValue: 720, min: 320, max: 1600, step: 20, unit: "px" },
     typeCardHeight: { type: ControlType.Number, title: "거래유형 카드 높이", defaultValue: 158, min: 110, max: 320, step: 4, unit: "px" },
     tableCardHeight: { type: ControlType.Number, title: "증권사 카드 최소높이", defaultValue: 250, min: 140, max: 400, step: 4, unit: "px" },
 })

@@ -35,7 +35,7 @@ const LIGHT = {
     line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", red: "#f04452", green: "#0ca678",
 }
 const DARK = {
-    bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
+    bg: "#0f1318", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
     line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", red: "#ff6b76", green: "#3ecf8e",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
@@ -72,6 +72,11 @@ function doPrint(factsOnly: boolean) {
 }
 
 function readBodyDark(): boolean {
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
 }
@@ -113,6 +118,21 @@ function parseBrief(text: string): { title: string; body: string }[] {
     return out
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicStockBrief(props: {
     width?: number; dark?: boolean; apiBase?: string
 }) {
@@ -128,7 +148,7 @@ export default function PublicStockBrief(props: {
         return () => obs.disconnect()
     }, [])
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
     const [tk, setTk] = useState<string>("")
     const [state, setState] = useState<string>("idle") // idle | loading | done | error
     const [data, setData] = useState<any>(null)
@@ -210,7 +230,7 @@ export default function PublicStockBrief(props: {
         <div style={wrap}>
             {/* ── 버튼 2개 — 상품 구분: 100% 데이터 vs 데이터+AI 해석. 아이콘 = Phosphor(Framer 네이티브 세트) ── */}
             <div data-noprint style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-                <button onClick={() => doPrint(true)} style={{ ...btnBase, cursor: "pointer", background: C.violetSoft, color: C.violet }}>
+                <button onClick={() => { if (tk && typeof window !== "undefined") window.open(base + "/api/fact_report?ticker=" + encodeURIComponent(tk), "_blank", "noopener") }} disabled={!tk} style={{ ...btnBase, cursor: tk ? "pointer" : "default", opacity: tk ? 1 : 0.5, background: C.violetSoft, color: C.violet }}>
                     <PhPrinter size={14} />
                     팩트 리포트 PDF
                 </button>

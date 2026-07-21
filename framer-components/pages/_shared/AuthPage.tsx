@@ -39,12 +39,23 @@ interface SupaSession {
     user: { id: string; email: string; user_metadata?: any }
 }
 
+// 🚨 세션 쓰기/삭제 시 소비자 재평가 트리거 (2026-07-14). localStorage.setItem 은 같은 탭에 storage 이벤트를
+//   발생시키지 않아, 로그인 직후 홈 모닝브리핑·둥지·NPS 리스너가 새 토큰을 인지 못 함 → verity_auth_change 명시 dispatch.
+function notifyAuthChange() {
+    if (typeof window === "undefined") return
+    try { window.dispatchEvent(new Event("verity_auth_change")) } catch (e) {}
+}
+
 function saveSession(s: SupaSession) {
-    if (typeof window !== "undefined") localStorage.setItem(SESSION_KEY, JSON.stringify(s))
+    if (typeof window === "undefined") return
+    localStorage.setItem(SESSION_KEY, JSON.stringify(s))
+    notifyAuthChange()
 }
 
 function clearSession() {
-    if (typeof window !== "undefined") localStorage.removeItem(SESSION_KEY)
+    if (typeof window === "undefined") return
+    localStorage.removeItem(SESSION_KEY)
+    notifyAuthChange()
 }
 
 function loadSession(): SupaSession | null {

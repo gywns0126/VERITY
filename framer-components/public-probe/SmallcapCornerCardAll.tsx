@@ -5,8 +5,10 @@ import { useState, useEffect } from "react"
  * 소형주 코너 (통합) — 🇰🇷 한국 / 🇺🇸 미국 국기 토글. 1개로 KR+US 둘 다.
  * 기존 SmallcapCornerCard(KR) + USSmallcapCornerCard(US) 통합 (2026-06-27). market별 config inline.
  *
- * 3단 해석: 쉬운이름 · 배지 · 왜중요(why) · 투명기준(criteria_text). L1(탭): 종목 + 재무 사실.
- * 🚨 RULE 7 — 점수·등급·순위·verdict 0. 전부 공시/재무 사실. 검증 점수 held(2027). LLM 0(RULE 6).
+ * 2026-07-19 리디자인 v2 (토스식 클린): 필터를 2렌즈(기회=방치우량 / 위험=희석·부실·교차·회계)로 그룹 +
+ *   색 절제 — 필터별 5색 → 렌즈 2색(초록/앰버) 뱃지만. count·토글=중립, 기준=인라인 muted. 앰버 떡칠 제거.
+ * 🚨 외곽선 금지(feedback_no_border_outline) — 보더 0, 분리/강조=채움색·여백·타이포·그림자만.
+ * 🚨 RULE 7 — 점수·등급·순위·verdict 0. 전부 공시/재무 사실. LLM 0(RULE 6).
  *    data: smallcap_corner_filters.json / us_smallcap_corner_filters.json. 다크모드 자가감지. cache-fallback.
  */
 
@@ -24,18 +26,26 @@ const DARK = {
 }
 const FLAG = "https://hatscripts.github.io/circle-flags/flags/"
 
-function makeTone(C: typeof LIGHT): Record<string, { fg: string; bg: string }> {
-  return {
-    neglected_quality: { fg: C.green, bg: C.greenSoft },
-    smallcap_dilution: { fg: C.amber, bg: C.amberSoft },
-    smallcap_distress: { fg: C.red, bg: C.redSoft },
-    clean_fin_risky_disc: { fg: C.violet, bg: C.violetSoft },
-    accounting_red_flag: { fg: C.blue, bg: C.blueSoft },
-  }
+// 렌즈 — 방치·우량 = 기회(발굴), 나머지 = 위험(회피). 필터 key 기준. 색은 렌즈 2색으로만.
+const LENS: Record<string, "opp" | "risk"> = {
+  neglected_quality: "opp",
+  smallcap_dilution: "risk",
+  smallcap_distress: "risk",
+  clean_fin_risky_disc: "risk",
+  accounting_red_flag: "risk",
+}
+const LENS_META: Record<"opp" | "risk", { label: string }> = {
+  opp: { label: "기회 · 숨은 우량주 발굴" },
+  risk: { label: "위험 · 피할 것 거르기" },
 }
 function readBodyDark(): boolean {
-  if (typeof document === "undefined" || !document.body) return false
-  return document.body.dataset.framerTheme === "dark"
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
+    if (typeof document === "undefined" || !document.body) return false
+    return document.body.dataset.framerTheme === "dark"
 }
 function eok(won: number): string { return Math.round(won / 1e8).toLocaleString() + "억" }
 function musd(m: number): string {
@@ -135,12 +145,27 @@ function FactRow(props: { t: Ticker; C: typeof LIGHT; market: "kr" | "us"; cfg: 
   )
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function SmallcapCornerCardAll(props: { width?: number; dark?: boolean; market?: string; krReportPath?: string; usReportPath?: string; krScreenerPath?: string; usScreenerPath?: string }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
-  const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+  const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
   const isDark = onCanvas ? !!props.dark : themeDark
   const C = isDark ? DARK : LIGHT
-  const TONE = makeTone(C)
+  const lensTone = (lens: "opp" | "risk") => lens === "opp" ? { c: C.green, bg: C.greenSoft } : { c: C.amber, bg: C.amberSoft }
   const width = props.width || 380
 
   const [market, setMarket] = useState<"kr" | "us">(props.market === "us" ? "us" : "kr")
@@ -197,6 +222,41 @@ export default function SmallcapCornerCardAll(props: { width?: number; dark?: bo
   const meta = (data && data._meta) || {}
   const filters: any[] = (data && data.filters) || []
 
+  const filterCard = (flt: any, i: number, tone: { c: string; bg: string }) => {
+    const isOpen = open === i
+    const tickers = flt.tickers || []
+    return (
+      <div key={i} style={{ background: C.card, borderRadius: 20, padding: 16, marginBottom: 12, boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ background: tone.bg, color: tone.c, fontSize: 11, fontWeight: 800, padding: "4px 9px", borderRadius: 8 }}>{flt.badge}</span>
+            <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.3 }}>{flt.name}</span>
+          </div>
+          <span style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>{flt.count}</span>
+        </div>
+        <div style={{ fontSize: 13, color: C.sub, fontWeight: 600, letterSpacing: -0.2, lineHeight: 1.55, padding: "0 1px 8px" }}>{flt.why}</div>
+        <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, letterSpacing: -0.2, lineHeight: 1.55, padding: "0 1px" }}>
+          <span style={{ fontWeight: 800, color: C.sub }}>기준</span>  {flt.criteria_text}
+        </div>
+        {tickers.length > 0 ? (
+          <div onClick={() => setOpen(isOpen ? -1 : i)} style={{ cursor: "pointer", marginTop: 12, fontSize: 12.5, fontWeight: 700, color: C.violet, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px", borderRadius: 10, background: isOpen ? C.violetSoft : C.bg }}>
+            종목 {tickers.length}개 보기 {isOpen ? "▴" : "▾"}
+          </div>
+        ) : null}
+        {isOpen ? (
+          <div style={{ marginTop: 4 }}>
+            {tickers.slice(0, 8).map((tk: Ticker, j: number) => <FactRow key={j} t={tk} C={C} market={market} cfg={cfg} reportPath={reportPath} />)}
+            {tickers.length > 8 ? (
+              <a href={screenerPath + "?filter=" + flt.key} target="_blank" rel="noopener noreferrer" style={{ display: "block", textAlign: "center", fontSize: 12.5, fontWeight: 700, color: C.violet, padding: "11px 0 3px", textDecoration: "none" }}>
+                전체 {flt.count}종목 스크리너 (검색·정렬) →
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
   return (
     <div style={shell}>
       <style>{"@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}"}</style>
@@ -234,36 +294,17 @@ export default function SmallcapCornerCardAll(props: { width?: number; dark?: bo
         <>
           <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, padding: "0 4px 12px", letterSpacing: -0.2, lineHeight: 1.5 }}>{cfg.subtitle}</div>
 
-          {filters.map((flt, i) => {
-            const t = TONE[flt.key] || { fg: C.violet, bg: C.violetSoft }
-            const isOpen = open === i
-            const tickers = flt.tickers || []
+          {(["opp", "risk"] as const).map((lens) => {
+            const group = filters.map((flt, i) => ({ flt, i })).filter((x) => (LENS[x.flt.key] || "risk") === lens)
+            if (!group.length) return null
+            const tone = lensTone(lens)
             return (
-              <div key={i} style={{ background: C.card, borderRadius: 20, padding: 16, marginBottom: 12, boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(0,0,0,0.04)" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ background: t.bg, color: t.fg, fontSize: 11, fontWeight: 800, padding: "4px 9px", borderRadius: 8 }}>{flt.badge}</span>
-                    <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.3 }}>{flt.name}</span>
-                  </div>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: t.fg }}>{flt.count}</span>
+              <div key={lens} style={{ marginBottom: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 4px 8px" }}>
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: tone.c, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, fontWeight: 800, color: C.sub, letterSpacing: -0.2 }}>{LENS_META[lens].label}</span>
                 </div>
-                <div style={{ fontSize: 13, color: C.sub, fontWeight: 600, letterSpacing: -0.2, lineHeight: 1.5, padding: "0 1px 9px" }}>{flt.why}</div>
-                <div style={{ background: C.bg, borderRadius: 12, padding: "9px 11px", fontSize: 11.5, color: C.faint, fontWeight: 700, letterSpacing: -0.2, lineHeight: 1.5 }}>기준 · {flt.criteria_text}</div>
-                {tickers.length > 0 ? (
-                  <div onClick={() => setOpen(isOpen ? -1 : i)} style={{ cursor: "pointer", marginTop: 11, fontSize: 12.5, fontWeight: 700, color: t.fg, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px", borderRadius: 10, background: isOpen ? t.bg : "transparent" }}>
-                    종목 {tickers.length}개 보기 {isOpen ? "▴" : "▾"}
-                  </div>
-                ) : null}
-                {isOpen ? (
-                  <div style={{ marginTop: 4 }}>
-                    {tickers.slice(0, 8).map((tk: Ticker, j: number) => <FactRow key={j} t={tk} C={C} market={market} cfg={cfg} reportPath={reportPath} />)}
-                    {tickers.length > 8 ? (
-                      <a href={screenerPath + "?filter=" + flt.key} target="_blank" rel="noopener noreferrer" style={{ display: "block", textAlign: "center", fontSize: 12.5, fontWeight: 700, color: t.fg, padding: "11px 0 3px", textDecoration: "none" }}>
-                        전체 {flt.count}종목 스크리너 (검색·정렬) →
-                      </a>
-                    ) : null}
-                  </div>
-                ) : null}
+                {group.map(({ flt, i }) => filterCard(flt, i, tone))}
               </div>
             )
           })}

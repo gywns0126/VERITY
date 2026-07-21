@@ -135,6 +135,44 @@ function demoCandles(): number[][] {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
+// 마운트/토글 재판독 SoT — verity_theme(localStorage) 우선 → html[data-an-theme] → body[data-framer-theme].
+// 791d29f7e 8개 fix 에서 누락됐던 body-only 재판독 버그 정정(다크에서 라이트 고정 방지, 2026-07-21 일괄).
+function readBodyDark(): boolean {
+    if (typeof document === "undefined") return false
+    try {
+        const pref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (pref === "dark") return true
+        if (pref === "light") return false
+        const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+        if (h === "dark") return true
+        if (h === "light") return false
+        if (document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 export default function PublicLiveChart(props: Props) {
     const { ticker, chartBase, height, dark, showVolume } = props
     const base = (chartBase || DEFAULT_BASE).replace(/\/+$/, "")
@@ -150,7 +188,7 @@ export default function PublicLiveChart(props: Props) {
     const [range, setRange] = useState("3M")
     const [hoverIdx, setHoverIdx] = useState<number | null>(null)
     const [noData, setNoData] = useState(false)
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
 
     const isDark = onCanvas ? !!dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -158,10 +196,7 @@ export default function PublicLiveChart(props: Props) {
     /* 테마 추종 */
     useEffect(() => {
         if (onCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
+        const read = () => setThemeDark(readBodyDark())
         read()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(read)
@@ -213,7 +248,7 @@ export default function PublicLiveChart(props: Props) {
             }
             return false
         }
-        fetch(url, { cache: "no-store" })
+        fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((doc) => {
                 if (!alive) return
@@ -236,7 +271,7 @@ export default function PublicLiveChart(props: Props) {
     useEffect(() => {
         if (onCanvas || range !== "전체" || !tk || histFull) return
         let alive = true
-        fetch(base + "/kr_chart_history/" + tk + ".json", { cache: "no-store" })
+        fetch(base + "/kr_chart_history/" + tk + ".json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive) setHistFull(d && Array.isArray(d.c) && d.c.length > 1 ? d.c : []) })
             .catch(() => { if (alive) setHistFull([]) })
@@ -408,7 +443,7 @@ export default function PublicLiveChart(props: Props) {
                                 {(lastChg > 0 ? "▲ +" : lastChg < 0 ? "▼ " : "") + lastChg.toFixed(2) + "%"}
                             </span>
                         )}
-                        <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>{dateDot(last[0])} 종가</span>
+                        <span style={{ fontSize: 10.5, fontWeight: 700, color: C.faint, background: C.grid, padding: "1px 6px", borderRadius: 5 }}>전일 종가 · {dateDot(last[0])}</span>
                         {view && view.isWeekly && <span style={{ fontSize: 10, fontWeight: 700, color: C.vg }}>주봉</span>}
                         {view && (
                             <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>

@@ -48,12 +48,24 @@ function loadSessionRaw(): AuthSession | null {
     }
 }
 
+// 🚨 세션 쓰기/삭제 시 소비자 재평가 트리거 (2026-07-14). localStorage.setItem 은 같은 탭에 storage 이벤트를
+//   발생시키지 않으므로, 홈 모닝브리핑·둥지(HoldingsTab)·NPS 등 리스너가 토큰 refresh 를 인지 못 함 →
+//   refresh 전 토큰(만료)으로 fetch 한 빈 결과에 갇히는 버그. verity_auth_change 명시 dispatch 로 재fetch 유도.
+function notifyAuthChange() {
+    if (typeof window === "undefined") return
+    try { window.dispatchEvent(new Event("verity_auth_change")) } catch (e) {}
+}
+
 function saveSession(s: AuthSession) {
-    if (typeof window !== "undefined") localStorage.setItem(SESSION_KEY, JSON.stringify(s))
+    if (typeof window === "undefined") return
+    localStorage.setItem(SESSION_KEY, JSON.stringify(s))
+    notifyAuthChange()
 }
 
 function clearSession() {
-    if (typeof window !== "undefined") localStorage.removeItem(SESSION_KEY)
+    if (typeof window === "undefined") return
+    localStorage.removeItem(SESSION_KEY)
+    notifyAuthChange()
 }
 
 async function refreshSession(supabaseUrl: string, anonKey: string, refreshToken: string): Promise<AuthSession | null> {

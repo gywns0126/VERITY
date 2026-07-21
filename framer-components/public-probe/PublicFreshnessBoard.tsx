@@ -19,7 +19,7 @@ const LIGHT = {
     closed: "#7e8db3", closedSoft: "#eef1f8",
 }
 const DARK = {
-    bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
+    bg: "#0f1318", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
     line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", green: "#3ecf8e", red: "#f97066", gray: "#667085",
     closed: "#8b97bd", closedSoft: "#222738",
 }
@@ -31,6 +31,11 @@ const CRIT_LABEL: Record<string, string> = { P0: "핵심 데이터", P1: "보조
 const STATUS_LABEL: Record<string, string> = { fresh: "신선", stale: "지연", closed: "휴장", discontinued: "중단", paused: "휴장" }
 
 function readBodyDark(): boolean {
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
 }
@@ -66,9 +71,24 @@ const SAMPLE = {
     ],
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicFreshnessBoard(props: { width?: number; dark?: boolean; dataUrl?: string }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
     const [showP2, setShowP2] = useState<boolean>(false)
 

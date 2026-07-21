@@ -31,6 +31,11 @@ const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 const CACHE_KEY = "verity_crypto_universe_cache"
 
 function readBodyDark(): boolean {
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
 }
@@ -70,7 +75,7 @@ function overhangColor(ratio: number, C: typeof LIGHT): string {
 
 export default function CryptoDilutionForensics(props: { dataUrl?: string; dark?: boolean; sortBy?: SortKey; topN?: number }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
 

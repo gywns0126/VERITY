@@ -17,7 +17,7 @@ const LIGHT = {
   line: "#e5e8eb", red: "#f04452", blue: "#3182f6", violet: "#6c5ce7", violetSoft: "#f0edff",
 }
 const DARK = {
-  bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
+  bg: "#0f1318", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
   line: "#2b2f37", red: "#ff6b76", blue: "#5a9cff", violet: "#a98bff", violetSoft: "#2a2440",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
@@ -31,8 +31,13 @@ const NAVER_RANK = [
 ]
 
 function readBodyDark(): boolean {
-  if (typeof document === "undefined" || !document.body) return false
-  return document.body.dataset.framerTheme === "dark"
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
+    if (typeof document === "undefined" || !document.body) return false
+    return document.body.dataset.framerTheme === "dark"
 }
 function sharesShort(v: any): string {
   const x = Number(v)
@@ -56,11 +61,26 @@ function fmtAge(iso: any): string {
   }
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicExploreHub(props: {
   width?: number; dark?: boolean; sectorUrl?: string; discoverPath?: string; stockPath?: string
 }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
-  const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+  const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
   const isDark = onCanvas ? !!props.dark : themeDark
   const C = isDark ? DARK : LIGHT
   const discoverPath = props.discoverPath || "/discover"
@@ -82,7 +102,7 @@ export default function PublicExploreHub(props: {
     if (onCanvas) return
     let alive = true
     const load = (url: string, cacheKey: string, setter: (v: any) => void, pick: (d: any) => any) => {
-      fetch(url, { cache: "no-store" })
+      fetch(url)
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           const v = d && pick(d)
