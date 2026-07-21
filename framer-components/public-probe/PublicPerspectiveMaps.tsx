@@ -23,7 +23,7 @@ const LIGHT = {
     heroBg: "#ece9f8", heroBgSel: "#e0dbf5", tileSel: "#ecedef",
 }
 const DARK = {
-    bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
+    bg: "#0f1318", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
     line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", track: "#242830",
     heroBg: "#211f2f", heroBgSel: "#292640", tileSel: "#262a33",
 }

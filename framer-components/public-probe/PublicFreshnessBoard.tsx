@@ -19,7 +19,7 @@ const LIGHT = {
     closed: "#7e8db3", closedSoft: "#eef1f8",
 }
 const DARK = {
-    bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
+    bg: "#0f1318", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
     line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", green: "#3ecf8e", red: "#f97066", gray: "#667085",
     closed: "#8b97bd", closedSoft: "#222738",
 }

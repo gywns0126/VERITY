@@ -56,7 +56,7 @@ const LIGHT = {
     onAccent: "#ffffff",
 }
 const DARK = {
-    bg: "#10141a",
+    bg: "#0f1318",
     card: "#171c23",
     ink: "#e3e7ec",
     sub: "#9aa4b1",

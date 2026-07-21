@@ -21,7 +21,7 @@ const LIGHT = {
   violet: "#6c5ce7", violetSoft: "#f0edff",
 }
 const DARK = {
-  bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
+  bg: "#0f1318", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
   line: "#2b2f37", red: "#ff6b76", redSoft: "#3a1f22", amber: "#ffb340", amberSoft: "#3a2e18",
   blue: "#5a9cff", blueSoft: "#1b2740", green: "#3ddc97", greenSoft: "#16322a",
   violet: "#a98bff", violetSoft: "#2a2440",

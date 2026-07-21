@@ -23,7 +23,7 @@ const LIGHT = {
     line: "#e5e8eb", violet: "#6c5ce7", violetSoft: "#f0edff", green: "#12b76a",
 }
 const DARK = {
-    bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
+    bg: "#0f1318", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
     line: "#2b2f37", violet: "#a98bff", violetSoft: "#2a2440", green: "#3ecf8e",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
