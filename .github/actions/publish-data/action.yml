@@ -47,7 +47,10 @@ runs:
         #   대체 = 리포트 내 출처 링크아웃(구현 완료) · 숫자 부활 = 유료 티어 Polygon×Benzinga
         #   정식 라이선스($99/월) 계약 후에만. 세션 간 재추가 핑퐁 2회(9c8397eea·414ff9431) —
         #   이 결정 변경 = PM 재승인 + memory(project_kr_index_public_data_2026_07_08) 갱신 필수.
-        for f in portfolio.json recommendations.json consensus_data.json \
+        # 🚫 consensus_data.json 도 발행 제외 (2026-07-21 전수감사, PM "긴급도순 ㄱㄱ" 승인) —
+        #   KR 브로커 목표가/투자의견(예: target_price 911524·"매수")로 us_analyst_consensus 와 동일
+        #   법적 class(재배포 blocker·법률큐). 소비처 0 확인(framer+vercel-api grep 전무). 7/10 결정 정합 확장.
+        for f in portfolio.json recommendations.json \
                  system_health_snapshot.json \
                  macro_snapshot.json \
                  crypto_macro.json \
