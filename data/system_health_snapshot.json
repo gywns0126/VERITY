@@ -1,31 +1,31 @@
 {
   "system_health": {
-    "status": "ok",
-    "checked_at": "2026-07-21T15:03:36+09:00",
+    "status": "error",
+    "checked_at": "2026-07-21T15:36:35+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 66749,
+    "elapsed_ms": 252173,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 7908,
+        "latency_ms": 208476,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 3974,
+        "latency_ms": 275,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 473,
+        "latency_ms": 375,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 130,
+        "latency_ms": 119,
         "detail": "정상",
         "attempts": 1
       },
@@ -37,49 +37,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 851,
+        "latency_ms": 1032,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 2874,
+        "latency_ms": 2681,
         "detail": "정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 47053,
+        "latency_ms": 19814,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260720)",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1519,
+        "latency_ms": 1835,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "ecos": {
-        "status": "ok",
-        "latency_ms": 557,
-        "detail": "정상",
-        "attempts": 1
+        "status": "error",
+        "latency_ms": 16698,
+        "detail": "HTTPSConnectionPool(host='ecos.bok.or.kr', port=443): Max retries exceeded with url: /api/StatisticSearch/8BT2P4G4NSU61M",
+        "attempts": 2
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 155,
+        "latency_ms": 89,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 233,
+        "latency_ms": 161,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 216,
+        "latency_ms": 120,
         "detail": "정상",
         "attempts": 1
       },
@@ -93,10 +93,10 @@
     "github_worker": {
       "status": "running",
       "conclusion": "in_progress",
-      "workflow": "DART Catalyst Pulse (공시속보 신선도)",
-      "started_at": "2026-07-21T06:00:36Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/29805674945",
-      "detail": "DART Catalyst Pulse (공시속보 신선도): in_progress"
+      "workflow": "Price Pulse (1m KR/US 지수 + 보유 + 추천)",
+      "started_at": "2026-07-21T06:35:36Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/29807505800",
+      "detail": "Price Pulse (1m KR/US 지수 + 보유 + 추천): in_progress"
     },
     "data_recency": {
       "status": "ok",
@@ -104,44 +104,44 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-07-21 15:01",
-          "age_hours": 0.04,
+          "last_updated": "2026-07-21 15:31",
+          "age_hours": 0.09,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-07-21 15:01",
-          "age_hours": 0.04,
+          "last_updated": "2026-07-21 15:31",
+          "age_hours": 0.09,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-07-21 15:01",
-          "age_hours": 0.04,
+          "last_updated": "2026-07-21 15:31",
+          "age_hours": 0.09,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-07-21 15:01",
-          "age_hours": 0.04,
+          "last_updated": "2026-07-21 15:31",
+          "age_hours": 0.09,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-07-21 15:01",
-          "age_hours": 0.04,
+          "last_updated": "2026-07-21 15:31",
+          "age_hours": 0.09,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-07-21 15:01",
-          "age_hours": 0.04,
+          "last_updated": "2026-07-21 15:31",
+          "age_hours": 0.09,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-07-21 15:01",
-          "age_hours": 0.04,
+          "last_updated": "2026-07-21 15:31",
+          "age_hours": 0.09,
           "threshold_hours": 1
         }
       }
@@ -149,13 +149,15 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "2f216fc",
-      "remote_message": "📡 공시속보 pulse 2026-07-21 15:03",
-      "remote_date": "2026-07-21T06:03:16Z",
-      "local_sha": "d3a6e72",
-      "detail": "cron 자동 갱신 — 📡 공시속보 pulse 2026-07-21 15:03"
+      "remote_sha": "0af9137",
+      "remote_message": "📊 macro_snapshot 2026-07-21T15:33",
+      "remote_date": "2026-07-21T06:33:05Z",
+      "local_sha": "ed7e68a",
+      "detail": "cron 자동 갱신 — 📊 macro_snapshot 2026-07-21T15:33"
     },
-    "errors": [],
+    "errors": [
+      "ecos API 오류 — HTTPSConnectionPool(host='ecos.bok.or.kr', port=443): Max retries exceeded with url: /api/StatisticSearch/8BT2P4G4NSU61M"
+    ],
     "warnings": [],
     "apis": {
       "kis_openapi": {
@@ -164,9 +166,9 @@
         "total": 3
       }
     },
-    "overall_status": "ok"
+    "overall_status": "error"
   },
-  "updated_at": "2026-07-21T15:03:58+09:00",
+  "updated_at": "2026-07-21T15:36:40+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
