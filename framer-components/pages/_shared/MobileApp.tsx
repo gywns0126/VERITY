@@ -46,7 +46,9 @@ function _bustUrl(url: string): string {
     return `${u}${u.includes("?") ? "&" : "?"}_=${Date.now()}`
 }
 function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
-    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
+    // 공개 blob = CDN 캐시 활용(캐시버스터·no-store 제거, 2026-07-20 비용절감). authed/vercel 엔드포인트는 기존대로.
+    const _cacheable = /public\.blob\.vercel-storage\.com/.test(url)
+    return fetch(_cacheable ? url : _bustUrl(url), _cacheable ? { mode: "cors", credentials: "omit", signal } : { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -1867,16 +1869,34 @@ export default function MobileApp(props: Props) {
 
     // 자동 로그인: mount 시 localStorage 동기 read 만. 토큰 만료면 로그아웃 상태.
     // (Supabase refresh 호출은 Sandbox 안정화 위해 제거 — 재인증은 Home 페이지에서)
-    useEffect(() => {
+    const readSession = useCallback(() => {
         const raw = _loadSessionRaw()
-        if (!raw) return
+        if (!raw) { setSession(null); return }
         const now = Date.now() / 1000
         if (raw.expires_at && now > raw.expires_at) {
             _clearSession()
+            setSession(null)
         } else {
             setSession(raw)
         }
     }, [])
+
+    useEffect(() => {
+        readSession()
+    }, [readSession])
+
+    // 로그인/토큰갱신 후 세션 재읽기 (Sandbox 안정: 네트워크 refresh 신설 없이 localStorage 재평가만).
+    // verity_auth_change=AuthGate dispatch · storage=타탭
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const onAuth = () => readSession()
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => {
+            window.removeEventListener("verity_auth_change", onAuth)
+            window.removeEventListener("storage", onAuth)
+        }
+    }, [readSession])
 
     useEffect(() => {
         if (!dataUrl) { setLoadError("dataUrl이 비어 있습니다"); return }

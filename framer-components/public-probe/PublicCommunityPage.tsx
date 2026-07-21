@@ -77,6 +77,9 @@ function readBodyDark(): boolean {
     // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
     // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
     try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
         if (typeof document !== "undefined" && document.body) {
             const a = document.body.dataset.framerTheme
             if (a === "dark") return true
@@ -112,10 +115,9 @@ function useBfLogoMap(): Record<string, string> | null {
 }
 function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
     const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
-    const pth = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || ""
-    if (!pth) return ""
-    if (pth.indexOf("http") === 0) return pth
-    return "https://cdn.brandfetch.io/" + pth + "?c=" + BF_CID + "&w=" + size * 2 + "&h=" + size * 2
+    if (!tk) return ""
+    // 로고 = 토스 종목 CDN (PM 결정: 완전 공개[런칭] 전까지 토스 사용, 2026-07-12). 404/차단 시 onError → 이니셜 폴백.
+    return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
 }
 function StockLogo(props: { ticker: any; name: any; C: any; size?: number }) {
     const { ticker, name, C } = props
@@ -130,7 +132,7 @@ function StockLogo(props: { ticker: any; name: any; C: any; size?: number }) {
         <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
             {!err && src ? (
                 <img src={src} alt="" loading="lazy" decoding="async" width={size} height={size} onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), objectFit: "contain", background: "#ffffff", display: "block" }} />
+                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), objectFit: "cover", background: "transparent", display: "block" }} />
             ) : (
                 <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), background: C.chipBg, color: C.faint, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
             )}
@@ -144,20 +146,32 @@ function StockLogo(props: { ticker: any; name: any; C: any; size?: number }) {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicCommunityPage(props: Props) {
     const { apiBase, stockPath, usStockPath, limit, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
     const cap = Math.max(5, Math.min(50, limit || 30))
 
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
         if (onCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
+        const read = () => setThemeDark(readBodyDark())
         read()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(read)
@@ -200,7 +214,8 @@ export default function PublicCommunityPage(props: Props) {
             .then((d) => { if (d && Array.isArray(d.items)) setFeed(d.items) })
             .catch(() => {})
             .finally(() => setLoading(false))
-    }, [base, cap, onCanvas])
+        // token 포함 — 로그인/토큰갱신(verity_auth_change) 후 setToken → 피드 재fetch(mine/liked 반영). 없으면 로그인 직후 피드 미갱신.
+    }, [base, cap, onCanvas, token])
 
     // 종목명 매핑 (universe_search) — 실패해도 무해(티커 그대로 노출)
     useEffect(() => {
@@ -293,7 +308,7 @@ export default function PublicCommunityPage(props: Props) {
             {menuId && <div onClick={() => setMenuId("")} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
             <div style={col}>
                 {/* 헤더 */}
-                <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px" }}>커뮤니티</div>
+                <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>커뮤니티</div>
                 <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 3, lineHeight: 1.5 }}>
                     종목 관점을 나누는 공간 · 모든 글은 이용자 개인 의견이며 AlphaNest 의 분석·판단·추천이 아니에요
                 </div>
