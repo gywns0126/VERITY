@@ -188,7 +188,9 @@ def _commodity_to_score(cm: Dict[str, Any], stock: Optional[Dict[str, Any]] = No
     ms = pr.get("margin_safety_score")
     if ms is None:
         return 50.0
-    return _clip(50.0 + float(ms))
+    # 2026-07-21 감사: +50 shift 를 producer(CommodityScout)로 이동 → ms 는 이미 0~100 정규화됨.
+    # 기존 _clip(50+ms) 와 수학적 동일(producer 가 50 을 더해 clip[0,100] 하므로). 회귀 0.
+    return _clip(float(ms))
 
 
 def _export_to_score(stock: Dict[str, Any]) -> float:
