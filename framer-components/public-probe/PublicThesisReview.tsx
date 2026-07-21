@@ -22,12 +22,17 @@ const STANCES: Record<string, { label: string; key: "up" | "down" | "faint" }> =
 }
 
 function readBodyDark(): boolean {
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
 }
 function loadToken(): string {
     if (typeof window === "undefined") return ""
-    try { const raw = localStorage.getItem(SESSION_KEY); if (!raw) return ""; const s = JSON.parse(raw); return typeof s.access_token === "string" ? s.access_token : "" } catch { return "" }
+    try { const raw = localStorage.getItem(SESSION_KEY); if (!raw) return ""; const s = JSON.parse(raw); if (s && s.expires_at && Date.now() / 1000 > s.expires_at) return ""; return typeof s.access_token === "string" ? s.access_token : "" } catch { return "" }
 }
 function loadLocal(): any[] {
     if (typeof window === "undefined") return []
@@ -50,9 +55,24 @@ const DEMO = [
     { ticker: "035420", name: "NAVER", stance: "watch", note: "실적발표 후 재검토.", date: "2026-06-20", entryPrice: 198000, curPrice: 191500 },
 ]
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
 export default function PublicThesisReview(props: { width?: number; dark?: boolean; apiBase?: string; stockPath?: string }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
     const base = (props.apiBase || DEFAULT_API).replace(/\/+$/, "")
@@ -60,6 +80,19 @@ export default function PublicThesisReview(props: { width?: number; dark?: boole
 
     const [items, setItems] = useState<any[]>(onCanvas ? DEMO : [])
     const [loading, setLoading] = useState<boolean>(!onCanvas)
+    const [authTick, setAuthTick] = useState(0)   // 로그인/토큰갱신 시 데이터 로더 재트리거
+
+    // 로그인/토큰갱신 후 세션 재평가 → 서버 thesis 재fetch. verity_auth_change=AuthGate dispatch · storage=타탭
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        const onAuth = () => setAuthTick((n) => n + 1)
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => {
+            window.removeEventListener("verity_auth_change", onAuth)
+            window.removeEventListener("storage", onAuth)
+        }
+    }, [onCanvas])
 
     useEffect(() => {
         if (onCanvas) return
@@ -78,8 +111,8 @@ export default function PublicThesisReview(props: { width?: number; dark?: boole
             if (!base_list.length) { setItems([]); setLoading(false); return }
             // 종가(flow_5d)·종목명(universe) 1회 fetch — 실시간가 조회 아님(컴플라이언스)
             Promise.all([
-                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
             ]).then(([fd, ud]) => {
                 if (!alive) return
                 const fm = (fd && (fd.flows || fd)) || {}
@@ -105,7 +138,7 @@ export default function PublicThesisReview(props: { width?: number; dark?: boole
             build(loadLocal())
         }
         return () => { alive = false }
-    }, [onCanvas, base])
+    }, [onCanvas, base, authTick])
 
     const wrap: any = { width: props.width || 380, fontFamily: FONT, background: C.bg, color: C.ink, padding: 14, boxSizing: "border-box" }
     const st = (id: string) => STANCES[id] || STANCES.watch

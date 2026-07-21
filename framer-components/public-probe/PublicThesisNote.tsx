@@ -33,6 +33,7 @@ function loadToken(): string {
         const raw = localStorage.getItem(SESSION_KEY)
         if (!raw) return ""
         const s = JSON.parse(raw)
+        if (s && s.expires_at && Date.now() / 1000 > s.expires_at) return ""   // 만료 가드 — 만료 토큰 반환 시 401 유발
         return typeof s.access_token === "string" ? s.access_token : ""
     } catch { return "" }
 }
@@ -89,14 +90,52 @@ const DEMO_FEED = [
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
+
+// 마운트/토글 재판독 SoT — verity_theme(localStorage) 우선 → html[data-an-theme] → body[data-framer-theme].
+// 791d29f7e 8개 fix 에서 누락됐던 body-only 재판독 버그 정정(다크에서 라이트 고정 방지, 2026-07-21 일괄).
+function readBodyDark(): boolean {
+    if (typeof document === "undefined") return false
+    try {
+        const pref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (pref === "dark") return true
+        if (pref === "light") return false
+        const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+        if (h === "dark") return true
+        if (h === "light") return false
+        if (document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 export default function PublicThesisNote(props: Props) {
     const { ticker, apiBase, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     // 테마 추종 — 사이트 다크모드(body[data-framer-theme]) 따라감. 캔버스는 dark prop 정적.
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     useEffect(() => {
         if (onCanvas) return
-        const read = () => { const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""; setThemeDark(t === "dark") }
+        const read = () => setThemeDark(readBodyDark())
         read()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(read)
@@ -129,12 +168,24 @@ export default function PublicThesisNote(props: Props) {
         return () => { window.removeEventListener(TK_EVENT, reread); window.removeEventListener("popstate", reread) }
     }, [ticker, onCanvas])
 
+    // 로그인/토큰갱신 후 토큰 재읽기 → 서버 thesis·피드 재fetch (token 키 loader 자동 재실행). verity_auth_change=AuthGate dispatch · storage=타탭
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        const onAuth = () => setToken(loadToken())
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => {
+            window.removeEventListener("verity_auth_change", onAuth)
+            window.removeEventListener("storage", onAuth)
+        }
+    }, [onCanvas])
+
     const [thesis, setThesis] = useState<any>(null)   // 저장된 기록
     const [editing, setEditing] = useState(false)
     const [stance, setStance] = useState("watch")
     const [note, setNote] = useState("")
     const [curPrice, setCurPrice] = useState<number | null>(null)
-    const [token] = useState<string>(loadToken)
+    const [token, setToken] = useState<string>(loadToken)
     const [serverTheses, setServerTheses] = useState<Record<string, any> | null>(null)  // null=미로드(로그인 시)
     // 커뮤니티 v1 — 공개 토글 + 종목별 공개 피드 + 좋아요/신고
     const [isPublic, setIsPublic] = useState(false)
@@ -209,7 +260,7 @@ export default function PublicThesisNote(props: Props) {
         if (onCanvas) { setCurPrice(73900); return }
         if (!tk) return
         let alive = true
-        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json", { cache: "no-store" })
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive || !d) return
