@@ -538,28 +538,18 @@ def _load_us_consensus() -> Dict[str, Dict[str, Any]]:
 
 
 def _us_consensus_block(cons: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """yfinance 컨센서스 raw → public 블록 (목표가 평균·범위 / 투자의견 / 업사이드 / 의견 분포).
-    외부 애널리스트 집계 사실만 — 자체 점수·등급 0 (RULE 7)."""
+    """yfinance 컨센서스 raw → public 블록 (link-out only, 2026-07-21 감사).
+
+    목표가(target_mean/high/low)·투자의견(rec_key)·업사이드·의견분포(counts) = 제공사(Benzinga/S&P)
+    라이선스 데이터 → 발행 제외(us_analyst_consensus 7/10 ban 정합, PM "링크아웃 전환" 승인). 컨센서스
+    접근 = 리포트 내 출처 링크아웃(PublicStockReport:2563 이 ticker 로 Yahoo/네이버 링크 생성)이 담당.
+    num_analysts(커버 애널리스트 수) 만 사실 메타로 유지 — 목표가·등급 아님."""
     if not cons or not cons.get("num_analysts"):
         return None
-
-    def _usd2(v: Any) -> Optional[str]:
-        try:
-            return f"${float(v):,.2f}"
-        except (TypeError, ValueError):
-            return None
-
-    out = {
-        "target_price": _usd2(cons.get("target_mean")),
-        "target_high": _usd2(cons.get("target_high")),
-        "target_low": _usd2(cons.get("target_low")),
-        "opinion": REC_KEY_KO.get(str(cons.get("rec_key") or "")),
-        "upside": _pct(cons.get("upside_pct"), signed=True),
+    return {
         "num_analysts": cons.get("num_analysts"),
-        "counts": cons.get("counts") if isinstance(cons.get("counts"), dict) else None,
-        "note": "외부 애널리스트 집계(yfinance) · 자체 의견 아님",
+        "note": "애널리스트 목표가·투자의견은 출처 링크아웃으로 확인 (제공사 라이선스 데이터)",
     }
-    return {k: v for k, v in out.items() if v is not None}
 
 
 def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[str, float]],
