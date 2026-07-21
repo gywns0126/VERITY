@@ -72,10 +72,28 @@ def compute_social_sentiment(
         except Exception as e:
             logger.warning(f"StockTwits 감성 수집 실패 ({name}): {e}")
 
+    # 2026-07-21 감사 P1: 결측/skip 소스가 score=50 을 full weight 로 주입해 composite 를 50 으로 끌어당김
+    # (예: KR reddit skip, 미장 stocktwits _error). 실제 데이터 반환한 소스만으로 가중 재정규화.
+    # 전 소스 present 시 wsum=1.0 → 기존 산식과 동일(하위호환).
+    news_present = bool(news_data) and (news_data.get("headline_count") or 0) > 0
     if is_us:
-        combined = news_score * 0.30 + stocktwits_score * 0.35 + reddit_score * 0.35
+        _pairs = [
+            (news_score, 0.30, news_present),
+            (stocktwits_score, 0.35, bool(stocktwits_data) and not stocktwits_data.get("_error")),
+            (reddit_score, 0.35, bool(reddit_data)),
+        ]
     else:
-        combined = news_score * 0.40 + community_score * 0.35 + reddit_score * 0.25
+        _pairs = [
+            (news_score, 0.40, news_present),
+            (community_score, 0.35, bool(community_data)),
+            (reddit_score, 0.25, bool(reddit_data)),
+        ]
+    _active = [(sc, w) for sc, w, present in _pairs if present]
+    if _active:
+        _wsum = sum(w for _, w in _active) or 1.0
+        combined = sum(sc * w for sc, w in _active) / _wsum
+    else:
+        combined = 50.0  # 전 소스 결측 → 중립
 
     combined = max(0, min(100, round(combined)))
 
