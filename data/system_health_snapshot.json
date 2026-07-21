@@ -1,31 +1,31 @@
 {
   "system_health": {
-    "status": "ok",
-    "checked_at": "2026-07-21T12:36:42+09:00",
+    "status": "error",
+    "checked_at": "2026-07-21T13:03:43+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 261704,
+    "elapsed_ms": 83343,
     "api_health": {
       "dart": {
-        "status": "ok",
-        "latency_ms": 228738,
-        "detail": "정상",
-        "attempts": 1
+        "status": "error",
+        "latency_ms": 40635,
+        "detail": "HTTPSConnectionPool(host='opendart.fss.or.kr', port=443): Max retries exceeded with url: /api/corpCode.xml?crtfc_key=a66",
+        "attempts": 2
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 245,
+        "latency_ms": 998,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 353,
+        "latency_ms": 507,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 110,
+        "latency_ms": 127,
         "detail": "정상",
         "attempts": 1
       },
@@ -37,49 +37,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 763,
+        "latency_ms": 4946,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 5903,
+        "latency_ms": 1162,
         "detail": "정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 22318,
+        "latency_ms": 31757,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260720)",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1514,
+        "latency_ms": 1607,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 886,
+        "latency_ms": 873,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 118,
+        "latency_ms": 55,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 61,
+        "latency_ms": 125,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 272,
+        "latency_ms": 143,
         "detail": "정상",
         "attempts": 1
       },
@@ -93,10 +93,10 @@
     "github_worker": {
       "status": "running",
       "conclusion": "in_progress",
-      "workflow": "Price Pulse (1m KR/US 지수 + 보유 + 추천)",
-      "started_at": "2026-07-21T03:35:36Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/29798932212",
-      "detail": "Price Pulse (1m KR/US 지수 + 보유 + 추천): in_progress"
+      "workflow": "DART Catalyst Pulse (공시속보 신선도)",
+      "started_at": "2026-07-21T04:00:36Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/29800046117",
+      "detail": "DART Catalyst Pulse (공시속보 신선도): in_progress"
     },
     "data_recency": {
       "status": "ok",
@@ -104,44 +104,44 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-07-21 12:31",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-21 13:01",
+          "age_hours": 0.04,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-07-21 12:31",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-21 13:01",
+          "age_hours": 0.04,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-07-21 12:31",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-21 13:01",
+          "age_hours": 0.04,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-07-21 12:31",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-21 13:01",
+          "age_hours": 0.04,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-07-21 12:31",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-21 13:01",
+          "age_hours": 0.04,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-07-21 12:31",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-21 13:01",
+          "age_hours": 0.04,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-07-21 12:31",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-21 13:01",
+          "age_hours": 0.04,
           "threshold_hours": 1
         }
       }
@@ -149,13 +149,15 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "03deec7",
-      "remote_message": "📊 macro_snapshot 2026-07-21T12:33",
-      "remote_date": "2026-07-21T03:33:09Z",
-      "local_sha": "1b131fa",
-      "detail": "cron 자동 갱신 — 📊 macro_snapshot 2026-07-21T12:33"
+      "remote_sha": "eaaf3f4",
+      "remote_message": "📊 macro_snapshot 2026-07-21T13:02",
+      "remote_date": "2026-07-21T04:03:10Z",
+      "local_sha": "4bca3e5",
+      "detail": "cron 자동 갱신 — 📊 macro_snapshot 2026-07-21T13:02"
     },
-    "errors": [],
+    "errors": [
+      "DART 재무 API 오류 — HTTPSConnectionPool(host='opendart.fss.or.kr', port=443): Max retries exceeded with url: /api/corpCode.xml?crtfc_key=a66"
+    ],
     "warnings": [],
     "apis": {
       "kis_openapi": {
@@ -164,9 +166,9 @@
         "total": 3
       }
     },
-    "overall_status": "ok"
+    "overall_status": "error"
   },
-  "updated_at": "2026-07-21T12:36:45+09:00",
+  "updated_at": "2026-07-21T13:03:46+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
