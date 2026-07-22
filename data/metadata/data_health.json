@@ -1,11 +1,10 @@
 {
  "_meta": {
-  "generated_at": "2026-07-22T11:04:51.175793+09:00",
+  "generated_at": "2026-07-22T14:44:54.682034+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "red",
+ "status": "amber",
  "reasons": [
-  "P0 stale 2건",
   "비P0 stale 1건"
  ],
  "publish_guard": {
@@ -13,7 +12,7 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-07-22T11:04:51.136159+09:00",
+  "generated_at": "2026-07-22T14:44:54.633917+09:00",
   "ok": true,
   "failed": 0,
   "max_cdn_age_s": 0,
@@ -68,15 +67,15 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-07-22T11:04:41.042016+09:00",
+  "generated_at": "2026-07-22T14:44:46.913719+09:00",
   "summary": {
-   "fresh": 25,
-   "stale": 3,
+   "fresh": 27,
+   "stale": 1,
    "closed": 0,
    "discontinued": 1,
    "p0": {
     "total": 6,
-    "fresh": 4,
+    "fresh": 6,
     "closed": 0,
     "active": 6
    },
@@ -93,18 +92,7 @@
     "active": 12
    }
   },
-  "stale_p0": [
-   {
-    "id": "crypto",
-    "label": "크립토 시세·파생",
-    "age_min": 91.9
-   },
-   {
-    "id": "dart_catalyst_alerts",
-    "label": "DART 공시 알림",
-    "age_min": 236.9
-   }
-  ],
+  "stale_p0": [],
   "stale_other": [
    "equity_research"
   ]
