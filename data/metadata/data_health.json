@@ -1,22 +1,22 @@
 {
  "_meta": {
-  "generated_at": "2026-07-22T08:53:40.835123+09:00",
+  "generated_at": "2026-07-22T11:04:51.175793+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "amber",
+ "status": "red",
  "reasons": [
-  "비P0 stale 1건",
-  "CDN age 457s > 120s(스테일 서빙)"
+  "P0 stale 2건",
+  "비P0 stale 1건"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-07-22T08:53:40.771979+09:00",
+  "generated_at": "2026-07-22T11:04:51.136159+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 457,
+  "max_cdn_age_s": 0,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -37,7 +37,7 @@
      "PBR": 94.9
     },
     "total": 1505,
-    "cdn_age_s": 457,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -48,7 +48,7 @@
      "PBR": 73.7
     },
     "total": 3951,
-    "cdn_age_s": 457,
+    "cdn_age_s": 0,
     "error": null
    }
   ]
@@ -68,17 +68,17 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-07-22T08:53:36.111230+09:00",
+  "generated_at": "2026-07-22T11:04:41.042016+09:00",
   "summary": {
    "fresh": 25,
-   "stale": 1,
-   "closed": 2,
+   "stale": 3,
+   "closed": 0,
    "discontinued": 1,
    "p0": {
     "total": 6,
     "fresh": 4,
-    "closed": 2,
-    "active": 4
+    "closed": 0,
+    "active": 6
    },
    "p1": {
     "total": 11,
@@ -93,7 +93,18 @@
     "active": 12
    }
   },
-  "stale_p0": [],
+  "stale_p0": [
+   {
+    "id": "crypto",
+    "label": "크립토 시세·파생",
+    "age_min": 91.9
+   },
+   {
+    "id": "dart_catalyst_alerts",
+    "label": "DART 공시 알림",
+    "age_min": 236.9
+   }
+  ],
   "stale_other": [
    "equity_research"
   ]
