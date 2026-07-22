@@ -284,7 +284,8 @@ def _get_index_change(ticker: str, name: str) -> dict:
 
 
 def _get_upbit(market: str) -> dict:
-    """업비트 KRW 코인 일봉 시세 + 30일 sparkline (TIDE 동일 소스 업비트). 추측 0, 공개 시세 보드용.
+    """업비트 KRW 코인 일봉 시세 + 30일 sparkline (TIDE 동일 소스 업비트). 추측 0, 내부(본인) 분석용.
+    🚨 업비트 = 재배포/공개표시 약관 금지(2026-07 리서치) → 공개 보드 표시 금지. 내부/TIDE(본인 이용)만.
     소액 코인(도지 등)은 소수점 보존, 고액은 정수 반올림."""
     meta = {"source": "upbit", "currency": "KRW", "as_of": _now_kst_iso()}
     try:
