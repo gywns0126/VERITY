@@ -625,13 +625,7 @@ export default function PublicDiscovery(props: Props) {
     )
     useEffect(() => {
         if (onCanvas) return
-        const read = () => {
-            const t =
-                typeof document !== "undefined" && document.body
-                    ? document.body.dataset.framerTheme
-                    : ""
-            setThemeDark(t === "dark")
-        }
+        const read = () => setThemeDark(readBodyDark())
         read()
         if (
             typeof MutationObserver === "undefined" ||
@@ -1566,7 +1560,7 @@ export default function PublicDiscovery(props: Props) {
                         borderRadius: 11,
                         fontSize: 13,
                         fontWeight: 800,
-                        background: C.vt,
+                        background: "#6c5ce7",
                         color: "#fff",
                     }}
                 >

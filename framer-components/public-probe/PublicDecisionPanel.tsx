@@ -474,13 +474,7 @@ export default function PublicDecisionPanel(props: Props) {
     )
     useEffect(() => {
         if (onCanvas) return
-        const read = () => {
-            const t =
-                typeof document !== "undefined" && document.body
-                    ? document.body.dataset.framerTheme
-                    : ""
-            setThemeDark(t === "dark")
-        }
+        const read = () => setThemeDark(readBodyDark())
         read()
         if (
             typeof MutationObserver === "undefined" ||

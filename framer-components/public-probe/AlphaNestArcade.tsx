@@ -235,6 +235,27 @@ function anReadDark(): boolean {
 }
 
 
+function readBodyDark(): boolean {
+    if (typeof document === "undefined") return false
+    try {
+        const pref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (pref === "dark") return true
+        if (pref === "light") return false
+        const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+        if (h === "dark") return true
+        if (h === "light") return false
+        if (document.body) {
+            const a = document.body.dataset.framerTheme
+            if (a === "dark") return true
+            if (a === "light") return false
+        }
+        if (typeof window !== "undefined" && window.matchMedia) {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+        }
+    } catch (e) {}
+    return false
+}
+
 export default function AlphaNestArcade(props: Props) {
     const { supabaseUrl, supabaseAnonKey, cellSize, dark } = props
     const url = (supabaseUrl || DEFAULT_SUPABASE_URL).replace(/\/+$/, "")
@@ -247,10 +268,7 @@ export default function AlphaNestArcade(props: Props) {
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
     useEffect(() => {
         if (onCanvas) return
-        const readTheme = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
+        const readTheme = () => setThemeDark(readBodyDark())
         readTheme()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(readTheme)
