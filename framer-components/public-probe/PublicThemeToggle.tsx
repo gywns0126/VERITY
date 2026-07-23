@@ -15,6 +15,13 @@ import React, { useEffect, useState } from "react"
  *    JS 상태(theme)는 aria-label/title 전용 (시각 무관). 해/달 아이콘 둘 다 렌더하고
  *    CSS 로 표시 전환 — SSR 첫 페인트는 OS media query, 속성 설정 후엔 속성 선택자 우선.
  *
+ * 🚨 2026-07-23 body-리셋 자가치유 (로그아웃 복귀 '부분 라이트' fix) — 되돌리지 말 것.
+ *    증상 = 로그아웃 후 재로그인해 페이지 복귀하면 네이티브 PageBg 만 라이트로 튀고(코드 컴포넌트는
+ *    html[data-an-theme]/verity_theme 로 다크 유지) 배경만 흰색 = split. 원인 = Framer 런타임이
+ *    복귀/새로고침 때 body[data-framer-theme] 를 OS(라이트)로 리셋하는데 html 은 안 건드림.
+ *    해결 = 옵저버가 body 가 저장 선호(prefTheme)와 어긋나면 즉시 body+html 을 pref 로 재확정.
+ *    이 토글은 NAV 상주(전 페이지) 라 한 곳에서 전 페이지 자가치유. (헤드 Custom Code 가드의 코드측 백스톱)
+ *
  * ⚠ 캔버스 에디터에선 동작 안 함(부작용 없음) — 실제 동작은 Preview/Publish 에서 확인.
  */
 
@@ -37,6 +44,21 @@ function systemTheme(): Theme {
 function readBodyTheme(): Theme {
     if (typeof document === "undefined") return "light"
     return document.body && document.body.dataset.framerTheme === "dark" ? "dark" : "light"
+}
+
+/* 저장 선호(사용자 선택) = verity_theme(localStorage) → html[data-an-theme](헤드 스크립트) → 기본 라이트.
+   body-리셋 자가치유의 기준값 — Framer 가 body 를 OS 로 튕겨도 이 값으로 되돌린다. */
+function prefTheme(): Theme {
+    try {
+        const s = localStorage.getItem(THEME_KEY)
+        if (s === "dark" || s === "light") return s
+    } catch (e) { /* no-op */ }
+    if (typeof document !== "undefined" && document.documentElement) {
+        const h = document.documentElement.dataset.anTheme
+        if (h === "dark") return "dark"
+        if (h === "light") return "light"
+    }
+    return "light"
 }
 
 function applyTheme(t: Theme) {
@@ -120,7 +142,18 @@ export default function PublicThemeToggle(props: Props) {
         setTheme(initial)
 
         if (typeof MutationObserver === "undefined" || !document.body) return
-        const obs = new MutationObserver(() => setTheme(readBodyTheme()))
+        /* body 속성 감시 — Framer 가 복귀/새로고침에 body 를 OS(라이트)로 리셋하면 저장 선호(prefTheme)로
+           재확정 = 네이티브 PageBg '부분 라이트' 자가치유(2026-07-23 로그아웃 복귀 fix). 재확정 시 html 도
+           함께(옵저버 재발화 → body===pref → 정착). 사용자 토글은 applyTheme 가 verity_theme 를 먼저
+           바꿔 pref 가 새 값이라 되돌리지 않음. 되돌리지 말 것. */
+        const obs = new MutationObserver(() => {
+            const pref = prefTheme()
+            if (readBodyTheme() !== pref) {
+                if (document.body) document.body.dataset.framerTheme = pref
+                if (document.documentElement) document.documentElement.dataset.anTheme = pref
+            }
+            setTheme(pref)
+        })
         obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
         return () => obs.disconnect()
     }, [isCanvas])
