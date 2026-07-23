@@ -405,10 +405,21 @@ def _compute_fact_score(
     # Phase 3: 증권사 리포트 + DART 사업보고서 AI 분석 컴포넌트
     # ⚠ analyst_report/dart_health = Gemini 가 리포트·DART 원문을 읽고 생성한 정성 판단(LLM read).
     # fact_score(실측 버킷)에 들어가지만 '측정된 사실' 아님 — 아래 provenance tag 로 정직 표기.
-    # 🔜 후속(별 PR): analyst_report report_count N-guard 수축 — 수축강도 k 외부 근거(credibility
-    #    이론 EPV/VHM) 확정 후 반영 예정. [[feedback_formula_coefficient_fact_check]].
     analyst_report = stock.get("analyst_report_summary") or {}
-    analyst_score = _safe_float(analyst_report.get("analyst_sentiment_score"), 50.0)
+    _analyst_raw = _safe_float(analyst_report.get("analyst_sentiment_score"), 50.0)
+    # 2026-07-23 RULE 7(PM=approved) N-guard: 단일 리포트가 극단 LLM 감정점수(예: LG 003550 = 리포트
+    # 1건에 95)를 그대로 fact 로 통과시키던 것 차단. Bühlmann 신뢰도 수축 Z=n/(n+k), prior=중립50:
+    #   effective = 50 + (raw−50) × n/(n+k). n=1→1/3(95→65), n=2→1/2, n↑→raw 수렴.
+    # k=2 근거(외부 검증, Perplexity 2026-07-23): ① Bühlmann credibility(1967) 표준형 ② Clark(2013)
+    #   "credibility as data augmentation" = k=가상관측치, 데이터 부족 시 유효한 보수 기본값 ③ 액추어리
+    #   실증 k≈2~15 중 보수(고수축) 끝. 원칙적 k=EPV/VHM 이나 실데이터 = analyst_report 종목 3개(≥2리포트
+    #   2개)로 EPV/VHM 추정 불가(그 자체가 곡선맞추기) → k=2 고정. 커버리지 밀도↑ 시 Bühlmann-Straub 풀링
+    #   재추정 후속. [[feedback_formula_coefficient_fact_check]] [[feedback_seed_size_conservatism]].
+    _n_reports = _safe_float(analyst_report.get("report_count"), 0.0)
+    if analyst_report.get("analyst_sentiment_score") is not None and _n_reports > 0:
+        analyst_score = 50.0 + (_analyst_raw - 50.0) * (_n_reports / (_n_reports + 2.0))
+    else:
+        analyst_score = _analyst_raw
 
     dart_analysis = stock.get("dart_business_analysis") or {}
     dart_health = _safe_float(dart_analysis.get("business_health_score"), 50.0)
