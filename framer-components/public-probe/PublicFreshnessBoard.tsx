@@ -3,12 +3,10 @@ import { useState, useEffect } from "react"
 
 /**
  * 데이터 신선도 board — 전 공개 스트림의 SLA 실측 상태 페이지 (나박 대응, 2026-07-07).
- * 데이터(Blob): freshness_board.json (freshness_board_builder — 매시 cron_health 사이클 갱신).
- * 행 = 스트림 한글명 + 갱신 주기 + 상태점(신선/지연/휴지) + 마지막 갱신 나이 + SLA 임계.
+ * 데이터(Blob): freshness_board.json. 🚨 RULE 7 사실만. 지연도 그대로 노출(유리박스 차별점).
  *
- * 🚨 RULE 7 — 사실만: 상태 = 마지막 갱신 시각 실측 vs SLA 임계 비교. 점수/예측 0.
- * RULE 6 — LLM narrative 0. 다크모드 자가감지(body[data-framer-theme]). cache-fallback(sessionStorage).
- * 지연(stale)도 숨기지 않고 그대로 노출 — 유리박스가 차별점 (경쟁 대시보드는 신선도 무표기).
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-fb-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 정적 HTML 정합. 되돌리지 말 것.
  */
 
 const LIGHT = {
@@ -22,18 +20,17 @@ const DARK = {
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/freshness_board.json"
 
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-fb-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "fb"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
+
 const CRIT_LABEL: Record<string, string> = { P0: "핵심 데이터", P1: "보조 데이터", P2: "배경 데이터" }
 const STATUS_LABEL: Record<string, string> = { fresh: "신선", stale: "지연", paused: "휴지" }
 
-function readBodyDark(): boolean {
-    try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-    } catch (e) {}
-    if (typeof document === "undefined" || !document.body) return false
-    return document.body.dataset.framerTheme === "dark"
-}
 function fmtMins(m: any): string {
     const x = Number(m)
     if (!isFinite(x) || x < 0) return ""
@@ -65,34 +62,10 @@ const SAMPLE = {
     ],
 }
 
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
-
 export default function PublicFreshnessBoard(props: { width?: number; dark?: boolean; dataUrl?: string }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
     const [showP2, setShowP2] = useState<boolean>(false)
-
-    useEffect(() => {
-        if (onCanvas) return
-        setThemeDark(readBodyDark())
-        const obs = new MutationObserver(() => setThemeDark(readBodyDark()))
-        if (document.body) obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
 
     useEffect(() => {
         if (onCanvas) return
@@ -111,11 +84,8 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
         return () => { alive = false }
     }, [onCanvas, props.dataUrl])
 
-    const isDark = onCanvas ? !!props.dark : themeDark
-    const C = isDark ? DARK : LIGHT
-
     const wrap: any = { width: props.width || 380, maxWidth: "100%", fontFamily: FONT, background: C.bg, color: C.ink, padding: "0 14px", boxSizing: "border-box" }
-    if (!data) return <div style={wrap}><div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>신선도 집계 준비 중…</div></div>
+    if (!data) return <div style={wrap}><style>{AN_PALETTE}</style><div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>신선도 집계 준비 중…</div></div>
 
     const meta = data._meta || {}
     const sum = data.summary || {}
@@ -158,7 +128,7 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
 
     return (
         <div style={wrap}>
-            {/* 헤더 + 요약 칩 */}
+            <style>{AN_PALETTE}</style>
             <div style={{ marginBottom: 4 }}>
                 <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>데이터 신선도</div>
                 <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3, lineHeight: 1.5 }}>
@@ -181,7 +151,6 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
             {p0.length > 0 && group("P0", p0)}
             {p1.length > 0 && group("P1", p1)}
 
-            {/* P2 = 배경 데이터, 접힘 기본 (본질은 존재 증명) */}
             {p2.length > 0 && !showP2 && (
                 <div onClick={() => setShowP2(true)}
                     style={{ background: C.card, borderRadius: 14, padding: "12px 14px", marginTop: 10, cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", display: "flex", alignItems: "center" }}>
@@ -191,7 +160,6 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
             )}
             {p2.length > 0 && showP2 && group("P2", p2)}
 
-            {/* RULE 7 footer */}
             <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 12, lineHeight: 1.55 }}>
                 상태 = 마지막 갱신 시각 실측을 스트림별 SLA 임계와 비교한 사실 · 주말·장외 무생산 구간은
                 유효 나이에서 제외 (휴지) · 지연도 그대로 표시
@@ -202,6 +170,6 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
 
 addPropertyControls(PublicFreshnessBoard, {
     width: { type: ControlType.Number, title: "Width", defaultValue: 380 },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
     dataUrl: { type: ControlType.String, title: "Data URL", defaultValue: DATA_URL },
 })

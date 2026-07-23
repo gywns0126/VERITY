@@ -2,14 +2,11 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 분기 재무 추이 — VERITY AlphaNest 종목 리포트 깊이 섹션. (독립 컴포넌트 — US는 quarterlyUrl=us_quarterly_public.json)
+ * 분기 재무 추이 — VERITY AlphaNest 종목 리포트 깊이 섹션. DART/SEC 분기 사실만(RULE 7).
+ * 데이터 = quarterlyUrl {stocks:{ticker:{quarters:[...]}}}. 실데이터(≥4분기) 없으면 자동 숨김.
  *
- * 목적 = "재무 단년 스냅샷 1개" → "최근 N분기 흐름(개선/악화)". DART/SEC 분기 사실만(RULE 7).
- * 데이터 = quarterlyUrl {stocks:{ticker:{quarters:[...]}}}. KR=dart_quarterly_public.json / US=us_quarterly_public.json.
- *   quarters[] = {q(분기말 YYYY-MM-DD), debt_ratio, roa, current_ratio, gross_margin, asset_turnover,
- *                 operating_margin, net_margin, roe(US 2026-07 확장 — 없는 시장/종목은 행 자동 skip)}
- * 🚨 라이브: 실데이터(≥4분기) 없으면 **자동 숨김**(가짜 추이 금지, RULE 7). 캔버스만 SAMPLE 미리보기.
- * 테마: init=false(SSG 라이트)→effect가 body 판독으로 교정(리렌더 강제). 외곽선 없음(소프트 카드). 루트 패딩 = /stock 컨벤션(narrow?14:18).
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-qtr-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 정적 HTML 정합. SVG stroke/fill 은 style 로 넘김(var). 되돌리지 말 것.
  */
 
 const LIGHT = {
@@ -23,6 +20,14 @@ const DARK = {
     good: "#34e08a", goodS: "#11281d", warn: "#ff9500", warnS: "#2a2113", grid: "#20262f",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-qtr-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "qtr"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 const METRICS: { key: string; label: string; unit: string; better: "up" | "down"; note?: string }[] = [
     { key: "debt_ratio", label: "부채비율", unit: "%", better: "down" },
@@ -73,46 +78,17 @@ function qLabel(qEnd: string): string {
     return `${y}.${q}`
 }
 
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
 export default function PublicQuarterlyTrend(props: Props) {
-    const { ticker, quarterlyUrl, maxQuarters, showExtremes, dark } = props
+    const { ticker, quarterlyUrl, maxQuarters, showExtremes } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [quarters, setQuarters] = useState<any[]>(onCanvas ? SAMPLE_QUARTERS : [])
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
-    const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
-
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
 
     useEffect(() => {
         const el = rootRef.current
@@ -158,6 +134,7 @@ export default function PublicQuarterlyTrend(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             <div style={{ background: C.card, borderRadius: 16, padding: narrow ? "15px 14px" : "17px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.4px" }}>분기 재무 추이</span>
@@ -215,26 +192,26 @@ export default function PublicQuarterlyTrend(props: Props) {
                                 <svg width={CW} height={CH} style={{ display: "block", width: "100%", overflow: "visible" }} viewBox={`0 0 ${CW} ${CH}`} preserveAspectRatio="none">
                                     <defs>
                                         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor={C.vt} stopOpacity={C === DARK ? 0.28 : 0.18} />
-                                            <stop offset="100%" stopColor={C.vt} stopOpacity={0} />
+                                            <stop offset="0%" stopOpacity={0.2} style={{ stopColor: C.vt }} />
+                                            <stop offset="100%" stopOpacity={0} style={{ stopColor: C.vt }} />
                                         </linearGradient>
                                     </defs>
                                     <path d={areaPath} fill={`url(#${gid})`} />
-                                    <path d={linePath} fill="none" stroke={C.vt} strokeWidth={1.75}
-                                        strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                                    <path d={linePath} fill="none" strokeWidth={1.75}
+                                        strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ stroke: C.vt }} />
                                     {showExtremes && (
                                         <>
-                                            <circle cx={hiPt.x} cy={hiPt.y} r={2.6} fill={C.card} stroke={C.vt} strokeWidth={1.4} vectorEffect="non-scaling-stroke" />
-                                            <circle cx={loPt.x} cy={loPt.y} r={2.6} fill={C.card} stroke={C.vt} strokeWidth={1.4} vectorEffect="non-scaling-stroke" />
-                                            <text x={clampX(hiPt.x)} y={Math.max(7, hiPt.y - 4)} textAnchor="middle" fontSize={8.5} fontWeight={700} fill={C.faint} fontFamily={FONT}>
+                                            <circle cx={hiPt.x} cy={hiPt.y} r={2.6} strokeWidth={1.4} vectorEffect="non-scaling-stroke" style={{ fill: C.card, stroke: C.vt }} />
+                                            <circle cx={loPt.x} cy={loPt.y} r={2.6} strokeWidth={1.4} vectorEffect="non-scaling-stroke" style={{ fill: C.card, stroke: C.vt }} />
+                                            <text x={clampX(hiPt.x)} y={Math.max(7, hiPt.y - 4)} textAnchor="middle" fontSize={8.5} fontWeight={700} fontFamily={FONT} style={{ fill: C.faint }}>
                                                 최고 {hiPt.v.toFixed(dec)}
                                             </text>
-                                            <text x={clampX(loPt.x)} y={Math.min(CH - 1, loPt.y + 9)} textAnchor="middle" fontSize={8.5} fontWeight={700} fill={C.faint} fontFamily={FONT}>
+                                            <text x={clampX(loPt.x)} y={Math.min(CH - 1, loPt.y + 9)} textAnchor="middle" fontSize={8.5} fontWeight={700} fontFamily={FONT} style={{ fill: C.faint }}>
                                                 최저 {loPt.v.toFixed(dec)}
                                             </text>
                                         </>
                                     )}
-                                    <circle cx={lastPt.x} cy={lastPt.y} r={3.4} fill={C.vt} stroke={C.card} strokeWidth={1.6} vectorEffect="non-scaling-stroke" />
+                                    <circle cx={lastPt.x} cy={lastPt.y} r={3.4} strokeWidth={1.6} vectorEffect="non-scaling-stroke" style={{ fill: C.vt, stroke: C.card }} />
                                 </svg>
 
                                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
@@ -263,5 +240,5 @@ addPropertyControls(PublicQuarterlyTrend, {
     quarterlyUrl: { type: ControlType.String, title: "Quarterly URL", defaultValue: DEFAULT_URL },
     maxQuarters: { type: ControlType.Number, title: "Max Quarters", defaultValue: 20, min: 4, max: 40, step: 1 },
     showExtremes: { type: ControlType.Boolean, title: "최고·최저점", defaultValue: true, enabledTitle: "On", disabledTitle: "Off" },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

@@ -2,17 +2,11 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 시장 — VERITY 공개 터미널 (골든구스) 탭.
+ * 시장 — VERITY 공개 터미널 (골든구스) 탭. 매크로 레짐 신호 + 이벤트 일정 + IPO.
+ * RULE 7 사실만 · RULE 6 런타임 LLM 0. ⓘ = hover(PC)/탭(모바일) 설명.
  *
- * 데이터 = macro_snapshot.json (Blob) + ipo_watch.json (Blob, IPO 파이프라인).
- * RULE 7 가드 — 노출 제외: market_mood / cross_asset.interpretation / global_events.impact·action.
- * RULE 6 — ⓘ 분석 설명 사전 작성. 런타임 LLM 0.
- * ⓘ = 항상 표시. 도움말 인터랙션 = PC(hover) 커서 / 모바일(touch) 탭. 토글 없음.
- * 반응형 — ResizeObserver + 100%/maxHeight/overflow.
- * 테마: init=false(SSG 라이트)→effect가 body 판독으로 교정(리렌더 강제). 캔버스는 dark prop 정적.
- * 🚨 중복 정리(2026-06-21): 글로벌 시세 보드(PublicMarketBoard)와 겹치는 시세 타일(USD/KRW·VIX·국채10Y·S&P·나스닥·금·WTI)
- *   제거 → 여긴 보드에 없는 **매크로 레짐 신호(금리차·밸류·신용) + 이벤트 일정 + IPO** 만. 보드=한눈 시세, 탭=심화 매크로.
- * 🚨 브랜드 = 보라(vg #6c5ce7/#a99bff, 2026-06-26). 링크·툴팁=보라 / D-day=시간신호라 green 유지. 면책("판단 제공 안 함·권유 아님·비노출")=제거 → 사이트 하단 단일 면책.
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-mkt-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 정적 HTML 정합. 되돌리지 말 것. ⓘ 아이콘 = 순보라 #6c5ce7(양모드).
  */
 
 const LIGHT = {
@@ -28,6 +22,14 @@ const DARK = {
     vt: "#a99bff", vtS: "#241f3a", tipBg: "#222a33", tipFg: "#e3e7ec",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-mkt-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "mkt"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 const INFO: Record<string, string> = {
     "美 10Y-2Y": "장기-단기 국채 금리차. 마이너스(역전)면 경기 침체 선행 신호로 봐요. 플러스면 정상.",
@@ -80,26 +82,12 @@ function fmtDate(s: any): string {
     return x.length === 8 ? `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6, 8)}` : x
 }
 
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
 export default function PublicMarketTab(props: Props) {
-    const { snapshotUrl, ipoUrl, dark } = props
+    const { snapshotUrl, ipoUrl } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     const rootRef = useRef<HTMLDivElement>(null)
@@ -109,23 +97,6 @@ export default function PublicMarketTab(props: Props) {
     const [openTip, setOpenTip] = useState<string>("")
     const [tipBox, setTipBox] = useState<{ left: number; width: number }>({ left: 0, width: 240 })
     const [hoverCapable, setHoverCapable] = useState(true)
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
-
-    const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
-
-    /* 테마 추종: init=false(SSG 라이트) → effect 가 body 판독으로 교정(리렌더 강제). 캔버스는 dark prop 정적 */
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
 
     useEffect(() => {
         if (typeof window === "undefined" || !window.matchMedia) return
@@ -140,7 +111,6 @@ export default function PublicMarketTab(props: Props) {
         return () => ro.disconnect()
     }, [])
 
-    // 바깥 탭/클릭 시 열린 툴팁 닫기 (모바일 탭 후 닫힘)
     useEffect(() => {
         if (typeof document === "undefined") return
         const close = () => setOpenTip("")
@@ -174,7 +144,6 @@ export default function PublicMarketTab(props: Props) {
     const narrow = w > 0 && w < 560
     const pad = narrow ? 12 : 18
 
-    // 🚨 보드(글로벌 시세)와 중복되는 시세 타일은 제외 — 여긴 보드에 없는 매크로 레짐 신호만(금리차·밸류·신용).
     const tiles: MetricBox[] = useMemo(() => {
         const m = (data && data.macro) || {}
         const g = (m.fred && m.fred) || {}
@@ -201,7 +170,6 @@ export default function PublicMarketTab(props: Props) {
         return C.faint
     }
 
-    // 툴팁 열기 — 가로 위치·폭을 컨테이너 안으로 clamp (좌우 안 잘림)
     const openTipAt = (e: any, id: string) => {
         try {
             const root = rootRef.current?.getBoundingClientRect()
@@ -217,7 +185,6 @@ export default function PublicMarketTab(props: Props) {
         setOpenTip(id)
     }
 
-    // ⓘ — 항상 표시. PC: hover, 모바일: 탭. (click 은 stopPropagation 으로 바깥 닫힘과 분리)
     const Info = ({ k, uid }: { k: string; uid: string }) => {
         if (!INFO[k]) return null
         const id = "i:" + k + ":" + uid
@@ -260,6 +227,7 @@ export default function PublicMarketTab(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             <div style={{ marginBottom: 4 }}>
                 <div style={{ fontSize: narrow ? 18 : 20, fontWeight: 800, letterSpacing: "-0.5px" }}>시장</div>
                 <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 3 }}>
@@ -267,7 +235,6 @@ export default function PublicMarketTab(props: Props) {
                 </div>
             </div>
 
-            {/* 매크로 레짐 타일 — ⓘ 호버(PC)/탭(모바일) 시 설명 팝업. 시세 타일은 글로벌 시세 보드로 이관(중복 제거) */}
             {tiles.length > 0 && (
                 <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(${narrow ? 130 : 150}px, 1fr))`, gap: 10, marginTop: 12 }}>
                     {tiles.map((t, ti) => (
@@ -289,7 +256,6 @@ export default function PublicMarketTab(props: Props) {
                 </div>
             )}
 
-            {/* 글로벌 이벤트 일정 */}
             {events.length > 0 && (
                 <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }}>
                     <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>글로벌 이벤트 일정</div>
@@ -313,7 +279,6 @@ export default function PublicMarketTab(props: Props) {
                 </div>
             )}
 
-            {/* IPO 파이프라인 */}
             {ipos.length > 0 && (
                 <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }}>
                     <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>IPO 파이프라인 <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>· 상장 전 · DART</span></div>
@@ -346,5 +311,5 @@ export default function PublicMarketTab(props: Props) {
 addPropertyControls(PublicMarketTab, {
     snapshotUrl: { type: ControlType.String, title: "Snapshot URL", defaultValue: DEFAULT_URL },
     ipoUrl: { type: ControlType.String, title: "IPO URL", defaultValue: DEFAULT_IPO },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

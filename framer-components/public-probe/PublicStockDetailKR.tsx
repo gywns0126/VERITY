@@ -3,15 +3,24 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
  * AlphaNest 공개 — KR 종목 심화 (기관·국민연금 대량보유 + 사업장 + 공시 forensics). DART 사실만.
- * PublicForensics + PublicHoldingsDetail 통합(2026-07-01) — 배치 1번. 둘은 폐기.
- * 🚨 RULE 7 — 위험점수·심각도·해석 0. 사실만. 데이터 = stock_report_public.json(지분·사업장) + kr_forensics_public.json(forensics).
- * 다크모드 = init=false(SSG 라이트)→effect readDark 교정(리렌더 강제). 외곽선 없음(소프트 카드).
- * Framer codeFileId = WNrsqjb (insertUrl framer.com/m/PublicStockDetailKR-RbhPiw.js).
+ * 🚨 RULE 7 — 위험점수·심각도·해석 0. 사실만. 데이터 = stock_report_public.json + kr_forensics_public.json.
+ *
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-sdk-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 정적 HTML 정합. 되돌리지 말 것.
  */
 
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#f0f1f3", vt: "#6c5ce7", vtS: "#f0edff" }
 const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#222730", vt: "#a99bff", vtS: "#241f3a" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-sdk-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "sdk"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
+
 const REPORT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
 const FORENSICS_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_forensics_public.json"
 
@@ -28,48 +37,6 @@ const SAMPLE_REC: any = {
 }
 const SAMPLE_FOR: any = { related_party_transactions: ["상대방: 계열사 등 / 유형: 제품매출 / 규모: 1,505억원 (영업수익의 약 75%)"], contingent_liabilities: ["금융기관 지급보증 USD 137백만 등"], cb_bw: { n_instruments: 2, dilution_pct: 12.5, instruments: [{ type: "CB", issue_amount: 50000000000, strike: 50000, resolved_date: "20250601" }, { type: "BW", issue_amount: 10000000000, strike: 40000, resolved_date: "20240301" }], note: "DART 주요사항보고 발행 기준(전환·상환 미반영) · 희석률=발행가능÷발행주식" }, year: "2025", source_note: "DART 사업보고서 원문 사실 · 자체 위험판단 아님" }
 
-function readDark(): boolean {
-    if (typeof document === "undefined" || !document.body) return false
-    return document.body.dataset.framerTheme === "dark"
-}
-
-function readBodyDark(): boolean {
-    // init=false(SSG 라이트와 동일) → 이 함수는 effect 에서만 실제 테마 교정에 사용(리렌더 강제, SSG-하이드레이션 stuck 방지).
-    try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
-
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?: string; forensicsUrl?: string; dark?: boolean }) {
     // ETF/ETN 선택 시 자기 숨김 — StockReport 가 body[data-verity-asset-kind] 신호 발행 (2026-07-10)
     const [assetKind, setAssetKind] = useState<string>("stock")
@@ -83,9 +50,6 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
         return () => obs.disconnect()
     }, [])
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : anReadDark()))
-    const isDark = onCanvas ? !!props.dark : themeDark
-    const C = isDark ? DARK : LIGHT
     const [rec, setRec] = useState<any>(onCanvas ? SAMPLE_REC : null)
     const [forensics, setForensics] = useState<any>(onCanvas ? SAMPLE_FOR : null)
     const rootRef = useRef<HTMLDivElement>(null)
@@ -98,16 +62,6 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
-
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readDark())
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
 
     useEffect(() => {
         if (onCanvas || !props.ticker) return
@@ -146,6 +100,7 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             {hasInst && (
                 <div>
                     {title("기관·국민연금 대량보유", "DART 5%+ 보고 · 사실")}
@@ -248,5 +203,5 @@ addPropertyControls(PublicStockDetailKR, {
     ticker: { type: ControlType.String, title: "종목코드", defaultValue: "" },
     reportUrl: { type: ControlType.String, title: "Report URL", defaultValue: REPORT_URL },
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: FORENSICS_URL },
-    dark: { type: ControlType.Boolean, title: "Dark (canvas)", defaultValue: false },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false },
 })

@@ -3,20 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 
 /**
  * 관심종목 — VERITY 공개 터미널 (AlphaNest) 우측 상시 사이드바.
+ * 저장 = localStorage["verity_watchlist"]. 검색 universe = universe_search.json. 둥지(보유) 연동 + 내 관점 배지.
+ * 🚨 시세 재배포 컴플라이언스 — 가격 열 없음. 행 클릭 → 리포트. RULE 7 사실만.
  *
- * 저장 = localStorage["verity_watchlist"] = [{ticker,name,market}] (로그인 불요·마찰 0).
- * 검색 universe = universe_search.json (통합 KR+US ~8.4천, nav/리포트/결정 검색과 동일 단일 소스. 2026-06-27 통일 — 괴리 제거).
- * 🚨 시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): /api/stock 실시간가 폴링 제거 — KIS/yfinance 시세를 회원(제3자)에게 재배포 불가.
- *   가격 열 삭제. 시세·차트 = 행 클릭 → 종목 리포트(네이버 link-out + TV 위젯)에서.
- * 저장 시 "verity-watchlist-changed" 이벤트 → PublicDisclosureFeed 가 즉시 관심종목 핀 갱신(같은 페이지).
- * 행 탭 → 종목 리포트(stockPath?q=ticker). RULE 7 — 가격·등락(외부 사실)만, 점수·추천 0.
- * 🚨 내 관점 통합(2026-06-21) — localStorage `verity_thesis_v1`(PublicThesisNote) 읽어 각 종목에 관점 배지(강세/관망/약세).
- *   = "내가 어떻게 본 종목들" 한눈. *사용자 본인* 저널이지 VERITY 추천 아님. focus/이벤트 시 재읽기(다른 페이지서 기록 반영).
- * 🚨 둥지(보유) 연동(2026-07-18) — 로그인 시 /api/holdings 읽어 보유종목을 관심종목에 합쳐 '보유' 배지 표시.
- *   verity_holdings_change/verity_auth_change 시 재조회. 보유-only 종목은 × 없음(해제는 둥지에서).
- * 컴팩트 사이징(목업 정합). 반응형 — ResizeObserver. 캔버스 = SEED 데모.
- * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
- * 🚨 배경 transparent + 하단 면책 푸터 제거(2026-06-26, PM) — 면책은 사이트 하단 단일 통합. 패딩 0(임베드 이중여백 해소).
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-wl-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   배경 transparent(사이드바). <style>{AN_PALETTE} 정적 HTML 정합. 되돌리지 말 것.
  */
 
 const LIGHT = {
@@ -30,6 +21,15 @@ const DARK = {
     vg: "#7fffa0", vgS: "#11281d", vt: "#a99bff", vtBox: "#1c1830", chip: "#1f262e",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-wl-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "wl"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
+
 const LS_KEY = "verity_watchlist"
 const THESIS_KEY = "verity_thesis_v1"
 const STANCE_META: Record<string, { label: string; key: "up" | "down" | "faint" }> = {
@@ -53,9 +53,6 @@ const SEED = [
     { ticker: "000660", name: "SK하이닉스", market: "kr" },
 ]
 
-// 🚨 익명 로컬 스크래치 세션 초기화 (2026-07-13) — 공개 페이지는 로그인 없이 접근 → 공유기기 익명 누출 차단.
-//   새 브라우저 세션(새 방문)마다 1회. 로그인 회원 = 서버(/api/watchgroups) 저장이라 로컬=스크래치 →
-//   유효 세션 있으면 skip(회원 보존), 없으면 clear(익명 초기화). verity_theme(기기설정)은 유지.
 function sessionResetScratch() {
     if (typeof window === "undefined") return
     try {
@@ -71,14 +68,12 @@ function sessionResetScratch() {
     } catch (e) {}
 }
 function loadWatch(): any[] {
-    // 디폴트(SEED) 없음 — 라이브는 빈 상태로 시작. 추가분만 localStorage 저장, 새 세션 = sessionResetScratch 로 리셋(익명).
     if (typeof window === "undefined") return []
     try {
         const r = localStorage.getItem(LS_KEY)
         if (!r) return []
         const a = JSON.parse(r)
         if (!Array.isArray(a)) return []
-        // 구버전 SEED 목업이 그대로 저장돼 있으면(사용자 미변경) 1회 자동 정리 — 목업 잔존 제거
         const seedSet = SEED.map((x) => String(x.ticker)).sort().join(",")
         const curSet = a.map((x: any) => String(x && x.ticker)).sort().join(",")
         if (a.length === SEED.length && curSet === seedSet) {
@@ -116,23 +111,8 @@ function loadToken(): string {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
-
 export default function PublicWatchlist(props: Props) {
-    const { stockUrl, apiBase, stockPath, dark } = props
+    const { stockUrl, apiBase, stockPath } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
 
@@ -144,24 +124,6 @@ export default function PublicWatchlist(props: Props) {
     const [theses, setTheses] = useState<Record<string, any>>({})
     const [adding, setAdding] = useState(false)
     const [query, setQuery] = useState("")
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
-
-    const isDark = onCanvas ? !!dark : themeDark
-    const C = isDark ? DARK : LIGHT
-
-    /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
 
     useEffect(() => {
         const el = rootRef.current
@@ -173,7 +135,7 @@ export default function PublicWatchlist(props: Props) {
 
     useEffect(() => { if (!onCanvas) { sessionResetScratch(); setWatch(loadWatch()) } }, [onCanvas])
 
-    /* 보유종목(둥지, /api/holdings) — 로그인 시 관심종목에 합쳐 '보유' 표시. 로그인/보유변경 시 재조회. */
+    /* 보유종목(둥지, /api/holdings) — 로그인 시 관심종목에 합쳐 '보유' 표시. */
     useEffect(() => {
         if (onCanvas) { setHeld([]); return }
         const load = () => {
@@ -192,7 +154,7 @@ export default function PublicWatchlist(props: Props) {
         return () => { window.removeEventListener("verity_auth_change", load); window.removeEventListener("verity_holdings_change", load); window.removeEventListener("storage", load) }
     }, [onCanvas, base])
 
-    /* 내 관점(thesis) 로드 — mount + focus/이벤트 재읽기(다른 페이지서 기록 반영) */
+    /* 내 관점(thesis) 로드 — mount + focus/이벤트 재읽기 */
     useEffect(() => {
         if (onCanvas) { setTheses({ "247540": { stance: "bull", date: "2026-06-18" }, "000660": { stance: "watch", date: "2026-06-20" }, "034020": { stance: "bear", date: "2026-06-19" } }); return }
         const read = () => setTheses(loadTheses())
@@ -257,7 +219,7 @@ export default function PublicWatchlist(props: Props) {
         window.location.href = p + "?q=" + encodeURIComponent(String(h.ticker || "").trim())
     }
 
-    /* 관심(로컬) ∪ 보유(둥지) 합집합 — 보유는 '보유' 배지, 관심(로컬)만 × 해제 가능 */
+    /* 관심(로컬) ∪ 보유(둥지) 합집합 */
     const rows = useMemo(() => {
         const byTk = new Map<string, any>()
         for (const h of watch) {
@@ -277,7 +239,6 @@ export default function PublicWatchlist(props: Props) {
         return arr
     }, [watch, held])
 
-
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
         background: "transparent", fontFamily: FONT, padding: pad, boxSizing: "border-box", color: C.ink,
@@ -289,7 +250,7 @@ export default function PublicWatchlist(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
-            {/* 관심종목 카드 */}
+            <style>{AN_PALETTE}</style>
             <div style={{ background: C.card, borderRadius: 14, padding: "14px 14px 11px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>관심종목</div>
                 <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 3 }}>검색 → 추가 · 보유종목 자동 표시 · 내 관점 배지</div>
@@ -315,7 +276,6 @@ export default function PublicWatchlist(props: Props) {
                                         {sm && <span style={{ fontSize: 9.5, fontWeight: 800, color: smCol, background: C.chip, borderRadius: 5, padding: "1px 6px", letterSpacing: "-0.1px" }}>내 관점 {sm.label}</span>}
                                     </div>
                                 </div>
-                                {/* 실시간가·등락 열 제거(2026-07-03 컴플라이언스) — 시세는 행 클릭 → 리포트의 네이버 link-out/TV 위젯 */}
                                 <span style={{ flexShrink: 0, fontSize: 13, color: C.faint, fontWeight: 700 }}>›</span>
                                 {h._watched ? (
                                     <button onClick={(e) => { e.stopPropagation(); removeStock(h.ticker) }} title="관심종목 삭제"
@@ -328,7 +288,6 @@ export default function PublicWatchlist(props: Props) {
                     })}
                 </div>
 
-                {/* 검색 추가 */}
                 {adding ? (
                     <div style={{ marginTop: 9 }}>
                         <input style={inputStyle} autoFocus placeholder="종목 검색 (이름·코드)" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -363,5 +322,5 @@ addPropertyControls(PublicWatchlist, {
     stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEFAULT_URL },
     apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
     stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
