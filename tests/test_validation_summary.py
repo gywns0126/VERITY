@@ -148,7 +148,10 @@ def test_write_summary_atomic(monkeypatch, tmp_path, brain_ic_records):
     loaded = json.loads(out.read_text(encoding="utf-8"))
     assert loaded["spec_version"] == "v0"
     assert "_write_error" not in s
-    assert len(loaded["signals"]) == 5
+    # public_slim = funnel 신호(VERITY wide-scan = 비공개 크라운주얼) 공개 slim 에서 제외 →
+    # 공개 발행 4개 (full build_summary 는 shadow_funnel 포함 5개 유지, 위 test 참조).
+    assert len(loaded["signals"]) == 4
+    assert all("funnel" not in x["signal"].lower() for x in loaded["signals"])
 
 
 def test_no_decision_feedback_pure_read(monkeypatch, tmp_path, brain_ic_records):
