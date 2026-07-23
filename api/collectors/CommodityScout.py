@@ -156,7 +156,10 @@ def _spread_regime(c20: float, s20: float) -> Tuple[str, int]:
 
 
 def _margin_safety_formula(pricing_power: float, raw_vol: float) -> float:
-    return float(pricing_power * 0.6 - raw_vol * 0.4)
+    # 2026-07-21 감사 P1: 옛 산식은 pp*0.6-vol*0.4 = -40~+60 스케일인데 소비처(narrator 65/40·red_flags 30)는
+    # 0~100 가정 → narrator 항상 '빠듯'·red_flags downgrade 상시. +50 shift + clip 을 producer 로 이동해
+    # 0~100 정규화(중립 50 기준). fact.py 는 기존 50+ms 를 ms 직접사용으로 변경(수학적 동일, 회귀 0).
+    return float(max(0.0, min(100.0, 50.0 + pricing_power * 0.6 - raw_vol * 0.4)))
 
 
 def _stock_sector(ticker_yf: str) -> str:

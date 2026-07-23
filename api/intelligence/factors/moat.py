@@ -23,9 +23,12 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
     # 1) Hohn: 섹터 배제 — 구조적으로 해자가 약한 업종 감점
     sector = stock.get("sector", "") or ""
     sub_sector = stock.get("sub_sector", "") or stock.get("industry", "") or ""
+    # 2026-07-20 감사 P1: excluded kr 목록은 한글(은행/증권/보험..)인데 sector/industry 는 yfinance 영문
+    # → KR penalty 무발화. company_type(한글 필드)을 매칭축에 포함(no-regression: 부재 시 "").
+    company_type = stock.get("company_type", "") or ""
     sector_key = "us" if is_us else "kr"
     excluded_list = excluded.get(sector_key, [])
-    sector_combined = f"{sector} {sub_sector}".strip()
+    sector_combined = f"{sector} {sub_sector} {company_type}".strip()
     if any(ex.lower() in sector_combined.lower() for ex in excluded_list if ex):
         score += penalty
 

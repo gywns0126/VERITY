@@ -194,6 +194,12 @@ def compute_factor_ic(
         "icir": round(icir, 3),
         "ic_series": [round(v, 5) for v in ic_series[-30:]],
         "is_significant": abs(ic_mean) > 0.05 and abs(icir) > 0.4,
+        # 2026-07-20 감사 P1: abs() 판정이라 음(-) IC 팩터도 significant. 부호 라벨 병기(임계 무변경)
+        # → 소비처가 'positive'(정방향 알파) vs 'inverse'(역방향, 반대로 써야 유효) 구분 가능.
+        "significant_direction": (
+            ("positive" if ic_mean > 0 else "inverse")
+            if (abs(ic_mean) > 0.05 and abs(icir) > 0.4) else None
+        ),
         "decay_alert": decay_alert,
         "sample_count": len(ic_series),
     }
