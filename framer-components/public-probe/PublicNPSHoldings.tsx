@@ -123,12 +123,13 @@ function anReadDark(): boolean {
         __anHyd = true
         return false
     }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    const h = document.documentElement
+        ? document.documentElement.dataset.anTheme
+        : null
     if (h === "dark") return true
     if (h === "light") return false
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
-
 
 export default function PublicNPSHoldings(props: {
     width?: number
@@ -138,7 +139,9 @@ export default function PublicNPSHoldings(props: {
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(() =>
-        RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()
+        RenderTarget.current() === RenderTarget.canvas
+            ? !!props.dark
+            : anReadDark()
     )
     // 국민연금공단 로고 — 파비콘 핫링크 + 실패 시 NPS 배지. 🚨 훅은 조건부 return 위 (framer_hooks_top_level — 스켈레톤 return 뒤에 두면 라이브 크래시, 2026-07-07 실사고)
     const [logoErr, setLogoErr] = useState(false)

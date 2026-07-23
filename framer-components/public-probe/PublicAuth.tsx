@@ -19,6 +19,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
  *
  * 🚨 수동 선행(Supabase 대시보드): AlphaNest 도메인을 Auth → URL Configuration → Redirect URLs 추가 + Google provider enable.
  * 다크모드 = body[data-framer-theme] 추종(캔버스는 dark prop 정적). 토글 없는 페이지(=/login)는 localStorage 폴백.
+ *   🎨 2026-07-20 fix: init=false(SSG 라이트 매칭·stuck 방지) → effect 가 실제 테마로 교정(첫로드 stuck-light 해결).
  */
 
 const SESSION_KEY = "verity_supabase_session"

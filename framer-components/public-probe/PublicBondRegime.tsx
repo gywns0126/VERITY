@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  *  - 생 수치(yields / 2Y-10Y·3M-10Y 스프레드 / IG·HY OAS) = ECOS(KR)·FRED(US) 1차 사실.
  *  - 레짐 분류(금리환경 / 곡선 / 신용사이클) = 자체 기준 v0 = 가설 (bondanalyzer.py). 섹션·푸터에 명시.
  *  - recession_signal(3M-10Y < -10bp) = Fed 표준. 점수·추천 0 (RULE 6 통과 — 결정론 산출 표시).
- * 데이터 = data/bonds.json (단일 writer, publish-data 발행). 테마 = body[data-framer-theme] 자가 추종.
+ * 데이터 = data/bonds.json (단일 writer, publish-data 발행). 테마 = init=false(SSG 라이트)→effect 교정.
  * 🚨 면책 문구 제거(2026-06-26, PM) — "등급·추천 아님 / 검증 후 2027" 류는 사이트 하단 단일 면책으로 통합. 출처·분류 기준 설명은 유지.
  */
 
@@ -66,10 +66,6 @@ function fmtAge(iso: any): string {
     }
 }
 
-/**
- * @framerSupportedLayoutWidth any
- * @framerSupportedLayoutHeight any
- */
 // 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
 let __anHyd = false
 function anReadDark(): boolean {
@@ -84,30 +80,10 @@ function anReadDark(): boolean {
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
 
-
-// 마운트/토글 재판독 SoT — verity_theme(localStorage) 우선 → html[data-an-theme] → body[data-framer-theme].
-// 791d29f7e 8개 fix 에서 누락됐던 body-only 재판독 버그 정정(다크에서 라이트 고정 방지, 2026-07-21 일괄).
-function readBodyDark(): boolean {
-    if (typeof document === "undefined") return false
-    try {
-        const pref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (pref === "dark") return true
-        if (pref === "light") return false
-        const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-        if (h === "dark") return true
-        if (h === "light") return false
-        if (document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
-
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight any
+ */
 export default function PublicBondRegime(props: Props) {
     const { dataUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -115,7 +91,10 @@ export default function PublicBondRegime(props: Props) {
     const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     useEffect(() => {
         if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
+        const read = () => {
+            const t = typeof document !== "undefined" && document.body ? document.body.dataset.framerTheme : ""
+            setThemeDark(t === "dark")
+        }
         read()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(read)
