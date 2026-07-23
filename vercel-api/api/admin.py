@@ -57,13 +57,14 @@ OPERATOR_BUCKET = os.environ.get("OPERATOR_BUCKET", "verity-reports")
 OPERATOR_PORTFOLIO_PATH = os.environ.get("OPERATOR_PORTFOLIO_PATH", "_operator/portfolio_full.json")
 
 
-def _download_operator_portfolio() -> Optional[dict]:
-    """private Supabase Storage 에서 full portfolio 다운로드 (service_role). 없으면 None → 공개 blob fallback."""
+def _download_operator_file(path: str) -> Optional[Any]:
+    """private Supabase Storage 에서 오퍼레이터 파일 다운로드 (service_role). 없으면 None → 공개 fallback.
+    분리 Stage 1(portfolio) + Stage 3 후속(history/system_health/brain_kb/admin_todos) 공용."""
     if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
         return None
     try:
         r = requests.get(
-            f"{SUPABASE_URL}/storage/v1/object/{OPERATOR_BUCKET}/{OPERATOR_PORTFOLIO_PATH}",
+            f"{SUPABASE_URL}/storage/v1/object/{OPERATOR_BUCKET}/{path}",
             headers={"apikey": SUPABASE_SERVICE_ROLE_KEY,
                      "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}"},
             timeout=10,
@@ -71,10 +72,15 @@ def _download_operator_portfolio() -> Optional[dict]:
         if r.status_code == 200:
             return r.json()
         if r.status_code != 404:
-            _logger.warning("operator portfolio fetch %s", r.status_code)
+            _logger.warning("operator file %s fetch %s", path, r.status_code)
     except (requests.RequestException, ValueError) as e:
-        _logger.warning("operator portfolio fetch failed: %s", e)
+        _logger.warning("operator file %s fetch failed: %s", path, e)
     return None
+
+
+def _download_operator_portfolio() -> Optional[dict]:
+    """full portfolio (분리 Stage 1). private 우선, 미populate 시 None → 공개 blob fallback."""
+    return _download_operator_file(OPERATOR_PORTFOLIO_PATH)
 
 
 def fetch_portfolio() -> Optional[dict]:
@@ -1103,6 +1109,34 @@ def handle_portfolio_full(request_handler) -> dict:
     return {"_status": 200, "_body": portfolio}
 
 
+# ── 오퍼레이터 파일 authed 서빙 (VERITY↔AlphaNest 분리 Stage 3 후속, 2026-07-23) ──
+# history/system_health_snapshot/brain_kb_usage/admin_todos = 오퍼레이터 전용(public-probe 소비 0).
+# 공개 발행 제거 → private bucket(_operator/*) 우선, 전환기 공개 blob fallback(제거 전엔 존재). do_GET
+# authorize() 통과분만 도달 = authed. pages/* 오퍼레이터 카드가 공개 blob 대신 이 라우트로 fetch.
+_BLOB_BASE = PORTFOLIO_URL.rsplit("/", 1)[0] + "/"
+
+
+def _make_operator_file_handler(public_name: str):
+    """public_name(예: 'history.json') → private '_operator/<name>' 우선 서빙 핸들러."""
+    private_path = f"_operator/{public_name}"
+
+    def _handler(request_handler) -> dict:
+        data = _download_operator_file(private_path)
+        if data is None:
+            # 전환기 fallback: 공개 blob 제거 전엔 존재 (제거 후 private 만).
+            try:
+                r = requests.get(_BLOB_BASE + public_name, timeout=10)
+                r.raise_for_status()
+                data = r.json()
+            except (requests.RequestException, ValueError):
+                data = None
+        if data is None:
+            return {"_status": 503, "_body": {"error": "operator_file_unavailable", "file": public_name}}
+        return {"_status": 200, "_body": data}
+
+    return _handler
+
+
 ROUTES = {
     "brain_health": handle_brain_health,
     "data_health": handle_data_health,
@@ -1110,6 +1144,10 @@ ROUTES = {
     "trust": handle_trust,
     "explain": handle_explain,
     "portfolio_full": handle_portfolio_full,
+    "history": _make_operator_file_handler("history.json"),
+    "system_health_snapshot": _make_operator_file_handler("system_health_snapshot.json"),
+    "brain_kb_usage": _make_operator_file_handler("brain_kb_usage.json"),
+    "admin_todos": _make_operator_file_handler("admin_todos.json"),
 }
 
 # 운영 변경(POST/DELETE) + 목록(GET) 라우트 — method-aware.

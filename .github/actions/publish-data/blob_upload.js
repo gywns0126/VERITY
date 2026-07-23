@@ -24,7 +24,12 @@ const SKIP_FILES = new Set(["README.md", "_manifest.txt"]);
 // allowlist 제거만으론 마지막 업로드본이 public URL 에 계속 서빙됨 → 매 run del 로 확정 차단.
 // del 은 blob URL 기준(pathname 은 SDK 버전 의존) — 스토어 host 는 사이트 컴포넌트들이 쓰는 고정 URL.
 const BLOB_HOST = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com";
-const RETIRED_BLOBS = ["public_price_snapshot.json", "ranking_board.json", "trending_kr.json"];
+const RETIRED_BLOBS = [
+    "public_price_snapshot.json", "ranking_board.json", "trending_kr.json",
+    // 2026-07-23 분리 Stage 3 후속: 오퍼레이터 전용 크라운주얼 → private bucket 이전, 공개 blob 삭제.
+    // (발행 목록 제거만으론 옛 blob 본 잔존 — del 로 노출 완전 차단. authed /api/admin?type=<name> 로 서빙.)
+    "admin_todos.json", "brain_kb_usage.json", "history.json", "system_health_snapshot.json",
+];
 const CACHE_MAX_AGE = 30; // 30s — Framer 가 매 페이지 진입마다 fresh 받음
 
 // ── 핵심 데이터 발행 가드 (fail-closed, 단일 병목) ─────────────────────────
