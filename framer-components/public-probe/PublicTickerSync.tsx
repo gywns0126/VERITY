@@ -46,6 +46,7 @@ export default function PublicTickerSync(props: Props) {
                 const url = window.location.pathname + "?" + params.toString() + window.location.hash
                 window.history.replaceState(null, "", url)
                 setSynced(stored)
+                try { window.dispatchEvent(new Event("verity-ticker-change")) } catch { /* */ }
             } else {
                 // 콜드 랜딩(?q·최근본 둘 다 없음) = 그날 거래대금 1위(hot_stock)로 디폴트.
                 // → verity_last_ticker + ?q 주입으로 페이지 전 컴포넌트(리포트·차트·관점·AI PDF)가 공유 종목을 읽음. 리포트/결정과 동일 소스.
@@ -63,6 +64,8 @@ export default function PublicTickerSync(props: Props) {
                             }
                         } catch { /* */ }
                         setSynced(t)
+                        // 리포트가 쓰는 것과 동일 이벤트 — 차트·관점·AI PDF·브리프 리스너가 리로드 없이 즉시 추종.
+                        try { window.dispatchEvent(new Event("verity-ticker-change")) } catch { /* */ }
                     })
                     .catch(() => {})
             }
