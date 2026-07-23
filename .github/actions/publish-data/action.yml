@@ -185,9 +185,19 @@ runs:
         # portfolio.json(Framer 메인 fetch·무인증 공개)이 rec 배열을 내장하는데 held-2027 strip 이
         # recommendations.json 만 커버 → brain_score/score_breakdown 이 raw 노출됨. 동일 sanitizer 적용
         # (스크립트가 dict.recommendations 케이스 이미 처리, sanitize_recommendations.py:55).
-        # 주: vams/gold_insight 등 top-level 노출은 본 strip 범위 밖 = 별 PM 큐.
         if [ -s "_public_dist/portfolio.json" ]; then
           python3 "${{ github.action_path }}/sanitize_recommendations.py" \
+            _public_dist/portfolio.json
+        fi
+
+        # ── portfolio.json top-level 크라운주얼 strip (2026-07-23 VERITY↔AlphaNest 분리 Stage 3) ──
+        # 무인증 공개 Blob 의 portfolio.json 이 vams(자본/포지션)·verity_brain·factor_ic·validation·
+        # market_horizon·decision_queue·trade_plan·sentiment 등 오퍼레이터 크라운주얼을 top-level 노출.
+        # AlphaNest 공개(public-probe)는 뉴스 3키(headlines/bloomberg_google_headlines/us_headlines)만
+        # 읽음(소비경계 검증 0 오분류) → blocklist strip 으로 크라운주얼만 제거·공개 시장데이터/DART 팩트 잔존.
+        # 원본 data/portfolio.json(오퍼레이터 authed 소스=private Supabase, 발행 전 업로드됨) 무변경.
+        if [ -s "_public_dist/portfolio.json" ]; then
+          python3 "${{ github.action_path }}/sanitize_portfolio_public.py" \
             _public_dist/portfolio.json
         fi
 
