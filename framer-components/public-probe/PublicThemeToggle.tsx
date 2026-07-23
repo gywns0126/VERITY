@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react"
  *
  * Framer 네이티브 테마는 body[data-framer-theme]("light"|"dark") 로 제어됨.
  *  - 클릭 → document.body.dataset.framerTheme 토글 + localStorage("verity_theme") 저장
- *  - 마운트 → 저장된 선호 복원(없으면 Framer 가 시스템 기준으로 설정한 값 유지)
+ *  - 마운트 → 저장된 선호 복원(없으면 기본 라이트 — 2026-07-19 첫 시작 라이트 결정)
  *  - 이 속성이 바뀌면 Framer Color Styles(NavBg/PageBg 등) + 구독하는 코드 컴포넌트가 모두 따라옴
  *
  * 🎨 2026-07-08 깜빡임 fix — 버튼 시각(배경/보더/아이콘색/아이콘 선택)을 JS 상태가 아니라
