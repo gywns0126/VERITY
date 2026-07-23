@@ -12,8 +12,8 @@ import { useEffect, type CSSProperties } from "react"
  *   localStorage(verity_supabase_session) 갱신 + verity_auth_change dispatch → 기존 소비자(HoldingsTab·
  *   MorningBriefing·NPS·StockReport 등)가 새 토큰으로 자동 재fetch. UI 없음(캔버스만 배치용 라벨).
  *
- * 🚨 표준 refresh 만 — 새 로그인/토큰 발급 경로 신설 아님(기존 refresh_token 을 grant_type=refresh_token 으로 교환).
- * 🚨 이중 refresh 방지(refresh_token 회전 충돌 = 강제 로그아웃 위험):
+ * 표준 refresh 만 — 새 로그인/토큰 발급 경로 신설 아님(기존 refresh_token 을 grant_type=refresh_token 으로 교환).
+ * 이중 refresh 방지(refresh_token 회전 충돌 = 강제 로그아웃 위험):
  *   · /login 에선 skip (AlphaNestAuth 가 담당) · localStorage 락(20s) 로 다중 인스턴스/탭 동시 refresh 차단
  *   · in-flight 플래그(모듈 스코프) · 만료 5분 전에만 트리거(불필요 재발급 0)
  * 세션 shape·엔드포인트·이벤트명 = AlphaNestAuth(PublicAuth.tsx) 와 동일.
@@ -141,7 +141,7 @@ export default function PublicSessionKeeper(props: Props) {
         const onLogin = () => {
             const p = (loginPath || "/login").replace(/\/+$/, "")
             const cur = window.location.pathname.replace(/\/+$/, "")
-            return p && cur === p
+            return p !== "" && cur === p
         }
         const tick = () => {
             if (onLogin()) return
