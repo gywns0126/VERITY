@@ -33,6 +33,7 @@ function loadToken(): string {
         const raw = localStorage.getItem(SESSION_KEY)
         if (!raw) return ""
         const s = JSON.parse(raw)
+        if (s && s.expires_at && Date.now() / 1000 > s.expires_at) return ""   // 만료 가드 — 만료 토큰 반환 시 401 유발
         return typeof s.access_token === "string" ? s.access_token : ""
     } catch { return "" }
 }
@@ -167,12 +168,24 @@ export default function PublicThesisNote(props: Props) {
         return () => { window.removeEventListener(TK_EVENT, reread); window.removeEventListener("popstate", reread) }
     }, [ticker, onCanvas])
 
+    // 로그인/토큰갱신 후 토큰 재읽기 → 서버 thesis·피드 재fetch (token 키 loader 자동 재실행). verity_auth_change=AuthGate dispatch · storage=타탭
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        const onAuth = () => setToken(loadToken())
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => {
+            window.removeEventListener("verity_auth_change", onAuth)
+            window.removeEventListener("storage", onAuth)
+        }
+    }, [onCanvas])
+
     const [thesis, setThesis] = useState<any>(null)   // 저장된 기록
     const [editing, setEditing] = useState(false)
     const [stance, setStance] = useState("watch")
     const [note, setNote] = useState("")
     const [curPrice, setCurPrice] = useState<number | null>(null)
-    const [token] = useState<string>(loadToken)
+    const [token, setToken] = useState<string>(loadToken)
     const [serverTheses, setServerTheses] = useState<Record<string, any> | null>(null)  // null=미로드(로그인 시)
     // 커뮤니티 v1 — 공개 토글 + 종목별 공개 피드 + 좋아요/신고
     const [isPublic, setIsPublic] = useState(false)

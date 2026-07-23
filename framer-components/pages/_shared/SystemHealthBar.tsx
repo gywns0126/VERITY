@@ -57,8 +57,13 @@ const MONO: React.CSSProperties = {
 /** Framer 단일 파일용 fetch (fetchPortfolioJson.ts와 동일 로직) */
 function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     const u = (url || "").trim()
+    const _cacheable = /public\.blob\.vercel-storage\.com/.test(u)
     const sep = u.includes("?") ? "&" : "?"
-    return fetch(`${u}${sep}_=${Date.now()}`, {
+    return fetch(_cacheable ? u : `${u}${sep}_=${Date.now()}`, _cacheable ? {
+        mode: "cors",
+        credentials: "omit",
+        signal,
+    } : {
         cache: "no-store",
         mode: "cors",
         credentials: "omit",
@@ -444,8 +449,11 @@ export default function SystemHealthBar(props: Props) {
         const ac = new AbortController()
         const doFetch = () => {
             const u = cronHealthUrl.trim()
+            const _cacheable = /public\.blob\.vercel-storage\.com/.test(u)
             const sep = u.includes("?") ? "&" : "?"
-            fetch(`${u}${sep}_=${Date.now()}`, {
+            fetch(_cacheable ? u : `${u}${sep}_=${Date.now()}`, _cacheable ? {
+                mode: "cors", credentials: "omit", signal: ac.signal,
+            } : {
                 cache: "no-store", mode: "cors", credentials: "omit", signal: ac.signal,
             })
                 .then((r) => {

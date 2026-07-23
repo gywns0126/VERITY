@@ -105,8 +105,7 @@ export default function DataIntegrityMonitor(props: Props) {
         if (onCanvas) return
         let alive = true
         const load = () => {
-            const url = `${dataUrl}${dataUrl.includes("?") ? "&" : "?"}t=${Date.now()}`
-            fetch(url, { cache: "no-store" })
+            fetch(dataUrl)
                 .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
                 .then((d) => { if (alive) { setDoc(d as DataHealth); setErr(null) } })
                 .catch((e) => { if (alive && !doc) setErr(String(e && e.message ? e.message : e)) })
@@ -119,7 +118,38 @@ export default function DataIntegrityMonitor(props: Props) {
     const page: React.CSSProperties = { background: C.bg, fontFamily: FONT, color: C.ink, width: "100%", boxSizing: "border-box", padding: 16, display: "flex", flexDirection: "column", gap: 12 }
     const card: React.CSSProperties = { background: C.card, borderRadius: 16, padding: "15px 17px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
     if (err && !doc) return <div style={page}><div style={{ ...card, color: C.up, fontSize: 13, fontWeight: 700 }}>data_health 로드 실패: {err.slice(0, 90)}</div></div>
-    if (!doc) return <div style={page}><div style={{ ...card, color: C.faint, fontSize: 13, fontWeight: 600 }}>데이터 무결 로딩…</div></div>
+    if (!doc) {
+        // 스켈레톤 — 상태 배지 + 섹션 카드 형태를 본떠 표시.
+        const dk = onCanvas ? !!props.dark : themeDark
+        const skBase = dk ? "#232a33" : "#e7eaee", skHi = dk ? "#2f3742" : "#f3f5f8"
+        const shim: React.CSSProperties = { background: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "dimShimmer 1.4s ease-in-out infinite" }
+        const secSk = (rows: number) => (
+            <div style={card}>
+                <div style={{ ...shim, width: 120, height: 15, borderRadius: 6, marginBottom: 12 }} />
+                {Array.from({ length: rows }).map((_, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginTop: i ? 10 : 0 }}>
+                        <div style={{ ...shim, width: 90, height: 12, borderRadius: 6 }} />
+                        <div style={{ ...shim, flex: 1, height: 12, borderRadius: 6 }} />
+                    </div>
+                ))}
+            </div>
+        )
+        return (
+            <div style={page} aria-busy="true" aria-label="데이터 무결 불러오는 중">
+                <style>{`@keyframes dimShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
+                <div style={card}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ ...shim, width: 10, height: 10, borderRadius: "50%" }} />
+                        <div style={{ ...shim, width: 110, height: 18, borderRadius: 6 }} />
+                        <div style={{ ...shim, width: 56, height: 20, borderRadius: 8 }} />
+                        <div style={{ ...shim, width: 60, height: 12, borderRadius: 6, marginLeft: "auto" }} />
+                    </div>
+                </div>
+                {secSk(3)}
+                {secSk(2)}
+            </div>
+        )
+    }
 
     const status = doc.status || "green"
     const sC = status === "red" ? C.up : status === "amber" ? C.amber : C.green

@@ -87,7 +87,7 @@ function dilutionBg(fdvMc: number | null, warn: string): { bg: string; strong: b
 
 export default function CryptoHeatmap(props: { dataUrl?: string; dark?: boolean; metric?: Metric }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : false))
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
 
@@ -111,7 +111,7 @@ export default function CryptoHeatmap(props: { dataUrl?: string; dark?: boolean;
         if (onCanvas) return
         let alive = true
         const url = props.dataUrl || BLOB + "/crypto_universe.json"
-        fetch(url, { cache: "no-store" })
+        fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive && d) setData(d) })
             .catch(() => {})

@@ -26,6 +26,26 @@ const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Menlo', monospace"
 const MONO: CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
 
 
+// 2026-07-23 VERITY↔AlphaNest 분리 Stage 2: 오퍼레이터는 공개 blob 대신 authed 엔드포인트.
+// /api/admin?type=portfolio_full (authorize: X-Admin-Token OR JWT+is_admin) 가 full portfolio 서빙.
+// verity_supabase_session(AdminLogin) 없으면 401 → 로그인 필요(VERITY=비공개). 공개 blob은 Stage 3서 sanitize.
+const API_BASE = "https://project-yw131.vercel.app"
+const DATA_URL = `${API_BASE}/api/admin?type=portfolio_full`
+
+// verity_supabase_session → Bearer JWT(만료체크). AdminDashboard 패턴. esbuild 안전(옵셔널체이닝 미사용).
+function _operatorAuthHeaders(): Record<string, string> {
+    try {
+        const raw = typeof localStorage !== "undefined" ? localStorage.getItem("verity_supabase_session") : null
+        if (!raw) return {}
+        const s = JSON.parse(raw)
+        const jwt = (!s.expires_at || Date.now() / 1000 <= s.expires_at) ? s.access_token : null
+        return jwt ? { Authorization: `Bearer ${jwt}` } : {}
+    } catch (e) {
+        return {}
+    }
+}
+
+
 interface Props {
     dataUrl: string
     refreshInterval: number
@@ -92,7 +112,10 @@ function bustUrl(url: string): string {
 
 
 function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
-    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
+    // 공개 blob = CDN 캐시 활용(캐시버스터·no-store 제거, 2026-07-20 비용절감). authed/vercel 엔드포인트는 기존대로.
+    const _cacheable = /public\.blob\.vercel-storage\.com/.test(url)
+    const _hdrs = /\/api\/admin/.test(url) ? _operatorAuthHeaders() : {}
+    return fetch(_cacheable ? url : bustUrl(url), _cacheable ? { mode: "cors", credentials: "omit", signal, headers: _hdrs } : { cache: "no-store", mode: "cors", credentials: "omit", signal, headers: _hdrs })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null")))
 }
@@ -599,13 +622,13 @@ const subLabelStyle: CSSProperties = {
 
 
 MarketHorizon.defaultProps = {
-    dataUrl: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
+    dataUrl: DATA_URL,
     refreshInterval: 600,
     defaultExpanded: false,
 }
 
 addPropertyControls(MarketHorizon, {
-    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json" },
+    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: DATA_URL },
     refreshInterval: { type: ControlType.Number, title: "새로고침(초)", defaultValue: 600, min: 60, max: 3600, step: 60 },
     defaultExpanded: { type: ControlType.Boolean, title: "처음부터 펼침", defaultValue: false },
 })

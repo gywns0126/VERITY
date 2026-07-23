@@ -16,7 +16,7 @@ import { useEffect, useState, type CSSProperties } from "react"
  */
 
 const LIGHT = { bg: "#f2f4f6", ink: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", violet: "#6c5ce7" }
-const DARK = { bg: "#16181d", ink: "#9aa4b1", faint: "#6b7684", line: "#2b2f37", violet: "#a99bff" }
+const DARK = { bg: "#0f1318", ink: "#9aa4b1", faint: "#6b7684", line: "#2b2f37", violet: "#a99bff" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
 function readBodyDark(): boolean {
@@ -52,7 +52,7 @@ export default function PublicSourceNote(props: {
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     // 첫 페인트부터 실제 테마로 시작(캔버스는 prop) — 반대색 flash 제거.
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : false))
     useEffect(() => {
         if (onCanvas) return
         setThemeDark(readBodyDark())

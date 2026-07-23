@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import React, { useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 
 /**
  * AlphaNest 내정보 페이지 — 페이지 전체용 컴포넌트 (네브바 버튼 없음, 페이지에 바로 렌더).
@@ -65,7 +65,9 @@ function loadSession(): SupaSession | null {
     if (typeof window === "undefined") return null
     try {
         const raw = localStorage.getItem(SESSION_KEY)
-        return raw ? (JSON.parse(raw) as SupaSession) : null
+        const s = raw ? (JSON.parse(raw) as SupaSession) : null
+        if (s && s.expires_at && Date.now() / 1000 > s.expires_at) return null   // 만료 가드 — 만료 토큰 반환 시 401 유발
+        return s
     } catch (e) {
         return null
     }
@@ -310,13 +312,13 @@ export default function PublicProfilePage(props: Props) {
         return () => obs.disconnect()
     }, [isCanvas])
 
-    /* 마운트: 세션 로드 + 프로필 보강 */
-    useEffect(() => {
-        if (isCanvas) return
+    /* 세션 로드 + 프로필 보강 — 마운트/로그인·토큰갱신(verity_auth_change)·타탭(storage) 공용 로더. cleanup 반환. */
+    const loadProfileFlow = useCallback((): (() => void) => {
+        if (isCanvas) return () => {}
         const s = loadSession()
         if (!s || !s.user) {
             setPhase("guest")
-            return
+            return () => {}
         }
         const meta = (s.user.user_metadata) || {}
         const base: Profile = {
@@ -331,7 +333,7 @@ export default function PublicProfilePage(props: Props) {
             is_admin: false,
         }
         setProfile(base)   // 폴백 준비 — fetch 실패/지연 시 이거라도 표시
-        if (!s.access_token) { setPhase("member"); return }   // 토큰 없으면 보강 불가 → 즉시 표시
+        if (!s.access_token) { setPhase("member"); return () => {} }   // 토큰 없으면 보강 불가 → 즉시 표시
         // 🚨 phase="member" 를 fetchProfile 완료까지 미룸 — 로딩 스켈레톤이 실제 느린 구간(profiles+is_admin fetch)
         //   동안 보이게(2026-07-18, "로딩이 오류처럼 보임"). 안전 타임아웃(6s)으로 무한 스켈레톤 방지.
         let alive = true
@@ -357,6 +359,25 @@ export default function PublicProfilePage(props: Props) {
         })
         return () => { alive = false; clearTimeout(to) }
     }, [isCanvas, supabaseUrl, supabaseAnonKey, profileTable])
+
+    /* 마운트: 세션 로드 + 프로필 보강 */
+    useEffect(() => {
+        return loadProfileFlow()
+    }, [loadProfileFlow])
+
+    // 로그인/토큰갱신 후 재읽기+재fetch (verity_auth_change=AuthGate dispatch · storage=타탭)
+    useEffect(() => {
+        if (isCanvas || typeof window === "undefined") return
+        let cleanup: () => void = () => {}
+        const onAuth = () => { cleanup(); cleanup = loadProfileFlow() }
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => {
+            cleanup()
+            window.removeEventListener("verity_auth_change", onAuth)
+            window.removeEventListener("storage", onAuth)
+        }
+    }, [isCanvas, loadProfileFlow])
 
     const go = (path: string) => {
         if (typeof window !== "undefined") {

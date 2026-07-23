@@ -32,7 +32,7 @@ function readBodyDark(): boolean {
 }
 function loadToken(): string {
     if (typeof window === "undefined") return ""
-    try { const raw = localStorage.getItem(SESSION_KEY); if (!raw) return ""; const s = JSON.parse(raw); return typeof s.access_token === "string" ? s.access_token : "" } catch { return "" }
+    try { const raw = localStorage.getItem(SESSION_KEY); if (!raw) return ""; const s = JSON.parse(raw); if (s && s.expires_at && Date.now() / 1000 > s.expires_at) return ""; return typeof s.access_token === "string" ? s.access_token : "" } catch { return "" }
 }
 function loadLocal(): any[] {
     if (typeof window === "undefined") return []
@@ -80,6 +80,19 @@ export default function PublicThesisReview(props: { width?: number; dark?: boole
 
     const [items, setItems] = useState<any[]>(onCanvas ? DEMO : [])
     const [loading, setLoading] = useState<boolean>(!onCanvas)
+    const [authTick, setAuthTick] = useState(0)   // 로그인/토큰갱신 시 데이터 로더 재트리거
+
+    // 로그인/토큰갱신 후 세션 재평가 → 서버 thesis 재fetch. verity_auth_change=AuthGate dispatch · storage=타탭
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        const onAuth = () => setAuthTick((n) => n + 1)
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => {
+            window.removeEventListener("verity_auth_change", onAuth)
+            window.removeEventListener("storage", onAuth)
+        }
+    }, [onCanvas])
 
     useEffect(() => {
         if (onCanvas) return
@@ -125,7 +138,7 @@ export default function PublicThesisReview(props: { width?: number; dark?: boole
             build(loadLocal())
         }
         return () => { alive = false }
-    }, [onCanvas, base])
+    }, [onCanvas, base, authTick])
 
     const wrap: any = { width: props.width || 380, fontFamily: FONT, background: C.bg, color: C.ink, padding: 14, boxSizing: "border-box" }
     const st = (id: string) => STANCES[id] || STANCES.watch

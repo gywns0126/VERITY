@@ -12,14 +12,32 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 로고 = 토스 종목 CDN + 이니셜 폴백. 다크모드 자가감지. cache-fallback.
  */
 
+/* 🚨🚨 롤백 방지 가드 (2026-07-23) — CLAUDE.md RULE 11. 지우거나 되돌리지 말 것. 🚨🚨
+ *
+ * 이 repo .tsx = 라이브 Framer(AlphaNest 공개 프로젝트)의 미러일 뿐이며, 종종 stale 하다.
+ * 라이브에만 있는 레이아웃 튜닝이 이 미러에 빠져 있을 수 있음:
+ *   · 우측 이벤트 리스트("종목 스크롤창") 높이 = 좌측 캘린더 그리드 높이에 매칭 + overflowY:auto(스크롤).
+ *     현재 미러는 아래 2단 grid 가 alignItems:"start"(자연 높이)라 이 매칭이 없음.
+ *     라이브 값이 정답 — readCodeFile 로 받아 복원하고, 되돌리지 말 것.
+ *
+ * 편집/붙여넣기 전 의무 (RULE 11):
+ *   1. Framer 데스크탑 = AlphaNest 공개 프로젝트 탭 focus 확인 (VERITY 내부 프로젝트 아님. getProjectXml 로 검증).
+ *   2. MCP readCodeFile 로 라이브 PublicCalendar 를 먼저 읽어 3-way diff (라이브 / 이 미러 / git origin/main).
+ *   3. 라이브가 더 신선하면 라이브를 base 로 미러 갱신 → 그 위에 변경 적용. stale 미러로 라이브를 덮지 말 것.
+ *   4. 변경은 3소스 동시 동기화: 라이브 Framer(MCP) + 이 repo 파일 + 메모리 feedback_framer_tri_source_sync_guard.
+ *      한쪽만 갱신 = 다음 싱크가 나머지를 롤백시키는 시한폭탄.
+ *
+ * 다크모드: readBodyDark() = body[data-framer-theme] 자가감지. 이 패턴을 단순화/제거하면 새로고침 시 부분 라이트 회귀.
+ */
+
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", track: "#eef0f3", hi: "#f6f7f9", vt: "#6c5ce7", vtS: "#f0edff",
+    line: "#e5e8eb", track: "#eef0f3", hi: "#f6f7f9", vt: "#6c5ce7", vtS: "#f0edff", vtSolid: "#6c5ce7",
     today: "#191f28", todayInk: "#ffffff", cellHover: "#f6f7f9",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
-    line: "#252b34", track: "#222a33", hi: "#1e242c", vt: "#a99bff", vtS: "#241f3a",
+    line: "#252b34", track: "#222a33", hi: "#1e242c", vt: "#a99bff", vtS: "#241f3a", vtSolid: "#6c5ce7",
     today: "#e3e7ec", todayInk: "#0f1318", cellHover: "#1e242c",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
@@ -237,7 +255,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
 
             {/* 카테고리 필터 칩 */}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-                <button onClick={() => setCatFilter("")} style={{ border: "none", cursor: "pointer", fontFamily: FONT, padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, background: !catFilter ? C.vt : C.card, color: !catFilter ? "#fff" : C.sub, boxShadow: !catFilter ? "none" : "0 1px 2px rgba(0,0,0,0.04)" }}>전체</button>
+                <button onClick={() => setCatFilter("")} style={{ border: "none", cursor: "pointer", fontFamily: FONT, padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, background: !catFilter ? C.vtSolid : C.card, color: !catFilter ? "#fff" : C.sub, boxShadow: !catFilter ? "none" : "0 1px 2px rgba(0,0,0,0.04)" }}>전체</button>
                 {Object.keys(CAT).map((k) => {
                     const on = catFilter === k
                     return (

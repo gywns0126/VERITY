@@ -43,6 +43,11 @@ function applyTheme(t: Theme) {
     /* localStorage 를 body 보다 먼저 — Custom Code 의 로드-레이스 감시(pref()=localStorage 재판독)가
        토글 순간을 오해해 되돌리지 않게 (2026-07-18 다크 첫로딩 fix 짝). */
     try { localStorage.setItem(THEME_KEY, t) } catch (e) { /* no-op */ }
+    /* html[data-an-theme] = 코드 컴포넌트 readBodyDark 의 1순위 판독 소스(헤드 스크립트와 동일 키).
+       body 보다 먼저 세팅 = body 관측자 재판독 시 최신 html 보장 (2026-07-19 대량 flash fix). */
+    if (typeof document !== "undefined" && document.documentElement) {
+        document.documentElement.dataset.anTheme = t
+    }
     if (typeof document !== "undefined" && document.body) {
         document.body.dataset.framerTheme = t
     }
@@ -102,12 +107,15 @@ export default function PublicThemeToggle(props: Props) {
         if (isCanvas) return
         /* 오버라이드 <style> 주입은 Custom Code(Start of <body>)가 첫 페인트 전에 담당 = 단일 출처.
            토글은 저장된 선호 복원 + 외부 변경 동기화만. */
-        let initial: Theme = systemTheme()
+        /* 기본 = 라이트 (사이트 첫 시작 라이트 결정, 2026-07-19). OS 설정 안 봄 = 로드마다 뒤집힘 방지.
+           명시적 저장(verity_theme)이 있을 때만 그 값. 헤드/보디 Custom Code 스크립트와 동일 규칙. */
+        let initial: Theme = "light"
         try {
             const saved = localStorage.getItem(THEME_KEY)
             if (saved === "dark" || saved === "light") initial = saved
         } catch (e) { /* no-op */ }
-        /* 항상 body 속성을 명시 — native(주입 CSS)+코드컴포넌트 첫 페인트부터 일치 */
+        /* 항상 html+body 속성을 명시 — native(주입 CSS)+코드컴포넌트 첫 페인트부터 일치 */
+        if (document.documentElement) document.documentElement.dataset.anTheme = initial
         if (document.body) document.body.dataset.framerTheme = initial
         setTheme(initial)
 

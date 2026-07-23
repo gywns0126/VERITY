@@ -60,7 +60,9 @@ function safeJsonParse(text: string): any {
 }
 
 function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
-    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
+        // 공개 blob = CDN 캐시 활용(캐시버스터·no-store 제거, 2026-07-20 비용절감). authed/vercel 엔드포인트는 기존대로.
+        const _cacheable = /public\.blob\.vercel-storage\.com/.test(url)
+        return fetch(_cacheable ? url : bustUrl(url), _cacheable ? { mode: "cors", credentials: "omit", signal } : { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((t) => {
             const cleaned = (t || "").replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")

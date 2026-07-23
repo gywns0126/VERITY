@@ -210,7 +210,7 @@ export default function PostmortemCard(props: Props) {
         let cancelled = false
         const load = async () => {
             try {
-                const r = await fetch(portfolioUrl, { cache: "no-store" })
+                const r = await fetch(portfolioUrl)
                 if (!r.ok) throw new Error(`HTTP ${r.status}`)
                 const data = await r.json()
                 if (cancelled) return

@@ -5,6 +5,24 @@
 import * as React from "react"
 import { addPropertyControls, ControlType } from "framer"
 
+// 2026-07-23 VERITY↔AlphaNest 분리 Stage 2: 오퍼레이터는 공개 blob 대신 authed 엔드포인트.
+// /api/admin?type=portfolio_full (authorize: X-Admin-Token OR JWT+is_admin) 가 full portfolio 서빙.
+// verity_supabase_session(AdminLogin) 없으면 401 → 로그인 필요(VERITY=비공개). 공개 blob은 Stage 3서 sanitize.
+const API_BASE = "https://project-yw131.vercel.app"
+
+// verity_supabase_session → Bearer JWT(만료체크). AdminDashboard 패턴. esbuild 안전(옵셔널체이닝 미사용).
+function _operatorAuthHeaders(): Record<string, string> {
+    try {
+        const raw = typeof localStorage !== "undefined" ? localStorage.getItem("verity_supabase_session") : null
+        if (!raw) return {}
+        const s = JSON.parse(raw)
+        const jwt = (!s.expires_at || Date.now() / 1000 <= s.expires_at) ? s.access_token : null
+        return jwt ? { Authorization: `Bearer ${jwt}` } : {}
+    } catch (e) {
+        return {}
+    }
+}
+
 interface Component {
     name: string
     score: number
@@ -65,7 +83,8 @@ export default function BrainGradeBreakdown(props: Props) {
     const [loading, setLoading] = React.useState<boolean>(false)
 
     React.useEffect(() => {
-        fetch(portfolioUrl)
+        const _hdrs = /\/api\/admin/.test(portfolioUrl) ? _operatorAuthHeaders() : {}
+        fetch(portfolioUrl, { headers: _hdrs })
             .then((r) => r.json())
             .then((d) => {
                 const recs = (d?.recommendations || []) as any[]
@@ -366,7 +385,7 @@ const loadingStyle: React.CSSProperties = {
 
 BrainGradeBreakdown.defaultProps = {
     apiUrl: "https://verity-api-kim-hyojuns-projects.vercel.app/api/brain_breakdown",
-    portfolioUrl: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
+    portfolioUrl: `${API_BASE}/api/admin?type=portfolio_full`,
     showIcDead: true,
     defaultTicker: "",
 }
@@ -380,7 +399,7 @@ addPropertyControls(BrainGradeBreakdown, {
     portfolioUrl: {
         type: ControlType.String,
         title: "Portfolio URL",
-        defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
+        defaultValue: `${API_BASE}/api/admin?type=portfolio_full`,
     },
     defaultTicker: {
         type: ControlType.String,

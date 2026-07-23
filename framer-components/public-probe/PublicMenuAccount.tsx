@@ -8,12 +8,13 @@ import { SignOut, CaretRight, User, SignIn } from "@phosphor-icons/react"
  * variant="account": 로그아웃=로그인/회원가입 버튼(솔리드 보라·흰 텍스트, 라이트·다크 동일 고정)
  *                    · 로그인=아바타+닉네임+(로그아웃) 카드.
  * variant="avatar" : 사용자 지정 프로필 사진(원형) 버튼 → 프로필 이동 (미로그인=로그인 이동).
+ *   아바타 = 사진 있으면 사진 → 없으면 실제 닉네임 이니셜 → 둘 다 없으면 중립 유저 아이콘 ('내' 안 뜸).
  *
  * 호버 = 그림자·리프트 없이 색만 살짝 진해짐 (버튼/카드 배경 darken, 아바타 brightness).
  * 인증 = PublicAuth/PublicProfilePage 공유 스키마 재사용 (신규 인증 생성 아님):
  *   세션 = localStorage("verity_supabase_session") · profiles.nickname/avatar(128px JPEG base64 data-URL).
  * 🚨 2026-07-20 플래시 제거 — 세션 + 프로필(닉네임·avatar) 을 localStorage 캐시로 마운트 시 동기 로드.
- *   페이지 이동마다 재마운트해도 캐시 닉네임 즉시 표시 → 이메일 번쩍임 없음. fetch 는 백그라운드 갱신만.
+ *   페이지 이동마다 재마운트해도 캐시 닉네임·사진 즉시 표시 → 이메일 번쩍임 없음. fetch 는 백그라운드 갱신.
  * 🎨 다크 자가감지 — fill/ink/sub 가 사이트 테마 추종(라이트=프롭 유지, 다크=사이트 표준). 보라 버튼·흰 텍스트=양모드 동일.
  */
 
@@ -22,6 +23,7 @@ const PROFILE_CACHE_KEY = "verity_profile_cache"
 
 interface SupaSession {
     access_token?: string
+    expires_at?: number
     user?: { id?: string; email?: string; user_metadata?: Record<string, string> }
 }
 
@@ -57,13 +59,15 @@ function loadSession(): SupaSession | null {
     if (typeof window === "undefined") return null
     try {
         const raw = window.localStorage.getItem(SESSION_KEY)
-        return raw ? (JSON.parse(raw) as SupaSession) : null
+        const s = raw ? (JSON.parse(raw) as SupaSession) : null
+        if (s && s.expires_at && Date.now() / 1000 > s.expires_at) return null   // 만료 가드 — 만료 토큰 반환 시 401 유발
+        return s
     } catch (e) {
         return null
     }
 }
 
-// 프로필(닉네임·아바타) 캐시 — 재마운트 시 fetch 전에 즉시 표시(이메일 플래시 방지).
+// 프로필(닉네임·아바타) 캐시 — 재마운트 시 fetch 전에 즉시 표시(이메일·플래시 방지).
 function loadCachedProfile(): ProfileRow | null {
     if (typeof window === "undefined") return null
     try {
@@ -178,7 +182,7 @@ export default function PublicMenuAccount(props: {
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
 
     // 다크모드 자가감지 — nav 계정 위젯이 사이트 테마 추종(2026-07-20). 라이트=프롭 색 유지, 다크=사이트 표준.
-    const [themeDark, setThemeDark] = useState<boolean>(false)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (isCanvas ? false : readBodyDark()))
     useEffect(() => {
         if (isCanvas) return
         const readT = () => setThemeDark(readBodyDark())
@@ -201,7 +205,8 @@ export default function PublicMenuAccount(props: {
     const [logoutHov, setLogoutHov] = useState(false)
     const [avatarHov, setAvatarHov] = useState(false)
 
-    useEffect(() => {
+    // 세션 재읽기 + 프로필 재fetch — 마운트/로그인·토큰갱신(verity_auth_change)·타탭(storage) 공용 로더.
+    const reloadAuth = useCallback(() => {
         if (isCanvas) return
         const s = loadSession()
         setSession(s)
@@ -213,6 +218,22 @@ export default function PublicMenuAccount(props: {
             setProfile(null)
         }
     }, [isCanvas, url, supabaseAnonKey, profileTable])
+
+    useEffect(() => {
+        reloadAuth()
+    }, [reloadAuth])
+
+    // 로그인/토큰갱신 후 재읽기+재fetch (verity_auth_change=AuthGate dispatch · storage=타탭)
+    useEffect(() => {
+        if (isCanvas || typeof window === "undefined") return
+        const onAuth = () => reloadAuth()
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => {
+            window.removeEventListener("verity_auth_change", onAuth)
+            window.removeEventListener("storage", onAuth)
+        }
+    }, [isCanvas, reloadAuth])
 
     const go = useCallback((dest: string) => {
         if (typeof window !== "undefined" && dest) window.location.assign(dest)
@@ -228,28 +249,33 @@ export default function PublicMenuAccount(props: {
     }, [busy, url, supabaseAnonKey, logoutRedirect, loginRedirect, go])
 
     const loggedIn = isCanvas ? true : !!(session && session.access_token && session.user)
-    // 이메일 fallback 제거 — 캐시 닉네임(없으면 '내 계정'). 세션 이메일이 잠깐 뜨는 플래시 원천 차단.
-    const nickname =
-        (profile && (profile.nickname || profile.display_name)) ||
-        (isCanvas ? "길동무" : "내 계정")
+    // realName = 실제 프로필 이름(있을 때만). 카드 텍스트는 없으면 '내 계정', 아바타 이니셜은 realName 만 사용('내' 방지).
+    const realName = (profile && (profile.nickname || profile.display_name)) || (isCanvas ? "길동무" : "")
+    const nickname = realName || "내 계정"
     const avatar = (profile && profile.avatar) || ""
-    const initial = (nickname || "?").trim().charAt(0).toUpperCase()
+    const initial = (realName || "?").trim().charAt(0).toUpperCase()
 
     const circle: React.CSSProperties = {
         width: avatarSize, height: avatarSize, borderRadius: "50%", overflow: "hidden",
         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
     }
+    // 중립 플레이스홀더 — 사진·이름 둘 다 없을 때(로딩·미설정). 'ㄴ' 같은 fallback 글자 대신 유저 아이콘.
+    const placeholderNode = (
+        <div style={{ ...circle, background: fill }}>
+            <User size={Math.round(avatarSize * 0.52)} color={sub} weight="fill" />
+        </div>
+    )
     const avatarNode = avatar ? (
         <div style={{ ...circle, background: fill }}>
             <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
-    ) : (
+    ) : realName ? (
         <div style={{ ...circle, background: accent }}>
             <span style={{ color: "#fff", fontWeight: 800, fontSize: Math.round(avatarSize * 0.42), fontFamily: FONT }}>
                 {initial}
             </span>
         </div>
-    )
+    ) : placeholderNode
 
     // ── variant: avatar (프로필 링크 버튼용) — hover 살짝 어둡게(brightness) ──
     if (variant === "avatar") {
@@ -265,11 +291,7 @@ export default function PublicMenuAccount(props: {
                     ...style,
                 }}
             >
-                {loggedIn ? avatarNode : (
-                    <div style={{ ...circle, background: fill }}>
-                        <User size={Math.round(avatarSize * 0.52)} color={sub} weight="fill" />
-                    </div>
-                )}
+                {loggedIn ? avatarNode : placeholderNode}
             </div>
         )
     }

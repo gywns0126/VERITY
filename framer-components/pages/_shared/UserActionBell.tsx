@@ -218,6 +218,18 @@ export default function UserActionBell(props: Props) {
         return () => globalThis.clearInterval(id)
     }, [fetchRows, refreshIntervalSec])
 
+    // 로그인/토큰갱신 후 즉시 재fetch (interval 만으로는 로그인 직후 반영 지연). verity_auth_change=AuthGate dispatch · storage=타탭
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const onAuth = () => { fetchRows() }
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => {
+            window.removeEventListener("verity_auth_change", onAuth)
+            window.removeEventListener("storage", onAuth)
+        }
+    }, [fetchRows])
+
     // self-heartbeat
     useEffect(() => {
         if (!supabaseUrl || !supabaseAnonKey) return

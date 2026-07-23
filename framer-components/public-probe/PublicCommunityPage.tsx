@@ -214,7 +214,8 @@ export default function PublicCommunityPage(props: Props) {
             .then((d) => { if (d && Array.isArray(d.items)) setFeed(d.items) })
             .catch(() => {})
             .finally(() => setLoading(false))
-    }, [base, cap, onCanvas])
+        // token 포함 — 로그인/토큰갱신(verity_auth_change) 후 setToken → 피드 재fetch(mine/liked 반영). 없으면 로그인 직후 피드 미갱신.
+    }, [base, cap, onCanvas, token])
 
     // 종목명 매핑 (universe_search) — 실패해도 무해(티커 그대로 노출)
     useEffect(() => {

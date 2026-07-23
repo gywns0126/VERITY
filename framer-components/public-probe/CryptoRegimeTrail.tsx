@@ -151,7 +151,7 @@ const DEMO = {
 
 export default function CryptoRegimeTrail(props: { dataUrl?: string; dark?: boolean }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : (typeof document !== "undefined" && !!document.body && document.body.dataset.framerTheme === "dark")))
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : false))
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
 
@@ -180,7 +180,7 @@ export default function CryptoRegimeTrail(props: { dataUrl?: string; dark?: bool
             } catch {}
         }
         const url = props.dataUrl || BLOB + "/tide/dashboard.json"
-        fetch(url, { cache: "no-store" })
+        fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive || !d) return

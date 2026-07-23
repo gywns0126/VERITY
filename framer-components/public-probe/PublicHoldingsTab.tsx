@@ -268,7 +268,7 @@ export default function PublicHoldingsTab(props: Props) {
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [rows, setRows] = useState<any[]>(SAMPLE)
+    const [rows, setRows] = useState<any[]>(onCanvas ? SAMPLE : [])
     const [closes, setCloses] = useState<Record<string, number>>({})   // KR 종가(stock_flow_5d) — 실시간 아님
     const [isDemo, setIsDemo] = useState(true)
     const [loading, setLoading] = useState<boolean>(() => (onCanvas ? false : !!getToken()))
@@ -284,7 +284,7 @@ export default function PublicHoldingsTab(props: Props) {
     const [q, setQ] = useState("")                                       // 종목 검색어
     const [pop, setPop] = useState<any>(null)                            // 추가/수정 팝업 {id?, ticker, name, market, shares, avg_cost}
     // 거래 기록(실현손익) — 본인 매매 이력. RULE 7 사실 기록, 순위·배지·공개 없음. /api/trades.
-    const [tradeData, setTradeData] = useState<{ trades: any[]; summary: any }>(() => ({ trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY }))
+    const [tradeData, setTradeData] = useState<{ trades: any[]; summary: any }>(() => (onCanvas ? { trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY } : { trades: [], summary: { by_ticker: [], total_realized_pnl: 0 } }))
     const [showTAdd, setShowTAdd] = useState(false)                      // 거래 추가 검색 패널
     const [tq, setTq] = useState("")                                     // 거래 추가 종목 검색어
     const [tPop, setTPop] = useState<any>(null)                          // 거래 팝업 {id?, ticker, name, market, side, shares, price, traded_at}
@@ -349,7 +349,7 @@ export default function PublicHoldingsTab(props: Props) {
     const loadHoldings = useCallback(() => {
         if (onCanvas) return
         const token = getToken()
-        if (!token) { setIsDemo(true); setRows(SAMPLE); setLoading(false); return }
+        if (!token) { setIsDemo(true); setRows([]); setLoading(false); return }
         // 🚨 토큰 있으면 즉시 로그인 화면 전환 (API 응답 기다리지 않음 — 로그인했는데 CTA 뜨는 사고 방지, 2026-07-13)
         setIsDemo(false)
         setLoading(true)
@@ -464,7 +464,7 @@ export default function PublicHoldingsTab(props: Props) {
     const loadTrades = useCallback(() => {
         if (onCanvas) return
         const token = getToken()
-        if (!token) { setTradeData({ trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY }); return }
+        if (!token) { setTradeData({ trades: [], summary: { by_ticker: [], total_realized_pnl: 0 } }); return }
         fetch(base + "/api/trades", { headers: { Authorization: "Bearer " + token } })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (d && Array.isArray(d.trades)) setTradeData({ trades: d.trades, summary: d.summary || { by_ticker: [], total_realized_pnl: 0 } }) })
@@ -753,7 +753,7 @@ export default function PublicHoldingsTab(props: Props) {
                         </div>
                     )}
 
-                    {Tabs}
+                    {(onCanvas || !isDemo) && Tabs}
 
                     {(() => {
                     const content = view === "holdings" ? (
@@ -1083,8 +1083,8 @@ export default function PublicHoldingsTab(props: Props) {
                             </div>
                         </>
                     )
-                    // 데모(미로그인) = 네이버 웨일식 브라우저 창 목업 안에 미리보기(평면, 3D 없음). pointerEvents none.
-                    return isDemo ? (
+                    // 캔버스(에디터) 프리뷰만 = 브라우저 창 목업 안 SAMPLE 미리보기. 라이브 미로그인 = 로그인 CTA 만(목업 없음). pointerEvents none.
+                    return isDemo ? (onCanvas ? (
                         <div style={{ marginTop: 14, borderRadius: 16, border: `1px solid ${C.line}`, boxShadow: "0 6px 16px rgba(0,0,0,0.08)", overflow: "hidden", background: C.card }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 13px", borderBottom: `1px solid ${C.line}`, background: isDark ? "#1c222b" : "#f7f8fa" }}>
                                 <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#ff5f57", flexShrink: 0 }} />
@@ -1095,7 +1095,7 @@ export default function PublicHoldingsTab(props: Props) {
                             </div>
                             <div style={{ padding: narrow ? "0 12px 14px" : "0 16px 16px", pointerEvents: "none" }}>{content}</div>
                         </div>
-                    ) : content
+                    ) : null) : content
                     })()}
                 </>
             )}

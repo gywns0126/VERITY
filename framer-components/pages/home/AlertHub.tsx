@@ -64,6 +64,25 @@ const MONO: CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabula
 
 /* ─────────── Portfolio fetch ─────────── */
 const PORTFOLIO_FETCH_TIMEOUT_MS = 15_000
+
+// 2026-07-23 VERITY↔AlphaNest 분리 Stage 2: 오퍼레이터는 공개 blob 대신 authed 엔드포인트.
+// /api/admin?type=portfolio_full (authorize: X-Admin-Token OR JWT+is_admin) 가 full portfolio 서빙.
+// verity_supabase_session(AdminLogin) 없으면 401 → 로그인 필요(VERITY=비공개). 공개 blob은 Stage 3서 sanitize.
+const API_BASE = "https://project-yw131.vercel.app"
+
+// verity_supabase_session → Bearer JWT(만료체크). AdminDashboard 패턴. esbuild 안전(옵셔널체이닝 미사용).
+function _operatorAuthHeaders(): Record<string, string> {
+    try {
+        const raw = typeof localStorage !== "undefined" ? localStorage.getItem("verity_supabase_session") : null
+        if (!raw) return {}
+        const s = JSON.parse(raw)
+        const jwt = (!s.expires_at || Date.now() / 1000 <= s.expires_at) ? s.access_token : null
+        return jwt ? { Authorization: `Bearer ${jwt}` } : {}
+    } catch (e) {
+        return {}
+    }
+}
+
 function bustUrl(url: string): string {
     const u = (url || "").trim()
     if (!u) return u
@@ -77,7 +96,10 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
         else signal.addEventListener("abort", () => ac.abort(), { once: true })
     }
     const timer = setTimeout(() => ac.abort(), PORTFOLIO_FETCH_TIMEOUT_MS)
-    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal: ac.signal })
+        // 공개 blob = CDN 캐시 활용(캐시버스터·no-store 제거, 2026-07-20 비용절감). authed/vercel 엔드포인트는 기존대로.
+        const _cacheable = /public\.blob\.vercel-storage\.com/.test(url)
+        const _hdrs = /\/api\/admin/.test(url) ? _operatorAuthHeaders() : {}
+        return fetch(_cacheable ? url : bustUrl(url), _cacheable ? { mode: "cors", credentials: "omit", signal: ac.signal, headers: _hdrs } : { cache: "no-store", mode: "cors", credentials: "omit", signal: ac.signal, headers: _hdrs })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
         .finally(() => clearTimeout(timer))
@@ -563,7 +585,7 @@ const loadingBox: CSSProperties = {
 /* ─────────── Framer Property Controls ─────────── */
 
 AlertHub.defaultProps = {
-    dataUrl: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
+    dataUrl: `${API_BASE}/api/admin?type=portfolio_full`,
     market: "kr",
     maxAlerts: 15,
     defaultExpanded: false,
@@ -573,7 +595,7 @@ addPropertyControls(AlertHub, {
     dataUrl: {
         type: ControlType.String,
         title: "Portfolio URL",
-        defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
+        defaultValue: `${API_BASE}/api/admin?type=portfolio_full`,
     },
     market: {
         type: ControlType.Enum,

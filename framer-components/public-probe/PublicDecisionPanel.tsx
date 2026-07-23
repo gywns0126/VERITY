@@ -521,6 +521,25 @@ export default function PublicDecisionPanel(props: Props) {
     })
     const tk = selTk
 
+    // 콜드 랜딩 디폴트 = 그날 거래대금 1위 (hot_stock.json) — prop·?q·최근본(localStorage) 셋 다 없을 때만.
+    // StockReport 와 동일 소스/키(verity_last_ticker) → 리포트·결정 페이지 디폴트 종목 일치. hot_stock=금융위 공공데이터(거래대금 사실).
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        if (String(tk || "").trim()) return // prop/?q/localStorage 로 이미 선택됨 → 연속성 유지
+        let alive = true
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const t = d && d.hot && d.hot.ticker
+                if (alive && t) setSelTk(String(t).toUpperCase())
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [onCanvas])
+
     // 검색 universe = 경량 인덱스(universe_search.json ~621KB) — 전 종목 리포트(9.2MB) 로드 제거. 2026-07-08.
     useEffect(() => {
         if (onCanvas) return

@@ -151,6 +151,7 @@ export default function AuthGate(props: Props) {
     const loginPath = props.loginPath || "/login"
     const showOverlay = props.showOverlay !== false
     const [state, setState] = useState<GateState>("checking")
+    const [authTick, setAuthTick] = useState(0)   // 로그인/토큰갱신 시 게이트 판정 재실행
 
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
 
@@ -232,7 +233,19 @@ export default function AuthGate(props: Props) {
         return () => {
             cancelled = true
         }
-    }, [supabaseUrl, supabaseAnonKey, normalizedLoginPath, isCanvas])
+    }, [supabaseUrl, supabaseAnonKey, normalizedLoginPath, isCanvas, authTick])
+
+    // 로그인/토큰갱신 후 게이트 판정 재실행 (로그인 직후 통과). verity_auth_change=saveSession dispatch · storage=타탭
+    useEffect(() => {
+        if (isCanvas || typeof window === "undefined") return
+        const onAuth = () => setAuthTick((n) => n + 1)
+        window.addEventListener("verity_auth_change", onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => {
+            window.removeEventListener("verity_auth_change", onAuth)
+            window.removeEventListener("storage", onAuth)
+        }
+    }, [isCanvas])
 
     useEffect(() => {
         if (state !== "authorized") return
