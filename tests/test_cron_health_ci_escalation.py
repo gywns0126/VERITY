@@ -61,3 +61,52 @@ def test_rule7_audit_is_ci_critical():
     sev, findings = m._sweep_severity_and_findings([_fail("rule7_audit.yml")], "PASS")
     assert sev == "FAIL"
     assert any("🔴" in x and "rule7_audit.yml" in x for x in findings)
+
+
+# ── _latest_completed_main_run: branch 오판 차단 (2026-07-23 false P0 회귀) ──
+
+def _run(branch, conclusion, status="completed", ts="2026-07-23T04:00:00Z"):
+    return {"headBranch": branch, "conclusion": conclusion, "status": status,
+            "createdAt": ts, "displayTitle": "x"}
+
+
+def test_pr_branch_failure_ignored_main_success_wins():
+    # 버그 재현: PR 브랜치 실패(최신) + main 성공(직전) → main 성공 반환(회귀 아님).
+    # newstab PR #142 tests.yml 실패가 main 회귀로 오판됐던 정확한 시나리오.
+    runs = [
+        _run("merge/newstab-into-main", "failure", ts="2026-07-23T04:01:00Z"),
+        _run("main", "success", ts="2026-07-23T03:38:00Z"),
+    ]
+    latest = m._latest_completed_main_run(runs)
+    assert latest is not None
+    assert latest["headBranch"] == "main"
+    assert latest["conclusion"] == "success"
+
+
+def test_real_main_failure_still_caught():
+    # main 최신 완료 run 이 failure → 반환(실 회귀는 여전히 잡힘).
+    runs = [
+        _run("main", "failure", ts="2026-07-23T05:00:00Z"),
+        _run("main", "success", ts="2026-07-23T03:00:00Z"),
+    ]
+    latest = m._latest_completed_main_run(runs)
+    assert latest is not None and latest["conclusion"] == "failure"
+
+
+def test_no_main_run_returns_none():
+    # 창 안에 main run 이 전무(전부 PR) → None (오탐 0, skip).
+    runs = [
+        _run("feat/x", "failure"),
+        _run("fix/y", "success"),
+    ]
+    assert m._latest_completed_main_run(runs) is None
+
+
+def test_in_progress_main_run_skipped():
+    # main in_progress(미완료)는 건너뛰고 직전 완료 main run 판정.
+    runs = [
+        _run("main", None, status="in_progress", ts="2026-07-23T06:00:00Z"),
+        _run("main", "failure", ts="2026-07-23T05:00:00Z"),
+    ]
+    latest = m._latest_completed_main_run(runs)
+    assert latest is not None and latest["conclusion"] == "failure"
