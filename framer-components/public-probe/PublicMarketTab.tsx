@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * RULE 6 — ⓘ 분석 설명 사전 작성. 런타임 LLM 0.
  * ⓘ = 항상 표시. 도움말 인터랙션 = PC(hover) 커서 / 모바일(touch) 탭. 토글 없음.
  * 반응형 — ResizeObserver + 100%/maxHeight/overflow.
- * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
+ * 테마: init=false(SSG 라이트)→effect가 body 판독으로 교정(리렌더 강제). 캔버스는 dark prop 정적.
  * 🚨 중복 정리(2026-06-21): 글로벌 시세 보드(PublicMarketBoard)와 겹치는 시세 타일(USD/KRW·VIX·국채10Y·S&P·나스닥·금·WTI)
  *   제거 → 여긴 보드에 없는 **매크로 레짐 신호(금리차·밸류·신용) + 이벤트 일정 + IPO** 만. 보드=한눈 시세, 탭=심화 매크로.
  * 🚨 브랜드 = 보라(vg #6c5ce7/#a99bff, 2026-06-26). 링크·툴팁=보라 / D-day=시간신호라 green 유지. 면책("판단 제공 안 함·권유 아님·비노출")=제거 → 사이트 하단 단일 면책.
@@ -80,10 +80,6 @@ function fmtDate(s: any): string {
     return x.length === 8 ? `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6, 8)}` : x
 }
 
-/**
- * @framerSupportedLayoutWidth any
- * @framerSupportedLayoutHeight any
- */
 // 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
 let __anHyd = false
 function anReadDark(): boolean {
@@ -98,30 +94,10 @@ function anReadDark(): boolean {
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
 
-
-// 마운트/토글 재판독 SoT — verity_theme(localStorage) 우선 → html[data-an-theme] → body[data-framer-theme].
-// 791d29f7e 8개 fix 에서 누락됐던 body-only 재판독 버그 정정(다크에서 라이트 고정 방지, 2026-07-21 일괄).
-function readBodyDark(): boolean {
-    if (typeof document === "undefined") return false
-    try {
-        const pref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (pref === "dark") return true
-        if (pref === "light") return false
-        const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-        if (h === "dark") return true
-        if (h === "light") return false
-        if (document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
-
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight any
+ */
 export default function PublicMarketTab(props: Props) {
     const { snapshotUrl, ipoUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -137,10 +113,13 @@ export default function PublicMarketTab(props: Props) {
 
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
 
-    /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
+    /* 테마 추종: init=false(SSG 라이트) → effect 가 body 판독으로 교정(리렌더 강제). 캔버스는 dark prop 정적 */
     useEffect(() => {
         if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
+        const read = () => {
+            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
+            setThemeDark(t === "dark")
+        }
         read()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(read)
