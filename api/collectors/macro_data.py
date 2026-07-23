@@ -56,11 +56,10 @@ def get_macro_indicators() -> dict:
         "sox": _get_index_change("^SOX", "필라델피아 반도체"),
         "kospi": _get_index_change("^KS11", "코스피"),    # 30일 추세선용(값은 price_pulse 실시간 유지)
         "kosdaq": _get_index_change("^KQ11", "코스닥"),   # 30일 추세선용(값은 price_pulse 실시간 유지)
-        "btc": _get_upbit_btc(),                 # 디지털 금
-        "eth": _get_upbit("KRW-ETH"),            # 스마트컨트랙트 대장
-        "xrp": _get_upbit("KRW-XRP"),            # 결제 (KR 업비트 거래량 최상위)
-        "sol": _get_upbit("KRW-SOL"),            # 고성능 L1
-        "doge": _get_upbit("KRW-DOGE"),          # 밈 대장
+        # crypto(btc/eth/xrp/sol/doge) = 공개 blob 미포함. 업비트 Open API 약관 제5조(저작권)
+        # "제공 데이터 무단 사용 금지" → 공개 재배포 저촉(2026-07-23 약관 원문 검증). 공개 보드는
+        # Binance 직접 호출로 서빙(PublicMarketBoard src:binance). 내부 crypto 소비처는 자체 소스
+        # (bybit/okx/coingecko) 사용. 업비트 수집 소비처 부재로 orphan → 제거.
     }
 
     fred = get_fred_macro_block()
@@ -283,34 +282,10 @@ def _get_index_change(ticker: str, name: str) -> dict:
     return {"value": 0, "change_pct": 0, "sparkline": [], "data_date": None, **meta, "status": "fail"}
 
 
-def _get_upbit(market: str) -> dict:
-    """업비트 KRW 코인 일봉 시세 + 30일 sparkline (TIDE 동일 소스 업비트). 추측 0, 공개 시세 보드용.
-    소액 코인(도지 등)은 소수점 보존, 고액은 정수 반올림."""
-    meta = {"source": "upbit", "currency": "KRW", "as_of": _now_kst_iso()}
-    try:
-        import json as _json
-        import urllib.request
-        req = urllib.request.Request(
-            f"https://api.upbit.com/v1/candles/days?market={market}&count=30",
-            headers={"User-Agent": "verity"},
-        )
-        with urllib.request.urlopen(req, timeout=15) as r:
-            rows = _json.loads(r.read().decode("utf-8"))
-        closes = [float(x["trade_price"]) for x in rows][::-1]  # 오래된→최신
-        if len(closes) >= 2:
-            current, prev = closes[-1], closes[-2]
-            change_pct = round(((current - prev) / prev) * 100, 2) if prev else 0
-            rnd = 0 if current >= 100 else 2  # 도지 등 소액 코인 소수점 보존
-            sparkline = [round(c, rnd) for c in closes][-30:]
-            return {"value": round(current, rnd), "change_pct": change_pct, "sparkline": sparkline, **meta, "status": "ok"}
-    except Exception as e:  # noqa: BLE001
-        _log_collector_fail("_get_upbit", market, e)
-    return {"value": 0, "change_pct": 0, "sparkline": [], **meta, "status": "fail"}
-
-
-def _get_upbit_btc() -> dict:
-    """비트코인 — 하위호환 wrapper (TIDE/기존 소비처 유지)."""
-    return _get_upbit("KRW-BTC")
+# _get_upbit / _get_upbit_btc 제거(2026-07-23): 업비트 Open API 약관 제5조(저작권) — 제공 데이터
+# 무단 사용/재배포 금지(현행 2023-12-15 약관 원문 검증). 이 함수 산출물은 공개 blob(macro_snapshot.json)
+# 으로 재배포되어 저촉. in-repo 소비처는 macro 주입부(제거됨)뿐이었고 공개 보드/내부 crypto 모두
+# 별도 소스(Binance / bybit·okx·coingecko)를 쓰므로 orphan. 필요 시 git history 참조.
 
 
 def _calc_yield_spread(data: dict) -> dict:
