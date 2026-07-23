@@ -1,33 +1,28 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useState, type CSSProperties } from "react"
+import { type CSSProperties } from "react"
+import { useEffect, useState } from "react"
 
 /**
- * 모바일 하단 네비 시안 — AlphaNest 공개. 하단 탭바 4핵심 + 더보기 시트(롱테일).
+ * 모바일 하단 네비 — AlphaNest 공개. 하단 탭바 4핵심 + 더보기 시트.
+ * 🚨 내부 이동 = <a href> + ControlType.Link. 아이콘 = 인라인 stroke SVG(자립).
  *
- * 목적 = 13페이지를 5슬롯으로(홈·탐색·종목·내 것 + 더보기). 나머지는 시트로.
- * 🚨 내부 이동 = <a href> + ControlType.Link (2026-07-05). window.location(전체 리로드) 아님 —
- *   Framer 퍼블리시 런타임이 동일 출처 내부 앵커를 가로채 SPA 라우팅(리로드 없이 이동)하도록 함.
- *   경로 prop = ControlType.Link 라 Framer UI에서 실제 내부 페이지를 물릴 수 있음(라우터 연결).
- * 🚨 Framer 제약: 코드 컴포넌트=iframe → position:fixed 뷰포트 고정 안 됨.
- *   실제 하단 고정은 이 컴포넌트를 Framer 네이티브 sticky 프레임에 넣어 처리.
- * 아이콘 = 인라인 stroke SVG(자립, npm import 회피). 활성=보라, 비활성=faint. 다크모드 자가감지.
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-mnv-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 정적 HTML 정합. SVG stroke 는 style 로 넘김(var). 되돌리지 말 것.
  */
 
 const LIGHT = { bar: "#ffffff", ink: "#191f28", faint: "#8b95a1", line: "#e5e8eb", violet: "#6c5ce7", sheet: "#ffffff", scrim: "rgba(0,0,0,0.32)", chip: "#f2f4f6" }
 const DARK = { bar: "#171c23", ink: "#e3e7ec", faint: "#828d9b", line: "#252b34", violet: "#a99bff", sheet: "#1e2128", scrim: "rgba(0,0,0,0.5)", chip: "#0f1318" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
-function readBodyDark(): boolean {
-    try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-    } catch (e) {}
-    if (typeof document === "undefined" || !document.body) return false
-    return document.body.dataset.framerTheme === "dark"
-}
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-mnv-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "mnv"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
-/* 인라인 stroke 아이콘 — 24 viewBox, currentColor */
+/* 인라인 stroke 아이콘 — 24 viewBox */
 const ICONS: Record<string, any> = {
     home: <><path d="M4 11.5 12 4l8 7.5" /><path d="M6 10.5V20h12v-9.5" /></>,
     explore: <><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>,
@@ -46,28 +41,13 @@ const ICONS: Record<string, any> = {
 }
 function Icon({ k, c, size = 23 }: { k: string; c: string; size?: number }) {
     return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", stroke: c }}>
             {ICONS[k] || null}
         </svg>
     )
 }
 
 type Item = { key: string; label: string; path: string }
-
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 
 export default function PublicMobileNav(props: {
     homePath?: string; explorePath?: string; stockPath?: string; mePath?: string
@@ -76,21 +56,13 @@ export default function PublicMobileNav(props: {
     dark?: boolean; activePath?: string
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
     const [moreOpen, setMoreOpen] = useState(false)
     const [path, setPath] = useState<string>(props.activePath || "/")
 
     useEffect(() => {
         if (onCanvas) return
-        setThemeDark(readBodyDark())
-        const obs = new MutationObserver(() => setThemeDark(readBodyDark()))
-        if (document.body) obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
         try { setPath(window.location.pathname || "/") } catch (e) {}
-        return () => obs.disconnect()
     }, [onCanvas])
-
-    const isDark = onCanvas ? !!props.dark : themeDark
-    const C = isDark ? DARK : LIGHT
 
     const core: Item[] = [
         { key: "home", label: "홈", path: props.homePath || "/" },
@@ -114,12 +86,10 @@ export default function PublicMobileNav(props: {
     const cur = norm(path)
     const coreActive = core.findIndex((it) => norm(it.path) === cur)
     const moreActive = coreActive < 0 && more.some((it) => norm(it.path) === cur)
-    // 캔버스 에디터에선 href 클릭 차단(페이지 이탈 방지). 퍼블리시에선 Framer 라우터가 앵커 가로챔.
     const guard = (e: any) => { if (onCanvas) e.preventDefault() }
 
     const wrap: CSSProperties = { width: "100%", maxWidth: "100%", boxSizing: "border-box", fontFamily: FONT, position: "relative" }
 
-    // 하단 탭 = <a href> (window.location 아님 → Framer SPA 라우팅 가능)
     const tabLink = (it: Item, active: boolean) => {
         const col = active ? C.violet : C.faint
         return (
@@ -133,7 +103,7 @@ export default function PublicMobileNav(props: {
 
     return (
         <div style={wrap}>
-            {/* 더보기 시트 (바 위로 펼침) */}
+            <style>{AN_PALETTE}</style>
             {moreOpen && (
                 <>
                     <div onClick={() => setMoreOpen(false)}
@@ -157,10 +127,8 @@ export default function PublicMobileNav(props: {
                 </>
             )}
 
-            {/* 하단 탭바 */}
             <div style={{ position: "relative", zIndex: 3, display: "flex", alignItems: "stretch", background: C.bar, borderTop: `1px solid ${C.line}`, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
                 {core.map((it, i) => tabLink(it, coreActive === i))}
-                {/* 더보기 = 이동 아니라 시트 토글이라 button 유지 */}
                 <button onClick={() => setMoreOpen((v) => !v)}
                     style={{ flex: 1, border: "none", background: "transparent", cursor: "pointer", fontFamily: FONT, padding: "8px 0 7px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
                     <Icon k="more" c={moreOpen || moreActive ? C.violet : C.faint} />
@@ -186,5 +154,5 @@ addPropertyControls(PublicMobileNav, {
     smallcapPath: { type: ControlType.Link, title: "소형주" },
     policyPath: { type: ControlType.Link, title: "약관" },
     activePath: { type: ControlType.String, title: "활성 경로(캔버스)", defaultValue: "/" },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
