@@ -42,7 +42,7 @@ def _gh_run_list(workflow: str, limit: int = 5) -> List[Dict[str, Any]]:
     try:
         result = subprocess.run(
             ["gh", "run", "list", f"--workflow={workflow}", "--limit", str(limit), "--json",
-             "databaseId,status,conclusion,createdAt,startedAt,updatedAt,event,displayTitle"],
+             "databaseId,status,conclusion,createdAt,startedAt,updatedAt,event,displayTitle,headBranch"],
             capture_output=True, text=True, timeout=20,
         )
         if result.returncode != 0:
@@ -290,6 +290,26 @@ _SWEEP_EXCLUDE = {
 # 신 push/PR 게이트 추가 시 = 파일명 한 줄 추가.
 _SWEEP_CI_CRITICAL = {"tests.yml", "rule7_audit.yml"}
 
+_DEFAULT_BRANCH = "main"
+
+
+def _latest_completed_main_run(runs: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """runs(gh run list, 최신순) 에서 main 브랜치 완료 run 중 최신 1개 반환 (없으면 None).
+
+    2026-07-23: sweep 가 branch 무관 latest(completed[0]) 를 집어 PR 브랜치(event=pull_request)
+    CI 실패를 'main CI 회귀 (코드 결함)' 로 오판 → false P0 (newstab PR #142 tests/rule7 실패가
+    main 회귀로 격상 알림). production 건강 = main only. PR CI 실패는 PR 자체에 red X 로 표시되고
+    머지 전이라 프로덕션과 무관. schedule/dispatch cron 은 headBranch=main 이라 무영향 —
+    실질 필터 대상은 CI workflow 의 PR-triggered run 뿐. 순수 함수 — 단위 테스트 대상.
+    """
+    for r in runs:  # 최신순 (gh run list)
+        if r.get("status") != "completed":
+            continue
+        if r.get("headBranch") != _DEFAULT_BRANCH:
+            continue
+        return r
+    return None
+
 
 def _sweep_workflow_latest_failures() -> List[Dict[str, Any]]:
     """전 workflow 의 최신 완료 run 이 failure 인 것 sweep (윈도우 무관).
@@ -305,11 +325,11 @@ def _sweep_workflow_latest_failures() -> List[Dict[str, Any]]:
         name = os.path.basename(path)
         if name in _SWEEP_EXCLUDE:
             continue
-        runs = _gh_run_list(name, limit=5)
-        completed = [r for r in runs if r.get("status") == "completed"]
-        if not completed:
+        # limit=10: PR 활동 burst 시 최근 run 이 전부 PR 브랜치일 수 있어 main run 확보 여유.
+        runs = _gh_run_list(name, limit=10)
+        latest = _latest_completed_main_run(runs)  # main 브랜치 완료 run 만 (PR 실패 오판 차단)
+        if latest is None:
             continue
-        latest = completed[0]  # gh run list = 최신순
         if latest.get("conclusion") in ("failure", "timed_out", "startup_failure"):
             age_h = None
             try:
