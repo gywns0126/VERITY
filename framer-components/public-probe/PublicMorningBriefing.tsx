@@ -56,7 +56,7 @@ const LIGHT = {
     onAccent: "#ffffff",
 }
 const DARK = {
-    bg: "#0f1318",
+    bg: "#10141a",
     card: "#171c23",
     ink: "#e3e7ec",
     sub: "#9aa4b1",
@@ -291,12 +291,13 @@ function anReadDark(): boolean {
         __anHyd = true
         return false
     }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    const h = document.documentElement
+        ? document.documentElement.dataset.anTheme
+        : null
     if (h === "dark") return true
     if (h === "light") return false
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
-
 
 export default function PublicMorningBriefing(props: Props) {
     const {
@@ -443,7 +444,8 @@ export default function PublicMorningBriefing(props: Props) {
                     const arr = fm[tk]
                     if (!Array.isArray(arr) || !arr.length) continue
                     const lastRow = arr[arr.length - 1]
-                    if (!cd && lastRow && lastRow.date) cd = String(lastRow.date)
+                    if (!cd && lastRow && lastRow.date)
+                        cd = String(lastRow.date)
                     const last = Number(lastRow && lastRow.close)
                     const prevRaw =
                         arr.length >= 2

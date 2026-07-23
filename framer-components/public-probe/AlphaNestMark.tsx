@@ -36,7 +36,9 @@ function MarkSvg(props: {
             aria-hidden="true"
             style={{ display: "block" }}
         >
-            {showBackground ? <rect width="100" height="100" fill={background} /> : null}
+            {showBackground ? (
+                <rect width="100" height="100" fill={background} />
+            ) : null}
             <ellipse cx="50" cy="36" rx="18" ry="24" fill={headColor} />
             <path
                 d="M 20 52 Q 20 84 50 84 Q 80 84 80 52"
