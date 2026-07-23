@@ -46,6 +46,28 @@ export default function PublicTickerSync(props: Props) {
                 const url = window.location.pathname + "?" + params.toString() + window.location.hash
                 window.history.replaceState(null, "", url)
                 setSynced(stored)
+                try { window.dispatchEvent(new Event("verity-ticker-change")) } catch { /* */ }
+            } else {
+                // 콜드 랜딩(?q·최근본 둘 다 없음) = 그날 거래대금 1위(hot_stock)로 디폴트.
+                // → verity_last_ticker + ?q 주입으로 페이지 전 컴포넌트(리포트·차트·관점·AI PDF)가 공유 종목을 읽음. 리포트/결정과 동일 소스.
+                fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json")
+                    .then((r) => (r.ok ? r.json() : null))
+                    .then((d) => {
+                        const t = d && d.hot && d.hot.ticker ? String(d.hot.ticker).toUpperCase() : ""
+                        if (!t) return
+                        try { window.localStorage.setItem(LAST_TK_KEY, t) } catch { /* */ }
+                        try {
+                            const p2 = new URLSearchParams(window.location.search)
+                            if (!(p2.get("q") || "").trim()) {
+                                p2.set("q", t)
+                                window.history.replaceState(null, "", window.location.pathname + "?" + p2.toString() + window.location.hash)
+                            }
+                        } catch { /* */ }
+                        setSynced(t)
+                        // 리포트가 쓰는 것과 동일 이벤트 — 차트·관점·AI PDF·브리프 리스너가 리로드 없이 즉시 추종.
+                        try { window.dispatchEvent(new Event("verity-ticker-change")) } catch { /* */ }
+                    })
+                    .catch(() => {})
             }
         } catch { /* private mode / quota */ }
     }, [onCanvas])

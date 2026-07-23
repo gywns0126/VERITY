@@ -12,14 +12,31 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 로고 = 토스 종목 CDN + 이니셜 폴백. 다크모드 자가감지. cache-fallback.
  */
 
+/* 🚨🚨 롤백 방지 가드 (2026-07-23) — CLAUDE.md RULE 11. 지우거나 되돌리지 말 것. 🚨🚨
+ *
+ * 이 repo .tsx = 라이브 Framer(AlphaNest 공개 프로젝트)의 미러. 양방향 stale 가능(라이브 편집 미반영 또는 그 반대).
+ * 되돌리면 안 되는 레이아웃:
+ *   · 우측 이벤트 리스트("종목 스크롤창") = 데스크톱에서 height = 좌측 캘린더 카드 offsetHeight(calH, calRef ResizeObserver, border-box) 정확 매칭 + overflowY:auto(스크롤).
+ *     static height/maxHeight(560 등)나 alignItems 로 되돌리지 말 것 — 정적값은 캘린더 높이와 안 맞음(2026-07-23 사고).
+ *
+ * 편집/붙여넣기 전 의무 (RULE 11):
+ *   1. Framer 데스크탑 = AlphaNest 공개 프로젝트 탭 focus 확인 (VERITY 내부 프로젝트 아님. getProjectXml 로 검증).
+ *   2. MCP readCodeFile 로 라이브 PublicCalendar 를 먼저 읽어 3-way diff (라이브 / 이 미러 / git origin/main).
+ *   3. 라이브가 더 신선하면 라이브를 base 로 미러 갱신 → 그 위에 변경 적용. stale 미러로 라이브를 덮지 말 것.
+ *   4. 변경은 3소스 동시 동기화: 라이브 Framer(MCP) + 이 repo 파일 + 메모리 feedback_framer_tri_source_sync_guard.
+ *      한쪽만 갱신 = 다음 싱크가 나머지를 롤백시키는 시한폭탄.
+ *
+ * 다크모드: readBodyDark() = body[data-framer-theme] 자가감지. 이 패턴을 단순화/제거하면 새로고침 시 부분 라이트 회귀.
+ */
+
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", track: "#eef0f3", hi: "#f6f7f9", vt: "#6c5ce7", vtS: "#f0edff",
+    line: "#e5e8eb", track: "#eef0f3", hi: "#f6f7f9", vt: "#6c5ce7", vtS: "#f0edff", vtSolid: "#6c5ce7",
     today: "#191f28", todayInk: "#ffffff", cellHover: "#f6f7f9",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
-    line: "#252b34", track: "#222a33", hi: "#1e242c", vt: "#a99bff", vtS: "#241f3a",
+    line: "#252b34", track: "#222a33", hi: "#1e242c", vt: "#a99bff", vtS: "#241f3a", vtSolid: "#6c5ce7",
     today: "#e3e7ec", todayInk: "#0f1318", cellHover: "#1e242c",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
@@ -65,18 +82,23 @@ function StockDot(props: { ticker: any; name: any; size?: number }) {
 }
 
 function readBodyDark(): boolean {
+    // 기본 = 라이트(사이트 첫 시작 라이트 결정, 2026-07-19). 명시적 'dark' 신호가 있을 때만 다크.
+    //   판독 순서 = html[data-an-theme](Custom Code 헤드 스크립트가 페인트 전 동기 세팅, 레이스 제거)
+    //   → body[data-framer-theme](토글) → localStorage. OS 설정은 안 봄(로드마다 뒤집힘 방지).
+    //   🚨 body-first 로 되돌리지 말 것 — Framer 네이티브가 새로고침 때 body 를 OS 로 리셋 → 부분 라이트 회귀(2026-07-23).
     try {
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
+        if (typeof document !== "undefined") {
+            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+            if (h === "dark") return true
+            if (h === "light") return false
+            if (document.body) {
+                const a = document.body.dataset.framerTheme
+                if (a === "dark") return true
+                if (a === "light") return false
+            }
         }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) return window.matchMedia("(prefers-color-scheme: dark)").matches
+        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (s === "dark") return true
     } catch (e) {}
     return false
 }
@@ -108,8 +130,10 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
     const [selDate, setSelDate] = useState<string>("")
     const [catFilter, setCatFilter] = useState<string>("")
     const [w, setW] = useState(0)
+    const [calH, setCalH] = useState(0)   // 좌측 캘린더 카드 실측 높이 → 우측 리스트 매칭
     const [listOpen, setListOpen] = useState(false)   // 모바일 리스트 더보기 펼침
     const rootRef = useRef<HTMLDivElement>(null)
+    const calRef = useRef<HTMLDivElement>(null)   // 좌측 캘린더 카드(높이 소스)
 
     useEffect(() => {
         if (onCanvas) return
@@ -128,6 +152,15 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
+
+    // 좌측 캘린더 카드 높이 실측(offsetHeight=border-box) → 우측 이벤트 리스트("종목 스크롤창") 높이 정확 매칭. data 로드 후 calRef 부착.
+    useEffect(() => {
+        const el = calRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver(() => setCalH(el.offsetHeight))
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [data])
 
     useEffect(() => {
         if (onCanvas) return
@@ -237,7 +270,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
 
             {/* 카테고리 필터 칩 */}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-                <button onClick={() => setCatFilter("")} style={{ border: "none", cursor: "pointer", fontFamily: FONT, padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, background: !catFilter ? C.vt : C.card, color: !catFilter ? "#fff" : C.sub, boxShadow: !catFilter ? "none" : "0 1px 2px rgba(0,0,0,0.04)" }}>전체</button>
+                <button onClick={() => setCatFilter("")} style={{ border: "none", cursor: "pointer", fontFamily: FONT, padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, background: !catFilter ? C.vtSolid : C.card, color: !catFilter ? "#fff" : C.sub, boxShadow: !catFilter ? "none" : "0 1px 2px rgba(0,0,0,0.04)" }}>전체</button>
                 {Object.keys(CAT).map((k) => {
                     const on = catFilter === k
                     return (
@@ -252,7 +285,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
 
             <div style={{ display: narrow ? "block" : "grid", gridTemplateColumns: narrow ? undefined : "1.35fr 1fr", gap: 16, alignItems: "start" }}>
                 {/* 월 그리드 */}
-                <div style={cardS}>
+                <div ref={calRef} style={cardS}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                         <div>
                             <span style={{ fontSize: narrow ? 18 : 21, fontWeight: 800, letterSpacing: "-0.4px" }}>
@@ -305,7 +338,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                 </div>
 
                 {/* 이벤트 리스트 (선택일 or 이 달 전체) */}
-                <div style={{ ...cardS, marginTop: narrow ? 16 : 0, padding: narrow ? "14px 14px" : "18px 18px", maxHeight: narrow ? undefined : 560, overflowY: narrow ? undefined : "auto" }}>
+                <div style={{ ...cardS, boxSizing: "border-box", marginTop: narrow ? 16 : 0, padding: narrow ? "14px 14px" : "18px 18px", height: narrow ? undefined : (calH || 560), overflowY: narrow ? undefined : "auto" }}>
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
                         <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>
                             {selDate ? selDate.slice(5).replace("-", "/") + " 이벤트" : "이 달 이벤트"}

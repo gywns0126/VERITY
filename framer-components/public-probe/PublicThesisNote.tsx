@@ -15,6 +15,7 @@ import { Heart, User } from "@phosphor-icons/react"
  * 커뮤니티 v1(2026-07-10, 020 migration): 공개 토글(기본 비공개·별명 필수) + 종목별 공개 관점 피드 + 좋아요 + 신고.
  *   피드 = /api/thesis_feed (익명 조회 가능, 별명·아바타만 노출 — 실명/이메일/기록가 비노출).
  *   🚨 피드 내용 = 이용자 개인 의견 라벨 필수 (AlphaNest 분석·판단 아님).
+ * 🚨 2026-07-21 세션 사슬 — loadToken 만료 가드 + verity_auth_change/storage 리스너(로그인·토큰갱신 후 서버 thesis·피드 재fetch).
  */
 
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", upS: "#fdecee", downS: "#eaf1fe", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff", chipBg: "#f2f4f6" }

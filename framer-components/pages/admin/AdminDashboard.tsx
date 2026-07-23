@@ -113,13 +113,33 @@ function _bucketFromDue(due?: string): "today" | "week" | "soon" | "long" {
 }
 
 /* ─── 유틸 ─── */
+// 2026-07-23 VERITY↔AlphaNest 분리 Stage 2: 오퍼레이터는 공개 blob 대신 authed 엔드포인트.
+// /api/admin?type=portfolio_full (authorize: X-Admin-Token OR JWT+is_admin) 가 full portfolio 서빙.
+// verity_supabase_session(AdminLogin) 없으면 401 → 로그인 필요(VERITY=비공개). 공개 blob은 Stage 3서 sanitize.
+const API_BASE = "https://project-yw131.vercel.app"
+
+// verity_supabase_session → Bearer JWT(만료체크). AdminDashboard 패턴. esbuild 안전(?. 미사용).
+function _operatorAuthHeaders(): Record<string, string> {
+    try {
+        const raw = typeof localStorage !== "undefined" ? localStorage.getItem("verity_supabase_session") : null
+        if (!raw) return {}
+        const s = JSON.parse(raw)
+        const jwt = (!s.expires_at || Date.now() / 1000 <= s.expires_at) ? s.access_token : null
+        return jwt ? { Authorization: `Bearer ${jwt}` } : {}
+    } catch (e) {
+        return {}
+    }
+}
+
 function _fetchJson(url: string, signal?: AbortSignal): Promise<any> {
     // raw.githubusercontent.com 은 "simple request" 만 허용 — custom header 붙이면
     // CORS preflight 가 걸려 차단됨 (Safari "Load failed" 의 원인).
     // 캐시 우회는 query param 의 timestamp 로만 처리.
+    const _cacheable = /public\.blob\.vercel-storage\.com/.test(url)
     const sep = url.includes("?") ? "&" : "?"
-    const finalUrl = `${url}${sep}t=${Date.now()}`
-    return fetch(finalUrl, { signal })
+    const finalUrl = _cacheable ? url : `${url}${sep}t=${Date.now()}`
+    const _hdrs = /\/api\/admin/.test(url) ? _operatorAuthHeaders() : {}
+    return fetch(finalUrl, { signal, headers: _hdrs })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
             // GitHub raw 가 NaN/Infinity 보내는 경우 대비
@@ -1375,7 +1395,7 @@ export default function AdminDashboard(props: Props) {
 }
 
 /* ─── Framer property controls ─── */
-const _DEFAULT_PORTFOLIO = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json"
+const _DEFAULT_PORTFOLIO = `${API_BASE}/api/admin?type=portfolio_full`
 const _DEFAULT_KB_USAGE = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/brain_kb_usage.json"
 const _DEFAULT_TODOS = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/admin_todos.json"
 

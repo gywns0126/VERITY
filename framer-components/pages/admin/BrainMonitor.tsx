@@ -38,6 +38,25 @@ const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 }
 const R = { sm: 4, md: 6, lg: 10 }
 /* ◆ DESIGN TOKENS END ◆ */
 
+// 2026-07-23 VERITY↔AlphaNest 분리 Stage 2: 오퍼레이터는 공개 blob 대신 authed 엔드포인트.
+// /api/admin?type=portfolio_full (authorize: X-Admin-Token OR JWT+is_admin) 가 full portfolio 서빙.
+// verity_supabase_session(AdminLogin) 없으면 401 → 로그인 필요(VERITY=비공개). 공개 blob은 Stage 3서 sanitize.
+const API_BASE = "https://project-yw131.vercel.app"
+const DATA_URL = `${API_BASE}/api/admin?type=portfolio_full`
+
+// verity_supabase_session → Bearer JWT(만료체크). AdminDashboard 패턴. esbuild 안전(옵셔널체이닝 미사용).
+function _operatorAuthHeaders(): Record<string, string> {
+    try {
+        const raw = typeof localStorage !== "undefined" ? localStorage.getItem("verity_supabase_session") : null
+        if (!raw) return {}
+        const s = JSON.parse(raw)
+        const jwt = (!s.expires_at || Date.now() / 1000 <= s.expires_at) ? s.access_token : null
+        return jwt ? { Authorization: `Bearer ${jwt}` } : {}
+    } catch (e) {
+        return {}
+    }
+}
+
 const HEALTH_HEX: Record<string, string> = {
     ok: C.success, warning: C.warn, critical: C.danger, unknown: C.textTertiary,
 }
@@ -130,7 +149,8 @@ export default function BrainMonitor(props: Props) {
 
     const fetchPostmortem = React.useCallback(async () => {
         try {
-            const r = await fetch(portfolioUrl, { cache: "no-store" })
+            const _hdrs = /\/api\/admin/.test(portfolioUrl) ? _operatorAuthHeaders() : {}
+            const r = await fetch(portfolioUrl, { headers: _hdrs })
             if (!r.ok) { setAuthError(`HTTP ${r.status}`); return null }
             setAuthError(null)
             const data = await r.json()
@@ -1075,8 +1095,7 @@ addPropertyControls(BrainMonitor, {
     portfolioUrl: {
         type: ControlType.String,
         title: "Portfolio URL",
-        defaultValue:
-            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
+        defaultValue: DATA_URL,
         placeholder: "https://...portfolio.json",
     },
 })

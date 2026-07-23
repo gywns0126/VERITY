@@ -356,7 +356,13 @@ def public_slim(summary: Dict[str, Any]) -> Dict[str, Any]:
         "spec_version": summary.get("spec_version"),
         "gate": summary.get("gate"),
         "rule7_disclaimer": summary.get("rule7_disclaimer"),
-        "signals": [_sanitize_signal(s) for s in summary.get("signals", [])],
+        # 🚨 VERITY wide-scan funnel = 비공개 자산 → 공개 slim 에서 제외 (내부 full 엔 유지).
+        #    AlphaNest 공개 표면에 funnel 존재/신호 노출 금지 (feedback_verity_vs_alphanest_identity).
+        "signals": [
+            _sanitize_signal(s)
+            for s in summary.get("signals", [])
+            if "funnel" not in str(s.get("signal", "")).lower()
+        ],
         "_note": (
             "공개 = 과정·신호명·표본·성숙도만. raw 성과(IC·적중률·기댓값·CI) = 검증(N≥252) 후. "
             "표본 누적 ≠ 신호 검증 (게이트 전 동전던지기와 구별 불가). 점수·등급·종목 추천 아님 (RULE 7 가설)."

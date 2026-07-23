@@ -22,6 +22,11 @@ const MONO: CSSProperties = { fontFamily: "'SF Mono','JetBrains Mono','Menlo',mo
 const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 
 function readBodyDark(): boolean {
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
     if (typeof document === "undefined" || !document.body) return false
     return document.body.dataset.framerTheme === "dark"
 }

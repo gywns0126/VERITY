@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *   진짜 흐름 = Δ상장좌수(설정/환매) = 가격효과 제거. 1일 Δ는 노이즈 → 누적 순흐름(최근 N일)이 주신호.
  *   괴리율 = (시장가 − NAV) / NAV — ETF 프리미엄/디스카운트(수요 쏠림 보조 단서).
  * 🚨 RULE 7: 상장좌수·NAV·순자산·흐름 = KRX OpenAPI 1차 사실(etf_flow.py 누적). 점수·추천 0. 첫 신호 = 거래일 ≥2.
- * 데이터 = data/etf_flow.json (단일 writer, publish-data 발행). history(≤40거래일)에서 누적 산출. 테마 = body[data-framer-theme] 자가 추종.
+ * 데이터 = data/etf_flow.json (단일 writer, publish-data 발행). history(≤40거래일)에서 누적 산출. 테마 = init=false(SSG 라이트)→effect 교정.
  */
 
 interface Props {
@@ -76,6 +76,20 @@ function premium(close: any, nav: any): number | null {
     return ((c - n) / n) * 100
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -84,7 +98,7 @@ export default function PublicETFFlow(props: Props) {
     const { dataUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     useEffect(() => {
         if (onCanvas) return
         const read = () => {

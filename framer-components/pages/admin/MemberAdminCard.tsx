@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
 /**
  * MemberAdminCard — 관리자 회원 관리 (AlphaNest 스타일).
  * 소스: /api/admin?type=member_management (본인 JWT · is_admin 서버 재검증 · service_role 실행).
- *   GET 목록/검색 · POST ban|unban|update · DELETE(계정 삭제, 2단계 confirm).
- * 규율: 제재=쓰기 차단(읽기·로그인 허용). 삭제=되돌릴 수 없음 → 이메일 재입력 확인.
- * 다크모드 = body[data-framer-theme] 자동감지. 접근차단 = 페이지 AuthGate(is_admin 계정만).
+ *   GET 목록/검색(+caller_is_super) · POST ban|unban|update(status·is_admin) · DELETE(2단계 confirm).
+ * 2단계 관리자: 최종 관리자(super)=부관리자 지정/해제 독점 · 부관리자=나머지 권한 동일.
+ *   '부관리자 지정/해제' 토글 = 최종 관리자에게만 노출 · 본인 계정 강등 불가 · 모든 변경 감사 로그.
+ * 다크모드 자동감지. 접근차단 = 페이지 AdminGate(is_admin 계정만).
  */
 
 const LIGHT = {
@@ -49,6 +50,15 @@ function loadToken(): string {
         return typeof s.access_token === "string" ? s.access_token : ""
     } catch (e) { return "" }
 }
+function loadUserId(): string {
+    if (typeof window === "undefined") return ""
+    try {
+        const raw = localStorage.getItem(SESSION_KEY)
+        if (!raw) return ""
+        const s = JSON.parse(raw)
+        return s && s.user && typeof s.user.id === "string" ? s.user.id : ""
+    } catch (e) { return "" }
+}
 function fmtDate(iso: any): string {
     if (!iso) return "—"
     try {
@@ -59,13 +69,14 @@ function fmtDate(iso: any): string {
 
 interface Member {
     id: string; email?: string; display_name?: string; nickname?: string
-    status?: string; is_admin?: boolean; is_banned?: boolean; ban_reason?: string
+    status?: string; is_admin?: boolean; is_super_admin?: boolean; is_banned?: boolean; ban_reason?: string
     banned_at?: string; created_at?: string
 }
 
 const SAMPLE: Member[] = [
     { id: "u1", email: "user1@example.com", nickname: "가치투자자", status: "pending", is_admin: false, is_banned: false, created_at: "2026-06-01" },
-    { id: "u2", email: "admin@example.com", nickname: "운영자", status: "approved", is_admin: true, is_banned: false, created_at: "2026-04-01" },
+    { id: "u2", email: "owner@alphanest.kr", nickname: "소유자", status: "approved", is_admin: true, is_super_admin: true, is_banned: false, created_at: "2026-04-01" },
+    { id: "u4", email: "deputy@alphanest.kr", nickname: "부관리자A", status: "approved", is_admin: true, is_super_admin: false, is_banned: false, created_at: "2026-05-01" },
     { id: "u3", email: "spam@example.com", nickname: "홍보봇", status: "pending", is_admin: false, is_banned: true, ban_reason: "반복 홍보글", banned_at: "2026-07-10", created_at: "2026-07-08" },
 ]
 
@@ -76,19 +87,22 @@ export default function MemberAdminCard(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
     const C = (onCanvas ? !!props.dark : themeDark) ? DARK : LIGHT
+    const meId = loadUserId()
 
     const [members, setMembers] = useState<Member[]>(onCanvas ? SAMPLE : [])
     const [total, setTotal] = useState<number | null>(onCanvas ? SAMPLE.length : null)
+    const [callerSuper, setCallerSuper] = useState<boolean>(onCanvas)
     const [q, setQ] = useState("")
     const [loading, setLoading] = useState(false)
     const [err, setErr] = useState("")
     const [msg, setMsg] = useState("")
-    const [openId, setOpenId] = useState("")           // 행 액션 펼침
-    const [banId, setBanId] = useState("")             // 제재 사유 입력 중
+    const [openId, setOpenId] = useState("")
+    const [banId, setBanId] = useState("")
     const [banReason, setBanReason] = useState("")
-    const [delId, setDelId] = useState("")             // 삭제 확인 중
+    const [delId, setDelId] = useState("")
     const [delEmail, setDelEmail] = useState("")
-    const [busy, setBusy] = useState("")               // 처리 중 user_id
+    const [adminId, setAdminId] = useState("")
+    const [busy, setBusy] = useState("")
 
     useEffect(() => {
         if (onCanvas) return
@@ -108,7 +122,7 @@ export default function MemberAdminCard(props: Props) {
         const url = `${apiBase}/api/admin?type=member_management&limit=100${query ? "&q=" + encodeURIComponent(query) : ""}`
         fetch(url, { headers: { Authorization: "Bearer " + token }, cache: "no-store" })
             .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
-            .then((d) => { setMembers(Array.isArray(d.members) ? d.members : []); setTotal(d.total != null ? d.total : null) })
+            .then((d) => { setMembers(Array.isArray(d.members) ? d.members : []); setTotal(d.total != null ? d.total : null); setCallerSuper(d.caller_is_super === true) })
             .catch((e) => setErr("불러오기 실패: " + (e && e.message ? e.message : e)))
             .finally(() => setLoading(false))
     }, [apiBase, onCanvas])
@@ -129,7 +143,7 @@ export default function MemberAdminCard(props: Props) {
             const d = await r.json().catch(() => ({}))
             if (!r.ok) throw new Error(d.error || ("HTTP " + r.status))
             setMsg(opts.ok)
-            setOpenId(""); setBanId(""); setBanReason(""); setDelId(""); setDelEmail("")
+            setOpenId(""); setBanId(""); setBanReason(""); setDelId(""); setDelEmail(""); setAdminId("")
             load(q)
         } catch (e: any) {
             setErr("실패: " + (e && e.message ? e.message : e))
@@ -145,11 +159,11 @@ export default function MemberAdminCard(props: Props) {
 
     return (
         <div style={wrap}>
-            {/* 헤더 + 검색 */}
             <div style={card}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
                     <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.4px" }}>회원 관리</span>
                     <span style={{ fontSize: 12, color: C.faint, fontWeight: 600 }}>{total != null ? total.toLocaleString() + "명" : ""}</span>
+                    {callerSuper && <span style={chip(C.vt, C.onAccent)}>최종 관리자</span>}
                     <span style={{ marginLeft: "auto", fontSize: 11, color: C.faint, fontWeight: 600 }}>{loading ? "불러오는 중…" : ""}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -162,18 +176,18 @@ export default function MemberAdminCard(props: Props) {
                 {msg && <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginTop: 10 }}>{msg}</div>}
             </div>
 
-            {/* 회원 리스트 */}
             <div style={card}>
                 {members.length === 0 && !loading ? (
                     <div style={{ fontSize: 13, color: C.faint, fontWeight: 600 }}>회원이 없어요</div>
                 ) : members.map((m, i) => {
                     const opened = openId === m.id
                     const st = m.status === "approved" ? { bg: C.greenS, fg: C.green, t: "승인" } : m.status === "rejected" ? { bg: C.upS, fg: C.up, t: "거절" } : { bg: C.grid, fg: C.sub, t: "대기" }
+                    const canToggleAdmin = callerSuper && m.id !== meId && !m.is_super_admin
                     return (
                         <div key={m.id} style={{ paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12, borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", cursor: "pointer" }} onClick={() => { setOpenId(opened ? "" : m.id); setBanId(""); setDelId("") }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", cursor: "pointer" }} onClick={() => { setOpenId(opened ? "" : m.id); setBanId(""); setDelId(""); setAdminId("") }}>
                                 <span style={{ fontSize: 14, fontWeight: 800 }}>{m.nickname || m.display_name || "(별명 없음)"}</span>
-                                {m.is_admin && <span style={chip(C.vtS, C.vt)}>관리자</span>}
+                                {m.is_super_admin ? <span style={chip(C.vt, C.onAccent)}>최종 관리자</span> : m.is_admin ? <span style={chip(C.vtS, C.vt)}>부관리자</span> : null}
                                 {m.is_banned && <span style={chip(C.upS, C.up)}>제재됨</span>}
                                 <span style={{ ...chip(st.bg, st.fg) }}>{st.t}</span>
                                 <span style={{ marginLeft: "auto", fontSize: 11, color: C.faint, fontWeight: 700, transform: opened ? "rotate(90deg)" : "none", transition: "transform 0.12s" }}>›</span>
@@ -182,16 +196,29 @@ export default function MemberAdminCard(props: Props) {
 
                             {opened && (
                                 <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-                                    {/* 액션 버튼 행 */}
                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                         {m.status !== "approved" && <button disabled={busy === m.id} onClick={() => act(m, { body: { action: "update", user_id: m.id, status: "approved" }, ok: "승인했어요" })} style={btn(C.greenS, C.green)}>승인</button>}
+                                        {canToggleAdmin && (m.is_admin
+                                            ? <button disabled={busy === m.id} onClick={() => { setAdminId(m.id); setBanId(""); setDelId("") }} style={btn(C.vtS, C.vt)}>부관리자 해제</button>
+                                            : <button disabled={busy === m.id} onClick={() => { setAdminId(m.id); setBanId(""); setDelId("") }} style={btn(C.vtS, C.vt)}>부관리자 지정</button>)}
                                         {m.is_banned
                                             ? <button disabled={busy === m.id} onClick={() => act(m, { body: { action: "unban", user_id: m.id }, ok: "제재를 해제했어요" })} style={btn(C.grid, C.sub)}>제재 해제</button>
-                                            : <button disabled={busy === m.id} onClick={() => { setBanId(m.id); setBanReason("") }} style={btn(C.amberS, C.amber)}>제재</button>}
-                                        <button disabled={busy === m.id} onClick={() => { setDelId(m.id); setDelEmail("") }} style={btn(C.upS, C.up)}>삭제</button>
+                                            : <button disabled={busy === m.id} onClick={() => { setBanId(m.id); setBanReason(""); setAdminId("") }} style={btn(C.amberS, C.amber)}>제재</button>}
+                                        <button disabled={busy === m.id} onClick={() => { setDelId(m.id); setDelEmail(""); setAdminId("") }} style={btn(C.upS, C.up)}>삭제</button>
                                     </div>
 
-                                    {/* 제재 사유 입력 */}
+                                    {adminId === m.id && (
+                                        <div style={{ background: C.vtS, borderRadius: 10, padding: 10 }}>
+                                            <div style={{ fontSize: 12, color: C.vt, fontWeight: 700, marginBottom: 8, lineHeight: 1.5 }}>
+                                                {m.is_admin ? "부관리자 권한을 해제할까요? 이 회원은 관리자 페이지에 접근할 수 없게 돼요." : "이 회원을 부관리자로 지정할까요? 최종 관리자와 같은 권한(부관리자 지정 제외)이 부여돼요."}
+                                            </div>
+                                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                                <button disabled={busy === m.id} onClick={() => act(m, { body: { action: "update", user_id: m.id, is_admin: !m.is_admin }, ok: m.is_admin ? "부관리자를 해제했어요" : "부관리자로 지정했어요" })} style={btn(C.vt, C.onAccent)}>{m.is_admin ? "해제 확정" : "지정 확정"}</button>
+                                                <button onClick={() => setAdminId("")} style={btn(C.card, C.sub)}>취소</button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {banId === m.id && (
                                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", background: C.grid, borderRadius: 10, padding: 10 }}>
                                             <input value={banReason} onChange={(e) => setBanReason(e.target.value)} placeholder="제재 사유 (선택)"
@@ -201,7 +228,6 @@ export default function MemberAdminCard(props: Props) {
                                         </div>
                                     )}
 
-                                    {/* 삭제 2단계 확인 */}
                                     {delId === m.id && (
                                         <div style={{ background: C.upS, borderRadius: 10, padding: 10 }}>
                                             <div style={{ fontSize: 12, color: C.up, fontWeight: 700, marginBottom: 8, lineHeight: 1.5 }}>계정·글 전부 영구 삭제돼요 (되돌릴 수 없음). 확인하려면 이메일 <b>{m.email}</b> 입력:</div>
@@ -220,7 +246,7 @@ export default function MemberAdminCard(props: Props) {
                     )
                 })}
             </div>
-            <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600 }}>제재=쓰기 차단(읽기 허용) · 모든 변경 감사 로그 기록 · is_admin 계정만</div>
+            <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600 }}>부관리자 지정/해제 = 최종 관리자만 · 본인 계정 강등 불가 · 모든 변경 감사 로그 기록</div>
         </div>
     )
 }

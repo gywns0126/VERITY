@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 🚨 PM 결정 2026-06-25 / RULE 7: 종목별 자기 과거 사실만(종목 간 평균·집계·랭킹 0). 과거 사실 비교지 예측·신호 아님.
  *   종목 간 집계 없음 → 생존편향 비해당. count(N)·날짜 = 사실의 일부. raw 주가 변화(시장 포함).
  *   LLM·네이버 못 가지는 자기 데이터 자산(RULE 6 escape — 자기 trail, narrative 아님). 점수·등급·추천 0.
- * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page 전환 추종 1s 폴링. 테마 = body[data-framer-theme] 추종.
+ * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page 전환 추종 1s 폴링. 테마 = init=false(SSG 라이트)→effect 교정.
  * 데이터 없으면 graceful 숨김(빈 카드 방지).
  */
 
@@ -68,6 +68,20 @@ const SAMPLE: Record<string, Stock> = {
     },
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -87,7 +101,7 @@ export default function PublicEventHistory(props: Props) {
     const { ticker, dataUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     useEffect(() => {
         if (onCanvas) return
         const read = () => {

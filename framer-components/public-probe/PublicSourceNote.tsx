@@ -12,7 +12,7 @@ import { useEffect, useState, type CSSProperties } from "react"
  *   여기로 옮기면 안 됨(RULE 7 "hit rate 노출 시 병기 의무").
  *
  * 사용 = props.sources 로 그 페이지에 실제 쓰인 출처만 콤마로 명시. note 로 문구 override 가능.
- * 테마 = body[data-framer-theme] 자가감지. 토스식 소프트(무채색, 얇은 상단 구분선).
+ * 테마 = init=false(SSG 라이트)→effect readBodyDark 교정(리렌더 강제). 토스식 소프트(무채색, 얇은 상단 구분선).
  */
 
 const LIGHT = { bg: "#f2f4f6", ink: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", violet: "#6c5ce7" }
@@ -20,9 +20,11 @@ const DARK = { bg: "#16181d", ink: "#9aa4b1", faint: "#6b7684", line: "#2b2f37",
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
 function readBodyDark(): boolean {
-    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
-    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    // init=false(SSG 라이트와 동일) → 이 함수는 effect 에서만 실제 테마 교정에 사용(리렌더 강제, SSG-하이드레이션 stuck 방지).
     try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
         if (typeof document !== "undefined" && document.body) {
             const a = document.body.dataset.framerTheme
             if (a === "dark") return true
@@ -40,6 +42,20 @@ function readBodyDark(): boolean {
     return false
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
 export default function PublicSourceNote(props: {
     width?: number
     sources?: string
@@ -48,8 +64,8 @@ export default function PublicSourceNote(props: {
     dark?: boolean
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    // 첫 페인트부터 실제 테마로 시작(캔버스는 prop) — 반대색 flash 제거.
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
+    // init=anReadDark(): 첫 마운트=라이트(SSG 매칭·stuck 방지), 이후 마운트=실제 테마 즉시 → effect 가 교정. 캔버스는 prop.
+    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : anReadDark()))
     useEffect(() => {
         if (onCanvas) return
         setThemeDark(readBodyDark())

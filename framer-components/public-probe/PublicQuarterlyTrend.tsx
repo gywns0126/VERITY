@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *   quarters[] = {q(분기말 YYYY-MM-DD), debt_ratio, roa, current_ratio, gross_margin, asset_turnover,
  *                 operating_margin, net_margin, roe(US 2026-07 확장 — 없는 시장/종목은 행 자동 skip)}
  * 🚨 라이브: 실데이터(≥4분기) 없으면 **자동 숨김**(가짜 추이 금지, RULE 7). 캔버스만 SAMPLE 미리보기.
- * 테마: Framer 네이티브 추종(body[data-framer-theme]). 외곽선 없음(소프트 카드). 루트 패딩 = /stock 컨벤션(narrow?14:18).
+ * 테마: init=false(SSG 라이트)→effect가 body 판독으로 교정(리렌더 강제). 외곽선 없음(소프트 카드). 루트 패딩 = /stock 컨벤션(narrow?14:18).
  */
 
 const LIGHT = {
@@ -73,6 +73,20 @@ function qLabel(qEnd: string): string {
     return `${y}.${q}`
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -84,7 +98,7 @@ export default function PublicQuarterlyTrend(props: Props) {
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [quarters, setQuarters] = useState<any[]>(onCanvas ? SAMPLE_QUARTERS : [])
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
 
     useEffect(() => {

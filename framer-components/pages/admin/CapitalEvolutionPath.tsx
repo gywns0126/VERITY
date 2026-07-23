@@ -114,11 +114,34 @@ const TIERS: TierSpec[] = [
 
 
 /* ◆ HELPERS ◆ */
+// 2026-07-23 VERITY↔AlphaNest 분리 Stage 2: 오퍼레이터는 공개 blob 대신 authed 엔드포인트.
+// /api/admin?type=portfolio_full (authorize: X-Admin-Token OR JWT+is_admin) 가 full portfolio 서빙.
+// verity_supabase_session(AdminLogin) 없으면 401 → 로그인 필요(VERITY=비공개). 공개 blob은 Stage 3서 sanitize.
+const API_BASE = "https://project-yw131.vercel.app"
+const DATA_URL = `${API_BASE}/api/admin?type=portfolio_full`
+
+// verity_supabase_session → Bearer JWT(만료체크). AdminDashboard 패턴. esbuild 안전(?. 미사용).
+function _operatorAuthHeaders(): Record<string, string> {
+    try {
+        const raw = typeof localStorage !== "undefined" ? localStorage.getItem("verity_supabase_session") : null
+        if (!raw) return {}
+        const s = JSON.parse(raw)
+        const jwt = (!s.expires_at || Date.now() / 1000 <= s.expires_at) ? s.access_token : null
+        return jwt ? { Authorization: `Bearer ${jwt}` } : {}
+    } catch (e) {
+        return {}
+    }
+}
+
 function fetchPortfolio(url: string, signal?: AbortSignal): Promise<any> {
     const u = (url || "").trim()
+    const _cacheable = /public\.blob\.vercel-storage\.com/.test(u)
     const sep = u.includes("?") ? "&" : "?"
-    return fetch(`${u}${sep}_=${Date.now()}`, {
-        cache: "no-store", mode: "cors", credentials: "omit", signal,
+    const _hdrs = /\/api\/admin/.test(u) ? _operatorAuthHeaders() : {}
+    return fetch(_cacheable ? u : `${u}${sep}_=${Date.now()}`, _cacheable ? {
+        mode: "cors", credentials: "omit", signal, headers: _hdrs,
+    } : {
+        cache: "no-store", mode: "cors", credentials: "omit", signal, headers: _hdrs,
     })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -437,7 +460,7 @@ function SubStat({ label, value, tone, small }: {
 
 
 CapitalEvolutionPath.defaultProps = {
-    portfolioUrl: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
+    portfolioUrl: DATA_URL,
     refreshIntervalSec: 300,  // 5분 (자본 변화 주기 = 시장 시간 매매)
     maxWidth: 1000,
 }
@@ -446,7 +469,7 @@ addPropertyControls(CapitalEvolutionPath, {
     portfolioUrl: {
         type: ControlType.String,
         title: "Portfolio URL",
-        defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
+        defaultValue: DATA_URL,
     },
     refreshIntervalSec: {
         type: ControlType.Number,

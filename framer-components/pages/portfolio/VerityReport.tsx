@@ -77,8 +77,9 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
         if (signal.aborted) ac.abort()
         else signal.addEventListener("abort", () => ac.abort(), { once: true })
     }
+    const _hdrs = /\/api\/admin/.test(url) ? _operatorAuthHeaders() : {}
     return _withTimeout(
-        fetch(bustPortfolioUrl(url), { ...PORTFOLIO_FETCH_INIT, signal: ac.signal })
+        fetch(bustPortfolioUrl(url), { ...PORTFOLIO_FETCH_INIT, headers: _hdrs, signal: ac.signal })
             .then((r) => {
                 if (!r.ok) throw new Error(`HTTP ${r.status}`)
                 return r.text()
@@ -93,8 +94,24 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     )
 }
 
-const DATA_URL =
-    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json"
+// 2026-07-23 VERITY↔AlphaNest 분리 Stage 2: 오퍼레이터는 공개 blob 대신 authed 엔드포인트.
+// /api/admin?type=portfolio_full (authorize: X-Admin-Token OR JWT+is_admin) 가 full portfolio 서빙.
+// verity_supabase_session(AdminLogin) 없으면 401 → 로그인 필요(VERITY=비공개). 공개 blob은 Stage 3서 sanitize.
+const API_BASE = "https://project-yw131.vercel.app"
+const DATA_URL = `${API_BASE}/api/admin?type=portfolio_full`
+
+// verity_supabase_session → Bearer JWT(만료체크). AdminDashboard 패턴. esbuild 안전(?. 미사용).
+function _operatorAuthHeaders(): Record<string, string> {
+    try {
+        const raw = typeof localStorage !== "undefined" ? localStorage.getItem("verity_supabase_session") : null
+        if (!raw) return {}
+        const s = JSON.parse(raw)
+        const jwt = (!s.expires_at || Date.now() / 1000 <= s.expires_at) ? s.access_token : null
+        return jwt ? { Authorization: `Bearer ${jwt}` } : {}
+    } catch (e) {
+        return {}
+    }
+}
 
 type Period = "daily" | "weekly" | "monthly" | "quarterly" | "semi" | "annual"
 const PERIOD_LABELS: Record<Period, string> = {

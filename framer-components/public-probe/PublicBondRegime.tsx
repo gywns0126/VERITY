@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  *  - 생 수치(yields / 2Y-10Y·3M-10Y 스프레드 / IG·HY OAS) = ECOS(KR)·FRED(US) 1차 사실.
  *  - 레짐 분류(금리환경 / 곡선 / 신용사이클) = 자체 기준 v0 = 가설 (bondanalyzer.py). 섹션·푸터에 명시.
  *  - recession_signal(3M-10Y < -10bp) = Fed 표준. 점수·추천 0 (RULE 6 통과 — 결정론 산출 표시).
- * 데이터 = data/bonds.json (단일 writer, publish-data 발행). 테마 = body[data-framer-theme] 자가 추종.
+ * 데이터 = data/bonds.json (단일 writer, publish-data 발행). 테마 = init=false(SSG 라이트)→effect 교정.
  * 🚨 면책 문구 제거(2026-06-26, PM) — "등급·추천 아님 / 검증 후 2027" 류는 사이트 하단 단일 면책으로 통합. 출처·분류 기준 설명은 유지.
  */
 
@@ -66,6 +66,20 @@ function fmtAge(iso: any): string {
     }
 }
 
+// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
+let __anHyd = false
+function anReadDark(): boolean {
+    if (typeof document === "undefined") return false
+    if (!__anHyd) {
+        __anHyd = true
+        return false
+    }
+    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    if (h === "dark") return true
+    if (h === "light") return false
+    return !!(document.body && document.body.dataset.framerTheme === "dark")
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -74,7 +88,7 @@ export default function PublicBondRegime(props: Props) {
     const { dataUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(!!dark)
+    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     useEffect(() => {
         if (onCanvas) return
         const read = () => {

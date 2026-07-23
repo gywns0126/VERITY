@@ -31,6 +31,18 @@ FISCAL_ENDS = {"03-31", "06-30", "09-30", "12-31"}
 RATIO_KEYS = ("debt_ratio", "roa", "current_ratio", "gross_margin", "asset_turnover")
 MIN_QUARTERS = 4   # 컴포넌트 게이트(series<4 = 미표시) 정합
 
+# 🚨 magnitude 가드 — DART 원천 XBRL 오류(누적-분기 혼입/원가 태그 오류)로 팽창한 값 auto-null.
+#   정의·물리 불가능만 격리(오탐 0). self-ref outlier 는 오탐 과다(133 hit 대부분 정상 사업 mix)로
+#   auto-null 배제 — 삼성 gm 38→61 류 미세팽창은 수집층(dart_fundamentals) 기간정합 교차검증 후속 큐.
+#   근거: /tmp dry-run 실측 2026-07-23 (1,900종목, 12값 격리, 전부 정의상 불가능 확인).
+# gross_margin = gp/rev → gp>rev 은 정의 불가(9값: 085660 gm 140-188·060980 781 등). period-agnostic 안전.
+# roa = ni/총자산(>0) → roa>100 = ni>자산(단일기간) 물리 불가(3값: 007700 492 등). 음수측은
+#   write-off/청산으로 극단 가능 → 하드 X.
+RATIO_BOUNDS = {
+    "gross_margin": (-100.0, 100.0),
+    "roa": (None, 100.0),
+}
+
 
 def _now_kst() -> datetime:
     return datetime.now(KST)
@@ -40,6 +52,7 @@ def build() -> Dict[str, Any]:
     # ticker -> {q: (fetched_at, quarter_dict)} — 중복은 fetched_at 최신 1건
     by_ticker: Dict[str, Dict[str, Any]] = {}
     bad_dates = 0
+    magnitude_dropped = 0   # 정의·물리 불가능으로 null 처리한 ratio-value 수 (관측)
     with open(INPUT_PATH, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -62,9 +75,16 @@ def build() -> Dict[str, Any]:
                 if v is None:
                     continue
                 try:
-                    q[k] = round(float(v), 2)
+                    fv = round(float(v), 2)
                 except (TypeError, ValueError):
                     continue
+                lo_hi = RATIO_BOUNDS.get(k)
+                if lo_hi is not None:
+                    lo, hi = lo_hi
+                    if (lo is not None and fv < lo) or (hi is not None and fv > hi):
+                        magnitude_dropped += 1   # 정의·물리 불가능 → null 처리(행은 유지)
+                        continue
+                q[k] = fv
             if len(q) <= 1:   # 비율 전부 null
                 continue
             fetched = str(row.get("fetched_at") or "")
@@ -87,6 +107,7 @@ def build() -> Dict[str, Any]:
             "source": "OpenDART (dart_quarterly_snapshots.jsonl, fiscal-end만)",
             "count": len(stocks),
             "dropped_nonfiscal_rows": bad_dates,
+            "dropped_magnitude_values": magnitude_dropped,
             "note": "분기/연 재무 비율 사실(부채비율/ROA/유동비율/매출총이익률/자산회전율) — 점수·등급 0 (RULE 7). fiscal-end 행만.",
         },
         "stocks": stocks,
@@ -109,7 +130,8 @@ def main() -> int:
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False)
         print(f"[dart_quarterly_public] logged=True · {len(out['stocks'])} 종목 "
-              f"(non-fiscal {out['_meta']['dropped_nonfiscal_rows']}행 제거) -> "
+              f"(non-fiscal {out['_meta']['dropped_nonfiscal_rows']}행 · "
+              f"magnitude-null {out['_meta']['dropped_magnitude_values']}값 제거) -> "
               f"{os.path.relpath(OUTPUT_PATH, _ROOT)}", file=sys.stderr)
         ok = True
         return 0

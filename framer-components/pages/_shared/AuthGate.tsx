@@ -28,6 +28,7 @@ const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
  * ⚠ 2026-05-21: optional chaining(?.) / optional catch(catch{}) / 즉시실행 async IIFE /
  *   defaultProps 등 모던 구문이 Framer esbuild 를 "RuntimeError: unreachable" 로 panic
  *   시키는 회귀가 있어, 보수적 구문으로 재작성함. 이 스타일 유지할 것.
+ * 🚨 2026-07-21: verity_auth_change/storage 리스너로 로그인·토큰갱신 직후 게이트 판정 재실행(authTick).
  */
 
 const SESSION_KEY = "verity_supabase_session"

@@ -4,9 +4,8 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
 /**
  * CommunityModerationCard — 관리자 커뮤니티 모더레이션 (AlphaNest 스타일).
  * 소스: /api/admin?type=community_moderation (본인 JWT · is_admin 서버 재검증 · service_role 실행).
- *   GET view=reports(신고 큐)|posts(전체 글) · POST hide|unhide · DELETE(글 삭제).
- *   작성자 제재 = member_management ban 재사용.
- * 다크모드 = body[data-framer-theme] 자동감지. 접근차단 = 페이지 AuthGate(is_admin).
+ *   GET view=reports(신고 큐)|posts(전체 글) · POST hide|unhide · DELETE(글 삭제). 작성자 제재 = member_management ban.
+ * 다크모드 자동감지. 접근차단 = 페이지 AdminGate(is_admin).
  */
 
 const LIGHT = {
@@ -182,7 +181,6 @@ export default function CommunityModerationCard(props: Props) {
 
     return (
         <div style={wrap}>
-            {/* 탭 */}
             <div style={card}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
                     <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.4px" }}>커뮤니티 모더레이션</span>
@@ -203,7 +201,6 @@ export default function CommunityModerationCard(props: Props) {
                 {msg && <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginTop: 10 }}>{msg}</div>}
             </div>
 
-            {/* 콘텐츠 */}
             <div style={card}>
                 {tab === "reports" ? (
                     reports.length === 0 && !loading ? (

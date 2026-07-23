@@ -38,7 +38,7 @@ const LIGHT = {
   greenSoft: "#eafaf3",
 }
 const DARK = {
-  bg: "#16181d",
+  bg: "#0f1318",
   card: "#1e2128",
   ink: "#f0f2f5",
   sub: "#b0b8c1",
@@ -201,8 +201,13 @@ const STOCKS: Stock[] = [
 ]
 
 function readBodyDark(): boolean {
-  if (typeof document === "undefined" || !document.body) return false
-  return document.body.dataset.framerTheme === "dark"
+    try {
+        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (_lsPref === "dark") return true
+        if (_lsPref === "light") return false
+    } catch (e) {}
+    if (typeof document === "undefined" || !document.body) return false
+    return document.body.dataset.framerTheme === "dark"
 }
 
 const toneColor = (C: typeof LIGHT, t: Flag["tone"]) =>
@@ -295,7 +300,7 @@ function TermText({ text, C }: { text: string; C: typeof LIGHT }) {
 
 export default function StockRadarProbe(props: { width?: number; dark?: boolean }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
-  const [themeDark, setThemeDark] = useState<boolean>(!!props.dark)
+  const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : false))
   const isDark = onCanvas ? !!props.dark : themeDark
   const C = isDark ? DARK : LIGHT
 

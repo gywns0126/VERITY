@@ -20,8 +20,12 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
         if (signal.aborted) ac.abort()
         else signal.addEventListener("abort", () => ac.abort(), { once: true })
     }
+    // 공개 blob = CDN 캐시 활용(캐시버스터·no-store 제거, 2026-07-20 비용절감). authed/vercel 엔드포인트는 기존대로.
+    const _cacheable = /public\.blob\.vercel-storage\.com/.test(url)
+    // 분리 Stage 2: authed 오퍼레이터 엔드포인트면 Bearer JWT 첨부.
+    const _hdrs = /\/api\/admin/.test(url) ? _operatorAuthHeaders() : {}
     return _withTimeout(
-        fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal: ac.signal })
+        fetch(_cacheable ? url : _bustUrl(url), _cacheable ? { mode: "cors", credentials: "omit", signal: ac.signal, headers: _hdrs } : { cache: "no-store", mode: "cors", credentials: "omit", signal: ac.signal, headers: _hdrs })
             .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
             .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"))),
         PORTFOLIO_FETCH_TIMEOUT_MS,
@@ -77,8 +81,24 @@ function stalenessInfo(updatedAt: any): { label: string; color: string; stale: b
     return { label: `${days.toFixed(1)}일 전 (stale)`, color: C.danger, stale: true }
 }
 
-const DATA_URL =
-    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json"
+// 2026-07-23 VERITY↔AlphaNest 분리 Stage 2: 오퍼레이터는 공개 blob 대신 authed 엔드포인트로.
+// /api/admin?type=portfolio_full (authorize: X-Admin-Token OR JWT+is_admin) 가 full portfolio 서빙.
+// verity_supabase_session(AdminLogin 발급) 없으면 401 → 로그인 필요(VERITY = 비공개). 공개 blob은 Stage 3서 sanitize.
+const API_BASE = "https://project-yw131.vercel.app"
+const DATA_URL = `${API_BASE}/api/admin?type=portfolio_full`
+
+// verity_supabase_session → Bearer JWT (만료 체크). AdminDashboard 패턴 정합. esbuild 안전(?. 미사용).
+function _operatorAuthHeaders(): Record<string, string> {
+    try {
+        const raw = typeof localStorage !== "undefined" ? localStorage.getItem("verity_supabase_session") : null
+        if (!raw) return {}
+        const s = JSON.parse(raw)
+        const jwt = (!s.expires_at || Date.now() / 1000 <= s.expires_at) ? s.access_token : null
+        return jwt ? { Authorization: `Bearer ${jwt}` } : {}
+    } catch (e) {
+        return {}
+    }
+}
 
 function _isUS(r: any): boolean {
     return r?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(r?.market || "")

@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react"
  *
  * Framer 네이티브 테마는 body[data-framer-theme]("light"|"dark") 로 제어됨.
  *  - 클릭 → document.body.dataset.framerTheme 토글 + localStorage("verity_theme") 저장
- *  - 마운트 → 저장된 선호 복원(없으면 Framer 가 시스템 기준으로 설정한 값 유지)
+ *  - 마운트 → 저장된 선호 복원(없으면 기본 라이트 — 2026-07-19 첫 시작 라이트 결정)
  *  - 이 속성이 바뀌면 Framer Color Styles(NavBg/PageBg 등) + 구독하는 코드 컴포넌트가 모두 따라옴
  *
  * 🎨 2026-07-08 깜빡임 fix — 버튼 시각(배경/보더/아이콘색/아이콘 선택)을 JS 상태가 아니라
@@ -15,6 +15,13 @@ import React, { useEffect, useState } from "react"
  *    JS 상태(theme)는 aria-label/title 전용 (시각 무관). 해/달 아이콘 둘 다 렌더하고
  *    CSS 로 표시 전환 — SSR 첫 페인트는 OS media query, 속성 설정 후엔 속성 선택자 우선.
  *
+ * 🚨 2026-07-23 body-리셋 자가치유 (로그아웃 복귀 '부분 라이트' fix) — 되돌리지 말 것.
+ *    증상 = 로그아웃 후 재로그인해 페이지 복귀하면 네이티브 PageBg 만 라이트로 튀고(코드 컴포넌트는
+ *    html[data-an-theme]/verity_theme 로 다크 유지) 배경만 흰색 = split. 원인 = Framer 런타임이
+ *    복귀/새로고침 때 body[data-framer-theme] 를 OS(라이트)로 리셋하는데 html 은 안 건드림.
+ *    해결 = 옵저버가 body 가 저장 선호(prefTheme)와 어긋나면 즉시 body+html 을 pref 로 재확정.
+ *    이 토글은 NAV 상주(전 페이지) 라 한 곳에서 전 페이지 자가치유. (헤드 Custom Code 가드의 코드측 백스톱)
+ *
  * ⚠ 캔버스 에디터에선 동작 안 함(부작용 없음) — 실제 동작은 Preview/Publish 에서 확인.
  */
 
@@ -22,53 +29,12 @@ const THEME_KEY = "verity_theme"
 type Theme = "light" | "dark"
 
 /*
- * Published Framer 사이트는 네이티브 Color Styles 의 다크값을
- * @media (prefers-color-scheme:dark) 로만 emit 함 (OS 설정 추종).
- * published HTML 엔 data-framer-theme 훅이 없어 JS 토글로 못 바꿈.
- *  → 토글이 같은 CSS 변수(--token-*)를 body[data-framer-theme] 기준으로
- *    재정의하는 <style> 을 head 에 주입해 OS media query 를 덮어씀.
- *    (속성 선택자 specificity > media 의 body{} 기본값)
- * 토큰 UUID 는 프로젝트 Color Style identity 에 고정(publish 간 불변).
- * 🚨 신 Color Style 추가/값 변경 시 = 여기 두 블록(light/dark)도 동기화 의무
- *    (2026-07-08 사고: 모바일 상단 bg 를 색스타일만 0.85 로 올리고 여기 옛값 #fff3 방치
- *     → 토글 사용자에게 fix 무효화. 색스타일 변경 = 이 파일 grep 의무).
+ * 토큰 오버라이드(--token-* 를 body[data-framer-theme] 기준 재정의)는 이제 사이트 Custom Code
+ * ("Start of <body>")의 <style id="verity-theme-token-overrides"> 가 첫 페인트 전에 배치 = 단일 출처.
+ * 여기(토글)선 더 주입하지 않음 — 드리프트 방지(2026-07-08 이중사본 사고 학습). 토글은 body 속성만 토글/복원.
+ * 🚨 Color Style 값/추가 변경 시 = 그 Custom Code 블록만 갱신(이 파일엔 사본 없음).
+ *    Custom Code 블록은 이제 테마 필수 인프라 — 제거 금지(제거 시 published 네이티브 색이 OS media 로 회귀).
  */
-const STYLE_ID = "verity-theme-token-overrides"
-const THEME_CSS =
-    'body[data-framer-theme="light"]{' +
-    "--token-ffcc4fd8-58d0-45dc-a259-50e9f47bc8db:#f2f4f6;" + // PageBg
-    "--token-f0419bdc-ebbe-435e-9bff-d5f72a0549cf:#ffffff;" + // NavBg
-    "--token-c15144f1-f6e3-44ad-a61e-ecf50795a3c5:#000000;" + // Ink
-    "--token-891a2668-deba-490a-b9f4-e8029d46f025:#f2f4f6;" + // Field
-    "--token-633070ef-c72c-4d61-8127-69b2f746f38f:#545454;" + // IconMuted
-    "--token-464a4386-16cc-4626-97c4-e6b0fcc2fa01:#6b7280;" + // MenuText
-    "--token-a8427b85-996c-4c32-93b4-222935fc2f01:#6c5ce7;" + // MenuHover
-    "--token-17d84716-89a0-4724-8331-39a778f7dcc5:#ffffffd9;" + // 모바일 상단 bg (흰색 0.85 — 7/7 스크롤 투과 fix 정합)
-    "}" +
-    'body[data-framer-theme="dark"]{' +
-    "--token-ffcc4fd8-58d0-45dc-a259-50e9f47bc8db:#0f1318;" +
-    "--token-f0419bdc-ebbe-435e-9bff-d5f72a0549cf:#171c23;" +
-    "--token-c15144f1-f6e3-44ad-a61e-ecf50795a3c5:#ffffff;" +
-    "--token-891a2668-deba-490a-b9f4-e8029d46f025:#1e242c;" +
-    "--token-633070ef-c72c-4d61-8127-69b2f746f38f:#9aa4b1;" +
-    "--token-464a4386-16cc-4626-97c4-e6b0fcc2fa01:#9aa4b1;" +
-    "--token-a8427b85-996c-4c32-93b4-222935fc2f01:#a99bff;" +
-    "--token-17d84716-89a0-4724-8331-39a778f7dcc5:#171c23d9;" + // 모바일 상단 bg (NavBg 다크 0.85)
-    "}"
-
-function injectOverrideStyle() {
-    if (typeof document === "undefined" || !document.head) return
-    const existing = document.getElementById(STYLE_ID)
-    if (existing) {
-        // 값 갱신 배포 시 구 페이지 잔존 스타일 교체 (SPA 캐시 대비)
-        if (existing.textContent !== THEME_CSS) existing.textContent = THEME_CSS
-        return
-    }
-    const el = document.createElement("style")
-    el.id = STYLE_ID
-    el.textContent = THEME_CSS
-    document.head.appendChild(el)
-}
 
 function systemTheme(): Theme {
     if (typeof window === "undefined" || !window.matchMedia) return "light"
@@ -80,11 +46,33 @@ function readBodyTheme(): Theme {
     return document.body && document.body.dataset.framerTheme === "dark" ? "dark" : "light"
 }
 
+/* 저장 선호(사용자 선택) = verity_theme(localStorage) → html[data-an-theme](헤드 스크립트) → 기본 라이트.
+   body-리셋 자가치유의 기준값 — Framer 가 body 를 OS 로 튕겨도 이 값으로 되돌린다. */
+function prefTheme(): Theme {
+    try {
+        const s = localStorage.getItem(THEME_KEY)
+        if (s === "dark" || s === "light") return s
+    } catch (e) { /* no-op */ }
+    if (typeof document !== "undefined" && document.documentElement) {
+        const h = document.documentElement.dataset.anTheme
+        if (h === "dark") return "dark"
+        if (h === "light") return "light"
+    }
+    return "light"
+}
+
 function applyTheme(t: Theme) {
+    /* localStorage 를 body 보다 먼저 — Custom Code 의 로드-레이스 감시(pref()=localStorage 재판독)가
+       토글 순간을 오해해 되돌리지 않게 (2026-07-18 다크 첫로딩 fix 짝). */
+    try { localStorage.setItem(THEME_KEY, t) } catch (e) { /* no-op */ }
+    /* html[data-an-theme] = 코드 컴포넌트 readBodyDark 의 1순위 판독 소스(헤드 스크립트와 동일 키).
+       body 보다 먼저 세팅 = body 관측자 재판독 시 최신 html 보장 (2026-07-19 대량 flash fix). */
+    if (typeof document !== "undefined" && document.documentElement) {
+        document.documentElement.dataset.anTheme = t
+    }
     if (typeof document !== "undefined" && document.body) {
         document.body.dataset.framerTheme = t
     }
-    try { localStorage.setItem(THEME_KEY, t) } catch (e) { /* no-op */ }
 }
 
 /* 버튼 자체의 테마 시각 — 토큰 var(첫 페인트 media query 값 → 속성 설정 후 오버라이드 값)
@@ -139,18 +127,33 @@ export default function PublicThemeToggle(props: Props) {
     /* 마운트: 토큰 오버라이드 주입 + 선호 복원 + 외부 변경 동기화 */
     useEffect(() => {
         if (isCanvas) return
-        injectOverrideStyle()
-        let initial: Theme = systemTheme()
+        /* 오버라이드 <style> 주입은 Custom Code(Start of <body>)가 첫 페인트 전에 담당 = 단일 출처.
+           토글은 저장된 선호 복원 + 외부 변경 동기화만. */
+        /* 기본 = 라이트 (사이트 첫 시작 라이트 결정, 2026-07-19). OS 설정 안 봄 = 로드마다 뒤집힘 방지.
+           명시적 저장(verity_theme)이 있을 때만 그 값. 헤드/보디 Custom Code 스크립트와 동일 규칙. */
+        let initial: Theme = "light"
         try {
             const saved = localStorage.getItem(THEME_KEY)
             if (saved === "dark" || saved === "light") initial = saved
         } catch (e) { /* no-op */ }
-        /* 항상 body 속성을 명시 — native(주입 CSS)+코드컴포넌트 첫 페인트부터 일치 */
+        /* 항상 html+body 속성을 명시 — native(주입 CSS)+코드컴포넌트 첫 페인트부터 일치 */
+        if (document.documentElement) document.documentElement.dataset.anTheme = initial
         if (document.body) document.body.dataset.framerTheme = initial
         setTheme(initial)
 
         if (typeof MutationObserver === "undefined" || !document.body) return
-        const obs = new MutationObserver(() => setTheme(readBodyTheme()))
+        /* body 속성 감시 — Framer 가 복귀/새로고침에 body 를 OS(라이트)로 리셋하면 저장 선호(prefTheme)로
+           재확정 = 네이티브 PageBg '부분 라이트' 자가치유(2026-07-23 로그아웃 복귀 fix). 재확정 시 html 도
+           함께(옵저버 재발화 → body===pref → 정착). 사용자 토글은 applyTheme 가 verity_theme 를 먼저
+           바꿔 pref 가 새 값이라 되돌리지 않음. 되돌리지 말 것. */
+        const obs = new MutationObserver(() => {
+            const pref = prefTheme()
+            if (readBodyTheme() !== pref) {
+                if (document.body) document.body.dataset.framerTheme = pref
+                if (document.documentElement) document.documentElement.dataset.anTheme = pref
+            }
+            setTheme(pref)
+        })
         obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
         return () => obs.disconnect()
     }, [isCanvas])
