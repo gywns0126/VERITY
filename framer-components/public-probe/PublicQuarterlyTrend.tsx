@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *   quarters[] = {q(분기말 YYYY-MM-DD), debt_ratio, roa, current_ratio, gross_margin, asset_turnover,
  *                 operating_margin, net_margin, roe(US 2026-07 확장 — 없는 시장/종목은 행 자동 skip)}
  * 🚨 라이브: 실데이터(≥4분기) 없으면 **자동 숨김**(가짜 추이 금지, RULE 7). 캔버스만 SAMPLE 미리보기.
- * 테마: Framer 네이티브 추종(body[data-framer-theme]). 외곽선 없음(소프트 카드). 루트 패딩 = /stock 컨벤션(narrow?14:18).
+ * 테마: init=false(SSG 라이트)→effect가 body 판독으로 교정(리렌더 강제). 외곽선 없음(소프트 카드). 루트 패딩 = /stock 컨벤션(narrow?14:18).
  */
 
 const LIGHT = {
@@ -73,10 +73,6 @@ function qLabel(qEnd: string): string {
     return `${y}.${q}`
 }
 
-/**
- * @framerSupportedLayoutWidth any
- * @framerSupportedLayoutHeight any
- */
 // 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
 let __anHyd = false
 function anReadDark(): boolean {
@@ -91,30 +87,10 @@ function anReadDark(): boolean {
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
 
-
-// 마운트/토글 재판독 SoT — verity_theme(localStorage) 우선 → html[data-an-theme] → body[data-framer-theme].
-// 791d29f7e 8개 fix 에서 누락됐던 body-only 재판독 버그 정정(다크에서 라이트 고정 방지, 2026-07-21 일괄).
-function readBodyDark(): boolean {
-    if (typeof document === "undefined") return false
-    try {
-        const pref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (pref === "dark") return true
-        if (pref === "light") return false
-        const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-        if (h === "dark") return true
-        if (h === "light") return false
-        if (document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
-
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight any
+ */
 export default function PublicQuarterlyTrend(props: Props) {
     const { ticker, quarterlyUrl, maxQuarters, showExtremes, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -127,7 +103,10 @@ export default function PublicQuarterlyTrend(props: Props) {
 
     useEffect(() => {
         if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
+        const read = () => {
+            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
+            setThemeDark(t === "dark")
+        }
         read()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(read)
@@ -146,7 +125,7 @@ export default function PublicQuarterlyTrend(props: Props) {
     useEffect(() => {
         if (onCanvas || !quarterlyUrl || !ticker) return
         let alive = true
-        fetch(quarterlyUrl)
+        fetch(quarterlyUrl, { cache: "no-store" })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const rec = d && d.stocks && d.stocks[ticker]
