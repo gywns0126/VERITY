@@ -1,27 +1,27 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useRef, useState, type CSSProperties } from "react"
+import { useRef, type CSSProperties } from "react"
+import { useState } from "react"
 
 /**
  * 약관 문서 — 이용약관 / 개인정보처리방침 (탭 토글). AlphaNest 결: 흰 카드/외곽선 없음/토스 미니멀.
- * 텍스트 = solo-counsel(law.go.kr) 검토 반영(2026-06-27): 자본시장법 §101·§102, 약관규제법 §6·§9,
- *   개인정보보호법 §30·§28의8·§31. 무료·점수미제공·정보only 포지셔닝.
- * 🚨 보호책임자 연락처·시행일은 prop 으로 주입(실명 아닌 운영 전용 이메일 권장 — 현역 신상 최소화).
- * 다크모드 = body[data-framer-theme] 자가감지.
+ * 텍스트 = solo-counsel(law.go.kr) 검토 반영(2026-06-27). 무료·점수미제공·정보only 포지셔닝.
+ * 🚨 보호책임자 연락처·시행일은 prop 으로 주입.
+ *
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-lgd-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 정적 HTML 정합. 되돌리지 말 것.
  */
 
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#f0f1f3", accent: "#6c5ce7", accentSoft: "#f0edff" }
 const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#222730", accent: "#a98bff", accentSoft: "#2a2440" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
-function readBodyDark(): boolean {
-    try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-    } catch (e) {}
-    if (typeof document === "undefined" || !document.body) return false
-    return document.body.dataset.framerTheme === "dark"
-}
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-lgd-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "lgd"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 type Sec = { h: string; body: string[] }
 
@@ -86,41 +86,11 @@ const PRIVACY: Sec[] = [
   { h: "10. 안전성 확보", body: ["접근권한 관리, 전송구간 암호화(HTTPS), 수탁자 보안 점검 등 합리적 보호조치를 취합니다."] },
 ]
 
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
-
 export default function PublicLegalDoc(props: { doc?: "terms" | "privacy"; dark?: boolean; cpoContact?: string; effectiveDate?: string }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
-  const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
-  const isDark = onCanvas ? !!props.dark : themeDark
-  const C = isDark ? DARK : LIGHT
   const [tab, setTab] = useState<"terms" | "privacy">(props.doc === "privacy" ? "privacy" : "terms")
   const rootRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (onCanvas) return
-    const read = () => setThemeDark(readBodyDark())
-    read()
-    if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-    const obs = new MutationObserver(read)
-    obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-    return () => obs.disconnect()
-  }, [onCanvas])
-
-  // 미설정 placeholder("게시 시 기입")는 canvas 편집 화면에만 노출 — 라이브엔 중립 fallback(내부 메모 누출 차단).
-  // ⚠ 실제 게시 전 Framer prop 로 시행일·보호책임자 연락처를 반드시 설정할 것.
   const cpo = props.cpoContact || (onCanvas ? "운영 전용 이메일 (게시 시 기입)" : "사이트 문의 경로로 접수")
   const eff = props.effectiveDate || (onCanvas ? "(게시 시 기입)" : "게시일 기준")
   const secs = (tab === "privacy" ? PRIVACY : TERMS).map((s) => ({ h: s.h, body: s.body.map((b) => b.replace("__CPO__", "보호책임자 연락처: " + cpo)) }))
@@ -129,7 +99,7 @@ export default function PublicLegalDoc(props: { doc?: "terms" | "privacy"; dark?
 
   return (
     <div ref={rootRef} style={wrap}>
-      {/* 탭 */}
+      <style>{AN_PALETTE}</style>
       <div style={{ display: "inline-flex", alignSelf: "flex-start", background: C.line, borderRadius: 10, padding: 3 }}>
         {([["terms", "이용약관"], ["privacy", "개인정보처리방침"]] as const).map(([k, lab]) => (
           <button key={k} onClick={() => setTab(k)} style={{ border: "none", cursor: "pointer", fontFamily: FONT, fontSize: 12.5, fontWeight: 700, padding: "7px 14px", borderRadius: 8, background: tab === k ? C.card : "transparent", color: tab === k ? C.accent : C.sub }}>{lab}</button>
@@ -159,7 +129,7 @@ export default function PublicLegalDoc(props: { doc?: "terms" | "privacy"; dark?
 
 addPropertyControls(PublicLegalDoc, {
   doc: { type: ControlType.Enum, title: "기본 문서", options: ["terms", "privacy"], optionTitles: ["이용약관", "개인정보처리방침"], defaultValue: "terms" },
-  dark: { type: ControlType.Boolean, title: "Dark (canvas)", defaultValue: false },
+  dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false },
   cpoContact: { type: ControlType.String, title: "보호책임자 연락처", defaultValue: "" },
   effectiveDate: { type: ControlType.String, title: "시행일", defaultValue: "" },
 })

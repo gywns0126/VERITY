@@ -3730,6 +3730,14 @@ export default function PublicStockReport(props: Props) {
     const factsCalc = s.facts_calc || {}
     const header = s.header || null
     const overview = s.overview || null
+    const dividend = s.dividend || null
+    const DIV_FACT_KEYS = ["배당수익률", "주당배당금", "배당성향"]
+    const divFactKeys = Object.keys(facts).filter(
+        (k) => DIV_FACT_KEYS.indexOf(k) >= 0
+    )
+    const metricKeys = Object.keys(facts).filter(
+        (k) => DIV_FACT_KEYS.indexOf(k) < 0
+    )
     const realEstate = s.real_estate || null
     const peer = s.peer || null
     const financials = s.financials
@@ -5463,8 +5471,8 @@ export default function PublicStockReport(props: Props) {
                     </>
                 )}
 
-            {/* 기본 지표 — 탭하면 계산식·실제 투입 숫자·출처 */}
-            {Object.keys(facts).length > 0 && (
+            {/* 기본 지표 — 탭하면 계산식·실제 투입 숫자·출처 (배당비율은 배당 섹션으로 분리) */}
+            {metricKeys.length > 0 && (
                 <>
                     {sectionTitle("기본 지표", "DART·KRX · 탭=계산식·출처")}
                     <div
@@ -5474,7 +5482,7 @@ export default function PublicStockReport(props: Props) {
                             gap: 10,
                         }}
                     >
-                        {Object.keys(facts).map((k) => {
+                        {metricKeys.map((k) => {
                             const opened = openMetric === k
                             return (
                                 <div
@@ -5680,6 +5688,164 @@ export default function PublicStockReport(props: Props) {
                         </div>
                     </>
                 )}
+
+            {/* 배당 — DART 배당 사실(비율 + 배당락일·확정여부·최근 결정). RULE 7: 해석·신호 0 */}
+            {(divFactKeys.length > 0 || dividend) && (
+                <>
+                    {sectionTitle("배당", "DART · 사실")}
+                    <div
+                        style={{
+                            background: C.card,
+                            borderRadius: 16,
+                            padding: "14px 16px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                        }}
+                    >
+                        {dividend &&
+                            (dividend.ex_date ||
+                                dividend.amount_per_share ||
+                                dividend.dividend_type) && (
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "baseline",
+                                        gap: 8,
+                                        flexWrap: "wrap",
+                                        marginBottom:
+                                            divFactKeys.length > 0 ? 12 : 4,
+                                    }}
+                                >
+                                    {dividend.amount_per_share && (
+                                        <span
+                                            style={{
+                                                fontFamily: HEAD,
+                                                fontSize: 22,
+                                                fontWeight: 800,
+                                                color: C.vt,
+                                                letterSpacing: "-0.6px",
+                                            }}
+                                        >
+                                            {dividend.amount_per_share}
+                                        </span>
+                                    )}
+                                    {dividend.dividend_type && (
+                                        <span
+                                            style={{
+                                                fontSize: 11,
+                                                fontWeight: 800,
+                                                color: C.vt,
+                                                background: C.vtS,
+                                                borderRadius: 7,
+                                                padding: "3px 9px",
+                                            }}
+                                        >
+                                            {dividend.dividend_type}
+                                        </span>
+                                    )}
+                                    <span
+                                        style={{
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            color: dividend.is_confirmed
+                                                ? C.sub
+                                                : C.faint,
+                                        }}
+                                    >
+                                        {dividend.is_confirmed ? "확정" : "예정"}
+                                    </span>
+                                    {dividend.ex_date && (
+                                        <span
+                                            style={{
+                                                marginLeft: "auto",
+                                                fontSize: 11.5,
+                                                color: C.faint,
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            배당락 {dateDot(dividend.ex_date)}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        {divFactKeys.map((k, i) => kvRow(k, facts[k], i))}
+                        {dividend &&
+                            Array.isArray(dividend.recent_decisions) &&
+                            dividend.recent_decisions.length > 0 && (
+                                <div
+                                    style={{
+                                        marginTop: 10,
+                                        paddingTop: 10,
+                                        borderTop: `1px solid ${C.line}`,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: 6,
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            color: C.faint,
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        최근 배당 공시
+                                    </div>
+                                    {dividend.recent_decisions.map(
+                                        (d: any, i: number) => (
+                                            <div
+                                                key={i}
+                                                style={{
+                                                    display: "flex",
+                                                    gap: 8,
+                                                    alignItems: "baseline",
+                                                    fontSize: 12,
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        flex: 1,
+                                                        minWidth: 0,
+                                                        color: C.sub,
+                                                        fontWeight: 600,
+                                                        whiteSpace: "nowrap",
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                    }}
+                                                >
+                                                    {d.title}
+                                                </span>
+                                                {d.date && (
+                                                    <span
+                                                        style={{
+                                                            flexShrink: 0,
+                                                            color: C.faint,
+                                                            fontWeight: 600,
+                                                        }}
+                                                    >
+                                                        {dateDot(d.date)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            )}
+                        <div
+                            style={{
+                                fontSize: 11,
+                                color: C.faint,
+                                fontWeight: 600,
+                                lineHeight: 1.5,
+                                marginTop: 10,
+                            }}
+                        >
+                            {dividend && dividend.note
+                                ? dividend.note
+                                : "DART 배당 공시 — 사실 (신호 아님)"}
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* 동종업계 비교 — 탭하면 상세 */}
             {peer && peer.rows && peer.rows.length > 0 && (

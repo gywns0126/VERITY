@@ -4,11 +4,11 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
 /**
  * AI 사실 종합 — VERITY 공개 터미널 (AlphaNest). 검증된 공개 사실(DART/KRX/공정위)을 LLM이 자연스럽게 종합.
  *
- * 🚨 RULE 6 escape hatch: ungrounded LLM narrative 금지지만 **자기 trail 위 종합 = 권장 방향**. ChatGPT 못 보는 우리 데이터 위.
- * 🚨 RULE 7 / held-2027 / 유사투자자문 법: **사실 종합·연결만**. 평가·의견·추천·등급 0(빌더 post-filter + 결정론 fallback).
- *   = "사세요/저평가/유망" 절대 없음. 이 컴포넌트는 ai_synthesis.json(빌더 산출) 텍스트를 표시만.
- * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page replaceState 추종 1s 폴링.
- * 데이터 = data/ai_synthesis.json (단일 writer, publish 발행). 없으면 graceful 숨김. 테마 = init=false(SSG 라이트)→effect readBodyDark 교정(리렌더 강제).
+ * 🚨 RULE 6 escape: 자기 trail 위 종합. 🚨 RULE 7 / held-2027 / 유사투자자문 법: 사실 종합·연결만(평가·의견·추천·등급 0).
+ * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page replaceState 추종 1s 폴링. 데이터 없으면 graceful 숨김.
+ *
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-as-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 로 정적 HTML 정합(하이드레이션 무관). 되돌리지 말 것.
  */
 
 interface Props {
@@ -18,9 +18,17 @@ interface Props {
 }
 const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/ai_synthesis.json"
 
-const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#f0f1f3", vt: "#6c5ce7", vtS: "#f0edff" }
-const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#222730", vt: "#a99bff", vtS: "#241f3a" }
+const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#f0f1f3", vt: "#6c5ce7", vtS: "#f0edff", skBase: "#e9edf1", skHi: "#f3f5f7" }
+const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#222730", vt: "#a99bff", vtS: "#241f3a", skBase: "#222a33", skHi: "#2d3742" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-as-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "as"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 function readTickerFromUrl(): string {
     if (typeof window === "undefined") return ""
@@ -31,70 +39,19 @@ function readTickerFromUrl(): string {
     } catch { return "" }
 }
 
-function readBodyDark(): boolean {
-    // init=false(SSG 라이트와 동일) → 이 함수는 effect 에서만 실제 테마 교정에 사용(리렌더 강제, SSG-하이드레이션 stuck 방지).
-    try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
-
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
 export default function PublicAISynthesis(props: Props) {
-    const { ticker, dataUrl, dark } = props
+    const { ticker, dataUrl } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!dark : anReadDark()))
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    const isDark = onCanvas ? !!dark : themeDark
-    const C = isDark ? DARK : LIGHT
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [tk, setTk] = useState<string>(() => String(ticker || "").trim().toUpperCase())
     const [synth, setSynth] = useState<Record<string, string>>({})
-    const [loaded, setLoaded] = useState<boolean>(onCanvas)   // ai_synthesis.json 로드 완료 여부 (스켈레톤 게이트)
+    const [loaded, setLoaded] = useState<boolean>(onCanvas)
 
     useEffect(() => {
         const el = rootRef.current
@@ -112,7 +69,7 @@ export default function PublicAISynthesis(props: Props) {
         const sync = () => { const u = readTickerFromUrl(); if (u) setTk((cur) => (cur === u ? cur : u)) }
         sync()
         window.addEventListener("popstate", sync)
-        window.addEventListener("verity-ticker-change", sync)   // 리포트/결정 컴포넌트의 in-page 종목 전환(콜드 기본값 포함) 즉시 추종
+        window.addEventListener("verity-ticker-change", sync)
         const iv = setInterval(sync, 1000)
         return () => { window.removeEventListener("popstate", sync); window.removeEventListener("verity-ticker-change", sync); clearInterval(iv) }
     }, [ticker, onCanvas])
@@ -138,18 +95,17 @@ export default function PublicAISynthesis(props: Props) {
         padding: 0, boxSizing: "border-box", color: C.ink,
     }
 
-    // 텍스트 없음: (1) 로드 중 + 종목 있음 → 스켈레톤, (2) 로드 완료 후 해당 종목 종합 없음/종목 없음 → 숨김
+    // 텍스트 없음: (1) 로드 중 + 종목 있음 → 스켈레톤, (2) 로드 완료 후 없음/종목 없음 → 숨김
     if (!text) {
         if (loaded || !tk) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
-        const base = isDark ? "#222a33" : "#e9edf1"
-        const hiC = isDark ? "#2d3742" : "#f3f5f7"
         const bar = (wd: any, h: number, mt: number): CSSProperties => ({
-            width: wd, height: h, marginTop: mt, borderRadius: 6, background: base,
-            backgroundImage: `linear-gradient(90deg, ${base} 25%, ${hiC} 37%, ${base} 63%)`,
+            width: wd, height: h, marginTop: mt, borderRadius: 6, background: C.skBase,
+            backgroundImage: `linear-gradient(90deg, ${C.skBase} 25%, ${C.skHi} 37%, ${C.skBase} 63%)`,
             backgroundSize: "800px 100%", animation: "vasShimmer 1.4s ease-in-out infinite",
         })
         return (
             <div ref={rootRef} style={wrap}>
+                <style>{AN_PALETTE}</style>
                 <style>{`@keyframes vasShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
                 <div style={{ background: C.card, borderRadius: 16, padding: narrow ? 14 : 18, boxSizing: "border-box", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                     <div style={bar(64, 18, 0)} />
@@ -164,6 +120,7 @@ export default function PublicAISynthesis(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             <div style={{ background: C.card, borderRadius: 16, padding: narrow ? 14 : 18, boxSizing: "border-box", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
                     <span style={{ fontSize: 10.5, fontWeight: 800, color: C.vt, background: C.vtS, borderRadius: 7, padding: "3px 8px", letterSpacing: "-0.2px" }}>AI 종합</span>
@@ -181,5 +138,5 @@ export default function PublicAISynthesis(props: Props) {
 addPropertyControls(PublicAISynthesis, {
     ticker: { type: ControlType.String, title: "Ticker(빈값=URL ?q)", defaultValue: "" },
     dataUrl: { type: ControlType.String, title: "Synthesis URL", defaultValue: DEFAULT_URL },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

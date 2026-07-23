@@ -6,24 +6,36 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *
  * 🚨 시세 컴플라이언스 — 소스·성격별:
  *   · 크립토 = Binance 무인증 공개(브라우저 직접) → 실시간 값. USD.
- *   · KR 지수 = yfinance 전일 종가 '숫자'(=사실, 저작권 대상 아님. macro_snapshot). data_date 라벨. 실시간은 네이버 딥링크.
- *   · US·글로벌 지수·환율·원자재 = 전일 종가 레벨 '숫자'(=사실). 값 표기 + 실시간은 네이버 딥링크.
+ *   · KR 지수 = yfinance 전일 종가 '숫자'(=사실). data_date 라벨. 실시간은 네이버 딥링크.
+ *   · US·글로벌 지수·환율·원자재 = 전일 종가 레벨 '숫자'(=사실). 실시간은 네이버 딥링크.
  *   · 금리 = FRED → 전일 종가.
- *   🚨 KIS price_pulse(실시간 KR지수 재배포=위법) · 업비트(재배포금지) 전면 제거. 되돌리지 말 것.
- *   ⚠️ 금지선 = 실시간 피드 재배포(코스콤/거래소/KIS). 전일 종가 숫자 표기는 사실이라 허용. 장중 접근=네이버 딥링크.
- * 🚨 이 disk 미러 = 라이브(MCP)와 동기 유지 의무 — 2026-07-19 사고: disk 구버전(price_pulse)이 라이브 컴플라이언트판을 덮음(붙여넣기/싱크).
- * 🚨 외곽선 금지 — 분리=채움색만. 🚨 RULE 7 사실만. KR 색 = 상승 빨강 / 하락 파랑. 다크모드 = body[data-framer-theme] 추종.
+ *   🚨 KIS price_pulse · 업비트 전면 제거. 되돌리지 말 것.
+ * 🚨 외곽선 금지 — 분리=채움색만. 🚨 RULE 7 사실만. KR 색 = 상승 빨강 / 하락 파랑.
+ *
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-mb-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE}</style> 로 팔레트를 정적 HTML 에 실어 → 하이드레이션/JS 무관 CSS 라 항상 정합. 되돌리지 말 것.
+ *   SVG(스파크) 색은 style 로 넘김(프레젠테이션 attribute 는 var 미해석).
  */
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#6b7684", faint: "#8b95a1", line: "#eef1f4",
     up: "#f04452", down: "#3182f6", flat: "#8b95a1", cPos: "#0ca678", cNeg: "#6c5ce7", chipBg: "#f2f4f6", live: "#0ca678", vg: "#6c5ce7",
+    skBase: "#e9edf1", skHi: "#f3f5f7",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34",
     up: "#f04452", down: "#5b9bff", flat: "#828d9b", cPos: "#34e08a", cNeg: "#a99bff", chipBg: "#0f1318", live: "#34e08a", vg: "#a99bff",
+    skBase: "#222a33", skHi: "#2d3742",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-mb-*)로 발행. 헤드 CSS·JS 다크감지 불필요, 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "mb"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 const DEFAULT_MACRO = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/macro_snapshot.json"
 const DEFAULT_EXPO = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/commodity_exposure.json"
@@ -111,7 +123,6 @@ function fmtNum(v: any, dec: number): string {
     return x.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec })
 }
 function cryptoDec(v: number): number { return !isFinite(v) ? 2 : v >= 1000 ? 0 : v >= 1 ? 2 : 4 }
-// data_date(YYYYMMDD) → "M/D 종가" 라벨. 없으면 제네릭 "전일 종가"로 폴백.
 function fmtCloseLabel(yyyymmdd: any): string {
     const s = String(yyyymmdd || "")
     if (s.length !== 8) return "전일 종가"
@@ -132,28 +143,14 @@ function Spark({ data, color, w, h }: { data: number[]; color: string; w: number
         <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: "block", flexShrink: 0 }}>
             <defs>
                 <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={color} stopOpacity={0.22} />
-                    <stop offset="100%" stopColor={color} stopOpacity={0} />
+                    <stop offset="0%" stopOpacity={0.22} style={{ stopColor: color }} />
+                    <stop offset="100%" stopOpacity={0} style={{ stopColor: color }} />
                 </linearGradient>
             </defs>
             <polygon points={area} fill={`url(#${gid})`} stroke="none" />
-            <polyline points={line} fill="none" stroke={color} strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            <polyline points={line} fill="none" strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ stroke: color }} />
         </svg>
     )
-}
-
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
 
 /**
@@ -161,10 +158,8 @@ function anReadDark(): boolean {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicMarketBoard(props: Props) {
-    const { macroUrl, commodityUrl, reportPath, dark, refreshSec } = props
+    const { macroUrl, commodityUrl, reportPath, refreshSec } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
-    const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -176,19 +171,6 @@ export default function PublicMarketBoard(props: Props) {
     const [cryptoRows, setCryptoRows] = useState<Record<string, { price: number; chg: number }>>({})
     const [cryptoSpark, setCryptoSpark] = useState<Record<string, number[]>>({})
     const [cryptoLive, setCryptoLive] = useState(false)
-
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
 
     useEffect(() => {
         const el = rootRef.current
@@ -309,7 +291,6 @@ export default function PublicMarketBoard(props: Props) {
                     const hasVal = value != null && isFinite(Number(value)) && Number(value) > 0
                     return { ...it, value, change_pct: cr ? cr.chg : undefined, spark: sp && sp.length >= 2 ? sp : null, dec: hasVal ? cryptoDec(Number(value)) : 2, dataDate: "", hasVal, pending: !hasVal && !cryptoLive }
                 }
-                // macro (전일 종가 값) — KR 지수 포함(yfinance). data_date = 실 종가 봉 날짜.
                 const node = M ? M[it.mkey || it.key] : undefined
                 const value = node && node.value
                 const change_pct = node && (node.change_pct != null ? node.change_pct : node.change_percent)
@@ -401,9 +382,8 @@ export default function PublicMarketBoard(props: Props) {
         )
     }
 
-    const isDark = onCanvas ? !!dark : themeDark
-    const skBase = isDark ? "#222a33" : "#e9edf1"
-    const skHi = isDark ? "#2d3742" : "#f3f5f7"
+    const skBase = C.skBase
+    const skHi = C.skHi
     const skBlock = (bw: number | string, bh: number, mt?: number): CSSProperties => ({
         width: bw, height: bh, marginTop: mt, borderRadius: 5, background: skBase,
         backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`,
@@ -438,6 +418,7 @@ export default function PublicMarketBoard(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>글로벌 시세</span>
@@ -472,5 +453,5 @@ addPropertyControls(PublicMarketBoard, {
     commodityUrl: { type: ControlType.String, title: "Commodity URL", defaultValue: DEFAULT_EXPO },
     reportPath: { type: ControlType.String, title: "Report Path", defaultValue: DEFAULT_REPORT },
     refreshSec: { type: ControlType.Number, title: "Refresh(s)", defaultValue: 300, min: 60, max: 600, step: 30 },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

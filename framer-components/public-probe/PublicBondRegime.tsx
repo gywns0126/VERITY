@@ -2,15 +2,12 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * 채권·금리 레짐 — VERITY 공개 터미널 (골든구스). 국민연금(PublicNPSHoldings)처럼 독립 "렌즈".
- * 디자인 = 토스식 미니멀: 무채색 위주 + 방향값만 up(빨강)/down(파랑), 얇은 구분선, 색배경·외곽선·뱃지 없음.
+ * 채권·금리 레짐 — VERITY 공개 터미널 (골든구스). 토스식 미니멀.
+ * 🚨 RULE 7: 생 수치=ECOS(KR)·FRED(US) 1차 사실. 레짐 분류=자체 기준 v0=가설. recession_signal=Fed 표준. 점수·추천 0.
+ * 데이터 = data/bonds.json.
  *
- * 🚨 RULE 7 (held-2027 / feedback_scope / feedback_source_attribution_discipline):
- *  - 생 수치(yields / 2Y-10Y·3M-10Y 스프레드 / IG·HY OAS) = ECOS(KR)·FRED(US) 1차 사실.
- *  - 레짐 분류(금리환경 / 곡선 / 신용사이클) = 자체 기준 v0 = 가설 (bondanalyzer.py). 섹션·푸터에 명시.
- *  - recession_signal(3M-10Y < -10bp) = Fed 표준. 점수·추천 0 (RULE 6 통과 — 결정론 산출 표시).
- * 데이터 = data/bonds.json (단일 writer, publish-data 발행). 테마 = init=false(SSG 라이트)→effect 교정.
- * 🚨 면책 문구 제거(2026-06-26, PM) — "등급·추천 아님 / 검증 후 2027" 류는 사이트 하단 단일 면책으로 통합. 출처·분류 기준 설명은 유지.
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-brg-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 정적 HTML 정합. SVG fill/stroke 는 style 로 넘김(var). 되돌리지 말 것.
  */
 
 interface Props {
@@ -21,13 +18,21 @@ const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/bon
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#f0f1f3", up: "#f04452", down: "#3182f6",
+    line: "#f0f1f3", up: "#f04452", down: "#3182f6", skBase: "#edeff2", skHi: "#f5f6f8",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
-    line: "#222730", up: "#f04452", down: "#5b9bff",
+    line: "#222730", up: "#f04452", down: "#5b9bff", skBase: "#1e242c", skHi: "#2a313b",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-brg-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "brg"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 const RATE_ENV: Record<string, string> = {
     rate_high_restrictive: "고금리 긴축", rate_elevated: "금리 높음",
@@ -66,44 +71,13 @@ function fmtAge(iso: any): string {
     }
 }
 
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
 export default function PublicBondRegime(props: Props) {
-    const { dataUrl, dark } = props
+    const { dataUrl } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => {
-            const t = typeof document !== "undefined" && document.body ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    const isDark = onCanvas ? !!dark : themeDark
-    const C = isDark ? DARK : LIGHT
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -131,11 +105,9 @@ export default function PublicBondRegime(props: Props) {
     const narrow = w > 0 && w < 560
     const loading = !data
 
-    const skBase = isDark ? "#1e242c" : "#edeff2"
-    const skHi = isDark ? "#2a313b" : "#f5f6f8"
     const sk = (bw: any, bh: number, br = 7): CSSProperties => ({
-        width: bw, height: bh, borderRadius: br, background: skBase,
-        backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`,
+        width: bw, height: bh, borderRadius: br, background: C.skBase,
+        backgroundImage: `linear-gradient(90deg, ${C.skBase} 25%, ${C.skHi} 37%, ${C.skBase} 63%)`,
         backgroundSize: "800px 100%", animation: "vbrShimmer 1.4s ease-in-out infinite", flexShrink: 0,
     })
 
@@ -156,6 +128,7 @@ export default function PublicBondRegime(props: Props) {
     if (loading) {
         return (
             <div ref={rootRef} style={wrap}>
+                <style>{AN_PALETTE}</style>
                 <style>{`@keyframes vbrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
                 <div style={{ ...sk(120, 12, 6), marginBottom: 12 }} />
                 <div style={{ ...sk("70%", 24, 8), marginBottom: 22 }} />
@@ -189,7 +162,6 @@ export default function PublicBondRegime(props: Props) {
     const sp210 = mkt === "us" ? usYC.spread_2y_10y : krSpread("2Y", "10Y")
     const sp3m10 = mkt === "us" ? usYC.spread_3m_10y : krSpread("3M", "10Y")
 
-    // 토스식 행 — 라벨(좌, 회색) · 값(우, ink) · 얇은 구분선
     const row = (label: string, value: any, opts?: { color?: string; note?: string; first?: boolean }) => (
         <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderTop: opts?.first ? "none" : `1px solid ${C.line}` }}>
             <span style={{ fontSize: 13.5, fontWeight: 500, color: C.sub }}>{label}</span>
@@ -219,7 +191,6 @@ export default function PublicBondRegime(props: Props) {
             x: pX + (i / (n - 1)) * (W - 2 * pX),
             y: pY + (1 - (Number(p.yield) - minY) / span) * (H - 2 * pY),
         }))
-        // 부드러운 곡선(Catmull-Rom → 베지어). 점 마커는 늘린 좌표에서 타원으로 찌그러져 제거.
         let line = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`
         for (let i = 0; i < n - 1; i++) {
             const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2
@@ -231,8 +202,8 @@ export default function PublicBondRegime(props: Props) {
         return (
             <div>
                 <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: 96, display: "block" }}>
-                    <path d={`${line} L ${pts[n - 1].x.toFixed(2)} ${H} L ${pts[0].x.toFixed(2)} ${H} Z`} fill={lineCol} opacity={isDark ? 0.1 : 0.06} />
-                    <path d={line} fill="none" stroke={lineCol} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                    <path d={`${line} L ${pts[n - 1].x.toFixed(2)} ${H} L ${pts[0].x.toFixed(2)} ${H} Z`} style={{ fill: lineCol, fillOpacity: 0.08 }} />
+                    <path d={line} fill="none" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ stroke: lineCol }} />
                 </svg>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
                     {curve.map((p, i) => (
@@ -251,7 +222,7 @@ export default function PublicBondRegime(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
-            {/* 헤더 */}
+            <style>{AN_PALETTE}</style>
             <div style={{ fontSize: 12, fontWeight: 600, color: C.faint }}>채권·금리</div>
             <div style={{ fontSize: narrow ? 20 : 23, fontWeight: 700, color: C.ink, letterSpacing: "-0.5px", marginTop: 6, lineHeight: 1.25 }}>{headline}</div>
             <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 500, marginTop: 7, lineHeight: 1.5 }}>
@@ -261,7 +232,6 @@ export default function PublicBondRegime(props: Props) {
                 채권시장이 주식에 보내는 신호{data.updated_at ? ` · ${fmtAge(data.updated_at)}` : ""}
             </div>
 
-            {/* 수익률 곡선 */}
             <div style={{ ...card, marginTop: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: C.ink }}>수익률 곡선</span>
@@ -278,7 +248,6 @@ export default function PublicBondRegime(props: Props) {
                 )}
             </div>
 
-            {/* 레짐 요약 */}
             <div style={{ ...card, marginTop: 12 }}>
                 {secLabel("한눈에", "분류는 자체 기준 v0")}
                 {row("금리 환경", reKo, { first: true })}
@@ -287,7 +256,6 @@ export default function PublicBondRegime(props: Props) {
                 {row("침체 신호", recession ? "켜짐" : "없음", { color: recession ? C.up : undefined })}
             </div>
 
-            {/* 스프레드 */}
             <div style={{ ...card, marginTop: 12 }}>
                 {secLabel(`스프레드 · ${mkt === "us" ? "미국" : "한국"}`)}
                 {row("2Y–10Y", fmtBp(sp210), { first: true, color: spreadColor(sp210), note: spreadNote(sp210) })}
@@ -295,7 +263,6 @@ export default function PublicBondRegime(props: Props) {
                 <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 10, lineHeight: 1.5 }}>3M–10Y가 −10bp 아래면 침체 선행신호로 봐요(Fed 표준).</div>
             </div>
 
-            {/* 신용 스프레드 */}
             {(credit.us_ig_oas != null || credit.us_hy_oas != null) && (
                 <div style={{ ...card, marginTop: 12 }}>
                     {secLabel("신용 스프레드 · 미국")}
@@ -304,7 +271,6 @@ export default function PublicBondRegime(props: Props) {
                 </div>
             )}
 
-            {/* 역전 경보 */}
             {alerts.length > 0 && (
                 <div style={{ ...card, marginTop: 12 }}>
                     {secLabel("곡선 역전 경보")}
@@ -316,7 +282,6 @@ export default function PublicBondRegime(props: Props) {
                 </div>
             )}
 
-            {/* 출처·분류 기준 */}
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
                 수익률·스프레드·OAS는 ECOS(한국)·FRED(미국) 사실. 레짐 분류(금리환경·곡선·신용사이클)는 자체 기준 v0이고, 침체신호는 Fed 표준이에요.
             </div>
@@ -326,5 +291,5 @@ export default function PublicBondRegime(props: Props) {
 
 addPropertyControls(PublicBondRegime, {
     dataUrl: { type: ControlType.String, title: "Bonds URL", defaultValue: DEFAULT_URL },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

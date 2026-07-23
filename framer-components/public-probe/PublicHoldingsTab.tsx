@@ -539,7 +539,7 @@ export default function PublicHoldingsTab(props: Props) {
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [rows, setRows] = useState<any[]>(onCanvas ? SAMPLE : [])
+    const [rows, setRows] = useState<any[]>(SAMPLE)
     const [closes, setCloses] = useState<Record<string, number>>({}) // KR 종가(stock_flow_5d) — 실시간 아님
     const [isDemo, setIsDemo] = useState(true)
     const [loading, setLoading] = useState<boolean>(() =>
@@ -562,13 +562,7 @@ export default function PublicHoldingsTab(props: Props) {
     const [pop, setPop] = useState<any>(null) // 추가/수정 팝업 {id?, ticker, name, market, shares, avg_cost}
     // 거래 기록(실현손익) — 본인 매매 이력. RULE 7 사실 기록, 순위·배지·공개 없음. /api/trades.
     const [tradeData, setTradeData] = useState<{ trades: any[]; summary: any }>(
-        () =>
-            onCanvas
-                ? { trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY }
-                : {
-                      trades: [],
-                      summary: { by_ticker: [], total_realized_pnl: 0 },
-                  }
+        () => ({ trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY })
     )
     const [showTAdd, setShowTAdd] = useState(false) // 거래 추가 검색 패널
     const [tq, setTq] = useState("") // 거래 추가 종목 검색어
@@ -653,7 +647,7 @@ export default function PublicHoldingsTab(props: Props) {
         const token = getToken()
         if (!token) {
             setIsDemo(true)
-            setRows([])
+            setRows(SAMPLE)
             setLoading(false)
             return
         }
@@ -861,8 +855,8 @@ export default function PublicHoldingsTab(props: Props) {
         const token = getToken()
         if (!token) {
             setTradeData({
-                trades: [],
-                summary: { by_ticker: [], total_realized_pnl: 0 },
+                trades: SAMPLE_TRADES,
+                summary: SAMPLE_TRADE_SUMMARY,
             })
             return
         }
@@ -3623,9 +3617,8 @@ export default function PublicHoldingsTab(props: Props) {
                                     </div>
                                 </>
                             )
-                        // 캔버스(에디터) 프리뷰만 = 브라우저 창 목업 안 SAMPLE 미리보기. 라이브 미로그인 = 로그인 CTA 만(목업 없음). pointerEvents none.
+                        // 데모(미로그인) = 브라우저 창 목업 안 SAMPLE 미리보기 (캔버스·라이브 공통, 40fbdabd2 회귀 복원 2026-07-24). pointerEvents none.
                         return isDemo ? (
-                            onCanvas ? (
                                 <div
                                     style={{
                                         marginTop: 14,
@@ -3720,7 +3713,6 @@ export default function PublicHoldingsTab(props: Props) {
                                         {content}
                                     </div>
                                 </div>
-                            ) : null
                         ) : (
                             content
                         )

@@ -1,60 +1,28 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useState, type CSSProperties } from "react"
+import { type CSSProperties } from "react"
 
 /**
  * 출처·고지 노트 (공유) — VERITY 공개 터미널. 페이지당 1회 하단 배치.
  *
- * 목적 = 컴포넌트/카드마다 "자체 점수 아님 · 출처 DART" 류를 반복 첨부하던 것(난잡)을
- *   페이지 하단 단일 노트로 통합 (2026-07-04 PM 지시). 카드 밑 주저리 제거, 출처는 한 번에 정리.
+ * 목적 = 컴포넌트/카드마다 "자체 점수 아님 · 출처 DART" 류를 반복 첨부하던 것을
+ *   페이지 하단 단일 노트로 통합 (2026-07-04 PM 지시).
+ * 🚨 RULE 7 경계: 일반 보일러플레이트만. 숫자에 붙는 통계 라벨은 각 컴포넌트에 유지.
  *
- * 🚨 RULE 7 경계: 여기로 옮기는 것 = "자체 분류·점수·등급 = 가설 / 추천 아님 / 출처" 일반 보일러플레이트만.
- *   숫자에 직접 붙는 통계 라벨(N=14 통계 무의미, hit rate+CI+expectancy 병기)은 각 컴포넌트 숫자 옆에 유지 —
- *   여기로 옮기면 안 됨(RULE 7 "hit rate 노출 시 병기 의무").
- *
- * 사용 = props.sources 로 그 페이지에 실제 쓰인 출처만 콤마로 명시. note 로 문구 override 가능.
- * 테마 = init=false(SSG 라이트)→effect readBodyDark 교정(리렌더 강제). 토스식 소프트(무채색, 얇은 상단 구분선).
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-sn-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   배경 = transparent(하단 노트 스트립, 상단 구분선만). <style>{AN_PALETTE} 로 정적 HTML 정합. 되돌리지 말 것.
  */
 
 const LIGHT = { bg: "#f2f4f6", ink: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", violet: "#6c5ce7" }
 const DARK = { bg: "#16181d", ink: "#9aa4b1", faint: "#6b7684", line: "#2b2f37", violet: "#a99bff" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
-function readBodyDark(): boolean {
-    // init=false(SSG 라이트와 동일) → 이 함수는 effect 에서만 실제 테마 교정에 사용(리렌더 강제, SSG-하이드레이션 stuck 방지).
-    try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
-
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-sn-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "sn"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 export default function PublicSourceNote(props: {
     width?: number
@@ -63,26 +31,12 @@ export default function PublicSourceNote(props: {
     showHeld?: boolean
     dark?: boolean
 }) {
-    const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    // init=anReadDark(): 첫 마운트=라이트(SSG 매칭·stuck 방지), 이후 마운트=실제 테마 즉시 → effect 가 교정. 캔버스는 prop.
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : anReadDark()))
-    useEffect(() => {
-        if (onCanvas) return
-        setThemeDark(readBodyDark())
-        const obs = new MutationObserver(() => setThemeDark(readBodyDark()))
-        if (document.body) obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    const isDark = onCanvas ? !!props.dark : themeDark
-    const C = isDark ? DARK : LIGHT
     const sources = (props.sources || "DART 전자공시 · KRX · 금융위 공공데이터 · 네이버 금융 · SEC EDGAR").trim()
     const held = props.showHeld !== false
     const note = (props.note || "").trim()
 
     const wrap: CSSProperties = {
         width: props.width || "100%", maxWidth: "100%", boxSizing: "border-box",
-        // 배경 = transparent: 하단 노트 스트립. 자기 bg hex 칠하면 Framer 네이티브 페이지 dark bg 와 어긋나 튐(다크 #0f1318 vs 하드코딩 #16181d). 상단 구분선만 유지.
         fontFamily: FONT, background: "transparent", color: C.ink,
         padding: "14px 16px", borderTop: `1px solid ${C.line}`,
         display: "flex", flexDirection: "column", gap: 4,
@@ -90,6 +44,7 @@ export default function PublicSourceNote(props: {
 
     return (
         <div style={wrap}>
+            <style>{AN_PALETTE}</style>
             <div style={{ fontSize: 11, fontWeight: 700, color: C.ink, letterSpacing: "-0.1px", lineHeight: 1.5 }}>
                 출처 <span style={{ fontWeight: 600, color: C.faint }}>· {sources}</span>
             </div>
@@ -110,5 +65,5 @@ addPropertyControls(PublicSourceNote, {
     sources: { type: ControlType.String, title: "출처", defaultValue: "DART 전자공시 · KRX · 금융위 공공데이터 · 네이버 금융 · SEC EDGAR", displayTextArea: true },
     note: { type: ControlType.String, title: "문구(override)", defaultValue: "" },
     showHeld: { type: ControlType.Boolean, title: "2027 held 문구", defaultValue: true, enabledTitle: "On", disabledTitle: "Off" },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

@@ -2,19 +2,27 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useState, useEffect } from "react"
 
 /**
- * 내 관점 복기 — AlphaNest 루프 결정 단계. 기록한 thesis 모음 + 기록 후 가격(종가) 변화.
- * dual: 로그인(verity_supabase_session) → /api/thesis · 익명 → localStorage verity_thesis_v1 (ThesisNote와 동일 키).
- * 🚨 시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): /api/stock 실시간가 병렬 조회 제거(KIS 재배포 불가).
- *   가격 = stock_flow_5d.json 마지막 close(종가·발행 유지 판정) 1회 fetch · 종목명 = universe_search.json. 커버리지 밖 = graceful "—".
- * 행 클릭 → StockReport ?q=. 자가 다크감지.
+ * 내 관점 복기 — AlphaNest 루프 결정 단계. 기록한 thesis 모음 + 기록 후 종가 변화.
+ * dual: 로그인 → /api/thesis · 익명 → localStorage verity_thesis_v1. 가격 = stock_flow_5d.json 마지막 close.
+ * 🚨 RULE 7 = 사용자 자기 저널 복기 — VERITY 채점·정답·점수 0. RULE 6 = LLM 0.
+ * 🚨 2026-07-21 세션 사슬 — loadToken 만료 가드 + verity_auth_change/storage 리스너.
  *
- * 🚨 RULE 7 = 사용자 자기 저널 복기 — VERITY 채점·정답·점수 0. "스스로 복기" 용도. RULE 6 = LLM 0.
- * 🚨 2026-07-21 세션 사슬 — loadToken 만료 가드 + verity_auth_change/storage 리스너(로그인·토큰갱신 후 서버 thesis 재fetch).
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-trv-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 정적 HTML 정합. 되돌리지 말 것.
  */
 
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", upS: "#fdecee", downS: "#eaf1fe", vt: "#6c5ce7", chipBg: "#f2f4f6" }
 const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34", up: "#f04452", down: "#5b9bff", upS: "#2a1a1d", downS: "#17263c", vt: "#a99bff", chipBg: "#0f1318" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-trv-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "trv"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
+
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const STORE_KEY = "verity_thesis_v1"
 const SESSION_KEY = "verity_supabase_session"
@@ -22,15 +30,6 @@ const STANCES: Record<string, { label: string; key: "up" | "down" | "faint" }> =
     bull: { label: "강세", key: "up" }, watch: { label: "관망", key: "faint" }, bear: { label: "약세", key: "down" },
 }
 
-function readBodyDark(): boolean {
-    try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-    } catch (e) {}
-    if (typeof document === "undefined" || !document.body) return false
-    return document.body.dataset.framerTheme === "dark"
-}
 function loadToken(): string {
     if (typeof window === "undefined") return ""
     try { const raw = localStorage.getItem(SESSION_KEY); if (!raw) return ""; const s = JSON.parse(raw); if (s && s.expires_at && Date.now() / 1000 > s.expires_at) return ""; return typeof s.access_token === "string" ? s.access_token : "" } catch { return "" }
@@ -56,34 +55,15 @@ const DEMO = [
     { ticker: "035420", name: "NAVER", stance: "watch", note: "실적발표 후 재검토.", date: "2026-06-20", entryPrice: 198000, curPrice: 191500 },
 ]
 
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
-
 export default function PublicThesisReview(props: { width?: number; dark?: boolean; apiBase?: string; stockPath?: string }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
-    const isDark = onCanvas ? !!props.dark : themeDark
-    const C = isDark ? DARK : LIGHT
     const base = (props.apiBase || DEFAULT_API).replace(/\/+$/, "")
     const stockPath = props.stockPath || "/stock"
 
     const [items, setItems] = useState<any[]>(onCanvas ? DEMO : [])
     const [loading, setLoading] = useState<boolean>(!onCanvas)
-    const [authTick, setAuthTick] = useState(0)   // 로그인/토큰갱신 시 데이터 로더 재트리거
+    const [authTick, setAuthTick] = useState(0)
 
-    // 로그인/토큰갱신 후 세션 재평가 → 서버 thesis 재fetch. verity_auth_change=AuthGate dispatch · storage=타탭
     useEffect(() => {
         if (onCanvas || typeof window === "undefined") return
         const onAuth = () => setAuthTick((n) => n + 1)
@@ -97,20 +77,11 @@ export default function PublicThesisReview(props: { width?: number; dark?: boole
 
     useEffect(() => {
         if (onCanvas) return
-        setThemeDark(readBodyDark())
-        const obs = new MutationObserver(() => setThemeDark(readBodyDark()))
-        if (document.body) obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    useEffect(() => {
-        if (onCanvas) return
         let alive = true
         const token = loadToken()
         const build = (base_list: any[]) => {
             if (!alive) return
             if (!base_list.length) { setItems([]); setLoading(false); return }
-            // 종가(flow_5d)·종목명(universe) 1회 fetch — 실시간가 조회 아님(컴플라이언스)
             Promise.all([
                 fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
                 fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -147,6 +118,7 @@ export default function PublicThesisReview(props: { width?: number; dark?: boole
 
     return (
         <div style={wrap}>
+            <style>{AN_PALETTE}</style>
             <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 12 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>내 관점 복기</span>
                 <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>· 기록 후 변화 (스스로 복기)</span>
@@ -191,7 +163,7 @@ export default function PublicThesisReview(props: { width?: number; dark?: boole
 
 addPropertyControls(PublicThesisReview, {
     width: { type: ControlType.Number, title: "Width", defaultValue: 380 },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
     apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
     stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
 })

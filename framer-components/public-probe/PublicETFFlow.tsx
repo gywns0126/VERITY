@@ -2,14 +2,12 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
- * ETF 자금흐름 렌즈 — VERITY 공개 터미널 (AlphaNest). 국민연금(PublicNPSHoldings)처럼 독립 "렌즈".
- * 디자인 = 토스식 미니멀: 무채색 위주 + 방향값만 유입(빨강)/유출(파랑), 얇은 구분선, 색배경·외곽선·이모지 없음.
+ * ETF 자금흐름 렌즈 — VERITY 공개 터미널 (AlphaNest). 토스식 미니멀.
+ * 🚨 차별: 패시브 자금이 어느 테마로. 진짜 흐름 = Δ상장좌수(설정/환매). 괴리율 = (시장가−NAV)/NAV.
+ * 🚨 RULE 7: 상장좌수·NAV·순자산·흐름 = KRX OpenAPI 1차 사실. 점수·추천 0. 데이터 = data/etf_flow.json.
  *
- * 🚨 차별 각도: 토스/네이버 ETF 화면(보수율·수익률)과 달리 "패시브 자금이 어느 테마로".
- *   진짜 흐름 = Δ상장좌수(설정/환매) = 가격효과 제거. 1일 Δ는 노이즈 → 누적 순흐름(최근 N일)이 주신호.
- *   괴리율 = (시장가 − NAV) / NAV — ETF 프리미엄/디스카운트(수요 쏠림 보조 단서).
- * 🚨 RULE 7: 상장좌수·NAV·순자산·흐름 = KRX OpenAPI 1차 사실(etf_flow.py 누적). 점수·추천 0. 첫 신호 = 거래일 ≥2.
- * 데이터 = data/etf_flow.json (단일 writer, publish-data 발행). history(≤40거래일)에서 누적 산출. 테마 = init=false(SSG 라이트)→effect 교정.
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-ef-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 정적 HTML 정합. 되돌리지 말 것.
  */
 
 interface Props {
@@ -22,13 +20,21 @@ const WINDOW = 20 // 누적 흐름 산출 최대 거래일 창
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#f0f1f3", up: "#f04452", down: "#3182f6",
+    line: "#f0f1f3", up: "#f04452", down: "#3182f6", skBase: "#edeff2", skHi: "#f5f6f8",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
-    line: "#222730", up: "#f04452", down: "#5b9bff",
+    line: "#222730", up: "#f04452", down: "#5b9bff", skBase: "#1e242c", skHi: "#2a313b",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-ef-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "ef"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 const CAT: Record<string, string> = {
     equity_domestic: "국내주식", equity_foreign: "해외주식", thematic: "테마",
@@ -59,7 +65,6 @@ function fmtAge(iso: any): string {
     }
 }
 
-// 누적 순흐름 — history 창에서 Δ상장좌수 × 최근 NAV (가격효과 제거). 거래일 ≥2 필요.
 function cumFlow(series: any[]): { flow: number; days: number; pct: number | null } | null {
     if (!Array.isArray(series) || series.length < 2) return null
     const win = series.slice(-WINDOW)
@@ -69,25 +74,10 @@ function cumFlow(series: any[]): { flow: number; days: number; pct: number | nul
     const d = bs - as
     return { flow: d * nav, days: win.length, pct: as ? (d / as) * 100 : null }
 }
-// 괴리율 — (시장가 − NAV) / NAV.
 function premium(close: any, nav: any): number | null {
     const c = Number(close), n = Number(nav)
     if (!isFinite(c) || !isFinite(n) || n <= 0) return null
     return ((c - n) / n) * 100
-}
-
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
 
 /**
@@ -95,25 +85,8 @@ function anReadDark(): boolean {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicETFFlow(props: Props) {
-    const { dataUrl, dark } = props
+    const { dataUrl } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => {
-            const t = typeof document !== "undefined" && document.body ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    const isDark = onCanvas ? !!dark : themeDark
-    const C = isDark ? DARK : LIGHT
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -141,7 +114,6 @@ export default function PublicETFFlow(props: Props) {
     const narrow = w > 0 && w < 560
     const loading = !data
 
-    // ETF별 누적 흐름·괴리율 부착 + 누적 흐름 절댓값 정렬
     const rows = useMemo(() => {
         if (!data) return [] as any[]
         const hist = data.history || {}
@@ -150,7 +122,6 @@ export default function PublicETFFlow(props: Props) {
             .sort((a: any, b: any) => Math.abs((b.cum && b.cum.flow) || 0) - Math.abs((a.cum && a.cum.flow) || 0))
     }, [data])
 
-    // 테마별 누적 순흐름 집계
     const cats = useMemo(() => {
         const m: Record<string, number> = {}
         for (const r of rows) {
@@ -159,11 +130,9 @@ export default function PublicETFFlow(props: Props) {
         return Object.entries(m).map(([k, v]) => ({ cat: k, flow: v })).sort((a, b) => Math.abs(b.flow) - Math.abs(a.flow))
     }, [rows])
 
-    const skBase = isDark ? "#1e242c" : "#edeff2"
-    const skHi = isDark ? "#2a313b" : "#f5f6f8"
     const sk = (bw: any, bh: number, br = 7): CSSProperties => ({
-        width: bw, height: bh, borderRadius: br, background: skBase,
-        backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`,
+        width: bw, height: bh, borderRadius: br, background: C.skBase,
+        backgroundImage: `linear-gradient(90deg, ${C.skBase} 25%, ${C.skHi} 37%, ${C.skBase} 63%)`,
         backgroundSize: "800px 100%", animation: "vefShimmer 1.4s ease-in-out infinite", flexShrink: 0,
     })
 
@@ -178,6 +147,7 @@ export default function PublicETFFlow(props: Props) {
     if (loading) {
         return (
             <div ref={rootRef} style={wrap}>
+                <style>{AN_PALETTE}</style>
                 <style>{`@keyframes vefShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
                 <div style={{ ...sk(110, 12, 6), marginBottom: 12 }} />
                 <div style={{ ...sk("64%", 24, 8), marginBottom: 22 }} />
@@ -195,14 +165,13 @@ export default function PublicETFFlow(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
-            {/* 헤더 */}
+            <style>{AN_PALETTE}</style>
             <div style={{ fontSize: 12, fontWeight: 600, color: C.faint }}>ETF 자금흐름</div>
             <div style={{ fontSize: narrow ? 20 : 23, fontWeight: 700, color: C.ink, letterSpacing: "-0.5px", marginTop: 6 }}>패시브 자금이 어디로</div>
             <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 500, marginTop: 7 }}>
                 누적 설정·환매(상장좌수 변화) · 가격효과 제거 · KRX{data.updated_at ? ` · ${fmtAge(data.updated_at)}` : ""}
             </div>
 
-            {/* 집계 중 (거래일 1일차) */}
             {!hasFlow && (
                 <div style={{ ...card, marginTop: 18 }}>
                     <div style={{ fontSize: 14.5, fontWeight: 700, color: C.ink }}>자금흐름 집계 중이에요</div>
@@ -212,7 +181,6 @@ export default function PublicETFFlow(props: Props) {
                 </div>
             )}
 
-            {/* 테마별 누적 순흐름 (흐름 있을 때) */}
             {hasFlow && cats.length > 0 && (
                 <div style={{ ...card, marginTop: 18 }}>
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, marginBottom: 14 }}>테마별 누적 순흐름</div>
@@ -223,7 +191,6 @@ export default function PublicETFFlow(props: Props) {
                         return (
                             <div key={c.cat} style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
                                 <div style={{ width: narrow ? 58 : 72, flexShrink: 0, fontSize: 12.5, fontWeight: 500, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{CAT[c.cat] || c.cat}</div>
-                                {/* 연회색 트랙(레인) + 컬러 막대 — 행 구분·기준선 확보. 양수=좌측/음수=우측 정렬 유지 */}
                                 <div style={{ flex: 1, minWidth: 0, position: "relative", height: 8, borderRadius: 4, background: C.bg }}>
                                     <div style={{ position: "absolute", top: 0, ...(pos ? { left: 0 } : { right: 0 }), width: `${pct}%`, height: 8, borderRadius: 4, background: col, opacity: 0.9 }} />
                                 </div>
@@ -234,7 +201,6 @@ export default function PublicETFFlow(props: Props) {
                 </div>
             )}
 
-            {/* ETF 리스트 — 누적 흐름 순 상위 8개 + 더보기 */}
             <div style={{ ...card, marginTop: 12, paddingTop: 6, paddingBottom: showAll || total <= COLLAPSED ? 6 : 0 }}>
                 {(showAll ? rows : rows.slice(0, COLLAPSED)).map((r: any, idx: number) => {
                     const e = r.e, cum = r.cum, prem = r.prem
@@ -271,7 +237,6 @@ export default function PublicETFFlow(props: Props) {
                 )}
             </div>
 
-            {/* 면책 */}
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 500, marginTop: 18, lineHeight: 1.6 }}>
                 상장좌수·NAV·순자산·괴리율은 KRX OpenAPI 사실이에요. 흐름은 상장좌수 변화 × NAV(설정/환매)를 최근 {WINDOW}거래일까지 누적한 값으로, 가격효과를 뺀 값이에요. 거래일 둘째 날부터 신호가 잡혀요. 자체 점수는 검증 후(2027) 공개해요.
             </div>
@@ -282,5 +247,5 @@ export default function PublicETFFlow(props: Props) {
 addPropertyControls(PublicETFFlow, {
     reportPath: { type: ControlType.String, title: "Report Path", defaultValue: "/stock" },
     dataUrl: { type: ControlType.String, title: "ETF Flow URL", defaultValue: DEFAULT_URL },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

@@ -9,7 +9,10 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 🚨 PM 결정 2026-06-25 / RULE 7: 종목별 자기 과거 사실만(종목 간 평균·집계·랭킹 0). 과거 사실 비교지 예측·신호 아님.
  *   종목 간 집계 없음 → 생존편향 비해당. count(N)·날짜 = 사실의 일부. raw 주가 변화(시장 포함).
  *   LLM·네이버 못 가지는 자기 데이터 자산(RULE 6 escape — 자기 trail, narrative 아님). 점수·등급·추천 0.
- * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page 전환 추종 1s 폴링. 테마 = init=false(SSG 라이트)→effect 교정.
+ * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page 전환 추종 1s 폴링.
+ *
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-eh-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE}</style> 로 팔레트를 정적 HTML 에 실어 → 하이드레이션/JS 무관 CSS 라 항상 정합. 되돌리지 말 것.
  * 데이터 없으면 graceful 숨김(빈 카드 방지).
  */
 
@@ -32,6 +35,14 @@ const DARK = {
     amber: "#ff9500", amberS: "#2a2113", green: "#34e08a", greenS: "#0f241c", red: "#f04452", redS: "#2a1a1d",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-eh-*)로 발행. 헤드 CSS·JS 다크감지 불필요, 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "eh"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 const WINDOWS: { key: string; label: string }[] = [
     { key: "ret_1d", label: "+1일" },
@@ -68,20 +79,6 @@ const SAMPLE: Record<string, Stock> = {
     },
 }
 
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -98,25 +95,8 @@ export default function PublicEventHistory(props: Props) {
         obs.observe(document.body, { attributes: true, attributeFilter: ["data-verity-asset-kind"] })
         return () => obs.disconnect()
     }, [])
-    const { ticker, dataUrl, dark } = props
+    const { ticker, dataUrl } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    const isDark = onCanvas ? !!dark : themeDark
-    const C = isDark ? DARK : LIGHT
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -174,6 +154,7 @@ export default function PublicEventHistory(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             <div style={{ background: C.card, borderRadius: 16, padding: narrow ? 14 : 18, boxSizing: "border-box", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 3, flexWrap: "wrap" }}>
                     <span style={{ fontSize: narrow ? 15 : 16, fontWeight: 800, letterSpacing: "-0.3px" }}>과거 공시 패턴</span>
@@ -228,5 +209,5 @@ export default function PublicEventHistory(props: Props) {
 addPropertyControls(PublicEventHistory, {
     ticker: { type: ControlType.String, title: "Ticker(빈값=URL ?q)", defaultValue: "" },
     dataUrl: { type: ControlType.String, title: "Event Study URL", defaultValue: DEFAULT_URL },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })

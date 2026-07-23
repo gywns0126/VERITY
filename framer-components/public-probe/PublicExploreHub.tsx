@@ -2,27 +2,33 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useState, useEffect } from "react"
 
 /**
- * 탐색 진입 허브 — AlphaNest 루프 1단계(탐색). "종목명을 몰라도 시작".
- * 업종(섹터) 카드 + 랭킹 2탭. 섹터 클릭 → Discovery `?sector=`, 종목 클릭 → StockReport `?q=`.
- * 데이터(Blob): sector_overview.json (섹터 집계 — DART 파생 medians + 수급). 랭킹 = 네이버 금융 link-out.
- * 🚨 시세 재배포 컴플라이언스(2026-07-02): ranking_board(KRX 거래대금·등락·시총 raw) 자체 발행 중단 →
- *   랭킹은 네이버가 서빙(재배포 아님). 섹터 카드의 avg_chg(KRX 등락)도 제거, DART 파생 medians·수급만 유지.
+ * 탐색 진입 허브 — AlphaNest 루프 1단계(탐색). 업종 카드 + 랭킹 2탭.
+ * 섹터 클릭 → Discovery ?sector=, 종목 클릭 → StockReport ?q=. 랭킹 = 네이버 금융 link-out(재배포 아님).
+ * 🚨 RULE 7 — 외부 사실(중앙값·수급)만. 자체 점수/등급/추천 0. RULE 6 — LLM narrative 0.
  *
- * 🚨 RULE 7 — 외부 사실(중앙값·수급)만. 자체 점수/등급/추천 0. 검증 점수 held(2027).
- *    RULE 6 — LLM narrative 0. 다크모드 자가감지(body[data-framer-theme]). cache-fallback(sessionStorage).
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-exh-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 정적 HTML 정합. vtBtn = 솔리드 액센트 버튼(양모드 순보라 #6c5ce7 + 흰 글자, 가시성). 되돌리지 말 것.
  */
 
 const LIGHT = {
   bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-  line: "#e5e8eb", red: "#f04452", blue: "#3182f6", violet: "#6c5ce7", violetSoft: "#f0edff",
+  line: "#e5e8eb", red: "#f04452", blue: "#3182f6", violet: "#6c5ce7", violetSoft: "#f0edff", vtBtn: "#6c5ce7",
 }
 const DARK = {
   bg: "#16181d", card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684",
-  line: "#2b2f37", red: "#ff6b76", blue: "#5a9cff", violet: "#a98bff", violetSoft: "#2a2440",
+  line: "#2b2f37", red: "#ff6b76", blue: "#5a9cff", violet: "#a98bff", violetSoft: "#2a2440", vtBtn: "#6c5ce7",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-exh-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "exh"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
+
 const SECTOR_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/sector_overview.json"
-// 랭킹 = 네이버 금융 link-out(네이버가 서빙 = 재배포 아님, 실시간·무료·합법). KRX raw 자체 발행 중단.
 const NAVER_RANK = [
   { label: "거래대금 상위", url: "https://finance.naver.com/sise/sise_quant.naver" },
   { label: "상승률 상위", url: "https://finance.naver.com/sise/sise_rise.naver" },
@@ -30,15 +36,6 @@ const NAVER_RANK = [
   { label: "시가총액 상위", url: "https://finance.naver.com/sise/sise_market_sum.naver" },
 ]
 
-function readBodyDark(): boolean {
-    try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-    } catch (e) {}
-    if (typeof document === "undefined" || !document.body) return false
-    return document.body.dataset.framerTheme === "dark"
-}
 function sharesShort(v: any): string {
   const x = Number(v)
   if (!isFinite(x) || x === 0) return "0"
@@ -61,42 +58,16 @@ function fmtAge(iso: any): string {
   }
 }
 
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
-
 export default function PublicExploreHub(props: {
   width?: number; dark?: boolean; sectorUrl?: string; discoverPath?: string; stockPath?: string
 }) {
   const onCanvas = RenderTarget.current() === RenderTarget.canvas
-  const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()))
-  const isDark = onCanvas ? !!props.dark : themeDark
-  const C = isDark ? DARK : LIGHT
   const discoverPath = props.discoverPath || "/discover"
   const stockPath = props.stockPath || "/stock"
 
   const [tab, setTab] = useState<string>("sector")
   const [sectors, setSectors] = useState<any[]>([])
   const [asOf, setAsOf] = useState<string>("")
-
-  useEffect(() => {
-    if (onCanvas) return
-    setThemeDark(readBodyDark())
-    const obs = new MutationObserver(() => setThemeDark(readBodyDark()))
-    if (document.body) obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-    return () => obs.disconnect()
-  }, [onCanvas])
 
   useEffect(() => {
     if (onCanvas) return
@@ -127,12 +98,13 @@ export default function PublicExploreHub(props: {
   const tabBtn = (v: string, lb: string) => (
     <button onClick={() => setTab(v)} style={{
       border: "none", cursor: "pointer", fontFamily: FONT, padding: "8px 16px", borderRadius: 10,
-      fontSize: 13, fontWeight: 800, background: tab === v ? C.violet : C.card, color: tab === v ? "#fff" : C.sub,
+      fontSize: 13, fontWeight: 800, background: tab === v ? C.vtBtn : C.card, color: tab === v ? "#fff" : C.sub,
     }}>{lb}</button>
   )
 
   return (
     <div style={wrap}>
+      <style>{AN_PALETTE}</style>
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         {tabBtn("sector", "업종")}
         {tabBtn("ranking", "랭킹")}
@@ -191,7 +163,7 @@ export default function PublicExploreHub(props: {
 
 addPropertyControls(PublicExploreHub, {
   width: { type: ControlType.Number, title: "Width", defaultValue: 380 },
-  dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+  dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
   sectorUrl: { type: ControlType.String, title: "Sector URL", defaultValue: SECTOR_URL },
   discoverPath: { type: ControlType.String, title: "Discover Path", defaultValue: "/discover" },
   stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
