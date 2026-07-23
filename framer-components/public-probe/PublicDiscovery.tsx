@@ -186,6 +186,8 @@ function bfLogoSrc(
 }
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 
+// 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-dsc-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+//   <style>{AN_PALETTE} 정적 HTML 정합. chevron data-URI = var 불가라 고정 gray(#8b95a1). 되돌리지 말 것.
 const LIGHT = {
     bg: "#f2f4f6",
     card: "#ffffff",
@@ -200,6 +202,7 @@ const LIGHT = {
     vt: "#6c5ce7",
     vtS: "#f0edff",
     glass: "rgba(242,244,246,0.7)",
+    skBase: "#e9edf1", skHi: "#f3f5f7", shadowStrong: "rgba(0,0,0,0.14)",
 }
 const DARK = {
     bg: "#0f1318",
@@ -215,7 +218,16 @@ const DARK = {
     vt: "#a99bff",
     vtS: "#241f3a",
     glass: "rgba(15,19,24,0.7)",
+    skBase: "#222a33", skHi: "#2d3742", shadowStrong: "rgba(0,0,0,0.5)",
 }
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-dsc-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "dsc"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
@@ -556,53 +568,10 @@ function metricNum(s: any, key: string): number | null {
     return num(f[key])
 }
 
-function readBodyDark(): boolean {
-    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
-    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
-    try {
-        const _lsPref =
-            typeof localStorage !== "undefined"
-                ? localStorage.getItem("verity_theme")
-                : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
-
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement
-        ? document.documentElement.dataset.anTheme
-        : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 export default function PublicDiscovery(props: Props) {
     const {
         stockUrl,
@@ -620,36 +589,6 @@ export default function PublicDiscovery(props: Props) {
     } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
-    const [themeDark, setThemeDark] = useState<boolean>(() =>
-        RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()
-    )
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => {
-            const t =
-                typeof document !== "undefined" && document.body
-                    ? document.body.dataset.framerTheme
-                    : ""
-            setThemeDark(t === "dark")
-        }
-        read()
-        if (
-            typeof MutationObserver === "undefined" ||
-            typeof document === "undefined" ||
-            !document.body
-        )
-            return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, {
-            attributes: true,
-            attributeFilter: ["data-framer-theme"],
-        })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    const isDark = onCanvas ? !!dark : themeDark
-    const C = isDark ? DARK : LIGHT
     const cap = Math.max(10, Math.min(120, perList || 40))
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
     const navTop = Math.max(0, Number(topOffset) || 60) // 사용자 고정 네브바 높이 — 탭/패널 sticky top 에만(전체 패딩 X, PM "탭만")
@@ -1050,7 +989,7 @@ export default function PublicDiscovery(props: Props) {
     }
     // 커스텀 chevron (OS 기본 화살표 제거 — appearance none). 색 = 테마 faint.
     // data URI 전체 encodeURIComponent — 공백/따옴표 raw 상태면 Safari·Framer 퍼블리시에서 파싱 실패 → placeholder 텍스처 노출 (다크에서만 도드라짐).
-    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='${C.faint}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
+    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='#8b95a1' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
     const selStyle: CSSProperties = {
         border: "none",
         borderRadius: 9,
@@ -1086,8 +1025,8 @@ export default function PublicDiscovery(props: Props) {
 
     // 로딩 스켈레톤 — 탭/헤더/툴바/결과 전 영역 일관 적용 (list 적재 전 빈 영역 방지). 토스식 shimmer.
     const loading = list.length === 0
-    const skBase = isDark ? "#222a33" : "#e9edf1"
-    const skHi = isDark ? "#2d3742" : "#f3f5f7"
+    const skBase = C.skBase
+    const skHi = C.skHi
     const skBlock = (bw: any, bh: number, br = 6): CSSProperties => ({
         width: bw,
         height: bh,
@@ -1591,6 +1530,7 @@ export default function PublicDiscovery(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             <div
                 style={{
@@ -1617,7 +1557,7 @@ export default function PublicDiscovery(props: Props) {
                             WebkitBackdropFilter: "saturate(1.4) blur(14px)",
                             zIndex: 5,
                             scrollbarWidth: "none",
-                            boxShadow: `0 8px 8px -7px ${isDark ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.14)"}`,
+                            boxShadow: `0 8px 8px -7px ${C.shadowStrong}`,
                         }}
                     >
                         {loading

@@ -173,6 +173,8 @@ interface Props {
     apiBase: string
 }
 
+// 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-nws-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+//   <style>{AN_PALETTE} 정적 HTML 정합. 화살표 SVG stroke=style(var). Donut/LegendRow=CSS. 되돌리지 말 것.
 const LIGHT = {
     bg: "#ffffff",
     card: "#ffffff",
@@ -187,6 +189,8 @@ const LIGHT = {
     down: "#3182f6",
     upBg: "#fdecee",
     downBg: "#eaf1fe",
+    skBase: "#e9edf1",
+    skHi: "#f3f5f7",
 }
 const DARK = {
     bg: "#171c23",
@@ -202,7 +206,17 @@ const DARK = {
     down: "#5b9bff",
     upBg: "#2a1a1d",
     downBg: "#17263c",
+    skBase: "#222a33",
+    skHi: "#2d3742",
 }
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-nws-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "nws"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 // GICS/yfinance 섹터 EN→KR (멤버십 사실 라벨). 미스 시 원문.
 const SECTOR_KR: Record<string, string> = {
@@ -307,19 +321,6 @@ const THEME_KEYWORDS: [string, string[]][] = [
     ["부동산", ["부동산", "집값", "분양", "전세"]],
 ]
 
-function readBodyDark(): boolean {
-    try {
-        const _lsPref =
-            typeof localStorage !== "undefined"
-                ? localStorage.getItem("verity_theme")
-                : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-    } catch (e) {}
-    if (typeof document === "undefined" || !document.body) return false
-    return document.body.dataset.framerTheme === "dark"
-}
-
 function hostname(url: string): string {
     if (!url) return ""
     try {
@@ -399,7 +400,7 @@ function asArray(x: any): any[] {
 function Logo(props: {
     ticker: any
     name: any
-    C: typeof LIGHT
+    C: any
     size?: number
 }) {
     const { ticker, name, C } = props
@@ -482,31 +483,8 @@ function Logo(props: {
     )
 }
 
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement
-        ? document.documentElement.dataset.anTheme
-        : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 export default function PublicNewsTab(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() =>
-        RenderTarget.current() === RenderTarget.canvas
-            ? !!props.dark
-            : anReadDark()
-    )
-    const isDark = onCanvas ? !!props.dark : themeDark
-    const C = isDark ? DARK : LIGHT
 
     const [tab, setTab] = useState<Tab>("stock")
     const [showKo, setShowKo] = useState<boolean>(false)
@@ -541,25 +519,6 @@ export default function PublicNewsTab(props: Props) {
     const [searchGroup, setSearchGroup] = useState<StockGroup | null>(null) // 검색된 종목 뉴스(온디맨드)
     const [searching, setSearching] = useState<boolean>(false)
     const [searchMsg, setSearchMsg] = useState<string>("")
-
-    /* 테마 추종 */
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (
-            typeof MutationObserver === "undefined" ||
-            typeof document === "undefined" ||
-            !document.body
-        )
-            return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, {
-            attributes: true,
-            attributeFilter: ["data-framer-theme"],
-        })
-        return () => obs.disconnect()
-    }, [onCanvas])
 
     /* 둥지/관심종목 읽기 — localStorage(verity_watchlist, 무로그인 별표) + 로그인(/api/watchgroups) 병합.
        별표 토글/로그인 변경 이벤트 추종해 자동 갱신. 비어 있으면 아래 stocks 가 추천으로 폴백. */
@@ -1132,6 +1091,7 @@ export default function PublicNewsTab(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             {/* 헤더 */}
             <div
@@ -1446,7 +1406,7 @@ export default function PublicNewsTab(props: Props) {
                     </div>
                 ) : null}
                 {loading ? (
-                    <NewsSkeleton C={C} isDark={isDark} />
+                    <NewsSkeleton C={C} />
                 ) : failed ? (
                     <div
                         style={{
@@ -1720,10 +1680,10 @@ export default function PublicNewsTab(props: Props) {
 }
 
 /* 로딩 스켈레톤 — 뉴스 카드 그리드 형태(제목 2줄 + 메타 1줄). shimmer. */
-function NewsSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
-    const { C, isDark } = props
-    const base = isDark ? "#222a33" : "#e9edf1"
-    const hi = isDark ? "#2d3742" : "#f3f5f7"
+function NewsSkeleton(props: { C: any }) {
+    const { C } = props
+        const base = C.skBase
+        const hi = C.skHi
     const bar = (
         w: string | number,
         h: number,
@@ -1782,7 +1742,7 @@ function NewsSkeleton(props: { C: typeof LIGHT; isDark: boolean }) {
 const DONUT_ANIM_KEY = "news_donut_anim_v1"
 function Donut(props: {
     segs: { label: string; n: number; color: string }[]
-    C: typeof LIGHT
+    C: any
     size?: number
     thickness?: number
     centerValue?: number // 중앙 숫자(카운트업 대상)
@@ -1938,7 +1898,7 @@ function LegendRow(props: {
     color: string
     label: string
     n: number
-    C: typeof LIGHT
+    C: any
 }) {
     return (
         <div
@@ -1996,7 +1956,7 @@ const THEME_COLORS = [
 /* 오늘의 뉴스 한눈 — 출처 신뢰도 / 신선도(MinHash) / 키워드 무드 / 뉴스 많은 종목. 전부 사실 집계(RULE7). */
 function NewsInsights(props: {
     ins: Insights
-    C: typeof LIGHT
+    C: any
     reportPath?: string
 }) {
     const { ins, C } = props
@@ -2230,7 +2190,7 @@ function NewsInsights(props: {
     )
 }
 
-function MarketBadge(props: { market: string; C: typeof LIGHT }) {
+function MarketBadge(props: { market: string; C: any }) {
     const m = (props.market || "").toUpperCase()
     if (!m) return null
     const isKR = m.indexOf("KOS") >= 0 || m === "KR" || m.indexOf("KRX") >= 0
@@ -2251,7 +2211,7 @@ function MarketBadge(props: { market: string; C: typeof LIGHT }) {
 }
 
 /* 호재/악재 = 위/아래 화살표(텍스트 X). pos/neg 일 때만. 제목 끝(우측). KR 색: 호재 빨강↑ / 악재 파랑↓. */
-function SentChip(props: { s: string; C: typeof LIGHT }) {
+function SentChip(props: { s: string; C: any }) {
     const s = props.s
     if (s !== "positive" && s !== "negative") return null
     const pos = s === "positive"
@@ -2279,7 +2239,7 @@ function SentChip(props: { s: string; C: typeof LIGHT }) {
                 height={11}
                 viewBox="0 0 12 12"
                 fill="none"
-                stroke={col}
+                style={{ stroke: col }}
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -2305,7 +2265,7 @@ function SentChip(props: { s: string; C: typeof LIGHT }) {
 function SectorBadge(props: {
     sector: string
     industry: string
-    C: typeof LIGHT
+    C: any
 }) {
     const label = sectorLabel(props.sector)
     if (!label) return null
@@ -2328,7 +2288,7 @@ function SectorBadge(props: {
 
 function NewsRow(props: {
     item: NewsItem
-    C: typeof LIGHT
+    C: any
     clamp?: number
     showKo?: boolean
 }) {
@@ -2467,7 +2427,7 @@ function NewsRow(props: {
 
 function FlatNews(props: {
     items: NewsItem[]
-    C: typeof LIGHT
+    C: any
     empty: string
     cardH: number
     showKo?: boolean
@@ -2661,7 +2621,7 @@ function FlatNews(props: {
 
 function StockNews(props: {
     groups: StockGroup[]
-    C: typeof LIGHT
+    C: any
     cardH: number
     showKo?: boolean
     reportPath?: string

@@ -8,6 +8,19 @@ MCP 로 라이브 반영이 위험한(>60KB, write-loss) 공개 컴포넌트. **
 
 ---
 
+## ⏳ 지금 복붙 필요 — 다크모드 CSS 변수 durable fix (110KB+ 2종)
+
+**근본 해결(PM 승인 durable fix, 2026-07-24):** 컴포넌트가 색을 JS(`readBodyDark`/`themeDark`)로 정하던 걸 전면 제거하고, `<style>{AN_PALETTE}`(컴포넌트 내장 CSS 변수 `--an-*`)로 배경·카드·글자·SVG를 넘긴다. 정적 SSG HTML 에도 색이 실려 하이드레이션과 무관 → 무거운 페이지 stuck-라이트 근본 제거. **소·중형 32종은 MCP push로 라이브 반영 완료.** 아래 2종은 110KB+ 라 MCP push 불가 → repo 통째 복붙.
+
+| repo 파일 | 라이브 코드파일 (id) | 반영 내용 | 상태 |
+|---|---|---|---|
+| `public-probe/PublicDiscovery.tsx` | PublicDiscovery (`jPlm149`, 114KB) | JS 다크감지 제거 → `--an-dsc-*` CSS 변수 내장(`<style>{AN_PALETTE}`). skeleton skBase/skHi·shadow 테마변수. chevron data-URI=var 불가라 고정 gray(#8b95a1). 라이브==repo 미러(변환 base) | ⏳ 복붙 |
+| `public-probe/PublicNewsTab.tsx` | PublicNewsTab (`WzS6r3a`, 112KB) | JS 다크감지 제거 → `--an-nws-*` CSS 변수 내장. 서브컴포넌트 C prop=var Record(`: any`). 화살표 SVG stroke=style(var). Donut/LegendRow=CSS. NewsSkeleton skBase/skHi. 라이브==repo 미러(변환 base) | ⏳ 복붙 |
+
+> ⚠️ Discovery·NewsTab 복붙 = **html-first readBodyDark 를 CSS 변수로 대체**(supersede). 복붙 후엔 이 2종에서 `readBodyDark` 개념 사라짐 = 정상.
+
+---
+
 ## ⏳ 지금 복붙 필요 — dark mode html-first fix (새로고침 '부분 라이트' 근본 fix)
 
 body-first `readBodyDark` → html-first 로 정정. body-first 는 Framer 정적 export 의 light body 에 단락돼 새로고침 시 라이트로 stuck. >60KB 라 MCP push 불가.
