@@ -57,8 +57,11 @@ def _compute_graham_score(stock: Dict[str, Any]) -> float:
     elif per > 30:
         score -= 8
 
-    # PBR × PER <= 22.5: Graham 복합 기준
-    if per > 0 and pbr > 0:
+    # PBR × PER <= 22.5: Graham 복합 기준 (15 P/E × 1.5 P/B)
+    # 2026-07-24 fix: 결측 PBR sentinel(verity_brain 이 None/≤0 을 1.0 으로 mutate, pbr_normalized_neutral)
+    # 은 진짜 PBR 아님 → 복합기준에서 per≤22.5 인 종목 전원 부당 +10 획득(fail-open, 실측 10/53). sentinel
+    # 종목은 복합기준 skip(진짜 book value 없음 = 가치/과대 판정 불가). moat.py:97 배제 패턴과 정합.
+    if per > 0 and pbr > 0 and not stock.get("pbr_normalized_neutral"):
         pb_pe = pbr * per
         if pb_pe <= 22.5:
             score += 10
