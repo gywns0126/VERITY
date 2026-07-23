@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  * 🚨 RULE 7 / held-2027 / 유사투자자문 법: **사실 종합·연결만**. 평가·의견·추천·등급 0(빌더 post-filter + 결정론 fallback).
  *   = "사세요/저평가/유망" 절대 없음. 이 컴포넌트는 ai_synthesis.json(빌더 산출) 텍스트를 표시만.
  * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page replaceState 추종 1s 폴링.
- * 데이터 = data/ai_synthesis.json (단일 writer, publish 발행). 없으면 graceful 숨김. 테마 = body[data-framer-theme] 추종.
+ * 데이터 = data/ai_synthesis.json (단일 writer, publish 발행). 없으면 graceful 숨김. 테마 = init=false(SSG 라이트)→effect readBodyDark 교정(리렌더 강제).
  */
 
 interface Props {
@@ -32,8 +32,7 @@ function readTickerFromUrl(): string {
 }
 
 function readBodyDark(): boolean {
-    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
-    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    // init=false(SSG 라이트와 동일) → 이 함수는 effect 에서만 실제 테마 교정에 사용(리렌더 강제, SSG-하이드레이션 stuck 방지).
     try {
         const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
         if (_lsPref === "dark") return true
@@ -55,10 +54,6 @@ function readBodyDark(): boolean {
     return false
 }
 
-/**
- * @framerSupportedLayoutWidth any
- * @framerSupportedLayoutHeight any
- */
 // 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
 let __anHyd = false
 function anReadDark(): boolean {
@@ -73,7 +68,10 @@ function anReadDark(): boolean {
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
 
-
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight any
+ */
 export default function PublicAISynthesis(props: Props) {
     const { ticker, dataUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
