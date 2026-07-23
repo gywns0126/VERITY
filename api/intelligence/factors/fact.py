@@ -322,6 +322,11 @@ def _compute_fact_score(
     const = _load_constitution()
     w_raw = (const.get("fact_score") or {}).get("weights") or {}
     w = dict(w_raw)
+    # 2026-07-23 RULE 7(PM 승인): equity_brief_verdict(Perplexity Sonar 의 자체 STRONG_BUY/AVOID 투자결론)를
+    # fact_score 채점에서 제거 → 관측 전용. 근거: Brain 의 임무 = 독립적 등급 산출인데, 입력에 타 LLM 의
+    # 투자결론을 넣으면 Brain 이 그 결론을 되받아 echo 하는 순환구조(RULE 6). 정성 verdict 는 llm_observations
+    # 로 노출(EquityBriefCard narrative). 3% 가중은 아래 정규화에서 잔여 컴포넌트로 재분배(체계적 감점 없음).
+    w.pop("equity_brief_verdict", None)
 
     ic_adj = _load_ic_adjustments()
     ic_applied = {}
@@ -398,6 +403,10 @@ def _compute_fact_score(
     canslim_score = _compute_canslim_score(stock)
 
     # Phase 3: 증권사 리포트 + DART 사업보고서 AI 분석 컴포넌트
+    # ⚠ analyst_report/dart_health = Gemini 가 리포트·DART 원문을 읽고 생성한 정성 판단(LLM read).
+    # fact_score(실측 버킷)에 들어가지만 '측정된 사실' 아님 — 아래 provenance tag 로 정직 표기.
+    # 🔜 후속(별 PR): analyst_report report_count N-guard 수축 — 수축강도 k 외부 근거(credibility
+    #    이론 EPV/VHM) 확정 후 반영 예정. [[feedback_formula_coefficient_fact_check]].
     analyst_report = stock.get("analyst_report_summary") or {}
     analyst_score = _safe_float(analyst_report.get("analyst_sentiment_score"), 50.0)
 
@@ -445,9 +454,12 @@ def _compute_fact_score(
         "analyst_report": analyst_score,
         "dart_health": dart_health,
         "perplexity_risk": perplexity_risk_score,
-        "equity_brief_verdict": equity_brief_score,  # Brain v6 prep
+        # equity_brief_verdict = 관측 전용으로 이관(2026-07-23 RULE 7, 위 w.pop) — 순환 echo 차단.
         "us_fscore": us_fscore_score,  # 2026-05-20 US Piotroski F-Score (RULE 7 승인, 3%)
     }
+    # LLM-derived 컴포넌트 provenance tag (fact_score 는 '실측' 신뢰 버킷인데 아래는 Gemini/Perplexity
+    # 정성 read 라 정직 표기 — Brain·감사 trail 이 측정된 사실과 LLM 판단을 구분). 점수 로직 불변.
+    _llm_derived = ["analyst_report", "dart_health"]
 
     # ── P0-1 fix (2026-05-16): IC + regime 적용 후 weight 합 normalize ──
     # 결함: IC=DEAD 시 weight × 0.3 적용 → multi_factor 0.188→0.056, prediction 0.085→0.026,
@@ -478,7 +490,6 @@ def _compute_fact_score(
     if not _num(analyst_report.get("analyst_sentiment_score")): _missing.add("analyst_report")
     if not _num(dart_analysis.get("business_health_score")): _missing.add("dart_health")
     if _risk_level not in _RISK_SCORE_MAP: _missing.add("perplexity_risk")
-    if _brief_verdict not in _BRIEF_VERDICT_MAP: _missing.add("equity_brief_verdict")
     if not _num(_us_fscore_raw): _missing.add("us_fscore")
     _total_w = sum(w.get(k, 0) for k in components)
     _present_w = sum(w.get(k, 0) for k in components if k not in _missing)
@@ -637,6 +648,13 @@ def _compute_fact_score(
         "components": {k: round(v, 1) for k, v in components.items() if isinstance(v, (int, float))},
         "data_coverage": round(data_coverage, 3),
         "missing_components": sorted(_missing),
+        # 2026-07-23 RULE 7: fact 컴포넌트 중 LLM 정성 read 출처 표기 (측정≠LLM 판단 구분).
+        "llm_derived_components": [k for k in _llm_derived if k in components],
+        # equity_brief_verdict = 관측 전용(점수 미반영). Perplexity 투자결론 — 순환 방지로 fact 제외.
+        "llm_observations": {
+            "equity_brief_verdict": _brief_verdict if _brief_verdict in _BRIEF_VERDICT_MAP else None,
+            "equity_brief_score_ref": round(equity_brief_score, 1),
+        },
     }
     if ic_applied:
         result["ic_adjustments"] = ic_applied
