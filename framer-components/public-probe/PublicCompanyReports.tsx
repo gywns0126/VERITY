@@ -7,9 +7,10 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 🚨 RULE 7 / held-2027 / feedback_scope: 전부 **외부 소스 링크 모음**(공시·정기보고서·증권사 리포트·IR). VERITY 자체 점수·추천·작문 0.
  *   링크 = 공식/공개 출처(DART·네이버 금융·SEC EDGAR). 클릭 시 원문으로 이동(새 탭).
  * 종목 = prop ticker → 없으면 URL ?q → verity_last_ticker. 6자리=KR / 그 외=US 소스 분기.
- *   리포트 페이지 in-page 전환(replaceState) 추종 위해 ?q 폴링(1s)으로 종목 동기화.
- * 이름 = stock_report_public(KR)/us_stock_report_public(US)에서 ticker→name 매핑(있으면). 없어도 링크는 ticker로 동작.
- * 테마 = body[data-framer-theme] 자가 추종.
+ *
+ * 🚨 2026-07-24 테마 = Framer 네이티브 CSS 변수(--an-*) 구동. JS 다크 감지 전면 제거.
+ *   헤드 Custom Code 의 <style id="an-theme-palette"> 가 body[data-framer-theme] 기준으로 색을 몰아줌 →
+ *   하이드레이션/JS 실행과 무관하게 CSS 라 항상 정합(정적 export stuck-라이트 근본 해결). 되돌리지 말 것.
  */
 
 interface Props {
@@ -23,27 +24,17 @@ const DEF_KR =
 const DEF_US =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json"
 
-const LIGHT = {
-    bg: "#f2f4f6",
-    card: "#ffffff",
-    ink: "#191f28",
-    sub: "#4e5968",
-    faint: "#8b95a1",
-    line: "#f0f1f3",
-    vt: "#6c5ce7",
-    vtS: "#f0edff",
-    chip: "#f2f4f6",
-}
-const DARK = {
-    bg: "#0f1318",
-    card: "#171c23",
-    ink: "#e3e7ec",
-    sub: "#9aa4b1",
-    faint: "#828d9b",
-    line: "#222730",
-    vt: "#a99bff",
-    vtS: "#241f3a",
-    chip: "#0f1318",
+// 색 = 헤드 #an-theme-palette 의 CSS 변수. body[data-framer-theme] 가 light/dark 를 결정(JS 불필요).
+const C = {
+    bg: "var(--an-bg)",
+    card: "var(--an-card)",
+    ink: "var(--an-ink)",
+    sub: "var(--an-sub)",
+    faint: "var(--an-faint)",
+    line: "var(--an-line)",
+    vt: "var(--an-vt)",
+    vtS: "var(--an-vtS)",
+    chip: "var(--an-chip)",
 }
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
@@ -71,7 +62,6 @@ function linksFor(tk: string): { label: string; src: string; url: string }[] {
     const isKR = /^\d{6}$/.test(t)
     if (isKR) {
         const c = encodeURIComponent(t)
-        // 전부 ?code=/?itemCode= 로 해당 회사 딥링크 (generic 검색페이지 X). 공시 항목은 클릭 시 DART 원문으로 이어짐.
         return [
             {
                 label: "공시·정기보고서 (사업·분기보고서)",
@@ -109,50 +99,6 @@ function linksFor(tk: string): { label: string; src: string; url: string }[] {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement
-        ? document.documentElement.dataset.anTheme
-        : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
-// 마운트/토글 재판독 SoT — verity_theme(localStorage) 우선 → html[data-an-theme] → body[data-framer-theme].
-// 791d29f7e 에서 8개 컴포넌트에 적용된 패턴(effect 가 body 만 읽어 init 을 라이트로 덮어쓰던 버그) — 이 파일이 누락되어 있었음.
-function readBodyDark(): boolean {
-    if (typeof document === "undefined") return false
-    try {
-        const pref =
-            typeof localStorage !== "undefined"
-                ? localStorage.getItem("verity_theme")
-                : null
-        if (pref === "dark") return true
-        if (pref === "light") return false
-        const h = document.documentElement
-            ? document.documentElement.dataset.anTheme
-            : null
-        if (h === "dark") return true
-        if (h === "light") return false
-        if (document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
-
 export default function PublicCompanyReports(props: Props) {
     // ETF/ETN 선택 시 자기 숨김 — StockReport 가 body[data-verity-asset-kind] 신호 발행 (2026-07-10)
     const [assetKind, setAssetKind] = useState<string>("stock")
@@ -169,32 +115,8 @@ export default function PublicCompanyReports(props: Props) {
         })
         return () => obs.disconnect()
     }, [])
-    const { ticker, krUniverseUrl, usUniverseUrl, dark } = props
+    const { ticker, krUniverseUrl, usUniverseUrl } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-
-    const [themeDark, setThemeDark] = useState<boolean>(() =>
-        RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()
-    )
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (
-            typeof MutationObserver === "undefined" ||
-            typeof document === "undefined" ||
-            !document.body
-        )
-            return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, {
-            attributes: true,
-            attributeFilter: ["data-framer-theme"],
-        })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    const isDark = onCanvas ? !!dark : themeDark
-    const C = isDark ? DARK : LIGHT
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -411,7 +333,7 @@ export default function PublicCompanyReports(props: Props) {
                                     height="13"
                                     viewBox="0 0 24 24"
                                     fill="none"
-                                    stroke={C.vt}
+                                    stroke="currentColor"
                                     strokeWidth="2.4"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
@@ -458,7 +380,7 @@ addPropertyControls(PublicCompanyReports, {
     },
     dark: {
         type: ControlType.Boolean,
-        title: "Dark",
+        title: "Dark(미사용)",
         defaultValue: false,
         enabledTitle: "On",
         disabledTitle: "Off",
