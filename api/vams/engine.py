@@ -352,7 +352,10 @@ def save_portfolio(portfolio: dict):
 def save_history(history: list):
     os.makedirs(DATA_DIR, exist_ok=True)
     clean = _sanitize_nan(history)
-    with open(HISTORY_PATH, "w", encoding="utf-8") as f:
+    # 2026-07-20 감사 P0: dev-mode 사이클이 prod history.json 에 phantom 매도 기록 →
+    # mode별 경로 분리(rec 패턴 engine.py:325 정합). prod 매매이력 오염 차단(win_rate 왜곡 근원).
+    dest = HISTORY_PATH if VERITY_MODE == "prod" else HISTORY_PATH.replace(".json", ".dev.json")
+    with open(dest, "w", encoding="utf-8") as f:
         json.dump(clean, f, ensure_ascii=False, indent=2, allow_nan=False)
 
 
@@ -897,6 +900,9 @@ def _append_exit_log(record: dict) -> None:
     """
     import sys
     path = os.path.join(DATA_DIR, "vams", "exit_log.jsonl")
+    # 2026-07-20 감사 P0: dev-mode phantom 매도 prod exit_log 오염 차단 — mode별 경로 분리
+    if VERITY_MODE != "prod":
+        path = path.replace(".jsonl", ".dev.jsonl")
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "a", encoding="utf-8") as f:

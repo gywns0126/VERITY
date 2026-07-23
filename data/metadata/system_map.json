@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-20T19:29:33.947208+09:00",
+  "generated_at": "2026-07-24T00:07:05.839283+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 218023,
-    "python_modules": 637,
-    "tsx_components": 116,
-    "json_data_files": 441,
-    "json_total_tracked": 456,
+    "code_lines_tsx_py": 219431,
+    "python_modules": 642,
+    "tsx_components": 117,
+    "json_data_files": 445,
+    "json_total_tracked": 460,
     "workflows": 63,
     "scheduled_workflows": 49,
     "cron_triggers": 59,
-    "git_tracked_files": 5897
+    "git_tracked_files": 5917
   },
   "subsystems": {
     "ingest": {
@@ -582,9 +582,9 @@
     },
     "surface": {
       "label": "출력",
-      "count": 116,
+      "count": 117,
       "by_group": {
-        "framer-components/public-probe": 59,
+        "framer-components/public-probe": 60,
         "market": 11,
         "_shared": 10,
         "admin": 9,
@@ -601,33 +601,33 @@
     },
     "data": {
       "label": "데이터",
-      "count": 441
+      "count": 445
     },
     "validation": {
       "label": "검증",
-      "n_trading_days": 45,
-      "n_calendar_days": 64,
+      "n_trading_days": 48,
+      "n_calendar_days": 67,
       "next_milestone": {
         "next_n": 100,
-        "days_remaining": 55,
+        "days_remaining": 52,
         "label": "예비 결과 (binomial 95% CI ±10%p)"
       },
-      "as_of": "2026-07-20T13:12:20+09:00"
+      "as_of": "2026-07-23T12:51:45+09:00"
     }
   },
   "python_by_dir": {
     "api": 369,
-    "tests": 129,
-    "scripts": 79,
-    "vercel-api": 50,
+    "tests": 130,
+    "scripts": 80,
+    "vercel-api": 51,
     "server": 7,
-    ".github": 3
+    ".github": 5
   },
   "funnel": {
-    "investable_real": 1289,
+    "investable_real": 2795,
     "cap": 5000,
     "stages": [
-      1289,
+      2795,
       300,
       100,
       25
@@ -638,7 +638,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~1289 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2795 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
@@ -646,7 +646,7 @@
       "warn": 1,
       "alert": 0
     },
-    "infra_as_of": "2026-07-20T10:28:25+09:00",
+    "infra_as_of": "2026-07-23T10:30:29+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,

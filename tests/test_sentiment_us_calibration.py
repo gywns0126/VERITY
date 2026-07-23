@@ -15,14 +15,22 @@ _PF = {
         "market_mood_us": {"score": 70},     # US mood 우호 (별도 빌드)
         "usd_krw": {"change_pct": 2.0},      # 외인 자금 신호 (KR)
     },
-    "geopolitical_hotspots": {"events": [{"severity": 8}]},   # KR 지정학
+    # 2026-07-20 감사: 실 생산자(alert_engine.build_geopolitical_hotspots) 스키마 = sanctioned/china
+    # per-ticker 리스트 (events 아님 — 옛 consumer 가 없는 키 읽어 전 종목 50 상수화하던 버그 fix 정합).
+    "geopolitical_hotspots": {
+        "sanctioned_exposure": [{"ticker": "005930", "name": "테스트", "pct": 12.0}],
+        "china_high_exposure": [],
+        "country_avg_exposure": [],
+        "covered_companies": 1,
+    },
     "market_summary": {"kospi": {"change_pct": -3.0}},        # KOSPI 단독 약세
     "nasdaq": {"change_pct": 1.0},
 }
 
 
 def _comp(currency):
-    r = _compute_sentiment_score({"currency": currency, "sentiment": {"score": 50}}, _PF)
+    # ticker 005930 = _PF sanctioned_exposure 등재 → KR geopolitical flagged(<50) 검증. US 는 is_us 로 항상 50.
+    r = _compute_sentiment_score({"currency": currency, "ticker": "005930", "sentiment": {"score": 50}}, _PF)
     return r.get("components") or {}
 
 
@@ -43,7 +51,7 @@ def test_kr_unchanged_regression():
     kr = _comp("KRW")
     assert kr["fx_sentiment"] < 50                # USD/KRW 2% → penalty
     assert kr["global_index_decoupling"] < 50     # KOSPI 약세 gap
-    assert kr["geopolitical_score"] < 50          # severity 8
+    assert kr["geopolitical_score"] < 50          # sanctioned_exposure flagged → 30
 
 
 def test_us_sentiment_diverges_from_kr():

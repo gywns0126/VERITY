@@ -154,11 +154,15 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
             elif acct == "법인세비용":
                 out["income_tax"] = amount
         elif sj == "CF":
-            if "영업활동현금흐름" in acct or acct == "영업활동으로 인한 현금흐름":
+            # 🚨 총계류 = account_id(IFRS 표준) 우선 매칭 + 한글 fallback (BS/IS 와 동일 정책 #87 을 CF 에도 적용).
+            #   2025 사업보고서부터 라벨 변형 다수('영업활동 현금흐름' 공백·'영업활동순현금흐름' 등) →
+            #   한글 텍스트-only 매칭이 놓쳐 현금흐름 0 (SK하이닉스·삼성전기·코웨이 실증). account_id 는 전 회사·전 연도 불변.
+            #   exact id — '영업활동에서 창출된 현금'(ifrs-full_...InOperations, 소분해)과 구분해 오염 방지.
+            if aid == "ifrs-full_CashFlowsFromUsedInOperatingActivities" or "영업활동현금흐름" in acct or acct == "영업활동으로 인한 현금흐름":
                 out["operating_cashflow"] = amount
-            elif "투자활동현금흐름" in acct or acct == "투자활동으로 인한 현금흐름":
+            elif aid == "ifrs-full_CashFlowsFromUsedInInvestingActivities" or "투자활동현금흐름" in acct or acct == "투자활동으로 인한 현금흐름":
                 out["investing_cashflow"] = amount
-            elif "재무활동현금흐름" in acct or acct == "재무활동으로 인한 현금흐름":
+            elif aid == "ifrs-full_CashFlowsFromUsedInFinancingActivities" or "재무활동현금흐름" in acct or acct == "재무활동으로 인한 현금흐름":
                 out["financing_cashflow"] = amount
     out["equity"] = out["total_assets"] - out["total_liabilities"]
     out["working_capital"] = out["current_assets"] - out["current_liabilities"]

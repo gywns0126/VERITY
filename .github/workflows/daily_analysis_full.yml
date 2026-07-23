@@ -568,6 +568,17 @@ jobs:
             exit 1
           fi
 
+      - name: Upload operator full data to private Supabase Storage
+        # VERITY↔AlphaNest 분리 Stage 1 (2026-07-23): full portfolio.json → verity-reports private bucket.
+        # /api/admin(?type=portfolio_full, authed=is_admin/토큰) 이 서빙 → 오퍼레이터 콘솔이 공개 blob 대신
+        # 이 authed 경로로 full fetch. 공개 blob(sanitize 예정, Stage 3)과 별도 = 크라운주얼 사설화.
+        # 실패해도 발행 계속(admin.py fallback=공개 blob). SUPABASE_SERVICE_ROLE_KEY 기존 등록.
+        if: always() && steps.coverage_gate.outcome != 'failure'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/upload_operator_data_to_supabase.py
+
       - name: Publish hot data to VERITY-data
         # Phase A: dual-write — main 에도 commit (위), gh-pages 에도 force-orphan push.
         # 검증 후 Phase B 에서 fetch URL 마이그레이션, Phase C 에서 main commit 제거.

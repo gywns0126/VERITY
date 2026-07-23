@@ -172,6 +172,12 @@ def _psi_single(yesterday: float, today: float, ref_scale: float = 1.0,
     if yesterday is None or today is None:
         return 0.0
 
+    # 2026-07-20 감사 P1: 분수[0,1] feature 는 pp 로 환산 후 scale (_pct suffix 오분류 방지).
+    # grade_distribution_buy_pct(분수)가 pp 브랜치로 가면 최대 diff 1.0 → PSI 0.1 로 critical(0.15) 도달 불가.
+    if feature_name == "grade_distribution_buy_pct":
+        diff = abs(today - yesterday) * 100.0  # 분수 → pp
+        return round(min(diff * 0.1, 1.0), 4)
+
     # % 형식 feature: 부호 변경 시 abs 차이로 PSI 산출 (단위 = pp)
     if feature_name and (feature_name.endswith("_change_pct")
                          or feature_name.endswith("_pct")

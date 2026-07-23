@@ -378,7 +378,9 @@ def score_regime_predictions(
         _rewrite_trail(trail_path, entries)
 
     groups = _aggregate_timeseries(entries)
-    if groups:
+    # 2026-07-20 감사 P1: 신규 채점 0 이어도 매 run 집계 재append 되던 결함(byte-identical 중복) —
+    # 형제 scorer 와 동일 가드(newly_scored 있을 때만 append). 6/17 newly_scored 가드 수정서 누락됐던 라인.
+    if groups and newly_scored:
         os.makedirs(os.path.dirname(ic_history_path), exist_ok=True)
         with open(ic_history_path, "a", encoding="utf-8") as f:
             for g in groups:

@@ -31,6 +31,24 @@ class TestExtractPLBS:
         assert out["operating_profit"] == 50_000
         assert out["net_income"] == 30_000
 
+    def test_extract_cashflow_by_account_id(self):
+        # 2025 사업보고서 라벨 변형('영업활동 현금흐름' 공백·'투자활동순현금흐름' 순)은 한글 텍스트-only
+        # 매칭이 놓침 → account_id(IFRS)로 복구되어야 함 (SK하이닉스·삼성전기 실증).
+        # 소분해 '영업활동에서 창출된 현금'(ifrs-full_...InOperations)은 영업활동 총계를 오염시키면 안 됨.
+        data = {
+            "list": [
+                {"sj_div": "CF", "account_nm": "영업활동에서 창출된 현금", "account_id": "ifrs-full_CashFlowsFromUsedInOperations", "thstrm_amount": "9,999"},
+                {"sj_div": "CF", "account_nm": "영업활동 현금흐름", "account_id": "ifrs-full_CashFlowsFromUsedInOperatingActivities", "thstrm_amount": "1,000"},
+                {"sj_div": "CF", "account_nm": "투자활동순현금흐름", "account_id": "ifrs-full_CashFlowsFromUsedInInvestingActivities", "thstrm_amount": "-500"},
+                {"sj_div": "CF", "account_nm": "재무활동 현금흐름", "account_id": "ifrs-full_CashFlowsFromUsedInFinancingActivities", "thstrm_amount": "-200"},
+            ]
+        }
+        out = df._extract_pl_bs_from_dart(data)
+        assert out["operating_cashflow"] == 1_000   # 공백 라벨 → account_id 로 복구, 소분해(9,999) 오염 없음
+        assert out["investing_cashflow"] == -500    # '순' 라벨 → account_id 로 복구
+        assert out["financing_cashflow"] == -200
+        assert out["free_cashflow"] == 500          # 영업 + 투자
+
     def test_extract_handles_missing(self):
         data = {"list": []}
         out = df._extract_pl_bs_from_dart(data)

@@ -188,7 +188,9 @@ def _commodity_to_score(cm: Dict[str, Any], stock: Optional[Dict[str, Any]] = No
     ms = pr.get("margin_safety_score")
     if ms is None:
         return 50.0
-    return _clip(50.0 + float(ms))
+    # 2026-07-21 감사: +50 shift 를 producer(CommodityScout)로 이동 → ms 는 이미 0~100 정규화됨.
+    # 기존 _clip(50+ms) 와 수학적 동일(producer 가 50 을 더해 clip[0,100] 하므로). 회귀 0.
+    return _clip(float(ms))
 
 
 def _export_to_score(stock: Dict[str, Any]) -> float:
@@ -320,6 +322,11 @@ def _compute_fact_score(
     const = _load_constitution()
     w_raw = (const.get("fact_score") or {}).get("weights") or {}
     w = dict(w_raw)
+    # 2026-07-23 RULE 7(PM 승인): equity_brief_verdict(Perplexity Sonar 의 자체 STRONG_BUY/AVOID 투자결론)를
+    # fact_score 채점에서 제거 → 관측 전용. 근거: Brain 의 임무 = 독립적 등급 산출인데, 입력에 타 LLM 의
+    # 투자결론을 넣으면 Brain 이 그 결론을 되받아 echo 하는 순환구조(RULE 6). 정성 verdict 는 llm_observations
+    # 로 노출(EquityBriefCard narrative). 3% 가중은 아래 정규화에서 잔여 컴포넌트로 재분배(체계적 감점 없음).
+    w.pop("equity_brief_verdict", None)
 
     ic_adj = _load_ic_adjustments()
     ic_applied = {}
@@ -396,8 +403,23 @@ def _compute_fact_score(
     canslim_score = _compute_canslim_score(stock)
 
     # Phase 3: 증권사 리포트 + DART 사업보고서 AI 분석 컴포넌트
+    # ⚠ analyst_report/dart_health = Gemini 가 리포트·DART 원문을 읽고 생성한 정성 판단(LLM read).
+    # fact_score(실측 버킷)에 들어가지만 '측정된 사실' 아님 — 아래 provenance tag 로 정직 표기.
     analyst_report = stock.get("analyst_report_summary") or {}
-    analyst_score = _safe_float(analyst_report.get("analyst_sentiment_score"), 50.0)
+    _analyst_raw = _safe_float(analyst_report.get("analyst_sentiment_score"), 50.0)
+    # 2026-07-23 RULE 7(PM=approved) N-guard: 단일 리포트가 극단 LLM 감정점수(예: LG 003550 = 리포트
+    # 1건에 95)를 그대로 fact 로 통과시키던 것 차단. Bühlmann 신뢰도 수축 Z=n/(n+k), prior=중립50:
+    #   effective = 50 + (raw−50) × n/(n+k). n=1→1/3(95→65), n=2→1/2, n↑→raw 수렴.
+    # k=2 근거(외부 검증, Perplexity 2026-07-23): ① Bühlmann credibility(1967) 표준형 ② Clark(2013)
+    #   "credibility as data augmentation" = k=가상관측치, 데이터 부족 시 유효한 보수 기본값 ③ 액추어리
+    #   실증 k≈2~15 중 보수(고수축) 끝. 원칙적 k=EPV/VHM 이나 실데이터 = analyst_report 종목 3개(≥2리포트
+    #   2개)로 EPV/VHM 추정 불가(그 자체가 곡선맞추기) → k=2 고정. 커버리지 밀도↑ 시 Bühlmann-Straub 풀링
+    #   재추정 후속. [[feedback_formula_coefficient_fact_check]] [[feedback_seed_size_conservatism]].
+    _n_reports = _safe_float(analyst_report.get("report_count"), 0.0)
+    if analyst_report.get("analyst_sentiment_score") is not None and _n_reports > 0:
+        analyst_score = 50.0 + (_analyst_raw - 50.0) * (_n_reports / (_n_reports + 2.0))
+    else:
+        analyst_score = _analyst_raw
 
     dart_analysis = stock.get("dart_business_analysis") or {}
     dart_health = _safe_float(dart_analysis.get("business_health_score"), 50.0)
@@ -443,9 +465,12 @@ def _compute_fact_score(
         "analyst_report": analyst_score,
         "dart_health": dart_health,
         "perplexity_risk": perplexity_risk_score,
-        "equity_brief_verdict": equity_brief_score,  # Brain v6 prep
+        # equity_brief_verdict = 관측 전용으로 이관(2026-07-23 RULE 7, 위 w.pop) — 순환 echo 차단.
         "us_fscore": us_fscore_score,  # 2026-05-20 US Piotroski F-Score (RULE 7 승인, 3%)
     }
+    # LLM-derived 컴포넌트 provenance tag (fact_score 는 '실측' 신뢰 버킷인데 아래는 Gemini/Perplexity
+    # 정성 read 라 정직 표기 — Brain·감사 trail 이 측정된 사실과 LLM 판단을 구분). 점수 로직 불변.
+    _llm_derived = ["analyst_report", "dart_health"]
 
     # ── P0-1 fix (2026-05-16): IC + regime 적용 후 weight 합 normalize ──
     # 결함: IC=DEAD 시 weight × 0.3 적용 → multi_factor 0.188→0.056, prediction 0.085→0.026,
@@ -476,7 +501,6 @@ def _compute_fact_score(
     if not _num(analyst_report.get("analyst_sentiment_score")): _missing.add("analyst_report")
     if not _num(dart_analysis.get("business_health_score")): _missing.add("dart_health")
     if _risk_level not in _RISK_SCORE_MAP: _missing.add("perplexity_risk")
-    if _brief_verdict not in _BRIEF_VERDICT_MAP: _missing.add("equity_brief_verdict")
     if not _num(_us_fscore_raw): _missing.add("us_fscore")
     _total_w = sum(w.get(k, 0) for k in components)
     _present_w = sum(w.get(k, 0) for k in components if k not in _missing)
@@ -635,6 +659,13 @@ def _compute_fact_score(
         "components": {k: round(v, 1) for k, v in components.items() if isinstance(v, (int, float))},
         "data_coverage": round(data_coverage, 3),
         "missing_components": sorted(_missing),
+        # 2026-07-23 RULE 7: fact 컴포넌트 중 LLM 정성 read 출처 표기 (측정≠LLM 판단 구분).
+        "llm_derived_components": [k for k in _llm_derived if k in components],
+        # equity_brief_verdict = 관측 전용(점수 미반영). Perplexity 투자결론 — 순환 방지로 fact 제외.
+        "llm_observations": {
+            "equity_brief_verdict": _brief_verdict if _brief_verdict in _BRIEF_VERDICT_MAP else None,
+            "equity_brief_score_ref": round(equity_brief_score, 1),
+        },
     }
     if ic_applied:
         result["ic_adjustments"] = ic_applied

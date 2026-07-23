@@ -301,12 +301,17 @@ def _extract_beat_miss(text: str) -> str:
 
 
 def _extract_risk_level(text: str) -> str:
-    """응답에서 HIGH/MODERATE/LOW 리스크 등급 추출."""
+    """응답에서 HIGH/MODERATE/LOW 리스크 등급 추출.
+
+    2026-07-23 RULE 7(PM 승인) fail-closed: 등급 미검출(자료 없음/파싱 실패) 기본값을
+    'LOW'(→fact 60 호재) 에서 'UNKNOWN' 으로. 근거 부재를 긍정 fact 로 주입하던 버그 차단 —
+    fact.py 에서 UNKNOWN 은 _RISK_SCORE_MAP 밖 → 50 중립 + _missing(coverage deflate).
+    """
     upper = text.upper()[:200]
     for level in ("HIGH", "MODERATE", "LOW"):
         if level in upper:
             return level
-    return "LOW"
+    return "UNKNOWN"
 
 
 def _extract_section(text: str, keyword: str) -> str:

@@ -117,7 +117,9 @@ def score_quality(
 
     if aum is not None and aum > 0:
         if "domestic" in category or "kr" in category.lower():
-            aum_score = min(100, math.log10(max(aum, 1)) / math.log10(10000) * 100)
+            # 2026-07-20 감사 P1: KR collector aum=원 raw(~1e13). 기존 denom log10(1e4)=4 → 전 KR ETF 100 포화.
+            # 원-scale(1e13=10조 기준 100)로 교정해 변별 복원.
+            aum_score = min(100, math.log10(max(aum, 1)) / math.log10(1e13) * 100)
         else:
             aum_score = min(100, math.log10(max(aum, 1)) / math.log10(10_000_000_000) * 100)
         scores.append(("aum", aum_score, 0.4))

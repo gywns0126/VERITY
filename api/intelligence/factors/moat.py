@@ -23,9 +23,12 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
     # 1) Hohn: 섹터 배제 — 구조적으로 해자가 약한 업종 감점
     sector = stock.get("sector", "") or ""
     sub_sector = stock.get("sub_sector", "") or stock.get("industry", "") or ""
+    # 2026-07-20 감사 P1: excluded kr 목록은 한글(은행/증권/보험..)인데 sector/industry 는 yfinance 영문
+    # → KR penalty 무발화. company_type(한글 필드)을 매칭축에 포함(no-regression: 부재 시 "").
+    company_type = stock.get("company_type", "") or ""
     sector_key = "us" if is_us else "kr"
     excluded_list = excluded.get(sector_key, [])
-    sector_combined = f"{sector} {sub_sector}".strip()
+    sector_combined = f"{sector} {sub_sector} {company_type}".strip()
     if any(ex.lower() in sector_combined.lower() for ex in excluded_list if ex):
         score += penalty
 
@@ -129,11 +132,12 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
     dart_moat = None if is_us else (stock.get("dart_business_analysis") or {}).get("moat_indicators")
     if isinstance(dart_moat, list) and dart_moat:
         valid = [m for m in dart_moat if isinstance(m, str) and m.strip()]
-        # 해자 개수 보너스
-        if len(valid) >= 3:
-            score += 5      # 복수 해자 (brand+tech+scale 등)
-        elif len(valid) >= 1:
-            score += 2      # 일부 해자
+        # 해자 지표 존재 보너스 (presence-only)
+        # 2026-07-23 RULE 7(PM 승인): 개수 스케일(≥3→+5) = LLM 이 지표를 많이 나열할수록 점수↑
+        # = verbosity 보상(할루시네이션 유인). presence-only 이진화로 개수 편향 제거 —
+        # 해자 유형 grounding 은 하단 키워드 카테고리 매칭이 담당(개수 아닌 실 유형 매칭).
+        if len(valid) >= 1:
+            score += 2      # 해자 지표 존재 (개수 무관)
 
         # 핵심 해자 유형 키워드 매칭 (중복 카운트 1회)
         all_text = " ".join(valid).lower()
