@@ -103,6 +103,12 @@ def _is_fresh_dart(rec: Any, bsns_year: str) -> bool:
         or (rec.get("financing_cashflow") or 0)
     ):
         return False
+    # 손익상세(2026-05-20 확장: sga/finance/income_tax) KEY 부재 = 확장 이전 수집 → 재추출
+    if "income_tax" not in rec or "sga" not in rec:
+        return False
+    # net_income=0 인데 법인세차감전(pretax)!=0 = 적자기업 순이익 클램프/라벨 미스 잔재 → 재추출
+    if (rec.get("net_income") or 0) == 0 and (rec.get("pretax_income") or 0) != 0:
+        return False
     return True
 
 

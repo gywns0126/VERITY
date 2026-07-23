@@ -49,6 +49,16 @@ class TestExtractPLBS:
         assert out["financing_cashflow"] == -200
         assert out["free_cashflow"] == 500          # 영업 + 투자
 
+    def test_extract_income_tax_by_account_id(self):
+        # '법인세비용(수익)'(삼성·SK) 라벨변형은 account_nm 정확일치를 빠져나감 → account_id 로 복구.
+        data = {
+            "list": [
+                {"sj_div": "IS", "account_nm": "법인세비용(수익)", "account_id": "ifrs-full_IncomeTaxExpenseContinuingOperations", "thstrm_amount": "3,000"},
+            ]
+        }
+        out = df._extract_pl_bs_from_dart(data)
+        assert out["income_tax"] == 3_000
+
     def test_extract_handles_missing(self):
         data = {"list": []}
         out = df._extract_pl_bs_from_dart(data)

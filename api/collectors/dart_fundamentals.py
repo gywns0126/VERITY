@@ -151,7 +151,9 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
                 out["finance_income"] = max(out["finance_income"], amount)
             elif acct in ("금융원가", "금융비용"):
                 out["finance_cost"] = max(out["finance_cost"], amount)
-            elif acct == "법인세비용":
+            elif aid == "ifrs-full_IncomeTaxExpenseContinuingOperations" or acct == "법인세비용":
+                # account_id 우선(BS/IS/CF 와 동일 정책) — '법인세비용(수익)'(삼성·SK)·'계속영업법인세효익'(SK이노)
+                # 라벨변형이 account_nm 정확일치를 빠져나가 income_tax=0 스퓨리어스 발생하던 것 복구.
                 out["income_tax"] = amount
         elif sj == "CF":
             # 🚨 총계류 = account_id(IFRS 표준) 우선 매칭 + 한글 fallback (BS/IS 와 동일 정책 #87 을 CF 에도 적용).
