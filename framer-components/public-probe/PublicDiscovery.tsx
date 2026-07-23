@@ -595,12 +595,13 @@ function anReadDark(): boolean {
         __anHyd = true
         return false
     }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    const h = document.documentElement
+        ? document.documentElement.dataset.anTheme
+        : null
     if (h === "dark") return true
     if (h === "light") return false
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
-
 
 export default function PublicDiscovery(props: Props) {
     const {
@@ -625,7 +626,13 @@ export default function PublicDiscovery(props: Props) {
     )
     useEffect(() => {
         if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
+        const read = () => {
+            const t =
+                typeof document !== "undefined" && document.body
+                    ? document.body.dataset.framerTheme
+                    : ""
+            setThemeDark(t === "dark")
+        }
         read()
         if (
             typeof MutationObserver === "undefined" ||

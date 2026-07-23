@@ -490,17 +490,20 @@ function anReadDark(): boolean {
         __anHyd = true
         return false
     }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    const h = document.documentElement
+        ? document.documentElement.dataset.anTheme
+        : null
     if (h === "dark") return true
     if (h === "light") return false
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
 
-
 export default function PublicNewsTab(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(() =>
-        RenderTarget.current() === RenderTarget.canvas ? !!props.dark : anReadDark()
+        RenderTarget.current() === RenderTarget.canvas
+            ? !!props.dark
+            : anReadDark()
     )
     const isDark = onCanvas ? !!props.dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -2196,15 +2199,13 @@ function NewsInsights(props: {
                                     .reduce((a, b) => a + b.n, 0)}
                                 centerSuffix=""
                                 centerSub="언급"
-                                segs={ins.themes
-                                    .slice(0, 6)
-                                    .map((th, i) => ({
-                                        label: th.name,
-                                        n: th.n,
-                                        color: THEME_COLORS[
-                                            i % THEME_COLORS.length
-                                        ],
-                                    }))}
+                                segs={ins.themes.slice(0, 6).map((th, i) => ({
+                                    label: th.name,
+                                    n: th.n,
+                                    color: THEME_COLORS[
+                                        i % THEME_COLORS.length
+                                    ],
+                                }))}
                             />
                             <div style={{ ...leg, flex: 1 }}>
                                 {ins.themes.slice(0, 5).map((th, i) => (

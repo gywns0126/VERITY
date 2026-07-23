@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  * 데이터 = /api/stock_news?code=종목코드 (네이버 금융 종목뉴스 라이브, 건당 밀도 enrichment).
  * 밀도: 카테고리 칩 · 출처 신뢰티어(✓) · 매체 클러스터 수 · 상대시각 · 관련 공시(뉴스×DART 연결, 우리 차별점).
  * RULE 6: LLM 해설 0. RULE 7: 호재악재·랭킹 0(사실만).
- * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page 전환 추종 1s 폴링. 테마 = body[data-framer-theme] 추종.
+ * 종목 = prop ticker → URL ?q → verity_last_ticker. in-page 전환 추종 1s 폴링. 테마 = init=false(SSG 라이트)→effect 교정.
  * 데이터 없으면 graceful 숨김.
  * 🚨 외곽 padding·narrow 브레이크포인트 = PublicStockReport 와 동일(w<560, 12/18) — /stock 좌측 열 카드 인셋 정렬(2026-07-04).
  */
@@ -51,10 +51,6 @@ const SAMPLE: NewsItem[] = [
     { title: "삼성전자, HBM4 양산 계획 발표", url: "#", source: "전자신문", category: "신사업·투자", credibility: 3, credible: false, outlets: 2, datetime: "", rel_time: "1일 전" },
 ]
 
-/**
- * @framerSupportedLayoutWidth any
- * @framerSupportedLayoutHeight any
- */
 // 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
 let __anHyd = false
 function anReadDark(): boolean {
@@ -69,30 +65,10 @@ function anReadDark(): boolean {
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
 
-
-// 마운트/토글 재판독 SoT — verity_theme(localStorage) 우선 → html[data-an-theme] → body[data-framer-theme].
-// 791d29f7e 8개 fix 에서 누락됐던 body-only 재판독 버그 정정(다크에서 라이트 고정 방지, 2026-07-21 일괄).
-function readBodyDark(): boolean {
-    if (typeof document === "undefined") return false
-    try {
-        const pref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (pref === "dark") return true
-        if (pref === "light") return false
-        const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-        if (h === "dark") return true
-        if (h === "light") return false
-        if (document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
-
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight any
+ */
 export default function PublicStockNews(props: Props) {
     const { ticker, apiBase, dark } = props
     const api = (apiBase || DEFAULT_API).replace(/\/+$/, "")
@@ -101,7 +77,10 @@ export default function PublicStockNews(props: Props) {
     const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
     useEffect(() => {
         if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
+        const read = () => {
+            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
+            setThemeDark(t === "dark")
+        }
         read()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(read)

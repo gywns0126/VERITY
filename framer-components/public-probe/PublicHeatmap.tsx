@@ -413,12 +413,13 @@ function anReadDark(): boolean {
         __anHyd = true
         return false
     }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    const h = document.documentElement
+        ? document.documentElement.dataset.anTheme
+        : null
     if (h === "dark") return true
     if (h === "light") return false
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
-
 
 export default function PublicHeatmap(props: Props) {
     const __lmH = useBfLogoMap()
@@ -837,7 +838,10 @@ export default function PublicHeatmap(props: Props) {
         const CW = 190,
             CH = 132,
             G = 14
-        const px = hover.mx != null ? hover.mx : hover.x * zoom.z + zoom.tx + hover.w * zoom.z,
+        const px =
+                hover.mx != null
+                    ? hover.mx
+                    : hover.x * zoom.z + zoom.tx + hover.w * zoom.z,
             py = hover.my != null ? hover.my : hover.y * zoom.z + zoom.ty
         let cl = px + G
         if (cl + CW > chartW - 6) cl = px - G - CW
@@ -1101,17 +1105,31 @@ export default function PublicHeatmap(props: Props) {
                                             setHover({
                                                 ...t,
                                                 v,
-                                                mx: r ? e.clientX - r.left : undefined,
-                                                my: r ? e.clientY - r.top : undefined,
+                                                mx: r
+                                                    ? e.clientX - r.left
+                                                    : undefined,
+                                                my: r
+                                                    ? e.clientY - r.top
+                                                    : undefined,
                                             })
                                         }}
                                         onMouseMove={(e) => {
-                                            if (dragRef.current.on || !chartRef.current)
+                                            if (
+                                                dragRef.current.on ||
+                                                !chartRef.current
+                                            )
                                                 return
-                                            const r = chartRef.current.getBoundingClientRect()
+                                            const r =
+                                                chartRef.current.getBoundingClientRect()
                                             setHover((h) =>
                                                 h && h.key === t.key
-                                                    ? { ...h, mx: e.clientX - r.left, my: e.clientY - r.top }
+                                                    ? {
+                                                          ...h,
+                                                          mx:
+                                                              e.clientX -
+                                                              r.left,
+                                                          my: e.clientY - r.top,
+                                                      }
                                                     : h
                                             )
                                         }}
