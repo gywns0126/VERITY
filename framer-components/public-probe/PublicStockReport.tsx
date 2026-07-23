@@ -4738,8 +4738,8 @@ export default function PublicStockReport(props: Props) {
                             height={18}
                             viewBox="0 0 24 24"
                             fill={starItemId ? "#f6b93b" : C.faint}
-                            stroke={starItemId ? "#f6b93b" : "none"}
-                            strokeWidth={1.7}
+                            stroke={starItemId ? "#f6b93b" : C.faint}
+                            strokeWidth={2.6}
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             aria-hidden="true"

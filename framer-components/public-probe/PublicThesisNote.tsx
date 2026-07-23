@@ -16,10 +16,13 @@ import { Heart, User } from "@phosphor-icons/react"
  *   피드 = /api/thesis_feed (익명 조회 가능, 별명·아바타만 노출 — 실명/이메일/기록가 비노출).
  *   🚨 피드 내용 = 이용자 개인 의견 라벨 필수 (AlphaNest 분석·판단 아님).
  * 🚨 2026-07-21 세션 사슬 — loadToken 만료 가드 + verity_auth_change/storage 리스너(로그인·토큰갱신 후 서버 thesis·피드 재fetch).
+ *
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-thn-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 정적 HTML 정합. Phosphor 아이콘 = 부모 color(var) currentColor 상속. solid 보라 버튼 = vtBtn 순보라(#6c5ce7). 되돌리지 말 것.
  */
 
-const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", upS: "#fdecee", downS: "#eaf1fe", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff", chipBg: "#f2f4f6" }
-const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34", up: "#f04452", down: "#5b9bff", upS: "#2a1a1d", downS: "#17263c", vg: "#34e08a", vgS: "#11281d", vt: "#a99bff", vtS: "#241f3a", chipBg: "#0f1318" }
+const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", upS: "#fdecee", downS: "#eaf1fe", vg: "#0ca678", vgS: "#e7faf0", vt: "#6c5ce7", vtS: "#f0edff", vtBtn: "#6c5ce7", chipBg: "#f2f4f6" }
+const DARK = { bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34", up: "#f04452", down: "#5b9bff", upS: "#2a1a1d", downS: "#17263c", vg: "#34e08a", vgS: "#11281d", vt: "#a99bff", vtS: "#241f3a", vtBtn: "#6c5ce7", chipBg: "#0f1318" }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const STORE_KEY = "verity_thesis_v1"
@@ -27,6 +30,14 @@ const LAST_TK_KEY = "verity_last_ticker"
 const TK_EVENT = "verity-ticker-change"
 const SESSION_KEY = "verity_supabase_session"
 const MIGRATED_KEY = "verity_thesis_migrated_v1"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-thn-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "thn"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 function loadToken(): string {
     if (typeof window === "undefined") return ""
@@ -91,59 +102,9 @@ const DEMO_FEED = [
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
-
-// 마운트/토글 재판독 SoT — verity_theme(localStorage) 우선 → html[data-an-theme] → body[data-framer-theme].
-// 791d29f7e 8개 fix 에서 누락됐던 body-only 재판독 버그 정정(다크에서 라이트 고정 방지, 2026-07-21 일괄).
-function readBodyDark(): boolean {
-    if (typeof document === "undefined") return false
-    try {
-        const pref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (pref === "dark") return true
-        if (pref === "light") return false
-        const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-        if (h === "dark") return true
-        if (h === "light") return false
-        if (document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
-
 export default function PublicThesisNote(props: Props) {
     const { ticker, apiBase, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    // 테마 추종 — 사이트 다크모드(body[data-framer-theme]) 따라감. 캔버스는 dark prop 정적.
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
-    const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
 
     const resolveTk = (): string => {
@@ -322,7 +283,7 @@ export default function PublicThesisNote(props: Props) {
     const stanceLabel = (id: string) => { const s = STANCES.find((x) => x.id === id); return s ? s.label : "관망" }
 
     if (!tk && !onCanvas) {
-        return <div style={{ ...wrap, textAlign: "center", color: C.faint, fontSize: 12.5, fontWeight: 600, padding: "22px 16px" }}>종목을 선택하면 내 관점을 기록할 수 있어요.</div>
+        return <div style={{ ...wrap, textAlign: "center", color: C.faint, fontSize: 12.5, fontWeight: 600, padding: "22px 16px" }}><style>{AN_PALETTE}</style>종목을 선택하면 내 관점을 기록할 수 있어요.</div>
     }
 
     const card: CSSProperties = { background: C.card, borderRadius: 14, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
@@ -366,8 +327,8 @@ export default function PublicThesisNote(props: Props) {
                             {it.avatar ? (
                                 <img src={it.avatar} alt="" width={26} height={26} style={{ width: 26, height: 26, borderRadius: 9, objectFit: "cover", flexShrink: 0 }} />
                             ) : (
-                                <div style={{ width: 26, height: 26, borderRadius: 9, background: C.chipBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                    <User size={14} color={C.faint} weight="fill" />
+                                <div style={{ width: 26, height: 26, borderRadius: 9, background: C.chipBg, color: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                    <User size={14} weight="fill" />
                                 </div>
                             )}
                             <span style={{ fontSize: 12.5, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.nickname}{it.mine ? " (나)" : ""}</span>
@@ -378,7 +339,7 @@ export default function PublicThesisNote(props: Props) {
                         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 7 }}>
                             <button onClick={() => toggleLike(it)}
                                 style={{ display: "inline-flex", alignItems: "center", gap: 4, border: "none", background: "transparent", cursor: "pointer", padding: 0, fontFamily: FONT, fontSize: 11.5, fontWeight: 700, color: it.liked ? C.up : C.faint }}>
-                                <Heart size={14} weight={it.liked ? "fill" : "regular"} color={it.liked ? C.up : C.faint} />
+                                <Heart size={14} weight={it.liked ? "fill" : "regular"} />
                                 {it.likes > 0 ? it.likes : "좋아요"}
                             </button>
                             {!it.mine && (
@@ -402,6 +363,7 @@ export default function PublicThesisNote(props: Props) {
         const dCol = diffPct == null ? C.faint : diffPct > 0 ? C.up : diffPct < 0 ? C.down : C.faint
         return (
             <div style={wrap}>
+                <style>{AN_PALETTE}</style>
                 <div style={card}>
                     {title}
                     <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
@@ -441,6 +403,7 @@ export default function PublicThesisNote(props: Props) {
     // 입력 폼 (신규/수정)
     return (
         <div style={wrap}>
+            <style>{AN_PALETTE}</style>
             <div style={card}>
                 {title}
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 6 }}>내 관점</div>
@@ -466,7 +429,7 @@ export default function PublicThesisNote(props: Props) {
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, paddingTop: 11, borderTop: `1px solid ${C.line}` }}>
                     <button onClick={() => { if (onCanvas) return; if (!token) { setPubMsg("로그인하면 공개할 수 있어요"); return } setIsPublic(!isPublic); setPubMsg("") }}
                         aria-label="커뮤니티에 공개" role="switch" aria-checked={isPublic}
-                        style={{ width: 42, height: 24, borderRadius: 999, border: "none", cursor: token ? "pointer" : "default", background: isPublic ? C.vt : C.line, position: "relative", flexShrink: 0, padding: 0, transition: "background 150ms", opacity: token ? 1 : 0.55 }}>
+                        style={{ width: 42, height: 24, borderRadius: 999, border: "none", cursor: token ? "pointer" : "default", background: isPublic ? C.vtBtn : C.line, position: "relative", flexShrink: 0, padding: 0, transition: "background 150ms", opacity: token ? 1 : 0.55 }}>
                         <span style={{ position: "absolute", top: 3, left: isPublic ? 21 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 150ms", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
                     </button>
                     <div style={{ minWidth: 0 }}>
@@ -476,7 +439,7 @@ export default function PublicThesisNote(props: Props) {
                 </div>
                 {pubMsg && <div style={{ fontSize: 11.5, fontWeight: 700, color: C.up, marginTop: 6 }}>{pubMsg}</div>}
                 <div style={{ display: "flex", gap: 8, marginTop: 11, alignItems: "center" }}>
-                    <button onClick={save} style={{ flex: 1, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vt, color: "#fff" }}>기록</button>
+                    <button onClick={save} style={{ flex: 1, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vtBtn, color: "#fff" }}>기록</button>
                     {thesis && <button onClick={() => { setEditing(false); setStance(thesis.stance); setNote(thesis.note || ""); setIsPublic(!!thesis.isPublic) }} style={{ flexShrink: 0, cursor: "pointer", fontFamily: FONT, padding: "11px 16px", borderRadius: 11, fontSize: 13, fontWeight: 700, background: "transparent", color: C.faint, border: `1px solid ${C.line}` }}>취소</button>}
                 </div>
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{token ? "내 계정에 저장 — 어느 기기서나 동일" : "이 기기에 저장 · 로그인하면 계정에 저장돼 어디서나 보여요"} · 기록 시점 가격 동결로 재방문 시 변화 표시</div>
@@ -489,5 +452,5 @@ export default function PublicThesisNote(props: Props) {
 addPropertyControls(PublicThesisNote, {
     ticker: { type: ControlType.String, title: "Ticker (빈칸=URL ?q=)", defaultValue: "" },
     apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
