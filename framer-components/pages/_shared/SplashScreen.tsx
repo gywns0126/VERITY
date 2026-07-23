@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react"
  * SplashScreen — AlphaNest 첫 로딩 스플래시 (토스식: 로고 + 밑에 "알파네스트").
  * 모션: 로고·글자 아래서 살짝 떠오르며 페이드 인 → 로고 은은한 호흡(float) → 살짝 커지며 디졸브.
  * 트랜지션 기반(부드럽고 keyframe 충돌 없음). 세션 1회(oncePerSession). 다크감지. 캔버스=정적.
+ * 🌓 다크 = bodyDark 가 localStorage(verity_theme) 우선 판독(2026-07-18) — 첫 페인트 스플래시도 저장 선호대로.
  * ⚠ 보수 구문(옵셔널체이닝/옵셔널catch/defaultProps 회피 — Framer esbuild panic).
  */
 
@@ -22,11 +23,6 @@ function bodyDark(): boolean {
             const a = document.body.dataset.framerTheme
             if (a === "dark") return true
             if (a === "light") return false
-        }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
         }
         if (typeof window !== "undefined" && window.matchMedia) return window.matchMedia("(prefers-color-scheme: dark)").matches
     } catch (e) {}

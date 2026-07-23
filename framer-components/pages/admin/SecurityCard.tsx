@@ -149,40 +149,6 @@ export default function SecurityCard(props: Props) {
         color: danger ? "#fff" : C.vt, background: danger ? C.up : C.vtS, opacity: on ? 0.5 : 1, whiteSpace: "nowrap",
     })
 
-    // 스켈레톤 — 최초 로딩(보안 로그 fetch) 동안 헤더·통계·섹션 형태를 본떠 표시(빈 카드=오류처럼 보임 회피).
-    //   에러(로그인 필요 등) 시엔 스켈레톤 대신 정상 렌더가 에러 메시지를 노출.
-    if (!onCanvas && !data && !err) {
-        const skBase = themeDark ? "#232a33" : "#e7eaee", skHi = themeDark ? "#2f3742" : "#f3f5f8"
-        const shim: CSSProperties = { background: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "secShimmer 1.4s ease-in-out infinite" }
-        const secSk = (rows: number) => (
-            <div style={card}>
-                <div style={{ ...shim, width: 110, height: 15, borderRadius: 6, marginBottom: 12 }} />
-                {Array.from({ length: rows }).map((_, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: i === 0 ? 0 : 9, marginTop: i === 0 ? 0 : 9, borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
-                        <div style={{ ...shim, width: 120, height: 14, borderRadius: 6 }} />
-                        <div style={{ ...shim, width: 40, height: 12, borderRadius: 6 }} />
-                        <div style={{ ...shim, width: 56, height: 22, borderRadius: 8, marginLeft: "auto" }} />
-                    </div>
-                ))}
-            </div>
-        )
-        return (
-            <div style={wrap} aria-busy="true" aria-label="보안 로그 불러오는 중">
-                <style>{`@keyframes secShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
-                <div style={card}>
-                    <div style={{ ...shim, width: 130, height: 18, borderRadius: 6 }} />
-                    <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-                        <div style={{ ...shim, flex: 1, height: 58, borderRadius: 11 }} />
-                        <div style={{ ...shim, flex: 1, height: 58, borderRadius: 11 }} />
-                    </div>
-                    <div style={{ ...shim, width: "100%", height: 38, borderRadius: 9, marginTop: 12 }} />
-                </div>
-                {secSk(2)}
-                {secSk(3)}
-            </div>
-        )
-    }
-
     const d = data || { probes: [], blocked: [], top_ips: [], stats: { probes_recent: 0, blocked_active: 0 } }
 
     return (

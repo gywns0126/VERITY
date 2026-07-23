@@ -24,7 +24,11 @@ const PROFILE_CACHE_KEY = "verity_profile_cache"
 interface SupaSession {
     access_token?: string
     expires_at?: number
-    user?: { id?: string; email?: string; user_metadata?: Record<string, string> }
+    user?: {
+        id?: string
+        email?: string
+        user_metadata?: Record<string, string>
+    }
 }
 
 interface ProfileRow {
@@ -39,7 +43,8 @@ function hexA(hex: string, a: number): string {
     const r = parseInt(h.slice(0, 2), 16)
     const g = parseInt(h.slice(2, 4), 16)
     const b = parseInt(h.slice(4, 6), 16)
-    if ([r, g, b].some((n) => Number.isNaN(n))) return `rgba(108, 92, 231, ${a})`
+    if ([r, g, b].some((n) => Number.isNaN(n)))
+        return `rgba(108, 92, 231, ${a})`
     return `rgba(${r}, ${g}, ${b}, ${a})`
 }
 
@@ -60,7 +65,7 @@ function loadSession(): SupaSession | null {
     try {
         const raw = window.localStorage.getItem(SESSION_KEY)
         const s = raw ? (JSON.parse(raw) as SupaSession) : null
-        if (s && s.expires_at && Date.now() / 1000 > s.expires_at) return null   // 만료 가드 — 만료 토큰 반환 시 401 유발
+        if (s && s.expires_at && Date.now() / 1000 > s.expires_at) return null // 만료 가드 — 만료 토큰 반환 시 401 유발
         return s
     } catch (e) {
         return null
@@ -80,28 +85,47 @@ function loadCachedProfile(): ProfileRow | null {
 
 function saveCachedProfile(row: ProfileRow) {
     try {
-        window.localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
-            nickname: row.nickname || "",
-            avatar: row.avatar || "",
-            display_name: row.display_name || "",
-        }))
+        window.localStorage.setItem(
+            PROFILE_CACHE_KEY,
+            JSON.stringify({
+                nickname: row.nickname || "",
+                avatar: row.avatar || "",
+                display_name: row.display_name || "",
+            })
+        )
     } catch (e) {}
 }
 
 function clearSession() {
-    try { window.localStorage.removeItem(SESSION_KEY) } catch (e) {}
-    try { window.localStorage.removeItem(PROFILE_CACHE_KEY) } catch (e) {}
-    try { window.sessionStorage.removeItem("verity_session_init") } catch (e) {}
+    try {
+        window.localStorage.removeItem(SESSION_KEY)
+    } catch (e) {}
+    try {
+        window.localStorage.removeItem(PROFILE_CACHE_KEY)
+    } catch (e) {}
+    try {
+        window.sessionStorage.removeItem("verity_session_init")
+    } catch (e) {}
 }
 
 async function fetchProfile(
-    url: string, anon: string, token: string, table: string, userId: string
+    url: string,
+    anon: string,
+    token: string,
+    table: string,
+    userId: string
 ): Promise<ProfileRow | null> {
     if (!url || !anon || !token || !userId) return null
     try {
         const res = await fetch(
             `${url}/rest/v1/${table}?id=eq.${encodeURIComponent(userId)}&select=nickname,avatar,display_name`,
-            { headers: { apikey: anon, Authorization: `Bearer ${token}`, Accept: "application/json" } }
+            {
+                headers: {
+                    apikey: anon,
+                    Authorization: `Bearer ${token}`,
+                    Accept: "application/json",
+                },
+            }
         )
         if (!res.ok) return null
         const rows = await res.json()
@@ -126,7 +150,9 @@ function readBodyDark(): boolean {
     // 기본 라이트(SSG 매칭). html[data-an-theme](커스텀코드/토글) → body[data-framer-theme] → localStorage(verity_theme).
     try {
         if (typeof document !== "undefined") {
-            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+            const h = document.documentElement
+                ? document.documentElement.dataset.anTheme
+                : null
             if (h === "dark") return true
             if (h === "light") return false
             if (document.body) {
@@ -135,7 +161,10 @@ function readBodyDark(): boolean {
                 if (a === "light") return false
             }
         }
-        const s = typeof localStorage !== "undefined" ? localStorage.getItem("verity_theme") : null
+        const s =
+            typeof localStorage !== "undefined"
+                ? localStorage.getItem("verity_theme")
+                : null
         if (s === "dark") return true
     } catch (e) {}
     return false
@@ -182,14 +211,24 @@ export default function PublicMenuAccount(props: {
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
 
     // 다크모드 자가감지 — nav 계정 위젯이 사이트 테마 추종(2026-07-20). 라이트=프롭 색 유지, 다크=사이트 표준.
-    const [themeDark, setThemeDark] = useState<boolean>(() => (isCanvas ? false : readBodyDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() =>
+        isCanvas ? false : readBodyDark()
+    )
     useEffect(() => {
         if (isCanvas) return
         const readT = () => setThemeDark(readBodyDark())
         readT()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+        if (
+            typeof MutationObserver === "undefined" ||
+            typeof document === "undefined" ||
+            !document.body
+        )
+            return
         const obs = new MutationObserver(readT)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+        obs.observe(document.body, {
+            attributes: true,
+            attributeFilter: ["data-framer-theme"],
+        })
         return () => obs.disconnect()
     }, [isCanvas])
     const fill = themeDark ? "#1e242c" : fillProp
@@ -197,8 +236,12 @@ export default function PublicMenuAccount(props: {
     const sub = themeDark ? "#828d9b" : subProp
 
     // 세션·프로필을 마운트 시 localStorage 에서 동기 로드 → 재마운트 즉시 올바른 상태(플래시 없음).
-    const [session, setSession] = useState<SupaSession | null>(() => (isCanvas ? null : loadSession()))
-    const [profile, setProfile] = useState<ProfileRow | null>(() => (isCanvas ? null : loadCachedProfile()))
+    const [session, setSession] = useState<SupaSession | null>(() =>
+        isCanvas ? null : loadSession()
+    )
+    const [profile, setProfile] = useState<ProfileRow | null>(() =>
+        isCanvas ? null : loadCachedProfile()
+    )
     const [busy, setBusy] = useState(false)
     const [btnHov, setBtnHov] = useState(false)
     const [cardHov, setCardHov] = useState(false)
@@ -211,8 +254,17 @@ export default function PublicMenuAccount(props: {
         const s = loadSession()
         setSession(s)
         if (s && s.access_token && s.user && s.user.id) {
-            fetchProfile(url, supabaseAnonKey, s.access_token, profileTable, s.user.id).then((row) => {
-                if (row) { setProfile(row); saveCachedProfile(row) }
+            fetchProfile(
+                url,
+                supabaseAnonKey,
+                s.access_token,
+                profileTable,
+                s.user.id
+            ).then((row) => {
+                if (row) {
+                    setProfile(row)
+                    saveCachedProfile(row)
+                }
             })
         } else {
             setProfile(null)
@@ -243,39 +295,67 @@ export default function PublicMenuAccount(props: {
         if (busy) return
         setBusy(true)
         const s = loadSession()
-        if (s && s.access_token) await serverLogout(url, supabaseAnonKey, s.access_token)
+        if (s && s.access_token)
+            await serverLogout(url, supabaseAnonKey, s.access_token)
         clearSession()
         go(logoutRedirect || loginRedirect)
     }, [busy, url, supabaseAnonKey, logoutRedirect, loginRedirect, go])
 
-    const loggedIn = isCanvas ? true : !!(session && session.access_token && session.user)
+    const loggedIn = isCanvas
+        ? true
+        : !!(session && session.access_token && session.user)
     // realName = 실제 프로필 이름(있을 때만). 카드 텍스트는 없으면 '내 계정', 아바타 이니셜은 realName 만 사용('내' 방지).
-    const realName = (profile && (profile.nickname || profile.display_name)) || (isCanvas ? "길동무" : "")
+    const realName =
+        (profile && (profile.nickname || profile.display_name)) ||
+        (isCanvas ? "길동무" : "")
     const nickname = realName || "내 계정"
     const avatar = (profile && profile.avatar) || ""
     const initial = (realName || "?").trim().charAt(0).toUpperCase()
 
     const circle: React.CSSProperties = {
-        width: avatarSize, height: avatarSize, borderRadius: "50%", overflow: "hidden",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        width: avatarSize,
+        height: avatarSize,
+        borderRadius: "50%",
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
     }
     // 중립 플레이스홀더 — 사진·이름 둘 다 없을 때(로딩·미설정). 'ㄴ' 같은 fallback 글자 대신 유저 아이콘.
     const placeholderNode = (
         <div style={{ ...circle, background: fill }}>
-            <User size={Math.round(avatarSize * 0.52)} color={sub} weight="fill" />
+            <User
+                size={Math.round(avatarSize * 0.52)}
+                color={sub}
+                weight="fill"
+            />
         </div>
     )
     const avatarNode = avatar ? (
         <div style={{ ...circle, background: fill }}>
-            <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img
+                src={avatar}
+                alt=""
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
         </div>
     ) : realName ? (
         <div style={{ ...circle, background: accent }}>
-            <span style={{ color: "#fff", fontWeight: 800, fontSize: Math.round(avatarSize * 0.42), fontFamily: FONT }}>
+            <span
+                style={{
+                    color: "#fff",
+                    fontWeight: 800,
+                    fontSize: Math.round(avatarSize * 0.42),
+                    fontFamily: FONT,
+                }}
+            >
                 {initial}
             </span>
         </div>
-    ) : placeholderNode
+    ) : (
+        placeholderNode
+    )
 
     // ── variant: avatar (프로필 링크 버튼용) — hover 살짝 어둡게(brightness) ──
     if (variant === "avatar") {
@@ -285,7 +365,9 @@ export default function PublicMenuAccount(props: {
                 onMouseEnter={() => setAvatarHov(true)}
                 onMouseLeave={() => setAvatarHov(false)}
                 style={{
-                    display: "inline-flex", cursor: "pointer", borderRadius: "50%",
+                    display: "inline-flex",
+                    cursor: "pointer",
+                    borderRadius: "50%",
                     filter: avatarHov ? "brightness(0.93)" : "none",
                     transition: "filter 0.15s ease",
                     ...style,
@@ -304,15 +386,29 @@ export default function PublicMenuAccount(props: {
                 onMouseEnter={() => setBtnHov(true)}
                 onMouseLeave={() => setBtnHov(false)}
                 style={{
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                    padding: "11px 14px", borderRadius: 13, cursor: "pointer", fontFamily: FONT,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 7,
+                    padding: "11px 14px",
+                    borderRadius: 13,
+                    cursor: "pointer",
+                    fontFamily: FONT,
                     background: btnHov ? darken(loginBg, 0.09) : loginBg,
                     transition: "background 0.15s ease",
                     ...style,
                 }}
             >
                 <SignIn size={17} color={loginText} weight="bold" />
-                <span style={{ fontWeight: 800, fontSize: 13.5, color: loginText }}>로그인 / 회원가입</span>
+                <span
+                    style={{
+                        fontWeight: 800,
+                        fontSize: 13.5,
+                        color: loginText,
+                    }}
+                >
+                    로그인 / 회원가입
+                </span>
             </div>
         )
     }
@@ -321,10 +417,17 @@ export default function PublicMenuAccount(props: {
     return (
         <div
             onMouseEnter={() => setCardHov(true)}
-            onMouseLeave={() => { setCardHov(false); setLogoutHov(false) }}
+            onMouseLeave={() => {
+                setCardHov(false)
+                setLogoutHov(false)
+            }}
             style={{
-                display: "flex", alignItems: "center", gap: 9,
-                padding: "8px 10px", borderRadius: 13, fontFamily: FONT,
+                display: "flex",
+                alignItems: "center",
+                gap: 9,
+                padding: "8px 10px",
+                borderRadius: 13,
+                fontFamily: FONT,
                 background: cardHov ? darken(fill, 0.06) : fill,
                 transition: "background 0.15s ease",
                 ...style,
@@ -332,19 +435,43 @@ export default function PublicMenuAccount(props: {
         >
             <div
                 onClick={() => go(profileRedirect)}
-                style={{ display: "flex", alignItems: "center", gap: 9, flex: 1, minWidth: 0, cursor: "pointer" }}
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    flex: 1,
+                    minWidth: 0,
+                    cursor: "pointer",
+                }}
             >
                 {avatarNode}
                 <div style={{ minWidth: 0 }}>
-                    <div style={{
-                        fontWeight: 800, fontSize: 13.5, color: ink,
-                        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                    }}>
+                    <div
+                        style={{
+                            fontWeight: 800,
+                            fontSize: 13.5,
+                            color: ink,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                        }}
+                    >
                         {nickname}
                     </div>
-                    <div style={{ fontSize: 10.5, fontWeight: 600, marginTop: 1, color: sub }}>프로필 보기</div>
+                    <div
+                        style={{
+                            fontSize: 10.5,
+                            fontWeight: 600,
+                            marginTop: 1,
+                            color: sub,
+                        }}
+                    >
+                        프로필 보기
+                    </div>
                 </div>
-                {!showLogout && <CaretRight size={15} color={sub} weight="bold" />}
+                {!showLogout && (
+                    <CaretRight size={15} color={sub} weight="bold" />
+                )}
             </div>
             {showLogout && (
                 <div
@@ -353,12 +480,20 @@ export default function PublicMenuAccount(props: {
                     onMouseLeave={() => setLogoutHov(false)}
                     title="로그아웃"
                     style={{
-                        display: "flex", cursor: busy ? "default" : "pointer", padding: 6, borderRadius: 9,
+                        display: "flex",
+                        cursor: busy ? "default" : "pointer",
+                        padding: 6,
+                        borderRadius: 9,
                         background: logoutHov ? hexA(sub, 0.16) : "transparent",
-                        opacity: busy ? 0.4 : 1, transition: "background 0.15s ease",
+                        opacity: busy ? 0.4 : 1,
+                        transition: "background 0.15s ease",
                     }}
                 >
-                    <SignOut size={17} color={logoutHov ? ink : sub} weight="bold" />
+                    <SignOut
+                        size={17}
+                        color={logoutHov ? ink : sub}
+                        weight="bold"
+                    />
                 </div>
             )}
         </div>
@@ -367,22 +502,82 @@ export default function PublicMenuAccount(props: {
 
 addPropertyControls(PublicMenuAccount, {
     variant: {
-        type: ControlType.Enum, title: "형태",
-        options: ["account", "avatar"], optionTitles: ["계정 행", "아바타만"],
+        type: ControlType.Enum,
+        title: "형태",
+        options: ["account", "avatar"],
+        optionTitles: ["계정 행", "아바타만"],
         defaultValue: "account",
     },
-    supabaseUrl: { type: ControlType.String, title: "Supabase URL", defaultValue: "", placeholder: "https://xxxxx.supabase.co" },
-    supabaseAnonKey: { type: ControlType.String, title: "Anon Key", defaultValue: "" },
-    profileTable: { type: ControlType.String, title: "프로필 테이블", defaultValue: "profiles" },
-    loginRedirect: { type: ControlType.String, title: "로그인 경로", defaultValue: "/login" },
-    logoutRedirect: { type: ControlType.String, title: "로그아웃 후 경로", defaultValue: "/login" },
-    profileRedirect: { type: ControlType.String, title: "프로필 경로", defaultValue: "/profile" },
-    avatarSize: { type: ControlType.Number, title: "아바타 크기", defaultValue: 36, min: 24, max: 120, unit: "px" },
-    showLogout: { type: ControlType.Boolean, title: "로그아웃 버튼", defaultValue: true, enabledTitle: "표시", disabledTitle: "숨김" },
-    loginBg: { type: ControlType.Color, title: "로그인 버튼 배경", defaultValue: "#6C5CE7" },
-    loginText: { type: ControlType.Color, title: "로그인 버튼 글자", defaultValue: "#FFFFFF" },
-    accent: { type: ControlType.Color, title: "아바타 배경", defaultValue: "#6c5ce7" },
-    fill: { type: ControlType.Color, title: "카드 채움색", defaultValue: "#f5f6f8" },
-    ink: { type: ControlType.Color, title: "닉네임 색", defaultValue: "#191f28" },
+    supabaseUrl: {
+        type: ControlType.String,
+        title: "Supabase URL",
+        defaultValue: "",
+        placeholder: "https://xxxxx.supabase.co",
+    },
+    supabaseAnonKey: {
+        type: ControlType.String,
+        title: "Anon Key",
+        defaultValue: "",
+    },
+    profileTable: {
+        type: ControlType.String,
+        title: "프로필 테이블",
+        defaultValue: "profiles",
+    },
+    loginRedirect: {
+        type: ControlType.String,
+        title: "로그인 경로",
+        defaultValue: "/login",
+    },
+    logoutRedirect: {
+        type: ControlType.String,
+        title: "로그아웃 후 경로",
+        defaultValue: "/login",
+    },
+    profileRedirect: {
+        type: ControlType.String,
+        title: "프로필 경로",
+        defaultValue: "/profile",
+    },
+    avatarSize: {
+        type: ControlType.Number,
+        title: "아바타 크기",
+        defaultValue: 36,
+        min: 24,
+        max: 120,
+        unit: "px",
+    },
+    showLogout: {
+        type: ControlType.Boolean,
+        title: "로그아웃 버튼",
+        defaultValue: true,
+        enabledTitle: "표시",
+        disabledTitle: "숨김",
+    },
+    loginBg: {
+        type: ControlType.Color,
+        title: "로그인 버튼 배경",
+        defaultValue: "#6C5CE7",
+    },
+    loginText: {
+        type: ControlType.Color,
+        title: "로그인 버튼 글자",
+        defaultValue: "#FFFFFF",
+    },
+    accent: {
+        type: ControlType.Color,
+        title: "아바타 배경",
+        defaultValue: "#6c5ce7",
+    },
+    fill: {
+        type: ControlType.Color,
+        title: "카드 채움색",
+        defaultValue: "#f5f6f8",
+    },
+    ink: {
+        type: ControlType.Color,
+        title: "닉네임 색",
+        defaultValue: "#191f28",
+    },
     sub: { type: ControlType.Color, title: "보조색", defaultValue: "#8b95a1" },
 })

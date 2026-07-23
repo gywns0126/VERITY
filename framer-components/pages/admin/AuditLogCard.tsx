@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
 /**
  * AuditLogCard — 관리자 조치 로그 (AlphaNest 스타일).
  * 소스: /api/admin?type=audit_log (본인 JWT · is_admin · service_role). 누가·뭘·누구를·언제.
- * admin_audit_log 테이블 기록(제재·삭제·수정·글삭제)을 최신순 표시. 읽기 전용.
- * 다크모드 자동감지. 접근차단 = 페이지 AuthGate.
+ * admin_audit_log 기록(제재·삭제·수정·글삭제)을 최신순 표시. 읽기 전용. 접근차단 = 페이지 AdminGate.
  */
 
 const LIGHT = {
@@ -21,7 +20,6 @@ const DARK = {
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const SESSION_KEY = "verity_supabase_session"
-// action → 한글 라벨 + 색 키
 const ACTIONS: Record<string, { t: string; c: string }> = {
     ban_user: { t: "회원 제재", c: "amber" }, unban_user: { t: "제재 해제", c: "green" },
     delete_user: { t: "회원 삭제", c: "up" }, update_profile: { t: "정보 수정", c: "vt" },
@@ -30,9 +28,6 @@ const ACTIONS: Record<string, { t: string; c: string }> = {
 
 function readBodyDark(): boolean {
     try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
         if (typeof document !== "undefined" && document.body) {
             const a = document.body.dataset.framerTheme
             if (a === "dark") return true
@@ -81,7 +76,7 @@ export default function AuditLogCard(props: Props) {
     const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
     const C = (onCanvas ? !!props.dark : themeDark) ? DARK : LIGHT
     const [rows, setRows] = useState<Row[]>(onCanvas ? SAMPLE : [])
-    const [loading, setLoading] = useState(!onCanvas)  // 초기 = 로딩(스켈레톤 첫 페인트부터, "없어요" 번쩍임 제거)
+    const [loading, setLoading] = useState(false)
     const [err, setErr] = useState("")
 
     useEffect(() => {
@@ -113,25 +108,6 @@ export default function AuditLogCard(props: Props) {
     const colorOf = (k?: string) => (k === "up" ? C.up : k === "green" ? C.green : k === "amber" ? C.amber : C.vt)
     const bgOf = (k?: string) => (k === "up" ? C.grid : k === "green" ? C.greenS : k === "amber" ? C.amberS : C.vtS)
 
-    // 스켈레톤 — 최초 로딩(조치 로그 fetch) 동안 로그 행 형태를 본떠 표시.
-    const dk = onCanvas ? !!props.dark : themeDark
-    const skBase = dk ? "#232a33" : "#e7eaee", skHi = dk ? "#2f3742" : "#f3f5f8"
-    const shim: CSSProperties = { background: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`, backgroundSize: "800px 100%", animation: "alcShimmer 1.4s ease-in-out infinite" }
-    const skRows = (
-        <>
-            <style>{`@keyframes alcShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
-            {[0, 1, 2, 3].map((i) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", paddingTop: i === 0 ? 0 : 11, marginTop: i === 0 ? 0 : 11, borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
-                    <div style={{ ...shim, width: 48, height: 20, borderRadius: 7, flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ ...shim, width: "70%", height: 13, borderRadius: 6 }} />
-                        <div style={{ ...shim, width: 130, height: 11, borderRadius: 6, marginTop: 4 }} />
-                    </div>
-                </div>
-            ))}
-        </>
-    )
-
     return (
         <div style={wrap}>
             <div style={card}>
@@ -143,8 +119,7 @@ export default function AuditLogCard(props: Props) {
             </div>
 
             <div style={card}>
-                {rows.length === 0 && loading ? skRows
-                 : rows.length === 0 && !loading ? (
+                {rows.length === 0 && !loading ? (
                     <div style={{ fontSize: 13, color: C.faint, fontWeight: 600 }}>기록된 조치가 없어요</div>
                 ) : rows.map((r, i) => {
                     const a = ACTIONS[r.action || ""] || { t: r.action || "조치", c: "vt" }
