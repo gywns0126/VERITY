@@ -8,9 +8,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *   링크 = 공식/공개 출처(DART·네이버 금융·SEC EDGAR). 클릭 시 원문으로 이동(새 탭).
  * 종목 = prop ticker → 없으면 URL ?q → verity_last_ticker. 6자리=KR / 그 외=US 소스 분기.
  *
- * 🚨 2026-07-24 테마 = Framer 네이티브 CSS 변수(--an-*) 구동. JS 다크 감지 전면 제거.
- *   헤드 Custom Code 의 <style id="an-theme-palette"> 가 body[data-framer-theme] 기준으로 색을 몰아줌 →
- *   하이드레이션/JS 실행과 무관하게 CSS 라 항상 정합(정적 export stuck-라이트 근본 해결). 되돌리지 말 것.
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   컴포넌트가 <style>{AN_PALETTE}</style> 로 팔레트를 직접 실어 → 정적 HTML 에 포함 → 하이드레이션/JS 무관 CSS 라 항상 정합.
+ *   body[data-framer-theme]("dark") 만 있으면(헤드 스크립트가 세팅) 색이 전부 따라옴. 되돌리지 말 것.
  */
 
 interface Props {
@@ -24,7 +24,13 @@ const DEF_KR =
 const DEF_US =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json"
 
-// 색 = 헤드 #an-theme-palette 의 CSS 변수. body[data-framer-theme] 가 light/dark 를 결정(JS 불필요).
+// 🎨 팔레트 자체 내장 — 헤드 CSS 없이도 var(--an-*) 정의. 정적 HTML 에 실려 하이드레이션 무관 정합.
+//    body = 기본(라이트), body[data-framer-theme="dark"] = 다크. 헤드 스크립트가 body 속성 세팅 → 색 전환.
+const AN_PALETTE =
+    "body{--an-bg:#f2f4f6;--an-card:#ffffff;--an-ink:#191f28;--an-sub:#4e5968;--an-faint:#8b95a1;--an-line:#e5e8eb;--an-vt:#6c5ce7;--an-vtS:#f0edff;--an-chip:#f2f4f6;}" +
+    'body[data-framer-theme="dark"]{--an-bg:#0f1318;--an-card:#171c23;--an-ink:#e3e7ec;--an-sub:#9aa4b1;--an-faint:#828d9b;--an-line:#252b34;--an-vt:#a99bff;--an-vtS:#241f3a;--an-chip:#1e242c;}'
+
+// 색 = 위 팔레트의 CSS 변수. body[data-framer-theme] 가 light/dark 를 결정(JS 불필요).
 const C = {
     bg: "var(--an-bg)",
     card: "var(--an-card)",
@@ -214,6 +220,7 @@ export default function PublicCompanyReports(props: Props) {
     if (!tk) {
         return (
             <div ref={rootRef} style={wrap}>
+                <style>{AN_PALETTE}</style>
                 <div
                     style={{
                         ...card,
@@ -232,6 +239,7 @@ export default function PublicCompanyReports(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             <div style={card}>
                 <div
                     style={{
