@@ -86,13 +86,24 @@ def _is_fresh_dart(rec: Any, bsns_year: str) -> bool:
     """직전 snapshot 의 종목 record 가 현 bsns_year DART 정식 데이터인가.
 
     연간보고서(reprt_code 11011)는 해당 연도 내 불변 → 재사용 정합(stale 아님).
+    단, 재무상태표는 있는데 현금흐름 3종이 전부 0 = CF 파싱 미스 신호(정상 기업은 CF 존재) →
+    stale 취급해 재추출 강제. CF account_id 매칭 fix(2026-07) 를 기존 0값 record 에 소급 반영하는 경로.
     """
-    return (
+    if not (
         isinstance(rec, dict)
         and str(rec.get("source", "")).startswith("DART")
         and str(rec.get("report_date", "")) == str(bsns_year)
         and (rec.get("total_assets") or 0) > 0
-    )
+    ):
+        return False
+    # 자산 有 · 영업/투자/재무 현금흐름 전부 0 = 파싱 미스 → 재추출(수정 파서가 소급 채움)
+    if not (
+        (rec.get("operating_cashflow") or 0)
+        or (rec.get("investing_cashflow") or 0)
+        or (rec.get("financing_cashflow") or 0)
+    ):
+        return False
+    return True
 
 
 def build() -> Dict[str, Any]:
