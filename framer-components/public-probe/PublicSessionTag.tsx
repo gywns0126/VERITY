@@ -92,16 +92,29 @@ export default function PublicSessionTag(props: Props) {
     const { dark, holidays, showClock, showSub, style } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
+    /* 테마 추종: html[data-an-theme] 먼저(헤드 스크립트 pre-paint) → body[data-framer-theme] → verity_theme.
+       🚨 body-first 금지 — 새로고침에 body 가 light 로 리셋돼도 html/verity 로 다크 유지(2026-07-23 부분 라이트 fix). 되돌리지 말 것. */
     const [themeDark, setThemeDark] = useState<boolean>(!!dark)
     useEffect(() => {
         if (onCanvas) return
         const read = () => {
-            const t =
+            const h =
+                typeof document !== "undefined" && document.documentElement
+                    ? document.documentElement.dataset.anTheme
+                    : ""
+            const b =
                 typeof document !== "undefined" && document.body
                     ? document.body.dataset.framerTheme
                     : ""
-            setThemeDark(t === "dark")
+            let dk = false
+            if (h === "dark") dk = true
+            else if (h === "light") dk = false
+            else if (b === "dark") dk = true
+            else if (b === "light") dk = false
+            else {
+                try { dk = localStorage.getItem("verity_theme") === "dark" } catch (e) { dk = false }
+            }
+            setThemeDark(dk)
         }
         read()
         if (

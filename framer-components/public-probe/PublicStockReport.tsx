@@ -3150,22 +3150,21 @@ function PeerStrip({ pct, C }: { pct: number; C: any }) {
 }
 
 function readBodyDark(): boolean {
-    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
-    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+    // 🎨 html[data-an-theme](헤드 스크립트 pre-paint, 레이스 제거) → body[data-framer-theme] → verity_theme 순.
+    // 🚨 body-first 금지 — Framer 정적 export 가 새로고침에 body 를 light 로 두면 verity 이전에 단락 → 부분 라이트(2026-07-23). 되돌리지 말 것.
     try {
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
+        if (typeof document !== "undefined") {
+            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+            if (h === "dark") return true
+            if (h === "light") return false
+            if (document.body) {
+                const a = document.body.dataset.framerTheme
+                if (a === "dark") return true
+                if (a === "light") return false
+            }
         }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
+        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (s === "dark") return true
     } catch (e) {}
     return false
 }
