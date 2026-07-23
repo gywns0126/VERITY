@@ -9,6 +9,7 @@ import { useState, useEffect } from "react"
  * 행 클릭 → StockReport ?q=. 자가 다크감지.
  *
  * 🚨 RULE 7 = 사용자 자기 저널 복기 — VERITY 채점·정답·점수 0. "스스로 복기" 용도. RULE 6 = LLM 0.
+ * 🚨 2026-07-21 세션 사슬 — loadToken 만료 가드 + verity_auth_change/storage 리스너(로그인·토큰갱신 후 서버 thesis 재fetch).
  */
 
 const LIGHT = { bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", up: "#f04452", down: "#3182f6", upS: "#fdecee", downS: "#eaf1fe", vt: "#6c5ce7", chipBg: "#f2f4f6" }
