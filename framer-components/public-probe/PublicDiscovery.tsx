@@ -782,7 +782,7 @@ export default function PublicDiscovery(props: Props) {
                     증권사 컨센서스 재배포(이중 IP: 네이버 ToS + 증권사 리서치 저작물) 소지.
                     PublicStockReport 의 출처 link-out 패턴과 정합 — 상세는 전체 리포트에서 출처 연결. */}
 
-                <button onClick={() => go(s.ticker)} style={{ width: "100%", marginTop: 16, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vt, color: "#fff" }}>전체 리포트 보기 →</button>
+                <button onClick={() => go(s.ticker)} style={{ width: "100%", marginTop: 16, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: "#6c5ce7", color: "#fff" }}>전체 리포트 보기 →</button>
                 <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5, textAlign: "center" }}>사실만 · 차트·심화는 전체 리포트</div>
             </div>
         )

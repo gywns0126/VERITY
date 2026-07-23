@@ -46,7 +46,7 @@
   align(right)[
     #text(size: 9.5pt, weight: 800, fill: accent)[ALPHANEST]
     #linebreak()
-    #text(size: 7.5pt, fill: faint)[팩트 리포트 · #D.generated]
+    #text(size: 7.5pt, fill: faint)[#D.at("report_label", default: "팩트 리포트") · #D.generated]
   ],
 )
 #v(1mm)
@@ -63,6 +63,29 @@
       text(size: 8.6pt, weight: 600)[#p.at(1)],
     )).flatten()
   )
+}
+
+// ─── AI 해석 (선택적 서술 장 — ai_report.py 만 D.ai 주입 · 팩트 리포트엔 없음) ───
+#if ("ai" in D) and (D.ai != none) {
+  v(4mm)
+  block[
+    #text(size: 10.5pt, weight: 800)[AI 해석]
+    #h(2mm) #text(size: 7.2pt, fill: faint)[아래 팩트 데이터 기반 자동 생성 서술 · 점수·추천 아님]
+  ]
+  v(1.6mm)
+  block(fill: fill, radius: 6pt, inset: (x: 4mm, y: 3.6mm), width: 100%, stroke: 0.5pt + hair)[
+    #for sec in D.ai.sections [
+      #text(size: 9pt, weight: 800, fill: accent)[#sec.h]
+      #v(0.9mm)
+      #text(size: 8.7pt, fill: ink)[#sec.body]
+      #v(2.6mm)
+    ]
+    #if D.ai.sources.len() > 0 [
+      #line(length: 100%, stroke: 0.4pt + hair)
+      #v(1.2mm)
+      #text(size: 7pt, fill: faint)[근거 데이터: #D.ai.sources.join(" · ")]
+    ]
+  ]
 }
 
 // ─── 한눈에 (glance): 4 카드 + 요약 밴드 ───
