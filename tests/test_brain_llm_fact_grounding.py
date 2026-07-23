@@ -28,7 +28,46 @@ def _stock(**over):
     return s
 
 
-# (analyst_report N-guard 수축 테스트 = 후속 PR — 수축강도 k 외부 근거 확정 후)
+# ── ① analyst_report N-guard 수축 (Bühlmann Z=n/(n+2), 단일 리포트 극단 차단) ──
+
+def test_analyst_single_report_extreme_shrinks_toward_neutral():
+    # report_count=1 에 sentiment 95 (LG 003550 실사례) → 중립(50) 방향 수축, raw 95 그대로 통과 X.
+    fs = _compute_fact_score(_stock(
+        analyst_report_summary={"analyst_sentiment_score": 95.0, "report_count": 1}
+    ), portfolio={})
+    ar = fs["components"]["analyst_report"]
+    # 50 + (95-50)*(1/3) = 65.0
+    assert 64.0 <= ar <= 66.0, ar
+    assert ar < 95.0  # 극단값 그대로 통과 금지
+
+
+def test_analyst_more_reports_less_shrink():
+    one = _compute_fact_score(_stock(
+        analyst_report_summary={"analyst_sentiment_score": 90.0, "report_count": 1}
+    ), portfolio={})["components"]["analyst_report"]
+    five = _compute_fact_score(_stock(
+        analyst_report_summary={"analyst_sentiment_score": 90.0, "report_count": 5}
+    ), portfolio={})["components"]["analyst_report"]
+    # 리포트 많을수록 raw(90)에 근접 (수축 약화)
+    assert five > one
+    assert five < 90.0
+
+
+def test_analyst_downside_extreme_also_shrinks():
+    # 대칭성: 단일 리포트 극단 하락(20)도 중립 방향 수축 (편향 없음).
+    ar = _compute_fact_score(_stock(
+        analyst_report_summary={"analyst_sentiment_score": 20.0, "report_count": 1}
+    ), portfolio={})["components"]["analyst_report"]
+    # 50 + (20-50)*(1/3) = 40.0
+    assert 39.0 <= ar <= 41.0, ar
+
+
+def test_analyst_no_report_count_uses_raw():
+    # report_count 부재 시 수축 미적용(raw 유지) — 결측 종목 왜곡 방지.
+    ar = _compute_fact_score(_stock(
+        analyst_report_summary={"analyst_sentiment_score": 80.0}
+    ), portfolio={})["components"]["analyst_report"]
+    assert 79.0 <= ar <= 81.0, ar
 
 
 # ── ② brief_verdict = 관측 전용 (fact 점수 제외, 순환 echo 차단) ──
