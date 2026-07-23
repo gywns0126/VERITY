@@ -18,9 +18,15 @@ import requests
 
 BUCKET = os.environ.get("OPERATOR_BUCKET", "verity-reports")
 
-# (로컬 소스, bucket 내 경로, content-type). 향후 오퍼레이터 파일(history/system_health 등) 추가.
+# (로컬 소스, bucket 내 경로, content-type).
+# 2026-07-23 분리 Stage 3 후속: 오퍼레이터 전용 파일(public-probe 소비 0)을 private bucket 으로.
+# 공개 발행 제거(action.yml)와 짝 — authed /api/admin?type=<name> 라우트로 서빙.
 UPLOADS = [
     ("data/portfolio.json", "_operator/portfolio_full.json", "application/json"),
+    ("data/history.json", "_operator/history.json", "application/json"),
+    ("data/system_health_snapshot.json", "_operator/system_health_snapshot.json", "application/json"),
+    ("data/brain_kb_usage.json", "_operator/brain_kb_usage.json", "application/json"),
+    ("data/admin_todos.json", "_operator/admin_todos.json", "application/json"),
 ]
 
 

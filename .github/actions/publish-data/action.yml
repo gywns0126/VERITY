@@ -38,10 +38,11 @@ runs:
         # force_orphan race 가드 — working copy 가 다른 builder 산출물에 대해 outdated 일 수
         # 있음. main HEAD fetch 후 main 의 data/ 에서 직접 추출 → 항상 최신 publish.
         git fetch origin main --depth=1 --quiet
-        # 2026-05-24 private repo migration — 추가 5 파일 (admin_todos / brain_kb_usage /
-        # history / metadata/cron_health.jsonl / metadata/data_pipeline_health.json).
-        # 기존엔 Framer 가 VERITY 본 repo public 으로 직접 페치. private 전환 후 죽기 때문에
-        # publish-data 에 합쳐 Blob + VERITY-data 양쪽 모두 publish.
+        # 2026-05-24 private repo migration — 추가 파일들. 기존엔 Framer 가 VERITY 본 repo public
+        # 으로 직접 페치. private 전환 후 죽기 때문에 publish-data 에 합쳐 Blob + VERITY-data publish.
+        # 🚫 2026-07-23 분리 Stage 3 후속: admin_todos/brain_kb_usage/history/system_health_snapshot =
+        #   오퍼레이터 전용(public-probe 소비 0) → 공개 발행 제거·private bucket(_operator/*)+authed
+        #   /api/admin?type=<name> 라우트로 이전. 크라운주얼 공개 노출 차단. 재추가 금지.
         # 🚫 us_analyst_consensus.json 재추가 금지 (PM 확정 2026-07-10) — 컨센서스 = 발행 제외.
         #   yfinance 목표가·투자의견 = Benzinga/S&P 실권리(재배포 blocker, 권리감사 쟁점3).
         #   대체 = 리포트 내 출처 링크아웃(구현 완료) · 숫자 부활 = 유료 티어 Polygon×Benzinga
@@ -51,7 +52,6 @@ runs:
         #   KR 브로커 목표가/투자의견(예: target_price 911524·"매수")로 us_analyst_consensus 와 동일
         #   법적 class(재배포 blocker·법률큐). 소비처 0 확인(framer+vercel-api grep 전무). 7/10 결정 정합 확장.
         for f in portfolio.json recommendations.json \
-                 system_health_snapshot.json \
                  macro_snapshot.json \
                  crypto_macro.json \
                  crypto_universe.json \
@@ -68,8 +68,6 @@ runs:
                  bonds.json \
                  kr_stock_names.json \
                  logo_map.json \
-                 admin_todos.json \
-                 brain_kb_usage.json \
                  ipo_watch.json \
                  nps_holdings.json \
                  nps_fund_returns.json \
@@ -116,8 +114,7 @@ runs:
                  universe_search.json \
                  logo_map.json \
                  ai_synthesis.json \
-                 event_study.json \
-                 history.json; do
+                 event_study.json; do
           if git show "origin/main:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
             echo "  + data/$f"
           else
