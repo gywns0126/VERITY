@@ -113,10 +113,18 @@ def extract_features(portfolio: Optional[dict]) -> Dict[str, float]:
     # recommendations 평균
     if recs:
         for src, dst in [("per", "avg_per"), ("pbr", "avg_pbr"), ("roe", "avg_roe"),
-                         ("debt_ratio", "avg_debt_ratio"), ("brain_score", "avg_brain_score")]:
+                         ("debt_ratio", "avg_debt_ratio")]:
             vals = [r.get(src) for r in recs if isinstance(r.get(src), (int, float))]
             if vals:
                 out[dst] = round(sum(vals) / len(vals), 4)
+
+        # 2026-07-24 fix: brain_score 는 top-level 아닌 verity_brain 중첩(grade 처리와 동일 위치).
+        # 옛 코드가 r.get("brain_score")=항상 None → avg_brain_score 미산출 → 드리프트 게이트 핵심
+        # 신호(브레인 점수 드리프트) 영구 부재로 무력화됐음. grade 분포(아래)와 동일 패턴으로 정정.
+        _bs = [(r.get("verity_brain") or {}).get("brain_score") for r in recs]
+        _bs = [x for x in _bs if isinstance(x, (int, float))]
+        if _bs:
+            out["avg_brain_score"] = round(sum(_bs) / len(_bs), 4)
 
         # grade 분포 — 위치는 verity_brain.grade (top-level grade 아님)
         grades = [
@@ -149,10 +157,14 @@ def extract_features(portfolio: Optional[dict]) -> Dict[str, float]:
         if s_vals:
             out["news_sentiment_avg"] = round(sum(s_vals) / len(s_vals), 4)
 
-    # VCI 평균 (vams 또는 verity_brain)
-    vci_avg = _scalar(vams, "vci_avg") or _scalar(portfolio.get("verity_brain") or {}, "vci_avg")
-    if vci_avg is not None:
-        out["vci_avg"] = vci_avg
+    # VCI 평균 — 2026-07-24 fix: 옛 소스(vams.vci_avg / portfolio.verity_brain.vci_avg)는 둘 다
+    # 미산출 키(항상 None) → vci_avg 영구 부재로 드리프트 게이트 2번째 신호 dead 였음. 실 VCI 는
+    # rec.verity_brain.vci.vci(개별 점수) → brain_score 와 동일하게 recs 평균으로 산출.
+    if recs:
+        _vci = [((r.get("verity_brain") or {}).get("vci") or {}).get("vci") for r in recs]
+        _vci = [x for x in _vci if isinstance(x, (int, float))]
+        if _vci:
+            out["vci_avg"] = round(sum(_vci) / len(_vci), 4)
 
     return out
 

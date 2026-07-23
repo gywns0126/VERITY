@@ -15,8 +15,11 @@ def _compute_canslim_score(stock: Dict[str, Any]) -> float:
     is_us = stock.get("currency") == "USD"
 
     # C: Current EPS Growth (최근 분기 EPS 성장률 ≥ 25%)
+    # 2026-07-24 fix: consensus.eps_growth_qoq_pct/yoy_pct = 미존재 필드(실 종목 0건 populate) → C 영구
+    # dead 였음. 실 소스 = stock.eps_quarterly_growth(yfinance earningsQuarterlyGrowth, %단위 실측
+    # 172.2/35.4/-29.0 → O'Neil C 정의 정합·임계 25/50과 단위 일치). consensus 참조 제거.
     cons = stock.get("consensus") or {}
-    eps_growth = _safe_float(cons.get("eps_growth_qoq_pct") or cons.get("eps_growth_yoy_pct"))
+    eps_growth = _safe_float(stock.get("eps_quarterly_growth"))
     if eps_growth is not None:
         if eps_growth >= 50:
             score += 15
@@ -40,7 +43,8 @@ def _compute_canslim_score(stock: Dict[str, Any]) -> float:
     # L: Leader — RS Rating (상대 강도, 기술적 모멘텀 프록시)
     tech = stock.get("technical") or {}
     # 52주 고점 대비 하락 비율을 RS 프록시로 활용
-    drop = _safe_float(stock.get("drop_from_high_pct", 0))
+    # 2026-07-24 fix: 결측 default 0(=신고가) 제거 — drop 부재 종목이 최강 리더 +8 부당획득(fail-open) 차단.
+    drop = _safe_float(stock.get("drop_from_high_pct"))
     if drop is not None:
         drop = abs(drop)
         if drop < 5:
@@ -70,9 +74,11 @@ def _compute_canslim_score(stock: Dict[str, Any]) -> float:
         elif inst_chg < -5:
             score -= 5
 
-    # N: New High — 신고가 여부
-    signals = tech.get("signals") or []
-    if any("고가" in s or "신고" in s or "돌파" in s for s in signals):
+    # N: New High — 신고가 근접
+    # 2026-07-24 fix: tech.signals 실 어휘(MACD/RSI 뿐)에 '고가/신고/돌파' 부재로 N 영구 dead 였음
+    # (문자열 키워드 매칭 미성립). drop_from_high_pct 직접 사용(신고가 프록시) — 52주 고점 대비 3% 이내 = 신고가권.
+    _drop_nh = _safe_float(stock.get("drop_from_high_pct"))
+    if _drop_nh is not None and abs(_drop_nh) < 3:
         score += 5
 
     return _clip(score)
