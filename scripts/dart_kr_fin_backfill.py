@@ -84,8 +84,16 @@ def main() -> int:
     universe = _universe(args.universe or DEFAULT_UNIVERSE, args.limit, (args.ticker or "").strip() or None)
     done = _load_done()
     rows = _load_rows()
-    seen = {(r.get("ticker"), r.get("fiscal_year")) for r in rows}
-    todo = [(t, n) for (t, n) in universe if t not in done]
+    def _has_net(r):
+        return ((r.get("fundamentals") or {}).get("net_income")) is not None
+
+    # net_income 채워진 행만 seen — null-net 행은 재수집 대상(2026-07 순이익 account_id fix+부호보존 소급).
+    #   과거 max(0,음수) 클램프로 적자기업 net=0→None 저장된 3,411행 복구 경로. 현행 파서가 정확 추출.
+    seen = {(r.get("ticker"), r.get("fiscal_year")) for r in rows if _has_net(r)}
+    rows_by_key = {(r.get("ticker"), r.get("fiscal_year")): r for r in rows}
+    # null-net 행 가진 ticker 는 done 이어도 재개 (해당 null 연도만 재fetch, 채워진 연도는 seen 으로 skip)
+    gap_tickers = {r.get("ticker") for r in rows if not _has_net(r)}
+    todo = [(t, n) for (t, n) in universe if t not in done or t in gap_tickers]
     print(f"[fin-bf] universe {len(universe)} | done {len(done)} | 잔여 {len(todo)} | years {years[0]}~{years[-1]} | cap {args.quota_cap}", file=sys.stderr)
 
     new_n, req_n = 0, 0
@@ -117,11 +125,15 @@ def main() -> int:
             inv_re = plbs.get("investment_property")
             if not (rev or op or net):
                 continue
-            rows.append({
-                "ticker": tk, "name": name, "fiscal_year": y, "period": "annual",
-                "fundamentals": {"revenue": rev or None, "operating_profit": op or None,
-                                 "net_income": net or None, "investment_property": inv_re or None},
-            })
+            fund = {"revenue": rev or None, "operating_profit": op or None,
+                    "net_income": net or None, "investment_property": inv_re or None}
+            existing = rows_by_key.get((tk, y))
+            if existing is not None:
+                existing["fundamentals"] = fund   # null-net 행 in-place 갱신 (중복 append 방지)
+            else:
+                new_row = {"ticker": tk, "name": name, "fiscal_year": y, "period": "annual", "fundamentals": fund}
+                rows.append(new_row)
+                rows_by_key[(tk, y)] = new_row
             seen.add((tk, y))
             new_n += 1; tk_new += 1
         done.add(tk)
