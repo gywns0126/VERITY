@@ -16,8 +16,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *
  * 이 repo .tsx = 라이브 Framer(AlphaNest 공개 프로젝트)의 미러. 양방향 stale 가능(라이브 편집 미반영 또는 그 반대).
  * 되돌리면 안 되는 레이아웃:
- *   · 우측 이벤트 리스트("종목 스크롤창") = 데스크톱에서 maxHeight = 좌측 캘린더 카드 실측 높이(calH, calRef ResizeObserver) 동적 매칭 + overflowY:auto(스크롤).
- *     static maxHeight(560 등)나 alignItems 로 되돌리지 말 것 — 정적값은 캘린더 높이와 안 맞음(2026-07-23 사고).
+ *   · 우측 이벤트 리스트("종목 스크롤창") = 데스크톱에서 height = 좌측 캘린더 카드 offsetHeight(calH, calRef ResizeObserver, border-box) 정확 매칭 + overflowY:auto(스크롤).
+ *     static height/maxHeight(560 등)나 alignItems 로 되돌리지 말 것 — 정적값은 캘린더 높이와 안 맞음(2026-07-23 사고).
  *
  * 편집/붙여넣기 전 의무 (RULE 11):
  *   1. Framer 데스크탑 = AlphaNest 공개 프로젝트 탭 focus 확인 (VERITY 내부 프로젝트 아님. getProjectXml 로 검증).
@@ -82,18 +82,23 @@ function StockDot(props: { ticker: any; name: any; size?: number }) {
 }
 
 function readBodyDark(): boolean {
+    // 기본 = 라이트(사이트 첫 시작 라이트 결정, 2026-07-19). 명시적 'dark' 신호가 있을 때만 다크.
+    //   판독 순서 = html[data-an-theme](Custom Code 헤드 스크립트가 페인트 전 동기 세팅, 레이스 제거)
+    //   → body[data-framer-theme](토글) → localStorage. OS 설정은 안 봄(로드마다 뒤집힘 방지).
+    //   🚨 body-first 로 되돌리지 말 것 — Framer 네이티브가 새로고침 때 body 를 OS 로 리셋 → 부분 라이트 회귀(2026-07-23).
     try {
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
+        if (typeof document !== "undefined") {
+            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+            if (h === "dark") return true
+            if (h === "light") return false
+            if (document.body) {
+                const a = document.body.dataset.framerTheme
+                if (a === "dark") return true
+                if (a === "light") return false
+            }
         }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) return window.matchMedia("(prefers-color-scheme: dark)").matches
+        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (s === "dark") return true
     } catch (e) {}
     return false
 }
@@ -148,11 +153,11 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
         return () => ro.disconnect()
     }, [])
 
-    // 좌측 캘린더 카드 높이 실측 → 우측 이벤트 리스트("종목 스크롤창") 높이 동적 매칭. data 로드 후 calRef 부착.
+    // 좌측 캘린더 카드 높이 실측(offsetHeight=border-box) → 우측 이벤트 리스트("종목 스크롤창") 높이 정확 매칭. data 로드 후 calRef 부착.
     useEffect(() => {
         const el = calRef.current
         if (!el || typeof ResizeObserver === "undefined") return
-        const ro = new ResizeObserver((e) => { for (const x of e) setCalH(x.contentRect.height) })
+        const ro = new ResizeObserver(() => setCalH(el.offsetHeight))
         ro.observe(el)
         return () => ro.disconnect()
     }, [data])
@@ -333,7 +338,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                 </div>
 
                 {/* 이벤트 리스트 (선택일 or 이 달 전체) */}
-                <div style={{ ...cardS, marginTop: narrow ? 16 : 0, padding: narrow ? "14px 14px" : "18px 18px", maxHeight: narrow ? undefined : (calH || 560), overflowY: narrow ? undefined : "auto" }}>
+                <div style={{ ...cardS, boxSizing: "border-box", marginTop: narrow ? 16 : 0, padding: narrow ? "14px 14px" : "18px 18px", height: narrow ? undefined : (calH || 560), overflowY: narrow ? undefined : "auto" }}>
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
                         <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>
                             {selDate ? selDate.slice(5).replace("-", "/") + " 이벤트" : "이 달 이벤트"}

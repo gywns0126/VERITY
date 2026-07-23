@@ -137,18 +137,23 @@ function Spark({ data, color, w, h }: { data: number[]; color: string; w: number
 }
 
 function readBodyDark(): boolean {
+    // 기본 = 라이트(사이트 첫 시작 라이트 결정, 2026-07-19). 명시적 'dark' 신호가 있을 때만 다크.
+    //   판독 순서 = html[data-an-theme](Custom Code 헤드 스크립트가 페인트 전 동기 세팅, 레이스 제거)
+    //   → body[data-framer-theme](토글) → localStorage. OS 설정은 안 봄(로드마다 뒤집힘 방지).
+    //   🚨 body-first 로 되돌리지 말 것 — Framer 네이티브가 새로고침 때 body 를 OS 로 리셋 → 부분 라이트 회귀(2026-07-23).
     try {
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
+        if (typeof document !== "undefined") {
+            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+            if (h === "dark") return true
+            if (h === "light") return false
+            if (document.body) {
+                const a = document.body.dataset.framerTheme
+                if (a === "dark") return true
+                if (a === "light") return false
+            }
         }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) return window.matchMedia("(prefers-color-scheme: dark)").matches
+        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (s === "dark") return true
     } catch (e) {}
     return false
 }
