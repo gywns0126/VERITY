@@ -58,10 +58,7 @@ export default function PublicThesisFeed(props: Props) {
     const [fbDark, setFbDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? false : readBodyDark()))
     useEffect(() => {
         if (onCanvas || props.C) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setFbDark(t === "dark")
-        }
+        const read = () => setFbDark(readBodyDark())   // html-first(부분 라이트 fix) — body-only 재판독 금지
         read()
         if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
         const obs = new MutationObserver(read)
