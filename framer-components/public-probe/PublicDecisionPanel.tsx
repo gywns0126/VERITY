@@ -446,12 +446,13 @@ function anReadDark(): boolean {
         __anHyd = true
         return false
     }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    const h = document.documentElement
+        ? document.documentElement.dataset.anTheme
+        : null
     if (h === "dark") return true
     if (h === "light") return false
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
-
 
 export default function PublicDecisionPanel(props: Props) {
     const {
@@ -527,7 +528,9 @@ export default function PublicDecisionPanel(props: Props) {
         if (onCanvas || typeof window === "undefined") return
         if (String(tk || "").trim()) return // prop/?q/localStorage 로 이미 선택됨 → 연속성 유지
         let alive = true
-        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json")
+        fetch(
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/hot_stock.json"
+        )
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const t = d && d.hot && d.hot.ticker
