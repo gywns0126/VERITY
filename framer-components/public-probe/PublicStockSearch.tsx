@@ -1,5 +1,12 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react"
+import {
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+} from "react"
 import { createPortal } from "react-dom"
 
 /**
@@ -15,10 +22,38 @@ import { createPortal } from "react-dom"
  * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
  */
 
-const LIGHT = { ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", vg: "#0ca678", vt: "#6c5ce7", vtS: "#f0edff", field: "#f2f4f6", card: "#ffffff", bg: "#f2f4f6", line: "#f0f1f3", up: "#f04452", down: "#3182f6" }
-const DARK = { ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", vg: "#7fffa0", vt: "#a99bff", vtS: "#241f3a", field: "#0f1318", card: "#171c23", bg: "#0f1318", line: "#222730", up: "#f04452", down: "#5b9bff" }
-const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
+const LIGHT = {
+    ink: "#191f28",
+    sub: "#4e5968",
+    faint: "#8b95a1",
+    vg: "#0ca678",
+    vt: "#6c5ce7",
+    vtS: "#f0edff",
+    field: "#f2f4f6",
+    card: "#ffffff",
+    bg: "#f2f4f6",
+    line: "#f0f1f3",
+    up: "#f04452",
+    down: "#3182f6",
+}
+const DARK = {
+    ink: "#e3e7ec",
+    sub: "#9aa4b1",
+    faint: "#828d9b",
+    vg: "#7fffa0",
+    vt: "#a99bff",
+    vtS: "#241f3a",
+    field: "#0f1318",
+    card: "#171c23",
+    bg: "#0f1318",
+    line: "#222730",
+    up: "#f04452",
+    down: "#5b9bff",
+}
+const FONT =
+    "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+const DEF_STOCK =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
 // 🚨 시세 재배포 컴플라이언스(2026-07-02): trending_kr(KRX 거래대금·등락·종가 raw) 자체 발행 중단.
 //   "지금 거래 활발" = 네이버 거래대금 상위 페이지로 link-out(네이버가 서빙 = 재배포 아님, 실시간·무료·합법).
 const NAVER_QUANT = "https://finance.naver.com/sise/sise_quant.naver"
@@ -36,71 +71,150 @@ function sessionResetScratch() {
         sessionStorage.setItem("verity_session_init", "1")
         let member = false
         try {
-            const s = JSON.parse(localStorage.getItem("verity_supabase_session") || "null")
-            member = !!(s && s.access_token && (!s.expires_at || Date.now() / 1000 < s.expires_at))
+            const s = JSON.parse(
+                localStorage.getItem("verity_supabase_session") || "null"
+            )
+            member = !!(
+                s &&
+                s.access_token &&
+                (!s.expires_at || Date.now() / 1000 < s.expires_at)
+            )
         } catch (e) {}
         if (member) return
-        for (const k of ["verity_watchlist", "verity_last_ticker", "verity_recent_tickers", "verity_thesis_v1", "verity_thesis_migrated_v1"]) localStorage.removeItem(k)
+        for (const k of [
+            "verity_watchlist",
+            "verity_last_ticker",
+            "verity_recent_tickers",
+            "verity_thesis_v1",
+            "verity_thesis_migrated_v1",
+        ])
+            localStorage.removeItem(k)
     } catch (e) {}
 }
 /* 로고 — 토스 종목 CDN(404/차단 시 이니셜 폴백) + circle-flags 원형 국기. ticker 형식으로 국장/미장 판별. */
 
 // ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
-const BF_CID = "1idalDez9T7KlggM8qX"  // 공개 임베드 client id (Logo Link 전용)
-const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+const BF_CID = "1idalDez9T7KlggM8qX" // 공개 임베드 client id (Logo Link 전용)
+const BF_MAP_URL =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
 let __bfMap: Record<string, string> | null = null
 let __bfColors: Record<string, string> = {}
 let __bfShapes: Record<string, number> = {}
-let __bfStyle: any = { padS: 8, padW: 15, wideRatio: 2.2 }  // 발행 데이터(style)로 조절 — 코드 수정 불요
+let __bfStyle: any = { padS: 8, padW: 15, wideRatio: 2.2 } // 발행 데이터(style)로 조절 — 코드 수정 불요
 let __bfP: Promise<Record<string, string>> | null = null
 function fetchBfMap(): Promise<Record<string, string>> {
     if (__bfMap) return Promise.resolve(__bfMap)
-    if (!__bfP) __bfP = fetch(BF_MAP_URL).then((r) => (r.ok ? r.json() : null)).then((d) => { __bfMap = (d && d.logos) || {}; __bfColors = (d && d.colors) || {}; __bfShapes = (d && d.shapes) || {}; __bfStyle = (d && d.style) || __bfStyle; return __bfMap as Record<string, string> }).catch(() => ({} as Record<string, string>))
+    if (!__bfP)
+        __bfP = fetch(BF_MAP_URL)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                __bfMap = (d && d.logos) || {}
+                __bfColors = (d && d.colors) || {}
+                __bfShapes = (d && d.shapes) || {}
+                __bfStyle = (d && d.style) || __bfStyle
+                return __bfMap as Record<string, string>
+            })
+            .catch(() => ({}) as Record<string, string>)
     return __bfP
 }
 function useBfLogoMap(): Record<string, string> | null {
     const [m, setM] = useState<Record<string, string> | null>(__bfMap)
-    useEffect(() => { let al = true; fetchBfMap().then((mm) => { if (al) setM(mm) }); return () => { al = false } }, [])
+    useEffect(() => {
+        let al = true
+        fetchBfMap().then((mm) => {
+            if (al) setM(mm)
+        })
+        return () => {
+            al = false
+        }
+    }, [])
     return m
 }
 function bfLogoPad(ticker: any): string {
     // 모양 적응 패딩 — 심볼(정사각)은 크게, 워드마크(가로 김)는 여백 확보 (토스식 가시성)
-    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const tk = String(ticker || "")
+        .toUpperCase()
+        .replace(/-/g, ".")
     const r = __bfShapes[tk] || __bfShapes[tk.replace(/\./g, "-")] || 1
-    if (r === 0) return "0%"  // 큐레이션 풀블리드 아이콘(자체 배경 포함) = 타일 꽉 채움
-    return (r > (__bfStyle.wideRatio || 2.2) ? (__bfStyle.padW || 15) : (__bfStyle.padS || 8)) + "%"
+    if (r === 0) return "0%" // 큐레이션 풀블리드 아이콘(자체 배경 포함) = 타일 꽉 채움
+    return (
+        (r > (__bfStyle.wideRatio || 2.2)
+            ? __bfStyle.padW || 15
+            : __bfStyle.padS || 8) + "%"
+    )
 }
 function bfInitialBg(ticker: any): string {
     // 이니셜 타일 — 티커 해시 투톤 그라데이션 (미보유 4.6K 도 디자인 자산화, 종목별 고정색)
-    let h = 0; const s = String(ticker || "?")
+    let h = 0
+    const s = String(ticker || "?")
     for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360
-    return "linear-gradient(135deg, hsl(" + h + ",62%,55%), hsl(" + ((h + 42) % 360) + ",68%,42%))"
+    return (
+        "linear-gradient(135deg, hsl(" +
+        h +
+        ",62%,55%), hsl(" +
+        ((h + 42) % 360) +
+        ",68%,42%))"
+    )
 }
 function bfLogoBg(ticker: any): string {
     // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
-    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const tk = String(ticker || "")
+        .toUpperCase()
+        .replace(/-/g, ".")
     const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
     // 토스식 넉아웃 (기본): 브랜드색 솔리드 배경 + 로고 흰 실루엣(bfLogoFilter). 조건 미충족 = 솔리드 파스텔.
     // style.mode 노브: "knockout"(기본) | "pastel". mixPct = 파스텔 혼합비(기본 30).
-    const p2 = (__bfMap && (__bfMap[tk] || __bfMap[tk.replace(/\./g, "-")])) || ""
-    if (c && p2 && p2.indexOf("http") !== 0 && (__bfStyle.mode || "pastel") === "knockout") return c  // 솔리드 브랜드색
+    const p2 =
+        (__bfMap && (__bfMap[tk] || __bfMap[tk.replace(/\./g, "-")])) || ""
+    if (
+        c &&
+        p2 &&
+        p2.indexOf("http") !== 0 &&
+        (__bfStyle.mode || "pastel") === "knockout"
+    )
+        return c // 솔리드 브랜드색
     if (!c) return "#ffffff"
     const mix = Number(__bfStyle.mixPct || 30)
-    try { if (typeof CSS !== "undefined" && CSS.supports && CSS.supports("color", "color-mix(in srgb, red 50%, white)")) return `color-mix(in srgb, ${c} ${mix}%, #ffffff)` } catch (e2) {}
+    try {
+        if (
+            typeof CSS !== "undefined" &&
+            CSS.supports &&
+            CSS.supports("color", "color-mix(in srgb, red 50%, white)")
+        )
+            return `color-mix(in srgb, ${c} ${mix}%, #ffffff)`
+    } catch (e2) {}
     return c + (__bfStyle.tintA || "4D")
 }
 function bfLogoFilter(ticker: any): string {
     // 넉아웃 조건과 동일할 때만 흰 실루엣 (Brandfetch 투명 로고 한정 — 파비콘류는 불투명이라 제외)
-    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+    const tk = String(ticker || "")
+        .toUpperCase()
+        .replace(/-/g, ".")
     const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
-    const p2 = (__bfMap && (__bfMap[tk] || __bfMap[tk.replace(/\./g, "-")])) || ""
-    return (c && p2 && p2.indexOf("http") !== 0 && (__bfStyle.mode || "pastel") === "knockout") ? "brightness(0) invert(1)" : "none"
+    const p2 =
+        (__bfMap && (__bfMap[tk] || __bfMap[tk.replace(/\./g, "-")])) || ""
+    return c &&
+        p2 &&
+        p2.indexOf("http") !== 0 &&
+        (__bfStyle.mode || "pastel") === "knockout"
+        ? "brightness(0) invert(1)"
+        : "none"
 }
-function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
-    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
+function bfLogoSrc(
+    ticker: any,
+    lm: Record<string, string> | null,
+    size: number
+): string {
+    const tk = String(ticker || "")
+        .toUpperCase()
+        .replace(/-/g, ".")
     if (!tk) return ""
     // 로고 = 토스 종목 CDN (PM 결정: 완전 공개[런칭] 전까지 토스 사용, 2026-07-12). 404/차단 시 onError → 이니셜 폴백.
-    return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
+    return (
+        "https://static.toss.im/png-icons/securities/icn-sec-fill-" +
+        tk +
+        ".png"
+    )
 }
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 function flagFromTicker(ticker: any): string {
@@ -112,20 +226,78 @@ function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
     const [err, setErr] = useState(false)
     const lm = useBfLogoMap()
     const bfSrc = bfLogoSrc(ticker, lm, size)
-    const ch = (String(name || "?").trim().charAt(0)) || "?"
+    const ch =
+        String(name || "?")
+            .trim()
+            .charAt(0) || "?"
     const code = flagFromTicker(ticker)
     const fsize = Math.round(size * 0.46)
     return (
-        <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
+        <span
+            style={{
+                position: "relative",
+                width: size,
+                height: size,
+                flexShrink: 0,
+                display: "inline-block",
+            }}
+        >
             {!err && bfSrc ? (
-                <img src={bfSrc} alt="" loading="lazy" decoding="async" width={size} height={size}
+                <img
+                    src={bfSrc}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    width={size}
+                    height={size}
                     onError={() => setErr(true)}
-                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), objectFit: "cover", display: "block", background: "transparent"}} />
+                    style={{
+                        width: size,
+                        height: size,
+                        borderRadius: Math.round(size * 0.32),
+                        objectFit: "cover",
+                        display: "block",
+                        background: "transparent",
+                    }}
+                />
             ) : (
-                <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>{ch}</span>
+                <span
+                    style={{
+                        width: size,
+                        height: size,
+                        borderRadius: Math.round(size * 0.32),
+                        background: bfInitialBg(ticker),
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: Math.round(size * 0.42),
+                        fontWeight: 800,
+                    }}
+                >
+                    {ch}
+                </span>
             )}
-            <img src={FLAG_BASE + code + ".svg"} alt="" loading="lazy" decoding="async" width={fsize} height={fsize}
-                style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block", boxShadow: "0 1px 2px rgba(0,0,0,0.18)" }} />
+            <img
+                src={FLAG_BASE + code + ".svg"}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                width={fsize}
+                height={fsize}
+                style={{
+                    position: "absolute",
+                    right: -3,
+                    bottom: -3,
+                    width: fsize,
+                    height: fsize,
+                    borderRadius: "50%",
+                    border: `1.5px solid ${C.card}`,
+                    background: C.card,
+                    display: "block",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.18)",
+                }}
+            />
         </span>
     )
 }
@@ -139,7 +311,9 @@ function readRecents(): any[] {
     try {
         const a = JSON.parse(window.localStorage.getItem(RECENTS_KEY) || "[]")
         return Array.isArray(a) ? a.filter((x) => x && x.t) : []
-    } catch { return [] }
+    } catch {
+        return []
+    }
 }
 
 interface Props {
@@ -156,7 +330,9 @@ function readBodyDark(): boolean {
     //   → body[data-framer-theme](토글) → localStorage. OS 설정은 안 봄(로드마다 뒤집힘 방지).
     try {
         if (typeof document !== "undefined") {
-            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+            const h = document.documentElement
+                ? document.documentElement.dataset.anTheme
+                : null
             if (h === "dark") return true
             if (h === "light") return false
             if (document.body) {
@@ -165,7 +341,10 @@ function readBodyDark(): boolean {
                 if (a === "light") return false
             }
         }
-        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        const s =
+            typeof localStorage !== "undefined"
+                ? localStorage.getItem("verity_theme")
+                : null
         if (s === "dark") return true
     } catch (e) {}
     return false
@@ -183,29 +362,42 @@ function anReadDark(): boolean {
         __anHyd = true
         return false
     }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    const h = document.documentElement
+        ? document.documentElement.dataset.anTheme
+        : null
     if (h === "dark") return true
     if (h === "light") return false
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
-
 
 export default function PublicStockSearch(props: Props) {
     const { placeholder, stockPath, stockUrl, usStockUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     /* 익명 로컬 스크래치 세션 초기화 — 검색 recents 읽기 전에 1회(공유기기 누출 차단, 회원은 skip) */
-    useEffect(() => { if (!onCanvas) sessionResetScratch() }, [onCanvas])
+    useEffect(() => {
+        if (!onCanvas) sessionResetScratch()
+    }, [onCanvas])
 
     /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() =>
+        RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()
+    )
     useEffect(() => {
         if (onCanvas) return
         const read = () => setThemeDark(readBodyDark())
         read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+        if (
+            typeof MutationObserver === "undefined" ||
+            typeof document === "undefined" ||
+            !document.body
+        )
+            return
         const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+        obs.observe(document.body, {
+            attributes: true,
+            attributeFilter: ["data-framer-theme"],
+        })
         return () => obs.disconnect()
     }, [onCanvas])
 
@@ -220,7 +412,11 @@ export default function PublicStockSearch(props: Props) {
     const [focused, setFocused] = useState(false)
     const [recents, setRecents] = useState<any[]>([])
     // 드롭다운 앵커 — nav 박스 overflow 클리핑 탈출용 fixed 좌표(입력창 rect 기준). null=미측정.
-    const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null)
+    const [anchor, setAnchor] = useState<{
+        top: number
+        left: number
+        width: number
+    } | null>(null)
 
     // 폭 측정 = 첫 페인트 전 동기(useLayoutEffect) — w:0→실측 사이 narrow 플립(패딩·폰트 움찔) 제거.
     // 페이지 이동마다 마운트 시 검색창 크기가 움찔하던 원인 (2026-07-20).
@@ -229,7 +425,9 @@ export default function PublicStockSearch(props: Props) {
         if (!el) return
         setW(el.getBoundingClientRect().width)
         if (typeof ResizeObserver === "undefined") return
-        const ro = new ResizeObserver((entries) => { for (const e of entries) setW(e.contentRect.width) })
+        const ro = new ResizeObserver((entries) => {
+            for (const e of entries) setW(e.contentRect.width)
+        })
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
@@ -239,14 +437,24 @@ export default function PublicStockSearch(props: Props) {
         if (onCanvas) return
         let alive = true
         const urls = [stockUrl].filter(Boolean)
-        Promise.all(urls.map((u) => fetch(u).then((r) => (r.ok ? r.json() : null)).catch(() => null)))
-            .then((docs) => {
-                if (!alive) return
-                const merged: any[] = []
-                for (const d of docs) { const a = d && (Array.isArray(d) ? d : d.stocks); if (Array.isArray(a)) merged.push(...a) }
-                if (merged.length) setUniverse(merged)
-            })
-        return () => { alive = false }
+        Promise.all(
+            urls.map((u) =>
+                fetch(u)
+                    .then((r) => (r.ok ? r.json() : null))
+                    .catch(() => null)
+            )
+        ).then((docs) => {
+            if (!alive) return
+            const merged: any[] = []
+            for (const d of docs) {
+                const a = d && (Array.isArray(d) ? d : d.stocks)
+                if (Array.isArray(a)) merged.push(...a)
+            }
+            if (merged.length) setUniverse(merged)
+        })
+        return () => {
+            alive = false
+        }
     }, [stockUrl, usStockUrl, onCanvas])
 
     /* 입력 → 종목코드. 코드/이름 정확 → 부분일치 → (실패 시) raw 텍스트. */
@@ -254,8 +462,21 @@ export default function PublicStockSearch(props: Props) {
         const s = text.trim()
         if (!s || !universe.length) return s
         const lower = s.toLowerCase()
-        let hit = universe.find((x) => String(x.ticker).toLowerCase() === lower || String(x.name || "").toLowerCase() === lower || String((x as any).name_ko || "") === s)
-        if (!hit) hit = universe.find((x) => String(x.ticker).toLowerCase().includes(lower) || String(x.name || "").toLowerCase().includes(lower) || String((x as any).name_ko || "").includes(s))
+        let hit = universe.find(
+            (x) =>
+                String(x.ticker).toLowerCase() === lower ||
+                String(x.name || "").toLowerCase() === lower ||
+                String((x as any).name_ko || "") === s
+        )
+        if (!hit)
+            hit = universe.find(
+                (x) =>
+                    String(x.ticker).toLowerCase().includes(lower) ||
+                    String(x.name || "")
+                        .toLowerCase()
+                        .includes(lower) ||
+                    String((x as any).name_ko || "").includes(s)
+            )
         return hit ? String(hit.ticker) : s
     }
 
@@ -264,25 +485,50 @@ export default function PublicStockSearch(props: Props) {
         const s = q.trim().toLowerCase()
         if (!s || !universe.length) return []
         const rk = (x: any) => {
-            const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
-            return t === s ? 0 : (n === s || k === s) ? 1 : t.indexOf(s) === 0 ? 2 : (n.indexOf(s) === 0 || (k && k.indexOf(s) === 0)) ? 3 : 4
+            const t = String(x.ticker || "").toLowerCase(),
+                n = String(x.name || "").toLowerCase(),
+                k = String(x.name_ko || "").toLowerCase()
+            return t === s
+                ? 0
+                : n === s || k === s
+                  ? 1
+                  : t.indexOf(s) === 0
+                    ? 2
+                    : n.indexOf(s) === 0 || (k && k.indexOf(s) === 0)
+                      ? 3
+                      : 4
         }
-        return universe.filter((x) =>
-            String(x.ticker).toLowerCase().includes(s) ||
-            String(x.name || "").toLowerCase().includes(s) ||
-            String((x as any).name_ko || "").includes(q.trim())
-        ).sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 12)
+        return universe
+            .filter(
+                (x) =>
+                    String(x.ticker).toLowerCase().includes(s) ||
+                    String(x.name || "")
+                        .toLowerCase()
+                        .includes(s) ||
+                    String((x as any).name_ko || "").includes(q.trim())
+            )
+            .sort((a: any, b: any) => rk(a) - rk(b))
+            .slice(0, 12)
     }, [q, universe])
 
     const pick = (tk: string, nm?: string) => {
         if (!tk || typeof window === "undefined") return
-        const name = nm || (universe.find((x) => String(x.ticker) === String(tk)) || {}).name || tk
+        const name =
+            nm ||
+            (universe.find((x) => String(x.ticker) === String(tk)) || {})
+                .name ||
+            tk
         try {
             window.localStorage.setItem(LAST_TK_KEY, tk)
             const cur = readRecents().filter((x) => String(x.t) !== String(tk))
             cur.unshift({ t: tk, n: name })
-            window.localStorage.setItem(RECENTS_KEY, JSON.stringify(cur.slice(0, RECENTS_CAP)))
-        } catch { /* private/quota */ }
+            window.localStorage.setItem(
+                RECENTS_KEY,
+                JSON.stringify(cur.slice(0, RECENTS_CAP))
+            )
+        } catch {
+            /* private/quota */
+        }
         const p = (stockPath || "/stock").replace(/\/+$/, "")
         window.location.href = p + "?q=" + encodeURIComponent(tk)
     }
@@ -301,7 +547,11 @@ export default function PublicStockSearch(props: Props) {
         setAnchor({ top: r.bottom + 6, left: r.left, width: r.width })
     }
 
-    const onFocus = () => { setRecents(readRecents()); setFocused(true); measure() }
+    const onFocus = () => {
+        setRecents(readRecents())
+        setFocused(true)
+        measure()
+    }
 
     /* 포커스 동안 scroll/resize 시 좌표 재측정 (fixed 패널이 입력창 따라가게). */
     useEffect(() => {
@@ -309,19 +559,28 @@ export default function PublicStockSearch(props: Props) {
         const m = () => measure()
         window.addEventListener("scroll", m, true)
         window.addEventListener("resize", m)
-        return () => { window.removeEventListener("scroll", m, true); window.removeEventListener("resize", m) }
+        return () => {
+            window.removeEventListener("scroll", m, true)
+            window.removeEventListener("resize", m)
+        }
     }, [focused, onCanvas])
 
     const narrow = w > 0 && w < 200
     const showQuery = !!q.trim()
     // anchor 필요 (fixed 좌표). onFocus 가 measure() 동기 호출 → 첫 포커스에도 anchor 존재.
     const showSuggest = !onCanvas && focused && !!anchor && !showQuery
-    const showMatches = !onCanvas && focused && !!anchor && showQuery && matches.length > 0
+    const showMatches =
+        !onCanvas && focused && !!anchor && showQuery && matches.length > 0
 
     const wrap: CSSProperties = {
-        width: "100%", height: "100%", boxSizing: "border-box",
-        display: "flex", alignItems: "center", gap: 7,
-        background: C.field, borderRadius: 999,
+        width: "100%",
+        height: "100%",
+        boxSizing: "border-box",
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        background: C.field,
+        borderRadius: 999,
         padding: narrow ? "8px 12px" : "9px 14px",
         fontFamily: FONT,
     }
@@ -332,40 +591,126 @@ export default function PublicStockSearch(props: Props) {
         left: anchor ? anchor.left : 0,
         width: anchor ? anchor.width : "auto",
         zIndex: 2147483000,
-        background: C.card, borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.16)",
-        padding: 6, maxHeight: 360, overflowY: "auto", minWidth: 240,
+        background: C.card,
+        borderRadius: 12,
+        boxShadow: "0 10px 30px rgba(0,0,0,0.16)",
+        padding: 6,
+        maxHeight: 360,
+        overflowY: "auto",
+        minWidth: 240,
     }
     const secLabel = (t: string, hint?: string) => (
-        <div style={{ display: "flex", alignItems: "baseline", gap: 6, padding: "8px 10px 4px" }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: C.faint }}>{t}</span>
-            {hint && <span style={{ fontSize: 10, fontWeight: 500, color: C.faint, opacity: 0.8 }}>{hint}</span>}
+        <div
+            style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: 6,
+                padding: "8px 10px 4px",
+            }}
+        >
+            <span style={{ fontSize: 11, fontWeight: 800, color: C.faint }}>
+                {t}
+            </span>
+            {hint && (
+                <span
+                    style={{
+                        fontSize: 10,
+                        fontWeight: 500,
+                        color: C.faint,
+                        opacity: 0.8,
+                    }}
+                >
+                    {hint}
+                </span>
+            )}
         </div>
     )
     const itemRow = (key: any, tk: any, nm: any, right: any) => (
-        <div key={key} onMouseDown={() => pick(String(tk), String(nm))}
-            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}>
+        <div
+            key={key}
+            onMouseDown={() => pick(String(tk), String(nm))}
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                borderRadius: 9,
+                cursor: "pointer",
+            }}
+        >
             <Logo ticker={tk} name={nm} C={C} size={28} />
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nm}</span>
+            <span
+                style={{
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    color: C.ink,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                }}
+            >
+                {nm}
+            </span>
             <span style={{ marginLeft: "auto", flexShrink: 0 }}>{right}</span>
         </div>
     )
 
     return (
-        <div ref={rootRef} style={{ position: "relative", width: "100%", height: "100%", fontFamily: FONT }}>
+        <div
+            ref={rootRef}
+            style={{
+                position: "relative",
+                width: "100%",
+                height: "100%",
+                fontFamily: FONT,
+            }}
+        >
             <div style={wrap}>
-                <span style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid ${C.faint}`, flexShrink: 0, display: "inline-block", position: "relative" }}>
-                    <span style={{ position: "absolute", width: 2, height: 6, background: C.faint, right: -3, bottom: -3, transform: "rotate(-45deg)" }} />
+                <span
+                    style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: "50%",
+                        border: `2px solid ${C.faint}`,
+                        flexShrink: 0,
+                        display: "inline-block",
+                        position: "relative",
+                    }}
+                >
+                    <span
+                        style={{
+                            position: "absolute",
+                            width: 2,
+                            height: 6,
+                            background: C.faint,
+                            right: -3,
+                            bottom: -3,
+                            transform: "rotate(-45deg)",
+                        }}
+                    />
                 </span>
                 <input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { setFocused(false); go() } }}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            setFocused(false)
+                            go()
+                        }
+                    }}
                     onFocus={onFocus}
                     onBlur={() => setTimeout(() => setFocused(false), 160)}
                     placeholder={placeholder || "종목 검색"}
                     style={{
-                        border: "none", outline: "none", background: "transparent", color: C.ink,
-                        fontFamily: FONT, fontSize: narrow ? 13 : 14, fontWeight: 600, width: "100%", minWidth: 0,
+                        border: "none",
+                        outline: "none",
+                        background: "transparent",
+                        color: C.ink,
+                        fontFamily: FONT,
+                        fontSize: narrow ? 13 : 14,
+                        fontWeight: 600,
+                        width: "100%",
+                        minWidth: 0,
                     }}
                 />
             </div>
@@ -373,49 +718,185 @@ export default function PublicStockSearch(props: Props) {
             {/* 드롭다운 = document.body 포털. nav 박스의 overflow:hidden / transform 클리핑을
                 탈출(fixed 좌표는 anchor=입력창 rect). 리포트 페이지는 풀페이지라 안 잘렸고,
                 nav 검색은 잘려 안 보이던 문제 해소. onMouseDown pick 은 포털에서도 React 트리로 동작. */}
-            {typeof document !== "undefined" && showMatches && createPortal(
-                <div style={panel}>
-                    {matches.map((m) => itemRow(m.ticker, m.ticker, m.name,
-                        <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{m.name_ko ? m.name_ko + " · " : ""}{m.ticker}{m.market ? " · " + m.market : ""}</span>))}
-                </div>, document.body)}
+            {typeof document !== "undefined" &&
+                showMatches &&
+                createPortal(
+                    <div style={panel}>
+                        {matches.map((m) =>
+                            itemRow(
+                                m.ticker,
+                                m.ticker,
+                                m.name,
+                                <span
+                                    style={{
+                                        fontSize: 11.5,
+                                        color: C.faint,
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    {m.name_ko ? m.name_ko + " · " : ""}
+                                    {m.ticker}
+                                    {m.market ? " · " + m.market : ""}
+                                </span>
+                            )
+                        )}
+                    </div>,
+                    document.body
+                )}
 
-            {typeof document !== "undefined" && showSuggest && createPortal(
-                <div style={panel}>
-                    {recents.length > 0 && (
-                        <>
-                            {secLabel("최근 본 종목")}
-                            {recents.slice(0, 6).map((r) => itemRow("r:" + r.t, r.t, r.n,
-                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{r.t}</span>))}
-                        </>
-                    )}
-                    {secLabel("지금 거래 활발", "거래대금 상위 · 네이버")}
-                    {/* 화살표 = SVG (텍스트 "↗" 는 iOS 에서 이모지 렌더 → 어색. PC 텍스트 글리프와 동일 룩 통일) · 좁은 화면 줄바꿈 방지 */}
-                    <div onMouseDown={() => { if (typeof window !== "undefined") window.open(isMobileWidth() ? M_NAVER_QUANT : NAVER_QUANT, "_blank", "noopener") }}
-                        style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 9, cursor: "pointer" }}>
-                        <span style={{ width: 22, height: 22, borderRadius: 7, background: C.vtS, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <svg width={11} height={11} viewBox="0 0 12 12" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ stroke: C.vt }}>
-                                <line x1="2.5" y1="9.5" x2="9" y2="3" />
-                                <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
-                            </svg>
-                        </span>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>실시간 거래대금 상위</span>
-                        <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11.5, fontWeight: 700, color: C.faint, whiteSpace: "nowrap" }}>
-                            네이버 금융
-                            <svg width={9} height={9} viewBox="0 0 12 12" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ stroke: C.faint }}>
-                                <line x1="2.5" y1="9.5" x2="9" y2="3" />
-                                <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
-                            </svg>
-                        </span>
-                    </div>
-                </div>, document.body)}
+            {typeof document !== "undefined" &&
+                showSuggest &&
+                createPortal(
+                    <div style={panel}>
+                        {recents.length > 0 && (
+                            <>
+                                {secLabel("최근 본 종목")}
+                                {recents
+                                    .slice(0, 6)
+                                    .map((r) =>
+                                        itemRow(
+                                            "r:" + r.t,
+                                            r.t,
+                                            r.n,
+                                            <span
+                                                style={{
+                                                    fontSize: 11.5,
+                                                    color: C.faint,
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                {r.t}
+                                            </span>
+                                        )
+                                    )}
+                            </>
+                        )}
+                        {secLabel("지금 거래 활발", "거래대금 상위 · 네이버")}
+                        {/* 화살표 = SVG (텍스트 "↗" 는 iOS 에서 이모지 렌더 → 어색. PC 텍스트 글리프와 동일 룩 통일) · 좁은 화면 줄바꿈 방지 */}
+                        <div
+                            onMouseDown={() => {
+                                if (typeof window !== "undefined")
+                                    window.open(
+                                        isMobileWidth()
+                                            ? M_NAVER_QUANT
+                                            : NAVER_QUANT,
+                                        "_blank",
+                                        "noopener"
+                                    )
+                            }}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "9px 10px",
+                                borderRadius: 9,
+                                cursor: "pointer",
+                            }}
+                        >
+                            <span
+                                style={{
+                                    width: 22,
+                                    height: 22,
+                                    borderRadius: 7,
+                                    background: C.vtS,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                }}
+                            >
+                                <svg
+                                    width={11}
+                                    height={11}
+                                    viewBox="0 0 12 12"
+                                    fill="none"
+                                    strokeWidth={1.8}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden="true"
+                                    style={{ stroke: C.vt }}
+                                >
+                                    <line x1="2.5" y1="9.5" x2="9" y2="3" />
+                                    <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
+                                </svg>
+                            </span>
+                            <span
+                                style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    color: C.ink,
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                }}
+                            >
+                                실시간 거래대금 상위
+                            </span>
+                            <span
+                                style={{
+                                    flexShrink: 0,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 3,
+                                    fontSize: 11.5,
+                                    fontWeight: 700,
+                                    color: C.faint,
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                네이버 금융
+                                <svg
+                                    width={9}
+                                    height={9}
+                                    viewBox="0 0 12 12"
+                                    fill="none"
+                                    strokeWidth={1.8}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden="true"
+                                    style={{ stroke: C.faint }}
+                                >
+                                    <line x1="2.5" y1="9.5" x2="9" y2="3" />
+                                    <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
+                                </svg>
+                            </span>
+                        </div>
+                    </div>,
+                    document.body
+                )}
         </div>
     )
 }
 
 addPropertyControls(PublicStockSearch, {
-    placeholder: { type: ControlType.String, title: "Placeholder", defaultValue: "종목 검색 (이름·코드)" },
-    stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
-    stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEF_STOCK },
-    usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    placeholder: {
+        type: ControlType.String,
+        title: "Placeholder",
+        defaultValue: "종목 검색 (이름·코드)",
+    },
+    stockPath: {
+        type: ControlType.String,
+        title: "Stock Path",
+        defaultValue: "/stock",
+    },
+    stockUrl: {
+        type: ControlType.String,
+        title: "Stock URL",
+        defaultValue: DEF_STOCK,
+    },
+    usStockUrl: {
+        type: ControlType.String,
+        title: "US Stock URL",
+        defaultValue:
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json",
+    },
+    dark: {
+        type: ControlType.Boolean,
+        title: "Dark",
+        defaultValue: false,
+        enabledTitle: "On",
+        disabledTitle: "Off",
+    },
 })
