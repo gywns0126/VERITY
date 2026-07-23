@@ -14,11 +14,10 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /* 🚨🚨 롤백 방지 가드 (2026-07-23) — CLAUDE.md RULE 11. 지우거나 되돌리지 말 것. 🚨🚨
  *
- * 이 repo .tsx = 라이브 Framer(AlphaNest 공개 프로젝트)의 미러일 뿐이며, 종종 stale 하다.
- * 라이브에만 있는 레이아웃 튜닝이 이 미러에 빠져 있을 수 있음:
- *   · 우측 이벤트 리스트("종목 스크롤창") 높이 = 좌측 캘린더 그리드 높이에 매칭 + overflowY:auto(스크롤).
- *     현재 미러는 아래 2단 grid 가 alignItems:"start"(자연 높이)라 이 매칭이 없음.
- *     라이브 값이 정답 — readCodeFile 로 받아 복원하고, 되돌리지 말 것.
+ * 이 repo .tsx = 라이브 Framer(AlphaNest 공개 프로젝트)의 미러. 양방향 stale 가능(라이브 편집 미반영 또는 그 반대).
+ * 되돌리면 안 되는 레이아웃:
+ *   · 우측 이벤트 리스트("종목 스크롤창") = 데스크톱에서 maxHeight = 좌측 캘린더 카드 실측 높이(calH, calRef ResizeObserver) 동적 매칭 + overflowY:auto(스크롤).
+ *     static maxHeight(560 등)나 alignItems 로 되돌리지 말 것 — 정적값은 캘린더 높이와 안 맞음(2026-07-23 사고).
  *
  * 편집/붙여넣기 전 의무 (RULE 11):
  *   1. Framer 데스크탑 = AlphaNest 공개 프로젝트 탭 focus 확인 (VERITY 내부 프로젝트 아님. getProjectXml 로 검증).
@@ -126,8 +125,10 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
     const [selDate, setSelDate] = useState<string>("")
     const [catFilter, setCatFilter] = useState<string>("")
     const [w, setW] = useState(0)
+    const [calH, setCalH] = useState(0)   // 좌측 캘린더 카드 실측 높이 → 우측 리스트 매칭
     const [listOpen, setListOpen] = useState(false)   // 모바일 리스트 더보기 펼침
     const rootRef = useRef<HTMLDivElement>(null)
+    const calRef = useRef<HTMLDivElement>(null)   // 좌측 캘린더 카드(높이 소스)
 
     useEffect(() => {
         if (onCanvas) return
@@ -146,6 +147,15 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
+
+    // 좌측 캘린더 카드 높이 실측 → 우측 이벤트 리스트("종목 스크롤창") 높이 동적 매칭. data 로드 후 calRef 부착.
+    useEffect(() => {
+        const el = calRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((e) => { for (const x of e) setCalH(x.contentRect.height) })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [data])
 
     useEffect(() => {
         if (onCanvas) return
@@ -270,7 +280,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
 
             <div style={{ display: narrow ? "block" : "grid", gridTemplateColumns: narrow ? undefined : "1.35fr 1fr", gap: 16, alignItems: "start" }}>
                 {/* 월 그리드 */}
-                <div style={cardS}>
+                <div ref={calRef} style={cardS}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                         <div>
                             <span style={{ fontSize: narrow ? 18 : 21, fontWeight: 800, letterSpacing: "-0.4px" }}>
@@ -323,7 +333,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                 </div>
 
                 {/* 이벤트 리스트 (선택일 or 이 달 전체) */}
-                <div style={{ ...cardS, marginTop: narrow ? 16 : 0, padding: narrow ? "14px 14px" : "18px 18px", maxHeight: narrow ? undefined : 560, overflowY: narrow ? undefined : "auto" }}>
+                <div style={{ ...cardS, marginTop: narrow ? 16 : 0, padding: narrow ? "14px 14px" : "18px 18px", maxHeight: narrow ? undefined : (calH || 560), overflowY: narrow ? undefined : "auto" }}>
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
                         <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>
                             {selDate ? selDate.slice(5).replace("-", "/") + " 이벤트" : "이 달 이벤트"}
