@@ -331,6 +331,33 @@ def get_entity_meta(facts: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _derive_bank_revenue(facts: Dict[str, Any], currency: str) -> List[Dict[str, Any]]:
+    """은행 총매출 파생 = 순이자이익(NII) + 비이자이익. RevenuesNetOfInterestExpense/Revenues 둘 다
+    부재한 은행(FITB 등: InterestIncomeExpenseNet + NoninterestIncome 만 보고)용.
+
+    📋 산식 사전등록(2026-07-24, Perplexity 리서치): 은행 revenue = net interest income + noninterest
+    income (CFA/FDIC/NY Fed/World Bank 표준 정의, 총이자수익 아님·이자비용 차감 후). NII 직접태그
+    (InterestIncomeExpenseNet) 우선, 부재 시 총이자(InterestAndDividendIncomeOperating) − 이자비용.
+    """
+    def _by(aliases):
+        return {(r["end"], r["form"]): r for r in extract_metric_series(facts, "revenue", aliases=aliases, currency=currency)}
+    nii = _by(["InterestIncomeExpenseNet"])
+    if not nii:
+        gii = _by(["InterestAndDividendIncomeOperating"])
+        iexp = {k: r.get("val") for k, r in _by(["InterestExpense"]).items()}
+        for key, r in gii.items():
+            ie, gv = iexp.get(key), r.get("val")
+            if ie is not None and gv is not None:
+                nii[key] = {**r, "val": gv - ie}   # NII = 총이자 − 이자비용
+    noni = {k: r.get("val") for k, r in _by(["NoninterestIncome"]).items()}
+    out = []
+    for key, r in nii.items():
+        n = noni.get(key)
+        if r.get("val") is not None and n is not None:
+            out.append({**r, "val": r["val"] + n, "tag": "DERIVED_NII+NoninterestIncome"})
+    return sorted(out, key=lambda x: x["end"])
+
+
 def fetch_all_metrics(cik: int) -> Dict[str, Any]:
     """단일 ticker 전체 표준 metrics fetch + alias 해소.
 
@@ -349,7 +376,14 @@ def fetch_all_metrics(cik: int) -> Dict[str, Any]:
     out_metrics: Dict[str, List[Dict[str, Any]]] = {}
     for k in TAG_ALIASES.keys():
         if k == "revenue" and is_fin:
-            out_metrics[k] = extract_metric_series(facts, k, aliases=FINANCIAL_REVENUE_ALIASES, currency=ccy)
+            rev = extract_metric_series(facts, k, aliases=FINANCIAL_REVENUE_ALIASES, currency=ccy)
+            # RevenuesNetOfInterestExpense/Revenues 부재 은행(FITB 등) → NII+비이자 합산 파생으로 gap 채움
+            derived = _derive_bank_revenue(facts, ccy)
+            if derived:
+                have = {(r["end"], r["form"]) for r in rev}
+                rev = rev + [r for r in derived if (r["end"], r["form"]) not in have]
+                rev.sort(key=lambda x: x["end"])
+            out_metrics[k] = rev
         else:
             out_metrics[k] = extract_metric_series(facts, k, currency=ccy)
     meta = get_entity_meta(facts)
