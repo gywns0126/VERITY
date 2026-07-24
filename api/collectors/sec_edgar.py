@@ -188,6 +188,20 @@ def get_financial_facts(ticker: str, user_agent: str) -> Dict:
             if result["total_debt"] and equity > 0:
                 result["debt_ratio"] = round(result["total_debt"] / equity * 100, 1)
 
+        # 2026-07-24 US 재무 확장 (2차 산식 감사: Altman/graham US 결측 해소). Assets/유동자산·부채·이익잉여금
+        # 추가 → Altman X1(운전자본/총자산)·X2(이익잉여금/총자산)·graham 유동비율(200%) US 활성화.
+        # XBRL 태그 실 SEC 호출 검증(AAPL). 통화=USD(비율이라 currency 상쇄, KR KRW 와 무관).
+        result["total_assets"] = _latest_annual("Assets")
+        result["retained_earnings"] = _latest_annual("RetainedEarningsAccumulatedDeficit")
+        _ca = _latest_annual("AssetsCurrent")
+        _cl = _latest_annual("LiabilitiesCurrent")
+        if _ca is not None and _cl is not None:
+            result["current_assets"] = _ca
+            result["current_liabilities"] = _cl
+            result["working_capital"] = _ca - _cl  # Altman X1 분자
+            if _cl > 0:
+                result["current_ratio"] = round(_ca / _cl * 100, 1)  # % 스케일 (graham 200 임계·KIS crnt_rate 정합)
+
         # 2026-06-16 — 부동산 앵커 (XBRL 구조화 장부가, 10-K Item 2 narrative 보완).
         # KR DART 투자부동산과 대칭. REIT 는 RealEstateInvestmentPropertyNet 사용.
         ppe = _latest_annual("PropertyPlantAndEquipmentNet")
