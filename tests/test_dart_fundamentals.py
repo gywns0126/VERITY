@@ -59,6 +59,25 @@ class TestExtractPLBS:
         out = df._extract_pl_bs_from_dart(data)
         assert out["income_tax"] == 3_000
 
+    def test_extract_revenue_by_account_id(self):
+        # top-line account_nm='매출'(LG화학류)은 구 substring 매칭을 빠져나가 revenue=0 → account_id 로 복구.
+        # '기타수익(매출액)'(OtherRevenue)은 revenue 로 안 잡혀야(구버그 차바이오텍 240B 오채택).
+        data = {"list": [
+            {"sj_div": "IS", "account_nm": "매출", "account_id": "ifrs-full_Revenue", "thstrm_amount": "48,916,104"},
+            {"sj_div": "IS", "account_nm": "기타수익(매출액)", "account_id": "ifrs-full_OtherRevenue", "thstrm_amount": "240,173"},
+        ]}
+        out = df._extract_pl_bs_from_dart(data)
+        assert out["revenue"] == 48_916_104
+
+    def test_extract_operating_profit_by_account_id(self):
+        # 라벨변형(공백)이라 정확일치 미스 → account_id 로 op 확보. 중단영업이익은 op 로 안 잡혀야.
+        data = {"list": [
+            {"sj_div": "IS", "account_nm": "영업이익 ", "account_id": "dart_OperatingIncomeLoss", "thstrm_amount": "2,163,234"},
+            {"sj_div": "IS", "account_nm": "중단영업이익(손실)", "account_id": "ifrs-full_ProfitLossFromDiscontinuedOperations", "thstrm_amount": "-2,609"},
+        ]}
+        out = df._extract_pl_bs_from_dart(data)
+        assert out["operating_profit"] == 2_163_234
+
     def test_extract_handles_missing(self):
         data = {"list": []}
         out = df._extract_pl_bs_from_dart(data)

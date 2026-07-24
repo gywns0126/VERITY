@@ -121,15 +121,23 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
             elif acct.strip() in ("건물", "건물및구축물"):
                 out["buildings"] = max(out["buildings"], amount)
         elif sj in ("IS", "CIS"):
-            if acct in ("매출액", "영업수익") or "수익(매출액)" in acct:
-                out["revenue"] = max(out["revenue"], amount)
+            if aid in ("ifrs-full_Revenue", "ifrs_Revenue"):
+                # 총계 정본 = account_id (BS/IS/CF 동일 정책). account_nm 이 '매출'/'매출액'/'영업수익'/
+                #   '수익(매출액)'/'매출 및 지분법손익' 어떤 변형이든 id 불변. 구 substring '수익(매출액)' 은
+                #   '기타수익(매출액)'(ifrs-full_OtherRevenue)을 잡아 revenue 오염(차바이오텍 240B vs 1.27조)·
+                #   top-line '매출' 누락(LG화학 revenue=0)이라 제거.
+                out["revenue"] = amount
+            elif out["revenue"] == 0 and acct in ("매출액", "영업수익", "매출", "매출 및 지분법손익"):
+                # id 부재(구 비표준) fallback — 정확일치만.
+                out["revenue"] = amount
             elif acct == "매출원가":
                 out["cogs"] = amount
             elif acct == "매출총이익" or "매출총이익" in acct:
                 out["gross_profit"] = amount
-            elif acct in ("영업이익", "영업이익(손실)"):
-                # 🚨 정확일치 필수 — 부분일치는 '계속영업이익(손실)'(세후, ≈순이익)에 걸려 영업이익을 덮어씀
-                #   (2026-07-06 실증: 삼성 2018 op 58.9조 → 44.3조 오염, fin_series 전 연도 op==net 사고)
+            elif aid == "dart_OperatingIncomeLoss" or acct in ("영업이익", "영업이익(손실)"):
+                # 🚨 account_id 우선(dart_ 확장, BS/IS/CF 동일 정책) + 정확일치 유지. 부분일치 절대 금지 —
+                #   '계속영업이익(손실)'(세후≈순이익)·'중단영업이익(손실)'·'주당…계속영업이익(손실)'(EPS)을 흡수해
+                #   op 를 자릿수/부호 파탄내던 구버그(LGES op 5,287원 vs 2.16조·GS 부호역전) 방어.
                 out["operating_profit"] = amount
             elif item.get("account_id") == "ifrs-full_ProfitLoss":
                 # 🚨 순이익 총계 정본 = account_id ifrs-full_ProfitLoss (NCI 포함 총계). 부호 보존
