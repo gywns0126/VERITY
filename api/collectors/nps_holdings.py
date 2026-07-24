@@ -439,7 +439,9 @@ def _from_major_csv(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
                             pct = None
                     elif "기준일" in kk:
                         dt = str(v or "").strip()
-                if not nm or pct is None:
+                # 🚨 '5% 이상 대량보유' 시드인데 지분율 <1% = 파일판 CSV 오값/청산분 → 제외.
+                #   실측: 042670 0.00%(실제 DART 13.63%)·012510 0.94%(실제 8.22%). DART 소스 정확값이 있으면 병합에서 대체.
+                if not nm or pct is None or pct < 1.0:
                     continue
                 tk = _lookup_ticker(name2tk, nm)
                 if tk:
