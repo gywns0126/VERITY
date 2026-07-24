@@ -32,6 +32,7 @@ SECTOR_MAP_PATH = os.path.join(_ROOT, "data", "kr_sector_map.json")
 KRXMKTCAP_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
 DART_KR_BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_kr_backfill_result.json")
 DART_KR_FIN_HISTORY_PATH = os.path.join(_ROOT, "data", "dart_kr_fin_history.json")  # 광범위 연간재무 백필(재무추이 부활)
+DIVIDENDS_KR_PATH = os.path.join(_ROOT, "data", "dividends_kr.json")  # 배당 스케줄(배당락일·확정·최근결정) 조인
 OUTPUT_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
 
 # 동종업계 비교 = 섹터별 중앙값. PER/PBR = KRX 시총 ÷ DART 순익·자기자본 자체계산(src="val"),
@@ -809,6 +810,50 @@ def _load_real_estate_history() -> Dict[str, Dict[str, Any]]:
     return out
 
 
+_DIV_TYPE_KO = {"year_end": "결산배당", "interim": "중간배당",
+                "quarterly": "분기배당", "special": "특별배당"}
+
+
+def _dividend_block(ticker: str, div_map: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """dividends_kr.json → 공개 배당 스케줄 블록 (배당락일·확정여부·최근 결정).
+    DART 배당 공시 사실만 — 해석·신호 0 (RULE 7). facts 배당비율(배당수익률/주당배당금/배당성향)과 상보."""
+    entries = div_map.get(ticker)
+    if not isinstance(entries, list) or not entries:
+        return None
+    records = [e for e in entries if isinstance(e, dict) and e.get("ex_date")]
+    meta = next((e for e in entries
+                 if isinstance(e, dict) and e.get("_meta") == "tier2_decisions"), None)
+    out: Dict[str, Any] = {}
+    if records:
+        latest = max(records, key=lambda r: str(r.get("ex_date") or ""))
+        out["ex_date"] = str(latest.get("ex_date"))
+        amt = (latest.get("confirmed_amount_per_share") if latest.get("is_confirmed")
+               else latest.get("announced_amount_per_share"))
+        try:
+            if amt is not None and float(amt) > 0:
+                out["amount_per_share"] = f"{float(amt):,.0f}원"
+        except (TypeError, ValueError):
+            pass
+        dt = latest.get("dividend_type")
+        if dt:
+            out["dividend_type"] = _DIV_TYPE_KO.get(str(dt), str(dt))
+        out["is_confirmed"] = bool(latest.get("is_confirmed"))
+    if meta and isinstance(meta.get("recent_decisions"), list):
+        decs = []
+        for d in meta["recent_decisions"][:3]:
+            if not isinstance(d, dict):
+                continue
+            title = str(d.get("report_title") or "").strip()
+            if title:
+                decs.append({"title": title, "date": d.get("decision_date")})
+        if decs:
+            out["recent_decisions"] = decs
+    if not out:
+        return None
+    out["note"] = "DART 배당 공시 — 사실 (배당락일·확정 여부, 신호 아님)"
+    return out
+
+
 def main() -> int:
     ok = False
     try:
@@ -888,6 +933,7 @@ def main() -> int:
         valuation = _valuation_map(fundamentals, krx_map) if krx_map else {}
         sector_doc = _load_json(SECTOR_MAP_PATH, {})
         sector_map = (sector_doc.get("map") if isinstance(sector_doc, dict) else {}) or {}
+        div_kr_map = _load_json(DIVIDENDS_KR_PATH, {}) or {}
         sector_medians = _sector_medians(fundamentals, sector_map, valuation) if sector_map else {}
         # KR↔US 교차피어 (Tier B B-5) — GICS 공통축 헬퍼 (로컬 import, 파일 관례 정합)
         from api.builders.cross_sector_peer import (
@@ -1005,6 +1051,11 @@ def main() -> int:
                     ov["sector"] = str(sk)
             if ov:
                 s["overview"] = ov
+
+            # 배당 스케줄 — dividends_kr.json 조인 (배당락일·확정·최근 결정). facts 배당비율과 상보. RULE 7: 사실만.
+            dvb = _dividend_block(tk, div_kr_map)
+            if dvb:
+                s["dividend"] = dvb
 
             # 부동산 부활 — rec 미보유 시 fallback: fin_history → dart_fundamentals 투자부동산 + 유형자산 주석 토지 (사실·장부가)
             _f = fundamentals.get(tk) or {}
