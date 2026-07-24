@@ -1313,10 +1313,13 @@ def analyze_stock(
     ss = float(sentiment["score"] or 0)
     vci_val = vci["vci"]
 
+    # 2026-07-24: 옛 raw 임계(vci_val > 25)는 gap 분포[-7,15]서 미발화 → vci_bonus 항상 0(VCI 기여 0).
+    # signal 기반(median-centered robust z, vci.py 재캘리)으로 정정 — STRONG contrarian 시에만 보너스.
+    vci_signal = vci.get("signal", "")
     vci_bonus = 0
-    if vci_val > 25 and fs >= 60:
+    if vci_signal == "STRONG_CONTRARIAN_BUY" and fs >= 60:
         vci_bonus = 5
-    elif vci_val < -25 and fs < 50:
+    elif vci_signal == "STRONG_CONTRARIAN_SELL" and fs < 50:
         vci_bonus = -10
 
     bw = _get_brain_weights(quadrant_name)
