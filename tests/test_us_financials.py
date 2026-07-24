@@ -96,6 +96,23 @@ class TestExtractMetricSeries:
         assert out[1]["val"] == 120_000_000_000
         assert out[1]["tag"] == "Revenues"
 
+    def test_dedup_year_end_instant_across_quarters(self):
+        # 연말(12-31) instant BS 가 다음해 Q1/Q2/Q3 10-Q 에 각기 fp 를 달고 재보고 → (end,form)로 1행 collapse.
+        #   구 key(end,fp,form)는 3행 생존 → latest-N 윈도우 잠식(US 분기 빈값 근원).
+        rows = [
+            {"start": "2023-12-31", "end": "2023-12-31", "val": 500, "fy": 2024, "fp": "Q1", "form": "10-Q", "accn": "a-001"},
+            {"start": "2023-12-31", "end": "2023-12-31", "val": 500, "fy": 2024, "fp": "Q2", "form": "10-Q", "accn": "a-002"},
+            {"start": "2023-12-31", "end": "2023-12-31", "val": 505, "fy": 2024, "fp": "Q3", "form": "10-Q", "accn": "a-003"},
+            {"start": "2024-03-31", "end": "2024-03-31", "val": 520, "fy": 2024, "fp": "Q1", "form": "10-Q", "accn": "b-001"},
+        ]
+        facts = _facts_with("Liabilities", rows)
+        out = usf.extract_metric_series(facts, "total_liabilities", ["Liabilities"])
+        ends = [r["end"] for r in out]
+        assert ends.count("2023-12-31") == 1        # 3행 아님
+        assert len(out) == 2
+        v = next(r["val"] for r in out if r["end"] == "2023-12-31")
+        assert v == 505                              # 최신 accn(a-003)
+
     def test_alias_merge(self):
         """5/20 핵심 fix — old Revenues + new RevenueFromContract... 동시 박힘."""
         old_rows = [

@@ -265,7 +265,7 @@ def extract_metric_series(
     tag_aliases = aliases or TAG_ALIASES.get(metric_key) or []
     is_instant = metric_key in INSTANT_METRICS
 
-    seen: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
+    seen: Dict[Tuple[str, str], Dict[str, Any]] = {}
     matched_tags: List[str] = []
     for tag in tag_aliases:
         if tag not in us_gaap:
@@ -293,7 +293,11 @@ def extract_metric_series(
             period = _classify_period(start, end, form, fp, fy, is_instant)
             if period is None:
                 continue
-            key = (period.end_date, period.fiscal_period, period.form)
+            # 🚨 dedup key 에서 fiscal_period 제거 — 연말(12-31) instant BS 가 다음해 Q1/Q2/Q3 10-Q 에
+            #   전년말 비교치로 각기 그 filing 의 fp 를 달고 재보고돼 같은 end 가 3행 생존 → latest-N 윈도우를
+            #   중복이 잠식(US 분기 51% 빈값 근원). (end,form) 로 collapse(GIS 실측: 120→86행, distinct 분기 68
+            #   무손실). flow 는 _classify_period 가 YTD/누적을 span 으로 이미 제외하므로 end 당 유일 → 충돌 없음.
+            key = (period.end_date, period.form)
             accn_new = r.get("accn", "")
             existing = seen.get(key)
             # 충돌: accn 최신 우선. 같은 accn 이면 alias 우선순위 (앞쪽 tag 우선).

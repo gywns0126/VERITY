@@ -585,8 +585,10 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
          "전년 매출 거의 0 → 성장률 분모 효과(산정 제외)", signed=True)
     _put("매출총이익률", row.get("gross_margin_pct"), 1e9,
          "매출총이익률>100% 물리 불가 → XBRL 추출 오류(산정 제외)", gross_cap=True)
+    # 영업이익률 = 양수 >100% 는 산술불가(영업이익 ≤ 매출총이익 ≤ 매출) → gross_cap(양수 100 게이트)로 차단
+    #   (VRRM 179% 등 매출 과소추출). 음의 극단(바이오 영업손실 -100~-200%)은 abs>200 까지 실제값 유지.
     _put("영업이익률", row.get("operating_margin_pct"), _MARGIN_MAX,
-         "매출 분모 과소·미미로 마진 왜곡(산정 제외)")
+         "영업이익률>100% 산술불가 또는 매출 분모 과소로 마진 왜곡(산정 제외)", gross_cap=True)
     _put("순이익률", row.get("net_margin_pct"), _MARGIN_MAX,
          "매출 분모 과소(금융 순이자수익 등)로 마진 왜곡(산정 제외)")
 
