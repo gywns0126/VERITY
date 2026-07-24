@@ -8,8 +8,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *   우리 강점 = 공시 포렌식. 각 이벤트에 사실 카테고리 태그(희석/자사주/구조/배당/IPO) + 종목 로고 + DART 원문.
  *   점수·등급·추천 0 (사실 분류 태그만).
  * 데이터 = calendar_public.json (calendar_public_builder — 공시·배당락·IPO 병합, 신규수집 0).
- *   실적발표 예정일·락업해제 = 소스 미보유로 미포함(가짜 이벤트 방지).
- * 로고 = 토스 종목 CDN + 이니셜 폴백. 다크모드 자가감지. cache-fallback.
+ * 로고 = 토스 종목 CDN + 이니셜 폴백. cache-fallback.
  */
 
 /* 🚨🚨 롤백 방지 가드 (2026-07-23) — CLAUDE.md RULE 11. 지우거나 되돌리지 말 것. 🚨🚨
@@ -20,42 +19,48 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *     static height/maxHeight(560 등)나 alignItems 로 되돌리지 말 것 — 정적값은 캘린더 높이와 안 맞음(2026-07-23 사고).
  *
  * 편집/붙여넣기 전 의무 (RULE 11):
- *   1. Framer 데스크탑 = AlphaNest 공개 프로젝트 탭 focus 확인 (VERITY 내부 프로젝트 아님. getProjectXml 로 검증).
- *   2. MCP readCodeFile 로 라이브 PublicCalendar 를 먼저 읽어 3-way diff (라이브 / 이 미러 / git origin/main).
- *   3. 라이브가 더 신선하면 라이브를 base 로 미러 갱신 → 그 위에 변경 적용. stale 미러로 라이브를 덮지 말 것.
- *   4. 변경은 3소스 동시 동기화: 라이브 Framer(MCP) + 이 repo 파일 + 메모리 feedback_framer_tri_source_sync_guard.
- *      한쪽만 갱신 = 다음 싱크가 나머지를 롤백시키는 시한폭탄.
+ *   1. Framer 데스크탑 = AlphaNest 공개 프로젝트 탭 focus 확인. 2. MCP readCodeFile 로 라이브 먼저 읽어 3-way diff.
+ *   3. 라이브 더 신선하면 라이브 base 로 갱신. 4. 3소스 동시 동기화(라이브 MCP + repo + 메모리).
  *
- * 다크모드: readBodyDark() = body[data-framer-theme] 자가감지. 이 패턴을 단순화/제거하면 새로고침 시 부분 라이트 회귀.
+ * 🚨 2026-07-24 다크모드 = 자체 내장 CSS 변수(--an-cal-*) 구동 (readBodyDark JS 감지 전면 제거, durable fix).
+ *   <style>{AN_PALETTE} 정적 HTML 정합 → 새로고침/무거운 페이지 stuck-라이트 근본 제거. 카테고리 soft-bg도 변수화. 되돌리지 말 것.
  */
 
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
     line: "#e5e8eb", track: "#eef0f3", hi: "#f6f7f9", vt: "#6c5ce7", vtS: "#f0edff", vtSolid: "#6c5ce7",
     today: "#191f28", todayInk: "#ffffff", cellHover: "#f6f7f9",
+    dilutionS: "#fdecee", buybackS: "#eaf1fe", supplyS: "#eef0f3", dividendS: "#e7faf0",
+    ipoS: "#f0edff", capitalS: "#fff4e0", structuralS: "#e3f7f9", governanceS: "#fdf0dc",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
     line: "#252b34", track: "#222a33", hi: "#1e242c", vt: "#a99bff", vtS: "#241f3a", vtSolid: "#6c5ce7",
     today: "#e3e7ec", todayInk: "#0f1318", cellHover: "#1e242c",
+    dilutionS: "#2a1518", buybackS: "#17263c", supplyS: "#252b34", dividendS: "#11281d",
+    ipoS: "#241f3a", capitalS: "#2a2113", structuralS: "#0f2a2d", governanceS: "#2a2010",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/calendar_public.json"
 
-// 이벤트 카테고리 = 사실 분류(색은 가독용, 좋다·나쁘다 라벨 아님)
-const CAT: Record<string, { label: string; c: string; s: string }> = {
-    dilution: { label: "희석", c: "#f04452", s: "#fdecee" },      // 유증·CB·BW
-    buyback: { label: "자사주", c: "#3182f6", s: "#eaf1fe" },     // 취득·소각(수급+)
-    supply: { label: "자사주처분", c: "#8b95a1", s: "#eef0f3" },  // 처분(수급-)
-    dividend: { label: "배당", c: "#0ca678", s: "#e7faf0" },
-    ipo: { label: "IPO", c: "#6c5ce7", s: "#f0edff" },
-    capital: { label: "자본변동", c: "#ff9500", s: "#fff4e0" },
-    structural: { label: "구조", c: "#00a8b5", s: "#e3f7f9" },
-    governance: { label: "지배구조", c: "#e6820a", s: "#fdf0dc" },
-}
-const CAT_DARK_S: Record<string, string> = {
-    dilution: "#2a1518", buyback: "#17263c", supply: "#252b34", dividend: "#11281d",
-    ipo: "#241f3a", capital: "#2a2113", structural: "#0f2a2d", governance: "#2a2010",
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-cal-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "cal"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
+
+// 이벤트 카테고리 = 사실 분류(색은 가독용, 좋다·나쁘다 라벨 아님). soft-bg 는 --an-cal-<cat>S 변수(테마 플립).
+const CAT: Record<string, { label: string; c: string }> = {
+    dilution: { label: "희석", c: "#f04452" },      // 유증·CB·BW
+    buyback: { label: "자사주", c: "#3182f6" },     // 취득·소각(수급+)
+    supply: { label: "자사주처분", c: "#8b95a1" },  // 처분(수급-)
+    dividend: { label: "배당", c: "#0ca678" },
+    ipo: { label: "IPO", c: "#6c5ce7" },
+    capital: { label: "자본변동", c: "#ff9500" },
+    structural: { label: "구조", c: "#00a8b5" },
+    governance: { label: "지배구조", c: "#e6820a" },
 }
 const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -81,27 +86,6 @@ function StockDot(props: { ticker: any; name: any; size?: number }) {
         style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), objectFit: "contain", display: "block", flexShrink: 0 }} />
 }
 
-function readBodyDark(): boolean {
-    // 기본 = 라이트(사이트 첫 시작 라이트 결정, 2026-07-19). 명시적 'dark' 신호가 있을 때만 다크.
-    //   판독 순서 = html[data-an-theme](Custom Code 헤드 스크립트가 페인트 전 동기 세팅, 레이스 제거)
-    //   → body[data-framer-theme](토글) → localStorage. OS 설정은 안 봄(로드마다 뒤집힘 방지).
-    //   🚨 body-first 로 되돌리지 말 것 — Framer 네이티브가 새로고침 때 body 를 OS 로 리셋 → 부분 라이트 회귀(2026-07-23).
-    try {
-        if (typeof document !== "undefined") {
-            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-            if (h === "dark") return true
-            if (h === "light") return false
-            if (document.body) {
-                const a = document.body.dataset.framerTheme
-                if (a === "dark") return true
-                if (a === "light") return false
-            }
-        }
-        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (s === "dark") return true
-    } catch (e) {}
-    return false
-}
 function ymd(d: Date): string {
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0")
 }
@@ -124,7 +108,6 @@ const DEMO = {
  */
 export default function PublicCalendar(props: { dataUrl?: string; stockPath?: string; dark?: boolean }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
     const [data, setData] = useState<any>(onCanvas ? DEMO : null)
     const [cur, setCur] = useState<{ y: number; m: number }>(() => ({ y: 2026, m: 6 })) // m=0-index (6=July)
     const [selDate, setSelDate] = useState<string>("")
@@ -134,16 +117,6 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
     const [listOpen, setListOpen] = useState(false)   // 모바일 리스트 더보기 펼침
     const rootRef = useRef<HTMLDivElement>(null)
     const calRef = useRef<HTMLDivElement>(null)   // 좌측 캘린더 카드(높이 소스)
-
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
 
     useEffect(() => {
         const el = rootRef.current
@@ -179,8 +152,6 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
     // 리스트 더보기 = 달/선택일/필터가 바뀌면 다시 접기
     useEffect(() => { setListOpen(false) }, [selDate, cur, catFilter])
 
-    const isDark = onCanvas ? !!props.dark : themeDark
-    const C = isDark ? DARK : LIGHT
     const narrow = w > 0 && w < 560
     const stockPath = props.stockPath || "/stock"
 
@@ -222,7 +193,8 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
         if (onCanvas || typeof window === "undefined" || !tk) return
         try { window.location.href = `${stockPath}?q=${encodeURIComponent(tk)}` } catch (e) {}
     }
-    const catS = (cat: string) => (isDark ? (CAT_DARK_S[cat] || C.track) : (CAT[cat]?.s || C.track))
+    // 카테고리 soft-bg = --an-cal-<cat>S 변수(라이트/다크 자동 플립). 미지정 카테고리 = track.
+    const catS = (cat: string) => (C as any)[cat + "S"] || C.track
 
     const todayStr = onCanvas ? "2026-07-17" : ymd(new Date())
     const selEvents: any[] = selDate ? (byDate[selDate] || []) : []
@@ -233,8 +205,6 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
         return rows
     }, [events, cur, catFilter])
     const listShown = selDate ? selEvents : monthList
-    // 🚨 모바일 = 이벤트가 많으면 나열이 길어 불편 → 6건 컷 + 더보기. 데스크톱은 스크롤 카드라 전량.
-    // 🔔 향후: 보유종목(holdings) 연동 시 = 사용자 보유 종목 이벤트 우선/필터 (개인화). 지금은 전 종목.
     const LIST_CAP = 6
     const listCapped = narrow && !listOpen && listShown.length > LIST_CAP
     const listRows = listCapped ? listShown.slice(0, LIST_CAP) : listShown
@@ -246,6 +216,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
         const sk: CSSProperties = { background: C.track, borderRadius: 10 }
         return (
             <div ref={rootRef} style={wrap}>
+                <style>{AN_PALETTE}</style>
                 <div style={cardS}>
                     <div style={{ ...sk, width: 120, height: 22 }} />
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 8, marginTop: 20 }}>
@@ -260,6 +231,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             {/* 헤더 */}
             <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: narrow ? 19 : 22, fontWeight: 800, letterSpacing: "-0.5px" }}>투자 캘린더</div>
@@ -337,7 +309,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                     </div>
                 </div>
 
-                {/* 이벤트 리스트 (선택일 or 이 달 전체) */}
+                {/* 이벤트 리스트 (선택일 or 이 달 전체) — height = 캘린더 카드 높이 정확 매칭 + 스크롤 */}
                 <div style={{ ...cardS, boxSizing: "border-box", marginTop: narrow ? 16 : 0, padding: narrow ? "14px 14px" : "18px 18px", height: narrow ? undefined : (calH || 560), overflowY: narrow ? undefined : "auto" }}>
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
                         <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>
@@ -352,10 +324,10 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             {listRows.map((e, i) => {
-                                const cat = CAT[e.cat] || { label: e.cat, c: C.faint, s: C.track }
+                                const cat = CAT[e.cat] || { label: e.cat, c: C.faint }
                                 return (
                                     <div key={i} onClick={() => goStock(e.ticker)} role={e.ticker ? "button" : undefined}
-                                        style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 11px", borderRadius: 12, background: isDark ? C.hi : C.hi, cursor: e.ticker ? "pointer" : "default" }}>
+                                        style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 11px", borderRadius: 12, background: C.hi, cursor: e.ticker ? "pointer" : "default" }}>
                                         <StockDot ticker={e.ticker} name={e.name} size={26} />
                                         <div style={{ minWidth: 0, flex: 1 }}>
                                             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -394,5 +366,5 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
 addPropertyControls(PublicCalendar, {
     dataUrl: { type: ControlType.String, title: "Data URL", defaultValue: DATA_URL },
     stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
