@@ -135,6 +135,23 @@ export default function PublicWatchlist(props: Props) {
 
     useEffect(() => { if (!onCanvas) { sessionResetScratch(); setWatch(loadWatch()) } }, [onCanvas])
 
+    /* 🚨 2026-07-24 리포트 별(담기/해제) 즉시 반영 — StockReport 가 localStorage["verity_watchlist"] 미러 + 이벤트 발사.
+       사이드바가 그 이벤트를 듣고 재읽기(별↔관심종목 동기). 자체 addStock/removeStock 도 verity-watchlist-changed 발사. */
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        const refresh = () => setWatch(loadWatch())
+        window.addEventListener("verity_watch_change", refresh)
+        window.addEventListener("verity-watchlist-changed", refresh)
+        window.addEventListener("storage", refresh)
+        window.addEventListener("focus", refresh)
+        return () => {
+            window.removeEventListener("verity_watch_change", refresh)
+            window.removeEventListener("verity-watchlist-changed", refresh)
+            window.removeEventListener("storage", refresh)
+            window.removeEventListener("focus", refresh)
+        }
+    }, [onCanvas])
+
     /* 보유종목(둥지, /api/holdings) — 로그인 시 관심종목에 합쳐 '보유' 표시. */
     useEffect(() => {
         if (onCanvas) { setHeld([]); return }
@@ -184,13 +201,17 @@ export default function PublicWatchlist(props: Props) {
     const matches = useMemo(() => {
         const q = query.trim().toLowerCase()
         if (!q) return []
+        // 🚨 2026-07-24 관심종목 검색 정제 — 지수(IDX_/지수)는 제외(담을 수 없음), ETF/ETN 은 순수 종목 뒤로 랭크.
+        const isIndex = (x: any) => String(x.market || "").includes("지수") || String(x.ticker || "").toUpperCase().indexOf("IDX_") === 0
+        const isDeriv = (x: any) => { const mk = String(x.market || "").toUpperCase(); return mk.indexOf("ETF") >= 0 || mk.indexOf("ETN") >= 0 }
         const rk = (x: any) => {
             const t = String(x.ticker || "").toLowerCase(), n = String(x.name || "").toLowerCase(), k = String(x.name_ko || "").toLowerCase()
-            return t === q ? 0 : (n === q || k === q) ? 1 : t.indexOf(q) === 0 ? 2 : (n.indexOf(q) === 0 || (k && k.indexOf(q) === 0)) ? 3 : 4
+            const bas = t === q ? 0 : (n === q || k === q) ? 1 : t.indexOf(q) === 0 ? 2 : (n.indexOf(q) === 0 || (k && k.indexOf(q) === 0)) ? 3 : 4
+            return bas + (isDeriv(x) ? 10 : 0)
         }
         const have = new Set(watch.map((x) => String(x.ticker)))
         return universe
-            .filter((x) => !have.has(String(x.ticker)) && (String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").includes(q)))
+            .filter((x) => !isIndex(x) && !have.has(String(x.ticker)) && (String(x.name || "").toLowerCase().includes(q) || String(x.ticker || "").includes(q)))
             .sort((a: any, b: any) => rk(a) - rk(b)).slice(0, 12)
     }, [query, universe, watch])
 

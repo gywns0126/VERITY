@@ -652,7 +652,10 @@ export default function PublicHoldingsTab(props: Props) {
             return
         }
         // 🚨 토큰 있으면 즉시 로그인 화면 전환 (API 응답 기다리지 않음 — 로그인했는데 CTA 뜨는 사고 방지, 2026-07-13)
+        // 🚨 2026-07-24 SAMPLE 잔존 제거 — 로그인 후에도 데모종목(삼성전자·하이닉스·NVDA)이 남던 사고.
+        //   token 있으면 rows 를 즉시 비우고, API 가 null/빈값/에러여도 SAMPLE 로 되돌아가지 않게 else/catch 에서 [] 확정.
         setIsDemo(false)
+        setRows([])
         setLoading(true)
         fetch(base + "/api/holdings", {
             headers: { Authorization: "Bearer " + token },
@@ -661,8 +664,9 @@ export default function PublicHoldingsTab(props: Props) {
             .then((d) => {
                 if (Array.isArray(d)) setRows(d)
                 else if (d && Array.isArray(d.holdings)) setRows(d.holdings)
+                else setRows([])
             })
-            .catch(() => {})
+            .catch(() => setRows([]))
             .finally(() => setLoading(false))
     }, [base, onCanvas])
 

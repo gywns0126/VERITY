@@ -3803,6 +3803,16 @@ export default function PublicStockReport(props: Props) {
                         item_id: starItemId,
                     }),
                 })
+                // 🚨 2026-07-24 관심종목 사이드바(PublicWatchlist=localStorage) 동기 — 별 해제 미러.
+                try {
+                    const _lsk = "verity_watchlist"
+                    const _cur = JSON.parse(window.localStorage.getItem(_lsk) || "[]")
+                    const _tk = String(s.ticker || "")
+                    if (Array.isArray(_cur))
+                        window.localStorage.setItem(_lsk, JSON.stringify(_cur.filter((x: any) => String(x && x.ticker) !== _tk)))
+                } catch {
+                    /* no-op */
+                }
             } else {
                 let gid = watchGroupId
                 if (!gid) {
@@ -3840,6 +3850,20 @@ export default function PublicStockReport(props: Props) {
                     .then((r) => (r.ok ? r.json() : null))
                     .catch(() => null)
                 setStarItemId(added && added.id ? added.id : "pending")
+                // 🚨 2026-07-24 관심종목 사이드바 동기 — 별 담기 미러(중복 방지, KR/US 정규화).
+                try {
+                    const _lsk = "verity_watchlist"
+                    const _cur = JSON.parse(window.localStorage.getItem(_lsk) || "[]")
+                    const _arr = Array.isArray(_cur) ? _cur : []
+                    const _tk = String(s.ticker || "")
+                    if (_tk && !_arr.some((x: any) => String(x && x.ticker) === _tk)) {
+                        const _us = /US|NAS|NYSE|AMEX/i.test(String(s.market || "")) || /^[A-Za-z]/.test(_tk)
+                        _arr.push({ ticker: _tk, name: s.name || _tk, market: _us ? "us" : "kr" })
+                        window.localStorage.setItem(_lsk, JSON.stringify(_arr))
+                    }
+                } catch {
+                    /* no-op */
+                }
             }
             if (typeof window !== "undefined")
                 window.dispatchEvent(new CustomEvent(WATCH_EVENT))

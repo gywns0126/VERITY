@@ -27,8 +27,8 @@ body-first `readBodyDark` → html-first 로 정정. body-first 는 Framer 정�
 
 | repo 파일 | 라이브 코드파일 (id) | 반영 내용 | 상태 |
 |---|---|---|---|
-| `public-probe/PublicStockReport.tsx` | PublicStockReport (`wQArrWb`, 400KB) | **CSS 변수 durable 전환**(`--an-sr-*`, readBodyDark/themeDark JS 제거 + `<style>{AN_PALETTE}` 4개 렌더루트 + SVG 색 attr 29곳 style 이관 + 영역 opacity=areaOp 변수) **+ 배당 섹션**(배당비율 3종 분리 + 배당락일·확정·최근결정) **+ 헤더 별 모서리 라운드**(strokeWidth 1.7→2.6 + 채움색 stroke 상시). 무거운 페이지 stuck-라이트 근본 해소 | ⏳ 복붙 |
-| `public-probe/PublicHoldingsTab.tsx` | PublicHoldingsTab (`S2WFHHW`, 191KB) | readBodyDark html-first **+ 로그인 전 SAMPLE 목업 복원**(40fbdabd2 회귀 — 라이브 미로그인 목업이 `onCanvas` 게이트로 사라진 것 원복) | ⏳ 복붙 |
+| `public-probe/PublicStockReport.tsx` | PublicStockReport (`wQArrWb`, 400KB) | **CSS 변수 durable 전환**(`--an-sr-*`, readBodyDark/themeDark JS 제거 + `<style>{AN_PALETTE}` 4개 렌더루트 + SVG 색 attr 29곳 style 이관 + 영역 opacity=areaOp 변수) **+ 배당 섹션**(배당비율 3종 분리 + 배당락일·확정·최근결정) **+ 헤더 별 모서리 라운드**(strokeWidth 1.7→2.6 + 채움색 stroke 상시) **+ 2026-07-24 별 담기/해제 → localStorage["verity_watchlist"] 미러**(관심종목 사이드바 동기, toggleStar 2곳). 무거운 페이지 stuck-라이트 근본 해소 | ⏳ 복붙 |
+| `public-probe/PublicHoldingsTab.tsx` | PublicHoldingsTab (`S2WFHHW`, 191KB) | readBodyDark html-first **+ 로그인 전 SAMPLE 목업 복원**(40fbdabd2 회귀 — 라이브 미로그인 목업이 `onCanvas` 게이트로 사라진 것 원복) **+ 2026-07-24 로그인 후 SAMPLE 잔존 제거**(loadHoldings 토큰 시 setRows([]) + API null/에러 시 [] 확정 — 로그인 후 데모종목 노출 fix) | ⏳ 복붙 |
 | `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`, 27KB) | readBodyDark html-first | ⏳ 복붙 |
 
 ## ✅ 라이브 이미 반영됨 (MCP push + byte-verify 완료 · 복붙 불요)
