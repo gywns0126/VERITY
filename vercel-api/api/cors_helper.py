@@ -20,14 +20,26 @@ _logger = logging.getLogger(__name__)
 
 _raw = os.environ.get("API_ALLOWED_ORIGINS", "") or ""
 
-ALLOWED_ORIGINS: FrozenSet[str] = frozenset(
+# 🚨 2026-07-24 AlphaNest 프로덕션 origin = 코드 기본 허용. env(API_ALLOWED_ORIGINS) 누락/오설정에도
+#   공개 사이트가 watchgroups·holdings 등 인증 API 를 호출할 수 있게(별 담기 안 됨·로그인 후 데모종목
+#   잔존의 근본 원인 = 프리플라이트에 ACAO 없음). wildcard 아님 — 명시 origin 만(JWT+wildcard CSRF 금지 정합).
+_DEFAULT_ORIGINS: FrozenSet[str] = frozenset(
+    {
+        "https://www.alphanest.kr",
+        "https://alphanest.kr",
+    }
+)
+
+_env_origins: FrozenSet[str] = frozenset(
     o for o in (s.strip() for s in _raw.split(",")) if o and o != "*"
 )
+ALLOWED_ORIGINS: FrozenSet[str] = _env_origins | _DEFAULT_ORIGINS
 _WILDCARD_IN_ENV = any(s.strip() == "*" for s in _raw.split(","))
 
-if not ALLOWED_ORIGINS:
-    _logger.critical(
-        "API_ALLOWED_ORIGINS 미설정 — /api/chat /api/watchgroups 크로스오리진 요청 전부 차단"
+if not _env_origins:
+    _logger.warning(
+        "API_ALLOWED_ORIGINS 미설정 — 코드 기본 origin(%s)만 허용",
+        ", ".join(sorted(_DEFAULT_ORIGINS)),
     )
 if _WILDCARD_IN_ENV:
     _logger.warning("API_ALLOWED_ORIGINS 에 '*' 포함됨 — 무시. 명시 origin 만 사용")
