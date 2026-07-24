@@ -110,6 +110,25 @@ class TestComputeRatios:
         assert r["op_margin"] is None
         assert r["debt_ratio"] is not None  # equity > 0
 
+    def test_magnitude_gate_impossible_ratios_dropped(self):
+        # 산술/물리 불가능 = 파싱 오염 → None. gp>rev(gross_margin>100%)·cur_l≈0·eq≈0.
+        r = df._compute_ratios({"equity": 1e11, "total_assets": 1e12, "net_income": 1e10,
+                                "revenue": 240e9, "gross_profit": 363e9,   # gp>rev
+                                "current_assets": 1e11, "current_liabilities": 1e6,  # 100000배
+                                "operating_profit": 300e9, "total_liabilities": 29e9})
+        assert r["gross_margin"] is None          # gp>rev 불가
+        assert r["op_margin"] is None             # op>rev 불가
+        assert r["current_ratio"] is None         # >100배 분모붕괴
+        r2 = df._compute_ratios({"equity": 1, "total_assets": 1e12, "total_liabilities": 29e9,
+                                 "net_income": 1e10, "revenue": 1e12, "operating_profit": 1e11})
+        assert r2["debt_ratio"] is None           # 자본≈0 → >5000%
+
+    def test_magnitude_gate_keeps_real_extremes(self):
+        # roa 극단(일회성 처분이익)은 실제값 — 게이트 안 함(garbage 아님).
+        r = df._compute_ratios({"equity": 365e9, "total_assets": 365e9, "net_income": 1799e9,
+                                "revenue": 0, "operating_profit": 0})
+        assert r["roa"] is not None and r["roa"] > 100
+
 
 # ─────────────────────────────────────────────────────────────────────
 # yfinance fallback

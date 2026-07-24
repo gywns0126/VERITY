@@ -109,6 +109,14 @@ def _is_fresh_dart(rec: Any, bsns_year: str) -> bool:
     # net_income=0 인데 법인세차감전(pretax)!=0 = 적자기업 순이익 클램프/라벨 미스 잔재 → 재추출
     if (rec.get("net_income") or 0) == 0 and (rec.get("pretax_income") or 0) != 0:
         return False
+    # op 오파싱 신호: 매출 큰데 영업이익이 극소(EPS/중단영업 오치환 꼴)/0 = 구 파서 오염 → 재추출
+    #   (2026-07 op account_id 승격 소급 — LGES op 5,287원·GS 부호역전류)
+    _rev = rec.get("revenue") or 0
+    if _rev > 1e10 and abs(rec.get("operating_profit") or 0) < 1e6:
+        return False
+    # revenue 오파싱 신호: 자산 큰데 매출 0 = top-line '매출'(ifrs-full_Revenue) 누락 → 재추출(LG화학류)
+    if (rec.get("total_assets") or 0) > 1e11 and _rev == 0:
+        return False
     return True
 
 

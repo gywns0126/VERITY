@@ -98,11 +98,12 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
             #   (2026-07-12 고영 등 21종목 실증: DART 정상 174항목인데 파서 미스). id 는 공백·표기 불변.
             #   부분일치 금지 유지 — '자본과부채총계'(=ifrs-full_EquityAndLiabilities, 별 id) 오염 0
             #   (2026-07-06 부채비율 5.8% 사고 가드 계승).
-            if aid == "ifrs-full_Assets" or acct == "자산총계":
+            if aid in ("ifrs-full_Assets", "ifrs_Assets") or acct == "자산총계":
                 out["total_assets"] = amount
-            elif aid == "ifrs-full_Liabilities" or acct == "부채총계":
+            elif aid in ("ifrs-full_Liabilities", "ifrs_Liabilities") or acct == "부채총계":
                 out["total_liabilities"] = amount
-            elif aid == "ifrs-full_Equity" or acct == "자본총계":
+            elif aid in ("ifrs-full_Equity", "ifrs_Equity") or acct == "자본총계":
+                # 구 택소노미 접두사 'ifrs_'(언더스코어) 포함 — 자본 분모 붕괴→debt_ratio 폭발 방어.
                 out["equity"] = amount
             elif aid == "ifrs-full_CurrentAssets" or acct == "유동자산":
                 out["current_assets"] = amount
@@ -208,8 +209,11 @@ def _compute_ratios(pl_bs: dict) -> dict:
     op = pl_bs.get("operating_profit", 0)
     gp = pl_bs.get("gross_profit", 0)
 
+    # 🚨 magnitude 게이트 = 산술적/물리적 불가능(파싱 오염 신호)만 폐기. roa/roe 극단값은 실제 가능
+    #   (일회성 처분이익 등)이라 게이트 안 함 — garbage(불가능)와 unusual-but-real 을 구분.
     if eq > 0:
-        out["debt_ratio"] = round(pl_bs.get("total_liabilities", 0) / eq * 100, 2)
+        dr = round(pl_bs.get("total_liabilities", 0) / eq * 100, 2)
+        out["debt_ratio"] = dr if dr <= 5000 else None   # >5000% = 자본 분모 붕괴(구 택소노미 stale) → 폐기
         if ni:
             out["roe"] = round(ni / eq * 100, 2)
     if ta > 0 and ni:
@@ -217,11 +221,14 @@ def _compute_ratios(pl_bs: dict) -> dict:
     if ta > 0 and rev > 0:
         out["asset_turnover"] = round(rev / ta, 4)
     if rev > 0:
-        out["op_margin"] = round(op / rev * 100, 2)
+        opm = round(op / rev * 100, 2)
+        out["op_margin"] = opm if opm <= 100 else None   # op>rev 산술불가(revenue 오파싱) → 폐기
         if gp > 0:
-            out["gross_margin"] = round(gp / rev * 100, 2)
+            gm = round(gp / rev * 100, 2)
+            out["gross_margin"] = gm if gm <= 100 else None   # gp>rev 산술불가 → 폐기
     if cur_l > 0 and cur_a > 0:
-        out["current_ratio"] = round(cur_a / cur_l, 4)
+        cr = round(cur_a / cur_l, 4)
+        out["current_ratio"] = cr if cr <= 100 else None   # >100배 = 유동부채 분모 붕괴 → 폐기
     # NAV 프록시 — 소유 부동산 장부가 대비 자본/자산. 토지 단독은 취득원가라 시가 갭이 가장 큼.
     re_book = pl_bs.get("real_estate_book", 0)
     land = pl_bs.get("land", 0)
