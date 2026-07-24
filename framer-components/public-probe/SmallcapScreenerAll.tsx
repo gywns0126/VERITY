@@ -418,13 +418,20 @@ export default function SmallcapScreenerAll(props: {
 
     return (
         <div style={shell}>
+            {/* 제목 헤더 — 뉴스/증권사 페이지와 동일 위치·글자크기. shell 좌우 16px 고려해 좌 6px = net 22px(=뉴스/증권사) */}
+            <div style={{ padding: "20px 6px 10px 6px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>소형주</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: C.faint }}>국내·미국 · 사실 스크리너</span>
+                </div>
+            </div>
             {/* 국기 토글 + 카운트 */}
             <div
                 style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "2px 2px 12px",
+                    padding: "2px 6px 12px",
                     gap: 8,
                 }}
             >
