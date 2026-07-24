@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react"
  *
  * Framer 네이티브 테마는 body[data-framer-theme]("light"|"dark") 로 제어됨.
  *  - 클릭 → document.body.dataset.framerTheme 토글 + localStorage("verity_theme") 저장
- *  - 마운트 → 저장된 선호 복원(없으면 기본 라이트 — 2026-07-19 첫 시작 라이트 결정)
+ *  - 마운트 → 저장된 선호 복원(없으면 기기 OS prefers-color-scheme 따름 — 2026-07-24 PM: 첫 방문 OS 추종)
  *  - 이 속성이 바뀌면 Framer Color Styles(NavBg/PageBg 등) + 구독하는 코드 컴포넌트가 모두 따라옴
  *
  * 🎨 2026-07-08 깜빡임 fix — 버튼 시각(배경/보더/아이콘색/아이콘 선택)을 JS 상태가 아니라
@@ -58,7 +58,7 @@ function prefTheme(): Theme {
         if (h === "dark") return "dark"
         if (h === "light") return "light"
     }
-    return "light"
+    return systemTheme() // 저장/신호 없으면 기기 OS 따름 (헤드 Custom Code pref() 와 동일 규칙, 2026-07-24)
 }
 
 function applyTheme(t: Theme) {
@@ -129,9 +129,9 @@ export default function PublicThemeToggle(props: Props) {
         if (isCanvas) return
         /* 오버라이드 <style> 주입은 Custom Code(Start of <body>)가 첫 페인트 전에 담당 = 단일 출처.
            토글은 저장된 선호 복원 + 외부 변경 동기화만. */
-        /* 기본 = 라이트 (사이트 첫 시작 라이트 결정, 2026-07-19). OS 설정 안 봄 = 로드마다 뒤집힘 방지.
-           명시적 저장(verity_theme)이 있을 때만 그 값. 헤드/보디 Custom Code 스크립트와 동일 규칙. */
-        let initial: Theme = "light"
+        /* 🚨 기본 = 기기 OS(prefers-color-scheme) 따름 (2026-07-24 PM 결정 — 첫 방문 OS 추종, 헤드 Custom Code pref() 와 동일 규칙).
+           명시적 저장(verity_theme) 있으면 그 값 우선. 사용자가 토글하면 저장되어 이후 고정(로드마다 뒤집힘 없음). */
+        let initial: Theme = systemTheme()
         try {
             const saved = localStorage.getItem(THEME_KEY)
             if (saved === "dark" || saved === "light") initial = saved
