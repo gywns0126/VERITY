@@ -181,10 +181,13 @@ def _collect_asset(cfg: Dict[str, str]) -> Dict[str, Any]:
         ls = asset.get("long_short_ratio_okx")
     asset["long_short_ratio"] = ls
 
-    # 거래소별 OI(USD)가 둘 다 있으면 합산 명목(USD) 함께 노출 (raw 합산, 동일 단위 검증됨)
+    # 🚨 합산 명목(USD)은 실제 응답한 거래소 ≥2 일 때만 'combined'. 단일 거래소(예 Bybit 지오차단→OKX 단독)를
+    #   'combined'로 표기하면 실제의 절반값을 합산으로 오인 → oi_venues 명시 + 단일이면 미표기.
     bybit_usd = asset.get("oi_bybit_usd")
     okx_usd = asset.get("oi_okx_usd")
-    if bybit_usd is not None or okx_usd is not None:
+    venues = [v for v, u in (("bybit", bybit_usd), ("okx", okx_usd)) if u is not None]
+    asset["oi_venues"] = venues
+    if len(venues) >= 2:
         asset["oi_combined_usd"] = (bybit_usd or 0.0) + (okx_usd or 0.0)
 
     # 데이터 한 조각이라도 있으면 ok
@@ -229,6 +232,9 @@ def collect_crypto_positioning() -> Dict[str, Any]:
 
         result["ok_count"] = ok_count
         result["ok"] = ok_count >= 1
+        # source = 실제 응답한 거래소 합집합 (정적 "bybit+okx" 대신). Bybit 지오차단 시 "okx"로 정직 표기.
+        venues = sorted({v for name in _ASSETS for v in (result.get(name, {}).get("oi_venues") or [])})
+        result["source"] = "+".join(venues) if venues else _SOURCE
         if ok_count == 0:
             return {"ok": False, "ok_count": 0, "error": "all_sources_failed", "source": _SOURCE}
         return result
