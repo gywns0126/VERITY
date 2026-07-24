@@ -270,9 +270,11 @@ def _detect_red_flags(
     if _per is not None and _eps_g is not None:
         try:
             _per_f = float(_per)
-            _eps_f = float(_eps_g)
-            if _per_f > 0 and _eps_f > 0:
-                peg_v = _per_f / _eps_f
+            # 2026-07-24 PEGY(Lynch 배당 팩터): 분모 = 성장 + 배당수익률(%). 고배당 가치주가 낮은 성장으로
+            # PEG>3 강제 AVOID 되던 것 보정(총수익=성장+배당). graham PEG fix 와 정합.
+            _denom = float(_eps_g) + float(stock.get("div_yield") or 0)
+            if _per_f > 0 and _denom > 0:
+                peg_v = _per_f / _denom
                 if peg_v > 3.0:
                     auto_avoid_d.append(_make_flag(f"PEG {peg_v:.1f} (Lynch 절대 매도)"))
         except (TypeError, ValueError):
