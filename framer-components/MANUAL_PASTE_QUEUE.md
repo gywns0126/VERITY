@@ -31,13 +31,9 @@ body-first `readBodyDark` → html-first 로 정정. body-first 는 Framer 정�
 | `public-probe/PublicHoldingsTab.tsx` | PublicHoldingsTab (`S2WFHHW`, 191KB) | readBodyDark html-first **+ 로그인 전 SAMPLE 목업 복원**(40fbdabd2 회귀 — 라이브 미로그인 목업이 `onCanvas` 게이트로 사라진 것 원복) | ⏳ 복붙 |
 | `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`, 27KB) | readBodyDark html-first | ⏳ 복붙 |
 
-## ⏳ MCP push 대기 (플러그인 재연결 시 · 12KB 라 복붙 불요)
-
-| repo 파일 | 라이브 코드파일 (id) | 반영 내용 | 상태 |
-|---|---|---|---|
-| `public-probe/PublicEntranceMap.tsx` | PublicEntranceMap (getProjectXml 에서 id 확인) | **성과 요약 밴드 추가**(2026-07-24) — universe·자동수집 종수·검증게이트 진척 라이브 집계(하드코딩 0, RULE 7). 마케팅 축=깊이·자동·투명. repo 편집 완료, 플러그인 타임아웃으로 라이브 미반영 | ⏳ MCP push |
-
 ## ✅ 라이브 이미 반영됨 (MCP push + byte-verify 완료 · 복붙 불요)
+
+- **PublicEntranceMap** (`dczM3AA`) — 성과 요약 밴드 추가(2026-07-24, universe·자동수집 종수·검증게이트 라이브 집계, RULE 7). MCP push + readback byte-verify 완료(insertURL 해시 갱신 확인)
 
 - **PublicThemeToggle** (`W_KF9F5`) — body-리셋 자가치유(로그아웃 복귀 fix)
 - **PublicSessionTag** (`qcBvPxE`) — html-first
