@@ -9,10 +9,11 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *   실시간 시세 = 네이버 link-out(증권사 서빙 = 재배포 아님). "지금 거래 활발" = 네이버 거래대금 상위 link-out.
  * 시장경보 = 경보 시 헤더(종목명·가격·메타) 통째 틴트 박스(외곽선 없음)로 감싸 한눈에. 경보 없으면 헤더 평범.
  * 폰트 = Pretendard 단일. 탭→상세 = 기본지표(계산식+실제 투입숫자 facts_calc·출처)/수급(정확 주수)/동종업계(비교)/재무(전체 재무제표 그룹) + 공시·내부자·forensics(원문) — 전업러용 raw 접근. 있는 데이터만(RULE10).
- * 다크모드 = Framer 네이티브 토글(body[data-framer-theme]) 추종 — themeDark + MutationObserver. canvas 에선 dark prop. 사이트 다크모드 버튼과 실시간 연동.
+ * 다크모드 = Framer 네이티브 토글(body[data-framer-theme]) 추종(자체 내장 CSS 변수 --an-sr-*, JS 다크감지 제거). canvas 에선 dark prop. 사이트 다크모드 버튼과 실시간 연동.
  * 관심종목 = 로그인 시 헤더 별(둥근 SVG, 2026-06-22 토스풍 라운드+소프트골드, 미담김도 회색 채움+외곽선) → /api/watchgroups(JWT) 담기/해제. 미로그인=담기 안내. 세션=verity_supabase_session(AlphaNestAuth).
  */
 
+// 🚨 2026-07-24 다크 = 자체 내장 CSS 변수(--an-sr-*) durable. SVG 색 attr 전부 style 이관(var), 영역 opacity=areaOp. 되돌리지 말 것.
 const LIGHT = {
     bg: "#f2f4f6",
     card: "#ffffff",
@@ -36,6 +37,7 @@ const LIGHT = {
     tipBg: "#191f28",
     tipFg: "#ffffff",
     onAccent: "#ffffff",
+    skBase: "#e9edf1", skHi: "#f3f5f7", areaOp: "0.16",
 }
 const DARK = {
     bg: "#0f1318",
@@ -62,7 +64,16 @@ const DARK = {
     tipBg: "#222a33",
     tipFg: "#e3e7ec",
     onAccent: "#0f1318",
+    skBase: "#222a33", skHi: "#2d3742", areaOp: "0.26",
 }
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-sr-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "sr"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const HEAD = FONT
@@ -701,12 +712,11 @@ function TrendArrow({
             height={size}
             viewBox="0 0 12 12"
             fill="none"
-            stroke={color}
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden="true"
-            style={{ flexShrink: 0 }}
+            style={{ flexShrink: 0, stroke: color }}
         >
             {dir === "up" && (
                 <>
@@ -1029,7 +1039,7 @@ function IndexReportBlock({ C, narrow, name, doc }: any) {
                         <path
                             d={linePath}
                             fill="none"
-                            stroke={upC}
+                            style={{ stroke: upC }}
                             strokeWidth={2.2}
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -1038,7 +1048,7 @@ function IndexReportBlock({ C, narrow, name, doc }: any) {
                             cx={pts[pts.length - 1].x}
                             cy={pts[pts.length - 1].y}
                             r={3.4}
-                            fill={upC}
+                            style={{ fill: upC }}
                         />
                     </svg>
                 )}
@@ -1098,7 +1108,6 @@ function IndexReportBlock({ C, narrow, name, doc }: any) {
 
 function EtfReportBlock({
     C,
-    isDark,
     narrow,
     ticker,
     name,
@@ -1406,13 +1415,13 @@ function EtfReportBlock({
                                     x2={CW - PX}
                                     y1={zeroY}
                                     y2={zeroY}
-                                    stroke={C.grid}
+                                    style={{ stroke: C.grid }}
                                     strokeWidth={1}
                                 />
                                 <path
                                     d={smoothLine(pts)}
                                     fill="none"
-                                    stroke={flowColor}
+                                    style={{ stroke: flowColor }}
                                     strokeWidth={2.2}
                                     strokeLinecap="round"
                                 />
@@ -1420,7 +1429,7 @@ function EtfReportBlock({
                                     cx={pts[pts.length - 1].x}
                                     cy={pts[pts.length - 1].y}
                                     r={3.4}
-                                    fill={flowColor}
+                                    style={{ fill: flowColor }}
                                 />
                             </svg>
                         )}
@@ -1975,7 +1984,7 @@ function FinTrend({
                         y1={baseY}
                         x2={100}
                         y2={baseY}
-                        stroke={C.line}
+                        style={{ stroke: C.line }}
                         strokeWidth={1}
                         vectorEffect="non-scaling-stroke"
                     />
@@ -1983,7 +1992,7 @@ function FinTrend({
                 {areaPath && (
                     <path
                         d={areaPath}
-                        fill={C.vt}
+                        style={{ fill: C.vt }}
                         fillOpacity={0.1}
                         stroke="none"
                     />
@@ -1992,7 +2001,7 @@ function FinTrend({
                     <path
                         d={linePath}
                         fill="none"
-                        stroke={C.vt}
+                        style={{ stroke: C.vt }}
                         strokeWidth={2}
                         strokeLinejoin="round"
                         strokeLinecap="round"
@@ -2003,7 +2012,7 @@ function FinTrend({
                     <path
                         d={marginPath}
                         fill="none"
-                        stroke={C.amber}
+                        style={{ stroke: C.amber }}
                         strokeWidth={1.6}
                         strokeDasharray="3 2"
                         strokeLinejoin="round"
@@ -2135,7 +2144,6 @@ function qtLabel(qEnd: string): string {
 function QuarterlyTrend({
     ticker,
     C,
-    isDark,
     showExtremes = true,
     quarterlyUrl = QT_DEFAULT_URL,
     maxQuarters = 40,
@@ -2144,7 +2152,6 @@ function QuarterlyTrend({
 }: {
     ticker: string
     C: any
-    isDark: boolean
     showExtremes?: boolean
     quarterlyUrl?: string
     maxQuarters?: number
@@ -2430,13 +2437,11 @@ function QuarterlyTrend({
                                     >
                                         <stop
                                             offset="0%"
-                                            stopColor={lineColor}
-                                            stopOpacity={isDark ? 0.26 : 0.16}
+                                            style={{ stopColor: lineColor, stopOpacity: C.areaOp }}
                                         />
                                         <stop
                                             offset="100%"
-                                            stopColor={lineColor}
-                                            stopOpacity={0}
+                                            style={{ stopColor: lineColor, stopOpacity: 0 }}
                                         />
                                     </linearGradient>
                                 </defs>
@@ -2444,7 +2449,7 @@ function QuarterlyTrend({
                                 <path
                                     d={linePath}
                                     fill="none"
-                                    stroke={lineColor}
+                                    style={{ stroke: lineColor }}
                                     strokeWidth={2}
                                     strokeLinejoin="round"
                                     strokeLinecap="round"
@@ -2456,8 +2461,7 @@ function QuarterlyTrend({
                                             cx={hiPt.x}
                                             cy={hiPt.y}
                                             r={2.6}
-                                            fill={C.card}
-                                            stroke={lineColor}
+                                            style={{ fill: C.card, stroke: lineColor }}
                                             strokeWidth={1.4}
                                             vectorEffect="non-scaling-stroke"
                                         />
@@ -2465,8 +2469,7 @@ function QuarterlyTrend({
                                             cx={loPt.x}
                                             cy={loPt.y}
                                             r={2.6}
-                                            fill={C.card}
-                                            stroke={lineColor}
+                                            style={{ fill: C.card, stroke: lineColor }}
                                             strokeWidth={1.4}
                                             vectorEffect="non-scaling-stroke"
                                         />
@@ -2476,7 +2479,7 @@ function QuarterlyTrend({
                                             textAnchor="middle"
                                             fontSize={9}
                                             fontWeight={700}
-                                            fill={C.faint}
+                                            style={{ fill: C.faint }}
                                             fontFamily={FONT}
                                         >
                                             최고 {hiPt.v.toFixed(dec)}
@@ -2487,7 +2490,7 @@ function QuarterlyTrend({
                                             textAnchor="middle"
                                             fontSize={9}
                                             fontWeight={700}
-                                            fill={C.faint}
+                                            style={{ fill: C.faint }}
                                             fontFamily={FONT}
                                         >
                                             최저 {loPt.v.toFixed(dec)}
@@ -2498,8 +2501,7 @@ function QuarterlyTrend({
                                     cx={lastPt.x}
                                     cy={lastPt.y}
                                     r={3.4}
-                                    fill={lineColor}
-                                    stroke={C.card}
+                                    style={{ fill: lineColor, stroke: C.card }}
                                     strokeWidth={1.6}
                                     vectorEffect="non-scaling-stroke"
                                 />
@@ -2575,15 +2577,13 @@ function QuarterlyTrend({
  * 삼성전자 샘플 flash 대신 노출. 즉시 로드 깜빡임은 호출부 160ms 지연 게이트로 차단. */
 function StockReportSkeleton({
     C,
-    isDark,
     narrow,
 }: {
     C: any
-    isDark: boolean
     narrow: boolean
 }) {
-    const base = isDark ? "#222a33" : "#e9edf1"
-    const hi = isDark ? "#2d3742" : "#f3f5f7"
+    const base = C.skBase
+    const hi = C.skHi
     const sk = (
         w: number | string,
         h: number,
@@ -2787,7 +2787,7 @@ function FlowDivergingChart({
                     y1={MID}
                     x2={CW}
                     y2={MID}
-                    stroke={C.line}
+                    style={{ stroke: C.line }}
                     strokeWidth={1}
                     vectorEffect="non-scaling-stroke"
                 />
@@ -2811,11 +2811,11 @@ function FlowDivergingChart({
                                 width={barW}
                                 height={hh}
                                 rx={2}
-                                fill={col}
                                 opacity={hov && hov !== id ? 0.35 : 1}
                                 onMouseEnter={() => setHov(id)}
                                 onMouseLeave={() => setHov("")}
                                 style={{
+                                    fill: col,
                                     cursor: "pointer",
                                     transition: "opacity 0.12s",
                                 }}
@@ -2977,7 +2977,7 @@ function CashflowWaterfall({
                     y1={zeroY}
                     x2={CW}
                     y2={zeroY}
-                    stroke={C.line}
+                    style={{ stroke: C.line }}
                     strokeWidth={1}
                     vectorEffect="non-scaling-stroke"
                 />
@@ -2996,7 +2996,7 @@ function CashflowWaterfall({
                                     x2={x}
                                     y1={yAt(c.from)}
                                     y2={yAt(c.from)}
-                                    stroke={C.line}
+                                    style={{ stroke: C.line }}
                                     strokeWidth={1}
                                     strokeDasharray="2 2"
                                     vectorEffect="non-scaling-stroke"
@@ -3008,11 +3008,11 @@ function CashflowWaterfall({
                                 width={barW}
                                 height={h}
                                 rx={2}
-                                fill={col}
                                 opacity={hov >= 0 && hov !== c.i ? 0.35 : 1}
                                 onMouseEnter={() => setHov(c.i)}
                                 onMouseLeave={() => setHov(-1)}
                                 style={{
+                                    fill: col,
                                     cursor: "pointer",
                                     transition: "opacity 0.12s",
                                 }}
@@ -3149,26 +3149,6 @@ function PeerStrip({ pct, C }: { pct: number; C: any }) {
     )
 }
 
-function readBodyDark(): boolean {
-    // 🎨 html[data-an-theme](헤드 스크립트 pre-paint, 레이스 제거) → body[data-framer-theme] → verity_theme 순.
-    // 🚨 body-first 금지 — Framer 정적 export 가 새로고침에 body 를 light 로 두면 verity 이전에 단락 → 부분 라이트(2026-07-23). 되돌리지 말 것.
-    try {
-        if (typeof document !== "undefined") {
-            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-            if (h === "dark") return true
-            if (h === "light") return false
-            if (document.body) {
-                const a = document.body.dataset.framerTheme
-                if (a === "dark") return true
-                if (a === "light") return false
-            }
-        }
-        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (s === "dark") return true
-    } catch (e) {}
-    return false
-}
-
 export default function PublicStockReport(props: Props) {
     const {
         stockUrl,
@@ -3184,31 +3164,6 @@ export default function PublicStockReport(props: Props) {
         dark,
     } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() =>
-        onCanvas ? !!dark : readBodyDark()
-    )
-    const C = (
-        RenderTarget.current() === RenderTarget.canvas ? !!dark : themeDark
-    )
-        ? DARK
-        : LIGHT
-    useEffect(() => {
-        if (RenderTarget.current() === RenderTarget.canvas) return
-        const readTheme = () => setThemeDark(readBodyDark())
-        readTheme()
-        if (
-            typeof MutationObserver === "undefined" ||
-            typeof document === "undefined" ||
-            !document.body
-        )
-            return
-        const obs = new MutationObserver(readTheme)
-        obs.observe(document.body, {
-            attributes: true,
-            attributeFilter: ["data-framer-theme"],
-        })
-        return () => obs.disconnect()
-    }, [])
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
 
     const rootRef = useRef<HTMLDivElement>(null)
@@ -4299,10 +4254,10 @@ export default function PublicStockReport(props: Props) {
                 height="15"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke={C.faint}
                 strokeWidth="2.4"
                 strokeLinecap="round"
                 style={{
+                    stroke: C.faint,
                     position: "absolute",
                     left: 14,
                     top: "50%",
@@ -4594,10 +4549,10 @@ export default function PublicStockReport(props: Props) {
             ) || {}
         return (
             <div ref={rootRef} style={wrap}>
+                <style>{AN_PALETTE}</style>
                 {searchBox}
                 <EtfReportBlock
                     C={C}
-                    isDark={C === DARK}
                     narrow={narrow}
                     ticker={String(selTicker)}
                     name={String(uEnt.name || selTicker)}
@@ -4616,6 +4571,7 @@ export default function PublicStockReport(props: Props) {
             ) || {}
         return (
             <div ref={rootRef} style={wrap}>
+                <style>{AN_PALETTE}</style>
                 {searchBox}
                 <IndexReportBlock
                     C={C}
@@ -4630,10 +4586,10 @@ export default function PublicStockReport(props: Props) {
     if (showSkeleton) {
         return (
             <div ref={rootRef} style={wrap}>
+                <style>{AN_PALETTE}</style>
                 {skelVisible && (
                     <StockReportSkeleton
                         C={C}
-                        isDark={C === DARK}
                         narrow={narrow}
                     />
                 )}
@@ -4643,6 +4599,7 @@ export default function PublicStockReport(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             {searchBox}
 
             {/* 리포트 미보유 종목(검색 universe엔 있으나 정밀 리포트 없음) — graceful 안내. 시세·차트=옆 LiveChart·네이버. */}
@@ -4737,8 +4694,7 @@ export default function PublicStockReport(props: Props) {
                             width={18}
                             height={18}
                             viewBox="0 0 24 24"
-                            fill={starItemId ? "#f6b93b" : C.faint}
-                            stroke={starItemId ? "#f6b93b" : C.faint}
+                            style={{ fill: starItemId ? "#f6b93b" : C.faint, stroke: starItemId ? "#f6b93b" : C.faint }}
                             strokeWidth={2.6}
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -6318,7 +6274,6 @@ export default function PublicStockReport(props: Props) {
                             <QuarterlyTrend
                                 ticker={s.ticker}
                                 C={C}
-                                isDark={C === DARK}
                                 quarterlyUrl={
                                     isKRt ? QT_DEFAULT_URL : QT_US_URL
                                 }
@@ -7982,7 +7937,7 @@ export default function PublicStockReport(props: Props) {
                                     height={10}
                                     viewBox="0 0 12 12"
                                     fill="none"
-                                    stroke={C.faint}
+                                    style={{ stroke: C.faint }}
                                     strokeWidth={1.9}
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
