@@ -386,9 +386,16 @@ def fetch_all_metrics(cik: int) -> Dict[str, Any]:
             # RevenuesNetOfInterestExpense/Revenues 부재 은행(FITB 등) → NII+비이자 합산 파생으로 gap 채움
             derived = _derive_bank_revenue(facts, ccy)
             if derived:
-                have = {(r["end"], r["form"]) for r in rev}
-                rev = rev + [r for r in derived if (r["end"], r["form"]) not in have]
-                rev.sort(key=lambda x: x["end"])
+                rev_by = {(r["end"], r["form"]): r for r in rev}
+                for dr in derived:
+                    key = (dr["end"], dr["form"])
+                    ex = rev_by.get(key)
+                    # 파생(NII+비이자=총액)이 alias 값보다 1.5x+ 크면 alias 가 부분(계약/수수료수익만)이므로 교체.
+                    #   부재(gap)면 채움. 유사/작으면 정식 총액 태그(RevenuesNetOfInterestExpense 등) 유지.
+                    #   MTB: 2024 RevenueFromContract $1.54B(부분) → 파생 $9.28B(NII+비이자)로 교체(net_margin 172%→정상).
+                    if ex is None or (ex.get("val") and dr.get("val") and dr["val"] > ex["val"] * 1.5):
+                        rev_by[key] = dr
+                rev = sorted(rev_by.values(), key=lambda x: x["end"])
             out_metrics[k] = rev
         else:
             out_metrics[k] = extract_metric_series(facts, k, currency=ccy, prefer_total=pref_total)
