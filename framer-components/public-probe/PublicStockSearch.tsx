@@ -12,58 +12,39 @@ import { createPortal } from "react-dom"
 /**
  * 종목 검색창 (독립) — VERITY 공개 터미널. Framer 네이티브 nav 안에 끼워 쓰는 검색 전용.
  * Enter → 입력 텍스트를 유니버스에서 *종목코드*로 정규화 → /stock?q=<코드> 이동.
- *   (정규화 이유: 결정 페이지 컴포넌트는 ticker 정확매칭만 함. 종목명 ?q 는 빈 화면이 됨.)
- *   코드/이름 매칭 실패 시에만 raw 텍스트 fallback(리포트가 자체 이름매칭 시도).
  * 🚨 포커스(빈 검색어) = 최근 본 종목(localStorage) + "지금 거래 활발"(네이버 거래대금 상위 link-out).
- *   시세 재배포 컴플라이언스(2026-07-02): trending_kr(KRX raw) 자체 발행 중단 → 네이버가 서빙(재배포 아님).
- *   RULE 7 / held-2027 / 법률: "인기·추천"이 아니라 사실(거래대금). "이런 종목 어때요" 류 추천 어조 금지.
- * 종목 공유 = ?q + localStorage `verity_last_ticker`/`verity_recent_tickers` 기록. nav 자체는 Framer 네이티브.
- * 검색 universe = universe_search.json (통합 KR+US ~8.4천, 2026-06-27 검색 4종 단일 소스 통일 — 괴리 제거). US 별도 dual-load 폐기(통합 파일에 포함).
- * 테마: Framer 네이티브 추종 — body[data-framer-theme] 읽어 dark 전환(캔버스는 dark prop 정적 프리뷰).
+ * 검색 universe = universe_search.json (통합 KR+US ~8.4천). 드롭다운 = document.body 포털(nav overflow 클리핑 탈출).
+ *
+ * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-pss-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} = body{} 스코프라 포털 드롭다운(body 자식)도 함께 상속. SVG 화살표는 이미 style stroke(var). 되돌리지 말 것.
  */
 
 const LIGHT = {
-    ink: "#191f28",
-    sub: "#4e5968",
-    faint: "#8b95a1",
-    vg: "#0ca678",
-    vt: "#6c5ce7",
-    vtS: "#f0edff",
-    field: "#f2f4f6",
-    card: "#ffffff",
-    bg: "#f2f4f6",
-    line: "#f0f1f3",
-    up: "#f04452",
-    down: "#3182f6",
+    ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", vg: "#0ca678", vt: "#6c5ce7", vtS: "#f0edff",
+    field: "#f2f4f6", card: "#ffffff", bg: "#f2f4f6", line: "#f0f1f3", up: "#f04452", down: "#3182f6",
 }
 const DARK = {
-    ink: "#e3e7ec",
-    sub: "#9aa4b1",
-    faint: "#828d9b",
-    vg: "#7fffa0",
-    vt: "#a99bff",
-    vtS: "#241f3a",
-    field: "#0f1318",
-    card: "#171c23",
-    bg: "#0f1318",
-    line: "#222730",
-    up: "#f04452",
-    down: "#5b9bff",
+    ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", vg: "#7fffa0", vt: "#a99bff", vtS: "#241f3a",
+    field: "#0f1318", card: "#171c23", bg: "#0f1318", line: "#222730", up: "#f04452", down: "#5b9bff",
 }
-const FONT =
-    "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const DEF_STOCK =
-    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
-// 🚨 시세 재배포 컴플라이언스(2026-07-02): trending_kr(KRX 거래대금·등락·종가 raw) 자체 발행 중단.
-//   "지금 거래 활발" = 네이버 거래대금 상위 페이지로 link-out(네이버가 서빙 = 재배포 아님, 실시간·무료·합법).
+const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+const DEF_STOCK = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
+// 🚨 시세 재배포 컴플라이언스(2026-07-02): trending_kr(KRX raw) 자체 발행 중단. "지금 거래 활발" = 네이버 link-out.
 const NAVER_QUANT = "https://finance.naver.com/sise/sise_quant.naver"
 const M_NAVER_QUANT = "https://m.stock.naver.com/sise/trade"
 const LAST_TK_KEY = "verity_last_ticker"
 const RECENTS_KEY = "verity_recent_tickers"
 const RECENTS_CAP = 8
 
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-pss-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "pss"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
+
 // 🚨 익명 로컬 스크래치 세션 초기화 (2026-07-13) — 공개 페이지 로그인 없이 접근 → 공유기기 익명 누출 차단.
-//   새 브라우저 세션(새 방문)마다 1회. 유효 로그인 세션 있으면 skip(회원 보존, 서버 저장), 없으면 clear(익명).
 function sessionResetScratch() {
     if (typeof window === "undefined") return
     try {
@@ -71,36 +52,22 @@ function sessionResetScratch() {
         sessionStorage.setItem("verity_session_init", "1")
         let member = false
         try {
-            const s = JSON.parse(
-                localStorage.getItem("verity_supabase_session") || "null"
-            )
-            member = !!(
-                s &&
-                s.access_token &&
-                (!s.expires_at || Date.now() / 1000 < s.expires_at)
-            )
+            const s = JSON.parse(localStorage.getItem("verity_supabase_session") || "null")
+            member = !!(s && s.access_token && (!s.expires_at || Date.now() / 1000 < s.expires_at))
         } catch (e) {}
         if (member) return
-        for (const k of [
-            "verity_watchlist",
-            "verity_last_ticker",
-            "verity_recent_tickers",
-            "verity_thesis_v1",
-            "verity_thesis_migrated_v1",
-        ])
+        for (const k of ["verity_watchlist", "verity_last_ticker", "verity_recent_tickers", "verity_thesis_v1", "verity_thesis_migrated_v1"])
             localStorage.removeItem(k)
     } catch (e) {}
 }
-/* 로고 — 토스 종목 CDN(404/차단 시 이니셜 폴백) + circle-flags 원형 국기. ticker 형식으로 국장/미장 판별. */
 
-// ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
-const BF_CID = "1idalDez9T7KlggM8qX" // 공개 임베드 client id (Logo Link 전용)
-const BF_MAP_URL =
-    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
+// ── Brandfetch 로고 — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
+const BF_CID = "1idalDez9T7KlggM8qX"
+const BF_MAP_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json"
 let __bfMap: Record<string, string> | null = null
 let __bfColors: Record<string, string> = {}
 let __bfShapes: Record<string, number> = {}
-let __bfStyle: any = { padS: 8, padW: 15, wideRatio: 2.2 } // 발행 데이터(style)로 조절 — 코드 수정 불요
+let __bfStyle: any = { padS: 8, padW: 15, wideRatio: 2.2 }
 let __bfP: Promise<Record<string, string>> | null = null
 function fetchBfMap(): Promise<Record<string, string>> {
     if (__bfMap) return Promise.resolve(__bfMap)
@@ -130,91 +97,17 @@ function useBfLogoMap(): Record<string, string> | null {
     }, [])
     return m
 }
-function bfLogoPad(ticker: any): string {
-    // 모양 적응 패딩 — 심볼(정사각)은 크게, 워드마크(가로 김)는 여백 확보 (토스식 가시성)
-    const tk = String(ticker || "")
-        .toUpperCase()
-        .replace(/-/g, ".")
-    const r = __bfShapes[tk] || __bfShapes[tk.replace(/\./g, "-")] || 1
-    if (r === 0) return "0%" // 큐레이션 풀블리드 아이콘(자체 배경 포함) = 타일 꽉 채움
-    return (
-        (r > (__bfStyle.wideRatio || 2.2)
-            ? __bfStyle.padW || 15
-            : __bfStyle.padS || 8) + "%"
-    )
-}
 function bfInitialBg(ticker: any): string {
-    // 이니셜 타일 — 티커 해시 투톤 그라데이션 (미보유 4.6K 도 디자인 자산화, 종목별 고정색)
     let h = 0
     const s = String(ticker || "?")
     for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360
-    return (
-        "linear-gradient(135deg, hsl(" +
-        h +
-        ",62%,55%), hsl(" +
-        ((h + 42) % 360) +
-        ",68%,42%))"
-    )
+    return "linear-gradient(135deg, hsl(" + h + ",62%,55%), hsl(" + ((h + 42) % 360) + ",68%,42%))"
 }
-function bfLogoBg(ticker: any): string {
-    // 아이덴티티 색 틴트 타일 (토스식 참조 — 색은 로고 대표색/공식 브랜드색, 자산 복사 아님)
-    const tk = String(ticker || "")
-        .toUpperCase()
-        .replace(/-/g, ".")
-    const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
-    // 토스식 넉아웃 (기본): 브랜드색 솔리드 배경 + 로고 흰 실루엣(bfLogoFilter). 조건 미충족 = 솔리드 파스텔.
-    // style.mode 노브: "knockout"(기본) | "pastel". mixPct = 파스텔 혼합비(기본 30).
-    const p2 =
-        (__bfMap && (__bfMap[tk] || __bfMap[tk.replace(/\./g, "-")])) || ""
-    if (
-        c &&
-        p2 &&
-        p2.indexOf("http") !== 0 &&
-        (__bfStyle.mode || "pastel") === "knockout"
-    )
-        return c // 솔리드 브랜드색
-    if (!c) return "#ffffff"
-    const mix = Number(__bfStyle.mixPct || 30)
-    try {
-        if (
-            typeof CSS !== "undefined" &&
-            CSS.supports &&
-            CSS.supports("color", "color-mix(in srgb, red 50%, white)")
-        )
-            return `color-mix(in srgb, ${c} ${mix}%, #ffffff)`
-    } catch (e2) {}
-    return c + (__bfStyle.tintA || "4D")
-}
-function bfLogoFilter(ticker: any): string {
-    // 넉아웃 조건과 동일할 때만 흰 실루엣 (Brandfetch 투명 로고 한정 — 파비콘류는 불투명이라 제외)
-    const tk = String(ticker || "")
-        .toUpperCase()
-        .replace(/-/g, ".")
-    const c = __bfColors[tk] || __bfColors[tk.replace(/\./g, "-")]
-    const p2 =
-        (__bfMap && (__bfMap[tk] || __bfMap[tk.replace(/\./g, "-")])) || ""
-    return c &&
-        p2 &&
-        p2.indexOf("http") !== 0 &&
-        (__bfStyle.mode || "pastel") === "knockout"
-        ? "brightness(0) invert(1)"
-        : "none"
-}
-function bfLogoSrc(
-    ticker: any,
-    lm: Record<string, string> | null,
-    size: number
-): string {
-    const tk = String(ticker || "")
-        .toUpperCase()
-        .replace(/-/g, ".")
+function bfLogoSrc(ticker: any, lm: Record<string, string> | null, size: number): string {
+    const tk = String(ticker || "").toUpperCase().replace(/-/g, ".")
     if (!tk) return ""
     // 로고 = 토스 종목 CDN (PM 결정: 완전 공개[런칭] 전까지 토스 사용, 2026-07-12). 404/차단 시 onError → 이니셜 폴백.
-    return (
-        "https://static.toss.im/png-icons/securities/icn-sec-fill-" +
-        tk +
-        ".png"
-    )
+    return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
 }
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 function flagFromTicker(ticker: any): string {
@@ -226,22 +119,11 @@ function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
     const [err, setErr] = useState(false)
     const lm = useBfLogoMap()
     const bfSrc = bfLogoSrc(ticker, lm, size)
-    const ch =
-        String(name || "?")
-            .trim()
-            .charAt(0) || "?"
+    const ch = String(name || "?").trim().charAt(0) || "?"
     const code = flagFromTicker(ticker)
     const fsize = Math.round(size * 0.46)
     return (
-        <span
-            style={{
-                position: "relative",
-                width: size,
-                height: size,
-                flexShrink: 0,
-                display: "inline-block",
-            }}
-        >
+        <span style={{ position: "relative", width: size, height: size, flexShrink: 0, display: "inline-block" }}>
             {!err && bfSrc ? (
                 <img
                     src={bfSrc}
@@ -251,30 +133,10 @@ function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
                     width={size}
                     height={size}
                     onError={() => setErr(true)}
-                    style={{
-                        width: size,
-                        height: size,
-                        borderRadius: Math.round(size * 0.32),
-                        objectFit: "cover",
-                        display: "block",
-                        background: "transparent",
-                    }}
+                    style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), objectFit: "cover", display: "block", background: "transparent" }}
                 />
             ) : (
-                <span
-                    style={{
-                        width: size,
-                        height: size,
-                        borderRadius: Math.round(size * 0.32),
-                        background: bfInitialBg(ticker),
-                        color: "#ffffff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: Math.round(size * 0.42),
-                        fontWeight: 800,
-                    }}
-                >
+                <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), background: bfInitialBg(ticker), color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 800 }}>
                     {ch}
                 </span>
             )}
@@ -285,18 +147,7 @@ function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
                 decoding="async"
                 width={fsize}
                 height={fsize}
-                style={{
-                    position: "absolute",
-                    right: -3,
-                    bottom: -3,
-                    width: fsize,
-                    height: fsize,
-                    borderRadius: "50%",
-                    border: `1.5px solid ${C.card}`,
-                    background: C.card,
-                    display: "block",
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.18)",
-                }}
+                style={{ position: "absolute", right: -3, bottom: -3, width: fsize, height: fsize, borderRadius: "50%", border: `1.5px solid ${C.card}`, background: C.card, display: "block", boxShadow: "0 1px 2px rgba(0,0,0,0.18)" }}
             />
         </span>
     )
@@ -324,52 +175,10 @@ interface Props {
     dark: boolean
 }
 
-function readBodyDark(): boolean {
-    // 기본 = 라이트(사이트 첫 시작 라이트 결정, 2026-07-19). 명시적 'dark' 신호가 있을 때만 다크.
-    //   판독 순서 = html[data-an-theme](Custom Code 헤드 스크립트가 페인트 전 동기 세팅, 레이스 제거)
-    //   → body[data-framer-theme](토글) → localStorage. OS 설정은 안 봄(로드마다 뒤집힘 방지).
-    try {
-        if (typeof document !== "undefined") {
-            const h = document.documentElement
-                ? document.documentElement.dataset.anTheme
-                : null
-            if (h === "dark") return true
-            if (h === "light") return false
-            if (document.body) {
-                const a = document.body.dataset.framerTheme
-                if (a === "dark") return true
-                if (a === "light") return false
-            }
-        }
-        const s =
-            typeof localStorage !== "undefined"
-                ? localStorage.getItem("verity_theme")
-                : null
-        if (s === "dark") return true
-    } catch (e) {}
-    return false
-}
-
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement
-        ? document.documentElement.dataset.anTheme
-        : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 export default function PublicStockSearch(props: Props) {
     const { placeholder, stockPath, stockUrl, usStockUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -379,32 +188,6 @@ export default function PublicStockSearch(props: Props) {
         if (!onCanvas) sessionResetScratch()
     }, [onCanvas])
 
-    /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
-    const [themeDark, setThemeDark] = useState<boolean>(() =>
-        RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()
-    )
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (
-            typeof MutationObserver === "undefined" ||
-            typeof document === "undefined" ||
-            !document.body
-        )
-            return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, {
-            attributes: true,
-            attributeFilter: ["data-framer-theme"],
-        })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    // 색 = self-contained 하드코딩(DARK/LIGHT) — Custom Code 변수 의존 제거(2026-07-19 검색창 복구).
-    //   readBodyDark 가 html[data-an-theme](페인트 전 세팅)를 1순위로 판독 = 첫 페인트부터 정합.
-    const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
-
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [q, setQ] = useState("")
@@ -412,14 +195,9 @@ export default function PublicStockSearch(props: Props) {
     const [focused, setFocused] = useState(false)
     const [recents, setRecents] = useState<any[]>([])
     // 드롭다운 앵커 — nav 박스 overflow 클리핑 탈출용 fixed 좌표(입력창 rect 기준). null=미측정.
-    const [anchor, setAnchor] = useState<{
-        top: number
-        left: number
-        width: number
-    } | null>(null)
+    const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null)
 
-    // 폭 측정 = 첫 페인트 전 동기(useLayoutEffect) — w:0→실측 사이 narrow 플립(패딩·폰트 움찔) 제거.
-    // 페이지 이동마다 마운트 시 검색창 크기가 움찔하던 원인 (2026-07-20).
+    // 폭 측정 = 첫 페인트 전 동기(useLayoutEffect).
     useLayoutEffect(() => {
         const el = rootRef.current
         if (!el) return
@@ -432,7 +210,7 @@ export default function PublicStockSearch(props: Props) {
         return () => ro.disconnect()
     }, [])
 
-    /* 유니버스 로드 — 통합 universe_search.json(KR+US 단일). usStockUrl=레거시(통합 파일에 US 포함, 미사용). */
+    /* 유니버스 로드 — 통합 universe_search.json(KR+US 단일). */
     useEffect(() => {
         if (onCanvas) return
         let alive = true
@@ -463,19 +241,11 @@ export default function PublicStockSearch(props: Props) {
         if (!s || !universe.length) return s
         const lower = s.toLowerCase()
         let hit = universe.find(
-            (x) =>
-                String(x.ticker).toLowerCase() === lower ||
-                String(x.name || "").toLowerCase() === lower ||
-                String((x as any).name_ko || "") === s
+            (x) => String(x.ticker).toLowerCase() === lower || String(x.name || "").toLowerCase() === lower || String((x as any).name_ko || "") === s
         )
         if (!hit)
             hit = universe.find(
-                (x) =>
-                    String(x.ticker).toLowerCase().includes(lower) ||
-                    String(x.name || "")
-                        .toLowerCase()
-                        .includes(lower) ||
-                    String((x as any).name_ko || "").includes(s)
+                (x) => String(x.ticker).toLowerCase().includes(lower) || String(x.name || "").toLowerCase().includes(lower) || String((x as any).name_ko || "").includes(s)
             )
         return hit ? String(hit.ticker) : s
     }
@@ -488,44 +258,22 @@ export default function PublicStockSearch(props: Props) {
             const t = String(x.ticker || "").toLowerCase(),
                 n = String(x.name || "").toLowerCase(),
                 k = String(x.name_ko || "").toLowerCase()
-            return t === s
-                ? 0
-                : n === s || k === s
-                  ? 1
-                  : t.indexOf(s) === 0
-                    ? 2
-                    : n.indexOf(s) === 0 || (k && k.indexOf(s) === 0)
-                      ? 3
-                      : 4
+            return t === s ? 0 : n === s || k === s ? 1 : t.indexOf(s) === 0 ? 2 : n.indexOf(s) === 0 || (k && k.indexOf(s) === 0) ? 3 : 4
         }
         return universe
-            .filter(
-                (x) =>
-                    String(x.ticker).toLowerCase().includes(s) ||
-                    String(x.name || "")
-                        .toLowerCase()
-                        .includes(s) ||
-                    String((x as any).name_ko || "").includes(q.trim())
-            )
+            .filter((x) => String(x.ticker).toLowerCase().includes(s) || String(x.name || "").toLowerCase().includes(s) || String((x as any).name_ko || "").includes(q.trim()))
             .sort((a: any, b: any) => rk(a) - rk(b))
             .slice(0, 12)
     }, [q, universe])
 
     const pick = (tk: string, nm?: string) => {
         if (!tk || typeof window === "undefined") return
-        const name =
-            nm ||
-            (universe.find((x) => String(x.ticker) === String(tk)) || {})
-                .name ||
-            tk
+        const name = nm || (universe.find((x) => String(x.ticker) === String(tk)) || {}).name || tk
         try {
             window.localStorage.setItem(LAST_TK_KEY, tk)
             const cur = readRecents().filter((x) => String(x.t) !== String(tk))
             cur.unshift({ t: tk, n: name })
-            window.localStorage.setItem(
-                RECENTS_KEY,
-                JSON.stringify(cur.slice(0, RECENTS_CAP))
-            )
+            window.localStorage.setItem(RECENTS_KEY, JSON.stringify(cur.slice(0, RECENTS_CAP)))
         } catch {
             /* private/quota */
         }
@@ -567,127 +315,43 @@ export default function PublicStockSearch(props: Props) {
 
     const narrow = w > 0 && w < 200
     const showQuery = !!q.trim()
-    // anchor 필요 (fixed 좌표). onFocus 가 measure() 동기 호출 → 첫 포커스에도 anchor 존재.
     const showSuggest = !onCanvas && focused && !!anchor && !showQuery
-    const showMatches =
-        !onCanvas && focused && !!anchor && showQuery && matches.length > 0
+    const showMatches = !onCanvas && focused && !!anchor && showQuery && matches.length > 0
 
     const wrap: CSSProperties = {
-        width: "100%",
-        height: "100%",
-        boxSizing: "border-box",
-        display: "flex",
-        alignItems: "center",
-        gap: 7,
-        background: C.field,
-        borderRadius: 999,
-        padding: narrow ? "8px 12px" : "9px 14px",
-        fontFamily: FONT,
+        width: "100%", height: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 7,
+        background: C.field, borderRadius: 999, padding: narrow ? "8px 12px" : "9px 14px", fontFamily: FONT,
     }
     // fixed + 입력창 rect 좌표 → nav 박스 overflow 에 안 잘림. zIndex 큰 값(nav 위).
     const panel: CSSProperties = {
-        position: "fixed",
-        top: anchor ? anchor.top : 0,
-        left: anchor ? anchor.left : 0,
-        width: anchor ? anchor.width : "auto",
-        zIndex: 2147483000,
-        background: C.card,
-        borderRadius: 12,
-        boxShadow: "0 10px 30px rgba(0,0,0,0.16)",
-        padding: 6,
-        maxHeight: 360,
-        overflowY: "auto",
-        minWidth: 240,
+        position: "fixed", top: anchor ? anchor.top : 0, left: anchor ? anchor.left : 0, width: anchor ? anchor.width : "auto",
+        zIndex: 2147483000, background: C.card, borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.16)",
+        padding: 6, maxHeight: 360, overflowY: "auto", minWidth: 240,
     }
     const secLabel = (t: string, hint?: string) => (
-        <div
-            style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 6,
-                padding: "8px 10px 4px",
-            }}
-        >
-            <span style={{ fontSize: 11, fontWeight: 800, color: C.faint }}>
-                {t}
-            </span>
-            {hint && (
-                <span
-                    style={{
-                        fontSize: 10,
-                        fontWeight: 500,
-                        color: C.faint,
-                        opacity: 0.8,
-                    }}
-                >
-                    {hint}
-                </span>
-            )}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, padding: "8px 10px 4px" }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: C.faint }}>{t}</span>
+            {hint && <span style={{ fontSize: 10, fontWeight: 500, color: C.faint, opacity: 0.8 }}>{hint}</span>}
         </div>
     )
     const itemRow = (key: any, tk: any, nm: any, right: any) => (
         <div
             key={key}
             onMouseDown={() => pick(String(tk), String(nm))}
-            style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 10px",
-                borderRadius: 9,
-                cursor: "pointer",
-            }}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, cursor: "pointer" }}
         >
             <Logo ticker={tk} name={nm} C={C} size={28} />
-            <span
-                style={{
-                    fontSize: 13.5,
-                    fontWeight: 700,
-                    color: C.ink,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                }}
-            >
-                {nm}
-            </span>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nm}</span>
             <span style={{ marginLeft: "auto", flexShrink: 0 }}>{right}</span>
         </div>
     )
 
     return (
-        <div
-            ref={rootRef}
-            style={{
-                position: "relative",
-                width: "100%",
-                height: "100%",
-                fontFamily: FONT,
-            }}
-        >
+        <div ref={rootRef} style={{ position: "relative", width: "100%", height: "100%", fontFamily: FONT }}>
+            <style>{AN_PALETTE}</style>
             <div style={wrap}>
-                <span
-                    style={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: "50%",
-                        border: `2px solid ${C.faint}`,
-                        flexShrink: 0,
-                        display: "inline-block",
-                        position: "relative",
-                    }}
-                >
-                    <span
-                        style={{
-                            position: "absolute",
-                            width: 2,
-                            height: 6,
-                            background: C.faint,
-                            right: -3,
-                            bottom: -3,
-                            transform: "rotate(-45deg)",
-                        }}
-                    />
+                <span style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid ${C.faint}`, flexShrink: 0, display: "inline-block", position: "relative" }}>
+                    <span style={{ position: "absolute", width: 2, height: 6, background: C.faint, right: -3, bottom: -3, transform: "rotate(-45deg)" }} />
                 </span>
                 <input
                     value={q}
@@ -701,23 +365,11 @@ export default function PublicStockSearch(props: Props) {
                     onFocus={onFocus}
                     onBlur={() => setTimeout(() => setFocused(false), 160)}
                     placeholder={placeholder || "종목 검색"}
-                    style={{
-                        border: "none",
-                        outline: "none",
-                        background: "transparent",
-                        color: C.ink,
-                        fontFamily: FONT,
-                        fontSize: narrow ? 13 : 14,
-                        fontWeight: 600,
-                        width: "100%",
-                        minWidth: 0,
-                    }}
+                    style={{ border: "none", outline: "none", background: "transparent", color: C.ink, fontFamily: FONT, fontSize: narrow ? 13 : 14, fontWeight: 600, width: "100%", minWidth: 0 }}
                 />
             </div>
 
-            {/* 드롭다운 = document.body 포털. nav 박스의 overflow:hidden / transform 클리핑을
-                탈출(fixed 좌표는 anchor=입력창 rect). 리포트 페이지는 풀페이지라 안 잘렸고,
-                nav 검색은 잘려 안 보이던 문제 해소. onMouseDown pick 은 포털에서도 React 트리로 동작. */}
+            {/* 드롭다운 = document.body 포털(nav overflow 클리핑 탈출). AN_PALETTE 는 body{} 스코프라 포털도 상속. */}
             {typeof document !== "undefined" &&
                 showMatches &&
                 createPortal(
@@ -727,13 +379,7 @@ export default function PublicStockSearch(props: Props) {
                                 m.ticker,
                                 m.ticker,
                                 m.name,
-                                <span
-                                    style={{
-                                        fontSize: 11.5,
-                                        color: C.faint,
-                                        fontWeight: 600,
-                                    }}
-                                >
+                                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>
                                     {m.name_ko ? m.name_ko + " · " : ""}
                                     {m.ticker}
                                     {m.market ? " · " + m.market : ""}
@@ -751,113 +397,31 @@ export default function PublicStockSearch(props: Props) {
                         {recents.length > 0 && (
                             <>
                                 {secLabel("최근 본 종목")}
-                                {recents
-                                    .slice(0, 6)
-                                    .map((r) =>
-                                        itemRow(
-                                            "r:" + r.t,
-                                            r.t,
-                                            r.n,
-                                            <span
-                                                style={{
-                                                    fontSize: 11.5,
-                                                    color: C.faint,
-                                                    fontWeight: 600,
-                                                }}
-                                            >
-                                                {r.t}
-                                            </span>
-                                        )
-                                    )}
+                                {recents.slice(0, 6).map((r) =>
+                                    itemRow("r:" + r.t, r.t, r.n, <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>{r.t}</span>)
+                                )}
                             </>
                         )}
                         {secLabel("지금 거래 활발", "거래대금 상위 · 네이버")}
-                        {/* 화살표 = SVG (텍스트 "↗" 는 iOS 에서 이모지 렌더 → 어색. PC 텍스트 글리프와 동일 룩 통일) · 좁은 화면 줄바꿈 방지 */}
+                        {/* 화살표 = SVG (텍스트 "↗" 는 iOS 이모지 렌더 어색). 좁은 화면 줄바꿈 방지 */}
                         <div
                             onMouseDown={() => {
-                                if (typeof window !== "undefined")
-                                    window.open(
-                                        isMobileWidth()
-                                            ? M_NAVER_QUANT
-                                            : NAVER_QUANT,
-                                        "_blank",
-                                        "noopener"
-                                    )
+                                if (typeof window !== "undefined") window.open(isMobileWidth() ? M_NAVER_QUANT : NAVER_QUANT, "_blank", "noopener")
                             }}
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                padding: "9px 10px",
-                                borderRadius: 9,
-                                cursor: "pointer",
-                            }}
+                            style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 9, cursor: "pointer" }}
                         >
-                            <span
-                                style={{
-                                    width: 22,
-                                    height: 22,
-                                    borderRadius: 7,
-                                    background: C.vtS,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    flexShrink: 0,
-                                }}
-                            >
-                                <svg
-                                    width={11}
-                                    height={11}
-                                    viewBox="0 0 12 12"
-                                    fill="none"
-                                    strokeWidth={1.8}
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    aria-hidden="true"
-                                    style={{ stroke: C.vt }}
-                                >
+                            <span style={{ width: 22, height: 22, borderRadius: 7, background: C.vtS, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                <svg width={11} height={11} viewBox="0 0 12 12" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ stroke: C.vt }}>
                                     <line x1="2.5" y1="9.5" x2="9" y2="3" />
                                     <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
                                 </svg>
                             </span>
-                            <span
-                                style={{
-                                    flex: 1,
-                                    minWidth: 0,
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    color: C.ink,
-                                    whiteSpace: "nowrap",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                }}
-                            >
+                            <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                 실시간 거래대금 상위
                             </span>
-                            <span
-                                style={{
-                                    flexShrink: 0,
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 3,
-                                    fontSize: 11.5,
-                                    fontWeight: 700,
-                                    color: C.faint,
-                                    whiteSpace: "nowrap",
-                                }}
-                            >
+                            <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11.5, fontWeight: 700, color: C.faint, whiteSpace: "nowrap" }}>
                                 네이버 금융
-                                <svg
-                                    width={9}
-                                    height={9}
-                                    viewBox="0 0 12 12"
-                                    fill="none"
-                                    strokeWidth={1.8}
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    aria-hidden="true"
-                                    style={{ stroke: C.faint }}
-                                >
+                                <svg width={9} height={9} viewBox="0 0 12 12" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ stroke: C.faint }}>
                                     <line x1="2.5" y1="9.5" x2="9" y2="3" />
                                     <polyline points="4.2,2.8 9.2,2.8 9.2,7.8" />
                                 </svg>
@@ -871,32 +435,9 @@ export default function PublicStockSearch(props: Props) {
 }
 
 addPropertyControls(PublicStockSearch, {
-    placeholder: {
-        type: ControlType.String,
-        title: "Placeholder",
-        defaultValue: "종목 검색 (이름·코드)",
-    },
-    stockPath: {
-        type: ControlType.String,
-        title: "Stock Path",
-        defaultValue: "/stock",
-    },
-    stockUrl: {
-        type: ControlType.String,
-        title: "Stock URL",
-        defaultValue: DEF_STOCK,
-    },
-    usStockUrl: {
-        type: ControlType.String,
-        title: "US Stock URL",
-        defaultValue:
-            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json",
-    },
-    dark: {
-        type: ControlType.Boolean,
-        title: "Dark",
-        defaultValue: false,
-        enabledTitle: "On",
-        disabledTitle: "Off",
-    },
+    placeholder: { type: ControlType.String, title: "Placeholder", defaultValue: "종목 검색 (이름·코드)" },
+    stockPath: { type: ControlType.String, title: "Stock Path", defaultValue: "/stock" },
+    stockUrl: { type: ControlType.String, title: "Stock URL", defaultValue: DEF_STOCK },
+    usStockUrl: { type: ControlType.String, title: "US Stock URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json" },
+    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
