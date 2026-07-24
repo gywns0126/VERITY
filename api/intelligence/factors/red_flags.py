@@ -155,15 +155,12 @@ def _detect_red_flags(
         elif us_fcf is not None and us_fcf < 0:
             downgrade_d.append(_make_flag(f"FCF ${us_fcf/1e6:,.0f}M (음수)"))
 
-        # 2026-07-24 suspend: US_INSIDER_MSPR_PENALTY=-5.0 이 MSPR 실 스케일과 불일치. Finnhub MSPR 은
-        # 연속 sentiment 점수(실측 범위 ±450, mean +13)라 -5 임계가 근중립값(예 Adobe -5.21)까지 잡아
-        # US 절반(15/30)을 '대량 매도' 오감점 = 무변별 노이즈. 정본 "유의미 매도" 임계는 문헌 없음(연속점수).
-        # 미이해 메트릭에 감점 금지(fail-closed) → 임계 grounding(메트릭 정본 스케일/분포) 전까지 downgrade 보류.
-        # 재활성 = MSPR 스케일 확정 후 robust 임계(분포 기반). us_flow.py mspr>5 신호도 동일 재검토 큐.
+        # 2026-07-24 재활성: MSPR grounding 완료(Perplexity 실호출 — Finnhub MSPR 정본 = -100~100 정규화).
+        # collector 평균화 fix(finnhub_client, 합산→평균)로 스케일 정규화 + 임계 US_INSIDER_MSPR_PENALTY
+        # -5.0→-40.0(정본 스케일서 명확한 순매도). 옛 suspend(#155, 미이해 스케일 노이즈) 해제. 실측 6/30 발화.
         insider = stock.get("insider_sentiment") or {}
         mspr = insider.get("mspr", 0)
-        _MSPR_DOWNGRADE_SUSPENDED = True  # 위 사유 — grounding 전 감점 보류
-        if not _MSPR_DOWNGRADE_SUSPENDED and mspr < US_INSIDER_MSPR_PENALTY:
+        if mspr < US_INSIDER_MSPR_PENALTY:
             downgrade_d.append(_make_flag(f"내부자 MSPR {mspr:.2f} (대량 매도)"))
 
         opts = stock.get("options_flow") or {}

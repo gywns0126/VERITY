@@ -435,7 +435,9 @@ NEWSAPI_MAX_ARTICLES = _env_int("NEWSAPI_MAX_ARTICLES", 20)
 # US_SHORT_SQUEEZE_THRESHOLD = _env_float("US_SHORT_SQUEEZE_THRESHOLD", 20.0)  # dead
 US_IV_PERCENTILE_WARN = _env_float("US_IV_PERCENTILE_WARN", 80.0)
 US_PUT_CALL_BEARISH = _env_float("US_PUT_CALL_BEARISH", 1.5)
-US_INSIDER_MSPR_PENALTY = _env_float("US_INSIDER_MSPR_PENALTY", -5.0)
+# 2026-07-24: MSPR = -100~100 정규화(finnhub_client 평균화). '유의미 순매도' 임계 -5.0→-40.0
+# (정본 스케일서 명확한 매도, 실측 6/30=20% 발화). Finnhub 문서 canonical range -100~100 정합.
+US_INSIDER_MSPR_PENALTY = _env_float("US_INSIDER_MSPR_PENALTY", -40.0)
 
 # Claude 심층 분석: Brain STRONG_BUY/BUY 상위 N개만 Claude에게 전송
 CLAUDE_TOP_N = _env_int("CLAUDE_TOP_N", 3)
