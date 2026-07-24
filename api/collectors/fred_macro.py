@@ -228,6 +228,20 @@ def get_fred_macro_block() -> Dict[str, Any]:
             **dgs_trend,
         }
 
+    # 2년물 — us_2y 를 ^IRX(=3개월물 오라벨) 대신 FRED DGS2 로 정정 + yield_spread(2s10s) 정합화.
+    dgs2 = _fetch_series("DGS2", 260)
+    if len(dgs2) >= 1:
+        latest_d2, latest_v2 = dgs2[0]
+        ch5_2: Optional[float] = None
+        if len(dgs2) >= 6:
+            ch5_2 = round(latest_v2 - dgs2[5][1], 4)
+        out["dgs2"] = {
+            "value": round(latest_v2, 3),
+            "date": latest_d2,
+            "change_5d_pp": ch5_2,
+            **_compute_series_trend(dgs2),
+        }
+
     cpi = _fetch_series("CPILFESL", 16)
     if len(cpi) >= 13:
         cur_d, cur_v = cpi[0]
