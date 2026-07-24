@@ -49,6 +49,31 @@ def _int(v) -> int:
         return 0
 
 
+def _rate(v):
+    """소유비율(%) 파싱 — '-'/공백 → None."""
+    try:
+        return float(str(v).replace(",", "").strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _is_corporate_action(it: Dict[str, Any], chg: int, shares_after: int) -> bool:
+    """비매매(감자·주식병합·무상증자·액면분할·주요주주 전량 재기재) 판정.
+
+    신호 = 유의미 지분(소유비율 ≥1%) 보유자인데 '소유비율 증감'이 0.00% 인데도 대량 수량 증감.
+    비례 자본변동은 소유비율이 안 변함(감자 후에도 89.14%). 실제 매매면 비율이 반드시 변함.
+    → 대형주 임원 소액매매(소유비율≈0%)·첫취득은 오분류 안 됨(rate_after<1 이라 제외). 실측 검증:
+       국일제지 삼라마이다스 -904.5M주(감자, rate_after 89.14%·irds 0.00%)만 잡고 KB/신한/삼성 실매매 전량 보존.
+    """
+    rate_after = _rate(it.get("sp_stock_lmp_rate"))       # 소유비율 (변동 후, %)
+    irds_rate = _rate(it.get("sp_stock_lmp_irds_rate"))   # 소유비율 증감 (%)
+    return (
+        rate_after is not None and rate_after >= 1.0
+        and irds_rate is not None and abs(irds_rate) < 0.005
+        and shares_after and abs(chg) >= shares_after * 0.5
+    )
+
+
 def _rec_kr_set() -> set:
     """우선풀 — recommendations.json KR 6자리(항상 수집해 featured 신선 유지)."""
     try:
@@ -184,11 +209,16 @@ def main() -> int:
             net = buy_n = sell_n = 0
             for it in rows:
                 chg = _int(it.get("sp_stock_lmp_irds_cnt"))
-                net += chg
-                if chg > 0:
-                    buy_n += 1
-                elif chg < 0:
-                    sell_n += 1
+                shares_after = _int(it.get("sp_stock_lmp_cnt"))
+                corp_action = _is_corporate_action(it, chg, shares_after)
+                # 자본변동(감자/병합/무상증자/분할/재기재)은 매매 아님 → net/매수·매도 카운트 미합산.
+                #   국일제지 -9억주 '최대 순매도' 유령 원천 차단. 실 매매만 net_change 랭킹 반영.
+                if not corp_action:
+                    net += chg
+                    if chg > 0:
+                        buy_n += 1
+                    elif chg < 0:
+                        sell_n += 1
                 rc = str(it.get("rcept_no") or "")
                 trades.append({
                     "date": str(it.get("rcept_dt") or ""),
@@ -196,7 +226,8 @@ def main() -> int:
                     "position": str(it.get("isu_exctv_ofcps") or ""),
                     "registered": str(it.get("isu_exctv_rgist_at") or ""),
                     "change": chg,            # +매수 / −매도 (주)
-                    "shares_after": _int(it.get("sp_stock_lmp_cnt")),
+                    "shares_after": shares_after,
+                    "kind": "corporate_action" if corp_action else "trade",
                     "source_url": (DART_VIEW + rc) if rc else "",
                 })
             if trades:
