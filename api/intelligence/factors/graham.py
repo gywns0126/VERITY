@@ -76,18 +76,21 @@ def _compute_graham_score(stock: Dict[str, Any]) -> float:
     #   3) consensus.operating_profit_yoy_est_pct — 영업이익 성장 (EPS proxy, 한국 빈번)
     #   4) stock.revenue_growth               — 매출 성장 (약한 proxy)
     # graham_value 와 충돌 방지: PEG 단독 ±15 (Lynch 본인이 PEG 단독 의존 경고).
+    # 2026-07-24 fix: PEG 분모 = EPS 성장(정의). 옛 fallback 이 죽은 consensus.eps_growth_*(실 0건) →
+    # operating_profit → revenue_growth(매출성장 ≠ EPS!)로 붕괴 → US 15종목 중 13 을 매출성장 기반 오산
+    # PEG 로 잘못된 -15 penalty(가치주 오탈락 = 기회손실=돈). red_flags PEG fix(#153) 와 정합. 실 소스
+    # eps_quarterly_growth(%, 50/53). + PEGY(Lynch One Up 배당 팩터): 배당수익률을 분모에 가산 —
+    # 고배당 가치주는 성장이 낮아도 총수익(성장+배당)으로 평가(PEG>2 오탈락 방지).
     cons_local = stock.get("consensus") or {}
-    eps_growth_raw = (
-        cons_local.get("eps_growth_yoy_pct")
-        or cons_local.get("eps_growth_qoq_pct")
-        or cons_local.get("operating_profit_yoy_est_pct")
-        or stock.get("revenue_growth")
-    )
+    eps_growth_raw = stock.get("eps_quarterly_growth")
+    if eps_growth_raw is None:
+        eps_growth_raw = cons_local.get("operating_profit_yoy_est_pct")
     if per > 0 and eps_growth_raw is not None:
         try:
             eps_growth = float(eps_growth_raw)
-            if eps_growth > 0:
-                peg = per / eps_growth
+            _pegy_denom = eps_growth + float(stock.get("div_yield") or 0)  # PEGY = 성장 + 배당수익률(%)
+            if _pegy_denom > 0:
+                peg = per / _pegy_denom
                 if peg < 0.5:
                     score += 15  # 매우 매력적 (Lynch tenbagger 후보)
                 elif peg < 1.0:
