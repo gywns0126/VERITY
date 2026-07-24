@@ -541,6 +541,7 @@ export default function PublicHoldingsTab(props: Props) {
     const [w, setW] = useState(0)
     const [rows, setRows] = useState<any[]>(SAMPLE)
     const [closes, setCloses] = useState<Record<string, number>>({}) // KR 종가(stock_flow_5d) — 실시간 아님
+    const [npsMap, setNpsMap] = useState<Record<string, number>>({}) // 국민연금 전체보유(full+full_us, <5% 포함) 지분율 — 내 종목 배지(사실)
     const [isDemo, setIsDemo] = useState(true)
     const [loading, setLoading] = useState<boolean>(() =>
         onCanvas ? false : !!getToken()
@@ -731,6 +732,27 @@ export default function PublicHoldingsTab(props: Props) {
             alive = false
         }
     }, [isDemo, onCanvas])
+
+    // 국민연금 전체 보유(full 국내 + full_us 해외, 5% 미만 포함) — 내 보유종목에 지분율 배지. 공단 공시 사실(추천 아님).
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nps_holdings.json", { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!alive || !d) return
+                const m: Record<string, number> = {}
+                const src = ([] as any[]).concat(d.full || [], d.full_us || [])
+                for (const x of src) {
+                    if (x && x.ticker != null && x.pct != null) m[String(x.ticker)] = Number(x.pct)
+                }
+                setNpsMap(m)
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [onCanvas])
 
     const goStock = useCallback(
         (h: any) => {
@@ -2150,6 +2172,11 @@ export default function PublicHoldingsTab(props: Props) {
                                                         {Number(h.shares) || 0}
                                                         주 · 비중{" "}
                                                         {h._weight.toFixed(0)}%
+                                                        {npsMap[String(h.ticker)] != null && (
+                                                            <span style={{ color: C.vg, fontWeight: 700 }}>
+                                                                {" · 국민연금 " + npsMap[String(h.ticker)].toFixed(2) + "%"}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 {!narrow && (
