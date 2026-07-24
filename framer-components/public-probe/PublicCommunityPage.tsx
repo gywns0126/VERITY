@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useMemo, useState, type CSSProperties } from "react"
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { ChatCircle, DotsThree, Heart, User } from "@phosphor-icons/react"
 
 /**
@@ -281,6 +281,31 @@ export default function PublicCommunityPage(props: Props) {
         return arr
     }, [feed, filterTk, sort])
 
+    // 🚨 2026-07-24 사이드바 — 넓은 화면(≥940)만 우측에 트렌딩 종목. 피드는 가운데 단일 컬럼 유지(다열 금지=시간순 가독성).
+    const rootRef = useRef<HTMLDivElement>(null)
+    const [w, setW] = useState(0)
+    useEffect(() => {
+        const el = rootRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((entries) => {
+            for (const e of entries) setW(e.contentRect.width)
+        })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+    const wide = w >= 940
+    const trending = useMemo(() => {
+        const cnt: Record<string, number> = {}
+        for (const it of feed) {
+            const tk = String(it.ticker || "")
+            if (tk) cnt[tk] = (cnt[tk] || 0) + 1
+        }
+        return Object.keys(cnt)
+            .sort((a, b) => cnt[b] - cnt[a])
+            .slice(0, 8)
+            .map((tk) => [tk, cnt[tk]] as [string, number])
+    }, [feed])
+
     const stanceStyle = (id: string): CSSProperties => {
         const col = id === "bull" ? C.up : id === "bear" ? C.down : C.faint
         const bgc = id === "bull" ? C.upS : id === "bear" ? C.downS : C.chipBg
@@ -322,6 +347,7 @@ export default function PublicCommunityPage(props: Props) {
     const wrap: CSSProperties = {
         width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, boxSizing: "border-box",
         color: C.ink, padding: "20px 16px 32px", display: "flex", justifyContent: "center",
+        gap: wide ? 24 : 0, alignItems: "flex-start",
     }
     const col: CSSProperties = { width: "100%", maxWidth: 600, minWidth: 0 }
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "15px 16px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 10 }
@@ -335,7 +361,7 @@ export default function PublicCommunityPage(props: Props) {
     })
 
     return (
-        <div style={wrap}>
+        <div ref={rootRef} style={wrap}>
             <style>{AN_PALETTE}</style>
             <style>{`@keyframes vcpShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             {menuId && <div onClick={() => setMenuId("")} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
@@ -559,6 +585,32 @@ export default function PublicCommunityPage(props: Props) {
                     피드의 모든 글 = 이용자 개인 의견 · AlphaNest 의 분석·판단·추천 아님 · 부적절한 글은 ⋯ 메뉴로 신고
                 </div>
             </div>
+
+            {/* 🚨 2026-07-24 우측 사이드바 — 넓은 화면만. 트렌딩 종목(관점 수 상위) → 클릭 시 피드 필터 */}
+            {wide && (
+                <aside style={{ width: 264, flexShrink: 0, position: "sticky", top: 20 }}>
+                    <div style={{ ...card, marginTop: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink, letterSpacing: "-0.2px" }}>트렌딩 종목</div>
+                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 2, marginBottom: 6 }}>관점이 많은 종목</div>
+                        {trending.length === 0 ? (
+                            <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, padding: "4px 0" }}>아직 없어요</div>
+                        ) : (
+                            trending.map(([tk, n], i) => (
+                                <div
+                                    key={tk}
+                                    onClick={() => setFilterTk(filterTk === tk ? "" : tk)}
+                                    role="button"
+                                    style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}`, cursor: "pointer" }}
+                                >
+                                    <StockLogo ticker={tk} name={names[tk] || tk} C={C} size={26} />
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: filterTk === tk ? C.vg : C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{names[tk] || tk}</span>
+                                    <span style={{ marginLeft: "auto", flexShrink: 0, fontSize: 11.5, color: C.faint, fontWeight: 700 }}>{n}</span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </aside>
+            )}
         </div>
     )
 }

@@ -109,6 +109,9 @@ export default function PublicThesisFeed(props: Props) {
 
     const card: CSSProperties = { background: C.card, borderRadius: 14, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", fontFamily: FONT }
 
+    // 🚨 2026-07-24 내 관점 맨위 핀 고정 — 나머지는 서버 최신순(created_at.desc) 유지.
+    const shown = [...feed.filter((x: any) => x.mine), ...feed.filter((x: any) => !x.mine)]
+
     return (
         <div style={{ ...card, marginTop: 10 }}>
             {/* ⋯ 메뉴 바깥 클릭 닫기 backdrop */}
@@ -124,8 +127,8 @@ export default function PublicThesisFeed(props: Props) {
             {feed.length === 0 ? (
                 <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, padding: "6px 0 2px" }}>아직 공개된 관점이 없어요. 위에서 내 관점을 공개해 보세요.</div>
             ) : (
-                feed.map((it) => (
-                    <div key={it.id} style={{ padding: "10px 0 8px", borderTop: `1px solid ${C.line}` }}>
+                shown.map((it) => (
+                    <div key={it.id} style={{ padding: "10px 0 8px", borderTop: it.mine ? "none" : `1px solid ${C.line}`, background: it.mine ? (C.vtS || C.chipBg) : "transparent", borderRadius: it.mine ? 12 : 0, margin: it.mine ? "2px -8px 6px" : 0, paddingLeft: it.mine ? 10 : 0, paddingRight: it.mine ? 10 : 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             {it.avatar ? (
                                 <img src={it.avatar} alt="" width={26} height={26} style={{ width: 26, height: 26, borderRadius: 9, objectFit: "cover", flexShrink: 0 }} />
