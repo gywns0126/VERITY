@@ -83,6 +83,24 @@ def get_macro_indicators() -> dict:
             "source": "fred",
             "as_of": d.get("date"),
         }
+    # 🚨 us_2y = ^IRX(13주=3개월물) 오라벨 → FRED DGS2(진짜 2년물)로 정정 (us_10y 동일 패턴).
+    #   이 정정이 _calc_yield_spread(us_10y−us_2y)를 bonds.spread_2y_10y 와 정합화(구 0.87 자기모순 제거).
+    if fred.get("available") and fred.get("dgs2"):
+        d2 = fred["dgs2"]
+        v2 = float(d2["value"])
+        ch5_2 = d2.get("change_5d_pp")
+        prev2 = (v2 - float(ch5_2)) if ch5_2 is not None else None
+        chg2 = (
+            round((float(ch5_2) / prev2) * 100, 2)
+            if prev2 is not None and prev2 > 0 and ch5_2 is not None
+            else result["us_2y"].get("change_pct", 0)
+        )
+        result["us_2y"] = {
+            "value": round(v2, 3),
+            "change_pct": chg2,
+            "source": "fred",
+            "as_of": d2.get("date"),
+        }
 
     spread_10_2 = _calc_yield_spread(result)
     result["yield_spread"] = spread_10_2
