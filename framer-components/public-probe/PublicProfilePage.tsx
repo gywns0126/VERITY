@@ -255,10 +255,11 @@ function BustAvatar(props: { size: number; color: string }) {
 }
 
 function statusMeta(status: string, C: any): { label: string; fg: string; bg: string } {
-    if (status === "approved") return { label: "승인 완료", fg: C.green, bg: C.greenSoft }
+    // 🚨 2026-07-24 AlphaNest = 승인 없는 공개 tier. profiles.status(pending/approved)는 VERITY 운영
+    //   콘솔 게이트 전용이라 AlphaNest 프로필엔 승인 라벨을 노출하지 않음("승인 대기" 오해 제거).
+    //   pending/approved 모두 "AlphaNest 회원". 탈퇴만 별도 표시. (VERITY AuthPage 는 별개 컴포넌트로 승인 유지)
     if (status === "withdrawn") return { label: "탈퇴 처리됨", fg: C.faint, bg: C.line }
-    if (status === "pending") return { label: "승인 대기", fg: C.blue, bg: C.blueSoft }
-    return { label: status || "—", fg: C.sub, bg: C.field }
+    return { label: "AlphaNest 회원", fg: C.green, bg: C.greenSoft }
 }
 
 function fmtDate(v: string): string {
