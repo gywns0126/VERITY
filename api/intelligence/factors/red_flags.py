@@ -258,13 +258,15 @@ def _detect_red_flags(
     #   - PEG > 2 → _compute_graham_score 에서 -15 점수 차감 (downgrade)
     #   - PEG > 3 → 본 Hard Floor 발동 (auto_avoid). 원전 임계의 1.5× 보수화 = 자체 결정.
     # 한미 공통 적용. 자체 결정 명시 (큐 22cdd1ec, 2026-05-03 — feedback_master_rule_drift_audit).
+    # 2026-07-24 fix: PEG = P/E ÷ EPS 성장(정의). 옛 fallback 은 죽은 consensus.eps_growth_*(실 종목
+    # 0건 populate) → operating_profit → revenue_growth(매출성장 ≠ EPS성장!)로 붕괴 → US 전 종목 PEG 를
+    # 매출성장으로 오산 → 잘못된 auto_avoid(좋은 종목 강제 거부 = 기회손실). 실 EPS 성장 =
+    # stock.eps_quarterly_growth(%, 50/53 존재) 우선, 차선 operating_profit_yoy_est_pct(영업이익 추정).
+    # revenue_growth fallback 제거 — 진짜 EPS 성장 부재 시 PEG 미평가(fail-closed: 틀린 지표로 강제 AVOID 금지).
     _cons = stock.get("consensus") or {}
-    _eps_g = (
-        _cons.get("eps_growth_yoy_pct")
-        or _cons.get("eps_growth_qoq_pct")
-        or _cons.get("operating_profit_yoy_est_pct")
-        or stock.get("revenue_growth")
-    )
+    _eps_g = stock.get("eps_quarterly_growth")
+    if _eps_g is None:
+        _eps_g = _cons.get("operating_profit_yoy_est_pct")
     if _per is not None and _eps_g is not None:
         try:
             _per_f = float(_per)
