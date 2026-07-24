@@ -3,11 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 
 /**
  * 모닝 브리핑 — 홈 최상단 단일 채널 (PM 2026-07-05 · 2026-07-11 통합 지시).
- *   구성 = 제호(카드 밖) + [① 내 자산 카드] + [② 시장 브리핑 카드] — 형제 카드 2장.
+ *   구성 = 제호(카드 밖) + [① 내 자산] + [② 내 보유종목 소식] + [③ 시장 브리핑] — 형제 카드 3장.
  *   명도 위계: 라벨(섹션 제목·지수명)=회색 캡션, 검정(ink)=콘텐츠, 등락%=등락색(빨강/파랑).
  *
  * ① 내 자산 — 사용자 개인 보유종목. /api/holdings. 총 자산 = Σ(종가 × 수량). 전일 증감 = Σ(마지막 close − 직전 close) × 수량.
- * ② 시장 브리핑 — daily_briefing.json. 1면 recap(지수 등락%) + 섹션(mover 등락색·접힘). sessionStorage cache-fallback.
+ * ② 내 보유종목 소식 — daily_briefing 이벤트 ∩ 내 보유 티커 (클라이언트 매칭). 개인화 = 보유×사실, 서버 신설 0. 미로그인/데모 미노출. 2026-07-24 추가.
+ * ③ 시장 브리핑 — daily_briefing.json. 1면 recap(지수 등락%) + 섹션(mover 등락색·접힘). sessionStorage cache-fallback.
  *
  * RULE 6 = LLM 0. RULE 7 = 사실만. KR 등락색 = 상승 빨강 / 하락 파랑.
  *
@@ -335,6 +336,28 @@ export default function PublicMorningBriefing(props: Props) {
         return { totalVal, dayChange, dayPct, movers, hasUncovered, count: evald.length }
     }, [rows, closes, isDemo, fxRate])
 
+    // ── 내 보유종목 소식 = 오늘 브리핑 이벤트 ∩ 내 보유 티커 (클라이언트 매칭, 서버 신설 0). RULE 6/7 = 사실 필터만. ──
+    const myNews = useMemo(() => {
+        if ((!onCanvas && isDemo) || !brief || !Array.isArray(brief.sections)) return []
+        const holdMap = new Map<string, any>()
+        for (const h of rows) holdMap.set(String(h.ticker), h)
+        const out: any[] = []
+        const seen = new Set<string>()
+        for (const s of brief.sections) {
+            const items = (s && s.items) || []
+            for (const it of items) {
+                const tk = it && it.ticker ? String(it.ticker) : ""
+                if (!tk || !holdMap.has(tk)) continue
+                const key = tk + "|" + (it.text || "")
+                if (seen.has(key)) continue
+                seen.add(key)
+                const h = holdMap.get(tk)
+                out.push({ tk, name: it.name || (h && h.name) || tk, text: String(it.text || ""), mover: !!it.mover, us: isUsMkt(h || {}) })
+            }
+        }
+        return out
+    }, [rows, brief, isDemo, onCanvas])
+
     const noLogin = !onCanvas && isDemo
     const upC = (v: number) => (v >= 0 ? C.up : C.down)
     const arrow = (v: number) => (v > 0 ? "▲" : v < 0 ? "▼" : "·")
@@ -482,7 +505,38 @@ export default function PublicMorningBriefing(props: Props) {
                 </div>
             )}
 
-            {/* ── ② 시장 브리핑 카드 ── */}
+            {/* ── ② 내 보유종목 소식 — 개인화(보유 × 오늘 브리핑 이벤트 매칭). 미로그인/데모 미노출 ── */}
+            {!noLogin && !loading && !embargoed && brief && (asset.count > 0 || onCanvas) && (
+                <div style={card}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                        <span style={secTitle}>내 보유종목 소식</span>
+                        <span style={secNote}>오늘 브리핑에서 내 종목만 골랐어요</span>
+                    </div>
+                    {myNews.length === 0 ? (
+                        <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 600, color: C.faint, lineHeight: 1.5 }}>
+                            오늘은 보유종목 관련 새 공시·이벤트가 없어요
+                        </div>
+                    ) : (
+                        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 7 }}>
+                            {myNews.map((n: any, i: number) => (
+                                <div key={i} style={{ display: "flex", gap: 8, alignItems: "baseline", fontSize: narrow ? 12.5 : 13, lineHeight: 1.5 }}>
+                                    <span
+                                        onClick={() => goStockTk(n.tk, n.us)}
+                                        style={{ flexShrink: 0, fontWeight: 700, color: C.ink, cursor: "pointer", textDecoration: "underline", textDecorationColor: C.line, textUnderlineOffset: 3 }}
+                                    >
+                                        {n.name}
+                                    </span>
+                                    {n.mover && n.text ? moverText(n.text) : (
+                                        <span style={{ color: C.sub, fontWeight: 600, minWidth: 0 }}>{n.text}</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── ③ 시장 브리핑 카드 ── */}
             <div style={card}>
                 {!brief ? (
                     <div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>
