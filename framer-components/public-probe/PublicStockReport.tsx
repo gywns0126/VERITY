@@ -3245,7 +3245,6 @@ export default function PublicStockReport(props: Props) {
     const [starItemId, setStarItemId] = useState<any>(null)
     const [starBusy, setStarBusy] = useState(false)
     const [starHint, setStarHint] = useState(false)
-    const [starPulse, setStarPulse] = useState(0) // 별 토글 팝 애니메이션 리트리거(리렌더 key)
 
     useEffect(() => {
         if (typeof window === "undefined" || !window.matchMedia) return
@@ -3791,7 +3790,6 @@ export default function PublicStockReport(props: Props) {
         }
         const prevId = starItemId
         const wasOn = !!prevId
-        setStarPulse((p) => p + 1) // 클릭 즉시 팝 애니메이션
         setStarBusy(true)
         // 🚨 2026-07-24 낙관적 UI — 클릭 즉시 별 채움/비움 전환 + 사이드바 미러(서버 왕복 대기 X).
         //   "반응 느려서 여러 번 클릭" 해소. 서버는 백그라운드 반영, 실패 시 별 상태 원복.
@@ -4709,18 +4707,15 @@ export default function PublicStockReport(props: Props) {
                             alignItems: "center",
                         }}
                     >
-                        <style>{`@keyframes anStarPop{0%{transform:scale(1)}45%{transform:scale(1.12)}100%{transform:scale(1)}}@keyframes anStarSpin{to{transform:rotate(360deg)}}`}</style>
+                        <style>{`@keyframes anStarSpin{to{transform:rotate(360deg)}}`}</style>
                         <svg
-                            key={"sp" + starPulse}
                             width={18}
                             height={18}
                             viewBox="0 0 24 24"
                             style={{
                                 fill: starItemId ? "#f6b93b" : C.faint,
                                 stroke: starItemId ? "#f6b93b" : C.faint,
-                                transformOrigin: "center",
-                                transition: "fill .15s ease, stroke .15s ease",
-                                animation: starPulse ? "anStarPop .22s ease-out" : "none",
+                                transition: "fill .18s ease, stroke .18s ease",
                             }}
                             strokeWidth={2.6}
                             strokeLinecap="round"
