@@ -252,6 +252,7 @@ def extract_metric_series(
     metric_key: str,
     aliases: Optional[List[str]] = None,
     currency: str = "USD",
+    prefer_total: bool = False,
 ) -> List[Dict[str, Any]]:
     """단일 metric 의 표준화 시계열 — **모든 alias tag 의 rows 를 merge**.
 
@@ -303,11 +304,15 @@ def extract_metric_series(
             # 충돌: accn 최신 우선. 같은 accn 이면 alias 우선순위 (앞쪽 tag 우선).
             if existing is None:
                 pick = True
+            elif prefer_total and tag != existing.get("tag"):
+                # 🚨 revenue 전용 — 다른 태그 = 부분/세그먼트 vs 총액. 1.5x+ 큰 값(총액) 우선.
+                #   GIS: Revenues $2.19B(세그먼트) vs RevenueFromContract $18.1B(총액) → 총액 채택.
+                #   유사 magnitude(gross/net = ×1.01)는 alias 우선순위 유지(existing) → net 과대 방지.
+                #   같은 태그 restatement 는 아래 accn-최신 경로(태그 스위칭만 magnitude 규칙).
+                ev, nv = existing.get("val"), r.get("val")
+                pick = ev is not None and nv is not None and abs(nv) > abs(ev) * 1.5
             elif accn_new > existing.get("accn", ""):
                 pick = True
-            elif accn_new == existing.get("accn", ""):
-                # 첫 tag 우선 — existing 유지
-                pick = False
             else:
                 pick = False
             if pick:
@@ -375,8 +380,9 @@ def fetch_all_metrics(cik: int) -> Dict[str, Any]:
     # v0.3 — 금융은 revenue 만 FINANCIAL_REVENUE_ALIASES (총수익 우선) 로 추출.
     out_metrics: Dict[str, List[Dict[str, Any]]] = {}
     for k in TAG_ALIASES.keys():
+        pref_total = (k == "revenue")   # revenue 만 부분/세그먼트 태그 대신 총액 우선(GIS 스위칭 방어)
         if k == "revenue" and is_fin:
-            rev = extract_metric_series(facts, k, aliases=FINANCIAL_REVENUE_ALIASES, currency=ccy)
+            rev = extract_metric_series(facts, k, aliases=FINANCIAL_REVENUE_ALIASES, currency=ccy, prefer_total=True)
             # RevenuesNetOfInterestExpense/Revenues 부재 은행(FITB 등) → NII+비이자 합산 파생으로 gap 채움
             derived = _derive_bank_revenue(facts, ccy)
             if derived:
@@ -385,7 +391,7 @@ def fetch_all_metrics(cik: int) -> Dict[str, Any]:
                 rev.sort(key=lambda x: x["end"])
             out_metrics[k] = rev
         else:
-            out_metrics[k] = extract_metric_series(facts, k, currency=ccy)
+            out_metrics[k] = extract_metric_series(facts, k, currency=ccy, prefer_total=pref_total)
     meta = get_entity_meta(facts)
     meta["sic"] = sic
     meta["sic_description"] = sic_desc
