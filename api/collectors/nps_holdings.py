@@ -213,6 +213,11 @@ def _from_data_go_kr(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
                 pctf = float(str(pct).replace("%", "").replace(",", "")) if pct is not None else None
             except Exception:  # noqa: BLE001
                 pctf = None
+            # 🚨 '5% 이상 대량보유' 리스트인데 지분율 <1% = CSV 파일판 오값 또는 청산분(현재 5%+ 아님).
+            #   실측: 042670 CSV 0.00%(실제 DART 13.63%)·012510 CSV 0.94%(실제 8.22%) — 오값 노출 차단.
+            #   DART 소스(_from_dart_existing)에 정확값 있으면 병합에서 대체, 없으면 오값 미노출.
+            if pctf is not None and pctf < 1.0:
+                continue
             rec = {"ticker": tk, "name": nm, "pct": pctf, "qty_change": None, "date": asof, "src": "data.go.kr #15106890"}
             out[tk or ("name:" + _norm(nm))] = rec
     except Exception:  # noqa: BLE001
