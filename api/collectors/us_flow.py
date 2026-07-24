@@ -21,16 +21,18 @@ def compute_us_flow(stock: Dict[str, Any]) -> Dict[str, Any]:
 
     # ── 1) 내부자 심리 (MSPR) — KR 외국인 순매수 대용 ──
     insider = stock.get("insider_sentiment") or {}
+    # 2026-07-24: MSPR = -100~100 정규화(finnhub_client 평균화 정합). '대량' 임계 ±5→±40
+    # (정본 스케일서 명확한 순매수/매도, 근중립값 노이즈 회피).
     mspr = insider.get("mspr", 0)
     net_shares = insider.get("net_shares", 0)
 
-    if mspr > 5:
+    if mspr > 40:
         score += 10
         signals.append(f"내부자 대량 매수 (MSPR {mspr:.1f})")
     elif mspr > 0:
         score += 5
         signals.append(f"내부자 순매수 (MSPR {mspr:.1f})")
-    elif mspr < -5:
+    elif mspr < -40:
         score -= 10
         signals.append(f"내부자 대량 매도 (MSPR {mspr:.1f})")
     elif mspr < 0:

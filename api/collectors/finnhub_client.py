@@ -116,7 +116,11 @@ def get_insider_sentiment(ticker: str, api_key: str) -> Dict:
             neg += 1
         result["net_shares"] += int(ch)
 
-    result["mspr"] = round(total_mspr, 4)
+    # 2026-07-24 fix: 월별 mspr 합산 → 평균. Finnhub MSPR 정본 = -100~100 정규화(단일월 순매수강도,
+    # 문서: "-100 for most negative to 100 for most positive"). 90일창 3~6개월을 합산하면 ±450 로
+    # 스케일 부풀려져(개월수 의존) 임계와 불일치 → 소비처(red_flags/us_flow) 오판정. 평균으로 -100~100
+    # 정규화(개월수 무관) 복원. 실측: 평균 분포 [-75, 100] mean +4.8 = 정본 정합.
+    result["mspr"] = round(total_mspr / len(items), 4)
     result["positive_count"] = pos
     result["negative_count"] = neg
     return result
