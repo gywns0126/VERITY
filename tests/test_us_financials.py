@@ -113,6 +113,39 @@ class TestExtractMetricSeries:
         v = next(r["val"] for r in out if r["end"] == "2023-12-31")
         assert v == 505                              # 최신 accn(a-003)
 
+    def test_derive_bank_revenue_nii_plus_noninterest(self):
+        # RevenuesNetOfInterestExpense/Revenues 부재 은행(FITB류) → NII + 비이자 합산 파생.
+        #   사전등록 표준(Perplexity 2026-07-24): 은행 revenue = net interest income + noninterest income.
+        facts = _facts_multi({
+            "InterestIncomeExpenseNet": [
+                {"start": "2024-01-01", "end": "2024-12-31", "val": 5_980_000_000, "fy": 2024, "fp": "FY", "form": "10-K", "accn": "f-001"},
+            ],
+            "NoninterestIncome": [
+                {"start": "2024-01-01", "end": "2024-12-31", "val": 3_037_000_000, "fy": 2024, "fp": "FY", "form": "10-K", "accn": "f-001"},
+            ],
+        })
+        out = usf._derive_bank_revenue(facts, "USD")
+        assert len(out) == 1
+        assert out[0]["val"] == 5_980_000_000 + 3_037_000_000
+        assert out[0]["tag"] == "DERIVED_NII+NoninterestIncome"
+
+    def test_derive_bank_revenue_gross_minus_interest_expense(self):
+        # NII 직접태그 부재 → 총이자(InterestAndDividendIncomeOperating) − 이자비용 + 비이자.
+        facts = _facts_multi({
+            "InterestAndDividendIncomeOperating": [
+                {"start": "2024-01-01", "end": "2024-12-31", "val": 9_900_000_000, "fy": 2024, "fp": "FY", "form": "10-K", "accn": "g-001"},
+            ],
+            "InterestExpense": [
+                {"start": "2024-01-01", "end": "2024-12-31", "val": 3_920_000_000, "fy": 2024, "fp": "FY", "form": "10-K", "accn": "g-001"},
+            ],
+            "NoninterestIncome": [
+                {"start": "2024-01-01", "end": "2024-12-31", "val": 3_037_000_000, "fy": 2024, "fp": "FY", "form": "10-K", "accn": "g-001"},
+            ],
+        })
+        out = usf._derive_bank_revenue(facts, "USD")
+        assert len(out) == 1
+        assert out[0]["val"] == (9_900_000_000 - 3_920_000_000) + 3_037_000_000
+
     def test_alias_merge(self):
         """5/20 핵심 fix — old Revenues + new RevenueFromContract... 동시 박힘."""
         old_rows = [
