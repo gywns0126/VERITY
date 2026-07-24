@@ -3788,31 +3788,39 @@ export default function PublicStockReport(props: Props) {
             setTimeout(() => setStarHint(false), 2600)
             return
         }
+        const prevId = starItemId
+        const wasOn = !!prevId
         setStarBusy(true)
+        // 🚨 2026-07-24 낙관적 UI — 클릭 즉시 별 채움/비움 전환 + 사이드바 미러(서버 왕복 대기 X).
+        //   "반응 느려서 여러 번 클릭" 해소. 서버는 백그라운드 반영, 실패 시 별 상태 원복.
+        setStarItemId(wasOn ? null : "pending")
         try {
-            if (starItemId) {
-                setStarItemId(null)
+            const _lsk = "verity_watchlist"
+            const _cur = JSON.parse(window.localStorage.getItem(_lsk) || "[]")
+            const _arr = Array.isArray(_cur) ? _cur : []
+            const _tk = String(s.ticker || "")
+            if (wasOn) {
+                window.localStorage.setItem(_lsk, JSON.stringify(_arr.filter((x: any) => String(x && x.ticker) !== _tk)))
+            } else if (_tk && !_arr.some((x: any) => String(x && x.ticker) === _tk)) {
+                const _us = /US|NAS|NYSE|AMEX/i.test(String(s.market || "")) || /^[A-Za-z]/.test(_tk)
+                _arr.push({ ticker: _tk, name: s.name || _tk, market: _us ? "us" : "kr" })
+                window.localStorage.setItem(_lsk, JSON.stringify(_arr))
+            }
+            window.dispatchEvent(new CustomEvent(WATCH_EVENT))
+        } catch {
+            /* no-op */
+        }
+        let ok = true
+        try {
+            if (wasOn) {
                 await fetch(base + "/api/watchgroups", {
                     method: "DELETE",
                     headers: {
                         Authorization: `Bearer ${watchToken}`,
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({
-                        action: "remove_item",
-                        item_id: starItemId,
-                    }),
+                    body: JSON.stringify({ action: "remove_item", item_id: prevId }),
                 })
-                // 🚨 2026-07-24 관심종목 사이드바(PublicWatchlist=localStorage) 동기 — 별 해제 미러.
-                try {
-                    const _lsk = "verity_watchlist"
-                    const _cur = JSON.parse(window.localStorage.getItem(_lsk) || "[]")
-                    const _tk = String(s.ticker || "")
-                    if (Array.isArray(_cur))
-                        window.localStorage.setItem(_lsk, JSON.stringify(_cur.filter((x: any) => String(x && x.ticker) !== _tk)))
-                } catch {
-                    /* no-op */
-                }
             } else {
                 let gid = watchGroupId
                 if (!gid) {
@@ -3829,47 +3837,32 @@ export default function PublicStockReport(props: Props) {
                     gid = cr && cr.id ? String(cr.id) : ""
                     if (gid) setWatchGroupId(gid)
                 }
-                if (!gid) {
-                    setStarBusy(false)
-                    return
-                }
-                const added = await fetch(base + "/api/watchgroups", {
-                    method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${watchToken}`,
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        action: "add_item",
-                        group_id: gid,
-                        ticker: s.ticker,
-                        name: s.name,
-                        market: s.market,
-                    }),
-                })
-                    .then((r) => (r.ok ? r.json() : null))
-                    .catch(() => null)
-                setStarItemId(added && added.id ? added.id : "pending")
-                // 🚨 2026-07-24 관심종목 사이드바 동기 — 별 담기 미러(중복 방지, KR/US 정규화).
-                try {
-                    const _lsk = "verity_watchlist"
-                    const _cur = JSON.parse(window.localStorage.getItem(_lsk) || "[]")
-                    const _arr = Array.isArray(_cur) ? _cur : []
-                    const _tk = String(s.ticker || "")
-                    if (_tk && !_arr.some((x: any) => String(x && x.ticker) === _tk)) {
-                        const _us = /US|NAS|NYSE|AMEX/i.test(String(s.market || "")) || /^[A-Za-z]/.test(_tk)
-                        _arr.push({ ticker: _tk, name: s.name || _tk, market: _us ? "us" : "kr" })
-                        window.localStorage.setItem(_lsk, JSON.stringify(_arr))
-                    }
-                } catch {
-                    /* no-op */
+                if (gid) {
+                    const added = await fetch(base + "/api/watchgroups", {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${watchToken}`,
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            action: "add_item",
+                            group_id: gid,
+                            ticker: s.ticker,
+                            name: s.name,
+                            market: s.market,
+                        }),
+                    })
+                        .then((r) => (r.ok ? r.json() : null))
+                        .catch(() => null)
+                    setStarItemId(added && added.id ? added.id : "pending")
+                } else {
+                    ok = false
                 }
             }
-            if (typeof window !== "undefined")
-                window.dispatchEvent(new CustomEvent(WATCH_EVENT))
         } catch {
-            /* no-op */
+            ok = false
         }
+        if (!ok) setStarItemId(wasOn ? prevId : null) // 서버 실패 = 별 상태 원복
         setStarBusy(false)
     }
 
@@ -4718,7 +4711,13 @@ export default function PublicStockReport(props: Props) {
                             width={18}
                             height={18}
                             viewBox="0 0 24 24"
-                            style={{ fill: starItemId ? "#f6b93b" : C.faint, stroke: starItemId ? "#f6b93b" : C.faint }}
+                            style={{
+                                fill: starItemId ? "#f6b93b" : C.faint,
+                                stroke: starItemId ? "#f6b93b" : C.faint,
+                                transformOrigin: "center",
+                                transition: "transform .22s cubic-bezier(.34,1.56,.64,1), fill .15s ease, stroke .15s ease",
+                                transform: starBusy ? "scale(1.3)" : "scale(1)",
+                            }}
                             strokeWidth={2.6}
                             strokeLinecap="round"
                             strokeLinejoin="round"

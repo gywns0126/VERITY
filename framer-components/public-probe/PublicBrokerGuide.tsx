@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 
 /**
  * AlphaNest 증권사 가이드 (공개) — broker-neutral 사실 비교.
@@ -296,6 +296,21 @@ export default function PublicBrokerGuide(props: Props) {
     const [guide, setGuide] = useState<Guide | null>(onCanvas ? DEMO : null)
     const [loading, setLoading] = useState<boolean>(!onCanvas)
 
+    // 🚨 2026-07-24 헤더 정합 — 반응형 폭 측정. NewsTab 과 동일 narrow<480 + 동일 헤더 padding 으로
+    //   페이지 이동(뉴스↔증권사) 시 제목 위치·크기 일치(조잡한 점프 제거).
+    const rootRef = useRef<HTMLDivElement>(null)
+    const [w, setW] = useState(0)
+    useEffect(() => {
+        const el = rootRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((entries) => {
+            for (const e of entries) setW(e.contentRect.width)
+        })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+    const narrow = w > 0 && w < 480
+
     useEffect(() => {
         if (onCanvas) return
         let alive = true
@@ -331,10 +346,10 @@ export default function PublicBrokerGuide(props: Props) {
     ]
 
     return (
-        <div style={wrap}>
+        <div ref={rootRef} style={wrap}>
             <style>{AN_PALETTE}</style>
-            {/* 헤더 = 카드 아님. 페이지 위 담백 텍스트. */}
-            <div style={{ padding: "16px 14px 12px" }}>
+            {/* 헤더 = 카드 아님. 페이지 위 담백 텍스트. padding = NewsTab 과 동일(제목 정합). */}
+            <div style={{ padding: narrow ? "16px 13px 10px 13px" : "20px 22px 12px 22px" }}>
                 <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                     <span style={{ fontSize: 18, fontWeight: 800, color: C.text, letterSpacing: "-0.4px" }}>증권사 가이드</span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: C.faint }}>거래유형별 · 사실 비교</span>
