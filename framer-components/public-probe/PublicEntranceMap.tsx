@@ -8,6 +8,8 @@ import {
 /**
  * 입구 지도 — AlphaNest 홈 첫 화면. 자산명 + 실측 숫자 + 신선도 + 딥링크. 데이터(Blob): entrance_map.json.
  * 🚨 RULE 7 — 사실(개수·시각)만. 점수/추천 0. RULE 6 — LLM 0. 아이콘 = Phosphor 라인.
+ * 🎯 2026-07-24 성과 요약 밴드 = universe·자동수집 종수·검증게이트 진척을 라이브 집계(하드코딩 0).
+ *   마케팅 축 = 깊이·자동·투명(=N 게이트 무관 사실). 수익률/적중률 성과수치는 게재 안 함(RULE 7).
  *
  * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-enm-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
  *   <style>{AN_PALETTE} 정적 HTML 정합. Phosphor 아이콘 = 부모 color(var) currentColor 상속. 되돌리지 말 것.
@@ -125,6 +127,16 @@ export default function PublicEntranceMap(props: {
 
     const gate = data.validation_gate
 
+    // 🎯 성과 요약 — 라이브 집계(하드코딩 0). 깊이(universe)·자동수집 종수·신선도·게이트 = N 무관 사실(RULE 7).
+    const universeN = cnt("universe")
+    const liveKinds = (data.assets || []).filter((a: any) => a && Number(a.count) > 0).length
+    let freshestIso = ""
+    for (const a of data.assets || []) {
+        const v = a && a.as_of ? String(a.as_of) : ""
+        if (v > freshestIso) freshestIso = v
+    }
+    const freshLabel = freshestIso ? fmtAge(freshestIso) : ""
+
     return (
         <div style={wrap}>
             <style>{AN_PALETTE}</style>
@@ -140,6 +152,32 @@ export default function PublicEntranceMap(props: {
                 <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3, lineHeight: 1.5 }}>
                     전부 출처 있는 사실 · 숫자는 오늘 기준 실측 · 매일 자동 갱신
                 </div>
+            </div>
+
+            {/* 🎯 성과 요약 — 매일 자동으로 쌓이는 것(라이브 집계). 깊이·자동수집·검증진척 = 정직한 성과(RULE 7) */}
+            <div style={{ background: C.violetSoft, borderRadius: 14, padding: "13px 15px", marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: C.violet, letterSpacing: "-0.2px" }}>매일 자동으로 쌓이는 것</div>
+                <div style={{ display: "flex", gap: 18, marginTop: 8, flexWrap: "wrap" }}>
+                    <div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.5px" }}>{fmtN(universeN)}</div>
+                        <div style={{ fontSize: 10.5, fontWeight: 600, color: C.sub }}>한·미 전 종목</div>
+                    </div>
+                    <div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.5px" }}>{liveKinds}<span style={{ fontSize: 13, marginLeft: 1 }}>종</span></div>
+                        <div style={{ fontSize: 10.5, fontWeight: 600, color: C.sub }}>데이터 자동 수집</div>
+                    </div>
+                    {gate && gate.progress_pct != null && (
+                        <div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.5px" }}>{gate.progress_pct.toFixed(0)}<span style={{ fontSize: 13, marginLeft: 1 }}>%</span></div>
+                            <div style={{ fontSize: 10.5, fontWeight: 600, color: C.sub }}>검증 원장 N={gate.target_n} 진척</div>
+                        </div>
+                    )}
+                </div>
+                {freshLabel && (
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: C.violet, marginTop: 9 }}>
+                        가장 최근 갱신 {freshLabel} · 출처 있는 사실만
+                    </div>
+                )}
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
