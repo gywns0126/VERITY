@@ -84,15 +84,21 @@ def main() -> int:
     universe = _universe(args.universe or DEFAULT_UNIVERSE, args.limit, (args.ticker or "").strip() or None)
     done = _load_done()
     rows = _load_rows()
-    def _has_net(r):
-        return ((r.get("fundamentals") or {}).get("net_income")) is not None
+    def _row_clean(r):
+        # 재수집 불요 조건: net 존재 AND op 비오염. 하나라도 어기면 stale → 재수집.
+        f = r.get("fundamentals") or {}
+        if f.get("net_income") is None:
+            return False   # null-net(적자 클램프 잔재) → 재수집(2026-07 순이익 account_id fix 소급)
+        rev, op = f.get("revenue") or 0, f.get("operating_profit")
+        if rev > 1e10 and op is not None and abs(op) < 1e6:
+            return False   # op 오파싱(EPS/중단영업 오치환): 매출 큰데 op 극소 → 재수집(op account_id 승격 소급)
+        return True
 
-    # net_income 채워진 행만 seen — null-net 행은 재수집 대상(2026-07 순이익 account_id fix+부호보존 소급).
-    #   과거 max(0,음수) 클램프로 적자기업 net=0→None 저장된 3,411행 복구 경로. 현행 파서가 정확 추출.
-    seen = {(r.get("ticker"), r.get("fiscal_year")) for r in rows if _has_net(r)}
+    # 정상 행만 seen — 오염/null 행은 재수집 대상. dedup 멱등이라 양호분기 손실 0.
+    seen = {(r.get("ticker"), r.get("fiscal_year")) for r in rows if _row_clean(r)}
     rows_by_key = {(r.get("ticker"), r.get("fiscal_year")): r for r in rows}
-    # null-net 행 가진 ticker 는 done 이어도 재개 (해당 null 연도만 재fetch, 채워진 연도는 seen 으로 skip)
-    gap_tickers = {r.get("ticker") for r in rows if not _has_net(r)}
+    # 오염/null 행 가진 ticker 는 done 이어도 재개 (해당 연도만 재fetch, 정상 연도는 seen 으로 skip)
+    gap_tickers = {r.get("ticker") for r in rows if not _row_clean(r)}
     todo = [(t, n) for (t, n) in universe if t not in done or t in gap_tickers]
     print(f"[fin-bf] universe {len(universe)} | done {len(done)} | 잔여 {len(todo)} | years {years[0]}~{years[-1]} | cap {args.quota_cap}", file=sys.stderr)
 

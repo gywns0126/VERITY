@@ -50,3 +50,21 @@ class TestIsFreshDart:
     def test_non_dart_source_is_stale(self):
         rec = {**self.BASE, "source": "yfinance_fallback"}
         assert _is_fresh_dart(rec, "2025") is False
+
+    def test_op_oparsing_eps_is_stale(self):
+        # 매출 큰데 op 극소(EPS 5,287원 오치환 꼴) → 재추출 (op account_id 승격 소급)
+        rec = {**self.BASE, "total_assets": int(1e12), "revenue": int(1e12), "operating_profit": 5287}
+        assert _is_fresh_dart(rec, "2025") is False
+
+    def test_op_zero_large_revenue_is_stale(self):
+        rec = {**self.BASE, "total_assets": int(1e12), "revenue": int(1e12), "operating_profit": 0}
+        assert _is_fresh_dart(rec, "2025") is False
+
+    def test_revenue_zero_large_assets_is_stale(self):
+        # 자산 큰데 매출 0 = top-line '매출' 누락 → 재추출 (LG화학류)
+        rec = {**self.BASE, "total_assets": int(2e11), "revenue": 0, "operating_profit": int(1e11)}
+        assert _is_fresh_dart(rec, "2025") is False
+
+    def test_large_company_clean_op_is_fresh(self):
+        rec = {**self.BASE, "total_assets": int(1e12), "revenue": int(1e12), "operating_profit": int(1e11)}
+        assert _is_fresh_dart(rec, "2025") is True
