@@ -146,6 +146,34 @@ class TestExtractMetricSeries:
         assert len(out) == 1
         assert out[0]["val"] == (9_900_000_000 - 3_920_000_000) + 3_037_000_000
 
+    def test_prefer_total_picks_larger_tag(self):
+        # 부분/세그먼트(Revenues $2.19B) vs 총액(RevenueFromContract $18.1B) 동일 period → 총액 채택.
+        #   GIS 태그-스위칭(구년도 Revenues 부분값 → 10배 점프) 방어.
+        facts = _facts_multi({
+            "Revenues": [
+                {"start": "2020-06-01", "end": "2021-05-30", "val": 2_189_200_000, "fy": 2021, "fp": "FY", "form": "10-K", "accn": "r-001"},
+            ],
+            "RevenueFromContractWithCustomerExcludingAssessedTax": [
+                {"start": "2020-06-01", "end": "2021-05-30", "val": 18_127_000_000, "fy": 2021, "fp": "FY", "form": "10-K", "accn": "r-002"},
+            ],
+        })
+        out = usf.extract_metric_series(facts, "revenue", prefer_total=True)
+        assert len(out) == 1
+        assert out[0]["val"] == 18_127_000_000
+
+    def test_prefer_total_keeps_net_over_gross_similar(self):
+        # 유사 magnitude(gross ×1.01)는 alias 우선순위(net=Excluding 먼저) 유지 → net 과대 방지.
+        facts = _facts_multi({
+            "RevenueFromContractWithCustomerExcludingAssessedTax": [
+                {"start": "2020-01-01", "end": "2020-12-31", "val": 18_100_000_000, "fy": 2020, "fp": "FY", "form": "10-K", "accn": "s-001"},
+            ],
+            "RevenueFromContractWithCustomerIncludingAssessedTax": [
+                {"start": "2020-01-01", "end": "2020-12-31", "val": 18_300_000_000, "fy": 2020, "fp": "FY", "form": "10-K", "accn": "s-002"},
+            ],
+        })
+        out = usf.extract_metric_series(facts, "revenue", prefer_total=True)
+        assert out[0]["val"] == 18_100_000_000
+
     def test_alias_merge(self):
         """5/20 핵심 fix — old Revenues + new RevenueFromContract... 동시 박힘."""
         old_rows = [
