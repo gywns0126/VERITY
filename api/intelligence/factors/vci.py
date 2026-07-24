@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+from api.config import CRYPTO_FUNDING_OVERHEAT
 from api.intelligence.factors._common import _load_constitution
 
 
@@ -122,7 +123,9 @@ def _compute_vci(
             crypto = portfolio.get("crypto_macro", {})
             if crypto.get("available"):
                 fr = crypto.get("funding_rate", {})
-                if fr.get("ok") and fr.get("rate_pct", 0) >= 0.05:
+                # 2026-07-24 fix: 하드코딩 0.05 → 정본 상수 CRYPTO_FUNDING_OVERHEAT(0.06). 시스템 단일
+                # 출처(config)와 정합 — collector/구성 임계와 일치. env 조정 가능.
+                if fr.get("ok") and fr.get("rate_pct", 0) >= CRYPTO_FUNDING_OVERHEAT:
                     funding_overheat = True
         if funding_overheat:
             bubble_penalty = -5
