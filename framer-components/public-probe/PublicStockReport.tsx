@@ -3245,7 +3245,6 @@ export default function PublicStockReport(props: Props) {
     const [starItemId, setStarItemId] = useState<any>(null)
     const [starBusy, setStarBusy] = useState(false)
     const [starHint, setStarHint] = useState(false)
-    const [starLocal, setStarLocal] = useState(false) // 로컬 관심종목(localStorage) 별표 — 로그인 무관 즉시 반영
 
     useEffect(() => {
         if (typeof window === "undefined" || !window.matchMedia) return
@@ -3613,28 +3612,6 @@ export default function PublicStockReport(props: Props) {
         }
     }, [watchToken, s.ticker, base, onCanvas])
 
-    // 로컬 관심종목(localStorage) 별표 상태 — 로그인 무관 즉시 반영 + 사이드바/타 탭 변경 추종.
-    useEffect(() => {
-        if (onCanvas) return
-        const readLocal = () => {
-            try {
-                const a = JSON.parse(window.localStorage.getItem("verity_watchlist") || "[]")
-                setStarLocal(Array.isArray(a) && a.some((x: any) => String(x && x.ticker) === String(s.ticker)))
-            } catch {
-                setStarLocal(false)
-            }
-        }
-        readLocal()
-        window.addEventListener("verity-watchlist-changed", readLocal)
-        window.addEventListener("verity_watch_change", readLocal)
-        window.addEventListener("storage", readLocal)
-        return () => {
-            window.removeEventListener("verity-watchlist-changed", readLocal)
-            window.removeEventListener("verity_watch_change", readLocal)
-            window.removeEventListener("storage", readLocal)
-        }
-    }, [s.ticker, onCanvas])
-
     const narrow = w > 0 && w < 560
     const pad = narrow ? 12 : 18
 
@@ -3804,54 +3781,37 @@ export default function PublicStockReport(props: Props) {
         consensus,
     ])
 
-    // 🚨 2026-07-24 별 = 로컬 우선. 로그인 여부와 무관하게 클릭 즉시 관심종목(localStorage)에 담기/해제 +
-    //   사이드바(PublicWatchlist) 즉시 갱신 → "안 눌린다" 근본 해소. 로그인 시 서버(watchgroups)에도 저장(best-effort).
     const toggleStar = async () => {
-        if (starBusy || onCanvas) return
-        const isOn = !!starItemId || starLocal
-        const newOn = !isOn
-        // 1) 로컬 즉시 반영 (로그인 무관) — 사이드바가 verity-watchlist-changed / verity_watch_change 듣고 갱신.
-        try {
-            const _lsk = "verity_watchlist"
-            const _cur = JSON.parse(window.localStorage.getItem(_lsk) || "[]")
-            const _arr = Array.isArray(_cur) ? _cur : []
-            const _tk = String(s.ticker || "")
-            const _has = _arr.some((x: any) => String(x && x.ticker) === _tk)
-            let _next = _arr
-            if (newOn && !_has) {
-                const _us = /US|NAS|NYSE|AMEX/i.test(String(s.market || "")) || /^[A-Za-z]/.test(_tk)
-                _next = [..._arr, { ticker: _tk, name: s.name || _tk, market: _us ? "us" : "kr" }]
-            } else if (!newOn && _has) {
-                _next = _arr.filter((x: any) => String(x && x.ticker) !== _tk)
-            }
-            window.localStorage.setItem(_lsk, JSON.stringify(_next))
-            window.dispatchEvent(new Event("verity-watchlist-changed"))
-            window.dispatchEvent(new CustomEvent(WATCH_EVENT))
-        } catch {
-            /* no-op */
-        }
-        setStarLocal(newOn)
-        // 2) 미로그인 = 로컬만 (담았다는 안내만).
+        if (starBusy) return
         if (!watchToken) {
             setStarHint(true)
             setTimeout(() => setStarHint(false), 2600)
             return
         }
-        // 3) 로그인 = 서버(watchgroups)에도 반영.
         setStarBusy(true)
         try {
-            if (!newOn) {
-                if (starItemId) {
-                    const _id = starItemId
-                    setStarItemId(null)
-                    await fetch(base + "/api/watchgroups", {
-                        method: "DELETE",
-                        headers: {
-                            Authorization: `Bearer ${watchToken}`,
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({ action: "remove_item", item_id: _id }),
-                    })
+            if (starItemId) {
+                setStarItemId(null)
+                await fetch(base + "/api/watchgroups", {
+                    method: "DELETE",
+                    headers: {
+                        Authorization: `Bearer ${watchToken}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        action: "remove_item",
+                        item_id: starItemId,
+                    }),
+                })
+                // 🚨 2026-07-24 관심종목 사이드바(PublicWatchlist=localStorage) 동기 — 별 해제 미러.
+                try {
+                    const _lsk = "verity_watchlist"
+                    const _cur = JSON.parse(window.localStorage.getItem(_lsk) || "[]")
+                    const _tk = String(s.ticker || "")
+                    if (Array.isArray(_cur))
+                        window.localStorage.setItem(_lsk, JSON.stringify(_cur.filter((x: any) => String(x && x.ticker) !== _tk)))
+                } catch {
+                    /* no-op */
                 }
             } else {
                 let gid = watchGroupId
@@ -3869,26 +3829,44 @@ export default function PublicStockReport(props: Props) {
                     gid = cr && cr.id ? String(cr.id) : ""
                     if (gid) setWatchGroupId(gid)
                 }
-                if (gid) {
-                    const added = await fetch(base + "/api/watchgroups", {
-                        method: "POST",
-                        headers: {
-                            Authorization: `Bearer ${watchToken}`,
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            action: "add_item",
-                            group_id: gid,
-                            ticker: s.ticker,
-                            name: s.name,
-                            market: s.market,
-                        }),
-                    })
-                        .then((r) => (r.ok ? r.json() : null))
-                        .catch(() => null)
-                    setStarItemId(added && added.id ? added.id : "pending")
+                if (!gid) {
+                    setStarBusy(false)
+                    return
+                }
+                const added = await fetch(base + "/api/watchgroups", {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${watchToken}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        action: "add_item",
+                        group_id: gid,
+                        ticker: s.ticker,
+                        name: s.name,
+                        market: s.market,
+                    }),
+                })
+                    .then((r) => (r.ok ? r.json() : null))
+                    .catch(() => null)
+                setStarItemId(added && added.id ? added.id : "pending")
+                // 🚨 2026-07-24 관심종목 사이드바 동기 — 별 담기 미러(중복 방지, KR/US 정규화).
+                try {
+                    const _lsk = "verity_watchlist"
+                    const _cur = JSON.parse(window.localStorage.getItem(_lsk) || "[]")
+                    const _arr = Array.isArray(_cur) ? _cur : []
+                    const _tk = String(s.ticker || "")
+                    if (_tk && !_arr.some((x: any) => String(x && x.ticker) === _tk)) {
+                        const _us = /US|NAS|NYSE|AMEX/i.test(String(s.market || "")) || /^[A-Za-z]/.test(_tk)
+                        _arr.push({ ticker: _tk, name: s.name || _tk, market: _us ? "us" : "kr" })
+                        window.localStorage.setItem(_lsk, JSON.stringify(_arr))
+                    }
+                } catch {
+                    /* no-op */
                 }
             }
+            if (typeof window !== "undefined")
+                window.dispatchEvent(new CustomEvent(WATCH_EVENT))
         } catch {
             /* no-op */
         }
@@ -4720,10 +4698,10 @@ export default function PublicStockReport(props: Props) {
                     </span>
                     <button
                         onClick={toggleStar}
-                        title={(starItemId || starLocal) ? "관심종목 해제" : "관심종목 담기"}
+                        title={starItemId ? "관심종목 해제" : "관심종목 담기"}
                         disabled={starBusy}
                         aria-label={
-                            (starItemId || starLocal) ? "관심종목 해제" : "관심종목 담기"
+                            starItemId ? "관심종목 해제" : "관심종목 담기"
                         }
                         style={{
                             flexShrink: 0,
@@ -4740,7 +4718,7 @@ export default function PublicStockReport(props: Props) {
                             width={18}
                             height={18}
                             viewBox="0 0 24 24"
-                            style={{ fill: (starItemId || starLocal) ? "#f6b93b" : C.faint, stroke: (starItemId || starLocal) ? "#f6b93b" : C.faint }}
+                            style={{ fill: starItemId ? "#f6b93b" : C.faint, stroke: starItemId ? "#f6b93b" : C.faint }}
                             strokeWidth={2.6}
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -4757,7 +4735,7 @@ export default function PublicStockReport(props: Props) {
                                 fontWeight: 700,
                             }}
                         >
-                            담았어요 · 로그인 시 계정에 저장돼요
+                            로그인하면 저장돼요
                         </span>
                     )}
                     {warnTop && (
