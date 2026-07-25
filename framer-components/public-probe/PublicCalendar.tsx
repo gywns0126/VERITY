@@ -24,6 +24,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *
  * 🚨 2026-07-24 다크모드 = 자체 내장 CSS 변수(--an-cal-*) 구동 (readBodyDark JS 감지 전면 제거, durable fix).
  *   <style>{AN_PALETTE} 정적 HTML 정합 → 새로고침/무거운 페이지 stuck-라이트 근본 제거. 카테고리 soft-bg도 변수화. 되돌리지 말 것.
+ * 🚨 2026-07-25 좁은 폰(375px) 열 잘림 fix = day 그리드 repeat(7,minmax(0,1fr)) + 셀 minWidth:0/overflow. 되돌리지 말 것.
  */
 
 const LIGHT = {
@@ -219,7 +220,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                 <style>{AN_PALETTE}</style>
                 <div style={cardS}>
                     <div style={{ ...sk, width: 120, height: 22 }} />
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 8, marginTop: 20 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 8, marginTop: 20 }}>
                         {Array.from({ length: 35 }).map((_, i) => <div key={i} style={{ ...sk, height: narrow ? 34 : 46 }} />)}
                     </div>
                 </div>
@@ -274,9 +275,9 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                             </button>
                         </div>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: narrow ? 2 : 4 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: narrow ? 2 : 4 }}>
                         {WEEK.map((wd, i) => (
-                            <div key={wd} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: i >= 5 ? C.faint : C.sub, paddingBottom: 8 }}>{wd}</div>
+                            <div key={wd} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: i >= 5 ? C.faint : C.sub, paddingBottom: 8, minWidth: 0, overflow: "hidden" }}>{wd}</div>
                         ))}
                         {grid.map((d, i) => {
                             const ds = ymd(d)
@@ -289,6 +290,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                                 <button key={i} onClick={() => setSelDate(isSel ? "" : ds)} disabled={!inMonth && evs.length === 0}
                                     style={{
                                         position: "relative", border: "none", cursor: inMonth || evs.length ? "pointer" : "default", fontFamily: FONT,
+                                        minWidth: 0, overflow: "hidden", boxSizing: "border-box", padding: 0,
                                         height: narrow ? 44 : 56, borderRadius: 12, background: isSel ? C.today : (evs.length ? C.hi : "transparent"),
                                         color: isSel ? C.todayInk : inMonth ? C.ink : C.faint, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
                                         fontWeight: isToday ? 800 : 600, transition: "background 0.12s",
@@ -298,8 +300,8 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                                         {isToday && !isSel && <span style={{ position: "absolute", left: "50%", bottom: -3, transform: "translateX(-50%)", width: 3, height: 3, borderRadius: "50%", background: C.vt }} />}
                                     </span>
                                     {evs.length > 0 && (
-                                        <span style={{ display: "flex", gap: 3, alignItems: "center" }}>
-                                            {cats.map((cat, j) => <span key={j} style={{ width: 5, height: 5, borderRadius: "50%", background: isSel ? C.todayInk : (CAT[cat] ? CAT[cat].c : C.faint) }} />)}
+                                        <span style={{ display: "flex", gap: 3, alignItems: "center", maxWidth: "100%" }}>
+                                            {cats.map((cat, j) => <span key={j} style={{ width: 5, height: 5, borderRadius: "50%", background: isSel ? C.todayInk : (CAT[cat] ? CAT[cat].c : C.faint), flexShrink: 0 }} />)}
                                             {evs.length > 3 && <span style={{ fontSize: 8.5, fontWeight: 800, color: isSel ? C.todayInk : C.faint, marginLeft: 1 }}>+{evs.length - 3}</span>}
                                         </span>
                                     )}
