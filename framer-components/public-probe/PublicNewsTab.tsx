@@ -483,6 +483,14 @@ function Logo(props: {
     )
 }
 
+/**
+ * 🚨 2026-07-25 높이 정합 — 레이아웃 어노테이션 필수. 되돌리지 말 것.
+ *   어노테이션이 없으면 Framer 는 코드 컴포넌트를 고정 높이로 취급 → 인스턴스 Fit(hug) 이 정상 동작하지 않고
+ *   /news Desktop 프레임(overflow=clip)에서 본문이 잘림(실사고: height=720 고정).
+ *   height=auto = Fit 만 지원 → PM 이 실수로 px 고정해도 다시 잘릴 수 없음.
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight auto
+ */
 export default function PublicNewsTab(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
@@ -601,12 +609,10 @@ export default function PublicNewsTab(props: Props) {
         }
     }, [onCanvas, props.apiBase])
 
-    /* 데이터 로드 */
+    /* 데이터 로드 — 🚨 2026-07-25 캔버스에서도 실데이터 로드(과거 onCanvas early-return 제거).
+       이유: 캔버스가 빈 컴포넌트로 렌더되면 Fit(hug) 이 헤더 높이만 재서 실제 사이트 높이와 어긋남.
+       캔버스 = 사이트와 같은 내용 → 같은 높이. 되돌리지 말 것. */
     useEffect(() => {
-        if (onCanvas) {
-            setLoading(false)
-            return
-        }
         let alive = true
         const recUrl = props.recUrl || BLOB + "/recommendations.json"
         const pfUrl = props.portfolioUrl || BLOB + "/portfolio.json"
@@ -803,7 +809,6 @@ export default function PublicNewsTab(props: Props) {
             alive = false
         }
     }, [
-        onCanvas,
         props.recUrl,
         props.portfolioUrl,
         props.maxPerStock,
@@ -901,9 +906,10 @@ export default function PublicNewsTab(props: Props) {
         [stocks.length, market.length, us.length]
     )
 
-    /* 유니버스 로드(마운트) — 표준 검색창 autocomplete + '오늘 화제 종목' 언급 tally 공용(universe_search.json). */
+    /* 유니버스 로드(마운트) — 표준 검색창 autocomplete + '오늘 화제 종목' 언급 tally 공용(universe_search.json).
+       캔버스도 로드(2026-07-25) — '오늘 화제 종목' 줄이 캔버스에서 빠지면 Fit 높이가 사이트보다 짧아짐. */
     useEffect(() => {
-        if (onCanvas || uni.length) return
+        if (uni.length) return
         fetch(UNIVERSE_URL, { cache: "force-cache" })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
@@ -911,7 +917,7 @@ export default function PublicNewsTab(props: Props) {
                 if (Array.isArray(a)) setUni(a)
             })
             .catch(() => {})
-    }, [onCanvas, uni.length])
+    }, [uni.length])
 
     /* 오늘 화제 종목 = KR 헤드라인 제목에 언급된 종목명 tally (객관·언급 수). recommendations 편향 폐기.
        US 티커는 흔한 단어 충돌(IT/ALL/NOW…)로 노이즈 → KR 종목명(한글, 충돌 적음)만 집계. */
@@ -1074,7 +1080,7 @@ export default function PublicNewsTab(props: Props) {
     }
 
     // 🚨 2026-07-19 재테마 — root 흰 카드 감싸기 제거(BrokerGuide 동일). 표준 회색페이지: root 투명·자연 흐름 + 개별 흰 카드.
-    //   프레임 높이 = 캔버스에서 hug-content 로 설정. props.height 미사용(컨트롤 하위호환 존치).
+    //   프레임 높이 = 컴포넌트 자연 흐름(@framerSupportedLayoutHeight auto). props.height 미사용(컨트롤 하위호환 존치).
     const wrap: React.CSSProperties = {
         width: "100%",
         maxWidth: 1180,
