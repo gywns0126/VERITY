@@ -3,7 +3,9 @@ Thesis 커뮤니티 피드 API — 종목별 공개 관점 + 좋아요 + 신고 
 
 GET  /api/thesis_feed?ticker=005930          → 종목별 공개 관점 목록 (익명 가능, JWT 있으면 liked/mine 플래그)
 GET  /api/thesis_feed?limit=30               → ticker 생략 = 전 종목 최신 글로벌 피드 (커뮤니티 페이지, 2026-07-10)
-POST /api/thesis_feed { action, thesis_id, reason? }  → like | unlike | report (로그인 필수)
+GET  /api/thesis_feed?limit=30&offset=30     → 더보기 페이지네이션 (2026-07-25). 응답 has_more 로 끝 판정.
+GET  /api/thesis_feed?sort=hot               → 좋아요순. 최근 _HOT_WINDOW 개 안에서 집계(전수 아님 — 응답 window 명시).
+POST /api/thesis_feed { action, thesis_id, reason? }  → like | unlike | report | unpublish (로그인 필수)
 
 데이터 경계:
   · 노출 = public_profiles view(id/nickname/avatar 3컬럼) + user_thesis 공개행(RLS ut_select_public).
@@ -35,7 +37,11 @@ _GLOBAL_MAX_PER_HOUR = int(os.environ.get("THESIS_GLOBAL_HOURLY_LIMIT", "10000")
 _logger = logging.getLogger(__name__)
 _FEED_LIMIT = 20
 _FEED_LIMIT_MAX = 50
-_ACTIONS = {"like", "unlike", "report"}
+_FEED_OFFSET_MAX = 2000  # 커서 없는 offset 페이지네이션 상한(깊은 페이지 = DB 스캔 비용)
+# 인기 정렬 = 좋아요 집계용 최근 창. likes 가 별도 테이블이라 전수 정렬은 컬럼/뷰 신설(마이그레이션) 필요 —
+# v1 은 최근 N개 창 안에서 집계하고 응답에 window 를 명시(UI 라벨 정합). 전수 인기는 v2 (like_count 컬럼+트리거).
+_HOT_WINDOW = 300
+_ACTIONS = {"like", "unlike", "report", "unpublish"}
 
 
 def _global_budget_ok() -> bool:
@@ -127,6 +133,11 @@ class handler(BaseHTTPRequestHandler):
             limit = max(1, min(_FEED_LIMIT_MAX, int(qs.get("limit", ["0"])[0] or 0))) or _FEED_LIMIT
         except Exception:
             limit = _FEED_LIMIT
+        try:
+            offset = max(0, min(_FEED_OFFSET_MAX, int(qs.get("offset", ["0"])[0] or 0)))
+        except Exception:
+            offset = 0
+        hot = (qs.get("sort", [""])[0] or "").strip() == "hot"
 
         # 익명 조회 가능 — JWT 는 liked/mine 플래그용(검증 실패 = 익명 취급)
         viewer_id = None
@@ -135,33 +146,27 @@ class handler(BaseHTTPRequestHandler):
             viewer_id = sb.verify_jwt(jwt)
 
         # ticker 지정 = 종목 피드 / 생략 = 전 종목 글로벌 피드 (RLS ut_select_public 은 양쪽 동일 적용)
+        # 최신 = limit+1 조회로 has_more 판정(추가 count 쿼리 회피). 인기 = 최근 창 전체를 받아 좋아요순 재정렬.
         filters = {
             "is_public": "eq.true",
             "hidden": "eq.false",
             "select": "id,user_id,ticker,stance,note,created_at,updated_at",
             "order": "created_at.desc",
-            "limit": str(limit),
+            "limit": str(_HOT_WINDOW if hot else limit + 1),
+            "offset": "0" if hot else str(offset),
         }
         if ticker:
             filters["ticker"] = f"eq.{ticker}"
         try:
             rows = sb.select("user_thesis", filters)
         except Exception:
-            return _json_response(self, {"items": []})  # 020 미적용 DB — 컬럼 부재
+            return _json_response(self, {"items": [], "has_more": False})  # 020 미적용 DB — 컬럼 부재
 
         if not rows:
-            return _json_response(self, {"items": []})
+            return _json_response(self, {"items": [], "has_more": False})
 
+        # 좋아요 집계 — 인기 정렬은 창 전체가 대상이라 슬라이스 전에 집계
         ids = ",".join(r["id"] for r in rows if r.get("id"))
-        uids = ",".join(sorted({r["user_id"] for r in rows if r.get("user_id")}))
-
-        profiles: dict = {}
-        try:
-            for p in sb.select("public_profiles", {"id": f"in.({uids})", "select": "id,nickname,avatar"}):
-                profiles[p["id"]] = p
-        except Exception:
-            pass
-
         like_counts: dict = defaultdict(int)
         liked_ids = set()
         try:
@@ -171,6 +176,25 @@ class handler(BaseHTTPRequestHandler):
                     liked_ids.add(lk["thesis_id"])
         except Exception:
             pass
+
+        if hot:
+            # 좋아요 desc, 동수는 최신순(ISO 문자열 역순 = 최신 우선)
+            rows.sort(key=lambda r: (like_counts.get(r.get("id"), 0), str(r.get("created_at") or "")), reverse=True)
+            has_more = offset + limit < len(rows)
+            rows = rows[offset:offset + limit]
+        else:
+            has_more = len(rows) > limit
+            rows = rows[:limit]
+
+        # 프로필 = 실제 노출 행만(슬라이스 후) — 인기 창 300개 전부 조회하지 않음
+        uids = ",".join(sorted({r["user_id"] for r in rows if r.get("user_id")}))
+        profiles: dict = {}
+        if uids:
+            try:
+                for p in sb.select("public_profiles", {"id": f"in.({uids})", "select": "id,nickname,avatar"}):
+                    profiles[p["id"]] = p
+            except Exception:
+                pass
 
         items = []
         for r in rows:
@@ -187,7 +211,10 @@ class handler(BaseHTTPRequestHandler):
                 "liked": r.get("id") in liked_ids,
                 "mine": bool(viewer_id and r.get("user_id") == viewer_id),
             })
-        _json_response(self, {"items": items})
+        out = {"items": items, "has_more": has_more}
+        if hot:
+            out["window"] = _HOT_WINDOW  # UI 라벨 정합 — "최근 N개 중 인기"(전수 아님)
+        _json_response(self, out)
 
     def do_POST(self):
         if not _global_budget_ok():
@@ -220,6 +247,12 @@ class handler(BaseHTTPRequestHandler):
                 return _json_response(self, {"ok": True})
             if action == "unlike":
                 sb.delete("thesis_likes", {"thesis_id": thesis_id, "user_id": user_id}, user_jwt=jwt)
+                return _json_response(self, {"ok": True})
+            if action == "unpublish":
+                # 내 글 공개 해제(피드에서 내리기) — 메모 본문은 보존. match 에 user_id 동봉 + RLS 이중 방어.
+                # /api/thesis POST 재사용 금지 사유: entry_price 미동봉 시 NULL 덮어쓰기(기록가 유실).
+                sb.update("user_thesis", {"id": thesis_id, "user_id": user_id},
+                          {"is_public": False}, user_jwt=jwt)
                 return _json_response(self, {"ok": True})
             # report
             reason = str(body.get("reason", "")).strip()[:500]
