@@ -36,6 +36,8 @@ const C: Record<string, string> = {}
 for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 const STANCE_LABEL: Record<string, string> = { bull: "강세", watch: "관망", bear: "약세" }
+// 신고 사유 — 운영자(/admin 모더레이션)가 판단 근거로 쓰는 값. 자유입력 대신 고정 4종(오남용·개인정보 유입 차단).
+const REPORT_REASONS = ["스팸·광고", "욕설·비방", "허위·오해 소지", "기타"]
 const UNIVERSE_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 
@@ -172,16 +174,26 @@ export default function PublicCommunityPage(props: Props) {
 
     const [token, setToken] = useState("")
     const [feed, setFeed] = useState<any[]>([])
+    // 칩·트렌딩 원본 = 필터 없는 최신 페이지. 종목 필터가 서버로 넘어가도 칩 목록이 1종목으로 붕괴하지 않게 분리(2026-07-25).
+    const [overview, setOverview] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [more, setMore] = useState(false) // 더보기 진행 중
+    const [hasMore, setHasMore] = useState(false)
+    const [hotWin, setHotWin] = useState(0) // 인기 집계 창(서버 응답 window) — 라벨 정합용
     const [sort, setSort] = useState<"new" | "hot">("new")
     const [filterTk, setFilterTk] = useState("")
     const [names, setNames] = useState<Record<string, string>>({})
     const [msg, setMsg] = useState("")
     const [menuId, setMenuId] = useState("")
+    const [reportId, setReportId] = useState("") // 신고 사유 선택 대상
     const [reported, setReported] = useState<Record<string, boolean>>({})
     const [expanded, setExpanded] = useState<Record<string, boolean>>({})
     const [q, setQ] = useState("") // 종목 검색어(이름/코드)
     const [focused, setFocused] = useState(false)
+    const note = (m: string) => {
+        setMsg(m)
+        if (typeof window !== "undefined") window.setTimeout(() => setMsg((cur) => (cur === m ? "" : cur)), 3500)
+    }
 
     // 세션 토큰 추적(로그인/로그아웃 반영 — AlphaNestAuth 가 dispatch)
     useEffect(() => {
@@ -196,25 +208,65 @@ export default function PublicCommunityPage(props: Props) {
         }
     }, [onCanvas])
 
-    // 피드 로드 — ticker 생략 = 전 종목 최신
-    useEffect(() => {
-        if (onCanvas) {
-            setFeed(DEMO_FEED)
-            setLoading(false)
-            return
-        }
-        setLoading(true)
+    /* 피드 로드 — 정렬·종목필터·페이지네이션 전부 서버(2026-07-25).
+       이전: limit 30 단발 + 클라 정렬/필터 → 30개 넘는 글은 접근 경로 없음 + '인기'가 로드분 안에서만 정렬(가짜).
+       지금: offset 페이지네이션(has_more) + sort=hot(서버 집계, 최근 window 개) + ticker 서버 필터. */
+    const fetchPage = (off: number) => {
         const h: Record<string, string> = {}
         const t = getToken()
         if (t) h.Authorization = "Bearer " + t
-        fetch(base + "/api/thesis_feed?limit=" + cap, { headers: h, cache: "no-store" })
+        const u =
+            base +
+            "/api/thesis_feed?limit=" + cap +
+            "&offset=" + off +
+            (sort === "hot" ? "&sort=hot" : "") +
+            (filterTk ? "&ticker=" + encodeURIComponent(filterTk) : "")
+        return fetch(u, { headers: h, cache: "no-store" })
             .then((r) => (r.ok ? r.json() : null))
+            .then((d) => (d && Array.isArray(d.items) ? d : null))
+            .catch(() => null)
+    }
+
+    useEffect(() => {
+        if (onCanvas) {
+            setFeed(DEMO_FEED)
+            setOverview(DEMO_FEED)
+            setHasMore(false)
+            setLoading(false)
+            return
+        }
+        let alive = true
+        setLoading(true)
+        fetchPage(0)
             .then((d) => {
-                if (d && Array.isArray(d.items)) setFeed(d.items)
+                if (!alive) return
+                setFeed(d ? d.items : [])
+                setHasMore(!!(d && d.has_more))
+                setHotWin(d && d.window ? Number(d.window) : 0)
+                if (d && !filterTk) setOverview(d.items) // 칩·트렌딩 원본 갱신은 무필터일 때만
             })
-            .catch(() => {})
-            .finally(() => setLoading(false))
-    }, [base, cap, onCanvas])
+            .finally(() => {
+                if (alive) setLoading(false)
+            })
+        return () => {
+            alive = false
+        }
+    }, [base, cap, sort, filterTk, token, onCanvas])
+
+    const loadMore = () => {
+        if (more || !hasMore || onCanvas) return
+        setMore(true)
+        fetchPage(feed.length)
+            .then((d) => {
+                if (!d) return
+                setFeed((f) => {
+                    const seen = new Set(f.map((x) => x.id))
+                    return f.concat(d.items.filter((x: any) => !seen.has(x.id))) // 페이지 경계 신규글 중복 방지
+                })
+                setHasMore(!!d.has_more)
+            })
+            .finally(() => setMore(false))
+    }
 
     // 종목명 매핑 (universe_search) — 실패해도 무해(티커 그대로 노출)
     useEffect(() => {
@@ -249,15 +301,15 @@ export default function PublicCommunityPage(props: Props) {
         window.location.href = p + "?q=" + encodeURIComponent(tk)
     }
 
-    // 종목 칩 = 피드 등장 종목(글 수 내림차순)
+    // 종목 칩 = 최근 피드 등장 종목(글 수 내림차순). 원본 = overview(무필터) — 필터 중에도 목록 유지.
     const tickers = useMemo(() => {
         const cnt: Record<string, number> = {}
-        for (const it of feed) {
+        for (const it of overview) {
             const tk = String(it.ticker || "")
             if (tk) cnt[tk] = (cnt[tk] || 0) + 1
         }
         return Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 12)
-    }, [feed])
+    }, [overview])
 
     // 종목 검색 autocomplete — names(universe) 맵 재사용. 코드/이름 부분일치 상위 8, prefix 우선.
     const matches = useMemo(() => {
@@ -274,12 +326,11 @@ export default function PublicCommunityPage(props: Props) {
         return out.sort((a, b) => rk(a) - rk(b)).slice(0, 8)
     }, [q, names])
 
-    const shown = useMemo(() => {
-        let arr = filterTk ? feed.filter((it) => it.ticker === filterTk) : feed.slice()
-        if (sort === "hot")
-            arr = arr.slice().sort((a, b) => b.likes - a.likes || String(b.created_at).localeCompare(String(a.created_at)))
-        return arr
-    }, [feed, filterTk, sort])
+    // 정렬·필터 = 서버 처리(위 fetchPage). 캔버스 데모만 클라 필터.
+    const shown = useMemo(
+        () => (onCanvas && filterTk ? feed.filter((it) => it.ticker === filterTk) : feed),
+        [feed, filterTk, onCanvas]
+    )
 
     // 🚨 2026-07-24 사이드바 — 넓은 화면(≥940)만 우측에 트렌딩 종목. 피드는 가운데 단일 컬럼 유지(다열 금지=시간순 가독성).
     const rootRef = useRef<HTMLDivElement>(null)
@@ -296,7 +347,7 @@ export default function PublicCommunityPage(props: Props) {
     const wide = w >= 940
     const trending = useMemo(() => {
         const cnt: Record<string, number> = {}
-        for (const it of feed) {
+        for (const it of overview) {
             const tk = String(it.ticker || "")
             if (tk) cnt[tk] = (cnt[tk] || 0) + 1
         }
@@ -304,7 +355,7 @@ export default function PublicCommunityPage(props: Props) {
             .sort((a, b) => cnt[b] - cnt[a])
             .slice(0, 8)
             .map((tk) => [tk, cnt[tk]] as [string, number])
-    }, [feed])
+    }, [overview])
 
     const stanceStyle = (id: string): CSSProperties => {
         const col = id === "bull" ? C.up : id === "bear" ? C.down : C.faint
@@ -315,7 +366,7 @@ export default function PublicCommunityPage(props: Props) {
     const toggleLike = (it: any) => {
         if (onCanvas) return
         if (!token) {
-            setMsg("좋아요는 로그인 후 가능해요")
+            note("좋아요는 로그인 후 가능해요")
             return
         }
         const liked = !it.liked
@@ -328,20 +379,60 @@ export default function PublicCommunityPage(props: Props) {
             body: JSON.stringify({ action: liked ? "like" : "unlike", thesis_id: it.id }),
         }).catch(() => {})
     }
-    const reportItem = (it: any) => {
+    /* 신고 — 사유 선택 후 전송(2026-07-25). 이전엔 reason:"" 하드코딩이라 /admin 모더레이션에서 사유가 안 보였음. */
+    const openReport = (it: any) => {
         if (onCanvas || reported[it.id]) return
+        setMenuId("")
         if (!token) {
-            setMenuId("")
-            setMsg("신고는 로그인 후 가능해요")
+            note("신고는 로그인 후 가능해요")
             return
         }
-        setReported((m) => ({ ...m, [it.id]: true }))
-        setMenuId("")
+        setReportId(it.id)
+    }
+    const sendReport = (id: string, reason: string) => {
+        setReportId("")
+        if (onCanvas || !token || !id) return
+        setReported((m) => ({ ...m, [id]: true }))
         fetch(base + "/api/thesis_feed", {
             method: "POST",
             headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "report", thesis_id: it.id, reason: "" }),
+            body: JSON.stringify({ action: "report", thesis_id: id, reason }),
         }).catch(() => {})
+        note("신고가 접수됐어요 · 운영자가 확인해요")
+    }
+
+    /* 내 글 조작 — 비공개 전환(피드에서만 내림, 메모 보존) / 삭제(메모까지 제거).
+       비공개는 thesis_feed unpublish 액션 사용 — /api/thesis POST 재사용 시 entry_price 가 NULL 로 덮임. */
+    const unpublishItem = (it: any) => {
+        setMenuId("")
+        if (onCanvas) return
+        if (!token) {
+            note("로그인이 필요해요")
+            return
+        }
+        setFeed((f) => f.filter((x) => x.id !== it.id))
+        fetch(base + "/api/thesis_feed", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "unpublish", thesis_id: it.id }),
+        }).catch(() => {})
+        note("피드에서 내렸어요 · 메모는 종목 페이지에 남아요")
+    }
+    const deleteItem = (it: any) => {
+        setMenuId("")
+        if (onCanvas) return
+        if (!token) {
+            note("로그인이 필요해요")
+            return
+        }
+        if (typeof window !== "undefined" && !window.confirm("이 관점을 삭제할까요? 메모도 함께 지워져요.")) return
+        setFeed((f) => f.filter((x) => x.id !== it.id))
+        fetch(base + "/api/thesis", {
+            method: "DELETE",
+            headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+            body: JSON.stringify({ ticker: it.ticker }),
+        }).catch(() => {})
+        note("삭제했어요")
     }
 
     const wrap: CSSProperties = {
@@ -365,6 +456,41 @@ export default function PublicCommunityPage(props: Props) {
             <style>{AN_PALETTE}</style>
             <style>{`@keyframes vcpShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             {menuId && <div onClick={() => setMenuId("")} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
+
+            {/* 신고 사유 시트 — 사유 없이 접수하던 경로 대체(2026-07-25) */}
+            {reportId && (
+                <div
+                    onClick={() => setReportId("")}
+                    style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.32)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: "100%", maxWidth: 320, background: C.card, borderRadius: 16, padding: "16px 14px 10px", boxShadow: "0 12px 40px rgba(0,0,0,0.24)" }}
+                    >
+                        <div style={{ fontSize: 14.5, fontWeight: 800, color: C.ink, padding: "0 4px" }}>신고 사유</div>
+                        <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 4, padding: "0 4px", lineHeight: 1.5 }}>
+                            운영자가 확인 후 처리해요 · 허위 신고는 제재 대상
+                        </div>
+                        <div style={{ marginTop: 10 }}>
+                            {REPORT_REASONS.map((r) => (
+                                <button
+                                    key={r}
+                                    onClick={() => sendReport(reportId, r)}
+                                    style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "transparent", cursor: "pointer", padding: "12px 10px", borderRadius: 10, fontFamily: FONT, fontSize: 13, fontWeight: 700, color: C.ink }}
+                                >
+                                    {r}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => setReportId("")}
+                            style={{ width: "100%", marginTop: 6, border: "none", background: C.chipBg, color: C.sub, cursor: "pointer", padding: "11px 0", borderRadius: 10, fontFamily: FONT, fontSize: 12.5, fontWeight: 800 }}
+                        >
+                            취소
+                        </button>
+                    </div>
+                </div>
+            )}
             <div style={col}>
                 {/* 헤더 */}
                 <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>커뮤니티</div>
@@ -456,6 +582,13 @@ export default function PublicCommunityPage(props: Props) {
                     </div>
                 </div>
 
+                {/* 인기 = 전수 아님. 서버가 최근 window 개 안에서 좋아요순 집계 — 라벨로 명시(RULE 7 정합) */}
+                {sort === "hot" && hotWin > 0 && (
+                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8 }}>
+                        인기 = 최근 {hotWin}개 글 안에서 좋아요순 · 전체 기간 집계 아님
+                    </div>
+                )}
+
                 {msg && <div style={{ fontSize: 11.5, fontWeight: 700, color: C.up, marginTop: 10 }}>{msg}</div>}
 
                 {/* 피드 */}
@@ -505,28 +638,44 @@ export default function PublicCommunityPage(props: Props) {
                                         </div>
                                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 1 }}>{fmtAgo(it.created_at)}</div>
                                     </div>
-                                    {!it.mine && (
-                                        <span style={{ position: "relative", flexShrink: 0, display: "inline-flex" }}>
-                                            <button
-                                                onClick={() => setMenuId(menuId === it.id ? "" : it.id)}
-                                                aria-label="더보기"
-                                                style={{ border: "none", background: "transparent", cursor: "pointer", padding: 2, margin: -2, display: "inline-flex", alignItems: "center", color: C.faint }}
-                                            >
-                                                <DotsThree size={20} weight="bold" />
-                                            </button>
-                                            {menuId === it.id && (
-                                                <div style={{ position: "absolute", top: 24, right: 0, zIndex: 30, background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, boxShadow: "0 4px 14px rgba(0,0,0,0.12)", overflow: "hidden", minWidth: 104 }}>
+                                    {/* ⋯ 메뉴 — 내 글: 비공개 전환·삭제 / 남의 글: 신고(2026-07-25. 이전엔 내 글에 메뉴 자체가 없어 피드에서 못 내렸음) */}
+                                    <span style={{ position: "relative", flexShrink: 0, display: "inline-flex" }}>
+                                        <button
+                                            onClick={() => setMenuId(menuId === it.id ? "" : it.id)}
+                                            aria-label="더보기"
+                                            style={{ border: "none", background: "transparent", cursor: "pointer", padding: 2, margin: -2, display: "inline-flex", alignItems: "center", color: C.faint }}
+                                        >
+                                            <DotsThree size={20} weight="bold" />
+                                        </button>
+                                        {menuId === it.id && (
+                                            <div style={{ position: "absolute", top: 24, right: 0, zIndex: 30, background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, boxShadow: "0 4px 14px rgba(0,0,0,0.12)", overflow: "hidden", minWidth: 132 }}>
+                                                {it.mine ? (
+                                                    <>
+                                                        <button
+                                                            onClick={() => unpublishItem(it)}
+                                                            style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "transparent", cursor: "pointer", padding: "10px 14px", fontFamily: FONT, fontSize: 12, fontWeight: 700, color: C.ink, whiteSpace: "nowrap" }}
+                                                        >
+                                                            비공개로 전환
+                                                        </button>
+                                                        <button
+                                                            onClick={() => deleteItem(it)}
+                                                            style={{ display: "block", width: "100%", textAlign: "left", border: "none", borderTop: `1px solid ${C.line}`, background: "transparent", cursor: "pointer", padding: "10px 14px", fontFamily: FONT, fontSize: 12, fontWeight: 700, color: C.up, whiteSpace: "nowrap" }}
+                                                        >
+                                                            삭제
+                                                        </button>
+                                                    </>
+                                                ) : (
                                                     <button
-                                                        onClick={() => reportItem(it)}
+                                                        onClick={() => openReport(it)}
                                                         disabled={!!reported[it.id]}
                                                         style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "transparent", cursor: reported[it.id] ? "default" : "pointer", padding: "10px 14px", fontFamily: FONT, fontSize: 12, fontWeight: 700, color: reported[it.id] ? C.faint : C.up, whiteSpace: "nowrap" }}
                                                     >
                                                         {reported[it.id] ? "신고 접수됨" : "신고하기"}
                                                     </button>
-                                                </div>
-                                            )}
-                                        </span>
-                                    )}
+                                                )}
+                                            </div>
+                                        )}
+                                    </span>
                                 </div>
 
                                 {/* 종목 칩 + 스탠스 (토스식 정보 행) */}
@@ -579,6 +728,17 @@ export default function PublicCommunityPage(props: Props) {
                             </div>
                         )
                     })
+                )}
+
+                {/* 더보기 — 서버 offset 페이지네이션(2026-07-25). has_more=false 면 숨김 */}
+                {!loading && hasMore && (
+                    <button
+                        onClick={loadMore}
+                        disabled={more}
+                        style={{ width: "100%", marginTop: 10, border: "none", cursor: more ? "default" : "pointer", background: C.card, color: more ? C.faint : C.vg, borderRadius: 12, padding: "12px 0", fontFamily: FONT, fontSize: 12.5, fontWeight: 800, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+                    >
+                        {more ? "불러오는 중" : "더보기"}
+                    </button>
                 )}
 
                 <div style={{ textAlign: "center", fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 16, lineHeight: 1.6 }}>
