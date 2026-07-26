@@ -901,6 +901,92 @@ def handle_audit_log(handler, method: str, body: dict) -> dict:
     return {"_status": 200, "_body": {"items": r.json()}}
 
 
+_NOTICE_KINDS = ("notice", "event")
+_NOTICE_FIELDS = ("kind", "title", "body", "link", "pinned", "starts_at", "ends_at", "is_active")
+
+
+def _notice_payload(body: dict) -> dict:
+    """요청 body → notices 컬럼. 미동봉 키는 넣지 않음(부분 수정 시 기존값 보존)."""
+    out: dict = {}
+    for k in _NOTICE_FIELDS:
+        if k not in body:
+            continue
+        v = body[k]
+        if k == "kind":
+            v = str(v or "notice").strip()
+            if v not in _NOTICE_KINDS:
+                v = "notice"
+        elif k in ("title", "body", "link"):
+            v = str(v or "").strip()[: (120 if k == "title" else 2000)]
+        elif k in ("pinned", "is_active"):
+            v = bool(v)
+        elif k in ("starts_at", "ends_at"):
+            v = (str(v).strip() or None) if v else None
+        out[k] = v
+    return out
+
+
+def handle_notices(handler, method: str, body: dict) -> dict:
+    """공지·이벤트 발행 (027 migration). 공개 읽기는 /api/notices — 여기는 운영 쓰기·전량 목록."""
+    if not _svc_ready():
+        return {"_status": 503, "_body": {"error": "service_role_unconfigured"}}
+    actor = _caller_identity(headers_to_dict(handler))
+
+    if method == "GET":
+        # 관리자 목록 = 비활성·기간 지난 것 포함 전량
+        params = parse_qs(urlparse(handler.path).query)
+        limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
+        r = requests.get(f"{SUPABASE_URL}/rest/v1/notices", headers=_svc_headers(),
+                         params={"select": "id,kind,title,body,link,pinned,starts_at,ends_at,is_active,created_at,updated_at",
+                                 "order": "pinned.desc,created_at.desc", "limit": str(limit)}, timeout=10)
+        if r.status_code != 200:
+            return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
+        return {"_status": 200, "_body": {"items": r.json()}}
+
+    if method == "POST":
+        nid = str(body.get("id", "")).strip()
+        payload = _notice_payload(body)
+        if nid:  # 수정
+            if not payload:
+                return {"_status": 400, "_body": {"error": "no_fields"}}
+            r = requests.patch(f"{SUPABASE_URL}/rest/v1/notices",
+                               headers=_svc_headers({"Prefer": "return=representation"}),
+                               params={"id": f"eq.{nid}"}, json=payload, timeout=10)
+            if r.status_code not in (200, 204):
+                return {"_status": 502, "_body": {"error": "update_failed", "detail": r.text[:200]}}
+            _audit(actor, "update_notice", "notice", nid, {"fields": sorted(payload.keys())})
+            rows = r.json() if r.text else []
+            return {"_status": 200, "_body": {"ok": True, "item": (rows[0] if rows else None)}}
+        # 신규 — title 필수
+        if not payload.get("title"):
+            return {"_status": 400, "_body": {"error": "title_required"}}
+        payload.setdefault("kind", "notice")
+        payload["created_by"] = actor.get("id")
+        r = requests.post(f"{SUPABASE_URL}/rest/v1/notices",
+                          headers=_svc_headers({"Prefer": "return=representation"}),
+                          json=payload, timeout=10)
+        if r.status_code not in (200, 201):
+            return {"_status": 502, "_body": {"error": "insert_failed", "detail": r.text[:200]}}
+        rows = r.json() if r.text else []
+        item = rows[0] if rows else None
+        _audit(actor, "create_notice", "notice", (item or {}).get("id"), {"kind": payload.get("kind"), "title": payload.get("title")})
+        return {"_status": 201, "_body": {"ok": True, "item": item}}
+
+    if method == "DELETE":
+        nid = str(body.get("id", "")).strip()
+        if not nid:
+            return {"_status": 400, "_body": {"error": "id_required"}}
+        r = requests.delete(f"{SUPABASE_URL}/rest/v1/notices",
+                            headers=_svc_headers({"Prefer": "return=minimal"}),
+                            params={"id": f"eq.{nid}"}, timeout=10)
+        if r.status_code not in (200, 204):
+            return {"_status": 502, "_body": {"error": "delete_failed", "detail": r.text[:200]}}
+        _audit(actor, "delete_notice", "notice", nid, None)
+        return {"_status": 200, "_body": {"ok": True, "deleted": nid}}
+
+    return {"_status": 405, "_body": {"error": "method_not_allowed"}}
+
+
 def handle_community_moderation(handler, method: str, body: dict) -> dict:
     if not _svc_ready():
         return {"_status": 503, "_body": {"error": "service_role_unconfigured"}}
@@ -1157,6 +1243,7 @@ MOD_ROUTES = {
     "audit_log": handle_audit_log,
     "growth_stats": handle_growth_stats,
     "security": handle_security,
+    "notices": handle_notices,
 }
 
 

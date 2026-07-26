@@ -5,6 +5,7 @@ GET  /api/thesis_feed?ticker=005930          → 종목별 공개 관점 목록 
 GET  /api/thesis_feed?limit=30               → ticker 생략 = 전 종목 최신 글로벌 피드 (커뮤니티 페이지, 2026-07-10)
 GET  /api/thesis_feed?limit=30&offset=30     → 더보기 페이지네이션 (2026-07-25). 응답 has_more 로 끝 판정.
 GET  /api/thesis_feed?sort=hot               → 좋아요순. 최근 _HOT_WINDOW 개 안에서 집계(전수 아님 — 응답 window 명시).
+GET  /api/thesis_feed?stats=1                → 관점 온도(강세/관망/약세 글 수) 전체 + 종목별 상위 12 (2026-07-26)
 POST /api/thesis_feed { action, thesis_id, reason? }  → like | unlike | report | unpublish (로그인 필수)
 
 데이터 경계:
@@ -41,6 +42,8 @@ _FEED_OFFSET_MAX = 2000  # 커서 없는 offset 페이지네이션 상한(깊은
 # 인기 정렬 = 좋아요 집계용 최근 창. likes 가 별도 테이블이라 전수 정렬은 컬럼/뷰 신설(마이그레이션) 필요 —
 # v1 은 최근 N개 창 안에서 집계하고 응답에 window 를 명시(UI 라벨 정합). 전수 인기는 v2 (like_count 컬럼+트리거).
 _HOT_WINDOW = 300
+# 관점 온도(stats=1) 집계 창 — 인기 창과 별개로 더 넓게(스탠스 분포는 오래된 글도 의미 있음).
+_STATS_WINDOW = 1000
 _ACTIONS = {"like", "unlike", "report", "unpublish"}
 
 
@@ -119,6 +122,44 @@ class handler(BaseHTTPRequestHandler):
         _cors_headers(self)
         self.end_headers()
 
+    def _stats(self, ticker: str):
+        """공개 관점 스탠스 집계 — 전체 + 종목별 상위. 사실 집계(글 수)이며 추천·전망이 아님."""
+        filters = {
+            "is_public": "eq.true",
+            "hidden": "eq.false",
+            "select": "ticker,stance",
+            "order": "created_at.desc",
+            "limit": str(_STATS_WINDOW),
+        }
+        if ticker:
+            filters["ticker"] = f"eq.{ticker}"
+        try:
+            rows = sb.select("user_thesis", filters)
+        except Exception:
+            return _json_response(self, {"total": {}, "by_ticker": [], "window": _STATS_WINDOW})
+
+        total: dict = {"bull": 0, "watch": 0, "bear": 0}
+        per: dict = defaultdict(lambda: {"bull": 0, "watch": 0, "bear": 0})
+        for r in rows or []:
+            st = str(r.get("stance") or "watch")
+            if st not in total:
+                st = "watch"
+            total[st] += 1
+            tk = str(r.get("ticker") or "")
+            if tk:
+                per[tk][st] += 1
+
+        by_ticker = [
+            {"ticker": tk, **c, "total": c["bull"] + c["watch"] + c["bear"]}
+            for tk, c in per.items()
+        ]
+        by_ticker.sort(key=lambda x: (x["total"], x["ticker"]), reverse=True)
+        _json_response(self, {
+            "total": {**total, "total": sum(total.values())},
+            "by_ticker": by_ticker[:12],
+            "window": _STATS_WINDOW,  # UI 라벨 정합 — "최근 N개 기준"
+        })
+
     def do_GET(self):
         if not _global_budget_ok():
             return _json_response(self, {"error": "서비스 혼잡 - 잠시 후 재시도"}, 429)
@@ -129,6 +170,11 @@ class handler(BaseHTTPRequestHandler):
 
         qs = parse_qs(urlparse(self.path).query)
         ticker = (qs.get("ticker", [""])[0] or "").strip()
+
+        # 관점 온도 — 공개 관점의 강세/관망/약세 집계(사실 집계, RULE 7: 추천·전망 아님).
+        # 전수가 아니라 최근 _STATS_WINDOW 개 창 — 응답 window 로 명시해 UI 라벨과 정합.
+        if (qs.get("stats", [""])[0] or "").strip() in ("1", "true"):
+            return self._stats(ticker)
         try:
             limit = max(1, min(_FEED_LIMIT_MAX, int(qs.get("limit", ["0"])[0] or 0))) or _FEED_LIMIT
         except Exception:

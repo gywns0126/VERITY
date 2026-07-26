@@ -48,6 +48,11 @@ const DEMO_FEED = [
     { id: "d4", ticker: "035720", nickname: "관망러", avatar: "", stance: "bear", note: "신사업 비용이 아직 무겁다. 흑자 전환 확인 전까진 보수적으로.", created_at: "2026-07-05T10:00:00Z", likes: 1, liked: false, mine: false },
 ]
 
+const DEMO_NOTICES = [
+    { id: "n1", kind: "event", title: "첫 관점 남기기 이벤트", body: "이번 주 안에 관점을 남기면 커뮤니티 첫 기록으로 남아요.", link: "", pinned: true, created_at: "2026-07-26T00:00:00Z" },
+]
+const DEMO_STATS = { total: { bull: 12, watch: 7, bear: 4, total: 23 }, by_ticker: [], window: 1000 }
+
 interface Props {
     apiBase: string
     stockPath: string
@@ -162,6 +167,56 @@ function StockLogo(props: { ticker: any; name: any; C: any; size?: number }) {
     )
 }
 
+/* 관점 온도 — 강세/관망/약세 "글 수" 막대. 사실 집계이며 추천·전망·목표가가 아님(RULE 7).
+   표본이 작으면 비율이 튀므로 건수와 표본 창을 항상 병기. n<5 는 "표본 부족" 문구로 대체. */
+function StanceBar(props: { c: any; label: string; window?: number; compact?: boolean }) {
+    const { c, label } = props
+    const bull = Number(c?.bull || 0)
+    const watch = Number(c?.watch || 0)
+    const bear = Number(c?.bear || 0)
+    const n = bull + watch + bear
+    const seg = [
+        { k: "강세", v: bull, col: C.up },
+        { k: "관망", v: watch, col: C.faint },
+        { k: "약세", v: bear, col: C.down },
+    ]
+    return (
+        <div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                <span style={{ fontSize: 13.5, fontWeight: 800, color: C.ink, letterSpacing: "-0.2px" }}>{label}</span>
+                <span style={{ fontSize: 11, color: C.faint, fontWeight: 700 }}>{n}개</span>
+            </div>
+            {n < 5 ? (
+                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>
+                    표본 부족 (5개 미만) · 관점이 쌓이면 비율을 보여드려요
+                </div>
+            ) : (
+                <>
+                    <div style={{ display: "flex", height: 8, borderRadius: 999, overflow: "hidden", marginTop: 8, background: C.chipBg }}>
+                        {seg.map((s) => (
+                            <div key={s.k} style={{ width: (s.v / n) * 100 + "%", background: s.col }} title={s.k + " " + s.v + "개"} />
+                        ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 10, marginTop: 7, flexWrap: "wrap" }}>
+                        {seg.map((s) => (
+                            <span key={s.k} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, color: C.sub }}>
+                                <span style={{ width: 7, height: 7, borderRadius: 3, background: s.col }} />
+                                {s.k} {Math.round((s.v / n) * 100)}%
+                                <span style={{ color: C.faint, fontWeight: 600 }}>({s.v})</span>
+                            </span>
+                        ))}
+                    </div>
+                </>
+            )}
+            {!props.compact && (
+                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 7, lineHeight: 1.5 }}>
+                    이용자가 남긴 관점 글 수 집계{props.window ? ` · 최근 ${props.window}개 기준` : ""} · 추천·전망 아님
+                </div>
+            )}
+        </div>
+    )
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -190,10 +245,54 @@ export default function PublicCommunityPage(props: Props) {
     const [expanded, setExpanded] = useState<Record<string, boolean>>({})
     const [q, setQ] = useState("") // 종목 검색어(이름/코드)
     const [focused, setFocused] = useState(false)
+    const [notices, setNotices] = useState<any[]>([]) // 공지·이벤트(027) — 관리자 발행분
+    const [seenNotice, setSeenNotice] = useState("") // 배너 닫기(localStorage 기억)
+    const [stats, setStats] = useState<any>(null) // 관점 온도 — 강세/관망/약세 글 수
     const note = (m: string) => {
         setMsg(m)
         if (typeof window !== "undefined") window.setTimeout(() => setMsg((cur) => (cur === m ? "" : cur)), 3500)
     }
+
+    /* 공지·이벤트 배너 (2026-07-26) — /api/notices 공개 읽기. 관리자가 /admin 에서 발행한 문구 그대로(RULE 6: LLM 0).
+       027 미적용 DB 나 발행분 0건이면 빈 목록 → 배너 자체가 안 뜸(무회귀). */
+    useEffect(() => {
+        if (onCanvas) {
+            setNotices(DEMO_NOTICES)
+            return
+        }
+        try {
+            setSeenNotice(localStorage.getItem("an_notice_seen") || "")
+        } catch (e) {}
+        let alive = true
+        fetch(base + "/api/notices")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (alive && d && Array.isArray(d.items)) setNotices(d.items)
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [base, onCanvas])
+
+    /* 관점 온도 — 공개 관점의 강세/관망/약세 글 수(사실 집계). 종목 필터 시 그 종목 기준.
+       🚨 RULE 7: 추천·전망 아님. 표본(window)·건수 병기 의무. */
+    useEffect(() => {
+        if (onCanvas) {
+            setStats(DEMO_STATS)
+            return
+        }
+        let alive = true
+        fetch(base + "/api/thesis_feed?stats=1" + (filterTk ? "&ticker=" + encodeURIComponent(filterTk) : ""))
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (alive && d && d.total) setStats(d)
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [base, filterTk, onCanvas])
 
     // 세션 토큰 추적(로그인/로그아웃 반영 — AlphaNestAuth 가 dispatch)
     useEffect(() => {
@@ -527,6 +626,48 @@ export default function PublicCommunityPage(props: Props) {
                     종목 관점을 나누는 공간 · 모든 글은 이용자 개인 의견이며 AlphaNest 의 분석·판단·추천이 아니에요
                 </div>
 
+                {/* 공지·이벤트 배너 — pinned 우선 1건. 닫으면 그 id 는 다시 안 뜸(localStorage). */}
+                {(() => {
+                    const nt = notices.filter((x) => String(x.id) !== seenNotice)[0]
+                    if (!nt) return null
+                    const ev = nt.kind === "event"
+                    const body = (
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                            <span style={{ flexShrink: 0, marginTop: 1, fontSize: 10.5, fontWeight: 800, color: ev ? C.onAccent : C.vg, background: ev ? C.vg : C.vgS, borderRadius: 6, padding: "3px 7px" }}>
+                                {ev ? "이벤트" : "공지"}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink, letterSpacing: "-0.2px" }}>{nt.title}</div>
+                                {nt.body ? (
+                                    <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, marginTop: 3, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{nt.body}</div>
+                                ) : null}
+                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    setSeenNotice(String(nt.id))
+                                    try {
+                                        localStorage.setItem("an_notice_seen", String(nt.id))
+                                    } catch (err) {}
+                                }}
+                                aria-label="닫기"
+                                style={{ flexShrink: 0, border: "none", background: "transparent", cursor: "pointer", color: C.faint, fontSize: 15, lineHeight: 1, padding: 2, fontFamily: FONT }}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )
+                    const box: CSSProperties = { ...card, marginTop: 12, padding: "13px 14px", border: `1px solid ${ev ? C.vg : C.line}` }
+                    return nt.link ? (
+                        <a href={nt.link} target="_blank" rel="noopener noreferrer" style={{ ...box, display: "block", textDecoration: "none" }}>
+                            {body}
+                        </a>
+                    ) : (
+                        <div style={box}>{body}</div>
+                    )
+                })()}
+
                 {/* 종목 검색 */}
                 <div style={{ position: "relative", marginTop: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 7, background: C.card, borderRadius: 999, padding: "9px 14px", boxSizing: "border-box" }}>
@@ -617,6 +758,17 @@ export default function PublicCommunityPage(props: Props) {
                         인기 = 최근 {hotWin}개 글 안에서 좋아요순 · 전체 기간 집계 아님
                     </div>
                 )}
+
+                {/* 좁은 화면(사이드바 없음) 또는 종목 필터 중 = 피드 위에 관점 온도 노출 */}
+                {stats && stats.total && (!wide || filterTk) ? (
+                    <div style={{ ...card, marginTop: 10 }}>
+                        <StanceBar
+                            c={stats.total}
+                            label={filterTk ? tkName(filterTk) + " 관점 온도" : "관점 온도"}
+                            window={stats.window}
+                        />
+                    </div>
+                ) : null}
 
                 {msg && <div style={{ fontSize: 11.5, fontWeight: 700, color: C.up, marginTop: 10 }}>{msg}</div>}
 
@@ -778,7 +930,17 @@ export default function PublicCommunityPage(props: Props) {
             {/* 🚨 2026-07-24 우측 사이드바 — 넓은 화면만. 트렌딩 종목(관점 수 상위) → 클릭 시 피드 필터 */}
             {wide && (
                 <aside style={{ width: 264, flexShrink: 0, position: "sticky", top: 20 }}>
-                    <div style={{ ...card, marginTop: 0 }}>
+                    {/* 관점 온도 — 사실 집계(글 수). 종목 필터 시 그 종목 기준으로 전환 */}
+                    {stats && stats.total ? (
+                        <div style={{ ...card, marginTop: 0 }}>
+                            <StanceBar
+                                c={stats.total}
+                                label={filterTk ? tkName(filterTk) + " 관점 온도" : "관점 온도"}
+                                window={stats.window}
+                            />
+                        </div>
+                    ) : null}
+                    <div style={{ ...card, marginTop: stats && stats.total ? 10 : 0 }}>
                         <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink, letterSpacing: "-0.2px" }}>트렌딩 종목</div>
                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 2, marginBottom: 6 }}>관점이 많은 종목</div>
                         {trending.length === 0 ? (
