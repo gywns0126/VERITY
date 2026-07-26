@@ -1121,6 +1121,8 @@ function EtfReportBlock({
         sector: "섹터",
         dividend: "배당",
         reit: "리츠",
+        money: "단기금리",
+        etc: "기타",
     }
     const fmtF = (won: any, signed = false) => {
         const n = Number(won)

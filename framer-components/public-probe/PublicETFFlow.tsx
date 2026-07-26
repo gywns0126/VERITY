@@ -35,6 +35,8 @@ const CAT: Record<string, string> = {
     bond_kr: "한국채권", bond_us: "미국채권", commodity_gold: "금", commodity: "원자재",
     leverage: "레버리지", inverse: "인버스", sector_financial: "금융", sector_tech: "IT",
     sector: "섹터", dividend: "배당",
+    // 2026-07-27 전 종목 확대로 신설된 카테고리 (파킹형·리츠·미분류)
+    money: "단기금리", reit: "리츠", etc: "기타",
 }
 
 function fmtKRW(won: any, signed = false): string {
