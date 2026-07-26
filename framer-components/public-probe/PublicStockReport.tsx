@@ -1206,6 +1206,52 @@ function EtfReportBlock({
             </div>
         </div>
     )
+
+    /* 🚨 2026-07-27 지수형 보강 — 전 종목 커버리지(25→상장 전량)로 비로소 가능해진 항목들.
+       ① NAV 기간 수익률 ② 괴리율 평균·범위 ③ 같은 기초지수(없으면 같은 분류) ETF 비교.
+       전부 관측 사실 나열이며 순위·추천·전망이 아님(RULE 7). 표본이 짧으면 기간을 함께 표기. */
+    const navFirst = hist.length >= 2 ? Number(hist[0].nav) : NaN
+    const navLast = hist.length >= 2 ? Number(hist[hist.length - 1].nav) : NaN
+    const navRet =
+        isFinite(navFirst) && isFinite(navLast) && navFirst
+            ? ((navLast - navFirst) / navFirst) * 100
+            : null
+    const premVals = series
+        .map((s2: any) => s2.prem)
+        .filter((p: any) => p != null && isFinite(p)) as number[]
+    const premAvg = premVals.length
+        ? premVals.reduce((a2, b2) => a2 + b2, 0) / premVals.length
+        : null
+    const premMin = premVals.length ? Math.min(...premVals) : null
+    const premMax = premVals.length ? Math.max(...premVals) : null
+
+    const peerSize = (x: any) => Number(x.netasset || x.aum_usd || 0)
+    const peerKey = e && e.base_index ? "base_index" : "category"
+    const peerVal = e ? String(e[peerKey] || "") : ""
+    const peers =
+        e && peerVal && doc && Array.isArray(doc.etfs)
+            ? doc.etfs
+                  .filter(
+                      (x: any) =>
+                          String(x[peerKey] || "") === peerVal &&
+                          String(x.ticker) !== String(ticker)
+                  )
+                  .sort((a2: any, b2: any) => peerSize(b2) - peerSize(a2))
+                  .slice(0, 5)
+            : []
+    const peerRows = peers.length ? [e, ...peers] : []
+    const feeOf = (x: any) =>
+        x.ter != null && x.ter !== ""
+            ? String(x.ter)
+            : x.expense != null
+              ? x.expense + "%"
+              : "—"
+    const premOf = (x: any) => {
+        const c2 = Number(x.close),
+            n2 = Number(x.nav)
+        return isFinite(c2) && isFinite(n2) && n2 ? ((c2 - n2) / n2) * 100 : null
+    }
+
     return (
         <div style={{ marginTop: 14 }}>
             <div
@@ -1524,6 +1570,44 @@ function EtfReportBlock({
                                 ? kv("기초지수", String(e.base_index))
                                 : null}
                         </div>
+                        {/* 지수형 보강 — NAV 기간 수익률 · 괴리율 평균/범위 (보관 시계열 내, 표본 짧으면 기간 병기) */}
+                        {(navRet != null || premAvg != null) && (
+                            <div
+                                style={{
+                                    display: "flex",
+                                    gap: 12,
+                                    flexWrap: "wrap",
+                                    marginTop: 12,
+                                }}
+                            >
+                                {navRet != null
+                                    ? kv(
+                                          `NAV 수익률 (${hist.length}거래일)`,
+                                          (navRet >= 0 ? "+" : "") +
+                                              navRet.toFixed(2) +
+                                              "%",
+                                          navRet >= 0 ? C.up : C.down
+                                      )
+                                    : null}
+                                {premAvg != null
+                                    ? kv(
+                                          "괴리율 평균",
+                                          (premAvg >= 0 ? "+" : "") +
+                                              premAvg.toFixed(2) +
+                                              "%"
+                                      )
+                                    : null}
+                                {premMin != null && premMax != null
+                                    ? kv(
+                                          "괴리율 범위",
+                                          premMin.toFixed(2) +
+                                              "% ~ " +
+                                              premMax.toFixed(2) +
+                                              "%"
+                                      )
+                                    : null}
+                            </div>
+                        )}
                         <div
                             style={{
                                 fontSize: 11,
@@ -1538,8 +1622,159 @@ function EtfReportBlock({
                             {doc && doc.bas_dd
                                 ? ` · 기준일 ${ds(String(doc.bas_dd))}`
                                 : ""}
+                            {navRet != null
+                                ? " · NAV 수익률은 보관 시계열(최근 " +
+                                  hist.length +
+                                  "거래일) 구간 변화이며 장기 성과가 아님"
+                                : ""}
                         </div>
                     </div>
+                    {/* 🚨 같은 지수를 따라가는 ETF 비교 — 커버리지 전량 확보로 가능해진 항목.
+                        같은 기초지수(없으면 같은 분류)에서 순자산 상위 5 + 현재 종목. 사실 나열, 추천 아님. */}
+                    {peerRows.length >= 2 && (
+                        <div style={card}>
+                            <div
+                                style={{
+                                    fontSize: 13.5,
+                                    fontWeight: 800,
+                                    marginBottom: 2,
+                                }}
+                            >
+                                {peerKey === "base_index"
+                                    ? "같은 지수를 따라가는 ETF"
+                                    : "같은 분류 ETF"}
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: 11.5,
+                                    color: C.faint,
+                                    fontWeight: 600,
+                                    marginBottom: 8,
+                                }}
+                            >
+                                {peerKey === "base_index"
+                                    ? "기초지수 " + peerVal
+                                    : CATL[peerVal] || peerVal}{" "}
+                                · 순자산 상위
+                            </div>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    fontSize: 10.5,
+                                    color: C.faint,
+                                    fontWeight: 700,
+                                    padding: "0 0 5px",
+                                }}
+                            >
+                                <span style={{ flex: 1, minWidth: 0 }}>
+                                    종목
+                                </span>
+                                <span
+                                    style={{ width: 58, textAlign: "right" }}
+                                >
+                                    총보수
+                                </span>
+                                <span
+                                    style={{ width: 72, textAlign: "right" }}
+                                >
+                                    순자산
+                                </span>
+                                <span
+                                    style={{ width: 56, textAlign: "right" }}
+                                >
+                                    괴리율
+                                </span>
+                            </div>
+                            {peerRows.map((x: any, i2: number) => {
+                                const self =
+                                    String(x.ticker) === String(ticker)
+                                const p2 = premOf(x)
+                                return (
+                                    <div
+                                        key={String(x.ticker)}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            padding: "7px 0",
+                                            borderTop:
+                                                i2 === 0
+                                                    ? "none"
+                                                    : "1px solid " + C.line,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                flex: 1,
+                                                minWidth: 0,
+                                                fontSize: 12.5,
+                                                fontWeight: self ? 800 : 600,
+                                                color: self ? C.vt : C.sub,
+                                                whiteSpace: "nowrap",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                            }}
+                                        >
+                                            {x.name || x.ticker}
+                                            {self ? " (지금 보는 종목)" : ""}
+                                        </span>
+                                        <span
+                                            style={{
+                                                width: 58,
+                                                textAlign: "right",
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            {feeOf(x)}
+                                        </span>
+                                        <span
+                                            style={{
+                                                width: 72,
+                                                textAlign: "right",
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            {fmtF(peerSize(x))}
+                                        </span>
+                                        <span
+                                            style={{
+                                                width: 56,
+                                                textAlign: "right",
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                                color:
+                                                    p2 == null
+                                                        ? C.faint
+                                                        : p2 >= 0
+                                                          ? C.up
+                                                          : C.down,
+                                            }}
+                                        >
+                                            {p2 == null
+                                                ? "—"
+                                                : (p2 >= 0 ? "+" : "") +
+                                                  p2.toFixed(2) +
+                                                  "%"}
+                                        </span>
+                                    </div>
+                                )
+                            })}
+                            <div
+                                style={{
+                                    fontSize: 11,
+                                    color: C.faint,
+                                    fontWeight: 600,
+                                    marginTop: 10,
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                총보수·순자산·괴리율은 공시 사실 — 어느 쪽이
+                                낫다는 판단이 아니에요. 보수는 갱신 회차에 따라
+                                일부 종목이 비어 있을 수 있어요.
+                            </div>
+                        </div>
+                    )}
                     {Array.isArray(e.top_holdings) &&
                         e.top_holdings.length > 0 && (
                             <div style={card}>
