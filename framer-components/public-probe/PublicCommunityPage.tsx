@@ -402,7 +402,30 @@ export default function PublicCommunityPage(props: Props) {
     }
 
     /* 내 글 조작 — 비공개 전환(피드에서만 내림, 메모 보존) / 삭제(메모까지 제거).
-       비공개는 thesis_feed unpublish 액션 사용 — /api/thesis POST 재사용 시 entry_price 가 NULL 로 덮임. */
+       비공개는 thesis_feed unpublish 액션 사용 — /api/thesis POST 재사용 시 entry_price 가 NULL 로 덮임.
+       🚨 낙관 제거 후 실패하면 원위치 복구. unpublish 액션 미배포 API(구버전)면 400 이 오는데,
+          복구가 없으면 "내려간 것처럼 보이는데 새로고침하면 그대로" 상태가 됨. */
+    const mutateMine = (it: any, req: () => Promise<Response>, okMsg: string) => {
+        const idx = feed.findIndex((x) => x.id === it.id)
+        setFeed((f) => f.filter((x) => x.id !== it.id))
+        req()
+            .then((r) => {
+                if (r && r.ok) {
+                    note(okMsg)
+                    return
+                }
+                throw new Error("failed")
+            })
+            .catch(() => {
+                setFeed((f) => {
+                    if (f.some((x) => x.id === it.id)) return f
+                    const next = f.slice()
+                    next.splice(Math.max(0, Math.min(idx < 0 ? f.length : idx, f.length)), 0, it)
+                    return next
+                })
+                note("처리하지 못했어요 · 잠시 후 다시 시도해 주세요")
+            })
+    }
     const unpublishItem = (it: any) => {
         setMenuId("")
         if (onCanvas) return
@@ -410,13 +433,16 @@ export default function PublicCommunityPage(props: Props) {
             note("로그인이 필요해요")
             return
         }
-        setFeed((f) => f.filter((x) => x.id !== it.id))
-        fetch(base + "/api/thesis_feed", {
-            method: "POST",
-            headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "unpublish", thesis_id: it.id }),
-        }).catch(() => {})
-        note("피드에서 내렸어요 · 메모는 종목 페이지에 남아요")
+        mutateMine(
+            it,
+            () =>
+                fetch(base + "/api/thesis_feed", {
+                    method: "POST",
+                    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "unpublish", thesis_id: it.id }),
+                }),
+            "피드에서 내렸어요 · 메모는 종목 페이지에 남아요"
+        )
     }
     const deleteItem = (it: any) => {
         setMenuId("")
@@ -426,13 +452,16 @@ export default function PublicCommunityPage(props: Props) {
             return
         }
         if (typeof window !== "undefined" && !window.confirm("이 관점을 삭제할까요? 메모도 함께 지워져요.")) return
-        setFeed((f) => f.filter((x) => x.id !== it.id))
-        fetch(base + "/api/thesis", {
-            method: "DELETE",
-            headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-            body: JSON.stringify({ ticker: it.ticker }),
-        }).catch(() => {})
-        note("삭제했어요")
+        mutateMine(
+            it,
+            () =>
+                fetch(base + "/api/thesis", {
+                    method: "DELETE",
+                    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+                    body: JSON.stringify({ ticker: it.ticker }),
+                }),
+            "삭제했어요"
+        )
     }
 
     const wrap: CSSProperties = {
