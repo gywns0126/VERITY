@@ -18,8 +18,16 @@ on:
       horizon:
         description: "백필 목표 거래일(≈1년=250)"
         default: "250"
+      sleep_sec:
+        description: "콜 간 대기(초) — KRX 스로틀 회피. 실측 0.4s 는 과속"
+        default: "1.0"
   schedule:
     - cron: "20 21 * * 0" # 월 06:20 KST
+
+# 🚨 데이터 커밋 push 필수 — 없으면 github-actions[bot] 403 으로 수집분이 전량 유실됨
+#   (2026-07-27 실사고: 151거래일 수집 후 push 403, 커밋은 로컬에만 남아 폐기).
+permissions:
+  contents: write
 
 concurrency:
   group: etf-history-backfill
@@ -52,6 +60,8 @@ jobs:
         if: ${{ inputs.probe != true }}
         env:
           KRX_API_KEY: ${{ secrets.KRX_API_KEY }}
+          # 0.4s 로 250일을 연속 호출하니 약 99일이 빈 응답(스로틀 추정) → 기본 1.0s
+          ETF_HIST_SLEEP: ${{ inputs.sleep_sec || '1.0' }}
         run: |
           python scripts/etf_history_backfill.py \
             --max-days "${{ inputs.max_days || '40' }}" \
