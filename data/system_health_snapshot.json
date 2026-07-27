@@ -1,102 +1,102 @@
 {
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-07-27T16:35:45+09:00",
+    "checked_at": "2026-07-27T16:15:09+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 198302,
+    "elapsed_ms": 289819,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 197727,
+        "latency_ms": 198688,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
-        "status": "skipped",
-        "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "status": "ok",
+        "latency_ms": 244,
+        "detail": "정상",
+        "attempts": 1
       },
       "telegram": {
-        "status": "skipped",
-        "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "status": "ok",
+        "latency_ms": 401,
+        "detail": "@verity_stock_bot",
+        "attempts": 1
       },
       "gemini": {
-        "status": "skipped",
-        "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "status": "ok",
+        "latency_ms": 166,
+        "detail": "정상",
+        "attempts": 1
       },
       "anthropic": {
-        "status": "skipped",
+        "status": "ok",
         "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "detail": "키 존재 확인",
+        "attempts": 1
       },
       "kipris": {
-        "status": "skipped",
-        "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "status": "ok",
+        "latency_ms": 825,
+        "detail": "정상",
+        "attempts": 1
       },
       "public_data": {
-        "status": "skipped",
-        "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "status": "ok",
+        "latency_ms": 4341,
+        "detail": "정상",
+        "attempts": 1
       },
       "reports_signed_url": {
-        "status": "skipped",
-        "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "status": "ok",
+        "latency_ms": 1599,
+        "detail": "signed URL + fetch 정상",
+        "attempts": 1
       },
       "krx_open_api": {
-        "status": "skipped",
-        "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "status": "ok",
+        "latency_ms": 81425,
+        "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260721)",
+        "attempts": 1
       },
       "ecos": {
-        "status": "skipped",
-        "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "status": "ok",
+        "latency_ms": 749,
+        "detail": "정상",
+        "attempts": 1
       },
       "finnhub": {
-        "status": "skipped",
-        "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "status": "ok",
+        "latency_ms": 277,
+        "detail": "정상",
+        "attempts": 1
       },
       "polygon": {
-        "status": "skipped",
-        "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "status": "ok",
+        "latency_ms": 335,
+        "detail": "정상",
+        "attempts": 1
       },
       "sec_edgar": {
-        "status": "skipped",
-        "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "status": "ok",
+        "latency_ms": 139,
+        "detail": "정상",
+        "attempts": 1
       },
       "perplexity": {
-        "status": "skipped",
+        "status": "ok",
         "latency_ms": 0,
-        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
-        "attempts": 0
+        "detail": "키 설정 OK",
+        "attempts": 1
       }
     },
     "github_worker": {
       "status": "running",
-      "conclusion": "pending",
-      "workflow": "DART Catalyst Pulse (공시속보 신선도)",
-      "started_at": "2026-07-27T07:30:44Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/30246414481",
-      "detail": "DART Catalyst Pulse (공시속보 신선도): pending"
+      "conclusion": "in_progress",
+      "workflow": "Stock Analysis Pipeline (Full & Periodic)",
+      "started_at": "2026-07-27T07:07:44Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/30245011464",
+      "detail": "Stock Analysis Pipeline (Full & Periodic): in_progress"
     },
     "data_recency": {
       "status": "ok",
@@ -104,44 +104,44 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-07-27 16:31",
-          "age_hours": 0.07,
+          "last_updated": "2026-07-27 16:08",
+          "age_hours": 0.11,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-07-27 16:31",
-          "age_hours": 0.07,
+          "last_updated": "2026-07-27 16:08",
+          "age_hours": 0.11,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-07-27 16:31",
-          "age_hours": 0.07,
+          "last_updated": "2026-07-27 16:08",
+          "age_hours": 0.11,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-07-27 16:31",
-          "age_hours": 0.07,
+          "last_updated": "2026-07-27 16:08",
+          "age_hours": 0.11,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-07-27 16:31",
-          "age_hours": 0.07,
+          "last_updated": "2026-07-27 16:08",
+          "age_hours": 0.11,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-07-27 16:31",
-          "age_hours": 0.07,
+          "last_updated": "2026-07-27 16:08",
+          "age_hours": 0.11,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-07-27 16:31",
-          "age_hours": 0.07,
+          "last_updated": "2026-07-27 16:10",
+          "age_hours": 0.08,
           "threshold_hours": 1
         }
       }
@@ -149,11 +149,11 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "c0dd1cd",
-      "remote_message": "📊 macro_snapshot 2026-07-27T16:33",
-      "remote_date": "2026-07-27T07:33:08Z",
-      "local_sha": "40b38d5",
-      "detail": "cron 자동 갱신 — 📊 macro_snapshot 2026-07-27T16:33"
+      "remote_sha": "40b38d5",
+      "remote_message": "📊 realtime 업데이트 2026-07-27 16:11",
+      "remote_date": "2026-07-27T07:11:16Z",
+      "local_sha": "e0373fa",
+      "detail": "cron 자동 갱신 — 📊 realtime 업데이트 2026-07-27 16:11"
     },
     "errors": [],
     "warnings": [],
@@ -166,7 +166,7 @@
     },
     "overall_status": "ok"
   },
-  "updated_at": "2026-07-27T16:35:51+09:00",
+  "updated_at": "2026-07-27T16:15:14+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
