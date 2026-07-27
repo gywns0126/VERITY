@@ -1,11 +1,155 @@
 {
-  "updated_at": "2026-07-20T10:07:46.418788+09:00",
+  "updated_at": "2026-07-27T10:11:44.150644+09:00",
   "source": "DART OpenAPI list.json (C001 증권신고서/지분증권, corp_cls=E)",
   "search_window_days": 88,
   "disclaimer": "watch list (후보 신호, 가설 N=0). 추천 아님 — 상장 전은 가격 데이터가 없어 검증 trail 미적용. 상장 후 funnel 편입 시점부터 검증 시작.",
   "raw_c001_count": 277,
-  "count": 9,
+  "count": 10,
   "watch": [
+    {
+      "corp_name": "덕산넵코어스",
+      "corp_code": "00960623",
+      "rcept_no": "20260724000342",
+      "rcept_dt": "20260724",
+      "report_nm": "증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260724000342",
+      "stage": "최초",
+      "offering": {
+        "shares": 3000000,
+        "price_planned": 12400,
+        "total_planned": 37200000000,
+        "payment_date": "2026.09.21",
+        "subscribe_start": "2026.09.16",
+        "subscribe_end": "2026.09.17"
+      },
+      "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": true,
+        "bsns_year": "2025",
+        "total_assets": 52877636682,
+        "total_liabilities": 22249648833,
+        "equity": 30627987849,
+        "debt_ratio_pct": 72.64
+      }
+    },
+    {
+      "corp_name": "네오사피엔스",
+      "corp_code": "01876251",
+      "rcept_no": "20260723000660",
+      "rcept_dt": "20260723",
+      "report_nm": "증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260723000660",
+      "stage": "최초",
+      "offering": {
+        "shares": 2000000,
+        "price_planned": 13800,
+        "total_planned": 27600000000,
+        "payment_date": "2026.09.11",
+        "subscribe_start": "2026.09.08",
+        "subscribe_end": "2026.09.09"
+      },
+      "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
+    {
+      "corp_name": "빅웨이브로보틱스",
+      "corp_code": "01722066",
+      "rcept_no": "20260721001344",
+      "rcept_dt": "20260721",
+      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260721001344",
+      "stage": "정정",
+      "offering": {
+        "shares": 2000000,
+        "price_planned": 20000,
+        "total_planned": 40000000000,
+        "payment_date": "2026.08.10",
+        "subscribe_start": "2026.08.05",
+        "subscribe_end": "2026.08.06"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "백만원",
+        "periods": [
+          "2023연도 (제4기)",
+          "2024연도 (제5기)",
+          "2025연도 (제6기)",
+          "2026연도 1분기(주1) (제7기 1분기)"
+        ],
+        "revenue": [
+          6854,
+          13851,
+          20743,
+          3020
+        ],
+        "operating_income": [
+          -1199,
+          -659,
+          673,
+          -980
+        ],
+        "net_income": []
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
+    {
+      "corp_name": "니어스랩",
+      "corp_code": "01588897",
+      "rcept_no": "20260721000296",
+      "rcept_dt": "20260721",
+      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260721000296",
+      "stage": "정정",
+      "offering": {
+        "shares": 910000,
+        "price_planned": 30000,
+        "total_planned": 27300000000,
+        "payment_date": "2026.08.18",
+        "subscribe_start": "2026.08.12",
+        "subscribe_end": "2026.08.13"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "백만원",
+        "periods": [
+          "2023연도 (제9기)",
+          "2024연도 (제10기)",
+          "2025연도 (제11기)",
+          "2026연도 1분기 (제12기)"
+        ],
+        "revenue": [
+          2402,
+          5535,
+          6658,
+          509
+        ],
+        "operating_income": [
+          -11318,
+          -12772,
+          -16608,
+          -4181
+        ],
+        "net_income": []
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
     {
       "corp_name": "해치텍",
       "corp_code": "01947443",
@@ -77,51 +221,6 @@
       }
     },
     {
-      "corp_name": "니어스랩",
-      "corp_code": "01588897",
-      "rcept_no": "20260714000417",
-      "rcept_dt": "20260714",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260714000417",
-      "stage": "정정",
-      "offering": {
-        "shares": 910000,
-        "price_planned": 30000,
-        "total_planned": 27300000000,
-        "payment_date": "2026.08.10",
-        "subscribe_start": "2026.08.05",
-        "subscribe_end": "2026.08.06"
-      },
-      "doc_financials": {
-        "available": true,
-        "unit": "백만원",
-        "periods": [
-          "2023연도 (제9기)",
-          "2024연도 (제10기)",
-          "2025연도 (제11기)",
-          "2026연도 1분기 (제12기)"
-        ],
-        "revenue": [
-          2402,
-          5535,
-          6658,
-          509
-        ],
-        "operating_income": [
-          -11318,
-          -12772,
-          -16608,
-          -4181
-        ],
-        "net_income": []
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      }
-    },
-    {
       "corp_name": "기도산업",
       "corp_code": "00229085",
       "rcept_no": "20260714000315",
@@ -161,31 +260,6 @@
         "payment_date": "2026.08.28",
         "subscribe_start": "2026.08.25",
         "subscribe_end": "2026.08.26"
-      },
-      "doc_financials": {
-        "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      }
-    },
-    {
-      "corp_name": "에이치엘지노믹스",
-      "corp_code": "00624244",
-      "rcept_no": "20260710000294",
-      "rcept_dt": "20260710",
-      "report_nm": "[발행조건확정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260710000294",
-      "stage": "확정",
-      "offering": {
-        "shares": 2565000,
-        "price_planned": 18500,
-        "total_planned": 47452500000,
-        "payment_date": "2026.07.16",
-        "subscribe_start": "2026.07.13",
-        "subscribe_end": "2026.07.14"
       },
       "doc_financials": {
         "available": false
@@ -268,51 +342,6 @@
           17258,
           30822
         ]
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      }
-    },
-    {
-      "corp_name": "빅웨이브로보틱스",
-      "corp_code": "01722066",
-      "rcept_no": "20260701000455",
-      "rcept_dt": "20260701",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260701000455",
-      "stage": "정정",
-      "offering": {
-        "shares": 200000,
-        "price_planned": 22000,
-        "total_planned": 44000000000,
-        "payment_date": "2026.06.24",
-        "subscribe_start": "2026.06.19",
-        "subscribe_end": "2026.06.19"
-      },
-      "doc_financials": {
-        "available": true,
-        "unit": "백만원",
-        "periods": [
-          "2023연도 (제4기)",
-          "2024연도 (제5기)",
-          "2025연도 (제6기)",
-          "2026연도 1분기(주1) (제7기 1분기)"
-        ],
-        "revenue": [
-          6854,
-          13851,
-          20743,
-          3020
-        ],
-        "operating_income": [
-          -1199,
-          -659,
-          673,
-          -980
-        ],
-        "net_income": []
       },
       "doc_parse_error": null,
       "financials": {
