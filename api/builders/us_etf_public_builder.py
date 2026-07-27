@@ -23,7 +23,10 @@ CACHE_PATH = os.path.join(_ROOT, "data", "us_etf_cache.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "us_etf.json")
 KST = timezone(timedelta(hours=9))
 FRESH_DAYS = 5          # ETF 구성/AUM 저빈도 변동 → 5일 재수집
-MAX_PER_RUN = 40        # yfinance 레이트리밋 안전 (큐레이션 ~70 → 2일 내 전 커버)
+# 스키마를 넓힌 날은 캐시가 신선해도 옛 필드만 들고 있다 → 전량 재수집이 필요.
+# US_ETF_FORCE=1 (신선도 무시) · US_ETF_MAX_PER_RUN=N (1회 상한) 로 일회성 전량 갱신.
+MAX_PER_RUN = int(os.environ.get("US_ETF_MAX_PER_RUN") or 40)  # yfinance 레이트리밋 안전
+FORCE_REFETCH = os.environ.get("US_ETF_FORCE") == "1"
 THROTTLE_SEC = 0.3
 STALE_EMIT_DAYS = 30
 
@@ -67,6 +70,73 @@ def _expense(info: Dict[str, Any]) -> Optional[float]:
     return None
 
 
+def _num(v: Any) -> Optional[float]:
+    """NaN/None/pandas NA 를 걸러 float 로. json.dump 의 NaN 리터럴 = JS JSON.parse 파손."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f == f else None  # NaN != NaN
+
+
+def _pct(v: Any, digits: int = 2) -> Optional[float]:
+    """분수(0.3861) → 퍼센트(38.61)."""
+    f = _num(v)
+    return round(f * 100, digits) if f is not None else None
+
+
+def _fund_ops(fd: Any, tk: str) -> Dict[str, Any]:
+    """운용 지표 — 보수·회전율을 카테고리 평균과 나란히.
+
+    🚨 스케일 함정: fund_operations 의 보수는 **분수**(VOO 0.0003 = 0.03%) 인데
+    info["annualReportExpenseRatio"] 는 **이미 %**(0.03). 둘을 같은 자로 재면 100배 어긋난다.
+    여기(카테고리 평균)만 ×100 하고, 펀드 자신의 보수는 기존 _expense(info) 를 그대로 쓴다.
+    Total Net Assets 는 VOO=486,952(단위 불명, info.totalAssets=$1.67T 와 불일치) → 미채택.
+    """
+    out: Dict[str, Any] = {}
+    try:
+        df = fd.fund_operations
+        col = df.columns[0] if len(df.columns) else None
+        cat = "Category Average" if "Category Average" in df.columns else None
+        rows = {
+            "expense_cat_pct": "Annual Report Expense Ratio",
+            "turnover_pct": "Annual Holdings Turnover",
+        }
+        if cat is not None:
+            out["expense_cat_pct"] = _pct(df.loc[rows["expense_cat_pct"], cat], 3)
+            out["turnover_cat_pct"] = _pct(df.loc[rows["turnover_pct"], cat], 1)
+        if col is not None:
+            out["turnover_pct"] = _pct(df.loc[rows["turnover_pct"], col], 1)
+    except Exception:  # noqa: BLE001 — 지표 없는 ETF graceful
+        pass
+    return {k: v for k, v in out.items() if v is not None}
+
+
+def _equity_stats(fd: Any) -> Dict[str, Any]:
+    """구성종목 가중 밸류에이션.
+
+    🚨 yfinance 는 Price/Earnings 를 **역수(이익수익률)** 로 준다 — VOO 0.03716.
+    그대로 실으면 "PER 0.04" 라는 거짓이 사이트에 뜬다. 1/x 환산 실측 검증:
+    VOO 26.91 / 5.39 / 3.72 / 19.89, SCHD 18.29 / 3.49 (배당 ETF = 저평가 특성 일치),
+    TLT 0(=채권) → None. 2026-07-28 확인.
+    """
+    out: Dict[str, Any] = {}
+    keys = {
+        "per": "Price/Earnings", "pbr": "Price/Book",
+        "psr": "Price/Sales", "pcf": "Price/Cashflow",
+    }
+    try:
+        df = fd.equity_holdings
+        col = df.columns[0]
+        for k, row in keys.items():
+            v = _num(df.loc[row, col])
+            if v and v > 0:
+                out[k] = round(1.0 / v, 2)
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
 def _fetch_one(ticker: str) -> Dict[str, Any]:
     """yfinance ETF 사실 (info + top_holdings). 실패 시 {}."""
     import yfinance as yf
@@ -80,22 +150,94 @@ def _fetch_one(ticker: str) -> Dict[str, Any]:
         "aum_usd": info.get("totalAssets"),
         "family": info.get("fundFamily"),
         "expense": _expense(info),
+        "legal_type": info.get("legalType"),
     }
+    inc = _num(info.get("fundInceptionDate"))
+    if inc and inc > 0:
+        out["inception"] = datetime.fromtimestamp(inc, timezone.utc).strftime("%Y-%m-%d")
+
+    # 수익률 — 🚨 스케일이 필드마다 다르다(실측 2026-07-28):
+    #   ytdReturn = 이미 %(VOO 10.19), threeYear/fiveYearAverageReturn = 분수(0.19176 = 연 19.18%).
+    #   같은 자로 재면 3Y 가 0.19% 로 찍힌다. 각각 다르게 환산.
+    rets: Dict[str, Any] = {}
+    ytd = _num(info.get("ytdReturn"))
+    if ytd is not None:
+        rets["ytd"] = round(ytd, 2)
+    for key, src in (("y3", "threeYearAverageReturn"), ("y5", "fiveYearAverageReturn")):
+        v = _pct(info.get(src))
+        if v is not None:
+            rets[key] = v
+    if rets:
+        out["returns"] = rets
+    for key, src, conv in (
+        ("yield_pct", "yield", _pct),
+        ("beta3y", "beta3Year", _num),
+    ):
+        v = conv(info.get(src))
+        if v is not None:
+            out[key] = round(v, 2)
+
+    fd = None
     try:
-        th = t.funds_data.top_holdings  # DataFrame index=심볼, cols=[Name, Holding Percent]
+        fd = t.funds_data
+    except Exception:  # noqa: BLE001
+        fd = None
+    if fd is None:
+        return out
+
+    try:
+        ov = fd.fund_overview or {}
+        if ov.get("categoryName"):
+            out["category_name"] = ov.get("categoryName")
+    except Exception:  # noqa: BLE001
+        pass
+    out.update(_fund_ops(fd, ticker))
+    eq = _equity_stats(fd)
+    if eq:
+        out["equity_stats"] = eq
+    # 자산군 구성 — 주식/채권/현금/기타 (분수 → %)
+    try:
+        ac = fd.asset_classes or {}
+        assets = {
+            k2: _pct(ac.get(k1))
+            for k1, k2 in (
+                ("stockPosition", "stock"), ("bondPosition", "bond"),
+                ("cashPosition", "cash"), ("preferredPosition", "preferred"),
+                ("convertiblePosition", "convertible"), ("otherPosition", "other"),
+            )
+        }
+        assets = {k: v for k, v in assets.items() if v}
+        if assets:
+            out["assets"] = assets
+    except Exception:  # noqa: BLE001
+        pass
+    # 섹터 비중 — 주식형만 채워짐(채권·원자재는 {} → 생략)
+    try:
+        sw = fd.sector_weightings or {}
+        sect = {k: _pct(v) for k, v in sw.items()}
+        sect = {k: v for k, v in sect.items() if v}
+        if sect:
+            out["sectors"] = sect
+    except Exception:  # noqa: BLE001
+        pass
+    # 🚫 bond_holdings(듀레이션/만기) 미채택 — 실측 TLT duration 3.55·maturity 7.98 로 나오는데
+    #    iShares 공시 실값은 각각 ~15.6년·~25년. Yahoo 값이 틀렸다. 틀린 사실 게재 금지(RULE 7).
+    #    bond_ratings 도 TLT 에서 aa 1.0 + us_government 0.9963 로 합이 199% → 정의 불명, 미채택.
+    try:
+        th = fd.top_holdings  # DataFrame index=심볼, cols=[Name, Holding Percent]
         holdings = []
+        wsum = 0.0
         for sym, row in th.head(10).iterrows():
-            pct = row.get("Holding Percent")
+            fp = _num(row.get("Holding Percent"))
             w = None
-            try:
-                fp = float(pct)
-                if fp == fp:  # NaN 가드 (NaN != NaN) — json.dump 의 NaN 리터럴 = JS JSON.parse 깨짐
-                    w = round(fp * 100, 2) if fp < 1 else round(fp, 2)  # funds_data=분수(0.075=7.5%)
-            except (TypeError, ValueError):
-                pass
+            if fp is not None:
+                w = round(fp * 100, 2) if fp < 1 else round(fp, 2)  # funds_data=분수(0.075=7.5%)
+                wsum += w
             holdings.append({"t": str(sym), "n": str(row.get("Name") or ""), "w": w})
         if holdings:
             out["top_holdings"] = holdings
+            # 상위 10 이 전체의 몇 %인지 — Yahoo 는 10종까지만 준다. "나머지" 를 정직하게 표기.
+            out["top_w_sum"] = round(wsum, 1)
     except Exception:  # noqa: BLE001 — funds_data 없는 ETF (채권/원자재 등) graceful
         pass
     return out
@@ -111,7 +253,10 @@ def main() -> int:
     by_ticker: Dict[str, Any] = cache.get("by_ticker") or {}
 
     now = _now_kst()
-    todo = [t for t in CURATED if _age_days((by_ticker.get(t) or {}).get("as_of", ""), now) >= FRESH_DAYS]
+    todo = [
+        t for t in CURATED
+        if FORCE_REFETCH or _age_days((by_ticker.get(t) or {}).get("as_of", ""), now) >= FRESH_DAYS
+    ]
     todo.sort(key=lambda t: (by_ticker.get(t) or {}).get("as_of", ""))
     todo = todo[:MAX_PER_RUN]
 
@@ -140,17 +285,16 @@ def main() -> int:
         rec = by_ticker.get(t)
         if not rec or not rec.get("name") or _age_days(rec.get("as_of", ""), now) > STALE_EMIT_DAYS:
             continue
-        etfs.append({
-            "ticker": t, "name": rec.get("name"), "category": rec.get("category"),
-            "aum_usd": rec.get("aum_usd"), "family": rec.get("family"),
-            "expense": rec.get("expense"), "top_holdings": rec.get("top_holdings"),
-        })
+        # as_of(내부 신선도 키) 만 빼고 수집한 사실 전부 발행 — 신 필드 추가 시 emit 누락 방지
+        entry = {"ticker": t}
+        entry.update({k: v for k, v in rec.items() if k != "as_of" and v not in (None, {}, [])})
+        etfs.append(entry)
     etfs.sort(key=lambda e: (e.get("aum_usd") or 0), reverse=True)
 
     out = {
         "_meta": {
             "generated_at": now.isoformat(),
-            "source": "yfinance (US 상장 ETF info + top_holdings)",
+            "source": "yfinance (US 상장 ETF info + funds_data: 개요/운용/자산군/섹터/밸류에이션/보유종목)",
             "curated_n": len(CURATED),
             "covered_n": len(etfs),
             "fetched_this_run": fetched,
