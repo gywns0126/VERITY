@@ -85,6 +85,42 @@ const SAMPLE: Stats = {
 
 interface Props { apiBase: string; dark: boolean }
 
+
+/* 🚨 2026-07-27 /admin 최초 로딩 스켈레톤 — "…로딩" 텍스트 한 줄이면 카드 높이가 0에 가깝다가
+   데이터 도착 순간 튀어오른다. 실제 레이아웃과 같은 골격을 먼저 깔아 점프를 없앤다(PM 지적). */
+const ADM_SK_KEYS = "@keyframes admSk{0%{background-position:-400px 0}100%{background-position:400px 0}}"
+function admSk(C: any, w: any, h: number, r: number = 6): CSSProperties {
+    return {
+        width: w, height: h, borderRadius: r, flexShrink: 0,
+        background: `linear-gradient(90deg, ${C.grid || C.line} 25%, ${C.line} 37%, ${C.grid || C.line} 63%)`,
+        backgroundSize: "800px 100%", animation: "admSk 1.4s ease-in-out infinite",
+    }
+}
+function AdmSkeletonTiles(props: { C: any; card: CSSProperties; groups?: number; tiles?: number }) {
+    const { C, card } = props
+    const g = props.groups || 2
+    const t = props.tiles || 4
+    return (
+        <div aria-busy="true" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <style>{ADM_SK_KEYS}</style>
+            {Array.from({ length: g }).map((_, gi) => (
+                <div key={gi} style={card}>
+                    <div style={{ ...admSk(C, 96, 14), marginBottom: 12 }} />
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {Array.from({ length: t }).map((_, ti) => (
+                            <div key={ti} style={{ flex: "1 1 120px", minWidth: 110, padding: "12px 14px",
+                                borderRadius: 12, background: C.grid || C.line }}>
+                                <div style={admSk(C, "60%", 11)} />
+                                <div style={{ ...admSk(C, "40%", 20), marginTop: 8 }} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
 export default function GrowthCard(props: Props) {
     const apiBase = (props.apiBase || DEFAULT_API).replace(/\/+$/, "")
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -123,7 +159,7 @@ export default function GrowthCard(props: Props) {
     const num: CSSProperties = { fontVariantNumeric: "tabular-nums" }
 
     if (err && !st) return <div style={wrap}><div style={{ ...card, color: C.up, fontSize: 13, fontWeight: 700 }}>성장 통계 로드 실패: {err.slice(0, 90)}</div></div>
-    if (!st) return <div style={wrap}><div style={{ ...card, color: C.faint, fontSize: 13, fontWeight: 600 }}>성장 통계 로딩…</div></div>
+    if (!st) return <div style={wrap}><AdmSkeletonTiles C={C} card={card} groups={2} tiles={4} /></div>
 
     const m = st.members || {}
     const c = st.community || {}

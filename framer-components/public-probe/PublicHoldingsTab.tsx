@@ -539,7 +539,10 @@ export default function PublicHoldingsTab(props: Props) {
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [rows, setRows] = useState<any[]>(onCanvas ? SAMPLE : [])
+    // 🚨 2026-07-27 목업 깜빡임 제거 — 초기 state 에 SAMPLE 을 넣으면 Framer 정적 HTML(SSG)에 그대로
+    //   구워져 실사용자에게 "삼성전자 60주·NVIDIA 20주" 가 잠깐 보였다가 실제 값으로 바뀐다(PM 지적).
+    //   캔버스 프리뷰는 마운트 후 useEffect 로만 주입 → 첫 페인트는 어떤 렌더타깃에서도 목업 0.
+    const [rows, setRows] = useState<any[]>([])
     const [closes, setCloses] = useState<Record<string, number>>({}) // KR 종가(stock_flow_5d) — 실시간 아님
     const [isDemo, setIsDemo] = useState(true)
     const [loading, setLoading] = useState<boolean>(() =>
@@ -561,15 +564,17 @@ export default function PublicHoldingsTab(props: Props) {
     const [q, setQ] = useState("") // 종목 검색어
     const [pop, setPop] = useState<any>(null) // 추가/수정 팝업 {id?, ticker, name, market, shares, avg_cost}
     // 거래 기록(실현손익) — 본인 매매 이력. RULE 7 사실 기록, 순위·배지·공개 없음. /api/trades.
-    const [tradeData, setTradeData] = useState<{ trades: any[]; summary: any }>(
-        () =>
-            onCanvas
-                ? { trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY }
-                : {
-                      trades: [],
-                      summary: { by_ticker: [], total_realized_pnl: 0 },
-                  }
-    )
+    const [tradeData, setTradeData] = useState<{ trades: any[]; summary: any }>(() => ({
+        trades: [],
+        summary: { by_ticker: [], total_realized_pnl: 0 },
+    }))
+    const [tradesLoading, setTradesLoading] = useState(false)
+    // 캔버스 전용 목업 주입 — 마운트 후라 정적 HTML 에는 절대 포함되지 않음
+    useEffect(() => {
+        if (!onCanvas) return
+        setRows(SAMPLE)
+        setTradeData({ trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY })
+    }, [onCanvas])
     const [showTAdd, setShowTAdd] = useState(false) // 거래 추가 검색 패널
     const [tq, setTq] = useState("") // 거래 추가 종목 검색어
     const [tPop, setTPop] = useState<any>(null) // 거래 팝업 {id?, ticker, name, market, side, shares, price, traded_at}
@@ -860,12 +865,14 @@ export default function PublicHoldingsTab(props: Props) {
         if (onCanvas) return
         const token = getToken()
         if (!token) {
+            setTradesLoading(false)
             setTradeData({
                 trades: [],
                 summary: { by_ticker: [], total_realized_pnl: 0 },
             })
             return
         }
+        setTradesLoading(true)
         fetch(base + "/api/trades", {
             headers: { Authorization: "Bearer " + token },
         })
@@ -881,6 +888,7 @@ export default function PublicHoldingsTab(props: Props) {
                     })
             })
             .catch(() => {})
+            .finally(() => setTradesLoading(false))
     }, [base, onCanvas])
 
     // 거래 탭 최초 진입 시 lazy 로드(안 여는 사용자 API 호출 절약).
@@ -3220,6 +3228,39 @@ export default function PublicHoldingsTab(props: Props) {
                                         </div>
                                     )}
 
+                                    {/* 🚨 거래 로딩 스켈레톤 — 없으면 "거래 0건 / 기록 없어요" 가 먼저 뜬 뒤
+                                        실제 내역으로 바뀌어 빈 상태가 번쩍인다(2026-07-27 PM 지적 동일 계열). */}
+                                    {tradesLoading ? (
+                                        <>
+                                            <div style={{ ...cardS, padding: "18px 18px" }}>
+                                                <div style={sk(140, 12, 6)} />
+                                                <div style={{ ...sk(190, 26, 8), marginTop: 10 }} />
+                                                <div style={{ ...sk(240, 11, 6), marginTop: 10 }} />
+                                            </div>
+                                            <div style={{ ...cardS, padding: "16px 18px", marginTop: 10 }}>
+                                                <div style={sk(72, 13, 6)} />
+                                                {[0, 1, 2].map((i) => (
+                                                    <div
+                                                        key={i}
+                                                        style={{
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 10,
+                                                            marginTop: 14,
+                                                        }}
+                                                    >
+                                                        <div style={sk(30, 30, 10)} />
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={sk("42%", 12, 6)} />
+                                                            <div style={{ ...sk("28%", 10, 6), marginTop: 6 }} />
+                                                        </div>
+                                                        <div style={sk(84, 13, 6)} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
+                                    ) : (
+                                    <>
                                     {/* 실현손익 합계 (매도 확정분) */}
                                     <div
                                         style={{
@@ -3621,6 +3662,8 @@ export default function PublicHoldingsTab(props: Props) {
                                         (단순 계산·사실) · 본인 기록용 ·
                                         순위·배지·공개 없음 · 투자자문 아님
                                     </div>
+                                    </>
+                                    )}
                                 </>
                             )
                         // 캔버스(에디터) 프리뷰만 = 브라우저 창 목업 안 SAMPLE 미리보기. 라이브 미로그인 = 로그인 CTA 만(목업 없음). pointerEvents none.

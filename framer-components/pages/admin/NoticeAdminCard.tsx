@@ -71,6 +71,38 @@ const SAMPLE: Notice[] = [
 
 interface Props { apiBase: string; dark: boolean }
 
+
+/* 🚨 2026-07-27 /admin 최초 로딩 스켈레톤 — 카드들이 순차로 튀어나와 시선이 튐(PM 지적).
+   각 카드가 자기 자리에 같은 골격을 먼저 깔아 레이아웃이 흔들리지 않게 한다. */
+const ADM_SK_KEYS = "@keyframes admSk{0%{background-position:-400px 0}100%{background-position:400px 0}}"
+function admSk(C: any, w: any, h: number, r: number = 6): CSSProperties {
+    return {
+        width: w, height: h, borderRadius: r, flexShrink: 0,
+        background: `linear-gradient(90deg, ${C.grid || C.line} 25%, ${C.line} 37%, ${C.grid || C.line} 63%)`,
+        backgroundSize: "800px 100%", animation: "admSk 1.4s ease-in-out infinite",
+    }
+}
+function AdmSkeletonRows(props: { C: any; rows?: number }) {
+    const C = props.C
+    const n = props.rows || 4
+    return (
+        <div aria-busy="true">
+            <style>{ADM_SK_KEYS}</style>
+            {Array.from({ length: n }).map((_, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 0",
+                    borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                    <div style={admSk(C, 30, 30, 10)} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={admSk(C, "38%", 12)} />
+                        <div style={{ ...admSk(C, "24%", 10), marginTop: 6 }} />
+                    </div>
+                    <div style={admSk(C, 56, 22, 8)} />
+                </div>
+            ))}
+        </div>
+    )
+}
+
 export default function NoticeAdminCard(props: Props) {
     const apiBase = (props.apiBase || DEFAULT_API).replace(/\/+$/, "")
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -224,7 +256,9 @@ export default function NoticeAdminCard(props: Props) {
 
             {/* 목록 */}
             <div style={{ marginTop: 16, borderTop: `1px solid ${C.line}`, paddingTop: 6 }}>
-                {items.length === 0 ? (
+                {loading ? (
+                    <AdmSkeletonRows C={C} rows={3} />
+                ) : items.length === 0 ? (
                     <div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600, padding: "14px 2px" }}>
                         발행한 공지가 없어요
                     </div>
