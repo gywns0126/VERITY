@@ -45,8 +45,22 @@ _TIMEOUT_SLOW = 20    # dart / sec_edgar / krx_open_api (대용량/무역통계)
 
 # ── 1. API Heartbeat ──────────────────────────────────────────
 
-def _probe(label: str, fn, retries: int = 1) -> dict:
-    """공통 프로브: 성공/실패/응답시간 기록. 1회 재시도로 일시적 네트워크 떨림 완화."""
+def _probe(label: str, fn, retries: int = 1, deadline_ts: Optional[float] = None) -> dict:
+    """공통 프로브: 성공/실패/응답시간 기록. 1회 재시도로 일시적 네트워크 떨림 완화.
+
+    deadline_ts: time.time() 기준 진단 예산 마감. 지났으면 실호출 없이 "skipped".
+      2026-07-27 — realtime(10분 한계) 에서 자가진단이 125~345s 를 먹어 SIGTERM 유발
+      (2/8 run 실패). 상류 지연(ECOS max-retries·KRX 18-sweep) 이 예산을 통째로 삼키는
+      구조라 개별 timeout 만으로는 못 막음 → 전체 예산 상한으로 차단.
+      "skipped" 는 error 아님 → overall status 오염 없음 (다음 quick/full 이 정상 갱신).
+    """
+    if deadline_ts is not None and time.time() >= deadline_ts:
+        return {
+            "status": "skipped",
+            "latency_ms": 0,
+            "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+            "attempts": 0,
+        }
     last_err = None
     t0 = time.time()
     for attempt in range(retries + 1):
@@ -61,6 +75,9 @@ def _probe(label: str, fn, retries: int = 1) -> dict:
             }
         except Exception as e:
             last_err = e
+            # 예산이 이미 소진됐으면 재시도로 더 태우지 않음
+            if deadline_ts is not None and time.time() >= deadline_ts:
+                break
             if attempt < retries:
                 time.sleep(0.5)
     elapsed = round((time.time() - t0) * 1000)
@@ -402,10 +419,29 @@ def _check_krx_open_api() -> tuple:
     total = int(summary.get("total", 0))
     bas_dd = str(snap.get("bas_dd") or "")
 
-    if ok <= 0 and (forbidden > 0 or error > 0):
-        # KRX EOD 게시 전환 윈도 race — probe 1개(stk_bydd_trd)가 오늘-ok 라 bas_dd=오늘 선택됐으나
-        # 18-sweep 은 오늘 미게시(403/empty) → 키 오류처럼 보이는 오보. 키 유효 여부 = 직전 영업일
-        # 재확인으로 판별: 직전일 정상이면 게시 전환 중(키 유효), 직전일도 forbidden 이면 진짜 error.
+    ok_rate = ok / max(total, 1)
+    # 2026-05-07 추가: ok rate < 30% 면 false positive 방지 (이전 = 16/18 empty 인데 ok 표시)
+    degraded = total > 0 and ok_rate < 0.30
+
+    if degraded:
+        # 🚨 2026-07-27 — "미게시" 와 "장애" 를 무비용으로 분리.
+        #   _request_krx 의 status 의미: empty = HTTP 200 인데 rows 0 (그 날짜 아직 미게시) /
+        #   error = 네트워크·401·비200 / forbidden = 403. 즉 error 0 + forbidden 0 + empty 우세면
+        #   상류는 정상 응답 중이고 해당 basDd 데이터만 아직 안 올라온 상태 = 고장 아님.
+        #   관측 근거(2026-07-27 월 장중 realtime run 전수): "ok 2/18 (11%), 빈데이터 16,
+        #   권한없음 0, 오류 0 (basDd=20260727)" → 매 run `종합: ERROR`. 같은 로그의 실 생산경로
+        #   ([1.5] Active 갱신)는 정상 5/5, krx_mktcap.json bas_dd 도 최신 거래일 정합 = 순수 오탐.
+        #   "정상 무활동을 고장으로 오탐" 패턴(2026-07-08 KOSPI sanity·dart_catalyst 학습) 재발.
+        #   기존 가드는 `ok <= 0 and (forbidden or error)` 조건이라 이 케이스를 못 잡았음.
+        #   추가 호출 0 — 아래 직전일 재확인(18-sweep)을 안 타므로 진단 예산도 아낌.
+        if error == 0 and forbidden == 0 and empty > 0:
+            return (
+                True,
+                f"미게시 윈도 (basDd={bas_dd}: ok {ok}/{total}, 빈데이터 {empty}, 오류 0/권한없음 0) — "
+                f"상류 응답 정상, 해당 일자 데이터만 미게시",
+            )
+        # forbidden/error 가 섞인 진짜 애매한 케이스만 직전 영업일 재확인 (18-sweep 1회 추가).
+        # 직전일 정상 = 게시 전환 중(상류 유효) / 직전일도 깨짐 = 진짜 장애.
         prev_bas = _prev_published_bas_dd_krx(bas_dd)
         if prev_bas and prev_bas != bas_dd:
             psnap = collect_krx_openapi_snapshot(bas_dd=prev_bas, max_rows_per_endpoint=1)
@@ -415,16 +451,9 @@ def _check_krx_open_api() -> tuple:
             if p_ok > 0 and (p_ok / max(p_total, 1)) >= 0.30:
                 return (
                     True,
-                    f"오늘 EOD 게시 전환 중 (basDd={bas_dd}: 권한없음 {forbidden}/{total}) — "
-                    f"전 영업일 {prev_bas} ok {p_ok}/{p_total} 정상, 키 유효",
+                    f"오늘 EOD 게시 전환 중 (basDd={bas_dd}: ok {ok}/{total}, 빈데이터 {empty}, "
+                    f"권한없음 {forbidden}) — 전 영업일 {prev_bas} ok {p_ok}/{p_total} 정상, 키 유효",
                 )
-        return (
-            False,
-            f"ok {ok}/{total}, 권한없음 {forbidden}, 오류 {error}, 빈데이터 {empty} (basDd={bas_dd})",
-        )
-    # 2026-05-07 추가: ok rate < 30% 면 false positive 방지 (이전 = 16/18 empty 인데 ok 표시)
-    ok_rate = ok / max(total, 1)
-    if total > 0 and ok_rate < 0.30:
         return (
             False,
             f"degradation: ok {ok}/{total} ({ok_rate:.0%}), 빈데이터 {empty}, 권한없음 {forbidden}, 오류 {error} (basDd={bas_dd})",
@@ -435,23 +464,28 @@ def _check_krx_open_api() -> tuple:
     )
 
 
-def check_api_health() -> dict:
+def check_api_health(deadline_ts: Optional[float] = None) -> dict:
     """모든 API 상태를 한 번에 점검.
     CRIT-13: Finnhub/Polygon/SEC EDGAR/Perplexity 를 감시 대상에 포함해
-    US 분석 파이프라인 블랙홀을 deadman이 탐지할 수 있게 함."""
+    US 분석 파이프라인 블랙홀을 deadman이 탐지할 수 있게 함.
+
+    deadline_ts: 진단 전체 예산 마감 (time.time() 기준). 넘어선 시점부터 남은 프로브는
+      실호출 없이 "skipped". None = 무제한 (quick/full 기존 동작 보존).
+    비싼 프로브(KRX 18-sweep, ECOS)를 뒤로 둬서 예산 초과 시 저비용 프로브가 먼저 확보되게 함.
+    """
     checks = {
-        "dart": _probe("DART", _check_dart),
-        "fred": _probe("FRED", _check_fred),
-        "telegram": _probe("Telegram", _check_telegram),
-        "gemini": _probe("Gemini", _check_gemini),
-        "anthropic": _probe("Anthropic", _check_anthropic),
-        "kipris": _probe("KIPRIS", _check_kipris),
-        "public_data": _probe("공공데이터", _check_public_data),
-        "krx_open_api": _probe("KRX Open API", _check_krx_open_api),
-        "reports_signed_url": _probe("리포트 signed URL", _check_reports_signed_url),
+        "dart": _probe("DART", _check_dart, deadline_ts=deadline_ts),
+        "fred": _probe("FRED", _check_fred, deadline_ts=deadline_ts),
+        "telegram": _probe("Telegram", _check_telegram, deadline_ts=deadline_ts),
+        "gemini": _probe("Gemini", _check_gemini, deadline_ts=deadline_ts),
+        "anthropic": _probe("Anthropic", _check_anthropic, deadline_ts=deadline_ts),
+        "kipris": _probe("KIPRIS", _check_kipris, deadline_ts=deadline_ts),
+        "public_data": _probe("공공데이터", _check_public_data, deadline_ts=deadline_ts),
+        "reports_signed_url": _probe("리포트 signed URL", _check_reports_signed_url, deadline_ts=deadline_ts),
+        "krx_open_api": _probe("KRX Open API", _check_krx_open_api, deadline_ts=deadline_ts),
     }
     if ECOS_API_KEY:
-        checks["ecos"] = _probe("ECOS", _check_ecos)
+        checks["ecos"] = _probe("ECOS", _check_ecos, deadline_ts=deadline_ts)
 
     # US 파이프라인 핵심 — 키가 설정된 경우만 감시 (미설정 시 optional 취급)
     from api.config import (
@@ -461,13 +495,13 @@ def check_api_health() -> dict:
         PERPLEXITY_API_KEY,
     )
     if FINNHUB_API_KEY:
-        checks["finnhub"] = _probe("Finnhub", _check_finnhub)
+        checks["finnhub"] = _probe("Finnhub", _check_finnhub, deadline_ts=deadline_ts)
     if POLYGON_API_KEY:
-        checks["polygon"] = _probe("Polygon", _check_polygon)
+        checks["polygon"] = _probe("Polygon", _check_polygon, deadline_ts=deadline_ts)
     if SEC_EDGAR_USER_AGENT:
-        checks["sec_edgar"] = _probe("SEC EDGAR", _check_sec_edgar)
+        checks["sec_edgar"] = _probe("SEC EDGAR", _check_sec_edgar, deadline_ts=deadline_ts)
     if PERPLEXITY_API_KEY:
-        checks["perplexity"] = _probe("Perplexity", _check_perplexity)
+        checks["perplexity"] = _probe("Perplexity", _check_perplexity, deadline_ts=deadline_ts)
     return checks
 
 
@@ -688,9 +722,12 @@ def check_version_sync() -> dict:
 
 # ── 종합 진단 ──────────────────────────────────────────────
 
-def run_health_check() -> dict:
+def run_health_check(budget_seconds: Optional[float] = None) -> dict:
     """
     전체 시스템 자가진단 실행 → portfolio.json에 저장될 구조 반환
+
+    budget_seconds: API heartbeat 단계 전체 예산(초). 초과 시 남은 프로브 = "skipped".
+      None = 무제한 (quick/full 기존 동작). realtime 처럼 런타임 상한이 빠듯한 모드에서만 지정.
 
     반환 예시:
     {
@@ -708,7 +745,11 @@ def run_health_check() -> dict:
     print("\n[HEALTH] 시스템 자가진단 시작")
     t0 = time.time()
 
-    api_health = check_api_health()
+    deadline_ts = (t0 + budget_seconds) if budget_seconds else None
+    if deadline_ts:
+        print(f"  진단 예산: {budget_seconds:.0f}s (초과분 프로브 = skipped)")
+
+    api_health = check_api_health(deadline_ts=deadline_ts)
     github_worker = check_github_worker()
     data_recency = check_data_recency()
     version_sync = check_version_sync()
@@ -781,8 +822,9 @@ def run_health_check() -> dict:
     }
 
     ok_count = sum(1 for v in api_health.values() if v["status"] == "ok")
+    skipped_count = sum(1 for v in api_health.values() if v["status"] == "skipped")
     total_count = len(api_health)
-    print(f"  API: {ok_count}/{total_count} 정상")
+    print(f"  API: {ok_count}/{total_count} 정상" + (f" (예산초과 skip {skipped_count})" if skipped_count else ""))
     print(f"  Worker: {github_worker.get('status', '?')} — {github_worker.get('detail', '')}")
     print(f"  데이터: {data_recency.get('status', '?')} — 최종 {data_recency.get('updated_at', '?')}")
     print(f"  버전: {version_sync.get('local_version', '?')} ({version_sync.get('local_sha', '?')})")

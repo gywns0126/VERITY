@@ -1721,11 +1721,19 @@ def _apply_market_structure_override(
         "position_size_cap": position_cap,
     }
 
+    # 🚨 2026-07-27 — unavailable 플래그 전파 누락 fix (측정 오염).
+    #   collector 는 소스 불가 시 unavailable=True 로 정직 반환하는데(2026-06-17), 여기서
+    #   signal/net_bn 만 복사해 하류에 "NEUTRAL · 0억" 이 실측 중립과 동일하게 보였음.
+    #   KRX MDCSTAT06401 은 KDM 개편(2025-12-26) 후 LOGOUT 반환 = 사실상 상시 불가 상태라
+    #   죽은 소스의 0 이 매 run 중립 신호로 유입됨. 하류(프론트/브레인)가 구분 가능하게 전파.
+    _prog_unavailable = bool(program.get("unavailable")) or program.get("ok") is False
     market_brain["program_trading"] = {
-        "signal": program.get("signal", "NEUTRAL"),
-        "arb_net_bn": program.get("arb_net_bn", 0),
-        "non_arb_net_bn": program.get("non_arb_net_bn", 0),
-        "total_net_bn": program.get("total_net_bn", 0),
+        "signal": "UNAVAILABLE" if _prog_unavailable else program.get("signal", "NEUTRAL"),
+        "unavailable": _prog_unavailable,
+        "status_note": program.get("status_note") if _prog_unavailable else None,
+        "arb_net_bn": None if _prog_unavailable else program.get("arb_net_bn", 0),
+        "non_arb_net_bn": None if _prog_unavailable else program.get("non_arb_net_bn", 0),
+        "total_net_bn": None if _prog_unavailable else program.get("total_net_bn", 0),
         "sell_bomb": program.get("sell_bomb", False),
         "sell_bomb_reason": program.get("sell_bomb_reason"),
     }
