@@ -321,6 +321,9 @@ const DEFAULT_EMPLOYMENT =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nps_employment.json"
 const ETF_FLOW_URL =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_flow.json"
+// ETF 장기 시계열 — 종목별 파일(약 14KB). 전량 1파일이면 12.9MB 라 검색된 1종목만 lazy fetch.
+const ETF_HIST_BASE =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_hist/"
 const US_ETF_URL =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_etf.json"
 const KR_INDEX_URL =
@@ -1113,6 +1116,7 @@ function EtfReportBlock({
     name,
     market,
     doc,
+    longHist,
     onPick,
 }: any) {
     const CATL: Record<string, string> = {
@@ -1130,6 +1134,8 @@ function EtfReportBlock({
         sector: "섹터",
         dividend: "배당",
         reit: "리츠",
+        money: "단기금리",
+        etc: "기타",
     }
     const fmtF = (won: any, signed = false) => {
         const n = Number(won)
@@ -1213,6 +1219,104 @@ function EtfReportBlock({
             </div>
         </div>
     )
+
+    /* 🚨 2026-07-27 지수형 보강 — 전 종목 커버리지(25→상장 전량)로 비로소 가능해진 항목들.
+       ① NAV 기간 수익률 ② 괴리율 평균·범위 ③ 같은 기초지수(없으면 같은 분류) ETF 비교.
+       전부 관측 사실 나열이며 순위·추천·전망이 아님(RULE 7). 표본이 짧으면 기간을 함께 표기. */
+    const navFirst = hist.length >= 2 ? Number(hist[0].nav) : NaN
+    const navLast = hist.length >= 2 ? Number(hist[hist.length - 1].nav) : NaN
+    const navRet =
+        isFinite(navFirst) && isFinite(navLast) && navFirst
+            ? ((navLast - navFirst) / navFirst) * 100
+            : null
+    const premVals = series
+        .map((s2: any) => s2.prem)
+        .filter((p: any) => p != null && isFinite(p)) as number[]
+    const premAvg = premVals.length
+        ? premVals.reduce((a2, b2) => a2 + b2, 0) / premVals.length
+        : null
+    const premMin = premVals.length ? Math.min(...premVals) : null
+    const premMax = premVals.length ? Math.max(...premVals) : null
+
+    const peerSize = (x: any) => Number(x.netasset || x.aum_usd || 0)
+    const peerKey = e && e.base_index ? "base_index" : "category"
+    const peerVal = e ? String(e[peerKey] || "") : ""
+    const peers =
+        e && peerVal && doc && Array.isArray(doc.etfs)
+            ? doc.etfs
+                  .filter(
+                      (x: any) =>
+                          String(x[peerKey] || "") === peerVal &&
+                          String(x.ticker) !== String(ticker)
+                  )
+                  .sort((a2: any, b2: any) => peerSize(b2) - peerSize(a2))
+                  .slice(0, 5)
+            : []
+    const peerRows = peers.length ? [e, ...peers] : []
+    const feeOf = (x: any) =>
+        x.ter != null && x.ter !== ""
+            ? String(x.ter)
+            : x.expense != null
+              ? x.expense + "%"
+              : "—"
+    /* 🚨 2026-07-27 장기 지표 — etf_hist/{ticker}.json (246거래일 ≈ 1년) 기반.
+       NAV 기준으로만 계산한다(종가는 괴리 포함). 전부 관측 사실이며 예측·추천이 아님(RULE 7).
+       MDD 는 양수 크기로 표기([[feedback_mdd_magnitude_display]] 정합). */
+    const LH = longHist && Array.isArray(longHist.d) ? longHist : null
+    const lhNav: number[] = LH ? (LH.v || []).map((x: any) => Number(x)) : []
+    const lhOk = LH && lhNav.filter((x) => isFinite(x) && x > 0).length >= 20
+    const retOver = (win: number) => {
+        if (!lhOk) return null
+        const arr = lhNav.filter((x) => isFinite(x) && x > 0)
+        if (arr.length < 2) return null
+        const from = arr[Math.max(0, arr.length - 1 - win)]
+        const to = arr[arr.length - 1]
+        return from ? ((to - from) / from) * 100 : null
+    }
+    const lhStats = (() => {
+        if (!lhOk) return null
+        const arr = lhNav.filter((x) => isFinite(x) && x > 0)
+        const rets: number[] = []
+        for (let i2 = 1; i2 < arr.length; i2++) rets.push(arr[i2] / arr[i2 - 1] - 1)
+        const mean = rets.reduce((a2, b2) => a2 + b2, 0) / (rets.length || 1)
+        const varc =
+            rets.reduce((a2, b2) => a2 + (b2 - mean) * (b2 - mean), 0) /
+            (rets.length > 1 ? rets.length - 1 : 1)
+        const vol = Math.sqrt(varc) * Math.sqrt(246) * 100 // 연율화(거래일 246)
+        let peak = arr[0],
+            mdd = 0
+        for (const v2 of arr) {
+            if (v2 > peak) peak = v2
+            const dd = peak ? (peak - v2) / peak : 0
+            if (dd > mdd) mdd = dd
+        }
+        // 1년 누적 순설정 = Σ Δ좌수 × 그날 NAV (가격효과 제거, etf_flow 와 동일 정의)
+        let cumFlow = 0
+        const sh = (LH.s || []).map((x: any) => Number(x))
+        for (let i2 = 1; i2 < sh.length; i2++) {
+            const d2 = sh[i2] - sh[i2 - 1]
+            const nv = Number((LH.v || [])[i2])
+            if (isFinite(d2) && isFinite(nv)) cumFlow += d2 * nv
+        }
+        // 괴리율 평균(장기)
+        const prems: number[] = []
+        for (let i2 = 0; i2 < (LH.c || []).length; i2++) {
+            const c2 = Number(LH.c[i2]),
+                v2 = Number(LH.v[i2])
+            if (isFinite(c2) && isFinite(v2) && v2) prems.push(((c2 - v2) / v2) * 100)
+        }
+        const premAvgL = prems.length
+            ? prems.reduce((a2, b2) => a2 + b2, 0) / prems.length
+            : null
+        return { vol, mdd: mdd * 100, cumFlow, premAvgL, n: arr.length }
+    })()
+
+    const premOf = (x: any) => {
+        const c2 = Number(x.close),
+            n2 = Number(x.nav)
+        return isFinite(c2) && isFinite(n2) && n2 ? ((c2 - n2) / n2) * 100 : null
+    }
+
     return (
         <div style={{ marginTop: 14 }}>
             <div
@@ -1531,6 +1635,44 @@ function EtfReportBlock({
                                 ? kv("기초지수", String(e.base_index))
                                 : null}
                         </div>
+                        {/* 지수형 보강 — NAV 기간 수익률 · 괴리율 평균/범위 (보관 시계열 내, 표본 짧으면 기간 병기) */}
+                        {(navRet != null || premAvg != null) && (
+                            <div
+                                style={{
+                                    display: "flex",
+                                    gap: 12,
+                                    flexWrap: "wrap",
+                                    marginTop: 12,
+                                }}
+                            >
+                                {navRet != null
+                                    ? kv(
+                                          `NAV 수익률 (${hist.length}거래일)`,
+                                          (navRet >= 0 ? "+" : "") +
+                                              navRet.toFixed(2) +
+                                              "%",
+                                          navRet >= 0 ? C.up : C.down
+                                      )
+                                    : null}
+                                {premAvg != null
+                                    ? kv(
+                                          "괴리율 평균",
+                                          (premAvg >= 0 ? "+" : "") +
+                                              premAvg.toFixed(2) +
+                                              "%"
+                                      )
+                                    : null}
+                                {premMin != null && premMax != null
+                                    ? kv(
+                                          "괴리율 범위",
+                                          premMin.toFixed(2) +
+                                              "% ~ " +
+                                              premMax.toFixed(2) +
+                                              "%"
+                                      )
+                                    : null}
+                            </div>
+                        )}
                         <div
                             style={{
                                 fontSize: 11,
@@ -1545,8 +1687,238 @@ function EtfReportBlock({
                             {doc && doc.bas_dd
                                 ? ` · 기준일 ${ds(String(doc.bas_dd))}`
                                 : ""}
+                            {navRet != null
+                                ? " · NAV 수익률은 보관 시계열(최근 " +
+                                  hist.length +
+                                  "거래일) 구간 변화이며 장기 성과가 아님"
+                                : ""}
                         </div>
                     </div>
+                    {/* 🚨 1년 성과·흐름 — etf_hist 246거래일. NAV 기준(종가는 괴리 포함).
+                        표본이 20일 미만이면 카드 자체를 렌더하지 않음(신규 상장). */}
+                    {lhOk && lhStats && (
+                        <div style={card}>
+                            <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 2 }}>
+                                장기 관측 · NAV 기준
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: 11.5,
+                                    color: C.faint,
+                                    fontWeight: 600,
+                                    marginBottom: 10,
+                                }}
+                            >
+                                최근 {lhStats.n}거래일 ({String(LH.d[0]).slice(2, 4)}.
+                                {String(LH.d[0]).slice(4, 6)} ~{" "}
+                                {String(LH.d[LH.d.length - 1]).slice(2, 4)}.
+                                {String(LH.d[LH.d.length - 1]).slice(4, 6)})
+                            </div>
+                            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                                {[
+                                    ["1개월", retOver(21)],
+                                    ["3개월", retOver(63)],
+                                    ["6개월", retOver(126)],
+                                    ["1년", retOver(246)],
+                                ].map(([lb, rv]: any) =>
+                                    rv == null
+                                        ? null
+                                        : kv(
+                                              String(lb),
+                                              (rv >= 0 ? "+" : "") + rv.toFixed(2) + "%",
+                                              rv >= 0 ? C.up : C.down
+                                          )
+                                )}
+                            </div>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    gap: 12,
+                                    flexWrap: "wrap",
+                                    marginTop: 12,
+                                }}
+                            >
+                                {kv("변동성 (연율)", lhStats.vol.toFixed(1) + "%")}
+                                {kv("최대 낙폭", lhStats.mdd.toFixed(1) + "%")}
+                                {kv(
+                                    "누적 순설정",
+                                    fmtF(lhStats.cumFlow, true),
+                                    lhStats.cumFlow > 0
+                                        ? C.up
+                                        : lhStats.cumFlow < 0
+                                          ? C.down
+                                          : undefined
+                                )}
+                                {lhStats.premAvgL != null
+                                    ? kv(
+                                          "괴리율 평균",
+                                          (lhStats.premAvgL >= 0 ? "+" : "") +
+                                              lhStats.premAvgL.toFixed(2) +
+                                              "%"
+                                      )
+                                    : null}
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: 11,
+                                    color: C.faint,
+                                    fontWeight: 600,
+                                    marginTop: 12,
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                수익률·변동성·최대 낙폭 = NAV 기준 관측치 (분배금 미반영,
+                                종가 아님) · 변동성은 일간 변화의 연율 환산 · 최대 낙폭은 크기
+                                · 과거 구간 사실이며 앞으로의 성과를 뜻하지 않아요
+                            </div>
+                        </div>
+                    )}
+                    {/* 🚨 같은 지수를 따라가는 ETF 비교 — 커버리지 전량 확보로 가능해진 항목.
+                        같은 기초지수(없으면 같은 분류)에서 순자산 상위 5 + 현재 종목. 사실 나열, 추천 아님. */}
+                    {peerRows.length >= 2 && (
+                        <div style={card}>
+                            <div
+                                style={{
+                                    fontSize: 13.5,
+                                    fontWeight: 800,
+                                    marginBottom: 2,
+                                }}
+                            >
+                                {peerKey === "base_index"
+                                    ? "같은 지수를 따라가는 ETF"
+                                    : "같은 분류 ETF"}
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: 11.5,
+                                    color: C.faint,
+                                    fontWeight: 600,
+                                    marginBottom: 8,
+                                }}
+                            >
+                                {peerKey === "base_index"
+                                    ? "기초지수 " + peerVal
+                                    : CATL[peerVal] || peerVal}{" "}
+                                · 순자산 상위
+                            </div>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    fontSize: 10.5,
+                                    color: C.faint,
+                                    fontWeight: 700,
+                                    padding: "0 0 5px",
+                                }}
+                            >
+                                <span style={{ flex: 1, minWidth: 0 }}>
+                                    종목
+                                </span>
+                                <span
+                                    style={{ width: 58, textAlign: "right" }}
+                                >
+                                    총보수
+                                </span>
+                                <span
+                                    style={{ width: 72, textAlign: "right" }}
+                                >
+                                    순자산
+                                </span>
+                                <span
+                                    style={{ width: 56, textAlign: "right" }}
+                                >
+                                    괴리율
+                                </span>
+                            </div>
+                            {peerRows.map((x: any, i2: number) => {
+                                const self =
+                                    String(x.ticker) === String(ticker)
+                                const p2 = premOf(x)
+                                return (
+                                    <div
+                                        key={String(x.ticker)}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            padding: "7px 0",
+                                            borderTop:
+                                                i2 === 0
+                                                    ? "none"
+                                                    : "1px solid " + C.line,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                flex: 1,
+                                                minWidth: 0,
+                                                fontSize: 12.5,
+                                                fontWeight: self ? 800 : 600,
+                                                color: self ? C.vt : C.sub,
+                                                whiteSpace: "nowrap",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                            }}
+                                        >
+                                            {x.name || x.ticker}
+                                            {self ? " (지금 보는 종목)" : ""}
+                                        </span>
+                                        <span
+                                            style={{
+                                                width: 58,
+                                                textAlign: "right",
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            {feeOf(x)}
+                                        </span>
+                                        <span
+                                            style={{
+                                                width: 72,
+                                                textAlign: "right",
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            {fmtF(peerSize(x))}
+                                        </span>
+                                        <span
+                                            style={{
+                                                width: 56,
+                                                textAlign: "right",
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                                color:
+                                                    p2 == null
+                                                        ? C.faint
+                                                        : p2 >= 0
+                                                          ? C.up
+                                                          : C.down,
+                                            }}
+                                        >
+                                            {p2 == null
+                                                ? "—"
+                                                : (p2 >= 0 ? "+" : "") +
+                                                  p2.toFixed(2) +
+                                                  "%"}
+                                        </span>
+                                    </div>
+                                )
+                            })}
+                            <div
+                                style={{
+                                    fontSize: 11,
+                                    color: C.faint,
+                                    fontWeight: 600,
+                                    marginTop: 10,
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                총보수·순자산·괴리율은 공시 사실 — 어느 쪽이
+                                낫다는 판단이 아니에요. 보수는 갱신 회차에 따라
+                                일부 종목이 비어 있을 수 있어요.
+                            </div>
+                        </div>
+                    )}
                     {Array.isArray(e.top_holdings) &&
                         e.top_holdings.length > 0 && (
                             <div style={card}>
@@ -3344,6 +3716,26 @@ export default function PublicStockReport(props: Props) {
         }
     }, [kind, isUsEtf, onCanvas])
 
+    /* 🚨 2026-07-27 ETF 장기 시계열 — 246거래일(약 1년) 종목별 파일 lazy fetch.
+       etf_flow.json 의 history 는 상위 60종만 40일·나머지 6일이라 기간 수익률·변동성·MDD 를
+       못 만든다. 종목당 약 14KB 라 선택된 1종목만 받는다. 없으면(신규 상장·미발행) 조용히 생략. */
+    const [etfHist, setEtfHist] = useState<any>(null)
+    useEffect(() => {
+        setEtfHist(null)
+        if (onCanvas || kind !== "etf" || isUsEtf || !/^[0-9A-Z]{6}$/.test(String(selTicker)))
+            return
+        let alive = true
+        fetch(ETF_HIST_BASE + String(selTicker) + ".json")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (alive && d && Array.isArray(d.d) && d.d.length) setEtfHist(d)
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [kind, isUsEtf, selTicker, onCanvas])
+
     // 종목 상세 = 슬라이스 API 1콜(~11KB) — 전 종목 맵 로드(≈16MB) 대체 (로딩 극단 경량화 2026-07-08).
     //   report + flow/forensics/insider/warn/lending/supply/employment 를 한 번에 슬라이스 반환.
     //   검색 목록(searchList)은 universe_search.json 로 별도(경량) — 아래 effect. 상세는 선택 종목만.
@@ -4575,6 +4967,7 @@ export default function PublicStockReport(props: Props) {
                     name={String(uEnt.name || selTicker)}
                     market={String(uEnt.market || "ETF")}
                     doc={etfDoc}
+                    longHist={etfHist}
                     onPick={goTicker}
                 />
             </div>
