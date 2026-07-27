@@ -181,7 +181,12 @@ export default function MemberAdminCard(props: Props) {
                     <div style={{ fontSize: 13, color: C.faint, fontWeight: 600 }}>회원이 없어요</div>
                 ) : members.map((m, i) => {
                     const opened = openId === m.id
-                    const st = m.status === "approved" ? { bg: C.greenS, fg: C.green, t: "승인" } : m.status === "rejected" ? { bg: C.upS, fg: C.up, t: "거절" } : { bg: C.grid, fg: C.sub, t: "대기" }
+                    // 🚨 2026-07-27 AlphaNest 는 승인제가 아님 — profiles.status 기본값 'pending'(007)이
+                    //   여기서 "대기" 로 보여 승인 절차가 있는 것처럼 읽혔음(PM 지적). 실제로는 PublicAuth 가
+                    //   status 를 검사하지 않고 서버·RLS 어디에도 게이트가 없음(vercel-api 'approved' 검사 0건).
+                    //   'approved' 는 VERITY 운영 콘솔(AuthPage) 전용 해자라 DB 기본값은 그대로 두고 표시만 정리.
+                    //   의미 있는 상태(거절·탈퇴)만 배지로 남기고 승인/대기는 노출하지 않음.
+                    const st = m.status === "rejected" ? { bg: C.upS, fg: C.up, t: "거절" } : m.status === "withdrawn" ? { bg: C.grid, fg: C.sub, t: "탈퇴" } : null
                     const canToggleAdmin = callerSuper && m.id !== meId && !m.is_super_admin
                     return (
                         <div key={m.id} style={{ paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12, borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
@@ -189,7 +194,7 @@ export default function MemberAdminCard(props: Props) {
                                 <span style={{ fontSize: 14, fontWeight: 800 }}>{m.nickname || m.display_name || "(별명 없음)"}</span>
                                 {m.is_super_admin ? <span style={chip(C.vt, C.onAccent)}>최종 관리자</span> : m.is_admin ? <span style={chip(C.vtS, C.vt)}>부관리자</span> : null}
                                 {m.is_banned && <span style={chip(C.upS, C.up)}>제재됨</span>}
-                                <span style={{ ...chip(st.bg, st.fg) }}>{st.t}</span>
+                                {st && <span style={{ ...chip(st.bg, st.fg) }}>{st.t}</span>}
                                 <span style={{ marginLeft: "auto", fontSize: 11, color: C.faint, fontWeight: 700, transform: opened ? "rotate(90deg)" : "none", transition: "transform 0.12s" }}>›</span>
                             </div>
                             <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 3 }}>{m.email} · 가입 {fmtDate(m.created_at)}{m.is_banned && m.ban_reason ? ` · 사유: ${m.ban_reason}` : ""}</div>
@@ -197,7 +202,6 @@ export default function MemberAdminCard(props: Props) {
                             {opened && (
                                 <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                        {m.status !== "approved" && <button disabled={busy === m.id} onClick={() => act(m, { body: { action: "update", user_id: m.id, status: "approved" }, ok: "승인했어요" })} style={btn(C.greenS, C.green)}>승인</button>}
                                         {canToggleAdmin && (m.is_admin
                                             ? <button disabled={busy === m.id} onClick={() => { setAdminId(m.id); setBanId(""); setDelId("") }} style={btn(C.vtS, C.vt)}>부관리자 해제</button>
                                             : <button disabled={busy === m.id} onClick={() => { setAdminId(m.id); setBanId(""); setDelId("") }} style={btn(C.vtS, C.vt)}>부관리자 지정</button>)}
