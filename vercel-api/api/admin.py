@@ -939,6 +939,9 @@ def handle_notices(handler, method: str, body: dict) -> dict:
         r = requests.get(f"{SUPABASE_URL}/rest/v1/notices", headers=_svc_headers(),
                          params={"select": "id,kind,title,body,link,pinned,starts_at,ends_at,is_active,created_at,updated_at",
                                  "order": "pinned.desc,created_at.desc", "limit": str(limit)}, timeout=10)
+        if r.status_code == 404 or "PGRST205" in (r.text or ""):
+            # 🚨 027 미적용 = 흔한 상태. 502 로 뭉개면 화면에 "HTTP 502" 만 떠 원인을 못 봄(2026-07-27 실사고).
+            return {"_status": 200, "_body": {"items": [], "migration_required": "027_notices"}}
         if r.status_code != 200:
             return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
         return {"_status": 200, "_body": {"items": r.json()}}

@@ -82,6 +82,7 @@ export default function NoticeAdminCard(props: Props) {
     const [err, setErr] = useState("")
     const [msg, setMsg] = useState("")
     const [busy, setBusy] = useState("")
+    const [needMigration, setNeedMigration] = useState("")
 
     // 작성 폼
     const [kind, setKind] = useState<"notice" | "event">("notice")
@@ -108,7 +109,11 @@ export default function NoticeAdminCard(props: Props) {
         setLoading(true); setErr("")
         fetch(`${apiBase}/api/admin?type=notices&limit=100`, { headers: { Authorization: "Bearer " + token }, cache: "no-store" })
             .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
-            .then((d) => setItems(Array.isArray(d.items) ? d.items : []))
+            .then((d) => {
+                setItems(Array.isArray(d.items) ? d.items : [])
+                // 🚨 마이그레이션 미적용은 "실패" 가 아니라 "설치 대기" — 원인을 그대로 안내한다.
+                setNeedMigration(String(d.migration_required || ""))
+            })
             .catch((e) => setErr("불러오기 실패: " + (e && e.message ? e.message : e)))
             .finally(() => setLoading(false))
     }, [apiBase, onCanvas])
@@ -209,6 +214,11 @@ export default function NoticeAdminCard(props: Props) {
                 </button>
             </div>
 
+            {needMigration ? (
+                <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: C.vt, background: C.vtS, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55 }}>
+                    아직 준비 단계예요 — Supabase SQL Editor 에서 <b>{needMigration}.sql</b> 을 실행하면 바로 사용할 수 있어요.
+                </div>
+            ) : null}
             {err ? <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: C.up, background: C.upS, borderRadius: 8, padding: "8px 10px" }}>{err}</div> : null}
             {msg ? <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: C.green, background: C.greenS, borderRadius: 8, padding: "8px 10px" }}>{msg}</div> : null}
 

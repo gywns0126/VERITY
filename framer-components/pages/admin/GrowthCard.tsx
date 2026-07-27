@@ -181,7 +181,10 @@ export default function GrowthCard(props: Props) {
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {tile("공개 글", c.public, C.vt)}
                     {tile("7일 글", c.d7, C.green)}
-                    {tile("승인 대기", m.pending, (Number(m.pending) || 0) > 0 ? C.amber : undefined)}
+                    {/* 🚨 2026-07-27 "승인 대기" 타일 제거 — AlphaNest 는 승인제가 아닌데 profiles.status 기본값
+                        'pending'(007) 때문에 신규 가입자 수가 경고색(amber)으로 떠서 승인 절차가 밀린 것처럼 읽혔음.
+                        실제 게이트 없음(PublicAuth 미검사 · 서버/RLS 'approved' 검사 0건). 'approved' 는 VERITY
+                        운영 콘솔(AuthPage) 전용이라 그쪽 대시보드의 승인 카드는 그대로 둔다. */}
                     {tile("제재됨", m.banned, (Number(m.banned) || 0) > 0 ? C.up : undefined)}
                 </div>
             </div>
