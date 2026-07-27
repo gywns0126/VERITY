@@ -1,0 +1,69 @@
+name: ETF History Backfill
+
+# ETF 과거 시계열 백필 — KRX etf_bydd_trd 를 거래일별로 거슬러 축적(1콜=그날 전 종목).
+#   초기 채움 = workflow_dispatch 로 회차 반복(기본 40거래일/회 → 250일이면 약 7회).
+#   유지 = 주 1회(월 06:20 KST). 매일 돌리면 1,150개 파일이 매일 재기록돼 커밋이 무거워짐.
+# 🚨 RULE 4 — 신규 산출 경로(data/etf_hist/) git add 명시.
+
+on:
+  workflow_dispatch:
+    inputs:
+      probe:
+        description: "과거 날짜 응답 여부만 확인(쓰기 없음)"
+        type: boolean
+        default: false
+      max_days:
+        description: "이번 회차 거래일 수"
+        default: "40"
+      horizon:
+        description: "백필 목표 거래일(≈1년=250)"
+        default: "250"
+  schedule:
+    - cron: "20 21 * * 0" # 월 06:20 KST
+
+concurrency:
+  group: etf-history-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install -q requests
+
+      - name: Probe (과거 날짜 제공 여부)
+        if: ${{ inputs.probe == true }}
+        env:
+          KRX_API_KEY: ${{ secrets.KRX_API_KEY }}
+        run: python scripts/etf_history_backfill.py --probe
+
+      - name: Backfill
+        if: ${{ inputs.probe != true }}
+        env:
+          KRX_API_KEY: ${{ secrets.KRX_API_KEY }}
+        run: |
+          python scripts/etf_history_backfill.py \
+            --max-days "${{ inputs.max_days || '40' }}" \
+            --horizon "${{ inputs.horizon || '250' }}"
+
+      - name: Commit
+        if: ${{ inputs.probe != true }}
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/etf_hist || true
+          if git diff --cached --quiet; then
+            echo "변경 없음 — commit skip"
+          else
+            git commit -m "📈 etf_hist 백필 $(date -u +%Y-%m-%d)"
+            git pull --rebase --autostash origin main || true
+            git push origin HEAD:main
+          fi
