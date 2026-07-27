@@ -60,8 +60,15 @@ function smooth(pts: { x: number; y: number }[]): string {
     let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
     for (let i = 0; i < pts.length - 1; i++) {
         const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2
-        const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6
-        const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6
+        const c1x = p1.x + (p2.x - p0.x) / 6
+        const c2x = p2.x - (p3.x - p1.x) / 6
+        // 🚨 2026-07-27 오버슛 제거 — Catmull-Rom 제어점이 구간 밖으로 나가면 값이 평평하다가
+        //   아래로 파인 뒤 솟는다(PM 지적: 30일 합 1인데 내려갔다 올라감).
+        //   실측: 두 점 모두 y=80 인데 c2y=91.67. 제어점을 구간 [min,max] 로 클램프해 단조성 보존.
+        const lo = Math.min(p1.y, p2.y), hi = Math.max(p1.y, p2.y)
+        const clamp = (v: number) => Math.min(hi, Math.max(lo, v))
+        const c1y = clamp(p1.y + (p2.y - p0.y) / 6)
+        const c2y = clamp(p2.y - (p3.y - p1.y) / 6)
         d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`
     }
     return d
