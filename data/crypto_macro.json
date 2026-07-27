@@ -10,8 +10,8 @@
   },
   "funding_rate": {
     "ok": true,
-    "rate": 2.40122326638e-05,
-    "rate_pct": 0.0024,
+    "rate": 2.54502590317e-05,
+    "rate_pct": 0.0025,
     "prev_rate_pct": null,
     "signal": "neutral",
     "timestamp": "1785139200000",
@@ -19,24 +19,24 @@
   },
   "kimchi_premium": {
     "ok": true,
-    "premium_pct": -0.85,
-    "upbit_krw": 95025000.0,
-    "global_usd": 65426.0,
-    "binance_usd": 65426.0,
-    "usdt_krw": 1464.8599853515625,
+    "premium_pct": -0.98,
+    "upbit_krw": 95072000.0,
+    "global_usd": 65488.4,
+    "binance_usd": 65488.4,
+    "usdt_krw": 1466.1300048828125,
     "signal": "normal",
     "source": "upbit+bybit/okx"
   },
   "btc_nasdaq_corr": {
     "ok": true,
-    "correlation": NaN,
+    "correlation": -0.374,
     "period_days": 30,
-    "signal": "decoupled",
-    "btc_last_price": 65426.0
+    "signal": "inversely_correlated",
+    "btc_last_price": 65488.4
   },
   "stablecoin_mcap": {
     "ok": true,
-    "total_mcap_usd": 256517632663.2868,
+    "total_mcap_usd": 256510605162.9818,
     "total_mcap_b": 256.5,
     "usdt_mcap_b": 184.0,
     "usdc_mcap_b": 72.5
@@ -47,9 +47,11 @@
     "score": 44,
     "label": "중립",
     "risk_level": "normal",
-    "signals": []
+    "signals": [
+      "BTC-NQ 역상관 -0.37"
+    ]
   },
-  "collected_at": "2026-07-27T14:33:04+09:00",
+  "collected_at": "2026-07-27T15:02:38+09:00",
   "schema_version": "v0",
   "diagnostics": {
     "ok_count": 5,
