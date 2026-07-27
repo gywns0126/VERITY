@@ -37,7 +37,10 @@ jobs:
           python-version: "3.11"
 
       - name: Install deps
-        run: pip install -q requests
+        # 🚨 형제 워크플로(bond_etf_analysis · crypto_collect)와 동일하게 requirements.txt 전체.
+        #   api.config 가 python-dotenv 를 import 하는데 requests 만 깔아 ModuleNotFoundError 로
+        #   첫 프로브가 죽었음(2026-07-27). CLAUDE.md 워크플로 체크리스트 6번(의존성 정합) 사례.
+        run: pip install -r requirements.txt
 
       - name: Probe (과거 날짜 제공 여부)
         if: ${{ inputs.probe == true }}

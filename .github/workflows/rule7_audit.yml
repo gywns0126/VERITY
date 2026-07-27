@@ -71,7 +71,15 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch origin "$BASE_REF" --depth=50
+          # 🚨 2026-07-27 거짓 양성 수정 — depth=50 은 main 커밋 속도(자동 데이터 커밋 199건/24h)에
+          #   못 미쳐 분기점이 창 밖으로 밀림. 그러면 `origin/main..HEAD` 가 **이미 머지된 남의 커밋**을
+          #   PR 범위로 끌고 와 RULE 7 위반으로 오탐(실사고: PR #173, 본인 커밋 1개인데 8건 위반 보고).
+          #   가드가 무작위로 빨간불이면 무시하게 되고 진짜 위반이 통과함 → 시간 기준으로 교체.
+          git fetch origin "$BASE_REF" --shallow-since="6 months ago" || git fetch origin "$BASE_REF"
+          # 분기점이 여전히 창 밖이면(6개월 이상 묵은 브랜치) 전체 히스토리로 승격 — 조용한 오탐 방지
+          if ! git merge-base --is-ancestor "$(git merge-base "origin/$BASE_REF" HEAD 2>/dev/null || echo HEAD)" HEAD 2>/dev/null; then
+            git fetch origin "$BASE_REF" --unshallow || true
+          fi
           python scripts/pre_registration_audit.py --mode pr-check --base "origin/$BASE_REF"
 
       # ── push (main) — post-hoc 알림 ────────────────────────────────
