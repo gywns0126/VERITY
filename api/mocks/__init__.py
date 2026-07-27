@@ -24,6 +24,37 @@ from api import config
 logger = logging.getLogger(__name__)
 
 
+# ── mock 호출 census (2026-07-27) ───────────────────────────────────────────
+# WHY: daily_realtime / daily_analysis 워크플로에 VERITY_MODE 가 없어 기본값 dev 로 도는데,
+#   prod 전환 시 늘어날 유료 실호출 건수를 알 방법이 없었음. mock 레이어의 기존 logger.info 는
+#   루트 로거 WARNING 레벨이라 GH Actions 로그에서 통째로 억제됨(실측: INFO 라인 0건).
+#   → 비-prod 런 종료 시 mock 된 키를 집계 출력. dev 는 여전히 mock 이므로 측정 비용 0.
+#   이 census 가 "prod 로 켰을 때 실호출이 될 목록" 과 1:1.
+_MOCK_CENSUS: "dict[str, int]" = {}
+
+
+def mock_call_census() -> "dict[str, int]":
+    """이번 프로세스에서 mock 으로 대체된 키별 호출 수 (prod 였다면 실호출 건수)."""
+    return dict(_MOCK_CENSUS)
+
+
+def _print_mock_census() -> None:
+    if config.VERITY_MODE == "prod" or not _MOCK_CENSUS:
+        return
+    total = sum(_MOCK_CENSUS.values())
+    print(f"\n[MOCK CENSUS] VERITY_MODE={config.VERITY_MODE} — mock 대체 {total}건 "
+          f"({len(_MOCK_CENSUS)} 키). prod 전환 시 이만큼이 실호출:")
+    for k, n in sorted(_MOCK_CENSUS.items(), key=lambda x: -x[1]):
+        print(f"    {n:5d}  {k}")
+
+
+try:
+    import atexit
+    atexit.register(_print_mock_census)
+except Exception:      # pragma: no cover — 등록 실패해도 본 기능에 영향 없음
+    pass
+
+
 def _should_mock(key: str) -> bool:
     if config.VERITY_MODE == "prod":
         return False
@@ -65,6 +96,7 @@ def mockable(key: str):
         @functools.wraps(fn)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             if _should_mock(key):
+                _MOCK_CENSUS[key] = _MOCK_CENSUS.get(key, 0) + 1
                 logger.info(
                     "[VERITY_MODE=%s] MOCK %s (skipping %s)",
                     config.VERITY_MODE, key, fn.__qualname__,
