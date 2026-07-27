@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-07-27T14:32:36+09:00",
+  "collected_at": "2026-07-27T15:02:35+09:00",
   "macro": {
     "usd_krw": {
       "value": 1466.31,
@@ -1325,7 +1325,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-07-27T14:32:45+09:00",
+    "updated_at": "2026-07-27T15:03:35+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.98,
       "us_ig_risk": "LOW",
@@ -1485,12 +1485,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 22.78
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 94.57
   },
   "schema_version": "v0"
 }
