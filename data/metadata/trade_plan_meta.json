@@ -1,32 +1,32 @@
 {
   "version": "v0",
-  "computed_at": "2026-07-27T11:32:30.957519+00:00",
+  "computed_at": "2026-07-27T12:14:12.595105+00:00",
   "status": "insufficient_data",
   "sample_size": {
     "total": 25,
     "open": 0,
     "closed": 25,
-    "with_h5": 15,
-    "with_h14": 8,
+    "with_h5": 21,
+    "with_h14": 11,
     "with_h30": 3,
     "min_for_decompose": 30
   },
   "horizon_summary": {
     "h5": {
       "horizon_days": 5,
-      "n": 15,
-      "hit_rate_pct": 40.0,
-      "median_return_pct": -0.94,
-      "mean_return_pct": -0.48,
-      "ic": -0.361
+      "n": 21,
+      "hit_rate_pct": 52.38,
+      "median_return_pct": 0.1,
+      "mean_return_pct": 0.87,
+      "ic": 0.092
     },
     "h14": {
       "horizon_days": 14,
-      "n": 8,
-      "hit_rate_pct": 25.0,
-      "median_return_pct": -4.87,
-      "mean_return_pct": -5.52,
-      "ic": 0.0
+      "n": 11,
+      "hit_rate_pct": 45.45,
+      "median_return_pct": -2.86,
+      "mean_return_pct": -3.22,
+      "ic": 0.227
     },
     "h30": {
       "horizon_days": 30,
@@ -39,8 +39,8 @@
   },
   "feature_decomposition": {
     "status": "insufficient_data",
-    "n": 8,
-    "need_more_rows": 22
+    "n": 11,
+    "need_more_rows": 19
   },
   "sector_breakdown": {
     "Industrials": {
@@ -56,8 +56,9 @@
       "status": "insufficient_data"
     },
     "Energy": {
-      "n": 2,
-      "status": "insufficient_data"
+      "n": 5,
+      "hit_rate_pct": 60.0,
+      "median_return_pct": 2.42
     },
     "Technology": {
       "n": 1,
@@ -66,15 +67,15 @@
   },
   "verdict_strength": {
     "status": "insufficient_data",
-    "n": 8
+    "n": 11
   },
   "timeseries_baseline": {
     "earliest": "2026-06-10T12:03:09.387256+00:00",
     "windows": {
       "first_30d": {
-        "n": 8,
-        "hit_rate_pct": 25.0,
-        "median_return_pct": -4.87
+        "n": 11,
+        "hit_rate_pct": 45.45,
+        "median_return_pct": -2.86
       },
       "30_60d": {
         "n": 0,
