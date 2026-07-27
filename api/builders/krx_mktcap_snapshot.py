@@ -148,6 +148,17 @@ def _build_unified_universe(kr_uni):
                 _idx_n += 1
         except Exception:  # noqa: BLE001 — kr_index_daily 부재 graceful
             pass
+        # 🚨 2026-07-27 한글 검색 별칭 주입 — 국내 종목은 name_ko 가 전부 비어 있어(전수 검사)
+        #   이름이 라틴인 135종("NAVER"·"S-Oil"·"KODEX 200" 등)을 한글로 못 찾았다.
+        #   검색창은 name·ticker·name_ko·kw 를 보므로 여기서 한 번에 채운다(브랜드 토큰 치환이라
+        #   신규 상장 ETF 도 자동 대응). 이미 값이 있으면(해외 name_ko) 보존한다.
+        try:
+            from api.builders.kr_name_alias import enrich_entry as _kr_alias
+            for _e in uni:
+                _kr_alias(_e)
+        except Exception as _ae:  # noqa: BLE001 — 별칭 실패로 유니버스 발행을 막지 않음
+            print(f"[krx_mktcap] 한글 별칭 주입 skip: {_ae!r}", file=sys.stderr)
+
         udoc = {
             "_meta": {"generated_at": datetime.now(KST).isoformat(),
                       "count": len(uni), "kr": len(kr_uni) + kr_rep_n, "us": us_n, "kr_report_union": kr_rep_n,
