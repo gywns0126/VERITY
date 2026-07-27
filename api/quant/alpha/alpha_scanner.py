@@ -51,6 +51,16 @@ FACTOR_EXTRACTORS = {
 }
 
 
+# 후보 선발 자체에 쓰이는 팩터 = 자기 선발 기준으로 잘린 표본에서 자기 IC 를 재는 구조.
+# 이 팩터들의 IC 는 부호·크기 모두 해석 보류 (selection bias). 2026-07-28 신설.
+_SELECTION_KEY_FACTORS = {
+    "safety_score": (
+        "stock_filter 최종 선발 정렬 키(:219/220/227/367/368/375 reverse=True) — "
+        "상위만 통과한 표본에서 측정되어 IC 해석 불가"
+    ),
+}
+
+
 def _spearman_rank_corr(x: List[float], y: List[float]) -> float:
     """스피어만 순위 상관계수 (scipy 없이 구현)."""
     n = len(x)
@@ -234,6 +244,20 @@ def scan_all_factors(
     for factor_name in FACTOR_EXTRACTORS:
         ic_result = compute_factor_ic(snapshots, factor_name, forward_days,
                                       exact_horizon=exact_horizon)
+        # 🚨 2026-07-28 — 절단 표본(range restriction) 표기.
+        # 측정 표본 = snapshot["recommendations"] = stock_filter 를 통과한 후보군만(수십 종목).
+        # 전체 유니버스가 아니다. 그런데 stock_filter 의 최종 선발 정렬 키가 safety_score
+        # (stock_filter.py:219/220/227/367/368/375, reverse=True) 이고 사전 필터가 trading_value
+        # (:27) 이므로, 이 둘은 **자기 선발 기준으로 잘린 집합에서 자기 IC 를 재는** 구조다.
+        # 상위만 남아 분산이 축소된 표본의 IC 는 부호·크기 모두 신뢰할 수 없고, 음수가 나와도
+        # "신호가 역방향"의 증거가 되지 못한다(고전적 selection bias).
+        # 실측 2026-07-28 fd=30: safety_score IC -0.1788 / fundamental -0.1494 — 해석 보류 대상.
+        # 🚨 판정 로직 불변 — is_significant/decay_alert/multiplier 미변경. 메타데이터만 부착.
+        ic_result["sample_universe"] = "recommendations_post_filter"
+        ic_result["range_restricted"] = True
+        if factor_name in _SELECTION_KEY_FACTORS:
+            ic_result["self_selection_bias"] = True
+            ic_result["bias_note"] = _SELECTION_KEY_FACTORS[factor_name]
         results[factor_name] = ic_result
 
         if ic_result.get("is_significant"):
@@ -283,6 +307,16 @@ def scan_all_factors(
         "quality_label": quality_label,
         "trail_sufficient": trail_sufficient,
         "trail_warning": trail_warning,
+        # 2026-07-28 — 표본 정체 명시. 이 IC 는 전체 유니버스가 아니라 필터 통과 후보군에서 측정됨.
+        "sample_universe": "recommendations_post_filter",
+        "range_restricted": True,
+        "range_restriction_note": (
+            "IC 표본 = snapshot['recommendations'] (stock_filter 통과 후보군). 전체 유니버스 아님. "
+            "선발 정렬 키(safety_score)·사전필터(trading_value) 계열은 자기 선발 기준으로 잘린 "
+            "표본에서 자기 IC 를 재는 구조라 부호·크기 해석 불가. 비선발 종목 포함 표본으로 "
+            "재측정 전까지 DEAD/HEALTHY 판정을 인과로 읽지 말 것."
+        ),
+        "self_selection_factors": sorted(_SELECTION_KEY_FACTORS),
         "forward_days": forward_days,
         "factors": results,
         "ranking": [{"factor": k, "icir": v.get("icir", 0)} for k, v in ranking],
