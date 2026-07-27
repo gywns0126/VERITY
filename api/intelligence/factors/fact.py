@@ -492,9 +492,25 @@ def _compute_fact_score(
     # data_coverage 는 저점수가 (데이터 부재) vs (실제 약신호) 인지 구분하는 진단 필드로만 노출.
     def _num(x):
         return isinstance(x, (int, float)) and not (isinstance(x, float) and math.isnan(x))
+    # ── 🚨 2026-07-27 — 대체 신호(substitute) 를 '보유' 로 세지 않음 ────────────────
+    # consensus_score 는 컨센서스가 없을 때 consensus_score.py 가 **수급(flow) 점수**를 넣고
+    # score_source="flow_fallback" 으로 표기한다. 값이 숫자라 아래 _num() 검사를 통과해버려
+    # data_coverage 가 "컨센서스 보유" 로 계상됐음 — 실제로는 컨센서스 부재.
+    # 실측(2026-07-27 recommendations 44종목): flow_fallback 25건(57%) / us_perplexity_consensus 18 /
+    #   consensus 1. 즉 과반이 컨센서스 없이 다른 신호로 그 슬롯을 채우는데 coverage 는 100% 로 보였음.
+    # data_coverage 의 정의가 "(데이터 부재) vs (실제 약신호)" 구분이므로 대체분은 부재로 세는 게 정의 정합.
+    # 🚨 점수 불변 — data_coverage/missing 은 informational only(위 블록 명시). 컴포넌트 값·가중치
+    #   미변경. 슬롯 자체에서 flow_fallback 을 빼는 건 산식 변경이라 RULE 7 사전승인 대상 = 별건.
+    _SUBSTITUTE_SOURCES = {"flow_fallback"}
+    _substituted = set()
+    _consensus_source = consensus.get("score_source")
+    if _consensus_source in _SUBSTITUTE_SOURCES:
+        _substituted.add("consensus")
+
     _missing = set()
     if not _num(mf.get("multi_score")): _missing.add("multi_factor")
-    if not _num(consensus.get("consensus_score")): _missing.add("consensus")
+    if not _num(consensus.get("consensus_score")) or "consensus" in _substituted:
+        _missing.add("consensus")
     if not _num(pred.get("up_probability")): _missing.add("prediction")
     if (bt or {}).get("total_trades", 0) == 0: _missing.add("backtest")
     if not _num(timing.get("timing_score")): _missing.add("timing")
@@ -659,6 +675,10 @@ def _compute_fact_score(
         "components": {k: round(v, 1) for k, v in components.items() if isinstance(v, (int, float))},
         "data_coverage": round(data_coverage, 3),
         "missing_components": sorted(_missing),
+        # 2026-07-27 — 슬롯은 찼지만 값의 출처가 그 슬롯 이름과 다른 컴포넌트(대체 신호).
+        # IC/학습 trail 이 "컨센서스 신호" 와 "수급 대체분" 을 분리 집계할 수 있게 명시.
+        "substituted_components": sorted(_substituted),
+        "consensus_source": _consensus_source,
         # 2026-07-23 RULE 7: fact 컴포넌트 중 LLM 정성 read 출처 표기 (측정≠LLM 판단 구분).
         "llm_derived_components": [k for k in _llm_derived if k in components],
         # equity_brief_verdict = 관측 전용(점수 미반영). Perplexity 투자결론 — 순환 방지로 fact 제외.
