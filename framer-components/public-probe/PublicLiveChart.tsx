@@ -115,6 +115,14 @@ function fmtVol(v: any): string {
     if (x >= 1e4) return Math.round(x / 1e4).toLocaleString("en-US") + "만"
     return Math.round(x).toLocaleString("en-US")
 }
+// 순자산총액 — 조/억 단위 (ETF 잔액은 자릿수가 커 원 단위 노출이 안 읽힘)
+function fmtAmt(v: any): string {
+    const x = Number(v)
+    if (!isFinite(x) || x <= 0) return "—"
+    if (x >= 1e12) return (x / 1e12).toFixed(2) + "조원"
+    if (x >= 1e8) return Math.round(x / 1e8).toLocaleString("en-US") + "억원"
+    return Math.round(x).toLocaleString("en-US") + "원"
+}
 // collector(_chunk_idx)와 동일 — base36 (코드 'K' 포함 우선주 변형 대응). 양측 검증 완료.
 function chunkOf(code: string): string {
     const n = parseInt(code, 36) % N_CHUNKS
@@ -156,14 +164,19 @@ function toWeekly(cs: number[][]): number[][] {
         )
         if (key !== curKey) {
             if (cur) out.push(cur)
-            cur = [c[0], c[1], c[2], c[3], c[4], c[5]]
+            cur = c.slice() // ETF 전용 6·7번(NAV·좌수)까지 보존
             curKey = key
         } else if (cur) {
             cur[0] = c[0]
             cur[2] = Math.max(cur[2], c[2])
             cur[3] = Math.min(cur[3], c[3])
             cur[4] = c[4]
-            cur[5] += c[5]
+            if (c.length > 6) {
+                // ETF = 5번이 순자산총액(잔액). 합산하면 안 됨 — 주 마지막값.
+                cur[5] = c[5]
+                cur[6] = c[6]
+                cur[7] = c[7]
+            } else cur[5] += c[5]
         }
     }
     if (cur) out.push(cur)
@@ -236,6 +249,7 @@ export default function PublicLiveChart(props: Props) {
     const [range, setRange] = useState("3M")
     const [hoverIdx, setHoverIdx] = useState<number | null>(null)
     const [noData, setNoData] = useState(false)
+    const [isEtf, setIsEtf] = useState(false)
     const [themeDark, setThemeDark] = useState<boolean>(() =>
         RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()
     )
@@ -290,9 +304,14 @@ export default function PublicLiveChart(props: Props) {
                 }
             }
         }
-        return /^[0-9]{5}[0-9A-Z]$/.test(t) ? t : ""
+        return t
     }
-    const [tk, setTk] = useState<string>(resolveTk)
+    // 2026-07-28: 옛 코드는 여기서 6자리 코드가 아니면 ""를 돌려줬다 → 미장 티커(VOO)가
+    // "표시할 종목이 없습니다"(= 종목 자체가 없다)로 보여 오독을 낳았다. 이제 원문을 보존하고
+    // 국내 코드 여부만 파생 — 해외는 "차트 미제공"으로 정직하게 구분해 안내한다.
+    const [rawTk, setTk] = useState<string>(resolveTk)
+    const tk = /^[0-9]{5}[0-9A-Z]$/.test(rawTk) ? rawTk : ""
+    const isForeign = !!rawTk && !tk
     useEffect(() => {
         if (onCanvas) return
         const reread = () => setTk(resolveTk())
@@ -328,6 +347,7 @@ export default function PublicLiveChart(props: Props) {
         setFull([])
         setNoData(false)
         setName("")
+        setIsEtf(false)
         setHoverIdx(null)
         if (!tk) return
         let alive = true
@@ -344,6 +364,50 @@ export default function PublicLiveChart(props: Props) {
             }
             return false
         }
+        /* ETF 폴백 — 금융위 주식시세정보(kr_chart_daily)는 **주식만** 담는다. ETF/ETN 은 청크에
+           아예 없어 옛 코드가 곧장 "시세 정보 없음"으로 떨어졌다(PM 지적 2026-07-28).
+           ETF 는 KRX etf_bydd_trd 백필(etf_hist/{code}.json)이 종가·NAV·좌수·순자산을 갖고 있다.
+           OHLC 가 없으므로 캔들 대신 종가 라인 + NAV 라인으로 그린다.
+           행 = [날짜, 종가×4, 순자산(막대), NAV, 상장좌수] — 뒤 2칸이 ETF 전용. */
+        const tryEtf = () => {
+            fetch(base + "/etf_hist/" + tk + ".json")
+                .then((r) => (r.ok ? r.json() : null))
+                .then((d) => {
+                    if (!alive) return
+                    const ds = d && Array.isArray(d.d) ? d.d : null
+                    if (!ds) {
+                        setNoData(true)
+                        return
+                    }
+                    const rows: number[][] = []
+                    for (let i = 0; i < ds.length; i++) {
+                        const px = Number(d.c ? d.c[i] : NaN)
+                        if (!isFinite(px) || px <= 0) continue // 휴장/결측일 = 건너뜀
+                        const nav = Number(d.v ? d.v[i] : NaN)
+                        const ast = Number(d.a ? d.a[i] : NaN)
+                        const shr = Number(d.s ? d.s[i] : NaN)
+                        rows.push([
+                            Number(ds[i]),
+                            px,
+                            px,
+                            px,
+                            px,
+                            isFinite(ast) ? ast : 0,
+                            isFinite(nav) ? nav : 0,
+                            isFinite(shr) ? shr : 0,
+                        ])
+                    }
+                    if (rows.length > 1) {
+                        rows.sort((a, b) => a[0] - b[0])
+                        setFull(rows)
+                        setName(d.n || tk)
+                        setIsEtf(true)
+                    } else setNoData(true)
+                })
+                .catch(() => {
+                    if (alive) setNoData(true)
+                })
+        }
         fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((doc) => {
@@ -352,13 +416,13 @@ export default function PublicLiveChart(props: Props) {
                     try {
                         sessionStorage.setItem(cacheKey, JSON.stringify(doc))
                     } catch (e) {}
-                    if (!apply(doc)) setNoData(true) // 청크 수신 OK · 종목 없음 = 진짜 없음
+                    if (!apply(doc)) tryEtf() // 청크 수신 OK · 종목 없음 = ETF 일 수 있음
                 } else {
                     try {
                         const c = sessionStorage.getItem(cacheKey)
-                        if (!(c && apply(JSON.parse(c)))) setNoData(true)
+                        if (!(c && apply(JSON.parse(c)))) tryEtf()
                     } catch (e) {
-                        setNoData(true)
+                        tryEtf()
                     }
                 }
             })
@@ -381,7 +445,8 @@ export default function PublicLiveChart(props: Props) {
         setHistFull(null)
     }, [tk])
     useEffect(() => {
-        if (onCanvas || range !== "전체" || !tk || histFull) return
+        // ETF 는 etf_hist 자체가 전체 히스토리 — 별도 kr_chart_history 없음(404 방지)
+        if (onCanvas || range !== "전체" || !tk || histFull || isEtf) return
         let alive = true
         fetch(base + "/kr_chart_history/" + tk + ".json")
             .then((r) => (r.ok ? r.json() : null))
@@ -471,10 +536,18 @@ export default function PublicLiveChart(props: Props) {
             padT + (Hp - padT - padB) - ((v - pmin) / prng) * (Hp - padT - padB)
         const vols = candles.map((c) => c[5])
         const vmax = Math.max(1, ...vols)
+        // ETF 순자산 막대는 0 기준이면 변화가 안 보인다(잔액이라 늘 큰 값) — 최소값 기준으로 깔아줌
+        const vmin = isEtf ? Math.min(...vols.filter((v) => v > 0), vmax) * 0.98 : 0
+        const vspan = Math.max(1, vmax - vmin)
         const cw = Math.max(1.2, (W / n) * 0.62)
         const items = candles.map((c, i) => {
-            const upDay = c[4] >= c[1]
-            const bh = Hv ? (c[5] / vmax) * (Hv - 2) : 0
+            // ETF 는 시가가 없어 o=c — 전일 종가 대비로 색을 정한다
+            const upDay = isEtf
+                ? i > 0
+                    ? c[4] >= candles[i - 1][4]
+                    : true
+                : c[4] >= c[1]
+            const bh = Hv ? (Math.max(0, c[5] - vmin) / vspan) * (Hv - 2) : 0
             return {
                 x: xAt(i),
                 oy: yP(c[1]),
@@ -510,6 +583,24 @@ export default function PublicLiveChart(props: Props) {
             }
             return dstr
         }
+        // ETF 라인 — 종가 실선 + 아래 면적, NAV 는 점선(괴리를 눈으로 확인)
+        const closeLine = isEtf ? maPath(candles.map((c) => c[4])) : ""
+        const navLine =
+            isEtf && candles.some((c) => c.length > 6 && c[6] > 0)
+                ? maPath(candles.map((c) => (c[6] > 0 ? c[6] : null)))
+                : ""
+        const closeArea = closeLine
+            ? closeLine +
+              "L" +
+              xAt(n - 1).toFixed(1) +
+              "," +
+              (Hp - padB).toFixed(1) +
+              "L" +
+              xAt(0).toFixed(1) +
+              "," +
+              (Hp - padB).toFixed(1) +
+              "Z"
+            : ""
         return {
             W,
             H: chartH,
@@ -524,11 +615,14 @@ export default function PublicLiveChart(props: Props) {
             cw,
             n,
             tickIdx,
+            closeLine,
+            navLine,
+            closeArea,
             p5: maPath(view.ma5),
             p20: maPath(view.ma20),
             p60: maPath(view.ma60),
         }
-    }, [view, w, h, Hprop, showVolume])
+    }, [view, w, h, Hprop, showVolume, isEtf])
 
     const setHoverFromX = (clientX: number) => {
         if (!cv || !svgRef.current) return
@@ -682,7 +776,11 @@ export default function PublicLiveChart(props: Props) {
                 />
             </svg>
             <span style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>
-                {tk ? "표시할 시세 정보가 없습니다" : "표시할 종목이 없습니다"}
+                {isForeign
+                    ? "해외 종목은 차트를 제공하지 않아요"
+                    : tk
+                      ? "표시할 시세 정보가 없습니다"
+                      : "표시할 종목이 없습니다"}
             </span>
             <span
                 style={{
@@ -692,9 +790,11 @@ export default function PublicLiveChart(props: Props) {
                     lineHeight: 1.5,
                 }}
             >
-                {tk
-                    ? "이 종목은 차트로 표시할 일봉 데이터가 없어요"
-                    : "종목을 선택하면 차트가 표시돼요"}
+                {isForeign
+                    ? `${rawTk} 는 미국 상장 종목이에요 · 국내 시세는 금융위 공공데이터(재배포 허용)를 쓰지만 해외 시세는 재배포 권리가 없어 증권사 앱에서 확인해야 해요`
+                    : tk
+                      ? "이 종목은 차트로 표시할 일봉 데이터가 없어요"
+                      : "종목을 선택하면 차트가 표시돼요"}
             </span>
         </div>
     )
@@ -947,45 +1047,86 @@ export default function PublicLiveChart(props: Props) {
                                         vectorEffect="non-scaling-stroke"
                                     />
                                 )}
-                            {/* 캔들 + 거래량 */}
-                            {cv.items.map((cd: any, i: number) => {
-                                const col = cd.upDay ? C.up : C.down
-                                const bodyTop = Math.min(cd.oy, cd.cy)
-                                const bodyH = Math.max(
-                                    0.8,
-                                    Math.abs(cd.oy - cd.cy)
-                                )
-                                return (
-                                    <g key={i}>
-                                        {cv.Hv > 0 && (
-                                            <rect
-                                                x={cd.x - cv.cw / 2}
-                                                y={cd.volTop}
-                                                width={cv.cw}
-                                                height={cd.volH}
-                                                fill={col}
-                                                fillOpacity={0.35}
-                                            />
-                                        )}
-                                        <line
-                                            x1={cd.x}
-                                            y1={cd.hy}
-                                            x2={cd.x}
-                                            y2={cd.ly}
-                                            stroke={col}
-                                            strokeWidth={1}
-                                            vectorEffect="non-scaling-stroke"
-                                        />
-                                        <rect
-                                            x={cd.x - cv.cw / 2}
-                                            y={bodyTop}
-                                            width={Math.max(1, cv.cw)}
-                                            height={bodyH}
-                                            fill={col}
-                                        />
-                                    </g>
-                                )
-                            })}
+                            {/* ETF = 종가 라인(+면적) · NAV 점선 / 주식 = 캔들. 막대 = 순자산 or 거래량 */}
+                            {isEtf
+                                ? cv.items.map((cd: any, i: number) =>
+                                      cv.Hv > 0 ? (
+                                          <rect
+                                              key={i}
+                                              x={cd.x - cv.cw / 2}
+                                              y={cd.volTop}
+                                              width={cv.cw}
+                                              height={cd.volH}
+                                              fill={cd.upDay ? C.up : C.down}
+                                              fillOpacity={0.3}
+                                          />
+                                      ) : null
+                                  )
+                                : cv.items.map((cd: any, i: number) => {
+                                      const col = cd.upDay ? C.up : C.down
+                                      const bodyTop = Math.min(cd.oy, cd.cy)
+                                      const bodyH = Math.max(
+                                          0.8,
+                                          Math.abs(cd.oy - cd.cy)
+                                      )
+                                      return (
+                                          <g key={i}>
+                                              {cv.Hv > 0 && (
+                                                  <rect
+                                                      x={cd.x - cv.cw / 2}
+                                                      y={cd.volTop}
+                                                      width={cv.cw}
+                                                      height={cd.volH}
+                                                      fill={col}
+                                                      fillOpacity={0.35}
+                                                  />
+                                              )}
+                                              <line
+                                                  x1={cd.x}
+                                                  y1={cd.hy}
+                                                  x2={cd.x}
+                                                  y2={cd.ly}
+                                                  stroke={col}
+                                                  strokeWidth={1}
+                                                  vectorEffect="non-scaling-stroke"
+                                              />
+                                              <rect
+                                                  x={cd.x - cv.cw / 2}
+                                                  y={bodyTop}
+                                                  width={Math.max(1, cv.cw)}
+                                                  height={bodyH}
+                                                  fill={col}
+                                              />
+                                          </g>
+                                      )
+                                  })}
+                            {isEtf && cv.closeArea && (
+                                <path
+                                    d={cv.closeArea}
+                                    fill={C.vg}
+                                    fillOpacity={0.1}
+                                    stroke="none"
+                                />
+                            )}
+                            {isEtf && cv.closeLine && (
+                                <path
+                                    d={cv.closeLine}
+                                    fill="none"
+                                    stroke={C.vg}
+                                    strokeWidth={1.8}
+                                    vectorEffect="non-scaling-stroke"
+                                />
+                            )}
+                            {isEtf && cv.navLine && (
+                                <path
+                                    d={cv.navLine}
+                                    fill="none"
+                                    stroke={C.ma20}
+                                    strokeWidth={1.2}
+                                    strokeDasharray="3 3"
+                                    vectorEffect="non-scaling-stroke"
+                                />
+                            )}
                             {/* 이동평균선 5/20/60 */}
                             {cv.p60 && (
                                 <path
@@ -1102,11 +1243,40 @@ export default function PublicLiveChart(props: Props) {
                                 >
                                     {dateDot(hov[0])}
                                 </div>
-                                {tipRow("시가", won(hov[1]))}
-                                {tipRow("종가", won(hov[4]))}
-                                {tipRow("최고", won(hov[2]), C.up)}
-                                {tipRow("최저", won(hov[3]), C.down)}
-                                {tipRow("거래량", fmtVol(hov[5]))}
+                                {isEtf ? (
+                                    <>
+                                        {tipRow("종가", won(hov[4]))}
+                                        {hov.length > 6 &&
+                                            hov[6] > 0 &&
+                                            tipRow("NAV", won(hov[6]), C.ma20)}
+                                        {hov.length > 6 &&
+                                            hov[6] > 0 &&
+                                            (() => {
+                                                const dv =
+                                                    ((hov[4] - hov[6]) /
+                                                        hov[6]) *
+                                                    100
+                                                return tipRow(
+                                                    "괴리율",
+                                                    (dv > 0 ? "+" : "") +
+                                                        dv.toFixed(2) +
+                                                        "%",
+                                                    Math.abs(dv) >= 0.5
+                                                        ? C.up
+                                                        : C.faint
+                                                )
+                                            })()}
+                                        {tipRow("순자산", fmtAmt(hov[5]))}
+                                    </>
+                                ) : (
+                                    <>
+                                        {tipRow("시가", won(hov[1]))}
+                                        {tipRow("종가", won(hov[4]))}
+                                        {tipRow("최고", won(hov[2]), C.up)}
+                                        {tipRow("최저", won(hov[3]), C.down)}
+                                        {tipRow("거래량", fmtVol(hov[5]))}
+                                    </>
+                                )}
                                 {hovChg != null &&
                                     tipRow(
                                         "등락률",
@@ -1166,12 +1336,20 @@ export default function PublicLiveChart(props: Props) {
                             flexWrap: "wrap",
                         }}
                     >
-                        {!view.isMax && (
+                        {isEtf ? (
                             <>
-                                {maChip("MA5", C.ma5)}
-                                {maChip("MA20", C.ma20)}
-                                {maChip("MA60", C.ma60)}
+                                {maChip("종가", C.vg)}
+                                {maChip("NAV", C.ma20)}
+                                {showVolume !== false && maChip("순자산", C.up)}
                             </>
+                        ) : (
+                            !view.isMax && (
+                                <>
+                                    {maChip("MA5", C.ma5)}
+                                    {maChip("MA20", C.ma20)}
+                                    {maChip("MA60", C.ma60)}
+                                </>
+                            )
                         )}
                         <span
                             style={{
@@ -1180,12 +1358,15 @@ export default function PublicLiveChart(props: Props) {
                                 fontWeight: 500,
                             }}
                         >
-                            {view.isMax
-                                ? view.isWeekly
-                                    ? "주봉 · 전체 기간 (2020~)"
-                                    : "일봉 · 전체 기간"
-                                : "일봉"}{" "}
-                            · 전일까지 · 금융위 공공데이터 (T+1)
+                            {isEtf
+                                ? (view.isWeekly ? "주봉" : "일봉") +
+                                  " · 전일까지 · KRX OpenAPI (T+1)"
+                                : (view.isMax
+                                      ? view.isWeekly
+                                          ? "주봉 · 전체 기간 (2020~)"
+                                          : "일봉 · 전체 기간"
+                                      : "일봉") +
+                                  " · 전일까지 · 금융위 공공데이터 (T+1)"}
                         </span>
                         {tk && (
                             <a

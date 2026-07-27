@@ -1154,6 +1154,43 @@ function EtfReportBlock({
             ? doc.etfs.find((x: any) => String(x.ticker) === String(ticker))
             : null
     const isUs = !/^[0-9]{6}$/.test(String(ticker)) // 알파벳 티커=US ETF(us_etf.json) / 6자리=KR(etf_flow)
+
+    /* 🚨 2026-07-28 구성종목 히트맵 — 타일 면적 = 비중.
+       색은 시장마다 의미가 다르다. 같아 보이게 만들면 거짓이 되므로 라벨에 명시한다.
+       · KR = 전일 등락률(빨강/파랑). stock_flow_5d.json(이미 발행 중인 파일) 마지막 2종가로 계산.
+       · US = 비중 농도. 미국 구성종목의 일별 등락은 재배포 권리가 없어 발행 자체를 안 한다.
+       임베드(TradingView 등) 대신 자체 구현 — 남의 위젯은 우리 데이터가 아니고, 과거에 iframe
+       높이가 Fit 이면 0 으로 계산돼 위젯이 통째로 사라지는 사고도 있었다. */
+    const holdings: any[] =
+        e && Array.isArray(e.top_holdings) ? e.top_holdings : []
+    const holdKey = holdings.map((h: any) => String(h.t || "")).join(",")
+    const [holdChg, setHoldChg] = useState<Record<string, number>>({})
+    useEffect(() => {
+        setHoldChg({})
+        if (isUs || !holdKey) return
+        const codes = holdKey.split(",").filter((c: string) => /^\d{6}$/.test(c))
+        if (!codes.length) return
+        let alive = true
+        fetch(DEFAULT_FLOW)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!alive || !d || !d.flows) return
+                const out: Record<string, number> = {}
+                for (const c of codes) {
+                    const ser = d.flows[c]
+                    if (!Array.isArray(ser) || ser.length < 2) continue
+                    const c1 = Number(ser[ser.length - 1].close)
+                    const c0 = Number(ser[ser.length - 2].close)
+                    if (isFinite(c1) && isFinite(c0) && c0 > 0)
+                        out[c] = ((c1 - c0) / c0) * 100
+                }
+                setHoldChg(out)
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [holdKey, isUs])
     const hist = (doc && doc.history && doc.history[ticker]) || []
     const series: any[] = []
     let cum = 0
@@ -1210,6 +1247,286 @@ function EtfReportBlock({
             </div>
         </div>
     )
+
+    /* 🚨 2026-07-28 미국 ETF 심화 — PM 지적 "정보가 확실히 적긴하네"(VOO 화면 = 4줄 + top10).
+       yfinance funds_data 로 개요·운용·자산군·섹터·밸류에이션까지 확장. 전부 관측 사실(RULE 7).
+       숫자 스케일 함정 2건은 빌더에서 이미 교정 — PER 역수 환산, 보수 분수/% 혼재. */
+    const USSEC: Record<string, string> = {
+        technology: "기술",
+        financial_services: "금융",
+        healthcare: "헬스케어",
+        consumer_cyclical: "경기소비재",
+        consumer_defensive: "필수소비재",
+        communication_services: "커뮤니케이션",
+        industrials: "산업재",
+        energy: "에너지",
+        utilities: "유틸리티",
+        realestate: "부동산",
+        basic_materials: "소재",
+    }
+    const ASSETL: Record<string, string> = {
+        stock: "주식",
+        bond: "채권",
+        cash: "현금",
+        other: "기타",
+        preferred: "우선주",
+        convertible: "전환사채",
+    }
+    // 비중 막대 — 라벨/막대/수치 한 줄. 폭은 최댓값 기준 정규화(작은 비중도 보이게).
+    const barRow = (
+        label: string,
+        pct: number,
+        maxPct: number,
+        color: string,
+        key: any
+    ) => (
+        <div
+            key={key}
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "3px 0",
+            }}
+        >
+            <span
+                style={{
+                    flexShrink: 0,
+                    width: 84,
+                    fontSize: 11.5,
+                    color: C.sub,
+                    fontWeight: 700,
+                }}
+            >
+                {label}
+            </span>
+            <span
+                style={{
+                    flex: 1,
+                    minWidth: 0,
+                    height: 7,
+                    borderRadius: 4,
+                    background: C.line,
+                    overflow: "hidden",
+                }}
+            >
+                <span
+                    style={{
+                        display: "block",
+                        height: "100%",
+                        width:
+                            Math.max(
+                                2,
+                                (pct / Math.max(1e-6, maxPct)) * 100
+                            ).toFixed(1) + "%",
+                        background: color,
+                        borderRadius: 4,
+                    }}
+                />
+            </span>
+            <span
+                style={{
+                    flexShrink: 0,
+                    width: 48,
+                    textAlign: "right",
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    fontVariantNumeric: "tabular-nums",
+                }}
+            >
+                {pct.toFixed(1)}%
+            </span>
+        </div>
+    )
+    const cardTitle = (t: string, sub?: string) => (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: 7,
+                marginBottom: 6,
+            }}
+        >
+            <span style={{ fontSize: 13.5, fontWeight: 800 }}>{t}</span>
+            {sub ? (
+                <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>
+                    {sub}
+                </span>
+            ) : null}
+        </div>
+    )
+    const signed = (v: number) => (v > 0 ? "+" : "") + v.toFixed(2) + "%"
+    const retColor = (v: number) => (v > 0 ? C.up : v < 0 ? C.down : C.faint)
+
+    /* 히트맵 — 스트립 트리맵. 정렬 후 행 누적 비중이 목표치를 넘으면 행을 닫고, 행 높이는
+       그 행의 비중 합에 비례. 정사각 근사(squarified)보다 단순하지만 10~20 타일에선 형태가 안정적. */
+    const heatTiles = holdings
+        .map((h: any) => ({
+            t: String(h.t || ""),
+            n: String(h.n || ""),
+            w: Number(h.w),
+            chg: holdChg[String(h.t || "")],
+        }))
+        .filter((x: any) => isFinite(x.w) && x.w > 0)
+        .sort((a2: any, b2: any) => b2.w - a2.w)
+    const heatTotal = heatTiles.reduce((s2: number, x: any) => s2 + x.w, 0)
+    const heatRowsN = heatTiles.length <= 6 ? 2 : 3
+    const heatRows: any[][] = []
+    {
+        let row: any[] = []
+        let acc = 0
+        const target = heatTotal / heatRowsN
+        for (let i2 = 0; i2 < heatTiles.length; i2++) {
+            row.push(heatTiles[i2])
+            acc += heatTiles[i2].w
+            const remainRows = heatRowsN - heatRows.length
+            if (acc >= target && remainRows > 1) {
+                heatRows.push(row)
+                row = []
+                acc = 0
+            }
+        }
+        if (row.length) heatRows.push(row)
+    }
+    // KR = 등락률 농도(±3% 에서 포화) · US = 비중 농도
+    const heatColor = (x: any) => {
+        if (isUs) {
+            const a = Math.min(0.85, 0.15 + (x.w / (heatTiles[0].w || 1)) * 0.7)
+            return isDark
+                ? `rgba(169,155,255,${a.toFixed(2)})`
+                : `rgba(108,92,231,${a.toFixed(2)})`
+        }
+        const v = x.chg
+        if (v == null || !isFinite(v)) return isDark ? "#252b34" : "#eef1f4"
+        const a = Math.min(0.9, 0.14 + (Math.abs(v) / 3) * 0.76)
+        return v >= 0
+            ? `rgba(240,68,82,${a.toFixed(2)})`
+            : isDark
+              ? `rgba(91,155,255,${a.toFixed(2)})`
+              : `rgba(49,130,246,${a.toFixed(2)})`
+    }
+    const HEAT_H = narrow ? 200 : 240
+    const heatCard =
+        heatTiles.length >= 3 ? (
+            <div style={card}>
+                {cardTitle(
+                    "구성종목 지도",
+                    isUs
+                        ? "칸 크기 = 비중 · 색 진하기 = 비중"
+                        : "칸 크기 = 비중 · 색 = 전일 등락"
+                )}
+                <div
+                    style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 3,
+                        height: HEAT_H,
+                        marginTop: 2,
+                    }}
+                >
+                    {heatRows.map((row: any[], ri: number) => {
+                        const rw = row.reduce(
+                            (s2: number, x: any) => s2 + x.w,
+                            0
+                        )
+                        return (
+                            <div
+                                key={ri}
+                                style={{
+                                    display: "flex",
+                                    gap: 3,
+                                    flex: Math.max(0.5, rw),
+                                    minHeight: 0,
+                                }}
+                            >
+                                {row.map((x: any) => {
+                                    const showTxt = x.w / rw > 0.16
+                                    return (
+                                        <div
+                                            key={x.t}
+                                            onClick={() =>
+                                                onPick && !isUs
+                                                    ? onPick(x.t)
+                                                    : null
+                                            }
+                                            title={`${x.n || x.t} · 비중 ${x.w}%${
+                                                x.chg != null && isFinite(x.chg)
+                                                    ? " · " + signed(x.chg)
+                                                    : ""
+                                            }`}
+                                            style={{
+                                                flex: Math.max(0.4, x.w),
+                                                minWidth: 0,
+                                                borderRadius: 7,
+                                                background: heatColor(x),
+                                                cursor:
+                                                    onPick && !isUs
+                                                        ? "pointer"
+                                                        : "default",
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                overflow: "hidden",
+                                                padding: 2,
+                                            }}
+                                        >
+                                            {showTxt && (
+                                                <>
+                                                    <span
+                                                        style={{
+                                                            fontSize: 11.5,
+                                                            fontWeight: 800,
+                                                            color: "#fff",
+                                                            whiteSpace:
+                                                                "nowrap",
+                                                            textShadow:
+                                                                "0 1px 2px rgba(0,0,0,0.28)",
+                                                        }}
+                                                    >
+                                                        {x.t}
+                                                    </span>
+                                                    <span
+                                                        style={{
+                                                            fontSize: 10.5,
+                                                            fontWeight: 700,
+                                                            color: "rgba(255,255,255,0.92)",
+                                                            whiteSpace:
+                                                                "nowrap",
+                                                            textShadow:
+                                                                "0 1px 2px rgba(0,0,0,0.28)",
+                                                        }}
+                                                    >
+                                                        {x.chg != null &&
+                                                        isFinite(x.chg)
+                                                            ? signed(x.chg)
+                                                            : x.w + "%"}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )
+                    })}
+                </div>
+                <div
+                    style={{
+                        fontSize: 11,
+                        color: C.faint,
+                        fontWeight: 600,
+                        marginTop: 8,
+                        lineHeight: 1.5,
+                    }}
+                >
+                    {isUs
+                        ? "미국 구성종목의 일별 등락은 재배포 권리가 없어 색으로 쓰지 못해요 · 색은 비중 크기예요"
+                        : "전일 종가 대비 · 색이 진할수록 ±3%에 가까워요 · 칸을 누르면 그 종목으로 이동해요"}{" "}
+                    · 상위 {heatTiles.length}종 (전체 아님)
+                </div>
+            </div>
+        ) : null
 
     /* 🚨 2026-07-27 지수형 보강 — 전 종목 커버리지(25→상장 전량)로 비로소 가능해진 항목들.
        ① NAV 기간 수익률 ② 괴리율 평균·범위 ③ 같은 기초지수(없으면 같은 분류) ETF 비교.
@@ -1395,6 +1712,33 @@ function EtfReportBlock({
                         </div>
                         <div
                             style={{
+                                display: "flex",
+                                gap: 12,
+                                flexWrap: "wrap",
+                                marginTop: 12,
+                            }}
+                        >
+                            {e.inception
+                                ? kv("설정일", String(e.inception))
+                                : null}
+                            {e.legal_type
+                                ? kv(
+                                      "형태",
+                                      String(e.legal_type) ===
+                                          "Exchange Traded Fund"
+                                          ? "ETF"
+                                          : String(e.legal_type)
+                                  )
+                                : null}
+                            {e.yield_pct != null
+                                ? kv("분배율 (연)", e.yield_pct + "%")
+                                : null}
+                            {e.beta3y != null
+                                ? kv("베타 (3년)", String(e.beta3y))
+                                : null}
+                        </div>
+                        <div
+                            style={{
                                 fontSize: 11,
                                 color: C.faint,
                                 fontWeight: 600,
@@ -1407,6 +1751,189 @@ function EtfReportBlock({
                             점수·추천 아님
                         </div>
                     </div>
+
+                    {/* 수익률 — YTD 는 %, 3/5년은 연평균. 기간 정의를 라벨에 명시해 오독 차단 */}
+                    {e.returns &&
+                        (e.returns.ytd != null ||
+                            e.returns.y3 != null ||
+                            e.returns.y5 != null) && (
+                            <div style={card}>
+                                {cardTitle(
+                                    "수익률",
+                                    "분배금 재투자 기준 · 과거 성과 (미래 보장 아님)"
+                                )}
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        gap: 12,
+                                        flexWrap: "wrap",
+                                    }}
+                                >
+                                    {e.returns.ytd != null
+                                        ? kv(
+                                              "올해 (YTD)",
+                                              signed(Number(e.returns.ytd)),
+                                              retColor(Number(e.returns.ytd))
+                                          )
+                                        : null}
+                                    {e.returns.y3 != null
+                                        ? kv(
+                                              "3년 연평균",
+                                              signed(Number(e.returns.y3)),
+                                              retColor(Number(e.returns.y3))
+                                          )
+                                        : null}
+                                    {e.returns.y5 != null
+                                        ? kv(
+                                              "5년 연평균",
+                                              signed(Number(e.returns.y5)),
+                                              retColor(Number(e.returns.y5))
+                                          )
+                                        : null}
+                                </div>
+                            </div>
+                        )}
+
+                    {/* 비용·회전율 — 같은 카테고리 평균과 나란히. "싸다/비싸다"는 판단 대신 두 수치 병기 */}
+                    {(e.expense_cat_pct != null || e.turnover_pct != null) && (
+                        <div style={card}>
+                            {cardTitle(
+                                "비용·회전율",
+                                e.category_name
+                                    ? String(e.category_name) + " 평균 대비"
+                                    : "카테고리 평균 대비"
+                            )}
+                            <div
+                                style={{
+                                    display: "flex",
+                                    gap: 12,
+                                    flexWrap: "wrap",
+                                }}
+                            >
+                                {e.expense != null
+                                    ? kv("총보수", e.expense + "%")
+                                    : null}
+                                {e.expense_cat_pct != null
+                                    ? kv(
+                                          "카테고리 평균 보수",
+                                          e.expense_cat_pct + "%",
+                                          C.faint
+                                      )
+                                    : null}
+                                {e.turnover_pct != null
+                                    ? kv("회전율 (연)", e.turnover_pct + "%")
+                                    : null}
+                                {e.turnover_cat_pct != null
+                                    ? kv(
+                                          "카테고리 평균 회전율",
+                                          e.turnover_cat_pct + "%",
+                                          C.faint
+                                      )
+                                    : null}
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: 11,
+                                    color: C.faint,
+                                    fontWeight: 600,
+                                    marginTop: 8,
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                회전율 = 1년간 보유종목을 갈아치운 비율. 높을수록
+                                매매비용·과세 이연 불리가 커져요.
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 자산군 — 주식형/채권형/원자재형을 한눈에 (채권 ETF 는 여기서 성격이 드러남) */}
+                    {e.assets && Object.keys(e.assets).length > 0 && (
+                        <div style={card}>
+                            {cardTitle("자산군 구성")}
+                            {Object.keys(e.assets)
+                                .map((k: string) => ({
+                                    k,
+                                    v: Number(e.assets[k]),
+                                }))
+                                .filter((x: any) => isFinite(x.v) && x.v > 0)
+                                .sort((a2: any, b2: any) => b2.v - a2.v)
+                                .map((x: any, i2: number) =>
+                                    barRow(
+                                        ASSETL[x.k] || x.k,
+                                        x.v,
+                                        100,
+                                        i2 === 0 ? C.vt : C.faint,
+                                        x.k
+                                    )
+                                )}
+                        </div>
+                    )}
+
+                    {/* 섹터 비중 — 주식형만 존재. 채권·원자재 ETF 는 이 카드 자체가 안 나옴 */}
+                    {e.sectors && Object.keys(e.sectors).length > 0 && (
+                        <div style={card}>
+                            {cardTitle(
+                                "섹터 비중",
+                                "무엇에 얼마나 실려 있는지"
+                            )}
+                            {(() => {
+                                const rows = Object.keys(e.sectors)
+                                    .map((k: string) => ({
+                                        k,
+                                        v: Number(e.sectors[k]),
+                                    }))
+                                    .filter(
+                                        (x: any) => isFinite(x.v) && x.v > 0
+                                    )
+                                    .sort((a2: any, b2: any) => b2.v - a2.v)
+                                const mx2 = rows.length ? rows[0].v : 100
+                                return rows.map((x: any, i2: number) =>
+                                    barRow(
+                                        USSEC[x.k] || x.k,
+                                        x.v,
+                                        mx2,
+                                        i2 === 0 ? C.vt : C.sub,
+                                        x.k
+                                    )
+                                )
+                            })()}
+                        </div>
+                    )}
+
+                    {/* 구성종목 가중 밸류에이션 — 지수 자체가 비싼지 싼지의 유일한 정량 렌즈 */}
+                    {e.equity_stats &&
+                        Object.keys(e.equity_stats).length > 0 && (
+                            <div style={card}>
+                                {cardTitle(
+                                    "구성종목 밸류에이션",
+                                    "보유 비중으로 가중한 값"
+                                )}
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        gap: 12,
+                                        flexWrap: "wrap",
+                                    }}
+                                >
+                                    {e.equity_stats.per != null
+                                        ? kv("PER", String(e.equity_stats.per))
+                                        : null}
+                                    {e.equity_stats.pbr != null
+                                        ? kv("PBR", String(e.equity_stats.pbr))
+                                        : null}
+                                    {e.equity_stats.psr != null
+                                        ? kv("PSR", String(e.equity_stats.psr))
+                                        : null}
+                                    {e.equity_stats.pcf != null
+                                        ? kv(
+                                              "P/CF",
+                                              String(e.equity_stats.pcf)
+                                          )
+                                        : null}
+                                </div>
+                            </div>
+                        )}
+
                     {Array.isArray(e.top_holdings) &&
                         e.top_holdings.length > 0 && (
                             <div style={card}>
@@ -1469,8 +1996,30 @@ function EtfReportBlock({
                                         </span>
                                     </div>
                                 ))}
+                                {e.top_w_sum != null && (
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            color: C.faint,
+                                            fontWeight: 600,
+                                            marginTop: 8,
+                                            lineHeight: 1.5,
+                                        }}
+                                    >
+                                        상위 {e.top_holdings.length}종 합계{" "}
+                                        {Number(e.top_w_sum).toFixed(1)}% ·
+                                        나머지{" "}
+                                        {Math.max(
+                                            0,
+                                            100 - Number(e.top_w_sum)
+                                        ).toFixed(1)}
+                                        %는 그 아래 종목들 (소스가 상위 10종까지만
+                                        제공)
+                                    </div>
+                                )}
                             </div>
                         )}
+                    {heatCard}
                 </>
             ) : (
                 <>
@@ -2014,6 +2563,7 @@ function EtfReportBlock({
                                 </div>
                             </div>
                         )}
+                    {heatCard}
                     {series.length > 0 && (
                         <div style={card}>
                             <div
