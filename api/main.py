@@ -2734,6 +2734,13 @@ def main():
                 "upside_pct": cblock.get("upside_pct"),
                 "operating_profit_yoy_est_pct": cblock.get("operating_profit_yoy_est_pct"),
                 "warnings": cblock.get("warnings", []),
+                # 2026-07-28 — 네이버 기업실적분석 표의 분기 컬럼(과거 actual + (E) 추정).
+                # 같은 페이지에 이미 있던 것을 파서가 tds[:4] 로 잘라 버리던 것 복원.
+                # 🔒 consensus_data.json = 발행 제외 확정(2026-07-21 전수감사 PM 승인) + 공개
+                #   리포트 빌더도 "consensus": None 봉인(2026-07-10 쟁점4) → 공개 노출 0.
+                #   비공개 브레인 own-use 전용.
+                "quarters": raw_c.get("quarters") or [],
+                "quarter_estimate_labels": raw_c.get("quarter_estimate_labels") or [],
             }
         )
         print(
