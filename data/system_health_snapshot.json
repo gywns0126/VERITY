@@ -1,102 +1,102 @@
 {
   "system_health": {
-    "status": "error",
-    "checked_at": "2026-07-27T13:06:33+09:00",
+    "status": "ok",
+    "checked_at": "2026-07-27T15:05:40+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 238366,
+    "elapsed_ms": 180530,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 7460,
+        "latency_ms": 179877,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
-        "status": "ok",
-        "latency_ms": 351,
-        "detail": "정상",
-        "attempts": 1
+        "status": "skipped",
+        "latency_ms": 0,
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       },
       "telegram": {
-        "status": "ok",
-        "latency_ms": 550,
-        "detail": "@verity_stock_bot",
-        "attempts": 1
+        "status": "skipped",
+        "latency_ms": 0,
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       },
       "gemini": {
-        "status": "ok",
-        "latency_ms": 111,
-        "detail": "정상",
-        "attempts": 1
+        "status": "skipped",
+        "latency_ms": 0,
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       },
       "anthropic": {
-        "status": "ok",
+        "status": "skipped",
         "latency_ms": 0,
-        "detail": "키 존재 확인",
-        "attempts": 1
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       },
       "kipris": {
-        "status": "ok",
-        "latency_ms": 567,
-        "detail": "정상",
-        "attempts": 1
+        "status": "skipped",
+        "latency_ms": 0,
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       },
       "public_data": {
-        "status": "ok",
-        "latency_ms": 4171,
-        "detail": "정상",
-        "attempts": 1
-      },
-      "krx_open_api": {
-        "status": "error",
-        "latency_ms": 221393,
-        "detail": "degradation: ok 1/18 (6%), 빈데이터 9, 권한없음 0, 오류 8 (basDd=20260727)",
-        "attempts": 1
+        "status": "skipped",
+        "latency_ms": 0,
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       },
       "reports_signed_url": {
-        "status": "ok",
-        "latency_ms": 1606,
-        "detail": "signed URL + fetch 정상",
-        "attempts": 1
+        "status": "skipped",
+        "latency_ms": 0,
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
+      },
+      "krx_open_api": {
+        "status": "skipped",
+        "latency_ms": 0,
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       },
       "ecos": {
-        "status": "ok",
-        "latency_ms": 611,
-        "detail": "정상",
-        "attempts": 1
+        "status": "skipped",
+        "latency_ms": 0,
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       },
       "finnhub": {
-        "status": "ok",
-        "latency_ms": 381,
-        "detail": "정상",
-        "attempts": 1
+        "status": "skipped",
+        "latency_ms": 0,
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       },
       "polygon": {
-        "status": "ok",
-        "latency_ms": 327,
-        "detail": "정상",
-        "attempts": 1
+        "status": "skipped",
+        "latency_ms": 0,
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       },
       "sec_edgar": {
-        "status": "ok",
-        "latency_ms": 138,
-        "detail": "정상",
-        "attempts": 1
+        "status": "skipped",
+        "latency_ms": 0,
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       },
       "perplexity": {
-        "status": "ok",
+        "status": "skipped",
         "latency_ms": 0,
-        "detail": "키 설정 OK",
-        "attempts": 1
+        "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+        "attempts": 0
       }
     },
     "github_worker": {
       "status": "running",
       "conclusion": "in_progress",
-      "workflow": "Price Pulse (1m KR/US 지수 + 보유 + 추천)",
-      "started_at": "2026-07-27T04:05:43Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/30236164218",
-      "detail": "Price Pulse (1m KR/US 지수 + 보유 + 추천): in_progress"
+      "workflow": "DART Catalyst Pulse (공시속보 신선도)",
+      "started_at": "2026-07-27T06:00:44Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/30241376091",
+      "detail": "DART Catalyst Pulse (공시속보 신선도): in_progress"
     },
     "data_recency": {
       "status": "ok",
@@ -104,44 +104,44 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-07-27 13:01",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-27 15:01",
+          "age_hours": 0.07,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-07-27 13:01",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-27 15:01",
+          "age_hours": 0.07,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-07-27 13:01",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-27 15:01",
+          "age_hours": 0.07,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-07-27 13:01",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-27 15:01",
+          "age_hours": 0.07,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-07-27 13:01",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-27 15:01",
+          "age_hours": 0.07,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-07-27 13:01",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-27 15:01",
+          "age_hours": 0.07,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-07-27 13:01",
-          "age_hours": 0.09,
+          "last_updated": "2026-07-27 15:01",
+          "age_hours": 0.07,
           "threshold_hours": 1
         }
       }
@@ -149,15 +149,13 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "af359f6",
-      "remote_message": "💓 price_pulse 13:03",
-      "remote_date": "2026-07-27T04:03:50Z",
-      "local_sha": "b64daba",
-      "detail": "cron 자동 갱신 — 💓 price_pulse 13:03"
+      "remote_sha": "d9e335f",
+      "remote_message": "📊 macro_snapshot 2026-07-27T15:04",
+      "remote_date": "2026-07-27T06:04:12Z",
+      "local_sha": "275cd8a",
+      "detail": "cron 자동 갱신 — 📊 macro_snapshot 2026-07-27T15:04"
     },
-    "errors": [
-      "KRX Open API API 오류 — degradation: ok 1/18 (6%), 빈데이터 9, 권한없음 0, 오류 8 (basDd=20260727)"
-    ],
+    "errors": [],
     "warnings": [],
     "apis": {
       "kis_openapi": {
@@ -166,9 +164,9 @@
         "total": 13
       }
     },
-    "overall_status": "error"
+    "overall_status": "ok"
   },
-  "updated_at": "2026-07-27T13:06:37+09:00",
+  "updated_at": "2026-07-27T15:05:45+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
