@@ -48,6 +48,8 @@ _NAV_KEYS = ["NAV"]
 _CLOSE_KEYS = ["TDD_CLSPRC"]
 
 SLEEP_SEC = float(os.environ.get("ETF_HIST_SLEEP", "0.4") or "0.4")
+# 빈 응답 재시도 상한 — 이 횟수를 넘겨야 휴장일로 확정(쿼터·일시 장애와 구분)
+EMPTY_RETRY = int(os.environ.get("ETF_HIST_EMPTY_RETRY", "3") or "3")
 
 
 def _pick(row: Dict[str, Any], keys: List[str]) -> Optional[float]:
@@ -106,9 +108,15 @@ def backfill(max_days: int, horizon: int) -> Dict[str, Any]:
     os.makedirs(OUT_DIR, exist_ok=True)
     state = _load_json(STATE_PATH)
     done = set(state.get("days_done") or [])
+    # 🚨 빈 응답을 휴장일로 단정하면 쿼터·장애로 빈 날이 영구 누락됨(데이터 완결성 직결).
+    #   성공한 날만 done, 빈 날은 카운트만 올리고 다음 회차에 재시도. EMPTY_RETRY 회 넘으면 휴장 확정.
+    empty = {str(k): int(v) for k, v in (state.get("empty_counts") or {}).items()}
 
-    # 최신 → 과거 순으로 훑되, 이미 처리한 날짜는 건너뜀
-    candidates = [d for d in _business_days_back(horizon) if d not in done]
+    # 최신 → 과거 순으로 훑되, 이미 성공한 날짜와 휴장 확정일은 건너뜀
+    candidates = [
+        d for d in _business_days_back(horizon)
+        if d not in done and empty.get(d, 0) < EMPTY_RETRY
+    ]
     todo = candidates[:max_days]
     if not todo:
         print("[ETF_HIST] 백필 완료 상태 — 새로 받을 거래일 없음")
@@ -121,8 +129,9 @@ def backfill(max_days: int, horizon: int) -> Dict[str, Any]:
         rows = _fetch_etf_day(bas)
         time.sleep(SLEEP_SEC)
         if not rows:
-            print(f"[ETF_HIST] {bas} 응답 없음(휴장 추정) — skip", file=sys.stderr)
-            done.add(bas)  # 휴장일도 재시도 방지
+            empty[bas] = empty.get(bas, 0) + 1
+            tag = "휴장 확정" if empty[bas] >= EMPTY_RETRY else f"재시도 예정({empty[bas]}/{EMPTY_RETRY})"
+            print(f"[ETF_HIST] {bas} 응답 없음 — {tag}", file=sys.stderr)
             continue
         fetched_days += 1
         for ticker, row in rows.items():
@@ -163,6 +172,8 @@ def backfill(max_days: int, horizon: int) -> Dict[str, Any]:
         "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
         "days_done": sorted(done),
         "days_count": len(done),
+        "empty_counts": empty,
+        "holiday_confirmed": sorted([d for d, n in empty.items() if n >= EMPTY_RETRY]),
         "horizon": horizon,
         "remaining": max(0, len(candidates) - len(todo)),
         "note": "KRX etf_bydd_trd 거래일별 백필 — 관측 사실(가격·NAV·좌수·순자산)만. drip 진행.",
