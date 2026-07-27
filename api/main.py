@@ -1472,8 +1472,14 @@ def main():
         except Exception as _e:
             print(f"  ⚠️ 자가진단 캐시 읽기 실패: {_e}")
     if system_health is None:
+        # 🚨 2026-07-27 — realtime 은 런타임 상한 10분인데 자가진단이 125~345s 를 먹어
+        #   SIGTERM 종료(2026-07-27 08~11시 KST run 2/8 실패, partial save 조차 못 함).
+        #   상류 지연(ECOS max-retries·KRX 18-sweep)이 예산을 통째 삼키는 구조라 개별
+        #   timeout 만으로는 못 막음 → 모드별 진단 예산 상한. 초과분 프로브 = skipped(=error 아님),
+        #   다음 quick(1h)/full 진단이 정상 갱신하므로 감시 공백 없음.
+        _health_budget = 90 if mode in ("realtime", "realtime_us") else None
         try:
-            system_health = run_health_check()
+            system_health = run_health_check(budget_seconds=_health_budget)
         except Exception as e:
             print(f"  ⚠️ 자가진단 실패: {e}")
             system_health = {"status": "unknown", "errors": [str(e)]}
@@ -1699,7 +1705,13 @@ def main():
             portfolio["program_trading"] = prog
             sig = prog.get("signal", "?")
             total = prog.get("total_net_bn", 0)
-            print(f"  프로그램: {sig} | 순매수 {total:+,.0f}억 (차익 {prog.get('arb_net_bn', 0):+,.0f} / 비차익 {prog.get('non_arb_net_bn', 0):+,.0f})")
+            # 🚨 2026-07-27 — 소스 불가(KRX bld LOGOUT, KDM 개편으로 MDCSTAT06401 사망)인데
+            #   로그가 "프로그램: NEUTRAL | 순매수 +0억" 으로 떠서 실측 중립과 구분 불가였음.
+            #   collector 는 이미 unavailable=True 로 정직 반환 중 → 로그도 그대로 노출.
+            if prog.get("unavailable"):
+                print(f"  프로그램: 불가 — {prog.get('status_note') or prog.get('error') or '소스 점검 중'} (신호 미산출)")
+            else:
+                print(f"  프로그램: {sig} | 순매수 {total:+,.0f}억 (차익 {prog.get('arb_net_bn', 0):+,.0f} / 비차익 {prog.get('non_arb_net_bn', 0):+,.0f})")
             if prog.get("sell_bomb"):
                 print(f"  🚨 매도 폭탄 감지: {prog.get('sell_bomb_reason', '')}")
         except Exception as e:
