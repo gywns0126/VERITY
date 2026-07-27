@@ -10,6 +10,7 @@ VERITY Health Monitor — 시스템 자가진단 모듈
 from __future__ import annotations
 import os
 import json
+import threading
 import time
 from datetime import datetime, timedelta
 from typing import Optional
@@ -92,14 +93,23 @@ def _probe(label: str, fn, retries: int = 1, deadline_ts: Optional[float] = None
 def _check_dart() -> tuple:
     if not DART_API_KEY:
         return False, "키 미설정"
+    # 🚨 2026-07-27 — stream=True 필수. corpCode.xml 은 전 기업코드 ZIP(수 MB) 이라
+    #   기본 호출은 본문을 통째 다운로드함. requests 의 timeout 은 소켓 무응답 상한이지
+    #   총 전송시간 상한이 아니라, 전송이 느리면 timeout=20 이어도 끝나지 않음.
+    #   실측: 이 프로브 단독 197,727ms (run 30246412723) → realtime 진단 예산을 통째 소진,
+    #   나머지 13 프로브 전부 skip. 헬스체크는 status code 만 필요하므로 본문 미수신.
     r = requests.get(
         "https://opendart.fss.or.kr/api/corpCode.xml",
         params={"crtfc_key": DART_API_KEY},
         timeout=_TIMEOUT_SLOW,
+        stream=True,
     )
-    if r.status_code == 200:
-        return True, "정상"
-    return False, f"HTTP {r.status_code}"
+    try:
+        if r.status_code == 200:
+            return True, "정상"
+        return False, f"HTTP {r.status_code}"
+    finally:
+        r.close()
 
 
 def _check_ecos() -> tuple:
@@ -464,28 +474,96 @@ def _check_krx_open_api() -> tuple:
     )
 
 
-def check_api_health(deadline_ts: Optional[float] = None) -> dict:
+# 프로브 1건 하드 상한 기본값(초). 상류가 죽지도 살지도 않은 채 늘어지는 케이스 방어.
+# realtime 은 더 짧게 눌러 씀 (run_health_check(probe_timeout=) 인자).
+_PROBE_TIMEOUT_DEFAULT = 60
+
+
+def _probe_all(
+    specs: list,
+    probe_timeout: Optional[float] = None,
+    deadline_ts: Optional[float] = None,
+) -> dict:
+    """프로브를 동시에 띄우고 각각 하드 상한으로 회수.
+
+    🚨 2026-07-27 — 순차 + "프로브 진입 시점 deadline 체크" 만으로는 못 막는다는 게 실측으로
+      드러남. deadline 은 프로브 사이에서만 평가되므로 단일 프로브가 늘어지면 무력.
+      실측(run 30246412723): dart 프로브 단독 197,727ms → 90s 예산이 무의미해지고
+      나머지 13 프로브가 전부 skip = 감시 공백까지 발생. run 30239950220 은 진단 428,589ms
+      로 10분 SIGTERM 재발.
+      → ① 프로브별 하드 상한(join timeout) ② 동시 실행. 둘을 합치면 진단 전체 wall clock
+      이 probe_timeout 한 겹으로 bound 되고, 느린 프로브 하나가 나머지를 밀어내지 못함.
+
+    ThreadPoolExecutor 대신 데몬 스레드 — executor 의 non-daemon 워커는 인터프리터 종료 시
+    join 되어 realtime watchdog 의 SIGTERM 후 프로세스 종료를 지연시킴.
+    타임아웃된 스레드는 회수하지 않고 버림(데몬이라 프로세스 종료를 막지 않음).
+    """
+    limit = probe_timeout if probe_timeout is not None else _PROBE_TIMEOUT_DEFAULT
+    boxes = []
+    for key, label, fn in specs:
+        box: dict = {"key": key, "label": label, "result": None}
+        if deadline_ts is not None and time.time() >= deadline_ts:
+            box["result"] = {
+                "status": "skipped",
+                "latency_ms": 0,
+                "detail": "진단 예산 초과 — 이번 사이클 스킵 (다음 quick/full 진단이 갱신)",
+                "attempts": 0,
+            }
+            boxes.append((box, None))
+            continue
+
+        def _run(_box=box, _label=label, _fn=fn):
+            _box["result"] = _probe(_label, _fn)
+
+        t = threading.Thread(target=_run, name=f"health-probe-{key}", daemon=True)
+        t.start()
+        boxes.append((box, t))
+
+    checks = {}
+    for box, t in boxes:
+        if t is not None:
+            remaining = limit
+            if deadline_ts is not None:
+                remaining = min(remaining, max(0.0, deadline_ts - time.time()))
+            t.join(remaining)
+        r = box["result"]
+        if r is None:
+            # 상한 내 미완 = 상류 지연. error 로 올리면 늘어짐만으로 종합 ERROR 가 되므로
+            # 별도 status 로 분리 (skipped 와 동일하게 overall 오염 없음).
+            r = {
+                "status": "timeout",
+                "latency_ms": int(limit * 1000),
+                "detail": f"{limit:.0f}s 내 미응답 — 상류 지연 (다음 quick/full 진단이 갱신)",
+                "attempts": 1,
+            }
+        checks[box["key"]] = r
+    return checks
+
+
+def check_api_health(
+    deadline_ts: Optional[float] = None,
+    probe_timeout: Optional[float] = None,
+) -> dict:
     """모든 API 상태를 한 번에 점검.
     CRIT-13: Finnhub/Polygon/SEC EDGAR/Perplexity 를 감시 대상에 포함해
     US 분석 파이프라인 블랙홀을 deadman이 탐지할 수 있게 함.
 
-    deadline_ts: 진단 전체 예산 마감 (time.time() 기준). 넘어선 시점부터 남은 프로브는
-      실호출 없이 "skipped". None = 무제한 (quick/full 기존 동작 보존).
-    비싼 프로브(KRX 18-sweep, ECOS)를 뒤로 둬서 예산 초과 시 저비용 프로브가 먼저 확보되게 함.
+    deadline_ts: 진단 전체 예산 마감 (time.time() 기준). 넘어선 시점의 남은 프로브는 "skipped".
+    probe_timeout: 프로브 1건 하드 상한(초). 동시 실행이라 진단 전체가 이 한 겹으로 bound.
     """
-    checks = {
-        "dart": _probe("DART", _check_dart, deadline_ts=deadline_ts),
-        "fred": _probe("FRED", _check_fred, deadline_ts=deadline_ts),
-        "telegram": _probe("Telegram", _check_telegram, deadline_ts=deadline_ts),
-        "gemini": _probe("Gemini", _check_gemini, deadline_ts=deadline_ts),
-        "anthropic": _probe("Anthropic", _check_anthropic, deadline_ts=deadline_ts),
-        "kipris": _probe("KIPRIS", _check_kipris, deadline_ts=deadline_ts),
-        "public_data": _probe("공공데이터", _check_public_data, deadline_ts=deadline_ts),
-        "reports_signed_url": _probe("리포트 signed URL", _check_reports_signed_url, deadline_ts=deadline_ts),
-        "krx_open_api": _probe("KRX Open API", _check_krx_open_api, deadline_ts=deadline_ts),
-    }
+    specs = [
+        ("dart", "DART", _check_dart),
+        ("fred", "FRED", _check_fred),
+        ("telegram", "Telegram", _check_telegram),
+        ("gemini", "Gemini", _check_gemini),
+        ("anthropic", "Anthropic", _check_anthropic),
+        ("kipris", "KIPRIS", _check_kipris),
+        ("public_data", "공공데이터", _check_public_data),
+        ("reports_signed_url", "리포트 signed URL", _check_reports_signed_url),
+        ("krx_open_api", "KRX Open API", _check_krx_open_api),
+    ]
     if ECOS_API_KEY:
-        checks["ecos"] = _probe("ECOS", _check_ecos, deadline_ts=deadline_ts)
+        specs.append(("ecos", "ECOS", _check_ecos))
 
     # US 파이프라인 핵심 — 키가 설정된 경우만 감시 (미설정 시 optional 취급)
     from api.config import (
@@ -495,14 +573,15 @@ def check_api_health(deadline_ts: Optional[float] = None) -> dict:
         PERPLEXITY_API_KEY,
     )
     if FINNHUB_API_KEY:
-        checks["finnhub"] = _probe("Finnhub", _check_finnhub, deadline_ts=deadline_ts)
+        specs.append(("finnhub", "Finnhub", _check_finnhub))
     if POLYGON_API_KEY:
-        checks["polygon"] = _probe("Polygon", _check_polygon, deadline_ts=deadline_ts)
+        specs.append(("polygon", "Polygon", _check_polygon))
     if SEC_EDGAR_USER_AGENT:
-        checks["sec_edgar"] = _probe("SEC EDGAR", _check_sec_edgar, deadline_ts=deadline_ts)
+        specs.append(("sec_edgar", "SEC EDGAR", _check_sec_edgar))
     if PERPLEXITY_API_KEY:
-        checks["perplexity"] = _probe("Perplexity", _check_perplexity, deadline_ts=deadline_ts)
-    return checks
+        specs.append(("perplexity", "Perplexity", _check_perplexity))
+
+    return _probe_all(specs, probe_timeout=probe_timeout, deadline_ts=deadline_ts)
 
 
 # ── 2. GitHub Worker ──────────────────────────────────────────
@@ -722,12 +801,17 @@ def check_version_sync() -> dict:
 
 # ── 종합 진단 ──────────────────────────────────────────────
 
-def run_health_check(budget_seconds: Optional[float] = None) -> dict:
+def run_health_check(
+    budget_seconds: Optional[float] = None,
+    probe_timeout: Optional[float] = None,
+) -> dict:
     """
     전체 시스템 자가진단 실행 → portfolio.json에 저장될 구조 반환
 
     budget_seconds: API heartbeat 단계 전체 예산(초). 초과 시 남은 프로브 = "skipped".
-      None = 무제한 (quick/full 기존 동작). realtime 처럼 런타임 상한이 빠듯한 모드에서만 지정.
+    probe_timeout: 프로브 1건 하드 상한(초). 프로브는 동시 실행되므로 진단 전체 소요가
+      이 한 겹으로 bound 된다 (None = _PROBE_TIMEOUT_DEFAULT).
+      실측 근거 — 상한 없이는 dart 프로브 단독 197,727ms 로 전체 예산을 삼켰음.
 
     반환 예시:
     {
@@ -746,10 +830,11 @@ def run_health_check(budget_seconds: Optional[float] = None) -> dict:
     t0 = time.time()
 
     deadline_ts = (t0 + budget_seconds) if budget_seconds else None
+    _pt = probe_timeout if probe_timeout is not None else _PROBE_TIMEOUT_DEFAULT
     if deadline_ts:
-        print(f"  진단 예산: {budget_seconds:.0f}s (초과분 프로브 = skipped)")
+        print(f"  진단 예산: 전체 {budget_seconds:.0f}s / 프로브 1건 {_pt:.0f}s (동시 실행)")
 
-    api_health = check_api_health(deadline_ts=deadline_ts)
+    api_health = check_api_health(deadline_ts=deadline_ts, probe_timeout=probe_timeout)
     github_worker = check_github_worker()
     data_recency = check_data_recency()
     version_sync = check_version_sync()
@@ -823,8 +908,17 @@ def run_health_check(budget_seconds: Optional[float] = None) -> dict:
 
     ok_count = sum(1 for v in api_health.values() if v["status"] == "ok")
     skipped_count = sum(1 for v in api_health.values() if v["status"] == "skipped")
+    timeout_count = sum(1 for v in api_health.values() if v["status"] == "timeout")
     total_count = len(api_health)
-    print(f"  API: {ok_count}/{total_count} 정상" + (f" (예산초과 skip {skipped_count})" if skipped_count else ""))
+    _suffix = ""
+    if skipped_count or timeout_count:
+        _parts = []
+        if timeout_count:
+            _parts.append(f"상한초과 timeout {timeout_count}")
+        if skipped_count:
+            _parts.append(f"예산초과 skip {skipped_count}")
+        _suffix = " (" + " / ".join(_parts) + ")"
+    print(f"  API: {ok_count}/{total_count} 정상{_suffix}")
     print(f"  Worker: {github_worker.get('status', '?')} — {github_worker.get('detail', '')}")
     print(f"  데이터: {data_recency.get('status', '?')} — 최종 {data_recency.get('updated_at', '?')}")
     print(f"  버전: {version_sync.get('local_version', '?')} ({version_sync.get('local_sha', '?')})")

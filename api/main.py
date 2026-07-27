@@ -1477,9 +1477,18 @@ def main():
         #   상류 지연(ECOS max-retries·KRX 18-sweep)이 예산을 통째 삼키는 구조라 개별
         #   timeout 만으로는 못 막음 → 모드별 진단 예산 상한. 초과분 프로브 = skipped(=error 아님),
         #   다음 quick(1h)/full 진단이 정상 갱신하므로 감시 공백 없음.
-        _health_budget = 90 if mode in ("realtime", "realtime_us") else None
+        #   🚨 2026-07-27 후속 — 전체 예산만으로는 불충분했음이 N=1 실측으로 드러남.
+        #   deadline 은 프로브 사이에서만 평가돼서 단일 프로브 폭주를 못 끊음:
+        #   run 30246412723 = dart 단독 197,727ms → 90s 예산 무력 + 나머지 13 프로브 skip(감시 공백),
+        #   run 30239950220 = 진단 428,589ms 로 10분 SIGTERM 재발.
+        #   → 프로브 1건 하드 상한 + 동시 실행. realtime 은 25s 로 눌러 진단 전체를 ~25s 로 bound.
+        _is_rt = mode in ("realtime", "realtime_us")
+        _health_budget = 90 if _is_rt else None
+        _probe_timeout = 25 if _is_rt else None
         try:
-            system_health = run_health_check(budget_seconds=_health_budget)
+            system_health = run_health_check(
+                budget_seconds=_health_budget, probe_timeout=_probe_timeout
+            )
         except Exception as e:
             print(f"  ⚠️ 자가진단 실패: {e}")
             system_health = {"status": "unknown", "errors": [str(e)]}
