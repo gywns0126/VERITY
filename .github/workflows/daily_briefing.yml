@@ -1,4 +1,4 @@
-name: Daily Briefing (모닝 브리핑 — 홈 카드)
+name: Daily Briefing (시장 브리핑 — 홈 카드 · 상시 갱신)
 
 # 데일리 브리핑 v0 (PM 2026-07-05, project_daily_briefing_design): 기존 발행 피드 재조립만
 # (신규 수집 0 · LLM 0 · RULE 6/7 — 사실+예정 사실, 판단 동사 금지) → daily_briefing.json → 홈 최상단 카드.
@@ -15,7 +15,11 @@ name: Daily Briefing (모닝 브리핑 — 홈 카드)
 
 on:
   schedule:
-    - cron: '30 21 * * *'   # KST 06:30 생성 — 컴포넌트가 07:30 에 embargo 노출(교체)하므로, gh cron 지연을 흡수해 07:30 전 콘텐츠 준비 완료 보장
+    # 🚨 2026-07-28 상시 갱신 전환 (PM: "모닝을 빼고 수시로 체크"). 3시간마다 재조립 —
+    #   사용자가 언제 들어와도 최근 상태를 본다. 순수 변환(신규 수집 0 · pip 0 · KIS 0)이라
+    #   run 당 ~1분, 8회/일. 산출이 동일하면 커밋 자체를 건너뛰므로 Vercel/커밋 소음도 없다.
+    - cron: '30 21 * * *'   # KST 06:30 — 개장 전 준비
+    - cron: '0 */3 * * *'   # KST 09/12/15/18/21/00/03/06 — 상시 갱신
   workflow_run:
     workflows: ["KR Chart Daily (FSC public data)"]   # 지수(kr_index_daily) 최신화 완료 직후 자동 재발행 → recap 어제 종가 반영
     types: [completed]
@@ -55,7 +59,7 @@ jobs:
           git config user.email "gywns0126@gmail.com"
           git add data/
           git diff --staged --quiet && { echo "변경 없음"; exit 0; }
-          git commit -m "data(alpha-nest): 모닝 브리핑 $(TZ=Asia/Seoul date '+%Y-%m-%d')"
+          git commit -m "data(alpha-nest): 시장 브리핑 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
           BRANCH="${{ github.ref_name }}"
           for i in 1 2 3 4 5; do
             git rebase --abort 2>/dev/null || true
