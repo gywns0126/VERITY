@@ -1,21 +1,21 @@
 {
  "_meta": {
-  "generated_at": "2026-07-28T14:17:52.544785+09:00",
+  "generated_at": "2026-07-28T17:24:42.869123+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
  "reasons": [
-  "CDN age 841s > 120s(스테일 서빙)"
+  "CDN age 495s > 120s(스테일 서빙)"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-07-28T14:17:52.498716+09:00",
+  "generated_at": "2026-07-28T17:24:42.814568+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 841,
+  "max_cdn_age_s": 495,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -25,7 +25,7 @@
      "PBR": 95.8
     },
     "total": 1497,
-    "cdn_age_s": 837,
+    "cdn_age_s": 495,
     "error": null
    },
    {
@@ -36,7 +36,7 @@
      "PBR": 94.9
     },
     "total": 1505,
-    "cdn_age_s": 839,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -47,7 +47,7 @@
      "PBR": 73.7
     },
     "total": 3951,
-    "cdn_age_s": 841,
+    "cdn_age_s": 0,
     "error": null
    }
   ]
@@ -67,17 +67,17 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-07-28T14:17:47.671230+09:00",
+  "generated_at": "2026-07-28T17:24:34.646244+09:00",
   "summary": {
-   "fresh": 28,
+   "fresh": 26,
    "stale": 0,
-   "closed": 0,
+   "closed": 2,
    "discontinued": 1,
    "p0": {
     "total": 6,
-    "fresh": 6,
-    "closed": 0,
-    "active": 6
+    "fresh": 4,
+    "closed": 2,
+    "active": 4
    },
    "p1": {
     "total": 11,
