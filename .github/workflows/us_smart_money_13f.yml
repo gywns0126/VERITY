@@ -26,7 +26,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # 첫 run CUSIP 해석(~5분)+13F 파싱. 이후 캐시로 단축. GH 무료(public).
+    timeout-minutes: 45  # 첫 run CUSIP 해석(~5분)+13F 파싱. 이후 캐시로 단축. GH 무료(public).
 
     steps:
       - name: Checkout
@@ -55,7 +55,8 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/us_smart_money_13f.json data/us_investor_portfolios.json data/cusip_ticker_map.json
+          git add data/us_smart_money_13f.json data/us_investor_portfolios.json \
+            data/cusip_ticker_map.json data/13f_quarter_cache.json data/investor_profiles.json
           if git diff --staged --quiet; then
             echo "[smart_money] no changes"
             exit 0

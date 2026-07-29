@@ -206,6 +206,23 @@ def parse_13f_holdings(accession_no: str, cik: str) -> list[dict]:
             try:
                 if (info.findtext(".//putCall", "") or "").strip():
                     continue
+                # 🚨 2026-07-30 — 직접 주식 보유만 남긴다. 아래 둘을 안 거르면 동일 CUSIP 합산
+                #   과정에서 주식·옵션·전환사채가 한 덩어리가 되어 보유량·평가액이 붕괴한다.
+                #   실측(Tudor 2025-09-30, CIK 923093):
+                #     00971T101 SH  value 3,219,800  shares 42,500     Akamai / Equity Option
+                #     00971T101 PRN value 71,437,900 shares 73,703,000 Akamai / Convertible Bond
+                #   합산 시 shares=73,745,500 → 내재가 $0.97(실제 주가 ~$87). 그 결과 복제
+                #   수익률이 단일 분기 +425% 로 폭주했다(정상 분기는 -5~+9%).
+                #   ① sshPrnamtType — SH(주식) 외 PRN 은 '주식수'가 아니라 **채권 원금**.
+                #   ② titleOfClass — putCall 태그 없이 'Equity Option'/'Warrant' 로만 표기하는
+                #      filer 가 있다(Tudor). 태그 기반 필터만으로는 못 거른다.
+                #   해당 파일 분포: SH 3,273 / PRN 45.
+                prnamt_type = (info.findtext(".//sshPrnamtType", "") or "").strip().upper()
+                if prnamt_type and prnamt_type != "SH":
+                    continue
+                cls = (info.findtext(".//titleOfClass", "") or "").upper()
+                if any(k in cls for k in ("OPTION", "WARRANT", "RIGHT", "CONVERTIBLE", "NOTE", "BOND")):
+                    continue
                 cusip = (info.findtext(".//cusip", "") or "").strip().upper()
                 if not cusip:
                     continue
@@ -354,3 +371,97 @@ def compute_institutional_signal(cache_path: str = "data/13f_cache.json") -> dic
         "total_institutions": len(data),
         "total_tracked_issuers": len(ticker_agg),
     }
+
+
+# ── 공시 롱 북 복제 수익률 (2026-07-30 신설) ──────────────────────────────────
+# PM 요청 "그래프도 만들어서 연간 수익률". 13F 로 **실제 성과**는 못 낸다(롱 미국주식만 +
+# 45일 지연). 대신 업계 표준인 *복제 수익률* — "그 분기말 공시 포지션을 다음 분기말까지
+# 그대로 들고 있었다면" 을 계산한다. 실제 성과와 다른 이유를 반드시 병기해야 한다:
+#   · 분기 중 매매(공시 사이의 진입·청산) 미반영 → 실제 트레이딩 성과와 괴리
+#   · 숏·현금·채권·비미국·파생 제외
+#   · 두 분기 모두 보유한 종목만 계산 가능 → coverage_pct 로 계산 커버리지를 함께 노출
+# 가격은 외부 소스 없이 13F 자체의 내재가(value/shares)에서 얻는다 — 신규 소스 0.
+
+_QUARTER_CACHE_PATH = os.path.join(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))), "data", "13f_quarter_cache.json")
+
+
+def _load_quarter_cache() -> dict:
+    try:
+        with open(_QUARTER_CACHE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f) or {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_quarter_cache(cache: dict) -> None:
+    os.makedirs(os.path.dirname(_QUARTER_CACHE_PATH), exist_ok=True)
+    tmp = _QUARTER_CACHE_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(cache, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, _QUARTER_CACHE_PATH)
+
+
+def _implied_prices(rows: list[dict]) -> dict:
+    """cusip → 내재가(value/shares). 0·결측은 제외 (0 나눗셈·허수 제거)."""
+    return {r["cusip"]: r["value_usd"] / r["shares"]
+            for r in rows
+            if (r.get("shares") or 0) > 0 and (r.get("value_usd") or 0) > 0}
+
+
+def compute_replication_returns(cik: str, quarters: int = 9) -> list[dict]:
+    """분기별 복제 수익률 시계열 (오래된 분기 → 최근 순).
+
+    과거 제출본은 불변이라 accession_no 키로 영구 캐시 — 재run 시 SEC 재조회 없음.
+    """
+    filings = get_recent_13f_filings(cik, n=quarters)
+    if len(filings) < 2:
+        return []
+
+    cache = _load_quarter_cache()
+    dirty = False
+    snaps: list[tuple] = []
+    for f in filings:
+        acc = f.get("accession_no")
+        if not acc:
+            continue
+        if acc in cache:
+            rows = cache[acc]
+        else:
+            rows = [{"cusip": r["cusip"], "value_usd": r["value_usd"], "shares": r["shares"]}
+                    for r in parse_13f_holdings(acc, cik)]
+            cache[acc] = rows
+            dirty = True
+            time.sleep(0.15)                     # SEC 예의상 스로틀
+        snaps.append((f.get("report_date"), rows))
+    if dirty:
+        _save_quarter_cache(cache)
+
+    snaps = [s for s in snaps if s[0] and s[1]]
+    snaps.sort(key=lambda s: s[0])               # 오래된 → 최근
+    out: list[dict] = []
+    for (d0, h0), (d1, h1) in zip(snaps, snaps[1:]):
+        p0, p1 = _implied_prices(h0), _implied_prices(h1)
+        both = [r for r in h0 if r["cusip"] in p0 and r["cusip"] in p1]
+        base = sum(r["value_usd"] for r in both)
+        total = sum(r["value_usd"] for r in h0 if (r.get("value_usd") or 0) > 0)
+        if base <= 0 or total <= 0:
+            continue
+        ret = sum(r["value_usd"] * (p1[r["cusip"]] / p0[r["cusip"]] - 1) for r in both) / base
+        out.append({
+            "from": d0, "to": d1,
+            "return_pct": round(ret * 100, 2),
+            "coverage_pct": round(base / total * 100, 1),
+            "matched": len(both), "held": len(h0),
+        })
+    return out
+
+
+def annualize_from_quarters(series: list[dict]) -> Optional[float]:
+    """분기 복제 수익률 → 최근 4분기 누적(%). 4분기 미만이면 None (억지 연율화 금지)."""
+    if len(series) < 4:
+        return None
+    acc = 1.0
+    for q in series[-4:]:
+        acc *= (1 + (q.get("return_pct") or 0) / 100.0)
+    return round((acc - 1) * 100, 2)
