@@ -35,6 +35,18 @@ ACTIVE_MANAGERS = {
     "1336528":  "Pershing Square",
     "1040273":  "Third Point LLC",
     "1423053":  "Tiger Global",
+    # 2026-07-30 확장 (PM "전부 ㄱㄱ") — CIK 전부 SEC EDGAR 실조회 확인.
+    # 인물 축 뷰(us_investor_portfolios_public_builder)와 공유하는 단일 명단.
+    "1697748":  "ARK Invest",
+    "1603466":  "Point72",
+    "1536411":  "Duquesne Family Office",
+    "1029160":  "Soros Fund Management",
+    "1647251":  "TCI Fund Management",
+    "1103804":  "Viking Global",
+    "1167557":  "AQR Capital",
+    "850529":   "Fisher Asset Management",
+    "923093":   "Tudor Investment",
+    "1166559":  "Gates Foundation Trust",
 }
 TOP_HOLDINGS_PER_FUND = 300   # 펀드당 평가액 상위 N (롱테일 컷 — CUSIP 비용·노이즈 bound)
 

@@ -18,9 +18,45 @@ TRACKED_INSTITUTIONS = {
     "1336528":  "Pershing Square",
     "1040273":  "Third Point LLC",   # 2026-06-22 fix: 옛 1534492 = 개인(Lunsford) 오등록
     "1423053":  "Tiger Global",
+    # ── 2026-07-30 확장 (PM "전부 ㄱㄱ") ────────────────────────────────────────
+    # CIK 는 전부 SEC EDGAR 실조회로 확인 (browse-edgar type=13F-HR → submissions JSON
+    # 최근 13F-HR 존재 확인). 추정·기억 등록 금지 — 오등록 선례(Third Point 1534492=개인).
+    "1697748":  "ARK Invest",              # 캐서린 우드 — 최근 13F-HR 2026-05-12
+    "1603466":  "Point72",                 # 스티븐 코헨 — 2026-05-15
+    "1536411":  "Duquesne Family Office",  # 스탠리 드러켄밀러 — 2026-05-15
+    "1029160":  "Soros Fund Management",   # 조지 소로스 — 2026-05-15
+    "1647251":  "TCI Fund Management",     # 크리스 혼 — 2026-05-15
+    "1103804":  "Viking Global",           # 앤드리어스 할보르센 — 2026-05-15
+    "1167557":  "AQR Capital",             # 클리프 애즈니스 — 2026-05-15
+    "850529":   "Fisher Asset Management",  # 켄 피셔 — 2026-05-05
+    "923093":   "Tudor Investment",        # 폴 튜더 존스 — 2026-05-15
+    "1166559":  "Gates Foundation Trust",  # 빌 게이츠 — 2026-05-15
+    # 🚫 인덱스펀드 — 집중형 신호 희석 + CUSIP 수천 비용. 공개 빌더 ACTIVE_MANAGERS 에서 제외.
     "0000102909": "Vanguard Group",
     "0000093751": "BlackRock",
     "0000831001": "State Street",
+}
+
+# 기관명 → 대표 운용역(사람). 인물 축 뷰 라벨용.
+# 🚨 "그 사람이 곧 그 펀드" 가 아님 — 달리오(2022 경영일선 은퇴)·사이먼스(2024 작고) 처럼
+#    현 운용 주체와 인물이 다른 경우가 있어, 표기는 '기관(대표 연관 인물)' 형태로만 쓴다.
+MANAGER_PERSON = {
+    "Berkshire Hathaway": "워런 버핏",
+    "Bridgewater Associates": "레이 달리오(창업)",
+    "Renaissance Technologies": "제임스 사이먼스(창업)",
+    "Pershing Square": "빌 애크먼",
+    "Third Point LLC": "댄 로브",
+    "Tiger Global": "체이스 콜먼",
+    "ARK Invest": "캐서린 우드",
+    "Point72": "스티븐 코헨",
+    "Duquesne Family Office": "스탠리 드러켄밀러",
+    "Soros Fund Management": "조지 소로스(창업)",
+    "TCI Fund Management": "크리스 혼",
+    "Viking Global": "앤드리어스 할보르센",
+    "AQR Capital": "클리프 애즈니스",
+    "Fisher Asset Management": "켄 피셔",
+    "Tudor Investment": "폴 튜더 존스",
+    "Gates Foundation Trust": "빌 게이츠",
 }
 
 def get_latest_13f_filing(cik: str) -> Optional[dict]:
@@ -56,6 +92,11 @@ def get_recent_13f_filings(cik: str, n: int = 2) -> list[dict]:
         forms   = filings.get("form", [])
         dates   = filings.get("filingDate", [])
         accnos  = filings.get("accessionNumber", [])
+        # 🚨 2026-07-30 — report_date(보유 기준일) 추가. filed_at(제출일)과 다르다:
+        #   13F 는 분기말 기준 보유를 최대 45일 뒤에 제출하므로 filed_at 만 노출하면
+        #   "언제 시점 보유인지" 를 알 수 없어 최신 보유로 오독된다.
+        #   실측 예 — Berkshire: filingDate=2026-05-15 / reportDate=2026-03-31.
+        reports = filings.get("reportDate", [])
         out = []
         for i, form in enumerate(forms):
             if form == "13F-HR":
@@ -63,6 +104,7 @@ def get_recent_13f_filings(cik: str, n: int = 2) -> list[dict]:
                     "cik": cik,
                     "institution": TRACKED_INSTITUTIONS.get(cik, f"CIK_{cik}"),
                     "filed_at": dates[i] if i < len(dates) else None,
+                    "report_date": reports[i] if i < len(reports) else None,
                     "accession_no": accnos[i] if i < len(accnos) else None,
                 })
                 if len(out) >= n:
