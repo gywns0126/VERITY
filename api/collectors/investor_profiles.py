@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import os
 import time
 from typing import Any, Dict, List, Optional
@@ -102,6 +103,54 @@ def fetch_profile(institution: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _translate_ko(texts: List[str]) -> Dict[str, str]:
+    """영문 프로필 → 한국어. 기존 뉴스 번역과 동일 경로(Gemini flash-lite, 1 batch).
+
+    🚨 번역 = 사실 전달 유틸이지 narrative 생성이 아니다(RULE 6 경계 — news_translation 과 동일 판단).
+       원문(summary)은 지우지 않고 summary_ko 를 덧붙인다. 번역 실패 시 원문 그대로 노출되므로
+       화면이 비지 않는다. 프로필은 16건 고정 + 캐시라 호출은 사실상 최초 1회.
+    """
+    if not texts:
+        return {}
+    try:
+        from google import genai
+        from api.config import GEMINI_API_KEY, GEMINI_MODEL_CHAT
+
+        if not GEMINI_API_KEY:
+            return {}
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        numbered = "\n\n".join(f"{i}. {t}" for i, t in enumerate(texts))
+        prompt = (
+            "다음 영어 인물 소개문들을 자연스러운 한국어로 번역하라. "
+            "고유명사(인명·기업명·펀드명)는 통용 표기 유지, 숫자·연도·금액은 원문 그대로. "
+            "의역·요약·추가 서술 금지 — 원문에 없는 사실을 만들지 말 것. "
+            '반드시 JSON 객체로만 응답: {"0":"번역문","1":"번역문",...} (키=번호 문자열).\n\n'
+            + numbered
+        )
+        resp = client.models.generate_content(
+            model=GEMINI_MODEL_CHAT,
+            contents=prompt,
+            config={"response_mime_type": "application/json", "temperature": 0},
+        )
+        raw = (getattr(resp, "text", "") or "").strip()
+        m = re.search(r"\{.*\}", raw, re.DOTALL)
+        if not m:
+            return {}
+        obj = json.loads(m.group(0))
+        out: Dict[str, str] = {}
+        for k, v in obj.items():
+            try:
+                idx = int(k)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= idx < len(texts) and isinstance(v, str) and v.strip():
+                out[texts[idx]] = v.strip()
+        return out
+    except Exception as e:                                     # noqa: BLE001
+        logger.warning("[profile] 번역 실패(원문 유지): %s", e)
+        return {}
+
+
 def load_cache() -> Dict[str, Any]:
     try:
         with open(CACHE_PATH, "r", encoding="utf-8") as f:
@@ -119,6 +168,19 @@ def collect_profiles(institutions: List[str], refresh: bool = False) -> Dict[str
         p = fetch_profile(inst)
         if p:
             cache[inst] = p
+
+    # 영문 프로필만 한국어 병기 (한국어 위키에서 온 건 그대로).
+    need = [
+        v["summary"] for v in cache.values()
+        if isinstance(v, dict) and v.get("lang") != "ko"
+        and v.get("summary") and not v.get("summary_ko")
+    ]
+    if need:
+        ko = _translate_ko(need)
+        for v in cache.values():
+            if isinstance(v, dict) and ko.get(v.get("summary") or ""):
+                v["summary_ko"] = ko[v["summary"]]
+
     os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
     tmp = CACHE_PATH + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
