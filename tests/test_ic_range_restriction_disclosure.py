@@ -79,3 +79,55 @@ def test_insufficient_data_path_unchanged(monkeypatch):
     monkeypatch.setattr("api.workflows.archiver.load_snapshots_range", lambda n: [])
     out = A.scan_all_factors(forward_days=7)
     assert out["status"] == "insufficient_data"
+
+
+# ── 2026-07-29 후속 — trail 지속 검증 ────────────────────────────────────────
+# #190 은 scan_all_factors 반환에만 메타를 달았고, save_ic_snapshot 이 자체 화이트리스트로
+# entry 를 조립하는 구조라 factor_ic_history.json 에 실리지 않았음(실측으로 갭 확인).
+# trail = 미래 감사·N=252 게이트의 1차 자료 → 거기에 한계가 없으면 전체 유니버스 IC 로 오독됨.
+
+def test_save_ic_snapshot_persists_disclosure(tmp_path, monkeypatch):
+    import json as _json
+    out = tmp_path / "factor_ic_history.json"
+    monkeypatch.setattr(A, "IC_CACHE_PATH", str(out))
+
+    A.save_ic_snapshot({
+        "scanned_at": "2026-07-29T10:00:00+09:00",
+        "forward_days": 30,
+        "sample_universe": "recommendations_post_filter",
+        "range_restricted": True,
+        "self_selection_factors": ["safety_score"],
+        "factors": {
+            "safety_score": {"ic_mean": -0.18, "icir": -1.75, "is_significant": True,
+                             "decay_alert": False, "sample_count": 55,
+                             "self_selection_bias": True},
+            "momentum": {"ic_mean": 0.07, "icir": 0.5, "is_significant": False,
+                         "decay_alert": False, "sample_count": 55},
+        },
+    })
+
+    rec = _json.loads(out.read_text(encoding="utf-8"))[-1]
+    assert rec["range_restricted"] is True
+    assert rec["sample_universe"] == "recommendations_post_filter"
+    assert rec["self_selection_factors"] == ["safety_score"]
+    assert rec["factors"]["safety_score"]["self_selection_bias"] is True
+    assert rec["factors"]["momentum"]["self_selection_bias"] is False
+    # 기존 필드 회귀 0
+    assert rec["factors"]["safety_score"]["ic_mean"] == -0.18
+    assert rec["factors"]["safety_score"]["sample_count"] == 55
+    assert rec["date_key"] == "2026-07-29" and rec["forward_days"] == 30
+
+
+def test_save_ic_snapshot_without_meta_is_safe(tmp_path, monkeypatch):
+    """메타 없는 구 호출부도 깨지지 않아야 함 (None/[] 로 degrade)."""
+    import json as _json
+    out = tmp_path / "factor_ic_history.json"
+    monkeypatch.setattr(A, "IC_CACHE_PATH", str(out))
+    A.save_ic_snapshot({
+        "scanned_at": "2026-07-29T10:00:00+09:00", "forward_days": 7,
+        "factors": {"momentum": {"ic_mean": 0.1, "icir": 0.4, "sample_count": 10}},
+    })
+    rec = _json.loads(out.read_text(encoding="utf-8"))[-1]
+    assert rec["range_restricted"] is None
+    assert rec["self_selection_factors"] == []
+    assert rec["factors"]["momentum"]["self_selection_bias"] is False
