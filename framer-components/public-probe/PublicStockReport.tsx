@@ -1460,9 +1460,7 @@ function EtfReportBlock({
                                         <div
                                             key={x.t}
                                             onClick={() =>
-                                                onPick && !isUs
-                                                    ? onPick(x.t)
-                                                    : null
+                                                onPick ? onPick(x.t) : null
                                             }
                                             title={`${x.n || x.t} · 비중 ${x.w}%${
                                                 x.chg != null && isFinite(x.chg)
@@ -1474,10 +1472,9 @@ function EtfReportBlock({
                                                 minWidth: 0,
                                                 borderRadius: 7,
                                                 background: heatColor(x),
-                                                cursor:
-                                                    onPick && !isUs
-                                                        ? "pointer"
-                                                        : "default",
+                                                cursor: onPick
+                                                    ? "pointer"
+                                                    : "default",
                                                 display: "flex",
                                                 flexDirection: "column",
                                                 alignItems: "center",
@@ -1555,7 +1552,7 @@ function EtfReportBlock({
                     }}
                 >
                     {isUs
-                        ? "미국 구성종목의 일별 등락은 재배포 권리가 없어 색으로 쓰지 못해요 · 색은 비중 크기예요"
+                        ? "칸을 누르면 그 종목 리포트로 이동해요 · 미국 일별 등락은 재배포 권리가 없어 색은 비중 크기예요"
                         : "전일 종가 대비 · 색이 진할수록 ±3%에 가까워요 · 칸을 누르면 그 종목으로 이동해요"}{" "}
                     · 상위 {heatTiles.length}종 (전체 아님)
                 </div>
@@ -1983,11 +1980,15 @@ function EtfReportBlock({
                                 {e.top_holdings.map((h: any, i2: number) => (
                                     <div
                                         key={i2}
+                                        onClick={() =>
+                                            onPick ? onPick(String(h.t || "")) : null
+                                        }
                                         style={{
                                             display: "flex",
                                             alignItems: "center",
                                             gap: 8,
                                             padding: "5px 0",
+                                            cursor: onPick ? "pointer" : "default",
                                             borderTop:
                                                 i2 === 0
                                                     ? "none"

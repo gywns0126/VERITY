@@ -307,6 +307,17 @@ function anReadDark(): boolean {
     return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
 
+
+/* 🚨 2026-07-29 미장 링크 사고 — usStockPath 기본값이 "/us/stock" 이었는데 **그 페이지는 존재한 적이 없다**
+   (실측: https://www.alphanest.kr/us/stock?q=AAPL → 404). 둥지 보유종목·브리핑·커뮤니티에서 미국 종목을
+   누르면 전부 빈 404 로 떨어졌다. 리포트 페이지가 미장도 처리하므로 같은 경로로 보낸다.
+   캔버스 인스턴스에 옛 값이 남아 있어도 여기서 흡수한다 — 되돌리지 말 것. */
+function _usPath(us: any, kr: any): string {
+    const v = String(us || "").replace(/\/+$/, "")
+    if (!v || v === "/us/stock") return String(kr || "").replace(/\/+$/, "") || "/stock"
+    return v
+}
+
 export default function PublicMorningBriefing(props: Props) {
     const {
         apiBase,
@@ -605,7 +616,7 @@ export default function PublicMorningBriefing(props: Props) {
     const goStockTk = (tk: string, us?: boolean) => {
         if (typeof window === "undefined" || !tk) return
         const path = (
-            us ? usStockPath || "/us/stock" : stockPath || "/stock"
+            us ? _usPath(usStockPath, stockPath) : stockPath || "/stock"
         ).replace(/\/+$/, "")
         window.location.href = path + "?q=" + encodeURIComponent(tk)
     }
@@ -1365,7 +1376,7 @@ addPropertyControls(PublicMorningBriefing, {
     usStockPath: {
         type: ControlType.String,
         title: "Stock Path (US)",
-        defaultValue: "/us/stock",
+        defaultValue: "/stock",
     },
     briefUrl: {
         type: ControlType.String,

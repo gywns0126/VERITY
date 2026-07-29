@@ -221,6 +221,17 @@ function StanceBar(props: { c: any; label: string; window?: number; compact?: bo
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+
+/* 🚨 2026-07-29 미장 링크 사고 — usStockPath 기본값이 "/us/stock" 이었는데 **그 페이지는 존재한 적이 없다**
+   (실측: https://www.alphanest.kr/us/stock?q=AAPL → 404). 둥지 보유종목·브리핑·커뮤니티에서 미국 종목을
+   누르면 전부 빈 404 로 떨어졌다. 리포트 페이지가 미장도 처리하므로 같은 경로로 보낸다.
+   캔버스 인스턴스에 옛 값이 남아 있어도 여기서 흡수한다 — 되돌리지 말 것. */
+function _usPath(us: any, kr: any): string {
+    const v = String(us || "").replace(/\/+$/, "")
+    if (!v || v === "/us/stock") return String(kr || "").replace(/\/+$/, "") || "/stock"
+    return v
+}
+
 export default function PublicCommunityPage(props: Props) {
     const { apiBase, stockPath, usStockPath, limit, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -396,7 +407,7 @@ export default function PublicCommunityPage(props: Props) {
     const goStock = (tk: string) => {
         if (onCanvas || typeof window === "undefined" || !tk) return
         const kr = /^\d{6}$/.test(tk)
-        const p = (kr ? stockPath || "/stock" : usStockPath || "/us/stock").replace(/\/+$/, "")
+        const p = (kr ? stockPath || "/stock" : _usPath(usStockPath, stockPath)).replace(/\/+$/, "")
         window.location.href = p + "?q=" + encodeURIComponent(tk)
     }
 
@@ -969,7 +980,7 @@ export default function PublicCommunityPage(props: Props) {
 addPropertyControls(PublicCommunityPage, {
     apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
     stockPath: { type: ControlType.String, title: "Stock Path (KR)", defaultValue: "/stock" },
-    usStockPath: { type: ControlType.String, title: "Stock Path (US)", defaultValue: "/us/stock" },
+    usStockPath: { type: ControlType.String, title: "Stock Path (US)", defaultValue: "/stock" },
     limit: { type: ControlType.Number, title: "글 수", defaultValue: 30, min: 5, max: 50, step: 5 },
     dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
