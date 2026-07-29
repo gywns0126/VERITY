@@ -434,7 +434,12 @@ jobs:
         # RULE 7 = 외국인/기관 순매매량(외부 사실)만. 다음 step git add data/ (broad) = RULE 4.
         continue-on-error: true
         env:
-          FLOW_MAX_TICKERS: '300'
+          # 300 → 500 (2026-07-30). 재갱신 주기 1497/캡 = 약 5~6 거래일 → 약 3 거래일로 단축.
+          # 🚨 요청 *간격*(DELAY 0.4s)은 건드리지 않음 — 초당 요청률 불변, 일별 물량만 증가시켜
+          #    anti-bot 노출 증가를 최소화한다. 1,497 한방 금지(빌더 docstring)는 그대로 유효.
+          # 🚨 RULE 8 N=2 관측 지표 = data/stock_flow_5d.json 의 _meta.ok / _meta.collected_today.
+          #    ok/collected 가 1.0 에서 유의하게 떨어지면 차단 신호 → 즉시 '300' 으로 되돌릴 것.
+          FLOW_MAX_TICKERS: '500'
         run: python api/builders/stock_flow_public_builder.py
 
       - name: KR 종목 관측 신호 raw 적재 (v0, RULE 7 관측 only · 주간)
