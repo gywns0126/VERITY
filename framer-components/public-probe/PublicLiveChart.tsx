@@ -100,7 +100,7 @@ function tvWidgetHtml(symbol: string, dark: boolean, bg: string): string {
     }
     return (
         '<!DOCTYPE html><html><head><meta charset="utf-8">' +
-        "<style>*{margin:0;padding:0}html,body,.tradingview-widget-container{width:100%;height:100%;overflow:hidden;background:" +
+        "<style>*{margin:0;padding:0;border-radius:0!important}html,body,.tradingview-widget-container{width:100%;height:100%;overflow:hidden;border:none;background:" +
         bg +
         '}</style></head><body><div class="tradingview-widget-container">' +
         '<div class="tradingview-widget-container__widget" style="width:100%;height:100%"></div>' +
@@ -710,21 +710,38 @@ export default function PublicLiveChart(props: Props) {
                     </div>
                 </div>
                 {/* TradingView 임베드 — 데이터·라이선스는 TV 가 서빙. 우리는 저장·재배포하지 않는다. */}
-                <iframe
-                    key={rawTk + (tvDark ? "-d" : "-l")}
-                    title={rawTk + " 차트"}
-                    srcDoc={tvWidgetHtml(rawTk, tvDark, tvDark ? DARK.bg : LIGHT.bg)}
+                {/* 🚨 radius 는 **감싸는 div** 가 맡는다. iframe 자체에 borderRadius 를 주면 위젯이
+                    안쪽에 그린 테두리가 네 모서리에서 잘려 보인다(PM 지적 2026-07-30).
+                    래퍼가 overflow:hidden 으로 깔끔히 깎고, iframe 은 사각 그대로 둔다. */}
+                <div
                     style={{
                         width: "100%",
                         height: tvH,
-                        border: "none",
                         borderRadius: 12,
-                        display: "block",
-                        background: C.bg,
+                        overflow: "hidden",
+                        background: tvDark ? DARK.bg : LIGHT.bg,
+                        lineHeight: 0,
                     }}
-                    loading="lazy"
-                    sandbox="allow-scripts allow-same-origin allow-popups"
-                />
+                >
+                    <iframe
+                        key={rawTk + (tvDark ? "-d" : "-l")}
+                        title={rawTk + " 차트"}
+                        srcDoc={tvWidgetHtml(
+                            rawTk,
+                            tvDark,
+                            tvDark ? DARK.bg : LIGHT.bg
+                        )}
+                        style={{
+                            width: "100%",
+                            height: "100%",
+                            border: "none",
+                            display: "block",
+                            background: tvDark ? DARK.bg : LIGHT.bg,
+                        }}
+                        loading="lazy"
+                        sandbox="allow-scripts allow-same-origin allow-popups"
+                    />
+                </div>
                 {rows.length > 0 && (
                     <div
                         style={{
