@@ -48,6 +48,14 @@ jobs:
 
       - name: Build investor portfolios (인물 축)
         # 같은 13F 원천을 인물/기관 축으로 뒤집은 뷰. RULE 7 = 공시 사실만(수익률 랭킹 없음).
+        # GEMINI_API_KEY 사용처 = api/collectors/investor_profiles._translate_ko
+        #   (영문 위키 프로필 → 한국어 병기, news_translation 과 동일 flash-lite 경로).
+        #   🚨 키 미배선이면 번역이 조용히 0건이 된다(2026-07-30 로컬 검증에서 발견) — 원문 영문 노출.
+        #   프로필 16건 고정 + 캐시라 호출은 사실상 최초 1회.
+        # SEC_EDGAR_USER_AGENT = EDGAR 요청 UA (SEC 정책상 식별자 요구).
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SEC_EDGAR_USER_AGENT: ${{ secrets.SEC_EDGAR_USER_AGENT }}
         run: python -m api.builders.us_investor_portfolios_public_builder
 
       - name: Commit data (13f + investors + cusip cache)

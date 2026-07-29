@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 /**
  * 거장의 포트폴리오 — SEC 13F 공시 기반 인물 축 뷰 (공개 probe).
@@ -44,8 +44,10 @@ const DARK = {
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
-const MONO =
-    'ui-monospace, SFMono-Regular, Menlo, "SF Mono", monospace'
+// 🚨 숫자 = 모노 스택 금지. AlphaNest 공개 컴포넌트 표준은 Pretendard + tabular-nums
+// (fontVariantNumeric 사용 21개 파일 / ui-monospace 는 내가 들여온 이 파일 1개뿐이었음 —
+//  2026-07-30 PM 지적 "숫자가 프리텐다드가 아닌거 같은데"). 자릿수 정렬은 tabular-nums 로 충분.
+const NUM = { fontVariantNumeric: "tabular-nums" as const }
 
 const KO_CHANGE: Record<string, string> = {
     NEW: "신규",
@@ -142,111 +144,138 @@ const CANVAS_SAMPLE = {
 }
 
 // 분기 복제 수익률 선형 차트 (PM 2026-07-30 "막대 말고 선형").
-// 기존 Spark(마켓보드·크립토 티커) 패턴 재사용 — 라인 + 하단 그라데이션 + 0선.
-// 🚨 0 기준선을 반드시 그린다. 수익률은 부호가 의미이고, 0선 없는 선형은 등락을 감춘다.
-//    끝점만 강조(현재 분기) — 나머지 점은 작게 두어 선의 흐름이 읽히게.
+//
+// 🚨 preserveAspectRatio="none" 금지 — 2026-07-30 PM 지적 "그래프가 좌우로 늘려져 있음".
+//   고정 viewBox(560×132)를 width=100% 로 늘리면 선뿐 아니라 **텍스트·원까지 가로로 잡아당겨진다**
+//   (끝점이 타원, 라벨이 늘어짐). 기존 Spark(40×24)는 텍스트가 없어 왜곡이 안 보였을 뿐 같은 문제.
+//   → ResizeObserver 로 컨테이너 실폭을 재고 **실제 픽셀 좌표**로 그린다. 스케일 왜곡 0.
+//
+// 🚨 0 기준선 필수. 수익률은 부호가 의미이고, 0선 없는 선형은 등락을 감춘다.
+//   끝점만 강조(현재 분기) — 나머지 점은 작게 두어 선의 흐름이 읽히게.
 function ReturnLine({ rs, C }: { rs: any[]; C: typeof LIGHT }) {
-    const W = 560
-    const H = 132
-    const PAD_T = 16
-    const PAD_B = 26
+    const [w, setW] = useState(560)
+    const hostRef = useRef<HTMLDivElement | null>(null)
+
+    useEffect(() => {
+        const el = hostRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((entries) => {
+            const cw = entries[0]?.contentRect?.width
+            if (cw && cw > 0) setW(Math.round(cw))
+        })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+
+    const H = 138
+    const PAD_T = 18
+    const PAD_B = 28
+    const PAD_L = 14
+    // 🚨 우측 여백 = 끝점 값 라벨 자리. 2026-07-30 PM 지적 "숫자 위치 수정" —
+    //   라벨을 끝점 '위'에 두면 선이 그 점으로 들어오면서 글자와 겹친다(하강 구간에서 특히).
+    //   점 오른쪽으로 빼고 그만큼 플롯 폭을 줄여 충돌 자체를 없앤다.
+    const PAD_R = 56
     const vals = rs.map((q) => Number(q.return_pct) || 0)
-    if (vals.length < 2) return null
 
     const lo = Math.min(0, ...vals)
     const hi = Math.max(0, ...vals)
     const rng = hi - lo || 1
-    const x = (i: number) => (i / (vals.length - 1)) * (W - 24) + 12
+    const innerW = Math.max(120, w - PAD_L - PAD_R)
+    const x = (i: number) =>
+        vals.length < 2 ? PAD_L : (i / (vals.length - 1)) * innerW + PAD_L
     const y = (v: number) => PAD_T + (1 - (v - lo) / rng) * (H - PAD_T - PAD_B)
 
     const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`)
     const zeroY = y(0)
-    const area = `${pts.join(" ")} ${x(vals.length - 1).toFixed(1)},${zeroY.toFixed(1)} ${x(0).toFixed(1)},${zeroY.toFixed(1)}`
+    const area =
+        pts.join(" ") +
+        ` ${x(vals.length - 1).toFixed(1)},${zeroY.toFixed(1)} ${x(0).toFixed(1)},${zeroY.toFixed(1)}`
     const last = vals[vals.length - 1]
     const stroke = last >= 0 ? C.up : C.down
     const gid = "rl-" + stroke.replace(/[^a-z0-9]/gi, "")
 
     return (
-        <div style={{ width: "100%", overflowX: "auto" }}>
-            <svg
-                viewBox={`0 0 ${W} ${H}`}
-                width="100%"
-                height={H}
-                preserveAspectRatio="none"
-                style={{ display: "block", minWidth: 320 }}
-                role="img"
-                aria-label="분기별 복제 수익률 추이"
-            >
-                <defs>
-                    <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={stroke} stopOpacity={0.16} />
-                        <stop offset="100%" stopColor={stroke} stopOpacity={0} />
-                    </linearGradient>
-                </defs>
-                {/* 0 기준선 */}
-                <line
-                    x1={12}
-                    y1={zeroY}
-                    x2={W - 12}
-                    y2={zeroY}
-                    stroke={C.line}
-                    strokeWidth={1}
-                    strokeDasharray="3 3"
-                    vectorEffect="non-scaling-stroke"
-                />
-                <polygon points={area} fill={`url(#${gid})`} />
-                <polyline
-                    points={pts.join(" ")}
-                    fill="none"
-                    stroke={stroke}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    vectorEffect="non-scaling-stroke"
-                />
-                {vals.map((v, i) => {
-                    const isLast = i === vals.length - 1
-                    return (
-                        <g key={rs[i].to}>
-                            <circle
-                                cx={x(i)}
-                                cy={y(v)}
-                                r={isLast ? 4 : 2.4}
-                                fill={isLast ? stroke : C.card}
-                                stroke={stroke}
-                                strokeWidth={isLast ? 0 : 1.6}
-                                vectorEffect="non-scaling-stroke"
-                            />
-                            <title>{`${dot(rs[i].to)} · ${signed(v)} · 커버리지 ${rs[i].coverage_pct}%`}</title>
-                        </g>
-                    )
-                })}
-                {/* 끝점 값만 라벨 — 전 구간 라벨은 선을 가린다 */}
-                <text
-                    x={x(vals.length - 1)}
-                    y={Math.max(11, y(last) - 9)}
-                    textAnchor="end"
-                    fill={stroke}
-                    fontSize={11.5}
-                    fontWeight={700}
+        <div ref={hostRef} style={{ width: "100%" }}>
+            {vals.length < 2 ? null : (
+                <svg
+                    width={w}
+                    height={H}
+                    viewBox={`0 0 ${w} ${H}`}
+                    style={{ display: "block" }}
+                    role="img"
+                    aria-label="분기별 복제 수익률 추이"
                 >
-                    {signed(last)}
-                </text>
-                {vals.map((v, i) =>
-                    i === 0 || i === vals.length - 1 ? (
-                        <text
-                            key={"x" + rs[i].to}
-                            x={x(i)}
-                            y={H - 8}
-                            textAnchor={i === 0 ? "start" : "end"}
-                            fill={C.faint}
-                            fontSize={10.5}
-                        >
-                            {dot(rs[i].to).slice(2, 7)}
-                        </text>
-                    ) : null
-                )}
-            </svg>
+                    <defs>
+                        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={stroke} stopOpacity={0.16} />
+                            <stop offset="100%" stopColor={stroke} stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    {/* 0 기준선 */}
+                    <line
+                        x1={PAD_L}
+                        y1={zeroY}
+                        x2={w - PAD_R + 8}
+                        y2={zeroY}
+                        stroke={C.line}
+                        strokeWidth={1}
+                        strokeDasharray="3 3"
+                    />
+                    <polygon points={area} fill={`url(#${gid})`} />
+                    <polyline
+                        points={pts.join(" ")}
+                        fill="none"
+                        stroke={stroke}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                    {vals.map((v, i) => {
+                        const isLast = i === vals.length - 1
+                        return (
+                            <g key={rs[i].to}>
+                                <circle
+                                    cx={x(i)}
+                                    cy={y(v)}
+                                    r={isLast ? 4 : 2.6}
+                                    fill={isLast ? stroke : C.card}
+                                    stroke={stroke}
+                                    strokeWidth={isLast ? 0 : 1.6}
+                                />
+                                <title>{`${dot(rs[i].to)} · ${signed(v)} · 커버리지 ${rs[i].coverage_pct}%`}</title>
+                            </g>
+                        )
+                    })}
+                    {/* 끝점 값만 라벨 — 전 구간 라벨은 선을 가린다.
+                        🚨 SVG text 는 fontFamily 를 명시해야 Pretendard 가 적용된다. */}
+                    <text
+                        x={x(vals.length - 1) + 9}
+                        y={y(last) + 4}
+                        textAnchor="start"
+                        fill={stroke}
+                        fontFamily={FONT}
+                        fontSize={11.5}
+                        fontWeight={700}
+                    >
+                        {signed(last)}
+                    </text>
+                    {vals.map((v, i) =>
+                        i === 0 || i === vals.length - 1 ? (
+                            <text
+                                key={"x" + rs[i].to}
+                                x={x(i)}
+                                y={H - 9}
+                                textAnchor={i === 0 ? "start" : "middle"}
+                                fill={C.faint}
+                                fontFamily={FONT}
+                                fontSize={10.5}
+                            >
+                                {dot(rs[i].to).slice(2, 7)}
+                            </text>
+                        ) : null
+                    )}
+                </svg>
+            )}
         </div>
     )
 }
@@ -513,13 +542,20 @@ export default function PublicInvestorPortfolios(props: {
                     alignItems: "start",
                 }}
             >
-                {/* 좌: 운용사 목록 */}
+                {/* 좌: 운용사 목록 — 스크롤 시 제자리 고정(PM 2026-07-30).
+                    부모 grid 가 alignItems:"start" 여야 sticky 가 먹는다(stretch 면 트랙 높이만큼
+                    늘어나 붙을 자리가 없음). 최대 높이를 뷰포트에 묶어 목록이 화면을 넘지 않게. */}
                 <div
                     style={{
                         background: C.card,
                         borderRadius: 16,
                         overflow: "hidden",
                         minWidth: 0,
+                        position: "sticky",
+                        top: 12,
+                        maxHeight: "calc(100vh - 24px)",
+                        display: "flex",
+                        flexDirection: "column",
                     }}
                 >
                     <div
@@ -542,7 +578,7 @@ export default function PublicInvestorPortfolios(props: {
                         </span>
                         <span style={{ fontSize: 12, color: C.faint }}>공시 총액순</span>
                     </div>
-                    <div style={{ maxHeight: 640, overflowY: "auto" }}>
+                    <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
                         {list.map((v, i) => {
                             const on = i === sel
                             return (
@@ -567,7 +603,7 @@ export default function PublicInvestorPortfolios(props: {
                                 >
                                     <span
                                         style={{
-                                            fontFamily: MONO,
+                                            ...NUM,
                                             fontSize: 12,
                                             textAlign: "right",
                                             color: on ? C.vt : C.faint,
@@ -581,7 +617,7 @@ export default function PublicInvestorPortfolios(props: {
                                             style={{
                                                 display: "block",
                                                 fontSize: 14,
-                                                fontWeight: 650,
+                                                fontWeight: 600,
                                                 whiteSpace: "nowrap",
                                                 overflow: "hidden",
                                                 textOverflow: "ellipsis",
@@ -626,9 +662,9 @@ export default function PublicInvestorPortfolios(props: {
                                         <span
                                             style={{
                                                 display: "block",
-                                                fontFamily: MONO,
+                                                ...NUM,
                                                 fontSize: 13,
-                                                fontWeight: 650,
+                                                fontWeight: 600,
                                             }}
                                         >
                                             {money(v.disclosed_value_usd)}
@@ -636,7 +672,7 @@ export default function PublicInvestorPortfolios(props: {
                                         <span
                                             style={{
                                                 display: "block",
-                                                fontFamily: MONO,
+                                                ...NUM,
                                                 fontSize: 11,
                                                 color: C.faint,
                                             }}
@@ -695,7 +731,7 @@ export default function PublicInvestorPortfolios(props: {
                             <span
                                 style={{
                                     display: "block",
-                                    fontFamily: MONO,
+                                    ...NUM,
                                     fontSize: 13,
                                     color: C.ink,
                                 }}
@@ -718,7 +754,7 @@ export default function PublicInvestorPortfolios(props: {
                                 lineHeight: 1.68,
                             }}
                         >
-                            {cur.profile.summary}
+                            {cur.profile.summary_ko || cur.profile.summary}
                             {cur.profile.source_url ? (
                                 <div style={{ marginTop: 7 }}>
                                     <a
@@ -732,6 +768,7 @@ export default function PublicInvestorPortfolios(props: {
                                         }}
                                     >
                                         위키백과 · {cur.profile.name}
+                                        {cur.profile.summary_ko ? " · 자동 번역" : ""}
                                     </a>
                                 </div>
                             ) : null}
@@ -782,7 +819,7 @@ export default function PublicInvestorPortfolios(props: {
                                 <span
                                     style={{
                                         display: "block",
-                                        fontFamily: MONO,
+                                        ...NUM,
                                         fontSize: 16.5,
                                         fontWeight: 700,
                                         marginTop: 3,
@@ -930,7 +967,7 @@ export default function PublicInvestorPortfolios(props: {
                                         <td
                                             style={{
                                                 padding: "9px 9px",
-                                                fontFamily: MONO,
+                                                ...NUM,
                                                 fontSize: 13.5,
                                                 textAlign: "right",
                                                 borderTop: `1px solid ${C.line}`,
@@ -941,7 +978,7 @@ export default function PublicInvestorPortfolios(props: {
                                         <td
                                             style={{
                                                 padding: "9px 9px",
-                                                fontFamily: MONO,
+                                                ...NUM,
                                                 fontSize: 13.5,
                                                 textAlign: "right",
                                                 borderTop: `1px solid ${C.line}`,
@@ -962,7 +999,7 @@ export default function PublicInvestorPortfolios(props: {
                                                     padding: "2.5px 9px",
                                                     borderRadius: 999,
                                                     fontSize: 11.5,
-                                                    fontWeight: 650,
+                                                    fontWeight: 600,
                                                     background: chipBg(h.change_type),
                                                     color: chipFg(h.change_type),
                                                 }}
