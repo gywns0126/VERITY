@@ -33,6 +33,8 @@ const DEFAULT_BASE = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 // 미장 보강 소스 — 한글명·네이버 딥링크 코드(universe_search.nv) + US ETF 사실(us_etf)
 const UNIVERSE_URL = DEFAULT_BASE + "/universe_search.json"
 const US_ETF_URL = DEFAULT_BASE + "/us_etf.json"
+// 미국 개별종목 사실 = 슬라이스 API 1콜(~3.4KB). 전 종목 파일은 4.5MB 라 차트 옆에 두기엔 무겁다.
+const US_SLICE_BASE = "https://project-yw131.vercel.app/api/stock_slice?ticker="
 const N_CHUNKS = 40
 const LIGHT = {
     bg: "#ffffff", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
@@ -259,7 +261,17 @@ export default function PublicLiveChart(props: Props) {
                     acc.market = hit.market || ""
                 }
                 setUsInfo({ ...acc })
-                if (String(acc.market) !== "ETF") return
+                if (String(acc.market) !== "ETF") {
+                    // 미국 개별종목 — 시총·거래대금·PER·EPS 등 발행 사실을 채운다.
+                    return fetch(US_SLICE_BASE + encodeURIComponent(rawTk))
+                        .then((r) => (r.ok ? r.json() : null))
+                        .then((d2) => {
+                            const rep2 = d2 && d2.report
+                            if (!alive || !rep2) return
+                            setUsInfo({ ...acc, stock: rep2 })
+                        })
+                        .catch(() => {})
+                }
                 return fetch(US_ETF_URL)
                     .then((r) => (r.ok ? r.json() : null))
                     .then((e) => {
@@ -599,7 +611,19 @@ export default function PublicLiveChart(props: Props) {
             return (x > 0 ? "+" : "") + x.toFixed(2) + "%"
         }
         const cl = (v: any) => (Number(v) > 0 ? C.up : Number(v) < 0 ? C.down : C.faint)
+        const st = (usInfo && usInfo.stock) || null
         const rows: any[] = []
+        if (st) {
+            const h = st.header || {}
+            const f = st.facts || {}
+            if (h.market_cap) rows.push(kv("시가총액", String(h.market_cap)))
+            if (h.trading_value)
+                rows.push(kv("거래대금", String(h.trading_value)))
+            if (f["PER"]) rows.push(kv("PER", String(f["PER"])))
+            if (f["PBR"]) rows.push(kv("PBR", String(f["PBR"])))
+            if (f["EPS"]) rows.push(kv("EPS", String(f["EPS"])))
+            if (f["ROE"]) rows.push(kv("ROE", String(f["ROE"])))
+        }
         if (e && e.returns) {
             if (e.returns.ytd != null) rows.push(kv("올해", sg(e.returns.ytd), cl(e.returns.ytd)))
             if (e.returns.y3 != null) rows.push(kv("3년 연평균", sg(e.returns.y3), cl(e.returns.y3)))
@@ -617,7 +641,11 @@ export default function PublicLiveChart(props: Props) {
                     <div style={{ fontSize: 16, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>{nm}</div>
                     <div style={{ fontSize: 11.5, fontWeight: 700, color: C.faint, marginTop: 3 }}>
                         {rawTk}
-                        {e && e.category ? " · " + e.category : " · 미국 상장"}
+                        {e && e.category
+                            ? " · " + e.category
+                            : st && st.gics_ko
+                              ? " · " + st.gics_ko
+                              : " · 미국 상장"}
                         {e && e.family ? " · " + e.family : ""}
                     </div>
                 </div>
@@ -636,7 +664,7 @@ export default function PublicLiveChart(props: Props) {
                     실시간 차트·호가 보기 · 네이버 ↗
                 </a>
                 <span style={{ fontSize: 10.5, fontWeight: 500, color: C.faint, lineHeight: 1.5 }}>
-                    미국 시세는 재배포 권리가 없어 증권사 화면으로 연결해요 · 위 숫자는 yfinance 공개 사실
+                    미국 시세(주가·차트)는 재배포 권리가 없어 증권사 화면으로 연결해요 · 위 숫자는 발행 중인 공개 사실
                 </span>
             </div>
         )

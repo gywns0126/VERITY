@@ -969,6 +969,27 @@ function useAnFx(onCanvas: boolean, need: boolean): { rate: number; asOf: string
         ? { rate: fx.rate, asOf: fx.asOf, ok: true }
         : { rate: AN_FX_FALLBACK, asOf: "", ok: false }
 }
+/* 달러 표기 문자열 → 숫자. 빌더가 "$1.26T" / "$15.5B/일" / "$1.08" 처럼 **완성 문자열**을 준다.
+   숫자 필드가 따로 없어 화면단에서 되돌려야 원화 환산이 가능하다. 접미어 T/B/M/K 를 배수로 해석.
+   달러 표기가 아니면 null → 호출부가 원문을 그대로 쓴다(잘못 건드리지 않음). */
+function anParseUSD(txt: any): number | null {
+    const t = String(txt || "").trim()
+    if (!t || t.indexOf("$") < 0) return null
+    const m = t.match(/\$\s*(-?[\d,]*\.?\d+)\s*([TBMK])?/i)
+    if (!m) return null
+    const base = Number(String(m[1]).replace(/,/g, ""))
+    if (!isFinite(base)) return null
+    const mul: Record<string, number> = { T: 1e12, B: 1e9, M: 1e6, K: 1e3 }
+    return base * (m[2] ? mul[String(m[2]).toUpperCase()] || 1 : 1)
+}
+/* "$1.26T" → "1,829조원" 처럼 통째로 갈아끼운다. 접미어 뒤 꼬리(예: "/일")는 보존한다. */
+function anUSDtoKRW(txt: any, fx: number): string {
+    const v = anParseUSD(txt)
+    if (v == null || !(fx > 0)) return String(txt == null ? "" : txt)
+    const t = String(txt)
+    const tail = t.match(/(\/\S+)\s*$/)
+    return anKRWcompact(v * fx) + (tail ? tail[1] : "")
+}
 // 원화 압축 표기 — 조/억. 달러 압축(T/B/M)과 자릿수 감각이 달라 별도로 둔다.
 function anKRWcompact(v: number): string {
     const neg = v < 0
@@ -4872,6 +4893,13 @@ export default function PublicStockReport(props: Props) {
             .slice(0, 15)
     }, [query, searchList])
 
+    /* 통화 토글 — 미국 종목의 달러 표기를 원화로. 국내는 원래 원화라 무관.
+       빌더가 "$1.26T" 같은 완성 문자열을 주므로 anUSDtoKRW 로 파싱 후 환산한다. */
+    const isUsTk = !/^[0-9]{6}$/.test(String(s.ticker || ""))
+    const [ccy, setCcy] = useAnCcy(onCanvas)
+    const fxInfo = useAnFx(onCanvas, isUsTk && ccy === "KRW")
+    const toKRW = isUsTk && ccy === "KRW" && fxInfo.ok
+    const money = (v: any) => (toKRW ? anUSDtoKRW(v, fxInfo.rate) : v)
     const facts = s.facts || {}
     const fnote = s.facts_note || {}
     const factsCalc = s.facts_calc || {}
@@ -6107,10 +6135,60 @@ export default function PublicStockReport(props: Props) {
                             metaItem("52주", header.range_52w)}
                         {header &&
                             header.trading_value &&
-                            metaItem("거래대금", header.trading_value)}
+                            metaItem("거래대금", money(header.trading_value))}
                         {header &&
                             header.market_cap &&
-                            metaItem("시총", header.market_cap)}
+                            metaItem("시총", money(header.market_cap))}
+                        {isUsTk && (
+                            <span
+                                style={{
+                                    display: "inline-flex",
+                                    gap: 2,
+                                    background: C.line,
+                                    borderRadius: 8,
+                                    padding: 2,
+                                    alignSelf: "center",
+                                }}
+                            >
+                                {["USD", "KRW"].map((k) => (
+                                    <span
+                                        key={k}
+                                        onClick={() => setCcy(k)}
+                                        style={{
+                                            cursor: "pointer",
+                                            fontSize: 11,
+                                            fontWeight: 800,
+                                            padding: "3px 9px",
+                                            borderRadius: 6,
+                                            background:
+                                                ccy === k
+                                                    ? C.card
+                                                    : "transparent",
+                                            color: ccy === k ? C.ink : C.faint,
+                                        }}
+                                    >
+                                        {k === "USD" ? "$" : "₩"}
+                                    </span>
+                                ))}
+                            </span>
+                        )}
+                        {toKRW && fxInfo.asOf ? (
+                            <span
+                                style={{
+                                    fontSize: 10.5,
+                                    color: C.faint,
+                                    fontWeight: 600,
+                                    alignSelf: "center",
+                                }}
+                            >
+                                환율{" "}
+                                {Math.round(fxInfo.rate).toLocaleString()}원/$ (
+                                {String(fxInfo.asOf)
+                                    .slice(5, 16)
+                                    .replace("T", " ")}{" "}
+                                기준)
+                            </span>
+                        ) : null}
                     </div>
                 )}
                 {warnTop && (
@@ -6803,7 +6881,7 @@ export default function PublicStockReport(props: Props) {
                                             margin: "3px 0",
                                         }}
                                     >
-                                        {facts[k]}
+                                        {money(facts[k])}
                                     </div>
                                     {(() => {
                                         // 기준점 = 업종 중앙값 대비(peer). 외부 사실 비교일 뿐 좋다·나쁘다 판단 아님(RULE 7).
