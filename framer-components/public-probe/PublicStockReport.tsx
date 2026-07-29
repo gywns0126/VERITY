@@ -887,9 +887,104 @@ function fmtKRWcompact(v: any): string {
     else s = Math.round(a).toLocaleString()
     return (neg ? "−" : "") + s
 }
-function fmtUSDcompact(v: any): string {
+
+/* ── 통화 토글 (2026-07-30 PM 지시 "미장은 달러로 보이던데, 토글버튼 누르면 원화로") ─────────
+   환율 = macro_snapshot.json 의 usd_krw(yfinance, 30분 크론). 실시간 틱이 아니라 최신 스냅샷이므로
+   화면에 기준 시각을 함께 적는다 — 없는 정밀도를 있는 척하지 않는다.
+   선택값은 localStorage(an_ccy) + window 이벤트(an-ccy-change)로 전 컴포넌트가 함께 움직인다.
+   Framer 코드 컴포넌트는 서로 import 할 수 없어 이 블록은 각 파일에 같은 모양으로 둔다. */
+const AN_CCY_KEY = "an_ccy"
+const AN_CCY_EVENT = "an-ccy-change"
+const AN_FX_URL =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/macro_snapshot.json"
+const AN_FX_FALLBACK = 1380 // 스냅샷 실패 시에만. 화면엔 "환율 불러오는 중" 으로 구분 표기.
+
+function anReadCcy(): string {
+    try {
+        return window.localStorage.getItem(AN_CCY_KEY) === "KRW" ? "KRW" : "USD"
+    } catch (e) {
+        return "USD"
+    }
+}
+function anWriteCcy(v: string) {
+    try {
+        window.localStorage.setItem(AN_CCY_KEY, v)
+        window.dispatchEvent(new CustomEvent(AN_CCY_EVENT))
+    } catch (e) {
+        /* no-op */
+    }
+}
+function useAnCcy(onCanvas: boolean): [string, (v: string) => void] {
+    const [ccy, setCcy] = useState<string>(() => (onCanvas ? "USD" : anReadCcy()))
+    useEffect(() => {
+        if (onCanvas) return
+        const read = () => setCcy(anReadCcy())
+        read()
+        window.addEventListener(AN_CCY_EVENT, read)
+        window.addEventListener("storage", read) // 다른 탭에서 바꿔도 따라감
+        return () => {
+            window.removeEventListener(AN_CCY_EVENT, read)
+            window.removeEventListener("storage", read)
+        }
+    }, [onCanvas])
+    return [ccy, (v: string) => { setCcy(v); anWriteCcy(v) }]
+}
+function useAnFx(onCanvas: boolean, need: boolean): { rate: number; asOf: string; ok: boolean } {
+    const [fx, setFx] = useState<any>(null)
+    useEffect(() => {
+        if (onCanvas || !need || fx) return
+        let alive = true
+        try {
+            const c = sessionStorage.getItem("an_fx")
+            if (c) {
+                const j = JSON.parse(c)
+                if (j && j.rate > 0) {
+                    setFx(j)
+                    return
+                }
+            }
+        } catch (e) {
+            /* no-op */
+        }
+        fetch(AN_FX_URL)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const u = d && d.macro && d.macro.usd_krw
+                const rate = Number(u && u.value)
+                if (!alive || !(rate > 0)) return
+                const j = { rate, asOf: String((u && u.as_of) || "") }
+                setFx(j)
+                try {
+                    sessionStorage.setItem("an_fx", JSON.stringify(j))
+                } catch (e) {
+                    /* no-op */
+                }
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [onCanvas, need, fx])
+    return fx && fx.rate > 0
+        ? { rate: fx.rate, asOf: fx.asOf, ok: true }
+        : { rate: AN_FX_FALLBACK, asOf: "", ok: false }
+}
+// 원화 압축 표기 — 조/억. 달러 압축(T/B/M)과 자릿수 감각이 달라 별도로 둔다.
+function anKRWcompact(v: number): string {
+    const neg = v < 0
+    const a = Math.abs(v)
+    let s: string
+    if (a >= 1e12) s = (a / 1e12).toFixed(1) + "조원"
+    else if (a >= 1e8) s = Math.round(a / 1e8).toLocaleString("en-US") + "억원"
+    else if (a >= 1e4) s = Math.round(a / 1e4).toLocaleString("en-US") + "만원"
+    else s = Math.round(a).toLocaleString("en-US") + "원"
+    return (neg ? "−" : "") + s
+}
+
+function fmtUSDcompact(v: any, ccy?: string, fx?: number): string {
     if (v == null || isNaN(Number(v))) return "—"
     const n = Number(v)
+    if (ccy === "KRW" && fx && fx > 0) return anKRWcompact(n * fx)
     const neg = n < 0
     const a = Math.abs(n)
     let s: string
@@ -1155,6 +1250,11 @@ function EtfReportBlock({
             ? doc.etfs.find((x: any) => String(x.ticker) === String(ticker))
             : null
     const isUs = !/^[0-9]{6}$/.test(String(ticker)) // 알파벳 티커=US ETF(us_etf.json) / 6자리=KR(etf_flow)
+    // 통화 토글 — 미국 ETF 만 환산 대상(국내는 이미 원화)
+    const _onCanvasE = RenderTarget.current() === RenderTarget.canvas
+    const [ccy, setCcy] = useAnCcy(_onCanvasE)
+    const fxInfo = useAnFx(_onCanvasE, isUs && ccy === "KRW")
+    const krw = isUs && ccy === "KRW" && fxInfo.ok
 
     /* 🚨 2026-07-28 구성종목 히트맵 — 타일 면적 = 비중.
        색은 시장마다 의미가 다르다. 같아 보이게 만들면 거짓이 되므로 라벨에 명시한다.
@@ -1731,9 +1831,15 @@ function EtfReportBlock({
                             {e.aum_usd
                                 ? kv(
                                       "순자산(AUM)",
-                                      "$" +
-                                          (Number(e.aum_usd) / 1e9).toFixed(1) +
-                                          "B"
+                                      krw
+                                          ? anKRWcompact(
+                                                Number(e.aum_usd) * fxInfo.rate
+                                            )
+                                          : "$" +
+                                                (
+                                                    Number(e.aum_usd) / 1e9
+                                                ).toFixed(1) +
+                                                "B"
                                   )
                                 : null}
                             {e.expense != null
@@ -1780,6 +1886,47 @@ function EtfReportBlock({
                             미국 상장 ETF · yfinance
                             사실(카테고리·순자산·보수·구성) · 시세는 증권사 앱 ·
                             점수·추천 아님
+                            {krw && fxInfo.asOf ? (
+                                <>
+                                    {" "}
+                                    · 환율{" "}
+                                    {Math.round(fxInfo.rate).toLocaleString()}
+                                    원/$ ({String(fxInfo.asOf).slice(5, 16).replace("T", " ")}{" "}
+                                    기준)
+                                </>
+                            ) : null}
+                        </div>
+                        {/* 통화 토글 — 달러 금액을 원화로 바꿔 본다. 지수·비율은 통화가 없어 그대로. */}
+                        <div
+                            style={{
+                                display: "inline-flex",
+                                gap: 2,
+                                marginTop: 10,
+                                background: C.line,
+                                borderRadius: 9,
+                                padding: 2,
+                            }}
+                        >
+                            {["USD", "KRW"].map((k) => (
+                                <button
+                                    key={k}
+                                    onClick={() => setCcy(k)}
+                                    style={{
+                                        border: "none",
+                                        cursor: "pointer",
+                                        fontFamily: "inherit",
+                                        fontSize: 11.5,
+                                        fontWeight: 800,
+                                        padding: "4px 12px",
+                                        borderRadius: 7,
+                                        background:
+                                            ccy === k ? C.card : "transparent",
+                                        color: ccy === k ? C.ink : C.faint,
+                                    }}
+                                >
+                                    {k === "USD" ? "$ 달러" : "₩ 원화"}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -2747,6 +2894,10 @@ function FinTrend({
     C: any
     usd?: boolean
 }) {
+    // 통화 토글 — 미국 재무 수치(달러)를 원화로. 국내는 원래 원화라 무관.
+    const _oc = RenderTarget.current() === RenderTarget.canvas
+    const [finCcy] = useAnCcy(_oc)
+    const finFx = useAnFx(_oc, !!usd && finCcy === "KRW")
     const [metric, setMetric] = useState<"revenue" | "op" | "net">("revenue")
     const METRICS: { k: "revenue" | "op" | "net"; l: string }[] = [
         { k: "revenue", l: "매출" },
@@ -2870,7 +3021,13 @@ function FinTrend({
                         letterSpacing: "-0.6px",
                     }}
                 >
-                    {usd ? fmtUSDcompact(lastVal) : fmtKRWcompact(lastVal)}
+                    {usd
+                        ? fmtUSDcompact(
+                              lastVal,
+                              finCcy,
+                              finFx.ok ? finFx.rate : 0
+                          )
+                        : fmtKRWcompact(lastVal)}
                 </span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.faint }}>
                     {lastYear} {METRICS.find((m) => m.k === metric)!.l}
