@@ -66,6 +66,61 @@ SIC2_TO_GICS = {
     "86": "Industrials", "87": "Industrials", "89": "Industrials",
 }
 
+# KSIC(한국표준산업분류 10차) 2자리 대분류 → GICS 영문. US 의 SIC2_TO_GICS 와 동일 취지 폴백.
+# 배경(2026-07-30 실측): kr_sector_map 의 sector 가 yfinance 섹터명이 아니라 "KSIC-29271" 형태인
+# 종목이 232개 — normalize_gics 가 표준 11섹터가 아니면 None 을 돌려 gics/gics_ko/교차피어가 통째로
+# 비었다. 소스는 이미 보유했고 어휘만 달랐던 케이스라 추가 수집·쿼터 0으로 회수된다.
+KSIC2_TO_GICS = {
+    "10": "Consumer Defensive", "14": "Consumer Cyclical",
+    "16": "Basic Materials", "17": "Basic Materials", "18": "Industrials",
+    "20": "Basic Materials", "21": "Healthcare", "22": "Basic Materials",
+    "23": "Basic Materials", "24": "Basic Materials", "25": "Industrials",
+    "26": "Technology",        # 전자부품·컴퓨터·영상·음향·통신장비
+    "27": "Technology",        # 의료·정밀·광학기기 — 272(의료용기기)만 3자리에서 Healthcare 로 교정
+    "28": "Industrials", "29": "Industrials",
+    "30": "Consumer Cyclical", "31": "Industrials", "38": "Industrials",
+    "41": "Industrials", "42": "Industrials",
+    "46": "Consumer Cyclical", "47": "Consumer Cyclical",
+    "52": "Industrials", "55": "Consumer Cyclical",
+    "58": "Technology",        # 출판 — 582(SW 개발·공급)이 대부분. 581(서적)만 3자리 교정
+    "59": "Communication Services",
+    "62": "Technology", "63": "Technology",
+    "64": "Financial Services", "66": "Financial Services",
+    "70": "Healthcare",        # 연구개발 — KR 상장사는 701(자연과학) 바이오가 지배적
+    "71": "Industrials", "72": "Industrials", "73": "Industrials",
+    "75": "Industrials", "85": "Consumer Cyclical",
+}
+
+# KSIC 3자리 override — 2자리 대분류가 실체를 오분류하는 케이스만 (2자리보다 우선).
+KSIC3_TO_GICS = {
+    "271": "Technology",             # 측정·시험·항해·제어 정밀기기
+    "272": "Healthcare",             # 의료용 기기 (27 대분류=정밀기기=기술)
+    "273": "Technology",             # 사진장비·광학기기
+    "581": "Communication Services",  # 서적·잡지 출판 (58 대분류=출판=기술)
+    "582": "Technology",             # 소프트웨어 개발·공급
+    "701": "Healthcare",             # 자연과학·공학 연구개발
+    "713": "Communication Services",  # 광고 (71 대분류=전문서비스=산업재)
+}
+
+
+def kr_ksic_gics(sector: Optional[str]) -> Optional[str]:
+    """kr_sector_map 의 "KSIC-xxxxx" 문자열 → GICS 영문 근사. 표준 섹터명이면 그대로 통과.
+
+    반환값은 *근사*다 — 호출부는 실측 섹터와 구분되도록 출처를 병기할 것(RULE 7).
+    """
+    if not sector or not isinstance(sector, str):
+        return None
+    exact = normalize_gics(sector)
+    if exact:
+        return exact
+    if not sector.startswith("KSIC-"):
+        return None
+    code = sector[5:].strip()
+    if not code.isdigit():
+        return None
+    return KSIC3_TO_GICS.get(code[:3]) or KSIC2_TO_GICS.get(code[:2])
+
+
 # SIC 4자리 override — 2자리 대분류가 GICS 를 크게 오분류하는 고빈도 케이스만 교정 (2자리보다 우선).
 SIC4_TO_GICS = {
     "6798": "Real Estate",  # REIT (SIC 67 대분류=지주·투자=금융이나 REIT 실체=부동산)

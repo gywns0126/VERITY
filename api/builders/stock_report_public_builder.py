@@ -893,6 +893,7 @@ def main() -> int:
         from api.builders.cross_sector_peer import (
             GICS_KO as _GICS_KO,
             compute_gics_medians as _xpeer_medians,
+            kr_ksic_gics as _kr_ksic_gics,
             normalize_gics as _norm_gics,
             write_medians as _xpeer_write,
         )
@@ -970,11 +971,20 @@ def main() -> int:
             peer = _peer(tk, fundamentals, sector_map, sector_medians, valuation) if sector_map else None
             if peer:
                 s["peer"] = peer
-            # 교차피어용 GICS 섹터 태그 (표준 11 섹터만; KSIC-* 폴백 제외)
-            _g = _norm_gics((sector_map.get(tk) or {}).get("sector"))
+            # 교차피어용 GICS 섹터 태그. 표준 11섹터 실측 우선 → KSIC-* 는 2/3자리 근사 폴백.
+            # (2026-07-30) 폴백 이전엔 KSIC 표기 232종목의 gics 가 통째로 비어 섹터 비교·히트맵에서
+            # 누락됐다. 근사분은 gics_src="ksic_approx" 로 표기해 실측과 구분한다 (RULE 7).
+            _raw_sector = (sector_map.get(tk) or {}).get("sector")
+            _g = _norm_gics(_raw_sector)
+            _approx = False
+            if not _g and _kr_ksic_gics:
+                _g = _kr_ksic_gics(_raw_sector)
+                _approx = bool(_g)
             if _g:
                 s["gics"] = _g
                 s["gics_ko"] = _GICS_KO.get(_g, _g)
+                if _approx:
+                    s["gics_src"] = "ksic_approx"
             # 공정위 공식 지분/지배구조 — rec-embedded 없을 때 ftc 조인 부착(전 종목 ~346 대규모기업집단 소속사)
             if _ftc_lookup and _get_cc and not s.get("ownership"):
                 try:
