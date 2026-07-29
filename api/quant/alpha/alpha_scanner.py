@@ -463,6 +463,16 @@ def save_ic_snapshot(scan_result: Dict[str, Any]):
         "date": raw_date,
         "date_key": date_key,
         "forward_days": fwd,
+        # 🚨 2026-07-29 — 절단 표본 표기를 trail 에도 지속 (#190 후속).
+        # #190 은 scan_all_factors 반환에만 메타를 달았는데, 이 함수가 자체 화이트리스트로
+        # entry 를 조립해 저장하는 구조라 factor_ic_history.json 에는 실리지 않았음
+        # (2026-07-29 실측: 최신 레코드 키 = date/date_key/forward_days/factors 뿐).
+        # trail 이 곧 미래 감사·N=252 게이트의 1차 자료라, 거기에 한계가 없으면 후일
+        # 전체 유니버스 IC 로 오독된다. in-memory 소비자(strategy_evolver/factor_decay)만
+        # 아는 것으로는 부족.
+        "sample_universe": scan_result.get("sample_universe"),
+        "range_restricted": scan_result.get("range_restricted"),
+        "self_selection_factors": scan_result.get("self_selection_factors") or [],
         "factors": {},
     }
     for name, data in scan_result.get("factors", {}).items():
@@ -472,6 +482,8 @@ def save_ic_snapshot(scan_result: Dict[str, Any]):
             "significant": data.get("is_significant", False),
             "decay": data.get("decay_alert", False),
             "sample_count": data.get("sample_count", 0),
+            # 선발 키 팩터만 True — 자기 선발 기준으로 잘린 표본에서 잰 IC (해석 불가).
+            "self_selection_bias": data.get("self_selection_bias", False),
         }
 
     history = [
