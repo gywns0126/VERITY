@@ -65,7 +65,92 @@ const DARK = {
 }
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const FX = 1380
+const FX_FALLBACK = 1380 // 스냅샷 실패 시에만 — 평상시엔 실환율(useAnFx)
+
+/* ── 환율·통화 (2026-07-30) ────────────────────────────────────────────────
+   🚨 옛 코드는 FX 를 1380 으로 **하드코딩**해 두고 화면에도 "환율 1380원/$ 가정" 이라 적었다.
+   실제 환율이 1,450원대라 미국 보유분 평가액이 약 5% 낮게 잡히고 있었다(PM 지적 계기).
+   이제 macro_snapshot.json 의 usd_krw(yfinance, 30분 크론)를 읽는다. 실시간 틱이 아니므로
+   화면에 기준 시각을 함께 적는다 — 없는 정밀도를 있는 척하지 않는다. 스냅샷 실패 시에만 1380 폴백.
+   Framer 코드 컴포넌트는 서로 import 할 수 없어 이 블록은 각 파일에 같은 모양으로 둔다. */
+const AN_FX_URL =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/macro_snapshot.json"
+const AN_CCY_KEY = "an_ccy"
+const AN_CCY_EVENT = "an-ccy-change"
+function anReadCcy(): string {
+    try {
+        return window.localStorage.getItem(AN_CCY_KEY) === "KRW" ? "KRW" : "USD"
+    } catch (e) {
+        return "USD"
+    }
+}
+function useAnCcy(onCanvas: boolean): [string, (v: string) => void] {
+    const [ccy, setCcy] = useState<string>(() => (onCanvas ? "USD" : anReadCcy()))
+    useEffect(() => {
+        if (onCanvas) return
+        const read = () => setCcy(anReadCcy())
+        read()
+        window.addEventListener(AN_CCY_EVENT, read)
+        window.addEventListener("storage", read)
+        return () => {
+            window.removeEventListener(AN_CCY_EVENT, read)
+            window.removeEventListener("storage", read)
+        }
+    }, [onCanvas])
+    return [
+        ccy,
+        (v: string) => {
+            setCcy(v)
+            try {
+                window.localStorage.setItem(AN_CCY_KEY, v)
+                window.dispatchEvent(new CustomEvent(AN_CCY_EVENT))
+            } catch (e) {
+                /* no-op */
+            }
+        },
+    ]
+}
+function useAnFx(onCanvas: boolean): { rate: number; asOf: string; ok: boolean } {
+    const [fx, setFx] = useState<any>(null)
+    useEffect(() => {
+        if (onCanvas || fx) return
+        let alive = true
+        try {
+            const c = sessionStorage.getItem("an_fx")
+            if (c) {
+                const j = JSON.parse(c)
+                if (j && j.rate > 0) {
+                    setFx(j)
+                    return
+                }
+            }
+        } catch (e) {
+            /* no-op */
+        }
+        fetch(AN_FX_URL)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const u = d && d.macro && d.macro.usd_krw
+                const rate = Number(u && u.value)
+                if (!alive || !(rate > 0)) return
+                const j = { rate, asOf: String((u && u.as_of) || "") }
+                setFx(j)
+                try {
+                    sessionStorage.setItem("an_fx", JSON.stringify(j))
+                } catch (e) {
+                    /* no-op */
+                }
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [onCanvas, fx])
+    return fx && fx.rate > 0
+        ? { rate: fx.rate, asOf: fx.asOf, ok: true }
+        : { rate: FX_FALLBACK, asOf: "", ok: false }
+}
+
 
 // ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
 const BF_CID = "1idalDez9T7KlggM8qX" // 공개 임베드 client id (Logo Link 전용)
@@ -336,8 +421,11 @@ function parseFee(s: any): number {
     return isFinite(n) ? n / 100 : 0
 }
 // 통화 표기 — US=$, KR=원 (거래 원장·종목별 실현손익은 네이티브 통화. 합계만 FX 환산=holdings 관행).
-function px(v: number, us: boolean): string {
+function px(v: number, us: boolean, ccy?: string, fx?: number): string {
     if (!isFinite(v)) return "—"
+    // 미국 종목을 원화로 볼 때만 환산. 국내는 원래 원화라 손대지 않는다.
+    if (us && ccy === "KRW" && fx && fx > 0)
+        return Math.round(v * fx).toLocaleString("en-US") + "원"
     return us
         ? "$" + v.toLocaleString("en-US", { maximumFractionDigits: 2 })
         : Math.round(v).toLocaleString("en-US") + "원"
@@ -547,6 +635,10 @@ function _usPath(us: any, kr: any): string {
 export default function PublicHoldingsTab(props: Props) {
     const { apiBase, loginUrl, stockPath, usStockPath, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    // 실환율 — 하드코딩 1380 대체. 스냅샷 실패 시에만 폴백값이 쓰이고 라벨로 구분된다.
+    const fxInfo = useAnFx(onCanvas)
+    const FX = fxInfo.rate
+    const [ccy, setCcy] = useAnCcy(onCanvas)
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -1870,6 +1962,7 @@ export default function PublicHoldingsTab(props: Props) {
                         </div>
                     )}
 
+                    {(onCanvas || !isDemo) && CcyToggle}
                     {(onCanvas || !isDemo) && Tabs}
 
                     {(() => {
@@ -2097,7 +2190,7 @@ export default function PublicHoldingsTab(props: Props) {
                                             보유 {rows.length}종목 · 평단 입력
                                             기준(사실)
                                             {usRows.length
-                                                ? ` · 미국주식 환율 ${FX}원/$ 가정`
+                                                ? ` · 미국주식 환율 ${Math.round(FX).toLocaleString()}원/$${fxInfo.ok ? "" : " (기본값)"}`
                                                 : ""}
                                         </div>
                                     </div>
@@ -2905,7 +2998,9 @@ export default function PublicHoldingsTab(props: Props) {
                                             }}
                                         >
                                             22%(과표 3억↓)·27.5%(초과) · 손실
-                                            연내통산(이월 없음) · 환율 {FX}원/$
+                                            연내통산(이월 없음) · 환율{" "}
+                                            {Math.round(FX).toLocaleString()}원/$
+                                            {fxInfo.ok ? "" : " (기본값)"}
                                             가정
                                         </div>
                                     </div>
@@ -3311,7 +3406,7 @@ export default function PublicHoldingsTab(props: Props) {
                                             이동평균 매입가 차감(사실) · 거래{" "}
                                             {(tradeData.trades || []).length}건
                                             {tHasUs
-                                                ? ` · 미국주식 환율 ${FX}원/$ 가정`
+                                                ? ` · 미국주식 환율 ${Math.round(FX).toLocaleString()}원/$${fxInfo.ok ? "" : " (기본값)"}`
                                                 : ""}
                                         </div>
                                     </div>
@@ -3390,7 +3485,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                                 {Number(
                                                                     s.open_shares
                                                                 ) > 0
-                                                                    ? `보유 ${s.open_shares}주 · 평단 ${px(Number(s.open_avg_cost) || 0, us)}`
+                                                                    ? `보유 ${s.open_shares}주 · 평단 ${px(Number(s.open_avg_cost) || 0, us, ccy, FX)}`
                                                                     : "전량 매도"}
                                                             </div>
                                                         </div>
@@ -3421,7 +3516,9 @@ export default function PublicHoldingsTab(props: Props) {
                                                                         Number(
                                                                             s.realized_pnl
                                                                         ) || 0,
-                                                                        us
+                                                                        us,
+                        ccy,
+                        FX
                                                                     )}
                                                             </div>
                                                             <div
@@ -3581,7 +3678,9 @@ export default function PublicHoldingsTab(props: Props) {
                                                                     Number(
                                                                         t.price
                                                                     ) || 0,
-                                                                    us
+                                                                    us,
+                        ccy,
+                        FX
                                                                 )}
                                                             </div>
                                                         </div>
@@ -3604,7 +3703,9 @@ export default function PublicHoldingsTab(props: Props) {
                                                                     (Number(
                                                                         t.price
                                                                     ) || 0),
-                                                                us
+                                                                us,
+                                                                ccy,
+                                                                FX
                                                             )}
                                                         </div>
                                                         {!isDemo && t.id && (
