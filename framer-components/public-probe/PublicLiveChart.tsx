@@ -77,6 +77,40 @@ function naverUrl(tk: string): string {
         ? "https://m.stock.naver.com/domestic/stock/" + tk + "/total"
         : "https://finance.naver.com/item/main.naver?code=" + tk
 }
+/* 🚨 미국 차트 = TradingView Advanced Chart 임베드 (2026-07-30, PM "차트를 아예 못 보여준다고?").
+   2026-07-04 에 TV 를 접은 이유는 **KRX 심볼이 임베드에서 거부**됐기 때문이지 위젯 자체가 아니었다
+   (docs 실증: "KR 종목은 위젯 종류 무관 표시 불가"). 미국 심볼은 애초에 제한 대상이 아니다.
+   TV 문서 기준 **데이터 라이선스 책임은 TradingView 가 부담** → 임베드 측은 별도 계약 불요(지연 데이터).
+   의무 = attribution(TradingView 링크) 병기 + 위젯 코드 변형 금지.
+   🚨 iframe 높이는 반드시 px 로 준다 — Fit 이면 0 으로 계산돼 위젯이 통째로 사라진다(과거 사고). */
+function tvWidgetHtml(symbol: string, dark: boolean, bg: string): string {
+    const cfg = {
+        autosize: true,
+        symbol,
+        interval: "D",
+        timezone: "Asia/Seoul",
+        theme: dark ? "dark" : "light",
+        style: "1",
+        locale: "kr",
+        hide_side_toolbar: true,
+        allow_symbol_change: false,
+        save_image: false,
+        withdateranges: true,
+        support_host: "https://www.tradingview.com",
+    }
+    return (
+        '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+        "<style>*{margin:0;padding:0}html,body,.tradingview-widget-container{width:100%;height:100%;overflow:hidden;background:" +
+        bg +
+        '}</style></head><body><div class="tradingview-widget-container">' +
+        '<div class="tradingview-widget-container__widget" style="width:100%;height:100%"></div>' +
+        '<script src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>' +
+        JSON.stringify(cfg) +
+        "</scr" +
+        "ipt></div></body></html>"
+    )
+}
+
 /* 해외 딥링크 (2026-07-29) — 미장 시세 시계열은 재배포 권리가 없어 자체 차트를 못 그린다.
    증권사가 서빙하는 화면으로 정확히 보내는 것이 최선이자 합법.
    코드는 universe_search 의 nv(빌드 타임 해석). 실측상 접미어가 종목마다 다르다 —
@@ -205,6 +239,29 @@ export default function PublicLiveChart(props: Props) {
     const [isEtf, setIsEtf] = useState(false)
     // 해외 종목 보강 — PM 2026-07-29 "최대한의 정보 노출은 하자". 차트를 못 그린다고 빈 칸을 두지 않는다.
     const [usInfo, setUsInfo] = useState<any>(null)
+    /* 🚨 TradingView iframe 전용 테마 플래그. 이 컴포넌트 본문은 CSS 변수(--an-plc-*)로 칠하지만
+       iframe 안에서는 부모의 CSS 변수를 못 읽는다 → 테마와 배경색을 **값으로** 넘겨야 한다.
+       그래서 여기서만 body[data-framer-theme] 를 직접 읽는다(본문 렌더에는 쓰지 않음). */
+    const [tvDark, setTvDark] = useState(false)
+    useEffect(() => {
+        if (onCanvas) return
+        const read = () =>
+            setTvDark(
+                !!(
+                    typeof document !== "undefined" &&
+                    document.body &&
+                    document.body.dataset.framerTheme === "dark"
+                )
+            )
+        read()
+        if (typeof MutationObserver === "undefined" || !document.body) return
+        const o = new MutationObserver(read)
+        o.observe(document.body, {
+            attributes: true,
+            attributeFilter: ["data-framer-theme"],
+        })
+        return () => o.disconnect()
+    }, [onCanvas])
 
     // 종목 = prop → URL ?q= → localStorage(StockReport 기록). 이벤트·popstate 수신해 리로드 없이 추종.
     // 유효 코드 아니면 빈 상태 (기본 종목 fallback 금지 — 엉뚱 그래프 방지). 'K' 포함 우선주 변형 허용.
@@ -635,9 +692,11 @@ export default function PublicLiveChart(props: Props) {
             if (e.beta3y != null) rows.push(kv("베타 3년", String(e.beta3y)))
             if (e.aum_usd) rows.push(kv("순자산", "$" + (Number(e.aum_usd) / 1e9).toFixed(1) + "B"))
         }
+        // 위젯 높이 — 프레임 실측에서 헤더/사실/푸터 몫을 뺀 값. px 고정(Fit 금지).
+        const tvH = Math.max(220, (h > 260 ? h : Hprop) - (rows.length ? 210 : 150))
         return (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 12, padding: "0 14px" }}>
-                <div>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10, padding: "0 10px 4px" }}>
+                <div style={{ padding: "0 4px" }}>
                     <div style={{ fontSize: 16, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>{nm}</div>
                     <div style={{ fontSize: 11.5, fontWeight: 700, color: C.faint, marginTop: 3 }}>
                         {rawTk}
@@ -649,23 +708,75 @@ export default function PublicLiveChart(props: Props) {
                         {e && e.family ? " · " + e.family : ""}
                     </div>
                 </div>
-                {rows.length > 0 && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 18px" }}>{rows}</div>
-                )}
-                <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                {/* TradingView 임베드 — 데이터·라이선스는 TV 가 서빙. 우리는 저장·재배포하지 않는다. */}
+                <iframe
+                    key={rawTk + (tvDark ? "-d" : "-l")}
+                    title={rawTk + " 차트"}
+                    srcDoc={tvWidgetHtml(rawTk, tvDark, tvDark ? DARK.bg : LIGHT.bg)}
                     style={{
-                        alignSelf: "flex-start", fontSize: 12.5, fontWeight: 800, color: "#ffffff",
-                        background: C.vg, borderRadius: 10, padding: "9px 14px", textDecoration: "none",
+                        width: "100%",
+                        height: tvH,
+                        border: "none",
+                        borderRadius: 12,
+                        display: "block",
+                        background: C.bg,
+                    }}
+                    loading="lazy"
+                    sandbox="allow-scripts allow-same-origin allow-popups"
+                />
+                {rows.length > 0 && (
+                    <div
+                        style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "8px 18px",
+                            padding: "0 4px",
+                        }}
+                    >
+                        {rows}
+                    </div>
+                )}
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
+                        padding: "0 4px",
                     }}
                 >
-                    실시간 차트·호가 보기 · 네이버 ↗
-                </a>
-                <span style={{ fontSize: 10.5, fontWeight: 500, color: C.faint, lineHeight: 1.5 }}>
-                    미국 시세(주가·차트)는 재배포 권리가 없어 증권사 화면으로 연결해요 · 위 숫자는 발행 중인 공개 사실
-                </span>
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            fontSize: 12,
+                            fontWeight: 800,
+                            color: C.vg,
+                            textDecoration: "none",
+                        }}
+                    >
+                        실시간 호가 · 네이버 ↗
+                    </a>
+                    {/* attribution 의무 — TV 링크 병기(13px 이상) */}
+                    <a
+                        href={
+                            "https://www.tradingview.com/symbols/" +
+                            encodeURIComponent(rawTk) +
+                            "/"
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: C.faint,
+                            textDecoration: "none",
+                        }}
+                    >
+                        차트 by TradingView
+                    </a>
+                </div>
             </div>
         )
     }
