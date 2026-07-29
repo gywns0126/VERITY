@@ -26,34 +26,23 @@ import { useEffect, useMemo, useState } from "react"
 const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 const FX_FALLBACK = 1450
 
+// 🚨 AlphaNest 공통 토큰 — 자체 팔레트 금지(2026-07-30 PM 지적).
+// PublicCalendar/PublicNPSHoldings 와 동일 값. Framer ColorStyles(/Theme/PageBg·NavBg·MenuHover) 정합.
+// 상승=빨강 / 하락=파랑 = 한국 시장 관례. 서양식 green-up 은 이 사이트에서 오독을 만든다.
 const LIGHT = {
-    bg: "#faf9fd",
-    card: "#ffffff",
-    sunken: "#f3f2f8",
-    ink: "#17161f",
-    sub: "#4a4857",
-    faint: "#7b7889",
-    line: "#e9e7f1",
-    accent: "#6c5ce7",
-    accentSoft: "#efedfd",
-    accentInk: "#4e3fd0",
-    up: "#0f8f6c",
-    down: "#c0554f",
+    bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
+    line: "#e5e8eb", track: "#eef0f3", hi: "#f6f7f9",
+    vt: "#6c5ce7", vtS: "#f0edff",
+    up: "#f04452", down: "#3182f6", upS: "#fdecee", downS: "#eaf1fe",
 }
 const DARK = {
-    bg: "#101018",
-    card: "#191922",
-    sunken: "#20202b",
-    ink: "#eceaf5",
-    sub: "#b3b0c4",
-    faint: "#807d92",
-    line: "#2a2a37",
-    accent: "#8d7ffb",
-    accentSoft: "#241f3d",
-    accentInk: "#b3a8ff",
-    up: "#3fc79a",
-    down: "#e2726b",
+    bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
+    line: "#252b34", track: "#222a33", hi: "#1e242c",
+    vt: "#a99bff", vtS: "#241f3a",
+    up: "#ff6b76", down: "#5a9cff", upS: "#2a1c20", downS: "#1b2740",
 }
+const FONT =
+    "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
 const MONO =
     'ui-monospace, SFMono-Regular, Menlo, "SF Mono", monospace'
@@ -152,6 +141,116 @@ const CANVAS_SAMPLE = {
     ],
 }
 
+// 분기 복제 수익률 선형 차트 (PM 2026-07-30 "막대 말고 선형").
+// 기존 Spark(마켓보드·크립토 티커) 패턴 재사용 — 라인 + 하단 그라데이션 + 0선.
+// 🚨 0 기준선을 반드시 그린다. 수익률은 부호가 의미이고, 0선 없는 선형은 등락을 감춘다.
+//    끝점만 강조(현재 분기) — 나머지 점은 작게 두어 선의 흐름이 읽히게.
+function ReturnLine({ rs, C }: { rs: any[]; C: typeof LIGHT }) {
+    const W = 560
+    const H = 132
+    const PAD_T = 16
+    const PAD_B = 26
+    const vals = rs.map((q) => Number(q.return_pct) || 0)
+    if (vals.length < 2) return null
+
+    const lo = Math.min(0, ...vals)
+    const hi = Math.max(0, ...vals)
+    const rng = hi - lo || 1
+    const x = (i: number) => (i / (vals.length - 1)) * (W - 24) + 12
+    const y = (v: number) => PAD_T + (1 - (v - lo) / rng) * (H - PAD_T - PAD_B)
+
+    const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`)
+    const zeroY = y(0)
+    const area = `${pts.join(" ")} ${x(vals.length - 1).toFixed(1)},${zeroY.toFixed(1)} ${x(0).toFixed(1)},${zeroY.toFixed(1)}`
+    const last = vals[vals.length - 1]
+    const stroke = last >= 0 ? C.up : C.down
+    const gid = "rl-" + stroke.replace(/[^a-z0-9]/gi, "")
+
+    return (
+        <div style={{ width: "100%", overflowX: "auto" }}>
+            <svg
+                viewBox={`0 0 ${W} ${H}`}
+                width="100%"
+                height={H}
+                preserveAspectRatio="none"
+                style={{ display: "block", minWidth: 320 }}
+                role="img"
+                aria-label="분기별 복제 수익률 추이"
+            >
+                <defs>
+                    <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={stroke} stopOpacity={0.16} />
+                        <stop offset="100%" stopColor={stroke} stopOpacity={0} />
+                    </linearGradient>
+                </defs>
+                {/* 0 기준선 */}
+                <line
+                    x1={12}
+                    y1={zeroY}
+                    x2={W - 12}
+                    y2={zeroY}
+                    stroke={C.line}
+                    strokeWidth={1}
+                    strokeDasharray="3 3"
+                    vectorEffect="non-scaling-stroke"
+                />
+                <polygon points={area} fill={`url(#${gid})`} />
+                <polyline
+                    points={pts.join(" ")}
+                    fill="none"
+                    stroke={stroke}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    vectorEffect="non-scaling-stroke"
+                />
+                {vals.map((v, i) => {
+                    const isLast = i === vals.length - 1
+                    return (
+                        <g key={rs[i].to}>
+                            <circle
+                                cx={x(i)}
+                                cy={y(v)}
+                                r={isLast ? 4 : 2.4}
+                                fill={isLast ? stroke : C.card}
+                                stroke={stroke}
+                                strokeWidth={isLast ? 0 : 1.6}
+                                vectorEffect="non-scaling-stroke"
+                            />
+                            <title>{`${dot(rs[i].to)} · ${signed(v)} · 커버리지 ${rs[i].coverage_pct}%`}</title>
+                        </g>
+                    )
+                })}
+                {/* 끝점 값만 라벨 — 전 구간 라벨은 선을 가린다 */}
+                <text
+                    x={x(vals.length - 1)}
+                    y={Math.max(11, y(last) - 9)}
+                    textAnchor="end"
+                    fill={stroke}
+                    fontSize={11.5}
+                    fontWeight={700}
+                >
+                    {signed(last)}
+                </text>
+                {vals.map((v, i) =>
+                    i === 0 || i === vals.length - 1 ? (
+                        <text
+                            key={"x" + rs[i].to}
+                            x={x(i)}
+                            y={H - 8}
+                            textAnchor={i === 0 ? "start" : "end"}
+                            fill={C.faint}
+                            fontSize={10.5}
+                        >
+                            {dot(rs[i].to).slice(2, 7)}
+                        </text>
+                    ) : null
+                )}
+            </svg>
+        </div>
+    )
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -245,7 +344,7 @@ export default function PublicInvestorPortfolios(props: {
                     color: C.faint,
                     padding: 28,
                     borderRadius: 16,
-                    fontFamily: "inherit",
+                    fontFamily: FONT,
                     fontSize: 14,
                 }}
             >
@@ -258,23 +357,18 @@ export default function PublicInvestorPortfolios(props: {
     const rs: any[] = Array.isArray(cur?.quarterly_replication_returns)
         ? cur.quarterly_replication_returns
         : []
-    const maxAbs = Math.max(1, ...rs.map((q) => Math.abs(q.return_pct || 0)))
 
     const chipBg = (t: string) =>
         t === "NEW"
-            ? C.accentSoft
+            ? C.vtS
             : t === "INCREASED"
-              ? themeDark
-                  ? "rgba(63,199,154,.16)"
-                  : "rgba(15,143,108,.12)"
+              ? C.upS
               : t === "DECREASED"
-                ? themeDark
-                    ? "rgba(226,114,107,.16)"
-                    : "rgba(192,85,79,.12)"
-                : C.sunken
+                ? C.downS
+                : C.hi
     const chipFg = (t: string) =>
         t === "NEW"
-            ? C.accentInk
+            ? C.vt
             : t === "INCREASED"
               ? C.up
               : t === "DECREASED"
@@ -287,7 +381,7 @@ export default function PublicInvestorPortfolios(props: {
                 width: "100%",
                 background: C.bg,
                 color: C.ink,
-                fontFamily: "inherit",
+                fontFamily: FONT,
                 fontSize: 15,
                 lineHeight: 1.6,
                 padding: "4px 0 8px",
@@ -322,7 +416,7 @@ export default function PublicInvestorPortfolios(props: {
                     <div
                         style={{
                             display: "flex",
-                            background: C.sunken,
+                            background: C.hi,
                             borderRadius: 999,
                             padding: 3,
                             gap: 2,
@@ -346,7 +440,7 @@ export default function PublicInvestorPortfolios(props: {
                                     padding: "6px 15px",
                                     borderRadius: 999,
                                     background: krw === o.k ? C.card : "transparent",
-                                    color: krw === o.k ? C.accentInk : C.faint,
+                                    color: krw === o.k ? C.vt : C.faint,
                                 }}
                             >
                                 {o.t}
@@ -391,7 +485,7 @@ export default function PublicInvestorPortfolios(props: {
                         alignItems: "center",
                         gap: 7,
                         marginTop: 10,
-                        background: C.sunken,
+                        background: C.hi,
                         borderRadius: 999,
                         padding: "5px 12px",
                         fontSize: 12.5,
@@ -403,7 +497,7 @@ export default function PublicInvestorPortfolios(props: {
                             width: 6,
                             height: 6,
                             borderRadius: "50%",
-                            background: C.accent,
+                            background: C.vt,
                         }}
                     />
                     보유 기준일 {dot(cur?.report_date)} · 제출일 {dot(cur?.filed_at)}
@@ -463,7 +557,7 @@ export default function PublicInvestorPortfolios(props: {
                                         cursor: "pointer",
                                         font: "inherit",
                                         color: C.ink,
-                                        background: on ? C.accentSoft : "transparent",
+                                        background: on ? C.vtS : "transparent",
                                         padding: "11px 16px",
                                         display: "grid",
                                         gridTemplateColumns: "20px minmax(0,1fr) auto",
@@ -476,7 +570,7 @@ export default function PublicInvestorPortfolios(props: {
                                             fontFamily: MONO,
                                             fontSize: 12,
                                             textAlign: "right",
-                                            color: on ? C.accentInk : C.faint,
+                                            color: on ? C.vt : C.faint,
                                             fontWeight: on ? 700 : 400,
                                         }}
                                     >
@@ -512,7 +606,7 @@ export default function PublicInvestorPortfolios(props: {
                                                 display: "block",
                                                 height: 3,
                                                 borderRadius: 2,
-                                                background: C.sunken,
+                                                background: C.hi,
                                                 marginTop: 5,
                                                 overflow: "hidden",
                                             }}
@@ -522,7 +616,7 @@ export default function PublicInvestorPortfolios(props: {
                                                     display: "block",
                                                     height: "100%",
                                                     width: `${v.top10_concentration_pct || 0}%`,
-                                                    background: C.accent,
+                                                    background: C.vt,
                                                     borderRadius: 2,
                                                 }}
                                             />
@@ -590,7 +684,7 @@ export default function PublicInvestorPortfolios(props: {
                         </div>
                         <div
                             style={{
-                                background: C.sunken,
+                                background: C.hi,
                                 borderRadius: 12,
                                 padding: "8px 12px",
                                 fontSize: 12,
@@ -616,7 +710,7 @@ export default function PublicInvestorPortfolios(props: {
                         <div
                             style={{
                                 marginTop: 14,
-                                background: C.sunken,
+                                background: C.hi,
                                 borderRadius: 13,
                                 padding: "12px 14px",
                                 fontSize: 13,
@@ -632,7 +726,7 @@ export default function PublicInvestorPortfolios(props: {
                                         target="_blank"
                                         rel="noopener"
                                         style={{
-                                            color: C.accentInk,
+                                            color: C.vt,
                                             textDecoration: "none",
                                             fontSize: 12,
                                         }}
@@ -675,7 +769,7 @@ export default function PublicInvestorPortfolios(props: {
                             <div
                                 key={s.l}
                                 style={{
-                                    background: C.sunken,
+                                    background: C.hi,
                                     borderRadius: 12,
                                     padding: "10px 12px",
                                 }}
@@ -713,9 +807,9 @@ export default function PublicInvestorPortfolios(props: {
                         <div
                             style={{
                                 marginTop: 16,
-                                background: C.sunken,
+                                background: C.hi,
                                 borderRadius: 13,
-                                padding: "14px 14px 8px",
+                                padding: "14px 16px 12px",
                             }}
                         >
                             <div style={{ fontSize: 12.5, fontWeight: 700 }}>
@@ -725,95 +819,15 @@ export default function PublicInvestorPortfolios(props: {
                                 style={{
                                     fontSize: 11.5,
                                     color: C.faint,
-                                    margin: "3px 0 12px",
+                                    margin: "3px 0 10px",
                                     lineHeight: 1.55,
                                 }}
                             >
-                                각 분기말 공시 포지션을 다음 분기말까지 그대로 보유했다고 가정한
-                                계산값입니다. 분기 중 매매가 반영되지 않아 실제 운용 성과와 다릅니다.
+                                각 분기말 공시 포지션을 다음 분기말까지 그대로
+                                보유했다고 가정한 계산값입니다. 분기 중 매매가
+                                반영되지 않아 실제 운용 성과와 다릅니다.
                             </div>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "flex-end",
-                                    gap: 6,
-                                    height: 116,
-                                }}
-                            >
-                                {rs.map((q) => {
-                                    const up = (q.return_pct || 0) >= 0
-                                    const h = Math.max(
-                                        2,
-                                        (Math.abs(q.return_pct || 0) / maxAbs) * 40
-                                    )
-                                    return (
-                                        <div
-                                            key={q.to}
-                                            title={`커버리지 ${q.coverage_pct}%`}
-                                            style={{
-                                                flex: 1,
-                                                minWidth: 0,
-                                                display: "flex",
-                                                flexDirection: "column",
-                                                alignItems: "center",
-                                                gap: 5,
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    width: "100%",
-                                                    height: 86,
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    justifyContent: "flex-end",
-                                                }}
-                                            >
-                                                {up ? (
-                                                    <span
-                                                        style={{
-                                                            fontSize: 10.5,
-                                                            fontWeight: 650,
-                                                            color: C.up,
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        {signed(q.return_pct)}
-                                                    </span>
-                                                ) : null}
-                                                <span
-                                                    style={{
-                                                        height: h,
-                                                        background: up ? C.up : C.down,
-                                                        borderRadius: up ? "4px 4px 0 0" : "0 0 4px 4px",
-                                                        marginTop: up ? "auto" : 0,
-                                                    }}
-                                                />
-                                                {!up ? (
-                                                    <span
-                                                        style={{
-                                                            fontSize: 10.5,
-                                                            fontWeight: 650,
-                                                            color: C.down,
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        {signed(q.return_pct)}
-                                                    </span>
-                                                ) : null}
-                                            </div>
-                                            <span
-                                                style={{
-                                                    fontSize: 10,
-                                                    color: C.faint,
-                                                    whiteSpace: "nowrap",
-                                                }}
-                                            >
-                                                {dot(q.to).slice(2, 7)}
-                                            </span>
-                                        </div>
-                                    )
-                                })}
-                            </div>
+                            <ReturnLine rs={rs} C={C} />
                         </div>
                     ) : null}
 
@@ -899,7 +913,7 @@ export default function PublicInvestorPortfolios(props: {
                                                     marginLeft: "auto",
                                                     marginTop: 4,
                                                     borderRadius: 2,
-                                                    background: C.sunken,
+                                                    background: C.hi,
                                                     overflow: "hidden",
                                                 }}
                                             >
@@ -908,7 +922,7 @@ export default function PublicInvestorPortfolios(props: {
                                                         display: "block",
                                                         height: "100%",
                                                         width: `${Math.min(100, (h.weight_pct || 0) * 3)}%`,
-                                                        background: C.accent,
+                                                        background: C.vt,
                                                     }}
                                                 />
                                             </span>
