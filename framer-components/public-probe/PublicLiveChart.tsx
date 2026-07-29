@@ -710,9 +710,12 @@ export default function PublicLiveChart(props: Props) {
                     </div>
                 </div>
                 {/* TradingView 임베드 — 데이터·라이선스는 TV 가 서빙. 우리는 저장·재배포하지 않는다. */}
-                {/* 🚨 radius 는 **감싸는 div** 가 맡는다. iframe 자체에 borderRadius 를 주면 위젯이
-                    안쪽에 그린 테두리가 네 모서리에서 잘려 보인다(PM 지적 2026-07-30).
-                    래퍼가 overflow:hidden 으로 깔끔히 깎고, iframe 은 사각 그대로 둔다. */}
+                {/* 🚨 모서리 처리 — 2차 수정(PM 재지적 2026-07-30).
+                    1차엔 래퍼에 radius+overflow:hidden 만 줬는데 여전히 잘려 보였다. 원인은
+                    **위젯이 자기 문서 안에서 1px 테두리를 그린다**는 것 — TradingView 는 중첩 iframe 을
+                    쓰기 때문에 우리가 srcDoc CSS 로 border:0 를 걸어도 그 안까지 닿지 않는다.
+                    → iframe 을 사방 3px 크게 잡고 -3px 로 당겨(overscan) 위젯 테두리를 잘라낸다.
+                    래퍼의 overflow:hidden 이 넘친 부분을 먹으므로 모서리가 깔끔해진다. 되돌리지 말 것. */}
                 <div
                     style={{
                         width: "100%",
@@ -732,8 +735,9 @@ export default function PublicLiveChart(props: Props) {
                             tvDark ? DARK.bg : LIGHT.bg
                         )}
                         style={{
-                            width: "100%",
-                            height: "100%",
+                            width: "calc(100% + 6px)",
+                            height: "calc(100% + 6px)",
+                            margin: -3,
                             border: "none",
                             display: "block",
                             background: tvDark ? DARK.bg : LIGHT.bg,
