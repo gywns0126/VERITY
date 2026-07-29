@@ -1,21 +1,21 @@
 {
-  "collected_at": "2026-07-28T12:10:21.738793+00:00",
+  "collected_at": "2026-07-29T09:20:46.759497+00:00",
   "schema_version": 1,
   "severity": "GREEN",
   "severity_reasons": [],
-  "n_verification_days": 64,
+  "n_verification_days": 65,
   "n_milestones": {
     "to_50": 0,
-    "to_100": 36,
-    "to_252": 188,
-    "to_365": 301
+    "to_100": 35,
+    "to_252": 187,
+    "to_365": 300
   },
-  "n_trades": 86,
+  "n_trades": 89,
   "trade_milestones": {
     "to_50": 0,
-    "to_100": 14,
-    "to_252": 166,
-    "to_365": 279
+    "to_100": 11,
+    "to_252": 163,
+    "to_365": 276
   },
   "n_validation_samples": 50,
   "sample_milestones": {
@@ -24,7 +24,7 @@
     "to_252": 202,
     "to_365": 315
   },
-  "one_liner": "과열 (Euphoria) · 0 BUY / 31 WATCH / 18 CAUTION / 5 AVOID · VAMS 37% 현금 · 가설 N=64",
+  "one_liner": "과열 (Euphoria) · 0 BUY / 30 WATCH / 17 CAUTION / 7 AVOID · VAMS 39% 현금 · 가설 N=65",
   "ttd_recent_p50_minutes": null,
   "days_clean": {
     "kis": 0,
@@ -36,28 +36,28 @@
   "operator_deadman": {
     "days_git": 0.0,
     "days_telegram": null,
-    "days_uaq": 28.56,
+    "days_uaq": 29.56,
     "trigger": "ok",
     "maintenance": false,
     "warn_days": 7.0
   },
   "pre_registration_pending": [],
   "alert_volume_24h": {
-    "sent": 17,
-    "dedupe_skip": 24,
-    "quiet_skip": 9,
-    "fp_repeat_max": 14
+    "sent": 21,
+    "dedupe_skip": 13,
+    "quiet_skip": 8,
+    "fp_repeat_max": 11
   },
   "auto_action_blocked": [],
   "_inputs_snapshot": {
     "kis_lock_commits_24h": 1,
-    "fred_age_h": 0.68,
-    "fred_24h_failure_rate": 0.002197802197802198,
+    "fred_age_h": 1.13,
+    "fred_24h_failure_rate": 0.002564102564102564,
     "core_sources_ok": true,
     "runtime_mode": "full",
     "ramp_up_stage": 5000,
     "brain_anomaly_24h": 0,
-    "vams_days_since_reset": 72,
+    "vams_days_since_reset": 73,
     "validation_sample": 50
   },
   "rule7_quota": {
@@ -74,6 +74,6 @@
         "subject": "fix(brain): fact_score LLM 정성점수 정직화 4종 (RULE 7 사전등록)"
       }
     ],
-    "as_of": "2026-07-28T22:23:43+09:00"
+    "as_of": "2026-07-29T12:38:38+09:00"
   }
 }
