@@ -322,6 +322,14 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.public_disclosure_feed_builder
 
+      - name: 미국 티커 네이버 딥링크 코드 해석 (drip 300/run)
+        # 미장 시세 시계열은 재배포 권리 부재 → 자체 차트 대신 증권사(네이버) 화면 딥링크.
+        # 접미어가 종목마다 달라(TSLA.O / VOO / BRKb) 빌드 타임 해석이 필요. 시세 값 미저장.
+        # krx_mktcap_snapshot 이 이 캐시를 읽어 universe_search 에 nv 필드로 실으므로 **직전**에 실행.
+        # 외부 fetch(네이버 공개 basic). 다음 step git add data/ (broad) 자동 포함 = RULE 4.
+        continue-on-error: true
+        run: python -m api.collectors.us_naver_code
+
       - name: KRX 시총 스냅샷 (PER/PBR 자체계산 입력)
         # KRX OpenAPI 공식 시총·상장주식수 → data/krx_mktcap.json. KIS 무관(KRX_API_KEY). 빌더 직전 실행.
         # 네트워크 호출. 다음 stock_report 빌더가 읽어 PER/PBR=시총÷순익·자본 자체계산.

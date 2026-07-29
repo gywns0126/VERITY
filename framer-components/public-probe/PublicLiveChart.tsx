@@ -30,6 +30,9 @@ interface Props {
     showVolume: boolean
 }
 const DEFAULT_BASE = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
+// 미장 보강 소스 — 한글명·네이버 딥링크 코드(universe_search.nv) + US ETF 사실(us_etf)
+const UNIVERSE_URL = DEFAULT_BASE + "/universe_search.json"
+const US_ETF_URL = DEFAULT_BASE + "/us_etf.json"
 const N_CHUNKS = 40
 const LIGHT = {
     bg: "#ffffff", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
@@ -71,6 +74,14 @@ function naverUrl(tk: string): string {
     return isMobileWidth()
         ? "https://m.stock.naver.com/domestic/stock/" + tk + "/total"
         : "https://finance.naver.com/item/main.naver?code=" + tk
+}
+/* 해외 딥링크 (2026-07-29) — 미장 시세 시계열은 재배포 권리가 없어 자체 차트를 못 그린다.
+   증권사가 서빙하는 화면으로 정확히 보내는 것이 최선이자 합법.
+   코드는 universe_search 의 nv(빌드 타임 해석). 실측상 접미어가 종목마다 다르다 —
+   TSLA.O(나스닥) / VOO(무접미) / BRKb(클래스주). nv 가 아직 없으면 검색으로 보낸다(빈손 금지). */
+function naverWorldUrl(tk: string, nv: string): string {
+    if (nv) return "https://m.stock.naver.com/worldstock/stock/" + nv + "/total"
+    return "https://m.stock.naver.com/search?query=" + encodeURIComponent(tk)
 }
 function mmdd(bas: number): string {
     const s = String(bas)
@@ -190,6 +201,8 @@ export default function PublicLiveChart(props: Props) {
     const [hoverIdx, setHoverIdx] = useState<number | null>(null)
     const [noData, setNoData] = useState(false)
     const [isEtf, setIsEtf] = useState(false)
+    // 해외 종목 보강 — PM 2026-07-29 "최대한의 정보 노출은 하자". 차트를 못 그린다고 빈 칸을 두지 않는다.
+    const [usInfo, setUsInfo] = useState<any>(null)
 
     // 종목 = prop → URL ?q= → localStorage(StockReport 기록). 이벤트·popstate 수신해 리로드 없이 추종.
     // 유효 코드 아니면 빈 상태 (기본 종목 fallback 금지 — 엉뚱 그래프 방지). 'K' 포함 우선주 변형 허용.
@@ -224,6 +237,44 @@ export default function PublicLiveChart(props: Props) {
             window.removeEventListener("popstate", reread)
         }
     }, [ticker, onCanvas])
+
+    /* 해외 종목 = 유니버스(한글명·네이버 코드) + us_etf(ETF 사실) 를 받아 빈 화면을 채운다.
+       국내 종목이면 아무것도 받지 않는다(불필요 트래픽 0). */
+    useEffect(() => {
+        setUsInfo(null)
+        if (onCanvas || !isForeign) return
+        let alive = true
+        const acc: any = { ticker: rawTk }
+        fetch(UNIVERSE_URL)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!alive || !d) return
+                const arr = Array.isArray(d) ? d : d.stocks || []
+                const hit = arr.find(
+                    (x: any) => String(x.ticker || "").toUpperCase() === rawTk
+                )
+                if (hit) {
+                    acc.name = hit.name_ko || hit.name || rawTk
+                    acc.nv = hit.nv || ""
+                    acc.market = hit.market || ""
+                }
+                setUsInfo({ ...acc })
+                if (String(acc.market) !== "ETF") return
+                return fetch(US_ETF_URL)
+                    .then((r) => (r.ok ? r.json() : null))
+                    .then((e) => {
+                        if (!alive || !e) return
+                        const f = (e.etfs || []).find(
+                            (x: any) => String(x.ticker || "").toUpperCase() === rawTk
+                        )
+                        if (f) setUsInfo({ ...acc, etf: f })
+                    })
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [isForeign, rawTk, onCanvas])
 
     useEffect(() => {
         const el = wrapRef.current
@@ -521,17 +572,75 @@ export default function PublicLiveChart(props: Props) {
                 />
             </svg>
             <span style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>
-                {isForeign ? "해외 종목은 차트를 제공하지 않아요" : tk ? "표시할 시세 정보가 없습니다" : "표시할 종목이 없습니다"}
+                {tk ? "표시할 시세 정보가 없습니다" : "표시할 종목이 없습니다"}
             </span>
             <span style={{ fontSize: 11, fontWeight: 500, color: C.faint, lineHeight: 1.5 }}>
-                {isForeign
-                    ? rawTk + " 는 미국 상장 종목이에요 · 국내 시세는 금융위 공공데이터(재배포 허용)를 쓰지만 해외 시세는 재배포 권리가 없어 증권사 앱에서 확인해야 해요"
-                    : tk
-                      ? "이 종목은 차트로 표시할 일봉 데이터가 없어요"
-                      : "종목을 선택하면 차트가 표시돼요"}
+                {tk
+                    ? "이 종목은 차트로 표시할 일봉 데이터가 없어요"
+                    : "종목을 선택하면 차트가 표시돼요"}
             </span>
         </div>
     )
+    /* 해외 종목 — 차트를 못 그리는 자리에 "없다"만 적어두지 않는다(PM 2026-07-29).
+       가진 사실(한글명 · 분류 · ETF면 수익률/보수/분배율/베타/AUM)을 펴고,
+       실시간 시세는 증권사(네이버) 화면으로 바로 보낸다. */
+    const renderForeign = () => {
+        const e = (usInfo && usInfo.etf) || null
+        const nm = (usInfo && usInfo.name) || rawTk
+        const url = naverWorldUrl(rawTk, (usInfo && usInfo.nv) || "")
+        const kv = (k: string, v: string, col?: string) => (
+            <div key={k} style={{ minWidth: 78 }}>
+                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 700 }}>{k}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: col || C.ink, marginTop: 2, letterSpacing: "-0.3px" }}>{v}</div>
+            </div>
+        )
+        const sg = (v: any) => {
+            const x = Number(v)
+            return (x > 0 ? "+" : "") + x.toFixed(2) + "%"
+        }
+        const cl = (v: any) => (Number(v) > 0 ? C.up : Number(v) < 0 ? C.down : C.faint)
+        const rows: any[] = []
+        if (e && e.returns) {
+            if (e.returns.ytd != null) rows.push(kv("올해", sg(e.returns.ytd), cl(e.returns.ytd)))
+            if (e.returns.y3 != null) rows.push(kv("3년 연평균", sg(e.returns.y3), cl(e.returns.y3)))
+            if (e.returns.y5 != null) rows.push(kv("5년 연평균", sg(e.returns.y5), cl(e.returns.y5)))
+        }
+        if (e) {
+            if (e.expense != null) rows.push(kv("총보수", e.expense + "%"))
+            if (e.yield_pct != null) rows.push(kv("분배율", e.yield_pct + "%"))
+            if (e.beta3y != null) rows.push(kv("베타 3년", String(e.beta3y)))
+            if (e.aum_usd) rows.push(kv("순자산", "$" + (Number(e.aum_usd) / 1e9).toFixed(1) + "B"))
+        }
+        return (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 12, padding: "0 14px" }}>
+                <div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>{nm}</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: C.faint, marginTop: 3 }}>
+                        {rawTk}
+                        {e && e.category ? " · " + e.category : " · 미국 상장"}
+                        {e && e.family ? " · " + e.family : ""}
+                    </div>
+                </div>
+                {rows.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 18px" }}>{rows}</div>
+                )}
+                <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        alignSelf: "flex-start", fontSize: 12.5, fontWeight: 800, color: "#ffffff",
+                        background: C.vg, borderRadius: 10, padding: "9px 14px", textDecoration: "none",
+                    }}
+                >
+                    실시간 차트·호가 보기 · 네이버 ↗
+                </a>
+                <span style={{ fontSize: 10.5, fontWeight: 500, color: C.faint, lineHeight: 1.5 }}>
+                    미국 시세는 재배포 권리가 없어 증권사 화면으로 연결해요 · 위 숫자는 yfinance 공개 사실
+                </span>
+            </div>
+        )
+    }
     const renderSkeleton = () => {
         const skBase = C.skBase
         const skHi = C.skHi
@@ -743,6 +852,8 @@ export default function PublicLiveChart(props: Props) {
                         )}
                     </div>
                 </>
+            ) : isForeign ? (
+                renderForeign()
             ) : noData || (!tk && !onCanvas) ? (
                 renderEmpty()
             ) : (

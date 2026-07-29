@@ -159,6 +159,22 @@ def _build_unified_universe(kr_uni):
         except Exception as _ae:  # noqa: BLE001 — 별칭 실패로 유니버스 발행을 막지 않음
             print(f"[krx_mktcap] 한글 별칭 주입 skip: {_ae!r}", file=sys.stderr)
 
+        # 미국 종목 네이버 딥링크 코드(nv) 주입 (2026-07-29) — 미장은 시세 시계열 재배포 권리가
+        # 없어 자체 차트를 못 그린다. 대신 증권사가 서빙하는 화면으로 정확히 보낸다.
+        # 접미어가 종목마다 다르므로(TSLA.O vs VOO vs BRKb) 미리 해석해 둔 캐시를 얹는다.
+        try:
+            from api.collectors.us_naver_code import load_map as _nv_map
+            _nv = _nv_map()
+            _nv_n = 0
+            for _e in uni:
+                _c = _nv.get(str(_e.get("ticker") or ""))
+                if _c:
+                    _e["nv"] = _c
+                    _nv_n += 1
+            print(f"[krx_mktcap] 네이버 해외코드 주입 {_nv_n}종", file=sys.stderr)
+        except Exception as _ne:  # noqa: BLE001 — 링크 보강 실패로 유니버스 발행을 막지 않음
+            print(f"[krx_mktcap] 네이버 해외코드 주입 skip: {_ne!r}", file=sys.stderr)
+
         udoc = {
             "_meta": {"generated_at": datetime.now(KST).isoformat(),
                       "count": len(uni), "kr": len(kr_uni) + kr_rep_n, "us": us_n, "kr_report_union": kr_rep_n,
