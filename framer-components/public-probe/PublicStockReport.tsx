@@ -4815,10 +4815,52 @@ export default function PublicStockReport(props: Props) {
             setTimeout(() => setStarHint(false), 2600)
             return
         }
+        const prevId = starItemId
+        const wasOn = !!prevId
         setStarBusy(true)
+        /* 🚨 낙관적 UI (브랜치 fix/newstab-window-lazy 에 갇혀 있던 작업을 2026-07-30 main 으로 이관).
+           서버 왕복을 기다리면 눌러도 반응이 없어 보여 PM 이 "반응 느려서 여러 번 클릭" 을 겪었고,
+           이번엔 "보유종목에 저장 안됨" 으로 다시 올라왔다. 클릭 즉시 별을 채우고 사이드바용
+           localStorage 도 같이 갱신한 뒤, 서버는 뒤에서 반영한다. 실패하면 별 상태를 원복한다.
+           되돌리지 말 것 — 되돌리면 "저장이 안 된다" 로 다시 보고된다. */
+        setStarItemId(wasOn ? null : "pending")
         try {
-            if (starItemId) {
-                setStarItemId(null)
+            const _lsk = "verity_watchlist"
+            const _cur = JSON.parse(
+                window.localStorage.getItem(_lsk) || "[]"
+            )
+            const _arr = Array.isArray(_cur) ? _cur : []
+            const _tk = String(s.ticker || "")
+            if (wasOn) {
+                window.localStorage.setItem(
+                    _lsk,
+                    JSON.stringify(
+                        _arr.filter(
+                            (x: any) => String(x && x.ticker) !== _tk
+                        )
+                    )
+                )
+            } else if (
+                _tk &&
+                !_arr.some((x: any) => String(x && x.ticker) === _tk)
+            ) {
+                const _us =
+                    /US|NAS|NYSE|AMEX/i.test(String(s.market || "")) ||
+                    /^[A-Za-z]/.test(_tk)
+                _arr.push({
+                    ticker: _tk,
+                    name: s.name || _tk,
+                    market: _us ? "us" : "kr",
+                })
+                window.localStorage.setItem(_lsk, JSON.stringify(_arr))
+            }
+            window.dispatchEvent(new CustomEvent(WATCH_EVENT))
+        } catch {
+            /* no-op */
+        }
+        let ok = true
+        try {
+            if (wasOn) {
                 await fetch(base + "/api/watchgroups", {
                     method: "DELETE",
                     headers: {
@@ -4827,7 +4869,7 @@ export default function PublicStockReport(props: Props) {
                     },
                     body: JSON.stringify({
                         action: "remove_item",
-                        item_id: starItemId,
+                        item_id: prevId,
                     }),
                 })
             } else {
@@ -4846,33 +4888,30 @@ export default function PublicStockReport(props: Props) {
                     gid = cr && cr.id ? String(cr.id) : ""
                     if (gid) setWatchGroupId(gid)
                 }
-                if (!gid) {
-                    setStarBusy(false)
-                    return
-                }
-                const added = await fetch(base + "/api/watchgroups", {
-                    method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${watchToken}`,
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        action: "add_item",
-                        group_id: gid,
-                        ticker: s.ticker,
-                        name: s.name,
-                        market: s.market,
-                    }),
-                })
-                    .then((r) => (r.ok ? r.json() : null))
-                    .catch(() => null)
-                setStarItemId(added && added.id ? added.id : "pending")
+                if (gid) {
+                    const added = await fetch(base + "/api/watchgroups", {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${watchToken}`,
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            action: "add_item",
+                            group_id: gid,
+                            ticker: s.ticker,
+                            name: s.name,
+                            market: s.market,
+                        }),
+                    })
+                        .then((r) => (r.ok ? r.json() : null))
+                        .catch(() => null)
+                    setStarItemId(added && added.id ? added.id : "pending")
+                } else ok = false
             }
-            if (typeof window !== "undefined")
-                window.dispatchEvent(new CustomEvent(WATCH_EVENT))
         } catch {
-            /* no-op */
+            ok = false
         }
+        if (!ok) setStarItemId(wasOn ? prevId : null) // 서버 실패 = 별 상태 원복
         setStarBusy(false)
     }
 
@@ -5717,13 +5756,19 @@ export default function PublicStockReport(props: Props) {
                             alignItems: "center",
                         }}
                     >
+                        {/* 🚨 별 상태 전환 애니메이션 + 저장 중 스피너 (브랜치에 갇혀 있던 작업 이관 2026-07-30).
+                            스케일 팝은 과해서 제거하고 색 채움만 부드럽게 — PM 확정. 되돌리지 말 것. */}
+                        <style>{`@keyframes anStarSpin{to{transform:rotate(360deg)}}`}</style>
                         <svg
                             width={18}
                             height={18}
                             viewBox="0 0 24 24"
-                            fill={starItemId ? "#f6b93b" : C.faint}
-                            stroke={starItemId ? "#f6b93b" : "none"}
-                            strokeWidth={1.7}
+                            style={{
+                                fill: starItemId ? "#f6b93b" : C.faint,
+                                stroke: starItemId ? "#f6b93b" : C.faint,
+                                transition: "fill .18s ease, stroke .18s ease",
+                            }}
+                            strokeWidth={2.6}
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             aria-hidden="true"
@@ -5731,6 +5776,22 @@ export default function PublicStockReport(props: Props) {
                             <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.685 21.5a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.45 10.286a.53.53 0 0 1 .294-.903l5.165-.756a2.122 2.122 0 0 0 1.597-1.16z" />
                         </svg>
                     </button>
+                    {starBusy && (
+                        <span
+                            role="status"
+                            aria-label="저장 중"
+                            style={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: "50%",
+                                border: `2px solid ${C.line}`,
+                                borderTopColor: C.vg,
+                                display: "inline-block",
+                                flexShrink: 0,
+                                animation: "anStarSpin .6s linear infinite",
+                            }}
+                        />
+                    )}
                     {starHint && (
                         <span
                             style={{
