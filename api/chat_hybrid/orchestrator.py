@@ -186,6 +186,7 @@ def run_hybrid(
     session_id: str = "anonymous",
     recent_turns: Optional[List[Dict[str, str]]] = None,
     user_watchlist: Optional[List[Dict[str, Any]]] = None,
+    internal: bool = False,
 ) -> Iterator[Dict[str, Any]]:
     """메인 엔트리 — NDJSON 이벤트 generator.
 
@@ -226,7 +227,7 @@ def run_hybrid(
         if not ok:
             metrics["outcome"] = f"reject:rate_limit:{(info or {}).get('limit_type', '?')}"
         # rest of body indented inside try — done via separate edits
-        yield from _run_hybrid_core(query, session_id, recent_turns, t0, metrics, ok, info, user_watchlist)
+        yield from _run_hybrid_core(query, session_id, recent_turns, t0, metrics, ok, info, user_watchlist, internal)
     except Exception as e:
         metrics["outcome"] = f"error:{type(e).__name__}"
         metrics["error_msg"] = str(e)[:200]
@@ -245,8 +246,12 @@ def _run_hybrid_core(
     rate_ok: bool,
     rate_info: Optional[Dict],
     user_watchlist: Optional[List[Dict[str, Any]]] = None,
+    internal: bool = False,
 ) -> Iterator[Dict[str, Any]]:
-    """오케스트레이션 본체 — run_hybrid 의 try 블록에서 호출."""
+    """오케스트레이션 본체 — run_hybrid 의 try 블록에서 호출.
+
+    internal=True = 관리자 전용. 미발행 자산을 컨텍스트에 넣는다(공개 경로는 항상 False).
+    """
     # rate_limit 판정은 caller 에서 이미 함
     ok = rate_ok
     info = rate_info
@@ -318,6 +323,28 @@ def _run_hybrid_core(
         "latency_ms": brain_ms,
         "matched_tickers": brain_ctx.get("matched_tickers", []),
     }
+
+    # 4.1 내부 전용 컨텍스트 — 🚨 관리자 경로에서만(internal=True). 공개 챗은 기본 False 라 미주입.
+    #     미발행 자산(추천 원본·VAMS 실적·컨센서스 목표가·팩터 IC·시스템 헬스)을 판단 재료로 넣는다.
+    #     brain_ctx.text 에 이어 붙여 합성기 시그니처를 건드리지 않는다(공개 경로 무변경).
+    if internal:
+        try:
+            from api.chat_hybrid.search import internal_context as _ic
+
+            _tks = [str(t).upper() for t in (intent.get("related_tickers") or []) if t]
+            _tks += [str(t).upper() for t in brain_ctx.get("matched_tickers", []) if t]
+            _inb = _ic.build_internal_context(sorted(set(_tks)))
+            if _inb.get("ok"):
+                brain_ctx["text"] = (brain_ctx.get("text") or "") + "\n\n" + _inb["text"]
+                metrics["internal_chars"] = _inb["chars"]
+                yield {
+                    "type": "status",
+                    "stage": "internal",
+                    "sections": _inb.get("sections", []),
+                    "chars": _inb["chars"],
+                }
+        except Exception as _ie:  # noqa: BLE001 — 내부 블록 실패로 챗을 죽이지 않는다
+            logger.warning("internal_context 주입 실패: %r", _ie)
 
     # 4.5 정공법 grounding 보강 (2026-06-03 삼성전자 65,000원 환각 사고):
     # 질의에 언급된 종목인데 VERITY 데이터가 없으면(유니버스 밖) brain 컨텍스트가
