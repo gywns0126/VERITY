@@ -28,6 +28,9 @@ interface Props {
     height: number
     dark: boolean
     showVolume: boolean
+    /* 해외(TradingView) 임베드 높이 — 고정 px. 위젯이 툴바·지표·하단 기간바를 자체로 들고 있어
+       남는 공간을 나눠 쓰면 캔들 영역이 눌려 답답해 보인다(PM 2026-07-30). 캔버스에서 조절. */
+    usChartHeight: number
 }
 const DEFAULT_BASE = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 // 미장 보강 소스 — 한글명·네이버 딥링크 코드(universe_search.nv) + US ETF 사실(us_etf)
@@ -220,7 +223,8 @@ function demoCandles(): number[][] {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicLiveChart(props: Props) {
-    const { ticker, chartBase, height, dark, showVolume } = props
+    const { ticker, chartBase, height, dark, showVolume, usChartHeight } =
+        props
     const base = (chartBase || DEFAULT_BASE).replace(/\/+$/, "")
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const Hprop = height || 480
@@ -693,10 +697,23 @@ export default function PublicLiveChart(props: Props) {
             if (e.aum_usd) rows.push(kv("순자산", "$" + (Number(e.aum_usd) / 1e9).toFixed(1) + "B"))
         }
         // 위젯 높이 — 프레임 실측에서 헤더/사실/푸터 몫을 뺀 값. px 고정(Fit 금지).
-        // 헤더를 숨긴 만큼 위젯이 더 차지한다. 남기는 몫 = 이름줄 + 사실줄 + 링크줄.
-        const tvH = Math.max(240, (h > 260 ? h : Hprop) - (rows.length ? 178 : 118))
+        /* 🚨 고정 높이 (PM 2026-07-30 "이것저것 기능이 많다보니 답답해보이네").
+           옛 계산식은 프레임 높이에서 사실줄·링크줄 몫을 뺀 **나머지**를 줬는데, 위젯이 툴바·지표선택·
+           하단 기간바를 자체로 들고 있어 나머지만으로는 캔들 영역이 눌렸다. 이제 px 로 고정한다. */
+        const tvH = Math.max(240, Number(usChartHeight) || 460)
         return (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10, padding: "0 10px 4px" }}>
+            <div
+                style={{
+                    flex: 1,
+                    minHeight: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    padding: "0 10px 4px",
+                    // 차트를 고정 높이로 주면 프레임이 짧을 때 아래 내용이 잘린다 → 자체 스크롤.
+                    overflowY: "auto",
+                }}
+            >
                 <div style={{ padding: "0 4px" }}>
                     <div style={{ fontSize: 16, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>{nm}</div>
                     <div style={{ fontSize: 11.5, fontWeight: 700, color: C.faint, marginTop: 3 }}>
@@ -1038,6 +1055,7 @@ addPropertyControls(PublicLiveChart, {
     ticker: { type: ControlType.String, title: "Ticker", defaultValue: "" },
     chartBase: { type: ControlType.String, title: "Chart Base", defaultValue: DEFAULT_BASE },
     height: { type: ControlType.Number, title: "Height(fallback)", defaultValue: 480, min: 220, max: 800, step: 10 },
+    usChartHeight: { type: ControlType.Number, title: "해외 차트 높이", defaultValue: 460, min: 240, max: 900, step: 10 },
     showVolume: { type: ControlType.Boolean, title: "Volume", defaultValue: true, enabledTitle: "On", disabledTitle: "Off" },
     dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
