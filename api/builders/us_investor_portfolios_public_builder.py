@@ -25,7 +25,9 @@ from typing import Any, Dict, List
 
 from api.collectors.sec_13f_collector import (
     MANAGER_PERSON, get_recent_13f_filings, parse_13f_holdings,
+    compute_replication_returns, annualize_from_quarters,
 )
+from api.collectors.investor_profiles import collect_profiles
 from api.collectors.cusip_resolver import resolve_cusips
 from api.builders.us_smart_money_13f_public_builder import (
     ACTIVE_MANAGERS, TOP_HOLDINGS_PER_FUND, _holdings_with_change,
@@ -45,6 +47,13 @@ _CAVEAT = (
     "disclosed_value_change_pct = 공시 총액의 분기 대비 변동으로, 주가 변동과 실제 매매가 섞인 값."
 )
 
+_RETURN_CAVEAT = (
+    "복제 수익률 = 각 분기말 공시 포지션을 다음 분기말까지 그대로 보유했다고 가정한 계산값. "
+    "분기 중 매매(공시와 공시 사이의 진입·청산)가 반영되지 않아 실제 운용 성과와 다르다. "
+    "숏·현금·채권·비미국·파생은 13F 자체에 없어 제외된다. "
+    "두 분기 모두 보유한 종목만 계산 가능하므로 coverage_pct(계산에 포함된 평가액 비중)를 함께 본다."
+)
+
 
 def _concentration(holdings: List[dict], top_n: int = 10) -> float | None:
     """상위 top_n 종목이 공시 총액에서 차지하는 비중(%). 집중형/분산형 구분용 사실값."""
@@ -58,6 +67,12 @@ def _concentration(holdings: List[dict], top_n: int = 10) -> float | None:
 def build() -> Dict[str, Any]:
     investors: List[Dict[str, Any]] = []
     errors: List[str] = []
+    # 전기 사실은 거의 안 변하므로 캐시 우선 — 위키 호출 절약 + 실패해도 기존 값 유지.
+    try:
+        profiles = collect_profiles(list(ACTIVE_MANAGERS.values()))
+    except Exception as e:                                     # noqa: BLE001
+        errors.append(f"프로필 수집 실패(무시): {type(e).__name__}")
+        profiles = {}
 
     for cik, name in ACTIVE_MANAGERS.items():
         try:
@@ -106,10 +121,20 @@ def build() -> Dict[str, Any]:
             # 건수를 사실로 내보내고 cusip 은 그대로 남겨 링크아웃 가능하게 둔다.
             unresolved = sum(1 for h in rows if not h.get("ticker"))
 
+            # 분기 복제 수익률 — 실제 성과 아님(아래 caveat). 과거 제출본은 캐시라 재조회 없음.
+            try:
+                rets = compute_replication_returns(cik, quarters=9)
+            except Exception as e:                             # noqa: BLE001
+                errors.append(f"{name}: 복제수익률 실패 {type(e).__name__}")
+                rets = []
+
             investors.append({
                 "cik": cik,
                 "institution": name,
                 "person": MANAGER_PERSON.get(name),
+                "profile": profiles.get(name),
+                "quarterly_replication_returns": rets,
+                "trailing_4q_replication_pct": annualize_from_quarters(rets),
                 "unresolved_ticker_count": unresolved,
                 # 🚨 보유 기준일 ≠ 제출일. 둘 다 노출해야 신선도 오독이 안 난다.
                 "report_date": curr_f.get("report_date"),
@@ -138,6 +163,8 @@ def build() -> Dict[str, Any]:
             "investor_count": len(investors),
             "ranking_basis": "disclosed_value_usd (공시 총액) — 수익률 랭킹 아님",
             "caveat": _CAVEAT,
+            "return_caveat": _RETURN_CAVEAT,
+            "profile_source": "위키백과 REST summary — 직업 키워드 검증 통과분만(동명이인 가드)",
             "errors": errors,
         },
         "investors": investors,
