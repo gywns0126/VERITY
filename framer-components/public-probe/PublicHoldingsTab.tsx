@@ -1289,6 +1289,60 @@ export default function PublicHoldingsTab(props: Props) {
         </div>
     )
 
+    /* 통화 토글 — 미국 보유분을 원화로 환산해 본다. 국내는 원래 원화라 바뀌지 않는다.
+       선택은 localStorage(an_ccy)에 남아 리포트 등 다른 화면과 함께 움직인다.
+       🚨 2026-07-30: 이 정의가 빠진 채 렌더 참조만 들어가 "CcyToggle is not defined" 로
+       둥지 페이지가 통째로 죽었다(PM 캔버스 에러). 정의와 참조를 항상 같이 옮길 것. */
+    const CcyToggle = (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 10,
+                flexWrap: "wrap",
+            }}
+        >
+            <div
+                style={{
+                    display: "inline-flex",
+                    gap: 2,
+                    background: C.bg,
+                    borderRadius: 9,
+                    padding: 2,
+                }}
+            >
+                {["USD", "KRW"].map((k) => (
+                    <div
+                        key={k}
+                        onClick={() => setCcy(k)}
+                        style={{
+                            cursor: "pointer",
+                            fontSize: 11.5,
+                            fontWeight: 800,
+                            padding: "4px 12px",
+                            borderRadius: 7,
+                            background: ccy === k ? C.card : "transparent",
+                            color: ccy === k ? C.ink : C.faint,
+                        }}
+                    >
+                        {k === "USD" ? "$ 달러" : "₩ 원화"}
+                    </div>
+                ))}
+            </div>
+            <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>
+                미국 종목 표기 · 환율 {Math.round(FX).toLocaleString()}원/$
+                {fxInfo.ok
+                    ? fxInfo.asOf
+                        ? " (" +
+                          String(fxInfo.asOf).slice(5, 16).replace("T", " ") +
+                          " 기준)"
+                        : ""
+                    : " (기본값 — 환율 불러오는 중)"}
+            </span>
+        </div>
+    )
+
     const Tabs = (
         <div
             style={{
