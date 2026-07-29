@@ -119,38 +119,60 @@ def _schedule_active(schedule: str, now: datetime) -> bool:
     return True  # always / weekly / monthly
 
 
+def latest_ts_for_glob(pattern: str, ts_field: str | None):
+    """glob 스트림(crypto_* / us_financials/*) — 매칭 파일 전체에서 최신 ts 1개.
+
+    2026-07-30: 알람 경로(build_observations)가 glob 을 skip 하던 사각 해소용으로 승격.
+    board 빌더가 자체 복제하던 동일 로직도 이 함수를 import 하게 통일 (단일 산식 유지).
+    """
+    best = None
+    for path in glob.glob(os.path.join(DATA_DIR, pattern)):
+        ts = _extract_ts(_load_any(path), ts_field)
+        t = _parse_ts_kst(ts) if ts else None
+        if t and (best is None or t > best):
+            best = t
+    return best
+
+
 def build_observations() -> dict:
     now = now_kst()
     m = _load_any(MANIFEST) or {}
     rows = []
     for s in m.get("streams", []):
-        if s.get("owner") == "local":
-            continue  # heartbeat 가 별도 커버
         if s.get("active_check") is False:
-            # 비발행 입력(gitignore)·다운스트림으로 신선도 판정하는 스트림 = 능동검사 제외
+            # 비발행 입력(gitignore)·ts 필드 부재 등 능동검사 불가 — 등재는 유지(미감시를 명시)
             rows.append({"id": s["id"], "status": "skip_inactive"})
             continue
         f = s.get("file", "")
         sched = s.get("schedule", "always")
-        if "*" in f:  # glob v0 skip
-            rows.append({"id": s["id"], "status": "skip_glob"})
+        is_glob = "*" in f
+        # owner=local 이어도 산출물이 저장소에 커밋되면 CI 에서 나이 판정 가능(event_study 17MB).
+        # 미커밋 로컬 전용(kr_flow_observations.parquet)만 heartbeat 소관으로 남긴다.
+        if s.get("owner") == "local" and not os.path.exists(os.path.join(DATA_DIR, f)):
+            rows.append({"id": s["id"], "status": "skip_local_absent"})
             continue
         if not _schedule_active(sched, now):
             rows.append({"id": s["id"], "status": "skip_schedule", "schedule": sched})
             continue
-        path = os.path.join(DATA_DIR, f)
-        if not os.path.exists(path):
-            rows.append({"id": s["id"], "status": "missing"})
-            continue
-        obj = _load_any(path)
-        ts = _extract_ts(obj, s.get("ts_field"))
-        if not ts:
-            rows.append({"id": s["id"], "status": "no_ts"})
-            continue
-        t = _parse_ts_kst(ts)
-        if t is None:
-            rows.append({"id": s["id"], "status": "bad_ts", "ts": ts})
-            continue
+        if is_glob:
+            t = latest_ts_for_glob(f, s.get("ts_field"))
+            if t is None:
+                rows.append({"id": s["id"], "status": "no_ts"})
+                continue
+        else:
+            path = os.path.join(DATA_DIR, f)
+            if not os.path.exists(path):
+                rows.append({"id": s["id"], "status": "missing"})
+                continue
+            obj = _load_any(path)
+            ts = _extract_ts(obj, s.get("ts_field"))
+            if not ts:
+                rows.append({"id": s["id"], "status": "no_ts"})
+                continue
+            t = _parse_ts_kst(ts)
+            if t is None:
+                rows.append({"id": s["id"], "status": "bad_ts", "ts": ts})
+                continue
         age_m = (now - t).total_seconds() / 60
         # weekday/market_hours = 주말 무생산 스트림 → 토·일 경과분 제외한 유효 age 로 판정
         age_eff = age_m
