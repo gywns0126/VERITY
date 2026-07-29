@@ -116,6 +116,10 @@ async function main() {
     let ok = 0,
         fail = 0;
     const held = [];
+
+    // ── 1단계: 가드 판정 (동기, 순서 결정적) ──
+    // 병렬 업로드 전에 HOLD 를 먼저 확정한다 — 가드 의미와 held 순서를 기존과 동일하게 유지.
+    const queue = [];
     for (const [fp, blobPath] of entries) {
         const gr = guardCore(fp, blobPath);
         if (!gr.ok) {
@@ -124,15 +128,52 @@ async function main() {
             held.push({ file: blobPath, reason: gr.reason });
             continue;
         }
-        try {
-            const url = await uploadFile(fp, blobPath);
-            console.log(`  ✓ ${blobPath} → ${url}`);
-            ok++;
-        } catch (e) {
-            console.error(`  ✗ ${blobPath} — ${e.message}`);
-            fail++;
+        queue.push([fp, blobPath]);
+    }
+
+    // ── 2단계: 병렬 업로드 (워커 풀) ──
+    // 🚨 2026-07-30 순차 → 병렬. 사유 = 15분 job timeout 사고.
+    //   7/27 ETF 백필 신설로 etf_hist/ 가 1,196 파일까지 누적 → 파일당 1회 await put 순차 PUT 이
+    //   publish step 을 13분까지 밀어올려 dart_catalyst_pulse(timeout 15)가 7/28 0/14 로 전멸.
+    //   같은 publish 를 쓰는 모든 워크플로가 동일 위험이었다.
+    //   업로드는 서로 다른 blobPath 로의 독립 PUT 이라 순서 무관 → 워커 풀이 안전.
+    //   가드(guardCore)는 위 1단계에서 이미 완료되어 병렬화 영향 없음.
+    // 동시성 8 = 보수값(레이트리밋 여유). BLOB_UPLOAD_CONCURRENCY 로 조정 가능.
+    // 재시도 1회 = 병렬화로 새로 생기는 리스크(순간 레이트리밋 → 조용한 누락) 상쇄.
+    //   기존 순차 코드에는 재시도가 없어 일시 실패가 곧 영구 누락이었다 — 이 점도 함께 개선.
+    const CONCURRENCY = Math.max(1, parseInt(process.env.BLOB_UPLOAD_CONCURRENCY || "8", 10) || 8);
+    let cursor = 0;
+
+    async function worker() {
+        while (true) {
+            const i = cursor++;
+            if (i >= queue.length) return;
+            const [fp, blobPath] = queue[i];
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    const url = await uploadFile(fp, blobPath);
+                    console.log(`  ✓ ${blobPath} → ${url}`);
+                    ok++;
+                    break;
+                } catch (e) {
+                    if (attempt === 0) {
+                        await new Promise((r) => setTimeout(r, 500));
+                        continue;
+                    }
+                    console.error(`  ✗ ${blobPath} — ${e.message}`);
+                    fail++;
+                }
+            }
         }
     }
+
+    const t0 = Date.now();
+    await Promise.all(
+        Array.from({ length: Math.min(CONCURRENCY, queue.length || 1) }, () => worker())
+    );
+    console.log(
+        `  (업로드 ${queue.length}건 · 동시성 ${CONCURRENCY} · ${((Date.now() - t0) / 1000).toFixed(1)}s)`
+    );
     for (const blobPath of RETIRED_BLOBS) {
         try {
             await del(`${BLOB_HOST}/${blobPath}`);
