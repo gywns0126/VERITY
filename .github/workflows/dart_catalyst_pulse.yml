@@ -8,7 +8,9 @@ name: DART Catalyst Pulse (공시속보 신선도)
 # 7축 audit (CLAUDE.md):
 #  1 env/secret: DART_API_KEY (full 과 동일 secret). publish = VERITY_DATA_PAT + VERCEL_BLOB_TOKEN.
 #  2 push trigger: schedule only — Vercel deploy 무관(vercel-api/ 미변경, ignoreCommand skip, RULE 2).
-#  3 concurrency: group=verity-data-write (full/realtime 공유 직렬화 → commit race 0, WARN-17).
+#  3 concurrency: group=verity-catalyst-pulse 전용 (2026-07-30 분리). 구 verity-data-write 공유 시
+#    30분 dispatch 가 18개 공유 큐를 축출 → 본 워크플로 7/28 0/14 + universe_scan 연속 축출 사고.
+#    파일 집합이 타 멤버와 겹치지 않음을 실 커밋 대조로 확인. 하단 concurrency 블록에 상세.
 #  4 cron: 30분 간격(>5분, silent skip 안전) + :13/:43 offset(정각 high-load 회피).
 #  5 KIS: 미사용(DART only) — KIS env/호출 0, RULE 1 안전.
 #  6 pip: requirements.txt (requests 포함).
@@ -29,8 +31,26 @@ permissions:
   contents: write
 
 concurrency:
-  group: verity-data-write
-  cancel-in-progress: false
+  # 🚨 2026-07-30 분리 (verity-data-write → 전용 group). 사유 = 축출 사고.
+  #   verity-data-write 에 18개 워크플로가 물려 있고 GitHub 은 그룹당 pending 을 1개만 유지한다.
+  #   30분 간격 dispatch 인 본 워크플로가 큐에 들어올 때마다 대기 중이던 run 이 취소됐다.
+  #   피해 실측: 본 워크플로 7/27 성공 11/13 → 7/28 0/14 → 7/29 1/13.
+  #   동시에 universe_scan 을 7/28·7/29 연속 축출 → universe_candidates.json 32h stale
+  #   → daily_analysis 가 26h 가드로 매시간 중단(7/29 4회 exit 1).
+  #
+  # 분리 안전성 (실 커밋 파일 집합 대조로 확인, 겹침 0):
+  #   본 워크플로 = calendar_public.json / dart_catalyst_alerts.jsonl
+  #                / metadata/dart_catalyst_heartbeat.json / public_disclosure_feed.json
+  #   universe_scan = universe_candidates.json / stock_history/ / wide_scan_log.jsonl
+  #                / metadata/{shadow_funnel_picks,data_pipeline_health,runtime_load_log,multibagger_watch}
+  #   push race 는 기존 pull --rebase --autostash 재시도 루프가 흡수. WARN-17 직렬화 의도는
+  #   나머지 17개에 그대로 유지된다(본 건은 KIS 무관·DART only 라 RULE 1 영향 0).
+  #
+  # cancel-in-progress: true — pulse 성격상 "최신 우선". 30분 주기 재수집이라 진행 중 run 을
+  #   버려도 손실이 없고(다음 dispatch 가 같은 창을 다시 읽음), 큐 점유 자체를 없애 축출을 끊는다.
+  #   price_pulse(verity-pulse) 선례 정합.
+  group: verity-catalyst-pulse
+  cancel-in-progress: true
 
 jobs:
   pulse:
