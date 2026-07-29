@@ -1109,6 +1109,7 @@ function EtfReportBlock({
     doc,
     longHist,
     onPick,
+    universe,
 }: any) {
     const CATL: Record<string, string> = {
         equity_domestic: "국내주식",
@@ -1360,10 +1361,24 @@ function EtfReportBlock({
 
     /* 히트맵 — 스트립 트리맵. 정렬 후 행 누적 비중이 목표치를 넘으면 행을 닫고, 행 높이는
        그 행의 비중 합에 비례. 정사각 근사(squarified)보다 단순하지만 10~20 타일에선 형태가 안정적. */
+    /* 타일 표기명 — 한국어 우선. KR 은 네이버 집계라 h.n 이 이미 한글이고,
+       US 는 "NVIDIA Corp" 같은 영문이라 universe_search 의 name_ko 로 갈아끼운다.
+       universe 는 부모가 이미 받아 둔 검색 인덱스 재사용(추가 fetch 0). */
+    const uniKo: Record<string, string> = {}
+    if (Array.isArray(universe))
+        for (const u of universe) {
+            const ko = u && u.name_ko ? String(u.name_ko) : ""
+            if (ko) uniKo[String(u.ticker || "")] = ko
+        }
+    const HAN = /[가-힣]/
+    const koName = (tk2: string, raw: string) => {
+        if (HAN.test(raw)) return raw
+        return uniKo[tk2] || raw || tk2
+    }
     const heatTiles = holdings
         .map((h: any) => ({
             t: String(h.t || ""),
-            n: String(h.n || ""),
+            n: koName(String(h.t || ""), String(h.n || "")),
             w: Number(h.w),
             chg: holdChg[String(h.t || "")],
         }))
@@ -1473,18 +1488,37 @@ function EtfReportBlock({
                                         >
                                             {showTxt && (
                                                 <>
+                                                    {/* 로고 = 넉넉한 칸에만. 좁은 칸에서 로고가 이름을 밀어내면 못 읽는다 */}
+                                                    {x.w / rw > 0.24 && (
+                                                        <Logo
+                                                            ticker={x.t}
+                                                            name={x.n}
+                                                            market={
+                                                                isUs
+                                                                    ? "US"
+                                                                    : "KOSPI"
+                                                            }
+                                                            C={C}
+                                                            size={22}
+                                                        />
+                                                    )}
                                                     <span
                                                         style={{
+                                                            marginTop: 2,
+                                                            maxWidth: "100%",
                                                             fontSize: 11.5,
                                                             fontWeight: 800,
                                                             color: "#fff",
                                                             whiteSpace:
                                                                 "nowrap",
+                                                            overflow: "hidden",
+                                                            textOverflow:
+                                                                "ellipsis",
                                                             textShadow:
-                                                                "0 1px 2px rgba(0,0,0,0.28)",
+                                                                "0 1px 2px rgba(0,0,0,0.32)",
                                                         }}
                                                     >
-                                                        {x.t}
+                                                        {x.n || x.t}
                                                     </span>
                                                     <span
                                                         style={{
@@ -1494,7 +1528,7 @@ function EtfReportBlock({
                                                             whiteSpace:
                                                                 "nowrap",
                                                             textShadow:
-                                                                "0 1px 2px rgba(0,0,0,0.28)",
+                                                                "0 1px 2px rgba(0,0,0,0.32)",
                                                         }}
                                                     >
                                                         {x.chg != null &&
@@ -1960,6 +1994,16 @@ function EtfReportBlock({
                                                     : "1px solid " + C.line,
                                         }}
                                     >
+                                        <Logo
+                                            ticker={String(h.t || "")}
+                                            name={koName(
+                                                String(h.t || ""),
+                                                String(h.n || "")
+                                            )}
+                                            market="US"
+                                            C={C}
+                                            size={22}
+                                        />
                                         <span
                                             style={{
                                                 flexShrink: 0,
@@ -1983,7 +2027,10 @@ function EtfReportBlock({
                                                 textOverflow: "ellipsis",
                                             }}
                                         >
-                                            {h.n}
+                                            {koName(
+                                                String(h.t || ""),
+                                                String(h.n || "")
+                                            )}
                                         </span>
                                         <span
                                             style={{
@@ -5539,6 +5586,7 @@ export default function PublicStockReport(props: Props) {
                     doc={etfDoc}
                     longHist={etfHist}
                     onPick={goTicker}
+                    universe={searchList}
                 />
             </div>
         )

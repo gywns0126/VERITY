@@ -9,7 +9,15 @@ import {
 } from "react"
 
 /**
- * 모닝 브리핑 — 홈 최상단 단일 채널 (PM 2026-07-05 · 2026-07-11 통합 지시).
+ * 시장 브리핑 — 홈 최상단 단일 채널 (PM 2026-07-05 · 2026-07-11 통합 지시).
+ *
+ * 🚨 2026-07-28 상시 갱신 전환 (PM: "모닝 브리핑에서 모닝을 빼고 수시로 체크하는거지.
+ *   사용자가 들어올때마다 전체적인 시장 상황을 짐작 및 이해할 수 있게").
+ *   · publish_at 07:30 embargo 폐기 — 받는 즉시 노출.
+ *   · 제호 "모닝 브리핑" → "시장 브리핑", 부제 = 장 상태 + "N분 전 갱신".
+ *   · 탭 복귀(visibilitychange/focus) + 5분 폴링 재조회.
+ *   · KR 지수·섹터는 금융위 공공데이터 T+1 이라 오늘 종가가 아니다 → 섹션 부제에
+ *     "MM.DD 종가 기준" 을 찍어 오늘 것으로 오독하지 않게 한다.
  *   구성 = 제호(카드 밖) + [① 내 자산 카드] + [② 시장 브리핑 카드] — 형제 카드 2장.
  *   🚨 2026-07-11 PM: 사파리 창/신문 제호 목업 제거 — 토스식 플랫 카드, 정보 가독성 우선.
  *      기존 PublicDailyBriefing(s1NvKbN) 데이터 로직(1면 배너·섹션·mover·접힘·cache-fallback) 이식,
@@ -333,7 +341,8 @@ export default function PublicMorningBriefing(props: Props) {
     const [brief, setBrief] = useState<any>(onCanvas ? SAMPLE_BRIEF : null)
     const [briefFailed, setBriefFailed] = useState(false)
     const [openSec, setOpenSec] = useState<Record<string, boolean>>({})
-    const [, setNowTick] = useState(0) // embargo 해제 시각에 재렌더 트리거
+    const [, setNowTick] = useState(0) // 경과 시간 표시 갱신용 60초 틱
+    const [reloadTick, setReloadTick] = useState(0) // 탭 복귀·5분 폴링 재조회 트리거
 
     const isDark = onCanvas ? !!dark : themeDark
     const C = isDark ? DARK : LIGHT
@@ -499,22 +508,28 @@ export default function PublicMorningBriefing(props: Props) {
                 } else fallback()
             })
             .catch(fallback)
+        const onBack = () => {
+            if (document.visibilityState === "visible") setReloadTick((t) => t + 1)
+        }
+        document.addEventListener("visibilitychange", onBack)
+        window.addEventListener("focus", onBack)
+        const poll = setInterval(() => setReloadTick((t) => t + 1), 300000)
         return () => {
             alive = false
+            document.removeEventListener("visibilitychange", onBack)
+            window.removeEventListener("focus", onBack)
+            clearInterval(poll)
         }
-    }, [onCanvas, briefUrl])
+    }, [onCanvas, briefUrl, reloadTick])
 
-    // embargo 해제 타이머 — publish_at 시각에 재렌더(콘텐츠 교체). 이미 지난 시각이면 no-op.
+    // 🚨 2026-07-28 상시 갱신 — 옛 embargo(publish_at 07:30 전 숨김) 타이머 폐기.
+    //   PM: "모닝 브리핑에서 모닝을 빼고 수시로 체크하는거지." 받는 즉시 노출한다.
+    //   경과 시간 표시가 1분 단위로 늙어 보이게 60초 틱만 유지.
     useEffect(() => {
-        if (onCanvas || !brief || !brief.publish_at) return
-        const ms = Date.parse(brief.publish_at) - Date.now()
-        if (!isFinite(ms) || ms <= 0) return
-        const id = setTimeout(
-            () => setNowTick((t) => t + 1),
-            Math.min(ms + 800, 2100000000)
-        )
-        return () => clearTimeout(id)
-    }, [brief, onCanvas])
+        if (onCanvas) return
+        const id = setInterval(() => setNowTick((t) => t + 1), 60000)
+        return () => clearInterval(id)
+    }, [onCanvas])
 
     // ── 내 자산 계산 ──
     const asset = useMemo(() => {
@@ -648,21 +663,33 @@ export default function PublicMorningBriefing(props: Props) {
         ? pubHM(brief.publish_at) || pubHM(brief.generated_at)
         : ""
     // embargo — publish_at(고정 발행시각) 전에는 ② 시장 브리핑을 노출하지 않고 "발행 예정" 표시. 클라 시계로 그 시각에 교체.
-    const embargoTs =
-        brief && brief.publish_at ? Date.parse(brief.publish_at) : 0
-    const embargoed =
-        !onCanvas &&
-        isFinite(embargoTs) &&
-        embargoTs > 0 &&
-        Date.now() < embargoTs
-    const dateLine =
-        brief && brief.date
-            ? String(brief.date).replace(/-/g, ".").slice(5) +
-              " (" +
-              (brief.weekday || "") +
-              ")" +
-              (pubTime ? " · " + pubTime + " 발행" : "")
-            : "매일 아침 07:30 발행"
+    // 🚨 embargo 폐기 (2026-07-28) — 아침 한 번이 아니라 상시. 항상 false.
+    const embargoed = false
+    // 신선도 = "몇 분 전 갱신". 고정 발행 시각 표기는 상시 갱신과 맞지 않는다.
+    const agoText = (iso: any) => {
+        const t = Date.parse(String(iso || ""))
+        if (!isFinite(t)) return ""
+        const mins = Math.floor((Date.now() - t) / 60000)
+        if (mins < 1) return "방금 갱신"
+        if (mins < 60) return mins + "분 전 갱신"
+        const hrs = Math.floor(mins / 60)
+        if (hrs < 24) return hrs + "시간 전 갱신"
+        return Math.floor(hrs / 24) + "일 전 갱신"
+    }
+    const SESSL: Record<string, string> = {
+        장전: "장 시작 전",
+        장중: "장중",
+        장마감: "장 마감",
+        휴장: "휴장",
+    }
+    const dateLine = brief
+        ? [
+              brief.session ? SESSL[String(brief.session)] || "" : "",
+              agoText(brief.generated_at),
+          ]
+              .filter(Boolean)
+              .join(" · ")
+        : "수시 갱신"
 
     // 카드 밖 제호 + 형제 카드 2장 (개인 / 시장). 중첩 카드 회피.
     const shell: CSSProperties = {
@@ -728,7 +755,7 @@ export default function PublicMorningBriefing(props: Props) {
                         letterSpacing: "-0.4px",
                     }}
                 >
-                    모닝 브리핑
+                    시장 브리핑
                 </span>
                 <span
                     style={{
@@ -1000,7 +1027,7 @@ export default function PublicMorningBriefing(props: Props) {
                         }}
                     >
                         {briefFailed
-                            ? "시장 브리핑 준비 중 — 매일 아침 07:30 발행돼요"
+                            ? "시장 브리핑 준비 중 — 곧 다시 채워져요"
                             : "시장 브리핑 수신 중…"}
                     </div>
                 ) : embargoed ? (
@@ -1158,7 +1185,13 @@ export default function PublicMorningBriefing(props: Props) {
                                         <span style={secTitle}>{s.title}</span>
                                         <span style={secNote}>
                                             {isBannerSec
-                                                ? "섹터 · 거래대금 · 같은 날 공시"
+                                                ? (s.as_of
+                                                      ? String(s.as_of).slice(4, 6) +
+                                                        "." +
+                                                        String(s.as_of).slice(6, 8) +
+                                                        " 종가 기준 · "
+                                                      : "") +
+                                                  "섹터 · 거래대금 · 같은 날 공시"
                                                 : s.note}
                                         </span>
                                     </div>

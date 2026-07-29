@@ -193,7 +193,7 @@ def _sec_market_recap(names: Dict[str, str]) -> Dict[str, Any]:
     ks = (indices.get("코스피") or {}).get("c") or []
     kq = (indices.get("코스닥") or {}).get("c") or []
     if not (anchor and ks and kq):
-        return {"title": "지난 거래일 시장", "items": []}
+        return {"title": "직전 거래일 시장", "items": []}
     ks_chg, kq_chg = ks[-1][2], kq[-1][2]
 
     # 코스피200 섹터 — 파생 변형(비중상한/TOP/테마) 제외한 순수 섹터만
@@ -299,10 +299,26 @@ def _sec_market_recap(names: Dict[str, str]) -> Dict[str, Any]:
                       "text": f"{m['chg']:+.1f}% · 같은 날 공시: {m['nm']}", "mover": True})
 
     d = f"{anchor[4:6]}/{anchor[6:8]}"
-    return {"title": "지난 거래일 시장", "items": items,
+    return {"title": "직전 거래일 시장", "items": items, "as_of": anchor,
             "recap": {"date": d, "kospi": ks_chg, "kosdaq": kq_chg,
                       "kospi_close": ks[-1][1], "kosdaq_close": kq[-1][1], "headline": headline},
             "note": f"기준 {d} · 지수·섹터·등락 = 금융위 공공데이터(전 거래일) · 공시 병기 = 사실, 인과 해석 아님"}
+
+
+def _session(now: datetime) -> str:
+    """장 상태 — 사용자가 아무 때나 들어와도 "지금이 어느 국면인지" 를 먼저 알게 한다.
+
+    KRX 정규장 09:00~15:30. 휴장일 판정은 여기서 하지 않는다(공휴일 캘린더 의존 회피) —
+    주말만 걸러내고, 평일 공휴일은 "장 마감" 으로 보이는 편이 틀린 "장중" 보다 안전하다.
+    """
+    if now.weekday() >= 5:
+        return "휴장"
+    hm = now.hour * 60 + now.minute
+    if hm < 9 * 60:
+        return "장전"
+    if hm < 15 * 60 + 30:
+        return "장중"
+    return "장마감"
 
 
 def main() -> int:
@@ -324,9 +340,15 @@ def main() -> int:
         out = {
             "date": now.strftime("%Y-%m-%d"),
             "generated_at": now.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
-            # 고정 조간 발행 시각(embargo·표시용) — 컴포넌트가 이 시각을 고정 노출하고 클라 시계로 그 시각에 교체.
-            # gh cron 지연/오후 체인 재발행과 무관하게 07:30 고정(2026-07-14). generated_at(실 빌드 시각)과 별개.
-            "publish_at": now.strftime("%Y-%m-%d") + "T07:30:00+09:00",
+            # 🚨 2026-07-28 상시 갱신 전환 (PM: "모닝 브리핑에서 모닝을 빼고 수시로 체크하는거지").
+            #   옛 구조 = publish_at 07:30 고정 + 컴포넌트 embargo → 아침 한 번 읽는 물건.
+            #   새 구조 = 하루 여러 번 재조립, 컴포넌트는 받는 즉시 노출. publish_at 은 옛 컴포넌트
+            #   호환을 위해 과거 시각(자정)으로 남겨 embargo 가 항상 해제된 상태가 되게 한다.
+            "publish_at": now.strftime("%Y-%m-%d") + "T00:00:00+09:00",
+            "session": _session(now),
+            # 시장 recap 이 어느 날 종가인지 — 금융위 공공데이터는 T+1 이라 오늘 종가가 아니다.
+            # 컴포넌트가 이 값으로 "직전 거래일 MM.DD 종가 기준" 을 정확히 찍는다(PM 혼동 지점).
+            "recap_as_of": next((s2.get("as_of") for s2 in sections if s2.get("as_of")), ""),
             "weekday": ["월", "화", "수", "목", "금", "토", "일"][now.weekday()],
             "warnings_n": len(warnings),
             "sections": sections,

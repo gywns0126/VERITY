@@ -9,10 +9,24 @@
   · 19:41 재스캔은 KR 10 자가복구했으나 이미 산출된 recommendations 는 KR 1 고정
 """
 import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
 import api.builders.universe_scan_builder as USB
+
+
+_KST = timezone(timedelta(hours=9))
+
+
+def _ago(hours: float) -> str:
+    """지금부터 N시간 전 KST 문자열.
+
+    🚨 2026-07-28: 여기에 고정 날짜를 쓰면 테스트가 달력과 함께 썩는다. 실제로
+    "2026-07-24T15:37:38+09:00" 이 승계 상한(96h)을 넘긴 7/28 오후에 CI 가 깨졌다
+    (age=99.7h). 검증 대상은 **상대 나이**지 특정 날짜가 아니므로 now 기준으로 만든다.
+    """
+    return (datetime.now(_KST) - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%S+09:00")
 
 
 def _kr(t):
@@ -43,8 +57,9 @@ def snap(tmp_path, monkeypatch):
 
 def test_kr_starvation_splices_prev_kr_and_keeps_fresh_us(snap):
     """실사고 재현: 이번 run US-only → 직전 KR 승계, 신선 US 유지."""
+    fresh = _ago(24)  # 승계 상한(96h) 안 — 날짜 고정 금지
     prev = {
-        "collected_at": "2026-07-24T15:37:38+09:00",
+        "collected_at": fresh,
         "candidates": [_kr("000660"), _kr("005930"), _us("OLD")],
     }
     res = snap([_us("ACN"), _us("CTSH")], prev=prev)
@@ -56,12 +71,12 @@ def test_kr_starvation_splices_prev_kr_and_keeps_fresh_us(snap):
     assert d["us_count"] == 2                      # 신선 US 만 — 직전 US(OLD) 는 미승계
     tickers = {c["ticker"] for c in res["candidates"]}
     assert {"ACN", "CTSH", "000660", "005930"} == tickers
-    assert d["kr_prev_collected_at"] == "2026-07-24T15:37:38+09:00"
+    assert d["kr_prev_collected_at"] == fresh
 
 
 def test_normal_run_untouched(snap):
     """양쪽 다 있으면 승계 로직 미개입."""
-    prev = {"collected_at": "2026-07-24T15:37:38+09:00", "candidates": [_kr("999999")]}
+    prev = {"collected_at": _ago(24), "candidates": [_kr("999999")]}
     res = snap([_kr("000660"), _us("ACN")], prev=prev)
     d = res["diagnostics"]
     assert d["kr_used_prev"] is False
@@ -72,7 +87,7 @@ def test_normal_run_untouched(snap):
 def test_stale_prev_not_spliced(snap):
     """상한(96h) 초과 직전분은 승계 금지 — 낡은 KR 후보 무한 연장 차단."""
     prev = {
-        "collected_at": "2026-07-01T15:37:38+09:00",   # 수 주 전
+        "collected_at": _ago(24 * 27),   # 수 주 전
         "candidates": [_kr("000660")],
     }
     res = snap([_us("ACN")], prev=prev)
@@ -85,10 +100,10 @@ def test_stale_prev_not_spliced(snap):
 def test_splice_chain_uses_origin_scan_time(snap):
     """직전이 이미 승계본이면 원 스캔 시각을 승계 — 무한 연쇄 방지."""
     prev = {
-        "collected_at": "2026-07-27T15:32:59+09:00",           # 승계가 일어난 시각(최근)
+        "collected_at": _ago(4),                               # 승계가 일어난 시각(최근)
         "candidates": [_kr("000660")],
         "diagnostics": {"kr_used_prev": True,
-                        "kr_prev_collected_at": "2026-07-01T15:00:00+09:00"},  # 원 스캔=오래됨
+                        "kr_prev_collected_at": _ago(24 * 27)},  # 원 스캔=수 주 전
     }
     res = snap([_us("ACN")], prev=prev)
     d = res["diagnostics"]
@@ -99,7 +114,7 @@ def test_splice_chain_uses_origin_scan_time(snap):
 def test_total_zero_still_uses_full_prev(snap):
     """기존 전체-0 fallback 은 그대로 (회귀 없음)."""
     prev = {
-        "collected_at": "2026-07-27T10:00:00+09:00",
+        "collected_at": _ago(9),
         "candidates": [_kr("000660"), _us("ACN")],
     }
     res = snap([], prev=prev)
