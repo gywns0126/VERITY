@@ -4861,17 +4861,36 @@ export default function PublicStockReport(props: Props) {
         let ok = true
         try {
             if (wasOn) {
-                await fetch(base + "/api/watchgroups", {
-                    method: "DELETE",
-                    headers: {
-                        Authorization: `Bearer ${watchToken}`,
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        action: "remove_item",
-                        item_id: prevId,
-                    }),
-                })
+                /* 담자마자 끄는 경우 prevId 가 "pending"(추가 응답에 id 가 없던 자리표)일 수 있다.
+                   그대로 DELETE 하면 서버가 못 지워 유령이 남는다 — 실 id 를 다시 찾아 지운다. */
+                let rid = prevId
+                if (!rid || rid === "pending") {
+                    const gs = await fetch(base + "/api/watchgroups", {
+                        headers: { Authorization: `Bearer ${watchToken}` },
+                        cache: "no-store",
+                    })
+                        .then((r) => (r.ok ? r.json() : null))
+                        .catch(() => null)
+                    const tkNow = String(s.ticker || "")
+                    if (Array.isArray(gs))
+                        for (const g of gs)
+                            for (const it of g.items || [])
+                                if (String(it.ticker || "") === tkNow && it.id)
+                                    rid = String(it.id)
+                }
+                if (rid && rid !== "pending") {
+                    await fetch(base + "/api/watchgroups", {
+                        method: "DELETE",
+                        headers: {
+                            Authorization: `Bearer ${watchToken}`,
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            action: "remove_item",
+                            item_id: rid,
+                        }),
+                    })
+                } else ok = false
             } else {
                 let gid = watchGroupId
                 if (!gid) {
@@ -4912,6 +4931,12 @@ export default function PublicStockReport(props: Props) {
             ok = false
         }
         if (!ok) setStarItemId(wasOn ? prevId : null) // 서버 실패 = 별 상태 원복
+        /* 🚨 서버 반영이 끝난 뒤 한 번 더 알린다 (2026-07-30 PM 보고 "별 끄면 보유종목이 안 없어짐").
+           관심종목 위젯은 이 이벤트를 받으면 **서버를 다시 읽는다**. 위 낙관적 발신만 있으면
+           아직 지워지지 않은 서버 상태를 읽어 방금 끈 종목이 되살아난다.
+           낙관적 발신(로컬 즉시 반영) + 확정 발신(서버 진실) 두 번 모두 필요하다. 되돌리지 말 것. */
+        if (typeof window !== "undefined")
+            window.dispatchEvent(new CustomEvent(WATCH_EVENT))
         setStarBusy(false)
     }
 
