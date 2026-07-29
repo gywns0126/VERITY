@@ -4734,6 +4734,40 @@ export default function PublicStockReport(props: Props) {
         () => (flowMap && flowMap[s.ticker]) || [],
         [flowMap, s.ticker]
     )
+    /* 🚨 수급 기준일 병기 (2026-07-30) — stock_flow_5d 는 네이버 anti-bot 때문에 하루 300종목만
+       수집하고 나머지는 직전 스냅샷을 carry-forward 한다(_meta.collected_today). 그래서 종목마다
+       마지막 거래일이 다르다(실측 2026-07-30: 7/28 602종목 / 7/24 487 / 7/23 248 …).
+       기준일을 안 적으면 회전 대기 중인 종목이 "데이터가 멈춘 것"으로 읽힌다 — PM 오인 실사례.
+       RULE 7 = 사실(기준일·지연 거래일 수)만. 지연 사유는 적되 판단·점수는 붙이지 않는다. */
+    const flowAsOf = useMemo(() => {
+        const base = "순매매량(주) · 네이버 · 탭=정확 수치"
+        const dates = (flowRows as any[])
+            .map((r) => String(r?.date || ""))
+            .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+            .sort()
+        const last = dates[dates.length - 1]
+        if (!last) return base
+        const [, mm, dd] = last.split("-")
+        const label = `${Number(mm)}/${Number(dd)} 기준`
+        // 경과 거래일(주말 제외) — 2일 초과면 회전 수집 대기 중임을 명시.
+        // 🚨 날짜만 비교 — new Date() 의 시각 성분을 섞으면 당일이 한 번 더 세어져 +1 과대계상.
+        //    브라우저 TZ 와 무관하게 KST 기준 날짜로 정규화한다.
+        const kstYmd = (d: Date) =>
+            new Date(d.getTime() + 9 * 3600 * 1000)
+                .toISOString()
+                .slice(0, 10)
+        const todayYmd = kstYmd(new Date())
+        let lag = 0
+        const cur = new Date(`${last}T00:00:00Z`)
+        while (kstYmd(cur) < todayYmd && lag < 30) {
+            cur.setUTCDate(cur.getUTCDate() + 1)
+            const wd = cur.getUTCDay()
+            if (wd !== 0 && wd !== 6) lag += 1
+        }
+        return lag > 2
+            ? `${label} · 순차 수집 대기 ${lag}거래일 · 네이버`
+            : `${label} · 순매매량(주) · 네이버 · 탭=정확 수치`
+    }, [flowRows])
     const flowMax = useMemo(() => {
         let mx = 1
         for (const r of flowRows)
@@ -6074,7 +6108,7 @@ export default function PublicStockReport(props: Props) {
                 <>
                     {sectionTitle(
                         "수급 — 외국인·기관 5일",
-                        "순매매량(주) · 네이버 · 탭=정확 수치",
+                        flowAsOf,
                         "수급"
                     )}
                     <div
