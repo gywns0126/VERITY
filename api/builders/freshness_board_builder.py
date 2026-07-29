@@ -21,7 +21,6 @@ status 규칙:
 """
 from __future__ import annotations
 
-import glob
 import json
 import os
 import sys
@@ -36,13 +35,19 @@ from scripts.freshness_shadow_monitor import (  # noqa: E402
     _parse_ts_kst,
     _schedule_active,
     _weekend_minutes_between,
+    latest_ts_for_glob,
 )
 
 MANIFEST = os.path.join(DATA_DIR, "freshness_sla.json")
 OUTPUT_PATH = os.path.join(DATA_DIR, "freshness_board.json")
 
 # 비발행 내부 입력 — 사이트 표면에 대응물이 없어 board 노출 무가치 (다운스트림이 별도 등재)
-EXCLUDE_IDS = {"analyst_reports"}
+# + ts 필드가 없어 능동검사 불가한 원장(2026-07-30 등재분). 매니페스트에는 active_check=false 로
+#   남겨 "미감시"를 명시하되, 공개 board 에서 discontinued(수집 중단)로 오표기되지 않게 제외.
+EXCLUDE_IDS = {
+    "analyst_reports",
+    "kr_stock_names", "kr_earnings_pattern", "us_earnings_pattern", "recommendations",
+}
 
 # 공개용 고정 문구 — 매니페스트 cadence 원문은 내부 워크플로명·정정 remark 를 포함하므로
 # 재발행하지 않고 여기서 고정. 미등재 id = label 에 id 그대로, cadence 생략 (내부문구 유출 0).
@@ -78,21 +83,43 @@ PUBLIC_LABELS = {
     "broker_guide": ("증권사 가이드", "월 1회"),
     "dividends_kr": ("KR 배당", "매일 1회"),
     "market_warnings": ("KRX 시장경보", "매일 1회"),
+    # 2026-07-30 커버리지 확장분 — 라벨 미등재 시 영문 id 가 공개 노출되므로 함께 등재
+    "public_disclosure_feed": ("KR 공시 피드", "평일 1회"),
+    "disclosure_forensics": ("KR 공시 포렌식", "평일 1회"),
+    "kr_forensics_public": ("KR 재무 포렌식", "평일 1회"),
+    "insider_trades": ("KR 내부자 거래", "평일 1회"),
+    "stock_flow_5d": ("KR 종목 5일 흐름", "평일 1회"),
+    "validation_summary": ("검증 진행 요약", "평일 1회"),
+    "universe_search": ("종목 검색 인덱스", "평일 1회"),
+    "universe_search_kr": ("KR 검색 인덱스", "평일 1회"),
+    "kr_index_daily": ("KR 지수 일봉", "평일 1회"),
+    "nps_holdings": ("국민연금 보유", "평일 1회"),
+    "securities_lending": ("대차거래", "평일 1회"),
+    "commodity_exposure": ("원자재 노출도", "평일 1회"),
+    "sector_overview": ("섹터 개요", "평일 1회"),
+    "supply_demand": ("투자자 수급", "평일 1회"),
+    "perspective_maps": ("관점 지도", "평일 1회"),
+    "entrance_map": ("진입 지도", "평일 1회"),
+    "cross_gics_kr": ("KR 섹터 매핑", "평일 1회"),
+    "calendar_public": ("일정 캘린더", "평일 1회"),
+    "hot_stock": ("거래 집중 종목", "평일 1회"),
+    "daily_briefing": ("데일리 브리핑", "매일 1회"),
+    "us_disclosure_feed": ("US 공시 피드", "매일 1회"),
+    "us_etf": ("US ETF", "매일 1회"),
+    "us_short_interest": ("US 공매도 잔고", "매일 1회"),
+    "freshness_board": ("신선도 보드", "매시"),
+    "smallcap_corner_filters": ("소형주 코너 필터", "주 1회"),
+    "portfolio": ("포트폴리오 원장", "주 1회"),
+    "nps_employment": ("국민연금 고용", "월 1회"),
+    "cross_gics_us": ("US 섹터 매핑", "월 1회"),
+    "us_quarterly_public": ("US 분기 추이", "월 1회"),
+    "us_smallcap_corner_filters": ("US 소형주 필터", "월 1회"),
+    "us_disclosure_forensics": ("US 공시 포렌식", "월 1회"),
+    "nps_fund_returns": ("국민연금 수익률", "월 1회"),
+    "logo_map": ("로고 매핑", "비정기"),
 }
 
 _CRIT_ORDER = {"P0": 0, "P1": 1, "P2": 2}
-
-
-def _latest_ts_for_glob(pattern: str, ts_field):
-    """glob 스트림(crypto_* 등) — 매칭 파일 전체에서 최신 ts 1개."""
-    best = None
-    for path in glob.glob(os.path.join(DATA_DIR, pattern)):
-        obj = _load_any(path)
-        ts = _extract_ts(obj, ts_field)
-        t = _parse_ts_kst(ts) if ts else None
-        if t and (best is None or t > best):
-            best = t
-    return best
 
 
 def build_board() -> dict:
@@ -122,7 +149,7 @@ def build_board() -> dict:
 
         f = s.get("file", "")
         if "*" in f:
-            t = _latest_ts_for_glob(f, s.get("ts_field"))
+            t = latest_ts_for_glob(f, s.get("ts_field"))
         else:
             path = os.path.join(DATA_DIR, f)
             obj = _load_any(path) if os.path.exists(path) else None
