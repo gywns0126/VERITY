@@ -3,7 +3,7 @@ EDGAR 13F-HR 기관 투자자 포지션 수집기
 periodic_quarterly 모드 실행 / value_hunter.py 연계
 """
 from __future__ import annotations
-import os, re, time, json, logging, requests
+import os, re, time, json, logging, statistics, requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Optional
@@ -128,9 +128,13 @@ def _find_infotable_url(cik: str, accession_no: str) -> Optional[str]:
     except Exception as e:
         logger.error(f"[13F] index.json 실패 CIK={cik}: {e}")
         return None
+    # 🚨 2026-07-30 — 확장자 대소문자 무시. Viking Global 은 'MSFS13F033126.XML'(대문자)로
+    #   제출해 endswith('.xml') 이 놓쳤고 보유 파싱이 0건이었다(실측: infotable url=None).
+    #   primary_doc 비교도 동일하게 대소문자 무시.
     cands = [(it.get("name", ""), int(it.get("size") or 0))
              for it in idx.get("directory", {}).get("item", [])
-             if it.get("name", "").endswith(".xml") and it.get("name") != "primary_doc.xml"]
+             if it.get("name", "").lower().endswith(".xml")
+             and it.get("name", "").lower() != "primary_doc.xml"]
     if not cands:
         return None
     cands.sort(key=lambda x: -x[1])   # 최대 = 보유 테이블
@@ -147,6 +151,42 @@ def _strip_ns(xml_text: str) -> str:
     x = re.sub(r"<(/?)[\w.]+:", r"<\1", x)                          # 태그 prefix
     x = re.sub(r"\s[\w.]+:([\w.]+\s*=)", r" \1", x)                 # 속성 prefix
     return x
+
+
+def _normalize_value_units(rows: list[dict], cik: str = "") -> list[dict]:
+    """13F value 열의 단위를 filer 별로 정규화 (천 달러 → 달러).
+
+    🚨 2026-07-30 — 기존 코드는 "2023+ 는 전부 실달러"를 **전역 가정**으로 뒀다
+    (주석: "×1000 폐기 — 2026-06-22 ALLY $39/주 검증"). 그런데 그 검증은 filer 1곳 표본이었고,
+    실제로는 개정 후에도 **천 달러 단위로 계속 제출하는 filer 가 있다**.
+    실측(2026-07-30, 15개 filer 전수 중앙 단가):
+       Duquesne Family Office  $0.08   ← 유일 이상치. TSM 을 $0.34 로 표기(실제 ~$340)
+       나머지 14곳            $73~$310  ← 정상
+    보정 없이 쓰면 Duquesne 이 총액 $2.9M 짜리 펀드로 표시된다(실제는 조 단위).
+
+    판별 = 내재단가(value/shares) 중앙값. 13F 는 $100M+ 보유 기관만 제출 대상이라
+    책 전체 중앙 단가가 $1 미만인 정상 포트폴리오는 사실상 없다. 중앙값을 쓰므로 개별
+    페니스톡 몇 종목으로는 뒤집히지 않는다. ×1000 후에도 상식 범위를 벗어나면 보정하지 않음
+    (양방향 오판 방지 — 조용히 틀린 값을 만들지 않는다).
+    """
+    px = [r["value_usd"] / r["shares"] for r in rows
+          if (r.get("shares") or 0) > 0 and (r.get("value_usd") or 0) > 0]
+    if len(px) < 3:
+        return rows          # 표본 부족 = 판정 보류 (원본 유지)
+    med = statistics.median(px)
+    if med >= 1.0:
+        return rows          # 정상 단위
+    scaled = med * 1000.0
+    if not (1.0 <= scaled <= 100000.0):
+        logger.warning("[13F] CIK=%s 내재단가 중앙값 %.4f — ×1000 후에도 비정상(%.2f), 보정 보류",
+                       cik, med, scaled)
+        return rows
+    logger.warning("[13F] CIK=%s value 열이 천 달러 단위로 판정 (중앙 단가 $%.4f → $%.2f). ×1000 보정 적용",
+                   cik, med, scaled)
+    for r in rows:
+        r["value_usd"] = (r.get("value_usd") or 0) * 1000.0
+        r["value_unit_corrected"] = True
+    return rows
 
 
 def parse_13f_holdings(accession_no: str, cik: str) -> list[dict]:
@@ -179,7 +219,8 @@ def parse_13f_holdings(accession_no: str, cik: str) -> list[dict]:
             })
             e["value_usd"] += value
             e["shares"] += shares
-        return sorted(agg.values(), key=lambda x: x["value_usd"], reverse=True)
+        rows = sorted(agg.values(), key=lambda x: x["value_usd"], reverse=True)
+        return _normalize_value_units(rows, cik)
     except Exception as e:
         logger.error(f"[13F] 보유 파싱 실패: {e}")
         return []
