@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-07-29T22:25:29.011241+09:00",
+  "generated_at": "2026-07-30T00:31:36.716453+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 250824,
-    "python_modules": 660,
+    "code_lines_tsx_py": 251184,
+    "python_modules": 661,
     "tsx_components": 136,
-    "json_data_files": 1650,
-    "json_total_tracked": 1665,
+    "json_data_files": 1651,
+    "json_total_tracked": 1666,
     "workflows": 64,
     "scheduled_workflows": 50,
     "cron_triggers": 61,
-    "git_tracked_files": 7169
+    "git_tracked_files": 7171
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 67,
+      "count": 68,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -61,6 +61,7 @@
         "api/collectors/sec_13f_collector.py",
         "api/collectors/sentiment_engine.py",
         "api/collectors/stocktwits_sentiment.py",
+        "api/collectors/us_naver_code.py",
         "api/collectors/x_sentiment.py",
         "api/cron/price_pulse.py",
         "api/intelligence/dart_importance_observer.py",
@@ -609,7 +610,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1650
+      "count": 1651
     },
     "validation": {
       "label": "검증",
@@ -624,7 +625,7 @@
     }
   },
   "python_by_dir": {
-    "api": 370,
+    "api": 371,
     "tests": 145,
     "scripts": 81,
     "vercel-api": 52,
@@ -632,10 +633,10 @@
     ".github": 5
   },
   "funnel": {
-    "investable_real": 2759,
+    "investable_real": 75,
     "cap": 5000,
     "stages": [
-      2759,
+      75,
       300,
       100,
       25
@@ -646,7 +647,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2759 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~75 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
