@@ -1,32 +1,32 @@
 {
   "version": "v0",
-  "computed_at": "2026-07-29T08:20:17.366359+00:00",
+  "computed_at": "2026-07-29T16:16:36.967932+00:00",
   "status": "insufficient_data",
   "sample_size": {
     "total": 27,
-    "open": 2,
-    "closed": 25,
-    "with_h5": 21,
-    "with_h14": 11,
+    "open": 1,
+    "closed": 26,
+    "with_h5": 23,
+    "with_h14": 15,
     "with_h30": 3,
     "min_for_decompose": 30
   },
   "horizon_summary": {
     "h5": {
       "horizon_days": 5,
-      "n": 21,
-      "hit_rate_pct": 52.38,
-      "median_return_pct": 0.1,
-      "mean_return_pct": 0.87,
-      "ic": 0.092
+      "n": 23,
+      "hit_rate_pct": 47.83,
+      "median_return_pct": -0.32,
+      "mean_return_pct": 0.23,
+      "ic": 0.1
     },
     "h14": {
       "horizon_days": 14,
-      "n": 11,
-      "hit_rate_pct": 45.45,
-      "median_return_pct": -2.86,
-      "mean_return_pct": -3.22,
-      "ic": 0.227
+      "n": 15,
+      "hit_rate_pct": 53.33,
+      "median_return_pct": 2.42,
+      "mean_return_pct": -1.58,
+      "ic": -0.164
     },
     "h30": {
       "horizon_days": 30,
@@ -39,8 +39,8 @@
   },
   "feature_decomposition": {
     "status": "insufficient_data",
-    "n": 11,
-    "need_more_rows": 19
+    "n": 15,
+    "need_more_rows": 15
   },
   "sector_breakdown": {
     "Industrials": {
@@ -48,7 +48,7 @@
       "status": "insufficient_data"
     },
     "Communication Services": {
-      "n": 1,
+      "n": 3,
       "status": "insufficient_data"
     },
     "Consumer Cyclical": {
@@ -56,9 +56,9 @@
       "status": "insufficient_data"
     },
     "Energy": {
-      "n": 5,
-      "hit_rate_pct": 60.0,
-      "median_return_pct": 2.42
+      "n": 7,
+      "hit_rate_pct": 71.43,
+      "median_return_pct": 3.07
     },
     "Technology": {
       "n": 1,
@@ -67,20 +67,20 @@
   },
   "verdict_strength": {
     "status": "insufficient_data",
-    "n": 11
+    "n": 15
   },
   "timeseries_baseline": {
     "earliest": "2026-06-10T12:03:09.387256+00:00",
     "windows": {
       "first_30d": {
-        "n": 11,
-        "hit_rate_pct": 45.45,
+        "n": 13,
+        "hit_rate_pct": 46.15,
         "median_return_pct": -2.86
       },
       "30_60d": {
-        "n": 0,
-        "hit_rate_pct": null,
-        "median_return_pct": null
+        "n": 2,
+        "hit_rate_pct": 100.0,
+        "median_return_pct": 3.83
       },
       "60d_plus": {
         "n": 0,
