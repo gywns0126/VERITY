@@ -693,7 +693,8 @@ export default function PublicLiveChart(props: Props) {
             if (e.aum_usd) rows.push(kv("순자산", "$" + (Number(e.aum_usd) / 1e9).toFixed(1) + "B"))
         }
         // 위젯 높이 — 프레임 실측에서 헤더/사실/푸터 몫을 뺀 값. px 고정(Fit 금지).
-        const tvH = Math.max(220, (h > 260 ? h : Hprop) - (rows.length ? 210 : 150))
+        // 헤더를 숨긴 만큼 위젯이 더 차지한다. 남기는 몫 = 이름줄 + 사실줄 + 링크줄.
+        const tvH = Math.max(240, (h > 260 ? h : Hprop) - (rows.length ? 178 : 118))
         return (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10, padding: "0 10px 4px" }}>
                 <div style={{ padding: "0 4px" }}>
@@ -811,8 +812,18 @@ export default function PublicLiveChart(props: Props) {
     return (
         <div ref={wrapRef} style={wrap}>
             <style>{AN_PALETTE}</style>
-            {/* 헤더 — 전일 종가·등락 + 52주 + 기간탭 (정직: T+1 전일까지) */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 10px 6px", flexWrap: "wrap" }}>
+            {/* 헤더 — 전일 종가·등락 + 52주 + 기간탭 (정직: T+1 전일까지).
+                🚨 해외 종목에서는 통째로 숨긴다. TradingView 위젯이 자체 기간 선택(withdateranges)을
+                갖고 있어 우리 탭은 눌러도 아무 일이 없다 — 죽은 버튼을 두면 고장으로 읽힌다(PM 지적). */}
+            <div
+                style={{
+                    display: isForeign ? "none" : "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "0 10px 6px",
+                    flexWrap: "wrap",
+                }}
+            >
                 {last && (
                     <>
                         <span style={{ fontSize: 17, fontWeight: 800, color: C.ink, letterSpacing: -0.3 }}>{won(last[4])}</span>
