@@ -1,11 +1,10 @@
 {
  "_meta": {
-  "generated_at": "2026-07-30T11:12:36.929651+09:00",
+  "generated_at": "2026-07-30T14:35:34.738730+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "red",
+ "status": "amber",
  "reasons": [
-  "P0 stale 1건",
   "비P0 stale 1건"
  ],
  "publish_guard": {
@@ -13,7 +12,7 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-07-30T11:12:36.874919+09:00",
+  "generated_at": "2026-07-30T14:35:34.682939+09:00",
   "ok": true,
   "failed": 0,
   "max_cdn_age_s": 0,
@@ -68,15 +67,15 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-07-30T11:12:27.522731+09:00",
+  "generated_at": "2026-07-30T14:35:24.457429+09:00",
   "summary": {
-   "fresh": 59,
-   "stale": 2,
+   "fresh": 60,
+   "stale": 1,
    "closed": 0,
    "discontinued": 1,
    "p0": {
     "total": 6,
-    "fresh": 5,
+    "fresh": 6,
     "closed": 0,
     "active": 6
    },
@@ -93,13 +92,7 @@
     "active": 36
    }
   },
-  "stale_p0": [
-   {
-    "id": "crypto",
-    "label": "크립토 시세·파생",
-    "age_min": 99.7
-   }
-  ],
+  "stale_p0": [],
   "stale_other": [
    "nps_fund_returns"
   ]
