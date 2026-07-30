@@ -39,7 +39,17 @@ permissions:
 # WARN-17: data/* 쓰기 워크플로 단일 그룹 직렬화 (verity-data-write).
 # daily_analysis_full 와 같은 group → 큐잉 (충돌 회피).
 concurrency:
-  group: verity-data-write
+  # 🚨 2026-07-30 verity-data-write → verity-universe-scan 분리. 되돌리지 말 것.
+  #
+  # 사고 실측: verity-data-write 는 17개 워크플로가 공유하는데 daily_analysis_full 이 1h56m~2h30m
+  # 을 점유한다. 그 창에 걸린 universe_scan 예약 실행이 7/28·7/29 연속 cancelled →
+  # universe_candidates.json 이 26h stale → daily_analysis 의 신선도 guard 가 정상 작동해 exit 1
+  # → daily_analysis_full failure. 즉 "실패"의 뿌리가 결함이 아니라 **락 기아**였다.
+  #
+  # 분리 안전성 = 이 워크플로의 push 는 이미 `git pull --rebase --autostash -X ours` + 5회 재시도라
+  # 동시 커밋 경합을 흡수한다(us_insider_trades·kr_stock_flow 와 동일 패턴). 락으로 직렬화할
+  # 필요가 없다. [[feedback_concurrency_group_lock_audit]] 정합 — 형제 수 × 평균 run 시간 audit 결과.
+  group: verity-universe-scan
   cancel-in-progress: false
 
 jobs:

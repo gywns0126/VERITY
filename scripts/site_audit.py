@@ -47,6 +47,19 @@ CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 # 발행 대기(백필 진행 중) URL — 404 를 FAIL 아닌 WARN 으로 강등(추적 유지, red 회피). 데이터 랜딩 시 제거.
 # dart_quarterly_public.json = KR 분기 backfill 완주 전 미발행 (item 2, MIN_QUARTERS=4 게이트). backfill cron 완주 시 자동 200 → 이 set 에서 제거.
 PENDING_PUBLISH = {"dart_quarterly_public.json"}
+# 컴플라이언스 은퇴 발행물 — 의도적 발행 중단이라 404 가 *정상*. FAIL 로 잡으면 감사 전체가
+# 상시 RED 가 되어 진짜 신호를 가린다(2026-07-13~07-30 실제로 그랬음: 이 4건 뒤에
+# data.recommendations brain 결손 54/54 WARN 이 묻혀 있었다).
+# 🚨 은폐 아님 — 아래 check_publish 가 WARN 으로 계속 보고한다. 은퇴 시 컴포넌트 참조까지
+#    지우는 게 원칙이고([[feedback_mass_removal_dangling_ref_audit]]) 잔존 참조는 여기 WARN 이
+#    유일한 추적점이다. 참조 제거(운영 콘솔 패널 정리)는 별건 큐.
+RETIRED_PUBLISH = {
+    "admin_todos.json",
+    "brain_kb_usage.json",
+    "history.json",
+    "system_health_snapshot.json",
+    "trending_kr.json",
+}
 
 KST = timezone(timedelta(hours=9))
 PAK_RE = re.compile(r"박[으이아았혀힘은는지하한히음으면혀]")  # RULE 9 금지 동사
@@ -176,18 +189,30 @@ def check_publish(rep: Report) -> None:
     if not urls:
         rep.add("publish.fetch_urls", "WARN", "프론트 fetch URL 0건 검출")
         return
-    broken, pending = [], []
+    broken, pending, retired = [], [], []
     for u in sorted(urls):
         st, _ = http(u, timeout=15)
         if st != 200:
             base = u.split("/")[-1]
-            (pending if base in PENDING_PUBLISH else broken).append(f"{st} {base}")
+            if base in RETIRED_PUBLISH:
+                retired.append(f"{st} {base}")
+            elif base in PENDING_PUBLISH:
+                pending.append(f"{st} {base}")
+            else:
+                broken.append(f"{st} {base}")
     if broken:
         rep.add("publish.fetch_urls", "FAIL", f"{len(broken)}/{len(urls)} broken: {'; '.join(broken[:4])}")
     elif pending:
         rep.add("publish.fetch_urls", "WARN", f"발행대기 {len(pending)}(backfill): {'; '.join(pending[:4])} · {len(urls) - len(pending)}/{len(urls)} = 200")
     else:
-        rep.add("publish.fetch_urls", "PASS", f"{len(urls)}/{len(urls)} = 200")
+        rep.add("publish.fetch_urls", "PASS", f"{len(urls) - len(retired)}/{len(urls) - len(retired)} = 200")
+    # 은퇴분 잔존 참조 = 별도 축으로 계속 보고(FAIL 강등이지 은폐 아님).
+    if retired:
+        rep.add(
+            "publish.retired_refs",
+            "WARN",
+            f"은퇴 발행물 참조 {len(retired)}건 잔존(404 정상): {'; '.join(retired[:5])} — 컴포넌트 참조 정리 큐",
+        )
 
 
 # ── 4. esbuild parse (Framer publish 깨짐 검출) ────────────────────
