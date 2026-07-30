@@ -115,7 +115,7 @@ PUBLIC_LABELS = {
     "us_quarterly_public": ("US 분기 추이", "월 1회"),
     "us_smallcap_corner_filters": ("US 소형주 필터", "월 1회"),
     "us_disclosure_forensics": ("US 공시 포렌식", "월 1회"),
-    "nps_fund_returns": ("국민연금 수익률", "월 1회"),
+    "nps_fund_returns": ("국민연금 수익률", "수집 중단 — 생산 경로 부재로 은퇴"),
     "logo_map": ("로고 매핑", "비정기"),
 }
 

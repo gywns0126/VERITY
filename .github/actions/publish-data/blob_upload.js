@@ -29,6 +29,11 @@ const RETIRED_BLOBS = [
     // 2026-07-23 분리 Stage 3 후속: 오퍼레이터 전용 크라운주얼 → private bucket 이전, 공개 blob 삭제.
     // (발행 목록 제거만으론 옛 blob 본 잔존 — del 로 노출 완전 차단. authed /api/admin?type=<name> 로 서빙.)
     "admin_todos.json", "brain_kb_usage.json", "history.json", "system_health_snapshot.json",
+    // 2026-07-30 PM 은퇴 결정 — nps_fund_returns 는 **생산 경로가 존재하지 않는다**.
+    // 전수 참조 감사: collector·builder·workflow 0건, 2026-04-30 에 한 번 생성된 뒤 갱신 수단 없음
+    // → 91일 stale 이 아니라 영구 stale. 소비자(PublicNPSHoldings)는 404 안전
+    // (`r.ok` 체크 + 렌더가 `{returns && Array.isArray(returns.annual) && ...}` 로 가드) → 패널만 사라진다.
+    "nps_fund_returns.json",
 ];
 const CACHE_MAX_AGE = 30; // 30s — Framer 가 매 페이지 진입마다 fresh 받음
 

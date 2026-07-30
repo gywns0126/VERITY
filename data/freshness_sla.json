@@ -625,11 +625,12 @@
   {
    "id": "nps_fund_returns",
    "file": "nps_fund_returns.json",
-   "max_age_minutes": 50400,
+   "max_age_minutes": null,
    "owner": "ci",
    "schedule": "always",
-   "cadence": "월 1회 (🚨 생산처 정적 미검출 — 2026-04-30 이후 동결)",
-   "criticality": "P2"
+   "cadence": "수집 중단 — 생산 경로 부재로 은퇴 (PM 2026-07-30)",
+   "criticality": "P2",
+   "active_check": false
   },
   {
    "id": "logo_map",
