@@ -428,10 +428,19 @@ jobs:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
         run: python -m api.builders.insider_trades_public_builder
 
-      # 🚨 공개 종목 수급 빌드 = 2026-07-30 `kr_stock_flow.yml` 로 분리 이관됨. 여기서 지웠다.
-      #   사유 = 이 워크플로가 verity-data-write 그룹을 17개와 공유하면서 1h56m~2h30m 을 점유해
-      #   (2h30m21s = timeout 150분 도달 사례) 형제 워크플로가 큐에서 취소됐다. 수급은 다른 스텝과
-      #   데이터 의존이 없어 분리 가능. 되돌리지 말 것 — 되돌리면 락 점유가 다시 길어진다.
+      - name: 공개 종목 수급 빌드 (외국인·기관 5일, public-safe)
+        # 전 종목 시총순 rotation, 일별 캡(FLOW_MAX_TICKERS, anti-bot) + carry-forward → ~6일 내 전 종목.
+        # 검증된 파서(flow_observation_logger: 모바일 trend JSON→frgn HTML 폴백). 네이버 외부 fetch(KIS 0).
+        # RULE 7 = 외국인/기관 순매매량(외부 사실)만. 다음 step git add data/ (broad) = RULE 4.
+        continue-on-error: true
+        env:
+          # 300 → 500 (2026-07-30). 재갱신 주기 1497/캡 = 약 5~6 거래일 → 약 3 거래일로 단축.
+          # 🚨 요청 *간격*(DELAY 0.4s)은 건드리지 않음 — 초당 요청률 불변, 일별 물량만 증가시켜
+          #    anti-bot 노출 증가를 최소화한다. 1,497 한방 금지(빌더 docstring)는 그대로 유효.
+          # 🚨 RULE 8 N=2 관측 지표 = data/stock_flow_5d.json 의 _meta.ok / _meta.collected_today.
+          #    ok/collected 가 1.0 에서 유의하게 떨어지면 차단 신호 → 즉시 '300' 으로 되돌릴 것.
+          FLOW_MAX_TICKERS: '500'
+        run: python api/builders/stock_flow_public_builder.py
 
       - name: KR 종목 관측 신호 raw 적재 (v0, RULE 7 관측 only · 주간)
         # 내부자·수급·희석·총수일가 raw → data/observations/kr_cross_section_observations.jsonl (금요일만 self-run, 점수 0).
