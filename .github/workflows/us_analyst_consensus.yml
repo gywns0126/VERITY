@@ -51,6 +51,16 @@ jobs:
           US_CONSENSUS_MAX_SECONDS: ${{ github.event.inputs.max_seconds || '2400' }}
         run: python -m api.builders.us_analyst_consensus_public_builder
 
+      - name: private repo 동기화 (민감 데이터)
+        # 🚨 2026-07-30 — 이 파일은 발행 영구 금지 자산(PM 7/10)인데 public repo 에 그대로 있어
+        #   raw.githubusercontent 로 200 이 떴다. blob allowlist 에서만 빼고 repo 는 열려 있었다.
+        #   이제 VERITY-private 로 올린다. PAT 없으면 조용히 skip(파이프라인 보호).
+        #   ⚠ public 커밋 스텝은 PAT 검증 완료 후 제거 예정 — 지금 먼저 지우면 갱신이 끊긴다.
+        continue-on-error: true
+        env:
+          PRIVATE_DATA_PAT: ${{ secrets.PRIVATE_DATA_PAT }}
+        run: python scripts/private_data.py push data/us_analyst_consensus.json
+
       - name: Commit data/us_analyst_consensus.json
         run: |
           git config user.name "AI Stock Bot"

@@ -54,8 +54,56 @@ _DATA = _find_data_dir()
 # 🚨 서버리스 대비 — 내부 파일은 **미발행**이라 공개 blob URL 폴백이 없다(공개 파일과 다른 점).
 #    Vercel 번들에 data/ 가 없으면 내부 블록은 조용히 빈 채로 간다(챗은 공개 컨텍스트로 계속 동작).
 #    비공개 저장소를 붙일 때 이 두 env 를 쓴다. 미설정이면 로컬 파일만 시도.
-_REMOTE_BASE = os.environ.get("INTERNAL_DATA_BASE", "").rstrip("/")
+# 🌉 임시 브리지 (2026-07-30) — 민감 데이터 private 분리가 끝나기 전까지의 경유지.
+#   이 파일들은 **지금 이미 public repo 에 있어** raw URL 로 200 이 뜬다(실측). 그래서 챗이
+#   오늘 당장 내부 자산을 읽을 수 있다. 새로 여는 게 아니라 **이미 열려 있는 것을 쓰는 것**이다.
+#   🚨 이건 노출의 해결이 아니라 해결 전까지의 다리다. private 분리(PRIVATE_DATA_PAT)가 서면
+#   _load_private 가 먼저 성공하므로 이 경로는 자동으로 안 쓰인다 — 코드 수정 없이 전환된다.
+#   INTERNAL_DATA_BASE 를 명시하면 그 값이 우선한다.
+_PUBLIC_BRIDGE = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data"
+_REMOTE_BASE = (os.environ.get("INTERNAL_DATA_BASE") or _PUBLIC_BRIDGE).rstrip("/")
 _REMOTE_TOKEN = os.environ.get("INTERNAL_DATA_TOKEN", "")
+# private repo 폴백 — 민감 데이터를 public repo 에서 분리한 뒤(2026-07-30) 여기서 읽는다.
+# 공개 raw URL 이 아니라 **인증이 필요한 contents API** 를 쓴다. 토큰 없으면 시도조차 하지 않는다.
+_PRIV_REPO = os.environ.get("PRIVATE_DATA_REPO", "gywns0126/VERITY-private")
+_PRIV_BRANCH = os.environ.get("PRIVATE_DATA_BRANCH", "main")
+_PRIV_PAT = os.environ.get("PRIVATE_DATA_PAT", "")
+
+
+def _load_private(name: str) -> Any:
+    """VERITY-private 에서 data/<name> 을 읽는다. 1MB 초과는 download_url 경유."""
+    if not _PRIV_PAT:
+        return None
+    import urllib.request
+
+    hdr = {
+        "Authorization": "Bearer " + _PRIV_PAT,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    try:
+        req = urllib.request.Request(
+            f"https://api.github.com/repos/{_PRIV_REPO}/contents/data/{name}?ref={_PRIV_BRANCH}"
+        )
+        for k, v in hdr.items():
+            req.add_header(k, v)
+        with urllib.request.urlopen(req, timeout=10) as r:
+            meta = json.loads(r.read())
+        content = meta.get("content") or ""
+        if content:
+            import base64
+
+            return json.loads(base64.b64decode(content))
+        du = meta.get("download_url")
+        if not du:
+            return None
+        req2 = urllib.request.Request(du)
+        req2.add_header("Authorization", "Bearer " + _PRIV_PAT)
+        with urllib.request.urlopen(req2, timeout=20) as r2:
+            return json.loads(r2.read())
+    except Exception as e:  # noqa: BLE001 — 폴백 실패는 조용히(내부 블록만 비고 챗은 계속)
+        _logger.info("internal_context: %s private 로드 실패 (%s)", name, type(e).__name__)
+        return None
 
 _MAX_TICKER_DETAIL = 6      # 질문에 걸린 종목 상세 상한
 _MAX_CHARS = 14000          # 내부 블록 전체 상한 (합성 프롬프트 예산 보호)
@@ -68,6 +116,9 @@ def _load(name: str) -> Any:
                 return json.load(f)
         except (OSError, json.JSONDecodeError) as e:
             _logger.info("internal_context: %s 로컬 로드 실패 (%s)", name, type(e).__name__)
+    priv = _load_private(name)
+    if priv is not None:
+        return priv
     if not _REMOTE_BASE:
         return None
     # 비공개 원격 폴백 — 토큰이 있을 때만. 공개 URL 을 여기에 넣지 말 것(= 재배포).
