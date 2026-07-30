@@ -59,6 +59,8 @@ RETIRED_PUBLISH = {
     "history.json",
     "system_health_snapshot.json",
     "trending_kr.json",
+    # 2026-07-30 PM 은퇴 — 생산 경로 부재(collector·builder·workflow 0건)로 영구 stale 였음.
+    "nps_fund_returns.json",
 }
 
 KST = timezone(timedelta(hours=9))
