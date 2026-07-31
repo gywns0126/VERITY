@@ -14,13 +14,14 @@
 """
 from __future__ import annotations
 
+import html
 import json
 import logging
 import re
 import os
 import time
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import requests
 
@@ -84,13 +85,112 @@ def _fetch_summary(lang: str, title: str) -> Optional[Dict[str, Any]]:
         logger.warning("[profile] %s:%s 폐기 — 직업 키워드 없음(동명이인 의심): %.50s",
                        lang, title, extract)
         return None
-    return {
+    out = {
         "name": j.get("title"),
         "summary": extract,
         "source": "위키백과",
         "source_url": (j.get("content_urls") or {}).get("desktop", {}).get("page"),
         "lang": lang,
     }
+    img = _fetch_image(j)
+    if img:
+        out["image"] = img
+    return out
+
+
+# ── 인물 사진 (2026-07-30 신설) ──────────────────────────────────────────────
+# 프로필 텍스트와 같은 위키 경로에서 사진만 추가. 새 소스 0.
+#
+# 🚨 fail-closed — 자유 라이선스로 **확인된** 사진만 싣는다.
+#   영문 위키백과는 생존 인물의 비자유 이미지를 금지(자유 대체본 생성 가능)하므로 실측상
+#   대부분 CC/PD 지만, 정책에 기대지 않고 파일별 extmetadata 를 매번 확인한다.
+#   라이선스 판정 실패 = 사진 생략. 조용히 권리 미확인본을 공개하지 않는다.
+#   실측(2026-07-30, 추적 16인): 자유 라이선스 11 / 위키에 사진 자체 없음 5 / 판정불가 0.
+#
+# CC BY·BY-SA 는 저작자 표시가 의무 → artist/license/license_url 을 함께 저장해
+# 컴포넌트가 사진 옆에 표기할 수 있게 한다. 표기 없이 쓰면 라이선스 위반이다.
+# BY-SA 는 동일조건 변경허락이 걸리므로 원본을 자르기/리사이즈만 할 것(합성·색보정 금지).
+_FREE_LICENSE_HINTS = ("cc0", "cc by", "cc-by", "public domain", "pd-", "attribution")
+
+
+def _image_filename(url: str) -> Optional[str]:
+    """업로드 URL → File: 이름. thumb 경로는 .../thumb/a/bc/<파일명>/<크기>-... 구조."""
+    if not url:
+        return None
+    if "/thumb/" in url:
+        parts = url.split("/thumb/", 1)[1].split("/")
+        return unquote(parts[2]) if len(parts) > 2 else None
+    return unquote(url.rsplit("/", 1)[-1])
+
+
+def _fetch_image(summary: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """REST summary 응답 → 자유 라이선스 사진 메타. 미확인이면 None."""
+    thumb = (summary.get("thumbnail") or {}).get("source")
+    if not thumb:
+        return None
+    fname = _image_filename(thumb)
+    if not fname:
+        return None
+    for host in ("commons.wikimedia.org", "en.wikipedia.org"):
+        try:
+            r = requests.get(
+                f"https://{host}/w/api.php",
+                params={"action": "query", "titles": f"File:{fname}",
+                        "prop": "imageinfo", "iiprop": "extmetadata", "format": "json"},
+                headers=_UA, timeout=15,
+            )
+            if r.status_code != 200:
+                continue
+            page = list(r.json()["query"]["pages"].values())[0]
+            meta = page["imageinfo"][0]["extmetadata"]
+        except Exception:                                          # noqa: BLE001
+            continue
+        lic = (meta.get("LicenseShortName", {}).get("value") or "").strip()
+        if not any(h in lic.lower() for h in _FREE_LICENSE_HINTS):
+            logger.warning("[profile] %s 사진 생략 — 자유 라이선스 아님/미확인(%s)", fname, lic or "?")
+            return None
+        # Artist 는 HTML 조각으로 온다 — 태그 제거 후 엔티티까지 풀어야 화면에 '&amp;' 가 안 남는다.
+        artist = html.unescape(
+            re.sub(r"<[^>]+>", "", meta.get("Artist", {}).get("value") or "")
+        ).strip()
+        artist = re.sub(r"\s+", " ", artist)
+        return {
+            "url": thumb,
+            "width": (summary.get("thumbnail") or {}).get("width"),
+            "height": (summary.get("thumbnail") or {}).get("height"),
+            "artist": artist[:120] or None,
+            "license": lic,
+            "license_url": (meta.get("LicenseUrl", {}).get("value") or "").strip() or None,
+            "file_page": f"https://{host}/wiki/File:{quote(fname)}",
+        }
+    logger.warning("[profile] %s 사진 생략 — 라이선스 조회 실패", fname)
+    return None
+
+
+def backfill_images(cache: Dict[str, Any]) -> int:
+    """기존 캐시 항목에 사진만 덧붙인다 (텍스트 재조회 없음).
+
+    캐시가 이미 차 있으면 collect_profiles 가 fetch_profile 을 건너뛰므로, 이 경로가 없으면
+    사진이 영원히 안 붙는다. image 키가 이미 있으면(성공이든 실패 후 None 이든) 재시도하지 않는다.
+    """
+    added = 0
+    for inst, v in cache.items():
+        if not isinstance(v, dict) or "image" in v or not v.get("name"):
+            continue
+        lang = v.get("lang") or "en"
+        try:
+            r = requests.get(
+                f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{quote(v['name'])}",
+                headers=_UA, timeout=15)
+            j = r.json() if r.status_code == 200 else {}
+        except Exception:                                          # noqa: BLE001
+            j = {}
+        img = _fetch_image(j) if j else None
+        v["image"] = img          # None 도 기록 — 매 run 재조회 방지
+        if img:
+            added += 1
+        time.sleep(0.25)
+    return added
 
 
 def fetch_profile(institution: str) -> Optional[Dict[str, Any]]:
@@ -168,6 +268,12 @@ def collect_profiles(institutions: List[str], refresh: bool = False) -> Dict[str
         p = fetch_profile(inst)
         if p:
             cache[inst] = p
+
+    # 기존 캐시 항목에 사진 백필 (2026-07-30). 캐시가 이미 차 있으면 위 루프가 skip 되므로
+    # 이 경로가 없으면 사진이 영원히 안 붙는다. image 키가 있으면 재조회하지 않는다.
+    n_img = backfill_images(cache)
+    if n_img:
+        logger.info("[profile] 사진 %d건 신규 확보", n_img)
 
     # 영문 프로필만 한국어 병기 (한국어 위키에서 온 건 그대로).
     need = [
