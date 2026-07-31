@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-07-31T06:32:10+09:00",
+  "collected_at": "2026-07-31T09:02:12+09:00",
   "macro": {
     "usd_krw": {
       "value": 1421.84,
@@ -1351,7 +1351,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-07-31T06:32:21+09:00",
+    "updated_at": "2026-07-31T09:03:12+09:00",
     "credit_spreads": {
       "us_ig_oas": 1.0,
       "us_ig_risk": "MODERATE",
@@ -1360,36 +1360,6 @@
     }
   },
   "global_events": [
-    {
-      "name": "미국 GDP 발표",
-      "severity": "medium",
-      "impact_area": [
-        "경기",
-        "전체시장"
-      ],
-      "impact": "예상 상회 시 경기 낙관→주식↑, 하회 시 침체 우려",
-      "action": "경기 사이클 판단 자료로 활용",
-      "date": "2026-07-30",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 53,
-      "d_day": -1
-    },
-    {
-      "name": "미국 주간 실업수당 청구",
-      "severity": "medium",
-      "impact_area": [
-        "경기",
-        "고용"
-      ],
-      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
-      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
-      "date": "2026-07-30",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 180,
-      "d_day": -1
-    },
     {
       "name": "BOJ 금융정책결정회합",
       "severity": "high",
@@ -1571,12 +1541,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 26.26
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 100.9
   },
   "schema_version": "v0"
 }
