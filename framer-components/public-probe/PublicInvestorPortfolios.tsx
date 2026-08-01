@@ -93,6 +93,131 @@ function fmtMoney(v: number | null | undefined, krw: boolean, fx: number): strin
 const signed = (v: number | null | undefined) =>
     v == null || !Number.isFinite(v) ? "—" : (v > 0 ? "+" : "") + v.toFixed(1) + "%"
 
+// ── 인물 사진 / 종목 로고 (2026-08-01) ──────────────────────────────────────
+// 사진 = 위키미디어 자유 라이선스만. 수집기(investor_profiles.py)가 파일별 extmetadata 로
+//   라이선스를 확인해 fail-closed 로 걸러 보내므로 여기서는 온 것만 그린다.
+//   🚨 CC BY·BY-SA 는 저작자 표시가 의무 → 프로필 카드에 artist/license 를 반드시 함께 노출.
+//   🚨 BY-SA 동일조건 변경허락 → 원본을 자르기·리사이즈만 한다. objectFit:"cover" 외에
+//      색보정·합성·오버레이 금지(파생물이 되면 같은 라이선스로 배포해야 한다).
+//
+// 로고 = 토스 CDN. 미국 티커도 서빙된다(2026-08-01 실호출 AAPL/NVDA/MSFT 전부 200).
+//   🚨 [[project_logo_toss_lane_2026_07_12]] — 라이브 로고 레인은 **토스**다.
+//      Brandfetch/logo_map 으로 갈아타지 말 것(2026-07-12 롤백 사고, PM 격분).
+//      404 는 이니셜 폴백 — 기존 종목 리포트와 동일 패턴.
+const TOSS_LOGO = (t: string) =>
+    `https://static.toss.im/png-icons/securities/icn-sec-fill-${encodeURIComponent(t)}.png`
+
+function initialsOf(s?: string | null): string {
+    const w = (s || "")
+        .replace(/[^A-Za-z가-힣0-9 ]/g, " ")
+        .split(/\s+/)
+        .filter(Boolean)
+    if (!w.length) return "?"
+    if (/[가-힣]/.test(w[0])) return w[0].slice(0, 2)
+    return w.slice(0, 2).map((x) => x[0]).join("").toUpperCase()
+}
+
+// 원형 아바타 — 사진 있으면 사진, 없거나 로드 실패면 이니셜.
+function Avatar({
+    src,
+    name,
+    size,
+    C,
+}: {
+    src?: string | null
+    name?: string | null
+    size: number
+    C: typeof LIGHT
+}) {
+    // 훅은 조건부 return 위 ([[feedback_framer_hooks_top_level]])
+    const [bad, setBad] = useState(false)
+    const box = {
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        flex: `0 0 ${size}px`,
+    } as const
+    if (src && !bad) {
+        return (
+            <img
+                src={src}
+                alt=""
+                loading="lazy"
+                onError={() => setBad(true)}
+                style={{
+                    ...box,
+                    objectFit: "cover",
+                    display: "block",
+                    background: C.hi,
+                }}
+            />
+        )
+    }
+    return (
+        <span
+            aria-hidden="true"
+            style={{
+                ...box,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: C.vtS,
+                color: C.vt,
+                fontSize: Math.max(10, Math.round(size * 0.36)),
+                fontWeight: 700,
+                letterSpacing: "-0.02em",
+            }}
+        >
+            {initialsOf(name)}
+        </span>
+    )
+}
+
+// 종목 로고 — 토스 CDN. 404/미해결 티커는 이니셜.
+function TickerLogo({ ticker, C }: { ticker?: string | null; C: typeof LIGHT }) {
+    const [bad, setBad] = useState(false)
+    const S = 22
+    const box = {
+        width: S,
+        height: S,
+        borderRadius: 7,
+        flex: `0 0 ${S}px`,
+    } as const
+    if (ticker && !bad) {
+        return (
+            <img
+                src={TOSS_LOGO(ticker)}
+                alt=""
+                loading="lazy"
+                onError={() => setBad(true)}
+                style={{
+                    ...box,
+                    objectFit: "cover",
+                    display: "block",
+                    background: C.hi,
+                }}
+            />
+        )
+    }
+    return (
+        <span
+            aria-hidden="true"
+            style={{
+                ...box,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: C.hi,
+                color: C.faint,
+                fontSize: 9.5,
+                fontWeight: 700,
+            }}
+        >
+            {(ticker || "").slice(0, 2).toUpperCase() || "—"}
+        </span>
+    )
+}
+
 // 캔버스 미리보기용 최소 표본 — 빈 렌더 금지([[feedback_framer_layout_annotation_required]]).
 // 실데이터 형태와 동일한 키만 사용(형태 drift 방지).
 const CANVAS_SAMPLE = {
@@ -120,7 +245,19 @@ const CANVAS_SAMPLE = {
                 { to: "2025-12-31", return_pct: 4.58, coverage_pct: 99.3 },
                 { to: "2026-03-31", return_pct: -0.86, coverage_pct: 95.7 },
             ],
-            profile: null,
+            // 캔버스에서도 아바타·출처가 보이도록 실데이터와 같은 형태로 채운다(빈 렌더 금지).
+            profile: {
+                name: "워런 버핏",
+                summary: "",
+                source: "위키백과",
+                source_url: "https://ko.wikipedia.org/wiki/워런_버핏",
+                image: {
+                    url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Warren_Buffett_KU_Visit.jpg/330px-Warren_Buffett_KU_Visit.jpg",
+                    artist: "Mark Hirschey",
+                    license: "CC BY-SA 2.0",
+                    license_url: "https://creativecommons.org/licenses/by-sa/2.0",
+                },
+            },
             top_holdings: [
                 {
                     ticker: "AAPL",
@@ -596,7 +733,8 @@ export default function PublicInvestorPortfolios(props: {
                                         background: on ? C.vtS : "transparent",
                                         padding: "11px 16px",
                                         display: "grid",
-                                        gridTemplateColumns: "20px minmax(0,1fr) auto",
+                                        gridTemplateColumns:
+                                            "20px 30px minmax(0,1fr) auto",
                                         gap: 10,
                                         alignItems: "center",
                                     }}
@@ -612,6 +750,12 @@ export default function PublicInvestorPortfolios(props: {
                                     >
                                         {i + 1}
                                     </span>
+                                    <Avatar
+                                        src={v.profile?.image?.url}
+                                        name={v.person || v.institution}
+                                        size={30}
+                                        C={C}
+                                    />
                                     <span style={{ minWidth: 0 }}>
                                         <span
                                             style={{
@@ -704,18 +848,39 @@ export default function PublicInvestorPortfolios(props: {
                             alignItems: "flex-start",
                         }}
                     >
-                        <div>
-                            <div
-                                style={{
-                                    fontSize: 20,
-                                    fontWeight: 800,
-                                    letterSpacing: "-0.02em",
-                                }}
-                            >
-                                {cur.person || cur.institution}
-                            </div>
-                            <div style={{ color: C.faint, fontSize: 12.5, marginTop: 3 }}>
-                                {cur.institution} · CIK {cur.cik}
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 12,
+                                minWidth: 0,
+                            }}
+                        >
+                            <Avatar
+                                src={cur.profile?.image?.url}
+                                name={cur.person || cur.institution}
+                                size={52}
+                                C={C}
+                            />
+                            <div style={{ minWidth: 0 }}>
+                                <div
+                                    style={{
+                                        fontSize: 20,
+                                        fontWeight: 800,
+                                        letterSpacing: "-0.02em",
+                                    }}
+                                >
+                                    {cur.person || cur.institution}
+                                </div>
+                                <div
+                                    style={{
+                                        color: C.faint,
+                                        fontSize: 12.5,
+                                        marginTop: 3,
+                                    }}
+                                >
+                                    {cur.institution} · CIK {cur.cik}
+                                </div>
                             </div>
                         </div>
                         <div
@@ -770,6 +935,37 @@ export default function PublicInvestorPortfolios(props: {
                                         위키백과 · {cur.profile.name}
                                         {cur.profile.summary_ko ? " · 자동 번역" : ""}
                                     </a>
+                                </div>
+                            ) : null}
+                            {/* 🚨 사진 저작자 표시 = CC BY·BY-SA 의무 사항. 지우지 말 것.
+                                표기 없이 쓰면 라이선스 위반이다. */}
+                            {cur.profile.image ? (
+                                <div
+                                    style={{
+                                        marginTop: 4,
+                                        fontSize: 11.5,
+                                        color: C.faint,
+                                    }}
+                                >
+                                    사진{" "}
+                                    {cur.profile.image.artist
+                                        ? cur.profile.image.artist + " · "
+                                        : ""}
+                                    {cur.profile.image.license_url ? (
+                                        <a
+                                            href={cur.profile.image.license_url}
+                                            target="_blank"
+                                            rel="noopener"
+                                            style={{
+                                                color: C.faint,
+                                                textDecoration: "underline",
+                                            }}
+                                        >
+                                            {cur.profile.image.license}
+                                        </a>
+                                    ) : (
+                                        cur.profile.image.license
+                                    )}
                                 </div>
                             ) : null}
                         </div>
@@ -925,11 +1121,32 @@ export default function PublicInvestorPortfolios(props: {
                                                 padding: "9px 9px",
                                                 fontSize: 13.5,
                                                 borderTop: `1px solid ${C.line}`,
-                                                fontWeight: h.ticker ? 650 : 500,
+                                                // 🚨 라이브 정합 — #213 이 650→600 일괄 변경 시
+                                                // 이 삼항만 놓쳤고 라이브에는 600 이 반영돼
+                                                // 있었다. repo 를 라이브에 맞춘다(RULE 11).
+                                                fontWeight: h.ticker ? 600 : 500,
                                                 color: h.ticker ? C.ink : C.faint,
                                             }}
                                         >
-                                            {h.ticker || h.cusip}
+                                            <span
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 8,
+                                                    minWidth: 0,
+                                                }}
+                                            >
+                                                <TickerLogo ticker={h.ticker} C={C} />
+                                                <span
+                                                    style={{
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        whiteSpace: "nowrap",
+                                                    }}
+                                                >
+                                                    {h.ticker || h.cusip}
+                                                </span>
+                                            </span>
                                         </td>
                                         <td
                                             style={{
@@ -1027,7 +1244,9 @@ export default function PublicInvestorPortfolios(props: {
                 }}
             >
                 출처 — SEC EDGAR 13F-HR. 티커는 OpenFIGI로 CUSIP을 변환했으며 변환되지 않은
-                항목은 CUSIP으로 표시합니다. 인물 소개 출처는 각 카드에 표기했습니다.
+                항목은 CUSIP으로 표시합니다. 인물 소개와 사진은 위키미디어에서 가져왔으며
+                자유 라이선스로 확인된 것만 실었습니다. 저작자와 라이선스는 각 카드에 표기했습니다.
+                종목 로고는 토스 제공입니다.
                 운용사명 옆 인물은 대표 연관 인물이며 현재 운용 주체와 다를 수 있습니다.
             </div>
         </div>
