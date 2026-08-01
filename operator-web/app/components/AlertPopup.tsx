@@ -1,8 +1,8 @@
 "use client"
-// AlertPopup — 고영향 이벤트 긴급 팝업. 프레이머판 포팅(React, Framer 종속 제거).
+// AlertPopup — 고영향 이벤트 긴급 팝업. 공개 알파네스트 디자인(토스식 부드러운 카드).
 // 공개 사실만(urgent_alerts.json) fetch — 크라운주얼/인증데이터 미접근(봉인 규율).
 import { useEffect, useState } from "react"
-import { useDark, palette } from "@/lib/theme"
+import { useDark, palette, FONT, NUM } from "@/lib/theme"
 import { fetchPublic } from "@/lib/api"
 
 const SEEN_KEY = "verity_urgent_seen"
@@ -13,11 +13,19 @@ type Alert = {
     type: string
     headline: string
     date?: string
+    krw?: number
     source_url?: string
 }
 
 function alertKey(a: Alert) {
     return String(a.source_url || "") + "|" + String(a.headline || "")
+}
+
+function fmtKrw(v?: number): string | null {
+    if (!v || v <= 0) return null
+    const eok = v / 1e8
+    if (eok >= 1) return `${eok.toFixed(eok >= 100 ? 0 : 1)}억`
+    return `${Math.round(v / 1e4).toLocaleString()}만`
 }
 
 export default function AlertPopup({ maxVisible = 3 }: { maxVisible?: number }) {
@@ -55,9 +63,14 @@ export default function AlertPopup({ maxVisible = 3 }: { maxVisible?: number }) 
     if (shown.length === 0) return null
 
     function accent(t: string) {
-        if (t === "insider_buy") return c.buy
-        if (t === "insider_sell") return c.sell
-        return c.purple
+        if (t === "insider_buy") return c.up
+        if (t === "insider_sell") return c.down
+        return c.vt
+    }
+    function accentSoft(t: string) {
+        if (t === "insider_buy") return c.upS
+        if (t === "insider_sell") return c.downS
+        return c.vtS
     }
     function tag(t: string) {
         if (t === "insider_buy") return "임원·대주주 매수"
@@ -77,46 +90,64 @@ export default function AlertPopup({ maxVisible = 3 }: { maxVisible?: number }) 
                 gap: 10,
                 width: "100%",
                 maxWidth: 380,
+                fontFamily: FONT,
             }}
         >
-            {shown.map((a, i) => (
-                <div
-                    key={alertKey(a) + i}
-                    style={{
-                        background: c.card,
-                        borderRadius: 16,
-                        border: `1px solid ${c.border}`,
-                        borderLeft: `3px solid ${accent(a.type)}`,
-                        boxShadow: dark ? "0 8px 30px rgba(0,0,0,0.5)" : "0 8px 30px rgba(0,0,0,0.14)",
-                        padding: "14px 15px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 7,
-                    }}
-                >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: accent(a.type) }}>{tag(a.type)}</span>
-                        <button
-                            onClick={() => dismiss(a)}
-                            aria-label="닫기"
-                            style={{ border: "none", background: "transparent", color: c.sub, fontSize: 16, cursor: "pointer", padding: 2 }}
-                        >
-                            ×
-                        </button>
+            {shown.map((a, i) => {
+                const ac = accent(a.type)
+                const krw = fmtKrw(a.krw)
+                return (
+                    <div
+                        key={alertKey(a) + i}
+                        style={{
+                            background: c.card,
+                            borderRadius: 16,
+                            borderLeft: `3px solid ${ac}`,
+                            boxShadow: dark ? "0 8px 30px rgba(0,0,0,0.5)" : "0 8px 30px rgba(0,0,0,0.14)",
+                            padding: "14px 16px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 7,
+                        }}
+                    >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span
+                                style={{
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    color: ac,
+                                    background: accentSoft(a.type),
+                                    borderRadius: 8,
+                                    padding: "3px 8px",
+                                }}
+                            >
+                                {tag(a.type)}
+                            </span>
+                            <button
+                                onClick={() => dismiss(a)}
+                                aria-label="닫기"
+                                style={{ border: "none", background: "transparent", color: c.faint, fontSize: 16, cursor: "pointer", padding: 2, lineHeight: 1 }}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: c.ink, letterSpacing: "-0.02em" }}>{a.name}</span>
+                            {krw ? <span style={{ fontSize: 13, fontWeight: 700, color: ac, ...NUM }}>{krw}</span> : null}
+                        </div>
+                        <div style={{ fontSize: 13, color: c.sub, lineHeight: 1.45 }}>{a.headline}</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
+                            <span style={{ fontSize: 11, color: c.faint, ...NUM }}>{a.date} · 공시 사실</span>
+                            {a.source_url ? (
+                                <a href={a.source_url} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 600, color: ac, textDecoration: "none" }}>
+                                    DART 원문 →
+                                </a>
+                            ) : null}
+                        </div>
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: c.fg, letterSpacing: "-0.02em" }}>{a.name}</div>
-                    <div style={{ fontSize: 13, color: c.fg, lineHeight: 1.45 }}>{a.headline}</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
-                        <span style={{ fontSize: 11, color: c.sub }}>{a.date} · 공시 사실</span>
-                        {a.source_url ? (
-                            <a href={a.source_url} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 600, color: accent(a.type), textDecoration: "none" }}>
-                                DART 원문 →
-                            </a>
-                        ) : null}
-                    </div>
-                </div>
-            ))}
-            {extra > 0 ? <div style={{ fontSize: 11, color: c.sub, textAlign: "center" }}>외 {extra}건 더</div> : null}
+                )
+            })}
+            {extra > 0 ? <div style={{ fontSize: 11, color: c.faint, textAlign: "center", ...NUM }}>외 {extra}건 더</div> : null}
         </div>
     )
 }
