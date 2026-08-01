@@ -1237,6 +1237,8 @@ ROUTES = {
     "system_health_snapshot": _make_operator_file_handler("system_health_snapshot.json"),
     "brain_kb_usage": _make_operator_file_handler("brain_kb_usage.json"),
     "admin_todos": _make_operator_file_handler("admin_todos.json"),
+    # ④ 검증 층(오퍼레이터 authed) — IC/팩터건강/성과. authed=본인전용이라 공개 노출 아님(봉인 무관).
+    "verification": _make_operator_file_handler("verification_report.json"),
 }
 
 # 운영 변경(POST/DELETE) + 목록(GET) 라우트 — method-aware.

@@ -27,6 +27,7 @@ UPLOADS = [
     ("data/system_health_snapshot.json", "_operator/system_health_snapshot.json", "application/json"),
     ("data/brain_kb_usage.json", "_operator/brain_kb_usage.json", "application/json"),
     ("data/admin_todos.json", "_operator/admin_todos.json", "application/json"),
+    ("data/verification_report.json", "_operator/verification_report.json", "application/json"),
 ]
 
 

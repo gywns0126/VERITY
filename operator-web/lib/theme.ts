@@ -16,7 +16,7 @@ const LIGHT = {
     line: "#e5e8eb", track: "#eef1f4", hi: "#f6f7f9",
     vt: "#6c5ce7", vtS: "#f0edff",
     up: "#f04452", down: "#3182f6", upS: "#fff0f1", downS: "#eef4ff",
-    green: "#15c47e", greenS: "#eafaf3",
+    green: "#15c47e", greenS: "#eafaf3", amber: "#ff9500", amberS: "#fff6e9",
 }
 // 다크 up/down = 라이브 최신 PublicInvestorPortfolios 정합(2026-07-12 접근성 검증값).
 //   🚨 옛 #ff6b76/#5a9cff 로 되돌리지 말 것 — down #4a90f0 은 OKLCH 다크밴드 준수 + 색약 ΔE 79.8 PASS,
@@ -26,7 +26,7 @@ const DARK = {
     line: "#252b34", track: "#222a33", hi: "#1e242c",
     vt: "#a99bff", vtS: "#241f3a",
     up: "#f04452", down: "#4a90f0", upS: "#2a1a1d", downS: "#1b2740",
-    green: "#34e08a", greenS: "#12241c",
+    green: "#34e08a", greenS: "#12241c", amber: "#f0a020", amberS: "#2a2013",
 }
 
 export type Palette = typeof LIGHT

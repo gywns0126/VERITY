@@ -6,6 +6,7 @@ import AlertPopup from "./components/AlertPopup"
 import StockSearch from "./components/StockSearch"
 import OperatorPicks from "./components/OperatorPicks"
 import TriSynthesisPanel from "./components/TriSynthesisPanel"
+import VerificationPanel from "./components/VerificationPanel"
 
 export default function Home() {
     const dark = useDark()
@@ -44,8 +45,8 @@ export default function Home() {
                     <Placeholder c={c} text="중용 포트폴리오 — US 일봉(#8)+사전등록 상수 승인 대기." />
                 </Section>
 
-                <Section c={c} title="④ 검증" note="N 진척·VAMS·2027 게이트">
-                    <Placeholder c={c} text="검증 trail 패널 포팅 대기." />
+                <Section c={c} title="④ 검증" note="학습루프·팩터건강·IC·2027 게이트">
+                    <VerificationPanel />
                 </Section>
             </div>
 
