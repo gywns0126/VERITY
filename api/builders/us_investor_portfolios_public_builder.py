@@ -88,7 +88,8 @@ _CASH_CAVEAT_CONC = 85      # 집중도가 이 이상이면 현금·채권 미�
 
 def _disclosed_style(conc, moves: int, n: int, rets: list) -> Dict[str, Any]:
     """집중도·회전·변동을 평서문으로. 판정·점수 없음."""
-    out: Dict[str, Any] = {"label": None, "detail": None, "badges": [], "cash_caveat": False}
+    out: Dict[str, Any] = {"label": None, "detail": None, "badges": [],
+                           "cash_caveat": False, "replication_vol": None}
     if conc is None or not n:
         return out
     for lo, label, detail in _STYLE_BANDS:
@@ -103,6 +104,9 @@ def _disclosed_style(conc, moves: int, n: int, rets: list) -> Dict[str, Any]:
     if len(vals) >= 3:
         m = sum(vals) / len(vals)
         sd = (sum((v - m) ** 2 for v in vals) / len(vals)) ** 0.5
+        # 산점도 Y축용으로 값 자체를 내보낸다(배지 판정에만 쓰고 버리면 프론트가 재계산해야 함).
+        # 🚨 분기 표본이 4~8개뿐이라 정밀도가 낮다. 순위 비교용이지 절대값 해석용이 아니다.
+        out["replication_vol"] = round(sd, 2)
         if sd >= _HIGH_VOL:
             out["badges"].append("기복 큼")
     out["cash_caveat"] = conc >= _CASH_CAVEAT_CONC

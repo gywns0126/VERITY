@@ -244,6 +244,7 @@ const CANVAS_SAMPLE = {
                 detail: "상위 10종목이 대부분입니다",
                 badges: [],
                 cash_caveat: true,
+                replication_vol: 4.0,
             },
             trailing_4q_replication_pct: 11.37,
             quarterly_replication_returns: [
@@ -420,6 +421,163 @@ function ReturnLine({ rs, C }: { rs: any[]; C: typeof LIGHT }) {
                     )}
                 </svg>
             )}
+        </div>
+    )
+}
+
+// 스타일 지도 — 집중도 × 복제 변동성 2축 산점도 (PM 2026-08-01).
+//
+// 🚨 왜 육각형(레이더)이 아니라 2축인가:
+//   쓸 수 있는 축을 전부 재보니 독립인 건 둘뿐이었다. 실측 상관 —
+//     집중도 ↔ 종목수 **-0.90** (사실상 같은 축) / 집중도 ↔ 변동성 +0.07 (독립)
+//     변동성 ↔ 복제수익 +0.37 / 종목수 ↔ 변동성 -0.17
+//   나머지 후보(종목수·신규수)는 holdings 상한 300 에 걸려 왜곡되고, 분기 총액변동은
+//   주가 등락이 섞여 성향과 무관하다. 6축을 채우면 4개가 가짜 축이 된다.
+//   레이더는 면적이 값의 제곱으로 커지고 축 순서가 모양을 바꿔, 가짜 축이 섞이면
+//   특히 해롭다. 그래서 정직하게 2축만 그린다. 육각형 요청이 다시 오면 이 주석부터 볼 것.
+//
+// 🚨 분면에 이름을 붙이지 않는다("공격형" 등). 13F 는 현금·채권·숏이 빠져 성향 판정의
+//   근거가 못 된다(버핏 집중도 90.7% = 16인 중 4위). 위치는 사실, 해석은 독자 몫.
+function StyleMap({
+    list,
+    sel,
+    onPick,
+    C,
+}: {
+    list: any[]
+    sel: number
+    onPick: (i: number) => void
+    C: typeof LIGHT
+}) {
+    const [w, setW] = useState(560)
+    const hostRef = useRef<HTMLDivElement | null>(null)
+
+    useEffect(() => {
+        const el = hostRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((e) => {
+            const cw = e[0]?.contentRect?.width
+            if (cw && cw > 0) setW(Math.round(cw))
+        })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+
+    const pts = list
+        .map((v, i) => ({
+            i,
+            name: v.person || v.institution,
+            x: Number(v.top10_concentration_pct),
+            y: Number(v.disclosed_style?.replication_vol),
+        }))
+        .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
+
+    // 🚨 ReturnLine 과 같은 이유로 실픽셀 좌표를 쓴다 — viewBox 를 늘리면 텍스트까지 왜곡된다.
+    const H = 300
+    const PAD = { t: 16, r: 18, b: 34, l: 44 }
+    if (pts.length < 3) return null
+    const xs = pts.map((p) => p.x)
+    const ys = pts.map((p) => p.y)
+    const x0 = 0
+    const x1 = 100
+    const y0 = 0
+    const y1 = Math.max(...ys) * 1.15 || 1
+    const innerW = Math.max(140, w - PAD.l - PAD.r)
+    const innerH = H - PAD.t - PAD.b
+    const px = (v: number) => PAD.l + ((v - x0) / (x1 - x0)) * innerW
+    const py = (v: number) => PAD.t + (1 - (v - y0) / (y1 - y0)) * innerH
+
+    return (
+        <div ref={hostRef} style={{ width: "100%" }}>
+            <svg
+                width={w}
+                height={H}
+                viewBox={`0 0 ${w} ${H}`}
+                style={{ display: "block" }}
+                role="img"
+                aria-label="집중도와 분기 기복으로 본 운용사 분포"
+            >
+                {[0, 25, 50, 75, 100].map((g) => (
+                    <g key={g}>
+                        <line
+                            x1={px(g)}
+                            y1={PAD.t}
+                            x2={px(g)}
+                            y2={PAD.t + innerH}
+                            stroke={C.line}
+                            strokeWidth={1}
+                            strokeDasharray="2 4"
+                        />
+                        <text
+                            x={px(g)}
+                            y={H - 16}
+                            textAnchor="middle"
+                            fill={C.faint}
+                            fontFamily={FONT}
+                            fontSize={10.5}
+                            fontWeight={550}
+                        >
+                            {g}%
+                        </text>
+                    </g>
+                ))}
+                <text
+                    x={PAD.l + innerW / 2}
+                    y={H - 3}
+                    textAnchor="middle"
+                    fill={C.faint}
+                    fontFamily={FONT}
+                    fontSize={11}
+                    fontWeight={600}
+                >
+                    상위 10종목 비중 — 오른쪽일수록 몇 개에 몰아서
+                </text>
+                <text
+                    x={12}
+                    y={PAD.t + innerH / 2}
+                    textAnchor="middle"
+                    fill={C.faint}
+                    fontFamily={FONT}
+                    fontSize={11}
+                    fontWeight={600}
+                    transform={`rotate(-90 12 ${PAD.t + innerH / 2})`}
+                >
+                    분기 기복 — 위일수록 출렁임
+                </text>
+                {pts.map((p) => {
+                    const on = p.i === sel
+                    return (
+                        <g
+                            key={p.i}
+                            onClick={() => onPick(p.i)}
+                            style={{ cursor: "pointer" }}
+                        >
+                            <circle
+                                cx={px(p.x)}
+                                cy={py(p.y)}
+                                r={on ? 8 : 5}
+                                fill={on ? C.vt : C.card}
+                                stroke={on ? C.vt : C.faint}
+                                strokeWidth={on ? 0 : 1.6}
+                            />
+                            <title>{`${p.name} · 집중도 ${p.x.toFixed(0)}% · 기복 ${p.y.toFixed(1)}`}</title>
+                            {on ? (
+                                <text
+                                    x={px(p.x)}
+                                    y={py(p.y) - 13}
+                                    textAnchor="middle"
+                                    fill={C.vt}
+                                    fontFamily={FONT}
+                                    fontSize={12}
+                                    fontWeight={750}
+                                >
+                                    {p.name}
+                                </text>
+                            ) : null}
+                        </g>
+                    )
+                })}
+            </svg>
         </div>
     )
 }
@@ -676,6 +834,44 @@ export default function PublicInvestorPortfolios(props: {
                     />
                     보유 기준일 {dot(cur?.report_date)} · 제출일 {dot(cur?.filed_at)}
                     {lagDays != null ? ` — 공시까지 ${lagDays}일` : ""}
+                </div>
+            </div>
+
+            {/* 스타일 지도 — 16명을 한 화면에 놓고 비교. 점을 누르면 아래 상세가 바뀐다
+                ([[feedback_in_component_interactivity]] — 컴포넌트 안에서 상호작용 완결). */}
+            <div
+                style={{
+                    background: C.card,
+                    borderRadius: 16,
+                    padding: "16px 18px 10px",
+                    marginBottom: 18,
+                }}
+            >
+                <div style={{ fontSize: 14, fontWeight: 750, letterSpacing: "-0.01em" }}>
+                    한눈에 보는 스타일
+                </div>
+                <div
+                    style={{
+                        color: C.faint,
+                        fontSize: 12.5,
+                        margin: "4px 0 6px",
+                        lineHeight: 1.55,
+                    }}
+                >
+                    점을 누르면 아래에서 자세히 볼 수 있습니다. 오른쪽일수록 소수 종목에
+                    몰아서 담았고, 위일수록 분기마다 성과가 출렁였습니다.
+                </div>
+                <StyleMap list={list} sel={sel} onPick={setSel} C={C} />
+                <div
+                    style={{
+                        fontSize: 11.5,
+                        color: C.faint,
+                        lineHeight: 1.55,
+                        paddingBottom: 6,
+                    }}
+                >
+                    위치는 공시 숫자를 그대로 옮긴 것이며 좋고 나쁨을 뜻하지 않습니다.
+                    현금·채권·공매도는 이 공시에 없어 반영되지 않습니다.
                 </div>
             </div>
 
