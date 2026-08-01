@@ -102277,42 +102277,30 @@
   },
   "brain_accuracy": {
     "grades": {
-      "AVOID": {
-        "count": 8,
-        "avg_return": 0.6,
-        "hit_rate": 12.5
-      },
       "CAUTION": {
-        "count": 19,
-        "avg_return": -0.1,
-        "hit_rate": 15.8
+        "count": 9,
+        "avg_return": -1.5,
+        "hit_rate": 33.3
       },
       "WATCH": {
-        "count": 23,
-        "avg_return": 1.1,
-        "hit_rate": 26.1
+        "count": 18,
+        "avg_return": 4.3,
+        "hit_rate": 66.7
+      },
+      "AVOID": {
+        "count": 2,
+        "avg_return": 8.5,
+        "hit_rate": 50.0
       }
     },
     "insight": "브레인 강력매수 평균 0% — 팩트 가중치 조정 검토 필요"
   },
   "brain_quality": {
-    "score": 28.8,
-    "status": "ok",
-    "period": "weekly",
-    "components": {
-      "positive_hit_rate_score": 20.0,
-      "avoid_avoidance_score": 8.8,
-      "grade_separation_score": 0.0
-    },
-    "metrics": {
-      "total_samples": 8,
-      "strong_buy_n": 0,
-      "buy_n": 0,
-      "avoid_n": 8,
-      "weighted_positive_hit_rate": 0.0,
-      "avoid_avg_return": 0.6,
-      "grade_spread_pp": null
-    }
+    "score": null,
+    "status": "insufficient_data",
+    "components": {},
+    "period": "monthly",
+    "note": "표본 2건 — 5건 이상 누적 필요"
   },
   "event_insights": [
     {
@@ -102906,21 +102894,21 @@
     }
   },
   "monthly_report": {
-    "title": "월간 종합 분석 (2026년 7월)",
-    "executive_summary": "지난 기간 실현 수익률 0%, 이번 리포트 기대수익률 0%로, 유의미한 투자 기회를 포착하지 못했습니다. 원/달러 환율 상승 및 반도체 섹터 자금 유출 등 거시경제 지표 악화로 시장 전반에 걸쳐 위험 회피 심리가 확산되었습니다. 현금 비중을 유지하며 방어적 관점을 지속하는 것이 최우선입니다.",
-    "performance_review": "지난 기간 '매수(BUY)' 추천은 0건이었습니다. 포트폴리오 수익률은 -0.83%를 기록했으며, 이는 시장의 방향성 부재 속에서 적극적인 포지션 구축을 지양한 결과입니다. 기회비용이 발생했으나, '돈을 잃지 않는 것'이 최우선 원칙이므로 불확실성이 높은 국면에서 무리한 진입을 회피한 것은 합리적 판단이었습니다.",
-    "sector_analysis": "생명보험, 백화점 등 경기 방어 및 내수 관련 섹터가 상대적 강세를 보인 반면, 통신장비, IT서비스 등 성장주 섹터는 약세를 면치 못했습니다. 자금 흐름 역시 전기장비, 석유가스 등 전통 산업으로 유입되고 IT, 반도체 등 기술주에서 유출되는 양상을 보였습니다. 이는 시장 참여자들이 인플레이션 및 경기 둔화 우려에 따라 성장주 비중을 축소하고 가치주 및 방어주로 이동하는 전형적인 위험 회피(Risk-off) 현상입니다.",
-    "macro_outlook": "시장 변동성을 나타내는 VIX 지수는 평균 17.7로 안정적이었으나, 장중 21.5까지 상승하는 등 잠재적 불안 요인이 상존합니다. 가장 큰 위험 신호는 원/달러 환율이 2.22% 상승하며 원화 약세가 심화된 점입니다. 이는 외국인 자금 유출을 가속화하고 수입 물가 상승을 유발하여 기업 마진에 부담을 줄 수 있습니다. 반면 금 가격은 10% 이상 급락하여 달러화 초강세 현상을 반영, 안전자산 선호 심리가 복합적인 양상을 띠고 있습니다.",
-    "brain_review": "Verity Brain은 해당 기간 매수 추천을 내지 않았습니다. 시장이 전반적으로 하락 압력을 받은 점을 고려할 때, 이는 손실 회피에 기여한 올바른 판단입니다. WATCH, CAUTION 등급의 평균 수익률이 0%로 집계된 것은 해당 등급의 '매수 보류' 시그널이 유효하게 작동했음을 의미합니다. 시스템의 '팩트 가중치 조정 검토' 의견이 있었으나, 현재와 같이 심리 지표(개선)와 실물 지표(환율 악화)가 괴리되는 구간에서는 사실(Fact) 데이터에 더 높은 가중치를 부여하는 현행 로직이 유효하다고 판단됩니다.",
-    "meta_insight": "이번 기간 보조 입력 신호의 단독 적중률 데이터가 부재하여 개별 신호의 유효성을 계량적으로 검증하기는 어렵습니다. 다만 정성적으로 판단할 때, '개선' 흐름을 보인 매크로 분위기 점수(평균 54.6)는 시장의 실제 방향성과 다소 괴리가 있었습니다. Brain이 이 신호에 과도하게 의존하지 않고, 환율 데이터 및 섹터 자금 흐름과 같은 객관적 데이터를 우선하여 보수적 결론을 내린 것은 긍정적으로 평가됩니다. 이는 개별 신호의 노이즈를 시스템이 성공적으로 필터링했음을 시사합니다.",
-    "strategy": "다음 월간 전략의 핵심은 '자본 보존'입니다. 원화 약세가 진정되기 전까지 신규 매수 진입은 극도로 보수적인 관점을 유지합니다. 포트폴리오 내 현금 비중을 현재 수준 또는 그 이상으로 유지하고, 환율 상승의 피해주(수입 원가 비중이 높은 기업, 외화 부채가 많은 기업)에 대한 비중 축소를 고려해야 합니다. 만약 신규 진입을 고려한다면, 제한적인 환율 영향과 견고한 수요를 가진 필수소비재 섹터 내에서만 안전마진이 확보된 기업을 선별적으로 검토할 것입니다.",
-    "risk_watch": "가장 주의해야 할 리스크는 '원/달러 환율의 추가 상승'입니다. 1550원 선을 상향 돌파할 경우 외국인 자금의 대규모 이탈이 촉발될 수 있습니다. 둘째, '반도체 섹터의 자금 유출 지속' 여부입니다. 국내 증시의 핵심인 반도체 업황 개선 신호가 부재할 경우 지수 전반의 상승 동력 확보가 어렵습니다. 마지막으로 '매크로 지표와 시장 심리의 괴리'가 해소되는 과정에서 발생할 수 있는 변동성 확대에 대비해야 합니다.",
+    "title": "월간 종합 분석 리포트 (2026년 8월)",
+    "executive_summary": "지난 기간 실현 수익률 0.0%, 이번 리포트 기대 수익률 0.0%입니다. 변동성 확대 국면에서 신규 추천 없이 리스크 관리에 집중했으며, 포트폴리오는 -4.86%를 기록했습니다. 원화의 급격한 강세 전환이 관찰되었으나, 시장 전반의 투자심리는 여전히 취약하여 방어적 기조를 유지합니다.",
+    "performance_review": "분석 기간 중 변동성 지수(VIX)가 최대 19.0까지 상승하는 등 시장 불안정성이 높아져 '돈을 잃지 않는 것'을 최우선 원칙으로 삼았습니다. 이에 따라 신규 '매수' 추천은 없었으며, 결과적으로 추천 포트폴리오의 실현 손익은 0%입니다. 보유 포트폴리오가 -4.86%의 수익률과 -7.23%의 최대 낙폭을 기록한 점을 감안할 때, 공격적인 포지션 확대를 자제한 것은 유효한 판단이었습니다.",
+    "sector_analysis": "문구류, 가정용품 등 필수소비재 및 손해보험 섹터가 강세를 보이며 시장의 명백한 위험 회피 성향을 나타냈습니다. 반면 경기소비재, 금융 등 경기 민감주는 약세를 면치 못했습니다. 주목할 점은 섹터 수익률이 부진했음에도 불구하고 반도체 및 전자장비 기기로 자금이 유입된 점입니다. 이는 해당 섹터의 저가 매수 수요 혹은 펀더멘털 회복 기대감이 반영된 현상으로 분석됩니다. 은행, 항공 등 구조적으로 해자가 약한 업종에서의 자금 유출은 지속되고 있습니다.",
+    "macro_outlook": "가장 중요한 거시경제 변수는 원/달러 환율의 급락(-6.41%)입니다. 원화 강세는 통상적으로 외국인 자금 유입에 긍정적이며, 이는 '개선'으로 나타난 시장 분위기 지표의 주된 배경으로 판단됩니다. 그러나 VIX 지수가 여전히 안정권(15 이하)에 진입하지 못했고, 뉴스 키워드에 '급락', '하락', '사이드카'가 빈번하게 등장하는 등 실제 시장 체감은 냉랭합니다. 거시 지표와 시장 심리 간의 괴리가 큰 상황으로, 섣부른 낙관은 경계해야 합니다.",
+    "brain_review": "Verity Brain의 등급 부여는 대체로 유효하게 작동했습니다. 'WATCH' 등급 종목군은 평균 4.3%의 수익률을, 'CAUTION' 등급은 -1.5%의 수익률을 기록하며 각 등급의 위험도를 적절히 반영했습니다. 다만, 'AVOID'로 분류된 2개 종목이 평균 8.5% 상승한 것은 명백한 오판입니다. 이는 Brain이 특정 펀더멘털 리스크를 과대평가했거나, 시장의 비이성적 투기 심리를 제대로 반영하지 못했을 가능성을 시사합니다. 표본이 적어 통계적 유의성은 낮으나, 향후 AVOID 등급 산출 로직에 대한 심층 검토가 필요합니다.",
+    "meta_insight": "Brain의 판단에 사용된 보조 입력 신호들의 유용성을 검증한 결과, '컨센서스' 신호가 시장 기준선과 동일한 69.6%의 정확도를 보여 가장 신뢰도가 높았습니다. 반면, 뉴스 헤드라인 기반의 '감성(sentiment)' 신호는 적중률 30.4%, 시장 대비 초과 적중률 -39.2%p로 최악의 노이즈였습니다. 이는 '급락' 등의 공포 키워드가 시장을 지배할 때, 감성 분석은 오히려 역방향 신호로 작용할 수 있음을 의미합니다. Brain의 종합 판단 정확도 하락은 이러한 노이즈 신호의 영향 때문일 수 있으며, 입력 신호의 가중치를 시장 국면에 따라 동적으로 조정할 필요가 있습니다.",
+    "strategy": "다음 월간 전략은 '최대 보수' 기조에서 '선별적 관찰'로 한 단계 상향합니다. 공격적인 매수는 여전히 지양하되, 강화된 원화 가치의 수혜가 기대되는 종목군을 주시할 필요가 있습니다. 구체적으로, 1) 자금 유입이 확인된 반도체 섹터 내 우량주, 2) '컨센서스' 점수가 높은 종목, 3) 견고한 재무구조와 가격 결정력을 보유한 기업을 중심으로 관심 목록을 압축해야 합니다. 신규 진입 시에는 포지션당 최대 손실률을 엄격히 제한하는 원칙을 준수해야 합니다.",
+    "risk_watch": "가장 큰 리스크는 원화의 변동성입니다. 최근의 급격한 강세가 되돌려질 경우 외국인 자금 이탈과 함께 시장이 재차 충격을 받을 수 있습니다. 또한, 개선된 매크로 분위기 지표와 달리 실제 시장을 지배하는 공포 심리 간의 괴리가 좁혀지지 않을 경우, 예상치 못한 급변동이 발생할 수 있습니다. 마지막으로, Brain의 'AVOID' 등급 오판 사례는 모델 자체에 대한 맹신을 경계해야 함을 시사합니다.",
     "_gemini_model": "gemini-2.5-pro",
     "_period": "monthly",
     "_period_label": "월간",
     "_date_range": {
-      "start": "2026-06-01",
-      "end": "2026-07-01"
+      "start": "2026-07-02",
+      "end": "2026-08-01"
     },
     "expected_return": {
       "count": 0,
@@ -102936,38 +102924,113 @@
       "worst_picks": [],
       "top3_sectors": [
         {
-          "name": "생명보험",
-          "avg_change_pct": 1.11
+          "name": "문구류",
+          "avg_change_pct": 3.8
         },
         {
-          "name": "백화점과일반상점",
-          "avg_change_pct": 0.64
+          "name": "가정용품",
+          "avg_change_pct": 1.15
         },
         {
-          "name": "카드",
-          "avg_change_pct": 0.63
+          "name": "손해보험",
+          "avg_change_pct": 1.05
         }
       ],
       "brain_grades": {
+        "CAUTION": {
+          "count": 9,
+          "avg_return": -1.5,
+          "hit_rate": 33.3
+        },
         "WATCH": {
           "count": 18,
-          "avg_return": 0.0,
-          "hit_rate": 0.0
-        },
-        "CAUTION": {
-          "count": 3,
-          "avg_return": 0.0,
-          "hit_rate": 0.0
+          "avg_return": 4.3,
+          "hit_rate": 66.7
         },
         "AVOID": {
-          "count": 4,
-          "avg_return": 0.0,
-          "hit_rate": 0.0
+          "count": 2,
+          "avg_return": 8.5,
+          "hit_rate": 50.0
         }
       },
-      "meta_findings": [],
-      "meta_findings_aux": [],
-      "meta_findings_brain": null,
+      "meta_findings": [
+        {
+          "source": "consensus",
+          "accuracy_pct": 69.6,
+          "sample_size": 23,
+          "excess_accuracy_pct": 0.0
+        },
+        {
+          "source": "timing",
+          "accuracy_pct": 43.5,
+          "sample_size": 23,
+          "excess_accuracy_pct": -26.1
+        },
+        {
+          "source": "multi_factor",
+          "accuracy_pct": 39.1,
+          "sample_size": 23,
+          "excess_accuracy_pct": -30.5
+        },
+        {
+          "source": "prediction",
+          "accuracy_pct": 34.8,
+          "sample_size": 23,
+          "excess_accuracy_pct": -34.8
+        },
+        {
+          "source": "brain",
+          "accuracy_pct": 34.8,
+          "sample_size": 23,
+          "excess_accuracy_pct": -34.8
+        },
+        {
+          "source": "sentiment",
+          "accuracy_pct": 30.4,
+          "sample_size": 23,
+          "excess_accuracy_pct": -39.2
+        }
+      ],
+      "meta_findings_aux": [
+        {
+          "source": "consensus",
+          "accuracy_pct": 69.6,
+          "sample_size": 23,
+          "excess_accuracy_pct": 0.0
+        },
+        {
+          "source": "timing",
+          "accuracy_pct": 43.5,
+          "sample_size": 23,
+          "excess_accuracy_pct": -26.1
+        },
+        {
+          "source": "multi_factor",
+          "accuracy_pct": 39.1,
+          "sample_size": 23,
+          "excess_accuracy_pct": -30.5
+        },
+        {
+          "source": "prediction",
+          "accuracy_pct": 34.8,
+          "sample_size": 23,
+          "excess_accuracy_pct": -34.8
+        },
+        {
+          "source": "sentiment",
+          "accuracy_pct": 30.4,
+          "sample_size": 23,
+          "excess_accuracy_pct": -39.2
+        }
+      ],
+      "meta_findings_brain": {
+        "source": "brain",
+        "accuracy_pct": 34.8,
+        "sample_size": 23,
+        "excess_accuracy_pct": -34.8,
+        "label": "Verity Brain (종합 판단)",
+        "note": "보조 신호 ranking 동급 비교 금지 — 종합 판단자 참고치"
+      },
       "meta_aux_labels": {
         "multi_factor": "멀티팩터 종합",
         "consensus": "컨센서스",
@@ -102975,16 +103038,16 @@
         "prediction": "AI 예측(XGBoost)",
         "sentiment": "뉴스 감성"
       },
-      "meta_market_drift_pct": 50.0,
-      "meta_sample_size": 0,
-      "portfolio_return": -0.83,
-      "max_drawdown": -2.73,
+      "meta_market_drift_pct": 69.6,
+      "meta_sample_size": 23,
+      "portfolio_return": -4.86,
+      "max_drawdown": -7.23,
       "expected_count": 0,
       "expected_avg_upside_pct": 0,
       "expected_top_picks": []
     }
   },
-  "monthly_report_updated": "2026-07-01T13:50:14+09:00",
+  "monthly_report_updated": "2026-08-01T12:46:12+09:00",
   "portfolio_summary": {
     "today_pct": null,
     "cumulative_pct": -5.52,
