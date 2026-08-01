@@ -100,9 +100,9 @@ export default function AlertPopup({ maxVisible = 3 }: { maxVisible?: number }) 
                     <div
                         key={alertKey(a) + i}
                         style={{
+                            // 🚨 외곽선 금지(좌측 accent 바 제거) — 긴급도는 태그칩 채움색+금액 색으로만.
                             background: c.card,
                             borderRadius: 16,
-                            borderLeft: `3px solid ${ac}`,
                             boxShadow: dark ? "0 8px 30px rgba(0,0,0,0.5)" : "0 8px 30px rgba(0,0,0,0.14)",
                             padding: "14px 16px",
                             display: "flex",

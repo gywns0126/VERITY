@@ -117,7 +117,7 @@ export default function TriSynthesisPanel() {
             <Block c={c} tag="구조화" tagColor={GEM} model={gm.model} kind="정리(의견)" text={gm.content} />
 
             {syn.verity_trail && syn.verity_trail.summary ? (
-                <div style={{ background: c.card, borderRadius: 14, border: `1px dashed ${c.line}`, padding: "11px 13px" }}>
+                <div style={{ background: c.vtS, borderRadius: 14, padding: "11px 13px" }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: c.sub, marginBottom: 5 }}>VERITY 자체 관점 (가설, 검증 전)</div>
                     <div style={{ fontSize: 12, color: c.ink, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{syn.verity_trail.summary}</div>
                 </div>
@@ -131,8 +131,9 @@ export default function TriSynthesisPanel() {
 }
 
 function Block({ c, tag, tagColor, model, kind, text, citations }: { c: Palette; tag: string; tagColor: string; model?: string; kind: string; text?: string; citations?: string[] }) {
+    // 🚨 외곽선 금지 — 좌측 accent 바 제거. 소스 구분은 태그 텍스트 색으로만.
     return (
-        <div style={{ ...cardStyle(c, "12px 14px"), borderLeft: `3px solid ${tagColor}`, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ ...cardStyle(c, "12px 14px"), display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 11, fontWeight: 800, color: tagColor }}>{tag}</span>
                 <span style={{ fontSize: 10, color: c.faint }}>{model || ""}</span>
