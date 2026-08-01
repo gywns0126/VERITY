@@ -7,6 +7,7 @@ import StockSearch from "./components/StockSearch"
 import OperatorPicks from "./components/OperatorPicks"
 import TriSynthesisPanel from "./components/TriSynthesisPanel"
 import VerificationPanel from "./components/VerificationPanel"
+import RealtimeQuotes from "./components/RealtimeQuotes"
 
 export default function Home() {
     const dark = useDark()
@@ -29,8 +30,8 @@ export default function Home() {
                     </div>
                 </header>
 
-                <Section c={c} title="① 지금" note="고영향 이벤트·브리핑">
-                    <Placeholder c={c} text="긴급 팝업 라이브(우하단). 브리핑 카드는 포팅 중." />
+                <Section c={c} title="① 지금" note="실시간 시세·고영향 이벤트">
+                    <RealtimeQuotes />
                 </Section>
 
                 <Section c={c} title="② 판단" note="검색 → 3종 LLM 종합 → 추천">

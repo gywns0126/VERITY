@@ -5,6 +5,9 @@ import { authHeaders } from "./auth"
 
 export const API_BASE = "https://project-yw131.vercel.app"
 export const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
+// Railway 실시간 KIS 서버(FastAPI) — 시세/호가/캔들. KIS_SHARED_TOKEN 순수 소비자(발급 X, RULE 1).
+// 🚨 배포 시 operator 오리진을 Railway ALLOWED_ORIGINS(server/config.py)에 추가해야 CORS 통과.
+export const RAILWAY = "https://verity-production-1e44.up.railway.app"
 
 export type FetchResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string }
 
@@ -26,6 +29,17 @@ export async function fetchOperator<T = unknown>(type: string): Promise<FetchRes
 export async function fetchPublic<T = unknown>(file: string): Promise<FetchResult<T>> {
     try {
         const r = await fetch(`${BLOB}/${file}`)
+        if (!r.ok) return { ok: false, status: r.status, error: "http" }
+        return { ok: true, data: (await r.json()) as T }
+    } catch (e) {
+        return { ok: false, status: 0, error: String(e) }
+    }
+}
+
+// Railway 실시간 서버 (KIS 본인 이용, 발급 X 소비자). path 예: "quotes?tickers=005930,000660".
+export async function fetchRailway<T = unknown>(path: string): Promise<FetchResult<T>> {
+    try {
+        const r = await fetch(`${RAILWAY}/${path}`, { cache: "no-store" })
         if (!r.ok) return { ok: false, status: r.status, error: "http" }
         return { ok: true, data: (await r.json()) as T }
     } catch (e) {
