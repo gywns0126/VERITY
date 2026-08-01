@@ -9,6 +9,7 @@ import TriSynthesisPanel from "./components/TriSynthesisPanel"
 import VerificationPanel from "./components/VerificationPanel"
 import RealtimeQuotes from "./components/RealtimeQuotes"
 import StockReport from "./components/StockReport"
+import ChatConsult from "./components/ChatConsult"
 
 export default function Home() {
     const dark = useDark()
@@ -50,6 +51,10 @@ export default function Home() {
 
                 <Section c={c} title="④ 검증" note="학습루프·팩터건강·IC·2027 게이트">
                     <VerificationPanel />
+                </Section>
+
+                <Section c={c} title="상담" note="Brain 그라운딩 · 종목·전략 Q&A">
+                    <ChatConsult />
                 </Section>
             </div>
 
