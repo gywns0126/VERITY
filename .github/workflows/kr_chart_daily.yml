@@ -61,7 +61,9 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/kr_chart_daily/ data/kr_index_daily.json data/hot_stock.json
+          # 🚨 RULE 4 — 신 산출물은 git add 정합 의무. kr_close_latest.json = 보유종목 평가 기준가
+          #   (2026-07-31 신설, 청크 파생 평면 맵). 누락 시 사이트가 옛 종가로 수익률 계산.
+          git add data/kr_chart_daily/ data/kr_index_daily.json data/hot_stock.json data/kr_close_latest.json
           if git diff --staged --quiet; then
             echo "[kr_chart_daily] no changes"
             exit 0
@@ -78,7 +80,7 @@ jobs:
             sleep $((i * 5))
           done
 
-      - name: Blob 업로드 (kr_chart_daily/chunk_XX.json + meta)
+      - name: Blob 업로드 (kr_chart_daily/chunk_XX.json + meta + kr_close_latest.json)
         # 2026-07-07 구조 변경 — 공용 publish-data staging 제외, 갱신 시점 Blob 직행.
         # 옛 구조: 28MB 가 모든 publish-data 호출자(price_pulse 5분 주기 포함)에서
         # 재업로드 → price_pulse run 6분 > dispatch 5분 → 큐 취소 연쇄 (ratio 22% FAIL).
@@ -93,6 +95,13 @@ jobs:
           fi
           mkdir -p _chart_dist/kr_chart_daily
           cp data/kr_chart_daily/*.json _chart_dist/kr_chart_daily/
+          # 평가 기준가 맵 = 청크와 같은 슬롯에서 Blob 루트 직행 (신선도 동행 보장).
+          # publish-data 목록에도 등재(이중 경로) — 어느 쪽이 먼저 돌아도 같은 내용.
+          if [ -s data/kr_close_latest.json ]; then
+            cp data/kr_close_latest.json _chart_dist/
+          else
+            echo "::warning::kr_close_latest.json 없음 — 보유종목 평가 기준가 미갱신"
+          fi
           cd .github/actions/publish-data
           npm install --no-save --silent --no-audit --no-fund @vercel/blob@^0.27
           node blob_upload.js "${{ github.workspace }}/_chart_dist"

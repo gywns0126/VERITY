@@ -10,11 +10,13 @@
   · 4-카테고리 실호출 검증 완료 (KOSPI 대형/KOSDAQ/우선주/일자별 벌크 2,873종목).
   상세 = docs/MIGRATION_KRX_QUOTE_REDISTRIBUTION_2026_07.md.
 
-산출 = data/kr_chart_daily/chunk_00..39.json (+ meta.json).
+산출 = data/kr_chart_daily/chunk_00..39.json (+ meta.json) + data/kr_close_latest.json.
   · 청크 = int(단축코드, 36) % 40 — 코드에 'K' 포함 우선주 변형 대응 (base36).
     프론트(PublicLiveChart)도 동일 산식: parseInt(code, 36) % 40. 양측 검증 완료.
   · 종목당 최근 KEEP_DAYS(250) 거래일, 캔들 = [basDt, 시, 고, 저, 종, 거래량] 오름차순.
   · publish-data action 이 kr_chart_daily/ 디렉토리째 VERITY-data + Blob dual-write.
+  · kr_close_latest.json = 전 종목 최신 종가 평면 맵(청크 파생, ~50KB). 소비 = PublicHoldingsTab
+    평가손익. 청크는 종목당 250봉이라 보유목록이 통째 받기엔 무겁다(1청크 ~780KB).
 
 키 = PUBLIC_DATA_API_KEY (data.go.kr 일반 인증키, 기존 관세청/공정위 collector 와 공용).
   serviceKey 는 직접 quote (미인코딩 원본 재인코딩 깨짐 — ftc_group_equity 패턴).
@@ -45,6 +47,7 @@ BASE_URL = (
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT_DIR = os.path.join(_REPO_ROOT, "data", "kr_chart_daily")
 HOT_PATH = os.path.join(_REPO_ROOT, "data", "hot_stock.json")
+CLOSE_LATEST_PATH = os.path.join(_REPO_ROOT, "data", "kr_close_latest.json")
 N_CHUNKS = 40
 
 # 거래대금 상위 = "그날 핫한 종목" 후보. ETF/ETN 제외(개별 종목만) — mrktCtg 에 ETF 플래그 없어 발행사 prefix 로 배제.
@@ -266,6 +269,59 @@ def emit_hot_stock(rows: List[Dict[str, Any]], as_of: str) -> None:
           f"거래대금={top[0]['trPrc'] / 1e8:.0f}억")
 
 
+def emit_close_latest(chunks: List[Dict[str, Any]], as_of: str) -> None:
+    """전 종목 최신 종가 1행 맵 → data/kr_close_latest.json (경량 ~50KB).
+
+    🚨 2026-07-31 신설 — 보유종목 평가손익 오표시 사고 수정.
+      옛 소스 = stock_flow_5d.json 마지막 close. 그 파일은 시총순 회전 수집(하루 500종목,
+      forward 누적)이라 **종목마다 마지막 종가 날짜가 제각각**(어제~5주 전). 실측 2026-07-31:
+      1,801종목 중 71% 가 직전 거래일 종가와 불일치 / 36% 는 5%+ / 23% 는 10%+ 괴리
+      → 하락한 종목이 플러스 수익률로 표시(부호 역전). 청크(kr_chart_daily)는 전 종목
+      동일 as_of 라 이 왜곡이 없다 — 다만 청크 1개 ~780KB 라 보유목록이 통째 받기엔 무겁다.
+      → 청크에서 마지막 캔들 종가만 추출한 평면 맵을 별도 발행(소비 = PublicHoldingsTab).
+    수록 = 청크 최신 as_of 와 같은 날 종가만 (거래정지/상장폐지 종목의 옛 종가 혼입 차단).
+    """
+    prices: Dict[str, int] = {}
+    stale = 0
+    for ch in chunks:
+        for code, ent in (ch.get("stocks") or {}).items():
+            candles = ent.get("c") or []
+            if not candles:
+                continue
+            last = candles[-1]
+            if str(last[0]) != str(as_of):
+                stale += 1      # 당일 미거래(정지·폐지) = 평가가 제외 → 프론트가 "시세 없음" 표기
+                continue
+            close = int(last[4])
+            if close > 0:
+                prices[code] = close
+    if len(prices) < 500:
+        print(f"[fsc_daily_prices] close_latest 종목 부족 ({len(prices)}) — skip", file=sys.stderr)
+        return
+    doc = {
+        "_meta": {
+            "as_of": as_of,
+            "count": len(prices),
+            "excluded_stale": stale,
+            "source": "금융위원회_주식시세정보 (data.go.kr/data/15094808 · 이용허락범위 제한 없음)",
+            "basis": "직전 거래일 종가 (T+1). 실시간 아님 — 보유종목 평가 기준가.",
+            "generated_at": datetime.now(_KST).isoformat(timespec="seconds"),
+        },
+        "prices": prices,
+    }
+    with open(CLOSE_LATEST_PATH, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"[fsc_daily_prices] close_latest as_of={as_of} 종목={len(prices)} (당일 미거래 제외 {stale})")
+
+
+def _close_latest_as_of() -> str:
+    try:
+        with open(CLOSE_LATEST_PATH, encoding="utf-8") as f:
+            return str((json.load(f).get("_meta") or {}).get("as_of") or "")
+    except Exception:
+        return ""
+
+
 def run_daily() -> bool:
     latest = latest_available_date()
     if not latest:
@@ -275,6 +331,9 @@ def run_daily() -> bool:
     cur = max((ch.get("as_of") or "") for ch in chunks)
     if cur and cur >= latest:
         print(f"[fsc_daily_prices] 이미 최신 (as_of={cur})")
+        # 청크가 최신이어도 평가가 맵이 뒤처졌으면 여기서 따라잡는다(신규 도입/발행 누락 복구).
+        if _close_latest_as_of() != cur:
+            emit_close_latest(chunks, cur)
         return True
     rows = fetch_day(latest)
     if len(rows) < 500:  # 전 종목 벌크가 이상 축소 = API 이상 → 기존 데이터 보존
@@ -283,6 +342,7 @@ def run_daily() -> bool:
     _append_rows(chunks, rows)
     _save_chunks(chunks, latest)
     emit_hot_stock(rows, latest)  # 거래대금 1위 = 리포트 콜드 랜딩 디폴트
+    emit_close_latest(chunks, latest)  # 보유종목 평가 기준가 (전 종목 동일 as_of)
     return True
 
 
@@ -317,6 +377,7 @@ def run_backfill(target_days: int = KEEP_DAYS) -> bool:
         print(f"[fsc_daily_prices] backfill 불충분 (거래일 {got}) — abort", file=sys.stderr)
         return False
     _save_chunks(chunks, str(as_of))
+    emit_close_latest(chunks, str(as_of))
     print(f"[fsc_daily_prices] backfill 완료 — 거래일 {got}")
     return True
 
