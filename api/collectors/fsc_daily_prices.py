@@ -282,6 +282,8 @@ def emit_close_latest(chunks: List[Dict[str, Any]], as_of: str) -> None:
     수록 = 청크 최신 as_of 와 같은 날 종가만 (거래정지/상장폐지 종목의 옛 종가 혼입 차단).
     """
     prices: Dict[str, int] = {}
+    prev: Dict[str, int] = {}
+    prev_as_of = ""
     stale = 0
     for ch in chunks:
         for code, ent in (ch.get("stocks") or {}).items():
@@ -295,31 +297,48 @@ def emit_close_latest(chunks: List[Dict[str, Any]], as_of: str) -> None:
             close = int(last[4])
             if close > 0:
                 prices[code] = close
+            # 전일 종가 — 등락률 소비자(모닝브리핑 총자산 증감·ETF 구성종목 히트맵)용.
+            # 청크는 전 종목 동일 거래일 축이라 두 행이 **연속 거래일**임이 보장된다.
+            if len(candles) >= 2:
+                p = int(candles[-2][4])
+                if p > 0:
+                    prev[code] = p
+                    if not prev_as_of:
+                        prev_as_of = str(candles[-2][0])
     if len(prices) < 500:
         print(f"[fsc_daily_prices] close_latest 종목 부족 ({len(prices)}) — skip", file=sys.stderr)
         return
     doc = {
         "_meta": {
             "as_of": as_of,
+            "prev_as_of": prev_as_of,
             "count": len(prices),
+            "prev_count": len(prev),
             "excluded_stale": stale,
             "source": "금융위원회_주식시세정보 (data.go.kr/data/15094808 · 이용허락범위 제한 없음)",
-            "basis": "직전 거래일 종가 (T+1). 실시간 아님 — 보유종목 평가 기준가.",
+            "basis": "직전 거래일 종가 (T+1). 실시간 아님 — 평가 기준가·등락률 SoT.",
             "generated_at": datetime.now(_KST).isoformat(timespec="seconds"),
         },
         "prices": prices,
+        "prev": prev,
     }
     with open(CLOSE_LATEST_PATH, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"[fsc_daily_prices] close_latest as_of={as_of} 종목={len(prices)} (당일 미거래 제외 {stale})")
+    print(f"[fsc_daily_prices] close_latest as_of={as_of} 종목={len(prices)} "
+          f"(전일 {len(prev)}·{prev_as_of} / 당일 미거래 제외 {stale})")
 
 
-def _close_latest_as_of() -> str:
+def _close_latest_current(as_of: str) -> bool:
+    """평가가 맵이 이미 최신인가. 날짜뿐 아니라 **스키마**도 본다 —
+    필드를 추가(prev 등)했는데 날짜가 같아 재발행이 skip 되면 소비자가 조용히 옛 스키마를 받는다."""
     try:
         with open(CLOSE_LATEST_PATH, encoding="utf-8") as f:
-            return str((json.load(f).get("_meta") or {}).get("as_of") or "")
+            doc = json.load(f)
     except Exception:
-        return ""
+        return False
+    if str((doc.get("_meta") or {}).get("as_of") or "") != str(as_of):
+        return False
+    return bool(doc.get("prices")) and bool(doc.get("prev"))
 
 
 def run_daily() -> bool:
@@ -331,8 +350,8 @@ def run_daily() -> bool:
     cur = max((ch.get("as_of") or "") for ch in chunks)
     if cur and cur >= latest:
         print(f"[fsc_daily_prices] 이미 최신 (as_of={cur})")
-        # 청크가 최신이어도 평가가 맵이 뒤처졌으면 여기서 따라잡는다(신규 도입/발행 누락 복구).
-        if _close_latest_as_of() != cur:
+        # 청크가 최신이어도 평가가 맵이 뒤처졌으면 여기서 따라잡는다(신규 도입/발행 누락/스키마 변경 복구).
+        if not _close_latest_current(cur):
             emit_close_latest(chunks, cur)
         return True
     rows = fetch_day(latest)

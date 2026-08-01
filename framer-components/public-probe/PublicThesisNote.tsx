@@ -8,7 +8,7 @@ import { Heart, User } from "@phosphor-icons/react"
  * 🚨 RULE 7 = 이건 **사용자 자기 저널**(관점/메모/날짜)이지 VERITY 의 추천·점수가 아님. 우리는 채점/판단 0.
  * 🚨 RULE 6 = LLM 0. 전부 사용자 입력 + 결정론적 가격 diff.
  * 저장 = localStorage `verity_thesis_v1` + "verity-thesis-changed" 이벤트 → PublicWatchlist 즉시 관점 배지 갱신.
- * 가격 = stock_flow_5d.json 마지막 close(종가, 네이버 소스·발행 유지 판정) — 기록 시점 entryPrice 동결 → 재방문 diff.
+ * 가격 = kr_close_latest.json 종가(금융위 공공데이터, 전 종목 동일 거래일) — 기록 시점 entryPrice 동결 → 재방문 diff.
  * 🚨 시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): /api/stock 실시간가 조회 제거(KIS 재배포 불가) → 종가 diff 로 전환. 커버리지 밖 = graceful "—".
  * ticker = prop → URL ?q= → localStorage `verity_last_ticker` 폴백(페이지 토글 시 종목 유지).
  *   + "verity-ticker-change" 이벤트 수신 → 같은 페이지 PublicDecisionPanel(검색 통합)이 종목 바꾸면 리로드 없이 따라옴(2026-06-23).
@@ -255,20 +255,21 @@ export default function PublicThesisNote(props: Props) {
         if (t) { setStance(t.stance); setNote(t.note || ""); setIsPublic(!!t.isPublic) } else { setStance("watch"); setNote(""); setIsPublic(false) }
     }, [tk, onCanvas, token, serverTheses])
 
-    // 종가 (재방문 diff용 + 기록 시 entryPrice 동결) — stock_flow_5d 마지막 close(실시간 아님, 컴플라이언스)
+    /* 종가 (재방문 diff용 + 기록 시 entryPrice 동결) — kr_close_latest.json(금융위 공공데이터).
+       🚨 되돌리지 말 것 (2026-08-01) — 옛 소스 stock_flow_5d.json 은 회전 수집이라 종목마다
+       종가 날짜가 다르다(어제~5주 전). entryPrice 를 낡은 가격으로 동결하면 재방문 diff 가
+       영구히 틀어지고, 하락 종목이 플러스로 보인다(실측 71% 불일치·23% 는 10%+ 괴리). */
     useEffect(() => {
         setCurPrice(null)
         if (onCanvas) { setCurPrice(73900); return }
         if (!tk) return
         let alive = true
-        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json")
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_close_latest.json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive || !d) return
-                const fm = d.flows || d
-                const arr = fm && fm[tk]
-                const last = Array.isArray(arr) && arr.length ? arr[arr.length - 1] : null
-                const c = last && Number(last.close)
+                const pm = d.prices
+                const c = pm && Number(pm[tk])
                 if (c && isFinite(c)) setCurPrice(c)
             })
             .catch(() => {})

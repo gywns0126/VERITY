@@ -294,8 +294,12 @@ const DEFAULT_URL =
 // 검색은 전 universe, 리포트는 보유 종목만 → 미보유 종목 선택 시 graceful "준비중"(엉뚱 종목 폴백 차단).
 const UNIVERSE_URL =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
+// 수급(외국인·기관 순매매) 전용 — 회전 수집이라 **가격 용도로는 쓰지 말 것**(종목마다 날짜 상이).
 const DEFAULT_FLOW =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json"
+// 종가·전일 종가 (금융위 공공데이터, 전 종목 동일 거래일) — 가격/등락률은 전부 이쪽.
+const CLOSE_LATEST_URL =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_close_latest.json"
 const DEFAULT_FORENSICS =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/disclosure_forensics.json"
 const DEFAULT_INSIDER =
@@ -1279,7 +1283,9 @@ function EtfReportBlock({
 
     /* 🚨 2026-07-28 구성종목 히트맵 — 타일 면적 = 비중.
        색은 시장마다 의미가 다르다. 같아 보이게 만들면 거짓이 되므로 라벨에 명시한다.
-       · KR = 전일 등락률(빨강/파랑). stock_flow_5d.json(이미 발행 중인 파일) 마지막 2종가로 계산.
+       · KR = 전일 등락률(빨강/파랑). kr_close_latest.json 의 종가·전일 종가로 계산.
+         🚨 되돌리지 말 것 (2026-08-01) — stock_flow_5d 는 회전 수집이라 마지막 2행이 **연속
+         거래일이 아닐 수 있다**(예: 7/07 과 6/24). 그걸 "전일 등락률"로 표기하면 거짓이 된다.
        · US = 비중 농도. 미국 구성종목의 일별 등락은 재배포 권리가 없어 발행 자체를 안 한다.
        임베드(TradingView 등) 대신 자체 구현 — 남의 위젯은 우리 데이터가 아니고, 과거에 iframe
        높이가 Fit 이면 0 으로 계산돼 위젯이 통째로 사라지는 사고도 있었다. */
@@ -1293,16 +1299,15 @@ function EtfReportBlock({
         const codes = holdKey.split(",").filter((c: string) => /^\d{6}$/.test(c))
         if (!codes.length) return
         let alive = true
-        fetch(DEFAULT_FLOW)
+        fetch(CLOSE_LATEST_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                if (!alive || !d || !d.flows) return
+                if (!alive || !d || !d.prices) return
+                const pv = d.prev || {}
                 const out: Record<string, number> = {}
                 for (const c of codes) {
-                    const ser = d.flows[c]
-                    if (!Array.isArray(ser) || ser.length < 2) continue
-                    const c1 = Number(ser[ser.length - 1].close)
-                    const c0 = Number(ser[ser.length - 2].close)
+                    const c1 = Number(d.prices[c])
+                    const c0 = Number(pv[c])
                     if (isFinite(c1) && isFinite(c0) && c0 > 0)
                         out[c] = ((c1 - c0) / c0) * 100
                 }

@@ -35,10 +35,11 @@ import {
  *
  * ① 내 자산 — 사용자 개인 보유종목 (VERITY 시스템 성과 아님). PublicHoldingsTab 계산 재사용.
  *   인증 — localStorage["verity_supabase_session"].access_token → /api/holdings.
- *   총 자산 = Σ(종가 × 수량), 종가 = stock_flow_5d 마지막 close → h.price → avg_cost graceful.
- *   전일 증감 = Σ(마지막 close − 직전 close) × 수량 — 🚨 전일 "종가" 대비만(실시간 아님).
+ *   총 자산 = Σ(종가 × 수량), 종가 = kr_close_latest.json(금융위 공공데이터, 전 종목 동일 거래일)
+ *     → h.price → avg_cost graceful. 🚨 stock_flow_5d 로 되돌리지 말 것 (2026-08-01 오표시).
+ *   전일 증감 = Σ(종가 − 전일 종가) × 수량 — 🚨 전일 "종가" 대비만(실시간 아님).
  *     시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): 실시간 폴링 0, EOD 종가 재사용만.
- *     stock_flow_5d = KR·커버리지 한정 → 증감 집계 = 국내 커버 종목만(US·미커버 = 총액엔 포함, 증감 제외).
+ *     KR 한정 → 증감 집계 = 국내 커버 종목만(US·미커버 = 총액엔 포함, 증감 제외).
  *   미로그인(라이브) = 컴팩트 CTA 한 줄. 캔버스 = SAMPLE 미리보기.
  *
  * ② 시장 브리핑 — daily_briefing.json (빌더 미착수 → 라이브 404 시 "준비 중" 한 줄, SAMPLE 은 캔버스 전용).
@@ -84,8 +85,8 @@ const FX_FALLBACK = 1500
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
 const DEFAULT_API = "https://project-yw131.vercel.app"
-const FLOW_URL =
-    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json"
+const CLOSE_URL =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_close_latest.json"
 const PULSE_URL =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/price_pulse.json"
 const BRIEF_URL =
@@ -341,7 +342,7 @@ export default function PublicMorningBriefing(props: Props) {
     const [closes, setCloses] = useState<
         Record<string, { last: number; prev: number | null }>
     >({})
-    const [closeDate, setCloseDate] = useState<string>("") // 마지막 종가 날짜(stock_flow_5d) — "전일" 대신 실제 날짜 표기
+    const [closeDate, setCloseDate] = useState<string>("") // 종가 기준일(kr_close_latest _meta.as_of, 전 종목 공통) — "전일" 대신 실제 날짜 표기
     const [isDemo, setIsDemo] = useState(true)
     const [loading, setLoading] = useState<boolean>(() =>
         onCanvas ? false : !!getToken()
@@ -448,37 +449,40 @@ export default function PublicMorningBriefing(props: Props) {
         }
     }, [onCanvas])
 
-    // 종가(마지막·직전) — stock_flow_5d 재사용. 실시간 아님, 신규 시세 노출 0.
+    /* 종가(마지막·직전) — kr_close_latest.json (금융위 공공데이터, 전 종목 동일 거래일).
+       🚨 되돌리지 말 것 (2026-08-01 총자산·증감 오표시) — 옛 소스 stock_flow_5d.json 은
+       시총순 회전 수집(하루 500종목)이라 종목마다 종가 날짜가 다르다(어제~5주 전).
+       실측: 1,801종목 중 71% 가 직전 거래일 종가와 불일치, 23% 는 10%+ 괴리.
+       총자산이 옛 가격으로 부풀고, 화면의 "N/N 종가 기준" 도 **첫 종목 날짜**를 전체에
+       붙인 거짓 표기였다. 지금은 전 종목 공통 as_of 라 표기가 사실과 일치한다.
+       증감(전일 대비)도 두 종가가 연속 거래일임이 보장돼야 성립한다(prev 맵). */
     useEffect(() => {
         if (onCanvas || isDemo) return
         let alive = true
-        fetch(FLOW_URL)
+        fetch(CLOSE_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                const fm = d && (d.flows || d)
-                if (!alive || !fm || typeof fm !== "object") return
+                const pm = d && d.prices
+                if (!alive || !pm || typeof pm !== "object") return
+                const pv = (d && d.prev) || {}
                 const m: Record<string, { last: number; prev: number | null }> =
                     {}
-                let cd = ""
-                for (const tk of Object.keys(fm)) {
-                    const arr = fm[tk]
-                    if (!Array.isArray(arr) || !arr.length) continue
-                    const lastRow = arr[arr.length - 1]
-                    if (!cd && lastRow && lastRow.date)
-                        cd = String(lastRow.date)
-                    const last = Number(lastRow && lastRow.close)
-                    const prevRaw =
-                        arr.length >= 2
-                            ? Number(arr[arr.length - 2].close)
-                            : NaN
+                for (const tk of Object.keys(pm)) {
+                    const last = Number(pm[tk])
                     if (!isFinite(last) || !last) continue
+                    const prevRaw = Number(pv[tk])
                     m[tk] = {
                         last,
                         prev: isFinite(prevRaw) && prevRaw ? prevRaw : null,
                     }
                 }
                 setCloses(m)
-                if (cd) setCloseDate(cd)
+                const ao = String((d._meta && d._meta.as_of) || "")
+                // "YYYYMMDD" → "YYYY-MM-DD" (표기부가 slice(5) 로 월/일을 뽑는다)
+                if (ao.length === 8)
+                    setCloseDate(
+                        ao.slice(0, 4) + "-" + ao.slice(4, 6) + "-" + ao.slice(6)
+                    )
             })
             .catch(() => {})
         return () => {
