@@ -164,7 +164,7 @@ function Avatar({
                 background: C.vtS,
                 color: C.vt,
                 fontSize: Math.max(10, Math.round(size * 0.36)),
-                fontWeight: 700,
+                fontWeight: 750,
                 letterSpacing: "-0.02em",
             }}
         >
@@ -210,7 +210,7 @@ function TickerLogo({ ticker, C }: { ticker?: string | null; C: typeof LIGHT }) 
                 background: C.hi,
                 color: C.faint,
                 fontSize: 9.5,
-                fontWeight: 700,
+                fontWeight: 750,
             }}
         >
             {(ticker || "").slice(0, 2).toUpperCase() || "—"}
@@ -238,6 +238,13 @@ const CANVAS_SAMPLE = {
             increased_count: 4,
             decreased_count: 6,
             unresolved_ticker_count: 0,
+            holdings_capped: false,
+            disclosed_style: {
+                label: "몇 개만 크게",
+                detail: "상위 10종목이 대부분입니다",
+                badges: [],
+                cash_caveat: true,
+            },
             trailing_4q_replication_pct: 11.37,
             quarterly_replication_returns: [
                 { to: "2025-06-30", return_pct: 0.32, coverage_pct: 99.6 },
@@ -392,7 +399,7 @@ function ReturnLine({ rs, C }: { rs: any[]; C: typeof LIGHT }) {
                         fill={stroke}
                         fontFamily={FONT}
                         fontSize={11.5}
-                        fontWeight={700}
+                        fontWeight={750}
                     >
                         {signed(last)}
                     </text>
@@ -549,6 +556,7 @@ export default function PublicInvestorPortfolios(props: {
                 color: C.ink,
                 fontFamily: FONT,
                 fontSize: 15,
+                fontWeight: 500,
                 lineHeight: 1.6,
                 padding: "4px 0 8px",
             }}
@@ -602,7 +610,7 @@ export default function PublicInvestorPortfolios(props: {
                                     cursor: "pointer",
                                     font: "inherit",
                                     fontSize: 13,
-                                    fontWeight: 600,
+                                    fontWeight: 650,
                                     padding: "6px 15px",
                                     borderRadius: 999,
                                     background: krw === o.k ? C.card : "transparent",
@@ -638,7 +646,7 @@ export default function PublicInvestorPortfolios(props: {
                     marginBottom: 18,
                 }}
             >
-                <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "-0.01em" }}>
+                <div style={{ fontSize: 14, fontWeight: 750, letterSpacing: "-0.01em" }}>
                     지금 보는 건 실시간이 아니라 {dot(cur?.report_date)} 시점의 보유입니다.
                 </div>
                 <div style={{ color: C.sub, fontSize: 13, marginTop: 5 }}>
@@ -706,7 +714,7 @@ export default function PublicInvestorPortfolios(props: {
                         <span
                             style={{
                                 fontSize: 11.5,
-                                fontWeight: 700,
+                                fontWeight: 750,
                                 letterSpacing: "0.09em",
                                 color: C.faint,
                             }}
@@ -745,7 +753,7 @@ export default function PublicInvestorPortfolios(props: {
                                             fontSize: 12,
                                             textAlign: "right",
                                             color: on ? C.vt : C.faint,
-                                            fontWeight: on ? 700 : 400,
+                                            fontWeight: on ? 750 : 500,
                                         }}
                                     >
                                         {i + 1}
@@ -761,7 +769,7 @@ export default function PublicInvestorPortfolios(props: {
                                             style={{
                                                 display: "block",
                                                 fontSize: 14,
-                                                fontWeight: 600,
+                                                fontWeight: 650,
                                                 whiteSpace: "nowrap",
                                                 overflow: "hidden",
                                                 textOverflow: "ellipsis",
@@ -808,7 +816,7 @@ export default function PublicInvestorPortfolios(props: {
                                                 display: "block",
                                                 ...NUM,
                                                 fontSize: 13,
-                                                fontWeight: 600,
+                                                fontWeight: 650,
                                             }}
                                         >
                                             {money(v.disclosed_value_usd)}
@@ -821,7 +829,8 @@ export default function PublicInvestorPortfolios(props: {
                                                 color: C.faint,
                                             }}
                                         >
-                                            {v.holdings_count}종목
+                                            {v.holdings_count}
+                                            {v.holdings_capped ? "+" : ""}종목
                                         </span>
                                     </span>
                                 </button>
@@ -881,6 +890,65 @@ export default function PublicInvestorPortfolios(props: {
                                 >
                                     {cur.institution} · CIK {cur.cik}
                                 </div>
+                                {/* 공시에 보이는 방식 — 성향 판정이 아니다.
+                                    13F 는 현금·채권·숏이 빠지므로 성향의 근거가 못 된다
+                                    (버핏 집중도 90.7% = 16인 중 4위. 판정하면 '공격적'이 됨). */}
+                                {cur.disclosed_style?.label ? (
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            flexWrap: "wrap",
+                                            alignItems: "center",
+                                            gap: 6,
+                                            marginTop: 8,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                background: C.vtS,
+                                                color: C.vt,
+                                                borderRadius: 999,
+                                                padding: "4px 11px",
+                                                fontSize: 12.5,
+                                                fontWeight: 750,
+                                            }}
+                                        >
+                                            {cur.disclosed_style.label}
+                                        </span>
+                                        {(cur.disclosed_style.badges || []).map(
+                                            (b: string) => (
+                                                <span
+                                                    key={b}
+                                                    style={{
+                                                        background: C.hi,
+                                                        color: C.sub,
+                                                        borderRadius: 999,
+                                                        padding: "4px 10px",
+                                                        fontSize: 12,
+                                                        fontWeight: 650,
+                                                    }}
+                                                >
+                                                    {b}
+                                                </span>
+                                            )
+                                        )}
+                                    </div>
+                                ) : null}
+                                {/* 🚨 집중도가 높은 인물에만 — 13F 사각지대 고지.
+                                    이 줄이 없으면 "버핏 = 몰빵형" 오독이 난다. 지우지 말 것. */}
+                                {cur.disclosed_style?.cash_caveat ? (
+                                    <div
+                                        style={{
+                                            fontSize: 12,
+                                            color: C.faint,
+                                            marginTop: 6,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        현금·채권은 이 공시에 나오지 않습니다. 주식만 놓고 본
+                                        모습입니다.
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
                         <div
@@ -982,7 +1050,17 @@ export default function PublicInvestorPortfolios(props: {
                     >
                         {[
                             { l: "공시 총액", v: money(cur.disclosed_value_usd) },
-                            { l: "보유 종목", v: String(cur.holdings_count) },
+                            {
+                                l: "보유 종목",
+                                // 🚨 holdings_count 는 빌더 상한(TOP_HOLDINGS_PER_FUND)에 걸린다.
+                                //   상한이면 실제는 더 많다 — "300종목"으로 단정하면 거짓이 된다.
+                                v:
+                                    String(cur.holdings_count) +
+                                    (cur.holdings_capped ? "+" : ""),
+                                sub: cur.holdings_capped
+                                    ? "상위 " + cur.holdings_count + "종목 기준"
+                                    : undefined,
+                            },
                             {
                                 l: "상위 10종목 비중",
                                 v: (cur.top10_concentration_pct ?? "—") + "%",
@@ -1017,7 +1095,7 @@ export default function PublicInvestorPortfolios(props: {
                                         display: "block",
                                         ...NUM,
                                         fontSize: 16.5,
-                                        fontWeight: 700,
+                                        fontWeight: 750,
                                         marginTop: 3,
                                         color: (s as any).c || C.ink,
                                     }}
@@ -1100,7 +1178,7 @@ export default function PublicInvestorPortfolios(props: {
                                                 key={h}
                                                 style={{
                                                     fontSize: 11,
-                                                    fontWeight: 600,
+                                                    fontWeight: 650,
                                                     letterSpacing: "0.07em",
                                                     color: C.faint,
                                                     textAlign: i === 0 ? "left" : "right",
@@ -1124,7 +1202,7 @@ export default function PublicInvestorPortfolios(props: {
                                                 // 🚨 라이브 정합 — #213 이 650→600 일괄 변경 시
                                                 // 이 삼항만 놓쳤고 라이브에는 600 이 반영돼
                                                 // 있었다. repo 를 라이브에 맞춘다(RULE 11).
-                                                fontWeight: h.ticker ? 600 : 500,
+                                                fontWeight: h.ticker ? 650 : 550,
                                                 color: h.ticker ? C.ink : C.faint,
                                             }}
                                         >
@@ -1216,7 +1294,7 @@ export default function PublicInvestorPortfolios(props: {
                                                     padding: "2.5px 9px",
                                                     borderRadius: 999,
                                                     fontSize: 11.5,
-                                                    fontWeight: 600,
+                                                    fontWeight: 650,
                                                     background: chipBg(h.change_type),
                                                     color: chipFg(h.change_type),
                                                 }}

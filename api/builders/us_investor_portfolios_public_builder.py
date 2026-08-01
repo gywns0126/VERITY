@@ -64,6 +64,51 @@ def _concentration(holdings: List[dict], top_n: int = 10) -> float | None:
     return round(top / total * 100, 1)
 
 
+# ── 공시에 보이는 운용 방식 (2026-08-01, PM "개미투자자들로 하여금 이해하기 좋게") ──
+#
+# 🚨 이것은 **성향 판정이 아니다.** "안정적/공격적" 라벨을 붙이지 않는다.
+#   13F 는 미국 상장 롱 주식만 담는다 — 현금·채권·숏·해외자산이 통째로 빠진다.
+#   실측 반례(2026-08-01): 워런 버핏의 상위10 집중도는 90.7% 로 16인 중 4위다.
+#   집중도로 성향을 판정하면 버핏이 "공격적" 이 된다. 그의 안정성은 대부분 현금·보험
+#   플로트에서 오는데 그건 13F 에 안 나오기 때문이다. 그래서 판정 대신 **공시 숫자를
+#   말로 옮기기만** 한다. 독자가 스스로 읽는다.
+#
+# 구간값은 서술 편의를 위한 것이며 점수·순위·매매신호가 아니다(RULE 7 — 자체 산식 노출 시
+# 가설 명시. 여기서는 아예 점수를 만들지 않는 쪽을 택했다).
+_STYLE_BANDS = (
+    (90, "몇 개만 크게", "상위 10종목이 대부분입니다"),
+    (60, "소수에 실음", "상위 10종목 비중이 큽니다"),
+    (35, "반반", "상위 10종목과 나머지가 비슷합니다"),
+    (0,  "잘게 쪼갬", "수백 종목에 나눠 담았습니다"),
+)
+_LOW_TURNOVER_PCT = 15      # 분기 중 손댄 종목이 이 % 미만 = "거의 안 바꿈"
+_HIGH_VOL = 12.0            # 분기 복제 수익률 표준편차가 이 이상 = "기복 큼"
+_CASH_CAVEAT_CONC = 85      # 집중도가 이 이상이면 현금·채권 미포함 단서를 함께 노출
+
+
+def _disclosed_style(conc, moves: int, n: int, rets: list) -> Dict[str, Any]:
+    """집중도·회전·변동을 평서문으로. 판정·점수 없음."""
+    out: Dict[str, Any] = {"label": None, "detail": None, "badges": [], "cash_caveat": False}
+    if conc is None or not n:
+        return out
+    for lo, label, detail in _STYLE_BANDS:
+        if conc >= lo:
+            out["label"] = label
+            out["detail"] = detail
+            break
+    # 회전 — holdings_count 가 상한에 걸리면 분모가 잘려 비율이 부풀므로 배지를 달지 않는다.
+    if n < TOP_HOLDINGS_PER_FUND and (moves / n * 100) < _LOW_TURNOVER_PCT:
+        out["badges"].append("거의 안 바꿈")
+    vals = [q.get("return_pct") for q in (rets or []) if q.get("return_pct") is not None]
+    if len(vals) >= 3:
+        m = sum(vals) / len(vals)
+        sd = (sum((v - m) ** 2 for v in vals) / len(vals)) ** 0.5
+        if sd >= _HIGH_VOL:
+            out["badges"].append("기복 큼")
+    out["cash_caveat"] = conc >= _CASH_CAVEAT_CONC
+    return out
+
+
 def build() -> Dict[str, Any]:
     investors: List[Dict[str, Any]] = []
     errors: List[str] = []
@@ -128,10 +173,21 @@ def build() -> Dict[str, Any]:
                 errors.append(f"{name}: 복제수익률 실패 {type(e).__name__}")
                 rets = []
 
+            _conc = _concentration(rows, 10)
+            _n = len(rows)
+            _capped = _n >= TOP_HOLDINGS_PER_FUND
+            _moves = sum(1 for h in rows
+                         if h.get("change_type") in ("NEW", "INCREASED", "DECREASED"))
+            _style = _disclosed_style(_conc, _moves, _n, rets)
+
             investors.append({
                 "cik": cik,
                 "institution": name,
                 "person": MANAGER_PERSON.get(name),
+                # 공시에 보이는 운용 방식 (2026-08-01) — 아래 _disclosed_style 주석 참조.
+                "disclosed_style": _style,
+                # holdings_count 는 TOP_HOLDINGS_PER_FUND 상한에 걸린다. 상한이면 실제는 더 많다.
+                "holdings_capped": _capped,
                 "profile": profiles.get(name),
                 "quarterly_replication_returns": rets,
                 "trailing_4q_replication_pct": annualize_from_quarters(rets),
@@ -140,11 +196,11 @@ def build() -> Dict[str, Any]:
                 "report_date": curr_f.get("report_date"),
                 "filed_at": curr_f.get("filed_at"),
                 "prev_report_date": filings[1].get("report_date") if len(filings) > 1 else None,
-                "holdings_count": len(rows),
+                "holdings_count": _n,
                 "disclosed_value_usd": total_now,
                 "prev_disclosed_value_usd": total_prev or None,
                 "disclosed_value_change_pct": change_pct,
-                "top10_concentration_pct": _concentration(rows, 10),
+                "top10_concentration_pct": _conc,
                 "new_count": sum(1 for h in rows if h.get("change_type") == "NEW"),
                 "increased_count": sum(1 for h in rows if h.get("change_type") == "INCREASED"),
                 "decreased_count": sum(1 for h in rows if h.get("change_type") == "DECREASED"),
