@@ -683,7 +683,8 @@ export default function PublicHoldingsTab(props: Props) {
         summary: { by_ticker: [], total_realized_pnl: 0 },
     }))
     const [tradesLoading, setTradesLoading] = useState(false)
-    // 캔버스 전용 목업 주입 — 마운트 후라 정적 HTML 에는 절대 포함되지 않음
+    // 캔버스 전용 목업 주입 — 마운트 후라 정적 HTML 에는 절대 포함되지 않음.
+    //   라이브 미로그인 목업은 loadHoldings 의 토큰 부재 분기가 담당(로그아웃 전환도 그쪽이 처리).
     useEffect(() => {
         if (!onCanvas) return
         setRows(SAMPLE)
@@ -771,8 +772,17 @@ export default function PublicHoldingsTab(props: Props) {
         if (onCanvas) return
         const token = getToken()
         if (!token) {
+            /* 🚨 로그인 전 미리보기 = SAMPLE 목업(브라우저 창 + "예시" 배지, pointerEvents none).
+               되돌리지 말 것 — 여기서 setRows([]) 로 비우면 로그인 전 화면이 CTA 만 남는다
+               (2026-07-27 깜빡임 수정의 부작용, PM 지적 2026-08-01).
+               깜빡임 안전: 이 경로는 useEffect(마운트 후) 에서만 호출되어 정적 HTML 에 목업이
+               구워지지 않고, 토큰이 있으면 아래 분기로 빠져 SAMPLE 이 주입될 경로 자체가 없다. */
             setIsDemo(true)
-            setRows([])
+            setRows(SAMPLE)
+            setTradeData({
+                trades: SAMPLE_TRADES,
+                summary: SAMPLE_TRADE_SUMMARY,
+            })
             setLoading(false)
             return
         }
@@ -980,10 +990,11 @@ export default function PublicHoldingsTab(props: Props) {
         if (onCanvas) return
         const token = getToken()
         if (!token) {
+            // 미로그인 = 거래 기록도 SAMPLE 미리보기 유지 (loadHoldings 토큰 부재 분기와 동일 규율)
             setTradesLoading(false)
             setTradeData({
-                trades: [],
-                summary: { by_ticker: [], total_realized_pnl: 0 },
+                trades: SAMPLE_TRADES,
+                summary: SAMPLE_TRADE_SUMMARY,
             })
             return
         }
@@ -3873,9 +3884,12 @@ export default function PublicHoldingsTab(props: Props) {
                                     )}
                                 </>
                             )
-                        // 캔버스(에디터) 프리뷰만 = 브라우저 창 목업 안 SAMPLE 미리보기. 라이브 미로그인 = 로그인 CTA 만(목업 없음). pointerEvents none.
+                        /* 미로그인(=isDemo) = 브라우저 창 목업 안 SAMPLE 미리보기 + "예시" 배지.
+                           pointerEvents none 이라 조작 불가 — 로그인 CTA 로만 진입.
+                           🚨 캔버스 전용(onCanvas)으로 좁히지 말 것 — 2026-07-27 그렇게 좁혔다가
+                           로그인 전 미리보기가 통째로 사라졌다(PM 지적 2026-08-01). */
                         return isDemo ? (
-                            onCanvas ? (
+                            rows.length ? (
                                 <div
                                     style={{
                                         marginTop: 14,
@@ -3943,7 +3957,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                 textOverflow: "ellipsis",
                                             }}
                                         >
-                                            alphanest.app/holdings
+                                            alphanest.kr/nest
                                         </div>
                                         <span
                                             style={{
