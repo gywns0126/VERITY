@@ -19,7 +19,12 @@ import json
 import sys
 
 # us_analyst_consensus 재배포 금지 (2026-07-10 PM 확정)
-STRIP_KEYS = {"analyst_consensus"}
+# 🚨 2026-08-01 봉인 — verity_trail/brief_verdict 추가. 실측: equity_research/*.json 45개가
+#   verity_trail 보유(brain_score·grade·fact_score·sentiment_score·vci_value·reasoning[가중치 실값
+#   산식 분해]·recommended_position_pct·vams_holding_*). _source 가 "VERITY own metrics(Brain v5+
+#   Lynch+VAMS) — NOT from external LLM" 이라 IP 명시. reasoning 은 sanitize_recommendations 가
+#   score_breakdown 을 지우는 것과 동일 클래스. brief_verdict = 오퍼레이터 등급(HOLD/BUY/AVOID).
+STRIP_KEYS = {"analyst_consensus", "verity_trail", "brief_verdict"}
 
 
 def main(path: str) -> int:
@@ -27,12 +32,12 @@ def main(path: str) -> int:
         with open(path, "r", encoding="utf-8") as f:
             doc = json.load(f)
     except (OSError, json.JSONDecodeError) as e:
-        # fail-safe: 형식 미인지·로드 실패 시 원본 유지(공개본이 이미 복사됨) — 단 로그 명시.
-        print(f"sanitize_equity_brief: 로드 실패({e}) — skip")
-        return 0
+        # 🚨 fail-CLOSED (2026-08-01): 파싱 실패 = strip 불가 → 발행 중단(non-zero).
+        print(f"sanitize_equity_brief: 로드 실패({e}) — 발행 중단(fail-closed)")
+        return 1
     if not isinstance(doc, dict):
-        print("sanitize_equity_brief: dict 아님 — skip")
-        return 0
+        print("sanitize_equity_brief: dict 아님 — 발행 중단(fail-closed)")
+        return 1
 
     stripped = [k for k in STRIP_KEYS if k in doc]
     for k in stripped:

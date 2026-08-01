@@ -46,6 +46,15 @@ STRIP_KEYS = {
     "quarterly_report", "semi_report",
     "daily_report_updated", "weekly_report_updated", "monthly_report_updated",
     "quarterly_report_updated", "semi_report_updated",
+    # 🚨 2026-08-01 봉인 — KIS 실시간 재배포(약관 본인 이용 한정) + 오퍼레이터 크라운주얼.
+    #   실측(라이브 blob): kis_snapshots 에 호가 10+10단(orderbook.rows·total_ask/bid_vol) +
+    #   brain.invest_opinion{source:"kis"}, kis_market 74KB·kis_overseas_market 127KB.
+    #   claude_final_review = VAMS 손익·손절선·61종목 등급·시장국면 서술. etf_screening =
+    #   자체 verity_etf_score/factor_scores. institutional_13f/sec_risk_scan = 자체 신호.
+    #   공개(public-probe)는 이 키를 읽지 않음(Stage-3 소비경계). 오퍼레이터는 authed 로 이전.
+    "kis_snapshots", "kis_market", "kis_overseas_market", "kis_us_snapshots",
+    "kis_us_market", "kis_index", "claude_final_review", "claude_final_verdict",
+    "etf_screening", "sec_risk_scan", "institutional_13f",
 }
 
 
@@ -54,13 +63,14 @@ def main(path: str) -> int:
         with open(path, "r", encoding="utf-8") as f:
             doc = json.load(f)
     except (OSError, json.JSONDecodeError) as e:
-        # fail-safe: 형식 미인지·로드 실패 시 원본 유지하지 않고 오히려 발행 차단이 안전하나,
-        # 공개본이 이미 복사됐으므로 로그 명시 후 skip (원본 크라운주얼 노출 잔존 = 상위 게이트가 감지).
-        print(f"sanitize_portfolio_public: 로드 실패({e}) — skip (⚠️ 크라운주얼 잔존 가능)")
-        return 0
+        # 🚨 fail-CLOSED (2026-08-01): 파싱 실패 = 크라운주얼 sanitize 불가 → 발행 중단(non-zero).
+        #   기존 fail-open(return 0)은 미sanitize 원본을 그대로 발행해 크라운주얼을 노출했다.
+        #   producer 가 json.dump 로 쓰므로 파싱 실패는 사실상 손상뿐 — 그때는 발행 차단이 정답.
+        print(f"sanitize_portfolio_public: 로드 실패({e}) — 발행 중단(fail-closed)")
+        return 1
     if not isinstance(doc, dict):
-        print("sanitize_portfolio_public: dict 아님 — skip")
-        return 0
+        print("sanitize_portfolio_public: dict 아님 — 발행 중단(fail-closed)")
+        return 1
 
     stripped = [k for k in STRIP_KEYS if k in doc]
     for k in stripped:
