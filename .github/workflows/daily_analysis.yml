@@ -22,6 +22,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   # 🚨 RULE 1 — GH Actions 단일 발급원 (PM 2026-05-31). 발급 직후 Supabase publish (Railway/Vercel 소비).
   KIS_SHARED_TOKEN: "1"
+  # 🚨 RULE 1 이중발급 fix (2026-08-02, PM 승인 option1) — 이 워크플로는 발급 금지, 공유 토큰 읽기 전용.
+  #   7/21·6/26 daily_realtime×daily_analysis 동시 발급 실증. 발급자 = kis_token_refresh(주)+daily_realtime(백업)만.
+  KIS_CACHE_ONLY: "1"
 
 permissions:
   contents: write
