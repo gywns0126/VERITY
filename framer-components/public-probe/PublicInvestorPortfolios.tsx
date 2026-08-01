@@ -544,9 +544,12 @@ function StyleMap({
                 >
                     분기 기복 — 위일수록 출렁임
                 </text>
-                {pts.map((p) => {
-                    const on = p.i === sel
-                    return (
+                {/* 🚨 선택 점을 마지막에 그린다. SVG 는 문서 순서대로 덮으므로 그냥 map 하면
+                    뒤 인덱스 점들이 선택 점의 이름표를 가린다(2026-08-01 PM 스크린샷 — "켄 피셔"
+                    라벨이 다른 점 뒤로 들어감). z-index 는 SVG 에 안 먹으니 순서로 해결한다. */}
+                {pts
+                    .filter((p) => p.i !== sel)
+                    .map((p) => (
                         <g
                             key={p.i}
                             onClick={() => onPick(p.i)}
@@ -555,28 +558,50 @@ function StyleMap({
                             <circle
                                 cx={px(p.x)}
                                 cy={py(p.y)}
-                                r={on ? 8 : 5}
-                                fill={on ? C.vt : C.card}
-                                stroke={on ? C.vt : C.faint}
-                                strokeWidth={on ? 0 : 1.6}
+                                r={5}
+                                fill={C.card}
+                                stroke={C.faint}
+                                strokeWidth={1.6}
                             />
                             <title>{`${p.name} · 집중도 ${p.x.toFixed(0)}% · 기복 ${p.y.toFixed(1)}`}</title>
-                            {on ? (
-                                <text
-                                    x={px(p.x)}
-                                    y={py(p.y) - 13}
-                                    textAnchor="middle"
-                                    fill={C.vt}
-                                    fontFamily={FONT}
-                                    fontSize={12}
-                                    fontWeight={750}
-                                >
-                                    {p.name}
-                                </text>
-                            ) : null}
                         </g>
-                    )
-                })}
+                    ))}
+                {pts
+                    .filter((p) => p.i === sel)
+                    .map((p) => (
+                        <g key={p.i} style={{ cursor: "pointer" }}>
+                            {/* 이름표 자리를 비우는 후광 — 점이 촘촘한 구간에서도 읽히게.
+                                paintOrder="stroke" 로 외곽선을 글자 뒤에 깐다. */}
+                            <text
+                                x={px(p.x)}
+                                y={py(p.y) - 14}
+                                textAnchor="middle"
+                                fill={C.vt}
+                                stroke={C.card}
+                                strokeWidth={3.5}
+                                paintOrder="stroke"
+                                strokeLinejoin="round"
+                                fontFamily={FONT}
+                                fontSize={12.5}
+                                fontWeight={750}
+                            >
+                                {p.name}
+                            </text>
+                            <circle
+                                cx={px(p.x)}
+                                cy={py(p.y)}
+                                r={9}
+                                fill={C.card}
+                            />
+                            <circle
+                                cx={px(p.x)}
+                                cy={py(p.y)}
+                                r={7}
+                                fill={C.vt}
+                            />
+                            <title>{`${p.name} · 집중도 ${p.x.toFixed(0)}% · 기복 ${p.y.toFixed(1)}`}</title>
+                        </g>
+                    ))}
             </svg>
         </div>
     )
