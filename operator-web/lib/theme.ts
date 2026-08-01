@@ -10,18 +10,22 @@ export const FONT =
 // 숫자 스타일 — 모노 금지, tabular-nums.
 export const NUM: CSSProperties = { fontVariantNumeric: "tabular-nums" }
 
+// 라이트 = 라이브 4컴포넌트 전건 일치(검증 2026-08-01, MCP 대조). vt = 라이브 "vg"(퍼플) 동의어.
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", track: "#eef0f3", hi: "#f6f7f9",
+    line: "#e5e8eb", track: "#eef1f4", hi: "#f6f7f9",
     vt: "#6c5ce7", vtS: "#f0edff",
-    up: "#f04452", down: "#3182f6", upS: "#fdecee", downS: "#eaf1fe",
+    up: "#f04452", down: "#3182f6", upS: "#fff0f1", downS: "#eef4ff",
     green: "#15c47e", greenS: "#eafaf3",
 }
+// 다크 up/down = 라이브 최신 PublicInvestorPortfolios 정합(2026-07-12 접근성 검증값).
+//   🚨 옛 #ff6b76/#5a9cff 로 되돌리지 말 것 — down #4a90f0 은 OKLCH 다크밴드 준수 + 색약 ΔE 79.8 PASS,
+//   #5b9bff/#5a9cff 는 dataviz validator FAIL. NPSHoldings/MarketBoard 는 아직 구형(라이브도 마이그레이션 중).
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
     line: "#252b34", track: "#222a33", hi: "#1e242c",
     vt: "#a99bff", vtS: "#241f3a",
-    up: "#ff6b76", down: "#5a9cff", upS: "#2a1c20", downS: "#1b2740",
+    up: "#f04452", down: "#4a90f0", upS: "#2a1a1d", downS: "#1b2740",
     green: "#34e08a", greenS: "#12241c",
 }
 
