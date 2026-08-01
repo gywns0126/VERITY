@@ -8,6 +8,7 @@ import OperatorPicks from "./components/OperatorPicks"
 import TriSynthesisPanel from "./components/TriSynthesisPanel"
 import VerificationPanel from "./components/VerificationPanel"
 import RealtimeQuotes from "./components/RealtimeQuotes"
+import StockReport from "./components/StockReport"
 
 export default function Home() {
     const dark = useDark()
@@ -38,6 +39,7 @@ export default function Home() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                         <StockSearch />
                         <TriSynthesisPanel />
+                        <StockReport />
                         <OperatorPicks />
                     </div>
                 </Section>
