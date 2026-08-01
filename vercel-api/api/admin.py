@@ -1237,6 +1237,9 @@ ROUTES = {
     "system_health_snapshot": _make_operator_file_handler("system_health_snapshot.json"),
     "brain_kb_usage": _make_operator_file_handler("brain_kb_usage.json"),
     "admin_todos": _make_operator_file_handler("admin_todos.json"),
+    # 3종 LLM 종합 (2026-08-01) — 오퍼레이터 전용. private _operator/tri_synthesis.json.
+    # 공개 blob 미발행이라 fallback 없음(미존재 → 503) = 노출 0. Brain grounding 이라 authed 필수.
+    "tri_synthesis": _make_operator_file_handler("tri_synthesis.json"),
 }
 
 # 운영 변경(POST/DELETE) + 목록(GET) 라우트 — method-aware.
