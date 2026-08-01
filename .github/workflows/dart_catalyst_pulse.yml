@@ -92,6 +92,10 @@ jobs:
           python -m api.builders.public_disclosure_feed_builder
           # 투자 캘린더 = 공시피드+배당락+IPO 재배열 (2026-07-12, KIS 무관·신규수집 0). git add data/ 로 자동 포함.
           python -m api.builders.calendar_public_builder || echo "[calendar] build 실패(비차단)"
+          # 긴급 팝업 피드 (2026-08-01) = 임원/대주주 대량거래(금액=주식수×평가기준가) + 긴급공시(sev3).
+          #   방금 수집한 dart_catalyst_alerts.jsonl + insider_trades.json + kr_close_latest.json 조인.
+          #   공시 사실만(RULE 7). git add data/ 로 urgent_alerts.json 자동 포함(RULE 4).
+          python -m api.builders.urgent_alerts_builder || echo "[urgent_alerts] build 실패(비차단)"
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/
