@@ -27,6 +27,8 @@ UPLOADS = [
     ("data/system_health_snapshot.json", "_operator/system_health_snapshot.json", "application/json"),
     ("data/brain_kb_usage.json", "_operator/brain_kb_usage.json", "application/json"),
     ("data/admin_todos.json", "_operator/admin_todos.json", "application/json"),
+    # 중용 목표비중 — 태생부터 봉인(gitignore, 공개 발행 금지). private bucket + authed 만.
+    ("data/moderation_portfolio.json", "_operator/moderation_portfolio.json", "application/json"),
 ]
 
 
