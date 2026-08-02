@@ -1,0 +1,64 @@
+name: Blob Seal (banned object delete)
+
+# 발행 금지 자산의 "기존" blob 객체 삭제 유틸 — allowlist 제외는 향후 발행만 막고 과거 업로드는
+# 남는다(2026-08-02 발견: us_analyst_consensus.json·consensus_data.json blob 200 잔존, PM 7/10·7/21 금지).
+# dispatch 전용(cron 없음 → RULE 8 은 N=1 실행 + curl 404 검증으로 갈음). push/commit 없음(RULE 2·4 무관).
+# env: VERCEL_BLOB_TOKEN = 기존 publish-data 와 동일 secret (blob.vercel-storage.com 삭제 권한).
+
+on:
+  workflow_dispatch:
+    inputs:
+      files:
+        description: '삭제할 blob 파일명(쉼표구분). 기본 = 금지 2종.'
+        required: false
+        default: 'us_analyst_consensus.json,consensus_data.json'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  seal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete banned blob objects
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+          FILES: ${{ github.event.inputs.files }}
+        run: |
+          if [ -z "$BLOB_READ_WRITE_TOKEN" ]; then
+            echo "::error::VERCEL_BLOB_TOKEN 미설정 — 삭제 불가"
+            exit 1
+          fi
+          npm i --no-fund --no-audit @vercel/blob@latest
+          node - <<'EOF'
+          const { del } = require("@vercel/blob");
+          const base = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/";
+          const files = (process.env.FILES || "").split(",").map(s => s.trim()).filter(Boolean);
+          (async () => {
+            for (const f of files) {
+              try {
+                await del(base + f, { token: process.env.BLOB_READ_WRITE_TOKEN });
+                console.log("deleted:", f);
+              } catch (e) {
+                console.log("::warning::delete 실패", f, String(e).slice(0, 200));
+              }
+            }
+          })();
+          EOF
+
+      - name: Verify 404
+        env:
+          FILES: ${{ github.event.inputs.files }}
+        run: |
+          FAIL=0
+          for f in $(echo "$FILES" | tr ',' ' '); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/$f")
+            echo "  $code  $f"
+            if [ "$code" = "200" ]; then FAIL=1; fi
+          done
+          if [ "$FAIL" = "1" ]; then
+            echo "::error::여전히 200 — 봉인 실패"
+            exit 1
+          fi

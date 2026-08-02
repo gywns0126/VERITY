@@ -55,37 +55,15 @@ jobs:
         # 🚨 2026-07-30 — 이 파일은 발행 영구 금지 자산(PM 7/10)인데 public repo 에 그대로 있어
         #   raw.githubusercontent 로 200 이 떴다. blob allowlist 에서만 빼고 repo 는 열려 있었다.
         #   이제 VERITY-private 로 올린다. PAT 없으면 조용히 skip(파이프라인 보호).
-        #   ⚠ public 커밋 스텝은 PAT 검증 완료 후 제거 예정 — 지금 먼저 지우면 갱신이 끊긴다.
+        #   ✅ 2026-08-02 봉인: public 커밋 스텝 제거 + git rm + .gitignore (schedule 은 이미 7/1 비활성,
+        #   마지막 public 커밋 7/8 = "갱신 끊김" 우려는 이미 moot). 이후 보존 경로 = private_data.py 만.
         continue-on-error: true
         env:
           PRIVATE_DATA_PAT: ${{ secrets.PRIVATE_DATA_PAT }}
         run: python scripts/private_data.py push data/us_analyst_consensus.json
 
-      - name: Commit data/us_analyst_consensus.json
-        run: |
-          git config user.name "AI Stock Bot"
-          git config user.email "gywns0126@gmail.com"
-          git add data/us_analyst_consensus.json
-          if git diff --staged --quiet; then
-            echo "[us_consensus] no changes"
-            exit 0
-          fi
-          TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
-          git commit -m "📊 us_analyst_consensus ${TODAY_KST}"
-          BRANCH="${{ github.ref_name }}"
-          PUSHED=false
-          for i in 1 2 3 4 5; do
-            git rebase --abort 2>/dev/null || true
-            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
-              PUSHED=true
-              break
-            fi
-            echo "push attempt $i failed, retrying in $((i * 5))s..."
-            sleep $((i * 5))
-          done
-          if [ "$PUSHED" != "true" ]; then
-            echo "::warning::push 5회 실패 — 다음 cron 재시도"
-          fi
+      # (제거됨 2026-08-02) Commit data/us_analyst_consensus.json — 발행 금지 자산의 public 커밋 경로 폐쇄.
+      #   파일은 git rm + .gitignore 로 트리에서 제거. 재추가 = PM 재승인 + 유료 라이선스만.
 
       - name: Publish to VERITY-data + Vercel Blob
         if: always()
