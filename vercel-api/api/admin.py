@@ -1237,6 +1237,8 @@ ROUTES = {
     "system_health_snapshot": _make_operator_file_handler("system_health_snapshot.json"),
     "brain_kb_usage": _make_operator_file_handler("brain_kb_usage.json"),
     "admin_todos": _make_operator_file_handler("admin_todos.json"),
+    # 중용 목표비중(③척추) — 태생 봉인 자산. authed=본인전용이라 노출 아님(공개 blob fallback 도 없음 — gitignore).
+    "moderation_portfolio": _make_operator_file_handler("moderation_portfolio.json"),
 }
 
 # 운영 변경(POST/DELETE) + 목록(GET) 라우트 — method-aware.
