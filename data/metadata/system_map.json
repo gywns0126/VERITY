@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-03T00:16:38.093689+09:00",
+  "generated_at": "2026-08-03T01:26:34.508099+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 260192,
+    "code_lines_tsx_py": 260382,
     "python_modules": 680,
-    "tsx_components": 151,
-    "json_data_files": 1658,
-    "json_total_tracked": 1677,
-    "workflows": 66,
-    "scheduled_workflows": 51,
-    "cron_triggers": 62,
-    "git_tracked_files": 7229
+    "tsx_components": 153,
+    "json_data_files": 1659,
+    "json_total_tracked": 1678,
+    "workflows": 67,
+    "scheduled_workflows": 52,
+    "cron_triggers": 63,
+    "git_tracked_files": 7226
   },
   "subsystems": {
     "ingest": {
@@ -153,8 +153,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 66,
-      "scheduled": 51,
+      "count": 67,
+      "scheduled": 52,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -377,6 +377,13 @@
           "name": "measure_universe_load",
           "crons": [],
           "scheduled": false
+        },
+        {
+          "name": "moderation_portfolio",
+          "crons": [
+            "50 9 * * 1-5"
+          ],
+          "scheduled": true
         },
         {
           "name": "n_counter",
@@ -603,13 +610,13 @@
     },
     "surface": {
       "label": "출력",
-      "count": 151,
+      "count": 153,
       "by_group": {
         "framer-components/public-probe": 72,
         "admin": 15,
         "_shared": 14,
         "market": 11,
-        "operator-web/app/components": 8,
+        "operator-web/app/components": 10,
         "framer-components/crypto-public": 7,
         "analysis": 5,
         "home": 5,
@@ -624,7 +631,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1658
+      "count": 1659
     },
     "validation": {
       "label": "검증",
