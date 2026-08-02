@@ -1,27 +1,30 @@
 """중용(中庸) 포트폴리오 빌더 — 구성 척추 (#4).
 
-사전등록 = docs/PREREG_MODERATION_PORTFOLIO_2026_08_01.md (private repo).
-PM 승인: 방향(3층 결합) 2026-08-01 · 상수 그대로 2026-08-02 ("이어서 고고").
-RULE 7: 산출 = 가설(검증 N<252) · brain_score 는 어느 층에도 미투입(자기참조 차단 —
-검증 전 산식이 사이징을 오염시키지 않게). Layer1 은 사실(팩트 필드)만 사용.
+사전등록 = docs/PREREG_MODERATION_PORTFOLIO_2026_08_01.md (private repo · 등록본이 권위).
+PM 승인: 방향 2026-08-01 · 상수 2026-08-02. RULE 7: 상수 동결 — 조정 = 신규 사전등록.
 
-3층 (각 층 학술 근거 ≥2):
-  Layer1 극단 배제 — 유니버스 내 상대 분위(decile), 비대칭(근거 있는 쪽 꼬리만).
-    E1 재무 극단: 부채비율 상위 분위 AND 유동비율 하위 분위 (동시) 또는 DART 심각도 >=3
-       (Piotroski 2000 — 재무건전성 하위 꼬리의 systematic 저성과)
-    E2 낙폭 극단: 고점대비 낙폭 최심 분위 (Daniel & Moskowitz 2016 — momentum crash 꼬리)
-    E3 과열 극단: PER 상위 분위 AND PBR 상위 분위 (동시) (Harvey et al. 2018 — 팩터 극단 꼬리)
-    E4 규모 극단: 시총 하위 분위 — 정수주/체결 실행 불능 프록시
-    결측 필드 = 해당 룰 그 종목 미적용(배제 아님 — 결측을 벌하지 않는다).
-  Layer2 슬리브 가중 — Ledoit-Wolf(2004) 상수상관 수축 공분산의 최소분산(롱온리 클립)
-    ⊕ 1/N (λ=0.5, DeMiguel 2009 — 추정오차 하 1/N 견고성).
-  Layer3 스케일 — gross = min( 목표변동성 12%/σ_p , quarter-Kelly 0.25·(ERP 0.04/σ_p²) , 1.0 ).
-    잔여 = 현금. 무레버리지 절대 (MacLean·Thorp·Ziemba 2011 — 과베팅 비대칭 파산).
-  종목 10% 상한 = **총자산 대비, gross 적용 후** — 초과분은 현금으로(재배분 안 함, 보수 방향).
-    (N<10 소규모 유니버스에서도 수학적으로 성립하는 유일한 해석.)
+🚨 2026-08-02 자기 정정: 최초 구현이 메모리 재구성 E-룰(낙폭·과열·규모)을 사용 — 등록본과 상이
+(특히 "낙폭 최심 배제"는 등록본의 "하위 극단 배제 금지" 원칙과 충돌). 본 판 = 등록본 E1~E4 그대로.
 
-US 추천 = v1 제외 목록 표기(us_chart_daily 공분산 소스 주간 적재 후 편입 예정).
-산출 data/moderation_portfolio.json = 오퍼레이터 자산 — .gitignore + private bucket 만(공개 발행 금지).
+등록 3층:
+  Layer1 극단 배제 — 당일 후보 풀 내 상대 10분위, 비대칭(근거 있는 쪽만):
+    E1 = PBR 하위 분위 AND (F-Score<=2 OR ROE<0)      — Piotroski 2000 (밸류트랩)
+    E2 = 6M 수익률 상위 분위 AND 시장 패닉 상태          — Daniel-Moskowitz 2016 (승자 크래시)
+    E3 = volatility_60d 상위 분위                        — Ang et al. 2006 · Frazzini-Pedersen 2014
+    E4 = debt_ratio 상위 분위                            — 재무 곤경 (E1 과 직교)
+    잔여 < 8 → insufficient_breadth 정직 중단(억지 구성 금지).
+  Layer2 = sklearn LedoitWolf 수축 공분산 → SLSQP 최소분산(롱온리·상한) ⊕ 1/N (λ=0.5 LOCKED).
+  Layer3 = E = min(0.12/σ_p, 0.25·0.04/σ_p², 1.0) · 잔여 현금 · 무레버리지.
+  brain_score = 어느 층에도 미투입(자기참조 차단).
+
+구현 노트(등록 공백/데이터 갭 — 산식 변경 아님, 상태 플래그로 정직 노출):
+  · 수익률 입력 = kr_chart_daily 일봉(등록 시점 sparkline_weekly 는 정렬 결함 확인 → 일봉 재배선).
+    σ 연율화 = sqrt(252).
+  · F-Score 정수 필드 부재 → E1 은 가용 leg(ROE<0)만 + flag. (필드 적재 시 자동 완전체.)
+  · 패닉 판정(24개월 지수 누적<0 AND 63일 변동성>3년 중앙값) = 지수 시계열 756일 필요.
+    현 kr_index_daily keep 120일 → 판정 불가 시 panic=False + flag (E2 휴면, 백필 큐).
+  · SLSQP 상한 0.10 은 N<10 에서 수학 불능 → 상한 = 1/N 로 완화 + flag (feasibility 보정).
+산출/트레일 = 태생 봉인(.gitignore + private bucket + authed).
 """
 from __future__ import annotations
 
@@ -37,14 +40,17 @@ import numpy as np
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 KST = timezone(timedelta(hours=9))
 
-# ── 사전등록 상수 (PM 승인 2026-08-02 — 조정 = 신규 사전등록 필수) ──
-DECILE = 0.10            # 극단 = 상/하위 10분위
-BLEND_LAMBDA = 0.5       # Layer2: w = λ·minvar ⊕ (1−λ)·1/N
-MAX_POS = 0.10           # 종목 상한 (총자산 대비, gross 후)
-TARGET_VOL = 0.12        # 연 목표변동성
-KELLY_PHI = 0.25         # quarter-Kelly
-ERP = 0.04               # 기대 초과수익 보수 prior (스케일 앵커 — 예측 아님)
-MIN_COMMON_DAYS = 60     # 공분산 최소 공통 거래일 (미만 = 1/N 폴백)
+# ── 사전등록 상수 (LOCKED) ──
+DECILE = 0.10
+BLEND_LAMBDA = 0.5
+MAX_POS = 0.10                 # SLSQP 상한 (N<10 → 1/N 완화 + flag)
+TARGET_VOL = 0.12
+KELLY_PHI = 0.25
+ERP = 0.04
+MIN_BREADTH = 8                # 잔여 하한 — 미만이면 구성 중단
+RET6M_DAYS = 126
+VOL_DAYS = 60
+PANIC_NEED_DAYS = 756          # 3년 (지수 시계열 요구)
 TRADING_DAYS = 252
 
 
@@ -52,15 +58,15 @@ def _num(v: Any) -> Optional[float]:
     return float(v) if isinstance(v, (int, float)) and np.isfinite(v) else None
 
 
-# ── Layer 1 — 극단 배제 (비대칭 · 상대 분위 · 사실만) ──
-
 def _decile_flags(vals: List[Optional[float]], top: bool) -> List[bool]:
-    """상위(top=True)/하위 10분위 플래그. 결측 = False. 유효표본 <5 = 룰 전체 미적용."""
+    """상/하위 10분위 플래그. 결측=False. 유효표본 <5 = 룰 미적용(분위 퇴화)."""
     idx = [i for i, v in enumerate(vals) if v is not None]
     out = [False] * len(vals)
     if len(idx) < 5:
         return out
     arr = np.array([vals[i] for i in idx], dtype=float)
+    if np.isclose(arr.max(), arr.min()):     # 분산 0(전원 동일) = 극단 부재 → 룰 미적용
+        return out
     q = float(np.quantile(arr, 1 - DECILE if top else DECILE))
     for i in idx:
         v = vals[i]
@@ -69,112 +75,121 @@ def _decile_flags(vals: List[Optional[float]], top: bool) -> List[bool]:
     return out
 
 
-def exclude_extremes(recs: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
-    """KR 추천 → (생존, 배제[{ticker,name,reason}]). 비대칭 — 근거 있는 쪽 꼬리만."""
-    debt = [_num(r.get("debt_ratio")) for r in recs]
-    curr = [_num(r.get("current_ratio")) for r in recs]
-    drop = [_num(r.get("drop_from_high_pct")) for r in recs]
-    per = [_num(r.get("per")) for r in recs]
-    pbr = [_num(r.get("pbr")) for r in recs]
-    mcap = [_num(r.get("market_cap")) for r in recs]
+# ── 지수 패닉 상태 (등록 정의 · 데이터 부족 시 휴면) ──
 
-    e1a = _decile_flags(debt, top=True)
-    e1b = _decile_flags(curr, top=False)
-    e2 = _decile_flags(drop, top=False)      # drop 은 음수 — 하위 분위 = 최심 낙폭
-    e3a = _decile_flags(per, top=True)
-    e3b = _decile_flags(pbr, top=True)
-    e4 = _decile_flags(mcap, top=False)
+def panic_state(index_closes: Optional[List[float]]) -> Tuple[bool, str]:
+    """등록: 24개월 누적수익 < 0 AND 63일 실현변동성 > 3년 중앙값. 756일 미만 = 판정 불가."""
+    if not index_closes or len(index_closes) < PANIC_NEED_DAYS:
+        n = len(index_closes or [])
+        return False, f"panic_series_insufficient({n}d<{PANIC_NEED_DAYS}d)"
+    px = np.array(index_closes, dtype=float)
+    ret24 = px[-1] / px[-504] - 1.0                       # 24개월 ≈ 504거래일
+    rets = px[1:] / px[:-1] - 1.0
+    win = 63
+    vols = np.array([rets[i - win:i].std() for i in range(win, len(rets) + 1)])
+    cur_vol = float(vols[-1])
+    med3y = float(np.median(vols[-PANIC_NEED_DAYS:]))
+    active = bool(ret24 < 0 and cur_vol > med3y)
+    return active, ""
+
+
+# ── Layer 1 — 등록 E1~E4 (비대칭 · 상대 분위 · brain 미사용) ──
+
+def layer1_exclude(
+    recs: List[Dict[str, Any]],
+    feats: Dict[str, Dict[str, Optional[float]]],
+    panic_active: bool,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, str]], List[str]]:
+    """recs + 계산 피처(ret_6m·vol_60d) → (생존, 배제, flags)."""
+    flags: List[str] = []
+    pbr = [_num(r.get("pbr")) for r in recs]
+    roe = [_num(r.get("roe")) or _num((r.get("kis_financial_ratio") or {}).get("roe")) for r in recs]
+    fsc = [_num(r.get("f_score")) for r in recs]
+    debt = [_num(r.get("debt_ratio")) or _num((r.get("kis_financial_ratio") or {}).get("debt_ratio")) for r in recs]
+    r6 = [feats.get(str(r.get("ticker")), {}).get("ret_6m") for r in recs]
+    v60 = [feats.get(str(r.get("ticker")), {}).get("vol_60d") for r in recs]
+
+    if all(v is None for v in fsc):
+        flags.append("f_score_unavailable(E1=ROE<0 leg only)")
+
+    pbr_low = _decile_flags(pbr, top=False)
+    r6_top = _decile_flags(r6, top=True)
+    v60_top = _decile_flags(v60, top=True)
+    debt_top = _decile_flags(debt, top=True)
+    if not panic_active:
+        flags.append("E2_dormant(panic=False)")
 
     keep, excluded = [], []
     for i, r in enumerate(recs):
         tk = str(r.get("ticker"))
-        sev = _num((r.get("dart_disclosure_events") or {}).get("severity"))
         reasons = []
-        if (e1a[i] and e1b[i]) or (sev is not None and sev >= 3):
-            reasons.append("E1 재무 극단" + (" (DART sev>=3)" if sev is not None and sev >= 3 else ""))
-        if e2[i]:
-            reasons.append("E2 낙폭 극단")
-        if e3a[i] and e3b[i]:
-            reasons.append("E3 과열 극단")
-        if e4[i]:
-            reasons.append("E4 규모 극단")
+        quality_bad = (fsc[i] is not None and fsc[i] <= 2) or (roe[i] is not None and roe[i] < 0)
+        if pbr_low[i] and quality_bad:
+            reasons.append("E1 밸류트랩(PBR하위+저품질)")
+        if panic_active and r6_top[i]:
+            reasons.append("E2 패닉장 승자(모멘텀 크래시 존)")
+        if v60_top[i]:
+            reasons.append("E3 고변동 극단")
+        if debt_top[i]:
+            reasons.append("E4 고부채 극단")
         if reasons:
             excluded.append({"ticker": tk, "name": r.get("name") or tk, "reason": " · ".join(reasons)})
         else:
             keep.append(r)
-    return keep, excluded
+    return keep, excluded, flags
 
 
-# ── Layer 2 — Ledoit-Wolf(2004) 상수상관 수축 → 최소분산⊕1/N 슬리브 ──
-
-def ledoit_wolf_cc(X: np.ndarray) -> Tuple[np.ndarray, float]:
-    """상수상관 타깃 LW 수축 공분산 (Ledoit & Wolf 2004). X=(T,d) 일수익률 → (Σ*, δ)."""
-    T, d = X.shape
-    Xc = X - X.mean(axis=0, keepdims=True)
-    S = (Xc.T @ Xc) / T
-    s = np.sqrt(np.clip(np.diag(S), 1e-18, None))
-    R = S / np.outer(s, s)
-    off = ~np.eye(d, dtype=bool)
-    r_bar = float(R[off].mean()) if d > 1 else 0.0
-    F = r_bar * np.outer(s, s)
-    np.fill_diagonal(F, np.diag(S))
-
-    W = np.einsum("ti,tj->tij", Xc, Xc) - S[None, :, :]      # (T,d,d)
-    pi_mat = (W ** 2).mean(axis=0)
-    pi_hat = float(pi_mat.sum())
-    theta = np.einsum("ti,tij->ij", Xc ** 2, W) / T          # ϑ_ii,ij
-    rho_hat = float(np.trace(pi_mat))
-    if d > 1:
-        sr = np.sqrt(np.outer(np.diag(S), 1.0 / np.clip(np.diag(S), 1e-18, None)))  # √(s_ii/s_jj)
-        term = sr.T * theta + sr * theta.T
-        rho_hat += float((r_bar / 2.0) * term[off].sum())
-    gamma_hat = float(((F - S) ** 2).sum())
-    delta = 0.0 if gamma_hat <= 0 else max(0.0, min(1.0, (pi_hat - rho_hat) / gamma_hat / T))
-    return delta * F + (1 - delta) * S, delta
-
+# ── Layer 2 — sklearn LedoitWolf + SLSQP 최소분산 ⊕ 1/N ──
 
 def layer2_sleeve(X: np.ndarray) -> Tuple[np.ndarray, np.ndarray, Dict[str, Any]]:
-    """(T,d) → (슬리브 가중 합1, 공분산 Σ, meta). T 부족/퇴화 = 1/N 폴백."""
+    """(T,d) 일수익률 → (슬리브 합1, Σ(일간), meta)."""
+    from sklearn.covariance import LedoitWolf
+    from scipy.optimize import minimize
+
     T, d = X.shape
     ew = np.full(d, 1.0 / d)
     if d == 1:
-        sigma = np.atleast_2d(np.var(X[:, 0])) if T > 1 else np.array([[0.0]])
-        return np.array([1.0]), sigma, {"method": "single", "lw_delta": None}
-    if T < MIN_COMMON_DAYS:
-        sigma = np.cov(X.T) if T > 1 else np.eye(d) * 1e-4
-        return ew, np.atleast_2d(sigma), {"method": f"1/N-fallback(T<{MIN_COMMON_DAYS})", "lw_delta": None}
-    sigma, delta = ledoit_wolf_cc(X)
-    try:
-        mv = np.linalg.pinv(sigma) @ np.ones(d)
-        mv = np.clip(mv, 0, None)            # 롱온리 클립 휴리스틱
-        mv = mv / mv.sum() if mv.sum() > 0 else ew
-    except np.linalg.LinAlgError:
+        return np.array([1.0]), np.atleast_2d(np.var(X[:, 0]) if T > 1 else 1e-4), {"method": "single"}
+    lw = LedoitWolf().fit(X)
+    sigma = lw.covariance_
+    cap = MAX_POS
+    meta: Dict[str, Any] = {"method": "LW-minvar(SLSQP)⊕1/N", "lw_shrinkage": round(float(lw.shrinkage_), 4)}
+    if d < int(round(1 / MAX_POS)):
+        cap = 1.0 / d
+        meta["cap_relaxed"] = f"N={d}<10 → cap=1/N(feasibility)"
+    res = minimize(
+        lambda w: float(w @ sigma @ w),
+        ew, method="SLSQP",
+        bounds=[(0.0, cap)] * d,
+        constraints=[{"type": "eq", "fun": lambda w: float(w.sum() - 1.0)}],
+        options={"maxiter": 300, "ftol": 1e-12},
+    )
+    if res.success and np.isfinite(res.x).all():
+        mv = np.clip(res.x, 0, cap)
+        mv = mv / mv.sum()
+    else:
         mv = ew
+        meta["minvar_fallback"] = "SLSQP 실패 → 1/N"
     w = BLEND_LAMBDA * mv + (1 - BLEND_LAMBDA) * ew
-    return w / w.sum(), sigma, {"method": "LW-minvar⊕1/N", "lw_delta": round(delta, 4)}
+    return w / w.sum(), sigma, meta
 
 
-# ── Layer 3 — 스케일 + 총자산 10% 상한 ──
+# ── Layer 3 — 노출 (목표변동성 ∧ quarter-Kelly ∧ 무레버리지) ──
 
-def layer3_scale(w_sleeve: np.ndarray, sigma_daily: np.ndarray) -> Dict[str, Any]:
-    var_d = float(w_sleeve @ sigma_daily @ w_sleeve)
-    vol_ann = float(np.sqrt(max(var_d, 1e-12) * TRADING_DAYS))
-    g_vol = TARGET_VOL / vol_ann if vol_ann > 0 else 1.0
-    g_kelly = KELLY_PHI * (ERP / (vol_ann ** 2)) if vol_ann > 0 else 1.0
-    gross = float(min(g_vol, g_kelly, 1.0))
-    bind = "vol_target" if g_vol <= min(g_kelly, 1.0) else ("quarter_kelly" if g_kelly <= 1.0 else "no_leverage")
-    return {"portfolio_vol_annual": round(vol_ann, 4), "gross_pre_cap": round(gross, 4), "bind": bind}
-
-
-def final_weights(w_sleeve: np.ndarray, gross: float) -> np.ndarray:
-    """최종 비중 = min(슬리브×gross, MAX_POS). 초과분 = 현금(재배분 없음 — 보수)."""
-    return np.minimum(w_sleeve * gross, MAX_POS)
+def layer3_exposure(w: np.ndarray, sigma_daily: np.ndarray) -> Dict[str, Any]:
+    var_d = float(w @ sigma_daily @ w)
+    vol = float(np.sqrt(max(var_d, 1e-12) * TRADING_DAYS))
+    k_vol = TARGET_VOL / vol if vol > 0 else 1.0
+    k_kelly = KELLY_PHI * ERP / (vol ** 2) if vol > 0 else 1.0
+    e = float(min(k_vol, k_kelly, 1.0))
+    bind = "vol_target" if k_vol <= min(k_kelly, 1.0) else ("quarter_kelly" if k_kelly <= 1.0 else "no_leverage")
+    return {"portfolio_vol_annual": round(vol, 4), "k_vol": round(k_vol, 4),
+            "k_kelly": round(k_kelly, 4), "exposure": round(e, 4), "cash": round(1 - e, 4), "bind": bind}
 
 
-# ── 데이터 적재 + 빌드 ──
+# ── 데이터 적재 ──
 
-def _load_kr_returns(tickers: List[str]) -> Tuple[np.ndarray, List[str], int]:
-    """kr_chart_daily 청크 → 공통일 inner-join 일수익률. (X(T,d), 정렬티커, 공통일수)."""
+def _load_closes(tickers: List[str]) -> Dict[str, Dict[int, float]]:
     closes: Dict[str, Dict[int, float]] = {}
     for path in sorted(glob.glob(os.path.join(_ROOT, "data", "kr_chart_daily", "chunk_*.json"))):
         try:
@@ -185,6 +200,34 @@ def _load_kr_returns(tickers: List[str]) -> Tuple[np.ndarray, List[str], int]:
             if tk in stocks and tk not in closes:
                 closes[tk] = {int(row[0]): float(row[4]) for row in (stocks[tk].get("c") or [])
                               if isinstance(row, list) and len(row) >= 5 and row[4]}
+    return closes
+
+
+def _features(closes: Dict[str, Dict[int, float]]) -> Dict[str, Dict[str, Optional[float]]]:
+    """티커별 ret_6m(126d)·vol_60d — Layer1 입력."""
+    out: Dict[str, Dict[str, Optional[float]]] = {}
+    for tk, cd in closes.items():
+        px = np.array([cd[k] for k in sorted(cd)], dtype=float)
+        ret6 = float(px[-1] / px[-(RET6M_DAYS + 1)] - 1.0) if len(px) > RET6M_DAYS else None
+        if len(px) > VOL_DAYS:
+            r = px[-(VOL_DAYS + 1):]
+            vol = float((r[1:] / r[:-1] - 1.0).std())
+        else:
+            vol = None
+        out[tk] = {"ret_6m": ret6, "vol_60d": vol}
+    return out
+
+
+def _load_index_closes() -> Optional[List[float]]:
+    try:
+        d = json.load(open(os.path.join(_ROOT, "data", "kr_index_daily.json"), encoding="utf-8"))
+        ser = ((d.get("indices") or {}).get("코스피") or {}).get("c") or []
+        return [float(r[1]) for r in ser if isinstance(r, list) and len(r) >= 2]
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def _aligned_returns(closes: Dict[str, Dict[int, float]], tickers: List[str]) -> Tuple[np.ndarray, List[str], int]:
     have = [tk for tk in tickers if closes.get(tk)]
     if not have:
         return np.zeros((0, 0)), [], 0
@@ -196,6 +239,8 @@ def _load_kr_returns(tickers: List[str]) -> Tuple[np.ndarray, List[str], int]:
     return P[1:] / P[:-1] - 1.0, have, len(days)
 
 
+# ── 빌드 + 트레일 ──
+
 def build(portfolio_doc: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     if portfolio_doc is None:
         portfolio_doc = json.load(open(os.path.join(_ROOT, "data", "portfolio.json"), encoding="utf-8"))
@@ -203,37 +248,71 @@ def build(portfolio_doc: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     kr = [r for r in recs if r.get("currency") == "KRW"]
     us = [str(r.get("ticker")) for r in recs if r.get("currency") == "USD"]
 
-    keep, excluded = exclude_extremes(kr)
-    tickers = [str(r.get("ticker")) for r in keep]
-    X, aligned, n_days = _load_kr_returns(tickers)
+    tickers = [str(r.get("ticker")) for r in kr]
+    closes = _load_closes(tickers)
+    feats = _features(closes)
+    panic, panic_flag = panic_state(_load_index_closes())
+    keep, excluded, flags = layer1_exclude(kr, feats, panic)
+    if panic_flag:
+        flags.append(panic_flag)
 
-    if X.size and aligned:
-        w_sleeve, sigma, meta2 = layer2_sleeve(X)
-        l3 = layer3_scale(w_sleeve, sigma)
-        w_final = final_weights(w_sleeve, l3["gross_pre_cap"])
-        gross_final = float(w_final.sum())
-        weights = {tk: round(float(wi), 4) for tk, wi in zip(aligned, w_final) if wi > 1e-6}
-    else:
-        meta2 = {"method": "no_data", "lw_delta": None}
-        l3 = {"portfolio_vol_annual": None, "gross_pre_cap": 0.0, "bind": "no_data"}
-        gross_final, weights = 0.0, {}
-
-    name_of = {str(r.get("ticker")): (r.get("name") or r.get("ticker")) for r in kr}
-    return {
+    base = {
         "as_of": datetime.now(KST).strftime("%Y-%m-%d"),
-        "method": "중용 3층 (PREREG_MODERATION_PORTFOLIO_2026_08_01 · 상수 승인 2026-08-02)",
-        "layer1": {"universe_kr": len(kr), "excluded": excluded, "survivors": len(keep)},
-        "layer2": {**meta2, "common_days": n_days, "aligned": len(aligned), "blend_lambda": BLEND_LAMBDA},
-        "layer3": {**l3, "target_vol": TARGET_VOL, "kelly_phi": KELLY_PHI, "erp_prior": ERP,
-                   "max_pos_total": MAX_POS, "leverage_cap": 1.0,
-                   "gross_final": round(gross_final, 4), "cash": round(1 - gross_final, 4)},
-        "weights": weights,                      # 최종 비중(총자산 대비) — 잔여 = 현금
-        "names": {tk: name_of.get(tk, tk) for tk in weights},
-        "us_pending": us,                        # us_chart_daily 공분산 적재 후 편입
-        "disclosure": {"rule7": "가설 · 검증 N<252 (2027 게이트) · 매수/매도 지시 아님",
-                       "brain_used_in_sizing": False},
+        "method": "중용 3층 v0 (PREREG_MODERATION_PORTFOLIO_2026_08_01 등록본 · 상수 승인 2026-08-02)",
+        "layer1": {"universe_kr": len(kr), "excluded": excluded, "survivors": len(keep),
+                   "panic_active": panic, "flags": flags},
+        "us_pending": us,
+        "disclosure": {"rule7": "가설 · 라이브 검증 N=0 (게이트 N>=252, ~2027) · 매수/매도 지시 아님",
+                       "brain_used_in_sizing": False,
+                       "citations": "Piotroski2000·Daniel-Moskowitz2016·Ang2006·Frazzini-Pedersen2014·"
+                                    "Ledoit-Wolf2004·DeMiguel2009·Harvey2018·MacLean-Thorp-Ziemba2011"},
         "generated_at": datetime.now(KST).isoformat(timespec="seconds"),
     }
+
+    if len(keep) < MIN_BREADTH:
+        base["status"] = "insufficient_breadth"
+        base["layer1"]["note"] = f"생존 {len(keep)} < {MIN_BREADTH} — 억지 구성 금지(등록 §2)"
+        base["weights"] = {}
+        return base
+
+    X, aligned, n_days = _aligned_returns(closes, [str(r.get("ticker")) for r in keep])
+    w_sleeve, sigma, meta2 = layer2_sleeve(X)
+    l3 = layer3_exposure(w_sleeve, sigma)
+    w_final = w_sleeve * l3["exposure"]
+    name_of = {str(r.get("ticker")): (r.get("name") or r.get("ticker")) for r in kr}
+
+    base.update({
+        "status": "ok",
+        "layer2": {**meta2, "common_days": n_days, "aligned": len(aligned),
+                   "blend_lambda": BLEND_LAMBDA, "max_pos_sleeve": MAX_POS},
+        "layer3": {**l3, "target_vol": TARGET_VOL, "kelly_phi": KELLY_PHI, "erp_prior": ERP, "leverage_cap": 1.0},
+        "weights": {tk: round(float(wi), 4) for tk, wi in zip(aligned, w_final) if wi > 1e-6},
+        "names": {tk: name_of.get(tk, tk) for tk in aligned},
+    })
+    return base
+
+
+def _append_trail(doc: Dict[str, Any]) -> None:
+    """등록 §5 trail — 사후 편집 금지 append. 파일도 봉인 대상(gitignore)."""
+    path = os.path.join(_ROOT, "data", "moderation_portfolio_trail.jsonl")
+    row = {
+        "ts": doc.get("generated_at"),
+        "status": doc.get("status"),
+        "universe_kr": doc["layer1"]["universe_kr"],
+        "cuts": {}, "survivors": doc["layer1"]["survivors"],
+        "weights": doc.get("weights") or {},
+        "sigma_p": (doc.get("layer3") or {}).get("portfolio_vol_annual"),
+        "k_vol": (doc.get("layer3") or {}).get("k_vol"),
+        "k_kelly": (doc.get("layer3") or {}).get("k_kelly"),
+        "exposure": (doc.get("layer3") or {}).get("exposure"),
+        "flags": doc["layer1"].get("flags"),
+    }
+    for e in doc["layer1"]["excluded"]:
+        for part in str(e.get("reason", "")).split(" · "):
+            key = part.split(" ")[0]
+            row["cuts"][key] = row["cuts"].get(key, 0) + 1
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def main() -> None:
@@ -241,9 +320,11 @@ def main() -> None:
     out = os.path.join(_ROOT, "data", "moderation_portfolio.json")
     with open(out, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)
-    print(f"[moderation] 생존 {doc['layer1']['survivors']}/{doc['layer1']['universe_kr']} · "
-          f"gross {doc['layer3']['gross_final']} ({doc['layer3']['bind']}) · "
-          f"vol {doc['layer3']['portfolio_vol_annual']} → {out}", file=sys.stderr)
+    _append_trail(doc)
+    l3 = doc.get("layer3") or {}
+    print(f"[moderation] {doc.get('status')} · 생존 {doc['layer1']['survivors']}/{doc['layer1']['universe_kr']}"
+          f" · E {l3.get('exposure')} ({l3.get('bind')}) · vol {l3.get('portfolio_vol_annual')} → {out}",
+          file=sys.stderr)
 
 
 if __name__ == "__main__":
