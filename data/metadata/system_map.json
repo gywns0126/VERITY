@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-02T16:24:50.679657+09:00",
+  "generated_at": "2026-08-02T18:34:45.547316+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 257707,
-    "python_modules": 673,
+    "code_lines_tsx_py": 257886,
+    "python_modules": 674,
     "tsx_components": 141,
-    "json_data_files": 1658,
-    "json_total_tracked": 1673,
-    "workflows": 64,
+    "json_data_files": 1657,
+    "json_total_tracked": 1672,
+    "workflows": 65,
     "scheduled_workflows": 50,
     "cron_triggers": 61,
-    "git_tracked_files": 7198
+    "git_tracked_files": 7199
   },
   "subsystems": {
     "ingest": {
@@ -153,7 +153,7 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 64,
+      "count": 65,
       "scheduled": 50,
       "workflows": [
         {
@@ -163,6 +163,11 @@
         },
         {
           "name": "atr_phase_0_verdict",
+          "crons": [],
+          "scheduled": false
+        },
+        {
+          "name": "blob_seal",
           "crons": [],
           "scheduled": false
         },
@@ -610,7 +615,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1658
+      "count": 1657
     },
     "validation": {
       "label": "검증",
@@ -626,7 +631,7 @@
   },
   "python_by_dir": {
     "api": 375,
-    "tests": 150,
+    "tests": 151,
     "scripts": 82,
     "vercel-api": 54,
     "server": 7,
