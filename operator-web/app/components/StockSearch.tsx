@@ -101,6 +101,7 @@ export default function StockSearch({ placeholder = "종목명·티커 검색" }
     return (
         <div style={{ fontFamily: FONT, width: "100%", boxSizing: "border-box" }}>
             <input
+                id="af-search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={placeholder}
