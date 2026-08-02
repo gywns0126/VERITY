@@ -1239,6 +1239,8 @@ ROUTES = {
     "admin_todos": _make_operator_file_handler("admin_todos.json"),
     # ④ 검증 층(오퍼레이터 authed) — IC/팩터건강/성과. authed=본인전용이라 공개 노출 아님(봉인 무관).
     "verification": _make_operator_file_handler("verification_report.json"),
+    # 중용 목표비중(③척추) — 태생 봉인 자산. authed=본인전용이라 노출 아님(공개 blob fallback 도 없음 — gitignore).
+    "moderation_portfolio": _make_operator_file_handler("moderation_portfolio.json"),
 }
 
 # 운영 변경(POST/DELETE) + 목록(GET) 라우트 — method-aware.

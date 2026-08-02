@@ -620,16 +620,83 @@ def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
     return {"blocked": False, "reason": ""}
 
 
-def _apply_half_kelly(invest_amount: float, brain_score: int) -> float:
-    """V6: Half-Kelly (또는 설정된 비율) 적용."""
-    if VAMS_KELLY_SCALE >= 1.0:
+# ── V7 fractional Kelly (PREREG_KELLY_FIX_2026_08_02 · PM 승인 2026-08-02, RULE 7 1회) ──
+KELLY_MULT_MIN = 0.6           # D3 — mult 하한
+KELLY_MULT_MAX = 1.2           # D3 — mult 상한
+KELLY_B_DEFAULT = 1.2          # D4 — 실현 표본 부족 시 보수 default (옛 임의값 1.5 교체)
+KELLY_LAMBDA_N_FULL = 252      # D2 — 검증 연동 스케일 (IC 게이트 N=252 정합)
+KELLY_MIN_WINS_LOSSES = 10     # D4 — 실현 b 채택 최소 표본 (승·패 각각)
+_KELLY_REF_BRAIN = 60          # 중립 기준점 (mult=1.0)
+
+
+def _kelly_realized_stats() -> Tuple[int, float]:
+    """VAMS exit_log 실현 통계 → (n_closed, b=avg_win/avg_loss).
+
+    실패/표본부족(승·패 각 10 미만) = (n, KELLY_B_DEFAULT). read-only, 예외 삼킴(사이징 경로 보호).
+    """
+    path = os.path.join(DATA_DIR, "vams", "exit_log.jsonl")
+    wins: List[float] = []
+    losses: List[float] = []
+    n = 0
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    pct = float(json.loads(line).get("pnl_pct"))
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    continue
+                n += 1
+                if pct > 0:
+                    wins.append(pct)
+                elif pct < 0:
+                    losses.append(-pct)
+    except OSError:
+        return 0, KELLY_B_DEFAULT
+    if len(wins) >= KELLY_MIN_WINS_LOSSES and len(losses) >= KELLY_MIN_WINS_LOSSES:
+        avg_loss = sum(losses) / len(losses)
+        if avg_loss > 0:
+            return n, (sum(wins) / len(wins)) / avg_loss
+    return n, KELLY_B_DEFAULT
+
+
+def _apply_fractional_kelly(invest_amount: float, brain_score: int,
+                            stats: Optional[Tuple[int, float]] = None) -> float:
+    """V7 (PREREG_KELLY_FIX_2026_08_02, PM 승인 2026-08-02) — 검증연동 fractional Kelly.
+
+    옛 V6 half-Kelly 결함(실측 2026-08-02): scaled_kelly/kelly_raw = VAMS_KELLY_SCALE 상쇄로
+    brain 50~90 전 구간 0.5× 동일(edge 무차별) + brain 40 은 float epsilon 경로로 ≈0 절벽.
+
+    사전등록 공식 그대로:
+      λ = min(1, n_closed/252)                  # 검증 신뢰(D2). 미검증 → 0 → 중립(mult=1)
+      p = 0.5 + (brain/100 − 0.5)·λ             # 미검증 점수의 확률 사용 축소 (RULE 7 #2)
+      b = 실현 avg_win/avg_loss (D4, 부족 시 1.2)
+      f(p) = max(0, (b·p − (1−p)) / b)          # full Kelly 분수
+      mult = clip(1 + φ·(f(p) − f(p_ref))·λ, 0.6, 1.2)   # φ=VAMS_KELLY_SCALE(quarter 0.25, D1)
+
+    🚨 λ≈0(미검증) 동안 brain 효과 ≈0 — 미검증 산식이 사이징을 지배하지 못함.
+    실자본 사이징 = 중용(brain 배제)이 지배. 본 함수 = VAMS 페이퍼 전용(캘리브레이션 축적).
+    """
+    try:
+        bs = float(brain_score)
+    except (TypeError, ValueError):
         return invest_amount
-    p = brain_score / 100.0
-    b = 1.5
-    q = 1.0 - p
-    kelly_raw = max(0, (b * p - q) / b)
-    scaled_kelly = kelly_raw * VAMS_KELLY_SCALE
-    return invest_amount * min(scaled_kelly / max(kelly_raw, 0.01), 1.0) if kelly_raw > 0 else invest_amount * 0.5
+    n, b = stats if stats is not None else _kelly_realized_stats()
+    lam = max(0.0, min(1.0, n / float(KELLY_LAMBDA_N_FULL)))
+    if lam <= 0.0 or b <= 0.0:
+        return invest_amount
+
+    def _f(p: float) -> float:
+        p = max(0.0, min(1.0, p))
+        return max(0.0, (b * p - (1.0 - p)) / b)
+
+    p_eff = 0.5 + (bs / 100.0 - 0.5) * lam
+    p_ref = 0.5 + (_KELLY_REF_BRAIN / 100.0 - 0.5) * lam
+    mult = 1.0 + VAMS_KELLY_SCALE * (_f(p_eff) - _f(p_ref)) * lam
+    mult = max(KELLY_MULT_MIN, min(KELLY_MULT_MAX, mult))
+    return invest_amount * mult
 
 
 def _apply_volatility_adj(invest_amount: float, stock: dict) -> tuple:
@@ -715,7 +782,7 @@ def execute_buy(
 
     invest_amount = min(max_per_stock, cash * 0.9)
     brain_score = stock.get("brain_score", 0) or stock.get("verity_brain", {}).get("brain_score", 50)
-    invest_amount = _apply_half_kelly(invest_amount, brain_score)
+    invest_amount = _apply_fractional_kelly(invest_amount, brain_score)
     # Sprint 11 결함 3 — 변동성 기반 sizing 보정 (ATR proxy)
     invest_amount, vol_meta = _apply_volatility_adj(invest_amount, stock)
     # Regime-aware position sizing (2026-05-23 PM 승인, RULE 7) — macro/regime multiplier 를

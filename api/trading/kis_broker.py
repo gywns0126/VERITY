@@ -237,7 +237,13 @@ class KISBroker:
         self._token: Optional[str] = None
         self._token_expires: Optional[datetime] = None
         self._issued_date: str = ""
-        self._cache_only: bool = cache_only
+        # 🚨 2026-08-02 RULE 1 이중발급 fix: 워크플로가 KIS_CACHE_ONLY=1 로 소비자를 발급금지(읽기전용)
+        #   강제 가능. daily_analysis/daily_analysis_full 이 이 플래그로 순수 소비자화 → 발급자는
+        #   kis_token_refresh(주) + daily_realtime(백업) 만 남김 (7/21·6/26 이중발급 실증 대응).
+        env_cache_only = os.environ.get("KIS_CACHE_ONLY", "").strip().lower() in (
+            "1", "true", "yes", "on"
+        )
+        self._cache_only: bool = cache_only or env_cache_only
         self._load_cached_token()
 
     def _load_cached_token(self) -> None:
@@ -432,6 +438,26 @@ class KISBroker:
         # 1. 메모리 유효 토큰
         if not force_refresh and self._token and self._token_expires and now < self._token_expires:
             return self._token
+
+        # 🚨 2026-08-02 RULE 1 이중발급 fix (7/21 01:26+01:32 · 6/26 16:13+16:31 실증 —
+        #   daily_realtime × daily_analysis(_full) 동시 발급). 로컬 file lock 은 동시 러너의
+        #   stale checkout 에 무력 = 각자 아직 커밋 안 된 lock 을 보고 발급 → 이중.
+        #   → 발급 결정 前 Supabase 공유 store(cross-runner 실시간 truth) 를 항상 확인.
+        #   최근(<24h) 유효 토큰이 이미 있으면 재사용하고 발급하지 않는다.
+        #   force_refresh(주 발급원 kis_token_refresh, KST 23:45) 만 예외 = 1일 1회 강제 발급 유지.
+        if not force_refresh and _kis_shared_enabled():
+            _loaded = _kis_load_shared_token(self.app_key)
+            if _loaded:
+                _tok, _exp, _iss = _loaded
+                if _iss and _exp and (now - _iss) < timedelta(hours=24) and now < _exp:
+                    self._token = _tok
+                    self._token_expires = _exp
+                    self._issued_date = _iss.strftime("%Y-%m-%d")
+                    logger.info(
+                        "KIS shared-store-first HIT — 최근(<24h) 공유 토큰 재사용, 발급 스킵 "
+                        "(RULE 1 cross-runner race guard, 2026-08-02)"
+                    )
+                    return self._token
 
         # 2. 디스크 재로드
         if not force_refresh:
