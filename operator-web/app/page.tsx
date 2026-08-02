@@ -2,7 +2,7 @@
 // 홈 콕핏 셸 — 워크플로 IA: ①지금 ②판단 ③구성(척추) ④검증. 공개 알파네스트 디자인 전면 참고.
 // ②판단 = 검색(입구)→3종 LLM 종합→추천. ①③④ 는 순차 포팅.
 import { useDark, palette, FONT, type Palette } from "@/lib/theme"
-import AlertPopup from "./components/AlertPopup"
+import AlertsSection from "./components/AlertsSection"
 import StockSearch from "./components/StockSearch"
 import OperatorPicks from "./components/OperatorPicks"
 import TriSynthesisPanel from "./components/TriSynthesisPanel"
@@ -11,6 +11,7 @@ import RealtimeQuotes from "./components/RealtimeQuotes"
 import ChatConsult from "./components/ChatConsult"
 import ControlPanel from "./components/ControlPanel"
 import AuthPanel from "./components/AuthPanel"
+import ModerationPanel from "./components/ModerationPanel"
 
 export default function Home() {
     const dark = useDark()
@@ -35,8 +36,12 @@ export default function Home() {
 
                 <AuthPanel />
 
-                <Section c={c} title="① 지금" note="실시간 시세·고영향 이벤트">
+                <Section c={c} title="① 지금" note="실시간 시세 · 본인 KIS">
                     <RealtimeQuotes />
+                </Section>
+
+                <Section c={c} title="긴급 공시·이벤트" note="임원·대주주 대량매매 등 고영향 사실">
+                    <AlertsSection />
                 </Section>
 
                 <Section c={c} title="② 판단" note="검색 → 3종 LLM 종합 → 추천">
@@ -49,8 +54,8 @@ export default function Home() {
 
                 <Section c={c} title="③ 구성 (척추)" note="매매 기준 제어판 · 중용 사이징">
                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <ModerationPanel />
                         <ControlPanel />
-                        <Placeholder c={c} text="중용 포트폴리오(목표비중) — 빌더 #4 대기. 분기 재분배는 목표비중 랜딩 시 자동 연결." />
                     </div>
                 </Section>
 
@@ -62,8 +67,6 @@ export default function Home() {
                     <ChatConsult />
                 </Section>
             </div>
-
-            <AlertPopup />
         </main>
     )
 }
@@ -80,10 +83,3 @@ function Section({ c, title, note, children }: { c: Palette; title: string; note
     )
 }
 
-function Placeholder({ c, text }: { c: Palette; text: string }) {
-    return (
-        <div style={{ background: c.card, borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", padding: "18px 20px", fontSize: 13, color: c.sub }}>
-            {text}
-        </div>
-    )
-}
