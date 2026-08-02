@@ -9,6 +9,7 @@ import TriSynthesisPanel from "./components/TriSynthesisPanel"
 import VerificationPanel from "./components/VerificationPanel"
 import RealtimeQuotes from "./components/RealtimeQuotes"
 import ChatConsult from "./components/ChatConsult"
+import ControlPanel from "./components/ControlPanel"
 
 export default function Home() {
     const dark = useDark()
@@ -43,8 +44,11 @@ export default function Home() {
                     </div>
                 </Section>
 
-                <Section c={c} title="③ 구성 (척추)" note="중용 스캔→깔때기→사이징">
-                    <Placeholder c={c} text="중용 포트폴리오 — US 일봉(#8)+사전등록 상수 승인 대기." />
+                <Section c={c} title="③ 구성 (척추)" note="매매 기준 제어판 · 중용 사이징">
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <ControlPanel />
+                        <Placeholder c={c} text="중용 포트폴리오(목표비중) — 빌더 #4 대기. 분기 재분배는 목표비중 랜딩 시 자동 연결." />
+                    </div>
                 </Section>
 
                 <Section c={c} title="④ 검증" note="학습루프·팩터건강·IC·2027 게이트">
