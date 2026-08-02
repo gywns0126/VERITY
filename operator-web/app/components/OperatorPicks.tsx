@@ -105,7 +105,7 @@ export default function OperatorPicks({ limit = 20 }: { limit?: number }) {
             <div style={{ fontFamily: FONT, display: "flex", flexDirection: "column", gap: 10 }}>
                 {head}
                 <div style={{ color: status === "auth" ? c.sub : c.down, fontSize: 13, lineHeight: 1.5 }}>
-                    {status === "auth" ? "오퍼레이터 로그인이 필요합니다 (VERITY = 비공개)." : "데이터를 불러오지 못했습니다."}
+                    {status === "auth" ? "오퍼레이터 로그인이 필요합니다 (비공개)." : "데이터를 불러오지 못했습니다."}
                 </div>
             </div>
         )

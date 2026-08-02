@@ -79,7 +79,7 @@ export default function TriSynthesisPanel() {
             <div style={wrapStyle}>
                 {title}
                 <div style={{ color: status === "auth" ? c.sub : c.down, fontSize: 13, lineHeight: 1.5 }}>
-                    {status === "auth" ? "오퍼레이터 로그인이 필요합니다 (VERITY = 비공개)." : "데이터를 불러오지 못했습니다."}
+                    {status === "auth" ? "오퍼레이터 로그인이 필요합니다 (비공개)." : "데이터를 불러오지 못했습니다."}
                 </div>
             </div>
         )
@@ -118,7 +118,7 @@ export default function TriSynthesisPanel() {
 
             {syn.verity_trail && syn.verity_trail.summary ? (
                 <div style={{ background: c.vtS, borderRadius: 14, padding: "11px 13px" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: c.sub, marginBottom: 5 }}>VERITY 자체 관점 (가설, 검증 전)</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: c.sub, marginBottom: 5 }}>자체 관점 (가설, 검증 전)</div>
                     <div style={{ fontSize: 12, color: c.ink, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{syn.verity_trail.summary}</div>
                 </div>
             ) : null}

@@ -25,7 +25,7 @@ export default function Home() {
         >
             <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 20px 96px" }}>
                 <header style={{ marginBottom: 22 }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em", color: c.ink }}>VERITY 오퍼레이터</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em", color: c.ink }}>알파파운더</div>
                     <div style={{ fontSize: 12, color: c.faint, marginTop: 4 }}>
                         워크플로 콕핏 · 지금 → 판단 → 구성 → 검증 · Brain=가설(N&lt;252)
                     </div>

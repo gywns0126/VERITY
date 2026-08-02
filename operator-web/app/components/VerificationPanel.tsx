@@ -56,7 +56,7 @@ export default function VerificationPanel() {
     if (status === "auth" || status === "error") {
         return (
             <div style={{ ...cardStyle(c), fontFamily: FONT, fontSize: 13, color: status === "auth" ? c.sub : c.down }}>
-                {status === "auth" ? "오퍼레이터 로그인이 필요합니다 (VERITY = 비공개)." : "검증 데이터를 불러오지 못했습니다."}
+                {status === "auth" ? "오퍼레이터 로그인이 필요합니다 (비공개)." : "검증 데이터를 불러오지 못했습니다."}
             </div>
         )
     }
