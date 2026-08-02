@@ -1,0 +1,97 @@
+"use client"
+// 오퍼레이터 오리진 Supabase 인증 — 공개사이트(PublicAuth/PublicSessionKeeper)와 동일 프로젝트·
+// 동일 세션키(verity_supabase_session)·동일 shape({access_token, refresh_token, expires_at}).
+// 🚨 비밀번호 로그인 = 이 오리진의 "독립 세션 패밀리" 발급 → 공개사이트 세션과 refresh 회전 충돌 없음(정석).
+//   세션 붙여넣기 폴백 = 같은 패밀리 공유라 회전 충돌 가능(붙여넣은 뒤 공개사이트 쪽이 로그아웃될 수 있음) — UI 에 경고 병기.
+// anon key = 공개 클라이언트 키(브라우저 임베드 표준, PublicSessionKeeper 와 동일 값).
+const SUPABASE_URL = "https://lykqebdcurreppowulsl.supabase.co"
+const ANON_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5a3FlYmRjdXJyZXBwb3d1bHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMTcyMTUsImV4cCI6MjA5MDU5MzIxNX0.JhwsWgsrdDJ12BzZZjR7o6jdS-Mxny2eSJeWq59DhNs"
+
+const SESSION_KEY = "verity_supabase_session"
+const LOCK_KEY = "verity_session_refresh_lock"
+const LOCK_MS = 20000          // 다중 탭 동시 refresh 디바운스 (SessionKeeper 정합)
+const REFRESH_MARGIN_S = 300   // 만료 5분 전 선제 갱신
+
+export type Session = { access_token: string; refresh_token: string; expires_at: number; user_email?: string }
+
+export function loadSession(): Session | null {
+    try {
+        const raw = localStorage.getItem(SESSION_KEY)
+        if (!raw) return null
+        const s = JSON.parse(raw)
+        return s && s.access_token ? (s as Session) : null
+    } catch {
+        return null
+    }
+}
+
+export function saveSession(s: Session): void {
+    try {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(s))
+    } catch {}
+}
+
+export function clearSession(): void {
+    try {
+        localStorage.removeItem(SESSION_KEY)
+    } catch {}
+}
+
+async function tokenRequest(grant: string, body: Record<string, string>): Promise<Session> {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=${grant}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+        body: JSON.stringify(body),
+    })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok || !d.access_token) {
+        throw new Error(String(d.error_description || d.msg || d.error || `로그인 실패 (${r.status})`))
+    }
+    return {
+        access_token: d.access_token,
+        refresh_token: d.refresh_token || "",
+        expires_at: d.expires_at || Math.floor(Date.now() / 1000) + (d.expires_in || 3600),
+        user_email: d.user?.email,
+    }
+}
+
+export async function signInPassword(email: string, password: string): Promise<Session> {
+    const s = await tokenRequest("password", { email, password })
+    saveSession(s)
+    return s
+}
+
+/** 세션 JSON 붙여넣기 폴백 — 공개사이트 콘솔의 verity_supabase_session 값 그대로. */
+export function importSessionJson(raw: string): Session {
+    const s = JSON.parse(raw.trim())
+    if (!s || typeof s.access_token !== "string" || !s.access_token) throw new Error("access_token 없는 JSON")
+    const sess: Session = {
+        access_token: s.access_token,
+        refresh_token: s.refresh_token || "",
+        expires_at: Number(s.expires_at) || Math.floor(Date.now() / 1000) + 3600,
+        user_email: s.user_email || s.email,
+    }
+    saveSession(sess)
+    return sess
+}
+
+/** 만료 임박 시 refresh — 성공 true. 다중 탭 락(SessionKeeper 패턴, 회전 충돌 방지). */
+export async function refreshIfNeeded(): Promise<boolean> {
+    const s = loadSession()
+    if (!s || !s.refresh_token) return false
+    const now = Math.floor(Date.now() / 1000)
+    if (s.expires_at && now < s.expires_at - REFRESH_MARGIN_S) return false
+    try {
+        const lock = Number(localStorage.getItem(LOCK_KEY) || 0)
+        if (Date.now() - lock < LOCK_MS) return false
+        localStorage.setItem(LOCK_KEY, String(Date.now()))
+    } catch {}
+    try {
+        const next = await tokenRequest("refresh_token", { refresh_token: s.refresh_token })
+        saveSession({ ...next, user_email: next.user_email || s.user_email })
+        return true
+    } catch {
+        return false
+    }
+}
