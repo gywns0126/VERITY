@@ -29,8 +29,14 @@ from api.intelligence.factors.moat import _compute_moat_score
 
 # ─── Regime panic gate (mean-reversion bonus 차단) ───────────
 
+# 🚨 2026-08-02 키 정합 fix: 생산측(verity_brain._detect_panic_stage)은 "panic_stage1"(언더스코어 없음)
+#   을 emit 하는데 여기는 "panic_stage_1" 로 등재돼 있었음 → 패닉 스테이지에서 게이트 매치 실패
+#   = mean-reversion 차단이 작동하지 않는 fail-open (7/20 감사 "죽은 렌즈", 2026-08-02 양측 실코드 확증).
+#   생산측 철자로 정정. vix_spread_panic·perplexity_critical·us_recession = 생산측 0곳(죽은 엔트리,
+#   무해하여 유지). 제네릭 "panic"(verity_brain:470) 미등재는 별도 스코프(게이트 vocabulary 확장,
+#   PM 결정 큐 — 오타 수정과 분리, 태스크 #12).
 _PANIC_OVERRIDE_MODES = frozenset({
-    "panic_stage_1", "panic_stage_2", "panic_stage_3", "panic_stage_4",
+    "panic_stage1", "panic_stage2", "panic_stage3", "panic_stage4",
     "vix_spread_panic", "cape_bubble", "yield_defense", "vi_cascade",
     "fund_flow_cash_flight", "perplexity_critical", "us_recession",
 })
