@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-02T23:03:39.379711+09:00",
+  "generated_at": "2026-08-03T00:16:38.093689+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 257886,
-    "python_modules": 674,
-    "tsx_components": 141,
-    "json_data_files": 1657,
-    "json_total_tracked": 1672,
-    "workflows": 65,
-    "scheduled_workflows": 50,
-    "cron_triggers": 61,
-    "git_tracked_files": 7199
+    "code_lines_tsx_py": 260192,
+    "python_modules": 680,
+    "tsx_components": 151,
+    "json_data_files": 1658,
+    "json_total_tracked": 1677,
+    "workflows": 66,
+    "scheduled_workflows": 51,
+    "cron_triggers": 62,
+    "git_tracked_files": 7229
   },
   "subsystems": {
     "ingest": {
@@ -153,8 +153,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 65,
-      "scheduled": 50,
+      "count": 66,
+      "scheduled": 51,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -523,6 +523,13 @@
           "scheduled": true
         },
         {
+          "name": "us_chart_daily",
+          "crons": [
+            "0 21 * * 6"
+          ],
+          "scheduled": true
+        },
+        {
           "name": "us_disclosure_feed",
           "crons": [
             "0 5 * * *"
@@ -596,18 +603,20 @@
     },
     "surface": {
       "label": "출력",
-      "count": 141,
+      "count": 151,
       "by_group": {
         "framer-components/public-probe": 72,
         "admin": 15,
         "_shared": 14,
         "market": 11,
+        "operator-web/app/components": 8,
         "framer-components/crypto-public": 7,
         "analysis": 5,
         "home": 5,
         "us": 4,
         "portfolio": 3,
         "corp": 2,
+        "operator-web/app": 2,
         "framer-components": 1,
         "framer-components/arena": 1,
         "framer-components/private-probe": 1
@@ -615,7 +624,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1657
+      "count": 1658
     },
     "validation": {
       "label": "검증",
@@ -630,8 +639,8 @@
     }
   },
   "python_by_dir": {
-    "api": 375,
-    "tests": 151,
+    "api": 379,
+    "tests": 153,
     "scripts": 82,
     "vercel-api": 54,
     "server": 7,
