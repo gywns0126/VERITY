@@ -552,6 +552,21 @@ jobs:
           python -m api.arena.berserker_status
           python -m api.arena.berserker_shadow
 
+      # Tranche B dual-write (#9 봉인) — daily_analysis.yml 동일 스텝 (설계 주석은 그쪽 참조).
+      - name: Private data sync (Tranche B)
+        if: always()
+        continue-on-error: true
+        env:
+          PRIVATE_DATA_PAT: ${{ secrets.PRIVATE_DATA_PAT }}
+        run: |
+          for f in data/factor_ic_history.json data/recommendations.json data/portfolio.json; do
+            if git diff --quiet -- "$f" && git diff --cached --quiet -- "$f"; then
+              echo "[private_data] unchanged skip $f"
+            else
+              python scripts/private_data.py push "$f"
+            fi
+          done
+
       - name: Commit & push results
         # 핵심 데이터 붕괴 시 커밋 차단 (coverage_gate fail-closed) — 결함본이 repo·사이트로 안 나감. 2026-07-12.
         if: success() && steps.coverage_gate.outcome != 'failure'
