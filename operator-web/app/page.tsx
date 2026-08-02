@@ -10,6 +10,7 @@ import VerificationPanel from "./components/VerificationPanel"
 import RealtimeQuotes from "./components/RealtimeQuotes"
 import ChatConsult from "./components/ChatConsult"
 import ControlPanel from "./components/ControlPanel"
+import AuthPanel from "./components/AuthPanel"
 
 export default function Home() {
     const dark = useDark()
@@ -31,6 +32,8 @@ export default function Home() {
                         워크플로 콕핏 · 지금 → 판단 → 구성 → 검증 · Brain=가설(N&lt;252)
                     </div>
                 </header>
+
+                <AuthPanel />
 
                 <Section c={c} title="① 지금" note="실시간 시세·고영향 이벤트">
                     <RealtimeQuotes />
