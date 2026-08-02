@@ -8,7 +8,6 @@ import OperatorPicks from "./components/OperatorPicks"
 import TriSynthesisPanel from "./components/TriSynthesisPanel"
 import VerificationPanel from "./components/VerificationPanel"
 import RealtimeQuotes from "./components/RealtimeQuotes"
-import StockReport from "./components/StockReport"
 import ChatConsult from "./components/ChatConsult"
 
 export default function Home() {
@@ -40,7 +39,6 @@ export default function Home() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                         <StockSearch />
                         <TriSynthesisPanel />
-                        <StockReport />
                         <OperatorPicks />
                     </div>
                 </Section>

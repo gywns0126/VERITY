@@ -19,10 +19,33 @@ type Rec = {
     roe?: number
     rec_price?: number
     ai_verdict?: string
+    // 추천 이유(드라이버) 추출용 — 리포트 제거 후 추천이 이유를 직접 실음(취사선택, 2026-08-02).
+    drop_from_high_pct?: number
+    flow?: { foreign_net?: number }
+    lynch_kr?: { label?: string }
+    dart_disclosure_events?: { severity?: number }
 }
 
 function num(v: unknown): number | null {
     return typeof v === "number" && isFinite(v) ? v : null
+}
+
+// 추천 이유 = 사실 드라이버 2~4개(밸류·수급·Lynch·리스크). brain 은 별도 가설 라벨로 이미 노출.
+function driversOf(r: Rec): string[] {
+    const out: string[] = []
+    const per = num(r.per)
+    const pbr = num(r.pbr)
+    if (pbr !== null && pbr > 0 && pbr <= 1) out.push(`PBR ${pbr.toFixed(1)} 저평가`)
+    else if (per !== null && per > 0 && per <= 10) out.push(`PER ${per.toFixed(1)} 저평가`)
+    const drop = num(r.drop_from_high_pct)
+    if (drop !== null && drop <= -30) out.push(`고점대비 ${drop.toFixed(0)}%`)
+    const fn = r.flow ? num(r.flow.foreign_net) : null
+    if (fn !== null && fn > 0) out.push("외인 순매수")
+    else if (fn !== null && fn < 0) out.push("외인 순매도")
+    if (r.lynch_kr && r.lynch_kr.label) out.push(`Lynch ${r.lynch_kr.label}`)
+    const sev = r.dart_disclosure_events ? num(r.dart_disclosure_events.severity) : null
+    if (sev !== null && sev >= 3) out.push("공시 리스크")
+    return out.slice(0, 4)
 }
 
 function brainOf(r: Rec): { score: number | null; grade: string } {
@@ -106,6 +129,7 @@ export default function OperatorPicks({ limit = 20 }: { limit?: number }) {
                 const pbr = num(r.pbr)
                 const roe = num(r.roe)
                 const accent = recColor(c, r.recommendation)
+                const drivers = driversOf(r)
                 return (
                     <div key={(r.ticker || "") + i} style={{ ...cardStyle(c, "12px 14px"), display: "flex", flexDirection: "column", gap: 8 }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -132,8 +156,18 @@ export default function OperatorPicks({ limit = 20 }: { limit?: number }) {
                             {roe !== null ? <Metric c={c} k="ROE" v={roe.toFixed(1) + "%"} /> : null}
                             {price !== null ? <Metric c={c} k="기준가" v={isUS ? "$" + price.toFixed(2) : Math.round(price).toLocaleString()} /> : null}
                         </div>
-                        {r.ai_verdict ? (
-                            <div style={{ fontSize: 12, color: c.sub, lineHeight: 1.45, borderTop: `1px solid ${c.line}`, paddingTop: 7 }}>{r.ai_verdict}</div>
+                        {drivers.length || r.ai_verdict ? (
+                            <div style={{ borderTop: `1px solid ${c.line}`, paddingTop: 7, display: "flex", flexDirection: "column", gap: 6 }}>
+                                <div style={{ fontSize: 10.5, fontWeight: 700, color: c.faint }}>추천 이유</div>
+                                {drivers.length ? (
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                        {drivers.map((d, j) => (
+                                            <span key={j} style={{ fontSize: 11, fontWeight: 600, color: c.vt, background: c.vtS, borderRadius: 8, padding: "3px 8px" }}>{d}</span>
+                                        ))}
+                                    </div>
+                                ) : null}
+                                {r.ai_verdict ? <div style={{ fontSize: 12, color: c.sub, lineHeight: 1.45 }}>{r.ai_verdict}</div> : null}
+                            </div>
                         ) : null}
                     </div>
                 )
