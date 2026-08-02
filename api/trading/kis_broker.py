@@ -1773,14 +1773,21 @@ class KISBroker:
         return data.get("output", {})
 
     def overseas_daily_price(self, excd: str, ticker: str, period: str = "D",
-                             count: str = "120") -> List[Dict]:
-        """해외주식 일별 시세."""
+                             bymd: str = "", modp: str = "1") -> List[Dict]:
+        """해외주식 일별 시세 (HHDFS76240000). output2 = [{xymd,clos,open,high,low,tvol,...}].
+        🚨 미국 개별주 1년치 일봉의 유일한 실질 경로 (FHKST03030100/inquire-daily-chartprice 는
+           지수·환율 전용 = 개별주 불가, 2026-08-02 확인).
+        🚨 MODP: '1'=수정주가(액면분할·병합 반영, 분석 기본값), '0'=원주가. 국내 FID_ORG_ADJ_PRC(0:수정)
+           와 값이 반대이므로 주의. 공분산/수익률엔 반드시 수정주가('1').
+        bymd = 조회 기준일자(YYYYMMDD, 빈값=최근). 1회 최대 ~100건 → caller 가 bymd 를 이전 페이지
+           최소일 하루 전으로 갱신하며 페이지네이션(252거래일 = 3회+)."""
+        gubn = {"D": "0", "W": "1", "M": "2"}.get(period, "0")
         data = self._get(
             "/uapi/overseas-price/v1/quotations/dailyprice",
             "HHDFS76240000",
             {
                 "AUTH": "", "EXCD": excd, "SYMB": ticker,
-                "GUBN": "0", "BYMD": "", "MODP": "0", "KEYB": "",
+                "GUBN": gubn, "BYMD": bymd, "MODP": modp, "KEYB": "",
             },
         )
         return data.get("output2", data.get("output", [])) or []

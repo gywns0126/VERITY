@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+:root {
+    color-scheme: light dark;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        system-ui, sans-serif;
+    /* 공개 알파네스트 표준 배경 (PublicInvestorPortfolios/NPSHoldings 정합) */
+    background: #f2f4f6;
+    -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #0f1318;
+    }
+}
