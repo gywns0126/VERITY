@@ -62,6 +62,30 @@ export async function signInPassword(email: string, password: string): Promise<S
     return s
 }
 
+/** 구글 OAuth 진입 URL — PublicAuth.getGoogleOAuthUrl 동일 패턴.
+ * 🚨 redirect_to 는 Supabase Auth "Redirect URLs" 허용목록에 있어야 함(없으면 Site URL 로 폴백
+ *   = 공개사이트로 튕겨 세션이 엉뚱한 오리진에 저장됨). 오퍼레이터 도메인 등록 = 대시보드 1회. */
+export function googleAuthUrl(redirectTo: string): string {
+    return `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}&apikey=${encodeURIComponent(ANON_KEY)}`
+}
+
+/** OAuth 복귀 해시(#access_token=...) 캡처 → 세션 저장 + URL 정리. 캡처 시 true. */
+export function captureOAuthHash(): boolean {
+    if (typeof window === "undefined") return false
+    const h = window.location.hash
+    if (!h || h.indexOf("access_token=") < 0) return false
+    const p = new URLSearchParams(h.replace(/^#/, ""))
+    const at = p.get("access_token")
+    if (!at) return false
+    const expiresAt = Number(p.get("expires_at")) ||
+        Math.floor(Date.now() / 1000) + (Number(p.get("expires_in")) || 3600)
+    saveSession({ access_token: at, refresh_token: p.get("refresh_token") || "", expires_at: expiresAt })
+    try {
+        window.history.replaceState({}, "", window.location.pathname + window.location.search)
+    } catch {}
+    return true
+}
+
 /** 세션 JSON 붙여넣기 폴백 — 공개사이트 콘솔의 verity_supabase_session 값 그대로. */
 export function importSessionJson(raw: string): Session {
     const s = JSON.parse(raw.trim())
