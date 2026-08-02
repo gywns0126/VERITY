@@ -32,24 +32,64 @@ export default function ChatConsult() {
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }, [turns, busy])
 
+    function setLastAssistant(text: string) {
+        setTurns((prev) => {
+            const next = prev.slice()
+            for (let i = next.length - 1; i >= 0; i--) {
+                if (next[i].role === "assistant") {
+                    next[i] = { ...next[i], text }
+                    break
+                }
+            }
+            return next
+        })
+    }
+
     async function send() {
         const q = input.trim()
         if (!q || busy) return
         setInput("")
         const history = turns.slice(-6).map((t) => ({ role: t.role, content: t.text }))
-        setTurns((prev) => [...prev, { role: "user", text: q }])
+        setTurns((prev) => [...prev, { role: "user", text: q }, { role: "assistant", text: "" }])
         setBusy(true)
         try {
             const r = await fetch(`${API_BASE}/api/chat`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question: q, recent_turns: history, watchlist: loadWatchlist() }),
+                // 🚨 RULE 6: stream=true → hybrid(Brain+Perplexity 통합) 그라운딩 경로. 미가용 시 백엔드가 legacy NDJSON 폴백.
+                body: JSON.stringify({ question: q, stream: true, recent_turns: history, watchlist: loadWatchlist() }),
             })
-            const d = await r.json().catch(() => null)
-            const answer = d && d.ok && d.answer ? String(d.answer) : (d && d.error) || "답변을 받지 못했습니다."
-            setTurns((prev) => [...prev, { role: "assistant", text: answer }])
+            if (!r.ok || !r.body) throw new Error("http")
+            const reader = r.body.getReader()
+            const dec = new TextDecoder()
+            let buf = "", acc = ""
+            for (;;) {
+                const { done, value } = await reader.read()
+                if (done) break
+                buf += dec.decode(value, { stream: true })
+                const lines = buf.split("\n")
+                buf = lines.pop() || ""
+                for (const line of lines) {
+                    const s = line.trim()
+                    if (!s) continue
+                    let ev: { type?: string; text?: string; message?: string }
+                    try {
+                        ev = JSON.parse(s)
+                    } catch {
+                        continue
+                    }
+                    if (ev.type === "delta" && ev.text) {
+                        acc += ev.text
+                        setLastAssistant(acc)
+                    } else if (ev.type === "error") {
+                        acc = String(ev.message || "오류가 발생했습니다.")
+                        setLastAssistant(acc)
+                    }
+                }
+            }
+            if (!acc) setLastAssistant("답변을 받지 못했습니다.")
         } catch {
-            setTurns((prev) => [...prev, { role: "assistant", text: "상담 서버에 연결하지 못했습니다." }])
+            setLastAssistant("상담 서버에 연결하지 못했습니다.")
         } finally {
             setBusy(false)
         }
@@ -71,13 +111,14 @@ export default function ChatConsult() {
                 ) : (
                     turns.map((t, i) => {
                         const mine = t.role === "user"
+                        const empty = !t.text
                         return (
                             <div key={i} style={{ display: "flex", justifyContent: mine ? "flex-end" : "flex-start" }}>
                                 <div
                                     style={{
                                         maxWidth: "84%",
                                         background: mine ? c.vtS : c.hi,
-                                        color: c.ink,
+                                        color: empty ? c.faint : c.ink,
                                         borderRadius: 14,
                                         padding: "10px 13px",
                                         fontSize: 13.5,
@@ -85,17 +126,12 @@ export default function ChatConsult() {
                                         whiteSpace: "pre-wrap",
                                     }}
                                 >
-                                    {t.text}
+                                    {t.text || (t.role === "assistant" ? "답변 작성 중…" : "")}
                                 </div>
                             </div>
                         )
                     })
                 )}
-                {busy ? (
-                    <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                        <div style={{ background: c.hi, color: c.faint, borderRadius: 14, padding: "10px 13px", fontSize: 13 }}>답변 작성 중…</div>
-                    </div>
-                ) : null}
             </div>
 
             <div style={{ display: "flex", gap: 8 }}>

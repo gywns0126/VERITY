@@ -182,19 +182,30 @@ export default function StockReport() {
                 </Card>
             ) : null}
 
-            {/* backtest — RULE 7: win_rate 는 표본수+평균수익 병기 */}
-            {n(bt.total_trades) != null && n(bt.total_trades)! > 0 ? (
-                <Card c={c} label="백테스트 (가설)">
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
-                        <span style={{ fontSize: 12.5, color: c.sub }}>표본 <b style={{ color: c.ink, ...NUM }}>N={n(bt.total_trades)}</b></span>
-                        {n(bt.win_rate) != null ? <span style={{ fontSize: 12.5, color: c.sub }}>승률 <b style={{ color: c.ink, ...NUM }}>{(n(bt.win_rate)! * (n(bt.win_rate)! <= 1 ? 100 : 1)).toFixed(0)}%</b></span> : null}
-                        {n(bt.avg_return) != null ? <span style={{ fontSize: 12.5, color: c.sub }}>평균수익 <b style={{ color: netCol(n(bt.avg_return)), ...NUM }}>{n(bt.avg_return)!.toFixed(1)}%</b></span> : null}
-                    </div>
-                    <div style={{ fontSize: 11, color: c.amber, marginTop: 2 }}>
-                        {n(bt.total_trades)! < 30 ? "⚠ N<30 = 통계 무의미. " : ""}승률 단독 아닌 표본·기대값 병기(RULE 7). 2027 게이트 전 예측력 주장 아님.
-                    </div>
-                </Card>
-            ) : null}
+            {/* backtest — 🚨 RULE 7: 승률+기대값+표본+CI 모두 병기(단독 금지) */}
+            {n(bt.total_trades) != null && n(bt.total_trades)! > 0 ? (() => {
+                const N = n(bt.total_trades)!
+                const wr = n(bt.win_rate)
+                const p = wr == null ? null : wr <= 1 ? wr : wr / 100
+                const ciPp = p != null ? 1.96 * Math.sqrt(Math.max(p * (1 - p), 0) / N) * 100 : null // 95% 이항 CI(%p)
+                return (
+                    <Card c={c} label="백테스트 (가설)">
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
+                            <span style={{ fontSize: 12.5, color: c.sub }}>표본 <b style={{ color: c.ink, ...NUM }}>N={N}</b></span>
+                            {p != null ? (
+                                <span style={{ fontSize: 12.5, color: c.sub }}>
+                                    승률 <b style={{ color: c.ink, ...NUM }}>{(p * 100).toFixed(0)}%</b>
+                                    {ciPp != null ? <span style={{ color: c.faint, ...NUM }}> ±{ciPp.toFixed(0)}%p</span> : null}
+                                </span>
+                            ) : null}
+                            {n(bt.avg_return) != null ? <span style={{ fontSize: 12.5, color: c.sub }}>평균수익 <b style={{ color: netCol(n(bt.avg_return)), ...NUM }}>{n(bt.avg_return)!.toFixed(1)}%</b></span> : null}
+                        </div>
+                        <div style={{ fontSize: 11, color: c.amber, marginTop: 2 }}>
+                            {N < 30 ? "⚠ N<30 = 통계 무의미. " : N < 100 ? "예비 결과 · N<100 = 95% CI 광범위. " : ""}승률+기대값+표본+CI 병기(RULE 7). 2027 게이트 전 예측력 주장 아님.
+                        </div>
+                    </Card>
+                )
+            })() : null}
 
             {/* 판단 (ai_verdict) */}
             {r.ai_verdict || r.gold_insight ? (
