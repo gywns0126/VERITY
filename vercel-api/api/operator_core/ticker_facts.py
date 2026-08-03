@@ -67,21 +67,34 @@ SCAN_FILES = [
     "calendar_public.json", "market_warnings.json", "ipo_watch.json",
     "commodity_exposure.json", "etf_flow.json", "perspective_maps.json",
     "hot_stock.json", "us_smallcap_corner_filters.json", "smallcap_corner_filters.json",
+    "ai_synthesis.json", "kr_earnings_pattern.json", "nps_holdings.json",
+    "us_major_holdings.json", "us_short_interest.json", "us_insider_trades.json",
 ]
 
 # 로컬 전용(미발행) — 발행물보다 원본에 가깝다.
+# 🚨 PM 2026-08-03: "민감한 자료도 전부 종합해서 결과를 내라" — 본인 전용 경로이므로
+#   비공개·미발행 자산을 빼지 않는다. 공개 발행 목록(action.yml)과는 정반대 판단이다.
 LOCAL_FILES = [
     ("data/dart_fundamentals_kr.json", "DART 재무", True),      # True = 티커 키 dict
+    ("data/dart_kr_fin_history.json", "DART 재무 시계열", False),
     ("data/kr_listed.json", "상장정보", True),
     ("data/recommendations.json", "운영풀", False),
     ("data/krx_mktcap.json", "시총", True),
+    ("data/kr_sector_map.json", "섹터맵", False),
+    ("data/report_summaries.json", "리포트 요약", False),
+    ("data/dividends_kr.json", "배당", True),
+    ("data/chain_snippets.json", "공급망 스니펫", False),
+    ("data/group_structure.json", "그룹 지배구조", False),
 ]
 
 # 오퍼레이터 private bucket (Supabase). 인증 없으면 skip.
 PRIVATE_FILES = [
     ("_operator/portfolio_full.json", "포트폴리오(비공개)"),
+    ("_operator/tri_synthesis.json", "3종 LLM 배치 종합(비공개)"),
     ("_operator/verification_report.json", "검증 리포트(비공개)"),
     ("_operator/moderation_portfolio.json", "중용 목표비중(비공개)"),
+    ("_operator/brain_kb_usage.json", "Brain KB 사용(비공개)"),
+    ("_operator/history.json", "거래·판단 이력(비공개)"),
 ]
 
 
@@ -191,7 +204,10 @@ def _extract_for_ticker(doc: Any, tk: str) -> Optional[Any]:
         hits = [x for x in doc if isinstance(x, dict) and str(x.get("ticker") or "") == tk]
         return hits or None
     for key in ("stocks", "map", "items", "events", "warnings", "feed", "flows",
-                "prices", "etfs", "top", "rows", "recommendations"):
+                "prices", "etfs", "top", "rows", "recommendations",
+                # 2026-08-03 실측 추가 — 오퍼레이터 전 자산 조인(PM "민감 자료도 전부")
+                "summaries", "synth", "patterns", "by_ticker", "structure", "full",
+                "holdings", "positions", "syntheses", "data", "fundamentals"):
         v = doc.get(key)
         if isinstance(v, dict) and tk in v:
             return v[tk]
