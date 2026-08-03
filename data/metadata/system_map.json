@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-03T22:47:15.158065+09:00",
+  "generated_at": "2026-08-04T01:11:55.826805+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 266701,
-    "python_modules": 693,
-    "tsx_components": 168,
-    "json_data_files": 1666,
-    "json_total_tracked": 1685,
+    "code_lines_tsx_py": 267471,
+    "python_modules": 699,
+    "tsx_components": 169,
+    "json_data_files": 1668,
+    "json_total_tracked": 1687,
     "workflows": 70,
     "scheduled_workflows": 54,
     "cron_triggers": 65,
-    "git_tracked_files": 7278
+    "git_tracked_files": 7279
   },
   "subsystems": {
     "ingest": {
@@ -92,7 +92,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 62,
+      "count": 63,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -144,6 +144,7 @@
         "api/intelligence/regime_prediction.py",
         "api/intelligence/sec_8k_change_detector.py",
         "api/intelligence/sector_rotation_detector.py",
+        "api/intelligence/source_tiers.py",
         "api/intelligence/strategy_evolver.py",
         "api/intelligence/strategy_pool.py",
         "api/intelligence/stress.py",
@@ -636,10 +637,10 @@
     },
     "surface": {
       "label": "출력",
-      "count": 168,
+      "count": 169,
       "by_group": {
         "framer-components/public-probe": 72,
-        "operator-web/app/components": 21,
+        "operator-web/app/components": 22,
         "admin": 15,
         "_shared": 14,
         "market": 11,
@@ -660,7 +661,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1666
+      "count": 1668
     },
     "validation": {
       "label": "검증",
@@ -675,8 +676,8 @@
     }
   },
   "python_by_dir": {
-    "api": 386,
-    "tests": 154,
+    "api": 389,
+    "tests": 157,
     "scripts": 83,
     "vercel-api": 58,
     "server": 7,
