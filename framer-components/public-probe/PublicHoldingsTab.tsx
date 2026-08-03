@@ -16,7 +16,10 @@ import {
  *   미로그인/캔버스 = SAMPLE 미리보기 + 로그인 CTA. (StockDashboard getAccessToken 패턴 재사용)
  * RULE 7 — 평가손익 = 종가 × 수량 − 입력평단 (단순 계산·사실). 매수·매도·추천·점수 0.
  * 🚨 시세 재배포 컴플라이언스(2026-07-03 Phase 1.5): /api/stock 실시간가 폴링 제거 — KIS/yfinance 시세 회원(제3자) 재배포 불가.
- *   평가 기준가 = stock_flow_5d.json 마지막 close(네이버 소스·발행 유지 판정, KR·커버리지 한정) → h.price → avg_cost 순 graceful.
+ *   평가 기준가 = kr_close_latest.json (금융위 공공데이터 직전 거래일 종가, 전 종목 동일 기준일, ~2,900종목).
+ *   🚨 되돌리지 말 것 (2026-07-31) — 옛 소스 stock_flow_5d.json 은 회전 수집이라 종목마다 종가 날짜가
+ *   달라(어제~5주 전) 하락 종목이 플러스로 표시됐다(실측 71% 불일치). 커버리지 밖(미국·ETF·거래정지)은
+ *   0% 로 위장하지 않고 "시세 없음" + 손익 합계 제외.
  *   실시간 시세 = 행 클릭 → 종목 리포트(네이버 link-out + TV 위젯)에서.
  * 반응형 — ResizeObserver. 테마 = body[data-framer-theme] 자가감지. 브랜드 보라(vg).
  * 🚩 국기 = circle-flags SVG(Logo/FlagIcon) — 이모지 금지(싸구려). 데모 = 단순 CTA(3D목업 X).
@@ -65,7 +68,92 @@ const DARK = {
 }
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const FX = 1380
+const FX_FALLBACK = 1380 // 스냅샷 실패 시에만 — 평상시엔 실환율(useAnFx)
+
+/* ── 환율·통화 (2026-07-30) ────────────────────────────────────────────────
+   🚨 옛 코드는 FX 를 1380 으로 **하드코딩**해 두고 화면에도 "환율 1380원/$ 가정" 이라 적었다.
+   실제 환율이 1,450원대라 미국 보유분 평가액이 약 5% 낮게 잡히고 있었다(PM 지적 계기).
+   이제 macro_snapshot.json 의 usd_krw(yfinance, 30분 크론)를 읽는다. 실시간 틱이 아니므로
+   화면에 기준 시각을 함께 적는다 — 없는 정밀도를 있는 척하지 않는다. 스냅샷 실패 시에만 1380 폴백.
+   Framer 코드 컴포넌트는 서로 import 할 수 없어 이 블록은 각 파일에 같은 모양으로 둔다. */
+const AN_FX_URL =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/macro_snapshot.json"
+const AN_CCY_KEY = "an_ccy"
+const AN_CCY_EVENT = "an-ccy-change"
+function anReadCcy(): string {
+    try {
+        return window.localStorage.getItem(AN_CCY_KEY) === "KRW" ? "KRW" : "USD"
+    } catch (e) {
+        return "USD"
+    }
+}
+function useAnCcy(onCanvas: boolean): [string, (v: string) => void] {
+    const [ccy, setCcy] = useState<string>(() => (onCanvas ? "USD" : anReadCcy()))
+    useEffect(() => {
+        if (onCanvas) return
+        const read = () => setCcy(anReadCcy())
+        read()
+        window.addEventListener(AN_CCY_EVENT, read)
+        window.addEventListener("storage", read)
+        return () => {
+            window.removeEventListener(AN_CCY_EVENT, read)
+            window.removeEventListener("storage", read)
+        }
+    }, [onCanvas])
+    return [
+        ccy,
+        (v: string) => {
+            setCcy(v)
+            try {
+                window.localStorage.setItem(AN_CCY_KEY, v)
+                window.dispatchEvent(new CustomEvent(AN_CCY_EVENT))
+            } catch (e) {
+                /* no-op */
+            }
+        },
+    ]
+}
+function useAnFx(onCanvas: boolean): { rate: number; asOf: string; ok: boolean } {
+    const [fx, setFx] = useState<any>(null)
+    useEffect(() => {
+        if (onCanvas || fx) return
+        let alive = true
+        try {
+            const c = sessionStorage.getItem("an_fx")
+            if (c) {
+                const j = JSON.parse(c)
+                if (j && j.rate > 0) {
+                    setFx(j)
+                    return
+                }
+            }
+        } catch (e) {
+            /* no-op */
+        }
+        fetch(AN_FX_URL)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const u = d && d.macro && d.macro.usd_krw
+                const rate = Number(u && u.value)
+                if (!alive || !(rate > 0)) return
+                const j = { rate, asOf: String((u && u.as_of) || "") }
+                setFx(j)
+                try {
+                    sessionStorage.setItem("an_fx", JSON.stringify(j))
+                } catch (e) {
+                    /* no-op */
+                }
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [onCanvas, fx])
+    return fx && fx.rate > 0
+        ? { rate: fx.rate, asOf: fx.asOf, ok: true }
+        : { rate: FX_FALLBACK, asOf: "", ok: false }
+}
+
 
 // ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
 const BF_CID = "1idalDez9T7KlggM8qX" // 공개 임베드 client id (Logo Link 전용)
@@ -336,8 +424,11 @@ function parseFee(s: any): number {
     return isFinite(n) ? n / 100 : 0
 }
 // 통화 표기 — US=$, KR=원 (거래 원장·종목별 실현손익은 네이티브 통화. 합계만 FX 환산=holdings 관행).
-function px(v: number, us: boolean): string {
+function px(v: number, us: boolean, ccy?: string, fx?: number): string {
     if (!isFinite(v)) return "—"
+    // 미국 종목을 원화로 볼 때만 환산. 국내는 원래 원화라 손대지 않는다.
+    if (us && ccy === "KRW" && fx && fx > 0)
+        return Math.round(v * fx).toLocaleString("en-US") + "원"
     return us
         ? "$" + v.toLocaleString("en-US", { maximumFractionDigits: 2 })
         : Math.round(v).toLocaleString("en-US") + "원"
@@ -352,6 +443,13 @@ function todayISO(): string {
     } catch {
         return ""
     }
+}
+
+// 평가 기준일 "YYYYMMDD" → "7/30". 없는 정밀도를 있는 척하지 않으려면 기준일을 화면에 적어야 한다.
+function fmtAsOf(s: string): string {
+    const t = String(s || "")
+    if (t.length !== 8) return t
+    return Number(t.slice(4, 6)) + "/" + Number(t.slice(6, 8))
 }
 
 // ETF 누적 순흐름(Δ상장좌수 × NAV, 가격효과 제거) — /etf 페이지 cumFlow 와 동일 로직. 자산군 자금 방향(사실) 참조용.
@@ -533,15 +631,33 @@ function readBodyDark(): boolean {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
+
+/* 🚨 2026-07-29 미장 링크 사고 — usStockPath 기본값이 "/us/stock" 이었는데 **그 페이지는 존재한 적이 없다**
+   (실측: https://www.alphanest.kr/us/stock?q=AAPL → 404). 둥지 보유종목·브리핑·커뮤니티에서 미국 종목을
+   누르면 전부 빈 404 로 떨어졌다. 리포트 페이지가 미장도 처리하므로 같은 경로로 보낸다.
+   캔버스 인스턴스에 옛 값이 남아 있어도 여기서 흡수한다 — 되돌리지 말 것. */
+function _usPath(us: any, kr: any): string {
+    const v = String(us || "").replace(/\/+$/, "")
+    if (!v || v === "/us/stock") return String(kr || "").replace(/\/+$/, "") || "/stock"
+    return v
+}
+
 export default function PublicHoldingsTab(props: Props) {
     const { apiBase, loginUrl, stockPath, usStockPath, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    // 실환율 — 하드코딩 1380 대체. 스냅샷 실패 시에만 폴백값이 쓰이고 라벨로 구분된다.
+    const fxInfo = useAnFx(onCanvas)
+    const FX = fxInfo.rate
+    const [ccy, setCcy] = useAnCcy(onCanvas)
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [rows, setRows] = useState<any[]>(SAMPLE)
-    const [closes, setCloses] = useState<Record<string, number>>({}) // KR 종가(stock_flow_5d) — 실시간 아님
-    const [npsMap, setNpsMap] = useState<Record<string, number>>({}) // 국민연금 전체보유(full+full_us, <5% 포함) 지분율 — 내 종목 배지(사실)
+    // 🚨 2026-07-27 목업 깜빡임 제거 — 초기 state 에 SAMPLE 을 넣으면 Framer 정적 HTML(SSG)에 그대로
+    //   구워져 실사용자에게 "삼성전자 60주·NVIDIA 20주" 가 잠깐 보였다가 실제 값으로 바뀐다(PM 지적).
+    //   캔버스 프리뷰는 마운트 후 useEffect 로만 주입 → 첫 페인트는 어떤 렌더타깃에서도 목업 0.
+    const [rows, setRows] = useState<any[]>([])
+    const [closes, setCloses] = useState<Record<string, number>>({}) // KR 종가(kr_close_latest) — 실시간 아님
+    const [closeAsOf, setCloseAsOf] = useState<string>("") // YYYYMMDD — 화면에 기준일 명시
     const [isDemo, setIsDemo] = useState(true)
     const [loading, setLoading] = useState<boolean>(() =>
         onCanvas ? false : !!getToken()
@@ -562,9 +678,18 @@ export default function PublicHoldingsTab(props: Props) {
     const [q, setQ] = useState("") // 종목 검색어
     const [pop, setPop] = useState<any>(null) // 추가/수정 팝업 {id?, ticker, name, market, shares, avg_cost}
     // 거래 기록(실현손익) — 본인 매매 이력. RULE 7 사실 기록, 순위·배지·공개 없음. /api/trades.
-    const [tradeData, setTradeData] = useState<{ trades: any[]; summary: any }>(
-        () => ({ trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY })
-    )
+    const [tradeData, setTradeData] = useState<{ trades: any[]; summary: any }>(() => ({
+        trades: [],
+        summary: { by_ticker: [], total_realized_pnl: 0 },
+    }))
+    const [tradesLoading, setTradesLoading] = useState(false)
+    // 캔버스 전용 목업 주입 — 마운트 후라 정적 HTML 에는 절대 포함되지 않음.
+    //   라이브 미로그인 목업은 loadHoldings 의 토큰 부재 분기가 담당(로그아웃 전환도 그쪽이 처리).
+    useEffect(() => {
+        if (!onCanvas) return
+        setRows(SAMPLE)
+        setTradeData({ trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY })
+    }, [onCanvas])
     const [showTAdd, setShowTAdd] = useState(false) // 거래 추가 검색 패널
     const [tq, setTq] = useState("") // 거래 추가 종목 검색어
     const [tPop, setTPop] = useState<any>(null) // 거래 팝업 {id?, ticker, name, market, side, shares, price, traded_at}
@@ -647,16 +772,22 @@ export default function PublicHoldingsTab(props: Props) {
         if (onCanvas) return
         const token = getToken()
         if (!token) {
+            /* 🚨 로그인 전 미리보기 = SAMPLE 목업(브라우저 창 + "예시" 배지, pointerEvents none).
+               되돌리지 말 것 — 여기서 setRows([]) 로 비우면 로그인 전 화면이 CTA 만 남는다
+               (2026-07-27 깜빡임 수정의 부작용, PM 지적 2026-08-01).
+               깜빡임 안전: 이 경로는 useEffect(마운트 후) 에서만 호출되어 정적 HTML 에 목업이
+               구워지지 않고, 토큰이 있으면 아래 분기로 빠져 SAMPLE 이 주입될 경로 자체가 없다. */
             setIsDemo(true)
             setRows(SAMPLE)
+            setTradeData({
+                trades: SAMPLE_TRADES,
+                summary: SAMPLE_TRADE_SUMMARY,
+            })
             setLoading(false)
             return
         }
         // 🚨 토큰 있으면 즉시 로그인 화면 전환 (API 응답 기다리지 않음 — 로그인했는데 CTA 뜨는 사고 방지, 2026-07-13)
-        // 🚨 2026-07-24 SAMPLE 잔존 제거 — 로그인 후에도 데모종목(삼성전자·하이닉스·NVDA)이 남던 사고.
-        //   token 있으면 rows 를 즉시 비우고, API 가 null/빈값/에러여도 SAMPLE 로 되돌아가지 않게 else/catch 에서 [] 확정.
         setIsDemo(false)
-        setRows([])
         setLoading(true)
         fetch(base + "/api/holdings", {
             headers: { Authorization: "Bearer " + token },
@@ -665,9 +796,8 @@ export default function PublicHoldingsTab(props: Props) {
             .then((d) => {
                 if (Array.isArray(d)) setRows(d)
                 else if (d && Array.isArray(d.holdings)) setRows(d.holdings)
-                else setRows([])
             })
-            .catch(() => setRows([]))
+            .catch(() => {})
             .finally(() => setLoading(false))
     }, [base, onCanvas])
 
@@ -703,56 +833,36 @@ export default function PublicHoldingsTab(props: Props) {
         }
     }, [onCanvas, showAdd, showTAdd, universe.length])
 
-    // 평가 기준가 — stock_flow_5d 마지막 close(발행 유지 파일 재사용, 신규 시세 노출 0). 커버리지 밖 = graceful fallback.
+    /* 평가 기준가 — kr_close_latest.json (금융위 공공데이터 직전 거래일 종가, 전 종목 동일 기준일).
+       🚨 되돌리지 말 것 (2026-07-31 수익률 부호 역전 사고) — 옛 소스 = stock_flow_5d.json 의
+       마지막 close. 그 파일은 시총순 회전 수집(하루 500종목)이라 **종목마다 종가 날짜가 제각각**
+       (어제~5주 전). 실측: 1,801종목 중 71% 가 직전 거래일 종가와 불일치, 23% 는 10%+ 괴리
+       → 하락 종목이 플러스로 표시됐다. flow_5d 로 되돌리면 같은 사고가 재발한다.
+       커버리지 밖(미국·ETF·거래정지) = 값을 지어내지 않고 "시세 없음" 표기 + 손익 합계 제외. */
     useEffect(() => {
         if (onCanvas || isDemo) return
         let alive = true
         fetch(
-            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_flow_5d.json",
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_close_latest.json",
             { cache: "no-store" }
         )
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                const fm = d && (d.flows || d)
-                if (!alive || !fm || typeof fm !== "object") return
+                const pm = d && d.prices
+                if (!alive || !pm || typeof pm !== "object") return
                 const m: Record<string, number> = {}
-                for (const tk of Object.keys(fm)) {
-                    const arr = fm[tk]
-                    const last =
-                        Array.isArray(arr) && arr.length
-                            ? arr[arr.length - 1]
-                            : null
-                    const c = last && Number(last.close)
-                    if (c && isFinite(c)) m[tk] = c
+                for (const tk of Object.keys(pm)) {
+                    const c = Number(pm[tk])
+                    if (c > 0 && isFinite(c)) m[tk] = c
                 }
                 setCloses(m)
+                setCloseAsOf(String((d._meta && d._meta.as_of) || ""))
             })
             .catch(() => {})
         return () => {
             alive = false
         }
     }, [isDemo, onCanvas])
-
-    // 국민연금 전체 보유(full 국내 + full_us 해외, 5% 미만 포함) — 내 보유종목에 지분율 배지. 공단 공시 사실(추천 아님).
-    useEffect(() => {
-        if (onCanvas) return
-        let alive = true
-        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nps_holdings.json", { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                if (!alive || !d) return
-                const m: Record<string, number> = {}
-                const src = ([] as any[]).concat(d.full || [], d.full_us || [])
-                for (const x of src) {
-                    if (x && x.ticker != null && x.pct != null) m[String(x.ticker)] = Number(x.pct)
-                }
-                setNpsMap(m)
-            })
-            .catch(() => {})
-        return () => {
-            alive = false
-        }
-    }, [onCanvas])
 
     const goStock = useCallback(
         (h: any) => {
@@ -761,7 +871,7 @@ export default function PublicHoldingsTab(props: Props) {
             if (!tk) return
             const us = h.market === "us" || h.currency === "USD"
             const path = (
-                us ? usStockPath || "/us/stock" : stockPath || "/stock"
+                us ? _usPath(usStockPath, stockPath) : stockPath || "/stock"
             ).replace(/\/+$/, "")
             window.location.href = path + "?q=" + encodeURIComponent(tk)
         },
@@ -880,12 +990,15 @@ export default function PublicHoldingsTab(props: Props) {
         if (onCanvas) return
         const token = getToken()
         if (!token) {
+            // 미로그인 = 거래 기록도 SAMPLE 미리보기 유지 (loadHoldings 토큰 부재 분기와 동일 규율)
+            setTradesLoading(false)
             setTradeData({
                 trades: SAMPLE_TRADES,
                 summary: SAMPLE_TRADE_SUMMARY,
             })
             return
         }
+        setTradesLoading(true)
         fetch(base + "/api/trades", {
             headers: { Authorization: "Bearer " + token },
         })
@@ -901,6 +1014,7 @@ export default function PublicHoldingsTab(props: Props) {
                     })
             })
             .catch(() => {})
+            .finally(() => setTradesLoading(false))
     }, [base, onCanvas])
 
     // 거래 탭 최초 진입 시 lazy 로드(안 여는 사용자 API 호출 절약).
@@ -1026,29 +1140,36 @@ export default function PublicHoldingsTab(props: Props) {
     const narrow = w > 0 && w < 560
     const pad = narrow ? 12 : 18
 
+    /* 평가 — 기준가 없는 종목(미국·ETF·거래정지)은 0% 로 위장하지 않는다(_priced=false).
+       옛 코드는 종가가 없으면 평단을 현재가로 써서 "정확히 0.0%" 를 표시했다 — 사용자가 손익 0
+       으로 오독한다. 지금은 손익 "—" + 합계 제외, 평가금액만 매입가 기준으로 잡아 비중을 유지. */
     const evald = rows.map((h) => {
         const us = h.market === "us" || h.currency === "USD"
         const fx = us ? FX : 1
-        const cur =
-            closes[String(h.ticker)] != null
-                ? closes[String(h.ticker)]
-                : Number(h.price) || Number(h.avg_cost) || 0
-        const val = (Number(h.shares) || 0) * cur * fx
-        const cost = (Number(h.shares) || 0) * (Number(h.avg_cost) || 0) * fx
-        const pl = val - cost
-        const plPct = cost > 0 ? (pl / cost) * 100 : 0
-        return { ...h, _us: us, _val: val, _pl: pl, _plPct: plPct }
+        const shares = Number(h.shares) || 0
+        const px = Number(closes[String(h.ticker)]) || 0
+        const seeded = Number(h.price) || 0 // SAMPLE 미리보기 전용 시세
+        const cur = px > 0 ? px : seeded > 0 ? seeded : Number(h.avg_cost) || 0
+        const priced = px > 0 || seeded > 0
+        const val = shares * cur * fx
+        const cost = shares * (Number(h.avg_cost) || 0) * fx
+        const pl = priced ? val - cost : 0
+        const plPct = priced && cost > 0 ? (pl / cost) * 100 : 0
+        return {
+            ...h,
+            _us: us,
+            _priced: priced,
+            _val: val,
+            _cost: cost,
+            _pl: pl,
+            _plPct: plPct,
+        }
     })
-    const totalVal = evald.reduce((a, b) => a + b._val, 0)
-    const totalCost = evald.reduce(
-        (a, b) =>
-            a +
-            (Number(b.shares) || 0) *
-                (Number(b.avg_cost) || 0) *
-                (b._us ? FX : 1),
-        0
-    )
-    const totalPl = totalVal - totalCost
+    const totalVal = evald.reduce((a, b) => a + b._val, 0) // 비중용 — 미평가는 매입가 기준
+    const pricedRows = evald.filter((h) => h._priced)
+    const unpricedN = evald.length - pricedRows.length
+    const totalCost = pricedRows.reduce((a, b) => a + b._cost, 0)
+    const totalPl = pricedRows.reduce((a, b) => a + b._pl, 0)
     const totalPlPct = totalCost > 0 ? (totalPl / totalCost) * 100 : 0
     const withWeight = evald
         .map((h) => ({
@@ -1194,6 +1315,60 @@ export default function PublicHoldingsTab(props: Props) {
                 }}
             >
                 {v}
+            </span>
+        </div>
+    )
+
+    /* 통화 토글 — 미국 보유분을 원화로 환산해 본다. 국내는 원래 원화라 바뀌지 않는다.
+       선택은 localStorage(an_ccy)에 남아 리포트 등 다른 화면과 함께 움직인다.
+       🚨 2026-07-30: 이 정의가 빠진 채 렌더 참조만 들어가 "CcyToggle is not defined" 로
+       둥지 페이지가 통째로 죽었다(PM 캔버스 에러). 정의와 참조를 항상 같이 옮길 것. */
+    const CcyToggle = (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 10,
+                flexWrap: "wrap",
+            }}
+        >
+            <div
+                style={{
+                    display: "inline-flex",
+                    gap: 2,
+                    background: C.bg,
+                    borderRadius: 9,
+                    padding: 2,
+                }}
+            >
+                {["USD", "KRW"].map((k) => (
+                    <div
+                        key={k}
+                        onClick={() => setCcy(k)}
+                        style={{
+                            cursor: "pointer",
+                            fontSize: 11.5,
+                            fontWeight: 800,
+                            padding: "4px 12px",
+                            borderRadius: 7,
+                            background: ccy === k ? C.card : "transparent",
+                            color: ccy === k ? C.ink : C.faint,
+                        }}
+                    >
+                        {k === "USD" ? "$ 달러" : "₩ 원화"}
+                    </div>
+                ))}
+            </div>
+            <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>
+                미국 종목 표기 · 환율 {Math.round(FX).toLocaleString()}원/$
+                {fxInfo.ok
+                    ? fxInfo.asOf
+                        ? " (" +
+                          String(fxInfo.asOf).slice(5, 16).replace("T", " ") +
+                          " 기준)"
+                        : ""
+                    : " (기본값 — 환율 불러오는 중)"}
             </span>
         </div>
     )
@@ -1871,6 +2046,7 @@ export default function PublicHoldingsTab(props: Props) {
                         </div>
                     )}
 
+                    {(onCanvas || !isDemo) && CcyToggle}
                     {(onCanvas || !isDemo) && Tabs}
 
                     {(() => {
@@ -2097,8 +2273,14 @@ export default function PublicHoldingsTab(props: Props) {
                                         >
                                             보유 {rows.length}종목 · 평단 입력
                                             기준(사실)
+                                            {closeAsOf
+                                                ? ` · ${fmtAsOf(closeAsOf)} 종가 기준`
+                                                : ""}
+                                            {unpricedN
+                                                ? ` · 시세 없는 ${unpricedN}종목 손익 제외`
+                                                : ""}
                                             {usRows.length
-                                                ? ` · 미국주식 환율 ${FX}원/$ 가정`
+                                                ? ` · 미국주식 환율 ${Math.round(FX).toLocaleString()}원/$${fxInfo.ok ? "" : " (기본값)"}`
                                                 : ""}
                                         </div>
                                     </div>
@@ -2172,11 +2354,6 @@ export default function PublicHoldingsTab(props: Props) {
                                                         {Number(h.shares) || 0}
                                                         주 · 비중{" "}
                                                         {h._weight.toFixed(0)}%
-                                                        {npsMap[String(h.ticker)] != null && (
-                                                            <span style={{ color: C.vg, fontWeight: 700 }}>
-                                                                {" · 국민연금 " + npsMap[String(h.ticker)].toFixed(2) + "%"}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </div>
                                                 {!narrow && (
@@ -2222,16 +2399,20 @@ export default function PublicHoldingsTab(props: Props) {
                                                         style={{
                                                             fontSize: 14.5,
                                                             fontWeight: 800,
-                                                            color: plColor(
-                                                                h._pl
-                                                            ),
+                                                            color: h._priced
+                                                                ? plColor(h._pl)
+                                                                : C.faint,
                                                         }}
                                                     >
-                                                        {(h._plPct > 0
-                                                            ? "+"
-                                                            : "") +
-                                                            h._plPct.toFixed(1)}
-                                                        %
+                                                        {h._priced
+                                                            ? (h._plPct > 0
+                                                                  ? "+"
+                                                                  : "") +
+                                                              h._plPct.toFixed(
+                                                                  1
+                                                              ) +
+                                                              "%"
+                                                            : "—"}
                                                     </div>
                                                     <div
                                                         style={{
@@ -2241,7 +2422,9 @@ export default function PublicHoldingsTab(props: Props) {
                                                             marginTop: 2,
                                                         }}
                                                     >
-                                                        {money(h._val)}
+                                                        {h._priced
+                                                            ? money(h._val)
+                                                            : "시세 없음"}
                                                     </div>
                                                 </div>
                                                 <span
@@ -2313,9 +2496,13 @@ export default function PublicHoldingsTab(props: Props) {
                                             lineHeight: 1.5,
                                         }}
                                     >
-                                        종목 누르면 상세 리포트 · 평가손익 =
-                                        종가(전일) × 보유수량 − 입력 평단 (단순
-                                        계산·사실) · 실시간 시세는 리포트에서
+                                        종목 누르면 상세 리포트 · 평가손익 ={" "}
+                                        {closeAsOf
+                                            ? `${fmtAsOf(closeAsOf)} 종가`
+                                            : "직전 거래일 종가"}{" "}
+                                        × 보유수량 − 입력 평단 (단순 계산·사실) ·
+                                        종가 = 금융위 공공데이터(T+1) · 실시간
+                                        시세는 리포트에서
                                     </div>
                                 </>
                             ) : view === "mix" ? (
@@ -2911,7 +3098,9 @@ export default function PublicHoldingsTab(props: Props) {
                                             }}
                                         >
                                             22%(과표 3억↓)·27.5%(초과) · 손실
-                                            연내통산(이월 없음) · 환율 {FX}원/$
+                                            연내통산(이월 없음) · 환율{" "}
+                                            {Math.round(FX).toLocaleString()}원/$
+                                            {fxInfo.ok ? "" : " (기본값)"}
                                             가정
                                         </div>
                                     </div>
@@ -2985,28 +3174,34 @@ export default function PublicHoldingsTab(props: Props) {
                                                                 marginTop: 2,
                                                             }}
                                                         >
-                                                            {h._us
-                                                                ? "양도세 22% 대상"
-                                                                : h._val >=
-                                                                    TAX.KR_MAJOR_AMT
-                                                                  ? "대주주 과세 검토"
-                                                                  : "비과세 · 거래세만"}
+                                                            {!h._priced
+                                                                ? "시세 없음 · 손익 계산 제외"
+                                                                : h._us
+                                                                  ? "양도세 22% 대상"
+                                                                  : h._val >=
+                                                                      TAX.KR_MAJOR_AMT
+                                                                    ? "대주주 과세 검토"
+                                                                    : "비과세 · 거래세만"}
                                                         </div>
                                                     </div>
                                                     <div
                                                         style={{
                                                             fontSize: 13.5,
                                                             fontWeight: 800,
-                                                            color: plColor(
-                                                                h._pl
-                                                            ),
+                                                            color: h._priced
+                                                                ? plColor(h._pl)
+                                                                : C.faint,
                                                             fontVariantNumeric:
                                                                 "tabular-nums",
                                                             flexShrink: 0,
                                                         }}
                                                     >
-                                                        {h._pl >= 0 ? "+" : ""}
-                                                        {wonCompact(h._pl)}
+                                                        {h._priced
+                                                            ? (h._pl >= 0
+                                                                  ? "+"
+                                                                  : "") +
+                                                              wonCompact(h._pl)
+                                                            : "—"}
                                                     </div>
                                                 </div>
                                             ))}
@@ -3245,6 +3440,39 @@ export default function PublicHoldingsTab(props: Props) {
                                         </div>
                                     )}
 
+                                    {/* 🚨 거래 로딩 스켈레톤 — 없으면 "거래 0건 / 기록 없어요" 가 먼저 뜬 뒤
+                                        실제 내역으로 바뀌어 빈 상태가 번쩍인다(2026-07-27 PM 지적 동일 계열). */}
+                                    {tradesLoading ? (
+                                        <>
+                                            <div style={{ ...cardS, padding: "18px 18px" }}>
+                                                <div style={sk(140, 12, 6)} />
+                                                <div style={{ ...sk(190, 26, 8), marginTop: 10 }} />
+                                                <div style={{ ...sk(240, 11, 6), marginTop: 10 }} />
+                                            </div>
+                                            <div style={{ ...cardS, padding: "16px 18px", marginTop: 10 }}>
+                                                <div style={sk(72, 13, 6)} />
+                                                {[0, 1, 2].map((i) => (
+                                                    <div
+                                                        key={i}
+                                                        style={{
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 10,
+                                                            marginTop: 14,
+                                                        }}
+                                                    >
+                                                        <div style={sk(30, 30, 10)} />
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={sk("42%", 12, 6)} />
+                                                            <div style={{ ...sk("28%", 10, 6), marginTop: 6 }} />
+                                                        </div>
+                                                        <div style={sk(84, 13, 6)} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
+                                    ) : (
+                                    <>
                                     {/* 실현손익 합계 (매도 확정분) */}
                                     <div
                                         style={{
@@ -3284,7 +3512,7 @@ export default function PublicHoldingsTab(props: Props) {
                                             이동평균 매입가 차감(사실) · 거래{" "}
                                             {(tradeData.trades || []).length}건
                                             {tHasUs
-                                                ? ` · 미국주식 환율 ${FX}원/$ 가정`
+                                                ? ` · 미국주식 환율 ${Math.round(FX).toLocaleString()}원/$${fxInfo.ok ? "" : " (기본값)"}`
                                                 : ""}
                                         </div>
                                     </div>
@@ -3363,7 +3591,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                                 {Number(
                                                                     s.open_shares
                                                                 ) > 0
-                                                                    ? `보유 ${s.open_shares}주 · 평단 ${px(Number(s.open_avg_cost) || 0, us)}`
+                                                                    ? `보유 ${s.open_shares}주 · 평단 ${px(Number(s.open_avg_cost) || 0, us, ccy, FX)}`
                                                                     : "전량 매도"}
                                                             </div>
                                                         </div>
@@ -3394,7 +3622,9 @@ export default function PublicHoldingsTab(props: Props) {
                                                                         Number(
                                                                             s.realized_pnl
                                                                         ) || 0,
-                                                                        us
+                                                                        us,
+                        ccy,
+                        FX
                                                                     )}
                                                             </div>
                                                             <div
@@ -3554,7 +3784,9 @@ export default function PublicHoldingsTab(props: Props) {
                                                                     Number(
                                                                         t.price
                                                                     ) || 0,
-                                                                    us
+                                                                    us,
+                        ccy,
+                        FX
                                                                 )}
                                                             </div>
                                                         </div>
@@ -3577,7 +3809,9 @@ export default function PublicHoldingsTab(props: Props) {
                                                                     (Number(
                                                                         t.price
                                                                     ) || 0),
-                                                                us
+                                                                us,
+                                                                ccy,
+                                                                FX
                                                             )}
                                                         </div>
                                                         {!isDemo && t.id && (
@@ -3646,10 +3880,16 @@ export default function PublicHoldingsTab(props: Props) {
                                         (단순 계산·사실) · 본인 기록용 ·
                                         순위·배지·공개 없음 · 투자자문 아님
                                     </div>
+                                    </>
+                                    )}
                                 </>
                             )
-                        // 데모(미로그인) = 브라우저 창 목업 안 SAMPLE 미리보기 (캔버스·라이브 공통, 40fbdabd2 회귀 복원 2026-07-24). pointerEvents none.
+                        /* 미로그인(=isDemo) = 브라우저 창 목업 안 SAMPLE 미리보기 + "예시" 배지.
+                           pointerEvents none 이라 조작 불가 — 로그인 CTA 로만 진입.
+                           🚨 캔버스 전용(onCanvas)으로 좁히지 말 것 — 2026-07-27 그렇게 좁혔다가
+                           로그인 전 미리보기가 통째로 사라졌다(PM 지적 2026-08-01). */
                         return isDemo ? (
+                            rows.length ? (
                                 <div
                                     style={{
                                         marginTop: 14,
@@ -3717,7 +3957,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                 textOverflow: "ellipsis",
                                             }}
                                         >
-                                            alphanest.app/holdings
+                                            alphanest.kr/nest
                                         </div>
                                         <span
                                             style={{
@@ -3744,6 +3984,7 @@ export default function PublicHoldingsTab(props: Props) {
                                         {content}
                                     </div>
                                 </div>
+                            ) : null
                         ) : (
                             content
                         )
@@ -3773,7 +4014,7 @@ addPropertyControls(PublicHoldingsTab, {
     usStockPath: {
         type: ControlType.String,
         title: "Stock Path (US)",
-        defaultValue: "/us/stock",
+        defaultValue: "/stock",
     },
     dark: {
         type: ControlType.Boolean,
