@@ -1198,6 +1198,51 @@ def handle_portfolio_full(request_handler) -> dict:
     return {"_status": 200, "_body": portfolio}
 
 
+# 터미널 화면이 실제 쓰는 키만 — full(3.57MB) 대비 ≈ 4~6%. (2026-08-03 Safari 메모리 킬 대응)
+_TERMINAL_KEYS = (
+    "updated_at", "vams", "briefing", "sector_rotation", "global_events",
+    "headlines", "bloomberg_google_headlines", "market_horizon", "daily_report",
+    "sectors", "macro",
+)
+_TERMINAL_REC_FIELDS = (
+    "name", "ticker", "currency", "recommendation", "per", "pbr", "roe",
+    "rec_price", "ai_verdict", "drop_from_high_pct", "brain_score",
+)
+
+
+def handle_portfolio_terminal(request_handler) -> dict:
+    """오퍼레이터 터미널 슬림 페이로드 — 추천은 필드 화이트리스트(개당 ~27KB → ~0.7KB)."""
+    portfolio = fetch_portfolio()
+    if not portfolio:
+        return {"_status": 503, "_body": {"error": "portfolio_unavailable"}}
+    out = {k: portfolio.get(k) for k in _TERMINAL_KEYS if k in portfolio}
+    slim_recs = []
+    for r in portfolio.get("recommendations") or []:
+        if not isinstance(r, dict):
+            continue
+        s = {k: r.get(k) for k in _TERMINAL_REC_FIELDS if r.get(k) is not None}
+        vb = r.get("verity_brain")
+        if isinstance(vb, dict):
+            s["verity_brain"] = {
+                k: vb.get(k) for k in ("brain_score", "grade_label", "grade") if vb.get(k) is not None
+            }
+        fl = r.get("flow")
+        if isinstance(fl, dict) and fl.get("foreign_net") is not None:
+            s["flow"] = {"foreign_net": fl.get("foreign_net")}
+        ly = r.get("lynch_kr")
+        if isinstance(ly, dict) and ly.get("label"):
+            s["lynch_kr"] = {"label": ly.get("label")}
+        de = r.get("dart_disclosure_events")
+        if isinstance(de, dict) and de.get("severity") is not None:
+            s["dart_disclosure_events"] = {"severity": de.get("severity")}
+        av = s.get("ai_verdict")
+        if isinstance(av, str) and len(av) > 240:
+            s["ai_verdict"] = av[:240]
+        slim_recs.append(s)
+    out["recommendations"] = slim_recs
+    return {"_status": 200, "_body": out}
+
+
 # ── 오퍼레이터 파일 authed 서빙 (VERITY↔AlphaNest 분리 Stage 3 후속, 2026-07-23) ──
 # history/system_health_snapshot/brain_kb_usage/admin_todos = 오퍼레이터 전용(public-probe 소비 0).
 # 공개 발행 제거 → private bucket(_operator/*) 우선, 전환기 공개 blob fallback(제거 전엔 존재). do_GET
@@ -1233,6 +1278,9 @@ ROUTES = {
     "trust": handle_trust,
     "explain": handle_explain,
     "portfolio_full": handle_portfolio_full,
+    # 터미널 슬림 페이로드 (2026-08-03) — full 3.57MB(추천 1.67MB) 파싱이 Safari WebContent
+    # 메모리 킬 유발(This page couldn't load 반복). 화면 필요 키 + 추천 필드 화이트리스트만 ≈ 4~6%.
+    "portfolio_terminal": handle_portfolio_terminal,
     "history": _make_operator_file_handler("history.json"),
     "system_health_snapshot": _make_operator_file_handler("system_health_snapshot.json"),
     "brain_kb_usage": _make_operator_file_handler("brain_kb_usage.json"),

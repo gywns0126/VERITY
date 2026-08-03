@@ -5,8 +5,12 @@
 //   (크립토=Binance 분봉 실시간 / 지수·환율=수집 시계열 확대). BTC/ETH = 코스닥 옆 상주(5초 tick).
 import { useEffect, useRef, useState } from "react"
 import { useDark, palette, FONT, NUM, type Palette } from "@/lib/theme"
-import { fetchPublic } from "@/lib/api"
+import { fetchPublic, fetchRailway } from "@/lib/api"
 import ChartModal, { type ChartTarget } from "./ChartModal"
+
+const IDX_POLL_MS = 10000 // KR 지수 실시간 — Railway /index_quotes (KIS 공유토큰 소비, RULE 1 안전)
+
+type IdxQuote = { price?: number; change?: number; change_pct?: number }
 
 const LEAD: Array<{ key: string; name: string; unit?: string }> = [
     { key: "kospi", name: "코스피" },
@@ -47,6 +51,7 @@ export default function MarketStrip() {
     const c = palette(dark)
     const [m, setM] = useState<Record<string, Node>>({})
     const [crypto, setCrypto] = useState<CryptoRow[]>([])
+    const [idxLive, setIdxLive] = useState<Record<string, IdxQuote>>({})
     const [target, setTarget] = useState<ChartTarget | null>(null)
     const prevPx = useRef<Record<string, number>>({})
 
@@ -66,9 +71,17 @@ export default function MarketStrip() {
         }
         pull()
         const t = setInterval(pull, CRYPTO_POLL_MS)
+        // KR 지수 실시간 (PM "레일웨이 돈 주고 쓰는데 당연히") — 값 0/실패 = macro_snapshot 유지
+        async function pullIdx() {
+            const r = await fetchRailway<{ quotes?: Record<string, IdxQuote> }>("index_quotes")
+            if (!cancelled && r.ok && r.data.quotes) setIdxLive(r.data.quotes)
+        }
+        pullIdx()
+        const t2 = setInterval(pullIdx, IDX_POLL_MS)
         return () => {
             cancelled = true
             clearInterval(t)
+            clearInterval(t2)
         }
     }, [])
 
@@ -76,6 +89,10 @@ export default function MarketStrip() {
         crypto.forEach((r) => {
             const p = parseFloat(r.lastPrice || "")
             if (isFinite(p)) prevPx.current[r.symbol] = p
+        })
+        Object.keys(idxLive).forEach((k) => {
+            const p = idxLive[k]?.price
+            if (typeof p === "number" && p > 0) prevPx.current[`idx:${k}`] = p
         })
     })
 
@@ -106,15 +123,25 @@ export default function MarketStrip() {
 
     function idx(k: string, name: string, unit?: string) {
         const n = m[k] || {}
-        const v = typeof n.value === "number" ? n.value : null
-        const cp = typeof n.change_pct === "number" ? n.change_pct : typeof n.change_percent === "number" ? n.change_percent : null
+        // KR 지수 = Railway 실시간 우선 (KIS 10초), 실패/0 = 스냅샷 폴백
+        const live = idxLive[k]
+        const liveOk = live && typeof live.price === "number" && live.price > 0
+        const v = liveOk ? (live.price as number) : typeof n.value === "number" ? n.value : null
+        const cp = liveOk && typeof live.change_pct === "number"
+            ? live.change_pct
+            : typeof n.change_pct === "number" ? n.change_pct : typeof n.change_percent === "number" ? n.change_percent : null
+        const was = prevPx.current[`idx:${k}`]
+        const dir = liveOk && typeof was === "number" && v !== null && v !== was ? (v > was ? "up" : "dn") : ""
         return (
             <Card
                 key={k}
                 name={name}
+                tag={liveOk ? "실시간" : undefined}
                 value={v != null ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) + (unit || "") : "—"}
                 cp={cp}
                 spark={n.sparkline}
+                flashKey={liveOk ? `${k}-${v}` : undefined}
+                dir={dir}
                 onOpen={() => setTarget({ kind: "macro", name, unit, series: n.sparkline || [], value: v, changePct: cp })}
             />
         )
@@ -146,7 +173,7 @@ export default function MarketStrip() {
                 {REST.map(({ key, name, unit }) => idx(key, name, unit))}
             </div>
             <div style={{ fontSize: 9.5, color: c.faint, padding: "5px 2px 0" }}>
-                카드 클릭 = 상세 차트 · 지수·환율·금리 = 약 30분 주기 수집 · 크립토 = 실시간(Binance 5초) · 미장 = 미국 장중 외 전일 종가
+                카드 클릭 = 상세 차트 · KR 지수 = 실시간(KIS 10초) · 크립토 = 실시간(5초) · 미장·환율·금리 = 약 30분 주기, 미장은 장중 외 전일 종가
             </div>
             {target ? <ChartModal target={target} onClose={() => setTarget(null)} /> : null}
         </div>

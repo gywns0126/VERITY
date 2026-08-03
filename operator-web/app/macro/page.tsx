@@ -6,7 +6,7 @@
 // 소스 = portfolio_full(authed) + macro_synthesis(authed) + us_investor_portfolios.json(공개 사실).
 import { useEffect, useState } from "react"
 import { useDark, palette, cardStyle, FONT, NUM, type Palette } from "@/lib/theme"
-import { fetchOperator, fetchPublic } from "@/lib/api"
+import { fetchOperator, fetchPortfolioSlim, fetchPublic } from "@/lib/api"
 import { isAuthed } from "@/lib/auth"
 import { captureOAuthHash, refreshIfNeeded } from "@/lib/supabase"
 import type { PortfolioFull, SectorRow } from "@/lib/types"
@@ -60,14 +60,29 @@ export default function MacroPage() {
     useEffect(() => {
         if (!authed) return
         let cancelled = false
-        fetchOperator<PortfolioFull>("portfolio_full").then((r) => {
+        fetchPortfolioSlim<PortfolioFull>().then((r) => {
             if (!cancelled && r.ok) setPf(r.data)
         })
         fetchOperator<MacroSyn>("macro_synthesis").then((r) => {
             if (!cancelled && r.ok) setSyn(r.data)
         })
         fetchPublic<{ investors?: Investor[] }>("us_investor_portfolios.json").then((r) => {
-            if (!cancelled && r.ok && Array.isArray(r.data.investors)) setWhales(r.data.investors)
+            if (!cancelled && r.ok && Array.isArray(r.data.investors)) {
+                // 슬림 보관 — 화면이 쓰는 필드·상위 5보유만 state 로 (메모리 규율)
+                setWhales(
+                    r.data.investors.map((w) => ({
+                        institution: w.institution,
+                        person: w.person,
+                        trailing_4q_replication_pct: w.trailing_4q_replication_pct,
+                        report_date: w.report_date,
+                        holdings_capped: (w.holdings_capped || w.holdings || [])
+                            .slice()
+                            .sort((a, b) => (b.weight_pct || 0) - (a.weight_pct || 0))
+                            .slice(0, 5)
+                            .map((h) => ({ ticker: h.ticker, weight_pct: h.weight_pct, change_type: h.change_type })),
+                    }))
+                )
+            }
         })
         return () => {
             cancelled = true
@@ -87,9 +102,11 @@ export default function MacroPage() {
     const cl = syn?.sources?.claude
     const px = syn?.sources?.perplexity
 
-    const secTitle = (t: string, n?: string) => (
-        <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 8 }}>
-            <span style={{ fontSize: 13.5, fontWeight: 800, color: c.ink, letterSpacing: "-0.02em" }}>{t}</span>
+    // 알파네스트 섹션 문법 — 컬러 닷 아이브로 + 타이틀 + 메타 (좌측 바 아님, 닷만)
+    const secTitle = (t: string, n?: string, dot?: string) => (
+        <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 10 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: dot || c.vt, alignSelf: "center", flexShrink: 0 }} />
+            <span style={{ fontSize: 14, fontWeight: 800, color: c.ink, letterSpacing: "-0.02em" }}>{t}</span>
             {n ? <span style={{ fontSize: 10, color: c.faint }}>{n}</span> : null}
         </div>
     )
@@ -135,7 +152,7 @@ export default function MacroPage() {
                 {/* 매크로 지표 8종 */}
                 <PanelBoundary name="지표">
                     <div style={{ ...cardStyle(c, "14px 16px") }}>
-                        {secTitle("매크로 지표", "환율 · 원자재 · 변동성 · 약 30분 주기")}
+                        {secTitle("매크로 지표", "환율 · 원자재 · 변동성 · 약 30분 주기", c.green)}
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8 }}>
                             {Object.keys(MACRO_LABELS).map((k) => {
                                 const n = macro[k]
@@ -164,7 +181,7 @@ export default function MacroPage() {
                 {/* 섹터 보드 */}
                 <PanelBoundary name="섹터">
                     <div style={{ ...cardStyle(c, "14px 16px") }}>
-                        {secTitle("섹터 보드", `${sectors.length}개 업종 · 등락률순`)}
+                        {secTitle("섹터 보드", `${sectors.length}개 업종 · 등락률순`, c.up)}
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))", gap: 14 }}>
                             <SectorList c={c} title="핫 섹터" rows={hot} accent={c.up} />
                             <SectorList c={c} title="부진 섹터" rows={cold} accent={c.down} />
@@ -248,7 +265,7 @@ export default function MacroPage() {
                 {/* 이벤트 캘린더 */}
                 <PanelBoundary name="이벤트">
                     <div style={{ ...cardStyle(c, "14px 16px") }}>
-                        {secTitle("이벤트 캘린더", `지정학 · 정책 · ${events.length}건`)}
+                        {secTitle("이벤트 캘린더", `지정학 · 정책 · ${events.length}건`, c.amber)}
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 10 }}>
                             {events.map((e, i) => {
                                 const high = String(e.severity || "").toLowerCase() === "high"
@@ -275,7 +292,7 @@ export default function MacroPage() {
                 {/* 고래 13F */}
                 <PanelBoundary name="고래">
                     <div style={{ ...cardStyle(c, "14px 16px") }}>
-                        {secTitle("고래 포지션", "13F 분기 공시 사실 · 지연 데이터 · 복제수익률=참고")}
+                        {secTitle("고래 포지션", "13F 분기 공시 사실 · 지연 데이터 · 복제수익률=참고", c.down)}
                         {whales.length === 0 ? (
                             <div style={{ fontSize: 12, color: c.sub }}>불러오는 중이거나 미발행.</div>
                         ) : (

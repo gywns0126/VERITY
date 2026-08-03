@@ -547,6 +547,27 @@ def fetch_price(ticker: str) -> dict:
     }
 
 
+def fetch_index(index_cd: str = "0001") -> dict:
+    """업종 현재지수 — inquire-index-price, tr_id FHPUP02100000 (kis_broker.get_index_price 미러).
+
+    index_cd: 0001=코스피, 1001=코스닥. KIS_SHARED_TOKEN 순수 소비자(발급 0, RULE 1 안전).
+    필드 방어 파싱 — 값 0 이면 프론트가 macro_snapshot 폴백 (PM 2026-08-03 KR 지수 실시간화).
+    """
+    d = _get(
+        "/uapi/domestic-stock/v1/quotations/inquire-index-price",
+        "FHPUP02100000",
+        {"FID_COND_MRKT_DIV_CODE": "U", "FID_INPUT_ISCD": index_cd},
+    )
+    o = d.get("output", {}) or {}
+    _f = lambda k: float(o.get(k, "0") or "0")
+    return {
+        "price": _f("bstp_nmix_prpr"),
+        "change": _f("bstp_nmix_prdy_vrss"),
+        "change_pct": _f("bstp_nmix_prdy_ctrt"),
+        "volume": _f("acml_vol"),
+    }
+
+
 def fetch_program_trade(market: str = "K") -> dict:
     """KIS 프로그램매매 종합현황(시간) — comp-program-trade-today, tr_id FHPPG04600101.
 

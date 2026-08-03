@@ -7,7 +7,7 @@
 //   포트폴리오 최상단. 링크그룹 = 행 클릭 → 전 패널 동기(verity-ticker).
 import { useEffect, useState } from "react"
 import { useDark, palette, FONT } from "@/lib/theme"
-import { fetchOperator, fetchPublic } from "@/lib/api"
+import { fetchPortfolioSlim, fetchPublic } from "@/lib/api"
 import { isAuthed } from "@/lib/auth"
 import { captureOAuthHash, refreshIfNeeded } from "@/lib/supabase"
 import type { AlertItem, PortfolioFull } from "@/lib/types"
@@ -63,7 +63,7 @@ export default function Home() {
     useEffect(() => {
         if (!authed) return
         let cancelled = false
-        fetchOperator<PortfolioFull>("portfolio_full").then((r) => {
+        fetchPortfolioSlim<PortfolioFull>().then((r) => {
             if (cancelled) return
             if (r.ok) {
                 setPf(r.data)

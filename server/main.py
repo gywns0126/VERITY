@@ -31,7 +31,7 @@ from server.config import (
 )
 from server.kis_rest_client import (
     fetch_daily, fetch_minute, fetch_weekly, fetch_monthly, fetch_full_history, fetch_orderbook,
-    fetch_price, fetch_trades, fetch_program_trade, place_kr_order,
+    fetch_price, fetch_trades, fetch_program_trade, fetch_index, place_kr_order,
     place_us_order, get_balance, token_status,
 )
 from server.kis_ws_client import KISWebSocketClient
@@ -374,6 +374,22 @@ async def program_trade(market: str = "K"):
     loop = asyncio.get_event_loop()
     data = await loop.run_in_executor(None, fetch_program_trade, market.upper())
     return {"program": data}
+
+
+@app.get("/index_quotes")
+async def index_quotes():
+    """KR 지수 실시간 — 코스피(0001)·코스닥(1001) 업종 현재지수 (PM 2026-08-03).
+    KIS_SHARED_TOKEN 순수 소비자(발급 0, RULE 1). 값 0 = 프론트가 macro_snapshot 폴백."""
+    loop = asyncio.get_event_loop()
+    kospi, kosdaq = await asyncio.gather(
+        loop.run_in_executor(None, fetch_index, "0001"),
+        loop.run_in_executor(None, fetch_index, "1001"),
+    )
+    kst = timezone(timedelta(hours=9))
+    return {
+        "quotes": {"kospi": kospi, "kosdaq": kosdaq},
+        "asof": datetime.now(kst).isoformat(timespec="seconds"),
+    }
 
 
 @app.get("/api/order")
