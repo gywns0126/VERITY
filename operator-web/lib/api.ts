@@ -32,6 +32,13 @@ export async function fetchOperator<T = unknown>(type: string): Promise<FetchRes
     }
 }
 
+/** 터미널 포트폴리오 — 슬림 라우트 우선(full 3.57MB = Safari 메모리 킬), 미배포 전환기만 full 폴백. */
+export async function fetchPortfolioSlim<T = unknown>(): Promise<FetchResult<T>> {
+    const r = await fetchOperator<T>("portfolio_terminal")
+    if (r.ok || r.error === "auth") return r
+    return fetchOperator<T>("portfolio_full")
+}
+
 // 공개 사실 blob (사실만 — 크라운주얼 아님). 인증 불필요.
 export async function fetchPublic<T = unknown>(file: string): Promise<FetchResult<T>> {
     try {
