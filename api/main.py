@@ -4334,6 +4334,16 @@ def main():
         portfolio.setdefault("daily_report", {})
         portfolio.setdefault("daily_report_us", {})
 
+    # ── 배지 단일 소유 게이트 (2026-08-03 PM 승인 — 표시 레이어, 산식 불변) ──
+    # 반드시 모든 LLM override(claude_analyst→pro→light) 이후·저장 직전에 실행.
+    # rec 배지 = verity_brain.grade 소유 + 강등 전용 게이트, LLM 합의는 analyst_view 보존.
+    try:
+        from api.intelligence.display_verdict import apply_display_verdict
+        _gated = sum(1 for _s in analyzed if apply_display_verdict(_s).get("display_verdict", {}).get("gates"))
+        print(f"  [display_verdict] {len(analyzed)}종목 배지 교정 · 게이트 발동 {_gated}건")
+    except Exception as _dv_e:  # 표시 게이트 실패가 파이프라인을 중단시키면 안 됨
+        print(f"  [display_verdict] 스킵: {type(_dv_e).__name__}: {_dv_e}")
+
     # ── STEP 7: VAMS ──
     print(f"\n[7] VAMS 가상 투자")
     portfolio["recommendations"] = analyzed
