@@ -27,7 +27,7 @@ OUT_PATH = os.path.join(DATA_DIR, "macro_synthesis.json")
 CACHE_PATH = os.path.join(DATA_DIR, "macro_synthesis_cache.json")
 CLAUDE_MODEL = "claude-opus-5"
 # 프롬프트 개정 시 +1 — fingerprint 포함 = 구 톤 캐시 자동 무효화 (tri v2 관례).
-PROMPT_VERSION = "1"
+PROMPT_VERSION = "2"
 
 
 def _load_portfolio() -> Dict[str, Any]:
@@ -110,24 +110,60 @@ def _perplexity_fresh() -> Dict[str, Any]:
     return {"content": r.get("content", ""), "citations": r.get("citations", []), "model": r.get("model")}
 
 
+# 그라운딩 검증 모델 — 2026-08-03 프로브에서 google_search 그라운딩 정합 실측
+# (코스피·미10y 정확 일치, 환각 0, 국내 주류 출처). flash-lite 는 그라운딩 미검증이라 명시 고정.
+_GEMINI_GROUNDED_MODEL = "gemini-2.5-flash"
+
+
 def _gemini_structure(grounding: str, fresh: str) -> Dict[str, Any]:
+    """구조화 + 국내 신선 축 승급 (PM 승인 2026-08-03) — 구글 검색 그라운딩으로
+    한국 거시·시장 사실(한국은행·금융위·주류 언론)을 보강. Perplexity(글로벌)와 상보.
+    출처는 source_tiers 로 T1/T2 만 citations 저장 (프로브 실측: 저품질 27% 차단)."""
     try:
         from google import genai
-        from api.config import GEMINI_API_KEY, GEMINI_MODEL_CHAT
+        from google.genai import types as _gtypes
+        from api.config import GEMINI_API_KEY
     except Exception as e:
         return {"error": f"gemini 모듈/키 부재: {e}"}
     if not GEMINI_API_KEY:
         return {"error": "GEMINI_API_KEY 미설정"}
     prompt = (
-        "아래 자기 자산 요약과 신선 사실을 [레짐] [동인] [리스크] 세 축으로 정리하라. "
-        "각 축 1~2줄, 각 줄 '- ' 시작, 증권사 리포트식 담백한 단정문. "
-        "마크다운(**, ##)·이모지 금지, 평문만. 새 숫자·전망 창작 금지.\n\n"
-        f"[자기 자산]\n{grounding}\n\n[신선 사실]\n{fresh}"
+        "구글 검색을 사용해 최근 72시간 한국(국내) 거시·시장의 확인된 사실을 보강하고, "
+        "아래 자기 자산 요약·신선 사실과 함께 네 축으로 정리하라: "
+        "[국내 신선] 2~3줄(검색 근거, 수치·날짜 병기) / [레짐] / [동인] / [리스크] 각 1~2줄. "
+        "각 줄 '- ' 시작, 증권사 리포트식 담백한 단정문. "
+        "마크다운(**, ##)·이모지 금지, 평문만. 전망·의견 창작 금지.\n\n"
+        f"[자기 자산]\n{grounding}\n\n[신선 사실(글로벌)]\n{fresh}"
     )
     try:
         client = genai.Client(api_key=GEMINI_API_KEY)
-        resp = client.models.generate_content(model=GEMINI_MODEL_CHAT, contents=prompt)
-        return {"content": (getattr(resp, "text", "") or "").strip(), "model": GEMINI_MODEL_CHAT}
+        resp = client.models.generate_content(
+            model=_GEMINI_GROUNDED_MODEL,
+            contents=prompt,
+            config=_gtypes.GenerateContentConfig(
+                tools=[_gtypes.Tool(google_search=_gtypes.GoogleSearch())],
+            ),
+        )
+        cites: list = []
+        try:
+            from api.intelligence.source_tiers import tier_of
+            gm_meta = resp.candidates[0].grounding_metadata
+            for ch in (getattr(gm_meta, "grounding_chunks", None) or []):
+                web = getattr(ch, "web", None)
+                title = getattr(web, "title", "") if web else ""
+                uri = getattr(web, "uri", "") if web else ""
+                # 프로브 실측: title = 도메인 문자열 → tier 판정은 title 로 (uri 는 구글 redirect)
+                if title and uri and tier_of(title) >= 1:
+                    cites.append({"title": title, "uri": uri})
+                if len(cites) >= 6:
+                    break
+        except Exception:
+            pass
+        return {
+            "content": (getattr(resp, "text", "") or "").strip(),
+            "model": _GEMINI_GROUNDED_MODEL + "+search",
+            "citations": cites,
+        }
     except Exception as e:
         return {"error": f"gemini 호출 실패: {e}"}
 
@@ -195,6 +231,12 @@ def synthesize_macro(force: bool = False) -> Dict[str, Any]:
 
     grounding = _grounding(p)
     px = _perplexity_fresh()
+    # Perplexity citations 도 차단 겹 통과 (source_tiers)
+    try:
+        from api.intelligence.source_tiers import filter_citations
+        px["citations"] = filter_citations(px.get("citations") or [], limit=6)
+    except Exception:
+        pass
     fresh_txt = px.get("content") or ("(신선 사실 수집 실패: " + str(px.get("error")) + ")")
     gm = _gemini_structure(grounding, fresh_txt)
     struct_txt = gm.get("content") or ("(구조화 실패: " + str(gm.get("error")) + ")")
@@ -207,7 +249,8 @@ def synthesize_macro(force: bool = False) -> Dict[str, Any]:
         "sources": {
             "perplexity": {"content": px.get("content"), "citations": px.get("citations"),
                            "model": px.get("model"), "error": px.get("error")},
-            "gemini": {"content": gm.get("content"), "model": gm.get("model"), "error": gm.get("error")},
+            "gemini": {"content": gm.get("content"), "model": gm.get("model"), "error": gm.get("error"),
+                       "gm_citations": gm.get("citations")},
             "claude": {"content": cl.get("content"), "model": cl.get("model"), "error": cl.get("error"),
                        "input_tokens": cl.get("input_tokens"), "output_tokens": cl.get("output_tokens")},
         },
