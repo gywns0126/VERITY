@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-03T09:16:00.543342+09:00",
+  "generated_at": "2026-08-03T13:03:09.551817+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 260594,
-    "python_modules": 680,
-    "tsx_components": 156,
+    "code_lines_tsx_py": 263984,
+    "python_modules": 688,
+    "tsx_components": 166,
     "json_data_files": 1666,
     "json_total_tracked": 1685,
-    "workflows": 67,
-    "scheduled_workflows": 52,
-    "cron_triggers": 63,
-    "git_tracked_files": 7241
+    "workflows": 68,
+    "scheduled_workflows": 53,
+    "cron_triggers": 64,
+    "git_tracked_files": 7263
   },
   "subsystems": {
     "ingest": {
@@ -90,7 +90,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 57,
+      "count": 60,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -128,6 +128,7 @@
         "api/intelligence/multibagger_watch.py",
         "api/intelligence/novelty.py",
         "api/intelligence/observation_scoring.py",
+        "api/intelligence/operator_ask.py",
         "api/intelligence/periodic_report.py",
         "api/intelligence/perplexity_realtime.py",
         "api/intelligence/portfolio.py",
@@ -143,8 +144,10 @@
         "api/intelligence/strategy_pool.py",
         "api/intelligence/stress.py",
         "api/intelligence/tail_risk_digest.py",
+        "api/intelligence/ticker_facts.py",
         "api/intelligence/trade_plan_evolution.py",
         "api/intelligence/trend_overlay.py",
+        "api/intelligence/tri_llm_synthesis.py",
         "api/intelligence/us_financials.py",
         "api/intelligence/value_hunter.py",
         "api/intelligence/verity_brain.py",
@@ -153,8 +156,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 67,
-      "scheduled": 52,
+      "count": 68,
+      "scheduled": 53,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -516,6 +519,13 @@
           "scheduled": true
         },
         {
+          "name": "tri_synthesis",
+          "crons": [
+            "0 21 * * 0"
+          ],
+          "scheduled": true
+        },
+        {
           "name": "universe_scan",
           "crons": [
             "30 6 * * 1-5"
@@ -610,15 +620,15 @@
     },
     "surface": {
       "label": "출력",
-      "count": 156,
+      "count": 166,
       "by_group": {
         "framer-components/public-probe": 72,
+        "operator-web/app/components": 20,
         "admin": 15,
         "_shared": 14,
-        "operator-web/app/components": 13,
         "market": 11,
         "framer-components/crypto-public": 7,
-        "analysis": 5,
+        "analysis": 6,
         "home": 5,
         "us": 4,
         "portfolio": 3,
@@ -626,7 +636,9 @@
         "operator-web/app": 2,
         "framer-components": 1,
         "framer-components/arena": 1,
-        "framer-components/private-probe": 1
+        "framer-components/private-probe": 1,
+        "operator-web/app/login": 1,
+        "operator-web/app/system": 1
       }
     },
     "data": {
@@ -646,10 +658,10 @@
     }
   },
   "python_by_dir": {
-    "api": 379,
+    "api": 383,
     "tests": 153,
     "scripts": 82,
-    "vercel-api": 54,
+    "vercel-api": 58,
     "server": 7,
     ".github": 5
   },
@@ -676,7 +688,7 @@
       "warn": 1,
       "alert": 0
     },
-    "infra_as_of": "2026-08-02T10:29:54+09:00",
+    "infra_as_of": "2026-08-03T10:30:20+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
