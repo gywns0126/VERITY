@@ -57,9 +57,22 @@ GEMINI_MODEL_CHAT = (os.environ.get("GEMINI_MODEL_CHAT") or "gemini-2.5-flash-li
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 # ── Claude 하이브리드 라우팅: 경량=Haiku, 범용=Sonnet, 전략=Opus ──
+# 2026-08-03 5족 이전 (PM 승인): sonnet-4-6→sonnet-5 (동가 $3/$15 · 인트로 $2/$10 ~8/31),
+# opus-4-7→opus-5 (완전 동가 $5/$25). 🚨 5족은 thinking 기본 on + 비기본 샘플링 파라미터
+# 400 거부 — 호출부는 is_claude_5_family() 가드로 thinking/temperature 를 분기한다.
 CLAUDE_MODEL_LIGHT = (os.environ.get("CLAUDE_MODEL_LIGHT", "claude-haiku-4-5") or "claude-haiku-4-5").strip()
-CLAUDE_MODEL_DEFAULT = (os.environ.get("CLAUDE_MODEL_DEFAULT", "claude-sonnet-4-6") or "claude-sonnet-4-6").strip()
-CLAUDE_MODEL_HEAVY = (os.environ.get("CLAUDE_MODEL_HEAVY", "claude-opus-4-7") or "claude-opus-4-7").strip()
+CLAUDE_MODEL_DEFAULT = (os.environ.get("CLAUDE_MODEL_DEFAULT", "claude-sonnet-5") or "claude-sonnet-5").strip()
+CLAUDE_MODEL_HEAVY = (os.environ.get("CLAUDE_MODEL_HEAVY", "claude-opus-5") or "claude-opus-5").strip()
+
+
+def is_claude_5_family(model: str) -> bool:
+    """5족(sonnet-5/opus-5/fable-5) 여부 — thinking 기본 on·샘플링 파라미터 거부 계열.
+
+    배치 JSON 경로는 이 가드로 thinking={"type": "disabled"} 를 명시해 비용·출력을
+    구세대와 동결하고, temperature 는 5족에 보내지 않는다 (400 방지).
+    haiku-4-5 등 구세대에 disabled 를 보내는 것도 금지 (파라미터 미지원)."""
+    m = (model or "").strip()
+    return m.startswith(("claude-sonnet-5", "claude-opus-5", "claude-fable-5", "claude-mythos-5"))
 CLAUDE_OPUS_ENABLE = os.environ.get("CLAUDE_OPUS_ENABLE", "1").strip().lower() in ("1", "true", "yes", "on")
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")

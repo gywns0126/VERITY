@@ -47,7 +47,8 @@ logger = logging.getLogger(__name__)
 
 def _default_model() -> str:
     # CLAUDE_MODEL_DEFAULT 를 api.config 에서 읽되, Vercel 번들에 없으면 하드코딩 기본값
-    default = "claude-sonnet-4-6"
+    # 2026-08-03 5족 이전 (PM 승인) — sonnet-5 동가($3/$15 · 인트로 $2/$10 ~8/31)
+    default = "claude-sonnet-5"
     try:
         from api.config import CLAUDE_MODEL_DEFAULT  # type: ignore
         default = CLAUDE_MODEL_DEFAULT or default
@@ -242,12 +243,18 @@ def stream_response(
 
     try:
         client = anthropic.Anthropic(api_key=api_key)
+        # 5족(sonnet-5+) 가드 (2026-08-03): 비기본 temperature = 400 거부 → 5족엔 안 보낸다.
+        # 챗은 지연 민감이라 thinking disabled 명시 (기본 on 이면 첫 토큰 지연 + 비용 증가).
+        # 판정은 모델명 prefix — vercel 번들엔 api.config 가 없을 수 있어 로컬 판정.
+        _is5 = use_model.startswith(("claude-sonnet-5", "claude-opus-5", "claude-fable-5"))
+        _extra = ({"thinking": {"type": "disabled"}} if _is5
+                  else {"temperature": _TEMPERATURE})
         with client.messages.stream(
             model=use_model,
             max_tokens=use_max_tokens,
-            temperature=_TEMPERATURE,
             system=_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_message}],
+            **_extra,
         ) as stream:
             for text_chunk in stream.text_stream:
                 if text_chunk:
