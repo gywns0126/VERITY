@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 CACHE_PATH = os.path.join(DATA_DIR, "tri_synthesis_cache.json")
 CACHE_TTL_HOURS = 24
 CLAUDE_SYNTH_MODEL = "claude-opus-5"   # PM 2026-08-01. 종합자 = 최고 판단력.
+# 프롬프트 개정 시 +1 — fingerprint 에 포함되어 구 톤 캐시 자동 무효화.
+# v2 (2026-08-03): PM "LLM 스타일 말고 증권사 리포트처럼 담백하게" — 데스크 노트 규격.
+PROMPT_VERSION = "2"
 
 
 # ─── 캐시 (fact-fingerprint) ─────────────────────────────────────────────
@@ -41,6 +44,7 @@ def _fingerprint(ticker: str, trail: Dict[str, Any]) -> str:
     """가격 jitter 로 캐시 무효화되지 않게 핵심 사실만 반올림해 지문 생성."""
     vb = trail.get("verity_brain") or {}
     parts = [
+        PROMPT_VERSION,
         ticker.upper(),
         str(round(float(trail.get("per") or 0), 1)),
         str(round(float(trail.get("pbr") or 0), 1)),
@@ -127,7 +131,10 @@ def _perplexity_fresh(ticker: str, name: str) -> Dict[str, Any]:
         f"실적·공시·계약·규제·경영진·수급 이벤트. 목표가/투자의견 숫자는 제외하고 "
         f"사실과 출처만. 없으면 '특이사항 없음'."
     )
-    sysp = "너는 사실 수집기다. 의견·추천·전망 금지. 확인된 사실과 출처만 3~5줄."
+    sysp = (
+        "너는 사실 수집기다. 의견·추천·전망 금지. 확인된 사실과 출처만 3~5줄. "
+        "평문으로만 써라 — 마크다운 굵게(**)·헤딩(#)·이모지 금지."
+    )
     r = call_perplexity(q, system_prompt=sysp, max_tokens=700, search_recency_filter="week")
     if r.get("error"):
         return {"error": r["error"]}
@@ -146,8 +153,9 @@ def _gemini_structure(ticker: str, name: str, trail_summary: str, fresh: str) ->
     if not GEMINI_API_KEY:
         return {"error": "GEMINI_API_KEY 미설정"}
     prompt = (
-        f"종목 {name}({ticker}). 아래 자체 trail 과 신선 사실을 3개 축으로 구조화하라 "
-        f"(강점/약점/지켜볼 것). 사실 기반, 새 숫자·전망 창작 금지, 각 축 1~2줄.\n\n"
+        f"종목 {name}({ticker}). 아래 자체 trail 과 신선 사실을 [강점] [약점] [체크] 세 축으로 "
+        f"정리하라. 각 축 1~2줄, 각 줄 '- ' 시작, 증권사 리포트식 담백한 단정문. "
+        f"마크다운(**, ##)·이모지 금지, 평문만. 사실 기반, 새 숫자·전망 창작 금지.\n\n"
         f"[자체 trail]\n{trail_summary}\n\n[신선 사실]\n{fresh}"
     )
     try:
@@ -171,11 +179,17 @@ def _claude_synthesize(ticker: str, name: str, trail_summary: str,
         return {"error": f"anthropic 모듈 부재: {e}"}
     if not ANTHROPIC_API_KEY:
         return {"error": "ANTHROPIC_API_KEY 미설정"}
+    # v2 톤 (PM 2026-08-03 "LLM 스타일 말고 증권사 리포트처럼 담백하게"):
+    #   데스크 노트 규격 고정 — 개조식·마크다운 금지·메타 담론 금지(가설 라벨은 패널이 표기).
     system = (
-        "너는 VERITY 오퍼레이터의 종합 분석가다. 세 입력(자체 trail=우리 산식, 신선 사실=Perplexity, "
-        "구조화=Gemini)을 하나의 정합 판단으로 종합한다. 규칙: (1) 우리 자체 trail 을 판단의 축으로 삼되 "
-        "'검증 전 가설(N<252)'로 정직히 다룬다. (2) 매수/매도 지시·목표가 숫자 재발행 금지. "
-        "(3) 상충하는 신호는 상충으로 드러낸다. (4) 6~8줄, 마지막 줄에 '지켜볼 트리거' 1개."
+        "너는 증권사 리서치 데스크의 시니어 애널리스트다. 전문 투자자가 아닌 오퍼레이터에게 "
+        "데스크 노트를 쓴다. 문체: 증권사 리포트처럼 담백한 개조식 단정문. 각 줄 '- ' 시작. "
+        "마크다운(**, #, 1. 2. 번호)·이모지·수사적 표현 금지, 평문만. 어려운 용어는 괄호로 짧게 풀이. "
+        "구성 고정: 첫 줄=한 줄 요약(현재 그림). 이어서 [포인트] 2~3줄 / [리스크] 1~2줄 / "
+        "[체크] 1줄(지켜볼 트리거 1개). 총 7줄 이내. "
+        "규칙: (1) 자체 trail 지표 인용 시 '(가설)' 한 단어만 병기 — 방법론·통계 설명을 본문에 "
+        "반복하지 않는다(패널이 라벨로 이미 표기). (2) 매수/매도 지시·목표가 숫자 재발행 금지. "
+        "(3) 상충 신호는 한 줄로 명시."
     )
     user = (
         f"종목: {name}({ticker})\n\n[① 자체 trail]\n{trail_summary}\n\n"

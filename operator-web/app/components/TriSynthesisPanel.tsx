@@ -132,6 +132,15 @@ export default function TriSynthesisPanel() {
     )
 }
 
+// 구 캐시분(마크다운 톤) 방어 정리 — 굵게(**)·헤딩(#)·불릿 기호를 평문 개조식으로.
+// 프롬프트 v2 부터는 생성 자체가 평문(데스크 노트 규격).
+function plain(t?: string): string {
+    return String(t || "")
+        .replace(/\*\*/g, "")
+        .replace(/^#{1,4}\s*/gm, "")
+        .replace(/^\s*[*•]\s+/gm, "- ")
+}
+
 function Block({ c, tag, tagColor, model, kind, text, citations }: { c: Palette; tag: string; tagColor: string; model?: string; kind: string; text?: string; citations?: string[] }) {
     // 🚨 외곽선 금지 — 좌측 accent 바 제거. 소스 구분은 태그 텍스트 색으로만.
     return (
@@ -141,7 +150,7 @@ function Block({ c, tag, tagColor, model, kind, text, citations }: { c: Palette;
                 <span style={{ fontSize: 10, color: c.faint }}>{model || ""}</span>
                 <span style={{ fontSize: 10, color: c.faint }}>· {kind}</span>
             </div>
-            <div style={{ fontSize: 13, color: c.ink, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{text || "(없음)"}</div>
+            <div style={{ fontSize: 13, color: c.ink, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{plain(text) || "(없음)"}</div>
             {citations && citations.length ? (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 2 }}>
                     {citations.slice(0, 5).map((u, i) => (
