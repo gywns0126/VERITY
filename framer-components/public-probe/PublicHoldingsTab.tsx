@@ -47,6 +47,11 @@ const LIGHT = {
     warn: "#ff9500",
     warnS: "#fff6e9",
     onAccent: "#ffffff",
+    shim: "#e9edf1",
+    shimHi: "#f3f5f7",
+    buyS: "#eaf2ff",
+    sellS: "#ffeaec",
+    rowHd: "#f7f8fa",
 }
 const DARK = {
     bg: "#0f1318",
@@ -65,7 +70,24 @@ const DARK = {
     warn: "#ffb340",
     warnS: "#3a2c14",
     onAccent: "#0f1318",
+    shim: "#222a33",
+    shimHi: "#2d3742",
+    buyS: "#152238",
+    sellS: "#3a1a1e",
+    rowHd: "#1c222b",
 }
+// 🎨 2026-08-03 테마 = 자체 내장 CSS 변수(--an-hld-*) 구동. **JS 다크 감지 제거.**
+//   PublicExploreHub(--an-exh-*) 와 동일 규약. 되돌리지 말 것 — 이유:
+//   JS 판정(readBodyDark)은 Framer 정적 export 의 첫 페인트와 경쟁해 라이트로 떨어지고,
+//   그러면 컴포넌트가 흰 판을 깔거나 글자가 배경색에 묻힌다(2026-08-01 리포트 / 08-03 둥지).
+//   CSS 변수는 body[data-framer-theme] 에 직접 걸려 Framer 가 테마를 바꾸는 순간 같이 바뀐다.
+const _ANP = "hld"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const CVAR: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) CVAR[_k] = "var(--an-" + _ANP + "-" + _k + ")"
+
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const FX_FALLBACK = 1380 // 스냅샷 실패 시에만 — 평상시엔 실환율(useAnFx)
@@ -695,8 +717,10 @@ export default function PublicHoldingsTab(props: Props) {
     const [tPop, setTPop] = useState<any>(null) // 거래 팝업 {id?, ticker, name, market, side, shares, price, traded_at}
     const [tBusy, setTBusy] = useState(false)
 
+    // 🚨 라이브/프리뷰 = CSS 변수(Framer body[data-framer-theme] 직결).
+    //   캔버스만 dark prop 정적 선택 — 캔버스는 Framer 가 body 속성을 안 줘 변수 해석이 안 된다.
     const isDark = onCanvas ? !!dark : themeDark
-    const C = isDark ? DARK : LIGHT
+    const C: any = onCanvas ? (dark ? DARK : LIGHT) : CVAR
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
 
     useEffect(() => {
@@ -1282,8 +1306,8 @@ export default function PublicHoldingsTab(props: Props) {
     }
 
     const shimmer: CSSProperties = {
-        backgroundColor: isDark ? "#222a33" : "#e9edf1",
-        backgroundImage: `linear-gradient(90deg, ${isDark ? "#222a33" : "#e9edf1"} 25%, ${isDark ? "#2d3742" : "#f3f5f7"} 37%, ${isDark ? "#222a33" : "#e9edf1"} 63%)`,
+        backgroundColor: C.shim,
+        backgroundImage: `linear-gradient(90deg, ${C.shim} 25%, ${C.shimHi} 37%, ${C.shim} 63%)`,
         backgroundSize: "800px 100%",
         animation: "vhtShimmer 1.4s ease-in-out infinite",
     }
@@ -1417,6 +1441,7 @@ export default function PublicHoldingsTab(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             {/* 추가/수정 팝업 — ★(추가) 또는 행 '수정' 클릭 시. 수량·평단 수동 입력 → POST(신규)/PATCH(수정). */}
             {pop && (
                 <div
@@ -1699,12 +1724,8 @@ export default function PublicHoldingsTab(props: Props) {
                                         background:
                                             tPop.side === sd
                                                 ? sd === "buy"
-                                                    ? isDark
-                                                        ? "#152238"
-                                                        : "#eaf2ff"
-                                                    : isDark
-                                                      ? "#3a1a1e"
-                                                      : "#ffeaec"
+                                                    ? C.buyS
+                                                    : C.sellS
                                                 : "transparent",
                                     }}
                                 >
@@ -3735,12 +3756,8 @@ export default function PublicHoldingsTab(props: Props) {
                                                                             : C.up,
                                                                         background:
                                                                             isBuy
-                                                                                ? isDark
-                                                                                    ? "#152238"
-                                                                                    : "#eaf2ff"
-                                                                                : isDark
-                                                                                  ? "#3a1a1e"
-                                                                                  : "#ffeaec",
+                                                                                ? C.buyS
+                                                                                : C.sellS,
                                                                         borderRadius: 6,
                                                                         padding:
                                                                             "2px 6px",
@@ -3908,9 +3925,7 @@ export default function PublicHoldingsTab(props: Props) {
                                             gap: 7,
                                             padding: "10px 13px",
                                             borderBottom: `1px solid ${C.line}`,
-                                            background: isDark
-                                                ? "#1c222b"
-                                                : "#f7f8fa",
+                                            background: C.rowHd,
                                         }}
                                     >
                                         <span
