@@ -21,7 +21,10 @@ def _stock(score_source, consensus_score=62):
         "name": "테스트",
         "consensus": {"consensus_score": consensus_score, "score_source": score_source},
         "multi_factor": {"multi_score": 55},
-        "prediction": {"up_probability": 51},
+        # 학습된 prediction 명시 (2026-08-03 측정 정화 정합) — method/train_samples 없으면
+        # fact.py 가 미학습 pseudo-값으로 보고 substituted 처리해 consensus provenance
+        # 검증이 오염된다. 이 테스트의 관심사는 consensus 축이므로 학습 상태로 고정.
+        "prediction": {"up_probability": 51, "method": "ensemble", "train_samples": 120},
         "timing": {"timing_score": 48},
     }
 
