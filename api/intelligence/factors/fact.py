@@ -391,7 +391,15 @@ def _compute_fact_score(
     consensus_score = _safe_float(consensus.get("consensus_score"), 50.0)
 
     pred = stock.get("prediction", {})
-    prediction_score = _clip(_safe_float(pred.get("up_probability"), 50.0))
+    # ── 측정 정화 (2026-08-03, PM 승인) — 미학습 prediction 은 모델 예측이 아니다 ──
+    # method=rule_based / train_samples=0 인데 up_probability 47~55% 를 방출해 fact 에
+    # "모델 예측 보유" 로 유입되던 pseudo-값 차단 (2026-08-03 094970 47.3%·GOOGL 55% 실측).
+    # 처리 = 컴포넌트 값 중립 50 (2026-05-20 확정: 결측=중립 imputation) + 아래 coverage
+    # 블록에서 missing+substituted 표기 (2026-07-27 flow_fallback 선례 — 대체 신호를
+    # '보유' 로 세지 않음). 점수 가중·임계 불변.
+    _pred_untrained = (str(pred.get("method") or "") == "rule_based"
+                       or int(pred.get("train_samples") or 0) <= 0)
+    prediction_score = 50.0 if _pred_untrained else _clip(_safe_float(pred.get("up_probability"), 50.0))
 
     bt = stock.get("backtest", {})
     backtest_score = _backtest_to_score(bt)
@@ -512,12 +520,15 @@ def _compute_fact_score(
     _consensus_source = consensus.get("score_source")
     if _consensus_source in _SUBSTITUTE_SOURCES:
         _substituted.add("consensus")
+    # 2026-08-03 측정 정화 — 미학습(rule_based/train 0) prediction = 대체 신호 (7/27 정합)
+    if _pred_untrained and _num(pred.get("up_probability")):
+        _substituted.add("prediction")
 
     _missing = set()
     if not _num(mf.get("multi_score")): _missing.add("multi_factor")
     if not _num(consensus.get("consensus_score")) or "consensus" in _substituted:
         _missing.add("consensus")
-    if not _num(pred.get("up_probability")): _missing.add("prediction")
+    if not _num(pred.get("up_probability")) or _pred_untrained: _missing.add("prediction")
     if (bt or {}).get("total_trades", 0) == 0: _missing.add("backtest")
     if not _num(timing.get("timing_score")): _missing.add("timing")
     if not _num(analyst_report.get("analyst_sentiment_score")): _missing.add("analyst_report")

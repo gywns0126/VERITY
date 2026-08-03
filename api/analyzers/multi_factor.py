@@ -165,19 +165,28 @@ def compute_multi_factor_score(
     기존 5팩터: fundamental, technical, sentiment, flow, macro
     퀀트 4팩터: momentum, quality, volatility, mean_reversion
     """
-    tech_score = technical.get("technical_score", 50)
+    # 측정 정화 (2026-08-03): 엔진이 "데이터 부재" 로 None 을 반환하면 중립 50 대입
+    # (2026-05-20 확정 설계 — 결측 = 중립 imputation). 종전 .get(key, 50) 은 키가 있고
+    # 값이 None 이면 None 을 통과시켜 합산에서 TypeError 가 나거나, 0-채움 가짜 점수
+    # (quality 6/100)가 실측처럼 유입됐다.
+    def _neutral(d: Optional[Dict], key: str) -> float:
+        v = (d or {}).get(key)
+        return v if isinstance(v, (int, float)) else 50
+
+    tech_score = _neutral(technical, "technical_score")
     news_score = sentiment.get("score", 50)
     social = social_sentiment or {}
     social_score = social.get("score", 50) if social else 50
     sent_score = round(news_score * 0.6 + social_score * 0.4) if social else news_score
-    flow_score = flow.get("flow_score", 50)
+    flow_score = _neutral(flow, "flow_score")
     macro_score = macro_mood.get("score", 50)
 
     qf = quant_factors or {}
-    momentum_score = qf.get("momentum", {}).get("momentum_score", 50)
-    quality_score = qf.get("quality", {}).get("quality_score", 50)
-    volatility_score = qf.get("volatility", {}).get("volatility_score", 50)
-    mr_score = qf.get("mean_reversion", {}).get("mean_reversion_score", 50)
+    momentum_score = _neutral(qf.get("momentum"), "momentum_score")
+    quality_score = _neutral(qf.get("quality"), "quality_score")
+    volatility_score = _neutral(qf.get("volatility"), "volatility_score")
+    mr_score = _neutral(qf.get("mean_reversion"), "mean_reversion_score")
+    quality_data_missing = (qf.get("quality") or {}).get("applicable") is False
 
     weights = _get_dynamic_weights(macro_score, bond_regime=bond_regime)
     regime = "risk_off" if macro_score <= 35 else "risk_on" if macro_score >= 65 else "neutral"
@@ -222,9 +231,13 @@ def compute_multi_factor_score(
     elif macro_score <= 35:
         all_signals.append("매크로 비관")
 
+    if quality_data_missing:
+        # 정직 신호 — 6/100 같은 가짜 실측 대신 "미산출 · 중립 대입" 을 명시 (측정 정화 2026-08-03)
+        all_signals.append("퀄리티 미산출 — 재무 데이터 부재 (중립 50 대입)")
+
     for factor_key in ["momentum", "quality", "volatility", "mean_reversion"]:
         factor_data = qf.get(factor_key, {})
-        for sig in factor_data.get("signals", []):
+        for sig in (factor_data or {}).get("signals", []):
             all_signals.append(sig)
 
     all_signals = _deduplicate_signals(all_signals)

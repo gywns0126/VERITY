@@ -87,6 +87,18 @@ def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:
     asset_turnover = stock.get("asset_turnover") or 0
     net_income = stock.get("net_income") or 0
 
+    # ── 데이터 게이트 (2026-08-03 측정 정화, PM 승인) ────────────────────────
+    # 관심종목 유래 레코드는 펀더멘털이 0 으로 채워져 들어온다 (roe/debt/CF 전부 0).
+    # 그 0 을 "실패" 로 채점하면 F7('데이터 없으면 통과') 만 남아 1/9 — 개선 중인 회사가
+    # 최저 품질로 왜곡된다 (2026-08-03 094970 실측: 실제 DART 는 ROA+·CFO+·CFO>NI).
+    # 결측 ≠ 실패. 핵심 입력이 전부 부재면 채점하지 않는다 (-2 = 데이터 부재 sentinel).
+    _has_deltas = any(v is not None for v in
+                      (delta_roa, delta_lev_neg, delta_cr_pos, delta_gm_pos, delta_at_pos))
+    _has_core = any((roa, op_cf, net_income, debt,
+                     stock.get("current_ratio") or 0, gross_margin, asset_turnover))
+    if not _has_core and not _has_deltas:
+        return (-2, ["F-Score 미산출 — 재무 데이터 부재 (0-채움 placeholder 채점 차단)"])
+
     # F1: ROA > 0
     if roa > 0:
         f_score += 1
@@ -355,6 +367,22 @@ def compute_quality_score(stock: Dict[str, Any]) -> Dict[str, Any]:
 
     # 1. Piotroski F-Score (35점) — 금융/리츠 미적용 (Perplexity Q-fin-5)
     f_score, f_details = compute_piotroski_f_score(stock)
+    if f_score == -2:
+        # 데이터 부재 (측정 정화 2026-08-03) — 채점 불가를 숫자로 위장하지 않는다.
+        # 소비처(multi_factor)가 중립 50 대입 + 결측 표기 (2026-05-20 확정 설계:
+        # 결측 = 중립 imputation ≡ 제외+재정규화+coverage deflate 와 동치).
+        return {
+            "quality_score": None,
+            "applicable": False,
+            "reason": "재무 데이터 부재 — 0-채움 placeholder 채점 차단",
+            "piotroski_f": None,
+            "piotroski_details": f_details,
+            "gross_profitability": None,
+            "altman": {"z_score": None, "zone": "unknown",
+                       "label": "데이터 부족", "applicable": False},
+            "components": {},
+            "signals": ["퀄리티 미산출 (재무 데이터 부재)"],
+        }
     if f_score < 0:
         f_norm = 0
         signals.append("F-Score 미적용 (금융/리츠)")
@@ -385,9 +413,16 @@ def compute_quality_score(stock: Dict[str, Any]) -> Dict[str, Any]:
     safe_cut = altman.get("safe_cut") or 2.3
     distress_cut = altman.get("distress_cut") or 1.1
     if altman.get("applicable") is False:
-        # 금융/리츠 — CAMELS/BIS proxy 컴포넌트 신설 전까지 배점 0 + 명시 (RULE 6 정합 신호)
-        z_score = 0
-        signals.append("Altman 미적용 (금융/리츠)")
+        if altman.get("model_variant") == "excluded_financial":
+            # 금융/리츠 — CAMELS/BIS proxy 컴포넌트 신설 전까지 배점 0 + 명시 (RULE 6 정합 신호)
+            z_score = 0
+            signals.append("Altman 미적용 (금융/리츠)")
+        else:
+            # 🚨 라벨 정정 (2026-08-03): total_assets 부재 등 데이터 부족도 applicable=False 로
+            # 오는데 종전엔 무조건 "금융/리츠" 라벨 — EMS 제조업(094970)에 금융 라벨이 찍혔다.
+            # 데이터 부족 = 미상 → 중립 10점 (아래 z None 분기와 동일), 정직한 라벨.
+            z_score = 10
+            signals.append("Altman 미산출 (재무 데이터 부족)")
     elif z is not None:
         # safe_cut~safe_cut+0.7 사이는 보강 점수, distress~safe 사이 grey, distress 미만 위험
         if z >= safe_cut + 0.7:
