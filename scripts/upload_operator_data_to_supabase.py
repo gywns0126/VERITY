@@ -27,6 +27,8 @@ UPLOADS = [
     ("data/system_health_snapshot.json", "_operator/system_health_snapshot.json", "application/json"),
     ("data/brain_kb_usage.json", "_operator/brain_kb_usage.json", "application/json"),
     ("data/admin_todos.json", "_operator/admin_todos.json", "application/json"),
+    # 2026-08-01 3종 LLM 종합(오퍼레이터 전용, Brain grounding) — 공개 blob 아님, private+authed 만.
+    ("data/tri_synthesis.json", "_operator/tri_synthesis.json", "application/json"),
     ("data/verification_report.json", "_operator/verification_report.json", "application/json"),
     # 중용 목표비중 — 태생부터 봉인(gitignore, 공개 발행 금지). private bucket + authed 만.
     ("data/moderation_portfolio.json", "_operator/moderation_portfolio.json", "application/json"),
@@ -40,8 +42,16 @@ def main() -> int:
         print("ERROR: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 미설정 — 업로드 불가", file=sys.stderr)
         return 2
 
+    # --only <substr>: 특정 파일만 업로드 (전용 워크플로가 타 오퍼레이터 파일을 stale 로 덮는 사고 방지).
+    only = None
+    if "--only" in sys.argv:
+        i = sys.argv.index("--only")
+        if i + 1 < len(sys.argv):
+            only = sys.argv[i + 1]
+
+    uploads = [u for u in UPLOADS if (only is None or only in u[0] or only in u[1])]
     ok = 0
-    for src, dest, ctype in UPLOADS:
+    for src, dest, ctype in uploads:
         if not os.path.isfile(src):
             print(f"WARN: {src} 부재 — skip")
             continue
@@ -76,7 +86,7 @@ def main() -> int:
         else:
             print(f"  ✗ {src} → {r.status_code} {r.text[:150]}", file=sys.stderr)
 
-    print(f"operator upload: {ok}/{len(UPLOADS)}")
+    print(f"operator upload: {ok}/{len(uploads)}")
     # 부분 실패도 발행 파이프라인 중단 X (fallback = 공개 blob) — 단 stderr 로 명시.
     return 0
 
