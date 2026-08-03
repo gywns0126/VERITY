@@ -43,7 +43,7 @@ export default function AccountHud({ vams, status }: { vams?: Vams; status: "loa
     const krPnlPct = krCost > 0 ? (krPnl / krCost) * 100 : null
 
     return (
-        <div style={{ ...cardStyle(c, "14px 20px"), fontFamily: FONT, display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ ...cardStyle(c, "16px 20px"), fontFamily: FONT, display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap", marginBottom: 12 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 190 }}>
                 <span style={{ fontSize: 11, color: c.faint, fontWeight: 700 }}>
                     총평가 자산 <span style={{ fontWeight: 500 }}>· VAMS 모의 1,000만 · 가설 N&lt;252</span>
@@ -66,7 +66,7 @@ export default function AccountHud({ vams, status }: { vams?: Vams; status: "loa
                 <span style={{ fontSize: 11, color: c.faint, fontWeight: 700 }}>
                     주식 노출 {exposure !== null ? <span style={{ color: c.ink, ...NUM }}>{exposure.toFixed(1)}%</span> : "—"}
                 </span>
-                <div style={{ height: 7, borderRadius: 999, background: c.track, overflow: "hidden" }}>
+                <div style={{ height: 8, borderRadius: 999, background: c.track, overflow: "hidden" }}>
                     <div style={{ width: `${Math.min(100, Math.max(0, exposure || 0))}%`, height: "100%", borderRadius: 999, background: c.vt }} />
                 </div>
             </div>

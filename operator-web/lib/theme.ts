@@ -35,6 +35,17 @@ export function palette(dark: boolean): Palette {
     return dark ? DARK : LIGHT
 }
 
+// ── 디자인 폴리시 토큰 (2026-08-03 #11) — 위계·리듬 단일 소스. 개별 컴포넌트 임의값 금지. ──
+// 카드 타이틀 = 14.5/800/-0.02em (알파네스트 카드 헤더 문법)
+export const CARD_TITLE: CSSProperties = { fontSize: 14.5, fontWeight: 800, letterSpacing: "-0.02em" }
+// 카드 패딩 리듬: 좁은 레일 = RAIL_PAD, 중앙·페이지 = MAIN_PAD
+export const RAIL_PAD = "14px 16px"
+export const MAIN_PAD = "16px 18px"
+// 클릭 가능 행 hover (StockSearch 기존 문법 승격 — 어포던스)
+export function hoverBg(dark: boolean): string {
+    return dark ? "rgba(169,155,255,0.10)" : "rgba(108,92,231,0.06)"
+}
+
 // 토스식 부드러운 카드 (radius 16, 아주 옅은 그림자) — AlphaNest 표준.
 export function cardStyle(c: Palette, pad = "18px 20px"): CSSProperties {
     return {

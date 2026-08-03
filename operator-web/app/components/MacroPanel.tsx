@@ -5,7 +5,7 @@
 // ③ daily_report (일일 분석·전략·리스크·내일 관점) ④ 레짐 톤·사이클·지정학·속보.
 // ②~④ = portfolio_full 기존 키 (추가 fetch 0) / ① 만 별도 authed fetch.
 import { useEffect, useState } from "react"
-import { useDark, palette, cardStyle, FONT, NUM, type Palette } from "@/lib/theme"
+import { useDark, palette, cardStyle, FONT, NUM, RAIL_PAD, type Palette } from "@/lib/theme"
 import { fetchOperator } from "@/lib/api"
 import type { PortfolioFull } from "@/lib/types"
 
@@ -77,7 +77,7 @@ export default function MacroPanel({ data }: { data: PortfolioFull | null }) {
     }
 
     return (
-        <div style={{ ...cardStyle(c, "13px 15px"), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ ...cardStyle(c, RAIL_PAD), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 10 }}>
             {/* 레짐 톤 + 브리핑 헤드라인 */}
             <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
                 {briefing?.tone ? (
@@ -85,7 +85,7 @@ export default function MacroPanel({ data }: { data: PortfolioFull | null }) {
                         {briefing.tone}
                     </span>
                 ) : null}
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: c.ink, lineHeight: 1.4, flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: c.ink, lineHeight: 1.45, flex: 1, minWidth: 0 }}>
                     {briefing?.headline || "브리핑 없음"}
                 </span>
             </div>

@@ -3,7 +3,7 @@
 // 행 = 로고 + 수량·평단 + 실시간 현재가(tick 플래시) + 손익. 클릭 = 링크그룹 전환(verity-ticker).
 // KR = Railway 실시간(3s 공유 폴러) / US = 서버 스냅샷 가격 (전일종가 체계, 차트 이원화 결정 정합).
 import { useEffect, useRef } from "react"
-import { useDark, palette, cardStyle, FONT, NUM } from "@/lib/theme"
+import { useDark, palette, cardStyle, FONT, NUM, CARD_TITLE, RAIL_PAD, hoverBg } from "@/lib/theme"
 import { useQuotes } from "@/lib/quotes"
 import { selectTicker, type Holding } from "@/lib/types"
 import StockLogo from "./StockLogo"
@@ -31,9 +31,9 @@ export default function HoldingsTable({ holdings, status }: { holdings: Holding[
     })
 
     return (
-        <div style={{ ...cardStyle(c, "13px 15px"), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ ...cardStyle(c, RAIL_PAD), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 800, color: c.ink, letterSpacing: "-0.02em" }}>보유 포트폴리오</span>
+                <span style={{ ...CARD_TITLE, color: c.ink }}>보유 포트폴리오</span>
                 <span style={{ fontSize: 10.5, color: c.faint, ...NUM }}>{holdings.length}종목</span>
             </div>
 
@@ -60,7 +60,9 @@ export default function HoldingsTable({ holdings, status }: { holdings: Holding[
                         <div
                             key={h.ticker}
                             onClick={() => selectTicker(h.ticker, h.name)}
-                            style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 2px", borderTop: i === 0 ? "none" : `1px solid ${c.line}`, cursor: "pointer" }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = hoverBg(dark) }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent" }}
+                            style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 4px", borderTop: i === 0 ? "none" : `1px solid ${c.line}`, cursor: "pointer", borderRadius: 8 }}
                         >
                             <StockLogo ticker={h.ticker} name={h.name} size={24} />
                             <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0, flex: 1 }}>

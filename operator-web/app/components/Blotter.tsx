@@ -3,7 +3,7 @@
 // 낸 주문의 접수/거부 기록 (localStorage af_blotter, OrderTicket 이 기록·이벤트 발신).
 // 체결·정정·취소 동기화(KIS 체결통보)는 후속.
 import { useEffect, useState } from "react"
-import { useDark, palette, cardStyle, FONT, NUM } from "@/lib/theme"
+import { useDark, palette, cardStyle, FONT, NUM, CARD_TITLE, MAIN_PAD } from "@/lib/theme"
 import StockLogo from "./StockLogo"
 
 type Entry = {
@@ -56,9 +56,9 @@ export default function Blotter() {
     if (rows.length === 0) return null
 
     return (
-        <div style={{ ...cardStyle(c, "13px 16px"), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ ...cardStyle(c, MAIN_PAD), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 13.5, fontWeight: 800, color: c.ink, letterSpacing: "-0.02em" }}>주문 블로터</span>
+                <span style={{ ...CARD_TITLE, color: c.ink }}>주문 블로터</span>
                 <button onClick={clear} style={{ border: "none", background: "transparent", color: c.faint, fontSize: 10.5, cursor: "pointer", fontFamily: FONT, padding: 0 }}>
                     비우기
                 </button>
