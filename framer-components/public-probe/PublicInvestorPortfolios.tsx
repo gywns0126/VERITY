@@ -936,12 +936,15 @@ export default function PublicInvestorPortfolios(props: {
 
             <div
                 style={{
-                    display: narrow ? "block" : "grid",
-                    gridTemplateColumns: narrow
-                        ? undefined
-                        : "minmax(0,330px) minmax(0,1fr)",
+                    // 🚨 2026-08-03 grid→flex-wrap. JS 측정(narrow)에 기대지 말 것.
+                    //   Framer 는 컴포넌트 프레임 폭이 뷰포트와 다를 수 있어 rootW 가 620 을 넘게 잡히고,
+                    //   그러면 Phone(390) 에서도 2단이 유지돼 우측 카드가 잘린다(PM 스크린샷 2026-08-03).
+                    //   flex-wrap 은 "둘이 안 들어가면 접는다" 를 브라우저가 판단하므로 측정이 필요 없다.
+                    //   좌 300 + 우 320 + gap 18 = 638 미만이면 자동 줄바꿈 → 세로 스택.
+                    display: "flex",
+                    flexWrap: "wrap",
                     gap: 18,
-                    alignItems: "start",
+                    alignItems: "flex-start",
                 }}
             >
                 {/* 좌: 운용사 목록 — 스크롤 시 제자리 고정(PM 2026-07-30).
@@ -952,7 +955,10 @@ export default function PublicInvestorPortfolios(props: {
                         background: C.card,
                         borderRadius: 16,
                         overflow: "hidden",
+                        // flex 아이템 — 기본 300px, 공간 남으면 330 까지만(데스크톱 비율 보존).
+                        flex: "1 1 300px",
                         minWidth: 0,
+                        maxWidth: narrow ? "100%" : 330,
                         // 모바일에선 sticky 사이드바가 화면을 잡아먹는다 → 일반 흐름 + 낮은 높이
                         position: narrow ? "static" : "sticky",
                         top: narrow ? undefined : 12,
@@ -1105,6 +1111,9 @@ export default function PublicInvestorPortfolios(props: {
                         background: C.card,
                         borderRadius: 16,
                         padding: narrow ? "16px 14px 18px" : "18px 20px 22px",
+                        // 남는 공간 전부 차지(999) — 좌측이 330 을 채우고 나머지가 여기로.
+                        // basis 320 = 이 값 아래로는 좌측과 나란히 설 수 없다는 선언 → 자동 줄바꿈 유발.
+                        flex: "999 1 320px",
                         minWidth: 0,
                     }}
                 >
