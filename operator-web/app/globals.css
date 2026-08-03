@@ -146,3 +146,23 @@ body {
         animation: none;
     }
 }
+
+/* 뉴스 티커 회전 페이드 (7초 교체) */
+@keyframes af-newsfade {
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.af-newsfade {
+    animation: af-newsfade 0.45s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+    .af-newsfade {
+        animation: none;
+    }
+}
