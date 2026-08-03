@@ -5484,7 +5484,12 @@ export default function PublicStockReport(props: Props) {
         maxHeight: "100%",
         overflowY: "auto",
         overflowX: "hidden",
-        background: C.bg,
+        // 🚨 루트 배경 = transparent. 자체 팔레트(C.bg)로 칠하지 말 것 (2026-08-01 부분 라이트 원인).
+        //   Framer 프레임의 ColorStyle(/Theme/PageBg)이 비쳐 보이게 두면 테마가 뭐든 자동 정합이고
+        //   JS 테마 판정(readBodyDark)의 타이밍과 무관해진다. C.bg 로 칠하면 새로고침 순간 판정이
+        //   라이트로 떨어질 때 컴포넌트가 페이지 위에 흰 판을 깔아 '부분 라이트'가 된다.
+        //   내부 카드(C.card 등)는 그대로 — 카드는 배경 위에 떠야 하므로 자체 색이 맞다.
+        background: "transparent",
         fontFamily: FONT,
         padding: pad,
         boxSizing: "border-box",
@@ -5973,6 +5978,9 @@ export default function PublicStockReport(props: Props) {
                             fontSize: 23,
                             fontWeight: 800,
                             letterSpacing: "-0.6px",
+                            // 🚨 색 명시 필수 — 없으면 상속에 기대게 되고, 루트 배경을 transparent 로
+                            //   바꾼 뒤 다크에서 종목명이 배경과 같은 어두운 색으로 묻혔다(2026-08-01).
+                            color: C.ink,
                         }}
                     >
                         {s.name}
@@ -6897,6 +6905,8 @@ export default function PublicStockReport(props: Props) {
                                             fontWeight: 800,
                                             letterSpacing: "-0.5px",
                                             margin: "3px 0",
+                                            // 종목명과 동일 사유 — 색 미지정 시 상속에 기대게 된다.
+                                            color: C.ink,
                                         }}
                                     >
                                         {/* 🚨 값과 중앙값은 **같은 출처**여야 한다 (2026-08-03).
