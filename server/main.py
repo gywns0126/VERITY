@@ -381,10 +381,14 @@ async def index_quotes():
     """KR 지수 실시간 — 코스피(0001)·코스닥(1001) 업종 현재지수 (PM 2026-08-03).
     KIS_SHARED_TOKEN 순수 소비자(발급 0, RULE 1). 값 0 = 프론트가 macro_snapshot 폴백."""
     loop = asyncio.get_event_loop()
-    kospi, kosdaq = await asyncio.gather(
-        loop.run_in_executor(None, fetch_index, "0001"),
-        loop.run_in_executor(None, fetch_index, "1001"),
-    )
+    try:
+        kospi, kosdaq = await asyncio.gather(
+            loop.run_in_executor(None, fetch_index, "0001"),
+            loop.run_in_executor(None, fetch_index, "1001"),
+        )
+    except Exception as e:  # 500 승격 금지 — 값 0 = 프론트 스냅샷 폴백 신호
+        logger.error("index_quotes 실패: %s", e)
+        kospi = kosdaq = {"price": 0.0, "change": 0.0, "change_pct": 0.0}
     kst = timezone(timedelta(hours=9))
     return {
         "quotes": {"kospi": kospi, "kosdaq": kosdaq},

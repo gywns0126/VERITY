@@ -553,19 +553,36 @@ def fetch_index(index_cd: str = "0001") -> dict:
     index_cd: 0001=코스피, 1001=코스닥. KIS_SHARED_TOKEN 순수 소비자(발급 0, RULE 1 안전).
     필드 방어 파싱 — 값 0 이면 프론트가 macro_snapshot 폴백 (PM 2026-08-03 KR 지수 실시간화).
     """
-    d = _get(
-        "/uapi/domestic-stock/v1/quotations/inquire-index-price",
-        "FHPUP02100000",
-        {"FID_COND_MRKT_DIV_CODE": "U", "FID_INPUT_ISCD": index_cd},
-    )
-    o = d.get("output", {}) or {}
-    _f = lambda k: float(o.get(k, "0") or "0")
-    return {
-        "price": _f("bstp_nmix_prpr"),
-        "change": _f("bstp_nmix_prdy_vrss"),
-        "change_pct": _f("bstp_nmix_prdy_ctrt"),
-        "volume": _f("acml_vol"),
-    }
+    try:
+        d = _get(
+            "/uapi/domestic-stock/v1/quotations/inquire-index-price",
+            "FHPUP02100000",
+            {"FID_COND_MRKT_DIV_CODE": "U", "FID_INPUT_ISCD": index_cd},
+        )
+        o = d.get("output") if isinstance(d, dict) else None
+        if isinstance(o, list):  # 일부 KIS TR = output 이 list — dict 가정 시 AttributeError(500 사고 2026-08-03)
+            o = o[0] if o and isinstance(o[0], dict) else {}
+        if not isinstance(o, dict):
+            o = {}
+
+        def _f(k: str) -> float:
+            try:
+                return float(o.get(k, "0") or "0")
+            except (TypeError, ValueError):
+                return 0.0
+
+        out = {
+            "price": _f("bstp_nmix_prpr"),
+            "change": _f("bstp_nmix_prdy_vrss"),
+            "change_pct": _f("bstp_nmix_prdy_ctrt"),
+            "volume": _f("acml_vol"),
+        }
+        if out["price"] <= 0 and isinstance(d, dict):
+            logger.warning("fetch_index %s 값 0 — rt_cd=%s keys=%s", index_cd, d.get("rt_cd"), list(d)[:6])
+        return out
+    except Exception as e:  # 어떤 예외도 500 승격 금지 — 프론트는 스냅샷 폴백
+        logger.warning("fetch_index 실패 %s: %s", index_cd, e)
+        return {"price": 0.0, "change": 0.0, "change_pct": 0.0, "volume": 0.0, "error": str(e)[:120]}
 
 
 def fetch_program_trade(market: str = "K") -> dict:
