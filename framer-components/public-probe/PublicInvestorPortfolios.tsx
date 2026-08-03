@@ -761,7 +761,14 @@ export default function PublicInvestorPortfolios(props: {
             ref={rootRef}
             style={{
                 width: "100%",
-                background: C.bg,
+                // 🚨 모바일 잘림 방지 — 자식이 넘쳐도 루트가 커지지 않게(2026-08-03 PM 지적).
+                //   maxWidth 100% + overflowX hidden 이 없으면 표(minWidth)가 페이지를 넓혀 잘린다.
+                maxWidth: "100%",
+                overflowX: "hidden",
+                boxSizing: "border-box",
+                // 🚨 배경 transparent — 자체 팔레트로 칠하면 테마 판정 타이밍에 흰 판이 깔린다
+                //   (2026-08-01 리포트와 동일 사유). Framer 프레임의 ColorStyle 이 비쳐 보이게 둔다.
+                background: "transparent",
                 color: C.ink,
                 fontFamily: FONT,
                 fontSize: 15,
@@ -787,6 +794,7 @@ export default function PublicInvestorPortfolios(props: {
                             fontSize: 24,
                             fontWeight: 800,
                             letterSpacing: "-0.022em",
+                            color: C.ink,
                         }}
                     >
                         거장의 포트폴리오
@@ -855,7 +863,7 @@ export default function PublicInvestorPortfolios(props: {
                     marginBottom: 18,
                 }}
             >
-                <div style={{ fontSize: 14, fontWeight: 750, letterSpacing: "-0.01em" }}>
+                <div style={{ fontSize: 14, fontWeight: 750, letterSpacing: "-0.01em", color: C.ink }}>
                     지금 보는 건 실시간이 아니라 {dot(cur?.report_date)} 시점의 보유입니다.
                 </div>
                 <div style={{ color: C.sub, fontSize: 13, marginTop: 5 }}>
@@ -898,7 +906,7 @@ export default function PublicInvestorPortfolios(props: {
                     marginBottom: 18,
                 }}
             >
-                <div style={{ fontSize: 14, fontWeight: 750, letterSpacing: "-0.01em" }}>
+                <div style={{ fontSize: 14, fontWeight: 750, letterSpacing: "-0.01em", color: C.ink }}>
                     한눈에 보는 스타일
                 </div>
                 <div
@@ -1021,6 +1029,7 @@ export default function PublicInvestorPortfolios(props: {
                                                 display: "block",
                                                 fontSize: 14,
                                                 fontWeight: 650,
+                                                color: C.ink,
                                                 whiteSpace: "nowrap",
                                                 overflow: "hidden",
                                                 textOverflow: "ellipsis",
@@ -1128,6 +1137,7 @@ export default function PublicInvestorPortfolios(props: {
                                         fontSize: 20,
                                         fontWeight: 800,
                                         letterSpacing: "-0.02em",
+                                        color: C.ink,
                                     }}
                                 >
                                     {cur.person || cur.institution}
@@ -1294,7 +1304,7 @@ export default function PublicInvestorPortfolios(props: {
                     <div
                         style={{
                             display: "grid",
-                            gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))",
+                            gridTemplateColumns: `repeat(auto-fit,minmax(${narrow ? 104 : 120}px,1fr))`,
                             gap: 8,
                             marginTop: 15,
                         }}
@@ -1413,12 +1423,23 @@ export default function PublicInvestorPortfolios(props: {
                     ) : null}
 
                     {/* 보유 종목 */}
-                    <div style={{ width: "100%", overflowX: "auto", marginTop: 12 }}>
+                    <div
+                        style={{
+                            width: "100%",
+                            maxWidth: "100%",
+                            minWidth: 0,
+                            overflowX: "auto",
+                            WebkitOverflowScrolling: "touch",
+                            marginTop: 12,
+                        }}
+                    >
                         <table
                             style={{
                                 width: "100%",
                                 borderCollapse: "collapse",
-                                minWidth: 460,
+                                // 좁은 화면에서 460 은 뷰포트를 넘겨 잘림을 만든다 → 340 으로 낮추고
+                                // 그래도 넘치면 이 컨테이너 안에서만 가로 스크롤.
+                                minWidth: narrow ? 340 : 460,
                             }}
                         >
                             <thead>
@@ -1492,7 +1513,7 @@ export default function PublicInvestorPortfolios(props: {
                                                 style={{
                                                     display: "block",
                                                     height: 3,
-                                                    width: 100,
+                                                    width: narrow ? 64 : 100,
                                                     marginLeft: "auto",
                                                     marginTop: 4,
                                                     borderRadius: 2,
