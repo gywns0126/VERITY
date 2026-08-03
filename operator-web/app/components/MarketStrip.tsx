@@ -1,10 +1,12 @@
 "use client"
-// MarketStrip — 상단 지수 스트립 (v2 터미널). 공개 사실(macro_snapshot, 전일종가/T+1)만. 외곽선 0.
-// v3.3 (PM 2026-08-03 "코인 시세 위로 — 코스피 코스닥 있는 곳까지"): BTC/ETH 를 코스닥 옆에 상주
-//   (Binance 공개 API = 마켓보드 법적 확정 소스, TIDE 트랙, 24/7 · 5초 tick 플래시).
+// MarketStrip — 상단 지수 스트립. 공개 사실(macro_snapshot, 약 30분 주기)만. 외곽선 0.
+// v3.4 (PM 2026-08-03 "그래프 세로로 배치, 각 시세 누르면 상세 그래프"):
+//   카드 내부 = 세로 스택(이름 → 값·등락 한 줄 → 전폭 그래프). 카드 클릭 = ChartModal
+//   (크립토=Binance 분봉 실시간 / 지수·환율=수집 시계열 확대). BTC/ETH = 코스닥 옆 상주(5초 tick).
 import { useEffect, useRef, useState } from "react"
-import { useDark, palette, FONT, NUM } from "@/lib/theme"
+import { useDark, palette, FONT, NUM, type Palette } from "@/lib/theme"
 import { fetchPublic } from "@/lib/api"
+import ChartModal, { type ChartTarget } from "./ChartModal"
 
 const LEAD: Array<{ key: string; name: string; unit?: string }> = [
     { key: "kospi", name: "코스피" },
@@ -27,14 +29,15 @@ const CRYPTO_NAMES: Record<string, string> = { BTCUSDT: "비트코인", ETHUSDT:
 type Node = { value?: number; change_pct?: number; change_percent?: number; sparkline?: number[] }
 type CryptoRow = { symbol: string; lastPrice?: string; priceChangePercent?: string }
 
+// 전폭 스파크 — viewBox 정규화(0~100) + width 100%
 function Spark({ data, color }: { data: number[]; color: string }) {
     if (!data || data.length < 2) return null
-    const w = 42, h = 26, pad = 2
+    const W = 100, H = 26, PAD = 1.5
     const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1
-    const pts = data.map((v, i) => `${((i / (data.length - 1)) * w).toFixed(1)},${(h - pad - ((v - mn) / rng) * (h - pad * 2)).toFixed(1)}`)
+    const pts = data.map((v, i) => `${((i / (data.length - 1)) * W).toFixed(1)},${(H - PAD - ((v - mn) / rng) * (H - PAD * 2)).toFixed(1)}`)
     return (
-        <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: "block", flexShrink: 0 }}>
-            <polyline points={pts.join(" ")} fill="none" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ stroke: color }} />
+        <svg width="100%" height={26} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
+            <polyline points={pts.join(" ")} fill="none" strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ stroke: color }} />
         </svg>
     )
 }
@@ -44,6 +47,7 @@ export default function MarketStrip() {
     const c = palette(dark)
     const [m, setM] = useState<Record<string, Node>>({})
     const [crypto, setCrypto] = useState<CryptoRow[]>([])
+    const [target, setTarget] = useState<ChartTarget | null>(null)
     const prevPx = useRef<Record<string, number>>({})
 
     useEffect(() => {
@@ -52,7 +56,6 @@ export default function MarketStrip() {
             if (cancelled) return
             setM((r.ok && (r.data.macro || (r.data as unknown as Record<string, Node>))) || {})
         })
-        // 크립토 24/7 tick
         async function pull() {
             try {
                 const r = await fetch(CRYPTO_ENDPOINT, { cache: "no-store" })
@@ -76,28 +79,27 @@ export default function MarketStrip() {
         })
     })
 
-    // 카드 공통 골격 (PM 2026-08-03 "박스 안 배치 엉망" 정리):
-    //   좌 = 이름(위) + 값·등락 한 줄(아래, nowrap — 줄바꿈·잘림 금지) / 우 = 스파크 고정폭.
-    //   단위(원 등)는 값에 병합해 개행 차단.
-    function Card({ name, tag, value, cp, spark, flashKey, dir }: { name: string; tag?: string; value: string; cp: number | null; spark?: number[]; flashKey?: string; dir?: string }) {
+    // 카드 = 세로 스택: 이름 / 값·등락 / 전폭 그래프. 클릭 = 상세 차트.
+    function Card({ name, tag, value, cp, spark, flashKey, dir, onOpen }: { name: string; tag?: string; value: string; cp: number | null; spark?: number[]; flashKey?: string; dir?: string; onOpen: () => void }) {
         const col = cp == null ? c.faint : cp > 0 ? c.up : cp < 0 ? c.down : c.faint
         const sign = cp != null && cp > 0 ? "+" : ""
         return (
-            <div style={{ background: c.card, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", padding: "9px 12px", display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-                    <div style={{ fontSize: 10.5, fontWeight: 700, color: c.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textAlign: "left" }}>
-                        {name}{tag ? <span style={{ color: c.faint, fontWeight: 500 }}> {tag}</span> : null}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, whiteSpace: "nowrap" }}>
-                        <span key={flashKey} className={dir ? `af-flash-${dir}` : undefined} style={{ fontSize: 13.5, fontWeight: 800, color: c.ink, ...NUM, whiteSpace: "nowrap" }}>
-                            {value}
-                        </span>
-                        <span style={{ fontSize: 10.5, fontWeight: 700, color: col, ...NUM, whiteSpace: "nowrap", flexShrink: 0 }}>
-                            {cp != null ? `${sign}${cp.toFixed(2)}%` : ""}
-                        </span>
-                    </div>
+            <div
+                onClick={onOpen}
+                style={{ background: c.card, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", padding: "9px 12px 7px", display: "flex", flexDirection: "column", gap: 3, minWidth: 0, cursor: "pointer" }}
+            >
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: c.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {name}{tag ? <span style={{ color: c.faint, fontWeight: 500 }}> {tag}</span> : null}
                 </div>
-                {spark && spark.length > 1 ? <Spark data={spark} color={col} /> : null}
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6, whiteSpace: "nowrap" }}>
+                    <span key={flashKey} className={dir ? `af-flash-${dir}` : undefined} style={{ fontSize: 14, fontWeight: 800, color: c.ink, ...NUM, whiteSpace: "nowrap" }}>
+                        {value}
+                    </span>
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: col, ...NUM, whiteSpace: "nowrap", flexShrink: 0 }}>
+                        {cp != null ? `${sign}${cp.toFixed(2)}%` : ""}
+                    </span>
+                </div>
+                {spark && spark.length > 1 ? <Spark data={spark} color={col} /> : <div style={{ height: 26 }} />}
             </div>
         )
     }
@@ -113,6 +115,7 @@ export default function MarketStrip() {
                 value={v != null ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) + (unit || "") : "—"}
                 cp={cp}
                 spark={n.sparkline}
+                onOpen={() => setTarget({ kind: "macro", name, unit, series: n.sparkline || [], value: v, changePct: cp })}
             />
         )
     }
@@ -126,23 +129,26 @@ export default function MarketStrip() {
                     const cp = parseFloat(row.priceChangePercent || "")
                     const was = prevPx.current[row.symbol]
                     const dir = isFinite(px) && typeof was === "number" && px !== was ? (px > was ? "up" : "dn") : ""
+                    const name = CRYPTO_NAMES[row.symbol] || row.symbol
                     return (
                         <Card
                             key={row.symbol}
-                            name={CRYPTO_NAMES[row.symbol] || row.symbol}
+                            name={name}
                             tag="실시간"
                             value={isFinite(px) ? "$" + px.toLocaleString(undefined, { maximumFractionDigits: px >= 1000 ? 0 : 2 }) : "—"}
                             cp={isFinite(cp) ? cp : null}
                             flashKey={`${row.symbol}-${row.lastPrice}`}
                             dir={dir}
+                            onOpen={() => setTarget({ kind: "crypto", name, symbol: row.symbol, value: isFinite(px) ? px : null, changePct: isFinite(cp) ? cp : null })}
                         />
                     )
                 })}
                 {REST.map(({ key, name, unit }) => idx(key, name, unit))}
             </div>
             <div style={{ fontSize: 9.5, color: c.faint, padding: "5px 2px 0" }}>
-                지수·환율·금리 = 약 30분 주기 수집 · 크립토 = 실시간(Binance 5초) · 미장 = 미국 장중 외 전일 종가
+                카드 클릭 = 상세 차트 · 지수·환율·금리 = 약 30분 주기 수집 · 크립토 = 실시간(Binance 5초) · 미장 = 미국 장중 외 전일 종가
             </div>
+            {target ? <ChartModal target={target} onClose={() => setTarget(null)} /> : null}
         </div>
     )
 }
