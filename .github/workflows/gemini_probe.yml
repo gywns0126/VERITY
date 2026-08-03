@@ -1,0 +1,32 @@
+name: Gemini Grounding Probe (dispatch-only, 실험)
+
+# Gemini 구글 검색 그라운딩 거시 정보 품질 1회 실험 (PM 2026-08-03). LLM 1콜 ~$0.01.
+# dispatch 전용 — cron 없음(silent skip 무관), 커밋 0(git add 무관), KIS 무관(RULE 1),
+# push trigger 없음(RULE 2). 판정 후 유지 또는 제거.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verity-gemini-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Run probe
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python scripts/gemini_grounding_probe.py
