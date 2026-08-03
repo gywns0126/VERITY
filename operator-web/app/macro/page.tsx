@@ -13,6 +13,7 @@ import type { PortfolioFull, SectorRow } from "@/lib/types"
 import TopBar from "../components/TopBar"
 import PanelBoundary from "../components/PanelBoundary"
 import StockLogo from "../components/StockLogo"
+import SystemActionPanel from "../components/SystemActionPanel"
 
 const MACRO_LABELS: Record<string, string> = {
     usd_krw: "달러 환율", usd_jpy: "엔/달러", eur_usd: "유로/달러", wti_oil: "WTI 유가",
@@ -159,6 +160,11 @@ export default function MacroPage() {
                         </div>
                     </PanelBoundary>
                 </div>
+
+                {/* 시스템 작용 — 매크로·게이트의 실작용 (PM 2026-08-03 1번 패널, VERITY #267) */}
+                <PanelBoundary name="시스템 작용">
+                    <SystemActionPanel c={c} sa={pf?.system_action} />
+                </PanelBoundary>
 
                 {/* 매크로 지표 8종 */}
                 <PanelBoundary name="지표">

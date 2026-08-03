@@ -134,6 +134,17 @@ export type PortfolioFull = {
     daily_report?: DailyReport
     sectors?: SectorRow[]
     macro?: Record<string, MacroNode>
+    system_action?: SystemAction
+}
+
+// 시스템 작용 — 매크로·게이트가 지금 파이프라인에 미치는 실작용 (VERITY #267, /macro 1번 패널)
+export type SystemAction = {
+    as_of?: string
+    rate_shield?: { on?: boolean; us_10y?: number | null; threshold?: number; grade_cap?: string | null; effect?: string }
+    quadrant?: { quadrant?: string; label?: string; favored?: string[]; unfavored?: string[] }
+    macro_multiplier_median?: number | null
+    verdict_gate?: { buy_count?: number; aligned?: string[]; gated_count?: number }
+    validation?: string
 }
 
 export type AlertItem = {
