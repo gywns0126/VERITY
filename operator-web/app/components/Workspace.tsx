@@ -8,6 +8,7 @@ import { useDark, palette, cardStyle, FONT, NUM, MAIN_PAD, type Palette } from "
 import { RAILWAY, fetchRailway } from "@/lib/api"
 import { useQuotes } from "@/lib/quotes"
 import StockLogo from "./StockLogo"
+import { CandleChart, type Candle } from "./ChartModal"
 import OrderTicket from "./OrderTicket"
 import TriSynthesisPanel from "./TriSynthesisPanel"
 
@@ -36,6 +37,8 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
     const [ticker, setTicker] = useState("")
     const [nameHint, setNameHint] = useState("")
     const [snap, setSnap] = useState<Snap | null>(null)
+    const [chartType, setChartType] = useState<"minute" | "daily" | "weekly" | "monthly">("daily")
+    const [candles, setCandles] = useState<Candle[]>([])
     const [ordPx, setOrdPx] = useState<number | null>(null)
     const isKR = /^\d{6}$/.test(ticker)
     const { q } = useQuotes(isKR ? [ticker] : [])
@@ -85,6 +88,47 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
             clearInterval(t2)
         }
     }, [ticker, isKR])
+
+    // 종목 캔들 — Railway /chart (KIS 일/주/월/분봉, 토스 격차 해소 2단계). 분봉만 30초 폴.
+    useEffect(() => {
+        setCandles([])
+        if (!isKR || !ticker) return
+        let stop = false
+        async function pull() {
+            const r = await fetchRailway<Record<string, Array<{ date?: string; time?: string; open?: number; high?: number; low?: number; close?: number; volume?: number }>>>(
+                `chart/${ticker}?type=${chartType}`
+            )
+            if (stop || !r.ok) return
+            const rows = r.data[chartType]
+            if (!Array.isArray(rows)) return
+            const cs: Candle[] = rows
+                .map((x) => ({
+                    t: x.time
+                        ? String(x.time)
+                        : String(x.date || "").length === 8
+                          ? `${String(x.date).slice(4, 6)}.${String(x.date).slice(6, 8)}`
+                          : String(x.date || ""),
+                    o: Number(x.open) || 0,
+                    h: Number(x.high) || 0,
+                    l: Number(x.low) || 0,
+                    c: Number(x.close) || 0,
+                    v: Number(x.volume) || 0,
+                }))
+                .filter((x) => x.h > 0)
+            setCandles(cs)
+        }
+        pull()
+        if (chartType === "minute") {
+            const t = setInterval(pull, 30000)
+            return () => {
+                stop = true
+                clearInterval(t)
+            }
+        }
+        return () => {
+            stop = true
+        }
+    }, [ticker, isKR, chartType])
 
     const live = isKR ? q[ticker]?.price : undefined
     const cp = isKR ? q[ticker]?.change_pct : undefined
@@ -137,6 +181,33 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
                     </span>
                 ) : null}
             </div>
+
+            {/* 종목 캔들 — 분/일/주/월 (KIS 실데이터) */}
+            {isKR ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                        {([["minute", "분봉"], ["daily", "일봉"], ["weekly", "주봉"], ["monthly", "월봉"]] as Array<["minute" | "daily" | "weekly" | "monthly", string]>).map(([k, label]) => (
+                            <button
+                                key={k}
+                                onClick={() => setChartType(k)}
+                                style={{ border: "none", borderRadius: 999, padding: "4px 11px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: FONT, background: chartType === k ? c.vtS : c.hi, color: chartType === k ? c.vt : c.faint }}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                        <span style={{ marginLeft: "auto", fontSize: 9.5, color: c.faint, alignSelf: "center" }}>
+                            KIS · {chartType === "minute" ? "당일 분봉 · 30초 갱신" : "SMA5 · SMA20"}
+                        </span>
+                    </div>
+                    {candles.length > 5 ? (
+                        <CandleChart cs={candles} c={c} dec={0} />
+                    ) : (
+                        <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11.5, color: c.faint, background: c.hi, borderRadius: 12 }}>
+                            차트 불러오는 중… (장외 분봉은 빈 값일 수 있음)
+                        </div>
+                    )}
+                </div>
+            ) : null}
 
             {/* 본문 — 호가 래더 + 티켓 */}
             {isKR ? (
