@@ -2,7 +2,7 @@
 // WatchTable — 관심(최근 검색) 실시간. 구 RealtimeQuotes 대체: 개별 10s 폴링 → 공유 3s 폴러
 // (Railway /quotes 30req/60s 제한 대응, tick 플래시 = PM 결함 #4). 클릭 = 링크그룹 전환.
 import { useEffect, useRef, useState } from "react"
-import { useDark, palette, cardStyle, FONT, NUM } from "@/lib/theme"
+import { useDark, palette, cardStyle, FONT, NUM, CARD_TITLE, RAIL_PAD, hoverBg } from "@/lib/theme"
 import { useQuotes } from "@/lib/quotes"
 import { selectTicker } from "@/lib/types"
 import StockLogo from "./StockLogo"
@@ -50,10 +50,10 @@ export default function WatchTable() {
     })
 
     return (
-        <div style={{ ...cardStyle(c, "13px 15px"), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ ...cardStyle(c, RAIL_PAD), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                    <span style={{ fontSize: 13.5, fontWeight: 800, color: c.ink, letterSpacing: "-0.02em" }}>관심 · 최근 검색</span>
+                    <span style={{ ...CARD_TITLE, color: c.ink }}>관심 · 최근 검색</span>
                     <span style={{ width: 5, height: 5, borderRadius: "50%", background: c.green }} />
                 </div>
                 {asof ? <span style={{ fontSize: 10, color: c.faint, ...NUM }}>{asof}</span> : null}
@@ -74,7 +74,9 @@ export default function WatchTable() {
                         <div
                             key={t.ticker}
                             onClick={() => selectTicker(t.ticker, t.name)}
-                            style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 2px", borderTop: i === 0 ? "none" : `1px solid ${c.line}`, cursor: "pointer" }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = hoverBg(dark) }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent" }}
+                            style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 4px", borderTop: i === 0 ? "none" : `1px solid ${c.line}`, cursor: "pointer", borderRadius: 8 }}
                         >
                             <StockLogo ticker={t.ticker} name={t.name} size={22} />
                             <span style={{ fontSize: 12.5, fontWeight: 700, color: c.ink, flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>

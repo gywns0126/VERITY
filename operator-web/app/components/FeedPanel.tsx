@@ -57,7 +57,7 @@ export default function FeedPanel({ alerts, holdTickers, recTickers, loaded }: {
     }
 
     return (
-        <div style={{ ...cardStyle(c, "8px 15px 10px"), fontFamily: FONT }}>
+        <div style={{ ...cardStyle(c, "10px 16px 12px"), fontFamily: FONT }}>
             {shown.map(({ a, tier }, i) => (
                 <FeedRow key={(a.source_url || "") + i} c={c} a={a} tier={tier} first={i === 0} />
             ))}
@@ -76,7 +76,9 @@ function FeedRow({ c, a, tier, first }: { c: Palette; a: AlertItem; tier: 1 | 2 
     return (
         <div
             onClick={() => selectTicker(a.ticker, a.name)}
-            style={{ display: "flex", flexDirection: "column", gap: 4, padding: "10px 0", borderTop: first ? "none" : `1px solid ${c.line}`, cursor: "pointer" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = c.hi }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent" }}
+            style={{ display: "flex", flexDirection: "column", gap: 4, padding: "10px 4px", borderTop: first ? "none" : `1px solid ${c.line}`, cursor: "pointer", borderRadius: 8 }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 9.5, fontWeight: 800, color: tierCol, background: tierBg, borderRadius: 6, padding: "2px 6px" }}>{tierLabel}</span>

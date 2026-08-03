@@ -4,7 +4,7 @@
 // 호가 = Railway 구독형: POST /subscribe(최대 10, idle TTL 300s) → /snapshot/{t} 2.5s 폴링.
 // 래더 가격 클릭 = 주문가 채움 (국내 HTS 스피드주문 문법).
 import { useEffect, useRef, useState } from "react"
-import { useDark, palette, cardStyle, FONT, NUM, type Palette } from "@/lib/theme"
+import { useDark, palette, cardStyle, FONT, NUM, MAIN_PAD, type Palette } from "@/lib/theme"
 import { RAILWAY, fetchRailway } from "@/lib/api"
 import { useQuotes } from "@/lib/quotes"
 import StockLogo from "./StockLogo"
@@ -105,12 +105,12 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
     if (!ticker) return null
 
     return (
-        <div style={{ ...cardStyle(c, "14px 16px"), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ ...cardStyle(c, MAIN_PAD), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 12 }}>
             {/* 헤더 — 선택 종목 실시간 */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <StockLogo ticker={ticker} name={name} size={28} />
                 <div style={{ display: "flex", flexDirection: "column", gap: 0, minWidth: 0 }}>
-                    <span style={{ fontSize: 15.5, fontWeight: 800, color: c.ink, letterSpacing: "-0.02em" }}>{name || ticker}</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: c.ink, letterSpacing: "-0.02em" }}>{name || ticker}</span>
                     <span style={{ fontSize: 10.5, color: c.faint, ...NUM }}>{ticker}</span>
                 </div>
                 {isKR ? (
@@ -152,8 +152,8 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
                                 {[...asks].reverse().map((l, i) => (
                                     <LadderRow key={`a${i}`} c={c} price={l.price!} vol={l.volume || 0} maxVol={maxVol} side="ask" onPick={setOrdPx} />
                                 ))}
-                                <div style={{ display: "flex", justifyContent: "center", padding: "3px 0", background: c.hi, borderRadius: 6, margin: "2px 0" }}>
-                                    <span style={{ fontSize: 11.5, fontWeight: 800, color: c.ink, ...NUM }}>
+                                <div style={{ display: "flex", justifyContent: "center", padding: "4px 0", background: c.hi, borderRadius: 8, margin: "3px 0" }}>
+                                    <span style={{ fontSize: 12.5, fontWeight: 800, color: c.ink, ...NUM }}>
                                         {typeof live === "number" ? Math.round(live).toLocaleString() : "—"}
                                     </span>
                                 </div>
@@ -207,13 +207,15 @@ function LadderRow({ c, price, vol, maxVol, side, onPick }: { c: Palette; price:
     return (
         <div
             onClick={() => onPick(price)}
-            style={{ display: "grid", gridTemplateColumns: "1fr 78px", gap: 6, alignItems: "center", padding: "1.5px 4px", cursor: "pointer", borderRadius: 5 }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = c.hi }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent" }}
+            style={{ display: "grid", gridTemplateColumns: "1fr 78px", gap: 6, alignItems: "center", padding: "2px 5px", cursor: "pointer", borderRadius: 6 }}
         >
-            <div style={{ position: "relative", height: 15, display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
-                <div style={{ position: "absolute", right: 0, top: 1, bottom: 1, width: `${w}%`, background: colS, borderRadius: 4 }} />
+            <div style={{ position: "relative", height: 16, display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+                <div style={{ position: "absolute", right: 0, top: 1, bottom: 1, width: `${w}%`, background: colS, borderRadius: 3 }} />
                 <span style={{ position: "relative", fontSize: 10.5, color: c.sub, ...NUM }}>{vol ? vol.toLocaleString() : ""}</span>
             </div>
-            <span style={{ fontSize: 12, fontWeight: 800, color: col, textAlign: "right", ...NUM }}>{Math.round(price).toLocaleString()}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 800, color: col, textAlign: "right", ...NUM }}>{Math.round(price).toLocaleString()}</span>
         </div>
     )
 }

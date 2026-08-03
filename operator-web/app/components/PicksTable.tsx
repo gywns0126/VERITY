@@ -3,7 +3,7 @@
 // 행 클릭 = 링크그룹 전환. 추천 이유 = 사실 드라이버 칩(취사선택 결정: 리포트 삭제 → 추천이유 직접 실음).
 // RULE 7: brain = 가설(N<252) 라벨 상시.
 import { useState } from "react"
-import { useDark, palette, cardStyle, FONT, NUM, type Palette } from "@/lib/theme"
+import { useDark, palette, cardStyle, FONT, NUM, CARD_TITLE, MAIN_PAD, hoverBg, type Palette } from "@/lib/theme"
 import { selectTicker, type Rec } from "@/lib/types"
 import StockLogo from "./StockLogo"
 
@@ -63,14 +63,14 @@ export default function PicksTable({ recs, status }: { recs: Rec[]; status: "loa
     })
     const shown = all ? sorted : sorted.slice(0, 12)
 
-    const th = { fontSize: 9.5, fontWeight: 700 as const, color: c.faint, textAlign: "right" as const, padding: "4px 8px", whiteSpace: "nowrap" as const }
+    const th = { fontSize: 10, fontWeight: 700 as const, color: c.faint, textAlign: "right" as const, padding: "4px 8px", whiteSpace: "nowrap" as const }
     const td = { fontSize: 12, color: c.sub, textAlign: "right" as const, padding: "6px 8px", whiteSpace: "nowrap" as const, ...NUM }
 
     return (
-        <div style={{ ...cardStyle(c, "13px 16px"), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ ...cardStyle(c, MAIN_PAD), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
-                    <span style={{ fontSize: 13.5, fontWeight: 800, color: c.ink, letterSpacing: "-0.02em" }}>오늘의 추천</span>
+                    <span style={{ ...CARD_TITLE, color: c.ink }}>오늘의 추천</span>
                     <span style={{ fontSize: 10, color: c.faint }}>스캔 5,000 → 후보 25 → 추천 {recs.length} → 중용 사이징</span>
                 </div>
                 <span style={{ fontSize: 10, color: c.faint }}>가설 · 검증 N&lt;252 (2027) · 예측 아님</span>
@@ -121,6 +121,8 @@ export default function PicksTable({ recs, status }: { recs: Rec[]; status: "loa
                                     <tr
                                         key={(r.ticker || "") + i}
                                         onClick={() => selectTicker(String(r.ticker || ""), r.name)}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = hoverBg(dark) }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent" }}
                                         style={{ cursor: "pointer", borderTop: i === 0 ? "none" : `1px solid ${c.line}` }}
                                     >
                                         <td style={{ ...td, textAlign: "left", overflow: "hidden" }}>

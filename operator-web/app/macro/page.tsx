@@ -5,7 +5,7 @@
 //   시장 지평(가설, 유사국면) / 이벤트 캘린더(D-day) / 월가·국내 헤드라인 / 고래 13F(공개 blob).
 // 소스 = portfolio_full(authed) + macro_synthesis(authed) + us_investor_portfolios.json(공개 사실).
 import { useEffect, useState } from "react"
-import { useDark, palette, cardStyle, FONT, NUM, type Palette } from "@/lib/theme"
+import { useDark, palette, cardStyle, FONT, NUM, MAIN_PAD, type Palette } from "@/lib/theme"
 import { fetchOperator, fetchPortfolioSlim, fetchPublic } from "@/lib/api"
 import { isAuthed } from "@/lib/auth"
 import { captureOAuthHash, refreshIfNeeded } from "@/lib/supabase"
@@ -119,7 +119,7 @@ export default function MacroPage() {
                 {/* 분석기 노트 + 신선 사실 */}
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)", gap: 12, alignItems: "start" }}>
                     <PanelBoundary name="분석기">
-                        <div style={{ ...cardStyle(c, "14px 16px") }}>
+                        <div style={{ ...cardStyle(c, MAIN_PAD) }}>
                             {secTitle("거시 분석기 — 오늘의 데스크 노트", `3종 LLM · 평일 07:50${syn?.generated_at ? ` · 생성 ${String(syn.generated_at).slice(5, 16).replace("T", " ")}` : ""}`)}
                             {cl?.content ? (
                                 <div style={{ fontSize: 13, color: c.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{plain(cl.content)}</div>
@@ -129,7 +129,7 @@ export default function MacroPage() {
                         </div>
                     </PanelBoundary>
                     <PanelBoundary name="신선사실">
-                        <div style={{ ...cardStyle(c, "14px 16px") }}>
+                        <div style={{ ...cardStyle(c, MAIN_PAD) }}>
                             {secTitle("신선 사실", "Perplexity · 72h")}
                             {px?.content ? (
                                 <>
@@ -151,7 +151,7 @@ export default function MacroPage() {
 
                 {/* 매크로 지표 8종 */}
                 <PanelBoundary name="지표">
-                    <div style={{ ...cardStyle(c, "14px 16px") }}>
+                    <div style={{ ...cardStyle(c, MAIN_PAD) }}>
                         {secTitle("매크로 지표", "환율 · 원자재 · 변동성 · 약 30분 주기", c.green)}
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8 }}>
                             {Object.keys(MACRO_LABELS).map((k) => {
@@ -180,7 +180,7 @@ export default function MacroPage() {
 
                 {/* 섹터 보드 */}
                 <PanelBoundary name="섹터">
-                    <div style={{ ...cardStyle(c, "14px 16px") }}>
+                    <div style={{ ...cardStyle(c, MAIN_PAD) }}>
                         {secTitle("섹터 보드", `${sectors.length}개 업종 · 등락률순`, c.up)}
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))", gap: 14 }}>
                             <SectorList c={c} title="핫 섹터" rows={hot} accent={c.up} />
@@ -210,7 +210,7 @@ export default function MacroPage() {
                 {/* 로테이션 + 시장 지평 */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 12, alignItems: "start" }}>
                     <PanelBoundary name="로테이션">
-                        <div style={{ ...cardStyle(c, "14px 16px") }}>
+                        <div style={{ ...cardStyle(c, MAIN_PAD) }}>
                             {secTitle("섹터 로테이션", rot?.cycle_label || "")}
                             {rot?.cycle_desc ? <div style={{ fontSize: 12, color: c.sub, lineHeight: 1.5, marginBottom: 8 }}>{rot.cycle_desc}</div> : null}
                             {(rot?.recommended_sectors || []).slice(0, 4).map((s, i) => (
@@ -223,7 +223,7 @@ export default function MacroPage() {
                     </PanelBoundary>
 
                     <PanelBoundary name="지평">
-                        <div style={{ ...cardStyle(c, "14px 16px") }}>
+                        <div style={{ ...cardStyle(c, MAIN_PAD) }}>
                             {secTitle("시장 지평", "자기 산식 · 가설 N<252")}
                             {mh?.verdict ? <div style={{ fontSize: 12.5, fontWeight: 700, color: c.ink, lineHeight: 1.5, marginBottom: 8 }}>{mh.verdict}</div> : null}
                             {mh?.horizons ? (
@@ -264,7 +264,7 @@ export default function MacroPage() {
 
                 {/* 이벤트 캘린더 */}
                 <PanelBoundary name="이벤트">
-                    <div style={{ ...cardStyle(c, "14px 16px") }}>
+                    <div style={{ ...cardStyle(c, MAIN_PAD) }}>
                         {secTitle("이벤트 캘린더", `지정학 · 정책 · ${events.length}건`, c.amber)}
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 10 }}>
                             {events.map((e, i) => {

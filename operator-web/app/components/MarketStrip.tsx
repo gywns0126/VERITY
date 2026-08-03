@@ -41,6 +41,8 @@ function Spark({ data, color }: { data: number[]; color: string }) {
     const pts = data.map((v, i) => `${((i / (data.length - 1)) * W).toFixed(1)},${(H - PAD - ((v - mn) / rng) * (H - PAD * 2)).toFixed(1)}`)
     return (
         <svg width="100%" height={26} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
+            {/* area fill — 알파네스트 차트 문법 (라인만 = 밋밋) */}
+            <polyline points={`0,${H - PAD} ${pts.join(" ")} ${W},${H - PAD}`} fill={color} opacity={0.09} stroke="none" />
             <polyline points={pts.join(" ")} fill="none" strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ stroke: color }} />
         </svg>
     )
