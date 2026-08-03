@@ -62,6 +62,49 @@ body {
     }
 }
 
+/* 토스식 섹션 고정 스크롤 (PM 2026-08-03): 넓은 화면 = 뷰포트 고정, 각 컬럼 내부 스크롤.
+   좁은 화면 = 기존 문서 스크롤 폴백. 데이터 많은 패널은 /system 페이지 분할. */
+@media (min-width: 1241px) {
+    .af-viewport {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .af-frame {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+    .af-term {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    .af-rail,
+    .af-center {
+        height: 100%;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-bottom: 6px;
+        scrollbar-width: thin;
+    }
+    .af-rail::-webkit-scrollbar,
+    .af-center::-webkit-scrollbar {
+        width: 5px;
+    }
+    .af-rail::-webkit-scrollbar-thumb,
+    .af-center::-webkit-scrollbar-thumb {
+        background: rgba(128, 128, 128, 0.28);
+        border-radius: 999px;
+    }
+    .af-rail::-webkit-scrollbar-track,
+    .af-center::-webkit-scrollbar-track {
+        background: transparent;
+    }
+}
+
 /* 시세 tick 플래시 — 코인식 실시간 체감 (PM 결함 #4). key 교체로 리마운트 → 재생. */
 @keyframes af-flash-up {
     from {
