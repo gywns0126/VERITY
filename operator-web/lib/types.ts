@@ -52,6 +52,16 @@ export type GlobalEvent = {
 
 export type Briefing = { headline?: string; tone?: string }
 
+/** 지수 상세 모달 설명 — daily_report(자기 리포트, 매일 생성) 발췌 (PM 2026-08-03 "요인·향후 설명"). */
+export type MarketExplain = {
+    analysis?: string
+    strategy?: string
+    risk?: string
+    outlook?: string
+    tone?: string
+    headline?: string
+}
+
 /** 🚨 recommended/avoid_sectors = 객체 배열 (실측 2026-08-03). 문자열로 렌더하면
  *  "Objects are not valid as a React child" 크래시 — 거시 패널 오류 실사고 근인. */
 export type RotSector = { name?: string; change_pct?: number; reason?: string; theme?: string }
