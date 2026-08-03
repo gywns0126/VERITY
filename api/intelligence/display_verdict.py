@@ -37,6 +37,7 @@ from typing import Any, Dict
 
 GRADE_ORDER = ["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"]
 _VALIDATION_NOTE = "가설 — 자체 산식 N<252 IC 게이트(2027-05) 미검증"
+_RATE_SHIELD_THRESHOLD = 4.5  # 미 10Y 금리 방패 임계 (B1+B2 2026-05-18 등록 상수 — 재정의 아님)
 
 
 def _demote(grade: str, steps: int = 1) -> str:
@@ -88,3 +89,62 @@ def apply_display_verdict(stock: Dict[str, Any]) -> Dict[str, Any]:
         "owner": "brain", "validation": _VALIDATION_NOTE,
     }
     return stock
+
+
+def build_system_action(portfolio: Dict[str, Any], analyzed) -> Dict[str, Any]:
+    """시스템 작용 요약 — 매크로·게이트가 지금 파이프라인에 미치는 실작용의 집계 (표시 전용).
+
+    2026-08-03 PM ("/macro 1번 패널"): 매크로 페이지가 지표 나열에 그침 — "그래서 시스템이
+    지금 뭘 하고 있나"를 한 패널로. 산식 불변 — 이미 산출된 값의 집계만.
+    소비처 = 오퍼레이터 사이트(알파파운더) SystemActionPanel. 공개 blob 에서는
+    sanitize STRIP_KEYS("system_action") 로 제거 (오퍼레이터 전용).
+    """
+    from datetime import datetime, timedelta, timezone
+    _kst = timezone(timedelta(hours=9))
+
+    macro = portfolio.get("macro") or {}
+    us10 = (macro.get("us_10y") or {}).get("value")
+    vb_top = portfolio.get("verity_brain") or {}
+    mo = vb_top.get("macro_override") or []
+    if isinstance(mo, dict):
+        mo = [mo]
+    shield = next((o for o in mo if isinstance(o, dict)
+                   and o.get("mode") in ("yield_defense", "kr_rate_defense")), None)
+    shield_on = shield is not None or (isinstance(us10, (int, float)) and us10 >= _RATE_SHIELD_THRESHOLD)
+
+    quadrant: Dict[str, Any] = {}
+    try:
+        from api.intelligence.verity_brain import detect_economic_quadrant
+        q = detect_economic_quadrant(portfolio) or {}
+        quadrant = {k: q.get(k) for k in ("quadrant", "label", "favored", "unfavored")
+                    if q.get(k) is not None}
+    except Exception:  # 표시 데이터가 파이프라인을 못 죽인다
+        pass
+
+    mults = sorted(m for m in ((s.get("macro_multiplier") or {}).get("multiplier")
+                               for s in analyzed) if isinstance(m, (int, float)))
+    buys = [s for s in analyzed if s.get("recommendation") in ("STRONG_BUY", "BUY")]
+
+    return {
+        "as_of": datetime.now(_kst).isoformat(timespec="seconds"),
+        "rate_shield": {
+            "on": bool(shield_on),
+            "us_10y": us10,
+            "threshold": _RATE_SHIELD_THRESHOLD,
+            "grade_cap": (shield or {}).get("max_grade"),
+            "label": (shield or {}).get("label") or ("금리 방패" if shield_on else None),
+            "effect": "발동 중 — 등급 상한 WATCH · 현금 비중 확대 권고" if shield_on else "미발동",
+        },
+        "quadrant": quadrant,
+        "macro_multiplier_median": (mults[len(mults) // 2] if mults else None),
+        "verdict_gate": {
+            "buy_count": len(buys),
+            "aligned": [s.get("ticker") for s in buys
+                        if (s.get("display_verdict") or {}).get("aligned")],
+            "gated_count": sum(1 for s in analyzed
+                               if (s.get("display_verdict") or {}).get("gates")),
+            "owner": "brain",
+        },
+        "validation": _VALIDATION_NOTE,
+        "_note": "표시 전용 · 산식 불변 — 이미 산출된 작용값의 집계 (오퍼레이터)",
+    }
