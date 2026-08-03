@@ -60,6 +60,24 @@ export type SectorRotation = {
     avoid_sectors?: string[]
 }
 
+export type HorizonBand = { median?: number; p25?: number; p75?: number; p5?: number; p95?: number }
+
+export type MarketHorizon = {
+    verdict?: string
+    recession_prob_12m?: number
+    cape_percentile?: number
+    cape_value?: number
+    cycle_stage_label_ko?: string
+    horizons?: Record<string, HorizonBand>
+}
+
+export type DailyReport = {
+    market_analysis?: string
+    strategy?: string
+    risk_watch?: string
+    tomorrow_outlook?: string
+}
+
 export type PortfolioFull = {
     updated_at?: string
     vams?: Vams
@@ -70,6 +88,8 @@ export type PortfolioFull = {
     global_events?: GlobalEvent[]
     briefing?: Briefing
     sector_rotation?: SectorRotation
+    market_horizon?: MarketHorizon
+    daily_report?: DailyReport
 }
 
 export type AlertItem = {
