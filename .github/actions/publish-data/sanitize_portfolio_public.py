@@ -22,6 +22,7 @@ import sys
 STRIP_KEYS = {
     # 자본·성과 (VAMS)
     "system_action",  # 2026-08-03 — 매크로·게이트 작용 요약 (오퍼레이터 전용 패널 데이터)
+    "exec_paper",  # 2026-08-04 — 사전등록 페이퍼 트랙 요약 (오퍼레이터 전용)
     "vams", "vams_profiles", "portfolio_summary", "safe_recommendations",
     # Brain 내부
     "verity_brain", "brain_accuracy", "brain_quality", "brain_evolution_log",
