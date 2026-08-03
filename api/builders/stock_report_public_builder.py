@@ -430,16 +430,10 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
     dy = _num(rec.get("div_yield"), "%", 2)
     if dy is not None and float(rec.get("div_yield") or 0) > 0:
         facts["배당수익률"] = dy
-    # BPS = 주가 ÷ PBR (주당순자산 · 사실 계산, 통화 인지)
-    try:
-        px = float(rec.get("price") or 0)
-        pbr_v = float(rec.get("pbr") or 0)
-        if px > 0 and pbr_v > 0:
-            bps_v = px / pbr_v
-            facts["BPS"] = f"${bps_v:,.2f}" if str(rec.get("currency") or "").upper() == "USD" else f"{bps_v:,.0f}원"
-            fnote["BPS"] = "주가 ÷ PBR"
-    except (TypeError, ValueError):
-        pass
+    # BPS = 자기자본 ÷ 발행주식수 — _valuation_map 에서 부착한다 (아래 보강 루프).
+    # 🚨 여기서 주가÷PBR 로 역산하지 말 것: rec["pbr"] 은 이상치일 때 1.0 으로 정규화되므로
+    #    (rec["data_quality_fixes"] = ["pbr_invalid_to_1.0"]) BPS 가 주가와 같은 값으로 나온다.
+    #    2026-08-03 발행본 rich 14종목 전수 오염 확인 → 역산 경로 제거.
     # PSR = 시가총액 ÷ 매출 (배 · 매출 있을 때만 · sanity 가드로 이상치 비노출)
     try:
         mc = float(rec.get("market_cap") or 0)
@@ -488,12 +482,20 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
             fnote["52주 고점대비"] = "현재가 ÷ 52주 최고가 − 1"
         except (TypeError, ValueError):
             pass
-    # 거래량(평균대비) (사실 — 당일 거래량 ÷ 최근 평균)
-    vr = (rec.get("technical") or {}).get("vol_ratio")
+    # 거래량(평균대비) (사실 — 직전 거래일 거래량 ÷ 최근 평균)
+    # 🚨 technical 블록이 미산출인 레코드(관심종목 유래 — price/ma 전부 0)는 vol_ratio 기본값 1.0 이
+    #    그대로 "100%" 로 나가 '거래량 평범' 으로 오독된다 (2026-08-03 094970 확인).
+    #    technical.price > 0 = 실제 산출된 블록. 미산출이면 필드 자체를 비노출한다.
+    tech = rec.get("technical") or {}
+    try:
+        tech_computed = float(tech.get("price") or 0) > 0
+    except (TypeError, ValueError):
+        tech_computed = False
+    vr = tech.get("vol_ratio") if tech_computed else None
     if vr not in (None, "", 0):
         try:
             facts["거래량(평균대비)"] = f"{float(vr) * 100:.0f}%"
-            fnote["거래량(평균대비)"] = "당일 거래량 ÷ 최근 평균"
+            fnote["거래량(평균대비)"] = "직전 거래일 거래량 ÷ 최근 평균"
         except (TypeError, ValueError):
             pass
 
@@ -587,7 +589,8 @@ def _median(vals: List[float]) -> Optional[float]:
 
 
 def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
-    """PER/PBR 자체계산: KRX 공식 시총 ÷ DART 순이익·자기자본. (자기자본 = 자산/(1+부채비율/100))."""
+    """PER/PBR/BPS 자체계산: KRX 공식 시총·발행주식수 ÷ DART 순이익·자기자본.
+    (자기자본 = 자산/(1+부채비율/100), BPS = 자기자본/발행주식수)."""
     out: Dict[str, Dict[str, float]] = {}
     for tk, f in fundamentals.items():
         km = krx_map.get(tk)
@@ -608,6 +611,10 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any]) -> Dic
         except (TypeError, ValueError):
             pass
         try:
+            shares = float(km.get("shares") or 0)
+        except (TypeError, ValueError):
+            shares = 0.0
+        try:
             ta = float(f.get("total_assets")) if f.get("total_assets") is not None else None
             dr = float(f.get("debt_ratio")) if f.get("debt_ratio") is not None else None
             if ta and ta > 0 and dr is not None and dr > -100:
@@ -615,6 +622,12 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any]) -> Dic
                 if equity > 0:
                     v["PBR"] = round(mktcap / equity, 2)
                     v["_pbr_in"] = {"mktcap": mktcap, "equity": equity}
+                    # BPS = 자기자본 ÷ 발행주식수 (KRX 공식 주식수 · DART 자본).
+                    # 🚨 주가÷PBR 역산 금지 — rec["pbr"] 은 placeholder 1.0 로 정규화되는 경우가 있어
+                    #    BPS 가 주가 그대로 나온다 (2026-08-03 rich 14종목 전수 오염 확인).
+                    if shares > 0:
+                        v["BPS"] = equity / shares
+                        v["_bps_in"] = {"equity": equity, "shares": shares}
         except (TypeError, ValueError):
             pass
         if v:
@@ -1013,6 +1026,15 @@ def main() -> int:
                     qin = val.get("_pbr_in") or {}
                     if qin:
                         fc["PBR"] = f"시가총액 {_fmt_won_signed(qin.get('mktcap'))} ÷ 자기자본 {_fmt_won_signed(qin.get('equity'))}"
+                if val.get("BPS") is not None and tk in rich_by_ticker:
+                    # rich(운영풀)에만 부착 — 기존 BPS 노출 범위 유지. light 전 종목 확산 금지
+                    # (유리박스 공개 화이트리스트 = 필드 신규 확산 금지, [[project_glassbox_public_contract_2026_06_25]]).
+                    s["facts"]["BPS"] = f"{float(val['BPS']):,.0f}원"
+                    fn["BPS"] = "자체계산"
+                    bin_ = val.get("_bps_in") or {}
+                    if bin_:
+                        fc["BPS"] = (f"자기자본 {_fmt_won_signed(bin_.get('equity'))} "
+                                     f"÷ 발행주식수 {int(bin_.get('shares') or 0):,}주")
             peer = _peer(tk, fundamentals, sector_map, sector_medians, valuation) if sector_map else None
             if peer:
                 s["peer"] = peer
