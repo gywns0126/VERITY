@@ -4358,6 +4358,19 @@ def main():
     except Exception as _sa_e:
         print(f"  [system_action] 스킵: {type(_sa_e).__name__}: {_sa_e}")
 
+    # ── 사전등록 페이퍼 트랙 (PM 2026-08-04 "페이퍼 트랙 ㄱㄱ") ──
+    # PREREG_AUTO_EXECUTION_GATE_2026_08_03 의 E·S·X 규칙을 가상 1,000만원으로 문자 그대로
+    # 집행 — 실전 전략(aligned BUY 체계) 자체의 예비 trail 축적. VAMS 불간섭(별도 상태·장부).
+    # 장부 = data/exec_paper_trail.jsonl (다음 step git add data/ broad = RULE 4 자동 포함).
+    try:
+        from api.execution.paper_track import run_paper_track
+        portfolio["exec_paper"] = run_paper_track(analyzed, DATA_DIR)
+        _ep = portfolio["exec_paper"]
+        print(f"  [exec_paper] equity {_ep['equity']:,} · 진입 {_ep['entered_today']}"
+              f" · pending {_ep['pending']} · flags {_ep['flags']}")
+    except Exception as _ep_e:
+        print(f"  [exec_paper] 스킵: {type(_ep_e).__name__}: {_ep_e}")
+
     # ── STEP 7: VAMS ──
     print(f"\n[7] VAMS 가상 투자")
     portfolio["recommendations"] = analyzed
