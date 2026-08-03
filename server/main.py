@@ -261,6 +261,46 @@ async def candles(ticker: str):
     return {"ticker": tk, "candles": data, "count": len(data)}
 
 
+# /quotes per-IP 레이트리밋 — 🚨 RULE 1/보안(2026-08-02 자기검수 저촉점 fix):
+#   무인증 브라우저 엔드포인트라 제3자가 오퍼레이터 KIS 토큰으로 무제한 조회 = 쿼터 남용 방어.
+#   (브라우저 클라는 RAILWAY_SHARED_SECRET 를 안전 보관 불가 → 인증 대신 per-IP 스로틀.)
+_quote_rl: Dict[str, list] = defaultdict(list)
+_QUOTE_MAX, _QUOTE_WIN = 30, 60  # IP당 60초 30회
+
+def _quote_rate_ok(ip: str) -> bool:
+    import time as _t
+    now = _t.monotonic()
+    hits = _quote_rl[ip]
+    hits[:] = [h for h in hits if h > now - _QUOTE_WIN]
+    if len(hits) >= _QUOTE_MAX:
+        return False
+    hits.append(now)
+    return True
+
+
+@app.get("/quotes")
+async def quotes(request: Request, tickers: str = Query("", description="쉼표구분 종목코드 (최대 15)")):
+    """오퍼레이터 실시간 시세 배치 — 현재가·등락률·거래량·OHLC.
+    🚨 RULE 1: fetch_price = KIS_SHARED_TOKEN 순수 소비자(공유 store 읽기만, 토큰 발급 절대 X).
+      배포 시 Railway KIS_SHARED_TOKEN=1 필수(미설정=legacy self-issue fail-open, 6/17 클래스).
+    per-IP 레이트리밋으로 쿼터 남용 차단. 본인 이용 실시간 시세."""
+    from datetime import datetime, timezone, timedelta
+    ip = request.client.host if request.client else "unknown"
+    if not _quote_rate_ok(ip):
+        return JSONResponse({"error": "rate_limited", "quotes": {}, "count": 0}, status_code=429)
+    kst = timezone(timedelta(hours=9))
+    codes = [t.strip().zfill(6) for t in tickers.split(",") if t.strip()][:15]
+    out: Dict[str, dict] = {}
+    for code in codes:
+        try:
+            q = fetch_price(code)
+            if q and q.get("price"):
+                out[code] = q
+        except Exception:
+            pass
+    return {"quotes": out, "count": len(out), "asof": datetime.now(kst).isoformat(timespec="seconds")}
+
+
 @app.post("/subscribe")
 async def subscribe(request: Request):
     body = await request.json()

@@ -1,0 +1,50 @@
+name: Moderation Portfolio (중용 목표비중)
+
+# ③구성 척추 데이터 공급 — 중용 3층 빌더(#236) 실행 + private bucket 업로드.
+# 산출(data/moderation_portfolio.json·trail)은 태생 봉인(gitignore) → 커밋/공개발행 0 (RULE 2·4 무관,
+# permissions contents:read). LLM 호출 0 = 비용 0. env = 기존 업로드와 동일 SUPABASE 시크릿 2종.
+
+on:
+  schedule:
+    # 평일 KST 18:50 (UTC 09:50) — kr_chart_daily(18:30 슬롯) 갱신 직후 1일 1회.
+    - cron: '50 9 * * 1-5'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verity-moderation
+  cancel-in-progress: false
+
+jobs:
+  build-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build moderation portfolio (중용 3층 — 등록본)
+        run: python -m api.portfolio.moderation_portfolio
+
+      - name: Upload to private bucket (_operator/)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/upload_operator_data_to_supabase.py

@@ -1,0 +1,90 @@
+name: US Chart Daily (covariance source)
+
+# 중용 포트폴리오 공분산 전제조건(#8) — 미국 정렬 일봉(수정주가) 수집.
+# 소스 = KIS 해외 dailyprice(HHDFS76240000, MODP=1). 산출 = data/us_chart_daily.json
+# (kr_chart_daily 동일 shape). 🚨 RULE 1: cache_only 소비자 — 토큰 발급 절대 안 함.
+
+on:
+  schedule:
+    # 주1 — KST 일 06:00 (미장 금 마감 후). 250일 공분산 창이라 주간 갱신으로 충분.
+    - cron: '0 21 * * 6'
+  workflow_dispatch:
+
+# Node.js 24 강제 (2026-06-02 GitHub Node 20 deprecation 대비)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  # 🚨 RULE 1 — GH 단일 발급원(kis_token_refresh)만 발급. 이 워크플로 = 공유 토큰 read 소비자.
+  KIS_SHARED_TOKEN: "1"
+  # 🚨 RULE 1 — 발급 절대 금지(cache_only). 미장 일봉은 공유 토큰 소비만.
+  KIS_CACHE_ONLY: "1"
+
+permissions:
+  contents: write
+
+concurrency:
+  # data/* 쓰기 워크플로 단일 그룹 직렬화 (JSON 손상·lost-update 방지). cancel 대신 큐잉.
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: KIS 토큰 캐시 복원 (하루 1회 발급 보장 정합 — read 전용)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/verity_kis_token.json
+          key: kis-token-v2-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            kis-token-v2-${{ runner.os }}-
+
+      - name: Collect US daily (KIS overseas dailyprice · cache_only · 수정주가)
+        env:
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$KIS_APP_KEY" ]; then
+            echo "[us_chart_daily] KIS secrets 미설정 — skip"
+            exit 0
+          fi
+          python -m api.collectors.us_chart_daily
+
+      - name: Commit us_chart_daily.json
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/us_chart_daily.json
+          if git diff --staged --quiet; then
+            echo "[us_chart_daily] 변화 없음 — 종료"
+            exit 0
+          fi
+          TODAY=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git commit -m "US 정렬 일봉 갱신 ${TODAY} (공분산 소스, KIS 수정주가)"
+          for i in 1 2 3; do
+            if git pull --rebase --autostash -X ours origin main && git push origin main; then
+              echo "[us_chart_daily] push 성공 (시도 $i)"
+              exit 0
+            fi
+            echo "[us_chart_daily] push 시도 $i 실패 — 재시도"
+            sleep $((i * 5))
+          done
+          echo "::warning::[us_chart_daily] push 3회 실패"

@@ -261,7 +261,10 @@ VAMS_REDESIGN_SHARPE = _env_float("VAMS_REDESIGN_SHARPE", 0.5)                  
 VAMS_REGIME_DRAWDOWN_PCT = _env_float("VAMS_REGIME_DRAWDOWN_PCT", 10.0)          # 벤치마크 조정 감지선 (%)
 
 # V6: 포트폴리오 레벨 리스크 제어
-VAMS_KELLY_SCALE = _env_float("VAMS_KELLY_SCALE", 0.5)
+# V7 (PREREG_KELLY_FIX_2026_08_02 D1, PM 승인 2026-08-02): half(0.5) → quarter(0.25) 통일.
+# 근거 = 파라미터 불확실 하 fractional Kelly(MacLean·Thorp·Ziemba 2011 / Baker-McHale shrinkage).
+# 용법 변경: 옛 "kelly_raw 에 곱하는 분수"(상쇄 결함) → 신 "중립 대비 mult 민감도 φ".
+VAMS_KELLY_SCALE = _env_float("VAMS_KELLY_SCALE", 0.25)
 VAMS_MAX_SECTOR_PCT = _env_float("VAMS_MAX_SECTOR_PCT", 35.0)
 VAMS_MAX_PORTFOLIO_BETA = _env_float("VAMS_MAX_PORTFOLIO_BETA", 1.5)
 VAMS_MAX_SINGLE_THEME_PCT = _env_float("VAMS_MAX_SINGLE_THEME_PCT", 40.0)

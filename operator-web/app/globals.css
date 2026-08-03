@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+    color-scheme: light dark;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        system-ui, sans-serif;
+    /* 공개 알파네스트 표준 배경 (PublicInvestorPortfolios/NPSHoldings 정합) */
+    background: #f2f4f6;
+    -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #0f1318;
+    }
+}
+:root[data-theme="dark"] body {
+    background: #0f1318;
+}
+:root[data-theme="light"] body {
+    background: #f2f4f6;
+}
+
+/* v2 밀집 터미널 — 3컬럼 그리드 (토스 기반 목업 정합). 경계=배경대비, 외곽선 없음 */
+.af-term {
+    display: grid;
+    grid-template-columns: 264px minmax(0, 1fr) 356px;
+    gap: 12px;
+    align-items: start;
+}
+.af-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: sticky;
+    top: 12px;
+}
+.af-center {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+.af-mkt {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+@media (max-width: 1120px) {
+    .af-term {
+        grid-template-columns: 1fr;
+    }
+    .af-rail {
+        position: static;
+    }
+}

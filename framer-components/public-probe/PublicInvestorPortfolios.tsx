@@ -21,6 +21,12 @@ import { useEffect, useMemo, useRef, useState } from "react"
  * 실패 시 FX_FALLBACK. 적용 환율·기준시각을 화면에 표기해 환산값의 출처를 감추지 않는다.
  *
  * 다크모드 = body[data-framer-theme] 자가감지 (기존 컴포넌트와 동일 — 손복사 드리프트 금지).
+ *
+ * 모바일 = 루트 ResizeObserver 실폭 기준 narrow(<620). PublicCalendar 등 형제 컴포넌트와 동일 관례
+ *   (뷰포트가 아니라 **컴포넌트 실폭** — Framer 는 컨테이너 폭이 뷰포트와 다르다).
+ *   620 인 이유 = 좌 330px + 우 1fr 2단이라 그 아래에서는 두 열이 동시에 뭉개진다.
+ *   narrow 시: 2단→세로 스택 / 좌측 목록 sticky 해제(모바일에서 화면 잠식) + 높이 300 /
+ *   상세 패딩 축소 / 산점도 높이 230·x눈금 3개·축라벨 축약.
  */
 
 const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
@@ -443,11 +449,13 @@ function StyleMap({
     sel,
     onPick,
     C,
+    narrow,
 }: {
     list: any[]
     sel: number
     onPick: (i: number) => void
     C: typeof LIGHT
+    narrow?: boolean
 }) {
     const [w, setW] = useState(560)
     const hostRef = useRef<HTMLDivElement | null>(null)
@@ -473,8 +481,10 @@ function StyleMap({
         .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
 
     // 🚨 ReturnLine 과 같은 이유로 실픽셀 좌표를 쓴다 — viewBox 를 늘리면 텍스트까지 왜곡된다.
-    const H = 300
-    const PAD = { t: 16, r: 18, b: 34, l: 44 }
+    const H = narrow ? 230 : 300
+    const PAD = narrow
+        ? { t: 14, r: 12, b: 32, l: 34 }
+        : { t: 16, r: 18, b: 34, l: 44 }
     if (pts.length < 3) return null
     const xs = pts.map((p) => p.x)
     const ys = pts.map((p) => p.y)
@@ -497,7 +507,7 @@ function StyleMap({
                 role="img"
                 aria-label="집중도와 분기 기복으로 본 운용사 분포"
             >
-                {[0, 25, 50, 75, 100].map((g) => (
+                {(narrow ? [0, 50, 100] : [0, 25, 50, 75, 100]).map((g) => (
                     <g key={g}>
                         <line
                             x1={px(g)}
@@ -542,11 +552,14 @@ function StyleMap({
                     fontWeight={600}
                     transform={`rotate(-90 12 ${PAD.t + innerH / 2})`}
                 >
-                    분기 기복 — 위일수록 출렁임
+                    {narrow ? "분기 기복 ↑" : "분기 기복 — 위일수록 출렁임"}
                 </text>
-                {pts.map((p) => {
-                    const on = p.i === sel
-                    return (
+                {/* 🚨 선택 점을 마지막에 그린다. SVG 는 문서 순서대로 덮으므로 그냥 map 하면
+                    뒤 인덱스 점들이 선택 점의 이름표를 가린다(2026-08-01 PM 스크린샷 — "켄 피셔"
+                    라벨이 다른 점 뒤로 들어감). z-index 는 SVG 에 안 먹으니 순서로 해결한다. */}
+                {pts
+                    .filter((p) => p.i !== sel)
+                    .map((p) => (
                         <g
                             key={p.i}
                             onClick={() => onPick(p.i)}
@@ -555,28 +568,50 @@ function StyleMap({
                             <circle
                                 cx={px(p.x)}
                                 cy={py(p.y)}
-                                r={on ? 8 : 5}
-                                fill={on ? C.vt : C.card}
-                                stroke={on ? C.vt : C.faint}
-                                strokeWidth={on ? 0 : 1.6}
+                                r={5}
+                                fill={C.card}
+                                stroke={C.faint}
+                                strokeWidth={1.6}
                             />
                             <title>{`${p.name} · 집중도 ${p.x.toFixed(0)}% · 기복 ${p.y.toFixed(1)}`}</title>
-                            {on ? (
-                                <text
-                                    x={px(p.x)}
-                                    y={py(p.y) - 13}
-                                    textAnchor="middle"
-                                    fill={C.vt}
-                                    fontFamily={FONT}
-                                    fontSize={12}
-                                    fontWeight={750}
-                                >
-                                    {p.name}
-                                </text>
-                            ) : null}
                         </g>
-                    )
-                })}
+                    ))}
+                {pts
+                    .filter((p) => p.i === sel)
+                    .map((p) => (
+                        <g key={p.i} style={{ cursor: "pointer" }}>
+                            {/* 이름표 자리를 비우는 후광 — 점이 촘촘한 구간에서도 읽히게.
+                                paintOrder="stroke" 로 외곽선을 글자 뒤에 깐다. */}
+                            <text
+                                x={px(p.x)}
+                                y={py(p.y) - 14}
+                                textAnchor="middle"
+                                fill={C.vt}
+                                stroke={C.card}
+                                strokeWidth={3.5}
+                                paintOrder="stroke"
+                                strokeLinejoin="round"
+                                fontFamily={FONT}
+                                fontSize={12.5}
+                                fontWeight={750}
+                            >
+                                {p.name}
+                            </text>
+                            <circle
+                                cx={px(p.x)}
+                                cy={py(p.y)}
+                                r={9}
+                                fill={C.card}
+                            />
+                            <circle
+                                cx={px(p.x)}
+                                cy={py(p.y)}
+                                r={7}
+                                fill={C.vt}
+                            />
+                            <title>{`${p.name} · 집중도 ${p.x.toFixed(0)}% · 기복 ${p.y.toFixed(1)}`}</title>
+                        </g>
+                    ))}
             </svg>
         </div>
     )
@@ -593,6 +628,10 @@ export default function PublicInvestorPortfolios(props: {
     topN?: number
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    // 모바일 대응 — 루트 실폭 측정 (PublicCalendar 등 형제 컴포넌트와 동일 관례).
+    // 좌 330px + 우 1fr 2단이라 620 미만에서는 두 열이 다 뭉개진다 → 세로 스택으로 전환.
+    const rootRef = useRef<HTMLDivElement | null>(null)
+    const [rootW, setRootW] = useState(0)
     const [themeDark, setThemeDark] = useState<boolean>(() =>
         onCanvas ? !!props.dark : readBodyDark()
     )
@@ -655,6 +694,17 @@ export default function PublicInvestorPortfolios(props: {
         }
     }, [onCanvas, props.macroUrl])
 
+    useEffect(() => {
+        const el = rootRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver((e) => {
+            for (const x of e) setRootW(x.contentRect.width)
+        })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+
+    const narrow = rootW > 0 && rootW < 620
     const C = themeDark ? DARK : LIGHT
     const list: any[] = useMemo(
         () => (data && Array.isArray(data.investors) ? data.investors : []),
@@ -708,6 +758,7 @@ export default function PublicInvestorPortfolios(props: {
 
     return (
         <div
+            ref={rootRef}
             style={{
                 width: "100%",
                 background: C.bg,
@@ -861,7 +912,7 @@ export default function PublicInvestorPortfolios(props: {
                     점을 누르면 아래에서 자세히 볼 수 있습니다. 오른쪽일수록 소수 종목에
                     몰아서 담았고, 위일수록 분기마다 성과가 출렁였습니다.
                 </div>
-                <StyleMap list={list} sel={sel} onPick={setSel} C={C} />
+                <StyleMap list={list} sel={sel} onPick={setSel} C={C} narrow={narrow} />
                 <div
                     style={{
                         fontSize: 11.5,
@@ -877,8 +928,10 @@ export default function PublicInvestorPortfolios(props: {
 
             <div
                 style={{
-                    display: "grid",
-                    gridTemplateColumns: "minmax(0,330px) minmax(0,1fr)",
+                    display: narrow ? "block" : "grid",
+                    gridTemplateColumns: narrow
+                        ? undefined
+                        : "minmax(0,330px) minmax(0,1fr)",
                     gap: 18,
                     alignItems: "start",
                 }}
@@ -892,9 +945,11 @@ export default function PublicInvestorPortfolios(props: {
                         borderRadius: 16,
                         overflow: "hidden",
                         minWidth: 0,
-                        position: "sticky",
-                        top: 12,
-                        maxHeight: "calc(100vh - 24px)",
+                        // 모바일에선 sticky 사이드바가 화면을 잡아먹는다 → 일반 흐름 + 낮은 높이
+                        position: narrow ? "static" : "sticky",
+                        top: narrow ? undefined : 12,
+                        maxHeight: narrow ? 300 : "calc(100vh - 24px)",
+                        marginBottom: narrow ? 14 : 0,
                         display: "flex",
                         flexDirection: "column",
                     }}
@@ -1040,7 +1095,7 @@ export default function PublicInvestorPortfolios(props: {
                     style={{
                         background: C.card,
                         borderRadius: 16,
-                        padding: "18px 20px 22px",
+                        padding: narrow ? "16px 14px 18px" : "18px 20px 22px",
                         minWidth: 0,
                     }}
                 >

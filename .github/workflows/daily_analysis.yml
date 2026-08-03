@@ -22,6 +22,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   # 🚨 RULE 1 — GH Actions 단일 발급원 (PM 2026-05-31). 발급 직후 Supabase publish (Railway/Vercel 소비).
   KIS_SHARED_TOKEN: "1"
+  # 🚨 RULE 1 이중발급 fix (2026-08-02, PM 승인 option1) — 이 워크플로는 발급 금지, 공유 토큰 읽기 전용.
+  #   7/21·6/26 daily_realtime×daily_analysis 동시 발급 실증. 발급자 = kis_token_refresh(주)+daily_realtime(백업)만.
+  KIS_CACHE_ONLY: "1"
 
 permissions:
   contents: write
@@ -238,6 +241,24 @@ jobs:
           # SERVICE_ROLE_KEY: api/health.py _check_reports_signed_url 가 signed URL 발급 검증할 때 필요 (write 권한).
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python api/main.py
+
+      # Tranche B dual-write (#9 봉인) — 크라운주얼 트레일을 VERITY-private 에도 동기.
+      # 단계 설계(private_data.py MANIFEST): dual-write N=2 검증 → 소비자 pull 배선 → public 추적 해제.
+      # continue-on-error + 스크립트 자체 토큰-없음 skip = 파이프라인 보호. 변경 시에만 push(무변경 커밋 방지).
+      # 🚨 public 추적 해제 후엔 git diff 가드가 무력(untracked=quiet) — 해제 시 가드 제거 의무.
+      - name: Private data sync (Tranche B)
+        if: always()
+        continue-on-error: true
+        env:
+          PRIVATE_DATA_PAT: ${{ secrets.PRIVATE_DATA_PAT }}
+        run: |
+          for f in data/factor_ic_history.json data/recommendations.json data/portfolio.json; do
+            if git diff --quiet -- "$f" && git diff --cached --quiet -- "$f"; then
+              echo "[private_data] unchanged skip $f"
+            else
+              python scripts/private_data.py push "$f"
+            fi
+          done
 
       - name: Commit & push results
         run: |

@@ -29,6 +29,9 @@ UPLOADS = [
     ("data/admin_todos.json", "_operator/admin_todos.json", "application/json"),
     # 2026-08-01 3종 LLM 종합(오퍼레이터 전용, Brain grounding) — 공개 blob 아님, private+authed 만.
     ("data/tri_synthesis.json", "_operator/tri_synthesis.json", "application/json"),
+    ("data/verification_report.json", "_operator/verification_report.json", "application/json"),
+    # 중용 목표비중 — 태생부터 봉인(gitignore, 공개 발행 금지). private bucket + authed 만.
+    ("data/moderation_portfolio.json", "_operator/moderation_portfolio.json", "application/json"),
 ]
 
 
