@@ -22,6 +22,7 @@ import Workspace from "./components/Workspace"
 import Blotter from "./components/Blotter"
 import PicksTable from "./components/PicksTable"
 import FeedPanel, { P0Line } from "./components/FeedPanel"
+import NewsTicker, { type NewsItem } from "./components/NewsTicker"
 import PanelBoundary from "./components/PanelBoundary"
 
 export default function Home() {
@@ -97,6 +98,16 @@ export default function Home() {
         if (r.ticker && r.name && !names[r.ticker]) names[String(r.ticker)] = r.name
     })
 
+    // 뉴스 티커 — 금융 필터 수집분만(국내·월가), 교차 배치로 다양성
+    const newsItems: NewsItem[] = []
+    const kr = (pf?.headlines || []).filter((h) => h && h.title)
+    const us = (pf?.bloomberg_google_headlines || []).filter((h) => h && h.title)
+    const maxLen = Math.max(kr.length, us.length)
+    for (let k = 0; k < maxLen && newsItems.length < 40; k++) {
+        if (k < kr.length) newsItems.push({ tag: "국내", title: String(kr[k].title), link: kr[k].link })
+        if (k < us.length) newsItems.push({ tag: "월가", title: String(us[k].title), link: us[k].link })
+    }
+
     const explain: MarketExplain = {
         analysis: pf?.daily_report?.market_analysis,
         strategy: pf?.daily_report?.strategy,
@@ -115,6 +126,7 @@ export default function Home() {
                 <AccountHud vams={pf?.vams} status={pfStatus} />
                 <P0Line alerts={alerts} holdTickers={holdT} />
                 <MarketStrip explain={explain} />
+                <NewsTicker items={newsItems} />
 
                 {/* 3열 — 각 컬럼 내부 스크롤 (토스식 섹션 고정) */}
                 <div className="af-term">
