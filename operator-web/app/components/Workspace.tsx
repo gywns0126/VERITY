@@ -125,6 +125,9 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
                 ) : (
                     <span style={{ fontSize: 11, color: c.faint }}>US 실시간 시세 미지원 (전일종가 체계)</span>
                 )}
+                {isKR && typeof q[ticker]?.low === "number" && typeof q[ticker]?.high === "number" && (q[ticker]!.high as number) > (q[ticker]!.low as number) ? (
+                    <DayRange c={c} low={q[ticker]!.low as number} high={q[ticker]!.high as number} px={typeof live === "number" ? live : null} />
+                ) : null}
                 {strength !== null ? (
                     <span
                         style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 800, color: strength >= 100 ? c.up : c.down, background: strength >= 100 ? c.upS : c.downS, borderRadius: 8, padding: "4px 9px", ...NUM }}
@@ -188,6 +191,23 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
             <div style={{ borderTop: `1px solid ${c.line}`, paddingTop: 12 }}>
                 <TriSynthesisPanel />
             </div>
+        </div>
+    )
+}
+
+// 1일 범위 바 — 토스 종목 헤더 문법 (저가~고가 트랙 + 현재가 위치 마커). /quotes 실데이터.
+function DayRange({ c, low, high, px }: { c: Palette; low: number; high: number; px: number | null }) {
+    const pos = px !== null && high > low ? Math.min(100, Math.max(0, ((px - low) / (high - low)) * 100)) : null
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 170 }}>
+            <span style={{ fontSize: 9.5, color: c.faint, ...NUM, flexShrink: 0 }}>{Math.round(low).toLocaleString()}</span>
+            <div style={{ position: "relative", flex: 1, height: 4, borderRadius: 999, background: c.track, minWidth: 70 }}>
+                {pos !== null ? (
+                    <span style={{ position: "absolute", left: `${pos}%`, top: -2.5, width: 9, height: 9, borderRadius: "50%", background: c.vt, transform: "translateX(-50%)", boxShadow: "0 0 0 2px rgba(108,92,231,0.25)" }} />
+                ) : null}
+            </div>
+            <span style={{ fontSize: 9.5, color: c.faint, ...NUM, flexShrink: 0 }}>{Math.round(high).toLocaleString()}</span>
+            <span style={{ fontSize: 9, color: c.faint, flexShrink: 0 }}>1일</span>
         </div>
     )
 }

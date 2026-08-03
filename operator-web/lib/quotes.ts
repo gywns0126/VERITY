@@ -11,6 +11,9 @@ export type Quote = {
     change?: number
     change_pct?: number
     volume?: number
+    open?: number
+    high?: number
+    low?: number
 }
 
 const POLL_MS = 3000
