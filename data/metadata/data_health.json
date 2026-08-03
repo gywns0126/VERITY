@@ -1,31 +1,32 @@
 {
  "_meta": {
-  "generated_at": "2026-08-03T11:12:16.686924+09:00",
+  "generated_at": "2026-08-03T15:15:55.412592+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
  "reasons": [
-  "CDN age 123s > 120s(스테일 서빙)"
+  "커버리지 회귀 경고 1건",
+  "비P0 stale 1건"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-03T11:12:16.633256+09:00",
+  "generated_at": "2026-08-03T15:15:55.354258+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 123,
+  "max_cdn_age_s": 31,
   "files": [
    {
     "file": "stock_report_public.json",
     "ok": true,
     "pct": {
-     "PER": 72.0,
-     "PBR": 95.7
+     "PER": 71.1,
+     "PBR": 95.9
     },
-    "total": 1499,
-    "cdn_age_s": 120,
+    "total": 1594,
+    "cdn_age_s": 29,
     "error": null
    },
    {
@@ -36,7 +37,7 @@
      "PBR": 94.9
     },
     "total": 1505,
-    "cdn_age_s": 123,
+    "cdn_age_s": 31,
     "error": null
    },
    {
@@ -47,30 +48,30 @@
      "PBR": 73.7
     },
     "total": 3951,
-    "cdn_age_s": 121,
+    "cdn_age_s": 31,
     "error": null
    }
   ]
  },
  "coverage": {
-  "generated_at": "2026-08-01T13:45:30.753404+09:00",
-  "kr_total": 1499,
+  "generated_at": "2026-08-03T14:25:53.343733+09:00",
+  "kr_total": 1594,
   "us_total": 1505,
   "core_fill_pct": {
-   "fields.facts.PBR": 95.7,
-   "fields.facts.PER": 72.0,
+   "fields.facts.PBR": 95.9,
+   "fields.facts.PER": 71.1,
    "us_fields.facts.PBR": 94.9,
    "us_fields.facts.PER": 86.3
   },
   "last_run_blocked": false,
   "last_run_fails": 0,
-  "last_run_warns": 0
+  "last_run_warns": 1
  },
  "freshness": {
-  "generated_at": "2026-08-03T11:12:14.657888+09:00",
+  "generated_at": "2026-08-03T15:15:51.855627+09:00",
   "summary": {
-   "fresh": 60,
-   "stale": 0,
+   "fresh": 59,
+   "stale": 1,
    "closed": 0,
    "discontinued": 2,
    "p0": {
@@ -87,12 +88,14 @@
    },
    "p2": {
     "total": 36,
-    "fresh": 35,
+    "fresh": 34,
     "closed": 0,
     "active": 35
    }
   },
   "stale_p0": [],
-  "stale_other": []
+  "stale_other": [
+   "freshness_board"
+  ]
  }
 }
