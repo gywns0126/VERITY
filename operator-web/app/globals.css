@@ -52,7 +52,8 @@ body {
 }
 .af-mkt {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+    /* 10카드 1줄 수용(넓은 화면) — 138px 하한. 좁으면 자연 개행. */
+    grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
     gap: 10px;
     margin-bottom: 12px;
 }
