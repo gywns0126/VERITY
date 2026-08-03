@@ -4912,6 +4912,19 @@ export default function PublicStockReport(props: Props) {
     const overview = s.overview || null
     const realEstate = s.real_estate || null
     const peer = s.peer || null
+    /* 지표 카드의 값 출처 통일 — peer.rows 에 같은 키가 있으면 그 value 를 쓴다.
+       peer 는 DART 재무 기준이라 facts 오염(결손의 0 인코딩)에 영향받지 않는다.
+       되돌리지 말 것 (2026-08-03) — 값=facts / 중앙값=peer 로 갈라두면 한 카드 안에서
+       "ROE 0% · 업종 중앙값 4.6%" 처럼 서로 어긋난 숫자가 뜬다. */
+    const peerVal = (k: string): string => {
+        const rows = peer && Array.isArray(peer.rows) ? peer.rows : null
+        if (!rows) return ""
+        for (let i = 0; i < rows.length; i++) {
+            if (rows[i] && rows[i].key === k && rows[i].value)
+                return String(rows[i].value)
+        }
+        return ""
+    }
     const financials = s.financials
     const finGroups =
         financials && Array.isArray(financials.groups) ? financials.groups : []
@@ -6886,7 +6899,12 @@ export default function PublicStockReport(props: Props) {
                                             margin: "3px 0",
                                         }}
                                     >
-                                        {money(facts[k])}
+                                        {/* 🚨 값과 중앙값은 **같은 출처**여야 한다 (2026-08-03).
+                                            옛 코드는 값=facts / 중앙값=peer 로 출처가 갈려, facts 가
+                                            오염된 종목에서 "ROE 0% · 업종 중앙값 4.6%" 처럼 한 카드
+                                            안에서 서로 어긋난 숫자가 떴다(제이엠티, PM 지적).
+                                            peer 는 DART 재무로 산출되므로 있으면 그쪽을 쓴다. */}
+                                        {money(peerVal(k) || facts[k])}
                                     </div>
                                     {(() => {
                                         // 기준점 = 업종 중앙값 대비(peer). 외부 사실 비교일 뿐 좋다·나쁘다 판단 아님(RULE 7).
