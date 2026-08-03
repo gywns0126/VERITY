@@ -6,7 +6,7 @@ import { useDark, palette, FONT, type Palette } from "@/lib/theme"
 import { clearSession, loadSession } from "@/lib/supabase"
 import StockSearch from "./StockSearch"
 
-export default function TopBar({ active }: { active: "terminal" | "system" }) {
+export default function TopBar({ active }: { active: "terminal" | "macro" | "system" }) {
     const dark = useDark()
     const c = palette(dark)
     const [who, setWho] = useState("")
@@ -51,6 +51,7 @@ export default function TopBar({ active }: { active: "terminal" | "system" }) {
             </span>
             <nav style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                 <a href="/" style={tab(active === "terminal")}>터미널</a>
+                <a href="/macro" style={tab(active === "macro")}>거시</a>
                 <a href="/system" style={tab(active === "system")}>구성 · 검증</a>
             </nav>
             {active === "terminal" ? (

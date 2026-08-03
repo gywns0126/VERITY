@@ -167,8 +167,11 @@ export default function MacroPanel({ data }: { data: PortfolioFull | null }) {
                     </div>
                     {rot?.recommended_sectors?.length ? (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                            {/* 🚨 객체 배열 — s.name 만 렌더 (문자열 취급 = 크래시, 2026-08-03 실사고) */}
                             {rot.recommended_sectors.slice(0, 4).map((s, i) => (
-                                <span key={i} style={{ fontSize: 10, fontWeight: 700, color: c.vt, background: c.vtS, borderRadius: 6, padding: "2px 7px" }}>{s}</span>
+                                <span key={i} style={{ fontSize: 10, fontWeight: 700, color: c.vt, background: c.vtS, borderRadius: 6, padding: "2px 7px", ...NUM }}>
+                                    {s?.name || "—"}{typeof s?.change_pct === "number" ? ` ${s.change_pct > 0 ? "+" : ""}${s.change_pct.toFixed(1)}%` : ""}
+                                </span>
                             ))}
                         </div>
                     ) : null}
@@ -216,6 +219,9 @@ export default function MacroPanel({ data }: { data: PortfolioFull | null }) {
                 </div>
             ) : null}
 
+            <a href="/macro" style={{ display: "block", textAlign: "center", background: c.hi, color: c.vt, borderRadius: 9, padding: "8px 0", fontSize: 11.5, fontWeight: 800, textDecoration: "none" }}>
+                거시 전체 보기 — 섹터 · 이벤트 · 월가 · 고래
+            </a>
             <div style={{ fontSize: 9.5, color: c.faint }}>LLM 의견=의견 · 자기 산식=가설 · 매수/매도 지시 아님</div>
         </div>
     )
