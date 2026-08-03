@@ -78,8 +78,10 @@ export default function TriSynthesisPanel() {
         return (
             <div style={wrapStyle}>
                 {title}
-                <div style={{ color: status === "auth" ? c.sub : c.down, fontSize: 13, lineHeight: 1.5 }}>
-                    {status === "auth" ? "오퍼레이터 로그인이 필요합니다 (비공개)." : "데이터를 불러오지 못했습니다."}
+                <div style={{ color: c.sub, fontSize: 13, lineHeight: 1.55 }}>
+                    {status === "auth"
+                        ? "오퍼레이터 로그인이 필요합니다 (비공개)."
+                        : "3종 LLM 종합 미적재 — 주 1회 사전계산(비용 관리). 배치 완료 후 자동 표시됩니다."}
                 </div>
             </div>
         )

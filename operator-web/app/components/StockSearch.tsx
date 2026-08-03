@@ -22,7 +22,7 @@ function loadRecent(): Stock[] {
     }
 }
 
-export default function StockSearch({ placeholder = "종목명·티커 검색" }: { placeholder?: string }) {
+export default function StockSearch({ placeholder = "종목명·티커 검색", floating = false }: { placeholder?: string; floating?: boolean }) {
     const dark = useDark()
     const c = palette(dark)
     const [universe, setUniverse] = useState<Stock[]>([])
@@ -98,21 +98,37 @@ export default function StockSearch({ placeholder = "종목명·티커 검색" }
         )
     }
 
+    // floating = 커맨드바 모드: 결과를 입력창 아래 절대배치 드롭다운으로 (레이아웃 밀림 0).
+    const resultsBox = results.length > 0 ? (
+        <div
+            style={{
+                background: c.card,
+                borderRadius: 14,
+                boxShadow: floating ? "0 8px 28px rgba(0,0,0,0.16)" : "0 1px 3px rgba(0,0,0,0.05)",
+                padding: 6,
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                ...(floating
+                    ? { position: "absolute" as const, top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 60, maxHeight: 420, overflowY: "auto" as const }
+                    : { marginTop: 8 }),
+            }}
+        >
+            {results.map((it, i) => <Row key={(it.ticker || "") + i} item={it} k={(it.ticker || "") + i} />)}
+        </div>
+    ) : null
+
     return (
-        <div style={{ fontFamily: FONT, width: "100%", boxSizing: "border-box" }}>
+        <div style={{ fontFamily: FONT, width: "100%", boxSizing: "border-box", position: floating ? "relative" : "static" }}>
             <input
                 id="af-search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={placeholder}
-                style={{ width: "100%", boxSizing: "border-box", background: inputBg, color: c.ink, border: "none", borderRadius: 12, padding: "13px 15px", fontSize: 15, fontFamily: FONT, outline: "none" }}
+                style={{ width: "100%", boxSizing: "border-box", background: inputBg, color: c.ink, border: "none", borderRadius: floating ? 10 : 12, padding: floating ? "9px 13px" : "13px 15px", fontSize: floating ? 13.5 : 15, fontFamily: FONT, outline: "none" }}
             />
-            {results.length > 0 ? (
-                <div style={{ marginTop: 8, background: c.card, borderRadius: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", padding: 6, display: "flex", flexDirection: "column", gap: 2 }}>
-                    {results.map((it, i) => <Row key={(it.ticker || "") + i} item={it} k={(it.ticker || "") + i} />)}
-                </div>
-            ) : null}
-            {results.length === 0 && recent.length > 0 ? (
+            {resultsBox}
+            {!floating && results.length === 0 && recent.length > 0 ? (
                 <div style={{ marginTop: 10 }}>
                     <div style={{ fontSize: 11, color: c.faint, marginBottom: 7, paddingLeft: 2 }}>최근 검색</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>

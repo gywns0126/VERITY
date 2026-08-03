@@ -173,7 +173,7 @@ function PerfLive({ c, p }: { c: Palette; p: Perf }) {
                 {cell("Sharpe 14d", p.sharpe_14d, false)}
             </div>
             <div style={{ fontSize: 11, color: c.amber, lineHeight: 1.5 }}>
-                ⚠ 예비 결과 — 표본수·신뢰구간 확인 전 판단 유보(N&lt;252, 2027 게이트 전).
+                예비 결과 — 표본수·신뢰구간 확인 전 판단 유보(N&lt;252, 2027 게이트 전).
             </div>
         </div>
     )
