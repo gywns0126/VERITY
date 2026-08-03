@@ -34,6 +34,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
+# 🚨 KIS 실시간 (Railway) — **오퍼레이터 본인 이용만**. 재배포 금지가 걸리는 건 제3자 배포이지
+#   본인 조회가 아니다(2026-07 컴플라이언스: 공개 발행은 T+1 금융위, 본인 이용은 KIS 실시간 OK).
+#   이 서버는 KIS_SHARED_TOKEN **순수 소비자**(발급 0) — RULE 1(1일 1토큰) 무관.
+#   2026-08-03 추가 사유: 종가만 보다가 장중 급등을 못 봤다(PM 지적 "실시간가 보면 되는걸").
+RAILWAY = os.environ.get("VERITY_REALTIME_URL", "https://verity-production-1e44.up.railway.app")
 _KST = timezone(timedelta(hours=9))
 # 캐시 위치 — Vercel 함수는 /tmp 만 쓰기 가능(레포 경로 read-only). 로컬 CLI 는 repo .cache.
 _CACHE_BASE = os.environ.get("OPERATOR_CACHE_DIR") or (
@@ -207,6 +212,31 @@ def _trim(v: Any, cap: int = 12) -> Any:
 
 
 # ── private bucket ───────────────────────────────────────────────────────────
+def _realtime(tk: str) -> Optional[Dict[str, Any]]:
+    """KIS 실시간 시세 (오퍼레이터 본인 이용). 미도달/장 마감이면 None — 조인을 막지 않는다.
+
+    🚨 이 값을 공개 발행물에 싣지 말 것. 공개 경로의 평가 기준가는 T+1 kr_close_latest 유지.
+    """
+    if not re.fullmatch(r"\d{6}", tk or ""):
+        return None  # v1 = KR 6자리만
+    doc = _fetch_json(f"{RAILWAY}/quotes?tickers={tk}", None)
+    q = ((doc or {}).get("quotes") or {}).get(tk)
+    if not isinstance(q, dict) or not q.get("price"):
+        return None
+    out: Dict[str, Any] = {
+        "현재가": q.get("price"),
+        "전일종가": q.get("prev_close"),
+        "등락": q.get("change"),
+        "등락률": f"{float(q.get('change_pct', 0)):+.2f}%" if q.get("change_pct") is not None else None,
+        "거래량": q.get("volume"),
+        "시가": q.get("open"), "고가": q.get("high"), "저가": q.get("low"),
+        "상한가": q.get("upper_limit"), "하한가": q.get("lower_limit"),
+        "_asof": (doc or {}).get("asof"),
+        "_note": "KIS 실시간 · 오퍼레이터 본인 이용 · 재배포 금지",
+    }
+    return {k: v for k, v in out.items() if v is not None}
+
+
 def _private_json(path: str) -> Optional[Any]:
     url = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
@@ -253,6 +283,16 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
             except Exception:
                 docs[f] = None
 
+    # 실시간 — 있으면 **가장 먼저**. 종가만 보다가 장중을 놓치는 사고 방지(2026-08-03).
+    rt = _realtime(tk) if include_private else None
+    if rt:
+        out["sections"].append({
+            "label": "실시간 시세 (KIS · 본인 이용)", "source": "railway:quotes",
+            "as_of": str(rt.pop("_asof", "") or ""), "data": rt,
+        })
+    else:
+        out["missing"].append("실시간 시세 (KIS — 미도달·장 마감·비KR)")
+
     # 종가 — 전 종목 동일 거래일(kr_close_latest). 등락은 prev 있을 때만.
     d = docs.get("kr_close_latest.json")
     if isinstance(d, dict):
@@ -262,8 +302,12 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
             blk: Dict[str, Any] = {"종가": px}
             if prev:
                 blk["전일종가"] = prev
-                blk["등락률"] = f"{(px - prev) / prev * 100:+.2f}%"
-            _add("종가", "kr_close_latest.json", d, blk)
+            # 등락률 = 발행본 chg 우선(원천 fltRt=수정주가 기준). 자본변경 종목은 발행에서 빠지므로
+            # 차분 재계산 금지 — 플루토스 +380% 같은 거짓이 되살아난다(2026-08-03).
+            cg = (d.get("chg") or {}).get(tk)
+            if cg is not None:
+                blk["등락률"] = f"{float(cg):+.2f}%"
+            _add("종가 (T+1 · 실시간 아님)", "kr_close_latest.json", d, blk)
         else:
             out["missing"].append("종가 (kr_close_latest.json — 당일 미거래·비수록)")
 

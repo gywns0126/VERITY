@@ -269,7 +269,11 @@ def emit_hot_stock(rows: List[Dict[str, Any]], as_of: str) -> None:
           f"거래대금={top[0]['trPrc'] / 1e8:.0f}억")
 
 
-def emit_close_latest(chunks: List[Dict[str, Any]], as_of: str) -> None:
+_LIMIT_PCT = 30.5   # KRX 가격제한폭 ±30% + 반올림 여유. 초과 = 자본변경/정지재개 의심.
+
+
+def emit_close_latest(chunks: List[Dict[str, Any]], as_of: str,
+                      rows: Optional[List[Dict[str, Any]]] = None) -> None:
     """전 종목 최신 종가 1행 맵 → data/kr_close_latest.json (경량 ~50KB).
 
     🚨 2026-07-31 신설 — 보유종목 평가손익 오표시 사고 수정.
@@ -280,11 +284,33 @@ def emit_close_latest(chunks: List[Dict[str, Any]], as_of: str) -> None:
       동일 as_of 라 이 왜곡이 없다 — 다만 청크 1개 ~780KB 라 보유목록이 통째 받기엔 무겁다.
       → 청크에서 마지막 캔들 종가만 추출한 평면 맵을 별도 발행(소비 = PublicHoldingsTab).
     수록 = 청크 최신 as_of 와 같은 날 종가만 (거래정지/상장폐지 종목의 옛 종가 혼입 차단).
+
+    🚨 2026-08-03 등락률 정정 — 자본변경/거래정지 재개 구간에서 전일 종가 차분이 거짓이 된다.
+      실측(20260731): 플루토스 481→2,310 = **+380%**, 금호전기 894→4,115 = **+360%**,
+      비비안 −35%. 셋 다 KRX 가격제한폭(±30%)을 넘어 물리적으로 불가능한 값이다.
+      원인 = 금융위는 정지 기간 동안 **직전 종가를 거래량 0 으로 반복** 제공하고, 재개일에는
+      자본변경(액면병합 등) 후 가격을 준다. 두 행을 그냥 빼면 병합 배수가 등락률로 둔갑한다.
+      원천의 `fltRt` 는 **수정주가 기준**이라 정확했다(각각 −3.95% / −7.94%).
+      → ① 등락률은 원천 fltRt 우선(`chg`), ② 정지·제한폭 초과 구간은 prev 자체를 빼서
+         소비자가 재계산해도 거짓이 나오지 않게 한다. 되돌리지 말 것.
     """
+    src_chg: Dict[str, float] = {}
+    if rows:
+        for r in rows:
+            code = str(r.get("srtnCd") or "").strip().upper()
+            if len(code) != 6:
+                continue
+            try:
+                src_chg[code] = float(str(r.get("fltRt")).replace(",", ""))
+            except (TypeError, ValueError):
+                pass
+
     prices: Dict[str, int] = {}
     prev: Dict[str, int] = {}
+    chg: Dict[str, float] = {}
     prev_as_of = ""
     stale = 0
+    suspect = 0
     for ch in chunks:
         for code, ent in (ch.get("stocks") or {}).items():
             candles = ent.get("c") or []
@@ -299,12 +325,24 @@ def emit_close_latest(chunks: List[Dict[str, Any]], as_of: str) -> None:
                 prices[code] = close
             # 전일 종가 — 등락률 소비자(모닝브리핑 총자산 증감·ETF 구성종목 히트맵)용.
             # 청크는 전 종목 동일 거래일 축이라 두 행이 **연속 거래일**임이 보장된다.
-            if len(candles) >= 2:
-                p = int(candles[-2][4])
-                if p > 0:
+            if close > 0 and len(candles) >= 2:
+                prow = candles[-2]
+                p = int(prow[4])
+                pvol = int(prow[5]) if len(prow) > 5 else 0
+                calc = ((close - p) / p * 100) if p > 0 else None
+                # 정지(거래량 0) 또는 제한폭 초과 = 두 행의 가격 기준이 다르다 → prev 비수록.
+                bad = p <= 0 or pvol == 0 or (calc is not None and abs(calc) > _LIMIT_PCT)
+                if bad:
+                    suspect += 1
+                else:
                     prev[code] = p
                     if not prev_as_of:
-                        prev_as_of = str(candles[-2][0])
+                        prev_as_of = str(prow[0])
+                    if calc is not None:
+                        chg[code] = round(calc, 2)
+            # 원천 fltRt 가 있으면 그것이 진실(수정주가 기준) — 차분 계산을 덮는다.
+            if code in prices and code in src_chg:
+                chg[code] = round(src_chg[code], 2)
     if len(prices) < 500:
         print(f"[fsc_daily_prices] close_latest 종목 부족 ({len(prices)}) — skip", file=sys.stderr)
         return
@@ -314,18 +352,24 @@ def emit_close_latest(chunks: List[Dict[str, Any]], as_of: str) -> None:
             "prev_as_of": prev_as_of,
             "count": len(prices),
             "prev_count": len(prev),
+            "chg_count": len(chg),
+            "chg_source": "원천 fltRt 우선(수정주가 기준), 없으면 전일 대비 차분",
             "excluded_stale": stale,
+            "excluded_suspect": suspect,
             "source": "금융위원회_주식시세정보 (data.go.kr/data/15094808 · 이용허락범위 제한 없음)",
-            "basis": "직전 거래일 종가 (T+1). 실시간 아님 — 평가 기준가·등락률 SoT.",
+            "basis": "직전 거래일 종가 (T+1). 실시간 아님 — 평가 기준가·등락률 SoT. "
+                     "자본변경·거래정지 재개 종목은 prev 비수록(차분이 거짓이 되므로).",
             "generated_at": datetime.now(_KST).isoformat(timespec="seconds"),
         },
         "prices": prices,
         "prev": prev,
+        "chg": chg,
     }
     with open(CLOSE_LATEST_PATH, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
     print(f"[fsc_daily_prices] close_latest as_of={as_of} 종목={len(prices)} "
-          f"(전일 {len(prev)}·{prev_as_of} / 당일 미거래 제외 {stale})")
+          f"(전일 {len(prev)}·{prev_as_of} / 등락률 {len(chg)} / "
+          f"당일 미거래 제외 {stale} / 자본변경·정지 제외 {suspect})")
 
 
 def _close_latest_current(as_of: str) -> bool:
@@ -338,7 +382,8 @@ def _close_latest_current(as_of: str) -> bool:
         return False
     if str((doc.get("_meta") or {}).get("as_of") or "") != str(as_of):
         return False
-    return bool(doc.get("prices")) and bool(doc.get("prev"))
+    # chg 는 2026-08-03 추가 — 날짜가 같아도 옛 스키마면 재발행시킨다.
+    return bool(doc.get("prices")) and bool(doc.get("prev")) and bool(doc.get("chg"))
 
 
 def run_daily() -> bool:
@@ -361,7 +406,7 @@ def run_daily() -> bool:
     _append_rows(chunks, rows)
     _save_chunks(chunks, latest)
     emit_hot_stock(rows, latest)  # 거래대금 1위 = 리포트 콜드 랜딩 디폴트
-    emit_close_latest(chunks, latest)  # 보유종목 평가 기준가 (전 종목 동일 as_of)
+    emit_close_latest(chunks, latest, rows)  # 평가 기준가 + 등락률(원천 fltRt)
     return True
 
 
