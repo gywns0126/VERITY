@@ -144,7 +144,13 @@ export default function MarketStrip() {
                 spark={n.sparkline}
                 flashKey={liveOk ? `${k}-${v}` : undefined}
                 dir={dir}
-                onOpen={() => setTarget({ kind: "macro", name, unit, series: n.sparkline || [], value: v, changePct: cp })}
+                onOpen={() =>
+                    setTarget(
+                        k === "kospi" || k === "kosdaq"
+                            ? { kind: "krindex", name, indexCd: k === "kospi" ? "0001" : "1001", value: v, changePct: cp }
+                            : { kind: "macro", name, unit, series: n.sparkline || [], value: v, changePct: cp }
+                    )
+                }
             />
         )
     }
