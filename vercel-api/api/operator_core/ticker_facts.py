@@ -197,6 +197,14 @@ def resolve_ticker(q: str) -> Tuple[str, str]:
         if bucket:
             r = bucket[0]
             return str(r.get("ticker") or ""), str(r.get("name") or "")
+    # US 심볼 패스스루 폴백 (2026-08-03 배선 감사) — 해석이 KR 전용이라 GOOGL 등 US 심볼이
+    # 여기서 죽어 전 섹션 조인 0 이 되던 갭. KR 이름 매칭이 전부 실패했을 때만 진입하므로
+    # 한글 질의 동작은 불변. 이름은 us_stock_names_ko(네이버 수집) 있으면 한글, 없으면 심볼.
+    u = s.upper()
+    if re.fullmatch(r"[A-Z]{1,5}([.-][A-Z])?", u):
+        ko = _load_local("data/us_stock_names_ko.json")
+        nm = ((ko or {}).get("names") or {}).get(u) if isinstance(ko, dict) else ""
+        return u, str(nm or u)
     return "", ""
 
 
