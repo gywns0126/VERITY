@@ -3634,8 +3634,8 @@
   {
     "type": "PARTIAL_SELL",
     "target_id": "target_1",
-    "date": "2026-08-03 19:14",
-    "timestamp": "2026-08-03T19:14:12+09:00",
+    "date": "2026-08-03 21:01",
+    "timestamp": "2026-08-03T21:01:40+09:00",
     "ticker": "RRC",
     "name": "RRC",
     "price": 57343.20032806396,
@@ -3653,8 +3653,8 @@
   {
     "type": "PARTIAL_SELL",
     "target_id": "target_2",
-    "date": "2026-08-03 19:14",
-    "timestamp": "2026-08-03T19:14:12+09:00",
+    "date": "2026-08-03 21:01",
+    "timestamp": "2026-08-03T21:01:40+09:00",
     "ticker": "RRC",
     "name": "RRC",
     "price": 57343.20032806396,
@@ -3667,6 +3667,41 @@
     "r_multiple": 2.0,
     "reason": "+2.0R reached, scale out",
     "rule_id": "exit_target_target_2",
+    "mode_tag": "moderate"
+  },
+  {
+    "type": "BUY",
+    "date": "2026-08-03 21:01",
+    "timestamp": "2026-08-03T21:01:40+09:00",
+    "ticker": "NEM",
+    "name": "NEM",
+    "asset_class": "US_STOCK",
+    "price": 133872.23049209593,
+    "effective_price": 133872.66,
+    "slippage_bps": 0.03,
+    "quantity": 6,
+    "total": 803355.9577718098,
+    "reason": "배리티 브레인 59점으로 관망하나, 멀티팩터 61점 매수 시그널 및 기관 목표가 37.9% 상승 여력 보입니다.",
+    "rule_id": "verdict_BUY",
+    "mode_tag": "moderate"
+  },
+  {
+    "type": "PARTIAL_SELL",
+    "target_id": "target_1",
+    "date": "2026-08-03 22:17",
+    "timestamp": "2026-08-03T22:17:08+09:00",
+    "ticker": "NEM",
+    "name": "NEM",
+    "price": 133713.86059364318,
+    "effective_price": 133702.5,
+    "slippage_bps": 0.85,
+    "quantity": 3,
+    "remaining_quantity": 3,
+    "total": 401047.4952521728,
+    "partial_pnl": -630.48,
+    "r_multiple": 1.0,
+    "reason": "+1.0R reached, lock in gains",
+    "rule_id": "exit_target_target_1",
     "mode_tag": "moderate"
   }
 ]
