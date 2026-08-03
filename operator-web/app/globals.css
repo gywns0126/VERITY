@@ -30,10 +30,11 @@ body {
     background: #f2f4f6;
 }
 
-/* v2 밀집 터미널 — 3컬럼 그리드 (토스 기반 목업 정합). 경계=배경대비, 외곽선 없음 */
+/* v3.1 터미널 — 3컬럼 그리드 (승인 목업 정합). 경계=배경대비, 외곽선 없음.
+   🚨 .af-rail sticky 금지 — 상단 sticky 바 아래로 텍스트 잘림 (PM 결함 #3, 2026-08-03). */
 .af-term {
     display: grid;
-    grid-template-columns: 264px minmax(0, 1fr) 356px;
+    grid-template-columns: 288px minmax(0, 1fr) 344px;
     gap: 12px;
     align-items: start;
 }
@@ -41,8 +42,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    position: sticky;
-    top: 12px;
+    min-width: 0;
 }
 .af-center {
     display: flex;
@@ -56,11 +56,40 @@ body {
     gap: 10px;
     margin-bottom: 12px;
 }
-@media (max-width: 1120px) {
+@media (max-width: 1240px) {
     .af-term {
         grid-template-columns: 1fr;
     }
-    .af-rail {
-        position: static;
+}
+
+/* 시세 tick 플래시 — 코인식 실시간 체감 (PM 결함 #4). key 교체로 리마운트 → 재생. */
+@keyframes af-flash-up {
+    from {
+        background: rgba(240, 68, 82, 0.2);
+    }
+    to {
+        background: transparent;
+    }
+}
+@keyframes af-flash-dn {
+    from {
+        background: rgba(49, 130, 246, 0.18);
+    }
+    to {
+        background: transparent;
+    }
+}
+.af-flash-up {
+    animation: af-flash-up 0.7s ease-out;
+    border-radius: 6px;
+}
+.af-flash-dn {
+    animation: af-flash-dn 0.7s ease-out;
+    border-radius: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .af-flash-up,
+    .af-flash-dn {
+        animation: none;
     }
 }
