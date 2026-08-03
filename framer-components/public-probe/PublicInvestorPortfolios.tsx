@@ -22,11 +22,11 @@ import { useEffect, useMemo, useRef, useState } from "react"
  *
  * 다크모드 = body[data-framer-theme] 자가감지 (기존 컴포넌트와 동일 — 손복사 드리프트 금지).
  *
- * 모바일 = 루트 ResizeObserver 실폭 기준 narrow(<620). PublicCalendar 등 형제 컴포넌트와 동일 관례
- *   (뷰포트가 아니라 **컴포넌트 실폭** — Framer 는 컨테이너 폭이 뷰포트와 다르다).
- *   620 인 이유 = 좌 330px + 우 1fr 2단이라 그 아래에서는 두 열이 동시에 뭉개진다.
- *   narrow 시: 2단→세로 스택 / 좌측 목록 sticky 해제(모바일에서 화면 잠식) + 높이 300 /
- *   상세 패딩 축소 / 산점도 높이 230·x눈금 3개·축라벨 축약.
+ * 🚨 모바일 = CSS 로만 판정한다 (2026-08-03). JS 측정(narrow)에 기대지 말 것.
+ *   Framer 는 컴포넌트 프레임 폭 ≠ 뷰포트라 ResizeObserver 의 rootW 가 Phone(390) 에서도
+ *   620 을 넘게 잡힌다 → 데스크톱 분기가 그대로 걸려 2단 유지·좌측 330 고정으로 잘리고 빈다.
+ *   레이아웃 접힘 = flex-wrap(브라우저 판단), 그 외 모바일 값 = AN_IPF_CSS 미디어쿼리(700px).
+ *   narrow 는 산점도 눈금/라벨 축약 같은 표시 미세조정에만 남겨둔다(틀려도 안 깨지는 것).
  */
 
 const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
@@ -54,6 +54,27 @@ const FONT =
 // (fontVariantNumeric 사용 21개 파일 / ui-monospace 는 내가 들여온 이 파일 1개뿐이었음 —
 //  2026-07-30 PM 지적 "숫자가 프리텐다드가 아닌거 같은데"). 자릿수 정렬은 tabular-nums 로 충분.
 const NUM = { fontVariantNumeric: "tabular-nums" as const }
+
+// 🚨 되돌리지 말 것 — 모바일 분기는 CSS 미디어쿼리로만 한다 (2026-08-03 PM 지적 2연속).
+//   1차: 좌/우 2단이 Phone 에서 안 접힘 → grid 를 flex-wrap 으로 교체(브라우저가 판단).
+//   2차: 접힌 뒤에도 좌측이 maxWidth 330 에 묶여 우측이 빔 → 아래 규칙으로 이전.
+//   원인은 둘 다 같다: Framer 는 컴포넌트 프레임 폭 ≠ 실제 뷰포트라 ResizeObserver 로 잰
+//   rootW 가 Phone(390) 에서도 620 을 넘게 잡힌다. 즉 JS 측정으로 모바일을 판정할 수 없다.
+//   미디어쿼리는 실제 뷰포트를 보므로 프레임 폭과 무관하게 맞는다.
+//   경계 700px = flex 줄바꿈 지점(좌 300 + 우 320 + gap 18 = 638) + 루트 여백 여유.
+//   ⚠ 인라인 스타일이 클래스를 이기므로 여기 있는 속성은 인라인에 두면 안 된다.
+const AN_IPF_CSS = `
+.an-ipf-side{flex:1 1 300px;position:sticky;top:12px;max-height:calc(100vh - 24px);margin-bottom:0}
+.an-ipf-detail{padding:18px 20px 22px}
+.an-ipf-tbl{min-width:460px}
+.an-ipf-bar{width:100px}
+@media (max-width:700px){
+.an-ipf-side{flex-basis:100%;position:static;max-height:340px;margin-bottom:14px}
+.an-ipf-detail{padding:16px 14px 18px}
+.an-ipf-tbl{min-width:340px}
+.an-ipf-bar{width:64px}
+}
+`
 
 const KO_CHANGE: Record<string, string> = {
     NEW: "신규",
@@ -449,13 +470,11 @@ function StyleMap({
     sel,
     onPick,
     C,
-    narrow,
 }: {
     list: any[]
     sel: number
     onPick: (i: number) => void
     C: typeof LIGHT
-    narrow?: boolean
 }) {
     const [w, setW] = useState(560)
     const hostRef = useRef<HTMLDivElement | null>(null)
@@ -470,6 +489,10 @@ function StyleMap({
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
+
+    // 🚨 좁은 화면 판정 = 이 차트 자기 실폭. 부모의 rootW(=Framer 프레임 폭)는 못 믿는다.
+    //   여기 w 는 자기 컨테이너를 재므로 Phone 에서 실제로 줄어드는 것이 확인된 값이다.
+    const narrow = w < 560
 
     const pts = list
         .map((v, i) => ({
@@ -777,6 +800,13 @@ export default function PublicInvestorPortfolios(props: {
                 padding: "4px 0 8px",
             }}
         >
+            {/* 🚨 2026-08-03 모바일 분기 = CSS 미디어쿼리. JS 측정(narrow)에 기대지 말 것.
+                Framer 는 컴포넌트 프레임 폭이 실제 뷰포트와 달라 rootW 가 크게 잡힌다.
+                그러면 Phone 에서도 데스크톱 값(좌측 maxWidth 330 / sticky)이 적용돼
+                줄바꿈 후에도 목록이 330 에 묶여 우측이 비고, 목록이 화면을 잠식한다(PM 지적).
+                아래 규칙은 인라인 스타일로 덮이므로 해당 속성을 인라인에서 지웠다 — 되돌리지 말 것. */}
+            <style>{AN_IPF_CSS}</style>
+
             {/* 헤더 + 통화 토글 */}
             <div
                 style={{
@@ -920,7 +950,7 @@ export default function PublicInvestorPortfolios(props: {
                     점을 누르면 아래에서 자세히 볼 수 있습니다. 오른쪽일수록 소수 종목에
                     몰아서 담았고, 위일수록 분기마다 성과가 출렁였습니다.
                 </div>
-                <StyleMap list={list} sel={sel} onPick={setSel} C={C} narrow={narrow} />
+                <StyleMap list={list} sel={sel} onPick={setSel} C={C} />
                 <div
                     style={{
                         fontSize: 11.5,
@@ -951,19 +981,16 @@ export default function PublicInvestorPortfolios(props: {
                     부모 grid 가 alignItems:"start" 여야 sticky 가 먹는다(stretch 면 트랙 높이만큼
                     늘어나 붙을 자리가 없음). 최대 높이를 뷰포트에 묶어 목록이 화면을 넘지 않게. */}
                 <div
+                    className="an-ipf-side"
                     style={{
                         background: C.card,
                         borderRadius: 16,
                         overflow: "hidden",
-                        // flex 아이템 — 기본 300px, 공간 남으면 330 까지만(데스크톱 비율 보존).
-                        flex: "1 1 300px",
+                        // flex / sticky / maxHeight / marginBottom = AN_IPF_CSS. 인라인 금지
+                        // (인라인이 클래스를 이겨 미디어쿼리가 안 먹는다).
+                        // maxWidth 상한도 두지 말 것 — 줄바꿈된 모바일에서 그 폭에 묶여
+                        // 우측이 빈다(2026-08-03 PM 지적).
                         minWidth: 0,
-                        maxWidth: narrow ? "100%" : 330,
-                        // 모바일에선 sticky 사이드바가 화면을 잡아먹는다 → 일반 흐름 + 낮은 높이
-                        position: narrow ? "static" : "sticky",
-                        top: narrow ? undefined : 12,
-                        maxHeight: narrow ? 300 : "calc(100vh - 24px)",
-                        marginBottom: narrow ? 14 : 0,
                         display: "flex",
                         flexDirection: "column",
                     }}
@@ -1107,11 +1134,12 @@ export default function PublicInvestorPortfolios(props: {
 
                 {/* 우: 상세 */}
                 <div
+                    className="an-ipf-detail"
                     style={{
                         background: C.card,
                         borderRadius: 16,
-                        padding: narrow ? "16px 14px 18px" : "18px 20px 22px",
-                        // 남는 공간 전부 차지(999) — 좌측이 330 을 채우고 나머지가 여기로.
+                        // padding = AN_IPF_CSS (미디어쿼리). 인라인 금지.
+                        // 남는 공간 전부 차지(999) — 좌측이 기본 300 을 채우고 나머지가 여기로.
                         // basis 320 = 이 값 아래로는 좌측과 나란히 설 수 없다는 선언 → 자동 줄바꿈 유발.
                         flex: "999 1 320px",
                         minWidth: 0,
@@ -1443,12 +1471,12 @@ export default function PublicInvestorPortfolios(props: {
                         }}
                     >
                         <table
+                            className="an-ipf-tbl"
                             style={{
                                 width: "100%",
                                 borderCollapse: "collapse",
-                                // 좁은 화면에서 460 은 뷰포트를 넘겨 잘림을 만든다 → 340 으로 낮추고
-                                // 그래도 넘치면 이 컨테이너 안에서만 가로 스크롤.
-                                minWidth: narrow ? 340 : 460,
+                                // minWidth = AN_IPF_CSS (미디어쿼리). 좁은 화면 340 / 넓은 화면 460.
+                                // 넘치면 바깥 컨테이너 안에서만 가로 스크롤. 인라인 금지.
                             }}
                         >
                             <thead>
@@ -1519,10 +1547,12 @@ export default function PublicInvestorPortfolios(props: {
                                                 ? "—"
                                                 : h.weight_pct.toFixed(2) + "%"}
                                             <span
+                                                className="an-ipf-bar"
                                                 style={{
                                                     display: "block",
                                                     height: 3,
-                                                    width: narrow ? 64 : 100,
+                                                    // width = AN_IPF_CSS. 고정 100 은 좁은 화면에서
+                                                    // 이 열의 하한이 되어 표를 넓힌다. 인라인 금지.
                                                     marginLeft: "auto",
                                                     marginTop: 4,
                                                     borderRadius: 2,
