@@ -599,7 +599,9 @@ def fetch_index_daily(index_cd: str = "0001") -> list:
             {
                 "FID_COND_MRKT_DIV_CODE": "U",
                 "FID_INPUT_ISCD": index_cd,
-                "FID_INPUT_DATE_1": (now - timedelta(days=90)).strftime("%Y%m%d"),
+                # 🚨 실측(2026-08-03): 이 TR 은 DATE_1 을 역방향 앵커로 해석 — DATE_1 직전 ~100봉 반환,
+                #   DATE_2 무시. now-90d 를 넣으면 석 달 전에서 끊긴 창이 온다. 앵커 = 오늘.
+                "FID_INPUT_DATE_1": now.strftime("%Y%m%d"),
                 "FID_INPUT_DATE_2": now.strftime("%Y%m%d"),
                 "FID_PERIOD_DIV_CODE": "D",
             },
