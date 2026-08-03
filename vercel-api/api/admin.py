@@ -1203,6 +1203,7 @@ _TERMINAL_KEYS = (
     "updated_at", "vams", "briefing", "sector_rotation", "global_events",
     "headlines", "bloomberg_google_headlines", "market_horizon", "daily_report",
     "sectors", "macro",
+    "system_action",  # 2026-08-03 /macro 시스템 작용 패널 (VERITY #267 — 작은 dict, 슬림 무해)
 )
 _TERMINAL_REC_FIELDS = (
     "name", "ticker", "currency", "recommendation", "per", "pbr", "roe",
