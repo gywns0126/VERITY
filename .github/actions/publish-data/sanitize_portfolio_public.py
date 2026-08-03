@@ -21,6 +21,7 @@ import sys
 # 오퍼레이터 크라운주얼 top-level 키 (RULE 6/7 자기 자산 — 공개 blob 제외). 소비경계 매핑(2026-07-23) PRIVATE 세트.
 STRIP_KEYS = {
     # 자본·성과 (VAMS)
+    "system_action",  # 2026-08-03 — 매크로·게이트 작용 요약 (오퍼레이터 전용 패널 데이터)
     "vams", "vams_profiles", "portfolio_summary", "safe_recommendations",
     # Brain 내부
     "verity_brain", "brain_accuracy", "brain_quality", "brain_evolution_log",

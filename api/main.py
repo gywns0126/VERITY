@@ -4344,6 +4344,20 @@ def main():
     except Exception as _dv_e:  # 표시 게이트 실패가 파이프라인을 중단시키면 안 됨
         print(f"  [display_verdict] 스킵: {type(_dv_e).__name__}: {_dv_e}")
 
+    # ── 시스템 작용 패널 데이터 (2026-08-03 PM "/macro 1번 패널") ──
+    # 매크로·게이트가 지금 시스템에 미치는 실작용 집계 — 표시 전용, 산식 불변.
+    # 공개 blob 은 sanitize STRIP_KEYS("system_action") 로 제거 (오퍼레이터 전용).
+    try:
+        from api.intelligence.display_verdict import build_system_action
+        portfolio["system_action"] = build_system_action(portfolio, analyzed)
+        _sa = portfolio["system_action"]
+        print(f"  [system_action] 방패={'ON' if _sa['rate_shield']['on'] else 'OFF'}"
+              f" · BUY {_sa['verdict_gate']['buy_count']}"
+              f" · aligned {len(_sa['verdict_gate']['aligned'])}"
+              f" · 게이트 {_sa['verdict_gate']['gated_count']}건")
+    except Exception as _sa_e:
+        print(f"  [system_action] 스킵: {type(_sa_e).__name__}: {_sa_e}")
+
     # ── STEP 7: VAMS ──
     print(f"\n[7] VAMS 가상 투자")
     portfolio["recommendations"] = analyzed
