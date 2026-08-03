@@ -17,7 +17,7 @@ import BottomTicker from "./components/BottomTicker"
 import AccountHud from "./components/AccountHud"
 import HoldingsTable from "./components/HoldingsTable"
 import WatchTable from "./components/WatchTable"
-import CryptoCard from "./components/CryptoCard"
+import MacroPanel from "./components/MacroPanel"
 import Workspace from "./components/Workspace"
 import Blotter from "./components/Blotter"
 import PicksTable from "./components/PicksTable"
@@ -112,7 +112,6 @@ export default function Home() {
                     <aside className="af-rail">
                         <HoldingsTable holdings={holdings} status={pfStatus} />
                         <WatchTable />
-                        <CryptoCard />
                     </aside>
 
                     <section className="af-center">
@@ -122,6 +121,8 @@ export default function Home() {
                     </section>
 
                     <aside className="af-rail">
+                        <RailTitle t="거시 — 숲" n="레짐 · 지정학 · 속보" ink={c.ink} faint={c.faint} />
+                        <MacroPanel data={pf} />
                         <RailTitle t="이벤트 피드" n="T1 보유 · T2 후보 · T3 참고" ink={c.ink} faint={c.faint} />
                         <FeedPanel alerts={alerts} holdTickers={holdT} recTickers={recT} loaded={alertsLoaded} />
                     </aside>
