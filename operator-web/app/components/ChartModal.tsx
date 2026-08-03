@@ -21,7 +21,7 @@ export type ChartTarget = {
     explain?: MarketExplain  // krindex: daily_report 발췌 (요인·전략·리스크·내일 관점)
 }
 
-type Candle = { t: string; o: number; h: number; l: number; c: number; v: number }
+export type Candle = { t: string; o: number; h: number; l: number; c: number; v: number }
 
 const INTERVALS: Array<{ k: string; label: string; limit: number }> = [
     { k: "1m", label: "1분", limit: 120 },
@@ -230,7 +230,7 @@ function sma(cs: Candle[], p: number): Array<number | null> {
     return out
 }
 
-function CandleChart({ cs, c, dec }: { cs: Candle[]; c: Palette; dec: number }) {
+export function CandleChart({ cs, c, dec }: { cs: Candle[]; c: Palette; dec: number }) {
     const W = 920, PT = 8, PL = 6, PR = 74, PB = 20
     const priceH = 268, gapH = 10, volH = 56
     const H = PT + priceH + gapH + volH + PB
