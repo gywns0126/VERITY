@@ -47,7 +47,7 @@ ws_client = KISWebSocketClient()
 
 # 배포 관측 태그 — /health 로 어떤 커밋 계열이 떠 있는지 판별 (2026-08-03 배포 추적 사고:
 # uptime_seconds 는 WS 연결 uptime 이라 배포판별 불가였음). 서버 변경 시 갱신.
-BUILD_TAG = "2026-08-03-idx4"
+BUILD_TAG = "2026-08-03-idx5"
 
 
 def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
@@ -381,22 +381,13 @@ async def program_trade(market: str = "K"):
     return {"program": data}
 
 
-@app.get("/index_quotes_debug")
-async def index_quotes_debug():
-    """임시 진단 (2026-08-03) — /index_quotes 500 의 실제 traceback 노출. 원인 확정 후 제거."""
-    import traceback
-    loop = asyncio.get_event_loop()
-    try:
-        k = await loop.run_in_executor(None, fetch_index, "0001")
-        return {"ok": True, "kospi": k}
-    except Exception:
-        return JSONResponse({"ok": False, "tb": traceback.format_exc()[-1800:]}, status_code=200)
-
-
 @app.get("/index_quotes")
 async def index_quotes():
     """KR 지수 실시간 — 코스피(0001)·코스닥(1001) 업종 현재지수 (PM 2026-08-03).
     KIS_SHARED_TOKEN 순수 소비자(발급 0, RULE 1). 값 0 = 프론트가 macro_snapshot 폴백."""
+    # 🚨 main.py 는 모듈 스코프에 datetime 계열 임포트가 없다 — /quotes 처럼 지역 임포트 필수.
+    #   (2026-08-03 500 사고 근인 = 이 누락의 NameError. py_compile 은 이름을 안 잡는다.)
+    from datetime import datetime, timezone, timedelta
     loop = asyncio.get_event_loop()
     try:
         kospi, kosdaq = await asyncio.gather(
