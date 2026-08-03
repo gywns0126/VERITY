@@ -22,7 +22,6 @@ import Workspace from "./components/Workspace"
 import Blotter from "./components/Blotter"
 import PicksTable from "./components/PicksTable"
 import FeedPanel, { P0Line } from "./components/FeedPanel"
-import ChatDock from "./components/ChatDock"
 import PanelBoundary from "./components/PanelBoundary"
 
 export default function Home() {
@@ -145,7 +144,6 @@ export default function Home() {
             </div>
 
             <BottomTicker />
-            <ChatDock />
         </main>
     )
 }
