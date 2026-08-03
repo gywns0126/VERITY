@@ -34,6 +34,7 @@ import json
 import os
 import sys
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -56,6 +57,7 @@ DAILY_LIMIT = int(os.environ.get("ASK_DAILY_LIMIT", "15"))
 CLAUDE_MODEL = "claude-opus-5"          # PM 선택. 종합 = 최상위 모델
 CLAUDE_EFFORT = os.environ.get("ASK_EFFORT", "high")   # low|medium|high|xhigh|max
 PPLX_MODEL = os.environ.get("ASK_PPLX_MODEL", "sonar")
+PPLX_MODEL_PRO = os.environ.get("ASK_PPLX_MODEL_PRO", "sonar-pro")  # 급변 사유 축만
 GEMINI_MODEL = os.environ.get("ASK_GEMINI_MODEL", "gemini-2.5-flash")
 
 
@@ -129,31 +131,174 @@ def _post_json(url: str, payload: Dict[str, Any], headers: Dict[str, str],
         return None
 
 
-# ── ① Perplexity — 신선한 외부 사실 ──────────────────────────────────────────
-def _perplexity(name: str, ticker: str, question: str) -> Optional[Dict[str, Any]]:
-    """오늘 급등 이유처럼 T+1 자체 데이터에 없는 것만 담당. 인용 필수."""
+# ── ① Perplexity — 결측(gap) 위임 리서치 ─────────────────────────────────────
+# PM 2026-08-03: "네가 정보 모을 때 퍼플렉시티 등에게 부가적 요소를 맡길 수 있는거지."
+#
+# 🚨 옛 구현은 한 번에 뭉뚱그려 물었다 —
+#     f"{name}({ticker}) 관련 최근 뉴스·공시·주가 급변 사유. 질문: {question}"
+#    ① 우리가 이미 가진 것(재무·밸류에이션)까지 질문에 섞여 검색이 흐려지고
+#    ② 날짜가 안 박히고 ③ 국내 소스 유도가 없어 동명 영문 법인·무관 시황이 잡혔다.
+#    2026-08-03 094970 +12% 사유 조회가 이 방식으로 실패("단정할 수 없습니다").
+#    → **우리 데이터에 구멍이 난 축만** 골라 축별 질문으로 분리 위임한다.
+
+_PPLX_RULES = (
+    "규칙: ① 확인된 사실과 출처(URL)만. 추정·전망·투자의견 금지. "
+    "② 확인 안 되면 반드시 '확인 안 됨'이라고 답하고 지어내지 마라. "
+    "③ 한국거래소 KIND·DART·네이버금융·국내 경제지 등 **국내 1차 소스** 우선. "
+    "④ 동명 해외 법인(영문 사명)과 혼동 금지 — 한국 상장사만. ⑤ 한국어."
+)
+
+
+def _sec_data(facts: Dict[str, Any], *label_prefixes: str) -> Optional[Any]:
+    for sec in facts.get("sections") or []:
+        lab = str(sec.get("label") or "")
+        if any(lab.startswith(p) for p in label_prefixes):
+            return sec.get("data")
+    return None
+
+
+def _move_pct(facts: Dict[str, Any]) -> Optional[float]:
+    """오늘 등락률(실시간 우선, 없으면 직전 확정 종가)."""
+    for lab in ("실시간 시세", "종가"):
+        d = _sec_data(facts, lab)
+        if isinstance(d, dict) and d.get("등락률"):
+            try:
+                return float(str(d["등락률"]).replace("%", "").replace("+", ""))
+            except (TypeError, ValueError):
+                pass
+    return None
+
+
+def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, str]]:
+    """자체 데이터의 구멍만 골라 외부 위임 질문으로 만든다.
+
+    우리가 이미 아는 것은 묻지 않는다 — 검색이 흐려지고 비용만 든다.
+    반환 = [{key, label, query, recency, tier}] (우선순위 순, 최대 3).
+    """
+    name = facts.get("name") or ""
+    tk = facts.get("ticker") or ""
+    today = _now().strftime("%Y년 %m월 %d일")
+    who = f"한국 상장사 {name}(종목코드 {tk})"
+    gaps: List[Dict[str, str]] = []
+
+    rep = _sec_data(facts, "리포트") or {}
+    mkt = rep.get("market") or ""
+    who = f"{'코스닥' if 'KOSDAQ' in str(mkt) else '코스피' if 'KOSPI' in str(mkt) else '한국'} 상장사 {name}(종목코드 {tk})"
+
+    # ① 급변 사유 미상 — 최우선. 우리 데이터로는 "얼마나" 만 알고 "왜" 를 모른다.
+    mv = _move_pct(facts)
+    if mv is not None and abs(mv) >= 5.0:
+        direction = "급등" if mv > 0 else "급락"
+        gaps.append({
+            "key": "catalyst",
+            "label": f"{direction} 사유 ({mv:+.1f}%)",
+            "recency": "day",
+            "tier": "pro",
+            "query": (
+                f"{who} 주가가 {today} 장중 {mv:+.1f}% {direction}했다. 그 사유는 무엇인가?\n"
+                f"확인할 것: (1) {today} 또는 직전 영업일에 나온 공시(KIND·DART 포함, "
+                f"단일판매·공급계약, 최대주주 변경, 무상증자, 자기주식 취득, 조회공시 요구 등) "
+                f"(2) 관련 뉴스·보도 (3) 이 종목이 속한 테마·업종의 동반 급등 여부 "
+                f"(4) 특징주·급등주 코너 언급.\n{_PPLX_RULES}"
+            ),
+        })
+
+    # ② 뉴스 공백 — 우리 sentiment 수집이 헤드라인 0건이면 외부에서 채운다.
+    social = rep.get("social_sentiment") or {}
+    senti = _sec_data(facts, "sentiment") or {}
+    hc = (senti.get("headline_count") if isinstance(senti, dict) else None)
+    if hc in (0, None) and not social.get("news", {}).get("positive"):
+        gaps.append({
+            "key": "news",
+            "label": "최근 뉴스·이슈",
+            "recency": "month",
+            "tier": "base",
+            "query": (
+                f"{who}에 대해 최근 1개월 내 보도된 뉴스·이슈를 시간순으로 정리해줘.\n"
+                f"수주·계약, 실적, 신규 사업, 증설·투자, 지분 변동, 소송·제재, "
+                f"거래소 조치(투자경고·불성실공시) 중심.\n{_PPLX_RULES}"
+            ),
+        })
+
+    # ③ 실적 임박 — 우리 calendar 는 제출 패턴 자체추정이라 확정 일정을 모른다.
+    for ev in (rep.get("calendar") or []):
+        if str(ev.get("kind")) != "실적":
+            continue
+        try:
+            d = datetime.strptime(str(ev.get("date")), "%Y-%m-%d").replace(tzinfo=_KST)
+        except (TypeError, ValueError):
+            break
+        if 0 <= (d - _now()).days <= 14:
+            gaps.append({
+                "key": "earnings",
+                "label": "실적 발표 일정",
+                "recency": "month",
+                "tier": "base",
+                "query": (
+                    f"{who}의 다음 실적 발표(반기·분기보고서 제출 또는 잠정실적 공시) "
+                    f"확정 일정이 공표됐는가? 직전 분기 실적 수치와 함께 알려줘.\n{_PPLX_RULES}"
+                ),
+            })
+        break
+
+    # ④ 컨센서스 부재 — 우리 consensus_available=false 는 "없다" 가 아니라 "우리가 못 모았다".
+    #    다만 마이크로캡은 실제로 커버리지가 없는 경우가 대부분이라 우선순위는 뒤로 둔다.
+    cons = rep.get("consensus") or {}
+    if not cons.get("target_price") and not cons.get("opinion"):
+        gaps.append({
+            "key": "consensus",
+            "label": "증권사 커버리지",
+            "recency": "year",
+            "tier": "base",
+            "query": (
+                f"{who}를 커버하는 증권사 리서치 리포트가 최근 1년 내 존재하는가?\n"
+                f"있으면 증권사명·발간일·투자의견·목표주가를, 없으면 "
+                f"'커버리지 없음'이라고 명확히 답해줘.\n{_PPLX_RULES}"
+            ),
+        })
+
+    # ⑤ 어떤 구멍도 안 잡혔는데 PM 질문이 외부 사실을 요구하면 그것만 위임
+    if not gaps and question.strip():
+        gaps.append({"key": "freeform", "label": "PM 질문", "recency": "week", "tier": "base",
+                     "query": f"{who}에 대한 질문: {question.strip()}\n{_PPLX_RULES}"})
+
+    return gaps[:3]
+
+
+def _perplexity_one(gap: Dict[str, str]) -> Optional[Dict[str, Any]]:
     key = os.environ.get("PERPLEXITY_API_KEY")
     if not key:
         return None
-    q = (f"{name}({ticker}) 관련 최근 뉴스·공시·주가 급변 사유. 질문: {question}\n"
-         "확인된 사실과 출처만. 추정·전망은 제외. 한국어.")
-    doc = _post_json(
-        "https://api.perplexity.ai/chat/completions",
-        {
-            "model": PPLX_MODEL,
-            "messages": [{"role": "user", "content": q}],
-            "search_recency_filter": "week",
-            "max_tokens": 900,
-        },
-        {"Authorization": f"Bearer {key}"},
-    )
-    if not doc:
-        return None
-    try:
-        text = doc["choices"][0]["message"]["content"]
-    except Exception:
-        return None
-    return {"text": text, "citations": doc.get("citations") or doc.get("search_results") or []}
+    # 급변 사유만 상위 tier — 검색 품질이 답을 좌우하는 유일한 축. 실패 시 기본 모델로 강등.
+    models = [PPLX_MODEL_PRO, PPLX_MODEL] if gap.get("tier") == "pro" else [PPLX_MODEL]
+    for model in models:
+        doc = _post_json(
+            "https://api.perplexity.ai/chat/completions",
+            {
+                "model": model,
+                "messages": [{"role": "user", "content": gap["query"]}],
+                "search_recency_filter": gap.get("recency") or "week",
+                "max_tokens": 900,
+            },
+            {"Authorization": f"Bearer {key}"},
+        )
+        try:
+            text = doc["choices"][0]["message"]["content"]  # type: ignore[index]
+        except Exception:
+            continue
+        return {"key": gap["key"], "label": gap["label"], "model": model, "text": text,
+                "citations": doc.get("citations") or doc.get("search_results") or []}
+    return None
+
+
+def _perplexity(facts: Dict[str, Any], question: str) -> List[Dict[str, Any]]:
+    """결측 축별 병렬 위임. 축이 없으면 호출 0 (비용 0)."""
+    gaps = research_gaps(facts, question)
+    if not gaps:
+        return []
+    with ThreadPoolExecutor(max_workers=len(gaps)) as ex:
+        res = list(ex.map(_perplexity_one, gaps))
+    return [r for r in res if r]
 
 
 # ── ② Gemini — 구조화 ────────────────────────────────────────────────────────
@@ -201,7 +346,7 @@ SYNTH_SYSTEM = """너는 VERITY/AlphaNest 오퍼레이터의 분석 파트너다
 형식: 짧게. 결론 먼저. 표는 사실 나열에만. 그다음 근거, 마지막에 한계와 확인이 필요한 것."""
 
 
-def _claude(facts_text: str, pplx: Optional[Dict[str, Any]], gem: Optional[str],
+def _claude(facts_text: str, pplx: List[Dict[str, Any]], gem: Optional[str],
             name: str, ticker: str, question: str) -> Optional[Dict[str, Any]]:
     try:
         import anthropic
@@ -215,12 +360,15 @@ def _claude(facts_text: str, pplx: Optional[Dict[str, Any]], gem: Optional[str],
     if gem:
         blocks += ["", "[구조화 — Gemini]", gem]
     if pplx:
-        cites = pplx.get("citations") or []
-        cite_txt = "\n".join(f"  - {c if isinstance(c, str) else c.get('url', '')}" for c in cites[:8])
-        blocks += ["", "[외부 신선 사실 — Perplexity, 자체 데이터 아님]", pplx["text"],
-                   ("출처:\n" + cite_txt) if cite_txt else ""]
+        blocks += ["", "[외부 위임 리서치 — Perplexity, 자체 데이터 아님]",
+                   "우리 데이터에 구멍이 난 축만 외부에 물었다. 자체 사실과 섞지 말고 분리 표기할 것."]
+        for r in pplx:
+            cites = r.get("citations") or []
+            cite_txt = "\n".join(f"  - {c if isinstance(c, str) else c.get('url', '')}" for c in cites[:6])
+            blocks += [f"― [{r['label']}] ({r.get('model')})", r["text"],
+                       ("출처:\n" + cite_txt) if cite_txt else ""]
     else:
-        blocks += ["", "[외부 신선 사실] 없음 — 오늘 장중 정보는 확인 불가."]
+        blocks += ["", "[외부 위임 리서치] 없음 — 위임할 결측 축이 없거나 호출 실패."]
 
     client = anthropic.Anthropic()
     try:
@@ -271,7 +419,7 @@ def ask(query: str, question: str = "", facts_only: bool = False,
         out["budget_blocked"] = f"일 LLM 호출 상한 {cap}회 소진 — 사실 조인만 수행"
         return out
 
-    pplx = _perplexity(facts.get("name") or query, facts["ticker"], q)
+    pplx = _perplexity(facts, q)
     gem = _gemini(facts_text, q)
     syn = _claude(facts_text, pplx, gem, facts.get("name") or query, facts["ticker"], q)
 
@@ -296,9 +444,13 @@ def render(out: Dict[str, Any]) -> str:
             u = syn.get("usage") or {}
             L.append(f"\n[토큰 in {u.get('in')} / out {u.get('out')} · effort {CLAUDE_EFFORT}"
                      f" · {out.get('_budget', '')}{' · 캐시' if out.get('_cached') else ''}]")
-    if out.get("perplexity"):
-        L += ["", "-" * 70, "# 외부 신선 사실 (Perplexity — 자체 데이터 아님)", "-" * 70,
-              out["perplexity"]["text"]]
+    for r in (out.get("perplexity") or []):
+        L += ["", "-" * 70,
+              f"# 외부 위임: {r['label']} (Perplexity/{r.get('model')} — 자체 데이터 아님)",
+              "-" * 70, r["text"]]
+        cites = [c if isinstance(c, str) else c.get("url", "") for c in (r.get("citations") or [])]
+        if any(cites):
+            L += ["", "출처: " + " · ".join(c for c in cites[:5] if c)]
     return "\n".join(L)
 
 
@@ -309,6 +461,24 @@ if __name__ == "__main__":
     ap.add_argument("query", help="종목명 또는 6자리 코드")
     ap.add_argument("--q", default="", help="질문")
     ap.add_argument("--facts-only", action="store_true", help="LLM 0 (비용 0)")
+    ap.add_argument("--questions", action="store_true",
+                    help="결측 축 위임 질문만 출력 (호출 0 · 비용 0). 웹 퍼플렉시티 Pro 복붙용")
     ap.add_argument("--no-cache", action="store_true")
     a = ap.parse_args()
+
+    if a.questions:
+        # API 자동 검색보다 품질이 높은 경로 — PM 이 웹 Pro 에 직접 붙여넣는다.
+        f = ticker_facts.collect(a.query)
+        if not f.get("ticker"):
+            print(ticker_facts.render_text(f))
+            sys.exit(1)
+        gs = research_gaps(f, a.q)
+        print(f"# {f.get('name')} ({f['ticker']}) — 외부 위임 질문 {len(gs)}건 "
+              f"(호출 0 · 웹 퍼플렉시티 복붙용)\n")
+        if not gs:
+            print("위임할 결측 축 없음 — 자체 데이터로 충분하다.")
+        for i, g in enumerate(gs, 1):
+            print(f"{'─' * 70}\n[{i}] {g['label']}  (최근성 {g['recency']})\n{'─' * 70}\n{g['query']}\n")
+        sys.exit(0)
+
     print(render(ask(a.query, a.q, a.facts_only, a.no_cache)))
