@@ -31,7 +31,7 @@ from server.config import (
 )
 from server.kis_rest_client import (
     fetch_daily, fetch_minute, fetch_weekly, fetch_monthly, fetch_full_history, fetch_orderbook,
-    fetch_price, fetch_trades, fetch_program_trade, fetch_index, place_kr_order,
+    fetch_price, fetch_trades, fetch_program_trade, fetch_index, fetch_index_daily, place_kr_order,
     place_us_order, get_balance, token_status,
 )
 from server.kis_ws_client import KISWebSocketClient
@@ -47,7 +47,7 @@ ws_client = KISWebSocketClient()
 
 # 배포 관측 태그 — /health 로 어떤 커밋 계열이 떠 있는지 판별 (2026-08-03 배포 추적 사고:
 # uptime_seconds 는 WS 연결 uptime 이라 배포판별 불가였음). 서버 변경 시 갱신.
-BUILD_TAG = "2026-08-03-idx5"
+BUILD_TAG = "2026-08-03-idx6"
 
 
 def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
@@ -402,6 +402,15 @@ async def index_quotes():
         "quotes": {"kospi": kospi, "kosdaq": kosdaq},
         "asof": datetime.now(kst).isoformat(timespec="seconds"),
     }
+
+
+@app.get("/index_daily/{index_cd}")
+async def index_daily(index_cd: str):
+    """KR 지수 일봉(90일) — 상세 차트 캔들용 (PM 2026-08-03 토스 대비 차트 격차)."""
+    cd = index_cd if index_cd in ("0001", "1001") else "0001"
+    loop = asyncio.get_event_loop()
+    candles = await loop.run_in_executor(None, fetch_index_daily, cd)
+    return {"candles": candles, "count": len(candles)}
 
 
 @app.get("/api/order")

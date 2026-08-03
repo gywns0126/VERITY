@@ -585,6 +585,55 @@ def fetch_index(index_cd: str = "0001") -> dict:
         return {"price": 0.0, "change": 0.0, "change_pct": 0.0, "volume": 0.0, "error": str(e)[:120]}
 
 
+def fetch_index_daily(index_cd: str = "0001") -> list:
+    """업종 일자별 지수(일봉) — FHPUP02120000 (kis_broker.get_index_daily 미러, 90일).
+
+    fetch_daily(종목)와 동일 캔들 shape 로 파싱: [{date,open,high,low,close,volume}] 과거→최신.
+    지수 = 소수라 float. 전 경로 방어 (500 승격 금지 — 2026-08-03 NameError 사고 계열 교훈).
+    """
+    try:
+        now = datetime.now(KST)
+        d = _get(
+            "/uapi/domestic-stock/v1/quotations/inquire-index-daily-price",
+            "FHPUP02120000",
+            {
+                "FID_COND_MRKT_DIV_CODE": "U",
+                "FID_INPUT_ISCD": index_cd,
+                "FID_INPUT_DATE_1": (now - timedelta(days=90)).strftime("%Y%m%d"),
+                "FID_INPUT_DATE_2": now.strftime("%Y%m%d"),
+                "FID_PERIOD_DIV_CODE": "D",
+            },
+        )
+        rows = d.get("output") if isinstance(d, dict) else None
+        if not isinstance(rows, list):
+            rows = d.get("output2") if isinstance(d, dict) and isinstance(d.get("output2"), list) else []
+
+        def _f(r: dict, k: str) -> float:
+            try:
+                return float(r.get(k, "0") or "0")
+            except (TypeError, ValueError):
+                return 0.0
+
+        candles = []
+        for r in reversed(rows):
+            if not isinstance(r, dict):
+                continue
+            o = _f(r, "bstp_nmix_oprc")
+            h = _f(r, "bstp_nmix_hgpr")
+            l = _f(r, "bstp_nmix_lwpr")
+            cl = _f(r, "bstp_nmix_prpr")
+            v = _f(r, "acml_vol")
+            if h > 0:
+                candles.append({
+                    "date": r.get("stck_bsop_date", "") or "",
+                    "open": o, "high": h, "low": l, "close": cl, "volume": v,
+                })
+        return candles
+    except Exception as e:
+        logger.warning("fetch_index_daily 실패 %s: %s", index_cd, e)
+        return []
+
+
 def fetch_program_trade(market: str = "K") -> dict:
     """KIS 프로그램매매 종합현황(시간) — comp-program-trade-today, tr_id FHPPG04600101.
 
