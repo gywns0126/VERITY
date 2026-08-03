@@ -23,6 +23,7 @@ import Blotter from "./components/Blotter"
 import PicksTable from "./components/PicksTable"
 import FeedPanel, { P0Line } from "./components/FeedPanel"
 import ChatDock from "./components/ChatDock"
+import PanelBoundary from "./components/PanelBoundary"
 
 export default function Home() {
     const dark = useDark()
@@ -110,21 +111,35 @@ export default function Home() {
                 {/* 3열 — 각 컬럼 내부 스크롤 (토스식 섹션 고정) */}
                 <div className="af-term">
                     <aside className="af-rail">
-                        <HoldingsTable holdings={holdings} status={pfStatus} />
-                        <WatchTable />
+                        <PanelBoundary name="보유">
+                            <HoldingsTable holdings={holdings} status={pfStatus} />
+                        </PanelBoundary>
+                        <PanelBoundary name="관심">
+                            <WatchTable />
+                        </PanelBoundary>
                     </aside>
 
                     <section className="af-center">
-                        <Workspace defaultTicker={holdT.find((t) => /^\d{6}$/.test(t)) || "005930"} names={names} />
-                        <Blotter />
-                        <PicksTable recs={recs} status={pfStatus} />
+                        <PanelBoundary name="워크스페이스">
+                            <Workspace defaultTicker={holdT.find((t) => /^\d{6}$/.test(t)) || "005930"} names={names} />
+                        </PanelBoundary>
+                        <PanelBoundary name="블로터">
+                            <Blotter />
+                        </PanelBoundary>
+                        <PanelBoundary name="추천">
+                            <PicksTable recs={recs} status={pfStatus} />
+                        </PanelBoundary>
                     </section>
 
                     <aside className="af-rail">
                         <RailTitle t="거시 — 숲" n="레짐 · 지정학 · 속보" ink={c.ink} faint={c.faint} />
-                        <MacroPanel data={pf} />
+                        <PanelBoundary name="거시">
+                            <MacroPanel data={pf} />
+                        </PanelBoundary>
                         <RailTitle t="이벤트 피드" n="T1 보유 · T2 후보 · T3 참고" ink={c.ink} faint={c.faint} />
-                        <FeedPanel alerts={alerts} holdTickers={holdT} recTickers={recT} loaded={alertsLoaded} />
+                        <PanelBoundary name="피드">
+                            <FeedPanel alerts={alerts} holdTickers={holdT} recTickers={recT} loaded={alertsLoaded} />
+                        </PanelBoundary>
                     </aside>
                 </div>
             </div>

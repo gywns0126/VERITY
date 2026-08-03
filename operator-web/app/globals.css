@@ -63,7 +63,13 @@ body {
 }
 
 /* 토스식 섹션 고정 스크롤 (PM 2026-08-03): 넓은 화면 = 뷰포트 고정, 각 컬럼 내부 스크롤.
-   좁은 화면 = 기존 문서 스크롤 폴백. 데이터 많은 패널은 /system 페이지 분할. */
+   좁은 화면 = 기존 문서 스크롤 폴백. 데이터 많은 패널은 /system 페이지 분할.
+   🚨 WebKit 크래시 가드 (Safari "This page couldn't load" 반복, 2026-08-03 실사고):
+     - 컬럼에 height:100% 금지 — align-items:start 그리드의 내용 크기 행 + 퍼센트 높이 = 순환
+       레이아웃 → WebKit 레이아웃 루프 → WebContent 프로세스 사망. 반드시
+       grid-template-rows: minmax(0,1fr) + stretch + min-height:0 문법만 사용.
+     - overflow:hidden 조상 안 position:sticky 금지(.af-viewport .af-bticker 강제 static).
+     - scrollbar-width 와 ::-webkit-scrollbar 동시 지정 금지 — webkit 계열만. */
 @media (min-width: 1241px) {
     .af-viewport {
         height: 100vh;
@@ -81,14 +87,17 @@ body {
     .af-term {
         flex: 1 1 auto;
         min-height: 0;
+        grid-template-rows: minmax(0, 1fr);
+        align-items: stretch;
     }
     .af-rail,
     .af-center {
-        height: 100%;
+        min-height: 0;
         overflow-y: auto;
-        overscroll-behavior: contain;
         padding-bottom: 6px;
-        scrollbar-width: thin;
+    }
+    .af-viewport .af-bticker {
+        position: static;
     }
     .af-rail::-webkit-scrollbar,
     .af-center::-webkit-scrollbar {
