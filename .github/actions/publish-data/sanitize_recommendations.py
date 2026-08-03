@@ -30,6 +30,9 @@ STRIP_KEYS = {
     "external_risk", "commodity_margin", "niche_data", "insider_sentiment",
     "social_sentiment", "equity_research_brief", "_gemini_model", "rec_price",
     "account_route",
+    # 2026-08-03 display_verdict 게이트 — LLM 합의 원본(참고 관측)은 비공개.
+    # display_verdict 자체는 STRIP_PAT(r"verdict") 자동 포착. recommendation 문자열만 공개.
+    "analyst_view",
 }
 # 패턴 백스톱 — 미래 추가 점수/등급/판정 필드 누출 방지 (consensus/recommendation/팩트 미포착)
 STRIP_PAT = re.compile(r"brain|score_break|verdict|fscore|lynch", re.IGNORECASE)
