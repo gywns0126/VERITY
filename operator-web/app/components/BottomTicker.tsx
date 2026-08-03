@@ -28,7 +28,7 @@ export default function BottomTicker() {
     }, [])
 
     return (
-        <div style={{ position: "sticky", bottom: 0, zIndex: 30, display: "flex", alignItems: "center", gap: 22, padding: "9px 18px", background: c.card, boxShadow: "0 -1px 3px rgba(0,0,0,0.05)", overflowX: "auto", whiteSpace: "nowrap", fontFamily: FONT }}>
+        <div className="af-bticker" style={{ position: "sticky", bottom: 0, zIndex: 30, display: "flex", alignItems: "center", gap: 22, padding: "9px 18px", background: c.card, boxShadow: "0 -1px 3px rgba(0,0,0,0.05)", overflowX: "auto", whiteSpace: "nowrap", fontFamily: FONT, flexShrink: 0 }}>
             {KEYS.map(([key, name, unit]) => {
                 const n = m[key] || {}
                 const v = typeof n.value === "number" ? n.value : null
