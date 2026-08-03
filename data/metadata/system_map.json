@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-03T19:59:27.653241+09:00",
+  "generated_at": "2026-08-03T22:47:15.158065+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 266407,
-    "python_modules": 690,
+    "code_lines_tsx_py": 266701,
+    "python_modules": 693,
     "tsx_components": 168,
     "json_data_files": 1666,
     "json_total_tracked": 1685,
-    "workflows": 69,
+    "workflows": 70,
     "scheduled_workflows": 54,
     "cron_triggers": 65,
-    "git_tracked_files": 7272
+    "git_tracked_files": 7278
   },
   "subsystems": {
     "ingest": {
@@ -92,7 +92,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 61,
+      "count": 62,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -105,6 +105,7 @@
         "api/intelligence/daily_actions.py",
         "api/intelligence/dart_importance_observer.py",
         "api/intelligence/dashboard_summary.py",
+        "api/intelligence/display_verdict.py",
         "api/intelligence/distribution_footprint.py",
         "api/intelligence/earnings_surprise.py",
         "api/intelligence/equity_research_brief.py",
@@ -159,7 +160,7 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 69,
+      "count": 70,
       "scheduled": 54,
       "workflows": [
         {
@@ -324,6 +325,11 @@
             "0 6 * * 1-5"
           ],
           "scheduled": true
+        },
+        {
+          "name": "gemini_probe",
+          "crons": [],
+          "scheduled": false
         },
         {
           "name": "hourly_pulse",
@@ -669,9 +675,9 @@
     }
   },
   "python_by_dir": {
-    "api": 385,
-    "tests": 153,
-    "scripts": 82,
+    "api": 386,
+    "tests": 154,
+    "scripts": 83,
     "vercel-api": 58,
     "server": 7,
     ".github": 5
