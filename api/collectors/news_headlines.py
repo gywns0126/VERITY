@@ -73,7 +73,11 @@ def collect_headlines(max_items: int = 20) -> list:
 
     seen_titles = set()
     unique = []
+    # 출처 차단 겹 (source_tiers, 2026-08-03) — UGC·블로그 drop. 가점(CREDIBLE_SOURCES)과 역할 분리.
+    from api.intelligence.source_tiers import is_blocked as _src_blocked
     for item in raw:
+        if _src_blocked(item.get("source", "")) or _src_blocked(item.get("link", "")):
+            continue
         title_key = re.sub(r"[^가-힣a-zA-Z0-9]", "", item["title"])
         if title_key not in seen_titles:
             seen_titles.add(title_key)

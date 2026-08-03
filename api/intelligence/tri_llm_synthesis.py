@@ -138,7 +138,12 @@ def _perplexity_fresh(ticker: str, name: str) -> Dict[str, Any]:
     r = call_perplexity(q, system_prompt=sysp, max_tokens=700, search_recency_filter="week")
     if r.get("error"):
         return {"error": r["error"]}
-    return {"content": r.get("content", ""), "citations": r.get("citations", []), "model": r.get("model")}
+    try:
+        from api.intelligence.source_tiers import filter_citations
+        cites = filter_citations(r.get("citations") or [], limit=5)
+    except Exception:
+        cites = r.get("citations", [])
+    return {"content": r.get("content", ""), "citations": cites, "model": r.get("model")}
 
 
 # ─── ② Gemini: 구조적 정리 ───────────────────────────────────────────────

@@ -19,7 +19,8 @@ const MACRO_LABELS: Record<string, string> = {
     gold: "금", silver: "은", copper: "구리", vix: "VIX",
 }
 
-type SynSource = { content?: string; model?: string; citations?: string[] }
+type GmCite = { title?: string; uri?: string }
+type SynSource = { content?: string; model?: string; citations?: string[]; gm_citations?: GmCite[] }
 type MacroSyn = { generated_at?: string; sources?: { claude?: SynSource; perplexity?: SynSource; gemini?: SynSource } }
 type Holding13F = { ticker?: string; weight_pct?: number; change_type?: string }
 type Investor = {
@@ -137,7 +138,17 @@ export default function MacroPage() {
                                     {px.citations?.length ? (
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
                                             {px.citations.slice(0, 5).map((u, i) => (
-                                                <a key={i} href={u} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.vt, textDecoration: "none" }}>출처 {i + 1}</a>
+                                                <a key={i} href={u} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.vt, textDecoration: "none" }}>글로벌 {i + 1}</a>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                    {/* 국내 근거 — Gemini 구글 그라운딩(T1/T2 필터 통과분만, source_tiers) */}
+                                    {(syn?.sources?.gemini as SynSource | undefined)?.gm_citations?.length ? (
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+                                            {(syn!.sources!.gemini!.gm_citations || []).slice(0, 6).map((g, i) => (
+                                                <a key={i} href={g.uri || "#"} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.green, textDecoration: "none" }}>
+                                                    국내 {g.title || i + 1}
+                                                </a>
                                             ))}
                                         </div>
                                     ) : null}
