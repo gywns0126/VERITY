@@ -25,6 +25,7 @@ from api.config import (
     CLAUDE_MODEL_DEFAULT,
     CLAUDE_MODEL_HEAVY,
     CLAUDE_OPUS_ENABLE,
+    is_claude_5_family,
     DATA_DIR,
     STRATEGY_REGISTRY_PATH,
     STRATEGY_MAX_WEIGHT_DELTA,
@@ -524,13 +525,17 @@ def propose_evolution(
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         print(f"  [V2] 전략 진화 모델: {model}")
+        # 5족 가드 (2026-08-03) — thinking 기본 on 이라 JSON 경로는 disabled 명시,
+        # content[0] 이 thinking 블록일 수 있어 text 블록 순회로 추출.
+        _extra = {"thinking": {"type": "disabled"}} if is_claude_5_family(model) else {}
         message = client.messages.create(
             model=model,
             max_tokens=800,
             system=_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
+            **_extra,
         )
-        text = message.content[0].text.strip()
+        text = next((b.text for b in message.content if b.type == "text"), "").strip()
         if text.startswith("```"):
             text = text.split("\n", 1)[1] if "\n" in text else text[3:]
             text = text.rsplit("```", 1)[0]

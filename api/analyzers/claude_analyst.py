@@ -21,6 +21,7 @@ from api.config import (
     ANTHROPIC_API_KEY,
     CLAUDE_MODEL_LIGHT,
     CLAUDE_MODEL_DEFAULT,
+    is_claude_5_family,
     now_kst,
 )
 
@@ -212,13 +213,17 @@ def analyze_stock_deep(stock: dict, gemini_result: dict, macro: Optional[dict] =
 
     try:
         model = CLAUDE_MODEL_DEFAULT
+        # 5족(sonnet-5+)은 thinking 기본 on — 배치 JSON 경로는 disabled 명시로 비용·출력 동결.
+        # content[0] 인덱싱 금지 — thinking 블록이 선두에 올 수 있어 text 블록 순회로 추출.
+        _extra = {"thinking": {"type": "disabled"}} if is_claude_5_family(model) else {}
         message = client.messages.create(
             model=model,
             max_tokens=800,
             system=_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
+            **_extra,
         )
-        text = message.content[0].text.strip()
+        text = next((b.text for b in message.content if b.type == "text"), "").strip()
 
         try:
             from api.tracing import get_tracer
@@ -458,13 +463,16 @@ def _call_claude(
     use_model = model or CLAUDE_MODEL_DEFAULT
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        # 5족 가드 — thinking disabled 명시(JSON 경로 동결). 구세대(haiku 등)엔 파라미터 자체를 안 보냄.
+        _extra = {"thinking": {"type": "disabled"}} if is_claude_5_family(use_model) else {}
         message = client.messages.create(
             model=use_model,
             max_tokens=max_tokens,
             system=system,
             messages=[{"role": "user", "content": prompt}],
+            **_extra,
         )
-        text = message.content[0].text.strip()
+        text = next((b.text for b in message.content if b.type == "text"), "").strip()
 
         try:
             from api.tracing import get_tracer
