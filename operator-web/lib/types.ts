@@ -39,10 +39,37 @@ export type Rec = {
     dart_disclosure_events?: { severity?: number }
 }
 
+export type Headline = { title?: string; link?: string }
+
+export type GlobalEvent = {
+    name?: string
+    severity?: string
+    country?: string
+    impact?: string
+    impact_area?: string[]
+    action?: string
+}
+
+export type Briefing = { headline?: string; tone?: string }
+
+export type SectorRotation = {
+    cycle?: string
+    cycle_label?: string
+    cycle_desc?: string
+    recommended_sectors?: string[]
+    avoid_sectors?: string[]
+}
+
 export type PortfolioFull = {
     updated_at?: string
     vams?: Vams
     recommendations?: Rec[]
+    // 거시(숲) — portfolio.json 실측 shape (2026-08-03). 별도 fetch 불요.
+    headlines?: Headline[]
+    bloomberg_google_headlines?: Headline[]
+    global_events?: GlobalEvent[]
+    briefing?: Briefing
+    sector_rotation?: SectorRotation
 }
 
 export type AlertItem = {
