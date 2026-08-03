@@ -1,11 +1,193 @@
 {
-  "updated_at": "2026-07-27T10:11:44.150644+09:00",
+  "updated_at": "2026-08-03T10:15:01.557016+09:00",
   "source": "DART OpenAPI list.json (C001 증권신고서/지분증권, corp_cls=E)",
   "search_window_days": 88,
   "disclaimer": "watch list (후보 신호, 가설 N=0). 추천 아님 — 상장 전은 가격 데이터가 없어 검증 trail 미적용. 상장 후 funnel 편입 시점부터 검증 시작.",
-  "raw_c001_count": 277,
-  "count": 10,
+  "raw_c001_count": 282,
+  "count": 12,
   "watch": [
+    {
+      "corp_name": "딜리셔스",
+      "corp_code": "01461730",
+      "rcept_no": "20260731000443",
+      "rcept_dt": "20260731",
+      "report_nm": "[발행조건확정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260731000443",
+      "stage": "확정",
+      "offering": {
+        "shares": 2200000,
+        "price_planned": 5000,
+        "payment_date": "2026.08.06",
+        "subscribe_start": "2026.08.03",
+        "subscribe_end": "2026.08.04"
+      },
+      "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
+    {
+      "corp_name": "스카이랩스",
+      "corp_code": "01586923",
+      "rcept_no": "20260729000518",
+      "rcept_dt": "20260729",
+      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260729000518",
+      "stage": "정정",
+      "offering": {
+        "shares": 2000000,
+        "price_planned": 13000,
+        "total_planned": 26000000000,
+        "payment_date": "2026.08.19",
+        "subscribe_start": "2026.08.13",
+        "subscribe_end": "2026.08.13"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "백만원",
+        "periods": [
+          "2026년(E)(제12기)",
+          "2027년(E)(제13기)",
+          "2028년(E)(제14기)",
+          "2029년(E)(제15기)",
+          "2030년(E)(제16기)"
+        ],
+        "revenue": [
+          10207,
+          18765,
+          38706,
+          57029,
+          77973
+        ],
+        "operating_income": [
+          -15439,
+          -10418,
+          4686,
+          16976,
+          30540
+        ],
+        "net_income": [
+          -15181,
+          -10136,
+          4967,
+          17258,
+          30822
+        ]
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
+    {
+      "corp_name": "와이즈플래닛컴퍼니",
+      "corp_code": "01867688",
+      "rcept_no": "20260729000302",
+      "rcept_dt": "20260729",
+      "report_nm": "증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260729000302",
+      "stage": "최초",
+      "offering": {
+        "shares": 1600000,
+        "price_planned": 10000,
+        "total_planned": 16000000000,
+        "payment_date": "2026.09.17",
+        "subscribe_start": "2026.09.14",
+        "subscribe_end": "2026.09.15"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "백만원",
+        "periods": [
+          "2026년 1분기(제14기 1분기)",
+          "2025년(제13기)",
+          "2024년(제12기)",
+          "2023년(제11기)"
+        ],
+        "revenue": [
+          15742,
+          64848,
+          69380,
+          64125
+        ],
+        "operating_income": [
+          1641,
+          6337,
+          6269,
+          5963
+        ],
+        "net_income": [
+          2142,
+          9385,
+          7691,
+          7157
+        ]
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
+    {
+      "corp_name": "글로벌테크놀로지",
+      "corp_code": "01564514",
+      "rcept_no": "20260728000487",
+      "rcept_dt": "20260728",
+      "report_nm": "증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260728000487",
+      "stage": "최초",
+      "offering": {
+        "shares": 4000000,
+        "price_planned": 13000,
+        "total_planned": 52000000000,
+        "payment_date": "2026.09.21",
+        "subscribe_start": "2026.09.16",
+        "subscribe_end": "2026.09.16"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "백만원",
+        "periods": [
+          "2025년 (제13기)",
+          "2026년(E) (제14기)",
+          "2027년(E) (제15기)",
+          "2028년(E) (제16기)",
+          "2029년(E) (제17기)"
+        ],
+        "revenue": [
+          29689,
+          61092,
+          93447,
+          122925,
+          169479
+        ],
+        "operating_income": [
+          -5956,
+          4697,
+          13385,
+          23400,
+          36867
+        ],
+        "net_income": [
+          -25889,
+          4035,
+          10948,
+          18760,
+          29264
+        ]
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      }
+    },
     {
       "corp_name": "덕산넵코어스",
       "corp_code": "00960623",
@@ -197,30 +379,6 @@
       }
     },
     {
-      "corp_name": "딜리셔스",
-      "corp_code": "01461730",
-      "rcept_no": "20260714000470",
-      "rcept_dt": "20260714",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260714000470",
-      "stage": "정정",
-      "offering": {
-        "shares": 2200000,
-        "price_planned": 5000,
-        "payment_date": "2026.08.06",
-        "subscribe_start": "2026.08.03",
-        "subscribe_end": "2026.08.04"
-      },
-      "doc_financials": {
-        "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      }
-    },
-    {
       "corp_name": "기도산업",
       "corp_code": "00229085",
       "rcept_no": "20260714000315",
@@ -288,60 +446,6 @@
       },
       "doc_financials": {
         "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      }
-    },
-    {
-      "corp_name": "스카이랩스",
-      "corp_code": "01586923",
-      "rcept_no": "20260707000316",
-      "rcept_dt": "20260707",
-      "report_nm": "증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260707000316",
-      "stage": "최초",
-      "offering": {
-        "shares": 2000000,
-        "price_planned": 13000,
-        "total_planned": 26000000000,
-        "payment_date": "2026.08.19",
-        "subscribe_start": "2026.08.13",
-        "subscribe_end": "2026.08.13"
-      },
-      "doc_financials": {
-        "available": true,
-        "unit": "백만원",
-        "periods": [
-          "2026년(E) (제12기)",
-          "2027년(E) (제13기)",
-          "2028년(E) (제14기)",
-          "2029년(E) (제15기)",
-          "2030년(E) (제16기)"
-        ],
-        "revenue": [
-          10207,
-          18765,
-          38706,
-          57029,
-          77973
-        ],
-        "operating_income": [
-          -15439,
-          -10418,
-          4686,
-          16976,
-          30540
-        ],
-        "net_income": [
-          -15181,
-          -10136,
-          4967,
-          17258,
-          30822
-        ]
       },
       "doc_parse_error": null,
       "financials": {
