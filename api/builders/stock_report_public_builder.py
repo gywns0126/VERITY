@@ -41,7 +41,9 @@ PEER_METRICS = [("PER", "PER", "", 1), ("PBR", "PBR", "", 1),
 DART = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
 
 FAMILY_TYPES = {"동일인", "친족"}
-MARKET_MAP = {"KP": "KOSPI", "KQ": "KOSDAQ", "KN": "KONEX"}
+# 🚨 2026-08-03 — kr_listed.json 실제 코드는 KS/KQ 인데 KP 만 매핑돼 있어 코스피 617종목이
+#   시장 라벨에 원시 코드 "KS" 로 발행됐다(실측). KP 는 과거 표기라 호환 유지.
+MARKET_MAP = {"KS": "KOSPI", "KP": "KOSPI", "KQ": "KOSDAQ", "KN": "KONEX"}
 
 
 def _now_kst() -> datetime:
@@ -155,6 +157,13 @@ def _num(v: Any, suffix: str = "", digits: int = 1) -> Optional[str]:
         return None
     if x != x:  # NaN
         return None
+    # 🚨 2026-08-03 소값 붕괴 방지 — ROE 0.04% 가 반올림으로 "0%" 가 되면 "값이 없다"로 오독된다.
+    #   실제 0 이 아닌데 표기가 0 이면 유효숫자가 보일 때까지 자릿수를 늘린다(최대 소수 3자리).
+    if x != 0:
+        d = digits
+        while d < 3 and abs(x) < 0.5 / (10 ** d):
+            d += 1
+        digits = d
     s = f"{x:.{digits}f}".rstrip("0").rstrip(".") if digits else f"{x:.0f}"
     return f"{s}{suffix}"
 
@@ -621,6 +630,51 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any]) -> Dic
     return out
 
 
+_BAD_NAME_RE = re.compile(r"^\d{6}\.K[SQ]\b|,0P[0-9A-Z]{8}|^\d{6}$")
+
+
+def _normalize_kr_identity(s: Dict[str, Any], tk: str, name_market) -> None:
+    """국내 종목명·시장 = 자체 SoT(kr_listed → kr_stock_names) 우선.
+
+    🚨 2026-08-03 — 운영풀(recommendations.json) 경로(rich)가 외부 소스에서 받은
+    `"094970.KS,0P0000EOZ4,42992"`(야후 심볼·모닝스타 ID·숫자 CSV 한 줄)를 그대로 종목명으로
+    노출했다(제이엠티·KT밀리의서재 2종목, PM 지적). 시장도 `.KS` 접미사로만 판정해 코스닥
+    종목이 KOSPI 로 찍혔다. 국내 종목은 kr_listed 라는 자체 SoT 가 있으므로 외부 값보다 우선한다.
+    되돌리지 말 것 — 외부 소스 이름을 신뢰하면 같은 오염이 재발한다.
+    """
+    if not re.fullmatch(r"\d{6}", tk):
+        return
+    nm, mk = name_market(tk)
+    cur = str(s.get("name") or "")
+    if nm and nm != tk and (not cur or cur == tk or _BAD_NAME_RE.search(cur)):
+        s["name"] = nm
+    if mk:
+        s["market"] = mk
+
+
+def _normalize_dart_facts(s: Dict[str, Any], fund: Optional[Dict[str, Any]]) -> None:
+    """ROE·부채비율·영업이익률 = DART 재무 우선. 값 없으면 **필드 자체를 뺀다**.
+
+    🚨 2026-08-03 — rich 경로는 운영풀 rec 의 `roe`/`debt_ratio` 를 썼는데, 그 값은 외부
+    조회 실패 시 0 으로 채워진다(결손의 0 인코딩). `_num(0)` → `"0%"` 라 화면에 "ROE 0%"
+    가 사실처럼 떴다(실측 10종목). 같은 종목의 DART 값은 멀쩡했다 — 제이엠티 ROE 8.65% /
+    부채비율 46.84%. 없는 값을 0 으로 보여주는 건 RULE 7 위반이므로 미노출로 되돌린다.
+    되돌리지 말 것 — rec 값을 DART 보다 우선하면 같은 오표시가 재발한다.
+    """
+    fund = fund or {}
+    facts = s.get("facts")
+    if not isinstance(facts, dict):
+        return
+    for key, src, suf, dg in (("ROE", "roe", "%", 1), ("부채비율", "debt_ratio", "%", 0),
+                              ("영업이익률", "op_margin", "%", 1)):
+        v = fund.get(src)
+        val = _num(v, suf, dg) if v is not None else None
+        if val is not None:
+            facts[key] = val
+        elif facts.get(key) in ("0%", "0"):
+            facts.pop(key, None)  # 결손의 0 인코딩 — 사실인 척하지 않는다
+
+
 def _metric_val(tk: str, src: str, fundamentals: Dict[str, Any], valuation: Dict[str, Any]) -> Optional[float]:
     if src in ("PER", "PBR"):
         v = (valuation.get(tk) or {}).get(src)
@@ -938,6 +992,8 @@ def main() -> int:
         # 재무요약 + PER/PBR 자체계산 보강 + 동종업계 비교 부착
         for s in stocks:
             tk = s["ticker"]
+            _normalize_kr_identity(s, tk, _name_market)
+            _normalize_dart_facts(s, fundamentals.get(tk))
             fin = _financials(fundamentals.get(tk))
             if fin:
                 s["financials"] = fin
