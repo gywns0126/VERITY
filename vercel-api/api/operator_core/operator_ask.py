@@ -186,9 +186,20 @@ def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, s
     who = f"{'코스닥' if 'KOSDAQ' in str(mkt) else '코스피' if 'KOSPI' in str(mkt) else '한국'} 상장사 {name}(종목코드 {tk})"
 
     # ① 급변 사유 미상 — 최우선. 우리 데이터로는 "얼마나" 만 알고 "왜" 를 모른다.
+    #    단, 공시 축은 DART 직조회(ticker_facts 상설 섹션)가 이미 단정한다 — 외부에 되묻지 않는다.
     mv = _move_pct(facts)
     if mv is not None and abs(mv) >= 5.0:
         direction = "급등" if mv > 0 else "급락"
+        dart_direct = _sec_data(facts, "DART 공시")
+        if isinstance(dart_direct, dict) and dart_direct.get("건수") == 0:
+            dart_note = ("참고: DART 직조회로 최근 30일 공시 0건은 이미 확정했다 — 공시 재확인은 "
+                         "불필요하고, 뉴스·테마 동반·특징주 코너 쪽만 확인하라.\n")
+        elif isinstance(dart_direct, dict) and dart_direct.get("공시"):
+            titles = " / ".join(f"{r.get('date')} {r.get('title')}" for r in dart_direct["공시"][:5])
+            dart_note = (f"참고: DART 직조회로 확인된 최근 공시 = {titles}. "
+                         f"이 공시와 오늘 {direction}의 연관 보도가 있는지 확인하라.\n")
+        else:
+            dart_note = ""
         gaps.append({
             "key": "catalyst",
             "label": f"{direction} 사유 ({mv:+.1f}%)",
@@ -196,10 +207,13 @@ def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, s
             "tier": "pro",
             "query": (
                 f"{who} 주가가 {today} 장중 {mv:+.1f}% {direction}했다. 그 사유는 무엇인가?\n"
-                f"확인할 것: (1) {today} 또는 직전 영업일에 나온 공시(KIND·DART 포함, "
-                f"단일판매·공급계약, 최대주주 변경, 무상증자, 자기주식 취득, 조회공시 요구 등) "
-                f"(2) 관련 뉴스·보도 (3) 이 종목이 속한 테마·업종의 동반 급등 여부 "
-                f"(4) 특징주·급등주 코너 언급.\n{_PPLX_RULES}"
+                f"{dart_note}"
+                f"확인할 것: (1) 관련 뉴스·보도 (2) 이 종목이 속한 테마·업종의 동반 {direction} 여부 "
+                f"(3) 특징주·급등주 코너 언급"
+                + ("" if dart_note else
+                   f" (4) {today} 또는 직전 영업일 공시(KIND·DART — 단일판매·공급계약, "
+                   f"최대주주 변경, 무상증자, 자기주식 취득, 조회공시 요구 등)")
+                + f".\n{_PPLX_RULES}"
             ),
         })
 
@@ -243,7 +257,10 @@ def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, s
 
     # ④ 컨센서스 부재 — 우리 consensus_available=false 는 "없다" 가 아니라 "우리가 못 모았다".
     #    다만 마이크로캡은 실제로 커버리지가 없는 경우가 대부분이라 우선순위는 뒤로 둔다.
+    #    증권사 리포트 수집(네이버, 2026-08-03 배선)이 이 종목을 잡았다면 로컬로 확인 끝 — 위임 생략.
     cons = rep.get("consensus") or {}
+    if _sec_data(facts, "증권사 리포트"):
+        cons = {"target_price": "로컬 확인", "opinion": "로컬 확인"}  # 위임 생략 표식
     if not cons.get("target_price") and not cons.get("opinion"):
         gaps.append({
             "key": "consensus",

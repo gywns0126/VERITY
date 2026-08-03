@@ -69,6 +69,10 @@ SCAN_FILES = [
     "hot_stock.json", "us_smallcap_corner_filters.json", "smallcap_corner_filters.json",
     "ai_synthesis.json", "kr_earnings_pattern.json", "nps_holdings.json",
     "us_major_holdings.json", "us_short_interest.json", "us_insider_trades.json",
+    # 2026-08-03 배선 감사 (PM "뭘 더 안쓰고 있는지 확인해서 배선해") — 발행돼 있는데 조인 0 이던 것:
+    "us_stock_report_public.json", "us_quarterly_public.json", "us_smart_money_13f.json",
+    "us_disclosure_feed.json", "us_disclosure_forensics.json", "us_earnings_pattern.json",
+    "event_study.json", "nps_employment.json",
 ]
 
 # 로컬 전용(미발행) — 발행물보다 원본에 가깝다.
@@ -85,6 +89,11 @@ LOCAL_FILES = [
     ("data/dividends_kr.json", "배당", True),
     ("data/chain_snippets.json", "공급망 스니펫", False),
     ("data/group_structure.json", "그룹 지배구조", False),
+    # 2026-08-03 배선 감사 — 로컬에 있는데 조인 0 이던 것:
+    ("data/analyst_reports.json", "증권사 리포트(네이버 수집)", False),   # company_reports[] · 커버리지 존재 확인
+    ("data/dart_kr_backfill_result.json", "DART 백필(연도별 팩터)", False),  # rows[] 1,061 records
+    ("data/commodity_impact.json", "원자재 영향", False),                  # by_ticker 상관·MoM 알림
+    ("data/us_fin_annual_compact.json", "US 연간재무", False),
 ]
 
 # 오퍼레이터 private bucket (Supabase). 인증 없으면 skip.
@@ -207,7 +216,8 @@ def _extract_for_ticker(doc: Any, tk: str) -> Optional[Any]:
                 "prices", "etfs", "top", "rows", "recommendations",
                 # 2026-08-03 실측 추가 — 오퍼레이터 전 자산 조인(PM "민감 자료도 전부")
                 "summaries", "synth", "patterns", "by_ticker", "structure", "full",
-                "holdings", "positions", "syntheses", "data", "fundamentals"):
+                "holdings", "positions", "syntheses", "data", "fundamentals",
+                "company_reports"):  # analyst_reports.json (2026-08-03 배선 감사)
         v = doc.get(key)
         if isinstance(v, dict) and tk in v:
             return v[tk]
@@ -251,6 +261,111 @@ def _realtime(tk: str) -> Optional[Dict[str, Any]]:
         "_note": "KIS 실시간 · 오퍼레이터 본인 이용 · 재배포 금지",
     }
     return {k: v for k, v in out.items() if v is not None}
+
+
+_DART_WINDOW_DAYS = 30
+
+
+def _dart_recent_filings(tk: str) -> Optional[Dict[str, Any]]:
+    """OpenDART list.json 직조회 — '공시 없음'을 추정이 아니라 **단정**하기 위한 1차 소스.
+
+    상설 배경 (PM 2026-08-03 "DART 직조회 상설로 넣어"):
+      094970 +12% 급등일에 스냅샷 파일·Perplexity 모두 "공시 확인 불가"로 끝났는데,
+      직조회는 1초 만에 "5/14 이후 공시 0건"을 확정했다. 스냅샷은 수집 시점 기준이라
+      '오늘 공시 유무'를 원리적으로 못 단정한다. 1콜/조회 = 일 2만 쿼터 대비 무시 가능.
+
+    corp_code = data/mapping.json 파일 직접 로드 — api.collectors import 금지
+    (vercel operator_core 복제본은 repo 루트 api/ 패키지를 번들에 못 가져간다).
+    캐시 없이 매번 신선 호출 — 장중 신규 공시가 이 섹션의 존재 이유다.
+    """
+    key = os.environ.get("DART_API_KEY")
+    if not key:
+        return None
+    mapping = _load_local("data/mapping.json")
+    cc = (mapping or {}).get(tk) if isinstance(mapping, dict) else None
+    if not cc:
+        return None
+    end = _now()
+    bgn = end - timedelta(days=_DART_WINDOW_DAYS)
+    url = "https://opendart.fss.or.kr/api/list.json?" + urllib.parse.urlencode({
+        "crtfc_key": key, "corp_code": cc,
+        "bgn_de": bgn.strftime("%Y%m%d"), "end_de": end.strftime("%Y%m%d"),
+        "page_count": 20,
+    })
+    try:
+        with urllib.request.urlopen(url, timeout=10) as r:
+            doc = json.loads(r.read().decode("utf-8", "replace"))
+    except Exception:
+        return None
+    status = str(doc.get("status") or "")
+    window = f"{bgn.strftime('%Y-%m-%d')} ~ {end.strftime('%Y-%m-%d')}"
+    if status == "013":  # 조회된 데이터 없음 = 그 자체가 사실
+        return {"조회구간": window, "건수": 0,
+                "확정": "구간 내 공시 0건 — DART 직조회 확정 (추정 아님)"}
+    if status != "000":  # 010 키오류 · 020 쿼터 초과 등 — 실패는 missing 으로
+        return None
+    rows = []
+    for it in (doc.get("list") or []):
+        dt = str(it.get("rcept_dt") or "")
+        rows.append({
+            "date": f"{dt[:4]}-{dt[4:6]}-{dt[6:8]}" if len(dt) == 8 else dt,
+            "title": str(it.get("report_nm") or "").strip(),
+            "filer": it.get("flr_nm"),
+            "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=" + str(it.get("rcept_no") or ""),
+        })
+    return {"조회구간": window, "건수": int(doc.get("total_count") or len(rows)), "공시": rows[:12]}
+
+
+# 일봉 청크 — api/collectors/fsc_daily_prices._chunk_idx 와 동일 규칙 (import 대신 복제 —
+# vercel operator_core 사유는 위와 동일. 규칙 변경 시 양쪽 동시 수정).
+_N_CHART_CHUNKS = 40
+
+
+def _chunk_idx(code: str) -> int:
+    try:
+        return int(code, 36) % _N_CHART_CHUNKS
+    except (TypeError, ValueError):
+        return -1
+
+
+def _daily_bars(tk: str) -> Optional[Dict[str, Any]]:
+    """kr_chart_daily 청크(금융위 T+1 · 250일)에서 일봉 + 산술 파생 사실.
+
+    2026-08-03 배선 감사: 발행돼 있는데 조인 0 이던 자산. technical 미산출(관심종목 유래)
+    종목이 "MA·고저·거래량 평균조차 없음" 상태로 나오던 갭의 입력을 여기서 공급한다.
+    파생은 전부 산술(사실) — MA/고저/평균거래량. 해석·신호는 상위 레이어 몫.
+    """
+    idx = _chunk_idx(tk)
+    if idx < 0:
+        return None
+    doc = _fetch_json(f"{BLOB}/kr_chart_daily/chunk_{idx:02d}.json", f"chart_chunk_{idx:02d}")
+    c = (((doc or {}).get("stocks") or {}).get(tk) or {}).get("c")
+    if not isinstance(c, list) or len(c) < 5:
+        return None
+    closes = [r[4] for r in c]
+    vols = [r[5] for r in c]
+    last = c[-1]
+
+    def ma(n: int) -> Optional[int]:
+        return round(sum(closes[-n:]) / n) if len(closes) >= n else None
+
+    hi = max(r[2] for r in c)
+    lo = min(r[3] for r in c)
+    v20 = round(sum(vols[-20:]) / min(20, len(vols)))
+    out: Dict[str, Any] = {
+        "기준일": str(last[0]),
+        "종가": last[4],
+        "보유일수": len(c),
+        "기간 최고/최저": f"{hi:,} / {lo:,}",
+        "고점대비": f"{(last[4] / hi - 1) * 100:+.1f}%",
+        "저점대비": f"{(last[4] / lo - 1) * 100:+.1f}%",
+        "MA20/60/120": " / ".join(f"{x:,}" if x else "—" for x in (ma(20), ma(60), ma(120))),
+        "거래량 20일평균": v20,
+        "최근 5봉 [일,시,고,저,종,량]": c[-5:],
+        "_note": "금융위 일봉 T+1 · MA/고저/평균거래량 = 산술 자체계산 (해석 아님)",
+        "_as_of": str((doc or {}).get("as_of") or ""),
+    }
+    return out
 
 
 def _private_json(path: str) -> Optional[Any]:
@@ -326,6 +441,26 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
             _add("종가 (T+1 · 실시간 아님)", "kr_close_latest.json", d, blk)
         else:
             out["missing"].append("종가 (kr_close_latest.json — 당일 미거래·비수록)")
+
+    # DART 공시 직조회 — 상설 (PM 2026-08-03). "0건" 도 사실 — 급변 사유 판단의 1차 관문.
+    df = _dart_recent_filings(tk)
+    if df is not None:
+        out["sections"].append({
+            "label": f"DART 공시 (직조회 · {_DART_WINDOW_DAYS}일)", "source": "opendart:list.json",
+            "as_of": _now().isoformat(timespec="seconds"), "data": df,
+        })
+    else:
+        out["missing"].append("DART 공시 직조회 (키 없음·corp_code 미해석·호출 실패)")
+
+    # 일봉 250일 + 산술 파생 (금융위 T+1) — 2026-08-03 배선 감사로 추가.
+    bars = _daily_bars(tk)
+    if bars is not None:
+        out["sections"].append({
+            "label": "일봉 (250일 · 산술 파생)", "source": "kr_chart_daily/chunk (금융위)",
+            "as_of": bars.pop("_as_of", ""), "data": bars,
+        })
+    else:
+        out["missing"].append("일봉 청크 (kr_chart_daily — 비수록·미도달)")
 
     # 리포트 — facts/peer/재무 등 큰 블록이라 필요한 것만
     d = docs.get("stock_report_public.json")
