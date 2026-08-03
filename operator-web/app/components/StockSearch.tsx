@@ -27,6 +27,7 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
     const c = palette(dark)
     const [universe, setUniverse] = useState<Stock[]>([])
     const [query, setQuery] = useState("")
+    const [idx, setIdx] = useState(-1)   // 키보드 탐색 (토스 검색 문법: 상하 이동·Enter 선택·ESC 지우기)
     const [recent, setRecent] = useState<Stock[]>([])
 
     useEffect(() => {
@@ -57,6 +58,7 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
             window.dispatchEvent(new CustomEvent("verity-ticker", { detail: { ticker: item.ticker, item } }))
         } catch {}
         setQuery("")
+        setIdx(-1)
     }
 
     const norm = query.trim().toLowerCase()
@@ -75,15 +77,15 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
     const inputBg = dark ? c.bg : c.track
     const hover = dark ? "rgba(169,155,255,0.14)" : "rgba(108,92,231,0.08)"
 
-    function Row({ item, k }: { item: Stock; k: string }) {
+    function Row({ item, k, active }: { item: Stock; k: string; active?: boolean }) {
         const isUS = item.market === "US"
         return (
             <div
                 key={k}
                 onClick={() => select(item)}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 11px", borderRadius: 10, cursor: "pointer", gap: 8 }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 11px", borderRadius: 10, cursor: "pointer", gap: 8, background: active ? hover : "transparent" }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = hover }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent" }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = active ? hover : "transparent" }}
             >
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
                     <span style={{ fontSize: 14, fontWeight: 600, color: c.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -114,7 +116,14 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
                     : { marginTop: 8 }),
             }}
         >
-            {results.map((it, i) => <Row key={(it.ticker || "") + i} item={it} k={(it.ticker || "") + i} />)}
+            {results.map((it, i) => <Row key={(it.ticker || "") + i} item={it} k={(it.ticker || "") + i} active={i === idx} />)}
+            <div style={{ display: "flex", gap: 12, padding: "7px 11px 3px", borderTop: `1px solid ${c.line}`, marginTop: 4 }}>
+                {([["Enter", "선택"], ["상하", "탐색"], ["ESC", "지우기"]] as Array<[string, string]>).map(([k, v]) => (
+                    <span key={k} style={{ fontSize: 9.5, color: c.faint }}>
+                        <span style={{ background: c.hi, borderRadius: 4, padding: "1px 5px", fontWeight: 700, color: c.sub }}>{k}</span> {v}
+                    </span>
+                ))}
+            </div>
         </div>
     ) : null
 
@@ -123,7 +132,13 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
             <input
                 id="af-search"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => { setQuery(e.target.value); setIdx(-1) }}
+                onKeyDown={(e) => {
+                    if (e.key === "ArrowDown") { e.preventDefault(); setIdx((v) => Math.min(results.length - 1, v + 1)) }
+                    else if (e.key === "ArrowUp") { e.preventDefault(); setIdx((v) => Math.max(-1, v - 1)) }
+                    else if (e.key === "Enter") { const pick = idx >= 0 ? results[idx] : results[0]; if (pick) select(pick) }
+                    else if (e.key === "Escape") { setQuery(""); setIdx(-1); (e.target as HTMLInputElement).blur() }
+                }}
                 placeholder={placeholder}
                 style={{ width: "100%", boxSizing: "border-box", background: inputBg, color: c.ink, border: "none", borderRadius: floating ? 10 : 12, padding: floating ? "9px 13px" : "13px 15px", fontSize: floating ? 13.5 : 15, fontFamily: FONT, outline: "none" }}
             />
