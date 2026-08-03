@@ -329,13 +329,24 @@ export default function MacroPage() {
                     </div>
                 </PanelBoundary>
 
-                {/* 헤드라인 2열 */}
+                {/* 라이브 뉴스 — 공식 유튜브 24시간 채널 임베드 (클릭 시 로드 — 페이지 무게·소음 방지) */}
+                <PanelBoundary name="라이브뉴스">
+                    <div style={{ ...cardStyle(c, MAIN_PAD) }}>
+                        {secTitle("라이브 뉴스", "공식 유튜브 24시간 · 클릭하면 재생")}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 12 }}>
+                            <LiveNews c={c} label="YTN" channel="UChlgI3UHCOnwUGzWzbJ3H5w" />
+                            <LiveNews c={c} label="연합뉴스TV" channel="UCTHCOPwqNfZ0uiKOvFyhGwg" />
+                        </div>
+                    </div>
+                </PanelBoundary>
+
+                {/* 헤드라인 2열 — 전체 아우름 (기본 12, 전체 토글) */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 12, alignItems: "start" }}>
                     <PanelBoundary name="월가">
-                        <HeadlineCard c={c} title="월가 · 글로벌" items={(pf?.bloomberg_google_headlines || []).slice(0, 12)} />
+                        <HeadlineCard c={c} title="월가 · 글로벌" items={pf?.bloomberg_google_headlines || []} />
                     </PanelBoundary>
                     <PanelBoundary name="국내">
-                        <HeadlineCard c={c} title="국내" items={(pf?.headlines || []).slice(0, 12)} />
+                        <HeadlineCard c={c} title="국내" items={pf?.headlines || []} />
                     </PanelBoundary>
                 </div>
 
@@ -400,10 +411,21 @@ function ChangeTag({ c, t }: { c: Palette; t?: string }) {
 }
 
 function HeadlineCard({ c, title, items }: { c: Palette; title: string; items: Array<{ title?: string; link?: string }> }) {
+    const [all, setAll] = useState(false)
+    const clean = items.filter((h) => h && h.title)
+    const shown = all ? clean : clean.slice(0, 12)
     return (
         <div style={{ ...cardStyle(c, "14px 16px") }}>
-            <div style={{ fontSize: 13.5, fontWeight: 800, color: c.ink, marginBottom: 8, letterSpacing: "-0.02em" }}>{title}</div>
-            {items.filter((h) => h && h.title).map((h, i) => (
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 13.5, fontWeight: 800, color: c.ink, letterSpacing: "-0.02em" }}>{title}</span>
+                <span style={{ fontSize: 10, color: c.faint }}>{clean.length}건</span>
+                {clean.length > 12 ? (
+                    <button onClick={() => setAll((v) => !v)} style={{ marginLeft: "auto", border: "none", background: c.hi, color: c.sub, borderRadius: 999, padding: "3px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: FONT }}>
+                        {all ? "접기" : "전체"}
+                    </button>
+                ) : null}
+            </div>
+            {shown.map((h, i) => (
                 <a
                     key={i}
                     href={h.link || "#"}
@@ -414,6 +436,39 @@ function HeadlineCard({ c, title, items }: { c: Palette; title: string; items: A
                     {h.title}
                 </a>
             ))}
+        </div>
+    )
+}
+
+// 라이브 뉴스 임베드 — 유튜브 공식 채널 live_stream (24시간 채널만 등록: 라이브 부재 시 오류 화면 방지).
+// 클릭-투-로드 = 진입 시 iframe 0 (무게·자동재생 소음 차단).
+function LiveNews({ c, label, channel }: { c: Palette; label: string; channel: string }) {
+    const [on, setOn] = useState(false)
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: c.ink }}>{label}</span>
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: c.up }} />
+                <span style={{ fontSize: 9.5, color: c.faint }}>LIVE</span>
+            </div>
+            {on ? (
+                <div style={{ position: "relative", width: "100%", paddingTop: "56.25%", borderRadius: 12, overflow: "hidden", background: "#000" }}>
+                    <iframe
+                        src={`https://www.youtube.com/embed/live_stream?channel=${channel}&autoplay=1&mute=1`}
+                        title={label}
+                        allow="autoplay; encrypted-media; picture-in-picture"
+                        allowFullScreen
+                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+                    />
+                </div>
+            ) : (
+                <button
+                    onClick={() => setOn(true)}
+                    style={{ border: "none", borderRadius: 12, background: c.hi, color: c.sub, fontSize: 12.5, fontWeight: 700, fontFamily: FONT, cursor: "pointer", width: "100%", paddingTop: "26%", paddingBottom: "26%" }}
+                >
+                    {label} 라이브 재생 (음소거 시작)
+                </button>
+            )}
         </div>
     )
 }

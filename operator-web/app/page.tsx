@@ -10,7 +10,7 @@ import { useDark, palette, FONT } from "@/lib/theme"
 import { fetchPortfolioSlim, fetchPublic } from "@/lib/api"
 import { isAuthed } from "@/lib/auth"
 import { captureOAuthHash, refreshIfNeeded } from "@/lib/supabase"
-import type { AlertItem, PortfolioFull } from "@/lib/types"
+import type { AlertItem, MarketExplain, PortfolioFull } from "@/lib/types"
 import TopBar from "./components/TopBar"
 import MarketStrip from "./components/MarketStrip"
 import BottomTicker from "./components/BottomTicker"
@@ -97,6 +97,15 @@ export default function Home() {
         if (r.ticker && r.name && !names[r.ticker]) names[String(r.ticker)] = r.name
     })
 
+    const explain: MarketExplain = {
+        analysis: pf?.daily_report?.market_analysis,
+        strategy: pf?.daily_report?.strategy,
+        risk: pf?.daily_report?.risk_watch,
+        outlook: pf?.daily_report?.tomorrow_outlook,
+        tone: pf?.briefing?.tone,
+        headline: pf?.briefing?.headline,
+    }
+
     return (
         <main className="af-viewport" style={{ minHeight: "100vh", background: c.bg, color: c.ink, fontFamily: FONT, WebkitFontSmoothing: "antialiased" }}>
             <TopBar active="terminal" />
@@ -105,7 +114,7 @@ export default function Home() {
                 {/* R1 계좌 헤드업 + R2 P0 + R3 시장 — 상단 고정 구역 */}
                 <AccountHud vams={pf?.vams} status={pfStatus} />
                 <P0Line alerts={alerts} holdTickers={holdT} />
-                <MarketStrip />
+                <MarketStrip explain={explain} />
 
                 {/* 3열 — 각 컬럼 내부 스크롤 (토스식 섹션 고정) */}
                 <div className="af-term">

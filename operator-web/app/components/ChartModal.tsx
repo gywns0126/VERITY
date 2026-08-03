@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react"
 import { useDark, palette, FONT, NUM, type Palette } from "@/lib/theme"
 import { fetchRailway } from "@/lib/api"
+import type { MarketExplain } from "@/lib/types"
 
 export type ChartTarget = {
     kind: "macro" | "crypto" | "krindex"
@@ -17,6 +18,7 @@ export type ChartTarget = {
     series?: number[]        // macro: 수집 시계열
     value?: number | null
     changePct?: number | null
+    explain?: MarketExplain  // krindex: daily_report 발췌 (요인·전략·리스크·내일 관점)
 }
 
 type Candle = { t: string; o: number; h: number; l: number; c: number; v: number }
@@ -184,6 +186,28 @@ export default function ChartModal({ target, onClose }: { target: ChartTarget; o
                         차트 불러오는 중…
                     </div>
                 )}
+
+                {/* 왜 움직였나 · 향후 관점 — 자기 리포트(daily_report) 발췌. RULE 7: 가설·예측 아님 라벨 */}
+                {isIndex && target.explain && (target.explain.analysis || target.explain.outlook) ? (
+                    <div style={{ background: c.hi, borderRadius: 12, padding: "11px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: c.vt }}>오늘 시장 설명</span>
+                            <span style={{ fontSize: 9.5, color: c.faint }}>자기 리포트 · 매일 생성 · 가설 — 예측 아님</span>
+                        </div>
+                        {([
+                            ["분석", target.explain.analysis],
+                            ["전략", target.explain.strategy],
+                            ["리스크", target.explain.risk],
+                            ["내일 관점", target.explain.outlook],
+                        ] as Array<[string, string | undefined]>).map(([k, v]) =>
+                            v ? (
+                                <div key={k} style={{ fontSize: 12, color: c.sub, lineHeight: 1.5 }}>
+                                    <span style={{ fontWeight: 800, color: c.ink }}>{k}</span> {v}
+                                </div>
+                            ) : null
+                        )}
+                    </div>
+                ) : null}
 
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5, color: c.faint }}>
                     <span>{candles.length ? `SMA5 · SMA20 · ${candles.length}봉` : ""}</span>

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react"
 import { useDark, palette, FONT, NUM, type Palette } from "@/lib/theme"
 import { fetchPublic, fetchRailway } from "@/lib/api"
 import ChartModal, { type ChartTarget } from "./ChartModal"
+import type { MarketExplain } from "@/lib/types"
 
 const IDX_POLL_MS = 10000 // KR 지수 실시간 — Railway /index_quotes (KIS 공유토큰 소비, RULE 1 안전)
 
@@ -48,7 +49,7 @@ function Spark({ data, color }: { data: number[]; color: string }) {
     )
 }
 
-export default function MarketStrip() {
+export default function MarketStrip({ explain }: { explain?: MarketExplain }) {
     const dark = useDark()
     const c = palette(dark)
     const [m, setM] = useState<Record<string, Node>>({})
@@ -147,7 +148,7 @@ export default function MarketStrip() {
                 onOpen={() =>
                     setTarget(
                         k === "kospi" || k === "kosdaq"
-                            ? { kind: "krindex", name, indexCd: k === "kospi" ? "0001" : "1001", value: v, changePct: cp }
+                            ? { kind: "krindex", name, indexCd: k === "kospi" ? "0001" : "1001", value: v, changePct: cp, explain }
                             : { kind: "macro", name, unit, series: n.sparkline || [], value: v, changePct: cp }
                     )
                 }
