@@ -45,6 +45,10 @@ logger = logging.getLogger(__name__)
 
 ws_client = KISWebSocketClient()
 
+# 배포 관측 태그 — /health 로 어떤 커밋 계열이 떠 있는지 판별 (2026-08-03 배포 추적 사고:
+# uptime_seconds 는 WS 연결 uptime 이라 배포판별 불가였음). 서버 변경 시 갱신.
+BUILD_TAG = "2026-08-03-idx3"
+
 
 def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
     """Railway /api/order 엔드포인트 인증 (fail-closed).
@@ -229,6 +233,7 @@ async def health():
     key_remaining = max(0, ws_client._APPROVAL_KEY_TTL - key_age) if key_age > 0 else 0
     return {
         "status": "ok",
+        "build": BUILD_TAG,
         "ws_connected": ws_client.connected,
         "subscribed_tickers": ws_client.subscribed_tickers,
         "subscribed_count": len(ws_client.subscribed_tickers),
