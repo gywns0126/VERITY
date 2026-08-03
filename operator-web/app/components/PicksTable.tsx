@@ -82,7 +82,19 @@ export default function PicksTable({ recs, status }: { recs: Rec[]; status: "loa
                 <div style={{ fontSize: 12.5, color: c.sub, padding: "4px 0" }}>추천 종목이 없습니다.</div>
             ) : (
                 <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
+                    {/* 🚨 tableLayout fixed + colgroup 명시 폭 — auto layout 은 렌더된 행 내용 폭으로
+                        열을 재계산해 접기/펼치기 때 열 위치가 움직임 (PM 2026-08-03 지적). */}
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720, tableLayout: "fixed" }}>
+                        <colgroup>
+                            <col style={{ width: 220 }} />
+                            <col style={{ width: 70 }} />
+                            <col style={{ width: 86 }} />
+                            <col style={{ width: 56 }} />
+                            <col style={{ width: 52 }} />
+                            <col style={{ width: 62 }} />
+                            <col style={{ width: 96 }} />
+                            <col />
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th style={{ ...th, textAlign: "left" }}>종목</th>
@@ -111,11 +123,11 @@ export default function PicksTable({ recs, status }: { recs: Rec[]; status: "loa
                                         onClick={() => selectTicker(String(r.ticker || ""), r.name)}
                                         style={{ cursor: "pointer", borderTop: i === 0 ? "none" : `1px solid ${c.line}` }}
                                     >
-                                        <td style={{ ...td, textAlign: "left" }}>
-                                            <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                                        <td style={{ ...td, textAlign: "left", overflow: "hidden" }}>
+                                            <span style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
                                                 <StockLogo ticker={r.ticker} name={r.name} size={20} />
-                                                <span style={{ fontSize: 12.5, fontWeight: 700, color: c.ink }}>{r.name || r.ticker}</span>
-                                                <span style={{ fontSize: 10, color: c.faint, ...NUM }}>{r.ticker}</span>
+                                                <span style={{ fontSize: 12.5, fontWeight: 700, color: c.ink, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name || r.ticker}</span>
+                                                <span style={{ fontSize: 10, color: c.faint, ...NUM, flexShrink: 0 }}>{r.ticker}</span>
                                             </span>
                                         </td>
                                         <td style={td}>
@@ -131,9 +143,9 @@ export default function PicksTable({ recs, status }: { recs: Rec[]; status: "loa
                                         <td style={{ ...td, fontWeight: 700, color: c.ink }}>
                                             {price !== null ? (isUS ? "$" + price.toFixed(2) : Math.round(price).toLocaleString()) : "—"}
                                         </td>
-                                        <td style={{ ...td, textAlign: "left" }}>
+                                        <td style={{ ...td, textAlign: "left", overflow: "hidden" }}>
                                             {drivers.map((d, j) => (
-                                                <span key={j} style={{ fontSize: 10, fontWeight: 600, color: c.vt, background: c.vtS, borderRadius: 6, padding: "2px 6px", marginRight: 4 }}>{d}</span>
+                                                <span key={j} style={{ fontSize: 10, fontWeight: 600, color: c.vt, background: c.vtS, borderRadius: 6, padding: "2px 6px", marginRight: 4, whiteSpace: "nowrap", display: "inline-block" }}>{d}</span>
                                             ))}
                                         </td>
                                     </tr>

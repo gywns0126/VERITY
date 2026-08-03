@@ -76,55 +76,73 @@ export default function MarketStrip() {
         })
     })
 
-    function IndexCard({ k, name, unit }: { k: string; name: string; unit?: string }) {
-        const n = m[k] || {}
-        const v = typeof n.value === "number" ? n.value : null
-        const cp = typeof n.change_pct === "number" ? n.change_pct : typeof n.change_percent === "number" ? n.change_percent : null
+    // 카드 공통 골격 (PM 2026-08-03 "박스 안 배치 엉망" 정리):
+    //   좌 = 이름(위) + 값·등락 한 줄(아래, nowrap — 줄바꿈·잘림 금지) / 우 = 스파크 고정폭.
+    //   단위(원 등)는 값에 병합해 개행 차단.
+    function Card({ name, tag, value, cp, spark, flashKey, dir }: { name: string; tag?: string; value: string; cp: number | null; spark?: number[]; flashKey?: string; dir?: string }) {
         const col = cp == null ? c.faint : cp > 0 ? c.up : cp < 0 ? c.down : c.faint
         const sign = cp != null && cp > 0 ? "+" : ""
         return (
-            <div style={{ background: c.card, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", padding: "9px 11px", display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-                {n.sparkline && n.sparkline.length > 1 ? <Spark data={n.sparkline} color={col} /> : null}
-                <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 10.5, fontWeight: 700, color: c.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                        <span style={{ fontSize: 13.5, fontWeight: 800, color: c.ink, ...NUM }}>{v != null ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—"}{unit || ""}</span>
-                        <span style={{ fontSize: 10.5, fontWeight: 700, color: col, ...NUM }}>{cp != null ? `${sign}${cp.toFixed(2)}%` : ""}</span>
+            <div style={{ background: c.card, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", padding: "9px 12px", display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: c.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textAlign: "left" }}>
+                        {name}{tag ? <span style={{ color: c.faint, fontWeight: 500 }}> {tag}</span> : null}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, whiteSpace: "nowrap" }}>
+                        <span key={flashKey} className={dir ? `af-flash-${dir}` : undefined} style={{ fontSize: 13.5, fontWeight: 800, color: c.ink, ...NUM, whiteSpace: "nowrap" }}>
+                            {value}
+                        </span>
+                        <span style={{ fontSize: 10.5, fontWeight: 700, color: col, ...NUM, whiteSpace: "nowrap", flexShrink: 0 }}>
+                            {cp != null ? `${sign}${cp.toFixed(2)}%` : ""}
+                        </span>
                     </div>
                 </div>
+                {spark && spark.length > 1 ? <Spark data={spark} color={col} /> : null}
             </div>
         )
     }
 
-    function CryptoCard({ row }: { row: CryptoRow }) {
-        const px = parseFloat(row.lastPrice || "")
-        const cp = parseFloat(row.priceChangePercent || "")
-        const was = prevPx.current[row.symbol]
-        const dir = isFinite(px) && typeof was === "number" && px !== was ? (px > was ? "up" : "dn") : ""
-        const col = !isFinite(cp) ? c.faint : cp > 0 ? c.up : cp < 0 ? c.down : c.faint
-        const sign = isFinite(cp) && cp > 0 ? "+" : ""
+    function idx(k: string, name: string, unit?: string) {
+        const n = m[k] || {}
+        const v = typeof n.value === "number" ? n.value : null
+        const cp = typeof n.change_pct === "number" ? n.change_pct : typeof n.change_percent === "number" ? n.change_percent : null
         return (
-            <div style={{ background: c.card, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", padding: "9px 11px", display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 10.5, fontWeight: 700, color: c.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {CRYPTO_NAMES[row.symbol] || row.symbol} <span style={{ color: c.faint, fontWeight: 500 }}>24/7</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                        <span key={`${row.symbol}-${row.lastPrice}`} className={dir ? `af-flash-${dir}` : undefined} style={{ fontSize: 13.5, fontWeight: 800, color: c.ink, ...NUM, padding: "0 2px" }}>
-                            {isFinite(px) ? "$" + px.toLocaleString(undefined, { maximumFractionDigits: px >= 1000 ? 0 : 2 }) : "—"}
-                        </span>
-                        <span style={{ fontSize: 10.5, fontWeight: 700, color: col, ...NUM }}>{isFinite(cp) ? `${sign}${cp.toFixed(2)}%` : ""}</span>
-                    </div>
-                </div>
-            </div>
+            <Card
+                key={k}
+                name={name}
+                value={v != null ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) + (unit || "") : "—"}
+                cp={cp}
+                spark={n.sparkline}
+            />
         )
     }
 
     return (
-        <div className="af-mkt" style={{ fontFamily: FONT }}>
-            {LEAD.map(({ key, name, unit }) => <IndexCard key={key} k={key} name={name} unit={unit} />)}
-            {crypto.map((row) => <CryptoCard key={row.symbol} row={row} />)}
-            {REST.map(({ key, name, unit }) => <IndexCard key={key} k={key} name={name} unit={unit} />)}
+        <div style={{ fontFamily: FONT, marginBottom: 12 }}>
+            <div className="af-mkt" style={{ marginBottom: 0 }}>
+                {LEAD.map(({ key, name, unit }) => idx(key, name, unit))}
+                {crypto.map((row) => {
+                    const px = parseFloat(row.lastPrice || "")
+                    const cp = parseFloat(row.priceChangePercent || "")
+                    const was = prevPx.current[row.symbol]
+                    const dir = isFinite(px) && typeof was === "number" && px !== was ? (px > was ? "up" : "dn") : ""
+                    return (
+                        <Card
+                            key={row.symbol}
+                            name={CRYPTO_NAMES[row.symbol] || row.symbol}
+                            tag="실시간"
+                            value={isFinite(px) ? "$" + px.toLocaleString(undefined, { maximumFractionDigits: px >= 1000 ? 0 : 2 }) : "—"}
+                            cp={isFinite(cp) ? cp : null}
+                            flashKey={`${row.symbol}-${row.lastPrice}`}
+                            dir={dir}
+                        />
+                    )
+                })}
+                {REST.map(({ key, name, unit }) => idx(key, name, unit))}
+            </div>
+            <div style={{ fontSize: 9.5, color: c.faint, padding: "5px 2px 0" }}>
+                지수·환율·금리 = 약 30분 주기 수집 · 크립토 = 실시간(Binance 5초) · 미장 = 미국 장중 외 전일 종가
+            </div>
         </div>
     )
 }

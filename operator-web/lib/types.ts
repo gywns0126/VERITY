@@ -52,12 +52,43 @@ export type GlobalEvent = {
 
 export type Briefing = { headline?: string; tone?: string }
 
+/** 🚨 recommended/avoid_sectors = 객체 배열 (실측 2026-08-03). 문자열로 렌더하면
+ *  "Objects are not valid as a React child" 크래시 — 거시 패널 오류 실사고 근인. */
+export type RotSector = { name?: string; change_pct?: number; reason?: string; theme?: string }
+
 export type SectorRotation = {
     cycle?: string
     cycle_label?: string
     cycle_desc?: string
-    recommended_sectors?: string[]
-    avoid_sectors?: string[]
+    recommended_sectors?: RotSector[]
+    avoid_sectors?: RotSector[]
+}
+
+export type SectorTopStock = { name?: string; price?: number; change_pct?: number }
+
+export type SectorRow = {
+    name?: string
+    market?: string
+    change_pct?: number
+    top_stocks?: SectorTopStock[]
+}
+
+export type MacroNode = {
+    value?: number
+    change?: number
+    change_pct?: number
+    week_high?: number
+    week_low?: number
+    sparkline?: number[]
+}
+
+export type Analog = {
+    name?: string
+    date?: string
+    distance?: number
+    cape?: number
+    vix?: number
+    unemployment?: number
 }
 
 export type HorizonBand = { median?: number; p25?: number; p75?: number; p5?: number; p95?: number }
@@ -69,6 +100,7 @@ export type MarketHorizon = {
     cape_value?: number
     cycle_stage_label_ko?: string
     horizons?: Record<string, HorizonBand>
+    analogs?: Analog[]
 }
 
 export type DailyReport = {
@@ -90,6 +122,8 @@ export type PortfolioFull = {
     sector_rotation?: SectorRotation
     market_horizon?: MarketHorizon
     daily_report?: DailyReport
+    sectors?: SectorRow[]
+    macro?: Record<string, MacroNode>
 }
 
 export type AlertItem = {
