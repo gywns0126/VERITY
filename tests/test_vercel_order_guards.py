@@ -177,3 +177,32 @@ def test_kr_order_still_works(monkeypatch):
     ok, msg, n = _validate(mod, {"ticker": "005930", "side": "BUY", "order_type": "00",
                                  "qty": 1, "price": 70000, "market": "kr"})
     assert ok and n["price"] == 70000 and isinstance(n["price"], int)
+
+
+def test_nonfinite_price_rejected(monkeypatch):
+    """NaN/Inf 차단 — NaN 은 모든 비교가 False 라 상한 검사를 통과하고(가격 nan 주문),
+    KR 분기 int() 에서는 미처리 예외(500)가 났다. 2026-08-04 적대적 테스트 발견."""
+    mod = _reload(monkeypatch, env={"RAILWAY_SHARED_SECRET": "x"})
+    for market, price in [("us", "nan"), ("us", "inf"), ("kr", "nan"), ("kr", float("inf"))]:
+        ok, msg, _ = _validate(mod, {"ticker": "AAPL", "side": "BUY", "order_type": "00",
+                                     "qty": 1, "price": price, "market": market})
+        assert not ok, f"{market}/{price} 통과됨"
+        assert "finite" in msg
+
+
+def test_negative_price_rejected(monkeypatch):
+    """음수 가격 — 시장가(01)는 범위검사를 건너뛰고 max(price,1) 로 상한도 우회했다."""
+    mod = _reload(monkeypatch, env={"RAILWAY_SHARED_SECRET": "x"})
+    for order_type in ("00", "01"):
+        ok, msg, _ = _validate(mod, {"ticker": "AAPL", "side": "BUY", "order_type": order_type,
+                                     "qty": 1, "price": -100, "market": "us"})
+        assert not ok and "negative" in msg
+
+
+def test_market_order_zero_price_still_allowed(monkeypatch):
+    """시장가 price=0 은 정상 경로 — 부호 가드가 이를 막지 않아야 한다(회귀 방지)."""
+    mod = _reload(monkeypatch, env={"RAILWAY_SHARED_SECRET": "x"})
+    ok, msg, n = _validate(mod, {"ticker": "005930", "side": "BUY", "order_type": "01",
+                                 "qty": 1, "price": 0, "market": "kr"})
+    assert ok, msg
+    assert n["price"] == 0

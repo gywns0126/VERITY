@@ -18,6 +18,7 @@ GET  /api/order → Railway /api/order (잔고)
 """
 from http.server import BaseHTTPRequestHandler
 import json
+import math
 import logging
 import os
 import time
@@ -209,6 +210,16 @@ class handler(BaseHTTPRequestHandler):
             price = float(body.get("price", 0) or 0)
         except (TypeError, ValueError):
             return False, "qty/price must be numeric", None
+
+        # 🚨 유한성·부호 가드 (2026-08-04 적대적 테스트로 발견 — 실자금 경로).
+        #   NaN 은 모든 비교가 False 라 아래 상한 검사를 전부 통과한다(nan 가격이 KIS 로 전송).
+        #   Inf/NaN 은 KR 분기의 int() 에서 ValueError/OverflowError → 미처리 500 (옛 int() 강제
+        #   코드는 try 안이라 400 이었음 = float 전환이 만든 회귀). 여기서 선차단.
+        if not math.isfinite(price):
+            return False, "price must be a finite number", None
+        if price < 0:
+            return False, "price must not be negative", None
+
         if market == "kr":
             if price != int(price):
                 return False, "KR price must be integer (호가 단위)", None
