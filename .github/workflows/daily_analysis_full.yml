@@ -552,6 +552,14 @@ jobs:
           python -m api.arena.berserker_status
           python -m api.arena.berserker_shadow
 
+      - name: Pool rotation 주간 판정 (R6 v0 — 보고서만, 집행 없음)
+        # 2026-08-04 PREREG_POOL_ROTATION — 토요 KST 만 실 판정 (스크립트 자체 게이트, 평일 no-op).
+        # 산출 = data/pool_rotation_report.json + pool_rotation_log.jsonl append — 다음 step
+        # git add data/ (broad) 자동 포함 = RULE 4. publish allowlist 미등재 = 비공개 (RULE 7).
+        # v0 = 보고서만, 집행 = PM 확인 후 수동. graceful: 입력 결손 exit 0.
+        continue-on-error: true
+        run: python scripts/pool_rotation_report.py
+
       # Tranche B dual-write (#9 봉인) — daily_analysis.yml 동일 스텝 (설계 주석은 그쪽 참조).
       - name: Private data sync (Tranche B)
         if: always()
