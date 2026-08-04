@@ -19,12 +19,39 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 CORNER_PATH = os.path.join(_ROOT, "data", "smallcap_corner.json")
 FORENSICS_PATH = os.path.join(_ROOT, "data", "disclosure_forensics.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "smallcap_corner_filters.json")
+CHART_DIR = os.path.join(_ROOT, "data", "kr_chart_daily")
 
 KST = timezone(timedelta(hours=9))
 
 
 def _now_kst() -> datetime:
     return datetime.now(KST)
+
+
+def _avg20_trading_value(tickers: set) -> Dict[str, int]:
+    """금융위 일봉 청크(종가×거래량)로 20일 평균 거래대금(원) — 사실 필드.
+
+    2026-08-04 신설: 풀 회전 R3 진입 게이트(E3 = 20일 평균 거래대금 ≥ 10억)가 코너
+    출신 후보를 판정하려면 이 필드가 필요 (부재 시 코너 소스 전멸 — 8/4 실측).
+    점수 아님 — 산술 사실만 (RULE 7)."""
+    out: Dict[str, int] = {}
+    for i in range(40):
+        p = os.path.join(CHART_DIR, f"chunk_{i:02d}.json")
+        try:
+            with open(p, encoding="utf-8") as f:
+                stocks = (json.load(f).get("stocks") or {})
+        except (OSError, json.JSONDecodeError):
+            continue
+        for tk, ent in stocks.items():
+            if tk not in tickers:
+                continue
+            bars = (ent or {}).get("c") or []
+            last20 = [b for b in bars[-20:] if isinstance(b, list) and len(b) >= 6]
+            if not last20:
+                continue
+            vals = [b[4] * b[5] for b in last20]  # 종가 × 거래량
+            out[tk] = int(sum(vals) / len(vals))
+    return out
 
 
 def _count(counts: Dict[str, int], *keys: str) -> int:
@@ -106,6 +133,8 @@ def main() -> int:
         for s in json.load(open(FORENSICS_PATH, encoding="utf-8")).get("stocks") or []:
             forensic_by_ticker[str(s.get("ticker"))] = s
 
+    tv20 = _avg20_trading_value({str(st.get("ticker")) for st in corner})
+
     groups = []
     for spec in FILTERS:
         members = []
@@ -116,8 +145,11 @@ def main() -> int:
             facts = _match(spec["key"], st, counts, bool(st.get("has_forensic_depth")))
             if facts is None:
                 continue
-            members.append({"ticker": tk, "name": st.get("name") or "",
-                            "market": st.get("market") or "", "facts": facts})
+            m = {"ticker": tk, "name": st.get("name") or "",
+                 "market": st.get("market") or "", "facts": facts}
+            if tk in tv20:
+                m["trading_value"] = tv20[tk]  # 20일 평균 거래대금(원) — E3/R3 게이트 입력
+            members.append(m)
         members.sort(key=lambda m: m.get("facts", {}).get("시총_억") or 0)
         groups.append({**spec, "count": len(members), "tickers": members})
 
