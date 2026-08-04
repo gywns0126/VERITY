@@ -281,8 +281,29 @@ def _merge_watch_items_into_candidates(
     candidates: list,
     watch_items: list,
 ) -> int:
-    """관심종목 중 후보에 없는 것을 추가. 반환: 추가된 수."""
+    """관심종목 중 후보에 없는 것을 추가. 반환: 추가된 수.
+
+    🚨 오염 수정 파이프 (2026-08-04 PM 승인) — 관심종목 유래 레코드 2결함 원천 수정:
+    ① KR 전 종목 `.KS` 강제 → 코스닥(예: 094970 제이엠티)이 KOSPI 로 오조회.
+       시장 오표기 + yfinance 응답 이상 → **펀더멘털 0-채움**(F-Score 1/9 왜곡 사고)의 뿌리.
+       kr_listed.json(KP/KQ/KN) 으로 접미사·시장 라벨 결정.
+    ② name 오염("094970.KS,0P0000EOZ4,42992") → kr_stock_names 정규화 + 콤마 최종 차단.
+       오염 name 은 집행 게이트 E4 자동 제외·중용 오배제(JMT "고부채 극단" 사고)의 원인.
+    """
     from api.collectors.stock_data import get_stock_data
+    _sfx = {"KP": ".KS", "KQ": ".KQ", "KN": ".KQ"}
+    _mkt_label = {"KP": "KOSPI", "KQ": "KOSDAQ", "KN": "KONEX"}
+    try:
+        with open(os.path.join(DATA_DIR, "kr_listed.json"), encoding="utf-8") as _f:
+            _listed = json.load(_f)
+    except Exception:
+        _listed = {}
+    try:
+        with open(os.path.join(DATA_DIR, "kr_stock_names.json"), encoding="utf-8") as _f:
+            _kr_names = json.load(_f)
+    except Exception:
+        _kr_names = {}
+
     existing = {s.get("ticker") for s in candidates}
     added = 0
     for wi in watch_items:
@@ -291,9 +312,21 @@ def _merge_watch_items_into_candidates(
             continue
         mkt = (wi.get("market") or "kr").lower()
         is_us = mkt == "us"
-        ticker_yf = ticker if is_us else f"{ticker}.KS"
+        _li = _listed.get(ticker) if isinstance(_listed, dict) else None
+        _kr_mkt = (_li or {}).get("market")
+        ticker_yf = ticker if is_us else f"{ticker}{_sfx.get(_kr_mkt, '.KS')}"
         data = get_stock_data(ticker_yf, period="1y")
         if data:
+            if not is_us:
+                _clean = (_kr_names.get(ticker) if isinstance(_kr_names, dict) else None) \
+                    or (_li or {}).get("name")
+                if _clean:
+                    data["name"] = _clean
+                if _kr_mkt in _mkt_label:
+                    data["market"] = _mkt_label[_kr_mkt]
+            if "," in str(data.get("name") or ""):
+                # 정규화 실패 시에도 콤마 오염은 절대 통과 금지 — 티커로 대체
+                data["name"] = ticker
             data["_from_watchlist"] = True
             candidates.append(data)
             existing.add(ticker)
