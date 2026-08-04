@@ -1,18 +1,16 @@
 {
  "_meta": {
-  "generated_at": "2026-08-04T13:09:19.662437+09:00",
+  "generated_at": "2026-08-04T16:34:15.506698+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "amber",
- "reasons": [
-  "비P0 stale 1건"
- ],
+ "status": "green",
+ "reasons": [],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-04T13:09:19.605739+09:00",
+  "generated_at": "2026-08-04T16:34:15.448930+09:00",
   "ok": true,
   "failed": 0,
   "max_cdn_age_s": 0,
@@ -67,17 +65,17 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-08-04T13:09:11.653595+09:00",
+  "generated_at": "2026-08-04T16:34:04.921122+09:00",
   "summary": {
-   "fresh": 59,
-   "stale": 1,
-   "closed": 0,
+   "fresh": 58,
+   "stale": 0,
+   "closed": 2,
    "discontinued": 2,
    "p0": {
     "total": 6,
-    "fresh": 6,
-    "closed": 0,
-    "active": 6
+    "fresh": 4,
+    "closed": 2,
+    "active": 4
    },
    "p1": {
     "total": 20,
@@ -87,14 +85,12 @@
    },
    "p2": {
     "total": 36,
-    "fresh": 34,
+    "fresh": 35,
     "closed": 0,
     "active": 35
    }
   },
   "stale_p0": [],
-  "stale_other": [
-   "freshness_board"
-  ]
+  "stale_other": []
  }
 }
