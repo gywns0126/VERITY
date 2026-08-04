@@ -48,6 +48,41 @@ def _demote(grade: str, steps: int = 1) -> str:
     return GRADE_ORDER[min(i + steps, len(GRADE_ORDER) - 1)]
 
 
+# F1 pullback_hold 임계 — 직전 5거래일 +15% 이상 급등 (PREREG_SIGNAL_FILTERS §F1, LOCKED)
+_PULLBACK_SURGE_PCT = 15.0
+
+
+def _trigger_condition(stock: Dict[str, Any], final: str, base: str,
+                       timing_action: Any) -> Dict[str, Any] | None:
+    """F1 조건부 신호 (PREREG_SIGNAL_FILTERS_2026_08_04 §F1 — 표시 전용, 산식 불변).
+
+    사례 = 기아: 시스템 "BUY" vs 오퍼레이터 "MA20 회복 후 분할" — 시스템이 발동 조건을
+    말하지 못하던 갭. 대상 = 최종 배지 WATCH ∧ brain_score ≥ 60.
+    유형 판정 = 등록 문서 나열 순 first-match (결정론): ma20_reclaim → timing_align →
+    pullback_hold. 전 조건 일봉 산술만 — LLM 재량 0 (RULE 6). v0 = 표시 전용,
+    집행 연결(E1 확장) = 별도 재등록.
+    """
+    vb = stock.get("verity_brain") or {}
+    brain_score = vb.get("brain_score")
+    if final != "WATCH" or not isinstance(brain_score, (int, float)) or brain_score < 60:
+        return None
+    tech = stock.get("technical") or {}
+    price = tech.get("price") or stock.get("current_price")
+    ma20 = tech.get("ma20")
+    if isinstance(price, (int, float)) and isinstance(ma20, (int, float)) \
+            and ma20 > 0 and price < ma20:
+        return {"type": "ma20_reclaim", "ma20": round(float(ma20)), "price": round(float(price)),
+                "message": f"MA20({round(float(ma20)):,}) 회복 시 관심 승격"}
+    if base in ("STRONG_BUY", "BUY") and timing_action != "BUY":
+        return {"type": "timing_align", "message": "타이밍 정렬 시 aligned 후보"}
+    r5 = tech.get("return_5d_pct")
+    if isinstance(r5, (int, float)) and r5 >= _PULLBACK_SURGE_PCT \
+            and isinstance(price, (int, float)):
+        return {"type": "pullback_hold", "prev_close": round(float(price)), "surge_5d_pct": r5,
+                "message": f"되돌림에서 {round(float(price)):,} 유지 확인"}
+    return None
+
+
 def apply_display_verdict(stock: Dict[str, Any]) -> Dict[str, Any]:
     """analyzed 레코드 1건의 배지를 Brain 소유로 교정 (in-place, 반환 동일 객체).
 
@@ -88,6 +123,9 @@ def apply_display_verdict(stock: Dict[str, Any]) -> Dict[str, Any]:
         "analyst_view": analyst_view, "aligned": aligned,
         "owner": "brain", "validation": _VALIDATION_NOTE,
     }
+    trig = _trigger_condition(stock, final, base, timing_action)
+    if trig:
+        stock["display_verdict"]["trigger_condition"] = trig
     return stock
 
 
