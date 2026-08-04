@@ -9,7 +9,7 @@
  * 작동:
  *   - _public_dist/ 의 모든 *.json + equity_research/*.json 을 Blob 으로 PUT
  *   - access: 'public' / addRandomSuffix: false (URL 안정) / allowOverwrite: true
- *   - cacheControlMaxAge: 30s (Framer 빠른 갱신 보장)
+ *   - cacheControlMaxAge: 파일별 차등 (2026-08-04 — 30s 일괄이 전송량 과금 주범, 하단 MAX_AGE_RULES)
  *   - BLOB_READ_WRITE_TOKEN env 필요 (caller workflow → action input → env)
  *
  * 호출: node blob_upload.js <_public_dist>
@@ -35,7 +35,23 @@ const RETIRED_BLOBS = [
     // (`r.ok` 체크 + 렌더가 `{returns && Array.isArray(returns.annual) && ...}` 로 가드) → 패널만 사라진다.
     "nps_fund_returns.json",
 ];
-const CACHE_MAX_AGE = 30; // 30s — Framer 가 매 페이지 진입마다 fresh 받음
+// ── 파일별 차등 캐시 (PM 승인 2026-08-04) — Vercel $44 청구 사고 대응 ──
+// 근인: 전 파일 30s 일괄 → CDN 캐시가 30초마다 만료 → 대형 JSON(portfolio 1.18MB ·
+// universe_search 1.32MB · recommendations 1.36MB)이 방문자 요청마다 원본 전송(과금).
+// 데이터 갱신은 대부분 일 1~2회 — 캐시 수명을 갱신 주기에 정렬해 CDN 히트율을 올린다.
+// 지연 트레이드오프: 발행 후 최대 10분(기본군)~1h(일1군) — 모닝브리핑 T+1 정책 대비 수용 범위.
+// 준실시간은 price_pulse 만 (60s 유지).
+const MAX_AGE_RULES = [
+    [/^price_pulse\.json$/, 60],
+    [/^(macro_snapshot|urgent_alerts)\.json$/, 300],
+    [/^(universe_search|kr_stock_names|kr_close_latest|us_investor_portfolios|us_smart_money[^/]*|sectors[^/]*)\.json$/, 3600],
+    [/^equity_research\//, 1800],
+];
+const DEFAULT_MAX_AGE = 600; // 일 2회 갱신군 (portfolio·recommendations 등)
+function maxAgeFor(blobPath) {
+    for (const [re, age] of MAX_AGE_RULES) if (re.test(blobPath)) return age;
+    return DEFAULT_MAX_AGE;
+}
 
 // ── 핵심 데이터 발행 가드 (fail-closed, 단일 병목) ─────────────────────────
 // 핵심 배수(PER/PBR)가 붕괴한 리포트는 업로드 SKIP → Blob 의 직전 GOOD 본 유지.
@@ -85,7 +101,7 @@ async function uploadFile(filePath, blobPath) {
         addRandomSuffix: false,
         allowOverwrite: true,
         contentType,
-        cacheControlMaxAge: CACHE_MAX_AGE,
+        cacheControlMaxAge: maxAgeFor(blobPath),
     });
     return url;
 }
