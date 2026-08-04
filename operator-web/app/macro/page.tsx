@@ -14,6 +14,7 @@ import TopBar from "../components/TopBar"
 import PanelBoundary from "../components/PanelBoundary"
 import StockLogo from "../components/StockLogo"
 import SystemActionPanel from "../components/SystemActionPanel"
+import TidePanel from "../components/TidePanel"
 
 const MACRO_LABELS: Record<string, string> = {
     usd_krw: "달러 환율", usd_jpy: "엔/달러", eur_usd: "유로/달러", wti_oil: "WTI 유가",
@@ -355,6 +356,11 @@ export default function MacroPage() {
                         <HeadlineCard c={c} title="국내" items={pf?.headlines || []} />
                     </PanelBoundary>
                 </div>
+
+                {/* TIDE 크립토 트랙 — 프론트 단일화 (구 tide 대시보드 대체, 공개 blob tide/dashboard.json) */}
+                <PanelBoundary name="TIDE">
+                    <TidePanel c={c} />
+                </PanelBoundary>
 
                 <div style={{ fontSize: 10, color: c.faint }}>
                     사실·수집 데이터 + LLM 의견(의견) + 자기 산식(가설 N&lt;252) · 13F=분기 지연 공시 · 매수/매도 지시 아님
