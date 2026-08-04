@@ -12,6 +12,7 @@ import { captureOAuthHash, refreshIfNeeded } from "@/lib/supabase"
 import type { PortfolioFull, SectorRow } from "@/lib/types"
 import TopBar from "../components/TopBar"
 import PanelBoundary from "../components/PanelBoundary"
+import ProgramPanel from "../components/ProgramPanel"
 import StockLogo from "../components/StockLogo"
 import SystemActionPanel from "../components/SystemActionPanel"
 import TidePanel from "../components/TidePanel"
@@ -194,6 +195,11 @@ export default function MacroPage() {
                             })}
                         </div>
                     </div>
+                </PanelBoundary>
+
+                {/* 프로그램매매 — KIS 공식 (#14-②) */}
+                <PanelBoundary name="프로그램">
+                    <ProgramPanel />
                 </PanelBoundary>
 
                 {/* 섹터 보드 */}

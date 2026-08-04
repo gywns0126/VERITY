@@ -39,6 +39,9 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
     const [snap, setSnap] = useState<Snap | null>(null)
     const [chartType, setChartType] = useState<"minute" | "daily" | "weekly" | "monthly">("daily")
     const [candles, setCandles] = useState<Candle[]>([])
+    // SSE 승급 (#14-③) — /stream/{ticker} 체결 즉시 반영. 폴링은 유지(스트림 단절 폴백).
+    const [ssePx, setSsePx] = useState<number | null>(null)
+    const [sseTrades, setSseTrades] = useState<Trade[]>([])
     const [ordPx, setOrdPx] = useState<number | null>(null)
     const isKR = /^\d{6}$/.test(ticker)
     const { q } = useQuotes(isKR ? [ticker] : [])
@@ -130,7 +133,36 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
         }
     }, [ticker, isKR, chartType])
 
-    const live = isKR ? q[ticker]?.price : undefined
+    // SSE 구독 — 이벤트 방어 파싱({type:"trade",data} 또는 snapshot 이벤트)
+    useEffect(() => {
+        setSsePx(null)
+        setSseTrades([])
+        if (!isKR || !ticker) return
+        let es: EventSource | null = null
+        try {
+            es = new EventSource(`${RAILWAY}/stream/${ticker}`)
+            es.onmessage = (e: MessageEvent) => {
+                if (!e.data) return
+                try {
+                    const d = JSON.parse(e.data)
+                    const t = d?.type === "trade" ? d.data : null
+                    const px = t && typeof t.price === "number" ? t.price : null
+                    if (px !== null) {
+                        setSsePx(px)
+                        setSseTrades((prev) => [t as Trade, ...prev].slice(0, 8))
+                    }
+                } catch {}
+            }
+        } catch {}
+        return () => {
+            try {
+                es?.close()
+            } catch {}
+        }
+    }, [ticker, isKR])
+
+    const pollPx = isKR ? q[ticker]?.price : undefined
+    const live = typeof ssePx === "number" ? ssePx : pollPx
     const cp = isKR ? q[ticker]?.change_pct : undefined
     const dir = typeof live === "number" && prevPx.current !== null && live !== prevPx.current ? (live > prevPx.current ? "up" : "dn") : ""
     useEffect(() => {
@@ -144,7 +176,8 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
     const bids = (ob.bids || []).filter((l) => typeof l.price === "number").slice(0, 10)
     const maxVol = Math.max(1, ...asks.map((l) => l.volume || 0), ...bids.map((l) => l.volume || 0))
     const strength = typeof snap?.strength_pct === "number" ? snap.strength_pct : null
-    const trades = (snap?.trades || []).filter((t) => typeof t.price === "number").slice(0, 8)
+    const snapTrades = (snap?.trades || []).filter((t) => typeof t.price === "number").slice(0, 8)
+    const trades = sseTrades.length ? sseTrades : snapTrades
 
     if (!ticker) return null
 
