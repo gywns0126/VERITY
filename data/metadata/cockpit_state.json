@@ -41,7 +41,22 @@
     "maintenance": false,
     "warn_days": 7.0
   },
-  "pre_registration_pending": [],
+  "pre_registration_pending": [
+    {
+      "sha": "403bcac0",
+      "date": "2026-08-03",
+      "subject": "fix(scoring): 측정 정화 — placeholder 가 실측으로 위장하는 3경로 차단 (#259)",
+      "is_candidate": true,
+      "has_pm": false,
+      "has_why": true,
+      "has_data": true,
+      "has_expected": true,
+      "missing": [
+        "PM=approved"
+      ],
+      "passed": false
+    }
+  ],
   "alert_volume_24h": {
     "sent": 19,
     "dedupe_skip": 17,
@@ -64,10 +79,15 @@
     "quarter": "2026Q3",
     "start": "2026-07-01",
     "end": "2026-09-30",
-    "count": 2,
+    "count": 3,
     "limit": 4,
     "status": "OK",
     "commits": [
+      {
+        "sha": "403bcac0",
+        "date": "2026-08-03",
+        "subject": "fix(scoring): 측정 정화 — placeholder 가 실측으로 위장하는 3경로 차단 (#259)"
+      },
       {
         "sha": "8b4844e1",
         "date": "2026-08-02",
@@ -79,6 +99,6 @@
         "subject": "fix(brain): fact_score LLM 정성점수 정직화 4종 (RULE 7 사전등록)"
       }
     ],
-    "as_of": "2026-08-03T12:54:54+09:00"
+    "as_of": "2026-08-04T12:37:27+09:00"
   }
 }
