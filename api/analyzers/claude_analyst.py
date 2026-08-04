@@ -223,6 +223,11 @@ def analyze_stock_deep(stock: dict, gemini_result: dict, macro: Optional[dict] =
             messages=[{"role": "user", "content": prompt}],
             **_extra,
         )
+        try:  # 관측 배선 — import 실패 환경(복제본 등)에서도 본업 무영향
+            from api.metadata.llm_cost import log_anthropic
+            log_anthropic(message, "claude_analyst")
+        except Exception:  # noqa: BLE001
+            pass
         text = next((b.text for b in message.content if b.type == "text"), "").strip()
 
         try:
@@ -472,6 +477,11 @@ def _call_claude(
             messages=[{"role": "user", "content": prompt}],
             **_extra,
         )
+        try:  # 관측 배선 — import 실패 환경(복제본 등)에서도 본업 무영향
+            from api.metadata.llm_cost import log_anthropic
+            log_anthropic(message, "claude_analyst")
+        except Exception:  # noqa: BLE001
+            pass
         text = next((b.text for b in message.content if b.type == "text"), "").strip()
 
         try:

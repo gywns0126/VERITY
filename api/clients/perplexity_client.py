@@ -88,6 +88,12 @@ def call_perplexity(
     message = choice.get("message", {})
     usage = data.get("usage", {})
 
+    try:  # 관측 배선 — import 실패해도 본업 무영향
+        from api.metadata.llm_cost import log_perplexity
+        log_perplexity(data, str(payload.get("model") or ""), "clients_pplx")
+    except Exception:  # noqa: BLE001
+        pass
+
     cost_obj = usage.get("cost", {})
     run_cost = 0.0
     if isinstance(cost_obj, dict):

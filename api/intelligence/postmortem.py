@@ -370,6 +370,11 @@ def generate_postmortem(days: int = 7, windows: Optional[list] = None) -> dict:
             system=_POSTMORTEM_PROMPT_SYSTEM,
             messages=[{"role": "user", "content": prompt}],
         )
+        try:  # 관측 배선 — import 실패 환경(복제본 등)에서도 본업 무영향
+            from api.metadata.llm_cost import log_anthropic
+            log_anthropic(message, "postmortem")
+        except Exception:  # noqa: BLE001
+            pass
         text = message.content[0].text.strip()
         result = _parse_llm_json(text)
         analyses = {a["ticker"]: a for a in result.get("analyses", [])}

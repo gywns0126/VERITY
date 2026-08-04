@@ -299,6 +299,11 @@ def _perplexity_one(gap: Dict[str, str]) -> Optional[Dict[str, Any]]:
             },
             {"Authorization": f"Bearer {key}"},
         )
+        try:  # 관측 배선 — import 실패 환경(복제본 등)에서도 본업 무영향
+            from api.metadata.llm_cost import log_perplexity
+            log_perplexity(doc, model, "operator_ask_research")
+        except Exception:  # noqa: BLE001
+            pass
         try:
             text = doc["choices"][0]["message"]["content"]  # type: ignore[index]
         except Exception:
@@ -396,6 +401,11 @@ def _claude(facts_text: str, pplx: List[Dict[str, Any]], gem: Optional[str],
             output_config={"effort": CLAUDE_EFFORT},
             messages=[{"role": "user", "content": "\n".join(blocks)}],
         )
+        try:  # 관측 배선 — import 실패 환경(복제본 등)에서도 본업 무영향
+            from api.metadata.llm_cost import log_anthropic
+            log_anthropic(resp, "operator_ask")
+        except Exception:  # noqa: BLE001
+            pass
     except Exception as e:  # noqa: BLE001
         print(f"[operator_ask] Claude 호출 실패: {str(e)[:300]}", file=sys.stderr)
         return None
