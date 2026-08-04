@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-04T21:18:45.784268+09:00",
+  "generated_at": "2026-08-04T23:56:51.099828+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 267828,
-    "python_modules": 699,
-    "tsx_components": 172,
-    "json_data_files": 1668,
-    "json_total_tracked": 1687,
+    "code_lines_tsx_py": 240849,
+    "python_modules": 705,
+    "tsx_components": 128,
+    "json_data_files": 1670,
+    "json_total_tracked": 1689,
     "workflows": 70,
     "scheduled_workflows": 54,
     "cron_triggers": 65,
-    "git_tracked_files": 7293
+    "git_tracked_files": 7259
   },
   "subsystems": {
     "ingest": {
@@ -92,7 +92,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 63,
+      "count": 64,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -154,6 +154,7 @@
         "api/intelligence/trend_overlay.py",
         "api/intelligence/tri_llm_synthesis.py",
         "api/intelligence/us_financials.py",
+        "api/intelligence/value_guards.py",
         "api/intelligence/value_hunter.py",
         "api/intelligence/verity_brain.py",
         "api/intelligence/veteran_triggers.py"
@@ -637,19 +638,12 @@
     },
     "surface": {
       "label": "출력",
-      "count": 172,
+      "count": 128,
       "by_group": {
         "framer-components/public-probe": 72,
-        "operator-web/app/components": 25,
+        "operator-web/app/components": 26,
         "admin": 15,
-        "_shared": 14,
-        "market": 11,
         "framer-components/crypto-public": 7,
-        "analysis": 6,
-        "home": 5,
-        "us": 4,
-        "portfolio": 3,
-        "corp": 2,
         "operator-web/app": 2,
         "framer-components": 1,
         "framer-components/arena": 1,
@@ -661,7 +655,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1668
+      "count": 1670
     },
     "validation": {
       "label": "검증",
@@ -676,9 +670,9 @@
     }
   },
   "python_by_dir": {
-    "api": 389,
-    "tests": 157,
-    "scripts": 83,
+    "api": 391,
+    "tests": 160,
+    "scripts": 84,
     "vercel-api": 58,
     "server": 7,
     ".github": 5
