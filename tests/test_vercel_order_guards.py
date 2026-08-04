@@ -109,7 +109,8 @@ def test_empty_strings_in_env_ignored(monkeypatch):
         "RAILWAY_SHARED_SECRET": "x",
         "ORDER_ALLOWED_ORIGINS": "https://verity.ai,,,",
     })
-    assert mod._ALLOWED_ORIGINS == frozenset({"https://verity.ai"})
+    # 2026-08-04 계약 갱신: _DEFAULT_ORIGINS(자사 오퍼레이터)가 env 와 합집합 — env 빈 항목만 무시 검증.
+    assert mod._ALLOWED_ORIGINS == frozenset({"https://verity.ai"}) | frozenset(mod._DEFAULT_ORIGINS)
 
 
 # ──────────────────────────────────────────────

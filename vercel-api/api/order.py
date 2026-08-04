@@ -47,10 +47,13 @@ _CORS_HEADERS = ("Content-Type", "Authorization")
 # 2026-04-23: 와일드카드 폴백 제거. 미설정이면 CORS 헤더 자체를 안 붙여 브라우저가
 # 크로스오리진 요청을 차단. '*' 를 값에 넣어도 명시적으로 제거 (wildcard 금지).
 _raw_origins = (os.environ.get("ORDER_ALLOWED_ORIGINS", "") or "")
+# 자사 오퍼레이터 오리진 기본 허용 (2026-08-04 "Load failed" 사고 — env 미등재로 신 도메인
+# 전면 차단됐음). 특정 오리진 명시 = 2026-04-23 wildcard 금지 결정 유지. env 는 합집합.
+_DEFAULT_ORIGINS = ("https://alphanest-psi.vercel.app",)
 _ALLOWED_ORIGINS = frozenset(
     o for o in (s.strip() for s in _raw_origins.split(","))
     if o and o != "*"
-)
+) | frozenset(_DEFAULT_ORIGINS)
 _WILDCARD_IN_ENV = any(s.strip() == "*" for s in _raw_origins.split(","))
 
 # 모듈 로드 시 설정 상태 로그 (Vercel 빌드 로그에 남음)
