@@ -1,18 +1,18 @@
 {
  "_meta": {
-  "generated_at": "2026-08-04T09:04:36.065849+09:00",
+  "generated_at": "2026-08-04T13:09:19.662437+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "red",
+ "status": "amber",
  "reasons": [
-  "P0 stale 1건"
+  "비P0 stale 1건"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-04T09:04:36.025147+09:00",
+  "generated_at": "2026-08-04T13:09:19.605739+09:00",
   "ok": true,
   "failed": 0,
   "max_cdn_age_s": 0,
@@ -67,7 +67,7 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-08-04T09:04:23.237284+09:00",
+  "generated_at": "2026-08-04T13:09:11.653595+09:00",
   "summary": {
    "fresh": 59,
    "stale": 1,
@@ -75,7 +75,7 @@
    "discontinued": 2,
    "p0": {
     "total": 6,
-    "fresh": 5,
+    "fresh": 6,
     "closed": 0,
     "active": 6
    },
@@ -87,18 +87,14 @@
    },
    "p2": {
     "total": 36,
-    "fresh": 35,
+    "fresh": 34,
     "closed": 0,
     "active": 35
    }
   },
-  "stale_p0": [
-   {
-    "id": "dart_catalyst_alerts",
-    "label": "DART 공시 알림",
-    "age_min": 615.0
-   }
-  ],
-  "stale_other": []
+  "stale_p0": [],
+  "stale_other": [
+   "freshness_board"
+  ]
  }
 }
