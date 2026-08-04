@@ -38,9 +38,20 @@ STRIP_KEYS = {
 STRIP_PAT = re.compile(r"brain|score_break|verdict|fscore|lynch", re.IGNORECASE)
 
 
+# sentiment 내부 슬림 (2026-08-04, PM "낭비는 확실히 아껴") — 공개 소비 실측:
+# PublicNewsTab 등이 쓰는 하위 필드 = headline_count·top_headline_links 뿐.
+# detail(13소스 세부, 항목당 ~2.7KB) = 공개 소비 0 + 내부 신호 구조 노출(봉인 정합) → strip.
+# top_headlines(links 와 중복 텍스트) = 소비 0 → strip. 전송(br/gzip) 기준 파일 ~15-20% 절감.
+_SENTIMENT_KEEP = {"score", "positive", "negative", "neutral", "headline_count", "top_headline_links"}
+
+
 def _sanitize_rec(rec: dict) -> dict:
-    return {k: v for k, v in rec.items()
-            if k not in STRIP_KEYS and not STRIP_PAT.search(k)}
+    out = {k: v for k, v in rec.items()
+           if k not in STRIP_KEYS and not STRIP_PAT.search(k)}
+    s = out.get("sentiment")
+    if isinstance(s, dict):
+        out["sentiment"] = {k: v for k, v in s.items() if k in _SENTIMENT_KEEP}
+    return out
 
 
 def main(path: str) -> int:
