@@ -42,8 +42,10 @@ export default function Login() {
             {ready ? (
                 <div style={{ ...cardStyle(c, "26px 26px 22px"), width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 14 }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em", color: c.ink }}>
-                            알파<span style={{ color: c.vt }}>파운더</span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/alphanest-logo.svg" alt="" width={26} height={26} style={{ display: "block" }} />
+                            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em", color: c.ink }}>알파네스트</span>
                         </span>
                         <span style={{ fontSize: 12, color: c.sub }}>오퍼레이터 터미널 · 비공개 · 본인 전용</span>
                     </div>
