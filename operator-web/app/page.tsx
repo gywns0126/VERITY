@@ -24,6 +24,7 @@ import PicksTable from "./components/PicksTable"
 import FeedPanel, { P0Line } from "./components/FeedPanel"
 import NewsTicker, { type NewsItem } from "./components/NewsTicker"
 import PanelBoundary from "./components/PanelBoundary"
+import BalanceCard from "./components/BalanceCard"
 
 export default function Home() {
     const dark = useDark()
@@ -136,6 +137,9 @@ export default function Home() {
                         </PanelBoundary>
                         <PanelBoundary name="관심">
                             <WatchTable />
+                        </PanelBoundary>
+                        <PanelBoundary name="실계좌">
+                            <BalanceCard />
                         </PanelBoundary>
                     </aside>
 
