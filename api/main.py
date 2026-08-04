@@ -2583,6 +2583,37 @@ def main():
     except Exception as e:
         print(f"  관심종목 병합 스킵: {e}")
 
+    # ── STEP 2.15: R1 보유 강제 편입 (PREREG_POOL_ROTATION_2026_08_04 — 관측 사각 0) ──
+    # VAMS·페이퍼 트랙 보유 = 풀 의무 편입, 보유 해소 전 퇴출 금지. 8/3 실측: 보유 4종
+    # (티쓰리·NAVER·파마리서치·삼성E&A)이 풀 밖 → 배지·청산(X1~X4) 판정 불가 사각.
+    # 매 run 집행 (R6 주간 판정과 별개 — R1 은 LOCKED 절대 조건). #271 오염 수정 파이프 재사용.
+    # 보유 소스 = 전 run 산출 portfolio.json (이 시점 신규 portfolio 미구성 — 전일 보유가 정답).
+    try:
+        _r1_items = []
+        _prev_pf = {}
+        try:
+            with open(os.path.join(DATA_DIR, "portfolio.json"), encoding="utf-8") as _pf:
+                _prev_pf = json.load(_pf)
+        except (OSError, json.JSONDecodeError):
+            pass
+        for _h in ((_prev_pf.get("vams") or {}).get("holdings") or []):
+            _tk = str(_h.get("ticker") or "").strip()
+            if _tk:
+                _r1_items.append({"ticker": _tk, "market": "kr" if _tk.isdigit() and len(_tk) == 6 else "us"})
+        try:
+            with open(os.path.join(DATA_DIR, "exec_paper_state.json"), encoding="utf-8") as _ef:
+                for _tk in ((json.load(_ef).get("positions") or {})):
+                    _tk = str(_tk).strip()
+                    _r1_items.append({"ticker": _tk, "market": "kr" if _tk.isdigit() and len(_tk) == 6 else "us"})
+        except (OSError, json.JSONDecodeError):
+            pass
+        if _r1_items:
+            _r1_added = _merge_watch_items_into_candidates(candidates, _r1_items)
+            if _r1_added:
+                print(f"  + [pool R1] 보유 강제 편입 {_r1_added}개 — 관측 사각 해소 (총 {len(candidates)}개)")
+    except Exception as _r1_e:  # noqa: BLE001
+        print(f"  [pool R1] 스킵: {type(_r1_e).__name__}: {_r1_e}")
+
     # ── STEP 3: quick + full — 기술적 + 수급 + 컨센서스 ──
     print("\n[3] 기술적 분석 + 수급 + 컨센서스")
     macro_mood = macro.get("market_mood", {"score": 50, "label": "중립"})
