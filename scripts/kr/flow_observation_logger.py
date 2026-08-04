@@ -182,6 +182,11 @@ if __name__ == "__main__":
         print("[flow_observation_logger] KR flow 관측 트레일:")
         for k, v in res.items():
             print(f"  {k}: {v}")
+        if res.get("tickers", 0) > 0 and res.get("ok", 0) == 0:
+            # 전패(네트워크/소스 다운)를 성공으로 반환하면 launchd wrapper 가 성공 스탬프를
+            # 찍어 <2일 재시도 가드가 잠김 (2026-08-01 DNS 전패 exit 0 → 열흘 수집 공백 사고).
+            sys.stderr.write("[flow_observation_logger] 전패 — exit 2 (성공 스탬프 차단, 다음 슬롯 재시도)\n")
+            sys.exit(2)
     except Exception as e:  # noqa: BLE001
         sys.stderr.write(f"[flow_observation_logger] 실패: {type(e).__name__}: {e}\n")
         raise
