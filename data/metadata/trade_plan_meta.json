@@ -1,46 +1,46 @@
 {
   "version": "v0",
-  "computed_at": "2026-08-04T10:35:23.418020+00:00",
+  "computed_at": "2026-08-04T11:17:39.753952+00:00",
   "status": "active",
   "sample_size": {
     "total": 32,
     "open": 0,
     "closed": 32,
-    "with_h5": 24,
-    "with_h14": 17,
-    "with_h30": 3,
+    "with_h5": 25,
+    "with_h14": 22,
+    "with_h30": 6,
     "min_for_decompose": 30
   },
   "horizon_summary": {
     "h5": {
       "horizon_days": 5,
-      "n": 24,
-      "hit_rate_pct": 45.83,
-      "median_return_pct": -0.63,
-      "mean_return_pct": -0.12,
-      "ic": 0.179
+      "n": 25,
+      "hit_rate_pct": 48.0,
+      "median_return_pct": -0.32,
+      "mean_return_pct": 0.17,
+      "ic": 0.095
     },
     "h14": {
       "horizon_days": 14,
-      "n": 17,
-      "hit_rate_pct": 52.94,
-      "median_return_pct": 2.42,
-      "mean_return_pct": -1.47,
-      "ic": -0.147
+      "n": 22,
+      "hit_rate_pct": 63.64,
+      "median_return_pct": 2.81,
+      "mean_return_pct": 0.06,
+      "ic": 0.206
     },
     "h30": {
       "horizon_days": 30,
-      "n": 3,
-      "hit_rate_pct": 33.33,
-      "median_return_pct": -9.68,
-      "mean_return_pct": -9.16,
-      "ic": null
+      "n": 6,
+      "hit_rate_pct": 66.67,
+      "median_return_pct": 0.51,
+      "mean_return_pct": -3.89,
+      "ic": 0.257
     }
   },
   "feature_decomposition": {
     "status": "insufficient_data",
-    "n": 17,
-    "need_more_rows": 13
+    "n": 22,
+    "need_more_rows": 8
   },
   "sector_breakdown": {
     "Industrials": {
@@ -56,31 +56,31 @@
       "status": "insufficient_data"
     },
     "Energy": {
-      "n": 8,
-      "hit_rate_pct": 75.0,
-      "median_return_pct": 3.11
+      "n": 12,
+      "hit_rate_pct": 83.33,
+      "median_return_pct": 3.22
     },
     "Technology": {
-      "n": 1,
+      "n": 2,
       "status": "insufficient_data"
     }
   },
   "verdict_strength": {
     "status": "insufficient_data",
-    "n": 17
+    "n": 22
   },
   "timeseries_baseline": {
     "earliest": "2026-06-10T12:03:09.387256+00:00",
     "windows": {
       "first_30d": {
-        "n": 13,
-        "hit_rate_pct": 46.15,
-        "median_return_pct": -2.86
+        "n": 14,
+        "hit_rate_pct": 50.0,
+        "median_return_pct": -0.34
       },
       "30_60d": {
-        "n": 4,
-        "hit_rate_pct": 75.0,
-        "median_return_pct": 3.83
+        "n": 8,
+        "hit_rate_pct": 87.5,
+        "median_return_pct": 5.37
       },
       "60d_plus": {
         "n": 0,
