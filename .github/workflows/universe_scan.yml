@@ -101,11 +101,25 @@ jobs:
         run: |
           python -m api.builders.universe_scan_builder
 
+      - name: Build candidates diff (편입/이탈, LLM 0)
+        if: always()
+        run: python -m api.builders.candidates_diff_builder || echo "[cand_diff] skip"
+
+      - name: Upload diff to private bucket (오퍼레이터 전용)
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/upload_operator_data_to_supabase.py --only candidates_diff || echo "[cand_diff] upload skip"
+
       - name: Commit data/universe_candidates.json
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/universe_candidates.json
+          # diff 비교 기준 스냅샷 — 매 run 새 컨테이너라 커밋해야 다음 run 이 비교 가능
+          # (universe_candidates.json 과 동일 노출 클래스 = 노출 증가 0). RULE 4 정합.
+          git add data/.candidates_prev.json 2>/dev/null || true
           # 🚨 KIS lock 파일도 함께 — universe_scan 도 KIS env 사용 → 발급 가능 source.
           # 1일 1토큰 룰 propagation 위해 필수 (2026-05-16 폭주 사고 후 추가).
           git add data/.kis_issued_date.txt 2>/dev/null || true
