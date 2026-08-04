@@ -129,3 +129,51 @@ def test_secret_missing_is_empty_string(monkeypatch):
     """secret 미설정 → 빈 문자열 (None 아님)."""
     mod = _reload(monkeypatch, env={})
     assert mod._RAILWAY_SHARED_SECRET == ""
+
+
+# ──────────────────────────────────────────────
+# _validate_order — 통화별 가격/상한 (2026-08-04 US 소수 절삭 결함 fix)
+# ──────────────────────────────────────────────
+
+def _validate(mod, body, limits=None):
+    h = mod.handler.__new__(mod.handler)
+    return mod.handler._validate_order(h, body, limits or {"max_order_krw": 10_000_000, "max_order_usd": 7_000})
+
+
+def test_us_decimal_price_preserved(monkeypatch):
+    """US 지정가 소수는 절삭되지 않는다(옛 int() 강제 = $133.54 → 133 사고)."""
+    mod = _reload(monkeypatch, env={"RAILWAY_SHARED_SECRET": "x"})
+    ok, msg, n = _validate(mod, {"ticker": "AAPL", "side": "BUY", "order_type": "00",
+                                 "qty": 2, "price": 133.54, "market": "us"})
+    assert ok, msg
+    assert n["price"] == 133.54
+
+
+def test_us_string_decimal_accepted(monkeypatch):
+    mod = _reload(monkeypatch, env={"RAILWAY_SHARED_SECRET": "x"})
+    ok, _, n = _validate(mod, {"ticker": "AAPL", "side": "BUY", "order_type": "00",
+                               "qty": 1, "price": "245.98", "market": "us"})
+    assert ok and n["price"] == 245.98
+
+
+def test_kr_price_must_be_integer(monkeypatch):
+    """KR 은 정수 호가 — 소수 지정가 거부(잘못된 주문 차단)."""
+    mod = _reload(monkeypatch, env={"RAILWAY_SHARED_SECRET": "x"})
+    ok, msg, _ = _validate(mod, {"ticker": "005930", "side": "BUY", "order_type": "00",
+                                 "qty": 1, "price": 70000.5, "market": "kr"})
+    assert not ok and "integer" in msg
+
+
+def test_us_value_limit_uses_usd_not_krw(monkeypatch):
+    """달러 주문에 원화 상한을 쓰던 통화 혼합 제거 — USD 상한으로 거부."""
+    mod = _reload(monkeypatch, env={"RAILWAY_SHARED_SECRET": "x"})
+    ok, msg, _ = _validate(mod, {"ticker": "AAPL", "side": "BUY", "order_type": "00",
+                                 "qty": 100, "price": 500, "market": "us"})
+    assert not ok and "USD" in msg
+
+
+def test_kr_order_still_works(monkeypatch):
+    mod = _reload(monkeypatch, env={"RAILWAY_SHARED_SECRET": "x"})
+    ok, msg, n = _validate(mod, {"ticker": "005930", "side": "BUY", "order_type": "00",
+                                 "qty": 1, "price": 70000, "market": "kr"})
+    assert ok and n["price"] == 70000 and isinstance(n["price"], int)

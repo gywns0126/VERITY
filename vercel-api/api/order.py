@@ -86,6 +86,10 @@ _ALLOWED_MARKETS = frozenset({"kr", "us"})
 _MAX_QTY = int(os.environ.get("ORDER_MAX_QTY", "10000"))
 _MAX_PRICE_KRW = int(os.environ.get("ORDER_MAX_PRICE_KRW", "100000000"))
 _MAX_ORDER_VALUE_KRW_DEFAULT = int(os.environ.get("ORDER_MAX_VALUE_KRW", "10000000"))
+# US 주문 안전 상한 (2026-08-04 결함 fix) — 달러 주문에 원화 상한을 적용하던 통화 혼합 제거.
+# KRW 1천만원 ≈ USD 7천 수준을 보수적으로 잡음(환율 무관 고정 상한, 필요 시 env 조정).
+_MAX_PRICE_USD = float(os.environ.get("ORDER_MAX_PRICE_USD", "100000"))
+_MAX_ORDER_VALUE_USD_DEFAULT = float(os.environ.get("ORDER_MAX_VALUE_USD", "7000"))
 _DAILY_COUNT_LIMIT_DEFAULT = int(os.environ.get("ORDER_DAILY_COUNT_LIMIT", "50"))
 
 # 인메모리 중복 방지 (서버리스 한계로 인스턴스별 상태 — 완전 중복 차단은 아님).
@@ -197,23 +201,40 @@ class handler(BaseHTTPRequestHandler):
         if market not in _ALLOWED_MARKETS:
             return False, "invalid market (kr/us)", None
 
+        # 🚨 2026-08-04 결함 fix — US 소수 가격 지원:
+        #   옛 코드는 price 를 무조건 int() → US 지정가 $133.54 가 133 으로 절삭(잘못된 가격 주문)
+        #   또는 문자열 "133.54" 에서 ValueError 거부. KR 은 정수 호가라 int 강제 유지.
         try:
             qty = int(body.get("qty", 0))
-            price = int(body.get("price", 0))
+            price = float(body.get("price", 0) or 0)
         except (TypeError, ValueError):
-            return False, "qty/price must be integer", None
+            return False, "qty/price must be numeric", None
+        if market == "kr":
+            if price != int(price):
+                return False, "KR price must be integer (호가 단위)", None
+            price = int(price)
+        else:
+            price = round(price, 2)   # US = 소수 2자리(센트)
 
         if qty <= 0 or qty > _MAX_QTY:
             return False, f"qty out of range (1~{_MAX_QTY})", None
+
+        # 통화별 상한 — 달러 주문에 원화 상한을 쓰던 통화 혼합 제거
+        is_kr = market == "kr"
+        max_price = _MAX_PRICE_KRW if is_kr else _MAX_PRICE_USD
+        cur = "KRW" if is_kr else "USD"
         if order_type == "00":
-            if price <= 0 or price > _MAX_PRICE_KRW:
-                return False, "price out of range for limit order", None
+            if price <= 0 or price > max_price:
+                return False, f"price out of range for limit order ({cur})", None
         # 시장가는 price=0 허용
 
         order_value = qty * max(price, 1)
-        max_per_order = int(limits.get("max_order_krw", _MAX_ORDER_VALUE_KRW_DEFAULT))
+        max_per_order = (
+            float(limits.get("max_order_krw", _MAX_ORDER_VALUE_KRW_DEFAULT)) if is_kr
+            else float(limits.get("max_order_usd", _MAX_ORDER_VALUE_USD_DEFAULT))
+        )
         if order_value > max_per_order:
-            return False, f"order value exceeds per-order limit ({max_per_order:,} KRW)", None
+            return False, f"order value exceeds per-order limit ({max_per_order:,.0f} {cur})", None
 
         normalized = {
             "ticker": ticker,
