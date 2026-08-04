@@ -16,26 +16,64 @@ from api.config import DATA_DIR, now_kst
 
 _PATH = os.path.join(DATA_DIR, "metadata", "llm_cost.jsonl")
 
-# 모델별 토큰 단가 (USD per 1M tokens). 2026-04 기준 추정.
+# 모델별 토큰 단가 (USD per 1M tokens). 2026-08 갱신 — 실단가는 각 콘솔이 정본.
 _PRICING = {
-    # Anthropic (2026-04 기준 추정 — 실제 단가는 Anthropic console 확인)
+    # Anthropic — 5족 (2026-08 공시가. sonnet-5 인트로가(2/10)는 8/31 종료라 정가 기재)
+    "claude-sonnet-5": {"input": 3.0, "output": 15.0},
+    "claude-opus-5": {"input": 5.0, "output": 25.0},
+    "claude-fable-5": {"input": 10.0, "output": 50.0},
     "claude-haiku-4-5": {"input": 1.0, "output": 5.0},
     "claude-sonnet-4-6": {"input": 3.0, "output": 15.0},
-    "claude-opus-4-7": {"input": 15.0, "output": 75.0},
+    "claude-opus-4-7": {"input": 5.0, "output": 25.0},
     # Google Gemini
     "gemini-2.5-flash": {"input": 0.30, "output": 1.20},
     "gemini-2.5-pro": {"input": 2.50, "output": 10.0},
-    # Perplexity
+    # Perplexity (usage.cost 실비가 있으면 그쪽 우선 — log_perplexity)
+    "sonar": {"input": 1.0, "output": 1.0},
     "sonar-pro": {"input": 3.0, "output": 15.0},
 }
 
 
 def estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
-    """USD 추정 비용. 알 수 없는 모델은 0."""
+    """USD 추정 비용. 정확 일치 → prefix 일치(날짜 suffix 변형 대응) → 0."""
     p = _PRICING.get(model)
+    if not p and model:
+        p = next((v for k, v in _PRICING.items() if model.startswith(k)), None)
     if not p:
         return 0.0
     return (input_tokens * p["input"] + output_tokens * p["output"]) / 1_000_000
+
+
+def log_anthropic(resp: Any, call_type: str) -> None:
+    """Anthropic SDK 응답 1건 로깅 — 관측이 본업을 못 죽인다 (절대 raise 안 함).
+
+    2026-08-04 Task#9: 장부가 Gemini 전용이던 관측 갭 해소 — 7개 호출부 공통 진입점."""
+    try:
+        u = getattr(resp, "usage", None)
+        log_call("anthropic", str(getattr(resp, "model", "") or ""), call_type,
+                 int(getattr(u, "input_tokens", 0) or 0),
+                 int(getattr(u, "output_tokens", 0) or 0))
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def log_perplexity(data: Any, model: str, call_type: str) -> None:
+    """Perplexity 응답(dict) 로깅 — usage.cost 실비 우선, 없으면 단가 추정. 절대 raise 안 함."""
+    try:
+        if not isinstance(data, dict):
+            return
+        u = data.get("usage") or {}
+        cost = None
+        c = u.get("cost")
+        if isinstance(c, dict):
+            cost = c.get("total_cost")
+        elif isinstance(c, (int, float)):
+            cost = float(c)
+        log_call("perplexity", str(data.get("model") or model or ""), call_type,
+                 int(u.get("prompt_tokens") or 0), int(u.get("completion_tokens") or 0),
+                 cost_usd=(float(cost) if cost else None))
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def log_call(

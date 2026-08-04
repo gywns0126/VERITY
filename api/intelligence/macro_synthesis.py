@@ -199,6 +199,11 @@ def _claude_scenarios(grounding: str, fresh: str, structured: str) -> Dict[str, 
             messages=[{"role": "user", "content": user}],
             extra_body={"output_config": {"effort": "low"}},
         )
+        try:  # 관측 배선 — import 실패 환경(복제본 등)에서도 본업 무영향
+            from api.metadata.llm_cost import log_anthropic
+            log_anthropic(msg, "macro_synthesis")
+        except Exception:  # noqa: BLE001
+            pass
         text = ""
         for block in msg.content:
             if getattr(block, "type", None) == "text":

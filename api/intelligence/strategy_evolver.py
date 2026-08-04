@@ -535,6 +535,11 @@ def propose_evolution(
             messages=[{"role": "user", "content": prompt}],
             **_extra,
         )
+        try:  # 관측 배선 — import 실패 환경(복제본 등)에서도 본업 무영향
+            from api.metadata.llm_cost import log_anthropic
+            log_anthropic(message, "strategy_evolver")
+        except Exception:  # noqa: BLE001
+            pass
         text = next((b.text for b in message.content if b.type == "text"), "").strip()
         if text.startswith("```"):
             text = text.split("\n", 1)[1] if "\n" in text else text[3:]

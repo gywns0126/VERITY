@@ -142,6 +142,12 @@ def search(
     except ValueError:
         return {"ok": False, "error": "JSON 파싱 실패", "latency_ms": latency_ms}
 
+    try:
+        from api.metadata.llm_cost import log_perplexity
+        log_perplexity(data, model, "chat_search")
+    except Exception:  # noqa: BLE001
+        pass
+
     choice = (data.get("choices") or [{}])[0]
     content = (choice.get("message") or {}).get("content", "")
 

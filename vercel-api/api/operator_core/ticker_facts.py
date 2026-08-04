@@ -528,6 +528,54 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
     return out
 
 
+def _fmt_num(v: Any) -> str:
+    if isinstance(v, bool):
+        return "예" if v else "아니오"
+    if isinstance(v, float) and v == int(v):
+        v = int(v)
+    if isinstance(v, int):
+        return f"{v:,}"
+    if isinstance(v, float):
+        return f"{v:,.2f}"
+    return str(v)
+
+
+def _fmt_data(d: Any, depth: int = 0) -> List[str]:
+    """섹션 데이터 사람화 (PM 2026-08-04 'JSON 코드 형식으로 나옴' 수정).
+    dict = 'k: v · k: v' 한 줄 / dict 배열 = 행당 한 줄(최근 4행 + 외 N) / 스칼라 배열 = 나열."""
+    if isinstance(d, dict):
+        parts = []
+        long_items: List[str] = []
+        for k, v in list(d.items())[:20]:
+            if isinstance(v, (dict, list)):
+                inner = _fmt_data(v, depth + 1)
+                long_items.append(f"- {k}:")
+                long_items.extend("  " + x for x in inner)
+            else:
+                parts.append(f"{k} {_fmt_num(v)}")
+        out = []
+        if parts:
+            out.append(" · ".join(parts))
+        out.extend(long_items)
+        return out or ["(빈 값)"]
+    if isinstance(d, list):
+        if not d:
+            return ["(빈 목록)"]
+        if all(isinstance(x, dict) for x in d):
+            rows = d[-4:] if depth == 0 else d[:3]   # 시계열 = 최근 우선
+            out = []
+            for x in rows:
+                out.append("- " + " · ".join(f"{k} {_fmt_num(v)}" for k, v in list(x.items())[:8]
+                                             if not isinstance(v, (dict, list))))
+            rest = len(d) - len(rows)
+            if rest > 0:
+                out.append(f"  (외 {rest}행)")
+            return out
+        vals = ", ".join(_fmt_num(x) for x in d[:12])
+        return [vals + (f" (외 {len(d)-12})" if len(d) > 12 else "")]
+    return [_fmt_num(d)]
+
+
 def render_text(res: Dict[str, Any]) -> str:
     """사람이 읽는 형태 — LLM 컨텍스트로도 그대로 쓴다(출처·기준일 포함)."""
     L: List[str] = []
@@ -538,7 +586,7 @@ def render_text(res: Dict[str, Any]) -> str:
     for sec in res["sections"]:
         stamp = f" · 기준 {sec['as_of']}" if sec.get("as_of") else ""
         L.append(f"## {sec['label']}  [{sec['source']}{stamp}]")
-        L.append(json.dumps(sec["data"], ensure_ascii=False, indent=1))
+        L.extend(_fmt_data(sec["data"]))
         L.append("")
     if res["missing"]:
         L.append("## 없는 것 (지어내지 말 것)")
