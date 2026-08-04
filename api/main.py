@@ -3986,6 +3986,24 @@ def main():
     except Exception as _us_e:  # noqa: BLE001
         print(f"  us_sentiment 주입 실패(무시): {_us_e}")
 
+    # ── 신호 필터 F2·F3 가드 평가 (PREREG_SIGNAL_FILTERS_2026_08_04) — 채점 전 부착 ──
+    # graham_value 채점(verity_brain_analyze 내부)이 stock["value_guards"] 를 읽으므로 반드시
+    # 이 앞. 결측·API 실패 = 비활성 (가드 미발동 — 채점 파이프 무영향). 공개 blob 은
+    # sanitize STRIP_KEYS("value_guards") 로 제거 (동 커밋, 오퍼레이터 전용 진단).
+    try:
+        from api.intelligence.value_guards import evaluate_value_guards
+        _vg_hits = []
+        for stock in candidates:
+            _g = evaluate_value_guards(stock)
+            if _g is not None:
+                stock["value_guards"] = _g
+                if _g.get("cycle_peak_guard") or _g.get("earnings_quality"):
+                    _vg_hits.append(f"{stock.get('ticker')}"
+                                    f"({'F2' if _g.get('cycle_peak_guard') else 'F3'})")
+        print(f"  [value_guards] 발동 {len(_vg_hits)}건" + (f" — {', '.join(_vg_hits[:8])}" if _vg_hits else ""))
+    except Exception as _vg_e:  # noqa: BLE001
+        print(f"  [value_guards] 스킵(채점 무영향): {type(_vg_e).__name__}: {_vg_e}")
+
     try:
         from api.intelligence.verity_brain import reset_ic_cache
         reset_ic_cache()

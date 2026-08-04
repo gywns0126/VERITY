@@ -61,3 +61,53 @@ def test_avoid_passthrough():
     s = apply_display_verdict(_stock(grade="AVOID", confidence="soft", timing="SELL", rec="BUY"))
     assert s["recommendation"] == "AVOID"
     assert s["display_verdict"]["gates"] == []  # BUY 이상에만 게이트 — 하위 등급은 그대로
+
+
+# ── F1 조건부 신호 (PREREG_SIGNAL_FILTERS_2026_08_04 §F1) ──────────────────────
+
+def _stock_f1(grade="WATCH", confidence="firm", timing="HOLD", brain_score=65,
+              price=10_000, ma20=11_000, r5=None):
+    s = _stock(grade=grade, confidence=confidence, timing=timing)
+    s["verity_brain"]["brain_score"] = brain_score
+    s["technical"] = {"price": price, "ma20": ma20, "return_5d_pct": r5}
+    return s
+
+
+def test_f1_ma20_reclaim_when_below_ma20():
+    # 기아 사례형: WATCH ∧ brain≥60 ∧ 종가 < MA20 → ma20_reclaim (등록 순서 1순위)
+    s = apply_display_verdict(_stock_f1(price=10_000, ma20=11_000))
+    trig = s["display_verdict"]["trigger_condition"]
+    assert trig["type"] == "ma20_reclaim"
+    assert "11,000" in trig["message"] and "회복" in trig["message"]
+
+
+def test_f1_timing_align_for_demoted_brain_buy():
+    # 브레인 BUY(soft 강등 → WATCH) ∧ 종가 ≥ MA20 ∧ timing ≠ BUY → timing_align
+    s = apply_display_verdict(_stock_f1(grade="BUY", confidence="soft",
+                                        price=12_000, ma20=11_000))
+    trig = s["display_verdict"]["trigger_condition"]
+    assert trig["type"] == "timing_align"
+
+
+def test_f1_pullback_hold_after_surge():
+    # 5일 +15%↑ 급등 ∧ 종가 ≥ MA20 ∧ base WATCH → pullback_hold
+    s = apply_display_verdict(_stock_f1(price=12_000, ma20=11_000, r5=18.2))
+    trig = s["display_verdict"]["trigger_condition"]
+    assert trig["type"] == "pullback_hold"
+    assert "12,000" in trig["message"]
+
+
+def test_f1_absent_below_brain_60():
+    s = apply_display_verdict(_stock_f1(brain_score=55))
+    assert "trigger_condition" not in s["display_verdict"]
+
+
+def test_f1_absent_for_non_watch_badge():
+    s = apply_display_verdict(_stock_f1(grade="CAUTION", brain_score=65))
+    assert "trigger_condition" not in s["display_verdict"]
+
+
+def test_f1_first_match_order_ma20_wins():
+    # ma20_reclaim 과 pullback_hold 동시 충족 → 등록 나열 순 first-match = ma20_reclaim
+    s = apply_display_verdict(_stock_f1(price=10_000, ma20=11_000, r5=20.0))
+    assert s["display_verdict"]["trigger_condition"]["type"] == "ma20_reclaim"

@@ -380,6 +380,12 @@ def analyze_technical(ticker_yf: str) -> dict:
     vol_ratio = round(vol_today / vol_avg20, 2) if vol_avg20 > 0 else 1.0
 
     price_change = (close.iloc[-1] - close.iloc[-2]) / close.iloc[-2] * 100 if len(close) >= 2 else 0
+    # 5거래일 수익률 — F1 pullback_hold 트리거 입력 (PREREG_SIGNAL_FILTERS §F1, 표시용·점수 불변)
+    return_5d = None
+    if len(close) >= 6:
+        _c5 = close.iloc[-6]
+        if pd.notna(_c5) and float(_c5) > 0:
+            return_5d = round((float(close.iloc[-1]) / float(_c5) - 1) * 100, 2)
     vol_direction = "up" if price_change > 0.3 else "down" if price_change < -0.3 else "flat"
 
     trend_strength = 0
@@ -494,6 +500,7 @@ def analyze_technical(ticker_yf: str) -> dict:
         "vol_direction": vol_direction,
         "trend_strength": trend_strength,
         "price_change_pct": round(float(price_change), 2),
+        "return_5d_pct": return_5d,
         "atr_14d": atr_14d,
         "atr_14d_pct": atr_14d_pct,
         "atr_14d_source": "operational",   # Phase 0 P-02: 운영 산출 vs 백테스트 사후 재계산 구분
@@ -509,7 +516,7 @@ def _empty_result() -> dict:
         "price": 0, "ma5": 0, "ma20": 0, "ma60": 0, "ma120": 0,
         "rsi": 50, "macd": 0, "macd_signal": 0, "macd_hist": 0,
         "bb_upper": 0, "bb_lower": 0, "bb_position": 50,
-        "vol_ratio": 1.0, "atr_14d": None, "atr_14d_pct": None,
+        "vol_ratio": 1.0, "atr_14d": None, "atr_14d_pct": None, "return_5d_pct": None,
         "atr_14d_source": None, "atr_14d_method": None,
         "signals": [], "technical_score": 50,
         "talib_observations": {"available": False},

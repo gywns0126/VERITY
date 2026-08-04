@@ -49,11 +49,19 @@ def _compute_graham_score(stock: Dict[str, Any]) -> float:
     roe = _safe_float(roe, 0) or 0
     current_ratio = _safe_float(current_ratio, 0) or 0
 
+    # ── 신호 필터 F2·F3 (PREREG_SIGNAL_FILTERS_2026_08_04, RULE 7 동결) ──
+    # F2 cycle_peak_guard = 가치 가점 무효(×0) — 사이클 피크 이익의 저PER 착시 제거.
+    # F3 earnings_quality = 가치 가점 50%(×0.5) — 영업외 비중·FCF 미달 분모 보정.
+    # 스케일 대상 = 저PER(+12/+5)·복합(+10)·PEG(+15/+8) 가점만. PEG 포함 근거 = PER 파생
+    # (사이클 피크 EPS 로 동일 착시). 감점·재무건전성 가점(유동비율/부채/ROE) = 불변.
+    _vg = stock.get("value_guards") or {}
+    _vscale = 0.0 if _vg.get("cycle_peak_guard") else (0.5 if _vg.get("earnings_quality") else 1.0)
+
     # PER <= 15: Graham 기준 충족
     if 0 < per <= 15:
-        score += 12
+        score += 12 * _vscale
     elif 0 < per <= 20:
-        score += 5
+        score += 5 * _vscale
     elif per > 30:
         score -= 8
 
@@ -64,7 +72,7 @@ def _compute_graham_score(stock: Dict[str, Any]) -> float:
     if per > 0 and pbr > 0 and not stock.get("pbr_normalized_neutral"):
         pb_pe = pbr * per
         if pb_pe <= 22.5:
-            score += 10
+            score += 10 * _vscale
         elif pb_pe > 50:
             score -= 8
 
@@ -92,9 +100,9 @@ def _compute_graham_score(stock: Dict[str, Any]) -> float:
             if _pegy_denom > 0:
                 peg = per / _pegy_denom
                 if peg < 0.5:
-                    score += 15  # 매우 매력적 (Lynch tenbagger 후보)
+                    score += 15 * _vscale  # 매우 매력적 (Lynch tenbagger 후보)
                 elif peg < 1.0:
-                    score += 8   # 매력적 (Lynch 표준 기준)
+                    score += 8 * _vscale   # 매력적 (Lynch 표준 기준)
                 elif peg <= 2.0:
                     pass  # 중립
                 else:

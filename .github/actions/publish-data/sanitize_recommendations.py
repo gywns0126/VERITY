@@ -33,6 +33,8 @@ STRIP_KEYS = {
     # 2026-08-03 display_verdict 게이트 — LLM 합의 원본(참고 관측)은 비공개.
     # display_verdict 자체는 STRIP_PAT(r"verdict") 자동 포착. recommendation 문자열만 공개.
     "analyst_view",
+    # 2026-08-04 신호 필터 F2·F3 진단 flag (PREREG_SIGNAL_FILTERS) — 자체 산식 파생, 오퍼레이터 전용.
+    "value_guards",
 }
 # 패턴 백스톱 — 미래 추가 점수/등급/판정 필드 누출 방지 (consensus/recommendation/팩트 미포착)
 STRIP_PAT = re.compile(r"brain|score_break|verdict|fscore|lynch", re.IGNORECASE)
