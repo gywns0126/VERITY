@@ -15,6 +15,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import shutil
 import subprocess
 import sys
 
@@ -112,13 +113,20 @@ def build() -> dict:
 def _publish_to_main() -> bool:
     """gh api contents PUT 로 main 직접 발행 (클론·dirty-tree rebase 회피, gh repo scope).
     CI cron_health 가 체크아웃 로컬파일로 읽어 heartbeat_at 나이 = 맥 SPOF 판정."""
+    # launchd 는 homebrew PATH 가 없을 수 있음 — 2026-07-04 plist PATH 축소로 gh
+    # FileNotFoundError 가 4주 침묵 실패(하트비트 30일 stale P0). which + 절대경로 폴백.
+    gh = shutil.which("gh") or next(
+        (p for p in ("/opt/homebrew/bin/gh", "/usr/local/bin/gh") if os.path.exists(p)), None)
+    if not gh:
+        print("[heartbeat] main 발행 실패: gh 미발견 — launchd PATH 에 homebrew 경로 필요")
+        return False
     with open(OUT, "rb") as f:
         content_b64 = base64.b64encode(f.read()).decode()
     sha = subprocess.run(
-        ["gh", "api", f"repos/{REPO}/contents/{REMOTE_PATH}", "--jq", ".sha"],
+        [gh, "api", f"repos/{REPO}/contents/{REMOTE_PATH}", "--jq", ".sha"],
         capture_output=True, text=True,
     ).stdout.strip()
-    args = ["gh", "api", "--method", "PUT", f"repos/{REPO}/contents/{REMOTE_PATH}",
+    args = [gh, "api", "--method", "PUT", f"repos/{REPO}/contents/{REMOTE_PATH}",
             "-f", "message=chore(heartbeat): 로컬 맥 생존 신호 갱신 [skip ci]",
             "-f", f"content={content_b64}"]
     if sha and not sha.startswith("{"):
