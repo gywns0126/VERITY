@@ -1,22 +1,22 @@
 {
-  "collected_at": "2026-08-04T08:33:08+09:00",
+  "collected_at": "2026-08-04T09:02:55+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
     "call": "neutral",
-    "net_score": -1,
+    "net_score": 0,
     "active_dims": 4,
     "rule": "net≥+2 risk_on / ≤−2 risk_off / else neutral (투명 tally, 가중치 없음)"
   },
   "dimensions": [
     {
       "name": "심리",
-      "vote": 0,
-      "read": "neutral",
+      "vote": 1,
+      "read": "on",
       "active": true,
       "drivers": {
-        "fng": 28.0,
-        "search_trend_pct": -2.6
+        "fng": 25.0,
+        "search_trend_pct": -2.3
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -50,7 +50,7 @@
       "read": "neutral",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": -1.7
+        "btc_change_pct_7d": -0.4
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -60,8 +60,8 @@
       "read": "누적 중",
       "active": false,
       "drivers": {
-        "ssr": 4.99,
-        "stablecoin_supply_usd": 255520754511.67776
+        "ssr": 4.98,
+        "stablecoin_supply_usd": 255534509343.013
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -80,7 +80,7 @@
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 63509.0,
+  "btc_price_at_call": 63447.0,
   "trail": [
     {
       "date": "2026-06-24",
@@ -372,8 +372,8 @@
     {
       "date": "2026-08-04",
       "call": "neutral",
-      "net_score": -1,
-      "btc_price": 63509.0,
+      "net_score": 0,
+      "btc_price": 63447.0,
       "active_dims": 4
     }
   ],
@@ -383,14 +383,14 @@
         "horizon_days": 7,
         "n": 13,
         "hit_rate": 0.6923,
-        "mean_realized_return": 0.005658,
+        "mean_realized_return": 0.005509,
         "label": "통계 무의미 (N<30)"
       },
       {
         "horizon_days": 30,
         "n": 3,
         "hit_rate": 0.0,
-        "mean_realized_return": 0.056282,
+        "mean_realized_return": 0.055957,
         "label": "통계 무의미 (N<30)"
       }
     ],
