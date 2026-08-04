@@ -46,8 +46,11 @@ export default function TopBar({ active }: { active: "terminal" | "macro" | "sys
 
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 18px", background: c.card, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", flexShrink: 0, position: "relative", zIndex: 40 }}>
-            <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-0.02em", color: c.ink, flexShrink: 0, fontFamily: FONT }}>
-                알파<span style={{ color: c.vt }}>파운더</span>
+            {/* 브랜드 = 로고(좌) + 알파네스트 잉크색(우) — 알파파운더 폐지, 공개 사이트 패밀리룩 (PM 2026-08-04) */}
+            <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/alphanest-logo.svg" alt="" width={22} height={22} style={{ display: "block" }} />
+                <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-0.02em", color: c.ink, fontFamily: FONT }}>알파네스트</span>
             </span>
             <nav style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                 <a href="/" style={tab(active === "terminal")}>터미널</a>
