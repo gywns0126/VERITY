@@ -108,3 +108,26 @@ def test_guard_doc_exists():
     with open(doc_path, encoding="utf-8") as f:
         body = f.read()
     assert "RULE 2" in body and "N=50" in body, "IGNORE_COMMAND.md 에 RULE 2 / N=50 불변식 설명이 없음"
+
+
+def test_guard_uses_last_deploy_sha_first(ignore_cmd: str):
+    """🚨 불변식 (3) — 마지막 배포 SHA 우선 (2026-08-05 빌드 폭주 실사고).
+
+    실사고: 창(N) 단독 방식은 반대 방향으로 터진다. 봇 커밋이 하루 292개(5분 간격 price_pulse)
+    쏟아지는 환경에서 코드 1회 변경이 그 후 N커밋 동안 **모든 데이터 커밋에 빌드를 통과**시켜
+    하루 수백 Next.js 빌드 → Vercel 예산 하루 만에 소진.
+    → VERCEL_GIT_PREVIOUS_SHA(마지막 배포 커밋)를 1순위 기준으로 쓰면 누락도 폭주도 없다.
+      창(N)은 그 변수를 못 쓸 때의 **폴백**으로만 남긴다(불변식 1 유지).
+    """
+    assert "VERCEL_GIT_PREVIOUS_SHA" in ignore_cmd, (
+        "마지막 배포 SHA 기준이 없음 — 창 단독 방식은 봇 커밋 환경에서 빌드 폭주(2026-08-05 실사고)."
+    )
+
+
+def test_guard_length_within_vercel_limit(ignore_cmd: str):
+    """🚨 ignoreCommand ≤ 256자 (2026-08-05 실사고).
+
+    한도를 넘기면 vercel.json 스키마 검증에서 `Build Failed` — 배포 전면 중단.
+    (당시 자산 해시가 안 바뀐 것을 '스킵 성공'으로 오독해 진단이 한 번 더 지연됐다.)
+    """
+    assert len(ignore_cmd) <= 256, f"ignoreCommand {len(ignore_cmd)}자 > 256 — 배포 전면 FAIL"

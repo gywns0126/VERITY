@@ -47,3 +47,32 @@ bash -c 'cd .. || exit 0; N=50; git rev-parse HEAD~$N >/dev/null 2>&1 || N=1; gi
 2. `tests/test_vercel_ignore_guard.py` 를 함께 갱신 (안 하면 CI 가 막음).
 3. **머지 후 Vercel 배포 상태를 반드시 확인** — `vercel.json` 은 잘못 건드리면 배포가 통째로 죽는다.
    `gh api repos/gywns0126/VERITY/deployments?per_page=5` → `deployments/<id>/statuses`
+
+## 2026-08-05 — 창 단독 방식의 반대편 실패(빌드 폭주) + 마지막 배포 SHA 도입
+
+창(N=50/200)만 쓰면 **반대 방향으로 터진다**는 것이 실측됐다.
+
+- 실측: main 24h 커밋 **323개 중 292개가 price_pulse**(5분 간격 봇 커밋).
+- 창 방식은 "최근 N커밋 안에 코드 변경이 있으면 빌드"라, 코드 1회 변경이 그 후 N커밋
+  (≈16시간) 동안 들어오는 **모든 데이터 커밋에 빌드를 통과**시킨다.
+- 결과: 하루 수백 Next.js 빌드 → Vercel On-Demand 예산이 하루 만에 소진.
+
+### 현재 설계 (불변식 3개 동시 충족)
+1. **1순위 = `VERCEL_GIT_PREVIOUS_SHA`** (마지막 배포 커밋). 그 이후 변경만 보므로
+   누락(창 밖 skip)도, 폭주(창 안 재빌드)도 발생하지 않는다.
+2. **폴백 = N=50 창** — 변수를 못 쓰는 상황에서 기존 누락 방어를 유지.
+3. **fail-open** — 기준 커밋을 못 잡으면 `exit 1`(BUILD). 누락 << 추가 배포.
+
+### 추가 제약 (실사고 유래)
+- `ignoreCommand` **≤ 256자** — 초과 시 스키마 검증에서 배포 전면 FAIL (2026-08-05).
+- 이중따옴표 금지 / 네트워크 git 명령 금지 / vercel.json 최상위 스키마 밖 키 금지.
+
+### 검증 방법 (오독 주의)
+배포 자산 해시 불변은 **스킵과 실패를 구분하지 못한다**. 반드시 커밋별 배포 상태로 확인:
+```
+gh api repos/gywns0126/VERITY/commits/<sha>/status \
+  -q '.statuses[] | select(.context|test("Vercel")) | .context+" "+.state+" | "+.description'
+```
+- `success | Canceled by Ignored Build Step` = 가드가 정상 스킵
+- `success | Deployment has completed` = 실제 배포
+- `error` = 빌드 실패

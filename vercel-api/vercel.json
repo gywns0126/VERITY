@@ -1,6 +1,6 @@
 {
   "cleanUrls": true,
-  "ignoreCommand": "bash -c 'cd ..;B=${VERCEL_GIT_PREVIOUS_SHA:-HEAD~1};git cat-file -e $B^{commit} 2>/dev/null||B=HEAD~1;git diff --quiet $B HEAD -- vercel-api/'",
+  "ignoreCommand": "bash -c 'cd ..;N=50;B=${VERCEL_GIT_PREVIOUS_SHA:-};git cat-file -e $B^{commit} 2>/dev/null || B=$(git rev-parse HEAD~$N 2>/dev/null) || exit 1;git diff --quiet $B HEAD -- vercel-api/ && exit 0;exit 1'",
   "functions": {
     "api/stock.py": {
       "maxDuration": 30
