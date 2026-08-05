@@ -1519,6 +1519,7 @@ def run_vams_cycle(
             sell_result = execute_sell(portfolio, holding, reason, history, profile=p)
             alerts.append({
                 "type": "STOP_LOSS",
+                "level": "CRITICAL",
                 "message": f"🚨 {sell_result['name']} 매도 | {reason} | 손익: {sell_result['pnl']:+,}원",
             })
 
@@ -1529,6 +1530,7 @@ def run_vams_cycle(
             if pr.get("sold_qty", 0) > 0:
                 alerts.append({
                     "type": "PARTIAL_EXIT",
+                    "level": "WARNING",
                     "message": (
                         f"💰 {holding['name']} 부분 익절 {pr['target_id']} | "
                         f"{pr['sold_qty']}주 @ {pr['sold_price']:,}원 "
@@ -1564,6 +1566,7 @@ def run_vams_cycle(
         if exposure.get("blocked"):
             alerts.append({
                 "type": "EXPOSURE_BLOCK",
+                "level": "WARNING",
                 "message": f"⛔ {stock.get('name', '?')} 매수 차단: {exposure['reason']}",
             })
             continue
@@ -1573,6 +1576,7 @@ def run_vams_cycle(
             bought += 1
             alerts.append({
                 "type": "NEW_BUY",
+                "level": "WARNING",
                 "message": f"✅ {result['name']} 매수 | {result['quantity']}주 @ {result['buy_price']:,}원 | 사유: {result['buy_reason']}",
             })
 
