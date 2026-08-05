@@ -46,6 +46,15 @@ const MAX_AGE_RULES = [
     [/^(macro_snapshot|urgent_alerts)\.json$/, 300],
     [/^(universe_search|kr_stock_names|kr_close_latest|us_investor_portfolios|us_smart_money[^/]*|sectors[^/]*)\.json$/, 3600],
     [/^equity_research\//, 1800],
+    // 2026-08-06 2차 정렬 — 8/4 차등에서 **대형 저빈도 파일이 기본군(600s)에 남아** 있었다.
+    // 실측 갱신 빈도(최근 14일 커밋 수 ÷ 14)와 실제 blob 크기:
+    //   event_study 21.1MB 일0.2회 · us_major_holdings 7.3MB 일0.4회 ·
+    //   dart_quarterly_public 5.7MB 일0.3회 · us_insider_trades 6.6MB 일1.0회 ·
+    //   us_stock_report_public 4.3MB 일0.9회
+    // → 10분 캐시면 하루 수십 번 원본 재전송. 갱신 주기에 맞춰 6h/2h 로 올린다.
+    // 지연 트레이드오프: 공시·재무 이력류라 수 시간 지연 수용 범위(준실시간 아님).
+    [/^(event_study|us_major_holdings|dart_quarterly_public|us_quarterly_public|13f_quarter_cache)\.json$/, 21600],
+    [/^(us_insider_trades|us_stock_report_public|us_disclosure_feed|us_disclosure_forensics)\.json$/, 7200],
 ];
 const DEFAULT_MAX_AGE = 600; // 일 2회 갱신군 (portfolio·recommendations 등)
 function maxAgeFor(blobPath) {
