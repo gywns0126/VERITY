@@ -1238,16 +1238,75 @@ def _apply_fallback_judgments(analyzed: list):
 
 
 def _update_simulation_stats(portfolio: dict):
-    """VAMS 매매 이력으로부터 누적 시뮬레이션 통계 갱신."""
+    """VAMS 매매 이력으로부터 누적 시뮬레이션 통계 갱신 (**리셋 이후만**).
+
+    🚨 2026-08-05 측정 정화 fix — 자본 리셋 경계 미적용 + 부분청산 누락.
+      결함: 옛 구현은 history 의 SELL 을 **전부** 셌다. VAMS 는 2026-05-17 에 자본
+        1천만으로 리셋(vams.reset_meta)했는데 그 **이전 13건**(4/2~5/15, 합 +164만)이
+        섞여 들어와 성과를 과대표시했다. 실측 대비:
+          옛: 91거래 · 승률 12.1% · 실현손익 −409,108원
+          신: 78거래 · 승률  5.1% · 실현손익 −1,815,620원 (리셋 이후 실제)
+      2차 피해: verification_trail 이 이 total_trades 를 "리셋 후 누적"으로 문서화하고
+        N=252 유의성 마일스톤(Bailey & López de Prado 2014)을 계산한다 — 13건 과대계상.
+      3차: validation_report(게이트 판정)와 같은 원장을 다르게 읽어 4.8배 괴리.
+
+    정합 기준 = api/vams/validation.py 와 **동일 정의**로 통일한다:
+      · 창 = reset_meta.reset_at 이후 (없으면 전체 — legacy 폴백, window_start=None 표기)
+      · 거래 1건 = 청산 episode. 부분청산(PARTIAL_SELL)은 부모 episode 에 합산해
+        1건으로 센다 (부분익절을 별건 '승'으로 세면 승률이 부풀려진다).
+    산식 아님 — 집계 창·거래 정의 교정이다 (RULE 7 임계 조정 비대상, 측정 정화).
+    """
     from api.vams.engine import load_history, VAMS_INITIAL_CASH
     history = load_history()
     vams = portfolio.get("vams", {})
 
-    sells = [h for h in history if h.get("type") == "SELL"]
+    reset_at = str(((vams.get("reset_meta") or {}).get("reset_at") or ""))[:10] or None
+
+    def _in_window(ev: dict) -> bool:
+        if not reset_at:
+            return True
+        return str(ev.get("date", ""))[:10] >= reset_at
+
+    # 부분청산 누적 → 부모 episode 합산 (validation.py 계약 승계)
+    partial_acc: dict = {}
+    sells: list = []          # 청산 episode (부분분 합산) — 거래 수·승률용
+    raw_sell_sum = 0.0        # 창 내 청산 raw pnl — 실현손익(돈) 계산용
+    partial_sum = 0.0         # 창 내 부분청산 pnl — 상동 (보유 중 종목분 포함)
+    for h in history:
+        tk = str(h.get("ticker") or h.get("name") or "")
+        htype = h.get("type")
+        if htype == "PARTIAL_SELL":
+            try:
+                pp = float(h.get("pnl") or h.get("partial_pnl") or 0)
+            except (TypeError, ValueError):
+                pp = 0.0
+            partial_acc[tk] = partial_acc.get(tk, 0.0) + pp
+            if _in_window(h):
+                partial_sum += pp
+            continue
+        if htype != "SELL" or h.get("pnl") is None:
+            continue
+        acc = partial_acc.pop(tk, 0.0)   # 이 episode 누적 부분익절 (없으면 0)
+        if not _in_window(h):
+            continue                      # 리셋 이전 episode 통째 제외(부분분도 함께 폐기)
+        try:
+            raw = float(h["pnl"])
+        except (TypeError, ValueError):
+            continue
+        ev = dict(h)
+        ev["pnl"] = raw + acc             # episode 손익 = 청산 + 그 종목 부분익절
+        sells.append(ev)
+        raw_sell_sum += raw
+
+    excluded_n = sum(1 for h in history if h.get("type") == "SELL" and not _in_window(h))
     total_trades = len(sells)
     wins = sum(1 for s in sells if s.get("pnl", 0) > 0)
     win_rate = round(wins / total_trades * 100, 1) if total_trades else 0
-    realized_pnl = sum(s.get("pnl", 0) for s in sells)
+    # 🔑 두 정의를 분리한다 (섞으면 이번 사고가 재발한다):
+    #   realized_pnl = **실제 실현된 돈** = 창 내 청산 raw + 창 내 부분청산 전액.
+    #     부분익절 후 아직 보유 중인 종목의 실현분도 돈이므로 포함한다.
+    #   total_trades/win_rate = **청산 완료 episode** 기준 (미청산 부분익절은 거래로 세지 않음).
+    realized_pnl = round(raw_sell_sum + partial_sum, 2)
 
     best_trade = max(sells, key=lambda s: s.get("pnl", 0)) if sells else None
     worst_trade = min(sells, key=lambda s: s.get("pnl", 0)) if sells else None
@@ -1280,6 +1339,11 @@ def _update_simulation_stats(portfolio: dict):
             "pnl": worst_trade.get("pnl", 0),
             "date": worst_trade.get("date", ""),
         } if worst_trade else None,
+        # 감사 필드 (2026-08-05) — 어떤 창을 셌는지 산출물 자체가 말하게 한다.
+        "window_start": reset_at,
+        "excluded_pre_reset_trades": excluded_n,
+        "partial_exits_folded": True,
+        "definition": "청산 episode 기준 (부분청산은 부모에 합산) · vams/validation.py 와 동일 정의",
         "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
     portfolio["vams"] = vams
