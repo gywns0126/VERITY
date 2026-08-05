@@ -4384,6 +4384,7 @@ def main():
                 headlines=portfolio.get("headlines", []),
                 verity_brain=portfolio.get("verity_brain"),
                 market="kr",
+                market_summary=portfolio.get("market_summary"),
                 event_insights=portfolio.get("event_insights"),
             )
             portfolio["daily_report"] = daily_report
@@ -4403,6 +4404,7 @@ def main():
                 headlines=portfolio.get("headlines", []),
                 verity_brain=portfolio.get("verity_brain"),
                 market="us",
+                market_summary=portfolio.get("market_summary"),
                 event_insights=portfolio.get("event_insights"),
             )
             portfolio["daily_report_us"] = daily_report_us
