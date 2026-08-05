@@ -225,33 +225,15 @@ def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
     # episode 의 종가 SELL 에 합산 = 1 진입 → 1 trade 통합 실현손익. 기존엔 partial_pnl(키 상이)
     # + type!=SELL 로 전량 제외돼 승자 이익이 win_rate/expectancy/SQN 서 invisible(게이트 보수 왜곡).
     # 측정 정의 교정(임계 튜닝 아님). 현 오염 0건(PARTIAL_SELL 0/SELL 13) 상태에서 사전 확정.
-    pnls = []
-    partial_acc = {}  # ticker -> 누적 부분익절 실현손익 (SELL 에서 소비·리셋)
-    for h in history:
-        htype = h.get("type")
-        ticker = str(h.get("ticker", ""))
-        if htype == "PARTIAL_SELL":
-            pp = h.get("partial_pnl")
-            if pp is not None:
-                try:
-                    partial_acc[ticker] = partial_acc.get(ticker, 0.0) + float(pp)
-                except (TypeError, ValueError):
-                    pass
-            continue
-        if htype != "SELL" or h.get("pnl") is None:
-            continue
-        acc = partial_acc.pop(ticker, 0.0)  # 이 episode 누적 부분익절 (없으면 0)
-        if start_dt is not None:
-            date_str = str(h.get("date", ""))[:10]
-            try:
-                if datetime.strptime(date_str, "%Y-%m-%d") < start_dt:
-                    continue  # 청산 episode 통째 제외 (부분익절도 함께 폐기)
-            except ValueError:
-                continue  # 날짜 파싱 실패 시 보수적으로 제외
-        try:
-            pnls.append(float(h["pnl"]) + acc)
-        except (TypeError, ValueError):
-            continue
+    # 🚨 2026-08-05 — 원장 재생 SoT 로 이관 (api/vams/trade_ledger).
+    #   ① 보유 0 상태 매도(유령) 배제 — 2026-07-20 감사가 잡은 dev-mode 오염의 **잔존 기록**.
+    #      버그는 ec7a66111 로 수정됐으나 이미 적재된 58건이 게이트 통계를 오염시키고 있었다
+    #      (리셋 후 SELL 70 = 실제 12 + 유령 58, 유령 손익 −1,396,639원).
+    #   ② simulation_stats 와 **같은 정의** 공유 — 같은 원장을 다르게 읽어 4.8배 괴리했던
+    #      2026-08-05 사고(#290) 재발 방지. "거래 1건"의 정의는 한 곳에만 있어야 한다.
+    from api.vams.trade_ledger import episode_pnls
+    _since = start_dt.strftime("%Y-%m-%d") if start_dt is not None else None
+    pnls, _led = episode_pnls(history, since=_since)
     if not pnls:
         return {
             "trades": 0, "wins": 0, "losses": 0,

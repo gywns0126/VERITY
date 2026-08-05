@@ -1267,46 +1267,19 @@ def _update_simulation_stats(portfolio: dict):
             return True
         return str(ev.get("date", ""))[:10] >= reset_at
 
-    # 부분청산 누적 → 부모 episode 합산 (validation.py 계약 승계)
-    partial_acc: dict = {}
-    sells: list = []          # 청산 episode (부분분 합산) — 거래 수·승률용
-    raw_sell_sum = 0.0        # 창 내 청산 raw pnl — 실현손익(돈) 계산용
-    partial_sum = 0.0         # 창 내 부분청산 pnl — 상동 (보유 중 종목분 포함)
-    for h in history:
-        tk = str(h.get("ticker") or h.get("name") or "")
-        htype = h.get("type")
-        if htype == "PARTIAL_SELL":
-            try:
-                pp = float(h.get("pnl") or h.get("partial_pnl") or 0)
-            except (TypeError, ValueError):
-                pp = 0.0
-            partial_acc[tk] = partial_acc.get(tk, 0.0) + pp
-            if _in_window(h):
-                partial_sum += pp
-            continue
-        if htype != "SELL" or h.get("pnl") is None:
-            continue
-        acc = partial_acc.pop(tk, 0.0)   # 이 episode 누적 부분익절 (없으면 0)
-        if not _in_window(h):
-            continue                      # 리셋 이전 episode 통째 제외(부분분도 함께 폐기)
-        try:
-            raw = float(h["pnl"])
-        except (TypeError, ValueError):
-            continue
-        ev = dict(h)
-        ev["pnl"] = raw + acc             # episode 손익 = 청산 + 그 종목 부분익절
-        sells.append(ev)
-        raw_sell_sum += raw
-
-    excluded_n = sum(1 for h in history if h.get("type") == "SELL" and not _in_window(h))
+    # 🚨 2026-08-05 — 유령 매도 배제 + 정의 단일화. 원장 재생은 api/vams/trade_ledger 가
+    # 단일 출처다(#290 의 4.8배 괴리 재발 방지 + 7/20 감사 phantom 잔존분 제거).
+    from api.vams.trade_ledger import reconstruct
+    led = reconstruct(history, since=reset_at)
+    sells = led["episodes"]
+    excluded_n = led["excluded_pre_window"]
+    phantom_n = len(led["phantoms"])
     total_trades = len(sells)
     wins = sum(1 for s in sells if s.get("pnl", 0) > 0)
     win_rate = round(wins / total_trades * 100, 1) if total_trades else 0
-    # 🔑 두 정의를 분리한다 (섞으면 이번 사고가 재발한다):
-    #   realized_pnl = **실제 실현된 돈** = 창 내 청산 raw + 창 내 부분청산 전액.
-    #     부분익절 후 아직 보유 중인 종목의 실현분도 돈이므로 포함한다.
-    #   total_trades/win_rate = **청산 완료 episode** 기준 (미청산 부분익절은 거래로 세지 않음).
-    realized_pnl = round(raw_sell_sum + partial_sum, 2)
+    # realized_pnl = 실제 돈 = 창 내 청산 raw + 창 내 부분청산 전액 (유령 손익 제외)
+    realized_pnl = round(sum(float(s.get("raw_pnl", 0)) for s in sells)
+                         + led["partial_realized"], 2)
 
     best_trade = max(sells, key=lambda s: s.get("pnl", 0)) if sells else None
     worst_trade = min(sells, key=lambda s: s.get("pnl", 0)) if sells else None
@@ -1342,8 +1315,10 @@ def _update_simulation_stats(portfolio: dict):
         # 감사 필드 (2026-08-05) — 어떤 창을 셌는지 산출물 자체가 말하게 한다.
         "window_start": reset_at,
         "excluded_pre_reset_trades": excluded_n,
+        "excluded_phantom_sells": phantom_n,
+        "phantom_pnl_excluded": led["phantom_pnl"],
         "partial_exits_folded": True,
-        "definition": "청산 episode 기준 (부분청산은 부모에 합산) · vams/validation.py 와 동일 정의",
+        "definition": "청산 episode 기준 (부분청산 부모 합산 · 보유 0 유령매도 배제) · SoT=api/vams/trade_ledger",
         "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
     portfolio["vams"] = vams

@@ -3,8 +3,18 @@ from api.vams.validation import _trade_stats
 
 
 def _hist(wins, win_amt, losses, loss_amt):
-    return ([{"type": "SELL", "pnl": win_amt, "date": "2026-06-01"}] * wins
-            + [{"type": "SELL", "pnl": -loss_amt, "date": "2026-06-01"}] * losses)
+    """각 청산에 선행 BUY 를 붙인다 — 2026-08-05 유령 매도 가드(trade_ledger) 도입 후
+    보유 0 상태 매도는 episode 로 세지 않는다. 종목을 분리해 재진입 오판도 피한다."""
+    out = []
+    for i in range(wins):
+        tk = f"W{i:03d}"
+        out += [{"type": "BUY", "ticker": tk, "date": "2026-05-31", "quantity": 10},
+                {"type": "SELL", "ticker": tk, "pnl": win_amt, "date": "2026-06-01"}]
+    for i in range(losses):
+        tk = f"L{i:03d}"
+        out += [{"type": "BUY", "ticker": tk, "date": "2026-05-31", "quantity": 10},
+                {"type": "SELL", "ticker": tk, "pnl": -loss_amt, "date": "2026-06-01"}]
+    return out
 
 
 def test_expectancy_r_formula():
