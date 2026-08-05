@@ -1110,8 +1110,12 @@ def _is_us_stock(s: dict) -> bool:
     return cur == "USD" or bool(__import__("re").search(r"NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA", mkt or "", __import__("re").IGNORECASE))
 
 
+BIGMOVE_PCT = 1.5  # 급변일 임계 — 뉴스 근거 확대 발동 (2026-08-05, 운영 상수)
+
+
 @mockable("gemini.daily_report")
-def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, headlines: list, verity_brain: Optional[dict] = None, market: str = "kr", event_insights: Optional[list] = None) -> dict:
+def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, headlines: list, verity_brain: Optional[dict] = None, market: str = "kr", event_insights: Optional[list] = None,
+                          market_summary: Optional[dict] = None) -> dict:
     """AI 일일 시장 종합 리포트 생성 (Verity Brain 결과 포함). market='us'이면 미장 전용."""
     try:
         client = init_gemini()
@@ -1131,6 +1135,25 @@ def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, he
             top_buys = [s for s in candidates if s.get("recommendation") == "BUY"][:5]
     top_sectors = sectors[:5] if sectors else []
     top_news = headlines[:5] if headlines else []
+    # ── 급변일 뉴스 근거 확대 (2026-08-05) ────────────────────────────────
+    # PM 지적 "헤드라인에 답이 있는데 리포트가 안 쓴다"의 실제 원인은 배선 부재가 아니다 —
+    # headlines 인자는 처음부터 있었고 호출부도 실데이터를 넘긴다. 진짜 갭은 두 개:
+    #   ① 관련성 무관하게 앞 5건만 절단  ② 지수가 크게 움직인 날에도 동일 취급
+    # 급변일(±1.5%)에만 창을 넓히고 인용을 요구한다. 🚨 인과 '단정'은 금지 —
+    # 같은 날 보도됐다는 사실 병기까지만 (RULE 7: 검증 안 된 인과 주장 금지).
+    _idx_move = None
+    if isinstance(market_summary, dict):
+        _iv = (market_summary.get("kospi" if market == "kr" else "sp500") or {}).get("change_pct")
+        if isinstance(_iv, (int, float)):
+            _idx_move = float(_iv)
+    move_block = ""
+    if _idx_move is not None and abs(_idx_move) >= BIGMOVE_PCT:
+        top_news = headlines[:12] if headlines else []
+        move_block = (
+            f"\n[급변일 — 지수 {_idx_move:+.2f}% (±{BIGMOVE_PCT}% 초과)]\n"
+            "위 뉴스 중 같은 날 보도된 항목 1~2개를 market_analysis 에 인용하라.\n"
+            "🚨 인과 단정 금지 — '때문에/원인은' 대신 '…보도가 있었다' 형태의 사실 병기만.\n"
+            "관련 보도가 없으면 억지로 만들지 말고 가격·매크로 근거만 쓴다.")
 
     brain_block = ""
     if verity_brain:
@@ -1204,7 +1227,7 @@ USD/KRW: {macro.get('usd_krw', {}).get('value', '?')}{fred_daily}
 {chr(10).join(f'- {s["name"]}: {s["change_pct"]:+.2f}%' for s in top_sectors) if top_sectors else 'None'}
 
 [News]
-{chr(10).join(f'- [{n.get("sentiment","?")}] {_neut(n["title"][:60])}' for n in top_news) if top_news else 'None'}
+{chr(10).join(f'- [{n.get("sentiment","?")}] {_neut(n["title"][:60])}' for n in top_news) if top_news else 'None'}{move_block}
 
 [Top Picks — US]
 {chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{}).get("multi_score",0)}pts)' for s in top_buys) if top_buys else 'No strong buys today'}
@@ -1255,7 +1278,7 @@ VIX: {macro.get('vix', {}).get('value', '?')} ({macro.get('vix', {}).get('change
 {chr(10).join(f'- {s["name"]}: {s["change_pct"]:+.02f}%' for s in top_sectors) if top_sectors else '없음'}
 
 [뉴스]
-{chr(10).join(f'- [{n.get("sentiment","?")}] {_neut(n["title"][:60])}' for n in top_news) if top_news else '없음'}
+{chr(10).join(f'- [{n.get("sentiment","?")}] {_neut(n["title"][:60])}' for n in top_news) if top_news else '없음'}{move_block}
 
 [찍은 종목]
 {chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{}).get("multi_score",0)}점)' for s in top_buys) if top_buys else '오늘 살 만한 거 없음'}
