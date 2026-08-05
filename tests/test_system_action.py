@@ -22,9 +22,33 @@ def test_shield_off_below_threshold():
 
 
 def test_shield_on_by_override_even_if_rate_missing():
+    """구 mode(yield_defense) 는 과거 발행물 재독 호환으로 계속 인식한다."""
     sa = build_system_action(_pf(us10=None, override=[{"mode": "yield_defense", "label": "금리 방패", "max_grade": "WATCH"}]), [])
     assert sa["rate_shield"]["on"] is True
     assert sa["rate_shield"]["grade_cap"] == "WATCH"
+
+
+def test_observation_mode_reports_sizing_not_grade_cap():
+    """2026-08-06 — 미 10Y 는 등급을 막지 않는다. 패널이 '등급 상한'을 말하면 거짓 표기다."""
+    analyzed = [{"recommendation": "BUY", "ticker": "A",
+                 "macro_multiplier": {"multiplier": 0.9, "yield_penalty": 0.1,
+                                      "inputs": {"us_10y_percentile": 97.2}}}]
+    sa = build_system_action(
+        _pf(us10=4.7, override=[{"mode": "yield_observation", "label": "금리 관측"}]), analyzed)
+    rs = sa["rate_shield"]
+    assert rs["on"] is True
+    assert rs["grade_cap"] is None
+    assert rs["sizing_penalty"] == 0.1 and rs["us_10y_percentile"] == 97.2
+    assert "등급 무영향" in rs["effect"] and "상한" not in rs["effect"]
+
+
+def test_kr_rate_defense_still_reports_grade_cap():
+    """한국 기준금리 방패는 범위 밖 — 등급 상한 표기가 그대로 남아야 한다."""
+    sa = build_system_action(
+        _pf(us10=4.7, override=[{"mode": "kr_rate_defense", "label": "기준금리 방패",
+                                 "max_grade": "WATCH"}]), [])
+    assert sa["rate_shield"]["grade_cap"] == "WATCH"
+    assert "등급 상한 WATCH" in sa["rate_shield"]["effect"]
 
 
 def test_verdict_gate_counts_and_aligned():
