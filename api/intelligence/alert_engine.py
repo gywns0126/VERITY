@@ -963,7 +963,15 @@ def _detect_flash_moves(macro: dict, recommendations: list) -> list:
         })
 
     for r in recommendations:
-        chg = r.get("change_pct") or r.get("day_change_pct")
+        # 2026-08-05 감사 fix — 실측(recommendations 62건) change_pct 0건 / day_change_pct 0건 이라
+        # 종목 단위 급등·급락 감지가 구조적으로 0회 발화였다. 당일 등락률의 실제 소재지는
+        # technical.price_change_pct(61/62, 실측 범위 -6.3~+9.0%) — 폴백 체인에 추가.
+        # 0.0 이 유효값이라 `or` 체인 대신 명시 None 검사.
+        chg = r.get("change_pct")
+        if chg is None:
+            chg = r.get("day_change_pct")
+        if chg is None:
+            chg = (r.get("technical") or {}).get("price_change_pct")
         name = r.get("name", "?")
         if chg is None:
             continue
