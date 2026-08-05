@@ -552,6 +552,15 @@ jobs:
           python -m api.arena.berserker_status
           python -m api.arena.berserker_shadow
 
+      - name: 측정 오염 자동 검출 (원장 정합·키 커버리지·단위 스케일)
+        # 2026-08-05 — 8/4~5 감사에서 확정 결함을 실제로 잡아낸 세 대조를 상시화.
+        # 사람이 478 모듈을 훑는 방식은 끝나지 않는다(그날 커버리지 3%). 검출력 실증:
+        #   유령 매도 58건 · 죽은 채점 키 10종 · 통화 혼재 5종 — 전부 이 검사가 재현.
+        # 🚨 점수 입력 0 (관측·신고 전용). 산출 data/measurement_audit.json + trail jsonl,
+        # 다음 step git add data/ (broad) 자동 포함 = RULE 4. graceful exit 0.
+        continue-on-error: true
+        run: python -c "from api.observability.measurement_audit import run; import json; r=run('.'); print('[measurement_audit]', r['status'], '· 실패:', r['failing'])"
+
       - name: B3 F-Score/Accrual shadow IC trail (관측 전용, brain-input 0)
         # 2026-08-05 — PREREG_FSCORE_ACCRUAL_B3_2026_07_12 (PM 승인 7/12 "굿임 고고") 집행.
         # recommendations.json 생성 후 실행: 당일 단면 관측 → eval 도달분 채점 → IC/ICIR 집계.
