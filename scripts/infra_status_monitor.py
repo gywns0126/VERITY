@@ -27,9 +27,10 @@ import os
 import re
 import subprocess
 import sys
+import urllib.request
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -167,6 +168,36 @@ def _get_run_annotations(repo: str, run_id: int) -> List[Dict[str, Any]]:
     return annotations
 
 
+_TIDE_BLOB = ("https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
+              "/tide/dashboard.json")
+_TIDE_HB_STALE_MIN = 720  # 12시간 — TIDE heartbeat 워크플로 6시간 주기의 2배 여유
+
+
+def _check_tide_blob() -> Optional[str]:
+    """TIDE 크론 헬스를 공개 blob 으로 확인 (private repo gh 접근 불필요).
+
+    2026-08-05 신설 — 기존 gh run list 경로가 private repo 를 VERITY 스코프 토큰으로
+    조회해 66일째 'gh fail' WARN 만 반복(실측 data/infra_status.json). 실패가 정보가
+    아니라 소음이었다. TIDE 는 이미 tide/dashboard.json 을 공개 blob 으로 발행하므로
+    (cron_status·minutes_since_heartbeat 포함) 토큰 없이 실 헬스를 볼 수 있다.
+    Returns: 이상 시 finding 문자열, 정상이면 None.
+    """
+    try:
+        req = urllib.request.Request(_TIDE_BLOB, headers={"User-Agent": "verity-infra-monitor"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            doc = json.load(r)
+    except Exception as e:  # 발행 자체가 끊긴 것 = 실제 이상 신호
+        return f"TIDE 대시보드 발행 확인 불가 ({type(e).__name__})"
+    health = (doc.get("health") or {})
+    status = str(health.get("cron_status") or "unknown")
+    gap = health.get("minutes_since_heartbeat")
+    if status == "critical":
+        return f"TIDE 크론 critical (HB {gap}분 전)"
+    if isinstance(gap, (int, float)) and gap > _TIDE_HB_STALE_MIN:
+        return f"TIDE heartbeat {int(gap)}분 정지 (임계 {_TIDE_HB_STALE_MIN}분)"
+    return None
+
+
 def check_external_repos() -> Dict[str, Any]:
     """외부 repo recent runs billing pattern detect via annotations API.
 
@@ -180,7 +211,11 @@ def check_external_repos() -> Dict[str, Any]:
         return {"provider": "External Repos", "status": "OK",
                 "detail": "EXTERNAL_REPOS 빈 list", "as_of": _now_kst()}
 
-    findings = []
+    findings: List[str] = []
+    gh_unavailable: List[str] = []
+    tide_finding = _check_tide_blob()
+    if tide_finding:
+        findings.append(tide_finding)
     for repo in repos:
         try:
             out = subprocess.check_output(
@@ -192,8 +227,11 @@ def check_external_repos() -> Dict[str, Any]:
                 timeout=15,
             )
             runs = json.loads(out)
-        except Exception as e:
-            findings.append(f"{repo}: gh fail ({str(e)[:40]})")
+        except Exception:
+            # private repo 를 VERITY 스코프 토큰으로 조회 → 항상 실패. 이건 이미 아는
+            # 사실이라 WARN 을 만들 정보가 없다(66일 반복 소음). 관측 갭으로만 기록하고
+            # 헬스는 아래 공개 blob 경로가 담당. 빌링 감지는 이 경로가 유일하므로 은폐 금지.
+            gh_unavailable.append(repo)
             continue
 
         n_fail = sum(1 for r in runs if r.get("conclusion") == "failure")
@@ -224,14 +262,16 @@ def check_external_repos() -> Dict[str, Any]:
         elif n_fail >= 5:
             findings.append(f"{repo}: 최근 10 run 중 {n_fail} 실패")
 
+    gap_note = (f" (빌링 감지 불가: {', '.join(gh_unavailable)} — private 접근 토큰 없음, "
+                f"헬스는 공개 blob 으로 확인)") if gh_unavailable else ""
     if findings:
         any_billing = any("billing" in f.lower() or "payment" in f.lower()
                           or "spending" in f.lower() for f in findings)
         status = "ALERT" if any_billing else "WARN"
         return {"provider": "External Repos", "status": status,
-                "detail": "; ".join(findings)[:300], "as_of": _now_kst()}
+                "detail": ("; ".join(findings) + gap_note)[:300], "as_of": _now_kst()}
     return {"provider": "External Repos", "status": "OK",
-            "detail": f"{len(repos)} repo 모두 정상", "as_of": _now_kst()}
+            "detail": f"{len(repos)} repo 정상{gap_note}", "as_of": _now_kst()}
 
 
 def check_dart() -> Dict[str, Any]:
