@@ -14,18 +14,24 @@ import api.main as M
 
 
 def _hist():
+    # 🚨 2026-08-05 유령 매도 가드 도입 후 — 모든 SELL 은 선행 BUY(수량 포함)가 있어야
+    # 실제 청산으로 인정된다. 보유 0 매도는 phantom 으로 배제된다(trade_ledger SoT).
     return [
+        {"type": "BUY", "ticker": "AAA", "date": "2026-04-01", "quantity": 10},
+        {"type": "BUY", "ticker": "BBB", "date": "2026-05-01", "quantity": 10},
+        {"type": "BUY", "ticker": "DDD", "date": "2026-06-20", "quantity": 10},
+        {"type": "BUY", "ticker": "EEE", "date": "2026-07-10", "quantity": 10},
         # ── 리셋(2026-05-17) 이전 — 전부 제외돼야 한다 ──
         {"type": "SELL", "ticker": "AAA", "name": "이전승", "date": "2026-04-02", "pnl": 500_000},
         {"type": "SELL", "ticker": "BBB", "name": "이전패", "date": "2026-05-15", "pnl": -100_000},
         # ── 리셋 이후 ──
-        {"type": "BUY", "ticker": "CCC", "date": "2026-05-20"},
-        {"type": "PARTIAL_SELL", "ticker": "CCC", "date": "2026-06-01", "pnl": 30_000},
+        {"type": "BUY", "ticker": "CCC", "date": "2026-05-20", "quantity": 10},
+        {"type": "PARTIAL_SELL", "ticker": "CCC", "date": "2026-06-01", "sold_qty": 3, "partial_pnl": 30_000},
         # 청산 −10,000 인데 부분익절 +30,000 → episode 는 +20,000 = 승
         {"type": "SELL", "ticker": "CCC", "name": "합산승", "date": "2026-06-10", "pnl": -10_000},
         {"type": "SELL", "ticker": "DDD", "name": "패", "date": "2026-07-01", "pnl": -50_000},
         # 부분익절만 하고 아직 보유 중 — 거래로는 안 세지만 돈은 실현됐다
-        {"type": "PARTIAL_SELL", "ticker": "EEE", "date": "2026-07-20", "pnl": 7_000},
+        {"type": "PARTIAL_SELL", "ticker": "EEE", "date": "2026-07-20", "sold_qty": 3, "partial_pnl": 7_000},
     ]
 
 
@@ -62,8 +68,11 @@ def test_realized_pnl_counts_open_position_partials(monkeypatch):
 
 def test_pre_reset_partials_are_discarded_with_their_episode(monkeypatch):
     hist = [
-        {"type": "PARTIAL_SELL", "ticker": "XXX", "date": "2026-04-10", "pnl": 900_000},
+        {"type": "BUY", "ticker": "XXX", "date": "2026-04-01", "quantity": 10},
+        {"type": "PARTIAL_SELL", "ticker": "XXX", "date": "2026-04-10",
+         "sold_qty": 3, "partial_pnl": 900_000},
         {"type": "SELL", "ticker": "XXX", "date": "2026-04-20", "pnl": -100_000},
+        {"type": "BUY", "ticker": "YYY", "date": "2026-05-25", "quantity": 10},
         {"type": "SELL", "ticker": "YYY", "date": "2026-06-01", "pnl": -5_000},
     ]
     s = _run(monkeypatch, hist)
@@ -83,4 +92,4 @@ def test_definition_field_is_emitted(monkeypatch):
     """산출물이 스스로 '무엇을 셌는지' 말해야 재발을 막는다."""
     s = _run(monkeypatch, _hist())
     assert "episode" in s["definition"]
-    assert "validation" in s["definition"]
+    assert "유령" in s["definition"] or "trade_ledger" in s["definition"]
