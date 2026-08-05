@@ -818,7 +818,31 @@ def execute_buy(
     # Phase 1.1 (2026-05-01) — trade_plan stop_loss 산출값을 진입 시 holding 에 영속화.
     # check_stop_loss 가 individual 우선 사용 (프로파일은 상한 작동).
     _trade_plan = stock.get("trade_plan") or {}
-    _stop_loss_obj = _trade_plan.get("stop_loss") or {}
+
+    # 🚨 2026-08-05 통화 정규화 — trade_plan 의 가격 필드는 **종목 원통화**(US=USD)로 산출되는데
+    # holding 의 buy_price/current_price 는 위에서 fx_rate 를 곱해 **KRW** 로 저장된다.
+    # 그대로 부착하면 check_partial_exit 의 `current_price >= target_price` 가
+    # `131,397 >= 99` 가 되어 **매 run 익절이 무조건 발동**한다(실측: EQT 30회·EXE 20회,
+    # 보유 US 5종 전부 비율 1,312~1,340배 = 환율). 손절도 동일 경로라 도달 불가가 된다.
+    # 비율(%)·R배수 필드는 통화 무관이므로 건드리지 않는다.
+    def _fx_norm(obj):
+        """가격 성격 키만 fx_rate 배 (US 전용). dict/중첩 dict 재귀."""
+        if fx_rate == 1.0 or not isinstance(obj, dict):
+            return obj
+        _PRICE_KEYS = {"price", "stop_price", "target_price", "low", "high",
+                       "min", "max", "entry_low", "entry_high"}
+        out = {}
+        for k, v in obj.items():
+            if isinstance(v, dict):
+                out[k] = _fx_norm(v)
+            elif k in _PRICE_KEYS and isinstance(v, (int, float)):
+                out[k] = round(v * fx_rate, 2)
+            else:
+                out[k] = v
+        return out
+
+    _stop_loss_obj = _fx_norm(_trade_plan.get("stop_loss") or {})
+    _exit_targets_norm = _fx_norm(_trade_plan.get("exit_targets") or {}) or None
     individual_stop_pct = _stop_loss_obj.get("stop_loss_pct")  # ATR 또는 fallback 산출값
     stop_loss_method = _stop_loss_obj.get("method")  # atr_dynamic | fixed_fallback | None
 
@@ -902,8 +926,15 @@ def execute_buy(
         "stop_loss_method": stop_loss_method,
         # Phase 0 P-03 — ATR 산출법 audit (마이그레이션 holding 보호)
         "atr_method_at_entry": _atr_method_at_entry,
-        # Phase 1.2 — R-multiple 부분 익절
-        "exit_targets": _trade_plan.get("exit_targets"),
+        # Phase 1.2 — R-multiple 부분 익절 (통화 정규화본)
+        "exit_targets": _exit_targets_norm,
+        # 2026-08-05 — 손절 파생값 영속화. 이전엔 stop_loss_pct_individual 만 남고
+        # stop_price/risk_per_share 는 저장되지 않아 12/12 가 0 이었다(감사 실측).
+        # trade_plan.stop_loss 가 없으면(WATCH 이하 = planner 미생성) None 유지 — 조작 금지.
+        "stop_price": _stop_loss_obj.get("stop_price") or _stop_loss_obj.get("price"),
+        "risk_per_share": _stop_loss_obj.get("risk_per_share"),
+        "entry_currency": "USD" if is_us else "KRW",
+        "entry_fx_rate": round(fx_rate, 2) if is_us else None,
         "exit_history": [],  # [{target_id, sold_qty, sold_price, r_multiple, at}]
         "trailing_active": False,  # +2R 도달 후 True (남은 20% 만 트레일링)
         "realized_pnl_partial": 0,  # 부분 청산 누적 실현 손익
@@ -1194,6 +1225,24 @@ def check_partial_exit(
         return []
 
     current_price = holding["current_price"]
+
+    # 🚨 2026-08-05 스케일 가드 — 기존 보유분 구제 + 재발 차단.
+    # execute_buy 는 이제 trade_plan 가격을 KRW 로 정규화해 부착하지만, **그 이전에 산
+    # holding** 은 타깃이 원통화(USD)로 남아 있다. 실측: 보유 US 5종 전부 매수가/타깃
+    # 비율이 1,312~1,340배(=환율) → `current_price >= target` 이 항상 참 → 매 run 익절
+    # 발동(EQT 30회·EXE 20회). 통화가 다르면 비교 자체가 무의미하므로 **평가를 건너뛴다**.
+    # 자동 환산은 하지 않는다 — 잘못된 배수로 실집행하느니 미실행이 안전하다(fail-closed).
+    buy_price = holding.get("buy_price") or 0
+    _t1 = (targets.get("target_1") or {}).get("price")
+    if buy_price > 0 and isinstance(_t1, (int, float)) and _t1 > 0:
+        _ratio = buy_price / _t1
+        if _ratio > 10 or _ratio < 0.1:
+            if not holding.get("_scale_mismatch_logged"):
+                holding["_scale_mismatch_logged"] = True
+                print(f"[VAMS] ⚠ 익절 타깃 스케일 불일치 — {holding.get('name')} "
+                      f"매수가 {buy_price:,.0f} vs target_1 {_t1:,.0f} (비율 {_ratio:,.0f}x). "
+                      f"통화 혼재 의심 — 부분익절 평가 skip (fail-closed)")
+            return []
     executed_target_ids = {
         h["target_id"] for h in holding.get("exit_history", []) if h.get("status") == "executed"
     }
