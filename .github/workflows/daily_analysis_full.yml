@@ -552,6 +552,15 @@ jobs:
           python -m api.arena.berserker_status
           python -m api.arena.berserker_shadow
 
+      - name: B3 F-Score/Accrual shadow IC trail (관측 전용, brain-input 0)
+        # 2026-08-05 — PREREG_FSCORE_ACCRUAL_B3_2026_07_12 (PM 승인 7/12 "굿임 고고") 집행.
+        # recommendations.json 생성 후 실행: 당일 단면 관측 → eval 도달분 채점 → IC/ICIR 집계.
+        # 🚨 검증축 분리 — 어떤 점수에도 입력되지 않는다(§3). 산출 = data/fscore_ic_shadow.jsonl
+        # + fscore_ic_history.jsonl, 다음 step git add data/ (broad) 자동 포함 = RULE 4.
+        # forward-only(과거 backfill 금지 = survivorship 무편의 조건 §6). graceful exit 0.
+        continue-on-error: true
+        run: python scripts/fscore_shadow_trail.py
+
       - name: Pool rotation 주간 판정 (R6 v0 — 보고서만, 집행 없음)
         # 2026-08-04 PREREG_POOL_ROTATION — 토요 KST 만 실 판정 (스크립트 자체 게이트, 평일 no-op).
         # 산출 = data/pool_rotation_report.json + pool_rotation_log.jsonl append — 다음 step
