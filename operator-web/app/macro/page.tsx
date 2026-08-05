@@ -316,7 +316,7 @@ export default function MacroPage() {
                 {/* 고래 13F */}
                 <PanelBoundary name="고래">
                     <div style={{ ...cardStyle(c, "14px 16px") }}>
-                        {secTitle("고래 포지션", "13F 분기 공시 사실 · 지연 데이터 · 복제수익률=참고", c.down)}
+                        {secTitle("고래 포지션", "13F 분기 지연 데이터 · 복제수익률=참고", c.down)}
                         {whales.length === 0 ? (
                             <div style={{ fontSize: 12, color: c.sub }}>불러오는 중이거나 미발행.</div>
                         ) : (
@@ -368,9 +368,6 @@ export default function MacroPage() {
                     <TidePanel c={c} />
                 </PanelBoundary>
 
-                <div style={{ fontSize: 10, color: c.faint }}>
-                    사실·수집 데이터 + LLM 의견(의견) + 자기 산식(가설 N&lt;252) · 13F=분기 지연 공시 · 매수/매도 지시 아님
-                </div>
             </div>
         </main>
     )

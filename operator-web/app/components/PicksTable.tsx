@@ -73,7 +73,7 @@ export default function PicksTable({ recs, status }: { recs: Rec[]; status: "loa
                     <span style={{ ...CARD_TITLE, color: c.ink }}>오늘의 추천</span>
                     <span style={{ fontSize: 10, color: c.faint }}>스캔 5,000 → 후보 25 → 추천 {recs.length} → 중용 사이징</span>
                 </div>
-                <span style={{ fontSize: 10, color: c.faint }}>가설 · 검증 N&lt;252 (2027) · 예측 아님</span>
+                <span style={{ fontSize: 10, color: c.faint }}>가설 · 검증 N&lt;252 (2027)</span>
             </div>
 
             {status === "loading" ? (

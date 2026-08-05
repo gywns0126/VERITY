@@ -13,7 +13,6 @@ import { captureOAuthHash, refreshIfNeeded } from "@/lib/supabase"
 import type { AlertItem, MarketExplain, PortfolioFull } from "@/lib/types"
 import TopBar from "./components/TopBar"
 import MarketStrip from "./components/MarketStrip"
-import BottomTicker from "./components/BottomTicker"
 import AccountHud from "./components/AccountHud"
 import HoldingsTable from "./components/HoldingsTable"
 import WatchTable from "./components/WatchTable"
@@ -172,7 +171,6 @@ export default function Home() {
                 </div>
             </div>
 
-            <BottomTicker />
         </main>
     )
 }

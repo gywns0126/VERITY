@@ -228,7 +228,7 @@ export default function TriSynthesisPanel() {
             ) : null}
 
             <div style={{ fontSize: 10, color: c.faint, textAlign: "right" }}>
-                생성 {String(syn.generated_at || "").slice(0, 16).replace("T", " ")} · 매수/매도 지시 아님
+                생성 {String(syn.generated_at || "").slice(0, 16).replace("T", " ")}
             </div>
         </div>
     )

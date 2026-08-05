@@ -92,7 +92,6 @@ export default function WatchTable() {
                     )
                 })
             )}
-            <div style={{ fontSize: 9.5, color: c.faint, paddingTop: 5 }}>KIS 공유 토큰 소비(발급 없음) · 매수/매도 지시 아님</div>
         </div>
     )
 }

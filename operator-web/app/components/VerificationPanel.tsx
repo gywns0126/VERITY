@@ -141,7 +141,7 @@ export default function VerificationPanel() {
                 {rep._corrections_meta ? (
                     <>비용 반영: 왕복 {((rep._corrections_meta.tx_cost_pct_round_trip ?? 0) * 100).toFixed(2)}% · {rep._corrections_meta.slippage_model || "슬리피지 모델"} · 상폐 {(rep._corrections_meta.delisted_return_pct ?? 0)}% · </>
                 ) : null}
-                자기 검증 trail(가설) · 매수/매도 지시 아님
+                자기 검증 trail(가설)
             </div>
         </div>
     )

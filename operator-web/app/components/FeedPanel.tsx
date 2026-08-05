@@ -62,7 +62,6 @@ export default function FeedPanel({ alerts, holdTickers, recTickers, loaded }: {
                 <FeedRow key={(a.source_url || "") + i} c={c} a={a} tier={tier} first={i === 0} />
             ))}
             {alerts.length > shown.length ? <div style={{ fontSize: 10.5, color: c.faint, padding: "7px 0 2px", ...NUM }}>외 {alerts.length - shown.length}건</div> : null}
-            <div style={{ fontSize: 9.5, color: c.faint, paddingTop: 5 }}>공시 사실 · T1=보유 직결 · T2=후보 연동 · 매수/매도 지시 아님</div>
         </div>
     )
 }

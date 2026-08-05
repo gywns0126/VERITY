@@ -187,12 +187,12 @@ export default function ChartModal({ target, onClose }: { target: ChartTarget; o
                     </div>
                 )}
 
-                {/* 왜 움직였나 · 향후 관점 — 자기 리포트(daily_report) 발췌. RULE 7: 가설·예측 아님 라벨 */}
+                {/* 왜 움직였나 · 향후 관점 — 자기 리포트(daily_report) 발췌 */}
                 {isIndex && target.explain && (target.explain.analysis || target.explain.outlook) ? (
                     <div style={{ background: c.hi, borderRadius: 12, padding: "11px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
                         <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
                             <span style={{ fontSize: 11, fontWeight: 800, color: c.vt }}>오늘 시장 설명</span>
-                            <span style={{ fontSize: 9.5, color: c.faint }}>자기 리포트 · 매일 생성 · 가설 — 예측 아님</span>
+                            <span style={{ fontSize: 9.5, color: c.faint }}>자기 리포트 · 매일 생성</span>
                         </div>
                         {([
                             ["분석", target.explain.analysis],
@@ -211,7 +211,7 @@ export default function ChartModal({ target, onClose }: { target: ChartTarget; o
 
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5, color: c.faint }}>
                     <span>{candles.length ? `SMA5 · SMA20 · ${candles.length}봉` : ""}</span>
-                    <span>사실 시세 · 매수/매도 지시 아님</span>
+                    <span>사실 시세</span>
                 </div>
             </div>
         </div>

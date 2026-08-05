@@ -67,7 +67,6 @@ export default function CandidatesDiff() {
             </div>
             {added.slice(0, 5).map((it) => row(it, "in"))}
             {removed.slice(0, 5).map((it) => row(it, "out"))}
-            <div style={{ fontSize: 9.5, color: c.faint, paddingTop: 5 }}>깔때기 스캔 결과 변화 · 매수/매도 지시 아님</div>
         </div>
     )
 }

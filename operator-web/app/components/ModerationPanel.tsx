@@ -128,7 +128,7 @@ export default function ModerationPanel() {
             {(l1.excluded || []).length ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <span style={{ fontSize: 10.5, fontWeight: 800, color: c.faint }}>
-                        극단 배제 {l1.excluded!.length} / 유니버스 {l1.universe_kr} (비대칭 · 사실만)
+                        극단 배제 {l1.excluded!.length} / 유니버스 {l1.universe_kr} (비대칭만)
                     </span>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         {l1.excluded!.slice(0, 8).map((e, i) => (
@@ -143,9 +143,6 @@ export default function ModerationPanel() {
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 10.5, color: c.faint }}>
                 <span>Ledoit-Wolf 수축 <span style={{ ...NUM }}>{l2.lw_shrinkage ?? "—"}</span> · 공통 <span style={{ ...NUM }}>{l2.common_days}</span>일 · {l2.aligned}종목</span>
                 {(doc.us_pending || []).length ? <span>US {doc.us_pending!.length}종목 대기(공분산 적재 후 편입)</span> : null}
-            </div>
-            <div style={{ fontSize: 10, color: c.faint, lineHeight: 1.5 }}>
-                Piotroski·Daniel-Moskowitz·Ledoit-Wolf·DeMiguel·Harvey·MacLean-Thorp-Ziemba 원전 사전등록 · 매수/매도 지시 아님
             </div>
         </div>
     )

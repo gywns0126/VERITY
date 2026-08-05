@@ -222,7 +222,6 @@ export default function MacroPanel({ data }: { data: PortfolioFull | null }) {
             <a href="/macro" style={{ display: "block", textAlign: "center", background: c.hi, color: c.vt, borderRadius: 9, padding: "8px 0", fontSize: 11.5, fontWeight: 800, textDecoration: "none" }}>
                 거시 전체 보기 — 섹터 · 이벤트 · 월가 · 고래
             </a>
-            <div style={{ fontSize: 9.5, color: c.faint }}>LLM 의견=의견 · 자기 산식=가설 · 매수/매도 지시 아님</div>
         </div>
     )
 }

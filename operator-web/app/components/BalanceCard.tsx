@@ -122,7 +122,7 @@ export default function BalanceCard() {
                     )}
                 </>
             )}
-            <div style={{ fontSize: 9.5, color: c.faint, paddingTop: 3 }}>수동 새로고침만(잔고 API 절약) · 사실</div>
+            <div style={{ fontSize: 9.5, color: c.faint, paddingTop: 3 }}>수동 새로고침만(잔고 API 절약)</div>
         </div>
     )
 }

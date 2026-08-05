@@ -90,7 +90,6 @@ export default function ProgramPanel() {
                 <>
                     {row("코스피", k)}
                     {row("코스닥", q)}
-                    <div style={{ fontSize: 9.5, color: c.faint, paddingTop: 6 }}>양수 = 프로그램 순매수 · 사실 · 매수/매도 지시 아님</div>
                 </>
             )}
         </div>

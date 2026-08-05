@@ -636,6 +636,71 @@ def fetch_index_daily(index_cd: str = "0001") -> list:
         return []
 
 
+# 미국 지수 심볼 (KIS 해외지수) — PM 2026-08-05 "나스닥·필라델피아 반도체 정보량 없다".
+_US_INDEX_CODES = {
+    "nasdaq": "COMP",   # 나스닥종합
+    "sp500": "SPX",     # S&P 500
+    "sox": "SOX",       # 필라델피아 반도체
+    "dow": "DJI",       # 다우존스
+}
+
+
+def fetch_us_index_daily(key: str = "nasdaq", days: int = 200) -> list:
+    """미국 지수 일봉 — inquire-daily-chartprice(FHKST03030100, 해외 N). fetch_daily 캔들 shape 정합.
+
+    필드는 국내와 다름(ovrs_nmix_*). rt_cd/필드 부재 시 빈 리스트(프론트 폴백) — 500 승격 금지.
+    """
+    try:
+        code = _US_INDEX_CODES.get(key, key.upper())
+        now = datetime.now(KST)
+        d = _get(
+            "/uapi/overseas-price/v1/quotations/inquire-daily-chartprice",
+            "FHKST03030100",
+            {
+                "FID_COND_MRKT_DIV_CODE": "N",
+                "FID_INPUT_ISCD": code,
+                "FID_INPUT_DATE_1": (now - timedelta(days=days)).strftime("%Y%m%d"),
+                "FID_INPUT_DATE_2": now.strftime("%Y%m%d"),
+                "FID_PERIOD_DIV_CODE": "D",
+            },
+        )
+        rows = d.get("output2") if isinstance(d, dict) else None
+        if not isinstance(rows, list):
+            logger.warning("fetch_us_index_daily %s output2 부재 rt_cd=%s", key,
+                           d.get("rt_cd") if isinstance(d, dict) else "?")
+            return []
+
+        def _f(r: dict, *keys: str) -> float:
+            for k in keys:
+                v = r.get(k)
+                if v not in (None, ""):
+                    try:
+                        return float(str(v).replace(",", ""))
+                    except (TypeError, ValueError):
+                        continue
+            return 0.0
+
+        out = []
+        for r in reversed(rows):
+            if not isinstance(r, dict):
+                continue
+            h = _f(r, "ovrs_nmix_hgpr", "stck_hgpr")
+            if h <= 0:
+                continue
+            out.append({
+                "date": r.get("stck_bsop_date", "") or r.get("xymd", ""),
+                "open": _f(r, "ovrs_nmix_oprc", "stck_oprc"),
+                "high": h,
+                "low": _f(r, "ovrs_nmix_lwpr", "stck_lwpr"),
+                "close": _f(r, "ovrs_nmix_prpr", "stck_clpr"),
+                "volume": _f(r, "acml_vol"),
+            })
+        return out
+    except Exception as e:
+        logger.warning("fetch_us_index_daily 실패 %s: %s", key, e)
+        return []
+
+
 def fetch_program_trade(market: str = "K") -> dict:
     """KIS 프로그램매매 종합현황(시간) — comp-program-trade-today, tr_id FHPPG04600101.
 
