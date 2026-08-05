@@ -25,7 +25,25 @@ COMMENT ON COLUMN public.profiles.order_enabled IS
 COMMENT ON COLUMN public.profiles.max_order_krw IS '건당 주문 금액 상한(원).';
 COMMENT ON COLUMN public.profiles.daily_order_count_limit IS '일일 주문 횟수 상한.';
 
--- ── 2) 권한 상승 차단 트리거 확장 (주문 필드 = service_role 전용) ──
+-- ── 2) 오퍼레이터 본인만 활성화 — 🚨 반드시 3) 함수 교체 **이전** 실행 ──────────
+--   검수 fix (2026-08-05): 원안은 가드 설치 후 UPDATE 순서라, 방금 설치한 주문 필드
+--   가드가 SQL Editor(비 service_role) UPDATE 를 RAISE 로 차단 = 자기잠금.
+--   025 가 UPDATE 를 함수 교체 앞에 둔 것과 같은 순서로 정정 (현행 함수엔 주문 가드가
+--   없어 이 시점 UPDATE 는 통과). 실매매를 아직 안 켤 거면 이 블록만 건너뛰어도 됨 —
+--   단 나중에 켤 땐 트리거를 잠시 꺼야 한다:
+--     ALTER TABLE public.profiles DISABLE TRIGGER trg_block_privileged_profile;
+--     UPDATE ...;  -- 아래 블록
+--     ALTER TABLE public.profiles ENABLE TRIGGER trg_block_privileged_profile;
+--   건당 100만원 · 일 5회 = 보수적 시작값. 조정도 DB 직접만.
+UPDATE public.profiles p
+   SET order_enabled = TRUE,
+       max_order_krw = 1000000,
+       daily_order_count_limit = 5
+  FROM auth.users u
+ WHERE p.id = u.id
+   AND u.email = 'gywns0126@gmail.com';
+
+-- ── 3) 권한 상승 차단 트리거 확장 (주문 필드 = service_role 전용) ──
 --   기존 함수(025)를 그대로 계승하고 주문 3필드 가드만 추가. 트리거 연결은 023 에서 이미 됨.
 CREATE OR REPLACE FUNCTION public.profiles_block_privileged_change()
 RETURNS TRIGGER
@@ -75,15 +93,7 @@ BEGIN
 END;
 $$;
 
--- ── 3) 오퍼레이터 본인만 활성화 ────────────────────────────────────
---   건당 100만원 · 일 5회 = 보수적 시작값. 조정도 DB 직접만.
-UPDATE public.profiles p
-   SET order_enabled = TRUE,
-       max_order_krw = 1000000,
-       daily_order_count_limit = 5
-  FROM auth.users u
- WHERE p.id = u.id
-   AND u.email = 'gywns0126@gmail.com';
+
 
 -- 검증 쿼리 (실행 후 확인용):
 --   SELECT u.email, p.order_enabled, p.max_order_krw, p.daily_order_count_limit

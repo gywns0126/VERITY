@@ -301,7 +301,7 @@ export default function Workspace({
                         ) : null}
                     </div>
 
-                    <OrderTicket ticker={ticker} name={name} presetPrice={ordPx} livePrice={typeof live === "number" ? live : null} holding={holdings.find((h) => h.ticker === ticker) || null} />
+                    <OrderTicket ticker={ticker} name={name} presetPrice={ordPx} livePrice={typeof live === "number" ? live : null} />
                 </div>
             ) : null}
 

@@ -13,14 +13,12 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useDark, palette, FONT, NUM, type Palette } from "@/lib/theme"
 import { API_BASE, fetchOperator } from "@/lib/api"
 import { authHeaders } from "@/lib/auth"
-import type { Holding } from "@/lib/types"
 
 type Props = {
     ticker: string
     name?: string
     presetPrice?: number | null
     livePrice?: number | null
-    holding?: Holding | null
 }
 
 /** KRX 호가단위 (2023-01-25 개편) — 가격대별. */
@@ -36,11 +34,11 @@ function tickSize(px: number): number {
 
 /** 매수 수수료(추정) + 매도 시 거래세 — 실집행 금액 감각용(정산은 증권사 기준). */
 const FEE_RATE = 0.00015   // 0.015% 가정
-const TAX_RATE = 0.0018    // 매도 거래세 0.18%
+const TAX_RATE = 0.0015    // 매도 거래세 — 2025.1.1 인하율 0.15% (추정 표시용, 정산은 증권사 기준)
 
 type ModTarget = { ticker?: string; weight?: number; target_weight?: number; name?: string }
 
-export default function OrderTicket({ ticker, name, presetPrice, livePrice, holding }: Props) {
+export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Props) {
     const dark = useDark()
     const c = palette(dark)
     const [side, setSide] = useState<"BUY" | "SELL">("BUY")
@@ -53,6 +51,9 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice, hold
     const [cash, setCash] = useState<number | null>(null)
     const [targets, setTargets] = useState<ModTarget[]>([])
     const [totalAsset, setTotalAsset] = useState<number | null>(null)
+    // 실계좌 보유 (KIS inquire-balance output1) — 검수 fix: 매도 수량·평단은 반드시
+    // 실보유 기준. 이전엔 VAMS 가상 보유(pf.vams.holdings)로 계산 = 실주문 오발주 위험.
+    const [acctHoldings, setAcctHoldings] = useState<Array<{ pdno?: string; hldg_qty?: string; pchs_avg_pric?: string }>>([])
 
     const isKR = /^\d{6}$/.test(ticker)
 
@@ -68,6 +69,7 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice, hold
                 if (isFinite(v)) setCash(v)
                 const ta = o2 ? parseFloat(String(o2.tot_evlu_amt ?? "").replace(/,/g, "")) : NaN
                 if (isFinite(ta)) setTotalAsset(ta)
+                if (Array.isArray(d?.output1)) setAcctHoldings(d.output1)
             })
             .catch(() => {})
         return () => {
@@ -78,11 +80,15 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice, hold
     // 중용 목표비중 — 우리 산식 결과(오퍼레이터 차별점)
     useEffect(() => {
         let stop = false
-        fetchOperator<{ targets?: ModTarget[]; weights?: ModTarget[]; portfolio?: ModTarget[] }>("moderation_portfolio").then((r) => {
-            if (stop || !r.ok) return
-            const d = r.data as Record<string, unknown>
-            const arr = (d.targets || d.weights || d.portfolio || []) as ModTarget[]
-            if (Array.isArray(arr)) setTargets(arr)
+        fetchOperator<Record<string, unknown>>("moderation_portfolio").then((r) => {
+            if (stop || !r.ok || !r.data) return
+            // 검수 fix: 실파일의 weights 는 배열이 아니라 dict {ticker: 비중(0~1)} —
+            // (moderation_portfolio.py:289 실측). 원안의 Array.isArray 검사는 영구 false
+            // → 간판 기능(목표비중 갭)이 조용히 죽어 있었다.
+            const w = (r.data as { weights?: Record<string, number> }).weights
+            if (w && typeof w === "object" && !Array.isArray(w)) {
+                setTargets(Object.entries(w).map(([tk, wt]) => ({ ticker: tk, weight: Number(wt) })))
+            }
         })
         return () => {
             stop = true
@@ -114,12 +120,20 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice, hold
     const netCost = side === "BUY" ? est + fee : est - fee - tax
     const valid = isKR && qn > 0 && (otype === "01" || pn > 0)
 
-    // 주문가능 수량 — 매수=예수금/가격, 매도=보유수량
+    // 실보유 (실계좌 output1 기준 — VAMS 가상 보유 아님)
+    const acct = useMemo(() => {
+        const h = acctHoldings.find((x) => String(x.pdno || "") === ticker)
+        const q = h ? parseInt(String(h.hldg_qty ?? "").replace(/,/g, ""), 10) : 0
+        const ap = h ? parseFloat(String(h.pchs_avg_pric ?? "").replace(/,/g, "")) : 0
+        return { qty: isFinite(q) ? q : 0, avgPrice: isFinite(ap) ? ap : 0 }
+    }, [acctHoldings, ticker])
+
+    // 주문가능 수량 — 매수=예수금/가격, 매도=실보유수량
     const maxQty = useMemo(() => {
-        if (side === "SELL") return holding?.quantity || 0
+        if (side === "SELL") return acct.qty
         if (!refPx || !cash) return 0
         return Math.floor(cash / (refPx * (1 + FEE_RATE)))
-    }, [side, holding, cash, refPx])
+    }, [side, acct, cash, refPx])
 
     // 중용 목표비중 갭
     const modGap = useMemo(() => {
@@ -127,20 +141,20 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice, hold
         const tw = typeof t?.target_weight === "number" ? t.target_weight : typeof t?.weight === "number" ? t.weight : null
         if (tw == null || !totalAsset || !refPx) return null
         const targetPct = tw <= 1 ? tw * 100 : tw            // 0.085 / 8.5 양쪽 수용
-        const curVal = (holding?.quantity || 0) * refPx
+        const curVal = acct.qty * refPx
         const curPct = totalAsset > 0 ? (curVal / totalAsset) * 100 : 0
         const needVal = (targetPct / 100) * totalAsset - curVal
         return { targetPct, curPct, needQty: Math.floor(needVal / refPx) }
-    }, [targets, ticker, totalAsset, refPx, holding])
+    }, [targets, ticker, totalAsset, refPx, acct])
 
     // 체결 시 평단 시뮬 (매수)
     const avgAfter = useMemo(() => {
         if (side !== "BUY" || !qn || !refPx) return null
-        const hq = holding?.quantity || 0
-        const hp = holding?.buy_price || 0
-        if (!hq) return refPx
+        const hq = acct.qty
+        const hp = acct.avgPrice
+        if (!hq || !hp) return refPx
         return (hq * hp + qn * refPx) / (hq + qn)
-    }, [side, qn, refPx, holding])
+    }, [side, qn, refPx, acct])
 
     const stepPrice = useCallback(
         (dir: 1 | -1) => {
@@ -295,8 +309,8 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice, hold
                 ) : null}
                 {est > 0 ? <Row c={c} k={side === "BUY" ? "총 필요" : "실수령(추정)"} v={Math.round(netCost).toLocaleString() + "원"} bold /> : null}
                 {cash !== null ? <Row c={c} k="예수금" v={Math.round(cash).toLocaleString() + "원"} /> : null}
-                {avgAfter && holding?.quantity ? (
-                    <Row c={c} k="체결 후 평단" v={`${Math.round(holding.buy_price || 0).toLocaleString()} → ${Math.round(avgAfter).toLocaleString()}`} />
+                {avgAfter && acct.qty > 0 && acct.avgPrice > 0 ? (
+                    <Row c={c} k="체결 후 평단(실계좌)" v={`${Math.round(acct.avgPrice).toLocaleString()} → ${Math.round(avgAfter).toLocaleString()}`} />
                 ) : null}
             </div>
 
@@ -313,6 +327,9 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice, hold
                 {busy ? "전송 중…" : arming ? "한 번 더 눌러 확정" : side === "BUY" ? "매수 주문" : "매도 주문"}
             </button>
             {msg ? <div style={{ fontSize: 11.5, fontWeight: 600, color: msg.ok ? c.green : c.up, lineHeight: 1.45 }}>{msg.text}</div> : null}
+            <div style={{ fontSize: 9.5, color: c.faint, lineHeight: 1.5 }}>
+                실주문 — KIS 계좌 집행. 서버가 주문 권한·건당 상한·일일 횟수를 재검증합니다.
+            </div>
         </div>
     )
 }
