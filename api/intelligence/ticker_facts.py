@@ -412,7 +412,21 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
         })
 
     # 1) 공개 발행물 — 병렬 fetch
-    urls = [(f, lab) for f, lab in CORE_FILES] + [(f, f[:-5]) for f in SCAN_FILES]
+    # 🚨 2026-08-06 전송량 fix (Vercel 과금 대응): 이전엔 종목 1건 조회에 발행물 **전체 35개
+    # · 73.8MB** 를 내려받았다. 그중 US 전용 10개(27.0MB)는 KR 종목 조회에 전혀 쓰이지
+    # 않고, KR 전용 파일도 US 조회엔 무용이다. 시장을 보고 필요한 것만 받는다.
+    # 기능 손실 0 — 해당 시장에서 애초에 매칭되지 않던 파일만 제외한다.
+    # (event_study 21.1MB 는 KR·US 공용이라 여기서 제외 대상 아님 — 청크 분할이 별건 과제.)
+    _is_us_q = not re.fullmatch(r"\d{6}", str(tk or ""))
+    def _needed(fname: str) -> bool:
+        if fname.startswith("us_"):
+            return _is_us_q                    # US 전용 → US 조회에만
+        if fname.startswith(("kr_", "dart_")):
+            return not _is_us_q                # KR 전용 → KR 조회에만
+        return True                            # 공용(event_study 등)은 항상
+    _scan = [f for f in SCAN_FILES if _needed(f)]
+    _skipped = len(SCAN_FILES) - len(_scan)
+    urls = [(f, lab) for f, lab in CORE_FILES if _needed(f)] + [(f, f[:-5]) for f in _scan]
     docs: Dict[str, Any] = {}
     with ThreadPoolExecutor(max_workers=8) as ex:
         futs = {ex.submit(_fetch_json, f"{BLOB}/{f}", f.replace("/", "_")): f for f, _ in urls}
