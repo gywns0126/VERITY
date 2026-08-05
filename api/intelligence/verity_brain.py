@@ -23,10 +23,13 @@ V5 추가 모듈:
 """
 from __future__ import annotations
 
+import glob
+import json
 import math
+import os
 from typing import Any, Dict, List, Optional, Tuple
 
-from api.config import MACRO_DGS10_DEFENSE_PCT
+from api.config import DATA_DIR, MACRO_DGS10_DEFENSE_PCT
 from api.utils.portfolio_writer import read_section
 
 # 2026-05-24 분해 — analyze_stock 3,738줄 monolith → factor 모듈.
@@ -368,8 +371,10 @@ def _apply_bond_regime(brain_result: Dict[str, Any], bond_regime: Dict[str, Any]
             secondary = existing_ov.get("secondary_signals", [])
             secondary.append({"mode": "bond_recession", "label": "채권 경기침체 신호", "max_grade": "WATCH"})
             existing_ov["secondary_signals"] = secondary
-            existing_max = existing_ov.get("max_grade", "WATCH")
-            if GRADE_ORDER.index("WATCH") > GRADE_ORDER.index(existing_max):
+            # 관측 전용 오버라이드(max_grade 부재)면 기존값 비교 없이 WATCH 를 세운다 —
+            # 기본값 "WATCH" 로 비교하면 침체 cap 이 조용히 사라진다(2026-08-06).
+            existing_max = existing_ov.get("max_grade")
+            if existing_max is None or GRADE_ORDER.index("WATCH") > GRADE_ORDER.index(existing_max):
                 existing_ov["max_grade"] = "WATCH"
 
         for s in brain_result.get("stocks", []):
@@ -454,7 +459,9 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
     signals: List[Dict[str, Any]] = []
 
     def _add(sig: Dict[str, Any]) -> None:
-        sig["_severity"] = _GRADE_SEVERITY.get(sig.get("max_grade", "BUY"), 2)
+        # max_grade 없는 시그널 = 관측 전용(등급 영향 0). 심각도 0 → primary 를 빼앗지 않는다.
+        _mg = sig.get("max_grade")
+        sig["_severity"] = 0 if _mg is None else _GRADE_SEVERITY.get(_mg, 2)
         signals.append(sig)
 
     # ── Soros 패닉 4단계 ──
@@ -470,9 +477,19 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             _add({"mode": "panic", "label": "패닉 모드", "message": msg, "reason": msg, "max_grade": "WATCH"})
 
     # ── 금리 방패 ──
+    # 🚨 2026-08-06 — 등급 차단(max_grade) **제거**. PM 승인 안 (가)
+    # (PREREG_YIELD_SHIELD_REDESIGN_2026_08_06). 절대 임계 4.5% 가 실측 분포 중앙값
+    # 4.48% 에 놓여 판별력이 없었고(AUC→0.5), 이진 차단이라 매수 신호가 원천 소멸해
+    # 검증 표본까지 봉쇄했다(aligned BUY 0건). 금리 압력은 이제 _yield_penalty 로
+    # **포지션 사이징**에 반영된다 — 방어 의도는 유지, 신호는 생존.
+    # 관측 표기는 남긴다(등급 영향 0, 표시 전용).
     if y10 is not None and y10 >= MACRO_DGS10_DEFENSE_PCT:
-        msg = f"미 10년 국채 {y10:.2f}% (≥{MACRO_DGS10_DEFENSE_PCT}%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
-        _add({"mode": "yield_defense", "label": "금리 방패", "message": msg, "reason": msg, "max_grade": "WATCH"})
+        _pct_obs = _yield_percentile(y10)
+        msg = (f"미 10년 국채 {y10:.2f}%"
+               + (f" (분포 상위 {100 - _pct_obs:.0f}%)" if _pct_obs is not None else "")
+               + " — 할인율 압력. 사이징 배율로 반영(등급 무영향)")
+        _add({"mode": "yield_observation", "label": "금리 관측",
+              "message": msg, "reason": msg})
 
     # ── 유포리아 ──
     if vix < 12 and mood > 80:
@@ -967,7 +984,9 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
     secondary = []
     for s in signals[1:]:
         s.pop("_severity", None)
-        secondary.append({"mode": s["mode"], "label": s["label"], "max_grade": s["max_grade"]})
+        # max_grade 는 관측 전용 시그널에 없다 (2026-08-06 금리 관측) — None 으로 병기.
+        secondary.append({"mode": s["mode"], "label": s["label"],
+                          "max_grade": s.get("max_grade")})
 
     if secondary:
         primary["secondary_signals"] = secondary
@@ -975,13 +994,18 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
         combined_msgs += [s["label"] for s in secondary]
         primary["combined_warning"] = " + ".join(combined_msgs)
 
-    # max_grade는 전체 시그널 중 가장 제한적인 것 적용
-    most_restrictive = "STRONG_BUY"
-    for s in signals:
-        g = s.get("max_grade", "BUY")
-        if GRADE_ORDER.index(g) > GRADE_ORDER.index(most_restrictive):
-            most_restrictive = g
-    primary["max_grade"] = most_restrictive
+    # max_grade는 전체 시그널 중 가장 제한적인 것 적용.
+    # 🚨 2026-08-06 — max_grade 가 **없는** 시그널(관측 전용)은 이 계산에서 제외한다.
+    # 이전처럼 "BUY" 로 기본값을 주면 관측이 STRONG_BUY 를 BUY 로 깎아 등급 차단이
+    # 뒷문으로 되살아난다(금리 방패 사이징 이전의 취지 무효).
+    capping = [s for s in signals if s.get("max_grade")]
+    if capping:
+        most_restrictive = "STRONG_BUY"
+        for s in capping:
+            g = s["max_grade"]
+            if GRADE_ORDER.index(g) > GRADE_ORDER.index(most_restrictive):
+                most_restrictive = g
+        primary["max_grade"] = most_restrictive
 
     return primary
 
@@ -1040,6 +1064,58 @@ def _score_to_grade(score: float) -> str:
     return "AVOID"
 
 
+# ── 금리 백분위 (PREREG_YIELD_SHIELD_REDESIGN_2026_08_06, PM 승인 안 (가)) ────────
+# 절대 임계 4.5% 폐기 근거: 실측 72일 분포가 4.36~4.67%(중앙 4.48%)라 임계가 정중앙 —
+# 이진 분류기 판별력 최소(AUC→0.5). 임계를 분포 중앙에 두면 표본 크기와 무관하게
+# 아무것도 가르지 못한다. 백분위는 그 문제를 정의상 해소한다.
+_YIELD_PCT_HI = 90.0    # 상위 10% = 배율 하한 도달
+_YIELD_PCT_LO = 80.0    # 상위 20% = 하향 시작
+_YIELD_MAX_PENALTY = 0.10   # 기존 penalty 축들과 동급(총합 cap 0.30 안에서 동작)
+_yield_hist_cache: Optional[List[float]] = None
+
+
+def _yield_percentile(y10: Optional[float]) -> Optional[float]:
+    """현재 10년물이 최근 252 스냅샷 분포에서 몇 퍼센타일인가. 표본 <60 이면 None(판정 보류)."""
+    global _yield_hist_cache
+    if y10 is None:
+        return None
+    if _yield_hist_cache is None:
+        vals: List[float] = []
+        try:
+            for f in sorted(glob.glob(os.path.join(DATA_DIR, "history", "20??-??-??.json")))[-252:]:
+                try:
+                    with open(f, encoding="utf-8") as fh:
+                        _m = (json.load(fh).get("macro") or {})
+                except (OSError, json.JSONDecodeError):
+                    continue
+                v = (_m.get("us_10y") or {}).get("value") or (_m.get("fred") or {}).get("dgs10")
+                if isinstance(v, (int, float)):
+                    vals.append(float(v))
+        except Exception:  # noqa: BLE001 — 관측 실패가 채점을 죽이지 않는다
+            vals = []
+        _yield_hist_cache = vals
+    hist = _yield_hist_cache
+    if len(hist) < 60:
+        # 🚨 조용한 실패 금지 — 2026-08-06 구현 중 실제로 import 누락으로 vals=[] 가 되어
+        # 전 구간 페널티 0 이 됐다(에러 없이). 표본 부족은 stderr 로 드러낸다.
+        import sys as _sys
+        print(f"[yield_pct] 표본 부족 N={len(hist)}<60 — 금리 페널티 미적용(판정 보류)",
+              file=_sys.stderr)
+        return None
+    below = sum(1 for v in hist if v <= y10)
+    return round(below / len(hist) * 100, 1)
+
+
+def _yield_penalty(y10: Optional[float]) -> Tuple[float, Optional[float]]:
+    """금리 압력 → 사이징 페널티(0 ~ _YIELD_MAX_PENALTY). 반환 (penalty, percentile)."""
+    pct = _yield_percentile(y10)
+    if pct is None or pct < _YIELD_PCT_LO:
+        return 0.0, pct
+    span = max(1e-9, _YIELD_PCT_HI - _YIELD_PCT_LO)
+    ratio = min(1.0, (pct - _YIELD_PCT_LO) / span)
+    return round(_YIELD_MAX_PENALTY * ratio, 4), pct
+
+
 def _compute_macro_multiplier(stock: Dict[str, Any],
                               portfolio: Dict[str, Any]) -> Tuple[float, Dict[str, Any]]:
     """B-continuous macro overlay (2026-05-18 PM 승인 완료).
@@ -1086,7 +1162,14 @@ def _compute_macro_multiplier(stock: Dict[str, Any],
     if cape_pct >= 90:
         cape_penalty = max(0.0, min(0.075, (cape_pct - 90) / 10 * 0.15))
 
-    total_penalty = min(0.30, valuation_penalty + currency_penalty + cape_penalty)
+    # 2026-08-06 — 금리 압력을 등급 차단에서 **사이징**으로 이전 (PM 승인 안 (가)).
+    # 5/23 에 macro/regime 배율을 "점수 → 사이징"으로 옮긴 결정의 미적용분 완성.
+    _y10 = _safe_float((macro.get("us_10y") or {}).get("value"), None)
+    if _y10 is None:
+        _y10 = _safe_float((macro.get("fred") or {}).get("dgs10"), None)
+    yield_penalty, yield_pct = _yield_penalty(_y10)
+
+    total_penalty = min(0.30, valuation_penalty + currency_penalty + cape_penalty + yield_penalty)
     multiplier = round(1.0 - total_penalty, 3)
 
     meta = {
@@ -1095,14 +1178,18 @@ def _compute_macro_multiplier(stock: Dict[str, Any],
         "valuation_penalty": round(valuation_penalty, 3),
         "currency_penalty": round(currency_penalty, 3),
         "cape_penalty": round(cape_penalty, 3),
+        "yield_penalty": round(yield_penalty, 3),
         "inputs": {
             "pbr": pbr,
             "usdkrw": usdkrw,
             "cape_pct": cape_pct,
+            "us_10y": _y10,
+            "us_10y_percentile": yield_pct,   # 관측 전용 — 재현 가능성(등록 §4)
             "currency": stock.get("currency"),
         },
-        "version": "v0_2026_05_18",
-        "rule_reference": "perplexity_caution_answers_2026_05_18.md B1+B2",
+        "version": "v1_2026_08_06",
+        "rule_reference": ("perplexity_caution_answers_2026_05_18.md B1+B2 + "
+                           "PREREG_YIELD_SHIELD_REDESIGN_2026_08_06 (금리축 사이징 이전)"),
     }
     return multiplier, meta
 
@@ -1409,9 +1496,11 @@ def analyze_stock(
         stock.setdefault("overrides_applied", []).append("ai_upside_relax")
 
     if macro_override:
-        max_g = macro_override.get("max_grade", "WATCH")
+        # 🚨 max_grade 부재 = 관측 전용 오버라이드(2026-08-06 금리 관측). 기본값 "WATCH" 를
+        # 주면 관측만으로 전 종목이 WATCH 로 깎인다 — 등급 차단 제거의 정반대.
+        max_g = macro_override.get("max_grade")
         _pre_cap = grade
-        grade = _cap_grade(grade, max_g)
+        grade = _cap_grade(grade, max_g) if max_g else grade
         if grade != _pre_cap:
             # cap 이 실제 발동했을 때만 overrides_applied 에 mode 기록 (audit 용).
             # primary mode 는 most_restrictive 시그널 = 실제 cap 결정 주체.
@@ -1808,6 +1897,9 @@ def _apply_cboe_pcr_override(
             secondary = existing_ov.get("secondary_signals", [])
             secondary.append({"mode": "cboe_panic", "label": "CBOE 풋/콜 패닉", "max_grade": max_grade})
             existing_ov["secondary_signals"] = secondary
+            if not existing_ov.get("max_grade"):
+                # 관측 전용 오버라이드였다면 패닉 cap 을 세운다 (2026-08-06)
+                existing_ov["max_grade"] = max_grade
 
         for s in result.get("stocks", []):
             if s.get("grade") in ("STRONG_BUY", "BUY"):

@@ -146,8 +146,10 @@ def build_system_action(portfolio: Dict[str, Any], analyzed) -> Dict[str, Any]:
     mo = vb_top.get("macro_override") or []
     if isinstance(mo, dict):
         mo = [mo]
+    # 2026-08-06 — 미 10Y 규칙은 yield_defense(등급 차단) → yield_observation(사이징)으로 교체.
+    # 구 mode 도 계속 인식한다: 과거 발행 portfolio.json 을 다시 읽을 때 패널이 비지 않게.
     shield = next((o for o in mo if isinstance(o, dict)
-                   and o.get("mode") in ("yield_defense", "kr_rate_defense")), None)
+                   and o.get("mode") in ("yield_observation", "yield_defense", "kr_rate_defense")), None)
     shield_on = shield is not None or (isinstance(us10, (int, float)) and us10 >= _RATE_SHIELD_THRESHOLD)
 
     quadrant: Dict[str, Any] = {}
@@ -163,15 +165,34 @@ def build_system_action(portfolio: Dict[str, Any], analyzed) -> Dict[str, Any]:
                                for s in analyzed) if isinstance(m, (int, float)))
     buys = [s for s in analyzed if s.get("recommendation") in ("STRONG_BUY", "BUY")]
 
+    # 금리 축이 지금 실제로 하는 일 = 사이징 페널티. 등급 상한은 kr_rate_defense 만 남았다.
+    _cap = (shield or {}).get("max_grade")
+    _ypens = sorted(p for p in ((s.get("macro_multiplier") or {}).get("yield_penalty")
+                                for s in analyzed) if isinstance(p, (int, float)))
+    _ypen = _ypens[len(_ypens) // 2] if _ypens else None
+    _ypct = next((v for v in ((((s.get("macro_multiplier") or {}).get("inputs") or {})
+                               .get("us_10y_percentile")) for s in analyzed)
+                  if isinstance(v, (int, float))), None)
+    if not shield_on:
+        _effect = "미발동"
+    elif _cap:
+        _effect = f"발동 중 — 등급 상한 {_cap} · 현금 비중 확대 권고"
+    elif _ypen:
+        _effect = f"발동 중 — 등급 무영향, 포지션 사이징 −{_ypen * 100:.1f}%p"
+    else:
+        _effect = "발동 중 — 등급 무영향(관측). 사이징 반영분 없음"
+
     return {
         "as_of": datetime.now(_kst).isoformat(timespec="seconds"),
         "rate_shield": {
             "on": bool(shield_on),
             "us_10y": us10,
             "threshold": _RATE_SHIELD_THRESHOLD,
-            "grade_cap": (shield or {}).get("max_grade"),
-            "label": (shield or {}).get("label") or ("금리 방패" if shield_on else None),
-            "effect": "발동 중 — 등급 상한 WATCH · 현금 비중 확대 권고" if shield_on else "미발동",
+            "grade_cap": _cap,                 # 2026-08-06 이후 미 10Y 단독이면 None(관측)
+            "sizing_penalty": _ypen,           # 사이징 배율에서 깎인 폭 (중앙값)
+            "us_10y_percentile": _ypct,        # 실측 252일 분포 내 위치
+            "label": (shield or {}).get("label") or ("금리 관측" if shield_on else None),
+            "effect": _effect,
         },
         "quadrant": quadrant,
         "macro_multiplier_median": (mults[len(mults) // 2] if mults else None),
