@@ -64,7 +64,16 @@ def build_trade_plan_v0(stock: dict, judgment: dict) -> dict:
     cond_rsi = rsi <= 50
     entry_active = cond_verdict and cond_position and cond_rsi
 
-    if rec == "BUY":
+    # ── 매매 계획 생성 대상 (PREREG_EXECUTION_PLAN_COVERAGE_2026_08_05, 안 (가) 승인) ──
+    # 🚨 2026-08-05 커버리지 fix: 이전엔 rec=="BUY" 에만 손절·익절·진입존을 만들었다.
+    # 그런데 VAMS 는 WATCH 종목도 매수하고 BUY 는 하루 0~3건뿐이라, **매수한 종목의 대다수가
+    # 매매 계획 없이 편입**됐다. 계획이 없으면 check_stop_loss 가 프로필 고정 −5% 로만
+    # 판정하는데 우리 종목 MAE 평균이 −9.6% 라 정상 등락에도 잘린다(청산 12건 전부 손절,
+    # 승률 20%·손익비 0.85 의 구조적 원인).
+    # 조치 = BUY 분기의 **기존 산식을 WATCH 에 그대로 재사용**한다. 산식 신설 0,
+    # 임계 무변경(ATR 배수·R 배수·비중 한도 전부 기존값). 진입 '활성' 판정은 BUY 전용 유지 —
+    # 계획을 갖는 것과 지금 사는 것은 별개다.
+    if rec in ("BUY", "WATCH"):
         entry_low = round(bb_lower)
         entry_high = round(min(ma20, price))
         if entry_low >= entry_high:
@@ -163,13 +172,12 @@ def build_trade_plan_v0(stock: dict, judgment: dict) -> dict:
             "deprecated": True,
         }
 
-        position_pct_range = {"min": 5, "max": 15, "note": "단일 종목 한도 — portfolio 보고 수동 결정"}
-    elif rec == "WATCH":
-        entry_zone = None
-        exit_target = None
-        exit_targets = None
-        stop_loss = None
-        position_pct_range = {"min": 0, "max": 5, "note": "관망 우선 — 진입 시 시범 비중"}
+        # 비중 한도만 등급별 분기 — 기존값 그대로 (계획 유무와 비중은 별개 축)
+        if rec == "BUY":
+            position_pct_range = {"min": 5, "max": 15,
+                                  "note": "단일 종목 한도 — portfolio 보고 수동 결정"}
+        else:  # WATCH — 계획은 갖되 비중은 관망 수준 유지
+            position_pct_range = {"min": 0, "max": 5, "note": "관망 우선 — 진입 시 시범 비중"}
     else:
         entry_zone = None
         exit_target = None
