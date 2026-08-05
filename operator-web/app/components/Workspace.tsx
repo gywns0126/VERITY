@@ -8,7 +8,8 @@ import { useDark, palette, cardStyle, FONT, NUM, MAIN_PAD, type Palette } from "
 import { RAILWAY, fetchRailway } from "@/lib/api"
 import { useQuotes } from "@/lib/quotes"
 import StockLogo from "./StockLogo"
-import { CandleChart, type Candle } from "./ChartModal"
+import ProChart, { type Candle } from "./ProChart"
+import type { Rec, Holding } from "@/lib/types"
 import OrderTicket from "./OrderTicket"
 import TriSynthesisPanel from "./TriSynthesisPanel"
 
@@ -31,7 +32,17 @@ function initialTicker(fallback: string): string {
     return fallback
 }
 
-export default function Workspace({ defaultTicker, names }: { defaultTicker: string; names: Record<string, string> }) {
+export default function Workspace({
+    defaultTicker,
+    names,
+    recs = [],
+    holdings = [],
+}: {
+    defaultTicker: string
+    names: Record<string, string>
+    recs?: Rec[]
+    holdings?: Holding[]
+}) {
     const dark = useDark()
     const c = palette(dark)
     const [ticker, setTicker] = useState("")
@@ -215,6 +226,9 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
                 ) : null}
             </div>
 
+            {/* 종목 인텔리전스 — 점수·팩터·수급·보유 (PM 2026-08-05 "최상급 오퍼레이터 급 정보") */}
+            <IntelStrip c={c} ticker={ticker} recs={recs} holdings={holdings} live={typeof live === "number" ? live : null} />
+
             {/* 종목 캔들 — 분/일/주/월 (KIS 실데이터) */}
             {isKR ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
@@ -233,7 +247,7 @@ export default function Workspace({ defaultTicker, names }: { defaultTicker: str
                         </span>
                     </div>
                     {candles.length > 5 ? (
-                        <CandleChart cs={candles} c={c} dec={0} />
+                        <ProChart candles={candles} dec={0} height={340} showRanges={chartType !== "minute"} />
                     ) : (
                         <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11.5, color: c.faint, background: c.hi, borderRadius: 12 }}>
                             차트 불러오는 중… (장외 분봉은 빈 값일 수 있음)
@@ -312,6 +326,80 @@ function DayRange({ c, low, high, px }: { c: Palette; low: number; high: number;
             </div>
             <span style={{ fontSize: 9.5, color: c.faint, ...NUM, flexShrink: 0 }}>{Math.round(high).toLocaleString()}</span>
             <span style={{ fontSize: 9, color: c.faint, flexShrink: 0 }}>1일</span>
+        </div>
+    )
+}
+
+// 선택 종목의 자체 판단 스택 한 줄 — 추천 데이터(brain·팩터·이유) + 보유 손익.
+function IntelStrip({ c, ticker, recs, holdings, live }: { c: Palette; ticker: string; recs: Rec[]; holdings: Holding[]; live: number | null }) {
+    const rec = recs.find((r) => String(r.ticker || "") === ticker)
+    const hold = holdings.find((h) => h.ticker === ticker)
+    if (!rec && !hold) return null
+
+    const vb = rec?.verity_brain
+    const score = typeof vb?.brain_score === "number" ? vb.brain_score : typeof rec?.brain_score === "number" ? rec.brain_score : null
+    const grade = vb?.grade_label || vb?.grade || ""
+    const label = (() => {
+        const r = String(rec?.recommendation || "").toUpperCase()
+        if (r === "STRONG_BUY") return { t: "적극매수", col: c.up }
+        if (r === "BUY") return { t: "매수", col: c.up }
+        if (r === "AVOID") return { t: "회피", col: c.down }
+        if (r === "CAUTION") return { t: "주의", col: c.amber }
+        return r ? { t: "관망", col: c.faint } : null
+    })()
+    const num = (v: unknown) => (typeof v === "number" && isFinite(v) ? v : null)
+    const per = num(rec?.per), pbr = num(rec?.pbr), roe = num(rec?.roe)
+    const drop = num(rec?.drop_from_high_pct)
+    const foreign = rec?.flow ? num(rec.flow.foreign_net) : null
+    const lynch = rec?.lynch_kr?.label
+    const px = live ?? num(hold?.current_price)
+    const pnlPct = hold?.buy_price && px ? ((px - hold.buy_price) / hold.buy_price) * 100 : null
+
+    const cell = (k: string, v: string, col?: string) => (
+        <span key={k} style={{ fontSize: 10.5, color: c.faint, whiteSpace: "nowrap" }}>
+            {k} <b style={{ color: col || c.ink, fontWeight: 800, ...NUM }}>{v}</b>
+        </span>
+    )
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 7, background: c.hi, borderRadius: 12, padding: "10px 12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                {score !== null ? (
+                    <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ fontSize: 10.5, fontWeight: 800, color: c.faint }}>브레인</span>
+                        <span style={{ fontSize: 17, fontWeight: 800, color: c.ink, ...NUM }}>{Math.round(score)}</span>
+                        {grade ? <span style={{ fontSize: 10.5, fontWeight: 700, color: c.vt, background: c.vtS, borderRadius: 6, padding: "2px 7px" }}>{grade}</span> : null}
+                        <span style={{ width: 62, height: 5, borderRadius: 999, background: c.track, overflow: "hidden" }}>
+                            <span style={{ display: "block", width: `${Math.min(100, Math.max(0, score))}%`, height: "100%", background: score >= 70 ? c.up : score >= 50 ? c.amber : c.faint }} />
+                        </span>
+                    </span>
+                ) : null}
+                {label ? (
+                    <span style={{ fontSize: 10.5, fontWeight: 800, color: "#fff", background: label.col, borderRadius: 6, padding: "3px 9px" }}>{label.t}</span>
+                ) : null}
+                {hold ? (
+                    <span style={{ marginLeft: "auto", display: "flex", alignItems: "baseline", gap: 8, ...NUM }}>
+                        <span style={{ fontSize: 10.5, color: c.faint }}>보유 <b style={{ color: c.ink }}>{(hold.quantity || 0).toLocaleString()}주</b></span>
+                        <span style={{ fontSize: 10.5, color: c.faint }}>평단 <b style={{ color: c.ink }}>{Math.round(hold.buy_price || 0).toLocaleString()}</b></span>
+                        {pnlPct !== null ? (
+                            <span style={{ fontSize: 12.5, fontWeight: 800, color: pnlPct > 0 ? c.up : pnlPct < 0 ? c.down : c.faint }}>
+                                {pnlPct > 0 ? "+" : ""}{pnlPct.toFixed(2)}%
+                            </span>
+                        ) : null}
+                    </span>
+                ) : null}
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+                {per !== null ? cell("PER", per.toFixed(1)) : null}
+                {pbr !== null ? cell("PBR", pbr.toFixed(2)) : null}
+                {roe !== null ? cell("ROE", roe.toFixed(1) + "%") : null}
+                {drop !== null ? cell("고점대비", drop.toFixed(0) + "%", drop <= -30 ? c.down : c.ink) : null}
+                {foreign !== null ? cell("외인", (foreign > 0 ? "+" : "") + Math.round(foreign).toLocaleString(), foreign > 0 ? c.up : c.down) : null}
+                {lynch ? cell("Lynch", lynch) : null}
+                {rec?.ai_verdict ? (
+                    <span style={{ fontSize: 10.5, color: c.sub, lineHeight: 1.4, flexBasis: "100%", minWidth: 0 }}>{String(rec.ai_verdict).slice(0, 160)}</span>
+                ) : null}
+            </div>
         </div>
     )
 }

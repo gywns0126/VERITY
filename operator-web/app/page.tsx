@@ -145,7 +145,7 @@ export default function Home() {
 
                     <section className="af-center">
                         <PanelBoundary name="워크스페이스">
-                            <Workspace defaultTicker={holdT.find((t) => /^\d{6}$/.test(t)) || "005930"} names={names} />
+                            <Workspace defaultTicker={holdT.find((t) => /^\d{6}$/.test(t)) || "005930"} names={names} recs={recs} holdings={holdings} />
                         </PanelBoundary>
                         <PanelBoundary name="블로터">
                             <Blotter />

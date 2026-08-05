@@ -145,13 +145,17 @@ export default function MarketStrip({ explain }: { explain?: MarketExplain }) {
                 spark={n.sparkline}
                 flashKey={liveOk ? `${k}-${v}` : undefined}
                 dir={dir}
-                onOpen={() =>
+                onOpen={() => {
+                    // 미장 지수(나스닥·S&P·필반)도 KIS 해외지수 일봉 캔들로 (PM 2026-08-05 "정보량 없다")
+                    const US_KEY: Record<string, string> = { nasdaq: "nasdaq", sp500: "sp500", sox: "sox" }
                     setTarget(
                         k === "kospi" || k === "kosdaq"
                             ? { kind: "krindex", name, indexCd: k === "kospi" ? "0001" : "1001", value: v, changePct: cp, explain }
-                            : { kind: "macro", name, unit, series: n.sparkline || [], value: v, changePct: cp }
+                            : US_KEY[k]
+                              ? { kind: "usindex", name, usKey: US_KEY[k], value: v, changePct: cp, explain }
+                              : { kind: "macro", name, unit, series: n.sparkline || [], value: v, changePct: cp }
                     )
-                }
+                }}
             />
         )
     }
