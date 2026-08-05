@@ -8,12 +8,14 @@ import { useEffect, useState } from "react"
 import { useDark, palette, FONT, NUM, type Palette } from "@/lib/theme"
 import { fetchRailway } from "@/lib/api"
 import type { MarketExplain } from "@/lib/types"
+import ProChart, { type Candle as ProCandle } from "./ProChart"
 
 export type ChartTarget = {
-    kind: "macro" | "crypto" | "krindex"
+    kind: "macro" | "crypto" | "krindex" | "usindex"
     name: string
     symbol?: string          // crypto: BTCUSDT
     indexCd?: string         // krindex: 0001 코스피 / 1001 코스닥
+    usKey?: string           // usindex: nasdaq / sp500 / sox / dow
     unit?: string
     series?: number[]        // macro: 수집 시계열
     value?: number | null
@@ -108,6 +110,27 @@ export default function ChartModal({ target, onClose }: { target: ChartTarget; o
                 clearInterval(t)
             }
         }
+        async function pullUs() {
+            if (!target.usKey) return
+            const r = await fetchRailway<{ candles?: Array<{ date?: string; open?: number; high?: number; low?: number; close?: number; volume?: number }> }>(
+                `us_index_daily/${target.usKey}`
+            )
+            if (stop || !r.ok || !Array.isArray(r.data.candles)) return
+            setCandles(
+                r.data.candles
+                    .map((x) => ({
+                        t: String(x.date || "").length === 8 ? `${String(x.date).slice(4, 6)}.${String(x.date).slice(6, 8)}` : String(x.date || ""),
+                        o: Number(x.open) || 0, h: Number(x.high) || 0, l: Number(x.low) || 0,
+                        c: Number(x.close) || 0, v: Number(x.volume) || 0,
+                    }))
+                    .filter((x) => x.h > 0)
+            )
+        }
+        if (target.kind === "usindex") {
+            pullUs()
+            const t = setInterval(pullUs, 120000)
+            return () => { stop = true; clearInterval(t) }
+        }
         if (target.kind === "krindex") {
             pullIndex()
             const t = setInterval(pullIndex, 30000)
@@ -122,7 +145,7 @@ export default function ChartModal({ target, onClose }: { target: ChartTarget; o
     }, [target, interval_])
 
     const isCrypto = target.kind === "crypto"
-    const isIndex = target.kind === "krindex"
+    const isIndex = target.kind === "krindex" || target.kind === "usindex"
     const last = candles.length ? candles[candles.length - 1] : null
     const first = candles.length ? candles[0] : null
     const rangeCp = last && first && first.o > 0 ? ((last.c - first.o) / first.o) * 100 : null
@@ -156,7 +179,7 @@ export default function ChartModal({ target, onClose }: { target: ChartTarget; o
                         </span>
                     ) : null}
                     <span style={{ marginLeft: "auto", fontSize: 10, color: c.faint }}>
-                        {isCrypto ? "실시간 · Binance · 5초" : isIndex ? "KIS 일봉 · 90일 · 30초 갱신" : "수집 시계열 · 약 30분 주기"}
+                        {isCrypto ? "실시간 · Binance · 5초" : isIndex ? (target.kind === "usindex" ? "KIS 해외지수 일봉 · 100봉" : "KIS 일봉 · 100봉 · 30초 갱신") : "수집 시계열 · 약 30분 주기"}
                     </span>
                     <button onClick={onClose} style={{ border: "none", background: c.hi, color: c.sub, borderRadius: 999, padding: "5px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer", fontFamily: FONT }}>
                         닫기 (Esc)
@@ -178,7 +201,7 @@ export default function ChartModal({ target, onClose }: { target: ChartTarget; o
                 ) : null}
 
                 {candles.length > 5 ? (
-                    <CandleChart cs={candles} c={c} dec={dec} />
+                    <ProChart candles={candles as ProCandle[]} dec={dec} height={360} />
                 ) : macroSeries.length > 1 ? (
                     <LineChart c={c} data={macroSeries} color={col} />
                 ) : (
