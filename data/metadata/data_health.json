@@ -1,29 +1,32 @@
 {
  "_meta": {
-  "generated_at": "2026-08-05T17:27:37.845519+09:00",
+  "generated_at": "2026-08-05T20:16:42.907650+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "green",
- "reasons": [],
+ "status": "amber",
+ "reasons": [
+  "비P0 stale 1건",
+  "CDN age 3009s > 120s(스테일 서빙)"
+ ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-05T17:27:37.797904+09:00",
+  "generated_at": "2026-08-05T20:16:42.849217+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 0,
+  "max_cdn_age_s": 3009,
   "files": [
    {
     "file": "stock_report_public.json",
     "ok": true,
     "pct": {
-     "PER": 71.0,
-     "PBR": 95.8
+     "PER": 71.1,
+     "PBR": 95.9
     },
     "total": 1595,
-    "cdn_age_s": 0,
+    "cdn_age_s": 3009,
     "error": null
    },
    {
@@ -51,13 +54,13 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-08-05T08:34:45.973142+09:00",
+  "generated_at": "2026-08-05T18:43:52.996034+09:00",
   "kr_total": 1595,
   "us_total": 1505,
   "core_fill_pct": {
-   "fields.facts.PBR": 95.8,
-   "fields.facts.PER": 71.0,
-   "us_fields.facts.PBR": 94.9,
+   "fields.facts.PBR": 95.9,
+   "fields.facts.PER": 71.1,
+   "us_fields.facts.PBR": 95.0,
    "us_fields.facts.PER": 86.3
   },
   "last_run_blocked": false,
@@ -65,10 +68,10 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-08-05T17:27:26.620153+09:00",
+  "generated_at": "2026-08-05T20:16:35.576276+09:00",
   "summary": {
-   "fresh": 58,
-   "stale": 0,
+   "fresh": 57,
+   "stale": 1,
    "closed": 2,
    "discontinued": 2,
    "p0": {
@@ -85,12 +88,14 @@
    },
    "p2": {
     "total": 36,
-    "fresh": 35,
+    "fresh": 34,
     "closed": 0,
     "active": 35
    }
   },
   "stale_p0": [],
-  "stale_other": []
+  "stale_other": [
+   "penny_watchlist"
+  ]
  }
 }
