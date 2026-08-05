@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "bash -c 'cd .. || exit 0; P=\"${VERCEL_GIT_PREVIOUS_SHA:-}\"; if [ -n \"$P\" ] && git cat-file -e \"$P^{commit}\" 2>/dev/null; then B=\"$P\"; elif git rev-parse HEAD~1 >/dev/null 2>&1; then B=HEAD~1; else exit 1; fi; git diff --quiet \"$B\" HEAD -- operator-web/ && exit 0; exit 1'"
+  "ignoreCommand": "bash -c 'cd ..;B=${VERCEL_GIT_PREVIOUS_SHA:-HEAD~1};git cat-file -e $B^{commit} 2>/dev/null||B=HEAD~1;git diff --quiet $B HEAD -- operator-web/'"
 }
