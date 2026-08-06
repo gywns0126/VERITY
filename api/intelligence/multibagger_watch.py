@@ -68,7 +68,13 @@ def build_watch(stocks: List[Dict[str, Any]], as_of: Optional[str] = None) -> Li
             "lynch_data_quality": lynch.get("data_quality"),
             "alert_count": alert_count,
             "signals": {
-                k: {"triggered": bool(v.get("triggered")), "score": v.get("score")}
+                # 🚨 2026-08-06 — reason 을 함께 남긴다.
+                # 이전엔 {triggered, score} 만 저장해 **죽은 신호와 정상 미발동이 구분되지
+                # 않았다**. industry_s_curve(미구현 스텁)·hold_pnl_threshold(입력 구조적 부재)가
+                # 29,271건 내내 0회였는데 trail 만으로는 알 수 없어 소스를 읽어야 했다.
+                # 산출 함수가 이미 사유를 담고 있다("산업 CAGR 데이터 미수집" 등) — 버리지 않는다.
+                k: {"triggered": bool(v.get("triggered")), "score": v.get("score"),
+                    "reason": v.get("reason")}
                 for k, v in sigs.items() if isinstance(v, dict)
             },
             "spec_version": "watch.v0",
