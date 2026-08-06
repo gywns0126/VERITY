@@ -10,6 +10,22 @@ body {
     padding: 0;
 }
 
+:root {
+    /* 국기 배지 테두리 등 컴포넌트가 참조하는 카드색 (StockLogo) */
+    --af-card: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --af-card: #171c23;
+    }
+}
+:root[data-theme="dark"] {
+    --af-card: #171c23;
+}
+:root[data-theme="light"] {
+    --af-card: #ffffff;
+}
+
 body {
     font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
         system-ui, sans-serif;

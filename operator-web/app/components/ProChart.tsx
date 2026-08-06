@@ -51,6 +51,7 @@ export default function ProChart({
     const [range, setRange] = useState("6m")
     const [hoverIdx, setHoverIdx] = useState<number | null>(null)
     const [logScale, setLogScale] = useState(false)
+    const [lineMode, setLineMode] = useState(false)   // PM 2026-08-06: 캔들 ↔ 유선형 전환
 
     // 반응형 — 컨테이너 실폭 추적(고정 viewBox 확대 = 흐릿함 방지)
     useEffect(() => {
@@ -193,8 +194,14 @@ export default function ProChart({
                         </button>
                     ))}
                     <button
+                        onClick={() => setLineMode((v) => !v)}
+                        style={{ marginLeft: "auto", border: "none", borderRadius: 999, padding: "4px 11px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: FONT, background: lineMode ? c.vtS : c.hi, color: lineMode ? c.vt : c.faint }}
+                    >
+                        {lineMode ? "유선형" : "캔들"}
+                    </button>
+                    <button
                         onClick={() => setLogScale((v) => !v)}
-                        style={{ marginLeft: "auto", border: "none", borderRadius: 999, padding: "4px 11px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: FONT, background: logScale ? c.vtS : c.hi, color: logScale ? c.vt : c.faint }}
+                        style={{ border: "none", borderRadius: 999, padding: "4px 11px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: FONT, background: logScale ? c.vtS : c.hi, color: logScale ? c.vt : c.faint }}
                     >
                         {logScale ? "로그" : "선형"}
                     </button>
@@ -254,21 +261,39 @@ export default function ProChart({
                         </g>
                     ) : null}
 
-                    {/* 캔들 */}
-                    {cs.map((k, i) => {
-                        const up = k.c >= k.o
-                        const col = up ? upCol : dnCol
-                        const x = geo.xAt(i)
-                        const top = geo.yP(Math.max(k.o, k.c))
-                        const bot = geo.yP(Math.min(k.o, k.c))
-                        const isLast = i === cs.length - 1
-                        return (
-                            <g key={i} opacity={hoverIdx == null || hoverIdx === i ? 1 : 0.82}>
-                                <line x1={x} x2={x} y1={geo.yP(k.h)} y2={geo.yP(k.l)} stroke={col} strokeWidth={isLast ? 1.6 : 1} />
-                                <rect x={x - geo.bw / 2} y={top} width={geo.bw} height={Math.max(1, bot - top)} fill={col} rx={0.8} />
-                            </g>
-                        )
-                    })}
+                    {/* 캔들 또는 유선형(종가 라인 + 면) — PM 2026-08-06 토글 */}
+                    {lineMode ? (
+                        (() => {
+                            const lineCol = cs[cs.length - 1].c >= cs[0].o ? upCol : dnCol
+                            const d = geo.path(cs.map((k) => k.c))
+                            const area = d
+                                ? d + `L${geo.xAt(cs.length - 1).toFixed(1)},${(geo.PT + geo.priceH).toFixed(1)}` +
+                                  `L${geo.xAt(0).toFixed(1)},${(geo.PT + geo.priceH).toFixed(1)}Z`
+                                : ""
+                            return (
+                                <g>
+                                    {area ? <path d={area} fill={lineCol} opacity={0.1} stroke="none" /> : null}
+                                    <path d={d} fill="none" stroke={lineCol} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
+                                    <circle cx={geo.xAt(cs.length - 1)} cy={geo.yP(cs[cs.length - 1].c)} r={2.8} fill={lineCol} />
+                                </g>
+                            )
+                        })()
+                    ) : (
+                        cs.map((k, i) => {
+                            const up = k.c >= k.o
+                            const col = up ? upCol : dnCol
+                            const x = geo.xAt(i)
+                            const top = geo.yP(Math.max(k.o, k.c))
+                            const bot = geo.yP(Math.min(k.o, k.c))
+                            const isLast = i === cs.length - 1
+                            return (
+                                <g key={i} opacity={hoverIdx == null || hoverIdx === i ? 1 : 0.82}>
+                                    <line x1={x} x2={x} y1={geo.yP(k.h)} y2={geo.yP(k.l)} stroke={col} strokeWidth={isLast ? 1.6 : 1} />
+                                    <rect x={x - geo.bw / 2} y={top} width={geo.bw} height={Math.max(1, bot - top)} fill={col} rx={0.8} />
+                                </g>
+                            )
+                        })
+                    )}
 
                     {/* 이동평균 */}
                     <path d={geo.path(view.ma5)} fill="none" stroke={c.green} strokeWidth={1.3} strokeLinejoin="round" />

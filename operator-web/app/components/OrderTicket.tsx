@@ -44,6 +44,7 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
     const [side, setSide] = useState<"BUY" | "SELL">("BUY")
     const [otype, setOtype] = useState<"00" | "01">("00")
     const [qty, setQty] = useState("")
+    const [amountInput, setAmountInput] = useState("")   // 토스 문법: 금액 입력 → 수량 역산
     const [price, setPrice] = useState("")
     const [arming, setArming] = useState(false)
     const [busy, setBusy] = useState(false)
@@ -102,6 +103,7 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
     useEffect(() => {
         setQty("")
         setPrice("")
+        setAmountInput("")
         setArming(false)
         setMsg(null)
     }, [ticker])
@@ -283,32 +285,66 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
                 ) : null}
             </div>
 
-            {/* 수량 + 비율 버튼 */}
-            <input
-                value={qty}
-                onChange={(e) => setQty(e.target.value.replace(/[^\d]/g, ""))}
-                placeholder={maxQty ? `수량 (가능 ${maxQty.toLocaleString()}주)` : "수량"}
-                inputMode="numeric"
-                style={inputSt}
-            />
-            {maxQty > 0 ? (
-                <div style={{ display: "flex", gap: 5 }}>
-                    {[10, 25, 50, 100].map((p) => (
-                        <button key={p} onClick={() => setQty(String(Math.max(1, Math.floor((maxQty * p) / 100))))} style={{ ...miniBtn, flex: 1 }}>
-                            {p === 100 ? "최대" : `${p}%`}
-                        </button>
-                    ))}
+            {/* 수량 — 입력 + ± 스테퍼 (토스 동등) */}
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                    value={qty}
+                    onChange={(e) => { setQty(e.target.value.replace(/[^\d]/g, "")); setAmountInput("") }}
+                    placeholder="수량"
+                    inputMode="numeric"
+                    style={inputSt}
+                />
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                    <button onClick={() => { setQty(String(Math.max(0, qn - 1))); setAmountInput("") }} style={{ ...miniBtn, padding: "8px 11px", fontSize: 13 }}>−</button>
+                    <button onClick={() => { setQty(String(qn + 1)); setAmountInput("") }} style={{ ...miniBtn, padding: "8px 11px", fontSize: 13 }}>+</button>
                 </div>
-            ) : null}
+            </div>
+
+            {/* 비율 버튼 — 항상 노출(토스 동등). 가능수량 미확보 시 안내로 대체하지 않고 비활성 표시. */}
+            <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                {[10, 25, 50, 100].map((p) => (
+                    <button
+                        key={p}
+                        disabled={maxQty <= 0}
+                        onClick={() => { setQty(String(Math.max(1, Math.floor((maxQty * p) / 100)))); setAmountInput("") }}
+                        style={{ ...miniBtn, flex: 1, opacity: maxQty > 0 ? 1 : 0.45, cursor: maxQty > 0 ? "pointer" : "default" }}
+                    >
+                        {p === 100 ? "최대" : `${p}%`}
+                    </button>
+                ))}
+                <span style={{ fontSize: 10, color: c.faint, whiteSpace: "nowrap", ...NUM }}>
+                    {maxQty > 0
+                        ? `가능 ${maxQty.toLocaleString()}주`
+                        : side === "SELL" ? "보유 0주" : refPx ? "예수금 확인 중" : "가격 입력"}
+                </span>
+            </div>
+
+            {/* 총 주문 금액 — 입력하면 수량 역산 (토스 핵심 UX) */}
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                    value={amountInput}
+                    onChange={(e) => {
+                        const raw = e.target.value.replace(/[^\d]/g, "")
+                        setAmountInput(raw)
+                        const amt = parseInt(raw, 10) || 0
+                        if (amt > 0 && refPx > 0) setQty(String(Math.max(0, Math.floor(amt / refPx))))
+                    }}
+                    placeholder="총 주문 금액 (입력 시 수량 자동)"
+                    inputMode="numeric"
+                    style={inputSt}
+                />
+                <span style={{ fontSize: 11, color: c.faint, flexShrink: 0 }}>원</span>
+            </div>
 
             {/* 금액 요약 */}
             <div style={{ display: "flex", flexDirection: "column", gap: 3, background: c.hi, borderRadius: 9, padding: "8px 10px" }}>
                 <Row c={c} k={side === "BUY" ? "주문 금액" : "매도 금액"} v={est > 0 ? Math.round(est).toLocaleString() + "원" : "—"} bold />
-                {est > 0 ? (
-                    <Row c={c} k={side === "BUY" ? `수수료(약 ${(FEE_RATE * 100).toFixed(3)}%)` : `수수료·세금`} v={"-" + (fee + tax).toLocaleString() + "원"} />
+                <Row c={c} k={side === "BUY" ? `수수료(약 ${(FEE_RATE * 100).toFixed(3)}%)` : "수수료·세금"} v={est > 0 ? "-" + (fee + tax).toLocaleString() + "원" : "—"} />
+                <Row c={c} k={side === "BUY" ? "총 필요" : "실수령(추정)"} v={est > 0 ? Math.round(netCost).toLocaleString() + "원" : "—"} bold />
+                <Row c={c} k="예수금" v={cash !== null ? Math.round(cash).toLocaleString() + "원" : "조회 실패"} />
+                {side === "BUY" && cash !== null && est > 0 ? (
+                    <Row c={c} k="주문 후 잔여" v={Math.round(cash - netCost).toLocaleString() + "원"} />
                 ) : null}
-                {est > 0 ? <Row c={c} k={side === "BUY" ? "총 필요" : "실수령(추정)"} v={Math.round(netCost).toLocaleString() + "원"} bold /> : null}
-                {cash !== null ? <Row c={c} k="예수금" v={Math.round(cash).toLocaleString() + "원"} /> : null}
                 {avgAfter && acct.qty > 0 && acct.avgPrice > 0 ? (
                     <Row c={c} k="체결 후 평단(실계좌)" v={`${Math.round(acct.avgPrice).toLocaleString()} → ${Math.round(avgAfter).toLocaleString()}`} />
                 ) : null}
