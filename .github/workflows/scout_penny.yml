@@ -56,6 +56,7 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/penny_watchlist.json
+          git add data/metadata/llm_cost.jsonl 2>/dev/null || true   # RULE 4 — LLM 비용 장부(미add 시 rebase 거부)
           DATE_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
           git diff --staged --quiet || git commit -m "🔍 PennyScout 일일 갱신 ${DATE_KST}"
           BRANCH="${{ github.ref_name }}"

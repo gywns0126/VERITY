@@ -64,6 +64,7 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/us_smart_money_13f.json data/us_investor_portfolios.json \
+          git add data/metadata/llm_cost.jsonl 2>/dev/null || true   # RULE 4 — LLM 비용 장부(미add 시 rebase 거부)
             data/cusip_ticker_map.json data/13f_quarter_cache.json data/investor_profiles.json
           if git diff --staged --quiet; then
             echo "[smart_money] no changes"

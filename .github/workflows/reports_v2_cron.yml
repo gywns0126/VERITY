@@ -162,6 +162,7 @@ jobs:
           # data/reports/ 는 .gitignore 됨 (위 Storage upload 단계가 산출물 경로).
           # metadata/history 만 commit.
           git add data/metadata/ data/history/ 2>/dev/null || true
+          git add data/metadata/llm_cost.jsonl 2>/dev/null || true   # RULE 4 — LLM 비용 장부(미add 시 rebase 거부)
           DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
           MODES="${{ steps.detect.outputs.modes }}"
           git diff --staged --quiet || git commit -m "📑 리포트 v2 자동 생성 ${DATE} (${MODES})"

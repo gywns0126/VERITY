@@ -165,6 +165,7 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/.kis_issued_date.txt
+          git add data/metadata/llm_cost.jsonl 2>/dev/null || true   # RULE 4 — LLM 비용 장부(미add 시 rebase 거부)
           if git diff --staged --quiet; then
             echo "[lock push] 변화 없음 — origin 이미 동기"
             exit 0

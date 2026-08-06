@@ -53,6 +53,7 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/broker_guide.json
+          git add data/metadata/llm_cost.jsonl 2>/dev/null || true   # RULE 4 — LLM 비용 장부(미add 시 rebase 거부)
           if git diff --staged --quiet; then
             echo "변경 없음 (직전 유지 또는 동일) — commit skip"
             exit 0
