@@ -1,0 +1,130 @@
+{
+ "as_of": "2026-08-06T09:01:47+09:00",
+ "version": "measurement_audit_v0",
+ "status": "FAIL",
+ "failing": [
+  "ledger_integrity",
+  "key_coverage",
+  "price_scale"
+ ],
+ "skipped": [],
+ "checks": {
+  "ledger_integrity": {
+   "ok": false,
+   "episodes": 22,
+   "phantom_sells": 58,
+   "phantom_pnl": -1396639.49,
+   "window_start": "2026-05-17",
+   "detail": "보유 0 상태 매도 58건 (손익 -1,396,639원) — 집계에서 배제됨. 신규 발생이면 원장 오염 재발"
+  },
+  "key_coverage": {
+   "ok": false,
+   "keys_checked": 75,
+   "dead_keys": [
+    {
+     "key": "alpha_combined",
+     "modules": [
+      "fact.py"
+     ]
+    },
+    {
+     "key": "close",
+     "modules": [
+      "fact.py"
+     ]
+    },
+    {
+     "key": "dart_financials",
+     "modules": [
+      "moat.py",
+      "quality.py",
+      "red_flags.py",
+      "value_guards.py"
+     ]
+    },
+    {
+     "key": "kis_program_trade",
+     "modules": [
+      "fact.py"
+     ]
+    },
+    {
+     "key": "operating_income",
+     "modules": [
+      "quality.py"
+     ]
+    },
+    {
+     "key": "options_flow",
+     "modules": [
+      "red_flags.py"
+     ]
+    },
+    {
+     "key": "prev_year",
+     "modules": [
+      "quality.py"
+     ]
+    },
+    {
+     "key": "sec_risk_flags",
+     "modules": [
+      "red_flags.py"
+     ]
+    },
+    {
+     "key": "shares_change_pct",
+     "modules": [
+      "quality.py"
+     ]
+    },
+    {
+     "key": "sub_sector",
+     "modules": [
+      "moat.py"
+     ]
+    },
+    {
+     "key": "total_debt",
+     "modules": [
+      "quality.py"
+     ]
+    }
+   ],
+   "thin_keys": [],
+   "detail": "레코드에 한 번도 없는 키 11종 — 해당 채점 축이 조용히 죽어 있다"
+  },
+  "price_scale": {
+   "ok": false,
+   "holdings_checked": 10,
+   "scale_mismatches": [
+    {
+     "name": "EXE",
+     "ticker": "EXE",
+     "field": "target_1",
+     "buy_price": 132650.89,
+     "value": 99,
+     "ratio": 1339.9
+    },
+    {
+     "name": "Alphabet",
+     "ticker": "GOOGL",
+     "field": "target_1",
+     "buy_price": 483440.13,
+     "value": 364,
+     "ratio": 1328.1
+    },
+    {
+     "name": "NEM",
+     "ticker": "NEM",
+     "field": "target_1",
+     "buy_price": 133872.66,
+     "value": 102,
+     "ratio": 1312.5
+    }
+   ],
+   "detail": "가격 스케일 불일치 3건 — 통화 혼재 의심(비율≈환율이면 확정). 해당 보유는 부분익절 평가가 skip 된다(fail-closed)"
+  }
+ },
+ "note": "측정 오염 자동 검출 — 2026-08-05 감사에서 확정 결함을 실제로 잡아낸 세 대조를 상시화. 점수 입력 0(관측 전용)."
+}
