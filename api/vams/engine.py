@@ -829,8 +829,11 @@ def execute_buy(
         """가격 성격 키만 fx_rate 배 (US 전용). dict/중첩 dict 재귀."""
         if fx_rate == 1.0 or not isinstance(obj, dict):
             return obj
+        # 2026-08-06 — risk_per_share 추가. 1R = 진입가−손절가라 **주당 통화 금액**이다.
+        # trade_planner 가 원통화(US=USD)로 산출하므로 여기서 KRW 로 맞추지 않으면
+        # KRW 가격들과 섞인다. (같은 날 trade_planner 가 이 값을 실제로 emit 하도록 수정)
         _PRICE_KEYS = {"price", "stop_price", "target_price", "low", "high",
-                       "min", "max", "entry_low", "entry_high"}
+                       "min", "max", "entry_low", "entry_high", "risk_per_share"}
         out = {}
         for k, v in obj.items():
             if isinstance(v, dict):
@@ -1113,14 +1116,23 @@ def execute_partial_sell(
     # 청산 수량 계산 (정수 round down)
     shares_to_sell = int(total_quantity * exit_pct / 100)
     if shares_to_sell <= 0:
-        # 너무 작아서 청산 불가 — 스킵 처리, exit_history 에 기록
-        holding.setdefault("exit_history", []).append({
-            "target_id": target_id,
-            "status": "skipped_too_small",
-            "total_quantity": total_quantity,
-            "exit_pct": exit_pct,
-            "at": now_kst().strftime("%Y-%m-%d %H:%M"),
-        })
+        # 너무 작아서 청산 불가 — 감사 기록만 남긴다.
+        # 🚨 2026-08-06 — 이 기록은 **차단이 아니다**. "지금 수량이 안 나눠진다"는 일시적
+        # 상태이지 "영원히 익절하지 않는다"가 아니다. 이전엔 check_partial_exit 가 이
+        # 항목을 executed 와 동급으로 취급해 해당 타깃을 영구 차단했고, 그래서 수량 1주인
+        # 보유는 이후 물타기로 수량이 늘어도 익절 평가가 되살아나지 않았다.
+        # 매 run 재기록으로 exit_history 가 무한 증식하지 않도록 1회만 남긴다.
+        _eh = holding.setdefault("exit_history", [])
+        if not any(x.get("target_id") == target_id and x.get("status") == "skipped_too_small"
+                   for x in _eh):
+            _eh.append({
+                "target_id": target_id,
+                "status": "skipped_too_small",
+                "total_quantity": total_quantity,
+                "exit_pct": exit_pct,
+                "at": now_kst().strftime("%Y-%m-%d %H:%M"),
+                "_note": "감사 기록 — 재평가를 막지 않는다(2026-08-06)",
+            })
         return {
             "target_id": target_id, "sold_qty": 0,
             "status": "skipped_too_small",
@@ -1243,11 +1255,13 @@ def check_partial_exit(
                       f"매수가 {buy_price:,.0f} vs target_1 {_t1:,.0f} (비율 {_ratio:,.0f}x). "
                       f"통화 혼재 의심 — 부분익절 평가 skip (fail-closed)")
             return []
+    # 🚨 2026-08-06 — 차단은 **실제 체결(executed)만**. 이전엔 skipped_too_small 도 같이
+    # 차단해, 수량이 안 나눠져 한 번 건너뛴 타깃이 영구히 죽었다. 실측: GOOGL(1주)은
+    # target_1·2 가 모두 skipped 로 기록돼 **앞으로 어떤 가격에도 익절하지 않는 상태**였다.
+    # "지금 못 나눔"은 일시적 상태다 — 수량이 늘거나 비중이 바뀌면 다시 평가돼야 한다.
+    # 재평가해도 여전히 작으면 sold_qty 0 으로 끝나므로 자금 이동은 없다(중복 기록은 위에서 차단).
     executed_target_ids = {
         h["target_id"] for h in holding.get("exit_history", []) if h.get("status") == "executed"
-    }
-    skipped_target_ids = {
-        h["target_id"] for h in holding.get("exit_history", []) if h.get("status") == "skipped_too_small"
     }
 
     results = []
@@ -1256,7 +1270,7 @@ def check_partial_exit(
         target = targets.get(target_id)
         if not target:
             continue
-        if target_id in executed_target_ids or target_id in skipped_target_ids:
+        if target_id in executed_target_ids:
             continue
         target_price = target.get("price")
         if target_price is None:
@@ -1557,6 +1571,18 @@ def run_vams_cycle(
 
     # 0. β FX 헷지 pending 진입 1회 소비 (cash→reserve, holdings 외 = auto-sell 제외)
     _consume_pending_fx_hedge(portfolio)
+
+    # 0.5. 🚨 통화 정규화 마이그레이션 (2026-08-06). 손절·익절 판정 **전에** 돌아야 한다.
+    # 8/5 에 넣은 _fx_norm 은 신규 매수에만 적용돼 기존 보유의 exit_targets 가 원통화(USD)로
+    # 남았고, 스케일 가드가 fail-closed 로 작동해 **미장 보유는 부분익절 평가가 통째로
+    # 건너뛰어졌다**(실측 3건). 멱등 — entry_currency 표식이 있으면 즉시 skip 한다.
+    try:
+        from api.vams.currency_migration import run as _ccy_migrate
+        _mig = _ccy_migrate(portfolio)
+        if _mig["converted"] or _mig["unresolved"]:
+            print(f"[currency_migration] {_mig['summary']}")
+    except Exception as _e:  # noqa: BLE001 — 마이그레이션 실패가 사이클을 죽이지 않는다
+        print(f"[currency_migration] skipped: {type(_e).__name__}: {_e}")
 
     # 1. 가격 업데이트
     update_holdings_price(portfolio, price_map)
