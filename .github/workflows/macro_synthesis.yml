@@ -5,8 +5,12 @@ name: Macro Synthesis (daily pre-market, operator-only)
 # 🚨 오퍼레이터 전용: macro_synthesis.json = 공개 발행 절대 금지. private bucket 업로드만,
 #   gitignore 로 공개 repo 커밋 차단. authed /api/admin?type=macro_synthesis 서빙.
 #
-# 7축 audit: env=3 LLM 키+SUPABASE(업로드) · push trigger 없음(공개 커밋 0) · concurrency 전용 group ·
-#   cron 일1(silent skip 저위험, tri 정합) · KIS 무관(RULE 1) · pip requirements · N=2=manual+다음 scheduled.
+# 2026-08-07 추가: 미국 수요 체인 관측(LLM 0, 가격·Finnhub only). 국장 개장 전 슬롯을 공유한다.
+#
+# 7축 audit: env=3 LLM 키+SUPABASE(업로드)+FINNHUB(수요체인 EPS 보강, 없으면 가격만) ·
+#   push trigger 없음(커밋 대상 = data/ 장부뿐 → vercel-api·operator-web 밖 = RULE 2 가드가 자동 skip) ·
+#   concurrency 전용 group · cron 일1(silent skip 저위험, tri 정합) · KIS 무관(RULE 1) ·
+#   pip requirements(yfinance 기존 등재) · N=2=manual+다음 scheduled.
 
 on:
   schedule:
@@ -61,23 +65,41 @@ jobs:
             python -m api.builders.macro_synthesis_builder
           fi
 
+      - name: Observe US demand chain (관측-only, LLM 무관)
+        # 국장 개장 전, 전일 미국 종가로 수요 체인(AI 반도체/소프트웨어/데이터센터/
+        # 2차전지/바이오) 을 관측한다. PM 사고 2026-08-05 — 코스피를 끌어올린 팔란티어·
+        # 캐터필러 실적과 앤트로픽-브로드컴 계약을 우리 시스템은 몰랐다. 유니버스 밖
+        # 미국 대형주가 관측 대상이 아니었기 때문. 소급 검증(8/4 미국 종가)에서
+        # AI 반도체 +6.19%(6/6) · AI 소프트웨어 +6.24% · PLTR z=8.46 포착 확인.
+        # 이 워크플로에 얹은 이유 = 이미 KST 07:50(미장 마감 후·국장 개장 전)에 도는
+        # 유일한 슬롯. 신규 cron 신설 회피 = RULE 8 부담 + GH 분 절약.
+        # LLM 호출 0 — 실패해도 위 거시 산출물에 영향 없도록 continue-on-error.
+        continue-on-error: true
+        env:
+          VERITY_MODE: prod
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}   # EPS 서프라이즈 보강용, 없으면 가격 관측만
+        run: python -m api.collectors.us_demand_chain
+
       - name: Upload to private bucket (macro_synthesis 만)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python scripts/upload_operator_data_to_supabase.py --only macro_synthesis
 
-      - name: Commit LLM cost ledger (RULE 4 — 산출물은 gitignore 로 봉인 유지)
+      - name: Commit ledgers (RULE 4 — 거시 산출물은 gitignore 로 봉인 유지)
         if: always()
         run: |
-          # 🚨 이 워크플로의 산출물(크라운주얼)은 .gitignore 로 커밋이 원천 차단되어 있다.
-          #   여기서 커밋하는 것은 **비용 장부뿐** — 가장 비싼 LLM 호출이 관측에서 빠지던
-          #   사각지대 해소(2026-08-06). 장부 미add 시 rebase 거부 사고도 함께 예방(RULE 4).
+          # 🚨 이 워크플로의 거시 산출물(크라운주얼)은 .gitignore 로 커밋이 원천 차단되어 있다.
+          #   여기서 커밋하는 것은 **장부뿐**:
+          #     · llm_cost.jsonl        가장 비싼 LLM 호출의 비용 관측(2026-08-06)
+          #     · us_demand_chain.*     미국 수요 체인 관측 원장 + 최신 스냅샷(2026-08-07).
+          #       스냅샷을 커밋해야 뒤에 도는 daily_analysis_full(KST 16:07)의 체크아웃이
+          #       읽어 리포트 프롬프트에 주입할 수 있다. 미add 시 rebase 거부 사고도 예방.
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/metadata/llm_cost.jsonl 2>/dev/null || true
+          git add data/metadata/llm_cost.jsonl data/observations/us_demand_chain.jsonl data/us_demand_chain.json 2>/dev/null || true
           git diff --staged --quiet && exit 0
-          git commit -m "💰 llm_cost 장부 — 거시 분석기"
+          git commit -m "💰 장부 — 거시 분석기 · 미국 수요 체인 관측"
           for i in 1 2 3 4 5 6; do
             git rebase --abort 2>/dev/null || true
             if git pull --rebase -X theirs origin main && git push origin main; then exit 0; fi
