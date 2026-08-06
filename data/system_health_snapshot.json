@@ -1,31 +1,31 @@
 {
   "system_health": {
-    "status": "error",
-    "checked_at": "2026-08-06T09:02:17+09:00",
+    "status": "ok",
+    "checked_at": "2026-08-06T07:36:47+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 17763,
+    "elapsed_ms": 15639,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 1010,
+        "latency_ms": 749,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
-        "status": "error",
-        "latency_ms": 16720,
-        "detail": "HTTPSConnectionPool(host='api.stlouisfed.org', port=443): Read timed out. (read timeout=8)",
-        "attempts": 2
+        "status": "ok",
+        "latency_ms": 205,
+        "detail": "정상",
+        "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 478,
+        "latency_ms": 548,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 508,
+        "latency_ms": 200,
         "detail": "정상",
         "attempts": 1
       },
@@ -37,49 +37,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 973,
+        "latency_ms": 526,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
-        "status": "error",
-        "latency_ms": 8492,
-        "detail": "네트워크 ConnectTimeout",
+        "status": "ok",
+        "latency_ms": 1028,
+        "detail": "정상",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1982,
+        "latency_ms": 1179,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 17146,
-        "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260805)",
+        "latency_ms": 15043,
+        "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260804)",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 651,
+        "latency_ms": 756,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 297,
+        "latency_ms": 604,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 144,
+        "latency_ms": 236,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 184,
+        "latency_ms": 67,
         "detail": "정상",
         "attempts": 1
       },
@@ -93,10 +93,10 @@
     "github_worker": {
       "status": "running",
       "conclusion": "in_progress",
-      "workflow": "Macro Collect",
-      "started_at": "2026-08-06T00:00:06Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/31058241326",
-      "detail": "Macro Collect: in_progress"
+      "workflow": "Daily Briefing (시장 브리핑 — 홈 카드 · 상시 갱신)",
+      "started_at": "2026-08-05T22:35:35Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/31053333408",
+      "detail": "Daily Briefing (시장 브리핑 — 홈 카드 · 상시 갱신): in_progress"
     },
     "data_recency": {
       "status": "ok",
@@ -104,65 +104,69 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-08-06 09:00",
+          "last_updated": "2026-08-06 07:34",
           "age_hours": 0.03,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-08-06 09:00",
+          "last_updated": "2026-08-06 07:34",
           "age_hours": 0.03,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-08-06 09:00",
+          "last_updated": "2026-08-06 07:34",
           "age_hours": 0.03,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-08-06 09:00",
+          "last_updated": "2026-08-06 07:34",
           "age_hours": 0.03,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-08-06 09:00",
+          "last_updated": "2026-08-06 07:34",
           "age_hours": 0.03,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-08-06 09:00",
+          "last_updated": "2026-08-06 07:34",
           "age_hours": 0.03,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-08-06 09:00",
-          "age_hours": 0.03,
+          "last_updated": "2026-08-06 07:36",
+          "age_hours": 0.01,
           "threshold_hours": 1
         }
       }
     },
     "version_sync": {
       "local_version": "v8.2.0",
-      "status": "update_available",
-      "remote_sha": "2733fdc",
-      "remote_message": "🪙 crypto_collect 2026-08-06T09:01",
-      "remote_date": "2026-08-06T00:01:57Z",
-      "local_sha": "2190e28",
-      "detail": "새로운 커밋이 원격에 존재합니다"
+      "status": "ok",
+      "remote_sha": "afa7196",
+      "remote_message": "📜 sec_8k cache 2026-08-06",
+      "remote_date": "2026-08-05T22:36:37Z",
+      "local_sha": "140c268",
+      "detail": "cron 자동 갱신 — 📜 sec_8k cache 2026-08-06"
     },
-    "errors": [
-      "FRED 매크로 API 오류 — HTTPSConnectionPool(host='api.stlouisfed.org', port=443): Read timed out. (read timeout=8)",
-      "관세청 무역 API 오류 — 네트워크 ConnectTimeout"
-    ],
+    "errors": [],
     "warnings": [],
-    "overall_status": "ok"
+    "overall_status": "ok",
+    "apis": {
+      "kis_openapi": {
+        "status": "ok",
+        "count": 19,
+        "total": 19
+      }
+    }
   },
-  "updated_at": "2026-08-06T09:02:28+09:00",
+  "updated_at": "2026-08-06T09:32:03+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
