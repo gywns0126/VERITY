@@ -128,6 +128,9 @@ def _detect_red_flags(
     """
     auto_avoid_d: list[Dict[str, Any]] = []
     downgrade_d: list[Dict[str, Any]] = []
+    # 결측으로 **판정을 못 한** 규칙 기록 (2026-08-06 PM 승인 안 (가)).
+    # 통과(무혐의)와 보류(모름)를 구분하기 위한 관측 필드 — 등급에 영향 0.
+    _gaps: list[Dict[str, Any]] = []
     is_us = stock.get("currency") == "USD"
 
     risk_kw = stock.get("detected_risk_keywords") or []
@@ -171,9 +174,15 @@ def _detect_red_flags(
         if avg_iv is not None and avg_iv > US_IV_PERCENTILE_WARN:
             downgrade_d.append(_make_flag(f"고변동성 경고: IV {avg_iv:.0f}%"))
 
+        # 미장 공매도 = short_interest.short_pct (숏인터레스트, 포지션 기준).
+        # KR 경로(kis_short_sale)와 측정 대상·임계·강도가 모두 다르다 — 시장 간 비교 금지.
+        # 2026-08-06 (PM 승인 안 (가)): 결측을 "깨끗함"으로 통과시키지 않고 기록한다.
         short = stock.get("short_interest") or {}
         short_pct = short.get("short_pct")
-        if short_pct is not None and short_pct > 20:
+        if short_pct is None:
+            _gaps.append({"rule": "short_interest_us", "field": "short_interest.short_pct",
+                          "market": "US", "effect": "판정 보류 — 규칙 미적용"})
+        elif short_pct > 20:
             downgrade_d.append(_make_flag(f"공매도 비율 {short_pct:.1f}%"))
     else:
         dart = stock.get("dart_financials", {})
@@ -209,9 +218,19 @@ def _detect_red_flags(
             downgrade_d.append(_make_flag("특수관계자 거래 고위험 (터널링 의심, Gemini 정성 high)"))
 
         # KIS 공매도 비율 경고
-        ks = stock.get("kis_short_sale", {})
-        short_r = ks.get("avg_short_ratio_5d", 0)
-        if short_r > 15:
+        # 🚨 2026-08-06 (PM 승인 안 (가), PREREG_SHORT_SALE_AUTO_AVOID_2026_08_06):
+        #   기존 `ks.get(..., 0)` 은 결측을 **0 = 무혐의**로 통과시켰다. 모르는 것을
+        #   깨끗함으로 위장하는 처리다(결측 ≠ 실패 ≠ 중립). 이제 결측이면 규칙을 건너뛰고
+        #   그 사실을 data_gaps 에 남긴다 — 실질 동작(통과)은 같지만 관측이 가능해진다.
+        #   임계(15/8)·강도(auto_avoid/downgrade)·측정 지표는 **무변경**(등록 §7-3).
+        #   주의: avg_short_ratio_5d = 공매도체결수량/총거래량 = 거래량 비중(흐름)이지
+        #   잔고(포지션)가 아니다. 지표 교체는 별도 재등록 대상(등록 §4-나).
+        ks = stock.get("kis_short_sale") or {}
+        short_r = ks.get("avg_short_ratio_5d")
+        if short_r is None:
+            _gaps.append({"rule": "short_sale_kr", "field": "kis_short_sale.avg_short_ratio_5d",
+                          "market": "KR", "effect": "판정 보류 — 규칙 미적용"})
+        elif short_r > 15:
             auto_avoid_d.append(_make_flag(f"공매도 비율 5일 평균 {short_r:.1f}% (과다)"))
         elif short_r > 8:
             downgrade_d.append(_make_flag(f"공매도 비율 주의 {short_r:.1f}%"))
@@ -367,4 +386,8 @@ def _detect_red_flags(
         "dedup_excluded": _dedup_excluded,
         "has_critical": has_critical,
         "downgrade_count": weighted_dc,
+        # 2026-08-06 — 결측으로 판정 보류된 규칙. 등급 영향 0(관측 전용).
+        # 빈 리스트 = 모든 규칙이 실제로 판정됐다는 뜻이지, 결측이 없다는 뜻이 아니다
+        # (현재 등재 규칙은 공매도 2종뿐 — 나머지 규칙의 결측 기록은 후속 확장 대상).
+        "data_gaps": _gaps,
     }
