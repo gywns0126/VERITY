@@ -906,20 +906,27 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             pass
 
     # ── Shiller CAPE 버블 ──
-    # constitution.json:577~581 의 cape_bubble_mode(CAPE>30 시 신규 매수 보수적·포지션 축소)을 실제 등급 cap으로 연결.
-    # max_grade=WATCH 로 panic_stages / cboe_panic 과 동일 패턴 (BUY/STRONG_BUY 종목이 WATCH 이하로 강제됨).
+    # 🚨 2026-08-06 — 등급 차단(max_grade) **제거**. PM 승인 안 (가)
+    # (PREREG_CAPE_BUBBLE_CAP_2026_08_06). 세 가지 이유:
+    #  ① 임계 30 이 자체 관측 범위(39.9~42.8) **밖**이라 조건부 규칙이 아니라 상수였다.
+    #     발행 스냅샷 87일 중 등급 cap 이 0개인 날 = 0일. BUY 등급이 구조적으로 영구 0.
+    #  ② 헌법 cape_bubble_mode.action 원문 = "신규 매수 보수적, 포지션 대폭 축소" = **사이징**.
+    #     등급 차단으로의 승격은 헌법에 없는 자체 결정이었고 등록 흔적도 없었다.
+    #  ③ _compute_macro_multiplier 의 cape_penalty 가 이미 사이징을 깎고 있어 이중 계상이었다.
+    # 헌법이 요구한 방어는 cape_penalty(상한 0.10 으로 상향) 단일 경로가 이행한다.
+    # 관측 표기는 남긴다(등급 영향 0, 표시 전용).
     cape = fred.get("cape", {}).get("value")
     if cape is not None:
         try:
             cape_val = float(cape)
             if cape_val > 30:
-                msg = f"Shiller CAPE {cape_val:.1f} > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+                msg = (f"Shiller CAPE {cape_val:.1f} > 30 — 역사적 고평가 구간"
+                       " (1929/2000/2007 전조). 사이징 배율로 반영(등급 무영향)")
                 _add({
-                    "mode": "cape_bubble",
-                    "label": "CAPE 버블",
+                    "mode": "cape_observation",
+                    "label": "CAPE 관측",
                     "message": msg,
                     "reason": msg,
-                    "max_grade": "WATCH",
                 })
         except (TypeError, ValueError):
             pass
@@ -1157,10 +1164,16 @@ def _compute_macro_multiplier(stock: Dict[str, Any],
         if usdkrw >= 1450:
             currency_penalty = max(0.0, min(0.075, (usdkrw - 1450) / 300 * 0.075))
 
+    # 2026-08-06 — 상한 0.075 → 0.10 (PM 승인 안 (가), PREREG_CAPE_BUBBLE_CAP_2026_08_06).
+    # 등급 차단(max_grade WATCH)이 하던 방어를 이 단일 경로가 흡수한다. 헌법
+    # cape_bubble_mode.action "포지션 대폭 축소" 원문과 구현이 이제 일치한다.
+    # 기울기는 유지 — 90 퍼센타일 시작, 백분위 1당 1.5%p. 상한만 이동해 96.7pct 에서 포화.
+    # 총 페널티 cap 0.30 은 불변이므로 다른 축이 밀리는 만큼만 실제로 반영된다.
+    _CAPE_MAX_PENALTY = 0.10
     cape_pct = _safe_float(horizon.get("cape_percentile"), 50.0) or 50.0
     cape_penalty = 0.0
     if cape_pct >= 90:
-        cape_penalty = max(0.0, min(0.075, (cape_pct - 90) / 10 * 0.15))
+        cape_penalty = max(0.0, min(_CAPE_MAX_PENALTY, (cape_pct - 90) / 10 * 0.15))
 
     # 2026-08-06 — 금리 압력을 등급 차단에서 **사이징**으로 이전 (PM 승인 안 (가)).
     # 5/23 에 macro/regime 배율을 "점수 → 사이징"으로 옮긴 결정의 미적용분 완성.

@@ -35,9 +35,16 @@ from api.intelligence.factors.moat import _compute_moat_score
 #   생산측 철자로 정정. vix_spread_panic·perplexity_critical·us_recession = 생산측 0곳(죽은 엔트리,
 #   무해하여 유지). 제네릭 "panic"(verity_brain:470) 미등재는 별도 스코프(게이트 vocabulary 확장,
 #   PM 결정 큐 — 오타 수정과 분리, 태스크 #12).
+# 🚨 2026-08-06 재발 — 같은 클래스의 결함이 두 번째다. 금리/CAPE 방패를 등급 차단에서
+#   사이징으로 옮기며 mode 를 yield_defense→yield_observation, cape_bubble→cape_observation
+#   으로 개명했는데 이 집합을 갱신하지 않으면 여기 엔트리가 그대로 죽는다(위 2026-08-02 사고와
+#   동일 기제). 실측: 방치 시 게이트 발동률 89.7% → 28.7% (61%p 조용한 붕괴).
+#   신·구 이름 **양쪽** 등재 — 과거 발행 portfolio.json 재독 시에도 매치가 유지된다.
 _PANIC_OVERRIDE_MODES = frozenset({
     "panic_stage1", "panic_stage2", "panic_stage3", "panic_stage4",
-    "vix_spread_panic", "cape_bubble", "yield_defense", "vi_cascade",
+    "vix_spread_panic", "vi_cascade",
+    "cape_observation", "yield_observation",    # 2026-08-06 개명 후 (현행)
+    "cape_bubble", "yield_defense",             # 개명 전 — 과거 데이터 호환
     "fund_flow_cash_flight", "perplexity_critical", "us_recession",
 })
 
@@ -50,8 +57,14 @@ def _is_regime_panic(portfolio: Optional[Dict[str, Any]],
     올려 거시 신호와 충돌하는 것 방지).
     """
     if macro_override:
-        mode = macro_override.get("mode") or ""
-        if mode in _PANIC_OVERRIDE_MODES:
+        # 2026-08-06 — primary 뿐 아니라 secondary_signals 도 스캔한다.
+        # primary 는 max_grade 심각도 tie-break 로 정해질 뿐이라, 위기 신호가 켜져 있어도
+        # 다른 규칙이 더 제한적이면 게이트가 놓쳤다. 국면 판정에 tie-break 순서는 무관하다.
+        # 실측(발행 스냅샷 87일): 기준선 89.7% → primary 만 스캔 시 35.6% (개명 후) → 전체 스캔 96.6%.
+        modes = {macro_override.get("mode") or ""}
+        modes |= {(s or {}).get("mode") or ""
+                  for s in (macro_override.get("secondary_signals") or [])}
+        if modes & _PANIC_OVERRIDE_MODES:
             return True
     if portfolio:
         try:
