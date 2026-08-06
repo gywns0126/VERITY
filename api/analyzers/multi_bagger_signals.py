@@ -253,9 +253,16 @@ def detect_industry_s_curve(
 
     출처: Everett Rogers, *Diffusion of Innovations* (1962). S-curve 채택 단계.
     """
-    # 산업 CAGR 데이터 미수집 (sector_trends 활용 후속)
+    # 🚨 미구현 스텁 — 29,271 관측(2026-06-09~08-06) 내내 0회 발동. 2026-08-06 사인 조사:
+    #   "sector_trends 보강 후 활성" 이라는 기존 복구 계획은 **전제가 틀렸다.**
+    #   portfolio.sector_trends 의 실체 = 1m/3m/6m **섹터 주가 등락률**(avg_change_pct,
+    #   top3/bottom3)이다. Rogers S-curve 는 산업 **매출** 2년 CAGR vs 직전 5년 CAGR 를
+    #   요구한다 — 6개월 주가 모멘텀으로는 5년 매출 CAGR 를 만들 수 없다.
+    #   즉 이 신호를 살리려면 산업 매출 시계열(5년+) 수집이 선행돼야 한다. 미보유.
+    #   ⚠️ 2026-09 active gate 전 결정 필요: 수집 착수 / 신호 폐기 / 게이트 연기.
     return {"triggered": False, "score": 50,
-            "reason": "산업 CAGR 데이터 미수집 (portfolio.sector_trends 보강 후 활성)"}
+            "reason": ("미구현 — 산업 매출 CAGR 시계열 미보유. sector_trends 는 섹터 "
+                       "주가 등락률이라 대체 불가(2026-08-06 사인 조사)")}
 
 
 def detect_hold_pnl_threshold(stock: Dict[str, Any]) -> Dict[str, Any]:
@@ -263,11 +270,17 @@ def detect_hold_pnl_threshold(stock: Dict[str, Any]) -> Dict[str, Any]:
 
     출처: Lynch *One Up* 1989 정성 원칙 ("꽃을 뽑지마"). 180d/+50% 임계 자체 설정.
     """
+    # 🚨 2026-08-06 사인 조사 — 29,271 관측 내내 0회. 임계 문제가 아니라 **소비자가 잘못됐다.**
+    #   Lynch 의 "꽃을 뽑지 마라"는 **이미 보유한 포지션**에 대한 규칙인데, 유일한 호출자
+    #   multibagger_watch 는 **유니버스 스캔(미보유 KR 소형주)** 에 이걸 돌린다.
+    #   hold_days 보유 레코드 = 0 / 29,271. 구조상 발동할 수 없다.
+    #   ⚠️ 2026-09 active gate 전 결정 필요: 보유 종목 쪽으로 소비자 이전 / 신호 폐기.
     days = stock.get("hold_days") or stock.get("days_held")
     pnl = _safe_float(stock.get("unrealized_pnl_pct") or stock.get("return_pct"))
     if days is None or pnl is None:
         return {"triggered": False, "score": 50,
-                "reason": "보유 일수 또는 미실현 손익률 미수집"}
+                "reason": ("적용 불가 — 보유 종목 규칙인데 미보유 유니버스에 평가됨"
+                           "(hold_days 부재, 2026-08-06 사인 조사)")}
     try:
         days = int(days)
     except (TypeError, ValueError):
