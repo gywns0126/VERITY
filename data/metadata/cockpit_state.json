@@ -1,21 +1,21 @@
 {
-  "collected_at": "2026-08-05T23:28:06.801728+00:00",
+  "collected_at": "2026-08-06T00:56:21.029558+00:00",
   "schema_version": 1,
   "severity": "GREEN",
   "severity_reasons": [],
-  "n_verification_days": 71,
+  "n_verification_days": 72,
   "n_milestones": {
     "to_50": 0,
-    "to_100": 29,
-    "to_252": 181,
-    "to_365": 294
+    "to_100": 28,
+    "to_252": 180,
+    "to_365": 293
   },
-  "n_trades": 91,
+  "n_trades": 22,
   "trade_milestones": {
-    "to_50": 0,
-    "to_100": 9,
-    "to_252": 161,
-    "to_365": 274
+    "to_50": 28,
+    "to_100": 78,
+    "to_252": 230,
+    "to_365": 343
   },
   "n_validation_samples": 29,
   "sample_milestones": {
@@ -24,7 +24,7 @@
     "to_252": 223,
     "to_365": 336
   },
-  "one_liner": "과열 (Euphoria) · 0 BUY / 42 WATCH / 19 CAUTION / 6 AVOID · VAMS 12% 현금 · 가설 N=71",
+  "one_liner": "과열 (Euphoria) · 0 BUY / 24 WATCH / 9 CAUTION / 3 AVOID · VAMS 20% 현금 · 가설 N=72",
   "ttd_recent_p50_minutes": null,
   "days_clean": {
     "kis": 0,
@@ -58,19 +58,19 @@
     }
   ],
   "alert_volume_24h": {
-    "sent": 23,
-    "dedupe_skip": 17,
+    "sent": 24,
+    "dedupe_skip": 18,
     "quiet_skip": 1,
     "fp_repeat_max": 10
   },
   "auto_action_blocked": [],
   "_inputs_snapshot": {
     "kis_lock_commits_24h": 1,
-    "fred_age_h": 0.35,
+    "fred_age_h": 0.39,
     "fred_24h_failure_rate": 0.0,
     "core_sources_ok": true,
-    "runtime_mode": "quick",
-    "ramp_up_stage": 0,
+    "runtime_mode": "full_us",
+    "ramp_up_stage": 5000,
     "brain_anomaly_24h": 0,
     "vams_days_since_reset": 80,
     "validation_sample": 29
