@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-06T23:32:37+09:00",
+  "collected_at": "2026-08-07T00:02:16+09:00",
   "macro": {
     "usd_krw": {
       "value": 1425.02,
@@ -1275,31 +1275,31 @@
         "curve": [
           {
             "tenor": "1Y",
-            "yield": 3.373
+            "yield": 3.38
           },
           {
             "tenor": "2Y",
-            "yield": 3.692
+            "yield": 3.728
           },
           {
             "tenor": "3Y",
-            "yield": 3.867
+            "yield": 3.913
           },
           {
             "tenor": "5Y",
-            "yield": 4.12
+            "yield": 4.172
           },
           {
             "tenor": "10Y",
-            "yield": 4.328
+            "yield": 4.394
           },
           {
             "tenor": "20Y",
-            "yield": 4.541
+            "yield": 4.617
           },
           {
             "tenor": "30Y",
-            "yield": 4.564
+            "yield": 4.635
           }
         ],
         "curve_shape": "normal"
@@ -1358,11 +1358,11 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-08-06T23:32:50+09:00",
+    "updated_at": "2026-08-07T00:03:16+09:00",
     "credit_spreads": {
-      "us_ig_oas": 0.97,
+      "us_ig_oas": 0.96,
       "us_ig_risk": "LOW",
-      "us_hy_oas": 2.73,
+      "us_hy_oas": 2.75,
       "us_hy_risk": "LOW"
     }
   },
@@ -1379,7 +1379,7 @@
       "impact": "미국 GDP 70%인 서비스업 체감경기. 제조업 PMI와 교차 확인",
       "action": "서비스 견조 시 소프트랜딩 시나리오 우호",
       "source": "ISM",
-      "d_day": -1
+      "d_day": -2
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1394,7 +1394,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 0
+      "d_day": -1
     },
     {
       "name": "미국 고용지표 (NFP)",
@@ -1410,7 +1410,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 50,
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "미국 기존주택판매",
@@ -1425,7 +1425,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 291,
-      "d_day": 5
+      "d_day": 4
     },
     {
       "name": "미국 CPI 발표",
@@ -1441,7 +1441,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 10,
-      "d_day": 6
+      "d_day": 5
     },
     {
       "name": "미국 PPI 발표",
@@ -1456,7 +1456,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 46,
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1471,7 +1471,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "옵션만기일 (한국)",
@@ -1485,7 +1485,7 @@
       "impact": "프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
       "action": "만기일 장중 단기 매매 자제",
       "source": "KRX",
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "Michigan 소비자심리 예비치",
@@ -1499,7 +1499,7 @@
       "impact": "미국 소비자 기대 인플레이션 포함. Fed도 주시하는 지표",
       "action": "소비재·리테일 섹터 감정 판단",
       "source": "UMich",
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "미국 소매판매",
@@ -1514,7 +1514,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 9,
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "미국 주택착공",
@@ -1529,7 +1529,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 27,
-      "d_day": 12
+      "d_day": 11
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1544,16 +1544,20 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 14
+      "d_day": 13
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 29.46
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 90.45
   },
   "schema_version": "v0"
 }
