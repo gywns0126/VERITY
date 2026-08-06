@@ -31,6 +31,16 @@ TRAIL_PATH = os.path.join(DATA_DIR, "metadata", "measurement_audit_trail.jsonl")
 # 검사 C — 가격 계열 필드 비율 임계. 통화 혼재(USD↔KRW)는 1,300배 근처라 10배면 충분히 잡힌다.
 SCALE_RATIO_MAX = 10.0
 
+# 검사 D — 발동률 판정 대역.
+# 🚨 90 인 이유(실측 근거): 최초 구현에서 95 로 뒀더니 `cape_bubble` 94.3% 가 **바로 아래로
+#   빠져나갔다**. 그 규칙은 임계 30 이 실측 범위(39.9~42.8) 밖이라 사실상 상수였고, 87일 내내
+#   BUY 등급을 막고 있던 장본인이다. 검사가 잡으라고 만든 결함을 검사가 놓친 것이다.
+#   90 = 10일 중 9일 발동 → 반대 국면 표본이 10%뿐이라 발동/미발동 비교가 성립하지 않는다.
+#   85~90 은 아직 판정하지 않고 watch 로 올려 눈에는 띄게 한다(조용한 통과 금지).
+_ALWAYS_ON_PCT = 90.0
+_NEVER_ON_PCT = 5.0
+_WATCH_PCT = 85.0
+
 # 검사 B — 채점 판단에 실제로 쓰이는 모듈만 (전 코드베이스가 아니라 채점 경로 한정)
 SCORING_MODULES = [
     "api/intelligence/factors/fact.py",
@@ -165,23 +175,158 @@ def audit_price_scale() -> Dict[str, Any]:
         return {"ok": None, "skipped": f"{type(e).__name__}: {e}"[:120]}
 
 
+def audit_rule_discrimination() -> Dict[str, Any]:
+    """검사 D — 규칙이 국면을 **가르고 있는지** 발동률로 검증 (2026-08-06 신설).
+
+    배경: 8/6 하루에 같은 부류 결함을 세 번 잡았는데 **셋 다 A~C 검사가 못 잡는 종류**였다.
+      · 금리 방패 임계 4.50% = 실측 분포 중앙값 4.48% → 분포 한가운데라 판별력 0(AUC→0.5)
+      · CAPE 임계 30 = 실측 범위 39.9~42.8 **밖** → 조건부 규칙이 아니라 상수. 87일 내내 발동
+      · 결과: 등급 cap 이 0개인 날 = 0/87. BUY 등급이 구조적으로 영구 0
+    셋 다 손으로 찾았고 방법이 매번 같았다 — **발동률을 히스토리로 재고 임계를 분포와 대조**.
+    그 방법을 코드로 옮긴다.
+
+    판정: 발동률 ≥95% 또는 ≤5% = 국면을 구분하지 못함 = 정보량 0.
+      상시 발동은 "항상 방어 중"처럼 보이지만 실제로는 **규칙이 없는 것과 같다** —
+      켜지고 꺼지지 않으면 그 규칙이 옳은지 검증할 표본 자체가 생기지 않는다.
+
+    🚨 판정만 한다. 임계를 고치지 않는다(RULE 7 — 조정은 사전등록 대상).
+    """
+    try:
+        import glob as _glob
+        files = sorted(_glob.glob(os.path.join(DATA_DIR, "history", "20??-??-??.json")))
+        if len(files) < 30:
+            return {"ok": None, "skipped": f"히스토리 {len(files)}일 < 30 — 발동률 판정 보류"}
+
+        fired: Dict[str, int] = {}
+        capped: Dict[str, int] = {}
+        no_cap_days = 0
+        n = 0
+        for p in files:
+            snap = _load(p, None)
+            if not isinstance(snap, dict):
+                continue
+            ov = (snap.get("verity_brain") or {}).get("macro_override")
+            if isinstance(ov, list):
+                ov = ov[0] if ov else None
+            if not isinstance(ov, dict):
+                continue
+            n += 1
+            sigs = [{"mode": ov.get("mode"), "max_grade": ov.get("max_grade")}]
+            sigs += [s for s in (ov.get("secondary_signals") or []) if isinstance(s, dict)]
+            day_caps = 0
+            for s in sigs:
+                m = s.get("mode")
+                if not m:
+                    continue
+                fired[m] = fired.get(m, 0) + 1
+                if s.get("max_grade") in ("WATCH", "CAUTION", "AVOID"):
+                    capped[m] = capped.get(m, 0) + 1
+                    day_caps += 1
+            if day_caps == 0:
+                no_cap_days += 1
+        if not n:
+            return {"ok": None, "skipped": "스냅샷에 macro_override 없음"}
+
+        degenerate: List[Dict[str, Any]] = []
+        watch: List[Dict[str, Any]] = []
+        for m, c in sorted(fired.items(), key=lambda kv: -kv[1]):
+            rate = round(c / n * 100, 1)
+            if not capped.get(m):
+                continue                      # 등급에 영향 없는 관측 규칙은 대상 아님
+            if rate >= _ALWAYS_ON_PCT or rate <= _NEVER_ON_PCT:
+                degenerate.append({
+                    "rule": m, "fired_days": c, "activation_pct": rate,
+                    "verdict": ("상시 발동 — 국면 구분 불가(정보량 0)" if rate >= _ALWAYS_ON_PCT
+                                else "거의 미발동 — 표본 부족으로 검증 불가"),
+                })
+            elif rate >= _WATCH_PCT:
+                watch.append({"rule": m, "fired_days": c, "activation_pct": rate,
+                              "verdict": "경계 — 반대 국면 표본이 얇다"})
+
+        return {
+            "ok": not degenerate and no_cap_days > 0,
+            "snapshots": n,
+            "cap_rules_checked": len(capped),
+            "degenerate_rules": degenerate,
+            "watch_rules": watch,
+            "bands": {"always_on_pct": _ALWAYS_ON_PCT, "never_on_pct": _NEVER_ON_PCT,
+                      "watch_pct": _WATCH_PCT},
+            "days_without_any_cap": no_cap_days,
+            "days_without_any_cap_pct": round(no_cap_days / n * 100, 1),
+            "detail": (
+                (f"상시/미발동 등급 규칙 {len(degenerate)}종 — " +
+                 ", ".join(f"{d['rule']}({d['activation_pct']}%)" for d in degenerate) + ". ")
+                if degenerate else "") +
+            (f"🚨 등급 cap 이 0개인 날 = 0/{n}일 — 최상위 등급이 구조적으로 불가능하다"
+             if no_cap_days == 0 else f"cap 없는 날 {no_cap_days}/{n}일"),
+            "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
+        }
+    except Exception as e:  # noqa: BLE001
+        return {"ok": None, "skipped": f"{type(e).__name__}: {e}"[:120]}
+
+
+# ── 알려진 미해결 항목 baseline ──────────────────────────────────────
+# 🚨 2026-08-06 — 매일 FAIL 이면 아무도 읽지 않는다. 실제로 그렇게 됐다: price_scale 이
+#   통화 혼재 3건을 매일 신고하고 있었는데 8/6 까지 아무도 보지 않았다(영구 FAIL 에 묻힘).
+#   경보가 의미를 가지려면 **FAIL = 새로 생겼다** 여야 한다. 알려진 미해결분은 여기에
+#   고정하고 status 를 KNOWN 으로 내린다. 값이 커지면 즉시 FAIL 로 복귀한다.
+#   해소 시 이 baseline 을 낮추는 것이 완료 조건이다(태스크 #19/#20).
+_KNOWN_BASELINE = {
+    "ledger_integrity": {"phantom_sells": 58},      # 8/5 확인 과거분. 초과 = 재발
+    "key_coverage": {"dead_keys": 10},              # 태스크 #20
+    "price_scale": {"scale_mismatches": 3},         # 태스크 #19 — 미장 보유 통화 소급 미완
+}
+
+
+def _exceeds_baseline(name: str, chk: Dict[str, Any]) -> Optional[bool]:
+    """알려진 baseline 초과 여부. True=신규 발생, False=알려진 범위, None=판정 불가."""
+    base = _KNOWN_BASELINE.get(name)
+    if not base or chk.get("ok") is not False:
+        return None
+    for field, limit in base.items():
+        v = chk.get(field)
+        if isinstance(v, list):
+            v = len(v)
+        if not isinstance(v, (int, float)):
+            return None
+        if v > limit:
+            return True
+    return False
+
+
 def run(root: str = ".") -> Dict[str, Any]:
     checks = {
         "ledger_integrity": audit_ledger(),
         "key_coverage": audit_key_coverage(root),
         "price_scale": audit_price_scale(),
+        "rule_discrimination": audit_rule_discrimination(),
     }
-    fails = [k for k, v in checks.items() if v.get("ok") is False]
+    # baseline 대조 — 알려진 미해결분은 KNOWN, 초과분만 FAIL
+    known: List[str] = []
+    for k, v in checks.items():
+        ex = _exceeds_baseline(k, v)
+        if ex is False:
+            v["baseline"] = _KNOWN_BASELINE.get(k)
+            v["status"] = "KNOWN"
+            known.append(k)
+        elif ex is True:
+            v["status"] = "REGRESSION"
+
+    fails = [k for k, v in checks.items() if v.get("ok") is False and k not in known]
     skips = [k for k, v in checks.items() if v.get("ok") is None]
     out = {
         "as_of": now_kst().isoformat(timespec="seconds"),
-        "version": "measurement_audit_v0",
-        "status": "FAIL" if fails else ("PARTIAL" if skips else "OK"),
+        "version": "measurement_audit_v1",
+        "status": ("FAIL" if fails else
+                   ("KNOWN" if known else ("PARTIAL" if skips else "OK"))),
         "failing": fails,
+        "known_unresolved": known,
         "skipped": skips,
         "checks": checks,
-        "note": ("측정 오염 자동 검출 — 2026-08-05 감사에서 확정 결함을 실제로 잡아낸 "
-                 "세 대조를 상시화. 점수 입력 0(관측 전용)."),
+        "note": ("측정 오염 자동 검출 — 8/5 감사가 잡아낸 3대조 + 8/6 신설 규칙 판별력 검사. "
+                 "점수 입력 0(관측 전용). status FAIL = **알려진 baseline 초과 = 신규 발생**. "
+                 "KNOWN = 미해결분이 알려진 범위 안(태스크 #19/#20). 매일 FAIL 이면 아무도 "
+                 "읽지 않는다는 8/6 학습 반영."),
     }
     tmp = OUT_PATH + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -193,5 +338,9 @@ def run(root: str = ".") -> Dict[str, Any]:
                             "phantom_sells": checks["ledger_integrity"].get("phantom_sells"),
                             "dead_keys": len(checks["key_coverage"].get("dead_keys") or []),
                             "scale_mismatches": len(checks["price_scale"].get("scale_mismatches") or []),
+                            "degenerate_rules": len(
+                                checks["rule_discrimination"].get("degenerate_rules") or []),
+                            "days_without_cap_pct":
+                                checks["rule_discrimination"].get("days_without_any_cap_pct"),
                             }, ensure_ascii=False) + "\n")
     return out

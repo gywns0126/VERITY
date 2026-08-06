@@ -580,7 +580,19 @@ jobs:
         # 🚨 점수 입력 0 (관측·신고 전용). 산출 data/measurement_audit.json + trail jsonl,
         # 다음 step git add data/ (broad) 자동 포함 = RULE 4. graceful exit 0.
         continue-on-error: true
-        run: python -c "from api.observability.measurement_audit import run; import json; r=run('.'); print('[measurement_audit]', r['status'], '· 실패:', r['failing'])"
+        run: python -c "from api.observability.measurement_audit import run; r=run('.'); print('[measurement_audit]', r['status'], '· 신규:', r['failing'], '· KNOWN:', r['known_unresolved'])"
+
+      - name: 측정 감사 신규 검출 telegram push
+        # 🚨 2026-08-06 — 경보가 로그에만 찍히면 아무도 읽지 않는다. 실제로 통화 혼재 3건이
+        # 매일 신고되고 있었는데 8/6 PM 질문("자동 크론 만들었잖아? 아직도 3%야?")으로
+        # 파다가 발견했다. status FAIL(=baseline 초과=신규)일 때만 발송, KNOWN/OK 는 침묵.
+        # **알림 0건이 정상 baseline** — 1건이라도 오면 그날 새로 생긴 것이다.
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_QUIET_HOURS_ENABLED: ${{ vars.TELEGRAM_QUIET_HOURS_ENABLED || '1' }}
+        run: python scripts/push_measurement_audit_telegram.py
 
       - name: B3 F-Score/Accrual shadow IC trail (관측 전용, brain-input 0)
         # 2026-08-05 — PREREG_FSCORE_ACCRUAL_B3_2026_07_12 (PM 승인 7/12 "굿임 고고") 집행.
