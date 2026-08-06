@@ -562,6 +562,17 @@ jobs:
         continue-on-error: true
         run: python -c "from api.observability.excursion_trail import build; s=build(); print('[excursion]', 'N=' + str(s['n_episodes']), 'MFE', s['mfe']['mean'], 'MAE', s['mae']['mean'], '·', ' / '.join(s['labels']))"
 
+      - name: 공매도 규칙 사후 수익률 관측 (관측 전용, 점수 입력 0)
+        # 2026-08-06 — PREREG_SHORT_SALE_AUTO_AVOID_2026_08_06 (PM 승인 안 (가)) 집행.
+        # 공매도 auto_avoid 는 등급 산식 최강 조치(즉시 AVOID)인데 걸러낸 종목의 사후
+        # 수익률을 기록하지 않아 규칙이 옳은지 판정할 데이터가 0 이었다. 임계·강도를
+        # 논하기 전에 관측이 먼저다. 임계·측정 지표는 무변경 — 여기서 판정하지 않는다.
+        # 🚨 결측을 clean 과 분리 집계 · KR(흐름)·US(포지션) 합산 금지 · 종목 단위 N.
+        # 산출 data/short_sale_trail.jsonl + short_sale_summary.json — 다음 step
+        # git add data/ (broad) 자동 포함 = RULE 4. graceful exit 0. 수익률은 KR 전용.
+        continue-on-error: true
+        run: python -c "from api.observability.short_sale_trail import build; s=build(); k=s['KR']['auto_avoid']['fwd_20d']; print('[short_sale]', 'obs=' + str(s['n_observations']), 'auto_avoid 종목N=' + str(k['n_tickers']), '20d', k['mean'], '·', ' / '.join(s['labels']))"
+
       - name: 측정 오염 자동 검출 (원장 정합·키 커버리지·단위 스케일)
         # 2026-08-05 — 8/4~5 감사에서 확정 결함을 실제로 잡아낸 세 대조를 상시화.
         # 사람이 478 모듈을 훑는 방식은 끝나지 않는다(그날 커버리지 3%). 검출력 실증:
