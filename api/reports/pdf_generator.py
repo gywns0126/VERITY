@@ -966,7 +966,10 @@ def generate_daily_pdf(portfolio: Dict[str, Any]) -> str:
 
     if macro_ov.get("mode"):
         mode = str(macro_ov["mode"]).lower()
-        c = pdf.RED if mode == "panic" else pdf.BLUE if mode == "yield_defense" else pdf.YELLOW
+        # 2026-08-06 개명 반영 — yield_defense→yield_observation, cape_bubble→cape_observation.
+        # 관측 전용(등급 무영향)은 경고색 대신 정보색(BLUE)으로 표기한다. 구 이름도 유지(과거 리포트).
+        _info = ("yield_defense", "yield_observation", "cape_observation")
+        c = pdf.RED if mode == "panic" else pdf.BLUE if mode in _info else pdf.YELLOW
         y_box = pdf.get_y()
         box_h = 16.0
         pdf.set_fill_color(c[0] // 4, c[1] // 4, c[2] // 4)
