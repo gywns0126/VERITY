@@ -1,5 +1,5 @@
 {
-  "ts_kst": "2026-08-07T00:09:14.777342+09:00",
+  "ts_kst": "2026-08-07T00:21:14.428896+09:00",
   "shadow": true,
   "brain_input": false,
   "caveat": "관측-only 가설. 점수 미반영(brain_input=false). 체인-국장 연결은 '같은 수요 체인' 사실 병기까지이며 인과 단정 아님. 임계(7%/3x/2.5%)=이론 고정, 사전등록 없이 조정 금지.",
@@ -11,13 +11,13 @@
   "coverage": {
     "requested": 22,
     "fetched": 22,
-    "with_surprise": 0
+    "with_surprise": 22
   },
   "chains": {
     "ai_semi": {
       "label": "AI 반도체",
       "thesis": "AI 가속기·HBM 수요. 국장 반도체 대형주의 전방 수요",
-      "avg_change_pct": 1.41,
+      "avg_change_pct": 1.33,
       "breadth": "5/6",
       "coverage": 6,
       "signal": "중립",
@@ -38,53 +38,65 @@
       "members": [
         {
           "ticker": "AMD",
-          "change_pct": 2.33,
-          "z": 0.46,
-          "vol_ratio": 0.36,
-          "close": 493.28
-        },
-        {
-          "ticker": "TSM",
-          "change_pct": 2.02,
-          "z": 0.63,
-          "vol_ratio": 0.25,
-          "close": 422.36
+          "change_pct": 2.13,
+          "z": 0.42,
+          "vol_ratio": 0.38,
+          "close": 492.32,
+          "eps_surprise_pct": 1.78,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "MU",
-          "change_pct": 1.77,
-          "z": 0.25,
-          "vol_ratio": 0.41,
-          "close": 908.97
+          "change_pct": 1.99,
+          "z": 0.28,
+          "vol_ratio": 0.43,
+          "close": 910.99,
+          "eps_surprise_pct": 17.33,
+          "eps_period": "2026-06-30"
+        },
+        {
+          "ticker": "TSM",
+          "change_pct": 1.99,
+          "z": 0.62,
+          "vol_ratio": 0.27,
+          "close": 422.26,
+          "eps_surprise_pct": 10.92,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "AVGO",
-          "change_pct": 1.43,
-          "z": 0.41,
-          "vol_ratio": 0.21,
-          "close": 424.27
+          "change_pct": 1.33,
+          "z": 0.39,
+          "vol_ratio": 0.23,
+          "close": 423.86,
+          "eps_surprise_pct": -0.24,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "SMCI",
-          "change_pct": 1.4,
-          "z": 0.19,
-          "vol_ratio": 0.24,
-          "close": 30.75
+          "change_pct": 1.06,
+          "z": 0.14,
+          "vol_ratio": 0.26,
+          "close": 30.64,
+          "eps_surprise_pct": 32.3,
+          "eps_period": "2026-03-31"
         },
         {
           "ticker": "NVDA",
           "change_pct": -0.52,
           "z": -0.2,
-          "vol_ratio": 0.36,
-          "close": 218.09
+          "vol_ratio": 0.38,
+          "close": 218.08,
+          "eps_surprise_pct": 4.34,
+          "eps_period": "2026-06-30"
         }
       ]
     },
     "ai_software": {
       "label": "AI 소프트웨어",
       "thesis": "AI 실수요(도입·매출화) 확인. 반도체 수요의 지속성 근거",
-      "avg_change_pct": -0.02,
-      "breadth": "3/6",
+      "avg_change_pct": -0.51,
+      "breadth": "2/6",
       "coverage": 6,
       "signal": "중립",
       "kr_link": [
@@ -103,54 +115,66 @@
       ],
       "members": [
         {
-          "ticker": "MSFT",
-          "change_pct": 2.24,
-          "z": 0.75,
-          "vol_ratio": 0.28,
-          "close": 498.36
-        },
-        {
           "ticker": "NOW",
-          "change_pct": -1.69,
-          "z": -0.37,
-          "vol_ratio": 0.21,
-          "close": 115.24
+          "change_pct": -2.06,
+          "z": -0.45,
+          "vol_ratio": 0.23,
+          "close": 114.8,
+          "eps_surprise_pct": 4.35,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "PLTR",
-          "change_pct": -0.78,
-          "z": -0.15,
-          "vol_ratio": 0.41,
-          "close": 157.2
+          "change_pct": -1.59,
+          "z": -0.31,
+          "vol_ratio": 0.43,
+          "close": 155.91,
+          "eps_surprise_pct": 15.69,
+          "eps_period": "2026-06-30"
+        },
+        {
+          "ticker": "MSFT",
+          "change_pct": 1.55,
+          "z": 0.52,
+          "vol_ratio": 0.29,
+          "close": 495.03,
+          "eps_surprise_pct": 9.53,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "GOOGL",
-          "change_pct": -0.69,
-          "z": -0.28,
-          "vol_ratio": 0.25,
-          "close": 359.95
+          "change_pct": -0.82,
+          "z": -0.34,
+          "vol_ratio": 0.27,
+          "close": 359.44,
+          "eps_surprise_pct": -4.36,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "ORCL",
-          "change_pct": 0.43,
-          "z": 0.1,
-          "vol_ratio": 0.21,
-          "close": 145.01
+          "change_pct": -0.26,
+          "z": -0.06,
+          "vol_ratio": 0.23,
+          "close": 144.01,
+          "eps_surprise_pct": 1.41,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "META",
-          "change_pct": 0.39,
-          "z": 0.13,
-          "vol_ratio": 0.23,
-          "close": 591.07
+          "change_pct": 0.1,
+          "z": 0.03,
+          "vol_ratio": 0.24,
+          "close": 589.34,
+          "eps_surprise_pct": -16.03,
+          "eps_period": "2026-06-30"
         }
       ]
     },
     "datacenter_infra": {
       "label": "데이터센터 인프라",
       "thesis": "AI 의 물리 병목 = 전력·냉각·건설. 국장 전력기기 수출과 직결",
-      "avg_change_pct": 0.6,
-      "breadth": "2/4",
+      "avg_change_pct": 0.71,
+      "breadth": "3/4",
       "coverage": 4,
       "signal": "중립",
       "kr_link": [
@@ -169,39 +193,47 @@
       ],
       "members": [
         {
-          "ticker": "ETN",
-          "change_pct": 1.35,
-          "z": 0.41,
-          "vol_ratio": 0.21,
-          "close": 453.32
+          "ticker": "VRT",
+          "change_pct": 1.6,
+          "z": 0.33,
+          "vol_ratio": 0.25,
+          "close": 282.39,
+          "eps_surprise_pct": 5.7,
+          "eps_period": "2026-06-30"
         },
         {
-          "ticker": "VRT",
-          "change_pct": 1.18,
-          "z": 0.24,
-          "vol_ratio": 0.23,
-          "close": 281.23
+          "ticker": "ETN",
+          "change_pct": 1.21,
+          "z": 0.37,
+          "vol_ratio": 0.22,
+          "close": 452.67,
+          "eps_surprise_pct": 1.56,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "CAT",
-          "change_pct": -0.08,
-          "z": -0.03,
-          "vol_ratio": 0.3,
-          "close": 870.42
+          "change_pct": 0.11,
+          "z": 0.04,
+          "vol_ratio": 0.31,
+          "close": 872.08,
+          "eps_surprise_pct": 30.52,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "PWR",
-          "change_pct": -0.07,
+          "change_pct": -0.08,
           "z": -0.02,
-          "vol_ratio": 0.16,
-          "close": 682.51
+          "vol_ratio": 0.18,
+          "close": 682.41,
+          "eps_surprise_pct": 27.22,
+          "eps_period": "2026-06-30"
         }
       ]
     },
     "ev_battery": {
       "label": "전기차·2차전지",
       "thesis": "셀·소재 수요. 국장 배터리 3사 가동률 선행",
-      "avg_change_pct": 3.38,
+      "avg_change_pct": 3.27,
       "breadth": "3/3",
       "coverage": 3,
       "signal": "확장",
@@ -222,31 +254,37 @@
       "members": [
         {
           "ticker": "ALB",
-          "change_pct": 8.45,
-          "z": 2.99,
-          "vol_ratio": 0.66,
-          "close": 128.88
+          "change_pct": 8.25,
+          "z": 2.92,
+          "vol_ratio": 0.71,
+          "close": 128.65,
+          "eps_surprise_pct": 14.68,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "RIVN",
-          "change_pct": 1.45,
-          "z": 0.29,
-          "vol_ratio": 0.13,
-          "close": 15.78
+          "change_pct": 1.54,
+          "z": 0.31,
+          "vol_ratio": 0.15,
+          "close": 15.8,
+          "eps_surprise_pct": 28.46,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "TSLA",
-          "change_pct": 0.24,
-          "z": 0.07,
-          "vol_ratio": 0.25,
-          "close": 322.33
+          "change_pct": 0.02,
+          "z": 0.01,
+          "vol_ratio": 0.27,
+          "close": 321.62,
+          "eps_surprise_pct": -36.43,
+          "eps_period": "2026-06-30"
         }
       ]
     },
     "biotech": {
       "label": "바이오",
       "thesis": "글로벌 신약 수요·CDMO 물량. 국장 CDMO 수주 선행",
-      "avg_change_pct": 0.74,
+      "avg_change_pct": 0.69,
       "breadth": "2/3",
       "coverage": 3,
       "signal": "중립",
@@ -263,24 +301,30 @@
       "members": [
         {
           "ticker": "NVO",
-          "change_pct": 1.43,
-          "z": 0.59,
-          "vol_ratio": 0.39,
-          "close": 45.17
+          "change_pct": 1.22,
+          "z": 0.51,
+          "vol_ratio": 0.47,
+          "close": 45.08,
+          "eps_surprise_pct": 23.06,
+          "eps_period": "2026-03-31"
         },
         {
           "ticker": "LLY",
-          "change_pct": 1.07,
-          "z": 0.5,
-          "vol_ratio": 0.42,
-          "close": 1182.42
+          "change_pct": 1.15,
+          "z": 0.54,
+          "vol_ratio": 0.45,
+          "close": 1183.27,
+          "eps_surprise_pct": 38.14,
+          "eps_period": "2026-06-30"
         },
         {
           "ticker": "VRTX",
-          "change_pct": -0.29,
+          "change_pct": -0.3,
           "z": -0.17,
-          "vol_ratio": 0.12,
-          "close": 483.42
+          "vol_ratio": 0.14,
+          "close": 483.36,
+          "eps_surprise_pct": -1.95,
+          "eps_period": "2026-06-30"
         }
       ]
     }
@@ -290,11 +334,11 @@
       "ticker": "ALB",
       "chain": "ev_battery",
       "chain_label": "전기차·2차전지",
-      "change_pct": 8.45,
-      "z": 2.99,
-      "vol_ratio": 0.66,
+      "change_pct": 8.25,
+      "z": 2.92,
+      "vol_ratio": 0.71,
       "trigger": "move",
-      "eps_surprise_pct": null,
+      "eps_surprise_pct": 14.68,
       "kr_link": [
         "LG에너지솔루션",
         "삼성SDI",
