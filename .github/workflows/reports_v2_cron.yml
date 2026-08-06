@@ -167,18 +167,21 @@ jobs:
           git diff --staged --quiet || git commit -m "📑 리포트 v2 자동 생성 ${DATE} (${MODES})"
           BRANCH="${{ github.ref_name }}"
           PUSHED=false
-          for i in 1 2 3 4 5; do
+          # 재시도 8회 + 지터 (2026-08-06 실패 fix) — main 에 push 하는 워크플로가 56개,
+          # 봇 커밋 하루 292개. 고정 간격 재시도는 여러 워크플로가 같은 리듬으로 재충돌한다.
+          for i in 1 2 3 4 5 6 7 8; do
             git rebase --abort 2>/dev/null || true
             git merge --abort 2>/dev/null || true
             if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
               PUSHED=true
               break
             fi
-            echo "Push attempt $i failed, retrying in $((i * 10))s..."
-            sleep $((i * 10))
+            WAIT=$(( i * 7 + RANDOM % 15 ))
+            echo "Push attempt $i failed, retrying in ${WAIT}s (jittered)..."
+            sleep "$WAIT"
           done
           if [ "$PUSHED" != "true" ]; then
-            echo "::error::All 5 push attempts failed"
+            echo "::error::All 8 push attempts failed (main 경합) — 다음 스케줄에서 재시도"
             exit 1
           fi
 
