@@ -174,3 +174,86 @@ def test_audit_never_feeds_scores():
     import inspect
     src = inspect.getsource(MA)
     assert "brain_score" not in src and "recommendation =" not in src
+
+
+# ── 검사 E — red_flag 규칙 커버리지 ──────────────────────────────────
+
+def _rf_snap(tmp_path, day, per_stock_flags):
+    """per_stock_flags = [[flag_text, ...], ...] — 종목별 발동 플래그."""
+    d = tmp_path / "history"
+    d.mkdir(exist_ok=True)
+    recs = [{"ticker": f"00000{i}",
+             "verity_brain": {"red_flags": {"auto_avoid": fl, "downgrade": []}}}
+            for i, fl in enumerate(per_stock_flags)]
+    (d / f"{day}.json").write_text(json.dumps({"recommendations": recs}), encoding="utf-8")
+
+
+def _rf_days(tmp_path, n, flags):
+    for i in range(n):
+        _rf_snap(tmp_path, f"2026-05-{i + 1:02d}", flags)
+
+
+def _rf_code(tmp_path, literals):
+    """가짜 red_flags.py 를 만들어 규칙 정의를 통제한다."""
+    p = tmp_path / "api" / "intelligence" / "factors"
+    p.mkdir(parents=True, exist_ok=True)
+    body = "\n".join(f'    _make_flag(f"{lit}")' for lit in literals)
+    (p / "red_flags.py").write_text(f"def f():\n{body}\n", encoding="utf-8")
+
+
+def test_flag_prefix_extraction(tmp_path):
+    _rf_code(tmp_path, ["공매도 비율 5일 평균 {x}% (과다)", "부채비율 {d}%"])
+    pre = MA._flag_rule_prefixes(str(tmp_path))
+    assert "공매도 비율 5일 평균" in pre and "부채비율" in pre
+
+
+def test_never_fired_rule_detected(monkeypatch, tmp_path):
+    """🚨 코드에 있는데 107일 0건 = 확인 대상."""
+    _wire(monkeypatch, tmp_path)
+    _rf_code(tmp_path, ["살아있는 규칙 {x}", "죽은 규칙 {y}"])
+    _rf_days(tmp_path, 40, [["살아있는 규칙 12"]])
+    r = MA.audit_flag_coverage(str(tmp_path))
+    assert [x["rule"] for x in r["never_fired"]] == ["죽은 규칙"]
+    assert r["rules_fired"] == 1 and r["ok"] is False
+
+
+def test_longest_prefix_wins(monkeypatch, tmp_path):
+    """짧은 접두어가 긴 규칙을 삼키면 안 된다 — 공매도 비율 vs 공매도 비율 5일 평균."""
+    _wire(monkeypatch, tmp_path)
+    _rf_code(tmp_path, ["공매도 비율 {a}%", "공매도 비율 5일 평균 {b}% (과다)"])
+    _rf_days(tmp_path, 40, [["공매도 비율 5일 평균 20.0% (과다)"]])
+    r = MA.audit_flag_coverage(str(tmp_path))
+    never = {x["rule"] for x in r["never_fired"]}
+    assert never == {"공매도 비율"}          # 긴 쪽이 발동으로 귀속
+
+
+def test_all_rules_firing_passes(monkeypatch, tmp_path):
+    # 접두어는 4자 이상이어야 규칙으로 잡힌다(짧은 조각의 오탐 방지)
+    _wire(monkeypatch, tmp_path)
+    _rf_code(tmp_path, ["부채비율 경고 {x}", "마진 취약 {y}"])
+    _rf_days(tmp_path, 40, [["부채비율 경고 1"], ["마진 취약 2"]])
+    r = MA.audit_flag_coverage(str(tmp_path))
+    assert r["ok"] is True and not r["never_fired"]
+
+
+def test_flag_coverage_skips_on_thin_history(monkeypatch, tmp_path):
+    _wire(monkeypatch, tmp_path)
+    _rf_code(tmp_path, ["부채비율 경고 {x}"])
+    _rf_days(tmp_path, 5, [["부채비율 경고 1"]])
+    assert MA.audit_flag_coverage(str(tmp_path))["ok"] is None
+
+
+def test_flag_coverage_wording_is_not_a_verdict(monkeypatch, tmp_path):
+    """미발동 ≠ 고장. 희소 사건일 수 있으므로 단정하지 않는다(RULE 10 정합)."""
+    _wire(monkeypatch, tmp_path)
+    _rf_code(tmp_path, ["살아있는 {x}", "희소 사건 {y}"])
+    _rf_days(tmp_path, 40, [["살아있는 1"]])
+    r = MA.audit_flag_coverage(str(tmp_path))
+    assert "확인" in r["detail"] and "미발동 ≠ 고장" in r["detail"]
+
+
+def test_short_literals_are_not_rules(tmp_path):
+    """4자 미만 접두어는 규칙으로 세지 않는다 — 조각 매칭으로 오탐이 난다."""
+    _rf_code(tmp_path, ["ab {x}", "충분히 긴 규칙 {y}"])
+    pre = MA._flag_rule_prefixes(str(tmp_path))
+    assert "충분히 긴 규칙" in pre and "ab" not in pre
