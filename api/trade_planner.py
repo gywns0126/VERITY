@@ -139,6 +139,11 @@ def build_trade_plan_v0(stock: dict, judgment: dict) -> dict:
         if risk_per_share <= 0:
             # 비정상 — fallback: 진입가 +10%
             risk_per_share = price * 0.05
+        # 🚨 2026-08-06 — stop_loss dict 에 실어 보낸다. 이전엔 지역 변수로만 존재해
+        # engine 의 `_stop_loss_obj.get("risk_per_share")` 가 **항상 None** 이었다
+        # (8/5 에 영속화 코드를 넣었는데 값의 출처가 없어 죽은 필드였다).
+        # 1R 은 R배수 익절·손절 체계 전체의 단위라 저장되지 않으면 사후 검증이 불가능하다.
+        stop_loss["risk_per_share"] = round(risk_per_share, 2)
 
         target_1_price = round(price + risk_per_share * _cfg.R_MULTIPLE_TARGET_1)
         target_2_price = round(price + risk_per_share * _cfg.R_MULTIPLE_TARGET_2)
