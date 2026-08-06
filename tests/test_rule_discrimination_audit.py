@@ -1,0 +1,176 @@
+# -*- coding: utf-8 -*-
+"""검사 D — 규칙 판별력 자동 검출 + baseline (2026-08-06 신설).
+
+배경: 8/6 하루에 같은 부류 결함을 세 번 잡았는데 셋 다 기존 A~C 검사가 못 잡는 종류였다.
+셋 다 손으로 찾았고 방법이 매번 같았다 — 발동률을 히스토리로 재고 임계를 분포와 대조.
+그 방법을 코드로 옮긴 것이 검사 D 다.
+
+그리고 8/6 에 하나 더 배웠다: `price_scale` 이 통화 혼재를 **매일** 신고하고 있었는데
+아무도 읽지 않았다. 매일 FAIL 인 경보는 경보가 아니다 → baseline 도입.
+
+계약: ① 상시 발동(≥90%)·거의 미발동(≤5%) 등급 규칙 검출 ② 85~90% 는 watch 로 노출
+③ 등급 cap 이 0개인 날이 0 이면 최상위 등급 구조적 불가 신고 ④ 알려진 미해결분은
+KNOWN 으로 내리고 **초과분만 FAIL** ⑤ 점수 입력 0 · 임계 조정 0(판정만).
+"""
+import json
+
+import api.observability.measurement_audit as MA
+
+
+def _snap(tmp_path, day, sigs):
+    """sigs = [(mode, max_grade), ...] — 첫 항목이 primary."""
+    d = tmp_path / "history"
+    d.mkdir(exist_ok=True)
+    ov = {"mode": sigs[0][0], "max_grade": sigs[0][1],
+          "secondary_signals": [{"mode": m, "max_grade": g} for m, g in sigs[1:]]}
+    (d / f"{day}.json").write_text(
+        json.dumps({"verity_brain": {"macro_override": ov}}), encoding="utf-8")
+
+
+def _days(tmp_path, n, sigs_for):
+    for i in range(n):
+        _snap(tmp_path, f"2026-05-{i + 1:02d}" if i < 31 else f"2026-06-{i - 30:02d}",
+              sigs_for(i))
+
+
+def _wire(monkeypatch, tmp_path):
+    monkeypatch.setattr(MA, "DATA_DIR", str(tmp_path))
+
+
+# ── 상시 발동 검출 ───────────────────────────────────────────────────
+
+def test_always_on_cap_rule_detected(monkeypatch, tmp_path):
+    """🚨 핵심 — 매일 켜진 등급 규칙은 국면을 구분하지 못한다."""
+    _wire(monkeypatch, tmp_path)
+    _days(tmp_path, 60, lambda i: [("always_cap", "WATCH")])
+    r = MA.audit_rule_discrimination()
+    modes = {d["rule"] for d in r["degenerate_rules"]}
+    assert "always_cap" in modes
+    assert r["ok"] is False
+
+
+def test_threshold_is_90_not_95(monkeypatch, tmp_path):
+    """실측 근거 — cape_bubble 94.3% 가 95 임계 아래로 빠져나갔다. 93% 도 잡아야 한다."""
+    _wire(monkeypatch, tmp_path)
+    # 100일 중 93일 발동 = 93.0%
+    _days(tmp_path, 100, lambda i: [("cap_93", "WATCH")] if i < 93 else [("other", "BUY")])
+    r = MA.audit_rule_discrimination()
+    assert "cap_93" in {d["rule"] for d in r["degenerate_rules"]}
+
+
+def test_watch_band_surfaces_near_miss(monkeypatch, tmp_path):
+    """85~90% 는 판정하지 않되 조용히 통과시키지도 않는다."""
+    _wire(monkeypatch, tmp_path)
+    _days(tmp_path, 100, lambda i: [("cap_87", "WATCH")] if i < 87 else [("other", "BUY")])
+    r = MA.audit_rule_discrimination()
+    assert "cap_87" not in {d["rule"] for d in r["degenerate_rules"]}
+    assert "cap_87" in {d["rule"] for d in r["watch_rules"]}
+
+
+def test_healthy_rule_passes(monkeypatch, tmp_path):
+    """켜지고 꺼지는 규칙은 통과 — 정상 규칙까지 잡으면 경보가 무의미해진다."""
+    _wire(monkeypatch, tmp_path)
+    _days(tmp_path, 100, lambda i: [("cap_30", "WATCH")] if i < 30 else [("other", "BUY")])
+    r = MA.audit_rule_discrimination()
+    assert not r["degenerate_rules"]
+    assert r["ok"] is True
+
+
+def test_observation_rules_exempt(monkeypatch, tmp_path):
+    """등급에 영향 없는 관측 mode 는 상시여도 대상 아님 (8/6 도입한 *_observation)."""
+    _wire(monkeypatch, tmp_path)
+    _days(tmp_path, 60, lambda i: [("cape_observation", None), ("real", "WATCH")]
+          if i < 20 else [("cape_observation", None)])
+    r = MA.audit_rule_discrimination()
+    assert "cape_observation" not in {d["rule"] for d in r["degenerate_rules"]}
+
+
+# ── 최상위 등급 구조적 불가 ──────────────────────────────────────────
+
+def test_zero_uncapped_days_flagged(monkeypatch, tmp_path):
+    """cap 이 하루도 안 풀리면 최상위 등급이 구조적으로 불가능하다 — 8/6 실측 0/87일."""
+    _wire(monkeypatch, tmp_path)
+    _days(tmp_path, 60, lambda i: [("a", "WATCH")] if i % 2 else [("b", "CAUTION")])
+    r = MA.audit_rule_discrimination()
+    assert r["days_without_any_cap"] == 0
+    assert "구조적으로 불가능" in r["detail"]
+    assert r["ok"] is False
+
+
+def test_uncapped_days_counted(monkeypatch, tmp_path):
+    _wire(monkeypatch, tmp_path)
+    _days(tmp_path, 60, lambda i: [("a", "WATCH")] if i < 30 else [("obs", None)])
+    r = MA.audit_rule_discrimination()
+    assert r["days_without_any_cap"] == 30
+
+
+def test_skips_when_history_thin(monkeypatch, tmp_path):
+    """표본 부족은 판정 보류 — 없는 결론을 만들지 않는다."""
+    _wire(monkeypatch, tmp_path)
+    _days(tmp_path, 10, lambda i: [("a", "WATCH")])
+    r = MA.audit_rule_discrimination()
+    assert r["ok"] is None and "판정 보류" in r["skipped"]
+
+
+# ── baseline — 매일 FAIL 인 경보는 경보가 아니다 ─────────────────────
+
+def test_known_unresolved_downgraded_from_fail():
+    """알려진 미해결분(유령 58·죽은키 10·통화 3)은 KNOWN 으로 내려간다."""
+    for name, base in MA._KNOWN_BASELINE.items():
+        field, limit = next(iter(base.items()))
+        chk = {"ok": False, field: limit}
+        assert MA._exceeds_baseline(name, chk) is False
+
+
+def test_regression_above_baseline_is_fail():
+    """baseline 초과 = 신규 발생 = FAIL. 이게 경보의 의미다."""
+    for name, base in MA._KNOWN_BASELINE.items():
+        field, limit = next(iter(base.items()))
+        assert MA._exceeds_baseline(name, {"ok": False, field: limit + 1}) is True
+
+
+def test_baseline_accepts_list_valued_fields():
+    """dead_keys 처럼 리스트로 오는 필드도 길이로 비교된다."""
+    n = MA._KNOWN_BASELINE["key_coverage"]["dead_keys"]
+    assert MA._exceeds_baseline("key_coverage", {"ok": False, "dead_keys": [0] * n}) is False
+    assert MA._exceeds_baseline("key_coverage", {"ok": False, "dead_keys": [0] * (n + 1)}) is True
+
+
+def test_passing_check_not_baselined():
+    assert MA._exceeds_baseline("ledger_integrity", {"ok": True, "phantom_sells": 0}) is None
+
+
+def test_run_separates_fail_from_known(monkeypatch, tmp_path):
+    """status FAIL = 새로 생겼다. KNOWN = 알려진 범위 안."""
+    _wire(monkeypatch, tmp_path)
+    _days(tmp_path, 60, lambda i: [("always_cap", "WATCH")])
+    monkeypatch.setattr(MA, "OUT_PATH", str(tmp_path / "o.json"))
+    monkeypatch.setattr(MA, "TRAIL_PATH", str(tmp_path / "m" / "t.jsonl"))
+    monkeypatch.setattr(MA, "audit_ledger", lambda: {"ok": False, "phantom_sells": 58})
+    monkeypatch.setattr(MA, "audit_key_coverage", lambda root=".": {"ok": False, "dead_keys": [0] * 10})
+    monkeypatch.setattr(MA, "audit_price_scale", lambda: {"ok": False, "scale_mismatches": [0] * 3})
+    out = MA.run(str(tmp_path))
+    assert out["failing"] == ["rule_discrimination"]        # 신규만
+    assert set(out["known_unresolved"]) == {"ledger_integrity", "key_coverage", "price_scale"}
+    assert out["checks"]["price_scale"]["status"] == "KNOWN"
+
+
+def test_run_flags_regression_over_baseline(monkeypatch, tmp_path):
+    _wire(monkeypatch, tmp_path)
+    _days(tmp_path, 60, lambda i: [("a", "WATCH")] if i < 20 else [("obs", None)])
+    monkeypatch.setattr(MA, "OUT_PATH", str(tmp_path / "o.json"))
+    monkeypatch.setattr(MA, "TRAIL_PATH", str(tmp_path / "m" / "t.jsonl"))
+    monkeypatch.setattr(MA, "audit_ledger", lambda: {"ok": False, "phantom_sells": 59})   # +1
+    monkeypatch.setattr(MA, "audit_key_coverage", lambda root=".": {"ok": True, "dead_keys": []})
+    monkeypatch.setattr(MA, "audit_price_scale", lambda: {"ok": True, "scale_mismatches": []})
+    out = MA.run(str(tmp_path))
+    assert "ledger_integrity" in out["failing"]
+    assert out["checks"]["ledger_integrity"]["status"] == "REGRESSION"
+    assert out["status"] == "FAIL"
+
+
+def test_audit_never_feeds_scores():
+    """RULE 7 — 이 모듈은 어떤 점수에도 입력되지 않는다."""
+    import inspect
+    src = inspect.getsource(MA)
+    assert "brain_score" not in src and "recommendation =" not in src
