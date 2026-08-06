@@ -1113,6 +1113,52 @@ def _is_us_stock(s: dict) -> bool:
 BIGMOVE_PCT = 1.5  # 급변일 임계 — 뉴스 근거 확대 발동 (2026-08-05, 운영 상수)
 
 
+def _build_demand_chain_block(is_us: bool) -> str:
+    """미국 수요 체인 관측을 리포트 프롬프트 컨텍스트로 주입.
+
+    PM 사고(2026-08-05) 대응 — 그날 코스피를 끌어올린 팔란티어·캐터필러 실적과
+    앤트로픽-브로드컴 계약을 우리 시스템은 전혀 몰랐다. 유니버스 밖 미국 대형주는
+    관측 대상이 아니었기 때문이다([[api.collectors.us_demand_chain]] 이 그 구멍을 메운다).
+
+    🚨 관측-only. 점수에 들어가지 않고 프롬프트 근거로만 쓴다. 인과 단정 금지 —
+    '같은 수요 체인' 이라는 사실 병기까지만 (RULE 7).
+    파일이 없거나 stale 이면 빈 문자열 = 리포트는 종전대로 동작한다.
+    """
+    try:
+        path = os.path.join(DATA_DIR, "us_demand_chain.json")
+        with open(path, encoding="utf-8") as f:
+            snap = json.load(f)
+    except Exception:
+        return ""
+
+    chains = snap.get("chains") or {}
+    events = snap.get("events") or []
+    moving = [c for c in chains.values() if c.get("signal") in ("확장", "위축")]
+    if not moving and not events:
+        return ""
+
+    lines = []
+    for c in moving:
+        kr = ", ".join(k["name"] for k in (c.get("kr_link") or [])[:3])
+        tail = f" | 국장 동일 체인: {kr}" if (kr and not is_us) else ""
+        lines.append(f"- {c['label']} {c['avg_change_pct']:+.2f}% ({c['breadth']} 상승) = 수요 {c['signal']}{tail}")
+    for e in events[:5]:
+        sp = f", EPS 서프라이즈 {e['eps_surprise_pct']:+.1f}%" if e.get("eps_surprise_pct") is not None else ""
+        kr = ", ".join((e.get("kr_link") or [])[:3])
+        tail = f" | 국장 동일 체인: {kr}" if (kr and not is_us) else ""
+        lines.append(f"- [개별] {e['ticker']} {e['change_pct']:+.2f}% (z={e.get('z')}, 거래량 x{e.get('vol_ratio')}{sp}){tail}")
+
+    header = (
+        "\n[미국 수요 체인 관측 — 전일 미국 종가 기준]\n"
+        if is_us else
+        "\n[미국 수요 체인 관측 — 전일 미국 종가, 국장 개장 전 선행 신호]\n"
+    )
+    return header + "\n".join(lines) + (
+        "\n🚨 이 관측은 가설(관측-only, 점수 미반영)이다. 국장 종목과의 연결은 '같은 수요 체인' "
+        "이라는 사실까지만 쓰고 '때문에/원인은' 같은 인과 단정은 쓰지 마라."
+    )
+
+
 @mockable("gemini.daily_report")
 def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, headlines: list, verity_brain: Optional[dict] = None, market: str = "kr", event_insights: Optional[list] = None,
                           market_summary: Optional[dict] = None) -> dict:
@@ -1191,6 +1237,8 @@ def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, he
         if parts:
             event_block = "\n[매크로 이벤트 실시간 분석 — Perplexity]\n" + "\n".join(parts)
 
+    chain_block = _build_demand_chain_block(is_us)
+
     fr = macro.get("fred") or {}
     dgs = fr.get("dgs10") or {}
     cpi = fr.get("core_cpi") or {}
@@ -1231,7 +1279,7 @@ USD/KRW: {macro.get('usd_krw', {}).get('value', '?')}{fred_daily}
 
 [Top Picks — US]
 {chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{}).get("multi_score",0)}pts)' for s in top_buys) if top_buys else 'No strong buys today'}
-{brain_block}{event_block}
+{brain_block}{event_block}{chain_block}
 
 너는 월가 관점에서 미국 시장을 분석하는 펀드매니저다. 한국어로 답변해.
 S&P 500, NASDAQ 움직임 중심으로 쓰되, 글로벌 매크로 맥락도 포함해.
@@ -1282,7 +1330,7 @@ VIX: {macro.get('vix', {}).get('value', '?')} ({macro.get('vix', {}).get('change
 
 [찍은 종목]
 {chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{}).get("multi_score",0)}점)' for s in top_buys) if top_buys else '오늘 살 만한 거 없음'}
-{brain_block}{event_block}
+{brain_block}{event_block}{chain_block}
 
 JSON만:
 {{
