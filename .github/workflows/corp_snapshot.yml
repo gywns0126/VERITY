@@ -30,7 +30,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 permissions:
-  contents: read
+  contents: write   # 장부 커밋용(산출물은 gitignore 봉인)
 
 concurrency:
   group: corp-snapshot
@@ -74,3 +74,21 @@ jobs:
           else
             python scripts/estate_corp_snapshot.py --portfolio data/portfolio.json $ARGS
           fi
+
+      - name: Commit LLM cost ledger (RULE 4 — 산출물은 gitignore 로 봉인 유지)
+        if: always()
+        run: |
+          # 🚨 이 워크플로의 산출물(크라운주얼)은 .gitignore 로 커밋이 원천 차단되어 있다.
+          #   여기서 커밋하는 것은 **비용 장부뿐** — 가장 비싼 LLM 호출이 관측에서 빠지던
+          #   사각지대 해소(2026-08-06). 장부 미add 시 rebase 거부 사고도 함께 예방(RULE 4).
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/metadata/llm_cost.jsonl 2>/dev/null || true
+          git diff --staged --quiet && exit 0
+          git commit -m "💰 llm_cost 장부 — 기업 스냅샷"
+          for i in 1 2 3 4 5 6; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin main && git push origin main; then exit 0; fi
+            sleep $(( i * 7 + RANDOM % 15 ))
+          done
+          echo "::warning::장부 push 실패 — 다음 run 에서 누적 재시도"
