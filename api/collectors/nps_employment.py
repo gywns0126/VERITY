@@ -177,8 +177,12 @@ def collect(limit: int = 0) -> Dict[str, Any]:
     ym = datetime.now(KST).strftime("%Y%m")
     out: Dict[str, Any] = {}
     done = 0
-    # API 한도 30tx/초 · 콜당 ~4초 지연 → 8워커 = 최대 8 동시(<<30), 순차 대비 ~8배
-    with ThreadPoolExecutor(max_workers=8) as ex:
+    # API 한도 30tx/초 · 콜당 ~4초 지연 → 워커 N 이면 실효 N/4 tx/s.
+    # 🚨 8워커(=2 tx/s)로는 2026-07-15 정기 run 이 90분 timeout 에 걸려 그 달을 통째로
+    #   놓쳤다("~30분" 주석은 실측과 달랐다). 20워커 = 5 tx/s 로 여전히 한도의 1/6이며
+    #   런타임은 대략 1/2.5. 한도(30tx/s)에 붙이지 않는 이유 = 429 로 통째 실패하는 것보다
+    #   여유를 두고 완주하는 편이 월 1회 수집에서 훨씬 안전하다.
+    with ThreadPoolExecutor(max_workers=int(os.environ.get("NPS_EMP_WORKERS", "20"))) as ex:
         futs = {ex.submit(_one, tk, name, key, ym): tk for tk, name in universe}
         for fut in as_completed(futs):
             tk = futs[fut]
@@ -206,23 +210,54 @@ def main() -> int:
             ok = True
             return 0
         now = datetime.now(KST)
+
+        # 🚨 부분 수집 병합 (2026-08-07) — 이전 스냅샷을 밑에 깔고 이번 결과로 덮는다.
+        #   사고: 2026-07-15 정기 run 이 90분 timeout 으로 죽어 6월분을 통째로 놓쳤고,
+        #   데이터가 5월에 한 달간 묶여 있었다. 통짜 교체 방식이면 중간에 끊긴 run 의
+        #   성과가 0 이 되고, 부분 결과를 그대로 쓰면 미수집 종목이 화면에서 사라진다.
+        #   레코드마다 자기 기준월(ym)을 들고 있으므로, 종목별로 가장 최신 월을 유지하면
+        #   끊긴 run 도 진척이 남고 사라지는 종목도 없다.
+        merged: Dict[str, Any] = {}
+        try:
+            with open(OUT_PATH, encoding="utf-8") as f:
+                merged = dict((json.load(f).get("stocks") or {}))
+        except (FileNotFoundError, json.JSONDecodeError):
+            merged = {}
+        for tk, v in stocks.items():
+            prev = merged.get(tk)
+            # 더 오래된 월로 덮어쓰지 않는다(소스가 과거월을 되돌려주는 경우 방어).
+            if prev and str(v.get("ym") or "") < str(prev.get("ym") or ""):
+                continue
+            merged[tk] = v
+
+        yms = sorted({str(v.get("ym") or "") for v in merged.values() if v.get("ym")})
         doc = {
             "_meta": {
                 "generated_at": now.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
                 "source": "국민연금공단 가입 사업장 내역 (data.go.kr B552015, 매월 15일 이후 갱신)",
                 "note": "고용 프록시(국민연금 가입자 기준) · 사업장명 정확일치 매칭 · 공단 공시 사실",
-                "count": len(stocks),
+                "count": len(merged),
+                # 신선도 관측 — 종목마다 기준월이 다를 수 있어 범위로 노출한다.
+                "data_ym_latest": yms[-1] if yms else None,
+                "data_ym_oldest": yms[0] if yms else None,
+                "fetched_this_run": len(stocks),
             },
-            "stocks": stocks,
+            "stocks": merged,
         }
         with open(OUT_PATH, "w", encoding="utf-8") as f:
             json.dump(doc, f, ensure_ascii=False)
         with open(HIST_PATH, "a", encoding="utf-8") as f:
-            ym = now.strftime("%Y%m")
+            # 🚨 ym = **데이터 기준월**(레코드의 dataCrtYm). 실행 월이 아니다.
+            #   종전엔 실행 월을 적어, 7월에 돌며 받은 5월 데이터가 202507 로 기록됐다
+            #   = 시계열 오염(2개월 밀린 값이 최신 월로 둔갑). 이번 run 결과만 적재한다.
+            run_ym = now.strftime("%Y%m")
             for tk, v in stocks.items():
-                f.write(json.dumps({"ym": ym, "ticker": tk, "cnt": v["jnngp_cnt"],
+                f.write(json.dumps({"ym": str(v.get("ym") or run_ym), "run_ym": run_ym,
+                                    "ticker": tk, "cnt": v["jnngp_cnt"],
                                     "hire": v["hire"], "leave": v["leave"]}, ensure_ascii=False) + "\n")
-        print(f"[nps_emp] logged=True · {len(stocks)}종목 → {os.path.relpath(OUT_PATH, _ROOT)} (+history)", file=sys.stderr)
+        print(f"[nps_emp] logged=True · 이번 run {len(stocks)} · 누적 {len(merged)}종목 · "
+              f"기준월 {yms[0] if yms else '?'}~{yms[-1] if yms else '?'} "
+              f"→ {os.path.relpath(OUT_PATH, _ROOT)} (+history)", file=sys.stderr)
         ok = True
         return 0
     except Exception as e:  # noqa: BLE001
