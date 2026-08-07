@@ -275,12 +275,23 @@ def detect_hold_pnl_threshold(stock: Dict[str, Any]) -> Dict[str, Any]:
     #   multibagger_watch 는 **유니버스 스캔(미보유 KR 소형주)** 에 이걸 돌린다.
     #   hold_days 보유 레코드 = 0 / 29,271. 구조상 발동할 수 없다.
     #   ⚠️ 2026-09 active gate 전 결정 필요: 보유 종목 쪽으로 소비자 이전 / 신호 폐기.
-    days = stock.get("hold_days") or stock.get("days_held")
-    pnl = _safe_float(stock.get("unrealized_pnl_pct") or stock.get("return_pct"))
-    if days is None or pnl is None:
+    # 🚨 `or` 체인 금지 — 보유 0일·수익률 0.0% 이 falsy 라 None 으로 무너진다.
+    #   실측(2026-08-07): 당일 매수 F&F(보유 0일)가 "적용 불가"로 기록됐다.
+    #   결측(모름)과 0(실측값)은 다른 것이다 — 8/6 공매도 등록의 결측 원칙과 같은 축.
+    days = stock.get("hold_days")
+    if days is None:
+        days = stock.get("days_held")
+    pnl = _safe_float(stock.get("unrealized_pnl_pct"))
+    if pnl is None:
+        pnl = _safe_float(stock.get("return_pct"))
+    if days is None and pnl is None:
         return {"triggered": False, "score": 50,
-                "reason": ("적용 불가 — 보유 종목 규칙인데 미보유 유니버스에 평가됨"
-                           "(hold_days 부재, 2026-08-06 사인 조사)")}
+                "reason": ("적용 불가 — 보유 종목 규칙인데 보유 맥락이 없다"
+                           "(미보유 유니버스, 2026-08-06 사인 조사)")}
+    if days is None or pnl is None:
+        _missing = "보유 일수" if days is None else "미실현 손익률"
+        return {"triggered": False, "score": 50,
+                "reason": f"판정 보류 — {_missing} 결측"}
     try:
         days = int(days)
     except (TypeError, ValueError):

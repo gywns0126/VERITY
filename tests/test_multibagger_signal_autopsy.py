@@ -78,3 +78,109 @@ def test_watch_row_persists_reason(monkeypatch):
     sig = rows[0]["signals"]["industry_s_curve"]
     assert "reason" in sig and sig["reason"]
     assert json.dumps(rows[0], ensure_ascii=False)   # 직렬화 가능
+
+
+# ── 소비자 이전: 보유 종목 축 (PM 승인 2026-08-06) ───────────────────
+
+from api.intelligence.multibagger_watch import build_holding_flowers, run_watch  # noqa: E402
+
+
+def _pf(holdings):
+    return {"vams": {"holdings": holdings}}
+
+
+def test_holding_axis_evaluates_hold_pnl():
+    """소비자 이전 — 보유 종목에서 hold_pnl 이 실제로 평가된다."""
+    rows = build_holding_flowers(
+        _pf([{"ticker": "000001", "name": "T", "buy_date": "2025-01-01", "return_pct": 80.0}]),
+        as_of="2026-08-07")
+    sig = rows[0]["signals"]["hold_pnl_threshold"]
+    assert rows[0]["source"] == "holding"
+    assert sig["triggered"] is True and rows[0]["alert_count"] == 1
+
+
+def test_holding_axis_not_yet_is_not_broken():
+    """🚨 임계 미달은 '미충족' 이지 '적용 불가' 가 아니다 — 둘을 섞으면 사인 추적이 죽는다."""
+    rows = build_holding_flowers(
+        _pf([{"ticker": "000001", "buy_date": "2026-08-01", "return_pct": 5.0}]),
+        as_of="2026-08-07")
+    r = rows[0]["signals"]["hold_pnl_threshold"]
+    assert r["triggered"] is False
+    assert "미충족" in r["reason"] and "적용 불가" not in r["reason"]
+    assert rows[0]["hold_days"] == 6
+
+
+def test_zero_hold_days_is_a_value_not_missing():
+    """🚨 당일 매수(0일)·수익률 0.0% 이 falsy 라 None 으로 무너지던 결함.
+
+    실측 2026-08-07: 당일 매수 F&F 가 '적용 불가'로 기록됐다. 결측(모름)과 0(실측값)은 다르다.
+    """
+    rows = build_holding_flowers(
+        _pf([{"ticker": "383220", "buy_date": "2026-08-07", "return_pct": 0.0}]),
+        as_of="2026-08-07")
+    r = rows[0]["signals"]["hold_pnl_threshold"]
+    assert rows[0]["hold_days"] == 0
+    assert "적용 불가" not in r["reason"] and "미충족" in r["reason"]
+
+
+def test_unparseable_buy_date_holds_judgement():
+    rows = build_holding_flowers(
+        _pf([{"ticker": "000001", "buy_date": None, "return_pct": 60.0}]), as_of="2026-08-07")
+    r = rows[0]["signals"]["hold_pnl_threshold"]
+    assert rows[0]["hold_days"] is None
+    assert "판정 보류" in r["reason"]
+
+
+def test_holding_axis_only_evaluates_hold_pnl():
+    """나머지 4신호는 평가하지 않는다 — 보유 레코드에 펀더멘털이 없어 전부 결손이 된다."""
+    rows = build_holding_flowers(
+        _pf([{"ticker": "000001", "buy_date": "2026-01-01", "return_pct": 10.0}]),
+        as_of="2026-08-07")
+    assert set(rows[0]["signals"]) == {"hold_pnl_threshold"}
+
+
+def test_holding_axis_failure_does_not_kill_universe(monkeypatch, tmp_path):
+    """보유 축이 죽어도 유니버스 축은 기록된다(관측이 funnel 을 죽이지 않는다)."""
+    import api.intelligence.multibagger_watch as MW
+    monkeypatch.setattr(MW, "build_holding_flowers",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    stock = {"ticker": "000001", "name": "T", "market_cap": 5e11,
+             "sector": "IT", "currency": "KRW", "revenue_growth": 40.0}
+    n = run_watch([stock], path=str(tmp_path / "w.jsonl"))
+    assert n >= 0                      # 예외가 전파되지 않는다
+
+
+def test_holding_rows_marked_for_split_analysis():
+    rows = build_holding_flowers(
+        _pf([{"ticker": "000001", "buy_date": "2026-01-01", "return_pct": 10.0}]),
+        as_of="2026-08-07")
+    assert rows[0]["source"] == "holding"
+
+
+def test_two_axes_write_to_separate_files(tmp_path, monkeypatch):
+    """🚨 유니버스와 보유는 스키마가 다르다 — 한 파일에 섞으면 소비자가 깨진다.
+
+    실측: 처음 한 파일에 합쳤더니 기존 end-to-end 테스트가 즉시 KeyError('market_cap').
+    """
+    import api.intelligence.multibagger_watch as MW
+    monkeypatch.setattr(MW, "build_holding_flowers", lambda *a, **k: [
+        {"watch_date": "2026-08-07", "source": "holding", "ticker": "000002"}])
+    uni, hold = tmp_path / "u.jsonl", tmp_path / "h.jsonl"
+    stock = {"ticker": "000001", "name": "T", "market_cap": 5e11,
+             "sector": "IT", "currency": "KRW", "revenue_growth": 40.0}
+    MW.run_watch([stock], path=str(uni), hold_path=str(hold))
+    assert hold.exists()
+    for line in hold.read_text(encoding="utf-8").splitlines():
+        assert json.loads(line)["source"] == "holding"
+    if uni.exists():
+        for line in uni.read_text(encoding="utf-8").splitlines():
+            assert "market_cap" in json.loads(line)      # 유니버스 스키마 보존
+
+
+def test_workflow_git_adds_new_trail():
+    """RULE 4 — specific git add 패턴이라 신 파일 줄이 없으면 silent 손실."""
+    import os
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(repo, ".github/workflows/universe_scan.yml"), encoding="utf-8") as f:
+        yml = f.read()
+    assert "git add data/metadata/multibagger_holdings.jsonl" in yml
