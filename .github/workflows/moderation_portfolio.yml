@@ -43,6 +43,17 @@ jobs:
       - name: Build moderation portfolio (중용 3층 — 등록본)
         run: python -m api.portfolio.moderation_portfolio
 
+      - name: Rebalance drift review (표시값 — 자동 매매 0)
+        # 2026-08-07 — quarterly_rebalance 가 8/2 승인 후 5일째 소비자 0 이었다(테스트만 import).
+        # 목표비중이 방금 산출된 이 자리가 유일하게 자연스러운 소비 지점이다.
+        # 실측 발견: FX 헷지 ETF 1종이 총자산 28.9% (개별 주식 최대의 3배) — 아무도 못 보던 그림.
+        # 🚨 표시값 전용·자동 매매 0·brain 미투입. 산출물은 목표비중과 동일 봉인 등급(_operator/).
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python -m api.portfolio.rebalance_review
+
       - name: Upload to private bucket (_operator/)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
