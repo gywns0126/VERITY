@@ -199,12 +199,18 @@ def collect(limit: int = 0) -> Dict[str, Any]:
     ym = datetime.now(KST).strftime("%Y%m")
     out: Dict[str, Any] = {}
     done = 0
-    # API 한도 30tx/초 · 콜당 ~4초 지연 → 워커 N 이면 실효 N/4 tx/s.
-    # 🚨 8워커(=2 tx/s)로는 2026-07-15 정기 run 이 90분 timeout 에 걸려 그 달을 통째로
-    #   놓쳤다("~30분" 주석은 실측과 달랐다). 20워커 = 5 tx/s 로 여전히 한도의 1/6이며
-    #   런타임은 대략 1/2.5. 한도(30tx/s)에 붙이지 않는 이유 = 429 로 통째 실패하는 것보다
-    #   여유를 두고 완주하는 편이 월 1회 수집에서 훨씬 안전하다.
-    with ThreadPoolExecutor(max_workers=int(os.environ.get("NPS_EMP_WORKERS", "20"))) as ex:
+    # 🚨 워커 수 = 이 수집기의 **유일한 rate 제어 장치**다 (THROTTLE=0.0, 워커당 sleep 없음).
+    #   따라서 워커를 올리는 것은 곧 호출 속도를 그만큼 올리는 것이다.
+    #
+    # 사고 (2026-08-07, 자책): timeout 대응이라며 8 → 20 으로 올렸다가 전량 수집이
+    #   1595종목 **전부 매칭 0** 으로 끝났다. 같은 날 8종목 스모크는 정상(매칭 4/8, 202606
+    #   수신)이었으므로 소스·키·주말 문제가 아니라 **대량 구간에서만 나는 rate 거절**이다.
+    #   근거가 된 산식 자체가 틀렸다 — "콜당 ~4초 → 20워커=5 tx/s" 로 계산했으나 종목 1개가
+    #   호출 1개가 아니다(검색 1~3회 + 매칭 사업장당 2회). 실제 버스트는 추정의 수 배였다.
+    #   원래 문제였던 90분 timeout 은 워커가 아니라 timeout 180분 상향으로 이미 해결됐다.
+    #   → 8 로 되돌린다. 속도가 필요하면 워커가 아니라 THROTTLE 과 함께 조정하고,
+    #     반드시 소량 스모크(workflow_dispatch limit=8)로 먼저 확인할 것.
+    with ThreadPoolExecutor(max_workers=int(os.environ.get("NPS_EMP_WORKERS", "8"))) as ex:
         futs = {ex.submit(_one, tk, name, key, ym): tk for tk, name in universe}
         for fut in as_completed(futs):
             tk = futs[fut]
