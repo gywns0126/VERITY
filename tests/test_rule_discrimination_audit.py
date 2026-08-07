@@ -141,18 +141,22 @@ def test_passing_check_not_baselined():
 
 
 def test_run_separates_fail_from_known(monkeypatch, tmp_path):
-    """status FAIL = 새로 생겼다. KNOWN = 알려진 범위 안."""
+    """status FAIL = 새로 생겼다. KNOWN = 알려진 범위 안.
+
+    2026-08-07 갱신 — price_scale baseline 이 0 이 되어(#300 해소) 불일치 1건이면 FAIL 이다.
+    """
     _wire(monkeypatch, tmp_path)
-    _days(tmp_path, 60, lambda i: [("always_cap", "WATCH")])
+    _days(tmp_path, 60, lambda i: [("a", "WATCH")] if i < 20 else [("obs", None)])
     monkeypatch.setattr(MA, "OUT_PATH", str(tmp_path / "o.json"))
     monkeypatch.setattr(MA, "TRAIL_PATH", str(tmp_path / "m" / "t.jsonl"))
     monkeypatch.setattr(MA, "audit_ledger", lambda: {"ok": False, "phantom_sells": 58})
     monkeypatch.setattr(MA, "audit_key_coverage", lambda root=".": {"ok": False, "dead_keys": [0] * 10})
-    monkeypatch.setattr(MA, "audit_price_scale", lambda: {"ok": False, "scale_mismatches": [0] * 3})
+    monkeypatch.setattr(MA, "audit_price_scale", lambda: {"ok": False, "scale_mismatches": [0]})
+    monkeypatch.setattr(MA, "audit_flag_coverage", lambda root=".": {"ok": False, "never_fired": [0] * 13})
     out = MA.run(str(tmp_path))
-    assert out["failing"] == ["rule_discrimination"]        # 신규만
-    assert set(out["known_unresolved"]) == {"ledger_integrity", "key_coverage", "price_scale"}
-    assert out["checks"]["price_scale"]["status"] == "KNOWN"
+    assert out["failing"] == ["price_scale"]               # 신규(통화 혼재 재발)만
+    assert set(out["known_unresolved"]) == {"ledger_integrity", "key_coverage", "flag_coverage"}
+    assert out["checks"]["ledger_integrity"]["status"] == "KNOWN"
 
 
 def test_run_flags_regression_over_baseline(monkeypatch, tmp_path):
@@ -257,3 +261,41 @@ def test_short_literals_are_not_rules(tmp_path):
     _rf_code(tmp_path, ["ab {x}", "충분히 긴 규칙 {y}"])
     pre = MA._flag_rule_prefixes(str(tmp_path))
     assert "충분히 긴 규칙" in pre and "ab" not in pre
+
+
+# ── baseline 갱신 (2026-08-07 N=2 검증 후) ───────────────────────────
+
+def test_price_scale_baseline_is_zero_after_migration():
+    """🚨 통화 마이그레이션(#300) 후 실 cron 에서 불일치 0건 확인 → baseline 3→0.
+
+    baseline 을 내려두지 않으면 재발해도 KNOWN 으로 묻힌다. **해소 = baseline 하향**이다.
+    """
+    assert MA._KNOWN_BASELINE["price_scale"]["scale_mismatches"] == 0
+    assert MA._exceeds_baseline("price_scale", {"ok": False, "scale_mismatches": [0]}) is True
+
+
+def test_rule_discrimination_baselined_until_window_clears():
+    """8/6 에 제거한 cape_bubble 이 87일 창에서 빠질 때까지만 유지되는 한시 기준선.
+
+    창에서 빠지면 degenerate 가 줄어들고, 그때 이 항목을 제거해야 한다.
+    지금 유지하는 이유 = 매일 FAIL·알림이 가면 '알림 0건이 정상' 원칙이 깨지기 때문.
+    """
+    base = MA._KNOWN_BASELINE.get("rule_discrimination")
+    assert base and base["degenerate_rules"] == 2
+    # 늘어나면(새 규칙이 죽으면) 즉시 FAIL
+    assert MA._exceeds_baseline(
+        "rule_discrimination", {"ok": False, "degenerate_rules": [0, 0, 0]}) is True
+
+
+def test_alarm_silent_when_everything_is_known(monkeypatch, tmp_path):
+    """알림 0건이 정상 baseline — 알려진 범위 안이면 status 가 FAIL 이 아니다."""
+    _wire(monkeypatch, tmp_path)
+    _days(tmp_path, 60, lambda i: [("a", "WATCH")] if i < 20 else [("obs", None)])
+    monkeypatch.setattr(MA, "OUT_PATH", str(tmp_path / "o.json"))
+    monkeypatch.setattr(MA, "TRAIL_PATH", str(tmp_path / "m" / "t.jsonl"))
+    monkeypatch.setattr(MA, "audit_ledger", lambda: {"ok": False, "phantom_sells": 58})
+    monkeypatch.setattr(MA, "audit_key_coverage", lambda root=".": {"ok": False, "dead_keys": [0] * 10})
+    monkeypatch.setattr(MA, "audit_price_scale", lambda: {"ok": True, "scale_mismatches": []})
+    monkeypatch.setattr(MA, "audit_flag_coverage", lambda root=".": {"ok": False, "never_fired": [0] * 13})
+    out = MA.run(str(tmp_path))
+    assert out["status"] != "FAIL" and out["failing"] == []

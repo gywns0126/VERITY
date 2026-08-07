@@ -284,7 +284,15 @@ def audit_rule_discrimination() -> Dict[str, Any]:
 _KNOWN_BASELINE = {
     "ledger_integrity": {"phantom_sells": 58},      # 8/5 확인 과거분. 초과 = 재발
     "key_coverage": {"dead_keys": 10},              # 태스크 #20
-    "price_scale": {"scale_mismatches": 3},         # 태스크 #19 — 미장 보유 통화 소급 미완
+    # 🚨 2026-08-07 — 3 → 0 하향. 통화 마이그레이션(#300) 적용 후 실 cron 에서 불일치
+    #   0건 확인(price_scale ok=True). baseline 을 낮추는 것이 해소의 정의다 —
+    #   내려두지 않으면 재발해도 KNOWN 으로 묻힌다.
+    "price_scale": {"scale_mismatches": 0},
+    # 검사 D — 8/6 에 제거한 cape_bubble(93.1%)이 87일 히스토리 창에서 빠질 때까지
+    #   degenerate 1종 + cap 0일이 남는다. 그동안 매일 FAIL·알림이 가면 "알림 0건이 정상"
+    #   원칙이 깨진다. 현 상태를 기준선으로 두고 **늘어날 때만** 알린다.
+    #   창에서 빠지면 자동으로 0 이 되므로 그때 이 항목을 제거한다.
+    "rule_discrimination": {"degenerate_rules": 2},
     # 검사 E — 미발동 red_flag 규칙. 배선 결함과 희소 사건이 섞여 있어 전수 분류 전까지
     # 기준선으로 둔다. 늘어나면(=규칙이 새로 죽으면) 즉시 FAIL.
     "flag_coverage": {"never_fired": 13},
