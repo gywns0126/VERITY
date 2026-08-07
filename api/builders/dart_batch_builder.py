@@ -225,7 +225,13 @@ def _quarter_end_iso(report_date, reprt_code, fetched_at: str) -> str:
     if len(rd) == 4 and rd.isdigit():
         suffix = _REPRT_END_MMDD.get(str(reprt_code) if reprt_code else "11011", "12-31")
         return f"{rd}-{suffix}"
-    return fetched_at[:10] if fetched_at else _now_kst().strftime("%Y-%m-%d")
+    # 🚨 2026-08-07 — 산출 불가 시 **수집일을 쓰지 않는다**(빈 문자열 반환).
+    #   5/20 에 같은 결함을 한 번 고쳤는데(1,867건) 이 폴백이 남아 계속 오염을 생산했다:
+    #   실측 2026-06-07 298건 · 07-24 96건 · 08-02 90건 = 전부 수집일.
+    #   가짜 분기말은 결측보다 나쁘다 — YoY 조회(±30일)를 빗나가게 해 델타 산출을
+    #   통째로 막는다(KR 추천 23종 중 22종이 no_prior 였다).
+    #   caller 가 빈 값이면 그 행을 기록하지 않는다.
+    return ""
 
 
 def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
@@ -246,11 +252,15 @@ def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
     fundamentals = snapshot.get("fundamentals", {})
     fetched_at = snapshot.get("collected_at", "")
     written = 0
+    skipped_no_qend = 0
     try:
         with open(snapshots_path, "a", encoding="utf-8") as f:
             for ticker, fund in fundamentals.items():
                 reprt_code = fund.get("reprt_code") or "11011"  # 연간 default
                 quarter_end = _quarter_end_iso(fund.get("report_date"), reprt_code, fetched_at)
+                if not quarter_end:
+                    skipped_no_qend += 1
+                    continue        # 분기말 미산출 = 시계열에 넣지 않는다(가짜 날짜 금지)
                 entry = {
                     "ticker": ticker,
                     "quarter_end": quarter_end,
@@ -268,7 +278,9 @@ def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
                 written += 1
         sys.stderr.write(
-            f"[dart_batch] quarterly_snapshots appended={written} → {snapshots_path}\n"
+            f"[dart_batch] quarterly_snapshots appended={written}"
+            + (f" · 분기말 미산출 skip={skipped_no_qend}" if skipped_no_qend else "")
+            + f" → {snapshots_path}\n"
         )
     except Exception as e:
         sys.stderr.write(f"[dart_batch] quarterly snapshot append fail: {e}\n")

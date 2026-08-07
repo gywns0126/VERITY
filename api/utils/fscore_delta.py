@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -32,6 +32,25 @@ KST = timezone(timedelta(hours=9))
 
 REPO_ROOT = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 QUARTERLY_SNAPSHOT_PATH = REPO_ROOT / "data" / "dart_quarterly_snapshots.jsonl"
+
+
+
+def is_real_quarter_end(value: Any) -> bool:
+    """진짜 분기 종료일인가 — 3·6·9·12월 **말일**만 참.
+
+    🚨 2026-08-07 — 레거시 오염 방어. 수집일이 quarter_end 로 기록된 행이 2,631건
+    (2026-05-17 ×1867 등) 남아 있고, 그 행이 '최신'으로 선택되면 YoY 조회(±30일)가
+    실제 분기말과 44~47일 어긋나 **전부 빗나간다**. 실측: KR 추천 23종 중 22종 no_prior.
+    쓰기 쪽은 같은 날 수리했지만(가짜 날짜 대신 skip) 이미 적재된 행은 여기서 막는다.
+    """
+    try:
+        d = datetime.strptime(str(value), "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return False
+    if d.month not in (3, 6, 9, 12):
+        return False
+    nxt_m, nxt_y = (d.month % 12) + 1, d.year + (1 if d.month == 12 else 0)
+    return d == date(nxt_y, nxt_m, 1) - timedelta(days=1)
 
 
 def load_quarterly_snapshots(ticker: str) -> List[Dict[str, Any]]:
@@ -60,8 +79,8 @@ def load_quarterly_snapshots(ticker: str) -> List[Dict[str, Any]]:
                     if s.get("ticker", "").upper() != ticker.upper():
                         continue
                     qend = s.get("quarter_end", "")
-                    if not qend:
-                        continue
+                    if not qend or not is_real_quarter_end(qend):
+                        continue        # 수집일이 섞인 레거시 행 차단 (2026-08-07)
                     prev = by_quarter.get(qend)
                     if prev is None or (s.get("fetched_at", "") > prev.get("fetched_at", "")):
                         by_quarter[qend] = s
