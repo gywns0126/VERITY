@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-07T15:37:56.698974+09:00",
+  "generated_at": "2026-08-07T17:00:22.910455+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 247359,
-    "python_modules": 734,
+    "code_lines_tsx_py": 247809,
+    "python_modules": 736,
     "tsx_components": 128,
     "json_data_files": 1677,
     "json_total_tracked": 1696,
     "workflows": 70,
     "scheduled_workflows": 54,
-    "cron_triggers": 65,
-    "git_tracked_files": 7306
+    "cron_triggers": 67,
+    "git_tracked_files": 7309
   },
   "subsystems": {
     "ingest": {
@@ -424,7 +424,9 @@
         {
           "name": "nps_employment",
           "crons": [
-            "0 20 15 * *"
+            "0 20 15 * *",
+            "0 20 19 * *",
+            "0 20 23 * *"
           ],
           "scheduled": true
         },
@@ -671,18 +673,18 @@
     }
   },
   "python_by_dir": {
-    "api": 399,
-    "tests": 179,
+    "api": 400,
+    "tests": 180,
     "scripts": 86,
     "vercel-api": 58,
     "server": 7,
     ".github": 5
   },
   "funnel": {
-    "investable_real": 2842,
+    "investable_real": 2796,
     "cap": 5000,
     "stages": [
-      2842,
+      2796,
       300,
       100,
       25
@@ -693,7 +695,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2842 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2796 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
