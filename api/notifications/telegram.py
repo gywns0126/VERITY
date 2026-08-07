@@ -257,6 +257,66 @@ def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False,
         return False
 
 
+
+
+# 알림 문구 → 유형 shape. 수치와 선행 종목명을 지워 같은 규칙이 한 줄로 모이게 한다.
+#   "삼성전자 수익률 -8.3% — 손절선 접근" → "· 수익률 # — 손절선 접근"
+#   "기아 수익률 -12.7% — 손절선 접근"   → "· 수익률 # — 손절선 접근"
+_SHAPE_NUM = re.compile(r"[\d,.\-+%]+")
+
+
+def _alert_shape(msg: str) -> str:
+    body = _SHAPE_NUM.sub("#", msg or "")
+    # 선행 고유명사(종목명) 1토큰 제거 — 뒤에 조사/공백이 오는 첫 어절
+    parts = body.split(" ", 1)
+    if len(parts) == 2 and len(parts[0]) <= 12:
+        body = "· " + parts[1]
+    return body[:80]
+
+
+_ALERT_TYPE_LEDGER_PATH = os.path.join(
+    os.path.dirname(_VOLUME_LEDGER_PATH), "alert_type_ledger.jsonl")
+
+
+def _append_alert_type_ledger(crit: List[Dict[str, Any]],
+                              rest: List[Dict[str, Any]]) -> None:
+    """알림 **유형별** 적재 (2026-08-07 신설, 관측 전용).
+
+    배경: volume 장부는 배치 헤더만 남겨 "🚨 VERITY 긴급 알림" 83건(3주)이 어느 유형에서
+    나왔는지 알 수 없었다. CRITICAL 안에 매크로 국면 서술(VIX·리세션확률·미장급락 —
+    같은 국면이면 며칠씩 반복)과 보유 종목 액션(손절 접근·매도 권고 — 1회성·행동 가능)이
+    섞여 있는데, 비율을 모르면 어느 쪽을 낮출지 정할 수 없다.
+
+    🚨 발송 여부와 무관하게 **생성된 알림**을 기록한다 — quiet hours·dedupe 로 안 간 것도
+    "시스템이 긴급이라고 판단한 횟수"라 정비 근거에 필요하다.
+    실패해도 알림 경로를 죽이지 않는다.
+    """
+    if not crit and not rest:
+        return
+    try:
+        os.makedirs(os.path.dirname(_ALERT_TYPE_LEDGER_PATH), exist_ok=True)
+        ts = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+        with open(_ALERT_TYPE_LEDGER_PATH, "a", encoding="utf-8") as f:
+            for level, group in (("CRITICAL", crit), ("OTHER", rest)):
+                for a in group:
+                    # 🚨 발신원이 스키마 둘을 쓴다 — vams/engine 은 `type`,
+                    #   alert_engine 은 `category`. 하나만 읽으면 대부분 unknown 이 된다
+                    #   (alert_engine 에 "type" 0건 / "category" 다수). 둘 다 남기고
+                    #   집계 키는 type → category 순으로 폴백한다.
+                    f.write(json.dumps({
+                        "ts_kst": ts,
+                        "level": level,
+                        "key": a.get("type") or a.get("category") or "unknown",
+                        "type": a.get("type"),
+                        "category": a.get("category"),
+                        "declared_level": a.get("level"),
+                        # 수치·종목명을 지운 형태 — 같은 규칙이 같은 shape 로 모인다
+                        "shape": _alert_shape(str(a.get("message") or "")),
+                    }, ensure_ascii=False) + "\n")
+    except Exception as e:  # noqa: BLE001 — 관측 실패가 알림을 죽이지 않는다
+        print(f"[telegram] alert_type ledger 실패: {type(e).__name__}: {e}", file=sys.stderr)
+
+
 def send_alerts(alerts: list[dict]) -> bool:
     """알림 목록 전송. 성공 시 True (토큰 미설정 시 콘솔만이면 False).
 
@@ -277,6 +337,12 @@ def send_alerts(alerts: list[dict]) -> bool:
     rest = [a for a in alerts if str(a.get("level", "")).upper() != "CRITICAL"]
 
     sent_any = False
+
+    # 🚨 2026-08-07 — 묶음 안의 **유형**을 별도 장부에 남긴다.
+    #   volume 장부는 배치 헤더("🚨 VERITY 긴급 알림")만 기록해, 3주간 긴급 83건이
+    #   어느 유형에서 나왔는지 셀 수 없었다. 어느 알림이 시끄러운지 모르면 정비도 못 한다.
+    #   발송 성공 여부와 무관하게 **생성된 알림**을 기록한다(quiet/dedupe 로 안 간 것도 관측 대상).
+    _append_alert_type_ledger(crit, rest)
 
     if crit:
         lines = ["<b>🚨 VERITY 긴급 알림</b>\n"]
