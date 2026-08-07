@@ -119,3 +119,37 @@ export async function refreshIfNeeded(): Promise<boolean> {
         return false
     }
 }
+
+// ── 내 프로필 (계좌 라우팅·시드) — PM 2026-08-07 다계좌 ──────────────
+// 회원 = 오퍼레이터 + 지인 1명. A안(각자 자기 계좌에서 자기가 승인)이라 화면은 항상
+// **본인 것만** 보여준다. RLS 가 본인 행만 내주므로 여기서 별도 필터를 두지 않는다.
+export type MyProfile = { broker_slug: string | null; seed_krw: number | null }
+
+/** 본인 profiles 행 조회. 실패·미로그인 시 null (호출부는 실계좌 총액으로 폴백). */
+export async function fetchMyProfile(): Promise<MyProfile | null> {
+    const s = loadSession()
+    if (!s?.access_token) return null
+    try {
+        const r = await fetch(
+            `${SUPABASE_URL}/rest/v1/profiles?select=broker_slug,seed_krw&limit=1`,
+            {
+                headers: {
+                    apikey: ANON_KEY,
+                    Authorization: `Bearer ${s.access_token}`,
+                    Accept: "application/json",
+                },
+            }
+        )
+        if (!r.ok) return null
+        const rows = (await r.json()) as Array<Record<string, unknown>>
+        if (!Array.isArray(rows) || !rows.length) return null
+        const seed = Number(rows[0].seed_krw)
+        return {
+            broker_slug: (rows[0].broker_slug as string) || null,
+            // 0·음수·NaN 은 배분 분모로 쓸 수 없다(0 나눗셈·부호 반전). null 로 떨어뜨려 폴백.
+            seed_krw: isFinite(seed) && seed > 0 ? seed : null,
+        }
+    } catch {
+        return null
+    }
+}

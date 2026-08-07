@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useDark, palette, FONT, NUM, type Palette } from "@/lib/theme"
 import { API_BASE, fetchOperator } from "@/lib/api"
 import { authHeaders } from "@/lib/auth"
+import { fetchMyProfile } from "@/lib/supabase"
 
 type Props = {
     ticker: string
@@ -52,6 +53,10 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
     const [cash, setCash] = useState<number | null>(null)
     const [targets, setTargets] = useState<ModTarget[]>([])
     const [totalAsset, setTotalAsset] = useState<number | null>(null)
+    // 배분 분모 — 이 전략에 배정한 시드(profiles.seed_krw). null 이면 실계좌 총액 전액.
+    // 계좌 일부만 이 전략에 쓰는 경우를 위한 것. 회원마다 시드가 다르므로 같은 목표비중이
+    // 각자 규모에 비례한 금액으로 환산된다(PM 2026-08-07 "각자 시드 규모 비례 배분").
+    const [seedKrw, setSeedKrw] = useState<number | null>(null)
     // 실계좌 보유 (KIS inquire-balance output1) — 검수 fix: 매도 수량·평단은 반드시
     // 실보유 기준. 이전엔 VAMS 가상 보유(pf.vams.holdings)로 계산 = 실주문 오발주 위험.
     const [acctHoldings, setAcctHoldings] = useState<Array<{ pdno?: string; hldg_qty?: string; pchs_avg_pric?: string }>>([])
@@ -73,6 +78,17 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
                 if (Array.isArray(d?.output1)) setAcctHoldings(d.output1)
             })
             .catch(() => {})
+        return () => {
+            stop = true
+        }
+    }, [])
+
+    // 내 시드 배정액 — 배분 분모. 실패 시 null 로 두고 실계좌 총액으로 폴백한다.
+    useEffect(() => {
+        let stop = false
+        fetchMyProfile().then((p) => {
+            if (!stop && p?.seed_krw) setSeedKrw(p.seed_krw)
+        })
         return () => {
             stop = true
         }
@@ -137,17 +153,21 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
         return Math.floor(cash / (refPx * (1 + FEE_RATE)))
     }, [side, acct, cash, refPx])
 
-    // 중용 목표비중 갭
+    // 중용 목표비중 갭 — 같은 목표비중을 **각자 시드 규모에 비례**해 금액으로 환산한다.
+    // 분모 = seed_krw(배정액) 우선, 없으면 실계좌 총평가액. 두 사람이 같은 종목을 봐도
+    // 각자 자기 규모의 필요 수량이 나온다. 잔고는 이미 계좌별로 라우팅되므로(X-Verity-Broker)
+    // totalAsset 도 본인 것이다.
     const modGap = useMemo(() => {
         const t = targets.find((x) => String(x.ticker || "") === ticker)
         const tw = typeof t?.target_weight === "number" ? t.target_weight : typeof t?.weight === "number" ? t.weight : null
-        if (tw == null || !totalAsset || !refPx) return null
+        const base = seedKrw ?? totalAsset
+        if (tw == null || !base || base <= 0 || !refPx) return null
         const targetPct = tw <= 1 ? tw * 100 : tw            // 0.085 / 8.5 양쪽 수용
         const curVal = acct.qty * refPx
-        const curPct = totalAsset > 0 ? (curVal / totalAsset) * 100 : 0
-        const needVal = (targetPct / 100) * totalAsset - curVal
-        return { targetPct, curPct, needQty: Math.floor(needVal / refPx) }
-    }, [targets, ticker, totalAsset, refPx, acct])
+        const curPct = (curVal / base) * 100
+        const needVal = (targetPct / 100) * base - curVal
+        return { targetPct, curPct, needQty: Math.floor(needVal / refPx), base, seedScoped: seedKrw != null }
+    }, [targets, ticker, totalAsset, seedKrw, refPx, acct])
 
     // 체결 시 평단 시뮬 (매수)
     const avgAfter = useMemo(() => {
@@ -244,6 +264,11 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
                     <span style={{ fontSize: 10, fontWeight: 800, color: c.vt }}>중용 목표</span>
                     <span style={{ fontSize: 11, color: c.sub, ...NUM }}>
                         목표 <b style={{ color: c.ink }}>{modGap.targetPct.toFixed(1)}%</b> · 현재 <b style={{ color: c.ink }}>{modGap.curPct.toFixed(1)}%</b>
+                    </span>
+                    {/* 분모를 밝힌다 — 같은 비중이라도 사람마다 금액이 다르므로, 무엇에 대한
+                        %인지 모르면 수량을 검산할 수 없다. */}
+                    <span style={{ fontSize: 10, color: c.sub, ...NUM }}>
+                        / {modGap.seedScoped ? "배정 시드" : "계좌 총액"} {(modGap.base / 1e4).toLocaleString(undefined, { maximumFractionDigits: 0 })}만
                     </span>
                     {modGap.needQty !== 0 ? (
                         <button

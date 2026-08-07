@@ -33,7 +33,7 @@ from server.kis_rest_client import (
     fetch_daily, fetch_minute, fetch_weekly, fetch_monthly, fetch_full_history, fetch_orderbook,
     fetch_price, fetch_trades, fetch_program_trade, fetch_index, fetch_index_daily,
     fetch_us_index_daily, place_kr_order,
-    place_us_order, get_balance, token_status,
+    place_us_order, get_balance, token_status, BrokerMismatch,
 )
 from server.kis_ws_client import KISWebSocketClient
 from server.security import start_security
@@ -428,10 +428,18 @@ async def order_balance(request: Request, market: str = Query("kr")):
     denied = _order_auth_fail_response(request)
     if denied is not None:
         return denied
+    # 🚨 주문과 동일하게 계좌를 라우팅한다. 라우팅 없이 두면 친구 로그인으로 오퍼레이터
+    #   잔고·보유종목이 그대로 노출된다 — 주문 오라우팅과 같은 급의 사고.
+    broker = (request.headers.get("X-Verity-Broker") or "").strip()
+    if not broker:
+        return JSONResponse({"error": "계좌 라우팅 헤더 누락 — 조회 거절"}, status_code=403)
     loop = asyncio.get_event_loop()
     try:
-        data = await loop.run_in_executor(None, get_balance, market.lower())
+        data = await loop.run_in_executor(None, get_balance, market.lower(), broker)
         return data
+    except BrokerMismatch as e:
+        logger.error("잔고 조회 거절 (계좌 라우팅): %s", e)
+        return JSONResponse({"error": str(e)}, status_code=403)
     except Exception as e:
         logger.error("잔고 조회 실패: %s", e)
         return JSONResponse({"error": str(e)}, status_code=502)
@@ -444,6 +452,15 @@ async def order_place(request: Request):
     if denied is not None:
         return denied
     body = await request.json()
+    # 🚨 계좌 라우팅 — 출처는 Vercel 이 service_role 전용 컬럼(profiles.broker_slug)에서 읽어
+    #   붙인 헤더다. **본문(body)에서 읽지 않는다** — 본문은 클라이언트가 조작할 수 있고,
+    #   그러면 남의 계좌로 주문을 낼 수 있다. 헤더 구간은 X-Service-Auth 로 이미 신뢰됨.
+    broker = (request.headers.get("X-Verity-Broker") or "").strip()
+    if not broker:
+        return JSONResponse(
+            {"success": False, "message": "계좌 라우팅 헤더 누락 — 주문 거절"},
+            status_code=403,
+        )
     ticker = str(body.get("ticker", "")).strip()
     side = str(body.get("side", "")).lower()
     qty = int(body.get("qty", 0))
@@ -463,13 +480,17 @@ async def order_place(request: Request):
     try:
         if market == "us":
             result = await loop.run_in_executor(
-                None, place_us_order, excd, ticker, side, qty, float(price), order_type,
+                None, place_us_order, excd, ticker, side, qty, float(price), order_type, broker,
             )
         else:
             result = await loop.run_in_executor(
-                None, place_kr_order, ticker, side, qty, int(price), order_type,
+                None, place_kr_order, ticker, side, qty, int(price), order_type, broker,
             )
         return result
+    except BrokerMismatch as e:
+        # 계좌 불일치 = 설정 문제이지 일시 장애가 아니다. 502 로 뭉개면 재시도를 유발한다.
+        logger.error("주문 거절 (계좌 라우팅): %s", e)
+        return JSONResponse({"success": False, "message": str(e)}, status_code=403)
     except Exception as e:
         logger.error("주문 실패: %s", e)
         return JSONResponse({"success": False, "message": str(e)}, status_code=502)
