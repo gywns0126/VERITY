@@ -39,6 +39,14 @@ jobs:
 
       - name: Run export trade pipeline
         env:
+          # 🚨 VERITY_MODE 기본값 = dev = **LLM 호출이 mock 으로 대체**된다. 이 한 줄이
+          #   없어서 [2/4] Gemini HS 매핑이 늘 0건이었고, 그 결과 trade_analysis.json 이
+          #   stocks=[] 로만 발행됐다(git 이력 전 커밋이 0건 = 한 번도 내용을 낸 적 없음).
+          #   키(GEMINI/PUBLIC_DATA)는 처음부터 다 있었다 — 소스가 아니라 배선 문제였다.
+          #   2026-08-07 발견: shadow monitor 가 이 스트림을 유일한 알람으로 물고 있었는데
+          #   "데이터를 못 구한다" 로 오독하고 폐기할 뻔했다. macro_synthesis.yml 이 같은
+          #   함정에 "default dev = mock — 실호출 위해 명시" 주석을 남긴 것과 동일 사례.
+          VERITY_MODE: prod
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
           KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
