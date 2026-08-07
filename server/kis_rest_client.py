@@ -23,6 +23,7 @@ from server.config import (
     KIS_APP_KEY,
     KIS_APP_SECRET,
     KIS_ACCOUNT_NO,
+    broker_credentials,
     KIS_BASE_URL,
     SUPABASE_URL,
     SUPABASE_SERVICE_ROLE_KEY,
@@ -309,11 +310,43 @@ def _post(path: str, tr_id: str, body: dict) -> dict:
         return {}
 
 
-def _account_parts() -> tuple[str, str]:
-    raw = KIS_ACCOUNT_NO.replace("-", "")
+def _split_account(raw: str) -> tuple[str, str]:
+    raw = (raw or "").replace("-", "")
     cano = raw[:8] if len(raw) >= 8 else raw
     prdt = raw[8:10] if len(raw) >= 10 else "01"
     return cano, prdt
+
+
+def _account_parts() -> tuple[str, str]:
+    return _split_account(KIS_ACCOUNT_NO)
+
+
+class BrokerMismatch(RuntimeError):
+    """요청한 계좌와 이 프로세스가 쥔 토큰의 앱키가 다름 — 발주 금지."""
+
+
+def _account_parts_for(broker: str) -> tuple[str, str]:
+    """슬러그 → (CANO, ACNT_PRDT_CD). 안전하지 않으면 예외로 끊는다.
+
+    🚨 핵심 안전 속성 — **손에 든 토큰의 앱키 == 주문 대상 계좌의 앱키** 일 때만 통과.
+    KIS 토큰은 앱키에 묶여 있으므로, 이 조건이 깨진 채 발주하면 오퍼레이터 토큰으로
+    친구 계좌번호를 밀어 넣는 꼴이 된다(거절되거나, 더 나쁘게는 엉뚱한 계좌 체결).
+    이 검사는 2단계(앱키별 토큰 발급, RULE 1)가 완료되면 자동으로 통과하기 시작한다 —
+    그때까지 오퍼레이터 외 계좌는 여기서 fail-closed 로 막힌다. 조용히 통과시키지 않는
+    이유 = 실자금이고, 잘못된 계좌 체결은 되돌릴 수 없기 때문.
+    """
+    creds = broker_credentials(broker)
+    if not creds:
+        raise BrokerMismatch(
+            f"알 수 없거나 미설정된 계좌 슬러그: {broker!r}. "
+            "BROKER_SLUGS allowlist 와 KIS_APP_KEY__<SLUG> 계열 env 를 확인."
+        )
+    if creds["app_key"] != KIS_APP_KEY:
+        raise BrokerMismatch(
+            f"계좌 {broker!r} 의 토큰이 이 프로세스에 없음 — 발주 차단. "
+            "앱키별 토큰 발급(RULE 1 2단계) 완료 전까지는 오퍼레이터 계좌만 주문 가능."
+        )
+    return _split_account(creds["account_no"])
 
 
 # ── 일봉 ──
@@ -725,8 +758,9 @@ def fetch_program_trade(market: str = "K") -> dict:
 
 # ── 국내 주문 ──
 
-def place_kr_order(ticker: str, side: str, qty: int, price: int, order_type: str) -> dict:
-    cano, prdt = _account_parts()
+def place_kr_order(ticker: str, side: str, qty: int, price: int, order_type: str,
+                   broker: str = "operator") -> dict:
+    cano, prdt = _account_parts_for(broker)
     tr_id = "TTTC0802U" if side == "buy" else "TTTC0801U"
     data = _post(
         "/uapi/domestic-stock/v1/trading/order-cash",
@@ -748,8 +782,9 @@ def place_kr_order(ticker: str, side: str, qty: int, price: int, order_type: str
 
 # ── 해외 주문 ──
 
-def place_us_order(excd: str, ticker: str, side: str, qty: int, price: float, order_type: str) -> dict:
-    cano, prdt = _account_parts()
+def place_us_order(excd: str, ticker: str, side: str, qty: int, price: float, order_type: str,
+                   broker: str = "operator") -> dict:
+    cano, prdt = _account_parts_for(broker)
     tr_id = "TTTT1002U" if side == "buy" else "TTTT1006U"
     data = _post(
         "/uapi/overseas-stock/v1/trading/order",
@@ -772,8 +807,8 @@ def place_us_order(excd: str, ticker: str, side: str, qty: int, price: float, or
 
 # ── 잔고 조회 ──
 
-def get_balance(market: str = "kr") -> dict:
-    cano, prdt = _account_parts()
+def get_balance(market: str = "kr", broker: str = "operator") -> dict:
+    cano, prdt = _account_parts_for(broker)
     if market == "us":
         return _get(
             "/uapi/overseas-stock/v1/trading/inquire-balance",

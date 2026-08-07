@@ -24,6 +24,46 @@ ORDER_SECRET_LEGACY: str = os.getenv("ORDER_SECRET", "").strip().strip('"')
 
 KIS_WS_URL: str = "ws://ops.koreainvestment.com:21000"
 
+# ── 다계좌 라우팅 (PM 2026-08-07) ────────────────────────────────────
+# 회원 = 오퍼레이터 + 지인 1명. A안 = **각자 자기 계좌에서 자기가 승인**(타인 자금 일임 아님).
+# 자격증명은 사람 수가 2명이라 별도 암호화 저장소를 만들지 않고 배포 env 세트로 둔다 —
+# 저장소를 새로 만들면 그 자체가 새 유출 표면이고, 2명 규모에선 이득이 없다.
+#
+# env 규약:
+#   operator = 기존 KIS_APP_KEY / KIS_APP_SECRET / KIS_ACCOUNT_NO (변수명 불변 = 하위호환)
+#   그 외    = KIS_APP_KEY__<SLUG대문자> / KIS_APP_SECRET__<SLUG> / KIS_ACCOUNT_NO__<SLUG>
+#   BROKER_SLUGS = 'operator,friend'  ← allowlist. 여기 없는 슬러그는 해석 자체를 거부.
+#
+# 🚨 allowlist 가 필수인 이유: 슬러그가 env 키 이름으로 조립되므로, 검증 없이 받으면
+#   임의 env 를 읽어내는 통로가 된다. Supabase CHECK(029) + Vercel 정규식 + 여기 allowlist
+#   3중. 슬러그 출처가 service_role 전용 컬럼이라 이미 신뢰 구간이지만 방어를 겹친다.
+_DEFAULT_BROKER: str = "operator"
+BROKER_SLUGS: tuple = tuple(
+    s for s in (x.strip() for x in os.getenv("BROKER_SLUGS", _DEFAULT_BROKER).split(","))
+    if s and s.replace("_", "").isalnum() and s.islower()
+)
+
+
+def broker_credentials(slug: str) -> dict | None:
+    """슬러그 → KIS 자격증명 세트. allowlist 밖이거나 미설정이면 None (= fail-closed).
+
+    호출자는 None 을 반드시 거절로 처리해야 한다. 기본 계좌로 폴백하면 남의 실계좌로
+    주문이 나간다 — 이 함수가 막으려는 사고가 정확히 그것이다.
+    """
+    slug = (slug or "").strip()
+    if not slug or slug not in BROKER_SLUGS:
+        return None
+    if slug == _DEFAULT_BROKER:
+        key, secret, acct = KIS_APP_KEY, KIS_APP_SECRET, KIS_ACCOUNT_NO
+    else:
+        sfx = slug.upper()
+        key = os.getenv(f"KIS_APP_KEY__{sfx}", "").strip().strip('"')
+        secret = os.getenv(f"KIS_APP_SECRET__{sfx}", "").strip().strip('"')
+        acct = os.getenv(f"KIS_ACCOUNT_NO__{sfx}", "").strip().strip('"')
+    if not (key and secret and acct):
+        return None
+    return {"slug": slug, "app_key": key, "app_secret": secret, "account_no": acct}
+
 # ── KIS 공유 토큰 store (Supabase) — RULE 1 단일 발급원 (PM 결정 2026-05-31) ──
 # Railway = 유일 발급원 → 발급 시 kis_shared_token 테이블에 토큰 값 기록.
 # GH/Vercel = service_role 읽기 소비. KIS_SHARED_TOKEN=1 일 때만 활성 (단계적 cutover).

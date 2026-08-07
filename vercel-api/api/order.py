@@ -21,6 +21,7 @@ import json
 import math
 import logging
 import os
+import re
 import time
 import traceback
 from datetime import datetime, timezone
@@ -84,6 +85,10 @@ def _resolve_origin(request_origin: str) -> str:
 _ALLOWED_SIDES = frozenset({"BUY", "SELL", "01", "02"})
 _ALLOWED_ORDER_TYPES = frozenset({"00", "01"})  # 지정가 / 시장가
 _ALLOWED_MARKETS = frozenset({"kr", "us"})
+# 계좌 라우팅 슬러그 형식 — Supabase 029 의 CHECK 제약과 동일. 서버 env 키를 조립하는
+# 값이라 DB 가드가 뚫려도 여기서 한 번 더 끊는다(이중 방어).
+_SLUG_RE = re.compile(r"^[a-z][a-z0-9_]{0,15}$")
+
 _MAX_QTY = int(os.environ.get("ORDER_MAX_QTY", "10000"))
 _MAX_PRICE_KRW = int(os.environ.get("ORDER_MAX_PRICE_KRW", "100000000"))
 _MAX_ORDER_VALUE_KRW_DEFAULT = int(os.environ.get("ORDER_MAX_VALUE_KRW", "10000000"))
@@ -116,18 +121,23 @@ def _prune_dedupe(now: float) -> None:
 
 class handler(BaseHTTPRequestHandler):
     def _order_limits_for(self, user_id: str, jwt: str) -> dict:
-        """profiles 테이블에서 사용자별 주문 권한/한도 조회. 실패 시 기본값."""
+        """profiles 테이블에서 사용자별 주문 권한/한도/계좌 라우팅 조회. 실패 시 기본값.
+
+        🚨 broker_slug 는 기본값을 두지 않는다(None). 회원이 2명 이상인 순간
+        기본값 = "조회에 실패하면 남의 계좌로 주문" 이 되기 때문이다. 없으면 거절.
+        """
         defaults = {
             "order_enabled": False,
             "max_order_krw": _MAX_ORDER_VALUE_KRW_DEFAULT,
             "daily_order_count_limit": _DAILY_COUNT_LIMIT_DEFAULT,
+            "broker_slug": None,
         }
         try:
             rows = sb.select(
                 "profiles",
                 {
                     "id": f"eq.{user_id}",
-                    "select": "order_enabled,max_order_krw,daily_order_count_limit",
+                    "select": "order_enabled,max_order_krw,daily_order_count_limit,broker_slug",
                     "limit": "1",
                 },
                 user_jwt=jwt,
@@ -135,12 +145,14 @@ class handler(BaseHTTPRequestHandler):
             if not rows:
                 return defaults
             row = rows[0]
+            slug = (row.get("broker_slug") or "").strip()
             return {
                 "order_enabled": bool(row.get("order_enabled")),
                 "max_order_krw": int(row.get("max_order_krw") or defaults["max_order_krw"]),
                 "daily_order_count_limit": int(
                     row.get("daily_order_count_limit") or defaults["daily_order_count_limit"]
                 ),
+                "broker_slug": slug if _SLUG_RE.match(slug) else None,
             }
         except Exception as e:
             _logger.warning("order limits lookup failed: %s", e)
@@ -173,6 +185,13 @@ class handler(BaseHTTPRequestHandler):
         if not limits.get("order_enabled"):
             self._json(403, {"error": "Order not permitted for this account"})
             return None
+        # 🚨 계좌 라우팅 미지정 = 거절. 조용히 기본 계좌로 보내면 남의 실계좌로 체결된다.
+        if not limits.get("broker_slug"):
+            self._json(403, {
+                "error": "Broker account not linked",
+                "detail": "profiles.broker_slug 미지정 — 서버에서 계좌 연결 후 이용 가능",
+            })
+            return None
         return {"user_id": uid, "jwt": jwt, "limits": limits}
 
     def _proxy_headers(self, user: dict) -> dict:
@@ -183,6 +202,8 @@ class handler(BaseHTTPRequestHandler):
             out["X-Service-Auth"] = _RAILWAY_SHARED_SECRET
         # Railway가 사용자별 로깅/권한을 하도록 검증된 UID를 헤더로 전달
         out["X-Verity-User-Id"] = user["user_id"]
+        # 실계좌 라우팅 — 값의 출처는 service_role 전용 컬럼(029). 클라이언트 입력이 아니다.
+        out["X-Verity-Broker"] = user["limits"]["broker_slug"]
         return out
 
     def _validate_order(self, body: dict, limits: dict) -> Tuple[bool, str, Optional[dict]]:
