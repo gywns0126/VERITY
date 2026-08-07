@@ -5,12 +5,29 @@ memory project_multi_bagger_watch 결정 22 — 텐버거 후보 신호 (매도 
 
 이 모듈은 **코드 구현만** — 운영 적용은 후속 (multi_bagger_signals_active env gate).
 
-5 신호:
+4 신호 (2026-08-07 PM 승인 — industry_s_curve 폐기로 5 → 4):
   1. revenue_acceleration (Mauboussin & Rappaport, Expectations Investing 2001)
   2. operating_leverage (Mauboussin, More Than You Know — firm-level)
   3. category_leader  ⭐ P0a 정정 의제 (자체 정량 룰 — 점유율 1위 + 4분기 격차 확대)
-  4. industry_s_curve (Everett Rogers, Diffusion of Innovations 1962)
-  5. hold_pnl_threshold (Lynch One Up 1989 정성 원칙, 180d/+50% 정량은 자체 설정)
+  4. hold_pnl_threshold (Lynch One Up 1989 정성 원칙, 180d/+50% 정량은 자체 설정)
+     — 2026-08-06 소비자 이전: 유니버스 스캔 → 보유 종목(multibagger_watch.build_holding_flowers)
+
+🗑️ 폐기 — industry_s_curve (Rogers, Diffusion of Innovations 1962):
+   29,271 관측(6/9~8/6) 0회 발동. 미구현 스텁이었고, 복구 계획("sector_trends 보강 후
+   활성")의 전제가 틀렸다 — sector_trends 는 섹터 **주가 등락률**(1m/3m/6m)이고 S-curve 는
+   산업 **매출** 2년 CAGR vs 직전 5년 CAGR 를 요구한다. 대체 불가.
+   PM 결정 2026-08-07 안 (가) = 폐기 후 4신호로 재정의. "5신호" 라벨이 거짓이었기 때문.
+   산업 매출 시계열(5년+) 확보 시 재등록 대상.
+
+🚨 검증 상태 (오해 방지 — 2026-08-07 명시):
+   본 모듈의 임계는 **백테스트로 검증된 적이 없다.** 근거로 적힌 것들의 실제 성격:
+     · 15% YoY = "텐배거 128종목의 진입 시점 분포" = P(성장률│텐배거). 규칙의 적중률
+       P(텐배거│성장률) 이 아니다. 생존자 조건부 분포로 임계를 잡은 것.
+     · DOL 2.5x = 한국 사례 3건(삼성전자·SK하이닉스·LGES) 사후 선택.
+     · category_leader = 자체 설정 (Lynch 인용 부정확 정정 기록 있음).
+   실측 방증: revenue_acceleration 이 소형주 유니버스의 **79.5%** 에서 발동한다.
+   5개 중 4개가 걸리는 조건은 희소 사건을 가려낼 수 없다.
+   → 후보군 vs 비후보군 forward 수익률 관측이 선행돼야 한다(공매도 trail 과 같은 구조).
 
 연관: docs/DECISION_LOG_MASTER.md 5/2 P0a (commit 7916b1f5 정정)
       memory project_multi_bagger_watch / project_phase_0_staged_framework
@@ -246,24 +263,6 @@ def detect_category_leader(
     }
 
 
-def detect_industry_s_curve(
-    stock: Dict[str, Any], portfolio: Dict[str, Any],
-) -> Dict[str, Any]:
-    """신호 4 — 산업 매출 가속 (2년 CAGR > 직전 5년 CAGR × 1.5).
-
-    출처: Everett Rogers, *Diffusion of Innovations* (1962). S-curve 채택 단계.
-    """
-    # 🚨 미구현 스텁 — 29,271 관측(2026-06-09~08-06) 내내 0회 발동. 2026-08-06 사인 조사:
-    #   "sector_trends 보강 후 활성" 이라는 기존 복구 계획은 **전제가 틀렸다.**
-    #   portfolio.sector_trends 의 실체 = 1m/3m/6m **섹터 주가 등락률**(avg_change_pct,
-    #   top3/bottom3)이다. Rogers S-curve 는 산업 **매출** 2년 CAGR vs 직전 5년 CAGR 를
-    #   요구한다 — 6개월 주가 모멘텀으로는 5년 매출 CAGR 를 만들 수 없다.
-    #   즉 이 신호를 살리려면 산업 매출 시계열(5년+) 수집이 선행돼야 한다. 미보유.
-    #   ⚠️ 2026-09 active gate 전 결정 필요: 수집 착수 / 신호 폐기 / 게이트 연기.
-    return {"triggered": False, "score": 50,
-            "reason": ("미구현 — 산업 매출 CAGR 시계열 미보유. sector_trends 는 섹터 "
-                       "주가 등락률이라 대체 불가(2026-08-06 사인 조사)")}
-
 
 def detect_hold_pnl_threshold(stock: Dict[str, Any]) -> Dict[str, Any]:
     """신호 5 — 보유 180일+ AND 미실현 +50%+.
@@ -307,14 +306,15 @@ def detect_hold_pnl_threshold(stock: Dict[str, Any]) -> Dict[str, Any]:
 def evaluate_multi_bagger_signals(
     stock: Dict[str, Any], portfolio: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """5 신호 일괄 평가. project_multi_bagger_watch 결정 22 정합.
+    """4 신호 일괄 평가. project_multi_bagger_watch 결정 22 정합.
+
+    2026-08-07 — industry_s_curve 폐기(PM 승인 안 가). 상세 = 모듈 docstring.
 
     Returns:
         {
             "revenue_acceleration": {...},
             "operating_leverage": {...},
             "category_leader": {...},  ⭐ P0a
-            "industry_s_curve": {...},
             "hold_pnl_threshold": {...},
             "alert_count": int (triggered=True 개수),
         }
@@ -322,14 +322,12 @@ def evaluate_multi_bagger_signals(
     s1 = detect_revenue_acceleration(stock)
     s2 = detect_operating_leverage(stock)
     s3 = detect_category_leader(stock, portfolio)
-    s4 = detect_industry_s_curve(stock, portfolio)
     s5 = detect_hold_pnl_threshold(stock)
-    count = sum(1 for r in (s1, s2, s3, s4, s5) if r.get("triggered"))
+    count = sum(1 for r in (s1, s2, s3, s5) if r.get("triggered"))
     return {
         "revenue_acceleration": s1,
         "operating_leverage": s2,
         "category_leader": s3,
-        "industry_s_curve": s4,
         "hold_pnl_threshold": s5,
         "alert_count": count,
     }

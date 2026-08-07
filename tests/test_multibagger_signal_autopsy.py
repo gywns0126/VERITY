@@ -19,24 +19,32 @@ import json
 
 from api.analyzers.multi_bagger_signals import (
     detect_hold_pnl_threshold,
-    detect_industry_s_curve,
     evaluate_multi_bagger_signals,
 )
 from api.intelligence.multibagger_watch import build_watch
 
 
-def test_industry_s_curve_is_unimplemented_stub():
-    """구현되면 이 테스트가 깨진다 — 그때 사유 문구와 함께 갱신할 것."""
-    r = detect_industry_s_curve({"ticker": "000001", "sector": "IT"}, {"sector_trends": {}})
-    assert r["triggered"] is False
-    assert "미구현" in r["reason"]
+def test_industry_s_curve_is_removed():
+    """🗑️ PM 승인 안 (가) — 폐기. 되살리려면 산업 매출 시계열 확보 + 재등록이 선행."""
+    import api.analyzers.multi_bagger_signals as M
+    assert not hasattr(M, "detect_industry_s_curve")
+    out = evaluate_multi_bagger_signals({"ticker": "000001"}, {"recommendations": []})
+    assert "industry_s_curve" not in out
 
 
-def test_industry_s_curve_stays_false_even_with_sector_trends():
-    """🚨 sector_trends 를 줘도 발동하지 않는다 — 그게 대체 데이터가 아니라는 뜻."""
-    pf = {"sector_trends": {"1m": {"top3_sectors": [{"name": "IT", "avg_change_pct": 9.9}]},
-                            "6m": {"top3_sectors": [{"name": "IT", "avg_change_pct": 40.0}]}}}
-    assert detect_industry_s_curve({"ticker": "000001", "sector": "IT"}, pf)["triggered"] is False
+def test_signal_set_is_exactly_four():
+    """"5신호" 라벨이 거짓이었기에 폐기했다 — 라벨과 실체가 다시 어긋나지 않게 고정."""
+    out = evaluate_multi_bagger_signals({"ticker": "000001"}, {"recommendations": []})
+    assert {k for k in out if k != "alert_count"} == {
+        "revenue_acceleration", "operating_leverage", "category_leader", "hold_pnl_threshold"}
+
+
+def test_validation_status_documented():
+    """🚨 백테스트 없음이 모듈에 명시돼 있어야 한다 — '검증됐다'는 오해가 비싸다."""
+    import api.analyzers.multi_bagger_signals as M
+    doc = M.__doc__ or ""
+    assert "백테스트로 검증된 적이 없다" in doc
+    assert "P(성장률│텐배거)" in doc      # 생존자 조건부 분포임을 명시
 
 
 def test_hold_pnl_inapplicable_without_holding_context():
@@ -61,11 +69,10 @@ def test_hold_pnl_thresholds_unchanged():
 def test_alert_count_excludes_dead_signals():
     """죽은 2종은 alert_count 를 부풀리지 않는다 — 5신호 라벨이지만 실효 3종."""
     out = evaluate_multi_bagger_signals({"ticker": "000001"}, {"recommendations": []})
-    assert out["industry_s_curve"]["triggered"] is False
     assert out["hold_pnl_threshold"]["triggered"] is False
     assert out["alert_count"] == sum(
         1 for k in ("revenue_acceleration", "operating_leverage", "category_leader",
-                    "industry_s_curve", "hold_pnl_threshold") if out[k]["triggered"])
+                    "hold_pnl_threshold") if out[k]["triggered"])
 
 
 def test_watch_row_persists_reason(monkeypatch):
@@ -75,7 +82,7 @@ def test_watch_row_persists_reason(monkeypatch):
     rows = build_watch([stock], as_of="2026-08-06")
     if not rows:                       # 신호 0 이면 focused list 에서 제외됨
         return
-    sig = rows[0]["signals"]["industry_s_curve"]
+    sig = rows[0]["signals"]["revenue_acceleration"]
     assert "reason" in sig and sig["reason"]
     assert json.dumps(rows[0], ensure_ascii=False)   # 직렬화 가능
 
