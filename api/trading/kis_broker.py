@@ -72,7 +72,17 @@ def _kis_app_key_fp(app_key: str) -> str:
     return hashlib.sha256(app_key.encode("utf-8")).hexdigest()[:12]
 
 
-def _kis_publish_shared_token(token: str, expires_dt, issued_dt, app_key: str) -> None:
+def _kis_store_id(broker: str = "operator") -> str:
+    """공유 store 행 id. 🚨 오퍼레이터는 반드시 'kis_rest' — 기존 행/소비자와 호환.
+
+    다계좌(PM 2026-08-07)로 키가 늘어도 오퍼레이터 행 id 는 절대 바꾸지 않는다. 바꾸면
+    Railway/Vercel 소비자가 전부 토큰을 못 찾고, RULE 1 상 재발급도 못 해 거래가 멈춘다.
+    """
+    return "kis_rest" if broker == "operator" else f"kis_rest__{broker}"
+
+
+def _kis_publish_shared_token(token: str, expires_dt, issued_dt, app_key: str,
+                              broker: str = "operator") -> None:
     """발급 직후 Supabase upsert — GH 단일 발급원의 SoT. 실패해도 caller(분석) 진행."""
     if not _kis_shared_enabled():
         return
@@ -80,7 +90,7 @@ def _kis_publish_shared_token(token: str, expires_dt, issued_dt, app_key: str) -
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     try:
         body = {
-            "id": "kis_rest",
+            "id": _kis_store_id(broker),
             "access_token": token,
             "expires_at": expires_dt.isoformat(),
             "issued_at": issued_dt.isoformat(),
@@ -105,7 +115,7 @@ def _kis_publish_shared_token(token: str, expires_dt, issued_dt, app_key: str) -
         logger.warning("KIS 공유 store publish 실패 (GH cache 는 유지): %s", e)
 
 
-def _kis_load_shared_token(app_key: str):
+def _kis_load_shared_token(app_key: str, broker: str = "operator"):
     """Supabase 공유 store 에서 최신 유효 토큰 read (GH 소비자용, cutover 완성 2026-06-03).
 
     배경: cutover(5/31)는 publish(GH→Supabase)만 만들고 GH 소비자 read 경로는 없었음. GH run 은
@@ -125,7 +135,7 @@ def _kis_load_shared_token(app_key: str):
             f"{url}/rest/v1/kis_shared_token",
             headers={"apikey": key, "Authorization": f"Bearer {key}"},
             params={
-                "id": "eq.kis_rest",
+                "id": f"eq.{_kis_store_id(broker)}",
                 "select": "access_token,expires_at,issued_at,app_key_fp",
                 "limit": "1",
             },
@@ -217,7 +227,7 @@ class KISBroker:
                 cls._cb_consecutive_failures, _KIS_CB_COOLDOWN_S,
             )
 
-    def __init__(self, cache_only: bool = False):
+    def __init__(self, cache_only: bool = False, broker: str = "operator"):
         """
         Args:
             cache_only: True 면 신규 토큰 발급 절대 금지. cache 토큰만 사용.
@@ -226,14 +236,26 @@ class KISBroker:
                        price_pulse 같은 고빈도 consumer 가 신규 발급 source 되는 것 차단.
                        정상 source = kis_token_refresh (KST 23:45 1일 1회) + daily_realtime backup.
         """
-        self.app_key: str = os.environ.get("KIS_APP_KEY", "").strip().strip('"')
-        self.app_secret: str = os.environ.get("KIS_APP_SECRET", "").strip().strip('"')
-        raw_acct = os.environ.get("KIS_ACCOUNT_NO", "").strip().strip('"').replace("-", "")
+        # 🚨 다계좌 (PM 2026-08-07) — 오퍼레이터는 **기존 env 변수명 그대로**. 이름을 바꾸면
+        #   배포 env 를 전부 다시 넣어야 하고, 하나라도 빠지면 RULE 1 상 재발급도 못 한다.
+        #   추가 계좌만 KIS_APP_KEY__<SLUG> 계열을 쓴다. 키별로 토큰 버킷·락·store 행이 분리되며
+        #   1일 1토큰 가드도 **키마다 독립**으로 걸린다(한 키 발급이 다른 키 락을 건드리지 않음).
+        self.broker_slug: str = (broker or "operator").strip() or "operator"
+        _sfx = "" if self.broker_slug == "operator" else f"__{self.broker_slug.upper()}"
+        self.app_key: str = os.environ.get(f"KIS_APP_KEY{_sfx}", "").strip().strip('"')
+        self.app_secret: str = os.environ.get(f"KIS_APP_SECRET{_sfx}", "").strip().strip('"')
+        raw_acct = os.environ.get(f"KIS_ACCOUNT_NO{_sfx}", "").strip().strip('"').replace("-", "")
         self.account_cano: str = raw_acct[:8] if len(raw_acct) >= 8 else raw_acct
         self.account_prdt: str = raw_acct[8:10] if len(raw_acct) >= 10 else "01"
         self.base_url: str = os.environ.get(
             "KIS_OPENAPI_BASE_URL", _PROD_URL
         ).strip().strip('"').rstrip("/")
+        # 토큰 디스크 캐시 — 오퍼레이터는 기존 파일명 그대로(verity_kis_token.json).
+        # 키가 섞이면 A 키 토큰으로 B 계좌에 붙는 사고가 나므로 파일부터 분리한다.
+        self._cache_path: str = (
+            _TOKEN_CACHE_PATH if self.broker_slug == "operator"
+            else os.path.join(_TOKEN_CACHE_DIR, f"verity_kis_token__{self.broker_slug}.json")
+        )
         self._token: Optional[str] = None
         self._token_expires: Optional[datetime] = None
         self._issued_date: str = ""
@@ -254,7 +276,7 @@ class KISBroker:
         """
         import sys
         try:
-            with open(_TOKEN_CACHE_PATH, "r", encoding="utf-8") as f:
+            with open(self._cache_path, "r", encoding="utf-8") as f:
                 cached = json.load(f)
             token = cached.get("access_token", "")
             expires_str = cached.get("expires_at", "")
@@ -290,7 +312,7 @@ class KISBroker:
                     file=sys.stderr,
                 )
         except FileNotFoundError:
-            print(f"[kis_cache] file not found: {_TOKEN_CACHE_PATH}", file=sys.stderr)
+            print(f"[kis_cache] file not found: {self._cache_path}", file=sys.stderr)
         except (KeyError, ValueError) as e:
             print(f"[kis_cache] parse error: {e}", file=sys.stderr)
         except Exception as e:
@@ -302,7 +324,7 @@ class KISBroker:
         RULE 1: read-only — 발급 X. file cache 가 만료/부재일 때 fallback. 유효 토큰 적재 시 True.
         """
         import sys
-        loaded = _kis_load_shared_token(self.app_key)
+        loaded = _kis_load_shared_token(self.app_key, self.broker_slug)
         if not loaded:
             return False
         token, expires_dt, issued_dt = loaded
@@ -325,10 +347,10 @@ class KISBroker:
         """
         import sys
         try:
-            cache_dir = os.path.dirname(_TOKEN_CACHE_PATH)
+            cache_dir = os.path.dirname(self._cache_path)
             if cache_dir:
                 os.makedirs(cache_dir, exist_ok=True)
-            with open(_TOKEN_CACHE_PATH, "w", encoding="utf-8") as f:
+            with open(self._cache_path, "w", encoding="utf-8") as f:
                 json.dump(
                     {
                         "access_token": self._token,
@@ -338,7 +360,7 @@ class KISBroker:
                     },
                     f,
                 )
-            os.chmod(_TOKEN_CACHE_PATH, 0o600)
+            os.chmod(self._cache_path, 0o600)
             print(
                 f"[kis_cache] SAVED — path={_TOKEN_CACHE_PATH} expires={self._token_expires.isoformat(timespec='seconds') if self._token_expires else 'N/A'}",
                 file=sys.stderr,
@@ -446,7 +468,7 @@ class KISBroker:
         #   최근(<24h) 유효 토큰이 이미 있으면 재사용하고 발급하지 않는다.
         #   force_refresh(주 발급원 kis_token_refresh, KST 23:45) 만 예외 = 1일 1회 강제 발급 유지.
         if not force_refresh and _kis_shared_enabled():
-            _loaded = _kis_load_shared_token(self.app_key)
+            _loaded = _kis_load_shared_token(self.app_key, self.broker_slug)
             if _loaded:
                 _tok, _exp, _iss = _loaded
                 if _iss and _exp and (now - _iss) < timedelta(hours=24) and now < _exp:
@@ -561,7 +583,7 @@ class KISBroker:
         self._mark_issued_today()  # ★ 파일 lock 기록 — 같은 날 재발급 차단
         # ★ GH 단일 발급원 — 발급 직후 Supabase 공유 store publish (Railway/Vercel 소비).
         #   KIS_SHARED_TOKEN=1 일 때만. file lock 이 GH 내부 1일 1발급 보장 = publish 도 1/day.
-        _kis_publish_shared_token(self._token, self._token_expires, now, self.app_key)
+        _kis_publish_shared_token(self._token, self._token_expires, now, self.app_key, self.broker_slug)
         return self._token
 
     # ── 파일 기반 daily lock (하루 1회 보장) ──
@@ -569,11 +591,16 @@ class KISBroker:
     def _daily_lock_path(self) -> str:
         """git repo commit 가능한 경로 — data/.kis_issued_date.txt.
         workflow 의 'git add data/' 로 자동 포함되어 다음 실행이 checkout 시 받음."""
+        # 🚨 오퍼레이터 = 기존 파일명 유지(.kis_issued_date.txt). 워크플로 git add 경로가
+        #   이 이름에 묶여 있고, 이름이 바뀌면 락이 propagate 되지 않아 러너마다 재발급한다
+        #   (= RULE 1 위반). 추가 계좌만 접미사를 붙이고, 워크플로 git add 도 함께 넓힌다.
+        fname = (".kis_issued_date.txt" if self.broker_slug == "operator"
+                 else f".kis_issued_date__{self.broker_slug}.txt")
         try:
             from api.config import DATA_DIR
-            return os.path.join(DATA_DIR, ".kis_issued_date.txt")
+            return os.path.join(DATA_DIR, fname)
         except Exception:
-            return os.path.join(os.getcwd(), "data", ".kis_issued_date.txt")
+            return os.path.join(os.getcwd(), "data", fname)
 
     def _is_issued_today(self) -> bool:
         """[deprecated 2026-05-13] 오늘 이미 발급됐는지 lock 파일에서 확인.

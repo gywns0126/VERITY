@@ -75,8 +75,7 @@ def test_friend_resolves_to_own_credentials(monkeypatch):
 
 
 # ── 3. 토큰-계좌 일치 가드 ───────────────────────────────────────────
-def test_mismatched_app_key_blocks_order(monkeypatch):
-    """친구 계좌인데 프로세스가 쥔 토큰은 오퍼레이터 것 → 발주 차단."""
+def _multi(monkeypatch):
     _load_config(
         monkeypatch, KIS_APP_KEY="opkey", KIS_APP_SECRET="ops", KIS_ACCOUNT_NO="11111111-01",
         BROKER_SLUGS="operator,friend",
@@ -85,13 +84,126 @@ def test_mismatched_app_key_blocks_order(monkeypatch):
     )
     import server.kis_rest_client as krc
     importlib.reload(krc)
+    return krc
 
-    # 오퍼레이터는 통과 (토큰 앱키 == 계좌 앱키)
+
+def test_account_parts_never_cross_accounts(monkeypatch):
+    """슬러그마다 자기 계좌번호가 나온다 — 서로의 계좌로 넘어가지 않는다."""
+    krc = _multi(monkeypatch)
     assert krc._account_parts_for("operator") == ("11111111", "01")
+    assert krc._account_parts_for("friend") == ("22222222", "01")
 
-    # 친구는 차단 — 조용히 오퍼레이터 계좌로 흐르지 않는다
+
+def test_alt_broker_token_never_falls_back_to_operator(monkeypatch):
+    """공유 store 에 친구 토큰이 없으면 예외 — 오퍼레이터 토큰으로 대신 나가지 않는다.
+
+    이게 뚫리면 친구 계좌번호에 오퍼레이터 자격증명이 붙는다(= 최악의 오라우팅).
+    """
+    krc = _multi(monkeypatch)
+    monkeypatch.setattr(krc, "_shared_enabled", lambda: True)
+    monkeypatch.setattr(krc, "_read_shared_token_for", lambda sid: None)
+    monkeypatch.setattr(krc, "_get_token", lambda: "OPERATOR_TOKEN")
+
+    with pytest.raises(RuntimeError) as ei:
+        krc._get_token_for("friend")
+    assert "OPERATOR_TOKEN" not in str(ei.value)
+
+
+def test_alt_broker_token_fingerprint_must_match(monkeypatch):
+    """store 에 있는 토큰이 다른 앱키로 발급된 것이면 차단 — env 오설정 detect."""
+    krc = _multi(monkeypatch)
+    monkeypatch.setattr(krc, "_shared_enabled", lambda: True)
+    monkeypatch.setattr(krc, "_read_shared_token_for", lambda sid: {
+        "access_token": "T", "expires_at": "2099-01-01T00:00:00+09:00", "app_key_fp": "deadbeefdead",
+    })
     with pytest.raises(krc.BrokerMismatch):
-        krc._account_parts_for("friend")
+        krc._get_token_for("friend")
+
+
+def test_alt_broker_reads_its_own_store_row(monkeypatch):
+    """친구는 kis_rest__friend 행을 읽는다 — 오퍼레이터 행(kis_rest)을 읽으면 안 된다."""
+    import hashlib
+    krc = _multi(monkeypatch)
+    seen = []
+    fp = hashlib.sha256(b"frkey").hexdigest()[:12]
+    monkeypatch.setattr(krc, "_shared_enabled", lambda: True)
+
+    def fake(sid):
+        seen.append(sid)
+        return {"access_token": "FRIEND_TOKEN", "expires_at": "2099-01-01T00:00:00+09:00",
+                "app_key_fp": fp}
+
+    monkeypatch.setattr(krc, "_read_shared_token_for", fake)
+    assert krc._get_token_for("friend") == "FRIEND_TOKEN"
+    assert seen == ["kis_rest__friend"]
+
+
+def test_headers_bundle_one_persons_credentials(monkeypatch):
+    """한 요청의 토큰·appkey·appsecret 이 전부 같은 사람 것이어야 한다."""
+    import hashlib
+    krc = _multi(monkeypatch)
+    fp = hashlib.sha256(b"frkey").hexdigest()[:12]
+    monkeypatch.setattr(krc, "_shared_enabled", lambda: True)
+    monkeypatch.setattr(krc, "_read_shared_token_for", lambda sid: {
+        "access_token": "FRIEND_TOKEN", "expires_at": "2099-01-01T00:00:00+09:00", "app_key_fp": fp,
+    })
+    h = krc._headers("TTTC0802U", "friend")
+    assert h["appkey"] == "frkey" and h["appsecret"] == "frs"
+    assert h["authorization"] == "Bearer FRIEND_TOKEN"
+
+
+# ── 발급자 측: 계좌별 락·store 행 분리, 오퍼레이터 경로 불변 ─────────────
+def test_operator_paths_unchanged(monkeypatch):
+    """🚨 오퍼레이터의 락 파일명·store id 는 절대 바뀌면 안 된다.
+
+    바뀌면 기존 락이 propagate 되지 않아 러너마다 재발급(= RULE 1 위반)하고,
+    소비자들이 토큰 행을 못 찾아 거래가 멈춘다.
+    """
+    monkeypatch.setenv("KIS_APP_KEY", "opkey")
+    monkeypatch.setenv("KIS_APP_SECRET", "ops")
+    monkeypatch.setenv("KIS_ACCOUNT_NO", "11111111-01")
+    from api.trading.kis_broker import KISBroker, _kis_store_id
+
+    assert _kis_store_id("operator") == "kis_rest"
+    b = KISBroker()
+    assert b.broker_slug == "operator"
+    assert b._daily_lock_path().endswith("/.kis_issued_date.txt")
+    assert b._cache_path.endswith("/verity_kis_token.json")
+
+
+def test_alt_broker_paths_are_separate(monkeypatch):
+    """계좌별 락·캐시·store 행이 분리 — 한 계좌 발급이 다른 계좌 가드를 건드리지 않는다."""
+    monkeypatch.setenv("KIS_APP_KEY", "opkey")
+    monkeypatch.setenv("KIS_APP_KEY__FRIEND", "frkey")
+    monkeypatch.setenv("KIS_APP_SECRET__FRIEND", "frs")
+    monkeypatch.setenv("KIS_ACCOUNT_NO__FRIEND", "22222222-01")
+    from api.trading.kis_broker import KISBroker, _kis_store_id
+
+    assert _kis_store_id("friend") == "kis_rest__friend"
+    f = KISBroker(broker="friend")
+    assert f.app_key == "frkey" and f.account_cano == "22222222"
+    assert f._daily_lock_path().endswith("/.kis_issued_date__friend.txt")
+    assert f._cache_path.endswith("/verity_kis_token__friend.json")
+
+    o = KISBroker()
+    assert o._daily_lock_path() != f._daily_lock_path()
+    assert o._cache_path != f._cache_path
+
+
+def test_token_refresh_workflow_commits_all_lock_files():
+    """RULE 4 — 신규 계좌 락 파일이 git add 에서 빠지면 락이 전파되지 않는다."""
+    s = _src(".github/workflows/kis_token_refresh.yml")
+    assert "data/.kis_issued_date.txt data/.kis_issued_date__*.txt" in s
+    # 24h 가드는 절대 낮추지 않는다 (RULE 1, 사고 5/27·5/28)
+    assert "_is_recently_issued(hours=24)" in s
+    assert "hours=23" not in s
+
+
+def test_store_migration_allows_multikey_but_pins_operator():
+    s = _src("supabase/migrations/030_kis_shared_token_multikey.sql")
+    assert "kis_shared_token_singleton" in s          # 옛 싱글턴 제약 해제
+    assert "id = 'kis_rest' OR id ~" in s             # 오퍼레이터 id 고정 + 형식 제한
+    assert "kis_shared_token_app_key_fp_uniq" in s    # 같은 앱키 2행 = 하루 2토큰 차단
 
 
 def test_unknown_slug_raises_not_falls_back(monkeypatch):
