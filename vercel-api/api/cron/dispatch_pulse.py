@@ -124,8 +124,14 @@ def _resolve_events(now_utc: datetime) -> list[str]:
     # 2026-05-18 — daily_analysis_full + universe_scan Vercel fallback
     # GitHub Actions schedule cron silent miss/delay 회피 (5/16~5/18 universe_scan 3일 silent miss,
     # 5/18 daily_full 16:07 → 20:11 KST 4h delay). Vercel Cron = 신뢰 ↑.
-    # daily_analysis_full KR 마감 — UTC 07:07 = KST 16:07 Mon-Fri
-    if hour == 7 and minute == 7 and is_weekday:
+    # daily_analysis_full KR 마감 — UTC 07:50 = KST 16:50 Mon-Fri
+    # 🚨 2026-08-07 — 07:07 → 07:50 이동 (.github/workflows/daily_analysis_full.yml 과 쌍).
+    #   universe_scan(06:30 시작, 실측 49~66분)이 같은 concurrency 그룹을 점유하는 동안
+    #   daily_full 이 대기로 들어가고, 제3 워크플로 도착 시 밀려나 취소된다.
+    #   실측 08-07: universe_scan 06:30→07:24 · daily_full 07:07 대기 · Export Trade
+    #   07:16 도착 → daily_full 취소 = 당일 장 마감 분석 누락.
+    #   이 매핑을 안 옮기면 Vercel fallback 이 옛 시각으로 쏴 충돌이 재현된다.
+    if hour == 7 and minute == 50 and is_weekday:
         events.append("daily_analysis_full")
     # daily_analysis_full US 마감 — UTC 21:30 Tue-Fri = KST 06:30 Wed-Sat
     if hour == 21 and minute == 30 and py_wd in (1, 2, 3, 4):
