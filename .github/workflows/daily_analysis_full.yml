@@ -6,8 +6,21 @@ name: Stock Analysis Pipeline (Full & Periodic)
 
 on:
   schedule:
-    # 장 마감 full 분석 (KST 16:00 = UTC 07:00), 월~금
-    - cron: '7 7 * * 1-5'
+    # 장 마감 full 분석 (KST 16:50 = UTC 07:50), 월~금
+    # 🚨 2026-08-07 — 07:07 → 07:50 이동. universe_scan(06:30 시작)이 같은 concurrency
+    #   그룹(verity-data-write)에서 49~66분(중앙 55분) 돌아 07:07 슬롯을 항상 침범했다.
+    #   GitHub 는 그룹당 **대기 슬롯을 하나만** 유지하므로, 대기 중에 제3의 워크플로가
+    #   도착하면 밀려나 취소된다. 실측 2026-08-07:
+    #     Universe Scan 06:30→07:24 점유 · daily_full 07:07 대기 진입 ·
+    #     Export Trade 07:16 도착 → daily_full **취소(job 0개, 실행된 적 없음)**
+    #     = 당일 KST 16:07 장 마감 전체 분석 누락.
+    #   설계 주석(universe_scan.yml)은 "37분 일찍 시작"으로 ~35분 소요를 가정했는데
+    #   실제가 55분으로 드리프트했다.
+    #   부수 효과로 정확성도 개선된다 — 07:07 은 universe_scan 미완이라 어제 스냅샷을
+    #   읽어 max_stale 2h 초과 → 느린 인라인 폴백이었다. 07:50 이면 26분 stale = fast path.
+    #   ⚠️ vercel-api/api/cron/dispatch_pulse.py 의 시각 매핑도 **함께** 옮겨야 한다
+    #     (Vercel fallback 이 옛 시각으로 쏘면 같은 충돌이 재현된다).
+    - cron: '50 7 * * 1-5'
     # 미장 마감 full 분석 KST 06:30 (UTC 21:30), 화~금
     # 2026-05-18 fix: 옛 '2-6' (Tue-Sat UTC) 결함 — Sat UTC = KST Sun 06:30 = US 미장
     # 휴장 + KRX 일요일 휴장 = 분석할 세션 0 + KRX 빈 JSON 무한 fail. cron 자체 false trigger.
@@ -155,7 +168,10 @@ jobs:
             echo "mode=periodic_monthly" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "7 0 * * 6" ]; then
             echo "mode=periodic_weekly" >> $GITHUB_OUTPUT
-          elif [ "$CRON" = "7 7 * * 1-5" ]; then
+          elif [ "$CRON" = "50 7 * * 1-5" ] || [ "$CRON" = "7 7 * * 1-5" ]; then
+            # 🚨 2026-08-07 — cron 문자열 매칭이라 스케줄을 옮기면 여기가 같이 안 바뀌면
+            #   else 로 흘러간다(현재 else 도 full 이라 무해했지만, periodic 을 옮길 땐 치명적).
+            #   신·구 둘 다 인정 — 이전 스케줄로 예약된 run 이 남아 있을 수 있다.
             echo "mode=full" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "30 21 * * 2-5" ]; then
             echo "mode=full_us" >> $GITHUB_OUTPUT
