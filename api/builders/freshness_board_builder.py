@@ -29,6 +29,10 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 sys.path.insert(0, _ROOT)
 
 from api.config import DATA_DIR, now_kst  # noqa: E402
+from api.observability.content_freshness import (  # noqa: E402
+    content_status as _content_status,
+    extract_content_ts as _extract_content_ts,
+)
 from scripts.freshness_shadow_monitor import (  # noqa: E402
     _extract_ts,
     _load_any,
@@ -148,6 +152,7 @@ def build_board() -> dict:
             continue
 
         f = s.get("file", "")
+        obj = None   # glob 분기에서도 아래 내용 신선도 블록이 참조 — 미초기화 시 NameError
         if "*" in f:
             t = latest_ts_for_glob(f, s.get("ts_field"))
         else:
@@ -171,6 +176,29 @@ def build_board() -> dict:
             row["status"] = "closed"  # 주말/장 마감 무생산 = 정상(개장 시 재개). stale 오탐 방지
         else:
             row["status"] = "stale" if (maxm and age_eff > maxm) else "fresh"
+
+        # ── 내용 신선도 (2026-08-07) — 파일 시각과 직교하는 두 번째 축 ──────────
+        # 사고: 국민연금 직원수가 파일은 매번 새로 써지는데 안의 데이터는 5월에 묶여
+        #   있었고, 파일 시각만 보던 보드는 계속 "fresh" 를 냈다. 파이프라인이 "돌긴
+        #   도는데 낡은 값을 재발행" 하는 상태가 종전 축에서는 보이지 않는다.
+        # 🚨 opt-in — SLA 에 max_content_age_minutes 가 있는 스트림만 판정한다.
+        #   추측 임계를 100개 스트림에 일괄 적용하면 오탐이 쌓여 경고가 무뎌지고,
+        #   그때부터 감시는 있으나 마나가 된다.
+        c_max = s.get("max_content_age_minutes")
+        if c_max and obj is not None:
+            c_ts = _extract_content_ts(obj, s.get("content_field"))
+            c_status, c_age = _content_status(c_ts, c_max, now)
+            row["content_status"] = c_status
+            if c_ts is not None:
+                row["content_ts"] = c_ts.isoformat()
+            if c_age is not None:
+                row["content_age_min"] = c_age
+            row["max_content_age_min"] = c_max
+            # 두 축 중 나쁜 쪽을 최종 판정으로 올린다. 단 closed/discontinued 는
+            # "생산 안 하는 게 정상" 이라 내용 판정으로 뒤집지 않는다.
+            if c_status == "stale" and row["status"] == "fresh":
+                row["status"] = "stale"
+                row["stale_reason"] = "content"
         rows.append(row)
 
     rows.sort(key=lambda r: (_CRIT_ORDER.get(r.get("criticality"), 9), r["id"]))
