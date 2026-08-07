@@ -299,3 +299,60 @@ def test_alarm_silent_when_everything_is_known(monkeypatch, tmp_path):
     monkeypatch.setattr(MA, "audit_flag_coverage", lambda root=".": {"ok": False, "never_fired": [0] * 13})
     out = MA.run(str(tmp_path))
     assert out["status"] != "FAIL" and out["failing"] == []
+
+
+# ── 검사 F — 입력 상수성 (2026-08-07) ────────────────────────────────
+
+def _recs(tmp_path, rows):
+    (tmp_path / "recommendations.json").write_text(json.dumps(rows), encoding="utf-8")
+
+
+def test_constant_zero_input_detected(monkeypatch, tmp_path):
+    """🚨 존재하는데 전 종목 동일값(0) = 측정이 아니라 상위 공백.
+
+    실측 2026-08-07: credit_rate·current_ratio 가 19/19 전부 0.0.
+    falsy 라 `x or 기본값` 코드에서 결측으로 뭉개져 더 안 보였다.
+    """
+    _wire(monkeypatch, tmp_path)
+    _recs(tmp_path, [{"kis_credit_balance": {"credit_rate": 0.0}} for _ in range(15)])
+    r = MA.audit_input_constancy()
+    hit = [c for c in r["constant_inputs"] if c["input"] == "kis_credit_balance.credit_rate"]
+    assert hit and hit[0]["constant_value"] == 0.0 and hit[0]["severity"] == "high"
+    assert r["ok"] is False
+
+
+def test_varying_input_passes(monkeypatch, tmp_path):
+    _wire(monkeypatch, tmp_path)
+    _recs(tmp_path, [{"kis_financial_ratio": {"roe": float(i)}} for i in range(15)])
+    r = MA.audit_input_constancy()
+    assert not any(c["input"].endswith(".roe") for c in r["constant_inputs"])
+
+
+def test_constant_nonzero_is_medium(monkeypatch, tmp_path):
+    """0 이 아닌 상수도 의심이되 강도는 낮다 — 실제로 같은 값일 수 있다."""
+    _wire(monkeypatch, tmp_path)
+    _recs(tmp_path, [{"short_interest": {"short_pct": 3.5}} for _ in range(15)])
+    r = MA.audit_input_constancy()
+    hit = [c for c in r["constant_inputs"] if c["input"] == "short_interest.short_pct"]
+    assert hit and hit[0]["severity"] == "medium"
+
+
+def test_thin_sample_not_judged(monkeypatch, tmp_path):
+    """표본 10 미만은 우연히 같을 수 있다 — 판정하지 않는다."""
+    _wire(monkeypatch, tmp_path)
+    _recs(tmp_path, [{"kis_credit_balance": {"credit_rate": 0.0}} for _ in range(5)])
+    assert MA.audit_input_constancy()["constant_inputs"] == []
+
+
+def test_missing_not_counted_as_constant(monkeypatch, tmp_path):
+    """결측(None)은 검사 B 소관 — 여기서 상수로 세면 이중 신고가 된다."""
+    _wire(monkeypatch, tmp_path)
+    _recs(tmp_path, [{} for _ in range(15)])
+    assert MA.audit_input_constancy()["constant_inputs"] == []
+
+
+def test_constancy_baselined():
+    """상위 API 공백 2종은 우리가 못 고친다 — 기준선. 늘어나면 FAIL."""
+    assert MA._KNOWN_BASELINE["input_constancy"]["constant_inputs"] == 2
+    assert MA._exceeds_baseline(
+        "input_constancy", {"ok": False, "constant_inputs": [0, 0, 0]}) is True

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""measurement_audit — 측정 오염 자동 검출 5종 (2026-08-05 신설 · 08-06 확장).
+"""measurement_audit — 측정 오염 자동 검출 6종 (2026-08-05 신설 · 08-06~07 확장).
 
 배경: 2026-08-04~05 감사에서 확정 결함이 다수 나왔는데, **전부 "조용히 죽어서 아무도
 몰랐던" 종류**였다 — 하트비트 30일, event_study 38일, 유령 매도 3주, 통화 오류(당시 진행 중).
@@ -17,6 +17,8 @@
 
   D. 규칙 판별력  — 매크로 등급 규칙의 발동률. 상시(≥90%)·미발동(≤5%) 검출 + cap 0일 집계
   E. 플래그 커버리지 — red_flag 규칙 중 실제로 발동한 적 없는 것 검출 (코드 정의 vs 관측)
+  F. 입력 상수성  — 규칙 입력이 전 종목 **동일값**인가. 존재하는데 다 같으면 측정이 아니라
+     상위 공백이다. 8/7 실측: credit_rate·current_ratio 가 19/19 전부 0.0
 
 그리고 **baseline** 을 도입했다. 8/6 에 price_scale 이 통화 혼재를 매일 신고하고 있었는데
 아무도 읽지 않은 것이 드러났다 — 매일 FAIL 인 경보는 경보가 아니다. 알려진 미해결분은
@@ -296,6 +298,9 @@ _KNOWN_BASELINE = {
     # 검사 E — 미발동 red_flag 규칙. 배선 결함과 희소 사건이 섞여 있어 전수 분류 전까지
     # 기준선으로 둔다. 늘어나면(=규칙이 새로 죽으면) 즉시 FAIL.
     "flag_coverage": {"never_fired": 13},
+    # 검사 F — 상위 API 가 빈 값을 0 으로 주는 입력 2종(credit_rate·current_ratio).
+    #   우리가 고칠 수 없다(KIS 응답). 늘어나면 = 다른 입력도 죽었다는 뜻이므로 FAIL.
+    "input_constancy": {"constant_inputs": 2},
 }
 
 
@@ -322,6 +327,7 @@ def run(root: str = ".") -> Dict[str, Any]:
         "price_scale": audit_price_scale(),
         "rule_discrimination": audit_rule_discrimination(),
         "flag_coverage": audit_flag_coverage(root),
+        "input_constancy": audit_input_constancy(),
     }
     # baseline 대조 — 알려진 미해결분은 KNOWN, 초과분만 FAIL
     known: List[str] = []
@@ -338,7 +344,7 @@ def run(root: str = ".") -> Dict[str, Any]:
     skips = [k for k, v in checks.items() if v.get("ok") is None]
     out = {
         "as_of": now_kst().isoformat(timespec="seconds"),
-        "version": "measurement_audit_v2",
+        "version": "measurement_audit_v3",
         "status": ("FAIL" if fails else
                    ("KNOWN" if known else ("PARTIAL" if skips else "OK"))),
         "failing": fails,
@@ -366,6 +372,8 @@ def run(root: str = ".") -> Dict[str, Any]:
                                 checks["rule_discrimination"].get("days_without_any_cap_pct"),
                             "flags_never_fired": len(
                                 checks["flag_coverage"].get("never_fired") or []),
+                            "constant_inputs": len(
+                                checks["input_constancy"].get("constant_inputs") or []),
                             }, ensure_ascii=False) + "\n")
     return out
 
@@ -451,6 +459,80 @@ def audit_flag_coverage(root: str = ".") -> Dict[str, Any]:
             "note": ("미발동 규칙은 **확인 대상**이지 판정이 아니다. 계속기업 불확실성·"
                      "불성실공시 같은 규칙은 107일 0건이 정상일 수 있다. 반면 입력 필드가 "
                      "항상 결손이면 배선 결함이다. 임계 조정은 사전등록 대상(RULE 7)."),
+        }
+    except Exception as e:  # noqa: BLE001
+        return {"ok": None, "skipped": f"{type(e).__name__}: {e}"[:120]}
+
+
+
+# 검사 F — 입력 필드 상수값 대역. 전 종목 동일값(특히 0)은 데이터가 아니라 **상위 공백**이다.
+_CONST_MIN_RECORDS = 10     # 이보다 적으면 우연히 같을 수 있다
+
+# 검사 F 대상 — 규칙 판정에 실제로 쓰이는 중첩 입력. (라벨, 경로)
+_RULE_INPUTS = [
+    ("kis_credit_balance.credit_rate", ("kis_credit_balance", "credit_rate")),
+    ("kis_financial_ratio.current_ratio", ("kis_financial_ratio", "current_ratio")),
+    ("kis_financial_ratio.roe", ("kis_financial_ratio", "roe")),
+    ("kis_financial_ratio.debt_ratio", ("kis_financial_ratio", "debt_ratio")),
+    ("kis_short_sale.avg_short_ratio_5d", ("kis_short_sale", "avg_short_ratio_5d")),
+    ("short_interest.short_pct", ("short_interest", "short_pct")),
+    ("options_flow.put_call_ratio", ("options_flow", "put_call_ratio")),
+    ("options_flow.avg_iv", ("options_flow", "avg_iv")),
+    ("insider_sentiment.mspr", ("insider_sentiment", "mspr")),
+]
+
+
+def _dig(rec: Dict[str, Any], path: tuple) -> Any:
+    cur: Any = rec
+    for k in path:
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(k)
+    return cur
+
+
+def audit_input_constancy() -> Dict[str, Any]:
+    """검사 F — 규칙 입력이 전 종목 **동일값**인가 (2026-08-07 신설).
+
+    배경: 8/7 C-1 감사에서 `credit_rate` 와 `current_ratio` 가 19/19 종목 **전부 0.0** 인
+    것이 드러났다. 존재하긴 하는데 전부 같은 값이면 그건 측정이 아니라 상위 공백이다.
+    그리고 falsy 라서 `x or 기본값` 류 코드에서 결측으로 뭉개져 더 안 보인다 —
+    같은 날 hold_pnl 에서 보유 0일이 None 으로 무너진 것과 동일 함정.
+
+    판정: 값이 존재하는 레코드가 10건 이상인데 **고유값이 1개** = 상위 공백 의심.
+      · 그 값이 0 이면 특히 강한 신호(대부분의 API 가 빈 값을 0 으로 준다).
+      · 결측(None)은 여기서 세지 않는다 — 검사 B 소관이다.
+
+    🚨 판정만 한다. 임계·규칙을 고치지 않는다(RULE 7).
+    """
+    try:
+        recs = _load(os.path.join(DATA_DIR, "recommendations.json"), [])
+        if not recs:
+            return {"ok": None, "skipped": "recommendations.json 없음"}
+        const, varying = [], 0
+        for label, path in _RULE_INPUTS:
+            vals = [_dig(r, path) for r in recs]
+            present = [v for v in vals if isinstance(v, (int, float))]
+            if len(present) < _CONST_MIN_RECORDS:
+                continue                       # 표본 부족 — 판정 보류
+            uniq = set(present)
+            if len(uniq) == 1:
+                only = next(iter(uniq))
+                const.append({"input": label, "n_present": len(present),
+                              "constant_value": only,
+                              "severity": "high" if only == 0 else "medium"})
+            else:
+                varying += 1
+        return {
+            "ok": not const,
+            "inputs_checked": len(_RULE_INPUTS),
+            "varying": varying,
+            "constant_inputs": const,
+            "detail": (f"전 종목 동일값 입력 {len(const)}종 — " +
+                       ", ".join(f"{c['input']}={c['constant_value']}" for c in const) +
+                       ". 측정이 아니라 상위 공백 의심(규칙이 영원히 발동 못 한다)."
+                       if const else "입력 값 분산 정상"),
+            "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다.",
         }
     except Exception as e:  # noqa: BLE001
         return {"ok": None, "skipped": f"{type(e).__name__}: {e}"[:120]}
