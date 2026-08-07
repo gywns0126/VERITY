@@ -18,6 +18,15 @@ on:
     - cron: '0 20 19 * *'   # KST 20일 05:00 — 1차 만회
     - cron: '0 20 23 * *'   # KST 24일 05:00 — 2차 만회
   workflow_dispatch:
+    inputs:
+      limit:
+        # 스모크 테스트용 — 소수 종목만 조회해 1분 안에 API 생사를 판별한다(2026-08-07 신설).
+        # 전량은 ~60분·3.5K 콜이라, "지금도 같은 증상인가" 를 확인하려고 매번 태울 수 없다.
+        # 🚨 limit>0 이면 커밋·발행을 건너뛴다 — 부분 결과가 정식 스냅샷으로 올라가지 않도록.
+        description: '조회 종목 수 상한 (스모크 테스트). 0 또는 미입력 = 전량 + 커밋/발행'
+        required: false
+        default: '0'
+        type: string
 
 concurrency:
   group: verity-nps-employment
@@ -43,9 +52,12 @@ jobs:
       - name: Collect NPS employment
         env:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+          NPS_EMP_LIMIT: ${{ github.event.inputs.limit || '0' }}
         run: python api/collectors/nps_employment.py
 
       - name: Commit data
+        # 스모크 테스트(limit>0)는 부분 결과라 정식 스냅샷으로 커밋하지 않는다.
+        if: ${{ (github.event.inputs.limit || '0') == '0' }}
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "actions@github.com"
@@ -56,6 +68,7 @@ jobs:
           git push origin main
 
       - name: Publish (VERITY-data + Vercel Blob)
+        if: ${{ (github.event.inputs.limit || '0') == '0' }}
         continue-on-error: true
         uses: ./.github/actions/publish-data
         with:
