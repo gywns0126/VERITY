@@ -1,14 +1,14 @@
 {
- "as_of": "2026-08-07T11:40:50+09:00",
- "version": "measurement_audit_v2",
- "status": "FAIL",
- "failing": [
-  "rule_discrimination"
- ],
+ "as_of": "2026-08-07T20:08:12+09:00",
+ "version": "measurement_audit_v3",
+ "status": "KNOWN",
+ "failing": [],
  "known_unresolved": [
   "ledger_integrity",
   "key_coverage",
-  "flag_coverage"
+  "rule_discrimination",
+  "flag_coverage",
+  "input_constancy"
  ],
  "skipped": [],
  "checks": {
@@ -126,23 +126,23 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 0,
-   "days_without_any_cap_pct": 0.0,
-   "detail": "상시/미발동 등급 규칙 2종 — cape_bubble(92.0%), oil_geopolitical_shock(1.1%). 🚨 등급 cap 이 0개인 날 = 0/88일 — 최상위 등급이 구조적으로 불가능하다",
-   "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다."
+   "days_without_any_cap": 1,
+   "days_without_any_cap_pct": 1.1,
+   "detail": "상시/미발동 등급 규칙 2종 — cape_bubble(92.0%), oil_geopolitical_shock(1.1%). cap 없는 날 1/88일",
+   "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
+   "baseline": {
+    "degenerate_rules": 2
+   },
+   "status": "KNOWN"
   },
   "flag_coverage": {
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 11,
-   "stock_days": 4090,
+   "stock_days": 4091,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
-     "fired": 0
-    },
-    {
-     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
@@ -150,11 +150,15 @@
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
      "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "fired": 0
+    },
+    {
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
@@ -195,6 +199,31 @@
    "note": "미발동 규칙은 **확인 대상**이지 판정이 아니다. 계속기업 불확실성·불성실공시 같은 규칙은 107일 0건이 정상일 수 있다. 반면 입력 필드가 항상 결손이면 배선 결함이다. 임계 조정은 사전등록 대상(RULE 7).",
    "baseline": {
     "never_fired": 13
+   },
+   "status": "KNOWN"
+  },
+  "input_constancy": {
+   "ok": false,
+   "inputs_checked": 9,
+   "varying": 5,
+   "constant_inputs": [
+    {
+     "input": "kis_credit_balance.credit_rate",
+     "n_present": 20,
+     "constant_value": 0.0,
+     "severity": "high"
+    },
+    {
+     "input": "kis_financial_ratio.current_ratio",
+     "n_present": 20,
+     "constant_value": 0.0,
+     "severity": "high"
+    }
+   ],
+   "detail": "전 종목 동일값 입력 2종 — kis_credit_balance.credit_rate=0.0, kis_financial_ratio.current_ratio=0.0. 측정이 아니라 상위 공백 의심(규칙이 영원히 발동 못 한다).",
+   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다.",
+   "baseline": {
+    "constant_inputs": 2
    },
    "status": "KNOWN"
   }
