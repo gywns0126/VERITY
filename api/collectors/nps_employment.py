@@ -53,8 +53,14 @@ def _key() -> str:
 #   "API 가 죽음" 과 "조건에 맞는 결과가 없음" 이 구분되지 않았다. 실제로 2026-08-07
 #   만회 수집이 1595종목 전부 매칭 0 으로 끝났는데, 로그에는 정상 완료로만 남아
 #   원인을 사후에 특정할 수 없었다. 이제 실패 유형을 세고 표본을 남긴다.
-_CALL_STATS: Dict[str, int] = {"ok": 0, "http_error": 0, "exception": 0, "bad_body": 0}
+_CALL_STATS: Dict[str, int] = {"ok": 0, "http_error": 0, "exception": 0, "bad_body": 0,
+                               "consecutive_conn_fail": 0}
 _ERR_SAMPLE: List[str] = []
+
+# 연결 실패 대응 (2026-08-07). 재시도는 일시적 흔들림용, 서킷은 지속 차단용.
+CONN_RETRIES = 2         # 연결 계열만 재시도 (HTTP 오류는 재시도 무의미 — 서버가 답한 것)
+CONN_BACKOFF_S = 1.5     # 1.5s → 3s. 차단 상태를 더 자극하지 않도록 짧게 끝낸다
+CONN_FAIL_CIRCUIT = 30   # 연속 30회 연결 실패 = 호스트 차단으로 보고 즉시 중단
 
 
 def _note_err(kind: str, detail: str) -> None:
@@ -63,24 +69,50 @@ def _note_err(kind: str, detail: str) -> None:
         _ERR_SAMPLE.append(detail[:300])
 
 
+class _HostDown(RuntimeError):
+    """연결 차단 서킷 — 더 두드리지 말고 즉시 중단."""
+
+
 def _get(op: str, params: Dict[str, Any], key: str) -> Optional[Dict[str, Any]]:
-    try:
-        r = requests.get(f"{BASE}/{op}", params={"serviceKey": key, "dataType": "json", **params}, timeout=15)
-        time.sleep(THROTTLE)
-        if r.status_code != 200:
-            # data.go.kr 은 인증/한도 오류를 본문에 담아 200 이 아닌 코드로 주기도 하고,
-            # 200 + 오류코드로 주기도 한다. 양쪽 다 표본을 남겨야 진단이 된다.
-            _note_err("http_error", f"{op} HTTP {r.status_code}: {r.text[:200]}")
+    # 🚨 서킷 브레이커 (2026-08-07) — 연결이 연속으로 막히면 즉시 포기한다.
+    #   사고: 호스트가 TCP 연결을 거부하기 시작했는데 코드가 1595종목을 끝까지 시도해
+    #   **2시간 반 동안 4791회 헛발질**(ok 0)을 했다. 차단된 상태에서 계속 두드리는 것은
+    #   복구를 늦출 뿐이고, 러너 시간도 통째로 버린다. 1분 안에 실패해야 진단이 빠르다.
+    if _CALL_STATS.get("consecutive_conn_fail", 0) >= CONN_FAIL_CIRCUIT:
+        raise _HostDown(f"연결 실패 {CONN_FAIL_CIRCUIT}회 연속 — 호스트 차단/장애로 판단, 중단")
+
+    last_err = None
+    for attempt in range(CONN_RETRIES + 1):
+        try:
+            r = requests.get(f"{BASE}/{op}",
+                             params={"serviceKey": key, "dataType": "json", **params}, timeout=15)
+            time.sleep(THROTTLE)
+            _CALL_STATS["consecutive_conn_fail"] = 0
+            if r.status_code != 200:
+                # data.go.kr 은 인증/한도 오류를 비200 으로도, 200+오류코드로도 준다.
+                # 양쪽 다 표본을 남겨야 진단이 된다.
+                _note_err("http_error", f"{op} HTTP {r.status_code}: {r.text[:200]}")
+                return None
+            body = r.json().get("response", {}).get("body", {})
+            if not isinstance(body, dict):
+                _note_err("bad_body", f"{op}: {r.text[:200]}")
+                return None
+            _CALL_STATS["ok"] += 1
+            return body
+        except (requests.ConnectionError, requests.Timeout) as e:
+            # 연결 계열만 재시도한다 — 일시적 네트워크 흔들림은 넘기고, 지속 차단은
+            # 위 서킷이 잡는다. 지수 백오프로 차단 상태를 더 자극하지 않는다.
+            last_err = e
+            if attempt < CONN_RETRIES:
+                time.sleep(CONN_BACKOFF_S * (2 ** attempt))
+                continue
+        except Exception as e:  # noqa: BLE001
+            _note_err("exception", f"{op}: {e!r}")
             return None
-        body = r.json().get("response", {}).get("body", {})
-        if not isinstance(body, dict):
-            _note_err("bad_body", f"{op}: {r.text[:200]}")
-            return None
-        _CALL_STATS["ok"] += 1
-        return body
-    except Exception as e:  # noqa: BLE001
-        _note_err("exception", f"{op}: {e!r}")
-        return None
+
+    _CALL_STATS["consecutive_conn_fail"] = _CALL_STATS.get("consecutive_conn_fail", 0) + 1
+    _note_err("exception", f"{op}: {last_err!r}")
+    return None
 
 
 def _items(body: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -223,6 +255,15 @@ def collect(limit: int = 0) -> Dict[str, Any]:
                 pass
             if done % 200 == 0:
                 print(f"[nps_emp] 진행 {done}/{len(universe)} · 매칭 {len(out)}", file=sys.stderr)
+            # 🚨 서킷이 걸리면 남은 작업을 취소하고 **그때까지 모은 것만** 들고 나간다.
+            #   main() 의 병합 로직이 종목별 최신 월을 유지하므로 부분 결과도 진척으로 남는다
+            #   (전량 실패로 0 을 반환해 아무것도 못 건지는 것보다 낫다).
+            if _CALL_STATS.get("consecutive_conn_fail", 0) >= CONN_FAIL_CIRCUIT:
+                print(f"[nps_emp] 🚨 연결 차단 감지 — {done}/{len(universe)} 에서 중단, "
+                      f"수집분 {len(out)}종목 보존", file=sys.stderr)
+                for f2 in futs:
+                    f2.cancel()
+                break
     print(f"[nps_emp] 완료 — 유니버스 {len(universe)} · 매칭 {len(out)}", file=sys.stderr)
     return out
 
