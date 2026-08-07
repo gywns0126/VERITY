@@ -57,6 +57,10 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
     // 계좌 일부만 이 전략에 쓰는 경우를 위한 것. 회원마다 시드가 다르므로 같은 목표비중이
     // 각자 규모에 비례한 금액으로 환산된다(PM 2026-08-07 "각자 시드 규모 비례 배분").
     const [seedKrw, setSeedKrw] = useState<number | null>(null)
+    // 연결된 계좌(profiles.broker_slug). null = 미연결 → 주문·잔고 모두 403.
+    // 회원이 2명이라 "지금 이 주문이 누구 계좌로 나가는지"가 화면에 보여야 한다.
+    const [broker, setBroker] = useState<string | null>(null)
+    const [profileLoaded, setProfileLoaded] = useState(false)
     // 실계좌 보유 (KIS inquire-balance output1) — 검수 fix: 매도 수량·평단은 반드시
     // 실보유 기준. 이전엔 VAMS 가상 보유(pf.vams.holdings)로 계산 = 실주문 오발주 위험.
     const [acctHoldings, setAcctHoldings] = useState<Array<{ pdno?: string; hldg_qty?: string; pchs_avg_pric?: string }>>([])
@@ -87,7 +91,10 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
     useEffect(() => {
         let stop = false
         fetchMyProfile().then((p) => {
-            if (!stop && p?.seed_krw) setSeedKrw(p.seed_krw)
+            if (stop) return
+            if (p?.seed_krw) setSeedKrw(p.seed_krw)
+            setBroker(p?.broker_slug ?? null)
+            setProfileLoaded(true)
         })
         return () => {
             stop = true
@@ -258,6 +265,12 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
 
     return (
         <div style={{ fontFamily: FONT, display: "flex", flexDirection: "column", gap: 8 }}>
+            {/* 계좌 연결 상태 — 미연결이면 주문이 403 으로 떨어진다. 눌러보고 알게 하지 않는다. */}
+            {profileLoaded && !broker ? (
+                <div style={{ background: c.amberS, borderRadius: 9, padding: "7px 10px", fontSize: 11, color: c.amber, fontWeight: 700 }}>
+                    증권계좌 미연결 — 주문·잔고 조회 불가. 서버에서 계좌 연결 후 이용 가능합니다.
+                </div>
+            ) : null}
             {/* 중용 목표비중 갭 — 우리 시스템만 아는 정보 */}
             {modGap ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, background: c.vtS, borderRadius: 9, padding: "7px 10px", flexWrap: "wrap" }}>
@@ -269,6 +282,7 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
                         %인지 모르면 수량을 검산할 수 없다. */}
                     <span style={{ fontSize: 10, color: c.sub, ...NUM }}>
                         / {modGap.seedScoped ? "배정 시드" : "계좌 총액"} {(modGap.base / 1e4).toLocaleString(undefined, { maximumFractionDigits: 0 })}만
+                        {broker ? ` · ${broker}` : ""}
                     </span>
                     {modGap.needQty !== 0 ? (
                         <button
