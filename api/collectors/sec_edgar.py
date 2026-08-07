@@ -7,8 +7,10 @@ SEC EDGAR 미국 공시 데이터 수집기 (DART 대체)
 
 Rate limit: 10 req/sec, User-Agent 필수
 """
-import time
 import logging
+import re
+import time
+
 import requests
 from typing import Dict, List, Optional
 
@@ -23,6 +25,29 @@ _WWW_BASE = "https://www.sec.gov"
 _SESSION = requests.Session()
 _LAST_CALL = 0.0
 _MIN_INTERVAL = 0.12  # 10req/sec → ~0.1s
+
+
+
+# ── EDGAR display_names 파서 (2026-08-07) ────────────────────────────
+# 전문검색 API 가 tickers 를 비워 보내는 경우가 있어 표시명에서 뽑는다.
+#   "ESAB Corp  (ESAB)  (CIK 0001877322)" → ("ESAB", "0001877322")
+#   "ALEXANDER TECH CORP  (CIK 0001347491)" → (None, "0001347491")  ← 티커 없는 발행사
+_DISPLAY_TICKER = re.compile(r"\(([A-Z][A-Z0-9.\-]{0,5})\)")
+_DISPLAY_CIK = re.compile(r"\(CIK\s*(\d{6,10})\)")
+
+
+def _ticker_from_display(display: str) -> str:
+    """표시명에서 티커 추출. CIK 괄호는 제외한다(숫자라 티커 패턴에 안 걸리지만 명시)."""
+    for m in _DISPLAY_TICKER.finditer(display or ""):
+        cand = m.group(1)
+        if cand != "CIK":
+            return cand
+    return ""
+
+
+def _cik_from_display(display: str) -> str:
+    m = _DISPLAY_CIK.search(display or "")
+    return m.group(1) if m else ""
 
 
 def _headers(user_agent: str) -> dict:
@@ -368,24 +393,50 @@ def scan_risk_filings(
             hits = data.get("hits", {}).get("hits", [])
             for hit in hits[:10]:
                 src = hit.get("_source", {})
-                entity_id = src.get("entity_id", "")
-                file_num = src.get("file_num", "")
-                url = f"https://www.sec.gov/Archives/edgar/data/{entity_id}/{file_num}"
-                if url in seen_urls:
-                    continue
-                seen_urls.add(url)
-
                 names = src.get("display_names") or []
                 tickers = src.get("tickers") or []
+                display = names[0] if names else ""
+
+                # 🚨 2026-08-07 — 티커 추출 결함 수리.
+                #   `src["tickers"]` 가 비어 오는데 그대로 "" 를 넣어, 하류에서
+                #   `if ft and ft in port_tickers` 매칭이 **원천 불가**였다(실측 10/10 공백).
+                #   결과: sec_risk_flags 가 0/39, SEC 8-K 리스크 downgrade 규칙이 상시 사문화.
+                #   티커는 display_names 안에 있다 — "ESAB Corp  (ESAB)  (CIK 0001877322)".
+                ticker = tickers[0] if tickers else ""
+                if not ticker:
+                    ticker = _ticker_from_display(display)
+                cik = _cik_from_display(display) or (src.get("ciks") or [""])[0]
+
+                # URL 도 깨져 있었다 — entity_id 는 빈 문자열, file_num 은 **리스트**라
+                #   ".../data//['0001877322-26-...']" 가 생성됐다. 사용 가능한 값일 때만
+                #   그 경로를 쓰고, 아니면 CIK 기반 EDGAR 조회 링크로 폴백한다.
+                entity_id = src.get("entity_id") or ""
+                file_num = src.get("file_num")
+                if entity_id and isinstance(file_num, str) and file_num:
+                    url = f"https://www.sec.gov/Archives/edgar/data/{entity_id}/{file_num}"
+                    url_kind = "archive"
+                elif cik:
+                    url = ("https://www.sec.gov/cgi-bin/browse-edgar"
+                           f"?action=getcompany&CIK={cik}&type={forms.split(',')[0]}")
+                    url_kind = "cik_browse"
+                else:
+                    url = "https://www.sec.gov/edgar/search/"
+                    url_kind = "search_root"
+                dedupe_key = f"{display}|{src.get('file_date','')}|{keyword}"
+                if dedupe_key in seen_urls:
+                    continue
+                seen_urls.add(dedupe_key)
 
                 all_filings.append({
                     "keyword_matched": keyword,
-                    "company": names[0] if names else "",
-                    "ticker": tickers[0] if tickers else "",
+                    "company": display,
+                    "ticker": ticker,
+                    "cik": cik,
                     "filed_date": src.get("file_date", ""),
                     "form_type": src.get("form_type", forms.split(",")[0]),
                     "description": src.get("display_description", ""),
                     "url": url,
+                    "url_kind": url_kind,   # 어느 경로로 만들었는지 관측 (archive 가 정상)
                 })
         except Exception as e:
             logger.warning("SEC risk scan failed for keyword '%s': %s", keyword, e)
