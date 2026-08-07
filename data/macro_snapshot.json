@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-07T08:15:57+09:00",
+  "collected_at": "2026-08-07T09:02:41+09:00",
   "macro": {
     "usd_krw": {
       "value": 1422.91,
@@ -1360,7 +1360,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-08-07T08:16:10+09:00",
+    "updated_at": "2026-08-07T09:03:41+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.96,
       "us_ig_risk": "LOW",
@@ -1382,21 +1382,6 @@
       "action": "서비스 견조 시 소프트랜딩 시나리오 우호",
       "source": "ISM",
       "d_day": -2
-    },
-    {
-      "name": "미국 주간 실업수당 청구",
-      "severity": "medium",
-      "impact_area": [
-        "경기",
-        "고용"
-      ],
-      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
-      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
-      "date": "2026-08-06",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 180,
-      "d_day": -1
     },
     {
       "name": "미국 고용지표 (NFP)",
@@ -1550,12 +1535,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 27.66
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 123.96
   },
   "schema_version": "v0"
 }
