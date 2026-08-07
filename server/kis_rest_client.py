@@ -269,22 +269,82 @@ def token_status() -> dict:
     }
 
 
-def _headers(tr_id: str) -> dict:
+# 계좌별 토큰 메모리 캐시 — {slug: (token, expires_ts)}. 오퍼레이터는 기존 전역 경로를 쓴다.
+_alt_tokens: dict = {}
+
+
+def _read_shared_token_for(store_id: str) -> Optional[dict]:
+    """공유 store 의 특정 행 read. 🚨 read-only — 이 모듈은 어떤 계좌에 대해서도 발급하지 않는다."""
+    if not _shared_enabled():
+        return None
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/kis_shared_token",
+            headers=_sb_headers(),
+            params={"id": f"eq.{store_id}", "select": "*"},
+            timeout=8,
+        )
+        r.raise_for_status()
+        rows = r.json()
+        return rows[0] if rows else None
+    except Exception as e:
+        logger.warning("KIS 공유 토큰 read 실패 (%s): %s", store_id, e)
+        return None
+
+
+def _get_token_for(broker: str) -> str:
+    """계좌 슬러그의 토큰. 오퍼레이터는 기존 경로 그대로(동작 불변).
+
+    🚨 추가 계좌는 **공유 store 읽기 전용**. 자체 발급 경로가 아예 없다 — RULE 1 상
+    발급원은 GH Actions 하나뿐이고, 여기에 발급을 허용하면 2026-05-31 dual-issuer 사고가
+    키 수만큼 재현된다. store 에 없으면 예외로 끊어 주문이 실패하게 둔다.
+    """
+    if broker == "operator":
+        return _get_token()
+
+    creds = broker_credentials(broker)
+    if not creds:
+        raise BrokerMismatch(f"알 수 없는 계좌 슬러그: {broker!r}")
+
+    cached = _alt_tokens.get(broker)
+    if cached and time.time() < cached[1]:
+        return cached[0]
+
+    row = _read_shared_token_for(f"kis_rest__{broker}")
+    if not row:
+        raise RuntimeError(
+            f"계좌 {broker!r} 의 공유 토큰 없음 — GH Actions 가 아직 발급/publish 안 함. "
+            "Railway 는 발급하지 않는다(RULE 1)."
+        )
+    fp = hashlib.sha256(creds["app_key"].encode("utf-8")).hexdigest()[:12]
+    if row.get("app_key_fp") != fp:
+        raise BrokerMismatch(
+            f"계좌 {broker!r} 의 store 지문 불일치 — env 앱키와 발급된 토큰이 다른 키다. 주문 차단."
+        )
+    tok, exp = row.get("access_token", ""), _parse_ts(row.get("expires_at"))
+    if not tok or not exp or time.time() >= exp - 300:
+        raise RuntimeError(f"계좌 {broker!r} 의 공유 토큰 만료 — 다음 발급까지 대기.")
+    _alt_tokens[broker] = (tok, exp - 300)
+    return tok
+
+
+def _headers(tr_id: str, broker: str = "operator") -> dict:
+    creds = broker_credentials(broker) if broker != "operator" else None
     return {
         "Content-Type": "application/json; charset=utf-8",
-        "authorization": f"Bearer {_get_token()}",
-        "appkey": KIS_APP_KEY,
-        "appsecret": KIS_APP_SECRET,
+        "authorization": f"Bearer {_get_token_for(broker)}",
+        "appkey": creds["app_key"] if creds else KIS_APP_KEY,
+        "appsecret": creds["app_secret"] if creds else KIS_APP_SECRET,
         "tr_id": tr_id,
         "custtype": "P",
     }
 
 
-def _get(path: str, tr_id: str, params: dict) -> dict:
+def _get(path: str, tr_id: str, params: dict, broker: str = "operator") -> dict:
     try:
         r = requests.get(
             f"{KIS_BASE_URL}{path}",
-            headers=_headers(tr_id),
+            headers=_headers(tr_id, broker),
             params=params,
             timeout=8,
         )
@@ -295,11 +355,11 @@ def _get(path: str, tr_id: str, params: dict) -> dict:
         return {}
 
 
-def _post(path: str, tr_id: str, body: dict) -> dict:
+def _post(path: str, tr_id: str, body: dict, broker: str = "operator") -> dict:
     try:
         r = requests.post(
             f"{KIS_BASE_URL}{path}",
-            headers=_headers(tr_id),
+            headers=_headers(tr_id, broker),
             json=body,
             timeout=8,
         )
@@ -328,23 +388,17 @@ class BrokerMismatch(RuntimeError):
 def _account_parts_for(broker: str) -> tuple[str, str]:
     """슬러그 → (CANO, ACNT_PRDT_CD). 안전하지 않으면 예외로 끊는다.
 
-    🚨 핵심 안전 속성 — **손에 든 토큰의 앱키 == 주문 대상 계좌의 앱키** 일 때만 통과.
-    KIS 토큰은 앱키에 묶여 있으므로, 이 조건이 깨진 채 발주하면 오퍼레이터 토큰으로
-    친구 계좌번호를 밀어 넣는 꼴이 된다(거절되거나, 더 나쁘게는 엉뚱한 계좌 체결).
-    이 검사는 2단계(앱키별 토큰 발급, RULE 1)가 완료되면 자동으로 통과하기 시작한다 —
-    그때까지 오퍼레이터 외 계좌는 여기서 fail-closed 로 막힌다. 조용히 통과시키지 않는
-    이유 = 실자금이고, 잘못된 계좌 체결은 되돌릴 수 없기 때문.
+    🚨 핵심 안전 속성 — **한 요청 안에서 자격증명 3종(토큰·앱키·계좌번호)이 항상 한 사람
+    것으로 묶인다.** 이 함수는 계좌번호만 풀고, 토큰과 appkey 헤더는 _headers(tr_id, broker)
+    가 같은 슬러그로 조립한다. 지문 대조는 _get_token_for() 가 공유 store 의 app_key_fp 와
+    env 앱키를 맞춰 수행하므로, env 와 발급된 토큰이 다른 키면 거기서 끊긴다.
+    잘못된 계좌 체결은 되돌릴 수 없으므로 어느 단계도 조용히 통과시키지 않는다.
     """
     creds = broker_credentials(broker)
     if not creds:
         raise BrokerMismatch(
             f"알 수 없거나 미설정된 계좌 슬러그: {broker!r}. "
             "BROKER_SLUGS allowlist 와 KIS_APP_KEY__<SLUG> 계열 env 를 확인."
-        )
-    if creds["app_key"] != KIS_APP_KEY:
-        raise BrokerMismatch(
-            f"계좌 {broker!r} 의 토큰이 이 프로세스에 없음 — 발주 차단. "
-            "앱키별 토큰 발급(RULE 1 2단계) 완료 전까지는 오퍼레이터 계좌만 주문 가능."
         )
     return _split_account(creds["account_no"])
 
@@ -773,6 +827,7 @@ def place_kr_order(ticker: str, side: str, qty: int, price: int, order_type: str
             "ORD_QTY": str(qty),
             "ORD_UNPR": str(price),
         },
+        broker,
     )
     if data.get("rt_cd") != "0":
         return {"success": False, "message": data.get("msg1", "주문 실패"), "raw": data}
@@ -798,6 +853,7 @@ def place_us_order(excd: str, ticker: str, side: str, qty: int, price: float, or
             "ORD_QTY": str(qty),
             "OVRS_ORD_UNPR": str(price),
         },
+        broker,
     )
     if data.get("rt_cd") != "0":
         return {"success": False, "message": data.get("msg1", "주문 실패"), "raw": data}
@@ -818,6 +874,7 @@ def get_balance(market: str = "kr", broker: str = "operator") -> dict:
                 "OVRS_EXCG_CD": "NASD", "TR_CRCY_CD": "USD",
                 "CTX_AREA_FK200": "", "CTX_AREA_NK200": "",
             },
+            broker,
         )
     return _get(
         "/uapi/domestic-stock/v1/trading/inquire-balance",

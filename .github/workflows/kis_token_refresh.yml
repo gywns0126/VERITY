@@ -60,6 +60,12 @@ jobs:
         env:
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          # 추가 계좌 (PM 2026-08-07, 회원 2명). secret 미등록이면 빈 문자열 → 해당 계좌만 건너뛴다.
+          # 🚨 오퍼레이터 변수명은 위 그대로 — 이름을 바꾸면 배포 env 를 전부 다시 넣어야 하고
+          #    하나라도 빠지면 RULE 1 상 재발급도 못 해 거래가 멈춘다.
+          BROKER_SLUGS: ${{ vars.BROKER_SLUGS || 'operator' }}
+          KIS_APP_KEY__FRIEND: ${{ secrets.KIS_APP_KEY__FRIEND }}
+          KIS_APP_SECRET__FRIEND: ${{ secrets.KIS_APP_SECRET__FRIEND }}
           KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -69,34 +75,58 @@ jobs:
           sys.path.insert(0, os.getcwd())
           from api.trading.kis_broker import KISBroker
 
-          broker = KISBroker()
-          if not broker.is_configured:
-              print("KIS 미설정 (KIS_APP_KEY/SECRET 없음) — 건너뜀")
-              sys.exit(0)
+          def refresh_one(slug):
+              """계좌 1개 발급. True=발급함 / False=건너뜀. 가드 로직은 단일 계좌 때와 동일."""
+              broker = KISBroker(broker=slug)
+              if not broker.is_configured:
+                  print(f"[{slug}] KIS 미설정 (APP_KEY/SECRET 없음) — 건너뜀")
+                  return False
 
-          # lock 사전 체크 — 시각 기반 (2026-05-13 자정 race fix 후 변경).
-          # 🚨 2026-05-22 RULE 1 정정: 6h → 23h. KIS = 1일 1토큰(발급 간격 최소 24h).
-          # 🚨 2026-05-29 RULE 1 재정정: 23h → 24h. 사고 5/27 + 5/28 매일 알림.
-          # 5/27 00:08 preflight + 23:08 preflight = 23h 0m → 23h 가드 통과 → 2번째 발급.
-          # 5/28 22:11 발급 = 다시 ~23h interval → 사용자 카톡 알림 1건 (RULE 1 P0).
-          # 24h 가드 = preflight/refresh 어느 쪽이든 정책 (발급 간격 최소 24h) 정합.
-          # 단점: 23:45 cron 박힌 23h57m < 24h → skip → daily_realtime backup 의존.
-          # PM 결정 5/29 옵션 A (가드만 fix). cron schedule 변경 보류.
-          if broker._is_recently_issued(hours=24):
-              print("lock — 24h 이내 이미 발급됨. KIS API 호출 skip (1일 1토큰 가드).")
-              sys.exit(0)
+              # lock 사전 체크 — 시각 기반 (2026-05-13 자정 race fix 후 변경).
+              # 🚨 2026-05-22 RULE 1 정정: 6h → 23h. KIS = 1일 1토큰(발급 간격 최소 24h).
+              # 🚨 2026-05-29 RULE 1 재정정: 23h → 24h. 사고 5/27 + 5/28 매일 알림.
+              # 5/27 00:08 preflight + 23:08 preflight = 23h 0m → 23h 가드 통과 → 2번째 발급.
+              # 5/28 22:11 발급 = 다시 ~23h interval → 사용자 카톡 알림 1건 (RULE 1 P0).
+              # 24h 가드 = preflight/refresh 어느 쪽이든 정책 (발급 간격 최소 24h) 정합.
+              # 단점: 23:45 cron 기준 23h57m < 24h → skip → daily_realtime backup 의존.
+              # PM 결정 5/29 옵션 A (가드만 fix). cron schedule 변경 보류.
+              # 🚨 계좌마다 락 파일이 분리되어 있어 이 가드도 계좌별로 독립 판정된다.
+              if broker._is_recently_issued(hours=24):
+                  print(f"[{slug}] lock — 24h 이내 이미 발급됨. KIS API 호출 skip (1일 1토큰 가드).")
+                  return False
 
-          # force_refresh=True — broker 내부 24h 가드 bypass. 위 workflow-level 24h 가드가
-          # 1일 1토큰 보장 (당일 미발급 시에만 여기 도달 = backup 발급).
-          token = broker.authenticate(force_refresh=True)
-          print(f"KIS 토큰 갱신 완료: {token[:8]}***")
+              # force_refresh=True — broker 내부 24h 가드 bypass. 위 workflow-level 24h 가드가
+              # 1일 1토큰 보장 (당일 미발급 시에만 여기 도달 = backup 발급).
+              token = broker.authenticate(force_refresh=True)
+              print(f"[{slug}] KIS 토큰 갱신 완료: {token[:8]}***")
+              return True
+
+          # 🚨 RULE 1 은 **앱키마다** 적용된다. 계좌가 늘어도 한 계좌가 하루 2토큰을 받으면
+          #   그 계좌가 제재 대상이다. 그래서 슬러그마다 독립된 락 파일·store 행·24h 가드를
+          #   쓰고, 이 루프는 한 계좌 실패가 다른 계좌 발급을 막지 않도록 격리한다.
+          slugs = [s.strip() for s in os.environ.get("BROKER_SLUGS", "operator").split(",") if s.strip()]
+          if "operator" not in slugs:
+              slugs.insert(0, "operator")   # 오퍼레이터 발급 누락 방지 (env 오설정 대비)
+
+          issued, skipped = [], []
+          for slug in slugs:
+              try:
+                  ok = refresh_one(slug)
+              except Exception as e:
+                  print(f"[{slug}] 발급 실패: {e}")
+                  skipped.append(slug)
+                  continue
+              (issued if ok else skipped).append(slug)
+          print(f"발급 {issued} / 건너뜀 {skipped}")
           PYEOF
 
       - name: daily lock 파일 commit & push
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/.kis_issued_date.txt || true
+          # RULE 4 — 계좌가 늘면 락 파일도 늘어난다. 글롭으로 받아 신규 계좌 추가 시
+          #   yml 수정을 잊어 락이 propagate 안 되는 사고(= 러너마다 재발급 = RULE 1 위반)를 막는다.
+          git add data/.kis_issued_date.txt data/.kis_issued_date__*.txt || true
           if git diff --staged --quiet; then
             echo "daily lock 파일 변화 없음 — 오늘 이미 발급된 상태"
             exit 0
