@@ -49,15 +49,37 @@ def _key() -> str:
     return os.environ.get("PUBLIC_DATA_API_KEY", "").strip()
 
 
+# 호출 결과 계측 (2026-08-07) — 종전엔 비200도 예외도 전부 None 으로 삼켜서
+#   "API 가 죽음" 과 "조건에 맞는 결과가 없음" 이 구분되지 않았다. 실제로 2026-08-07
+#   만회 수집이 1595종목 전부 매칭 0 으로 끝났는데, 로그에는 정상 완료로만 남아
+#   원인을 사후에 특정할 수 없었다. 이제 실패 유형을 세고 표본을 남긴다.
+_CALL_STATS: Dict[str, int] = {"ok": 0, "http_error": 0, "exception": 0, "bad_body": 0}
+_ERR_SAMPLE: List[str] = []
+
+
+def _note_err(kind: str, detail: str) -> None:
+    _CALL_STATS[kind] = _CALL_STATS.get(kind, 0) + 1
+    if len(_ERR_SAMPLE) < 3:
+        _ERR_SAMPLE.append(detail[:300])
+
+
 def _get(op: str, params: Dict[str, Any], key: str) -> Optional[Dict[str, Any]]:
     try:
         r = requests.get(f"{BASE}/{op}", params={"serviceKey": key, "dataType": "json", **params}, timeout=15)
         time.sleep(THROTTLE)
         if r.status_code != 200:
+            # data.go.kr 은 인증/한도 오류를 본문에 담아 200 이 아닌 코드로 주기도 하고,
+            # 200 + 오류코드로 주기도 한다. 양쪽 다 표본을 남겨야 진단이 된다.
+            _note_err("http_error", f"{op} HTTP {r.status_code}: {r.text[:200]}")
             return None
         body = r.json().get("response", {}).get("body", {})
-        return body if isinstance(body, dict) else None
-    except Exception:  # noqa: BLE001
+        if not isinstance(body, dict):
+            _note_err("bad_body", f"{op}: {r.text[:200]}")
+            return None
+        _CALL_STATS["ok"] += 1
+        return body
+    except Exception as e:  # noqa: BLE001
+        _note_err("exception", f"{op}: {e!r}")
         return None
 
 
@@ -205,10 +227,24 @@ def main() -> int:
         limit = int(os.environ.get("NPS_EMP_LIMIT", "0") or 0)
         stocks = collect(limit)
         if not stocks:
-            # 산출 0 = 기존 스냅샷 보존 (키 부재/장애 시 데이터 손실 방지)
-            print("[nps_emp] logged=True · 매칭 0 — 기존 파일 보존(no-op)", file=sys.stderr)
-            ok = True
-            return 0
+            # 기존 스냅샷은 계속 보존한다 (키 부재/장애 시 데이터 손실 방지 — 이 부분은 유지).
+            # 🚨 다만 **성공으로 끝내지 않는다** (2026-08-07). 종전엔 exit 0 이라 워크플로가
+            #   초록으로 끝났고, 1595종목 전부 매칭 0 인 전면 장애가 "정상 완료" 와 구분되지
+            #   않았다. 신선도 보드도 파일 시각만 보므로 어디에서도 드러나지 않는다.
+            #   매칭 0 = 정상 상태가 아니다(2026-07-08 에는 1313종목 매칭). 시끄럽게 실패시킨다.
+            print(f"[nps_emp] 🚨 매칭 0 — 기존 파일 보존하되 실패 처리. 호출 통계: {_CALL_STATS}",
+                  file=sys.stderr)
+            for s in _ERR_SAMPLE:
+                print(f"[nps_emp]   err: {s}", file=sys.stderr)
+            if not _ERR_SAMPLE and _CALL_STATS.get("ok"):
+                # 호출은 200 인데 결과가 비었다 = 인증 만료보다 필터/스펙 변경 쪽 의심.
+                print("[nps_emp]   HTTP 는 정상 — 응답이 비었거나 필터 조건 불일치. "
+                      "getBassInfoSearchV2 응답 스펙 변경 여부 확인 필요.", file=sys.stderr)
+            else:
+                print("[nps_emp]   data.go.kr 활용신청 만료/일일 트래픽 초과 우선 확인 "
+                      "(키는 API 별로 따로 승인됨 — 다른 공공데이터 수집기가 살아 있어도 "
+                      "국민연금 서비스만 만료될 수 있음).", file=sys.stderr)
+            return 1
         now = datetime.now(KST)
 
         # 🚨 부분 수집 병합 (2026-08-07) — 이전 스냅샷을 밑에 깔고 이번 결과로 덮는다.
