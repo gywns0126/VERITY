@@ -36,6 +36,9 @@ UPLOADS = [
     ("data/verification_report.json", "_operator/verification_report.json", "application/json"),
     # 중용 목표비중 — 태생부터 봉인(gitignore, 공개 발행 금지). private bucket + authed 만.
     ("data/moderation_portfolio.json", "_operator/moderation_portfolio.json", "application/json"),
+    # 2026-08-07 드리프트 점검 — 목표비중 파생물이라 동일 봉인 등급.
+    #   🚨 gitignore 라 git add 로는 전달 불가 — 이 목록이 유일한 전달 경로다(RULE 4 등가).
+    ("data/rebalance_review.json", "_operator/rebalance_review.json", "application/json"),
 ]
 
 
