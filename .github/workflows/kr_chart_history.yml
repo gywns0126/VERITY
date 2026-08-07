@@ -45,6 +45,37 @@ jobs:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
         run: python api/collectors/fsc_daily_prices.py --mode history --out _history_dist
 
+      - name: 시점별 유니버스 수집 (상폐 복원 — 생존 편향 해소)
+        # 🚨 2026-08-07 — 백테스트 자산 점검에서 확정적 생존 편향 발견:
+        #   분기 스냅샷의 2016년 보유 1,080종목이 **전부 현재 상장**, 사라진 종목 0.
+        #   10년간 상폐 0건은 불가능 — 오늘 살아남은 종목만 골라 과거를 채운 것이다.
+        #   이 상태로 백테스트하면 망한 회사가 빠져 수익률이 부풀고, 실전에서 그만큼 잃는다.
+        #   금융위 API 가 basDt 로 그 날의 전체 상장 종목을 주므로 별도 소스 없이 복원된다.
+        #   실측: 3.5년(44 스냅샷) 수집 시 사라진 종목 171건.
+        # 월 1회 · 멱등(이미 있는 기준일 skip) · 쿼터 가드 max-calls.
+        continue-on-error: true
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
+        run: python -m api.collectors.kr_universe_pit --start 20200101 --max-calls 90
+
+      - name: Commit 시점 유니버스 (RULE 4 — 이 워크플로는 Blob 전용이라 git add 부재였다)
+        # 🚨 이 워크플로에는 git add 가 없다(산출물이 Blob 직행). 신 파일을 그냥 만들면
+        #   러너 소멸과 함께 사라진다 — RULE 4 가 경고하는 정확히 그 패턴.
+        #   kr_universe_pit.jsonl 은 6.5년 누적 시 ~1.9MB (일봉 165MB 와 달리 git 부담 없음).
+        #   백테스트 유니버스의 정본이라 반드시 버전 관리 대상이다.
+        continue-on-error: true
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/kr_universe_pit.jsonl data/kr_delisting.json 2>/dev/null || true
+          git diff --staged --quiet && echo "no changes" && exit 0
+          git commit -m "📅 시점 유니버스 (상폐 복원) $(TZ=Asia/Seoul date +%Y-%m-%d)"
+          for i in 1 2 3; do
+            git pull --rebase --autostash -X ours origin main && git push origin main && exit 0
+            sleep $((i * 7))
+          done
+          echo "::warning::시점 유니버스 push 3회 실패"
+
       - name: Blob 업로드 (kr_chart_history/{ticker}.json)
         # publish-data 의 blob_upload.js 재사용 — 1-level 서브디렉토리 지원 확인 완료.
         # RETIRED_BLOBS del 도 함께 수행 (멱등 — 컴플라이언스 잔존 차단, 부작용 0).
