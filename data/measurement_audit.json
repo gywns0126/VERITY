@@ -1,11 +1,14 @@
 {
- "as_of": "2026-08-06T18:16:27+09:00",
- "version": "measurement_audit_v0",
+ "as_of": "2026-08-07T11:40:50+09:00",
+ "version": "measurement_audit_v2",
  "status": "FAIL",
  "failing": [
+  "rule_discrimination"
+ ],
+ "known_unresolved": [
   "ledger_integrity",
   "key_coverage",
-  "price_scale"
+  "flag_coverage"
  ],
  "skipped": [],
  "checks": {
@@ -15,7 +18,11 @@
    "phantom_sells": 58,
    "phantom_pnl": -1396639.49,
    "window_start": "2026-05-17",
-   "detail": "보유 0 상태 매도 58건 (손익 -1,396,639원) — 집계에서 배제됨. 신규 발생이면 원장 오염 재발"
+   "detail": "보유 0 상태 매도 58건 (손익 -1,396,639원) — 집계에서 배제됨. 신규 발생이면 원장 오염 재발",
+   "baseline": {
+    "phantom_sells": 58
+   },
+   "status": "KNOWN"
   },
   "key_coverage": {
    "ok": false,
@@ -83,39 +90,114 @@
     }
    ],
    "thin_keys": [],
-   "detail": "레코드에 한 번도 없는 키 10종 — 해당 채점 축이 조용히 죽어 있다"
+   "detail": "레코드에 한 번도 없는 키 10종 — 해당 채점 축이 조용히 죽어 있다",
+   "baseline": {
+    "dead_keys": 10
+   },
+   "status": "KNOWN"
   },
   "price_scale": {
+   "ok": true,
+   "holdings_checked": 11,
+   "scale_mismatches": [],
+   "detail": "스케일 정합"
+  },
+  "rule_discrimination": {
    "ok": false,
-   "holdings_checked": 10,
-   "scale_mismatches": [
+   "snapshots": 88,
+   "cap_rules_checked": 7,
+   "degenerate_rules": [
     {
-     "name": "EXE",
-     "ticker": "EXE",
-     "field": "target_1",
-     "buy_price": 132650.89,
-     "value": 99,
-     "ratio": 1339.9
+     "rule": "cape_bubble",
+     "fired_days": 81,
+     "activation_pct": 92.0,
+     "verdict": "상시 발동 — 국면 구분 불가(정보량 0)"
     },
     {
-     "name": "Alphabet",
-     "ticker": "GOOGL",
-     "field": "target_1",
-     "buy_price": 483440.13,
-     "value": 364,
-     "ratio": 1328.1
-    },
-    {
-     "name": "NEM",
-     "ticker": "NEM",
-     "field": "target_1",
-     "buy_price": 133872.66,
-     "value": 102,
-     "ratio": 1312.5
+     "rule": "oil_geopolitical_shock",
+     "fired_days": 1,
+     "activation_pct": 1.1,
+     "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
     }
    ],
-   "detail": "가격 스케일 불일치 3건 — 통화 혼재 의심(비율≈환율이면 확정). 해당 보유는 부분익절 평가가 skip 된다(fail-closed)"
+   "watch_rules": [],
+   "bands": {
+    "always_on_pct": 90.0,
+    "never_on_pct": 5.0,
+    "watch_pct": 85.0
+   },
+   "days_without_any_cap": 0,
+   "days_without_any_cap_pct": 0.0,
+   "detail": "상시/미발동 등급 규칙 2종 — cape_bubble(92.0%), oil_geopolitical_shock(1.1%). 🚨 등급 cap 이 0개인 날 = 0/88일 — 최상위 등급이 구조적으로 불가능하다",
+   "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다."
+  },
+  "flag_coverage": {
+   "ok": false,
+   "rules_defined": 24,
+   "rules_fired": 11,
+   "stock_days": 4090,
+   "never_fired": [
+    {
+     "rule": "공매도 시장 상위 10 종목 (KIS)",
+     "fired": 0
+    },
+    {
+     "rule": "외인·기관 순매도 상위 (KIS)",
+     "fired": 0
+    },
+    {
+     "rule": "계속기업 불확실성 (감사인 명시)",
+     "fired": 0
+    },
+    {
+     "rule": "SEC 8-K 리스크 공시:",
+     "fired": 0
+    },
+    {
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "fired": 0
+    },
+    {
+     "rule": "약세 옵션 시그널: P/C",
+     "fired": 0
+    },
+    {
+     "rule": "고변동성 경고: IV",
+     "fired": 0
+    },
+    {
+     "rule": "불성실공시법인 지정",
+     "fired": 0
+    },
+    {
+     "rule": "FCF 마이너스(",
+     "fired": 0
+    },
+    {
+     "rule": "신용잔고율 주의",
+     "fired": 0
+    },
+    {
+     "rule": "공매도 비율",
+     "fired": 0
+    },
+    {
+     "rule": "신용잔고율",
+     "fired": 0
+    },
+    {
+     "rule": "유동비율",
+     "fired": 0
+    }
+   ],
+   "always_fired": [],
+   "detail": "정의 24종 중 발동 11종 · 미발동 13종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
+   "note": "미발동 규칙은 **확인 대상**이지 판정이 아니다. 계속기업 불확실성·불성실공시 같은 규칙은 107일 0건이 정상일 수 있다. 반면 입력 필드가 항상 결손이면 배선 결함이다. 임계 조정은 사전등록 대상(RULE 7).",
+   "baseline": {
+    "never_fired": 13
+   },
+   "status": "KNOWN"
   }
  },
- "note": "측정 오염 자동 검출 — 2026-08-05 감사에서 확정 결함을 실제로 잡아낸 세 대조를 상시화. 점수 입력 0(관측 전용)."
+ "note": "측정 오염 자동 검출 — 8/5 감사가 잡아낸 3대조 + 8/6 신설 규칙 판별력 검사. 점수 입력 0(관측 전용). status FAIL = **알려진 baseline 초과 = 신규 발생**. KNOWN = 미해결분이 알려진 범위 안(태스크 #19/#20). 매일 FAIL 이면 아무도 읽지 않는다는 8/6 학습 반영."
 }
