@@ -55,6 +55,16 @@ WORKERS = 8            # Yahoo 유량 — 과하면 429. 실측 8병렬 안정
 PERIOD = "max"         # 전 기간 (상장 이후)
 MIN_BARS = 60          # 이보다 짧으면 저장하지 않는다(신규 상장·데이터 불량)
 
+# 🚨 2026-08-08 CI 첫 실행 학습 — GitHub 러너에서 2,418종(408초) 지점부터 야후가 통째로
+#   거부했다. 거부는 즉시 반환이라 남은 2,900종이 20초 만에 "실패" 로 소모되고 run 이
+#   45.4% 로 끝났다(로컬 맥에서는 97.4% 였다 = 거주지 IP 와 데이터센터 IP 의 차이).
+#   대책 = 청크 단위로 성공률을 보고, 무너지면 쿨다운 후 그 청크만 재시도한다.
+#   무한 재시도는 하지 않는다 — 쿨다운 예산을 다 쓰면 부분 산출로 정직하게 끝낸다.
+CHUNK = 200                 # 성공률 관측 단위
+COOLDOWN_SEC = 240          # 차단 감지 시 대기(야후 유량 창 회복 대기)
+MAX_COOLDOWNS = 10          # 쿨다운 총 예산 — 초과하면 조기 종료(부분 산출 유지)
+MIN_CHUNK_OK_RATE = 0.25    # 이 밑이면 "차단" 으로 간주
+
 
 def load_universe(limit: int = 0) -> List[str]:
     """미국 티커 목록. us_universe_combined 우선, 없으면 sp1500.
@@ -136,13 +146,29 @@ def _have() -> Set[str]:
     return {os.path.splitext(f)[0] for f in os.listdir(OUT_DIR) if f.endswith(".json")}
 
 
-def collect(limit: int = 0, refresh: bool = False, universe_limit: int = 0) -> Dict[str, Any]:
+def _load_skip_list(path: str) -> Set[str]:
+    """원격(Blob)에 이미 있는 티커 목록. CI 는 매 run 빈 디스크라 이게 없으면 재개가 안 된다."""
+    if not path or not os.path.exists(path):
+        return set()
+    try:
+        with open(path, encoding="utf-8") as f:
+            return {ln.strip().upper() for ln in f if ln.strip()}
+    except OSError:
+        return set()
+
+
+def collect(limit: int = 0, refresh: bool = False, universe_limit: int = 0,
+            skip_list: str = "") -> Dict[str, Any]:
     universe = load_universe(universe_limit)
     if not universe:
         return {"status": "no_universe", "hint": "data/us_universe_combined.json 확인"}
     os.makedirs(OUT_DIR, exist_ok=True)
-    have = set() if refresh else _have()
+    remote = set() if refresh else _load_skip_list(skip_list)
+    have = set() if refresh else (_have() | remote)
     todo = [t for t in universe if t not in have]
+    if remote:
+        print(f"[us_chart_history] 원격 보유 {len(remote):,}종 skip — 잔여 {len(todo):,}",
+              file=sys.stderr, flush=True)
     if limit:
         todo = todo[:limit]
 
@@ -159,22 +185,53 @@ def collect(limit: int = 0, refresh: bool = False, universe_limit: int = 0) -> D
         os.replace(tmp, os.path.join(OUT_DIR, f"{t}.json"))
         return True
 
-    if todo:
+    def _run_batch(batch: List[str]) -> List[bool]:
         with cf.ThreadPoolExecutor(max_workers=WORKERS) as ex:
-            for i, (t, good) in enumerate(zip(todo, ex.map(_one, todo)), 1):
-                if good:
-                    ok += 1
-                else:
-                    failed.append(t)
-                if i % 200 == 0:
-                    print(f"[us_chart_history] {i}/{len(todo)} · ok {ok} · "
-                          f"{time.time() - t0:.0f}s", file=sys.stderr, flush=True)
+            return list(ex.map(_one, batch))
 
-    total = _have()
+    cooldowns = 0
+    stopped_early = False
+    for start in range(0, len(todo), CHUNK):
+        chunk = todo[start:start + CHUNK]
+        res = _run_batch(chunk)
+        miss = [t for t, good in zip(chunk, res) if not good]
+        ok += len(chunk) - len(miss)
+
+        rate = (len(chunk) - len(miss)) / len(chunk)
+        if rate < MIN_CHUNK_OK_RATE and miss:
+            # 차단 의심 — 쿨다운 후 이 청크의 실패분만 재시도. 회복하면 계속 진행한다.
+            if cooldowns >= MAX_COOLDOWNS:
+                failed.extend(miss)
+                stopped_early = True
+                print(f"[us_chart_history] 쿨다운 예산 {MAX_COOLDOWNS}회 소진 · "
+                      f"{start + len(chunk)}/{len(todo)} 지점에서 중단 — 부분 산출 유지",
+                      file=sys.stderr, flush=True)
+                break
+            cooldowns += 1
+            print(f"[us_chart_history] 성공률 {rate:.0%} — 야후 차단 의심. "
+                  f"{COOLDOWN_SEC}s 대기 후 {len(miss)}종 재시도 (쿨다운 {cooldowns}/{MAX_COOLDOWNS})",
+                  file=sys.stderr, flush=True)
+            time.sleep(COOLDOWN_SEC)
+            res2 = _run_batch(miss)
+            recovered = sum(1 for good in res2 if good)
+            ok += recovered
+            failed.extend([t for t, good in zip(miss, res2) if not good])
+            print(f"[us_chart_history] 재시도 회복 {recovered}/{len(miss)}",
+                  file=sys.stderr, flush=True)
+        else:
+            failed.extend(miss)
+
+        print(f"[us_chart_history] {min(start + CHUNK, len(todo))}/{len(todo)} · ok {ok} · "
+              f"{time.time() - t0:.0f}s", file=sys.stderr, flush=True)
+
+    # 보유 = 로컬 신규 + 원격 기보유. CI 는 로컬만 세면 매 run 이 처음처럼 보인다.
+    total = _have() | remote
     meta = {
         "as_of": time.strftime("%Y-%m-%dT%H:%M:%S+09:00", time.localtime(time.time() + 9 * 3600)),
-        "universe": len(universe), "have": len(total),
+        "universe": len(universe), "have": len(total), "have_local": len(_have()),
+        "have_remote": len(remote),
         "fetched_now": ok, "failed_now": len(failed), "failed_sample": failed[:30],
+        "cooldowns": cooldowns, "stopped_early": stopped_early,
         "source": "yfinance period=max auto_adjust=True",
         "note": ("레포 비커밋 — 5,000종목 규모라 Blob/외부 저장 대상. "
                  "🚨 실패는 상장폐지·티커변경·야후 미수록 혼재이며 사유를 단정하지 않는다."),
@@ -193,13 +250,16 @@ def main() -> int:
     ap.add_argument("--universe-limit", type=int, default=0)
     ap.add_argument("--refresh", action="store_true")
     ap.add_argument("--plan-only", action="store_true")
+    ap.add_argument("--skip-list", default="",
+                    help="원격(Blob)에 이미 있는 티커 목록 파일 — CI 재개용")
     a = ap.parse_args()
     if a.plan_only:
         u = load_universe(a.universe_limit)
-        print(f"[us_chart_history] 유니버스 {len(u):,} · 보유 {len(_have()):,} · "
-              f"잔여 {len([t for t in u if t not in _have()]):,}")
+        have = _have() | _load_skip_list(a.skip_list)
+        print(f"[us_chart_history] 유니버스 {len(u):,} · 보유 {len(have):,} · "
+              f"잔여 {len([t for t in u if t not in have]):,}")
         return 0
-    r = collect(a.limit, a.refresh, a.universe_limit)
+    r = collect(a.limit, a.refresh, a.universe_limit, a.skip_list)
     if r.get("status") != "ok":
         print(f"[us_chart_history] {r.get('status')} — {r.get('hint','')}", file=sys.stderr)
         return 1

@@ -29,9 +29,17 @@ _TREASURY_SERIES = [
     ("30Y", "DGS30"),
 ]
 
+# 🚨 2026-08-08 정정 — us_ig_oas 가 BAMLC0A4CBBB(= BBB 등급 OAS, IG 최하단 한 칸)를 담고 있었다.
+#   공개 컴포넌트 PublicBondRegime 은 이 값을 "투자등급 IG" 로 표기한다 = 라벨과 실제 시리즈 불일치.
+#   실측(2026-08-06 관측): 전체 IG 0.78 vs BBB 0.97 — 0.19%p 차이로 늘 BBB 가 더 넓게 나온다.
+#   → us_ig_oas 를 전체 IG 지수(BAMLC0A0CM)로 바꿔 라벨과 데이터를 일치시키고, BBB 는 잃지 않도록
+#     us_bbb_oas 로 따로 남긴다(추가 사실, 기존 키 제거 0).
+#   🚨 임계 무변경 — credit_cycle/risk_appetite 판정은 HY 만 쓰므로(bondanalyzer.analyze_credit_spreads)
+#     이 교체로 등급 판정 산식이 바뀌지 않는다. RULE 7 임계 조정 아님(입력 결함 정정).
 _CREDIT_SERIES = {
-    "us_ig_oas": "BAMLC0A4CBBB",
-    "us_hy_oas": "BAMLH0A0HYM2",
+    "us_ig_oas": "BAMLC0A0CM",      # ICE BofA US Corporate Index OAS (전체 투자등급)
+    "us_bbb_oas": "BAMLC0A4CBBB",   # ICE BofA BBB US Corporate Index OAS (IG 최하단)
+    "us_hy_oas": "BAMLH0A0HYM2",    # ICE BofA US High Yield Index OAS
 }
 
 
@@ -190,12 +198,15 @@ def get_us_bond_summary() -> Dict[str, Any]:
             result["spread_3m_10y"] = round(y10 - y3m, 3)
 
     ig_val = _fetch_latest(_CREDIT_SERIES["us_ig_oas"])
+    bbb_val = _fetch_latest(_CREDIT_SERIES["us_bbb_oas"])
     hy_val = _fetch_latest(_CREDIT_SERIES["us_hy_oas"])
 
     credit: Dict[str, Any] = {}
     if ig_val is not None:
         credit["us_ig_oas"] = round(ig_val, 3)
         credit["us_ig_risk"] = _assess_credit_risk(ig_val, "ig")
+    if bbb_val is not None:
+        credit["us_bbb_oas"] = round(bbb_val, 3)
     if hy_val is not None:
         credit["us_hy_oas"] = round(hy_val, 3)
         credit["us_hy_risk"] = _assess_credit_risk(hy_val, "hy")

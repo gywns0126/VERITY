@@ -29,7 +29,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 55  # budget 2400s(40분) + checkout/install/commit 여유. GH 6h 한도 내·public 무료.
+    timeout-minutes: 75  # insider 2400s(40분) + ETF 900s(15분) + checkout/install/commit 여유.
 
     steps:
       - name: Checkout
@@ -57,12 +57,25 @@ jobs:
         continue-on-error: true
         run: python -m api.builders.us_short_interest_public_builder
 
+      - name: Refresh US ETF universe (Polygon · 월 1 회)
+        # 2026-08-08 신설 — US ETF 커버리지가 손큐레이션 84 종에 머물러 있었다(KR 은 1,160 전량).
+        # --max-age-days 25 = 매일 도는 job 에 끼워도 Polygon 호출은 월 1 회로 유지된다.
+        # 실패해도 계속 — 기존 유니버스 파일 재사용(스크립트에 1,000종 미만 미덮음 가드 내장).
+        continue-on-error: true
+        env:
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+        run: python3 scripts/us/fetch_us_etf_universe.py --max-age-days 25
+
       - name: Build US ETF facts (category / AUM / expense / holdings)
         # RULE 7 = 사실만 (카테고리·순자산·운용사·보수율·구성종목). 소스 = yfinance(무료).
         # 🚨 소비자 = PublicStockReport 의 US_ETF_URL — 2026-07-11 PR #81 이 컴포넌트만 main 에 올리고
         #    데이터·빌더·publish 목록을 두고 와서 us_etf.json 이 Blob 404 → 미장 ETF 패널 파손 +
         #    site_audit RED. 갱신 경로(이 스텝) + publish 등재 + 데이터 3종을 함께 둔다.
+        # 🚨 벽시계 예산 900s — 유니버스가 5,487 종이라 건수 상한만으로는 러너 시간을 못 막는다.
+        #    앞 스텝(us_insider 2400s) 과 합쳐 job timeout 안에 들어와야 앞 산출까지 commit 된다.
         continue-on-error: true
+        env:
+          US_ETF_MAX_SECONDS: '900'
         run: python -m api.builders.us_etf_public_builder
 
       - name: Commit data/us_insider_trades.json
@@ -75,7 +88,7 @@ jobs:
           # short_interest = continue-on-error 스텝 산출. 첫 실행/실패 시 파일 부재 → add 실패로
           # 워크플로가 죽지 않도록 존재할 때만 stage ([[feedback_data_collection_verification_mandatory]]).
           for f in data/us_short_interest.json data/us_short_interest_cache.json \
-                   data/us_etf.json data/us_etf_cache.json; do
+                   data/us_etf.json data/us_etf_cache.json data/us_etf_universe.json; do
             if [ -f "$f" ]; then git add "$f"; fi
           done
           if git diff --staged --quiet; then

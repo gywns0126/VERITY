@@ -6,8 +6,19 @@
 🚨 RULE 7 — 사실만: 카테고리·순자산(AUM)·운용사·보수율·보유종목 top(비중). 자체 점수·판단 0.
 🚨 가격/NAV 재배포 회피 = 실시간 시세 미노출(증권사 link-out). 여긴 구성·비용 사실 렌즈.
 
-소스 = yfinance (Ticker.info + funds_data.top_holdings). 큐레이션 ~70종(AUM 상위 광범/섹터/해외/채권/원자재).
+소스 = yfinance (Ticker.info + funds_data.top_holdings).
 출력 = data/us_etf.json {_meta, etfs:[{ticker, name, category, aum_usd, family, expense, top_holdings}]}.
+
+🚨 2026-08-08 전량 확대 — 이전에는 아래 CURATED 손큐레이션 84 종이 유니버스 전부였다. 같은 날
+  커버리지 감사에서 KR ETF 는 1,160 종 전량인데 US 는 84 라는 비대칭이 드러났다. 병목은 소스가
+  아니라 우리 설정이었다([[feedback_coverage_check_collector_filter_first]] — ETF 25→1,150 과 동형).
+  이제 유니버스 = `data/us_etf_universe.json`(Polygon ETF/ETV/ETN 5,486종, 별 스크립트가 월 1 갱신).
+  CURATED 는 폐기하지 않고 **core 우선순위 목록**으로 남는다 — 핵심 ETF 가 롱테일 뒤로 밀리면
+  안 되기 때문이다.
+
+  2층 신선도 = core 5일 / tail 30일. 2층 발행 = core+AUM 상위는 전 필드, 나머지는 슬림 레코드
+  (ticker·name·category·aum·expense·family·type). 4,000+ 종 전 필드 발행 = 공개 blob 수 MB 로
+  비대해져 프론트 파싱이 무너진다. 슬림 층이 "존재는 안다, 상세는 상위부터" 를 정직하게 표기한다.
 """
 from __future__ import annotations
 
@@ -21,14 +32,23 @@ from typing import Any, Dict, List, Optional
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CACHE_PATH = os.path.join(_ROOT, "data", "us_etf_cache.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "us_etf.json")
+UNIVERSE_PATH = os.path.join(_ROOT, "data", "us_etf_universe.json")
 KST = timezone(timedelta(hours=9))
-FRESH_DAYS = 5          # ETF 구성/AUM 저빈도 변동 → 5일 재수집
+FRESH_DAYS = 5          # core(CURATED) — 구성/AUM 저빈도 변동
+TAIL_FRESH_DAYS = 30    # 롱테일 — 일별 예산 안에서 한 바퀴 도는 현실 주기
+MISS_RETRY_DAYS = 45    # yfinance 가 ETF 로 인정하지 않은 티커 재시도 간격(상폐·비ETF 잔여)
 # 스키마를 넓힌 날은 캐시가 신선해도 옛 필드만 들고 있다 → 전량 재수집이 필요.
 # US_ETF_FORCE=1 (신선도 무시) · US_ETF_MAX_PER_RUN=N (1회 상한) 로 일회성 전량 갱신.
-MAX_PER_RUN = int(os.environ.get("US_ETF_MAX_PER_RUN") or 40)  # yfinance 레이트리밋 안전
+MAX_PER_RUN = int(os.environ.get("US_ETF_MAX_PER_RUN") or 300)
+# 🚨 벽시계 예산 — 유니버스가 5,486 종이라 건수 상한만으로는 러너 시간을 못 막는다.
+#   같은 job 안에서 us_insider(2400s) 뒤에 돌기 때문에 이 스텝이 job timeout 을 먹으면
+#   앞 스텝 산출까지 commit 되지 않는다.
+MAX_SECONDS = int(os.environ.get("US_ETF_MAX_SECONDS") or 900)
 FORCE_REFETCH = os.environ.get("US_ETF_FORCE") == "1"
 THROTTLE_SEC = 0.3
-STALE_EMIT_DAYS = 30
+STALE_EMIT_DAYS = 30        # core 발행 신선도 하한
+TAIL_STALE_EMIT_DAYS = 120  # 롱테일은 30일 주기라 30일 컷이면 매 주기 깜빡인다
+DETAIL_TOP_N = int(os.environ.get("US_ETF_DETAIL_TOP_N") or 400)  # 전 필드 발행 상한(AUM 상위)
 
 # 큐레이션 = AUM/인지도 상위 US 상장 ETF (광범·섹터·해외·채권·원자재·테마)
 CURATED: List[str] = [
@@ -243,6 +263,23 @@ def _fetch_one(ticker: str) -> Dict[str, Any]:
     return out
 
 
+def _load_universe() -> tuple[List[str], Dict[str, str], Dict[str, str]]:
+    """(티커 목록, name_map, type_map). 유니버스 파일 부재 시 CURATED 로 축퇴.
+
+    축퇴는 조용한 축소라 로그를 남긴다 — 파일이 없으면 84 종으로 되돌아간 것이고,
+    그 사실이 보이지 않으면 확대가 회귀해도 아무도 모른다.
+    """
+    try:
+        doc = json.load(open(UNIVERSE_PATH, encoding="utf-8"))
+        tickers = [str(t).upper() for t in (doc.get("tickers") or [])]
+        if tickers:
+            return tickers, (doc.get("names") or {}), (doc.get("type_map") or {})
+        print("[us_etf] 유니버스 파일 tickers 비어 있음 — CURATED 로 축퇴", file=sys.stderr)
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"[us_etf] 유니버스 로드 실패({type(e).__name__}) — CURATED 로 축퇴", file=sys.stderr)
+    return list(CURATED), {}, {}
+
+
 def main() -> int:
     cache: Dict[str, Any] = {"updated_at": None, "by_ticker": {}}
     if os.path.exists(CACHE_PATH):
@@ -253,15 +290,47 @@ def main() -> int:
     by_ticker: Dict[str, Any] = cache.get("by_ticker") or {}
 
     now = _now_kst()
-    todo = [
-        t for t in CURATED
-        if FORCE_REFETCH or _age_days((by_ticker.get(t) or {}).get("as_of", ""), now) >= FRESH_DAYS
-    ]
-    todo.sort(key=lambda t: (by_ticker.get(t) or {}).get("as_of", ""))
-    todo = todo[:MAX_PER_RUN]
+    poly_universe, uni_names, uni_types = _load_universe()
+    # 🚨 합집합 — Polygon reference 에 없는 실재 ETF 가 있다(2026-08-08 실측: SPLG = SPDR
+    #   Portfolio S&P 500, 조회 자체가 빈 결과). 유니버스를 그대로 쓰면 기존에 커버하던 종목이
+    #   조용히 빠진다. CURATED 는 어떤 경우에도 유지한다 — 확대가 축소를 낳으면 안 된다.
+    core = list(CURATED)
+    core_set = set(core)
+    universe = core + [t for t in poly_universe if t not in core_set]
+    tail = [t for t in universe if t not in core_set]
+
+    def _due(t: str, fresh_days: int) -> bool:
+        rec = by_ticker.get(t) or {}
+        if FORCE_REFETCH:
+            return True
+        # yfinance 가 ETF 로 인정하지 않은 티커 = 매 run 재시도하면 예산만 태운다.
+        if rec.get("miss"):
+            return _age_days(rec.get("last_try") or rec.get("as_of", ""), now) >= MISS_RETRY_DAYS
+        # 🚨 as_of = 데이터가 실제로 갱신된 시각, last_try = 마지막 시도 시각. 둘을 분리해야
+        #   "실패했는데 as_of 만 밀어서 신선해 보이는" 상태가 생기지 않는다. backoff 는 둘 중 최근값.
+        ref = max(rec.get("as_of", "") or "", rec.get("last_try", "") or "")
+        return _age_days(ref, now) >= fresh_days
+
+    # core 를 앞에 둔다 — 롱테일 5,400 종이 핵심 ETF 갱신을 밀어내면 안 된다.
+    todo_core = sorted(
+        (t for t in core if _due(t, FRESH_DAYS)),
+        key=lambda t: (by_ticker.get(t) or {}).get("as_of", ""),
+    )
+    todo_tail = sorted(
+        (t for t in tail if _due(t, TAIL_FRESH_DAYS)),
+        key=lambda t: (by_ticker.get(t) or {}).get("as_of", ""),
+    )
+    todo = (todo_core + todo_tail)[:MAX_PER_RUN]
 
     fetched = 0
+    missed = 0
+    started = time.monotonic()
+    budget_hit = False
     for t in todo:
+        if time.monotonic() - started > MAX_SECONDS:
+            budget_hit = True
+            print(f"[us_etf] 벽시계 예산 {MAX_SECONDS}s 소진 — 남은 {len(todo) - fetched - missed}종은 다음 run")
+            break
         try:
             rec = _fetch_one(t)
         except Exception as e:  # noqa: BLE001 — 개별 실패 격리
@@ -271,6 +340,15 @@ def main() -> int:
             rec["as_of"] = now.isoformat()
             by_ticker[t] = rec
             fetched += 1
+        else:
+            # 음성 캐시 — 기존 사실은 지우지 않고 last_try 만 찍어 backoff 한다(as_of 는 손대지 않음).
+            prev = by_ticker.get(t) or {}
+            if prev.get("name"):
+                prev["last_try"] = now.isoformat()
+                by_ticker[t] = prev
+            else:
+                by_ticker[t] = {"miss": True, "last_try": now.isoformat()}
+            missed += 1
         time.sleep(THROTTLE_SEC)
 
     cache["by_ticker"] = by_ticker
@@ -280,24 +358,56 @@ def main() -> int:
         json.dump(cache, f, ensure_ascii=False)
     os.replace(tmp, CACHE_PATH)
 
-    etfs = []
-    for t in CURATED:
+    _SLIM_KEYS = ("name", "category", "category_name", "aum_usd", "family", "expense")
+
+    covered: List[Dict[str, Any]] = []
+    for t in universe:
         rec = by_ticker.get(t)
-        if not rec or not rec.get("name") or _age_days(rec.get("as_of", ""), now) > STALE_EMIT_DAYS:
+        if not rec or not rec.get("name"):
             continue
-        # as_of(내부 신선도 키) 만 빼고 수집한 사실 전부 발행 — 신 필드 추가 시 emit 누락 방지
-        entry = {"ticker": t}
-        entry.update({k: v for k, v in rec.items() if k != "as_of" and v not in (None, {}, [])})
+        limit = STALE_EMIT_DAYS if t in core_set else TAIL_STALE_EMIT_DAYS
+        if _age_days(rec.get("as_of", ""), now) > limit:
+            continue
+        covered.append({"_t": t, "_rec": rec, "_aum": rec.get("aum_usd") or 0})
+
+    # 전 필드 발행 = core + AUM 상위 DETAIL_TOP_N. 나머지는 슬림.
+    covered.sort(key=lambda e: (e["_t"] in core_set, e["_aum"]), reverse=True)
+    detail_set = {e["_t"] for e in covered[:DETAIL_TOP_N]} | core_set
+
+    etfs: List[Dict[str, Any]] = []
+    for e in covered:
+        t, rec = e["_t"], e["_rec"]
+        entry: Dict[str, Any] = {"ticker": t}
+        if t in detail_set:
+            # as_of/last_try(내부 신선도 키) 만 빼고 수집한 사실 전부 발행 — 신 필드 emit 누락 방지
+            entry.update({
+                k: v for k, v in rec.items()
+                if k not in ("as_of", "last_try", "miss") and v not in (None, {}, [])
+            })
+        else:
+            entry.update({k: rec[k] for k in _SLIM_KEYS if rec.get(k) not in (None, "", {}, [])})
+            entry["slim"] = True
+        if uni_types.get(t) and uni_types[t] != "ETF":
+            entry["type"] = uni_types[t]   # ETV(신탁형·원자재) / ETN(지수연동증권) 구분 사실
         etfs.append(entry)
     etfs.sort(key=lambda e: (e.get("aum_usd") or 0), reverse=True)
 
+    detail_n = sum(1 for e in etfs if not e.get("slim"))
     out = {
         "_meta": {
             "generated_at": now.isoformat(),
-            "source": "yfinance (US 상장 ETF info + funds_data: 개요/운용/자산군/섹터/밸류에이션/보유종목)",
-            "curated_n": len(CURATED),
+            "source": "yfinance (US 상장 ETF info + funds_data: 개요/운용/자산군/섹터/밸류에이션/보유종목) "
+                      "· 유니버스 = Polygon ETF/ETV/ETN",
+            "universe_n": len(universe),
+            "curated_n": len(core),
             "covered_n": len(etfs),
+            "detail_n": detail_n,
+            "slim_n": len(etfs) - detail_n,
             "fetched_this_run": fetched,
+            "missed_this_run": missed,
+            "budget_hit": budget_hit,
+            "note": "slim=true 는 티커·명칭·카테고리·AUM·보수만 채워진 층 — 상세(구성종목·섹터·"
+                    "밸류에이션)는 AUM 상위부터 채워진다. 미수록 = 아직 수집 전이지 부재 아님.",
             "disclaimer": "US ETF 사실(카테고리·AUM·운용사·보수·보유종목 top) — 점수/추천 아님(RULE 7). "
                           "실시간 시세·NAV 미노출(증권사 앱). yfinance 무료 소스.",
         },
@@ -305,7 +415,10 @@ def main() -> int:
     }
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False)
-    print(f"[us_etf] curated {len(CURATED)} | fetched {fetched} | covered {len(etfs)} | out={OUTPUT_PATH}")
+    print(
+        f"[us_etf] universe {len(universe)} | core {len(core)} | fetched {fetched} "
+        f"| miss {missed} | covered {len(etfs)} (상세 {detail_n} / 슬림 {len(etfs) - detail_n})"
+    )
     return 0
 
 

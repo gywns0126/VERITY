@@ -56,35 +56,42 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Collect US daily history (yfinance · auto_adjust)
-        # 🚨 멱등 — 이미 받은 티커는 파일 존재로 skip. 중단돼도 다음 run 이 이어받는다.
-        run: |
-          ARGS=""
-          LIMIT="${{ github.event.inputs.limit || '0' }}"
-          [ "$LIMIT" != "0" ] && ARGS="--limit $LIMIT"
-          python -m api.collectors.us_chart_history $ARGS
-
-      - name: 커버리지 확인 (조용한 전량 실패 차단)
-        # 🚨 2026-08-08 학습 — us_chart_daily 가 count 0 인 채 성공으로 끝나고 있었다.
-        #   파일 mtime 만 보면 신선도 보드에 "0일 경과" 로 잡힌다. 없는 것보다 나쁘다.
-        run: |
-          python - <<'PY'
-          import json, sys
-          m = json.load(open("data/us_chart_history_meta.json", encoding="utf-8"))
-          have, uni = m["have"], m["universe"]
-          print(f"[us_chart_history] 보유 {have:,}/{uni:,} ({have/uni*100:.1f}%)")
-          if have < uni * 0.5:
-              print("::error::커버리지 50% 미만 — 산출물 신뢰 불가", file=sys.stderr)
-              sys.exit(1)
-          PY
-
-      - name: Setup Node (Blob 업로드용)
+      - name: Setup Node (Blob 목록·업로드용)
         uses: actions/setup-node@v4
         with:
           node-version: '24'
 
+      - name: Blob 기보유 목록 (재개용 skip-list)
+        # 🚨 2026-08-08 첫 CI 실행 학습 — 이 레이크는 레포에 커밋하지 않아서 러너가 매번 빈
+        #   디스크로 시작한다. 수집기의 "파일 존재 = 체크포인트" 재개가 CI 에서는 무력했다.
+        #   Blob 에 이미 있는 티커를 먼저 받아 skip-list 로 넘겨야 run 이 누적된다.
+        # 실패해도 계속 — 빈 목록이면 전량 수집을 시도할 뿐이다.
+        continue-on-error: true
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: |
+          cd .github/actions/publish-data
+          npm install --no-save --silent --no-audit --no-fund @vercel/blob@^0.27
+          node blob_list_prefix.js us_chart_history/ \
+            "${{ github.workspace }}/data/us_chart_history_remote.txt"
+
+      - name: Collect US daily history (yfinance · auto_adjust)
+        # 🚨 멱등 — 로컬 파일 + Blob skip-list 로 이미 받은 티커는 건너뛴다.
+        # 🚨 2026-08-08 첫 실행: 2,418종(408초) 지점부터 야후가 러너 IP 를 차단해 남은 2,900종이
+        #   20초 만에 실패 소모되고 45.4% 로 끝났다(로컬 맥 97.4%). 수집기에 청크 성공률 감시 +
+        #   쿨다운 재시도를 넣었다. 그래도 부족하면 부분 산출을 올리고 다음 run 이 이어받는다.
+        run: |
+          ARGS=""
+          LIMIT="${{ github.event.inputs.limit || '0' }}"
+          [ "$LIMIT" != "0" ] && ARGS="--limit $LIMIT"
+          python -m api.collectors.us_chart_history $ARGS \
+            --skip-list data/us_chart_history_remote.txt
+
       - name: Blob 업로드 (us_chart_history/{ticker}.json)
         # publish-data 의 blob_upload.js 재사용 — kr_chart_history 와 동일 패턴.
+        # 🚨 커버리지 게이트보다 **앞**에 둔다. 게이트가 먼저 exit 1 하면 그 run 이 모은
+        #   수천 종이 통째로 버려진다(2026-08-08 실제로 2,418종을 그렇게 잃었다).
+        #   부분이라도 올려야 다음 run 이 이어받는다 — 게이트는 그 뒤에서 판정만 한다.
         env:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
         run: |
@@ -100,3 +107,21 @@ jobs:
           cd .github/actions/publish-data
           npm install --no-save --silent --no-audit --no-fund @vercel/blob@^0.27
           node blob_upload.js "${{ github.workspace }}/_us_history_dist"
+
+      - name: 커버리지 확인 (조용한 전량 실패 차단)
+        # 🚨 2026-08-08 학습 — us_chart_daily 가 count 0 인 채 성공으로 끝나고 있었다.
+        #   파일 mtime 만 보면 신선도 보드에 "0일 경과" 로 잡힌다. 없는 것보다 나쁘다.
+        # have = 로컬 신규 + Blob 기보유 누적치. 업로드 뒤에 판정하므로 데이터 손실이 없다.
+        run: |
+          python - <<'PY'
+          import json, sys
+          m = json.load(open("data/us_chart_history_meta.json", encoding="utf-8"))
+          have, uni = m["have"], m["universe"]
+          print(f"[us_chart_history] 보유 {have:,}/{uni:,} ({have/uni*100:.1f}%) "
+                f"· 로컬 신규 {m.get('have_local', 0):,} · 원격 기보유 {m.get('have_remote', 0):,} "
+                f"· 쿨다운 {m.get('cooldowns', 0)} · 조기중단 {m.get('stopped_early', False)}")
+          if have < uni * 0.5:
+              print("::error::커버리지 50% 미만 — 다음 run 이 이어받는다(부분 산출은 Blob 에 보존)",
+                    file=sys.stderr)
+              sys.exit(1)
+          PY
