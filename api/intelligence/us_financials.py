@@ -363,18 +363,38 @@ def _derive_bank_revenue(facts: Dict[str, Any], currency: str) -> List[Dict[str,
     return sorted(out, key=lambda x: x["end"])
 
 
-def fetch_all_metrics(cik: int) -> Dict[str, Any]:
+def fetch_all_metrics(
+    cik: int,
+    facts: Optional[Dict[str, Any]] = None,
+    sic_pair: Optional[Tuple[Optional[int], Optional[str]]] = None,
+) -> Dict[str, Any]:
     """단일 ticker 전체 표준 metrics fetch + alias 해소.
+
+    Args:
+        facts: companyfacts JSON 을 이미 갖고 있으면 주입 — HTTP 생략.
+        sic_pair: (sic, sic_description) 주입 — submissions HTTP 생략.
+
+    🚨 2026-08-08 신설(주입 인자). **파싱·산출 로직은 한 줄도 바뀌지 않았다** — 전송만
+       분리했다. SEC 벌크 `companyfacts.zip`(1.34GB, 전 상장사)으로 유니버스를
+       sp1500(1,502) → 전량(5,324)으로 넓히기 위함이다. 개별 API 로는 ~7.4시간이라
+       GH 6시간 한도를 넘는다. 주입 경로와 HTTP 경로의 산출이 동일함을
+       `tests/test_sec_companyfacts_bulk.py` 가 고정한다.
 
     Returns: {meta, metrics: {revenue: [...], ...}, fetched_at}
     """
-    facts = fetch_companyfacts(cik)
-    if not facts:
-        return {"_error": f"companyfacts fetch failed for CIK {cik}"}
-    time.sleep(0.15)  # SEC rate limit 안전
+    if facts is None:
+        facts = fetch_companyfacts(cik)
+        if not facts:
+            return {"_error": f"companyfacts fetch failed for CIK {cik}"}
+        time.sleep(0.15)  # SEC rate limit 안전
+    elif not facts:
+        return {"_error": f"companyfacts empty for CIK {cik}"}
     # v0.1 — SIC fetch (FCF financial gating + v0.3 revenue alias). 실패해도 graceful.
-    sic, sic_desc = fetch_sic(cik)
-    time.sleep(0.15)
+    if sic_pair is None:
+        sic, sic_desc = fetch_sic(cik)
+        time.sleep(0.15)
+    else:
+        sic, sic_desc = sic_pair
     is_fin = is_financial_sic(sic)
     ccy = _detect_currency(facts)  # 보고 통화 (USD 또는 CAD 등 외국 상장 native)
     # v0.3 — 금융은 revenue 만 FINANCIAL_REVENUE_ALIASES (총수익 우선) 로 추출.
@@ -742,6 +762,8 @@ def compute_derived(
 def build_ticker_snapshot(
     ticker: str, cik: int, history_quarters: int = 8, history_years: int = 5,
     market_cap: Optional[float] = None, div_yield: Optional[float] = None,
+    facts: Optional[Dict[str, Any]] = None,
+    sic_pair: Optional[Tuple[Optional[int], Optional[str]]] = None,
 ) -> Dict[str, Any]:
     """단일 ticker 의 표준화 + 시계열 + 파생 snapshot.
 
@@ -749,7 +771,7 @@ def build_ticker_snapshot(
 
     Returns: {ticker, meta, series_annual, series_quarterly, derived, fetched_at, _errors}.
     """
-    raw = fetch_all_metrics(cik)
+    raw = fetch_all_metrics(cik, facts=facts, sic_pair=sic_pair)
     if "_error" in raw:
         return {"ticker": ticker, "_error": raw["_error"], "fetched_at": raw.get("fetched_at")}
 
