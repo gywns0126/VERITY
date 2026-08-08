@@ -7,8 +7,9 @@ _SWEEP_CI_CRITICAL allowlist 만 FAIL(🔴) 격상. 순수 헬퍼 단위 검증.
 import scripts.cron_health_monitor as m
 
 
-def _fail(workflow, age_h=3.0):
-    return {"workflow": workflow, "conclusion": "failure", "age_h": age_h, "title": "x"}
+def _fail(workflow, age_h=3.0, streak=1):
+    return {"workflow": workflow, "conclusion": "failure", "age_h": age_h, "title": "x",
+            "streak": streak}
 
 
 def test_empty_sweep_keeps_base_severity():
@@ -61,6 +62,61 @@ def test_rule7_audit_is_ci_critical():
     sev, findings = m._sweep_severity_and_findings([_fail("rule7_audit.yml")], "PASS")
     assert sev == "FAIL"
     assert any("🔴" in x and "rule7_audit.yml" in x for x in findings)
+
+
+# ── 연속 실패 격상 (2026-08-08): transient 1~2회 vs 스스로 낫지 않는 고장 구분 ──
+
+def test_single_failure_stays_warning_no_streak_label():
+    sev, findings = m._sweep_severity_and_findings([_fail("kr_chart_daily.yml", streak=1)], "PASS")
+    assert sev == "WARNING"
+    assert all("연속" not in x for x in findings)
+
+
+def test_two_consecutive_labels_streak_but_stays_warning():
+    # 러너 IP 추첨으로 두 슬롯 연달아 튕기는 것은 실측 정상 범위 — 라벨만 붙이고 격상 안 함.
+    sev, findings = m._sweep_severity_and_findings([_fail("kr_chart_daily.yml", streak=2)], "PASS")
+    assert sev == "WARNING"
+    assert any("2연속" in x for x in findings)
+    assert all("🔴" not in x for x in findings)
+
+
+def test_three_consecutive_escalates_to_fail():
+    sev, findings = m._sweep_severity_and_findings([_fail("some_weekly.yml", streak=3)], "PASS")
+    assert sev == "FAIL"
+    assert any("🔴" in x and "3연속" in x and "낫지 않는" in x for x in findings)
+
+
+def test_known_degraded_never_escalates():
+    # 원인 확정 + 조치가 시간 대기(월 16~25일 재시도 창) = 매 회차 알림 금지.
+    assert "nps_employment.yml" in m._SWEEP_KNOWN_DEGRADED
+    sev, findings = m._sweep_severity_and_findings([_fail("nps_employment.yml", streak=9)], "PASS")
+    assert sev == "WARNING"
+    assert any("원인 확정" in x for x in findings)
+    assert all("🔴" not in x for x in findings)
+
+
+def test_missing_streak_key_defaults_safe():
+    # streak 키 없는 옛 형태 dict = 격상 없음(기본 WARNING). 회귀 방어.
+    legacy = {"workflow": "some_weekly.yml", "conclusion": "failure", "age_h": 2.0, "title": "x"}
+    sev, _ = m._sweep_severity_and_findings([legacy], "PASS")
+    assert sev == "WARNING"
+
+
+def _r(branch, conclusion, status="completed"):
+    return {"headBranch": branch, "conclusion": conclusion, "status": status,
+            "createdAt": "2026-08-08T04:00:00Z", "displayTitle": "x"}
+
+
+def test_streak_counts_only_completed_main_runs():
+    runs = [_r("feat/x", "failure"),            # PR 브랜치 = 무시
+            _r("main", None, status="in_progress"),  # 미완료 = 무시
+            _r("main", "failure"), _r("main", "timed_out"), _r("main", "failure"),
+            _r("main", "success"), _r("main", "failure")]
+    assert m._main_failure_streak(runs) == 3
+
+
+def test_streak_zero_when_latest_main_success():
+    assert m._main_failure_streak([_r("main", "success"), _r("main", "failure")]) == 0
 
 
 # ── _latest_completed_main_run: branch 오판 차단 (2026-07-23 false P0 회귀) ──

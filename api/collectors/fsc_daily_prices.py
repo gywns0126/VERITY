@@ -57,6 +57,12 @@ _ETF_PREFIXES = ("KODEX", "TIGER", "KBSTAR", "ARIRANG", "ACE", "SOL", "PLUS", "H
 KEEP_DAYS = 250          # ~1년 거래일 (52주 고저 계산 가능)
 _BULK_ROWS = 5000        # 전 종목 ~2,900 → 1콜 (실측 2026-07-04: 2,873건 0.3s)
 _REQ_TIMEOUT = 60
+# GH 러너 → apis.data.go.kr 은 간헐적으로 ConnectTimeout (거부·403 아님 = 방화벽 드롭).
+# 실측 2026-08-03~08-07: 최근 30 run 중 7 실패, 전부 `<urlopen error timed out>`.
+# 한국 IP(개발 맥)는 같은 시각 0.9초 정상 → 러너 IP 추첨 의존. 연결 계층만 재시도한다.
+# 국민연금 수집기(nps_employment)와 같은 뿌리 — 같은 게이트웨이(apis.data.go.kr).
+_NET_RETRIES = 3
+_NET_BACKOFF = (5, 20)   # 초 — 1차 실패 후 5s, 2차 후 20s (총 대기 ≤ 25s, 슬롯 10분 안)
 _KST = timezone(timedelta(hours=9))
 
 
@@ -83,18 +89,31 @@ def _call(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     for k, v in params.items():
         qs += f"&{urllib.parse.quote(str(k))}={urllib.parse.quote(str(v))}"
     url = f"{BASE_URL}?{qs}"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    body = None
+    for attempt in range(_NET_RETRIES):
+        try:
+            with urllib.request.urlopen(req, timeout=_REQ_TIMEOUT) as r:
+                body = r.read().decode("utf-8", "replace")
+            break
+        except Exception as e:  # 연결 계층만 재시도 — 응답 에러는 아래에서 별도 처리
+            if attempt < _NET_RETRIES - 1:
+                delay = _NET_BACKOFF[min(attempt, len(_NET_BACKOFF) - 1)]
+                print(f"[fsc_daily_prices] 연결 실패 {attempt + 1}/{_NET_RETRIES} ({e}) "
+                      f"— {delay}s 후 재시도", file=sys.stderr)
+                time.sleep(delay)
+                continue
+            print(f"[fsc_daily_prices] 호출 실패 {params}: {e}", file=sys.stderr)
+            return None
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=_REQ_TIMEOUT) as r:
-            body = r.read().decode("utf-8", "replace")
-        doc = json.loads(body)
+        doc = json.loads(body or "")
         header = (doc.get("response") or {}).get("header") or {}
         if header.get("resultCode") != "00":
             print(f"[fsc_daily_prices] API 에러 {header}", file=sys.stderr)
             return None
         return (doc.get("response") or {}).get("body") or {}
     except Exception as e:  # 게이트웨이 XML 봉투(키/쿼터) 포함 — JSON 파싱 실패로 수렴
-        print(f"[fsc_daily_prices] 호출 실패 {params}: {e}", file=sys.stderr)
+        print(f"[fsc_daily_prices] 응답 파싱 실패 {params}: {e}", file=sys.stderr)
         return None
 
 
