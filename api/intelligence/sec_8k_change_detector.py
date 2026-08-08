@@ -107,8 +107,12 @@ def _ticker_to_cik(ticker: str) -> Optional[str]:
     return _load_ticker_cik_map().get(ticker.upper())
 
 
-def _fetch_recent_8k(cik10: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """EDGAR submissions API → 최근 8-K filing 목록."""
+def _fetch_recent_8k(cik10: str, limit: int = 10) -> Optional[List[Dict[str, Any]]]:
+    """EDGAR submissions API → 최근 8-K filing 목록.
+
+    🚨 조회 실패 = None, 조회 성공인데 8-K 가 없음 = []. 둘을 같은 [] 로 뭉치면
+    전량 실패가 "신규 0건"으로 통과한다 ([[feedback_silent_total_failure_guard]]).
+    """
     url = f"https://data.sec.gov/submissions/CIK{cik10}.json"
     try:
         resp = requests.get(url, headers=_HEADERS, timeout=15)
@@ -116,7 +120,7 @@ def _fetch_recent_8k(cik10: str, limit: int = 10) -> List[Dict[str, Any]]:
         data = resp.json()
     except Exception as e:
         print(f"[sec_8k] {cik10} fetch fail: {e}", file=sys.stderr)
-        return []
+        return None
 
     recent = data.get("filings", {}).get("recent", {})
     forms = recent.get("form", [])
@@ -222,6 +226,7 @@ def detect_changes(tickers: Optional[List[str]] = None) -> Dict[str, Any]:
     by_ticker = cache.setdefault("by_ticker", {})
 
     new_filings_summary: List[Dict[str, Any]] = []
+    fetched_ok = 0  # EDGAR 조회가 실제로 성공한 ticker 수 = 전량 실패 판정 근거
     for t in tickers:
         cik10 = _ticker_to_cik(t)
         if not cik10:
@@ -231,7 +236,10 @@ def detect_changes(tickers: Optional[List[str]] = None) -> Dict[str, Any]:
         recent = _fetch_recent_8k(cik10, limit=5)
         time.sleep(0.15)  # SEC rate limit (10 req/sec) 안전 마진
 
-        if not recent:
+        if recent is None:  # 조회 실패 — 성공으로 세지 않는다
+            continue
+        fetched_ok += 1
+        if not recent:  # 조회는 됐고 8-K 만 없음 = 정상
             continue
 
         latest_accession = recent[0]["accession"]
@@ -286,6 +294,7 @@ def detect_changes(tickers: Optional[List[str]] = None) -> Dict[str, Any]:
     return {
         "checked_at": datetime.now(KST).isoformat(timespec="seconds"),
         "tickers_checked": len(tickers),
+        "tickers_fetched_ok": fetched_ok,
         "new_filings_count": len(new_filings_summary),
         "new_filings": new_filings_summary,
     }
@@ -307,6 +316,18 @@ def main() -> int:
 
     result = detect_changes(tickers)
     print(json.dumps(result, ensure_ascii=False, indent=2), file=sys.stderr)
+
+    # 전량 실패 가드 — ticker 는 있는데 EDGAR 조회 성공이 0 이면 사고다.
+    # 여기서 0 을 돌려주면 cache mtime 만 갱신되어 신선도 보드가 통과시킨다.
+    if result.get("_error"):
+        print(f"[sec_8k] {result['_error']} — exit 1", file=sys.stderr)
+        return 1
+    if result.get("tickers_checked", 0) and not result.get("tickers_fetched_ok", 0):
+        print(
+            f"[sec_8k] 조회 성공 0/{result['tickers_checked']} — 전량 실패로 판정, exit 1",
+            file=sys.stderr,
+        )
+        return 1
     return 0
 
 
