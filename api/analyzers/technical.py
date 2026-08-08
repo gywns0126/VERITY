@@ -331,11 +331,31 @@ def analyze_technical(ticker_yf: str) -> dict:
     except Exception:
         return _empty_result()
 
-    close = hist["Close"].dropna()
-    volume = hist["Volume"].dropna()
-    high = hist["High"].dropna()
-    low = hist["Low"].dropna()
+    return analyze_technical_from_ohlcv(
+        hist["Close"].dropna(),
+        hist["High"].dropna(),
+        hist["Low"].dropna(),
+        hist["Volume"].dropna(),
+        ticker=ticker_yf,
+    )
 
+
+def analyze_technical_from_ohlcv(close, high, low, volume, ticker: str = "") -> dict:
+    """OHLCV 만으로 기술적 지표 산출 — I/O 없는 순수 함수.
+
+    🚨 2026-08-08 분리: `analyze_technical` 이 함수 안에서 yfinance 를 직접 호출해
+       **과거 시점 재현이 불가능**했다. 그래서 지표 계산부를 그대로 떼어냈다.
+       사전등록 `docs/PREREG_BACKTEST_KR_PRICE_AXES.md` §1.1 (PM 승인 안 가).
+
+    🚨 **수식·임계·분기를 한 줄도 바꾸지 않았다. 이동만 했다.**
+       `tests/test_technical_extraction.py` 가 같은 OHLCV 에 대해 분리 전후 산출이
+       동일함을 고정한다. 이 함수를 고칠 때는 `analyze_technical` 소비자(운영 경로)와
+       백테스트 소비자가 **동시에** 영향받는다는 점을 기억할 것.
+
+    Args:
+        close/high/low/volume: pandas Series (시간 오름차순, dropna 완료)
+        ticker: ATR 마이그레이션 로그용 식별자. 계산에는 쓰지 않는다.
+    """
     if len(close) < 5:
         return _empty_result()
 
@@ -343,8 +363,8 @@ def analyze_technical(ticker_yf: str) -> dict:
 
     # Phase 0 P-02 (2026-05-01): 인라인 ATR → 헬퍼 호출 + ticker 정규화 + 메타필드.
     # 산출법은 ATR_METHOD 환경변수 (default wilder_ema_14). 마이그레이션 14일간 A/B 비교 로깅.
-    # ticker_yf "005930.KS" → "005930" 정규화 (atr_migration_log.jsonl ticker 일관성).
-    normalized_ticker = ticker_yf.split(".")[0] if "." in ticker_yf else ticker_yf
+    # ticker "005930.KS" → "005930" 정규화 (atr_migration_log.jsonl ticker 일관성).
+    normalized_ticker = ticker.split(".")[0] if "." in ticker else ticker
     if _should_log_migration():
         atr_14d, atr_14d_pct, atr_method = compute_atr_with_ab_comparison(
             high, low, close, ticker=normalized_ticker

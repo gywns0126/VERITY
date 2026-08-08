@@ -103,3 +103,47 @@ def test_workflow_commits_the_output():
     assert "api.collectors.kr_universe_pit" in yml          # 수집 배선
     assert "git add data/kr_universe_pit.jsonl" in yml      # 산출물 전달
     assert "data/kr_delisting.json" in yml
+
+
+# ── as_of dedup 키 불일치 (2026-08-08 실사고) ─────────────────────────────
+def test_existing_dates_keys_on_as_of_not_bas_dt(tmp_path, monkeypatch):
+    """🚨 기록 키와 dedup 키가 같아야 한다.
+
+    실사고: `_existing_dates` 가 `bas_dt` 를 모으고 caller 는 `target`(월말 달력일)과
+    비교했다. 월말이 휴장이면 as_of=20200229 / bas_dt=20200228 로 갈려 skip 이
+    **영원히 실패**하고 매 run 이 같은 달을 다시 append 했다.
+    실측 피해 121행 중 고유 79 — 24개 날짜가 최대 4중복.
+    """
+    from api.collectors import kr_universe_pit as up
+    p = tmp_path / "pit.jsonl"
+    p.write_text(json.dumps({"as_of": "20200229", "bas_dt": "20200228",
+                             "tickers": ["005930"]}) + "\n", encoding="utf-8")
+    monkeypatch.setattr(up, "PIT_PATH", str(p))
+    got = up._existing_dates()
+    assert "20200229" in got, "월말 달력일(as_of)로 dedup 해야 재수집이 막힌다"
+
+
+def test_dedupe_file_keeps_last_per_as_of(tmp_path, monkeypatch):
+    from api.collectors import kr_universe_pit as up
+    p = tmp_path / "pit.jsonl"
+    rows = [
+        {"as_of": "20200229", "bas_dt": "20200228", "tickers": ["a"], "collected_at": "1"},
+        {"as_of": "20200229", "bas_dt": "20200228", "tickers": ["a", "b"], "collected_at": "2"},
+        {"as_of": "20200331", "bas_dt": "20200331", "tickers": ["c"], "collected_at": "3"},
+    ]
+    p.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    monkeypatch.setattr(up, "PIT_PATH", str(p))
+    r = up.dedupe_file()
+    assert r == {"status": "ok", "before": 3, "after": 2, "removed": 1}
+    kept = [json.loads(l) for l in p.read_text(encoding="utf-8").splitlines()]
+    assert [k["as_of"] for k in kept] == ["20200229", "20200331"]
+    assert kept[0]["collected_at"] == "2"        # 마지막 수집분 유지
+
+
+def test_dedupe_is_idempotent(tmp_path, monkeypatch):
+    from api.collectors import kr_universe_pit as up
+    p = tmp_path / "pit.jsonl"
+    p.write_text(json.dumps({"as_of": "20200229", "tickers": ["a"]}) + "\n", encoding="utf-8")
+    monkeypatch.setattr(up, "PIT_PATH", str(p))
+    assert up.dedupe_file()["removed"] == 0
+    assert up.dedupe_file()["removed"] == 0

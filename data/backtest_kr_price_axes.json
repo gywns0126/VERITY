@@ -1,0 +1,562 @@
+{
+ "generated_at": "2026-08-09T01:33:42+09:00",
+ "prereg": "docs/PREREG_BACKTEST_KR_PRICE_AXES.md (PM 승인 안 가)",
+ "axes_weight_base": {
+  "technical": 0.17,
+  "momentum": 0.1,
+  "volatility": 0.06,
+  "mean_reversion": 0.06
+ },
+ "method": {
+  "entry": "T+1 종가 (신호는 T 종가 산출 — T 종가 매수는 불가능)",
+  "horizons": [
+   20,
+   60
+  ],
+  "bonferroni_t": 2.73,
+  "judgment": "비겹침 표본만. 임계는 8검정 기준이며 낮추지 않는다",
+  "universe": "kr_universe_pit 월말 · 우선주/스팩/리츠/ETF 제외",
+  "delist_haircut": 0.7,
+  "cost_roundtrip": 0.0023
+ },
+ "caveats": {
+  "bid_ask_bounce": "mean_reversion 은 종가가 매수호가에 체결된 종목과 상관된다. T+1 진입으로 완화되나 제거되지 않음 — 단독 채택 금지",
+  "cross_section_mismatch": "단면 모집단 = PIT 전체(약 1,400종목). 운영은 후보 25종목 — 통과해도 1:1 전이 아님",
+  "not_strategy": "팩터 신호 검정이며 진입·청산·사이징을 포함한 전략 검증이 아님"
+ },
+ "coverage": {
+  "rebalances": 75,
+  "window": [
+   "20200131",
+   "20260331"
+  ],
+  "excluded": {
+   "reit": 1645,
+   "preferred": 7248,
+   "etf": 296,
+   "spac": 4423
+  },
+  "median_names": 2476,
+  "total_observations": 186340,
+  "delisted_exits": 726,
+  "elapsed_sec": 1084.6
+ },
+ "results": {
+  "technical_20d_optimistic": {
+   "ic_naive": {
+    "n": 75,
+    "mean": -0.014924,
+    "t": -2.1086,
+    "positive_rate": 0.4133
+   },
+   "ic_non_overlap": {
+    "n": 59,
+    "mean": -0.01017,
+    "t": -1.2305,
+    "positive_rate": 0.4746
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": -0.006681,
+    "t": -1.5251,
+    "positive_rate": 0.4133
+   },
+   "spread_non_overlap": {
+    "n": 59,
+    "mean": -0.006459,
+    "t": -1.2002,
+    "positive_rate": 0.4237
+   },
+   "passes_bonferroni_ic": false
+  },
+  "technical_20d_conservative": {
+   "ic_naive": {
+    "n": 75,
+    "mean": -0.014779,
+    "t": -2.0807,
+    "positive_rate": 0.4267
+   },
+   "ic_non_overlap": {
+    "n": 59,
+    "mean": -0.009978,
+    "t": -1.2035,
+    "positive_rate": 0.4915
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": -0.006543,
+    "t": -1.4938,
+    "positive_rate": 0.4
+   },
+   "spread_non_overlap": {
+    "n": 59,
+    "mean": -0.00626,
+    "t": -1.1632,
+    "positive_rate": 0.4068
+   },
+   "passes_bonferroni_ic": false
+  },
+  "technical_60d_optimistic": {
+   "ic_naive": {
+    "n": 75,
+    "mean": -0.012705,
+    "t": -2.1555,
+    "positive_rate": 0.4
+   },
+   "ic_non_overlap": {
+    "n": 24,
+    "mean": -0.000106,
+    "t": -0.01,
+    "positive_rate": 0.4167
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": -0.01997,
+    "t": -2.3905,
+    "positive_rate": 0.36
+   },
+   "spread_non_overlap": {
+    "n": 24,
+    "mean": -0.016609,
+    "t": -0.8182,
+    "positive_rate": 0.5
+   },
+   "passes_bonferroni_ic": false
+  },
+  "technical_60d_conservative": {
+   "ic_naive": {
+    "n": 75,
+    "mean": -0.012541,
+    "t": -2.1258,
+    "positive_rate": 0.4133
+   },
+   "ic_non_overlap": {
+    "n": 24,
+    "mean": 0.000151,
+    "t": 0.0143,
+    "positive_rate": 0.4583
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": -0.019757,
+    "t": -2.379,
+    "positive_rate": 0.36
+   },
+   "spread_non_overlap": {
+    "n": 24,
+    "mean": -0.016435,
+    "t": -0.8157,
+    "positive_rate": 0.5
+   },
+   "passes_bonferroni_ic": false
+  },
+  "momentum_20d_optimistic": {
+   "ic_naive": {
+    "n": 75,
+    "mean": -0.017841,
+    "t": -1.1907,
+    "positive_rate": 0.4933
+   },
+   "ic_non_overlap": {
+    "n": 59,
+    "mean": -0.012257,
+    "t": -0.6938,
+    "positive_rate": 0.5424
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": -0.042728,
+    "t": -4.6559,
+    "positive_rate": 0.2933
+   },
+   "spread_non_overlap": {
+    "n": 59,
+    "mean": -0.047384,
+    "t": -4.2284,
+    "positive_rate": 0.322
+   },
+   "passes_bonferroni_ic": false
+  },
+  "momentum_20d_conservative": {
+   "ic_naive": {
+    "n": 75,
+    "mean": -0.018199,
+    "t": -1.2167,
+    "positive_rate": 0.4933
+   },
+   "ic_non_overlap": {
+    "n": 59,
+    "mean": -0.012539,
+    "t": -0.7105,
+    "positive_rate": 0.5424
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": -0.042998,
+    "t": -4.6948,
+    "positive_rate": 0.2933
+   },
+   "spread_non_overlap": {
+    "n": 59,
+    "mean": -0.047591,
+    "t": -4.2521,
+    "positive_rate": 0.322
+   },
+   "passes_bonferroni_ic": false
+  },
+  "momentum_60d_optimistic": {
+   "ic_naive": {
+    "n": 75,
+    "mean": -0.01685,
+    "t": -1.5313,
+    "positive_rate": 0.4667
+   },
+   "ic_non_overlap": {
+    "n": 24,
+    "mean": -0.001331,
+    "t": -0.0898,
+    "positive_rate": 0.5833
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": -0.124897,
+    "t": -6.4084,
+    "positive_rate": 0.1733
+   },
+   "spread_non_overlap": {
+    "n": 24,
+    "mean": -0.099219,
+    "t": -5.3496,
+    "positive_rate": 0.1667
+   },
+   "passes_bonferroni_ic": false
+  },
+  "momentum_60d_conservative": {
+   "ic_naive": {
+    "n": 75,
+    "mean": -0.018088,
+    "t": -1.6511,
+    "positive_rate": 0.4533
+   },
+   "ic_non_overlap": {
+    "n": 24,
+    "mean": -0.002669,
+    "t": -0.1805,
+    "positive_rate": 0.5417
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": -0.126299,
+    "t": -6.4817,
+    "positive_rate": 0.16
+   },
+   "spread_non_overlap": {
+    "n": 24,
+    "mean": -0.100948,
+    "t": -5.489,
+    "positive_rate": 0.125
+   },
+   "passes_bonferroni_ic": false
+  },
+  "volatility_20d_optimistic": {
+   "ic_naive": {
+    "n": 74,
+    "mean": 0.078632,
+    "t": 6.3339,
+    "positive_rate": 0.7973
+   },
+   "ic_non_overlap": {
+    "n": 58,
+    "mean": 0.072178,
+    "t": 4.9609,
+    "positive_rate": 0.7759
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": 0.026304,
+    "t": 2.5003,
+    "positive_rate": 0.6667
+   },
+   "spread_non_overlap": {
+    "n": 59,
+    "mean": 0.029181,
+    "t": 2.2029,
+    "positive_rate": 0.661
+   },
+   "passes_bonferroni_ic": true
+  },
+  "volatility_20d_conservative": {
+   "ic_naive": {
+    "n": 74,
+    "mean": 0.07823,
+    "t": 6.3125,
+    "positive_rate": 0.7973
+   },
+   "ic_non_overlap": {
+    "n": 58,
+    "mean": 0.071807,
+    "t": 4.9455,
+    "positive_rate": 0.7759
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": 0.023751,
+    "t": 2.6521,
+    "positive_rate": 0.6667
+   },
+   "spread_non_overlap": {
+    "n": 59,
+    "mean": 0.025915,
+    "t": 2.3062,
+    "positive_rate": 0.661
+   },
+   "passes_bonferroni_ic": true
+  },
+  "volatility_60d_optimistic": {
+   "ic_naive": {
+    "n": 74,
+    "mean": 0.107671,
+    "t": 10.0347,
+    "positive_rate": 0.8784
+   },
+   "ic_non_overlap": {
+    "n": 23,
+    "mean": 0.108952,
+    "t": 6.5244,
+    "positive_rate": 0.8696
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": 0.050272,
+    "t": 2.7319,
+    "positive_rate": 0.68
+   },
+   "spread_non_overlap": {
+    "n": 24,
+    "mean": 0.054865,
+    "t": 1.5114,
+    "positive_rate": 0.625
+   },
+   "passes_bonferroni_ic": true
+  },
+  "volatility_60d_conservative": {
+   "ic_naive": {
+    "n": 74,
+    "mean": 0.106304,
+    "t": 9.9687,
+    "positive_rate": 0.8784
+   },
+   "ic_non_overlap": {
+    "n": 23,
+    "mean": 0.107587,
+    "t": 6.4817,
+    "positive_rate": 0.8696
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": 0.044245,
+    "t": 2.5971,
+    "positive_rate": 0.6667
+   },
+   "spread_non_overlap": {
+    "n": 24,
+    "mean": 0.046539,
+    "t": 1.3753,
+    "positive_rate": 0.625
+   },
+   "passes_bonferroni_ic": true
+  },
+  "mean_reversion_20d_optimistic": {
+   "ic_naive": {
+    "n": 75,
+    "mean": 0.030468,
+    "t": 2.5077,
+    "positive_rate": 0.6267
+   },
+   "ic_non_overlap": {
+    "n": 59,
+    "mean": 0.021833,
+    "t": 1.5404,
+    "positive_rate": 0.5424
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": 0.007294,
+    "t": 1.1334,
+    "positive_rate": 0.5467
+   },
+   "spread_non_overlap": {
+    "n": 59,
+    "mean": 0.004482,
+    "t": 0.5872,
+    "positive_rate": 0.4915
+   },
+   "passes_bonferroni_ic": false
+  },
+  "mean_reversion_20d_conservative": {
+   "ic_naive": {
+    "n": 75,
+    "mean": 0.030648,
+    "t": 2.5207,
+    "positive_rate": 0.6267
+   },
+   "ic_non_overlap": {
+    "n": 59,
+    "mean": 0.021984,
+    "t": 1.5496,
+    "positive_rate": 0.5424
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": 0.007162,
+    "t": 1.1106,
+    "positive_rate": 0.5467
+   },
+   "spread_non_overlap": {
+    "n": 59,
+    "mean": 0.004389,
+    "t": 0.5737,
+    "positive_rate": 0.4915
+   },
+   "passes_bonferroni_ic": false
+  },
+  "mean_reversion_60d_optimistic": {
+   "ic_naive": {
+    "n": 75,
+    "mean": 0.032508,
+    "t": 3.3746,
+    "positive_rate": 0.68
+   },
+   "ic_non_overlap": {
+    "n": 24,
+    "mean": 0.015768,
+    "t": 0.8115,
+    "positive_rate": 0.6667
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": 0.045552,
+    "t": 4.1522,
+    "positive_rate": 0.6533
+   },
+   "spread_non_overlap": {
+    "n": 24,
+    "mean": 0.034179,
+    "t": 1.7521,
+    "positive_rate": 0.625
+   },
+   "passes_bonferroni_ic": false
+  },
+  "mean_reversion_60d_conservative": {
+   "ic_naive": {
+    "n": 75,
+    "mean": 0.033278,
+    "t": 3.4513,
+    "positive_rate": 0.6933
+   },
+   "ic_non_overlap": {
+    "n": 24,
+    "mean": 0.016466,
+    "t": 0.8478,
+    "positive_rate": 0.7083
+   },
+   "spread_naive": {
+    "n": 75,
+    "mean": 0.045544,
+    "t": 4.1648,
+    "positive_rate": 0.6667
+   },
+   "spread_non_overlap": {
+    "n": 24,
+    "mean": 0.034202,
+    "t": 1.7539,
+    "positive_rate": 0.625
+   },
+   "passes_bonferroni_ic": false
+  }
+ },
+ "h3_axis_independence": {
+  "technical~momentum": {
+   "corr": 0.4938,
+   "n": 59,
+   "pass": true
+  },
+  "technical~volatility": {
+   "corr": 0.2747,
+   "n": 58,
+   "pass": true
+  },
+  "technical~mean_reversion": {
+   "corr": -0.7149,
+   "n": 59,
+   "pass": false
+  },
+  "momentum~volatility": {
+   "corr": 0.2487,
+   "n": 58,
+   "pass": true
+  },
+  "momentum~mean_reversion": {
+   "corr": -0.75,
+   "n": 59,
+   "pass": false
+  },
+  "volatility~mean_reversion": {
+   "corr": -0.2083,
+   "n": 58,
+   "pass": true
+  }
+ },
+ "h4_vs_fundamental": {
+  "price_axes_mean_ic": {
+   "technical": -0.01017,
+   "momentum": -0.012257,
+   "volatility": 0.072178,
+   "mean_reversion": 0.021833
+  },
+  "price_axes_avg": 0.017896,
+  "fundamental_ref": {
+   "fscore8": 0.030941,
+   "gpa": 0.009005
+  },
+  "fundamental_avg": 0.019973,
+  "h4_holds": false
+ },
+ "pbo": {
+  "pbo": 0.0001,
+  "n_combinations": 12870,
+  "n_partitions": 16,
+  "n_trials": 16,
+  "lambda_quantiles": {
+   "p5": 0.3566749439387324,
+   "p25": 0.8754687373539001,
+   "p50": 2.0149030205422647,
+   "p75": 2.772588722239781,
+   "p95": 2.772588722239781
+  },
+  "degradation_slope": -0.6493,
+  "degradation_intercept": 0.7685,
+  "p_oos_loss": 0.007,
+  "verdict": "robust",
+  "trials": [
+   "mean_reversion_20d_conservative",
+   "mean_reversion_20d_optimistic",
+   "mean_reversion_60d_conservative",
+   "mean_reversion_60d_optimistic",
+   "momentum_20d_conservative",
+   "momentum_20d_optimistic",
+   "momentum_60d_conservative",
+   "momentum_60d_optimistic",
+   "technical_20d_conservative",
+   "technical_20d_optimistic",
+   "technical_60d_conservative",
+   "technical_60d_optimistic",
+   "volatility_20d_conservative",
+   "volatility_20d_optimistic",
+   "volatility_60d_conservative",
+   "volatility_60d_optimistic"
+  ],
+  "T": 75
+ },
+ "note": "🚨 관측 산출물. 점수·집행 입력 0."
+}

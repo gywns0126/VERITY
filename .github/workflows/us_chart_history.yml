@@ -1,0 +1,102 @@
+# 미장 전체 유니버스 일봉 이력 (yfinance) — KR `kr_chart_history` 대응.
+# 2026-08-08 신설. 로컬 실측: 유니버스 5,324 → 수집 5,188 (97.4%) · 1.9GB · 17분(8병렬).
+#
+# 왜 필요한가: 2026-08-08 백테스트로 최종 점수의 39%(technical 17 · momentum 10 ·
+#   volatility 6 · mean_reversion 6)가 전부 가격 파생임을 KR 에서 확인했다. 미장에서는
+#   같은 검정을 못 했다 — 일봉 이력이 없었기 때문이다. 그 재료를 만든다.
+#
+# 🚨 git 비커밋 (1.9GB) — Blob 직행. kr_chart_history 와 동일 정책.
+# 🚨 소스 = yfinance. 2026-08-08 실호출 검증에서 무료로 이력을 주는 곳이 여기뿐이었다
+#   (Polygon 무료 과거 403·분당2콜 429 / FMP 403 / Alpha Vantage 프리미엄 / Finnhub 403 /
+#    Stooq HTML 차단). 운영 `analyze_technical` 이 이미 쓰는 경로다.
+# 🚨 KIS 무관 — RULE 1(1일 1토큰) 자원을 대량 US 일봉에 붙이지 않는다.
+#
+# 7축 audit (2026-08-08): env=VERCEL_BLOB_TOKEN 기존 등록(키 불요 소스) / push=0 (커밋 없음,
+#   RULE 2 무관) / concurrency=전용 group / cron=월1회 / KIS 무관 /
+#   pip=requirements(yfinance·curl_cffi 기등록) + npm @vercel/blob / RULE 8 N=2 큐(월간).
+name: US Chart History (monthly)
+
+on:
+  schedule:
+    # 매월 2일 07:11 UTC (= KST 16:11). kr_chart_history(1일 06:37 UTC)와 하루 띄워
+    # 러너·Blob 동시 부하를 피한다.
+    - cron: '11 7 2 * *'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: '이번 run 최대 종목 (0=전체). 부분 적재 시 다음 run 이 이어받음'
+        required: false
+        default: '0'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verity-us-chart-history
+  cancel-in-progress: false
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240  # 로컬 17분 + Blob PUT 5,188건. GH 러너·Blob 지연 여유 포함
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Collect US daily history (yfinance · auto_adjust)
+        # 🚨 멱등 — 이미 받은 티커는 파일 존재로 skip. 중단돼도 다음 run 이 이어받는다.
+        run: |
+          ARGS=""
+          LIMIT="${{ github.event.inputs.limit || '0' }}"
+          [ "$LIMIT" != "0" ] && ARGS="--limit $LIMIT"
+          python -m api.collectors.us_chart_history $ARGS
+
+      - name: 커버리지 확인 (조용한 전량 실패 차단)
+        # 🚨 2026-08-08 학습 — us_chart_daily 가 count 0 인 채 성공으로 끝나고 있었다.
+        #   파일 mtime 만 보면 신선도 보드에 "0일 경과" 로 잡힌다. 없는 것보다 나쁘다.
+        run: |
+          python - <<'PY'
+          import json, sys
+          m = json.load(open("data/us_chart_history_meta.json", encoding="utf-8"))
+          have, uni = m["have"], m["universe"]
+          print(f"[us_chart_history] 보유 {have:,}/{uni:,} ({have/uni*100:.1f}%)")
+          if have < uni * 0.5:
+              print("::error::커버리지 50% 미만 — 산출물 신뢰 불가", file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - name: Setup Node (Blob 업로드용)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Blob 업로드 (us_chart_history/{ticker}.json)
+        # publish-data 의 blob_upload.js 재사용 — kr_chart_history 와 동일 패턴.
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: |
+          if [ -z "$BLOB_READ_WRITE_TOKEN" ]; then
+            echo "::error::VERCEL_BLOB_TOKEN 없음"
+            exit 1
+          fi
+          mkdir -p "${{ github.workspace }}/_us_history_dist/us_chart_history"
+          cp data/us_chart_history/*.json \
+             "${{ github.workspace }}/_us_history_dist/us_chart_history/" 2>/dev/null || true
+          cp data/us_chart_history_meta.json \
+             "${{ github.workspace }}/_us_history_dist/us_chart_history/_meta.json" 2>/dev/null || true
+          cd .github/actions/publish-data
+          npm install --no-save --silent --no-audit --no-fund @vercel/blob@^0.27
+          node blob_upload.js "${{ github.workspace }}/_us_history_dist"

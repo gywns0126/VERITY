@@ -9,12 +9,15 @@ on:
   schedule:
     # 매월 5일 KST 09:00 = UTC 0일 00:00 (분기 보고서 충분히 누적).
     - cron: '0 0 5 * *'
+  # 🚨 2026-08-08: 기본 유니버스 sp1500(1,502종목 = 유니버스의 28%) → bulk(전량 5,324).
+  #    병목이 SEC 한계가 아니라 우리 설정이었다. 재무에 종속된 us_stock_report_public·
+  #    us_quarterly_public 도 28% 였으므로 셋이 같이 오른다.
   workflow_dispatch:
     inputs:
       universe:
-        description: '유니버스 (sp1500=S&P Composite 1500 기본 / portfolio=추천 US)'
+        description: '유니버스 (bulk=전량 5,324 SEC벌크 기본 / sp1500 / portfolio / smallcap)'
         required: false
-        default: 'sp1500'
+        default: 'bulk'
       ticker:
         description: '단일 ticker (manual test 용 — universe 무시)'
         required: false
@@ -37,7 +40,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 180  # sp1500 ~1500종목 SEC fetch(~125분) + Blob 업로드. GH 6h 한도 내·public 무료. (단일 ticker/portfolio 는 수분)
+    timeout-minutes: 330  # bulk 전량 5,324종목: zip ~5분 + 파싱/SIC ~100분 + Blob 업로드 5,324건. GH 6h 한도 내.
 
     steps:
       - name: Checkout
@@ -68,16 +71,25 @@ jobs:
 
       - name: Build US financials snapshots
         run: |
-          UNIVERSE="${{ github.event.inputs.universe || 'sp1500' }}"   # cron 기본 = sp1500 (자동 리프레시)
-          ARGS="--universe $UNIVERSE"
-          if [ -n "${{ github.event.inputs.ticker }}" ]; then
-            ARGS="--ticker ${{ github.event.inputs.ticker }}"
-          fi
+          UNIVERSE="${{ github.event.inputs.universe || 'bulk' }}"   # cron 기본 = bulk 전량
           LIMIT="${{ github.event.inputs.limit || '0' }}"
-          if [ -n "$LIMIT" ] && [ "$LIMIT" != "0" ]; then
-            ARGS="$ARGS --limit $LIMIT"
+          if [ -n "${{ github.event.inputs.ticker }}" ]; then
+            # 단일 ticker = 기존 개별 API 경로 (수분, 디버그용)
+            python -m api.builders.us_financials_builder --ticker ${{ github.event.inputs.ticker }}
+          elif [ "$UNIVERSE" = "bulk" ]; then
+            # 🚨 전량 경로 = SEC 벌크 companyfacts.zip(1.4GB) 1회 다운로드.
+            #    개별 API 로 5,324종목 = ~7.4시간 > GH 6시간 한도. 벌크는 다운로드 ~5분 +
+            #    종목당 1.1초(SIC HTTP 병목) ≈ 100분.
+            ARGS=""
+            [ "$LIMIT" != "0" ] && ARGS="--limit $LIMIT"
+            python -m api.collectors.sec_companyfacts_bulk $ARGS
+            # _summary 재생성 (report/quarterly 빌더 입력) — 벌크는 per-ticker 만 쓴다
+            python -m api.builders.us_financials_builder --summary-only || true
+          else
+            ARGS="--universe $UNIVERSE"
+            [ "$LIMIT" != "0" ] && ARGS="$ARGS --limit $LIMIT"
+            python -m api.builders.us_financials_builder $ARGS
           fi
-          python -m api.builders.us_financials_builder $ARGS
 
       - name: 미장 종목 리포트 public-safe 빌드
         # us_financials/_summary → RULE7 allowlist → data/us_stock_report_public.json (PublicStockReport 재사용)
