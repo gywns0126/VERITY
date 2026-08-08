@@ -1,0 +1,75 @@
+name: ownership-backfill
+
+# KR 지분구조 drip 백필 — 공개 리포트 ownership 섹션을 전 종목으로 확대.
+#
+# PM 2026-08-08 "안채워진 국장 정보 ... 이후에 자동으로 모아지게 해".
+# 커버리지 래칫이 ownership 18.8% 를 표적으로 지목 → 원인은 소스 부재가 아니라 범위였다
+# (공정위 = 대규모기업집단 ~346개사 상한 / DART 사업보고서 = 전 상장사 제출).
+#
+# 자가완주 설계: 매 run CHUNK(300) 만큼만 채우고 다음 run 이 이어받는다. 미보유 종목만
+# 조회하므로 완주 후에는 사실상 no-op(신규 상장·사업연도 전환 시 자동 재개).
+# 종목당 정확히 1콜 → 1,795종목 약 6일 완주.
+#
+# 7축 audit: env=DART_API_KEY 만 · push trigger 없음(data/ 커밋뿐 = RULE 2 가드 자동 skip) ·
+#   전용 concurrency group · cron 일1(silent skip 저위험) · KIS 무관(RULE 1) ·
+#   pip requirements(requests 기존) · N=2 = manual + 다음 scheduled.
+#
+# 🚨 DART 일일 한도 20K 를 dart_catalyst / quarterly_backfill 등과 나눠 쓴다
+#   ([[project_dart_api_2026_constraints]]). CHUNK 를 올려 빨리 채우려다 다른 수집기를
+#   굶기면 손해가 더 크다 — 6일 완주가 의도한 속도다.
+
+on:
+  schedule:
+    - cron: '40 19 * * *'   # UTC 19:40 = KST 04:40 — 타 DART 워크플로 슬롯 회피
+  workflow_dispatch:
+    inputs:
+      chunk:
+        description: '이번 run 에서 채울 종목 수 (기본 300)'
+        required: false
+        default: '300'
+        type: string
+
+concurrency:
+  group: verity-ownership-backfill
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install deps
+        run: pip install requests python-dotenv
+
+      - name: Backfill ownership
+        env:
+          VERITY_MODE: prod   # 🚨 기본 dev = mock. 실호출 명시 (export_trade 2026-08-07 사고 교훈)
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          OWNERSHIP_CHUNK: ${{ github.event.inputs.chunk || '300' }}
+        run: python -m api.builders.ownership_backfill_builder
+
+      - name: Commit
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          # RULE 4 — 산출물 + 진도 커서 둘 다. 커서가 빠지면 매 run 처음부터 다시 긁는다.
+          git add data/kr_ownership.json data/metadata/kr_ownership_cursor.json 2>/dev/null || true
+          git diff --staged --quiet && echo "변화 없음(완주 상태)" && exit 0
+          git commit -m "🧬 지분구조 백필 $(TZ=Asia/Seoul date +%Y-%m-%d)"
+          for i in 1 2 3 4 5 6; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin main && git push origin main; then exit 0; fi
+            sleep $(( i * 7 + RANDOM % 15 ))
+          done
+          echo "::warning::push 실패 — 다음 run 에서 누적 재시도"

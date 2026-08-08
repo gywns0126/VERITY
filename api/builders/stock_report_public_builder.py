@@ -30,6 +30,8 @@ CONSENSUS_PATH = os.path.join(_ROOT, "data", "consensus_data.json")
 CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
 # 과거 적재분 — alerts 와 종목 집합이 다르다(공시 커버리지 확대, 2026-08-08)
 CATALYST_BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_catalyst_backfill.jsonl")
+# DART 최대주주 drip 백필 산출 (ownership 커버리지 확대, 2026-08-08)
+KR_OWNERSHIP_PATH = os.path.join(_ROOT, "data", "kr_ownership.json")
 SECTOR_MAP_PATH = os.path.join(_ROOT, "data", "kr_sector_map.json")
 KRXMKTCAP_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
 DART_KR_BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_kr_backfill_result.json")
@@ -937,6 +939,7 @@ def main() -> int:
         fund_doc = _load_json(FUND_PATH, {})
         fundamentals = (fund_doc.get("fundamentals") if isinstance(fund_doc, dict) else {}) or {}
         fin_series = _load_fin_series()
+        _dart_holders = (_load_json(KR_OWNERSHIP_PATH, {}) or {}).get("holders") or {}
         real_estate_map = _load_real_estate_history()
         # 유형자산 주석 LLM 토지·건물 장부가 map — recommendations facilities_parser(고빈도) 유래.
         # 본문 재무제표엔 유형자산 총계만 → 토지 세부는 주석에만 → NAV 프록시 정밀화 입력.
@@ -1134,6 +1137,19 @@ def main() -> int:
                         s["ownership"] = own
                 except Exception:  # noqa: BLE001
                     pass
+
+            # DART 최대주주(hyslrSttus) 폴백 — 공정위는 대규모기업집단 ~346개사가 상한이라
+            #   나머지 종목은 지분구조가 통째로 비었다(커버리지 18.8%). DART 사업보고서는
+            #   전 상장사가 제출하므로 그쪽으로 메운다(2026-08-08, drip 백필이 적재).
+            #   공정위분이 있으면 그대로 둔다 — 지정 자료라 더 정밀하다.
+            if not s.get("ownership"):
+                _dh = (_dart_holders.get(tk) or {}).get("top")
+                if _dh:
+                    s["ownership"] = {
+                        "holders": [{"name": h["name"], "relate": h.get("relate") or "", "pct": h["pct"]}
+                                    for h in _dh],
+                        "source": "DART 최대주주 현황(사업보고서)",
+                    }
 
             # 인물 링크 생존성 — 검증된 인물만 link_ok (죽은 링크 0, PM 2026-07-04)
             if s.get("ownership"):
