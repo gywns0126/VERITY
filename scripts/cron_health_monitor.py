@@ -290,6 +290,21 @@ _SWEEP_EXCLUDE = {
 # 신 push/PR 게이트 추가 시 = 파일명 한 줄 추가.
 _SWEEP_CI_CRITICAL = {"tests.yml", "rule7_audit.yml"}
 
+# 원인이 확정돼 있고 조치가 시간 대기인 것 = 연속 실패해도 격상하지 않는다(알림 피로 차단).
+# 값 = 사유. 원인 미확정이면 여기 넣지 말 것 — "아는 고장" 과 "안 보이는 고장" 을 섞으면
+# sweep 이 무력해진다. 해소되면 즉시 삭제.
+_SWEEP_KNOWN_DEGRADED = {
+    # 2026-08-08: GH 러너 IP → apis.data.go.kr ConnectTimeout(방화벽 드롭). 한국 IP 는 정상.
+    # 재시도 창 = 매월 16~25일. 즉시 복구는 로컬(한국 IP) 실행.
+    "nps_employment.yml": "러너 IP 차단(월 16~25일 재시도 창)",
+}
+
+# 연속 실패 임계 — 1~2회는 transient(러너 IP 추첨·게이트웨이 hiccup) 로 흡수하고,
+# 3연속부터는 "스스로 낫지 않는 고장" 으로 본다. 2026-06-17 tests.yml 5연속 21h 학습의 일반화.
+_SWEEP_PERSISTENT_STREAK = 3
+
+_FAIL_CONCLUSIONS = ("failure", "timed_out", "startup_failure")
+
 _DEFAULT_BRANCH = "main"
 
 
@@ -330,7 +345,7 @@ def _sweep_workflow_latest_failures() -> List[Dict[str, Any]]:
         latest = _latest_completed_main_run(runs)  # main 브랜치 완료 run 만 (PR 실패 오판 차단)
         if latest is None:
             continue
-        if latest.get("conclusion") in ("failure", "timed_out", "startup_failure"):
+        if latest.get("conclusion") in _FAIL_CONCLUSIONS:
             age_h = None
             try:
                 ts = datetime.fromisoformat(str(latest.get("createdAt", "")).replace("Z", "+00:00"))
@@ -342,8 +357,29 @@ def _sweep_workflow_latest_failures() -> List[Dict[str, Any]]:
                 "conclusion": latest.get("conclusion"),
                 "age_h": round(age_h, 1) if age_h is not None else None,
                 "title": latest.get("displayTitle", "?"),
+                "streak": _main_failure_streak(runs),
             })
     return out
+
+
+def _main_failure_streak(runs: List[Dict[str, Any]]) -> int:
+    """최신 완료 main run 부터 연속 실패 개수 (성공을 만나면 중단).
+
+    2026-08-08 신설 — sweep 이 "최신 1건 실패" 만 보고 전부 같은 ⚠ 로 찍어,
+    러너 IP 추첨으로 한 번 튕긴 것과 며칠째 못 도는 것이 구분되지 않았다.
+    kr_chart_daily(최근 30run 중 7실패, 슬롯 다중이라 데이터는 착지)와
+    nps_employment(매 회차 실패, 데이터 정지)가 같은 줄로 보이던 문제.
+    호출 없이 이미 받아온 runs(limit=10)만 쓴다. 순수 함수 — 단위 테스트 대상.
+    """
+    streak = 0
+    for r in runs:  # 최신순
+        if r.get("status") != "completed" or r.get("headBranch") != _DEFAULT_BRANCH:
+            continue
+        if r.get("conclusion") in _FAIL_CONCLUSIONS:
+            streak += 1
+        else:
+            break
+    return streak
 
 
 def _sweep_severity_and_findings(
@@ -352,14 +388,25 @@ def _sweep_severity_and_findings(
     """sweep 결과 → (severity, findings 추가분).
 
     CI allowlist(_SWEEP_CI_CRITICAL) 실패 = 실 코드 회귀 → FAIL 격상(🔴).
+    3연속 이상 실패(_SWEEP_PERSISTENT_STREAK) = 스스로 낫지 않는 고장 → FAIL 격상(🔴).
+      단 _SWEEP_KNOWN_DEGRADED (원인 확정 + 조치가 시간 대기) 는 격상 제외.
     그 외 = generic WARNING(⚠, noise 차단). base_severity 가 이미 FAIL 이면 유지(다운그레이드 X).
     순수 함수 — I/O 없음, 단위 테스트 대상.
     """
     findings: List[str] = []
     if not workflow_failures:
         return base_severity, findings
+
+    def _persistent(wf: Dict[str, Any]) -> bool:
+        return (
+            int(wf.get("streak") or 0) >= _SWEEP_PERSISTENT_STREAK
+            and wf["workflow"] not in _SWEEP_KNOWN_DEGRADED
+            and wf["workflow"] not in _SWEEP_CI_CRITICAL  # CI 는 아래 has_ci 가 이미 격상
+        )
+
     has_ci = any(w["workflow"] in _SWEEP_CI_CRITICAL for w in workflow_failures)
-    if has_ci:
+    has_persistent = any(_persistent(w) for w in workflow_failures)
+    if has_ci or has_persistent:
         severity = "FAIL"
     elif base_severity == "PASS":
         severity = "WARNING"
@@ -367,13 +414,24 @@ def _sweep_severity_and_findings(
         severity = base_severity
     for wf in workflow_failures[:8]:
         age_txt = f"{wf['age_h']:.0f}h 전" if wf.get("age_h") is not None else "시점?"
+        streak = int(wf.get("streak") or 0)
+        streak_txt = f", {streak}연속" if streak >= 2 else ""
         if wf["workflow"] in _SWEEP_CI_CRITICAL:
             findings.append(
-                f"🔴 {wf['workflow']} 최신 run {wf['conclusion']} ({age_txt}) — main CI 회귀 (코드 결함)"
+                f"🔴 {wf['workflow']} 최신 run {wf['conclusion']} ({age_txt}{streak_txt}) — main CI 회귀 (코드 결함)"
+            )
+        elif _persistent(wf):
+            findings.append(
+                f"🔴 {wf['workflow']} {streak}연속 실패 ({age_txt}) — 스스로 낫지 않는 고장, 원인 진단 필요"
+            )
+        elif wf["workflow"] in _SWEEP_KNOWN_DEGRADED:
+            findings.append(
+                f"⚠ {wf['workflow']} 최신 run {wf['conclusion']} ({age_txt}{streak_txt}) "
+                f"— 원인 확정: {_SWEEP_KNOWN_DEGRADED[wf['workflow']]}"
             )
         else:
             findings.append(
-                f"⚠ {wf['workflow']} 최신 run {wf['conclusion']} ({age_txt}) — 감시목록 밖 silent 실패"
+                f"⚠ {wf['workflow']} 최신 run {wf['conclusion']} ({age_txt}{streak_txt}) — 감시목록 밖 silent 실패"
             )
     return severity, findings
 

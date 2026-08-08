@@ -44,6 +44,9 @@ OUT_PATH = os.path.join(_REPO_ROOT, "data", "kr_index_daily.json")
 KEEP_DAYS = 120
 _BULK_ROWS = 2000        # 전 지수 1일치 << 2000 (지수 수십 개 × 안전배수)
 _REQ_TIMEOUT = 60
+# 러너 IP ↔ apis.data.go.kr 간헐 ConnectTimeout 대응 — fsc_daily_prices 와 동일 정책.
+_NET_RETRIES = 3
+_NET_BACKOFF = (5, 20)
 _KST = timezone(timedelta(hours=9))
 
 # 응답 필드 후보 (FSC 지수 API 표준 스키마 — 활용신청 승인 후 실 응답으로 재확인).
@@ -76,11 +79,24 @@ def _call(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     for k, v in params.items():
         qs += f"&{urllib.parse.quote(str(k))}={urllib.parse.quote(str(v))}"
     url = f"{BASE_URL}?{qs}"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    body = None
+    for attempt in range(_NET_RETRIES):
+        try:
+            with urllib.request.urlopen(req, timeout=_REQ_TIMEOUT) as r:
+                body = r.read().decode("utf-8", "replace")
+            break
+        except Exception as e:  # 연결 계층만 재시도 (형제 API — fsc_daily_prices 와 같은 게이트웨이)
+            if attempt < _NET_RETRIES - 1:
+                delay = _NET_BACKOFF[min(attempt, len(_NET_BACKOFF) - 1)]
+                print(f"[fsc_index] 연결 실패 {attempt + 1}/{_NET_RETRIES} ({e}) "
+                      f"— {delay}s 후 재시도", file=sys.stderr)
+                time.sleep(delay)
+                continue
+            print(f"[fsc_index] 호출 실패 {params}: {e}", file=sys.stderr)
+            return None
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=_REQ_TIMEOUT) as r:
-            body = r.read().decode("utf-8", "replace")
-        doc = json.loads(body)
+        doc = json.loads(body or "")
         header = (doc.get("response") or {}).get("header") or {}
         if header.get("resultCode") != "00":
             print(f"[fsc_index] API 에러 {header}", file=sys.stderr)
@@ -88,7 +104,7 @@ def _call(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return (doc.get("response") or {}).get("body") or {}
     except Exception as e:
         # 'Forbidden'(활용신청 미승인)·게이트웨이 XML 봉투 = JSON 파싱 실패로 수렴
-        print(f"[fsc_index] 호출 실패 {params}: {e}", file=sys.stderr)
+        print(f"[fsc_index] 응답 파싱 실패 {params}: {e}", file=sys.stderr)
         return None
 
 
