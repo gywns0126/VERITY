@@ -51,12 +51,25 @@ MIN_YEAR = 2019          # 백테스트 구간 2020~ 이므로 YoY 위해 2019 �
 _WORKERS = 8
 
 
-def _targets() -> List[Tuple[str, int, int]]:
+def _targets(frozen: Optional[List[List[Any]]] = None) -> List[Tuple[str, int, int]]:
     """[(ticker, 시작연도, 종료연도)] — 소멸 종목 중 펀더멘털 미보유분만.
 
     제외(우선주/스팩/리츠/ETF)는 백테스트 모듈의 사전 고정 규칙을 그대로 쓴다 —
     두 곳에서 따로 정의하면 유니버스가 어긋난다.
+
+    🚨 `frozen` = 첫 run 에 확정한 대상 목록. 이후 run 은 이것을 그대로 쓴다.
+       매 run 다시 계산하면 "2019만 채워진 종목"이 '펀더멘털 보유'로 분류돼
+       2020~2022 를 영영 못 받는다 — 중단 1회로 그 종목이 조용히 반쪽만 남는다.
+       (2026-08-08 실사고: 15/32 구간에서 중단, 진행 파일 미기록으로 재계산 위험)
     """
+    if frozen:
+        out_f: List[Tuple[str, int, int]] = []
+        for row in frozen:
+            try:
+                out_f.append((str(row[0]), int(row[1]), int(row[2])))
+            except (TypeError, ValueError, IndexError):
+                continue
+        return out_f
     from api.quant.backtest.kr_fundamental import (
         exclusion_reason, load_fundamentals, load_names,
     )
@@ -113,11 +126,23 @@ def collect(max_units: int = 6000, workers: int = _WORKERS) -> Dict[str, Any]:
     from api.builders.dart_batch_builder import _append_quarterly_snapshots
     from api.collectors.dart_fundamentals import fetch_dart_fundamentals_batch
 
-    targets = _targets()
+    prog = _load_progress()
+    targets = _targets(prog.get("frozen_targets"))
     if not targets:
         return {"status": "no_targets"}
-    prog = _load_progress()
     done: Set[str] = set(prog.get("done_keys") or [])
+    frozen = prog.get("frozen_targets") or [[t, y0, y1] for t, y0, y1 in targets]
+
+    def _checkpoint(completed: bool = False) -> None:
+        """🚨 매 키마다 저장한다. 완료 시점에만 저장하면 중단 1회로 진도가 통째 날아간다."""
+        _save_progress({
+            "done_keys": sorted(done), "targets": len(targets),
+            "frozen_targets": frozen, "completed": completed,
+            "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S+09:00",
+                                        time.localtime(time.time() + 9 * 3600)),
+        })
+
+    _checkpoint()
 
     years = sorted({y for _, y0, y1 in targets for y in range(y0, y1 + 1)})
     units = 0
@@ -134,9 +159,7 @@ def collect(max_units: int = 6000, workers: int = _WORKERS) -> Dict[str, Any]:
             if key in done:
                 continue
             if units + len(alive) > max_units:
-                _save_progress({"done_keys": sorted(done), "targets": len(targets),
-                                "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S+09:00",
-                                                            time.localtime(time.time() + 9 * 3600))})
+                _checkpoint()
                 return {"status": "paused_quota", "units": units,
                         "appended": appended_total, "per_key": per_key,
                         "elapsed_sec": round(time.time() - t0, 1)}
@@ -158,16 +181,14 @@ def collect(max_units: int = 6000, workers: int = _WORKERS) -> Dict[str, Any]:
             units += len(alive)
             appended_total += n_app
             done.add(key)
+            _checkpoint()                       # 키 단위 체크포인트 (중단 내성)
             per_key.append({"key": key, "tried": len(alive),
                             "with_data": len(got), "appended": n_app})
             sys.stderr.write(f"[dart_delisted_backfill] {key} 시도 {len(alive)} · "
                              f"데이터 {len(got)} · append {n_app}\n")
             sys.stderr.flush()
 
-    _save_progress({"done_keys": sorted(done), "targets": len(targets),
-                    "completed": True,
-                    "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S+09:00",
-                                                time.localtime(time.time() + 9 * 3600))})
+    _checkpoint(completed=True)
     return {"status": "ok", "units": units, "appended": appended_total,
             "targets": len(targets), "per_key": per_key,
             "elapsed_sec": round(time.time() - t0, 1)}

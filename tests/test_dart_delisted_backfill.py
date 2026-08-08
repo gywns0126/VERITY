@@ -127,3 +127,36 @@ def test_progress_roundtrip(tmp_path, monkeypatch):
 def test_progress_missing_file_is_empty_not_crash(tmp_path, monkeypatch):
     monkeypatch.setattr(bf, "PROGRESS_PATH", str(tmp_path / "none.json"))
     assert bf._load_progress() == {}
+
+
+# ── ⑤ 중단 내성 (2026-08-08 실사고) ────────────────────────────────────────
+def test_frozen_targets_survive_partial_fill(tmp_path, monkeypatch):
+    """🚨 부분 수집 후 재실행이 대상을 다시 계산하면 안 된다.
+
+    실사고: 15/32 구간에서 중단. 2019~2022 만 채워진 종목이 '펀더멘털 보유'로
+    분류돼 2023~2025 를 영영 못 받는다 — 그 종목은 조용히 반쪽만 남는다.
+    frozen 목록이 있으면 디스크 상태와 무관하게 그대로 쓴다.
+    """
+    monkeypatch.setattr(bf, "DELIST_PATH",
+                        _write_delisting(tmp_path, {"222220": "20250630"}))
+    # 이미 시계열이 생긴 상태로 흉내 — 재계산하면 대상에서 빠진다
+    monkeypatch.setattr("api.quant.backtest.kr_fundamental.load_names", lambda: {})
+    monkeypatch.setattr("api.quant.backtest.kr_fundamental.load_fundamentals",
+                        lambda: {"222220": [{"quarter_end": "2019-12-31"}]})
+    assert bf._targets() == []                                    # 재계산 = 유실
+    assert bf._targets([["222220", 2019, 2025]]) == [("222220", 2019, 2025)]
+
+
+def test_frozen_targets_ignore_malformed_rows():
+    assert bf._targets([["222220", 2019, 2025], ["bad"], None]) == [("222220", 2019, 2025)]
+
+
+def test_checkpoint_saves_after_every_key():
+    """완료 시점에만 저장하면 중단 1회로 진도가 통째 날아간다."""
+    src = open(bf.__file__, encoding="utf-8").read()
+    body = src.split("def collect(")[1]
+    # for-루프 본문 안에서 done.add 직후 체크포인트가 있어야 한다
+    lines = body.splitlines()
+    i = next(n for n, ln in enumerate(lines) if "done.add(key)" in ln)
+    assert "_checkpoint()" in lines[i + 1]
+    assert "frozen_targets" in src
