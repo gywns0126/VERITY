@@ -58,6 +58,17 @@ jobs:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
         run: python -m api.collectors.kr_universe_pit --start 20200101 --max-calls 90
 
+      - name: 소멸 종목 일봉 수집 (생존 편향 해소의 마지막 조각)
+        # 🚨 2026-08-08 — 기존 일봉 레이크는 **현 상장 유니버스 기준**이라 소멸 종목이 0/415.
+        #   가격이 없으면 상폐를 유니버스에 넣어도 수익률을 못 매겨 편향이 그대로 남는다.
+        #   금융위 API 가 소멸 종목 시세를 마지막 거래일까지 보유한다 — 실수집 415/415,
+        #   309,982행, 실패 0. 구성: 보통주 264(64%)·스팩 133·우선주 14·리츠 4.
+        #   위 유니버스 수집 **다음**에 온다(그 산출이 입력).
+        continue-on-error: true
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
+        run: python -m api.collectors.kr_chart_delisted --limit 200
+
       - name: Commit 시점 유니버스 (RULE 4 — 이 워크플로는 Blob 전용이라 git add 부재였다)
         # 🚨 이 워크플로에는 git add 가 없다(산출물이 Blob 직행). 신 파일을 그냥 만들면
         #   러너 소멸과 함께 사라진다 — RULE 4 가 경고하는 정확히 그 패턴.
@@ -68,6 +79,8 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/kr_universe_pit.jsonl data/kr_delisting.json 2>/dev/null || true
+          # 소멸 종목 일봉 — 10MB(연 ~2MB 증가). 일봉 165MB 와 달리 git 수용 가능.
+          git add data/kr_chart_delisted/ data/kr_chart_delisted_meta.json 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           git commit -m "📅 시점 유니버스 (상폐 복원) $(TZ=Asia/Seoul date +%Y-%m-%d)"
           for i in 1 2 3; do
