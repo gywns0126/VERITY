@@ -24,12 +24,27 @@ const LIGHT = {
     page: "#f2f4f6", chrome: "#e9ebee", chromeLine: "#d8dbe0", addr: "#ffffff", addrInk: "#8b95a1",
     card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#e5e8eb", violet: "#6c5ce7",
     up: "#f04452", down: "#3182f6",
+    // 그림자도 팔레트 키로 승격 — 종전엔 isDark 삼항이라 JS 판정에 묶여 있었다.
+    shadow: "0 6px 22px rgba(31,41,55,0.12)",
 }
 const DARK = {
     page: "#16181d", chrome: "#2a2e37", chromeLine: "#363b45", addr: "#1a1d24", addrInk: "#6b7684",
     card: "#1e2128", ink: "#f0f2f5", sub: "#b0b8c1", faint: "#6b7684", line: "#2b2f37", violet: "#a98bff",
     up: "#f04452", down: "#5b9bff",
+    shadow: "0 8px 28px rgba(0,0,0,0.40)",
 }
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-dbr-*)로 발행. 되돌리지 말 것.
+//   JS 다크 감지(readBodyDark/MutationObserver)는 첫 페인트에서 라이트로 그린 뒤 뒤늦게
+//   다크로 바뀌어 "부분 라이트" 로 보이는 사고가 반복됐다. body[data-framer-theme] 를
+//   CSS 가 직접 받으면 페인트 시점부터 정합이라 그 창 자체가 없어진다.
+//   (프레이머 네이티브 테마 정합 — 이미 마이그레이션된 36개 공개 컴포넌트와 동일 문법)
+const _ANP = "dbr"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
+
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
 const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/daily_briefing.json"
 const PER_SECTION = 4 // 섹션당 기본 노출, 초과 = "+N건" 접힘
@@ -58,47 +73,11 @@ const SAMPLE = {
     disclaimer: "전부 공시·수집 사실과 자체계산 예상 창 · 점수·추천·매매의견 아님",
 }
 
-function readBodyDark(): boolean {
-    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
-    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
-    try {
-        const _lsPref = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
 
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
 
 
 export default function PublicDailyBriefing(props: {
@@ -106,7 +85,6 @@ export default function PublicDailyBriefing(props: {
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     // 첫 페인트부터 실제 테마로 시작(캔버스는 prop) — 로딩 창 반대색 flash 제거.
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : anReadDark()))
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
     const [failed, setFailed] = useState(false)
     const [openSec, setOpenSec] = useState<Record<string, boolean>>({})
@@ -122,14 +100,6 @@ export default function PublicDailyBriefing(props: {
             return true
         } catch (e) { return false }
     })
-
-    useEffect(() => {
-        if (onCanvas) return
-        setThemeDark(readBodyDark())
-        const obs = new MutationObserver(() => setThemeDark(readBodyDark()))
-        if (document.body) obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
 
     useEffect(() => {
         if (onCanvas) return
@@ -164,8 +134,6 @@ export default function PublicDailyBriefing(props: {
         return () => clearTimeout(t)
     }, [wantAnim, data, onCanvas])
 
-    const isDark = onCanvas ? !!props.dark : themeDark
-    const C = isDark ? DARK : LIGHT
     const stockPath = props.stockPath || "/stock"
 
     const go = (tk: string) => {
@@ -193,7 +161,7 @@ export default function PublicDailyBriefing(props: {
         <div style={{
             background: C.card, borderRadius: 12, overflow: "hidden",
             border: `1px solid ${C.chromeLine}`,
-            boxShadow: isDark ? "0 8px 28px rgba(0,0,0,0.40)" : "0 6px 22px rgba(31,41,55,0.12)",
+            boxShadow: C.shadow,
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px", height: 34, background: C.chrome, borderBottom: `1px solid ${C.chromeLine}` }}>
                 <div style={{ display: "flex", gap: 6 }}>
@@ -255,6 +223,7 @@ export default function PublicDailyBriefing(props: {
 
     return (
         <div style={wrap}>
+            <style>{AN_PALETTE}</style>
             <style>{`@keyframes dbStream{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}@keyframes dbPulse{0%,100%{opacity:0.35}50%{opacity:1}}`}</style>
             {windowShell(
                 <div>
