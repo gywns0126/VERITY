@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  로컬 레이크 하트비트 일 1회 (2026-08-08 신설).
+
+  왜 신설했나 — 하트비트가 backup_irreplaceable.sh(launchd 주 1회, 일요일) 에만 동승해서
+  data/local_lake_health.json 이 **주 단위로만** 갱신됐다. 2026-08-08 커버리지 감사에서
+  보드가 kr_flow_parquet "11일 stale" / event_study "38일 stale" 로 떠 있었는데,
+  실제 로컬 파일은 kr_flow 8/07 21:13 · event_study 8/07 21:10 로 멀쩡했다.
+  즉 데이터가 아니라 **관측이 늙어 있었다** — 없는 것보다 나쁜 신호다
+  ([[feedback_silent_total_failure_guard]] 의 역방향: 살아 있는데 죽었다고 보고).
+
+  🚨 저녁 슬롯 + RunAtLoad catch-up — com.verity.krflow.biweekly 가 2026-07-04 에 배운 것과
+  동일 이유다. 새벽 슬롯은 맥 종료 시 영영 skip 된다(절전 wake 만 coalesce, 종료는 catch-up 없음).
+
+  설치:
+    cp scripts/run_lake_heartbeat.sh ~/VERITY_data_lake/ && chmod +x ~/VERITY_data_lake/run_lake_heartbeat.sh
+    cp scripts/com.verity.lake-heartbeat.daily.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.verity.lake-heartbeat.daily.plist
+  해제:
+    launchctl unload ~/Library/LaunchAgents/com.verity.lake-heartbeat.daily.plist
+  즉시 1회:
+    launchctl start com.verity.lake-heartbeat.daily
+  로그: ~/VERITY_data_lake/lake_heartbeat.log
+
+  🚨 PATH 에 homebrew 경로 필수 — 하트비트는 gh api 로 main 에 직접 발행한다. 2026-07-04 에
+  plist PATH 를 줄였다가 gh 를 못 찾아 4주간 조용히 실패하고 하트비트가 30일 stale 이 된 적이 있다.
+
+  🚨 /bin/bash 래퍼를 거치는 이유 — plist 가 /usr/bin/python3 로 Desktop 아래 스크립트를 직접
+  실행하면 TCC 가 "Operation not permitted" 로 막는다(2026-08-08 실측). 기존 com.verity.krflow
+  와 같은 형태(레이크 경로 .sh 래퍼)로 맞춘다. 래퍼는 ~/VERITY_main(origin/main 워크트리)에서
+  하트비트를 돌린다 — Desktop 작업 레포에서 돌리면 옛 data/ 사본을 읽고 거짓 stale 을 낸다.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.verity.lake-heartbeat.daily</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/macbookpro/VERITY_data_lake/run_lake_heartbeat.sh</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>21</integer>
+    <key>Minute</key>
+    <integer>40</integer>
+  </dict>
+
+  <!-- 로그인/부팅 시 1회 따라잡기. 하트비트는 읽기+발행뿐이라 과실행 부작용이 없다. -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/macbookpro/VERITY_data_lake/lake_heartbeat.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/macbookpro/VERITY_data_lake/lake_heartbeat.log</string>
+</dict>
+</plist>

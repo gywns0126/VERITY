@@ -1,11 +1,11 @@
 """
 국내 채권 수익률·스프레드 수집 (pykrx + ECOS)
   - 국고채 수익률 곡선 (1Y~30Y)
-  - 회사채 신용등급별 스프레드 (AA-/A+/BBB+)
+  - 회사채 신용등급별 스프레드 (AA- / BBB-, 3년물, 국고채 3년 대비)
   - 한국은행 ECOS 보조 (국고채 3Y 기준)
 """
 from datetime import timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from api.config import ECOS_API_KEY, now_kst
 
@@ -19,20 +19,11 @@ _KR_GOV_BOND_TENORS = {
     "30Y": "국고채권(30년)",
 }
 
-_CORP_GRADES = ("AA-", "A+", "BBB+")
-
-_ECOS_BOND_ITEMS = {
-    "gov_1y":  ("817Y002", "010200000"),
-    "gov_2y":  ("817Y002", "010200001"),
-    "gov_3y":  ("817Y002", "010210000"),
-    "gov_5y":  ("817Y002", "010200002"),
-    "gov_10y": ("817Y002", "010210000"),
-    "gov_20y": ("817Y002", "010220000"),
-    "gov_30y": ("817Y002", "010230000"),
-    "corp_aa_minus": ("817Y002", "010300003"),
-    "corp_a_plus":   ("817Y002", "010300006"),
-    "corp_bbb_plus": ("817Y002", "010300009"),
-}
+# 🚨 2026-08-08 정정 — 옛 _CORP_GRADES/_ECOS_BOND_ITEMS 는 어디에서도 참조되지 않는 죽은 상수였고,
+#   담고 있던 회사채 item 코드(010300003 AA- / 010300006 A+ / 010300009 BBB+)는 ECOS 에 존재하지
+#   않는 번호였다(실호출 3건 전부 INFO-200 "해당하는 데이터가 없습니다"). 2026-06-03 에 국고채
+#   코드만 메타 API 로 정정하고 회사채 코드는 그대로 남겨 둔 잔여물이다. 코드 자체를 제거하고
+#   실제 유효 코드는 _ecos_yield_curve() 안 corp_grade_map 한 곳에만 둔다(단일 출처).
 
 
 def _pykrx_bond_yields() -> Dict[str, Any]:
@@ -67,8 +58,15 @@ def _pykrx_bond_yields() -> Dict[str, Any]:
     return {"curve": curve} if curve else {}
 
 
-def _ecos_fetch_series(stat_code: str, item_code: str, days: int = 30) -> Optional[float]:
-    """ECOS에서 단일 시계열의 최신값."""
+def _ecos_fetch_point(
+    stat_code: str, item_code: str, days: int = 30
+) -> Optional[Tuple[float, str]]:
+    """ECOS 단일 시계열의 최신 관측 = (값, 관측일 YYYYMMDD).
+
+    🚨 관측일을 같이 돌려주는 이유 = ECOS 일별 금리는 수집 시점보다 뒤처진다(2026-08-08 실측:
+      회사채 최신 관측 20260723 = 수집일 대비 16일 전). 수집일을 as_of 로 쓰면 실제보다 신선한
+      것처럼 보인다 — [[feedback_macro_timestamp_policy]] collected_at 과 as_of 분리 의무.
+    """
     if not ECOS_API_KEY:
         return None
     try:
@@ -93,9 +91,15 @@ def _ecos_fetch_series(stat_code: str, item_code: str, days: int = 30) -> Option
         if isinstance(rows, dict):
             rows = [rows]
         last = rows[-1]
-        return round(float(last.get("DATA_VALUE", 0)), 4)
+        return round(float(last.get("DATA_VALUE", 0)), 4), str(last.get("TIME") or "")
     except Exception:
         return None
+
+
+def _ecos_fetch_series(stat_code: str, item_code: str, days: int = 30) -> Optional[float]:
+    """ECOS 최신값만 (관측일이 필요 없는 경로용 얇은 래퍼)."""
+    point = _ecos_fetch_point(stat_code, item_code, days)
+    return point[0] if point else None
 
 
 def _ecos_yield_curve() -> Dict[str, Any]:
@@ -124,19 +128,28 @@ def _ecos_yield_curve() -> Dict[str, Any]:
 
     gov_3y = next((c["yield"] for c in curve if c["tenor"] == "3Y"), None)
 
+    # 🚨 2026-08-08 정정 — ECOS 메타 API(StatisticItemList/817Y002) 27행 실조회로 확정한 코드.
+    #   옛 코드(010300003 / 010300006 / 010300009)는 셋 다 존재하지 않아 grades 가 항상 비었고,
+    #   그 결과 bonds.json 에 kr_corp_spreads 키 자체가 없었다 = KR 신용 스프레드 축 상시 결손.
+    #   niche_intel.build_macro_niche_credit / _build_credit(KR) 이 이 값을 읽으므로 침묵 결손이었다.
+    #   817Y002 가 제공하는 회사채 등급은 AA-(3년)와 BBB-(3년) 둘뿐이다 — A+/BBB+ 는 미제공이라 뺀다.
     corp_grade_map = {
-        "AA-":  ("817Y002", "010300003"),
-        "A+":   ("817Y002", "010300006"),
-        "BBB+": ("817Y002", "010300009"),
+        "AA-":  ("817Y002", "010300000"),  # 회사채(3년, AA-)
+        "BBB-": ("817Y002", "010320000"),  # 회사채(3년, BBB-)
     }
 
     grades: Dict[str, Dict[str, Any]] = {}
+    grade_as_of = ""
     for grade, (stat, item) in corp_grade_map.items():
-        val = _ecos_fetch_series(stat, item, days=30)
-        if val is not None:
+        point = _ecos_fetch_point(stat, item, days=30)
+        if point is not None:
+            val, obs_date = point
             entry: Dict[str, Any] = {"yield": val}
             if gov_3y is not None:
                 entry["spread_vs_3y"] = round(val - gov_3y, 3)
+            if obs_date:
+                entry["as_of"] = obs_date
+                grade_as_of = max(grade_as_of, obs_date)
             grades[grade] = entry
 
     result: Dict[str, Any] = {}
@@ -144,6 +157,8 @@ def _ecos_yield_curve() -> Dict[str, Any]:
         result["curve"] = curve
     if grades:
         result["grades"] = grades
+        if grade_as_of:
+            result["grades_as_of"] = grade_as_of
     return result
 
 
@@ -203,8 +218,10 @@ def get_bond_market_summary() -> Dict[str, Any]:
 
     grades = ecos_data.get("grades")
     if grades:
+        # date = ECOS 실제 관측일(있으면). 수집일 fallback 은 관측일 부재 시에만.
         result["kr_corp_spreads"] = {
-            "date": date_str,
+            "date": ecos_data.get("grades_as_of") or date_str,
+            "collected_at": ts,
             "grades": grades,
         }
 

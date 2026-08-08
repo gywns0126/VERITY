@@ -40,6 +40,7 @@ SECTION_SCHEMAS: Dict[str, dict] = {
                 "spread_3m_10y":    None,
                 "credit_spreads":   {
                     "us_ig_oas":  None,
+                    "us_bbb_oas": None,
                     "us_hy_oas":  None,
                     "us_ig_risk": None,
                     "us_hy_risk": None,
@@ -51,11 +52,12 @@ SECTION_SCHEMAS: Dict[str, dict] = {
         },
         "credit_spreads": {
             "us_ig_oas":  None,
+            "us_bbb_oas": None,
             "us_hy_oas":  None,
             "us_ig_risk": None,
             "us_hy_risk": None,
         },
-        "kr_corp_spreads":  {"date": "", "grades": {}},
+        "kr_corp_spreads":  {"date": "", "collected_at": "", "grades": {}},
         "inversion_alerts": [],
         "has_alert":        False,
         "bond_regime": {
