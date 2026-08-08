@@ -130,16 +130,56 @@ def month_ends(start: date, end: date) -> List[str]:
 
 
 def _existing_dates() -> Set[str]:
+    """이미 수집한 **as_of**(월말 달력일) 집합.
+
+    🚨 2026-08-08 수리: 이전에는 `bas_dt` 를 모아 놓고 caller 가 `target`(월말 달력일)과
+       비교했다. 월말이 휴장이면 `as_of=20200229`, `bas_dt=20200228` 로 갈리므로
+       skip 판정이 **영원히 실패**하고 매 run 이 같은 달을 다시 append 했다.
+       실측 피해: 121행 중 고유 as_of 79개, 24개 날짜가 최대 4중복
+       (전부 월말이 주말/공휴일인 달). 백테스트 리밸런스가 그만큼 중복 계상됐다.
+       기록 키와 dedup 키는 같아야 한다.
+    """
     if not os.path.exists(PIT_PATH):
         return set()
     got: Set[str] = set()
     with open(PIT_PATH, encoding="utf-8") as f:
         for line in f:
             try:
-                got.add(str(json.loads(line).get("bas_dt")))
+                got.add(str(json.loads(line).get("as_of")))
             except Exception:  # noqa: BLE001
                 continue
     return got
+
+
+def dedupe_file() -> Dict[str, Any]:
+    """as_of 중복 제거 — 같은 as_of 는 **마지막 수집분만** 남긴다 (멱등, 원본 보존 X).
+
+    소비자(백테스트)는 as_of 를 리밸런스 시점으로 쓰므로 중복이 있으면 그 달이
+    2~4회 계상된다. 겹침 판정은 진입 인덱스 간격으로 걸러지지만 naive 통계와
+    관측 수는 부풀고, PBO 행렬에는 동일 행이 반복 투입된다.
+    """
+    if not os.path.exists(PIT_PATH):
+        return {"status": "no_file"}
+    keep: Dict[str, str] = {}
+    total = 0
+    with open(PIT_PATH, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                d = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            total += 1
+            keep[str(d.get("as_of"))] = line
+    tmp = PIT_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        for k in sorted(keep):
+            f.write(keep[k] + "\n")
+    os.replace(tmp, PIT_PATH)
+    return {"status": "ok", "before": total, "after": len(keep),
+            "removed": total - len(keep)}
 
 
 def collect(start: str, end: str, max_calls: int = 200) -> Dict[str, Any]:
@@ -241,6 +281,10 @@ def main() -> int:
     ap.add_argument("--max-calls", type=int, default=200)
     ap.add_argument("--build-only", action="store_true")
     a = ap.parse_args()
+    dd = dedupe_file()
+    if dd.get("removed"):
+        print(f"[kr_universe_pit] as_of 중복 제거 {dd['removed']}행 "
+              f"({dd['before']} → {dd['after']})", file=sys.stderr)
     if not a.build_only:
         r = collect(a.start, a.end, a.max_calls)
         print(f"[kr_universe_pit] 수집 +{r['added']} · skip {r['skipped']} · "
