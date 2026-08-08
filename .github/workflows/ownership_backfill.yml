@@ -50,7 +50,10 @@ jobs:
           cache-dependency-path: requirements.txt
 
       - name: Install deps
-        run: pip install requests python-dotenv
+        # 🚨 requests 만으로는 부족하다 — DartScout → stock_data 임포트 체인이 yfinance 를
+        #   끌어온다(2026-08-08 N=1 manual run 이 ModuleNotFoundError 로 잡음).
+        #   최소 설치로 아끼려다 실패하느니 다른 DART 워크플로와 같은 기준을 쓴다.
+        run: pip install -r requirements.txt
 
       - name: Backfill ownership
         env:
