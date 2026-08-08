@@ -141,12 +141,37 @@ def _post_json(url: str, payload: Dict[str, Any], headers: Dict[str, str],
 #    2026-08-03 094970 +12% 사유 조회가 이 방식으로 실패("단정할 수 없습니다").
 #    → **우리 데이터에 구멍이 난 축만** 골라 축별 질문으로 분리 위임한다.
 
-_PPLX_RULES = (
+_RULES_COMMON = (
     "규칙: ① 확인된 사실과 출처(URL)만. 추정·전망·투자의견 금지. "
     "② 확인 안 되면 반드시 '확인 안 됨'이라고 답하고 지어내지 마라. "
+)
+_RULES_KR = _RULES_COMMON + (
     "③ 한국거래소 KIND·DART·네이버금융·국내 경제지 등 **국내 1차 소스** 우선. "
     "④ 동명 해외 법인(영문 사명)과 혼동 금지 — 한국 상장사만. ⑤ 한국어."
 )
+_RULES_US = _RULES_COMMON + (
+    "③ SEC EDGAR·발행사(운용사) 공식 자료·미국 경제지 등 **미국 1차 소스** 우선. "
+    "④ 동명 한국 상장사와 혼동 금지 — 미국 상장 종목만. ⑤ 한국어로 답하되 "
+    "회사·상품명과 인용 문구는 원문 표기를 병기."
+)
+_PPLX_RULES = _RULES_KR      # 하위호환 (KR 기본)
+
+
+def _market_of(facts: Dict[str, Any], ticker: str) -> str:
+    """KR / US 판별.
+
+    🚨 2026-08-08 수리: 이전에는 시장을 보지 않고 전 종목을 "한국 상장사" 로 단정했다.
+       미국 종목(TSLL 등)에 대해 KIND·DART 를 1차 소스로 지정하고, 규칙 ④가
+       "동명 해외 법인 혼동 금지 — 한국 상장사만" 이라 **정답 방향을 적극 차단**했다.
+       위임 질문은 우리 데이터가 빈 종목에 쓰는 도구인데, 그 종목이 대개 미국 종목이다.
+    """
+    mkt = str(((_sec_data(facts, "리포트") or {}) or {}).get("market") or "").upper()
+    if "KOSPI" in mkt or "KOSDAQ" in mkt or "KRX" in mkt:
+        return "KR"
+    if "NYSE" in mkt or "NASDAQ" in mkt or "AMEX" in mkt or "ARCA" in mkt:
+        return "US"
+    t = str(ticker or "")
+    return "KR" if (len(t) == 6 and t.isdigit()) else "US"
 
 
 def _sec_data(facts: Dict[str, Any], *label_prefixes: str) -> Optional[Any]:
@@ -178,12 +203,18 @@ def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, s
     name = facts.get("name") or ""
     tk = facts.get("ticker") or ""
     today = _now().strftime("%Y년 %m월 %d일")
-    who = f"한국 상장사 {name}(종목코드 {tk})"
     gaps: List[Dict[str, str]] = []
 
     rep = _sec_data(facts, "리포트") or {}
-    mkt = rep.get("market") or ""
-    who = f"{'코스닥' if 'KOSDAQ' in str(mkt) else '코스피' if 'KOSPI' in str(mkt) else '한국'} 상장사 {name}(종목코드 {tk})"
+    mkt = str(rep.get("market") or "")
+    market = _market_of(facts, tk)
+    if market == "KR":
+        seg = "코스닥" if "KOSDAQ" in mkt else "코스피" if "KOSPI" in mkt else "한국"
+        who = f"{seg} 상장사 {name}(종목코드 {tk})"
+        rules = _RULES_KR
+    else:
+        who = f"미국 상장 종목 {name}(티커 {tk})"
+        rules = _RULES_US
 
     # ① 급변 사유 미상 — 최우선. 우리 데이터로는 "얼마나" 만 알고 "왜" 를 모른다.
     #    단, 공시 축은 DART 직조회(ticker_facts 상설 섹션)가 이미 단정한다 — 외부에 되묻지 않는다.
@@ -213,7 +244,7 @@ def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, s
                 + ("" if dart_note else
                    f" (4) {today} 또는 직전 영업일 공시(KIND·DART — 단일판매·공급계약, "
                    f"최대주주 변경, 무상증자, 자기주식 취득, 조회공시 요구 등)")
-                + f".\n{_PPLX_RULES}"
+                + f".\n{rules}"
             ),
         })
 
@@ -230,7 +261,7 @@ def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, s
             "query": (
                 f"{who}에 대해 최근 1개월 내 보도된 뉴스·이슈를 시간순으로 정리해줘.\n"
                 f"수주·계약, 실적, 신규 사업, 증설·투자, 지분 변동, 소송·제재, "
-                f"거래소 조치(투자경고·불성실공시) 중심.\n{_PPLX_RULES}"
+                f"거래소 조치(투자경고·불성실공시) 중심.\n{rules}"
             ),
         })
 
@@ -250,7 +281,7 @@ def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, s
                 "tier": "base",
                 "query": (
                     f"{who}의 다음 실적 발표(반기·분기보고서 제출 또는 잠정실적 공시) "
-                    f"확정 일정이 공표됐는가? 직전 분기 실적 수치와 함께 알려줘.\n{_PPLX_RULES}"
+                    f"확정 일정이 공표됐는가? 직전 분기 실적 수치와 함께 알려줘.\n{rules}"
                 ),
             })
         break
@@ -270,14 +301,14 @@ def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, s
             "query": (
                 f"{who}를 커버하는 증권사 리서치 리포트가 최근 1년 내 존재하는가?\n"
                 f"있으면 증권사명·발간일·투자의견·목표주가를, 없으면 "
-                f"'커버리지 없음'이라고 명확히 답해줘.\n{_PPLX_RULES}"
+                f"'커버리지 없음'이라고 명확히 답해줘.\n{rules}"
             ),
         })
 
     # ⑤ 어떤 구멍도 안 잡혔는데 PM 질문이 외부 사실을 요구하면 그것만 위임
     if not gaps and question.strip():
         gaps.append({"key": "freeform", "label": "PM 질문", "recency": "week", "tier": "base",
-                     "query": f"{who}에 대한 질문: {question.strip()}\n{_PPLX_RULES}"})
+                     "query": f"{who}에 대한 질문: {question.strip()}\n{rules}"})
 
     return gaps[:3]
 
