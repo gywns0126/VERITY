@@ -57,6 +57,17 @@ const DARK = {
     heroBgSel: "#292640",
     tileSel: "#262a33",
 }
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-psm-*)로 발행. 되돌리지 말 것.
+//   JS 다크 감지(readBodyDark/MutationObserver)는 첫 페인트를 라이트로 그린 뒤 이펙트가
+//   돌아야 다크로 바뀐다. 그 사이가 "부분 라이트" 로 보이는 반복 증상의 원인이었다.
+//   body[data-framer-theme] 를 CSS 가 직접 받으면 페인트 시점부터 정합이라 그 창이 없어진다.
+//   (이미 마이그레이션된 공개 컴포넌트들과 동일 문법 — 프레이머 네이티브 테마 정합)
+const _ANP = "psm"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DATA_URL =
@@ -207,27 +218,6 @@ function isKR(tk: any): boolean {
     return /^\d{6}$/.test(String(tk || ""))
 }
 
-function readBodyDark(): boolean {
-    // 기본 = 라이트(사이트 첫 시작 라이트 결정, 2026-07-19). 명시적 'dark' 신호가 있을 때만 다크.
-    //   판독 순서 = html[data-an-theme](Custom Code 헤드 스크립트가 페인트 전 동기 세팅, 레이스 제거)
-    //   → body[data-framer-theme](토글) → localStorage. OS 설정은 안 봄(로드마다 뒤집힘 방지).
-    //   🚨 body-first 로 되돌리지 말 것 — Framer 네이티브가 새로고침 때 body 를 OS 로 리셋 → 부분 라이트 회귀(2026-07-23).
-    try {
-        if (typeof document !== "undefined") {
-            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-            if (h === "dark") return true
-            if (h === "light") return false
-            if (document.body) {
-                const a = document.body.dataset.framerTheme
-                if (a === "dark") return true
-                if (a === "light") return false
-            }
-        }
-        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (s === "dark") return true
-    } catch (e) {}
-    return false
-}
 function fmtAge(iso: any): string {
     if (!iso) return ""
     try {
@@ -712,9 +702,6 @@ export default function PublicPerspectiveMaps(props: {
     stockPath?: string
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() =>
-        onCanvas ? !!props.dark : readBodyDark()
-    )
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
     const [lens, setLens] = useState<string>("desire")
     const [mkt, setMkt] = useState<string>("전체")
@@ -722,27 +709,6 @@ export default function PublicPerspectiveMaps(props: {
     const [sel, setSel] = useState<Record<string, string>>({})
     const [ddOpen, setDdOpen] = useState<string>("")
     const [showAll, setShowAll] = useState<boolean>(false)
-
-    const isDark = onCanvas ? !!props.dark : themeDark
-    const C = isDark ? DARK : LIGHT
-
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (
-            typeof MutationObserver === "undefined" ||
-            typeof document === "undefined" ||
-            !document.body
-        )
-            return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, {
-            attributes: true,
-            attributeFilter: ["data-framer-theme"],
-        })
-        return () => obs.disconnect()
-    }, [onCanvas])
 
     useEffect(() => {
         if (onCanvas) return
@@ -1015,6 +981,7 @@ export default function PublicPerspectiveMaps(props: {
 
     return (
         <div style={wrap}>
+            <style>{AN_PALETTE}</style>
             <div style={{ marginBottom: 12 }}>
                 <div
                     style={{
