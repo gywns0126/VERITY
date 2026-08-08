@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-08T11:10:28.042697+09:00",
+  "generated_at": "2026-08-08T12:44:49.679732+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 249004,
-    "python_modules": 743,
+    "code_lines_tsx_py": 249323,
+    "python_modules": 745,
     "tsx_components": 128,
-    "json_data_files": 1680,
-    "json_total_tracked": 1699,
+    "json_data_files": 1688,
+    "json_total_tracked": 1707,
     "workflows": 70,
     "scheduled_workflows": 54,
-    "cron_triggers": 67,
-    "git_tracked_files": 7327
+    "cron_triggers": 65,
+    "git_tracked_files": 7337
   },
   "subsystems": {
     "ingest": {
@@ -424,9 +424,7 @@
         {
           "name": "nps_employment",
           "crons": [
-            "0 20 15 * *",
-            "0 20 19 * *",
-            "0 20 23 * *"
+            "0 20 15-24 * *"
           ],
           "scheduled": true
         },
@@ -658,23 +656,23 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1680
+      "count": 1688
     },
     "validation": {
       "label": "검증",
       "n_trading_days": 59,
-      "n_calendar_days": 82,
+      "n_calendar_days": 83,
       "next_milestone": {
         "next_n": 100,
         "days_remaining": 41,
         "label": "예비 결과 (binomial 95% CI ±10%p)"
       },
-      "as_of": "2026-08-07T12:23:13+09:00"
+      "as_of": "2026-08-08T11:26:37+09:00"
     }
   },
   "python_by_dir": {
-    "api": 402,
-    "tests": 185,
+    "api": 403,
+    "tests": 186,
     "scripts": 86,
     "vercel-api": 58,
     "server": 7,
