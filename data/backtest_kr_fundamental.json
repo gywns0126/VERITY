@@ -1,0 +1,388 @@
+{
+ "generated_at": "2026-08-08T22:51:34+09:00",
+ "prereg": "docs/PREREG_BACKTEST_KR_2020_2026.md (v1.1 보정)",
+ "axes": {
+  "fscore8": "Piotroski 재현 가능 8기준 (F1~F6·F8·F9) — F7 만 제외, 운영에서도 전 종목 상수라 순위 동치",
+  "gpa": "Novy-Marx Gross Profitability = (매출총이익률 × 자산회전율). 항등식 재구성"
+ },
+ "dropped_axis": {
+  "graham_pbr_per": "PBR/PER 시계열 소스 0 (전 data/ sweep 확인) — 재현 불가로 폐기"
+ },
+ "method": {
+  "universe": "kr_universe_pit 월말 스냅샷 (생존 편향 0)",
+  "exclusions": "우선주(코드 끝자리≠0) · 스팩 · 리츠 · ETF",
+  "pit_lag_days": 45,
+  "horizons": [
+   20,
+   60
+  ],
+  "delist_haircut": 0.7,
+  "cost_roundtrip": 0.0023,
+  "judgment_rule": "비겹침 표본만 · Bonferroni |t| ≥ 2.64 (사전등록 6검정 기준 유지)"
+ },
+ "coverage": {
+  "rebalances": 118,
+  "window": [
+   "20200131",
+   "20260430"
+  ],
+  "excluded": {
+   "reit": 2471,
+   "preferred": 11508,
+   "etf": 467,
+   "spac": 6400
+  },
+  "median_names": 1381,
+  "total_observations": 161774,
+  "delisted_exits": 606,
+  "elapsed_sec": 50.8
+ },
+ "results": {
+  "fscore8_20d_optimistic": {
+   "ic_naive": {
+    "n": 118,
+    "mean": 0.032944,
+    "t": 7.2739,
+    "positive_rate": 0.8305
+   },
+   "ic_non_overlap": {
+    "n": 60,
+    "mean": 0.030941,
+    "t": 4.9496,
+    "positive_rate": 0.8167
+   },
+   "spread_naive": {
+    "n": 118,
+    "mean": -0.008387,
+    "t": -1.4018,
+    "positive_rate": 0.4661
+   },
+   "spread_non_overlap": {
+    "n": 60,
+    "mean": -0.014129,
+    "t": -1.3381,
+    "positive_rate": 0.4167
+   }
+  },
+  "fscore8_20d_conservative": {
+   "ic_naive": {
+    "n": 118,
+    "mean": 0.032701,
+    "t": 7.2337,
+    "positive_rate": 0.8305
+   },
+   "ic_non_overlap": {
+    "n": 60,
+    "mean": 0.030558,
+    "t": 4.904,
+    "positive_rate": 0.8167
+   },
+   "spread_naive": {
+    "n": 118,
+    "mean": -0.008535,
+    "t": -1.4286,
+    "positive_rate": 0.4661
+   },
+   "spread_non_overlap": {
+    "n": 60,
+    "mean": -0.014376,
+    "t": -1.3636,
+    "positive_rate": 0.4167
+   }
+  },
+  "fscore8_60d_optimistic": {
+   "ic_naive": {
+    "n": 118,
+    "mean": 0.039257,
+    "t": 8.8176,
+    "positive_rate": 0.7712
+   },
+   "ic_non_overlap": {
+    "n": 25,
+    "mean": 0.037141,
+    "t": 3.5737,
+    "positive_rate": 0.8
+   },
+   "spread_naive": {
+    "n": 118,
+    "mean": -0.017005,
+    "t": -1.5408,
+    "positive_rate": 0.5254
+   },
+   "spread_non_overlap": {
+    "n": 25,
+    "mean": -0.018462,
+    "t": -1.1101,
+    "positive_rate": 0.48
+   }
+  },
+  "fscore8_60d_conservative": {
+   "ic_naive": {
+    "n": 118,
+    "mean": 0.038748,
+    "t": 8.7017,
+    "positive_rate": 0.7712
+   },
+   "ic_non_overlap": {
+    "n": 25,
+    "mean": 0.03731,
+    "t": 3.5944,
+    "positive_rate": 0.8
+   },
+   "spread_naive": {
+    "n": 118,
+    "mean": -0.017262,
+    "t": -1.5649,
+    "positive_rate": 0.5254
+   },
+   "spread_non_overlap": {
+    "n": 25,
+    "mean": -0.018537,
+    "t": -1.1148,
+    "positive_rate": 0.48
+   }
+  },
+  "gpa_20d_optimistic": {
+   "ic_naive": {
+    "n": 118,
+    "mean": 0.011021,
+    "t": 1.8304,
+    "positive_rate": 0.6102
+   },
+   "ic_non_overlap": {
+    "n": 60,
+    "mean": 0.009005,
+    "t": 1.0551,
+    "positive_rate": 0.5667
+   },
+   "spread_naive": {
+    "n": 118,
+    "mean": -0.015711,
+    "t": -3.2,
+    "positive_rate": 0.4661
+   },
+   "spread_non_overlap": {
+    "n": 60,
+    "mean": -0.025682,
+    "t": -3.0337,
+    "positive_rate": 0.3833
+   }
+  },
+  "gpa_20d_conservative": {
+   "ic_naive": {
+    "n": 118,
+    "mean": 0.011054,
+    "t": 1.8276,
+    "positive_rate": 0.6102
+   },
+   "ic_non_overlap": {
+    "n": 60,
+    "mean": 0.008738,
+    "t": 1.0198,
+    "positive_rate": 0.5667
+   },
+   "spread_naive": {
+    "n": 118,
+    "mean": -0.015665,
+    "t": -3.1889,
+    "positive_rate": 0.4661
+   },
+   "spread_non_overlap": {
+    "n": 60,
+    "mean": -0.025652,
+    "t": -3.0308,
+    "positive_rate": 0.3833
+   }
+  },
+  "gpa_60d_optimistic": {
+   "ic_naive": {
+    "n": 118,
+    "mean": 0.013661,
+    "t": 2.0631,
+    "positive_rate": 0.5508
+   },
+   "ic_non_overlap": {
+    "n": 25,
+    "mean": 0.010067,
+    "t": 0.5968,
+    "positive_rate": 0.52
+   },
+   "spread_naive": {
+    "n": 118,
+    "mean": -0.04637,
+    "t": -4.376,
+    "positive_rate": 0.3729
+   },
+   "spread_non_overlap": {
+    "n": 25,
+    "mean": -0.059611,
+    "t": -3.6459,
+    "positive_rate": 0.28
+   }
+  },
+  "gpa_60d_conservative": {
+   "ic_naive": {
+    "n": 118,
+    "mean": 0.013041,
+    "t": 1.9546,
+    "positive_rate": 0.5508
+   },
+   "ic_non_overlap": {
+    "n": 25,
+    "mean": 0.009405,
+    "t": 0.5536,
+    "positive_rate": 0.52
+   },
+   "spread_naive": {
+    "n": 118,
+    "mean": -0.047832,
+    "t": -4.5329,
+    "positive_rate": 0.3644
+   },
+   "spread_non_overlap": {
+    "n": 25,
+    "mean": -0.060922,
+    "t": -3.7456,
+    "positive_rate": 0.28
+   }
+  }
+ },
+ "h3_axis_independence": {
+  "ic_correlation": 0.4318,
+  "n": 60,
+  "threshold": 0.7,
+  "pass": true
+ },
+ "monotonicity_20d": {
+  "fscore8": {
+   "0": {
+    "n": 1375,
+    "mean_20d": 0.00162,
+    "median_20d": -0.016892
+   },
+   "1": {
+    "n": 4665,
+    "mean_20d": 0.023522,
+    "median_20d": -0.012376
+   },
+   "2": {
+    "n": 10166,
+    "mean_20d": 0.019711,
+    "median_20d": -0.009009
+   },
+   "3": {
+    "n": 16923,
+    "mean_20d": 0.012244,
+    "median_20d": -0.007246
+   },
+   "4": {
+    "n": 21485,
+    "mean_20d": 0.025208,
+    "median_20d": -0.003578
+   },
+   "5": {
+    "n": 23722,
+    "mean_20d": 0.012398,
+    "median_20d": -0.003673
+   },
+   "6": {
+    "n": 20500,
+    "mean_20d": 0.013153,
+    "median_20d": -0.003094
+   },
+   "7": {
+    "n": 12557,
+    "mean_20d": 0.011247,
+    "median_20d": -0.005081
+   },
+   "8": {
+    "n": 5478,
+    "mean_20d": 0.011759,
+    "median_20d": -0.004657
+   }
+  },
+  "gpa": {
+   "0": {
+    "n": 122884,
+    "mean_20d": 0.014229,
+    "median_20d": -0.00665
+   },
+   "1": {
+    "n": 24920,
+    "mean_20d": 0.012343,
+    "median_20d": -0.00198
+   },
+   "2": {
+    "n": 7987,
+    "mean_20d": 0.019579,
+    "median_20d": -0.002024
+   },
+   "3": {
+    "n": 2887,
+    "mean_20d": 0.016303,
+    "median_20d": 0.0
+   },
+   "4": {
+    "n": 1543,
+    "mean_20d": 0.020266,
+    "median_20d": 0.0
+   },
+   "5": {
+    "n": 817,
+    "mean_20d": 0.003701,
+    "median_20d": -0.014417
+   },
+   "6": {
+    "n": 329,
+    "mean_20d": 0.024105,
+    "median_20d": 0.009868
+   },
+   "7": {
+    "n": 181,
+    "mean_20d": -0.000925,
+    "median_20d": 0.0
+   },
+   "9": {
+    "n": 180,
+    "mean_20d": 0.036956,
+    "median_20d": 0.015123
+   }
+  }
+ },
+ "delisted_fundamental_recovery": {
+  "delisted_eligible": 264,
+  "delisted_with_fundamentals": 202,
+  "delisted_recovery_pct": 76.5,
+  "survivor_coverage_pct": 71.8,
+  "gate_pass": true
+ },
+ "pbo": {
+  "pbo": 0.2992,
+  "n_combinations": 12870,
+  "n_partitions": 16,
+  "n_trials": 8,
+  "lambda_quantiles": {
+   "p5": -0.6931471805599454,
+   "p25": -0.22314355131420985,
+   "p50": 0.22314355131420993,
+   "p75": 0.6931471805599452,
+   "p95": 0.6931471805599452
+  },
+  "degradation_slope": -0.5134,
+  "degradation_intercept": -0.2188,
+  "p_oos_loss": 0.961,
+  "verdict": "caution",
+  "trials": [
+   "fscore8_20d_conservative",
+   "fscore8_20d_optimistic",
+   "fscore8_60d_conservative",
+   "fscore8_60d_optimistic",
+   "gpa_20d_conservative",
+   "gpa_20d_optimistic",
+   "gpa_60d_conservative",
+   "gpa_60d_optimistic"
+  ],
+  "T": 118
+ },
+ "note": "🚨 관측 산출물. 점수·집행 입력 0. 결과 해석은 사전등록 §4 표대로."
+}

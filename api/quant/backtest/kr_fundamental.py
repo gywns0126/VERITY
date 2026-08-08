@@ -412,6 +412,34 @@ def _select_non_overlapping(entry_idx: List[int], horizon: int) -> List[int]:
     return keep
 
 
+def _recovery_stats() -> Dict[str, Any]:
+    """소멸 종목 펀더멘털 복구율 — v1.1 §4 의 판정 불가 게이트(50%) 근거.
+
+    편향을 "줄였다" 가 아니라 **얼마나 남았는지를 숫자로** 낸다.
+    """
+    try:
+        with open(DELIST_PATH, encoding="utf-8") as f:
+            dl = json.load(f) or {}
+        latest = str(dl.get("as_of"))
+        names = load_names()
+        funds = load_fundamentals()
+        last = dl.get("last_seen") or {}
+        gone = [t for t, v in last.items()
+                if str(v) != latest and not exclusion_reason(t, names.get(t))]
+        surv = [t for t, v in last.items()
+                if str(v) == latest and not exclusion_reason(t, names.get(t))]
+        gh = sum(1 for t in gone if t in funds)
+        sh = sum(1 for t in surv if t in funds)
+        return {
+            "delisted_eligible": len(gone), "delisted_with_fundamentals": gh,
+            "delisted_recovery_pct": round(gh / len(gone) * 100, 1) if gone else None,
+            "survivor_coverage_pct": round(sh / len(surv) * 100, 1) if surv else None,
+            "gate_pass": bool(gone) and gh / len(gone) >= 0.50,
+        }
+    except (OSError, json.JSONDecodeError, ZeroDivisionError):
+        return {"status": "unavailable"}
+
+
 def run(lake_dir: str, out_path: str = OUT_PATH,
         trail_path: str = TRAIL_PATH, dry_run: bool = False) -> Dict[str, Any]:
     t0 = time.time()
@@ -561,6 +589,48 @@ def run(lake_dir: str, out_path: str = OUT_PATH,
     except Exception as e:  # noqa: BLE001
         pbo = {"status": "error", "detail": f"{type(e).__name__}: {str(e)[:120]}"}
 
+    # ── H3 (사전등록 가설) + 단조성 진단 ────────────────────────────────────
+    # 🚨 검정을 추가하는 것이 아니다. H3 는 v1.1 §1 에 등록된 가설이고, 단조성 표는
+    #    "IC 는 유의한데 분위 스프레드는 음수" 라는 결과를 서술하기 위한 기술통계다.
+    #    임계·방법을 바꾸지 않으며 주 검정값에 영향을 주지 않는다(동일성 대조 의무).
+    h3: Dict[str, Any] = {"status": "insufficient"}
+    ic_pairs = {a: [] for a in AXES}
+    for rb in rebalances:
+        for axis in AXES:
+            xs, ys = [], []
+            for r in rb["rows"]:
+                v, ret = r.get(axis), r.get("r20_optimistic")
+                if v is None or ret is None:
+                    continue
+                xs.append(float(v))
+                ys.append(float(ret))
+            ic_pairs[axis].append(spearman(xs, ys) if len(xs) >= MIN_NAMES else None)
+    sel20 = _select_non_overlapping(entry_idx, 20)
+    pa = [(ic_pairs[AXES[0]][i], ic_pairs[AXES[1]][i]) for i in sel20]
+    pa = [(x, y) for x, y in pa if x is not None and y is not None]
+    if len(pa) >= 3:
+        corr = spearman([x for x, _ in pa], [y for _, y in pa])
+        h3 = {"ic_correlation": (round(corr, 4) if corr is not None else None),
+              "n": len(pa), "threshold": 0.7,
+              "pass": (corr is not None and abs(corr) < 0.7)}
+
+    monotonicity: Dict[str, Any] = {}
+    for axis in AXES:
+        by: Dict[Any, List[float]] = {}
+        for rb in rebalances:
+            for r in rb["rows"]:
+                v, ret = r.get(axis), r.get("r20_optimistic")
+                if v is None or ret is None:
+                    continue
+                k = int(v) if axis == "fscore8" else min(9, int(float(v) * 10))
+                by.setdefault(k, []).append(float(ret))
+        monotonicity[axis] = {
+            str(k): {"n": len(v),
+                     "mean_20d": round(sum(v) / len(v), 6),
+                     "median_20d": round(sorted(v)[len(v) // 2], 6)}
+            for k, v in sorted(by.items()) if len(v) >= 100
+        }
+
     doc = {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S+09:00",
                                       time.localtime(time.time() + 9 * 3600)),
@@ -582,6 +652,9 @@ def run(lake_dir: str, out_path: str = OUT_PATH,
         },
         "coverage": coverage,
         "results": results,
+        "h3_axis_independence": h3,
+        "monotonicity_20d": monotonicity,
+        "delisted_fundamental_recovery": _recovery_stats(),
         "pbo": pbo,
         "note": "🚨 관측 산출물. 점수·집행 입력 0. 결과 해석은 사전등록 §4 표대로.",
     }
