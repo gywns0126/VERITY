@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-08T21:04:13.420731+09:00",
+  "generated_at": "2026-08-08T22:10:22.453443+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 249355,
-    "python_modules": 745,
+    "code_lines_tsx_py": 249548,
+    "python_modules": 746,
     "tsx_components": 128,
-    "json_data_files": 1688,
-    "json_total_tracked": 1707,
-    "workflows": 70,
-    "scheduled_workflows": 54,
-    "cron_triggers": 65,
-    "git_tracked_files": 7337
+    "json_data_files": 1690,
+    "json_total_tracked": 1709,
+    "workflows": 71,
+    "scheduled_workflows": 55,
+    "cron_triggers": 66,
+    "git_tracked_files": 7341
   },
   "subsystems": {
     "ingest": {
@@ -163,8 +163,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 70,
-      "scheduled": 54,
+      "count": 71,
+      "scheduled": 55,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -436,6 +436,13 @@
           "scheduled": true
         },
         {
+          "name": "ownership_backfill",
+          "crons": [
+            "40 19 * * *"
+          ],
+          "scheduled": true
+        },
+        {
           "name": "price_pulse",
           "crons": [],
           "scheduled": false
@@ -656,7 +663,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1688
+      "count": 1690
     },
     "validation": {
       "label": "검증",
@@ -671,7 +678,7 @@
     }
   },
   "python_by_dir": {
-    "api": 403,
+    "api": 404,
     "tests": 186,
     "scripts": 86,
     "vercel-api": 58,
