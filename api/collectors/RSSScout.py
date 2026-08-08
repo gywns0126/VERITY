@@ -228,8 +228,17 @@ def _entry_published_iso(entry: Any) -> str:
     return now_kst().isoformat()
 
 
-def _parse_feeds() -> List[Dict[str, str]]:
+def _parse_feeds() -> Tuple[List[Dict[str, str]], int]:
+    """(헤드라인 행, 조회 성공 피드 수) 를 돌려준다.
+
+    🚨 두 번째 값이 가드의 근거다. feedparser 는 네트워크 실패에도 예외 대신
+    빈 entries 를 돌려주므로, 산출 행수만 보면 "새 기사 없음"(정상)과
+    "피드 전량 실패"(사고)가 구분되지 않는다. 증분 피드라 0건 자체는 정상일 수
+    있으니 가드는 행수가 아니라 조회 성공 수에 걸어야 한다.
+    [[feedback_silent_total_failure_guard]]
+    """
     out: List[Dict[str, str]] = []
+    ok_feeds = 0
     for source, url in FEEDS:
         try:
             parsed = feedparser.parse(url, agent=USER_AGENT)
@@ -240,7 +249,15 @@ def _parse_feeds() -> List[Dict[str, str]]:
                 f"[RSSScout] outcome=fail feed_source={source} err={type(e).__name__}: {str(e)[:120]} logged=True\n"
             )
             continue
-        for entry in getattr(parsed, "entries", []) or []:
+        entries = getattr(parsed, "entries", []) or []
+        if not entries:
+            # 예외 없이 빈 응답 = feedparser 가 삼킨 실패. 성공으로 세지 않는다.
+            sys.stderr.write(
+                f"[RSSScout] outcome=empty feed_source={source} entries=0 logged=True\n"
+            )
+            continue
+        ok_feeds += 1
+        for entry in entries:
             title = (entry.get("title") or "").strip()
             link = (entry.get("link") or "").strip()
             if not title or not link:
@@ -253,10 +270,11 @@ def _parse_feeds() -> List[Dict[str, str]]:
                     "link": link,
                 }
             )
-    return out
+    return out, ok_feeds
 
 
 def run_rss_scout() -> int:
+    """신규 반영 건수를 돌려준다. 피드 전량 실패는 -1 (호출부가 실패 종료)."""
     mapping = _load_json(MAPPING_PATH, {})
     if not isinstance(mapping, dict):
         mapping = {}
@@ -288,7 +306,15 @@ def run_rss_scout() -> int:
     new_rows: List[Dict[str, str]] = []
     breaking_alerts: List[Tuple[str, str]] = []
 
-    headlines = _parse_feeds()
+    headlines, ok_feeds = _parse_feeds()
+    if ok_feeds == 0:
+        # 전량 실패. news_flash.json 을 건드리지 않고 실패로 종료한다 —
+        # 여기서 정상 종료하면 mtime 만 신선해져 신선도 보드가 통과시킨다.
+        sys.stderr.write(
+            f"[RSSScout] outcome=total_fail feeds={len(FEEDS)} ok=0 — 산출 미갱신·실패 종료\n"
+        )
+        return -1
+
     for h in headlines:
         link = h["link"]
         if link in seen_links:
@@ -340,4 +366,7 @@ def run_rss_scout() -> int:
 
 if __name__ == "__main__":
     n = run_rss_scout()
+    if n < 0:
+        sys.stderr.write("[RSSScout] 피드 전량 실패 — exit 1\n")
+        sys.exit(1)
     print(f"[RSSScout] 신규 헤드라인 {n}건 반영 (raw_data.news_flash)")
