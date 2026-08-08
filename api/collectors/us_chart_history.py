@@ -191,6 +191,11 @@ def collect(limit: int = 0, refresh: bool = False, universe_limit: int = 0,
 
     cooldowns = 0
     stopped_early = False
+    # 🚨 영구 결손과 차단을 구분한다 (2026-08-09 N=2 학습). 레이크가 다 찬 뒤의 잔여 todo 는
+    #   상폐·티커변경·야후 미수록만 남아 성공률이 구조적으로 0% 다. 그걸 차단으로 읽으면
+    #   매 run 이 240초를 헛되이 쓰고 meta 의 cooldowns 가 계속 1 로 찍혀 "차단당하는 중" 으로
+    #   오독된다. 쿨다운 재시도가 **한 종도 회복하지 못하면** 그 run 에서는 더 기다리지 않는다.
+    permanent_miss = False
     for start in range(0, len(todo), CHUNK):
         chunk = todo[start:start + CHUNK]
         res = _run_batch(chunk)
@@ -198,7 +203,7 @@ def collect(limit: int = 0, refresh: bool = False, universe_limit: int = 0,
         ok += len(chunk) - len(miss)
 
         rate = (len(chunk) - len(miss)) / len(chunk)
-        if rate < MIN_CHUNK_OK_RATE and miss:
+        if rate < MIN_CHUNK_OK_RATE and miss and not permanent_miss:
             # 차단 의심 — 쿨다운 후 이 청크의 실패분만 재시도. 회복하면 계속 진행한다.
             if cooldowns >= MAX_COOLDOWNS:
                 failed.extend(miss)
@@ -216,8 +221,14 @@ def collect(limit: int = 0, refresh: bool = False, universe_limit: int = 0,
             recovered = sum(1 for good in res2 if good)
             ok += recovered
             failed.extend([t for t, good in zip(miss, res2) if not good])
-            print(f"[us_chart_history] 재시도 회복 {recovered}/{len(miss)}",
-                  file=sys.stderr, flush=True)
+            if recovered == 0:
+                permanent_miss = True
+                print(f"[us_chart_history] 재시도 회복 0/{len(miss)} — 차단이 아니라 영구 결손"
+                      f"(상폐·티커변경·야후 미수록)로 판단. 이 run 은 더 대기하지 않는다",
+                      file=sys.stderr, flush=True)
+            else:
+                print(f"[us_chart_history] 재시도 회복 {recovered}/{len(miss)}",
+                      file=sys.stderr, flush=True)
         else:
             failed.extend(miss)
 
@@ -232,6 +243,9 @@ def collect(limit: int = 0, refresh: bool = False, universe_limit: int = 0,
         "have_remote": len(remote),
         "fetched_now": ok, "failed_now": len(failed), "failed_sample": failed[:30],
         "cooldowns": cooldowns, "stopped_early": stopped_early,
+        # True = 남은 실패가 차단이 아니라 영구 결손으로 판정됐다는 뜻. 커버리지가 안 오르는
+        # 이유를 다음 사람이 오독하지 않게 한다(차단이면 재시도가 의미 있고, 영구면 없다).
+        "permanent_miss": permanent_miss,
         "source": "yfinance period=max auto_adjust=True",
         "note": ("레포 비커밋 — 5,000종목 규모라 Blob/외부 저장 대상. "
                  "🚨 실패는 상장폐지·티커변경·야후 미수록 혼재이며 사유를 단정하지 않는다."),
