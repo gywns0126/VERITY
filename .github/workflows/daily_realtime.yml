@@ -218,6 +218,19 @@ jobs:
 
       - name: Run analysis
         env:
+          # 🚨 VERITY_MODE 기본값 = dev = LLM 호출이 mock 으로 대체된다. 이 한 줄이 없어서
+          #   **꼬리위험 알림(전쟁·대규모 재난 등)이 조용히 꺼져 있었다** — 2026-08-08 발견.
+          #   MOCK CENSUS 가 매 실행 gemini.tail_risk 를 찍고 있었는데, 이는 LLM 을 매번
+          #   호출한다는 뜻이 아니라 데코레이터가 **함수 전체**에 붙어 프리필터·쿨다운
+          #   검사까지 통째로 스텁된다는 뜻이다(mock 반환값 None → 아무 알림도 안 나감).
+          #
+          #   비용: prod 에서는 3중 게이트가 실제로 작동해 호출이 드물다.
+          #     ① 프리필터 — 지진/쓰나미/전쟁/미사일/도발/대형 산불/airstrike 등 키워드 매칭
+          #     ② 쿨다운 12분  ③ severity 8+ 만 텔레그램 발송
+          #     (Claude 교차검증은 Gemini severity 7+ 일 때만 = 이중 게이트)
+          #   평시 호출 0, 재난·전쟁 헤드라인이 뜬 날에만 소수. 이 파이프라인의 LLM 호출은
+          #   이것 하나뿐임을 최근 실행 5회 MOCK CENSUS 로 확인(gemini.tail_risk 단일 키).
+          VERITY_MODE: prod
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
