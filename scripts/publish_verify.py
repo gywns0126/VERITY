@@ -46,6 +46,62 @@ def _fetch(url: str, timeout: int = 45):
         return r.read(), r.headers.get("age")
 
 
+# ── 섹션 커버리지 (2026-08-08) ─────────────────────────────────────────
+# PM "다른 종목들도 이렇게 계속 차야 하는데" — 종전 게이트는 facts.PER/PBR 두 개를
+# 하한 5% 로만 봤다. 그래서 2026-08-08 에 발견된 갭(리포트 자체가 없는 종목 198개,
+# 공시 없는 종목 570개)은 이 게이트를 그대로 통과했다. 붕괴만 잡고 **미충족은 못 본다**.
+#
+# 두 가지를 더한다:
+#   ① 래칫 — 한 번 찬 섹션이 다시 비면 막는다(회귀 방지). 절대 임계를 사람이 정하지 않고
+#      과거 기록 대비로 판단하므로, 커버리지가 늘수록 기준도 같이 올라간다.
+#   ② 갭 순위 — 덜 찬 섹션을 매 발행마다 출력해 다음에 채울 곳이 저절로 드러나게 한다.
+#      (한 종목씩 사람이 발견하는 방식은 지속 가능하지 않다는 것이 이번 사례의 교훈)
+_SECTIONS = ("disclosures", "fin_series", "ownership", "calendar", "peer", "consensus", "business")
+# 회귀 판정 여유 — 유니버스 구성이 바뀌면 몇 %p 는 자연 변동한다. 그보다 큰 하락만 잡는다.
+_RATCHET_TOL_PCT = 3.0
+# 종목 수 감소 허용치(%). 상장폐지 등으로 소폭 줄 수 있으나 대량 이탈은 사고다.
+_RATCHET_N_TOL = 2.0
+# 기준선 = 최근 이 개수의 기록 중 최댓값 (단발 이상치에 기준이 끌려가지 않도록)
+_BASELINE_WINDOW = 10
+
+
+def _section_coverage(arr: list) -> dict:
+    """섹션별 보유 종목 비율(%). 값의 품질이 아니라 '있나 없나'만 본다 = 사실 계측."""
+    total = len(arr) or 1
+    out = {}
+    for sec in _SECTIONS:
+        out[sec] = round(sum(1 for s in arr if _filled((s or {}).get(sec))) * 100.0 / total, 1)
+    return out
+
+
+def _baseline_from_history(fname: str) -> dict:
+    """과거 기록에서 파일별 최고 커버리지·최대 N 회수. 기록 없으면 빈 dict(첫 실행 = 통과)."""
+    best: dict = {}
+    best_n = 0
+    try:
+        with open(HIST, "r", encoding="utf-8") as f:
+            lines = f.readlines()[-_BASELINE_WINDOW:]
+    except FileNotFoundError:
+        return {}
+    for line in lines:
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        for r in rec.get("results") or []:
+            if r.get("file") != fname:
+                continue
+            for k, v in (r.get("coverage") or {}).items():
+                if isinstance(v, (int, float)) and v > best.get(k, -1):
+                    best[k] = v
+            n = r.get("total")
+            if isinstance(n, int) and n > best_n:
+                best_n = n
+    if best_n:
+        best["_total"] = best_n
+    return best
+
+
 def verify_one(fname: str, cfg: dict) -> dict:
     res: dict = {"file": fname, "ok": False}
     try:
@@ -82,6 +138,26 @@ def verify_one(fname: str, cfg: dict) -> dict:
     res["ok"] = ok
     if not ok:
         res["error"] = f"배달 채움율 붕괴 {pcts} < floor {cfg['floor']}%"
+
+    # 섹션 커버리지 + 래칫(회귀 방지). 붕괴(floor)와 별개로 **후퇴**를 잡는다.
+    cov = _section_coverage(arr)
+    res["coverage"] = cov
+    base = _baseline_from_history(fname)
+    drops = []
+    for k, v in cov.items():
+        b = base.get(k)
+        if isinstance(b, (int, float)) and v < b - _RATCHET_TOL_PCT:
+            drops.append(f"{k} {b}%→{v}%")
+    bn = base.get("_total")
+    if isinstance(bn, int) and bn > 0 and total < bn * (1 - _RATCHET_N_TOL / 100.0):
+        drops.append(f"종목수 {bn}→{total}")
+    if drops:
+        res["ok"] = False
+        res["regression"] = drops
+        prev = res.get("error")
+        res["error"] = ("커버리지 후퇴: " + " · ".join(drops)) + (f" | {prev}" if prev else "")
+    # 미충족 상위 — 다음에 채울 곳이 매 발행마다 드러나게 한다(사람이 종목별로 찾지 않도록)
+    res["gaps"] = sorted(((k, v) for k, v in cov.items() if v < 95.0), key=lambda x: x[1])[:5]
     return res
 
 
@@ -101,12 +177,16 @@ def main() -> None:
     with open(HIST, "a", encoding="utf-8") as f:
         f.write(json.dumps({"ts": doc["generated_at"], "ok": doc["ok"], "failed": doc["failed"],
                             "results": [{"file": r["file"], "ok": r.get("ok"), "pct": r.get("pct"),
+                                         "total": r.get("total"), "coverage": r.get("coverage"),
                                          "cdn_age_s": r.get("cdn_age_s")} for r in results]},
                            ensure_ascii=False) + "\n")
     for r in results:
         tag = "OK" if r.get("ok") else "FAIL"
         extra = (" · " + r["error"]) if r.get("error") else ""
         print(f"[publish_verify] {tag} {r['file']} · N={r.get('total')} · {r.get('pct')} · CDN age={r.get('cdn_age_s')}s{extra}")
+        if r.get("gaps"):
+            gap_s = " · ".join(f"{k} {v}%" for k, v in r["gaps"])
+            print(f"[publish_verify]   미충족 상위: {gap_s}")
     if bad:
         print(f"::error::publish_verify {len(bad)} 파일 배달 붕괴 — {[b['file'] for b in bad]}")
         raise SystemExit(1)
