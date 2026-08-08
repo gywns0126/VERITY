@@ -28,6 +28,8 @@ KRLISTED_PATH = os.path.join(_ROOT, "data", "kr_listed.json")
 NAMES_PATH = os.path.join(_ROOT, "data", "kr_stock_names.json")
 CONSENSUS_PATH = os.path.join(_ROOT, "data", "consensus_data.json")
 CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
+# 과거 적재분 — alerts 와 종목 집합이 다르다(공시 커버리지 확대, 2026-08-08)
+CATALYST_BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_catalyst_backfill.jsonl")
 SECTOR_MAP_PATH = os.path.join(_ROOT, "data", "kr_sector_map.json")
 KRXMKTCAP_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
 DART_KR_BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_kr_backfill_result.json")
@@ -168,37 +170,53 @@ def _num(v: Any, suffix: str = "", digits: int = 1) -> Optional[str]:
     return f"{s}{suffix}"
 
 
+# 종목당 공시 상한 — backfill 병합으로 총 행이 11K → 148K 가 되므로 상한이 없으면
+# 발행 JSON 이 폭증한다. 최근 순 정렬 후 자르므로 화면이 쓰는 최신분은 보존된다.
+CATALYST_PER_TICKER_MAX = 30
+
+
 def _load_catalyst_by_ticker() -> Dict[str, List[Dict[str, Any]]]:
+    """공시 = alerts(최근 감시분) + backfill(과거 적재분) 병합.
+
+    🚨 2026-08-08 (PM "동우팜투테이블 정보량이 적어보여") — 종전엔 alerts 만 읽었다.
+    실측: alerts 11,072행/1,760종목 · backfill 137,370행/**1,315종목**. 두 파일의 종목
+    집합이 다르다 — 088910 은 alerts 0건인데 backfill 에는 9건 있었고, 그래서 공시 섹션이
+    비어 있었다. 커버리지가 서로를 보완하므로 둘 다 읽는다(rcept_no 로 중복 제거).
+    fin_history 를 재무추이에 병합한 것과 같은 패턴.
+    """
     out: Dict[str, List[Dict[str, Any]]] = {}
-    if not os.path.isfile(CATALYST_PATH):
-        return out
     seen: set = set()
-    with open(CATALYST_PATH, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                a = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            tk = str(a.get("ticker") or "")
-            rc = str(a.get("rcept_no") or "")
-            if not tk or not rc or rc in seen:
-                continue
-            seen.add(rc)
-            dt = str(a.get("rcept_dt") or "")
-            date = f"{dt[:4]}-{dt[4:6]}-{dt[6:8]}" if len(dt) == 8 else dt
-            out.setdefault(tk, []).append({
-                "title": a.get("report_nm") or "",
-                "label": a.get("pblntf_label") or "",
-                "date": date,
-                "is_correction": bool(a.get("is_correction")),
-                "filer": a.get("flr_nm") or "",
-                "source_url": DART + rc,
-            })
+    # alerts 를 먼저 읽어 중복 시 최근 감시분이 남게 한다(같은 rcept_no 면 뒤가 skip).
+    for path in (CATALYST_PATH, CATALYST_BACKFILL_PATH):
+        if not os.path.isfile(path):
+            continue
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    a = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                tk = str(a.get("ticker") or "")
+                rc = str(a.get("rcept_no") or "")
+                if not tk or not rc or rc in seen:
+                    continue
+                seen.add(rc)
+                dt = str(a.get("rcept_dt") or "")
+                date = f"{dt[:4]}-{dt[4:6]}-{dt[6:8]}" if len(dt) == 8 else dt
+                out.setdefault(tk, []).append({
+                    "title": a.get("report_nm") or "",
+                    "label": a.get("pblntf_label") or "",
+                    "date": date,
+                    "is_correction": bool(a.get("is_correction")),
+                    "filer": a.get("flr_nm") or "",
+                    "source_url": DART + rc,
+                })
     for tk in out:
         out[tk].sort(key=lambda d: d["date"], reverse=True)
+        del out[tk][CATALYST_PER_TICKER_MAX:]
     return out
 
 
@@ -596,9 +614,17 @@ def _median(vals: List[float]) -> Optional[float]:
     return xs[mid] if n % 2 else (xs[mid - 1] + xs[mid]) / 2.0
 
 
-def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
+def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
+                   fin_series: Optional[Dict[str, List[Dict[str, Any]]]] = None) -> Dict[str, Dict[str, float]]:
     """PER/PBR/BPS 자체계산: KRX 공식 시총·발행주식수 ÷ DART 순이익·자기자본.
-    (자기자본 = 자산/(1+부채비율/100), BPS = 자기자본/발행주식수)."""
+    (자기자본 = 자산/(1+부채비율/100), BPS = 자기자본/발행주식수).
+
+    fin_series 를 주면 fundamentals 결측 종목도 **시총 + PER 까지는** 채운다
+    (2026-08-08). 근거는 동일하다 — KRX 공식 시총 ÷ DART 공시 순이익. 다만 자기자본
+    (총자산·부채비율)이 연간 시계열에 없어 PBR/BPS 는 계산하지 않고 비워 둔다.
+    🚨 없는 값을 역산해 채우지 않는다 — 2026-08-03 rich 14종목 전수 오염이 역산 경로에서
+    나왔다. 계산 가능한 것만 계산하고 나머지는 결측으로 남기는 편이 맞다.
+    """
     out: Dict[str, Dict[str, float]] = {}
     for tk, f in fundamentals.items():
         km = krx_map.get(tk)
@@ -640,6 +666,32 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any]) -> Dic
             pass
         if v:
             out[tk] = v
+
+    # fundamentals 결측 종목 보강 — 시총 + PER 만 (근거: KRX 공식 시총 ÷ DART 공시 순이익).
+    # 이 종목들은 위 루프가 아예 훑지 않아 시총조차 없었고, 그래서 정렬·필터·동종비교에서
+    # 통째로 빠졌다. PBR/BPS 는 자기자본 입력이 없어 계산하지 않는다(결측 유지).
+    for tk, pts in (fin_series or {}).items():
+        if tk in out or not pts:
+            continue
+        km = krx_map.get(tk)
+        if not km:
+            continue
+        try:
+            mktcap = float(km.get("mktcap") or 0)
+        except (TypeError, ValueError):
+            continue
+        if mktcap <= 0:
+            continue
+        v = {"mktcap": mktcap}
+        latest = pts[-1]  # _load_fin_series 가 연도 오름차순으로 정렬해 둔다
+        try:
+            ni = float(latest.get("net")) if latest.get("net") is not None else None
+        except (TypeError, ValueError):
+            ni = None
+        if ni and ni > 0:
+            v["PER"] = round(mktcap / ni, 2)
+            v["_per_in"] = {"mktcap": mktcap, "net_income": ni, "fiscal_year": latest.get("year")}
+        out[tk] = v
     return out
 
 
@@ -935,8 +987,14 @@ def main() -> int:
                 return li.get("name") or names.get(tk) or tk, MARKET_MAP.get(li.get("market"), li.get("market") or "")
             return (names.get(tk) or tk), ""
 
-        # universe = fundamentals 1,650 ∪ 운영풀
-        universe = set(fundamentals.keys()) | set(rich_by_ticker.keys())
+        # universe = fundamentals ∪ 운영풀 ∪ **연간재무 백필 보유분**
+        # 🚨 2026-08-08 (PM "동우팜투테이블 정보량이 적어보여") — 유니버스가 fundamentals
+        #   키에만 묶여 있어, 시총·연간재무가 멀쩡히 있는데도 fundamentals 에 없으면 종목이
+        #   리포트에서 통째로 빠졌다. 088910 실측: 시총 552억·연간재무 11개년 보유,
+        #   fundamentals 누락 → 공개 리포트 부재(검색에는 노출되어 "정보량 0" 으로 보임).
+        #   fin_series 는 이미 1013행에서 종목에 부착되는데 유니버스에만 못 들어가던 상태.
+        #   DART 공시 실값이라 RULE 7 allowlist 정합(자체 산식·점수 없음).
+        universe = set(fundamentals.keys()) | set(rich_by_ticker.keys()) | set(fin_series.keys())
         stocks: List[Dict[str, Any]] = []
         for tk in universe:
             if tk in rich_by_ticker:
@@ -945,14 +1003,17 @@ def main() -> int:
                 fund = fundamentals.get(tk) or {}
                 nm, mk = _name_market(tk)
                 light = build_light(tk, fund, nm, mk, catalyst, consensus_map)
-                # 컨센서스 보강만 있고 facts 전무면 노출 가치 낮음 — facts 있을 때만
-                if light["facts"] or light["disclosures"]:
+                # 컨센서스 보강만 있고 facts 전무면 노출 가치 낮음 — 실체가 있을 때만.
+                # 연간재무 시계열(fin_series)도 실체로 인정한다 — DART 공시 실값이고
+                # 1013행에서 종목에 부착되어 추이 그래프로 렌더된다. 이걸 제외하면
+                # fundamentals 결측 종목이 "검색은 되는데 리포트는 빈" 상태가 된다.
+                if light["facts"] or light["disclosures"] or fin_series.get(tk):
                     stocks.append(light)
 
         # PER/PBR 자체계산 (KRX 공식 시총 ÷ DART) + 동종업계 비교 준비
         krx_doc = _load_json(KRXMKTCAP_PATH, {})
         krx_map = (krx_doc.get("map") if isinstance(krx_doc, dict) else {}) or {}
-        valuation = _valuation_map(fundamentals, krx_map) if krx_map else {}
+        valuation = _valuation_map(fundamentals, krx_map, fin_series) if krx_map else {}
         sector_doc = _load_json(SECTOR_MAP_PATH, {})
         sector_map = (sector_doc.get("map") if isinstance(sector_doc, dict) else {}) or {}
         sector_medians = _sector_medians(fundamentals, sector_map, valuation) if sector_map else {}
