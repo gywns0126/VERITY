@@ -78,6 +78,17 @@ const DARK = {
     warn: "#ffb340",
     onAccent: "#0f1318",
 }
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-mbr-*)로 발행. 되돌리지 말 것.
+//   JS 다크 감지(readBodyDark/MutationObserver)는 첫 페인트를 라이트로 그린 뒤 뒤늦게
+//   다크로 바꿔 "부분 라이트" 로 보이는 사고가 반복됐다. body[data-framer-theme] 를 CSS 가
+//   직접 받으면 페인트 시점부터 정합이라 그 창 자체가 없어진다.
+//   (이미 마이그레이션된 36개 공개 컴포넌트와 동일 문법 — 프레이머 네이티브 테마 정합)
+const _ANP = "mbr"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 // 미국주식 KRW 환산 — 실시간 usd_krw(price_pulse) 조회. 폴백=근사값(PublicHoldingsTab 동기).
@@ -263,50 +274,12 @@ function FlagIcon(props: { code: string; size?: number }) {
         />
     )
 }
-function readBodyDark(): boolean {
-    try {
-        const _lsPref =
-            typeof localStorage !== "undefined"
-                ? localStorage.getItem("verity_theme")
-                : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
 
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
 // 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement
-        ? document.documentElement.dataset.anTheme
-        : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
 
 
 /* 🚨 2026-07-29 미장 링크 사고 — usStockPath 기본값이 "/us/stock" 이었는데 **그 페이지는 존재한 적이 없다**
@@ -333,9 +306,6 @@ export default function PublicMorningBriefing(props: Props) {
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [themeDark, setThemeDark] = useState<boolean>(() =>
-        RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()
-    )
 
     // ① 내 자산 상태
     const [rows, setRows] = useState<any[]>(SAMPLE_HOLD)
@@ -356,8 +326,6 @@ export default function PublicMorningBriefing(props: Props) {
     const [, setNowTick] = useState(0) // 경과 시간 표시 갱신용 60초 틱
     const [reloadTick, setReloadTick] = useState(0) // 탭 복귀·5분 폴링 재조회 트리거
 
-    const isDark = onCanvas ? !!dark : themeDark
-    const C = isDark ? DARK : LIGHT
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
 
     // 반응형 폭
@@ -371,20 +339,6 @@ export default function PublicMorningBriefing(props: Props) {
     }, [])
 
     // 테마 자가감지
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (typeof MutationObserver !== "undefined" && document.body) {
-            const mo = new MutationObserver(read)
-            mo.observe(document.body, {
-                attributes: true,
-                attributeFilter: ["data-framer-theme"],
-            })
-            return () => mo.disconnect()
-        }
-    }, [onCanvas])
-
     // 보유종목 로드 (/api/holdings)
     const loadHoldings = useCallback(() => {
         if (onCanvas) return
@@ -753,6 +707,7 @@ export default function PublicMorningBriefing(props: Props) {
 
     return (
         <div ref={rootRef} style={shell}>
+            <style>{AN_PALETTE}</style>
             {/* 제호 — 카드 밖 (카드 2장을 하나의 채널로 묶는 역할) */}
             <div
                 style={{
