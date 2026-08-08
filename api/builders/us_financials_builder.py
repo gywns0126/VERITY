@@ -241,7 +241,32 @@ def main() -> int:
                              "smallcap=소형주 트랙(combined 중 시총 ≤ $%dB)" % (SMALLCAP_CAP_MAX // 10**9))
     parser.add_argument("--offset", type=int, default=0,
                         help="유니버스 시작 오프셋 (다일/배치 분할 적재용, 멱등 재개).")
+    parser.add_argument("--summary-only", action="store_true",
+                        help="SEC fetch 0 — 디스크의 per-ticker 파일만 읽어 _summary 재생성.")
     args = parser.parse_args()
+
+    if args.summary_only:
+        # 🚨 2026-08-08 신설. 벌크 경로(sec_companyfacts_bulk)가 per-ticker 만 쓰므로
+        #    _summary 를 따로 재생성해야 한다 — us_stock_report_public / us_quarterly_public
+        #    빌더가 _summary 를 입력으로 읽는다. 여기서 SEC 를 다시 때리지 않는다.
+        snaps: List[Dict[str, Any]] = []
+        for path in sorted(OUTPUT_DIR.glob("*.json")):
+            if path.name.startswith("_"):
+                continue
+            try:
+                snaps.append(json.loads(path.read_text(encoding="utf-8")))
+            except (OSError, ValueError):
+                continue
+        if not snaps:
+            print("[us_financials] per-ticker 파일 0 — _summary 재생성 불가", file=sys.stderr)
+            return 1
+        summary = _build_summary(snaps)
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        SUMMARY_PATH.write_text(json.dumps(summary, ensure_ascii=False, indent=2),
+                                encoding="utf-8")
+        print(f"[us_financials] _summary 재생성 {len(snaps):,}종목 → {SUMMARY_PATH.name}",
+              file=sys.stderr)
+        return 0
 
     if args.ticker:
         tickers = [args.ticker.upper()]
