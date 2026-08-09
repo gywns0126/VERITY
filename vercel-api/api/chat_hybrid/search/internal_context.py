@@ -14,6 +14,7 @@
   · recommendations.json — 전 종목 원본(가격·시총·PER/PBR·ROE·성장률·추세). 공개본은 strip 됨
   · portfolio.json — VAMS 자산/수익/검증 리포트, 시스템 헬스. 공개본은 31키로 축소(Stage 3)
   · us_analyst_consensus.json — 목표가·투자의견. **발행 영구 금지**(Benzinga/S&P 실권리)
+  · us_form144.json — 내부자 매도 **예정** 신고(SEC 공시 사실). Form 4 와 시점이 반대인 별개 축
   · factor_ic_history.json — 팩터 IC 시계열
   · validation_summary.json full — funnel 신호 포함(공개본은 제외)
 
@@ -245,6 +246,45 @@ def _sec_consensus(tickers: List[str]) -> List[str]:
     return out
 
 
+def _sec_form144(tickers: List[str]) -> List[str]:
+    """미장 Form 144 — 내부자 매도 **예정** 신고.
+
+    🚨 Form 4(사후 체결)와 시점이 반대인 별개 축이다. 여기 수치는 "팔겠다고 신고한 것" 이지
+       체결이 아니다 — 신고 후 미집행도 흔하다. 합성 LLM 이 "팔았다" 로 쓰지 않게 매 줄에
+       '예정' 을 남긴다(RULE 7 = 사실만, 우리 해석 0).
+    """
+    doc = _load("us_form144.json")
+    if not isinstance(doc, dict):
+        return []
+    rows = doc.get("stocks")
+    if not isinstance(rows, list) or not rows:
+        return []
+    by = {str((r or {}).get("ticker") or ""): r for r in rows}
+    hit = [by[t] for t in tickers if t in by][:_MAX_TICKER_DETAIL]
+    if not hit:
+        return [f"[내부] 미장 Form 144(매도 예정 신고) {len(rows)}종 보유"]
+    out = ["[내부] 미장 Form 144 — 내부자 매도 **예정** 신고(체결 아님). SEC 공시 사실."]
+    for r in hit:
+        head = f"  · {r.get('ticker')} 신고 {r.get('notice_count')}건"
+        if r.get("total_value_usd"):
+            head += f" · 예정 금액 합 ${r['total_value_usd']:,.0f}"
+        if r.get("latest_filing_date"):
+            head += f" · 최근 {r['latest_filing_date']}"
+        out.append(head)
+        for n in (r.get("notices") or [])[:3]:
+            bits = [str(n.get("filing_date") or "")]
+            if n.get("person"):
+                bits.append(str(n["person"])[:24])
+            if n.get("relationship"):
+                bits.append(str(n["relationship"]))
+            if n.get("units"):
+                bits.append(f"{n['units']:,}주 예정")
+            if n.get("value_usd"):
+                bits.append(f"${n['value_usd']:,.0f}")
+            out.append("      - " + " · ".join(bits))
+    return out
+
+
 def _sec_factor_ic() -> List[str]:
     doc = _load("factor_ic_history.json")
     if not doc:
@@ -295,6 +335,7 @@ def build_internal_context(
         lambda: _sec_recommendations(tks),
         _sec_vams,
         lambda: _sec_consensus(tks),
+        lambda: _sec_form144(tks),
         _sec_factor_ic,
         _sec_health,
     ):
