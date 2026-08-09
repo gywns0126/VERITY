@@ -17,9 +17,16 @@ KR DART 보다 정밀: restatement / auditor_change = 미장 특화 red flag (KR
   5.01 → control_change    (Changes in Control of Registrant)
   2.05 → restructuring     (Costs Associated with Exit or Disposal)
 
-한계 (정직, RULE 7): registered offering(424B/S-1)은 8-K 아님 → dilution 은 Item 3.02
-  (unregistered) 만 포착. convertible(CB)은 8-K item(1.01 광범위)으로 정확 식별 불가 → 미집계.
+등록 공모 (2026-08-09 추가 — 옛 "한계" 항목을 메움):
+  S-1 / S-3 / F-1 (+/A) → offering_registered  (등록 신고 = 발행 준비)
+  424B*               → offering_priced       (프로스펙터스 = 실제 발행·매출)
+  🚨 dilution(8-K 3.02) 과 **합치지 않는다**. 3.02 는 비등록 매출이고 이쪽은 등록 공모라
+  성격이 다르다. 합치면 기존 dilution 카운트의 의미가 바뀐다. 같은 submissions 응답에
+  이미 들어 있어 추가 HTTP 호출은 0.
+
+한계 (정직, RULE 7): convertible(CB)은 8-K item(1.01 광범위)으로 정확 식별 불가 → 미집계.
   노이즈(2.02 실적 / 5.07 주총 / 7.01 FD / 8.01 기타 / 9.01 첨부 / 5.02 임원) = 미집계.
+  등록 신고는 철회·미발행으로 끝날 수 있다 — offering_registered 는 "발행 확정" 이 아니다.
 
 입력: data/us_smallcap_corner.json(종목) + data/sec_ticker_cik_map.json(CIK)
 출력: data/us_disclosure_forensics.json {stocks:[{ticker, name, counts, latest_8k, n_8k}]}
@@ -67,8 +74,26 @@ def _cik10(raw) -> str:
     return s.zfill(10) if s.isdigit() else s
 
 
-def _fetch_8k_items(cik10: str, cutoff: str):
-    """submissions/CIK → 윈도우 내 8-K filing 의 (date, items list). 실패 시 None."""
+def _offering_category(form: str) -> str:
+    """등록 공모 form → 카테고리. 해당 없으면 빈 문자열.
+
+    424B* = 프로스펙터스(실제 발행·매출). S-1/S-3/F-1 = 등록 신고(준비 단계).
+    둘을 나누는 이유 = 등록만 하고 발행 안 하는 경우가 흔해 신호 강도가 다르다.
+    """
+    f = form.upper().strip()
+    if f.startswith("424B"):
+        return "offering_priced"
+    base = f.split("/")[0]  # S-1/A → S-1
+    if base in ("S-1", "S-3", "F-1", "F-3"):
+        return "offering_registered"
+    return ""
+
+
+def _fetch_filings(cik10: str, cutoff: str):
+    """submissions/CIK → 윈도우 내 (8-K 목록, 등록공모 목록).
+
+    같은 응답에서 둘 다 뽑는다 — 등록 공모를 위해 추가 호출을 하지 않는다.
+    """
     url = f"https://data.sec.gov/submissions/CIK{cik10}.json"
     req = urllib.request.Request(url, headers={"User-Agent": SEC_USER_AGENT})
     d = json.loads(urllib.request.urlopen(req, timeout=25).read())
@@ -77,16 +102,20 @@ def _fetch_8k_items(cik10: str, cutoff: str):
     dates = recent.get("filingDate", [])
     items = recent.get("items", [])
     out = []
+    offerings = []
     for i, f in enumerate(forms):
-        if f != "8-K":
-            continue
         fdate = dates[i] if i < len(dates) else ""
         if fdate < cutoff:  # ISO 날짜 문자열 비교
             continue
-        raw_items = items[i] if i < len(items) else ""
-        codes = [c.strip() for c in str(raw_items).split(",") if c.strip()]
-        out.append((fdate, codes))
-    return out
+        if f == "8-K":
+            raw_items = items[i] if i < len(items) else ""
+            codes = [c.strip() for c in str(raw_items).split(",") if c.strip()]
+            out.append((fdate, codes))
+            continue
+        cat = _offering_category(str(f))
+        if cat:
+            offerings.append((fdate, cat, str(f).upper().strip()))
+    return out, offerings
 
 
 def main() -> int:
@@ -106,9 +135,9 @@ def main() -> int:
             fail += 1
             continue
         try:
-            filings = _fetch_8k_items(_cik10(raw_cik), cutoff)
+            filings, offerings = _fetch_filings(_cik10(raw_cik), cutoff)
         except Exception as e:  # noqa: BLE001
-            print(f"[us_forensics] {tk} 8-K fetch 실패: {type(e).__name__}", file=sys.stderr)
+            print(f"[us_forensics] {tk} 공시 fetch 실패: {type(e).__name__}", file=sys.stderr)
             fail += 1
             time.sleep(0.3)
             continue
@@ -121,6 +150,16 @@ def main() -> int:
                 cat = ITEM_CATEGORY.get(c)
                 if cat:
                     counts[cat] = counts.get(cat, 0) + 1
+
+        # 등록 공모 — dilution(3.02) 과 별도 키로 집계한다.
+        latest_offering = ""
+        latest_offering_form = ""
+        for fdate, cat, form in offerings:
+            counts[cat] = counts.get(cat, 0) + 1
+            if fdate > latest_offering:
+                latest_offering = fdate
+                latest_offering_form = form
+
         if counts:  # forensic 신호 보유 종목만 (사실 없으면 비노출, RULE 7)
             stocks.append({
                 "ticker": tk,
@@ -128,6 +167,9 @@ def main() -> int:
                 "counts": counts,
                 "n_8k": len(filings),
                 "latest_8k": latest,
+                "n_offering": len(offerings),
+                "latest_offering": latest_offering,
+                "latest_offering_form": latest_offering_form,
             })
             ok += 1
         else:
@@ -140,7 +182,7 @@ def main() -> int:
         "_meta": {
             "generated_at": _now_kst().isoformat(),
             "track": "us_smallcap_forensics",
-            "source": "SEC EDGAR submissions 8-K items",
+            "source": "SEC EDGAR submissions — 8-K items + 등록공모(S-1/S-3/F-1/424B)",
             "window_days": WINDOW_DAYS,
             "universe_n": len(corner),
             "flagged_n": len(stocks),
