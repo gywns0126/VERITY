@@ -1262,6 +1262,22 @@ def _update_simulation_stats(portfolio: dict):
 
     reset_at = str(((vams.get("reset_meta") or {}).get("reset_at") or ""))[:10] or None
 
+    # 🚨 2026-08-09 규칙 변경 표식 (docs/PREREG_STOPLOSS_CAP_2026_08_09.md).
+    #   손절 캡 −5% → −20% 로 바꾸면 이전 거래와 이후 거래는 **다른 규칙의 산물**이다.
+    #   5/17 리셋 선례(옛 룰/새 룰 혼재 방지) 정합.
+    #   다만 자산 리셋은 하지 않으므로 창을 통째로 옮기지 않고 **양쪽을 다 노출**한다 —
+    #   집계 창은 reset_at 유지(누적 N 보존), 규칙 변경 이후만의 집계를 별도 필드로 병기.
+    #   어느 창을 게이트에 쓸지는 PM 결정 사항이며 여기서 임의로 바꾸지 않는다.
+    rule_changes = vams.get("rule_change_log") or []
+    last_rule_change = None
+    if isinstance(rule_changes, list) and rule_changes:
+        try:
+            last_rule_change = str(sorted(
+                (str(r.get("at") or "") for r in rule_changes if isinstance(r, dict))
+            )[-1])[:10] or None
+        except (TypeError, ValueError):
+            last_rule_change = None
+
     def _in_window(ev: dict) -> bool:
         if not reset_at:
             return True
@@ -1314,6 +1330,16 @@ def _update_simulation_stats(portfolio: dict):
         } if worst_trade else None,
         # 감사 필드 (2026-08-05) — 어떤 창을 셌는지 산출물 자체가 말하게 한다.
         "window_start": reset_at,
+        # 규칙 변경 이후만의 집계 — 게이트 창 전환 여부는 PM 결정(임의 전환 금지).
+        "rule_change_at": last_rule_change,
+        "post_rule_change": (
+            {
+                "trades": sum(1 for e in sells if str(e.get("date", ""))[:10] >= last_rule_change),
+                "realized_pnl": round(sum(
+                    float(e.get("pnl") or 0) for e in sells
+                    if str(e.get("date", ""))[:10] >= last_rule_change), 2),
+            } if last_rule_change else None
+        ),
         "excluded_pre_reset_trades": excluded_n,
         "excluded_phantom_sells": phantom_n,
         "phantom_pnl_excluded": led["phantom_pnl"],
