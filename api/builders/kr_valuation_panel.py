@@ -29,6 +29,11 @@ PIT 소스가 없어서였다. 이 패널이 그 47점의 입력이다.
 - 배당 = 사업연도 종료 **+90일** 이후에만 관측 가능(주총 확정 시점 근사).
 
 출력 = `data/metadata/kr_valuation_panel.jsonl`
+
+🚨 **이 출력은 git 추적하지 않는다**(.gitignore). 입력 3종으로 외부호출 0 · 약 5초에
+   재빌드되는 66MB 파생물이라, 재빌드마다 새 blob 을 쌓을 이유가 없다.
+   추적되는 것 = 입력 원장 3종 + `kr_valuation_panel_health.json`(요약).
+   소비 전에 `python3 api/builders/kr_valuation_panel.py` 를 먼저 돌릴 것.
 """
 from __future__ import annotations
 
