@@ -16,7 +16,7 @@ PIT 소스가 없어서였다. 이 패널이 그 47점의 입력이다.
 
 | 항목 | 운영 | 여기 | 알려진 차이 |
 |---|---|---|---|
-| PER | yfinance trailingPE | 시총 ÷ TTM 순이익 | 운영은 지배주주 EPS 기준, 여기는 **전체 순이익**(`ifrs-full_ProfitLoss`). 비지배지분 큰 지주사에서 벌어진다 |
+| PER | yfinance trailingPE | **주가 ÷ 지배주주 EPS**(DART alotMatter `(연결)주당순이익`) | 정의는 같다. 운영은 TTM, 여기는 직전 확정 사업연도. EPS 부재 시 시총÷TTM순이익 폴백 |
 | PBR | yfinance priceToBook | 시총 ÷ 자본총계 | 자본총계 = 패널 역산(실 DART 대조 중앙오차 0.0%) |
 | 배당 | yfinance dividendRate/price | DART 주당현금배당금 ÷ 종가 | 운영은 최근 12개월, 여기는 직전 확정 사업연도 |
 
@@ -162,8 +162,14 @@ def load_dividends() -> Dict[str, List[Dict[str, Any]]]:
             y = r.get("year")
             if y is None:
                 continue
-            # 사업연도 종료 +90일 이후에 관측 가능
-            r["_as_of"] = _plus(int(y) * 10000 + 1231, LAG_DIVIDEND_DAYS)
+            # 🚨 당기(thstrm)는 `rcept_date` = **실제 접수일**이 진짜 관측 시점이다
+            #    (005930 2024: 결산 12-31, 접수 2025-03-11 = +70일 — +90일 근사보다 이르다).
+            #    전기·전전기는 자기 사업연도 보고서로 더 일찍 공개됐으므로 그 해 +90일로 근사.
+            rd = str(r.get("rcept_date") or "")
+            if r.get("basis") == "thstrm" and len(rd) == 8 and rd.isdigit():
+                r["_as_of"] = int(rd)
+            else:
+                r["_as_of"] = _plus(int(y) * 10000 + 1231, LAG_DIVIDEND_DAYS)
             out.setdefault(str(r.get("ticker") or ""), []).append(r)
     for v in out.values():
         v.sort(key=lambda x: x["_as_of"])
@@ -241,14 +247,21 @@ def build() -> Dict[str, Any]:
             if p is not None and eq is None:
                 bump("no_equity")
 
-            # 🚨 적자(ni<=0)는 PER 산출 불가 → None. 운영도 trailingPE 가 안 나와 0점이 된다.
-            per = (mc / ni) if (ni and ni > 0) else None
+            close = m.get("c")
+            dsnaps = divs.get(t)
+            dv = _pit(dsnaps, d) if dsnaps else None
+
+            # 🚨 PER 은 **주가 ÷ 지배주주 EPS** 가 정본이다 — 운영 yfinance trailingPE 와 같은 정의.
+            #    시총÷전체순이익은 비지배지분 큰 지주사에서 벌어지므로 폴백으로만 쓴다.
+            per = per_basis = None
+            eps_own = dv.get("eps_owner") if dv else None
+            if eps_own and eps_own > 0 and close and close > 0:
+                per, per_basis = float(close) / float(eps_own), "eps_owner"
+            elif ni and ni > 0:
+                per, per_basis = mc / ni, "mktcap_over_ni"
             pbr = (mc / eq) if (eq and eq > 0) else None
 
             dy = None
-            dsnaps = divs.get(t)
-            dv = _pit(dsnaps, d) if dsnaps else None
-            close = m.get("c")
             if dv is not None and close and close > 0:
                 dps = dv.get("dps")
                 if dps is not None:
@@ -261,6 +274,7 @@ def build() -> Dict[str, Any]:
                 "div_yield": (round(dy, 4) if dy is not None else None),
                 "src_quarter": (p.get("quarter_end") if p else None),
                 "src_period": (p.get("period") if p else None),
+                "per_basis": per_basis, "div_src_year": (dv.get("year") if dv else None),
                 "ni_basis": ni_basis, "ni_src_quarter": ni_src, "ni_stale_days": ni_age,
                 "eq_src_quarter": eq_src, "eq_stale_days": eq_age,
                 "pts_per": pts_per(per), "pts_pbr": pts_pbr(pbr), "pts_div": pts_div(dy),
@@ -287,6 +301,8 @@ def build() -> Dict[str, Any]:
         "max_stale_days": MAX_STALE_DAYS,
         "ni_basis": {b: sum(1 for r in rows if r.get("ni_basis") == b)
                      for b in ("ttm", "annual")},
+        "per_basis": {b: sum(1 for r in rows if r.get("per_basis") == b)
+                      for b in ("eps_owner", "mktcap_over_ni")},
         "stale_days_median": {
             k: (sorted(v)[len(v) // 2] if v else None)
             for k, v in (("ni", [r["ni_stale_days"] for r in rows
