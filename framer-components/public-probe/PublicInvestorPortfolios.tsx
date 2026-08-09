@@ -879,7 +879,12 @@ export default function PublicInvestorPortfolios(props: {
                                     font: "inherit",
                                     fontSize: 13,
                                     fontWeight: 650,
-                                    padding: "6px 15px",
+                                    // 🚨 좌우 폭 고정 — 되돌리지 말 것 (2026-08-09 PM 스크린샷).
+                                    //   padding 만 주면 글자폭(USD vs KRW)만큼 알약이 좌우로
+                                    //   흔들려 전환할 때마다 버튼이 달라 보인다.
+                                    width: 62,
+                                    padding: "6px 0",
+                                    textAlign: "center",
                                     borderRadius: 999,
                                     background: krw === o.k ? C.card : "transparent",
                                     color: krw === o.k ? C.vt : C.faint,
@@ -889,19 +894,20 @@ export default function PublicInvestorPortfolios(props: {
                             </button>
                         ))}
                     </div>
-                    {krw ? (
-                        <div
-                            style={{
-                                fontSize: 11.5,
-                                color: C.faint,
-                                marginTop: 5,
-                                textAlign: "right",
-                            }}
-                        >
-                            1달러 = {fx.rate.toLocaleString()}원
-                            {fx.asOf ? " · " + dot(fx.asOf.slice(0, 10)) + " 기준" : " · 근사값"}
-                        </div>
-                    ) : null}
+                    {/* 🚨 환율 문구는 통화와 무관하게 항상 띄운다 — 되돌리지 말 것 (2026-08-09 PM).
+                        KRW 일 때만 그리면 전환할 때마다 이 줄이 생겼다 사라져 아래가 밀린다.
+                        USD 로 보고 있어도 "무슨 환율로 환산되는지" 를 먼저 아는 편이 낫다. */}
+                    <div
+                        style={{
+                            fontSize: 11.5,
+                            color: C.faint,
+                            marginTop: 5,
+                            textAlign: "right",
+                        }}
+                    >
+                        1달러 = {fx.rate.toLocaleString()}원
+                        {fx.asOf ? " · " + dot(fx.asOf.slice(0, 10)) + " 기준" : " · 근사값"}
+                    </div>
                 </div>
             </div>
 

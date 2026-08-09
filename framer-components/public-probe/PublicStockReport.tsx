@@ -1943,7 +1943,10 @@ function EtfReportBlock({
                                         fontFamily: "inherit",
                                         fontSize: 11.5,
                                         fontWeight: 800,
-                                        padding: "4px 12px",
+                                        // 🚨 좌우 폭 고정 — 되돌리지 말 것 (2026-08-09 PM, 거장 토글과 동일 규율).
+                                        width: 56,
+                                        padding: "4px 0",
+                                        textAlign: "center",
                                         borderRadius: 7,
                                         background:
                                             ccy === k ? C.card : "transparent",
@@ -6184,7 +6187,10 @@ export default function PublicStockReport(props: Props) {
                                             cursor: "pointer",
                                             fontSize: 11,
                                             fontWeight: 800,
-                                            padding: "3px 9px",
+                                            // 🚨 좌우 폭 고정 — 기호 1글자($ vs ₩)도 폭이 달라 흔들린다.
+                                            width: 22,
+                                            padding: "3px 0",
+                                            textAlign: "center",
                                             borderRadius: 6,
                                             background:
                                                 ccy === k
