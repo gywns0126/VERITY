@@ -157,9 +157,15 @@ def _to_float(v: Any) -> Optional[float]:
         return None
 
 
-def fetch_day(bas_dt: str) -> List[Dict[str, Any]]:
-    """1 거래일 전 지수 시세. 휴장일 = 빈 리스트."""
+def fetch_day(bas_dt: str) -> Optional[List[Dict[str, Any]]]:
+    """1 거래일 전 지수 시세. 휴장일 = 빈 리스트, **호출 실패 = None**.
+
+    구분 이유는 `fsc_daily_prices.fetch_day` 와 동일 — 갭 루프가 실패를 휴장일로 오인하면
+    그날이 영구히 비는데 as_of 는 올라가 "신선한 구멍" 이 된다.
+    """
     body = _call({"numOfRows": _BULK_ROWS, "pageNo": 1, "basDt": bas_dt})
+    if body is None:
+        return None
     if not body:
         return []
     items = (body.get("items") or {}).get("item") or []
@@ -258,26 +264,32 @@ def run_daily() -> bool:
               f"{full[0]}~{days[0]} 구간은 `--mode backfill` 필요", file=sys.stderr)
 
     fetched = 0
-    got_latest = False
+    last_good: Optional[str] = None
+    stopped_at: Optional[str] = None
     for day in days:  # 오름차순
         rows = fetch_day(day)
+        if rows is None:  # 🚨 호출 실패 = 휴장일 아님 → 연속 구간까지만 저장
+            stopped_at = day
+            break
         if not rows:
-            continue  # 휴장일 = 빈 응답
+            continue  # 진짜 휴장일 = 빈 응답
         if len(rows) < 5:
             print(f"[fsc_index] 벌크 이상 ({day} rows={len(rows)}) — 중단", file=sys.stderr)
             return False
         _append_rows(store, rows)
         fetched += 1
-        if day == latest:
-            got_latest = True
+        last_good = day
 
-    if not got_latest:  # as_of 를 올릴 근거 없음 (조용한 성공 금지)
-        print(f"[fsc_index] latest({latest}) 수집 실패 — 채움 {fetched}일 폐기", file=sys.stderr)
+    if fetched == 0 or not last_good:  # 전량 실패 (조용한 성공 금지)
+        print(f"[fsc_index] 수집 0일 ({days[0]}~{days[-1]}) — 전량 실패", file=sys.stderr)
         return False
 
-    _save(store, latest)
+    _save(store, last_good)  # 커서 = 실제로 연속 확보한 마지막 날
     if fetched > 1:
-        print(f"[fsc_index] 갭 채움 {fetched}일 ({days[0]}~{latest})")
+        print(f"[fsc_index] 갭 채움 {fetched}일 ({days[0]}~{last_good})")
+    if stopped_at:
+        print(f"[fsc_index] {stopped_at} 호출 실패 — as_of={last_good} 까지만 저장. "
+              f"남은 {stopped_at}~{latest} 은 다음 run 이 이어서 채운다", file=sys.stderr)
     return True
 
 
@@ -321,7 +333,7 @@ if __name__ == "__main__":
     args = ap.parse_args()
     if args.mode == "probe":
         # 활용신청 승인 후 실 응답 스키마 확인용 — 지수 목록·필드 덤프
-        rows = fetch_day(latest_available_date() or "")
+        rows = fetch_day(latest_available_date() or "") or []
         print(f"rows={len(rows)}")
         if rows:
             print("필드:", list(rows[0].keys()))
