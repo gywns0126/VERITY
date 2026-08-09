@@ -601,13 +601,28 @@ function StyleMap({
                     ))}
                 {pts
                     .filter((p) => p.i === sel)
-                    .map((p) => (
+                    .map((p) => {
+                        // 🚨 이름표를 SVG 안으로 밀어 넣는다 — 되돌리지 말 것 (2026-08-09 PM 스크린샷).
+                        //   textAnchor="middle" 이라 점이 좌·우 끝에 있으면 이름의 절반이
+                        //   SVG 경계 밖으로 나가 잘린다("빌 애크먼" = 집중도 최상단 → 오른쪽 끝).
+                        //   SVG 는 뷰박스 밖을 그리지 않으므로 앵커 x 를 안쪽으로 당겨야 한다.
+                        //   한글 12.5px·750 기준 글자폭 ≈ 12.4px → 반폭 = 글자수 × 6.2.
+                        //   +4 = 후광 stroke(3.5) 절반과 여백. 이름표는 잘리느니 조금 어긋나는 게 낫다.
+                        const halfW = Math.max(20, p.name.length * 6.2 + 4)
+                        const lx = Math.min(
+                            Math.max(px(p.x), halfW),
+                            Math.max(halfW, w - halfW)
+                        )
+                        // 위쪽 끝 점은 이름표가 뷰박스 위로 나가므로 점 아래로 내린다.
+                        const ly =
+                            py(p.y) - 14 < 12 ? py(p.y) + 22 : py(p.y) - 14
+                        return (
                         <g key={p.i} style={{ cursor: "pointer" }}>
                             {/* 이름표 자리를 비우는 후광 — 점이 촘촘한 구간에서도 읽히게.
                                 paintOrder="stroke" 로 외곽선을 글자 뒤에 깐다. */}
                             <text
-                                x={px(p.x)}
-                                y={py(p.y) - 14}
+                                x={lx}
+                                y={ly}
                                 textAnchor="middle"
                                 fill={C.vt}
                                 stroke={C.card}
@@ -634,7 +649,8 @@ function StyleMap({
                             />
                             <title>{`${p.name} · 집중도 ${p.x.toFixed(0)}% · 기복 ${p.y.toFixed(1)}`}</title>
                         </g>
-                    ))}
+                        )
+                    })}
             </svg>
         </div>
     )
@@ -785,9 +801,14 @@ export default function PublicInvestorPortfolios(props: {
             style={{
                 width: "100%",
                 // 🚨 모바일 잘림 방지 — 자식이 넘쳐도 루트가 커지지 않게(2026-08-03 PM 지적).
-                //   maxWidth 100% + overflowX hidden 이 없으면 표(minWidth)가 페이지를 넓혀 잘린다.
+                //   maxWidth 100% + overflowX 클립이 없으면 표(minWidth)가 페이지를 넓혀 잘린다.
                 maxWidth: "100%",
-                overflowX: "hidden",
+                // 🚨 `hidden` 이 아니라 `clip` 이어야 한다 — 되돌리지 말 것 (2026-08-09 PM 지적).
+                //   overflow-x:hidden 은 반대축을 auto 로 계산해 이 루트를 **스크롤 컨테이너**로
+                //   만든다. 그러면 자식의 position:sticky 가 뷰포트가 아니라 이 루트를 기준으로
+                //   붙어서, 좌측 운용사 목록 고정(2026-07-30 PM)이 조용히 죽는다.
+                //   `clip` 은 잘라내되 스크롤 컨테이너를 만들지 않아 둘 다 성립한다.
+                overflowX: "clip",
                 boxSizing: "border-box",
                 // 🚨 배경 transparent — 자체 팔레트로 칠하면 테마 판정 타이밍에 흰 판이 깔린다
                 //   (2026-08-01 리포트와 동일 사유). Framer 프레임의 ColorStyle 이 비쳐 보이게 둔다.
