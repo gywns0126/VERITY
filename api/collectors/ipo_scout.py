@@ -194,9 +194,25 @@ def scout() -> Dict[str, Any]:
     }
 
 
-def main() -> None:
+def main() -> int:
     print("ipo_scout — DART 증권신고서(C001) IPO 파이프라인 수집...")
     result = scout()
+
+    # 🚨 전량 실패 가드 (#46). 두 개의 0 을 구분한다.
+    #   · count == 0        = IPO 후보 없음. 정상이다(증분 성격).
+    #   · raw_c001_count == 0 = DART 조회 자체가 실패. SEARCH_DAYS=88일 창에서
+    #     C001 증권신고서가 한 건도 없는 경우는 사실상 없다.
+    #   _call 이 실패 시 빈 dict 를 돌려주므로 rows=[] 만 보면 둘이 같아 보인다.
+    #   여기서 정상 종료하면 후보 0건 파일이 새로 기록되고 mtime 만 갱신되어
+    #   신선도 보드가 통과시킨다. [[feedback_silent_total_failure_guard]]
+    if not result.get("raw_c001_count"):
+        print(
+            f"[ipo_scout] outcome=total_fail DART C001 조회 {SEARCH_DAYS}일 창에서 0건 "
+            "— 조회 실패로 판정, 산출 미갱신·실패 종료",
+            file=sys.stderr,
+        )
+        return 1
+
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
@@ -207,7 +223,8 @@ def main() -> None:
         price_s = f"{price:,}원" if price else "공모가 미상"
         sub = o.get("subscribe_start", "?")
         print(f"  {w['corp_name'][:18]:18s} | {w.get('stage') or '?':2s} | {price_s:>12s} | 청약 {sub}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
