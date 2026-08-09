@@ -117,11 +117,16 @@ def _call(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
 
 
-def fetch_day(bas_dt: str) -> List[Dict[str, Any]]:
-    """1 거래일 전 종목 시세. 휴장일 = 빈 리스트."""
+def fetch_day(bas_dt: str) -> Optional[List[Dict[str, Any]]]:
+    """1 거래일 전 종목 시세. 휴장일 = 빈 리스트, **호출 실패 = None**.
+
+    🚨 둘을 구분해야 한다 (2026-08-09). 갭 채움 루프가 빈 리스트를 "휴장일" 로 보고
+    건너뛰는데, 호출 실패도 빈 리스트면 그날을 조용히 건너뛴 채 as_of 가 latest 로
+    올라간다 = 영구 구멍인데 신선도 보드에는 "신선" 으로 보인다.
+    """
     body = _call({"numOfRows": _BULK_ROWS, "pageNo": 1, "basDt": bas_dt})
-    if not body:
-        return []
+    if body is None:  # 연결·키·파싱 실패 — 휴장일 아님
+        return None
     items = (body.get("items") or {}).get("item") or []
     total = int(body.get("totalCount") or 0)
     # 페이지 초과 방어 — 상장 종목 폭증 시 paginate (현 2,873 << 5,000)
@@ -460,29 +465,39 @@ def run_daily() -> bool:
               f"{full[0]}~{days[0]} 구간은 `--mode backfill` 필요", file=sys.stderr)
 
     fetched = 0
-    rows_latest: List[Dict[str, Any]] = []
+    last_good: Optional[str] = None
+    last_rows: List[Dict[str, Any]] = []
+    stopped_at: Optional[str] = None
     for day in days:  # 오름차순 — 옛 날짜부터 채운다
         rows = fetch_day(day)
+        if rows is None:
+            # 🚨 호출 실패 = 휴장일 아님. 건너뛰면 그날이 영구히 비는데 as_of 는 올라가
+            #   "신선한 구멍" 이 된다. 여기서 멈추고 **연속 구간까지만** 저장한다.
+            stopped_at = day
+            break
         if not rows:
-            continue  # 휴장일 = 빈 응답 (공휴일 표를 들 필요 없음)
+            continue  # 진짜 휴장일 = 빈 응답 (공휴일 표를 들 필요 없음)
         if len(rows) < 500:  # 전 종목 벌크가 이상 축소 = API 이상 → 기존 데이터 보존
             print(f"[fsc_daily_prices] 벌크 이상 ({day} rows={len(rows)}) — 중단", file=sys.stderr)
             return False
         _append_rows(chunks, rows)
         fetched += 1
-        if day == latest:
-            rows_latest = rows
+        last_good, last_rows = day, rows
 
-    if not rows_latest:  # latest 를 못 받으면 as_of 를 올릴 수 없다 (조용한 성공 금지)
-        print(f"[fsc_daily_prices] latest({latest}) 수집 실패 — 채움 {fetched}일 폐기",
-              file=sys.stderr)
+    if fetched == 0 or not last_good:  # 한 날도 못 받음 = 전량 실패 (조용한 성공 금지)
+        print(f"[fsc_daily_prices] 수집 0일 ({days[0]}~{days[-1]}) — 전량 실패", file=sys.stderr)
         return False
 
-    _save_chunks(chunks, latest)
-    emit_hot_stock(rows_latest, latest)  # 거래대금 1위 = 리포트 콜드 랜딩 디폴트
-    emit_close_latest(chunks, latest, rows_latest)  # 평가 기준가 + 등락률(원천 fltRt)
+    # as_of = 실제로 연속 확보한 마지막 날. latest 를 못 채웠으면 그 사실을 커서에 남긴다
+    # (커서를 latest 로 올리면 남은 날을 다음 run 이 영영 안 찾는다).
+    _save_chunks(chunks, last_good)
+    emit_hot_stock(last_rows, last_good)  # 거래대금 1위 = 리포트 콜드 랜딩 디폴트
+    emit_close_latest(chunks, last_good, last_rows)  # 평가 기준가 + 등락률(원천 fltRt)
     if fetched > 1:
-        print(f"[fsc_daily_prices] 갭 채움 {fetched}일 ({days[0]}~{latest})")
+        print(f"[fsc_daily_prices] 갭 채움 {fetched}일 ({days[0]}~{last_good})")
+    if stopped_at:
+        print(f"[fsc_daily_prices] {stopped_at} 호출 실패 — as_of={last_good} 까지만 저장. "
+              f"남은 {stopped_at}~{latest} 은 다음 run 이 이어서 채운다", file=sys.stderr)
     return True
 
 

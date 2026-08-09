@@ -114,10 +114,47 @@ def test_missed_days_are_backfilled(monkeypatch, wired):
     assert calls["hot"] == "20260806" and calls["close"] == "20260806"
 
 
-def test_latest_failure_discards_partial(monkeypatch, wired):
-    # 중간 날은 받았는데 latest 를 못 받으면 as_of 를 올리지 않고 실패로 신고한다.
+def test_call_failure_is_not_treated_as_holiday(monkeypatch, wired):
+    # 🚨 핵심 회귀 — 호출 실패(None)를 휴장일([])로 오인하면 그날이 영구히 비는데
+    #   as_of 는 latest 로 올라가 "신선한 구멍" 이 된다. 실패 지점에서 멈춰야 한다.
     chunks, calls = wired
-    monkeypatch.setattr(fsc, "latest_available_date", lambda: "20260805")  # 빈 응답 날짜
+    seen = []
+
+    def fetch(day):
+        seen.append(day)
+        return None if day == "20260804" else _bulk(day)
+
+    monkeypatch.setattr(fsc, "fetch_day", fetch)
+    monkeypatch.setattr(fsc, "latest_available_date", lambda: "20260806")
+    assert fsc.run_daily() is True                 # 8/3 은 확보 = 전량 실패 아님
+    assert seen == ["20260803", "20260804"]        # 실패 지점에서 중단(뒷날 호출 안 함)
+    assert calls["saved_as_of"] == "20260803"      # 커서 = 연속 확보한 마지막 날
+    ent = chunks[fsc._chunk_idx("000001")]["stocks"]["000001"]
+    assert [c[0] for c in ent["c"]] == [20260731, 20260803]  # 구멍 없음
+
+
+def test_latest_call_failure_keeps_contiguous_progress(monkeypatch, wired):
+    # 중간까지 받고 latest 에서 실패 = 받은 만큼 저장하고 커서는 거기까지.
+    # 다음 run 이 남은 구간을 이어서 채운다(옛 동작은 전부 폐기라 진도가 0이었다).
+    chunks, calls = wired
+
+    def fetch(day):
+        if day == "20260805":
+            return []          # 진짜 휴장일
+        return None if day == "20260806" else _bulk(day)
+
+    monkeypatch.setattr(fsc, "fetch_day", fetch)
+    monkeypatch.setattr(fsc, "latest_available_date", lambda: "20260806")
+    assert fsc.run_daily() is True
+    assert calls["saved_as_of"] == "20260804"
+    assert calls["close"] == "20260804"  # 평가 기준가도 실제 확보일 기준
+
+
+def test_total_failure_saves_nothing(monkeypatch, wired):
+    # 첫 날부터 실패 = 확보 0 → exit 1 경로 (조용한 성공 금지).
+    chunks, calls = wired
+    monkeypatch.setattr(fsc, "fetch_day", lambda day: None)
+    monkeypatch.setattr(fsc, "latest_available_date", lambda: "20260806")
     assert fsc.run_daily() is False
     assert calls["saved_as_of"] is None
 
@@ -177,11 +214,29 @@ def test_index_missed_days_are_backfilled(monkeypatch):
     assert saved["as_of"] == "20260806"
 
 
-def test_index_latest_failure_discards_partial(monkeypatch):
+def test_index_call_failure_stops_and_keeps_cursor_honest(monkeypatch):
+    # 지수도 같은 계약 — 실패 지점에서 멈추고 커서는 연속 확보한 마지막 날.
+    store = {"_meta": {"as_of": "20260731"}, "indices": {}}
+    saved, seen = {}, []
+
+    def fetch(day):
+        seen.append(day)
+        return None if day == "20260804" else _idx_rows(day)
+
+    monkeypatch.setattr(fsc_idx, "_load", lambda: store)
+    monkeypatch.setattr(fsc_idx, "fetch_day", fetch)
+    monkeypatch.setattr(fsc_idx, "_save", lambda s, a: saved.update({"as_of": a}))
+    monkeypatch.setattr(fsc_idx, "latest_available_date", lambda: "20260806")
+    assert fsc_idx.run_daily() is True
+    assert seen == ["20260803", "20260804"]
+    assert saved["as_of"] == "20260803"
+
+
+def test_index_total_failure_saves_nothing(monkeypatch):
     store = {"_meta": {"as_of": "20260731"}, "indices": {}}
     saved = {}
     monkeypatch.setattr(fsc_idx, "_load", lambda: store)
-    monkeypatch.setattr(fsc_idx, "fetch_day", lambda day: [] if day == "20260806" else _idx_rows(day))
+    monkeypatch.setattr(fsc_idx, "fetch_day", lambda day: None)
     monkeypatch.setattr(fsc_idx, "_save", lambda s, a: saved.update({"as_of": a}))
     monkeypatch.setattr(fsc_idx, "latest_available_date", lambda: "20260806")
     assert fsc_idx.run_daily() is False
