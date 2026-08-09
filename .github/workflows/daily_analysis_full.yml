@@ -636,6 +636,15 @@ jobs:
         continue-on-error: true
         run: python scripts/pool_rotation_report.py
 
+      - name: 손절 캡 변경 사후 감시 (사전등록 §4·§5)
+        # 2026-08-09 PREREG_STOPLOSS_CAP — 손절 캡 −5%→−20% 의 되돌림 감시 + N=20 보고.
+        # 🚨 되돌림 감시(MDD −17%)는 **매 run** 해야 한다 — 20거래를 기다리면 늦다.
+        #   조건이 "20거래 **내**" 라 그 창 안에서 언제든 걸릴 수 있다.
+        # 판정만 하고 자동 원복은 하지 않는다(되돌림 = PM 결정).
+        # 산출 = data/metadata/stoploss_watch.json — 다음 step git add data/ (broad) = RULE 4.
+        continue-on-error: true
+        run: python -m api.observability.stoploss_watch
+
       # Tranche B dual-write (#9 봉인) — daily_analysis.yml 동일 스텝 (설계 주석은 그쪽 참조).
       - name: Private data sync (Tranche B)
         if: always()
