@@ -1,0 +1,38 @@
+{
+ "status": "watching",
+ "checked_at": "2026-08-09T22:30:27+09:00",
+ "prereg": "docs/PREREG_STOPLOSS_CAP_2026_08_09.md",
+ "rule_change_at": "2026-08-09",
+ "progress": {
+  "trades": 0,
+  "target": 20,
+  "pct": 0.0
+ },
+ "metrics": {
+  "trades": 0,
+  "wins": 0,
+  "losses": 0,
+  "win_rate": null,
+  "avg_win_krw": null,
+  "avg_loss_krw": null,
+  "pl_ratio": null,
+  "expectancy_krw": null,
+  "mdd_pct": -8.58,
+  "stop_methods": {}
+ },
+ "baseline_before_change": {
+  "trades": 22,
+  "win_rate": 0.2273,
+  "pl_ratio": 0.814,
+  "expectancy_krw": -23538,
+  "fixed_stop_avg_pct": -7.75,
+  "mdd_pct": -8.58,
+  "individual_atr_fires": 0
+ },
+ "revert": {
+  "triggered": false,
+  "threshold_mdd_pct": -17.0,
+  "action": "조건 미충족 — 감시 계속"
+ },
+ "note": "판정만 한다. 자동 원복하지 않는다(되돌림은 PM 결정). N<20 구간의 수치는 참고값이며 RULE 7 상 '통계 무의미'."
+}
