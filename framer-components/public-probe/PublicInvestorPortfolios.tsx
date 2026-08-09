@@ -854,7 +854,17 @@ export default function PublicInvestorPortfolios(props: {
                         미국 증권거래위원회(SEC) 13F 공시로 확인되는 {list.length}개 운용사의 보유 종목
                     </div>
                 </div>
-                <div>
+                {/* 🚨 우측 열 = 세로 스택 + 오른쪽 정렬. 되돌리지 말 것 (2026-08-09 PM 스크린샷).
+                    환율 문구를 상시 노출로 바꾸자(같은 날) 이 열의 폭이 문구 길이로 넓어졌고,
+                    토글 컨테이너가 블록 레벨 flex 라 그 폭까지 늘어나 KRW 오른쪽에 빈 공간이 생겼다.
+                    alignItems:flex-end 로 토글을 내용 폭으로 줄이고 문구와 오른쪽을 맞춘다. */}
+                <div
+                    style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-end",
+                    }}
+                >
                     <div
                         style={{
                             display: "flex",
