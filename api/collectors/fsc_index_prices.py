@@ -47,6 +47,7 @@ _REQ_TIMEOUT = 60
 # 러너 IP ↔ apis.data.go.kr 간헐 ConnectTimeout 대응 — fsc_daily_prices 와 동일 정책.
 _NET_RETRIES = 3
 _NET_BACKOFF = (5, 20)
+_MAX_GAP_DAYS = 10  # 갭 채움 상한 (하루 1콜). 초과분은 --mode backfill 영역
 _KST = timezone(timedelta(hours=9))
 
 # 응답 필드 후보 (FSC 지수 API 표준 스키마 — 활용신청 승인 후 실 응답으로 재확인).
@@ -106,6 +107,33 @@ def _call(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         # 'Forbidden'(활용신청 미승인)·게이트웨이 XML 봉투 = JSON 파싱 실패로 수렴
         print(f"[fsc_index] 응답 파싱 실패 {params}: {e}", file=sys.stderr)
         return None
+
+
+def _candidate_days(cur: str, latest: str, max_days: int = _MAX_GAP_DAYS) -> List[str]:
+    """`cur` 다음 날 ~ `latest` 후보 거래일 (주말 제외, 오름차순).
+
+    `fsc_daily_prices._candidate_days` 와 같은 규칙 — 두 수집기가 같은 게이트웨이·같은
+    T+1 주기라 정책을 함께 간다. 공유 모듈로 빼지 않은 이유 = 두 파일 모두 **파일 직접 실행**
+    전제(`-m` 은 collectors/__init__ 이 dotenv 를 당겨 pip 필요)라 import 결합을 만들지 않는다.
+    순수 함수 — 단위 테스트 대상.
+    """
+    if not latest:
+        return []
+    if not cur or cur >= latest:
+        return [latest]
+    try:
+        d = datetime.strptime(cur, "%Y%m%d") + timedelta(days=1)
+        end = datetime.strptime(latest, "%Y%m%d")
+    except ValueError:
+        return [latest]
+    out: List[str] = []
+    while d <= end:
+        if d.weekday() < 5:
+            out.append(d.strftime("%Y%m%d"))
+        d += timedelta(days=1)
+    if len(out) > max_days:
+        out = out[-max_days:]
+    return out or [latest]
 
 
 def _pick(row: Dict[str, Any], keys) -> Any:
@@ -220,12 +248,36 @@ def run_daily() -> bool:
     if cur and cur >= latest:
         print(f"[fsc_index] 이미 최신 (as_of={cur})")
         return True
-    rows = fetch_day(latest)
-    if len(rows) < 5:
-        print(f"[fsc_index] 벌크 이상 (rows={len(rows)}) — skip", file=sys.stderr)
+
+    # 🚨 갭 채움 — fsc_daily_prices 와 동일 정책 (2026-08-09).
+    #   latest 하루만 당기면 건너뛴 날의 지수 포인트가 영구히 빈다.
+    days = _candidate_days(cur, latest)
+    full = _candidate_days(cur, latest, max_days=10 ** 6)
+    if len(full) > len(days):
+        print(f"[fsc_index] 갭 {len(full)}일 > 상한 {_MAX_GAP_DAYS}일 — "
+              f"{full[0]}~{days[0]} 구간은 `--mode backfill` 필요", file=sys.stderr)
+
+    fetched = 0
+    got_latest = False
+    for day in days:  # 오름차순
+        rows = fetch_day(day)
+        if not rows:
+            continue  # 휴장일 = 빈 응답
+        if len(rows) < 5:
+            print(f"[fsc_index] 벌크 이상 ({day} rows={len(rows)}) — 중단", file=sys.stderr)
+            return False
+        _append_rows(store, rows)
+        fetched += 1
+        if day == latest:
+            got_latest = True
+
+    if not got_latest:  # as_of 를 올릴 근거 없음 (조용한 성공 금지)
+        print(f"[fsc_index] latest({latest}) 수집 실패 — 채움 {fetched}일 폐기", file=sys.stderr)
         return False
-    _append_rows(store, rows)
+
     _save(store, latest)
+    if fetched > 1:
+        print(f"[fsc_index] 갭 채움 {fetched}일 ({days[0]}~{latest})")
     return True
 
 
