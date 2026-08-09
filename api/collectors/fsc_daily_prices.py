@@ -136,6 +136,36 @@ def fetch_day(bas_dt: str) -> List[Dict[str, Any]]:
     return items
 
 
+_MAX_GAP_DAYS = 10  # 갭 채움 상한 (하루 1콜). 이보다 벌어지면 --mode backfill 영역
+
+
+def _candidate_days(cur: str, latest: str, max_days: int = _MAX_GAP_DAYS) -> List[str]:
+    """`cur` 다음 날부터 `latest` 까지 후보 거래일 (주말 제외, 오름차순).
+
+    공휴일 표는 들지 않는다 — 휴장일은 API 가 빈 리스트를 주므로 호출부가 skip 한다.
+    `cur` 가 비었으면(최초 수집) latest 하루만. 이력 확보는 `--mode backfill` 담당.
+    상한 초과 시 최근 `max_days` 만 남긴다(버린 구간은 호출부가 로그로 신고).
+    순수 함수 — 단위 테스트 대상.
+    """
+    if not latest:
+        return []
+    if not cur or cur >= latest:
+        return [latest]
+    try:
+        d = datetime.strptime(cur, "%Y%m%d") + timedelta(days=1)
+        end = datetime.strptime(latest, "%Y%m%d")
+    except ValueError:  # as_of 형식 파손 = 갭 계산 포기, 최신 하루만
+        return [latest]
+    out: List[str] = []
+    while d <= end:
+        if d.weekday() < 5:  # 토·일 제외 (API 빈 응답 낭비 차단)
+            out.append(d.strftime("%Y%m%d"))
+        d += timedelta(days=1)
+    if len(out) > max_days:
+        out = out[-max_days:]
+    return out or [latest]
+
+
 def latest_available_date() -> Optional[str]:
     """API 가 보유한 최신 거래일 (삼성전자 최신 1행 — 응답 basDt 내림차순 실측 확인)."""
     body = _call({"numOfRows": 1, "pageNo": 1, "likeSrtnCd": "005930"})
@@ -418,14 +448,41 @@ def run_daily() -> bool:
         if not _close_latest_current(cur):
             emit_close_latest(chunks, cur)
         return True
-    rows = fetch_day(latest)
-    if len(rows) < 500:  # 전 종목 벌크가 이상 축소 = API 이상 → 기존 데이터 보존
-        print(f"[fsc_daily_prices] 벌크 이상 (rows={len(rows)}) — skip", file=sys.stderr)
+
+    # 🚨 갭 채움 — latest 하루만 가져오면 건너뛴 날은 영구히 빈다 (2026-08-09).
+    #   옛 동작: 하루 3슬롯이 전부 실패한 날 → 다음 날 run 이 latest 만 당겨서 그날 캔들이 소실.
+    #   신선도 보드는 최신 as_of 만 보므로 이 구멍을 영원히 못 잡는다(52주 고저·거래일 수 오염).
+    #   러너 IP 간헐 차단(실패율 23%)에 대한 진짜 대응 = "매번 성공" 이 아니라 "가끔 성공해도 복구".
+    days = _candidate_days(cur, latest)
+    full = _candidate_days(cur, latest, max_days=10 ** 6)
+    if len(full) > len(days):  # 상한 초과분은 조용히 버리지 않는다
+        print(f"[fsc_daily_prices] 갭 {len(full)}일 > 상한 {_MAX_GAP_DAYS}일 — "
+              f"{full[0]}~{days[0]} 구간은 `--mode backfill` 필요", file=sys.stderr)
+
+    fetched = 0
+    rows_latest: List[Dict[str, Any]] = []
+    for day in days:  # 오름차순 — 옛 날짜부터 채운다
+        rows = fetch_day(day)
+        if not rows:
+            continue  # 휴장일 = 빈 응답 (공휴일 표를 들 필요 없음)
+        if len(rows) < 500:  # 전 종목 벌크가 이상 축소 = API 이상 → 기존 데이터 보존
+            print(f"[fsc_daily_prices] 벌크 이상 ({day} rows={len(rows)}) — 중단", file=sys.stderr)
+            return False
+        _append_rows(chunks, rows)
+        fetched += 1
+        if day == latest:
+            rows_latest = rows
+
+    if not rows_latest:  # latest 를 못 받으면 as_of 를 올릴 수 없다 (조용한 성공 금지)
+        print(f"[fsc_daily_prices] latest({latest}) 수집 실패 — 채움 {fetched}일 폐기",
+              file=sys.stderr)
         return False
-    _append_rows(chunks, rows)
+
     _save_chunks(chunks, latest)
-    emit_hot_stock(rows, latest)  # 거래대금 1위 = 리포트 콜드 랜딩 디폴트
-    emit_close_latest(chunks, latest, rows)  # 평가 기준가 + 등락률(원천 fltRt)
+    emit_hot_stock(rows_latest, latest)  # 거래대금 1위 = 리포트 콜드 랜딩 디폴트
+    emit_close_latest(chunks, latest, rows_latest)  # 평가 기준가 + 등락률(원천 fltRt)
+    if fetched > 1:
+        print(f"[fsc_daily_prices] 갭 채움 {fetched}일 ({days[0]}~{latest})")
     return True
 
 
