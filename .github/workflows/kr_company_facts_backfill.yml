@@ -1,0 +1,111 @@
+name: kr-company-facts-backfill
+
+# KR 기업사실 drip 백필 — 중·소형주 정보 채움 (PM 2026-08-09 "전 종목 대상 정보 전투 채우기").
+#
+# 전수 감사 실측 (KR 유니버스 2,700 = 대형 307·중형 353·소형 1,540·초소형 486):
+#   중형+소형 1,893 대비 커버리지가 배당 1.5% · CB/BW 2.0% · 공급망 0.5% · 최대주주 0%.
+#   원인은 소스 부재가 아니라 **순회 유니버스**였다 —
+#     · `api/collectors/stock_data.ALL_STOCKS` = 45종 하드코딩(전부 대형주). DartScout·
+#       group_structure·ReportScout·dart_report_analyzer 가 이걸 돈다.
+#     · 배당은 더 좁아서 VAMS 보유 종목만(11종).
+#     · ChainScout 은 full run 당 `candidates[:5]`.
+#   분석기들은 이미 배치 함수라 코드를 안 고치고 유니버스만 갈아끼웠다.
+#   ([[feedback_coverage_check_collector_filter_first]] — 얇으면 소스가 아니라 우리 필터부터)
+#
+# 자가완주: 매 run 축별 LIMIT 만큼만 채우고 다음 run 이 이어받는다. 미보유 종목만 조회하므로
+#   완주 후 사실상 no-op(신규 상장·사업연도 전환 시 자동 재개). 코너 1,274종 기준 약 1주.
+#
+# 7축 audit: env=DART_API_KEY 만 · push trigger 없음(data/ 커밋뿐 = RULE 2 자동 skip) ·
+#   전용 concurrency group · cron 일1(silent skip 저위험) · KIS 무관(RULE 1) ·
+#   pip requirements.txt(DartScout→stock_data→yfinance 체인) · N=2 = manual + 다음 scheduled.
+#
+# 🚨 DART 일일 20K 공유 쿼터. 슬롯 회피 = ownership 04:40 / dart_kr_fin 05:30 / dart_meta 07:00 /
+#   quarterly 20:00 / catalyst 09:00·17:00·23:00 (KST). 여기는 KST 06:15.
+#   4축 × 200종 ≈ 1,200콜(전체의 6%). LIMIT 을 올려 빨리 채우려다 다른 수집기를 굶기지 말 것.
+#
+# 🚨 LLM 축(related_party·litigation·business)은 여기 없다. Gemini 과금이라 --allow-llm
+#   명시 + PM 승인 후 별도 run. 자체 원장 실단가 $0.00186/콜 × 코너 1,274 × 3축 ≈ $7.
+
+on:
+  schedule:
+    - cron: '15 21 * * *'   # UTC 21:15 = KST 06:15
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: '축별 이번 run 처리 종목 수 (기본 200)'
+        required: false
+        default: '200'
+        type: string
+      axes:
+        description: '쉼표구분 축 (기본 dividends,shareholders,cb_bw,chain)'
+        required: false
+        default: 'dividends,shareholders,cb_bw,chain'
+        type: string
+      universe:
+        description: 'corner | market | reco'
+        required: false
+        default: 'corner'
+        type: string
+
+concurrency:
+  group: verity-kr-company-facts
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Backfill company facts
+        env:
+          VERITY_MODE: prod   # 🚨 기본 dev = mock. 실호출 명시 (export_trade 2026-08-07 교훈)
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: |
+          python scripts/kr_company_facts_backfill.py \
+            --universe "${{ github.event.inputs.universe || 'corner' }}" \
+            --axes "${{ github.event.inputs.axes || 'dividends,shareholders,cb_bw,chain' }}" \
+            --limit "${{ github.event.inputs.limit || '200' }}"
+
+      - name: Rebuild Lynch classes
+        # 순수 변환 (외부 호출 0) — 위 백필로 배당·재무가 늘어난 만큼 분류 커버리지가 따라 오른다.
+        # 산식 무변경(2026-05-23 PM 사전등록 A3), 계산 범위만 전 종목.
+        # 백필이 실패해도 기존 입력으로는 돌아야 하므로 continue-on-error 를 걸지 않는다
+        # (0건이면 빌더가 exit 1 로 스스로 신고한다).
+        run: python -m api.builders.kr_lynch_class_builder
+
+      - name: Commit
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          # 🚨 RULE 4 — 축별 산출물을 **파일마다 나눠서** add 한다.
+          #   한 줄로 묶으면 파일 하나가 없을 때 add 가 통째로 실패해 멀쩡한 산출물까지
+          #   스테이징되지 않는다 (2026-08-09 KIS 락 동결 사고와 동형).
+          for f in data/dividends_kr.json \
+                   data/kr_major_shareholders.json \
+                   data/dart_cb_bw_cache.json \
+                   data/chain_snippets.json \
+                   data/kr_lynch_class.json; do
+            git add "$f" 2>/dev/null || echo "::notice::$f 없음(이번 run 미산출)"
+          done
+          git diff --staged --quiet && echo "변화 없음(완주 상태)" && exit 0
+          git commit -m "🧾 기업사실 백필 $(TZ=Asia/Seoul date +%Y-%m-%d)"
+          for i in 1 2 3 4 5 6; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin main && git push origin main; then exit 0; fi
+            sleep $(( i * 7 + RANDOM % 15 ))
+          done
+          echo "::warning::push 실패 — 다음 run 에서 누적 재시도"

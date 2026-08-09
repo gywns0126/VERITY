@@ -106,6 +106,12 @@ LOCAL_FILES = [
     ("data/dart_litigation_cache.json", "DART 소송·우발채무(심화)", False),
     ("data/dart_related_party_cache.json", "DART 특수관계자 거래(심화)", False),
     ("data/dart_cb_bw_cache.json", "DART CB·BW 희석(심화)", False),
+    # 2026-08-09 중·소형주 채움 — `scripts/kr_company_facts_backfill.py` 산출.
+    #   기존 group_structure(20종)는 ALL_STOCKS=45 에 묶여 있었다. 이쪽은 코너 전량 대상.
+    ("data/kr_major_shareholders.json", "최대주주 현황(DART)", False),
+    # Lynch 6분류 — 운영풀 20종에서만 계산되던 것을 전 종목(2,686)으로 확대.
+    #   산식 무변경(2026-05-23 PM 사전등록 A3), 입력 조달 범위만 넓혔다.
+    ("data/kr_lynch_class.json", "Lynch 분류(규칙 기반 사실)", False),
     ("data/us_form144.json", "US Form 144 (내부자 매도 예고)", False),
     ("data/us_options.json", "US 옵션 체인(IV·스큐·PC비율)", False),
     ("data/us_sector_cache.json", "US 섹터", True),
