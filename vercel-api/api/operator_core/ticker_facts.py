@@ -73,6 +73,11 @@ SCAN_FILES = [
     "us_stock_report_public.json", "us_quarterly_public.json", "us_smart_money_13f.json",
     "us_disclosure_feed.json", "us_disclosure_forensics.json", "us_earnings_pattern.json",
     "event_study.json", "nps_employment.json",
+    # 2026-08-09 배선 감사 2차 — US ETF 가 통째로 조인 0 이던 갭. JEPQ/QQQ/SPY/TLT 등
+    #   682 종의 구성·보수·AUM·섹터 사실이 발행돼 있는데 챗이 한 건도 못 봤다(PM 실사용에서 발각).
+    #   레코드에 as_of 가 실려 있다 — 회전 수집이라 파일 _meta.generated_at 은 쓰기 시각일 뿐
+    #   그 종목의 기준일이 아니다. 반드시 레코드 as_of 를 읽을 것.
+    "us_etf.json",
 ]
 
 # 로컬 전용(미발행) — 발행물보다 원본에 가깝다.
@@ -94,6 +99,16 @@ LOCAL_FILES = [
     ("data/dart_kr_backfill_result.json", "DART 백필(연도별 팩터)", False),  # rows[] 1,061 records
     ("data/commodity_impact.json", "원자재 영향", False),                  # by_ticker 상관·MoM 알림
     ("data/us_fin_annual_compact.json", "US 연간재무", False),
+    # 2026-08-09 배선 감사 2차 — 로컬에 쌓이는데 조인 0 이던 사실 축.
+    #   DART 심화 4종은 2026-08-07-08 수집분이고 운영풀 종목만 커버한다(39~60종) —
+    #   미수록 = 아직 수집 전이지 "해당 없음" 이 아니다. 없으면 섹션이 안 뜬다.
+    ("data/dart_analysis_cache.json", "DART 사업건전성·해자(심화)", False),
+    ("data/dart_litigation_cache.json", "DART 소송·우발채무(심화)", False),
+    ("data/dart_related_party_cache.json", "DART 특수관계자 거래(심화)", False),
+    ("data/dart_cb_bw_cache.json", "DART CB·BW 희석(심화)", False),
+    ("data/us_form144.json", "US Form 144 (내부자 매도 예고)", False),
+    ("data/us_options.json", "US 옵션 체인(IV·스큐·PC비율)", False),
+    ("data/us_sector_cache.json", "US 섹터", True),
 ]
 
 # 오퍼레이터 private bucket (Supabase). 인증 없으면 skip.
@@ -181,31 +196,61 @@ def resolve_ticker(q: str) -> Tuple[str, str]:
     if not isinstance(rows, list):
         rows = [{"ticker": k, "name": v} for k, v in names.items()] if isinstance(names, dict) else []
     low = s.lower()
-    exact, prefix, part = [], [], []
-    for r in rows:
-        nm = str(r.get("name") or "")
-        if not nm:
-            continue
-        n = nm.lower()
-        if n == low:
-            exact.append(r)
-        elif n.startswith(low):
-            prefix.append(r)
-        elif low in n:
-            part.append(r)
-    for bucket in (exact, prefix, part):
-        if bucket:
-            r = bucket[0]
-            return str(r.get("ticker") or ""), str(r.get("name") or "")
+
+    def _match(rowset: Any) -> Tuple[str, str]:
+        exact, prefix, part = [], [], []
+        for r in rowset or []:
+            if not isinstance(r, dict):
+                continue
+            nm = str(r.get("name") or "")
+            if not nm:
+                continue
+            n = nm.lower()
+            if n == low:
+                exact.append(r)
+            elif n.startswith(low):
+                prefix.append(r)
+            elif low in n:
+                part.append(r)
+        for bucket in (exact, prefix, part):
+            if bucket:
+                r = bucket[0]
+                return str(r.get("ticker") or ""), str(r.get("name") or "")
+        return "", ""
+
+    tk, nm = _match(rows)
+    if tk:
+        return tk, nm
     # US 심볼 패스스루 폴백 (2026-08-03 배선 감사) — 해석이 KR 전용이라 GOOGL 등 US 심볼이
     # 여기서 죽어 전 섹션 조인 0 이 되던 갭. KR 이름 매칭이 전부 실패했을 때만 진입하므로
     # 한글 질의 동작은 불변. 이름은 us_stock_names_ko(네이버 수집) 있으면 한글, 없으면 심볼.
     u = s.upper()
     if re.fullmatch(r"[A-Z]{1,5}([.-][A-Z])?", u):
-        ko = _load_local("data/us_stock_names_ko.json")
-        nm = ((ko or {}).get("names") or {}).get(u) if isinstance(ko, dict) else ""
-        return u, str(nm or u)
-    return "", ""
+        return u, _us_display_name(u) or u
+    # 이름으로 US·ETF 찾기 (2026-08-09) — 'Invesco QQQ' 처럼 심볼이 아닌 질의용.
+    # 🚨 심볼 패스스루 **뒤**에 두는 것이 핵심이다. 앞에 두면 'MU' 가 'Municipal…' 접두
+    #   매칭으로 MUB 에 끌려간다. 심볼 모양이면 심볼로 확정하고, 아닐 때만 이름을 뒤진다.
+    uni_all = _fetch_json(f"{BLOB}/universe_search.json", "universe_all") or {}
+    return _match(uni_all.get("stocks") if isinstance(uni_all, dict) else None)
+
+
+def _us_display_name(u: str) -> str:
+    """US 심볼 → 표시명. 한글명 우선, 없으면 ETF 정식명, 없으면 빈 문자열.
+
+    2026-08-09: JEPQ 조회 헤더가 'JEPQ (JEPQ)' 로 나오던 갭. us_stock_names_ko 는 개별주
+    수집본이라 ETF 가 없는데 us_etf_universe.names 에 5,486 종 정식명이 이미 있었다.
+    """
+    for rel, path in (("data/us_stock_names_ko.json", "names"),
+                      ("data/us_name_ko.json", ""),
+                      ("data/us_etf_universe.json", "names")):
+        d = _load_local(rel)
+        if not isinstance(d, dict):
+            continue
+        src = d.get(path) if path else d
+        v = src.get(u) if isinstance(src, dict) else None
+        if isinstance(v, str) and v:
+            return v
+    return ""
 
 
 # ── 제네릭 추출 ──────────────────────────────────────────────────────────────
@@ -489,8 +534,11 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
             "label": "실시간 시세 (KIS · 본인 이용)", "source": "railway:quotes",
             "as_of": str(rt.pop("_asof", "") or ""), "data": rt,
         })
-    else:
-        out["missing"].append("실시간 시세 (KIS — 미도달·장 마감·비KR)")
+    elif not _is_us_q:
+        # 🚨 '없는 것' 은 **적용 가능한데 비어 있는** 축만 적는다(2026-08-09). US 종목에
+        #   KR 전용 축(KIS 실시간·DART 직조회·금융위 일봉)을 적으면 "찾아봤는데 없더라" 로
+        #   읽혀 실제보다 결손이 커 보인다. 애초에 해당되지 않는 축은 침묵이 정직하다.
+        out["missing"].append("실시간 시세 (KIS — 미도달·장 마감)")
 
     # 종가 — 전 종목 동일 거래일(kr_close_latest). 등락은 prev 있을 때만.
     d = docs.get("kr_close_latest.json")
@@ -517,7 +565,7 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
             "label": f"DART 공시 (직조회 · {_DART_WINDOW_DAYS}일)", "source": "opendart:list.json",
             "as_of": _now().isoformat(timespec="seconds"), "data": df,
         })
-    else:
+    elif not _is_us_q:
         out["missing"].append("DART 공시 직조회 (키 없음·corp_code 미해석·호출 실패)")
 
     # 일봉 250일 + 산술 파생 (금융위 T+1) — 2026-08-03 배선 감사로 추가.
@@ -527,7 +575,7 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
             "label": "일봉 (250일 · 산술 파생)", "source": "kr_chart_daily/chunk (금융위)",
             "as_of": bars.pop("_as_of", ""), "data": bars,
         })
-    else:
+    elif not _is_us_q:
         out["missing"].append("일봉 청크 (kr_chart_daily — 비수록·미도달)")
 
     # 리포트 — facts/peer/재무 등 큰 블록이라 필요한 것만
@@ -567,7 +615,12 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
             _add(f[:-5], f, d, _trim(got))
 
     # 2) 로컬 미발행
+    # 🚨 시장 게이팅은 발행물(_needed)과 같은 규칙을 로컬에도 건다. 2026-08-09 에 US 3종·DART
+    #   심화 4종을 추가하며 넣었다 — 없으면 KR 조회 1건마다 us_form144(2.1MB)·us_fin_annual
+    #   (4.5MB)까지 매번 파싱해 애초에 매칭될 수 없는 파일에 시간을 쓴다(2026-08-06 전송량 fix 동형).
     for rel, label, is_map in LOCAL_FILES:
+        if not _needed(os.path.basename(rel)):
+            continue
         d = _load_local(rel)
         if d is None:
             continue
@@ -593,6 +646,21 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
         elif sec:
             out["sections"].append(sec)
 
+    # 5) 🚨 가격 축 부재 신고 (2026-08-09) — 이 레이어가 존재하는 이유가 가격 환각 차단인데
+    #   (2026-06-03 삼성전자 "65,000원 지지선"), US 조회는 시세·일봉이 **한 축도 배선돼 있지
+    #   않다**. 그런데 위 시장 게이팅으로 KR 전용 결손을 침묵시키고 나니 US ETF 가 "섹션 1 ·
+    #   없는 것 0" 으로 나와 **결손이 아예 없는 것처럼** 읽힌다 — 조용한 누락의 반대 방향
+    #   함정이다. 가격이 안 잡혔으면 반드시 명시한다. 소비자(LLM 포함)가 "가격은 모른다" 를
+    #   알아야 지어내지 않는다.
+    _PRICE_LABELS = ("실시간 시세", "종가", "일봉")
+    if not any(str(s.get("label", "")).startswith(_PRICE_LABELS) for s in out["sections"]):
+        out["missing"].append(
+            "시세·일봉 — 이 종목의 가격 축이 하나도 조인되지 않았다. "
+            "🚨 가격·등락률·지지선·목표가를 언급하지 말 것"
+            + (" (US 가격은 us_chart_history Blob 월 1회 산출이며 아직 조인 미배선)"
+               if _is_us_q else "")
+        )
+
     return out
 
 
@@ -614,7 +682,8 @@ def _fmt_data(d: Any, depth: int = 0) -> List[str]:
     if isinstance(d, dict):
         parts = []
         long_items: List[str] = []
-        for k, v in list(d.items())[:20]:
+        items = list(d.items())
+        for k, v in items[:20]:
             if isinstance(v, (dict, list)):
                 inner = _fmt_data(v, depth + 1)
                 long_items.append(f"- {k}:")
@@ -625,16 +694,30 @@ def _fmt_data(d: Any, depth: int = 0) -> List[str]:
         if parts:
             out.append(" · ".join(parts))
         out.extend(long_items)
+        if len(items) > 20:
+            out.append(f"  (미표시 키 {len(items) - 20}: {', '.join(k for k, _ in items[20:26])})")
         return out or ["(빈 값)"]
     if isinstance(d, list):
         if not d:
             return ["(빈 목록)"]
         if all(isinstance(x, dict) for x in d):
-            rows = d[-4:] if depth == 0 else d[:3]   # 시계열 = 최근 우선
+            # 🚨 단일 레코드는 시계열이 아니라 '그 종목 사실 한 벌' 이다. 아래 행 포맷으로 접으면
+            #   중첩 필드가 통째로 사라진다 — 2026-08-09 JEPQ 사고: 구성종목·섹터·자산배분·배당률·
+            #   3년수익률이 전부 렌더에서 증발했는데 화면상으로는 멀쩡한 섹션으로 보였다.
+            #   조인은 성공했는데 출력에서 잃는 형태라 "배선 0" 보다 발견이 늦다.
+            if len(d) == 1:
+                return _fmt_data(d[0], depth)
+            rows = d[-4:] if depth == 0 else d[:10 if depth == 1 else 3]  # 시계열 = 최근 우선
             out = []
             for x in rows:
-                out.append("- " + " · ".join(f"{k} {_fmt_num(v)}" for k, v in list(x.items())[:8]
-                                             if not isinstance(v, (dict, list))))
+                flat = [(k, v) for k, v in x.items() if not isinstance(v, (dict, list))]
+                line = "- " + " · ".join(f"{k} {_fmt_num(v)}" for k, v in flat[:8])
+                # 잘라낸 것은 반드시 신고한다. 조용한 누락 = 없는 것보다 나쁘다.
+                dropped = [k for k, _ in flat[8:]] + [k for k, v in x.items()
+                                                      if isinstance(v, (dict, list))]
+                if dropped:
+                    line += f"  (미표시 {len(dropped)}: {', '.join(dropped[:6])})"
+                out.append(line)
             rest = len(d) - len(rows)
             if rest > 0:
                 out.append(f"  (외 {rest}행)")

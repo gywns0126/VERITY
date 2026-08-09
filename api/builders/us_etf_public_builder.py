@@ -358,6 +358,8 @@ def main() -> int:
         json.dump(cache, f, ensure_ascii=False)
     os.replace(tmp, CACHE_PATH)
 
+    # 🚨 as_of 는 슬림 층에도 반드시 실린다 — 아래 emit 참조. 발행에서 빼면 소비자가
+    #   레코드 나이를 알 방법이 사라진다(2026-08-09 사고).
     _SLIM_KEYS = ("name", "category", "category_name", "aum_usd", "family", "expense")
 
     covered: List[Dict[str, Any]] = []
@@ -379,13 +381,15 @@ def main() -> int:
         t, rec = e["_t"], e["_rec"]
         entry: Dict[str, Any] = {"ticker": t}
         if t in detail_set:
-            # as_of/last_try(내부 신선도 키) 만 빼고 수집한 사실 전부 발행 — 신 필드 emit 누락 방지
+            # last_try/miss(내부 backoff 상태) 만 빼고 수집한 사실 전부 발행 — 신 필드 emit 누락 방지
             entry.update({
                 k: v for k, v in rec.items()
-                if k not in ("as_of", "last_try", "miss") and v not in (None, {}, [])
+                if k not in ("last_try", "miss") and v not in (None, {}, [])
             })
         else:
             entry.update({k: rec[k] for k in _SLIM_KEYS if rec.get(k) not in (None, "", {}, [])})
+            if rec.get("as_of"):
+                entry["as_of"] = rec["as_of"]
             entry["slim"] = True
         if uni_types.get(t) and uni_types[t] != "ETF":
             entry["type"] = uni_types[t]   # ETV(신탁형·원자재) / ETN(지수연동증권) 구분 사실
@@ -408,6 +412,13 @@ def main() -> int:
             "budget_hit": budget_hit,
             "note": "slim=true 는 티커·명칭·카테고리·AUM·보수만 채워진 층 — 상세(구성종목·섹터·"
                     "밸류에이션)는 AUM 상위부터 채워진다. 미수록 = 아직 수집 전이지 부재 아님.",
+            # 🚨 2026-08-09 신설 — 나이가 두 겹이라는 걸 소비자가 알아야 한다.
+            "as_of_note": "레코드별 as_of = **우리가 수집한 시각**이다. 이 파일의 generated_at 은 "
+                          "회전 수집기의 쓰기 시각일 뿐 개별 종목의 기준일이 아니다(core 5일 / "
+                          "롱테일 30일 주기로 돌아간다). 게다가 top_holdings·sectors 는 운용사가 "
+                          "마지막으로 공시한 구성이라 실제 포트폴리오보다 최대 한 달 더 늦을 수 "
+                          "있다. 구성 비중을 '현재' 로 단정하지 말 것 — JEPQ 실측 2026-08-09: "
+                          "as_of 8/4 레코드가 6월말 구성을 담고 있었고 7월말 구성은 그 뒤에 나왔다.",
             "disclaimer": "US ETF 사실(카테고리·AUM·운용사·보수·보유종목 top) — 점수/추천 아님(RULE 7). "
                           "실시간 시세·NAV 미노출(증권사 앱). yfinance 무료 소스.",
         },
