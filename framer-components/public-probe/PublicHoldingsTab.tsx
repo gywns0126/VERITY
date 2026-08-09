@@ -1374,7 +1374,11 @@ export default function PublicHoldingsTab(props: Props) {
                             cursor: "pointer",
                             fontSize: 11.5,
                             fontWeight: 800,
-                            padding: "4px 12px",
+                            // 🚨 좌우 폭 고정 — 되돌리지 말 것 (2026-08-09 PM, 거장 토글과 동일 규율).
+                            //   "$ 달러" / "₩ 원화" 는 글자수가 같아도 기호 폭이 달라 알약이 흔들린다.
+                            width: 56,
+                            padding: "4px 0",
+                            textAlign: "center",
                             borderRadius: 7,
                             background: ccy === k ? C.card : "transparent",
                             color: ccy === k ? C.ink : C.faint,
