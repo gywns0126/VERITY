@@ -57,6 +57,7 @@ jobs:
             kis-token-v2-${{ runner.os }}-
 
       - name: KIS 토큰 갱신
+        id: refresh
         env:
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
@@ -118,9 +119,19 @@ jobs:
                   continue
               (issued if ok else skipped).append(slug)
           print(f"발급 {issued} / 건너뜀 {skipped}")
+
+          # 🚨 다음 step 의 자가 신고용. 발급 건수를 넘겨야 "발급했는데 락 커밋 0" 을
+          #   실패로 판정할 수 있다 (2026-08-09 사고 = 그 판정이 없어서 조용히 통과).
+          _gh_out = os.environ.get("GITHUB_OUTPUT")
+          if _gh_out:
+              with open(_gh_out, "a", encoding="utf-8") as _f:
+                  _f.write(f"issued_count={len(issued)}\n")
           PYEOF
 
       - name: daily lock 파일 commit & push
+        env:
+          # 앞 step 의 실발급 건수. 이 값이 있어야 "발급했는데 락 미기록" 을 판정한다.
+          ISSUED_COUNT: ${{ steps.refresh.outputs.issued_count }}
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
@@ -138,8 +149,17 @@ jobs:
           for _lock in data/.kis_issued_date__*.txt; do
             [ -e "$_lock" ] && git add "$_lock" || true
           done
+          # 🚨 자가 신고 (2026-08-09 사고의 본체 대응).
+          #   발급과 락 커밋은 별개 사건이다. 발급이 있었는데 스테이징이 비면 락이
+          #   기록되지 않았다는 뜻이고, 그대로 exit 0 하면 24h 가드가 stale 락을 보고
+          #   계속 통과한다 = 알림도 로그 에러도 없이 RULE 1 가드가 꺼진다.
+          #   사람이 락 커밋 이력을 대조해야만 잡히던 것을 run 이 스스로 신고하게 한다.
           if git diff --staged --quiet; then
-            echo "daily lock 파일 변화 없음 — 오늘 이미 발급된 상태"
+            if [ "${ISSUED_COUNT:-0}" -gt 0 ] 2>/dev/null; then
+              echo "::error::발급 ${ISSUED_COUNT}건인데 daily lock 변화 0 — 락 미기록. RULE 1 가드 무력화 상태다 (2026-08-09 사고 재발)."
+              exit 1
+            fi
+            echo "daily lock 파일 변화 없음 — 이번 run 발급 0건 (24h 가드로 skip)"
             exit 0
           fi
           TODAY=$(TZ=Asia/Seoul date +%Y-%m-%d)

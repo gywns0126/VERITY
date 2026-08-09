@@ -211,6 +211,21 @@ def test_token_refresh_workflow_commits_all_lock_files():
     assert "hours=23" not in s
 
 
+def test_token_refresh_run_reports_unrecorded_lock():
+    """🚨 발급했는데 락 커밋이 없으면 run 이 스스로 실패해야 한다.
+
+    2026-08-09 사고의 본체는 "발급 성공"과 "락 커밋"이 별개 사건인데 후자가
+    실패해도 run 이 초록이었다는 점이다. 카톡 알림도 로그 에러도 워크플로 실패도
+    없어서, 사람이 락 커밋 이력을 대조해야만 잡혔다. 그 판정을 run 안으로 옮긴다.
+    [[feedback_measurement_audit_automation]] · [[feedback_silent_total_failure_guard]]
+    """
+    s = _src(".github/workflows/kis_token_refresh.yml")
+    assert "issued_count=" in s        # 발급 건수를 다음 step 으로 전달
+    assert "ISSUED_COUNT:" in s        # lock step 이 그 값을 env 로 받는다
+    assert "ISSUED_COUNT:-0" in s      # 미설정 시 안전 기본값(0 = 정상 skip)
+    assert "::error::발급" in s        # 발급>0 인데 스테이징 0 이면 실패로 신고
+
+
 def test_store_migration_allows_multikey_but_pins_operator():
     s = _src("supabase/migrations/030_kis_shared_token_multikey.sql")
     assert "kis_shared_token_singleton" in s          # 옛 싱글턴 제약 해제
