@@ -29,20 +29,25 @@ REPO = "gywns0126/VERITY"
 REMOTE_PATH = "data/local_lake_health.json"  # CI cron_health 가 체크아웃 로컬파일로 읽음
 
 # (name, 경로, kind) — kind=mtime: 파일 수정시각 / kind=json:<field>: JSON 내부 타임스탬프
+# 🚨 2026-08-09 — `us_prices.duckdb` 를 추적에서 뺐다. 갱신 스케줄이 없어 43일 멈춰 있던
+#   레이크이고, US 가격 정본은 이제 CI 산출 `us_chart_history`(월 1회) 로 옮겼다. 폴백으로만
+#   남은 파일을 계속 stale 로 세면 "고칠 수 없는 빨간불" 만 남는다. 대신 그 자리에 새 정본의
+#   로컬 캐시(us_event_study.json)를 넣어 **전달 경로가 살아 있는지**를 본다.
 TRACKED = [
     ("kr_prices_lake",     os.path.join(LAKE, "kr_prices.duckdb"),                          "mtime"),
-    ("us_prices_lake",     os.path.join(LAKE, "us_prices.duckdb"),                          "mtime"),
     ("kr_flow_parquet",    os.path.join(LAKE, "kr_flow_observations.parquet"),             "mtime"),
     ("prediction_trail",   os.path.join(LAKE, "smallcap_corner_prediction_trail.jsonl"),  "mtime"),
+    ("us_event_study",     os.path.join(LAKE, "us_event_study.json"),
+     "json:_meta.generated_at"),
     ("event_study",        os.path.join(DATA_DIR, "event_study.json"),  "json:_meta.generated_at"),
 ]
 
 # 아티팩트별 stale 임계(시간). 로컬 잡 자연 cadence 기준 — 초과 시 status=stale.
 STALE_H = {
     "kr_prices_lake": 24 * 9,
-    "us_prices_lake": 24 * 14,
     "kr_flow_parquet": 24 * 10,
     "prediction_trail": 24 * 10,
+    "us_event_study": 24 * 45,   # 소스가 월 1회(매월 2일) — 한 회차 건너뛰어도 여유
     "event_study": 24 * 10,
 }
 

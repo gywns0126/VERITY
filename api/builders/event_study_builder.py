@@ -36,7 +36,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from api.config import DATA_DIR, now_kst  # noqa: E402
 
 KR_LAKE_PATH = os.path.expanduser("~/VERITY_data_lake/kr_prices.duckdb")
+# 🚨 폴백 전용 (2026-08-09~). US 정본은 아래 Blob 산출물 — 경위는 _load_us_precomputed 주석.
 US_LAKE_PATH = os.path.expanduser("~/VERITY_data_lake/us_prices.duckdb")
+US_EVENT_STUDY_BLOB = os.environ.get(
+    "US_EVENT_STUDY_URL",
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_chart_history/_event_study.json",
+)
 BACKFILL_PATH = os.path.join(DATA_DIR, "dart_catalyst_backfill.jsonl")
 ALERTS_PATH = os.path.join(DATA_DIR, "dart_catalyst_alerts.jsonl")
 US_CAT_PATH = os.path.join(DATA_DIR, "us_catalyst_backfill.jsonl")  # SEC 8-K (label/tone 사전분류 by backfill_us_catalyst)
@@ -194,10 +199,58 @@ def _forward_returns(dates: List[str], closes: List[float], event_date: str) -> 
     return rec
 
 
-def _build_market(events: List[Dict[str, Any]], lake_path: str) -> Dict[str, Any]:
-    """이벤트 + 레이크 → {ticker: {name, events:[...]}}. KR/US 공통. ticker 키 충돌 0(KR 숫자/US 영문)."""
+def _load_price_series_history(
+    tickers: List[str], hist_dir: str
+) -> Dict[str, Tuple[List[str], List[float]]]:
+    """us_chart_history 레이크(티커별 JSON) → {ticker: (날짜, 종가)}.
+
+    🚨 2026-08-09 — US 가격 출처를 로컬 duckdb 에서 이 레이크로 옮기기 위한 로더.
+    duckdb 쪽은 수동 백필이라 2026-06-26 에 43일 멈춰 있었고(스케줄 부재), 종목도 1,505 뿐이었다.
+    이 레이크는 CI 가 만들고(5,188종·97.4%) 워크플로 자체가 감시 대상이라 조용히 얼지 않는다.
+    파일 스키마 = {"t": ticker, "c": [[yyyymmdd, o, h, l, close, vol], ...]} (날짜 오름차순).
+    """
+    out: Dict[str, Tuple[List[str], List[float]]] = {}
+    if not os.path.isdir(hist_dir):
+        return out
+    for tic in tickers:
+        path = os.path.join(hist_dir, f"{tic}.json")
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, encoding="utf-8") as f:
+                doc = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            continue
+        dates: List[str] = []
+        closes: List[float] = []
+        for row in doc.get("c") or []:
+            try:
+                d, c = int(row[0]), float(row[4])
+            except (IndexError, TypeError, ValueError):
+                continue
+            if c <= 0:
+                continue
+            s = str(d)
+            # 이벤트 날짜가 'YYYY-MM-DD' 라 같은 자로 맞춘다(bisect 는 문자열 비교).
+            dates.append(f"{s[:4]}-{s[4:6]}-{s[6:8]}")
+            closes.append(c)
+        if dates:
+            out[tic] = (dates, closes)
+    return out
+
+
+def _build_market(
+    events: List[Dict[str, Any]],
+    lake_path: str = "",
+    prices: Optional[Dict[str, Tuple[List[str], List[float]]]] = None,
+) -> Dict[str, Any]:
+    """이벤트 + 가격 → {ticker: {name, events:[...]}}. KR/US 공통. ticker 키 충돌 0(KR 숫자/US 영문).
+
+    prices 를 직접 주면 그걸 쓰고, 없으면 duckdb 레이크에서 읽는다(KR 경로).
+    """
     tickers = sorted({e["ticker"] for e in events})
-    prices = _load_price_series(tickers, lake_path)
+    if prices is None:
+        prices = _load_price_series(tickers, lake_path)
 
     stocks: Dict[str, Any] = {}
     for e in events:
@@ -234,16 +287,80 @@ def _build_market(events: List[Dict[str, Any]], lake_path: str) -> Dict[str, Any
     return out
 
 
+def _load_us_precomputed() -> Tuple[Dict[str, Any], str]:
+    """CI 가 만든 US 이벤트스터디 반쪽을 가져온다 → (stocks, 출처 설명).
+
+    🚨 2026-08-09 구조 변경. 이전에는 US 도 로컬 duckdb(`us_prices.duckdb`)에서 만들었는데
+      그 레이크는 **갱신 스케줄이 없어** 2026-06-26 에 멈춘 채 43일을 갔다. 백필 스크립트가
+      "이미 있는 ticker = skip" 이라 날짜가 늘지 않는 구조였고, 그 위에서 이벤트스터디가
+      계속 돌았다 = 측정이 조용히 과거에 고정. 종목도 1,505(S&P1500)뿐이었다.
+      이제 US 반쪽은 `us_chart_history` 워크플로(월 1회·5,188종·97.4%)가 CI 에서 만들어
+      Blob 에 올리고, 여기서는 내려받아 쓴다. 워크플로 자체가 신선도 감시 대상이라
+      조용히 얼지 않는다.
+
+    캐시는 레포 밖(~/VERITY_data_lake)에 둔다 — 12MB 급 파일이라 커밋하면 레포가 붓는다.
+    조건부 GET(ETag)으로 변경 없으면 304 라 월 1회만 실제로 내려받는다.
+    """
+    cache = os.path.expanduser("~/VERITY_data_lake/us_event_study.json")
+    etag_path = cache + ".etag"
+    url = f"{US_EVENT_STUDY_BLOB}"
+
+    headers = {}
+    if os.path.exists(cache) and os.path.exists(etag_path):
+        try:
+            headers["If-None-Match"] = open(etag_path, encoding="utf-8").read().strip()
+        except OSError:
+            pass
+    try:
+        import requests
+        r = requests.get(url, headers=headers, timeout=120)
+        if r.status_code == 200 and r.content:
+            os.makedirs(os.path.dirname(cache), exist_ok=True)
+            tmp = cache + ".tmp"
+            with open(tmp, "wb") as f:
+                f.write(r.content)
+            os.replace(tmp, cache)
+            if r.headers.get("ETag"):
+                with open(etag_path, "w", encoding="utf-8") as f:
+                    f.write(r.headers["ETag"])
+            print(f"[event_study] US 반쪽 내려받음 ({len(r.content) / 1e6:.1f}MB)")
+        elif r.status_code == 304:
+            print("[event_study] US 반쪽 캐시 최신(304)")
+        else:
+            print(f"[event_study] US 반쪽 받기 실패 HTTP {r.status_code} — 캐시/폴백 사용")
+    except Exception as e:  # noqa: BLE001 — 네트워크 실패는 치명 아님(캐시·폴백 존재)
+        print(f"[event_study] US 반쪽 받기 실패({type(e).__name__}) — 캐시/폴백 사용")
+
+    if not os.path.exists(cache):
+        return {}, ""
+    try:
+        with open(cache, encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}, ""
+    stocks = doc.get("stocks") or {}
+    as_of = (doc.get("_meta") or {}).get("generated_at", "")[:10]
+    return stocks, f"us_chart_history 레이크(CI 산출 {as_of})"
+
+
 def build() -> Dict[str, Any]:
     kr = _build_market(_load_events(), KR_LAKE_PATH)
-    us = _build_market(_load_us_events(), US_LAKE_PATH)
+
+    # US = CI 산출본 우선. 없으면 옛 로컬 duckdb 로 폴백(전환기·오프라인 안전).
+    us, us_src = _load_us_precomputed()
+    if not us:
+        us = _build_market(_load_us_events(), US_LAKE_PATH)
+        us_src = "us_prices.duckdb 폴백(로컬·수동 갱신)"
     out_stocks = {**kr, **us}  # ticker 키 충돌 0 (KR 숫자코드 / US 영문)
 
     total_occ = sum(len(g["occurrences"]) for s in out_stocks.values() for g in s["events"])
     feed = {
         "_meta": {
             "generated_at": now_kst().isoformat(),
-            "source": "KR=DART 공시이력(2015~)+kr_prices · US=SEC 8-K(2015~)+us_prices. forward return(거래일 +1/+5/+20/+60).",
+            "source": ("KR=DART 공시이력(2015~)+kr_prices · "
+                       f"US=SEC 8-K(2015~)+{us_src or 'us_prices'}. "
+                       "forward return(거래일 +1/+5/+20/+60)."),
+            "us_price_source": us_src or "unknown",
             "note": "종목별 자기 과거 카탈리스트 공시 당시 주가 변화. 종목 간 집계 없음 — 과거 사실 비교용(예측·신호 아님).",
             "windows": WINDOWS,
             "stock_count": len(out_stocks),
