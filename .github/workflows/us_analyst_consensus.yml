@@ -5,11 +5,24 @@ name: US Analyst Consensus (yfinance)
 # 전 종목(sp1500 1505) rotation + carry-forward + budget. RULE 7 = 외부 사실(우리 점수 아님).
 
 # 🚨 2026-07-01 권리감사 — US 애널리스트 컨센서스(yfinance)는 실권리자 Benzinga/S&P IP,
-#   공개 재배포 금지축. 무료 공개 배포 위해 자동 발행 중단(schedule 비활성). PM 결정: 지금은 빼고 KR 홈그라운드 먼저.
-#   재개 = 재배포 허용 유료 벤더(FMP/Finnhub 상업tier) 계약 후. (수동 dispatch 만 유지 — 내부 검토용.)
+#   **공개 발행 영구 금지축**. 그때 schedule 까지 같이 껐다.
+#
+# 🚨 2026-08-09 schedule 만 복원 (PM 승인 — "중요도 순" 1순위). 발행 금지는 그대로다.
+#   7/1 에 껐던 이유는 "공개 배포" 였는데, 8/2 봉인으로 이 자산은 이미 오퍼레이터 전용 경로만
+#   남았다: public 커밋 스텝 제거 + git rm + .gitignore + blob allowlist 제외.
+#   실제 전달 경로 = private_data.py → VERITY-private/data/ → 오퍼레이터 챗이 PAT 로 직독.
+#   그 경로는 살아 있는데(파일 1.5MB 존재) 스케줄이 없어 **2026-08-02 이후 7일 정지**였다.
+#   즉 지금 상태는 "공개를 막은 것" 이 아니라 "오퍼레이터 재료를 굶긴 것" 이었다.
+#
+#   🚫 **여기서 발행 allowlist 를 다시 건드리지 말 것.** `.github/actions/publish-data/action.yml`
+#      의 파일 목록에 us_analyst_consensus.json 재추가 = PM 7/10 결정 위반. 세션 간 재추가
+#      핑퐁이 이미 2회(9c8397eea·414ff9431) 있었다. 숫자 부활 = 유료 라이선스 계약 후에만.
+#      상세 = 메모리 project_kr_index_public_data_2026_07_08.
 on:
-  # schedule:
-  #   - cron: '0 22 * * 0,2,4'   # 비활성(권리감사 2026-07-01). 재배포-허용 벤더 계약 시 재개.
+  schedule:
+    # KST 07:00 월·수·금 (UTC 22:00 일·화·목). 컨센서스는 저빈도 변동이라 주 3회로 충분하고,
+    # 1회 run 이 전량을 채운다(2026-08-02 실측: collected_today 5,269 · rate_limited 30).
+    - cron: '0 22 * * 0,2,4'
   workflow_dispatch:
     inputs:
       max_seconds:
@@ -57,10 +70,12 @@ jobs:
         #   이제 VERITY-private 로 올린다. PAT 없으면 조용히 skip(파이프라인 보호).
         #   ✅ 2026-08-02 봉인: public 커밋 스텝 제거 + git rm + .gitignore (schedule 은 이미 7/1 비활성,
         #   마지막 public 커밋 7/8 = "갱신 끊김" 우려는 이미 moot). 이후 보존 경로 = private_data.py 만.
-        continue-on-error: true
+        # 🚨 2026-08-09 continue-on-error 제거 + --strict. 이제 이 스텝이 **유일한 보존 경로**다
+        #   (public 커밋은 8/2 에 닫혔다). 여기서 조용히 skip 되면 수집한 5,269종이 러너와 함께
+        #   사라지는데 워크플로는 초록으로 끝난다 — 오퍼레이터는 재료가 없는 줄도 모른다.
         env:
           PRIVATE_DATA_PAT: ${{ secrets.PRIVATE_DATA_PAT }}
-        run: python scripts/private_data.py push data/us_analyst_consensus.json
+        run: python scripts/private_data.py push data/us_analyst_consensus.json --strict
 
       # (제거됨 2026-08-02) Commit data/us_analyst_consensus.json — 발행 금지 자산의 public 커밋 경로 폐쇄.
       #   파일은 git rm + .gitignore 로 트리에서 제거. 재추가 = PM 재승인 + 유료 라이선스만.
