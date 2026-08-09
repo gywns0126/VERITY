@@ -1,0 +1,482 @@
+{
+ "_note": "사전등록 §6 의무 진단. 추정 결과 재산출 아님.",
+ "rebalances": 76,
+ "n_quantile": 5,
+ "scenario": "conservative",
+ "axes": {
+  "safety_partial_20d": {
+   "quantile_mean_ret_pct": [
+    2.036,
+    1.65,
+    1.476,
+    1.272,
+    0.986
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     22
+    ],
+    [
+     14,
+     26
+    ],
+    [
+     19,
+     30
+    ],
+    [
+     23,
+     35
+    ],
+    [
+     29,
+     53
+    ]
+   ],
+   "monotone_decreasing": true,
+   "extreme_only": false
+  },
+  "safety_partial_60d": {
+   "quantile_mean_ret_pct": [
+    5.645,
+    4.627,
+    3.838,
+    3.448,
+    2.536
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     22
+    ],
+    [
+     14,
+     26
+    ],
+    [
+     19,
+     30
+    ],
+    [
+     23,
+     35
+    ],
+    [
+     29,
+     53
+    ]
+   ],
+   "monotone_decreasing": true,
+   "extreme_only": false
+  },
+  "safety_partial_values": {
+   "distinct": 51,
+   "share": "연속(24 초과)",
+   "n": 106707
+  },
+  "drop_20d": {
+   "quantile_mean_ret_pct": [
+    1.222,
+    1.246,
+    1.058,
+    0.861,
+    0.748
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     15
+    ],
+    [
+     0,
+     15
+    ],
+    [
+     5,
+     15
+    ],
+    [
+     5,
+     15
+    ],
+    [
+     10,
+     15
+    ]
+   ],
+   "monotone_decreasing": false,
+   "extreme_only": false
+  },
+  "drop_60d": {
+   "quantile_mean_ret_pct": [
+    3.391,
+    3.271,
+    2.633,
+    1.969,
+    1.623
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     15
+    ],
+    [
+     0,
+     15
+    ],
+    [
+     5,
+     15
+    ],
+    [
+     5,
+     15
+    ],
+    [
+     10,
+     15
+    ]
+   ],
+   "monotone_decreasing": true,
+   "extreme_only": false
+  },
+  "drop_values": {
+   "distinct": [
+    0,
+    5,
+    10,
+    15
+   ],
+   "share": {
+    "0": 0.1398,
+    "5": 0.1809,
+    "10": 0.2097,
+    "15": 0.4696
+   },
+   "n": 161342
+  },
+  "trading_value_20d": {
+   "quantile_mean_ret_pct": [
+    1.484,
+    1.378,
+    0.961,
+    0.85,
+    0.464
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     4
+    ],
+    [
+     0,
+     4
+    ],
+    [
+     0,
+     8
+    ],
+    [
+     4,
+     12
+    ]
+   ],
+   "monotone_decreasing": true,
+   "extreme_only": false
+  },
+  "trading_value_60d": {
+   "quantile_mean_ret_pct": [
+    3.936,
+    3.963,
+    2.369,
+    1.678,
+    0.946
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     4
+    ],
+    [
+     0,
+     4
+    ],
+    [
+     0,
+     8
+    ],
+    [
+     4,
+     12
+    ]
+   ],
+   "monotone_decreasing": false,
+   "extreme_only": false
+  },
+  "trading_value_values": {
+   "distinct": [
+    0,
+    4,
+    8,
+    12
+   ],
+   "share": {
+    "0": 0.4777,
+    "4": 0.3621,
+    "8": 0.1234,
+    "12": 0.0368
+   },
+   "n": 161342
+  },
+  "debt_20d": {
+   "quantile_mean_ret_pct": [
+    1.538,
+    1.66,
+    1.575,
+    1.436,
+    1.442
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     6
+    ],
+    [
+     6,
+     10
+    ],
+    [
+     6,
+     10
+    ]
+   ],
+   "monotone_decreasing": false,
+   "extreme_only": false
+  },
+  "debt_60d": {
+   "quantile_mean_ret_pct": [
+    4.439,
+    4.534,
+    4.256,
+    3.828,
+    3.833
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     6
+    ],
+    [
+     6,
+     10
+    ],
+    [
+     6,
+     10
+    ]
+   ],
+   "monotone_decreasing": false,
+   "extreme_only": false
+  },
+  "debt_values": {
+   "distinct": [
+    0,
+    6,
+    10
+   ],
+   "share": {
+    "0": 0.5561,
+    "6": 0.2172,
+    "10": 0.2267
+   },
+   "n": 100649
+  },
+  "op_margin_20d": {
+   "quantile_mean_ret_pct": [
+    1.633,
+    1.305,
+    1.307,
+    1.563,
+    1.543
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     6
+    ],
+    [
+     6,
+     10
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     10,
+     10
+    ]
+   ],
+   "monotone_decreasing": false,
+   "extreme_only": false
+  },
+  "op_margin_60d": {
+   "quantile_mean_ret_pct": [
+    4.634,
+    3.852,
+    3.641,
+    3.966,
+    4.059
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     6
+    ],
+    [
+     6,
+     10
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     10,
+     10
+    ]
+   ],
+   "monotone_decreasing": false,
+   "extreme_only": true
+  },
+  "op_margin_values": {
+   "distinct": [
+    0,
+    3,
+    6,
+    10
+   ],
+   "share": {
+    "0": 0.0164,
+    "3": 0.0924,
+    "6": 0.2376,
+    "10": 0.6535
+   },
+   "n": 94097
+  },
+  "roe_20d": {
+   "quantile_mean_ret_pct": [
+    1.569,
+    1.196,
+    1.643,
+    1.622,
+    1.608
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     2
+    ],
+    [
+     0,
+     2
+    ],
+    [
+     0,
+     6
+    ]
+   ],
+   "monotone_decreasing": false,
+   "extreme_only": false
+  },
+  "roe_60d": {
+   "quantile_mean_ret_pct": [
+    4.269,
+    3.619,
+    4.473,
+    4.388,
+    4.155
+   ],
+   "quantile_score_span": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     2
+    ],
+    [
+     0,
+     2
+    ],
+    [
+     0,
+     6
+    ]
+   ],
+   "monotone_decreasing": false,
+   "extreme_only": false
+  },
+  "roe_values": {
+   "distinct": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "share": {
+    "0": 0.8174,
+    "2": 0.1429,
+    "4": 0.0303,
+    "6": 0.0093
+   },
+   "n": 102313
+  }
+ }
+}
