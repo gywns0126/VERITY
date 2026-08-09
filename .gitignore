@@ -107,5 +107,10 @@ VERITY_ESTATE_status_*.pdf
 # 오퍼레이터 온디맨드 종합 캐시·사용량 (비공개, 커밋 금지)
 .cache/
 
+# 🚨 오퍼레이터 판단 실험 노트 (비공개). 이 repo 는 PUBLIC 이라 여기 들어오면 안 된다.
+#   보존은 보조 repo(.git-private = VERITY-private)가 맡는다 — 삭제가 아니라 이전이다.
+#   신규 파일은 이 규칙 때문에 보조 repo 에서도 `add -f` 가 필요하다.
+/private/
+
 # 미장 일봉 이력 레이크 — 5,000종목 규모라 레포 비커밋 (KR kr_chart_history 와 동일 정책)
 data/us_chart_history/
