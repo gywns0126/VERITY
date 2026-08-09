@@ -46,7 +46,7 @@
       "max_age_minutes": 360,
       "owner": "ci",
       "schedule": "always",
-      "cadence": "실측 median 100분·max 306분 (manifest 30분 주장 정정 2026-07-01). max_age=360 = 정상최대갭+버퍼",
+      "cadence": "macro_collect.yml (repository_dispatch — vercel dispatch_pulse 30분 발화, gh schedule 아님). 실측 median 100분·max 306분 (manifest 30분 주장 정정 2026-07-01). max_age=360 = 정상최대갭+버퍼",
       "criticality": "P0"
     },
     {
@@ -64,7 +64,7 @@
       "max_age_minutes": 30,
       "owner": "ci",
       "schedule": "market_hours",
-      "cadence": "1분 lite (장중만, 장외 정체 정상)",
+      "cadence": "price_pulse.yml (repository_dispatch — Vercel Cron 매분 → /api/cron/dispatch_pulse 단일 통로, gh schedule 아님). 1분 lite (장중만, 장외 정체 정상)",
       "criticality": "P0"
     },
     {
@@ -84,7 +84,7 @@
       "max_age_minutes": 4320,
       "owner": "ci",
       "schedule": "weekday",
-      "cadence": "일배치",
+      "cadence": "daily_analysis_full.yml 일배치 (stock_report_public_builder)",
       "criticality": "P0",
       "note": "부동산 NAV 프록시(부동산 장부가÷시총) 노출. 토지(유형자산 주석 LLM) 소스=사업보고서 연1회 → 토지 필드는 최대 ~1yr staleness 정상, 파일 age SLA와 직교. 🔔 필드-레벨(토지) 신선도 monitor = governance 미결 큐."
     },
@@ -143,7 +143,7 @@
       "max_age_minutes": 4320,
       "owner": "ci",
       "schedule": "weekly",
-      "cadence": "중단 — 권리감사(2026-07-01)로 schedule 비활성 (마지막 run 6/30). 재배포 허용 벤더 계약 시 재개 + active_check 복원",
+      "cadence": "us_analyst_consensus.yml (cron 비활성·workflow_dispatch 전용). 중단 — 권리감사(2026-07-01)로 schedule 비활성 (마지막 run 6/30). 재배포 허용 벤더 계약 시 재개 + active_check 복원",
       "criticality": "P1"
     },
     {
@@ -329,7 +329,7 @@
       "max_age_minutes": 2880,
       "owner": "ci",
       "schedule": "weekday",
-      "cadence": "일배치 daily_analysis_full (KIS 공유토큰 read)",
+      "cadence": "daily_analysis_full.yml 일배치 (market_warnings_public_builder, KIS 공유토큰 read)",
       "criticality": "P2",
       "known_issue": "2026-06-20~07-10 3주 침묵사(SUPABASE env 누락) — eb8383b3b 수리, 재발 시 이 등록이 잡음"
     },
@@ -466,7 +466,7 @@
       "max_age_minutes": 4320,
       "owner": "ci",
       "schedule": "weekday",
-      "cadence": "평일 1회 (생산처 정적 미검출)",
+      "cadence": "daily_analysis_full.yml 평일 1회 (perspective_maps_builder — 생산처 확정 2026-08-09, 옛 '정적 미검출' 정정)",
       "criticality": "P2"
     },
     {
@@ -475,7 +475,7 @@
       "max_age_minutes": 4320,
       "owner": "ci",
       "schedule": "weekday",
-      "cadence": "평일 1회 (생산처 정적 미검출)",
+      "cadence": "daily_analysis_full.yml 평일 1회 (entrance_map_builder — 생산처 확정 2026-08-09, 옛 '정적 미검출' 정정)",
       "criticality": "P2"
     },
     {
