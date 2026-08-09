@@ -1,19 +1,21 @@
 {
  "_meta": {
-  "generated_at": "2026-08-09T21:38:48.399107+09:00",
+  "generated_at": "2026-08-09T22:45:03.217251+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "green",
- "reasons": [],
+ "status": "amber",
+ "reasons": [
+  "CDN age 585s > 120s(스테일 서빙)"
+ ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-09T21:38:48.337049+09:00",
+  "generated_at": "2026-08-09T22:45:03.164043+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 0,
+  "max_cdn_age_s": 585,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -23,7 +25,7 @@
      "PBR": 85.2
     },
     "total": 1795,
-    "cdn_age_s": 0,
+    "cdn_age_s": 585,
     "error": null
    },
    {
@@ -65,7 +67,7 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-08-09T21:38:37.797554+09:00",
+  "generated_at": "2026-08-09T22:44:55.020914+09:00",
   "summary": {
    "fresh": 32,
    "stale": 0,
