@@ -462,6 +462,15 @@ jobs:
           FLOW_MAX_TICKERS: '500'
         run: python api/builders/stock_flow_public_builder.py
 
+      - name: KR 소형주 외국인 순매수 급증 관측 (RULE 7 관측 only)
+        # 🚨 2026-08-09 제이엠티 094970 사례. 데이터는 늦지 않았다 — 급등 당일 21:44 KST 에
+        #   외국인 +104,642주가 이미 수집돼 있었다. 갭은 표면화였다(파일에 있었는데 안 봤다).
+        #   임계는 전부 기존 상수 재사용(flow 3.0x·move 7.0% = us_demand_chain,
+        #   시총 300~3000억 = smallcap_corner) — 새 숫자 0개. 사전등록 없이 조정 금지.
+        #   바로 위 stock_flow_public_builder 산출(stock_flow_5d.json)을 읽으므로 순서 고정.
+        #   broad git add data/ = RULE 4(observations 디렉토리 자동 포함).
+        run: python -m api.builders.kr_flow_spike_observer
+
       - name: KR 종목 관측 신호 raw 적재 (v0, RULE 7 관측 only · 주간)
         # 내부자·수급·희석·총수일가 raw → data/observations/kr_cross_section_observations.jsonl (금요일만 self-run, 점수 0).
         # 엔진 미사용 신호 forward IC trail 누적(N≥252 2027 검증용). spec docs/kr_cross_section_observation_spec_v0.
