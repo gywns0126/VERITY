@@ -60,11 +60,12 @@ jobs:
           US_OPTIONS_MAX_SECONDS: ${{ github.event.inputs.max_seconds || '1800' }}
         run: python -m api.collectors.us_options_snapshot
 
-      - name: Commit data/us_options.json
+      - name: Commit data/us_options.json + trail
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/us_options.json
+          # RULE 4 — L2 누적 trail 도 함께. 미add 시 다음 run 이 rebase 에서 거부된다.
+          git add data/us_options.json data/us_options_trail.jsonl
           if git diff --staged --quiet; then
             echo "[us_options] no changes"
             exit 0

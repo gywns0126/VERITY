@@ -1697,7 +1697,14 @@ def main():
     # ── STEP 1.5: KRX OpenAPI — tier별 주기 (US 모드에서는 스킵)
     # full: 전부 갱신 | quick: Macro+Active 병합(Static 유지) | realtime: Active만 병합
     def _slim_krx(snap: dict) -> dict:
-        """portfolio.json 저장용: summary + 메타만 유지, 상세 endpoint rows 제거."""
+        """portfolio.json 저장용: summary + 메타만 유지, 상세 endpoint rows 제거.
+
+        🚨 이 축약은 **L3(발행) 층의 일이지 L1(수집) 층의 일이 아니다.** 2026-08-09 까지는
+           여기서 버린 것이 어디에도 남지 않아 매일 채권 308 · 파생지수 320 행이 소멸했다.
+           지금은 collect_krx_openapi_snapshot(persist_raw=True) 가 전체 행을
+           data/krx_raw/{bas_dd}.json 에 먼저 착지시킨다 — 이 함수는 축약만 담당한다.
+           persist_raw 를 끄면 그 폐기가 되살아난다.
+        """
         return {
             "bas_dd": snap.get("bas_dd"),
             "updated_at": snap.get("updated_at"),
@@ -1711,7 +1718,10 @@ def main():
             print("\n[1.5] KRX OpenAPI 스킵 (US 모드)")
         elif effective_mode == "full":
             print("\n[1.5] KRX OpenAPI 전체 갱신 (Static+Macro+Active, 18개)")
-            krx_snapshot = collect_krx_openapi_snapshot()
+            # 🚨 persist_raw — 아래 _slim_krx 가 상세 행을 제거하기 때문에, 이걸 켜지 않으면
+            #   매 full run 이 채권 308 · 파생지수 320 등을 받아서 그대로 버린다(추가 호출 0).
+            #   L1 폐기 금지 — docs/DATA_LAYER_RESEARCH_20260809.md §1-1 · §4-1.
+            krx_snapshot = collect_krx_openapi_snapshot(persist_raw=True)
             krx_snapshot["tier_plan"] = krx_tier_plan_dict()
             ts = krx_snapshot.get("updated_at") or now_kst().strftime(
                 "%Y-%m-%dT%H:%M:%S+09:00"

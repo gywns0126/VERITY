@@ -8,6 +8,8 @@ KRX OpenAPI collector.
 from __future__ import annotations
 
 import copy
+import json
+import os
 from datetime import date, timedelta
 from typing import Dict, List, Optional, Sequence
 
@@ -249,13 +251,105 @@ def krx_stk_ksq_rows_sorted_by_trading_value(
     return ("", [])
 
 
+# ── L1 raw 착지 (2026-08-09) ────────────────────────────────────────
+# 🚨 왜 생겼나: 이 수집기는 18개 엔드포인트를 매 full run 호출하면서 **응답을 두 겹으로
+#   버리고 있었다** — ① 여기서 sample 5행만 남기고 ② api/main.py `_slim_krx()` 가 그 5행마저
+#   제거. 실측(2026-08-09): 일반채권 308 · 파생지수 320 · 소액채권 40 · 국채유통 11 ·
+#   채권지수 3 · 금 2 종목의 payload 가 매일 통째로 사라지고 있었다. API 비용은 이미 냈다.
+#   docs/DATA_LAYER_RESEARCH_20260809.md §1-1 · §4-1(L1 폐기 금지).
+#
+# 🚨 범위 규율: 여기서 하는 일은 **폐기 중단**뿐이다. 채권/파생 "축 개설"(점수 반영·발행)은
+#   가설 사전등록 전까지 하지 않는다(같은 문서 §4-3 보류 목록). raw 를 남겨 둬야 나중에
+#   가설이 서면 소급 검정이 가능해진다 — 지금 안 남기면 그날부터만 쌓인다.
+#
+# 보존 = 90일 rolling(§4-1 계층 보존). 일반채권 308행이 약 101KB 이므로 전체 ~250KB/일,
+#   90일 ≈ 22MB. 무기한 누적은 하지 않는다.
+_RAW_DIRNAME = os.path.join("data", "krx_raw")
+_RAW_RETENTION_DAYS = 90
+
+# 🚨 착지 대상 = **다른 소비자가 전혀 없어 여기서 버리면 사라지는** 엔드포인트만.
+#   제외한 것들은 이미 다른 경로로 살아남는다:
+#     stk_bydd_trd · ksq_bydd_trd → universe_builder · trading_value_scanner · krx_mktcap_snapshot
+#     etf_bydd_trd               → etf_flow.json (1,160종 전량 누적)
+#     stk/ksq_isu_base_info      → 종목 마스터로 소비
+#     kospi/kosdaq/krx_dd_trd    → kr_index_daily.json (금융위 경로와 중복)
+#   전량을 남기면 stk+ksq 만으로 하루 수 MB → 90일에 수백 MB 라 레포가 감당하지 못한다.
+#   실측(2026-08-09): 아래 목록 기준 639행 180KB/일 → 90일 ≈ 16MB.
+_RAW_PERSIST_IDS: tuple = (
+    "bnd_bydd_trd",     # 일반채권 308
+    "kts_bydd_trd",     # 국채전문유통 11
+    "smb_bydd_trd",     # 소액채권 40
+    "bon_dd_trd",       # 채권지수 3
+    "drvprod_dd_trd",   # 파생상품지수 320
+    "gold_bydd_trd",    # 금 2
+    "oil_bydd_trd",     # 석유
+    "ets_bydd_trd",     # 배출권
+    "esg_etp_info",     # ESG 증권상품
+    "esg_index_info",   # ESG 지수
+)
+
+
+def _raw_dir() -> str:
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return os.path.join(root, _RAW_DIRNAME)
+
+
+def _prune_raw(keep_days: int = _RAW_RETENTION_DAYS) -> int:
+    """보존기간 초과 raw 파일 삭제. 파일명 = {bas_dd}.json 이라 날짜 비교로 끝난다."""
+    d = _raw_dir()
+    if not os.path.isdir(d):
+        return 0
+    cutoff = (now_kst().date() - timedelta(days=keep_days)).strftime("%Y%m%d")
+    removed = 0
+    for fn in os.listdir(d):
+        stem = fn[:-5] if fn.endswith(".json") else ""
+        if len(stem) == 8 and stem.isdigit() and stem < cutoff:
+            try:
+                os.remove(os.path.join(d, fn))
+                removed += 1
+            except OSError:
+                pass
+    return removed
+
+
+def persist_krx_raw(bas_dd: str, endpoints_full: Dict[str, List[dict]]) -> Optional[str]:
+    """전체 행을 data/krx_raw/{bas_dd}.json 으로 착지. 실패는 조용히(수집 본류를 막지 않음)."""
+    if not bas_dd or not endpoints_full:
+        return None
+    try:
+        d = _raw_dir()
+        os.makedirs(d, exist_ok=True)
+        path = os.path.join(d, f"{bas_dd}.json")
+        doc = {
+            "bas_dd": bas_dd,
+            "collected_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+            "source": "KRX OpenAPI (data-dbg.krx.co.kr/svc/apis) 전체 행",
+            "note": "L1 raw — 관측 사실만. 점수·판단 0(RULE 7). 보존 90일 rolling.",
+            "row_counts": {k: len(v) for k, v in endpoints_full.items()},
+            "endpoints": endpoints_full,
+        }
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
+        os.replace(tmp, path)
+        _prune_raw()
+        return path
+    except Exception as e:  # noqa: BLE001 — raw 착지 실패가 스냅샷 수집을 막지 않는다
+        print(f"[krx_raw] 착지 실패(무시): {type(e).__name__}: {e}")
+        return None
+
+
 def collect_krx_openapi_snapshot(
     bas_dd: Optional[str] = None,
     endpoint_ids: Optional[List[str]] = None,
     max_rows_per_endpoint: int = 5,
+    persist_raw: bool = False,
 ) -> Dict[str, object]:
     """
     KRX OpenAPI 스냅샷 수집.
+
+    persist_raw=True 이면 **전체 행**을 data/krx_raw/{bas_dd}.json 으로 남긴다(추가 호출 0).
+    반환 스냅샷의 구조는 그대로다 — 기존 소비자(portfolio.krx_openapi·health)에 영향 없음.
 
     Returns:
       {
@@ -274,12 +368,15 @@ def collect_krx_openapi_snapshot(
         "endpoints": {},
     }
 
+    raw_full: Dict[str, List[dict]] = {}
     for eid in target_ids:
         meta = KRX_ENDPOINT_MAP.get(eid)
         if not meta:
             continue
         result = _request_krx(meta["path"], b)
         rows = result.get("rows") or []
+        if persist_raw and eid in _RAW_PERSIST_IDS and isinstance(rows, list) and rows:
+            raw_full[eid] = rows
         sample = rows[:max_rows_per_endpoint] if isinstance(rows, list) else []
         endpoint_data = {
             "id": eid,
@@ -297,6 +394,13 @@ def collect_krx_openapi_snapshot(
             st = "error"
         out["summary"][st] += 1
         out["summary"]["total"] += 1
+
+    if persist_raw:
+        path = persist_krx_raw(b, raw_full)
+        if path:
+            total_rows = sum(len(v) for v in raw_full.values())
+            print(f"[krx_raw] {b} · {len(raw_full)}엔드포인트 {total_rows:,}행 착지 "
+                  f"→ {os.path.relpath(path, os.path.dirname(_raw_dir()))}")
 
     return out
 

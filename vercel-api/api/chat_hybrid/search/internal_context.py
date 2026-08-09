@@ -15,7 +15,8 @@
   · portfolio.json — VAMS 자산/수익/검증 리포트, 시스템 헬스. 공개본은 31키로 축소(Stage 3)
   · us_analyst_consensus.json — 목표가·투자의견. **발행 영구 금지**(Benzinga/S&P 실권리)
   · us_form144.json — 내부자 매도 **예정** 신고(SEC 공시 사실). Form 4 와 시점이 반대인 별개 축
-  · us_options.json — 옵션 IV·스큐·P/C(근월). 미장 가격 미시구조 — 다른 축이 못 보는 자리
+  · us_options.json — 옵션 IV·스큐·P/C. 미장 가격 미시구조 — 다른 축이 못 보는 자리
+  · us_eps_revision.json — 추정치 리비전(90일 창). **발행 금지**(컨센서스 class)
   · factor_ic_history.json — 팩터 IC 시계열
   · validation_summary.json full — funnel 신호 포함(공개본은 제외)
 
@@ -290,8 +291,10 @@ def _sec_options(tickers: List[str]) -> List[str]:
     """미장 옵션 관측 — IV·스큐·P/C. 시장이 붙인 값이지 우리 판단이 아니다.
 
     🚨 스큐 정의를 함께 싣는다. 정의 없는 스큐 숫자는 비교가 불가능해 사실 구실을 못 한다.
-    🚨 근월 만기 1개 기준이라 만기 구조는 담기지 않는다 — 합성 LLM 이 "IV term structure" 로
-       확대 해석하지 않게 범위를 명시한다.
+    🚨 만기 1개(잔존 30일 목표) 기준이라 만기 구조는 담기지 않는다 — 합성 LLM 이
+       "IV term structure" 로 확대 해석하지 않게 범위를 명시한다.
+    🚨 스큐는 정의가 둘이다(rr = OTM 풋−OTM 콜 / xzz = OTM 풋−ATM 콜). 값이 다르므로
+       어느 정의인지 붙이지 않고 "스큐" 라고만 쓰면 거짓이 된다.
     """
     doc = _load("us_options.json")
     if not isinstance(doc, dict):
@@ -304,7 +307,7 @@ def _sec_options(tickers: List[str]) -> List[str]:
     if not hit:
         return [f"[내부] 미장 옵션 관측 {len(rows)}종 보유 (IV·미결제·P/C)"]
     skew_def = (doc.get("_meta") or {}).get("skew_definition") or ""
-    out = ["[내부] 미장 옵션 관측 — 근월 만기 1개 기준. 시장 관측치(IV·OI·거래량)와 단순 산술만."]
+    out = ["[내부] 미장 옵션 관측 — 만기 1개(잔존 30일 목표) 기준. 시장 관측치(IV·OI·거래량)와 단순 산술만."]
     if skew_def:
         out.append(f"  (스큐 정의) {skew_def}")
     for r in hit:
@@ -313,8 +316,14 @@ def _sec_options(tickers: List[str]) -> List[str]:
             bits.append(f"만기 {r['expiry']}")
         if r.get("iv_atm_pct") is not None:
             bits.append(f"ATM IV {r['iv_atm_pct']}%")
-        if r.get("skew_pp") is not None:
-            bits.append(f"스큐 {r['skew_pp']:+}%p")
+        if r.get("skew_rr_pp") is not None:
+            bits.append(f"스큐(rr) {r['skew_rr_pp']:+}%p")
+        if r.get("skew_xzz_pp") is not None:
+            bits.append(f"스큐(xzz) {r['skew_xzz_pp']:+}%p")
+        if r.get("dte") is not None:
+            bits.append(f"잔존 {r['dte']}일")
+        if r.get("quality_rows") is not None:
+            bits.append(f"품질행 {r['quality_rows']}")
         if r.get("pc_volume") is not None:
             bits.append(f"P/C거래 {r['pc_volume']}")
         if r.get("pc_oi") is not None:
@@ -322,6 +331,41 @@ def _sec_options(tickers: List[str]) -> List[str]:
         if r.get("as_of"):
             bits.append(f"관측 {str(r['as_of'])[:10]}")
         out.append("  · " + " · ".join(bits))
+    return out
+
+
+def _sec_eps_revision(tickers: List[str]) -> List[str]:
+    """미장 애널리스트 추정치 리비전 — 🚫 발행 금지 class(컨센서스와 동일 취급).
+
+    🚨 90일 롤링 창 스냅샷이다. "지난 1년 리비전 추이" 로 확대 해석하면 거짓이 된다.
+    """
+    doc = _load("us_eps_revision.json")
+    if not isinstance(doc, dict):
+        return []
+    rows = doc.get("stocks")
+    if not isinstance(rows, list) or not rows:
+        return []
+    by = {str((r or {}).get("ticker") or ""): r for r in rows}
+    hit = [by[t] for t in tickers if t in by][:_MAX_TICKER_DETAIL]
+    if not hit:
+        return [f"[내부] 미장 추정치 리비전 {len(rows)}종 보유 (🚫 발행 금지 자산)"]
+    out = ["[내부] 미장 애널리스트 추정치 리비전 — 🚫 발행 금지(컨센서스 class). "
+           "90일 롤링 창 기준이며 그 이전 구간은 담기지 않는다."]
+    for r in hit:
+        for pk, plabel in (("+1q", "다음분기"), ("+1y", "내년")):
+            b = (r.get("periods") or {}).get(pk) or {}
+            if not b:
+                continue
+            bits = [f"{r.get('ticker')} {plabel}"]
+            if b.get("cur") is not None:
+                bits.append(f"추정 EPS {b['cur']}")
+            if b.get("chg_d30_pct") is not None:
+                bits.append(f"30일 변화 {b['chg_d30_pct']:+}%")
+            if b.get("net30") is not None:
+                bits.append(f"상향−하향 {b['net30']:+}")
+            if b.get("diffusion30") is not None:
+                bits.append(f"확산도 {b['diffusion30']:+}")
+            out.append("  · " + " · ".join(bits))
     return out
 
 
@@ -377,6 +421,7 @@ def build_internal_context(
         lambda: _sec_consensus(tks),
         lambda: _sec_form144(tks),
         lambda: _sec_options(tks),
+        lambda: _sec_eps_revision(tks),
         _sec_factor_ic,
         _sec_health,
     ):
