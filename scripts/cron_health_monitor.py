@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -303,6 +304,31 @@ _SWEEP_KNOWN_DEGRADED = {
 # 3연속부터는 "스스로 낫지 않는 고장" 으로 본다. 2026-06-17 tests.yml 5연속 21h 학습의 일반화.
 _SWEEP_PERSISTENT_STREAK = 3
 
+_SLA_PATH = os.path.join(_REPO_ROOT, "data", "freshness_sla.json")
+_YML_RE = re.compile(r"[a-z0-9_]+\.yml")
+
+
+def _workflow_stream_map() -> Dict[str, List[str]]:
+    """워크플로 파일명 → 그 워크플로가 만드는 freshness 스트림 id 목록.
+
+    출처 = `data/freshness_sla.json` 의 `streams[].cadence` 안에 적힌 yml 파일명
+    (예: "30분(시간당 2회) crypto_collect.yml"). 71 스트림 중 47이 yml 을 명시한다.
+    읽기 실패·매핑 없음 = 빈 dict → 판정은 엄격 쪽(격상 유지)으로 떨어진다.
+    """
+    out: Dict[str, List[str]] = {}
+    try:
+        with open(_SLA_PATH, encoding="utf-8") as f:
+            streams = (json.load(f) or {}).get("streams") or []
+    except Exception:
+        return out
+    for s in streams:
+        sid = s.get("id")
+        if not sid:
+            continue
+        for yml in _YML_RE.findall(str(s.get("cadence") or "")):
+            out.setdefault(yml, []).append(sid)
+    return out
+
 _FAIL_CONCLUSIONS = ("failure", "timed_out", "startup_failure")
 
 _DEFAULT_BRANCH = "main"
@@ -383,25 +409,51 @@ def _main_failure_streak(runs: List[Dict[str, Any]]) -> int:
 
 
 def _sweep_severity_and_findings(
-    workflow_failures: List[Dict[str, Any]], base_severity: str
+    workflow_failures: List[Dict[str, Any]],
+    base_severity: str,
+    stale_ids: Optional[List[str]] = None,
+    wf_streams: Optional[Dict[str, List[str]]] = None,
 ) -> tuple[str, List[str]]:
     """sweep 결과 → (severity, findings 추가분).
 
     CI allowlist(_SWEEP_CI_CRITICAL) 실패 = 실 코드 회귀 → FAIL 격상(🔴).
     3연속 이상 실패(_SWEEP_PERSISTENT_STREAK) = 스스로 낫지 않는 고장 → FAIL 격상(🔴).
-      단 _SWEEP_KNOWN_DEGRADED (원인 확정 + 조치가 시간 대기) 는 격상 제외.
-    그 외 = generic WARNING(⚠, noise 차단). base_severity 가 이미 FAIL 이면 유지(다운그레이드 X).
-    순수 함수 — I/O 없음, 단위 테스트 대상.
+      단 아래 둘은 격상 제외:
+        - _SWEEP_KNOWN_DEGRADED (원인 확정 + 조치가 시간 대기)
+        - 🚨 **산출물이 신선한 경우** — 그 워크플로가 만드는 freshness 스트림이 전부 stale 아님.
+
+    산출물 게이트가 필요한 이유(2026-08-09): run 실패는 건강의 대리 지표일 뿐이고,
+    사이트가 보는 것은 산출물이다. `kr_chart_daily` 는 하루 3슬롯이라 일부 run 이 실패해도
+    데이터는 착지한다 — 그런데 3연속 실패만 보고 P0 를 울리면, 주말 내내(다음 정기 슬롯은
+    월요일) 같은 알림이 매시간 반복된다. 실제로 8/9 07:23 에 그렇게 울렸다.
+    반대로 스트림이 stale 하면 그때는 진짜 고장이므로 격상한다.
+    매핑을 못 찾은 워크플로(스트림 미등록)는 **엄격 쪽**(격상 유지) — 신선도를 증명할 수 없으므로.
+    `stale_ids=None`(freshness 판정 자체가 실패)도 같은 이유로 엄격 쪽.
+
+    순수 함수 — I/O 없음(매핑·stale 목록은 호출자가 주입). 단위 테스트 대상.
     """
     findings: List[str] = []
     if not workflow_failures:
         return base_severity, findings
+
+    _streams = wf_streams or {}
+    _stale = set(stale_ids or [])
+
+    def _fresh_artifacts(wf: Dict[str, Any]) -> Optional[List[str]]:
+        """산출물이 전부 신선하면 스트림 id 목록, 아니면 None(= 증명 실패)."""
+        if stale_ids is None:
+            return None
+        ids = _streams.get(wf["workflow"]) or []
+        if not ids:
+            return None
+        return ids if all(i not in _stale for i in ids) else None
 
     def _persistent(wf: Dict[str, Any]) -> bool:
         return (
             int(wf.get("streak") or 0) >= _SWEEP_PERSISTENT_STREAK
             and wf["workflow"] not in _SWEEP_KNOWN_DEGRADED
             and wf["workflow"] not in _SWEEP_CI_CRITICAL  # CI 는 아래 has_ci 가 이미 격상
+            and _fresh_artifacts(wf) is None
         )
 
     has_ci = any(w["workflow"] in _SWEEP_CI_CRITICAL for w in workflow_failures)
@@ -423,6 +475,11 @@ def _sweep_severity_and_findings(
         elif _persistent(wf):
             findings.append(
                 f"🔴 {wf['workflow']} {streak}연속 실패 ({age_txt}) — 스스로 낫지 않는 고장, 원인 진단 필요"
+            )
+        elif streak >= _SWEEP_PERSISTENT_STREAK and _fresh_artifacts(wf):
+            findings.append(
+                f"⚠ {wf['workflow']} {streak}연속 실패 ({age_txt}) — 산출물은 신선"
+                f"({'·'.join(_fresh_artifacts(wf) or [])}), 실행만 실패"
             )
         elif wf["workflow"] in _SWEEP_KNOWN_DEGRADED:
             findings.append(
@@ -884,21 +941,23 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             findings.append(f"vision metric 산출 실패: {type(e).__name__}: {e}")
 
     # N) 전 workflow 최신-run 실패 sweep (bespoke 밖 cron silent 실패 포착 — dart_batch 3주 학습)
+    # 🚨 판정은 여기서 하지 않는다 — 산출물 신선도(블록 O)를 봐야 격상 여부가 정해진다.
+    #   run 실패는 대리 지표, 사이트가 보는 것은 산출물. 2026-08-09 주말 반복 P0 학습.
     workflow_failures = _sweep_workflow_latest_failures()
-    severity, _sweep_findings = _sweep_severity_and_findings(workflow_failures, severity)
-    findings.extend(_sweep_findings)
 
     # O) freshness SLA 능동 판정 (2026-07-06 flip — shadow 관측 6/27~7/6 게이트 통과 후 승격)
     # 게이트 trail: macro dispatch N=2(7/3) + 월요일 9 run 무오탐(7/6, 주말 유효 age 검증).
     # 판정 = freshness_sla.json 매니페스트 × schedule-aware 유효 age (shadow 와 동일 산정 재사용).
     # P0 stale = FAIL + critical(즉시 빨강) / P1·P2 stale = WARNING. shadow jsonl 관측 병행 유지.
     freshness_summary: Dict[str, Any] = {}
+    _stale_ids_for_sweep: Optional[List[str]] = None  # None = 판정 실패 → sweep 은 엄격 쪽
     try:
         if _REPO_ROOT not in sys.path:  # `python scripts/...` 실행 시 sys.path[0]=scripts/ — repo root 필요
             sys.path.insert(0, _REPO_ROOT)
         from scripts.freshness_shadow_monitor import build_observations
         _fresh_obs = build_observations()
         _stale_rows = [r for r in _fresh_obs.get("rows", []) if r.get("would_alarm")]
+        _stale_ids_for_sweep = [r["id"] for r in _stale_rows]
         freshness_summary = {
             "checked": _fresh_obs.get("checked"),
             "stale_ids": [r["id"] for r in _stale_rows],
@@ -925,6 +984,12 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         freshness_summary = {"error": f"{type(e).__name__}: {e}"[:150]}
         severity = "WARNING" if severity == "PASS" else severity
         findings.append(f"freshness 판정 실패: {type(e).__name__}")
+
+    # N-후속) sweep 판정 — 산출물 신선도(O)를 반영해 격상 여부 결정.
+    severity, _sweep_findings = _sweep_severity_and_findings(
+        workflow_failures, severity, _stale_ids_for_sweep, _workflow_stream_map()
+    )
+    findings.extend(_sweep_findings)
 
     return {
         "severity": severity,
