@@ -413,7 +413,9 @@
       "owner": "ci",
       "schedule": "weekday",
       "cadence": "평일 1회 kr_chart_daily.yml",
-      "criticality": "P1"
+      "criticality": "P1",
+      "ts_field": "_meta.as_of",
+      "age_basis": "data_date — T+1 소스. 쓴 시각이 아니라 데이터 날짜로 나이를 잰다 (2026-08-09)"
     },
     {
       "id": "nps_holdings",
@@ -431,7 +433,9 @@
       "owner": "ci",
       "schedule": "weekday",
       "cadence": "평일 1회 daily_analysis_full.yml",
-      "criticality": "P2"
+      "criticality": "P2",
+      "ts_field": "_meta.as_of",
+      "age_basis": "data_date — 8/8 에 쓴 파일이 8/6 데이터였다(35h 가림). 데이터 날짜 기준 (2026-08-09)"
     },
     {
       "id": "commodity_exposure",
@@ -512,7 +516,9 @@
       "owner": "ci",
       "schedule": "weekday",
       "cadence": "평일 1회 kr_chart_daily.yml",
-      "criticality": "P2"
+      "criticality": "P2",
+      "ts_field": "_meta.as_of",
+      "age_basis": "data_date — T+1 소스. 쓴 시각이 아니라 데이터 날짜로 나이를 잰다 (2026-08-09)"
     },
     {
       "id": "daily_briefing",
