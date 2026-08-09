@@ -96,6 +96,16 @@ def test_us_가격축이_실호출로_존재한다():
     assert tf._us_quote("005930") is None, "KR 은 KIS·금융위 담당 — 이 경로를 타면 안 된다"
 
 
+def test_kis_해외_실호출은_실패해도_조인을_막지_않는다():
+    """KIS 해외 경로(Railway /us_quotes)는 야후와 2층이다.
+
+    배포 전·장 마감·네트워크 실패 어느 쪽이든 None 을 돌려주고 야후 층이 답을 낸다.
+    한 소스가 죽어서 가격 축 전체가 사라지면 안 된다.
+    """
+    assert tf._us_realtime("005930") is None, "KR 은 KIS 국내 경로가 담당한다"
+    assert tf._us_realtime("ZZZZINVALID") is None, "미해석 심볼에서 예외가 새면 안 된다"
+
+
 def test_가격_부재_문구는_금지가_아니라_실호출_지시다():
     """문구가 '언급 금지' 로 되돌아가면 다음 세션이 그대로 입을 닫는다."""
     src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

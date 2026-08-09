@@ -290,6 +290,34 @@ def _trim(v: Any, cap: int = 12) -> Any:
     return v
 
 
+def _us_realtime(tk: str) -> Optional[Dict[str, Any]]:
+    """US 실시간 현재가 — KIS 해외 현재체결가(Railway 경유). 미도달/장 마감이면 None.
+
+    🚨 왜 Railway 를 거치나 (RULE 1): KIS 토큰은 앱키에 묶인다. 로컬 `.env` 앱키 지문은
+      GH Actions 발급분과 다르므로(2026-08-09 실측 c72f47d5… vs 728e2190…) 로컬 직접
+      호출은 자체 발급을 요구하고 그건 하루 2토큰이다. Railway 는 공유 store 순수
+      소비자(발급 0)라 여기를 거치는 것이 유일하게 정합한 경로다.
+    🚨 이 값을 공개 발행물에 싣지 말 것 — 본인 이용 한정.
+    """
+    if not tk or re.fullmatch(r"\d{6}", tk):
+        return None
+    doc = _fetch_json(f"{RAILWAY}/us_quotes?tickers={urllib.parse.quote(tk)}", None)
+    q = ((doc or {}).get("quotes") or {}).get(tk.upper())
+    if not isinstance(q, dict) or not q.get("price"):
+        return None
+    out = {
+        "현재가": q.get("price"), "전일종가": q.get("prev_close"),
+        "등락": q.get("change"),
+        "등락률": (f"{float(q['change_pct']):+.2f}%"
+                 if q.get("change_pct") is not None else None),
+        "거래량": q.get("volume"), "거래대금": q.get("amount"),
+        "통화": q.get("currency"), "거래소": q.get("excd"),
+        "_asof": (doc or {}).get("asof"),
+        "_note": "KIS 해외 현재체결가 · 오퍼레이터 본인 이용 · 재배포 금지",
+    }
+    return {k: v for k, v in out.items() if v is not None}
+
+
 def _us_quote(tk: str) -> Optional[Dict[str, Any]]:
     """US 시세·최근 5봉 — 발행물이 아니라 **연결된 소스 실호출**.
 
@@ -600,16 +628,24 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
         #   읽혀 실제보다 결손이 커 보인다. 애초에 해당되지 않는 축은 침묵이 정직하다.
         out["missing"].append("실시간 시세 (KIS — 미도달·장 마감)")
 
-    # US 시세 — 발행물이 아니라 연결 소스 실호출. KR 의 KIS 실시간 + 금융위 일봉에 대응한다.
+    # US 시세 — 발행물이 아니라 연결 소스 실호출. KR 의 (KIS 실시간 + 금융위 일봉) 2층에 대응한다.
+    #   ① KIS 해외 현재체결가 = 장중 현재가. ② 야후 = 최종 체결일 + 5봉 + 52주 고저.
+    #   🚨 둘을 섞지 말 것 — ①이 있으면 그게 '지금', ②는 '마지막 마감' 이다(SKILL.md 규율 2 정합).
     if _is_us_q:
+        urt = _us_realtime(tk) if include_private else None
+        if urt:
+            out["sections"].append({
+                "label": "미국 실시간 시세 (KIS · 본인 이용)", "source": "railway:us_quotes",
+                "as_of": str(urt.pop("_asof", "") or ""), "data": urt,
+            })
         uq = _us_quote(tk)
         if uq:
             out["sections"].append({
                 "label": "미국 시세·일봉 (야후 실호출)", "source": "yahoo:chart",
                 "as_of": str(uq.pop("_as_of", "") or ""), "data": uq,
             })
-        else:
-            out["missing"].append("미국 시세 (야후 실호출 실패 — 티커 오류·네트워크)")
+        elif not urt:
+            out["missing"].append("미국 시세 (KIS 해외·야후 둘 다 실패 — 티커 오류·네트워크)")
 
     # 종가 — 전 종목 동일 거래일(kr_close_latest). 등락은 prev 있을 때만.
     d = docs.get("kr_close_latest.json")

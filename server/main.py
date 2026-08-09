@@ -32,7 +32,7 @@ from server.config import (
 from server.kis_rest_client import (
     fetch_daily, fetch_minute, fetch_weekly, fetch_monthly, fetch_full_history, fetch_orderbook,
     fetch_price, fetch_trades, fetch_program_trade, fetch_index, fetch_index_daily,
-    fetch_us_index_daily, place_kr_order,
+    fetch_us_index_daily, fetch_us_price, place_kr_order,
     place_us_order, get_balance, token_status, BrokerMismatch,
 )
 from server.kis_ws_client import KISWebSocketClient
@@ -305,6 +305,39 @@ async def quotes(request: Request, tickers: str = Query("", description="쉼표�
         except Exception:
             pass
     return {"quotes": out, "count": len(out), "asof": datetime.now(kst).isoformat(timespec="seconds")}
+
+
+@app.get("/us_quotes")
+async def us_quotes(request: Request,
+                    tickers: str = Query("", description="쉼표구분 US 심볼 (최대 10)"),
+                    excd: str = Query("", description="거래소 강제 지정 (NAS/NYS/AMS). 미지정=자동 탐색")):
+    """오퍼레이터 US 실시간 시세 — KIS 해외 현재체결가(HHDFS00000300).
+
+    🚨 2026-08-09 신설. 이전까지 US 종목은 가격 축이 0 이라 챗이 가격을 근거로 말할 수
+      없었다. KIS 해외 API 는 이미 있었고 **소비 경로만** 없었다.
+    🚨 RULE 1: /quotes 와 동일하게 KIS_SHARED_TOKEN 순수 소비자다(발급 절대 X).
+      로컬에서 직접 부르지 않고 여기 두는 이유 = 로컬 앱키와 GH 발급 앱키가 달라
+      로컬 호출은 자체 발급을 요구하게 되고, 그건 하루 2토큰이다.
+    🚨 KR /quotes 는 건드리지 않았다 — 거긴 zfill(6) 이 전제라 US 를 섞으면 KR 이 깨진다.
+      상한 10 (거래소 자동 탐색이 심볼당 최대 3 콜이라 /quotes 15 보다 낮게 잡는다).
+    """
+    from datetime import datetime, timezone, timedelta
+    ip = request.client.host if request.client else "unknown"
+    if not _quote_rate_ok(ip):
+        return JSONResponse({"error": "rate_limited", "quotes": {}, "count": 0}, status_code=429)
+    kst = timezone(timedelta(hours=9))
+    syms = [t.strip().upper() for t in tickers.split(",") if t.strip()][:10]
+    ex = (excd or "").strip().upper()
+    out: Dict[str, dict] = {}
+    for s in syms:
+        try:
+            q = fetch_us_price(s, ex)
+            if q and q.get("price"):
+                out[s] = q
+        except Exception:
+            pass
+    return {"quotes": out, "count": len(out),
+            "asof": datetime.now(kst).isoformat(timespec="seconds")}
 
 
 @app.post("/subscribe")

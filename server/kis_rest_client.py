@@ -15,7 +15,7 @@ import os
 import threading
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Dict, Optional
 
 import requests
 
@@ -632,6 +632,53 @@ def fetch_price(ticker: str) -> dict:
         "upper_limit": _i("stck_mxpr"),
         "lower_limit": _i("stck_llam"),
     }
+
+
+# ── 해외주식 현재가 (2026-08-09 신설) ────────────────────────────────────────
+# 🚨 왜 Railway 에 두나: 오퍼레이터 챗이 US 종목을 물으면 가격 축이 0 이었다. KIS 해외
+#   현재가 API 는 kis_broker 에 이미 있었지만 **소비 경로**가 없었다. 로컬에서 직접 부르면
+#   자체 토큰 발급이 필요한데(로컬 .env 앱키 ≠ GH 발급 앱키) 그건 RULE 1 위반이다.
+#   Railway 는 공유 store 순수 소비자(발급 0)라 여기 두는 것이 유일하게 정합한 자리다.
+_US_EXCD_ORDER = ("NAS", "NYS", "AMS")
+_US_EXCD_CACHE: Dict[str, str] = {}   # 티커 → 거래소. 거래소 맵이 없어 탐색 결과를 재사용한다.
+
+
+def fetch_us_price(ticker: str, excd: str = "") -> dict:
+    """해외주식 현재체결가 — /uapi/overseas-price/v1/quotations/price (HHDFS00000300).
+
+    excd 미지정이면 NAS→NYS→AMS 순으로 탐색하고 성공한 거래소를 캐시한다(유니버스에
+    거래소 맵이 없다). 값 없으면 {} — 조인/응답을 막지 않는다.
+    """
+    tk = (ticker or "").strip().upper()
+    if not tk:
+        return {}
+    order = (excd,) if excd else (_US_EXCD_CACHE.get(tk),) + _US_EXCD_ORDER
+    for ex in order:
+        if not ex:
+            continue
+        o = _get("/uapi/overseas-price/v1/quotations/price", "HHDFS00000300",
+                 {"AUTH": "", "EXCD": ex, "SYMB": tk}).get("output") or {}
+        try:
+            last = float(o.get("last") or 0)
+        except (TypeError, ValueError):
+            last = 0.0
+        if last <= 0:
+            continue
+        _US_EXCD_CACHE[tk] = ex
+        _f = lambda k: float(o.get(k) or 0)         # noqa: E731
+        return {
+            "price": last,
+            "prev_close": _f("base") or None,
+            "change": _f("diff") or None,
+            "change_pct": _f("rate"),
+            "volume": int(_f("tvol")),
+            "amount": _f("tamt") or None,
+            "currency": o.get("curr") or "USD",
+            "excd": ex,
+            "sign": o.get("sign"),          # 1상한 2상승 3보합 4하한 5하락
+            "tradable": o.get("ordy"),      # 주문 가능 여부 문자열
+        }
+    return {}
 
 
 def fetch_index(index_cd: str = "0001") -> dict:
