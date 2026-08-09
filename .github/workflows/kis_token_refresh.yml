@@ -126,7 +126,18 @@ jobs:
           git config user.email "gywns0126@gmail.com"
           # RULE 4 — 계좌가 늘면 락 파일도 늘어난다. 글롭으로 받아 신규 계좌 추가 시
           #   yml 수정을 잊어 락이 propagate 안 되는 사고(= 러너마다 재발급 = RULE 1 위반)를 막는다.
-          git add data/.kis_issued_date.txt data/.kis_issued_date__*.txt || true
+          #
+          # 🚨 2026-08-09 사고 — 반드시 파일별로 나눠서 add 할 것.
+          #   한 줄로 묶으면(`git add A B*`) 글롭 B* 가 안 맞을 때 git add 가 **원자적으로
+          #   전부 실패**해서 오퍼레이터 락 A 까지 스테이징되지 않는다. FRIEND 계좌 secret 이
+          #   미등록이라 __friend 락이 생성되지 않았고, `|| true` 가 그 실패를 삼켜
+          #   아래 diff 검사가 "변화 없음"으로 통과했다. 결과 = 락이 8/7 에 동결된 채
+          #   8/8·8/9 실발급 2회가 기록되지 않음 → 24h 가드가 stale 락을 보고 항상
+          #   통과 → 하루 2토큰 가능 상태(RULE 1 위반 직전).
+          git add data/.kis_issued_date.txt || true
+          for _lock in data/.kis_issued_date__*.txt; do
+            [ -e "$_lock" ] && git add "$_lock" || true
+          done
           if git diff --staged --quiet; then
             echo "daily lock 파일 변화 없음 — 오늘 이미 발급된 상태"
             exit 0
