@@ -210,9 +210,19 @@ def run_cb_bw(univ, year, delay, dry, limit=None) -> Dict[str, int]:
     print(f"  [cb_bw] 대상 {len(sd)} · 미보유 {len(rest)} (발행주식수 보유분)")
     if dry or not sd:
         return {"todo": len(sd), "ok": 0}
-    res = analyze_all_cb_bw(sd)
-    print(f"  [cb_bw] 결과 {len(res)}")
-    return {"todo": len(sd), "ok": len(res)}
+    # 🚨 청크 — `analyze_all_cb_bw` 는 루프 종료 후 캐시를 1회만 저장한다(dart_cb_bw.py:171).
+    #   1,255종을 통으로 넘기면 종목당 2콜 × 약 2.5초 = 50분 넘게 진도가 메모리에만 남고
+    #   중단 1회로 전량 소멸한다(배당·8/8 백필 체크포인트 사고와 동형).
+    keys = list(sd)
+    CH = 100
+    total = 0
+    for i in range(0, len(keys), CH):
+        part = {k: sd[k] for k in keys[i:i + CH]}
+        res = analyze_all_cb_bw(part)
+        total += len(res)
+        print(f"  [cb_bw] {min(i+CH, len(keys))}/{len(keys)} · 누적 오버행 {total}", flush=True)
+    print(f"  [cb_bw] 결과 {total}")
+    return {"todo": len(sd), "ok": total}
 
 
 def run_shareholders(univ, year, delay, dry, limit=None) -> Dict[str, int]:
