@@ -128,14 +128,19 @@ def main(argv: List[str]) -> int:
         print(__doc__, file=sys.stderr)
         return 2
     mode = argv[1]
-    targets = argv[2:]
+    # 🚨 --strict (2026-08-09) — 이 경로가 **유일한 보존 경로**인 자산에서 쓴다.
+    #   기본 fail-open 은 로컬·포크 CI 를 위한 것인데, us_analyst_consensus 처럼 public 커밋을
+    #   닫아 둔 자산은 여기서 실패하면 산출물이 러너와 함께 사라지고 워크플로는 초록으로 끝난다.
+    #   건수 0 인데 성공 종료 = 없는 것보다 나쁘다([[feedback_silent_total_failure_guard]]).
+    strict = "--strict" in argv
+    targets = [a for a in argv[2:] if not a.startswith("--")]
     if not targets or targets == ["--all"]:
         targets = list(MANIFEST)
 
     if not TOKEN:
         # fail-open — 토큰 없는 환경(로컬 개발·포크 CI)에서 파이프라인을 죽이지 않는다.
         print("[private_data] PRIVATE_DATA_PAT 없음 — skip", file=sys.stderr)
-        return 0
+        return 1 if strict else 0
 
     ok = 0
     for rel in targets:
@@ -145,6 +150,9 @@ def main(argv: List[str]) -> int:
         except Exception as e:  # noqa: BLE001 — 개별 실패 격리
             print(f"[private_data] {mode} 예외 {rel}: {type(e).__name__}", file=sys.stderr)
     print(f"[private_data] {mode} {ok}/{len(targets)} 완료", file=sys.stderr)
+    if strict and ok < len(targets):
+        print(f"[private_data] strict — {len(targets) - ok}건 실패, 실패로 종료", file=sys.stderr)
+        return 1
     return 0
 
 
