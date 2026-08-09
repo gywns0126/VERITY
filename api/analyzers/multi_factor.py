@@ -11,40 +11,56 @@ from typing import Any, Dict, List, Optional
 # ── 기존 5팩터 가중치 (합 = 0.70) ──
 # 나머지 0.30은 퀀트 4팩터에 배분
 
+# ── #42 배분 재설계 (2026-08-09, PM 승인 · docs/PREREG_42_WEIGHT_REALLOCATION_2026_08_09.md) ──
+# 근거 = 2026-08-08 백테스트(리밸런스 75 · 관측 186,340 · PBO 0.0001 · 임계 |t|>=2.73):
+#   volatility 통과(t 4.96/6.52) · quality 부분통과(F-Score8 t 4.95/3.57)
+#   **technical 신호 0(t -1.23/-0.01) · momentum 신호 0(t -0.69/-0.09)**
+# 변경 = 신호 0 판정 2축을 **50%** 로 감축, 감축분은 나머지 7축에 현행 비율 pro-rata.
+#   · 50% 는 자의적 단일 선택이다(완전 제거는 검정력상 과하고, 유지는 측정과 배치).
+#     **재조정하지 않는다** — RULE 7 "1회만" 정신.
+#   · pro-rata 재분배는 추가 가정 0(손대지 않은 축의 상대 순서 불변). 통과축 집중(대안)은
+#     volatility 단일 팩터 베팅이 되어 #45 미장 검증 전에는 이르다고 판단해 채택하지 않았다.
+#   · mean_reversion 은 "불통과" 이지 "신호 0" 이 아니라 손대지 않는다(상쇄 문제는 #43 소관).
+# 🚨 적용 전 실측(운영 풀 40종): multi_score 중앙 55.06->56.62 · **Δbrain 중앙 +0.16점** ·
+#   등급 변경 3/40 · Spearman 0.9334. **실효는 작다** — multi_factor 가 최종 점수의 12.75%
+#   이기 때문이다. 그럼에도 적용하는 이유 = 근거와 배분이 어긋난 상태를 남기지 않기 위함.
 BASE_WEIGHTS = {
-    "fundamental": 0.18,
-    "technical": 0.17,
-    "sentiment": 0.10,
-    "flow": 0.13,
-    "macro": 0.12,
-    "momentum": 0.10,
-    "quality": 0.08,
-    "volatility": 0.06,
-    "mean_reversion": 0.06,
+    "fundamental": 0.2133,
+    "technical": 0.085,      # <- 0.17 (신호 0)
+    "sentiment": 0.1185,
+    "flow": 0.154,
+    "macro": 0.1422,
+    "momentum": 0.05,        # <- 0.10 (신호 0)
+    "quality": 0.0948,
+    "volatility": 0.0711,
+    "mean_reversion": 0.0711,
 }
 
+# #42 동일 규칙 적용. regime 이 바뀐다고 없던 정보가 생기지 않는다.
 RISK_OFF_WEIGHTS = {
-    "fundamental": 0.20,
-    "technical": 0.12,
-    "sentiment": 0.06,
-    "flow": 0.10,
-    "macro": 0.17,
-    "momentum": 0.05,
-    "quality": 0.14,
-    "volatility": 0.10,
-    "mean_reversion": 0.06,
+    "fundamental": 0.2207,
+    "technical": 0.06,       # <- 0.12
+    "sentiment": 0.0661,
+    "flow": 0.1102,
+    "macro": 0.1874,
+    "momentum": 0.025,       # <- 0.05
+    "quality": 0.1543,
+    "volatility": 0.1102,
+    "mean_reversion": 0.0661,
 }
 
+# #42 동일 규칙. 🚨 RISK_ON 은 technical 0.18 이라 방치하면 위험선호 국면에서
+# 신호 0 축이 오히려 커진다 — 세 벡터를 모두 고쳐야 하는 이유.
 RISK_ON_WEIGHTS = {
-    "fundamental": 0.14,
-    "technical": 0.18,
-    "sentiment": 0.10,
-    "flow": 0.16,
-    "macro": 0.07,
-    "momentum": 0.15,
-    "quality": 0.05,
-    "volatility": 0.05,
-    "mean_reversion": 0.10,
+    "fundamental": 0.1745,
+    "technical": 0.09,       # <- 0.18
+    "sentiment": 0.1246,
+    "flow": 0.1995,
+    "macro": 0.0872,
+    "momentum": 0.075,       # <- 0.15
+    "quality": 0.0623,
+    "volatility": 0.0623,
+    "mean_reversion": 0.1246,
 }
 
 
