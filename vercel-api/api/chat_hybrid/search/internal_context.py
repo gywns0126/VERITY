@@ -290,8 +290,10 @@ def _sec_options(tickers: List[str]) -> List[str]:
     """미장 옵션 관측 — IV·스큐·P/C. 시장이 붙인 값이지 우리 판단이 아니다.
 
     🚨 스큐 정의를 함께 싣는다. 정의 없는 스큐 숫자는 비교가 불가능해 사실 구실을 못 한다.
-    🚨 근월 만기 1개 기준이라 만기 구조는 담기지 않는다 — 합성 LLM 이 "IV term structure" 로
-       확대 해석하지 않게 범위를 명시한다.
+    🚨 만기 1개(잔존 30일 목표) 기준이라 만기 구조는 담기지 않는다 — 합성 LLM 이
+       "IV term structure" 로 확대 해석하지 않게 범위를 명시한다.
+    🚨 스큐는 정의가 둘이다(rr = OTM 풋−OTM 콜 / xzz = OTM 풋−ATM 콜). 값이 다르므로
+       어느 정의인지 붙이지 않고 "스큐" 라고만 쓰면 거짓이 된다.
     """
     doc = _load("us_options.json")
     if not isinstance(doc, dict):
@@ -304,7 +306,7 @@ def _sec_options(tickers: List[str]) -> List[str]:
     if not hit:
         return [f"[내부] 미장 옵션 관측 {len(rows)}종 보유 (IV·미결제·P/C)"]
     skew_def = (doc.get("_meta") or {}).get("skew_definition") or ""
-    out = ["[내부] 미장 옵션 관측 — 근월 만기 1개 기준. 시장 관측치(IV·OI·거래량)와 단순 산술만."]
+    out = ["[내부] 미장 옵션 관측 — 만기 1개(잔존 30일 목표) 기준. 시장 관측치(IV·OI·거래량)와 단순 산술만."]
     if skew_def:
         out.append(f"  (스큐 정의) {skew_def}")
     for r in hit:
@@ -313,8 +315,14 @@ def _sec_options(tickers: List[str]) -> List[str]:
             bits.append(f"만기 {r['expiry']}")
         if r.get("iv_atm_pct") is not None:
             bits.append(f"ATM IV {r['iv_atm_pct']}%")
-        if r.get("skew_pp") is not None:
-            bits.append(f"스큐 {r['skew_pp']:+}%p")
+        if r.get("skew_rr_pp") is not None:
+            bits.append(f"스큐(rr) {r['skew_rr_pp']:+}%p")
+        if r.get("skew_xzz_pp") is not None:
+            bits.append(f"스큐(xzz) {r['skew_xzz_pp']:+}%p")
+        if r.get("dte") is not None:
+            bits.append(f"잔존 {r['dte']}일")
+        if r.get("quality_rows") is not None:
+            bits.append(f"품질행 {r['quality_rows']}")
         if r.get("pc_volume") is not None:
             bits.append(f"P/C거래 {r['pc_volume']}")
         if r.get("pc_oi") is not None:
