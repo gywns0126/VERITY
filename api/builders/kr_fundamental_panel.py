@@ -28,7 +28,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -68,6 +68,59 @@ def _accruals(ni: Optional[float], ocf: Optional[float],
     if assets <= 0:
         return None, "derived_assets_nonpositive"
     return round((ni - ocf) / assets, 6), None
+
+
+def _add_ttm(rows: List[Dict[str, Any]]) -> None:
+    """기간 일관 TTM 계열 추가. 🚨 기존 필드 의미는 건드리지 않는다 —
+    조용히 바꾸면 이미 나간 산출물(8/9 안심점수 검정 등)이 재현 불가가 된다.
+
+    변환: Q1·Q2·Q3 = 3개월치 그대로 · **Q4 = FY − (Q1+Q2+Q3)** 로 복원 →
+          어느 분기에서든 직전 4개 분기 합 = TTM.
+    한 분기라도 비면 그 시점 TTM 은 None (0 대체 금지).
+    """
+    by_tk: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    for r in rows:
+        by_tk.setdefault(r["ticker"], {})[r["quarter_end"]] = r
+    for tk, qs in by_tk.items():
+        years = sorted({q[:4] for q in qs})
+        q3m: Dict[str, Dict[str, Optional[float]]] = {}     # 분기말 → 3개월치
+        for y in years:
+            k = {m: f"{y}-{m}" for m in ("03-31", "06-30", "09-30", "12-31")}
+            for fld in ("net_income", "operating_cashflow"):
+                v1, v2, v3 = (qs.get(k["03-31"], {}).get(fld), qs.get(k["06-30"], {}).get(fld),
+                              qs.get(k["09-30"], {}).get(fld))
+                fy = qs.get(k["12-31"], {}).get(fld)
+                for kk, vv in ((k["03-31"], v1), (k["06-30"], v2), (k["09-30"], v3)):
+                    q3m.setdefault(kk, {})[fld] = vv
+                q4 = (fy - (v1 + v2 + v3)) if None not in (fy, v1, v2, v3) else None
+                q3m.setdefault(k["12-31"], {})[fld] = q4
+        order = sorted(q3m)
+        for i, qe in enumerate(order):
+            if i < 3 or qe not in qs:
+                continue
+            win = order[i - 3:i + 1]
+            # 🚨 연속 4분기가 아니면(상장 전 공백 등) TTM 을 만들지 않는다
+            if not _is_consecutive(win):
+                continue
+            rec = qs[qe]
+            for fld, out in (("net_income", "net_income_ttm"),
+                             ("operating_cashflow", "operating_cashflow_ttm")):
+                vals = [q3m[w].get(fld) for w in win]
+                if all(v is not None for v in vals):
+                    rec[out] = round(sum(vals), 1)
+            if rec.get("net_income_ttm") is not None and rec.get("assets"):
+                rec["roa_ttm"] = round(rec["net_income_ttm"] / rec["assets"] * 100.0, 4)
+
+
+def _is_consecutive(qends: List[str]) -> bool:
+    seq = ["03-31", "06-30", "09-30", "12-31"]
+    idx = []
+    for q in qends:
+        try:
+            idx.append(int(q[:4]) * 4 + seq.index(q[5:]))
+        except ValueError:
+            return False
+    return all(idx[i + 1] - idx[i] == 1 for i in range(len(idx) - 1))
 
 
 def build() -> Dict[str, Any]:
@@ -113,12 +166,30 @@ def build() -> Dict[str, Any]:
 
     for (tk, qe), r in sorted(best.items()):
         rec: Dict[str, Any] = {"ticker": tk, "quarter_end": qe,
+                               # 🚨 2026-08-10 추가. DART `thstrm_amount` 는 분기보고서에서
+                               #   **3개월치**, 사업보고서에서 **연간**이다(실호출 확정:
+                               #   005930 2024 Q1 6.75조 / 반기 9.84조 / 3Q 10.10조 / 사업 34.45조,
+                               #   Q1+Q2+Q3 = 26.70조 = 3분기 누적). 즉 이 패널의 net_income·
+                               #   operating_cashflow·roa 는 **기간이 섞여 있다.**
+                               #   기간 일관 지표가 필요하면 아래 *_ttm 을 쓸 것.
+                               "period": "FY" if qe[5:7] == "12" else "Q",
                                "fetched_at": r.get("fetched_at")}
         for m in _METRICS:
             v = _num(r.get(m))
             if v is not None:
                 rec[m] = v
                 filled[m] += 1
+        # 자산 = 자기 행의 ni/roa 역산(같은 기간이라 정합). 스톡이라 분기·연간 무관.
+        assets = None
+        _ni, _roa = rec.get("net_income"), rec.get("roa")
+        if _ni is not None and _roa is not None and abs(_roa) >= 0.5:
+            assets = _ni / (_roa / 100.0)
+            rec["assets"] = round(assets, 1)
+            _dr = rec.get("debt_ratio")
+            if _dr is not None and _dr > -100:
+                # 부채비율 = 부채/자본×100 · 자산 = 부채+자본 → 자본 = 자산/(1+부채비율/100)
+                # 실측 검증(2026-08-10, N=18 실 DART 대조): 중앙오차 0.0% · 최대 0.7%
+                rec["equity"] = round(assets / (1.0 + _dr / 100.0), 1)
         acc, why = _accruals(rec.get("net_income"), rec.get("operating_cashflow"),
                              rec.get("roa"))
         if acc is not None:
@@ -127,6 +198,8 @@ def build() -> Dict[str, Any]:
         elif why:
             acc_reasons[why] = acc_reasons.get(why, 0) + 1
         rows.append(rec)
+
+    _add_ttm(rows)
 
     os.makedirs(os.path.dirname(OUT_PANEL), exist_ok=True)
     tmp = OUT_PANEL + ".tmp"

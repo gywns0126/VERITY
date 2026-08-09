@@ -1,14 +1,14 @@
 {
- "generated_at": "2026-08-09T18:34:09.796787+09:00",
+ "generated_at": "2026-08-10T00:05:04.523167+09:00",
  "source": "data/dart_quarterly_snapshots.jsonl",
- "raw_rows": 125365,
- "panel_rows": 55354,
+ "raw_rows": 127671,
+ "panel_rows": 55356,
  "dropped": {
-  "duplicate_ticker_quarter": 67802,
+  "duplicate_ticker_quarter": 70106,
   "quarter_end_not_quarter_end": 2209,
   "parse_error": 0
  },
- "tickers": 2153,
+ "tickers": 2154,
  "quarters": 46,
  "quarter_range": [
   "2016-03-31",
@@ -16,39 +16,39 @@
  ],
  "filled": {
   "roa": {
-   "n": 54325,
-   "pct": 98.1
+   "n": 54334,
+   "pct": 98.2
   },
   "debt_ratio": {
-   "n": 54556,
+   "n": 54558,
    "pct": 98.6
   },
   "current_ratio": {
-   "n": 54211,
+   "n": 54213,
    "pct": 97.9
   },
   "gross_margin": {
-   "n": 48624,
+   "n": 48628,
    "pct": 87.8
   },
   "asset_turnover": {
-   "n": 54375,
+   "n": 54380,
    "pct": 98.2
   },
   "operating_cashflow": {
-   "n": 55354,
+   "n": 55356,
    "pct": 100.0
   },
   "net_income": {
-   "n": 55354,
+   "n": 55356,
    "pct": 100.0
   }
  },
  "accrual_ratio": {
-  "computed": 44750,
-  "pct": 80.8,
+  "computed": 44760,
+  "pct": 80.9,
   "skipped_reasons": {
-   "roa_too_small": 10604
+   "roa_too_small": 10596
   },
   "definition": "(순이익 − 영업현금흐름) / 총자산. 총자산은 순이익/ROA 로 역산 (패널에 총자산 컬럼이 없음). |ROA| < 0.5% 는 역산 불안정으로 제외."
  },
