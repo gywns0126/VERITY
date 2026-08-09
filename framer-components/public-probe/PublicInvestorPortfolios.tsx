@@ -867,7 +867,16 @@ export default function PublicInvestorPortfolios(props: {
                 >
                     <div
                         style={{
-                            display: "flex",
+                            // 🚨 되돌리지 말 것 (2026-08-09 PM, 3번째 수정).
+                            //   `display:flex` + 자식 `width:62` 로는 우측 여백이 안 잡혔다.
+                            //   inline-grid + gridAutoColumns:1fr = 두 칸이 **가장 넓은 글자 기준
+                            //   같은 폭**으로 잡히고(전환해도 안 흔들림), 컨테이너는 내용 폭에서 멈춘다.
+                            //   width:fit-content + alignSelf 로 부모가 늘려도 안 늘어나게 이중으로 건다.
+                            display: "inline-grid",
+                            gridAutoFlow: "column",
+                            gridAutoColumns: "1fr",
+                            width: "fit-content",
+                            alignSelf: "flex-end",
                             background: C.hi,
                             borderRadius: 999,
                             padding: 3,
@@ -889,12 +898,11 @@ export default function PublicInvestorPortfolios(props: {
                                     font: "inherit",
                                     fontSize: 13,
                                     fontWeight: 650,
-                                    // 🚨 좌우 폭 고정 — 되돌리지 말 것 (2026-08-09 PM 스크린샷).
-                                    //   padding 만 주면 글자폭(USD vs KRW)만큼 알약이 좌우로
-                                    //   흔들려 전환할 때마다 버튼이 달라 보인다.
-                                    width: 62,
-                                    padding: "6px 0",
+                                    // 폭 균등은 부모 grid(1fr 2칸)가 담당한다 — 여기서 고정폭을
+                                    // 주면 내용보다 넓어져 우측이 빈다(2026-08-09 실패한 1차 수정).
+                                    padding: "6px 14px",
                                     textAlign: "center",
+                                    whiteSpace: "nowrap",
                                     borderRadius: 999,
                                     background: krw === o.k ? C.card : "transparent",
                                     color: krw === o.k ? C.vt : C.faint,
