@@ -72,7 +72,7 @@ def test_fetch_filings_splits_8k_and_offering(monkeypatch):
 
     monkeypatch.setattr(fb.urllib.request, "urlopen", lambda *a, **k: _Resp())
 
-    eightk, offerings = fb._fetch_filings("0000000320", cutoff="2026-01-01")
+    eightk, offerings, _proxies = fb._fetch_filings("0000000320", cutoff="2026-01-01")
 
     assert eightk == [("2026-08-01", ["3.02", "1.01"])]
     # 2020 년 S-1/A 는 cutoff 밖 → 제외
