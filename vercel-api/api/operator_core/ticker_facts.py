@@ -387,6 +387,52 @@ def _private_json(path: str) -> Optional[Any]:
 
 
 # ── 메인 ─────────────────────────────────────────────────────────────────────
+PAST_DECISIONS_LIMIT = 5
+
+
+def past_decisions_section(tk: str, limit: int = PAST_DECISIONS_LIMIT,
+                           path: Optional[str] = None):
+    """(섹션 dict | None, 오류 문구 | None) — 같은 종목의 과거 판단.
+
+    🚨 왜 조인하나 (2026-08-09): 이게 없으면 매 질의가 처음이다. 사실을 아무리 잘 모아도
+    "3개월 전에 뭐라고 했고 결과가 어땠나" 를 모르면 정보량만 많은 단발성 판단이다.
+    도서관(사실)·학술지(검증)에 없던 **실험 노트** 자리다.
+
+    · 기록이 없으면 섹션을 만들지 않는다 — 빈 섹션은 "없는 것을 넣지 않는다" 규율 위반이고,
+      0 건을 있는 척하면 판단이 흔들린다.
+    · 조회 실패는 삼키지 않고 문구로 돌려준다(호출부가 missing 에 남긴다).
+    · 🚨 단 **모듈 부재는 실패가 아니다.** 이 파일은 sync_operator_ask.sh 로 vercel-api 에
+      복제되는데 decision_journal 은 복제 대상이 아니다(실험 노트는 터미널 전용·비공개).
+      배포본에서 ModuleNotFoundError 를 "실패" 로 보고하면 매 조회마다 없는 결함이 뜬다.
+    · 지연 임포트 = 순환 차단(decision_journal → operator_ask → ticker_facts).
+    """
+    try:
+        from api.intelligence import decision_journal as _dj
+    except ImportError:
+        return None, None  # 이 배포에는 실험 노트가 없다 — 설계상 정상
+    try:
+        past = _dj.read_recent(tk, limit=limit, path=path)
+    except Exception as e:  # noqa: BLE001
+        return None, f"과거 판단 조회 실패 ({type(e).__name__})"
+    if not past:
+        return None, None
+    return {
+        "label": "과거 판단 (실험 노트 · 오퍼레이터)",
+        "source": "private:decisions/verdicts.jsonl",
+        "as_of": str(past[0].get("ts_kst") or "")[:10],
+        "data": [{
+            "ts": str(p.get("ts_kst") or "")[:16],
+            "verdict": p.get("verdict"),
+            "confidence": p.get("confidence"),
+            "ref_price": p.get("ref_price"),
+            "basis_axes": p.get("basis_axes"),
+            "brain_verdict": p.get("brain_verdict"),
+            "scored": p.get("scored"),
+            "brief": p.get("reasoning_brief"),
+        } for p in past],
+    }, None
+
+
 def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
     """종목 하나에 대한 전 소스 사실 조인.
 
@@ -538,6 +584,14 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
             got = _extract_for_ticker(d, tk)
             if got:
                 _add(label, f"private:{path}", d, _trim(got))
+
+    # 4) 과거 판단 (실험 노트) — 2026-08-09
+    if include_private:
+        sec, err = past_decisions_section(tk)
+        if err:
+            out["missing"].append(err)
+        elif sec:
+            out["sections"].append(sec)
 
     return out
 

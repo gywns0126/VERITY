@@ -40,8 +40,19 @@ from typing import Any, Dict, List, Optional, Tuple
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, _ROOT)
 
-from api.config import now_kst                       # noqa: E402
-from api.intelligence.operator_ask import _fingerprint  # noqa: E402  (중복 신설 금지)
+from api.config import now_kst  # noqa: E402
+
+
+def _fingerprint(*parts: str) -> str:
+    """operator_ask 의 구현을 그대로 쓴다(중복 신설 금지).
+
+    🚨 지연 임포트인 이유가 두 가지다.
+      ① 순환 차단 — ticker_facts 가 이 모듈을 읽고, operator_ask 는 ticker_facts 를 읽는다.
+         모듈 최상단에서 당기면 고리가 닫힌다.
+      ② 무게 — 해시 헬퍼 하나 때문에 LLM 클라이언트까지 끌어올 이유가 없다.
+    """
+    from api.intelligence.operator_ask import _fingerprint as _fp
+    return _fp(*parts)
 
 JOURNAL_PATH = os.path.join(_ROOT, "private", "decisions", "verdicts.jsonl")
 
