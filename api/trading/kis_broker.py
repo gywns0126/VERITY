@@ -166,6 +166,53 @@ def _kis_load_shared_token(app_key: str, broker: str = "operator"):
         return None
 
 
+def _kis_shared_fp_conflict(app_key: str, broker: str = "operator") -> Optional[str]:
+    """같은 slug 의 공유 store 에 **다른 앱키로 발급된 유효 토큰**이 있으면 그 지문을 돌려준다.
+
+    🚨 2026-08-09 신설 — RULE 1 잠재 구멍. `_kis_load_shared_token` 은 app_key_fp 불일치를
+      "행 없음" 과 똑같이 None 으로 돌려준다. 그래서 호출부가 구분하지 못하고 **발급 경로로
+      흘러간다.** 지금 그걸 막는 건 파일 락 하나뿐인데, 락이 굳으면(2026-08-09 글롭 미매칭
+      사고) 24h 가드가 항상 통과해 두 번째 토큰이 나간다.
+
+      slug 는 계정 1개에 대응한다(store 행 id = kis_rest__<slug>). 같은 slug 인데 env 앱키가
+      store 와 다르다 = ① 내 키가 stale 이거나 ② 같은 계좌에 등록된 두 번째 앱이다.
+      **둘 다 발급하면 안 된다** — ①은 쓸모없는 토큰이고 ②는 그 계좌 하루 2토큰이다.
+      (다중 계좌는 slug 를 나눠 각자 버킷을 갖는다 — 0928af2 설계. 이 검사와 충돌하지 않는다.)
+
+    실측 배경: 로컬 .env 지문 c72f47d5d28e ≠ GH 발급분 728e2190409c (2026-08-09).
+    Returns: 충돌 시 store 쪽 지문, 아니면 None(행 없음·만료·일치 전부 포함).
+    """
+    if not _kis_shared_enabled() or not app_key:
+        return None
+    url = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    try:
+        r = requests.get(
+            f"{url}/rest/v1/kis_shared_token",
+            headers={"apikey": key, "Authorization": f"Bearer {key}"},
+            params={"id": f"eq.{_kis_store_id(broker)}",
+                    "select": "expires_at,app_key_fp", "limit": "1"},
+            timeout=8,
+        )
+        r.raise_for_status()
+        rows = r.json()
+    except Exception as e:  # noqa: BLE001 — store 미도달로 발급을 막지는 않는다(가용성)
+        logger.warning("KIS 공유 store fp 대조 실패: %s", e)
+        return None
+    if not rows:
+        return None
+    fp = (rows[0].get("app_key_fp") or "").strip()
+    exp = (rows[0].get("expires_at") or "").strip()
+    if not fp or fp == _kis_app_key_fp(app_key):
+        return None
+    try:
+        if datetime.now(KST) >= datetime.fromisoformat(exp):
+            return None            # 만료분은 충돌 아님 — 새로 받아야 한다
+    except (TypeError, ValueError):
+        return None
+    return fp
+
+
 class OrderSide(Enum):
     BUY = "buy"
     SELL = "sell"
@@ -555,6 +602,21 @@ class KISBroker:
 
         if not self.is_configured:
             raise RuntimeError("KIS_APP_KEY / KIS_APP_SECRET 미설정")
+
+        # 🚨 RULE 1 최종 관문 (2026-08-09) — 여기부터가 실제 발급이다.
+        #   같은 slug 의 공유 store 에 **다른 앱키로 발급된 유효 토큰**이 있으면 발급하지 않는다.
+        #   위 파일 락이 유일한 방어였는데, 락은 커밋 전파에 의존해 stale 해질 수 있다
+        #   (8/9 글롭 미매칭으로 이틀 동결된 전례). store 는 cross-runner 실시간 truth 라
+        #   락이 굳어도 이 검사는 산다. fail-closed 가 정답 — 못 쓰는 토큰을 더 받느니 멈춘다.
+        _conflict = _kis_shared_fp_conflict(self.app_key, self.broker_slug)
+        if _conflict:
+            raise RuntimeError(
+                f"KIS 발급 차단 (RULE 1): slug '{self.broker_slug}' 의 공유 store 에 "
+                f"다른 앱키(지문 {_conflict})로 발급된 유효 토큰이 있다. "
+                f"현재 env 앱키 지문 = {_kis_app_key_fp(self.app_key)}. "
+                "여기서 발급하면 같은 계좌 하루 2토큰이다. "
+                "env 앱키를 발급원과 맞추거나, 계좌가 다르면 BROKER_SLUGS 로 slug 를 분리할 것."
+            )
 
         url = f"{self.base_url}/oauth2/tokenP"
         body = {
