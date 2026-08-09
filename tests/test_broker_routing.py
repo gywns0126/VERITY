@@ -191,9 +191,21 @@ def test_alt_broker_paths_are_separate(monkeypatch):
 
 
 def test_token_refresh_workflow_commits_all_lock_files():
-    """RULE 4 — 신규 계좌 락 파일이 git add 에서 빠지면 락이 전파되지 않는다."""
+    """RULE 4 — 신규 계좌 락 파일이 git add 에서 빠지면 락이 전파되지 않는다.
+
+    🚨 2026-08-09 사고로 요구 형태가 뒤집혔다. 옛 assert 는 두 경로를 **한 줄로
+    묶으라고** 강제했는데(`git add A B*`), 그 형태가 사고의 원인이었다. 글롭 B*
+    가 안 맞으면 git add 가 원자적으로 전부 실패해 오퍼레이터 락 A 까지
+    스테이징되지 않는다. FRIEND secret 미등록 → __friend 락 미생성 → 8/8·8/9
+    실발급 2회가 락에 기록되지 않아 24h 가드가 무력화됐다.
+
+    그래서 의도(두 락 모두 커버)는 유지하되 한 줄 묶음은 금지로 고정한다.
+    """
     s = _src(".github/workflows/kis_token_refresh.yml")
-    assert "data/.kis_issued_date.txt data/.kis_issued_date__*.txt" in s
+    assert "git add data/.kis_issued_date.txt" in s      # 오퍼레이터 락 단독 add
+    assert "data/.kis_issued_date__*.txt" in s           # 계좌별 락도 커버
+    # 🚨 한 줄 묶음 금지 — 글롭 미매칭 시 전체 실패 (2026-08-09 재발 방지)
+    assert "git add data/.kis_issued_date.txt data/.kis_issued_date__*.txt" not in s
     # 24h 가드는 절대 낮추지 않는다 (RULE 1, 사고 5/27·5/28)
     assert "_is_recently_issued(hours=24)" in s
     assert "hours=23" not in s
