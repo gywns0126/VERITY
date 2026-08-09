@@ -241,6 +241,21 @@ def main() -> int:
         },
     }
 
+    # 🚨 전량 실패 가드 (#46, 2026-08-09). price_pulse 는 P0 스트림이다.
+    #   지수·KR·US 를 전부 못 받았는데 파일을 새로 쓰면 내용은 빈 채로 mtime 만
+    #   갱신되어 신선도 보드가 "0분 경과" 로 통과시킨다 = 없는 것보다 나쁘다.
+    #   한쪽 시장만 휴장인 경우는 정상이므로 **전량 0** 일 때만 실패로 본다.
+    #   실패 시 파일을 건드리지 않는다 — 빈 새 파일보다 옛 값이 낫다.
+    obtained = len(indices) + len(kis_prices) + result["counts"]["us"]
+    requested = len(_INDEX_SYMBOLS) + len(kr_tickers) + len(us_symbols)
+    if requested and not obtained:
+        print(
+            f"[pulse] outcome=total_fail 요청 {requested}건 전부 실패 "
+            f"(지수 0 / KR 0 / US 0) — 산출 미갱신·실패 종료",
+            file=sys.stderr,
+        )
+        return 1
+
     os.makedirs(_DATA, exist_ok=True)
     with open(_OUT, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
