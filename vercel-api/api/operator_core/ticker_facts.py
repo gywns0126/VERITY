@@ -290,6 +290,66 @@ def _trim(v: Any, cap: int = 12) -> Any:
     return v
 
 
+def _us_quote(tk: str) -> Optional[Dict[str, Any]]:
+    """US 시세·최근 5봉 — 발행물이 아니라 **연결된 소스 실호출**.
+
+    🚨 2026-08-09 PM 지적으로 신설. 그 전까지 US 조회는 가격 축이 0 이었고, 나는 그걸
+      "us_chart_history(Blob·월 1회) 배선이 필요한 신규 과제" 로 보고했다. 틀린 판정이다.
+      이 챗의 설계는 **조인이 천장이 아니다** — 발행물로 못 채우는 축은 그 자리에서
+      연결된 소스를 실호출해 채운다. 발행 파이프라인을 기다릴 이유가 없다.
+      (같은 날 JEPQ 분석에서 내가 손으로 야후를 호출해 답을 만들었으면서, 정작 코드에는
+       "가격 언급 금지" 가드를 넣었다. 손으로 되는 걸 코드가 못 하게 한 셈이다.)
+
+    의존성 0(urllib) — yfinance 를 쓰지 않는 이유는 Vercel operator_core 복제본이
+    같은 파일을 그대로 배포하기 때문이다. 실패는 None — 한 소스가 죽어도 조인은 산다.
+    KIS 와 무관하므로 RULE 1 영향 0(토큰 발급 경로 아님).
+    """
+    if not tk or re.fullmatch(r"\d{6}", tk):
+        return None  # KR 은 KIS 실시간 + 금융위 일봉이 담당
+    doc = _fetch_json(
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(tk)}"
+        "?range=1mo&interval=1d",
+        None,  # 가격은 캐시하지 않는다 — 신선도가 이 섹션의 존재 이유
+        {"User-Agent": "Mozilla/5.0"},
+    )
+    try:
+        res = ((doc or {}).get("chart") or {}).get("result") or []
+        meta = res[0]["meta"]
+        ts = res[0]["timestamp"]
+        q = res[0]["indicators"]["quote"][0]
+    except (KeyError, IndexError, TypeError):
+        return None
+    px = meta.get("regularMarketPrice")
+    if px is None:
+        return None
+    closes = [(t, c) for t, c in zip(ts, q.get("close") or []) if c is not None]
+    if not closes:
+        return None
+    out: Dict[str, Any] = {"현재가": round(float(px), 4)}
+    if len(closes) >= 2:
+        prev = closes[-2][1]
+        out["전일종가"] = round(float(prev), 4)
+        out["등락률"] = f"{(float(px) / float(prev) - 1) * 100:+.2f}%"
+    last_dt = datetime.fromtimestamp(int(meta.get("regularMarketTime") or closes[-1][0]), _KST)
+    age_d = (_now() - last_dt).days
+    out.update({
+        "통화": meta.get("currency"), "거래소": meta.get("exchangeName"),
+        "52주고": meta.get("fiftyTwoWeekHigh"), "52주저": meta.get("fiftyTwoWeekLow"),
+        "거래량": meta.get("regularMarketVolume"),
+        "최근 5봉 [일,종가,거래량]": [
+            [datetime.fromtimestamp(int(t), _KST).strftime("%Y%m%d"), round(float(c), 4),
+             (q.get("volume") or [None])[ts.index(t)] if t in ts else None]
+            for t, c in closes[-5:]
+        ],
+        "_as_of": last_dt.isoformat(timespec="seconds"),
+        # 🚨 KIS 실시간(KR)과 성격이 다르다. 장 마감·주말이면 마지막 체결일 값이다.
+        "_note": ("야후 파이낸스 · 최종 체결일 기준"
+                  + (f" (오늘 기준 {age_d}일 전 — 장중 값 아님)" if age_d >= 1 else " (당일)")
+                  + " · 실시간 아님. 오퍼레이터 본인 이용, 재배포 금지"),
+    })
+    return {k: v for k, v in out.items() if v is not None}
+
+
 # ── private bucket ───────────────────────────────────────────────────────────
 def _realtime(tk: str) -> Optional[Dict[str, Any]]:
     """KIS 실시간 시세 (오퍼레이터 본인 이용). 미도달/장 마감이면 None — 조인을 막지 않는다.
@@ -540,6 +600,17 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
         #   읽혀 실제보다 결손이 커 보인다. 애초에 해당되지 않는 축은 침묵이 정직하다.
         out["missing"].append("실시간 시세 (KIS — 미도달·장 마감)")
 
+    # US 시세 — 발행물이 아니라 연결 소스 실호출. KR 의 KIS 실시간 + 금융위 일봉에 대응한다.
+    if _is_us_q:
+        uq = _us_quote(tk)
+        if uq:
+            out["sections"].append({
+                "label": "미국 시세·일봉 (야후 실호출)", "source": "yahoo:chart",
+                "as_of": str(uq.pop("_as_of", "") or ""), "data": uq,
+            })
+        else:
+            out["missing"].append("미국 시세 (야후 실호출 실패 — 티커 오류·네트워크)")
+
     # 종가 — 전 종목 동일 거래일(kr_close_latest). 등락은 prev 있을 때만.
     d = docs.get("kr_close_latest.json")
     if isinstance(d, dict):
@@ -652,13 +723,13 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
     #   없는 것 0" 으로 나와 **결손이 아예 없는 것처럼** 읽힌다 — 조용한 누락의 반대 방향
     #   함정이다. 가격이 안 잡혔으면 반드시 명시한다. 소비자(LLM 포함)가 "가격은 모른다" 를
     #   알아야 지어내지 않는다.
-    _PRICE_LABELS = ("실시간 시세", "종가", "일봉")
+    _PRICE_LABELS = ("실시간 시세", "종가", "일봉", "미국 시세")
     if not any(str(s.get("label", "")).startswith(_PRICE_LABELS) for s in out["sections"]):
         out["missing"].append(
-            "시세·일봉 — 이 종목의 가격 축이 하나도 조인되지 않았다. "
-            "🚨 가격·등락률·지지선·목표가를 언급하지 말 것"
-            + (" (US 가격은 us_chart_history Blob 월 1회 산출이며 아직 조인 미배선)"
-               if _is_us_q else "")
+            "시세·일봉 — 이 종목의 가격 축이 하나도 잡히지 않았다. "
+            "🚨 기억으로 가격을 지어내지 말 것. **연결된 소스를 직접 실호출해 채워라** "
+            "(야후 chart API·KIS overseas_price·웹). 조인은 바닥이지 천장이 아니다 — "
+            "발행물에 없다고 '모른다' 로 끝내면 그건 배선 핑계다"
         )
 
     return out

@@ -82,6 +82,30 @@ def test_etf_이름이_해석된다():
     assert name and name != "JEPQ", "ETF 정식명 해석 실패"
 
 
+def test_us_가격축이_실호출로_존재한다():
+    """🚨 PM 지적 2026-08-09 — 조인은 바닥이지 천장이 아니다.
+
+    발행물에 US 가격이 없다고 "us_chart_history 배선이 필요한 신규 과제" 로 보고했던 건
+    오판이다. 이 챗의 설계는 발행물로 못 채우는 축을 **그 자리에서 연결 소스 실호출**로
+    채우는 것이다(같은 날 JEPQ 분석에서 내가 손으로 야후를 호출해 답을 만들었으면서
+    코드에는 "가격 언급 금지" 가드를 넣었다 — 손으로 되는 걸 코드가 못 하게 한 셈).
+    """
+    q = tf._us_quote("QQQ")
+    assert q and q.get("현재가"), "US 시세 실호출 경로가 죽었다"
+    assert q.get("통화") == "USD" and q.get("_as_of")
+    assert tf._us_quote("005930") is None, "KR 은 KIS·금융위 담당 — 이 경로를 타면 안 된다"
+
+
+def test_가격_부재_문구는_금지가_아니라_실호출_지시다():
+    """문구가 '언급 금지' 로 되돌아가면 다음 세션이 그대로 입을 닫는다."""
+    src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "api/intelligence/ticker_facts.py"), encoding="utf-8").read()
+    i = src.index("가격 축이 하나도 잡히지 않았다")
+    guard = src[i:i + 400]
+    assert "실호출" in guard, "결손 문구가 실호출 지시를 잃었다"
+    assert "언급하지 말 것" not in guard, "금지 문구로 되돌아갔다 — 설계는 '채워라' 다"
+
+
 def test_로컬파일도_시장_게이팅을_받는다():
     """KR 조회에 us_* 로컬 파일을 파싱하지 않는다 (KR 조회 35s → 12s 로 준 근거)."""
     us_local = [r for r, _, _ in tf.LOCAL_FILES if os.path.basename(r).startswith("us_")]
