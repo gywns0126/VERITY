@@ -27,6 +27,12 @@ on:
         description: '이번 run 최대 종목 (0=전체). 부분 적재 시 다음 run 이 이어받음'
         required: false
         default: '0'
+      resume:
+        description: >-
+          true = Blob 기보유 티커를 건너뛰고 잔여만 수집(차단으로 끊긴 run 이어받기).
+          기본 false = 전량 재수집(월간 갱신 본래 목적).
+        required: false
+        default: 'false'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -61,11 +67,14 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Blob 기보유 목록 (재개용 skip-list)
+      - name: Blob 기보유 목록 (resume 모드 전용 skip-list)
         # 🚨 2026-08-08 첫 CI 실행 학습 — 이 레이크는 레포에 커밋하지 않아서 러너가 매번 빈
         #   디스크로 시작한다. 수집기의 "파일 존재 = 체크포인트" 재개가 CI 에서는 무력했다.
-        #   Blob 에 이미 있는 티커를 먼저 받아 skip-list 로 넘겨야 run 이 누적된다.
-        # 실패해도 계속 — 빈 목록이면 전량 수집을 시도할 뿐이다.
+        #   차단으로 끊긴 run 을 이어받으려면 Blob 기보유 목록이 필요하다.
+        # 🚨 **기본값이 아니다.** skip-list 를 상시 켜면 "이미 있는 티커는 영영 다시 안 받는" 게
+        #   되어 월간 갱신이 사실상 없어진다 — 오늘 us_prices.duckdb 에서 고친 바로 그 결함
+        #   ("이미 있는 ticker = skip" → 날짜가 늘지 않음)과 같은 구조다. resume=true 일 때만 켠다.
+        if: ${{ github.event.inputs.resume == 'true' }}
         continue-on-error: true
         env:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
@@ -76,16 +85,29 @@ jobs:
             "${{ github.workspace }}/data/us_chart_history_remote.txt"
 
       - name: Collect US daily history (yfinance · auto_adjust)
-        # 🚨 멱등 — 로컬 파일 + Blob skip-list 로 이미 받은 티커는 건너뛴다.
+        # 기본 = 전량 재수집(월간 갱신). resume=true 일 때만 Blob 기보유분을 건너뛴다.
         # 🚨 2026-08-08 첫 실행: 2,418종(408초) 지점부터 야후가 러너 IP 를 차단해 남은 2,900종이
         #   20초 만에 실패 소모되고 45.4% 로 끝났다(로컬 맥 97.4%). 수집기에 청크 성공률 감시 +
-        #   쿨다운 재시도를 넣었다. 그래도 부족하면 부분 산출을 올리고 다음 run 이 이어받는다.
+        #   쿨다운 재시도를 넣었다. 그래도 끊기면 부분 산출을 올리고 resume=true 로 이어받는다.
         run: |
           ARGS=""
           LIMIT="${{ github.event.inputs.limit || '0' }}"
           [ "$LIMIT" != "0" ] && ARGS="--limit $LIMIT"
-          python -m api.collectors.us_chart_history $ARGS \
-            --skip-list data/us_chart_history_remote.txt
+          if [ "${{ github.event.inputs.resume }}" = "true" ] && \
+             [ -f data/us_chart_history_remote.txt ]; then
+            ARGS="$ARGS --skip-list data/us_chart_history_remote.txt"
+            echo "[resume] Blob 기보유 skip-list 적용"
+          fi
+          python -m api.collectors.us_chart_history $ARGS
+
+      - name: 미장 이벤트스터디 반쪽 빌드 (레이크가 러너에 있는 지금)
+        # 🚨 2026-08-09 — US 이벤트스터디는 로컬 `us_prices.duckdb` 에서 만들고 있었는데
+        #   그 레이크는 갱신 스케줄이 없어 2026-06-26 에 43일 멈춘 채였다(측정이 과거에 고정).
+        #   여기서 만들면 방금 받은 5,188종 전 기간 일봉을 그대로 쓰므로 추가 수집 비용이 0이고,
+        #   이 워크플로가 신선도 감시 대상이라 조용히 얼지 않는다.
+        # 실패해도 계속 — 일봉 레이크 업로드(다음 스텝)가 이 run 의 본체다.
+        continue-on-error: true
+        run: python -m api.builders.us_event_study_builder
 
       - name: Blob 업로드 (us_chart_history/{ticker}.json)
         # publish-data 의 blob_upload.js 재사용 — kr_chart_history 와 동일 패턴.
@@ -104,6 +126,9 @@ jobs:
              "${{ github.workspace }}/_us_history_dist/us_chart_history/" 2>/dev/null || true
           cp data/us_chart_history_meta.json \
              "${{ github.workspace }}/_us_history_dist/us_chart_history/_meta.json" 2>/dev/null || true
+          # 이벤트스터디 US 반쪽 — 로컬 event_study_builder 가 조건부 GET 으로 받아 KR 과 합친다.
+          cp data/us_event_study.json \
+             "${{ github.workspace }}/_us_history_dist/us_chart_history/_event_study.json" 2>/dev/null || true
           cd .github/actions/publish-data
           npm install --no-save --silent --no-audit --no-fund @vercel/blob@^0.27
           node blob_upload.js "${{ github.workspace }}/_us_history_dist"
