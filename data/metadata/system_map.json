@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-09T23:54:35.600778+09:00",
+  "generated_at": "2026-08-10T00:36:37.878604+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 258297,
-    "python_modules": 782,
+    "code_lines_tsx_py": 259779,
+    "python_modules": 787,
     "tsx_components": 128,
-    "json_data_files": 1702,
-    "json_total_tracked": 1721,
-    "workflows": 75,
-    "scheduled_workflows": 59,
-    "cron_triggers": 70,
-    "git_tracked_files": 7403
+    "json_data_files": 1706,
+    "json_total_tracked": 1725,
+    "workflows": 76,
+    "scheduled_workflows": 60,
+    "cron_triggers": 71,
+    "git_tracked_files": 7414
   },
   "subsystems": {
     "ingest": {
@@ -165,8 +165,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 75,
-      "scheduled": 59,
+      "count": 76,
+      "scheduled": 60,
       "workflows": [
         {
           "name": "atr_4cell_sweep",
@@ -375,6 +375,13 @@
           "name": "kr_chart_history",
           "crons": [
             "37 6 1 * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "kr_company_facts_backfill",
+          "crons": [
+            "15 21 * * *"
           ],
           "scheduled": true
         },
@@ -693,7 +700,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1702
+      "count": 1706
     },
     "validation": {
       "label": "검증",
@@ -708,9 +715,9 @@
     }
   },
   "python_by_dir": {
-    "api": 418,
+    "api": 422,
     "tests": 207,
-    "scripts": 87,
+    "scripts": 88,
     "vercel-api": 58,
     "server": 7,
     ".github": 5
