@@ -86,6 +86,55 @@ def test_three_consecutive_escalates_to_fail():
     assert any("🔴" in x and "3연속" in x and "낫지 않는" in x for x in findings)
 
 
+# ── 산출물 게이트 (2026-08-09): run 실패 ≠ 데이터 손실 ──
+
+_MAP = {"kr_chart_daily.yml": ["kr_index_daily", "hot_stock"]}
+
+
+def test_fresh_artifacts_block_escalation():
+    # 8/9 07:23 실제 오보 재현 — kr_chart_daily 3연속 실패 + 스트림 전부 신선 = P0 아님.
+    sev, findings = m._sweep_severity_and_findings(
+        [_fail("kr_chart_daily.yml", streak=3)], "PASS", stale_ids=[], wf_streams=_MAP
+    )
+    assert sev == "WARNING"
+    assert any("산출물은 신선" in x and "kr_index_daily" in x for x in findings)
+    assert all("🔴" not in x for x in findings)
+
+
+def test_stale_artifact_still_escalates():
+    # 같은 3연속인데 스트림이 stale = 진짜 고장 → 격상.
+    sev, findings = m._sweep_severity_and_findings(
+        [_fail("kr_chart_daily.yml", streak=3)], "PASS",
+        stale_ids=["kr_index_daily"], wf_streams=_MAP,
+    )
+    assert sev == "FAIL"
+    assert any("🔴" in x for x in findings)
+
+
+def test_unmapped_workflow_stays_strict():
+    # 스트림 미등록 = 신선도를 증명할 수 없음 → 엄격 쪽(격상 유지).
+    sev, _ = m._sweep_severity_and_findings(
+        [_fail("some_weekly.yml", streak=3)], "PASS", stale_ids=[], wf_streams=_MAP
+    )
+    assert sev == "FAIL"
+
+
+def test_freshness_unavailable_stays_strict():
+    # freshness 판정 자체가 실패(stale_ids=None) → 격상 유지. 침묵으로 넘기지 않는다.
+    sev, _ = m._sweep_severity_and_findings(
+        [_fail("kr_chart_daily.yml", streak=3)], "PASS", stale_ids=None, wf_streams=_MAP
+    )
+    assert sev == "FAIL"
+
+
+def test_workflow_stream_map_reads_real_registry():
+    # 실 매니페스트 파싱 — kr_chart_daily 는 kr_index_daily·hot_stock 를 만든다.
+    mp = m._workflow_stream_map()
+    assert "kr_chart_daily.yml" in mp
+    assert "kr_index_daily" in mp["kr_chart_daily.yml"]
+    assert "crypto" in mp.get("crypto_collect.yml", [])
+
+
 def test_known_degraded_never_escalates():
     # 원인 확정 + 조치가 시간 대기(월 16~25일 재시도 창) = 매 회차 알림 금지.
     assert "nps_employment.yml" in m._SWEEP_KNOWN_DEGRADED
