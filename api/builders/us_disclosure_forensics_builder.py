@@ -24,9 +24,25 @@ KR DART 보다 정밀: restatement / auditor_change = 미장 특화 red flag (KR
   성격이 다르다. 합치면 기존 dilution 카운트의 의미가 바뀐다. 같은 submissions 응답에
   이미 들어 있어 추가 HTTP 호출은 0.
 
+위임장 (2026-08-09 추가 — DEF 14A 축):
+  DEFC14A / PREC14A → proxy_contest (위임장 대결 = 경영권 분쟁)
+  DEFM14A / PREM14A → proxy_merger  (합병·중대거래 승인 안건)
+  DEF 14A / PRE 14A → proxy_annual  (정기 주총)
+  DEFA14A(추가 권유자료)는 같은 건에 여러 번 붙어 카운트를 부풀리므로 제외.
+
+소비처 = 오퍼레이터 판단 레이어. ticker_facts 가 us_disclosure_forensics.json 을
+  이미 소스로 등록하고 있어 별도 배선 없이 종목 질의에 조인된다(공개 화면 아님).
+
+희석 3단계 관측 (이 빌더가 한 화면에서 잇는 것):
+  ① proxy_annual 안건에서 수권주식수 증가 승인 → ② offering_registered(S-1/S-3)
+  → ③ offering_priced(424B). ①의 안건 내용은 문서 파싱이 필요해 미구현이고,
+  지금은 "정기 주총이 있었다" 까지만 사실이다. 단계 간 인과 단정 금지.
+
 한계 (정직, RULE 7): convertible(CB)은 8-K item(1.01 광범위)으로 정확 식별 불가 → 미집계.
   노이즈(2.02 실적 / 5.07 주총 / 7.01 FD / 8.01 기타 / 9.01 첨부 / 5.02 임원) = 미집계.
   등록 신고는 철회·미발행으로 끝날 수 있다 — offering_registered 는 "발행 확정" 이 아니다.
+  🚨 위임장은 **폼 코드까지만** 사실이다. 역분할·수권주식수 증가 같은 안건 내용은
+  문서 파싱이 필요해 미구현 — proxy_annual 을 "희석 예고" 로 읽으면 안 된다.
 
 입력: data/us_smallcap_corner.json(종목) + data/sec_ticker_cik_map.json(CIK)
 출력: data/us_disclosure_forensics.json {stocks:[{ticker, name, counts, latest_8k, n_8k}]}
@@ -89,10 +105,29 @@ def _offering_category(form: str) -> str:
     return ""
 
 
-def _fetch_filings(cik10: str, cutoff: str):
-    """submissions/CIK → 윈도우 내 (8-K 목록, 등록공모 목록).
+def _proxy_category(form: str) -> str:
+    """위임장 권유 신고서(14A 계열) → 카테고리. 해당 없으면 빈 문자열.
 
-    같은 응답에서 둘 다 뽑는다 — 등록 공모를 위해 추가 호출을 하지 않는다.
+    SEC 폼 코드 자체가 성격을 구분해 준다 — 문서를 열지 않아도 여기까지는 사실이다.
+      DEFC14A / PREC14A → proxy_contest (위임장 대결 = 경영권 분쟁)
+      DEFM14A / PREM14A → proxy_merger  (합병·중대거래 승인 안건)
+      DEF 14A / PRE 14A → proxy_annual  (정기 주총)
+    DEFA14A(추가 권유자료)는 같은 건에 여러 번 붙어 카운트를 부풀리므로 제외한다.
+    """
+    f = form.upper().replace(" ", "").strip()
+    if f in ("DEFC14A", "PREC14A"):
+        return "proxy_contest"
+    if f in ("DEFM14A", "PREM14A"):
+        return "proxy_merger"
+    if f in ("DEF14A", "PRE14A"):
+        return "proxy_annual"
+    return ""
+
+
+def _fetch_filings(cik10: str, cutoff: str):
+    """submissions/CIK → 윈도우 내 (8-K 목록, 등록공모 목록, 위임장 목록).
+
+    셋 다 같은 응답에서 뽑는다 — 축을 늘려도 추가 HTTP 호출은 0이다.
     """
     url = f"https://data.sec.gov/submissions/CIK{cik10}.json"
     req = urllib.request.Request(url, headers={"User-Agent": SEC_USER_AGENT})
@@ -103,6 +138,7 @@ def _fetch_filings(cik10: str, cutoff: str):
     items = recent.get("items", [])
     out = []
     offerings = []
+    proxies = []
     for i, f in enumerate(forms):
         fdate = dates[i] if i < len(dates) else ""
         if fdate < cutoff:  # ISO 날짜 문자열 비교
@@ -115,7 +151,11 @@ def _fetch_filings(cik10: str, cutoff: str):
         cat = _offering_category(str(f))
         if cat:
             offerings.append((fdate, cat, str(f).upper().strip()))
-    return out, offerings
+            continue
+        pcat = _proxy_category(str(f))
+        if pcat:
+            proxies.append((fdate, pcat, str(f).upper().strip()))
+    return out, offerings, proxies
 
 
 def main() -> int:
@@ -135,7 +175,7 @@ def main() -> int:
             fail += 1
             continue
         try:
-            filings, offerings = _fetch_filings(_cik10(raw_cik), cutoff)
+            filings, offerings, proxies = _fetch_filings(_cik10(raw_cik), cutoff)
         except Exception as e:  # noqa: BLE001
             print(f"[us_forensics] {tk} 공시 fetch 실패: {type(e).__name__}", file=sys.stderr)
             fail += 1
@@ -160,6 +200,15 @@ def main() -> int:
                 latest_offering = fdate
                 latest_offering_form = form
 
+        # 위임장 — 폼 코드만으로 구분 가능한 범위까지만 집계한다.
+        latest_proxy = ""
+        latest_proxy_form = ""
+        for fdate, cat, form in proxies:
+            counts[cat] = counts.get(cat, 0) + 1
+            if fdate > latest_proxy:
+                latest_proxy = fdate
+                latest_proxy_form = form
+
         if counts:  # forensic 신호 보유 종목만 (사실 없으면 비노출, RULE 7)
             stocks.append({
                 "ticker": tk,
@@ -170,6 +219,9 @@ def main() -> int:
                 "n_offering": len(offerings),
                 "latest_offering": latest_offering,
                 "latest_offering_form": latest_offering_form,
+                "n_proxy": len(proxies),
+                "latest_proxy": latest_proxy,
+                "latest_proxy_form": latest_proxy_form,
             })
             ok += 1
         else:
@@ -182,7 +234,7 @@ def main() -> int:
         "_meta": {
             "generated_at": _now_kst().isoformat(),
             "track": "us_smallcap_forensics",
-            "source": "SEC EDGAR submissions — 8-K items + 등록공모(S-1/S-3/F-1/424B)",
+            "source": "SEC EDGAR submissions — 8-K items + 등록공모(S-1/S-3/F-1/424B) + 위임장(14A)",
             "window_days": WINDOW_DAYS,
             "universe_n": len(corner),
             "flagged_n": len(stocks),
