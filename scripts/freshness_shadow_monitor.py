@@ -84,8 +84,28 @@ def _load_any(path: str):
 
 
 def _parse_ts_kst(iso: str) -> datetime | None:
+    """ISO ts → KST datetime. 날짜만 있는 값(`20260806` / `2026-08-06`)도 받는다.
+
+    날짜-only = **그 날 끝(익일 00:00 KST)** 으로 본다 (2026-08-09).
+    `as_of=20260806` 은 "8/6 장까지의 데이터" 라는 뜻이므로 8/6 이 끝난 시점에 완성된 것이다.
+    00:00 로 잡으면 하루가 통째로 더 늙어 보여 임계가 어긋난다.
+    이 경로가 필요한 이유 = T+N 소스는 "쓴 시각" 이 아니라 "데이터 날짜" 로 나이를 재야 하는데
+    (`ts_field: _meta.as_of`), 그 값이 ISO 가 아니라 YYYYMMDD 다.
+    """
+    s = (iso or "").strip()
+    # 🚨 compact 8자리(YYYYMMDD)만 "그 날 끝" 으로 본다. `as_of` 계열의 표기 관례이고,
+    #   이 형식은 기존 fromisoformat 경로에서 파이썬 3.10 이하가 파싱 자체를 못 했다(NO_TS).
+    #   `2026-08-06` 같은 ISO date 는 **기존 동작(자정) 유지** — 아이템의 `date` 필드가
+    #   fallback 으로 잡히는 스트림이 나중에 생겼을 때 조용히 24h 젊어지는 것을 막는다.
+    #   (2026-08-09 측정: 날짜-only ts 를 쓰는 스트림 = 아래 3개뿐, 전부 _meta.as_of)
+    if len(s) == 8 and s.isdigit():
+        try:
+            d = datetime.strptime(s, "%Y%m%d")
+        except ValueError:
+            return None
+        return datetime.combine(d.date() + timedelta(days=1), time(0), tzinfo=KST)
     try:
-        t = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        t = datetime.fromisoformat(s.replace("Z", "+00:00"))
     except ValueError:
         return None
     if t.tzinfo is None:
