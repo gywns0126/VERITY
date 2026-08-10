@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-10T23:32:08+09:00",
+  "collected_at": "2026-08-11T00:02:36+09:00",
   "macro": {
     "usd_krw": {
       "value": 1417.33,
@@ -1373,7 +1373,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 291,
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "미국 CPI 발표",
@@ -1389,7 +1389,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 10,
-      "d_day": 2
+      "d_day": 1
     },
     {
       "name": "미국 PPI 발표",
@@ -1404,7 +1404,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 46,
-      "d_day": 3
+      "d_day": 2
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1419,7 +1419,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 3
+      "d_day": 2
     },
     {
       "name": "옵션만기일 (한국)",
@@ -1433,7 +1433,7 @@
       "impact": "프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
       "action": "만기일 장중 단기 매매 자제",
       "source": "KRX",
-      "d_day": 3
+      "d_day": 2
     },
     {
       "name": "Michigan 소비자심리 예비치",
@@ -1447,7 +1447,7 @@
       "impact": "미국 소비자 기대 인플레이션 포함. Fed도 주시하는 지표",
       "action": "소비재·리테일 섹터 감정 판단",
       "source": "UMich",
-      "d_day": 4
+      "d_day": 3
     },
     {
       "name": "미국 소매판매",
@@ -1462,7 +1462,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 9,
-      "d_day": 4
+      "d_day": 3
     },
     {
       "name": "미국 주택착공",
@@ -1477,7 +1477,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 27,
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1492,16 +1492,51 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 10
+      "d_day": 9
+    },
+    {
+      "name": "Conference Board 소비자신뢰",
+      "date": "2026-08-25",
+      "country": "미국",
+      "severity": "low",
+      "impact_area": [
+        "소비심리",
+        "고용기대"
+      ],
+      "impact": "Michigan과 교차 검증되는 소비심리. 고용 기대 하위지표 중요",
+      "action": "Michigan과 방향 일치 시 신뢰도 상승",
+      "source": "Conference Board",
+      "d_day": 14
+    },
+    {
+      "name": "미국 PCE 물가지수",
+      "severity": "high",
+      "impact_area": [
+        "물가",
+        "금리기대"
+      ],
+      "impact": "Fed 선호 인플레 지표. CPI와 유사하나 실질 정책 영향 큼",
+      "action": "CPI와 교차 확인, 인플레 추세 판단",
+      "date": "2026-08-25",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 21,
+      "d_day": 14
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 69.0
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 135.27
   },
   "schema_version": "v0"
 }
