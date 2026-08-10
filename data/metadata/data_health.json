@@ -1,18 +1,22 @@
 {
  "_meta": {
-  "generated_at": "2026-08-10T20:03:25.351428+09:00",
+  "generated_at": "2026-08-10T21:55:42.377717+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "green",
- "reasons": [],
+ "status": "red",
+ "reasons": [
+  "배달 검증 실패 1건",
+  "커버리지 게이트 차단(직전 run)",
+  "커버리지 회귀 경고 12건"
+ ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-10T20:03:25.293267+09:00",
-  "ok": true,
-  "failed": 0,
+  "generated_at": "2026-08-10T21:55:42.321326+09:00",
+  "ok": false,
+  "failed": 1,
   "max_cdn_age_s": 0,
   "files": [
    {
@@ -28,14 +32,14 @@
    },
    {
     "file": "us_stock_report_public.json",
-    "ok": true,
+    "ok": false,
     "pct": {
-     "PER": 86.3,
-     "PBR": 94.9
+     "PER": 44.0,
+     "PBR": 72.1
     },
-    "total": 1505,
+    "total": 5148,
     "cdn_age_s": 0,
-    "error": null
+    "error": "커버리지 후퇴: disclosures 98.0%→80.4% · fin_series 99.6%→80.2% · calendar 99.7%→28.3% · peer 95.8%→83.7%"
    },
    {
     "file": "us_stock_report_us_smallcap.json",
@@ -60,12 +64,12 @@
    "us_fields.facts.PBR": 94.9,
    "us_fields.facts.PER": 86.3
   },
-  "last_run_blocked": false,
-  "last_run_fails": 0,
-  "last_run_warns": 0
+  "last_run_blocked": true,
+  "last_run_fails": 2,
+  "last_run_warns": 12
  },
  "freshness": {
-  "generated_at": "2026-08-10T20:03:15.225414+09:00",
+  "generated_at": "2026-08-10T21:55:30.887433+09:00",
   "summary": {
    "fresh": 58,
    "stale": 0,

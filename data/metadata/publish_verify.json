@@ -1,8 +1,8 @@
 {
- "generated_at": "2026-08-10T20:03:25.293267+09:00",
- "ok": true,
+ "generated_at": "2026-08-10T21:55:42.321326+09:00",
+ "ok": false,
  "checked": 3,
- "failed": 0,
+ "failed": 1,
  "results": [
   {
    "file": "stock_report_public.json",
@@ -47,22 +47,29 @@
   },
   {
    "file": "us_stock_report_public.json",
-   "ok": true,
-   "total": 1505,
+   "ok": false,
+   "total": 5148,
    "cdn_age_s": 0,
    "pct": {
-    "PER": 86.3,
-    "PBR": 94.9
+    "PER": 44.0,
+    "PBR": 72.1
    },
    "coverage": {
-    "disclosures": 98.0,
-    "fin_series": 99.6,
+    "disclosures": 80.4,
+    "fin_series": 80.2,
     "ownership": 0.0,
-    "calendar": 99.7,
-    "peer": 95.8,
+    "calendar": 28.3,
+    "peer": 83.7,
     "consensus": 0.0,
-    "business": 98.9
+    "business": 98.5
    },
+   "regression": [
+    "disclosures 98.0%→80.4%",
+    "fin_series 99.6%→80.2%",
+    "calendar 99.7%→28.3%",
+    "peer 95.8%→83.7%"
+   ],
+   "error": "커버리지 후퇴: disclosures 98.0%→80.4% · fin_series 99.6%→80.2% · calendar 99.7%→28.3% · peer 95.8%→83.7%",
    "gaps": [
     [
      "ownership",
@@ -71,6 +78,18 @@
     [
      "consensus",
      0.0
+    ],
+    [
+     "calendar",
+     28.3
+    ],
+    [
+     "fin_series",
+     80.2
+    ],
+    [
+     "disclosures",
+     80.4
     ]
    ]
   },
