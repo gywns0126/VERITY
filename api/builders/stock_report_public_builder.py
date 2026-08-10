@@ -28,6 +28,11 @@ KRLISTED_PATH = os.path.join(_ROOT, "data", "kr_listed.json")
 NAMES_PATH = os.path.join(_ROOT, "data", "kr_stock_names.json")
 CONSENSUS_PATH = os.path.join(_ROOT, "data", "consensus_data.json")
 CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
+# 2026-08-09 중·소형주 채움 — light 경로 보강 소스 (전부 로컬 발행물, 부재 시 graceful)
+LYNCH_PATH = os.path.join(_ROOT, "data", "kr_lynch_class.json")
+OWNER_DART_PATH = os.path.join(_ROOT, "data", "kr_major_shareholders.json")
+CBBW_PATH = os.path.join(_ROOT, "data", "dart_cb_bw_cache.json")
+CHAIN_PATH = os.path.join(_ROOT, "data", "chain_snippets.json")
 # 과거 적재분 — alerts 와 종목 집합이 다르다(공시 커버리지 확대, 2026-08-08)
 CATALYST_BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_catalyst_backfill.jsonl")
 # DART 최대주주 drip 백필 산출 (ownership 커버리지 확대, 2026-08-08)
@@ -584,9 +589,66 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
     return out
 
 
+def _ownership_from_dart(rec: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """DART 최대주주 현황(hyslrSttus) → ownership 노출 shape.
+
+    🚨 2026-08-09 — 기존 ownership 은 공정위 `ftc_official` 이 유일 소스였는데 공정위는
+    **대규모기업집단(~346개사)만** 공시한다. 중·소형주는 구조적으로 대상 밖이라 8.6% 에
+    머물렀다(소스 부재가 아니라 소스 성격 문제). DART 사업보고서 최대주주 현황은
+    **전 상장사 제출 의무**라 여기서 채운다. 두 소스는 note 로 구분한다.
+    """
+    rows_in = (rec or {}).get("shareholders") or []
+    if not isinstance(rows_in, list) or not rows_in:
+        return None
+    # 🚨 DART hyslrSttus 응답에는 '계/합계/소계/총계' 집계행이 섞인다. 수집 단계에서도
+    #   거르지만 여기서 한 번 더 막는다 — 소스가 오염된 채 들어와도 공개 화면에
+    #   "계 76.2%" 같은 잡음이 나가면 안 된다(2026-08-09 실측 2,368행 오염).
+    _AGG = {"계", "합계", "소계", "총계"}
+    rows: List[Dict[str, Any]] = []
+    for s in rows_in:
+        try:
+            pct = float(str(s.get("stock_rate") or "0").replace(",", ""))
+        except (TypeError, ValueError):
+            pct = 0.0
+        nm = str(s.get("nm") or "").strip()
+        if not nm or re.sub(r"\s+", "", nm) in _AGG:
+            continue
+        rows.append({"name": nm, "type": str(s.get("relate") or ""), "pct": round(pct, 2)})
+    if not rows:
+        return None
+    rows.sort(key=lambda x: x["pct"], reverse=True)
+    return {
+        "family_pct": None,   # 공정위 '동일인+친족' 분류가 없는 소스 — 지어내지 않는다
+        "group": "",
+        "shareholders": rows[:8],
+        "note": f"DART 사업보고서 최대주주 현황 ({(rec or {}).get('bsns_year') or ''}) · "
+                "지분율은 보고서 기재값. 공정위 총수일가 분류는 이 소스에 없음",
+    }
+
+
+def _overhang_from_cache(rec: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """CB/BW 오버행 — DART 발행결정 공시 + 발행주식수 비율. LLM 0, 자체 점수 0."""
+    if not isinstance(rec, dict):
+        return None
+    n = rec.get("n_instruments")
+    if not n:
+        return None      # 0건 = '오버행 없음 확정'. 빈 섹션을 만들지 않는다
+    return {
+        "count": n,
+        "dilution_pct": rec.get("dilution_pct"),
+        "issuable_shares": rec.get("total_issuable_shares"),
+        "window": rec.get("window"),
+        "note": "전환사채·신주인수권부사채 발행결정 공시 기준 잠재 희석 · DART 사실",
+    }
+
+
 def build_light(ticker: str, fund: Dict[str, Any], name: str, market: str,
                 catalyst: Dict[str, List[Dict[str, Any]]],
-                consensus_map: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+                consensus_map: Dict[str, Dict[str, Any]],
+                lynch_map: Optional[Dict[str, Any]] = None,
+                owner_map: Optional[Dict[str, Any]] = None,
+                overhang_map: Optional[Dict[str, Any]] = None,
+                chain_map: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     facts: Dict[str, str] = {}
     for key, src, suf, dg in [("PER", "per", "", 1), ("PBR", "pbr", "", 1),
                                ("ROE", "roe", "%", 1), ("부채비율", "debt_ratio", "%", 0),
@@ -595,13 +657,34 @@ def build_light(ticker: str, fund: Dict[str, Any], name: str, market: str,
         if val is not None:
             facts[key] = val
     cons = consensus_map.get(ticker)
+    # 🚨 2026-08-09 — 여기까지가 옛 light 였다. 아래 4종은 운영풀 20종(build_rich)에만
+    #   달려 있어 소형주 리포트가 "네이버와 같은 화면" 이던 원인이다.
+    #   전부 DART/규칙 기반 사실이라 RULE 7 정합(자체 점수·등급·매매의견 0).
+    lynch = (lynch_map or {}).get(ticker)
+    lens = None
+    if isinstance(lynch, dict) and lynch.get("data_quality") == "ok":
+        # 미검증·저신뢰 분류는 숨긴다 — build_rich 의 _verity_lens_from_rec 와 같은 규율
+        lens = {
+            "lynch": {k: lynch.get(k) for k in ("class", "label", "summary", "color")}
+                     | {"reasons": (lynch.get("reasons") or [])[:4]},
+            "note": "Peter Lynch 분류 룰을 공개 재무 사실에 적용한 관측 — 자체 점수·매매의견 "
+                    "아님. 종합점수는 검증 후(2027) 공개.",
+        }
+    chain = (chain_map or {}).get(ticker) or {}
+    snippets = (chain.get("snippets") or [])[:3] if isinstance(chain, dict) else []
     return {
         "ticker": ticker, "name": name or ticker, "market": market or "",
         "business": "",
         "facts": facts, "facts_note": {},
         "disclosures": catalyst.get(ticker, [])[:8],
-        "ownership": None,
+        "ownership": _ownership_from_dart((owner_map or {}).get(ticker)),
+        "overhang": _overhang_from_cache((overhang_map or {}).get(ticker)),
+        "supply_chain": ({"report_nm": chain.get("report_nm"), "rcept_dt": chain.get("rcept_dt"),
+                          "snippets": snippets,
+                          "note": "사업보고서 '주요 매출처' 앵커 주변 원문 발췌 · DART"}
+                         if snippets else None),
         "consensus": None,  # 쟁점4 봉인 (2026-07-10) — cons map 은 내부 관측용으로만 유지
+        "verity_lens": lens,
         "calendar": [],
         "rich": False,
     }
@@ -997,6 +1080,19 @@ def main() -> int:
         #   fundamentals 누락 → 공개 리포트 부재(검색에는 노출되어 "정보량 0" 으로 보임).
         #   fin_series 는 이미 1013행에서 종목에 부착되는데 유니버스에만 못 들어가던 상태.
         #   DART 공시 실값이라 RULE 7 allowlist 정합(자체 산식·점수 없음).
+        # 🚨 2026-08-09 중·소형주 채움 — light 경로에 붙일 사실 4종.
+        #   전부 로컬 발행물이고 부재 시 graceful({}) — 한 파일이 없어도 리포트는 그대로 난다.
+        _lynch_map = (_load_json(LYNCH_PATH, {})
+                      or {}).get("by_ticker") or {}
+        _owner_map = (_load_json(OWNER_DART_PATH, {})
+                      or {}).get("by_ticker") or {}
+        _overhang_map = (_load_json(CBBW_PATH, {})
+                         or {}).get("by_ticker") or {}
+        _chain_map = (_load_json(CHAIN_PATH, {})
+                      or {}).get("by_ticker") or {}
+        print(f"  [light 보강] lynch {len(_lynch_map)} · 최대주주 {len(_owner_map)} · "
+              f"CB/BW {len(_overhang_map)} · 공급망 {len(_chain_map)}")
+
         universe = set(fundamentals.keys()) | set(rich_by_ticker.keys()) | set(fin_series.keys())
         stocks: List[Dict[str, Any]] = []
         for tk in universe:
@@ -1005,7 +1101,9 @@ def main() -> int:
             else:
                 fund = fundamentals.get(tk) or {}
                 nm, mk = _name_market(tk)
-                light = build_light(tk, fund, nm, mk, catalyst, consensus_map)
+                light = build_light(tk, fund, nm, mk, catalyst, consensus_map,
+                                    lynch_map=_lynch_map, owner_map=_owner_map,
+                                    overhang_map=_overhang_map, chain_map=_chain_map)
                 # 컨센서스 보강만 있고 facts 전무면 노출 가치 낮음 — 실체가 있을 때만.
                 # 연간재무 시계열(fin_series)도 실체로 인정한다 — DART 공시 실값이고
                 # 1013행에서 종목에 부착되어 추이 그래프로 렌더된다. 이걸 제외하면

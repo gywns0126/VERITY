@@ -131,8 +131,17 @@ def run_dividends(univ, year, delay, dry, limit=None) -> Dict[str, int]:
     """DART 사업보고서 배당 = 종목당 1콜. 기존 dividends_kr.json 에 upsert."""
     from api.collectors.dividend_kr import sweep_annual_plans, load_dividends_db
     db = load_dividends_db()
-    todo = [tk for tk, _ in univ
-            if not any(not r.get("_meta") for r in (db.get(tk) or []))]
+
+    def _done(tk: str) -> bool:
+        """실배당 레코드가 있거나, 같은 사업연도 '무배당 확정' 마커가 있으면 완료."""
+        for r in (db.get(tk) or []):
+            if not r.get("_meta"):
+                return True
+            if r.get("_meta") == _NO_DIV and str(r.get("bsns_year")) == str(year):
+                return True
+        return False
+
+    todo = [tk for tk, _ in univ if not _done(tk)]
     total_todo = len(todo)
     todo = _cap(todo, limit)
     print(f"  [dividends] 대상 {len(univ)} · 미보유 {total_todo} · 이번 run {len(todo)}")
@@ -143,18 +152,55 @@ def run_dividends(univ, year, delay, dry, limit=None) -> Dict[str, int]:
     #   (2026-08-08 '백필 체크포인트 유실'과 동형). 공유 라이브러리는 소량 cron 이 쓰므로
     #   건드리지 않고 여기서 끊는다.
     CH = 100
-    ok = tried = 0
+    ok = tried = nodiv = 0
     for i in range(0, len(todo), CH):
         chunk = todo[i:i + CH]
         res = sweep_annual_plans(chunk, int(year))
         ok += sum(1 for v in res.values() if v in ("insert", "update"))
         tried += len(res)
-        print(f"  [dividends] {min(i+CH, len(todo))}/{len(todo)} · 누적 갱신 {ok}", flush=True)
-    print(f"  [dividends] 갱신 {ok} / 시도 {tried}")
+        # 🚨 '무배당 확정' 을 남긴다. 안 남기면 흔적이 0이라 (a) 매 run 재조회하고
+        #   (b) "조회했는데 없음" 과 "아직 안 함" 이 구분되지 않아 완주 판정이 영영 안 선다.
+        #   CB/BW 는 이미 '오버행 없음' 을 확정으로 남긴다 — 배당만 빠져 있었다.
+        nodiv += _mark_no_dividend([t for t, v in res.items() if v == "fail"], year)
+        print(f"  [dividends] {min(i+CH, len(todo))}/{len(todo)} · 누적 갱신 {ok} "
+              f"· 무배당 확정 {nodiv}", flush=True)
+    print(f"  [dividends] 갱신 {ok} · 무배당 확정 {nodiv} / 시도 {tried}")
     q = quarantine_implausible_dividends()
     if q:
         print(f"  [dividends] 🚨 비현실 DPS {q}건 격리 (implausible=true 표기, 값 보존)")
-    return {"todo": len(todo), "ok": ok, "quarantined": q}
+    # 🚨 '무배당 확정' 도 진도다 — ok 에 합산하지 않으면 아래 완주 가드가 오작동한다
+    #   (배당 없는 종목만 남은 run 을 '전량 실패' 로 오판해 exit 1).
+    return {"todo": len(todo), "ok": ok, "no_dividend": nodiv,
+            "progressed": ok + nodiv, "quarantined": q}
+
+
+_NO_DIV = "no_dividend"
+
+
+def _mark_no_dividend(tickers, year) -> int:
+    """DART 사업보고서에 배당 기재가 없는 종목에 '무배당 확정' 마커를 남긴다.
+
+    `_meta` 키를 쓰므로 기존 소비자(실배당 레코드만 읽는 쪽)는 영향이 없다.
+    """
+    if not tickers:
+        return 0
+    from datetime import datetime, timedelta, timezone
+    db = _load(DIVIDENDS_PATH, {}) or {}
+    now = datetime.now(timezone(timedelta(hours=9))).isoformat(timespec="seconds")
+    n = 0
+    for tk in tickers:
+        arr = db.setdefault(tk, [])
+        if any(r.get("_meta") == _NO_DIV and str(r.get("bsns_year")) == str(year) for r in arr):
+            continue
+        arr.append({"_meta": _NO_DIV, "bsns_year": str(year), "checked_at": now,
+                    "note": "DART 사업보고서 배당 기재 없음 — 미조회가 아니라 '무배당 확정'"})
+        n += 1
+    if n:
+        tmp = DIVIDENDS_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(db, f, ensure_ascii=False)
+        os.replace(tmp, DIVIDENDS_PATH)
+    return n
 
 
 # 배당수익률 상한 — 이 위는 '주당 배당금' 이 아니라 총액/누적 행을 잘못 집은 것이다.
@@ -377,8 +423,13 @@ def main() -> int:
 
     print(f"\n[facts_backfill] {time.time()-t0:.0f}초 · {json.dumps(summary, ensure_ascii=False)}")
     # 🚨 전량 실패는 성공으로 끝내지 않는다 ([[feedback_silent_total_failure_guard]])
-    if summary and all(("error" in v) or (v.get("ok", 0) == 0 and v.get("todo", 0) > 0)
-                       for v in summary.values()) and not a.dry_run:
+    def _stalled(v):
+        if "error" in v:
+            return True
+        # progressed 가 있으면 그걸 본다(배당: 갱신 + 무배당 확정). 없으면 ok.
+        moved = v.get("progressed", v.get("ok", 0))
+        return moved == 0 and v.get("todo", 0) > 0
+    if summary and all(_stalled(v) for v in summary.values()) and not a.dry_run:
         print("🚨 모든 축이 0건 — 실패로 종료", file=sys.stderr)
         return 1
     return 0
