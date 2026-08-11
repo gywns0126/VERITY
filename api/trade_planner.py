@@ -163,7 +163,10 @@ def build_trade_plan_v0(stock: dict, judgment: dict) -> dict:
             },
             "target_3": {
                 "method": "trailing_stop",
-                "trail_pct": _cfg.R_MULTIPLE_TRAIL_PCT,
+                # 🚨 trail_pct 제거 (2026-08-11 PREREG_SMALL_QTY_EXIT §2-2).
+                # R_MULTIPLE_TRAIL_PCT(5.0) 은 **쓰이기만 하고 읽는 곳이 0** 이었다 —
+                # 실제 트레일링은 VAMS_PROFILES[...]["trailing_stop_pct"](3.0) 로 작동한다.
+                # 값을 바꾸지 않는다. 3.0 의 타당성은 미검정이며 별건이다.
                 "reason": "let winners run with trailing",
             },
         }

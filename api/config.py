@@ -391,7 +391,11 @@ R_MULTIPLE_TARGET_1 = float(os.environ.get("R_MULTIPLE_TARGET_1", "1.0"))  # +1R
 R_MULTIPLE_TARGET_2 = float(os.environ.get("R_MULTIPLE_TARGET_2", "2.0"))  # +2R
 R_MULTIPLE_EXIT_PCT_1 = float(os.environ.get("R_MULTIPLE_EXIT_PCT_1", "50"))  # 보유 50%
 R_MULTIPLE_EXIT_PCT_2 = float(os.environ.get("R_MULTIPLE_EXIT_PCT_2", "30"))  # 추가 30%
-R_MULTIPLE_TRAIL_PCT = float(os.environ.get("R_MULTIPLE_TRAIL_PCT", "5.0"))  # 남은 20% 트레일링
+# 🚨 사용처 0 (2026-08-11 실측). trade_planner 가 target_3 에 쓰기만 했고 읽는 코드가 없었다.
+# 실제 트레일링 = VAMS_PROFILES[profile]["trailing_stop_pct"] (moderate 3.0).
+# 상수는 남긴다 — env 로 주입하던 배포가 있으면 import 오류를 내지 않기 위해서다.
+# 값 통합(3.0 vs 5.0)은 트레일링 폭 변경이라 RULE 7 별건.
+R_MULTIPLE_TRAIL_PCT = float(os.environ.get("R_MULTIPLE_TRAIL_PCT", "5.0"))  # DEPRECATED — 미사용
 
 # ── Phase 2-A: 유니버스 확장 + Ramp-up (결정 1, 4) ──
 # Stage 1=500, Stage 2=1500, Stage 3=3000, Stage 4=5000.
