@@ -251,6 +251,14 @@ def get_bond_market_summary() -> Dict[str, Any]:
         result["curve"] = curve
         result["curve_shape"] = _classify_curve_shape(curve)
         result["available"] = True
+        # 🚨 2026-08-11 — curve_as_of 전파. #348 이 _ecos_yield_curve 에 관측일을 넣었으나
+        #   이 함수가 curve/curve_shape 만 옮겨 **집계 관측일이 bonds.json 에 닿지 않았다.**
+        #   measurement_audit 검사 I(as_of 노후)가 잡았다. 만기별 as_of 는 curve 항목 안에
+        #   살아 있으나, 축 단위 노후 판정에는 집계값이 필요하다.
+        #   pykrx 보충분에는 관측일이 없으므로 실제 존재하는 값들의 최대치를 쓴다.
+        _as_ofs = [str(c.get("as_of")) for c in curve if c.get("as_of")]
+        if _as_ofs:
+            result["curve_as_of"] = max(_as_ofs)
 
     grades = ecos_data.get("grades")
     if grades:

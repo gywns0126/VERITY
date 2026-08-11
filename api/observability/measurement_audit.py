@@ -187,6 +187,175 @@ def audit_price_scale() -> Dict[str, Any]:
         return {"ok": None, "skipped": f"{type(e).__name__}: {e}"[:120]}
 
 
+def audit_guard_inputs() -> Dict[str, Any]:
+    """G. 가드 입력 부재 — 가드가 읽는 필드가 실제로 채워져 있는가. (2026-08-11 신설)
+
+    실증(2026-08-11): `check_position_size` 의 포트폴리오 가드 3종이 보유에서
+    `sector` / `beta` / `multi_factor.quant_factors` 를 읽는데 **셋 다 0/11 이었다.**
+    execute_buy 가 저장한 적이 없다. 결과: 전 보유가 섹터 "Unknown" 으로 뭉쳐 후보 섹터
+    노출이 항상 0 → 섹터 35% 상한 무발동. 베타는 전부 기본 1.0 → 상한 1.5 무발동.
+    팩터 쏠림은 전부 0% → 무발동. **5/17 리셋 이후 매수 22건이 전부 무가드로 통과했고
+    에러도 로그도 0 이었다.**
+
+    A~F 로는 안 잡힌다 — 원장은 정합하고, 키 커버리지는 채점 모듈만 보고, 값이 이상한
+    게 아니라 **아예 없다**. "가드가 존재한다"와 "가드가 작동한다"는 다른 명제다.
+    """
+    try:
+        pf = _load(os.path.join(DATA_DIR, "portfolio.json"), {}) or {}
+        hs = ((pf.get("vams") or {}).get("holdings")) or []
+        if not hs:
+            return {"ok": None, "skipped": "보유 0건"}
+        specs = (
+            ("sector", "섹터 35% 상한", lambda h: h.get("sector")),
+            ("beta", "포트폴리오 베타 1.5 상한", lambda h: h.get("beta")),
+            ("quant_factors", "팩터 쏠림 차단",
+             lambda h: (h.get("multi_factor") or {}).get("quant_factors")),
+        )
+        dead = []
+        cov = {}
+        for key, guard, get in specs:
+            n = sum(1 for h in hs if get(h))
+            cov[key] = {"filled": n, "total": len(hs), "guard": guard}
+            if n == 0:
+                dead.append({"field": key, "guard": guard, "filled": 0, "total": len(hs)})
+        return {
+            "ok": not dead,
+            "holdings_checked": len(hs),
+            "coverage": cov,
+            "dead_guards": dead,
+            "detail": (f"입력 전무한 가드 {len(dead)}종 — 코드에 존재하나 한 번도 발동할 수 없다: "
+                       + ", ".join(f"{d['guard']}({d['field']})" for d in dead)
+                       if dead else "가드 입력 정합"),
+        }
+    except Exception as e:  # noqa: BLE001
+        return {"ok": None, "skipped": f"{type(e).__name__}: {e}"[:120]}
+
+
+def audit_exit_paths() -> Dict[str, Any]:
+    """H. 출구 경로 0 — 이익을 확정할 방법이 하나도 없는 보유가 있는가. (2026-08-11 신설)
+
+    실증(2026-08-11): `trailing_active` 가 부분매도 **체결 블록 안에서만** 켜졌다.
+    수량이 모자라 skip 되면 그 줄에 도달하지 않고, check_stop_loss 는 exit_targets 를
+    가진 보유에 이 플래그를 요구한다 → **1주 포지션은 이익 확정 경로가 0개**였다
+    (target_1·2 는 floor 로 0주, target_3 은 플래그 미활성, 기간손절은 return≤0 조건).
+    출구가 −20% 손절뿐이라 100% 올라도 되돌릴 때까지 들고 있었다. 실측 6/11 이 사다리
+    일부/전부 불능이었고 NEM 은 2R 을 넘겼는데도 미활성이었다.
+
+    fix(#351) 이후에도 **분할 자체의 불가는 남는다**(고가주). 재발과 잔존을 같이 센다.
+    """
+    try:
+        import math
+        pf = _load(os.path.join(DATA_DIR, "portfolio.json"), {}) or {}
+        hs = ((pf.get("vams") or {}).get("holdings")) or []
+        if not hs:
+            return {"ok": None, "skipped": "보유 0건"}
+        no_exit, ladder_broken = [], []
+        for h in hs:
+            et = h.get("exit_targets") or {}
+            if not et:
+                continue          # 사다리 없는 보유는 highest>buy 로 트레일링이 열린다
+            q = float(h.get("quantity") or 0)
+            ret = float(h.get("return_pct") or 0)
+            splittable = {tid: math.floor(q * float((et.get(tid) or {}).get("exit_pct") or 0) / 100)
+                          for tid in ("target_1", "target_2")}
+            if any(v < 1 for v in splittable.values()):
+                ladder_broken.append({"name": h.get("name"), "qty": q,
+                                      "splittable": splittable})
+            # 이익 중인데 트레일링 미활성 + 분할 불가 = 확정 경로 0
+            #   (기간손절은 return≤0 에서만 발동하므로 이익 구간의 출구가 아니다)
+            if ret > 0 and not h.get("trailing_active") and all(
+                    v < 1 for v in splittable.values()):
+                t2 = (et.get("target_2") or {}).get("price")
+                cur = float(h.get("current_price") or 0)
+                no_exit.append({"name": h.get("name"), "qty": q, "return_pct": ret,
+                                "past_target_2": bool(t2 and cur >= t2)})
+        return {
+            "ok": not no_exit,
+            "holdings_checked": len(hs),
+            "no_profit_exit": no_exit,
+            "ladder_broken": ladder_broken,
+            "detail": (f"이익 확정 경로 0인 보유 {len(no_exit)}건 — 출구가 손절뿐이다"
+                       + (f" (사다리 불능 {len(ladder_broken)}건 별도)" if ladder_broken else "")
+                       if no_exit else
+                       f"확정 경로 정합 (사다리 불능 {len(ladder_broken)}건 — 고가주 잔존분)"),
+        }
+    except Exception as e:  # noqa: BLE001
+        return {"ok": None, "skipped": f"{type(e).__name__}: {e}"[:120]}
+
+
+def audit_as_of_staleness() -> Dict[str, Any]:
+    """I. as_of 노후 — 발행물의 관측일이 수집일보다 얼마나 뒤처졌는가. (2026-08-11 신설)
+
+    실증(2026-08-11): `bonddata._ecos_fetch_point` 가 ECOS 에 10행만 요청했다. ECOS 는
+    오름차순이라 30일 창에서 돌아온 것은 **가장 오래된 10건**이고 rows[-1] 은 약
+    10영업일 전 값이었다. 발행 AA- 4.576(as_of 20260727) ↔ ECOS 실제 4.476(20260810).
+    국고채 커브도 같은 함수를 타서 전 만기 동반 노후(최대 12bp)였다.
+
+    🚨 탐지가 **as_of 하나에 달려 있었다.** 회사채엔 as_of 가 있어 15일 전인 게 눈에
+    걸렸고, 국고채 커브엔 as_of 자체가 없어 영구 미탐지였다. 그래서 이 검사는
+    **as_of 부재도 결함으로 센다** — 없으면 노후를 구조적으로 확인할 수 없다.
+    """
+    try:
+        from datetime import date
+
+        def _d(v) -> Optional[date]:
+            t = re.sub(r"[^0-9]", "", str(v or ""))[:8]
+            try:
+                return date(int(t[:4]), int(t[4:6]), int(t[6:8])) if len(t) == 8 else None
+            except ValueError:
+                return None
+
+        # (파일, 축 경로, 허용 노후일) — 일별 갱신 계열만. 분기 공시는 대상 아님.
+        # 🚨 경로는 **실 스키마 확인 후** 고정했다(2026-08-11). 추정 경로를 쓰면 값이
+        #   멀쩡해도 영구 'missing' 을 신고해 검사 자체가 잡음이 된다.
+        #   회사채 관측일의 실제 키는 `date` 다(`grades_as_of` 는 수집기 내부 이름).
+        specs = [
+            ("bonds.json", ("kr_corp_spreads", "date"), 5),
+            ("bonds.json", ("yield_curves", "kr", "curve_as_of"), 5),
+        ]
+        stale, missing, absent = [], [], []
+        for fname, path, limit in specs:
+            doc = _load(os.path.join(DATA_DIR, fname), {}) or {}
+            # 🚨 파일 부재와 'as_of 없음' 은 다른 조건이다. 전자는 이 검사의 대상이 아니라
+            #   skip 이다 — 무관한 파일이 없다고 측정 감사가 FAIL 하면 경보가 잡음이 된다
+            #   (기존 테스트가 이 구분 누락을 잡았다).
+            if not doc:
+                absent.append(f"{fname}:부재")
+                continue
+            node: Any = doc
+            for k in path[:-1]:
+                node = (node or {}).get(k) if isinstance(node, dict) else None
+            val = (node or {}).get(path[-1]) if isinstance(node, dict) else None
+            axis = f"{fname}:{'.'.join(path)}"
+            if not val:
+                missing.append(axis)
+                continue
+            obs = _d(val)
+            coll = _d((doc.get("updated_at") or doc.get("collected_at")))
+            if not obs or not coll:
+                missing.append(axis)
+                continue
+            lag = (coll - obs).days
+            if lag > limit:
+                stale.append({"axis": axis, "as_of": str(obs), "collected": str(coll),
+                              "lag_days": lag, "limit": limit})
+        bad = stale or missing
+        if len(absent) == len(specs):
+            return {"ok": None, "skipped": f"대상 파일 부재: {','.join(absent)}"[:120]}
+        return {
+            "ok": not bad,
+            "axes_checked": len(specs) - len(absent),
+            "stale_axes": stale,
+            "missing_as_of": missing,
+            "absent_sources": absent,
+            "detail": (f"노후 {len(stale)}축 · as_of 부재 {len(missing)}축 — "
+                       "as_of 가 없으면 노후를 구조적으로 확인할 수 없다"
+                       if bad else "관측일 정합"),
+        }
+    except Exception as e:  # noqa: BLE001
+        return {"ok": None, "skipped": f"{type(e).__name__}: {e}"[:120]}
+
+
 def audit_rule_discrimination() -> Dict[str, Any]:
     """검사 D — 규칙이 국면을 **가르고 있는지** 발동률로 검증 (2026-08-06 신설).
 
@@ -301,6 +470,10 @@ _KNOWN_BASELINE = {
     # 검사 F — 상위 API 가 빈 값을 0 으로 주는 입력 2종(credit_rate·current_ratio).
     #   우리가 고칠 수 없다(KIS 응답). 늘어나면 = 다른 입력도 죽었다는 뜻이므로 FAIL.
     "input_constancy": {"constant_inputs": 2},
+    # 검사 H — 고가주는 포지션 상한 안에서 3단 분할이 성립하지 않는다(Alphabet 4주 =
+    #   2,022,247원 > max_per_stock 200만). 미해결로 기록됐다(PREREG_SMALL_QTY_EXIT §2-4).
+    #   이익 확정 경로 0(no_profit_exit)은 baseline 0 — 하나라도 나오면 신규 발생이다.
+    "exit_paths": {"no_profit_exit": 0},
 }
 
 
@@ -328,6 +501,10 @@ def run(root: str = ".") -> Dict[str, Any]:
         "rule_discrimination": audit_rule_discrimination(),
         "flag_coverage": audit_flag_coverage(root),
         "input_constancy": audit_input_constancy(),
+        # 2026-08-11 신설 — 그날 손으로 찾은 결함 3종의 검출 방법을 상시화
+        "guard_inputs": audit_guard_inputs(),
+        "exit_paths": audit_exit_paths(),
+        "as_of_staleness": audit_as_of_staleness(),
     }
     # baseline 대조 — 알려진 미해결분은 KNOWN, 초과분만 FAIL
     known: List[str] = []
@@ -344,7 +521,7 @@ def run(root: str = ".") -> Dict[str, Any]:
     skips = [k for k, v in checks.items() if v.get("ok") is None]
     out = {
         "as_of": now_kst().isoformat(timespec="seconds"),
-        "version": "measurement_audit_v3",
+        "version": "measurement_audit_v4",
         "status": ("FAIL" if fails else
                    ("KNOWN" if known else ("PARTIAL" if skips else "OK"))),
         "failing": fails,
@@ -374,6 +551,9 @@ def run(root: str = ".") -> Dict[str, Any]:
                                 checks["flag_coverage"].get("never_fired") or []),
                             "constant_inputs": len(
                                 checks["input_constancy"].get("constant_inputs") or []),
+                            "dead_guards": len(checks["guard_inputs"].get("dead_guards") or []),
+                            "no_profit_exit": len(checks["exit_paths"].get("no_profit_exit") or []),
+                            "stale_axes": len(checks["as_of_staleness"].get("stale_axes") or []),
                             }, ensure_ascii=False) + "\n")
     return out
 
