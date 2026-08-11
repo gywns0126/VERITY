@@ -86,7 +86,8 @@ def build() -> Dict[str, Any]:
     try:
         from api.vams.engine import load_history
         from api.vams.trade_ledger import reconstruct
-        led = reconstruct(load_history(), since=changed_at)
+        hist = load_history()
+        led = reconstruct(hist, since=changed_at)
         eps: List[Dict[str, Any]] = led.get("episodes") or []
     except Exception as e:  # noqa: BLE001 — 감시 실패가 파이프라인을 죽이지 않는다
         return {"status": "ledger_error", "checked_at": now, "prereg": PREREG,
@@ -98,6 +99,25 @@ def build() -> Dict[str, Any]:
     avg_w = (sum(float(e["pnl"]) for e in wins) / len(wins)) if wins else 0.0
     avg_l = (sum(float(e["pnl"]) for e in losses) / len(losses)) if losses else 0.0
     total = sum(float(e.get("pnl") or 0) for e in eps)
+
+    # % 기대값 병기 (2026-08-11, FX 헤지 등록 §4) — 헤지 축소로 가용 현금이 늘면 신규
+    # 포지션이 커져 원화 기대값이 크기만으로 부풀 수 있다. 크기 불변 지표를 같이 낸다.
+    # 에피소드에는 cost 가 없어 history BUY 기록과 (ticker, 직전 매수) 조인으로 구한다.
+    buy_cost: Dict[str, List] = {}
+    for hrec in (hist or []):
+        if str(hrec.get("action") or "").upper() != "BUY":
+            continue
+        tk, c = str(hrec.get("ticker") or ""), hrec.get("total_cost") or hrec.get("cost")
+        if tk and c:
+            buy_cost.setdefault(tk, []).append((str(hrec.get("date") or ""), float(c)))
+    pcts: List[float] = []
+    for e in eps:
+        cands = [c for d0, c in buy_cost.get(str(e.get("ticker")), [])
+                 if d0[:10] <= str(e.get("date") or "9999")[:10]]
+        if cands:
+            pcts.append(float(e.get("pnl") or 0) / cands[-1] * 100.0)
+    expectancy_pct = (round(sum(pcts) / len(pcts), 3) if pcts else None)
+    cost_join_coverage = round(len(pcts) / n, 3) if n else None
 
     # MDD — 규칙 변경 이후 자산 곡선. simulation_stats 는 창이 달라 쓰지 않는다.
     mdd = None
@@ -144,6 +164,9 @@ def build() -> Dict[str, Any]:
             "avg_loss_krw": round(avg_l) if losses else None,
             "pl_ratio": round(abs(avg_w / avg_l), 3) if (wins and losses and avg_l) else None,
             "expectancy_krw": round(total / n) if n else None,
+            # 크기 불변 병기 — expectancy_krw 단독 비교 금지(헤지 축소 후 포지션 크기 오염)
+            "expectancy_pct": expectancy_pct,
+            "cost_join_coverage": cost_join_coverage,
             "mdd_pct": mdd,
             "stop_methods": methods,
         },

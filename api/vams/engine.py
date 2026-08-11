@@ -1610,6 +1610,20 @@ def run_vams_cycle(
     # 1. 가격 업데이트
     update_holdings_price(portfolio, price_map)
 
+    # 1.5. FX 헤지 레짐 게이트 (2026-08-11 PM 승인, PREREG_FX_HEDGE_REGIME_2026_08_11).
+    # 가격 갱신 **후** 평가해야 목표(0.30×총자산 − USD 주식)가 신선하다. recalc 선행.
+    try:
+        from api.vams.fx_hedge_regime import run as _fx_regime
+        recalculate_total(portfolio)
+        _fxr = _fx_regime(portfolio, _get_fx_rate(portfolio))
+        if _fxr.get("status") == "adjusted":
+            _op = _fxr["op"]
+            recalculate_total(portfolio)
+            print(f"[fx_hedge_regime] {_op['kind']} {_op.get('moved', 0):,.0f}원 "
+                  f"({','.join(_op['triggers'])}) → 목표 {_op['target']:,}원 · 상태 {_op['state']}")
+    except Exception as _e:  # noqa: BLE001 — 레짐 평가 실패가 사이클을 죽이지 않는다
+        print(f"[fx_hedge_regime] skipped: {type(_e).__name__}: {_e}")
+
     # 2. 손절/익절 체크
     for holding in list(portfolio["vams"]["holdings"]):
         should_sell, reason = check_stop_loss(holding, p)
