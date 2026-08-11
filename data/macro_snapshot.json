@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-11T16:32:57+09:00",
+  "collected_at": "2026-08-11T17:02:00+09:00",
   "macro": {
     "usd_krw": {
       "value": 1416.62,
@@ -1250,38 +1250,38 @@
         "curve": [
           {
             "tenor": "1Y",
-            "yield": 3.384,
-            "as_of": "20260810"
+            "yield": 3.395,
+            "as_of": "20260811"
           },
           {
             "tenor": "2Y",
-            "yield": 3.601,
-            "as_of": "20260810"
+            "yield": 3.633,
+            "as_of": "20260811"
           },
           {
             "tenor": "3Y",
-            "yield": 3.778,
-            "as_of": "20260810"
+            "yield": 3.808,
+            "as_of": "20260811"
           },
           {
             "tenor": "5Y",
-            "yield": 3.994,
-            "as_of": "20260810"
+            "yield": 4.042,
+            "as_of": "20260811"
           },
           {
             "tenor": "10Y",
-            "yield": 4.239,
-            "as_of": "20260810"
+            "yield": 4.301,
+            "as_of": "20260811"
           },
           {
             "tenor": "20Y",
-            "yield": 4.555,
-            "as_of": "20260810"
+            "yield": 4.639,
+            "as_of": "20260811"
           },
           {
             "tenor": "30Y",
-            "yield": 4.585,
-            "as_of": "20260810"
+            "yield": 4.666,
+            "as_of": "20260811"
           }
         ],
         "curve_shape": "normal"
@@ -1340,7 +1340,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-08-11T16:33:12+09:00",
+    "updated_at": "2026-08-11T17:03:00+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.78,
       "us_ig_risk": "LOW",
@@ -1349,18 +1349,18 @@
       "us_hy_risk": "LOW"
     },
     "kr_corp_spreads": {
-      "date": "20260810",
-      "collected_at": "2026-08-11T16:33:12+09:00",
+      "date": "20260811",
+      "collected_at": "2026-08-11T17:03:00+09:00",
       "grades": {
         "AA-": {
-          "yield": 4.476,
-          "spread_vs_3y": 0.698,
-          "as_of": "20260810"
+          "yield": 4.504,
+          "spread_vs_3y": 0.696,
+          "as_of": "20260811"
         },
         "BBB-": {
-          "yield": 10.276,
-          "spread_vs_3y": 6.498,
-          "as_of": "20260810"
+          "yield": 10.305,
+          "spread_vs_3y": 6.497,
+          "as_of": "20260811"
         }
       }
     }
@@ -1531,12 +1531,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 28.65
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 86.82
   },
   "schema_version": "v0"
 }
