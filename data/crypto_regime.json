@@ -1,10 +1,10 @@
 {
-  "collected_at": "2026-08-11T13:32:58+09:00",
+  "collected_at": "2026-08-11T14:01:58+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
     "call": "neutral",
-    "net_score": 1,
+    "net_score": -1,
     "active_dims": 4,
     "rule": "net≥+2 risk_on / ≤−2 risk_off / else neutral (투명 tally, 가중치 없음)"
   },
@@ -27,20 +27,20 @@
       "active": true,
       "drivers": {
         "funding_signal": "neutral",
-        "put_call_oi": 0.572,
+        "put_call_oi": 0.573,
         "long_short_ratio": 1.63
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
     {
       "name": "자금흐름",
-      "vote": 1,
-      "read": "on",
+      "vote": -1,
+      "read": "off",
       "active": true,
       "drivers": {
-        "btc_net_inflow_usd": 98845326.995,
-        "eth_net_inflow_usd": 49601034.6,
-        "combined_net_inflow_usd": 148446361.595
+        "btc_net_inflow_usd": -144670942.17,
+        "eth_net_inflow_usd": -14587910.54,
+        "combined_net_inflow_usd": -159258852.70999998
       },
       "rule": "ETF(BTC+ETH) 일일 순유입 on / 순유출 off"
     },
@@ -50,7 +50,7 @@
       "read": "neutral",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": 0.5
+        "btc_change_pct_7d": 0.4
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -61,7 +61,7 @@
       "active": false,
       "drivers": {
         "ssr": 5.03,
-        "stablecoin_supply_usd": 255480622116.77002
+        "stablecoin_supply_usd": 255477877821.55536
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -80,7 +80,7 @@
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 64052.0,
+  "btc_price_at_call": 63972.0,
   "trail": [
     {
       "date": "2026-06-24",
@@ -421,8 +421,8 @@
     {
       "date": "2026-08-11",
       "call": "neutral",
-      "net_score": 1,
-      "btc_price": 64052.0,
+      "net_score": -1,
+      "btc_price": 63972.0,
       "active_dims": 4
     }
   ],
@@ -432,7 +432,7 @@
         "horizon_days": 7,
         "n": 18,
         "hit_rate": 0.5556,
-        "mean_realized_return": 0.009915,
+        "mean_realized_return": 0.009776,
         "label": "통계 무의미 (N<30)"
       },
       {
