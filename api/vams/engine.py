@@ -943,6 +943,19 @@ def execute_buy(
         "realized_pnl_partial": 0,  # 부분 청산 누적 실현 손익
         # P2-2 prep — Capital 3-Tier mode tag. routing logic 별 sprint.
         "mode_tag": inferred_mode,
+        # 2026-08-11 — 포트폴리오 가드 입력 영속. check_position_size 의 섹터 35% 상한·
+        # 베타 1.5 상한·팩터쏠림 가드가 h.get("sector")/h.get("beta")/h["multi_factor"]
+        # ["quant_factors"] 를 읽는데 **셋 다 저장된 적이 없어** 가드가 한 번도 안 걸렸다
+        # (2026-08-11 실측 0/11 — 섹터는 전부 "Unknown" 으로 뭉쳐 후보 섹터 노출이 항상 0).
+        # beta 는 추천 파이프라인에 키 자체가 없어 None 저장 — 가드 부활은 별건.
+        "sector": stock.get("sector"),
+        "beta": stock.get("beta"),
+        "multi_factor": {"quant_factors": {
+            k: v for k, v in (((stock.get("multi_factor") or {}).get("quant_factors")
+                               or {}).items())
+            if k in ("momentum", "quality", "volatility", "mean_reversion")
+            and isinstance(v, (int, float))
+        }},
     }
 
     portfolio["vams"]["cash"] -= actual_cost
@@ -1583,6 +1596,16 @@ def run_vams_cycle(
             print(f"[currency_migration] {_mig['summary']}")
     except Exception as _e:  # noqa: BLE001 — 마이그레이션 실패가 사이클을 죽이지 않는다
         print(f"[currency_migration] skipped: {type(_e).__name__}: {_e}")
+
+    # 0.6. 가드 입력 백필 (2026-08-11). 기존 보유 11건이 sector/quant_factors 없이 저장돼
+    # 사이징 가드 3종이 전부 무발동이었다. 멱등 — 채워진 보유는 즉시 skip.
+    try:
+        from api.vams.holding_metadata_backfill import run as _meta_backfill
+        _mb = _meta_backfill(portfolio)
+        if _mb["filled"]:
+            print(f"[meta_backfill] {_mb['summary']}")
+    except Exception as _e:  # noqa: BLE001 — 백필 실패가 사이클을 죽이지 않는다
+        print(f"[meta_backfill] skipped: {type(_e).__name__}: {_e}")
 
     # 1. 가격 업데이트
     update_holdings_price(portfolio, price_map)
