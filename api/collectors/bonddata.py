@@ -4,6 +4,7 @@
   - 회사채 신용등급별 스프레드 (AA- / BBB-, 3년물, 국고채 3년 대비)
   - 한국은행 ECOS 보조 (국고채 3Y 기준)
 """
+import sys
 from datetime import timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -66,6 +67,20 @@ def _ecos_fetch_point(
     🚨 관측일을 같이 돌려주는 이유 = ECOS 일별 금리는 수집 시점보다 뒤처진다(2026-08-08 실측:
       회사채 최신 관측 20260723 = 수집일 대비 16일 전). 수집일을 as_of 로 쓰면 실제보다 신선한
       것처럼 보인다 — [[feedback_macro_timestamp_policy]] collected_at 과 as_of 분리 의무.
+
+    🚨 **2026-08-11 결함 정정 — 행 수 절단.** 옛 URL 은 `json/kr/1/10` 이라 ECOS 에
+      **10행만** 요청했다. ECOS 는 **오름차순**으로 주므로 30일 창(영업일 약 22관측)에서
+      돌아오는 것은 **가장 오래된 10건**이고, `rows[-1]` 은 그중 마지막 = 실제 최신이 아니라
+      **약 10영업일 전 값**이었다.
+
+      실측(2026-08-11): 발행 AA- 4.576 / as_of 20260727  ↔  ECOS 실제 4.476 / 20260810.
+      국고채 커브도 같은 함수를 타서 전 만기가 함께 낡아 있었다 —
+      1Y 3.375↔3.384 · 2Y 3.723↔3.601 · 3Y 3.865↔3.778 · 5Y 4.117↔3.994 · 10Y 4.333↔4.239
+      (최대 12bp). 워크플로는 계속 success 였고 값도 그럴듯해서 **초록불로는 못 잡는 결함**이다.
+      [[feedback_silent_total_failure_guard]] 의 반대 방향 — 0건이 아니라 '틀린 값이 채워짐'.
+
+      → 행 수를 창 길이에서 파생시키고, **응답이 상한에 닿으면 절단으로 보고 거부**한다.
+        상한을 늘려도 닿으면 조용히 옛 값을 쓰는 대신 None 을 돌려 결손으로 드러낸다.
     """
     if not ECOS_API_KEY:
         return None
@@ -76,8 +91,10 @@ def _ecos_fetch_point(
         today = now_kst().date()
         start = today - timedelta(days=days)
         key_seg = quote(str(ECOS_API_KEY).strip(), safe="")
+        # 창 길이에서 파생 + 넉넉한 여유. 달력일보다 관측이 많을 수 없으므로 days+50 이면 안전.
+        limit = days + 50
         url = (
-            f"https://ecos.bok.or.kr/api/StatisticSearch/{key_seg}/json/kr/1/10"
+            f"https://ecos.bok.or.kr/api/StatisticSearch/{key_seg}/json/kr/1/{limit}"
             f"/{stat_code}/D/{start.strftime('%Y%m%d')}/{today.strftime('%Y%m%d')}/{item_code}"
         )
         r = requests.get(url, timeout=20)
@@ -90,7 +107,16 @@ def _ecos_fetch_point(
             return None
         if isinstance(rows, dict):
             rows = [rows]
-        last = rows[-1]
+        # 🚨 상한에 닿았다 = 절단 가능 = rows[-1] 이 최신이라는 보장이 깨진다. 옛 값을 조용히
+        #   쓰지 말고 결손으로 드러낸다(틀린 값보다 빈 값이 낫다).
+        if len(rows) >= limit:
+            sys.stderr.write(
+                f"[bonddata] 🚨 ECOS 응답이 상한 {limit} 에 닿음 ({stat_code}/{item_code}) — "
+                f"절단 의심, 최신값 신뢰 불가로 결손 처리\n"
+            )
+            return None
+        # ECOS 는 오름차순 → 마지막이 최신. 방어적으로 TIME 최대값을 고른다.
+        last = max(rows, key=lambda r: str(r.get("TIME") or ""))
         return round(float(last.get("DATA_VALUE", 0)), 4), str(last.get("TIME") or "")
     except Exception:
         return None
@@ -121,10 +147,18 @@ def _ecos_yield_curve() -> Dict[str, Any]:
     }
 
     curve: List[Dict[str, Any]] = []
+    curve_as_of = ""
     for tenor, (stat, item) in tenor_map.items():
-        val = _ecos_fetch_series(stat, item, days=30)
-        if val is not None:
-            curve.append({"tenor": tenor, "yield": val})
+        # 🚨 커브에도 관측일을 남긴다. 옛 코드는 값만 담아 **커브가 언제 것인지 알 수 없었다**
+        #   — 위 행수 절단이 10영업일 낡은 값을 채웠는데도 신선도 보드가 못 잡은 이유다.
+        point = _ecos_fetch_point(stat, item, days=30)
+        if point is not None:
+            val, obs_date = point
+            entry: Dict[str, Any] = {"tenor": tenor, "yield": val}
+            if obs_date:
+                entry["as_of"] = obs_date
+                curve_as_of = max(curve_as_of, obs_date)
+            curve.append(entry)
 
     gov_3y = next((c["yield"] for c in curve if c["tenor"] == "3Y"), None)
 
@@ -155,6 +189,8 @@ def _ecos_yield_curve() -> Dict[str, Any]:
     result: Dict[str, Any] = {}
     if curve:
         result["curve"] = curve
+        if curve_as_of:
+            result["curve_as_of"] = curve_as_of
     if grades:
         result["grades"] = grades
         if grade_as_of:
