@@ -24,7 +24,11 @@ permissions:
   contents: write   # main 에 dart_fundamentals_kr.json commit
 
 concurrency:
-  group: verity-data-write
+# 🚨 2026-08-11 그룹 분리 — dart_batch 와 dart_quarterly_backfill 은
+#   data/dart_quarterly_snapshots.jsonl 을 공유하므로 서로는 직렬화가 필요하다.
+#   다만 verity-data-write 의 나머지와는 공유 산출물이 없어 기아만 당하고 있었다.
+#   상세 = [[feedback_concurrency_starvation_pending_slot]].
+  group: verity-dart-backfill
   cancel-in-progress: false
 
 jobs:

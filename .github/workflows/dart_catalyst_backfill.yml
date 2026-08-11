@@ -29,7 +29,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: verity-data-write
+# 🚨 2026-08-11 그룹 분리 — 기아 회피. 이 워크플로는 verity-data-write 의 다른 구성원과
+#   **공유 산출물이 0** 이다(정적 감사: git add 경로 교집합 없음). 그런데 같은 그룹에 있어
+#   daily_analysis_full(114분)이 락을 쥐고 daily_analysis(매시간)가 도착하는 동안
+#   pending 슬롯 1칸에서 계속 축출됐다. 상세 = [[feedback_concurrency_starvation_pending_slot]].
+#   경량군끼리는 직렬화를 유지한다(전부 ≤13분, 미발견 겹침 대비 안전 마진).
+  group: verity-data-write-light
   cancel-in-progress: false
 
 jobs:
