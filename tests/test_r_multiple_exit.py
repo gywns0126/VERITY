@@ -102,7 +102,11 @@ class TestExitTargetsBuild:
         plan = build_trade_plan_v0(_stock_for_plan(), {"recommendation": "BUY"})
         t3 = plan["exit_targets"]["target_3"]
         assert t3["method"] == "trailing_stop"
-        assert t3["trail_pct"] == 5.0
+        # 🚨 trail_pct 는 제거됐다 (2026-08-11 PREREG_SMALL_QTY_EXIT §2-2).
+        # R_MULTIPLE_TRAIL_PCT(5.0) 은 쓰이기만 하고 읽는 곳이 0 이었고, 실제 트레일링은
+        # VAMS_PROFILES[...]["trailing_stop_pct"](3.0) 로 작동한다. 이 단언이 죽은 값을
+        # 고정하고 있었다 — 산출물에 없어야 정합이다.
+        assert "trail_pct" not in t3
 
     def test_deprecated_exit_target_synced(self):
         plan = build_trade_plan_v0(_stock_for_plan(), {"recommendation": "BUY"})

@@ -1187,9 +1187,9 @@ def execute_partial_sell(
         "at": now_kst().strftime("%Y-%m-%d %H:%M"),
     })
 
-    # target_2 (2R) 도달 시 trailing_active=True (남은 20% 트레일링 활성)
-    if target_id == "target_2":
-        holding["trailing_active"] = True
+    # trailing_active 설정은 check_partial_exit 의 **가격 도달** 판정으로 이관했다
+    # (2026-08-11 PREREG_SMALL_QTY_EXIT §2-1). 체결 여부에 묶으면 소수량 포지션이
+    # 영구 미활성이 된다. 단일 출처 유지를 위해 여기서는 설정하지 않는다.
 
     portfolio["vams"]["cash"] += actual_revenue
     # Capital 3-Tier sub-PnL update — partial sell (2026-05-17)
@@ -1289,6 +1289,15 @@ def check_partial_exit(
         if target_price is None:
             continue
         if current_price >= target_price:
+            # 🚨 2026-08-11 (PREREG_SMALL_QTY_EXIT) — 트레일링 활성은 **가격 도달** 기준이다.
+            # 옛 코드는 execute_partial_sell 의 체결 블록 안에서만 켰다. 그래서 수량이
+            # 안 나눠져 skipped_too_small 이 되면 그 줄에 도달하지 않아 trailing_active 가
+            # 영구 False 였고, check_stop_loss 는 exit_targets 보유에 이 플래그를 요구하므로
+            # **1주 포지션은 이익을 확정할 코드 경로가 하나도 없었다**(출구 = −20% 손절뿐).
+            # 실측 2026-08-11: 보유 11건 중 6건이 사다리 일부/전부 불능, NEM 은 target_2
+            # 가격을 넘겼는데도 미활성. 원 주석이 "2R **도달** 시" 이므로 설계 의도 복원이다.
+            if target_id == "target_2":
+                holding["trailing_active"] = True
             r = execute_partial_sell(portfolio, holding, target_id, target, history, profile)
             results.append(r)
 
