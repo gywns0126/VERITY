@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-08-11T16:50:59.735343+09:00",
+  "generated_at": "2026-08-11T17:47:58.441842+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 259964,
-    "python_modules": 787,
+    "code_lines_tsx_py": 260797,
+    "python_modules": 791,
     "tsx_components": 128,
-    "json_data_files": 1715,
-    "json_total_tracked": 1734,
+    "json_data_files": 1717,
+    "json_total_tracked": 1736,
     "workflows": 76,
     "scheduled_workflows": 60,
     "cron_triggers": 71,
-    "git_tracked_files": 7421
+    "git_tracked_files": 7428
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 71,
+      "count": 73,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -47,6 +47,7 @@
         "api/collectors/dart_catalyst.py",
         "api/collectors/dart_corp_code.py",
         "api/collectors/dart_delisted_backfill.py",
+        "api/collectors/dart_dividend_history.py",
         "api/collectors/dart_fundamentals.py",
         "api/collectors/dart_major_holders.py",
         "api/collectors/ecos_fx_daily.py",
@@ -81,6 +82,7 @@
         "scripts/dart_catalyst_backfill.py",
         "scripts/dart_kr_backfill.py",
         "scripts/dart_kr_fin_backfill.py",
+        "scripts/dart_quarterly_gap_backfill.py",
         "scripts/hourly_pulse_send.py",
         "scripts/kr_sector_dart_fallback.py",
         "scripts/scout_penny.py",
@@ -700,7 +702,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1715
+      "count": 1717
     },
     "validation": {
       "label": "검증",
@@ -715,9 +717,9 @@
     }
   },
   "python_by_dir": {
-    "api": 422,
+    "api": 425,
     "tests": 207,
-    "scripts": 88,
+    "scripts": 89,
     "vercel-api": 58,
     "server": 7,
     ".github": 5
