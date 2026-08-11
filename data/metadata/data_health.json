@@ -1,22 +1,24 @@
 {
  "_meta": {
-  "generated_at": "2026-08-11T23:17:35.111403+09:00",
+  "generated_at": "2026-08-12T00:56:28.356585+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "red",
  "reasons": [
   "커버리지 게이트 차단(직전 run)",
-  "커버리지 회귀 경고 11건"
+  "커버리지 회귀 경고 11건",
+  "비P0 stale 2건",
+  "CDN age 264s > 120s(스테일 서빙)"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-11T23:17:35.055963+09:00",
+  "generated_at": "2026-08-12T00:56:28.302604+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 0,
+  "max_cdn_age_s": 264,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -26,7 +28,7 @@
      "PBR": 79.4
     },
     "total": 1780,
-    "cdn_age_s": 0,
+    "cdn_age_s": 264,
     "error": null
    },
    {
@@ -37,7 +39,7 @@
      "PBR": 72.1
     },
     "total": 5148,
-    "cdn_age_s": 0,
+    "cdn_age_s": 264,
     "error": null
    },
    {
@@ -68,10 +70,10 @@
   "last_run_warns": 11
  },
  "freshness": {
-  "generated_at": "2026-08-11T23:17:26.842912+09:00",
+  "generated_at": "2026-08-12T00:56:23.386035+09:00",
   "summary": {
-   "fresh": 58,
-   "stale": 0,
+   "fresh": 56,
+   "stale": 2,
    "closed": 2,
    "discontinued": 2,
    "p0": {
@@ -88,12 +90,15 @@
    },
    "p2": {
     "total": 36,
-    "fresh": 35,
+    "fresh": 33,
     "closed": 0,
     "active": 35
    }
   },
   "stale_p0": [],
-  "stale_other": []
+  "stale_other": [
+   "market_warnings",
+   "securities_lending"
+  ]
  }
 }
