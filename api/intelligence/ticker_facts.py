@@ -545,10 +545,19 @@ def past_decisions_section(tk: str, limit: int = PAST_DECISIONS_LIMIT,
       배포본에서 ModuleNotFoundError 를 "실패" 로 보고하면 매 조회마다 없는 결함이 뜬다.
     · 지연 임포트 = 순환 차단(decision_journal → operator_ask → ticker_facts).
     """
+    # 🚨 2026-08-12 fix — 임포트 경로 3단.
+    #   스킬의 기본 명령이 `python3 api/intelligence/operator_ask.py` = **스크립트 모드**라
+    #   sys.path[0] 이 이 디렉토리이고 repo 루트가 없다. 절대 임포트만 두면 여기서
+    #   ImportError 가 나고, 아래 "배포본엔 없음" 분기가 그걸 삼켜 **주 경로에서 섹션이
+    #   조용히 사라졌다**(2026-08-11 실측: collect 32섹션 / CLI 출력 31섹션).
+    #   operator_ask 가 ticker_facts 에 쓰는 폴백 패턴과 동일하게 맞춘다.
     try:
-        from api.intelligence import decision_journal as _dj
+        from api.intelligence import decision_journal as _dj   # 패키지 컨텍스트
     except ImportError:
-        return None, None  # 이 배포에는 실험 노트가 없다 — 설계상 정상
+        try:
+            import decision_journal as _dj                     # 스크립트 모드
+        except ImportError:
+            return None, None  # 이 배포에는 실험 노트가 없다 — 설계상 정상(vercel 복제본)
     try:
         past = _dj.read_recent(tk, limit=limit, path=path)
     except Exception as e:  # noqa: BLE001
