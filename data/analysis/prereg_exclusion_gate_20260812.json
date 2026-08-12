@@ -1,0 +1,384 @@
+{
+ "_meta": {
+  "prereg": "docs/PREREG_EXCLUSION_GATE_ADOPTION_2026_08_12.md",
+  "approved": "PM 2026-08-12 'ㄱㄱ.'",
+  "executed_at": "2026-08-13T04:24:55+09:00",
+  "design": "동일강도 짝지은 교체 — r_t 를 현직(min_safety 55)에서 상속, 같은 인원수",
+  "tests": 6,
+  "judgment": "NW t → BH-FDR q=.05 · 채택 |t|≥3.0 양 호라이즌 · 참고 Bonf 2.64"
+ },
+ "coverage": {
+  "rebalances": 76,
+  "window": [
+   "20200131",
+   "20260430"
+  ],
+  "elapsed_sec": 98.2
+ },
+ "results": {
+  "C1_20d_optimistic": {
+   "d_nw": {
+    "n": 76,
+    "mean": -0.000576,
+    "t": -0.4589,
+    "lag": 0,
+    "positive_rate": 0.5
+   },
+   "d_non_overlap": {
+    "n": 60,
+    "mean": -0.001083,
+    "t": -0.7417,
+    "positive_rate": 0.4667
+   },
+   "d_mean_pct": -0.0576
+  },
+  "C1_20d_conservative": {
+   "d_nw": {
+    "n": 76,
+    "mean": -0.000576,
+    "t": -0.4589,
+    "lag": 0,
+    "positive_rate": 0.5
+   },
+   "d_non_overlap": {
+    "n": 60,
+    "mean": -0.001083,
+    "t": -0.7417,
+    "positive_rate": 0.4667
+   },
+   "d_mean_pct": -0.0576,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": -0.000211,
+     "sign_pos": false
+    },
+    "H2": {
+     "n": 38,
+     "mean": -0.000941,
+     "sign_pos": false
+    }
+   },
+   "p_two_sided": 0.647633,
+   "passes_bh_fdr": false
+  },
+  "C1_60d_optimistic": {
+   "d_nw": {
+    "n": 76,
+    "mean": -0.000702,
+    "t": -0.2218,
+    "lag": 2,
+    "positive_rate": 0.5395
+   },
+   "d_non_overlap": {
+    "n": 25,
+    "mean": 0.001414,
+    "t": 0.3221,
+    "positive_rate": 0.52
+   },
+   "d_mean_pct": -0.0702
+  },
+  "C1_60d_conservative": {
+   "d_nw": {
+    "n": 76,
+    "mean": -0.000709,
+    "t": -0.2244,
+    "lag": 2,
+    "positive_rate": 0.5395
+   },
+   "d_non_overlap": {
+    "n": 25,
+    "mean": 0.001401,
+    "t": 0.3194,
+    "positive_rate": 0.52
+   },
+   "d_mean_pct": -0.0709,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": -0.000677,
+     "sign_pos": false
+    },
+    "H2": {
+     "n": 38,
+     "mean": -0.000742,
+     "sign_pos": false
+    }
+   },
+   "p_two_sided": 0.823056,
+   "passes_bh_fdr": false
+  },
+  "C2_20d_optimistic": {
+   "d_nw": {
+    "n": 76,
+    "mean": -0.001216,
+    "t": -0.8789,
+    "lag": 0,
+    "positive_rate": 0.4737
+   },
+   "d_non_overlap": {
+    "n": 60,
+    "mean": -0.002304,
+    "t": -1.5,
+    "positive_rate": 0.45
+   },
+   "d_mean_pct": -0.1216
+  },
+  "C2_20d_conservative": {
+   "d_nw": {
+    "n": 76,
+    "mean": -0.001216,
+    "t": -0.8789,
+    "lag": 0,
+    "positive_rate": 0.4737
+   },
+   "d_non_overlap": {
+    "n": 60,
+    "mean": -0.002304,
+    "t": -1.5,
+    "positive_rate": 0.45
+   },
+   "d_mean_pct": -0.1216,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": -0.000926,
+     "sign_pos": false
+    },
+    "H2": {
+     "n": 38,
+     "mean": -0.001505,
+     "sign_pos": false
+    }
+   },
+   "p_two_sided": 0.382263,
+   "passes_bh_fdr": false
+  },
+  "C2_60d_optimistic": {
+   "d_nw": {
+    "n": 76,
+    "mean": -0.001978,
+    "t": -0.5889,
+    "lag": 2,
+    "positive_rate": 0.4605
+   },
+   "d_non_overlap": {
+    "n": 25,
+    "mean": 0.000214,
+    "t": 0.0487,
+    "positive_rate": 0.48
+   },
+   "d_mean_pct": -0.1978
+  },
+  "C2_60d_conservative": {
+   "d_nw": {
+    "n": 76,
+    "mean": -0.001978,
+    "t": -0.5889,
+    "lag": 2,
+    "positive_rate": 0.4605
+   },
+   "d_non_overlap": {
+    "n": 25,
+    "mean": 0.000214,
+    "t": 0.0487,
+    "positive_rate": 0.48
+   },
+   "d_mean_pct": -0.1978,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": -0.001249,
+     "sign_pos": false
+    },
+    "H2": {
+     "n": 38,
+     "mean": -0.002707,
+     "sign_pos": false
+    }
+   },
+   "p_two_sided": 0.557698,
+   "passes_bh_fdr": false
+  },
+  "C3_20d_optimistic": {
+   "d_nw": {
+    "n": 76,
+    "mean": -0.00013,
+    "t": -0.0651,
+    "lag": 0,
+    "positive_rate": 0.5132
+   },
+   "d_non_overlap": {
+    "n": 60,
+    "mean": -0.001203,
+    "t": -0.5363,
+    "positive_rate": 0.5
+   },
+   "d_mean_pct": -0.013
+  },
+  "C3_20d_conservative": {
+   "d_nw": {
+    "n": 76,
+    "mean": -0.00013,
+    "t": -0.0651,
+    "lag": 0,
+    "positive_rate": 0.5132
+   },
+   "d_non_overlap": {
+    "n": 60,
+    "mean": -0.001203,
+    "t": -0.5363,
+    "positive_rate": 0.5
+   },
+   "d_mean_pct": -0.013,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": 0.001937,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 38,
+     "mean": -0.002197,
+     "sign_pos": false
+    }
+   },
+   "p_two_sided": 0.948268,
+   "passes_bh_fdr": false
+  },
+  "C3_60d_optimistic": {
+   "d_nw": {
+    "n": 76,
+    "mean": 0.001008,
+    "t": 0.2099,
+    "lag": 2,
+    "positive_rate": 0.5132
+   },
+   "d_non_overlap": {
+    "n": 25,
+    "mean": 0.003559,
+    "t": 0.5775,
+    "positive_rate": 0.48
+   },
+   "d_mean_pct": 0.1008
+  },
+  "C3_60d_conservative": {
+   "d_nw": {
+    "n": 76,
+    "mean": 0.001008,
+    "t": 0.2099,
+    "lag": 2,
+    "positive_rate": 0.5132
+   },
+   "d_non_overlap": {
+    "n": 25,
+    "mean": 0.003559,
+    "t": 0.5775,
+    "positive_rate": 0.48
+   },
+   "d_mean_pct": 0.1008,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": 0.005356,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 38,
+     "mean": -0.00334,
+     "sign_pos": false
+    }
+   },
+   "p_two_sided": 0.834315,
+   "passes_bh_fdr": false
+  }
+ },
+ "diagnostics": {
+  "C1_winner_retention": {
+   "cand": 0.1499,
+   "inc": 0.1748,
+   "cand_ge_inc": false
+  },
+  "C1_absent_in_excluded": {
+   "cand": 0.0251,
+   "inc": 0.0399
+  },
+  "excl_rate_mean": 0.8083,
+  "C1_full_obs_20d": {
+   "n": 76,
+   "mean": 0.000312,
+   "sign_pos": true
+  },
+  "C1_full_obs_60d": {
+   "n": 76,
+   "mean": 0.002312,
+   "sign_pos": true
+  },
+  "C2_winner_retention": {
+   "cand": 0.1382,
+   "inc": 0.1719,
+   "cand_ge_inc": false
+  },
+  "C2_absent_in_excluded": {
+   "cand": 0.023,
+   "inc": 0.0387
+  },
+  "C2_full_obs_20d": {
+   "n": 76,
+   "mean": 0.000198,
+   "sign_pos": true
+  },
+  "C2_full_obs_60d": {
+   "n": 76,
+   "mean": 0.001552,
+   "sign_pos": true
+  },
+  "C3_winner_retention": {
+   "cand": 0.1224,
+   "inc": 0.1604,
+   "cand_ge_inc": false
+  },
+  "C3_absent_in_excluded": {
+   "cand": 0.0602,
+   "inc": 0.0934
+  },
+  "C3_full_obs_20d": {
+   "n": 76,
+   "mean": 0.002213,
+   "sign_pos": true
+  },
+  "C3_full_obs_60d": {
+   "n": 76,
+   "mean": 0.007934,
+   "sign_pos": true
+  }
+ },
+ "adoption": {
+  "C1": {
+   "bh_both": false,
+   "t3_both": false,
+   "winner_retention": false,
+   "split_sign": false,
+   "full_obs_sign": true,
+   "all_pass": false
+  },
+  "C2": {
+   "bh_both": false,
+   "t3_both": false,
+   "winner_retention": false,
+   "split_sign": false,
+   "full_obs_sign": true,
+   "all_pass": false
+  },
+  "C3": {
+   "bh_both": false,
+   "t3_both": false,
+   "winner_retention": false,
+   "split_sign": false,
+   "full_obs_sign": true,
+   "all_pass": false
+  },
+  "adopted": null,
+  "rule": "전 조건 충족자 중 축수 최소 (C1>C2>C3). 전원 미통과 = 무채택 (§3-2)"
+ }
+}
