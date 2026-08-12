@@ -37,7 +37,10 @@ from datetime import datetime, timezone, timedelta
 
 # ── config (검수 대상 SoT) ─────────────────────────────────────────
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROD_SITE = "https://verity-terminal.framer.website"
+# 🚨 2026-08-12 재지정 — 구 프레이머 배리티(verity-terminal.framer.website)는 은퇴 대상이라
+#   그걸 재던 주1 cron 은 "초록인데 실사이트는 미측정" 상태였다. 검수 대상 = 살아있는 공개 사이트.
+#   오퍼레이터 터미널(operator-web, 인증 게이트)은 이 감사 축(공개 도달성/발행)의 대상이 아니다.
+PROD_SITE = "https://www.alphanest.kr"
 API_BASE = "https://project-yw131.vercel.app/api"
 BRAIN_API = "https://verity-api-kim-hyojuns-projects.vercel.app/api/brain_breakdown"
 BLOB_BASE = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"

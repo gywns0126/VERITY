@@ -73,21 +73,23 @@ _TRACKED_ENV_KEYS = (
 
 
 def _cors_diag() -> dict:
-    """cors_helper 가 정상 import 되고 ALLOWED_ORIGINS 가 채워졌는지 + Framer origin 매칭되는지."""
+    """cors_helper 가 정상 import 되고 ALLOWED_ORIGINS 가 채워졌는지 + 공개 사이트 origin 매칭되는지."""
     out = {
         "import_path_tried": "api.cors_helper",
         "import_ok": False,
         "import_error": None,
         "allowed_origins_count": 0,
-        "test_match_framer": False,
+        "test_match_public_site": False,
     }
     try:
         from api.cors_helper import resolve_origin, ALLOWED_ORIGINS  # type: ignore
         out["import_ok"] = True
         out["allowed_origins_count"] = len(ALLOWED_ORIGINS)
-        # 실제 매칭 — 값이 무엇인지는 노출하지 않고 boolean 만
-        framer = "https://verity-terminal.framer.website"
-        out["test_match_framer"] = bool(resolve_origin(framer))
+        # 실제 매칭 — 값이 무엇인지는 노출하지 않고 boolean 만.
+        # 🚨 2026-08-12: 프로브 심볼을 구 프레이머 배리티 → 살아있는 공개 사이트로 교체.
+        #   구 오리진으로 재면 은퇴한 표면의 허용 여부를 검사하게 된다.
+        public_site = "https://www.alphanest.kr"
+        out["test_match_public_site"] = bool(resolve_origin(public_site))
     except Exception as e:
         out["import_error"] = f"{type(e).__name__}: {str(e)[:200]}"
         # fallback: 직접 env 길이만 — 값 노출 안 함
