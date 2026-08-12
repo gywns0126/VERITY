@@ -825,6 +825,25 @@ def main() -> int:
                 s["calendar"] = [w]
                 n_cal += 1
         print(f"[us_stock_report] 어닝 캘린더(예상 창) 부착 {n_cal}/{len(stocks)} 종목", file=sys.stderr)
+        # 🚨 빈 껍데기 제외 (2026-08-12, PM "데이터 없이는 좀 그렇잖아").
+        #   SEC 벌크로 유니버스가 1,505 → 5,148 로 늘면서, 핵심축이 하나도 없는 행이
+        #   662종목(12.9%) 생겼다 — ticker·name 만 있고 PER·PBR·재무·peer 가 전부 빈 행이다.
+        #   수집은 전량 유지하고(레이크·조인엔 그대로) **발행만** 최소선을 건다.
+        #   기준 = 핵심축 4종 중 **1개 이상**. 임의 임계가 아니라 "아무 것도 없으면 빼는" 최소선이다.
+        #   실측 4,486종목(87.1%) 통과 · 662종목 제외.
+        def _core_axes(s: Dict[str, Any]) -> int:
+            fa = s.get("facts") or {}
+            def _f(v): return v not in (None, "", "-", [], {})
+            return sum([_f(fa.get("PER")), _f(fa.get("PBR")),
+                        _f(s.get("financials")), _f(s.get("peer"))])
+
+        _before = len(stocks)
+        stocks = [s for s in stocks if _core_axes(s) > 0]
+        _dropped = _before - len(stocks)
+        if _dropped:
+            print(f"[us_stock_report] 빈 껍데기 제외 {_dropped}종목 "
+                  f"(핵심축 0) · 발행 {len(stocks)}/{_before}", file=sys.stderr)
+
         # ROE 큰 순 (사실 정렬)
         def _roe(s):
             v = s.get("facts", {}).get("ROE", "")
