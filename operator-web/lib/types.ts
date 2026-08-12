@@ -1,6 +1,51 @@
 // 공유 타입 — portfolio_full(/api/admin authed) 1차 자료 검증 shape (data/portfolio.json 실측 2026-08-03).
 // page.tsx 가 한 번 fetch 해 HUD/보유/추천/피드에 내려줌 (중복 fetch 금지).
 
+// ── 구 프레이머 admin 카드 이관 shape (2026-08-12) ──────────────────
+// 🚨 서버 화이트리스트 `_TERMINAL_KEYS`(vercel-api/api/admin.py) 와 짝이다. 한쪽만 바꾸면
+//    타입은 통과하는데 값이 조용히 undefined 로 빈다 — 함께 고칠 것.
+export type CostMonitor = {
+    month_key?: string
+    updated_at?: string
+    monthly_usage?: {
+        claude_deep_calls?: number
+        claude_light_calls?: number
+        claude_tokens?: number
+        gemini_stock_calls?: number
+        gemini_report_calls?: number
+        gemini_pro_calls?: number
+        perplexity_calls?: number
+    }
+}
+
+export type BrainQuality = { status?: string; metrics?: { total_samples?: number } }
+
+export type PostmortemFailure = {
+    ticker?: string
+    name?: string
+    original_rec?: string
+    actual_return?: number
+    lesson?: string
+    misleading_factor?: string
+    brain_score?: number
+    brain_grade?: string
+}
+
+export type Postmortem = {
+    status?: string
+    failures?: PostmortemFailure[]
+    analyzed_count?: number
+    period?: string
+    summary?: string
+    lesson?: string
+    system_suggestion?: string
+    quality_label?: string
+    trail_sufficient?: boolean
+    coverage_ratio?: number
+    misleading_factors?: Record<string, number>
+    generated_at?: string
+}
+
 export type Holding = {
     ticker: string
     name?: string
@@ -135,6 +180,11 @@ export type PortfolioFull = {
     sectors?: SectorRow[]
     macro?: Record<string, MacroNode>
     system_action?: SystemAction
+    // 2026-08-12 구 프레이머 admin 카드 이관 — /system 의 AI 사용량·Brain 표본·사후분석.
+    // 서버 화이트리스트 _TERMINAL_KEYS(vercel-api/api/admin.py) 와 짝. 한쪽만 바꾸면 조용히 빈다.
+    cost_monitor?: CostMonitor
+    brain_quality?: BrainQuality
+    postmortem?: Postmortem
 }
 
 // 시스템 작용 — 매크로·게이트가 지금 파이프라인에 미치는 실작용 (VERITY #267, /macro 1번 패널)
