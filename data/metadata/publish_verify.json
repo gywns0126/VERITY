@@ -1,8 +1,8 @@
 {
- "generated_at": "2026-08-12T20:43:48.085416+09:00",
- "ok": true,
+ "generated_at": "2026-08-12T21:56:19.243056+09:00",
+ "ok": false,
  "checked": 3,
- "failed": 0,
+ "failed": 1,
  "results": [
   {
    "file": "stock_report_public.json",
@@ -47,22 +47,26 @@
   },
   {
    "file": "us_stock_report_public.json",
-   "ok": true,
-   "total": 5148,
+   "ok": false,
+   "total": 4486,
    "cdn_age_s": 0,
    "pct": {
-    "PER": 44.1,
-    "PBR": 72.1
+    "PER": 50.6,
+    "PBR": 82.9
    },
    "coverage": {
-    "disclosures": 80.3,
-    "fin_series": 80.3,
+    "disclosures": 87.4,
+    "fin_series": 92.3,
     "ownership": 0.0,
-    "calendar": 28.3,
-    "peer": 83.7,
+    "calendar": 32.5,
+    "peer": 96.1,
     "consensus": 0.0,
-    "business": 98.5
+    "business": 99.1
    },
+   "regression": [
+    "종목수 5148→4486"
+   ],
+   "error": "커버리지 후퇴: 종목수 5148→4486",
    "gaps": [
     [
      "ownership",
@@ -74,15 +78,15 @@
     ],
     [
      "calendar",
-     28.3
+     32.5
     ],
     [
      "disclosures",
-     80.3
+     87.4
     ],
     [
      "fin_series",
-     80.3
+     92.3
     ]
    ]
   },
