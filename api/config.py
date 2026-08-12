@@ -278,6 +278,12 @@ VAMS_REGIME_DRAWDOWN_PCT = _env_float("VAMS_REGIME_DRAWDOWN_PCT", 10.0)         
 # 근거 = 파라미터 불확실 하 fractional Kelly(MacLean·Thorp·Ziemba 2011 / Baker-McHale shrinkage).
 # 용법 변경: 옛 "kelly_raw 에 곱하는 분수"(상쇄 결함) → 신 "중립 대비 mult 민감도 φ".
 VAMS_KELLY_SCALE = _env_float("VAMS_KELLY_SCALE", 0.25)
+# ── 게이트 강도 재설계 (2026-08-12, PREREG_GATE_STRENGTH_REDESIGN · PR #357 채택 B) ──
+# safety_score 는 **하위 배제 게이트**다 — 상위 선별 아님 (측정: 상위 구간 승자보존이
+# 무작위 이하 0.746 vs 1.0 · 하위 20% 컷 시 0.933). 컷 = 단면 백분위 하위 20%.
+# 🚨 스캔 금지 — 20 은 최적값 주장이 아니라 측정된 신호 경계(Q1)의 상속 (등록 §5).
+GATE_BOTTOM_PCT = 0.20
+
 VAMS_MAX_SECTOR_PCT = _env_float("VAMS_MAX_SECTOR_PCT", 35.0)
 VAMS_MAX_PORTFOLIO_BETA = _env_float("VAMS_MAX_PORTFOLIO_BETA", 1.5)
 VAMS_MAX_SINGLE_THEME_PCT = _env_float("VAMS_MAX_SINGLE_THEME_PCT", 40.0)
@@ -305,7 +311,7 @@ VAMS_PROFILES = {
     "moderate": {
         "label": "중간",
         "recommendations": ("BUY", "STRONG_BUY"),
-        "min_safety": 55,
+        "min_safety": 55,   # DEPRECATED(8/12 게이트 컷오버) — 폴백·섀도 전용. 정본 = safety_pct ≥ GATE_BOTTOM_PCT
         "max_risk_keywords": 1,
         "max_picks": 7,
         "max_buy_per_cycle": 5,

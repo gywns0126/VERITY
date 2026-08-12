@@ -4651,16 +4651,27 @@ def main():
     except Exception as _tp_err:
         print(f"  [trade_plan] 산출/로깅 스킵: {_tp_err}")
 
+    def _gate_pass(s):
+        """게이트 컷오버 (2026-08-12, PR #357 채택 B): 정본 = safety_pct ≥ GATE_BOTTOM_PCT.
+        🚨 전환 폴백 — safety_pct 미부착(구 아티팩트/보유 주입)이면 구 게이트(≥55)로.
+        조용한 빈 픽 방지. 폴백 사용은 measurement_audit 가 감시한다."""
+        from api.config import GATE_BOTTOM_PCT
+        pct = s.get("safety_pct")
+        if pct is not None:
+            return pct >= GATE_BOTTOM_PCT
+        return s.get("safety_score", 0) >= 55          # 폴백 (min_safety 55 섀도)
+
     def _profile_picks(stocks, profile):
         return [
             {"ticker": s["ticker"], "name": s["name"], "price": s.get("price"),
              "safety_score": s.get("safety_score", 0),
+             "safety_pct": s.get("safety_pct"),
              "recommendation": s.get("recommendation"),
              "ai_verdict": s.get("ai_verdict", ""),
              "detected_risk_keywords": s.get("detected_risk_keywords", [])}
             for s in stocks
             if s.get("recommendation") in profile["recommendations"]
-            and s.get("safety_score", 0) >= profile["min_safety"]
+            and _gate_pass(s)
             and len(s.get("detected_risk_keywords") or []) <= profile["max_risk_keywords"]
         ][:profile["max_picks"]]
 
