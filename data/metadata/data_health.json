@@ -1,11 +1,10 @@
 {
  "_meta": {
-  "generated_at": "2026-08-13T07:35:20.497675+09:00",
+  "generated_at": "2026-08-13T08:36:01.941903+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "red",
+ "status": "amber",
  "reasons": [
-  "배달 검증 실패 1건",
   "비P0 stale 1건"
  ],
  "publish_guard": {
@@ -13,9 +12,9 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-13T07:35:20.438826+09:00",
-  "ok": false,
-  "failed": 1,
+  "generated_at": "2026-08-13T08:36:01.887215+09:00",
+  "ok": true,
+  "failed": 0,
   "max_cdn_age_s": 0,
   "files": [
    {
@@ -31,14 +30,14 @@
    },
    {
     "file": "us_stock_report_public.json",
-    "ok": false,
+    "ok": true,
     "pct": {
      "PER": 50.6,
      "PBR": 82.9
     },
     "total": 4486,
     "cdn_age_s": 0,
-    "error": "커버리지 후퇴: 종목수 5148→4486"
+    "error": null
    },
    {
     "file": "us_stock_report_us_smallcap.json",
@@ -68,7 +67,7 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-08-13T07:35:08.173700+09:00",
+  "generated_at": "2026-08-13T08:35:52.869438+09:00",
   "summary": {
    "fresh": 57,
    "stale": 1,
