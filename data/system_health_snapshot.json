@@ -1,31 +1,31 @@
 {
   "system_health": {
     "status": "error",
-    "checked_at": "2026-08-12T19:20:58+09:00",
+    "checked_at": "2026-08-12T20:09:25+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 17281,
+    "elapsed_ms": 14383,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 732,
+        "latency_ms": 937,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 409,
+        "latency_ms": 327,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 516,
+        "latency_ms": 329,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 173,
+        "latency_ms": 177,
         "detail": "정상",
         "attempts": 1
       },
@@ -37,49 +37,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 794,
+        "latency_ms": 1121,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
-        "status": "ok",
-        "latency_ms": 942,
-        "detail": "정상",
+        "status": "error",
+        "latency_ms": 8562,
+        "detail": "네트워크 ConnectTimeout",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1262,
+        "latency_ms": 871,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 11778,
+        "latency_ms": 13884,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260811)",
         "attempts": 1
       },
       "ecos": {
-        "status": "error",
-        "latency_ms": 16565,
-        "detail": "HTTPSConnectionPool(host='ecos.bok.or.kr', port=443): Max retries exceeded with url: /api/StatisticSearch/8BT2P4G4NSU61M",
-        "attempts": 2
+        "status": "ok",
+        "latency_ms": 804,
+        "detail": "정상",
+        "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 277,
+        "latency_ms": 101,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 471,
+        "latency_ms": 120,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 70,
+        "latency_ms": 102,
         "detail": "정상",
         "attempts": 1
       },
@@ -91,12 +91,12 @@
       }
     },
     "github_worker": {
-      "status": "ok",
-      "conclusion": "success",
+      "status": "running",
+      "conclusion": "in_progress",
       "workflow": "RULE 7 Audit",
-      "started_at": "2026-08-12T10:14:30Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/31586537133",
-      "detail": "RULE 7 Audit: success"
+      "started_at": "2026-08-12T11:09:20Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/31590585224",
+      "detail": "RULE 7 Audit: in_progress"
     },
     "data_recency": {
       "status": "ok",
@@ -104,43 +104,43 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-08-12 19:19",
+          "last_updated": "2026-08-12 20:07",
           "age_hours": 0.03,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-08-12 19:19",
-          "age_hours": 0.03,
+          "last_updated": "2026-08-12 20:07",
+          "age_hours": 0.02,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-08-12 19:19",
+          "last_updated": "2026-08-12 20:07",
           "age_hours": 0.03,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-08-12 19:19",
+          "last_updated": "2026-08-12 20:07",
           "age_hours": 0.03,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-08-12 19:19",
-          "age_hours": 0.03,
+          "last_updated": "2026-08-12 20:07",
+          "age_hours": 0.02,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-08-12 19:19",
+          "last_updated": "2026-08-12 20:07",
           "age_hours": 0.03,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-08-12 19:19",
+          "last_updated": "2026-08-12 20:07",
           "age_hours": 0.03,
           "threshold_hours": 1
         }
@@ -148,15 +148,15 @@
     },
     "version_sync": {
       "local_version": "v8.2.0",
-      "status": "ok",
-      "remote_sha": "083cbb2",
-      "remote_message": "🎯 cockpit 2026-08-12T19:15",
-      "remote_date": "2026-08-12T10:17:32Z",
-      "local_sha": "acc0477",
-      "detail": "cron 자동 갱신 — 🎯 cockpit 2026-08-12T19:15"
+      "status": "update_available",
+      "remote_sha": "05a7c31",
+      "remote_message": "feat(gate): 게이트 컷오버 1단계 — 백분위 하위 20% 컷 + 매수 정렬 brain 교체 (PR #357 채택 B) (#359)\n\n사",
+      "remote_date": "2026-08-12T11:09:18Z",
+      "local_sha": "93ee7a4",
+      "detail": "새로운 커밋이 원격에 존재합니다"
     },
     "errors": [
-      "ecos API 오류 — HTTPSConnectionPool(host='ecos.bok.or.kr', port=443): Max retries exceeded with url: /api/StatisticSearch/8BT2P4G4NSU61M"
+      "관세청 무역 API 오류 — 네트워크 ConnectTimeout"
     ],
     "warnings": [],
     "apis": {
@@ -168,7 +168,7 @@
     },
     "overall_status": "error"
   },
-  "updated_at": "2026-08-12T19:21:02+09:00",
+  "updated_at": "2026-08-12T20:09:30+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
