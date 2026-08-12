@@ -9,6 +9,7 @@ import { RAILWAY, fetchRailway } from "@/lib/api"
 import { useQuotes } from "@/lib/quotes"
 import StockLogo from "./StockLogo"
 import ProChart, { type Candle } from "./ProChart"
+import TVChart, { tvSupported } from "./TVChart"
 import type { Rec, Holding } from "@/lib/types"
 import OrderTicket from "./OrderTicket"
 import TriSynthesisPanel from "./TriSynthesisPanel"
@@ -211,7 +212,7 @@ export default function Workspace({
                         </span>
                     </div>
                 ) : (
-                    <span style={{ fontSize: 11, color: c.faint }}>US 실시간 시세 미지원 (전일종가 체계)</span>
+                    <span style={{ fontSize: 11, color: c.faint }}>US 시세 = 전일종가 스냅샷 · 차트 = TradingView 지연</span>
                 )}
                 {isKR && typeof q[ticker]?.low === "number" && typeof q[ticker]?.high === "number" && (q[ticker]!.high as number) > (q[ticker]!.low as number) ? (
                     <DayRange c={c} low={q[ticker]!.low as number} high={q[ticker]!.high as number} px={typeof live === "number" ? live : null} />
@@ -254,6 +255,12 @@ export default function Workspace({
                         </div>
                     )}
                 </div>
+            ) : tvSupported(ticker) ? (
+                /* 미장 종목 차트 = TradingView 임베드 (PM 2026-08-12).
+                   그전까지 US 티커는 차트가 아예 없었다 — 미국 주가 시계열은 재배포 권리가 없어
+                   자체 발행 대상이 아니고(us_stock_report_* header 에 주가 없음), TV 는 데이터
+                   라이선스를 자기가 부담하는 임베드라 우리 쪽 계약 없이 합법. 상세 = TVChart.tsx */
+                <TVChart symbol={ticker} height={380} />
             ) : null}
 
             {/* 본문 — 호가 래더 + 티켓 */}
