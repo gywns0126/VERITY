@@ -191,6 +191,35 @@ def _flat_pcts(report: Dict[str, Any]) -> Dict[str, float]:
     return out
 
 
+def _flat_counts(report: Dict[str, Any]) -> Dict[str, int]:
+    """절대 채움 건수 {지표: filled}. _flat_pcts 와 키 체계 동일.
+
+    🚨 왜 필요한가 (2026-08-12): 게이트가 **비율만** 봐서 분모 증가와 분자 붕괴를
+    구분하지 못했다. 미장 유니버스가 1,505 → 5,148 로 3.4배가 되자
+    us.field.facts.PER 86.3%→44.1%, us.companion.us_quarterly 99.5%→30.4% 로 찍혀
+    publish 가 차단됐는데, 종목 단위 대조 결과 **데이터 손실은 0** 이었다
+    (PER 채움 1,299→2,265 / PBR 1,428→3,710 / 재무 1,499→4,243, 기존 종목 중 잃은 것 0).
+    커버리지가 개선됐는데 게이트가 붕괴로 읽은 것이다.
+    """
+    out: Dict[str, int] = {}
+    for k, v in (report.get("fields") or {}).items():
+        if isinstance(v, dict) and v.get("filled") is not None:
+            out[f"field.{k}"] = v["filled"]
+    for k, v in (report.get("companions") or {}).items():
+        if isinstance(v, dict) and v.get("count") is not None:
+            out[f"companion.{k}"] = v["count"]
+    for k, v in (report.get("us_fields") or {}).items():
+        if isinstance(v, dict) and v.get("filled") is not None:
+            out[f"us.field.{k}"] = v["filled"]
+    for k, v in (report.get("us_companions") or {}).items():
+        if isinstance(v, dict) and v.get("count") is not None:
+            out[f"us.companion.{k}"] = v["count"]
+    for k, v in (report.get("us_smallcap_fields") or {}).items():
+        if isinstance(v, dict) and v.get("filled") is not None:
+            out[f"us_smallcap.field.{k}"] = v["filled"]
+    return out
+
+
 def _universe_for(key: str, report: Dict[str, Any]) -> int:
     """flat 지표 키의 유니버스 총수 (절대 하한 게이트용)."""
     if key.startswith("us_smallcap."):
@@ -218,12 +247,26 @@ def main() -> None:
     # 1) 회귀 게이트 — 마지막 GOOD baseline(REPORT_PATH) 대비 핵심 필드 급락(>30%p)
     if prev:
         before = _flat_pcts(prev)
+        before_n, now_n = _flat_counts(prev), _flat_counts(report)
         for k, pct in now.items():
             old = before.get(k)
             if old is None or old - pct <= REGRESSION_WARN_PP:
                 continue
             if old - pct > CORE_FAIL_PP and k.startswith(CORE_PREFIXES):
+                # 🚨 분모 증가 vs 분자 붕괴 구분 (2026-08-12).
+                #   절대 채움 건수가 유지·증가했으면 데이터가 사라진 게 아니라 유니버스가
+                #   커진 것이다. 이때 차단하면 커버리지 개선이 배포를 막는다.
+                #   2026-07-11 실사고(us_quarterly 1,494→10종)는 건수가 실제로 붕괴했으므로
+                #   이 완화로도 그대로 잡힌다 — 게이트의 원래 목적은 보존된다.
+                o_n, n_n = before_n.get(k), now_n.get(k)
+                if o_n is not None and n_n is not None and n_n >= o_n:
+                    print(f"[coverage] WARN {k} 비율 {old}%→{pct}% 하락이나 "
+                          f"절대 건수 {o_n}→{n_n} 유지·증가 — 분모 증가로 판정, 차단 안 함")
+                    warns += 1
+                    continue
                 msg = f"{k} 핵심 급락 {old}%→{pct}% (-{round(old - pct, 1)}%p)"
+                if o_n is not None and n_n is not None:
+                    msg += f" · 절대 건수 {o_n}→{n_n}"
                 print(f"[coverage] FAIL {msg} — publish 차단")
                 reasons.append(msg)
                 fails += 1
