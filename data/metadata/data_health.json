@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-08-12T23:18:58.400522+09:00",
+  "generated_at": "2026-08-13T00:55:24.260966+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "red",
@@ -8,18 +8,17 @@
   "배달 검증 실패 1건",
   "P0 stale 1건",
   "커버리지 회귀 경고 10건",
-  "비P0 stale 2건",
-  "CDN age 201s > 120s(스테일 서빙)"
+  "비P0 stale 16건"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-12T23:18:58.344816+09:00",
+  "generated_at": "2026-08-13T00:55:24.205492+09:00",
   "ok": false,
   "failed": 1,
-  "max_cdn_age_s": 201,
+  "max_cdn_age_s": 97,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -29,7 +28,7 @@
      "PBR": 79.4
     },
     "total": 1780,
-    "cdn_age_s": 200,
+    "cdn_age_s": 96,
     "error": null
    },
    {
@@ -40,7 +39,7 @@
      "PBR": 82.9
     },
     "total": 4486,
-    "cdn_age_s": 199,
+    "cdn_age_s": 96,
     "error": "커버리지 후퇴: 종목수 5148→4486"
    },
    {
@@ -51,7 +50,7 @@
      "PBR": 73.5
     },
     "total": 3924,
-    "cdn_age_s": 201,
+    "cdn_age_s": 97,
     "error": null
    }
   ]
@@ -71,10 +70,10 @@
   "last_run_warns": 10
  },
  "freshness": {
-  "generated_at": "2026-08-12T23:18:56.011783+09:00",
+  "generated_at": "2026-08-13T00:55:21.820336+09:00",
   "summary": {
-   "fresh": 55,
-   "stale": 3,
+   "fresh": 41,
+   "stale": 17,
    "closed": 2,
    "discontinued": 2,
    "p0": {
@@ -85,27 +84,41 @@
    },
    "p1": {
     "total": 20,
-    "fresh": 19,
+    "fresh": 12,
     "closed": 0,
     "active": 19
    },
    "p2": {
     "total": 36,
-    "fresh": 33,
+    "fresh": 26,
     "closed": 0,
     "active": 35
    }
   },
   "stale_p0": [
    {
-    "id": "crypto",
-    "label": "크립토 시세·파생",
-    "age_min": 106.6
+    "id": "ai_synthesis",
+    "label": "AI 종합 브리핑",
+    "age_min": 4375.4
    }
   ],
   "stale_other": [
+   "disclosure_forensics",
+   "factor_ic_history",
+   "insider_trades",
+   "kr_forensics_public",
+   "stock_flow_5d",
+   "universe_search",
+   "validation_summary",
+   "commodity_exposure",
+   "entrance_map",
    "market_warnings",
-   "securities_lending"
+   "nps_holdings",
+   "perspective_maps",
+   "sector_overview",
+   "securities_lending",
+   "supply_demand",
+   "universe_search_kr"
   ]
  }
 }
