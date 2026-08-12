@@ -20,7 +20,9 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC_DIR="${REPO_ROOT}/api/intelligence"
 DST="${REPO_ROOT}/vercel-api/api/operator_core"
-FILES=(ticker_facts.py operator_ask.py)
+# 🚨 ticker_facts 가 import 하는 모듈은 전부 여기 등재해야 한다. 누락 시 Vercel 쪽에서만
+#    ImportError 로 섹션이 조용히 빠진다(로컬 CLI 는 멀쩡해서 발견이 늦다).
+FILES=(ticker_facts.py operator_ask.py us_filing_probe.py)
 
 if [ "${1:-}" = "--check" ]; then
   rc=0

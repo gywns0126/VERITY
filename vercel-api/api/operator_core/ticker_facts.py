@@ -662,6 +662,47 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
         elif not urt:
             out["missing"].append("미국 시세 (KIS 해외·야후 둘 다 실패 — 티커 오류·네트워크)")
 
+        # SEC EDGAR 직조회 — KR 의 DART 직조회에 대응하는 상설 배선 (2026-08-12 신설).
+        #   기존 `us_disclosure_feed` 는 8-K 만 수집해 10-Q/10-K/S-1/424B* 가 조인 밖이었다.
+        #   SWMR 조회에서 재무·완전희석·락업 만기·유동성 라인이 **전부 사각지대**로 드러났고,
+        #   그중 완전희석 결손은 시총을 2배 과소 계상시켰다(발행주식 $426M vs 완전희석 $863M).
+        #   유니버스 파일에 의존하지 않으므로 커버리지 밖 신규 상장도 즉시 답이 나온다.
+        #   import 은 operator_ask 와 같은 이중 경로다 — 스크립트 직접 실행 시 이 파일은
+        #   패키지가 아니라 최상위 모듈로 로드되므로 `api.intelligence.*` 가 풀리지 않는다
+        #   (2026-08-12 실측: 절대 import 하나만 두었더니 CLI 에서 조용히 섹션이 통째로 빠졌다).
+        _ufp = None
+        try:
+            from . import us_filing_probe as _ufp  # type: ignore[attr-defined]
+        except ImportError:  # noqa: BLE001
+            try:
+                import us_filing_probe as _ufp  # type: ignore[no-redef]
+            except ImportError:
+                _ufp = None
+        try:
+            sec = _ufp.probe(tk) if _ufp else None
+        except Exception:  # noqa: BLE001
+            sec = None
+        if sec:
+            cap = sec.pop("_capital", None)
+            # 시총 사다리는 **실호출로 확보한 가격이 있을 때만** 만든다. 가격을 지어내지 않는다.
+            px_now = None
+            for _s in out["sections"]:
+                if _s.get("source") in ("railway:us_quotes", "yahoo:chart"):
+                    px_now = (_s.get("data") or {}).get("현재가")
+                    if px_now:
+                        break
+            if cap and px_now:
+                lad = _ufp.market_cap_ladder(cap, float(px_now))
+                if lad and isinstance(sec.get("자본구조"), dict):
+                    sec["자본구조"]["시가총액 (종가 × 주식수)"] = lad
+            out["sections"].append({
+                "label": f"SEC 공시·자본구조 (직조회 · {_ufp.WINDOW_DAYS}일)",
+                "source": "sec:submissions+companyfacts",
+                "as_of": _now().isoformat(timespec="seconds"), "data": sec,
+            })
+        elif _is_us_q:
+            out["missing"].append("SEC 직조회 (CIK 미해석·호출 실패 — 미국 상장사가 아닐 수 있음)")
+
     # 종가 — 전 종목 동일 거래일(kr_close_latest). 등락은 prev 있을 때만.
     d = docs.get("kr_close_latest.json")
     if isinstance(d, dict):
