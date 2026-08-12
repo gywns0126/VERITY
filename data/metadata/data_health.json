@@ -1,22 +1,23 @@
 {
  "_meta": {
-  "generated_at": "2026-08-13T03:55:19.819780+09:00",
+  "generated_at": "2026-08-13T05:00:00.066732+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "red",
  "reasons": [
   "배달 검증 실패 1건",
-  "비P0 stale 1건"
+  "비P0 stale 1건",
+  "CDN age 170s > 120s(스테일 서빙)"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-13T03:55:19.760471+09:00",
+  "generated_at": "2026-08-13T04:59:59.978634+09:00",
   "ok": false,
   "failed": 1,
-  "max_cdn_age_s": 0,
+  "max_cdn_age_s": 170,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -26,7 +27,7 @@
      "PBR": 79.4
     },
     "total": 1780,
-    "cdn_age_s": 0,
+    "cdn_age_s": 167,
     "error": null
    },
    {
@@ -37,7 +38,7 @@
      "PBR": 82.9
     },
     "total": 4486,
-    "cdn_age_s": 0,
+    "cdn_age_s": 169,
     "error": "커버리지 후퇴: 종목수 5148→4486"
    },
    {
@@ -48,7 +49,7 @@
      "PBR": 73.5
     },
     "total": 3924,
-    "cdn_age_s": 0,
+    "cdn_age_s": 170,
     "error": null
    }
   ]
@@ -68,7 +69,7 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-08-13T03:55:09.511024+09:00",
+  "generated_at": "2026-08-13T04:59:55.657602+09:00",
   "summary": {
    "fresh": 57,
    "stale": 1,
