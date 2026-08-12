@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-12T19:15:04.967735+09:00",
+  "generated_at": "2026-08-12T20:13:27.696467+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 262405,
-    "python_modules": 797,
-    "tsx_components": 128,
-    "json_data_files": 1721,
-    "json_total_tracked": 1740,
+    "code_lines_tsx_py": 264874,
+    "python_modules": 803,
+    "tsx_components": 129,
+    "json_data_files": 1723,
+    "json_total_tracked": 1742,
     "workflows": 76,
     "scheduled_workflows": 60,
     "cron_triggers": 71,
-    "git_tracked_files": 7428
+    "git_tracked_files": 7438
   },
   "subsystems": {
     "ingest": {
@@ -95,7 +95,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 66,
+      "count": 67,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -158,6 +158,7 @@
         "api/intelligence/trade_plan_evolution.py",
         "api/intelligence/trend_overlay.py",
         "api/intelligence/tri_llm_synthesis.py",
+        "api/intelligence/us_filing_probe.py",
         "api/intelligence/us_financials.py",
         "api/intelligence/value_guards.py",
         "api/intelligence/value_hunter.py",
@@ -685,10 +686,10 @@
     },
     "surface": {
       "label": "출력",
-      "count": 128,
+      "count": 129,
       "by_group": {
         "framer-components/public-probe": 72,
-        "operator-web/app/components": 26,
+        "operator-web/app/components": 27,
         "admin": 15,
         "framer-components/crypto-public": 7,
         "operator-web/app": 2,
@@ -702,7 +703,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1721
+      "count": 1723
     },
     "validation": {
       "label": "검증",
@@ -717,10 +718,10 @@
     }
   },
   "python_by_dir": {
-    "api": 428,
-    "tests": 210,
+    "api": 431,
+    "tests": 212,
     "scripts": 89,
-    "vercel-api": 58,
+    "vercel-api": 59,
     "server": 7,
     ".github": 5
   },
