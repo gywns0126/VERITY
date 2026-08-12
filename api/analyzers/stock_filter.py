@@ -8,6 +8,7 @@ Phase 2-A: run_extended_filter_pipeline — 정적 화이트리스트 85종목 �
   UNIVERSE_RAMP_UP_STAGE 환경변수로 Stage 1 (500) ~ Stage 4 (5000) 제어.
   Hard Floor → 코어 fallback → step1/step2 호환성 유지.
 """
+import os
 from typing import List, Optional
 from api.config import (
     FILTER_MIN_TRADING_VALUE, FILTER_MIN_TRADING_VALUE_US, FILTER_MAX_DEBT_RATIO,
@@ -51,6 +52,104 @@ def step2_fundamental_filter(stocks: list) -> list:
 
         results.append(s)
     return results
+
+
+
+# ── 심층분석 지명 로테이션 (2026-08-12, PREREG_ANALYSIS_ROTATION · PM 승인) ──────
+_ROTATION_STATE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "data", "metadata", "analysis_rotation_state.json")
+_ROTATION_LOG_PATH = os.path.join(
+    os.path.dirname(_ROTATION_STATE_PATH), "analysis_rotation_log.jsonl")
+_ROTATION_DEAD_DAYS = 14      # §4 — 상태 파일 미갱신 ~10거래일(달력 14일) = 배선 사망 → 구 지명 복귀
+
+
+def nominate_for_analysis(step2: list, market_scope: str = "all",
+                          label: str = "Filter") -> list:
+    """심층분석 지명 — **staleness 순환** (안심점수 상위 직선발 폐지).
+
+    근거(측정): 상위 구간 승자보존 0.746~0.795 < 무작위 1.0 (PR #357 · 독립 재계산 검증).
+    상위 선별에 엣지가 없으므로 지명은 고르는 것이 아니라 돌아가며 전부 보는 것이다.
+    지명 = 게이트 통과 풀(safety_pct ≥ GATE_BOTTOM_PCT)에서 **최장 미분석 순**
+    (미분석 우선 → last_nominated asc → 티커 asc — 완전 결정론 · 점수 순위 0).
+
+    🚨 폴백(등록 §4): 상태 파일이 존재하는데 {_ROTATION_DEAD_DAYS}일 미갱신 = 기록 배선
+    사망 → 구 지명(안심 상위)으로 자동 복귀 + 큰 소리로 신고. 파일 부재 = cold start
+    (사망 아님 — 전 종목 미분석으로 시작). 섀도 = 구 지명 상위를 병행 로그.
+    """
+    import json as _json
+    from datetime import datetime, timedelta, timezone
+
+    from api.config import GATE_BOTTOM_PCT
+
+    kst_now = datetime.now(timezone(timedelta(hours=9)))
+    today = kst_now.strftime("%Y-%m-%d")
+
+    state = {}
+    dead = False
+    try:
+        if os.path.exists(_ROTATION_STATE_PATH):
+            doc = _json.load(open(_ROTATION_STATE_PATH, encoding="utf-8")) or {}
+            state = doc.get("tickers") or {}
+            upd = str(doc.get("updated_at") or "")[:10]
+            if upd:
+                age = (kst_now.date()
+                       - datetime.strptime(upd, "%Y-%m-%d").date()).days
+                if age > _ROTATION_DEAD_DAYS:
+                    dead = True
+    except Exception as _e:  # noqa: BLE001 — 읽기 실패 = 배선 사망 취급
+        print(f"[{label}] 🚨 로테이션 상태 읽기 실패({type(_e).__name__}) — 구 지명 폴백")
+        dead = True
+
+    def _legacy(pool, quota):
+        return sorted(pool, key=lambda x: x.get("safety_score", 0), reverse=True)[:quota]
+
+    def _rotate(pool, quota):
+        gated = [x for x in pool if (x.get("safety_pct") or 0) >= GATE_BOTTOM_PCT]
+        if not gated:
+            # 게이트 판정 불가(표본 부족 등) — 지어내지 않고 구 지명 폴백 + 신고
+            print(f"[{label}] 🚨 게이트 통과 0 (pct 부재/표본 부족) — 구 지명 폴백")
+            return _legacy(pool, quota), None
+        gated.sort(key=lambda x: (state.get(str(x.get("ticker"))) or "0000-00-00",
+                                  str(x.get("ticker"))))
+        return gated[:quota], len(gated)
+
+    markets = ([("KR", [x for x in step2 if x.get("currency") != "USD"], FILTER_KR_TOP_N),
+                ("US", [x for x in step2 if x.get("currency") == "USD"], FILTER_US_TOP_N)]
+               if market_scope == "all" else [("ALL", list(step2), FILTER_TOP_N)])
+
+    top: list = []
+    pool_total = 0
+    for mkt, pool, quota in markets:
+        if dead:
+            picked, gsize = _legacy(pool, quota), None
+            print(f"[{label}] 🚨 로테이션 사망 폴백({mkt}) — 안심상위 {len(picked)}종")
+        else:
+            picked, gsize = _rotate(pool, quota)
+        shadow = _legacy(pool, quota)
+        overlap = len({x.get("ticker") for x in picked}
+                      & {x.get("ticker") for x in shadow})
+        cyc = (f" · 완주≈{(gsize + quota - 1) // quota}일" if gsize else "")
+        print(f"[{label}] 지명({mkt}): {len(picked)}/{quota} · 게이트 풀 {gsize}{cyc} "
+              f"· 구지명(안심상위) 겹침 {overlap}/{len(picked)}")
+        top.extend(picked)
+
+    if not dead:
+        for x in top:
+            state[str(x.get("ticker"))] = today
+        try:
+            os.makedirs(os.path.dirname(_ROTATION_STATE_PATH), exist_ok=True)
+            tmp = _ROTATION_STATE_PATH + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                _json.dump({"updated_at": today, "tickers": state}, f, ensure_ascii=False)
+            os.replace(tmp, _ROTATION_STATE_PATH)
+            with open(_ROTATION_LOG_PATH, "a", encoding="utf-8") as f:
+                f.write(_json.dumps({"date": today, "nominated": len(top),
+                                     "state_size": len(state)},
+                                    ensure_ascii=False) + "\n")
+        except Exception as _e:  # noqa: BLE001 — 기록 실패가 지명을 막지 않는다 (다음 run 사망 감지)
+            print(f"[{label}] 🚨 로테이션 상태 기록 실패: {type(_e).__name__}: {_e}")
+    return top
 
 
 def attach_safety_percentile(scored: list) -> None:
@@ -248,21 +347,9 @@ def run_filter_pipeline(market_scope: str = "all", _metrics: Optional[dict] = No
         s["safety_score"] = calculate_safety_score(s)
     attach_safety_percentile(step2)
 
-    if market_scope == "all":
-        kr_pool = [s for s in step2 if s.get("currency") != "USD"]
-        us_pool = [s for s in step2 if s.get("currency") == "USD"]
-        kr_pool.sort(key=lambda x: x["safety_score"], reverse=True)
-        us_pool.sort(key=lambda x: x["safety_score"], reverse=True)
-        # 2026-05-11: 시장별 분리. KR 10 + US 15 = 25 (사용자 결정).
-        top_kr = kr_pool[:FILTER_KR_TOP_N]
-        top_us = us_pool[:FILTER_US_TOP_N]
-        top = top_kr + top_us
-        print(f"[Filter] 최종 후보: KR {len(top_kr)}개 + US {len(top_us)}개 = {len(top)}개")
-    else:
-        step2.sort(key=lambda x: x["safety_score"], reverse=True)
-        # 단일 시장 = legacy FILTER_TOP_N 사용 (정합 fallback)
-        top = step2[:FILTER_TOP_N]
-        print(f"[Filter] 최종 후보 (상위 {len(top)}개):")
+    # 지명 = staleness 순환 (안심상위 직선발 폐지 — PREREG_ANALYSIS_ROTATION, 측정 근거 PR #357).
+    # 쿼터 KR 10 + US 15 는 5/11 PM 결정 그대로.
+    top = nominate_for_analysis(step2, market_scope=market_scope, label="Filter")
 
     for s in top:
         tag = " [턴어라운드]" if s.get("_turnaround") else ""
@@ -397,20 +484,8 @@ def run_extended_filter_pipeline(
         s["safety_score"] = calculate_safety_score(s)
     attach_safety_percentile(step2)
 
-    if market_scope == "all":
-        kr_pool = [s for s in step2 if s.get("currency") != "USD"]
-        us_pool = [s for s in step2 if s.get("currency") == "USD"]
-        kr_pool.sort(key=lambda x: x["safety_score"], reverse=True)
-        us_pool.sort(key=lambda x: x["safety_score"], reverse=True)
-        # 2026-05-11: 시장별 분리. KR 10 + US 15 = 25 (사용자 결정).
-        top_kr = kr_pool[:FILTER_KR_TOP_N]
-        top_us = us_pool[:FILTER_US_TOP_N]
-        top = top_kr + top_us
-        print(f"[Phase 2-A] 최종: KR {len(top_kr)} + US {len(top_us)} = {len(top)}개")
-    else:
-        step2.sort(key=lambda x: x["safety_score"], reverse=True)
-        top = step2[:FILTER_TOP_N]
-        print(f"[Phase 2-A] 최종 후보: {len(top)}개")
+    # 지명 = staleness 순환 (동일 규칙 — PREREG_ANALYSIS_ROTATION)
+    top = nominate_for_analysis(step2, market_scope=market_scope, label="Phase 2-A")
 
     if not top:
         print(f"[Phase 2-A] step1/step2 통과 0건 → 코어 fallback")
