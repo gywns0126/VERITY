@@ -1,23 +1,25 @@
 {
  "_meta": {
-  "generated_at": "2026-08-12T21:56:19.300263+09:00",
+  "generated_at": "2026-08-12T23:18:58.400522+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "red",
  "reasons": [
   "배달 검증 실패 1건",
+  "P0 stale 1건",
   "커버리지 회귀 경고 10건",
-  "비P0 stale 2건"
+  "비P0 stale 2건",
+  "CDN age 201s > 120s(스테일 서빙)"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-12T21:56:19.243056+09:00",
+  "generated_at": "2026-08-12T23:18:58.344816+09:00",
   "ok": false,
   "failed": 1,
-  "max_cdn_age_s": 0,
+  "max_cdn_age_s": 201,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -27,7 +29,7 @@
      "PBR": 79.4
     },
     "total": 1780,
-    "cdn_age_s": 0,
+    "cdn_age_s": 200,
     "error": null
    },
    {
@@ -38,7 +40,7 @@
      "PBR": 82.9
     },
     "total": 4486,
-    "cdn_age_s": 0,
+    "cdn_age_s": 199,
     "error": "커버리지 후퇴: 종목수 5148→4486"
    },
    {
@@ -49,7 +51,7 @@
      "PBR": 73.5
     },
     "total": 3924,
-    "cdn_age_s": 0,
+    "cdn_age_s": 201,
     "error": null
    }
   ]
@@ -69,15 +71,15 @@
   "last_run_warns": 10
  },
  "freshness": {
-  "generated_at": "2026-08-12T21:56:05.549702+09:00",
+  "generated_at": "2026-08-12T23:18:56.011783+09:00",
   "summary": {
-   "fresh": 56,
-   "stale": 2,
+   "fresh": 55,
+   "stale": 3,
    "closed": 2,
    "discontinued": 2,
    "p0": {
     "total": 6,
-    "fresh": 4,
+    "fresh": 3,
     "closed": 2,
     "active": 4
    },
@@ -94,7 +96,13 @@
     "active": 35
    }
   },
-  "stale_p0": [],
+  "stale_p0": [
+   {
+    "id": "crypto",
+    "label": "크립토 시세·파생",
+    "age_min": 106.6
+   }
+  ],
   "stale_other": [
    "market_warnings",
    "securities_lending"
