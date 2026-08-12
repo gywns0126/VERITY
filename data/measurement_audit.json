@@ -1,9 +1,12 @@
 {
- "as_of": "2026-08-08T12:12:37+09:00",
- "version": "measurement_audit_v3",
+ "as_of": "2026-08-13T02:05:13+09:00",
+ "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
-  "key_coverage"
+  "key_coverage",
+  "guard_inputs",
+  "exit_paths",
+  "as_of_staleness"
  ],
  "known_unresolved": [
   "ledger_integrity",
@@ -111,15 +114,9 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 89,
+   "snapshots": 93,
    "cap_rules_checked": 7,
    "degenerate_rules": [
-    {
-     "rule": "cape_bubble",
-     "fired_days": 81,
-     "activation_pct": 91.0,
-     "verdict": "상시 발동 — 국면 구분 불가(정보량 0)"
-    },
     {
      "rule": "oil_geopolitical_shock",
      "fired_days": 1,
@@ -127,15 +124,22 @@
      "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
     }
    ],
-   "watch_rules": [],
+   "watch_rules": [
+    {
+     "rule": "cape_bubble",
+     "fired_days": 81,
+     "activation_pct": 87.1,
+     "verdict": "경계 — 반대 국면 표본이 얇다"
+    }
+   ],
    "bands": {
     "always_on_pct": 90.0,
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 2,
-   "days_without_any_cap_pct": 2.2,
-   "detail": "상시/미발동 등급 규칙 2종 — cape_bubble(91.0%), oil_geopolitical_shock(1.1%). cap 없는 날 2/89일",
+   "days_without_any_cap": 6,
+   "days_without_any_cap_pct": 6.5,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.1%). cap 없는 날 6/93일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -145,8 +149,8 @@
   "flag_coverage": {
    "ok": false,
    "rules_defined": 24,
-   "rules_fired": 11,
-   "stock_days": 4131,
+   "rules_fired": 12,
+   "stock_days": 4300,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -177,10 +181,6 @@
      "fired": 0
     },
     {
-     "rule": "불성실공시법인 지정",
-     "fired": 0
-    },
-    {
      "rule": "FCF 마이너스(",
      "fired": 0
     },
@@ -202,7 +202,7 @@
     }
    ],
    "always_fired": [],
-   "detail": "정의 24종 중 발동 11종 · 미발동 13종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
+   "detail": "정의 24종 중 발동 12종 · 미발동 12종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
    "note": "미발동 규칙은 **확인 대상**이지 판정이 아니다. 계속기업 불확실성·불성실공시 같은 규칙은 107일 0건이 정상일 수 있다. 반면 입력 필드가 항상 결손이면 배선 결함이다. 임계 조정은 사전등록 대상(RULE 7).",
    "baseline": {
     "never_fired": 13
@@ -233,6 +233,145 @@
     "constant_inputs": 2
    },
    "status": "KNOWN"
+  },
+  "guard_inputs": {
+   "ok": false,
+   "holdings_checked": 11,
+   "coverage": {
+    "sector": {
+     "filled": 0,
+     "total": 11,
+     "guard": "섹터 35% 상한"
+    },
+    "beta": {
+     "filled": 0,
+     "total": 11,
+     "guard": "포트폴리오 베타 1.5 상한"
+    },
+    "quant_factors": {
+     "filled": 0,
+     "total": 11,
+     "guard": "팩터 쏠림 차단"
+    }
+   },
+   "gate_pct_coverage": {
+    "with_pct": 0,
+    "scored": 28,
+    "ok": false
+   },
+   "dead_guards": [
+    {
+     "field": "sector",
+     "guard": "섹터 35% 상한",
+     "filled": 0,
+     "total": 11
+    },
+    {
+     "field": "beta",
+     "guard": "포트폴리오 베타 1.5 상한",
+     "filled": 0,
+     "total": 11
+    },
+    {
+     "field": "quant_factors",
+     "guard": "팩터 쏠림 차단",
+     "filled": 0,
+     "total": 11
+    },
+    {
+     "field": "safety_pct",
+     "guard": "게이트 컷오버(하위20% 컷)",
+     "filled": 0,
+     "total": 28
+    }
+   ],
+   "detail": "입력 전무한 가드 4종 — 코드에 존재하나 한 번도 발동할 수 없다: 섹터 35% 상한(sector), 포트폴리오 베타 1.5 상한(beta), 팩터 쏠림 차단(quant_factors), 게이트 컷오버(하위20% 컷)(safety_pct)"
+  },
+  "exit_paths": {
+   "ok": false,
+   "holdings_checked": 11,
+   "no_profit_exit": [
+    {
+     "name": "파마리서치",
+     "qty": 1.0,
+     "return_pct": 26.51,
+     "past_target_2": false
+    },
+    {
+     "name": "HD한국조선해양",
+     "qty": 1.0,
+     "return_pct": 3.4,
+     "past_target_2": false
+    },
+    {
+     "name": "Alphabet",
+     "qty": 1.0,
+     "return_pct": 0.45,
+     "past_target_2": false
+    }
+   ],
+   "ladder_broken": [
+    {
+     "name": "NAVER",
+     "qty": 2.0,
+     "splittable": {
+      "target_1": 1,
+      "target_2": 0
+     }
+    },
+    {
+     "name": "파마리서치",
+     "qty": 1.0,
+     "splittable": {
+      "target_1": 0,
+      "target_2": 0
+     }
+    },
+    {
+     "name": "EXE",
+     "qty": 3.0,
+     "splittable": {
+      "target_1": 1,
+      "target_2": 0
+     }
+    },
+    {
+     "name": "HD한국조선해양",
+     "qty": 1.0,
+     "splittable": {
+      "target_1": 0,
+      "target_2": 0
+     }
+    },
+    {
+     "name": "Alphabet",
+     "qty": 1.0,
+     "splittable": {
+      "target_1": 0,
+      "target_2": 0
+     }
+    },
+    {
+     "name": "NEM",
+     "qty": 3.0,
+     "splittable": {
+      "target_1": 1,
+      "target_2": 0
+     }
+    }
+   ],
+   "detail": "이익 확정 경로 0인 보유 3건 — 출구가 손절뿐이다 (사다리 불능 6건 별도)",
+   "status": "REGRESSION"
+  },
+  "as_of_staleness": {
+   "ok": false,
+   "axes_checked": 2,
+   "stale_axes": [],
+   "missing_as_of": [
+    "bonds.json:yield_curves.kr.curve_as_of"
+   ],
+   "absent_sources": [],
+   "detail": "노후 0축 · as_of 부재 1축 — as_of 가 없으면 노후를 구조적으로 확인할 수 없다"
   }
  },
  "note": "측정 오염 자동 검출 — 8/5 감사가 잡아낸 3대조 + 8/6 신설 규칙 판별력 검사. 점수 입력 0(관측 전용). status FAIL = **알려진 baseline 초과 = 신규 발생**. KNOWN = 미해결분이 알려진 범위 안(태스크 #19/#20). 매일 FAIL 이면 아무도 읽지 않는다는 8/6 학습 반영."
