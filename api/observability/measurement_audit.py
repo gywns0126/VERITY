@@ -218,10 +218,28 @@ def audit_guard_inputs() -> Dict[str, Any]:
             cov[key] = {"filled": n, "total": len(hs), "guard": guard}
             if n == 0:
                 dead.append({"field": key, "guard": guard, "filled": 0, "total": len(hs)})
+        # 게이트 컷오버 입력 생존 (2026-08-12, PR #357) — 추천 풀의 safety_pct 부착률.
+        # 0 이면 신 게이트가 전원 폴백(구 55) = 컷오버가 조용히 무효화된 상태다.
+        gate_cov = None
+        try:
+            recs = _load(os.path.join(DATA_DIR, "recommendations.json"), []) or []
+            if isinstance(recs, dict):
+                recs = recs.get("recommendations") or []
+            scored = [r for r in recs if isinstance(r, dict) and r.get("safety_score") is not None]
+            if scored:
+                with_pct = sum(1 for r in scored if r.get("safety_pct") is not None)
+                gate_cov = {"with_pct": with_pct, "scored": len(scored),
+                            "ok": with_pct > 0}
+                if with_pct == 0:
+                    dead.append({"field": "safety_pct", "guard": "게이트 컷오버(하위20% 컷)",
+                                 "filled": 0, "total": len(scored)})
+        except Exception:  # noqa: BLE001
+            pass
         return {
             "ok": not dead,
             "holdings_checked": len(hs),
             "coverage": cov,
+            "gate_pct_coverage": gate_cov,
             "dead_guards": dead,
             "detail": (f"입력 전무한 가드 {len(dead)}종 — 코드에 존재하나 한 번도 발동할 수 없다: "
                        + ", ".join(f"{d['guard']}({d['field']})" for d in dead)

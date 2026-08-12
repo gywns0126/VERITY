@@ -53,6 +53,40 @@ def step2_fundamental_filter(stocks: list) -> list:
     return results
 
 
+def attach_safety_percentile(scored: list) -> None:
+    """단면 백분위(safety_pct) 부착 — 시장(KR/US)별 · 동점 평균.
+
+    2026-08-12 게이트 컷오버 (PREREG_GATE_STRENGTH_REDESIGN §4, PR #357 채택 B).
+    safety_score 의 검증된 역할 = **하위 배제** (하위 20% 컷 시 승자격납비 0.746→0.933,
+    t 10.35). 소비처(_profile_picks · VAMS 매수)는 절대점수 55 대신 `safety_pct ≥
+    GATE_BOTTOM_PCT` 를 쓴다. 🚨 백분위는 **이 단면(Step2 생존자)** 기준 — 소비처가
+    좁은 풀(~40)에서 재계산하면 의미가 사라지므로 여기서 한 번만 계산해 부착한다.
+    """
+    from api.config import GATE_BOTTOM_PCT
+    for is_us in (False, True):
+        pool = [s for s in scored if (s.get("currency") == "USD") == is_us]
+        n = len(pool)
+        if n < 5:
+            for s_ in pool:
+                s_["safety_pct"] = None      # 표본 부족 — 게이트 판정 불가로 신고
+            continue
+        order = sorted(range(n), key=lambda i: pool[i].get("safety_score", 0))
+        i = 0
+        while i < n:
+            j = i
+            v = pool[order[i]].get("safety_score", 0)
+            while j + 1 < n and pool[order[j + 1]].get("safety_score", 0) == v:
+                j += 1
+            avg = ((i + j) / 2 + 1) / n
+            for k in range(i, j + 1):
+                pool[order[k]]["safety_pct"] = round(avg, 4)
+            i = j + 1
+        passed = sum(1 for s_ in pool if (s_.get("safety_pct") or 0) >= GATE_BOTTOM_PCT)
+        mkt = "US" if is_us else "KR"
+        print(f"[Filter] 게이트(하위{GATE_BOTTOM_PCT:.0%} 컷) {mkt}: {passed}/{n} 통과 "
+              f"(구 게이트 ≥55: {sum(1 for s_ in pool if s_.get('safety_score', 0) >= 55)} — 섀도)")
+
+
 def calculate_safety_score(stock: dict) -> int:
     """안심 점수 계산 v2 (0~100, 8개 팩터)"""
     score = 0
@@ -212,6 +246,7 @@ def run_filter_pipeline(market_scope: str = "all", _metrics: Optional[dict] = No
 
     for s in step2:
         s["safety_score"] = calculate_safety_score(s)
+    attach_safety_percentile(step2)
 
     if market_scope == "all":
         kr_pool = [s for s in step2 if s.get("currency") != "USD"]
@@ -360,6 +395,7 @@ def run_extended_filter_pipeline(
 
     for s in step2:
         s["safety_score"] = calculate_safety_score(s)
+    attach_safety_percentile(step2)
 
     if market_scope == "all":
         kr_pool = [s for s in step2 if s.get("currency") != "USD"]

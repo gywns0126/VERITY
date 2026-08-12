@@ -1667,16 +1667,40 @@ def run_vams_cycle(
 
     held_tickers = {h["ticker"] for h in portfolio["vams"]["holdings"]}
 
+    # ── 게이트 컷오버 (2026-08-12, PREREG_GATE_STRENGTH_REDESIGN §4 · PR #357 채택 B) ──
+    # 정본 게이트 = safety_pct ≥ GATE_BOTTOM_PCT (하위 배제 — 측정된 신호 구간).
+    # 🚨 전환 폴백: safety_pct 미부착이면 구 게이트(min_safety)로 — 조용한 매수 정지 방지.
+    from api.config import GATE_BOTTOM_PCT
+
+    def _gate_pass(s: dict) -> bool:
+        pct = s.get("safety_pct")
+        if pct is not None:
+            return pct >= GATE_BOTTOM_PCT
+        return s.get("safety_score", 0) >= min_safety
+
     buy_candidates = [
         s for s in analyzed_stocks
         if s.get("recommendation") in allowed_recs
-        and s.get("safety_score", 0) >= min_safety
+        and _gate_pass(s)
         and len(s.get("detected_risk_keywords") or []) <= max_risk_kw
         and s.get("ticker") not in held_tickers
         and s.get("price", 0) > 0
     ]
 
-    buy_candidates.sort(key=lambda s: s.get("safety_score", 0), reverse=True)
+    # 🚨 정렬 = brain_score (safety 내림차순 폐지 — 측정: safety 상위 구간 승자보존
+    #   0.746 = 무작위(1.0) 이하. 그 구간을 선호해서 사는 키였다). brain 정렬은 미검증
+    #   (등록 §4-2 정직 신고) — G2/G3 전방 감시 대상. 결측 brain = 0 (뒤로).
+    def _brain_key(s: dict) -> float:
+        v = s.get("brain_score", 0) or (s.get("verity_brain") or {}).get("brain_score", 0)
+        return float(v) if isinstance(v, (int, float)) else 0.0
+
+    _old_order = sorted(buy_candidates,
+                        key=lambda s: s.get("safety_score", 0), reverse=True)[:3]
+    buy_candidates.sort(key=_brain_key, reverse=True)
+    if buy_candidates and _old_order:
+        print(f"[gate_cutover] 매수 정렬 섀도 — 구(safety) 상위3: "
+              f"{[s.get('ticker') for s in _old_order]} · 신(brain) 상위3: "
+              f"{[s.get('ticker') for s in buy_candidates[:3]]}")
 
     bought = 0
     for stock in buy_candidates:
