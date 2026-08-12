@@ -118,6 +118,35 @@ def test_module_absence_is_not_a_failure(monkeypatch, journal):
     assert err is None, "모듈 부재는 결함으로 보고하지 않는다"
 
 
+def test_script_mode_import_fallback(monkeypatch, journal):
+    """🚨 2026-08-12 실사고 — 주 경로에서 섹션이 조용히 사라졌다.
+
+    스킬의 기본 명령이 `python3 api/intelligence/operator_ask.py` = 스크립트 모드다.
+    이때 sys.path[0] 이 api/intelligence 라 repo 루트가 없고, 절대 임포트
+    `from api.intelligence import decision_journal` 이 ImportError 를 낸다.
+    그걸 "배포본엔 없음" 으로 삼켜서 collect 32섹션 / CLI 출력 31섹션이 됐다.
+
+    패키지 임포트가 막혀도 top-level `decision_journal` 로 살아나야 한다.
+    """
+    import builtins
+
+    real = builtins.__import__
+
+    def _no_pkg(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "api.intelligence" and fromlist and "decision_journal" in fromlist:
+            raise ImportError("No module named 'api'")
+        return real(name, globals, locals, fromlist, level)
+
+    dj.record(_facts(), "관심", "medium", ["fscore8"], "스크립트 모드", path=journal)
+    monkeypatch.setattr(builtins, "__import__", _no_pkg)
+    monkeypatch.setitem(sys.modules, "decision_journal", dj)  # 스크립트 모드의 top-level
+
+    sec, err = tf.past_decisions_section("005930", path=journal)
+    assert err is None
+    assert sec is not None, "스크립트 모드에서 섹션이 사라지면 안 된다"
+    assert sec["data"][0]["verdict"] == "관심"
+
+
 def test_render_text_handles_section(journal):
     """조인 결과가 실제로 렌더되는지 — 섹션만 만들고 안 보이면 의미가 없다."""
     dj.record(_facts(), "관심", "medium", ["fscore8"], "F-Score 8점", path=journal)
