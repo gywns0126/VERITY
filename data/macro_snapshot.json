@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-13T22:32:45+09:00",
+  "collected_at": "2026-08-14T00:02:26+09:00",
   "macro": {
     "usd_krw": {
       "value": 1418.84,
@@ -1285,6 +1285,11 @@
             "as_of": "20260813"
           },
           {
+            "tenor": "10Y",
+            "yield": 4.298,
+            "as_of": "20260813"
+          },
+          {
             "tenor": "20Y",
             "yield": 4.619,
             "as_of": "20260813"
@@ -1351,17 +1356,17 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-08-13T22:32:59+09:00",
+    "updated_at": "2026-08-14T00:03:26+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.79,
       "us_ig_risk": "LOW",
       "us_bbb_oas": 0.98,
-      "us_hy_oas": 2.72,
+      "us_hy_oas": 2.71,
       "us_hy_risk": "LOW"
     },
     "kr_corp_spreads": {
       "date": "20260813",
-      "collected_at": "2026-08-13T22:32:59+09:00",
+      "collected_at": "2026-08-14T00:03:26+09:00",
       "grades": {
         "AA-": {
           "yield": 4.488,
@@ -1390,7 +1395,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 46,
-      "d_day": 0
+      "d_day": -1
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1405,7 +1410,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 0
+      "d_day": -1
     },
     {
       "name": "옵션만기일 (한국)",
@@ -1419,7 +1424,7 @@
       "impact": "프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
       "action": "만기일 장중 단기 매매 자제",
       "source": "KRX",
-      "d_day": 0
+      "d_day": -1
     },
     {
       "name": "Michigan 소비자심리 예비치",
@@ -1433,7 +1438,7 @@
       "impact": "미국 소비자 기대 인플레이션 포함. Fed도 주시하는 지표",
       "action": "소비재·리테일 섹터 감정 판단",
       "source": "UMich",
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "미국 소매판매",
@@ -1448,7 +1453,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 9,
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "미국 주택착공",
@@ -1463,7 +1468,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 27,
-      "d_day": 5
+      "d_day": 4
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1478,7 +1483,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "Conference Board 소비자신뢰",
@@ -1492,7 +1497,7 @@
       "impact": "Michigan과 교차 검증되는 소비심리. 고용 기대 하위지표 중요",
       "action": "Michigan과 방향 일치 시 신뢰도 상승",
       "source": "Conference Board",
-      "d_day": 12
+      "d_day": 11
     },
     {
       "name": "미국 PCE 물가지수",
@@ -1507,7 +1512,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 21,
-      "d_day": 12
+      "d_day": 11
     },
     {
       "name": "미국 GDP 발표",
@@ -1522,7 +1527,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 53,
-      "d_day": 13
+      "d_day": 12
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1537,7 +1542,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 14
+      "d_day": 13
     },
     {
       "name": "한국은행 금통위",
@@ -1552,16 +1557,20 @@
       "country": "한국",
       "source": "BOK",
       "date": "2026-08-27",
-      "d_day": 14
+      "d_day": 13
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 31.06
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 118.06
   },
   "schema_version": "v0"
 }
