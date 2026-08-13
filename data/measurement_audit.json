@@ -1,15 +1,15 @@
 {
- "as_of": "2026-08-13T02:05:13+09:00",
+ "as_of": "2026-08-13T09:36:07+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
-  "key_coverage",
   "guard_inputs",
   "exit_paths",
   "as_of_staleness"
  ],
  "known_unresolved": [
   "ledger_integrity",
+  "key_coverage",
   "rule_discrimination",
   "flag_coverage",
   "input_constancy"
@@ -18,7 +18,7 @@
  "checks": {
   "ledger_integrity": {
    "ok": false,
-   "episodes": 22,
+   "episodes": 23,
    "phantom_sells": 58,
    "phantom_pnl": -1396639.49,
    "window_start": "2026-05-17",
@@ -42,15 +42,6 @@
      "key": "close",
      "modules": [
       "fact.py"
-     ]
-    },
-    {
-     "key": "dart_financials",
-     "modules": [
-      "moat.py",
-      "quality.py",
-      "red_flags.py",
-      "value_guards.py"
      ]
     },
     {
@@ -103,12 +94,15 @@
     }
    ],
    "thin_keys": [],
-   "detail": "레코드에 한 번도 없는 키 11종 — 해당 채점 축이 조용히 죽어 있다",
-   "status": "REGRESSION"
+   "detail": "레코드에 한 번도 없는 키 10종 — 해당 채점 축이 조용히 죽어 있다",
+   "baseline": {
+    "dead_keys": 10
+   },
+   "status": "KNOWN"
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -149,7 +143,7 @@
   "flag_coverage": {
    "ok": false,
    "rules_defined": 24,
-   "rules_fired": 12,
+   "rules_fired": 11,
    "stock_days": 4300,
    "never_fired": [
     {
@@ -181,6 +175,10 @@
      "fired": 0
     },
     {
+     "rule": "불성실공시법인 지정",
+     "fired": 0
+    },
+    {
      "rule": "FCF 마이너스(",
      "fired": 0
     },
@@ -202,7 +200,7 @@
     }
    ],
    "always_fired": [],
-   "detail": "정의 24종 중 발동 12종 · 미발동 12종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
+   "detail": "정의 24종 중 발동 11종 · 미발동 13종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
    "note": "미발동 규칙은 **확인 대상**이지 판정이 아니다. 계속기업 불확실성·불성실공시 같은 규칙은 107일 0건이 정상일 수 있다. 반면 입력 필드가 항상 결손이면 배선 결함이다. 임계 조정은 사전등록 대상(RULE 7).",
    "baseline": {
     "never_fired": 13
@@ -236,21 +234,21 @@
   },
   "guard_inputs": {
    "ok": false,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "coverage": {
     "sector": {
-     "filled": 0,
-     "total": 11,
+     "filled": 10,
+     "total": 10,
      "guard": "섹터 35% 상한"
     },
     "beta": {
      "filled": 0,
-     "total": 11,
+     "total": 10,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 0,
-     "total": 11,
+     "filled": 10,
+     "total": 10,
      "guard": "팩터 쏠림 차단"
     }
    },
@@ -261,22 +259,10 @@
    },
    "dead_guards": [
     {
-     "field": "sector",
-     "guard": "섹터 35% 상한",
-     "filled": 0,
-     "total": 11
-    },
-    {
      "field": "beta",
      "guard": "포트폴리오 베타 1.5 상한",
      "filled": 0,
-     "total": 11
-    },
-    {
-     "field": "quant_factors",
-     "guard": "팩터 쏠림 차단",
-     "filled": 0,
-     "total": 11
+     "total": 10
     },
     {
      "field": "safety_pct",
@@ -285,11 +271,11 @@
      "total": 28
     }
    ],
-   "detail": "입력 전무한 가드 4종 — 코드에 존재하나 한 번도 발동할 수 없다: 섹터 35% 상한(sector), 포트폴리오 베타 1.5 상한(beta), 팩터 쏠림 차단(quant_factors), 게이트 컷오버(하위20% 컷)(safety_pct)"
+   "detail": "입력 전무한 가드 2종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta), 게이트 컷오버(하위20% 컷)(safety_pct)"
   },
   "exit_paths": {
    "ok": false,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "no_profit_exit": [
     {
      "name": "파마리서치",
@@ -306,7 +292,7 @@
     {
      "name": "Alphabet",
      "qty": 1.0,
-     "return_pct": 0.45,
+     "return_pct": 0.67,
      "past_target_2": false
     }
    ],
@@ -324,6 +310,14 @@
      "qty": 1.0,
      "splittable": {
       "target_1": 0,
+      "target_2": 0
+     }
+    },
+    {
+     "name": "LG",
+     "qty": 3.0,
+     "splittable": {
+      "target_1": 1,
       "target_2": 0
      }
     },
@@ -360,7 +354,7 @@
      }
     }
    ],
-   "detail": "이익 확정 경로 0인 보유 3건 — 출구가 손절뿐이다 (사다리 불능 6건 별도)",
+   "detail": "이익 확정 경로 0인 보유 3건 — 출구가 손절뿐이다 (사다리 불능 7건 별도)",
    "status": "REGRESSION"
   },
   "as_of_staleness": {
