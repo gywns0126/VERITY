@@ -35,6 +35,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -257,6 +258,79 @@ def read_recent(ticker: str, limit: int = 5, path: Optional[str] = None) -> List
     return hits[:limit]
 
 
+RECOMMENDATIONS_PATH = os.path.join(_ROOT, "data", "recommendations.json")
+
+# 🚨 재판단 간격 = 사전등록 시계의 중간값(20 거래일).
+#   매일 찍으면 forward 창이 겹쳐 N 이 안 는다 — 백테스트가 이미 겪은 함정이다
+#   (naive N=75 → 비겹침 N=23~59). 20거래일 간격이면 5/20 시계가 겹치지 않는다.
+#   🚨 이 값은 사전등록(docs/decision_journal_scoring_prereg_20260809.md)의 시계에서
+#   따온 것이지 새로 고른 숫자가 아니다. 시계를 바꾸면 여기도 사전등록 대상이다.
+REJUDGE_TRADING_DAYS = 20
+_TRADING_DAYS_PER_WEEK = 5
+
+
+def _due_after(last_ts: str) -> bool:
+    """마지막 판단 이후 REJUDGE_TRADING_DAYS 거래일이 지났나 (달력일 근사)."""
+    if not last_ts:
+        return True
+    try:
+        last = datetime.fromisoformat(last_ts)
+    except ValueError:
+        return True
+    # 거래일 → 달력일 근사 (주 5거래일). 정확한 거래일 달력은 채점기 몫이고,
+    # 여기는 "너무 자주 찍지 않는다" 는 큐잉 목적이라 근사로 충분하다.
+    span = REJUDGE_TRADING_DAYS / _TRADING_DAYS_PER_WEEK * 7
+    return (now_kst() - last).days >= span
+
+
+def due_candidates(path: Optional[str] = None,
+                   rec_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """오늘 판단이 필요한 funnel 후보 목록.
+
+    🚨 왜 필요한가 (2026-08-14): 지금 실험 노트는 **PM 이 물어볼 때만** 기록된다.
+    3일에 1건이 쌓였고, 그보다 나쁜 건 **선택 편향**이다 — 물어보는 종목은 이미
+    뭔가 있는 종목이라 표본이 한쪽으로 쏠린다. funnel 후보 전수를 대상으로 하면
+    편향이 사라진다.
+
+    🚨 매일 전수를 찍지는 않는다. 후보 집합의 연속일 겹침률이 82~100%(실측 2026-08-14)라
+    매일 기록하면 같은 종목이 20번 들어가고 forward 창이 통째로 겹친다. 그래서
+    **신규이거나 마지막 판단이 20거래일 이상 지난 종목만** 큐에 올린다.
+
+    🚨 판단 자체는 코드가 하지 않는다. 이 함수는 "누가 due 인가" 만 계산하고,
+    verdict 는 터미널이 사실 조인을 보고 낸다. 스크립트가 판단을 지어내면
+    그건 N 이 아니라 잡음이다.
+    """
+    rec_file = rec_path or RECOMMENDATIONS_PATH
+    try:
+        with open(rec_file, encoding="utf-8") as f:
+            rows = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return []
+    if isinstance(rows, dict):
+        rows = rows.get("recommendations") or rows.get("stocks") or []
+
+    out: List[Dict[str, Any]] = []
+    for r in rows if isinstance(rows, list) else []:
+        if not isinstance(r, dict):
+            continue
+        tk = str(r.get("ticker") or "").strip()
+        if not tk:
+            continue
+        prev = read_recent(tk, limit=1, path=path)
+        last_ts = str(prev[0].get("ts_kst") or "") if prev else ""
+        if not _due_after(last_ts):
+            continue
+        out.append({
+            "ticker": tk,
+            "name": r.get("name") or "",
+            "market": r.get("market") or "",
+            "last_ts": last_ts[:16] or None,
+            "last_verdict": (prev[0].get("verdict") if prev else None),
+        })
+    out.sort(key=lambda x: (x["last_ts"] or "", x["ticker"]))
+    return out
+
+
 def _self_test() -> int:
     """임시 경로에 기록·재읽기 왕복. 실 저장소를 건드리지 않는다."""
     import tempfile
@@ -293,10 +367,23 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="판단 실험 노트 (오퍼레이터 전용)")
     ap.add_argument("--self-test", action="store_true", help="임시 경로 왕복 검증")
     ap.add_argument("--recent", metavar="TICKER", help="해당 종목 최근 판단 조회")
+    ap.add_argument("--due", action="store_true",
+                    help="오늘 판단이 필요한 funnel 후보 (신규 또는 20거래일 경과)")
     a = ap.parse_args()
 
     if a.self_test:
         sys.exit(_self_test())
+    if a.due:
+        rows = due_candidates()
+        if not rows:
+            print("판단 due 종목 없음 — 후보 전부 20거래일 이내에 기록됨")
+            sys.exit(0)
+        print(f"# 판단 due {len(rows)}종목 (신규 또는 {REJUDGE_TRADING_DAYS}거래일 경과)")
+        print("#   판단은 터미널이 낸다. 종목별로 사실 조인을 보고 record() 로 남길 것.\n")
+        for r in rows:
+            prev = f"직전 {r['last_ts']} {r['last_verdict']}" if r["last_ts"] else "신규"
+            print(f"  {r['ticker']:>8}  {str(r['name'])[:18]:<18} {str(r['market'])[:6]:<6} {prev}")
+        sys.exit(0)
     if a.recent:
         rows = read_recent(a.recent, limit=10)
         if not rows:
