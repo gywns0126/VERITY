@@ -1,14 +1,14 @@
 {
- "as_of": "2026-08-13T09:36:07+09:00",
+ "as_of": "2026-08-13T19:24:00+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
+  "ledger_integrity",
   "guard_inputs",
   "exit_paths",
   "as_of_staleness"
  ],
  "known_unresolved": [
-  "ledger_integrity",
   "key_coverage",
   "rule_discrimination",
   "flag_coverage",
@@ -19,14 +19,11 @@
   "ledger_integrity": {
    "ok": false,
    "episodes": 23,
-   "phantom_sells": 58,
-   "phantom_pnl": -1396639.49,
+   "phantom_sells": 59,
+   "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
-   "detail": "보유 0 상태 매도 58건 (손익 -1,396,639원) — 집계에서 배제됨. 신규 발생이면 원장 오염 재발",
-   "baseline": {
-    "phantom_sells": 58
-   },
-   "status": "KNOWN"
+   "detail": "보유 0 상태 매도 59건 (손익 -1,332,835원) — 집계에서 배제됨. 신규 발생이면 원장 오염 재발",
+   "status": "REGRESSION"
   },
   "key_coverage": {
    "ok": false,
@@ -143,7 +140,7 @@
   "flag_coverage": {
    "ok": false,
    "rules_defined": 24,
-   "rules_fired": 11,
+   "rules_fired": 12,
    "stock_days": 4300,
    "never_fired": [
     {
@@ -175,10 +172,6 @@
      "fired": 0
     },
     {
-     "rule": "불성실공시법인 지정",
-     "fired": 0
-    },
-    {
      "rule": "FCF 마이너스(",
      "fired": 0
     },
@@ -200,7 +193,7 @@
     }
    ],
    "always_fired": [],
-   "detail": "정의 24종 중 발동 11종 · 미발동 13종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
+   "detail": "정의 24종 중 발동 12종 · 미발동 12종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
    "note": "미발동 규칙은 **확인 대상**이지 판정이 아니다. 계속기업 불확실성·불성실공시 같은 규칙은 107일 0건이 정상일 수 있다. 반면 입력 필드가 항상 결손이면 배선 결함이다. 임계 조정은 사전등록 대상(RULE 7).",
    "baseline": {
     "never_fired": 13
@@ -214,13 +207,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 20,
+     "n_present": 17,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 20,
+     "n_present": 17,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -254,7 +247,7 @@
    },
    "gate_pct_coverage": {
     "with_pct": 0,
-    "scored": 28,
+    "scored": 31,
     "ok": false
    },
    "dead_guards": [
@@ -268,7 +261,7 @@
      "field": "safety_pct",
      "guard": "게이트 컷오버(하위20% 컷)",
      "filled": 0,
-     "total": 28
+     "total": 31
     }
    ],
    "detail": "입력 전무한 가드 2종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta), 게이트 컷오버(하위20% 컷)(safety_pct)"
@@ -280,19 +273,19 @@
     {
      "name": "파마리서치",
      "qty": 1.0,
-     "return_pct": 26.51,
+     "return_pct": 31.94,
      "past_target_2": false
     },
     {
      "name": "HD한국조선해양",
      "qty": 1.0,
-     "return_pct": 3.4,
+     "return_pct": 0.95,
      "past_target_2": false
     },
     {
      "name": "Alphabet",
      "qty": 1.0,
-     "return_pct": 0.67,
+     "return_pct": 1.1,
      "past_target_2": false
     }
    ],
