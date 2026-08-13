@@ -1,0 +1,117 @@
+{
+ "_meta": {
+  "prereg": "docs/PREREG_TRANSFER_DIAGNOSIS_2026_08_14.md",
+  "approved": "PM 2026-08-14 'ㄱㄱ'",
+  "executed_at": "2026-08-14T09:55:28+09:00",
+  "tests": 3,
+  "top_n": 10,
+  "horizon": 20,
+  "split_boundary": 20230301,
+  "expected_signs": {
+   "log_adv": "-",
+   "log_mktcap": "-",
+   "spread_minus_topn": "+"
+  },
+  "scope": "진단이지 처방이 아니다 — 산식·운영 무변경 (§5)",
+  "not_measured": [
+   "거래정지(플래그 부재)",
+   "상폐(미래정보 — 기술통계로 강등)"
+  ]
+ },
+ "coverage": {
+  "rebalances": 78,
+  "window": [
+   20200131,
+   20260630
+  ],
+  "h1": 38,
+  "h2": 40,
+  "elapsed_sec": 98.5
+ },
+ "results": {
+  "log_adv": {
+   "h1_mean": 18.714176,
+   "h2_mean": 18.159879,
+   "diff": -0.554297,
+   "t": -4.9001,
+   "n_h1": 38,
+   "n_h2": 40,
+   "p_two_sided": 1.9e-05,
+   "passes_bh_fdr": true,
+   "passes_bonferroni": true
+  },
+  "log_mktcap": {
+   "h1_mean": 25.663974,
+   "h2_mean": 25.287252,
+   "diff": -0.376722,
+   "t": -5.6953,
+   "n_h1": 38,
+   "n_h2": 40,
+   "p_two_sided": 2e-06,
+   "passes_bh_fdr": true,
+   "passes_bonferroni": true
+  },
+  "spread_minus_topn": {
+   "h1_mean": 0.009581,
+   "h2_mean": 0.008008,
+   "diff": -0.001573,
+   "t": -0.19,
+   "n_h1": 38,
+   "n_h2": 40,
+   "p_two_sided": 0.850348,
+   "passes_bh_fdr": false,
+   "passes_bonferroni": false
+  }
+ },
+ "diagnostics": {
+  "ladder_N10": {
+   "H1": 0.054,
+   "H2": 0.7386
+  },
+  "ladder_N30": {
+   "H1": -0.4381,
+   "H2": 0.3826
+  },
+  "ladder_N50": {
+   "H1": -0.0483,
+   "H2": 0.4408
+  },
+  "ladder_N100": {
+   "H1": -0.0453,
+   "H2": 0.529
+  },
+  "style_pct_ep": {
+   "H1": 0.8401,
+   "H2": 0.8536
+  },
+  "style_pct_bp": {
+   "H1": 0.8118,
+   "H2": 0.8888
+  },
+  "style_pct_vol": {
+   "H1": 0.9155,
+   "H2": 0.9179
+  },
+  "style_pct_illiq": {
+   "H1": 0.8867,
+   "H2": 0.8753
+  },
+  "impact_over_5pct": {
+   "H1": 1.13,
+   "H2": 1.88
+  },
+  "delisted_rate_TOPN": {
+   "H1": 0.0,
+   "H2": 0.0
+  },
+  "_delisted_note": "🚨 미래 정보(as_of 기준 상폐 여부) — 판정 근거 아님, H-C 정황 증거로만 (등록 §3-1)",
+  "topn_excess_pct": {
+   "H1": 0.054,
+   "H2": 0.7386
+  },
+  "spread_pct": {
+   "H1": 1.0121,
+   "H2": 1.5394
+  }
+ }
+}
