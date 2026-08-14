@@ -215,5 +215,32 @@ def test_no_kis_usage_in_new_workflow():
         assert "kis_broker" not in src
 
 
+def test_no_bare_datetime_in_main():
+    """main.py 는 datetime 모듈을 상단 import 하지 않는다 — bare 사용은 NameError 다.
+
+    2026-08-14 실사고: STEP 5.87 재작성 시 `datetime.fromisoformat` 를 그냥 썼다.
+    감싸고 있던 try/except 가 NameError 를 삼켜 _age_h=None 이 되고, 48h stale 경고가
+    영구히 안 뜨는 상태가 됐다. 죽지 않아서 더 늦게 발견되는 종류다.
+    파일 관례는 블록마다 `from datetime import datetime as _dt` 지역 import 다.
+    """
+    src = _read(MAIN_PY)
+    assert not re.search(r"^\s*import datetime\s*$", src, flags=re.M), (
+        "모듈 import 가 생겼다면 이 테스트의 전제를 갱신할 것")
+    hits = []
+    for i, line in enumerate(src.splitlines(), 1):
+        code = line.split("#", 1)[0]
+        if re.search(r"(?<![_.\w])datetime\.(now|fromisoformat|strptime|utcnow|today)", code):
+            hits.append(f"{i}: {line.strip()[:70]}")
+    assert not hits, "bare datetime 사용 (NameError):\n" + "\n".join(hits)
+
+
+def test_step587_staleness_guard_is_live():
+    """신선도 계산이 실제로 값을 낸다 — 조용히 꺼진 가드 재발 방지."""
+    src = _read(MAIN_PY)
+    blk = src.split("[5.87]")[1][:2000]
+    assert "_dt.fromisoformat" in blk, "지역 import 별칭을 쓰지 않았다"
+    assert "from datetime import datetime as _dt" in blk
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

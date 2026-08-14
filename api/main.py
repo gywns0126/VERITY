@@ -3711,7 +3711,12 @@ def main():
             _upd = summary_result.get("updated_at") or "?"
             _age_h = None
             try:
-                _age_h = (now_kst() - datetime.fromisoformat(_upd)).total_seconds() / 3600
+                # 🚨 main.py 에는 datetime 모듈 상단 import 가 없다 — 파일 전역이 블록마다
+                #   지역 import 하는 관례다. 바로 `datetime.fromisoformat` 를 쓰면 NameError 가
+                #   나는데 이 try 가 삼켜서 _age_h=None 이 되고, stale 경고가 영구히 안 뜬다
+                #   (2026-08-14 작성 직후 발견 — 조용히 꺼진 가드).
+                from datetime import datetime as _dt
+                _age_h = (now_kst() - _dt.fromisoformat(_upd)).total_seconds() / 3600
             except Exception:  # noqa: BLE001
                 pass
             _st = summary_result.get("stats", {}) or {}
