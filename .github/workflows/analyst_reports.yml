@@ -16,6 +16,8 @@ name: Analyst Reports (증권사 리포트 수집 + AI 요약)
 # 7축 audit (CLAUDE.md):
 #  1 env/secret: GEMINI_API_KEY (report_summarizer 의 PDF 요약). 네이버 리포트 메타는 공개 —
 #    별도 키 없음. 사용 endpoint = google genai generate_content (api/analyzers/report_summarizer.py).
+#    + VERITY_MODE='prod' 필수. 최초 N=1 에서 이걸 빠뜨려 전량 mock → 수집 0건 → exit 1 이었다
+#    (run 31808986654). 키가 아니어도 실호출을 가르는 env 는 이 축의 점검 대상이다.
 #  2 push trigger: schedule/manual only. commit 경로가 data/ 뿐이라 vercel-api/ 미변경 →
 #    ignoreCommand 가 자동 skip (RULE 2 정합, deploy 0).
 #  3 concurrency: group=verity-analyst-reports **전용**. verity-data-write 공유 금지 —
@@ -73,6 +75,11 @@ jobs:
 
       - name: Collect + summarize analyst reports
         env:
+          # 🚨 VERITY_MODE 필수 — 미설정 시 api/config.py 기본값이 dev 라
+          #   @mockable 이 전부 mock 으로 대체되어 수집 0건으로 끝난다.
+          #   N=1 run 31808986654 이 정확히 이걸로 실패했다 ([MOCK CENSUS] VERITY_MODE=dev).
+          #   이 워크플로는 실수집이 존재 이유라 staging 선택지를 두지 않는다.
+          VERITY_MODE: 'prod'
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL_DEFAULT: ${{ vars.GEMINI_MODEL_DEFAULT || 'gemini-2.5-flash' }}
         run: python scripts/analyst_reports_cron.py

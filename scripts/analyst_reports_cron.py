@@ -36,7 +36,7 @@ sys.path.insert(0, _ROOT)
 
 from api.analyzers.report_summarizer import run_report_summarizer  # noqa: E402
 from api.collectors.ReportScout import scout_reports  # noqa: E402
-from api.config import now_kst  # noqa: E402
+from api.config import VERITY_MODE, now_kst  # noqa: E402
 
 RECOMMENDATIONS = os.path.join(_ROOT, "data", "recommendations.json")
 
@@ -152,8 +152,15 @@ def main() -> int:
     #   '성공 종료 + mtime 갱신' 은 신선도 보드를 초록불로 통과시켜 없는 것보다 나쁘다.
     #   단 dev/staging 은 @mockable 이 0을 돌려주는 게 정상이라 가드 대상이 아니다
     #   (여기서 exit 1 을 내면 로컬 검증마다 거짓 경보가 난다).
-    if os.environ.get("VERITY_MODE") in ("dev", "staging"):
-        print(f"  (VERITY_MODE={os.environ['VERITY_MODE']} — mock 구간, 전량실패 가드 미적용)")
+    #
+    # 🚨 2026-08-14 N=1 fix — 모드 판정은 반드시 api.config 를 거친다.
+    #   옛: os.environ.get("VERITY_MODE") → 미설정 시 None. mock 레이어는 같은 미설정을
+    #       config 기본값 "dev" 로 읽어 mock 을 돌리는데, 이 가드만 None 을 prod 취급해
+    #       "mock 이 0을 돌려줬다 → 전량 실패 exit 1" 이라는 거짓 경보를 냈다.
+    #       같은 변수의 미설정을 두 곳이 다르게 해석한 것이 진범이다 (N=1 run 31808986654).
+    #   신: config.VERITY_MODE 단일 해석 — 미설정=dev 로 양쪽이 일치한다.
+    if VERITY_MODE in ("dev", "staging"):
+        print(f"  (VERITY_MODE={VERITY_MODE} — mock 구간, 전량실패 가드 미적용)")
     elif status in ("no_reports", "empty_input") and aggregated == 0:
         print(f"❌ 산출물 0 (status={status}) — 전량 실패로 신고 (exit 1)")
         return 1
