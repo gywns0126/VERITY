@@ -1,0 +1,586 @@
+{
+ "_meta": {
+  "prereg": "docs/PREREG_SEGMENT_ALLOCATION_2026_08_14.md",
+  "approved": "PM 2026-08-14 'ㄱㄱ' (§6 4건)",
+  "executed_at": "2026-08-15T08:35:57+09:00",
+  "tests": 6,
+  "adopt_t": 3.0,
+  "bonferroni": 2.64,
+  "dsr_m_trials": 84,
+  "n_hold": 12,
+  "roundtrip_cost_pct": 0.23,
+  "curve_fit_guard": "적합 파라미터 0 — 세그먼트 수익 표를 배분 결정에 쓰지 않았다. 역변동성(룩백 창)·레짐 스위칭(전환 임계)은 등록 제외 (§0·§5)",
+  "direction": "사전 고정 없음 (배분 우열에 대한 사전 근거가 없다)",
+  "dependence_note": "검정 5·6(A1−A2)은 1~4의 선형결합이다 — 6검정은 독립이 아니다. BH 는 양의 의존(PRDS) 가정에서 FDR 을 통제하므로 이 구조에서 낙관적일 수 있다. 채택 주장은 |t|≥3.0 을 별도로 요구한다",
+  "scope": "이 등록으로 운영을 바꾸지 않는다. 컷오버는 별도 승인 (§4)",
+  "not_reproduced": [
+   "손절·트레일링·기간손절",
+   "Kelly/섹터/베타 가드",
+   "배당(가격 수익률만)",
+   "시장충격"
+  ],
+  "in_sample_caveat": "C3 축 선택이 같은 창(#355 §1) — 선택 편향 상속"
+ },
+ "coverage": {
+  "snapshots": 79,
+  "window": [
+   20200131,
+   20260731
+  ],
+  "median_names": 2030,
+  "rows_kept": 160195,
+  "dropped_no_mktcap": 891,
+  "kospi_days": 1642,
+  "elapsed_sec": 92.2
+ },
+ "descriptive": {
+  "A0_H20": {
+   "n_days": 1604,
+   "total_return_pct": 101.97,
+   "cagr_pct": 11.68,
+   "mdd": -0.2489,
+   "calmar": 0.469,
+   "sharpe": 0.866,
+   "sortino": 1.178,
+   "ann_vol_pct": 13.87,
+   "rebalances": 79,
+   "turnover_per_reb": 0.5074,
+   "cost_total_pct": 9.219,
+   "excess_total_pct": -52.93,
+   "excess_monthly_mean_pct": -0.6555,
+   "seg_weights": {
+    "large": 0.2036,
+    "mid": 0.4789,
+    "small": 0.3175
+   },
+   "split_excess": {
+    "H1": {
+     "n": 38,
+     "mean": 0.007363,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.019455,
+     "sign_pos": false
+    }
+   }
+  },
+  "A0_H60": {
+   "n_days": 1604,
+   "total_return_pct": 56.03,
+   "cagr_pct": 7.24,
+   "mdd": -0.2771,
+   "calmar": 0.261,
+   "sharpe": 0.553,
+   "sortino": 0.742,
+   "ann_vol_pct": 14.58,
+   "rebalances": 27,
+   "turnover_per_reb": 0.6049,
+   "cost_total_pct": 3.757,
+   "excess_total_pct": -63.39,
+   "excess_monthly_mean_pct": -0.9596,
+   "seg_weights": {
+    "large": 0.216,
+    "mid": 0.4722,
+    "small": 0.3117
+   },
+   "split_excess": {
+    "H1": {
+     "n": 38,
+     "mean": 0.002052,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.020393,
+     "sign_pos": false
+    }
+   }
+  },
+  "A1_H20": {
+   "n_days": 1604,
+   "total_return_pct": 66.8,
+   "cagr_pct": 8.37,
+   "mdd": -0.2738,
+   "calmar": 0.306,
+   "sharpe": 0.638,
+   "sortino": 0.852,
+   "ann_vol_pct": 14.19,
+   "rebalances": 79,
+   "turnover_per_reb": 0.5432,
+   "cost_total_pct": 9.871,
+   "excess_total_pct": -60.82,
+   "excess_monthly_mean_pct": -0.8962,
+   "seg_weights": {
+    "large": 0.3333,
+    "mid": 0.3333,
+    "small": 0.3333
+   },
+   "split_excess": {
+    "H1": {
+     "n": 38,
+     "mean": 0.002458,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.019546,
+     "sign_pos": false
+    }
+   }
+  },
+  "A1_H60": {
+   "n_days": 1604,
+   "total_return_pct": 50.94,
+   "cagr_pct": 6.68,
+   "mdd": -0.2715,
+   "calmar": 0.246,
+   "sharpe": 0.51,
+   "sortino": 0.688,
+   "ann_vol_pct": 14.88,
+   "rebalances": 27,
+   "turnover_per_reb": 0.6481,
+   "cost_total_pct": 4.025,
+   "excess_total_pct": -64.16,
+   "excess_monthly_mean_pct": -1.0051,
+   "seg_weights": {
+    "large": 0.3333,
+    "mid": 0.3333,
+    "small": 0.3333
+   },
+   "split_excess": {
+    "H1": {
+     "n": 38,
+     "mean": -0.001015,
+     "sign_pos": false
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.018426,
+     "sign_pos": false
+    }
+   }
+  },
+  "A2_H20": {
+   "n_days": 1604,
+   "total_return_pct": 102.25,
+   "cagr_pct": 11.7,
+   "mdd": -0.2713,
+   "calmar": 0.431,
+   "sharpe": 0.79,
+   "sortino": 1.098,
+   "ann_vol_pct": 15.55,
+   "rebalances": 79,
+   "turnover_per_reb": 0.4483,
+   "cost_total_pct": 8.146,
+   "excess_total_pct": -52.06,
+   "excess_monthly_mean_pct": -0.6251,
+   "seg_weights": {
+    "large": 0.9198,
+    "mid": 0.0759,
+    "small": 0.0042
+   },
+   "split_excess": {
+    "H1": {
+     "n": 38,
+     "mean": 0.003611,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.015392,
+     "sign_pos": false
+    }
+   }
+  },
+  "A2_H60": {
+   "n_days": 1604,
+   "total_return_pct": 87.27,
+   "cagr_pct": 10.36,
+   "mdd": -0.27,
+   "calmar": 0.384,
+   "sharpe": 0.673,
+   "sortino": 0.944,
+   "ann_vol_pct": 16.74,
+   "rebalances": 27,
+   "turnover_per_reb": 0.5401,
+   "cost_total_pct": 3.354,
+   "excess_total_pct": -54.75,
+   "excess_monthly_mean_pct": -0.7136,
+   "seg_weights": {
+    "large": 0.9167,
+    "mid": 0.0772,
+    "small": 0.0062
+   },
+   "split_excess": {
+    "H1": {
+     "n": 38,
+     "mean": 0.002461,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.016032,
+     "sign_pos": false
+    }
+   }
+  }
+ },
+ "results": {
+  "A1_minus_A0_20d": {
+   "nw": {
+    "n": 79,
+    "mean": -0.002407,
+    "t": -1.3366,
+    "lag": 1,
+    "positive_rate": 0.4051
+   },
+   "n_months": 79,
+   "mean_pct": -0.2407,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean_pct": -0.4905
+    },
+    "H2": {
+     "n": 41,
+     "mean_pct": -0.0092
+    }
+   },
+   "p_two_sided": 0.185239,
+   "passes_bh_fdr": false,
+   "passes_t3": false
+  },
+  "A1_minus_A0_60d": {
+   "nw": {
+    "n": 79,
+    "mean": -0.000455,
+    "t": -0.2079,
+    "lag": 3,
+    "positive_rate": 0.4937
+   },
+   "n_months": 79,
+   "mean_pct": -0.0455,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean_pct": -0.3067
+    },
+    "H2": {
+     "n": 41,
+     "mean_pct": 0.1966
+    }
+   },
+   "p_two_sided": 0.835849,
+   "passes_bh_fdr": false,
+   "passes_t3": false
+  },
+  "A2_minus_A0_20d": {
+   "nw": {
+    "n": 79,
+    "mean": 0.000304,
+    "t": 0.1057,
+    "lag": 1,
+    "positive_rate": 0.4937
+   },
+   "n_months": 79,
+   "mean_pct": 0.0304,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean_pct": -0.3752
+    },
+    "H2": {
+     "n": 41,
+     "mean_pct": 0.4063
+    }
+   },
+   "p_two_sided": 0.916092,
+   "passes_bh_fdr": false,
+   "passes_t3": false
+  },
+  "A2_minus_A0_60d": {
+   "nw": {
+    "n": 79,
+    "mean": 0.00246,
+    "t": 0.7281,
+    "lag": 3,
+    "positive_rate": 0.5823
+   },
+   "n_months": 79,
+   "mean_pct": 0.246,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean_pct": 0.0409
+    },
+    "H2": {
+     "n": 41,
+     "mean_pct": 0.4361
+    }
+   },
+   "p_two_sided": 0.468733,
+   "passes_bh_fdr": false,
+   "passes_t3": false
+  },
+  "A1_minus_A2_20d": {
+   "nw": {
+    "n": 79,
+    "mean": -0.002711,
+    "t": -1.1237,
+    "lag": 1,
+    "positive_rate": 0.3924
+   },
+   "n_months": 79,
+   "mean_pct": -0.2711,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean_pct": -0.1153
+    },
+    "H2": {
+     "n": 41,
+     "mean_pct": -0.4155
+    }
+   },
+   "p_two_sided": 0.264587,
+   "passes_bh_fdr": false,
+   "passes_t3": false
+  },
+  "A1_minus_A2_60d": {
+   "nw": {
+    "n": 79,
+    "mean": -0.002915,
+    "t": -1.0201,
+    "lag": 3,
+    "positive_rate": 0.3924
+   },
+   "n_months": 79,
+   "mean_pct": -0.2915,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean_pct": -0.3476
+    },
+    "H2": {
+     "n": 41,
+     "mean_pct": -0.2395
+    }
+   },
+   "p_two_sided": 0.310835,
+   "passes_bh_fdr": false,
+   "passes_t3": false
+  }
+ },
+ "diagnostics": {
+  "half_stability": {
+   "A0_H20": {
+    "H1": {
+     "n": 38,
+     "mean": 0.007363,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.019455,
+     "sign_pos": false
+    }
+   },
+   "A0_H60": {
+    "H1": {
+     "n": 38,
+     "mean": 0.002052,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.020393,
+     "sign_pos": false
+    }
+   },
+   "A1_H20": {
+    "H1": {
+     "n": 38,
+     "mean": 0.002458,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.019546,
+     "sign_pos": false
+    }
+   },
+   "A1_H60": {
+    "H1": {
+     "n": 38,
+     "mean": -0.001015,
+     "sign_pos": false
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.018426,
+     "sign_pos": false
+    }
+   },
+   "A2_H20": {
+    "H1": {
+     "n": 38,
+     "mean": 0.003611,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.015392,
+     "sign_pos": false
+    }
+   },
+   "A2_H60": {
+    "H1": {
+     "n": 38,
+     "mean": 0.002461,
+     "sign_pos": true
+    },
+    "H2": {
+     "n": 41,
+     "mean": -0.016032,
+     "sign_pos": false
+    }
+   }
+  },
+  "random_allocation_bench": {
+   "H20": {
+    "trials": 20,
+    "excess_mean_pct": -0.811,
+    "excess_p2_5_pct": -1.069,
+    "excess_p97_5_pct": -0.4409,
+    "calmar_mean": 0.371,
+    "calmar_p97_5": 0.635,
+    "note": "배분만 무작위 · 종목 선택은 점수 유지. 후보가 95% 상단을 못 넘으면 배분 효과 아님"
+   },
+   "H60": {
+    "trials": 20,
+    "excess_mean_pct": -0.9266,
+    "excess_p2_5_pct": -1.1223,
+    "excess_p97_5_pct": -0.5886,
+    "calmar_mean": 0.29,
+    "calmar_p97_5": 0.501,
+    "note": "배분만 무작위 · 종목 선택은 점수 유지. 후보가 95% 상단을 못 넘으면 배분 효과 아님"
+   }
+  },
+  "a2_score_nullification": {
+   "H20": {
+    "a2_excess_mean_pct": -0.6251,
+    "random_pick_mean_pct": -0.8031,
+    "random_p97_5_pct": -0.234,
+    "beats_random_95": false,
+    "note": "🚨 무작위 종목과 무차별이면 A2 는 지수 배분 추종일 뿐 (§4-6)"
+   },
+   "H60": {
+    "a2_excess_mean_pct": -0.7136,
+    "random_pick_mean_pct": -0.757,
+    "random_p97_5_pct": -0.0482,
+    "beats_random_95": false,
+    "note": "🚨 무작위 종목과 무차별이면 A2 는 지수 배분 추종일 뿐 (§4-6)"
+   }
+  },
+  "concentration_impact": {
+   "A0_H20": {
+    "max_single_weight": 0.0833,
+    "seg_weights": {
+     "large": 0.2036,
+     "mid": 0.4789,
+     "small": 0.3175
+    },
+    "orders_over_adv5pct": 1.75
+   },
+   "A0_H60": {
+    "max_single_weight": 0.0833,
+    "seg_weights": {
+     "large": 0.216,
+     "mid": 0.4722,
+     "small": 0.3117
+    },
+    "orders_over_adv5pct": 1.96
+   },
+   "A1_H20": {
+    "max_single_weight": 0.0833,
+    "seg_weights": {
+     "large": 0.3333,
+     "mid": 0.3333,
+     "small": 0.3333
+    },
+    "orders_over_adv5pct": 1.54
+   },
+   "A1_H60": {
+    "max_single_weight": 0.0833,
+    "seg_weights": {
+     "large": 0.3333,
+     "mid": 0.3333,
+     "small": 0.3333
+    },
+    "orders_over_adv5pct": 1.85
+   },
+   "A2_H20": {
+    "max_single_weight": 0.0833,
+    "seg_weights": {
+     "large": 0.9198,
+     "mid": 0.0759,
+     "small": 0.0042
+    },
+    "orders_over_adv5pct": 0.78
+   },
+   "A2_H60": {
+    "max_single_weight": 0.0833,
+    "seg_weights": {
+     "large": 0.9167,
+     "mid": 0.0772,
+     "small": 0.0062
+    },
+    "orders_over_adv5pct": 0.89
+   }
+  }
+ },
+ "adoption": {
+  "A1_H20": {
+   "bh": false,
+   "t3": false,
+   "calmar_ge_a0": false,
+   "mdd_not_worse": false,
+   "split_both_pos": false,
+   "beats_random_alloc": false,
+   "all_pass": false
+  },
+  "A1_H60": {
+   "bh": false,
+   "t3": false,
+   "calmar_ge_a0": false,
+   "mdd_not_worse": true,
+   "split_both_pos": false,
+   "beats_random_alloc": false,
+   "all_pass": false
+  },
+  "A2_H20": {
+   "bh": false,
+   "t3": false,
+   "calmar_ge_a0": false,
+   "mdd_not_worse": false,
+   "split_both_pos": false,
+   "beats_random_alloc": false,
+   "a2_not_nullified": false,
+   "all_pass": false
+  },
+  "A2_H60": {
+   "bh": false,
+   "t3": false,
+   "calmar_ge_a0": true,
+   "mdd_not_worse": true,
+   "split_both_pos": false,
+   "beats_random_alloc": false,
+   "a2_not_nullified": false,
+   "all_pass": false
+  },
+  "reference_config": null,
+  "rule": "전 조건 충족자 중 A1 우선(더 적은 주장) · 그다음 H 최대. 전원 미충족 = 참조 등록 없음 — '배분으로 해결되지 않음' 으로 기록하고 남은 선택지는 중립화(롱숏) 또는 지수 인정 (§4)"
+ }
+}
