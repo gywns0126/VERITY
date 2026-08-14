@@ -1,10 +1,10 @@
 {
-  "collected_at": "2026-08-15T03:33:04+09:00",
+  "collected_at": "2026-08-15T04:32:33+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
     "call": "risk_off",
-    "net_score": -2,
+    "net_score": -3,
     "active_dims": 4,
     "rule": "net≥+2 risk_on / ≤−2 risk_off / else neutral (투명 tally, 가중치 없음)"
   },
@@ -16,7 +16,7 @@
       "active": true,
       "drivers": {
         "fng": 29.0,
-        "search_trend_pct": 1.9
+        "search_trend_pct": -1.2
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -28,7 +28,7 @@
       "drivers": {
         "funding_signal": "neutral",
         "put_call_oi": 0.543,
-        "long_short_ratio": 2.25
+        "long_short_ratio": 2.26
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
@@ -46,11 +46,11 @@
     },
     {
       "name": "추세",
-      "vote": 0,
-      "read": "neutral",
+      "vote": -1,
+      "read": "off",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": -2.7
+        "btc_change_pct_7d": -3.0
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -61,7 +61,7 @@
       "active": false,
       "drivers": {
         "ssr": 4.95,
-        "stablecoin_supply_usd": 255140174746.41498
+        "stablecoin_supply_usd": 255131190866.08942
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -80,7 +80,7 @@
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 62979.0,
+  "btc_price_at_call": 62866.0,
   "trail": [
     {
       "date": "2026-06-24",
@@ -449,8 +449,8 @@
     {
       "date": "2026-08-15",
       "call": "risk_off",
-      "net_score": -2,
-      "btc_price": 62979.0,
+      "net_score": -3,
+      "btc_price": 62866.0,
       "active_dims": 4
     }
   ],
@@ -460,14 +460,14 @@
         "horizon_days": 7,
         "n": 21,
         "hit_rate": 0.4762,
-        "mean_realized_return": 0.003766,
+        "mean_realized_return": 0.003518,
         "label": "통계 무의미 (N<30)"
       },
       {
         "horizon_days": 30,
         "n": 6,
         "hit_rate": 0.3333,
-        "mean_realized_return": 0.027961,
+        "mean_realized_return": 0.02767,
         "label": "통계 무의미 (N<30)"
       }
     ],
