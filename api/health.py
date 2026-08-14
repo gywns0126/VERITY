@@ -300,30 +300,59 @@ def _check_reports_signed_url() -> tuple:
 
 
 def _check_public_data() -> tuple:
-    """관세청 무역통계 ping — 진짜 운영 endpoint (nitemtrade) 사용 (2026-05-07)."""
+    """관세청 무역통계 ping — 진짜 운영 endpoint (nitemtrade) 사용 (2026-05-07).
+
+    🚨 2026-08-13 재시도 추가 — `apis.data.go.kr` 러너 IP 드롭 대응
+    ([[feedback_public_data_gateway_runner_ip_retry]]).
+
+    원장 `data/metadata/data_health.jsonl` 244건(4/30~8/13) 실측: ok 238 / warning 4 /
+    critical 2 = 실패율 2.5%. critical 2건(8/08 07:32 · 8/13 18:25)의 latency 가 각각
+    8,275ms · 8,574ms 로 **옛 하드코딩 timeout=8 에 정확히 걸린 값**이다. 정상일 땐
+    0.7~1.2초 — 느려진 게 아니라 응답이 아예 안 온다(드롭). 같은 8/13 의 00:32·08:42 는
+    정상이었으니 지속 장애가 아니라 **단발 드롭**이고, 그 1회가 critical 알림을 띄웠다.
+    로컬 한국 IP 프로브는 3.3초에 정상 응답 — 게이트웨이 자체는 살아 있다.
+
+    그래서 고칠 대상은 소스가 아니라 이 체크다. 드롭성 실패(타임아웃/연결)만 1회 재시도한다.
+    🚨 키 거부·요청 오류·비200 은 **재시도하지 않는다** — 결정적 실패라 두 번 때려도 같고,
+    재시도하면 진짜 장애의 발견만 늦어진다.
+    🚨 2차에 성공해도 detail 에 남긴다 — 조용히 삼키면 드롭 빈도가 원장에서 사라진다
+    ([[feedback_render_stage_silent_field_drop]] 정합).
+    """
     if not PUBLIC_DATA_API_KEY:
         return False, "키 미설정"
-    try:
-        r = requests.get(
-            "https://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList",
-            params={
-                "serviceKey": PUBLIC_DATA_API_KEY,
-                "strtYymm": "202604", "endYymm": "202604",
-                "hsSgnCd": "0101", "cntyCd": "ZZ",
-                "numOfRows": 1, "pageNo": 1,
-            },
-            timeout=8,
-        )
-        if r.status_code != 200:
-            return False, f"HTTP {r.status_code}"
-        body = (r.text or "")[:500]
-        if "SERVICE_KEY" in body and ("ERROR" in body or "DENIED" in body):
-            return False, "키 거부 (SERVICE_KEY_ERROR)"
-        if "INVALID" in body and "REQUEST" in body:
-            return False, "요청 오류"
-        return True, "정상"
-    except requests.RequestException as e:
-        return False, f"네트워크 {type(e).__name__}"
+
+    last_err = "네트워크"
+    for attempt in (1, 2):
+        try:
+            r = requests.get(
+                "https://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList",
+                params={
+                    "serviceKey": PUBLIC_DATA_API_KEY,
+                    "strtYymm": "202604", "endYymm": "202604",
+                    "hsSgnCd": "0101", "cntyCd": "ZZ",
+                    "numOfRows": 1, "pageNo": 1,
+                },
+                timeout=_TIMEOUT_DEFAULT,
+            )
+        except requests.Timeout:
+            last_err = "타임아웃"
+        except requests.RequestException as e:
+            last_err = f"네트워크 {type(e).__name__}"
+        else:
+            # 응답이 온 경우 = 결정적 판정. 재시도 없이 즉시 종결.
+            if r.status_code != 200:
+                return False, f"HTTP {r.status_code}"
+            body = (r.text or "")[:500]
+            if "SERVICE_KEY" in body and ("ERROR" in body or "DENIED" in body):
+                return False, "키 거부 (SERVICE_KEY_ERROR)"
+            if "INVALID" in body and "REQUEST" in body:
+                return False, "요청 오류"
+            return True, "정상" if attempt == 1 else f"정상 (1차 {last_err} 후 재시도 성공)"
+
+        if attempt == 1:
+            time.sleep(1.0)
+
+    return False, f"{last_err} (2회 시도)"
 
 
 # ── CRIT-13: US 분석 파이프라인 핵심 API 감시 ──
