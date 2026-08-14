@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-14T22:24:00.017543+09:00",
+  "generated_at": "2026-08-14T23:31:11.693889+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 268288,
-    "python_modules": 813,
+    "code_lines_tsx_py": 268692,
+    "python_modules": 815,
     "tsx_components": 133,
     "json_data_files": 1730,
     "json_total_tracked": 1749,
-    "workflows": 76,
-    "scheduled_workflows": 60,
-    "cron_triggers": 71,
-    "git_tracked_files": 7458
+    "workflows": 77,
+    "scheduled_workflows": 61,
+    "cron_triggers": 72,
+    "git_tracked_files": 7462
   },
   "subsystems": {
     "ingest": {
@@ -168,9 +168,16 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 76,
-      "scheduled": 60,
+      "count": 77,
+      "scheduled": 61,
       "workflows": [
+        {
+          "name": "analyst_reports",
+          "crons": [
+            "20 4 * * 1-5"
+          ],
+          "scheduled": true
+        },
         {
           "name": "atr_4cell_sweep",
           "crons": [],
@@ -718,8 +725,8 @@
   },
   "python_by_dir": {
     "api": 436,
-    "tests": 217,
-    "scripts": 89,
+    "tests": 218,
+    "scripts": 90,
     "vercel-api": 59,
     "server": 7,
     ".github": 5
