@@ -1,0 +1,443 @@
+{
+ "_meta": {
+  "prereg": "docs/PREREG_DIVIDEND_TOTAL_RETURN_2026_08_15.md",
+  "approved": "PM 2026-08-15 'ㄱㄱ' (§6 4건)",
+  "executed_at": "2026-08-15T10:12:37+09:00",
+  "tests": 2,
+  "adopt_t": 3.0,
+  "bonferroni": 2.24,
+  "dsr_m_trials": 86,
+  "n_hold": 12,
+  "roundtrip_cost_pct": 0.23,
+  "primary_benchmark": "B3 (유니버스 시총가중 TR · 동일 회계) — §6-1 PM 승인",
+  "ex_date_rule": "결산기준일(결산월 최종거래일) 직전 거래일 — §6-3 PM 승인",
+  "tax_basis": "세전 (양쪽 동일). 세후 15.4% 는 민감도로만 (§1-1)",
+  "bench_cost": "벤치 = 지수 성격이므로 거래비용 0. 포트만 회전비용 과금",
+  "changed_vs_367": "수익 회계(배당)만. 점수·종목수·유니버스·비용 규칙 동일",
+  "not_reproduced": [
+   "손절·트레일링·기간손절",
+   "Kelly/섹터/베타 가드",
+   "시장충격",
+   "중간·분기배당 개별 처리(연 1회 지급 근사)"
+  ],
+  "approximations": [
+   "FY2024+ 배당기준일 분리 → 연말 고정 근사 (민감도 ±3거래일)",
+   "KOSPI TR 부재 → 벤치 자작(B3). B1 은 연속성 병기만"
+  ],
+  "registration_deviation": "🚨 등록 후 스모크에서 배당 원장 결함 발견 → 단위 오류 필터 신설(등록에 없던 것). dps 총액 오파싱(067900 = 보고 0.58% vs 계산 10,596,990%) · 액면분할 미조정(000480 = 보고 5.61% vs 계산 56.2%). 🚨 실측 방향 = 착수 전 예상과 **반대**: 결함 레코드는 전 종목을 담는 벤치(B3)를 훨씬 크게 오염시켜(필터 미적용 시 순 배당 기여 −44.76%/월) 결과를 우리에게 **불리한** 쪽으로 왜곡한다. 즉 필터는 우리 숫자를 올리는 정정이므로 더 엄격히 봐야 한다 — 그럼에도 정제 후 결과가 임계 미달이라 판정은 뒤집히지 않는다. 필터 미적용 결과를 민감도에 병기한다"
+ },
+ "coverage": {
+  "snapshots": 79,
+  "window": [
+   20200131,
+   20260731
+  ],
+  "held_unique_tickers": 154,
+  "held_with_div_record": 150,
+  "held_without_div_record": 4,
+  "div_ledger": {
+   "rows": 22799,
+   "tickers": 2747,
+   "ticker_years": 20959,
+   "dps_gt0": 10576,
+   "fy_range": [
+    2017,
+    2025
+   ]
+  },
+  "fy2026_snapshots": 7,
+  "fy2026_note": "FY2026 배당 원장 부재 → 해당 구간 배당 0 (양쪽 동일 적용, 우리 쪽 하향 편향)",
+  "dropped_no_mktcap": 891,
+  "elapsed_sec": 111.9
+ },
+ "descriptive": {
+  "P_PR_H20": {
+   "monthly_mean_pct": 0.9879,
+   "total_pct": 101.97,
+   "n_days": 1604,
+   "total_return_pct": 101.97,
+   "cagr_pct": 11.68,
+   "mdd": -0.2489,
+   "calmar": 0.469,
+   "sharpe": 0.866,
+   "sortino": 1.178,
+   "ann_vol_pct": 13.87
+  },
+  "P_TR_H20": {
+   "monthly_mean_pct": 1.3082,
+   "total_pct": 158.57,
+   "n_days": 1604,
+   "total_return_pct": 158.57,
+   "cagr_pct": 16.1,
+   "mdd": -0.2489,
+   "calmar": 0.647,
+   "sharpe": 1.154,
+   "sortino": 1.601,
+   "ann_vol_pct": 13.76
+  },
+  "B1_H20": {
+   "monthly_mean_pct": 1.7734,
+   "total_pct": 199.48
+  },
+  "B2_H20": {
+   "monthly_mean_pct": 1.8823,
+   "total_pct": 230.97
+  },
+  "B3_H20": {
+   "monthly_mean_pct": 2.0237,
+   "total_pct": 268.84
+  },
+  "P_PR_H60": {
+   "monthly_mean_pct": 0.6733,
+   "total_pct": 56.03,
+   "n_days": 1604,
+   "total_return_pct": 56.03,
+   "cagr_pct": 7.24,
+   "mdd": -0.2771,
+   "calmar": 0.261,
+   "sharpe": 0.553,
+   "sortino": 0.742,
+   "ann_vol_pct": 14.58
+  },
+  "P_TR_H60": {
+   "monthly_mean_pct": 0.9823,
+   "total_pct": 98.07,
+   "n_days": 1604,
+   "total_return_pct": 98.07,
+   "cagr_pct": 11.33,
+   "mdd": -0.2443,
+   "calmar": 0.464,
+   "sharpe": 0.822,
+   "sortino": 1.124,
+   "ann_vol_pct": 14.32
+  },
+  "B1_H60": {
+   "monthly_mean_pct": 1.7734,
+   "total_pct": 199.48
+  },
+  "B2_H60": {
+   "monthly_mean_pct": 1.9043,
+   "total_pct": 236.29
+  },
+  "B3_H60": {
+   "monthly_mean_pct": 2.0465,
+   "total_pct": 275.02
+  }
+ },
+ "decomposition": {
+  "H20": {
+   "reported_excess_vs_B1": -0.6555,
+   "same_accounting_excess_vs_B3": -0.5418,
+   "port_div_yield": 0.3116,
+   "univ_div_yield": 0.1382,
+   "net_div_contribution": 0.1734,
+   "universe_contribution_B2_minus_B1": 0.0937,
+   "after_tax_net_div": 0.1467,
+   "_note": "분해는 복리 교차항 때문에 1차 근사로만 가법적이다"
+  },
+  "H60": {
+   "reported_excess_vs_B1": -0.9596,
+   "same_accounting_excess_vs_B3": -0.8837,
+   "port_div_yield": 0.299,
+   "univ_div_yield": 0.1389,
+   "net_div_contribution": 0.1601,
+   "universe_contribution_B2_minus_B1": 0.1135,
+   "after_tax_net_div": 0.1355,
+   "_note": "분해는 복리 교차항 때문에 1차 근사로만 가법적이다"
+  }
+ },
+ "results": {
+  "P_TR_minus_B3_20d": {
+   "nw": {
+    "n": 79,
+    "mean": -0.005418,
+    "t": -0.6626,
+    "lag": 1,
+    "positive_rate": 0.519
+   },
+   "n_months": 79,
+   "mean_pct": -0.5418,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean_pct": 0.8373
+    },
+    "H2": {
+     "n": 41,
+     "mean_pct": -1.8199
+    }
+   },
+   "p_two_sided": 0.50954,
+   "passes_bh_fdr": false,
+   "passes_t3": false,
+   "ci95_pct": [
+    -2.1445,
+    1.0609
+   ]
+  },
+  "P_TR_minus_B3_60d": {
+   "nw": {
+    "n": 79,
+    "mean": -0.008837,
+    "t": -1.1651,
+    "lag": 3,
+    "positive_rate": 0.4937
+   },
+   "n_months": 79,
+   "mean_pct": -0.8837,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean_pct": 0.2231
+    },
+    "H2": {
+     "n": 41,
+     "mean_pct": -1.9095
+    }
+   },
+   "p_two_sided": 0.247529,
+   "passes_bh_fdr": false,
+   "passes_t3": false,
+   "ci95_pct": [
+    -2.3703,
+    0.6029
+   ]
+  }
+ },
+ "diagnostics": {
+  "reproduction_gate": {
+   "H20": {
+    "expected": -0.6555,
+    "got": -0.6555,
+    "diff": 0.0,
+    "pass": true
+   },
+   "H60": {
+    "expected": -0.9596,
+    "got": -0.9596,
+    "diff": 0.0,
+    "pass": true
+   },
+   "all_pass": true
+  },
+  "dividend_record_validation": {
+   "kept": 8054,
+   "dropped": 355,
+   "no_price": 2167,
+   "dropped_pct": 4.22,
+   "rule": "implied/reported ∉ [0.25,4.0] 또는 (보고 부재 & implied > 15.0%)",
+   "examples": [
+    {
+     "ticker": "000480",
+     "fy": 2022,
+     "implied_pct": 56.18,
+     "reported_pct": 5.61,
+     "ratio": 10.01
+    },
+    {
+     "ticker": "000480",
+     "fy": 2021,
+     "implied_pct": 53.57,
+     "reported_pct": 5.37,
+     "ratio": 9.98
+    },
+    {
+     "ticker": "000480",
+     "fy": 2020,
+     "implied_pct": 49.59,
+     "reported_pct": 4.89,
+     "ratio": 10.14
+    },
+    {
+     "ticker": "000480",
+     "fy": 2018,
+     "implied_pct": 47.11,
+     "reported_pct": 4.72,
+     "ratio": 9.98
+    },
+    {
+     "ticker": "000480",
+     "fy": 2019,
+     "implied_pct": 43.67,
+     "reported_pct": 4.72,
+     "ratio": 9.25
+    },
+    {
+     "ticker": "001230",
+     "fy": 2023,
+     "implied_pct": 30.3,
+     "reported_pct": 6.8,
+     "ratio": 4.46
+    },
+    {
+     "ticker": "001230",
+     "fy": 2024,
+     "implied_pct": 29.39,
+     "reported_pct": 6.8,
+     "ratio": 4.32
+    },
+    {
+     "ticker": "001130",
+     "fy": 2024,
+     "implied_pct": 27.26,
+     "reported_pct": 2.7,
+     "ratio": 10.1
+    },
+    {
+     "ticker": "001130",
+     "fy": 2025,
+     "implied_pct": 26.51,
+     "reported_pct": 2.6,
+     "ratio": 10.2
+    },
+    {
+     "ticker": "001230",
+     "fy": 2022,
+     "implied_pct": 21.76,
+     "reported_pct": 4.2,
+     "ratio": 5.18
+    },
+    {
+     "ticker": "000670",
+     "fy": 2023,
+     "implied_pct": 20.53,
+     "reported_pct": 1.94,
+     "ratio": 10.58
+    },
+    {
+     "ticker": "001130",
+     "fy": 2023,
+     "implied_pct": 19.56,
+     "reported_pct": 2.0,
+     "ratio": 9.78
+    }
+   ]
+  },
+  "double_count_guard": {
+   "FY2019": {
+    "ex_date": 20191227,
+    "n_payer": 960,
+    "n_nonpayer": 796,
+    "gap_pct_p": -1.616,
+    "unadjusted_ok": true
+   },
+   "FY2020": {
+    "ex_date": 20201229,
+    "n_payer": 966,
+    "n_nonpayer": 889,
+    "gap_pct_p": -2.316,
+    "unadjusted_ok": true
+   },
+   "FY2021": {
+    "ex_date": 20211229,
+    "n_payer": 1021,
+    "n_nonpayer": 909,
+    "gap_pct_p": -1.84,
+    "unadjusted_ok": true
+   },
+   "FY2022": {
+    "ex_date": 20221228,
+    "n_payer": 1031,
+    "n_nonpayer": 961,
+    "gap_pct_p": -1.434,
+    "unadjusted_ok": true
+   },
+   "FY2023": {
+    "ex_date": 20231227,
+    "n_payer": 1057,
+    "n_nonpayer": 1028,
+    "gap_pct_p": -3.281,
+    "unadjusted_ok": true
+   },
+   "FY2024": {
+    "ex_date": 20241227,
+    "n_payer": 1070,
+    "n_nonpayer": 1086,
+    "gap_pct_p": -0.786,
+    "unadjusted_ok": true
+   },
+   "FY2025": {
+    "ex_date": 20251229,
+    "n_payer": 1125,
+    "n_nonpayer": 1099,
+    "gap_pct_p": -1.537,
+    "unadjusted_ok": true
+   }
+  },
+  "coverage": {
+   "snapshots": 79,
+   "window": [
+    20200131,
+    20260731
+   ],
+   "held_unique_tickers": 154,
+   "held_with_div_record": 150,
+   "held_without_div_record": 4,
+   "div_ledger": {
+    "rows": 22799,
+    "tickers": 2747,
+    "ticker_years": 20959,
+    "dps_gt0": 10576,
+    "fy_range": [
+     2017,
+     2025
+    ]
+   },
+   "fy2026_snapshots": 7,
+   "fy2026_note": "FY2026 배당 원장 부재 → 해당 구간 배당 0 (양쪽 동일 적용, 우리 쪽 하향 편향)",
+   "dropped_no_mktcap": 891,
+   "elapsed_sec": 111.9
+  },
+  "sensitivity_ex_date": {
+   "ex_shift_-3": {
+    "20": 0.1767,
+    "60": 0.1625
+   },
+   "ex_shift_+3": {
+    "20": 0.1336,
+    "60": 0.1754
+   },
+   "no_validation_filter": {
+    "20": -44.7577,
+    "60": -44.9022
+   }
+  },
+  "sensitivity_after_tax": {
+   "H20": 0.1467,
+   "H60": 0.1355
+  },
+  "external_consistency": {
+   "computed_univ_div_yield_pct_per_month": {
+    "H20": 0.1382,
+    "H60": 0.1389
+   },
+   "computed_univ_div_yield_pct_annual": {
+    "H20": 1.658,
+    "H60": 1.667
+   },
+   "published_kospi_div_yield_pct": {
+    "2022_expected": 2.4,
+    "2025_05_07": 2.14,
+    "2025_12_26": 1.35,
+    "2026_05_29": 0.82,
+    "2026_06_04": 0.92,
+    "sources": [
+     "신한투자증권 배당주전략 22년 1분기",
+     "INDEXerGO 배당수익률 시리즈",
+     "파이낸셜뉴스 2026-05-06 '시총은 3배 뛴 코스피, 배당수익률은 반토막'"
+    ]
+   },
+   "verdict": "정합 — 우리 계산 1.66%(기간 평균)가 공표 KOSPI 0.82~2.4% 범위 안. 우리 유니버스는 KOSDAQ 포함(배당수익률 더 낮음)이라 KOSPI 평균보다 낮게 나오는 것이 예상 방향. §3-4 의 '2배 이상 이탈' 에 해당하지 않음",
+   "status": "확인 완료"
+  }
+ },
+ "verdict": {
+  "primary_horizon": 20,
+  "net_div_contribution_pct_per_month": 0.1734,
+  "threshold_pct": 0.2,
+  "material": false,
+  "action": "회계는 부차적 요인 — 과거 결론 유지, 이 가지를 닫는다",
+  "same_accounting_excess_still_negative": true,
+  "forbidden_claim_guard": "B3 기준 초과가 음수면 '배당을 넣으니 이긴다' 류 서술 금지 (§4)"
+ }
+}
