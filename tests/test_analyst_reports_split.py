@@ -131,7 +131,13 @@ def test_workflow_uses_dedicated_concurrency_group():
 
 
 def test_workflow_git_add_is_per_file():
-    """RULE 4 — 글롭 묶음 금지. 미매칭 시 원자적 전체 실패(8/9 사고)."""
+    """RULE 4 — 글롭 묶음 금지, 그리고 gitignore 대상은 add 하지 않는다.
+
+    data/analyst_reports.json 은 data/.gitignore 대상(매 실행 갱신되는 중간 산출물)이라
+    add 하면 조용한 no-op 이 된다. 추적 대상은 집계 결과 하나뿐이다 —
+    report_summaries.json 은 _processed_hashes 캐시를 담고 있어 의도적으로 추적한다
+    (2026-05-20: gitignore 시 clean checkout 마다 캐시가 비어 Gemini 재과금).
+    """
     src = _read(WF_YML)
     # 실제 셸 명령 줄만 — 주석(#) 안의 'git add' 언급은 제외한다.
     real = []
@@ -140,11 +146,42 @@ def test_workflow_git_add_is_per_file():
         if s.startswith("#") or not s.startswith("git add "):
             continue
         real.append(s[len("git add "):].split("2>")[0].strip())
-    assert "data/analyst_reports.json" in real
     assert "data/report_summaries.json" in real
+    assert "data/analyst_reports.json" not in real, (
+        "gitignore 대상을 add 하고 있다 — 조용한 no-op")
     for a in real:
         assert "*" not in a, f"글롭 사용 금지: {a}"
         assert len(a.split()) == 1, f"한 줄 다중 add 금지: {a}"
+
+
+def test_gitignore_assumption_still_holds():
+    """위 테스트의 전제(analyst_reports.json = gitignore)가 바뀌면 같이 깨지게 한다."""
+    ig = _read(os.path.join(_ROOT, "data", ".gitignore"))
+    assert "analyst_reports.json" in ig
+
+
+def test_scout_has_ip_drop_retry():
+    """러너 IP 간헐 드롭 대비 재시도 — 2026-08-14 N=1 실측(러너 0건 / 로컬 162건)."""
+    src = _read(CRON_PY)
+    assert "_collect_with_retry" in src
+    assert "_SCOUT_ATTEMPTS" in src and "_SCOUT_BACKOFF_S" in src
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("arc3", CRON_PY)
+    arc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(arc)
+    assert arc._SCOUT_ATTEMPTS >= 2, "재시도 1회는 드롭 대비가 아니다"
+
+    calls = {"n": 0}
+
+    def flaky():
+        calls["n"] += 1
+        # 1회차 드롭, 2회차 회복 — 재시도가 살려내야 한다.
+        return {"stats": {"company_total": 0 if calls["n"] == 1 else 162}}
+
+    arc.scout_reports = flaky
+    arc.time = type("T", (), {"sleep": staticmethod(lambda s: None)})()
+    _meta, _st, total = arc._collect_with_retry(attempts=3)
+    assert total == 162 and calls["n"] == 2
 
 
 def test_workflow_runs_before_consumers():

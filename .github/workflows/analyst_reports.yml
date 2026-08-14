@@ -82,7 +82,10 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           # RULE 4 — 파일별 add. 글롭 묶음 금지(미매칭 시 전체 실패, 8/9 사고).
-          git add data/analyst_reports.json 2>/dev/null || true
+          # data/analyst_reports.json 은 data/.gitignore 대상이라 여기서 add 하지 않는다
+          # (매 실행 갱신되는 중간 산출물). 추적 대상은 집계 결과 한 개뿐이다 —
+          # report_summaries.json 은 _processed_hashes 캐시를 담고 있어 의도적으로 추적한다
+          # (2026-05-20: gitignore 시 clean checkout 마다 캐시가 비어 Gemini 재과금 발생).
           git add data/report_summaries.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "변경 없음 — commit 생략 (timestamp-only commit spam 방지)"

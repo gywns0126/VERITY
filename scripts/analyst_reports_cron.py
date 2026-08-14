@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from typing import Any, Dict, List
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -43,6 +44,10 @@ RECOMMENDATIONS = os.path.join(_ROOT, "data", "recommendations.json")
 # 즉 여기서 읽는 스냅샷은 통상 '전일자' 다 — 우선순위 힌트 용도라 그것으로 충분하다.
 # 없으면 recommendations(운영 풀)만으로 진행한다. abort 하지 않는다.
 _UNIVERSE_MAX_STALE_H = 96
+
+# 러너 IP 간헐 드롭 대비 — 총 3회, 30s/60s 백오프. 51분 작업 대비 무시할 비용이다.
+_SCOUT_ATTEMPTS = 3
+_SCOUT_BACKOFF_S = 30
 
 
 def _kr6(v: Any) -> str:
@@ -86,20 +91,45 @@ def _priority_tickers() -> List[str]:
     return list(dict.fromkeys(out))
 
 
+def _collect_with_retry(attempts: int = _SCOUT_ATTEMPTS):
+    """리포트 메타 수집 — 러너 IP 드롭 대비 백오프 재시도.
+
+    🚨 2026-08-14 N=1 실측으로 확인한 실패 유형이다. 같은 시각·같은 코드·prod 모드에서
+      GitHub 러너(KST 23:22) = 0건 / 로컬 한국 IP(KST 23:25) = 162건 이었다.
+      같은 날 KST 16:50 러너 run 은 150건을 받았으므로 영구 차단이 아니라 간헐 드롭이다.
+      이 프로젝트에 이미 같은 계열 기록이 있다 — 공공데이터 게이트웨이 러너IP 드롭,
+      야후 성공률 로컬 97% vs CI 45%
+      ([[feedback_public_data_gateway_runner_ip_retry]] · [[feedback_ci_runner_ip_throttle_and_gate_order]]).
+    """
+    meta = {}
+    st = {}
+    total = 0
+    for i in range(1, attempts + 1):
+        try:
+            meta = scout_reports() or {}
+        except Exception as e:  # noqa: BLE001
+            print(f"  수집 시도 {i}/{attempts} 예외: {e}")
+            meta = {}
+        st = meta.get("stats", {}) or {}
+        total = int(st.get("company_total", 0) or 0)
+        print(f"  수집 시도 {i}/{attempts} · 기업 {total}건 "
+              f"(네이버 {st.get('company_naver', 0)} / KIRS "
+              f"{int(st.get('company_kirs_outsourcing', 0) or 0) + int(st.get('company_kirs_insourcing', 0) or 0)}) "
+              f"· with_pdf {st.get('with_pdf', 0)} · 산업 {st.get('industry_total', 0)}")
+        if total > 0:
+            return meta, st, total
+        if i < attempts:
+            wait = _SCOUT_BACKOFF_S * i
+            print(f"  0건 — {wait}s 후 재시도 (러너 IP 드롭 가능성)")
+            time.sleep(wait)
+    return meta, st, total
+
+
 def main() -> int:
     print(f"[analyst_reports] 시작 {now_kst().isoformat(timespec='seconds')}")
 
-    # ── ① 리포트 메타 수집 (네이버 공개) ──
-    try:
-        meta = scout_reports()
-    except Exception as e:  # noqa: BLE001
-        print(f"❌ scout_reports 실패: {e}")
-        return 1
-    st = meta.get("stats", {}) or {}
-    company_total = int(st.get("company_total", 0) or 0)
-    print(f"  수집 · 기업 {company_total}건 "
-          f"(with_ticker {st.get('with_ticker', 0)}, with_pdf {st.get('with_pdf', 0)}) "
-          f"· 산업 {st.get('industry_total', 0)}건")
+    # ── ① 리포트 메타 수집 (네이버·KIRS 공개) ──
+    meta, st, company_total = _collect_with_retry()
 
     # ── ② 요약 + 종목별 집계 ──
     pri = _priority_tickers()
