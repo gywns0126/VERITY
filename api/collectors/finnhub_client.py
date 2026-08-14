@@ -21,9 +21,22 @@ _SESSION = requests.Session()
 _LAST_CALL = 0.0
 _MIN_INTERVAL = 1.0  # 무료 60req/min → ~1req/sec 안전 마진
 
+# 🚨 403 = 플랜 미포함 엔드포인트. 프로세스 안에서 한 번 확인하면 그 뒤로는 건너뛴다 (2026-08-13).
+#   실측: full run 2건(31679449048 성공 / 31745952833 실패) 교차 확인 — `stock/price-target` 와
+#   `institutional/ownership` 이 **매번 10/10 전부 403**, 성공 사례 0. 종목당 1콜씩 무조건 실패하며
+#   호출마다 스로틀 1s + 왕복을 태웠다. 그 run 은 자체 예산 110분을 소진해 Gemini 배치 16/50 에서
+#   종료됐다(api/main.py:1527) — 즉 헛돈 시간이 결손으로 이어졌다.
+#   차단기 방식을 고른 이유 = 호출을 영영 지우면 플랜을 올려도 조용히 빈 채로 남는다. 프로세스마다
+#   1콜로 현재 권한을 다시 확인하고, 열리면 그 run 부터 자동으로 되살아난다.
+#   429(레이트리밋)는 기존대로 재시도 — 일시적 신호라 차단 대상이 아니다.
+_FORBIDDEN_ENDPOINTS: set = set()
+
 
 def _get(endpoint: str, params: dict, api_key: str, timeout: int = 12) -> Optional[Union[dict, list]]:
     global _LAST_CALL
+    if endpoint in _FORBIDDEN_ENDPOINTS:
+        return None
+
     elapsed = time.time() - _LAST_CALL
     if elapsed < _MIN_INTERVAL:
         time.sleep(_MIN_INTERVAL - elapsed)
@@ -36,6 +49,12 @@ def _get(endpoint: str, params: dict, api_key: str, timeout: int = 12) -> Option
             logger.warning("Finnhub rate limited, sleeping 5s")
             time.sleep(5)
             r = _SESSION.get(f"{_BASE}/{endpoint}", params=params, timeout=timeout)
+        if r.status_code == 403:
+            _FORBIDDEN_ENDPOINTS.add(endpoint)
+            logger.warning(
+                "Finnhub %s 403 (플랜 미포함) — 이번 프로세스에서 비활성화, 남은 종목은 건너뛴다", endpoint
+            )
+            return None
         r.raise_for_status()
         return r.json()
     except Exception as e:
