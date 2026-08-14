@@ -258,6 +258,13 @@ def build() -> Dict[str, Any]:
 
             # 🚨 PER 은 **주가 ÷ 지배주주 EPS** 가 정본이다 — 운영 yfinance trailingPE 와 같은 정의.
             #    시총÷전체순이익은 비지배지분 큰 지주사에서 벌어지므로 폴백으로만 쓴다.
+            # 🚨 미해결 (별건 · 사전등록 대상): 분할 직후~차기 공시 전 구간에서는 주가가
+            #    분할 후 기준인데 EPS 는 분할 전 기준이라 PER 이 분할배수만큼 낮아진다
+            #    (= 가치축 ep 가 부풀어 상위로 올라간다). 실측 `000480` 20230430~20240229 ·
+            #    `037710` 20220430~20230228 각 11행. 시총÷전체순이익은 분할에 불변이라
+            #    대조 기준이 되지만, 그 경계(4배)로 걸러보면 658종목 3,990행이 바뀌고
+            #    상위가 외국계 상장사(900xxx·950xxx)라 원인이 분할이 아니다. **점수 축을
+            #    바꾸는 개입이므로 데이터 정정에 끼워 넣지 않는다** — 별도 사전등록에서 다룬다.
             per = per_basis = None
             eps_own = dv.get("eps_owner") if dv else None
             if eps_own and eps_own > 0 and close and close > 0:
@@ -271,6 +278,13 @@ def build() -> Dict[str, Any]:
                 dps = dv.get("dps")
                 if dps is not None:
                     dy = float(dps) / float(close) * 100.0
+                    # 🚨 같은 원장의 공시 배당수익률과 대조. 분할 직후 구간(구 기준 dps ÷
+                    #    분할 후 주가)과 제출인 단위오류를 함께 걸러낸다. 연중 주가 변동이
+                    #    만드는 정상 이탈은 대부분 2배 안이라 4배를 경계로 둔다.
+                    rep = dv.get("div_yield_reported")
+                    if isinstance(rep, (int, float)) and rep > 0 and dy > rep * 4:
+                        dy = None
+                        bump("dy_crosscheck_fail")
 
             rows.append({
                 "d": d, "t": t, "mktcap": mc, "close": close,
