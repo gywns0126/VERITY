@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-14T22:32:49+09:00",
+  "collected_at": "2026-08-14T23:02:32+09:00",
   "macro": {
     "usd_krw": {
       "value": 1411.44,
@@ -1453,21 +1453,6 @@
       "d_day": 4
     },
     {
-      "name": "미국 주간 실업수당 청구",
-      "severity": "medium",
-      "impact_area": [
-        "경기",
-        "고용"
-      ],
-      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
-      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
-      "date": "2026-08-20",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 180,
-      "d_day": 6
-    },
-    {
       "name": "Conference Board 소비자신뢰",
       "date": "2026-08-25",
       "country": "미국",
@@ -1512,21 +1497,6 @@
       "d_day": 12
     },
     {
-      "name": "미국 주간 실업수당 청구",
-      "severity": "medium",
-      "impact_area": [
-        "경기",
-        "고용"
-      ],
-      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
-      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
-      "date": "2026-08-27",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 180,
-      "d_day": 13
-    },
-    {
       "name": "한국은행 금통위",
       "severity": "medium",
       "impact_area": [
@@ -1543,12 +1513,18 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 32.66
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 141.25
   },
   "schema_version": "v0"
 }
