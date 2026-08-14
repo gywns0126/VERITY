@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-14T08:32:49+09:00",
+  "collected_at": "2026-08-14T09:02:50+09:00",
   "macro": {
     "usd_krw": {
       "value": 1418.13,
@@ -1365,7 +1365,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-08-14T08:32:58+09:00",
+    "updated_at": "2026-08-14T09:03:50+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.79,
       "us_ig_risk": "LOW",
@@ -1375,7 +1375,7 @@
     },
     "kr_corp_spreads": {
       "date": "20260813",
-      "collected_at": "2026-08-14T08:32:58+09:00",
+      "collected_at": "2026-08-14T09:03:50+09:00",
       "grades": {
         "AA-": {
           "yield": 4.488,
@@ -1391,36 +1391,6 @@
     }
   },
   "global_events": [
-    {
-      "name": "미국 PPI 발표",
-      "severity": "medium",
-      "impact_area": [
-        "물가",
-        "기업마진"
-      ],
-      "impact": "생산자 물가. CPI 선행지표. 기업 마진 압박 신호",
-      "action": "CPI 발표 전 힌트로 활용",
-      "date": "2026-08-13",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 46,
-      "d_day": -1
-    },
-    {
-      "name": "미국 주간 실업수당 청구",
-      "severity": "medium",
-      "impact_area": [
-        "경기",
-        "고용"
-      ],
-      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
-      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
-      "date": "2026-08-13",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 180,
-      "d_day": -1
-    },
     {
       "name": "옵션만기일 (한국)",
       "date": "2026-08-13",
@@ -1570,12 +1540,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 23.87
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 109.39
   },
   "schema_version": "v0"
 }
