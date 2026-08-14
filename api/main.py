@@ -209,8 +209,9 @@ from api.analyzers.claude_analyst import (
 )
 from api.intelligence.alert_engine import generate_briefing, build_geopolitical_hotspots
 from api.intelligence.verity_brain import analyze_all as verity_brain_analyze
-from api.collectors.ReportScout import scout_reports
-from api.analyzers.report_summarizer import run_report_summarizer
+# scout_reports / run_report_summarizer 는 2026-08-14 에 scripts/analyst_reports_cron.py 로
+# 옮겼다(STEP 5.87 분리). 여기서 다시 import 하지 말 것 — 인라인 재수집이 부활하면
+# 51분이 파이프라인으로 되돌아와 워치독 110분 초과가 재발한다.
 from api.analyzers.dart_report_analyzer import analyze_all_business_reports
 from api.intelligence.periodic_report import generate_periodic_analysis, compute_sector_trend_summary
 from api.workflows.archiver import archive_daily_snapshot, cleanup_old_snapshots
@@ -3690,43 +3691,45 @@ def main():
     # ReportScout: 네이버 기업/산업 리포트 PDF URL 메타 (1일 1회)
     # report_summarizer: PDF → Gemini Flash 요약 → 종목별 집계 (analyst_sentiment_score 등)
     # verity_brain 이 analyst_report_summary 를 fact_score 컴포넌트로 사용하므로 Brain 직전 실행.
+    # 🚨 2026-08-14 분리 — 수집·요약(51.4분)을 scripts/analyst_reports_cron.py 로 옮겼다.
+    #   실측: daily_analysis_full 4회 연속 실패(fail 2/cancel 2). 원인은 run 117분 vs 워치독
+    #   110분 초과이고, 그 117분의 구간 프로파일이 5.87 리포트 51.4분 / STEP 3 기술적분석
+    #   33.5분 / 5.75 NAV 14.2분이었다. 5.87 한 구간이 44% 였다.
+    #   Brain 이 쓰는 것은 attach 산물(analyst_report_summary)뿐이고 집계는 이미
+    #   data/report_summaries.json 에 원자적으로 저장된다 → 여기서는 읽어서 붙이기만 한다.
+    #   산식·선정 로직 무변경, 수집 시점만 앞선 cron(평일 KST 13:20)으로 이동.
+    #   🚨 인라인 재수집 fallback 을 두지 않는다 — 그걸 두면 파일이 없는 날 다시 51분이
+    #     들어와 같은 초과가 재발한다. 부재는 결손으로 신고하고 파이프라인은 계속 간다.
     if effective_mode == "full":
-        print("\n[5.87] 증권사 리포트 수집 + AI 요약")
+        print("\n[5.87] 증권사 리포트 요약 부착 (수집=analyst_reports cron 분리)")
         try:
-            report_meta = scout_reports()
-            stats = report_meta.get("stats", {})
-            print(f"  기업 {stats.get('company_total', 0)}건 "
-                  f"(with_ticker {stats.get('with_ticker', 0)}, with_pdf {stats.get('with_pdf', 0)}) "
-                  f"· 산업 {stats.get('industry_total', 0)}건")
+            from api.analyzers.report_summarizer import SUMMARIES_PATH as _RS_PATH
+            summary_result: Dict[str, Any] = {}
+            if os.path.exists(_RS_PATH):
+                with open(_RS_PATH, encoding="utf-8") as _f:
+                    summary_result = json.load(_f) or {}
+            _upd = summary_result.get("updated_at") or "?"
+            _age_h = None
+            try:
+                _age_h = (now_kst() - datetime.fromisoformat(_upd)).total_seconds() / 3600
+            except Exception:  # noqa: BLE001
+                pass
+            _st = summary_result.get("stats", {}) or {}
+            print(f"  집계 파일 {os.path.basename(_RS_PATH)} · updated_at {_upd}"
+                  + (f" ({_age_h:.1f}h 전)" if _age_h is not None else "")
+                  + f" · 종목 {_st.get('tickers_aggregated', 0)}")
+            if _age_h is not None and _age_h > 48:
+                # 신선도 이탈은 조용히 넘기지 않는다. 파이프라인은 계속 가되 사실을 남긴다.
+                print(f"  ⚠️ report_summaries 48h 초과 stale ({_age_h:.1f}h) — "
+                      f"analyst_reports cron 점검 필요")
+            if not summary_result:
+                print("  ⚠️ report_summaries.json 부재 — analyst_report_summary 부착 0 "
+                      "(Brain 은 해당 컴포넌트 없이 진행)")
 
-            # 2026-05-18 A2 fix — 운영 풀 KR ticker6 priority 전달.
-            # 옛: 최신 date desc 만 → 운영 풀 외 종목 선정 → 매칭 0/10.
-            # 신: 운영 풀 우선 선정 → analyst_report_summary attach 회복.
-            #
-            # 2026-05-19 A2.1 fix — US mode 에서 candidates=US-only → priority empty 결함.
-            # 옛: candidates 만 검사 → US mode 시 _pri_tickers=[] → date desc fallback →
-            #     운영 풀 KR 매칭 0/10 (28일 영구 fallback).
-            # 신: candidates 의 KR + prev_recs 의 KR 합쳐 dedupe → 모드 무관 KR pool 항상 전달.
-            # docs/BRAIN_SCORE_AUDIT_20260518.md §9 후속, single-variable.
-            _pri_from_cand = [
-                str(s.get("ticker", "")).zfill(6)
-                for s in candidates
-                if s.get("currency") != "USD" and str(s.get("ticker", "")).isdigit()
-            ]
-            _prev_recs_for_pri = portfolio.get("recommendations") or []
-            _pri_from_prev = [
-                str(r.get("ticker", "")).zfill(6)
-                for r in _prev_recs_for_pri
-                if r.get("currency") != "USD" and str(r.get("ticker", "")).isdigit()
-            ]
-            _pri_tickers = list(dict.fromkeys(_pri_from_cand + _pri_from_prev))
-            summary_result = run_report_summarizer(priority_tickers=_pri_tickers)
-            ss = summary_result.get("stats", {})
-            print(f"  AI 요약 신규 {ss.get('new_summaries_this_run', 0)} "
-                  f"(skip {ss.get('skipped_this_run', 0)}) "
-                  f"| 종목 집계 {ss.get('tickers_aggregated', 0)} "
-                  f"| 누적 {ss.get('total_processed_lifetime', 0)}")
-
+            # 우선순위 티커 선정(운영 후보 KR + 운영 풀 KR, dedupe)은 분리된 러너가
+            # 같은 규칙으로 디스크에서 수행한다 — scripts/analyst_reports_cron.py::_priority_tickers.
+            # 2026-05-18 A2 / 2026-05-19 A2.1 fix 의 의도(운영 풀 우선, 모드 무관 KR pool)는
+            # 그쪽에 그대로 옮겨져 있다.
             summaries = summary_result.get("summaries", {})
             analyst_attached = 0
             for stock in candidates:

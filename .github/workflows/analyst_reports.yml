@@ -1,0 +1,100 @@
+name: Analyst Reports (증권사 리포트 수집 + AI 요약)
+
+# 🚨 2026-08-14 신설 — daily_analysis_full 에서 STEP 5.87 을 분리한 전용 워크플로.
+#
+# 왜 (실측):
+#   daily_analysis_full 이 4회 연속 실패했다 (fail 2 / cancel 2, 8/13~8/14).
+#   원인 = run 117분 vs 런타임 워치독 110분 초과. 그 117분의 구간 프로파일:
+#     · [5.87] 증권사 리포트 수집 + AI 요약 ...... 51.4분  (44%)  ← 본 워크플로로 분리
+#     · [3]    기술적 분석 + 수급 + 컨센서스 ...... 33.5분
+#     · [5.75] 관계회사 지배구조 + NAV ............ 14.2분
+#   Brain 이 쓰는 것은 attach 산물(analyst_report_summary)뿐이고, 집계는 이미
+#   data/report_summaries.json 에 원자적으로 저장된다. 수집·요약을 앞선 시각으로 옮기면
+#   본 파이프라인은 파일을 읽어 붙이기만 하면 된다 (산식·선정 로직 무변경, 시점만 이동).
+#   기대 효과: daily_analysis_full 117분 → 약 66분 (워치독 110분 대비 여유 44분).
+#
+# 7축 audit (CLAUDE.md):
+#  1 env/secret: GEMINI_API_KEY (report_summarizer 의 PDF 요약). 네이버 리포트 메타는 공개 —
+#    별도 키 없음. 사용 endpoint = google genai generate_content (api/analyzers/report_summarizer.py).
+#  2 push trigger: schedule/manual only. commit 경로가 data/ 뿐이라 vercel-api/ 미변경 →
+#    ignoreCommand 가 자동 skip (RULE 2 정합, deploy 0).
+#  3 concurrency: group=verity-analyst-reports **전용**. verity-data-write 공유 금지 —
+#    그 그룹은 18개가 물려 있고 GitHub 은 그룹당 pending 을 1개만 유지해서 축출 사고가 났다
+#    (dart_catalyst_pulse 7/28 0/14 + universe_scan 연속 축출). 파일 집합 겹침 0 을 확인했다:
+#      본 워크플로 = data/analyst_reports.json · data/report_summaries.json
+#      universe_scan = universe_candidates.json / stock_history/ / wide_scan_log.jsonl / metadata/*
+#      daily_analysis_full = 그 외 전량 (report_summaries 는 이제 read-only)
+#    cancel-in-progress: false — 50분짜리 작업이라 중도 취소하면 그날 산출물이 사라진다.
+#  4 cron: 평일 KST 13:20 (UTC 04:20). 정각 회피(:20) + 혼잡 시간대 회피
+#    (UTC 21시 12개 / 0시 11개 / 22시 7개가 몰려 있다). 하루 1회라 GH schedule
+#    silent skip 위험 없음(>5분). 소비자보다 앞선다: universe_scan 15:30 KST,
+#    daily_analysis_full 16:50 KST → 약 2.5h 여유.
+#  5 KIS: 미사용 (네이버 + Gemini only). 토큰 발급 경로 0 = RULE 1 무관.
+#  6 pip: requirements.txt (requests / google-genai / pdf 파서 포함 — 기존 full 과 동일 집합).
+#  7 N=2: 추가 후 manual run(N=1) + 다음 scheduled(N=2) 실 결과 + 산출물 정합 검증 의무 (RULE 8).
+#
+# RULE 4 (신 파일 git add 정합): 산출 파일 2개를 **파일별로 나눠서** add 한다.
+#   한 줄로 묶으면 글롭 미매칭 시 원자적으로 전부 실패해 멀쩡한 것까지 스테이징되지 않는다 (8/9 사고).
+
+on:
+  schedule:
+    - cron: '20 4 * * 1-5'   # 평일 KST 13:20
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-analyst-reports
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75      # 실측 51.4분 + 마진. 초과 시 다음 평일 재시도.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Collect + summarize analyst reports
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL_DEFAULT: ${{ vars.GEMINI_MODEL_DEFAULT || 'gemini-2.5-flash' }}
+        run: python scripts/analyst_reports_cron.py
+
+      - name: Commit outputs
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          # RULE 4 — 파일별 add. 글롭 묶음 금지(미매칭 시 전체 실패, 8/9 사고).
+          git add data/analyst_reports.json 2>/dev/null || true
+          git add data/report_summaries.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "변경 없음 — commit 생략 (timestamp-only commit spam 방지)"
+            exit 0
+          fi
+          git commit -m "📑 analyst reports $(date -u +%Y-%m-%d)"
+          for i in 1 2 3 4 5; do
+            if git push origin main; then
+              echo "push 성공 (시도 $i)"; exit 0
+            fi
+            echo "push 실패 — rebase 후 재시도 ($i)"
+            git pull --rebase --autostash origin main || true
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
