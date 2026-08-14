@@ -125,6 +125,38 @@ def fetch(key: str, corp_code: str, year: int) -> Optional[List[Dict[str, Any]]]
     return list(d.get("list") or [])
 
 
+IMPLAUSIBLE_DPS = 1_000_000        # 주당 배당 상한 — 원장 22,799행 실측 최대가 10만원대
+_TOTAL_MATCH_TOL = 0.05
+
+
+def flag_filer_unit_error(rec: Dict[str, Any]) -> None:
+    """🚨 제출인이 '주당 현금배당금' 칸에 **배당금 총액**을 적는 사고가 실재한다.
+
+    실측 `067900` FY2022~2025 4건 — dps 904,982,950 인데 같은 응답의 현금배당금총액이
+    904백만원(= 904,000,000)으로 거의 일치한다. 같은 응답의 EPS 1,330 × 현금배당성향
+    3.76% ≈ 50원이 실제 주당 배당이고 외부 대조(yfinance 50·50·70·100원)와도 맞는다.
+    **우리 파서는 정상 — DART 원본이 틀렸다.**
+
+    소비 측(`kr_valuation_panel`)이 이를 그대로 나누면 배당수익률이 2,810만% 가 되고
+    배당 축 순위 1위로 올라간다. 그래서 수집 단계에서 끊는다.
+
+    판정 = 주당 배당으로 불가능한 크기 **그리고** 같은 응답의 총액과 일치 — 둘 다일 때.
+    총액이 없으면 크기만으로 끊되 사유를 구분해 남긴다(조용히 지우지 않는다).
+    """
+    dps = rec.get("dps")
+    if not isinstance(dps, (int, float)) or dps <= IMPLAUSIBLE_DPS:
+        return
+    tot = rec.get("cash_div_total_mil")
+    if isinstance(tot, (int, float)) and tot > 0:
+        base = tot * 1_000_000
+        if abs(dps - base) / base <= _TOTAL_MATCH_TOL:
+            rec["dps"] = None
+            rec["dps_dropped"] = "filer_put_total_in_per_share_field"
+            return
+    rec["dps"] = None
+    rec["dps_dropped"] = "implausible_dps"
+
+
 def parse(rows: List[Dict[str, Any]], ticker: str, call_year: int) -> List[Dict[str, Any]]:
     """se × stock_knd 격자 → 연도별 1행. 🚨 보통주만 채택(우선주는 별 종목코드다).
 
@@ -150,6 +182,8 @@ def parse(rows: List[Dict[str, Any]], ticker: str, call_year: int) -> List[Dict[
             v = _num(r.get(field))
             if se.startswith("주당현금배당금"):
                 col = "dps"
+            elif se.startswith("현금배당금총액"):
+                col = "cash_div_total_mil"        # 백만원 — dps 단위오류 교차검증용
             elif se.startswith("현금배당수익률"):
                 col = "div_yield_reported"
             elif "주당순이익" in se:
@@ -170,6 +204,7 @@ def parse(rows: List[Dict[str, Any]], ticker: str, call_year: int) -> List[Dict[
         # 🚨 배당 0 과 미보고는 다르다. 배당 항목이 통째로 비면 행을 만들지 않는다 —
         #    소비 측이 "0원 배당" 으로 오독하면 배당 12점이 조용히 왜곡된다.
         if got:
+            flag_filer_unit_error(rec)
             out.append(rec)
     return out
 
