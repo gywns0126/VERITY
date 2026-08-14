@@ -1,0 +1,238 @@
+{
+ "_meta": {
+  "prereg": "docs/PREREG_SEGMENT_IC_2026_08_14.md",
+  "approved": "PM 2026-08-14 'ㄱㄱ'",
+  "executed_at": "2026-08-14T19:54:16+09:00",
+  "tests": 8,
+  "adopt_t": 3.0,
+  "bonferroni": 2.73,
+  "problem_restated": "대형주는 이미 유니버스 안에 있다(삼성 1,534조·하이닉스 1,255조). 표적은 유니버스가 아니라 동일가중이다 (§0)",
+  "blocker": "시총가중이 이겨도 진단 3(무작위와 무차별)이면 채택 불가 — 지수 추종을 자체 산식으로 위장하는 것 (§4)",
+  "scope": "진단이며 산식·운영 무변경"
+ },
+ "coverage": {
+  "snapshots": 76,
+  "window": [
+   20200131,
+   20260430
+  ],
+  "median_names": 2057,
+  "elapsed_sec": 87.9
+ },
+ "results": {
+  "ic_large_20d": {
+   "nw": {
+    "n": 76,
+    "mean": 0.082364,
+    "t": 4.6719,
+    "lag": 0,
+    "positive_rate": 0.6974
+   },
+   "n": 76,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": 0.08
+    },
+    "H2": {
+     "n": 38,
+     "mean": 0.08473
+    }
+   },
+   "p_two_sided": 1.3e-05,
+   "passes_bh_fdr": true,
+   "passes_t3": true
+  },
+  "ic_large_60d": {
+   "nw": {
+    "n": 76,
+    "mean": 0.140413,
+    "t": 5.2287,
+    "lag": 2,
+    "positive_rate": 0.7763
+   },
+   "n": 76,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": 0.12482
+    },
+    "H2": {
+     "n": 38,
+     "mean": 0.15601
+    }
+   },
+   "p_two_sided": 1e-06,
+   "passes_bh_fdr": true,
+   "passes_t3": true
+  },
+  "ic_mid_20d": {
+   "nw": {
+    "n": 76,
+    "mean": 0.131793,
+    "t": 8.788,
+    "lag": 0,
+    "positive_rate": 0.8421
+   },
+   "n": 76,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": 0.11336
+    },
+    "H2": {
+     "n": 38,
+     "mean": 0.15023
+    }
+   },
+   "p_two_sided": 0.0,
+   "passes_bh_fdr": true,
+   "passes_t3": true
+  },
+  "ic_mid_60d": {
+   "nw": {
+    "n": 76,
+    "mean": 0.18538,
+    "t": 9.3109,
+    "lag": 2,
+    "positive_rate": 0.9211
+   },
+   "n": 76,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": 0.16079
+    },
+    "H2": {
+     "n": 38,
+     "mean": 0.20997
+    }
+   },
+   "p_two_sided": 0.0,
+   "passes_bh_fdr": true,
+   "passes_t3": true
+  },
+  "ic_small_20d": {
+   "nw": {
+    "n": 76,
+    "mean": 0.106378,
+    "t": 9.2404,
+    "lag": 0,
+    "positive_rate": 0.8684
+   },
+   "n": 76,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": 0.09915
+    },
+    "H2": {
+     "n": 38,
+     "mean": 0.11361
+    }
+   },
+   "p_two_sided": 0.0,
+   "passes_bh_fdr": true,
+   "passes_t3": true
+  },
+  "ic_small_60d": {
+   "nw": {
+    "n": 76,
+    "mean": 0.146728,
+    "t": 11.0875,
+    "lag": 2,
+    "positive_rate": 0.9474
+   },
+   "n": 76,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": 0.14152
+    },
+    "H2": {
+     "n": 38,
+     "mean": 0.15193
+    }
+   },
+   "p_two_sided": 0.0,
+   "passes_bh_fdr": true,
+   "passes_t3": true
+  },
+  "capw_minus_ew_20d": {
+   "nw": {
+    "n": 76,
+    "mean": 0.002568,
+    "t": 1.3619,
+    "lag": 0,
+    "positive_rate": 0.5921
+   },
+   "n": 76,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": 0.00286
+    },
+    "H2": {
+     "n": 38,
+     "mean": 0.00227
+    }
+   },
+   "p_two_sided": 0.177306,
+   "passes_bh_fdr": false,
+   "passes_t3": false
+  },
+  "capw_minus_ew_60d": {
+   "nw": {
+    "n": 76,
+    "mean": 0.003005,
+    "t": 0.9007,
+    "lag": 2,
+    "positive_rate": 0.5526
+   },
+   "n": 76,
+   "split": {
+    "H1": {
+     "n": 38,
+     "mean": -9e-05
+    },
+    "H2": {
+     "n": 38,
+     "mean": 0.0061
+    }
+   },
+   "p_two_sided": 0.370631,
+   "passes_bh_fdr": false,
+   "passes_t3": false
+  }
+ },
+ "diagnostics": {
+  "seg_return_large_20d_pct": {
+   "H1": 0.8878,
+   "H2": 1.254
+  },
+  "seg_return_mid_20d_pct": {
+   "H1": 1.2182,
+   "H2": 0.0952
+  },
+  "seg_return_small_20d_pct": {
+   "H1": 2.1421,
+   "H2": 0.5602
+  },
+  "capw_concentration": {
+   "max_single_mean": 0.2632,
+   "top3_sum_mean": 0.5545,
+   "over_60pct_rebalances": 17,
+   "note": "상위3 합 > 60% = 사실상 개별주 베팅 (§3-2)"
+  },
+  "score_contribution_capw_20d": {
+   "score_mean_pct": 1.3524,
+   "random_mean_pct": 1.2786,
+   "random_p2_5_pct": -0.7515,
+   "random_p97_5_pct": 2.8214,
+   "beats_random_95": false,
+   "note": "🚨 무작위 95% 상단을 못 넘으면 시총가중이 점수를 무력화한 것 (§4)"
+  },
+  "impact_over_equal": 1.55,
+  "impact_over_cap": 1.21
+ }
+}
