@@ -169,3 +169,50 @@ def test_appends_do_not_overwrite(path):
     with open(path, encoding="utf-8") as f:
         lines = [json.loads(x) for x in f if x.strip()]
     assert len(lines) == 2
+
+
+# ── due 큐 (배치 판단 대상 선정) ────────────────────────────────────────────
+
+def _rec_file(tmp_path, tickers):
+    import json as _j
+    p = tmp_path / "recs.json"
+    p.write_text(_j.dumps([{"ticker": t, "name": t, "market": "KOSPI"} for t in tickers]),
+                 encoding="utf-8")
+    return str(p)
+
+
+def test_due_includes_new_tickers(tmp_path, path):
+    rec = _rec_file(tmp_path, ["000270", "005930"])
+    due = dj.due_candidates(path=path, rec_path=rec)
+    assert {d["ticker"] for d in due} == {"000270", "005930"}
+    assert all(d["last_ts"] is None for d in due)
+
+
+def test_due_excludes_recently_judged(tmp_path, path):
+    """🚨 매일 찍으면 forward 창이 겹쳐 N 이 안 는다 — 20거래일 안은 제외."""
+    dj.record(_facts(ticker="005930"), "관심", "medium", [], "최근 판단", path=path)
+    rec = _rec_file(tmp_path, ["000270", "005930"])
+    due = dj.due_candidates(path=path, rec_path=rec)
+    assert {d["ticker"] for d in due} == {"000270"}
+
+
+def test_due_after_boundary():
+    """경계 = REJUDGE_TRADING_DAYS 거래일. 그 전은 제외, 지나면 포함."""
+    from datetime import timedelta
+    now = dj.now_kst()
+    span_days = dj.REJUDGE_TRADING_DAYS / 5 * 7
+    assert dj._due_after("") is True, "기록 없으면 항상 due"
+    assert dj._due_after((now - timedelta(days=span_days - 2)).isoformat()) is False
+    assert dj._due_after((now - timedelta(days=span_days + 2)).isoformat()) is True
+
+
+def test_due_survives_missing_or_broken_recs(tmp_path, path):
+    assert dj.due_candidates(path=path, rec_path=str(tmp_path / "none.json")) == []
+    bad = tmp_path / "bad.json"
+    bad.write_text("{깨진", encoding="utf-8")
+    assert dj.due_candidates(path=path, rec_path=str(bad)) == []
+
+
+def test_rejudge_interval_matches_prereg_horizon():
+    """🚨 20 은 사전등록 시계에서 따온 값이지 새로 고른 숫자가 아니다."""
+    assert dj.REJUDGE_TRADING_DAYS in dj.HORIZON_DAYS
