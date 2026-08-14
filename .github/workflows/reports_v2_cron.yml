@@ -160,12 +160,24 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           # data/reports/ 는 .gitignore 됨 (위 Storage upload 단계가 산출물 경로).
-          # metadata/history 만 commit.
-          git add data/metadata/ data/history/ 2>/dev/null || true
-          git add data/metadata/llm_cost.jsonl 2>/dev/null || true   # RULE 4 — LLM 비용 장부(미add 시 rebase 거부)
+          # 🚨 RULE 4 — 좁은 add 금지. 2026-08-13·14 사고: `data/metadata/ data/history/` 만
+          #   스테이징해서 api/main.py 가 data/ 루트에 쓴 파일(telegram_volume.jsonl 등)이
+          #   unstaged 로 남았고, `git pull --rebase` 가 "You have unstaged changes" 로 거부해
+          #   재시도 8회가 전부 같은 이유로 실패했다. 경합이 아니라 작업트리 오염이었다.
+          #   api/main.py 를 도는 나머지 3개 워크플로(daily_analysis_full / daily_analysis /
+          #   daily_realtime)는 전부 broad add 라 무사했다 — 여기만 예외였다.
+          git add data/
           DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
           MODES="${{ steps.detect.outputs.modes }}"
           git diff --staged --quiet || git commit -m "📑 리포트 v2 자동 생성 ${DATE} (${MODES})"
+          # 스테이징 밖 잔여 변경 = rebase 차단 요인. 남아 있으면 신고하고 치운다
+          # (조용히 8회 실패하는 대신 원인을 로그에 남긴다).
+          DIRTY=$(git status --porcelain --untracked-files=no)
+          if [ -n "$DIRTY" ]; then
+            echo "::warning::스테이징 밖 변경 잔존 — rebase 전 stash 처리"
+            echo "$DIRTY"
+            git stash push --quiet --message "reports_v2 pre-rebase residual" || true
+          fi
           BRANCH="${{ github.ref_name }}"
           PUSHED=false
           # 재시도 8회 + 지터 (2026-08-06 실패 fix) — main 에 push 하는 워크플로가 56개,
@@ -182,7 +194,13 @@ jobs:
             sleep "$WAIT"
           done
           if [ "$PUSHED" != "true" ]; then
-            echo "::error::All 8 push attempts failed (main 경합) — 다음 스케줄에서 재시도"
+            # 원인 구분 — 작업트리가 더러우면 재시도로 절대 안 풀린다(8회 전부 즉시 실패).
+            if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+              echo "::error::push 실패 — 작업트리 오염(경합 아님). 아래 파일이 add 범위 밖이다:"
+              git status --porcelain --untracked-files=no
+            else
+              echo "::error::All 8 push attempts failed (main 경합) — 다음 스케줄에서 재시도"
+            fi
             exit 1
           fi
 
