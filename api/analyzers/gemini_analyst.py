@@ -1460,6 +1460,13 @@ def analyze_batch(
         if i > 0:
             time.sleep(6)
         print(f"  [Gemini] ({i+1}/{len(candidates)}): {stock_info['name']}")
+        # 진척 등록 — 런타임 예산이 끊길 때 "몇/몇에서 멈췄나" 를 신고하기 위한 한 줄.
+        # 8/13 run 은 여기 16/50 에서 죽었는데 결손이 어디에도 안 남았다(api/observability/run_progress.py).
+        try:
+            from api.observability import run_progress as _rp
+            _rp.set_stage("gemini_batch", i + 1, len(candidates), "종목")
+        except Exception:
+            pass
 
         analysis = None
         for attempt in range(3):

@@ -154,13 +154,27 @@ def _on_sigterm(signum, frame):  # noqa: ARG001
     else:
         _sys.stderr.write("[graceful_sigterm] _latest_portfolio_ref None — save 스킵 (early SIGTERM)\n")
 
+    # 🚨 미처리 신고 (2026-08-13) — 끊긴 자리에서 무엇이 얼마나 안 됐는지 남긴다.
+    #   8/13 run 31745952833 은 Gemini 16/50 에서 죽어 34종목이 AI 종합 없이 남았는데, 발행은
+    #   정상 완료해 data_health 가 green 이었다. 결손이 초록불 뒤에 숨는 게 진짜 문제라
+    #   예산을 손대기 전에 먼저 보이게 만든다. 신고만 하고 판정·수정은 하지 않는다.
+    shortfall_text = ""
+    try:
+        from api.observability import run_progress as _rp
+        shortfall_text = _rp.format_shortfall()
+        _sys.stderr.write(f"[graceful_sigterm] {shortfall_text}\n")
+        _rp.append_cutoff_row(extra={"partial_portfolio_saved": saved})
+    except Exception as e:
+        _sys.stderr.write(f"[graceful_sigterm] shortfall 신고 FAIL: {e}\n")
+
     # 텔레그램 알람 (bypass_quiet — critical)
     try:
         from api.notifications.telegram import send_message
         send_message(
             f"⚠️ <b>VERITY 런타임 한계</b>\n"
             f"watchdog SIGTERM 발동 — partial portfolio {'저장' if saved else '미저장'}\n"
-            f"즉시 root cause 진단 필요 (data/metadata/runtime_load_log.jsonl)",
+            + (f"{shortfall_text}\n" if shortfall_text else "")
+            + f"즉시 root cause 진단 필요 (data/metadata/runtime_cutoff.jsonl · runtime_load_log.jsonl)",
             bypass_quiet=True,
             dedupe=False,
         )
@@ -1541,6 +1555,13 @@ def main():
         _threading.Event().wait(_run_limit)
         elapsed = int(_time.monotonic() - _run_start)
         print(f"\n⏱ 런타임 한계 도달 ({elapsed//60}분 {elapsed%60}초) — 프로세스 종료")
+        # 🚨 SIGTERM 을 보내기 **전에** 사유를 못박는다. 핸들러에서 사유가 비어 있으면 외부 취소
+        #   (GH Actions concurrency cancel 등)로 구분된다. 둘을 섞으면 예산 문제 빈도를 잘못 센다.
+        try:
+            from api.observability import run_progress as _rp
+            _rp.mark_cutoff("runtime_budget")
+        except Exception:
+            pass
         import os as _os
         _os.kill(_os.getpid(), 15)  # SIGTERM → 정상 종료 흐름
 
