@@ -355,9 +355,52 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python api/main.py
 
+      # 🚨 미처리 장부만 따로 커밋 (2026-08-15). 본 커밋 스텝(`Commit & push results`)은
+      #   `success()` fail-closed 라 분석이 죽으면 안 돈다 — 그 설계는 그대로 둔다(결함본 차단이 목적).
+      #   문제는 예산 소진 신고(`data/metadata/runtime_cutoff.jsonl`)가 **바로 그때만 생기는데**
+      #   같은 이유로 영영 커밋되지 않아, 어느 단계가 얼마나 잘리는지 근거가 안 쌓인다는 것이다.
+      #   그래서 이 한 파일만 KIS 락 push 와 같은 문법으로 즉시 올린다. 다른 산출물은 건드리지 않는다.
+      - name: 미처리 장부 즉시 push (런타임 예산 소진 기록)
+        if: ${{ !cancelled() }}
+        run: |
+          if [ ! -f data/metadata/runtime_cutoff.jsonl ]; then
+            echo "[cutoff push] 기록 없음 — 완주했거나 예산 소진 전 종료. 정상"
+            exit 0
+          fi
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/metadata/runtime_cutoff.jsonl
+          if git diff --staged --quiet; then
+            echo "[cutoff push] 변화 없음"
+            exit 0
+          fi
+          TODAY=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git commit -m "⏱ runtime cutoff ${TODAY} (미처리 신고)"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              echo "[cutoff push] ✓ 성공 (시도 $i)"
+              exit 0
+            fi
+            echo "[cutoff push] 시도 $i 실패 — 재시도"
+            sleep $((i * 5))
+          done
+          echo "::warning::[cutoff push] 3회 실패 — 신고는 텔레그램·로그에 남아 있음"
+
+      # 🚨 2026-08-15 `!cancelled()` 적용 대상 5종 — 분석이 예산 소진으로 죽어도 이 빌더들은 돈다.
+      #   왜: `Run analysis` 실패 시 뒤따르는 발행 빌더 20+개가 전부 skip 되고, 그 결과
+      #   stock_report_public / nps_holdings / insider_trades / securities_lending 이 8/13 이후
+      #   38~48시간 정체했다(full 3연속 실패 8/14 06:30 · 8/14 16:50 · 8/15 06:30 실측).
+      #   왜 5종뿐인가: 나머지는 **같은 run 안에서 skip 되는 다른 빌더의 산출물**을 읽는다.
+      #   그 상태로 돌리면 어제 내용에 오늘 `_meta.generated_at` 을 찍어 발행한다 — 지금(아예 안 도는 것)
+      #   보다 나쁘다. 특히 6종이 `stock_report_public.json` 에 매달려 있다(2026-08-15 의존 실측).
+      #   🚨 `always()` 가 아니라 `!cancelled()` 다 — Price Pulse 취소 등 job cancel 때는 돌지 않는다.
       - name: 공개 공시속보 피드 빌드 (public-safe)
         # main.py STEP 5.78 이 data/dart_catalyst_alerts.jsonl 갱신 후 → public-safe JSON 변환.
         # 순수 변환 (외부호출/KIS 0). 다음 step git add data/ (broad) 자동 포함 = RULE 4.
+        # 분석이 STEP 5.78 이전에 죽으면 입력이 옛것 — 그때는 같은 내용 재발행이라 손해는 없다.
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: python -m api.builders.public_disclosure_feed_builder
 
@@ -366,6 +409,8 @@ jobs:
         # 접미어가 종목마다 달라(TSLA.O / VOO / BRKb) 빌드 타임 해석이 필요. 시세 값 미저장.
         # krx_mktcap_snapshot 이 이 캐시를 읽어 universe_search 에 nv 필드로 실으므로 **직전**에 실행.
         # 외부 fetch(네이버 공개 basic). 다음 step git add data/ (broad) 자동 포함 = RULE 4.
+        # in-run 의존 0 — 분석 성패와 무관하게 안전.
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: python -m api.collectors.us_naver_code
 
@@ -411,6 +456,8 @@ jobs:
         # data.go.kr #1160100(금융위 대차거래, serviceKey=PUBLIC_DATA_API_KEY 공통) → 전종목 ~2,769개 대차잔고.
         # 진짜 공매도잔고=KRX 봇차단으로 free 불가 → 대차잔고(빌려준 주식=공매도 재료) proxy. 키 없으면 graceful skip. → data/securities_lending.json.
         # 순수 fetch(KIS 0). RULE 7 = 대차잔고 금액·수량 사실만(점수·추천·스퀴즈예측 0). 다음 step git add data/ (broad) 자동 = RULE 4. publish allowlist 등재 완료.
+        # in-run 의존 0(자기 산출만) — `!cancelled()` 대상 5종 중 하나. 8/13 이후 48시간 정체였다.
+        if: ${{ !cancelled() }}
         continue-on-error: true
         env:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
@@ -429,12 +476,16 @@ jobs:
       - name: 공개 공시 forensics 빌드 (이벤트 이력·빈도, public-safe)
         # dart_catalyst_alerts.jsonl → 종목별 유상증자/감자/CB/정정 이벤트 빈도·타임라인 → data/disclosure_forensics.json.
         # 순수 변환(외부호출/KIS 0). RULE 7 = report_nm 사실·빈도만, 자체 위험점수 0. 다음 step git add data/ (broad) = RULE 4.
+        # in-run 의존 = dart_catalyst_alerts(STEP 5.78) + 자기 산출뿐 — `!cancelled()` 대상 5종 중 하나.
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: python -m api.builders.disclosure_forensics_builder
 
       - name: 공개 KR forensics 빌드 (특수관계자 거래·우발부채·소송 사실)
         # dart_related_party_cache + dart_litigation_cache (by_ticker) → data/kr_forensics_public.json.
         # 순수 변환(외부호출 0). RULE 7/6 = 원문 사실 리스트만, 위험점수·심각도·터널링 의심서술·요약 0. 다음 step git add data/ (broad) = RULE 4.
+        # in-run 의존 0 — `!cancelled()` 대상 5종 중 하나.
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: python -m api.builders.kr_forensics_public_builder
 
