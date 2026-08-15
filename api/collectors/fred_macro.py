@@ -43,6 +43,22 @@ def _log_fred_health(series_id: str, status: str, reason: str = "",
             "points": points,
             "elapsed_ms": elapsed_ms,
         }
+        # 🚨 적재 시점 schema 가드 (2026-08-15 배선). 구조 위반만 차단하고 새 status 값은
+        #    통과 + 경고 — 수집기가 상태를 하나 추가했다고 수집이 멈추면 안 된다.
+        #    import 지연 = pandera/pandas 를 fred_macro 임포트 경로에 올리지 않는다.
+        try:
+            from api.observability.jsonl_schemas import (
+                FRED_HEALTH_SCHEMA, FRED_HEALTH_ENUMS, guard_append,
+            )
+            ok, why = guard_append(
+                entry, FRED_HEALTH_SCHEMA, FRED_HEALTH_ENUMS, label="fred_health.jsonl",
+            )
+            if not ok:
+                sys.stderr.write(f"[fred_health] 적재 차단 — {why}\n")
+                return
+        except ImportError:
+            pass  # 가드 부재로 수집을 막지 않는다
+
         with open(FRED_HEALTH_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
         # silent skip 절대 금지 — fail 은 stderr 명시

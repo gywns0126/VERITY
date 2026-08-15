@@ -844,6 +844,22 @@ def _append_jsonl(entry: dict) -> bool:
     try/finally + logged 명시 stderr + 누적 검증 N run 의무.
     """
     try:
+        # 🚨 적재 시점 schema 가드 (2026-08-15 배선). 구조 위반만 차단, 새 mode/label 은 경고.
+        #    import 지연 = pandera/pandas 를 wide_scan 임포트 경로에 올리지 않는다.
+        try:
+            from api.observability.jsonl_schemas import (
+                WIDE_SCAN_LOG_SCHEMA, WIDE_SCAN_LOG_ENUMS, guard_append,
+            )
+            ok, why = guard_append(
+                entry, WIDE_SCAN_LOG_SCHEMA, WIDE_SCAN_LOG_ENUMS, label="wide_scan_log.jsonl",
+            )
+            if not ok:
+                import sys
+                print(f"[wide_scan] 적재 차단 — {why}", file=sys.stderr, flush=True)
+                return False
+        except ImportError:
+            pass  # 가드 부재로 적재를 막지 않는다
+
         WIDE_SCAN_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         with open(WIDE_SCAN_LOG_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")

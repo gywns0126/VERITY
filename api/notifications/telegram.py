@@ -48,7 +48,25 @@ def _append_volume_ledger(entry: Dict[str, Any]) -> None:
                  bypass_quiet, fingerprint, msg_first_line (헤더 1줄, 종목명 마스킹 X — fp 로 식별)
     """
     logged = False
+    blocked = ""
     try:
+        # 🚨 적재 시점 schema 가드 (2026-08-15 배선). 사후 detect 가 아니라 사전 차단이다.
+        #    구조 위반(필수 필드 부재/타입 불일치)만 막고, 못 보던 outcome 값은 통과 + 경고.
+        #    import 는 지연 — jsonl_schemas 가 pandera/pandas 를 끌어오므로 모듈 임포트 비용을
+        #    telegram.py 전체에 지우지 않는다.
+        try:
+            from api.observability.jsonl_schemas import (
+                TELEGRAM_VOLUME_SCHEMA, TELEGRAM_VOLUME_ENUMS, guard_append,
+            )
+            ok, blocked = guard_append(
+                entry, TELEGRAM_VOLUME_SCHEMA, TELEGRAM_VOLUME_ENUMS,
+                label="telegram_volume.jsonl",
+            )
+            if not ok:
+                return
+        except ImportError:
+            pass  # 가드 부재로 적재를 막지 않는다 — 원 결함보다 수집 중단이 나쁘다
+
         os.makedirs(os.path.dirname(_VOLUME_LEDGER_PATH), exist_ok=True)
         existing: List[Dict[str, Any]] = []
         if os.path.isfile(_VOLUME_LEDGER_PATH):
@@ -71,7 +89,9 @@ def _append_volume_ledger(entry: Dict[str, Any]) -> None:
     finally:
         sys.stderr.write(
             f"[telegram_volume] outcome={entry.get('outcome')} "
-            f"bypass_quiet={entry.get('bypass_quiet')} logged={logged}\n"
+            f"bypass_quiet={entry.get('bypass_quiet')} logged={logged}"
+            + (f" BLOCKED={blocked}" if blocked else "")
+            + "\n"
         )
 
 
