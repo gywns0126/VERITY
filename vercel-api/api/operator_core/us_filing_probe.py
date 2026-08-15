@@ -49,6 +49,10 @@ _TTL_DOC = 24 * 3600
 WINDOW_DAYS = 240          # 공시 이력 창 — 분기보고 2회 + IPO 서류를 포괄
 MAX_FILINGS = 24           # 조인 출력 상한 (렌더 절단 방지 — 초과분은 "미표시 N" 신고)
 _LOCKUP_DEFAULT_DAYS = 180  # 미기재 시 관행값. 실제 일수는 424B4 본문에서 우선 파싱
+# 모델 학습 컷오프. 이 뒤에 상장한 회사는 모델 기억에 **아예 없다** — 기억으로 말하면
+# 반드시 틀린다(2026-08-15 SPCX: "비상장" 이라고 단정했고 실제는 6/12 나스닥 상장).
+# 모델을 갈아탈 때 같이 올릴 것. 보수적으로 두는 편이 안전하다(경보가 좀 더 나올 뿐).
+_MODEL_CUTOFF = "2026-05-01"
 _RECENT_IPO_DAYS = 500      # 이 안에 상장한 종목만 락업 경보 대상 (그 밖은 잡음)
 _ATM_WINDOW_DAYS = 400      # 이 안에 체결된 자금조달 라인만 경보 (옛 소진분 제외)
 
@@ -534,6 +538,18 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
                     src = "424B4 본문 파싱"
             out["상장"] = (f"{ipo['filingDate']} ({ipo['form']}) · 상장 {days_listed}일차"
                           + (" · 상장 1년 미만" if days_listed < 365 else ""))
+            # 🚨 학습 컷오프 경보 — 2026-08-15 SPCX 사고의 구조적 차단.
+            #    스페이스X 는 2026-06-12 상장인데 나는 "비상장" 이라고 단정해 답을 시작했다.
+            #    학습 컷오프(2026-05)가 상장 직전이라 기억에 없었고, **조인을 돌리기도 전에**
+            #    말했다. 모델 기억은 이 회사에 대해 틀린 게 아니라 아예 존재하지 않는다.
+            #    이건 회사 하나의 문제가 아니라 컷오프 이후 상장 전체에 걸린 계열이므로,
+            #    조인이 매번 스스로 신고하게 한다 ([[feedback_knowledge_cutoff_verify_first]]).
+            if ipo["filingDate"] >= _MODEL_CUTOFF:
+                out["🚨 학습 컷오프 이후 상장"] = (
+                    f"{ipo['filingDate']} 상장 = 모델 학습 컷오프({_MODEL_CUTOFF}) 이후. "
+                    "이 회사에 대한 모델 기억은 부정확한 게 아니라 **없다**. "
+                    "상장 여부·티커·사업 구성·지배구조를 기억으로 말하지 말고 "
+                    "전부 이 조인과 원문에서만 읽을 것.")
 
             def _fmt(d: date) -> str:
                 dd = (d - today).days
@@ -636,10 +652,115 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
                 fin["런웨이(단순)"] = f"약 {float(cash['val']) / q:.1f}분기 (분기 소진 기준)"
         elif cash and ocf:
             fin["런웨이"] = "미산출 — 현금·영업현금흐름 기간말 불일치 또는 소진 없음"
+
+        # 🚨 아래는 전부 "내가 손으로 계산하지 않게" 하려고 넣는다. 2026-08-15 SPCX 실측:
+        #    424B4 표지의 공모주식수 × 공모가로 "조달 $75B" 를 만들어 답했는데, 실제
+        #    `ProceedsFromIssuanceInitialPublicOffering` = $85,675M 였다(초과배정 전량 행사).
+        #    한 번의 호출 거리에 정답이 있었다. 자기 산술은 오답의 상시 경로다
+        #    ([[feedback_verify_by_load_bearing_not_surprise]] 규칙 3).
+        for label, tag in (
+            ("영업손익", "OperatingIncomeLoss"),
+            ("매출원가", "CostOfRevenue"),
+            ("연구개발비", "ResearchAndDevelopmentExpense"),
+            ("판매관리비", "SellingGeneralAndAdministrativeExpense"),
+        ):
+            r = _fresh(_latest(facts, "us-gaap", tag, "USD"), anchor)
+            if r and rev and r.get("start") == rev.get("start") and r.get("end") == rev.get("end"):
+                fin[label] = f"${r['val']:,.0f}"
+        # 구성요소 합 ↔ 보고 영업손익 대조 — 공짜 자가검증. 어긋나면 태그 누락 신호다.
+        op = _fresh(_latest(facts, "us-gaap", "OperatingIncomeLoss", "USD"), anchor)
+        if rev and op and all(k in fin for k in ("매출원가", "연구개발비", "판매관리비")):
+            parts = sum(float(_latest(facts, "us-gaap", t, "USD")["val"])
+                        for t in ("CostOfRevenue", "ResearchAndDevelopmentExpense",
+                                  "SellingGeneralAndAdministrativeExpense"))
+            resid = float(rev["val"]) - parts - float(op["val"])
+            fin["손익 정합"] = (
+                f"매출 − (원가+R&D+판관비) − 영업손익 = ${resid:,.0f}"
+                + (" ✓ 구성요소로 닫힘" if abs(resid) <= abs(float(rev["val"])) * 0.01
+                   else " 🚨 잔차 큼 — 미포착 비용 항목 있음. 손익 해석 시 주의"))
+
+        for label, tag in (
+            ("영업현금흐름", "NetCashProvidedByUsedInOperatingActivities"),
+            ("설비투자(capex)", "PaymentsToAcquirePropertyPlantAndEquipment"),
+            ("IPO 순수취", "ProceedsFromIssuanceInitialPublicOffering"),
+        ):
+            r = _fresh(_latest(facts, "us-gaap", tag, "USD"), anchor)
+            if r:
+                per = f" ({r['start']}~{r['end']})" if r.get("start") else f" (기준 {r['end']})"
+                fin[label] = f"${r['val']:,.0f}{per}"
+        # FCF 는 두 값이 **같은 기간** 일 때만. 기간이 어긋난 뺄셈은 그럴듯해서 더 위험하다.
+        _o = _fresh(_latest(facts, "us-gaap",
+                            "NetCashProvidedByUsedInOperatingActivities", "USD"), anchor)
+        _c = _fresh(_latest(facts, "us-gaap",
+                            "PaymentsToAcquirePropertyPlantAndEquipment", "USD"), anchor)
+        if _o and _c and _o.get("start") == _c.get("start") and _o.get("end") == _c.get("end"):
+            fin["FCF(영업현금흐름 − capex)"] = (
+                f"${float(_o['val']) - float(_c['val']):,.0f} ({_o['start']}~{_o['end']})")
+
         if fin:
             out["재무 요약 (XBRL)"] = fin
 
+        seg = _segment_block(cik, rows)
+        if seg:
+            out["부문별 (10-Q/10-K 본문)"] = seg
+
     return out or None
+
+
+# 부문 표 — "세그먼트 분해 불가" 라는 오답을 구조적으로 막는다.
+# 2026-08-15 SPCX 실측: 서브LLM 의 "세그먼트 분해 불가" 를 검증 없이 옮겼는데, 10-Q
+# Note 18 에 3부문(Space·Connectivity·AI) 매출·영업손익·capex 가 전부 있었다. 같은 답에서
+# 그 LLM 의 다른 오류 4건은 검증했다 — 선택적 검증이 무검증보다 위험하다는 사례다.
+# 여기서 **있으면 싣고, 없으면 "본문에 부문 주석 없음(확인함)" 이라고 명시**한다.
+# 둘 다 표기해야 "안 찾아본 것" 과 "찾아봤는데 없는 것" 이 구분된다.
+_SEG_HEAD_PAT = re.compile(
+    r"(?:reportable segments?|operating and reportable segments?|Segment Information|"
+    r"Note\s+\d+\s*[-–—]\s*Segments?)", re.I)
+_SEG_NAMES_PAT = re.compile(
+    r"(?:three|two|four|five)\s+operating and reportable segments?[^.]{0,200}", re.I)
+
+
+def _segment_block(cik: str, rows: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """최신 10-Q/10-K 본문에서 부문 주석을 찾아 원문 발췌로 싣는다.
+
+    XBRL 로 안 가는 이유 = 부문 데이터는 차원(axis/member)으로 태깅돼 companyconcept
+    단순 조회로는 안 잡히고, 회사마다 멤버 이름이 달라 일반화가 안 된다. 본문 발췌가
+    정확하고 싸다. 파싱해서 표로 만들지 않는 것도 의도적이다 — 우리가 재가공하면 그
+    가공이 새 오답 경로가 된다. **원문 그대로 보여주고 읽는 쪽이 판단한다.**
+    """
+    latest = next((r for r in sorted(rows, key=lambda r: r["filingDate"], reverse=True)
+                   if r["form"] in ("10-Q", "10-K", "10-K/A", "10-Q/A")), None)
+    if not latest:
+        return None
+    txt = _doc_text(cik, latest["accessionNumber"], latest["primaryDocument"])
+    if not txt:
+        return None
+    src = f"{latest['form']} {latest['filingDate']}"
+    out: Dict[str, Any] = {}
+
+    m = _SEG_NAMES_PAT.search(txt)
+    if m:
+        out["부문 구성"] = re.sub(r"\s+", " ", m.group(0)).strip()[:400]
+
+    # 부문 손익표 — 헤드 뒤 본문을 그대로 발췌. 숫자를 우리가 재계산하지 않는다.
+    for mm in _SEG_HEAD_PAT.finditer(txt):
+        seg_txt = txt[mm.start():mm.start() + 2600]
+        if not re.search(r"(?:income|loss)\s*\(?loss\)?\s*from operations|Revenue", seg_txt, re.I):
+            continue
+        out["부문 주석 발췌"] = re.sub(r"\s+", " ", seg_txt).strip()
+        out["_출처"] = f"{src} 본문 직접 확인"
+        break
+
+    # 매출 분해(제품·서비스·지역) — 부문 주석이 없어도 Note 3 에 있는 경우가 많다.
+    i = txt.lower().find("revenue disaggregated")
+    if i >= 0:
+        out["매출 분해 발췌"] = re.sub(r"\s+", " ", txt[i:i + 1400]).strip()
+        out.setdefault("_출처", f"{src} 본문 직접 확인")
+
+    if not out:
+        # 🚨 "안 찾아봄" 과 "찾아봤는데 없음" 의 구분. 이게 없으면 부재 주장을 못 한다.
+        return {"부문 주석": f"본문에 부문·매출분해 주석 없음 — {src} 전문 검색 확인(추정 아님)"}
+    return out
 
 
 # ── 공개 진입점 ───────────────────────────────────────────────────────────

@@ -244,6 +244,46 @@ def test_cover_shares_sums_multiple_classes(monkeypatch):
 def test_market_cap_ladder_needs_a_real_price():
     """가격이 없으면 시총을 만들지 않는다 — 지어낸 가격 금지 규율."""
     assert P.market_cap_ladder({"_basic": 100, "_diluted_max": 200}, 0) is None
+
+
+# ── 오답을 구조적으로 막는 블록 ────────────────────────────────────────────
+
+def test_post_cutoff_listing_raises_memory_alert(monkeypatch):
+    """🚨 학습 컷오프 이후 상장은 조인이 스스로 신고한다 — SPCX "비상장" 오답 차단.
+
+    스페이스X는 2026-06-12 상장인데 컷오프(2026-05)가 직전이라 모델 기억에 없다.
+    기억이 '부정확' 한 게 아니라 '부재' 라서, 확신을 갖고 틀린 말을 하게 된다.
+    """
+    monkeypatch.setattr(P, "_doc_text", lambda *a, **k: None)
+    recent = (date.today() - timedelta(days=60)).isoformat()
+    al = P._alerts_block("0000000001", [_row(recent, "424B4")], None) or {}
+    assert "🚨 학습 컷오프 이후 상장" in al
+    assert "없다" in al["🚨 학습 컷오프 이후 상장"]
+
+    # 컷오프 이전 상장은 경보를 내지 않는다 (잡음 방지).
+    old = "2024-03-01"
+    al2 = P._alerts_block("0000000001", [_row(old, "424B4")], None) or {}
+    assert "🚨 학습 컷오프 이후 상장" not in al2
+
+
+def test_absent_segment_note_says_it_searched(monkeypatch):
+    """🚨 "부문 없음" 과 "안 찾아봄" 을 구분한다 — 부재 주장의 근거를 데이터가 들고 있게.
+
+    2026-08-15 사고: 서브LLM 의 "세그먼트 분해 불가" 를 검증 없이 옮겼는데 10-Q Note 18
+    에 3부문이 전부 있었다. 조인이 "찾아봤고 없다" 를 말할 수 있어야 부재를 단정한다.
+    """
+    monkeypatch.setattr(P, "_doc_text", lambda *a, **k: "본문에 부문 얘기가 전혀 없다")
+    got = P._segment_block("0000000001", [_row("2026-08-04", "10-Q")])
+    assert "전문 검색 확인" in got["부문 주석"] and "추정 아님" in got["부문 주석"]
+
+    # 있으면 원문 발췌를 그대로 싣는다 (우리가 재가공하지 않는다).
+    body = ("Note 18 - Segments The Company manages three operating and reportable segments: "
+            "(i) Space, (ii) Connectivity, and (iii) AI. Revenue $ 962 $ 4,291 $ 2,561 "
+            "income (loss) from operations ( 542 ) 1,656 ( 1,257 )")
+    monkeypatch.setattr(P, "_doc_text", lambda *a, **k: body)
+    got2 = P._segment_block("0000000001", [_row("2026-08-04", "10-Q")])
+    assert "Connectivity" in got2["부문 주석 발췌"]
+    assert got2["_출처"] == "10-Q 2026-08-04 본문 직접 확인"
     assert P.market_cap_ladder(None, 10.0) is None
 
 

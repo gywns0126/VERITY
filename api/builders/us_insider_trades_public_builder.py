@@ -100,19 +100,45 @@ def _rec_us_set() -> set:
 _ROTATION_CYCLE_DAYS = 7  # 확장 유니버스(소형주 포함 ~5,313) 전 커버 목표 사이클
 
 
+def _suspect_tickers(limit: int = 400) -> List[str]:
+    """이전 snapshot 에서 **파서 오답이 남아 있을 법한 엔트리**를 앞으로 당긴다.
+
+    🚨 2026-08-15. 전환(C)·부여(A)를 매매로 합산하던 결함을 고쳤지만, 이 빌더는 회전
+    수집이라 오늘 슬롯에 안 걸린 종목은 **옛 오답이 carry-forward 로 살아남는다**
+    (전체 1주기 ≈ 7일). 하필 오염 엔트리는 |net_change| 가 비정상적으로 커서
+    `-abs(net_change)` 정렬의 **최상단** 을 차지하고, 그게 공개 알파네스트
+    "내부자 순매수" 탭에 그대로 실린다. 즉 가장 눈에 띄는 자리가 가장 오래 틀린 채 남는다.
+
+    그래서 |net_change| 상위를 강제로 우선 재수집한다. 정상 엔트리는 재수집해도 값이
+    같으니 손해가 없고, 오염 엔트리는 즉시 정정된다. 파서를 고친 뒤 한 번만 필요한
+    조치가 아니라 **상시 가드**다 — 앞으로 어떤 집계 오류가 생겨도 큰 값부터 씻긴다.
+    """
+    try:
+        with open(OUTPUT_PATH, encoding="utf-8") as f:
+            stocks = json.load(f).get("stocks") or []
+    except (OSError, ValueError):
+        return []
+    ranked = sorted(stocks, key=lambda s: -abs(int(s.get("net_change") or 0)))
+    return [str(s.get("ticker")) for s in ranked[:limit] if s.get("ticker")]
+
+
 def _ordered_universe() -> List[str]:
     """rec 우선풀 먼저 + 나머지를 페이지 단위 회전(~7일 1사이클, 전 종목 순차 커버).
     day-of-year 를 페이지 단위로 회전 — 소형주 확장(5,313)으로 하루 1칸 회전은 꼬리 종목이 수천일
-    대기 → 페이지(≈len/7)씩 전진해 대형·소형 모두 주 단위 커버 (2026-07-09)."""
+    대기 → 페이지(≈len/7)씩 전진해 대형·소형 모두 주 단위 커버 (2026-07-09).
+    맨 앞에는 |net_change| 상위(오답 잔존 가능 구간)를 둔다 — `_suspect_tickers` 참조."""
     uni = _universe()
     rec = _rec_us_set()
-    priority = [t for t in uni if t in rec]
-    rest = [t for t in uni if t not in rec]
+    uni_set = set(uni)
+    suspect = [t for t in _suspect_tickers() if t in uni_set]
+    sus_set = set(suspect)
+    priority = [t for t in uni if t in rec and t not in sus_set]
+    rest = [t for t in uni if t not in rec and t not in sus_set]
     if rest:
         page = max(1, len(rest) // _ROTATION_CYCLE_DAYS)
         start = (_now_kst().timetuple().tm_yday % _ROTATION_CYCLE_DAYS) * page
         rest = rest[start:] + rest[:start]
-    return priority + rest
+    return suspect + priority + rest
 
 
 def _load_prev() -> Dict[str, Dict[str, Any]]:
