@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-15T12:25:12.369118+09:00",
+  "generated_at": "2026-08-15T13:05:58.472461+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 272542,
-    "python_modules": 824,
+    "code_lines_tsx_py": 273352,
+    "python_modules": 827,
     "tsx_components": 133,
     "json_data_files": 1735,
     "json_total_tracked": 1754,
-    "workflows": 77,
-    "scheduled_workflows": 61,
-    "cron_triggers": 72,
-    "git_tracked_files": 7475
+    "workflows": 78,
+    "scheduled_workflows": 62,
+    "cron_triggers": 73,
+    "git_tracked_files": 7479
   },
   "subsystems": {
     "ingest": {
@@ -168,8 +168,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 77,
-      "scheduled": 61,
+      "count": 78,
+      "scheduled": 62,
       "workflows": [
         {
           "name": "analyst_reports",
@@ -187,6 +187,13 @@
           "name": "atr_phase_0_verdict",
           "crons": [],
           "scheduled": false
+        },
+        {
+          "name": "attribution_freshness_audit",
+          "crons": [
+            "20 0 1 * *"
+          ],
+          "scheduled": true
         },
         {
           "name": "blob_seal",
@@ -725,8 +732,8 @@
   },
   "python_by_dir": {
     "api": 440,
-    "tests": 223,
-    "scripts": 90,
+    "tests": 224,
+    "scripts": 92,
     "vercel-api": 59,
     "server": 7,
     ".github": 5
