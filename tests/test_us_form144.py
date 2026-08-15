@@ -32,3 +32,29 @@ def test_filer_typo_does_not_become_our_number():
     high = [{"units": 1, "value_usd": 700_000.0} for _ in range(4)]
     m._flag_implied_price_outliers(high)
     assert not any(n.get("value_suspect") for n in high)
+
+
+def test_issuer_cik_extracted_for_attribution():
+    """🚨 Form 144 도 발행사를 뽑아 귀속 대조한다 — Form 4 VWAV→SVRE 계열 예방.
+
+    판매자 CIK 색인은 아직 관측되지 않았지만 `issuerCik` 이 원문에 그대로 있어
+    대조 비용이 0 이다. 한 번 물린 계열은 공짜면 막아 둔다.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "f144", "api/builders/us_form144_public_builder.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+
+    xml = """<?xml version="1.0"?>
+<edgarSubmission>
+  <issuerInfo><issuerCik>0001824920</issuerCik><issuerName>IONQ INC</issuerName></issuerInfo>
+  <securitiesInformation>
+    <noOfUnitsSold>6222</noOfUnitsSold>
+    <aggregateMarketValue>340281.18</aggregateMarketValue>
+  </securitiesInformation>
+  <nameOfPersonForWhoseAccountTheSecuritiesAreToBeSold>JOHN W RAYMOND</nameOfPersonForWhoseAccountTheSecuritiesAreToBeSold>
+</edgarSubmission>"""
+    p = m._parse_144(xml)
+    assert p["_issuer_cik"] == "1824920"      # 선행 0 제거 — int(cik) 비교와 맞춘다
+    assert p["units"] == 6222

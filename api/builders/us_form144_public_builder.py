@@ -69,6 +69,12 @@ def _parse_144(xml_text: str) -> Optional[Dict[str, Any]]:
         root = ET.fromstring(_strip_ns(xml_text))
     except ET.ParseError:
         return None
+    # 🚨 발행사 CIK 를 같이 돌려준다 — 호출자가 우리 종목인지 대조한다(2026-08-15 감사).
+    #   Form 4 에서 같은 계열이 터졌다: EDGAR 가 양쪽 CIK 에 색인하는 서식을 발행사 확인
+    #   없이 수집해, VisionWave 가 SaverOne 지분을 산 거래가 VWAV 내부자 매수로 실렸다.
+    #   Form 144 에서 판매자 CIK 색인은 아직 관측되지 않았지만, `issuerCik` 이 원문에
+    #   그대로 들어 있어 대조 비용이 0 이다. 한 번 물린 계열은 공짜면 막아 둔다.
+    issuer_cik = _txt(root.find(".//issuerInfo/issuerCik")) or _txt(root.find(".//issuerCik"))
     person = _txt(root.find(".//nameOfPersonForWhoseAccountTheSecuritiesAreToBeSold"))
     units = _float(_txt(root.find(".//securitiesInformation/noOfUnitsSold")))
     value = _float(_txt(root.find(".//securitiesInformation/aggregateMarketValue")))
@@ -77,6 +83,7 @@ def _parse_144(xml_text: str) -> Optional[Dict[str, Any]]:
     rels = [_txt(e) for e in root.findall(".//relationshipToIssuer") if _txt(e)]
     broker = _txt(root.find(".//brokerOrMarketmakerDetails/name"))
     return {
+        "_issuer_cik": issuer_cik.lstrip("0") if issuer_cik else "",
         "person": person,
         "relationship": ", ".join(dict.fromkeys(rels)) or None,
         "units": int(units) if units > 0 else None,
@@ -190,6 +197,10 @@ def build() -> int:
                 continue
             if not parsed:
                 continue
+            # 발행사 대조 — 우리 종목이 아니라 우리 종목이 **남의 주식을 파는** 신고면 버린다.
+            if parsed.get("_issuer_cik") and parsed["_issuer_cik"] != str(int(cik)):
+                continue
+            parsed.pop("_issuer_cik", None)
             parsed["filing_date"] = dates[i]
             parsed["source_url"] = SEC_INDEX.format(
                 cik=int(cik), accn_nodash=accn_nodash, accn=accns[i])
