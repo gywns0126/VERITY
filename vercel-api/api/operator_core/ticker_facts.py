@@ -365,10 +365,10 @@ def _us_quote(tk: str) -> Optional[Dict[str, Any]]:
         out["전일종가"] = round(float(prev), 4)
         out["등락률"] = f"{(float(px) / float(prev) - 1) * 100:+.2f}%"
     last_dt = datetime.fromtimestamp(int(meta.get("regularMarketTime") or closes[-1][0]), _KST)
-    age_d = (_now() - last_dt).days
+    out["기준"] = _us_session_label(meta, last_dt)
     out.update({
         "통화": meta.get("currency"), "거래소": meta.get("exchangeName"),
-        "52주고": meta.get("fiftyTwoWeekHigh"), "52주저": meta.get("fiftyTwoWeekLow"),
+        "52주고(장중)": meta.get("fiftyTwoWeekHigh"), "52주저(장중)": meta.get("fiftyTwoWeekLow"),
         "거래량": meta.get("regularMarketVolume"),
         "최근 5봉 [일,종가,거래량]": [
             [datetime.fromtimestamp(int(t), _KST).strftime("%Y%m%d"), round(float(c), 4),
@@ -376,12 +376,39 @@ def _us_quote(tk: str) -> Optional[Dict[str, Any]]:
             for t, c in closes[-5:]
         ],
         "_as_of": last_dt.isoformat(timespec="seconds"),
-        # 🚨 KIS 실시간(KR)과 성격이 다르다. 장 마감·주말이면 마지막 체결일 값이다.
-        "_note": ("야후 파이낸스 · 최종 체결일 기준"
-                  + (f" (오늘 기준 {age_d}일 전 — 장중 값 아님)" if age_d >= 1 else " (당일)")
-                  + " · 실시간 아님. 오퍼레이터 본인 이용, 재배포 금지"),
+        "_note": "야후 파이낸스 · 오퍼레이터 본인 이용, 재배포 금지",
     })
     return {k: v for k, v in out.items() if v is not None}
+
+
+def _us_session_label(meta: Dict[str, Any], last_dt: datetime) -> str:
+    """미국장 개폐 상태 + 그 값이 '장중가' 인지 '종가' 인지를 못 박아 돌려준다.
+
+    🚨 2026-08-15 사고 고정. KST 09:24 에 SPCX 를 조회해 "미국 실시간 시세" 섹션의
+    $140.00 을 현재가로 답했다. 실제는 8/14 종가다(`regularMarketTime` = 8/14 20:00 UTC
+    = 16:00 ET). 미국장은 KST 22:30~05:00 이라 **한국 낮 시간 조회는 항상 마감 후**인데,
+    섹션 제목이 "실시간" 이라 라벨만 보고 넘어갔다. 기존 `age_d` 판정도 KST 일자 차이로
+    계산돼 05:00 종가를 "(당일)" 로 표시했다 — 틀린 위안이었다.
+
+    판정은 시계 계산이 아니라 **야후가 주는 `currentTradingPeriod`** 로 한다.
+    EDT/EST 전환을 우리가 흉내 낼 이유가 없고, 소스가 이미 정답을 준다.
+    [[feedback_verify_by_load_bearing_not_surprise]] 규칙 2의 코드 강제분.
+    """
+    ctp = (meta.get("currentTradingPeriod") or {}).get("regular") or {}
+    start, end = ctp.get("start"), ctp.get("end")
+    off = ctp.get("gmtoffset")
+    sess = ""
+    if end is not None and off is not None:
+        # 거래소 현지(ET) 기준 세션 일자 — KST 일자로 말하면 하루 어긋난다.
+        sess = datetime.utcfromtimestamp(int(end) + int(off)).strftime("%Y-%m-%d")
+    now_ep = int(_now().timestamp())
+    if start is not None and end is not None:
+        if int(start) <= now_ep <= int(end):
+            return f"미국장 개장 중 · 장중 체결가 ({sess} ET 세션)"
+        if now_ep < int(start):
+            return f"미국장 개장 전 · 직전 거래일 종가 (다음 세션 {sess} ET)"
+        return f"🚨 미국장 마감 · **{sess} (ET) 종가** — 현재가 아님"
+    return f"미국장 개폐 판정 불가 · 최종 체결 {last_dt.strftime('%Y-%m-%d %H:%M KST')}"
 
 
 # ── private bucket ───────────────────────────────────────────────────────────
@@ -648,12 +675,21 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
     #   🚨 둘을 섞지 말 것 — ①이 있으면 그게 '지금', ②는 '마지막 마감' 이다(SKILL.md 규율 2 정합).
     if _is_us_q:
         urt = _us_realtime(tk) if include_private else None
+        uq = _us_quote(tk)
+        # 🚨 KIS 섹션 라벨이 "실시간" 이라 한국 낮 시간 조회에서 종가를 현재가로 읽는 사고가
+        #    났다(2026-08-15 SPCX). 미국장은 KST 22:30~05:00 이라 한국 업무시간 조회는
+        #    **항상 마감 후**다. 야후가 판정한 세션 상태를 KIS 섹션 라벨에도 그대로 얹어
+        #    라벨만 보고도 틀릴 수 없게 한다.
+        sess = (uq or {}).get("기준") or ""
+        closed = "마감" in sess or "개장 전" in sess
         if urt:
+            urt["기준"] = sess or "미국장 개폐 판정 불가 (야후 미응답)"
             out["sections"].append({
-                "label": "미국 실시간 시세 (KIS · 본인 이용)", "source": "railway:us_quotes",
+                "label": ("미국 시세 (KIS · 본인 이용) — 🚨 장 마감, 직전 거래일 종가"
+                          if closed else "미국 실시간 시세 (KIS · 본인 이용) — 장중"),
+                "source": "railway:us_quotes",
                 "as_of": str(urt.pop("_asof", "") or ""), "data": urt,
             })
-        uq = _us_quote(tk)
         if uq:
             out["sections"].append({
                 "label": "미국 시세·일봉 (야후 실호출)", "source": "yahoo:chart",
