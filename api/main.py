@@ -4235,6 +4235,30 @@ def main():
     # 순서 결함 fix — brain 직전 attach 로 perplexity_risk_score 정상 작동.
     # docs/BRAIN_SCORE_AUDIT_20260518.md §9 B audit 참조.
 
+    # 🚨 체크포인트 저장 (2026-08-15) — LLM 단계 진입 직전.
+    #
+    #   왜 여기인가: `full` 모드는 여기까지 `save_portfolio()` 가 **한 번도** 불리지 않았다.
+    #   main() 안의 호출 지점 3곳이 전부 비켜 있다 — 1726 은 `if should_abort:` 조기중단 경로,
+    #   2590 은 `if mode in ("realtime","realtime_us")` 전용, 4915 는 이 STEP 6 보다 뒤다.
+    #   그래서 워치독이 Gemini 도중 SIGTERM 을 보내면 `_latest_portfolio_ref` 가 None 이라
+    #   핸들러의 "partial portfolio 저장" 이 **항상 스킵**됐다(8/14·8/15 실패 run 2건 로그 실측:
+    #   `_latest_portfolio_ref None — save 스킵 (early SIGTERM)`).
+    #   결과 = 예산을 다 태우고 죽으면 유니버스 스캔(약 33분) + 병합(약 51분) + 채점까지
+    #   **그때까지의 분석분이 통째로 사라졌다.** 꼬리만 잃는 게 아니었다.
+    #
+    #   여기서 한 번 저장하면 둘이 동시에 해결된다.
+    #     ① 디스크에 채점 완료분이 남는다 — LLM 단계가 잘려도 앞의 결과는 보존
+    #     ② `_latest_portfolio_ref` 가 세팅돼 SIGTERM 핸들러의 partial 저장이 실제로 작동
+    #   되돌리지 말 것 — 이 저장을 빼면 위 두 안전장치가 같이 죽는다.
+    #
+    #   비용은 저장 1회(원자적 write)뿐이고 외부 호출·LLM 0 이다.
+    try:
+        save_portfolio(portfolio)
+        print("  [checkpoint] LLM 단계 진입 전 저장 — 여기서 잘려도 채점분은 보존")
+    except Exception as _cp_err:
+        import sys as _cp_sys
+        _cp_sys.stderr.write(f"[checkpoint] 저장 실패(무시하고 계속): {_cp_err}\n")
+
     # ── STEP 6: full 전용 — Gemini AI (V6: 후보 상한 적용) ──
     if effective_mode == "full":
         from api.config import GEMINI_BATCH_MAX_STOCKS
