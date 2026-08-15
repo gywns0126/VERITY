@@ -1,7 +1,7 @@
 {
  "_meta": {
   "artifact": "ic_overlap_audit",
-  "generated_at": "2026-08-15T13:57:07+09:00",
+  "generated_at": "2026-08-15T22:21:29+09:00",
   "score_system": {
    "name": "factor_ic",
    "is_operational": false,
@@ -15,7 +15,7 @@
   ],
   "unfreeze_trigger_ref": "api/quant/alpha/factor_decay.py:293 — 재개 trigger '유효-N 마일스톤 (non-overlapping 또는 Newey-West 보정) 도달'",
   "min_blocks_for_estimate": 3,
-  "t_critical": 1.96
+  "criteria": "임계 = Student-t 양측 5% df=k-1 (1.96 아님) · k<10 = exploratory · confirmatory = k>=10 + 임계 통과. 외부 검증 = Perplexity 2026-08-15 (learning_materials/perplexity_ic_validation_answers_2026_08_15.md Q1)"
  },
  "snapshot_days": 115,
  "snapshot_range": [
@@ -24,7 +24,8 @@
  ],
  "summary": {
   "cells_total": 60,
-  "cells_significant_nonoverlap": 2,
+  "cells_confirmatory": 0,
+  "cells_exploratory_pass": 0,
   "cells_unestimable": 30,
   "unfreeze_trigger_met": false
  },
@@ -36,8 +37,16 @@
     "k_independent": 6,
     "t_current": -0.01,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": -0.01,
+    "t_nw_lag_2h": -0.01,
     "t_nonoverlap": 0.16,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 0.57,
+    "t_offset_worst": 0.16,
+    "t_offset_best": -1.06,
     "t_inflation": 0.1,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -46,8 +55,16 @@
     "k_independent": 3,
     "t_current": -0.8,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": -0.56,
+    "t_nw_lag_2h": -0.7,
     "t_nonoverlap": -0.54,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.36,
+    "t_offset_worst": 0.11,
+    "t_offset_best": 2.62,
     "t_inflation": 1.5,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -56,7 +73,10 @@
     "k_independent": 1,
     "t_current": -3.81,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": -2.18,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -65,7 +85,10 @@
     "k_independent": 0,
     "t_current": 0.02,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -76,8 +99,16 @@
     "k_independent": 6,
     "t_current": 2.98,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": 1.92,
+    "t_nw_lag_2h": 1.58,
     "t_nonoverlap": 1.36,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 0.86,
+    "t_offset_worst": -0.29,
+    "t_offset_best": 2.3,
     "t_inflation": 2.2,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -86,8 +117,16 @@
     "k_independent": 3,
     "t_current": 5.63,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": 2.13,
+    "t_nw_lag_2h": 2.16,
     "t_nonoverlap": 1.43,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 1.0,
+    "t_offset_worst": 0.38,
+    "t_offset_best": 3.14,
     "t_inflation": 3.9,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -96,7 +135,10 @@
     "k_independent": 1,
     "t_current": 5.84,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": 2.03,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -105,7 +147,10 @@
     "k_independent": 0,
     "t_current": 1.58,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -116,8 +161,16 @@
     "k_independent": 6,
     "t_current": 3.43,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": 2.74,
+    "t_nw_lag_2h": 2.91,
     "t_nonoverlap": 1.45,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 1.0,
+    "t_offset_worst": 0.0,
+    "t_offset_best": 2.01,
     "t_inflation": 2.4,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -126,8 +179,16 @@
     "k_independent": 3,
     "t_current": 4.14,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": 2.6,
+    "t_nw_lag_2h": 2.37,
     "t_nonoverlap": 1.17,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.86,
+    "t_offset_worst": 0.32,
+    "t_offset_best": 77.57,
     "t_inflation": 3.5,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -136,7 +197,10 @@
     "k_independent": 1,
     "t_current": 5.86,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": 3.18,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -145,7 +209,10 @@
     "k_independent": 0,
     "t_current": 2.47,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -156,8 +223,16 @@
     "k_independent": 6,
     "t_current": 2.31,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": 1.96,
+    "t_nw_lag_2h": 2.4,
     "t_nonoverlap": 0.98,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 0.86,
+    "t_offset_worst": 0.12,
+    "t_offset_best": 2.78,
     "t_inflation": 2.4,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -166,8 +241,16 @@
     "k_independent": 3,
     "t_current": 4.88,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": 2.87,
+    "t_nw_lag_2h": 3.91,
     "t_nonoverlap": 1.21,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.93,
+    "t_offset_worst": -0.01,
+    "t_offset_best": 3.81,
     "t_inflation": 4.0,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -176,7 +259,10 @@
     "k_independent": 1,
     "t_current": 4.93,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": 2.54,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -185,7 +271,10 @@
     "k_independent": 0,
     "t_current": -3.56,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -196,9 +285,17 @@
     "k_independent": 6,
     "t_current": 4.9,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": 2.97,
+    "t_nw_lag_2h": 2.99,
     "t_nonoverlap": 2.13,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 1.0,
+    "t_offset_worst": 0.88,
+    "t_offset_best": 2.55,
     "t_inflation": 2.3,
-    "verdict": "유의"
+    "evidence_class": "exploratory",
+    "verdict": "비유의"
    },
    "fwd14": {
     "ic_mean": 0.18994,
@@ -206,8 +303,16 @@
     "k_independent": 3,
     "t_current": 7.64,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": 3.71,
+    "t_nw_lag_2h": 3.86,
     "t_nonoverlap": 1.94,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 1.0,
+    "t_offset_worst": 0.99,
+    "t_offset_best": 6.3,
     "t_inflation": 3.9,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -216,7 +321,10 @@
     "k_independent": 1,
     "t_current": 15.48,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": 10.79,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -225,7 +333,10 @@
     "k_independent": 0,
     "t_current": 0.42,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -236,8 +347,16 @@
     "k_independent": 6,
     "t_current": -4.71,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": -2.79,
+    "t_nw_lag_2h": -2.83,
     "t_nonoverlap": -1.83,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 0.0,
+    "t_offset_worst": -0.68,
+    "t_offset_best": -3.37,
     "t_inflation": 2.6,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -246,8 +365,16 @@
     "k_independent": 3,
     "t_current": -5.54,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": -2.31,
+    "t_nw_lag_2h": -2.78,
     "t_nonoverlap": -1.45,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.0,
+    "t_offset_worst": -0.23,
+    "t_offset_best": -3.9,
     "t_inflation": 3.8,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -256,7 +383,10 @@
     "k_independent": 1,
     "t_current": -10.77,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": -6.11,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -265,7 +395,10 @@
     "k_independent": 0,
     "t_current": -0.33,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -276,8 +409,16 @@
     "k_independent": 6,
     "t_current": 0.33,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": 0.27,
+    "t_nw_lag_2h": 0.3,
     "t_nonoverlap": 0.11,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 0.57,
+    "t_offset_worst": -0.0,
+    "t_offset_best": 1.74,
     "t_inflation": 2.9,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -286,8 +427,16 @@
     "k_independent": 3,
     "t_current": 2.25,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": 1.81,
+    "t_nw_lag_2h": 2.52,
     "t_nonoverlap": 0.6,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.71,
+    "t_offset_worst": -0.19,
+    "t_offset_best": 1.96,
     "t_inflation": 3.7,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -296,7 +445,10 @@
     "k_independent": 1,
     "t_current": -1.79,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": -1.54,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -305,7 +457,10 @@
     "k_independent": 0,
     "t_current": -5.33,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -316,8 +471,16 @@
     "k_independent": 6,
     "t_current": -0.06,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": -0.05,
+    "t_nw_lag_2h": -0.05,
     "t_nonoverlap": -0.02,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 0.43,
+    "t_offset_worst": 0.02,
+    "t_offset_best": 1.39,
     "t_inflation": 2.4,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -326,8 +489,16 @@
     "k_independent": 3,
     "t_current": 1.74,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": 0.94,
+    "t_nw_lag_2h": 1.19,
     "t_nonoverlap": 0.47,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.79,
+    "t_offset_worst": -0.11,
+    "t_offset_best": 1.79,
     "t_inflation": 3.7,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -336,7 +507,10 @@
     "k_independent": 1,
     "t_current": -1.65,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": -2.87,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -345,7 +519,10 @@
     "k_independent": 0,
     "t_current": -2.31,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -356,8 +533,16 @@
     "k_independent": 6,
     "t_current": 1.98,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": 1.42,
+    "t_nw_lag_2h": 1.39,
     "t_nonoverlap": 0.85,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 0.86,
+    "t_offset_worst": -0.3,
+    "t_offset_best": 1.74,
     "t_inflation": 2.3,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -366,8 +551,16 @@
     "k_independent": 3,
     "t_current": 2.61,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": 1.34,
+    "t_nw_lag_2h": 1.54,
     "t_nonoverlap": 0.97,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.86,
+    "t_offset_worst": 0.22,
+    "t_offset_best": 3.01,
     "t_inflation": 2.7,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -376,7 +569,10 @@
     "k_independent": 1,
     "t_current": 6.07,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": 4.51,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -385,7 +581,10 @@
     "k_independent": 0,
     "t_current": -3.31,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -396,8 +595,16 @@
     "k_independent": 6,
     "t_current": -0.88,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": -0.65,
+    "t_nw_lag_2h": -0.57,
     "t_nonoverlap": -0.18,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 0.29,
+    "t_offset_worst": -0.01,
+    "t_offset_best": -1.82,
     "t_inflation": 5.0,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -406,8 +613,16 @@
     "k_independent": 3,
     "t_current": -0.43,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": -0.19,
+    "t_nw_lag_2h": -0.2,
     "t_nonoverlap": -0.29,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.36,
+    "t_offset_worst": 0.06,
+    "t_offset_best": 2.94,
     "t_inflation": 1.5,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -416,7 +631,10 @@
     "k_independent": 1,
     "t_current": -0.13,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": -0.04,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -425,7 +643,10 @@
     "k_independent": 0,
     "t_current": 2.03,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -436,8 +657,16 @@
     "k_independent": 6,
     "t_current": 3.92,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": 2.57,
+    "t_nw_lag_2h": 3.26,
     "t_nonoverlap": 1.72,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 1.0,
+    "t_offset_worst": 0.38,
+    "t_offset_best": 3.08,
     "t_inflation": 2.3,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -446,8 +675,16 @@
     "k_independent": 3,
     "t_current": 6.07,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": 2.75,
+    "t_nw_lag_2h": 3.16,
     "t_nonoverlap": 1.45,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 1.0,
+    "t_offset_worst": 0.12,
+    "t_offset_best": 12.13,
     "t_inflation": 4.2,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -456,7 +693,10 @@
     "k_independent": 1,
     "t_current": 6.02,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": 2.29,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -465,7 +705,10 @@
     "k_independent": 0,
     "t_current": -6.2,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -476,8 +719,16 @@
     "k_independent": 6,
     "t_current": 1.11,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": 0.81,
+    "t_nw_lag_2h": 0.9,
     "t_nonoverlap": 0.58,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 0.71,
+    "t_offset_worst": 0.22,
+    "t_offset_best": 2.18,
     "t_inflation": 1.9,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -486,8 +737,16 @@
     "k_independent": 3,
     "t_current": 0.71,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": 0.34,
+    "t_nw_lag_2h": 0.47,
     "t_nonoverlap": 0.18,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.64,
+    "t_offset_worst": 0.06,
+    "t_offset_best": 3.59,
     "t_inflation": 4.0,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -496,7 +755,10 @@
     "k_independent": 1,
     "t_current": 1.91,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": 0.87,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -505,7 +767,10 @@
     "k_independent": 0,
     "t_current": 3.51,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -516,8 +781,16 @@
     "k_independent": 6,
     "t_current": -0.3,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": -0.19,
+    "t_nw_lag_2h": -0.2,
     "t_nonoverlap": -0.16,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 0.43,
+    "t_offset_worst": 0.03,
+    "t_offset_best": 1.13,
     "t_inflation": 1.9,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -526,8 +799,16 @@
     "k_independent": 3,
     "t_current": -0.5,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": -0.4,
+    "t_nw_lag_2h": -0.56,
     "t_nonoverlap": -0.12,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.36,
+    "t_offset_worst": -0.09,
+    "t_offset_best": -1.53,
     "t_inflation": 4.1,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -536,7 +817,10 @@
     "k_independent": 1,
     "t_current": -1.51,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": -1.41,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -545,7 +829,10 @@
     "k_independent": 0,
     "t_current": -3.05,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -556,9 +843,17 @@
     "k_independent": 6,
     "t_current": 4.94,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": 3.95,
+    "t_nw_lag_2h": 3.88,
     "t_nonoverlap": 1.98,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 1.0,
+    "t_offset_worst": 0.47,
+    "t_offset_best": 3.16,
     "t_inflation": 2.5,
-    "verdict": "유의"
+    "evidence_class": "exploratory",
+    "verdict": "비유의"
    },
    "fwd14": {
     "ic_mean": 0.10422,
@@ -566,8 +861,16 @@
     "k_independent": 3,
     "t_current": 4.13,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": 2.55,
+    "t_nw_lag_2h": 2.71,
     "t_nonoverlap": 1.87,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.93,
+    "t_offset_worst": 0.04,
+    "t_offset_best": 5.16,
     "t_inflation": 2.2,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -576,7 +879,10 @@
     "k_independent": 1,
     "t_current": 6.85,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": 6.77,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -585,7 +891,10 @@
     "k_independent": 0,
     "t_current": -7.8,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   },
@@ -596,8 +905,16 @@
     "k_independent": 6,
     "t_current": -0.46,
     "overlap_pct": 85.7,
+    "t_nw_lag_h1": -0.4,
+    "t_nw_lag_2h": -0.48,
     "t_nonoverlap": -0.33,
+    "t_crit_df": 2.571,
+    "offset_count": 7,
+    "positive_offset_ratio": 0.43,
+    "t_offset_worst": 0.32,
+    "t_offset_best": -0.96,
     "t_inflation": 1.4,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd14": {
@@ -606,8 +923,16 @@
     "k_independent": 3,
     "t_current": -0.89,
     "overlap_pct": 92.9,
+    "t_nw_lag_h1": -0.49,
+    "t_nw_lag_2h": -0.53,
     "t_nonoverlap": -0.43,
+    "t_crit_df": 4.303,
+    "offset_count": 14,
+    "positive_offset_ratio": 0.29,
+    "t_offset_worst": -0.05,
+    "t_offset_best": -4.33,
     "t_inflation": 2.1,
+    "evidence_class": "exploratory",
     "verdict": "비유의"
    },
    "fwd30": {
@@ -616,7 +941,10 @@
     "k_independent": 1,
     "t_current": -3.91,
     "overlap_pct": 96.7,
+    "t_nw_lag_h1": -1.68,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 1개 < 3 — 표준오차를 추정할 표본이 없다"
    },
    "fwd63": {
@@ -625,7 +953,10 @@
     "k_independent": 0,
     "t_current": 2.59,
     "overlap_pct": 98.4,
+    "t_nw_lag_h1": null,
+    "t_nw_lag_2h": null,
     "verdict": "추정불가",
+    "evidence_class": "unestimable",
     "why": "독립 관측 0개 < 3 — 표준오차를 추정할 표본이 없다"
    }
   }

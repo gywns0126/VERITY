@@ -62,19 +62,44 @@ _SELECTION_KEY_FACTORS = {
 }
 
 
+# Student-t 양측 5% 임계 (df → t_crit). 소표본은 1.96 이 아니라 이걸 써야 한다 —
+# Perplexity 외부 검증 (2026-08-15, learning_materials/perplexity_ic_validation_answers_2026_08_15.md
+# Q1): "Student-t 임계값을 쓰더라도 자유도는 사실상 k-1". df>30 은 1.96 근사.
+_T_CRIT_5PCT = {1: 12.71, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365,
+                8: 2.306, 9: 2.262, 10: 2.228, 11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145,
+                15: 2.131, 16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093, 20: 2.086,
+                25: 2.060, 30: 2.042}
+
+
+def _t_crit(df: int) -> float:
+    if df <= 0:
+        return float("inf")
+    if df in _T_CRIT_5PCT:
+        return _T_CRIT_5PCT[df]
+    if df > 30:
+        return 1.96
+    # 21~24, 26~29 — 인접 값 보간 없이 보수 쪽(작은 df) 채택
+    for d in sorted(_T_CRIT_5PCT, reverse=True):
+        if d <= df:
+            return _T_CRIT_5PCT[d]
+    return float("inf")
+
+
 def _nonoverlap_t(ic_series: List[float], forward_days: int) -> Dict[str, Any]:
-    """겹침 보정 t — 독립 관측만으로 다시 잰다. 🚨 판정 임계는 건드리지 않는다.
+    """겹침 보정 t — 독립 관측만으로 다시 잰다. 🚨 판정 임계(is_significant)는 건드리지 않는다.
 
     왜: `compute_factor_ic` 은 일별 스냅샷마다 forward 창을 연다. 스냅샷 간격이 중앙 1일이라
     인접 관측은 (forward_days-1)/forward_days 만큼 **같은 미래 구간을 공유**한다. 그런데
     ICIR×√n 의 n 은 관측 '일수'라 독립 표본이 아니다 → t 가 부풀려진다.
 
-    독립 관측 k = n // forward_days. 시작 오프셋별 비겹침 부분표본의 t 중앙값을 낸다.
-    k < 3 이면 표준오차를 추정할 표본 자체가 없다 → estimable=False.
+    방법 (Perplexity 외부 검증 2026-08-15 Q1 채택):
+      - 시작 오프셋 0..forward_days-1 **전부**의 비겹침 부분표본 t 를 내고 중앙값 채택
+        (오프셋 하나 선택 = 데이터 스누핑). positive_offset_ratio·worst·best 병기.
+      - 임계 = Student-t 양측 5%, **df = k-1** (k = n // forward_days). 1.96 아님.
+      - k < 3 = 추정 불가 / k < 10 = **exploratory** (t 가 임계를 넘어도 확증 아님) /
+        k ≥ 10 + 임계 통과 = confirmatory.
 
-    이력: 2026-05-23 `factor_decay.compute_ic_weight_adjustments()` 가 바로 이 사유로 동결됐고
-    (유효-N ≈ 6), 해제 조건이 "non-overlapping 또는 Newey-West 보정 도달"이다.
-    2026-08-15 실측 = 여전히 6 (겹침이 병목이라 달력이 흘러도 유효 N 이 비례해 늘지 않는다).
+    이력: 2026-05-23 `factor_decay` 동결(유효-N ≈ 6)의 해제 조건이 이 측정이다.
     상설 감사 = `scripts/audit/ic_overlap_check.py`.
     """
     n = len(ic_series)
@@ -86,6 +111,7 @@ def _nonoverlap_t(ic_series: List[float], forward_days: int) -> Dict[str, Any]:
     if k < 3:
         out["estimable"] = False
         out["t_nonoverlap"] = None
+        out["evidence_class"] = "unestimable"
         out["note"] = f"독립 관측 {k}개 < 3 — 표준오차 추정 불가"
         return out
     ts: List[float] = []
@@ -98,10 +124,21 @@ def _nonoverlap_t(ic_series: List[float], forward_days: int) -> Dict[str, Any]:
     if not ts:
         out["estimable"] = False
         out["t_nonoverlap"] = None
+        out["evidence_class"] = "unestimable"
         out["note"] = "비겹침 부분표본의 분산이 0"
         return out
+    t_med = statistics.median(ts)
+    crit = _t_crit(k - 1)
     out["estimable"] = True
-    out["t_nonoverlap"] = round(statistics.median(ts), 2)
+    out["t_nonoverlap"] = round(t_med, 2)
+    out["t_crit_df"] = round(crit, 3)
+    out["offset_count"] = len(ts)
+    out["positive_offset_ratio"] = round(sum(1 for t in ts if t > 0) / len(ts), 2)
+    out["t_offset_worst"] = round(min(ts, key=abs), 2)
+    out["t_offset_best"] = round(max(ts, key=abs), 2)
+    passed = abs(t_med) >= crit
+    out["evidence_class"] = ("confirmatory" if (passed and k >= 10)
+                             else "exploratory")
     return out
 
 
@@ -262,8 +299,11 @@ def compute_factor_ic(
         #    표본 수 항이 없다. 아래 3필드가 그 한계를 같은 자리에서 드러낸다.
         "threshold_only": True,
         **overlap,
+        # 🚨 df=k-1 임계 (1.96 아님) — Perplexity Q1 채택 2026-08-15. k<10 이면 통과해도
+        #    evidence_class 는 exploratory 에 머문다.
         "passes_nonoverlap": bool(
-            overlap.get("estimable") and abs(overlap.get("t_nonoverlap") or 0) >= 1.96
+            overlap.get("estimable")
+            and abs(overlap.get("t_nonoverlap") or 0) >= overlap.get("t_crit_df", 1.96)
         ),
         # 2026-07-20 감사 P1: abs() 판정이라 음(-) IC 팩터도 significant. 부호 라벨 병기(임계 무변경)
         # → 소비처가 'positive'(정방향 알파) vs 'inverse'(역방향, 반대로 써야 유효) 구분 가능.
@@ -387,7 +427,10 @@ def scan_all_factors(
                 # 🚨 겹침 보정 병기 — 소비처(admin PDF)가 임계통과와 독립관측을 함께 보이게 한다
                 "k_independent": v.get("k_independent"),
                 "t_nonoverlap": v.get("t_nonoverlap"),
+                "t_crit_df": v.get("t_crit_df"),
                 "estimable": v.get("estimable"),
+                "passes_nonoverlap": v.get("passes_nonoverlap"),
+                "evidence_class": v.get("evidence_class"),
             }
             for k, v in ranking
         ],

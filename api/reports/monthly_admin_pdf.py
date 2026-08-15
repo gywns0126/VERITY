@@ -496,12 +496,14 @@ def _render_chap3_brain(pdf: VerityPDF, analysis: Dict[str, Any], portfolio: Dic
                     pdf.cell(30, 5, "IC -", align="R")
             if obs is not None:
                 pdf.cell(30, 5, f"n={obs}", align="R")
-            # 🚨 2026-08-15 PM 승인 — daily_admin_pdf 와 동일 규율. n = 관측 '일수'(겹침 포함).
+            # 🚨 2026-08-15 PM 승인 — daily_admin_pdf 와 동일 규율. 임계 = df=k-1 (Perplexity Q1).
             k = it.get("k_independent")
             t_no = it.get("t_nonoverlap")
             if k is not None:
                 if it.get("estimable") and t_no is not None:
-                    mark = "O" if abs(float(t_no)) >= 1.96 else "-"
+                    ec = it.get("evidence_class")
+                    mark = ("C" if ec == "confirmatory"
+                            else ("E+" if it.get("passes_nonoverlap") else "E"))
                     pdf.cell(46, 5, f"k={k} t{float(t_no):+.2f} {mark}", align="R")
                 else:
                     pdf.cell(46, 5, f"k={k} 추정불가", align="R")
@@ -519,9 +521,10 @@ def _render_chap3_brain(pdf: VerityPDF, analysis: Dict[str, Any], portfolio: Dic
             if passed is not None:
                 unest = fic.get("unestimable_factors") or []
                 pdf.text_block(
-                    f"겹침 제거 후 |t|>=1.96 ({len(passed)}): "
+                    f"겹침 제거 + df=k-1 임계 통과 ({len(passed)}): "
                     + (", ".join(map(str, passed[:12])) or "없음")
-                    + (f"  ·  추정불가 {len(unest)}개(독립관측 3 미만)" if unest else ""),
+                    + "  [k<10 = exploratory — 통과해도 확증 아님]"
+                    + (f"  ·  추정불가 {len(unest)}개" if unest else ""),
                     color=pdf.INK_TERTIARY,
                 )
     else:

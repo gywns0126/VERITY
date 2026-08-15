@@ -1304,12 +1304,15 @@ def _render_chap9_postmortem(pdf: VerityPDF, portfolio: Dict[str, Any]):
             if obs is not None:
                 pdf.cell(30, 5, f"n={obs}", align="R")
             # 🚨 2026-08-15 PM 승인 — 겹침 보정 병기. n 은 관측 '일수'라 독립 표본이 아니다.
-            #    k = 독립 관측 수, 비겹침 t = 겹침 제거 후 t. 임계는 무변경, 표기만 정직하게.
+            #    임계 = df=k-1 Student-t (Perplexity Q1 채택 — 1.96 은 대표본 근사).
+            #    k<10 은 임계를 넘어도 exploratory(E). 확증(C)은 k>=10 + 임계 통과만.
             k = it.get("k_independent")
             t_no = it.get("t_nonoverlap")
             if k is not None:
                 if it.get("estimable") and t_no is not None:
-                    mark = "O" if abs(float(t_no)) >= 1.96 else "-"
+                    ec = it.get("evidence_class")
+                    mark = ("C" if ec == "confirmatory"
+                            else ("E+" if it.get("passes_nonoverlap") else "E"))
                     pdf.cell(46, 5, f"k={k} t{float(t_no):+.2f} {mark}", align="R")
                 else:
                     pdf.cell(46, 5, f"k={k} 추정불가", align="R")
@@ -1327,9 +1330,10 @@ def _render_chap9_postmortem(pdf: VerityPDF, portfolio: Dict[str, Any]):
             if passed is not None:
                 unest = fic.get("unestimable_factors") or []
                 pdf.text_block(
-                    f"겹침 제거 후 |t|>=1.96 ({len(passed)}): "
+                    f"겹침 제거 + df=k-1 임계 통과 ({len(passed)}): "
                     + (", ".join(map(str, passed[:12])) or "없음")
-                    + (f"  ·  추정불가 {len(unest)}개(독립관측 3 미만)" if unest else ""),
+                    + "  [k<10 = exploratory — 통과해도 확증 아님]"
+                    + (f"  ·  추정불가 {len(unest)}개" if unest else ""),
                     color=pdf.INK_TERTIARY,
                 )
 

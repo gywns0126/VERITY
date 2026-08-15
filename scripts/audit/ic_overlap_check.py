@@ -126,8 +126,31 @@ def ic_series(snaps: List[dict], factor: str, fwd: int, exact: bool) -> List[flo
     return out
 
 
+def _nw_se(x: List[float], lag: int) -> float:
+    """Newey-West(1987) HAC 표준오차 — Bartlett taper. 보조 지표 전용 (Perplexity Q1:
+    표본 대비 lag 이 크면 과소보정되므로 '참고치로만 제시, 작은 표본 t값 과신 금지')."""
+    n = len(x)
+    mu = statistics.mean(x)
+    e = [v - mu for v in x]
+    s = sum(v * v for v in e) / n
+    for L in range(1, min(lag, n - 1) + 1):
+        g = sum(e[t] * e[t - L] for t in range(L, n)) / n
+        s += 2 * (1 - L / (lag + 1)) * g
+    return math.sqrt(max(s, 1e-12) / n)
+
+
 def judge(ser: List[float], fwd: int) -> Dict[str, Any]:
-    """현행 t 와 비겹침 블록 t 를 함께 낸다."""
+    """현행 t / 비겹침 블록 판정 / NW 보조 — Perplexity Q1 권장 보고 형식 (2026-08-15 채택).
+
+    핵심 규칙:
+      - 오프셋 0..fwd-1 전부의 비겹침 표본을 만들고 중앙값·부호일관성·worst/best 보고
+        (오프셋 하나 선택 = 데이터 스누핑)
+      - 임계 = Student-t 양측 5%, df = k-1 (1.96 은 대표본 근사)
+      - k < 10 = exploratory (임계를 넘어도 확증 아님) · k ≥ 10 + 통과 = confirmatory
+      - NW(h-1)·NW(2h-1) 은 보조 참고치
+    """
+    from api.quant.alpha.alpha_scanner import _t_crit  # 단일 출처 (t-표)
+
     n = len(ser)
     if n < 5:
         return {"n": n, "verdict": "표본부족"}
@@ -139,12 +162,15 @@ def judge(ser: List[float], fwd: int) -> Dict[str, Any]:
         "ic_mean": round(mu, 5), "n_days": n, "k_independent": k,
         "t_current": round(t_now, 2),
         "overlap_pct": round((fwd - 1) / fwd * 100, 1),
+        # 보조: NW HAC (참고치 전용)
+        "t_nw_lag_h1": round(mu / _nw_se(ser, fwd - 1), 2) if n > fwd else None,
+        "t_nw_lag_2h": round(mu / _nw_se(ser, 2 * fwd - 1), 2) if n > 2 * fwd else None,
     }
     if k < MIN_BLOCKS:
         row["verdict"] = "추정불가"
+        row["evidence_class"] = "unestimable"
         row["why"] = f"독립 관측 {k}개 < {MIN_BLOCKS} — 표준오차를 추정할 표본이 없다"
         return row
-    # 시작 오프셋별 비겹침 부분표본의 t 분포 → 중앙값 채택
     ts = []
     for off in range(fwd):
         sub = ser[off::fwd]
@@ -152,12 +178,22 @@ def judge(ser: List[float], fwd: int) -> Dict[str, Any]:
             ts.append(statistics.mean(sub) / (statistics.stdev(sub) / math.sqrt(len(sub))))
     if not ts:
         row["verdict"] = "추정불가"
+        row["evidence_class"] = "unestimable"
         row["why"] = "비겹침 부분표본의 분산이 0"
         return row
     t_ind = statistics.median(ts)
+    crit = _t_crit(k - 1)
+    passed = abs(t_ind) >= crit
     row["t_nonoverlap"] = round(t_ind, 2)
+    row["t_crit_df"] = round(crit, 3)
+    row["offset_count"] = len(ts)
+    row["positive_offset_ratio"] = round(sum(1 for t in ts if t > 0) / len(ts), 2)
+    row["t_offset_worst"] = round(min(ts, key=abs), 2)
+    row["t_offset_best"] = round(max(ts, key=abs), 2)
     row["t_inflation"] = round(abs(t_now) / abs(t_ind), 1) if abs(t_ind) > 1e-9 else None
-    row["verdict"] = "유의" if abs(t_ind) >= T_CRIT else "비유의"
+    row["evidence_class"] = "confirmatory" if (passed and k >= 10) else "exploratory"
+    row["verdict"] = ("확증" if row["evidence_class"] == "confirmatory"
+                      else ("탐색적(임계통과)" if passed else "비유의"))
     return row
 
 
@@ -192,26 +228,32 @@ def main() -> int:
             elif r["verdict"] == "추정불가":
                 line += f"{r['ic_mean']:+7.3f}{r['t_current']:7.1f}{'  —':>6}{r['k_independent']:3d} 불가"
             else:
+                tag = ("확증" if r["evidence_class"] == "confirmatory"
+                       else ("E+" if r["verdict"] == "탐색적(임계통과)" else " ·"))
                 line += (f"{r['ic_mean']:+7.3f}{r['t_current']:7.1f}"
-                         f"{r['t_nonoverlap']:7.2f}{r['k_independent']:3d}"
-                         f"{'  유의' if r['verdict']=='유의' else '   ·  '}")
+                         f"{r['t_nonoverlap']:7.2f}{r['k_independent']:3d} {tag:>3}")
         print(line)
 
-    surviving = [(f, h, r) for f, hs in results.items() for h, r in hs.items()
-                 if r.get("verdict") == "유의"]
+    confirmatory = [(f, h, r) for f, hs in results.items() for h, r in hs.items()
+                    if r.get("evidence_class") == "confirmatory"]
+    explor_pass = [(f, h, r) for f, hs in results.items() for h, r in hs.items()
+                   if r.get("verdict") == "탐색적(임계통과)"]
     unestimable = [(f, h) for f, hs in results.items() for h, r in hs.items()
                    if r.get("verdict") == "추정불가"]
     total = sum(len(hs) for hs in results.values())
 
     print("\n" + "═" * 118)
-    print(f"비겹침 판정 통과 {len(surviving)} / 전체 {total}  ·  추정불가 {len(unestimable)}")
+    print(f"확증(confirmatory, k≥10+df임계) {len(confirmatory)} / "
+          f"탐색적 임계통과(E+, k<10) {len(explor_pass)} / 전체 {total}  ·  추정불가 {len(unestimable)}")
     print("═" * 118)
-    for f, h, r in sorted(surviving, key=lambda x: -abs(x[2]["t_nonoverlap"])):
+    for f, h, r in sorted(confirmatory + explor_pass, key=lambda x: -abs(x[2]["t_nonoverlap"])):
         print(f"  {f:17}{h:<6} IC {r['ic_mean']:+.3f}  "
-              f"t 현행 {r['t_current']:+6.1f} → 비겹침 {r['t_nonoverlap']:+5.2f}  "
-              f"(부풀림 {r['t_inflation']}배)  k={r['k_independent']}")
-    if not surviving:
+              f"t 현행 {r['t_current']:+6.1f} → 비겹침 {r['t_nonoverlap']:+5.2f} "
+              f"(임계 {r['t_crit_df']:.2f}, df={r['k_independent']-1})  "
+              f"부호일관 {r['positive_offset_ratio']:.0%}  [{r['evidence_class']}]")
+    if not (confirmatory or explor_pass):
         print("  0건")
+    surviving = confirmatory  # 하위 payload 호환 — '확증' 만 생존으로 센다
 
     payload = {
         "_meta": {
@@ -241,15 +283,21 @@ def main() -> int:
                 "'유효-N 마일스톤 (non-overlapping 또는 Newey-West 보정) 도달'"
             ),
             "min_blocks_for_estimate": MIN_BLOCKS,
-            "t_critical": T_CRIT,
+            "criteria": (
+                "임계 = Student-t 양측 5% df=k-1 (1.96 아님) · k<10 = exploratory · "
+                "confirmatory = k>=10 + 임계 통과. 외부 검증 = Perplexity 2026-08-15 "
+                "(learning_materials/perplexity_ic_validation_answers_2026_08_15.md Q1)"
+            ),
         },
         "snapshot_days": len(allsnaps),
         "snapshot_range": [min(allsnaps), max(allsnaps)],
         "summary": {
             "cells_total": total,
-            "cells_significant_nonoverlap": len(surviving),
+            "cells_confirmatory": len(confirmatory),
+            "cells_exploratory_pass": len(explor_pass),
             "cells_unestimable": len(unestimable),
-            "unfreeze_trigger_met": len(surviving) > 0 and len(unestimable) < total / 2,
+            # 동결 해제 = 확증 등급 존재 (탐색적 통과는 해제 근거가 아니다)
+            "unfreeze_trigger_met": len(confirmatory) > 0,
         },
         "factors": results,
     }
