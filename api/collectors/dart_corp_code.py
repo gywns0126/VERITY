@@ -5,6 +5,7 @@ dart-fss 라이브러리로 전체 상장사의 {종목코드: 고유번호} 매
 data/mapping.json에 저장한다. 이후 OpenDART API 호출 시 get_corp_code()로
 종목코드 → 고유번호를 즉시 조회할 수 있다.
 """
+import datetime as _dt
 import json
 import os
 import sys
@@ -24,6 +25,8 @@ NAME_MAP_PATH = os.path.join(DATA_DIR, "kr_stock_names.json")
 # 이름→ticker_yf 역맵 빌드에 사용 (NAV listed 매칭 복구, 2026-06-16). kr_stock_names 와
 # 달리 폐지 오염 없음 + market suffix 보유.
 LISTED_MAP_PATH = os.path.join(DATA_DIR, "kr_listed.json")
+# 맵 3종의 생성 시각 사이드카. 맵 파일 안에 넣으면 전 키를 순회하는 소비자가 깨진다.
+NAME_MAP_META_PATH = os.path.join(DATA_DIR, "kr_name_map_meta.json")
 _CORP_CLS_TO_SUFFIX = {"Y": "KS", "K": "KQ"}  # Y=유가증권(KOSPI), K=코스닥
 _NAME_MAP_MAX_AGE_S = 30 * 24 * 3600  # 30일 — 신규 상장 흡수 주기 (월1회 갱신 등가)
 
@@ -64,6 +67,13 @@ def build_mapping() -> Dict[str, str]:
         json.dump(names, f, ensure_ascii=False, indent=2)
     with open(LISTED_MAP_PATH, "w", encoding="utf-8") as f:
         json.dump(listed, f, ensure_ascii=False, indent=2)
+    # 🚨 생성 시각을 **내용으로** 남긴다 — 파일 mtime 은 CI 에서 무의미하다(아래 참조).
+    #    맵 3종은 소비자가 전 키를 순회하므로 `_generated_at` 를 그 안에 넣으면 깨진다.
+    #    그래서 별도 사이드카 파일로 둔다.
+    with open(NAME_MAP_META_PATH, "w", encoding="utf-8") as f:
+        json.dump({"generated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+                   "mapping": len(mapping), "names": len(names), "listed": len(listed)},
+                  f, ensure_ascii=False, indent=2)
 
     return mapping
 
@@ -79,14 +89,37 @@ def ensure_name_map() -> None:
         return
     _name_ensured = True
     try:
-        import time as _t
+        # 🚨 신선도 판정을 **파일 mtime 에서 내용 타임스탬프로** 옮긴다 (2026-08-15 감사).
+        #    GitHub Actions 는 매 run 마다 repo 를 새로 체크아웃하므로 모든 파일의 mtime 이
+        #    "방금" 이다. 즉 `time() - getmtime(...) > 30일` 은 CI 에서 **영원히 거짓**이고,
+        #    30일 갱신 게이트가 한 번도 발동한 적이 없다. 위 docstring 이 설계 의도로
+        #    "daily_analysis_full 경유로 발동 → 생성·커밋 자동" 이라 적어 둔 그 경로가
+        #    조용히 죽어 있었다.
+        #    증거: kr_stock_names.json 마지막 커밋 2026-06-03 · kr_listed.json 2026-06-17.
+        #    증상: 신규 상장(예 476710)이 맵에 영영 안 들어온다 — 조인의 상장정보·이름
+        #    검증 축이 신규 종목에 대해 침묵한다. 에러·경보 0 이라 미탐지되는 계열이다.
         need = True
-        if os.path.exists(NAME_MAP_PATH):
-            need = (_t.time() - os.path.getmtime(NAME_MAP_PATH)) > _NAME_MAP_MAX_AGE_S
-        # kr_listed.json 부재 시에도 재생성 (2026-06-16 신규 파일 self-heal —
-        # 신선한 name_map 만 있고 listed 맵 없는 환경에서 NAV resolver degrade 방지).
-        if not os.path.exists(LISTED_MAP_PATH):
+        meta_age = None
+        if os.path.exists(NAME_MAP_META_PATH):
+            try:
+                with open(NAME_MAP_META_PATH, encoding="utf-8") as _mf:
+                    gen = json.load(_mf).get("generated_at")
+                if gen:
+                    born = _dt.datetime.fromisoformat(gen)
+                    if born.tzinfo is None:
+                        born = born.replace(tzinfo=_dt.timezone.utc)
+                    meta_age = (_dt.datetime.now(_dt.timezone.utc) - born).total_seconds()
+                    need = meta_age > _NAME_MAP_MAX_AGE_S
+            except (OSError, ValueError, TypeError):
+                need = True          # 메타를 못 읽으면 재생성 — 조용히 옛 맵을 쓰지 않는다
+        # 맵 자체가 없으면 무조건 재생성 (2026-06-16 self-heal 유지).
+        if not os.path.exists(NAME_MAP_PATH) or not os.path.exists(LISTED_MAP_PATH):
             need = True
+        if need:
+            sys.stderr.write(
+                "[name_map] 갱신 필요 — "
+                + ("메타 부재(최초 1회)" if meta_age is None else f"생성 후 {meta_age / 86400:.1f}일")
+                + "\n")
         if need and DART_API_KEY:
             sys.stderr.write("[name_map] kr_stock_names.json 생성/갱신 (dart-fss, ~1분)\n")
             build_mapping()
