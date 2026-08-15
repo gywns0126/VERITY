@@ -355,8 +355,11 @@ def run(lake: str, out_path: str = OUT_PATH, limit: int = 0) -> Dict[str, Any]:
         verdict[f"L1_H{h}"] = cond
     verdict["adopted"] = [k for k, v in verdict.items()
                           if isinstance(v, dict) and v.get("all_pass")]
-    verdict["rule"] = ("전원 미충족 = '시장 노출 제거로는 해결되지 않는다' 기록. "
-                       "남는 것은 산식 조정이 아니라 N 축적(2027-05 게이트) (§4)")
+    # 🚨 최초 판본은 "남는 것은 N 축적(2027-05 게이트)" 이었다. 그 게이트는 PM 이 타 세션에서
+    #    **폐기**한 전제다(2026-08-15) — "252 측정이 무책임하게 축적만 강요한다" 는 지적이었고
+    #    검증 틀 자체가 수정됐다. 산출물 JSON 에는 옛 문자열이 남아 있으므로 인용 금지.
+    verdict["rule"] = ("전원 미충족 = '시장 노출 제거로는 해결되지 않는다' 기록 (§4). "
+                       "후속 방향은 이 산출물이 정하지 않는다")
 
     doc = {
         "_meta": {
