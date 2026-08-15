@@ -87,6 +87,37 @@ def _parse_144(xml_text: str) -> Optional[Dict[str, Any]]:
     }
 
 
+def _flag_implied_price_outliers(notices: List[Dict[str, Any]], factor: float = 20.0) -> None:
+    """제출인 기입 오류를 **종목 내부 일관성**으로 잡는다. 제자리 수정(in-place).
+
+    🚨 2026-08-15. SYF 실측: 동일 인물(COVIELLO ARTHUR W JR)의 동일 4,000주가
+    2026-05-01 신고에서는 $305,788, 2026-08-03 신고에서는 **$25,240,000,000** 이었다.
+    주당 631만 달러 = 불가능(SYF 는 $70 대). 총액 $25.3B 가 공개 발행물에 실려 있었고,
+    이건 SYF 시가총액과 맞먹는다. 원인은 우리 파서가 아니라 **제출인의 기입 오류**지만,
+    그대로 싣는 순간 우리 숫자가 된다. 배당 원장 사고와 같은 계열
+    ([[project_dividend_ledger_unit_error_2026_08_15]] — 제출인이 총액을 주당 칸에).
+
+    외부 가격을 끌어오지 않는 이유: 이 빌더는 시세 소스가 없고, 종목 내부에 이미
+    비교군이 있다. **같은 종목의 다른 신고들이 함축하는 주당가 중앙값** 과 비교하면
+    자족적으로 판정된다(BRK.A 같은 초고가주도 자기 중앙값과 비교되므로 오탐이 없다).
+    표본이 얇으면(<3) 판정하지 않는다 — 근거 없이 지우느니 남긴다.
+    """
+    px = [(n["value_usd"] / n["units"], n)
+          for n in notices
+          if n.get("value_usd") and n.get("units") and n["units"] > 0]
+    if len(px) < 3:
+        return
+    ordered = sorted(p for p, _ in px)
+    med = ordered[len(ordered) // 2]
+    if med <= 0:
+        return
+    for p, n in px:
+        if p > med * factor or p < med / factor:
+            n["value_suspect"] = (
+                f"주당 환산 ${p:,.2f} vs 동일종목 중앙값 ${med:,.2f} "
+                f"({p / med:.0f}배) — 제출인 기입 오류 의심. 합계에서 제외")
+
+
 def _load_prev() -> Dict[str, Dict[str, Any]]:
     try:
         with open(OUTPUT_PATH, encoding="utf-8") as f:
@@ -167,7 +198,10 @@ def build() -> int:
         if not notices:
             continue
         notices.sort(key=lambda n: n.get("filing_date") or "", reverse=True)
-        total_value = sum(n["value_usd"] for n in notices if n.get("value_usd"))
+        _flag_implied_price_outliers(notices)
+        # 이상치는 합계에서 제외한다 — 하나가 총액을 통째로 지배한다.
+        total_value = sum(n["value_usd"] for n in notices
+                          if n.get("value_usd") and not n.get("value_suspect"))
         fresh[tk] = {
             "ticker": tk,
             "notice_count": len(notices),
