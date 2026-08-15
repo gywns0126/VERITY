@@ -77,7 +77,60 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ── 중복 트리거 가드 (2026-08-15 신설) ──────────────────────────────────────
+  # 🚨 이 워크플로는 트리거가 둘이다 — GH `schedule` + Vercel `repository_dispatch`.
+  #   후자는 "GH schedule silent miss 회피" fallback 인데(2026-05-18), GH 가 정상 발화하면
+  #   **둘 다 돈다**. fallback 에 "본편이 이미 돌았나" 확인이 없었다.
+  #
+  #   실측 (2026-08-15, GitHub API 표본 60건 / 20일):
+  #     · 중복 쌍 16건. 예) 08-14T21:30 dispatch(실패 110분) + 21:49 schedule(성공 146분)
+  #       = 슬롯 하나에 256분. 두 번째는 concurrency 큐에서 96분 대기 후 시작했다.
+  #     · universe_scan 도 같은 구조로 4건 (양쪽 다 성공 = 순수 낭비). 그쪽은 후속 과제.
+  #
+  #   🚨 설계상 중요한 점 — 중복이 우연히 재시도 역할을 했다. 08-14 는 dispatch 가 실패하고
+  #     schedule 이 성공해 그날 산출물을 건졌다. 그래서 이 가드는 **선행이 성공했을 때만**
+  #     건너뛴다. 선행이 실패·취소면 후행이 그대로 재시도로 남는다.
+  #     workflow-level concurrency(verity-data-write, cancel-in-progress:false) 가 직렬화하므로
+  #     이 job 이 시작하는 시점엔 선행 run 의 결론이 이미 나 있다.
+  #
+  #   fail-open 원칙: 조회 실패·자기 run 미발견·판단 불가 = **무조건 실행**. 슬롯을 비우는 것이
+  #     이 fallback 이 막으려던 사고이므로, 의심스러우면 도는 쪽이 맞다.
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Checkout (가드 스크립트)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 같은 슬롯 성공분 확인
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SELF: ${{ github.run_id }}
+          WINDOW_MIN: '120'   # 관측 중복 간격 18.9~88.8분. 정규 슬롯 간격 13.7h 이상이라 안전
+        run: |
+          set -uo pipefail
+          # 수동 실행은 오퍼레이터 의도 — 가드 미적용
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=1" >> "$GITHUB_OUTPUT"; echo "수동 실행 — 가드 미적용"; exit 0
+          fi
+          JSON=$(gh api "repos/${{ github.repository }}/actions/workflows/daily_analysis_full.yml/runs?per_page=30" 2>/dev/null) || JSON=""
+          if [ -z "$JSON" ]; then
+            echo "run=1" >> "$GITHUB_OUTPUT"; echo "API 조회 실패 — fail-open 실행"; exit 0
+          fi
+          # 🚫 판정 로직을 여기 인라인으로 되돌리지 말 것 — YAML 블록 스칼라 들여쓰기가 깨져
+          #    워크플로가 통째로 무효가 된다(2026-08-15 실측). 스크립트 파일로 유지한다.
+          OUT=$(printf '%s' "$JSON" | python3 scripts/ci/duplicate_run_guard.py)
+          echo "$OUT"
+          echo "run=$(printf '%s' "$OUT" | grep -oE '^run=[01]$' | tail -1 | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
   analyze:
+    needs: guard
+    if: needs.guard.outputs.run == '1'
     runs-on: ubuntu-latest
     # 🚨 2026-07-16 안전변 120 → 150. 평일 baseline 이 ~100~120분(고정, 크립 아님 — 프로파일 확인)
     #   이라 120 천장에 붙어 있어, 외부 API 무제한 호출이 가끔 멈추면 슬롯이 천장을 넘어 SIGTERM.
