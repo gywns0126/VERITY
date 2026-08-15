@@ -78,11 +78,42 @@ PORTFOLIO_URL: str = os.getenv(
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
 ).strip()
 
-ALLOWED_ORIGINS: list[str] = [
+# ── CORS ────────────────────────────────────────────────────────────────────
+# 🚨 2026-08-15 — 기본값이 "*" 였고 배포본이 그 상태였다(실측: 임의 Origin 으로 호출 시
+#   `access-control-allow-origin: *` 응답). 이 서버의 시세 라우트(/chart /quotes /snapshot
+#   /candles /stream)는 인증이 없어 KIS 실시간 현재가가 그대로 나가므로, 브라우저 경유
+#   제3자 사용까지 열려 있었다. 이 프로젝트의 자체 규율은 "KIS raw 시세 = 제3자 재배포 불가,
+#   본인 이용은 합법" 이다(api/collectors/fsc_daily_prices.py 상단).
+#
+#   ⚠️ CORS 는 브라우저 정책일 뿐이다 — curl·서버 호출은 이걸로 막히지 않는다(실측 확인).
+#     서버 대 서버 경로(ticker_facts·kis_quote)는 이 변경의 영향을 받지 않는다.
+#     여기서 닫는 것은 "제3자 웹사이트가 브라우저 JS 로 우리 시세를 읽어가는" 벡터뿐이다.
+#     인증·rate limit 은 별건으로 남아 있다.
+#
+#   패턴은 vercel-api/api/cors_helper.py 와 동일하게 맞춘다 — 코드 기본 origin 을 두어
+#   env 누락·오설정에도 공개 사이트가 죽지 않게 하고, env 의 "*" 는 명시적으로 제거한다.
+_DEFAULT_ORIGINS: tuple[str, ...] = (
+    "https://www.alphanest.kr",
+    "https://alphanest.kr",
+    "https://alphanest-psi.vercel.app",   # 오퍼레이터 사이트
+)
+
+_env_origins: list[str] = [
     o.strip()
-    for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")
-    if o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if o.strip() and o.strip() != "*"      # wildcard 금지 (cors_helper 정합)
 ]
+
+ALLOWED_ORIGINS: list[str] = list(dict.fromkeys([*_env_origins, *_DEFAULT_ORIGINS]))
+
+# Framer 퍼블리시·프리뷰 도메인 + 로컬 개발. 공개 컴포넌트
+# (framer-components/public-probe/RealtimeChartProbe.tsx)가 브라우저에서 EventSource 로
+# /stream/{ticker} 를 붙기 때문에, 프리뷰 도메인을 빠뜨리면 라이브 차트가 죽는다.
+# 명시 목록으로는 서브도메인을 다 적을 수 없어 regex 로 둔다 (wildcard 아님 — 도메인 고정).
+ALLOWED_ORIGIN_REGEX: str = os.getenv(
+    "ALLOWED_ORIGIN_REGEX",
+    r"^https://([a-z0-9-]+\.)*framer\.(app|website)$|^http://localhost(:\d+)?$",
+)
 
 PORT: int = int(os.getenv("PORT", "8000"))
 

@@ -24,6 +24,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from server.config import (
     ALLOWED_ORIGINS,
+    ALLOWED_ORIGIN_REGEX,
     CLEANUP_INTERVAL,
     IDLE_UNSUB_TTL,
     PORT,
@@ -214,6 +215,11 @@ app.add_middleware(GZipMiddleware, minimum_size=256)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    # 🚨 2026-08-15 — 옛 설정은 allow_origins=["*"] 로 배포돼 있었다(실측 확인).
+    #   시세 라우트가 무인증이라 브라우저 경유 제3자 사용까지 열려 있던 상태다.
+    #   regex 는 Framer 퍼블리시·프리뷰 서브도메인 + 로컬 개발용 — 공개 컴포넌트가
+    #   EventSource 로 /stream/{ticker} 에 붙으므로 빠뜨리면 라이브 차트가 죽는다.
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
