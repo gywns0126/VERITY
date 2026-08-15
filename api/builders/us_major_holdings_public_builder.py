@@ -206,6 +206,24 @@ def main() -> int:
                 collected += 1
             # else: 13D/G 존재하나 파싱 0 → 이전 보존
 
+        # 🚨 유니버스 이탈 종목 정리 (2026-08-15 감사). carry-forward 에 만료가 없어서,
+        #    유니버스에서 빠진 티커는 회전 수집이 방문하지 않아 **재수집 경로가 영영 없는
+        #    화석**으로 남는다. 실측 39종목. 파서·가드를 고쳐도 이 엔트리는 안 바뀐다
+        #    (us_insider_trades 에서 같은 형태가 공개 랭킹 1·2위를 차지했다).
+        #    유니버스 로드 실패 시 전량 삭제를 막으려 하한을 둔다.
+        uni_now = set(order)
+        if len(uni_now) >= 1000:
+            dropped = [t for t in merged if t not in uni_now]
+            for t in dropped:
+                merged.pop(t, None)
+            if dropped:
+                print(f"[us_holdings] 유니버스 이탈 {len(dropped)}종목 제거 (재수집 불가 화석): "
+                      + ", ".join(sorted(dropped)[:8]) + (" 외" if len(dropped) > 8 else ""),
+                      file=sys.stderr)
+        else:
+            print(f"[us_holdings] 유니버스 {len(uni_now)}종목 — 하한 미달로 이탈 정리 skip",
+                  file=sys.stderr)
+
         # 정렬: 최근 신고일 desc (freshness).
         stocks = sorted(merged.values(), key=lambda s: (s.get("filings") or [{}])[0].get("date", ""), reverse=True)
 

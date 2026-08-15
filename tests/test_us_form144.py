@@ -19,7 +19,7 @@ def test_filer_typo_does_not_become_our_number():
         {"units": 610, "value_usd": 46_805.0},
         {"units": 721, "value_usd": 55_322.0},
     ]
-    m._flag_implied_price_outliers(notices)
+    m._flag_implied_price_outliers(notices)   # ticker 미지정 → 내부 중앙값 폴백
     assert notices[0].get("value_suspect") and "기입 오류 의심" in notices[0]["value_suspect"]
     assert not any(n.get("value_suspect") for n in notices[1:])
 
@@ -58,3 +58,35 @@ def test_issuer_cik_extracted_for_attribution():
     p = m._parse_144(xml)
     assert p["_issuer_cik"] == "1824920"      # 선행 0 제거 — int(cik) 비교와 맞춘다
     assert p["units"] == 6222
+
+
+def test_external_spot_beats_internal_median(monkeypatch):
+    """🚨 기준점은 종목 밖(spot)에 둔다 — 다수가 틀리면 중앙값이 정답을 배신한다.
+
+    BKNG 실측(2026-08-15): 신고 7건 중 2건이 주당 $4,241·$4,141(분할 전 가격대),
+    5건이 $181~207. 실제 주가는 $212.06(야후 실호출). 내부 중앙값은 우연히 맞았지만,
+    오기가 다수인 종목에서는 중앙값이 오류 쪽으로 뒤집혀 정상값을 이상치로 건다.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "f144b", "api/builders/us_form144_public_builder.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    monkeypatch.setattr(m, "_spot_cache", {"ZZZ": 212.06})
+
+    # 다수(3건)가 틀리고 소수(2건)가 맞는 구성 — 중앙값을 쓰면 정답이 걸린다.
+    notices = [
+        {"units": 100, "value_usd": 100 * 5000.0},   # 오기(분할 전 가격대) → spot 기준 23.6배
+        {"units": 100, "value_usd": 100 * 4141.0},   # 오기 → 19.5배 = 경계 아래, 미검출 허용
+        {"units": 100, "value_usd": 100 * 212.0},    # 정상
+        {"units": 100, "value_usd": 100 * 205.0},    # 정상
+        {"units": 100, "value_usd": 100 * 200.0},    # 정상
+    ]
+    m._flag_implied_price_outliers(notices, ticker="ZZZ")
+    assert notices[0].get("value_suspect")                       # 오기가 걸린다
+    assert not any(n.get("value_suspect") for n in notices[2:])  # 정상은 안 걸린다
+
+    # spot 이 없으면 내부 중앙값 폴백 — 표본 <3 이면 판정하지 않는다.
+    thin = [{"units": 10, "value_usd": 1e9}, {"units": 10, "value_usd": 100.0}]
+    m._flag_implied_price_outliers(thin, ticker="NOSPOT")
+    assert not any(n.get("value_suspect") for n in thin)

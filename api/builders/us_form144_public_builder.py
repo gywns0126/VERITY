@@ -94,35 +94,77 @@ def _parse_144(xml_text: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def _flag_implied_price_outliers(notices: List[Dict[str, Any]], factor: float = 20.0) -> None:
-    """제출인 기입 오류를 **종목 내부 일관성**으로 잡는다. 제자리 수정(in-place).
+_SPOT_PATH = os.path.join(_ROOT, "data", "us_options.json")
+_spot_cache: Optional[Dict[str, float]] = None
 
-    🚨 2026-08-15. SYF 실측: 동일 인물(COVIELLO ARTHUR W JR)의 동일 4,000주가
-    2026-05-01 신고에서는 $305,788, 2026-08-03 신고에서는 **$25,240,000,000** 이었다.
-    주당 631만 달러 = 불가능(SYF 는 $70 대). 총액 $25.3B 가 공개 발행물에 실려 있었고,
-    이건 SYF 시가총액과 맞먹는다. 원인은 우리 파서가 아니라 **제출인의 기입 오류**지만,
-    그대로 싣는 순간 우리 숫자가 된다. 배당 원장 사고와 같은 계열
-    ([[project_dividend_ledger_unit_error_2026_08_15]] — 제출인이 총액을 주당 칸에).
 
-    외부 가격을 끌어오지 않는 이유: 이 빌더는 시세 소스가 없고, 종목 내부에 이미
-    비교군이 있다. **같은 종목의 다른 신고들이 함축하는 주당가 중앙값** 과 비교하면
-    자족적으로 판정된다(BRK.A 같은 초고가주도 자기 중앙값과 비교되므로 오탐이 없다).
-    표본이 얇으면(<3) 판정하지 않는다 — 근거 없이 지우느니 남긴다.
+def _spot_map() -> Dict[str, float]:
+    """티커 → 참조 현재가(us_options.json 의 spot, 3,500+ 종목).
+
+    🚨 이건 **평가 기준가가 아니라 자릿수 검증용 앵커**다. 회전 수집이라 며칠 stale 할 수
+    있으나, 주당 환산이 맞는 자릿수인지 보는 데는 충분하다. 평가·수익률 계산에 쓰지 말 것
+    ([[feedback_rotating_collector_not_a_price_source]] 는 그 용도를 금지한 것이고,
+     자릿수 sanity 앵커는 별개다).
+    """
+    global _spot_cache
+    if _spot_cache is not None:
+        return _spot_cache
+    m: Dict[str, float] = {}
+    try:
+        with open(_SPOT_PATH, encoding="utf-8") as f:
+            for s in (json.load(f).get("stocks") or []):
+                t, sp = s.get("ticker"), s.get("spot")
+                if t and isinstance(sp, (int, float)) and sp > 0:
+                    m[str(t).upper()] = float(sp)
+    except (OSError, ValueError, TypeError):
+        pass
+    _spot_cache = m
+    return m
+
+
+def _flag_implied_price_outliers(notices: List[Dict[str, Any]], factor: float = 20.0,
+                                 ticker: str = "") -> None:
+    """제출인 기입 오류를 잡는다. 제자리 수정(in-place).
+
+    **왜 필요한가.** aggregate market value 는 제출인이 직접 적는 칸이라 오기가 들어온다.
+    2026-08-15 실측 — SYF: 동일 인물(COVIELLO ARTHUR W JR)의 동일 4,000주가 5/1 신고
+    $305,788, 8/3 신고 **$25,240,000,000**. 주당 631만 달러(SYF 는 $81)로, 총액 $25.3B 가
+    SYF 시가총액과 맞먹는 채로 공개 발행물에 실려 있었다. 원인이 남의 오기여도 그대로
+    싣는 순간 우리 숫자가 된다 ([[project_dividend_ledger_unit_error_2026_08_15]] 와 동형).
+
+    🚨 **기준점은 외부 참조가(spot) 우선.** 처음엔 종목 내부 중앙값만 썼는데 감사에서
+    깨졌다 — BKNG 는 신고 7건 중 2건이 주당 $4,241·$4,141(분할 전 가격대)이고 5건이
+    $181~207 인데, 실제 주가는 **$212.06**(52주 $150~232, 야후 실호출 확인)이다.
+    내부 중앙값 $200 은 우연히 맞았지만, 다수가 틀린 종목에서는 중앙값이 오류 쪽으로
+    뒤집혀 **정답을 이상치로 거는** 구조적 위험이 있다. 판정 근거를 종목 밖에 두어야 한다.
+    (여기서 나 자신도 "BKNG 는 $4,200 대" 라고 기억으로 단정했다가 실호출에서 틀렸다 —
+     앵커를 데이터로 두는 이유가 정확히 이것이다.)
+
+    spot 이 없는 종목만 내부 중앙값으로 폴백하고, 그때는 표본 <3 이면 판정하지 않는다
+    — 근거 없이 지우느니 남긴다. 이상치는 삭제가 아니라 `value_suspect` 사유를 달고
+    합계에서만 빠진다(추적 가능).
     """
     px = [(n["value_usd"] / n["units"], n)
           for n in notices
           if n.get("value_usd") and n.get("units") and n["units"] > 0]
-    if len(px) < 3:
+    if not px:
         return
-    ordered = sorted(p for p, _ in px)
-    med = ordered[len(ordered) // 2]
-    if med <= 0:
+    ref = _spot_map().get(str(ticker).upper()) if ticker else None
+    label = "참조가"
+    if not ref:
+        # 폴백 — 표본이 얇으면 판정하지 않는다. 근거 없이 지우느니 남긴다.
+        if len(px) < 3:
+            return
+        ordered = sorted(p for p, _ in px)
+        ref = ordered[len(ordered) // 2]
+        label = "동일종목 중앙값"
+    if not ref or ref <= 0:
         return
     for p, n in px:
-        if p > med * factor or p < med / factor:
+        if p > ref * factor or p < ref / factor:
             n["value_suspect"] = (
-                f"주당 환산 ${p:,.2f} vs 동일종목 중앙값 ${med:,.2f} "
-                f"({p / med:.0f}배) — 제출인 기입 오류 의심. 합계에서 제외")
+                f"주당 환산 ${p:,.2f} vs {label} ${ref:,.2f} "
+                f"({p / ref:.1f}배) — 제출인 기입 오류 의심. 합계에서 제외")
 
 
 def _load_prev() -> Dict[str, Dict[str, Any]]:
@@ -209,7 +251,7 @@ def build() -> int:
         if not notices:
             continue
         notices.sort(key=lambda n: n.get("filing_date") or "", reverse=True)
-        _flag_implied_price_outliers(notices)
+        _flag_implied_price_outliers(notices, ticker=tk)
         # 이상치는 합계에서 제외한다 — 하나가 총액을 통째로 지배한다.
         total_value = sum(n["value_usd"] for n in notices
                           if n.get("value_usd") and not n.get("value_suspect"))
