@@ -361,32 +361,107 @@ async def subscribe(request: Request):
     }
 
 
+# ── /chart 응답 캐시 (2026-08-15) ───────────────────────────────────────────
+# 🚨 왜: 이 라우트만 KIS REST 를 **요청마다 직접** 호출했다. 토큰만 캐시하고 응답은 안 했다.
+#   증폭이 크다 — 기본값 type=all 은 한 요청에 KIS 5콜(daily·minute·price·orderbook·trades)이다.
+#   엔드포인트는 무인증이고 URL 이 public repo 에 그대로 있다
+#   (framer-components/public-probe/RealtimeChartProbe.tsx · api/intelligence/ticker_facts.py).
+#   즉 제3자 트래픽이 오퍼레이터 계정의 KIS 쿼터를 먹고, 유량 초과 시 재시도·백오프 코드가
+#   없어 **오퍼레이터 본인 조회가 먼저 죽는다.**
+#   CORS 를 닫아도(2026-08-15) 이 벡터는 안 막힌다 — CORS 는 브라우저 정책이라 curl 은 통과한다.
+#
+#   대조: /quotes·/us_quotes 는 이미 per-IP 레이트리밋(60초 30회)이 있고,
+#        /snapshot·/candles 는 WS 메모리 상태를 읽어 KIS 를 안 건드린다. 이 라우트만 무방비였다.
+#
+#   레이트리밋 대신 캐시를 택한 이유: IP 기준 제한은 Vercel 공용 egress 를 함께 막을 위험이
+#   있는데, 캐시는 트래픽 출처와 무관하게 KIS 호출 상한을 만들고 오퍼레이터 응답도 빨라진다.
+_chart_cache: Dict[str, tuple] = {}          # key -> (expire_ts, payload)
+_chart_locks: Dict[str, asyncio.Lock] = {}   # key -> 동시요청 합류용
+_CHART_CACHE_MAX = 512
+# 타입별 TTL(초). 실시간성이 필요한 축만 짧게 둔다 — 5초는 체감 0이면서 초당 KIS 콜을 1로 묶는다.
+_CHART_TTL = {
+    "price": 5, "all": 5, "minute": 5,
+    "daily": 60, "weekly": 300, "monthly": 300, "full": 900,
+}
+
+
+def _chart_cache_get(key: str):
+    hit = _chart_cache.get(key)
+    if not hit:
+        return None
+    expire_ts, payload = hit
+    if time.monotonic() >= expire_ts:
+        _chart_cache.pop(key, None)
+        return None
+    return payload
+
+
+def _chart_cache_put(key: str, payload, ttl: float) -> None:
+    if len(_chart_cache) >= _CHART_CACHE_MAX:
+        # 만료분 우선 정리, 그래도 넘치면 가장 이른 만료부터 버린다(무한 증가 방지).
+        now = time.monotonic()
+        for k in [k for k, (e, _) in _chart_cache.items() if e <= now]:
+            _chart_cache.pop(k, None)
+        while len(_chart_cache) >= _CHART_CACHE_MAX:
+            _chart_cache.pop(min(_chart_cache, key=lambda k: _chart_cache[k][0]), None)
+    _chart_cache[key] = (time.monotonic() + ttl, payload)
+
+
 @app.get("/chart/{ticker}")
 async def chart(ticker: str, type: str = Query("all")):
-    """KIS REST 차트 데이터 — Railway 상주 토큰으로 KIS 알림 없이 조회."""
+    """KIS REST 차트 데이터 — Railway 상주 토큰으로 KIS 알림 없이 조회.
+
+    응답은 타입별 TTL 로 캐시한다(위 블록 참조). 동시 요청은 락으로 합류시켜
+    캐시 미스 순간의 stampede 가 KIS 로 그대로 나가지 않게 한다.
+    """
     tk = ticker.strip().zfill(6)
+    ck = f"{tk}:{type}"
+    cached = _chart_cache_get(ck)
+    if cached is not None:
+        return cached
+
+    lock = _chart_locks.setdefault(ck, asyncio.Lock())
+    async with lock:
+        # 락 대기 중 앞선 요청이 채웠을 수 있다 — 재확인 후 진행.
+        cached = _chart_cache_get(ck)
+        if cached is not None:
+            return cached
+        payload, cacheable = await _chart_fetch(tk, type)
+        if cacheable:
+            _chart_cache_put(ck, payload, _CHART_TTL.get(type, 5))
+        if len(_chart_locks) > _CHART_CACHE_MAX * 2:
+            _chart_locks.clear()   # 락 딕셔너리 무한 증가 방지 (경합 시 잠깐 비효율일 뿐 안전)
+        return payload
+
+
+async def _chart_fetch(tk: str, type: str):
+    """실제 조회. 반환 = (payload, 캐시해도 되는가).
+
+    부분 실패(type=all 의 일부 축)나 오류 응답은 캐시하지 않는다 — 그러면 TTL 동안
+    degrade 된 응답을 계속 돌려주게 된다.
+    """
     loop = asyncio.get_event_loop()
     try:
         if type == "daily":
             data = await loop.run_in_executor(None, fetch_daily, tk)
-            return {"daily": data}
+            return {"daily": data}, True
         if type == "weekly":
             data = await loop.run_in_executor(None, fetch_weekly, tk)
-            return {"weekly": data}
+            return {"weekly": data}, True
         if type == "monthly":
             data = await loop.run_in_executor(None, fetch_monthly, tk)
-            return {"monthly": data}
+            return {"monthly": data}, True
         if type == "full":
             # 전체 상장 기간 월봉 (yfinance, KIS 무관) — IPO 까지. KIS 100건 캡 우회.
             data = await loop.run_in_executor(None, fetch_full_history, tk)
-            return {"full": data}
+            return {"full": data}, True
         if type == "minute":
             data = await loop.run_in_executor(None, fetch_minute, tk)
-            return {"minute": data}
+            return {"minute": data}, True
         if type == "price":
             data = await loop.run_in_executor(None, fetch_price, tk)
-            return {"price": data}
-        # type == "all"
+            return {"price": data}, True
+        # type == "all" — 한 요청에 KIS 5콜. 캐시 효과가 가장 큰 경로다.
         import concurrent.futures
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
             f_daily = loop.run_in_executor(ex, fetch_daily, tk)
@@ -398,7 +473,8 @@ async def chart(ticker: str, type: str = Query("all")):
                 f_daily, f_minute, f_price, f_orderbook, f_trades,
                 return_exceptions=True,
             )
-        return {
+        parts = (daily, minute, price, orderbook, trades)
+        payload = {
             "ticker": tk,
             "daily": daily if not isinstance(daily, Exception) else [],
             "minute": minute if not isinstance(minute, Exception) else [],
@@ -406,9 +482,11 @@ async def chart(ticker: str, type: str = Query("all")):
             "orderbook": orderbook if not isinstance(orderbook, Exception) else {},
             "trades": trades if not isinstance(trades, Exception) else [],
         }
+        # 부분 실패는 캐시하지 않는다 — TTL 동안 degrade 된 응답을 계속 돌려주게 된다.
+        return payload, not any(isinstance(p, Exception) for p in parts)
     except Exception as e:
         logger.error("chart 조회 실패 %s: %s", tk, e)
-        return JSONResponse({"error": str(e)}, status_code=502)
+        return JSONResponse({"error": str(e)}, status_code=502), False
 
 
 @app.get("/program/{market}")
