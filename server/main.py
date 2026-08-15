@@ -49,7 +49,7 @@ ws_client = KISWebSocketClient()
 
 # 배포 관측 태그 — /health 로 어떤 커밋 계열이 떠 있는지 판별 (2026-08-03 배포 추적 사고:
 # uptime_seconds 는 WS 연결 uptime 이라 배포판별 불가였음). 서버 변경 시 갱신.
-BUILD_TAG = "2026-08-05-usidx"
+BUILD_TAG = "2026-08-15-chartcache"
 
 
 def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
