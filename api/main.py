@@ -1532,7 +1532,15 @@ def main():
     tracer.log("market_scope", market_scope)
 
     # ── 런타임 가드: 모드별 최대 실행 시간 초과 시 강제 종료 ──
-    # full / full_us = 110분 (workflow timeout-minutes 120 안전 마진 10분).
+    # full / full_us = 110분.
+    #
+    # 🚨 2026-08-15 계측 — 이 값의 근거가 사라진 상태다. 원래 산정식은
+    #   "workflow timeout-minutes 120 − 안전 마진 10" 이었는데, yml 의 timeout-minutes 는
+    #   그 뒤 150 → 240 으로 올라갔고 이 상수와 아래 print 문구만 120 에 남았다.
+    #   즉 현재 run 을 죽이는 것은 워크플로 타임아웃이 아니라 이 110분 가드이고,
+    #   240분 예산 중 약 125분이 쓰이지 않고 남는다 (실측 job 115.3분 종료).
+    #   숫자 조정은 PM 결정 대기 — 임의 상향 금지 (yml 주석: "또 닿으면 올리지 말고 분해를 논의").
+    #   여기서는 근거가 사라진 문구만 정정한다.
     # 5/10 13:11 KST 1500 stage run 이 82분 한계 도달 SIGTERM 후 상향 (Phase 2-A ramp-up).
     # universe stage 별 동적 산식은 실측 데이터 누적 후 (5/16 ATR verdict 후 sprint).
     _MODE_MAX_SECONDS = {
@@ -1543,13 +1551,17 @@ def main():
         "full_us": 110 * 60,
     }
     _run_limit = _MODE_MAX_SECONDS.get(effective_mode, 110 * 60)
+    # .github/workflows/daily_analysis_full.yml 의 timeout-minutes 와 동일해야 한다.
+    # 어긋나면 위 print 가 다시 거짓 여유를 보고한다 (그게 이번 drift 의 형태였다).
+    _WORKFLOW_TIMEOUT_MIN = 240
     import threading as _threading, time as _time
     _run_start = _time.monotonic()
 
     # 운영 가시화 — silent skip 절대 금지 (feedback_data_collection_verification_mandatory)
     print(
         f"\n⏱ runtime watchdog: mode={effective_mode} stage={os.environ.get('UNIVERSE_RAMP_UP_STAGE', '0')} "
-        f"limit={_run_limit//60}분 (workflow timeout 120 안전 마진 {(120 * 60 - _run_limit)//60}분)"
+        f"limit={_run_limit//60}분 (workflow timeout {_WORKFLOW_TIMEOUT_MIN}분 · 미사용 여유 "
+        f"{_WORKFLOW_TIMEOUT_MIN - _run_limit//60}분)"
     )
 
     def _runtime_watchdog():
