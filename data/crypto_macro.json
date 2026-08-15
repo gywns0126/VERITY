@@ -10,8 +10,8 @@
   },
   "funding_rate": {
     "ok": true,
-    "rate": 7.18284649049e-05,
-    "rate_pct": 0.0072,
+    "rate": 7.34739766244e-05,
+    "rate_pct": 0.0073,
     "prev_rate_pct": null,
     "signal": "neutral",
     "timestamp": "1786809600000",
@@ -19,29 +19,26 @@
   },
   "kimchi_premium": {
     "ok": true,
-    "premium_pct": 0.08,
-    "upbit_krw": 89102000.0,
-    "global_usd": 63052.3,
-    "binance_usd": 63052.3,
+    "premium_pct": 0.2,
+    "upbit_krw": 89025000.0,
+    "global_usd": 62922.5,
+    "binance_usd": 62922.5,
     "usdt_krw": 1412.0,
     "signal": "normal",
     "source": "upbit+bybit/okx"
   },
   "btc_nasdaq_corr": {
     "ok": true,
-    "correlation": -0.108,
+    "correlation": -0.021,
     "period_days": 30,
     "signal": "decoupled",
-    "btc_last_price": 63052.3
+    "btc_last_price": 62922.5
   },
   "stablecoin_mcap": {
-    "ok": true,
-    "total_mcap_usd": 254891413238.19244,
-    "total_mcap_b": 254.9,
-    "usdt_mcap_b": 183.0,
-    "usdc_mcap_b": 71.9
+    "ok": false,
+    "error": "429 Client Error: Too Many Requests for url: https://api.coingecko.com/api/v3/simple/price?ids=tether%2Cusd-coin&vs_curr"
   },
-  "ok_count": 5,
+  "ok_count": 4,
   "total": 5,
   "composite": {
     "score": 45,
@@ -49,10 +46,10 @@
     "risk_level": "normal",
     "signals": []
   },
-  "collected_at": "2026-08-15T17:32:20+09:00",
+  "collected_at": "2026-08-15T18:03:02+09:00",
   "schema_version": "v0",
   "diagnostics": {
-    "ok_count": 5,
+    "ok_count": 4,
     "used_prev_snapshot": false
   }
 }
