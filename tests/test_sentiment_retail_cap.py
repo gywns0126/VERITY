@@ -61,11 +61,17 @@ def test_retail_cap_meme_stock_pump():
     stock, portfolio = _make_inputs(news=60, x=100, social=100)
     result = _compute_sentiment_score(stock, portfolio)
 
-    # ── 13-source hard-wire 산식: x=100/social=100 = retail 21% < cap 22% → cap 미발동 ──
-    assert result["score"] == 62, (
-        f"expected 62 with 13-source single-source weights, got {result['score']} "
+    # ── 2026-08-15 구조 재편 (PREREG_FORMULA_RESTRUCTURE): 시장 레벨 9요소 가중 0 ──
+    # x_sentiment 는 포트폴리오 레벨(전 종목 동일값)이라 선별 점수에서 제외 — meme 종목을
+    # 변별한 적이 산술적으로 없던 축이다. retail 그룹 = social(종목 레벨)만 잔존.
+    # 신계약 기대값: news 60×.4167 + consensus 50×.2381 + social 100×.2024 + geo 50×.1429 = 64
+    # social 기여 20.2 < cap 22 → 정상 운영 cap 미발동 유지.
+    assert result["score"] == 64, (
+        f"expected 64 with stock-level-4 weights (2026-08-15 재편), got {result['score']} "
         f"(retail_excess={result.get('retail_excess_score')})"
     )
+    assert result["selection_basis"].startswith("stock_level_4")
+    assert "x_sentiment" in result["market_level_excluded"]
 
     # ── 정상 운영 cap 미발동 (intentional dead, meme trigger 시만 cap_meme 18% 강화) ──
     assert result["retail_cap_applied"] is False, (

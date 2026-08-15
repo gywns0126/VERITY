@@ -54,8 +54,16 @@ def test_kr_unchanged_regression():
     assert kr["geopolitical_score"] < 50          # sanctioned_exposure flagged → 30
 
 
-def test_us_sentiment_diverges_from_kr():
-    # 동일 매크로 환경에서 US 종합 점수가 KR 과 달라야(왜곡 제거 효과).
+def test_market_context_cannot_move_selection_score():
+    # ── 2026-08-15 구조 재편 (PREREG_FORMULA_RESTRUCTURE): 신계약 ──
+    # 시장 레벨 9요소 가중 0 → 종목 레벨 입력이 같으면 시장 컨텍스트(KR 매크로 왜곡 포함)가
+    # 선별 점수를 못 움직인다. 구계약("US ≠ KR 점수")의 왜곡 제거 의도는 이 상위 보장으로
+    # 대체된다 — 왜곡 자체가 선별 경로에서 사라졌다.
     us = _compute_sentiment_score({"currency": "USD", "sentiment": {"score": 50}}, _PF)
     kr = _compute_sentiment_score({"currency": "KRW", "sentiment": {"score": 50}}, _PF)
-    assert us.get("score") != kr.get("score")
+    assert us.get("score") == kr.get("score"), "시장 레벨 요소가 선별 점수에 침투"
+
+    # 종목 레벨 차이(geopolitical flag)는 계속 변별한다 — 005930 = sanctioned 등재 픽스처.
+    kr_flag = _compute_sentiment_score(
+        {"currency": "KRW", "ticker": "005930", "sentiment": {"score": 50}}, _PF)
+    assert kr_flag.get("score") < kr.get("score"), "종목 레벨 geo flag 변별 소실"

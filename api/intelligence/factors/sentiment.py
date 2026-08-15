@@ -195,17 +195,30 @@ def _compute_sentiment_score(
     #   - retail (x + social) 21% → RETAIL_CAP_BASE 22% 미만 (정상 운영 dead),
     #     meme trigger 시만 RETAIL_CAP_MEME 18% 동적 강화 (Phase 2 TODO).
     #   - geopolitical 0.060 가장 큰 신규 비중 (한국 시장 지정학 민감도).
+    # ── 2026-08-15 구조 재편 (PREREG_FORMULA_RESTRUCTURE_2026_08_15, RULE 7 1회·PM 승인) ──
+    # 시장 레벨 9요소 가중 0 — 같은 날 전 종목 동일값은 횡단면 순위에 산술적으로 기여 0
+    # (115일 실측 + Perplexity Q2: "market-level 신호는 timing/exposure 레이어로").
+    # 컴포넌트 13종의 계산·기록은 전부 유지 — 관측과 시장 레이어 소비는 불변.
+    # 선별 기여 = 종목 레벨 4요소만: news .175 / consensus_opinion .10 / social .085 /
+    # geopolitical .06 (노출 flag 기반이라 종목 레벨 — Q2 의 상호작용 형태) → 아래 norm 이
+    # 재정규화 (실효 .4167/.2381/.2024/.1429).
+    # 🚨 constitution sentiment_score.weights 와 반드시 동기 — 여기 fallback 만 살아 있으면
+    # constitution 편집을 이 dict 가 부활시킨다. 구 가중(시장 9): x .125 / market_mood .125 /
+    # crypto .065 / fear_greed .065 / headlines .05 / fx .05 / commodity .04 / decoupling .04 /
+    # horizon_link .02 — 복원은 prereg rollback 절차로만.
     _default_w = {
-        # 기존 7 (재분배 — 합 0.740)
-        "news_sentiment": 0.175, "x_sentiment": 0.125, "market_mood": 0.125,
-        "consensus_opinion": 0.100, "crypto_macro": 0.065,
-        "market_fear_greed": 0.065, "social_sentiment": 0.085,
-        # 신규 6 (합 0.260)
-        "fx_sentiment": 0.050, "commodity_sentiment": 0.040,
-        "global_index_decoupling": 0.040, "geopolitical_score": 0.060,
-        "macro_headlines": 0.050, "market_horizon_link": 0.020,
+        # 종목 레벨 4 (선별 기여)
+        "news_sentiment": 0.175, "consensus_opinion": 0.100,
+        "social_sentiment": 0.085, "geopolitical_score": 0.060,
+        # 시장 레벨 9 (가중 0 — 계산·기록만)
+        "x_sentiment": 0.0, "market_mood": 0.0, "crypto_macro": 0.0,
+        "market_fear_greed": 0.0, "fx_sentiment": 0.0, "commodity_sentiment": 0.0,
+        "global_index_decoupling": 0.0, "macro_headlines": 0.0, "market_horizon_link": 0.0,
     }
-    # sum = 1.000 ✓ (hard-wire, audit 가능)
+    _MARKET_LEVEL_EXCLUDED = (
+        "x_sentiment", "market_mood", "crypto_macro", "market_fear_greed", "fx_sentiment",
+        "commodity_sentiment", "global_index_decoupling", "macro_headlines", "market_horizon_link",
+    )
     active_w = {}
     w_sum = 0.0
     for key in components:
@@ -254,4 +267,7 @@ def _compute_sentiment_score(
                        for k, v in components.items()},
         "retail_cap_applied": retail_excess > 0,
         "retail_excess_score": round(retail_excess, 2),
+        # 산출물 자기신고 (RULE 12) — 이 점수는 종목 레벨 4요소만 반영한다.
+        "market_level_excluded": list(_MARKET_LEVEL_EXCLUDED),
+        "selection_basis": "stock_level_4 (2026-08-15 재편 — PREREG_FORMULA_RESTRUCTURE)",
     }

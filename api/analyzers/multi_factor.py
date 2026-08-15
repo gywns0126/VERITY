@@ -24,43 +24,48 @@ from typing import Any, Dict, List, Optional
 # 🚨 적용 전 실측(운영 풀 40종): multi_score 중앙 55.06->56.62 · **Δbrain 중앙 +0.16점** ·
 #   등급 변경 3/40 · Spearman 0.9334. **실효는 작다** — multi_factor 가 최종 점수의 12.75%
 #   이기 때문이다. 그럼에도 적용하는 이유 = 근거와 배분이 어긋난 상태를 남기지 않기 위함.
+# ── 2026-08-15 구조 재편 (PREREG_FORMULA_RESTRUCTURE_2026_08_15, RULE 7 1회·PM 승인) ──
+# macro 축 제거 — 시장 레벨(전 종목 공통)이라 횡단면 순위 기여가 산술적으로 0
+# (115일 실측: 88/115일 고유값 ≤2, 나머지는 장중 갱신 혼합. Perplexity Q2 정합).
+# 🚨 macro 의 역할은 사라진 게 아니라 자리만 정리됐다: ① regime 선택자(아래
+# _get_dynamic_weights 의 risk_off/on 분기)로 계속 벡터를 고른다 ② 사이징은
+# macro_multiplier(B-continuous) ③ 캡은 panic_stages. breakdown 에는 macro 점수 계속
+# 표기(가중 0 → 기여 0). 구 벡터 = ÷(1−macro가중) 재정규화, 잔차는 최대 축 흡수.
+# #42 조정 비율(momentum/technical 절반) 보존: 구 macro 가중 = BASE .1422 /
+# RISK_OFF .1874 / RISK_ON .0872. 복원은 prereg rollback 절차로만.
 BASE_WEIGHTS = {
-    "fundamental": 0.2133,
-    "technical": 0.085,      # <- 0.17 (신호 0)
-    "sentiment": 0.1185,
-    "flow": 0.154,
-    "macro": 0.1422,
-    "momentum": 0.05,        # <- 0.10 (신호 0)
-    "quality": 0.0948,
-    "volatility": 0.0711,
-    "mean_reversion": 0.0711,
+    "fundamental": 0.2487,   # <- 0.2133 ÷ 0.8578
+    "technical": 0.0991,     # #42 절반 유지 (<- 0.17 신호 0)
+    "sentiment": 0.1381,
+    "flow": 0.1795,
+    "momentum": 0.0583,      # #42 절반 유지 (<- 0.10 신호 0)
+    "quality": 0.1105,
+    "volatility": 0.0829,
+    "mean_reversion": 0.0829,
 }
 
 # #42 동일 규칙 적용. regime 이 바뀐다고 없던 정보가 생기지 않는다.
 RISK_OFF_WEIGHTS = {
-    "fundamental": 0.2207,
-    "technical": 0.06,       # <- 0.12
-    "sentiment": 0.0661,
-    "flow": 0.1102,
-    "macro": 0.1874,
-    "momentum": 0.025,       # <- 0.05
-    "quality": 0.1543,
-    "volatility": 0.1102,
-    "mean_reversion": 0.0661,
+    "fundamental": 0.2717,   # <- 0.2207 ÷ 0.8126
+    "technical": 0.0738,
+    "sentiment": 0.0813,
+    "flow": 0.1356,
+    "momentum": 0.0308,
+    "quality": 0.1899,
+    "volatility": 0.1356,
+    "mean_reversion": 0.0813,
 }
 
-# #42 동일 규칙. 🚨 RISK_ON 은 technical 0.18 이라 방치하면 위험선호 국면에서
-# 신호 0 축이 오히려 커진다 — 세 벡터를 모두 고쳐야 하는 이유.
+# #42 동일 규칙. 🚨 RISK_ON 은 technical 이 큰 벡터라 신호 0 축 확대 방지 유지.
 RISK_ON_WEIGHTS = {
-    "fundamental": 0.1745,
-    "technical": 0.09,       # <- 0.18
-    "sentiment": 0.1246,
-    "flow": 0.1995,
-    "macro": 0.0872,
-    "momentum": 0.075,       # <- 0.15
-    "quality": 0.0623,
-    "volatility": 0.0623,
-    "mean_reversion": 0.1246,
+    "fundamental": 0.1912,   # <- 0.1745 ÷ 0.9128
+    "technical": 0.0986,
+    "sentiment": 0.1365,
+    "flow": 0.2184,
+    "momentum": 0.0822,
+    "quality": 0.0683,
+    "volatility": 0.0683,
+    "mean_reversion": 0.1365,
 }
 
 

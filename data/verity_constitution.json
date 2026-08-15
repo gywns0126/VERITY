@@ -23,7 +23,25 @@
       "dart_health": 0.049,
       "perplexity_risk": 0.02
     },
-    "notes": "V5: graham_value(안전마진+재무건전성) + canslim_growth(EPS가속+RS) 추가. 기존 팩터 비율 보수적 재배분."
+    "notes": "V5: graham_value(안전마진+재무건전성) + canslim_growth(EPS가속+RS) 추가. 기존 팩터 비율 보수적 재배분.",
+    "_runtime_note_2026_08_15": {
+      "freeze": "multi_factor .1876 / consensus .1279 / prediction .0853 / timing .0597 은 런타임 ×0.0 (factor_decay 2026-05-23 동결, fact.py:355 적용). 문서 가중 46.05% 가 실효 0.",
+      "normalize": "잔여 가중은 fact.py:509 재정규화. equity_brief_verdict .03 은 2026-07-23 채점 제외.",
+      "regime_switch": "Graham/CANSLIM 은 regime 따라 ×1.5/×0.5 (fact.py:366) — 여기 weights 에 없는 런타임 변조.",
+      "effective_2026_08_15": {
+        "moat_quality": 0.1498,
+        "analyst_report": 0.1376,
+        "backtest": 0.1197,
+        "export_trade": 0.1197,
+        "graham_value": 0.1197,
+        "canslim_growth": 0.1197,
+        "dart_health": 0.086,
+        "commodity_margin": 0.0599,
+        "us_fscore": 0.0527,
+        "perplexity_risk": 0.0351
+      },
+      "warning": "이 weights 숫자를 실효 가중으로 인용하지 말 것 — BRAIN_AUDIT_2026_08_15 §2."
+    }
   },
   "quant_factors": {
     "description": "학술 퀀트 팩터 설정 — multi_factor v3 내부 서브팩터",
@@ -114,20 +132,38 @@
     "description": "심리/감성 기반 종합 점수 (0~100). V5.2: 전체 13개 소스 가중치 합 = 1.0",
     "weights": {
       "news_sentiment": 0.175,
-      "x_sentiment": 0.125,
-      "market_mood": 0.125,
+      "x_sentiment": 0.0,
+      "market_mood": 0.0,
       "consensus_opinion": 0.1,
-      "crypto_macro": 0.065,
-      "market_fear_greed": 0.065,
+      "crypto_macro": 0.0,
+      "market_fear_greed": 0.0,
       "social_sentiment": 0.085,
-      "fx_sentiment": 0.05,
-      "commodity_sentiment": 0.04,
-      "global_index_decoupling": 0.04,
+      "fx_sentiment": 0.0,
+      "commodity_sentiment": 0.0,
+      "global_index_decoupling": 0.0,
       "geopolitical_score": 0.06,
-      "macro_headlines": 0.05,
-      "market_horizon_link": 0.02
+      "macro_headlines": 0.0,
+      "market_horizon_link": 0.0
     },
-    "notes": "V5.2 (2026-06-03 PM승인): 구버전 7개(합1.0)가 코드 _default_w 13개를 덮어써 w_sum=1.26 → 신규 6 매크로 소스 희석되던 출처 이중화(RULE7) 정정. 코드 sentiment.py _default_w(2026-05-16 Phase B Perplexity 자문 설계값)와 동기화 = 단일 출처. 기존 7개 합 0.74 + 신규 6개 합 0.26. 신호 영향(기존 7개 비중 축소)은 의도된 설계 복원이며 곡선맞추기 아님."
+    "notes": "V5.2 (2026-06-03 PM승인): 구버전 7개(합1.0)가 코드 _default_w 13개를 덮어써 w_sum=1.26 → 신규 6 매크로 소스 희석되던 출처 이중화(RULE7) 정정. 코드 sentiment.py _default_w(2026-05-16 Phase B Perplexity 자문 설계값)와 동기화 = 단일 출처. 기존 7개 합 0.74 + 신규 6개 합 0.26. 신호 영향(기존 7개 비중 축소)은 의도된 설계 복원이며 곡선맞추기 아님.",
+    "_restructure_2026_08_15": {
+      "what": "시장 레벨 9요소 가중 0 — 종목 선별 점수는 종목 레벨 4요소(news/consensus_opinion/social/geopolitical)만. 컴포넌트 계산·기록은 유지.",
+      "why": "같은 날 전 종목 동일값은 횡단면 순위에 산술적으로 기여 0 (115일 실측 + Perplexity Q2). 시장 신호의 자리는 timing/sizing 레이어.",
+      "old_weights": {
+        "x_sentiment": 0.125,
+        "market_mood": 0.125,
+        "crypto_macro": 0.065,
+        "market_fear_greed": 0.065,
+        "macro_headlines": 0.05,
+        "commodity_sentiment": 0.04,
+        "market_horizon_link": 0.02,
+        "fx_sentiment": 0.05,
+        "global_index_decoupling": 0.04
+      },
+      "runtime": "sentiment.py 가 active 가중 합으로 재정규화 — 실효 = news .4167 / consensus_opinion .2381 / social .2024 / geopolitical .1429",
+      "prereg": "docs/PREREG_FORMULA_RESTRUCTURE_2026_08_15.md (RULE 7 1회 조정, PM 승인 2026-08-15)",
+      "rollback": "old_weights 복원 + sentiment.py _default_w 동기"
+    }
   },
   "vci": {
     "description": "Verity Contrarian Index — 팩트와 심리의 괴리율",
@@ -145,7 +181,8 @@
       "-15 <= VCI <= 15": "팩트와 심리 정렬 — 추세 추종 전략 유효",
       "-25 <= VCI < -15": "심리 과열 — 팩트 대비 고평가 주의",
       "VCI < -25": "심리만 좋고 팩트는 나쁨 → 버블 경계, 매도 검토"
-    }
+    },
+    "_status": "코드가 SoT — vci.py v2 (2026-07-24 median/MAD robust z, signal 기반). 아래 raw ±25/±15 임계는 v1 이력 기록. gap 분포 [-7,15] 에서 raw 임계는 미발화였다."
   },
   "hedge_fund_principles": {
     "description": "V4 — PDF 학습 기반 헤지펀드 마스터 투자 원칙 (분기별 상수 업데이트)",
@@ -597,36 +634,8 @@
       "condition": "Shiller CAPE > 30",
       "action": "시장 과열 경고, 신규 매수 보수적, 포지션 대폭 축소",
       "source": "Shiller Irrational Exuberance — 1929, 2000, 2007 직전 공통"
-    }
-  },
-  "bond_regime": {
-    "description": "Phase 2 — 채권 시장 레짐 판단 (bondanalyzer.py + yieldcurveanalyzer.py 연동)",
-    "rate_environment": "rate_elevated",
-    "curve_shape": "flat",
-    "credit_cycle": "neutral",
-    "recession_signal": false,
-    "notes": "yieldcurveanalyzer.py의 get_bond_regime_signal()이 실행 시마다 갱신"
-  },
-  "etf_multifactor": {
-    "description": "Phase 2 — ETF 멀티팩터 스크리닝 가중치 (etfscreener.py 동기화)",
-    "momentum_weight": 0.35,
-    "value_weight": 0.3,
-    "quality_weight": 0.25,
-    "liquidity_weight": 0.1,
-    "notes": "etfscreener.py의 FACTOR_WEIGHTS와 일치해야 함"
-  },
-  "bond_vci_thresholds": {
-    "description": "Phase 2 — 채권/ETF 신호 등급 임계값 (주식 VCI 기준 동일 적용)",
-    "STRONG_BUY": 75,
-    "BUY": 60,
-    "WATCH": 45,
-    "CAUTION": 25,
-    "AVOID": 0
-  },
-  "bond_macro_override": {
-    "description": "Phase 2 — 채권 시장 발 매크로 오버라이드 트리거",
-    "trigger": "recession_signal == true",
-    "action": "포트폴리오 전체 방어모드 전환, equity_bias VERY_NEGATIVE 적용"
+    },
+    "_status": "모드 서술 = 설계 이력. 실행 SoT = panic_stages 캡(verity_brain._detect_panic_stage) + B-continuous macro_multiplier(2026-05-18, 상한 0.30). cape/euphoria 바이너리 모드는 continuous 로 대체됨."
   },
   "gemini_system_instruction": {
     "role": "너는 '배리티 터미널'의 수석 펀드매니저다. 15년 경력의 한국 투자 전문가.",
@@ -676,157 +685,6 @@
       "5년: 중장기 성장 시나리오",
       "10년: 장기 산업 구조 변화 내 포지셔닝"
     ]
-  },
-  "graham_defensive_screen": {
-    "description": "V5 — Benjamin Graham 방어적 투자자 7가지 기준 + 안전마진 매매 로직",
-    "criteria": {
-      "market_cap": "대형주 이상 (소기업 제외)",
-      "current_ratio_min": 2.0,
-      "dividend_years_min": 20,
-      "earnings_consecutive_years": 10,
-      "eps_growth_10yr_min_pct": 33,
-      "pe_ratio_max": 15,
-      "pb_pe_product_max": 22.5
-    },
-    "signals": {
-      "BUY": "price < intrinsic_value * 0.67",
-      "SELL": "price > intrinsic_value * 1.25",
-      "HOLD": "0.67 <= price/intrinsic_value <= 1.25"
-    },
-    "scoring_weight_in_fact": 0.08
-  },
-  "canslim_growth_screen": {
-    "description": "V5 — William O'Neil CANSLIM 7요소 + 기술적 베이스 패턴 감지",
-    "criteria": {
-      "C_current_eps_growth_min_pct": 25,
-      "A_annual_eps_growth_min_pct": 25,
-      "N_new_catalyst": "신제품/신경영/신고가",
-      "S_volume_confirmation": "거래량 증가 동반 주가 상승",
-      "L_rs_rating_min": 80,
-      "I_institutional_entry": "우수 기관 신규 진입 확인",
-      "M_market_direction": "상승장에서만 매수"
-    },
-    "loss_cut_pct": 8,
-    "profit_take_pct": 20,
-    "scoring_weight_in_fact": 0.08
-  },
-  "bubble_detection": {
-    "description": "V5 — Mackay 5단계 + Shiller CAPE + Taleb 블랙스완 필터",
-    "cape_thresholds": {
-      "extreme_undervalue": 10,
-      "fair_range": [
-        10,
-        20
-      ],
-      "overvalued": 25,
-      "bubble_warning": 30
-    },
-    "mackay_signals": [
-      "비이성적 주가상승 + 미디어 과열",
-      "관련 없는 업종 동일 테마 동반상승",
-      "'이번에는 다르다' 내러티브 등장",
-      "기본수익가치와 주가 괴리 역사적 최고"
-    ],
-    "collapse_leading_signals": [
-      "내부자 대량 매도",
-      "유동성 급감 (스프레드 급등)",
-      "선도주 신고가 경신 실패"
-    ],
-    "taleb_filters": {
-      "min_sharpe": 1.0,
-      "min_trade_count": 100,
-      "max_drawdown_pct": 15,
-      "path_dependence_check": "현재 가격에서 이 포지션을 새로 잡겠는가?"
-    }
-  },
-  "trading_psychology": {
-    "description": "V5 — Douglas 5기본진실 + Elder 3M + Carter 5실수 경고 체계",
-    "douglas_five_truths": [
-      "모든 거래의 결과는 랜덤하다",
-      "엣지는 확률 우위일 뿐이다",
-      "랜덤 결과에서 일관된 성과를 낸다",
-      "지금 이 순간에 집중하라",
-      "리스크를 사전에 정의하라"
-    ],
-    "elder_three_m": {
-      "mind": "자기 통제·감정 관리 (최우선)",
-      "money": "자금 관리 (2%/6% 룰)",
-      "method": "트레이딩 시스템 (가장 후순위)"
-    },
-    "carter_five_mistakes": [
-      "손절 없이 진입",
-      "손실 중 포지션 추가(물타기)",
-      "과도한 포지션 사이징",
-      "복수 심리 매매",
-      "규칙 없이 직관만 의존"
-    ],
-    "pre_trade_checklist": [
-      "최대 손실을 감당할 수 있는가?",
-      "손절 가격을 사전에 정의했는가?",
-      "감정 상태가 중립적인가?",
-      "복수심으로 거래하려는 것은 아닌가?",
-      "시스템 신호인가, 충동인가?",
-      "포지션 크기가 자본의 2% 이내인가?"
-    ]
-  },
-  "candlestick_psychology": {
-    "description": "V5 — Steve Nison 3대 심리 원칙 + Rule of Multiple Techniques",
-    "three_principles": {
-      "trend_context": "패턴보다 발생 위치(추세 맥락)가 핵심. 횡보 중간 패턴은 노이즈.",
-      "confirmation": "캔들 신호 즉시 진입 금지. 다음 캔들 또는 서양 도구로 교차 확인 후 행동.",
-      "rules_over_emotions": "기술적 분석 = 감정을 규칙으로 대체. 진입/청산/손절 사전 설정."
-    },
-    "confirmation_checklist": [
-      "명확한 기존 추세가 있는가?",
-      "의미 있는 지지/저항 구간에서 발생했는가?",
-      "거래량이 패턴을 확인하는가?",
-      "MA/RSI/MACD 등이 같은 방향인가?",
-      "손절 위치가 명확히 설정 가능한가?"
-    ],
-    "scoring": {
-      "single_candle_base": 1,
-      "two_candle_base": 2,
-      "three_candle_base": 3,
-      "volume_bonus": 1,
-      "sr_level_bonus": 1,
-      "trend_alignment_bonus": 1,
-      "strong_threshold": 4,
-      "moderate_threshold": 2
-    }
-  },
-  "elder_risk_rules": {
-    "description": "V5 — Alexander Elder 2%/6% 규칙 + 삼중스크린 시스템",
-    "two_pct_rule": "단일 거래 최대 손실 = 자본의 2%",
-    "six_pct_rule": "월 최대 손실 = 자본의 6%, 도달 시 그 달 거래 중단",
-    "triple_screen": {
-      "screen1_weekly": "MACD 히스토그램 방향 확인 (장기 추세)",
-      "screen2_daily": "스토캐스틱 과매도 반등 (중기 조정, 추세 역방향에서 매수 기회)",
-      "screen3_hourly": "전일 고점 돌파 시 진입, 트레일링 스탑"
-    },
-    "adx_regime": {
-      "below_20": "비추세장 → 오실레이터 전략",
-      "above_25_rising": "강한 추세장 → 추세추종 전략",
-      "above_40": "추세 과열 → 진입 주의, 청산 준비"
-    }
-  },
-  "livermore_rules": {
-    "description": "V5 — Jesse Livermore 탐색매매 + 피봇포인트 + 최소저항선",
-    "line_of_least_resistance": "상승장 매수만, 하락장 공매도만, 횡보장 현금 보유",
-    "probing_entry": {
-      "stages_pct": [
-        20,
-        20,
-        20,
-        40
-      ],
-      "condition": "수익 확인 후 다음 단계 진입. 손실 시 즉시 청산.",
-      "max_loss_pct": 10
-    },
-    "pivotal_points": {
-      "reversal": "거래량 200%+ 급증 + 가격 방향 전환 → 추세 반전 경고",
-      "continuation": "조정 후 이전 고점 재탈환 + 거래량 증가 → 추세 지속 확인"
-    },
-    "industry_group": "같은 산업 그룹 2개+ 종목 동일 패턴 시 신뢰도 상승"
   },
   "dilution_rules": {
     "version": "2.0",
