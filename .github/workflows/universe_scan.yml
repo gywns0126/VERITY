@@ -66,7 +66,53 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ── 중복 트리거 가드 (2026-08-15, daily_analysis_full 와 동일 설계) ─────────
+  # 🚨 트리거가 둘이다 — GH `schedule`(30 6 * * 1-5) + Vercel `repository_dispatch`
+  #   (5/16~5/18 정기 cron 3일 silent miss 학습으로 추가한 fallback). GH 가 정상 발화하면
+  #   **둘 다 돈다**. fallback 에 "본편이 이미 돌았나" 확인이 없었다.
+  #
+  #   실측 (2026-08-15, GitHub API 표본 50건 / 20일): 중복 쌍 4건.
+  #     08-07 / 08-11 / 08-12 / 08-14 — **4건 모두 양쪽 성공 = 순수 낭비** (run 당 35~53분).
+  #     간격 75.5~88.8분. 정규 슬롯은 24h 간격이라 120분 창은 넉넉히 안전하다.
+  #
+  #   🚨 이 워크플로는 universe_candidates.json 생산자다. 잘못 건너뛰면 daily_analysis 가
+  #     26h stale 게이트로 중단(exit 1 + 텔레그램)된다. 그래서 가드는 **선행이 '성공' 했을
+  #     때만** 생략한다 — 성공했다면 후보 스냅샷이 방금 갱신된 상태이므로 게이트가 만족된다.
+  #     실패·취소·진행중·조회실패는 전부 실행(fail-open)이라 결손 방향으로는 기울지 않는다.
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Checkout (가드 스크립트)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 같은 슬롯 성공분 확인
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SELF: ${{ github.run_id }}
+          WINDOW_MIN: '120'
+        run: |
+          set -uo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=1" >> "$GITHUB_OUTPUT"; echo "수동 실행 — 가드 미적용"; exit 0
+          fi
+          JSON=$(gh api "repos/${{ github.repository }}/actions/workflows/universe_scan.yml/runs?per_page=30" 2>/dev/null) || JSON=""
+          if [ -z "$JSON" ]; then
+            echo "run=1" >> "$GITHUB_OUTPUT"; echo "API 조회 실패 — fail-open 실행"; exit 0
+          fi
+          # 🚫 판정 로직 인라인 금지 — YAML 블록 스칼라가 깨져 워크플로가 무효가 된다(실측).
+          OUT=$(printf '%s' "$JSON" | python3 scripts/ci/duplicate_run_guard.py)
+          echo "$OUT"
+          echo "run=$(printf '%s' "$OUT" | grep -oE '^run=[01]$' | tail -1 | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
   scan:
+    needs: guard
+    if: needs.guard.outputs.run == '1'
     runs-on: ubuntu-latest
     timeout-minutes: 60   # universe 5000 + cooler 누적 35분 → 안전 마진 25분
 

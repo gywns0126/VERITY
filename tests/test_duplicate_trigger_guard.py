@@ -29,6 +29,7 @@ import yaml
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WF = os.path.join(_ROOT, ".github", "workflows", "daily_analysis_full.yml")
+WF_UNIVERSE = os.path.join(_ROOT, ".github", "workflows", "universe_scan.yml")
 
 
 def _wf_src() -> str:
@@ -169,6 +170,48 @@ def test_guard_does_not_touch_analyze_timeout():
     d = yaml.safe_load(_wf_src())
     assert d["jobs"]["analyze"]["timeout-minutes"] == 240
     assert d["jobs"]["guard"]["timeout-minutes"] <= 10, "가드는 가벼워야 한다"
+
+
+# ── universe_scan 동일 적용 (2026-08-15) ───────────────────────────────────
+# 실측 중복 4건 / 20일, 4건 모두 양쪽 성공 = 순수 낭비(run 당 35~53분).
+# 🚨 이 워크플로는 universe_candidates.json 생산자다 — 잘못 건너뛰면 daily_analysis 가
+#   26h stale 게이트로 중단된다. 선행 '성공' 조건과 fail-open 이 그 방향을 막는다.
+
+def _uni_src() -> str:
+    with open(WF_UNIVERSE, encoding="utf-8") as f:
+        return f.read()
+
+
+def test_universe_scan_gated_on_guard():
+    d = yaml.safe_load(_uni_src())
+    jobs = d["jobs"]
+    assert "guard" in jobs, "universe_scan 가드 job 이 없다"
+    sc = jobs["scan"]
+    assert sc.get("needs") == "guard" or "guard" in (sc.get("needs") or [])
+    assert "needs.guard.outputs.run" in str(sc.get("if", ""))
+
+
+def test_universe_scan_uses_shared_script():
+    src = _uni_src()
+    assert "scripts/ci/duplicate_run_guard.py" in src
+    assert "python3 -c '" not in src, "판정 로직이 인라인으로 되돌아왔다"
+    assert "universe_scan.yml/runs" in src, "자기 워크플로가 아닌 것을 조회하고 있다"
+    yaml.safe_load(src)
+
+
+def test_universe_scan_budget_untouched():
+    """스캔 예산(60분)·자체 concurrency 그룹은 가드가 건드리지 않는다."""
+    d = yaml.safe_load(_uni_src())
+    assert d["jobs"]["scan"]["timeout-minutes"] == 60
+    assert d["concurrency"]["group"] == "verity-universe-scan"
+    assert d["concurrency"]["cancel-in-progress"] is False
+
+
+def test_each_workflow_queries_its_own_runs():
+    """가드가 남의 워크플로 run 을 보고 판단하면 엉뚱하게 생략된다."""
+    assert "daily_analysis_full.yml/runs" in _wf_src()
+    assert "universe_scan.yml/runs" not in _wf_src()
+    assert "daily_analysis_full.yml/runs" not in _uni_src()
 
 
 if __name__ == "__main__":
