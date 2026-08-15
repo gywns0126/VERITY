@@ -30,12 +30,30 @@ concurrency:
 
 jobs:
   pulse:
+    # 🚨 2026-08-15 실측 — 취소 58%는 동시성 축출이 아니라 **타임아웃**이었다.
+    #   표본 100건: cancelled 58 / success 41. 취소분의 job 시간이 309·319·320·322초로
+    #   전부 5분 경계에 몰려 있고, 12개 step 을 실제로 실행하다 죽었다(큐 대기 아님).
+    #   성공분 실측 289초 — 한도 300초 대비 여유가 11초뿐이라 조금만 느리면 잘린다.
+    #   step 프로파일(GitHub jobs API, print 시각 아님):
+    #     publish 126s · pip install 61s · checkout 41s · setup-python 24s
+    #     · **실제 작업(Run price pulse) 19s** · commit 3s · warm 7s = 289s
+    #   즉 19초 작업에 오버헤드가 93%다.
+    #   조치 ① timeout 5→12분 (즉시 절단 중단) ② checkout fetch-depth 로 41s 축소.
+    #   🚫 publish(126s) 축소는 하지 않는다 — publish-data 는 force_orphan: true 로
+    #     VERITY-data main 을 통째 교체한다. 파일 목록을 줄이면 나머지 74개가 삭제된다.
+    #     (전체 발행 자체는 cockpit_aggregate 5분 cron 과 중복이지만, 줄이려면 액션의
+    #      배포 방식부터 바꿔야 하므로 별건이다.)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # 전체 히스토리 clone 이 41초였다. price_pulse 커밋만 13,140건이라 누적이 크다.
+          # commit + `git pull --rebase` 재시도가 있어 0(=전체) 대신 얕은 이력을 남긴다.
+          # dart_catalyst_pulse 선례와 동일 값.
+          fetch-depth: 10
 
       - name: Setup Python
         uses: actions/setup-python@v5
