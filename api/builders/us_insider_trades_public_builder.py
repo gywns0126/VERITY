@@ -171,6 +171,32 @@ def _txt(el: Optional[ET.Element]) -> str:
 NO_MARKET_TX = object()
 
 
+def _form4_issuer(xml_text: str) -> Tuple[str, str]:
+    """Form 4 의 **발행사** (issuerCik, issuerTradingSymbol). 실패 시 ("","").
+
+    🚨 2026-08-15 신설. EDGAR 는 Form 4 를 **발행사 CIK 와 보고자 CIK 양쪽에** 색인한다.
+    이 빌더는 티커→CIK→submissions 로 수집하므로, **어떤 회사가 다른 회사의 내부자로서
+    제출한 Form 4 까지 자기 종목 거래로 끌어온다.**
+
+    실측: VWAV(VisionWave, 발행주식 2,538만주) 엔트리에 "Director 가 35.4억주 매수(P)" 가
+    실려 net_change +244억주가 나왔다. 원문을 열어보니 issuerTradingSymbol = **SVRE**
+    (SaverOne 2014 Ltd.) — VisionWave 가 SaverOne 지분을 산 거래였다. VWAV 와 무관하다.
+    발행주식의 140배라는 불가능한 수치가 공개 "내부자 순매수" 탭 1위에 실려 있었다.
+
+    전환·부여 합산 결함(NO_MARKET_TX)을 고쳐도 이건 안 잡힌다 — 코드가 진짜 P(시장매수)
+    이기 때문이다. **귀속 자체가 틀린 것**이라 발행사 대조가 유일한 방어다.
+    """
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return "", ""
+    iss = root.find(".//issuer")
+    if iss is None:
+        return "", ""
+    return (_txt(iss.find("issuerCik")).lstrip("0"),
+            _txt(iss.find("issuerTradingSymbol")).strip().upper())
+
+
 def _parse_form4(xml_text: str) -> Optional[Tuple[str, str, float, str, str]]:
     """form4.xml → (person, position, net_shares, code, last_date).
 
@@ -290,6 +316,13 @@ def main() -> int:
                         continue
                     parsed = _parse_form4(xr.text)
                 except requests.RequestException:
+                    continue
+                # 🚨 발행사 대조 먼저. 우리 종목이 아니라 **우리 종목이 남의 내부자로서**
+                #    제출한 공시면 버린다(VWAV→SVRE 사고). 파싱은 성공했으므로 n_parsed 는
+                #    올린다 — 그래야 "이 종목엔 매매 없음" 으로 엔트리가 정리된다.
+                i_cik, i_sym = _form4_issuer(xr.text)
+                if (i_cik and i_cik != str(int(cik))) or (i_sym and i_sym != tk.upper()):
+                    n_parsed += 1
                     continue
                 if parsed is NO_MARKET_TX:
                     n_parsed += 1      # 권위적 "매매 없음" — carry-forward 대상이 아니다

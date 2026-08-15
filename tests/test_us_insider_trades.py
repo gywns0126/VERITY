@@ -186,6 +186,40 @@ def test_representative_code_follows_net_sign():
     assert net == 11390.0 and code == "P"
 
 
+def test_issuer_symbol_is_extracted_for_attribution_check():
+    """🚨 Form 4 의 발행사를 뽑아 귀속을 대조한다 — VWAV→SVRE 오귀속 차단.
+
+    EDGAR 는 Form 4 를 발행사 CIK 와 보고자 CIK **양쪽에** 색인한다. 이 빌더는
+    티커→CIK→submissions 로 수집하므로, 어떤 회사가 **남의 내부자로서** 낸 공시까지
+    자기 종목 거래로 끌어온다. 실측: VWAV(발행주식 2,538만주) 엔트리에 "35.4억주 매수(P)"
+    가 실려 net +244억주가 나왔고, 원문 발행사는 SVRE(SaverOne)였다. 발행주식의 140배가
+    공개 '내부자 순매수' 탭 1위에 있었다. 코드가 진짜 P 라서 매매 필터로는 안 걸린다 —
+    **귀속 대조가 유일한 방어다.**
+    """
+    other = """<?xml version="1.0"?>
+<ownershipDocument>
+  <issuer>
+    <issuerCik>0001894693</issuerCik>
+    <issuerName>SaverOne 2014 Ltd.</issuerName>
+    <issuerTradingSymbol>SVRE</issuerTradingSymbol>
+  </issuer>
+  <reportingOwner><reportingOwnerId><rptOwnerName>VisionWave Holdings, Inc.</rptOwnerName></reportingOwnerId></reportingOwner>
+  <nonDerivativeTable><nonDerivativeTransaction>
+    <transactionDate><value>2026-03-30</value></transactionDate>
+    <transactionCoding><transactionCode>P</transactionCode></transactionCoding>
+    <transactionAmounts>
+      <transactionShares><value>3545596800</value></transactionShares>
+      <transactionAcquiredDisposedCode><value>A</value></transactionAcquiredDisposedCode>
+    </transactionAmounts>
+  </nonDerivativeTransaction></nonDerivativeTable>
+</ownershipDocument>"""
+    cik, sym = b._form4_issuer(other)
+    assert (cik, sym) == ("1894693", "SVRE")
+    # 매매 파싱 자체는 성공한다 — 그래서 귀속 대조 없이는 절대 안 걸린다.
+    assert b._parse_form4(other)[2] == 3545596800.0
+    assert b._form4_issuer("<not xml") == ("", "")
+
+
 def test_grant_only_is_no_market_tx_not_parse_failure():
     """부여·세금원천만 있는 Form 4 는 '매매 없음' 이지 '파싱 실패' 가 아니다.
 
