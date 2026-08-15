@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import statistics
 from typing import Any, Dict, List
@@ -59,6 +60,49 @@ _SELECTION_KEY_FACTORS = {
         "상위만 통과한 표본에서 측정되어 IC 해석 불가"
     ),
 }
+
+
+def _nonoverlap_t(ic_series: List[float], forward_days: int) -> Dict[str, Any]:
+    """겹침 보정 t — 독립 관측만으로 다시 잰다. 🚨 판정 임계는 건드리지 않는다.
+
+    왜: `compute_factor_ic` 은 일별 스냅샷마다 forward 창을 연다. 스냅샷 간격이 중앙 1일이라
+    인접 관측은 (forward_days-1)/forward_days 만큼 **같은 미래 구간을 공유**한다. 그런데
+    ICIR×√n 의 n 은 관측 '일수'라 독립 표본이 아니다 → t 가 부풀려진다.
+
+    독립 관측 k = n // forward_days. 시작 오프셋별 비겹침 부분표본의 t 중앙값을 낸다.
+    k < 3 이면 표준오차를 추정할 표본 자체가 없다 → estimable=False.
+
+    이력: 2026-05-23 `factor_decay.compute_ic_weight_adjustments()` 가 바로 이 사유로 동결됐고
+    (유효-N ≈ 6), 해제 조건이 "non-overlapping 또는 Newey-West 보정 도달"이다.
+    2026-08-15 실측 = 여전히 6 (겹침이 병목이라 달력이 흘러도 유효 N 이 비례해 늘지 않는다).
+    상설 감사 = `scripts/audit/ic_overlap_check.py`.
+    """
+    n = len(ic_series)
+    k = n // forward_days if forward_days > 0 else 0
+    out: Dict[str, Any] = {
+        "k_independent": k,
+        "overlap_pct": round((forward_days - 1) / forward_days * 100, 1) if forward_days else 0.0,
+    }
+    if k < 3:
+        out["estimable"] = False
+        out["t_nonoverlap"] = None
+        out["note"] = f"독립 관측 {k}개 < 3 — 표준오차 추정 불가"
+        return out
+    ts: List[float] = []
+    for off in range(forward_days):
+        sub = ic_series[off::forward_days]
+        if len(sub) >= 3:
+            sd = statistics.stdev(sub)
+            if sd > 1e-9:
+                ts.append(statistics.mean(sub) / (sd / math.sqrt(len(sub))))
+    if not ts:
+        out["estimable"] = False
+        out["t_nonoverlap"] = None
+        out["note"] = "비겹침 부분표본의 분산이 0"
+        return out
+    out["estimable"] = True
+    out["t_nonoverlap"] = round(statistics.median(ts), 2)
+    return out
 
 
 def _spearman_rank_corr(x: List[float], y: List[float]) -> float:
@@ -180,6 +224,11 @@ def compute_factor_ic(
             "ic_series": [],
             "is_significant": False,
             "decay_alert": False,
+            "threshold_only": True,
+            "k_independent": 0,
+            "t_nonoverlap": None,
+            "estimable": False,
+            "passes_nonoverlap": False,
             "note": "IC 계산 불가 (데이터 부족)",
         }
 
@@ -197,6 +246,11 @@ def compute_factor_ic(
         elif overall_mean > 0.05 and recent_mean < overall_mean * 0.3:
             decay_alert = True
 
+    # 🚨 겹침 보정 t 병기 (2026-08-15 PM 승인). 임계 판정 로직은 **무변경** —
+    #    is_significant 는 여전히 표본 수 항이 없는 고정 임계 2개다. 그 사실이 보이도록
+    #    k_independent / t_nonoverlap / estimable 을 나란히 실어 소비처가 함께 표시한다.
+    overlap = _nonoverlap_t(ic_series, forward_days)
+
     return {
         "factor": factor_name,
         "ic_mean": round(ic_mean, 5),
@@ -204,6 +258,13 @@ def compute_factor_ic(
         "icir": round(icir, 3),
         "ic_series": [round(v, 5) for v in ic_series[-30:]],
         "is_significant": abs(ic_mean) > 0.05 and abs(icir) > 0.4,
+        # 🚨 "is_significant" 는 유의성 검정이 아니다 — |IC|>0.05 & |ICIR|>0.4 고정 임계일 뿐,
+        #    표본 수 항이 없다. 아래 3필드가 그 한계를 같은 자리에서 드러낸다.
+        "threshold_only": True,
+        **overlap,
+        "passes_nonoverlap": bool(
+            overlap.get("estimable") and abs(overlap.get("t_nonoverlap") or 0) >= 1.96
+        ),
         # 2026-07-20 감사 P1: abs() 판정이라 음(-) IC 팩터도 significant. 부호 라벨 병기(임계 무변경)
         # → 소비처가 'positive'(정방향 알파) vs 'inverse'(역방향, 반대로 써야 유효) 구분 가능.
         "significant_direction": (
@@ -319,8 +380,36 @@ def scan_all_factors(
         "self_selection_factors": sorted(_SELECTION_KEY_FACTORS),
         "forward_days": forward_days,
         "factors": results,
-        "ranking": [{"factor": k, "icir": v.get("icir", 0)} for k, v in ranking],
+        "ranking": [
+            {
+                "factor": k,
+                "icir": v.get("icir", 0),
+                # 🚨 겹침 보정 병기 — 소비처(admin PDF)가 임계통과와 독립관측을 함께 보이게 한다
+                "k_independent": v.get("k_independent"),
+                "t_nonoverlap": v.get("t_nonoverlap"),
+                "estimable": v.get("estimable"),
+            }
+            for k, v in ranking
+        ],
+        # 🚨 이름 유지 = 하위 호환(strategy_evolver:239,344 소비). 단 의미는 "임계통과"다 —
+        #    유의성 검정이 아니라 |IC|>0.05 & |ICIR|>0.4 고정 임계이며 표본 수 항이 없다.
         "significant_factors": significant,
+        "significant_label": "임계통과",
+        "significant_criterion": "|IC|>0.05 and |ICIR|>0.4 (표본 수 미반영)",
+        # 겹침 제거 후에도 |t|≥1.96 인 것 — 이쪽이 통계적 판정에 가깝다
+        "nonoverlap_pass_factors": [
+            k for k, v in results.items() if v.get("passes_nonoverlap")
+        ],
+        "unestimable_factors": [
+            k for k, v in results.items()
+            if v.get("estimable") is False and (v.get("sample_count") or 0) >= 5
+        ],
+        "overlap_note": (
+            f"일별 스냅샷에 fwd{forward_days} 창을 굴려 인접 관측이 "
+            f"{round((forward_days-1)/forward_days*100)}% 겹친다. is_significant 의 n 은 "
+            "관측 '일수'라 독립 표본이 아니다. 독립 관측 k = n // forward_days. "
+            "상설 감사 = scripts/audit/ic_overlap_check.py"
+        ),
         "decaying_factors": decaying,
         "scanned_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }

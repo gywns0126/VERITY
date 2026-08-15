@@ -5227,6 +5227,14 @@ def main():
                     "ranking": ic_scan.get("ranking", [])[:10],
                     "significant_factors": ic_scan.get("significant_factors", []),
                     "decaying_factors": ic_scan.get("decaying_factors", []),
+                    # 🚨 2026-08-15 PM 승인 — "유의" 표현 철회 + 겹침 보정 병기.
+                    #    is_significant 는 표본 수 항이 없는 고정 임계다. 소비처가 그 사실과
+                    #    독립 관측 수를 같은 자리에서 보이게 한다 (admin PDF 9-2 / 3-3).
+                    "significant_label": ic_scan.get("significant_label"),
+                    "significant_criterion": ic_scan.get("significant_criterion"),
+                    "nonoverlap_pass_factors": ic_scan.get("nonoverlap_pass_factors", []),
+                    "unestimable_factors": ic_scan.get("unestimable_factors", []),
+                    "overlap_note": ic_scan.get("overlap_note"),
                     "updated_at": ic_scan.get("scanned_at"),
                     "monthly_rollup": monthly,
                     "windows_available": list(mw_result.get("windows", {}).keys()),

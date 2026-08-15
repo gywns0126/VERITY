@@ -1303,13 +1303,35 @@ def _render_chap9_postmortem(pdf: VerityPDF, portfolio: Dict[str, Any]):
                     pdf.cell(30, 5, "IC -", align="R")
             if obs is not None:
                 pdf.cell(30, 5, f"n={obs}", align="R")
+            # 🚨 2026-08-15 PM 승인 — 겹침 보정 병기. n 은 관측 '일수'라 독립 표본이 아니다.
+            #    k = 독립 관측 수, 비겹침 t = 겹침 제거 후 t. 임계는 무변경, 표기만 정직하게.
+            k = it.get("k_independent")
+            t_no = it.get("t_nonoverlap")
+            if k is not None:
+                if it.get("estimable") and t_no is not None:
+                    mark = "O" if abs(float(t_no)) >= 1.96 else "-"
+                    pdf.cell(46, 5, f"k={k} t{float(t_no):+.2f} {mark}", align="R")
+                else:
+                    pdf.cell(46, 5, f"k={k} 추정불가", align="R")
             pdf.ln(5)
         sig = fic.get("significant_factors") or []
         if sig:
             pdf.ln(1)
+            # 🚨 "유의" 표현 철회 — |IC|>0.05 & |ICIR|>0.4 고정 임계일 뿐 표본 수 항이 없다.
             pdf.text_block(
-                f"유의 팩터 ({len(sig)}): " + ", ".join(map(str, sig[:12]))
+                f"임계통과 팩터 ({len(sig)}) — "
+                f"{fic.get('significant_criterion') or '|IC|>0.05 and |ICIR|>0.4 (표본 수 미반영)'}: "
+                + ", ".join(map(str, sig[:12]))
             )
+            passed = fic.get("nonoverlap_pass_factors")
+            if passed is not None:
+                unest = fic.get("unestimable_factors") or []
+                pdf.text_block(
+                    f"겹침 제거 후 |t|>=1.96 ({len(passed)}): "
+                    + (", ".join(map(str, passed[:12])) or "없음")
+                    + (f"  ·  추정불가 {len(unest)}개(독립관측 3 미만)" if unest else ""),
+                    color=pdf.INK_TERTIARY,
+                )
 
     # ── 9-3. Brain Accuracy 등급별 ──
     grades = ba.get("grades") or {}

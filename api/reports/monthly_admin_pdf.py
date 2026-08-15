@@ -496,11 +496,34 @@ def _render_chap3_brain(pdf: VerityPDF, analysis: Dict[str, Any], portfolio: Dic
                     pdf.cell(30, 5, "IC -", align="R")
             if obs is not None:
                 pdf.cell(30, 5, f"n={obs}", align="R")
+            # 🚨 2026-08-15 PM 승인 — daily_admin_pdf 와 동일 규율. n = 관측 '일수'(겹침 포함).
+            k = it.get("k_independent")
+            t_no = it.get("t_nonoverlap")
+            if k is not None:
+                if it.get("estimable") and t_no is not None:
+                    mark = "O" if abs(float(t_no)) >= 1.96 else "-"
+                    pdf.cell(46, 5, f"k={k} t{float(t_no):+.2f} {mark}", align="R")
+                else:
+                    pdf.cell(46, 5, f"k={k} 추정불가", align="R")
             pdf.ln(5)
         sig = fic.get("significant_factors") or []
         if sig:
             pdf.ln(1)
-            pdf.text_block(f"유의 팩터 ({len(sig)}): " + ", ".join(map(str, sig[:12])))
+            # 🚨 "유의" 표현 철회 — 표본 수 항이 없는 고정 임계다.
+            pdf.text_block(
+                f"임계통과 팩터 ({len(sig)}) — "
+                f"{fic.get('significant_criterion') or '|IC|>0.05 and |ICIR|>0.4 (표본 수 미반영)'}: "
+                + ", ".join(map(str, sig[:12]))
+            )
+            passed = fic.get("nonoverlap_pass_factors")
+            if passed is not None:
+                unest = fic.get("unestimable_factors") or []
+                pdf.text_block(
+                    f"겹침 제거 후 |t|>=1.96 ({len(passed)}): "
+                    + (", ".join(map(str, passed[:12])) or "없음")
+                    + (f"  ·  추정불가 {len(unest)}개(독립관측 3 미만)" if unest else ""),
+                    color=pdf.INK_TERTIARY,
+                )
     else:
         pdf.text_block("Factor IC 월간 누적 데이터 부족 (factor_ic builder cron 누적 필요)",
                       color=pdf.INK_TERTIARY)
