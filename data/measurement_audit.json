@@ -1,15 +1,15 @@
 {
- "as_of": "2026-08-15T10:48:00+09:00",
+ "as_of": "2026-08-15T11:24:21+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
   "ledger_integrity",
+  "key_coverage",
   "guard_inputs",
   "exit_paths",
   "as_of_staleness"
  ],
  "known_unresolved": [
-  "key_coverage",
   "rule_discrimination",
   "flag_coverage",
   "input_constancy"
@@ -39,6 +39,15 @@
      "key": "close",
      "modules": [
       "fact.py"
+     ]
+    },
+    {
+     "key": "dart_financials",
+     "modules": [
+      "moat.py",
+      "quality.py",
+      "red_flags.py",
+      "value_guards.py"
      ]
     },
     {
@@ -90,17 +99,9 @@
      ]
     }
    ],
-   "thin_keys": [
-    {
-     "key": "equity_research_brief",
-     "coverage": "2/47"
-    }
-   ],
-   "detail": "레코드에 한 번도 없는 키 10종 — 해당 채점 축이 조용히 죽어 있다",
-   "baseline": {
-    "dead_keys": 10
-   },
-   "status": "KNOWN"
+   "thin_keys": [],
+   "detail": "레코드에 한 번도 없는 키 11종 — 해당 채점 축이 조용히 죽어 있다",
+   "status": "REGRESSION"
   },
   "price_scale": {
    "ok": true,
@@ -153,19 +154,19 @@
      "fired": 0
     },
     {
-     "rule": "계속기업 불확실성 (감사인 명시)",
-     "fired": 0
-    },
-    {
      "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
      "rule": "SEC 8-K 리스크 공시:",
+     "fired": 0
+    },
+    {
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
@@ -255,9 +256,9 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 24,
-    "scored": 34,
-    "ok": true
+    "with_pct": 0,
+    "scored": 31,
+    "ok": false
    },
    "dead_guards": [
     {
@@ -265,9 +266,15 @@
      "guard": "포트폴리오 베타 1.5 상한",
      "filled": 0,
      "total": 10
+    },
+    {
+     "field": "safety_pct",
+     "guard": "게이트 컷오버(하위20% 컷)",
+     "filled": 0,
+     "total": 31
     }
    ],
-   "detail": "입력 전무한 가드 1종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta)"
+   "detail": "입력 전무한 가드 2종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta), 게이트 컷오버(하위20% 컷)(safety_pct)"
   },
   "exit_paths": {
    "ok": false,
@@ -288,7 +295,7 @@
     {
      "name": "Alphabet",
      "qty": 1.0,
-     "return_pct": 1.35,
+     "return_pct": 1.13,
      "past_target_2": false
     }
    ],

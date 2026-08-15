@@ -1,17 +1,15 @@
 {
- "as_of": "2026-08-15T10:48:28+09:00",
+ "as_of": "2026-08-15T11:24:24+09:00",
  "version": "v0 (PREREG_POOL_ROTATION_2026_08_04 — 보고서만, 집행 없음)",
  "evidence_days": 12,
  "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 12일. 미달 임계는 발동하지 않음",
  "pool": {
-  "size": 47,
-  "kr": 29,
+  "size": 43,
+  "kr": 20,
   "kr_floor": 20,
   "kr_deficit": 0,
-  "size_note": "정원 미달 47 < 55",
-  "sector_over_cap": {
-   "Industrials": 27.7
-  }
+  "size_note": "정원 미달 43 < 55",
+  "sector_over_cap": {}
  },
  "r1_held": [
   "000270",
@@ -29,40 +27,48 @@
  "exits": [],
  "entries": [
   {
-   "ticker": "228340",
-   "name": "동양파일",
-   "source": "smallcap",
-   "trading_value": 2606081882
+   "ticker": "000080",
+   "name": "하이트진로",
+   "source": "funnel",
+   "trading_value": 2455894100
   },
   {
-   "ticker": "012690",
-   "name": "모나리자",
-   "source": "smallcap",
-   "trading_value": 11142765188
+   "ticker": "000100",
+   "name": "유한양행",
+   "source": "funnel",
+   "trading_value": 18498620700
   },
   {
-   "ticker": "042110",
-   "name": "에스씨디",
-   "source": "smallcap",
-   "trading_value": 5489331274
+   "ticker": "000120",
+   "name": "CJ대한통운",
+   "source": "funnel",
+   "trading_value": 4363498400
   },
   {
-   "ticker": "003310",
-   "name": "대주산업",
-   "source": "smallcap",
-   "trading_value": 2426676977
+   "ticker": "000150",
+   "name": "두산",
+   "source": "funnel",
+   "trading_value": 66736076000
   },
   {
-   "ticker": "000850",
-   "name": "화천기공",
-   "source": "smallcap",
-   "trading_value": 1326828577
+   "ticker": "000240",
+   "name": "한국앤컴퍼니",
+   "source": "funnel",
+   "trading_value": 2309475000
   }
  ],
- "watch_streaks": [],
+ "watch_streaks": [
+  {
+   "ticker": "CTSH",
+   "avoid_streak": 12,
+   "pollution_streak": 0,
+   "lowliq_streak": 0,
+   "evidence_days": 12
+  }
+ ],
  "candidate_supply": {
   "funnel_total": 25,
-  "funnel_kr_out_of_pool": 0,
+  "funnel_kr_out_of_pool": 9,
   "smallcap_total": 1014,
   "smallcap_liquidity_field_missing": false
  },
