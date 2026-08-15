@@ -1,0 +1,94 @@
+name: Attribution & Freshness Audit
+
+# 귀속·신선도 감사 (2026-08-15 신설, PM 지시).
+#
+# 무엇을 잡나 = **조용한 실패**. 여기서 보는 결함들은 에러도 경보도 워크플로 실패도 내지
+# 않는다. 숫자가 그럴듯하게 틀려 있을 뿐이라 기존 신호로는 영구 미탐지다. 2026-08-15 에
+# 하루 8건이 나왔고 전부 손으로 찾았다 — 그걸 기계로 옮긴 게 이 워크플로다.
+#
+# 🚨 워크플로 7축 감사 (CLAUDE.md 체크리스트 정합):
+#  ① env/secret  = **없음**. SEC 는 UA(연락처)만 요구하고 스크립트 상수로 들고 있다.
+#                  쓰지도 않을 시크릿을 env 에 등록하지 않는다
+#                  ([[feedback_env_registration_with_usage_proof]]).
+#  ② push trigger = **커밋하지 않는다.** 감사는 읽기 전용이고 산출물을 repo 에 쓰지 않는다.
+#                  → `vercel-api/` 외부 commit 자체가 0 이라 RULE 2 (Vercel deploy 폭주)
+#                  경로에 아예 진입하지 않는다. 결과는 run 로그 + exit code 로만 전달한다.
+#  ③ concurrency = 전용 그룹. 형제 워크플로와 산출물 교집합이 0(쓰기 0)이라 잠금 경합이
+#                  없지만, 자기 자신의 중복 실행만 막는다. cancel-in-progress=false —
+#                  월 1회 실행이라 취소보다 완주가 낫다
+#                  ([[feedback_concurrency_starvation_pending_slot]] 정합: 그룹 분리).
+#  ④ cron        = 매월 1일 KST 09:20 = UTC 00:20. GH 는 5분 미만 cron 을 조용히 skip 하는데
+#                  월간이라 무관. UTC 정각 혼잡을 피해 20분에 둔다.
+#  ⑤ KIS 관련    = 없음. 토큰 발급 경로가 아니므로 RULE 1 영향 0. `.kis_issued_date.txt`
+#                  add 도 불필요(커밋 자체가 없다).
+#  ⑥ pip         = **설치 0**. 스크립트는 urllib/json/subprocess 만 쓴다. 빌더 함수를
+#                  import 하지만 그쪽 `requests` 는 함수 내부 import 라 모듈 로드 시
+#                  당겨지지 않는다(로컬 실측 확인).
+#  ⑦ N=2 audit   = RULE 8. push 직후 workflow_dispatch 로 N=1, 다음 월간 스케줄이 N=2.
+#
+# git 이력이 필요하다(⑤ 이름맵 신선도가 마지막 커밋일을 본다) → fetch-depth: 0.
+
+on:
+  schedule:
+    - cron: "20 0 1 * *"     # 매월 1일 00:20 UTC = KST 09:20
+  workflow_dispatch:
+    inputs:
+      sample:
+        description: "실호출 검사 표본 상한 (기본 25)"
+        required: false
+        default: "25"
+      no_net:
+        description: "SEC 실호출 없이 파일·git 검사만 (true/false)"
+        required: false
+        default: "false"
+
+concurrency:
+  group: attribution-freshness-audit
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # 이름맵 신선도 검사가 git log 커밋일을 읽는다
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run audit
+        id: audit
+        run: |
+          set -o pipefail
+          ARGS="--sample ${{ github.event.inputs.sample || '25' }}"
+          if [ "${{ github.event.inputs.no_net }}" = "true" ]; then ARGS="$ARGS --no-net"; fi
+          python3 scripts/audit_attribution_freshness.py $ARGS 2>&1 | tee /tmp/audit.txt
+        continue-on-error: true
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## 귀속·신선도 감사"
+            echo ""
+            echo '```'
+            cat /tmp/audit.txt 2>/dev/null || echo "(출력 없음)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail on P0
+        if: always()
+        run: |
+          # 🚨 P0 를 성공으로 넘기면 이 워크플로의 존재 이유가 사라진다.
+          #    감사가 초록불인데 값이 틀린 상태 = 우리가 고치려던 바로 그 형태다.
+          if [ "${{ steps.audit.outcome }}" != "success" ]; then
+            echo "::error::귀속·신선도 감사 P0 발견 — run 로그/summary 확인"
+            exit 1
+          fi
+          echo "P0 없음"
