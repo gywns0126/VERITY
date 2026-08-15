@@ -363,6 +363,25 @@ def main() -> int:
                 collected += 1
             # else: Form4 존재하나 한 건도 파싱 못 함(일시 실패) → 이전 보존, collected 미증가
 
+        # 🚨 유니버스를 떠난 종목 정리 (2026-08-15). carry-forward 에 만료가 없어서,
+        #    유니버스에서 빠진 티커는 **재수집 경로가 영영 없는 화석**으로 남는다. 실측:
+        #    33종목이 그 상태였고 그중 OLPX(-15.1억주)·EEX(-3.7억주)는 7/17~18 옛 파서로
+        #    수집된 값이라 `-abs(net_change)` 정렬의 1·2위를 차지하고 있었다 — 즉 공개
+        #    '내부자 순매수' 탭 최상단이 **고칠 수 없는 옛 오답**이었다.
+        #    유니버스 로드 실패 시 전량 삭제를 막으려 하한을 둔다(축소 사고 방지).
+        uni_now = set(order)
+        if len(uni_now) >= 1000:
+            dropped = [t for t in merged if t not in uni_now]
+            for t in dropped:
+                merged.pop(t, None)
+            if dropped:
+                print(f"[us_insider] 유니버스 이탈 {len(dropped)}종목 제거 "
+                      f"(재수집 불가 화석): {', '.join(sorted(dropped)[:8])}"
+                      + (" 외" if len(dropped) > 8 else ""), file=sys.stderr)
+        else:
+            print(f"[us_insider] 유니버스 {len(uni_now)}종목 — 하한 미달로 이탈 정리 skip",
+                  file=sys.stderr)
+
         stocks = sorted(merged.values(), key=lambda s: -abs(int(s.get("net_change") or 0)))
 
         if not stocks and os.path.isfile(OUTPUT_PATH):
