@@ -49,10 +49,13 @@ KST = timezone(timedelta(hours=9))
 # 이 배율을 넘으면 제출인 기입 오류로 본다. 2026-08-15 실측 분포 = 정상 연중 변동 2~3배,
 # 오류는 44배~82,541배로 명확히 갈린다. 20배는 그 사이 빈 구간이다.
 UNIT_OUTLIER_FACTOR = 20.0
-# 내부자 순증감이 발행주식의 이 비율을 넘으면 오귀속 의심. 지배주주 블록딜이 30%대까지
-# 나오므로(INIO 13.8% 정상) 넉넉히 둔다. VWAV 오귀속은 14,000% 였다.
-INSIDER_PCT_CEILING = 60.0
+# 내부자 순증감이 발행주식(최근 2년 최댓값)의 이 비율을 넘으면 오귀속 의심.
+# 🚨 임계를 자릿수로 둔다. 감자·분할 미조정만으로 수백 %가 나오므로(CDT 815%) 낮게 잡으면
+# 오탐이 대부분이 되고, 오탐이 대부분이면 아무도 안 본다. 진짜 오귀속은 자릿수가 다르다
+# (VWAV = 발행주식의 96,260%). 여기를 통과했다고 정상이라는 뜻은 아니다 — 자릿수 오류만 본다.
+INSIDER_PCT_CEILING = 1000.0
 MAP_MAX_AGE_DAYS = 45     # 이름맵 30일 주기 + 유예 15일
+_MH_PER_TICKER_CAP = 10   # us_major_holdings_public_builder.PER_TICKER_CAP 정합
 
 
 class Finding:
@@ -170,14 +173,24 @@ def check_form144_units() -> List[Finding]:
 
 # ── ③ 내부자 순증감 규모 ─────────────────────────────────────────────────
 
-def _shares_outstanding(cik: str) -> Optional[float]:
+def _shares_outstanding_max(cik: str) -> Optional[float]:
+    """최근 2년 보고분 중 **최댓값**. 최신값이 아니다.
+
+    🚨 2026-08-15 초회 실행에서 내 검사가 오탐을 냈다. CDT 는 반복 감자로 발행주식이
+    3.06M → 1.63M → 4.86M → 6.31M → **786,670** 으로 널뛴다. 거래 주식수는 감자 이전
+    기준이라 최신 발행주식수와 비교하면 6,537% 가 나오는데, 이건 오귀속이 아니라
+    **분할 미조정**이다. 최댓값을 쓰면 815% 로 떨어져 임계 아래가 된다.
+    진짜 오귀속(VWAV 96,260%)은 자릿수가 달라 이 보정으로 안 사라진다.
+    """
     t = _get(f"https://data.sec.gov/api/xbrl/companyconcept/CIK{cik}"
              "/dei/EntityCommonStockSharesOutstanding.json")
     if not t:
         return None
     try:
         rows = list(json.loads(t)["units"].values())[0]
-        return float(rows[-1]["val"]) if rows else None
+        cut = (datetime.now(timezone.utc) - timedelta(days=730)).strftime("%Y-%m-%d")
+        vals = [float(r["val"]) for r in rows if str(r.get("end", "")) >= cut and r.get("val")]
+        return max(vals) if vals else None
     except (ValueError, KeyError, IndexError, TypeError):
         return None
 
@@ -200,7 +213,7 @@ def check_insider_magnitude(sample: int) -> List[Finding]:
         net = abs(int(s.get("net_change") or 0))
         if not cik.strip("0") or net == 0:
             continue
-        so = _shares_outstanding(cik)
+        so = _shares_outstanding_max(cik)
         if not so:
             unchecked += 1
             continue
@@ -347,10 +360,14 @@ def check_13dg_coverage(sample: int) -> List[Finding]:
             continue
         edgar_n = sum(1 for f in forms if "13D" in f.upper() or "13G" in f.upper())
         our_n = int(s.get("total") or 0)
+        # 🚨 상한 도달분은 판정 대상이 아니다. 빌더가 종목당 PER_TICKER_CAP(=10)건만 파싱하고
+        #    수집 창도 따로 있어, "EDGAR 179건 vs 우리 10건" 은 커버리지 실패가 아니라 상한이다.
+        #    초회 실행에서 이걸 '폼명 필터 의심' 으로 신고한 게 내 검사의 오탐이었다.
+        #    상한에 닿지 않았는데 0 이거나 극히 얇을 때만 필터를 의심한다.
+        if our_n >= _MH_PER_TICKER_CAP:
+            continue
         if edgar_n >= 5 and our_n == 0:
-            zero.append(f"{s.get('ticker')}: EDGAR {edgar_n}건 vs 우리 0건")
-        elif edgar_n >= 10 and our_n < edgar_n * 0.2:
-            zero.append(f"{s.get('ticker')}: EDGAR {edgar_n}건 vs 우리 {our_n}건")
+            zero.append(f"{s.get('ticker')}: EDGAR {edgar_n}건 vs 우리 0건 (상한 미도달)")
     if zero:
         out.append(Finding("P0", "13dg-cov", f"포착률 이상 {len(zero)}종목 (폼명 필터 의심)",
                            " · ".join(zero[:6])))
