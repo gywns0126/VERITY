@@ -1,15 +1,17 @@
 {
- "as_of": "2026-08-08T12:12:40+09:00",
+ "as_of": "2026-08-15T10:48:28+09:00",
  "version": "v0 (PREREG_POOL_ROTATION_2026_08_04 — 보고서만, 집행 없음)",
- "evidence_days": 6,
- "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 6일. 미달 임계는 발동하지 않음",
+ "evidence_days": 12,
+ "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 12일. 미달 임계는 발동하지 않음",
  "pool": {
-  "size": 40,
-  "kr": 20,
+  "size": 47,
+  "kr": 29,
   "kr_floor": 20,
   "kr_deficit": 0,
-  "size_note": "정원 미달 40 < 55",
-  "sector_over_cap": {}
+  "size_note": "정원 미달 47 < 55",
+  "sector_over_cap": {
+   "Industrials": 27.7
+  }
  },
  "r1_held": [
   "000270",
@@ -17,7 +19,6 @@
   "009540",
   "028050",
   "035420",
-  "204610",
   "214450",
   "383220",
   "EXE",
@@ -26,21 +27,44 @@
  ],
  "r1_held_out_of_pool": [],
  "exits": [],
- "entries": [],
- "watch_streaks": [
+ "entries": [
   {
-   "ticker": "CTSH",
-   "avoid_streak": 6,
-   "pollution_streak": 0,
-   "lowliq_streak": 0,
-   "evidence_days": 6
+   "ticker": "228340",
+   "name": "동양파일",
+   "source": "smallcap",
+   "trading_value": 2606081882
+  },
+  {
+   "ticker": "012690",
+   "name": "모나리자",
+   "source": "smallcap",
+   "trading_value": 11142765188
+  },
+  {
+   "ticker": "042110",
+   "name": "에스씨디",
+   "source": "smallcap",
+   "trading_value": 5489331274
+  },
+  {
+   "ticker": "003310",
+   "name": "대주산업",
+   "source": "smallcap",
+   "trading_value": 2426676977
+  },
+  {
+   "ticker": "000850",
+   "name": "화천기공",
+   "source": "smallcap",
+   "trading_value": 1326828577
   }
  ],
+ "watch_streaks": [],
  "candidate_supply": {
   "funnel_total": 25,
   "funnel_kr_out_of_pool": 0,
-  "smallcap_total": 1027,
-  "smallcap_liquidity_field_missing": true
+  "smallcap_total": 1014,
+  "smallcap_liquidity_field_missing": false
  },
  "swap_cap": 5,
  "action": "PM 확인 후 수동 반영 (v0). 4주 관찰 후 v1 자동 집행 별도 승인"

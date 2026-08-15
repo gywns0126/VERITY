@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-13T19:24:00+09:00",
+ "as_of": "2026-08-15T10:48:00+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -90,7 +90,12 @@
      ]
     }
    ],
-   "thin_keys": [],
+   "thin_keys": [
+    {
+     "key": "equity_research_brief",
+     "coverage": "2/47"
+    }
+   ],
    "detail": "레코드에 한 번도 없는 키 10종 — 해당 채점 축이 조용히 죽어 있다",
    "baseline": {
     "dead_keys": 10
@@ -105,7 +110,7 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 93,
+   "snapshots": 95,
    "cap_rules_checked": 7,
    "degenerate_rules": [
     {
@@ -119,7 +124,7 @@
     {
      "rule": "cape_bubble",
      "fired_days": 81,
-     "activation_pct": 87.1,
+     "activation_pct": 85.3,
      "verdict": "경계 — 반대 국면 표본이 얇다"
     }
    ],
@@ -128,9 +133,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 6,
-   "days_without_any_cap_pct": 6.5,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.1%). cap 없는 날 6/93일",
+   "days_without_any_cap": 8,
+   "days_without_any_cap_pct": 8.4,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.1%). cap 없는 날 8/95일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -140,15 +145,11 @@
   "flag_coverage": {
    "ok": false,
    "rules_defined": 24,
-   "rules_fired": 12,
-   "stock_days": 4300,
+   "rules_fired": 11,
+   "stock_days": 4425,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
-     "fired": 0
-    },
-    {
-     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
@@ -156,11 +157,15 @@
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
      "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "fired": 0
+    },
+    {
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
@@ -169,6 +174,10 @@
     },
     {
      "rule": "고변동성 경고: IV",
+     "fired": 0
+    },
+    {
+     "rule": "불성실공시법인 지정",
      "fired": 0
     },
     {
@@ -193,7 +202,7 @@
     }
    ],
    "always_fired": [],
-   "detail": "정의 24종 중 발동 12종 · 미발동 12종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
+   "detail": "정의 24종 중 발동 11종 · 미발동 13종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
    "note": "미발동 규칙은 **확인 대상**이지 판정이 아니다. 계속기업 불확실성·불성실공시 같은 규칙은 107일 0건이 정상일 수 있다. 반면 입력 필드가 항상 결손이면 배선 결함이다. 임계 조정은 사전등록 대상(RULE 7).",
    "baseline": {
     "never_fired": 13
@@ -246,9 +255,9 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 0,
-    "scored": 31,
-    "ok": false
+    "with_pct": 24,
+    "scored": 34,
+    "ok": true
    },
    "dead_guards": [
     {
@@ -256,15 +265,9 @@
      "guard": "포트폴리오 베타 1.5 상한",
      "filled": 0,
      "total": 10
-    },
-    {
-     "field": "safety_pct",
-     "guard": "게이트 컷오버(하위20% 컷)",
-     "filled": 0,
-     "total": 31
     }
    ],
-   "detail": "입력 전무한 가드 2종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta), 게이트 컷오버(하위20% 컷)(safety_pct)"
+   "detail": "입력 전무한 가드 1종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta)"
   },
   "exit_paths": {
    "ok": false,
@@ -273,19 +276,19 @@
     {
      "name": "파마리서치",
      "qty": 1.0,
-     "return_pct": 31.94,
+     "return_pct": 23.41,
      "past_target_2": false
     },
     {
      "name": "HD한국조선해양",
      "qty": 1.0,
-     "return_pct": 0.95,
+     "return_pct": 4.89,
      "past_target_2": false
     },
     {
      "name": "Alphabet",
      "qty": 1.0,
-     "return_pct": 1.1,
+     "return_pct": 1.35,
      "past_target_2": false
     }
    ],
