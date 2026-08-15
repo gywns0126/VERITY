@@ -111,13 +111,43 @@ def test_old_ipo_emits_no_lockup_alert(monkeypatch):
 
 def test_recent_ipo_emits_lockup_alert(monkeypatch):
     """상장 1년 미만이면 락업 만기를 낸다. 본문에 일수가 있으면 그걸 우선한다."""
-    monkeypatch.setattr(P, "_doc_text",
-                        lambda *a, **k: "for a period of 180 days from the date of this prospectus")
+    monkeypatch.setattr(
+        P, "_doc_text",
+        lambda *a, **k: ("Lock-Up Agreements. We have agreed with the underwriters that "
+                         "for a period of 180 days from the date of this prospectus, "
+                         "the shares may not be Transferred."))
     ipo = (date.today() - timedelta(days=150)).isoformat()
     al = P._alerts_block("0000000001", [_row(ipo, "424B4")], None) or {}
     assert "424B4 본문 파싱" in al["락업 만기(추정)"]
     expected = (date.fromisoformat(ipo) + timedelta(days=180)).isoformat()
     assert expected in al["락업 만기(추정)"]
+
+
+def test_greenshoe_days_do_not_become_the_lockup(monkeypatch):
+    """🚨 그린슈 30일을 락업 만기로 쓰지 않는다 — SPCX 2026-08-15 사고.
+
+    424B4 의 "30 days after the date of this prospectus" 는 인수인 초과배정 옵션이다.
+    `.search()` 가 문서 첫 매치인 이걸 물어 락업을 상장+30일로 냈고, 이미 지난
+    날짜라 "이미 경과" 로 표시돼 **리스크 없음으로 읽히는** 반대 방향 오답이 됐다.
+    실제 SPCX 락업 = 기본 180일 + 연장 366일(머스크 64억주).
+    """
+    body = (
+        "The underwriters may exercise an option to purchase additional shares "
+        "at the initial public offering price for 30 days after the date of this prospectus. "
+        + "filler " * 300 +
+        "Lock-Up and Market Standoff Agreements. Mr. Musk has agreed with the underwriters "
+        "that during a period of 366 days after the date of this prospectus, all of the "
+        "shares owned by him are subject to the restrictions described below; and certain "
+        "shareholders have agreed to a lock-up for 180 days from the date of this prospectus.")
+    monkeypatch.setattr(P, "_doc_text", lambda *a, **k: body)
+    ipo_d = date.today() - timedelta(days=64)
+    al = P._alerts_block("0000000001", [_row(ipo_d.isoformat(), "424B4")], None) or {}
+
+    assert P._lockup_days(body) == (180, 366, 2)          # 30일은 배제된다
+    assert (ipo_d + timedelta(days=180)).isoformat() in al["락업 만기(추정)"]
+    assert (ipo_d + timedelta(days=366)).isoformat() in al["락업 최종 만기(연장분)"]
+    assert "이미 경과" not in al["락업 만기(추정)"]
+    assert (ipo_d + timedelta(days=30)).isoformat() not in str(al)
 
 
 def test_old_equity_line_is_not_alerted(monkeypatch):
@@ -170,6 +200,45 @@ def test_diluted_ladder_and_market_cap():
     assert lad == ["발행주식 기준: $426M", "완전희석 기준: $863M"]
     # 요점 = 두 값이 2배 넘게 벌어진다는 것. 하나만 쓰면 판단이 뒤집힌다.
     assert cap["_diluted_max"] / cap["_basic"] > 2.0
+
+
+def test_weighted_average_never_beats_actual_shares():
+    """🚨 신규 상장에서 시총이 반토막 나던 결손 — SPCX 2026-08-15 실측값.
+
+    companyfacts 에 `dei` 네임스페이스가 통째로 없고 `CommonStockSharesOutstanding`
+    도 없어 **가중평균 희석 EPS 분모**(58.6억)로 폴백했다. 가중평균은 상장 전 기간까지
+    포함해 구조적으로 작다 — 실제 발행주식 131.8억의 44%. $140 기준 시총이
+    $1.85T 대신 $821B 로 나왔다. 그럴듯한 값이라 미탐지되는 계열의 오류다.
+    """
+    f = _facts({
+        ("us-gaap", "WeightedAverageNumberOfDilutedSharesOutstanding", "shares"): [
+            {"end": "2026-06-30", "val": 5_864_000_000}],
+    })
+    cover_doc = {"total": 13_181_779_945, "form": "10-Q", "date": "2026-08-04",
+                 "classes": {"Class A": 7_696_293_669, "Class B": 5_485_486_276}}
+
+    cap = P._capital_block(f, cover_doc)
+    assert cap["_basic"] == 13_181_779_945          # 가중평균이 아니라 실제 발행주식
+    assert cap["_diluted_max"] == 13_181_779_945    # 가중평균이 더 작으면 사다리에 안 올린다
+    assert "가중평균 주의" in cap                     # 역전 사실을 조용히 넘기지 않는다
+    assert P.market_cap_ladder(cap, 140.00) == ["발행주식 기준: $1,845,449M"]
+
+    # 표지가 없으면(구형 회사) 가중평균 폴백은 유지하되, 그게 최후 수단이어야 한다.
+    assert P._capital_block(f, None)["_basic"] == 5_864_000_000
+
+
+def test_cover_shares_sums_multiple_classes(monkeypatch):
+    """다중 클래스 회사는 표지의 클래스별 주식수를 합산한다 (SPCX = A + B)."""
+    monkeypatch.setattr(
+        P, "_doc_text",
+        lambda *a, **k: ("Indicate by check mark whether the registrant is a shell company. "
+                         "No. As of July 28, 2026, the registrant had 7,696,293,669 shares of "
+                         "Class A common stock and 5,485,486,276 shares of Class B common "
+                         "stock outstanding."))
+    rows = [_row("2026-08-04", "10-Q")]
+    got = P._cover_shares("0000000001", rows)
+    assert got["total"] == 13_181_779_945
+    assert got["classes"] == {"Class A": 7_696_293_669, "Class B": 5_485_486_276}
 
 
 def test_market_cap_ladder_needs_a_real_price():

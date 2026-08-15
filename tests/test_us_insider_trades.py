@@ -61,13 +61,75 @@ FORM4_SELL = """<?xml version="1.0"?>
   </nonDerivativeTable>
 </ownershipDocument>"""
 
-# 파생만(옵션) — 비파생 0 → None (방향 신호 약함).
+# 파생만(옵션) — 비파생 0 → NO_MARKET_TX (방향 신호 약함).
 FORM4_DERIV_ONLY = """<?xml version="1.0"?>
 <ownershipDocument>
   <reportingOwner><reportingOwnerId><rptOwnerName>X Y</rptOwnerName></reportingOwnerId></reportingOwner>
   <derivativeTable><derivativeTransaction>
     <transactionCoding><transactionCode>M</transactionCode></transactionCoding>
   </derivativeTransaction></derivativeTable>
+</ownershipDocument>"""
+
+# 🚨 머스크 SPCX 2026-06-15 실제 구조의 축약 — 전환(C) 3.16억 + 인수대가 취득(A) 5.11억
+#    + 실제 시장매도(S) 11,390. 옛 구현은 이걸 전부 합산해 net +801,923,260 을 만들고,
+#    codes 에 S 가 섞였다는 이유로 대표코드를 "S" 로 찍어 "머스크가 8억주를 팔았다" 가 됐다.
+FORM4_MUSK_SHAPED = """<?xml version="1.0"?>
+<ownershipDocument>
+  <reportingOwner>
+    <reportingOwnerId><rptOwnerName>Musk Elon</rptOwnerName></reportingOwnerId>
+    <reportingOwnerRelationship>
+      <isDirector>1</isDirector><isOfficer>1</isOfficer>
+      <officerTitle>CEO, CTO &amp; Chairman</officerTitle>
+    </reportingOwnerRelationship>
+  </reportingOwner>
+  <nonDerivativeTable>
+    <nonDerivativeTransaction>
+      <transactionDate><value>2026-02-02</value></transactionDate>
+      <transactionCoding><transactionCode>A</transactionCode></transactionCoding>
+      <transactionAmounts>
+        <transactionShares><value>511289725</value></transactionShares>
+        <transactionAcquiredDisposedCode><value>A</value></transactionAcquiredDisposedCode>
+      </transactionAmounts>
+    </nonDerivativeTransaction>
+    <nonDerivativeTransaction>
+      <transactionDate><value>2026-06-15</value></transactionDate>
+      <transactionCoding><transactionCode>C</transactionCode></transactionCoding>
+      <transactionAmounts>
+        <transactionShares><value>282614850</value></transactionShares>
+        <transactionAcquiredDisposedCode><value>A</value></transactionAcquiredDisposedCode>
+      </transactionAmounts>
+    </nonDerivativeTransaction>
+    <nonDerivativeTransaction>
+      <transactionDate><value>2026-04-02</value></transactionDate>
+      <transactionCoding><transactionCode>G</transactionCode></transactionCoding>
+      <transactionAmounts>
+        <transactionShares><value>480</value></transactionShares>
+        <transactionAcquiredDisposedCode><value>D</value></transactionAcquiredDisposedCode>
+      </transactionAmounts>
+    </nonDerivativeTransaction>
+    <nonDerivativeTransaction>
+      <transactionDate><value>2026-04-02</value></transactionDate>
+      <transactionCoding><transactionCode>S</transactionCode></transactionCoding>
+      <transactionAmounts>
+        <transactionShares><value>11390</value></transactionShares>
+        <transactionAcquiredDisposedCode><value>D</value></transactionAcquiredDisposedCode>
+      </transactionAmounts>
+    </nonDerivativeTransaction>
+  </nonDerivativeTable>
+</ownershipDocument>"""
+
+# 부여·세금원천만 — 정상 파싱이지만 매매 신호 0. None(파싱 실패)과 구분돼야 한다.
+FORM4_GRANT_ONLY = """<?xml version="1.0"?>
+<ownershipDocument>
+  <reportingOwner><reportingOwnerId><rptOwnerName>Grantee A</rptOwnerName></reportingOwnerId></reportingOwner>
+  <nonDerivativeTable><nonDerivativeTransaction>
+    <transactionDate><value>2026-06-17</value></transactionDate>
+    <transactionCoding><transactionCode>F</transactionCode></transactionCoding>
+    <transactionAmounts>
+      <transactionShares><value>2617</value></transactionShares>
+      <transactionAcquiredDisposedCode><value>D</value></transactionAcquiredDisposedCode>
+    </transactionAmounts>
+  </nonDerivativeTransaction></nonDerivativeTable>
 </ownershipDocument>"""
 
 
@@ -88,12 +150,50 @@ def test_parse_sell_director():
     assert code == "S"
 
 
-def test_parse_derivative_only_returns_none():
-    assert b._parse_form4(FORM4_DERIV_ONLY) is None  # 비파생 0
+def test_parse_derivative_only_is_no_market_tx():
+    """비파생 0 — 정상 파싱이므로 '파싱 실패(None)' 와 구분한다."""
+    assert b._parse_form4(FORM4_DERIV_ONLY) is b.NO_MARKET_TX
 
 
 def test_parse_malformed_returns_none():
     assert b._parse_form4("<not-xml") is None
+
+
+def test_conversions_and_grants_are_not_trades():
+    """🚨 전환(C)·부여(A)·증여(G)를 매매로 합산하지 않는다 — SPCX 2026-08-15 사고.
+
+    옛 구현은 비파생 거래를 코드 무관하게 전부 합산해 머스크 Form 4 하나에서
+    net_change +801,923,260 을 만들었고, codes 에 S 가 하나 섞였다는 이유로
+    대표코드를 "S"(매도) 로 찍었다. 결과 = "머스크가 8억주를 팔았다".
+    sell_n 0 인데 code S 라는 자기모순이 이미 신호였다.
+    실제 시장 거래는 11,390주 매도 하나뿐이다.
+    """
+    person, position, net, code, last_date = b._parse_form4(FORM4_MUSK_SHAPED)
+    assert person == "Musk Elon"
+    assert net == -11390.0        # P/S 만 합산 (A 511M · C 283M · G 480 은 제외)
+    assert code == "S"            # 순액 부호에서 끌어온다
+    assert last_date == "2026-06-15"
+
+
+def test_representative_code_follows_net_sign():
+    """대표코드는 codes 목록이 아니라 순액 부호를 따른다 (순매수인데 'S' 금지)."""
+    xml = FORM4_MUSK_SHAPED.replace(
+        "<transactionShares><value>11390</value></transactionShares>\n"
+        "        <transactionAcquiredDisposedCode><value>D</value></transactionAcquiredDisposedCode>",
+        "<transactionShares><value>11390</value></transactionShares>\n"
+        "        <transactionAcquiredDisposedCode><value>A</value></transactionAcquiredDisposedCode>")
+    _, _, net, code, _ = b._parse_form4(xml)
+    assert net == 11390.0 and code == "P"
+
+
+def test_grant_only_is_no_market_tx_not_parse_failure():
+    """부여·세금원천만 있는 Form 4 는 '매매 없음' 이지 '파싱 실패' 가 아니다.
+
+    둘을 뭉치면 main() 의 carry-forward 분기가 옛 엔트리를 영구 보존한다 —
+    파서를 고쳐도 산출물이 안 바뀌는 경로다.
+    """
+    assert b._parse_form4(FORM4_GRANT_ONLY) is b.NO_MARKET_TX
+    assert b._parse_form4(FORM4_GRANT_ONLY) is not None
 
 
 def test_ordered_universe_priority_first(tmp_path, monkeypatch):

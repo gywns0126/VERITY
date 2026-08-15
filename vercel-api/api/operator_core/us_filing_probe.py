@@ -29,6 +29,7 @@ import html
 import json
 import os
 import re
+import sys as _sys
 import time
 import urllib.parse
 import urllib.request
@@ -171,13 +172,28 @@ def _doc_url(cik: str, accession: str, doc: str) -> str:
 
 
 def _doc_text(cik: str, accession: str, doc: str, limit: int = 1_500_000) -> Optional[str]:
-    """공시 원문 텍스트. 대형 투서(50만자+)가 있어 상한을 둔다."""
+    """공시 원문 텍스트. 대형 투서(50만자+)가 있어 상한을 둔다.
+
+    🚨 **스트립을 먼저, 절단을 나중에** 한다. 이전 구현은 `_strip_html(raw[:limit*4])` 로
+    원시 HTML 을 먼저 잘랐는데, "태그가 본문의 4배를 넘지 않는다" 는 가정이 iXBRL 에서
+    깨진다. SPCX 424B4 실측(2026-08-15): raw 11,953,976자 → 6,000,000자에서 절단 →
+    본문 978,385자만 남아 **락업 조항이 통째로 소실**됐고, 파서가 "본문 미파싱" 으로
+    관행값 180일을 썼다. 전량 스트립 시 1,472,657자로 상한 안에 들어온다.
+    12MB 스트립 실측 0.09초 — 순서를 뒤집는 비용이 없다.
+    태그 비중은 문서마다 다르므로 **절단 여부는 스트립 후에만 판정할 수 있다**
+    ([[feedback_api_row_limit_truncation_stale_value]] 계열: 상한이 조용히 값을 바꾼다).
+    """
     if not doc:
         return None
     raw = _fetch(_doc_url(cik, accession, doc), f"doc_{accession}.txt", _TTL_DOC, as_json=False)
     if not isinstance(raw, str):
         return None
-    return _strip_html(raw[:limit * 4])[:limit]
+    txt = _strip_html(raw)
+    if len(txt) > limit:
+        # 조용히 자르지 않는다 — 무엇을 못 봤는지 로그로 신고한다.
+        print(f"[us_filing_probe] 본문 절단: {doc} {len(txt):,}자 → {limit:,}자 "
+              f"(뒤쪽 {len(txt) - limit:,}자 미확인)", file=_sys.stderr)
+    return txt[:limit]
 
 
 # ── 공시 이력 ─────────────────────────────────────────────────────────────
@@ -293,14 +309,70 @@ def _fresh_first(facts, tags, unit, anchor) -> Optional[Dict[str, Any]]:
     return best
 
 
-def _capital_block(facts: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+# 10-Q/10-K 표지 발행주식수. XBRL `dei:EntityCommonStockSharesOutstanding` 가 없거나
+# 다중 클래스라 무차원 값이 비는 회사가 있어, 표지 원문이 유일하게 확실한 출처다.
+# "the registrant had 7,696,293,669 shares of Class A common stock and 5,485,486,276
+#  shares of Class B common stock outstanding" → 두 클래스를 합산한다.
+_COVER_SHARES_PAT = re.compile(
+    r"([\d,]{7,})\s+shares?\s+of\s+(?:the\s+registrant['’]s\s+)?"
+    r"(?:its\s+)?(?P<cls>Class\s+[A-Z]\s+)?(?:common\s+stock|common\s+shares)", re.I)
+_COVER_ANCHOR_PAT = re.compile(
+    r"(?:had|were|there\s+were|outstanding)[^.]{0,600}?outstanding", re.I)
+
+
+def _cover_shares(cik: str, rows: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """최신 10-Q/10-K 표지에서 클래스별 발행주식수를 합산한다.
+
+    2026-08-15 SPCX 실측: companyfacts 에 `dei` 네임스페이스가 통째로 없고
+    `CommonStockSharesOutstanding` 도 없어, `_capital_block` 이 **가중평균 희석 EPS
+    분모**(58.6억주)로 폴백했다. 실제 발행주식은 131.8억주 — 시총이 $821B 로 나와
+    실제 $1.85T 의 **44%** 로 과소 계상됐다. 상장 직후 기업은 가중평균이 상장 전
+    기간까지 포함해 구조적으로 작다. 이 폴백은 최근 IPO 종목 전체에 걸린다
+    ([[feedback_api_row_limit_truncation_stale_value]] 와 같은 계열 — 그럴듯한 값이라
+    미탐지된다).
+    """
+    latest = next((r for r in sorted(rows, key=lambda r: r["filingDate"], reverse=True)
+                   if r["form"] in ("10-Q", "10-K", "10-K/A", "10-Q/A")), None)
+    if not latest:
+        return None
+    # 상한 여유 — SPCX 10-Q 실측에서 표지 문구가 44,123자 지점에 있었다(iXBRL 헤더가
+    # 앞을 길게 먹는다). 60K 로 두면 서문이 조금만 길어도 표지를 놓친다.
+    txt = _doc_text(cik, latest["accessionNumber"], latest["primaryDocument"], limit=250_000)
+    if not txt:
+        return None
+    anchor = _COVER_ANCHOR_PAT.search(txt)
+    if not anchor:
+        return None
+    seg = txt[max(0, anchor.start() - 400):anchor.end()]
+    seen: Dict[str, int] = {}
+    for m in _COVER_SHARES_PAT.finditer(seg):
+        try:
+            n = int(m.group(1).replace(",", ""))
+        except ValueError:
+            continue
+        if n < 1000:            # 액면가·비율 같은 잡음 배제
+            continue
+        cls = (m.group("cls") or "보통주").strip()
+        seen[cls] = max(seen.get(cls, 0), n)   # 같은 클래스 중복 언급은 최대값 1회만
+    if not seen:
+        return None
+    return {"total": sum(seen.values()), "classes": seen,
+            "form": latest["form"], "date": latest["filingDate"]}
+
+
+def _capital_block(facts: Dict[str, Any],
+                   cover_doc: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     """완전희석 사다리 — 결손(②)의 직접 수정.
 
     발행주식만으로 계산한 시총은 마이크로캡에서 체계적으로 과소 계상된다. 옵션·워런트가
     깊은 내가격이면 행사 유인이 최대라 '잠재'가 아니라 '예정' 물량에 가깝다.
+
+    🚨 반대 방향 오차도 있다 — 가중평균 희석 분모를 발행주식 대신 쓰면 신규 상장에서
+    시총이 절반 이하로 나온다(SPCX 실측). `cover_doc`(표지 원문 파싱)을 최우선으로 둔다.
     """
-    if not facts:
+    if not facts and not cover_doc:
         return None
+    facts = facts or {}
     out: Dict[str, Any] = {}
 
     cover = _latest(facts, "dei", "EntityCommonStockSharesOutstanding", "shares")
@@ -323,6 +395,12 @@ def _capital_block(facts: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
     if cover:
         out["표지 발행주식"] = f"{int(cover['val']):,}주 (기준 {cover.get('end')})"
+    if cover_doc:
+        cls = cover_doc.get("classes") or {}
+        detail = " + ".join(f"{k} {v:,}" for k, v in cls.items()) if len(cls) > 1 else ""
+        out["표지 발행주식 (원문)"] = (
+            f"{cover_doc['total']:,}주 · {cover_doc['form']} 표지 {cover_doc['date']}"
+            + (f" ({detail})" if detail else ""))
     if outstanding:
         out["발행주식 (outstanding)"] = f"{int(outstanding):,}주"
     if issued and outstanding and issued != outstanding:
@@ -342,14 +420,32 @@ def _capital_block(facts: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         out["반희석 제외분 (EPS 미산입)"] = f"{int(anti):,}주"
 
     # 사다리 — 분모를 하나로 단정하지 않는다. 어느 기준인지 밝히는 게 요점이다.
-    base = wavg_d or outstanding or (cover.get("val") if cover else None)
+    #
+    # 🚨 우선순위가 이 함수의 전부다. 가중평균(wavg_d)을 앞에 두면 신규 상장에서 시총이
+    #    반토막 난다(SPCX 실측: 58.6억 vs 실제 131.8억). 실제 발행주식 → 가중평균 순서다.
+    doc_total = float(cover_doc["total"]) if cover_doc else None
+    basic = doc_total or (float(cover["val"]) if cover else None) or (
+        float(outstanding) if outstanding else None)
+    base = basic or (float(wavg_d) if wavg_d else None)
     if base:
-        rungs: List[Tuple[str, float]] = [("회사 희석 분모" if wavg_d else "발행주식", float(base))]
+        label = ("발행주식(표지 원문)" if doc_total else
+                 "발행주식(표지 XBRL)" if cover else
+                 "발행주식" if outstanding else "회사 희석 분모")
+        rungs: List[Tuple[str, float]] = [(label, float(base))]
+        # 가중평균이 실제 발행주식보다 크면(전환 예정분 반영) 그것도 사다리에 올린다.
+        if wavg_d and basic and float(wavg_d) > float(basic):
+            rungs.append(("회사 희석 분모", float(wavg_d)))
+        top = rungs[-1][1]
         if anti:
-            rungs.append(("+ 반희석 제외분", float(base) + float(anti)))
+            rungs.append(("+ 반희석 제외분", top + float(anti)))
         out["완전희석 사다리"] = [f"{lbl}: {int(n):,}주" for lbl, n in rungs]
         out["_diluted_max"] = int(rungs[-1][1])
-        out["_basic"] = int(outstanding or base)
+        out["_basic"] = int(base)
+        if wavg_d and basic and float(wavg_d) < float(basic) * 0.9:
+            out["_note_wavg"] = (
+                f"가중평균 희석 분모 {int(wavg_d):,}주는 발행주식 {int(basic):,}주보다 작다 "
+                "— 기중 신주발행·상장. 시총은 발행주식 기준을 쓴다")
+            out["가중평균 주의"] = out["_note_wavg"]
     return out or None
 
 
@@ -373,6 +469,36 @@ _GOING_CONCERN_PAT = re.compile(
     r"substantial doubt (?:about|as to|exists)[^.]{0,120}going concern", re.I)
 _LOCKUP_DAYS_PAT = re.compile(
     r"(?:period of\s+)?(\d{2,3})\s*days\s+(?:from|after)\s+the date of this prospectus", re.I)
+# 🚨 위 패턴은 락업 조항만 무는 게 아니다. 424B4 에는 같은 어구가 **인수인 초과배정
+#    옵션(그린슈)** 에도 쓰인다 — "exercisable for 30 days after the date of this
+#    prospectus". SPCX 실측(2026-08-15): `.search()` 가 문서 첫 매치인 그린슈 30일을
+#    물어 락업 만기를 2026-07-12 로 냈고 "이미 경과" 라 표시됐다. 실제 락업은 180일
+#    기본 + 366일 연장(머스크 64억주)이고, 그 사이에 단계적 해제가 9회 있다.
+#    "이미 경과" 는 리스크 없음으로 읽히므로 방향까지 반대인 오답이었다.
+#    → 매치마다 **주변 문맥에 락업 어휘가 있는지** 확인하고, 그중 **최댓값**을 만기로 둔다.
+_LOCKUP_CTX_PAT = re.compile(
+    r"lock-?\s?up|market standoff|may (?:not )?be Transferred|restricted from", re.I)
+_LOCKUP_CTX_WINDOW = 700   # 매치 주변 이만큼 안에 락업 어휘가 있어야 채택
+
+
+def _lockup_days(txt: str) -> Optional[Tuple[int, int, int]]:
+    """424B4 본문 → (기본 락업일, 최종 락업일, 단계 해제 후보 수).
+
+    그린슈·딜러 인도의무 같은 무관 조항을 문맥으로 배제한다.
+    """
+    hits: List[int] = []
+    for m in _LOCKUP_DAYS_PAT.finditer(txt):
+        s = max(0, m.start() - _LOCKUP_CTX_WINDOW)
+        if not _LOCKUP_CTX_PAT.search(txt[s:m.end() + _LOCKUP_CTX_WINDOW]):
+            continue
+        try:
+            hits.append(int(m.group(1)))
+        except ValueError:
+            continue
+    if not hits:
+        return None
+    # 기본 = 최빈 관행값(180 등) 중 최소, 최종 = 최대(연장 락업)
+    return min(hits), max(hits), len(set(hits))
 _EQUITY_LINE_PAT = re.compile(
     r"(common stock purchase agreement|committed equity facility|equity line|"
     r"at[- ]the[- ]market offering|purchase agreement with[^.]{0,80}pursuant to which[^.]{0,120}"
@@ -397,23 +523,37 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
             # 오래 상장된 회사의 옛 424B4 로 만든 "락업 만기 2021년" 은 신호가 아니라 잡음이다.
             # 락업이 판단을 바꾸는 구간(상장 ~1년)에서만 낸다.
             days_listed = (today - ipo_d).days
-            lock_days = _LOCKUP_DEFAULT_DAYS
+            base_days = final_days = _LOCKUP_DEFAULT_DAYS
+            stages = 0
             src = "관행값 180일 (본문 미파싱)"
             txt = _doc_text(cik, ipo["accessionNumber"], ipo["primaryDocument"])
             if txt:
-                m = _LOCKUP_DAYS_PAT.search(txt)
-                if m:
-                    lock_days = int(m.group(1))
+                parsed = _lockup_days(txt)
+                if parsed:
+                    base_days, final_days, stages = parsed
                     src = "424B4 본문 파싱"
-            expiry = ipo_d + timedelta(days=lock_days)
-            d_day = (expiry - today).days
             out["상장"] = (f"{ipo['filingDate']} ({ipo['form']}) · 상장 {days_listed}일차"
                           + (" · 상장 1년 미만" if days_listed < 365 else ""))
-            out["락업 만기(추정)"] = (
-                f"{expiry.isoformat()} · {src} · "
-                + (f"D{d_day:+d}일" if d_day else "오늘")
-                + (" 🔺 90일 이내" if 0 <= d_day <= 90 else
-                   " · 이미 경과" if d_day < 0 else ""))
+
+            def _fmt(d: date) -> str:
+                dd = (d - today).days
+                return (f"{d.isoformat()} · "
+                        + (f"D{dd:+d}일" if dd else "오늘")
+                        + (" 🔺 90일 이내" if 0 <= dd <= 90 else
+                           " · 이미 경과" if dd < 0 else ""))
+
+            base_exp = ipo_d + timedelta(days=base_days)
+            final_exp = ipo_d + timedelta(days=final_days)
+            out["락업 만기(추정)"] = f"{_fmt(base_exp)} · 기본 {base_days}일 · {src}"
+            if final_days != base_days:
+                # 연장 락업이 별도로 있으면 그게 진짜 마지막 물량이다. 기본 만기만 보고
+                # "다 풀렸다" 고 읽으면 최대 물량을 놓친다(SPCX = 머스크 64억주 366일).
+                out["락업 최종 만기(연장분)"] = (
+                    f"{_fmt(final_exp)} · 연장 {final_days}일 · {src}")
+            if stages > 2:
+                out["락업 단계 해제"] = (
+                    f"본문에 서로 다른 기간 {stages}종 — 단계적 해제 구조. "
+                    "만기 1개로 수급을 판단하지 말 것 (424B4 'Shares Eligible for Future Sale' 표 확인)")
 
     # ── ④ ATM·유동성 라인 (희석 조기 경보) ──
     #   구조 = 8-K item 1.01 + 근접 S-1/S-3 + 뒤따르는 424B3. 구조 일치 시에만 본문을 연다
@@ -531,7 +671,7 @@ def probe(ticker: str) -> Optional[Dict[str, Any]]:
     if sic:
         out["업종(SIC)"] = sic
 
-    cap = _capital_block(facts) if facts else None
+    cap = _capital_block(facts, _cover_shares(cik, rows))
     if cap:
         out["_capital"] = {k: v for k, v in cap.items() if k.startswith("_")}
         out["자본구조"] = {k: v for k, v in cap.items() if not k.startswith("_")}

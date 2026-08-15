@@ -138,6 +138,13 @@ def _txt(el: Optional[ET.Element]) -> str:
     return (el.text or "").strip() if el is not None else ""
 
 
+# "정상 파싱했으나 시장 매매(P/S)가 없다" 를 "파싱 실패" 와 구분하는 센티널.
+# 둘을 None 하나로 뭉치면, 매매가 없는 종목의 **옛 엔트리가 영구 보존**된다
+# (main() 의 carry-forward 분기가 파싱 실패로 오인). 머스크 오답이 고쳐진 뒤에도
+# 산출물에 계속 남는 경로가 바로 이것이다.
+NO_MARKET_TX = object()
+
+
 def _parse_form4(xml_text: str) -> Optional[Tuple[str, str, float, str, str]]:
     """form4.xml → (person, position, net_shares, code, last_date).
 
@@ -169,16 +176,29 @@ def _parse_form4(xml_text: str) -> Optional[Tuple[str, str, float, str, str]]:
     for tx in root.iter("nonDerivativeTransaction"):
         shares = _float(_txt(tx.find(".//transactionShares/value")))
         ad = _txt(tx.find(".//transactionAcquiredDisposedCode/value")).upper()
-        code = _txt(tx.find(".//transactionCode"))
+        code = _txt(tx.find(".//transactionCode")).upper()
         d = _txt(tx.find(".//transactionDate/value"))
         if d > last_date:
             last_date = d
         if code:
             codes.append(code)
-        net += shares * (1 if ad == "A" else -1 if ad == "D" else 0)
-    if not codes and net == 0.0:
-        return None  # 비파생 거래 없음(파생만 — 옵션 등, 방향 신호 약함)
-    primary = "P" if "P" in codes else "S" if "S" in codes else (codes[0] if codes else "")
+        # 🚨 시장 매매(P/S)만 방향 신호다. 나머지는 합산하지 않는다.
+        #    2026-08-15 SPCX 실측: 머스크 Form 4 하나가 전환(C) 3.16억주 + xAI 인수
+        #    대가 취득(A) 5.11억주를 담고 있었는데 전부 합산돼 net_change
+        #    +801,923,260 이 나왔고, codes 에 S 가 하나(11,390주 실매도) 섞였다는
+        #    이유로 대표코드가 "S"(매도) 로 찍혔다. 결과 = "머스크가 8억주를 팔았다".
+        #    sell_n 0 인데 code S 라는 자기모순이 이미 신호였다.
+        #    A=부여 · C=전환 · M=옵션행사 · F=세금원천 · G=증여 · J=기타 · D=발행사 반환
+        #    — 전부 시장 수급과 무관하거나 방향이 모호하다.
+        if code in ("P", "S"):
+            net += shares * (1 if ad == "A" else -1 if ad == "D" else 0)
+    if not codes:
+        return NO_MARKET_TX  # 비파생 거래 없음(파생만 — 옵션 등, 방향 신호 약함)
+    if "P" not in codes and "S" not in codes:
+        return NO_MARKET_TX  # 부여·전환·세금원천만 — 매매 신호 아님. 실으면 오독을 만든다
+    # 대표코드는 **순액 부호에서 끌어온다**. codes 목록에서 뽑으면 순매수인데 "S" 로
+    # 찍히는 자기모순이 재발한다(위 SPCX 사고의 절반이 이 줄이었다).
+    primary = "P" if net > 0 else "S" if net < 0 else ("P" if "P" in codes else "S")
     return person, position, net, primary, last_date
 
 
@@ -224,7 +244,7 @@ def main() -> int:
 
             trades: List[Dict[str, Any]] = []
             net_total = buy_n = sell_n = 0.0
-            per = n_form4 = 0
+            per = n_form4 = n_parsed = 0   # n_parsed = XML 파싱까지 성공한 건수
             for i in range(len(forms)):
                 if forms[i] != "4" or dates[i] < cutoff:
                     continue
@@ -245,8 +265,12 @@ def main() -> int:
                     parsed = _parse_form4(xr.text)
                 except requests.RequestException:
                     continue
-                if not parsed:
+                if parsed is NO_MARKET_TX:
+                    n_parsed += 1      # 권위적 "매매 없음" — carry-forward 대상이 아니다
                     continue
+                if not parsed:
+                    continue           # 진짜 파싱 실패 — 이전 데이터를 보존한다
+                n_parsed += 1
                 person, position, net, code, last_date = parsed
                 net_total += net
                 if net > 0:
@@ -270,11 +294,15 @@ def main() -> int:
                     "total": len(trades), "trades": trades[:MAX_TRADES], "collected_at": today,
                 }
                 collected += 1
-            elif n_form4 == 0:
-                # 권위적 공백(200 응답 + 윈도우 내 Form4 0건) — 이전 데이터 제거(aged out).
+            elif n_form4 == 0 or n_parsed > 0:
+                # 권위적 공백 — 이전 데이터 제거(aged out). 두 경우 모두 "없음이 사실":
+                #   ① 200 응답 + 윈도우 내 Form4 0건
+                #   ② Form4 를 읽는 데는 성공했으나 시장 매매(P/S)가 0건
+                # ②를 빠뜨리면 옛 엔트리가 영원히 살아남는다 — 파서를 고쳐도 산출물이
+                # 안 바뀌는 경로다(SPCX 머스크 오답이 실제로 이 분기에 걸려 있었다).
                 merged.pop(tk, None)
                 collected += 1
-            # else: Form4 존재하나 trades 0 (xml 파싱·일시 실패) → 이전 보존, collected 미증가
+            # else: Form4 존재하나 한 건도 파싱 못 함(일시 실패) → 이전 보존, collected 미증가
 
         stocks = sorted(merged.values(), key=lambda s: -abs(int(s.get("net_change") or 0)))
 
