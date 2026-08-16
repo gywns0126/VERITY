@@ -142,6 +142,13 @@ def main() -> int:
             filings: List[Dict[str, Any]] = []
             n_13d = n_13g = n_dg = 0
             per = 0
+            # 🚨 2026-08-16 — 수집 창 안 실제 건수를 먼저 센다(비용 0, 이미 받은 배열 순회).
+            #   아래 루프의 n_dg 는 상한에서 break 하므로 cap+1 에서 멎어 진짜 건수가 아니다.
+            #   이 값이 없으면 "우리 10건" 이 종목의 전부인 것처럼 발행된다 (ECHO 실제 179건).
+            window_total = sum(
+                1 for i in range(len(forms))
+                if forms[i].upper() in FORM_SET and dates[i] >= cutoff
+            )
             for i in range(len(forms)):
                 if forms[i].upper() not in FORM_SET or dates[i] < cutoff:
                     continue
@@ -197,6 +204,13 @@ def main() -> int:
                     "ticker": tk, "name": tk, "cik": cik,
                     "latest_pct": pcts[0] if pcts else None,
                     "n_13d": n_13d, "n_13g": n_13g, "total": len(filings),
+                    # 🚨 total 은 '우리가 파싱해 보유한 건수'다. 상한(PER_TICKER_CAP)에 닿으면
+                    #   종목의 전부가 아니다 — 자른 사실을 같이 발행한다
+                    #   ([[feedback_render_stage_silent_field_drop]] 자를 땐 '미표시 N' 신고).
+                    #   이게 없으면 소비자도 감사도 10 을 진짜 건수로 읽는다.
+                    "window_total": window_total,
+                    "truncated": window_total > len(filings),
+                    "omitted": max(0, window_total - len(filings)),
                     "filings": filings[:MAX_FILINGS], "collected_at": today,
                 }
                 collected += 1
