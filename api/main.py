@@ -4555,12 +4555,32 @@ def main():
             print(f"  ⚠️ Claude 라이트/drift 스킵: {e}")
 
     # ── STEP 6.5: full 전용 — AI 일일 리포트 (KR + US) ──
+    # 🚨 2026-08-16 (PM 결정) — 오퍼레이터 리포트를 **보유 종목으로만** 좁힌다.
+    #   근거: 시장 전체 서사는 PM 이 이 챗(verity-stock 29소스 조인)에서 훨씬 깊게 본다.
+    #         리포트가 남을 이유는 "내가 들고 있는 것을 확인" 하는 용도뿐이다.
+    #   범위: vams.holdings(보유) 에 있는 종목만 candidates 로 넘긴다. 보유 0이면 종전대로.
+    #   🚨 알파네스트(공개)는 무변경 — daily_report 는 발행 시 STRIP_KEYS 로 제거된다
+    #      (sanitize_portfolio_public.py:47). 공개 리포트는 daily_public_report 별도 경로.
+    _held_tickers = {
+        str(h.get("ticker") or "").split(".")[0]
+        for h in ((portfolio.get("vams") or {}).get("holdings") or [])
+        if isinstance(h, dict) and h.get("ticker")
+    }
+    if _held_tickers:
+        _report_scope = [s for s in analyzed
+                         if str(s.get("ticker") or "").split(".")[0] in _held_tickers]
+        print(f"  리포트 범위 = 보유 {len(_report_scope)}/{len(_held_tickers)}종목 "
+              f"(전체 후보 {len(analyzed)} 중)")
+    else:
+        _report_scope = analyzed
+        print("  리포트 범위 = 보유 원장 부재 → 전체 후보 (종전 동작)")
+
     if effective_mode == "full":
         print("\n[6.5] AI 일일 시장 리포트 (KR)")
         try:
             daily_report = generate_daily_report(
                 macro=macro,
-                candidates=analyzed,
+                candidates=_report_scope,
                 sectors=portfolio.get("sectors", []),
                 headlines=portfolio.get("headlines", []),
                 verity_brain=portfolio.get("verity_brain"),
@@ -4580,7 +4600,7 @@ def main():
         try:
             daily_report_us = generate_daily_report(
                 macro=macro,
-                candidates=analyzed,
+                candidates=_report_scope,
                 sectors=portfolio.get("sectors", []),
                 headlines=portfolio.get("headlines", []),
                 verity_brain=portfolio.get("verity_brain"),
