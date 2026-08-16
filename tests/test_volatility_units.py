@@ -51,3 +51,46 @@ def test_signal_string_shows_real_percent():
     r = compute_volatility_score({"volatility_20d": 0.060})
     sig = " ".join(r["signals"])
     assert "95." in sig or "초고변동" in sig  # 0.06*sqrt(252)*100 ≈ 95.2%
+
+
+# ── 🚨 2026-08-17 결측 축 재정규화 (PM 승인) ────────────────────────────────
+# 실측 배경: 운영 풀 56종목에서 beta 가 0/56, volatility_20d 가 34/56 였다.
+# 종전에는 못 잰 축에 중립 50 을 채우고 고정 가중으로 합산해, beta(.25)+idio(.15)
+# = 40% 가 전 종목 동일값인 채로 가중을 먹었다. 그 결과 값이 있는 34종목조차
+# 표준편차 7.42 (범위 29~59) 로 50 쪽에 눌려 있었다 → 교정 후 12.38 (15~65).
+
+def test_unmeasured_axes_reported():
+    """못 잰 하위축은 이름으로 신고한다 — 중립 50 을 관측처럼 보이게 두지 않는다."""
+    r = compute_volatility_score({"volatility_20d": 0.02})
+    assert set(r["unmeasured_axes"]) == {"vol_trend", "beta", "idiosyncratic"}
+    r2 = compute_volatility_score({"volatility_20d": 0.02, "volatility_60d": 0.03, "beta": 1.0})
+    assert r2["unmeasured_axes"] == []
+
+
+def test_renormalization_excludes_unmeasured_weight():
+    """측정된 축만으로 재정규화 — 결측 축의 중립 50 이 총점을 50 쪽으로 끌지 않는다."""
+    r = compute_volatility_score({"volatility_20d": 0.008})   # 초저변동 → rv 90
+    # realized_vol 만 측정 → 재정규화하면 총점 = rv 그 자체
+    assert r["components"]["realized_vol"] == 90
+    assert r["volatility_score"] == 90, "결측 축 중립값이 총점을 희석하면 회귀"
+
+
+def test_renormalization_widens_dispersion():
+    """🚨 핵심 회귀: 같은 입력 집합의 총점 분산이 고정가중 대비 넓어진다."""
+    import statistics
+    vols = [0.008, 0.015, 0.025, 0.040, 0.070]
+    W = {"realized_vol": 0.35, "vol_trend": 0.25, "beta": 0.25, "idiosyncratic": 0.15}
+    new, old = [], []
+    for v in vols:
+        r = compute_volatility_score({"volatility_20d": v})
+        new.append(r["volatility_score"])
+        old.append(round(sum(r["components"][k] * W[k] for k in W)))
+    assert statistics.pstdev(new) > statistics.pstdev(old) * 1.5, (
+        f"재정규화가 변별을 넓히지 못함: 옛 {statistics.pstdev(old):.2f} → 새 {statistics.pstdev(new):.2f}")
+
+
+def test_all_axes_unmeasured_is_neutral_with_report():
+    """전 축 미측정 = 중립 50 이되, unmeasured_axes 가 4축 전부를 신고한다."""
+    r = compute_volatility_score({})
+    assert r["volatility_score"] == 50
+    assert len(r["unmeasured_axes"]) == 4

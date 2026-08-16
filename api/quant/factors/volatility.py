@@ -167,7 +167,21 @@ def compute_volatility_score(
         "idiosyncratic": 0.15,
     }
 
-    total = sum(scores[k] * weights[k] for k in weights)
+    # 🚨 2026-08-17 — 못 잰 하위축은 **빼고 남은 축으로 재정규화**한다 (PM 승인).
+    #   종전: 결측 축에 중립 50 을 넣고 고정 가중으로 합산 → 그 축이 전 종목 동일값이라
+    #         순위 기여가 0 인데도 가중을 먹었다. 실측(운영 풀 56종목):
+    #           beta 0/56 부재 → beta .25 + idiosyncratic .15 = **40% 가 전 종목 상수**
+    #           volatility_20d 34/56 → 나머지 60% 도 절반 종목에서만 작동
+    #         결과 = 명목 가중 0.25 대비 **실효 변별 0.091(36%)**. 다른 3축은 명목=실효였다.
+    #   이제: 측정된 축만으로 재정규화 → 값이 있는 종목은 온전히 변별하고,
+    #         전무한 종목은 중립 50 + unmeasured_axes 신고로 스스로 밝힌다.
+    #   🚨 이건 임계 조정이 아니라 **결측 처리 교정**이다 (PREREG_QUANT_FACTOR_FIX ④ 이행).
+    _active = {k: v for k, v in weights.items() if k not in unmeasured}
+    if _active:
+        _s = sum(_active.values())
+        total = sum(scores[k] * (_active[k] / _s) for k in _active)
+    else:
+        total = 50.0          # 전 축 미측정 = 중립. 신고는 unmeasured_axes 가 한다
     total = max(0, min(100, round(total)))
 
     return {
