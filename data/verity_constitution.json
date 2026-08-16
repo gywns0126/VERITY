@@ -7,21 +7,10 @@
   "fact_score": {
     "description": "객관적 수치 기반 종합 점수 (0~100)",
     "weights": {
-      "equity_brief_verdict": 0.03,
-      "us_fscore": 0.03,
-      "multi_factor": 0.1876,
-      "consensus": 0.1279,
-      "prediction": 0.0853,
-      "backtest": 0.0682,
-      "timing": 0.0597,
-      "commodity_margin": 0.0341,
-      "export_trade": 0.0682,
-      "moat_quality": 0.0853,
-      "graham_value": 0.0682,
-      "canslim_growth": 0.0682,
-      "analyst_report": 0.0784,
-      "dart_health": 0.049,
-      "perplexity_risk": 0.02
+      "graham_value": 0.25,
+      "canslim_growth": 0.25,
+      "quant_quality": 0.25,
+      "quant_volatility": 0.25
     },
     "notes": "V5: graham_value(안전마진+재무건전성) + canslim_growth(EPS가속+RS) 추가. 기존 팩터 비율 보수적 재배분.",
     "_runtime_note_2026_08_15": {
@@ -41,6 +30,114 @@
         "perplexity_risk": 0.0351
       },
       "warning": "이 weights 숫자를 실효 가중으로 인용하지 말 것 — BRAIN_AUDIT_2026_08_15 §2."
+    },
+    "_v0_weights_2026_08_16": {
+      "equity_brief_verdict": 0.03,
+      "us_fscore": 0.03,
+      "multi_factor": 0.1876,
+      "consensus": 0.1279,
+      "prediction": 0.0853,
+      "backtest": 0.0682,
+      "timing": 0.0597,
+      "commodity_margin": 0.0341,
+      "export_trade": 0.0682,
+      "moat_quality": 0.0853,
+      "graham_value": 0.0682,
+      "canslim_growth": 0.0682,
+      "analyst_report": 0.0784,
+      "dart_health": 0.049,
+      "perplexity_risk": 0.02
+    },
+    "_basis_2026_08_16": {
+      "policy": "문헌 표준 = 기본값 ON(자체 증거 불요). 문헌 이탈(자체 팩터·차등 가중·임계 조정)만 §7-3 게이트 통과. 등록 = PREREG_BASELINE_V1_LITERATURE_2026_08_16.md",
+      "weighting": "1/N 동일가중 — 군별 상대 성과 추정이 우리 데이터로 불가(1년 축적 시 검출하한 0.054 > 확증 IC 하위 절반). DeMiguel-Garlappi-Uppal 2009.",
+      "components": {
+        "graham_value": {
+          "basis": "literature",
+          "source": "Graham, Security Analysis / The Intelligent Investor",
+          "family": "value"
+        },
+        "canslim_growth": {
+          "basis": "literature",
+          "source": "O'Neil, How to Make Money in Stocks (CANSLIM)",
+          "family": "growth"
+        },
+        "quant_quality": {
+          "basis": "literature+confirmed",
+          "source": "Piotroski 2000 · Novy-Marx 2013 · Altman 1968",
+          "family": "quality",
+          "self_test": "B군 roa t 6.65 · cfoa t 7.07 (확증)"
+        },
+        "quant_volatility": {
+          "basis": "literature+confirmed",
+          "source": "Ang-Hodrick-Xing-Zhang 2006 · Baker-Bradley-Wurgler 2011",
+          "family": "low_volatility",
+          "self_test": "#42 백테스트 t 4.96/6.52 (통과)"
+        }
+      },
+      "excluded": {
+        "quant_momentum": {
+          "basis": "literature",
+          "reason": "Jegadeesh-Titman 문헌은 있으나 자체 백테스트 신호 0 (t −0.69/−0.09, 관측 186,340). KR·JP 모멘텀 부재는 문헌에도 보고 — 양쪽이 제외를 지지"
+        },
+        "quant_mean_reversion": {
+          "basis": "self",
+          "reason": "5축 중 3축이 동일 신호 중복 계상(zscore·bollinger·ma_dev = 60%)"
+        },
+        "moat_quality": {
+          "basis": "self",
+          "reason": "Buffett 개념 차용이나 산식은 자체 합성. 같은 개념을 quant_quality 가 문헌 산식으로 담는다"
+        },
+        "backtest": {
+          "basis": "self",
+          "reason": "승률0.6+Sharpe0.4 자체설정. 자기 성과를 입력으로 되먹이는 순환"
+        },
+        "export_trade": {
+          "basis": "self",
+          "reason": "관세청 데이터는 자산이나 ±8/±4 배점은 자체설정 → 관측으로"
+        },
+        "commodity_margin": {
+          "basis": "self",
+          "reason": "섹터 면제 3종 자체설정 → 관측으로"
+        },
+        "us_fscore": {
+          "basis": "literature",
+          "reason": "Piotroski 이나 quant_quality 가 이미 F-Score 포함(중복) + KR 전 종목 중립 50"
+        },
+        "analyst_report": {
+          "basis": "llm_derived",
+          "reason": "D군 — 재현 불가, 라이브 forward 전용 트랙으로 분리"
+        },
+        "dart_health": {
+          "basis": "llm_derived",
+          "reason": "D군 분리"
+        },
+        "perplexity_risk": {
+          "basis": "llm_derived",
+          "reason": "D군 분리"
+        },
+        "equity_brief_verdict": {
+          "basis": "llm_derived",
+          "reason": "2026-07-23 이미 채점 제외"
+        },
+        "multi_factor": {
+          "basis": "self",
+          "reason": "2026-05-23 IC 동결 ×0.0 — 구성 축은 quant_* 로 직접 배선"
+        },
+        "consensus": {
+          "basis": "self",
+          "reason": "동결 ×0.0 + 과반이 flow_fallback 대체"
+        },
+        "prediction": {
+          "basis": "self",
+          "reason": "동결 ×0.0 + 미학습 rule_based"
+        },
+        "timing": {
+          "basis": "self",
+          "reason": "동결 ×0.0"
+        }
+      },
+      "open_item_stage_b": "graham/canslim regime 스위칭(×1.5/×0.5, fact.py:366)은 차등 가중이라 1/N 원칙과 배치. v1.0 에서는 기존 동작 유지하고 별도 판단으로 남긴다"
     }
   },
   "quant_factors": {

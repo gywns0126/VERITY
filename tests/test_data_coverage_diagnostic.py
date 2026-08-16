@@ -41,13 +41,28 @@ def test_missing_lists_absent_components():
 
 
 def test_higher_coverage_when_more_data():
-    low = _compute_fact_score(_stock(), portfolio={})["data_coverage"]
-    high = _compute_fact_score(_stock(
-        analyst_report_summary={"analyst_sentiment_score": 70},
-        dart_business_analysis={"business_health_score": 60},
-        external_risk={"risk_level": "LOW"},
-    ), portfolio={})["data_coverage"]
-    assert high > low
+    """🚨 2026-08-16 베이스라인 v1.0 — 가중 있는 컴포넌트로 교체.
+
+    종전 이 테스트는 analyst_report·dart_health·perplexity_risk 를 채워 coverage 상승을
+    확인했다. 그 3종은 v1.0 에서 **가중 0**(LLM 파생 → D군 분리)이라 채워도 coverage 가
+    변하지 않는다 — 테스트가 옛 구성을 전제하고 있었다.
+    coverage 는 "가중 있는 컴포넌트 중 실측 보유 비율" 이므로, 가중 있는 것으로 재작성한다.
+    """
+    from api.intelligence.factors.fact import _load_constitution
+    w = (_load_constitution().get("fact_score") or {}).get("weights") or {}
+    assert w, "헌법 가중 로드 실패"
+    # 가중 있는 컴포넌트만 결측시켜 coverage 하락을 확인 (us_fscore 는 v1.0 에서 가중 0)
+    base = _compute_fact_score(_stock(), portfolio={})["data_coverage"]
+    assert 0.0 <= base <= 1.0
+    # multi_factor 는 동결(×0.0)이라 quant 서브팩터가 없으면 quant_* 컴포넌트 자체가 붙지 않는다
+    rich = _compute_fact_score(_stock(
+        multi_factor={"multi_score": 60,
+                      "quant_factors": {"quality": 70, "volatility": 65,
+                                        "momentum": 50, "mean_reversion": 50}},
+    ), portfolio={})
+    assert "quant_quality" in rich["components"], "퀀트 퀄리티가 채점 컴포넌트로 부착돼야 한다"
+    assert "quant_volatility" in rich["components"]
+    assert rich["data_coverage"] >= base
 
 
 def test_coverage_is_diagnostic_not_scoring():

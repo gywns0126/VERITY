@@ -499,6 +499,20 @@ def _compute_fact_score(
     # 정성 read 라 정직 표기 — Brain·감사 trail 이 측정된 사실과 LLM 판단을 구분). 점수 로직 불변.
     _llm_derived = ["analyst_report", "dart_health"]
 
+    # ── 🚨 베이스라인 v1.0 (2026-08-16, PREREG_BASELINE_V1_LITERATURE) ──────────────
+    # 퀀트 서브팩터를 **합산 이전**에 부착한다.
+    # 종전: 이 값들이 합산(아래 total 루프) 이 끝난 뒤에 components 에 추가돼, 계산은 되면서
+    #       점수 기여는 0 이었다. `fact_score.weights` 에도 없었다 — 즉 문헌 근거 팩터
+    #       (Piotroski·Novy-Marx·Altman·Ang 저변동)가 저장만 되고 버려졌다.
+    #       그 자리를 자체설정 42.7% + LLM 29.6% 가 채우고 있었다 (BRAIN_AUDIT §2 · 8/16 집계).
+    # 이제: quant_quality·quant_volatility 가 헌법 가중을 받아 실제로 채점된다.
+    #       momentum·mean_reversion 은 제외 — 근거는 `_basis_2026_08_16.excluded`.
+    _quant_sub = mf.get("quant_factors", {})
+    if _quant_sub:
+        for _qk in ("momentum", "quality", "volatility", "mean_reversion"):
+            _qv = _quant_sub.get(_qk, 50)
+            components[f"quant_{_qk}"] = _qv if isinstance(_qv, (int, float)) else 50
+
     # ── P0-1 fix (2026-05-16): IC + regime 적용 후 weight 합 normalize ──
     # 결함: IC=DEAD 시 weight × 0.3 적용 → multi_factor 0.188→0.056, prediction 0.085→0.026,
     #       timing 0.060→0.018. 합 1.000 → ~0.6 으로 떨어짐 → fact_score 자연 ~40% 감점.
@@ -564,12 +578,8 @@ def _compute_fact_score(
     if alpha_score is not None and alpha_combined.get("method") != "fallback":
         components["alpha_combined"] = alpha_score
 
-    # 퀀트 서브팩터 요약 (있으면)
-    quant_sub = mf.get("quant_factors", {})
-    if quant_sub:
-        for qk, default in [("momentum", 50), ("quality", 50), ("volatility", 50), ("mean_reversion", 50)]:
-            v = quant_sub.get(qk, default)
-            components[f"quant_{qk}"] = v if isinstance(v, (int, float)) else default
+    # (quant 서브팩터는 베이스라인 v1.0 부터 채점 대상이라 위 합산 **이전**에 부착된다.
+    #  아래 블록은 제거됐다 — _attach_quant_components() 참조)
 
     # IC 서브팩터 보정: alpha_combined 보너스 스케일링
     # 2026-05-25 IC-DEAD freeze: frozen status 도 적용 (4 PM disable factor 만 0.0).
