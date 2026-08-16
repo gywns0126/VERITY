@@ -12,25 +12,7 @@
       "quant_quality": 0.25,
       "quant_volatility": 0.25
     },
-    "notes": "V5: graham_value(안전마진+재무건전성) + canslim_growth(EPS가속+RS) 추가. 기존 팩터 비율 보수적 재배분.",
-    "_runtime_note_2026_08_15": {
-      "freeze": "multi_factor .1876 / consensus .1279 / prediction .0853 / timing .0597 은 런타임 ×0.0 (factor_decay 2026-05-23 동결, fact.py:355 적용). 문서 가중 46.05% 가 실효 0.",
-      "normalize": "잔여 가중은 fact.py:509 재정규화. equity_brief_verdict .03 은 2026-07-23 채점 제외.",
-      "regime_switch": "Graham/CANSLIM 은 regime 따라 ×1.5/×0.5 (fact.py:366) — 여기 weights 에 없는 런타임 변조.",
-      "effective_2026_08_15": {
-        "moat_quality": 0.1498,
-        "analyst_report": 0.1376,
-        "backtest": 0.1197,
-        "export_trade": 0.1197,
-        "graham_value": 0.1197,
-        "canslim_growth": 0.1197,
-        "dart_health": 0.086,
-        "commodity_margin": 0.0599,
-        "us_fscore": 0.0527,
-        "perplexity_risk": 0.0351
-      },
-      "warning": "이 weights 숫자를 실효 가중으로 인용하지 말 것 — BRAIN_AUDIT_2026_08_15 §2."
-    },
+    "notes": "베이스라인 v1.0 (2026-08-16) — 문헌 4군 동일가중. 가치=Graham · 성장=O'Neil CANSLIM · 퀄리티=Piotroski/Novy-Marx/Altman · 저변동=Ang et al. 채택·제외 근거는 _basis_2026_08_16 참조. 동결 상태이며 개정은 next_review 주기로만.",
     "_v0_weights_2026_08_16": {
       "equity_brief_verdict": 0.03,
       "us_fscore": 0.03,
@@ -138,6 +120,13 @@
         }
       },
       "open_item_stage_b": "graham/canslim regime 스위칭(×1.5/×0.5, fact.py:366)은 차등 가중이라 1/N 원칙과 배치. v1.0 에서는 기존 동작 유지하고 별도 판단으로 남긴다"
+    },
+    "_runtime_note_2026_08_16": {
+      "status": "🚨 베이스라인 v1.0 (2026-08-16) 이후 — 이 weights 가 곧 실효 가중이다. 문서와 런타임이 처음으로 일치한다.",
+      "why_this_note_replaced_the_old_one": "옛 _runtime_note_2026_08_15 는 '문서 가중 46.05% 가 실효 0' 과 effective 표 10종을 담고 있었다. 베이스라인 v1.0 으로 그 표가 통째로 무효가 됐다. 낡은 표를 남기면 다음 세션이 그것을 실효 가중으로 인용한다 — 오늘 사고(문헌 팩터가 합산 뒤에 붙어 기여 0)의 원인이 정확히 문서·런타임 불일치였다. 원문은 git 이력(커밋 b203e7826 이전)에 있다.",
+      "freeze_now_moot": "multi_factor·consensus·prediction·timing 은 2026-05-23 동결(×0.0) 대상이었는데, v1.0 에서 weights 자체에 없다. 따라서 ic_adjustments 는 이제 비거나 무해하다 — 동결이 사라진 게 아니라 대상이 가중표 밖으로 나갔다. 해제 조건(confirmatory 등급 존재)은 그대로 유효.",
+      "runtime_modulation_remaining": "Graham/CANSLIM regime 스위칭 ×1.5/×0.5 (fact.py:366) 은 여전히 weights 밖 런타임 변조다. 1/N 원칙과 배치되므로 _basis_2026_08_16.open_item_stage_b 에 미결로 등재.",
+      "do_not_cite": "이 블록을 실효 가중 표로 복제하지 말 것. 실효 가중은 위 weights 그 자체다."
     }
   },
   "quant_factors": {
