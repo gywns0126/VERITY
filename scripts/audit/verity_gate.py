@@ -10,6 +10,9 @@ Stop 게이트 (턴 종료 차단):
   S1 직전 응답 텍스트 RULE 9 regex (전과: 응답 레벨 5차 drift — 유일하게 기계가 없던 자리)
   S2 (조건부) 지식 표면 검사 — 층1 파일 mtime 변화 시에만 knowledge_surface_check 실행
   S3 (조건부) prereg 계약 — prereg 산출물이 dirty 할 때만 계약 pytest 실행
+  S4 private docs 동기 — docs/ 는 public 에서 gitignore 라 private repo 가 유일 사본.
+     미추적(사본 0)=차단 · 미커밋(직전본 있음)=경고. 전과: PM 승인 사전등록 3건이
+     13일간 디스크 단일 사본 (8/17 발견, 디스크 188 vs 추적 185)
 PreToolUse(Bash) 게이트 (도구 실행 전 차단):
   P1 git commit 메시지 RULE 9 regex (커밋 누수 2건/78일이 닫히는 자리)
   P2 git add -A / --all / '.' 차단 (feedback_cluster_git_commit)
@@ -151,6 +154,57 @@ def _check_prereg_conditional() -> str | None:
     return f"prereg 계약 위반 (dirty {len(dirty)}건, pytest 실패):\n{tail}"
 
 
+def _check_private_docs_sync() -> tuple[str | None, str | None]:
+    """docs/ 가 private repo 에 심겼는지. 반환 = (차단 사유, 경고 사유).
+
+    🚨 2026-08-17 신설 — 실측으로 13일 미동기가 드러났다. `docs/` 는 public 에서
+    gitignore 라 private repo 에만 남는데, 8/4~8/5 작성된 **PM 승인 사전등록 3건**이
+    한 번도 커밋되지 않아 이 맥 디스크 단일 사본이었다 (디스크 188 vs 추적 185).
+
+    원인 = CLAUDE.md 가 요구하는 `add -f` 누락. 실측한 git 거동:
+      · 신규 파일 + plain add → 스테이징 자체가 안 됨 (경로가 통째로 무시됨)
+      · 추적 파일 + plain add → **스테이징은 되지만 exit 1** → `add && commit` 체인이
+        commit 전에 끊긴다. 어느 쪽도 에러가 시끄럽지 않아 13일간 미탐지였다.
+
+    미추적(=사본 0) 은 차단, 수정만 된 것(=직전본 존재) 은 경고로 나눈다.
+    사전등록은 RULE 7 임계 동결의 근거 문서라 소실 = 동결 근거 소실이다.
+    """
+    gd = os.path.join(ROOT, ".git-private")
+    if not os.path.isdir(gd):
+        return None, None                      # 다른 머신 = 해당 없음
+    docs = os.path.join(ROOT, "docs")
+    if not os.path.isdir(docs):
+        return None, None
+    disk = set()
+    for dp, _dn, fn in os.walk(docs):
+        for f in fn:
+            rel = os.path.relpath(os.path.join(dp, f), ROOT)
+            disk.add(rel)
+    r = subprocess.run(["git", "--git-dir=" + gd, "--work-tree=" + ROOT,
+                        "ls-files", "docs/"],
+                       capture_output=True, text=True, timeout=15, cwd=ROOT)
+    if r.returncode != 0:
+        return None, f"private repo ls-files 실패 (exit {r.returncode}) — docs 동기 미확인"
+    tracked = {l for l in r.stdout.splitlines() if l}
+    missing = sorted(disk - tracked)
+    if missing:
+        names = "\n  ".join(missing[:8])
+        more = f"\n  … 외 {len(missing) - 8}건" if len(missing) > 8 else ""
+        return (f"private repo 미추적 docs {len(missing)}건 (디스크 {len(disk)} · 추적 "
+                f"{len(tracked)}) — public 은 /docs/ gitignore 라 **사본이 이 디스크뿐**이다:\n"
+                f"  {names}{more}\n"
+                "  git --git-dir=.git-private --work-tree=. add -f <경로> && … commit && … push\n"
+                "  (🚨 -f 필수 · add -A 금지 · 명시 경로만 — CLAUDE.md 하이브리드 절)"), None
+    d = subprocess.run(["git", "--git-dir=" + gd, "--work-tree=" + ROOT,
+                        "status", "--porcelain", "docs/", "CLAUDE.md"],
+                       capture_output=True, text=True, timeout=15, cwd=ROOT)
+    dirty = [l for l in d.stdout.splitlines() if l.strip()]
+    if dirty:
+        return None, (f"private repo 미커밋 {len(dirty)}건 (직전본은 있음): "
+                      + ", ".join(l[3:] for l in dirty[:5]))
+    return None, None
+
+
 def hook_stop() -> int:
     try:
         payload = json.load(sys.stdin)
@@ -192,6 +246,18 @@ def hook_stop() -> int:
             return 0
     except Exception as e:  # noqa: BLE001
         return _fail_open("stop/S3", e)
+
+    # S4 — private docs 동기 (미추적=차단 · 미커밋=경고)
+    try:
+        block, warn = _check_private_docs_sync()
+        if block:
+            _out({"decision": "block",
+                  "reason": block + "\n(세션이 만든 문서는 세션 밖에 심는다 — RULE 12.)"})
+            return 0
+        if warn:
+            _out({"systemMessage": f"[verity_gate:stop/S4] {warn}"})
+    except Exception as e:  # noqa: BLE001
+        return _fail_open("stop/S4", e)
     return 0
 
 
@@ -362,6 +428,18 @@ def _selftest() -> int:  # noqa: C901 — 케이스 나열
          (r.get("hookSpecificOutput") or {}).get("permissionDecision") == "deny")
     r = run("pretool", {"tool_name": "Bash", "tool_input": {"command": "ls -la && echo done"}})
     case("pretool: git 무관 명령 → allow", r == {})
+
+    # S4 — private docs 동기 (함수 직접 호출: 실제 repo 상태를 쓴다)
+    blk, wrn = _check_private_docs_sync()
+    case("S4: 현 repo 미추적 docs 0 (있으면 그것이 잡아야 할 위반)", blk is None)
+    case("S4: 반환 형태 = (차단|None, 경고|None)",
+         (blk is None or isinstance(blk, str)) and (wrn is None or isinstance(wrn, str)))
+    _saved_root = globals()["ROOT"]
+    try:
+        globals()["ROOT"] = td            # .git-private 없는 경로 = 다른 머신
+        case("S4: .git-private 부재 → 해당 없음(통과)", _check_private_docs_sync() == (None, None))
+    finally:
+        globals()["ROOT"] = _saved_root
 
     print("\n셀프테스트 " + ("전건 통과" if ok else "실패 존재"))
     return 0 if ok else 1
