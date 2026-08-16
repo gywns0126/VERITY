@@ -39,6 +39,13 @@ REG_PATH = os.path.join(DATA_DIR, "analysis", "experiment_registry.jsonl")
 MIN_N_T = 100                     # 월별 최소 횡단면 크기
 FUND_LAG_DAYS = 45                # 분기 재무 가용 규칙: quarter_end + 45일 ≤ 월말
 OOS_FROM = 20240801               # 🚨 frozen OOS — 이 날짜 이후 월말은 v1 에서 잠금
+# ── v1.1 restatement (2026-08-16, PM "확실해?" 재검증에서 적발) ────────────────
+# 패널 close = 🚨 무수정 종가 실증: 카카오 035720 5:1 분할(2021-04) 498,000→113,500
+# = 가짜 −77% 수익률 (실제 시총 +14%). 오염 관측 1,784/202,953 (0.88%, 극단 680).
+# 스크린 = 수익률 창에서 |Δln close − Δln mktcap| > CA_SCREEN 이면 그 관측 제외
+# (분할·감자·대량증자로 주당 수익률을 신뢰할 수 없음 — 정당한 유증도 걸리지만 보수·정직 방향).
+# Q4 채택 규칙 정합: 성과를 바꾸는 bug fix = restatement + 기존 결과 정정 공지.
+CA_SCREEN = 0.25
 HORIZONS_M = [1, 3, 6, 12]        # forward 지평 (개월)
 FACTORS = ["ep", "bp", "dy", "roa", "gross_margin", "cfoa",
            "asset_turnover", "current_ratio", "accrual_inv", "debt_inv"]
@@ -178,10 +185,26 @@ def nonoverlap_judge(ic: List[float], step: int) -> Dict[str, Any]:
                            "t_raw": round(t_raw, 2)}
     if step == 1:
         crit = _t_crit(n - 1)
+        # NW(lag=3) 보조 — 월별 IC 시계열 자기상관 대비 (분류는 계약대로 raw, 병기 의무)
+        mu2 = mu
+        e = [v - mu2 for v in ic]
+        s0 = sum(v * v for v in e) / n
+        for L in range(1, min(3, n - 1) + 1):
+            g = sum(e[t] * e[t - L] for t in range(L, n)) / n
+            s0 += 2 * (1 - L / 4) * g
+        se_nw = math.sqrt(max(s0, 1e-12) / n)
+        t_nw = mu2 / se_nw if se_nw > 0 else 0.0
+        ac1 = 0.0
+        if n > 2 and statistics.stdev(ic) > 1e-12:
+            m0 = statistics.mean(ic)
+            num = sum((ic[t] - m0) * (ic[t - 1] - m0) for t in range(1, n))
+            den = sum((v - m0) ** 2 for v in ic)
+            ac1 = num / den if den > 1e-12 else 0.0
         row.update({"t_nonoverlap": round(t_raw, 2), "t_crit_df": round(crit, 3),
-                    "estimable": True,
+                    "estimable": True, "t_nw_lag3": round(t_nw, 2), "ic_autocorr1": round(ac1, 2),
                     "evidence_class": ("confirmatory" if (abs(t_raw) >= crit and n >= 10)
-                                       else "exploratory")})
+                                       else "exploratory"),
+                    "nw_also_passes": bool(abs(t_nw) >= crit)})
         return row
     if k < 3:
         row.update({"estimable": False, "t_nonoverlap": None, "evidence_class": "unestimable"})
@@ -234,6 +257,7 @@ def run(dry: bool = False) -> Dict[str, Any]:
 
     ic_series: Dict[Tuple[str, int], List[float]] = defaultdict(list)
     excluded_delist = 0
+    excluded_ca = 0
     used_pairs = 0
 
     for m in is_months:
@@ -268,7 +292,16 @@ def run(dry: bool = False) -> Dict[str, Any]:
                         excluded_delist += 1
                         continue
                     c1 = _f(r2.get("close"))
-                    if not c0 or not c1 or c0 <= 0:
+                    if not c0 or not c1 or c0 <= 0 or c1 <= 0:
+                        continue
+                    # v1.1 기업행동 스크린 — 무수정 종가의 가짜 수익률 차단
+                    k0, k1 = _f(vr.get("mktcap")), _f(r2.get("mktcap"))
+                    if k0 and k1 and k0 > 0 and k1 > 0:
+                        if abs(math.log(c1 / c0) - math.log(k1 / k0)) > CA_SCREEN:
+                            excluded_ca += 1
+                            continue
+                    else:
+                        excluded_ca += 1   # 시총 결측 = 검증 불가 → 제외 (보수)
                         continue
                     xs.append(fv)
                     ys.append((c1 - c0) / c0)
@@ -294,7 +327,7 @@ def run(dry: bool = False) -> Dict[str, Any]:
     n_is = len([m for m in is_months if len(val[m]) >= MIN_N_T])
     payload = {
         "_meta": {
-            "artifact": "factor_engine_kr_v1",
+            "artifact": "factor_engine_kr_v1.1",
             "generated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
             "contract": "docs/FACTOR_ENGINE_DESIGN_2026_08_16.md",
             "score_system": {"name": "factor_engine_kr_v1", "is_operational": False,
@@ -305,6 +338,7 @@ def run(dry: bool = False) -> Dict[str, Any]:
                            "note": "개봉 = 합침/폐기 결정 시 1회 (§7-3b)"},
             "known_limitations": [
                 f"상폐 실현손실 미반영 — 소멸 종목은 지평 제외 (제외 관측 {excluded_delist:,}건). quality/value IC 과대 위험",
+                f"🚨 v1.1 restatement: 패널 close = 무수정 종가 (카카오 5:1 실증) — 기업행동 스크린 |dln c − dln mc|>{CA_SCREEN} 로 {excluded_ca:,}관측 제외. v1.0 결과는 이 오염 포함이라 폐기",
                 "유동성/거래대금 필터 없음 — microcap 비중 미통제",
                 "fwd12m 은 IS 내 k≈4 — 설계상 exploratory 고정",
             ],
