@@ -1,0 +1,2630 @@
+{
+ "_meta": {
+  "artifact": "data_manifest",
+  "purpose": "산출물 1건 = 1행 선언. 공개/비공개 경계와 등재 상태의 단일 창구 (구조 제안 ①)",
+  "generated_by": "scripts/audit/build_data_manifest.py",
+  "scope": "data/ 최상위 추적 파일 + 위치 무관 발행 목록 등재분 (레이크·캐시 디렉터리 전체는 대상 아님)",
+  "derived_from": {
+   "publish": ".github/actions/publish-data/action.yml",
+   "private": ".gitignore /data/ 규칙",
+   "sla": "data/freshness_sla.json streams",
+   "contract": "data/contracts/*.contract.json"
+  },
+  "limits": [
+   "producers 는 이름 언급 + 쓰기 정황 기반 **후보**다. 확정 아님 (동적 파일명은 못 잡는다)",
+   "visibility=private 는 무시규칙 대상이라 추적 목록에 없다 — 여기에는 나타나지 않는다",
+   "이 대장은 선언이지 강제가 아니다. 강제는 --check 의 종료 코드 1이 한다"
+  ],
+  "is_operational": false
+ },
+ "private_rules": [
+  "data/mock_orders.log",
+  "data/mock_broker_state.json",
+  "data/auto_trade_history.json",
+  "data/.auto_trade_paused",
+  "data/.system_maintenance_mode",
+  "data/.last_user_telegram_ts",
+  "data/.timing_state.json",
+  "data/history/runs/",
+  "data/portfolio.json.bak",
+  "data/metadata/*.bak",
+  "data/metadata/*.bak.*",
+  "data/*.json.bak",
+  "data/*.json.bak.*",
+  "data/cache/5r_analysis/",
+  "data/analysis/_archive/",
+  "data/arena/*",
+  "data/estate_backtest_v0_dry_run/",
+  "data/smallcap_corner_ic_history.jsonl",
+  "data/us_financials/*.json",
+  "data/tri_synthesis.json",
+  "data/tri_synthesis_cache.json",
+  "data/candidates_diff.json",
+  "data/macro_synthesis.json",
+  "data/macro_synthesis_cache.json",
+  "data/us_analyst_consensus.json",
+  "data/moderation_portfolio.json",
+  "data/moderation_portfolio_trail.jsonl",
+  "data/rebalance_review.json",
+  "data/rebalance_review_trail.jsonl",
+  "data/us_chart_history/",
+  "data/metadata/kr_valuation_panel.jsonl",
+  "data/metadata/.verity_gate_stamp.json"
+ ],
+ "artifacts": [
+  {
+   "path": "data/.candidates_prev.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 45252,
+   "producers": [
+    "api/builders/candidates_diff_builder.py"
+   ]
+  },
+  {
+   "path": "data/.dart_delisted_backfill_progress.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 10817,
+   "producers": [
+    "api/collectors/dart_delisted_backfill.py"
+   ]
+  },
+  {
+   "path": "data/.dart_quarterly_backfill_progress.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 22713,
+   "producers": [
+    "api/builders/dart_quarterly_backfill_builder.py"
+   ]
+  },
+  {
+   "path": "data/.dart_quarterly_gap_backfill_progress.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 12121,
+   "producers": []
+  },
+  {
+   "path": "data/.gemini_chat_counter.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 17,
+   "producers": [
+    "api/notifications/telegram_bot.py"
+   ]
+  },
+  {
+   "path": "data/.gitignore",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2262,
+   "producers": [
+    "api/collectors/us_chart_history.py",
+    "api/builders/kr_valuation_panel.py",
+    "api/intelligence/decision_journal.py"
+   ]
+  },
+  {
+   "path": "data/.kis_issued_date.txt",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 25,
+   "producers": [
+    "api/trading/kis_broker.py",
+    "scripts/cron_health_monitor.py",
+    "scripts/infra_status_monitor.py"
+   ]
+  },
+  {
+   "path": "data/.telegram_offset",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 9,
+   "producers": [
+    "api/notifications/telegram_bot.py"
+   ]
+  },
+  {
+   "path": "data/13f_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 26819,
+   "producers": [
+    "api/collectors/sec_13f_collector.py"
+   ]
+  },
+  {
+   "path": "data/13f_quarter_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 9719353,
+   "producers": [
+    "api/collectors/sec_13f_collector.py"
+   ]
+  },
+  {
+   "path": "data/admin_todos.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1541,
+   "producers": [
+    "vercel-api/api/admin.py"
+   ]
+  },
+  {
+   "path": "data/ai_synthesis.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "ai_synthesis:P0",
+   "contract": null,
+   "size_bytes": 1031833,
+   "producers": [
+    "api/builders/ai_synthesis_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/ai_synthesis_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2,
+   "producers": [
+    "api/builders/ai_synthesis_builder.py"
+   ]
+  },
+  {
+   "path": "data/alert_type_ledger.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 48243,
+   "producers": [
+    "api/notifications/telegram.py"
+   ]
+  },
+  {
+   "path": "data/alpha_nest_filters.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 12331,
+   "producers": [
+    "api/builders/alpha_nest_filters_builder.py"
+   ]
+  },
+  {
+   "path": "data/arena/berserker_shadow_score.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 286,
+   "producers": [
+    "api/arena/berserker_shadow.py"
+   ]
+  },
+  {
+   "path": "data/arena/berserker_status.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1881,
+   "producers": [
+    "api/arena/berserker_status.py"
+   ]
+  },
+  {
+   "path": "data/backtest_kr_fundamental.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 7495,
+   "producers": [
+    "api/quant/backtest/kr_fundamental.py"
+   ]
+  },
+  {
+   "path": "data/backtest_kr_fundamental_trail.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 10538,
+   "producers": [
+    "api/quant/backtest/kr_fundamental.py"
+   ]
+  },
+  {
+   "path": "data/backtest_kr_price_axes.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 11294,
+   "producers": [
+    "api/quant/backtest/kr_price_axes.py"
+   ]
+  },
+  {
+   "path": "data/backtest_kr_price_axes_trail.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 9711,
+   "producers": [
+    "api/quant/backtest/kr_price_axes.py"
+   ]
+  },
+  {
+   "path": "data/backtest_stats.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 3401,
+   "producers": [
+    "api/intelligence/backtest_archive.py",
+    "api/observability/cross_link_layer.py"
+   ]
+  },
+  {
+   "path": "data/bonds.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "bonds_etfs:P1",
+   "contract": null,
+   "size_bytes": 1491,
+   "producers": [
+    "api/run_bond_etf.py",
+    "api/collectors/bonddata.py",
+    "api/observability/measurement_audit.py"
+   ]
+  },
+  {
+   "path": "data/brain_kb_usage.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2669,
+   "producers": [
+    "api/main.py",
+    "api/analyzers/gemini_analyst.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/brain_knowledge_base.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 58081,
+   "producers": [
+    "api/analyzers/gemini_analyst.py",
+    "scripts/_archive/build_brain_kb_v2.py"
+   ]
+  },
+  {
+   "path": "data/broker_guide.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "broker_guide:P2",
+   "contract": null,
+   "size_bytes": 29570,
+   "producers": [
+    "api/collectors/broker_guide.py",
+    "api/observability/data_pipeline_health.py"
+   ]
+  },
+  {
+   "path": "data/calendar_public.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "calendar_public:P2",
+   "contract": null,
+   "size_bytes": 358115,
+   "producers": [
+    "api/builders/calendar_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/chain_snippets.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 3838743,
+   "producers": [
+    "api/builders/stock_report_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "scripts/kr_company_facts_backfill.py"
+   ]
+  },
+  {
+   "path": "data/commodity_exposure.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "commodity_exposure:P2",
+   "contract": null,
+   "size_bytes": 3150,
+   "producers": [
+    "api/builders/commodity_exposure_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/commodity_impact.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 24779,
+   "producers": [
+    "api/main.py",
+    "api/collectors/CommodityScout.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/commodity_sector_map_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 612,
+   "producers": []
+  },
+  {
+   "path": "data/consensus_data.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 41678,
+   "producers": [
+    "api/main.py",
+    "api/builders/stock_report_public_builder.py",
+    "api/observability/say_do_divergence.py"
+   ]
+  },
+  {
+   "path": "data/corp_idno_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 146698,
+   "producers": [
+    "api/collectors/ftc_group_equity.py"
+   ]
+  },
+  {
+   "path": "data/cross_gics_kr.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "cross_gics_kr:P2",
+   "contract": null,
+   "size_bytes": 2328,
+   "producers": [
+    "api/builders/stock_report_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/cross_gics_us.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "cross_gics_us:P2",
+   "contract": null,
+   "size_bytes": 2355,
+   "producers": [
+    "api/builders/us_stock_report_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/crypto_defillama.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 10128,
+   "producers": [
+    "api/builders/crypto_regime_synthesis.py",
+    "api/builders/crypto_collect_builder.py"
+   ]
+  },
+  {
+   "path": "data/crypto_etf_flow.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 638,
+   "producers": [
+    "api/builders/crypto_regime_synthesis.py",
+    "api/builders/crypto_collect_builder.py"
+   ]
+  },
+  {
+   "path": "data/crypto_governance.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 72536,
+   "producers": [
+    "api/builders/crypto_collect_builder.py"
+   ]
+  },
+  {
+   "path": "data/crypto_macro.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 1195,
+   "producers": [
+    "api/builders/crypto_regime_synthesis.py",
+    "api/builders/crypto_collect_builder.py"
+   ]
+  },
+  {
+   "path": "data/crypto_news.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 17598,
+   "producers": [
+    "api/builders/crypto_collect_builder.py"
+   ]
+  },
+  {
+   "path": "data/crypto_options.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 962,
+   "producers": [
+    "api/builders/crypto_regime_synthesis.py",
+    "api/builders/crypto_collect_builder.py"
+   ]
+  },
+  {
+   "path": "data/crypto_positioning.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 899,
+   "producers": [
+    "api/builders/crypto_regime_synthesis.py",
+    "api/builders/crypto_collect_builder.py"
+   ]
+  },
+  {
+   "path": "data/crypto_regime.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 10450,
+   "producers": [
+    "api/builders/crypto_regime_synthesis.py"
+   ]
+  },
+  {
+   "path": "data/crypto_regime_trail.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 5327,
+   "producers": [
+    "api/builders/crypto_regime_synthesis.py"
+   ]
+  },
+  {
+   "path": "data/crypto_stablecoins.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 2661,
+   "producers": [
+    "api/builders/crypto_regime_synthesis.py",
+    "api/builders/crypto_collect_builder.py"
+   ]
+  },
+  {
+   "path": "data/crypto_trends.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 681,
+   "producers": [
+    "api/builders/crypto_regime_synthesis.py",
+    "api/builders/crypto_collect_builder.py"
+   ]
+  },
+  {
+   "path": "data/crypto_universe.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 44438,
+   "producers": [
+    "api/builders/crypto_regime_synthesis.py",
+    "api/builders/crypto_collect_builder.py"
+   ]
+  },
+  {
+   "path": "data/cusip_ticker_map.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 27832,
+   "producers": [
+    "api/collectors/cusip_resolver.py"
+   ]
+  },
+  {
+   "path": "data/daily_briefing.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "daily_briefing:P1",
+   "contract": null,
+   "size_bytes": 6236,
+   "producers": [
+    "api/builders/daily_briefing_builder.py"
+   ]
+  },
+  {
+   "path": "data/daily_briefing_history.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 13695,
+   "producers": [
+    "api/builders/daily_briefing_builder.py"
+   ]
+  },
+  {
+   "path": "data/dart_analysis_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 142780,
+   "producers": [
+    "api/analyzers/dart_report_analyzer.py",
+    "api/collectors/DartScout.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/dart_catalyst_alerts.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 4029234,
+   "producers": [
+    "api/main.py",
+    "api/collectors/nps_holdings.py",
+    "api/collectors/dart_catalyst.py"
+   ]
+  },
+  {
+   "path": "data/dart_catalyst_backfill.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 48256089,
+   "producers": [
+    "api/builders/event_study_builder.py",
+    "api/builders/disclosure_forensics_builder.py",
+    "api/builders/stock_report_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/dart_catalyst_backfill_done.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 13273,
+   "producers": [
+    "scripts/dart_catalyst_backfill.py"
+   ]
+  },
+  {
+   "path": "data/dart_cb_bw_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 446660,
+   "producers": [
+    "api/analyzers/dart_cb_bw.py",
+    "api/builders/kr_forensics_public_builder.py",
+    "api/builders/stock_report_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/dart_fundamentals_kr.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": "dart_fundamentals_kr:P1",
+   "contract": null,
+   "size_bytes": 1821738,
+   "producers": [
+    "api/analyzers/stock_filter.py",
+    "api/builders/kr_lynch_class_builder.py",
+    "api/builders/dart_batch_builder.py"
+   ]
+  },
+  {
+   "path": "data/dart_kr_fin_history.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 3362800,
+   "producers": [
+    "api/quant/backtest/kr_safety_score_full.py",
+    "api/builders/kr_lynch_class_builder.py",
+    "api/builders/stock_report_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/dart_kr_fin_history_done.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 18043,
+   "producers": [
+    "scripts/dart_kr_fin_backfill.py"
+   ]
+  },
+  {
+   "path": "data/dart_litigation_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 86244,
+   "producers": [
+    "api/analyzers/dart_litigation.py",
+    "api/builders/kr_forensics_public_builder.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/dart_quarterly_public.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "dart_quarterly_public:P2",
+   "contract": null,
+   "size_bytes": 6686407,
+   "producers": [
+    "api/builders/us_quarterly_public_builder.py",
+    "api/builders/entrance_map_builder.py",
+    "api/builders/dart_quarterly_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/dart_quarterly_snapshots.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": "dart_quarterly_snapshots:P1",
+   "contract": null,
+   "size_bytes": 42986353,
+   "producers": [
+    "api/main.py",
+    "api/quant/backtest/kr_fundamental.py",
+    "api/collectors/dart_delisted_backfill.py"
+   ]
+  },
+  {
+   "path": "data/dart_related_party_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 81142,
+   "producers": [
+    "api/analyzers/dart_related_party.py",
+    "api/builders/kr_forensics_public_builder.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/disclosure_forensics.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "disclosure_forensics:P1",
+   "contract": null,
+   "size_bytes": 4977630,
+   "producers": [
+    "api/builders/smallcap_corner_filters_builder.py",
+    "api/builders/us_disclosure_forensics_builder.py",
+    "api/builders/us_smallcap_corner_filters_builder.py"
+   ]
+  },
+  {
+   "path": "data/dividends_kr.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": "dividends_kr:P2",
+   "contract": null,
+   "size_bytes": 605740,
+   "producers": [
+    "api/main.py",
+    "api/collectors/dividend_kr.py",
+    "api/builders/kr_lynch_class_builder.py"
+   ]
+  },
+  {
+   "path": "data/dividends_us.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 10587,
+   "producers": [
+    "api/collectors/dividend_us.py"
+   ]
+  },
+  {
+   "path": "data/entrance_map.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "entrance_map:P2",
+   "contract": null,
+   "size_bytes": 1391,
+   "producers": [
+    "api/builders/entrance_map_builder.py"
+   ]
+  },
+  {
+   "path": "data/etf_flow.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "etf_flow:P1",
+   "contract": null,
+   "size_bytes": 1494292,
+   "producers": [
+    "api/run_bond_etf.py",
+    "api/collectors/etf_flow.py",
+    "api/collectors/krx_openapi.py"
+   ]
+  },
+  {
+   "path": "data/event_study.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "event_study:P1",
+   "contract": null,
+   "size_bytes": 21935773,
+   "producers": [
+    "api/builders/event_study_builder.py",
+    "api/builders/us_event_study_builder.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/excursion_summary.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 700,
+   "producers": [
+    "api/observability/excursion_trail.py"
+   ]
+  },
+  {
+   "path": "data/excursion_trail.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 3569,
+   "producers": [
+    "api/observability/excursion_trail.py"
+   ]
+  },
+  {
+   "path": "data/exec_paper_state.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 169,
+   "producers": [
+    "api/main.py",
+    "api/execution/paper_track.py",
+    "scripts/pool_rotation_report.py"
+   ]
+  },
+  {
+   "path": "data/factor_ic_history.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": "factor_ic_history:P1",
+   "contract": null,
+   "size_bytes": 946765,
+   "producers": [
+    "api/quant/alpha/alpha_scanner.py",
+    "api/observability/trail_integrity.py",
+    "api/observability/validation_summary.py"
+   ]
+  },
+  {
+   "path": "data/freshness_board.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "freshness_board:P2",
+   "contract": null,
+   "size_bytes": 17411,
+   "producers": [
+    "api/builders/freshness_board_builder.py",
+    "api/builders/data_health_builder.py"
+   ]
+  },
+  {
+   "path": "data/freshness_sla.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 23661,
+   "producers": [
+    "api/builders/freshness_board_builder.py",
+    "scripts/freshness_shadow_monitor.py",
+    "scripts/cron_health_monitor.py"
+   ]
+  },
+  {
+   "path": "data/fscore_ic_history.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 43054,
+   "producers": [
+    "api/intelligence/fscore_shadow.py"
+   ]
+  },
+  {
+   "path": "data/fscore_ic_shadow.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 136284,
+   "producers": [
+    "api/intelligence/fscore_shadow.py"
+   ]
+  },
+  {
+   "path": "data/ftc_group_equity.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 5153865,
+   "producers": [
+    "api/collectors/ftc_group_equity.py"
+   ]
+  },
+  {
+   "path": "data/group_structure.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 502413,
+   "producers": [
+    "api/collectors/group_structure.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/history.dev.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 107486,
+   "producers": []
+  },
+  {
+   "path": "data/history.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 107486,
+   "producers": [
+    "api/quant/backtest/kr_dividend_total_return.py",
+    "api/quant/backtest/kr_safety_score_full.py",
+    "api/quant/alpha/alpha_scanner.py"
+   ]
+  },
+  {
+   "path": "data/hot_stock.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "hot_stock:P2",
+   "contract": null,
+   "size_bytes": 858,
+   "producers": [
+    "api/collectors/fsc_daily_prices.py",
+    "api/builders/daily_briefing_builder.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/hscode_mapping.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 9437,
+   "producers": []
+  },
+  {
+   "path": "data/industry_themes_pulse.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": "equity_research:P2",
+   "contract": null,
+   "size_bytes": 118458,
+   "producers": [
+    "api/builders/industry_themes_pulse_builder.py",
+    "api/intelligence/macro_industry_align.py"
+   ]
+  },
+  {
+   "path": "data/infra_status.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1314,
+   "producers": [
+    "scripts/infra_status_monitor.py",
+    "scripts/cockpit_aggregate.py",
+    "scripts/system_map.py"
+   ]
+  },
+  {
+   "path": "data/insider_trades.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "insider_trades:P1",
+   "contract": null,
+   "size_bytes": 3650881,
+   "producers": [
+    "api/builders/kr_observation_logger.py",
+    "api/builders/entrance_map_builder.py",
+    "api/builders/daily_briefing_builder.py"
+   ]
+  },
+  {
+   "path": "data/investor_profiles.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 20900,
+   "producers": [
+    "api/collectors/investor_profiles.py"
+   ]
+  },
+  {
+   "path": "data/ipo_watch.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "ipo_watch:P2",
+   "contract": null,
+   "size_bytes": 13030,
+   "producers": [
+    "api/collectors/ipo_scout.py",
+    "api/builders/calendar_public_builder.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/kr_chart_delisted_meta.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 23073,
+   "producers": [
+    "api/quant/backtest/kr_fundamental.py",
+    "api/collectors/kr_chart_delisted.py"
+   ]
+  },
+  {
+   "path": "data/kr_close_latest.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 122051,
+   "producers": [
+    "api/collectors/fsc_daily_prices.py",
+    "api/builders/urgent_alerts_builder.py",
+    "api/intelligence/decision_journal.py"
+   ]
+  },
+  {
+   "path": "data/kr_corp_domains.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 81875,
+   "producers": [
+    "api/collectors/kr_corp_domains.py",
+    "api/builders/logo_map_builder.py"
+   ]
+  },
+  {
+   "path": "data/kr_delisting.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 154434,
+   "producers": [
+    "api/quant/backtest/kr_fundamental.py",
+    "api/collectors/kr_chart_delisted.py",
+    "api/collectors/dart_delisted_backfill.py"
+   ]
+  },
+  {
+   "path": "data/kr_earnings_pattern.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "kr_earnings_pattern:P2",
+   "contract": null,
+   "size_bytes": 422771,
+   "producers": [
+    "api/builders/stock_report_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "scripts/kr_earnings_pattern_backfill.py"
+   ]
+  },
+  {
+   "path": "data/kr_forensics_public.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "kr_forensics_public:P1",
+   "contract": null,
+   "size_bytes": 255318,
+   "producers": [
+    "api/builders/kr_forensics_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/kr_index_daily.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "kr_index_daily:P1",
+   "contract": null,
+   "size_bytes": 444458,
+   "producers": [
+    "api/collectors/fsc_index_prices.py",
+    "api/collectors/krx_openapi.py",
+    "api/builders/daily_briefing_builder.py"
+   ]
+  },
+  {
+   "path": "data/kr_listed.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 179992,
+   "producers": [
+    "api/main.py",
+    "api/quant/backtest/kr_fundamental.py",
+    "api/collectors/group_structure.py"
+   ]
+  },
+  {
+   "path": "data/kr_lynch_class.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 690799,
+   "producers": [
+    "api/builders/kr_lynch_class_builder.py",
+    "api/builders/stock_report_public_builder.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/kr_major_shareholders.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1090664,
+   "producers": [
+    "api/builders/stock_report_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "scripts/kr_company_facts_backfill.py"
+   ]
+  },
+  {
+   "path": "data/kr_ownership.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 612654,
+   "producers": [
+    "api/builders/ownership_backfill_builder.py",
+    "api/builders/stock_report_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/kr_sector_map.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 200078,
+   "producers": [
+    "api/builders/kr_lynch_class_builder.py",
+    "api/builders/perspective_maps_builder.py",
+    "api/builders/sector_overview_builder.py"
+   ]
+  },
+  {
+   "path": "data/kr_stock_names.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "kr_stock_names:P2",
+   "contract": null,
+   "size_bytes": 126237,
+   "producers": [
+    "api/main.py",
+    "api/collectors/nps_holdings.py",
+    "api/collectors/dart_corp_code.py"
+   ]
+  },
+  {
+   "path": "data/kr_universe_pit.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2126590,
+   "producers": [
+    "api/quant/backtest/kr_fundamental.py",
+    "api/collectors/kr_universe_pit.py"
+   ]
+  },
+  {
+   "path": "data/krx_mktcap.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 225790,
+   "producers": [
+    "api/builders/kr_lynch_class_builder.py",
+    "api/builders/sector_overview_builder.py",
+    "api/builders/kr_flow_spike_observer.py"
+   ]
+  },
+  {
+   "path": "data/local_lake_health.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1299,
+   "producers": [
+    "scripts/cron_health_monitor.py",
+    "scripts/local_lake_heartbeat.py",
+    "scripts/kr/offsite_trail_backup.py"
+   ]
+  },
+  {
+   "path": "data/logo_map.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "logo_map:P2",
+   "contract": null,
+   "size_bytes": 771329,
+   "producers": [
+    "api/builders/logo_map_builder.py"
+   ]
+  },
+  {
+   "path": "data/macro_industry_alignment.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1903,
+   "producers": [
+    "api/intelligence/macro_industry_align.py"
+   ]
+  },
+  {
+   "path": "data/macro_industry_mapping.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 7139,
+   "producers": [
+    "api/intelligence/macro_industry_align.py"
+   ]
+  },
+  {
+   "path": "data/macro_snapshot.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "macro_snapshot:P0",
+   "contract": null,
+   "size_bytes": 31774,
+   "producers": [
+    "api/builders/macro_collect_builder.py",
+    "api/observability/data_pipeline_health.py",
+    "scripts/regime_drift_audit.py"
+   ]
+  },
+  {
+   "path": "data/macro_themes_history.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 39943,
+   "producers": [
+    "api/intelligence/macro_themes_brief.py"
+   ]
+  },
+  {
+   "path": "data/macro_themes_pulse.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": "macro_themes:P2",
+   "contract": null,
+   "size_bytes": 4272,
+   "producers": [
+    "api/intelligence/macro_themes_brief.py",
+    "api/intelligence/macro_industry_align.py"
+   ]
+  },
+  {
+   "path": "data/mapping.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 95210,
+   "producers": [
+    "api/collectors/RSSScout.py",
+    "api/collectors/SpecialScout.py",
+    "api/collectors/dart_dividend_history.py"
+   ]
+  },
+  {
+   "path": "data/market_warnings.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "market_warnings:P2",
+   "contract": null,
+   "size_bytes": 407,
+   "producers": [
+    "api/builders/daily_briefing_builder.py",
+    "api/builders/market_warnings_public_builder.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/measurement_audit.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 8425,
+   "producers": [
+    "api/observability/measurement_audit.py"
+   ]
+  },
+  {
+   "path": "data/metadata/cockpit_state.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2183,
+   "producers": [
+    "scripts/pre_registration_audit.py",
+    "scripts/cockpit_aggregate.py"
+   ]
+  },
+  {
+   "path": "data/metadata/cron_health.jsonl",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 814888,
+   "producers": [
+    "api/observability/data_health.py",
+    "scripts/cron_health_monitor.py",
+    "scripts/self_assets_weekly.py"
+   ]
+  },
+  {
+   "path": "data/metadata/data_health.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1732,
+   "producers": [
+    "api/builders/data_health_builder.py",
+    "api/observability/data_health.py",
+    "scripts/cockpit_aggregate.py"
+   ]
+  },
+  {
+   "path": "data/metadata/data_pipeline_health.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 6670,
+   "producers": [
+    "api/observability/data_pipeline_health.py",
+    "api/observability/data_health.py",
+    "scripts/cockpit_aggregate.py"
+   ]
+  },
+  {
+   "path": "data/metadata/system_map.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 20121,
+   "producers": [
+    "scripts/system_map.py"
+   ]
+  },
+  {
+   "path": "data/ml_prediction_ic_history.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 27134,
+   "producers": [
+    "api/observability/validation_summary.py"
+   ]
+  },
+  {
+   "path": "data/new_listings.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": "new_listings:P2",
+   "contract": null,
+   "size_bytes": 957,
+   "producers": [
+    "api/main.py",
+    "api/collectors/krx_ipo_collector.py"
+   ]
+  },
+  {
+   "path": "data/news_flash.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": "news_flash:P0",
+   "contract": null,
+   "size_bytes": 60300,
+   "producers": [
+    "api/collectors/RSSScout.py",
+    "api/intelligence/tail_risk_digest.py"
+   ]
+  },
+  {
+   "path": "data/news_translation_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 532238,
+   "producers": [
+    "api/main.py",
+    "api/collectors/news_translation.py"
+   ]
+  },
+  {
+   "path": "data/nps_employment.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "nps_employment:P2",
+   "contract": null,
+   "size_bytes": 209627,
+   "producers": [
+    "api/collectors/nps_employment.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/stock_slice.py"
+   ]
+  },
+  {
+   "path": "data/nps_employment_history.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 559955,
+   "producers": [
+    "api/collectors/nps_employment.py"
+   ]
+  },
+  {
+   "path": "data/nps_full_holdings.csv",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 35795,
+   "producers": [
+    "api/collectors/nps_holdings.py"
+   ]
+  },
+  {
+   "path": "data/nps_full_holdings.meta.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 125,
+   "producers": [
+    "api/collectors/nps_holdings.py"
+   ]
+  },
+  {
+   "path": "data/nps_full_holdings_overseas.csv",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 121070,
+   "producers": [
+    "api/collectors/nps_holdings.py"
+   ]
+  },
+  {
+   "path": "data/nps_fund_overview.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 672,
+   "producers": [
+    "api/collectors/nps_holdings.py"
+   ]
+  },
+  {
+   "path": "data/nps_holdings.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "nps_holdings:P2",
+   "contract": null,
+   "size_bytes": 209059,
+   "producers": [
+    "api/collectors/nps_holdings.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/fact_report.py"
+   ]
+  },
+  {
+   "path": "data/nps_major_holdings.csv",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 5765,
+   "producers": [
+    "api/collectors/nps_holdings.py"
+   ]
+  },
+  {
+   "path": "data/nps_portfolio_mix.csv",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 761,
+   "producers": [
+    "api/collectors/nps_holdings.py"
+   ]
+  },
+  {
+   "path": "data/observation_ic_history.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 79926,
+   "producers": [
+    "api/intelligence/observation_scoring.py"
+   ]
+  },
+  {
+   "path": "data/penny_watchlist.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": "penny_watchlist:P2",
+   "contract": null,
+   "size_bytes": 1671,
+   "producers": [
+    "scripts/scout_penny.py"
+   ]
+  },
+  {
+   "path": "data/perspective_maps.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "perspective_maps:P2",
+   "contract": null,
+   "size_bytes": 63554,
+   "producers": [
+    "api/builders/perspective_maps_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/pool_rotation_log.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 586,
+   "producers": [
+    "scripts/pool_rotation_report.py"
+   ]
+  },
+  {
+   "path": "data/pool_rotation_report.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1628,
+   "producers": [
+    "scripts/pool_rotation_report.py"
+   ]
+  },
+  {
+   "path": "data/portfolio.dev.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2844810,
+   "producers": [
+    "api/main.py",
+    "api/vams/engine.py",
+    "scripts/audit_brain_score_baseline.py"
+   ]
+  },
+  {
+   "path": "data/portfolio.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "portfolio:P2",
+   "contract": null,
+   "size_bytes": 2688973,
+   "producers": [
+    "api/run_bond_etf.py",
+    "api/main.py",
+    "api/quant/fomo_score.py"
+   ]
+  },
+  {
+   "path": "data/prediction_ic_history.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 41218,
+   "producers": [
+    "api/intelligence/regime_prediction.py",
+    "api/intelligence/prediction_scoring.py",
+    "api/observability/trail_integrity.py"
+   ]
+  },
+  {
+   "path": "data/price_pulse.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "price_pulse:P0",
+   "contract": null,
+   "size_bytes": 2100,
+   "producers": [
+    "api/cron/price_pulse.py",
+    "scripts/cron_health_monitor.py",
+    "scripts/system_map.py"
+   ]
+  },
+  {
+   "path": "data/public_disclosure_feed.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "public_disclosure_feed:P1",
+   "contract": null,
+   "size_bytes": 924948,
+   "producers": [
+    "api/builders/us_disclosure_feed_builder.py",
+    "api/builders/calendar_public_builder.py",
+    "api/builders/public_disclosure_feed_builder.py"
+   ]
+  },
+  {
+   "path": "data/raw_data.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 386269,
+   "producers": [
+    "api/analyzers/dart_report_analyzer.py",
+    "api/collectors/RSSScout.py",
+    "api/collectors/SpecialScout.py"
+   ]
+  },
+  {
+   "path": "data/recommendations.dev.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2150723,
+   "producers": []
+  },
+  {
+   "path": "data/recommendations.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "recommendations:P2",
+   "contract": null,
+   "size_bytes": 1760935,
+   "producers": [
+    "api/main.py",
+    "api/builders/stock_flow_public_builder.py",
+    "api/builders/tri_synthesis_builder.py"
+   ]
+  },
+  {
+   "path": "data/regime_prediction_ic_history.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 48296,
+   "producers": [
+    "api/intelligence/regime_prediction.py"
+   ]
+  },
+  {
+   "path": "data/report_summaries.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1694033,
+   "producers": [
+    "api/main.py",
+    "api/analyzers/report_summarizer.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/sec_8k_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": "sec_8k_cache:P1",
+   "contract": null,
+   "size_bytes": 13826,
+   "producers": [
+    "api/intelligence/sec_8k_change_detector.py"
+   ]
+  },
+  {
+   "path": "data/sec_ticker_cik_map.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 229787,
+   "producers": [
+    "api/builders/us_disclosure_forensics_builder.py",
+    "api/intelligence/sec_8k_change_detector.py"
+   ]
+  },
+  {
+   "path": "data/sector_overview.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "sector_overview:P2",
+   "contract": null,
+   "size_bytes": 7483,
+   "producers": [
+    "api/builders/sector_overview_builder.py",
+    "api/builders/entrance_map_builder.py"
+   ]
+  },
+  {
+   "path": "data/securities_lending.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "securities_lending:P2",
+   "contract": null,
+   "size_bytes": 383971,
+   "producers": [
+    "api/collectors/securities_lending.py",
+    "api/builders/entrance_map_builder.py",
+    "api/builders/coverage_report_builder.py"
+   ]
+  },
+  {
+   "path": "data/self_assets_weekly.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 9610,
+   "producers": [
+    "scripts/self_assets_weekly.py"
+   ]
+  },
+  {
+   "path": "data/short_sale_summary.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 5306,
+   "producers": [
+    "api/observability/short_sale_trail.py"
+   ]
+  },
+  {
+   "path": "data/short_sale_trail.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 993223,
+   "producers": [
+    "api/observability/short_sale_trail.py"
+   ]
+  },
+  {
+   "path": "data/smallcap_corner.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 446667,
+   "producers": [
+    "api/builders/smallcap_corner_filters_builder.py",
+    "api/builders/us_disclosure_forensics_builder.py",
+    "api/builders/us_smallcap_corner_filters_builder.py"
+   ]
+  },
+  {
+   "path": "data/smallcap_corner_filters.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "smallcap_corner_filters:P2",
+   "contract": null,
+   "size_bytes": 291038,
+   "producers": [
+    "api/builders/smallcap_corner_filters_builder.py",
+    "api/builders/us_smallcap_corner_filters_builder.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/stock_flow_5d.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "stock_flow_5d:P1",
+   "contract": null,
+   "size_bytes": 803136,
+   "producers": [
+    "api/collectors/fsc_daily_prices.py",
+    "api/builders/sector_overview_builder.py",
+    "api/builders/stock_flow_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/stock_report_public.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "stock_report_public:P0",
+   "contract": null,
+   "size_bytes": 11505804,
+   "producers": [
+    "api/collectors/nps_employment.py",
+    "api/collectors/nps_holdings.py",
+    "api/collectors/kr_corp_domains.py"
+   ]
+  },
+  {
+   "path": "data/strategy_registry.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 6109,
+   "producers": [
+    "api/intelligence/strategy_evolver.py"
+   ]
+  },
+  {
+   "path": "data/supply_demand.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "supply_demand:P2",
+   "contract": null,
+   "size_bytes": 521,
+   "producers": [
+    "api/builders/supply_demand_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/stock_slice.py"
+   ]
+  },
+  {
+   "path": "data/system_health_snapshot.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 4505,
+   "producers": [
+    "api/main.py",
+    "scripts/cockpit_aggregate.py",
+    "vercel-api/api/admin.py"
+   ]
+  },
+  {
+   "path": "data/telegram_dedupe_global.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 190,
+   "producers": [
+    "api/notifications/telegram.py"
+   ]
+  },
+  {
+   "path": "data/telegram_volume.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 682702,
+   "producers": [
+    "api/notifications/telegram.py",
+    "scripts/cockpit_aggregate.py"
+   ]
+  },
+  {
+   "path": "data/trade_analysis.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": "trade_analysis:P2",
+   "contract": null,
+   "size_bytes": 11263,
+   "producers": [
+    "api/workflows/export_trade_pipeline.py"
+   ]
+  },
+  {
+   "path": "data/universe_candidates.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 77957,
+   "producers": [
+    "api/main.py",
+    "api/builders/candidates_diff_builder.py",
+    "api/builders/universe_scan_builder.py"
+   ]
+  },
+  {
+   "path": "data/universe_search.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "universe_search:P1",
+   "contract": null,
+   "size_bytes": 1667267,
+   "producers": [
+    "api/collectors/us_naver_code.py",
+    "api/collectors/kr_corp_domains.py",
+    "api/builders/entrance_map_builder.py"
+   ]
+  },
+  {
+   "path": "data/universe_search_kr.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "universe_search_kr:P2",
+   "contract": null,
+   "size_bytes": 280146,
+   "producers": [
+    "api/builders/krx_mktcap_snapshot.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/urgent_alerts.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 4874,
+   "producers": [
+    "api/builders/urgent_alerts_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_catalyst_backfill.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 31389680,
+   "producers": [
+    "api/builders/event_study_builder.py",
+    "api/builders/us_event_study_builder.py",
+    "scripts/us/backfill_us_catalyst.py"
+   ]
+  },
+  {
+   "path": "data/us_catalyst_backfill_done.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 11087,
+   "producers": [
+    "scripts/us/backfill_us_catalyst.py"
+   ]
+  },
+  {
+   "path": "data/us_chart_daily.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 533573,
+   "producers": [
+    "api/collectors/us_chart_daily.py"
+   ]
+  },
+  {
+   "path": "data/us_chart_history_meta.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 677,
+   "producers": [
+    "api/collectors/us_chart_history.py"
+   ]
+  },
+  {
+   "path": "data/us_demand_chain.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 8290,
+   "producers": [
+    "api/analyzers/gemini_analyst.py",
+    "api/collectors/us_demand_chain.py"
+   ]
+  },
+  {
+   "path": "data/us_disclosure_feed.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_disclosure_feed:P2",
+   "contract": null,
+   "size_bytes": 4285110,
+   "producers": [
+    "api/builders/us_stock_report_public_builder.py",
+    "api/builders/us_disclosure_feed_builder.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/us_disclosure_forensics.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_disclosure_forensics:P2",
+   "contract": null,
+   "size_bytes": 186728,
+   "producers": [
+    "api/builders/us_disclosure_forensics_builder.py",
+    "api/builders/us_smallcap_corner_filters_builder.py",
+    "api/builders/us_smallcap_corner_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_earnings_pattern.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_earnings_pattern:P2",
+   "contract": null,
+   "size_bytes": 722418,
+   "producers": [
+    "api/builders/us_stock_report_public_builder.py",
+    "api/builders/us_financials_incremental.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/us_eps_revision.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2430412,
+   "producers": [
+    "api/collectors/us_eps_revision.py"
+   ]
+  },
+  {
+   "path": "data/us_eps_revision_trail.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1770039,
+   "producers": [
+    "api/collectors/us_eps_revision.py"
+   ]
+  },
+  {
+   "path": "data/us_etf.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_etf:P2",
+   "contract": null,
+   "size_bytes": 1096226,
+   "producers": [
+    "api/collectors/us_naver_code.py",
+    "api/builders/us_etf_public_builder.py",
+    "api/builders/krx_mktcap_snapshot.py"
+   ]
+  },
+  {
+   "path": "data/us_etf_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2920748,
+   "producers": [
+    "api/builders/us_etf_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_etf_universe.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 400250,
+   "producers": [
+    "api/builders/us_etf_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "scripts/us/fetch_us_etf_universe.py"
+   ]
+  },
+  {
+   "path": "data/us_fin_annual_compact.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 4499928,
+   "producers": [
+    "api/builders/us_stock_report_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/us_financials_bulk_meta.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 422,
+   "producers": [
+    "api/collectors/sec_companyfacts_bulk.py"
+   ]
+  },
+  {
+   "path": "data/us_form144.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 4983344,
+   "producers": [
+    "api/builders/us_form144_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/us_insider_trades.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_insider_trades:P1",
+   "contract": null,
+   "size_bytes": 4836392,
+   "producers": [
+    "api/builders/entrance_map_builder.py",
+    "api/builders/coverage_report_builder.py",
+    "api/builders/us_insider_trades_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_investor_portfolios.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 156631,
+   "producers": [
+    "api/builders/us_investor_portfolios_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_major_holdings.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_major_holdings:P2",
+   "contract": null,
+   "size_bytes": 7823476,
+   "producers": [
+    "api/builders/us_major_holdings_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "api/intelligence/us_filing_probe.py"
+   ]
+  },
+  {
+   "path": "data/us_market_caps.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 160409,
+   "producers": [
+    "api/builders/us_stock_report_public_builder.py",
+    "api/builders/us_financials_builder.py",
+    "api/builders/us_smallcap_corner_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_name_ko.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1916,
+   "producers": [
+    "api/builders/us_stock_report_public_builder.py",
+    "api/builders/us_smallcap_corner_builder.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/us_naver_code.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 900482,
+   "producers": [
+    "api/collectors/us_naver_code.py"
+   ]
+  },
+  {
+   "path": "data/us_options.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1010887,
+   "producers": [
+    "api/collectors/us_options_snapshot.py",
+    "api/builders/us_form144_public_builder.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/us_options_trail.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1403272,
+   "producers": [
+    "api/collectors/us_options_snapshot.py"
+   ]
+  },
+  {
+   "path": "data/us_quarterly_public.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_quarterly_public:P2",
+   "contract": null,
+   "size_bytes": 2001993,
+   "producers": [
+    "api/builders/us_quarterly_public_builder.py",
+    "api/builders/dart_quarterly_public_builder.py",
+    "api/builders/coverage_report_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_sector_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1100,
+   "producers": [
+    "api/collectors/us_sector.py",
+    "api/builders/cross_sector_peer.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/us_short_interest.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_short_interest:P2",
+   "contract": null,
+   "size_bytes": 988813,
+   "producers": [
+    "api/builders/us_short_interest_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/us_forensics.py"
+   ]
+  },
+  {
+   "path": "data/us_short_interest_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1027351,
+   "producers": [
+    "api/builders/us_short_interest_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_sic_ko.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 20538,
+   "producers": [
+    "api/builders/us_stock_report_public_builder.py",
+    "api/builders/us_smallcap_corner_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_smallcap_corner.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 982113,
+   "producers": [
+    "api/builders/us_disclosure_forensics_builder.py",
+    "api/builders/us_smallcap_corner_filters_builder.py",
+    "api/builders/us_smallcap_corner_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_smallcap_corner_filters.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_smallcap_corner_filters:P2",
+   "contract": null,
+   "size_bytes": 1117962,
+   "producers": [
+    "api/builders/us_smallcap_corner_filters_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/us_smart_money_13f.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_smart_money_13f:P2",
+   "contract": null,
+   "size_bytes": 380209,
+   "producers": [
+    "api/builders/us_smart_money_13f_public_builder.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/us_forensics.py"
+   ]
+  },
+  {
+   "path": "data/us_stock_names_ko.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 179710,
+   "producers": [
+    "api/collectors/us_stock_names_ko.py",
+    "api/builders/krx_mktcap_snapshot.py",
+    "api/intelligence/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/us_stock_report_public.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_stock_report_public:P1",
+   "contract": null,
+   "size_bytes": 12051336,
+   "producers": [
+    "api/collectors/nps_holdings.py",
+    "api/builders/us_stock_report_public_builder.py",
+    "api/builders/perspective_maps_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_stock_report_us_smallcap.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_smallcap_report:P2",
+   "contract": null,
+   "size_bytes": 9385679,
+   "producers": [
+    "api/collectors/nps_holdings.py",
+    "api/builders/us_stock_report_public_builder.py",
+    "api/builders/krx_mktcap_snapshot.py"
+   ]
+  },
+  {
+   "path": "data/us_universe_combined.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 437612,
+   "producers": [
+    "api/collectors/us_chart_history.py",
+    "api/collectors/sec_companyfacts_bulk.py",
+    "api/collectors/us_stock_names_ko.py"
+   ]
+  },
+  {
+   "path": "data/us_universe_sp1500.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 48143,
+   "producers": [
+    "api/collectors/us_chart_history.py",
+    "api/collectors/sec_companyfacts_bulk.py",
+    "api/builders/us_financials_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_volume.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 686524,
+   "producers": [
+    "api/builders/us_smallcap_corner_builder.py",
+    "scripts/us/fetch_us_volume.py"
+   ]
+  },
+  {
+   "path": "data/validation_summary.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "validation_summary:P1",
+   "contract": null,
+   "size_bytes": 2135,
+   "producers": [
+    "api/builders/entrance_map_builder.py",
+    "api/observability/validation_summary.py"
+   ]
+  },
+  {
+   "path": "data/value_guards_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 14353,
+   "producers": [
+    "api/intelligence/value_guards.py"
+   ]
+  },
+  {
+   "path": "data/verification_report.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2033,
+   "producers": [
+    "api/intelligence/backtest_archive.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/admin.py"
+   ]
+  },
+  {
+   "path": "data/verity_brain_audit_report.pdf",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 127177,
+   "producers": []
+  },
+  {
+   "path": "data/verity_constitution.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 73218,
+   "producers": [
+    "api/analyzers/gemini_analyst.py",
+    "api/analyzers/yieldcurveanalyzer.py",
+    "api/intelligence/strategy_evolver.py"
+   ]
+  },
+  {
+   "path": "data/verity_report_daily.pdf",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 169227,
+   "producers": [
+    "api/reports/pdf_generator.py"
+   ]
+  },
+  {
+   "path": "data/verity_report_monthly.pdf",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 104924,
+   "producers": []
+  },
+  {
+   "path": "data/verity_report_quarterly.pdf",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 107323,
+   "producers": []
+  },
+  {
+   "path": "data/verity_report_weekly.pdf",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 101515,
+   "producers": [
+    "api/reports/pdf_generator.py"
+   ]
+  },
+  {
+   "path": "data/verity_terms.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 17086,
+   "producers": []
+  },
+  {
+   "path": "data/wide_scan_log.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 343952,
+   "producers": [
+    "api/analyzers/wide_scan.py",
+    "api/observability/trail_integrity.py",
+    "api/observability/data_pipeline_health.py"
+   ]
+  }
+ ]
+}
