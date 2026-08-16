@@ -57,12 +57,11 @@ def test_new_artifacts_declare_score_system_and_power():
         when = str(m.get("executed_at") or "")
         if when and when[:10] < CONTRACT_FROM:
             continue
-        if "score_system" not in m:
-            missing.append(f"{base}: _meta.score_system 없음 — 어떤 점수를 쟀는지, "
-                           "그게 운영에 쓰이는지 신고할 것 (prereg_contract.declare_score_system)")
-        if "min_detectable" not in m:
-            missing.append(f"{base}: _meta.min_detectable 없음 — |t|=3 검출하한 신고할 것 "
-                           "(prereg_contract.declare_power). 판정력 없는 등록은 무의미하다")
+        # 🚨 2026-08-16 — 필드 존재 확인에서 **반려 판정**으로 승격.
+        #   옛 검사는 등록서가 스스로 "🚨 판정 불가" 라고 적어도 통과시켰다.
+        from api.quant.backtest.prereg_contract import contract_violations
+        for msg in contract_violations(m):
+            missing.append(f"{base}: {msg}")
     assert not missing, "사전등록 산출물 계약 위반:\n  " + "\n  ".join(missing)
 
 
