@@ -33,6 +33,8 @@ def compute_mean_reversion_score(stock: Dict[str, Any]) -> Dict[str, Any]:
     """
     scores: Dict[str, float] = {}
     signals: List[str] = []
+    # 🚨 중립 50 이 "관측" 으로 오독되지 않도록 미채점 축을 신고한다.
+    unmeasured: List[str] = []
 
     tech = stock.get("technical") or {}
     price = stock.get("price") or 0
@@ -40,7 +42,13 @@ def compute_mean_reversion_score(stock: Dict[str, Any]) -> Dict[str, Any]:
     ma20 = tech.get("ma20") or stock.get("ma20")
     ma60 = tech.get("ma60") or stock.get("ma60")
     ma120 = tech.get("ma120") or stock.get("ma120")
-    rsi = tech.get("rsi") or 50
+    # 🚨 2026-08-16 (PREREG_QUANT_FACTOR_FIX) — 옛 `or 50` 제거.
+    #   ① 결측이 중립 50 으로 위장돼 "관측 없음" 과 "RSI 정확히 50" 이 구분되지 않았다.
+    #   ② 0 이 falsy 라 **RSI=0(극단 과매도)이 50 으로 뒤집혔다** — 부호가 반대인 오답.
+    #   이제 = 없으면 이 컴포넌트를 채점하지 않는다.
+    rsi = tech.get("rsi")
+    if rsi is None:
+        rsi = stock.get("rsi")
     bb_pos = tech.get("bb_position")
 
     # --- 1. 가격 Z-Score (20일 기준) ---
@@ -73,11 +81,15 @@ def compute_mean_reversion_score(stock: Dict[str, Any]) -> Dict[str, Any]:
             z_score_pts = 5
             signals.append(f"Z-Score {zscore_val:.2f} 극단적 과매수")
 
+    if zscore_val is None:
+        unmeasured.append("zscore")
     scores["zscore"] = z_score_pts
 
-    # --- 2. RSI 평균회귀 ---
+    # --- 2. RSI 평균회귀 --- (rsi 부재 = 미채점, 중립 50 유지 + unmeasured 신고)
     rsi_mr_score = 50.0
-    if rsi <= 25:
+    if rsi is None:
+        unmeasured.append("rsi_reversion")
+    elif rsi <= 25:
         rsi_mr_score = 92
         signals.append(f"RSI {rsi} 극단적 과매도 — 반등 유력")
     elif rsi <= 35:
@@ -120,6 +132,8 @@ def compute_mean_reversion_score(stock: Dict[str, Any]) -> Dict[str, Any]:
             bb_score = 8
             signals.append("볼린저 상단 이탈 — 과열")
 
+    if bb_pos is None:
+        unmeasured.append("bollinger")
     scores["bollinger"] = bb_score
 
     # --- 4. 이동평균 괴리율 ---
@@ -142,6 +156,8 @@ def compute_mean_reversion_score(stock: Dict[str, Any]) -> Dict[str, Any]:
         else:
             ma_dev_score = 10
 
+    if not (price > 0 and ma60):
+        unmeasured.append("ma_deviation")
     scores["ma_deviation"] = ma_dev_score
 
     # --- 5. Hurst Exponent 근사 ---
@@ -165,6 +181,8 @@ def compute_mean_reversion_score(stock: Dict[str, Any]) -> Dict[str, Any]:
             hurst_score = 20
             signals.append(f"Hurst {hurst:.2f} 추세 지속형")
 
+    if hurst is None:
+        unmeasured.append("hurst")
     scores["hurst"] = hurst_score
 
     # --- 종합 ---
@@ -181,6 +199,7 @@ def compute_mean_reversion_score(stock: Dict[str, Any]) -> Dict[str, Any]:
 
     return {
         "mean_reversion_score": total,
+        "unmeasured_axes": unmeasured,
         "components": {k: round(v, 1) for k, v in scores.items()},
         "signals": signals[:5],
         "metrics": {

@@ -247,7 +247,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 48243,
+   "size_bytes": 48857,
    "producers": [
     "api/notifications/telegram.py"
    ]
@@ -491,7 +491,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 10130,
+   "size_bytes": 10129,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -515,7 +515,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 72534,
+   "size_bytes": 72527,
    "producers": [
     "api/builders/crypto_collect_builder.py"
    ]
@@ -538,7 +538,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 17429,
+   "size_bytes": 7169,
    "producers": [
     "api/builders/crypto_collect_builder.py"
    ]
@@ -549,7 +549,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 962,
+   "size_bytes": 963,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -561,7 +561,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 902,
+   "size_bytes": 900,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -573,7 +573,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 10451,
+   "size_bytes": 10449,
    "producers": [
     "api/builders/crypto_regime_synthesis.py"
    ]
@@ -607,7 +607,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 682,
+   "size_bytes": 681,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -619,7 +619,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 44432,
+   "size_bytes": 44463,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -938,7 +938,7 @@
    "publish": true,
    "sla": "freshness_board:P2",
    "contract": null,
-   "size_bytes": 17403,
+   "size_bytes": 17405,
    "producers": [
     "api/builders/freshness_board_builder.py",
     "api/builders/data_health_builder.py"
@@ -1352,7 +1352,7 @@
    "publish": true,
    "sla": "macro_snapshot:P0",
    "contract": null,
-   "size_bytes": 31721,
+   "size_bytes": 31768,
    "producers": [
     "api/builders/macro_collect_builder.py",
     "api/observability/data_pipeline_health.py",
@@ -1388,7 +1388,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 61422,
+   "size_bytes": 61644,
    "producers": [
     "scripts/audit/build_data_manifest.py"
    ]
@@ -1448,7 +1448,7 @@
    "publish": true,
    "sla": null,
    "contract": null,
-   "size_bytes": 815878,
+   "size_bytes": 816774,
    "producers": [
     "api/observability/data_health.py",
     "scripts/cron_health_monitor.py",
@@ -1461,7 +1461,7 @@
    "publish": true,
    "sla": null,
    "contract": null,
-   "size_bytes": 1732,
+   "size_bytes": 1877,
    "producers": [
     "api/builders/data_health_builder.py",
     "api/observability/data_health.py",
@@ -2010,7 +2010,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 682702,
+   "size_bytes": 684044,
    "producers": [
     "api/notifications/telegram.py",
     "scripts/cockpit_aggregate.py"
@@ -2064,6 +2064,18 @@
     "api/builders/krx_mktcap_snapshot.py",
     "api/intelligence/ticker_facts.py",
     "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/upbit_orderbook_slippage.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2004,
+   "producers": [
+    "api/collectors/upbit_orderbook_slippage.py",
+    "api/builders/crypto_collect_builder.py"
    ]
   },
   {
@@ -2141,7 +2153,7 @@
    "publish": true,
    "sla": "us_disclosure_feed:P2",
    "contract": null,
-   "size_bytes": 4284580,
+   "size_bytes": 4284123,
    "producers": [
     "api/builders/us_stock_report_public_builder.py",
     "api/builders/us_disclosure_feed_builder.py",

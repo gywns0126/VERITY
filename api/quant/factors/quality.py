@@ -53,6 +53,13 @@ def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:
 
     f_score = 0
     details: List[str] = []
+    # 🚨 2026-08-16 (PREREG_QUANT_FACTOR_FIX) — 채점 불가 항목을 셈한다.
+    #   옛 구현은 델타가 없으면 **수준**(current_ratio≥1.5 · gross_margin≥30 · turnover≥0.8)으로
+    #   대체 채점했다. Piotroski 원전에서 F6·F8·F9 는 전부 *전년 대비 개선* 신호라, 수준 대체는
+    #   "높지만 악화 중" 인 기업에 점수를 주고 공표 연구와의 비교 가능성을 깬다.
+    #   F7 도 데이터 부재를 합격으로 셌다(실측 1,274/1,274 전량 가점).
+    #   이제 = 못 재면 점수도 주지 않고, 몇 개를 못 쟀는지 신고한다.
+    unmeasured: List[str] = []
 
     roe = stock.get("roe") or 0
     roa = stock.get("roa") or (roe * 0.5 if roe else 0)
@@ -133,7 +140,7 @@ def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:
         f_score += 1
         details.append("F5: 부채 감소 (prev_year)")
 
-    # F6: 유동비율 개선 (fscore_deltas 1순위)
+    # F6: 유동비율 **개선** (fscore_deltas 1순위 · prev_year 2순위)
     current_ratio = stock.get("current_ratio") or 0
     prev_current = prev.get("current_ratio") or 0
     if delta_cr_pos is True:
@@ -142,46 +149,74 @@ def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:
     elif delta_cr_pos is None and current_ratio > prev_current and prev_current > 0:
         f_score += 1
         details.append("F6: 유동성 개선 (prev_year)")
-    elif delta_cr_pos is None and current_ratio >= 1.5:
-        f_score += 1
-        details.append("F6: 유동비율 양호")
+    elif delta_cr_pos is None and prev_current <= 0:
+        unmeasured.append("F6")   # 🚨 2026-08-16 — 옛 `current_ratio >= 1.5` **수준** fallback 제거
 
-    # F7: 신주 미발행 (데이터 없으면 통과)
-    shares_issued = stock.get("shares_change_pct") or 0
-    if shares_issued <= 0:
+    # F7: 신주 미발행 — 🚨 데이터가 있을 때만 채점 (옛 '없으면 통과' = 결측에 가점)
+    shares_issued = stock.get("shares_change_pct")
+    if shares_issued is None:
+        unmeasured.append("F7")
+    elif shares_issued <= 0:
         f_score += 1
         details.append("F7: 희석 없음")
 
-    # F8: 매출총이익률 개선 (fscore_deltas 1순위)
+    # F8: 매출총이익률 **개선**
     if delta_gm_pos is True:
         f_score += 1
         details.append("F8: 총이익률 개선 (jsonl)")
     elif delta_gm_pos is None and gross_margin > prev_gp_margin and prev_gp_margin > 0:
         f_score += 1
         details.append("F8: 총이익률 개선 (prev_year)")
-    elif delta_gm_pos is None and gross_margin >= 30:
-        f_score += 1
-        details.append("F8: 총이익률 양호")
+    elif delta_gm_pos is None and prev_gp_margin <= 0:
+        unmeasured.append("F8")   # 🚨 옛 `gross_margin >= 30` 수준 fallback 제거 (실측 321/1,274 발화)
 
-    # F9: 자산회전율 개선 (fscore_deltas 1순위)
+    # F9: 자산회전율 **개선**
     if delta_at_pos is True:
         f_score += 1
         details.append("F9: 자산회전율 개선 (jsonl)")
     elif delta_at_pos is None and asset_turnover > prev_asset_turnover and prev_asset_turnover > 0:
         f_score += 1
         details.append("F9: 자산효율 개선 (prev_year)")
-    elif delta_at_pos is None and asset_turnover >= 0.8:
-        f_score += 1
-        details.append("F9: 자산회전 양호")
+    elif delta_at_pos is None and prev_asset_turnover <= 0:
+        unmeasured.append("F9")   # 🚨 옛 `asset_turnover >= 0.8` 수준 fallback 제거
 
+    if unmeasured:
+        details.append(f"{_UNMEASURED_TAG}{'·'.join(unmeasured)} ({len(unmeasured)}/9)")
     return f_score, details
 
 
-def compute_gross_profitability(stock: Dict[str, Any]) -> float:
+_UNMEASURED_TAG = "측정불가: "
+
+
+def f_measurable_count(details: List[str]) -> int:
+    """details 에서 채점 가능했던 F 항목 수(9 − 측정불가)를 되읽는다.
+
+    반환 시그니처를 3원소로 넓히면 외부 계약(테스트·백테스트 대조)이 깨지므로,
+    개수는 details 태그로 실어 보내고 여기서 되읽는다.
     """
-    Novy-Marx Gross Profitability = 매출총이익 / 총자산.
-    데이터가 없으면 영업이익률로 프록시.
-    반환: 0.0~1.0+ (비율)
+    for d in details:
+        if d.startswith(_UNMEASURED_TAG):
+            try:
+                return 9 - int(d.rsplit("(", 1)[1].split("/")[0])
+            except (IndexError, ValueError):
+                return 9
+    return 9
+
+
+def compute_gross_profitability(stock: Dict[str, Any]) -> Optional[float]:
+    """
+    Novy-Marx Gross Profitability = 매출총이익 / **총자산**.
+
+    🚨 2026-08-16 교정 (PREREG_QUANT_FACTOR_FIX) — 총자산이 없으면 `None` 을 반환한다.
+       옛 최종 fallback 은 `op_margin/100`, 즉 매출총이익÷**매출**(마진)을 돌려주고 있었다.
+       분모가 다른 별개 지표인데 이름과 배점은 Gross Profitability 그대로였다.
+       실측: 소형주 코너 1,274종목 **전량**이 이 fallback 을 탔고(정의 경로 0건),
+       280종목이 그 값으로 만점 25점을 받았다. 게다가 우리 자체 B군 검정에서
+       `gross_margin` 은 **비확증 4팩터** 중 하나다 — 근거 없는 지표에 최대 배점을
+       주면서 학술 이름을 달고 있던 셈.
+       없는 것은 만들어내지 않는다. 필요하면 매출·총자산을 실어야 한다.
+
+    반환: 0.0~1.0+ (비율) 또는 None(산출 불가)
     """
     gp = stock.get("gross_profit")
     total_assets = stock.get("total_assets")
@@ -192,10 +227,11 @@ def compute_gross_profitability(stock: Dict[str, Any]) -> float:
     op_margin = stock.get("operating_margin") or 0
     revenue = stock.get("revenue") or 0
     if op_margin > 0 and revenue > 0 and total_assets and total_assets > 0:
+        # 매출총이익 근사(영업이익률 ×1.3) — 분모는 총자산 유지 = 정의 정합
         estimated_gp = revenue * (op_margin / 100) * 1.3
         return round(estimated_gp / total_assets, 4)
 
-    return op_margin / 100 if op_margin > 0 else 0.0
+    return None
 
 
 def compute_altman_z(stock: Dict[str, Any]) -> Dict[str, Any]:
@@ -383,19 +419,34 @@ def compute_quality_score(stock: Dict[str, Any]) -> Dict[str, Any]:
             "components": {},
             "signals": ["퀄리티 미산출 (재무 데이터 부재)"],
         }
+    unmeasured_axes: List[str] = []
+    n_meas = f_measurable_count(f_details)
     if f_score < 0:
-        f_norm = 0
-        signals.append("F-Score 미적용 (금융/리츠)")
+        # 금융/리츠 = 적용 불가. 🚨 2026-08-16 — 옛 0점(=최하위 채점)에서 중립으로 교정.
+        #   같은 파일의 데이터 부재(-2) 경로는 이미 applicable=False→중립인데, 금융만 0점이라
+        #   실측상 금융 3종이 33~36 에 갇히고 비금융은 84 까지 갔다. 두 '적용 불가' 를 통일한다.
+        f_norm = 17.5
+        unmeasured_axes.append("f_score(금융·리츠)")
+        signals.append("F-Score 미적용 (금융/리츠) — 중립 배점")
+    elif n_meas < 4:
+        # 채점 가능 항목이 4개 미만이면 F-Score 로 볼 수 없다 (결측을 실패로 세지 않는다)
+        f_norm = 17.5
+        unmeasured_axes.append(f"f_score(측정 {n_meas}/9)")
+        signals.append(f"F-Score 미산출 — 채점 가능 {n_meas}/9")
     else:
-        f_norm = (f_score / 9) * 35
+        f_norm = (f_score / n_meas) * 35   # 🚨 분모 = 채점 가능 수 (옛 고정 9)
         if f_score >= 7:
-            signals.append(f"F-Score {f_score}/9 우량")
+            signals.append(f"F-Score {f_score}/{n_meas} 우량")
         elif f_score <= 3:
-            signals.append(f"F-Score {f_score}/9 취약")
+            signals.append(f"F-Score {f_score}/{n_meas} 취약")
 
-    # 2. Gross Profitability (25점)
+    # 2. Gross Profitability (25점) — 총자산 부재 시 None (2026-08-16 교정)
     gp = compute_gross_profitability(stock)
-    if gp >= 0.33:
+    if gp is None:
+        gp_score = 12.5
+        unmeasured_axes.append("gross_profitability(총자산 부재)")
+        signals.append("총이익성 미산출 (총자산 부재) — 중립 배점")
+    elif gp >= 0.33:
         gp_score = 25
         signals.append(f"총이익률/자산 {gp:.1%} 고수익")
     elif gp >= 0.20:
@@ -470,8 +521,12 @@ def compute_quality_score(stock: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "quality_score": total,
         "piotroski_f": f_score,
+        "piotroski_measurable": n_meas,
         "piotroski_details": f_details,
-        "gross_profitability": round(gp, 4),
+        "gross_profitability": round(gp, 4) if gp is not None else None,
+        # 🚨 자기신고 — 어느 축이 '측정 못 해서 중립' 인지. 중립 배점이 관측으로 오독되면
+        #   2027 IC 집계가 없는 신호를 있는 것으로 센다 (PREREG_QUANT_FACTOR_FIX).
+        "unmeasured_axes": unmeasured_axes,
         "altman": altman,
         "components": {
             "f_score_pts": round(f_norm, 1),
