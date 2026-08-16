@@ -1,0 +1,525 @@
+{
+ "_meta": {
+  "artifact": "factor_engine_kr_v1",
+  "generated_at": "2026-08-16T12:57:39+09:00",
+  "contract": "docs/FACTOR_ENGINE_DESIGN_2026_08_16.md",
+  "score_system": {
+   "name": "factor_engine_kr_v1",
+   "is_operational": false,
+   "note": "연구 전용 — 운영 가중·게이트에 미연결. 반영은 별도 사전등록"
+  },
+  "universe": "kr_valuation_panel 월말 전량 (N_t≥100, 유동성 필터 없음 — microcap 포함 한계)",
+  "pit": "밸류=패널 내장 stale_days · 재무=quarter_end+45d 가용 규칙",
+  "frozen_oos": {
+   "locked_from": 20240801,
+   "locked_months": 24,
+   "note": "개봉 = 합침/폐기 결정 시 1회 (§7-3b)"
+  },
+  "known_limitations": [
+   "상폐 실현손실 미반영 — 소멸 종목은 지평 제외 (제외 관측 17,009건). quality/value IC 과대 위험",
+   "유동성/거래대금 필터 없음 — microcap 비중 미통제",
+   "fwd12m 은 IS 내 k≈4 — 설계상 exploratory 고정"
+  ],
+  "n_trials": 40,
+  "min_detectable_note": "fwd1m IS T=55개월급 — |t|=2 검출하한 IC ≈ 2σ_IC/√T",
+  "thin_months_skipped": []
+ },
+ "is_months_used": 56,
+ "is_range": [
+  20191231,
+  20240731
+ ],
+ "observations_used": 3575658,
+ "factors": {
+  "ep": {
+   "fwd1m": {
+    "ic_mean": 0.05342,
+    "n_months": 55,
+    "k_independent": 55,
+    "t_raw": 4.51,
+    "t_nonoverlap": 4.51,
+    "t_crit_df": 1.96,
+    "estimable": true,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd3m": {
+    "ic_mean": 0.06854,
+    "n_months": 53,
+    "k_independent": 17,
+    "t_raw": 5.55,
+    "t_nonoverlap": 3.04,
+    "t_crit_df": 2.12,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd6m": {
+    "ic_mean": 0.08577,
+    "n_months": 50,
+    "k_independent": 8,
+    "t_raw": 6.84,
+    "t_nonoverlap": 2.81,
+    "t_crit_df": 2.365,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd12m": {
+    "ic_mean": 0.11454,
+    "n_months": 44,
+    "k_independent": 3,
+    "t_raw": 11.77,
+    "t_nonoverlap": 3.59,
+    "t_crit_df": 4.303,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": true
+   }
+  },
+  "bp": {
+   "fwd1m": {
+    "ic_mean": 0.08672,
+    "n_months": 55,
+    "k_independent": 55,
+    "t_raw": 5.76,
+    "t_nonoverlap": 5.76,
+    "t_crit_df": 1.96,
+    "estimable": true,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd3m": {
+    "ic_mean": 0.1195,
+    "n_months": 53,
+    "k_independent": 17,
+    "t_raw": 6.73,
+    "t_nonoverlap": 3.95,
+    "t_crit_df": 2.12,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd6m": {
+    "ic_mean": 0.15421,
+    "n_months": 50,
+    "k_independent": 8,
+    "t_raw": 8.23,
+    "t_nonoverlap": 3.21,
+    "t_crit_df": 2.365,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd12m": {
+    "ic_mean": 0.20951,
+    "n_months": 44,
+    "k_independent": 3,
+    "t_raw": 12.7,
+    "t_nonoverlap": 3.28,
+    "t_crit_df": 4.303,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": true
+   }
+  },
+  "dy": {
+   "fwd1m": {
+    "ic_mean": 0.0616,
+    "n_months": 55,
+    "k_independent": 55,
+    "t_raw": 3.43,
+    "t_nonoverlap": 3.43,
+    "t_crit_df": 1.96,
+    "estimable": true,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd3m": {
+    "ic_mean": 0.0796,
+    "n_months": 53,
+    "k_independent": 17,
+    "t_raw": 4.44,
+    "t_nonoverlap": 2.55,
+    "t_crit_df": 2.12,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd6m": {
+    "ic_mean": 0.09323,
+    "n_months": 50,
+    "k_independent": 8,
+    "t_raw": 5.11,
+    "t_nonoverlap": 2.0,
+    "t_crit_df": 2.365,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd12m": {
+    "ic_mean": 0.1225,
+    "n_months": 44,
+    "k_independent": 3,
+    "t_raw": 6.87,
+    "t_nonoverlap": 1.81,
+    "t_crit_df": 4.303,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   }
+  },
+  "roa": {
+   "fwd1m": {
+    "ic_mean": 0.0577,
+    "n_months": 55,
+    "k_independent": 55,
+    "t_raw": 6.44,
+    "t_nonoverlap": 6.44,
+    "t_crit_df": 1.96,
+    "estimable": true,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd3m": {
+    "ic_mean": 0.06544,
+    "n_months": 53,
+    "k_independent": 17,
+    "t_raw": 8.44,
+    "t_nonoverlap": 5.49,
+    "t_crit_df": 2.12,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd6m": {
+    "ic_mean": 0.06659,
+    "n_months": 50,
+    "k_independent": 8,
+    "t_raw": 8.11,
+    "t_nonoverlap": 3.17,
+    "t_crit_df": 2.365,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd12m": {
+    "ic_mean": 0.05046,
+    "n_months": 44,
+    "k_independent": 3,
+    "t_raw": 6.32,
+    "t_nonoverlap": 1.68,
+    "t_crit_df": 4.303,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   }
+  },
+  "gross_margin": {
+   "fwd1m": {
+    "ic_mean": -0.00679,
+    "n_months": 55,
+    "k_independent": 55,
+    "t_raw": -0.64,
+    "t_nonoverlap": -0.64,
+    "t_crit_df": 1.96,
+    "estimable": true,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd3m": {
+    "ic_mean": -0.01922,
+    "n_months": 53,
+    "k_independent": 17,
+    "t_raw": -1.61,
+    "t_nonoverlap": -0.94,
+    "t_crit_df": 2.12,
+    "estimable": true,
+    "positive_offset_ratio": 0.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd6m": {
+    "ic_mean": -0.04058,
+    "n_months": 50,
+    "k_independent": 8,
+    "t_raw": -3.22,
+    "t_nonoverlap": -1.27,
+    "t_crit_df": 2.365,
+    "estimable": true,
+    "positive_offset_ratio": 0.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd12m": {
+    "ic_mean": -0.08318,
+    "n_months": 44,
+    "k_independent": 3,
+    "t_raw": -6.95,
+    "t_nonoverlap": -1.65,
+    "t_crit_df": 4.303,
+    "estimable": true,
+    "positive_offset_ratio": 0.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   }
+  },
+  "cfoa": {
+   "fwd1m": {
+    "ic_mean": 0.043,
+    "n_months": 55,
+    "k_independent": 55,
+    "t_raw": 6.84,
+    "t_nonoverlap": 6.84,
+    "t_crit_df": 1.96,
+    "estimable": true,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd3m": {
+    "ic_mean": 0.0559,
+    "n_months": 53,
+    "k_independent": 17,
+    "t_raw": 9.56,
+    "t_nonoverlap": 5.28,
+    "t_crit_df": 2.12,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd6m": {
+    "ic_mean": 0.05961,
+    "n_months": 50,
+    "k_independent": 8,
+    "t_raw": 9.85,
+    "t_nonoverlap": 3.77,
+    "t_crit_df": 2.365,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd12m": {
+    "ic_mean": 0.05959,
+    "n_months": 44,
+    "k_independent": 3,
+    "t_raw": 11.48,
+    "t_nonoverlap": 3.39,
+    "t_crit_df": 4.303,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": true
+   }
+  },
+  "asset_turnover": {
+   "fwd1m": {
+    "ic_mean": 0.02973,
+    "n_months": 55,
+    "k_independent": 55,
+    "t_raw": 3.84,
+    "t_nonoverlap": 3.84,
+    "t_crit_df": 1.96,
+    "estimable": true,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd3m": {
+    "ic_mean": 0.04062,
+    "n_months": 53,
+    "k_independent": 17,
+    "t_raw": 6.04,
+    "t_nonoverlap": 3.52,
+    "t_crit_df": 2.12,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "confirmatory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd6m": {
+    "ic_mean": 0.05407,
+    "n_months": 50,
+    "k_independent": 8,
+    "t_raw": 9.06,
+    "t_nonoverlap": 3.85,
+    "t_crit_df": 2.365,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": true
+   },
+   "fwd12m": {
+    "ic_mean": 0.07324,
+    "n_months": 44,
+    "k_independent": 3,
+    "t_raw": 15.23,
+    "t_nonoverlap": 4.39,
+    "t_crit_df": 4.303,
+    "estimable": true,
+    "positive_offset_ratio": 1.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": true
+   }
+  },
+  "current_ratio": {
+   "fwd1m": {
+    "ic_mean": 0.00066,
+    "n_months": 55,
+    "k_independent": 55,
+    "t_raw": 0.09,
+    "t_nonoverlap": 0.09,
+    "t_crit_df": 1.96,
+    "estimable": true,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd3m": {
+    "ic_mean": -0.00155,
+    "n_months": 53,
+    "k_independent": 17,
+    "t_raw": -0.21,
+    "t_nonoverlap": 0.08,
+    "t_crit_df": 2.12,
+    "estimable": true,
+    "positive_offset_ratio": 0.67,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd6m": {
+    "ic_mean": -0.00942,
+    "n_months": 50,
+    "k_independent": 8,
+    "t_raw": -1.32,
+    "t_nonoverlap": -0.42,
+    "t_crit_df": 2.365,
+    "estimable": true,
+    "positive_offset_ratio": 0.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd12m": {
+    "ic_mean": -0.02769,
+    "n_months": 44,
+    "k_independent": 3,
+    "t_raw": -4.9,
+    "t_nonoverlap": -1.62,
+    "t_crit_df": 4.303,
+    "estimable": true,
+    "positive_offset_ratio": 0.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   }
+  },
+  "accrual_inv": {
+   "fwd1m": {
+    "ic_mean": -0.00279,
+    "n_months": 55,
+    "k_independent": 55,
+    "t_raw": -0.48,
+    "t_nonoverlap": -0.48,
+    "t_crit_df": 1.96,
+    "estimable": true,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd3m": {
+    "ic_mean": 0.00351,
+    "n_months": 53,
+    "k_independent": 17,
+    "t_raw": 0.49,
+    "t_nonoverlap": 0.4,
+    "t_crit_df": 2.12,
+    "estimable": true,
+    "positive_offset_ratio": 0.67,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd6m": {
+    "ic_mean": 0.00722,
+    "n_months": 50,
+    "k_independent": 8,
+    "t_raw": 1.23,
+    "t_nonoverlap": 0.59,
+    "t_crit_df": 2.365,
+    "estimable": true,
+    "positive_offset_ratio": 0.67,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd12m": {
+    "ic_mean": 0.00844,
+    "n_months": 44,
+    "k_independent": 3,
+    "t_raw": 1.56,
+    "t_nonoverlap": 0.68,
+    "t_crit_df": 4.303,
+    "estimable": true,
+    "positive_offset_ratio": 0.58,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   }
+  },
+  "debt_inv": {
+   "fwd1m": {
+    "ic_mean": 0.00061,
+    "n_months": 55,
+    "k_independent": 55,
+    "t_raw": 0.08,
+    "t_nonoverlap": 0.08,
+    "t_crit_df": 1.96,
+    "estimable": true,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd3m": {
+    "ic_mean": -0.0046,
+    "n_months": 53,
+    "k_independent": 17,
+    "t_raw": -0.6,
+    "t_nonoverlap": -0.21,
+    "t_crit_df": 2.12,
+    "estimable": true,
+    "positive_offset_ratio": 0.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd6m": {
+    "ic_mean": -0.01262,
+    "n_months": 50,
+    "k_independent": 8,
+    "t_raw": -1.6,
+    "t_nonoverlap": -0.64,
+    "t_crit_df": 2.365,
+    "estimable": true,
+    "positive_offset_ratio": 0.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   },
+   "fwd12m": {
+    "ic_mean": -0.03528,
+    "n_months": 44,
+    "k_independent": 3,
+    "t_raw": -6.27,
+    "t_nonoverlap": -1.59,
+    "t_crit_df": 4.303,
+    "estimable": true,
+    "positive_offset_ratio": 0.0,
+    "evidence_class": "exploratory",
+    "bh_fdr_pass_q10": false
+   }
+  }
+ }
+}
