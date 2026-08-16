@@ -3883,6 +3883,31 @@ def main():
                 except Exception as e:
                     print(f"  ⚠️ 소송·우발부채 분석 스킵: {e}")
 
+                # ── 🚨 감사보고서 핵심감사사항(KAM) 판독 (2026-08-16 신설, PM 승인) ──
+                # 감사인이 "가장 위험하다고 본 것" 을 직접 적어둔 산문. 2018년부터 의무 기재인데
+                # 우리는 한 번도 읽은 적이 없었다(전수 grep 0건). 정형 필드가 없어 LLM 판독만 가능.
+                # 🚨 관측 only — 산출은 점수가 아니라 **사실**(감사인이 X 를 지목했다)이라
+                #    추출 정확도로 검증 가능. 점수 반영은 표본 검증 + 사전등록 후.
+                try:
+                    from api.analyzers.dart_kam import analyze_all_kam
+                    kam_result = analyze_all_kam(stocks_dict)
+                    kam_attached = kam_total = 0
+                    for stock in candidates:
+                        t = stock.get("ticker")
+                        if not t:
+                            continue
+                        t6 = str(t).split(".")[0].zfill(6)
+                        km = kam_result.get(t6)
+                        if km and "_skip_reason" not in km:
+                            stock["dart_kam"] = km
+                            kam_attached += 1
+                            kam_total += int(km.get("kam_count") or 0)
+                    if kam_attached:
+                        print(f"  ✓ {kam_attached}개 종목에 dart_kam 부착 "
+                              f"(핵심감사사항 {kam_total}건, 관측 only)")
+                except Exception as e:
+                    print(f"  ⚠️ 핵심감사사항 판독 스킵: {e}")
+
                 # ── DART 주요사항: CB/BW 전환·행사 오버행(잠재 희석) ──
                 # 2026-07-10. 🚨 관측 only · 사실만 — 발행규모·전환가·발행가능주식수·희석률.
                 # 구조화 파싱(LLM 0) · 자체 점수 0(RULE 7). dart_cb_bw 필드로만 부착.

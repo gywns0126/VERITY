@@ -518,6 +518,26 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
                 ppe_note = best[:14000]
                 break
 
+    # 🚨 2026-08-16 핵심감사사항(KAM) additive 슬라이스 — PM 승인.
+    #   2018년부터 상장사 감사보고서 **의무 기재**. 감사인이 "이 회사에서 가장 위험하다고 본 것"을
+    #   산문으로 직접 적어둔 것 — 전문가의 위험 평가가 전 상장사에 매년 무료로 공개된다.
+    #   🚨 그런데 우리 코드에 'KAM'·'핵심감사사항' 문자열이 **0건**이었다 (2026-08-16 전수 grep).
+    #   정형 필드가 없고 내용이 회사마다 달라 키워드 매칭으로는 못 잡는다 → LLM 판독 대상.
+    #   기존 dart_audit_signals 는 계속기업·강조사항만 본다(둘은 정형 문구라 키워드로 잡힘).
+    #   경계: KAM 헤딩 ~ 다음 표준 헤딩. 정밀 우선 — 못 찾으면 미매칭(garbage 회피), 14K cap.
+    kam_patterns = [
+        r"(?is)핵심\s*감사\s*사항(.*?)(?:기타\s*사항|재무제표에\s*대한\s*경영진|감사인의\s*책임|그\s*밖의\s*사항|강조\s*사항)",
+        r"(?is)Key\s+Audit\s+Matters?(.*?)(?:Other\s+Matter|Responsibilit|Emphasis\s+of\s+Matter)",
+    ]
+    kam_text = ""
+    for pat in kam_patterns:
+        km = re.findall(pat, cleaned)
+        if km:
+            best = max(km, key=len).strip()
+            if len(best) > 150:
+                kam_text = best[:14000]
+                break
+
     # 2026-06-04 going-concern/강조사항 — 감사보고서가 같은 ZIP 번들 시 포착.
     # doubt 전용 구문만 (정상 boilerplate "계속기업을 전제로" 회피, false-positive 차단).
     try:
@@ -540,6 +560,8 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
         "litigation_char_count": len(litigation),
         "ppe_note_text": ppe_note,
         "ppe_note_char_count": len(ppe_note),
+        "kam_text": kam_text,
+        "kam_char_count": len(kam_text),
         "going_concern_doubt": _gc["going_concern_doubt"],
         "emphasis_of_matter": _gc["emphasis_of_matter"],
         "going_concern_severity": _gc["severity"],
