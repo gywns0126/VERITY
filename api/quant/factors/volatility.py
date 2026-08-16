@@ -36,8 +36,15 @@ def compute_volatility_score(
     """
     scores: Dict[str, float] = {}
     signals: List[str] = []
+    # 🚨 2026-08-17 — 결측 축 자기신고 (quality·mean_reversion 과 동일 규약).
+    #   실측: 운영 풀 56종목 중 quant_volatility 가 **정확히 50인 종목이 25개(45%)** 였다.
+    #   원인 = volatility_20d 결손 25(KR 9·US 16) + **beta 는 56종목 전부 부재**.
+    #   중립 50 은 관측이 아니라 "못 쟀음" 인데, 신고가 없으면 가중 0.25 를 받는 축의
+    #   절반이 무기여라는 사실이 보이지 않는다. 고유값(11)만 세면 이 쏠림을 놓친다.
+    unmeasured: List[str] = []
 
-    vol_20 = stock.get("volatility_20d") or stock.get("technical", {}).get("volatility_20d")
+    _tech = stock.get("technical") or {}   # 🚨 None 이면 .get 이 터진다 — or {} 로 방어
+    vol_20 = stock.get("volatility_20d") or _tech.get("volatility_20d")
     vol_60 = stock.get("volatility_60d")
     beta = stock.get("beta")
 
@@ -78,6 +85,8 @@ def compute_volatility_score(
             elif ratio > 1.5:
                 rv_score = max(rv_score - 10, 0)
 
+    if vol_20 is None:
+        unmeasured.append("realized_vol")
     scores["realized_vol"] = rv_score
 
     # --- 2. 변동성 추세 (축소 = 긍정) ---
@@ -99,6 +108,8 @@ def compute_volatility_score(
             trend_score = 15
             signals.append("변동성 급확대 — 경계")
 
+    if not (vol_20 is not None and vol_60 is not None and vol_60 > 0):
+        unmeasured.append("vol_trend")
     scores["vol_trend"] = trend_score
 
     # --- 3. 베타 (저베타 = 고점수) ---
@@ -118,6 +129,8 @@ def compute_volatility_score(
             beta_score = 15
             signals.append(f"베타 {beta:.2f} 고위험")
 
+    if beta is None:
+        unmeasured.append("beta")
     scores["beta"] = beta_score
 
     # --- 4. 고유 변동성 (Idiosyncratic Vol) ---
@@ -142,6 +155,8 @@ def compute_volatility_score(
         else:
             idio_score = 75
 
+    if not (vol_20 is not None and beta is not None):
+        unmeasured.append("idiosyncratic")
     scores["idiosyncratic"] = idio_score
 
     # --- 종합 ---
@@ -157,6 +172,7 @@ def compute_volatility_score(
 
     return {
         "volatility_score": total,
+        "unmeasured_axes": unmeasured,
         "components": {k: round(v, 1) for k, v in scores.items()},
         "signals": signals[:5],
         "metrics": {
@@ -188,7 +204,7 @@ def compute_universe_vol_stats(
     betas = []
 
     for s in universe:
-        v20 = s.get("volatility_20d") or s.get("technical", {}).get("volatility_20d")
+        v20 = s.get("volatility_20d") or (s.get("technical") or {}).get("volatility_20d")
         v60 = s.get("volatility_60d")
         b = s.get("beta")
 
