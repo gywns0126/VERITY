@@ -64,8 +64,13 @@ class GateReport:
 
     @property
     def selection_is_valid(self) -> bool:
-        """격자 최고값을 채택해도 되는가."""
-        return self.pbo < PBO_WARN and self.is_oos_r**2 >= R2_MIN
+        """격자 최고값을 채택해도 되는가.
+
+        🚨 상관은 **부호까지** 본다. R² 만 보면 r=−0.455 가 R²=0.207 로 임계를 통과하는데,
+        음의 상관은 "IS 최적이 OOS 최악" 이라는 뜻이라 채택 근거가 아니라 반증이다.
+        (2026-08-16 크립토 유동성 임계 검정에서 실제로 이 값이 나와 결함이 드러났다.)
+        """
+        return self.pbo < PBO_WARN and self.is_oos_r >= sqrt(R2_MIN)
 
     def render(self) -> str:
         L = []
@@ -77,12 +82,15 @@ class GateReport:
         L.append(f"  PBO = {self.pbo:.1%}  (IS 최적이 OOS 중앙값 아래로 갈 확률)")
         L.append(f"  IS↔OOS Sharpe 상관 {self.is_oos_r:+.3f} (R²={self.is_oos_r**2:.3f})")
         L.append("")
-        if self.pbo >= PBO_FAIL:
+        if self.is_oos_r <= -sqrt(R2_MIN):
+            v = (f"❌ FAIL — IS↔OOS 상관이 **음수**({self.is_oos_r:+.3f}). IS 최적이 OOS 최악에 가깝다. "
+                 "채택은 반대로 가는 것이다.")
+        elif self.pbo >= PBO_FAIL:
             v = "❌ FAIL — 선택이 동전던지기. 격자 최고값 채택 금지."
         elif self.pbo >= PBO_WARN:
             v = "⚠️ 경계 — IS 최적이 절반 가까이 무너진다. 앙상블 또는 현행 유지 권고."
-        elif self.is_oos_r**2 < R2_MIN:
-            v = f"⚠️ 경계 — PBO 는 낮으나 IS↔OOS R²={self.is_oos_r**2:.3f} < {R2_MIN}. 선택 근거 약함."
+        elif self.is_oos_r < sqrt(R2_MIN):
+            v = f"⚠️ 경계 — PBO 는 낮으나 IS↔OOS 상관 {self.is_oos_r:+.3f} 이 임계 미달. 선택 근거 약함."
         else:
             v = "✅ 선택 유효 — IS 최적 채택 가능."
         L.append(f"  판정: {v}")
