@@ -338,7 +338,9 @@ def run(dry: bool = False) -> Dict[str, Any]:
                            "note": "개봉 = 합침/폐기 결정 시 1회 (§7-3b)"},
             "known_limitations": [
                 f"상폐 실현손실 미반영 — 소멸 종목은 지평 제외 (제외 관측 {excluded_delist:,}건). quality/value IC 과대 위험",
-                f"🚨 v1.1 restatement: 패널 close = 무수정 종가 (카카오 5:1 실증) — 기업행동 스크린 |dln c − dln mc|>{CA_SCREEN} 로 {excluded_ca:,}관측 제외. v1.0 결과는 이 오염 포함이라 폐기",
+                f"🚨 v1.1 restatement: 패널 close = 무수정 종가 (카카오 5:1 실증) — 기업행동 스크린 |dln c − dln mc|>{CA_SCREEN} 로 {excluded_ca:,}관측 제외 (쌍×팩터×지평 단위). v1.0 결과는 이 오염 포함이라 폐기",
+                "dy 재해석 (2차 검증): div_yield 는 무배당의 54%가 None(결측 처리) — dy IC = 배당 지급자 내부 순위 신호다. 전 단면 신호로 읽지 말 것",
+                "재무값 = 2026-06~08 일괄 수집본(as-restated) — 원 공시 시점 값 아님. 정정공시 look-ahead 소지 (표준 한계, rank 영향 소)",
                 "유동성/거래대금 필터 없음 — microcap 비중 미통제",
                 "fwd12m 은 IS 내 k≈4 — 설계상 exploratory 고정",
             ],
