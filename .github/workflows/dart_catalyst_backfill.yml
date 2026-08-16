@@ -81,7 +81,7 @@ jobs:
           BRANCH="${{ github.ref_name }}"
           for i in 1 2 3 4 5; do
             git rebase --abort 2>/dev/null || true
-            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+            if git pull --rebase --autostash -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
               echo "pushed"; exit 0
             fi
             echo "push attempt $i failed, retry in $((i*10))s"; sleep $((i*10))

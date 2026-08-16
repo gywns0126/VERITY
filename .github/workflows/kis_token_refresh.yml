@@ -171,7 +171,7 @@ jobs:
               exit 0
             fi
             echo "push 실패 (attempt $i) — rebase 후 재시도"
-            git pull --rebase origin "$BRANCH" || git merge --abort || true
+            git pull --rebase --autostash origin "$BRANCH" || git merge --abort || true
           done
           echo "::error::daily lock push 3회 실패"
           exit 1
