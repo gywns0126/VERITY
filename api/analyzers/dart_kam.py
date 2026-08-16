@@ -158,29 +158,66 @@ def analyze_kam(company_name: str, kam_text: str) -> Dict[str, Any]:
     return {"_skip_reason": "exhausted"}
 
 
-def analyze_all_kam(stocks: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    """DartScout 산출(kam_text 포함)이 있는 종목 전부 판독. 연도별 캐시."""
+def analyze_all_kam(stocks: Dict[str, Any],
+                    auto_fetch_missing: bool = True) -> Dict[str, Dict[str, Any]]:
+    """stocks dict 일괄 KAM 판독. `dart_litigation.analyze_all_litigation` 과 동형.
+
+    kam_text 우선순위: (1) stock_data.business_facilities_raw.kam_text,
+    (2) auto_fetch_missing 시 corp_code 로 DartScout 자체 fetch.
+    🚨 (2)가 없으면 백필 경로(`kr_company_facts_backfill`)가 kam_text 를 못 넘겨
+       전 종목 skip 된다 — 커버리지 0 이 조용히 유지된다.
+    캐시 구조도 `{"by_ticker": {ticker: {year: result}}}` 로 형제 캐시와 통일한다
+       (ticker_facts 조인이 by_ticker 규약을 읽는다).
+    """
     cache = _load_cache()
+    by_ticker: Dict[str, Any] = cache.get("by_ticker", {})
     out: Dict[str, Dict[str, Any]] = {}
-    fresh = 0
+    fresh = cached = skipped = 0
+
     for ticker, info in (stocks or {}).items():
         if not isinstance(info, dict):
             continue
-        kam_text = info.get("kam_text") or ""
         year = str(info.get("bsns_year") or "")
         name = info.get("name") or info.get("corp_name") or ticker
-        if not kam_text:
-            continue
-        hit = (cache.get(ticker) or {}).get(year)
-        if hit:
+        corp_code = info.get("corp_code")
+
+        tc = by_ticker.get(ticker, {})
+        hit = tc.get(year)
+        if hit and hit.get("kam_count") is not None:
             out[ticker] = hit
+            cached += 1
             continue
+
+        bf = info.get("business_facilities_raw") or {}
+        kam_text = info.get("kam_text") or (bf.get("kam_text") if isinstance(bf, dict) else "")
+        if (not kam_text or len(kam_text) < MIN_RAW_TEXT_LENGTH) and auto_fetch_missing and corp_code:
+            try:
+                from api.collectors.DartScout import fetch_business_facilities_raw
+                r = fetch_business_facilities_raw(corp_code, year)
+                kam_text = (r or {}).get("kam_text", "")
+            except Exception as e:  # noqa: BLE001
+                logger.warning("[kam] fetch 실패(%s): %s", name, str(e)[:60])
+                kam_text = ""
+        if not kam_text or len(kam_text) < MIN_RAW_TEXT_LENGTH:
+            out[ticker] = {"ticker": ticker, "_skip_reason": "no_kam_text"}
+            skipped += 1
+            continue
+
         res = analyze_kam(name, kam_text)
+        if "_skip_reason" in res:
+            out[ticker] = {**res, "ticker": ticker}
+            skipped += 1
+            continue
+        res["ticker"] = ticker
+        res["bsns_year"] = year
         out[ticker] = res
-        if "_skip_reason" not in res:
-            cache.setdefault(ticker, {})[year] = res
-            fresh += 1
+        tc[year] = res
+        by_ticker[ticker] = tc
+        fresh += 1
+
     if fresh:
+        cache["by_ticker"] = by_ticker
+        cache["updated_at"] = now_kst().isoformat()
         _save_cache(cache)
-        logger.info("[kam] 신규 판독 %d종목", fresh)
+    logger.info("[kam] 신규 %d · 캐시 %d · 스킵 %d", fresh, cached, skipped)
     return out

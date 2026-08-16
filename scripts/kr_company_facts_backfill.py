@@ -57,7 +57,10 @@ MAPPING_PATH = os.path.join(DATA, "mapping.json")
 LISTED_PATH = os.path.join(DATA, "kr_listed.json")
 DIVIDENDS_PATH = os.path.join(DATA, "dividends_kr.json")
 
-LLM_AXES = {"related_party", "litigation", "business"}
+# 🚨 2026-08-16 kam 추가 — 감사인이 지목한 위험(핵심감사사항). 2018년부터 의무 기재인데
+#   우리 커버리지가 0 이었다. DartScout 이 같은 document 에서 kam_text 를 additive 슬라이스하므로
+#   추가 DART 호출 0 — litigation·related_party 와 같은 fetch 를 나눠 쓴다.
+LLM_AXES = {"related_party", "litigation", "business", "kam"}
 FREE_AXES = {"dividends", "cb_bw", "shareholders", "chain"}
 ALL_AXES = FREE_AXES | LLM_AXES
 
@@ -366,6 +369,8 @@ def run_llm_axis(axis, univ, year, delay, dry, limit=None) -> Dict[str, int]:
         from api.analyzers.dart_related_party import analyze_all_related_party as fn
     elif axis == "litigation":
         from api.analyzers.dart_litigation import analyze_all_litigation as fn
+    elif axis == "kam":
+        from api.analyzers.dart_kam import analyze_all_kam as fn
     else:
         from api.analyzers.dart_report_analyzer import analyze_all_business_reports as fn
     res = fn(sd)
