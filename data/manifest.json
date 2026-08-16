@@ -43,6 +43,7 @@
   "data/macro_synthesis.json",
   "data/macro_synthesis_cache.json",
   "data/us_analyst_consensus.json",
+  "data/consensus_data.json",
   "data/moderation_portfolio.json",
   "data/moderation_portfolio_trail.jsonl",
   "data/rebalance_review.json",
@@ -50,6 +51,47 @@
   "data/us_chart_history/",
   "data/metadata/kr_valuation_panel.jsonl",
   "data/metadata/.verity_gate_stamp.json"
+ ],
+ "banned": [
+  {
+   "file": "data/us_analyst_consensus.json",
+   "reason": "yfinance 컨센서스 — 재배포 권리 없음",
+   "decided": "2026-07-10",
+   "sealed": "2026-08-02",
+   "preserve_via": "scripts/private_data.py (VERITY-private, PAT)",
+   "blob_evidence": {
+    "verified": "2026-08-16",
+    "http_code": 404,
+    "method": "curl blob base"
+   },
+   "egress": {
+    "git_tracked": true,
+    "publish_list": true,
+    "site_consumer": true,
+    "public_artifact": true,
+    "blob": true
+   }
+  },
+  {
+   "file": "data/consensus_data.json",
+   "reason": "KR 브로커 목표가·투자의견 — us_analyst_consensus 와 동일 법적 class",
+   "decided": "2026-07-21",
+   "sealed": "2026-08-16",
+   "preserve_via": "scripts/private_data.py (VERITY-private, PAT)",
+   "note": "7/21 판정 후 git 경로만 2주 미봉인 — HTTP 200 실측이 C5 신설 계기",
+   "blob_evidence": {
+    "verified": "2026-08-16",
+    "http_code": 404,
+    "method": "curl blob base"
+   },
+   "egress": {
+    "git_tracked": true,
+    "publish_list": true,
+    "site_consumer": true,
+    "public_artifact": true,
+    "blob": true
+   }
+  }
  ],
  "artifacts": [
   {
@@ -159,7 +201,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 9719353,
+   "size_bytes": 10926852,
    "producers": [
     "api/collectors/sec_13f_collector.py"
    ]
@@ -411,19 +453,6 @@
    "producers": []
   },
   {
-   "path": "data/consensus_data.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 41678,
-   "producers": [
-    "api/main.py",
-    "api/builders/stock_report_public_builder.py",
-    "api/observability/say_do_divergence.py"
-   ]
-  },
-  {
    "path": "data/corp_idno_cache.json",
    "visibility": "work",
    "publish": false,
@@ -462,7 +491,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 10128,
+   "size_bytes": 10130,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -486,7 +515,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 72536,
+   "size_bytes": 72534,
    "producers": [
     "api/builders/crypto_collect_builder.py"
    ]
@@ -497,7 +526,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 1195,
+   "size_bytes": 1198,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -509,7 +538,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 17598,
+   "size_bytes": 17429,
    "producers": [
     "api/builders/crypto_collect_builder.py"
    ]
@@ -532,7 +561,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 899,
+   "size_bytes": 902,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -544,7 +573,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 10450,
+   "size_bytes": 10451,
    "producers": [
     "api/builders/crypto_regime_synthesis.py"
    ]
@@ -566,7 +595,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 2661,
+   "size_bytes": 2657,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -578,7 +607,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 681,
+   "size_bytes": 682,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -590,7 +619,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 44438,
+   "size_bytes": 44432,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -602,7 +631,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 27832,
+   "size_bytes": 32208,
    "producers": [
     "api/collectors/cusip_resolver.py"
    ]
@@ -909,7 +938,7 @@
    "publish": true,
    "sla": "freshness_board:P2",
    "contract": null,
-   "size_bytes": 17411,
+   "size_bytes": 17403,
    "producers": [
     "api/builders/freshness_board_builder.py",
     "api/builders/data_health_builder.py"
@@ -1323,7 +1352,7 @@
    "publish": true,
    "sla": "macro_snapshot:P0",
    "contract": null,
-   "size_bytes": 31774,
+   "size_bytes": 31721,
    "producers": [
     "api/builders/macro_collect_builder.py",
     "api/observability/data_pipeline_health.py",
@@ -1351,6 +1380,17 @@
    "producers": [
     "api/intelligence/macro_themes_brief.py",
     "api/intelligence/macro_industry_align.py"
+   ]
+  },
+  {
+   "path": "data/manifest.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 61422,
+   "producers": [
+    "scripts/audit/build_data_manifest.py"
    ]
   },
   {
@@ -1408,7 +1448,7 @@
    "publish": true,
    "sla": null,
    "contract": null,
-   "size_bytes": 814888,
+   "size_bytes": 815878,
    "producers": [
     "api/observability/data_health.py",
     "scripts/cron_health_monitor.py",
@@ -1434,7 +1474,7 @@
    "publish": true,
    "sla": null,
    "contract": null,
-   "size_bytes": 6670,
+   "size_bytes": 6669,
    "producers": [
     "api/observability/data_pipeline_health.py",
     "api/observability/data_health.py",
@@ -1678,7 +1718,7 @@
    "publish": true,
    "sla": "portfolio:P2",
    "contract": null,
-   "size_bytes": 2688973,
+   "size_bytes": 2688892,
    "producers": [
     "api/run_bond_etf.py",
     "api/main.py",
@@ -2101,7 +2141,7 @@
    "publish": true,
    "sla": "us_disclosure_feed:P2",
    "contract": null,
-   "size_bytes": 4285110,
+   "size_bytes": 4284580,
    "producers": [
     "api/builders/us_stock_report_public_builder.py",
     "api/builders/us_disclosure_feed_builder.py",
@@ -2162,7 +2202,7 @@
    "publish": true,
    "sla": "us_etf:P2",
    "contract": null,
-   "size_bytes": 1096226,
+   "size_bytes": 1169580,
    "producers": [
     "api/collectors/us_naver_code.py",
     "api/builders/us_etf_public_builder.py",
@@ -2175,7 +2215,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 2920748,
+   "size_bytes": 3169317,
    "producers": [
     "api/builders/us_etf_public_builder.py"
    ]
@@ -2236,7 +2276,7 @@
    "publish": true,
    "sla": "us_insider_trades:P1",
    "contract": null,
-   "size_bytes": 4836392,
+   "size_bytes": 4762025,
    "producers": [
     "api/builders/entrance_map_builder.py",
     "api/builders/coverage_report_builder.py",
@@ -2249,7 +2289,7 @@
    "publish": true,
    "sla": null,
    "contract": null,
-   "size_bytes": 156631,
+   "size_bytes": 157299,
    "producers": [
     "api/builders/us_investor_portfolios_public_builder.py"
    ]
@@ -2360,7 +2400,7 @@
    "publish": true,
    "sla": "us_short_interest:P2",
    "contract": null,
-   "size_bytes": 988813,
+   "size_bytes": 989015,
    "producers": [
     "api/builders/us_short_interest_public_builder.py",
     "api/intelligence/ticker_facts.py",
@@ -2373,7 +2413,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 1027351,
+   "size_bytes": 1027370,
    "producers": [
     "api/builders/us_short_interest_public_builder.py"
    ]
@@ -2422,7 +2462,7 @@
    "publish": true,
    "sla": "us_smart_money_13f:P2",
    "contract": null,
-   "size_bytes": 380209,
+   "size_bytes": 393034,
    "producers": [
     "api/builders/us_smart_money_13f_public_builder.py",
     "api/intelligence/ticker_facts.py",

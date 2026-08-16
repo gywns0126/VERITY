@@ -18,6 +18,13 @@
   C2 무시규칙(.gitignore /data/) ↔ private — 규칙이 있는데 추적 중 = 유출 위험
   C3 public 인데 계약·SLA 둘 다 없음 = 무보증 발행 (경고)
   C4 매니페스트 ↔ 실물 목록 드리프트 (신규/삭제 파일 미반영)
+  C5 🚨 금지 자산 경로 대장 — 금지 결정 1건당 유출 경로 5종이 전부 닫혔는지
+
+🚨 C5 를 넣은 이유 (2026-08-16 실사고): 7/21 에 `consensus_data.json` 을 "발행 금지" 로
+판정하고 발행 목록·Blob 두 경로만 닫았다. raw git 경로가 남아 2주간 공개 저장소에서
+HTTP 200 으로 서비스됐다(41,678B, 브로커 목표가·투자의견 포함). **금지 결정문에 경로 목록이
+없으면 두 개를 닫고도 다 닫았다고 믿게 된다** — 결정 차원의 분모 실패다.
+그래서 금지는 선언이 아니라 **경로별 확인 결과**로만 성립하게 만든다.
 
 사용: python3 scripts/audit/build_data_manifest.py          # 생성/갱신
       python3 scripts/audit/build_data_manifest.py --check  # 대조만 (CI/게이트용)
@@ -161,6 +168,100 @@ def find_producers(basename: str, corpus: dict[str, str]) -> list[str]:
     return out[:3]
 
 
+BANNED = [
+    {
+        "file": "data/us_analyst_consensus.json",
+        "reason": "yfinance 컨센서스 — 재배포 권리 없음",
+        "decided": "2026-07-10", "sealed": "2026-08-02",
+        "preserve_via": "scripts/private_data.py (VERITY-private, PAT)",
+        "blob_evidence": {"verified": "2026-08-16", "http_code": 404, "method": "curl blob base"},
+    },
+    {
+        "file": "data/consensus_data.json",
+        "reason": "KR 브로커 목표가·투자의견 — us_analyst_consensus 와 동일 법적 class",
+        "decided": "2026-07-21", "sealed": "2026-08-16",
+        "preserve_via": "scripts/private_data.py (VERITY-private, PAT)",
+        "note": "7/21 판정 후 git 경로만 2주 미봉인 — HTTP 200 실측이 C5 신설 계기",
+        "blob_evidence": {"verified": "2026-08-16", "http_code": 404, "method": "curl blob base"},
+    },
+]
+
+# 금지 자산이 닫혀야 하는 유출 경로. 기계로 확인 가능한 것만 검사하고,
+# 나머지는 확인 근거를 대장에 남긴다 (확인 불가를 '통과' 로 두지 않는다).
+EGRESS_PATHS = ["git_tracked", "publish_list", "public_artifact", "blob", "site_consumer"]
+
+
+BLOB_BASE = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/"
+
+# 🚨 오퍼레이터 전용 소비는 금지 대상이 아니다. 금지의 뜻 = **재배포 금지**이지 본인 사용 금지가
+# 아니다. chat_hybrid 가 VERITY-private 에서 PAT 로 읽어 "판단 재료로만" 쓰는 경로는 설계상 허용
+# (internal_context._sec_consensus). 공개 경로(framer 공개 컴포넌트·발행 산출물)만 닫혀야 한다.
+OPERATOR_PRIVATE_OK = ("vercel-api/api/chat_hybrid/",)
+
+
+def _site_consumers(basename: str) -> list[str]:
+    """공개 경로에서 이 파일을 **실제로 읽는** 곳. 주석·상태 라벨은 제외한다."""
+    stem = basename.rsplit(".", 1)[0]
+    hits = []
+    for d in ("framer-components", "vercel-api", "operator-web/app", "operator-web/lib"):
+        base = os.path.join(ROOT, d)
+        if not os.path.isdir(base):
+            continue
+        for dp, _, fs in os.walk(base):
+            if any(s in dp + "/" for s in ("node_modules", "/.next/")):
+                continue
+            for f in fs:
+                if not f.endswith((".py", ".tsx", ".ts")):
+                    continue
+                p = os.path.join(dp, f)
+                rel_p = os.path.relpath(p, ROOT)
+                if rel_p.startswith(OPERATOR_PRIVATE_OK):
+                    continue
+                try:
+                    s = open(p, encoding="utf-8", errors="ignore").read()
+                except OSError:
+                    continue
+                for line in s.splitlines():
+                    t = line.strip()
+                    if stem not in t or t.startswith(("#", "//", "*")):
+                        continue
+                    if re.search(r"_load|open\(|fetch\(|read|require|import|get\(", t):
+                        hits.append(f"{rel_p}: {t[:60]}")
+                        break
+    return hits
+
+
+def banned_status(entry: dict, pub: set[str], tracked: set[str], net: bool = False) -> dict:
+    """금지 자산 1건의 경로별 닫힘 상태. True=닫힘 / False=열림 / None=확인 불가."""
+    f = entry["file"]
+    b = os.path.basename(f)
+    st = {
+        "git_tracked": f not in tracked,          # 추적 0 이어야 닫힘
+        "publish_list": b not in pub,             # 발행 목록 부재여야 닫힘
+        "site_consumer": not _site_consumers(b),  # 공개 경로 읽기 0 이어야 닫힘
+    }
+    # public_artifact — 발행 중인 공개 리포트에 컨센서스 값이 실렸는지 (전수 문자열)
+    rep = os.path.join(ROOT, "data", "stock_report_public.json")
+    try:
+        txt = _read(rep)
+        st["public_artifact"] = ("target_price" not in txt) and ('"opinion"' not in txt)
+    except OSError:
+        st["public_artifact"] = None
+    # blob — 기본은 기록된 증거를 쓰고, --net 이면 실제로 눌러 확인한다
+    ev = entry.get("blob_evidence") or {}
+    if net:
+        import urllib.request
+        try:
+            req = urllib.request.Request(BLOB_BASE + b, method="GET")
+            with urllib.request.urlopen(req, timeout=12) as r:
+                st["blob"] = r.status == 404
+        except Exception as e:  # noqa: BLE001 — 404 는 HTTPError 로 온다
+            st["blob"] = getattr(e, "code", None) == 404
+    else:
+        st["blob"] = ev.get("http_code") == 404 if ev else None
+    return st
+
+
 def build() -> dict:
     pub, priv = publish_names(), private_rules()
     sla, contracts, corpus = sla_streams(), contracts_map(), code_corpus()
@@ -196,6 +297,7 @@ def build() -> dict:
             "is_operational": False,
         },
         "private_rules": priv,
+        "banned": [dict(e, egress=banned_status(e, pub, set(tracked_all()), net=NET)) for e in BANNED],
         "artifacts": arts,
     }
 
@@ -232,10 +334,27 @@ def check(man: dict) -> list[str]:
     if added or gone:
         issues.append(f"C4 매니페스트 드리프트 — 신규 {len(added)} {added[:4]} · 소멸 {len(gone)} {gone[:4]}"
                       " → 재생성 필요")
+
+    all_tracked = set(tracked_all())                            # C5 금지 자산 경로 대장
+    for e in BANNED:
+        st = banned_status(e, pub, all_tracked, net=NET)
+        opened = [k for k, v in st.items() if v is False]
+        unknown = [k for k, v in st.items() if v is None]
+        if opened:
+            issues.append(f"🚨 C5 금지 자산 경로 열림 — {e['file']}: {opened} "
+                          f"(판정 {e['decided']}, 사유 {e['reason']})")
+        elif unknown:
+            issues.append(f"C5 {os.path.basename(e['file'])} 경로 {unknown} = 기계 확인 불가 "
+                          "(경고 — 수동 확인 근거를 대장에 남길 것)")
     return issues
 
 
+NET = False
+
+
 def main() -> int:
+    global NET
+    NET = "--net" in sys.argv
     check_only = "--check" in sys.argv
     if check_only:
         if not os.path.exists(MANIFEST):
@@ -258,7 +377,7 @@ def main() -> int:
     print(f"  비공개 규칙 {len(man.get('private_rules', []))}건 (추적 밖이라 대장에 없음)")
 
     issues = check(man)
-    hard = [i for i in issues if not i.startswith("C3")]
+    hard = [i for i in issues if not i.startswith("C3") and not i.startswith("C5 ")]
     if issues:
         print("\n대조 결과:")
         for i in issues:
