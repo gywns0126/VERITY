@@ -161,8 +161,46 @@ def verify_one(fname: str, cfg: dict) -> dict:
     return res
 
 
+# 🚨 2026-08-16 신설 — 배달 '내용' 이 아니라 배달 '시각' 을 본다.
+#   사고: VERITY_DATA_PAT 만료로 VERITY-data push 가 23시간 멈췄는데
+#   publish_verify 는 그 내내 ok=true 였다. 이 스크립트가 Blob 만 보고,
+#   Blob 조회는 stale 한 옛 파일에도 200 을 돌려주기 때문이다(cdn_age_s 는 CDN 캐시
+#   나이지 내용 나이가 아니다). publish-data 액션은 gh-pages 를 먼저 돌리고
+#   실패 시 composite 이 중단되어 Blob dual-write 까지 skip 되므로, 그 23시간은
+#   VERITY-data 와 Blob 이 **양쪽 다** 멈춘 구간이었다.
+#   호출부 4곳이 publish 단계에 continue-on-error: true 를 걸어 run 은 초록불이었고,
+#   신선도 SLA 는 VERITY repo 안 파일 mtime 만 봐서 33건 전부 stale 0 을 보고했다.
+#   즉 기존 신호 전부가 무증상이었고, 유일하게 남는 1차 사실이 VERITY-data 의 push 시각이다.
+_DATA_REPO_API = "https://api.github.com/repos/gywns0126/VERITY-data"
+_PUSH_SLA_H = 3.0   # cockpit 5분 cron 등 상시 publish 가 있어 3h 는 충분히 느슨하다
+
+
+def verify_publish_recency() -> dict:
+    """VERITY-data 마지막 push 시각 SLA. 배달 자체가 멎은 것을 잡는 유일한 검사."""
+    res = {"file": "_verity_data_push_recency", "ok": False}
+    try:
+        raw, _ = _fetch(_DATA_REPO_API)
+        pushed = json.loads(raw).get("pushed_at")
+        if not pushed:
+            res["error"] = "pushed_at 부재"
+            return res
+        ts = datetime.strptime(pushed, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        age_h = (datetime.now(timezone.utc) - ts).total_seconds() / 3600.0
+        res["pushed_at"] = pushed
+        res["age_h"] = round(age_h, 2)
+        res["sla_h"] = _PUSH_SLA_H
+        res["ok"] = age_h <= _PUSH_SLA_H
+        if not res["ok"]:
+            res["error"] = (f"VERITY-data push {age_h:.1f}h 정지 (SLA {_PUSH_SLA_H}h) — "
+                            "배달 경로 붕괴. run 이 초록불이어도 사이트는 멎어 있다")
+    except Exception as e:  # noqa: BLE001
+        res["error"] = f"조회 실패: {e}"
+    return res
+
+
 def main() -> None:
     results = [verify_one(f, c) for f, c in GUARD.items()]
+    results.append(verify_publish_recency())
     bad = [r for r in results if not r.get("ok")]
     doc = {
         "generated_at": datetime.now(KST).isoformat(),
