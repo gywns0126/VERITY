@@ -35,6 +35,9 @@ OPTIONS_PATH = os.path.join(DATA_DIR, "crypto_options.json")
 STABLECOINS_PATH = os.path.join(DATA_DIR, "crypto_stablecoins.json")
 POSITIONING_PATH = os.path.join(DATA_DIR, "crypto_positioning.json")
 TRENDS_PATH = os.path.join(DATA_DIR, "crypto_trends.json")
+# 업비트 호가 슬리피지 이력 (append-only). TIDE 비용 모델 검증용 — 스냅샷이 아니라
+# 분포가 필요해서 jsonl 이다. 🚨 신규 파일이므로 워크플로 git add 에 명시 추가 (RULE 4).
+ORDERBOOK_SLIPPAGE_PATH = os.path.join(DATA_DIR, "upbit_orderbook_slippage.jsonl")
 
 KST = timezone(timedelta(hours=9))
 
@@ -366,6 +369,28 @@ def main() -> int:
     except Exception as e:  # noqa: BLE001
         sys.stderr.write(f"[crypto_collect] regime synthesis fail: {type(e).__name__}:{str(e)[:100]}\n")
         results["regime"] = False
+
+    # ── 업비트 호가 슬리피지 스냅샷 (2026-08-16 신설, PM 지시) ──
+    #   TIDE 백테스트가 슬리피지를 0 으로 두고 있어 비용 모델이 검증되지 않았다.
+    #   첫 실측은 우리 주문 크기에서 체결충격 0 으로 나왔지만, 그 1건은 조용한 장의
+    #   스냅샷이다. 급락일에 스프레드가 벌어지는데 그때가 TSM 이 청산하는 순간이라
+    #   최선의 경우 1건으로 확정하면 백테스트가 낙관 편향된다 → **분포**를 쌓는다.
+    #   전용 크론을 만들지 않는 이유 = TIDE repo 는 무료 2000분/월 제약이고
+    #   이 워크플로는 이미 돌고 있어 마진 비용이 0 이다.
+    #   append-only 라 실패해도 기존 이력이 손상되지 않는다.
+    try:
+        from api.collectors.upbit_orderbook_slippage import (
+            collect_orderbook_slippage, append_jsonl,
+        )
+        _ob = collect_orderbook_slippage()
+        _n = append_jsonl(ORDERBOOK_SLIPPAGE_PATH, _ob)
+        results["orderbook_slippage"] = _n > 0
+        if _n == 0:
+            sys.stderr.write(f"[crypto_collect] orderbook 0행 — {_ob.get('error') or '호가 비어있음'}\n")
+    except Exception as e:
+        sys.stderr.write(
+            f"[crypto_collect] orderbook slippage fail: {type(e).__name__}:{str(e)[:100]}\n")
+        results["orderbook_slippage"] = False
 
     elapsed = round(time.time() - started, 2)
     sys.stderr.write(f"[crypto_collect] 적재 완료 {results} elapsed={elapsed}s\n")
