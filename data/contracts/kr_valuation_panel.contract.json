@@ -1,0 +1,38 @@
+{
+  "_meta": {
+    "contract_for": "kr_valuation_panel.jsonl",
+    "created": "2026-08-16",
+    "sot": "api/builders/kr_valuation_panel.py 헤더 (빌더 독스트링이 원문 — 이 계약은 기계가 읽는 이관본)",
+    "why": "8/16 무수정 종가 사고 — 소비자(factor.py)가 close 를 수정 종가로 가정, 카카오 5:1 분할이 가짜 -77% 수익률. 하중을 싣는 의미론은 문서가 아니라 계약+검증기로 강제한다 (구조 재검증 2026-08-16)."
+  },
+  "file": "data/metadata/kr_valuation_panel.jsonl",
+  "row_unit": "월말 × 종목 (2019-12-31 ~ · 일당 중앙 ~2,581종목)",
+  "required_fields": {
+    "d": "int YYYYMMDD (월말)",
+    "t": "str 6자리 KRX 코드 — 우선주 K/L 접미(00104K) + 2023+ 신형 영숫자 코드(0030R0 류, 신규상장) 포함",
+    "close": "number — 🚨 KRX 무수정 종가",
+    "mktcap": "number 원 단위 시총",
+    "per": "number|null", "pbr": "number|null", "div_yield": "number|null",
+    "per_basis": "str|null (eps_owner 등 — per=null 이면 null)",
+    "ni_stale_days": "int|null", "eq_stale_days": "int|null",
+    "div_src_year": "int|null", "src_quarter": "str|null"
+  },
+  "load_bearing_semantics": [
+    "close = KRX 무수정 종가 (krx_mktcap_history 'c'). 분할·병합 미조정 — 수익률 계산 시 기업행동 스크린 |Δln close − Δln mktcap| > 0.25 관측 제외 의무. 미적용 = 카카오 035720 5:1 분할이 가짜 −77% 수익률 (v1.1 restatement 원인).",
+    "per = 주가 ÷ 지배주주 EPS(DART). 운영 경로(yfinance trailingPE)와 같은 산식이 아니다 — 근사. 운영 수치와 직접 비교 금지.",
+    "div_yield = 배당 지급자만 값 존재 (무배당 ~54% = null). 전 단면 신호가 아니라 지급자 내 순위 신호로만 사용.",
+    "PIT: ni/eq_stale_days = 공시 가용일 기준 (분기 quarter_end+45일 · 연간 +90일 · 배당 +90일). look-ahead 아님 — 4중 검증 완료 (FACTOR_ENGINE_DESIGN 2차 검증 ④).",
+    "우선주 포함 (K/L 접미 티커, 표본 내 ~2%) — 보통주와 동일 단면에서 랭킹된다. 우선주 분리 통제는 미적용 (v2 검토 항목).",
+    "재무 원천 = as-restated (2026-06~08 일괄 수집). 원 공시값 아님 — 정정 look-ahead 소지, 표준 한계로 신고."
+  ],
+  "consumer_duties": [
+    "월간 수익률 계산 시 CA 스크린 적용 + 제외 건수 신고 (factor.py CA_SCREEN=0.25 선례)",
+    "div_yield 를 전 단면 랭킹에 넣지 않는다 (null=결측이지 0 이 아님)",
+    "운영 점수와의 대조 시 '근사 패널' 임을 결과물에 명시"
+  ],
+  "validation_rules": {
+    "field_regex": {"d": "^(19|20)\\d{6}$", "t": "^\\d[\\dA-Z]{5}$"},
+    "nullable": ["per", "pbr", "div_yield", "per_basis", "ni_stale_days", "eq_stale_days", "div_src_year", "src_quarter", "ni_basis", "eq_src_quarter", "ni_src_quarter", "src_period"],
+    "non_negative": ["close", "mktcap", "ni_stale_days", "eq_stale_days"]
+  }
+}

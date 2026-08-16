@@ -83,6 +83,16 @@
      "desc": "시장 심리 게이트 — 설계 등록·검정 미실행·시행 아님",
      "sot": "docs/PREREG_SENTIMENT_GATE_2026_08_16.md",
      "last_review": "2026-08-16", "next_review": "2026-11-16",
-     "kill_criteria_ref": "검정 H-G 미달 = 도입 폐기 (등록서 §4)"}
+     "kill_criteria_ref": "검정 H-G 미달 = 도입 폐기 (등록서 §4)"},
+    {"id": "verity_gate", "tier": "active", "status": "live",
+     "desc": "하네스 강제 게이트 — Stop(RULE9 응답·표면·prereg) + PreToolUse(커밋 RULE9·git add 규율). 셀프테스트 13 + 실발화 증명 8/16",
+     "sot": "docs/STRUCTURAL_GUARD_2026_08_16.md · scripts/audit/verity_gate.py",
+     "last_review": "2026-08-16", "next_review": "2026-11-16",
+     "kill_criteria_ref": "해제 = PM 지시로만. fail-open 자기신고(systemMessage) 무시 금지 — 신고 누적 = 게이트 점검"},
+    {"id": "data_contracts_v1", "tier": "active", "status": "live",
+     "desc": "데이터 계약 3건 (valuation·fundamental 패널 + 팩터엔진 _meta) — 하중 의미론 기계 검증, pytest 상설",
+     "sot": "data/contracts/ · scripts/audit/data_contract_check.py",
+     "last_review": "2026-08-16", "next_review": "2026-11-16",
+     "kill_criteria_ref": "계약 위반 = 데이터 결함 의심이 기본값 (계약 완화는 실물 전수 확인 후만 — 8/16 우선주 티커 선례)"}
   ]
 }

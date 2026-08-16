@@ -1,0 +1,28 @@
+{
+  "_meta": {
+    "contract_for": "factor_engine_kr_v1.json (및 후속 버전)",
+    "created": "2026-08-16",
+    "sot": "docs/FACTOR_ENGINE_DESIGN_2026_08_16.md 계약 절",
+    "why": "RULE 12 — 산출물이 자기 입으로 말하게 한다. '어떤 점수·운영 여부·검출하한·한계'가 _meta 에 없으면 타 세션이 연구 산출물을 운영 근거로 오독한다 (C3 사고 선례)."
+  },
+  "file": "data/analysis/factor_engine_kr_v1.json",
+  "format": "json (jsonl 아님)",
+  "required_meta_keys": [
+    "artifact", "contract", "frozen_oos", "generated_at",
+    "known_limitations", "min_detectable_note", "n_trials",
+    "pit", "score_system", "universe"
+  ],
+  "load_bearing_semantics": [
+    "score_system.is_operational = false 필수 — 이 엔진은 연구 산출물이며 운영 점수가 아니다. 운영 반영 = OOS 개봉 + 별도 사전등록 후에만.",
+    "frozen_oos: 2024-08 이후 잠금. 개봉 = 합침/폐기 결정 시 1회 (개봉 기록 의무).",
+    "known_limitations 에 상폐 실현손실 미반영·dy 지급자 한정·as-restated 신고 유지 — 제거 금지 (IC 는 상한으로 읽는다).",
+    "n_trials(=40) 신고 유지 — BH-FDR 의 분모. 팩터 추가 = n_trials 증가 + FDR 재계산."
+  ],
+  "consumer_duties": [
+    "confirmatory 팩터만 후속 설계 근거로 인용 (exploratory 인용 시 등급 병기)",
+    "IC 수치 인용 시 '상한' 한정어 유지 (비용·상폐 전)"
+  ],
+  "validation_rules": {
+    "score_system_is_operational_must_be_false": true
+  }
+}
