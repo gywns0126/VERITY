@@ -165,6 +165,11 @@ def check_registry() -> dict:
     today = date.today()
     overdue, bad = [], []
     tiers = {"critical", "active", "research"}
+    # 🚨 2026-08-16 — 개정 주기 규율 (registry._meta.revision_cadence).
+    #   개정일이 임의로 흩어지면 "지금 고칠 때인가" 가 매일 판단 대상이 되고, 조정이 상시화된다.
+    #   실측: 정렬 전 16모델이 날짜 4종으로 흩어져 있었고 11/15·11/16 은 등록 시점의 우연이었다.
+    kinds = {"revision", "health_check", "event_verdict"}
+    annual = (reg.get("_meta", {}).get("revision_cadence", {}) or {}).get("policy", "")
     for m in reg.get("models", []):
         mid = m.get("id", "?")
         if m.get("tier") not in tiers:
@@ -172,6 +177,14 @@ def check_registry() -> dict:
         for k in ("status", "sot", "next_review", "kill_criteria_ref"):
             if not m.get(k):
                 bad.append(f"{mid}: {k} 부재")
+        if m.get("review_kind") not in kinds:
+            bad.append(f"{mid}: review_kind 미분류 (revision|health_check|event_verdict)")
+        if "미정" in str(m.get("kill_criteria_ref") or ""):
+            bad.append(f"{mid}: kill_criteria 미정 — 관측변수·수치·시점·자동행동 4요소로 채울 것")
+        # 정기 개정 대상은 연례 고정일에만 (사건 판정은 예외)
+        if m.get("review_kind") in ("revision", "health_check") and \
+                str(m.get("next_review", ""))[5:] != "12-31":
+            bad.append(f"{mid}: next_review {m.get('next_review')} — 정기 개정은 연례 고정일(12-31)만")
         try:
             nr = datetime.strptime(m["next_review"], "%Y-%m-%d").date()
             if nr < today:
