@@ -52,6 +52,20 @@ GEMINI_MODEL_DEFAULT = (os.environ.get("GEMINI_MODEL_DEFAULT") or GEMINI_MODEL).
 GEMINI_MODEL_CRITICAL = (os.environ.get("GEMINI_MODEL_CRITICAL") or _GEMINI_PRO_FALLBACK).strip()
 GEMINI_PRO_ENABLE = os.environ.get("GEMINI_PRO_ENABLE", "1").strip().lower() in ("1", "true", "yes", "on")
 GEMINI_CRITICAL_TOP_N = _env_int("GEMINI_CRITICAL_TOP_N", 3)
+
+# 🚨 2026-08-16 (PM 결정) — 종목별 LLM 판정(ai_verdict) 기본 OFF.
+#   근거: ① 베이스라인 v1.0 에서 LLM 파생 3종이 채점에서 빠졌다(가중 29.6%→0)
+#         ② 배지 권한은 2026-08-03 display_verdict 게이트가 Brain 으로 되돌렸다(LLM 은 강등만)
+#         ③ 공개 발행물 출현 0회 — operator-web Workspace.tsx:406 에서 160자 잘린 회색 줄이 전부
+#         ④ PM 확인 "안봄"
+#   실측: 최근 30일 stock_analysis 2,130회 $5.85. 비용이 아니라 **아무도 안 읽는 판정이
+#         매일 생산되는 상태**가 문제다 — 남겨두면 언젠가 또 점수로 스며든다(29.6%가 그렇게 생겼다).
+#   🚨 LLM 을 끄는 게 아니라 **자리를 옮긴다**: 판정(verdict) → 공시 판독(fact extraction).
+#      살아있는 경로 = dart_litigation(소송·우발부채·약정·제재) · dart_audit_signals(계속기업·강조사항)
+#      · dart_related_party(터널링) · clients_pplx(신규 사건) · macro_synthesis.
+#      되돌림 = GEMINI_VERDICT_ENABLE=1
+GEMINI_VERDICT_ENABLE = os.environ.get(
+    "GEMINI_VERDICT_ENABLE", "0").strip().lower() in ("1", "true", "yes", "on")
 # 챗 엔진 전용 — 단순 Q&A 는 Flash-Lite (Flash 대비 약 50% 비용)
 GEMINI_MODEL_CHAT = (os.environ.get("GEMINI_MODEL_CHAT") or "gemini-2.5-flash-lite").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")

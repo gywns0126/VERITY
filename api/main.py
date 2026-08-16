@@ -4279,12 +4279,20 @@ def main():
                 ev for ev in portfolio.get("global_events", [])
                 if ev.get("trigger_source") and ev.get("affected_tickers")
             ]
-            with tracer.step("gemini_analysis"):
-                analyzed_subset = analyze_batch(
-                    gemini_candidates,
-                    macro_context=macro,
-                    geo_triggers=active_geo_triggers or None,
-                )
+            # 🚨 2026-08-16 — 종목별 LLM 판정 기본 OFF (config.GEMINI_VERDICT_ENABLE).
+            #   LLM 은 채점자가 아니라 판독자다. 판정은 Brain(문헌 4군)이 하고, LLM 예산은
+            #   공시 원문 판독(dart_litigation·audit_signals·related_party)으로 간다.
+            from api.config import GEMINI_VERDICT_ENABLE
+            if not GEMINI_VERDICT_ENABLE:
+                analyzed_subset = []
+                print("  Gemini 종목판정 OFF — 공시 판독 경로로 이관 (GEMINI_VERDICT_ENABLE=1 로 복구)")
+            else:
+                with tracer.step("gemini_analysis"):
+                    analyzed_subset = analyze_batch(
+                        gemini_candidates,
+                        macro_context=macro,
+                        geo_triggers=active_geo_triggers or None,
+                    )
             analyzed_tickers = {s["ticker"] for s in analyzed_subset}
             passthrough = [s for s in candidates if s.get("ticker") not in analyzed_tickers]
             analyzed = analyzed_subset + passthrough
@@ -4302,8 +4310,10 @@ def main():
     # ── STEP 6.2: full 전용 — Gemini Pro 상위 N개 재판단 (하이브리드 라우팅) ──
     gemini_pro_calls = 0
     if effective_mode == "full":
-        from api.config import GEMINI_PRO_ENABLE, GEMINI_CRITICAL_TOP_N
-        if GEMINI_PRO_ENABLE:
+        from api.config import GEMINI_PRO_ENABLE, GEMINI_CRITICAL_TOP_N, GEMINI_VERDICT_ENABLE
+        # Pro 재판단도 recommendation·ai_verdict 를 덮어쓰는 **판정**이라 같은 스위치를 받는다
+        # (2026-08-16 — 판정은 Brain, LLM 은 판독). 종전엔 Flash 만 끄고 Pro 가 살아 판정을 계속 썼다.
+        if GEMINI_PRO_ENABLE and GEMINI_VERDICT_ENABLE:
             print(f"\n[6.2] Gemini Pro 상위 {GEMINI_CRITICAL_TOP_N}개 재판단")
             try:
                 pro_results = reanalyze_top_n_pro(
