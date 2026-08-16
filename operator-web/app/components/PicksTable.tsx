@@ -61,7 +61,15 @@ export default function PicksTable({ recs, status }: { recs: Rec[]; status: "loa
         const sb = brainOf(b).score
         return (sb === null ? -1 : sb) - (sa === null ? -1 : sa)
     })
-    const shown = all ? sorted : sorted.slice(0, 12)
+    // 🚨 2026-08-16 (PM) — "buy 인 경우면 0개든 100개든 표시하라."
+    //   종전 = 상위 12개만 보이고 나머지는 접힘. BUY 가 13번째면 접힌 채로 안 보였다.
+    //   이제 = **BUY·STRONG_BUY 는 개수와 무관하게 항상 전부 표시**하고,
+    //          접기는 그 아래 등급(WATCH 이하)에만 적용한다. 판단 대상은 자르지 않는다.
+    const isBuy = (r: Rec) => String(r.recommendation || "").indexOf("BUY") >= 0
+    const buys = sorted.filter(isBuy)
+    const rest = sorted.filter((r) => !isBuy(r))
+    const shown = all ? sorted : [...buys, ...rest.slice(0, Math.max(0, 12 - buys.length))]
+    const hidden = sorted.length - shown.length
 
     const th = { fontSize: 10, fontWeight: 700 as const, color: c.faint, textAlign: "right" as const, padding: "4px 8px", whiteSpace: "nowrap" as const }
     const td = { fontSize: 12, color: c.sub, textAlign: "right" as const, padding: "6px 8px", whiteSpace: "nowrap" as const, ...NUM }
@@ -158,9 +166,10 @@ export default function PicksTable({ recs, status }: { recs: Rec[]; status: "loa
                 </div>
             )}
 
-            {sorted.length > 12 ? (
+            {hidden > 0 || all ? (
                 <button onClick={() => setAll((v) => !v)} style={{ border: "none", background: c.hi, color: c.sub, borderRadius: 9, padding: "7px 0", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT }}>
-                    {all ? "접기" : `전체 ${sorted.length}종목 보기`}
+                    {/* BUY 는 이미 전부 펴져 있다 — 접힌 것은 WATCH 이하뿐임을 문구로 밝힌다 */}
+                    {all ? "접기" : `관망 이하 ${hidden}종목 더 보기 (매수 ${buys.length}종목은 전부 표시 중)`}
                 </button>
             ) : null}
         </div>
