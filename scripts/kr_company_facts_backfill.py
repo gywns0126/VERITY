@@ -57,11 +57,15 @@ MAPPING_PATH = os.path.join(DATA, "mapping.json")
 LISTED_PATH = os.path.join(DATA, "kr_listed.json")
 DIVIDENDS_PATH = os.path.join(DATA, "dividends_kr.json")
 
-# 🚨 2026-08-16 kam 추가 — 감사인이 지목한 위험(핵심감사사항). 2018년부터 의무 기재인데
-#   우리 커버리지가 0 이었다. DartScout 이 같은 document 에서 kam_text 를 additive 슬라이스하므로
-#   추가 DART 호출 0 — litigation·related_party 와 같은 fetch 를 나눠 쓴다.
-LLM_AXES = {"related_party", "litigation", "business", "kam"}
-FREE_AXES = {"dividends", "cb_bw", "shareholders", "chain"}
+# 🚨 2026-08-17 kam 을 LLM → FREE 로 이동. PM 지시 "재미나이 호출이 무의미하면 아예 배제해".
+#   실측 근거: Gemini 가 5/5 종목을 `kam_count=0` 으로 냈고, 원인은 모델이 아니라 슬라이스가
+#   사업보고서 표지를 담은 것이었다(`'핵심감사사항'` = raw_text 8회 vs kam_text 0회).
+#   그런데 필요한 사실이 **이미 정형 표**('V. 회계감사인의 감사의견', 8열 고정)에 있어
+#   LLM 이 할 일이 없다. 결정론 파서가 감사인·의견·계속기업·강조사항·KAM 을
+#   3개 연도 × 개별/연결 6행으로 준다 — LLM 보다 많고, 비용 0, 검증 가능.
+#   ⚠️ 종전 주석의 "추가 DART 호출 0" 도 틀렸다 — raw 캐시가 없었다(7d4e3ff01 에서 신설).
+LLM_AXES = {"related_party", "litigation", "business"}
+FREE_AXES = {"dividends", "cb_bw", "shareholders", "chain", "kam"}
 ALL_AXES = FREE_AXES | LLM_AXES
 
 
@@ -371,9 +375,12 @@ def run_llm_axis(axis, univ, year, delay, dry, limit=None) -> Dict[str, int]:
     total = len(sd)
     if limit:
         sd = {tk: sd[tk] for tk in _cap(list(sd.keys()), limit)}
+    # 🚨 축마다 실제 과금 여부가 다르다 — kam 은 2026-08-17 부터 결정론 파서(LLM 0)다.
+    #   전 축에 "Gemini 호출 발생" 을 찍으면 경고가 거짓이 되고, 거짓 경고는 무시된다.
+    _paid = axis in LLM_AXES
     print(f"  [{axis}] 대상 {len(sd)}/{total}"
           + (f" (--limit {limit} 적용)" if limit else "")
-          + "  🚨 Gemini 호출 발생")
+          + ("  🚨 Gemini 호출 발생" if _paid else "  결정론 파싱 (LLM 0 · 과금 0)"))
     if dry or not sd:
         return {"todo": len(sd), "ok": 0}
     if axis == "related_party":

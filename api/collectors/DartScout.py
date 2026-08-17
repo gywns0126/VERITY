@@ -17,6 +17,7 @@ import functools
 import gzip
 import json
 import os
+import re
 import sys
 import time
 from typing import Any, Dict, List, Optional
@@ -519,25 +520,23 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
                 ppe_note = best[:14000]
                 break
 
-    # 🚨 2026-08-16 핵심감사사항(KAM) additive 슬라이스 — PM 승인.
-    #   2018년부터 상장사 감사보고서 **의무 기재**. 감사인이 "이 회사에서 가장 위험하다고 본 것"을
-    #   산문으로 직접 적어둔 것 — 전문가의 위험 평가가 전 상장사에 매년 무료로 공개된다.
-    #   🚨 그런데 우리 코드에 'KAM'·'핵심감사사항' 문자열이 **0건**이었다 (2026-08-16 전수 grep).
-    #   정형 필드가 없고 내용이 회사마다 달라 키워드 매칭으로는 못 잡는다 → LLM 판독 대상.
-    #   기존 dart_audit_signals 는 계속기업·강조사항만 본다(둘은 정형 문구라 키워드로 잡힘).
-    #   경계: KAM 헤딩 ~ 다음 표준 헤딩. 정밀 우선 — 못 찾으면 미매칭(garbage 회피), 14K cap.
-    kam_patterns = [
-        r"(?is)핵심\s*감사\s*사항(.*?)(?:기타\s*사항|재무제표에\s*대한\s*경영진|감사인의\s*책임|그\s*밖의\s*사항|강조\s*사항)",
-        r"(?is)Key\s+Audit\s+Matters?(.*?)(?:Other\s+Matter|Responsibilit|Emphasis\s+of\s+Matter)",
-    ]
-    kam_text = ""
-    for pat in kam_patterns:
-        km = re.findall(pat, cleaned)
-        if km:
-            best = max(km, key=len).strip()
-            if len(best) > 150:
-                kam_text = best[:14000]
-                break
+    # 🚨 2026-08-17 — 감사의견 표('V. 회계감사인의 감사의견') additive 슬라이스.
+    #   8/16 의 `kam_text` 를 이것으로 **교체**했다. 그 패턴은 실측에서 사업보고서 **표지**
+    #   (회사명·대표이사·소재지)를 담았다 — `'핵심감사사항'` 출현이 `raw_text` 8회 vs
+    #   `kam_text` **0회**. `핵심\s*감사\s*사항` 이 표의 **열 이름**으로도 등장하므로
+    #   그 지점부터 산문 헤딩까지 잡으면 표 뒤 문서 경계를 넘어 표지로 흘러간다.
+    #
+    #   교체 근거: 필요한 사실이 **정형 표**에 있다. 8열 `\n\n` 구분 고정이고 마지막 열이
+    #   핵심감사사항이며, 당기/전기/전전기 × 개별/연결 6행이 한 번에 나온다.
+    #   → LLM 불필요 (`api.analyzers.dart_kam.extract_kam` 이 결정론 파싱).
+    #   🚨 `raw_text`(= 'II. 사업의 내용' 슬라이스)로는 안 된다 — 섹션 V 가 그 밖이라
+    #   실측 커버리지가 2/10 이었고 그 2건도 슬라이스가 길어 우연히 걸친 것이었다.
+    #   여기서는 `cleaned`(전체 문서)에서 표 머리를 직접 찾는다.
+    audit_opinion_text = ""
+    _ah = re.search(r"사업연도[\s\S]{0,400}?핵심\s*감사\s*사항", cleaned)
+    if _ah:
+        # 표 머리 앞 200자(섹션 제목 문맥) + 뒤 6000자(3개 연도 × 2행이면 충분)
+        audit_opinion_text = cleaned[max(0, _ah.start() - 200):_ah.end() + 6000]
 
     # 2026-06-04 going-concern/강조사항 — 감사보고서가 같은 ZIP 번들 시 포착.
     # doubt 전용 구문만 (정상 boilerplate "계속기업을 전제로" 회피, false-positive 차단).
@@ -561,8 +560,10 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
         "litigation_char_count": len(litigation),
         "ppe_note_text": ppe_note,
         "ppe_note_char_count": len(ppe_note),
-        "kam_text": kam_text,
-        "kam_char_count": len(kam_text),
+        # 🚨 2026-08-17 — `kam_text`(표지를 담던 오슬라이스) → `audit_opinion_text` 교체.
+        #   소비처는 `dart_kam.extract_kam` 하나이며 결정론 파싱으로 전환됐다.
+        "audit_opinion_text": audit_opinion_text,
+        "audit_opinion_char_count": len(audit_opinion_text),
         "going_concern_doubt": _gc["going_concern_doubt"],
         "emphasis_of_matter": _gc["emphasis_of_matter"],
         "going_concern_severity": _gc["severity"],
@@ -617,6 +618,65 @@ def _raw_cache_put(corp_code: str, bsns_year: str, doc: Dict[str, Any]) -> None:
     except OSError as e:
         # 이 모듈은 logging 대신 stderr 관례 — 조용히 죽지 않게 반드시 남긴다
         sys.stderr.write(f"[dart_raw_cache] 저장 실패 {corp_code}_{bsns_year}: {e}\n")
+
+
+_AUDIT_YEAR_RE = re.compile(r"^제\s*[\d,]+\s*기")
+_AUDIT_KIND = ("감사보고서", "연결감사보고서")
+
+
+def parse_audit_opinion_table(raw_text: str) -> Optional[Dict[str, Any]]:
+    """사업보고서 'V. 회계감사인의 감사의견' 표를 **결정론 파싱** (LLM 미사용).
+
+    🚨 2026-08-17 — KAM 판독을 LLM 으로 하려다 실측에서 기각했다. PM 지시
+    "재미나이 호출이 무의미하면 아예 배제해" 에 대한 답이 이 함수다.
+
+    ① LLM 은 5/5 종목을 `kam_count=0` 으로 냈다. 원인은 모델이 아니라 내가 어제 만든
+       `kam_text` 슬라이스가 **사업보고서 표지**(회사명·대표이사·소재지)를 담고 있었기
+       때문이다 — `'핵심감사사항'` 출현이 `raw_text` 8회 vs `kam_text` **0회**.
+    ② 그런데 정작 필요한 사실이 **이미 정형 표**에 있다. 8열 `\\n\\n` 구분 고정이고
+       마지막 열이 핵심감사사항이다. 즉 LLM 이 할 일이 없다.
+    ③ 결정론 파서가 LLM 보다 **더 많이** 준다 — 감사인·감사의견·계속기업 불확실성·
+       강조사항·핵심감사사항을 **3개 연도(당기/전기/전전기) × 개별/연결** 6행으로.
+       감사인 교체(한미→삼일 · 한영→서현)도 그대로 보인다.
+    → 비용 0 · 네트워크 0(이미 캐시된 `raw_text` 만 씀) · 결정론 · 추출 정확도로 검증 가능.
+
+    🚨 `사업연도` 는 **병합 셀**이라 두 번째 행부터 생략된다(8열 → 7필드).
+       고정폭 슬라이싱은 여기서 깨진다 — 토큰 스트림으로 읽는다.
+
+    반환: {"columns": [...], "rows": [{사업연도, 구분, 감사인, 감사의견, ..., 핵심감사사항}]}
+          표가 없으면 None. 🚨 사업보고서에 감사보고서가 첨부되지 않은 종목이 실제로 많다
+          (표본 5 중 3) — 그건 결손이 아니라 **별도 공시**이므로 None 이 정상 응답이다.
+    """
+    if not raw_text:
+        return None
+    i = raw_text.find("핵심감사사항")
+    if i < 0:
+        return None
+    # 헤더 시작 = 마지막 열(핵심감사사항) 직전 400자 안의 "사업연도"
+    h = raw_text.rfind("사업연도", max(0, i - 400), i)
+    if h < 0:
+        return None
+    cols = [f.strip() for f in re.split(r"\n\s*\n", raw_text[h:i + len("핵심감사사항")]) if f.strip()]
+    if len(cols) < 6 or cols[-1] != "핵심감사사항":
+        return None                     # 헤더가 온전하지 않으면 추측하지 않는다
+    body = [f.strip() for f in
+            re.split(r"\n\s*\n", raw_text[i + len("핵심감사사항"):i + 6000]) if f.strip()]
+    tail = cols[1:]                     # 병합 셀(사업연도)을 뺀 나머지 열
+    rows: List[Dict[str, Any]] = []
+    year: Optional[str] = None
+    k = 0
+    while k < len(body):
+        tok = body[k]
+        if _AUDIT_YEAR_RE.match(tok):
+            year = tok
+            k += 1
+            continue
+        if tok in _AUDIT_KIND and year and k + len(tail) <= len(body):
+            rows.append({"사업연도": year, **dict(zip(tail, body[k:k + len(tail)]))})
+            k += len(tail)
+            continue
+        break                           # 표 밖으로 나갔다 — 더 읽지 않는다
+    return {"columns": cols, "rows": rows} if rows else None
 
 
 def fetch_business_facilities_raw(
