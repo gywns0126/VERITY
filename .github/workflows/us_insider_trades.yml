@@ -88,6 +88,14 @@ jobs:
         continue-on-error: true
         run: python -m api.collectors.us_short_pressure
 
+      - name: Build US IPO watch (SEC S-1 → 424B4 → 8-A12B 파이프라인)
+        # 2026-08-17 신설. ipo_scout 는 DART 전용이라 미장 상장 전 파이프라인이 비어 있었다.
+        # 🚨 주간(ipo_watch.yml)이 아니라 **여기 일간**에 붙인 이유 = 이 신호의 값이
+        #    "상장 임박" 이다. 424B4(공모가 확정) → 상장까지 보통 하루라 주 1 회면 대부분
+        #    지나간 뒤에 본다. 조회량 ~70건(인덱스 30 + 원문·submissions 40)이라 가볍다.
+        continue-on-error: true
+        run: python -m api.collectors.us_ipo_scout
+
       - name: Commit data/us_insider_trades.json
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
         # [[feedback_data_collection_verification_mandatory]] specific path commit.
@@ -99,7 +107,7 @@ jobs:
           # 워크플로가 죽지 않도록 존재할 때만 stage ([[feedback_data_collection_verification_mandatory]]).
           for f in data/us_short_interest.json data/us_short_interest_cache.json \
                    data/us_etf.json data/us_etf_cache.json data/us_etf_universe.json \
-                   data/us_short_pressure.json; do
+                   data/us_short_pressure.json data/us_ipo_watch.json; do
             if [ -f "$f" ]; then git add "$f"; fi
           done
           if git diff --staged --quiet; then
