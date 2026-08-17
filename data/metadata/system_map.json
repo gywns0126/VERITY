@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-08-17T22:11:03.464457+09:00",
+  "generated_at": "2026-08-17T22:55:35.437207+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 281497,
-    "python_modules": 862,
+    "code_lines_tsx_py": 282015,
+    "python_modules": 863,
     "tsx_components": 133,
-    "json_data_files": 1764,
-    "json_total_tracked": 1783,
+    "json_data_files": 1765,
+    "json_total_tracked": 1784,
     "workflows": 78,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 7536
+    "git_tracked_files": 7539
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 72,
+      "count": 73,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -64,6 +64,7 @@
         "api/collectors/sec_13f_collector.py",
         "api/collectors/sentiment_engine.py",
         "api/collectors/stocktwits_sentiment.py",
+        "api/collectors/us_ipo_scout.py",
         "api/collectors/us_naver_code.py",
         "api/collectors/x_sentiment.py",
         "api/cron/price_pulse.py",
@@ -715,7 +716,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1764
+      "count": 1765
     },
     "validation": {
       "label": "검증",
@@ -730,7 +731,7 @@
     }
   },
   "python_by_dir": {
-    "api": 441,
+    "api": 442,
     "tests": 233,
     "scripts": 117,
     "vercel-api": 59,
