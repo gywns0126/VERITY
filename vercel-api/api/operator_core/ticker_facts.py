@@ -106,6 +106,10 @@ LOCAL_FILES = [
     ("data/dart_litigation_cache.json", "DART 소송·우발채무(심화)", False),
     ("data/dart_related_party_cache.json", "DART 특수관계자 거래(심화)", False),
     ("data/dart_cb_bw_cache.json", "DART CB·BW 희석(심화)", False),
+    # 🚨 2026-08-16 신설 — 감사인이 직접 지목한 위험. 2018년부터 의무 기재인데 우리가
+    #   한 번도 읽지 않던 자료다(전수 grep 0건). 판정이 아니라 **사실**이라 조인에 싣는다.
+    #   이 줄이 없으면 판독 산출이 스냅샷에만 남아 아무도 안 읽는다 — ai_verdict 가 그렇게 죽었다.
+    ("data/dart_kam_cache.json", "핵심감사사항 KAM (감사인 지목 위험)", False),
     # 2026-08-09 중·소형주 채움 — `scripts/kr_company_facts_backfill.py` 산출.
     #   기존 group_structure(20종)는 ALL_STOCKS=45 에 묶여 있었다. 이쪽은 코너 전량 대상.
     ("data/kr_major_shareholders.json", "최대주주 현황(DART)", False),
@@ -115,6 +119,11 @@ LOCAL_FILES = [
     ("data/us_form144.json", "US Form 144 (내부자 매도 예고)", False),
     ("data/us_options.json", "US 옵션 체인(IV·스큐·PC비율)", False),
     ("data/us_sector_cache.json", "US 섹터", True),
+    # 🚨 2026-08-17 신설 — 미장 공매도 압력 3축(FINRA 일별 공매도 · Reg SHO 임계종목 · SEC FTD).
+    #   FINRA 파일은 us_market_observations 가 **이미 매일 받고 있었는데** 시장 aggregate 한
+    #   숫자로 접고 종목별 행을 버렸다. 같은 바이트에서 종목 축만 사라지던 것이라 수집이 아니라
+    #   폐기가 결손이었다. threshold/FTD 는 신규. 상세 = api/collectors/us_short_pressure.py
+    ("data/us_short_pressure.json", "US 공매도 압력(FINRA·Reg SHO·FTD)", True),
 ]
 
 # 오퍼레이터 private bucket (Supabase). 인증 없으면 skip.

@@ -78,6 +78,16 @@ jobs:
           US_ETF_MAX_SECONDS: '900'
         run: python -m api.builders.us_etf_public_builder
 
+      - name: Build US short pressure (FINRA 일별 공매도 · Reg SHO 임계 · SEC FTD)
+        # 2026-08-17 신설. 종목별 공매도 압력 3축 — 전부 무료 공개 소스(FINRA CDN / NASDAQ /
+        # NYSE / SEC), 인증 0. 여기 붙인 이유 = 같은 미장·일 1회 축이고 신규 cron 을 늘리지
+        # 않으려는 것 ([[project_cron_overload_2026_08_14]]). KST 13:00 이면 직전 미국 세션
+        # 파일이 올라와 있고, 없으면 수집기가 최대 5거래일까지 거슬러 최신본을 쓴다.
+        # 🚨 전 소스 실패 시 수집기가 exit 1 로 죽는다(빈 파일 덮기 금지) → continue-on-error
+        #    로 감싸 앞 스텝 산출물 commit 을 막지 않게 한다.
+        continue-on-error: true
+        run: python -m api.collectors.us_short_pressure
+
       - name: Commit data/us_insider_trades.json
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
         # [[feedback_data_collection_verification_mandatory]] specific path commit.
@@ -88,7 +98,8 @@ jobs:
           # short_interest = continue-on-error 스텝 산출. 첫 실행/실패 시 파일 부재 → add 실패로
           # 워크플로가 죽지 않도록 존재할 때만 stage ([[feedback_data_collection_verification_mandatory]]).
           for f in data/us_short_interest.json data/us_short_interest_cache.json \
-                   data/us_etf.json data/us_etf_cache.json data/us_etf_universe.json; do
+                   data/us_etf.json data/us_etf_cache.json data/us_etf_universe.json \
+                   data/us_short_pressure.json; do
             if [ -f "$f" ]; then git add "$f"; fi
           done
           if git diff --staged --quiet; then

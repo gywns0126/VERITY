@@ -119,6 +119,11 @@ LOCAL_FILES = [
     ("data/us_form144.json", "US Form 144 (내부자 매도 예고)", False),
     ("data/us_options.json", "US 옵션 체인(IV·스큐·PC비율)", False),
     ("data/us_sector_cache.json", "US 섹터", True),
+    # 🚨 2026-08-17 신설 — 미장 공매도 압력 3축(FINRA 일별 공매도 · Reg SHO 임계종목 · SEC FTD).
+    #   FINRA 파일은 us_market_observations 가 **이미 매일 받고 있었는데** 시장 aggregate 한
+    #   숫자로 접고 종목별 행을 버렸다. 같은 바이트에서 종목 축만 사라지던 것이라 수집이 아니라
+    #   폐기가 결손이었다. threshold/FTD 는 신규. 상세 = api/collectors/us_short_pressure.py
+    ("data/us_short_pressure.json", "US 공매도 압력(FINRA·Reg SHO·FTD)", True),
 ]
 
 # 오퍼레이터 private bucket (Supabase). 인증 없으면 skip.
