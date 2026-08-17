@@ -87,10 +87,21 @@ def log_prediction(
     if source:
         pid += f"-{source.split('.')[0]}"  # "shadow_funnel.v0" → suffix "shadow_funnel"
 
+    # 🚨 2026-08-17 — 팩터 산식 버전 도장 (PREREG_QUANT_FACTOR_FIX ⑤ 이행).
+    #   `spec_version` 은 이 trail 스키마의 버전이고, `factor_version` 은 **점수를 만든
+    #   산식**의 버전이다. 둘은 독립적으로 움직인다 — 스키마가 그대로여도 산식이 바뀌면
+    #   IC 를 섞으면 안 된다. 8/09 백테스트에서 본페로니를 통과한 축은 volatility 4셀이
+    #   유일한데, 이 도장이 없으면 그 확증이 어느 정의를 가리키는지 영구히 갈 수 없다.
+    try:
+        from api.quant.factors.version import factor_version as _fv
+        _factor_version = _fv()
+    except Exception:                       # noqa: BLE001 — 도장 실패가 예측 로깅을 막지 않는다
+        _factor_version = "unknown"
     entry = {
         "pred_id": pid,
         "created_at": created_iso,
         "spec_version": spec_version,
+        "factor_version": _factor_version,
         "source": source or "production",   # IC 집계 source 분리 (Shadow Funnel Scoring Spec v0 §5)
         "target_type": target_type,
         "target": target,

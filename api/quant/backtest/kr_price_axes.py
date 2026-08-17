@@ -36,6 +36,8 @@ import sys
 import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from api.quant.factors.version import factor_version as _factor_version
+
 from api.quant.backtest.kr_fundamental import (   # v1.1 과 같은 방법론 부품 재사용
     DELIST_HAIRCUT,
     DELIST_PATH,
@@ -420,6 +422,11 @@ def run(lake_dir: str, out_path: str = OUT_PATH, trail_path: str = TRAIL_PATH,
         },
         "coverage": coverage, "results": results,
         "h3_axis_independence": h3, "h4_vs_fundamental": h4, "pbo": pbo,
+        # 🚨 2026-08-17 — 산식 버전 도장 (PREREG_QUANT_FACTOR_FIX ⑤ 이행).
+        #   이 산출물이 이 시스템에서 **유일하게 본페로니를 통과한 결과**를 담고 있다
+        #   (volatility 4셀 · IC 0.072~0.109 · |t| 4.95~6.52). 산식이 바뀐 뒤 재실행분과
+        #   섞이면 개선인지 정의 변경인지 판별 불가가 된다. 버전은 순위를 바꾸는 변경에서만 올린다.
+        "factor_version": _factor_version(),
         "note": "🚨 관측 산출물. 점수·집행 입력 0.",
     }
     tmp = out_path + ".tmp"

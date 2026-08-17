@@ -35,26 +35,50 @@
       "weighting": "1/N 동일가중 — 군별 상대 성과 추정이 우리 데이터로 불가(1년 축적 시 검출하한 0.054 > 확증 IC 하위 절반). DeMiguel-Garlappi-Uppal 2009.",
       "components": {
         "graham_value": {
-          "basis": "literature",
+          "basis": "literature_family+self_thresholds",
           "source": "Graham, Security Analysis / The Intelligent Investor",
-          "family": "value"
+          "family": "value",
+          "_basis_prior_2026_08_16": "literature",
+          "signal_transform": {
+            "binned_points": 14,
+            "threshold_branches": 13,
+            "zscore_or_rank": 0
+          }
         },
         "canslim_growth": {
-          "basis": "literature",
+          "basis": "literature_family+self_thresholds",
           "source": "O'Neil, How to Make Money in Stocks (CANSLIM)",
-          "family": "growth"
+          "family": "growth",
+          "_basis_prior_2026_08_16": "literature",
+          "signal_transform": {
+            "binned_points": 16,
+            "threshold_branches": 14,
+            "zscore_or_rank": 0
+          }
         },
         "quant_quality": {
-          "basis": "literature+confirmed",
+          "basis": "literature_family+self_thresholds+confirmed",
           "source": "Piotroski 2000 · Novy-Marx 2013 · Altman 1968",
           "family": "quality",
-          "self_test": "B군 roa t 6.65 · cfoa t 7.07 (확증)"
+          "self_test": "B군 roa t 6.65 · cfoa t 7.07 (확증)",
+          "_basis_prior_2026_08_16": "literature+confirmed",
+          "signal_transform": {
+            "binned_points": 15,
+            "threshold_branches": 24,
+            "zscore_or_rank": 14
+          }
         },
         "quant_volatility": {
-          "basis": "literature+confirmed",
+          "basis": "literature_family+self_thresholds+confirmed",
           "source": "Ang-Hodrick-Xing-Zhang 2006 · Baker-Bradley-Wurgler 2011",
           "family": "low_volatility",
-          "self_test": "#42 백테스트 t 4.96/6.52 (통과)"
+          "self_test": "#42 백테스트 t 4.96/6.52 (통과)",
+          "_basis_prior_2026_08_16": "literature+confirmed",
+          "signal_transform": {
+            "binned_points": 0,
+            "threshold_branches": 21,
+            "zscore_or_rank": 2
+          }
         }
       },
       "excluded": {
@@ -119,7 +143,14 @@
           "reason": "동결 ×0.0"
         }
       },
-      "open_item_stage_b": "graham/canslim regime 스위칭(×1.5/×0.5, fact.py:366)은 차등 가중이라 1/N 원칙과 배치. v1.0 에서는 기존 동작 유지하고 별도 판단으로 남긴다"
+      "open_item_stage_b": "graham/canslim regime 스위칭(×1.5/×0.5, fact.py:366)은 차등 가중이라 1/N 원칙과 배치. v1.0 에서는 기존 동작 유지하고 별도 판단으로 남긴다",
+      "_label_correction_2026_08_17": {
+        "what": "basis 라벨을 literature → literature_family+self_thresholds 로 정정",
+        "why": "문헌은 **군 선택**(Graham/O'Neil/Piotroski/Novy-Marx/AHXZ/BBW)에만 해당하고 내부 배점(+12/+5 · +15/+8/-15 · F-Score 35점 · realized .35 등)은 자체설정이다. 우리 자체 학술 문서(academic_grounding_library_2026_06_13.md)가 이미 '결정 산식·임계는 어느 논문도 제시하지 않은 임의값 = 자기 가설' 이라 적어뒀는데 헌법 라벨만 그와 불일치했다.",
+        "external_verification": "퍼플렉시티 1차 출처 조회(2026-08-17) — Asness-Frazzini-Pedersen 2019 QMJ(RAS 24(1) 34-112, DOI 10.1007/s11142-018-9470-2)는 순위→z-score→단순평균이 표준이라 명시. 구간화는 표준이 아니며 경계 선택 자체가 은닉 자유도다. 우리 다단계 임계 배점은 F-score 의 0/1 이진성과 달라 배점 크기가 추정 파라미터 = Altman Z 회귀계수와 같은 범주.",
+        "score_change": "없음 — 라벨만 정정. 산식·임계·가중 전부 불변 (RULE 7 쿼터 미소모)",
+        "next": "z-score 동일가중 전환 = PREREG_ZSCORE_EQUAL_WEIGHT_2026_08_17.md (PM 승인 대기, 쿼터 소모)"
+      }
     },
     "_runtime_note_2026_08_16": {
       "status": "🚨 베이스라인 v1.0 (2026-08-16) 이후 — 이 weights 가 곧 실효 가중이다. 문서와 런타임이 처음으로 일치한다.",
