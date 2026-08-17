@@ -29,6 +29,7 @@ import json
 import logging
 import os
 import re
+import sys
 import time
 from typing import Any, Dict, Optional
 
@@ -190,20 +191,38 @@ def analyze_all_kam(stocks: Dict[str, Any],
 
         bf = info.get("business_facilities_raw") or {}
         kam_text = info.get("kam_text") or (bf.get("kam_text") if isinstance(bf, dict) else "")
+        # 🚨 2026-08-17 구간 계측 — 종목당 7분+ 인데 DART 다운로드인지 Gemini 판독인지
+        #   갈릴 근거가 없었다(표본 2로 35시간 배치를 정하려던 상태). 병목이 DART 면
+        #   병렬화가 듣고, Gemini 면 무의미하다. 그 결정을 실측으로 하기 위한 자리다.
+        #   `print` 대신 stderr 즉시 flush — 장시간 배치에서 진척이 보여야 한다.
+        t_fetch = t_llm = 0.0
+        from_cache = None
         if (not kam_text or len(kam_text) < MIN_RAW_TEXT_LENGTH) and auto_fetch_missing and corp_code:
+            _t0 = time.monotonic()
             try:
                 from api.collectors.DartScout import fetch_business_facilities_raw
                 r = fetch_business_facilities_raw(corp_code, year)
                 kam_text = (r or {}).get("kam_text", "")
+                from_cache = bool((r or {}).get("_from_cache"))
             except Exception as e:  # noqa: BLE001
                 logger.warning("[kam] fetch 실패(%s): %s", name, str(e)[:60])
                 kam_text = ""
+            t_fetch = time.monotonic() - _t0
         if not kam_text or len(kam_text) < MIN_RAW_TEXT_LENGTH:
             out[ticker] = {"ticker": ticker, "_skip_reason": "no_kam_text"}
             skipped += 1
+            sys.stderr.write(f"[kam] {ticker} {name[:12]} fetch {t_fetch:5.1f}s"
+                             f"{' (캐시)' if from_cache else ''} · KAM 본문 없음\n")
+            sys.stderr.flush()
             continue
 
+        _t1 = time.monotonic()
         res = analyze_kam(name, kam_text)
+        t_llm = time.monotonic() - _t1
+        sys.stderr.write(f"[kam] {ticker} {name[:12]} fetch {t_fetch:5.1f}s"
+                         f"{' (캐시)' if from_cache else ''} · llm {t_llm:5.1f}s"
+                         f" · 본문 {len(kam_text):,}자\n")
+        sys.stderr.flush()
         if "_skip_reason" in res:
             out[ticker] = {**res, "ticker": ticker}
             skipped += 1
