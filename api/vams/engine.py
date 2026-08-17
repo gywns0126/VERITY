@@ -532,6 +532,21 @@ def _estimate_slippage(order_value: float, adv: float, profile: Optional[dict] =
     return coeff * math.sqrt(max(participation, 0))
 
 
+def _num(v, default: float) -> float:
+    """None·빈문자·비수치를 default 로 접는다.
+
+    🚨 dict.get(k, default) 를 값 검증으로 쓰지 말 것. 그것은 **키 부재**만 막고
+    "키는 있는데 값이 None" 은 통과시킨다 — 산술로 넘어가면 TypeError 다.
+    """
+    if v is None:
+        return default
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return default
+    return f if f == f else default          # NaN 방어
+
+
 def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
     """V6: 매수 전 포트폴리오 레벨 노출 상한 체크.
     섹터 집중, 베타, 테마 집중을 확인해 blocked/reason 반환."""
@@ -545,21 +560,38 @@ def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
     sector_exposure: dict = {}
     portfolio_beta_sum = 0.0
     portfolio_weight_sum = 0.0
+    beta_missing = 0
 
     for h in holdings:
-        h_value = h.get("current_price", 0) * h.get("quantity", 0)
+        # 🚨 2026-08-17 — dict.get(k, default) 는 **키가 없을 때만** default 를 준다.
+        #   키가 있는데 값이 None 이면 None 이 그대로 나온다. cc18f344f(8/11)가
+        #   가드 입력을 영속하려고 "beta": stock.get("beta") 를 저장했는데 추천
+        #   파이프라인에 beta 키가 없어 전 보유 종목이 beta=None 이 됐고,
+        #   h_beta * h_pct 가 TypeError 로 파이프라인을 죽였다
+        #   (daily_analysis 5연속 실패, 8/16 16:07Z~). 값 검증을 default 에 맡기지 않는다.
+        h_value = _num(h.get("current_price"), 0.0) * _num(h.get("quantity"), 0.0)
         h_pct = h_value / total_asset * 100 if total_asset > 0 else 0
         h_sector = (h.get("sector") or "Unknown").strip()
         sector_exposure[h_sector] = sector_exposure.get(h_sector, 0) + h_pct
 
-        h_beta = h.get("beta", 1.0)
+        h_beta_raw = h.get("beta")
+        if h_beta_raw is None:
+            beta_missing += 1
+        h_beta = _num(h_beta_raw, 1.0)
         portfolio_beta_sum += h_beta * h_pct
         portfolio_weight_sum += h_pct
+
+    # 🚨 베타가 없으면 전부 1.0 으로 대체되어 이 가드는 "통과" 만 돌려준다.
+    #   조용히 통과시키면 가드가 살아 있는 것처럼 보인다 — 없는 것보다 나쁘다
+    #   ([[feedback_silent_total_failure_guard]]). 대체분을 매 판정에서 신고한다.
+    if beta_missing:
+        print(f"  [exposure] 베타 결측 {beta_missing}/{len(holdings)}종목 → 1.0 대체. "
+              f"이만큼 베타 상한({VAMS_MAX_PORTFOLIO_BETA}) 가드는 판정력이 없다")
 
     current_sector_pct = sector_exposure.get(cand_sector, 0)
     cand_invest = min(
         _get_profile().get("max_per_stock", 2_000_000),
-        portfolio.get("vams", {}).get("cash", 0) * 0.9,
+        _num(portfolio.get("vams", {}).get("cash"), 0.0) * 0.9,
     )
     cand_pct = cand_invest / total_asset * 100 if total_asset > 0 else 0
 
@@ -571,7 +603,7 @@ def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
 
     if portfolio_weight_sum > 0:
         current_beta = portfolio_beta_sum / portfolio_weight_sum
-        cand_beta = candidate_stock.get("beta", 1.0)
+        cand_beta = _num(candidate_stock.get("beta"), 1.0)   # 후보도 동일 None 함정
         new_beta = (portfolio_beta_sum + cand_beta * cand_pct) / (portfolio_weight_sum + cand_pct)
         if new_beta > VAMS_MAX_PORTFOLIO_BETA:
             return {
@@ -587,7 +619,7 @@ def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
     factor_high_pct: dict = {k: 0.0 for k in FACTOR_KEYS}
     factor_low_pct: dict = {k: 0.0 for k in FACTOR_KEYS}
     for h in holdings:
-        h_value = h.get("current_price", 0) * h.get("quantity", 0)
+        h_value = _num(h.get("current_price"), 0.0) * _num(h.get("quantity"), 0.0)   # 위와 동일 None 함정
         h_pct = h_value / total_asset * 100 if total_asset > 0 else 0
         h_qf = (h.get("multi_factor") or {}).get("quant_factors") or {}
         for k in FACTOR_KEYS:
