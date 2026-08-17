@@ -23,7 +23,13 @@ from api.config import (
 )
 
 
-_VOLUME_LEDGER_PATH = os.path.join(
+# 🚨 2026-08-17 — env 우회 신설. 아래 `_DEDUPE_STORE_PATH` 는 처음부터 우회가 있어
+#   테스트가 tmp 로 돌렸는데, 이 원장만 하드코딩이라 **테스트가 운영 원장에 실제로 append**
+#   해왔다. 실측: origin/main 의 telegram_volume.jsonl 2,991행 중 **84행이 픽스처**
+#   ("동일 본문"·"야간 routine 알림"·"긴급 critical" — tests/test_quiet_hours.py 발) ·
+#   6/03 8행 · 8/16 32행 · 8/17 44행. 소비처에 오퍼레이터 콕핏(`cockpit_aggregate.py`)과
+#   `novelty.py` 가 있어 관측이 오염된다. 두 경로의 규약을 대칭으로 맞춘다.
+_VOLUME_LEDGER_PATH = os.environ.get("TELEGRAM_VOLUME_LEDGER_PATH") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "data",
     "telegram_volume.jsonl",

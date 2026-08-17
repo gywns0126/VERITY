@@ -17,6 +17,10 @@ def _set_telegram_env(monkeypatch, tmp_path):
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
     # 영속 dedupe 파일 경로 격리 — 운영 data/ 충돌 방지 (2026-05-12).
     monkeypatch.setenv("TELEGRAM_DEDUPE_STORE_PATH", str(tmp_path / "tg_dedupe.json"))
+    # 🚨 2026-08-17 — 통수 원장도 격리. 이게 없어서 **이 테스트가 운영 원장에 실제로
+    #   append** 해왔다 (origin/main 2,991행 중 84행이 여기서 나온 픽스처).
+    #   dedupe 만 격리하고 원장을 빠뜨린 비대칭이 3개월 넘게 남아 있었다.
+    monkeypatch.setenv("TELEGRAM_VOLUME_LEDGER_PATH", str(tmp_path / "tg_volume.jsonl"))
     yield
 
 
