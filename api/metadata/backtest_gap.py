@@ -19,7 +19,11 @@ from typing import Any, Dict, List, Optional
 
 from api.config import DATA_DIR, now_kst
 
-_PATH = os.path.join(DATA_DIR, "metadata", "backtest_gap.jsonl")
+# 🚨 2026-08-17 — env 우회 신설. 이게 없어서 테스트가 **운영 원장에 실제로 append** 했다
+#   (스위트 1회당 5행 · 005930 진입가 70000.0/80000.0 · 슬리피지 0.0 = 픽스처).
+#   telegram 통수 원장·rule_change_log 와 같은 클래스이며 처방도 같다.
+_PATH = os.environ.get("VERITY_BACKTEST_GAP_PATH") or os.path.join(
+    DATA_DIR, "metadata", "backtest_gap.jsonl")
 
 
 def log_gap(

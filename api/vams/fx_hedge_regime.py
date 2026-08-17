@@ -30,7 +30,11 @@ PREREG = "docs/PREREG_FX_HEDGE_REGIME_2026_08_11.md"
 INITIAL_OP_ID = "fx_hedge_prereg_20260811_initial"
 # 초기 상태 = ON (등록 §2-1 backcast — 마지막 결정적 신호 = 2026-07 초 ≥1,509, 이후 <1,391 관측 0)
 INITIAL_STATE = "ON"
-RULE_LOG_PATH = os.path.join(DATA_DIR, "metadata", "rule_change_log.jsonl")
+# 🚨 2026-08-17 — env 우회 신설. 이게 없어서 테스트가 **운영 원장에 실제로 append** 했다
+#   (스위트 1회당 동일 fx_hedge_regime 이벤트 6행, 전부 같은 초). telegram 통수 원장과
+#   같은 클래스이며 처방도 같다. `stoploss_watch.RULE_LOG_PATH` 도 같은 변수를 읽는다.
+RULE_LOG_PATH = os.environ.get("VERITY_RULE_LOG_PATH") or os.path.join(
+    DATA_DIR, "metadata", "rule_change_log.jsonl")
 
 
 def _usd_stock_value(v: Dict[str, Any]) -> float:

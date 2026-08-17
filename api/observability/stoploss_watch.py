@@ -31,7 +31,9 @@ OUT_PATH = os.path.join(DATA_DIR, "metadata", "stoploss_watch.json")
 # 🚨 규칙 변경 원장은 **전용 파일**이다. portfolio.json 에 두면 안 된다 —
 #   2026-08-09 실측: 손절 커밋 13분 뒤 weekend_news 워크플로가 portfolio.json 을 덮어
 #   rule_change_log 가 사라졌다. 그 파일은 여러 워크플로가 rebase 로 쓰는 공유 산출물이다.
-RULE_LOG_PATH = os.path.join(DATA_DIR, "metadata", "rule_change_log.jsonl")
+# env 우회는 `fx_hedge_regime.RULE_LOG_PATH` 와 같은 변수를 읽는다 (2026-08-17, 테스트 격리).
+RULE_LOG_PATH = os.environ.get("VERITY_RULE_LOG_PATH") or os.path.join(
+    DATA_DIR, "metadata", "rule_change_log.jsonl")
 PREREG = "docs/PREREG_STOPLOSS_CAP_2026_08_09.md"
 
 # 사전등록 §4·§5 등록값 — 여기서 임의로 바꾸지 않는다.
