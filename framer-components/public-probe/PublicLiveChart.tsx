@@ -52,6 +52,13 @@ const DARK = {
     tipBd: "#2d343d", tabActive: "#252b34", skBase: "#222a33", skHi: "#2d3742",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
+/* 차트 영역(가격 플롯 + 거래량) 목표 가로:세로 비. 높이를 **폭에서** 뽑는 근거값이다.
+   1.75 = 모바일에서 안 눌리고 데스크톱에서 안 납작한 지점(2026-08-17 실측 조정).
+   🚨 이 값을 키우면 납작해지고 줄이면 세로로 늘어난다. 프레임 높이로 되돌리지 말 것. */
+const CHART_ASPECT = 1.75
+/* 헤더(가격·52주·기간탭) + x축 + MA범례 + 링크 + 패딩의 합 추정. 이제는 Hprop 을
+   상한으로 환산할 때만 쓰는 보조값이라 오차가 레이아웃을 흔들지 않는다. */
+const CHROME_H = 118
 const WK = ["일", "월", "화", "수", "목", "금", "토"]
 const RANGES = [
     { key: "1M", days: 22 },
@@ -295,7 +302,7 @@ export default function PublicLiveChart(props: Props) {
     const wrapRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [h, setH] = useState(0)
+    // 🚨 높이 상태 없음 — 자기 높이를 읽으면 Fit 순환이 닫힌다(위 ResizeObserver 주석).
     const [full, setFull] = useState<number[][]>(() =>
         RenderTarget.current() === RenderTarget.canvas ? demoCandles() : []
     )
@@ -412,14 +419,20 @@ export default function PublicLiveChart(props: Props) {
         }
     }, [isForeign, rawTk, onCanvas])
 
+    /* 🚨 **폭만 관찰한다. 높이는 절대 읽지 않는다.** (2026-08-17, 되돌리지 말 것)
+       종전엔 같은 ResizeObserver 로 자기 높이(contentRect.height)까지 읽어 `chartH = h - 118`
+       로 썼다. 두 가지가 동시에 깨졌다.
+         ① Fit 무한 성장 — Fit 이면 프레임 높이가 콘텐츠로 정해지는데 그 높이를 다시 읽어
+            차트를 키우니 h↑ → chartH↑ → 콘텐츠↑ → h↑ 로 순환이 닫힌다. PM 이 본 "끝없이
+            아래로 늘어짐" 이 이것이고, 560px 고정은 증상만 막은 우회였다.
+         ② 세로 늘어짐 — 높이가 고정이면 **폭이 줄어도 높이가 안 준다.** 모바일 폭에서
+            플롯이 1.1:1(거의 정사각형)이 돼 캔들이 세로로 늘어난다(데스크톱은 2.3:1 정상).
+       높이 권위를 폭으로 옮기면 둘 다 사라진다 — 순환의 고리가 끊기고, 폭이 줄면 높이도 준다. */
     useEffect(() => {
         const el = wrapRef.current
         if (!el || typeof ResizeObserver === "undefined") return
         const ro = new ResizeObserver((entries) => {
-            for (const e of entries) {
-                setW(e.contentRect.width)
-                setH(e.contentRect.height)
-            }
+            for (const e of entries) setW(e.contentRect.width)
         })
         ro.observe(el)
         return () => ro.disconnect()
@@ -582,7 +595,16 @@ export default function PublicLiveChart(props: Props) {
         }
         const prng = pmax - pmin || 1
         const W = Math.max(240, (w || 800) - 4)
-        const chartH = h > 200 ? Math.max(180, h - 118) : Hprop - 118
+        /* 🚨 차트 높이 = **폭에서 나온다.** 프레임 잔여 높이를 먹지 않는다 (2026-08-17).
+           ASPECT 1.75 = 가격 플롯+거래량을 합친 차트 영역의 가로:세로 목표비.
+           · W 300(모바일) → 171 → 하한 190 적용
+           · W 800(데스크톱) → 457
+           Hprop 은 이제 **상한**으로만 쓴다 — PM 이 캔버스에서 더 낮게 조일 수 있되,
+           폭이 좁을 때 억지로 늘리지는 못한다. 늘리는 방향이 세로 늘어짐의 원인이었다. */
+        const chartH = Math.min(
+            Math.max(190, Math.round(W / CHART_ASPECT)),
+            Math.max(220, Hprop - CHROME_H)
+        )
         const Hv = showVolume !== false ? Math.round(chartH * 0.16) : 0
         const gap = Hv ? 8 : 0
         const padT = 10, padB = 4
@@ -634,7 +656,7 @@ export default function PublicLiveChart(props: Props) {
             closeLine, navLine, closeArea,
             p5: maPath(view.ma5), p20: maPath(view.ma20), p60: maPath(view.ma60),
         }
-    }, [view, w, h, Hprop, showVolume, isEtf])
+    }, [view, w, Hprop, showVolume, isEtf])
 
     const setHoverFromX = (clientX: number) => {
         if (!cv || !svgRef.current) return
@@ -664,7 +686,9 @@ export default function PublicLiveChart(props: Props) {
     const cardFlip = cv ? hoverIdx != null && (hoverIdx as number) > cv.n * 0.5 : false
 
     const wrap: CSSProperties = {
-        width: "100%", height: "100%", minHeight: Math.max(260, Hprop), position: "relative",
+        /* 🚨 height:100% + minHeight:Hprop 였다 → 프레임이 크면 내용이 억지로 늘어났다.
+           이제 콘텐츠가 높이를 정한다(= Framer Fit 이 제대로 잰다). 프레임을 Fit 으로 둘 것. */
+        width: "100%", height: "auto", minHeight: 240, position: "relative",
         background: C.bg, borderRadius: 16, overflow: "hidden", boxSizing: "border-box",
         fontFamily: FONT, padding: "10px 4px 4px", display: "flex", flexDirection: "column",
     }
