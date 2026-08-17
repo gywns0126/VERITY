@@ -273,6 +273,18 @@ def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
     }
 
 
+def _regime_context_safe() -> dict:
+    """국면 맥락 조회 — 실패해도 게이트 산출을 죽이지 않는다.
+
+    🚨 advisory only. 이 값은 어떤 pass/verdict 에도 반영되지 않는다.
+    """
+    try:
+        from api.vams.regime_context import describe
+        return describe()
+    except Exception as e:
+        return {"advisory_only": True, "error": f"국면 맥락 산출 실패: {str(e)[:120]}"}
+
+
 def compute_validation_report(
     portfolio: dict,
     history: list,
@@ -526,5 +538,13 @@ def compute_validation_report(
             "sharpe_redesign_below": VAMS_REDESIGN_SHARPE,
             "regime_drawdown_pct": VAMS_REGIME_DRAWDOWN_PCT,
         },
+        # 🚨 국면 맥락 (PM 승인 2026-08-18) — **판정에 쓰지 않는다. 기록 의무다.**
+        #    VAMS 게이트는 절대 기준이라 국면을 통제하지 않는데, 주식도 국면 의존이
+        #    실측된다(200d MA 위 Sharpe 1.83 vs 아래 −1.03, t=+2.58).
+        #    게이트를 국면 조건부로 바꾸는 것은 지표 선택이 사전등록 대상이라 보류했고,
+        #    대신 판정문에 국면을 병기해 "국면 탓" 과 "실력 탓" 을 사후 분리 가능하게 한다.
+        #    소급 불가한 정보이므로 지금 기록을 시작하는 것이 핵심.
+        #    상세 = docs/KR_REGIME_WATCH_ASSESSMENT_2026_08_18.md
+        "regime_context": _regime_context_safe(),
         "computed_at": now_kst().strftime("%Y-%m-%d %H:%M"),
     }
