@@ -360,9 +360,20 @@ def run_chain(univ, year, delay, dry, limit=None) -> Dict[str, int]:
 
 
 def run_llm_axis(axis, univ, year, delay, dry, limit=None) -> Dict[str, int]:
-    """related_party / litigation / business — Gemini. 캐시 스킵 내장."""
+    """related_party / litigation / business / kam — Gemini. 캐시 스킵 내장.
+
+    🚨 2026-08-17 — `limit` 을 **인자로 받고 쓰지 않고 있었다**. LLM 축 4종 전부 `--limit`
+    이 무시돼, "5회로 나눠 실행(쿼터 20,000/일 공유)" 이라는 문서화된 운용이 성립하지
+    않았다. `--limit 5` 로 파일럿을 돌렸는데 대상 1,498 전량이 시작됐다 (실측, 9분 만에 중단.
+    Gemini 호출 전이라 비용 소모 $0). 자유축이 쓰는 `_cap` 을 동일하게 적용한다.
+    """
     sd = _stocks_dict(univ, year)
-    print(f"  [{axis}] 대상 {len(sd)}  🚨 Gemini 호출 발생")
+    total = len(sd)
+    if limit:
+        sd = {tk: sd[tk] for tk in _cap(list(sd.keys()), limit)}
+    print(f"  [{axis}] 대상 {len(sd)}/{total}"
+          + (f" (--limit {limit} 적용)" if limit else "")
+          + "  🚨 Gemini 호출 발생")
     if dry or not sd:
         return {"todo": len(sd), "ok": 0}
     if axis == "related_party":
