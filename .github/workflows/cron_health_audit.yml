@@ -47,6 +47,22 @@ jobs:
           TELEGRAM_ALLOWED_CHAT_IDS: ${{ secrets.TELEGRAM_ALLOWED_CHAT_IDS }}
         run: python scripts/cron_health_audit.py
 
+      - name: 산출물 대장 재생성 (C4 드리프트 자동 해소)
+        # 🚨 2026-08-17 신설. `build_data_manifest` 를 도는 워크플로가 **0건**이었다.
+        #   크론이 산출물을 만들면 대장이 모르므로 C4 가 발화하고, 사람이 손으로 재생성할
+        #   때까지 tests.yml 이 빨간불이다. 2026-08-17 하루에 3회 발생
+        #   (crypto_exogenous_history · kr_name_map_meta · us_short_pressure).
+        #   이 빈도면 사람이 감사를 무시하는 습관이 생긴다 — 가드가 있으나 마나가 된다.
+        #
+        #   🚨 자동 재생성이 게이트를 약화시키지 않는 이유: 대장은 **인벤토리**이고 노출
+        #   권한을 주지 않는다. `visibility`/`publish` 는 publish allowlist 에서 파생되므로
+        #   재생성이 공개를 승인하지 않으며, C5 유출 검사는 그대로 돈다. 즉 "무엇이
+        #   존재하는가" 만 갱신하고 "무엇을 내보내는가" 는 여전히 allowlist 가 정한다.
+        #
+        #   06:00 KST = 전날 산출물 전부 포착. 실패해도 헬스 감사 커밋을 막지 않는다.
+        continue-on-error: true
+        run: python scripts/audit/build_data_manifest.py
+
       - name: Commit audit jsonl
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증)
         # [[feedback_data_collection_verification_mandatory]] specific path commit
@@ -54,12 +70,17 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/metadata/cron_health_audit.jsonl
+          # 🚨 RULE 4 — 대장 재생성 산출물도 파일별 명시 add. 글롭으로 묶지 않는다
+          #   (2026-08-09 KIS 사고: 글롭 미매칭이 add 를 통째로 실패시켜 멀쩡한 파일까지
+          #   스테이징이 안 됐다). 재생성 스텝이 실패하면 파일이 안 바뀌어 no-op 이 된다.
+          git add data/manifest.json 2>/dev/null || true
+          git add data/metadata/data_contract_report.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "[cron_health_audit] no changes"
             exit 0
           fi
           TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
-          git commit -m "🩺 cron_health_audit ${TODAY_KST}"
+          git commit -m "🩺 cron_health_audit ${TODAY_KST} (+ 산출물 대장)"
           BRANCH="${{ github.ref_name }}"
           PUSHED=false
           for i in 1 2 3; do
