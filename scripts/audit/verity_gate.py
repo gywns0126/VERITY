@@ -195,14 +195,31 @@ def _check_private_docs_sync() -> tuple[str | None, str | None]:
                 f"  {names}{more}\n"
                 "  git --git-dir=.git-private --work-tree=. add -f <경로> && … commit && … push\n"
                 "  (🚨 -f 필수 · add -A 금지 · 명시 경로만 — CLAUDE.md 하이브리드 절)"), None
+    # 🚨 2026-08-17 확장 — docs/ 밖의 private 추적 파일까지. 계기: 같은 날 조사에서
+    #   `private/decisions/verdicts.jsonl` 이 디스크 14행 vs private HEAD **1행**이었다.
+    #   `/private/` 는 public .gitignore 라 판단 trail 13건이 이 디스크에만 있었다.
+    #   docs 사전등록 3건과 **같은 클래스**인데 종전 S4 는 docs/ 만 봐서 못 잡았다
+    #   (= 인스턴스만 막고 클래스를 안 막은 형태. autostash 건과 동일한 실수라 여기서 닫는다).
+    #
+    #   심각도는 **public 사본 유무**로 가른다. public 에도 있으면 그쪽이 SoT 라 지연이
+    #   무해하지만(portfolio.json), private 전용이면 지연 = 유일 백업이 낡은 것이다.
     d = subprocess.run(["git", "--git-dir=" + gd, "--work-tree=" + ROOT,
-                        "status", "--porcelain", "docs/", "CLAUDE.md"],
+                        "status", "--porcelain", "--untracked-files=no"],
                        capture_output=True, text=True, timeout=15, cwd=ROOT)
-    dirty = [l for l in d.stdout.splitlines() if l.strip()]
-    if dirty:
-        return None, (f"private repo 미커밋 {len(dirty)}건 (직전본은 있음): "
-                      + ", ".join(l[3:] for l in dirty[:5]))
-    return None, None
+    dirty = [l[3:].strip().strip('"') for l in d.stdout.splitlines() if l.strip()]
+    if not dirty:
+        return None, None
+    pub = subprocess.run(["git", "-C", ROOT, "ls-files", "--"] + dirty,
+                         capture_output=True, text=True, timeout=15)
+    in_public = {l for l in pub.stdout.splitlines() if l}
+    only_private = [p for p in dirty if p not in in_public]
+    if only_private:
+        return (f"private 전용 파일 {len(only_private)}건 미커밋 — public 에 사본이 없어 "
+                f"**이 디스크가 유일본**이다 (미커밋 총 {len(dirty)}건):\n  "
+                + "\n  ".join(only_private[:8])
+                + "\n  git --git-dir=.git-private --work-tree=. add -f <경로> && … commit && … push"), None
+    return None, (f"private 미커밋 {len(dirty)}건 (전부 public 에도 있어 SoT 는 무사): "
+                  + ", ".join(dirty[:5]))
 
 
 def hook_stop() -> int:
@@ -440,6 +457,30 @@ def _selftest() -> int:  # noqa: C901 — 케이스 나열
         case("S4: .git-private 부재 → 해당 없음(통과)", _check_private_docs_sync() == (None, None))
     finally:
         globals()["ROOT"] = _saved_root
+    # S4 확장 — private 전용(public 사본 없음) 파일이 더러우면 **차단**이어야 한다.
+    #   2026-08-17 계기: verdicts.jsonl 이 디스크 14행 vs private HEAD 1행 (판단 trail 13건 유일본).
+    _gd = os.path.join(ROOT, ".git-private")
+    _priv_only = []
+    if os.path.isdir(_gd):
+        _t = subprocess.run(["git", "--git-dir=" + _gd, "--work-tree=" + ROOT, "ls-files"],
+                            capture_output=True, text=True, timeout=15, cwd=ROOT).stdout.split("\n")
+        _cands = [p for p in _t if p and not p.startswith("docs/") and p != "CLAUDE.md"]
+        if _cands:
+            _p = subprocess.run(["git", "-C", ROOT, "ls-files", "--"] + _cands,
+                                capture_output=True, text=True, timeout=15).stdout.split("\n")
+            _priv_only = [p for p in _cands if p not in set(_p)]
+    case("S4: private 전용 파일이 존재한다 (없으면 이 검사 자체가 무의미)", bool(_priv_only))
+    if _priv_only:
+        _f = os.path.join(ROOT, _priv_only[0])
+        _orig = open(_f, "rb").read()
+        try:
+            open(_f, "ab").write(b"\n")
+            _b, _ = _check_private_docs_sync()
+            case("S4: private 전용 파일 더럽히면 → 차단", bool(_b) and "유일본" in (_b or ""))
+        finally:
+            open(_f, "wb").write(_orig)      # 원복 — 검사가 흔적을 남기지 않는다
+        _b2, _ = _check_private_docs_sync()
+        case("S4: 원복 후 → 차단 해제", _b2 is None)
 
     print("\n셀프테스트 " + ("전건 통과" if ok else "실패 존재"))
     return 0 if ok else 1
