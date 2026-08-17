@@ -1,31 +1,31 @@
 {
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-08-17T22:16:16+09:00",
+    "checked_at": "2026-08-17T16:54:42+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 12784,
+    "elapsed_ms": 14228,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 795,
+        "latency_ms": 809,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 1177,
+        "latency_ms": 265,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 483,
+        "latency_ms": 415,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 193,
+        "latency_ms": 155,
         "detail": "정상",
         "attempts": 1
       },
@@ -37,49 +37,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 546,
+        "latency_ms": 640,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 524,
+        "latency_ms": 1044,
         "detail": "정상",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1345,
+        "latency_ms": 1552,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 11912,
+        "latency_ms": 13412,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260814)",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 668,
+        "latency_ms": 674,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 262,
+        "latency_ms": 146,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 260,
+        "latency_ms": 177,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 125,
+        "latency_ms": 147,
         "detail": "정상",
         "attempts": 1
       },
@@ -93,67 +93,66 @@
     "github_worker": {
       "status": "running",
       "conclusion": "in_progress",
-      "workflow": "Tests",
-      "started_at": "2026-08-17T13:13:50Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/32033952805",
-      "detail": "Tests: in_progress"
+      "workflow": "Stock Analysis Pipeline (Full & Periodic)",
+      "started_at": "2026-08-17T07:50:45Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/32007597846",
+      "detail": "Stock Analysis Pipeline (Full & Periodic): in_progress"
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-08-17T16:54:45+09:00",
+      "updated_at": "2026-08-17T16:33:11+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-08-17 22:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-08-17 16:52",
+          "age_hours": 0.04,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-08-17 22:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-08-17 16:52",
+          "age_hours": 0.04,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-08-17 22:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-08-17 16:52",
+          "age_hours": 0.04,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-08-17 22:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-08-17 16:52",
+          "age_hours": 0.04,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-08-17 22:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-08-17 16:52",
+          "age_hours": 0.04,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-08-17 22:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-08-17 16:52",
+          "age_hours": 0.04,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-08-17 22:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-08-17 16:54",
+          "age_hours": 0.01,
           "threshold_hours": 1
         }
       }
     },
     "version_sync": {
       "local_version": "v8.2.0",
-      "status": "update_available",
-      "remote_sha": "f8bce90",
-      "remote_message": "feat(public): 미장 개별종목 현재가 스트립 — TV Single Quote 를 알파네스트 카드에 녹임\n\nWHY: PM 지적 — 공개 ",
-      "remote_date": "2026-08-17T13:13:46Z",
-      "local_sha": "c5bd95d",
-      "detail": "새로운 커밋이 원격에 존재합니다"
+      "status": "ok",
+      "remote_sha": "3c0e965",
+      "remote_message": "🔔 cron_health 2026-08-17T16:49",
+      "remote_date": "2026-08-17T07:49:06Z",
+      "local_sha": "3c0e965"
     },
     "errors": [],
     "warnings": [],
@@ -166,7 +165,7 @@
     },
     "overall_status": "ok"
   },
-  "updated_at": "2026-08-17T22:16:38+09:00",
+  "updated_at": "2026-08-17T22:33:31+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
