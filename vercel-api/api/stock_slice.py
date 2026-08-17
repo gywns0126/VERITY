@@ -64,6 +64,27 @@ def _load(fname):
     return hit[1] if hit else None  # stale fallback
 
 
+def _employment_gate(rec):
+    """고용(국민연금 가입자) 레코드 — 과소집계 의심분은 숫자를 내보내지 않는다.
+
+    🚨 2026-08-17 — 수집기가 사업장명 **정확일치**만 채택해서(부분일치는 하청 현장
+    수천 건을 물어오므로 원 설계는 옳다) 주력 사업장이 "○○ 안강공장" 처럼 접미가
+    붙어 등록된 회사는 소규모 사무소 하나만 잡힌다. 실측 테스 3명 / 풍산 3명 /
+    대우건설 4명 / 현대건설 8명 — 반면 삼성전자 125,592 는 정확하다(사업장이 회사명 그대로).
+    공개 사이트에 1/100~1/1000 로 축소된 숫자를 내보내는 것이 가장 나쁘므로,
+    수집기가 붙인 suspect 플래그가 있으면 값 대신 보류 사유만 전달한다.
+    근본 수정(접두일치 + 법인번호 대조)은 매칭 정확도 검증 후.
+    """
+    if not isinstance(rec, dict) or not rec.get("suspect"):
+        return rec
+    return {
+        "name": rec.get("name"),
+        "ym": rec.get("ym"),
+        "unavailable": True,
+        "reason": rec.get("suspect_reason") or "사업장 매칭 미완 — 표시 보류",
+    }
+
+
 def _slice(doc, ticker):
     """다양한 발행 스키마에서 ticker 엔트리 추출.
     {stocks:[...]}(리포트·내부자·포렌식·대차) / {stocks:{tk:{}}}(수급·고용)
@@ -146,7 +167,7 @@ class handler(BaseHTTPRequestHandler):
             out["lending"] = _slice(docs.get("lending"), ticker)
             out["lend_as_of"] = _meta_field(docs.get("lending"), "as_of")
             out["supply"] = _slice(docs.get("supply"), ticker)
-            out["employment"] = _slice(docs.get("employment"), ticker)
+            out["employment"] = _employment_gate(_slice(docs.get("employment"), ticker))
         else:
             report = _slice(docs.get("report"), ticker) or _slice(docs.get("report_smallcap"), ticker)
             out["report"] = report

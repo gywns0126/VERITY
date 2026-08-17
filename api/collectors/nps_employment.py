@@ -217,6 +217,51 @@ def _one(tk: str, name: str, key: str, ym: str) -> Optional[Dict[str, Any]]:
     }
 
 
+MKTCAP_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
+# 1인당 시총 상한. 전 종목 중앙값이 11.2억(2026-08-17 실측 1,495종목)이라 500억 = 약 45배다.
+_SUSPECT_CAP_PER_HEAD = 500 * 1e8
+
+
+def _flag_suspect(stocks: Dict[str, Any]) -> int:
+    """계통 과소집계 의심 레코드에 suspect 플래그. 값을 지우지 않고 **표시하지 말라고 알린다**.
+
+    🚨 왜 필요한가 (2026-08-17 발견 — PM 이 알파네스트에서 테스 3명 보고 물어봄):
+      이 수집기는 사업장명 **정확일치**만 채택한다. 부분일치를 쓰면 "삼성전자" 검색이
+      하청 현장 2,430건을 물어오기 때문인데(원 설계 의도, 옳다), 반대 방향으로 과교정된다 —
+      주력 사업장이 "풍산 안강공장"·"현대건설 ○○현장" 처럼 접미가 붙어 등록되면
+      정확일치에서 전부 탈락하고, 회사명과 글자 그대로 같은 소규모 사무소 하나만 남는다.
+      거기에 numOfRows=100(1페이지)·MAX_MATCH_DETAIL=4 상한이 겹친다.
+
+      실측: 테스(095610) 3명 / 풍산 3명 / 대우건설 4명 / 현대건설 8명 / GS 3명.
+      대조군으로 삼성전자 125,592 · 현대차 66,299 는 정확하다(사업장이 회사명 그대로 등록).
+      즉 집계 로직이 아니라 매칭 커버리지 결함이고, 종목별로 갈린다.
+
+      틀린 값을 공개 사이트에 그대로 내보내는 것이 가장 나쁘다. 근본 수정(접두일치 +
+      법인번호 대조)은 매칭 정확도 검증이 필요하므로, 그 전까지 의심분을 표시에서 뺀다.
+    """
+    try:
+        with open(MKTCAP_PATH, encoding="utf-8") as f:
+            mc = (json.load(f) or {}).get("map") or {}
+    except (OSError, ValueError):
+        return 0
+    n = 0
+    for tk, v in stocks.items():
+        cnt = v.get("jnngp_cnt")
+        cap = (mc.get(tk) or {}).get("mktcap")
+        if not isinstance(cnt, int) or cnt <= 0 or not cap:
+            continue
+        per = cap / cnt
+        if per > _SUSPECT_CAP_PER_HEAD:
+            v["suspect"] = True
+            v["suspect_reason"] = (f"1인당 시총 {per / 1e8:,.0f}억 — 사업장명 정확일치 매칭이 "
+                                   f"지점을 놓쳤을 가능성. 표시 보류")
+            n += 1
+        else:
+            v.pop("suspect", None)
+            v.pop("suspect_reason", None)
+    return n
+
+
 def collect(limit: int = 0) -> Dict[str, Any]:
     from concurrent.futures import ThreadPoolExecutor, as_completed
     key = _key()
@@ -313,6 +358,8 @@ def main() -> int:
                 continue
             merged[tk] = v
 
+        suspect_n = _flag_suspect(merged)
+
         yms = sorted({str(v.get("ym") or "") for v in merged.values() if v.get("ym")})
         doc = {
             "_meta": {
@@ -320,6 +367,9 @@ def main() -> int:
                 "source": "국민연금공단 가입 사업장 내역 (data.go.kr B552015, 매월 15일 이후 갱신)",
                 "note": "고용 프록시(국민연금 가입자 기준) · 사업장명 정확일치 매칭 · 공단 공시 사실",
                 "count": len(merged),
+                # 🚨 정확일치 매칭의 구조적 한계 신고 — 아래 _flag_suspect 주석 참조.
+                "suspect_count": suspect_n,
+                "suspect_rule": f"시총 ÷ 가입자 > {_SUSPECT_CAP_PER_HEAD / 1e8:,.0f}억/인",
                 # 신선도 관측 — 종목마다 기준월이 다를 수 있어 범위로 노출한다.
                 "data_ym_latest": yms[-1] if yms else None,
                 "data_ym_oldest": yms[0] if yms else None,
