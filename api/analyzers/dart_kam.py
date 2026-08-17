@@ -40,6 +40,10 @@ logger = logging.getLogger(__name__)
 CACHE_PATH = os.path.join(DATA_DIR, "dart_kam_cache.json")
 MIN_RAW_TEXT_LENGTH = 200
 MAX_TEXT_FOR_AI = 14000
+# 🚨 종목당 상한. 1,498종목 배치에서 한 건의 무한 대기가 전체를 세우는 것을 막는다
+#   (2026-08-17 실측: 타임아웃 없이 wall 13분 07초 · CPU 4초 = 네트워크 무한 대기).
+#   90초 = 14K자 입력 + JSON 출력에 충분하고, 초과분은 재시도/Pro fallback 로 넘긴다.
+LLM_TIMEOUT_MS = 90_000
 
 try:
     from api.utils.external_guard import wrap_untrusted
@@ -134,13 +138,27 @@ def analyze_kam(company_name: str, kam_text: str) -> Dict[str, Any]:
         company_name=company_name,
         raw_text=wrap_untrusted(kam_text[:MAX_TEXT_FOR_AI], source="dart_audit_report"),
     )
+    # 🚨 2026-08-17 — 구버전 SDK(`google.generativeai`) + **타임아웃 없음** 이 이 축을
+    #   실행 불가로 만들었다. 실측: 캐시 히트 종목 1건에서 wall 13분 07초 · CPU 4초 ·
+    #   프로세스 상태 SN(I/O 대기) = 네트워크에 무한 대기. 한 종목이 배치 전체를 세운다.
+    #   형제 3종(dart_litigation · dart_related_party · dart_report_analyzer)은 이미
+    #   `google.genai` Client 를 쓴다 — 어제 이 파일만 구버전으로 썼다. 관례에 맞춘다.
+    try:
+        from google import genai
+        client = genai.Client(api_key=GEMINI_API_KEY)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[kam] genai client 실패: %s", str(e)[:80])
+        return {"_skip_reason": f"client_error:{str(e)[:40]}"}
+
     for model, attempt in ((GEMINI_MODEL_DEFAULT, 1), (GEMINI_MODEL_DEFAULT, 2),
                            (GEMINI_MODEL_CRITICAL, 3)):
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=GEMINI_API_KEY)
-            resp = genai.GenerativeModel(model).generate_content(
-                prompt, generation_config={"response_mime_type": "application/json"})
+            resp = client.models.generate_content(
+                model=model, contents=prompt,
+                config={"response_mime_type": "application/json",
+                        # 무한 대기 차단 — 한 종목이 1,498종목 배치를 세우지 않게 한다
+                        "http_options": {"timeout": LLM_TIMEOUT_MS}},
+            )
             parsed = _parse_json(getattr(resp, "text", "") or "")
             if parsed is None:
                 return {"_skip_reason": "parse_failed"}
