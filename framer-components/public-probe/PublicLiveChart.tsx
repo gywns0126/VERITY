@@ -114,6 +114,69 @@ function tvWidgetHtml(symbol: string, dark: boolean, bg: string): string {
     )
 }
 
+/* 🚨 미장 현재가 스트립 — TradingView Single Quote 를 알파네스트 카드 크롬에 녹인다 (PM 2026-08-17).
+   되돌리지 말 것.
+
+   왜 필요했나: renderForeign 은 이름·티커 다음이 곧바로 차트라 **가격·등락 숫자가 아예 없었다.**
+     국내 분기는 헤더에 "전일 종가 · 날짜" 를 띄우는데 미장만 빈칸이었다.
+   왜 우리 데이터가 아닌 TV 인가: KIS·거래소 실시간을 공개 표면에 얹으면 **재배포**다.
+     2026-07-03 에 PublicStockReport 의 실시간 현재가 폴링을 제거한 이유가 정확히 그것이다.
+     TV 위젯은 데이터 라이선스를 TV 가 부담하는 '표시(display)' 임베드라 우리는 재배포자가 아니다.
+   왜 iframe 이 아니라 직접 주입인가: Single Quote 는 높이가 심볼마다 다른데 iframe 은 자동 높이를
+     못 잡는다(같은 파일의 차트가 px 고정인 이유 = [[feedback_framer_iframe_fixed_height]]).
+     PublicIndexBoard.IndexCard 가 쓰는 검증된 경로를 그대로 쓴다.
+   🚨 라벨을 "실시간" 으로 단정하지 말 것 — TV 무료 위젯은 심볼에 따라 단일거래소(Cboe BZX)
+     실시간이거나 지연이다. 위젯이 자체 표기하는 상태를 그대로 둔다. 어트리뷰션은 위젯이
+     자동 포함하며 제거 = 무료 사용 조건 위반.
+   크롬은 CSS 변수(C.card)로 테마를 따라가고, 위젯 자체 색은 tvDark 를 값으로 넘긴다
+     (TV JSON 설정은 CSS var 를 해석하지 못한다). */
+function UsQuoteStrip(props: { sym: string; isDark: boolean }) {
+    const { sym, isDark } = props
+    const ref = useRef<HTMLDivElement | null>(null)
+
+    useEffect(() => {
+        const host = ref.current
+        if (!host) return
+        host.innerHTML = ""
+        const container = document.createElement("div")
+        container.className = "tradingview-widget-container"
+        const w = document.createElement("div")
+        w.className = "tradingview-widget-container__widget"
+        container.appendChild(w)
+        const s = document.createElement("script")
+        s.type = "text/javascript"
+        s.async = true
+        s.src = "https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js"
+        s.innerHTML = JSON.stringify({
+            symbol: sym,
+            width: "100%",
+            isTransparent: true,
+            colorTheme: isDark ? "dark" : "light",
+            locale: "kr",
+        })
+        container.appendChild(s)
+        host.appendChild(container)
+        return () => {
+            host.innerHTML = ""
+        }
+    }, [sym, isDark])
+
+    return (
+        <div
+            style={{
+                background: C.card,
+                borderRadius: 14,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                overflow: "hidden",
+                padding: 2,
+                boxSizing: "border-box",
+            }}
+        >
+            <div ref={ref} style={{ width: "100%" }} />
+        </div>
+    )
+}
+
 /* 해외 딥링크 (2026-07-29) — 미장 시세 시계열은 재배포 권리가 없어 자체 차트를 못 그린다.
    증권사가 서빙하는 화면으로 정확히 보내는 것이 최선이자 합법.
    코드는 universe_search 의 nv(빌드 타임 해석). 실측상 접미어가 종목마다 다르다 —
@@ -726,6 +789,9 @@ export default function PublicLiveChart(props: Props) {
                         {e && e.family ? " · " + e.family : ""}
                     </div>
                 </div>
+                {/* 현재가·등락 — 이 자리가 미장만 비어 있었다(국내는 헤더에 전일 종가 표기).
+                    상세·라이선스 근거 = UsQuoteStrip 정의부 주석. */}
+                <UsQuoteStrip sym={rawTk} isDark={tvDark} />
                 {/* TradingView 임베드 — 데이터·라이선스는 TV 가 서빙. 우리는 저장·재배포하지 않는다. */}
                 {/* 🚨 모서리 처리 — 2차 수정(PM 재지적 2026-07-30).
                     1차엔 래퍼에 radius+overflow:hidden 만 줬는데 여전히 잘려 보였다. 원인은
