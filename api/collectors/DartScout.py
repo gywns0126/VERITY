@@ -14,6 +14,7 @@ DartScout — OpenDART 핵심 데이터 수집기
              '적정'이 아니면 즉시 CriticalAuditError 반환
 """
 import functools
+import gzip
 import json
 import os
 import sys
@@ -587,9 +588,41 @@ def _list_reports(corp_code: str, bgn_de: str, end_de: str, detail_ty: str) -> L
     return [d for d in listing.get("list", []) if "보고서" in d.get("report_nm", "")]
 
 
+_RAW_CACHE_DIR = os.path.join(DATA_DIR, "dart_raw_cache")
+_RAW_CACHE_MIN_CHARS = 500          # downstream MIN_RAW_TEXT_LENGTH 과 동일 기준
+
+
+def _raw_cache_path(corp_code: str, bsns_year: str) -> str:
+    return os.path.join(_RAW_CACHE_DIR, f"{corp_code}_{bsns_year}.json.gz")
+
+
+def _raw_cache_get(corp_code: str, bsns_year: str) -> Optional[Dict[str, Any]]:
+    p = _raw_cache_path(corp_code, bsns_year)
+    try:
+        with gzip.open(p, "rt", encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) and d.get("raw_text") else None
+    except (OSError, ValueError):
+        return None
+
+
+def _raw_cache_put(corp_code: str, bsns_year: str, doc: Dict[str, Any]) -> None:
+    """성공분만 저장 — 실패를 캐시하면 다음 run 이 영구히 재시도하지 않는다."""
+    if not doc.get("raw_text") or doc.get("char_count", 0) < _RAW_CACHE_MIN_CHARS:
+        return
+    try:
+        os.makedirs(_RAW_CACHE_DIR, exist_ok=True)
+        with gzip.open(_raw_cache_path(corp_code, bsns_year), "wt", encoding="utf-8") as f:
+            json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
+    except OSError as e:
+        # 이 모듈은 logging 대신 stderr 관례 — 조용히 죽지 않게 반드시 남긴다
+        sys.stderr.write(f"[dart_raw_cache] 저장 실패 {corp_code}_{bsns_year}: {e}\n")
+
+
 def fetch_business_facilities_raw(
     corp_code: str,
     bsns_year: Optional[str] = None,
+    use_cache: bool = True,
 ) -> Dict[str, Any]:
     """
     최신 사업보고서(A001) 본문에서 'II. 사업의 내용' 섹션 원문 슬라이스.
@@ -612,6 +645,21 @@ def fetch_business_facilities_raw(
     now = now_kst()
     if bsns_year is None:
         bsns_year = str(now.year - 1)
+
+    # 🚨 2026-08-17 — 디스크 캐시 read-through. 없어서 **같은 문서를 축마다 다시 받았다.**
+    #   이 함수 하나가 사업보고서 ZIP 다운로드 + 정규식 슬라이스라 종목당 4분대다
+    #   (실측: 코너 3종목 13분 35초에도 미완). 그런데 소비 축이 4개다 —
+    #   kam · litigation · related_party · business 가 **각각 따로** 받아왔다.
+    #   인수인계 문서는 "추가 DART 호출 0" 이라 적어뒀는데 근거가 없었다.
+    #   연 1회 갱신되는 사업보고서라 (corp_code, bsns_year) 키는 자연히 안정적이다.
+    #   저장은 gzip · `data/dart_raw_cache/`(gitignore) — 원문 슬라이스라 용량이 크고
+    #   재취득 가능한 파생물이므로 발행·추적 대상이 아니다.
+    if use_cache:
+        _hit = _raw_cache_get(corp_code, bsns_year)
+        if _hit is not None:
+            _hit["_from_cache"] = True
+            return _hit
+
     bgn = f"{int(bsns_year)}0101"
     end = now.strftime("%Y%m%d")
     prev_bgn = f"{int(bsns_year) - 1}0101"
@@ -639,13 +687,16 @@ def fetch_business_facilities_raw(
         if result.get("raw_text"):
             result["source_report_ty"] = detail_ty
             if result.get("char_count", 0) >= 500:
+                _raw_cache_put(corp_code, bsns_year, result)
                 return result  # downstream MIN 충족 → 즉시 반환
             attempts.append(result)
         else:
             last_error = result
 
     if attempts:
-        # 500 미달이지만 raw_text 있음 — 가장 긴 것 반환
+        # 500 미달이지만 raw_text 있음 — 가장 긴 것 반환.
+        # 🚨 캐시 저장 안 함 — `_raw_cache_put` 이 500 미달을 걸러낸다. 다음 run 이
+        #   재시도해 더 긴 본문을 잡을 여지를 남긴다(공시가 정정될 수 있다).
         return max(attempts, key=lambda r: r.get("char_count", 0))
     return last_error
 

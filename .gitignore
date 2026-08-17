@@ -119,6 +119,10 @@ VERITY_ESTATE_status_*.pdf
 
 # 미장 일봉 이력 레이크 — 5,000종목 규모라 레포 비커밋 (KR kr_chart_history 와 동일 정책)
 data/us_chart_history/
+# DART 사업보고서 원문 슬라이스 캐시 (2026-08-17). 재취득 가능한 파생물이고 gzip 이라도
+# 1,498종목 규모라 추적하지 않는다. 소비 축 4종(kam·litigation·related_party·business)이
+# 같은 문서를 다시 받던 것을 막는 자리 — 없으면 종목당 4분대가 축마다 반복된다.
+data/dart_raw_cache/
 
 # 파생 산출물 — 입력 3종(krx_mktcap_history · kr_fundamental_panel · kr_dividend_history)
 # 으로 외부호출 0 · 약 5초에 재빌드된다. 66MB 를 재빌드마다 새 blob 으로 쌓을 이유가 없다.
