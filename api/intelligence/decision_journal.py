@@ -35,13 +35,14 @@ from __future__ import annotations
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import date, datetime, time as dt_time, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, _ROOT)
 
 from api.config import now_kst  # noqa: E402
+from api.utils import market_calendar as _mcal  # noqa: E402
 
 
 def _fingerprint(*parts: str) -> str:
@@ -73,7 +74,40 @@ CAVEAT = ("터미널 판단 관측. Brain 점수 미반영(brain_input=false). "
 FORBIDDEN_PRICE_SOURCES = ("stock_flow_5d",)
 
 # 종가 섹션 data 에서 가격을 찾을 키 (우선순위). 어느 키를 썼는지 레코드에 남긴다.
-_PRICE_KEYS = ("close", "종가", "price", "last", "clpr")
+_PRICE_KEYS = ("close", "종가", "price", "last", "clpr", "현재가")
+
+# 🚨 기준가 후보 = "확정된 세션 종가" 를 들고 있는 섹션 **전부** (2026-08-17 신설).
+#
+#   종전에는 `종가` 섹션(kr_close_latest) 하나만 봤는데 두 가지가 동시에 깨져 있었다.
+#
+#   ① 룩어헤드 — kr_close_latest 는 15:30 마감 직후(15:10~19:57)에 도는데 금융위 시세가
+#      T+1 이라 **항상 전 거래일**이다. 8거래일 연속 실측(8/5~8/14)에서 예외 0건이고,
+#      평일·휴장 무관하게 그렇다. 마감 후에 내리는 판단은 그날 등락률을 이미 알고 내리는데
+#      채점 기준가는 그 전날이라, 상승일에 판단할수록 성적이 좋아지는 **한 방향 편향**이
+#      생긴다. 2026-08-17 한화오션 판단이 실례 — 8/14 +5.62% 를 알고 판단했는데 기준가는
+#      8/13 종가였다.
+#
+#   ② 미국 종목 기준가 부재 — 라벨이 `종가` 로 시작하지 않아 저널 15건 중 11건(73%)이
+#      ref_price=None 이었다. 채점 자체가 불가능한 레코드를 계속 쌓고 있었다.
+#
+#   고침 = 후보를 전부 열거하고 **세션일이 가장 최근인 것**을 고른다. 한 소스만 보고
+#   "그게 최신" 이라고 단정하지 않는다 — 분모를 먼저 세는 규율 그대로다.
+#
+#   🚨 장중 스냅샷은 후보에서 제외한다. 확정 종가가 아니라서 나중에 재현이 안 된다.
+#   (라벨 접두어, 세션일 해석 방식)
+_CLOSE_CANDIDATES = (
+    ("시총", "as_of_date"),            # krx_mktcap · bas_dd = 최종 거래일 (익일 오전 수집)
+    ("종가", "as_of_date"),            # kr_close_latest · T+1
+    ("일봉", "as_of_date"),            # 금융위 일봉 · T+1
+    ("미국 시세·일봉", "as_of_us_ts"),  # 야후 chart · as_of = regularMarketTime(KST 표기)
+    ("미국 시세 (KIS", "label_closed"),  # 라벨이 장 개폐를 자기 신고한다("🚨 장 마감")
+    ("실시간 시세", "kr_session"),      # KIS KR · 캘린더로 마감 판정된 때만 인정
+)
+
+# KR 정규장 마감 15:30. 종가 확정·전송 지연을 보고 여유를 둔다.
+_KR_CLOSE_SAFE = dt_time(15, 40)
+# 미국 정규장 마감 16:00 ET.
+_US_CLOSE_ET = dt_time(16, 0)
 
 # as_of 를 남길 섹션 (label 접두어 → 레코드 키)
 _ASOF_LABELS = (
@@ -127,29 +161,119 @@ def extract_as_of(facts: Dict[str, Any]) -> Dict[str, Optional[str]]:
     return out
 
 
-def extract_ref_price(facts: Dict[str, Any]) -> Tuple[Optional[float], Optional[str], Optional[str]]:
-    """(가격, 출처 파일, 사용한 키). 못 찾으면 (None, None, None).
+def _as_date(v: Any) -> Optional[date]:
+    """'20260814' / '2026-08-14' / ISO 타임스탬프 → date. 못 읽으면 None."""
+    s = str(v or "").strip()
+    if not s:
+        return None
+    if len(s) == 8 and s.isdigit():
+        try:
+            return datetime.strptime(s, "%Y%m%d").date()
+        except ValueError:
+            return None
+    try:
+        return datetime.fromisoformat(s).date()
+    except ValueError:
+        return None
+
+
+def _us_session_date_from_kst_ts(v: Any) -> Optional[date]:
+    """야후 regularMarketTime(KST 표기) → 그 값이 속한 **미국 세션일**.
+
+    🚨 라벨이 아니라 타임스탬프를 읽는다. KST 오전에 조회한 미국주식은 미국장 마감
+    후라서 직전 거래일 종가인데, 섹션 제목만 보면 "실시간" 으로 읽힌다(2026-08-15 사고).
+    """
+    s = str(v or "").strip()
+    if not s:
+        return None
+    try:
+        dtv = datetime.fromisoformat(s)
+    except ValueError:
+        return None
+    if dtv.tzinfo is None:
+        return None
+    utc = dtv.astimezone(timezone.utc)
+    off = 4 if _mcal.is_us_dst(utc.date()) else 5
+    return (utc - timedelta(hours=off)).date()
+
+
+def _session_date(mode: str, sec: Dict[str, Any], now: datetime) -> Optional[date]:
+    """이 섹션의 가격이 속한 **확정 세션일**. 확정 못 하면 None (= 후보 탈락)."""
+    if mode == "as_of_date":
+        return _as_date(sec.get("as_of"))
+
+    if mode == "as_of_us_ts":
+        return _us_session_date_from_kst_ts(sec.get("as_of"))
+
+    if mode == "label_closed":
+        # 조인이 라벨에 장 개폐를 자기 신고한다. 신고가 없으면 장중일 수 있어 쓰지 않는다.
+        if "장 마감" not in str(sec.get("label") or ""):
+            return None
+        off = 4 if _mcal.is_us_dst(now.date()) else 5
+        et = now.astimezone(timezone.utc) - timedelta(hours=off)
+        if _mcal.is_trading_day(et.date(), "US") and et.time() >= _US_CLOSE_ET:
+            return et.date()
+        return _mcal.previous_trading_day(et.date(), "US")
+
+    if mode == "kr_session":
+        # 🚨 장중이면 확정 종가가 아니다 — 후보에서 뺀다.
+        today = now.date()
+        if _mcal.is_trading_day(today, "KR"):
+            return today if now.time() >= _KR_CLOSE_SAFE else None
+        return _mcal.previous_trading_day(today, "KR")
+
+    return None
+
+
+def extract_ref_price(
+    facts: Dict[str, Any], now: Optional[datetime] = None
+) -> Tuple[Optional[float], Optional[str], Optional[str], Optional[str]]:
+    """(가격, 출처 파일, 사용한 키, 세션일 ISO). 못 찾으면 (None, 출처|None, None, None).
+
+    🚨 후보를 전부 열거한 뒤 **세션일이 가장 최근인 것**을 고른다. 단일 소스를 최신이라
+    단정하던 것이 룩어헤드의 원인이었다(_CLOSE_CANDIDATES 주석 참조).
 
     🚨 회전 수집 파일 출처는 거부한다. 값을 억지로 채우는 것보다 없다고 남기는 편이
     낫다 — 없는 정밀도를 있는 척하면 채점이 조용히 틀린다.
     """
-    sec = _find_section(facts, "종가")
-    if not sec:
-        return None, None, None
-    source = str(sec.get("source") or "")
-    if any(bad in source for bad in FORBIDDEN_PRICE_SOURCES):
-        raise JournalError(
-            f"평가 기준가로 쓸 수 없는 출처다: {source}. "
-            "회전 수집 파일의 close 는 가격이 아니다 — kr_close_latest 를 쓴다."
-        )
-    data = sec.get("data")
-    if not isinstance(data, dict):
-        return None, source or None, None
-    for k in _PRICE_KEYS:
-        v = data.get(k)
-        if isinstance(v, (int, float)) and v > 0:
-            return float(v), source or None, k
-    return None, source or None, None
+    now = now or now_kst()
+    best: Optional[Tuple[date, float, Optional[str], str, Optional[date]]] = None
+    fallback_source: Optional[str] = None
+
+    for prefix, mode in _CLOSE_CANDIDATES:
+        sec = _find_section(facts, prefix)
+        if not sec:
+            continue
+        source = str(sec.get("source") or "")
+        if any(bad in source for bad in FORBIDDEN_PRICE_SOURCES):
+            raise JournalError(
+                f"평가 기준가로 쓸 수 없는 출처다: {source}. "
+                "회전 수집 파일의 close 는 가격이 아니다 — kr_close_latest 를 쓴다."
+            )
+        if fallback_source is None:
+            fallback_source = source or None
+        data = sec.get("data")
+        if not isinstance(data, dict):
+            continue
+        price: Optional[float] = None
+        key: Optional[str] = None
+        for k in _PRICE_KEYS:
+            v = data.get(k)
+            if isinstance(v, (int, float)) and v > 0:
+                price, key = float(v), k
+                break
+        if price is None or key is None:
+            continue
+        sd = _session_date(mode, sec, now)
+        if sd is None:
+            # 세션일을 확정 못 한 후보는 쓰지 않는다. 언제 가격인지 모르면 채점이 안 된다.
+            continue
+        if best is None or sd > best[0]:
+            best = (sd, price, source or None, key, sd)
+
+    if best is None:
+        return None, fallback_source, None, None
+    return best[1], best[2], best[3], best[0].isoformat()
 
 
 def _validate(verdict: str, confidence: str) -> None:
@@ -173,7 +297,7 @@ def build_record(
     if not tk:
         raise JournalError("ticker 없는 판단은 기록하지 않는다 — 채점 대상을 특정할 수 없다.")
 
-    price, price_source, price_key = extract_ref_price(facts)
+    price, price_source, price_key, price_asof = extract_ref_price(facts)
     missing = facts.get("missing")
     return {
         # 관측 규율 4종 — data/observations/*.jsonl 과 동일 계보
@@ -199,6 +323,9 @@ def build_record(
         "ref_price": price,
         "ref_price_source": price_source,
         "ref_price_key": price_key,
+        # 🚨 기준가가 **어느 세션의 종가인지**. 이게 없으면 채점기가 시작점을 못 정한다.
+        #   판단 시각(ts_kst)과 다를 수 있고, 달라야 정상이다(마감 후 판단 = 그날 종가).
+        "ref_price_asof": price_asof,
 
         "brain_verdict": brain_verdict,
         "horizon_days": list(HORIZON_DAYS),

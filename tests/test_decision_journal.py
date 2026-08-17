@@ -90,6 +90,90 @@ def test_missing_price_is_null_not_guessed(path):
     assert rec["ref_price_source"] == "kr_close_latest.json"
 
 
+# ── 룩어헤드 차단 (2026-08-17 회귀 가드) ─────────────────────────────────────
+#
+# 🚨 이 4건은 실사고에서 나왔다. kr_close_latest 만 보던 종전 구현은
+#    ① KR 기준가가 항상 1거래일 뒤졌고(마감 후 판단 = 그날 등락률을 알고 내리는데
+#       채점은 전날부터 시작 → 상승일 판단이 유리해지는 한 방향 편향),
+#    ② 미국 종목은 라벨이 `종가` 가 아니라 저널 15건 중 11건이 ref_price=None 이었다.
+#    둘 다 조용히 틀리는 종류라 테스트로 고정한다.
+
+def _kst(s):
+    from datetime import datetime
+    return datetime.fromisoformat(s)
+
+
+def test_picks_latest_session_not_first_match():
+    """후보가 여럿이면 세션일이 최신인 것을 고른다 — 첫 매치가 아니라."""
+    facts = {
+        "ticker": "042660", "name": "한화오션", "missing": [],
+        "sections": [
+            {"label": "종가 (T+1 · 실시간 아님)", "source": "kr_close_latest.json",
+             "as_of": "20260813", "data": {"종가": 90700}},
+            {"label": "일봉 (250일 · 산술 파생)", "source": "kr_chart_daily/chunk (금융위)",
+             "as_of": "20260813", "data": {"종가": 90700}},
+            {"label": "시총", "source": "data/krx_mktcap.json",
+             "as_of": "20260814", "data": {"close": 95800}},
+        ],
+    }
+    price, source, _key, asof = dj.extract_ref_price(facts, now=_kst("2026-08-17T21:11:00+09:00"))
+    assert price == 95800, "8/13 종가를 골랐다 = 룩어헤드 회귀"
+    assert source == "data/krx_mktcap.json"
+    assert asof == "2026-08-14"
+
+
+def test_us_session_date_read_from_timestamp_not_label():
+    """야후 as_of 는 KST 표기다. 날짜만 잘라 쓰면 8/15 가 되지만 실제 세션은 8/14 다."""
+    facts = {
+        "ticker": "IONQ", "name": "아이온큐", "missing": [],
+        "sections": [
+            {"label": "미국 시세·일봉 (야후 실호출)", "source": "yahoo:chart",
+             "as_of": "2026-08-15T05:00:03+09:00", "data": {"현재가": 46.26}},
+        ],
+    }
+    price, source, _key, asof = dj.extract_ref_price(facts, now=_kst("2026-08-17T21:11:00+09:00"))
+    assert price == 46.26, "미국 종목 기준가가 None = 채점 불가 회귀"
+    assert source == "yahoo:chart"
+    assert asof == "2026-08-14", f"KST 날짜를 그대로 썼다: {asof}"
+
+
+def test_kr_intraday_snapshot_rejected():
+    """장중 KIS 현재가는 확정 종가가 아니다 — 기준가로 쓰면 재현이 안 된다."""
+    facts = {
+        "ticker": "042660", "name": "한화오션", "missing": [],
+        "sections": [
+            {"label": "실시간 시세 (KIS · 본인 이용)", "source": "railway:quotes",
+             "as_of": "2026-08-18T11:00:00+09:00", "data": {"현재가": 99000}},
+        ],
+    }
+    # 2026-08-18(화) 11:00 = KR 정규장 중
+    price, _source, _key, asof = dj.extract_ref_price(facts, now=_kst("2026-08-18T11:00:00+09:00"))
+    assert price is None, "장중 스냅샷을 기준가로 채택했다"
+    assert asof is None
+
+
+def test_kr_after_close_snapshot_accepted_as_todays_close():
+    """마감 후 KIS 현재가 = 그날 종가. 이걸 안 쓰면 마감~익일 오전 구간에 1일이 샌다."""
+    facts = {
+        "ticker": "042660", "name": "한화오션", "missing": [],
+        "sections": [
+            {"label": "종가 (T+1 · 실시간 아님)", "source": "kr_close_latest.json",
+             "as_of": "20260817", "data": {"종가": 95800}},
+            {"label": "실시간 시세 (KIS · 본인 이용)", "source": "railway:quotes",
+             "as_of": "2026-08-18T18:00:00+09:00", "data": {"현재가": 99000}},
+        ],
+    }
+    price, _source, _key, asof = dj.extract_ref_price(facts, now=_kst("2026-08-18T18:00:00+09:00"))
+    assert price == 99000
+    assert asof == "2026-08-18"
+
+
+def test_ref_price_asof_is_recorded(path):
+    """세션일이 레코드에 남아야 채점기가 시작점을 정할 수 있다."""
+    rec = dj.record(_facts(as_of="20260814"), "관심", "medium", [], "근거", path=path)
+    assert rec["ref_price_asof"] == "2026-08-14"
+
+
 # ── 지문 (소급 평가 오염 방지) ───────────────────────────────────────────────
 
 def test_fingerprint_changes_when_data_changes():
