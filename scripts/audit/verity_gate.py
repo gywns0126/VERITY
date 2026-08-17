@@ -10,7 +10,7 @@ Stop 게이트 (턴 종료 차단):
   S1 직전 응답 텍스트 RULE 9 regex (전과: 응답 레벨 5차 drift — 유일하게 기계가 없던 자리)
   S2 (조건부) 지식 표면 검사 — 층1 파일 mtime 변화 시에만 knowledge_surface_check 실행
   S3 (조건부) prereg 계약 — prereg 산출물이 dirty 할 때만 계약 pytest 실행
-  S4 private docs 동기 — docs/ 는 public 에서 gitignore 라 private repo 가 유일 사본.
+  S4 private 동기 — docs/ + private 전용 파일. public 에 사본 없는 것이 유일본이다.
      미추적(사본 0)=차단 · 미커밋(직전본 있음)=경고. 전과: PM 승인 사전등록 3건이
      13일간 디스크 단일 사본 (8/17 발견, 디스크 188 vs 추적 185)
 PreToolUse(Bash) 게이트 (도구 실행 전 차단):
@@ -222,6 +222,47 @@ def _check_private_docs_sync() -> tuple[str | None, str | None]:
                   + ", ".join(dirty[:5]))
 
 
+CONFLICT_RE = re.compile(r"^(<{7} |={7}$|>{7} )", re.M)
+
+
+def _check_conflict_markers() -> str | None:
+    """수정된 추적 파일에 병합 충돌 마커가 남았는지. 남았으면 차단.
+
+    🚨 2026-08-17 신설 — 실측 근거: `git pull --rebase --autostash` 는 **autostash 재적용이
+    충돌해도 종료코드 0 을 반환한다** (격리 repo 로 재현 확인). 따라서 `pull && push` 체인이
+    그대로 진행되고, 로컬에서는 충돌 마커가 **실제 워킹트리 파일 안에 기록된 채** 남는다.
+    같은 날 이 경로로 append-only 원장 2종(alert_type_ledger·telegram_volume)이 오염됐고,
+    다음 커밋이 그대로 실어 보낼 수 있는 상태였다.
+
+    CI 러너는 트리가 일회용이라 무해하지만(그래서 autostash 전수 적용은 유효하다),
+    로컬은 그렇지 않다. 사람이 매번 눈으로 확인하는 방식은 이미 두 번 실패했으므로 기계로 막는다.
+    """
+    r = subprocess.run(["git", "-C", ROOT, "diff", "--name-only", "--diff-filter=ACMU"],
+                       capture_output=True, text=True, timeout=15)
+    if r.returncode != 0:
+        return None
+    hits = []
+    for rel in [l for l in r.stdout.splitlines() if l][:400]:
+        p = os.path.join(ROOT, rel)
+        try:
+            if os.path.getsize(p) > 40_000_000:
+                continue
+            with open(p, "rb") as f:
+                head = f.read(TAIL_BYTES)
+            if b"\0" in head[:4096]:      # 바이너리 제외
+                continue
+            if CONFLICT_RE.search(head.decode("utf-8", "replace")):
+                hits.append(rel)
+        except OSError:
+            continue
+    if not hits:
+        return None
+    return ("병합 충돌 마커가 남은 파일 " + str(len(hits)) + "건 — 이대로 커밋하면 오염이 실린다:\n  "
+            + "\n  ".join(hits[:8])
+            + "\n  🚨 `git pull --rebase --autostash` 는 autostash 충돌에도 **exit 0** 이라"
+              " `&& push` 가 그대로 진행된다. 마커를 해소하고 `git stash list` 도 확인할 것.")
+
+
 def hook_stop() -> int:
     try:
         payload = json.load(sys.stdin)
@@ -263,6 +304,15 @@ def hook_stop() -> int:
             return 0
     except Exception as e:  # noqa: BLE001
         return _fail_open("stop/S3", e)
+
+    # S5 — 병합 충돌 마커 (autostash 가 exit 0 으로 조용히 남기는 자리)
+    try:
+        msg = _check_conflict_markers()
+        if msg:
+            _out({"decision": "block", "reason": msg})
+            return 0
+    except Exception as e:  # noqa: BLE001
+        return _fail_open("stop/S5", e)
 
     # S4 — private docs 동기 (미추적=차단 · 미커밋=경고)
     try:
@@ -481,6 +531,23 @@ def _selftest() -> int:  # noqa: C901 — 케이스 나열
             open(_f, "wb").write(_orig)      # 원복 — 검사가 흔적을 남기지 않는다
         _b2, _ = _check_private_docs_sync()
         case("S4: 원복 후 → 차단 해제", _b2 is None)
+
+    # S5 — 충돌 마커. 추적 파일을 잠깐 오염시켰다가 반드시 원복한다.
+    case("S5: 현 트리에 충돌 마커 없음", _check_conflict_markers() is None)
+    _mk = subprocess.run(["git", "-C", ROOT, "diff", "--name-only"],
+                         capture_output=True, text=True, timeout=15).stdout.splitlines()
+    _txt = next((p for p in _mk if p.endswith((".json", ".jsonl", ".md", ".py", ".txt"))), None)
+    if _txt:
+        _fp = os.path.join(ROOT, _txt)
+        _o = open(_fp, "rb").read()
+        try:
+            open(_fp, "ab").write(("\n<<<<<<< " + "HEAD\na\n" + "=" * 7 + "\nb\n" + ">" * 7 + " x\n").encode())
+            case("S5: 마커 주입 → 차단", (_check_conflict_markers() or "").find(_txt) >= 0)
+        finally:
+            open(_fp, "wb").write(_o)
+        case("S5: 원복 후 → 차단 해제", _check_conflict_markers() is None)
+    else:
+        case("S5: 주입 대상 수정파일 없음 (검사 생략, 통과 아님)", True)
 
     print("\n셀프테스트 " + ("전건 통과" if ok else "실패 존재"))
     return 0 if ok else 1
