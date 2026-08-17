@@ -120,19 +120,24 @@ def fetch_defi_fees() -> dict:
 
 
 def _already_today() -> bool:
-    """오늘자가 이미 들어 있으면 True. 30분 크론에 매번 걸어도 하루 1회만 실제 수집한다.
+    """오늘 이미 **수집을 시도했으면** True. 30분 크론에 매번 걸어도 하루 1회만 호출한다.
 
-    파일 mtime 이 아니라 **내용의 마지막 날짜**로 판정한다 — CI 는 매 run 체크아웃이라
-    mtime 이 항상 '방금' 이고, mtime 기준 게이트는 CI 에서 영원히 거짓이다
-    (2026-08-15 `dart_corp_code.ensure_name_map` 이 정확히 이 형태로 죽어 있었다).
+    두 가지를 의도적으로 구분한다:
+      · 파일 mtime ❌ — CI 는 매 run 체크아웃이라 항상 '방금'. mtime 게이트는 CI 에서
+        영원히 거짓이다 (2026-08-15 `dart_corp_code.ensure_name_map` 이 그 형태로 죽어 있었다).
+      · API 데이터 마지막 날짜(`coverage.range[-1]`) ❌ — 🚨 원본이 하루 늦게 갱신하면
+        수집해도 range 가 안 움직여 게이트가 계속 열린다 = 30분마다 재수집(하루 48회).
+        2026-08-17 N=1 직후 실측으로 확인해 교정했다.
+      · 우리가 쓴 `collected_at` ✅ — 내용이라 CI 안전하고, 원본 지연과 무관하게
+        "오늘 한 번 시도했다" 를 정확히 뜻한다.
     """
     try:
         with open(OUT, encoding="utf-8") as f:
-            rng = (json.load(f).get("coverage") or {}).get("range") or []
+            stamp = json.load(f).get("collected_at") or ""
     except (OSError, ValueError):
         return False
     today = dt.datetime.now(dt.timezone(dt.timedelta(hours=9))).strftime("%Y-%m-%d")
-    return bool(rng) and rng[-1] >= today
+    return stamp[:10] == today
 
 
 def main() -> int:
