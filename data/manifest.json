@@ -1133,9 +1133,9 @@
    "contract": null,
    "size_bytes": 10638,
    "producers": [
+    "api/collectors/us_ipo_scout.py",
     "api/collectors/ipo_scout.py",
-    "api/builders/calendar_public_builder.py",
-    "api/intelligence/ticker_facts.py"
+    "api/builders/calendar_public_builder.py"
    ]
   },
   {
@@ -1428,7 +1428,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 62700,
+   "size_bytes": 62940,
    "producers": [
     "scripts/audit/build_data_manifest.py"
    ]
@@ -2050,7 +2050,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 713757,
+   "size_bytes": 714699,
    "producers": [
     "api/notifications/telegram.py",
     "scripts/cockpit_aggregate.py"
@@ -2468,6 +2468,19 @@
    "size_bytes": 1027329,
    "producers": [
     "api/builders/us_short_interest_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_short_pressure.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1003508,
+   "producers": [
+    "api/collectors/us_short_pressure.py",
+    "api/intelligence/ticker_facts.py",
+    "vercel-api/api/operator_core/ticker_facts.py"
    ]
   },
   {
