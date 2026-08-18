@@ -15,8 +15,14 @@ MCP 로 라이브 반영이 위험한(>60KB, write-loss) 공개 컴포넌트. **
 
 | repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
 |---|---|---|---|
-| `public-probe/PublicGlassboxTab.tsx` | PublicGlassboxTab | 표본 목표·진행률 제거, 사실만 표기 | ⏳ 복붙 |
+| `public-probe/PublicGlassboxTab.tsx` | PublicGlassboxTab | 표본 목표·진행률 제거, 사실만 표기 | ✅ **복붙 완료 2026-08-19 (PM 확인 "정상 뜨네")** |
 | `pages/admin/BrainMonitor.tsx` | BrainMonitor (admin) | `pct_to_gate` 진행률 바 제거 (백엔드가 필드를 더 안 보냄) | ⏳ 복붙 |
+
+> 🚨 **1차 복붙은 문법 파손으로 실패했다** (2026-08-19). 툴팁 문자열 안에 큰따옴표를 넣어
+> `Expected ',', got '몇' (58:325)` 로 라이브 화면이 에러를 띄웠다. 원인은 검사 부재 —
+> 파이썬은 편집마다 `ast.parse` 로 막았는데 tsx 는 아무것도 없었고, 회귀 2,431건이 전부
+> 통과한 채로 깨진 파일이 나갔다. 이후 `tests/test_tsx_syntax.py` 가 전수 파싱한다.
+> **이 큐에 올리기 전 `npx --no-install esbuild <파일> --outfile=/dev/null` 통과 필수.**
 
 ### 왜 급한가 — 지금 화면이 틀린 값을 그린다
 
