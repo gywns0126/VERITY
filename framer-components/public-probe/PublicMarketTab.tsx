@@ -60,7 +60,9 @@ const SAMPLE = {
     ],
 }
 const SAMPLE_IPO = [
-    { corp_name: "케이앤에스아이앤씨", report_nm: "증권신고서(지분증권)", rcept_dt: "20260612", dart_url: "https://dart.fss.or.kr" },
+    { corp_name: "케이앤에스아이앤씨", report_nm: "증권신고서(지분증권)", rcept_dt: "20260612", stage: "확정",
+      dart_url: "https://dart.fss.or.kr",
+      offering: { shares: 3000000, price_planned: 12400, total_planned: 37200000000, subscribe_start: "2026.09.16", subscribe_end: "2026.09.17", payment_date: "2026.09.21" } },
 ]
 
 function fmtNum(v: any): string {
@@ -78,6 +80,37 @@ function fmtPct(v: any): string {
 function fmtDate(s: any): string {
     const x = String(s || "")
     return x.length === 8 ? `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6, 8)}` : x
+}
+
+/* 🚨 IPO 강화 (2026-08-18) — 데이터는 이미 다 있는데 화면이 회사명·날짜·링크만 썼다.
+   `ipo_watch.json` 의 offering 은 실측 **10/10 전 필드 채움**(공모가·주식수·규모·청약·납입).
+   IPO 에서 사람이 실제로 보는 건 공모가와 청약일인데 그게 안 보이고 있었다.
+   🚨 RULE 7 — 전부 DART 공시 원문 사실이다. 자기 산식·점수·추천 없음. */
+
+// "2026.09.16" / "20260916" 둘 다 받는다 (DART 표기가 섞인다).
+function ipoDate(s: any): Date | null {
+    const x = String(s || "").replace(/[.\-]/g, "")
+    if (x.length !== 8) return null
+    const d = new Date(+x.slice(0, 4), +x.slice(4, 6) - 1, +x.slice(6, 8))
+    return isNaN(d.getTime()) ? null : d
+}
+// 청약 시작까지 남은 일수. 지난 건 음수 → 정렬·배지에서 뒤로 민다.
+function daysTo(s: any): number | null {
+    const d = ipoDate(s)
+    if (!d) return null
+    const t = new Date()
+    t.setHours(0, 0, 0, 0)
+    return Math.round((d.getTime() - t.getTime()) / 86400000)
+}
+function fmtDay(s: any): string {
+    const d = ipoDate(s)
+    return d ? `${d.getMonth() + 1}/${d.getDate()}` : "—"
+}
+// 372억 / 1,240억 — 억 단위 반올림. 공모규모는 억 단위가 관례다.
+function fmtEok(v: any): string {
+    const x = Number(v)
+    if (!isFinite(x) || x <= 0) return "—"
+    return Math.round(x / 1e8).toLocaleString("en-US") + "억"
 }
 
 // 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
@@ -313,25 +346,61 @@ export default function PublicMarketTab(props: Props) {
                 </div>
             )}
 
-            {/* IPO 파이프라인 */}
+            {/* IPO 파이프라인 — 공모가·규모·청약일 노출 + 임박순 정렬 (2026-08-18 강화) */}
             {ipos.length > 0 && (
                 <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }}>
                     <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>IPO 파이프라인 <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>· 상장 전 · DART</span></div>
-                    {ipos.slice(0, 10).map((p, i) => (
-                        <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}`, alignItems: "flex-start" }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{p.corp_name || p.name}</div>
-                                <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, marginTop: 2 }}>
-                                    {(p.report_nm || "증권신고서")}{p.rcept_dt ? " · " + fmtDate(p.rcept_dt) : ""}
+                    {/* 🚨 접수일순이면 **청약이 이미 끝난 건**이 위로 온다(실측 10건 중 5건).
+                        다가오는 청약을 앞에 두고, 지난 건은 뒤로 민다. 원본 배열은 건드리지 않는다. */}
+                    {ipos
+                        .slice()
+                        .sort((a: any, b: any) => {
+                            const da = daysTo((a.offering || {}).subscribe_start)
+                            const db = daysTo((b.offering || {}).subscribe_start)
+                            const ka = da == null ? 9999 : da < 0 ? 5000 - da : da
+                            const kb = db == null ? 9999 : db < 0 ? 5000 - db : db
+                            return ka - kb
+                        })
+                        .slice(0, 10)
+                        .map((p: any, i: number) => {
+                            const o = p.offering || {}
+                            const dd = daysTo(o.subscribe_start)
+                            const soon = dd != null && dd >= 0 && dd <= 7
+                            const past = dd != null && dd < 0
+                            return (
+                                <div key={i} style={{ display: "flex", gap: 12, padding: "11px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}`, alignItems: "flex-start", opacity: past ? 0.55 : 1 }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                            <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{p.corp_name || p.name}</span>
+                                            {p.stage && (
+                                                <span style={{ fontSize: 9.5, fontWeight: 800, color: p.stage === "확정" ? C.green : C.faint, background: C.bg, borderRadius: 5, padding: "2px 6px" }}>{p.stage}</span>
+                                            )}
+                                            {soon && (
+                                                <span style={{ fontSize: 9.5, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 5, padding: "2px 6px" }}>
+                                                    {dd === 0 ? "청약 오늘" : `청약 D-${dd}`}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {/* 공모 조건 — 전부 DART 신고서 기재값 */}
+                                        <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginTop: 3 }}>
+                                            {o.price_planned ? `${Number(o.price_planned).toLocaleString("en-US")}원` : "공모가 미정"}
+                                            {o.total_planned ? ` · ${fmtEok(o.total_planned)}` : ""}
+                                            {o.shares ? ` · ${Number(o.shares).toLocaleString("en-US")}주` : ""}
+                                        </div>
+                                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 2 }}>
+                                            {o.subscribe_start ? `청약 ${fmtDay(o.subscribe_start)}${o.subscribe_end ? `~${fmtDay(o.subscribe_end)}` : ""}` : ""}
+                                            {o.payment_date ? ` · 납입 ${fmtDay(o.payment_date)}` : ""}
+                                            {p.rcept_dt ? ` · 접수 ${fmtDate(p.rcept_dt).slice(5)}` : ""}
+                                        </div>
+                                    </div>
+                                    {p.dart_url && (
+                                        <a href={p.dart_url} target="_blank" rel="noopener" style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 6, padding: "3px 9px", textDecoration: "none", whiteSpace: "nowrap" }}>원문</a>
+                                    )}
                                 </div>
-                            </div>
-                            {p.dart_url && (
-                                <a href={p.dart_url} target="_blank" rel="noopener" style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 6, padding: "3px 9px", textDecoration: "none", whiteSpace: "nowrap" }}>원문</a>
-                            )}
-                        </div>
-                    ))}
+                            )
+                        })}
                     <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>
-                        상장 전 파이프라인(증권신고서 제출) · 사실만
+                        상장 전 파이프라인(증권신고서 제출) · 공모가·청약일 = DART 신고서 기재값 · 사실만
                     </div>
                 </div>
             )}
