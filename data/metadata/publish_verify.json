@@ -1,8 +1,8 @@
 {
- "generated_at": "2026-08-18T17:29:46.456973+09:00",
- "ok": true,
+ "generated_at": "2026-08-18T18:27:49.054206+09:00",
+ "ok": false,
  "checked": 4,
- "failed": 0,
+ "failed": 1,
  "results": [
   {
    "file": "stock_report_public.json",
@@ -14,9 +14,9 @@
     "PBR": 80.2
    },
    "coverage": {
-    "disclosures": 94.2,
-    "fin_series": 93.3,
-    "ownership": 99.6,
+    "disclosures": 94.3,
+    "fin_series": 93.4,
+    "ownership": 99.7,
     "calendar": 85.6,
     "peer": 86.5,
     "consensus": 0.0,
@@ -41,7 +41,7 @@
     ],
     [
      "fin_series",
-     93.3
+     93.4
     ]
    ]
   },
@@ -49,7 +49,7 @@
    "file": "us_stock_report_public.json",
    "ok": true,
    "total": 4488,
-   "cdn_age_s": 0,
+   "cdn_age_s": 20821,
    "pct": {
     "PER": 50.7,
     "PBR": 83.0
@@ -90,7 +90,7 @@
    "file": "us_stock_report_us_smallcap.json",
    "ok": true,
    "total": 3924,
-   "cdn_age_s": 0,
+   "cdn_age_s": 20818,
    "pct": {
     "PER": 37.1,
     "PBR": 73.5
@@ -129,10 +129,8 @@
   },
   {
    "file": "_verity_data_push_recency",
-   "ok": true,
-   "pushed_at": "2026-08-18T08:25:04Z",
-   "age_h": 0.08,
-   "sla_h": 3.0
+   "ok": false,
+   "error": "조회 실패: HTTP Error 403: rate limit exceeded"
   }
  ]
 }
