@@ -128,9 +128,15 @@ def test_send_message_quiet_skip_does_not_register_dedupe(monkeypatch):
     assert len(sent) == 1
 
 
-def test_send_alerts_bypasses_when_critical_present(monkeypatch):
-    """2026-05-12: 묶음 bypass 폐기 — CRITICAL 묶음만 bypass 발송, INFO 묶음은 quiet hours skip.
-    야간 + INFO+CRITICAL 입력 → CRITICAL 묶음 1통만 발송됨.
+def test_send_alerts_bypasses_when_execution_critical_present(monkeypatch):
+    """야간 통과 = CRITICAL **이면서 집행 계열**일 때만 (2026-08-17 계약 변경).
+
+    🚨 계약 이력:
+      2026-05-12 — 묶음 bypass 폐기, CRITICAL 묶음만 통과 (INFO 묶음은 quiet skip)
+      2026-08-17 — CRITICAL 만으로는 부족. 실측상 CRITICAL 의 76%가 macro·earnings
+        (정보성)이고 그것들이 새벽 0·2·4·5시에 깨웠다. 이제 집행 계열
+        (STOP_LOSS·EXPOSURE_BLOCK·PARTIAL_EXIT·NEW_BUY)이 묶음에 있어야 통과한다.
+        실데이터 예측 = 야간 배치 89 → 26 (71% 감소), 낮 시간대 무변경.
     """
     monkeypatch.setenv("TELEGRAM_QUIET_HOURS_ENABLED", "1")
     cfg, qh, tg = _reload_modules()
@@ -139,15 +145,39 @@ def test_send_alerts_bypasses_when_critical_present(monkeypatch):
 
     ok = tg.send_alerts([
         {"level": "INFO", "message": "참고 1"},
-        {"level": "CRITICAL", "message": "긴급 1"},
+        {"level": "CRITICAL", "type": "STOP_LOSS", "message": "긴급 1"},
     ])
     assert ok is True
-    # CRITICAL 묶음만 발송 (INFO 묶음은 quiet hours 차단)
+    # 집행 계열 CRITICAL 묶음만 발송 (INFO 묶음은 quiet hours 차단)
     assert len(sent) == 1
-    payload = sent[0][1].get("json") or {}
-    text = payload.get("text", "")
+    text = (sent[0][1].get("json") or {}).get("text", "")
     assert "긴급" in text
-    assert "참고 1" not in text
+
+
+def test_send_alerts_informational_critical_stays_quiet(monkeypatch):
+    """🚨 핵심 회귀: 정보성 CRITICAL(거시·실적)은 야간에 깨우지 않는다."""
+    monkeypatch.setenv("TELEGRAM_QUIET_HOURS_ENABLED", "1")
+    cfg, qh, tg = _reload_modules()
+    monkeypatch.setattr(qh, "is_quiet_hours", lambda now=None: True)
+    sent = _patch_requests(monkeypatch, tg)
+
+    tg.send_alerts([
+        {"level": "CRITICAL", "category": "macro", "message": "VIX 급등"},
+        {"level": "CRITICAL", "category": "earnings", "message": "실적 발표"},
+    ])
+    assert len(sent) == 0, "정보성 CRITICAL 이 야간을 뚫었다 — 8/17 교정 회귀"
+
+
+def test_send_alerts_informational_critical_sends_in_daytime(monkeypatch):
+    """낮에는 종전과 동일하게 전부 발송된다 — 이 교정은 **야간 자격만** 바꾼다."""
+    monkeypatch.setenv("TELEGRAM_QUIET_HOURS_ENABLED", "1")
+    cfg, qh, tg = _reload_modules()
+    monkeypatch.setattr(qh, "is_quiet_hours", lambda now=None: False)
+    sent = _patch_requests(monkeypatch, tg)
+
+    ok = tg.send_alerts([{"level": "CRITICAL", "category": "macro", "message": "VIX 급등"}])
+    assert ok is True and len(sent) == 1
+    assert "VIX" in (sent[0][1].get("json") or {}).get("text", "")
 
 
 def test_send_alerts_skipped_when_only_info_at_night(monkeypatch):

@@ -343,6 +343,34 @@ def _append_alert_type_ledger(crit: List[Dict[str, Any]],
         print(f"[telegram] alert_type ledger 실패: {type(e).__name__}: {e}", file=sys.stderr)
 
 
+# 🚨 2026-08-17 — 야간(quiet hours) 통과 자격. PM 지시 "알림이 너무 많다" 실측 후 도입.
+#   실측(최근 8일, 픽스처 제외): 실발송 98건 중 **야간 30건(31%)** 이고 그중 **28건이
+#   "🚨 긴급" 묶음**이었다. CRITICAL 내역 = macro 125 · earnings 63 · STOP_LOSS 40 · unknown 19
+#   — 즉 **macro+earnings 가 CRITICAL 의 76%** 인데 이 둘이 새벽 0·2·4·5시에 깨웠다.
+#
+#   기준: **돈이 움직이는 것만 깨운다.** 손절·노출차단·부분청산·신규매수는 행동 가능하고
+#   시점이 중요하다. 거시 국면·실적 발표는 정보성이라 장 열릴 때 봐도 늦지 않는다
+#   (게다가 같은 국면이면 며칠씩 반복된다 — 장부 함수 docstring 이 이미 지적한 성질).
+#
+#   🚨 레벨(CRITICAL)은 건드리지 않는다 — 그건 다른 소비처가 읽는다. 여기서 바꾸는 것은
+#   **야간 통과 자격뿐**이고, 낮에는 종전과 동일하게 전부 발송된다.
+_QUIET_BYPASS_KEYS = {"STOP_LOSS", "EXPOSURE_BLOCK", "PARTIAL_EXIT", "NEW_BUY"}
+
+
+def _alert_key(a: Dict[str, Any]) -> str:
+    """장부와 **같은 폴백 순서** — type → category → unknown. 두 스키마가 공존한다."""
+    return str(a.get("type") or a.get("category") or "unknown")
+
+
+def _may_bypass_quiet(alerts: List[Dict[str, Any]]) -> bool:
+    """묶음에 집행 계열이 하나라도 있으면 야간 통과.
+
+    🚨 보수적으로 OR 로 판정한다 — 손절 1건이 거시 5건과 같이 묶였다고 그 손절을
+    아침까지 묻어두면 안 된다. 묶음을 쪼개는 것은 별건(발송 횟수가 늘어난다).
+    """
+    return any(_alert_key(a) in _QUIET_BYPASS_KEYS for a in alerts)
+
+
 def send_alerts(alerts: list[dict]) -> bool:
     """알림 목록 전송. 성공 시 True (토큰 미설정 시 콘솔만이면 False).
 
@@ -374,7 +402,10 @@ def send_alerts(alerts: list[dict]) -> bool:
         lines = ["<b>🚨 VERITY 긴급 알림</b>\n"]
         for alert in crit:
             lines.append(alert["message"])
-        if send_message("\n".join(lines), bypass_quiet=True):
+        # 🚨 2026-08-17 — 종전에는 CRITICAL 묶음이 **무조건** 야간을 통과했다.
+        #   실측상 그 통과의 대부분이 거시·실적(정보성)이라 새벽에 깨웠다.
+        #   이제 집행 계열이 포함된 묶음만 통과한다 (`_may_bypass_quiet`).
+        if send_message("\n".join(lines), bypass_quiet=_may_bypass_quiet(crit)):
             sent_any = True
 
     if rest and not TELEGRAM_CRITICAL_ONLY:
