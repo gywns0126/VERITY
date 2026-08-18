@@ -9,9 +9,25 @@
 화이트리스트 위반. 공개 소비자(PublicNewsTab=뉴스, StockDetailPanel/USDetailHub=recommendation+
 consensus+팩트)가 strip 대상 키를 전혀 쓰지 않음을 사전 검증(파손 0) 후 도입.
 
-⚠️ consensus / analyst_consensus / recommendation 은 여기서 제거하지 않음(별 트랙):
-   - consensus = 별도 PUBLIC_CONSENSUS 게이트 + USDetailHub 렌더 정리(쟁점3/4)
-   - recommendation(AVOID/BUY 문자열) = 페이지 소비 중, RULE 7 별도 검토 큐
+🚨 2026-08-18 — consensus / analyst_consensus / analyst_report_summary **strip 추가** (PM 결정
+"애널리스트는 공개용으로 안올리는걸로. 백엔드에만 냅둬서 오퍼레이터 산식에만 넣는 걸로").
+
+종전 이 자리에는 "consensus 는 별도 PUBLIC_CONSENSUS 게이트로 미룬다" 고 적혀 있었다.
+**그 게이트는 만들어지지 않았다** — 저장소 전체에서 `PUBLIC_CONSENSUS` 의 유일한 출현이
+이 주석 자신이었다(2026-08-18 grep). 그 사이 결정이 갈렸다:
+  · 2026-07-10 PM — `us_analyst_consensus.json` 재배포 금지 (파일 봉인 8/02)
+  · 2026-07-21 PM — `consensus_data.json` = "KR 브로커 목표가·투자의견, 동일 법적 class" (봉인 8/16)
+  · 그런데 **같은 숫자가 이 경로로는 계속 나갔다** — 라이브 blob 실측(8/18):
+    target_price 63 · kis_target_price 18 · investment_opinion 56 · single_consensus_target_price 56.
+    파일만 막고 통로를 안 막은 형태다.
+
+소비 파손 0 확인 — public-probe 전수 grep 에서 `consensus.<필드>` 접근 **0건**.
+`PublicStockReport.tsx:4935` 는 destructure 후 useMemo 의존성 배열에만 있고 렌더 경로가 없다.
+`:402/548/564` 는 SAMPLE 상수(하드코딩 문자열)라 발행본과 무관하다.
+
+원본 `data/` 는 그대로 둔다 — 오퍼레이터·백엔드 산식은 계속 쓴다. 막는 것은 **발행**뿐이다.
+
+⚠️ recommendation(AVOID/BUY 문자열) = 페이지 소비 중, RULE 7 별도 검토 큐
 신규 held 점수 필드 추가 시 STRIP_KEYS 갱신 또는 STRIP_PAT 로 자동 포착.
 """
 from __future__ import annotations
@@ -35,6 +51,12 @@ STRIP_KEYS = {
     "analyst_view",
     # 2026-08-04 신호 필터 F2·F3 진단 flag (PREREG_SIGNAL_FILTERS) — 자체 산식 파생, 오퍼레이터 전용.
     "value_guards",
+    # 🚨 2026-08-18 애널리스트 컨센서스 3키 (PM 결정 — 공개 발행 금지, 백엔드 유지).
+    #   consensus = 목표가·투자의견·실적추정 (KR 브로커 + KIS). 7/21 판정의 동일 법적 class.
+    #   analyst_consensus = rec 최상위 사본(20건). equity_research_brief 안의 것은 그 키가
+    #     이미 STRIP_KEYS 에 있어 함께 빠진다.
+    #   analyst_report_summary = recent_reports[].target_price (7건) 보유.
+    "consensus", "analyst_consensus", "analyst_report_summary",
 }
 # 패턴 백스톱 — 미래 추가 점수/등급/판정 필드 누출 방지 (consensus/recommendation/팩트 미포착)
 STRIP_PAT = re.compile(r"brain|score_break|verdict|fscore|lynch", re.IGNORECASE)
