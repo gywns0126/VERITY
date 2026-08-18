@@ -63,6 +63,14 @@ jobs:
         continue-on-error: true
         run: python scripts/audit/build_data_manifest.py
 
+      - name: Axis discrimination (R3 — 문헌 4축 변별 소멸 감시)
+        # 🚨 PREREG_BASELINE_V1_LITERATURE §7-C. 두 기준을 병행한다 —
+        #   고유값 ≤5 (절대 바닥) · 최빈값 점유 >50% (N 무관).
+        #   고유값 단독 임계는 운영 풀 크기에 의존해, 풀이 줄면 정상 운영을 오탐한다.
+        #   관측 전용(점수 변경 0)이라 실패해도 감사 커밋을 막지 않는다.
+        continue-on-error: true
+        run: python scripts/audit/axis_discrimination.py
+
       - name: Commit audit jsonl
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증)
         # [[feedback_data_collection_verification_mandatory]] specific path commit

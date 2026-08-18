@@ -30,6 +30,18 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    # 🚨 R2 (2026-08-18, PREREG_BASELINE_V1_LITERATURE §7-C) — 헌법 가중 불변식 위반 = 발행 정지.
+    #   되돌림 판단 대상이 아니다. 합이 1.0 이 아닌 점수는 애초에 의미가 없고, 의미 없는 점수를
+    #   내보낸 뒤 되돌리는 것은 순서가 틀렸다. 이 검사가 원본(data/verity_constitution.json)에
+    #   걸리는 이유 = fact.py:523 이 런타임에 **조용히 재정규화**해서 산출물만 보면 정상으로
+    #   보이기 때문이다. 런타임은 자기를 고치고 아무도 원인을 못 본다.
+    - name: Verify constitution weights (R2 — 위반 시 발행 정지)
+      shell: bash
+      run: |
+        git fetch origin main --depth=1 --quiet
+        git show origin/main:data/verity_constitution.json > /tmp/_const_check.json
+        python3 "${{ github.action_path }}/verify_constitution_weights.py" /tmp/_const_check.json
+
     - name: Stage public data (always from main HEAD)
       shell: bash
       run: |
