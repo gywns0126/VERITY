@@ -75,3 +75,47 @@ if __name__ == "__main__":
                 fails += 1
                 print(f"FAIL {name}: {e}")
     sys.exit(1 if fails else 0)
+
+
+def test_kelly_n_comes_from_ledger_not_raw_exit_log(tmp_path, monkeypatch):
+    """🚨 n 은 정본 원장(trade_ledger)에서 와야 한다 — raw exit_log 는 유령 매도를 담는다.
+
+    2026-08-18 실측: `exit_log.jsonl` 82행 중 **59행이 유령**(dev-mode 사이클 잔재,
+    7/20 감사 P0). 같은 종목·같은 날 같은 고점으로 8행이 찍힌 경우까지 있었다.
+    그대로 세면 λ = n/252 가 0.091 → 0.325 로 부풀어, **미검증 brain 점수에 실제
+    실적의 3.5배 사이징 권한**을 준다. 방향이 안전한 쪽이 아니라 위험한 쪽이다.
+
+    이 테스트는 "유령이 n 을 부풀리지 않는다" 만 고정한다 — 산식은 건드리지 않는다.
+    """
+    from api.vams import engine as E
+
+    # 실제 청산 1건 + 같은 (종목,날짜) 유령 5건
+    history = [
+        {"date": "2026-06-01", "type": "BUY", "ticker": "000001", "quantity": 10, "price": 1000},
+        {"date": "2026-06-10", "type": "SELL", "ticker": "000001", "quantity": 10,
+         "price": 900, "pnl": -1000},
+    ] + [{"date": "2026-06-10", "type": "SELL", "ticker": "000001", "quantity": 10,
+          "price": 900, "pnl": -1000} for _ in range(5)]
+
+    monkeypatch.setattr(E, "load_history", lambda: history)
+    monkeypatch.setattr(E, "_kelly_window_start", lambda: "2026-05-17")
+    monkeypatch.setattr(E, "DATA_DIR", str(tmp_path))   # exit_log 부재 → b=default
+
+    n, b = E._kelly_realized_stats()
+    assert n == 1, f"유령 5건이 n 에 섞였다: n={n} (정본 1건이어야 한다)"
+    assert b == E.KELLY_B_DEFAULT
+
+
+def test_kelly_lambda_denominator_is_a_scale_not_a_retired_gate():
+    """252 는 여기서 **스케일 분모**다 — 폐기된 IC 게이트(§7-1)와 동작이 다르다.
+
+    값 변경 = RULE 7 쿼터 소모라 재등록 대상. 이 테스트는 값이 조용히 바뀌는 것을 막는다.
+    """
+    from api.vams import engine as E
+
+    assert E.KELLY_LAMBDA_N_FULL == 252, "분모 변경은 재등록 대상 (PREREG_KELLY_FIX_2026_08_02)"
+    # 게이트가 아니라 연속 스케일 — 도달 전에도 0 이 아니라 비례해서 작동한다
+    base = 1_000_000
+    lo = E._apply_fractional_kelly(base, 90, stats=(20, 1.2))
+    hi = E._apply_fractional_kelly(base, 90, stats=(200, 1.2))
+    assert base < lo < hi, "n 증가에 따라 점증해야 한다(게이트식 계단 아님)"

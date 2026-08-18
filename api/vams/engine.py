@@ -14,7 +14,7 @@ import shutil
 import time
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Optional, List, Tuple
+from typing import Any, Dict, Optional, List, Tuple
 
 try:
     import fcntl  # POSIX only
@@ -656,37 +656,96 @@ def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
 KELLY_MULT_MIN = 0.6           # D3 — mult 하한
 KELLY_MULT_MAX = 1.2           # D3 — mult 상한
 KELLY_B_DEFAULT = 1.2          # D4 — 실현 표본 부족 시 보수 default (옛 임의값 1.5 교체)
-KELLY_LAMBDA_N_FULL = 252      # D2 — 검증 연동 스케일 (검증 게이트 정합)
+# D2 — 검증 연동 스케일. 실적이 쌓일수록 brain 의 사이징 영향을 키운다.
+# 🚨 2026-08-18 근거 표기 정정 — 종전 주석은 "검증 게이트 정합" 이었다. 그 게이트(N=252 IC,
+#   2027-05)는 §7-1 로 폐기됐다. 다만 여기서 252 는 **게이트가 아니라 스케일 분모**로 쓰인다
+#   ("도달하면 통과" 가 아니라 "쌓일수록 점증"). 동작은 폐기 대상이 아니므로 값은 유지하고
+#   근거 표기만 고친다. 분모 재설정 = RULE 7 쿼터 소모 → 재등록 대상(§7-3 승인 후).
+KELLY_LAMBDA_N_FULL = 252
 KELLY_MIN_WINS_LOSSES = 10     # D4 — 실현 b 채택 최소 표본 (승·패 각각)
 _KELLY_REF_BRAIN = 60          # 중립 기준점 (mult=1.0)
 
 
-def _kelly_realized_stats() -> Tuple[int, float]:
-    """VAMS exit_log 실현 통계 → (n_closed, b=avg_win/avg_loss).
+def _kelly_window_start() -> Optional[str]:
+    """Kelly 집계 창 = `reset_meta.reset_at` 이후. 없으면 None(전체 — legacy 폴백).
 
-    실패/표본부족(승·패 각 10 미만) = (n, KELLY_B_DEFAULT). read-only, 예외 삼킴(사이징 경로 보호).
+    🚨 정의를 `api/main.py:1278` · `api/vams/validation.py` 와 **한 글자까지 맞춘다.**
+    같은 원장을 다르게 읽어 4.8배 괴리가 났던 것이 #290 사고였다.
     """
-    path = os.path.join(DATA_DIR, "vams", "exit_log.jsonl")
-    wins: List[float] = []
-    losses: List[float] = []
-    n = 0
     try:
+        pf = load_portfolio()
+        v = (pf or {}).get("vams") or {}
+        return str(((v.get("reset_meta") or {}).get("reset_at") or ""))[:10] or None
+    except Exception:  # noqa: BLE001 — 사이징 경로 보호
+        return None
+
+
+def _kelly_realized_stats() -> Tuple[int, float]:
+    """VAMS 실현 통계 → (n_closed, b=avg_win/avg_loss). **정본 원장 기준.**
+
+    🚨 2026-08-18 정정 — 종전은 `exit_log.jsonl` 을 **그대로 세었다.** 그 파일은 dev-mode
+    사이클이 남긴 **유령 매도**를 포함한다(7/20 감사 P0). 실측: 82행 중 **59행이 유령**이고
+    정본 청산은 **23건**이다. 같은 종목·같은 날 같은 고점으로 8행이 연달아 찍힌 경우까지 있었다
+    (EQT 2026-07-07). 그 결과 λ = n/252 가 **0.091 이어야 할 것이 0.325** 로,
+    **미검증 brain 점수에 실제 실적의 3.5배 사이징 권한**을 주고 있었다. 방향이 안전한 쪽이
+    아니라 위험한 쪽이다.
+
+    `api/main.py` 는 2026-08-05 에 이미 `trade_ledger.reconstruct` 를 단일 출처로 전환했는데
+    (#290 의 4.8배 괴리 재발 방지) **이 함수만 따라오지 않았다.** 여기서 맞춘다.
+
+    산식·임계 불변 — 오염 제거일 뿐이라 RULE 7 쿼터를 소모하지 않는다.
+
+    n = 정본 에피소드 수. b 는 pct 가 원장에 없으므로 **에피소드당 exit_log 1행**만
+    골라 계산한다(같은 종목·날짜 후보 중 `raw_pnl` 에 가장 가까운 행). 승·패 각
+    `KELLY_MIN_WINS_LOSSES` 미만이면 종전대로 `KELLY_B_DEFAULT`.
+    read-only, 예외 삼킴(사이징 경로 보호 — 여기서 죽으면 매수가 통째로 멈춘다).
+    """
+    try:
+        from api.vams.trade_ledger import reconstruct
+        episodes = reconstruct(load_history(), since=_kelly_window_start())["episodes"]
+    except Exception:  # noqa: BLE001 — 사이징 경로 보호
+        return 0, KELLY_B_DEFAULT
+    n = len(episodes)
+    if not n:
+        return 0, KELLY_B_DEFAULT
+
+    # pct 조인 — 유령이 같은 (종목,날짜) 에 섞여 있으므로 에피소드당 1행만 고른다
+    by_key: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    try:
+        path = os.path.join(DATA_DIR, "vams", "exit_log.jsonl")
         with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
                     continue
                 try:
-                    pct = float(json.loads(line).get("pnl_pct"))
-                except (TypeError, ValueError, json.JSONDecodeError):
+                    row = json.loads(line)
+                except json.JSONDecodeError:
                     continue
-                n += 1
-                if pct > 0:
-                    wins.append(pct)
-                elif pct < 0:
-                    losses.append(-pct)
+                if row.get("pnl_pct") is None:
+                    continue
+                key = (str(row.get("ticker")), str(row.get("date") or row.get("ts"))[:10])
+                by_key.setdefault(key, []).append(row)
     except OSError:
-        return 0, KELLY_B_DEFAULT
+        return n, KELLY_B_DEFAULT
+
+    wins: List[float] = []
+    losses: List[float] = []
+    for ep in episodes:
+        cand = by_key.get((str(ep.get("ticker")), str(ep.get("date"))[:10]))
+        if not cand:
+            continue
+        target = _num(ep.get("raw_pnl") if ep.get("raw_pnl") is not None else ep.get("pnl"), 0.0)
+        row = min(cand, key=lambda r: abs(_num(r.get("pnl"), 0.0) - target))
+        try:
+            pct = float(row["pnl_pct"])
+        except (TypeError, ValueError):
+            continue
+        if pct > 0:
+            wins.append(pct)
+        elif pct < 0:
+            losses.append(-pct)
+
     if len(wins) >= KELLY_MIN_WINS_LOSSES and len(losses) >= KELLY_MIN_WINS_LOSSES:
         avg_loss = sum(losses) / len(losses)
         if avg_loss > 0:
