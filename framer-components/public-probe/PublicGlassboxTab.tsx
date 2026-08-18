@@ -8,8 +8,10 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 신뢰도 = 성과 숫자가 아니라 "엄밀함 + 전 신호 투명성 + 아직 안 끝났다는 정직"에서.
  *   PM 옵션 B(2026-06-18): 공개=과정·방법·진행만. raw 성과(IC/적중률/기댓값/CI)=검증 후 공개.
  * 표시 정직화(2026-06-19): N=유효표본(관측 T/중첩 k), 달력 일수 아님. 방법론·마일스톤·출처·보류사유 세분화.
- * 🚨 게이트 도달 프레이밍(2026-07-04): N_eff ≥ 252 도달 시 "진행률 99.9%"(끝난 듯) 대신 다음 관문(N≥684 DSR)으로
- *   진행률 재타겟 → "IC 게이트 도달 ✓ · 다음 관문까지 X% · 검증 완료 아님". 표본 도달 ≠ 검증 통과, 정체/방치 느낌 제거.
+ * 🚨 되돌리지 말 것 (2026-08-18) — 표본 목표·진행률 표시를 **의도적으로 제거**했다.
+ *   N=252 IC 게이트는 PM 결정(2026-08-15)으로 폐기됐다. 폐기 사유가 정확히 이 UI 형태였다:
+ *   검정력을 따지지 않고 표본만 요구하면 출력이 언제나 "더 모아라" 가 된다. 기다림은 결론이 아니다.
+ *   백엔드는 이미 `gate: null` 을 보낸다 — 여기서 목표치를 폴백으로 되살리면 폐기가 무효가 된다.
  * RULE 6 — ⓘ/문구 평문 사전 작성. 런타임 LLM 0. ⓘ = 항상 표시, PC hover / 모바일 탭, 툴팁 clamp.
  * 스켈레톤(2026-07-05 PM): 실사이트 로딩 = 토스식 shimmer 스켈레톤. SAMPLE 은 캔버스 전용 —
  *   가짜 숫자(N_eff 145 등) flash 는 RULE 7 위반 소지. 실패 시 sessionStorage 캐시 → 재시도 안내.
@@ -53,7 +55,7 @@ const FONT =
 
 const INFO: Record<string, string> = {
     "표본 N":
-        "검증 표본 = 전 종목 채점 누적(관측 T)을 예측 중첩(k)으로 나눈 유효표본 N_eff예요. 달력 일수가 아니라 관측 횟수라, 한 번 채점에 여러 종목이 더해져 빨리 쌓여요. 같은 날 종목들은 시장과 함께 움직여 서로 상관되니, N_eff는 진짜 독립 표본보다 다소 큰(낙관) 추정이에요. 통계로 동전 던지기와 갈리는 최소선이 N≥252.",
+        "검증 표본 = 전 종목 채점 누적(관측 T)을 예측 중첩(k)으로 나눈 유효표본 N_eff예요. 달력 일수가 아니라 관측 횟수라, 한 번 채점에 여러 종목이 더해져 빨리 쌓여요. 같은 날 종목들은 시장과 함께 움직여 서로 상관되니, N_eff는 진짜 독립 표본보다 다소 큰(낙관) 추정이에요. 표본이 작으면 동전 던지기와 구분되지 않습니다. 다만 "몇 개면 충분" 이라는 고정 최소선은 두지 않습니다 — 필요한 표본 수는 재려는 효과의 크기에 따라 달라지기 때문입니다.",
     "전진 검증":
         "예측을 먼저 기록하고, 만기일이 와야 그때의 미래 실현가로 채점해요. 미래를 미리 보는 일(look-ahead)이 구조적으로 불가능한 방식이라, 과거에 끼워맞춘 백테스트와 달라요.",
     IC: "예측 순위와 실제 수익 순위가 같은 방향인 정도(정보계수). 0이면 동전 던지기, 높을수록 예측력이 있다는 뜻이에요. 표본이 충분해야 의미가 생겨요.",
@@ -73,12 +75,10 @@ const SIGNAL_NAME: Record<string, string> = {
 const MILESTONES = [
     { n: 30, label: "통계 무의미선", desc: "N<30 = 결론 불가" },
     { n: 100, label: "예비 관찰", desc: "N≥100 = 예비(잠정)" },
-    {
-        n: 252,
-        label: "IC 게이트",
-        desc: "유의성 판정 시작 · Bailey-López de Prado",
-    },
-    { n: 684, label: "DSR", desc: "다중검정 보정 통과선" },
+    // 🚨 2026-08-18 — N=252 "IC 게이트" 제거. 표본 수 게이트는 PM 결정(2026-08-15)으로
+    //   폐기됐다: 검정력을 따지지 않고 표본만 요구하는 형태라 출력이 언제나 "더 모아라" 였다.
+    //   30·100 라벨과 684 DSR 참조값은 유지된다(폐기 대상이 아니었다).
+    { n: 684, label: "DSR 참조", desc: "다중검정 보정 참조값 (목표 아님)" },
 ]
 
 interface Sig {
@@ -91,10 +91,10 @@ interface Sig {
     source?: string
 }
 interface Gate {
-    target_n?: number
+    // 🚨 2026-08-18 — `target_n` · `progress_pct` 제거. 백엔드가 더 보내지 않고(폐기 정합),
+    //   타입에 남겨두면 다음 편집자가 "채워야 할 값" 으로 오해해 폴백을 되살린다.
     milestone?: string
     best_signal_n?: number
-    progress_pct?: number
 }
 
 interface Props {
@@ -108,10 +108,8 @@ const DEFAULT_URL =
 const SAMPLE = {
     generated_at: "2026-06-19T17:16:01+09:00",
     gate: {
-        target_n: 252,
-        milestone: "N=252 IC 게이트 (Bailey-López de Prado, 2027-05 목표)",
+        milestone: "표본 목표 없음 — 사전 검정력 관문 확정 대기",
         best_signal_n: 145.2,
-        progress_pct: 57.6,
     },
     signals: [
         {
@@ -120,7 +118,7 @@ const SAMPLE = {
             n: 726,
             n_eff: 145.2,
             label: "표본 N≥100 누적 (잠정 — 유의성 미검증)",
-            gate_status: "가설 (게이트 N≥252 미도달, 진척 57.6%)",
+            gate_status: "가설 (유의성 미달)",
             source: "prediction_ic_history.jsonl (Brain 종합 verdict, prediction_scoring v0)",
         },
         {
@@ -138,7 +136,7 @@ const SAMPLE = {
             n: 53,
             n_eff: null,
             label: "예비 (N<100, 검증 진행 중)",
-            gate_status: "가설 (게이트 N≥252 미도달, 진척 21.0%)",
+            gate_status: "가설 (유의성 미달)",
             source: "factor_ic_history.json (ic_stats machinery, forward_days 30)",
         },
         {
@@ -300,17 +298,6 @@ export default function PublicGlassboxTab(props: Props) {
             (x: any) => x && String(x.signal || "").indexOf("funnel") === -1
         )
     }, [data])
-    const progress = Math.max(0, Math.min(100, Number(gate.progress_pct) || 0))
-    const curN = Number(gate.best_signal_n) || 0
-    const targetN = Number(gate.target_n) || 252
-    // 표본 게이트 도달 = 판정 "시작선" 도달일 뿐, 유의성 통과(검증 완료) 아님. 프레이밍 전환용.
-    const gateReached = curN >= targetN
-    // 도달 후엔 "다음 관문"(다음 미도달 마일스톤)으로 진행률 재타겟 → 정체/방치 느낌 제거, 계속 climbing.
-    const nextMs = MILESTONES.find((m) => curN < m.n)
-    const nextPct = nextMs
-        ? Math.max(0, Math.min(100, (curN / nextMs.n) * 100))
-        : 100
-
     const bestSig = useMemo(() => {
         let best: Sig | null = null
         for (const s of signals) {
@@ -322,6 +309,13 @@ export default function PublicGlassboxTab(props: Props) {
         }
         return best
     }, [signals])
+
+    // 🚨 2026-08-18 — 진행률·목표 표본 제거. 백엔드가 `gate` 를 **null** 로 보내기 시작했는데
+    //   (폐기 정합) 여기 폴백이 `|| 252` 라 공개 페이지가 "N_eff 0 / 252 · 0%" 를 그리고 있었다.
+    //   폐기된 목표를 0% 진행률로 되살린 셈이다. 표본은 **사실로만** 적는다.
+    //   signals 의 n_eff 를 1차 출처로 쓴다 — gate 가 비어도 사실은 남는다.
+    const curN =
+        Number((bestSig && bestSig.n_eff) ?? gate.best_signal_n) || 0
 
     const updated = useMemo(() => {
         const g = data && data.generated_at
@@ -602,7 +596,7 @@ export default function PublicGlassboxTab(props: Props) {
                 </div>
             </div>
 
-            {/* 1) 게이트 진행률 / 도달 시 다음 관문으로 재타겟 (표본 크기 진척 — 시간 진척 아님) */}
+            {/* 1) 표본 현황 — 🚨 진행률 아님. 목표 표본 게이트는 폐기됐다(2026-08-15 결정) */}
             <div style={{ ...card, padding: "16px 16px", marginTop: 12 }}>
                 <div
                     style={{
@@ -612,11 +606,7 @@ export default function PublicGlassboxTab(props: Props) {
                         marginBottom: 2,
                     }}
                 >
-                    {gateReached
-                        ? nextMs
-                            ? `다음 관문 — N≥${nextMs.n} · ${nextMs.label}`
-                            : "전 표본 관문 통과 — 최종 판정 단계"
-                        : "검증 진행률 — 통계 유의 최소표본까지"}
+                    검증 표본 현황 — 목표치 없음
                 </div>
                 <div
                     style={{
@@ -628,27 +618,7 @@ export default function PublicGlassboxTab(props: Props) {
                         flexWrap: "wrap",
                     }}
                 >
-                    <span>
-                        N_eff = {f2(gate.best_signal_n, 0)}
-                        {gateReached && nextMs
-                            ? " / " + nextMs.n
-                            : " / " + targetN}
-                    </span>
-                    {gateReached ? (
-                        <span
-                            style={{
-                                fontSize: 11.5,
-                                fontWeight: 800,
-                                color: C.vg,
-                                background: C.vgS,
-                                borderRadius: 6,
-                                padding: "2px 8px",
-                                marginLeft: 8,
-                            }}
-                        >
-                            IC 게이트({targetN}) 도달 ✓
-                        </span>
-                    ) : null}
+                    <span>N_eff = {f2(curN, 1)}</span>
                     <Info k="표본 N" uid="gate" />
                 </div>
                 <div
@@ -661,26 +631,7 @@ export default function PublicGlassboxTab(props: Props) {
                     }}
                 >
                     관측 {bestSig && bestSig.n != null ? f2(bestSig.n, 0) : "—"}
-                    건 누적 → 중첩보정 유효표본 {f2(gate.best_signal_n, 0)} ·
-                    달력 일수 아님
-                </div>
-                <div
-                    style={{
-                        height: 10,
-                        borderRadius: 5,
-                        background: C.line,
-                        overflow: "hidden",
-                        margin: "10px 0 6px",
-                    }}
-                >
-                    <div
-                        style={{
-                            width: (gateReached ? nextPct : progress) + "%",
-                            height: "100%",
-                            background: gateReached ? C.vg : C.vt,
-                            borderRadius: 5,
-                        }}
-                    />
+                    건 누적 → 중첩보정 유효표본 {f2(curN, 1)} · 달력 일수 아님
                 </div>
                 <div
                     style={{
@@ -688,13 +639,15 @@ export default function PublicGlassboxTab(props: Props) {
                         color: C.faint,
                         fontWeight: 600,
                         lineHeight: 1.5,
+                        marginTop: 8,
                     }}
                 >
-                    {gateReached
-                        ? nextMs
-                            ? `IC 게이트(N≥${targetN}) 도달 ✓ · 다음 ${nextMs.label}(N≥${nextMs.n})까지 ${f2(nextPct, 0)}% · 유의성 판정은 표본 쌓이며 진행 · 검증 완료 아님`
-                            : `전 표본 관문(N≥684) 통과 · 유의성·DSR 최종 판정 단계 · 검증 완료 아님`
-                        : `유효표본이 통계 유의 최소선(N≥${targetN})에 닿은 정도 ${f2(progress, 1)}% · 관측 횟수 기반(시간 진척 아님)`}
+                    🚨 종전에는 여기에 "목표 표본까지 몇 %" 를 그렸습니다. 그 기준은
+                    2026-08-15 에 폐기했습니다 — 검정력을 따지지 않은 채 표본 수만
+                    요구하면 결론이 언제나 "더 모아라" 가 되기 때문입니다. 기다림은
+                    결론이 아닙니다. 대체 기준(사전 검정력 관문)은 확정 전이라, 확정될
+                    때까지 여기에 목표치를 지어내지 않습니다. 유의성 판정은 종전대로
+                    p 값으로 하며 아래 신호별로 표기합니다.
                 </div>
             </div>
 
@@ -922,9 +875,9 @@ export default function PublicGlassboxTab(props: Props) {
                         lineHeight: 1.55,
                     }}
                 >
-                    표본이 작을 때(N&lt;252) 좋아 보이는 숫자는 우연과 구분되지
+                    표본이 작을 때 좋아 보이는 숫자는 우연과 구분되지
                     않아요. 검증 안 된 성과를 보여주는 건 신뢰를 주는 게 아니라
-                    깎는 일이라, 게이트 통과 전까지 의도적으로 가립니다.
+                    깎는 일이라, 사전등록한 검정을 통과하기 전까지 의도적으로 가립니다.
                     증권사·앱이 구조적으로 안 하는 절제예요.
                 </div>
             </div>

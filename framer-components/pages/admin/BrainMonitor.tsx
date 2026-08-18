@@ -966,7 +966,8 @@ function ReportReadinessTab({ data }: any) {
     )
 }
 
-// 결정-trail 무결성 — N=252 게이트 입력 자산 손실/gap/품질 단일 검증 (admin?type=trust)
+// 결정-trail 무결성 — 입력 자산 손실/gap/품질 단일 검증 (admin?type=trust)
+// 🚨 종전 주석의 'N=252 게이트' 는 폐기된 전제다 (2026-08-15 PM 결정).
 function TrailIntegrityPanel({ ti }: { ti: any }) {
     if (!ti) return (
         <Panel title="결정-trail 무결성">
@@ -1025,23 +1026,21 @@ function TrailIntegrityPanel({ ti }: { ti: any }) {
 
             {(ti.gate_progress || []).length > 0 && (
                 <div style={{ marginTop: S.md, borderTop: `1px solid ${C.border}`, paddingTop: S.sm }}>
+                    {/* 🚨 되돌리지 말 것 (2026-08-18) — 진행률 바를 의도적으로 제거했다.
+                        종전에는 "N=252 IC 게이트 진행률" 과 pct_to_gate 바를 그렸는데, 그
+                        게이트는 PM 결정(2026-08-15)으로 폐기됐고 폐기 사유가 정확히 이 출력
+                        형태였다: 검정력을 따지지 않고 표본만 요구하면 결론이 언제나 "더 모아라"다.
+                        백엔드도 gate_n·pct_to_gate·remaining_days 를 더 보내지 않는다
+                        (api/observability/trail_integrity.py). 누적 거래일만 사실로 적는다. */}
                     <div style={{ fontSize: 11, color: C.textTertiary, marginBottom: S.xs }}>
-                        N=252 IC 게이트 진행률 (shadow 누적 거래일)
+                        shadow 누적 거래일 (목표치 없음)
                     </div>
-                    {(ti.gate_progress || []).map((g: any, i: number) => {
-                        const pct = Math.min(100, g.pct_to_gate || 0)
-                        return (
-                            <div key={i} style={{ padding: `${S.xs}px 0` }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
-                                    <span style={{ color: C.textSecondary, fontFamily: "monospace" }}>{g.signal}</span>
-                                    <span style={{ color: C.textTertiary }}>{g.n_trading_days}/{g.gate_n}일 ({pct}%)</span>
-                                </div>
-                                <div style={{ height: 4, background: C.bgElevated, borderRadius: 2, overflow: "hidden" }}>
-                                    <div style={{ width: `${pct}%`, height: "100%", background: C.accent }} />
-                                </div>
-                            </div>
-                        )
-                    })}
+                    {(ti.gate_progress || []).map((g: any, i: number) => (
+                        <div key={i} style={{ padding: `${S.xs}px 0`, display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+                            <span style={{ color: C.textSecondary, fontFamily: "monospace" }}>{g.signal}</span>
+                            <span style={{ color: C.textTertiary }}>{g.n_trading_days}일 · last {g.last_date || "—"}</span>
+                        </div>
+                    ))}
                 </div>
             )}
 
