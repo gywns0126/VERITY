@@ -220,7 +220,12 @@ _ZSPEC = {
     "asset_turnover":             +1,
     "volatility_20d":             -1,   # 저변동 = 고점수 (AHXZ 2006 · BBW 2011)
     "volatility_60d":             -1,
+    # 🚨 파생 신호. per 와 eps 성장을 각각 넣는 것만으로는 PEG 정보가 담기지 않는다
+    #   (Lynch: 성장 대비 밸류에이션). 종전 배점에도 독립 항목이었으므로 유지한다 —
+    #   이 전환은 **신호 집합을 바꾸지 않고 결합 방법만** 바꾼다.
+    "peg":                        -1,   # 낮을수록 매력 (Lynch: <1 매력 · >2 위험)
 }
+_Z_DERIVED = ("peg",)
 # 🚨 실측(2026-08-17 운영 풀 N=56) 보유 0 이라 제외한 것 — 넣어도 전 종목 결측이라
 #   z 가 안 만들어지고, "있는 척" 만 하게 된다:
 #     operating_profit_yoy_est_pct 0/56 · institutional_ownership 0/56 · beta 0/56
@@ -235,7 +240,34 @@ _Z_MIN_SAMPLE = 5          # attach_safety_percentile 과 같은 하한
 _Z_POSITIVE_ONLY = {"per", "pbr", "current_ratio", "asset_turnover"}
 
 
+def _derived_value(s: dict, f: str):
+    """파생 신호 — 원시 필드 조합. 분모가 0·음수면 미측정(중립 대입 금지)."""
+    if f == "peg":
+        # 🚨 운영 정의는 **PEGY** 다 — 분모 = EPS성장 + 배당수익률 (Lynch One Up 배당 팩터).
+        #   고배당 가치주가 성장이 낮다고 PEG>2 로 오탈락하는 것을 막는 장치이므로
+        #   여기서도 같은 분모를 쓴다. 정의를 바꾸면 전환이 아니라 신규 산식이 된다.
+        #   성장 소스 우선순위도 원본과 동일: eps_quarterly_growth → consensus.operating_profit_yoy_est_pct
+        #   (🚨 revenue_growth 로 폴백하지 않는다 — 2026-07-24 fix: 매출성장 ≠ EPS 라
+        #    US 15종목 중 13이 잘못된 −15 penalty 를 받았다).
+        per = s.get("per")
+        if not (isinstance(per, (int, float)) and per > 0):
+            return None
+        g = s.get("eps_quarterly_growth")
+        if g is None:
+            g = (s.get("consensus") or {}).get("operating_profit_yoy_est_pct")
+        try:
+            denom = float(g) + float(s.get("div_yield") or 0)
+        except (TypeError, ValueError):
+            return None
+        if denom <= 0:
+            return None          # 성장+배당 ≤ 0 이면 PEGY 정의 불가 (∞ 를 '비쌈'으로 읽지 않는다)
+        return per / denom
+    return None
+
+
 def _field_value(s: dict, f: str):
+    if f in _Z_DERIVED:
+        return _derived_value(s, f)
     v = s.get(f)
     if not isinstance(v, (int, float)):
         v = (s.get("technical") or {}).get(f)
