@@ -690,9 +690,13 @@ export default function PublicLiveChart(props: Props) {
     const cardFlip = cv ? hoverIdx != null && (hoverIdx as number) > cv.n * 0.5 : false
 
     const wrap: CSSProperties = {
-        /* 🚨 height:100% + minHeight:Hprop 였다 → 프레임이 크면 내용이 억지로 늘어났다.
-           이제 콘텐츠가 높이를 정한다(= Framer Fit 이 제대로 잰다). 프레임을 Fit 으로 둘 것. */
-        width: "100%", height: "auto", minHeight: 240, position: "relative",
+        /* 🚨 height:100% 로 되돌렸다 (2026-08-18 이분탐색).
+           `height:"auto"` 로 바꿨더니 캔들·MA·거래량이 통째로 안 그려졌다(축 라벨·툴팁은 HTML
+           이라 남아 원인이 안 보인다). 정적 분석으로는 못 짚었고 — 높이 계산·색 토큰·팔레트
+           주입 전부 정상이었다 — 변경 4건 중 이 레이아웃 한 건만 되돌려 원인을 가른다.
+           🚨 되돌리지 말 것: 종횡비 수정(폭에서 높이 산출)은 그대로 유지된다. 프레임은
+           고정 높이로 둔다(Fit 은 이 값이 100% 라 다시 순환 위험 — 별도로 다뤄야 한다). */
+        width: "100%", height: "100%", minHeight: Math.max(260, Hprop), position: "relative",
         background: C.bg, borderRadius: 16, overflow: "hidden", boxSizing: "border-box",
         fontFamily: FONT, padding: "10px 4px 4px", display: "flex", flexDirection: "column",
     }
