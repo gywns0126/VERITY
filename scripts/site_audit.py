@@ -112,11 +112,23 @@ def http(url: str, timeout: int = 25) -> tuple[int, bytes]:
 
 # ── 1. reachability ────────────────────────────────────────────────
 def check_reachability(rep: Report) -> None:
+    # 🚨 2026-08-18 — 마커를 "VERITY" 에서 실제 공개 브랜드로 정정.
+    #   공개 사이트는 AlphaNest 이고 VERITY 브랜딩은 분리 작업으로 걷어냈다
+    #   ([[project_verity_alphanest_split_2026_07_23]] · [[feedback_verity_vs_alphanest_identity]]).
+    #   실측: 본문에 대문자 "VERITY" 0건 · "알파네스트" 4건.
+    #   즉 사이트는 200/181KB 로 멀쩡한데 감사만 FAIL 을 냈다 — 게이트가 빨간불이면
+    #   사람이 감사를 무시하게 되므로, 이 거짓 FAIL 이 진짜 장애를 가린다.
+    #   마커를 여러 개 두고 하나라도 있으면 통과시킨다(브랜드 표기 변동 내성).
     st, body = http(PROD_SITE)
-    if st == 200 and b"VERITY" in body:
-        rep.add("reachability.site", "PASS", f"{PROD_SITE} 200")
+    markers = (b"\xec\x95\x8c\xed\x8c\x8c\xeb\x84\xa4\xec\x8a\xa4\xed\x8a\xb8",  # 알파네스트(UTF-8)
+               b"AlphaNest", b"alphanest", b"VERITY")
+    hit = [m for m in markers if m in body]
+    if st == 200 and hit:
+        rep.add("reachability.site", "PASS", f"{PROD_SITE} 200 · marker={len(hit)}")
     else:
-        rep.add("reachability.site", "FAIL", f"{PROD_SITE} → {st}")
+        # 실패 사유를 상태코드와 마커로 분리해 신고한다 — 둘은 원인이 다르다.
+        why = f"{st}" if st != 200 else "200 이나 브랜드 마커 0건(빈 셸/차단 의심)"
+        rep.add("reachability.site", "FAIL", f"{PROD_SITE} → {why}")
 
     # 실 ticker 확보 (recommendations 첫 종목)
     ticker = None
