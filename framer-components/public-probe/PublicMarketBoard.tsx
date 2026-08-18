@@ -63,12 +63,30 @@ const tvTokens = (K: typeof LIGHT) =>
    CFD 프록시를 쓰지 않는다. 되돌려서 CFD 로 바꾸면 다른 지수를 같은 이름으로 내보내게 된다.
    금리 2종(us_10y·us_2y)은 FRED 지표라 TV 심볼이 없다 → 현행 렌더 유지. */
 const TV_SYM: Record<string, string> = {
-    kospi: "KRX:KOSPI", kosdaq: "KRX:KOSDAQ",
-    sp500: "SP:SPX", nasdaq: "NASDAQ:IXIC", dow: "DJ:DJI",
-    sox: "NASDAQ:SOX", nikkei: "TVC:NI225", dax: "XETR:DAX",
-    vix: "CBOE:VIX", usdkrw: "FX_IDC:USDKRW",
-    gold: "TVC:GOLD", silver: "TVC:SILVER", copper: "COMEX:HG1!", wti_oil: "TVC:USOIL",
+    // ✅ 라이브 실측 통과 (2026-08-18 Framer preview)
+    dax: "XETR:DAX",
+    usdkrw: "FX_IDC:USDKRW",
+    gold: "TVC:GOLD",
+    silver: "TVC:SILVER",
+    wti_oil: "TVC:USOIL",
+    // ⚠️ 미검증 후보 — TVC/FOREXCOM 계열은 TV 자체 피드라 통과 가능성이 있다.
+    //    TVC:GOLD·SILVER·USOIL 이 통과했으므로 TVC:SOX·TVC:VIX 를 같은 근거로 시도한다.
+    //    FOREXCOM 은 TV CFD 피드 — 지수 원본이 막힌 자리를 대체할 수 있는 유일한 후보.
+    sp500: "FOREXCOM:SPXUSD",   // S&P500 추종 CFD — 지수와 동일 대상
+    dow: "FOREXCOM:DJI",        // 다우 추종 CFD — 지수와 동일 대상
+    sox: "TVC:SOX",
+    vix: "TVC:VIX",
 }
+
+/* 🚨 TV 위젯에 올리지 않는 것 — 실측 거부이거나 정체성이 어긋난다 (2026-08-18).
+     · kospi/kosdaq  = `KRX:KOSPI`·`KRX:KOSDAQ` 거부. KRX 지수 라이선스라 무료 위젯 불가.
+     · nikkei        = `TVC:NI225` 거부.
+     · copper        = `COMEX:HG1!` 거부 · `TVC:COPPER` 는 심볼 자체가 404.
+     · nasdaq        = 🚨 거부된 `NASDAQ:IXIC` 의 대체가 `FOREXCOM:NSXUSD` 인데 그건
+                       나스닥**100**이지 컴포짓이 아니다(26,445 vs 29,731). 같은 이름으로
+                       다른 지수를 내보내게 되므로 **쓰지 않는다.** 현행 전일 종가 유지.
+   위 5종은 현행 렌더(전일 종가 + 네이버 딥링크)를 그대로 쓴다. 되돌려서 넣지 말 것. */
+
 
 // 실시간 접근 = 네이버 딥링크(증권사 서빙 = 재배포 아님).
 const NAVER_URL: Record<string, string> = {
@@ -174,7 +192,9 @@ function TvQuote({ sym }: { sym: string }) {
     return createElement("tv-single-ticker", {
         symbol: sym,
         "hide-market-status": "",
-        style: { display: "block", height: 44, width: "100%" },
+        // 🚨 44px 였다가 내용이 카드를 넘쳐 라벨과 겹쳤다(2026-08-18 실측). 위젯이 요구하는
+        //    실제 높이(로고+가격+등락+어트리뷰션)를 담도록 키운다. Fit 금지 — 0 으로 접힌다.
+        style: { display: "block", height: 96, width: "100%" },
     })
 }
 
@@ -411,7 +431,10 @@ export default function PublicMarketBoard(props: Props) {
         const tvSym = !onCanvas && it.src === "macro" ? TV_SYM[it.key] : undefined
         return (
             <div key={it.key} onClick={onClick}
-                style={{ background: open ? C.chipBg : C.card, borderRadius: 11, padding: "8px 10px", boxShadow: open ? "inset 0 1px 3px rgba(0,0,0,0.12)" : "0 1px 2px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 9, minWidth: 0, cursor: expoHit ? "pointer" : "default" }}>
+                /* 🚨 minHeight 로 행 높이를 통일한다 — TV 위젯 카드(약 130px)와 자체 렌더
+                   카드(62px)가 한 그리드에 섞이면 행마다 높이가 튄다. 위쪽 정렬로 두어
+                   자체 렌더 카드가 위로 붙고 아래 여백이 남게 한다(가운데 정렬이면 떠 보인다). */
+                style={{ background: open ? C.chipBg : C.card, borderRadius: 11, padding: "8px 10px", boxShadow: open ? "inset 0 1px 3px rgba(0,0,0,0.12)" : "0 1px 2px rgba(0,0,0,0.04)", display: "flex", alignItems: "flex-start", gap: 9, minWidth: 0, minHeight: 132, boxSizing: "border-box", cursor: expoHit ? "pointer" : "default" }}>
                 {it.spark && <Spark data={it.spark} color={col} w={40} h={24} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -475,7 +498,7 @@ export default function PublicMarketBoard(props: Props) {
         backgroundSize: "800px 100%", animation: "vsrShimmer 1.4s ease-in-out infinite",
     })
     const skTile = (key: string) => (
-        <div key={key} style={{ background: C.card, borderRadius: 11, padding: "8px 10px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+        <div key={key} style={{ background: C.card, borderRadius: 11, padding: "8px 10px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", display: "flex", alignItems: "flex-start", gap: 9, minWidth: 0, minHeight: 132, boxSizing: "border-box" }}>
             <div style={skBlock(40, 24)} />
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={skBlock("60%", 11)} />
