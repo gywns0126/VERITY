@@ -419,10 +419,22 @@ export default function PublicMarketTab(props: Props) {
             {usIpos.length > 0 && (
                 <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }}>
                     <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>미국 IPO <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>· 상장 전 · SEC EDGAR</span></div>
-                    {/* 단계 내림 → 최근 접수순. 상장에 가까운 것이 위로 온다. */}
+                    {/* 🚨 정렬 = 공모조건 있는 건 우선 → SPAC 뒤로 → 단계 내림 → 최근순.
+                        단계만으로 정렬하면 거래소등록(8-A) 이 위를 다 차지하는데 그쪽은
+                        공모가가 안 붙어 상위 8건이 전부 "공모조건 —" 로 나온다(실측).
+                        공모조건이 파싱된 건을 앞에 두면 Jersey Mike's($683M)·Csquare($1.05B)
+                        같은 실제 IPO 가 숫자와 함께 올라온다.
+                        🚨 is_spac_likely 는 **정렬에만** 쓴다 — 회사명 휴리스틱이라 화면에
+                        표기하지 않는다(RULE 7). 순서 조정은 화면상 주장이 아니다. */}
                     {usIpos
                         .slice()
-                        .sort((a: any, b: any) => (b.stage - a.stage) || String(b.last_filed).localeCompare(String(a.last_filed)))
+                        .sort((a: any, b: any) => {
+                            const pa = ((a.pricing || {}).parse_ok ? 0 : 1) - ((b.pricing || {}).parse_ok ? 0 : 1)
+                            if (pa) return pa
+                            const sp = (a.is_spac_likely ? 1 : 0) - (b.is_spac_likely ? 1 : 0)
+                            if (sp) return sp
+                            return (b.stage - a.stage) || String(b.last_filed).localeCompare(String(a.last_filed))
+                        })
                         .slice(0, 8)
                         .map((p: any, i: number) => {
                             const pr = (p.pricing && p.pricing.parse_ok) ? p.pricing : null
