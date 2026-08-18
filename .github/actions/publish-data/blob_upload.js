@@ -37,7 +37,16 @@ const crypto = require("crypto");
 //   그 run 에서 커밋되지 않는다(다음 run 의 git add 를 기다려야 함). 게다가 price_pulse 처럼
 //   좁은 git add 를 쓰는 워크플로는 아예 커밋하지 않는다 — 하루 91회 도는 그 워크플로가
 //   매번 낡은 매니페스트를 보면 절감이 사라진다. Blob 은 쓰는 즉시 모든 run 이 최신을 본다.
-const MANIFEST_BLOB = "_blob_manifest.json";
+// 🚨 호출부가 4개다 — 각각 **다른 디렉토리**를 올린다:
+//     publish-data     _public_dist       (1,346 파일)
+//     kr_chart_daily   _chart_dist        (41,  평일 3회)
+//     kr_chart_history _history_dist      (월 1회)
+//     us_chart_history _us_history_dist   (월 1회)
+//   매니페스트를 하나로 두면 서로 덮어써서, 다른 루트가 돌 때마다 상대는 전량
+//   재업로드로 되돌아간다(절감이 조용히 반감). 업로드 루트별로 분리한다.
+const MANIFEST_SCOPE = (process.env.BLOB_MANIFEST_SCOPE
+    || path.basename(process.argv[2] || "default")).replace(/[^A-Za-z0-9_-]/g, "");
+const MANIFEST_BLOB = `_blob_manifest__${MANIFEST_SCOPE}.json`;
 const FULL_RESYNC_DAYS = 3;
 
 async function loadManifest() {
@@ -72,6 +81,8 @@ const SKIP_FILES = new Set(["README.md", "_manifest.txt"]);
 // del 은 blob URL 기준(pathname 은 SDK 버전 의존) — 스토어 host 는 사이트 컴포넌트들이 쓰는 고정 URL.
 const BLOB_HOST = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com";
 const RETIRED_BLOBS = [
+    // 2026-08-18 — 스코프 분리 전 단일 매니페스트(1회 발행 후 고아). 스토리지 정리.
+    "_blob_manifest.json",
     "public_price_snapshot.json", "ranking_board.json", "trending_kr.json",
     // 2026-07-23 분리 Stage 3 후속: 오퍼레이터 전용 크라운주얼 → private bucket 이전, 공개 blob 삭제.
     // (발행 목록 제거만으론 옛 blob 본 잔존 — del 로 노출 완전 차단. authed /api/admin?type=<name> 로 서빙.)
@@ -208,6 +219,7 @@ async function main() {
 
     // ── 1단계: 가드 판정 (동기, 순서 결정적) ──
     // 병렬 업로드 전에 HOLD 를 먼저 확정한다 — 가드 의미와 held 순서를 기존과 동일하게 유지.
+    console.log(`  [manifest] scope=${MANIFEST_SCOPE} blob=${MANIFEST_BLOB}`);
     const manifest = await loadManifest();
     const newHashes = {};
     let skipped = 0;
