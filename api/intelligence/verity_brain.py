@@ -1391,6 +1391,20 @@ def analyze_stock(
     # PBR 데이터 오류로 멀티팩터 과소평가 → AVOID → +6.1% 미스.
     # PBR ≤ 0 또는 None 일 때 중립값 1.0 (시장 평균 PBR ≈ 1.5 이지만 보수적으로 1.0).
     # 2-A _safe_float 패턴 동일.
+    #
+    # 🚨 2026-08-17 원인 규명 — KR 은 **전 종목이 이 경로로 온다**(운영 풀 20/20 sentinel).
+    #   실호출로 확인한 소스 상태:
+    #     yfinance  `priceToBook` = **None** (KR 전용 결손 · US 는 정상 반환)
+    #     KIS       roe·roa·debt_ratio·current_ratio 만 — PBR/BPS 없음
+    #     DART      가격 의존 비율 미제공 (설계상)
+    #   즉 **운영에서 KR PBR 을 줄 수 있는 소스가 현재 없다.** sentinel 은 결함이 아니라
+    #   그 사실의 정직한 표현이고, `graham.py` 가 표식을 보고 복합기준을 건너뛴다(2026-07-24).
+    #
+    #   🚨 `kr_valuation_panel.jsonl` 에 실제 PBR 이 있으나 **갖다 붙이면 안 된다** —
+    #   그건 `시총 ÷ 자본총계` 로 **운영 정의(yfinance TTM)와 다른 산식**이고 백테스트 전용
+    #   PIT 재구성이다(해당 모듈 docstring 이 "운영과 같은 산식이 아니다 — 근사다" 명시).
+    #   한쪽 시장만 다른 정의로 채우면 시장 단위 편향이 생긴다 — 같은 날 beta 부분 채움을
+    #   기각한 논리와 동일하다(실측 KR +16.8 vs US +0.0).
     _pbr_raw = stock.get("pbr")
     try:
         _pbr_v = float(_pbr_raw) if _pbr_raw is not None else None
