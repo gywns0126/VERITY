@@ -86,9 +86,11 @@ const SAMPLE_IPO = [
 const SAMPLE_US_IPO = [
     { name: "Vogenx, Inc.", stage: 4, stage_ko: "거래소등록", last_filed: "20260812", amend_count: 2,
       edgar_url: "https://www.sec.gov/cgi-bin/browse-edgar",
+      profile: { available: true, ticker: "VOGX", sic_desc: "Pharmaceutical Preparations" },
       pricing: { parse_ok: true, shares: 6250000, price_usd: 13, gross_usd: 81250000 } },
     { name: "Latigo Biotherapeutics, Inc.", stage: 3, stage_ko: "가격확정", last_filed: "20260807", amend_count: 1,
       edgar_url: "https://www.sec.gov/cgi-bin/browse-edgar",
+      profile: { available: true, ticker: "LTGO", sic_desc: "Pharmaceutical Preparations" },
       pricing: { parse_ok: true, shares: 19200000, price_usd: 18, gross_usd: 345600000 } },
 ]
 
@@ -464,10 +466,22 @@ export default function PublicMarketTab(props: Props) {
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                                             <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{p.name}</span>
+                                            {/* 상장 예정 심볼 — SEC submissions.tickers 기재값 */}
+                                            {(p.profile || {}).ticker && (
+                                                <span style={{ fontSize: 11, fontWeight: 800, color: C.vg, letterSpacing: "0.02em" }}>{p.profile.ticker}</span>
+                                            )}
                                             {p.stage_ko && (
                                                 <span style={{ fontSize: 9.5, fontWeight: 800, color: near ? C.green : C.faint, background: C.bg, borderRadius: 5, padding: "2px 6px" }}>{p.stage_ko}</span>
                                             )}
                                         </div>
+                                        {/* 🚨 업종 — SEC sicDescription 그대로다. 우리 번역·분류가 아니다.
+                                            SPAC 은 SEC 가 "Blank Checks"(SIC 6770)로 직접 분류하므로
+                                            별도 라벨 없이 이 줄에서 드러난다. */}
+                                        {(p.profile || {}).sic_desc && (
+                                            <div style={{ fontSize: 11.5, fontWeight: 600, color: C.faint, marginTop: 2 }}>
+                                                {p.profile.sic_desc}
+                                            </div>
+                                        )}
                                         {/* 공모 조건 — 424B4 표지 기재값. 파싱 성공분만 노출한다(추정 금지). */}
                                         {pr && (
                                             <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginTop: 3 }}>

@@ -72,6 +72,7 @@ _NEEDS_LINEAGE = {"424B4", "8-A12B", "CERT"}
 
 LOOKBACK_DAYS = 45          # 달력일. ≈31 거래일 — S-1 → 상장 리드타임을 덮는다.
 DOC_FETCH_CAP = 40          # 424B4 원문 조회 상한 (실측 2.3건/일 이라 넉넉하다)
+PROFILE_CAP = 60            # SEC 프로필 조회 상한 — 목록 노출 8건 + 정렬 변동 여유
 
 _SPAC_RE = re.compile(
     r"\b(acquisition\s+corp|acquisition\s+co|blank\s+check|capital\s+acquisition)\b", re.I
@@ -278,6 +279,52 @@ def already_public_ciks() -> set:
     return out
 
 
+# 🚨 SEC 가 SPAC 을 직접 분류한다 — SIC 6770 = "Blank Checks". 회사명 정규식(_SPAC_RE)은
+#   우리 휴리스틱이라 화면에 못 쓰지만 이건 **SEC 사실**이라 노출·정렬 양쪽에 쓸 수 있다.
+_SIC_BLANK_CHECK = "6770"
+
+_SUB_CACHE: Dict[str, Optional[Dict[str, Any]]] = {}
+
+
+def _submissions(cik: str) -> Optional[Dict[str, Any]]:
+    """CIK → submissions JSON. 🚨 같은 CIK 를 두 번 받지 않는다(프로필·보고이력 공용)."""
+    key = str(int(cik))
+    if key in _SUB_CACHE:
+        return _SUB_CACHE[key]
+    try:
+        j = json.loads(_get(SEC_SUBMISSIONS.format(cik10=key.zfill(10)),
+                            timeout=45).decode("utf-8", "ignore"))
+    except Exception:  # noqa: BLE001 — 한 건 실패로 전체 수집을 죽이지 않는다
+        j = None
+    _SUB_CACHE[key] = j
+    return j
+
+
+def sec_profile(cik: str) -> Dict[str, Any]:
+    """업종·상장예정 티커·소재지. 전부 SEC 기재값이다.
+
+    왜 넣었나: 카드에 회사명·단계·공모가뿐이라 **무슨 회사인지 알 수 없었다**(국내 IPO 와
+    같은 구멍). sicDescription 은 SEC 자체 분류 문구라 우리 판단이 섞이지 않는다.
+    """
+    j = _submissions(cik)
+    if not j:
+        return {"available": False}
+    sic = str(j.get("sic") or "").strip()
+    tick = [t for t in (j.get("tickers") or []) if t]
+    b = (j.get("addresses") or {}).get("business") or {}
+    city, st = str(b.get("city") or "").strip(), str(b.get("stateOrCountry") or "").strip()
+    return {
+        "available": True,
+        "sic": sic or None,
+        "sic_desc": str(j.get("sicDescription") or "").strip() or None,
+        # 🚨 SEC 분류 기반 SPAC 판정 — 회사명 휴리스틱보다 정확하고 공개 노출도 가능하다.
+        "is_blank_check": sic == _SIC_BLANK_CHECK,
+        "ticker": tick[0] if tick else None,
+        "region": ", ".join([x for x in (city, st) if x]) or None,
+        "state_of_inc": str(j.get("stateOfIncorporation") or "").strip() or None,
+    }
+
+
 def was_reporter_before(cik: str, before_yyyymmdd: str) -> Optional[bool]:
     """그 회사가 **이 등록 이전에 이미 정기보고서를 내던 회사**였나. 모르면 None.
 
@@ -285,10 +332,8 @@ def was_reporter_before(cik: str, before_yyyymmdd: str) -> Optional[bool]:
     기존 상장사(예: CURIS)는 몇 년치가 있다. 스냅샷이 아니라 **시점 비교**라서 방금 상장한
     회사를 잘못 걸러내지 않는다.
     """
-    try:
-        j = json.loads(_get(SEC_SUBMISSIONS.format(cik10=str(int(cik)).zfill(10)),
-                            timeout=45).decode("utf-8", "ignore"))
-    except Exception:  # noqa: BLE001
+    j = _submissions(cik)
+    if not j:
         return None
     rec = ((j.get("filings") or {}).get("recent") or {})
     forms, dates = rec.get("form") or [], rec.get("filingDate") or []
@@ -335,11 +380,25 @@ def build(lookback: int = LOOKBACK_DAYS, fetch_docs: bool = True) -> Dict[str, A
         it["stage_ko"] = STAGE_KO[stage]
         it["amend_count"] = forms.get("S-1/A", 0) + forms.get("F-1/A", 0)
         it["is_foreign_issuer"] = any(f.startswith("F-1") for f in forms)
+        # 이 시점엔 프로필이 아직 없다 → 회사명 폴백. 프로필 수집 후 SIC 로 덮는다(아래).
         it["is_spac_likely"] = bool(_SPAC_RE.search(it["name"]))
         # 지금 티커 보유 여부 = 정보용. IPO 판별에 쓰지 않는다(위 함수 주석의 사고).
         it["has_ticker_now"] = (str(int(it["cik"])) in listed) if listed else None
         it["edgar_url"] = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={it['cik']}&type=S-1&dateb=&owner=include&count=20"
         items.append(it)
+
+    # 🚨 SEC 프로필(업종·티커·소재지) — 화면에 뜰 상위권에만 붙인다.
+    #   전량 265건은 SEC 호출이 과하고, 목록은 상위 8건만 노출한다. 정렬 기준과 같은 순서로
+    #   넉넉히 PROFILE_CAP 만큼만 받아 표시 후보를 전부 덮는다. submissions 는 캐시라
+    #   뒤의 was_reporter_before 가 같은 CIK 를 다시 받지 않는다.
+    for it in sorted(items, key=lambda x: (x["stage"], x["last_filed"]), reverse=True)[:PROFILE_CAP]:
+        it["profile"] = sec_profile(it["cik"])
+        # 🚨 SPAC 판정을 SEC SIC 6770("Blank Checks")로 **승격**한다 — 회사명 정규식보다
+        #   정확하고, SEC 분류라 화면 노출도 가능하다. 프로필을 못 받은 건은 폴백 유지.
+        #   🚨 순서 주의: 항목 루프에서 판정하면 프로필이 아직 없어 항상 폴백으로 떨어진다
+        #   (첫 구현이 그 순서였다). 반드시 프로필 수집 **뒤**에 덮는다.
+        if (it["profile"] or {}).get("available"):
+            it["is_spac_likely"] = bool(it["profile"].get("is_blank_check"))
 
     # 가격확정 건만 원문 보강 — 상한 안에서 최신순.
     if fetch_docs:
