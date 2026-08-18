@@ -105,7 +105,7 @@ def _trail_summary(ticker: str, trail: Dict[str, Any]) -> str:
     if not trail:
         return f"{ticker}: VERITY 자체 trail 없음 (추천 유니버스 밖)."
     vb = trail.get("verity_brain") or {}
-    lines = [f"[VERITY 자체 trail — 검증 전 가설(N<252, 2027 게이트)]"]
+    lines = [f"[VERITY 자체 trail — 검증 전 가설(사전등록 미통과)]"]
     if vb.get("brain_score") is not None:
         lines.append(f"- Brain 등급: {vb.get('grade_label') or vb.get('grade')} (점수 {vb.get('brain_score')}, 가설)")
     for k, label in (("per", "PER"), ("pbr", "PBR"), ("roe", "ROE(%)")):
@@ -278,7 +278,7 @@ def synthesize(ticker: str, name: str = "", use_cache: bool = True,
         },
         "verity_trail": {"summary": ts, "has_trail": bool(trail)},
         "disclosure": {
-            "note": "3종 LLM 종합. Perplexity=신선사실·Gemini=구조화·Claude=종합. Brain 점수=가설(N<252, 2027). "
+            "note": "3종 LLM 종합. Perplexity=신선사실·Gemini=구조화·Claude=종합. Brain 점수=가설(사전등록 미통과). "
                     "LLM 의견은 의견이며 채점 입력 아님. 목표가 숫자 재발행 없음.",
             "rule6": "grounded (자기 trail 위 종합)",
             "rule7_hypothesis": True,

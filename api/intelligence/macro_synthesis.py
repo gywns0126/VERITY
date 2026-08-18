@@ -44,7 +44,7 @@ def _grounding(p: Dict[str, Any]) -> str:
     lines = []
     mh = p.get("market_horizon") or {}
     if mh.get("verdict"):
-        lines.append(f"[자기 산식 market_horizon — 가설(N<252)] {mh.get('verdict')}")
+        lines.append(f"[자기 산식 market_horizon — 가설(미검정)] {mh.get('verdict')}")
     br = p.get("briefing") or {}
     if br.get("headline"):
         lines.append(f"[브리핑] tone={br.get('tone')} · {br.get('headline')}")

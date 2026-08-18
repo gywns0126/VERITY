@@ -422,7 +422,7 @@ def _verity_lens_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "reasons": [str(x) for x in (lynch.get("reasons") or [])][:4],
             "color": str(lynch.get("color") or "neutral"),
         },
-        "note": "Peter Lynch 분류 룰을 공개 재무 사실에 적용한 관측 — 자체 점수·매매의견 아님. 종합점수는 검증 후(2027) 공개.",
+        "note": "Peter Lynch 분류 룰을 공개 재무 사실에 적용한 관측 — 자체 점수·매매의견 아님. 종합점수는 검증 통과 후 공개.",
     }
 
 
@@ -668,7 +668,7 @@ def build_light(ticker: str, fund: Dict[str, Any], name: str, market: str,
             "lynch": {k: lynch.get(k) for k in ("class", "label", "summary", "color")}
                      | {"reasons": (lynch.get("reasons") or [])[:4]},
             "note": "Peter Lynch 분류 룰을 공개 재무 사실에 적용한 관측 — 자체 점수·매매의견 "
-                    "아님. 종합점수는 검증 후(2027) 공개.",
+                    "아님. 종합점수는 검증 통과 후 공개.",
         }
     chain = (chain_map or {}).get(ticker) or {}
     snippets = (chain.get("snippets") or [])[:3] if isinstance(chain, dict) else []

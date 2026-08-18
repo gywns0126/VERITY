@@ -1618,7 +1618,7 @@ def analyze_stock(
         "validation": {
             "status": "hypothesis",
             "ic_gate_n": 252,
-            "note": "자기 산식 가설 — N<252 IC 게이트(2027-05) 미검증, 검증 전",
+            "note": "자기 산식 가설 — 사전등록 검정 미통과 (검증 틀 v2 §7-3 승인 대기)",
         },
         "grade": grade,
         "grade_label": GRADE_LABELS.get(grade, grade),

@@ -78,17 +78,25 @@ def build() -> Dict[str, Any]:
         entry: Dict[str, Any] = {"id": asset_id, "count": _count(doc, count_key), "as_of": _as_of(doc)}
         assets.append(entry)
 
-    # 검증 원장 — 게이트 진척(사실)만. raw 성과 봉인 정책(validation_summary._note) 그대로 상속.
+    # 검증 원장 — 표본 사실만. raw 성과 봉인 정책(validation_summary._note) 그대로 상속.
+    # 🚨 2026-08-18 — 종전은 `gate.target_n` + `gate.progress_pct`(목표 대비 진척률)를 실었다.
+    #    그 게이트(N=252, 2027-05)는 §7-1 로 폐기됐고 사유가 정확히 진척률 출력이었다
+    #    ("출력이 언제나 '더 모아라' 였다"). 상류가 `gate` → `sample` 로 바뀌었으므로
+    #    여기서도 목표·진척률을 만들지 않고 표본 크기만 싣는다.
+    #    구 `gate` 키도 계속 읽어 과거 산출물 호환은 유지하되 진척률은 버린다.
     vs = _load("validation_summary.json")
     gate = None
-    if vs and isinstance(vs.get("gate"), dict):
-        g = vs["gate"]
-        gate = {
-            "target_n": g.get("target_n"),
-            "progress_pct": g.get("progress_pct"),
-            "signals": len(vs.get("signals") or []),
-            "as_of": vs.get("generated_at"),
-        }
+    if vs:
+        sample = vs.get("sample") if isinstance(vs.get("sample"), dict) else None
+        legacy = vs.get("gate") if isinstance(vs.get("gate"), dict) else None
+        if sample or legacy:
+            gate = {
+                "best_signal_n": (sample or {}).get("best_signal_n")
+                or (legacy or {}).get("best_signal_n"),
+                "signals": len(vs.get("signals") or []),
+                "as_of": vs.get("generated_at"),
+                "note": "표본 크기(사실). 목표 N·진척률은 §7-1 폐기 — 검정력으로 판정한다.",
+            }
 
     return {
         "_meta": {

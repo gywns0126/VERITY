@@ -1,8 +1,10 @@
 """validation_summary — 모든 forward trail 의 정직한 검증 상태 단일 집계 (read-only).
 
 목적 (2026-06-13 신설): 흩어진 forward-scoring 산출물(brain production / xgb_ml /
-shadow_funnel / factor / sector)을 한 레코드씩 묶어 N=252 IC 게이트(2027-05) 읽기 준비 +
-운영자 크레덴셜 surface 로 만든다.
+shadow_funnel / factor / sector)을 한 레코드씩 묶어 운영자 크레덴셜 surface 로 만든다.
+
+🚨 2026-08-18 — 최초 목적문의 "N=252 IC 게이트(2027-05) 읽기 준비" 는 **폐기됐다**
+(§7-1). 이 모듈은 이제 목표 N·진척률을 만들지 않고 관측 사실만 집계한다.
 
 규율:
   · RULE 7 = 관측 only. 어떤 verdict/score/결정에도 피드백 0. 산식 신규 0 —
@@ -42,7 +44,11 @@ SPEC_VERSION = "v0"
 # ── RULE 7 라벨 게이트 (강제값 — 자유 파라미터 아님) ─────────────────────────────
 _N_MEANINGLESS = 30    # N<30 = 통계 무의미 (CLAUDE.md RULE 7)
 _N_PRELIM = 100        # N<100 = 예비 결과 (project_minimum_n_milestones)
-_GATE_N = 252          # N=252 IC 게이트 (Bailey-López de Prado, 2027-05 목표)
+# 🚨 _GATE_N 폐기 (2026-08-18) — `docs/VALIDATION_METHODOLOGY.md` §7-1.
+#    종전 주석은 "N=252 IC 게이트(2027-05 목표)" 였다. 그 게이트는 PM 이 2026-08-15 에
+#    폐기했고, 사유가 정확히 이 상수의 용도였다 — 목표 N 을 두고 진척률을 계산하면
+#    출력이 언제나 "더 모아라" 가 된다. 대체 게이트(§7-3)는 승인 대기.
+#    상수는 남기되 **판정·진척률에 쓰지 않는다** (아래 _maturity_label 의 표본 라벨만 사용).
 
 
 def _maturity_label(n_eff: Optional[float]) -> str:
@@ -59,16 +65,25 @@ def _maturity_label(n_eff: Optional[float]) -> str:
 
 
 def _gate_status(n_eff: Optional[float], ic_pvalue: Optional[float]) -> str:
-    """가설 vs 검증 상태 (N=252 게이트 기준). RULE 7 — 모두 잠정."""
+    """가설 vs 검증 상태. RULE 7 — 모두 잠정.
+
+    🚨 2026-08-18 정정 — 종전은 "게이트 N≥252 미도달, 진척 {pct}%" 를 냈다.
+    **그 게이트는 폐기됐다** (`docs/VALIDATION_METHODOLOGY.md` §7-1, PM 결정 2026-08-15).
+    폐기 사유가 정확히 이 출력 형태였다 — *"실제 출력이 언제나 '더 모아라' 였다.
+    검정력을 따지지 않은 채 표본만 요구하는 것은 무책임하다. 기다림은 결론이 아니다."*
+
+    즉 **폐기된 목표를 향한 진척률을 계속 계산해 보여주고 있었다.** 죽은 전제가 숫자로
+    포장돼 매 발행마다 복제되던 형태다(RULE 12).
+
+    대체 = 표본 크기를 **사실로만** 적고 목표 진척률을 만들지 않는다. 유의성 판정은
+    종전대로 p 값으로 한다 — 그건 폐기 대상이 아니었다.
+    대체 게이트(§7-3)는 PM 승인 대기라 여기서 새 임계를 만들지 않는다.
+    """
     if n_eff is None:
         return "가설 (관측 0)"
-    if n_eff < _GATE_N:
-        pct = round(min(n_eff / _GATE_N * 100.0, 99.9), 1)
-        return f"가설 (게이트 N≥252 미도달, 진척 {pct}%)"
-    # 게이트 도달 — 그래도 단일 검증, RULE 7 잠정 유지
     if ic_pvalue is not None and ic_pvalue < 0.05:
-        return "게이트 도달 + p<0.05 (잠정 검증 신호, 단일 trail)"
-    return "게이트 도달 (유의성 미달 — 가설 유지)"
+        return f"p<0.05 (잠정 신호, 단일 trail · 유효 관측 {n_eff:.0f})"
+    return f"가설 (유의성 미달 · 유효 관측 {n_eff:.0f})"
 
 
 # ── jsonl/json 안전 read ─────────────────────────────────────────────────────
@@ -316,16 +331,18 @@ def build_summary() -> Dict[str, Any]:
     return {
         "generated_at": now_kst().isoformat(),
         "spec_version": SPEC_VERSION,
-        "gate": {
-            "target_n": _GATE_N,
-            "milestone": "N=252 IC 게이트 (Bailey-López de Prado, 2027-05 목표)",
+        # 🚨 2026-08-18 — 종전은 "N=252 IC 게이트(2027-05 목표)" 와 그 **진척률(%)** 을 냈다.
+        #    그 게이트는 §7-1 로 폐기됐고, 폐기 사유가 정확히 이 출력 형태였다
+        #    ("실제 출력이 언제나 '더 모아라' 였다. 기다림은 결론이 아니다").
+        #    목표·진척률을 만들지 않고 관측 사실만 신고한다. 대체 게이트(§7-3)는 승인 대기.
+        "sample": {
             "best_signal_n": round(best_n, 2) if best_n else 0,
-            "progress_pct": round(min(best_n / _GATE_N * 100.0, 99.9), 1) if best_n else 0.0,
+            "note": "표본 크기는 사실. 목표 N 과 진척률은 §7-1 폐기 — 검정력으로 판정한다.",
         },
         "rule7_disclaimer": (
             "모든 항목 = 자기 산식 가설 (관측 only, 결정 피드백 0). N<30 통계 무의미 / "
             "N<100 예비. hit_rate 단독 해석 금지 — expectancy + CI95 + N 병기. "
-            "N=252 게이트(2027-05) 도달 전 통계 판정 무의미."
+            "검정력 미달 구간에서는 통계 판정이 무의미하다 (검증 틀 v2 §7-3 승인 대기)."
         ),
         "signals": signals,
         "_method": "기존 *_ic_history 산출물 재집계만 (신규 산식 0). prediction_scoring / "
@@ -364,7 +381,7 @@ def public_slim(summary: Dict[str, Any]) -> Dict[str, Any]:
             if "funnel" not in str(s.get("signal", "")).lower()
         ],
         "_note": (
-            "공개 = 과정·신호명·표본·성숙도만. raw 성과(IC·적중률·기댓값·CI) = 검증(N≥252) 후. "
+            "공개 = 과정·신호명·표본·성숙도만. raw 성과(IC·적중률·기댓값·CI) = 사전등록 검정 통과 후. "
             "표본 누적 ≠ 신호 검증 (게이트 전 동전던지기와 구별 불가). 점수·등급·종목 추천 아님 (RULE 7 가설)."
         ),
     }

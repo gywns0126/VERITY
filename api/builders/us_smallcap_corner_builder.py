@@ -154,7 +154,7 @@ def main() -> int:
             "with_forensic_depth": forensic_n,
             "source": "us_market_caps × us_financials × us_universe_combined × us_disclosure_forensics",
             "note": "Polygon CS active ∪ sp1500 + 시총 컷 = 자체 소형주 정의(RULE 7). 메인 funnel/VAMS 와 별개 "
-                    "병렬 트랙. forensic 깊이=8-K(Phase 4). 점수/Brain=held(2027).",
+                    "병렬 트랙. forensic 깊이=8-K(Phase 4). 점수/Brain=held(검증 전).",
         },
         "stocks": stocks,
     }

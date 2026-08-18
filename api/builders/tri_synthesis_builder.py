@@ -94,7 +94,7 @@ def build() -> Dict[str, Any]:
         "errors": errors,
         "est_cost_usd_this_run": est_cost,
         "note": "3종 LLM 종합(Perplexity 신선사실·Gemini 구조화·Claude opus-5 종합). "
-                "LLM 의견=의견(provenance 분리), Brain=가설(N<252). 채점 입력 아님. 오퍼레이터 전용.",
+                "LLM 의견=의견(provenance 분리), Brain=가설(사전등록 검정 미통과). 채점 입력 아님. 오퍼레이터 전용.",
     }
     return {"_meta": meta, "syntheses": syntheses}
 

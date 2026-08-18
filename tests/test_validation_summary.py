@@ -48,14 +48,19 @@ def test_maturity_label_gates():
     assert "유의 표본" not in label_100                  # 과대표현 회귀 차단
 
 
-def test_gate_status_progress_monotone():
-    s_low = VS._gate_status(50, None)
-    s_mid = VS._gate_status(200, None)
-    assert "미도달" in s_low and "미도달" in s_mid
-    # 게이트 도달 + 유의
+def test_gate_status_has_no_retired_progress():
+    """🚨 2026-08-18 전환 — 종전 이름은 test_gate_status_progress_monotone 이었고
+    "게이트 N≥252 미도달, 진척 X%" 를 **고정**하고 있었다. 그 게이트는 §7-1 로 폐기됐고
+    폐기 사유가 정확히 그 출력이었다("출력이 언제나 '더 모아라' 였다").
+    이제는 진척률이 **없어야** 통과한다 — 테스트가 죽은 전제를 붙잡고 있으면 안 된다.
+    """
+    for n in (50, 200, 300, 400):
+        out = VS._gate_status(n, None)
+        assert "진척" not in out, f"n={n} 에서 진척률 부활: {out}"
+        assert "252" not in out and "2027" not in out and "미도달" not in out
+    # 유의성 판정은 폐기 대상이 아니었다 — p 값 경로는 그대로
     assert "p<0.05" in VS._gate_status(300, 0.01)
-    # 게이트 도달 + 유의성 미달 = 가설 유지
-    assert "가설 유지" in VS._gate_status(300, 0.5)
+    assert VS._gate_status(300, 0.5).startswith("가설")
     assert VS._gate_status(None, None).startswith("가설")
 
 
@@ -126,9 +131,12 @@ def test_build_summary_shape(monkeypatch, tmp_path, brain_ic_records):
     # sector = 채점 보류 정직 보고
     assert by_name["sector"]["scored"] == 0
     assert "DEFERRED" in by_name["sector"]["status"]
-    # 게이트 진척 = 최대 N (brain n=388 vs n_eff=77.6 → n_eff 우선 77.6)
-    assert s["gate"]["target_n"] == 252
-    assert 0 < s["gate"]["progress_pct"] < 100
+    # 표본 크기 = 최대 N_eff (brain n=388 vs n_eff=77.6 → n_eff 우선 77.6)
+    # 🚨 2026-08-18 — `gate.target_n`(=252) + `progress_pct` 는 §7-1 폐기. `sample` 로 대체됐다.
+    #    진척률은 "목표를 향해 얼마나 갔나" 를 만들어내므로 되살리지 않는다.
+    assert "gate" not in s, "폐기된 목표 N 블록이 되살아났다"
+    assert s["sample"]["best_signal_n"] == 77.6
+    assert "progress_pct" not in s["sample"], "진척률이 되살아났다"
     # RULE 7 disclaimer 존재 + hit_rate 단독 금지 명문
     assert "hit_rate 단독" in s["rule7_disclaimer"]
 

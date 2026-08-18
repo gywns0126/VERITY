@@ -68,7 +68,7 @@ CONFIDENCES = ("low", "medium", "high")
 HORIZON_DAYS = (5, 20, 60)
 
 CAVEAT = ("터미널 판단 관측. Brain 점수 미반영(brain_input=false). "
-          "N<252 = 통계 무의미 구간이며 채점 산식은 사전등록 후 확정.")
+          "표본이 얕아 통계 판정 불가 구간이며 채점 산식은 사전등록 후 확정.")
 
 # 🚨 회전 수집 파일은 평가 기준가가 아니다. 여기서 막지 않으면 잘못된 기준가로 채점된다.
 FORBIDDEN_PRICE_SOURCES = ("stock_flow_5d",)
