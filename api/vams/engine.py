@@ -692,18 +692,23 @@ def _kelly_cache_key() -> tuple:
     return tuple(out)
 
 
-def _kelly_window_start() -> Optional[str]:
-    """Kelly 집계 창 = `reset_meta.reset_at` 이후. 없으면 None(전체 — legacy 폴백).
+def _kelly_window_start() -> Tuple[bool, Optional[str]]:
+    """Kelly 집계 창 = `reset_meta.reset_at` 이후. 반환 = (읽기 성공?, 창 시작일).
 
     🚨 정의를 `api/main.py:1278` · `api/vams/validation.py` 와 **한 글자까지 맞춘다.**
     같은 원장을 다르게 읽어 4.8배 괴리가 났던 것이 #290 사고였다.
+
+    🚨 **"못 읽음" 과 "리셋 없음(legacy)" 을 구분해서 돌려준다.** 둘 다 None 으로 접으면
+    `load_portfolio()` 가 실패할 때 창이 **조용히 전체로 넓어진다** — 2026-08-18 실측으로
+    에피소드가 **23 → 31** 로 뛰었다(리셋 이전 8건 유입). 사이징이 커지는 방향이라
+    안전하지 않다. 호출부는 실패 시 중립(λ=0)으로 접는다.
     """
     try:
         pf = load_portfolio()
-        v = (pf or {}).get("vams") or {}
-        return str(((v.get("reset_meta") or {}).get("reset_at") or ""))[:10] or None
     except Exception:  # noqa: BLE001 — 사이징 경로 보호
-        return None
+        return False, None
+    v = (pf or {}).get("vams") or {}
+    return True, (str(((v.get("reset_meta") or {}).get("reset_at") or ""))[:10] or None)
 
 
 def _kelly_realized_stats() -> Tuple[int, float]:
@@ -729,6 +734,14 @@ def _kelly_realized_stats() -> Tuple[int, float]:
     골라 계산한다(같은 종목·날짜 후보 중 `raw_pnl` 에 가장 가까운 행). 승·패 각
     `KELLY_MIN_WINS_LOSSES` 미만이면 종전대로 `KELLY_B_DEFAULT`.
     read-only, 예외 삼킴(사이징 경로 보호 — 여기서 죽으면 매수가 통째로 멈춘다).
+
+    🚨 **같은 사이클의 매도는 반영되지 않는다** (의도. 2026-08-18 확인).
+    `_append_exit_log` 는 매도마다 **즉시** 쓰지만(engine.py:1221) `save_history` 는
+    사이클 **끝**에 한 번 쓴다(engine.py:1982). 정본 전환으로 이 함수가 원장(history)을
+    보게 되면서, 같은 사이클 매도는 **다음 사이클부터** n 에 들어온다. 종전(exit_log 직독)은
+    즉시 반영됐으므로 **동작 변경이다.** 방향은 λ 가 작아지는 쪽 = 미검증 점수의 사이징
+    권한이 줄어드는 쪽이라 그대로 둔다. 되돌리려면 in-memory history 를 인자로 받아야 하고
+    그건 호출부 시그니처 변경이라 별건이다.
     """
     ck = _kelly_cache_key()
     if _KELLY_CACHE["key"] == ck and _KELLY_CACHE["val"] is not None:
@@ -740,7 +753,11 @@ def _kelly_realized_stats() -> Tuple[int, float]:
 
     try:
         from api.vams.trade_ledger import reconstruct
-        episodes = reconstruct(load_history(), since=_kelly_window_start())["episodes"]
+        ok, since = _kelly_window_start()
+        if not ok:
+            # 창을 모르면 세지 않는다 — 넓혀서 세면 리셋 이전분이 섞여 λ 가 커진다
+            return _ret((0, KELLY_B_DEFAULT))
+        episodes = reconstruct(load_history(), since=since)["episodes"]
     except Exception:  # noqa: BLE001 — 사이징 경로 보호
         # 🚨 실패도 캐시한다. 안 하면 원장이 깨진 동안 **매수 후보마다** 3.5MB 를 다시
         #   읽고 다시 실패한다 — 성능 회귀를 막으려 캐시를 넣고 정작 최악의 경로를

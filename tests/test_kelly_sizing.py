@@ -98,7 +98,7 @@ def test_kelly_n_comes_from_ledger_not_raw_exit_log(tmp_path, monkeypatch):
           "price": 900, "pnl": -1000} for _ in range(5)]
 
     monkeypatch.setattr(E, "load_history", lambda: history)
-    monkeypatch.setattr(E, "_kelly_window_start", lambda: "2026-05-17")
+    monkeypatch.setattr(E, "_kelly_window_start", lambda: (True, "2026-05-17"))
     monkeypatch.setattr(E, "DATA_DIR", str(tmp_path))   # exit_log 부재 → b=default
 
     n, b = E._kelly_realized_stats()
@@ -136,7 +136,7 @@ def test_kelly_stats_cache_invalidates_on_ledger_change(tmp_path, monkeypatch):
     state = {"h": hist}
     monkeypatch.setattr(E, "DATA_DIR", str(tmp_path))
     monkeypatch.setattr(E, "load_history", lambda: state["h"])
-    monkeypatch.setattr(E, "_kelly_window_start", lambda: "2026-05-17")
+    monkeypatch.setattr(E, "_kelly_window_start", lambda: (True, "2026-05-17"))
     E._KELLY_CACHE["key"] = None                      # 테스트 격리
     (tmp_path / "history.json").write_text("{}", encoding="utf-8")
 
@@ -168,7 +168,7 @@ def test_kelly_cache_key_includes_data_dir(tmp_path, monkeypatch):
     h2 = h1 + [{"date": "2026-06-11", "type": "BUY", "ticker": "B", "quantity": 5, "price": 2000},
                {"date": "2026-06-12", "type": "SELL", "ticker": "B", "quantity": 5,
                 "price": 2200, "pnl": 1000}]
-    monkeypatch.setattr(E, "_kelly_window_start", lambda: "2026-05-17")
+    monkeypatch.setattr(E, "_kelly_window_start", lambda: (True, "2026-05-17"))
     E._KELLY_CACHE["key"] = None
 
     monkeypatch.setattr(E, "DATA_DIR", str(d1))
@@ -192,8 +192,29 @@ def test_kelly_failure_path_is_cached(tmp_path, monkeypatch):
 
     monkeypatch.setattr(E, "DATA_DIR", str(tmp_path))
     monkeypatch.setattr(E, "load_history", _boom)
-    monkeypatch.setattr(E, "_kelly_window_start", lambda: "2026-05-17")
+    monkeypatch.setattr(E, "_kelly_window_start", lambda: (True, "2026-05-17"))
     E._KELLY_CACHE["key"] = None
 
     assert E._kelly_realized_stats() == (0, E.KELLY_B_DEFAULT)
     assert E._KELLY_CACHE["val"] == (0, E.KELLY_B_DEFAULT), "실패 경로가 캐시되지 않았다"
+
+
+def test_kelly_window_failure_falls_back_to_neutral_not_wider(monkeypatch):
+    """🚨 창을 못 읽으면 **세지 않는다**. 넓혀서 세면 리셋 이전분이 섞여 λ 가 커진다.
+
+    2026-08-18 실측 — `load_portfolio()` 실패 시 창이 조용히 전체로 넓어져
+    에피소드가 **23 → 31** 로 뛰었다(리셋 이전 8건 유입). 사이징이 커지는 방향이라
+    "안전한 실패" 가 아니다. 실패는 λ=0(중립)으로 접는다.
+    """
+    from api.vams import engine as E
+
+    def _boom():
+        raise RuntimeError("portfolio 파손")
+
+    monkeypatch.setattr(E, "load_portfolio", _boom)
+    E._KELLY_CACHE["key"] = None
+    assert E._kelly_window_start() == (False, None)
+    n, b = E._kelly_realized_stats()
+    assert n == 0, f"창을 모르는데 {n}건을 셌다 — 창이 넓어졌다"
+    assert b == E.KELLY_B_DEFAULT
+    E._KELLY_CACHE["key"] = None
