@@ -177,19 +177,6 @@ export default function PublicMarketBoard(props: Props) {
     const [cryptoLive, setCryptoLive] = useState(false)
 
     useEffect(() => {
-        if (onCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    useEffect(() => {
         const el = rootRef.current
         if (!el || typeof ResizeObserver === "undefined") return
         const ro = new ResizeObserver((entries) => { for (const e of entries) setW(e.contentRect.width) })
