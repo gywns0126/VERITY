@@ -48,10 +48,35 @@ _TICKER_RE = re.compile(r"^[A-Za-z0-9.\-]{1,12}$")
 _CACHE = {}  # fname -> (epoch, doc)
 
 
+# 🚨 2026-08-18 — 소스별 TTL. 일괄 30분이 전송량 과금을 키웠다.
+#   콜드 인스턴스 1회당 KR 21.7MB / US 21.4MB 를 Blob 에서 받는데, 그중
+#   stock_report_public 11.6MB(일 1.4회 갱신) · us_stock_report_public 12.1MB(일 0.9회) ·
+#   us_stock_report_us_smallcap 9.4MB(일 0.1회) 는 하루 1회 남짓 바뀐다.
+#   30분 TTL = 하루 최대 48회 재다운로드 — 갱신 1.4회 대비 34배 과전송이다.
+#   Blob 쪽 CDN 캐시(cacheControlMaxAge)도 같은 날 같은 근거로 정렬했다(blob_upload.js).
+#   준실시간 축(flow·supply·warn)만 짧게 남긴다.
+_TTL_BY_SOURCE = {
+    "report": 7200, "report_smallcap": 21600, "forensics": 7200,
+    "insider": 7200, "lending": 7200, "employment": 7200,
+    "flow": 1800, "supply": 1800, "warn": 1800,
+}
+_FNAME_TTL = None
+
+
+def _ttl_for(fname):
+    global _FNAME_TTL
+    if _FNAME_TTL is None:
+        _FNAME_TTL = {}
+        for m in (KR_SOURCES, US_SOURCES):
+            for k, f in m.items():
+                _FNAME_TTL[f] = _TTL_BY_SOURCE.get(k, TTL)
+    return _FNAME_TTL.get(fname, TTL)
+
+
 def _load(fname):
     now = time.time()
     hit = _CACHE.get(fname)
-    if hit and (now - hit[0]) < TTL:
+    if hit and (now - hit[0]) < _ttl_for(fname):
         return hit[1]
     try:
         r = requests.get(f"{BASE}/{fname}", timeout=TIMEOUT)

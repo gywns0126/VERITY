@@ -102,6 +102,18 @@ const MAX_AGE_RULES = [
     // 지연 트레이드오프: 공시·재무 이력류라 수 시간 지연 수용 범위(준실시간 아님).
     [/^(event_study|us_major_holdings|dart_quarterly_public|us_quarterly_public|13f_quarter_cache)\.json$/, 21600],
     [/^(us_insider_trades|us_stock_report_public|us_disclosure_feed|us_disclosure_forensics)\.json$/, 7200],
+    // 2026-08-18 3차 정렬 — 요금 $95.80 조사 중 **기본군(600s)에 남은 대형 저빈도 파일** 발견.
+    // 특히 KR 리포트(11.6MB)가 600s 인데 US 리포트(12.1MB)는 이미 7200s 였다 — 비대칭.
+    // 실측(최근 14일 커밋 ÷ 14, 파일 실크기):
+    //   stock_report_public 11.6MB 일1.4회 · us_stock_report_us_smallcap 9.4MB 일0.1회 ·
+    //   disclosure_forensics 5.0MB 일1.1회 · insider_trades 3.7MB 일1.1회 ·
+    //   etf_hist/ 14.6MB(1,209파일) 일0.1회 ← 과거 일봉이라 사실상 불변인데 규칙이 아예 없었다
+    // 갱신 주기보다 캐시가 짧으면 그 차이만큼 원본을 재전송한다(전송량 과금).
+    // 지연 트레이드오프: 전부 일 단위 갱신 데이터라 2~6h 지연 수용 범위.
+    // 🚨 public_disclosure_feed 는 일 9.2회라 기본군에 남긴다 — 준실시간 축이다.
+    [/^etf_hist\//, 21600],
+    [/^(us_stock_report_us_smallcap|us_smallcap_corner_filters|logo_map|us_earnings_pattern|etf_flow)\.json$/, 21600],
+    [/^(stock_report_public|disclosure_forensics|insider_trades|us_etf|ai_synthesis|us_short_interest|stock_flow_5d|kr_index_daily)\.json$/, 7200],
 ];
 const DEFAULT_MAX_AGE = 600; // 일 2회 갱신군 (portfolio·recommendations 등)
 function maxAgeFor(blobPath) {
