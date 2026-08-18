@@ -53,11 +53,15 @@ interface EventItem { name: string; date: string; d_day?: number | null; country
 interface Props {
     snapshotUrl: string
     ipoUrl: string
+    usIpoUrl: string
     dark: boolean
 }
 
 const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/macro_snapshot.json"
 const DEFAULT_IPO = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/ipo_watch.json"
+/* 🚨 미국 IPO — 소스가 **SEC EDGAR 단독**이라 미국 연방정부 저작물 = public domain.
+   재배포 약관 이슈가 없다(FINRA·거래소 데이터와 다르다). 상세 = api/collectors/us_ipo_scout.py */
+const DEFAULT_US_IPO = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_ipo_watch.json"
 
 const SAMPLE = {
     macro: {
@@ -75,6 +79,16 @@ const SAMPLE_IPO = [
     { corp_name: "케이앤에스아이앤씨", report_nm: "증권신고서(지분증권)", rcept_dt: "20260612", stage: "확정",
       dart_url: "https://dart.fss.or.kr",
       offering: { shares: 3000000, price_planned: 12400, total_planned: 37200000000, subscribe_start: "2026.09.16", subscribe_end: "2026.09.17", payment_date: "2026.09.21" } },
+]
+
+/* 미국 IPO 캔버스 데모 — 실제 산출 형태와 동일 키. */
+const SAMPLE_US_IPO = [
+    { name: "Vogenx, Inc.", stage: 4, stage_ko: "거래소등록", last_filed: "20260812", amend_count: 2,
+      edgar_url: "https://www.sec.gov/cgi-bin/browse-edgar",
+      pricing: { parse_ok: true, shares: 6250000, price_usd: 13, gross_usd: 81250000 } },
+    { name: "Latigo Biotherapeutics, Inc.", stage: 3, stage_ko: "가격확정", last_filed: "20260807", amend_count: 1,
+      edgar_url: "https://www.sec.gov/cgi-bin/browse-edgar",
+      pricing: { parse_ok: true, shares: 19200000, price_usd: 18, gross_usd: 345600000 } },
 ]
 
 function fmtNum(v: any): string {
@@ -130,13 +144,14 @@ function fmtEok(v: any): string {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicMarketTab(props: Props) {
-    const { snapshotUrl, ipoUrl } = props
+    const { snapshotUrl, ipoUrl, usIpoUrl } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
     const [data, setData] = useState<any>(SAMPLE)
     const [ipos, setIpos] = useState<any[]>(SAMPLE_IPO)
+    const [usIpos, setUsIpos] = useState<any[]>(SAMPLE_US_IPO)
     const [openTip, setOpenTip] = useState<string>("")
     const [tipBox, setTipBox] = useState<{ left: number; width: number }>({ left: 0, width: 240 })
     const [hoverCapable, setHoverCapable] = useState(true)
@@ -184,6 +199,19 @@ export default function PublicMarketTab(props: Props) {
             .catch(() => {})
         return () => { alive = false }
     }, [ipoUrl, onCanvas])
+
+    useEffect(() => {
+        if (onCanvas || !usIpoUrl) return
+        let alive = true
+        fetch(usIpoUrl, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const arr = d && Array.isArray(d.items) ? d.items : null
+                if (alive && arr) setUsIpos(arr)
+            })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [usIpoUrl, onCanvas])
 
     const narrow = w > 0 && w < 560
     const pad = narrow ? 12 : 18
@@ -387,8 +415,52 @@ export default function PublicMarketTab(props: Props) {
                 </div>
             )}
 
+            {/* 미국 IPO — SEC EDGAR 단계 추적 (2026-08-18 신설) */}
+            {usIpos.length > 0 && (
+                <div style={{ background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>미국 IPO <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>· 상장 전 · SEC EDGAR</span></div>
+                    {/* 단계 내림 → 최근 접수순. 상장에 가까운 것이 위로 온다. */}
+                    {usIpos
+                        .slice()
+                        .sort((a: any, b: any) => (b.stage - a.stage) || String(b.last_filed).localeCompare(String(a.last_filed)))
+                        .slice(0, 8)
+                        .map((p: any, i: number) => {
+                            const pr = (p.pricing && p.pricing.parse_ok) ? p.pricing : null
+                            const near = p.stage >= 3
+                            return (
+                                <div key={i} style={{ display: "flex", gap: 12, padding: "11px 0", borderTop: i === 0 ? "none" : `1px solid ${C.line}`, alignItems: "flex-start" }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                            <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{p.name}</span>
+                                            {p.stage_ko && (
+                                                <span style={{ fontSize: 9.5, fontWeight: 800, color: near ? C.green : C.faint, background: C.bg, borderRadius: 5, padding: "2px 6px" }}>{p.stage_ko}</span>
+                                            )}
+                                        </div>
+                                        {/* 공모 조건 — 424B4 표지 기재값. 파싱 성공분만 노출한다(추정 금지). */}
+                                        {pr && (
+                                            <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginTop: 3 }}>
+                                                ${Number(pr.price_usd).toLocaleString("en-US")} · {Number(pr.shares).toLocaleString("en-US")}주 · ${Math.round(Number(pr.gross_usd) / 1e6).toLocaleString("en-US")}M
+                                            </div>
+                                        )}
+                                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 2 }}>
+                                            {p.last_filed ? `최근 접수 ${fmtDate(p.last_filed).slice(5)}` : ""}
+                                            {p.amend_count ? ` · 정정 ${p.amend_count}회` : ""}
+                                        </div>
+                                    </div>
+                                    {p.edgar_url && (
+                                        <a href={p.edgar_url} target="_blank" rel="noopener" style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: C.vg, background: C.vgS, borderRadius: 6, padding: "3px 9px", textDecoration: "none", whiteSpace: "nowrap" }}>EDGAR</a>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>
+                        단계 = S-1 신청 → 정정 → 424B4 가격확정 → 8-A 거래소등록 · 공모 조건은 신고서 기재값 · 사실만
+                    </div>
+                </div>
+            )}
+
             <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 12, lineHeight: 1.5 }}>
-                출처 FRED · yfinance · DART · 사실 지표만
+                출처 FRED · yfinance · DART · SEC EDGAR · 사실 지표만
             </div>
         </div>
     )
@@ -397,5 +469,6 @@ export default function PublicMarketTab(props: Props) {
 addPropertyControls(PublicMarketTab, {
     snapshotUrl: { type: ControlType.String, title: "Snapshot URL", defaultValue: DEFAULT_URL },
     ipoUrl: { type: ControlType.String, title: "IPO URL", defaultValue: DEFAULT_IPO },
+    usIpoUrl: { type: ControlType.String, title: "US IPO URL", defaultValue: DEFAULT_US_IPO },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
