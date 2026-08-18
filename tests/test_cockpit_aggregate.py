@@ -173,8 +173,12 @@ def test_build_cockpit_state_with_full_ledgers(mock_ledger_dir):
     assert state["severity_reasons"] == []
     assert state["n_verification_days"] == 30
     assert state["n_milestones"]["to_50"] == 20  # 50 - 30
-    assert state["n_milestones"]["to_252"] == 222
-    assert state["n_milestones"]["to_365"] == 335
+    # 🚨 2026-08-18 — 종전은 to_252 == 222 를 고정했다. to_252/to_365 는 폐기된 표본수
+    #    게이트(VALIDATION_METHODOLOGY §7-1)를 향한 잔여일수라 산출에서 제거했다.
+    #    테스트가 죽은 전제를 붙잡고 있으면 코드를 고칠 수 없다 — 부재를 검증한다.
+    assert "to_252" not in state["n_milestones"], "폐기 마일스톤이 되살아났다"
+    assert "to_365" not in state["n_milestones"], "폐기 마일스톤이 되살아났다"
+    assert state["n_milestones"]["to_100"] == 70  # 100 - 30
     assert state["operator_deadman"]["trigger"] == "ok"
     assert state["alert_volume_24h"]["sent"] == 1
     assert state["alert_volume_24h"]["dedupe_skip"] == 1

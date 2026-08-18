@@ -19,7 +19,9 @@ type CockpitState = {
     severity?: "GREEN" | "YELLOW" | "RED"
     severity_reasons?: string[]
     n_verification_days?: number
-    n_milestones?: { to_50?: number; to_100?: number; to_252?: number; to_365?: number }
+    // 🚨 2026-08-18 — to_252 / to_365 제거. 폐기된 표본수 게이트(VALIDATION_METHODOLOGY §7-1)를
+    //    향한 잔여일수였다. to_50 / to_100 은 방법론적 하한(IC 측정·PSR 적용)이라 유지.
+    n_milestones?: { to_50?: number; to_100?: number }
     one_liner?: string
     operator_deadman?: { trigger?: string; days_git?: number; days_telegram?: number; days_uaq?: number; warn_days?: number }
     alert_volume_24h?: { sent?: number; dedupe_skip?: number; quiet_skip?: number; fp_repeat_max?: number }
@@ -106,7 +108,7 @@ export default function CockpitCard() {
                     <span style={{ fontSize: 11, color: c.faint, fontWeight: 700 }}>일</span>
                 </div>
                 <div style={{ fontSize: 10.5, color: c.faint, fontWeight: 600, marginTop: 3, ...NUM }}>
-                    50까지 {n0(ms.to_50)} · 100까지 {n0(ms.to_100)} · 252까지 {n0(ms.to_252)} · 365까지 {n0(ms.to_365)}
+                    50까지 {n0(ms.to_50)} · 100까지 {n0(ms.to_100)}
                 </div>
             </div>
 

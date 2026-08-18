@@ -18,11 +18,25 @@ from typing import Any, Dict, Optional
 
 
 # 통계 유의성 milestone (메모리 [[project_minimum_n_milestones_2026_05_18]] 정합)
+#
+# 🚨 2026-08-18 — `to_252`(IC IR 임계) 와 `to_365`(운영 trail 1년, 목표 2027-05) **제거**.
+#    둘 다 `docs/VALIDATION_METHODOLOGY.md` §7-1 로 폐기된 표본수 게이트다. 폐기 사유가
+#    정확히 이 계산이었다 — *"실제 출력이 언제나 '더 모아라' 였다. 검정력을 따지지 않은 채
+#    표본만 요구하는 것은 무책임하다."* 그런데 콕핏이 매일 "252까지 170일 · 365까지 283일"
+#    을 계산해 오퍼레이터 UI 에 띄우고 있었다 (`data/metadata/cockpit_state.json` 실측).
+#    `to_365` 는 CLAUDE.md RULE 7 이 **부활 금지**로 명시한 값이기도 하다.
+#
+#    남긴 둘은 폐기 대상이 아니다 — 표본 크기의 **방법론적 하한**이지 목표 시점이 아니다:
+#      to_50  = IC 측정 가능 임계 · to_100 = PSR 적용 가능(Bailey-Lopez 2014)
+#    이들은 "언제 도달하나" 가 아니라 "이 아래로는 계산 자체가 무의미" 를 뜻한다.
+#
+#    🚨 소비처가 프런트 2곳(operator-web `CockpitCard.tsx` · framer `OperatorCockpitCard.tsx`)
+#    이라 키를 통째로 지우면 UI 가 빈 값을 렌더한다. 두 키를 없애는 대신 **산출에서 제외**하고,
+#    프런트는 옵셔널 체이닝(`ms.to_252` → undefined)으로 자연히 생략된다.
+#    framer 는 RULE 11(3소스 동기화) 대상이라 별도 절차 — 잔여로 남긴다.
 _MILESTONES = {
     "to_50": 50,    # IC 측정 가능 임계 (5% 신뢰)
     "to_100": 100,  # PSR 적용 가능 (Bailey-Lopez 2014)
-    "to_252": 252,  # IC IR 신뢰 임계 (1년 영업일)
-    "to_365": 365,  # 운영 trail 1년 (목표 2027-05)
 }
 
 
