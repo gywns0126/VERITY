@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-19T01:02:51+09:00",
+  "collected_at": "2026-08-19T01:33:27+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
@@ -16,7 +16,7 @@
       "active": true,
       "drivers": {
         "fng": 41.0,
-        "search_trend_pct": 2.4
+        "search_trend_pct": 3.2
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -27,8 +27,8 @@
       "active": true,
       "drivers": {
         "funding_signal": "neutral",
-        "put_call_oi": 0.561,
-        "long_short_ratio": 1.41
+        "put_call_oi": 0.562,
+        "long_short_ratio": 1.39
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
@@ -60,8 +60,8 @@
       "read": "누적 중",
       "active": false,
       "drivers": {
-        "ssr": 5.1,
-        "stablecoin_supply_usd": 254936827392.0985
+        "ssr": 5.09,
+        "stablecoin_supply_usd": 254913758214.1446
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -80,7 +80,7 @@
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 64818.0,
+  "btc_price_at_call": 64638.0,
   "trail": [
     {
       "date": "2026-06-24",
@@ -478,7 +478,7 @@
       "date": "2026-08-19",
       "call": "neutral",
       "net_score": 1,
-      "btc_price": 64818.0,
+      "btc_price": 64638.0,
       "active_dims": 4
     }
   ],
@@ -488,14 +488,14 @@
         "horizon_days": 7,
         "n": 22,
         "hit_rate": 0.4545,
-        "mean_realized_return": 0.005659,
+        "mean_realized_return": 0.005529,
         "label": "통계 무의미 (N<30)"
       },
       {
         "horizon_days": 30,
         "n": 7,
         "hit_rate": 0.2857,
-        "mean_realized_return": 0.019892,
+        "mean_realized_return": 0.019507,
         "label": "통계 무의미 (N<30)"
       }
     ],
