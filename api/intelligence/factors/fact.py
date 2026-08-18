@@ -715,6 +715,11 @@ def _compute_fact_score(
         "components": {k: round(v, 1) for k, v in components.items() if isinstance(v, (int, float))},
         "data_coverage": round(data_coverage, 3),
         "missing_components": sorted(_missing),
+        # 🚨 2026-08-18 (R6) — 팩터 **내부** 미측정 하위축. 점수 영향 0, 보고 전용.
+        #   `missing_components`(바깥, 중립 50 대입)와 **정책이 다르다**: 안쪽은 못 잰 축을
+        #   빼고 재정규화한다(8/17 시행). 둘을 나란히 실어야 어느 정책이 적용됐는지 보인다.
+        #   종전에는 안쪽 신고가 조립 단계에서 버려져 산출물 출현 0 이었다.
+        "unmeasured_subaxes": (mf.get("quant_unmeasured_axes") or {}),
         # 2026-07-27 — 슬롯은 찼지만 값의 출처가 그 슬롯 이름과 다른 컴포넌트(대체 신호).
         # IC/학습 trail 이 "컨센서스 신호" 와 "수급 대체분" 을 분리 집계할 수 있게 명시.
         "substituted_components": sorted(_substituted),

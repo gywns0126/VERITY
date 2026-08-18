@@ -274,6 +274,22 @@ def compute_multi_factor_score(
         "mean_reversion": mr_score,
     }
 
+    # 🚨 2026-08-18 — 미측정 하위축 전파 (R6). **점수 영향 0, 보고 전용.**
+    #
+    # 결측 정책이 시스템에 **두 개** 있는데 하나만 보였다:
+    #   · 팩터 **내부**(volatility·quality·mean_reversion) = 못 잰 하위축을 빼고 재정규화(8/17)
+    #   · fact **바깥**(컴포넌트) = 중립 50 대입 + `missing_components` 로 신고(2026-05-20)
+    # 뒤쪽은 산출물에 보이는데 앞쪽은 안 보였다 — `unmeasured_axes` 를 세 모듈이 만들어 놓고
+    # 여기서 버려서 **소비처 0 · portfolio.json 출현 0** 이었다(8/18 실측).
+    # 그래서 4축 중 하나가 절반만 측정된 종목과 전부 측정된 종목이 산출물에서 구분되지 않았다.
+    # 재정규화 자체는 정당하나(아핀 고정점 50, Spearman 1.000000) **그 사실이 숨는 것**이 문제다.
+    # RULE 12 — 산출물이 자기 입으로 말하게 한다.
+    quant_unmeasured = {}
+    for _fk in ("momentum", "quality", "volatility", "mean_reversion"):
+        _ua = ((qf.get(_fk) or {}).get("unmeasured_axes") or []) if isinstance(qf.get(_fk), dict) else []
+        if _ua:
+            quant_unmeasured[_fk] = list(_ua)
+
     return {
         "multi_score": multi,
         "grade": grade,
@@ -283,5 +299,7 @@ def compute_multi_factor_score(
         "factor_breakdown": breakdown,
         "factor_contribution": contribution,
         "quant_factors": quant_sub,
+        # 미측정 하위축 신고 (R6, 2026-08-18) — 값이 있으면 그 축은 재정규화로 채점됐다는 뜻.
+        "quant_unmeasured_axes": quant_unmeasured,
         "all_signals": all_signals,
     }
