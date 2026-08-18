@@ -1,28 +1,106 @@
 {
  "_meta": {
-  "generated_at": "2026-08-17T22:41:14+09:00",
+  "generated_at": "2026-08-18T14:10:54+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 30,
+  "sessions_scanned": 31,
   "sessions_missed": [],
   "counts": {
-   "filings": 848,
-   "companies": 258,
+   "filings": 890,
+   "companies": 265,
    "by_stage": {
-    "신청": 102,
+    "신청": 105,
     "정정(심사중)": 106,
     "가격확정": 11,
-    "거래소등록": 39
+    "거래소등록": 43
    },
    "spac_likely": 31,
-   "has_ticker_now": 193,
+   "has_ticker_now": 198,
    "priced_secondary_excluded": 10,
-   "foreign_issuer": 65,
+   "foreign_issuer": 67,
    "priced_parse_ok": 8
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
  },
  "items": [
+  {
+   "cik": "2130219",
+   "name": "Hall Chadwick Acquisition Corp II",
+   "forms": {
+    "8-A12B": 1,
+    "S-1/A": 2
+   },
+   "first_filed": "20260730",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2130219&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2134856",
+   "name": "Karman Line Acquisition Corp.",
+   "forms": {
+    "8-A12B": 1,
+    "CERT": 1,
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20260727",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2134856&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2132582",
+   "name": "Lyntris Inc.",
+   "forms": {
+    "8-A12B": 1,
+    "CERT": 1,
+    "S-1/A": 3,
+    "S-1": 1
+   },
+   "first_filed": "20260723",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 3,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2132582&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2133719",
+   "name": "NorthStrive Acquisition Corp I.",
+   "forms": {
+    "8-A12B": 1,
+    "CERT": 1,
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20260722",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2133719&type=S-1&dateb=&owner=include&count=20"
+  },
   {
    "cik": "2006960",
    "name": "Londian Wason New Energy Tech Inc.",
@@ -1229,6 +1307,93 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2069785&type=S-1&dateb=&owner=include&count=20"
   },
   {
+   "cik": "1610590",
+   "name": "Check-Cap Ltd",
+   "forms": {
+    "F-1/A": 1,
+    "F-1": 1
+   },
+   "first_filed": "20260724",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1610590&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1880995",
+   "name": "Alopexx, Inc.",
+   "forms": {
+    "S-1/A": 1
+   },
+   "first_filed": "20260817",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1880995&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2123380",
+   "name": "Gravity Acquisition Corp.",
+   "forms": {
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20260805",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123380&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1893657",
+   "name": "Rubber Leaf Inc",
+   "forms": {
+    "S-1/A": 1
+   },
+   "first_filed": "20260817",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1893657&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2109801",
+   "name": "VARSAL TECH, INC.",
+   "forms": {
+    "S-1/A": 2
+   },
+   "first_filed": "20260722",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2109801&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
    "cik": "2065232",
    "name": "Fitness Fanatics Ltd",
    "forms": {
@@ -1387,24 +1552,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2145409&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2132582",
-   "name": "Lyntris Inc.",
-   "forms": {
-    "S-1/A": 3,
-    "S-1": 1
-   },
-   "first_filed": "20260723",
-   "last_filed": "20260812",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 3,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2132582&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "1131903",
    "name": "SPECTRAL CAPITAL Corp",
    "forms": {
@@ -1490,42 +1637,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=351998&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2134856",
-   "name": "Karman Line Acquisition Corp.",
-   "forms": {
-    "S-1/A": 1,
-    "S-1": 1
-   },
-   "first_filed": "20260727",
-   "last_filed": "20260811",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2134856&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2133719",
-   "name": "NorthStrive Acquisition Corp I.",
-   "forms": {
-    "S-1/A": 1,
-    "S-1": 1
-   },
-   "first_filed": "20260722",
-   "last_filed": "20260811",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2133719&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2113605",
@@ -1804,23 +1915,6 @@
    "is_spac_likely": true,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2136449&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2130219",
-   "name": "Hall Chadwick Acquisition Corp II",
-   "forms": {
-    "S-1/A": 2
-   },
-   "first_filed": "20260730",
-   "last_filed": "20260804",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2130219&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2104032",
@@ -2533,23 +2627,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1947016&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2109801",
-   "name": "VARSAL TECH, INC.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260722",
-   "last_filed": "20260722",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2109801&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2018269",
    "name": "Tong Ying Group",
    "forms": {
@@ -3065,6 +3142,91 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2039461&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2104827",
+   "name": "BANG MAI FANG HOLDINGS",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20260817",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2104827&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2027329",
+   "name": "Optimi Health Corp.",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20260817",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2027329&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1317685",
+   "name": "Alliance Laundry Holdings Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20260817",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1317685&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2065708",
+   "name": "Andersen Group Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20260817",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2065708&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1793497",
+   "name": "VS Trust",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20260817",
+   "last_filed": "20260817",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1793497&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1649739",
@@ -3611,23 +3773,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=744452&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2123380",
-   "name": "Gravity Acquisition Corp.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20260805",
-   "last_filed": "20260805",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123380&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2148196",
    "name": "Luminous Acquisition",
    "forms": {
@@ -4017,23 +4162,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1460702&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1610590",
-   "name": "Check-Cap Ltd",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20260724",
-   "last_filed": "20260724",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1610590&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2098410",
