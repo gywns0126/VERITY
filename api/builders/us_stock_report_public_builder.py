@@ -59,7 +59,21 @@ def _title(name: str) -> str:
 
 CACHE_PATH = os.path.join(_ROOT, "data", "cache", "universe_us.json")
 SIC_KO_PATH = os.path.join(_ROOT, "data", "us_sic_ko.json")  # SIC 영문업종 → 한글 (정적, 런타임 번역 0)
-NAME_KO_PATH = os.path.join(_ROOT, "data", "us_name_ko.json")  # 주요 종목 ticker → 한글명 (병기·한국어 검색)
+NAME_KO_PATH = os.path.join(_ROOT, "data", "us_name_ko.json")  # 주요 종목 ticker → 한글명 (수동 71건)
+# 🚨 2026-08-18 — 자동 수집물(네이버 autocomplete, 5,138건)이 따로 있는데 빌더가
+#   수동 71건짜리 파일만 읽어 name_ko 채움율이 1.4%(61/4,488)였다.
+#   수집 결함이 아니라 조인 미배선이다 — ASTS "AST 스페이스모바일" · RKLB "로켓 랩" ·
+#   LUNR "인튜이티브 머신스" 가 전부 이미 수집돼 있었다
+#   ([[feedback_coverage_check_collector_filter_first]] 커버리지 얇으면 소스가 아니라
+#    우리 쪽 필터·배선부터 본다).
+#   수동본을 지우지 않고 **우선**한다 — 사람이 손으로 고친 표기가 자동 수집 표기보다 정확하다.
+NAME_KO_AUTO_PATH = os.path.join(_ROOT, "data", "us_stock_names_ko.json")
+# 🚨 2026-08-18 — ownership 이 4,488종목 전부 None(채움율 0%)이었는데
+#   SEC Schedule 13D/13G 를 이미 4,634종목 수집해 두고 있었다(us_major_holdings.json).
+#   상세 filings 는 /api/verity/us-forensics 가 종목별로 이미 서빙하므로 여기엔
+#   **요약만** 싣는다 — 이 리포트는 12MB 이고 stock_slice 가 통째로 받아가서,
+#   상세를 넣으면 방금 줄인 전송량을 되돌린다.
+MAJOR_HOLDINGS_PATH = os.path.join(_ROOT, "data", "us_major_holdings.json")
 US_DISCLOSURE_FEED_PATH = os.path.join(_ROOT, "data", "us_disclosure_feed.json")  # SEC 8-K 수시공시(S&P1500) — disclosures 섹션 배선
 
 
@@ -81,13 +95,61 @@ def _load_us_disclosures() -> Dict[str, List[Dict[str, Any]]]:
     return out
 
 
+def _load_major_holdings() -> Dict[str, Dict[str, Any]]:
+    """ticker → 13D/G 요약. 상세(filings)는 싣지 않는다(us-forensics 담당)."""
+    try:
+        with open(MAJOR_HOLDINGS_PATH, encoding="utf-8") as f:
+            st = (json.load(f) or {}).get("stocks") or []
+    except (OSError, json.JSONDecodeError):
+        return {}
+    out: Dict[str, Dict[str, Any]] = {}
+    for r in st:
+        tk = str(r.get("ticker") or "").upper()
+        if not tk:
+            continue
+        out[tk] = {k: r.get(k) for k in
+                   ("latest_pct", "n_13d", "n_13g", "total",
+                    "window_total", "truncated", "omitted", "collected_at")
+                   if r.get(k) is not None}
+    return out
+
+
+def _us_ownership_block(rec: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """13D/G 요약 블록. 🚨 기관 지분율 총계가 **아니다** — 5%+ 대량보유 공시 건수다.
+    라벨 없이 숫자만 실으면 소비자가 지분율로 오독한다(RULE 7 = 사실만, 해석 0)."""
+    if not rec:
+        return None
+    b = dict(rec)
+    b["kind"] = "sec_13dg"
+    # 🚨 note 를 _meta 로 빼지 말 것 — stock_slice 는 종목 레코드만 잘라 보내서
+    #   _meta 가 따라가지 않는다. 경고가 숫자와 분리되면 지분율로 오독된다.
+    #   대신 문구를 압축한다(4,488종목 × 반복이라 길이가 곧 전송량이다).
+    b["note"] = "SEC 13D/13G 5%+ 대량보유 공시 건수 · 지분율 총계 아님"
+    if b.get("truncated"):
+        b["note"] += f" · 상한으로 {b.get('omitted')}건 미포함"
+    return b
+
+
 def _load_name_ko() -> Dict[str, str]:
+    """자동 수집(5,138건) 위에 수동 표기(71건)를 덮어쓴다."""
+    out: Dict[str, str] = {}
+    try:
+        with open(NAME_KO_AUTO_PATH, encoding="utf-8") as f:
+            auto = json.load(f)
+        names = auto.get("names") if isinstance(auto, dict) and "names" in auto else auto
+        if isinstance(names, dict):
+            out.update({str(k).upper(): v for k, v in names.items()
+                        if not str(k).startswith("_") and v})
+    except (OSError, json.JSONDecodeError, AttributeError):
+        pass
     try:
         with open(NAME_KO_PATH, encoding="utf-8") as f:
             d = json.load(f)
-        return {str(k).upper(): v for k, v in d.items() if not k.startswith("_")}
+        out.update({str(k).upper(): v for k, v in d.items()
+                    if not str(k).startswith("_") and v})   # 수동본이 이긴다
     except (OSError, json.JSONDecodeError):
-        return {}
+        pass
+    return out
 
 
 # numeric SIC → 한글 fallback (sic_description meta 결손 시 — MSFT/JPM 등 flagship 19종 빈값 방지).
@@ -556,7 +618,8 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
                 sic_ko: Optional[Dict[str, str]] = None,
                 name_ko: Optional[Dict[str, str]] = None,
                 fin: Optional[Dict[str, Optional[float]]] = None,
-                consensus_map: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
+                consensus_map: Optional[Dict[str, Dict[str, Any]]] = None,
+                holdings: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
     facts: Dict[str, str] = {}
     fnote: Dict[str, str] = {}
     pm: Dict[str, float] = {}   # peer 중앙값 산정용 numeric (가드 통과분만)
@@ -685,7 +748,7 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
         "facts_note": fnote,
         "peer": None,        # main 2-pass 에서 섹터 중앙값 부착
         "disclosures": [],   # 8-K 는 /us/feed (us_disclosure_feed_builder) 담당
-        "ownership": None,
+        "ownership": _us_ownership_block((holdings or {}).get((row.get("ticker") or "").upper())),
         "consensus": _us_consensus_block((consensus_map or {}).get((row.get("ticker") or "").upper())),
         "calendar": [],
         "_pm": pm,           # peer 산정용 temp (main 에서 제거)
@@ -729,8 +792,11 @@ def main() -> int:
         sic_ko = _load_sic_ko()    # SIC 영문업종 → 한글 (정적 맵)
         name_ko = _load_name_ko()  # 주요사 ticker → 한글명
         us_cons = _load_us_consensus()  # yfinance 애널리스트 컨센서스(외부 집계 사실)
+        holdings = _load_major_holdings()  # SEC 13D/G 요약 (ownership 배선, 2026-08-18)
+        print(f"[us_report] name_ko {len(name_ko)}건 · 13D/G {len(holdings)}종목 조인",
+              file=sys.stderr)
         stocks = [build_stock(r, meta_by_ticker.get(r.get("ticker"), {}), caps, sic_ko, name_ko,
-                              _load_fin_latest(r.get("ticker")), us_cons)
+                              _load_fin_latest(r.get("ticker")), us_cons, holdings)
                   for r in rows if r.get("ticker")]
         # 동종업계 비교(peer) — 2-pass: 섹터 중앙값 산정 → 종목별 부착. KR stock_report 정합.
         # 계층: 설명 단위(정밀) → N<5 시 SIC 2자리 대분류 폴백 (2026-07-04 peer 조사 — 미부착 483 전부 N<5 컷).
