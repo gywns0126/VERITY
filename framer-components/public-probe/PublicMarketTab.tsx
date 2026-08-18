@@ -78,6 +78,7 @@ const SAMPLE = {
 const SAMPLE_IPO = [
     { corp_name: "케이앤에스아이앤씨", report_nm: "증권신고서(지분증권)", rcept_dt: "20260612", stage: "확정",
       dart_url: "https://dart.fss.or.kr",
+      profile: { available: true, sector_ko: "IT·기술", est_dt: "20121228", region: "대전광역시 유성구" },
       offering: { shares: 3000000, price_planned: 12400, total_planned: 37200000000, subscribe_start: "2026.09.16", subscribe_end: "2026.09.17", payment_date: "2026.09.21" } },
 ]
 
@@ -131,6 +132,15 @@ function daysTo(s: any): number | null {
 function fmtDay(s: any): string {
     const d = ipoDate(s)
     return d ? `${d.getMonth() + 1}/${d.getDate()}` : "—"
+}
+// "20151203" → "2015 설립 · 11년차". 업력은 회사 성격을 가르는 값이라 카드에 같이 낸다.
+function fmtEst(s: any): string {
+    const x = String(s || "")
+    if (x.length !== 8) return ""
+    const y = Number(x.slice(0, 4))
+    if (!y) return ""
+    const age = new Date().getFullYear() - y
+    return `${y} 설립` + (age > 0 ? ` · ${age}년차` : "")
 }
 // 372억 / 1,240억 — 억 단위 반올림. 공모규모는 억 단위가 관례다.
 function fmtEok(v: any): string {
@@ -391,6 +401,16 @@ export default function PublicMarketTab(props: Props) {
                                                 </span>
                                             )}
                                         </div>
+                                        {/* 🚨 회사 성격 — 업종·업력·소재지. 카드에 이름·숫자·날짜만
+                                            있어 "무슨 회사인지" 를 알 수 없었다(PM 지적).
+                                            정기공시 재무는 상장 전이라 실측 1/10 만 채워져 그 자리를
+                                            못 메운다 — DART 기업개황은 10/10 채워진다.
+                                            업종은 회사가 공시한 KSIC 를 표준 대응한 값이다(자체 판단 아님). */}
+                                        {(p.profile || {}).available && (
+                                            <div style={{ fontSize: 11.5, fontWeight: 600, color: C.faint, marginTop: 2 }}>
+                                                {[p.profile.sector_ko, fmtEst(p.profile.est_dt), p.profile.region].filter(Boolean).join(" · ")}
+                                            </div>
+                                        )}
                                         {/* 공모 조건 — 전부 DART 신고서 기재값 */}
                                         <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginTop: 3 }}>
                                             {o.price_planned ? `${Number(o.price_planned).toLocaleString("en-US")}원` : "공모가 미정"}
@@ -400,7 +420,7 @@ export default function PublicMarketTab(props: Props) {
                                         <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 2 }}>
                                             {o.subscribe_start ? `청약 ${fmtDay(o.subscribe_start)}${o.subscribe_end ? `~${fmtDay(o.subscribe_end)}` : ""}` : ""}
                                             {o.payment_date ? ` · 납입 ${fmtDay(o.payment_date)}` : ""}
-                                            {p.rcept_dt ? ` · 접수 ${fmtDate(p.rcept_dt).slice(5)}` : ""}
+
                                         </div>
                                     </div>
                                     {p.dart_url && (

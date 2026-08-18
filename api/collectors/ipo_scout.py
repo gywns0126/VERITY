@@ -126,6 +126,56 @@ def _parse_with_fallback(corp_code: str, rcept_no: str, report_nm: str) -> Dict[
     return doc  # fallback 실패 — 원본(offering 빈 채) 반환
 
 
+# KSIC 대분류(2자리) → 섹터. scripts/kr_sector_dart_fallback.py 의 대응표와 동일 체계.
+#   🚨 자체 판단이 아니라 회사가 공시한 표준산업분류를 우리 섹터 축에 대응시킨 것뿐이다.
+_KSIC2_SECTOR: Dict[str, str] = {
+    **{k: "필수소비재" for k in ["01", "02", "03", "10", "11", "12"]},
+    **{k: "에너지" for k in ["05", "19"]},
+    **{k: "소재" for k in ["06", "07", "08", "16", "17", "20", "22", "23", "24"]},
+    **{k: "경기소비재" for k in ["13", "14", "15", "30", "32", "45", "46", "47", "55", "56", "85", "90", "91"]},
+    **{k: "헬스케어" for k in ["21", "27", "70", "86", "87"]},
+    **{k: "산업재" for k in ["18", "25", "28", "29", "31", "33", "34", "41", "42", "49", "50", "51", "52", "71", "72", "73", "74", "75", "76"]},
+    **{k: "유틸리티" for k in ["35", "36", "37", "38", "39"]},
+    **{k: "IT·기술" for k in ["26", "58", "62", "63"]},
+    **{k: "커뮤니케이션" for k in ["59", "60", "61"]},
+    **{k: "금융" for k in ["64", "65", "66"]},
+    "68": "부동산",
+}
+
+
+def _enrich_profile(corp_code: str) -> Dict[str, Any]:
+    """DART 기업개황 — 업종·설립일·소재지. 🚨 상장 전(corp_cls=E)에도 응답한다(실호출 확인).
+
+    왜 넣었나: 카드에 이름·숫자·날짜만 있어 **무슨 회사인지 알 수 없었다**.
+    정기공시 재무는 상장 전이라 실측 1/10 밖에 안 채워진다 — 그 자리를 이게 메운다.
+    전부 DART 기재값이고 섹터만 KSIC 표준 대응이다(자체 판단 아님).
+    """
+    if not corp_code:
+        return {"available": False}
+    # 🚨 raw requests 대신 DartScout._call 을 쓴다 — 재시도·dart_metrics 기록이 붙은
+    #    정규 경로이고, 이 파일에 requests 임포트가 없다(첫 구현에서 NameError 를 냈다).
+    try:
+        d = _call("company.json", {"corp_code": corp_code}) or {}
+    except Exception:  # noqa: BLE001 — 개황 하나 실패로 전체 수집을 죽이지 않는다
+        return {"available": False, "reason": "기업개황 조회 실패"}
+    if str(d.get("status")) != "000":
+        return {"available": False, "reason": f"status {d.get('status')}"}
+    code = str(d.get("induty_code") or "").strip()
+    est = str(d.get("est_dt") or "").strip()
+    adres = str(d.get("adres") or "").strip()
+    # 소재지는 앞 2어절만 (시/도 + 시/군/구) — 전체 주소는 카드에 과하다.
+    region = " ".join(adres.split()[:2]) if adres else ""
+    return {
+        "available": True,
+        "induty_code": code or None,
+        "sector_ko": _KSIC2_SECTOR.get(code[:2]) if code else None,
+        "est_dt": est or None,
+        "ceo_nm": str(d.get("ceo_nm") or "").strip() or None,
+        "region": region or None,
+        "hm_url": str(d.get("hm_url") or "").strip() or None,
+    }
+
+
 def _enrich_financials(corp_code: str) -> Dict[str, Any]:
     """외감 사업보고서가 있으면 재무 보강 (없으면 available=False).
 
@@ -178,6 +228,8 @@ def scout() -> Dict[str, Any]:
             "doc_parse_error": doc.get("error"),
             # 정기공시 재무 (외감 기업만) — debt_ratio 등 보조
             "financials": _enrich_financials(corp_code) if corp_code else {"available": False},
+            # 기업개황 — 업종·설립일·소재지. 재무가 상장 전이라 대부분 비는 자리를 메운다.
+            "profile": _enrich_profile(corp_code),
         })
 
     return {
