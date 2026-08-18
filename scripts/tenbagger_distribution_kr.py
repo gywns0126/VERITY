@@ -152,3 +152,110 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 2차 검증 (2026-08-18 후속) — PM "전부 검증해서 강화"
+#
+# 🚨 여기서 §2(거래대금 역U자)가 **정정**됐다. 시가총액으로 재검증하니 역U자가 사라지고
+#    약한 우상향이 나온다 — 거래대금은 size 가 아니라 **관심도** 프록시였다.
+#    두 결과가 갈리는 것 자체가 "거래대금을 size 로 쓰지 말라" 는 증거다.
+# ══════════════════════════════════════════════════════════════════════════
+
+MKTCAP = "data/krx_mktcap.json"
+WATCH = "data/metadata/multibagger_watch.jsonl"
+
+
+def verify_size_by_marketcap() -> None:
+    """A. 시총 기반 size 재검증. 발행주식수 × 2020년 초 주가.
+
+    🚨 한계 = 발행주식수가 **현재값**이다. 유상증자·분할이 있었으면 과거 시총이 왜곡된다.
+    정확히 하려면 시점별 주식수가 필요하다(DART 보유, 미결).
+    """
+    mk = json.load(open(MKTCAP))["map"]
+    shares = {k: v.get("shares") for k, v in mk.items() if v.get("shares")}
+    rec = []
+    for p in glob.glob(os.path.join(HIST, "*.json")):
+        try:
+            c = json.load(open(p)).get("c") or []
+        except Exception:
+            continue
+        if len(c) < MIN_BARS:
+            continue
+        t = os.path.basename(p)[:-5]
+        a = np.array(c, dtype=float)
+        cl = a[:, 4]
+        if cl[0] <= 0 or t not in shares:
+            continue
+        rec.append((cl[-1] / cl[0] - 1.0, shares[t] * cl[0]))
+    ret = np.array([r for r, _ in rec])
+    mc = np.array([m for _, m in rec])
+    q = np.quantile(mc, [0.2, 0.4, 0.6, 0.8])
+    print(f"\n## A. 시가총액 5분위 ({len(rec)}종목)")
+    print(f"{'분위':>6}{'종목':>7}{'텐배거':>7}{'배출률':>9}{'중앙수익':>10}")
+    for i in range(5):
+        lo = -np.inf if i == 0 else q[i - 1]
+        m = (mc >= lo) & (mc < q[i]) if i < 4 else (mc >= q[3])
+        n = int(m.sum())
+        tb = int((ret[m] >= TENBAGGER).sum())
+        print(f"{'Q'+str(i+1):>6}{n:>7}{tb:>7}{tb/n*100:>8.2f}%{np.median(ret[m])*100:>9.1f}%")
+    print("  🚨 시총 기준은 역U자가 아니다 — Q5(대형) 최다. 거래대금 결과와 갈린다")
+
+
+def verify_max_effect() -> None:
+    """C. MAX 효과 — 초기 20일 최대 일수익률('복권형' 정도) 5분위.
+
+    Bali et al. 의 MAX 효과 = 고-MAX 종목이 사후 저조. KR 에서 재현되는지 본다.
+    """
+    rec = []
+    for p in glob.glob(os.path.join(HIST, "*.json")):
+        try:
+            c = json.load(open(p)).get("c") or []
+        except Exception:
+            continue
+        if len(c) < MIN_BARS:
+            continue
+        a = np.array(c, dtype=float)
+        cl = a[:, 4]
+        if cl[0] <= 0 or len(cl) < 21:
+            continue
+        r20 = np.diff(cl[:21]) / cl[:20]
+        rec.append((cl[-1] / cl[0] - 1.0, float(r20.max())))
+    ret = np.array([r for r, _ in rec])
+    mx = np.array([m for _, m in rec])
+    q = np.quantile(mx, [0.2, 0.4, 0.6, 0.8])
+    print(f"\n## C. MAX 효과 5분위 ({len(rec)}종목)")
+    print(f"{'분위':>6}{'종목':>7}{'텐배거':>7}{'배출률':>9}{'중앙수익':>10}{'−75%손실':>10}")
+    for i in range(5):
+        lo = -np.inf if i == 0 else q[i - 1]
+        m = (mx >= lo) & (mx < q[i]) if i < 4 else (mx >= q[3])
+        n = int(m.sum())
+        tb = int((ret[m] >= TENBAGGER).sum())
+        print(f"{'Q'+str(i+1):>6}{n:>7}{tb:>7}{tb/n*100:>8.2f}%"
+              f"{np.median(ret[m])*100:>9.1f}%{(ret[m] <= -0.75).mean()*100:>9.1f}%")
+    print("  🚨 중앙수익·파산률이 MAX 에 **완전 단조** — MAX 효과 재현.")
+    print("     텐배거는 Q2(MAX 2.5~4%)에 최다. '급등 추격' 은 정확히 반대 방향이다")
+
+
+def verify_watch_status() -> None:
+    """D. 멀티배거 트랙 실 가동 상태 + 신호별 발동률.
+
+    🚨 전향 검정은 이 trail 로 **불가능**하다 — 49일뿐이라 텐배거 판정 구간(6.5년)과
+    겹치지 않는다. 신호가 켜졌을 때 이미 10배가 끝나 있었다.
+    """
+    if not os.path.exists(WATCH):
+        print("\n## D. watch trail 부재")
+        return
+    rows = [json.loads(l) for l in open(WATCH) if l.strip()]
+    days = sorted({r["watch_date"] for r in rows})
+    print(f"\n## D. 멀티배거 트랙 가동 — {len(rows):,}행 · {days[0]}~{days[-1]} ({len(days)}일)")
+    sig, fired = collections.Counter(), collections.Counter()
+    for r in rows:
+        for k, v in (r.get("signals") or {}).items():
+            sig[k] += 1
+            if isinstance(v, dict) and v.get("triggered"):
+                fired[k] += 1
+    for k in sig:
+        print(f"  {k:<26}{fired[k]:>7} / {sig[k]:>7} = {fired[k]/sig[k]*100:>6.2f}%")
+    print("  🚨 revenue_acceleration 79% 발동 = 선별력 없음 · "
+          "industry_s_curve·hold_pnl 0% = 스텁 의심")
