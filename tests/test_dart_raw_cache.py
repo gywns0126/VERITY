@@ -102,3 +102,56 @@ def test_use_cache_false_bypasses(monkeypatch):
     monkeypatch.setattr(D, "_list_reports", lambda *a, **k: [])
     out = D.fetch_business_facilities_raw("00126380", "2025", use_cache=False)
     assert out.get("_from_cache") is not True
+
+
+# ── KAM 추출 품질 (2026-08-17 전량 백필 실측에서 도출) ─────────────────────
+# 1,072종목 실측: 표 추출 943(88.0%) · 그중 **30건(3.2%)이 제목 셀에 서술까지** 담았다.
+# 원인 = `audit_opinion_text` 창(+6,000자)이 때때로 표 경계를 넘는다.
+
+def test_clean_title_cuts_narrative_spill():
+    """🚨 핵심 회귀: 제목 뒤에 붙은 서술을 잘라낸다."""
+    from api.analyzers.dart_kam import _clean_title
+    raw = "(1) 용역매출의 투입법에 따른 수익인식 핵심감사사항으로 결정한 이유용역매출의 총계약수익은 최초에"
+    t = _clean_title(raw)
+    assert t == "(1) 용역매출의 투입법에 따른 수익인식"
+    assert "결정한 이유" not in t
+
+
+def test_clean_title_preserves_normal_titles():
+    """정상 제목은 그대로 둔다 — 과잉 절단은 정보 손실이다."""
+    from api.analyzers.dart_kam import _clean_title
+    for ok in ("국내 제강부문 현금창출단위손상평가",
+               "재고자산 평가충당금 추정의 적정성 평가",
+               "매입대출채권(당기손익공정가치측정금융자산) 회계처리"):
+        assert _clean_title(ok) == ok
+
+
+def test_clean_title_caps_length_and_normalizes_space():
+    from api.analyzers.dart_kam import _clean_title, _TITLE_MAX
+    assert len(_clean_title("가" * 300)) == _TITLE_MAX
+    assert _clean_title("  공백   정규화   시험  ") == "공백 정규화 시험"
+
+
+def test_truncation_is_self_reported():
+    """🚨 조용히 자르지 않는다 — 자른 사실을 산출물이 스스로 신고해야 원문 대조가 된다."""
+    from api.analyzers import dart_kam as K
+    tbl = {"columns": ["사업연도", "구분", "감사인", "감사의견", "핵심감사사항"],
+           "rows": [{"사업연도": "제10기(당기)", "구분": "감사보고서", "감사인": "A회계법인",
+                     "감사의견": "적정의견",
+                     "핵심감사사항": "수익인식 핵심감사사항으로 결정한 이유 상세 서술이 이어짐"}]}
+    import api.collectors.DartScout as D
+    orig = D.parse_audit_opinion_table
+    D.parse_audit_opinion_table = lambda _t: tbl
+    try:
+        r = K.extract_kam("dummy")
+    finally:
+        D.parse_audit_opinion_table = orig
+    assert r["kam_count"] == 1
+    assert r["matters"][0]["title_truncated"] is True
+    assert "결정한 이유" not in r["matters"][0]["title"]
+
+
+def test_incremental_flush_constant_is_sane():
+    """증분 저장 주기 — 없으면 2시간 배치가 죽을 때 파싱분 전량 손실 (8/17 실측 결함)."""
+    from api.analyzers.dart_kam import _FLUSH_EVERY
+    assert 10 <= _FLUSH_EVERY <= 200, "너무 잦으면 I/O, 너무 드물면 손실 창이 커진다"

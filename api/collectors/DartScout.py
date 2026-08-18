@@ -624,6 +624,21 @@ _AUDIT_YEAR_RE = re.compile(r"^제\s*[\d,]+\s*기")
 _AUDIT_KIND = ("감사보고서", "연결감사보고서")
 
 
+_AUDIT_OPINION_RE = re.compile(r"^(적정|한정|부적정|의견거절)")
+
+
+def _AUDIT_MISALIGNED(row: dict) -> bool:
+    """열 정렬이 밀렸는지 — 값의 **종류**로 판정한다 (개수로는 못 잡는다).
+
+    지문 2종 (2026-08-17 실측):
+      · `감사인` 칸에 의견 문구가 들어옴 ("적정의견")
+      · `핵심감사사항` 칸에 사업연도가 들어옴 ("제24기(전기)")
+    """
+    aud = str(row.get("감사인") or "")
+    kam = str(row.get("핵심감사사항") or "")
+    return bool(_AUDIT_OPINION_RE.match(aud) or _AUDIT_YEAR_RE.match(kam))
+
+
 def parse_audit_opinion_table(raw_text: str) -> Optional[Dict[str, Any]]:
     """사업보고서 'V. 회계감사인의 감사의견' 표를 **결정론 파싱** (LLM 미사용).
 
@@ -672,7 +687,15 @@ def parse_audit_opinion_table(raw_text: str) -> Optional[Dict[str, Any]]:
             k += 1
             continue
         if tok in _AUDIT_KIND and year and k + len(tail) <= len(body):
-            rows.append({"사업연도": year, **dict(zip(tail, body[k:k + len(tail)]))})
+            cand = dict(zip(tail, body[k:k + len(tail)]))
+            # 🚨 2026-08-17 정렬 가드 — 실측 1,313종목 중 3건(0.2%)에서 행 필드 수가
+            #   예상과 달라 열이 한 칸씩 밀렸다. 그러면 감사인 칸에 '적정의견' 이,
+            #   핵심감사사항 칸에 '제24기(전기)' 가 들어가고, 그 뒤 연도 토큰이 KAM 값으로
+            #   먹혀 **모든 연도가 하나로 붕괴**한다(053210 실측: 6행 전부 제25기).
+            #   틀린 행을 내보내느니 여기서 멈춘다 — 조용한 오답이 부분 결측보다 나쁘다.
+            if _AUDIT_MISALIGNED(cand):
+                break
+            rows.append({"사업연도": year, **cand})
             k += len(tail)
             continue
         break                           # 표 밖으로 나갔다 — 더 읽지 않는다

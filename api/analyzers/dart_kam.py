@@ -36,6 +36,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import sys
 import time
 from typing import Any, Dict, Optional
@@ -48,6 +49,7 @@ CACHE_PATH = os.path.join(DATA_DIR, "dart_kam_cache.json")
 
 # 표의 '없음' 표기들 — 이걸 KAM 제목으로 오인하면 전 종목이 거짓 양성이 된다
 _EMPTY_TOKENS = {"-", "", "해당사항 없음", "해당사항없음", "없음", "N/A", "해당없음"}
+_FLUSH_EVERY = 50          # 증분 저장 주기 (1,498종목 ≈ 30회 쓰기)
 
 
 def _load_cache() -> Dict[str, Any]:
@@ -71,6 +73,25 @@ def _is_empty(v: Any) -> bool:
     return str(v or "").strip() in _EMPTY_TOKENS
 
 
+# 🚨 2026-08-17 실측 — 표 셀이 KAM 제목을 넘어 **서술까지** 담는 경우가 1,072종목 중 30건(3.2%).
+#   예: "(1) 용역매출의 투입법에 따른 수익인식 핵심감사사항으로 결정한 이유용역매출의 총계약수익은…"
+#   원인 = `audit_opinion_text` 창(+6,000자)이 때때로 표 경계를 넘는다. 제목만 남기고 자른다.
+#   🚨 잘라낸 사실을 `title_truncated` 로 신고한다 — 조용히 자르면 원문 대조가 불가능해진다.
+_TITLE_STOP = re.compile(
+    r"핵심\s*감사\s*사항(?:으로|이|은)|감사에서\s*다루어진|결정한\s*이유|"
+    r"감사인의\s*책임|우리는\s*다음을\s*포함")
+_TITLE_MAX = 120
+
+
+def _clean_title(raw: str) -> str:
+    """KAM 제목 정리 — 서술 유입분을 잘라내고 공백을 정규화한다."""
+    t = re.sub(r"\s+", " ", str(raw or "")).strip()
+    m = _TITLE_STOP.search(t)
+    if m and m.start() > 0:
+        t = t[:m.start()].strip()
+    return t[:_TITLE_MAX].strip()
+
+
 def extract_kam(raw_text: str) -> Dict[str, Any]:
     """`raw_text` 에서 감사의견 표를 파싱해 KAM 사실을 뽑는다. LLM 호출 0.
 
@@ -92,11 +113,14 @@ def extract_kam(raw_text: str) -> Dict[str, Any]:
     matters = []
     seen = set()
     for r in cur:
-        t = str(r.get("핵심감사사항") or "").strip()
+        t = _clean_title(str(r.get("핵심감사사항") or ""))
         if _is_empty(t) or t in seen:
             continue
         seen.add(t)
-        matters.append({"title": t, "fiscal_year": r.get("사업연도"),
+        _orig = re.sub(r"\s+", " ", str(r.get("핵심감사사항") or "")).strip()
+        matters.append({"title": t,
+                        "title_truncated": len(_orig) > len(t),
+                        "fiscal_year": r.get("사업연도"),
                         "scope": r.get("구분"), "auditor": r.get("감사인"),
                         "opinion": r.get("감사의견")})
 
@@ -192,10 +216,23 @@ def analyze_all_kam(stocks: Dict[str, Any],
         by_ticker[ticker] = tc
         fresh += 1
 
+        # 🚨 2026-08-17 — 증분 저장. 종전에는 **루프 끝에서 한 번만** 저장해, 1,498종목
+        #   2시간 배치가 중간에 죽으면 파싱 결과가 전량 사라졌다(실측으로 확인).
+        #   비싼 부분(DART 문서)은 `dart_raw_cache/` 가 증분 저장하므로 재실행이
+        #   치명적이진 않지만, 파싱분까지 버릴 이유가 없다.
+        #   50건마다 flush — 1,498종목에 약 30회 쓰기라 I/O 부담이 없다.
+        if fresh % _FLUSH_EVERY == 0:
+            cache["by_ticker"] = by_ticker
+            cache["updated_at"] = now_kst().isoformat()
+            cache["_method"] = "deterministic_table_parse"
+            cache["_partial"] = True          # 완주 전임을 산출물이 스스로 신고
+            _save_cache(cache)
+
     if fresh:
         cache["by_ticker"] = by_ticker
         cache["updated_at"] = now_kst().isoformat()
         cache["_method"] = "deterministic_table_parse"
+        cache["_partial"] = False         # 완주 — 부분 저장 표식 해제
         _save_cache(cache)
     logger.info("[kam] 신규 %d · 캐시 %d · 스킵 %d", fresh, cached, skipped)
     return out
