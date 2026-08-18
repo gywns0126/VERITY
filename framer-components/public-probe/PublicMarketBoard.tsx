@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
+import { createElement, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
  * 글로벌 시세 보드 — AlphaNest 공개. 소스별 컴플라이언스(2026-07-16, KR 소스 2026-07-17 yfinance, 2026-07-19 복원).
@@ -33,6 +33,42 @@ const BINANCE_REST = "https://data-api.binance.vision/api/v3/ticker/24hr"
 const BINANCE_KLINE = "https://data-api.binance.vision/api/v3/klines"
 const BINANCE_WS = "wss://data-stream.binance.vision/stream?streams="
 const CRYPTO_SYMS = ["BTCUSDT", "ETHUSDT", "XRPUSDT", "SOLUSDT", "DOGEUSDT"]
+
+/* 🚨 TradingView **web component** 위젯 (2026-08-18 신설, PM 결정).
+   왜 레거시 iframe 이 아닌가: iframe 은 CSS 가 안 넘어가 서체·색이 전부 TV 것이 된다.
+   web component 는 closed shadow DOM 이지만 **CSS 토큰이 위젯 안까지 적용**돼
+   알파네스트 디자인으로 통일할 수 있다(TV_TOKENS 참조).
+   🚨 재배포 아님 — 데이터는 뷰어 브라우저 ↔ TV 직접이고 우리 서버를 경유하지 않는다.
+   조건 = 어트리뷰션 유지 · 위젯 코드 미변형 · **위젯에서 값을 읽어오지 말 것**(읽는 순간 재배포).
+   지연 여부는 위젯이 `D` 배지로 자기 신고한다 — 우리가 "실시간" 이라 라벨하지 않는다. */
+const TV_MODULE = "https://widgets.tradingview-widget.com/w/en/tv-single-ticker.js"
+
+/* 알파네스트 매핑 토큰. 🚨 positive=빨강 / negative=파랑 — TV 기본값은 반대(하락=빨강)라
+   이걸 안 뒤집으면 같은 페이지의 국장 차트(하락=파랑)와 색 규칙이 어긋난다. */
+/* 🚨 함수로 둔다 — 이 파일(디스크 미러)의 `C` 는 컴포넌트 **내부**에서 테마로 결정된다
+   (222행 `const C = … ? DARK : LIGHT`). 모듈 최상위에서 C 를 참조하면 로드 시 ReferenceError.
+   라이브판은 C 가 모듈 최상위 CSS 변수 맵이라 구조가 다르다 — 이관 시 주의. */
+const tvTokens = (K: typeof LIGHT) =>
+    ".an-mb-tv{" +
+    "--tv-widget-font-family:" + FONT + ";" +
+    "--tv-widget-background-color:transparent;" +
+    "--tv-widget-text-color:" + K.ink + ";" +
+    "--tv-widget-price-text-color:" + K.ink + ";" +
+    "--tv-widget-positive-color:" + K.up + ";" +
+    "--tv-widget-negative-color:" + K.down + ";" +
+    "}"
+
+/* 🚨 심볼 정체성 — `FOREXCOM:NSXUSD` 는 나스닥**100** 이지 컴포짓이 아니다(26,445 vs 29,731).
+   실측(2026-08-17 TV 심볼 페이지 HTTP)에서 지수 심볼이 전부 실재(200)함을 확인했으므로
+   CFD 프록시를 쓰지 않는다. 되돌려서 CFD 로 바꾸면 다른 지수를 같은 이름으로 내보내게 된다.
+   금리 2종(us_10y·us_2y)은 FRED 지표라 TV 심볼이 없다 → 현행 렌더 유지. */
+const TV_SYM: Record<string, string> = {
+    kospi: "KRX:KOSPI", kosdaq: "KRX:KOSDAQ",
+    sp500: "SP:SPX", nasdaq: "NASDAQ:IXIC", dow: "DJ:DJI",
+    sox: "NASDAQ:SOX", nikkei: "TVC:NI225", dax: "XETR:DAX",
+    vix: "CBOE:VIX", usdkrw: "FX_IDC:USDKRW",
+    gold: "TVC:GOLD", silver: "TVC:SILVER", copper: "COMEX:HG1!", wti_oil: "TVC:USOIL",
+}
 
 // 실시간 접근 = 네이버 딥링크(증권사 서빙 = 재배포 아님).
 const NAVER_URL: Record<string, string> = {
@@ -118,6 +154,28 @@ function fmtCloseLabel(yyyymmdd: any): string {
     const m = Number(s.slice(4, 6)), d = Number(s.slice(6, 8))
     if (!m || !d) return "전일 종가"
     return `${m}/${d} 종가`
+}
+
+/* 값+등락 자리에만 들어가는 TV 위젯. 카드 껍데기·스파크·라벨·하단 링크는 우리 것으로 남는다
+   — 통째 교체하면 스파크라인·단위(원/%)·원자재 노출 토글이 전부 사라진다.
+   🚨 hooks 는 최상위에서만(Framer 규율). 모듈 스크립트는 1회만 주입한다. */
+function TvQuote({ sym }: { sym: string }) {
+    useEffect(() => {
+        if (typeof document === "undefined") return
+        if (document.querySelector('script[data-tv-single-ticker]')) return
+        const s = document.createElement("script")
+        s.type = "module"
+        s.src = TV_MODULE
+        s.async = true
+        s.setAttribute("data-tv-single-ticker", "1")
+        document.head.appendChild(s)
+    }, [])
+    // 커스텀 엘리먼트라 JSX 내장 태그가 아니다 → createElement 로 만든다(TS 오류 회피).
+    return createElement("tv-single-ticker", {
+        symbol: sym,
+        "hide-market-status": "",
+        style: { display: "block", height: 44, width: "100%" },
+    })
 }
 
 function Spark({ data, color, w, h }: { data: number[]; color: string; w: number; h: number }) {
@@ -349,6 +407,8 @@ export default function PublicMarketBoard(props: Props) {
         const expoHit = it.src === "macro" && expoData && expoData[it.key] && Number(expoData[it.key].count) > 0
         const open = openCommodity === it.key
         const onClick = expoHit ? () => setOpenCommodity(open ? "" : it.key) : undefined
+        // 캔버스에서는 위젯이 안 뜨므로 기존 렌더(데모값)를 그대로 쓴다.
+        const tvSym = !onCanvas && it.src === "macro" ? TV_SYM[it.key] : undefined
         return (
             <div key={it.key} onClick={onClick}
                 style={{ background: open ? C.chipBg : C.card, borderRadius: 11, padding: "8px 10px", boxShadow: open ? "inset 0 1px 3px rgba(0,0,0,0.12)" : "0 1px 2px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 9, minWidth: 0, cursor: expoHit ? "pointer" : "default" }}>
@@ -357,12 +417,17 @@ export default function PublicMarketBoard(props: Props) {
                     <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {it.name}{expoHit && <span style={{ marginLeft: 4, fontSize: 9.5, fontWeight: 700, color: C.cPos }}>·{expoData[it.key].count}</span>}
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.pre || ""}{fmtNum(it.value, it.dec ?? 2)}{it.unit || ""}</div>
+                    {tvSym ? (
+                        /* 장중 = TV 위젯. 값·등락을 우리가 그리지 않으므로 fmtNum·단위는 이 분기에서 쓰지 않는다. */
+                        <div className="an-mb-tv" style={{ marginTop: 1 }}><TvQuote sym={tvSym} /></div>
+                    ) : (
+                        <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.pre || ""}{fmtNum(it.value, it.dec ?? 2)}{it.unit || ""}</div>
+                    )}
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 0, minWidth: 0, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 11, fontWeight: 800, color: col, whiteSpace: "nowrap" }}>{isFinite(cp) ? `${sign}${cp.toFixed(2)}%` : "—"}</span>
+                        {!tvSym && <span style={{ fontSize: 11, fontWeight: 800, color: col, whiteSpace: "nowrap" }}>{isFinite(cp) ? `${sign}${cp.toFixed(2)}%` : "—"}</span>}
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
                             {live && <span style={{ width: 5, height: 5, borderRadius: "50%", background: C.live }} />}
-                            <span style={{ fontSize: 9, fontWeight: 700, color: live ? C.live : C.faint, whiteSpace: "nowrap" }}>{live ? "실시간" : fmtCloseLabel(it.dataDate)}</span>
+                            <span style={{ fontSize: 9, fontWeight: 700, color: live ? C.live : C.faint, whiteSpace: "nowrap" }}>{live ? "실시간" : tvSym ? "TradingView" : fmtCloseLabel(it.dataDate)}</span>
                         </span>
                         {!live && naverLink(it.key)}
                     </div>
@@ -438,10 +503,11 @@ export default function PublicMarketBoard(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{tvTokens(C)}</style>
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>글로벌 시세</span>
-                <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>크립토 실시간 · 나머지 전일 종가 + 네이버 실시간 링크</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>크립토 실시간 · 지수·환율·원자재 TradingView · 금리 전일 종가</span>
             </div>
 
             {rows.length === 0 ? (
@@ -461,7 +527,7 @@ export default function PublicMarketBoard(props: Props) {
             )}
 
             <div style={{ fontSize: 10, color: C.faint, fontWeight: 600, marginTop: 2, lineHeight: 1.5 }}>
-                크립토 = Binance 실시간 · 지수 레벨 = 전일 종가 '숫자'(사실) · 실시간은 네이버 딥링크 · 상승 빨강/하락 파랑
+                크립토 = Binance 실시간 · 지수·환율·원자재 = TradingView 위젯(지연 여부는 위젯 표기 기준) · 금리 = FRED 전일 종가 · 상승 빨강/하락 파랑
             </div>
         </div>
     )
