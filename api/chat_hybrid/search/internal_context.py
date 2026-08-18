@@ -281,7 +281,16 @@ def _sec_form144(tickers: List[str]) -> List[str]:
                 bits.append(str(n["relationship"]))
             if n.get("units"):
                 bits.append(f"{n['units']:,}주 예정")
-            if n.get("value_usd"):
+            # 🚨 2026-08-18 — value_suspect 가 붙은 값은 금액을 싣지 않는다.
+            #   빌더(_flag_implied_price_outliers)가 주당 환산 이상치를 잡아 라벨을 달고
+            #   **합계(total_value_usd)에서는 제외**하는데, 개별 줄에는 필터가 없어
+            #   SYF $6,310,000/주(참조가 $81 · 77,901배) 같은 제출인 기입 오류가
+            #   합성 LLM 입력으로 그대로 들어갔다. 감사가 이 건을 P0→WARN 으로 강등하며
+            #   "개별 value_usd 소비처 전수 grep 0건" 을 전제로 삼았는데 이 경로가 그 반례다.
+            #   금액을 지우는 대신 사유를 남긴다 — 신고 사실 자체는 보존한다.
+            if n.get("value_suspect"):
+                bits.append("금액 보류(제출인 기입 오류 의심)")
+            elif n.get("value_usd"):
                 bits.append(f"${n['value_usd']:,.0f}")
             out.append("      - " + " · ".join(bits))
     return out
