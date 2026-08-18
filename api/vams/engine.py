@@ -674,7 +674,15 @@ _KELLY_CACHE: Dict[str, Any] = {"key": None, "val": None}
 
 
 def _kelly_cache_key() -> tuple:
-    out = []
+    """캐시 키 = (DATA_DIR, 입력 3파일 mtime_ns).
+
+    🚨 `DATA_DIR` 이 키에 있어야 한다. 없으면 **파일이 전부 없을 때 키가 (0,0,0) 으로
+    수렴해 서로 다른 데이터 디렉터리끼리 충돌**한다 (2026-08-18 재현 — 청산 1건인 dir 과
+    2건인 dir 이 같은 답을 냈다). watch 대상 = `load_history()`/`load_portfolio()` 가
+    **실제로 읽는** 파일. dev 모드에서 save 는 `*.dev.json` 으로 가지만 load 는 항상
+    prod 를 읽으므로(engine.py:237·184) prod 경로를 본다.
+    """
+    out: List[Any] = [DATA_DIR]
     for rel in ("history.json", "portfolio.json", os.path.join("vams", "exit_log.jsonl")):
         fp = os.path.join(DATA_DIR, rel)
         try:
@@ -726,14 +734,18 @@ def _kelly_realized_stats() -> Tuple[int, float]:
     if _KELLY_CACHE["key"] == ck and _KELLY_CACHE["val"] is not None:
         return _KELLY_CACHE["val"]
 
+    def _ret(v: Tuple[int, float]) -> Tuple[int, float]:
+        _KELLY_CACHE["key"], _KELLY_CACHE["val"] = ck, v
+        return v
+
     try:
         from api.vams.trade_ledger import reconstruct
         episodes = reconstruct(load_history(), since=_kelly_window_start())["episodes"]
     except Exception:  # noqa: BLE001 — 사이징 경로 보호
-        return 0, KELLY_B_DEFAULT
-    def _ret(v: Tuple[int, float]) -> Tuple[int, float]:
-        _KELLY_CACHE["key"], _KELLY_CACHE["val"] = ck, v
-        return v
+        # 🚨 실패도 캐시한다. 안 하면 원장이 깨진 동안 **매수 후보마다** 3.5MB 를 다시
+        #   읽고 다시 실패한다 — 성능 회귀를 막으려 캐시를 넣고 정작 최악의 경로를
+        #   열어두는 셈이다. mtime 이 바뀌면(=복구되면) 자동 재시도된다.
+        return _ret((0, KELLY_B_DEFAULT))
 
     n = len(episodes)
     if not n:

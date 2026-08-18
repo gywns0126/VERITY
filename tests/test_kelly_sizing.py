@@ -150,3 +150,50 @@ def test_kelly_stats_cache_invalidates_on_ledger_change(tmp_path, monkeypatch):
     (tmp_path / "history.json").write_text('{"x":1}', encoding="utf-8")
 
     assert E._kelly_realized_stats()[0] == 2, "원장이 바뀌었는데 캐시가 옛 n 을 내놓았다"
+
+
+def test_kelly_cache_key_includes_data_dir(tmp_path, monkeypatch):
+    """🚨 캐시 키에 DATA_DIR 이 없으면 파일 전무 시 (0,0,0) 으로 수렴해 충돌한다.
+
+    2026-08-18 재현 — 청산 1건인 디렉터리와 2건인 디렉터리가 **같은 답**을 냈다.
+    mtime 만으로 키를 만들면 "없는 파일" 이 서로 구분되지 않는다.
+    """
+    from api.vams import engine as E
+
+    d1, d2 = tmp_path / "a", tmp_path / "b"
+    d1.mkdir(); d2.mkdir()
+    h1 = [{"date": "2026-06-01", "type": "BUY", "ticker": "A", "quantity": 10, "price": 1000},
+          {"date": "2026-06-10", "type": "SELL", "ticker": "A", "quantity": 10,
+           "price": 900, "pnl": -1000}]
+    h2 = h1 + [{"date": "2026-06-11", "type": "BUY", "ticker": "B", "quantity": 5, "price": 2000},
+               {"date": "2026-06-12", "type": "SELL", "ticker": "B", "quantity": 5,
+                "price": 2200, "pnl": 1000}]
+    monkeypatch.setattr(E, "_kelly_window_start", lambda: "2026-05-17")
+    E._KELLY_CACHE["key"] = None
+
+    monkeypatch.setattr(E, "DATA_DIR", str(d1))
+    monkeypatch.setattr(E, "load_history", lambda: h1)
+    assert E._kelly_realized_stats()[0] == 1
+
+    monkeypatch.setattr(E, "DATA_DIR", str(d2))
+    monkeypatch.setattr(E, "load_history", lambda: h2)
+    assert E._kelly_realized_stats()[0] == 2, "다른 DATA_DIR 인데 캐시가 옛 값을 냈다"
+
+
+def test_kelly_failure_path_is_cached(tmp_path, monkeypatch):
+    """🚨 실패도 캐시해야 한다 — 안 하면 원장이 깨진 동안 매수 후보마다 3.5MB 를 다시 읽는다.
+
+    성능 회귀를 막으려 캐시를 넣고 정작 최악의 경로를 열어두면 의미가 없다.
+    """
+    from api.vams import engine as E
+
+    def _boom():
+        raise RuntimeError("corrupt ledger")
+
+    monkeypatch.setattr(E, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(E, "load_history", _boom)
+    monkeypatch.setattr(E, "_kelly_window_start", lambda: "2026-05-17")
+    E._KELLY_CACHE["key"] = None
+
+    assert E._kelly_realized_stats() == (0, E.KELLY_B_DEFAULT)
+    assert E._KELLY_CACHE["val"] == (0, E.KELLY_B_DEFAULT), "실패 경로가 캐시되지 않았다"
