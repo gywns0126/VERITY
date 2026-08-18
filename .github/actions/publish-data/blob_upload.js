@@ -18,6 +18,53 @@
 const { put, del } = require("@vercel/blob");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
+
+// ── 내용 해시 스킵 (2026-08-18) ───────────────────────────────────────────────
+// 🚨 사고: Vercel on-demand 요금이 $7(3개월 평균) → $20.16(직전) → $95.80(7/27~8/27)
+//   으로 뛰었다. 원인은 이 스크립트가 **변경 여부를 안 보고 매번 전량 PUT** 한 것이다.
+//   실측 blob_upload: 1346 ok — price_pulse(하루 91회) · cockpit(24회) · crypto(18회) ·
+//   realtime(16회) 등 publish 워크플로 30개가 각각 1,346건을 다시 쓴다 ≈ 22.7만 쓰기/일.
+//   그중 etf_hist/ 가 1,209파일(90%)인데 과거 일봉이라 사실상 안 변한다.
+//   요금 주기 시작일(7/27)과 etf_hist 신설일(7/27)이 같다 — 곡선이 이 한 건으로 설명된다.
+//
+// 대책: 파일 내용 sha256 을 매니페스트에 남기고, 같으면 PUT 을 건너뛴다.
+//   🚨 안전변 필수 — 매니페스트와 Blob 실물이 어긋나면 파일이 영영 안 올라간다.
+//   ① BLOB_FORCE_FULL=1 이면 전량 재업로드 ② 매니페스트가 _FULL_RESYNC_DAYS 보다
+//   오래되면 자동 전량 ③ 매니페스트 파손·부재 시 전량. 즉 의심스러우면 항상 전량 쪽으로 넘어진다.
+// 🚨 매니페스트를 repo 파일이 아니라 **Blob 에** 둔다.
+//   publish-data 는 각 워크플로의 commit step **뒤에** 돌아서, repo 에 쓴 매니페스트는
+//   그 run 에서 커밋되지 않는다(다음 run 의 git add 를 기다려야 함). 게다가 price_pulse 처럼
+//   좁은 git add 를 쓰는 워크플로는 아예 커밋하지 않는다 — 하루 91회 도는 그 워크플로가
+//   매번 낡은 매니페스트를 보면 절감이 사라진다. Blob 은 쓰는 즉시 모든 run 이 최신을 본다.
+const MANIFEST_BLOB = "_blob_manifest.json";
+const FULL_RESYNC_DAYS = 3;
+
+async function loadManifest() {
+    if (process.env.BLOB_FORCE_FULL === "1") {
+        console.log("  [manifest] BLOB_FORCE_FULL=1 — 전량 재업로드");
+        return { hashes: {}, reason: "force" };
+    }
+    try {
+        // 캐시버스터 — CDN 이 옛 매니페스트를 주면 이미 바뀐 파일을 건너뛴다.
+        const r = await fetch(`${BLOB_HOST}/${MANIFEST_BLOB}?v=${Date.now()}`);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const m = await r.json();
+        const age = (Date.now() - Date.parse(m.generated_at || 0)) / 86400000;
+        if (!(age >= 0) || age > FULL_RESYNC_DAYS) {
+            console.log(`  [manifest] ${age.toFixed(1)}일 경과(>${FULL_RESYNC_DAYS}) — 전량 재동기화`);
+            return { hashes: {}, reason: "stale" };
+        }
+        return { hashes: m.hashes || {}, reason: "ok" };
+    } catch (e) {
+        console.log(`  [manifest] 부재/조회 실패 — 전량 업로드 (${e.message})`);
+        return { hashes: {}, reason: "missing" };
+    }
+}
+
+function sha256(buf) {
+    return crypto.createHash("sha256").update(buf).digest("hex");
+}
 
 const SKIP_FILES = new Set(["README.md", "_manifest.txt"]);
 // 시세 재배포 컴플라이언스(2026-07-03 Phase 2) — 발행 중단된 KRX-raw 파일의 잔존 blob 스냅샷 삭제(멱등).
@@ -149,6 +196,10 @@ async function main() {
 
     // ── 1단계: 가드 판정 (동기, 순서 결정적) ──
     // 병렬 업로드 전에 HOLD 를 먼저 확정한다 — 가드 의미와 held 순서를 기존과 동일하게 유지.
+    const manifest = await loadManifest();
+    const newHashes = {};
+    let skipped = 0;
+
     const queue = [];
     for (const [fp, blobPath] of entries) {
         const gr = guardCore(fp, blobPath);
@@ -158,7 +209,24 @@ async function main() {
             held.push({ file: blobPath, reason: gr.reason });
             continue;
         }
+        // 🚨 HOLD 판정 뒤에 해시를 잰다 — 순서를 바꾸면 결함본 해시가 매니페스트에 실려
+        //   다음 run 이 "변경 없음" 으로 건너뛴다(결함이 영구 고착).
+        let h;
+        try {
+            h = sha256(fs.readFileSync(fp));
+        } catch (e) {
+            queue.push([fp, blobPath]);      // 해시 실패 = 의심 → 업로드 쪽으로 넘어진다
+            continue;
+        }
+        newHashes[blobPath] = h;
+        if (manifest.hashes[blobPath] === h) {
+            skipped++;
+            continue;
+        }
         queue.push([fp, blobPath]);
+    }
+    if (skipped) {
+        console.log(`  [manifest] 내용 동일 ${skipped}건 스킵 · 업로드 대상 ${queue.length}건`);
     }
 
     // ── 2단계: 병렬 업로드 (워커 풀) ──
@@ -192,6 +260,9 @@ async function main() {
                     }
                     console.error(`  ✗ ${blobPath} — ${e.message}`);
                     fail++;
+                    // 🚨 실패분 해시는 남기지 않는다 — 남기면 다음 run 이 "변경 없음" 으로
+                    //   건너뛰어 Blob 에 영영 안 올라간다(조용한 영구 누락).
+                    delete newHashes[blobPath];
                 }
             }
         }
@@ -213,7 +284,27 @@ async function main() {
             console.log(`  🗑 ${blobPath} skip — ${e.message}`);
         }
     }
-    console.log(`\nblob_upload: ${ok} ok / ${fail} fail / ${held.length} held`);
+    // ── 매니페스트 기록 ──
+    // HOLD 된 파일은 newHashes 에 아예 안 들어가고, 실패분은 위에서 지웠다.
+    // 즉 "이번에 Blob 에 확실히 올라간 내용" 만 남는다 — 다음 run 이 그것만 건너뛴다.
+    try {
+        const body = Buffer.from(JSON.stringify({
+            generated_at: new Date().toISOString(),
+            note: "Blob 업로드 내용 해시. 같으면 PUT 스킵(요금 절감). 상세 = blob_upload.js 상단 주석.",
+            full_resync_days: FULL_RESYNC_DAYS,
+            count: Object.keys(newHashes).length,
+            hashes: newHashes,
+        }));
+        await put(MANIFEST_BLOB, body, {
+            access: "public", addRandomSuffix: false, allowOverwrite: true,
+            contentType: "application/json",
+            cacheControlMaxAge: 0,      // 다음 run 이 즉시 최신을 봐야 한다
+        });
+    } catch (e) {
+        console.error(`::warning::blob manifest write fail — ${e.message} (다음 run 은 전량 업로드)`);
+    }
+
+    console.log(`\nblob_upload: ${ok} ok / ${fail} fail / ${held.length} held / ${skipped} skip(동일)`);
     // dual-write 는 보조 경로 — 실패해도 기존 VERITY-data publish 정합 깨면 안 됨.
     // 그래서 항상 exit 0. fail 누적은 stderr warning 으로만 알림.
     if (fail > 0) {
