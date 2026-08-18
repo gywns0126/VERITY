@@ -186,6 +186,113 @@ def attach_safety_percentile(scored: list) -> None:
               f"(구 게이트 ≥55: {sum(1 for s_ in pool if s_.get('safety_score', 0) >= 55)} — 섀도)")
 
 
+# ── 팩터 하위신호 단면 z-score (2026-08-17, PREREG_FACTOR_V2 §5-1) ──────────────
+# 🚨 왜: 팩터 **내부** 하위신호를 임계 배점(+12/+5/−8)으로 합치고 있었다. 문헌 표준은
+#   순위 → z-score → 단순평균이다 (Asness-Frazzini-Pedersen 2019 QMJ, RAS 24(1) 34–112,
+#   DOI 10.1007/s11142-018-9470-2). 구간화는 표준이 아니며 **경계 선택 자체가 은닉 자유도**라
+#   짧은 표본에서 연속 z 보다 위험하다. 우리 다단계 배점은 F-score 의 0/1 과 달라 배점 크기가
+#   추정 파라미터이므로 Altman Z 회귀계수와 같은 과최적화 범주다.
+#
+# 🚨 기준 단면 = **스캔 생존자 전체**(PM 결정 2026-08-17). `universe_candidates.json` 의
+#   `ramp_up_note` 가 "5000 = cap(상한), 목표 아님 — 실 유니버스 = 품질 floor 통과 전체" 라
+#   명시하므로 고정 5,000 이 아니라 그날 생존자 전체다.
+#
+# 🚨 시장(KR/US)별 분리 — `attach_safety_percentile` 과 같은 규약. 섞으면 통화·시장 구조가
+#   오염된다(실측: beta 를 KR 만 채우자 KR 평균 +16.8 · US +0.0 = 시장 단위 편향).
+#
+# 방향(+1/−1)은 **신호의 성질**이지 소비처의 선택이 아니므로 여기서 정규화한다 —
+# 부착 후에는 **높을수록 좋음**으로 통일된다. 소비처는 방향을 다시 생각하지 않는다.
+#
+# 이 함수는 **부착만 한다.** 점수를 바꾸지 않는다 (전환은 팩터 함수 쪽, 별도 단계).
+_ZSPEC = {
+    # 필드                        방향   비고
+    "per":                        -1,   # 낮을수록 저평가 (Graham)
+    "pbr":                        -1,
+    "debt_ratio":                 -1,
+    "roe":                        +1,
+    "div_yield":                  +1,
+    "eps_quarterly_growth":       +1,   # CANSLIM C
+    "drop_from_high_pct":         +1,   # 0 에 가까울수록 신고가 근처 = RS 프록시
+    "roa":                        +1,
+    "operating_margin":           +1,
+    "current_ratio":              +1,
+    "gross_margin":               +1,
+    "asset_turnover":             +1,
+    "volatility_20d":             -1,   # 저변동 = 고점수 (AHXZ 2006 · BBW 2011)
+    "volatility_60d":             -1,
+}
+# 🚨 실측(2026-08-17 운영 풀 N=56) 보유 0 이라 제외한 것 — 넣어도 전 종목 결측이라
+#   z 가 안 만들어지고, "있는 척" 만 하게 된다:
+#     operating_profit_yoy_est_pct 0/56 · institutional_ownership 0/56 · beta 0/56
+#   beta 는 PREREG_FACTOR_V2 §6(입력 완결)이 채운 뒤 여기에 추가한다.
+_Z_MIN_SAMPLE = 5          # attach_safety_percentile 과 같은 하한
+
+
+# 🚨 비율 지표에서 0·음수는 "가장 싸다" 가 아니라 **못 잰 것**이다 (실적 없음·적자).
+#   실측 2026-08-17: KR 20종목 중 `per == 0` 이 3건인데, 방향(-1)을 그대로 적용하면
+#   그 3건이 **최고 저평가(z +1.40)** 로 매겨졌다. 앞서 잡은 `or 50` falsy 결함과 같은 클래스다.
+#   분모가 0 이하일 수 없는 지표는 여기서 걸러 **미측정으로 남긴다**(중립 대입 아님).
+_Z_POSITIVE_ONLY = {"per", "pbr", "current_ratio", "asset_turnover"}
+
+
+def _field_value(s: dict, f: str):
+    v = s.get(f)
+    if not isinstance(v, (int, float)):
+        v = (s.get("technical") or {}).get(f)
+    if not isinstance(v, (int, float)):
+        return None
+    if f in _Z_POSITIVE_ONLY and v <= 0:
+        return None                       # 0·음수 = 못 쟀음. 순위에 넣지 않는다
+    return v
+
+
+def attach_factor_zscores(scored: list) -> None:
+    """단면 z-score 부착 — `stock["factor_z"] = {필드: z}`.
+
+    규약은 `attach_safety_percentile` 과 동일: 시장별 분리 · 동점 평균 순위 · 표본 부족 시
+    None + 신고. 순위 → 정규분위 근사(Blom) → z 로 변환해 이상치 영향을 제한한다
+    (AQR QMJ 가 "순위 변환 후 표준화" 를 쓰는 이유와 같다).
+
+    🚨 결측은 **제외**한다 — 중립 0 을 넣으면 "못 잼" 이 "평균" 으로 둔갑한다.
+       소비처는 `factor_z` 에 키가 없으면 미측정으로 다룬다.
+    """
+    from statistics import NormalDist
+    _nd = NormalDist()
+    for is_us in (False, True):
+        pool = [s for s in scored if (s.get("currency") == "USD") == is_us]
+        if not pool:
+            continue
+        for s_ in pool:
+            s_.setdefault("factor_z", {})
+        for f, direction in _ZSPEC.items():
+            vals = [(i, _field_value(s_, f)) for i, s_ in enumerate(pool)]
+            have = [(i, v) for i, v in vals if v is not None]
+            if len(have) < _Z_MIN_SAMPLE:
+                continue                      # 표본 부족 — 키를 만들지 않는다(=미측정)
+            # 🚨 상수 축은 부착하지 않는다. 실측: KR 20종목의 `pbr` 이 **전부 1.0** 이었다
+            #   (US 는 33/36 정상). 임계 배점에서는 전 종목이 같은 점수를 받아 안 보이던
+            #   결함인데, z 로 바꾸면 σ=0 이라 드러난다. 값이 하나뿐이면 변별 정보가 0 이므로
+            #   "있는 척" 하지 말고 미측정으로 남긴다 — 소비처가 unmeasured 로 다룬다.
+            if len({v for _i, v in have}) < 2:
+                continue
+            n = len(have)
+            order = sorted(range(n), key=lambda k: have[k][1])
+            ranks = [0.0] * n
+            i = 0
+            while i < n:                      # 동점 평균
+                j = i
+                while j + 1 < n and have[order[j + 1]][1] == have[order[i]][1]:
+                    j += 1
+                avg = (i + j) / 2 + 1
+                for k in range(i, j + 1):
+                    ranks[order[k]] = avg
+                i = j + 1
+            for (idx, _v), r in zip(have, ranks):
+                # Blom 근사 — 순위를 정규분위로. 극단값이 z 를 지배하지 않는다
+                q = (r - 0.375) / (n + 0.25)
+                pool[idx]["factor_z"][f] = round(direction * _nd.inv_cdf(q), 4)
+
+
 def calculate_safety_score(stock: dict) -> int:
     """안심 점수 계산 v2 (0~100, 8개 팩터)"""
     score = 0
@@ -346,6 +453,11 @@ def run_filter_pipeline(market_scope: str = "all", _metrics: Optional[dict] = No
     for s in step2:
         s["safety_score"] = calculate_safety_score(s)
     attach_safety_percentile(step2)
+    # 🚨 2026-08-17 — 같은 단면에서 팩터 하위신호 z 도 부착 (PREREG_FACTOR_V2 §5-1).
+    #   여기서 한 번만 계산한다 — 소비처가 좁은 풀(~40)에서 재계산하면 의미가 사라진다
+    #   (바로 위 함수 docstring 이 같은 이유로 경고하는 함정).
+    #   현재는 **부착만** 한다. 점수 전환은 팩터 함수 쪽 별도 단계다.
+    attach_factor_zscores(step2)
 
     # 지명 = staleness 순환 (안심상위 직선발 폐지 — PREREG_ANALYSIS_ROTATION, 측정 근거 PR #357).
     # 쿼터 KR 10 + US 15 는 5/11 PM 결정 그대로.
@@ -483,6 +595,11 @@ def run_extended_filter_pipeline(
     for s in step2:
         s["safety_score"] = calculate_safety_score(s)
     attach_safety_percentile(step2)
+    # 🚨 2026-08-17 — 같은 단면에서 팩터 하위신호 z 도 부착 (PREREG_FACTOR_V2 §5-1).
+    #   여기서 한 번만 계산한다 — 소비처가 좁은 풀(~40)에서 재계산하면 의미가 사라진다
+    #   (바로 위 함수 docstring 이 같은 이유로 경고하는 함정).
+    #   현재는 **부착만** 한다. 점수 전환은 팩터 함수 쪽 별도 단계다.
+    attach_factor_zscores(step2)
 
     # 지명 = staleness 순환 (동일 규칙 — PREREG_ANALYSIS_ROTATION)
     top = nominate_for_analysis(step2, market_scope=market_scope, label="Phase 2-A")
