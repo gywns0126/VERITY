@@ -29,6 +29,18 @@ const DARK = {
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
+/* 🚨 테마 = 자체 내장 CSS 변수(--an-mkt-*) 구동. JS 다크 감지 없음. 되돌리지 말 것.
+   <style>{AN_PALETTE}</style> 로 팔레트를 정적 HTML 에 실으면 하이드레이션·JS 무관하게
+   항상 정합이다. JS 감지판은 첫 마운트에 라이트로 그렸다가 뒤집혀 플래시가 난다.
+   🚨 2026-08-18 — 디스크 미러가 구세대 JS 감지판이라 라이브(CSS 변수판)와 갈려 있었다.
+   라이브 기준으로 맞춘 것이다. 미러를 통짜 복붙해 라이브를 덮지 말 것(같은 날 실사고). */
+const _ANP = "mkt"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
+
 const INFO: Record<string, string> = {
     "美 10Y-2Y": "장기-단기 국채 금리차. 마이너스(역전)면 경기 침체 선행 신호로 봐요. 플러스면 정상.",
     "CAPE": "경기조정 주가수익비율(실러 PER). 높을수록 증시가 역사적으로 비싼 편이라는 뜻이에요.",
@@ -113,26 +125,12 @@ function fmtEok(v: any): string {
     return Math.round(x / 1e8).toLocaleString("en-US") + "억"
 }
 
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
 export default function PublicMarketTab(props: Props) {
-    const { snapshotUrl, ipoUrl, dark } = props
+    const { snapshotUrl, ipoUrl } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
     const rootRef = useRef<HTMLDivElement>(null)
@@ -142,23 +140,6 @@ export default function PublicMarketTab(props: Props) {
     const [openTip, setOpenTip] = useState<string>("")
     const [tipBox, setTipBox] = useState<{ left: number; width: number }>({ left: 0, width: 240 })
     const [hoverCapable, setHoverCapable] = useState(true)
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
-
-    const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
-
-    /* 테마 추종: init=false(SSG 라이트) → effect 가 body 판독으로 교정(리렌더 강제). 캔버스는 dark prop 정적 */
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
-            setThemeDark(t === "dark")
-        }
-        read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => obs.disconnect()
-    }, [onCanvas])
 
     useEffect(() => {
         if (typeof window === "undefined" || !window.matchMedia) return
@@ -293,6 +274,7 @@ export default function PublicMarketTab(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             <div style={{ marginBottom: 4 }}>
                 <div style={{ fontSize: narrow ? 18 : 20, fontWeight: 800, letterSpacing: "-0.5px" }}>시장</div>
                 <div style={{ fontSize: 12, color: C.faint, fontWeight: 600, marginTop: 3 }}>

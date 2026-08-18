@@ -18,12 +18,27 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 const LIGHT = {
     bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#6b7684", faint: "#8b95a1", line: "#eef1f4",
     up: "#f04452", down: "#3182f6", flat: "#8b95a1", cPos: "#0ca678", cNeg: "#6c5ce7", chipBg: "#f2f4f6", live: "#0ca678", vg: "#6c5ce7",
+    skBase: "#e9edf1", skHi: "#f3f5f7",
 }
 const DARK = {
     bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#252b34",
     up: "#f04452", down: "#5b9bff", flat: "#828d9b", cPos: "#34e08a", cNeg: "#a99bff", chipBg: "#0f1318", live: "#34e08a", vg: "#a99bff",
+    skBase: "#222a33", skHi: "#2d3742",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+/* 🚨 테마 = 자체 내장 CSS 변수(--an-mb-*) 구동. JS 다크 감지 없음. 되돌리지 말 것.
+   <style>{AN_PALETTE}</style> 로 팔레트를 정적 HTML 에 실으면 하이드레이션·JS 무관하게
+   항상 정합이다. JS 감지판은 첫 마운트를 라이트로 그렸다가 뒤집혀 플래시가 난다.
+   🚨 2026-08-18 복원 — TV 위젯 작업 중 디스크 구세대 미러가 라이브 CSS 변수판을 덮었다.
+   미러를 통짜 복붙해 라이브를 덮지 말 것(같은 날 실사고).
+   🚨 SVG 색은 프레젠테이션 attribute 가 var() 를 해석하지 못한다 → style 로 넘긴다(Spark). */
+const _ANP = "mb"
+const AN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 const DEFAULT_MACRO = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/macro_snapshot.json"
 const DEFAULT_EXPO = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/commodity_exposure.json"
@@ -132,28 +147,14 @@ function Spark({ data, color, w, h }: { data: number[]; color: string; w: number
         <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: "block", flexShrink: 0 }}>
             <defs>
                 <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={color} stopOpacity={0.22} />
-                    <stop offset="100%" stopColor={color} stopOpacity={0} />
+                    <stop offset="0%" stopOpacity={0.22} style={{ stopColor: color }} />
+                    <stop offset="100%" stopOpacity={0} style={{ stopColor: color }} />
                 </linearGradient>
             </defs>
             <polygon points={area} fill={`url(#${gid})`} stroke="none" />
-            <polyline points={line} fill="none" stroke={color} strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            <polyline points={line} fill="none" strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ stroke: color }} />
         </svg>
     )
-}
-
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
 }
 
 /**
@@ -161,10 +162,8 @@ function anReadDark(): boolean {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicMarketBoard(props: Props) {
-    const { macroUrl, commodityUrl, reportPath, dark, refreshSec } = props
+    const { macroUrl, commodityUrl, reportPath, refreshSec } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
-    const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -401,9 +400,8 @@ export default function PublicMarketBoard(props: Props) {
         )
     }
 
-    const isDark = onCanvas ? !!dark : themeDark
-    const skBase = isDark ? "#222a33" : "#e9edf1"
-    const skHi = isDark ? "#2d3742" : "#f3f5f7"
+    const skBase = C.skBase
+    const skHi = C.skHi
     const skBlock = (bw: number | string, bh: number, mt?: number): CSSProperties => ({
         width: bw, height: bh, marginTop: mt, borderRadius: 5, background: skBase,
         backgroundImage: `linear-gradient(90deg, ${skBase} 25%, ${skHi} 37%, ${skBase} 63%)`,
@@ -438,6 +436,7 @@ export default function PublicMarketBoard(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.4px" }}>글로벌 시세</span>
