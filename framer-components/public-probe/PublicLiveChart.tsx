@@ -52,13 +52,6 @@ const DARK = {
     tipBd: "#2d343d", tabActive: "#252b34", skBase: "#222a33", skHi: "#2d3742",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
-/* 차트 영역(가격 플롯 + 거래량) 목표 가로:세로 비. 높이를 **폭에서** 뽑는 근거값이다.
-   1.75 = 모바일에서 안 눌리고 데스크톱에서 안 납작한 지점(2026-08-17 실측 조정).
-   🚨 이 값을 키우면 납작해지고 줄이면 세로로 늘어난다. 프레임 높이로 되돌리지 말 것. */
-const CHART_ASPECT = 1.75
-/* 헤더(가격·52주·기간탭) + x축 + MA범례 + 링크 + 패딩의 합 추정. 이제는 Hprop 을
-   상한으로 환산할 때만 쓰는 보조값이라 오차가 레이아웃을 흔들지 않는다. */
-const CHROME_H = 118
 const WK = ["일", "월", "화", "수", "목", "금", "토"]
 const RANGES = [
     { key: "1M", days: 22 },
@@ -596,15 +589,26 @@ export default function PublicLiveChart(props: Props) {
         const prng = pmax - pmin || 1
         const W = Math.max(240, (w || 800) - 4)
         /* 🚨 차트 높이 = **폭에서 나온다.** 프레임 잔여 높이를 먹지 않는다 (2026-08-17).
-           ASPECT 1.75 = 가격 플롯+거래량을 합친 차트 영역의 가로:세로 목표비.
-           · W 300(모바일) → 171 → 하한 190 적용
-           · W 800(데스크톱) → 457
-           Hprop 은 이제 **상한**으로만 쓴다 — PM 이 캔버스에서 더 낮게 조일 수 있되,
-           폭이 좁을 때 억지로 늘리지는 못한다. 늘리는 방향이 세로 늘어짐의 원인이었다. */
-        const chartH = Math.min(
-            Math.max(190, Math.round(W / CHART_ASPECT)),
-            Math.max(220, Hprop - CHROME_H)
+           1.75 = 가격 플롯+거래량 영역의 가로:세로 목표비. 1.75 를 키우면 납작해지고
+           줄이면 세로로 늘어난다. 118 = 헤더+x축+범례+링크+패딩 추정치.
+           · W 300(모바일) → 171 → 하한 190 적용   · W 800(데스크톱) → 457
+           Hprop 은 **상한**으로만 쓴다 — 캔버스에서 더 낮게 조일 수 있되, 폭이 좁을 때
+           억지로 늘리지는 못한다. 늘리는 방향이 세로 늘어짐의 원인이었다.
+
+           🚨 상수를 따로 선언하지 않고 리터럴로 둔다 (2026-08-18).
+             종전엔 CHART_ASPECT/CHROME_H 를 모듈 최상위 상수로 뺐는데, 복붙이 블록 단위라
+             **상수 블록만 누락되면 `W / undefined` = NaN** 이 되고 chartH→Hp→전 좌표가
+             NaN 으로 번진다. 그러면 SVG 는 캔들·MA·거래량을 통째로 안 그리는데 축 라벨·
+             툴팁·범례는 HTML 이라 멀쩡히 남아 "차트만 사라진" 것처럼 보인다. 실제로 그렇게
+             깨졌다. 블록 간 의존을 없애 이 실패 자체를 불가능하게 만든다. 되돌리지 말 것.
+
+           🚨 유한성 가드 — 어떤 이유로든 NaN 이 되면 조용히 빈 차트가 되는 대신 기본값을 쓴다.
+             빈 화면은 원인을 못 알려주지만 그려진 차트는 최소한 보인다. */
+        const _ch = Math.min(
+            Math.max(190, Math.round(W / 1.75)),
+            Math.max(220, Hprop - 118)
         )
+        const chartH = Number.isFinite(_ch) ? _ch : 320
         const Hv = showVolume !== false ? Math.round(chartH * 0.16) : 0
         const gap = Hv ? 8 : 0
         const padT = 10, padB = 4
