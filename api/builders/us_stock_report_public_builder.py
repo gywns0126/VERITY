@@ -646,6 +646,15 @@ def build_stock(row: Dict[str, Any], meta: Dict[str, Any], caps: Dict[str, Dict[
          "자사주 매입·자본잠식으로 자기자본 과소 → ROE 왜곡(산정 제외)")
     _put("매출성장", row.get("revenue_yoy_pct_annual"), _GROWTH_MAX,
          "전년 매출 거의 0 → 성장률 분모 효과(산정 제외)", signed=True)
+    # 🚨 2026-08-18 — 연간 결측 시 분기 YoY 로 폴백. 실측 78종목이 연간 결측 + 분기 보유
+    #   이고 대부분 신규 상장주다(상장 직후엔 연간 비교 대상이 없다). SPCX 91.94% 도 이 형태.
+    #   🚨 같은 "매출성장" 키에 담지 않는다 — 연간과 분기는 기간이 달라 섞으면
+    #     피어 중앙값·정렬이 서로 다른 기간을 비교하게 된다
+    #     ([[feedback_dart_period_semantics_quarterly_vs_annual]] 분기/연간 혼용 = 변별력 오진).
+    #     별 키로 두고 라벨에 기간을 명시한다.
+    if row.get("revenue_yoy_pct_annual") is None:
+        _put("매출성장(분기YoY)", row.get("revenue_yoy_pct_quarterly"), _GROWTH_MAX,
+             "전년 동기 매출 거의 0 → 성장률 분모 효과(산정 제외)", signed=True)
     _put("매출총이익률", row.get("gross_margin_pct"), 1e9,
          "매출총이익률>100% 물리 불가 → XBRL 추출 오류(산정 제외)", gross_cap=True)
     # 영업이익률 = 양수 >100% 는 산술불가(영업이익 ≤ 매출총이익 ≤ 매출) → gross_cap(양수 100 게이트)로 차단
@@ -898,10 +907,29 @@ def main() -> int:
         #   기준 = 핵심축 4종 중 **1개 이상**. 임의 임계가 아니라 "아무 것도 없으면 빼는" 최소선이다.
         #   실측 4,486종목(87.1%) 통과 · 662종목 제외.
         def _core_axes(s: Dict[str, Any]) -> int:
+            """발행 자격 = 정보 축을 하나라도 갖는가.
+
+            🚨 2026-08-18 — 축 목록이 낡아 신규 상장주를 통째로 떨어뜨리고 있었다.
+              옛: PER·PBR·financials·peer 4개만 셌다. 이 넷은 전부 **재무 이력**에
+              의존해서, 상장 직후 종목은 자동으로 0점이 된다.
+              실측: SPCX(스페이스X, 2026-06-12 나스닥 상장)가 이 게이트에서 탈락했다 —
+              _summary 에 CIK·법인명·분기매출성장률 91.94% 가 있고 13D/G·공매도·한글명도
+              전부 수집돼 있는데 리포트에서만 사라졌다.
+              탈락 660종목 실측: 624종목(95%)이 다른 축을 보유
+              (ownership 542 · short 456 · insider 226 · revenue_yoy 47 · name_ko 660).
+              🚨 facts 키는 "매출성장" 이다 — "매출성장률" 로 쓰면 조용히 0으로 세어진다.
+              즉 "빈 껍데기 제외" 라는 이름과 달리 대부분 껍데기가 아니었다.
+              신 축 목록 = 그 사이 우리가 실제로 채운 것들을 포함한다.
+              🚨 이름만 있는 것은 여전히 탈락시킨다 — name_ko 는 축으로 세지 않는다
+                 (660종목 전부가 갖고 있어 세면 게이트가 무력화된다).
+            """
             fa = s.get("facts") or {}
             def _f(v): return v not in (None, "", "-", [], {})
             return sum([_f(fa.get("PER")), _f(fa.get("PBR")),
-                        _f(s.get("financials")), _f(s.get("peer"))])
+                        _f(s.get("financials")), _f(s.get("peer")),
+                        _f(s.get("ownership")), _f(s.get("disclosures")),
+                        _f(s.get("fin_series")), _f(fa.get("매출성장")),
+                        _f(fa.get("매출성장(분기YoY)"))])
 
         _before = len(stocks)
         stocks = [s for s in stocks if _core_axes(s) > 0]
