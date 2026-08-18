@@ -119,3 +119,34 @@ def test_kelly_lambda_denominator_is_a_scale_not_a_retired_gate():
     lo = E._apply_fractional_kelly(base, 90, stats=(20, 1.2))
     hi = E._apply_fractional_kelly(base, 90, stats=(200, 1.2))
     assert base < lo < hi, "n 증가에 따라 점증해야 한다(게이트식 계단 아님)"
+
+
+def test_kelly_stats_cache_invalidates_on_ledger_change(tmp_path, monkeypatch):
+    """🚨 캐시는 원장이 바뀌면 반드시 풀려야 한다 — 안 풀리면 매도 후에도 옛 n 을 쓴다.
+
+    캐시를 넣은 이유 = 정본 전환으로 이 함수가 portfolio.json(3.5MB)까지 읽게 됐고,
+    호출부가 `execute_buy` 라 매수 후보마다 돈다 (실측 193.5ms/회 → 후보 5,000이면 967초).
+    속도를 얻자고 신선도를 잃으면 안 되므로 mtime 키로 무효화한다.
+    """
+    from api.vams import engine as E
+
+    hist = [{"date": "2026-06-01", "type": "BUY", "ticker": "000001", "quantity": 10, "price": 1000},
+            {"date": "2026-06-10", "type": "SELL", "ticker": "000001", "quantity": 10,
+             "price": 900, "pnl": -1000}]
+    state = {"h": hist}
+    monkeypatch.setattr(E, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(E, "load_history", lambda: state["h"])
+    monkeypatch.setattr(E, "_kelly_window_start", lambda: "2026-05-17")
+    E._KELLY_CACHE["key"] = None                      # 테스트 격리
+    (tmp_path / "history.json").write_text("{}", encoding="utf-8")
+
+    assert E._kelly_realized_stats()[0] == 1
+
+    # 청산 1건 추가 + mtime 갱신 → 캐시가 풀려 2가 나와야 한다
+    state["h"] = hist + [
+        {"date": "2026-06-11", "type": "BUY", "ticker": "000002", "quantity": 5, "price": 2000},
+        {"date": "2026-06-12", "type": "SELL", "ticker": "000002", "quantity": 5,
+         "price": 2200, "pnl": 1000}]
+    (tmp_path / "history.json").write_text('{"x":1}', encoding="utf-8")
+
+    assert E._kelly_realized_stats()[0] == 2, "원장이 바뀌었는데 캐시가 옛 n 을 내놓았다"
