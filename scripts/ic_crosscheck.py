@@ -2,7 +2,7 @@
 
 목적 (2026-06-14): 우리가 자체 산출하는 IC(api/quant/alpha/ic_backtest.cross_sectional_ic +
 api/intelligence/ic_stats.newey_west_tstat)가 표준 라이브러리(alphalens-reloaded)와 **같은
-값을 내는지** 대조한다. 둘이 수렴하면 자체 IC 파이프라인을 신뢰할 수 있고(N=252 게이트
+값을 내는지** 대조한다. 둘이 수렴하면 자체 IC 파이프라인을 신뢰할 수 있고(검증 게이트
 전 사전 신뢰 확보), 발산하면 자체 산식에 구현 버그가 있다는 뜻이다.
 
 설계 원칙 (필수흡수 검증 캐비엇 정합):

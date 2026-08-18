@@ -1,6 +1,6 @@
 """trail_integrity — 결정시점 학습 trail 의 무결성 단일 감사기.
 
-목적 (2026-06-13 신설): N=252 IC 게이트(2027-05)의 입력이 되는 "결정시점 기록"이
+목적 (2026-06-13 신설): 검증 게이트의 입력이 되는 "결정시점 기록"이
 손실 없이·끊김 없이 축적되는지 **언제든 검증 가능**하게 한다. 산식·임계 무관 (RULE 7),
 순수 데이터 무결성 read-only 검사.
 
@@ -49,9 +49,12 @@ _TRAILS = [
     ("observations/dart_importance_gating.jsonl", "jsonl", "logged_at"),   # C1 SHADOW (event-count 게이트 N>=50)
 ]
 
-# N=252 IC 게이트(2027)로 누적 중인 shadow 신호 — 진행률 추적용 (path, date_key).
-# 거래일 누적 = 고유 날짜 수. ic_crosscheck 는 on-demand(일별 아님)라 제외.
-_GATE_N = 252
+# 누적 중인 shadow 신호 — **거래일 수를 사실로만** 적는다 (path, date_key).
+# 🚨 2026-08-18 — 종전엔 `_GATE_N = 252` 로 `pct_to_gate`·`remaining_days` 를 냈다.
+#   그 게이트는 `docs/VALIDATION_METHODOLOGY.md` §7-1 (PM 결정 2026-08-15)로 폐기됐고,
+#   폐기 사유가 정확히 이 출력이었다 — *"검정력을 따지지 않은 채 표본만 요구하는 것은
+#   무책임하다. 기다림은 결론이 아니다."* 대체 기준은 §7-3 승인 대기라 여기서 만들지 않는다.
+# ic_crosscheck 는 on-demand(일별 아님)라 제외.
 _SHADOW_GATE_TRAILS = [
     ("metadata/revision_momentum_shadow.jsonl", "ts_kst"),   # A2 리비전 모멘텀
     ("metadata/trend_overlay_prediction_trail.jsonl", "ts_kst"),  # A1 200MA 게이트
@@ -208,7 +211,7 @@ def _read_baseline() -> Dict[str, Any]:
 
 
 def _gate_progress() -> List[Dict[str, Any]]:
-    """shadow 신호별 N=252 IC 게이트 진행률 (누적 거래일 = 고유 날짜 수).
+    """shadow 신호별 검증 게이트 진행률 (누적 거래일 = 고유 날짜 수).
 
     "1년 대기 중 데이터 잘 쌓이는지" 가시화 — PM 진행률 바. 누적 거래일/252 + 잔여.
     """
@@ -236,9 +239,6 @@ def _gate_progress() -> List[Dict[str, Any]]:
         out.append({
             "signal": rel.replace("metadata/", "").replace(".jsonl", ""),
             "n_trading_days": n_days,
-            "gate_n": _GATE_N,
-            "pct_to_gate": round(100.0 * n_days / _GATE_N, 1),
-            "remaining_days": max(0, _GATE_N - n_days),
             "last_date": last_date,
         })
     return out
@@ -416,10 +416,9 @@ if __name__ == "__main__":
     for s in r.get("shadow_staleness", []):
         flag = "OK " if s["ok"] else "!! "
         print(f"    {flag}{s['signal']:32} stale={s['stale_bizdays']}영업일 last={s['last_date']}")
-    print("  N=252 게이트 진행률 (shadow 누적 거래일):")
+    print("  shadow 누적 거래일 (사실만 — 목표 진척률 없음, §7-1):")
     for g in r.get("gate_progress", []):
-        print(f"    {g['signal']:32} {g['n_trading_days']:>4}/{g['gate_n']}일 "
-              f"({g['pct_to_gate']}%) 잔여 {g['remaining_days']}일  last={g['last_date']}")
+        print(f"    {g['signal']:32} {g['n_trading_days']:>4}일  last={g['last_date']}")
     if r["findings"]:
         print("  findings:")
         for fnd in r["findings"]:

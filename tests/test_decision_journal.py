@@ -209,7 +209,7 @@ def test_observation_discipline_fields(path):
     rec = dj.record(_facts(), "회피", "high", ["offering_priced"], "근거", path=path)
     assert rec["shadow"] is True
     assert rec["brain_input"] is False
-    # 🚨 2026-08-18 — 종전은 "N<252" 를 고정했다. 그 게이트는 §7-1 폐기.
+    # 🚨 2026-08-18 — 종전은 "미검증" 를 고정했다. 그 게이트는 §7-1 폐기.
     #    caveat 이 존재하고 "가설/미통과" 취지를 담는지만 본다(죽은 날짜 고정 금지).
     assert rec["caveat"] and "2027" not in rec["caveat"] and "252" not in rec["caveat"]
     assert rec["horizon_days"] == list(dj.HORIZON_DAYS)

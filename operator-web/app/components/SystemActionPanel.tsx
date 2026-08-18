@@ -65,7 +65,7 @@ export default function SystemActionPanel({ c, sa }: { c: Palette; sa?: SystemAc
                         <span style={{ ...v, marginLeft: 6 }}>· 강등 {vg?.gated_count ?? 0}건</span>
                     </span>
                     <span style={{ fontSize: 10, color: c.faint, flexBasis: "100%" }}>
-                        배지 소유 = Brain(강등 전용 게이트) · {sa.validation ?? "가설 — 자체 산식 N<252 미검증"}
+                        배지 소유 = Brain(강등 전용 게이트) · {sa.validation ?? "가설 — 자체 산식 미검증"}
                     </span>
                 </div>
             )}

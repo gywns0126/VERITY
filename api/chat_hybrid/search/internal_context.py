@@ -386,7 +386,7 @@ def _sec_factor_ic() -> List[str]:
     if not isinstance(rows, list) or not rows:
         return []
     last = rows[-1] if isinstance(rows[-1], dict) else {}
-    out = [f"[내부] 팩터 IC 시계열 {len(rows)}건 (🚨 가설 — N<252 구간은 통계 무의미)"]
+    out = [f"[내부] 팩터 IC 시계열 {len(rows)}건 (🚨 가설 — 미검증 구간은 통계 무의미)"]
     kv = [f"{k}={last[k]}" for k in list(last)[:8] if not isinstance(last[k], (dict, list))]
     if kv:
         out.append("  · 최근: " + " · ".join(kv))

@@ -97,9 +97,11 @@ def test_gate_progress_counts_distinct_dates(tmp_path, monkeypatch):
     assert len(prog) == 1
     g = prog[0]
     assert g["n_trading_days"] == 2  # 고유 날짜
-    assert g["gate_n"] == 252
-    assert g["remaining_days"] == 250
     assert g["last_date"] == "2026-06-15"
+    # 🚨 2026-08-18 — 폐기된 게이트를 향한 진척 필드는 나오면 안 된다 (§7-1).
+    #   폐기 사유가 정확히 이 출력이었다: "기다림은 결론이 아니다."
+    for dead in ("gate_n", "pct_to_gate", "remaining_days"):
+        assert dead not in g, f"폐기된 진척 필드가 되살아났다: {dead}"
 
 
 def test_gate_progress_missing_file(tmp_path, monkeypatch):

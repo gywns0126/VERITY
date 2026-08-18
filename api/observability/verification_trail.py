@@ -3,7 +3,7 @@
 PM=approved 2026-05-23 (plan §Phase 1-d).
 WHY: VAMS reset_meta 시점 = N=0 origin. 매매 이벤트 count → N_today.
      Q11 milestone (50/100/252/365) 까지 잔여 계산. Bailey-Lopez de Prado 2014
-     N≥252 후 통계 유의 (메모리 [[project_minimum_n_milestones_2026_05_18]]).
+     검증 게이트 후 통계 유의 (메모리 [[project_minimum_n_milestones_2026_05_18]]).
 DATA: portfolio.vams.simulation_stats.total_trades (5/17 reset 후 누적 trade count) +
       portfolio.validation.cumulative_days (운영 일수).
 EXPECTED: cockpit_aggregate.py 가 compute_n_today() + compute_milestones() 호출 추가.

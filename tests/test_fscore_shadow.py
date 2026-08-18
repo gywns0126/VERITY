@@ -7,7 +7,7 @@
   · accrual 방향 −1 (低=양호) 로 정렬해야 H1(IC>0)이 양쪽 신호에 성립
   · horizon 3종 전부 paired 산출 (cherry-pick 금지)
   · 지표 paired 병기 — IC 단독/hit 단독/expectancy 단독 게재 금지 (RULE 7)
-  · 게이트 N≥252 ∧ IC>0.03 ∧ ICIR>0.3
+  · IC>0.03 ∧ ICIR>0.3 (표본수 임계는 §7-1 로 폐기 — 종합 판정은 §7-3 승인 대기)
   · forward-only (과거 backfill 금지 — survivorship 무편의 조건)
 """
 import json
@@ -140,14 +140,17 @@ def test_thin_cross_section_is_discarded(monkeypatch, tmp_path):
 
 
 def test_gate_constants_match_registration():
-    assert (FS.GATE_N, FS.GATE_IC, FS.GATE_ICIR) == (252, 0.03, 0.3)
+    """🚨 2026-08-18 — `GATE_N` 은 폐기됐다 (§7-1). 되살아나면 실패한다."""
+    assert not hasattr(FS, "GATE_N"), "폐기된 표본수 임계가 되살아났다 (§7-1)"
+    assert (FS.GATE_IC, FS.GATE_ICIR) == (0.03, 0.3)
 
 
 def test_labels_follow_registered_n_thresholds():
     assert "무의미" in FS._label(29)
     assert "예비" in FS._label(30)
     assert "누적" in FS._label(100)
-    assert "게이트" in FS._label(252)
+    # 표본이 아무리 쌓여도 '판정 가능' 을 자칭하지 않는다 — 대체 기준이 미확정(§7-3)이다
+    assert "누적" in FS._label(252) and "252" not in FS._label(252)
 
 
 def test_ci95_zero_inclusion_is_flagged(monkeypatch, tmp_path):

@@ -12,7 +12,7 @@ comom_monthly(comom + fwd_wml_4q/8q)에 대해 회귀/레짐/순위상관으로 
     중첩 forward 윈도(4/8분기) → 잔차 자기상관 → OLS SE 과소추정 회피.
   - **비선형 레짐**: CoMOM 5분위별 forward 평균(선형IC 단독 금지, 메모리). 단조감소 기대.
   - **Spearman**: 순위상관(부호 robustness).
-  - N=분기(109) — 검정력 한계 명시(예비결과, N<252 IC 게이트 전).
+  - N=분기(109) — 검정력 한계 명시(예비결과, 검증 전).
 """
 from __future__ import annotations
 
@@ -116,7 +116,7 @@ def validate(parquet: str = PARQUET_DEFAULT) -> Dict[str, object]:
 
 
 def _print(res: Dict[str, object]) -> None:
-    print("[validate_comom_decay] CoMOM forward decay (관측 only, RULE 7) — 예비결과: N<252 IC 게이트 전, 검정력 한계.\n")
+    print("[validate_comom_decay] CoMOM forward decay (관측 only, RULE 7) — 예비결과: 검증 전, 검정력 한계.\n")
     for factor, fres in res["factors"].items():
         hyp = FACTOR_HYPOTHESIS.get(factor, "")
         print(f"########## {factor}  (N={fres['n_quarters']}분기) ##########")

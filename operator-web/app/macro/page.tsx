@@ -248,7 +248,7 @@ export default function MacroPage() {
 
                     <PanelBoundary name="지평">
                         <div style={{ ...cardStyle(c, MAIN_PAD) }}>
-                            {secTitle("시장 지평", "자기 산식 · 가설 N<252")}
+                            {secTitle("시장 지평", "자기 산식 · 가설")}
                             {mh?.verdict ? <div style={{ fontSize: 12.5, fontWeight: 700, color: c.ink, lineHeight: 1.5, marginBottom: 8 }}>{mh.verdict}</div> : null}
                             {mh?.horizons ? (
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 10 }}>

@@ -599,7 +599,7 @@ def save_ic_snapshot(scan_result: Dict[str, Any]):
         # #190 은 scan_all_factors 반환에만 메타를 달았는데, 이 함수가 자체 화이트리스트로
         # entry 를 조립해 저장하는 구조라 factor_ic_history.json 에는 실리지 않았음
         # (2026-07-29 실측: 최신 레코드 키 = date/date_key/forward_days/factors 뿐).
-        # trail 이 곧 미래 감사·N=252 게이트의 1차 자료라, 거기에 한계가 없으면 후일
+        # trail 이 곧 미래 감사·검증 게이트의 1차 자료라, 거기에 한계가 없으면 후일
         # 전체 유니버스 IC 로 오독된다. in-memory 소비자(strategy_evolver/factor_decay)만
         # 아는 것으로는 부족.
         "sample_universe": scan_result.get("sample_universe"),

@@ -1,7 +1,8 @@
 "use client"
 // VerificationPanel — ④ 검증 층 (오퍼레이터 전용, authed). 공개 알파네스트 디자인.
 // 되돌리지 말 것: fetchOperator("verification")=verification_report.json(private bucket). 공개 blob 직독 금지.
-//   🚨 RULE 7: performance 실값 없으면(N<252) 가짜 hit rate 금지 — "축적 중 · 2027 게이트" 정직 표기.
+//   🚨 RULE 7: performance 실값 없으면(미검증) 가짜 hit rate 금지 — "축적 중" 정직 표기.
+//   🚨 2026-08-18 — 종전엔 "2027 게이트" 를 적었다. 그 게이트(N=252 IC, 2027-05)는 §7-1 로 폐기됐다.
 //   hit rate 표시 시엔 sample+CI 병기 의무(단독 게재 금지). 이게 LLM 못 가지는 자기 검증 trail 차별점.
 import { useEffect, useState } from "react"
 import { useDark, palette, cardStyle, FONT, NUM, type Palette } from "@/lib/theme"
@@ -91,8 +92,8 @@ export default function VerificationPanel() {
                     <div style={{ fontSize: 12.5, color: c.sub, lineHeight: 1.55 }}>
                         <b style={{ color: c.ink }}>검증 데이터 축적 중</b> — 통계적으로 무의미한 구간입니다.
                         <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 8 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: c.vt, background: c.vtS, borderRadius: 8, padding: "3px 9px" }}>N&lt;252</span>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: c.sub, background: c.hi, borderRadius: 8, padding: "3px 9px", ...NUM }}>IC 게이트 2027-05</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: c.vt, background: c.vtS, borderRadius: 8, padding: "3px 9px" }}>미검증</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: c.sub, background: c.hi, borderRadius: 8, padding: "3px 9px", ...NUM }}>검증 축적 중</span>
                             <span style={{ fontSize: 11, fontWeight: 700, color: c.sub, background: c.hi, borderRadius: 8, padding: "3px 9px" }}>hit rate 미표기(표본 부족)</span>
                         </div>
                         <div style={{ fontSize: 11, color: c.faint, marginTop: 6, lineHeight: 1.5 }}>
@@ -173,7 +174,7 @@ function PerfLive({ c, p }: { c: Palette; p: Perf }) {
                 {cell("Sharpe 14d", p.sharpe_14d, false)}
             </div>
             <div style={{ fontSize: 11, color: c.amber, lineHeight: 1.5 }}>
-                예비 결과 — 표본수·신뢰구간 확인 전 판단 유보(N&lt;252, 2027 게이트 전).
+                예비 결과 — 표본수·신뢰구간 확인 전 판단 유보.
             </div>
         </div>
     )

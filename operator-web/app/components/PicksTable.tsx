@@ -1,7 +1,7 @@
 "use client"
 // PicksTable — 오늘의 추천 (dense 테이블, 구 OperatorPicks 카드 리스트 대체 — Bloomberg 밀도).
 // 행 클릭 = 링크그룹 전환. 추천 이유 = 사실 드라이버 칩(취사선택 결정: 리포트 삭제 → 추천이유 직접 실음).
-// RULE 7: brain = 가설(N<252) 라벨 상시.
+// RULE 7: brain = 가설 라벨 상시.
 import { useState } from "react"
 import { useDark, palette, cardStyle, FONT, NUM, CARD_TITLE, MAIN_PAD, hoverBg, type Palette } from "@/lib/theme"
 import { selectTicker, type Rec } from "@/lib/types"
@@ -81,7 +81,7 @@ export default function PicksTable({ recs, status }: { recs: Rec[]; status: "loa
                     <span style={{ ...CARD_TITLE, color: c.ink }}>오늘의 추천</span>
                     <span style={{ fontSize: 10, color: c.faint }}>스캔 5,000 → 후보 25 → 추천 {recs.length} → 중용 사이징</span>
                 </div>
-                <span style={{ fontSize: 10, color: c.faint }}>가설 · 검증 N&lt;252 (2027)</span>
+                <span style={{ fontSize: 10, color: c.faint }}>가설 · 검증 축적 중</span>
             </div>
 
             {status === "loading" ? (

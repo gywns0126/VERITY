@@ -1,7 +1,7 @@
 "use client"
 // ModerationPanel — 중용(中庸) 목표비중 (③구성 척추, 오퍼레이터 authed). 공개 알파네스트 디자인.
 // 되돌리지 말 것: fetchOperator("moderation_portfolio")=태생 봉인 자산(private bucket, 공개 fallback 없음).
-//   🚨 RULE 7: 산출=가설(N<252) 라벨 · 승률류 없음(구성 규율 표시) · brain 미투입 명시. 외곽선 0.
+//   🚨 RULE 7: 산출=가설 라벨 · 승률류 없음(구성 규율 표시) · brain 미투입 명시. 외곽선 0.
 import { useEffect, useState } from "react"
 import { useDark, palette, cardStyle, FONT, NUM, type Palette } from "@/lib/theme"
 import { fetchOperator } from "@/lib/api"
@@ -43,7 +43,7 @@ export default function ModerationPanel() {
     const head = (
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 800, color: c.ink }}>중용 목표비중</span>
-            <span style={{ fontSize: 10.5, color: c.faint }}>3층 사전등록 산식 · 가설 N&lt;252 · brain 미투입</span>
+            <span style={{ fontSize: 10.5, color: c.faint }}>3층 사전등록 산식 · 가설 · brain 미투입</span>
         </div>
     )
 
@@ -85,7 +85,7 @@ export default function ModerationPanel() {
         <div style={{ ...cardStyle(c), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 800, color: c.ink }}>중용 목표비중</span>
-                <span style={{ fontSize: 10.5, color: c.faint, ...NUM }}>{doc.as_of} · 가설 N&lt;252 · brain 미투입</span>
+                <span style={{ fontSize: 10.5, color: c.faint, ...NUM }}>{doc.as_of} · 가설 · brain 미투입</span>
             </div>
 
             {/* 노출 게이지 — 위험자산 vs 현금 */}

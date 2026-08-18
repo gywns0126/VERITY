@@ -2,7 +2,7 @@
 // TriSynthesisPanel — 3종 LLM 종합 분석 (② 판단 층 센터피스, 오퍼레이터 전용). 공개 알파네스트 디자인.
 // StockSearch 가 쏜 verity-ticker / ?q= / verity_last_ticker 수신해 해당 종목 종합 표시.
 // 되돌리지 말 것: fetchOperator("tri_synthesis") 만 읽음(Brain grounding=오퍼레이터 전용). 공개 blob 직독 금지.
-//   RULE 7: LLM 의견=의견(provenance 분리 표기), Brain=가설(N<252) 라벨 필수.
+//   RULE 7: LLM 의견=의견(provenance 분리 표기), Brain=가설 라벨 필수.
 import { useEffect, useState } from "react"
 import { useDark, palette, cardStyle, FONT, type Palette } from "@/lib/theme"
 import { fetchOperator, fetchAsk, alphanestStockUrl, type AskResult } from "@/lib/api"
@@ -93,7 +93,7 @@ export default function TriSynthesisPanel() {
     const title = (
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
             <div style={{ color: c.ink, fontSize: 15, fontWeight: 800, letterSpacing: "-0.02em" }}>3종 LLM 종합</div>
-            <div style={{ color: c.faint, fontSize: 11 }}>Brain=가설 N&lt;252 · LLM 의견=의견</div>
+            <div style={{ color: c.faint, fontSize: 11 }}>Brain=가설 · LLM 의견=의견</div>
         </div>
     )
 

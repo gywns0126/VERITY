@@ -55,7 +55,7 @@ def test_neutral_reference_brain60():
 
 
 def test_current_sample_size_stays_gentle():
-    """현 exit_log 규모(n=78, λ≈0.31) → brain 90 도 중립 근처 (사전등록 'N<252 거의 중립')."""
+    """현 exit_log 규모(n=78, λ≈0.31) → brain 90 도 중립 근처 (사전등록 '미검증 거의 중립')."""
     out = _apply_fractional_kelly(BASE, 90, stats=(78, 1.2))
     assert 1.0 <= out / BASE < 1.05
 

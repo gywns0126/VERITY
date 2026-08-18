@@ -4,7 +4,7 @@
 총수일가 지분)를 엔진(brain score / observation trail) 어디서도 미사용 확인 — 엔진 insider=Finnhub(US),
 flow=market_flow(별개), ownership=DART major_shareholders(FTC cross-check만), forensics=red_flags 미wire.
 
-🚨 v0 = **점수·방향·조합식 0, raw 시점-페어 적재만** (crowding_observation_spec_v0 패턴). N≥252(2027) forward
+🚨 v0 = **점수·방향·조합식 0, raw 시점-페어 적재만** (crowding_observation_spec_v0 패턴). 검증 게이트 forward
    IC 검증용 trail 을 *지금부터* 누적 시작. v1(방향 환산 + 점수 사전등록) = Perplexity 방법론 + PM 승인 후
    한 번에 하나씩. brain score·decision 무간섭(가중 0). RULE 7 정합.
 

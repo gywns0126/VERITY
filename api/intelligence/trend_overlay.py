@@ -12,8 +12,7 @@
    어느 시장 게이트가 우월한지 N 누적 후 PM 결정.
 
 산식 prior (그리드서치 금지 — RULE 7): lookback=200(Faber 강제), 일별 모니터 + 월말 신호
-플래그(Faber 원전), binary 게이트. N-게이트: regime 전환 연 2~6회 → forward-only N≥252
-도달에 수십 년 → wire 는 B4(부분 backtest + 라이브 N Bayesian) 병행 필수 ([[project_verity_backtest_sprint]]).
+플래그(Faber 원전), binary 게이트. N-게이트: regime 전환 연 2~6회 → forward-only 검증 게이트 도달에 수십 년 → wire 는 B4(부분 backtest + 라이브 N Bayesian) 병행 필수 ([[project_verity_backtest_sprint]]).
 """
 from __future__ import annotations
 
@@ -93,7 +92,7 @@ def compute_overlay() -> Dict[str, Any]:
         "is_month_end_signal": is_month_end,
         "indices": per_index,
         "caveat": ("SHADOW 꼬리리스크 오버레이. '공짜 알파' 아님(OOS 소멸)=MDD 감축 only. "
-                   "target 지수 PM 미확정(둘 다 로깅). brain-input 0. wire=N>=252+B4 backtest 병행."),
+                   "target 지수 PM 미확정(둘 다 로깅). brain-input 0. wire=검증 게이트B4 backtest 병행."),
     }
 
 

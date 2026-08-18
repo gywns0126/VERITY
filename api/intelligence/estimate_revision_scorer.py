@@ -9,7 +9,7 @@
 🚨 UNIVERSE MISMATCH (적대적 검증 2026-06-14 핵심 발견): 우리 universe = US 메가캡 40종목.
    리비전 drift 엣지는 microcap 에서 생존하고 **메가캡에서 통계 유의성 소멸**(ex-microcap
    t 2.18 → 1.43). 즉 이 신호는 "엣지 있을 것"이 아니라 "문헌의 megacap-decay 가 우리 데이터
-   에서도 맞는지 N 누적으로 확인"하는 관측 목적. wire = N≥252(2027) IC 게이트 + 별도 PM 승인.
+   에서도 맞는지 N 누적으로 확인"하는 관측 목적. wire = 검증 게이트 + 별도 PM 승인.
 
 PIT 정합 ([[feedback_real_call_over_llm_consensus]] / 검증 "yfinance backfill 금지"):
    리비전 = yfinance 의 "30daysAgo" 필드(복원·재기재 위험) 대신, **우리가 그 시점에 기록한
@@ -37,7 +37,7 @@ _MIN_PRIOR_GAP_DAYS = 14   # 최소 이 정도는 떨어진 과거 스냅샷이�
 _UNIVERSE_CAVEAT = (
     "SHADOW-only. universe=US megacap 40 → 리비전 엣지 통계 유의성 소멸 구간"
     "(megacap t 2.18→1.43, 2026-06-14 검증). 관측 목적=megacap-decay 가설 확인. "
-    "brain-input 0. wire=N>=252 IC 게이트+PM 승인."
+    "brain-input 0. wire=검증 게이트+PM 승인."
 )
 
 

@@ -46,7 +46,7 @@ export default function AccountHud({ vams, status }: { vams?: Vams; status: "loa
         <div style={{ ...cardStyle(c, "16px 20px"), fontFamily: FONT, display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap", marginBottom: 12 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 190 }}>
                 <span style={{ fontSize: 11, color: c.faint, fontWeight: 700 }}>
-                    총평가 자산 <span style={{ fontWeight: 500 }}>· VAMS 모의 1,000만 · 가설 N&lt;252</span>
+                    총평가 자산 <span style={{ fontWeight: 500 }}>· VAMS 모의 1,000만 · 가설</span>
                 </span>
                 {status === "loading" ? (
                     <span style={{ fontSize: 24, fontWeight: 800, color: c.faint }}>불러오는 중…</span>

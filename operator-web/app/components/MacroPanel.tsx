@@ -114,7 +114,7 @@ export default function MacroPanel({ data }: { data: PortfolioFull | null }) {
             {/* ② 자기 산식 market_horizon — 가설 라벨 (RULE 7) */}
             {mh?.verdict ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, ...divider }}>
-                    {secTitle("시장 지평", "자기 산식 · 가설 N<252")}
+                    {secTitle("시장 지평", "자기 산식 · 가설")}
                     <div style={{ fontSize: 11.5, fontWeight: 700, color: c.ink, lineHeight: 1.45 }}>{mh.verdict}</div>
                     {mh.horizons ? (
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>

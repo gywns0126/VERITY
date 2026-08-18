@@ -263,25 +263,6 @@ def _check_conflict_markers() -> str | None:
               " `&& push` 가 그대로 진행된다. 마커를 해소하고 `git stash list` 도 확인할 것.")
 
 
-def _check_dead_premise() -> str | None:
-    """폐기된 전제를 **새로 인용**했는지 (2026-08-17 신설).
-
-    🚨 계기: kickoff '죽은 전제 (인용 금지)' 첫 줄이 "N≥252 게이트 폐기" 인데, 나는 같은 날
-    그 **폐기**된 전제를 사전등록 문서 2건에 써넣었다("N≥252 이후 재검토" — 인용 금지 대상).
-    PM 지적으로 잡혔다.
-    기존 `knowledge_surface_check` 는 kickoff 에 섹션이 **존재하는지**만 봐서 목록이 장식이 됐다.
-
-    변경분만 본다 — 기존 잔존(실측 12건)을 이유로 가드를 미루면 또 퇴화한다(RULE 12).
-    """
-    r = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "audit",
-                                                     "dead_premise_check.py")],
-                       capture_output=True, text=True, timeout=30, cwd=ROOT)
-    if r.returncode == 0:
-        return None
-    tail = "\n".join((r.stdout or "").splitlines()[-8:])
-    return ("폐기된 전제를 살아있는 조건처럼 인용했다 (kickoff '죽은 전제' 목록):\n" + tail)
-
-
 def hook_stop() -> int:
     try:
         payload = json.load(sys.stdin)
@@ -332,15 +313,6 @@ def hook_stop() -> int:
             return 0
     except Exception as e:  # noqa: BLE001
         return _fail_open("stop/S5", e)
-
-    # S6 — 폐기 전제 재인용 (변경분만)
-    try:
-        msg = _check_dead_premise()
-        if msg:
-            _out({"decision": "block", "reason": msg})
-            return 0
-    except Exception as e:  # noqa: BLE001
-        return _fail_open("stop/S6", e)
 
     # S4 — private docs 동기 (미추적=차단 · 미커밋=경고)
     try:

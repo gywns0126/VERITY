@@ -656,7 +656,7 @@ def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
 KELLY_MULT_MIN = 0.6           # D3 — mult 하한
 KELLY_MULT_MAX = 1.2           # D3 — mult 상한
 KELLY_B_DEFAULT = 1.2          # D4 — 실현 표본 부족 시 보수 default (옛 임의값 1.5 교체)
-KELLY_LAMBDA_N_FULL = 252      # D2 — 검증 연동 스케일 (IC 게이트 N=252 정합)
+KELLY_LAMBDA_N_FULL = 252      # D2 — 검증 연동 스케일 (검증 게이트 정합)
 KELLY_MIN_WINS_LOSSES = 10     # D4 — 실현 b 채택 최소 표본 (승·패 각각)
 _KELLY_REF_BRAIN = 60          # 중립 기준점 (mult=1.0)
 

@@ -3,7 +3,7 @@
 목적 (2026-06-13 신설): 흩어진 forward-scoring 산출물(brain production / xgb_ml /
 shadow_funnel / factor / sector)을 한 레코드씩 묶어 운영자 크레덴셜 surface 로 만든다.
 
-🚨 2026-08-18 — 최초 목적문의 "N=252 IC 게이트(2027-05) 읽기 준비" 는 **폐기됐다**
+🚨 2026-08-18 — 최초 목적문의 "검증 게이트 읽기 준비" 는 **폐기됐다**
 (§7-1). 이 모듈은 이제 목표 N·진척률을 만들지 않고 관측 사실만 집계한다.
 
 규율:
@@ -45,7 +45,7 @@ SPEC_VERSION = "v0"
 _N_MEANINGLESS = 30    # N<30 = 통계 무의미 (CLAUDE.md RULE 7)
 _N_PRELIM = 100        # N<100 = 예비 결과 (project_minimum_n_milestones)
 # 🚨 _GATE_N 폐기 (2026-08-18) — `docs/VALIDATION_METHODOLOGY.md` §7-1.
-#    종전 주석은 "N=252 IC 게이트(2027-05 목표)" 였다. 그 게이트는 PM 이 2026-08-15 에
+#    종전 주석은 "검증 게이트(2027-05 목표)" 였다. 그 게이트는 PM 이 2026-08-15 에
 #    폐기했고, 사유가 정확히 이 상수의 용도였다 — 목표 N 을 두고 진척률을 계산하면
 #    출력이 언제나 "더 모아라" 가 된다. 대체 게이트(§7-3)는 승인 대기.
 #    상수는 남기되 **판정·진척률에 쓰지 않는다** (아래 _maturity_label 의 표본 라벨만 사용).
@@ -67,7 +67,7 @@ def _maturity_label(n_eff: Optional[float]) -> str:
 def _gate_status(n_eff: Optional[float], ic_pvalue: Optional[float]) -> str:
     """가설 vs 검증 상태. RULE 7 — 모두 잠정.
 
-    🚨 2026-08-18 정정 — 종전은 "게이트 N≥252 미도달, 진척 {pct}%" 를 냈다.
+    🚨 2026-08-18 정정 — 종전은 "검증 게이트 미도달, 진척 {pct}%" 를 냈다.
     **그 게이트는 폐기됐다** (`docs/VALIDATION_METHODOLOGY.md` §7-1, PM 결정 2026-08-15).
     폐기 사유가 정확히 이 출력 형태였다 — *"실제 출력이 언제나 '더 모아라' 였다.
     검정력을 따지지 않은 채 표본만 요구하는 것은 무책임하다. 기다림은 결론이 아니다."*
@@ -331,7 +331,7 @@ def build_summary() -> Dict[str, Any]:
     return {
         "generated_at": now_kst().isoformat(),
         "spec_version": SPEC_VERSION,
-        # 🚨 2026-08-18 — 종전은 "N=252 IC 게이트(2027-05 목표)" 와 그 **진척률(%)** 을 냈다.
+        # 🚨 2026-08-18 — 종전은 "검증 게이트(2027-05 목표)" 와 그 **진척률(%)** 을 냈다.
         #    그 게이트는 §7-1 로 폐기됐고, 폐기 사유가 정확히 이 출력 형태였다
         #    ("실제 출력이 언제나 '더 모아라' 였다. 기다림은 결론이 아니다").
         #    목표·진척률을 만들지 않고 관측 사실만 신고한다. 대체 게이트(§7-3)는 승인 대기.
@@ -352,7 +352,7 @@ def build_summary() -> Dict[str, Any]:
 
 # 공개 발행 허용 signal 필드 화이트리스트 (옵션 B, 2026-06-18 + 2026-06-25 재확인).
 # 과정 투명성 = 신호명·표본·성숙도·출처는 공개. raw 성과(ic/expectancy/hit_rate/ci95/
-# brier/horizons/ic_pvalue 등)는 화이트리스트 밖이라 자동 제외 → 검증(N≥252) 후 공개.
+# brier/horizons/ic_pvalue 등)는 화이트리스트 밖이라 자동 제외 → 검증 후 공개.
 _PUBLIC_SIGNAL_FIELDS = ("signal", "status", "n", "n_eff", "label", "gate_status", "source")
 
 
@@ -365,7 +365,7 @@ def public_slim(summary: Dict[str, Any]) -> Dict[str, Any]:
 
     🚨 옵션 B 를 데이터 레이어에서 강제 (이전엔 UI 만 가렸고 raw JSON 은 ic/expectancy 노출 = leak).
     공개: gate 진행률 + 신호명 + N/N_eff + 성숙도 label + gate_status + source.
-    비공개: ic·expectancy·hit_rate·ci95·brier·horizons (검증 N≥252 후). PublicGlassboxTab 소비 정합.
+    비공개: ic·expectancy·hit_rate·ci95·brier·horizons (검증 검증 게이트 후). PublicGlassboxTab 소비 정합.
     메인 repo PUBLIC + git add data/ broad 라 full 비영속 (raw 성과 disk 커밋 회피).
     """
     return {

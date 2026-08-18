@@ -173,7 +173,7 @@ _OBS_SOURCE = "obs_us_market.v0"
 #   각 entry: (metric_key, sign). pred_score = signals[metric_key] * sign (sign 으로 "up=양수" 정렬만).
 #   direction = sign(pred_score) (>0 up / <0 down / ==0 neutral). target = 'sp500' (US 신호 → US 시장).
 #   ⚠️ contrarian flip 미적용 (자유 선택 = 곡선맞추기). as-published face-value 방향만 로깅 —
-#      face-value vs contrarian 의 정오는 N≥252 forward IC 부호가 답함 (이게 검증의 핵심, RULE 7).
+#      face-value vs contrarian 의 정오는 검증 게이트 forward IC 부호가 답함 (이게 검증의 핵심, RULE 7).
 # 강제 근거:
 #   aaii          : bull_bear_spread (양수 = bullish 우세 → up). 중심 0 자연 경계.
 #   naaim         : exposure_mean − 50 (능동운용 노출 50% 중립 기준 → 초과 = bullish).
@@ -197,7 +197,7 @@ def generate_observation_predictions(
     """관측-only 신호(us_market_observations) → 시장-레벨 forward 예측 (Observation Signal Trails Spec v0).
 
     동기: AAII/NAAIM/FINRA/Form4 가 결정에 안 들어간 채(관측 only) 로깅만 되고 forward 채점 trail 이
-    없어 "N≥252 때 wire 가치 있나" 판정 불가이던 갭. market-level forward 예측으로 환산 → 채점 누적.
+    없어 "검증 게이트 때 wire 가치 있나" 판정 불가이던 갭. market-level forward 예측으로 환산 → 채점 누적.
     관측 only — 채점 결과는 어떤 verdict/결정에도 피드백 0 (RULE 7). wire 가치 판정 자료로만.
 
     obs_latest = us_market_observations.latest_per_source() 출력
@@ -256,7 +256,7 @@ def generate_observation_predictions(
 # brain_score 는 코너에서 degenerate — 15 fact component 중 ~3만 present(나머지 시장신호 default 50)
 # → 평균이 50-51 상수(stdev 0.3). multi_factor 도 시장신호 5개 상수에 압축(stdev 1.79). 실제 분산 신호 =
 # quant 팩터(momentum stdev 13 / quality 11 / vol 8 / mr 5). 각 팩터 별 source 태그 → 팩터별 독립 forward IC
-# (관측 obs 패턴 미러, 가중치 자유선택 0, face-value). 어느 팩터가 코너에서 예측하나 = N≥252 IC 가 답함.
+# (관측 obs 패턴 미러, 가중치 자유선택 0, face-value). 어느 팩터가 코너에서 예측하나 = 검증 게이트가 답함.
 _SMALLCAP_BASE_SOURCE = "smallcap_corner"
 # 팩터 라벨 → enrich quant_factors 키. 엔진이 이미 高점수=호재 정렬(vol=低변동 高점수 / mr=과매도 高점수)
 # → face-value direction(score>50 up). 코너 전용 자유 파라미터 0.

@@ -50,7 +50,7 @@ def test_maturity_label_gates():
 
 def test_gate_status_has_no_retired_progress():
     """🚨 2026-08-18 전환 — 종전 이름은 test_gate_status_progress_monotone 이었고
-    "게이트 N≥252 미도달, 진척 X%" 를 **고정**하고 있었다. 그 게이트는 §7-1 로 폐기됐고
+    "검증 게이트 미도달, 진척 X%" 를 **고정**하고 있었다. 그 게이트는 §7-1 로 폐기됐고
     폐기 사유가 정확히 그 출력이었다("출력이 언제나 '더 모아라' 였다").
     이제는 진척률이 **없어야** 통과한다 — 테스트가 죽은 전제를 붙잡고 있으면 안 된다.
     """

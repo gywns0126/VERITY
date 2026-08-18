@@ -405,7 +405,7 @@ def _verity_lens_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """VERITY 관측 lens — '컨센서스 위에 얹는' 차별 view (토스·키움·LLM 미보유).
     규칙 기반 사실 분류(lynch_kr)만 발행. 자체 산식 점수·등급·매매의견
     (verity_brain/brain_score/grade, multi_factor grade·multi_score, safety_score,
-    recommendation, confidence)은 RULE 7대로 N≥252 IC 게이트(2027-05) 검증 전까지 발행 제외."""
+    recommendation, confidence)은 RULE 7대로 검증 게이트 통과 전까지 발행 제외."""
     lynch = rec.get("lynch_kr") or {}
     cls = lynch.get("class")
     if not cls:

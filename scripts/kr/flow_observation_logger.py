@@ -7,7 +7,7 @@ flow_observation_logger.py — KR 외국인/기관 일별 순매매 관측 트�
 *forward 누적*만 가능(단 1회 fetch=최근 ~20거래일 → 즉시 20일 시드).
 
 🚨 관측/측정 only (RULE 7) — 점수/brain wire 0. 별 trail(US crowding v0 와 동급 관측 누적).
-🚨 N<252 = 수년 누적형. near-term 승부 아님. 스코프 유니버스(top-N by 거래대금)로 anti-bot 회피.
+🚨 미검증 = 수년 누적형. near-term 승부 아님. 스코프 유니버스(top-N by 거래대금)로 anti-bot 회피.
 
 데이터 행 구조(2026-06-15 실검증, class="tah" 셀):
   [날짜, 종가, 전일비, 등락률, 거래량, 기관순매매(idx5), 외국인순매매(idx6), 외국인보유주수]

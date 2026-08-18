@@ -109,7 +109,7 @@ export default function BrainMonitorPanel({ postmortem }: { postmortem?: Postmor
                 <span style={{ ...CARD_TITLE, color: c.ink }}>Brain 관측</span>
                 {loading ? <span style={{ fontSize: 10, color: c.faint }}>불러오는 중…</span> : null}
                 {err ? <span style={{ fontSize: 10.5, color: c.down, fontWeight: 700 }}>{err}</span> : null}
-                <span style={{ marginLeft: "auto", fontSize: 10, color: c.faint }}>Brain=가설 N&lt;252 · 사실+과정 우선</span>
+                <span style={{ marginLeft: "auto", fontSize: 10, color: c.faint }}>Brain=가설 · 사실+과정 우선</span>
             </div>
 
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>

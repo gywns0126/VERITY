@@ -20,9 +20,11 @@
   · 결측 철학 = available_n < 9 → score None → 관측 제외 (부분 점수 금지)
   · 임계 스윕·그리드서치 금지. 현행 정의 1개의 성적만 낸다.
 
-게이트 (§3): N ≥ 252 ∧ IC > 0.03 ∧ ICIR > 0.3 → N ≥ 684 시 DSR/PBO 2차.
-  N = **일별 단면 개수**(거래일 ≈ 1년). N<30 "통계 무의미" / N<100 "예비 결과" 라벨 의무.
-  실패 조항 = 게이트 시점 CI95 가 0 을 포함하면 재보정 금지(폐기 또는 현행 유지).
+게이트 (§3): 🚨 **표본 수 임계는 폐기됐다** (§7-1, PM 결정 2026-08-15) — 검정력을 따지지
+  않은 채 표본만 요구하는 형태였다. IC > 0.03 ∧ ICIR > 0.3 은 등록 상수라 유지하되,
+  종합 판정은 대체 기준(§7-3) 승인 전까지 **보류(None)** 다. N<30 "통계 무의미" /
+  N<100 "예비 결과" 라벨은 유지한다 — 그건 폐기 대상이 아니었다.
+  실패 조항 = 판정 시점 CI95 가 0 을 포함하면 재보정 금지(폐기 또는 현행 유지).
 
 look-ahead 차단 (§6): Δ 는 fscore_delta 의 분기 공시 lag 적용분만 사용(기존 계약 승계).
 base 가격은 관측 당일 이전 스냅샷만 참조(prediction_scoring._realized_stock_return 승계).
@@ -46,15 +48,17 @@ HORIZONS = {"21d": 21, "63d": 63, "252d": 252}   # §2 거래일
 SIGNALS = ("fscore", "accrual")
 SIGNAL_DIRECTION = {"fscore": 1, "accrual": -1}   # accrual 低=양호 → 부호 반전 후 IC>0 검정
 MIN_CROSS_SECTION = 5      # 단면 rank-IC 최소 종목 수 (미만 = 그날 단면 폐기)
-GATE_N = 252
+# 🚨 2026-08-18 — `GATE_N = 252` 폐기 (`docs/VALIDATION_METHODOLOGY.md` §7-1, PM 결정
+#   2026-08-15). 표본 수 임계만으로 판정하는 형태 자체가 폐기 대상이었다. IC/ICIR 임계는
+#   등록 상수라 그대로 두고, **N 조건이 빠진 만큼 `pass` 를 참으로 만들지 않는다**(아래 None).
+#   대체 판정 기준은 §7-3 PM 승인 대기 — 여기서 새 임계를 지어내지 않는다.
 GATE_IC = 0.03
 GATE_ICIR = 0.3
 GRACE_DAYS = 14            # eval 후 가격 결손 재시도 유예 (prediction trail 선례)
 
 _LABEL_MEANINGLESS = "통계 무의미 (N<30)"
 _LABEL_PRELIM = "예비 결과, 검증 진행 중 (N<100)"
-_LABEL_ACCUMULATING = "누적 중 — 게이트 N=252 미도달"
-_LABEL_GATED = "게이트 판정 가능"
+_LABEL_ACCUMULATING = "누적 중 — 판정 기준 미확정 (검증 틀 v2 §7-3 승인 대기)"
 
 
 def _load_jsonl(path: str) -> List[Dict[str, Any]]:
@@ -235,9 +239,7 @@ def _label(n: int) -> str:
         return _LABEL_MEANINGLESS
     if n < 100:
         return _LABEL_PRELIM
-    if n < GATE_N:
-        return _LABEL_ACCUMULATING
-    return _LABEL_GATED
+    return _LABEL_ACCUMULATING
 
 
 def _bootstrap_ci95(values: List[float], iters: int = 2000) -> Optional[List[float]]:
@@ -312,7 +314,10 @@ def aggregate() -> List[Dict[str, Any]]:
             hit = round(sum(1 for x in ics if x > 0) / n, 4) if n else None
             ci95 = _bootstrap_ci95(ics)
             expectancy = round(statistics.mean(spreads), 4) if spreads else None
-            gate_pass = bool(n >= GATE_N and (ic_mean or 0) > GATE_IC and (icir or 0) > GATE_ICIR)
+            # 🚨 판정 보류 — N 임계가 폐기됐고 대체 기준은 미확정(§7-3). IC/ICIR 충족 여부만
+            #   따로 싣고, 종합 `pass` 는 None 으로 둔다. 조건이 하나 빠진 채 True 를 내면
+            #   소표본 잡음이 "게이트 통과" 로 둔갑한다.
+            thresholds_met = bool((ic_mean or 0) > GATE_IC and (icir or 0) > GATE_ICIR)
 
             out.append({
                 "scored_at": stamp,
@@ -329,8 +334,9 @@ def aggregate() -> List[Dict[str, Any]]:
                 "expectancy_spread_pp": expectancy,
                 "ci95_ic": ci95,
                 "ci95_includes_zero": (None if not ci95 else bool(ci95[0] <= 0 <= ci95[1])),
-                "gate": {"n_min": GATE_N, "ic_min": GATE_IC, "icir_min": GATE_ICIR,
-                         "pass": gate_pass},
+                "gate": {"n_min": None, "ic_min": GATE_IC, "icir_min": GATE_ICIR,
+                         "thresholds_met": thresholds_met, "pass": None,
+                         "pending": "판정 기준 미확정 — 검증 틀 v2 §7-3 PM 승인 대기"},
                 "label": _label(n),
                 "brain_input": False,
                 "note": ("관측 전용 — 어떤 점수에도 입력되지 않는다. "

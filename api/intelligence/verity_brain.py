@@ -1631,7 +1631,6 @@ def analyze_stock(
         # 모든 소비 컴포넌트가 이 플래그로 일관된 '가설' 라벨 렌더(실 N 은 VAMS validation 병합).
         "validation": {
             "status": "hypothesis",
-            "ic_gate_n": 252,
             "note": "자기 산식 가설 — 사전등록 검정 미통과 (검증 틀 v2 §7-3 승인 대기)",
         },
         "grade": grade,

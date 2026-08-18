@@ -32,7 +32,7 @@ def _atomic_write_json(path: str, payload: dict) -> None:
 
     2026-06-13 보강: 옛 직접 dump 는 5분 cron 부하 중 SIGTERM/crash 가 쓰기 도중
     들이닥치면 history 최종본이 잘린 채 남아 그날 결정시점 팩터 벡터가 영구 손실됐다
-    (N=252 게이트 자산 직격). 형제 모듈 brain_history._atomic_write 와 동일 패턴.
+    (검증 게이트 자산 직격). 형제 모듈 brain_history._atomic_write 와 동일 패턴.
     """
     tmp = f"{path}.tmp"
     with open(tmp, "w", encoding="utf-8") as f:

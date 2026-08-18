@@ -262,7 +262,7 @@ def build(portfolio_doc: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         "layer1": {"universe_kr": len(kr), "excluded": excluded, "survivors": len(keep),
                    "panic_active": panic, "flags": flags},
         "us_pending": us,
-        "disclosure": {"rule7": "가설 · 라이브 검증 N=0 (게이트 N>=252, ~2027) · 매수/매도 지시 아님",
+        "disclosure": {"rule7": "가설 · 라이브 검증 N=0 (검증 게이트) · 매수/매도 지시 아님",
                        "brain_used_in_sizing": False,
                        "citations": "Piotroski2000·Daniel-Moskowitz2016·Ang2006·Frazzini-Pedersen2014·"
                                     "Ledoit-Wolf2004·DeMiguel2009·Harvey2018·MacLean-Thorp-Ziemba2011"},

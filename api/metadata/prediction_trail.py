@@ -33,7 +33,7 @@ ML_PATH = os.path.join(DATA_DIR, "metadata", "ml_prediction_trail.jsonl")
 # spec docs/regime_validation_spec_v0_2026_06_13.md.
 REGIME_PATH = os.path.join(DATA_DIR, "metadata", "regime_prediction_trail.jsonl")
 # 관측-only 신호(us_market_observations: AAII/NAAIM/FINRA/Form4) forward trail (물리 분리). 이 신호들이
-# 결정에 들어가지 않은 채(관측 only) 로깅만 되고 forward 채점이 없어 "N≥252 때 wire 가치" 판정 불가이던 갭.
+# 결정에 들어가지 않은 채(관측 only) 로깅만 되고 forward 채점이 없어 "검증 게이트 때 wire 가치" 판정 불가이던 갭.
 # market-level forward 예측으로 환산 → 별 trail/scorer source 분리. 관측 only — 결정 피드백 0(RULE 7).
 # spec docs/observation_signal_trails_spec_v0_2026_06_13.md.
 OBS_PATH = os.path.join(DATA_DIR, "metadata", "observation_prediction_trail.jsonl")

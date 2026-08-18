@@ -84,7 +84,7 @@ def test_insufficient_data_path_unchanged(monkeypatch):
 # ── 2026-07-29 후속 — trail 지속 검증 ────────────────────────────────────────
 # #190 은 scan_all_factors 반환에만 메타를 달았고, save_ic_snapshot 이 자체 화이트리스트로
 # entry 를 조립하는 구조라 factor_ic_history.json 에 실리지 않았음(실측으로 갭 확인).
-# trail = 미래 감사·N=252 게이트의 1차 자료 → 거기에 한계가 없으면 전체 유니버스 IC 로 오독됨.
+# trail = 미래 감사·검증 게이트의 1차 자료 → 거기에 한계가 없으면 전체 유니버스 IC 로 오독됨.
 
 def test_save_ic_snapshot_persists_disclosure(tmp_path, monkeypatch):
     import json as _json

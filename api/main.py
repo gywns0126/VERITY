@@ -1262,7 +1262,7 @@ def _update_simulation_stats(portfolio: dict):
           옛: 91거래 · 승률 12.1% · 실현손익 −409,108원
           신: 78거래 · 승률  5.1% · 실현손익 −1,815,620원 (리셋 이후 실제)
       2차 피해: verification_trail 이 이 total_trades 를 "리셋 후 누적"으로 문서화하고
-        N=252 유의성 마일스톤(Bailey & López de Prado 2014)을 계산한다 — 13건 과대계상.
+        검증 게이트 유의성 마일스톤(Bailey & López de Prado 2014)을 계산한다 — 13건 과대계상.
       3차: validation_report(게이트 판정)와 같은 원장을 다르게 읽어 4.8배 괴리.
 
     정합 기준 = api/vams/validation.py 와 **동일 정의**로 통일한다:
@@ -5037,7 +5037,7 @@ def main():
             print(f"  Brain 스냅샷 스킵: {e}")
 
         # ── STEP 9.52: 결정-trail 무결성 감사 (손실/gap/품질 단일 검증) ──
-        # 2026-06-13 신설: N=252 게이트 입력이 되는 결정시점 기록이 손실 없이·끊김 없이
+        # 2026-06-13 신설: 검증 게이트 입력이 되는 결정시점 기록이 손실 없이·끊김 없이
         # 축적되는지 매 실행 검증. 산식 무관 read-only. 결과 = portfolio 노출 + jsonl 적재.
         print(f"\n[9.52] 결정-trail 무결성 감사")
         try:
