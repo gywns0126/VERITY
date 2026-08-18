@@ -1,13 +1,8 @@
 {
-  "generated_at": "2026-08-17T18:59:30.344351+09:00",
+  "generated_at": "2026-08-18T18:09:53.330607+09:00",
   "spec_version": "v0",
-  "gate": {
-    "target_n": 252,
-    "milestone": "N=252 IC 게이트 (Bailey-López de Prado, 2027-05 목표)",
-    "best_signal_n": 37.0,
-    "progress_pct": 14.7
-  },
-  "rule7_disclaimer": "모든 항목 = 자기 산식 가설 (관측 only, 결정 피드백 0). N<30 통계 무의미 / N<100 예비. hit_rate 단독 해석 금지 — expectancy + CI95 + N 병기. N=252 게이트(2027-05) 도달 전 통계 판정 무의미.",
+  "gate": null,
+  "rule7_disclaimer": "모든 항목 = 자기 산식 가설 (관측 only, 결정 피드백 0). N<30 통계 무의미 / N<100 예비. hit_rate 단독 해석 금지 — expectancy + CI95 + N 병기. 검정력 미달 구간에서는 통계 판정이 무의미하다 (검증 틀 v2 §7-3 승인 대기).",
   "signals": [
     {
       "signal": "brain_production",
@@ -15,7 +10,7 @@
       "n": 1648,
       "n_eff": 11.8,
       "label": "통계 무의미 (N<30)",
-      "gate_status": "가설 (게이트 N≥252 미도달, 진척 4.7%)",
+      "gate_status": "가설 (유의성 미달 · 유효 관측 12)",
       "source": "prediction_ic_history.jsonl (Brain 종합 verdict, prediction_scoring v0)"
     },
     {
@@ -24,16 +19,16 @@
       "n": 1378,
       "n_eff": 9.6,
       "label": "통계 무의미 (N<30)",
-      "gate_status": "가설 (게이트 N≥252 미도달, 진척 3.8%)",
+      "gate_status": "가설 (유의성 미달 · 유효 관측 10)",
       "source": "ml_prediction_ic_history.jsonl (XGB up_probability shadow, source-agnostic scorer 재사용)"
     },
     {
       "signal": "factor",
       "status": "IC 시계열 누적 중",
-      "n": 37,
+      "n": 38,
       "n_eff": null,
       "label": "예비 (N<100, 검증 진행 중)",
-      "gate_status": "가설 (게이트 N≥252 미도달, 진척 14.7%)",
+      "gate_status": "가설 (유의성 미달 · 유효 관측 38)",
       "source": "factor_ic_history.json (ic_stats machinery, forward_days 63)"
     },
     {
@@ -46,5 +41,5 @@
       "source": "prediction_trail.jsonl (target_type=sector)"
     }
   ],
-  "_note": "공개 = 과정·신호명·표본·성숙도만. raw 성과(IC·적중률·기댓값·CI) = 검증(N≥252) 후. 표본 누적 ≠ 신호 검증 (게이트 전 동전던지기와 구별 불가). 점수·등급·종목 추천 아님 (RULE 7 가설)."
+  "_note": "공개 = 과정·신호명·표본·성숙도만. raw 성과(IC·적중률·기댓값·CI) = 사전등록 검정 통과 후. 표본 누적 ≠ 신호 검증 (게이트 전 동전던지기와 구별 불가). 점수·등급·종목 추천 아님 (RULE 7 가설)."
 }
