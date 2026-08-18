@@ -92,7 +92,10 @@ def write_index(vault_content: Path, entries: List[Tuple[Path, Dict[str, str], s
         "1인 베타 단계 (38일+) 의 자기 산식 / 자기 운영 trail / Brain v5 임계 / Phase 0 KIS 정책.",
         "LLM 무료 tier 가 못 가지는 차별점 자산.",
         "",
-        "> 모든 자기 산식 = **가설 (N=Phase 0 ~14일, VAMS reset 5/17 후)**. 365일 trail 도달 (~2027-05) 전 통계 무의미.",
+        # 🚨 2026-08-18 — 종전엔 "365일 trail 도달 (~2027-05) 전 통계 무의미" 를 발행했다.
+        #   표본 수 게이트는 §7-1(PM 결정 2026-08-15)로 폐기됐다 — 검정력을 따지지 않은 채
+        #   표본만 요구하는 형태였다. 가설 표기 자체는 RULE 7 대로 유지한다.
+        "> 모든 자기 산식 = **가설**. 사전 검정력 관문(검증 틀 v2 §7-3) 통과 전이다.",
         "> hit rate 는 expectancy + sample size + CI 와 병기 의무.",
         "",
         "## Topic index",
