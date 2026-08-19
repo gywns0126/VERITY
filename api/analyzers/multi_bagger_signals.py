@@ -94,7 +94,11 @@ def detect_revenue_acceleration(stock: Dict[str, Any]) -> Dict[str, Any]:
         score_boost = 0
     score = min(100, 50 + rev_growth * 2 + score_boost)
 
-    reason_parts = [f"매출 YoY {rev_growth:+.1f}%"]
+    # 🚨 기준 회계연도를 사유에 실어 둔다 — "언제 대비 언제" 없이 성장률만 남기면
+    #   결측 연도가 낀 종목에서 다년 성장률이 YoY 로 둔갑해도 산출물만 봐서는 못 잡는다
+    #   (2026-08-19 실측: 37종목이 정확히 그 상태였다). 없으면 '기준연도 미상' 으로 신고.
+    fy = stock.get("revenue_growth_fy")
+    reason_parts = [f"매출 YoY {rev_growth:+.1f}% ({fy or '기준연도 미상'})"]
     if consecutive_acceleration is True:
         reason_parts.append("2Q 연속 가속 ✓ (Perplexity 권장 보강)")
     elif consecutive_acceleration is False:

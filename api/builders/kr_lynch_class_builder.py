@@ -105,9 +105,18 @@ def build() -> Dict[str, Any]:
         ys = sorted(rev[tk])
         y = ys[-1] if ys else None
         rg = None
-        if len(ys) >= 2 and rev[tk].get(ys[-2]):
+        rg_fy = None
+        # 🚨 2026-08-19 — **연속 연도일 때만** YoY 다. 종전은 마지막 두 항목을 무조건
+        #   전년 대비로 취급해 결측 연도가 있는 종목에서 다년 성장률을 YoY 로 게재했다.
+        #   실측 37종목: 051910(LG화학) 2015→2025 **10년 간격**을 "+127.3%" 로,
+        #   476830 2023→2025 를 "+5,414.9%" 로 기록. 멀티배거 watch 최신일 448 중 7종목 오염.
+        #   간격이 벌어지면 YoY 는 **모르는 것**이지 큰 값이 아니다 — 결측으로 둔다
+        #   (CAGR 로 환산하지 않는다. revenue_acceleration 이 묻는 건 최근 가속이지 장기 평균이 아니다).
+        #   기준 회계연도를 함께 실어 산출물이 자기 근거를 신고하게 한다(RULE 12).
+        if len(ys) >= 2 and rev[tk].get(ys[-2]) and ys[-1] - ys[-2] == 1:
             try:
                 rg = (rev[tk][ys[-1]] / rev[tk][ys[-2]] - 1) * 100
+                rg_fy = f"{ys[-2]}→{ys[-1]}"
             except ZeroDivisionError:
                 rg = None
         om = None
@@ -127,7 +136,7 @@ def build() -> Dict[str, Any]:
 
         stock = {
             "market_cap": m.get("mktcap"), "currency": "KRW",
-            "revenue_growth": rg, "operating_margin": om,
+            "revenue_growth": rg, "revenue_growth_fy": rg_fy, "operating_margin": om,
             "roe": fu.get("roe"), "debt_ratio": dr,
             "sector": sm.get("sector_ko") or sm.get("sector"),
             "industry": sm.get("industry"),      # 🚨 sector 와 분리 필수 (GICS 매칭 경로)

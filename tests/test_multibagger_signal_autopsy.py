@@ -15,10 +15,14 @@
 🚨 이 테스트는 **신호를 살리지 않는다**. 사인을 고정해 조용히 잊히지 않게 한다.
    2026-09 active gate 전 PM 결정 필요(수집 착수 / 소비자 이전 / 폐기 / 게이트 연기).
 """
+import inspect
 import json
+
+import pytest
 
 from api.analyzers.multi_bagger_signals import (
     detect_hold_pnl_threshold,
+    detect_revenue_acceleration,
     evaluate_multi_bagger_signals,
 )
 from api.intelligence.multibagger_watch import build_watch
@@ -191,3 +195,58 @@ def test_workflow_git_adds_new_trail():
     with open(os.path.join(repo, ".github/workflows/universe_scan.yml"), encoding="utf-8") as f:
         yml = f.read()
     assert "git add data/metadata/multibagger_holdings.jsonl" in yml
+
+
+# ── 2026-08-19 봉합 — 기준연도 계약 (RULE 12: 산출물이 자기 근거를 신고한다) ────────
+
+
+def test_revenue_growth_only_from_consecutive_fiscal_years():
+    """🚨 결측 연도가 낀 종목에서 다년 성장률이 YoY 로 둔갑하면 안 된다.
+
+    2026-08-19 실측 결함 — `kr_lynch_class_builder` 가 마지막 두 항목을 무조건 전년 대비로
+    취급해 37종목이 오염됐다(051910 LG화학 2015→2025 **10년 간격**을 '+127.3%' 로,
+    476830 2023→2025 를 '+5,414.9%' 로). 멀티배거 watch 448 중 7종목 도달.
+    간격이 벌어진 YoY 는 큰 값이 아니라 **모르는 값**이다.
+    """
+    from api.builders import kr_lynch_class_builder as B
+
+    rev = {"AAA": {2015: 100.0, 2025: 227.3},      # 10년 간격 — 산출 금지
+           "BBB": {2023: 100.0, 2024: 110.0, 2025: 121.0},   # 연속 — 산출
+           "CCC": {2023: 100.0, 2025: 5514.9}}     # 2년 간격 — 산출 금지
+    got = {}
+    for tk, series in rev.items():
+        ys = sorted(series)
+        rg, rg_fy = None, None
+        if len(ys) >= 2 and series.get(ys[-2]) and ys[-1] - ys[-2] == 1:
+            rg = (series[ys[-1]] / series[ys[-2]] - 1) * 100
+            rg_fy = f"{ys[-2]}→{ys[-1]}"
+        got[tk] = (rg, rg_fy)
+
+    assert got["AAA"] == (None, None), "10년 간격이 YoY 로 산출됐다"
+    assert got["CCC"] == (None, None), "2년 간격이 YoY 로 산출됐다"
+    assert got["BBB"][0] == pytest.approx(10.0)
+    assert got["BBB"][1] == "2024→2025"
+    # 빌더 소스가 같은 가드를 실제로 들고 있는지 (테스트만 통과하는 사태 차단)
+    src = inspect.getsource(B.build)
+    assert "ys[-1] - ys[-2] == 1" in src, "빌더에서 연속 연도 가드가 사라졌다"
+    assert "revenue_growth_fy" in src, "기준연도 신고 필드가 사라졌다"
+
+
+def test_revenue_acceleration_reason_declares_its_basis():
+    """성장률만 남기고 '언제 대비 언제' 를 안 남기면 오염을 산출물에서 못 잡는다."""
+    with_fy = detect_revenue_acceleration({"revenue_growth": 30.0,
+                                           "revenue_growth_fy": "2024→2025"})
+    assert "2024→2025" in with_fy["reason"]
+    without = detect_revenue_acceleration({"revenue_growth": 30.0})
+    assert "기준연도 미상" in without["reason"], "기준연도 부재가 침묵으로 넘어간다"
+
+
+def test_quarterly_reinforcement_declares_when_it_cannot_run():
+    """🚨 2Q 연속 가속 보강은 현재 **입력 부재로 전량 미작동**이다(448/448 None, 8/19 실측).
+
+    죽은 보강이 조용히 남는 걸 막는 계약 — 평가 불가일 때 반드시 사유로 신고해야 한다.
+    배선(= dart_financials.quarterly_revenue 공급)은 점수를 ±10/−5 움직이므로 PM 결정 사안.
+    """
+    r = detect_revenue_acceleration({"revenue_growth": 30.0})
+    assert r["consecutive_acceleration"] is None
+    assert "평가 불가" in r["reason"] or "미수집" in r["reason"]
