@@ -966,6 +966,10 @@ function ReportReadinessTab({ data }: any) {
     )
 }
 
+// 🚫 **폐기 컴포넌트** (operator-web 이관 완료 2026-08-12, 라이브 unpublish 후 삭제 가능).
+//   살아있는 쪽 = `operator-web/app/components/BrainMonitorPanel.tsx`.
+//   여기 수정은 어디에도 반영되지 않는다 — 복붙 큐에 올리지 말 것 (2026-08-19 오등록 사고).
+//   출처 = 메모리 `framer_track_index` 의 pages/admin 생존/폐기 구분표.
 // 결정-trail 무결성 — 입력 자산 손실/gap/품질 단일 검증 (admin?type=trust)
 // 🚨 종전 주석의 'N=252 게이트' 는 폐기된 전제다 (2026-08-15 PM 결정).
 function TrailIntegrityPanel({ ti }: { ti: any }) {
