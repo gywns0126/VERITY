@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-08-19T23:10:11.721160+09:00",
+  "generated_at": "2026-08-19T23:54:38.526889+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 287069,
-    "python_modules": 894,
+    "code_lines_tsx_py": 288043,
+    "python_modules": 899,
     "tsx_components": 131,
-    "json_data_files": 1771,
-    "json_total_tracked": 1790,
+    "json_data_files": 1772,
+    "json_total_tracked": 1791,
     "workflows": 78,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 7581
+    "git_tracked_files": 7588
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 77,
+      "count": 80,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -88,7 +88,10 @@
         "scripts/dart_revenue_backfill.py",
         "scripts/hourly_pulse_send.py",
         "scripts/kr_sector_dart_fallback.py",
+        "scripts/macro_h1_external_reconstruction.py",
+        "scripts/macro_h2_valuation_cross_section.py",
         "scripts/macro_h3_saturation_neutrality.py",
+        "scripts/macro_yield_form_comparison.py",
         "scripts/scout_penny.py",
         "server/kis_rest_client.py",
         "server/kis_ws_client.py",
@@ -720,7 +723,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1771
+      "count": 1772
     },
     "validation": {
       "label": "검증",
@@ -736,8 +739,8 @@
   },
   "python_by_dir": {
     "api": 446,
-    "tests": 249,
-    "scripts": 127,
+    "tests": 250,
+    "scripts": 131,
     "vercel-api": 59,
     "server": 7,
     ".github": 6
