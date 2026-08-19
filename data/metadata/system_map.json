@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-08-19T22:29:56.035441+09:00",
+  "generated_at": "2026-08-19T23:10:11.721160+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 286454,
-    "python_modules": 890,
+    "code_lines_tsx_py": 287069,
+    "python_modules": 894,
     "tsx_components": 131,
     "json_data_files": 1771,
     "json_total_tracked": 1790,
     "workflows": 78,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 7576
+    "git_tracked_files": 7581
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 75,
+      "count": 77,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -33,6 +33,7 @@
         "api/builders/dart_quarterly_public_builder.py",
         "api/builders/industry_themes_pulse_builder.py",
         "api/builders/macro_collect_builder.py",
+        "api/builders/macro_multiplier_trail_builder.py",
         "api/builders/macro_synthesis_builder.py",
         "api/chat_hybrid/search/kis_quote.py",
         "api/collectors/ChainScout.py",
@@ -87,6 +88,7 @@
         "scripts/dart_revenue_backfill.py",
         "scripts/hourly_pulse_send.py",
         "scripts/kr_sector_dart_fallback.py",
+        "scripts/macro_h3_saturation_neutrality.py",
         "scripts/scout_penny.py",
         "server/kis_rest_client.py",
         "server/kis_ws_client.py",
@@ -733,18 +735,18 @@
     }
   },
   "python_by_dir": {
-    "api": 445,
-    "tests": 247,
-    "scripts": 126,
+    "api": 446,
+    "tests": 249,
+    "scripts": 127,
     "vercel-api": 59,
     "server": 7,
     ".github": 6
   },
   "funnel": {
-    "investable_real": 2871,
+    "investable_real": 75,
     "cap": 5000,
     "stages": [
-      2871,
+      75,
       300,
       100,
       25
@@ -755,7 +757,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2871 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~75 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
