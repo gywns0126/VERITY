@@ -11,6 +11,16 @@ flow=market_flow(별개), ownership=DART major_shareholders(FTC cross-check만),
 입력(공개 빌더 산출, 이미 일별 생성): insider_trades.json / stock_flow_5d.json / disclosure_forensics.json /
    stock_report_public.json(ownership.family_pct). commodity_exposure 제외(산업 멤버십=정적, 종목 시변 신호 아님).
 출력: data/observations/kr_cross_section_observations.jsonl (주 1회 Fri, date-dedupe, append-only).
+
+🚨 2026-08-20 두 건 추가:
+① insider_net_365d/buy/sell 병기 — 기존 insider_net 은 elestock 전 기간 누적이라 종목별로
+   사실상 상수다(000660 8주 실측 104,361 → 106,615, 변동 2.2%). 그대로 252주를 모으면
+   '최근 내부자 매수'가 아니라 '누적 보유 수준'의 IC 를 재게 된다. 기존 컬럼은 trail 연속성
+   때문에 그대로 두고 창 컬럼을 나란히 시작한다(창 정의 변경 = 앞뒤가 섞임, RULE 13 ⑤).
+② 입력 신선도 자기신고 — 이 step 은 같은 run 의 빌더 4종 산출을 읽는다. 분석이 죽어 그
+   빌더가 skip 되면 '어제 값'이 '오늘 date'로 적재된다(as-of 거짓 = forward IC trail 오염).
+   → _meta.generated_at 이 오늘이 아닌 입력은 컬럼을 null 로 적고 stale_inputs 로 신고한다.
+   실측 사고: 2026-08-14(금) daily_analysis_full 3연속 실패 → 그 주 관측 행 영구 결손.
 """
 from __future__ import annotations
 
@@ -43,6 +53,14 @@ def _load_json(path: str, default: Any) -> Any:
         return default
 
 
+def _asof(doc) -> str:
+    """입력 산출물의 _meta.generated_at → 'YYYY-MM-DD'. 부재 시 '' (= stale 취급)."""
+    try:
+        return str(((doc or {}).get("_meta") or {}).get("generated_at") or "")[:10]
+    except AttributeError:
+        return ""
+
+
 def _already_logged(date_str: str) -> bool:
     """date-dedupe — 같은 날짜 entry 가 이미 있으면 재적재 skip (idempotent)."""
     if not os.path.exists(OUT_PATH):
@@ -72,41 +90,76 @@ def main() -> int:
             ok = True
             return 0
 
-        # 입력 4종 → ticker 인덱스
-        insider = {str(s.get("ticker")): s for s in (_load_json(INSIDER_PATH, {}).get("stocks") or [])}
-        flow = (_load_json(FLOW_PATH, {}).get("flows") or {})
-        forensics = {str(s.get("ticker")): s for s in (_load_json(FORENSICS_PATH, {}).get("stocks") or [])}
-        report = {str(s.get("ticker")): s for s in (_load_json(REPORT_PATH, {}).get("stocks") or [])}
+        # 입력 4종 로드 + 신선도 자기신고(docstring ② 참조)
+        docs = {
+            "insider": _load_json(INSIDER_PATH, {}),
+            "flow": _load_json(FLOW_PATH, {}),
+            "forensics": _load_json(FORENSICS_PATH, {}),
+            "report": _load_json(REPORT_PATH, {}),
+        }
+        stale = sorted(n for n, d in docs.items() if _asof(d) != date_str)
+        if len(stale) == len(docs):
+            # 전부 어제 것 = 이 run 에서 빌더가 하나도 안 돌았다. 빈 행을 남기는 대신 skip
+            #   (같은 날 뒤 run 이 date-dedupe 에 막히지 않고 제대로 적재하도록).
+            print(f"[kr_obs] 입력 4종 전부 stale(asof != {date_str}) — 적재 skip", file=sys.stderr)
+            return 0
+        if stale:
+            print(f"[kr_obs] stale 입력 {stale} — 해당 컬럼 null 적재(as-of 거짓 방지)", file=sys.stderr)
 
-        # 신호 보유 종목 합집합
-        tickers = set(insider) | set(flow) | set(forensics)
-        for tk, s in report.items():
-            if (s.get("ownership") or {}).get("family_pct") is not None:
-                tickers.add(tk)
+        def _ok(name: str):
+            return name not in stale
+
+        insider = {str(s.get("ticker")): s for s in (docs["insider"].get("stocks") or [])}
+        flow = (docs["flow"].get("flows") or {})
+        forensics = {str(s.get("ticker")): s for s in (docs["forensics"].get("stocks") or [])}
+        report = {str(s.get("ticker")): s for s in (docs["report"].get("stocks") or [])}
+
+        # 신호 보유 종목 합집합 — stale 소스는 union 에서 제외(전 컬럼 null 인 유령 행 방지)
+        tickers = set()
+        if _ok("insider"):
+            tickers |= set(insider)
+        if _ok("flow"):
+            tickers |= set(flow)
+        if _ok("forensics"):
+            tickers |= set(forensics)
+        if _ok("report"):
+            for tk, s in report.items():
+                if (s.get("ownership") or {}).get("family_pct") is not None:
+                    tickers.add(tk)
         if not tickers:
             print("[kr_obs] 신호 보유 종목 0 — skip", file=sys.stderr)
             return 0
 
-        def _dil(tk: str) -> int:
+        def _dil(tk: str):
+            if not _ok("forensics"):
+                return None
             c = (forensics.get(tk) or {}).get("counts") or {}
             return sum(int(c.get(k) or 0) for k in DILUTIVE)
 
         def _flow_last(tk: str):
+            if not _ok("flow"):
+                return {}
             rows = flow.get(tk) or []
             return rows[-1] if rows else {}
 
+        ins_ok = _ok("insider")
         rows: List[Dict[str, Any]] = []
         for tk in sorted(tickers):
             ins = insider.get(tk) or {}
             fl = _flow_last(tk)
-            own = (report.get(tk) or {}).get("ownership") or {}
-            rows.append({
+            own = (report.get(tk) or {}).get("ownership") or {} if _ok("report") else {}
+            row = {
                 "date": date_str,
                 "ticker": tk,
-                # 내부자(DART elestock) — net 증감(주), 매수/매도 건수
-                "insider_net": ins.get("net_change"),
-                "insider_buy_n": ins.get("buy_n"),
-                "insider_sell_n": ins.get("sell_n"),
+                # 내부자(DART elestock) — 전 기간 누적 net 증감(주), 매수/매도 건수.
+                #   🚨 창 아님. 2026-06-21~ trail 연속성 때문에 정의 유지.
+                "insider_net": ins.get("net_change") if ins_ok else None,
+                "insider_buy_n": ins.get("buy_n") if ins_ok else None,
+                "insider_sell_n": ins.get("sell_n") if ins_ok else None,
+                # 내부자 최근 365일 창 — 2026-08-20 신설(이 날짜 이전 행은 키 자체가 없음).
+                "insider_net_365d": ins.get("net_change_365d") if ins_ok else None,
+                "insider_buy_n_365d": ins.get("buy_n_365d") if ins_ok else None,
+                "insider_sell_n_365d": ins.get("sell_n_365d") if ins_ok else None,
                 # 수급(네이버) — 최근일 외국인/기관 순매매(주)
                 "foreign_net": fl.get("foreign_net"),
                 "inst_net": fl.get("inst_net"),
@@ -114,7 +167,10 @@ def main() -> int:
                 "dilution_count": _dil(tk),
                 # 지배구조(공정위) — 총수일가 지배지분 %
                 "family_pct": own.get("family_pct"),
-            })
+            }
+            if stale:
+                row["stale_inputs"] = stale   # 정상 주엔 키 자체가 없다(파일 비대 회피)
+            rows.append(row)
 
         os.makedirs(OUT_DIR, exist_ok=True)
         with open(OUT_PATH, "a", encoding="utf-8") as f:

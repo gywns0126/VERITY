@@ -1,7 +1,7 @@
 """insider_trades_public_builder 단위 테스트 — 자본변동(비매매) 필터."""
 from __future__ import annotations
 
-from api.builders.insider_trades_public_builder import _is_corporate_action, _int
+from api.builders.insider_trades_public_builder import _aggregate, _is_corporate_action, _int
 
 
 def _row(chg, after, rate_after, irds):
@@ -42,3 +42,63 @@ class TestCorporateActionFilter:
     def test_missing_rate_fields_is_trade(self):
         # 비율 필드 부재 → 판정 불가 → 매매로(보수적: 실매매 배제 안 함)
         assert _ca(_row(-904_500_000, 100_500_000, None, None)) is False
+
+
+class TestAggregateWindow:
+    """🚨 2026-08-20 — elestock 는 bgn_de/end_de 를 무시하고 전 기간을 반환한다(실측).
+
+    000660 로 3회 대조: 파라미터 없음 / 20260701~20260820 / 20260819 단일일자 → 전부 559건
+    동일(2024-08-20 ~ 2026-07-31). 그래서 창은 rcept_dt 로컬 필터가 잡아야 하고,
+    _meta.window_days=365 는 그 전까지 거짓 신고였다. 이 클래스가 그 계약을 고정한다.
+    """
+
+    @staticmethod
+    def _r(date, chg, after=10_000, rate_after=0.0, irds=0.0, rc="1"):
+        return {
+            "rcept_dt": date, "rcept_no": rc, "repror": "홍길동",
+            "isu_exctv_ofcps": "담당", "isu_exctv_rgist_at": "비등기임원",
+            "sp_stock_lmp_irds_cnt": chg, "sp_stock_lmp_cnt": after,
+            "sp_stock_lmp_rate": rate_after, "sp_stock_lmp_irds_rate": irds,
+        }
+
+    def test_lifetime_and_365d_diverge(self):
+        # 하이닉스형 = 창 밖 대량 + 창 안 소량. 두 집계가 갈려야 창 필터가 실제로 작동한 것.
+        rows = [
+            self._r("2024-09-02", 500_000),   # 창 밖
+            self._r("2025-02-04", -100_000),  # 창 밖
+            self._r("2026-07-31", 3_620),     # 창 안
+            self._r("2026-07-01", -1_500),    # 창 안
+        ]
+        trades, agg = _aggregate(rows, "2025-08-20")
+        assert agg["net_change"] == 402_120        # 전 기간
+        assert agg["buy_n"] == 2 and agg["sell_n"] == 2
+        assert agg["total"] == 4
+        assert agg["net_change_365d"] == 2_120     # 최근 365일만
+        assert agg["buy_n_365d"] == 1 and agg["sell_n_365d"] == 1
+        assert agg["total_365d"] == 2
+
+    def test_trades_sorted_newest_first(self):
+        rows = [self._r("2025-01-07", 10), self._r("2026-07-31", 20), self._r("2026-01-07", 30)]
+        trades, _ = _aggregate(rows, "2025-08-20")
+        assert [t["date"] for t in trades] == ["2026-07-31", "2026-01-07", "2025-01-07"]
+
+    def test_corporate_action_excluded_from_both_nets_but_counted_in_total(self):
+        # 감자(비매매)는 전 기간·365일 net/건수 모두에서 빠지고 total 에만 남는다(기존 정의 유지).
+        rows = [
+            self._r("2026-07-31", -904_500_000, after=100_500_000, rate_after=89.14, irds=0.00),
+            self._r("2026-07-01", 1_000),
+        ]
+        _, agg = _aggregate(rows, "2025-08-20")
+        assert agg["net_change"] == 1_000 and agg["net_change_365d"] == 1_000
+        assert agg["sell_n"] == 0 and agg["sell_n_365d"] == 0
+        assert agg["total"] == 2 and agg["total_365d"] == 2
+
+    def test_empty_rcept_dt_is_out_of_window(self):
+        # 날짜 부재 = 창 판정 불가 → 창 집계에서 제외(전 기간에는 남긴다)
+        _, agg = _aggregate([self._r("", 777)], "2025-08-20")
+        assert agg["net_change"] == 777
+        assert agg["net_change_365d"] == 0 and agg["total_365d"] == 0
+
+    def test_cutoff_is_inclusive(self):
+        _, agg = _aggregate([self._r("2025-08-20", 5)], "2025-08-20")
+        assert agg["net_change_365d"] == 5

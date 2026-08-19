@@ -449,6 +449,17 @@ jobs:
       #   그 상태로 돌리면 어제 내용에 오늘 `_meta.generated_at` 을 찍어 발행한다 — 지금(아예 안 도는 것)
       #   보다 나쁘다. 특히 6종이 `stock_report_public.json` 에 매달려 있다(2026-08-15 의존 실측).
       #   🚨 `always()` 가 아니라 `!cancelled()` 다 — Price Pulse 취소 등 job cancel 때는 돌지 않는다.
+      #
+      # 🚨 2026-08-20 — 가드 대상 5종 → 8종. 추가 = insider_trades · stock_flow · kr_observation_logger.
+      #   왜 위 "in-run 산출을 읽으면 제외" 원칙에 어긋나지 않는가: 앞 둘이 in-run 파일에서 읽는 건
+      #   **universe 목록뿐**이고(insider=stock_report_public, flow=stock_report_public+recommendations),
+      #   실제 payload 는 매 run DART/네이버에서 새로 가져온다. 어제 universe 로 오늘 사실을 긁는 것은
+      #   손해가 없다 — 재발행 금지 대상이던 "어제 내용에 오늘 generated_at" 과 클래스가 다르다.
+      #   kr_observation_logger 는 세 번째로, 자기 안에 입력 신선도 게이트를 갖췄다(빌더 docstring ②):
+      #   _meta.generated_at 이 오늘이 아닌 입력은 컬럼을 null 로 적고 stale_inputs 로 신고, 4종 전부
+      #   stale 이면 적재 자체를 skip 한다. 그래서 `!cancelled()` 를 줘도 stale 값이 trail 에 안 들어간다.
+      #   근거 사고 = 2026-08-14(금) full 3연속 실패로 그 주 관측 행이 영구 결손(주 1회 append-only).
+      #   여전히 제외 = stock_report_public(recommendations.json 재가공 = 재발행 클래스) 계열.
       - name: 공개 공시속보 피드 빌드 (public-safe)
         # main.py STEP 5.78 이 data/dart_catalyst_alerts.jsonl 갱신 후 → public-safe JSON 변환.
         # 순수 변환 (외부호출/KIS 0). 다음 step git add data/ (broad) 자동 포함 = RULE 4.
@@ -509,7 +520,7 @@ jobs:
         # data.go.kr #1160100(금융위 대차거래, serviceKey=PUBLIC_DATA_API_KEY 공통) → 전종목 ~2,769개 대차잔고.
         # 진짜 공매도잔고=KRX 봇차단으로 free 불가 → 대차잔고(빌려준 주식=공매도 재료) proxy. 키 없으면 graceful skip. → data/securities_lending.json.
         # 순수 fetch(KIS 0). RULE 7 = 대차잔고 금액·수량 사실만(점수·추천·스퀴즈예측 0). 다음 step git add data/ (broad) 자동 = RULE 4. publish allowlist 등재 완료.
-        # in-run 의존 0(자기 산출만) — `!cancelled()` 대상 5종 중 하나. 8/13 이후 48시간 정체였다.
+        # in-run 의존 0(자기 산출만) — `!cancelled()` 가드 대상. 8/13 이후 48시간 정체였다.
         if: ${{ !cancelled() }}
         continue-on-error: true
         env:
@@ -529,7 +540,7 @@ jobs:
       - name: 공개 공시 forensics 빌드 (이벤트 이력·빈도, public-safe)
         # dart_catalyst_alerts.jsonl → 종목별 유상증자/감자/CB/정정 이벤트 빈도·타임라인 → data/disclosure_forensics.json.
         # 순수 변환(외부호출/KIS 0). RULE 7 = report_nm 사실·빈도만, 자체 위험점수 0. 다음 step git add data/ (broad) = RULE 4.
-        # in-run 의존 = dart_catalyst_alerts(STEP 5.78) + 자기 산출뿐 — `!cancelled()` 대상 5종 중 하나.
+        # in-run 의존 = dart_catalyst_alerts(STEP 5.78) + 자기 산출뿐 — `!cancelled()` 가드 대상.
         if: ${{ !cancelled() }}
         continue-on-error: true
         run: python -m api.builders.disclosure_forensics_builder
@@ -537,7 +548,7 @@ jobs:
       - name: 공개 KR forensics 빌드 (특수관계자 거래·우발부채·소송 사실)
         # dart_related_party_cache + dart_litigation_cache (by_ticker) → data/kr_forensics_public.json.
         # 순수 변환(외부호출 0). RULE 7/6 = 원문 사실 리스트만, 위험점수·심각도·터널링 의심서술·요약 0. 다음 step git add data/ (broad) = RULE 4.
-        # in-run 의존 0 — `!cancelled()` 대상 5종 중 하나.
+        # in-run 의존 0 — `!cancelled()` 가드 대상.
         if: ${{ !cancelled() }}
         continue-on-error: true
         run: python -m api.builders.kr_forensics_public_builder
@@ -570,6 +581,9 @@ jobs:
         # DART 무료 키 재사용(KIS 0, ~1.6K 콜 ≪ 20K). RULE7 = 공시 사실만. 다음 step git add data/ (broad) = RULE 4.
         # 🚨 2026-06-27 P0 fix: DART_API_KEY env 누락으로 builder "부재 — skip" → insider_trades.json 6/20~6/27 동결(6.7일).
         #   continue-on-error 가 silent 마스킹. krx_mktcap KRX_API_KEY 누락(fab598aa2, 6/19~23 동결)과 동일 클래스.
+        # 🚨 2026-08-20 `!cancelled()` 추가 — in-run 의존은 universe 목록뿐, payload 는 매 run DART 신규 수집.
+        #   8/13~8/15 full 연속 실패 때 38~48시간 정체한 당사자다(위 헤더 주석 참조).
+        if: ${{ !cancelled() }}
         continue-on-error: true
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
@@ -579,6 +593,8 @@ jobs:
         # 전 종목 시총순 rotation, 일별 캡(FLOW_MAX_TICKERS, anti-bot) + carry-forward → ~6일 내 전 종목.
         # 검증된 파서(flow_observation_logger: 모바일 trend JSON→frgn HTML 폴백). 네이버 외부 fetch(KIS 0).
         # RULE 7 = 외국인/기관 순매매량(외부 사실)만. 다음 step git add data/ (broad) = RULE 4.
+        # 🚨 2026-08-20 `!cancelled()` 추가 — in-run 의존은 universe 목록뿐, payload 는 매 run 네이버 신규 수집.
+        if: ${{ !cancelled() }}
         continue-on-error: true
         env:
           # 300 → 500 (2026-07-30). 재갱신 주기 1497/캡 = 약 5~6 거래일 → 약 3 거래일로 단축.
@@ -602,6 +618,9 @@ jobs:
         # 내부자·수급·희석·총수일가 raw → data/observations/kr_cross_section_observations.jsonl (금요일만 self-run, 점수 0).
         # 엔진 미사용 신호 forward IC trail 누적(N≥252 2027 검증용). spec docs/kr_cross_section_observation_spec_v0.
         # 공개 빌더(insider/flow/forensics/stock_report) 뒤. KIS 0. broad git add data/ = RULE 4(observations 디렉토리 자동).
+        # 🚨 2026-08-20 `!cancelled()` 추가 — 2026-08-14(금) full 3연속 실패로 그 주 행이 영구 결손.
+        #   빌더 자체 입력 신선도 게이트가 stale 값 적재를 막으므로 안전(위 헤더 주석 참조).
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: python -m api.builders.kr_observation_logger
 

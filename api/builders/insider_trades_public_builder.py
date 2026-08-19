@@ -13,6 +13,13 @@ DART elestock.json(임원·주요주주 특정증권등소유상황보고서) = 
   · **wall-clock budget**(INSIDER_MAX_SECONDS, 기본 2700s) + MAX_CALLS — 예산 초과 시 안전 정지·보존.
   · **rate-limit 가드**: DART status 020(일일 제한)→정지·보존, 021(분당)→백오프 1회 재시도. 013=데이터없음(정상 공백).
 - per-entry collected_at 로 신선도 투명 표기. 출력 = data/insider_trades.json (action.yml 등재).
+
+🚨 2026-08-20 실측 — elestock 는 bgn_de/end_de 를 **무시하고 전 기간을 반환한다**.
+   000660 로 3회 대조: 파라미터 없음 / 20260701~20260820 / 20260819 단일일자 → 전부 559건 동일
+   (2024-08-20 ~ 2026-07-31). 즉 WINDOW_DAYS 를 API 에 넘기는 것만으로는 창이 잡히지 않는다.
+   2026-06-19 신설 이래 _meta.window_days=365 는 **거짓 신고**였다(전 기간 누적을 1년으로 표기).
+   → net_change/buy_n/sell_n/total = 전 기간 누적(정의 유지 — 기존 랭킹·관측 trail 연속성),
+     최근 365일 = rcept_dt 로컬 필터한 *_365d 필드. 창이 필요한 소비자는 후자를 쓸 것.
 🚨 RULE 7 = 공시 사실만(보고자·직위·증감·날짜·원문). 자체 점수·매수신호 0. 관측-only.
 """
 from __future__ import annotations
@@ -72,6 +79,58 @@ def _is_corporate_action(it: Dict[str, Any], chg: int, shares_after: int) -> boo
         and irds_rate is not None and abs(irds_rate) < 0.005
         and shares_after and abs(chg) >= shares_after * 0.5
     )
+
+
+def _aggregate(rows: List[Dict[str, Any]], cutoff_365: str):
+    """elestock rows → (trades 최신순, 집계 dict). 집계 2벌을 나란히 낸다.
+
+    · 전 기간 누적 = net_change / buy_n / sell_n / total
+        elestock 가 날짜 파라미터를 무시하므로 이게 원래부터의 실제 정의였다(docstring 참조).
+        정의를 바꾸지 않는다 — 공개 랭킹과 2026-06-21~ 관측 trail 의 연속성 때문.
+    · 최근 365일 = *_365d — 창은 API 가 아니라 rcept_dt 로컬 필터가 잡는다.
+    자본변동(감자·병합·무상증자·재기재)은 양쪽 net/건수에서 모두 제외하고 total 에는 포함한다
+    (기존 정의 유지 — 국일제지 -9억주 '최대 순매도' 유령 차단분).
+    """
+    trades: List[Dict[str, Any]] = []
+    net = buy_n = sell_n = 0
+    net365 = buy365 = sell365 = total365 = 0
+    for it in rows:
+        chg = _int(it.get("sp_stock_lmp_irds_cnt"))
+        shares_after = _int(it.get("sp_stock_lmp_cnt"))
+        corp_action = _is_corporate_action(it, chg, shares_after)
+        rcept_dt = str(it.get("rcept_dt") or "")
+        in_365 = bool(rcept_dt) and rcept_dt >= cutoff_365   # 'YYYY-MM-DD' 사전순 = 시간순
+        if in_365:
+            total365 += 1
+        if not corp_action:
+            net += chg
+            if chg > 0:
+                buy_n += 1
+            elif chg < 0:
+                sell_n += 1
+            if in_365:
+                net365 += chg
+                if chg > 0:
+                    buy365 += 1
+                elif chg < 0:
+                    sell365 += 1
+        rc = str(it.get("rcept_no") or "")
+        trades.append({
+            "date": rcept_dt,
+            "person": str(it.get("repror") or ""),
+            "position": str(it.get("isu_exctv_ofcps") or ""),
+            "registered": str(it.get("isu_exctv_rgist_at") or ""),
+            "change": chg,            # +매수 / −매도 (주)
+            "shares_after": shares_after,
+            "kind": "corporate_action" if corp_action else "trade",
+            "source_url": (DART_VIEW + rc) if rc else "",
+        })
+    trades.sort(key=lambda t: t["date"], reverse=True)
+    return trades, {
+        "net_change": net, "buy_n": buy_n, "sell_n": sell_n, "total": len(trades),
+        "net_change_365d": net365, "buy_n_365d": buy365,
+        "sell_n_365d": sell365, "total_365d": total365,
+    }
 
 
 def _rec_kr_set() -> set:
@@ -157,9 +216,12 @@ def main() -> int:
             return 0
 
         end_dt = _now_kst().date()
+        # 🚨 elestock 는 이 두 파라미터를 무시한다(2026-08-20 실측, docstring 참조).
+        #    호출 호환을 위해 계속 넘기되, 창 집계는 아래 cutoff_365 로컬 필터가 담당한다.
         bgn_de = (end_dt - timedelta(days=WINDOW_DAYS)).strftime("%Y%m%d")
         end_de = end_dt.strftime("%Y%m%d")
         today = end_dt.strftime("%Y-%m-%d")
+        cutoff_365 = (end_dt - timedelta(days=WINDOW_DAYS)).strftime("%Y-%m-%d")
 
         merged = _load_prev()            # carry-forward 베이스
         order = _ordered_universe()
@@ -205,40 +267,14 @@ def main() -> int:
                 continue
 
             collected += 1
-            trades = []
-            net = buy_n = sell_n = 0
-            for it in rows:
-                chg = _int(it.get("sp_stock_lmp_irds_cnt"))
-                shares_after = _int(it.get("sp_stock_lmp_cnt"))
-                corp_action = _is_corporate_action(it, chg, shares_after)
-                # 자본변동(감자/병합/무상증자/분할/재기재)은 매매 아님 → net/매수·매도 카운트 미합산.
-                #   국일제지 -9억주 '최대 순매도' 유령 원천 차단. 실 매매만 net_change 랭킹 반영.
-                if not corp_action:
-                    net += chg
-                    if chg > 0:
-                        buy_n += 1
-                    elif chg < 0:
-                        sell_n += 1
-                rc = str(it.get("rcept_no") or "")
-                trades.append({
-                    "date": str(it.get("rcept_dt") or ""),
-                    "person": str(it.get("repror") or ""),
-                    "position": str(it.get("isu_exctv_ofcps") or ""),
-                    "registered": str(it.get("isu_exctv_rgist_at") or ""),
-                    "change": chg,            # +매수 / −매도 (주)
-                    "shares_after": shares_after,
-                    "kind": "corporate_action" if corp_action else "trade",
-                    "source_url": (DART_VIEW + rc) if rc else "",
-                })
+            trades, agg = _aggregate(rows, cutoff_365)
             if trades:
-                trades.sort(key=lambda t: t["date"], reverse=True)
                 merged[tk] = {
-                    "ticker": tk, "name": name,
-                    "net_change": net, "buy_n": buy_n, "sell_n": sell_n, "total": len(trades),
+                    "ticker": tk, "name": name, **agg,
                     "trades": trades[:MAX_TRADES], "collected_at": today,
                 }
             else:
-                merged.pop(tk, None)   # 윈도우 내 공시 0 — 이전 데이터 제거(aged out)
+                merged.pop(tk, None)   # 공시 0 — 이전 데이터 제거(aged out)
             time.sleep(DELAY)
 
         stocks = sorted(merged.values(), key=lambda s: -abs(_int(s.get("net_change"))))
@@ -252,7 +288,14 @@ def main() -> int:
             "_meta": {
                 "generated_at": _now_kst().isoformat(),
                 "source": "DART elestock (임원·주요주주 특정증권 소유상황보고)",
-                "window_days": WINDOW_DAYS,
+                # 🚨 2026-08-20 정정 — 종전 365 신고는 거짓이었다. elestock 가 날짜 파라미터를
+                #    무시해 실제 집계 창은 '전 기간'이다. 창 집계는 *_365d 필드가 담당한다.
+                "window_days": None,
+                "window_note": (
+                    "DART elestock 는 bgn_de/end_de 를 무시하고 전 기간을 반환한다(2026-08-20 실측). "
+                    "net_change/buy_n/sell_n/total = 전 기간 누적. 최근 365일 집계 = *_365d 필드."
+                ),
+                "window_365d_from": cutoff_365,
                 "count": len(stocks),
                 "universe": len(order),
                 "collected_today": collected,
