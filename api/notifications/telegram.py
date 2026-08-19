@@ -399,7 +399,7 @@ def send_alerts(alerts: list[dict]) -> bool:
     _append_alert_type_ledger(crit, rest)
 
     if crit:
-        lines = ["<b>🚨 VERITY 긴급 알림</b>\n"]
+        lines = ["<b>🚨 긴급 알림</b>\n"]
         for alert in crit:
             lines.append(alert["message"])
         # 🚨 2026-08-17 — 종전에는 CRITICAL 묶음이 **무조건** 야간을 통과했다.
@@ -409,7 +409,7 @@ def send_alerts(alerts: list[dict]) -> bool:
             sent_any = True
 
     if rest and not TELEGRAM_CRITICAL_ONLY:
-        lines = ["<b>🔔 VERITY 알림</b>\n"]
+        lines = ["<b>🔔 알림</b>\n"]
         for alert in rest:
             lines.append(alert["message"])
         if send_message("\n".join(lines), bypass_quiet=False):
@@ -428,7 +428,7 @@ def send_daily_report(portfolio: dict):
     holdings = vams.get("holdings", [])
 
     lines = [
-        "<b>📋 VERITY 일일 브리핑</b>",
+        "<b>📋 일일 브리핑</b>",
         f"━━━━━━━━━━━━━━━",
     ]
 
@@ -539,7 +539,7 @@ def send_morning_briefing(portfolio: dict):
     recs = portfolio.get("recommendations", [])
 
     lines = [
-        "<b>☀️ VERITY 모닝 브리핑</b>",
+        "<b>☀️ 모닝 브리핑</b>",
         "━━━━━━━━━━━━━━━",
     ]
 
@@ -661,7 +661,7 @@ def send_morning_briefing(portfolio: dict):
     except Exception:
         pass
 
-    lines.append("\n<i>장 개장 전 모닝 브리핑 · VERITY AI</i>")
+    lines.append("\n<i>장 개장 전 모닝 브리핑</i>")
     # 모닝 브리핑은 KST 09:00 cron — quiet hours 밖이지만 안전하게 bypass.
     send_message("\n".join(lines), bypass_quiet=True)
 
@@ -669,7 +669,7 @@ def send_morning_briefing(portfolio: dict):
 def send_deadman_alert(reasons: list[str]) -> bool:
     """Deadman's Switch 발동 — 긴급 중단 알림"""
     lines = [
-        "<b>🚨 VERITY 긴급: 분석 중단됨</b>",
+        "<b>🚨 긴급: 분석 중단됨</b>",
         "<b>Deadman's Switch 발동</b>",
         "",
     ]
@@ -892,7 +892,7 @@ def send_timing_signal_alert(transitions: List[Dict[str, Any]]) -> bool:
             lines.append(f"   • {_html_escape(str(r))}")
         lines.append("")
 
-    lines.append("<i>타이밍 전이 감지 · VERITY AI</i>")
+    lines.append("<i>타이밍 전이 감지</i>")
     return send_message("\n".join(lines))
 
 

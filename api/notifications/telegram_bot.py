@@ -165,7 +165,7 @@ def handle_query(text: str) -> str:
             from api.intelligence.chat_engine import ask
             answer = ask(text, context=data)
             _gemini_increment()
-            return f"🤖 <b>VERITY</b>\n\n{answer}"
+            return f"🤖 <b>응답</b>\n\n{answer}"
         except Exception:
             pass
 
@@ -195,7 +195,7 @@ def _answer_briefing(data: dict) -> str:
         return "아직 브리핑이 생성되지 않았습니다."
 
     lines = [
-        f"<b>📋 VERITY 브리핑</b>",
+        f"<b>📋 브리핑</b>",
         f"",
         f"<b>{briefing.get('headline', '데이터 없음')}</b>",
         f"",
@@ -258,7 +258,7 @@ def _answer_alerts(data: dict) -> str:
     if not alerts:
         return "현재 활성 경고가 없습니다. ✅"
 
-    lines = [f"<b>🚨 VERITY 경고</b>", ""]
+    lines = [f"<b>🚨 경고</b>", ""]
 
     icons = {"CRITICAL": "🔴", "WARNING": "🟡", "INFO": "🔵"}
     for a in alerts[:7]:

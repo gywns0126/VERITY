@@ -22,6 +22,9 @@ from typing import Any, Dict, List, Optional
 
 from api.config import DATA_DIR, KST, now_kst
 
+# 🚨 하드코딩 복제 금지 — 핵심 소스 정의는 data_health 단일 출처를 재사용한다.
+from api.observability.data_health import CORE_SOURCES
+
 logger = logging.getLogger(__name__)
 
 _STATE_PATH = os.path.join(DATA_DIR, "metadata", "alert_state.json")
@@ -81,12 +84,39 @@ def _build_messages(health: Dict[str, Any],
                 continue
             if v.get("status") == "critical":
                 bad.append(k)
-        alerts.append({
-            "topic": "data_health",
-            "level": "critical",
-            "message": f"🔴 데이터 소스 장애: {', '.join(bad[:5]) if bad else '?'}",
-            "details": {"bad_sources": bad, "core_sources_ok": core_ok},
-        })
+        # 🚨 2026-08-19 — `core_sources_ok` 를 **판정에 쓴다.** 종전에는 details 에만 실어서
+        #   비핵심 소스 하나가 죽어도 🔴 최고 등급이 나갔다. `overall_status` 는 전 소스의
+        #   최악값(data_health.py:270 worst_status)이라 비핵심 1건이 전체를 critical 로 만든다.
+        #
+        #   실측 계기 (2026-08-18 17:30 알림) — `public_data` 단독 critical 인데
+        #   `core_sources_ok: True` 였다. latency 17,572ms = `_TIMEOUT_DEFAULT 8s × 2회 + sleep 1s`
+        #   에 정확히 일치 = 양쪽 시도 모두 **응답 드롭**(느려진 게 아니다). 같은 시각 로컬
+        #   한국 IP 프로브는 2,566ms 정상 — 게이트웨이는 살아 있다. 앞뒤 실행(8/17 1,044ms ·
+        #   8/19 1,205ms)도 정상이라 지속 장애가 아니라 러너 IP 단발 드롭이다
+        #   ([[feedback_cluster_ops_infra]] "러너IP 드롭=로컬 한국IP 복구").
+        #
+        #   즉 소스가 아니라 **등급**이 결함이었다. 핵심 4종(yfinance/fred/kis/dart)이
+        #   살아 있으면 판단 자료는 온전하므로 🟡 로 내린다. 🚨 삼키지는 않는다 —
+        #   빈도가 원장에서 사라지면 진짜 열화를 못 본다.
+        core_bad = [k for k in bad if k in CORE_SOURCES]
+        if core_bad or not core_ok:
+            alerts.append({
+                "topic": "data_health",
+                "level": "critical",
+                "message": f"🔴 핵심 데이터 소스 장애: {', '.join((core_bad or bad)[:5])}",
+                "details": {"bad_sources": bad, "core_bad": core_bad,
+                            "core_sources_ok": core_ok},
+            })
+        else:
+            alerts.append({
+                "topic": "data_health",
+                "level": "warning",
+                "message": (f"🟡 비핵심 소스 일시 장애: {', '.join(bad[:5])}"
+                            f" (핵심 {len(CORE_SOURCES)}종 정상)"),
+                "details": {"bad_sources": bad, "core_bad": [],
+                            "core_sources_ok": core_ok,
+                            "note": "핵심 소스 정상 — 판단 자료 온전. 반복되면 등급 재검토"},
+            })
     elif overall == "warning":
         # warning 은 누적 검사
         alerts.append({
@@ -190,14 +220,22 @@ def _filter_warnings(alerts: List[Dict[str, Any]],
 
 
 def _format_telegram(alert: Dict[str, Any]) -> str:
-    lines = [f"<b>[VERITY Brain]</b> {alert['message']}"]
+    # 🚨 2026-08-19 PM 지시 — 텔레그램 발송 문자열에서 브랜드 표기 제거.
+    #   알파네스트로 바꾸지 않는다: 텔레그램은 PM 1인 비공개 채널이고
+    #   `AlphaNest = 공개 터미널 / VERITY = 비공개 백엔드` 라 방향이 거꾸로다. 게다가 알림
+    #   내용이 brain_score·funnel·VAMS 같은 비공개 자산이라 공개 브랜드를 달면 그 자산이
+    #   공개 것으로 보인다 — 4회 재발한 혼동이다 ([[feedback_verity_vs_alphanest_identity]]).
+    #   브랜드 없이 알림 유형만 남긴다. 수신자가 한 명이라 발신자 표기는 정보가 아니다.
+    lines = [f"<b>{alert['message']}</b>"]
     d = alert.get("details") or {}
     for k, v in d.items():
         if isinstance(v, list):
             v = ", ".join(map(str, v[:5])) if v else "(없음)"
         lines.append(f"  · {k}: {v}")
     lines.append(f"\n시각: {now_kst().strftime('%Y-%m-%d %H:%M KST')}")
-    lines.append("링크: /admin/brain-monitor")
+    # 🚨 2026-08-19 — 종전 `/admin/brain-monitor` 는 폐기된 구 프레이머 admin 이다
+    #   (operator-web 이관 완료 2026-08-12). 죽은 링크를 알림마다 보내고 있었다.
+    lines.append("링크: /system")
     return "\n".join(lines)
 
 
