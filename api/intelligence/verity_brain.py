@@ -252,20 +252,54 @@ def _detect_panic_stage(
 
 def detect_economic_quadrant(portfolio: Dict[str, Any]) -> Dict[str, Any]:
     """Bridgewater All-Weather 4분면: 성장 × 인플레이션.
-    FRED GDP/CPI 또는 매크로 프록시로 분면을 판별한다."""
+
+    🚨 B1 시행 (PREREG_QUADRANT_DISPOSITION_2026_08_19, PM 승인 2026-08-19) —
+    **결측을 값으로 바꾸지 않는다.**
+
+    종전엔 `gdp_growth` 결측 시 `(market_mood − 50) × 0.06` 을 만들어 넣었다.
+    118일 전수 측정 결과 그 fallback 이 임계 1.5 를 넘으려면 mood > 75 여야 하는데
+    실측 범위가 30~75 라 **구조적으로 도달 불가**했고, 결과적으로
+    **성장 축이 경제가 아니라 `gdp_growth` 필드의 존재 여부로 뒤집혔다**
+    (결측 → growth_down 37/37 · 존재 → growth_up 81/81).
+    즉 fallback 은 관측이 아니라 **growth_down 상수의 주입**이었다.
+
+    이제 성장 입력이 없으면 `quadrant="unknown"` 을 반환한다. 같은 파일의
+    `cycle_stage` 가 이미 쓰는 결손 센티넬 규율과 정합이다 —
+    *"unknown 반환 = 데이터 결손 센티넬, 국면 X"*.
+
+    🚨 소비자는 `unknown` 을 국면으로 취급하면 안 된다. `favored`/`unfavored` 는
+    빈 리스트로 나가고 `quadrant_source` 가 무엇 때문인지 신고한다.
+    """
     macro = portfolio.get("macro", {})
     fred = macro.get("fred") or {}
 
     gdp_growth = fred.get("gdp_growth", {}).get("value")
     cpi_yoy = fred.get("cpi_yoy", {}).get("value")
+    growth_source = "fred.gdp_growth"
 
     if gdp_growth is None:
         pmi = fred.get("ism_pmi", {}).get("value")
         if pmi is not None:
             gdp_growth = float(pmi) - 50
+            growth_source = "fred.ism_pmi"
         else:
-            mood = macro.get("market_mood", {}).get("score", 50)
-            gdp_growth = (mood - 50) * 0.06
+            # 🚨 B1 — 여기서 값을 만들지 않는다. market_mood fallback 폐기.
+            return {
+                "quadrant": "unknown",
+                "label": "판정 보류 (성장 입력 결손)",
+                "favored": [],
+                "unfavored": [],
+                "crypto_bias": "neutral",
+                "gdp_growth": None,
+                "cpi_yoy": round(float(cpi_yoy), 2) if cpi_yoy is not None else None,
+                "quadrant_source": "unknown",
+                "unknown_reason": (
+                    "fred.gdp_growth · fred.ism_pmi 모두 결손 — 종전 market_mood "
+                    "fallback 은 B1(PREREG_QUADRANT_DISPOSITION_2026_08_19)로 폐기됐다. "
+                    "그 fallback 은 임계 1.5 에 mood>75 가 필요해 구조적으로 "
+                    "growth_down 상수를 주입하고 있었다(실측 37/37)"
+                ),
+            }
 
     if cpi_yoy is None:
         pce = fred.get("pce_yoy", {}).get("value")
@@ -300,6 +334,14 @@ def detect_economic_quadrant(portfolio: Dict[str, Any]) -> Dict[str, Any]:
         "crypto_bias": q_cfg.get("crypto_bias", "neutral"),
         "gdp_growth": round(gdp_growth, 2),
         "cpi_yoy": round(cpi_yoy, 2),
+        # 🚨 B1 자기신고 — 어떤 입력으로 판정했는지 산출물이 직접 말한다(RULE 12).
+        #   'fred.gdp_growth' 는 이름과 달리 GDP 실측이 아니라 침체확률 선형변환이다
+        #   (macro_field_audit 2026-08-19 특정). 그 사실도 함께 신고한다.
+        "quadrant_source": growth_source,
+        "growth_input_note": (
+            "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. "
+            "GDP 실측이 아니다"
+        ) if growth_source == "fred.gdp_growth" else None,
     }
 
 

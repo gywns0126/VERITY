@@ -161,6 +161,15 @@ def _check_quadrant_consistency(
     if not quadrant_info:
         return {"drift": False, "drift_count": 0, "reason": "quadrant_unavailable"}
 
+    # 🚨 B1 가드 (PREREG_QUADRANT_DISPOSITION_2026_08_19, PM 승인 2026-08-19) —
+    #   `unknown` 은 국면이 아니라 **결손 센티넬**이다. dict 가 truthy 라 위 가드를
+    #   그냥 통과하므로 여기서 따로 막는다. 국면이 없으면 드리프트 판정도 없다.
+    #   (favored/unfavored 가 빈 리스트라 판정 자체는 무해하나, "판정했다" 는 기록이
+    #    남으면 다음 사람이 국면이 있었다고 오독한다 — 그걸 막는 게 목적이다)
+    if quadrant_info.get("quadrant") == "unknown":
+        return {"drift": False, "drift_count": 0, "reason": "quadrant_unknown",
+                "unknown_reason": quadrant_info.get("unknown_reason")}
+
     favored = list(quadrant_info.get("favored") or [])
     unfavored = list(quadrant_info.get("unfavored") or [])
 

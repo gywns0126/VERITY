@@ -119,20 +119,33 @@ class TestF1F2Integration:
         # favored: 주식/회사채/성장주 (방어주 아님)
         assert "주식" in result["favored"] or "성장주" in result["favored"]
 
-    def test_regression_baseline_without_fix(self):
-        """fix 없이 (4 키 모두 부재) → growth_down_inflation_down 영구 강제 (회귀 baseline)."""
-        # 회귀 상황: fred 에 어느 키도 없음, mood 40 비관
+    def test_regression_baseline_now_returns_unknown(self):
+        """🚨 2026-08-19 B1 로 계약이 **뒤집혔다** (PREREG_QUADRANT_DISPOSITION_2026_08_19).
+
+        종전 이름은 `test_regression_baseline_without_fix` 였고
+        *"4 키 모두 부재 → growth_down_inflation_down **영구 강제**"* 를 고정하고 있었다.
+        그 docstring 자신이 "영구 강제" 라고 적었듯 **그건 결함의 기록이지 옳은 동작이
+        아니었다.** 118일 전수 측정에서 실제 피해가 확인됐다 —
+        결측 37일이 전부 growth_down 으로 나갔고(37/37), 그래서 성장 축이
+        경제가 아니라 **필드 존재 여부**로 뒤집히고 있었다.
+
+        B1 이 그 fallback 을 폐기했으므로 이제 같은 입력은 `unknown` 이어야 한다.
+        🚨 핀과 값은 한 커밋에서 같이 움직인다 — 오늘 universe_scan timeout 에서
+        같은 계열 사고가 한 번 났다(yml 만 바뀌고 핀이 안 따라와 main 이 red).
+        """
         fred = {}
         portfolio = _portfolio_with_fred(fred, mood_score=40)
         result = detect_economic_quadrant(portfolio)
-        # gdp = (40-50)*0.06 = -0.6, cpi = 2.5 하드코드
-        assert result["gdp_growth"] == -0.6
-        assert result["cpi_yoy"] == 2.5
-        assert result["quadrant"] == "growth_down_inflation_down"
+
+        assert result["quadrant"] == "unknown"
+        assert result["gdp_growth"] is None, "결측인데 숫자가 만들어졌다"
+        assert result["quadrant_source"] == "unknown"
+        # 종전 산식이 만들던 값 — 되살아나면 잡는다
+        assert result["gdp_growth"] != -0.6
 
 
 class TestFredMacroBlockDerivation:
-    """get_fred_macro_block 의 cpi_yoy / gdp_growth derivation 박힘 검증.
+    """get_fred_macro_block 의 cpi_yoy / gdp_growth derivation 구현 검증.
 
     실제 FRED API 호출 없이 derivation 로직만 단위 테스트.
     """
