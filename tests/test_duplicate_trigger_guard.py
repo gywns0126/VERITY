@@ -200,9 +200,20 @@ def test_universe_scan_uses_shared_script():
 
 
 def test_universe_scan_budget_untouched():
-    """스캔 예산(60분)·자체 concurrency 그룹은 가드가 건드리지 않는다."""
+    """스캔 예산·자체 concurrency 그룹은 **중복실행 가드가** 건드리지 않는다.
+
+    🚨 이 핀의 뜻은 "값이 영원히 불변" 이 아니라 "가드 작업이 예산을 건드리지 않았다" 다.
+    운영 근거가 있는 예산 변경은 정당하며, 그때는 이 핀을 함께 옮긴다.
+
+    변경 이력:
+      60 → 90 (2026-08-19, a10d7de00). 근거 = scan job 소요 크립 실측
+      8/13 57.9분 · 8/14 59.5분 · 8/18 59.75분(마진 15초) → 8/19 두 run 모두 정확히
+      60:00 에서 cancelled. 지배 구간은 단일 스텝 `Run universe scan + filter` 57분 17초.
+      🚨 그 커밋이 yml 만 바꾸고 이 핀을 안 옮겨 main 이 red 였다 — 핀과 값은 한 커밋에서
+        같이 움직여야 한다. 갱신을 잊으면 다음 사람이 "테스트가 틀렸나" 부터 의심한다.
+    """
     d = yaml.safe_load(_uni_src())
-    assert d["jobs"]["scan"]["timeout-minutes"] == 60
+    assert d["jobs"]["scan"]["timeout-minutes"] == 90
     assert d["concurrency"]["group"] == "verity-universe-scan"
     assert d["concurrency"]["cancel-in-progress"] is False
 
