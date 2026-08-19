@@ -192,7 +192,7 @@ export default function PublicMarketTab(props: Props) {
     useEffect(() => {
         if (onCanvas || !snapshotUrl) return
         let alive = true
-        fetch(snapshotUrl, { cache: "no-store" })
+        fetch(snapshotUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive && d && d.macro) setData(d) })
             .catch(() => {})
@@ -202,7 +202,7 @@ export default function PublicMarketTab(props: Props) {
     useEffect(() => {
         if (onCanvas || !ipoUrl) return
         let alive = true
-        fetch(ipoUrl, { cache: "no-store" })
+        fetch(ipoUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const arr = d && (Array.isArray(d.watch) ? d.watch : (Array.isArray(d) ? d : null))
@@ -215,7 +215,7 @@ export default function PublicMarketTab(props: Props) {
     useEffect(() => {
         if (onCanvas || !usIpoUrl) return
         let alive = true
-        fetch(usIpoUrl, { cache: "no-store" })
+        fetch(usIpoUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const arr = d && Array.isArray(d.items) ? d.items : null

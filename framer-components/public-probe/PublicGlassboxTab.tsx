@@ -264,7 +264,7 @@ export default function PublicGlassboxTab(props: Props) {
             }
             if (alive) setFailed(true)
         }
-        fetch(validationUrl, { cache: "no-store" })
+        fetch(validationUrl)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive) return

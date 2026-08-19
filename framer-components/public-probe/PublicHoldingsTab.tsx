@@ -771,10 +771,7 @@ export default function PublicHoldingsTab(props: Props) {
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch(
-            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_flow.json",
-            { cache: "no-store" }
-        )
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_flow.json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive || !d || !Array.isArray(d.etfs)) return
@@ -842,10 +839,7 @@ export default function PublicHoldingsTab(props: Props) {
     useEffect(() => {
         if (onCanvas || (!showAdd && !showTAdd) || universe.length) return
         let alive = true
-        fetch(
-            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json",
-            { cache: "no-store" }
-        )
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const a = d && (Array.isArray(d) ? d : d.stocks)
@@ -866,10 +860,7 @@ export default function PublicHoldingsTab(props: Props) {
     useEffect(() => {
         if (onCanvas || isDemo) return
         let alive = true
-        fetch(
-            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_close_latest.json",
-            { cache: "no-store" }
-        )
+        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_close_latest.json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const pm = d && d.prices

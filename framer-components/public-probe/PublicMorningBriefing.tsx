@@ -387,7 +387,7 @@ export default function PublicMorningBriefing(props: Props) {
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch(PULSE_URL, { cache: "no-store" })
+        fetch(PULSE_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const v =
@@ -460,7 +460,7 @@ export default function PublicMorningBriefing(props: Props) {
             }
             if (alive) setBriefFailed(true)
         }
-        fetch(briefUrl || BRIEF_URL, { cache: "no-store" })
+        fetch(briefUrl || BRIEF_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive) return

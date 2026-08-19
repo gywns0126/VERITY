@@ -285,7 +285,7 @@ export default function PublicNPSHoldings(props: {
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch(BLOB + "/nps_fund_returns.json", { cache: "no-store" })
+        fetch(BLOB + "/nps_fund_returns.json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (alive && d && Array.isArray(d.annual)) setReturns(d)
@@ -300,7 +300,7 @@ export default function PublicNPSHoldings(props: {
         if (onCanvas) return
         let alive = true
         const url = props.dataUrl || BLOB + "/nps_holdings.json"
-        fetch(url, { cache: "no-store" })
+        fetch(url)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (alive) {

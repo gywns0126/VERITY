@@ -97,7 +97,7 @@ export default function PublicFreshnessBoard(props: { width?: number; dark?: boo
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch(props.dataUrl || DATA_URL, { cache: "no-store" })
+        fetch(props.dataUrl || DATA_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (alive && d && Array.isArray(d.streams)) {

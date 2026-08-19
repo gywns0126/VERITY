@@ -73,6 +73,60 @@ N_eff = 0 / 252 · 진척 0.0%
 
 ---
 
+## 🚨 지금 복붙 필요 — 공개 blob CDN 우회 제거 (Vercel 비용) · **17파일**
+
+PM 지시 2026-08-19 "고쳐. 내가 복붙할게". 파일 = `public-probe/` 아래 그대로, 이미 수정 반영됨.
+
+### 왜 — 같은 사고가 7/20 에 이미 있었다
+
+메모리 원문: *2026-07-20 Vercel 청구 급증(Fast Origin Transfer 62GB=$16.91, Blob 18GB).
+방문자 아님. 범인 = `pages/*` 33개 컴포넌트가 공개 blob 을 캐시버스터+no-store 로 fetch.*
+
+그때 `pages/*` 는 고쳤는데 **`public-probe/`(공개 알파네스트)는 그대로 남았다.**
+실측(8/19) — 공개 blob fetch **23개소가 `cache:"no-store"`**. CDN 은 정상 작동 중이었다
+(`x-vercel-cache: HIT · age 1954 · s-maxage=300`) — **컴포넌트가 그걸 우회하고 있었다.**
+`portfolio.json` 이 891KB 라, 탭을 열 때마다 origin 에서 통째로 재다운로드된다.
+
+### 무엇이 바뀌었나 — `{ cache: "no-store" }` 인자만 제거
+
+```
+- fetch(validationUrl, { cache: "no-store" })
++ fetch(validationUrl)
+```
+
+로직·URL·에러 처리 전부 그대로다. **CDN 이 30초(s-maxage=300) 캐시하므로 신선도 손실은
+최악 30초**이고, 원본 데이터는 그보다 훨씬 느리게 갱신된다.
+
+| 파일 | 개소 | | 파일 | 개소 |
+|---|---:|---|---|---:|
+| `PublicHoldingsTab.tsx` | 3 | | `PublicEntranceMap.tsx` | 1 |
+| `PublicMarketTab.tsx` | 3 | | `PublicEventHistory.tsx` | 1 |
+| `PublicMorningBriefing.tsx` | 2 | | `PublicFreshnessBoard.tsx` | 1 |
+| `PublicNPSHoldings.tsx` | 2 | | `PublicGlassboxTab.tsx` | 1 |
+| `CryptoDilutionForensics.tsx` | 1 | | `PublicPerspectiveMaps.tsx` | 1 |
+| `CryptoNews.tsx` | 1 | | `PublicQuarterlyTrend.tsx` | 1 |
+| `PublicBondRegime.tsx` | 1 | | `PublicWatchlist.tsx` | 1 |
+| `PublicCompanyReports.tsx` | 1 | | `PublicDailyBriefing.tsx` | 1 |
+| `PublicETFFlow.tsx` | 1 | | | |
+
+🚨 `PublicGlassboxTab.tsx` 는 **어제 게이트 제거분과 합쳐진 최신본**이다. 어제 것을 이미
+붙였어도 이 파일은 **다시 붙여야** 한다.
+
+### 🚨 건드리지 않은 것 (일부러)
+
+`no-store` 가 남은 곳은 전부 **blob 이 아니다** — 고치면 오히려 깨진다:
+- 자체 API 라우트(`/api/verity/*`, `/api/thesis*`, `/api/holdings` 등) = 동적 응답, 인증 포함
+- 외부 거래소 API(바이낸스·업비트) = 우리 비용 아님
+- Supabase(`/rest/v1/`) = 인증 쿼리
+- `PublicDisclosureFeed.tsx:477` = `DEFAULT_API` 가 blob 이 아니라 우리 API 서버
+
+### 검증
+
+전 72개 `public-probe/*.tsx` esbuild 파싱 **파손 0**. `git diff` = 23개소 모두
+`, { cache: "no-store" }` 인자 제거만(로직 변경 0).
+
+---
+
 ## ⏳ 지금 복붙 필요 — dark mode html-first fix (새로고침 '부분 라이트' 근본 fix)
 
 body-first `readBodyDark` → html-first 로 정정. body-first 는 Framer 정적 export 의 light body 에 단락돼 새로고침 시 라이트로 stuck. >60KB 라 MCP push 불가.

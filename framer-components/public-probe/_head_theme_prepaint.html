@@ -1,0 +1,41 @@
+<!--
+  AlphaNest 다크모드 프리페인트 스크립트
+  넣는 곳: Framer 프로젝트 설정 → Custom Code → Head (start of <head>)
+
+  왜 필요한가 (2026-08-01 부분 라이트 재발 원인):
+    컴포넌트들의 readBodyDark() 는 html[data-an-theme] → body[data-framer-theme] → verity_theme
+    순으로 테마를 읽는다. 그런데 사이트 HTML 에 data-an-theme 를 심는 주체가 없었다(실측 0회).
+    1순위가 비니 2순위인 body[data-framer-theme] 로 내려가는데, Framer 정적 export 는
+    새로고침 직후 body 를 light 로 둔다. 그래서 verity_theme(사용자 선택) 검사까지 가지 못하고
+    light 가 반환되어, 컴포넌트 내부는 다크인데 바깥 프레임만 라이트로 남는다.
+
+    이 스크립트가 페인트 전에 html[data-an-theme] 를 심으면 1순위에서 값이 잡혀 레이스가 사라진다.
+
+  규칙 (PublicThemeToggle.tsx 와 동일 — 어긋나면 토글과 첫 페인트가 불일치한다):
+    저장 선호(verity_theme) 가 있으면 그 값 → 없으면 OS 설정 → 기본 라이트
+    html[data-an-theme] 와 body[data-framer-theme] 를 함께 설정
+
+  🚨 async/defer 를 붙이지 말 것. 페인트 전에 동기 실행되어야 의미가 있다.
+  🚨 body 는 이 시점에 없을 수 있으므로 있을 때만 설정하고, 없으면 DOMContentLoaded 에서 보정한다.
+-->
+<script>
+(function () {
+  try {
+    var t = null;
+    try { t = localStorage.getItem("verity_theme"); } catch (e) {}
+    if (t !== "dark" && t !== "light") {
+      t = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
+        ? "dark" : "light";
+    }
+    var el = document.documentElement;
+    if (el) el.setAttribute("data-an-theme", t);
+    var setBody = function () {
+      if (document.body) document.body.setAttribute("data-framer-theme", t);
+    };
+    setBody();
+    if (!document.body) {
+      document.addEventListener("DOMContentLoaded", setBody, { once: true });
+    }
+  } catch (e) {}
+})();
+</script>

@@ -111,7 +111,7 @@ export default function PublicDailyBriefing(props: {
             } catch (e) { /* ignore */ }
             if (alive) setFailed(true)
         }
-        fetch(props.dataUrl || DATA_URL, { cache: "no-store" })
+        fetch(props.dataUrl || DATA_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive) return

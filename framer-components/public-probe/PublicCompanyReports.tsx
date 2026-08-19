@@ -246,7 +246,7 @@ export default function PublicCompanyReports(props: Props) {
         const urls = [krUniverseUrl, usUniverseUrl].filter(Boolean)
         Promise.all(
             urls.map((u) =>
-                fetch(u, { cache: "no-store" })
+                fetch(u)
                     .then((r) => (r.ok ? r.json() : null))
                     .catch(() => null)
             )
