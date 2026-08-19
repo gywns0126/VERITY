@@ -100,6 +100,21 @@ _DILUTIVE_ITEMS = {"1.01", "3.02", "2.03"}
 #   14일 내 동반되면 자금조달로 이미 분류되므로(위 ④), 여기서는 그 조건을 뺀 건만 본다.
 _PIPELINE_ITEMS = {"1.01", "8.01"}
 _PIPELINE_WINDOW_DAYS = 400
+# ── 규제 마일스톤(인허가) 탐지 (2026-08-19 신설) ────────────────────────────
+# 🚨 NRC 자체 소스는 못 쓴다 — nrc.gov 는 Akamai 차단(HTTP 200 인데 본문이 Access Denied),
+#   ADAMS Public Search API 는 구독 필요. 벤더 한 곳 막힘 ≠ 축 불가
+#   ([[feedback_one_vendor_block_is_not_axis_impossible]]) — 같은 사실이 **우리가 이미 받는**
+#   8-K 첨부(보도자료)에 실린다. 실측 XE 3건: NRC 환경평가 FONSI · Part 70 연료 라이선스 ·
+#   DOE ARDP 예산기간 연장 · 영국 GDA 신청.
+# 🚨 위험문구(forward-looking statements)에도 같은 단어가 나온다. 그 구간을 먼저 잘라낸다 —
+#   안 자르면 전 종목이 상시 검출된다(실측 XE 2026-05-19 이 이 형태였다).
+_REG_MILESTONE_PAT = re.compile(
+    r"\b(NRC|Nuclear Regulatory Commission|construction permit|combined license|"
+    r"early site permit|design certification|Finding of No Significant Impact|FONSI|"
+    r"Part 70|Generic Design Assessment|operating licen[cs]e)\b")
+_FLS_PAT = re.compile(
+    r"forward[- ]looking statements|risk factors|safe harbor", re.I)
+
 _PIPELINE_PAT = re.compile(
     r"\b(purchase agreement|supply agreement|power purchase|offtake|"
     r"master agreement|development agreement|award(?:ed)?|contract(?:ed)?|"
@@ -688,6 +703,42 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
             f"{r['filingDate']} 8-K {label} · 본문 '{m.group(1)}'")
     if "전방 파이프라인(수주·계약 공시)" in out:
         out["전방 파이프라인(수주·계약 공시)"] = out["전방 파이프라인(수주·계약 공시)"][:8]
+
+    # ── ⑥ 규제 마일스톤(인허가) ──
+    # 🚨 위험문구(FLS) 구간을 먼저 잘라낸다. 안 자르면 "licensing" 이 리스크 열거에도
+    #    있어 전 종목이 상시 검출되고, 상시 검출은 신호가 아니다.
+    for r in rows:
+        if r["form"] != "8-K" or r["filingDate"] < pipe_cut:
+            continue
+        txt = _exhibit_text(r["accessionNumber"], r["primaryDocument"])
+        if not txt:
+            continue
+        fls = _FLS_PAT.search(txt)
+        body = txt[:fls.start()] if fls else txt
+        # 🚨 한 공시에 마일스톤이 여러 건이다 — search() 로 첫 건만 보면 나머지가 사라진다.
+        #   실측 XE 2026-06-04 은 GDA·NRC·FONSI·Part 70 등 6개 매치를 담고 있었다.
+        seen_frag: set = set()
+        for m in _REG_MILESTONE_PAT.finditer(body):
+            # 🚨 경계를 마침표로만 잡으면 틀린다 — 보도자료는 "•" 불릿 나열이라 앞 항목까지
+            #    끌려온다(실측 XE 06-04 이 IPO 문장에서 잘렸다). 불릿·줄바꿈도 경계로 본다.
+            _B = "•\n\r"
+            s0 = max([body.rfind(c, 0, m.start()) for c in _B]
+                     + [body.rfind(". ", 0, m.start())]) + 1
+            s1 = min([x for x in [body.find(c, m.end()) for c in _B]
+                      + [body.find(". ", m.end())] if x > 0] or [m.end() + 160])
+            frag = re.sub(r"\s+", " ", body[s0:s1].strip())[:170]
+            # 🚨 임원 이력·리스크 열거 오탐 차단 — 인물 경력에 "NRC 근무" 가 흔하다
+            #    (실측 OKLO 2026-07-28 이사 선임 공시). 마일스톤 동사가 없으면 버린다.
+            if not re.search(r"\b(received|submitted|approved|issued|granted|completed|"
+                             r"accepted|docketed|awarded|published)\b", frag, re.I):
+                continue
+            if frag[:60] in seen_frag:      # 같은 문장이 여러 키워드로 중복 매치된다
+                continue
+            seen_frag.add(frag[:60])
+            out.setdefault("규제 마일스톤(인허가 공시)", []).append(
+                f"{r['filingDate']} · {frag}")
+    if "규제 마일스톤(인허가 공시)" in out:
+        out["규제 마일스톤(인허가 공시)"] = out["규제 마일스톤(인허가 공시)"][:6]
 
     # ── going concern ──
     latest_fin = next((r for r in sorted(rows, key=lambda r: r["filingDate"], reverse=True)
