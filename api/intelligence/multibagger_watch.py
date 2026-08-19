@@ -48,6 +48,11 @@ def _is_kr_smallcap(s: Dict[str, Any]) -> bool:
     return 0 < mc < SMALLCAP_MAX_KRW
 
 
+def _sys_stderr():
+    import sys
+    return sys.stderr
+
+
 def build_watch(stocks: List[Dict[str, Any]], as_of: Optional[str] = None) -> List[Dict[str, Any]]:
     """KR 소형주 중 Fast Grower OR 신호 triggered 후보만 watch 레코드 생성 (로깅 전용).
 
@@ -56,6 +61,22 @@ def build_watch(stocks: List[Dict[str, Any]], as_of: Optional[str] = None) -> Li
     as_of = as_of or now_kst().strftime("%Y-%m-%d")
     smallcaps = [s for s in (stocks or []) if _is_kr_smallcap(s)]
     peers = {"recommendations": smallcaps}  # multi_bagger_signals 섹터 peer context
+
+    # 🚨 2026-08-19 (PM 승인 "2Q 보강 배선") — revenue_acceleration 의 2Q 연속가속 보강은
+    #   `dart_financials.quarterly_revenue` 를 읽는데 **그 키를 만드는 곳이 없었다.**
+    #   실측 8/18: 448/448 전량 None = 설계된 기저효과 방어가 통째로 죽어 있었다.
+    #   여기서 붙인다 — build_watch 는 모든 caller(wide_scan·테스트)의 공통 경로다.
+    #   🚨 커버리지를 stderr 로 신고한다. 안 세면 또 조용히 죽는다(RULE 12).
+    try:
+        from api.utils.quarterly_revenue import attach as _attach_qrev
+        _cov = _attach_qrev({str(s.get("ticker")): s for s in smallcaps if s.get("ticker")})
+        print(f"[multibagger_watch] quarterly_revenue 부착 {_cov.get('attached', 0)}"
+              f"/{_cov.get('attach_target', 0)} ({_cov.get('attach_pct', 0)}%)"
+              f" · 원장 매출보유행 {_cov.get('rows_with_revenue', 0):,}/{_cov.get('rows_total', 0):,}"
+              f" · 판정가능 티커 {_cov.get('tickers_usable', 0):,}", file=_sys_stderr())
+    except Exception as _qe:  # noqa: BLE001 — 보강 부착 실패가 watch 를 죽이지 않는다
+        print(f"[multibagger_watch] quarterly_revenue 부착 skip: {type(_qe).__name__}: {_qe}",
+              file=_sys_stderr())
 
     out: List[Dict[str, Any]] = []
     for s in smallcaps:

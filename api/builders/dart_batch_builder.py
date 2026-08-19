@@ -271,6 +271,12 @@ def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
                     "current_ratio": fund.get("current_ratio"),
                     "gross_margin": fund.get("gross_margin") or fund.get("gross_margins"),
                     "asset_turnover": fund.get("asset_turnover"),
+                    # 🚨 2026-08-19 — revenue 를 싣는다(PM 승인 "2Q 보강 배선").
+                    #   수집기가 이미 파싱해 asset_turnover=rev/ta 까지 쓰고도 버리던 값이라
+                    #   **추가 API 호출 0**. 이게 없어서 revenue_acceleration 의 2Q 연속가속
+                    #   보강이 448/448 전량 미작동이었다(설계된 방어가 통째로 죽어 있었다).
+                    #   소비 = api/utils/quarterly_revenue.build_series
+                    "revenue": fund.get("revenue"),
                     "operating_cashflow": fund.get("operating_cashflow"),
                     "net_income": fund.get("net_income"),
                     "fetched_at": fetched_at,
