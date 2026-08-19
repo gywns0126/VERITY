@@ -186,6 +186,25 @@ jobs:
 
       - name: Run analysis
         env:
+          # 🚨 2026-08-19 — AI 와 데이터를 가르는 축. **신설이 아니라 이미 있던 staging 을 쓴다.**
+          #
+          #   문제: 기본값이 `dev` 라 `@mockable` 이 붙은 것을 **전부** 막는다. AI 비용을
+          #   아끼려던 설정이 finnhub 수급·컨센서스까지 mock 으로 만들고 있었다.
+          #   실측(2026-08-19) — quick 이 mock 64건을 냈고 전부 finnhub 4키 × 16종목이다.
+          #   그 16종목이 `portfolio.json` 의 Finnhub 계열 미보유 16과 **정확히 일치**한다
+          #   (AGCO AIT ALGN ALV AME EXE GOOGL DVN KMT ALB NEM VICI TAP TROW EPAM LKQ).
+          #   🚨 실제 보유 종목(EXE·GOOGL·DVN·NEM…)이 그쪽에 몰려 있었다 — 판단에 쓰는
+          #   종목일수록 가짜 데이터를 받고 있었다.
+          #
+          #   해법: `staging` = allowlist 만 실호출(`api/mocks/__init__.py:58 _should_mock`).
+          #   데이터 키를 allowlist 에 넣고 AI 키(gemini 14 · claude 11 · perplexity 4)는
+          #   뺀다 → **데이터 실호출 + AI 차단**. 코드 변경 0.
+          #
+          #   🚨 오타 하나면 조용히 mock 으로 돌아간다 — 값은 키 이름과 **정확히** 일치해야
+          #   하고(`api/mocks` `@mockable(...)` 인자), 첫 run 에서 `[MOCK CENSUS]` 에
+          #   finnhub 키가 0건인지 확인 의무 (RULE 8 N=2). 검증 = tests/test_staging_real_keys.py
+          VERITY_MODE: staging
+          VERITY_STAGING_REAL_KEYS: "finnhub.analyst_consensus,finnhub.earnings_surprises,finnhub.insider_sentiment,finnhub.institutional_ownership,finnhub.basic_financials,finnhub.company_news,finnhub.peer_companies,polygon.short_interest,polygon.pre_after_market,polygon.options_flow,newsapi.us_stock_news,newsapi.market_news"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
