@@ -1,21 +1,23 @@
 {
  "_meta": {
-  "generated_at": "2026-08-19T19:23:21.060671+09:00",
+  "generated_at": "2026-08-19T20:21:18.531374+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "amber",
+ "status": "red",
  "reasons": [
-  "CDN age 34102s > 120s(스테일 서빙)"
+  "배달 검증 실패 1건",
+  "P0 stale 1건",
+  "커버리지 회귀 경고 3건"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-19T19:23:21.008639+09:00",
-  "ok": true,
-  "failed": 0,
-  "max_cdn_age_s": 34102,
+  "generated_at": "2026-08-19T20:21:18.473364+09:00",
+  "ok": false,
+  "failed": 1,
+  "max_cdn_age_s": 0,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -30,14 +32,14 @@
    },
    {
     "file": "us_stock_report_public.json",
-    "ok": true,
+    "ok": false,
     "pct": {
-     "PER": 50.7,
-     "PBR": 83.0
+     "PER": 44.9,
+     "PBR": 73.5
     },
-    "total": 4488,
-    "cdn_age_s": 34102,
-    "error": null
+    "total": 5069,
+    "cdn_age_s": 0,
+    "error": "커버리지 후퇴: disclosures 87.5%→81.7% · fin_series 92.5%→81.9% · calendar 32.5%→28.8% · peer 96.0%→85.0%"
    },
    {
     "file": "us_stock_report_us_smallcap.json",
@@ -47,7 +49,7 @@
      "PBR": 73.5
     },
     "total": 3924,
-    "cdn_age_s": 34100,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -61,29 +63,29 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-08-19T18:05:33.557385+09:00",
+  "generated_at": "2026-08-19T19:59:39.383299+09:00",
   "kr_total": 1790,
-  "us_total": 4488,
+  "us_total": 5069,
   "core_fill_pct": {
    "fields.facts.PBR": 80.2,
    "fields.facts.PER": 72.7,
-   "us_fields.facts.PBR": 83.0,
-   "us_fields.facts.PER": 50.7
+   "us_fields.facts.PBR": 73.5,
+   "us_fields.facts.PER": 44.9
   },
   "last_run_blocked": false,
   "last_run_fails": 0,
-  "last_run_warns": 0
+  "last_run_warns": 3
  },
  "freshness": {
-  "generated_at": "2026-08-19T19:23:15.646630+09:00",
+  "generated_at": "2026-08-19T20:21:04.487726+09:00",
   "summary": {
-   "fresh": 58,
-   "stale": 0,
+   "fresh": 57,
+   "stale": 1,
    "closed": 2,
    "discontinued": 2,
    "p0": {
     "total": 6,
-    "fresh": 4,
+    "fresh": 3,
     "closed": 2,
     "active": 4
    },
@@ -100,7 +102,13 @@
     "active": 35
    }
   },
-  "stale_p0": [],
+  "stale_p0": [
+   {
+    "id": "crypto",
+    "label": "크립토 시세·파생",
+    "age_min": 108.1
+   }
+  ],
   "stale_other": []
  }
 }
