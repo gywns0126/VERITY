@@ -91,6 +91,24 @@ ITEM_LABELS = {
 # 자금조달 경보에 쓰는 8-K 항목 — 희석 방향 사건만.
 _DILUTIVE_ITEMS = {"1.01", "3.02", "2.03"}
 
+# ── 전방 파이프라인(수주·계약) 탐지 (2026-08-19 신설) ────────────────────────
+# 🚨 WHY: 8-K item 1.01(중요 계약 체결)을 지금까지 **희석 탐지에만** 썼다. 같은 항목이
+#   수주·공급계약·PPA 이기도 한데 그 축이 신고되지 않아, 초기 인프라 기업 분석에서
+#   전방 파이프라인이 통째로 보이지 않았다(XE 실측 2026-08-19).
+#   후행 재무(매출·손익)만 보면 상장 직후 기업은 항상 "적자 확대" 로만 읽힌다.
+# 🚨 희석과 수주는 **같은 1.01 에서 갈린다.** 본문 어휘로 가른다 — 등록신고서(S-1/S-3/424B)가
+#   14일 내 동반되면 자금조달로 이미 분류되므로(위 ④), 여기서는 그 조건을 뺀 건만 본다.
+_PIPELINE_ITEMS = {"1.01", "8.01"}
+_PIPELINE_WINDOW_DAYS = 400
+_PIPELINE_PAT = re.compile(
+    r"\b(purchase agreement|supply agreement|power purchase|offtake|"
+    r"master agreement|development agreement|award(?:ed)?|contract(?:ed)?|"
+    r"letter of intent|memorandum of understanding|joint development)\b", re.I)
+# 자금조달 어휘 — 위 패턴과 동시 출현하면 수주로 세지 않는다(오분류 차단).
+_FINANCING_PAT = re.compile(
+    r"\b(at[- ]the[- ]market|equity line|securities purchase agreement|"
+    r"registered direct|private placement|warrant)\b", re.I)
+
 
 # ── 저수준 ────────────────────────────────────────────────────────────────
 
@@ -589,6 +607,7 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
     #   (ONDS 실측 2026-08-12: 2022-03-22 건이 올라왔다).
     atm_cut = (today - timedelta(days=_ATM_WINDOW_DAYS)).isoformat()
     reg = [r for r in rows if r["form"] in ("S-1", "S-3", "424B3", "424B5")]
+    _dilutive_dates: set = set()      # ④에서 자금조달로 분류된 8-K 일자 (⑤가 제외한다)
     for r in rows:
         if r["form"] != "8-K" or r["filingDate"] < atm_cut:
             continue
@@ -612,6 +631,63 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
             detail += f" · 최대 {m.group(1)}주"
         detail += " · 등록 " + ", ".join(f"{x['form']}({x['filingDate']})" for x in near[:2])
         out.setdefault("자금조달 라인(ATM·유동성 라인)", []).append(detail)
+        _dilutive_dates.add(r["filingDate"])
+
+    # ── ⑤ 전방 파이프라인(수주·계약) ──
+    # 위 ④가 "1.01 + 등록신고서 14일 내 동반 = 자금조달" 을 이미 걷어냈다. 남은 1.01/8.01 중
+    # 본문에 계약 어휘가 있고 자금조달 어휘가 없는 건만 수주로 신고한다.
+    # 🚨 판정이 아니라 **사실 열거**다 — 계약 규모·수익성은 본문에 없을 때가 많아
+    #    "수주 N건" 을 성장 근거로 번역하지 않는다(RULE 7 = 사실만, 해석 0).
+    pipe_cut = (today - timedelta(days=_PIPELINE_WINDOW_DAYS)).isoformat()
+
+    def _exhibit_text(accn: str, primary: str) -> str:
+        """8-K 표지 + EX-99 첨부 본문.
+
+        🚨 표지만 읽으면 못 잡는다 — 실측(2026-08-19): SMR 2026-08-11 item 1.01 표지는
+        5,928자이고 등록정보(주소·전화·CIK)뿐이다. 계약 내용은 EX-99.1 보도자료에 있고,
+        표지에 남는 영문은 ATM 상용문구라 **자금조달로 오분류**된다.
+        OKLO 2026-05-13 도 동일. 즉 표지 기반 판정은 구조적으로 틀린다.
+        """
+        parts = []
+        t0 = _doc_text(cik, accn, primary, limit=200_000)
+        if t0:
+            parts.append(t0)
+        idx = _fetch(_doc_url(cik, accn, "index.json"), f"idx_{accn}.json", _TTL_DOC, as_json=True)
+        names = []
+        if isinstance(idx, dict):
+            for f in ((idx.get("directory") or {}).get("item") or []):
+                nm = str(f.get("name") or "")
+                # 🚨 파일명은 제출대리인마다 접두사가 붙는다 — `^ex99` 로 고정하면 못 잡는다.
+                #   실측: SMR 은 EX-99.1 보도자료, OKLO 는 `tm...._ex1-1.htm`(계약서 본문)이라
+                #   EX-99 자체가 없다. 접두사 무시 + 계약 계열 번호(1/2/10/99)까지 본다.
+                if (re.search(r"ex-?(?:99|10|1|2)[-_.]?\d*\.(?:htm|html|txt)$", nm, re.I)
+                        and not nm.lower().startswith("r")):     # R1.htm = XBRL 렌더
+                    names.append(nm)
+        for nm in names[:3]:
+            t = _doc_text(cik, accn, nm, limit=200_000)
+            if t:
+                parts.append(t)
+        return "\n".join(parts)
+
+    for r in rows:
+        if r["form"] != "8-K" or r["filingDate"] < pipe_cut:
+            continue
+        if r["filingDate"] in _dilutive_dates:
+            continue                      # 이미 자금조달로 분류된 건
+        codes = {c.strip() for c in str(r.get("items") or "").split(",")}
+        if not (codes & _PIPELINE_ITEMS):
+            continue
+        txt = _exhibit_text(r["accessionNumber"], r["primaryDocument"])
+        if not txt:
+            continue
+        m = _PIPELINE_PAT.search(txt)
+        if not m or _FINANCING_PAT.search(txt):
+            continue
+        label = ", ".join(ITEM_LABELS.get(c, c) for c in sorted(codes & _PIPELINE_ITEMS))
+        out.setdefault("전방 파이프라인(수주·계약 공시)", []).append(
+            f"{r['filingDate']} 8-K {label} · 본문 '{m.group(1)}'")
+    if "전방 파이프라인(수주·계약 공시)" in out:
+        out["전방 파이프라인(수주·계약 공시)"] = out["전방 파이프라인(수주·계약 공시)"][:8]
 
     # ── going concern ──
     latest_fin = next((r for r in sorted(rows, key=lambda r: r["filingDate"], reverse=True)
