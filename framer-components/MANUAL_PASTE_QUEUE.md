@@ -73,7 +73,7 @@ N_eff = 0 / 252 · 진척 0.0%
 
 ---
 
-## 🚨 지금 복붙 필요 — 공개 blob CDN 우회 제거 (Vercel 비용) · **17파일**
+## 🚨 지금 복붙 필요 — 공개 blob CDN 우회 제거 (Vercel 비용) · **15파일**(2파일 폐기 제외)
 
 PM 지시 2026-08-19 "고쳐. 내가 복붙할게". 파일 = `public-probe/` 아래 그대로, 이미 수정 반영됨.
 
@@ -104,10 +104,21 @@ PM 지시 2026-08-19 "고쳐. 내가 복붙할게". 파일 = `public-probe/` 아
 | `PublicMorningBriefing.tsx` | 2 | | `PublicFreshnessBoard.tsx` | 1 |
 | `PublicNPSHoldings.tsx` | 2 | | `PublicGlassboxTab.tsx` | 1 |
 | `CryptoDilutionForensics.tsx` | 1 | | `PublicPerspectiveMaps.tsx` | 1 |
-| `CryptoNews.tsx` | 1 | | `PublicQuarterlyTrend.tsx` | 1 |
+| `CryptoNews.tsx` | 1 | | ~~`PublicQuarterlyTrend.tsx`~~ | 폐기 |
 | `PublicBondRegime.tsx` | 1 | | `PublicWatchlist.tsx` | 1 |
-| `PublicCompanyReports.tsx` | 1 | | `PublicDailyBriefing.tsx` | 1 |
+| `PublicCompanyReports.tsx` | 1 | | ~~`PublicDailyBriefing.tsx`~~ | 폐기 |
 | `PublicETFFlow.tsx` | 1 | | | |
+
+> 🚨 **2026-08-19 정정 — 2파일은 PM 이 폐기 결정하고 삭제했다.** 큐에서 제외한다.
+> `PublicDailyBriefing.tsx`(1개소) · `PublicQuarterlyTrend.tsx`(1개소) → **복붙 대상 15파일 21개소.**
+>
+> 🚨 **`framer_track_index` 에는 이 둘의 폐기 기재가 없었다.** 오히려 `public-probe/` 전체가
+> "삭제 절대 금지" 로 적혀 있어, 그 파일만 봤다면 반대로 판단했을 것이다. 즉 이번 건은
+> 색인 미독이 아니라 **색인에 없던 PM 결정**이다(어제 BrainMonitor 오등록과 다른 경우).
+>
+> **수집·발행은 유지한다** — 두 산출물을 다른 컴포넌트가 계속 읽는다:
+> `daily_briefing.json` → `PublicMorningBriefing.tsx` · `dart_quarterly_public.json` → `PublicStockReport.tsx`.
+> 컴포넌트가 죽었다고 빌더를 끄면 살아있는 화면이 빈다.
 
 🚨 `PublicGlassboxTab.tsx` 는 **어제 게이트 제거분과 합쳐진 최신본**이다. 어제 것을 이미
 붙였어도 이 파일은 **다시 붙여야** 한다.
