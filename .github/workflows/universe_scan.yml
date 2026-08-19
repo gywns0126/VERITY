@@ -114,7 +114,14 @@ jobs:
     needs: guard
     if: needs.guard.outputs.run == '1'
     runs-on: ubuntu-latest
-    timeout-minutes: 60   # universe 5000 + cooler 누적 35분 → 안전 마진 25분
+    # 🚨 2026-08-19 — 60 → 90. 종전 주석("cooler 누적 35분 → 안전 마진 25분")은 **낡았다**.
+    #   실측 scan job 소요: 8/13 57.9분 · 8/14 59.5분 · 8/18 59.75분(마진 15초) →
+    #   **8/19 두 run 모두 정확히 60:00 에서 cancelled**(id 32223678918 / 32227395097).
+    #   지배 구간은 단일 스텝 `Run universe scan + filter` 57분 17초 (나머지 전부 합쳐 2.7분).
+    #   결과: multibagger_watch·universe_candidates 가 8/18 에서 갱신 정지.
+    #   🚨 conclusion 이 failure 가 아니라 **cancelled** 라 실패 알림에 안 걸린다 — 조용한 정지였다.
+    #   본 조치는 지혈이다. 근본은 스캔 작업량이고 [[project_cron_overload_2026_08_14]] 소관.
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -168,7 +175,17 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          # 🚨 소요를 스스로 신고한다 — 8/19 정지는 "느려지는 중" 이 어디에도 안 남아서
+          #   한도에 닿는 순간까지 아무도 몰랐다(8/18 마진 15초). 다음 잠식은 넘기 전에 보인다.
+          _t0=$SECONDS
           python -m api.builders.universe_scan_builder
+          _el=$(( SECONDS - _t0 ))
+          _budget=$(( 90 * 60 ))
+          _pct=$(( _el * 100 / _budget ))
+          echo "[universe_scan] scan 소요 ${_el}s (${_pct}% / 예산 ${_budget}s)"
+          if [ "$_el" -gt $(( _budget * 75 / 100 )) ]; then
+            echo "::warning title=universe_scan 예산 잠식::${_el}s = 예산의 ${_pct}%. 8/19 에 60분 한도 초과로 2회 cancelled 된 이력이 있다(cancelled 라 실패 알림에 안 걸린다). 작업량 축소 검토."
+          fi
 
       - name: Build candidates diff (편입/이탈, LLM 0)
         if: always()
