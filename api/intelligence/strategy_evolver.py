@@ -465,7 +465,7 @@ best_hit_rate: w_fact={best_h.get('w_fact', '?')} ({best_h.get('hit_rate', '?')}
 ※ trade_plan_v0 결정 룰은 단순(BB/MA20/RSI). 자동 변경 X — 가중치 조정 시 위 신호를 참조해 판단.
 """
 
-    return f"""[VERITY Brain 가중치 최적화 요청]
+    return f"""[알파브레인 가중치 최적화 요청]
 
 ═══ 현행 Fact Score 가중치 (합=1.0) ═══
 {json.dumps(fact_w, indent=2)}

@@ -1,5 +1,5 @@
 """
-VERITY Brain Observatory — 측정 모듈 (Phase 1).
+알파브레인 Observatory — 측정 모듈 (Phase 1).
 
 선행 문서:
   docs/BRAIN_MONITOR_SPEC.md (Phase 1 §1)

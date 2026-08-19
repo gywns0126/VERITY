@@ -212,7 +212,7 @@ def _compute_kpi(obs: dict, portfolio: dict) -> dict:
 
 
 def _build_topology(obs: dict) -> dict:
-    """VERITY Brain 풀 토폴로지 — 모든 데이터 소스 + fact_score 13 + 엔진 + 출력.
+    """알파브레인 풀 토폴로지 — 모든 데이터 소스 + fact_score 13 + 엔진 + 출력.
 
     sub_cluster 로 input 을 5 그룹 분리 (price/financial/macro/news/ai).
     """

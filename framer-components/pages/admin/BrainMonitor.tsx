@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
 /**
- * VERITY Brain Observatory — 관리자 전용 모니터링 대시보드
+ * 알파브레인 Observatory — 관리자 전용 모니터링 대시보드
  * 단일 Framer 코드 컴포넌트 (iframe 우회). Sandbox 호환:
  *   - 무거운 애니메이션 X (Three.js / requestAnimationFrame loop 폐기)
  *   - 5분 setInterval polling

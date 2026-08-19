@@ -259,7 +259,7 @@ def _detect_red_flags(
                 downgrade_d.append(_make_flag(f"고부채 {kis_debt:.0f}% (KIS, 섹터 임계 {_debt_t['high']:.0f}%)"))
             if kis_roe < -20:
                 downgrade_d.append(_make_flag(f"ROE {kis_roe:.1f}% (KIS 기준)"))
-            # Hard Floor (배리티 브레인 투자 바이블 ⑥) — 유동비율 < 50% 단기 운영 자금 부족
+            # Hard Floor (알파브레인 투자 바이블 ⑥) — 유동비율 < 50% 단기 운영 자금 부족
             if 0 < kis_cr < 50:
                 auto_avoid_d.append(_make_flag(f"유동비율 {kis_cr:.0f}% (단기 운영 자금 부족)"))
 

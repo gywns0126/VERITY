@@ -375,7 +375,7 @@ def _build_knowledge_context(stock: dict) -> str:
         unified = unified.get("principles") or []
     if unified:
         parts.append(
-            "[배리티 브레인 기본 원칙 — 30권 고전 통합]\n"
+            "[알파브레인 기본 원칙 — 30권 고전 통합]\n"
             + "\n".join(f"- {p}" for p in unified[:6])
         )
 
@@ -857,7 +857,7 @@ def _build_prompt(
         vci_info = brain.get("vci", {})
         rf = brain.get("red_flags", {})
         brain_block = f"""
-[배리티 브레인 사전 판단]
+[알파브레인 사전 판단]
 브레인점수: {brain.get('brain_score', '?')} | 등급: {brain.get('grade_label', '?')} ({brain.get('grade', '?')})
 팩트: {brain.get('fact_score', {}).get('score', '?')} | 심리: {brain.get('sentiment_score', {}).get('score', '?')}
 VCI(괴리율): {vci_info.get('vci', '?'):+d} → {vci_info.get('label', '')}
@@ -1008,7 +1008,7 @@ RSI {tech.get('rsi', '?')} | MACD히스토 {tech.get('macd_hist', '?')} | 볼린
 규칙:
 1. company_tagline = 이 회사가 뭐 하는 곳인지 사업 본질 한줄. 15자 이내. 업종명이 아니라 핵심 사업. 예: "국내 1위 검색·AI 플랫폼", "글로벌 메모리 반도체 1위", "K-POP 4대 기획사", "국내 최대 배달 플랫폼"
 2. gold_insight = 재무/차트 핵심 한 줄. 구체적 숫자 필수. 군더더기 빼.
-3. recommendation: 배리티 브레인 등급을 존중하되, 정성적 판단으로 조정 가능. 조정 시 이유 명시.
+3. recommendation: 알파브레인 등급을 존중하되, 정성적 판단으로 조정 가능. 조정 시 이유 명시.
 4. risk_flags: 실제 데이터에서 확인된 것만. 레드플래그 있으면 반드시 포함.
 5. ai_verdict: 사장님한테 보고하듯 짧게. "~입니다" 금지. 반말 OK. VCI 괴리 있으면 언급.
 6. 현금흐름이 마이너스면 반드시 risk_flags에 포함.
@@ -1209,7 +1209,7 @@ def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, he
         top_picks = mb.get("top_picks", [])
         rf_stocks = mb.get("red_flag_stocks", [])
         brain_block = f"""
-[배리티 브레인 시장 종합]
+[알파브레인 시장 종합]
 시장 평균: 브레인 {mb.get('avg_brain_score', '?')}점 | 팩트 {mb.get('avg_fact_score', '?')} / 심리 {mb.get('avg_sentiment_score', '?')} / VCI {mb.get('avg_vci', 0):+d}
 등급 분포: 강매수 {dist.get('STRONG_BUY', 0)} | 매수 {dist.get('BUY', 0)} | 관망 {dist.get('WATCH', 0)} | 주의 {dist.get('CAUTION', 0)} | 회피 {dist.get('AVOID', 0)}"""
         if ov:

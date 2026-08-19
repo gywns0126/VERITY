@@ -1,5 +1,5 @@
 """
-Historical Backfill Replay — VERITY Brain 의 과거 검증.
+Historical Backfill Replay — 알파브레인 의 과거 검증.
 
 목적
 ----
@@ -599,7 +599,7 @@ def print_component_breakdown(breakdown: Dict[str, Any]) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="VERITY Brain historical backfill replay")
+    parser = argparse.ArgumentParser(description="알파브레인 historical backfill replay")
     parser.add_argument("--smoke", action="store_true", help="5 종목 × 1년 (smoke test)")
     parser.add_argument("--full", action="store_true", help="30 종목 × 2020~현재 (전체)")
     parser.add_argument("--tickers", type=str, help="콤마 구분 ticker (수동 지정)")

@@ -12,7 +12,7 @@
 각 trigger 는 stock + portfolio → {triggered: bool, score: 0-100, signals: [...], reason: str}.
 verity_brain.analyze_stock 에서 stock.veteran_signals 로 attach.
 
-출처: docs/VERITY_SYSTEM_SPEC_2026.md §27 + 배리티 브레인 학습 도서 (저작권 자료, 로컬만)
+출처: docs/VERITY_SYSTEM_SPEC_2026.md §27 + 알파브레인 학습 도서 (저작권 자료, 로컬만)
        memory project_brain_kb_learning / feedback_source_attribution_discipline
 """
 from __future__ import annotations

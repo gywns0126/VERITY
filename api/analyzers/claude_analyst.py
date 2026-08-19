@@ -171,7 +171,7 @@ PER {stock.get('per', 0):.1f} | PBR {stock.get('pbr', 0):.2f} | 배당 {stock.ge
 {cm_block}
 {macro_block}
 
-[배리티 브레인] {brain.get('brain_score', '?')}점 | {brain.get('grade_label', '?')} ({brain.get('grade', '?')})
+[알파브레인] {brain.get('brain_score', '?')}점 | {brain.get('grade_label', '?')} ({brain.get('grade', '?')})
 팩트 {brain.get('fact_score', {}).get('score', '?')} | 심리 {brain.get('sentiment_score', {}).get('score', '?')}
 VCI: {vci.get('vci', '?'):+d} — {vci.get('label', '')}
 {rf_lines}근거: {brain.get('reasoning', '')}

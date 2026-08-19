@@ -76,7 +76,7 @@ def _compute_graham_score(stock: Dict[str, Any]) -> float:
         elif pb_pe > 50:
             score -= 8
 
-    # ── Lynch PEG 보정 (배리티 브레인 투자 바이블 ④, Perplexity 권고) ──
+    # ── Lynch PEG 보정 (알파브레인 투자 바이블 ④, Perplexity 권고) ──
     # PEG = PER ÷ EPS 성장률. Lynch: PEG < 1 매력적, PEG > 2 위험.
     # 데이터 소스 우선순위:
     #   1) consensus.eps_growth_yoy_pct       — 가장 정확

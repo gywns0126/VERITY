@@ -3,7 +3,7 @@ DART KR Fundamental Backfill — 한국 종목 펀더멘털 historical IC 측정
 
 목적
 ----
-VERITY Brain 의 한국 종목 검증 사각지대 해소.
+알파브레인 의 한국 종목 검증 사각지대 해소.
 - US 종목: yfinance + backfill_replay 로 IC 측정 완료
 - KR 종목: 기존 검증 0% → DART 공시 데이터로 historical 펀더멘털 재구성
 
