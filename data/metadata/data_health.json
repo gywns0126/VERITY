@@ -1,23 +1,24 @@
 {
  "_meta": {
-  "generated_at": "2026-08-20T07:19:55.361984+09:00",
+  "generated_at": "2026-08-20T08:18:50.220215+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "amber",
+ "status": "red",
  "reasons": [
+  "P0 stale 1건",
   "커버리지 회귀 경고 3건",
   "비P0 stale 1건",
-  "CDN age 56682s > 120s(스테일 서빙)"
+  "CDN age 60217s > 120s(스테일 서빙)"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-20T07:19:55.309658+09:00",
+  "generated_at": "2026-08-20T08:18:50.168612+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 56682,
+  "max_cdn_age_s": 60217,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -27,7 +28,7 @@
      "PBR": 80.2
     },
     "total": 1790,
-    "cdn_age_s": 46284,
+    "cdn_age_s": 49819,
     "error": null
    },
    {
@@ -38,7 +39,7 @@
      "PBR": 73.5
     },
     "total": 5069,
-    "cdn_age_s": 35086,
+    "cdn_age_s": 38621,
     "error": null
    },
    {
@@ -49,7 +50,7 @@
      "PBR": 73.5
     },
     "total": 3924,
-    "cdn_age_s": 56682,
+    "cdn_age_s": 60217,
     "error": null
    },
    {
@@ -77,15 +78,15 @@
   "last_run_warns": 3
  },
  "freshness": {
-  "generated_at": "2026-08-20T07:19:52.451775+09:00",
+  "generated_at": "2026-08-20T08:18:47.399136+09:00",
   "summary": {
-   "fresh": 57,
-   "stale": 1,
+   "fresh": 56,
+   "stale": 2,
    "closed": 2,
    "discontinued": 2,
    "p0": {
     "total": 6,
-    "fresh": 4,
+    "fresh": 3,
     "closed": 2,
     "active": 4
    },
@@ -102,7 +103,13 @@
     "active": 35
    }
   },
-  "stale_p0": [],
+  "stale_p0": [
+   {
+    "id": "crypto",
+    "label": "크립토 시세·파생",
+    "age_min": 105.3
+   }
+  ],
   "stale_other": [
    "securities_lending"
   ]
