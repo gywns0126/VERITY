@@ -108,6 +108,20 @@ _PIPELINE_WINDOW_DAYS = 400
 #   DOE ARDP 예산기간 연장 · 영국 GDA 신청.
 # 🚨 위험문구(forward-looking statements)에도 같은 단어가 나온다. 그 구간을 먼저 잘라낸다 —
 #   안 자르면 전 종목이 상시 검출된다(실측 XE 2026-05-19 이 이 형태였다).
+# ── 정책자금·전력계약 (2026-08-19 신설) ──────────────────────────────────────
+# 🚨 항목코드를 1.01/8.01 로 좁히면 못 잡는다 — 실측 대부분이 **2.02(실적 발표)** 다.
+#   실적 보도자료(EX-99.1)에 분기 사업 마일스톤이 함께 실리기 때문이다.
+#   VST PPA 4건 중 3건이 2.02 · XE DOE 2건 전부 2.02 · XE 규제 6건도 2.02/7.01.
+# 🚨 PPA 는 원자로 **개발사**에서 안 나온다(XE·OKLO·SMR·LEU·CCJ·BWXT·UEC 전부 0건).
+#   PPA 를 맺는 쪽은 발전사업자다(VST 4건). 개발사의 0건은 결손이 아니라 사실이다 —
+#   축을 만들되 "0건 = 미공시" 로 읽어야지 "수집 실패" 로 읽으면 안 된다.
+_DOE_PAT = re.compile(
+    r"\b(ARDP|Advanced Reactor Demonstration Program|Department of Energy|"
+    r"cost[- ]share|budget period|loan guarantee|DOE award)\b")
+_PPA_PAT = re.compile(
+    r"\b(power purchase agreement|offtake agreement|electricity supply agreement|"
+    r"capacity agreement|energy supply agreement)\b", re.I)
+
 _REG_MILESTONE_PAT = re.compile(
     r"\b(NRC|Nuclear Regulatory Commission|construction permit|combined license|"
     r"early site permit|design certification|Finding of No Significant Impact|FONSI|"
@@ -717,8 +731,14 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
         body = txt[:fls.start()] if fls else txt
         # 🚨 한 공시에 마일스톤이 여러 건이다 — search() 로 첫 건만 보면 나머지가 사라진다.
         #   실측 XE 2026-06-04 은 GDA·NRC·FONSI·Part 70 등 6개 매치를 담고 있었다.
+        # 🚨 루프를 축마다 따로 두지 않는다 — 같은 문서를 4번 훑게 되고 한 문장이 여러 축에
+        #   중복 출현한다. **한 번 순회하며 분류**한다.
         seen_frag: set = set()
-        for m in _REG_MILESTONE_PAT.finditer(body):
+        _AXES = (("규제 마일스톤(인허가 공시)", _REG_MILESTONE_PAT),
+                 ("정책자금(DOE·보조금)", _DOE_PAT),
+                 ("전력계약(PPA·오프테이크)", _PPA_PAT))
+        for _axis, _pat in _AXES:
+          for m in _pat.finditer(body):
             # 🚨 경계를 마침표로만 잡으면 틀린다 — 보도자료는 "•" 불릿 나열이라 앞 항목까지
             #    끌려온다(실측 XE 06-04 이 IPO 문장에서 잘렸다). 불릿·줄바꿈도 경계로 본다.
             _B = "•\n\r"
@@ -729,16 +749,23 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
             frag = re.sub(r"\s+", " ", body[s0:s1].strip())[:170]
             # 🚨 임원 이력·리스크 열거 오탐 차단 — 인물 경력에 "NRC 근무" 가 흔하다
             #    (실측 OKLO 2026-07-28 이사 선임 공시). 마일스톤 동사가 없으면 버린다.
+            # 🚨 동사 목록을 규제 축 기준으로만 짜면 다른 축이 통째로 걸러진다.
+            #   실측: VST PPA 3건이 전부 "Announced a 20-year power purchase agreement"
+            #   인데 announced/signed/entered into 가 없어 0건이 됐다.
+            #   축을 늘릴 때 이 목록도 같이 넓혀야 한다 — 안 그러면 조용히 0건이다.
             if not re.search(r"\b(received|submitted|approved|issued|granted|completed|"
-                             r"accepted|docketed|awarded|published)\b", frag, re.I):
+                             r"accepted|docketed|awarded|published|announced|signed|"
+                             r"executed|entered into|secured|obtained|selected)\b",
+                             frag, re.I):
                 continue
-            if frag[:60] in seen_frag:      # 같은 문장이 여러 키워드로 중복 매치된다
+            if frag[:60] in seen_frag:      # 같은 문장이 여러 키워드·여러 축에 중복 매치된다
                 continue
             seen_frag.add(frag[:60])
-            out.setdefault("규제 마일스톤(인허가 공시)", []).append(
-                f"{r['filingDate']} · {frag}")
-    if "규제 마일스톤(인허가 공시)" in out:
-        out["규제 마일스톤(인허가 공시)"] = out["규제 마일스톤(인허가 공시)"][:6]
+            out.setdefault(_axis, []).append(f"{r['filingDate']} · {frag}")
+    for _axis in ("규제 마일스톤(인허가 공시)", "정책자금(DOE·보조금)",
+                  "전력계약(PPA·오프테이크)"):
+        if _axis in out:
+            out[_axis] = out[_axis][:6]
 
     # ── going concern ──
     latest_fin = next((r for r in sorted(rows, key=lambda r: r["filingDate"], reverse=True)
