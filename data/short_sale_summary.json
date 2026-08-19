@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-19T08:18:25+09:00",
+ "as_of": "2026-08-19T18:07:37+09:00",
  "version": "short_sale_trail_v0",
  "n_observations": 4696,
  "window_start": null,
@@ -10,8 +10,8 @@
  },
  "KR": {
   "auto_avoid": {
-   "n_observations": 84,
-   "n_tickers": 15,
+   "n_observations": 81,
+   "n_tickers": 14,
    "fwd_20d": {
     "n_tickers": 9,
     "n_observations": 35,
@@ -30,14 +30,14 @@
    }
   },
   "downgrade": {
-   "n_observations": 268,
+   "n_observations": 263,
    "n_tickers": 28,
    "fwd_20d": {
-    "n_tickers": 20,
-    "n_observations": 156,
-    "mean": -3.33,
-    "median": -4.65,
-    "mean_by_observation": 1.03,
+    "n_tickers": 21,
+    "n_observations": 168,
+    "mean": -2.59,
+    "median": -4.35,
+    "mean_by_observation": 1.57,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    },
    "fwd_60d": {
@@ -50,14 +50,14 @@
    }
   },
   "clean": {
-   "n_observations": 336,
+   "n_observations": 324,
    "n_tickers": 40,
    "fwd_20d": {
     "n_tickers": 23,
-    "n_observations": 113,
-    "mean": -5.43,
-    "median": -9.04,
-    "mean_by_observation": -4.09,
+    "n_observations": 121,
+    "mean": -4.27,
+    "median": -6.92,
+    "mean_by_observation": -2.81,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    },
    "fwd_60d": {
@@ -70,8 +70,8 @@
    }
   },
   "missing": {
-   "n_observations": 1219,
-   "n_tickers": 97,
+   "n_observations": 1239,
+   "n_tickers": 100,
    "fwd_20d": {
     "n_tickers": 84,
     "n_observations": 1166,
@@ -81,11 +81,11 @@
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    },
    "fwd_60d": {
-    "n_tickers": 68,
-    "n_observations": 970,
-    "mean": -4.65,
-    "median": -7.32,
-    "mean_by_observation": -0.84,
+    "n_tickers": 69,
+    "n_observations": 980,
+    "mean": -4.96,
+    "median": -8.52,
+    "mean_by_observation": -0.93,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    }
   }
@@ -174,9 +174,9 @@
  },
  "labels": [
   "통계 무의미 — auto_avoid 고유 종목 N=9 < 20 (관측 35건이지만 같은 종목 반복. 등록 §6 게이트)",
-  "[관측] auto_avoid -1.47% > clean -5.43% (종목 N=9) — 방향은 규칙과 반대지만 표본 미달로 판정 보류. N≥20 까지 조정 금지",
+  "[관측] auto_avoid -1.47% > clean -4.27% (종목 N=9) — 방향은 규칙과 반대지만 표본 미달로 판정 보류. N≥20 까지 조정 금지",
   "US 지표 결측 1031건 — clean 과 분리 집계됨(무혐의 통과 아님)",
-  "KR 지표 결측 1219건 — 수집 이전 기간 포함. clean 과 분리 집계"
+  "KR 지표 결측 1239건 — 수집 이전 기간 포함. clean 과 분리 집계"
  ],
  "brain_input": false,
  "note": "공매도 규칙 사후 수익률 관측 — 임계·강도 재판단의 판정 근거. 점수·집행 입력 0. KR=거래량 비중(흐름) / US=숏인터레스트(포지션) 로 측정 대상이 다르므로 시장 간 수치를 비교하지 말 것. 수익률은 KR 전용(US 일봉 레이크 미도달)."

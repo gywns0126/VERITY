@@ -1,24 +1,23 @@
 {
- "as_of": "2026-08-19T08:18:31+09:00",
+ "as_of": "2026-08-19T18:07:43+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
   "ledger_integrity",
+  "key_coverage",
   "guard_inputs",
   "exit_paths",
   "as_of_staleness"
  ],
  "known_unresolved": [
-  "key_coverage",
   "rule_discrimination",
-  "flag_coverage",
-  "input_constancy"
+  "flag_coverage"
  ],
  "skipped": [],
  "checks": {
   "ledger_integrity": {
    "ok": false,
-   "episodes": 24,
+   "episodes": 26,
    "phantom_sells": 59,
    "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
@@ -42,9 +41,29 @@
      ]
     },
     {
+     "key": "kis_credit_balance",
+     "modules": [
+      "red_flags.py"
+     ]
+    },
+    {
+     "key": "kis_financial_ratio",
+     "modules": [
+      "graham.py",
+      "moat.py",
+      "red_flags.py"
+     ]
+    },
+    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
+     ]
+    },
+    {
+     "key": "kis_short_sale",
+     "modules": [
+      "red_flags.py"
      ]
     },
     {
@@ -91,15 +110,12 @@
     }
    ],
    "thin_keys": [],
-   "detail": "레코드에 한 번도 없는 키 10종 — 해당 채점 축이 조용히 죽어 있다",
-   "baseline": {
-    "dead_keys": 10
-   },
-   "status": "KNOWN"
+   "detail": "레코드에 한 번도 없는 키 13종 — 해당 채점 축이 조용히 죽어 있다",
+   "status": "REGRESSION"
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 12,
+   "holdings_checked": 10,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -198,47 +214,30 @@
    "status": "KNOWN"
   },
   "input_constancy": {
-   "ok": false,
+   "ok": true,
    "inputs_checked": 9,
-   "varying": 5,
-   "constant_inputs": [
-    {
-     "input": "kis_credit_balance.credit_rate",
-     "n_present": 20,
-     "constant_value": 0.0,
-     "severity": "high"
-    },
-    {
-     "input": "kis_financial_ratio.current_ratio",
-     "n_present": 20,
-     "constant_value": 0.0,
-     "severity": "high"
-    }
-   ],
-   "detail": "전 종목 동일값 입력 2종 — kis_credit_balance.credit_rate=0.0, kis_financial_ratio.current_ratio=0.0. 측정이 아니라 상위 공백 의심(규칙이 영원히 발동 못 한다).",
-   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다.",
-   "baseline": {
-    "constant_inputs": 2
-   },
-   "status": "KNOWN"
+   "varying": 2,
+   "constant_inputs": [],
+   "detail": "입력 값 분산 정상",
+   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다."
   },
   "guard_inputs": {
    "ok": false,
-   "holdings_checked": 12,
+   "holdings_checked": 10,
    "coverage": {
     "sector": {
-     "filled": 12,
-     "total": 12,
+     "filled": 10,
+     "total": 10,
      "guard": "섹터 35% 상한"
     },
     "beta": {
      "filled": 0,
-     "total": 12,
+     "total": 10,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 12,
-     "total": 12,
+     "filled": 10,
+     "total": 10,
      "guard": "팩터 쏠림 차단"
     }
    },
@@ -252,31 +251,19 @@
      "field": "beta",
      "guard": "포트폴리오 베타 1.5 상한",
      "filled": 0,
-     "total": 12
+     "total": 10
     }
    ],
    "detail": "입력 전무한 가드 1종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta)"
   },
   "exit_paths": {
    "ok": false,
-   "holdings_checked": 12,
+   "holdings_checked": 10,
    "no_profit_exit": [
     {
      "name": "파마리서치",
      "qty": 1.0,
-     "return_pct": 21.86,
-     "past_target_2": false
-    },
-    {
-     "name": "HD한국조선해양",
-     "qty": 1.0,
-     "return_pct": 1.77,
-     "past_target_2": false
-    },
-    {
-     "name": "Alphabet",
-     "qty": 1.0,
-     "return_pct": 0.55,
+     "return_pct": 21.24,
      "past_target_2": false
     }
    ],
@@ -314,22 +301,6 @@
      }
     },
     {
-     "name": "HD한국조선해양",
-     "qty": 1.0,
-     "splittable": {
-      "target_1": 0,
-      "target_2": 0
-     }
-    },
-    {
-     "name": "Alphabet",
-     "qty": 1.0,
-     "splittable": {
-      "target_1": 0,
-      "target_2": 0
-     }
-    },
-    {
      "name": "ALB",
      "qty": 2.0,
      "splittable": {
@@ -338,7 +309,7 @@
      }
     }
    ],
-   "detail": "이익 확정 경로 0인 보유 3건 — 출구가 손절뿐이다 (사다리 불능 7건 별도)",
+   "detail": "이익 확정 경로 0인 보유 1건 — 출구가 손절뿐이다 (사다리 불능 5건 별도)",
    "status": "REGRESSION"
   },
   "as_of_staleness": {
