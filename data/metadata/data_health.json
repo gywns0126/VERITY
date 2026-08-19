@@ -1,21 +1,22 @@
 {
  "_meta": {
-  "generated_at": "2026-08-19T17:30:47.632876+09:00",
+  "generated_at": "2026-08-19T18:28:33.010564+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "amber",
+ "status": "red",
  "reasons": [
-  "CDN age 76179s > 120s(스테일 서빙)"
+  "P0 stale 1건",
+  "CDN age 79643s > 120s(스테일 서빙)"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-19T17:30:47.579882+09:00",
+  "generated_at": "2026-08-19T18:28:32.959147+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 76179,
+  "max_cdn_age_s": 79643,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -25,7 +26,7 @@
      "PBR": 80.2
     },
     "total": 1790,
-    "cdn_age_s": 22442,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -36,7 +37,7 @@
      "PBR": 83.0
     },
     "total": 4488,
-    "cdn_age_s": 76179,
+    "cdn_age_s": 79643,
     "error": null
    },
    {
@@ -47,7 +48,7 @@
      "PBR": 73.5
     },
     "total": 3924,
-    "cdn_age_s": 6935,
+    "cdn_age_s": 10400,
     "error": null
    },
    {
@@ -61,7 +62,7 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-08-19T08:16:22.401288+09:00",
+  "generated_at": "2026-08-19T18:05:33.557385+09:00",
   "kr_total": 1790,
   "us_total": 4488,
   "core_fill_pct": {
@@ -75,15 +76,15 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-08-19T17:30:44.934536+09:00",
+  "generated_at": "2026-08-19T18:28:26.177680+09:00",
   "summary": {
-   "fresh": 58,
-   "stale": 0,
+   "fresh": 57,
+   "stale": 1,
    "closed": 2,
    "discontinued": 2,
    "p0": {
     "total": 6,
-    "fresh": 4,
+    "fresh": 3,
     "closed": 2,
     "active": 4
    },
@@ -100,7 +101,13 @@
     "active": 35
    }
   },
-  "stale_p0": [],
+  "stale_p0": [
+   {
+    "id": "crypto",
+    "label": "크립토 시세·파생",
+    "age_min": 115.3
+   }
+  ],
   "stale_other": []
  }
 }
