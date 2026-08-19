@@ -1095,15 +1095,45 @@ _YIELD_PCT_WINDOW = 252          # 스냅샷 개수 상한. 파일이 적으면 
 _YIELD_PCT_MIN_SAMPLE = 60       # 미만이면 None(판정 보류) — 조용한 0 페널티 방지
 
 
+# 2026-08-06 — 상한 0.075 → 0.10 (PM 승인 안 (가), PREREG_CAPE_BUBBLE_CAP_2026_08_06).
+# 🚨 2026-08-19 모듈 상수로 승격 — 종전엔 함수 지역 변수라 포화 신고 쪽에서 리터럴을
+#   다시 써야 했다. 값 변경 없음(0.10 그대로), 두 곳이 갈리는 것만 막는다.
+_CAPE_MAX_PENALTY = 0.10
+
+# 🚨 페널티가 상한(_CAPE_MAX_PENALTY)에 닿는 백분위. 산식 (pct−90)/10×0.15 의 역산이며
+#   **테이블 상단(99)이 아니다**. 2026-08-19 실측 정정 — 종전엔 포화 판정을 99 기준으로 해서
+#   96.7~99 구간(= CAPE 36.50~40.0)의 포화를 통째로 놓쳤다.
+_CAPE_SATURATION_PCT = 90.0 + _CAPE_MAX_PENALTY / 0.15 * 10.0     # = 96.67
+
+
 def _cape_pct_meta(cape_pct: Optional[float]) -> Dict[str, Any]:
-    """CAPE 백분위 사양 + 포화 여부. market_horizon 은 지연 import(순환 회피)."""
+    """CAPE 백분위 사양 + **포화 자기신고**. market_horizon 은 지연 import(순환 회피).
+
+    A1 정명(PREREG_CAPE_AXIS_DISPOSITION_2026_08_19, PM 승인 2026-08-19):
+    이 축은 **거시 '신호' 가 아니라 밸류에이션 노출 정책**이다. 포화 구간에서는
+    CAPE 가 얼마든 같은 값을 내므로 신호로 읽으면 안 된다. 그 사실을 산출물이 신고한다.
+    🚨 정명은 축을 **고치지 않는다** — 값은 불변이고 이름과 상태가 드러날 뿐이다.
+    """
     try:
         from api.intelligence.market_horizon import _CAPE_TABLE_SPEC
         spec = dict(_CAPE_TABLE_SPEC)
     except Exception:  # noqa: BLE001 — 사양 신고 실패가 사이징을 죽이지 않는다
         return {"unavailable": True}
     spec["percentile_used"] = cape_pct
-    spec["saturated"] = bool(cape_pct is not None and cape_pct >= spec.get("table_max_percentile", 99))
+    spec["saturation_percentile"] = round(_CAPE_SATURATION_PCT, 2)
+    saturated = bool(cape_pct is not None and cape_pct >= _CAPE_SATURATION_PCT)
+    spec["saturated"] = saturated
+    spec["axis_role"] = "valuation_exposure_policy"      # ← A1 정명. "signal" 이 아니다
+    spec["role_note"] = (
+        "밸류에이션 노출 정책(신호 아님). 포화 시 CAPE 변동에 반응하지 않는다 — "
+        "PREREG_CAPE_AXIS_DISPOSITION_2026_08_19 A1"
+    )
+    if saturated:
+        spec["saturation_note"] = (
+            f"백분위 {cape_pct} ≥ {_CAPE_SATURATION_PCT:.2f} — 페널티가 상한 "
+            f"{_CAPE_MAX_PENALTY} 에 고정. CAPE 가 더 오르거나 내려도 이 값은 변하지 않는다"
+            " (실측: 155년 중 3.2% 구간 · 2025-07 이후 연속 포화)"
+        )
     return spec
 
 
@@ -1207,12 +1237,11 @@ def _compute_macro_multiplier(stock: Dict[str, Any],
         if usdkrw >= 1450:
             currency_penalty = max(0.0, min(0.075, (usdkrw - 1450) / 300 * 0.075))
 
-    # 2026-08-06 — 상한 0.075 → 0.10 (PM 승인 안 (가), PREREG_CAPE_BUBBLE_CAP_2026_08_06).
     # 등급 차단(max_grade WATCH)이 하던 방어를 이 단일 경로가 흡수한다. 헌법
     # cape_bubble_mode.action "포지션 대폭 축소" 원문과 구현이 이제 일치한다.
     # 기울기는 유지 — 90 퍼센타일 시작, 백분위 1당 1.5%p. 상한만 이동해 96.7pct 에서 포화.
     # 총 페널티 cap 0.30 은 불변이므로 다른 축이 밀리는 만큼만 실제로 반영된다.
-    _CAPE_MAX_PENALTY = 0.10
+    # 🚨 상한 상수는 모듈 스코프로 승격됨(_CAPE_MAX_PENALTY) — 포화 신고와 동일 출처.
     cape_pct = _safe_float(horizon.get("cape_percentile"), 50.0) or 50.0
     cape_penalty = 0.0
     if cape_pct >= 90:

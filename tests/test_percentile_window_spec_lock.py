@@ -98,3 +98,67 @@ def test_multiplier_meta_carries_percentile_spec():
     assert '"percentile_spec"' in src, "macro_multiplier meta 에서 창 사양 신고가 사라졌다"
     assert "yield_percentile_spec()" in src
     assert "_cape_pct_meta(" in src
+
+
+# ── A1 정명 (PREREG_CAPE_AXIS_DISPOSITION_2026_08_19, PM 승인 2026-08-19) ──────
+
+
+def test_cape_axis_declares_itself_as_policy_not_signal():
+    """🚨 A1 정명의 핵심 — 이 축은 '거시 신호' 가 아니라 **노출 정책**이다.
+
+    14개월째 상수인 축이 '신호' 라는 이름을 달고 있던 게 문제였다(성과 문제가 아니다 —
+    H3 대로 승수는 Sharpe·Calmar 중립). 이름과 실제를 맞추는 것이 A1 이다.
+    """
+    from api.intelligence.verity_brain import _cape_pct_meta
+
+    m = _cape_pct_meta(99.0)
+    assert m["axis_role"] == "valuation_exposure_policy", "정명이 되돌아갔다"
+    assert "신호 아님" in m["role_note"]
+
+
+def test_cape_saturation_uses_penalty_cap_not_table_top():
+    """🚨 2026-08-19 실측 정정 — 포화 시작은 테이블 상단(99)이 아니라 **96.67** 이다.
+
+    종전 판정이 `pct >= 99` 였어서 96.7~99 구간(= CAPE 36.50~40.0)의 포화를 통째로
+    놓쳤다. 그 구간이 바로 지금(2025-07~ 14개월) 우리가 있는 곳이다.
+    """
+    from api.intelligence.verity_brain import (_CAPE_MAX_PENALTY,
+                                               _CAPE_SATURATION_PCT, _cape_pct_meta)
+
+    assert abs(_CAPE_SATURATION_PCT - 96.67) < 0.01, "포화 임계가 바뀌었다"
+    # 산식 역산과 일치해야 한다 — 상한을 바꾸면 임계도 따라와야 한다
+    assert abs(_CAPE_SATURATION_PCT - (90.0 + _CAPE_MAX_PENALTY / 0.15 * 10.0)) < 1e-9
+
+    assert _cape_pct_meta(96.0)["saturated"] is False
+    assert _cape_pct_meta(97.0)["saturated"] is True      # 🚨 종전 로직은 여기를 놓쳤다
+    assert _cape_pct_meta(99.0)["saturated"] is True
+
+
+def test_cape_max_penalty_is_module_level_single_source():
+    """상한 리터럴이 두 곳에 갈리면 포화 신고와 실제 페널티가 어긋난다."""
+    import inspect
+
+    from api.intelligence import verity_brain as B
+    assert B._CAPE_MAX_PENALTY == 0.10
+    src = inspect.getsource(B)
+    # 함수 안에서 다시 정의하면 신고와 실제가 갈린다
+    assert "\n    _CAPE_MAX_PENALTY = " not in src, "지역 재정의가 되살아났다"
+
+
+def test_a1_changes_no_numbers():
+    """🚨 A1 은 **산식 변경 0** 이다. 페널티 값이 바뀌면 그건 A1 이 아니다.
+
+    정명이 축을 '고치는' 것으로 오해되지 않도록 값 불변을 계약으로 고정한다.
+    """
+    from api.intelligence.verity_brain import _CAPE_MAX_PENALTY
+
+    def pen(pct):
+        return 0.0 if pct < 90 else max(0.0, min(_CAPE_MAX_PENALTY, (pct - 90) / 10 * 0.15))
+
+    # 등록 전과 동일해야 하는 대표점
+    assert pen(89.9) == 0.0
+    assert abs(pen(93.0) - 0.045) < 1e-9
+    assert abs(pen(96.0) - 0.09) < 1e-9
+    assert pen(96.67) == _CAPE_MAX_PENALTY
+    assert pen(99.0) == _CAPE_MAX_PENALTY
+    assert pen(100.0) == _CAPE_MAX_PENALTY
