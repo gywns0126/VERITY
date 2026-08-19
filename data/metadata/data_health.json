@@ -1,23 +1,24 @@
 {
  "_meta": {
-  "generated_at": "2026-08-19T21:35:12.572291+09:00",
+  "generated_at": "2026-08-19T22:40:48.774576+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "red",
  "reasons": [
   "배달 검증 실패 1건",
+  "P0 stale 1건",
   "커버리지 회귀 경고 3건",
-  "CDN age 21596s > 120s(스테일 서빙)"
+  "CDN age 8377s > 120s(스테일 서빙)"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-19T21:35:12.509599+09:00",
+  "generated_at": "2026-08-19T22:40:48.720495+09:00",
   "ok": false,
   "failed": 1,
-  "max_cdn_age_s": 21596,
+  "max_cdn_age_s": 8377,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -27,7 +28,7 @@
      "PBR": 80.2
     },
     "total": 1790,
-    "cdn_age_s": 11195,
+    "cdn_age_s": 8377,
     "error": null
    },
    {
@@ -38,7 +39,7 @@
      "PBR": 73.5
     },
     "total": 5069,
-    "cdn_age_s": 0,
+    "cdn_age_s": 8374,
     "error": "커버리지 후퇴: disclosures 87.5%→81.7% · fin_series 92.5%→81.9% · calendar 32.5%→28.8% · peer 96.0%→85.0%"
    },
    {
@@ -49,7 +50,7 @@
      "PBR": 73.5
     },
     "total": 3924,
-    "cdn_age_s": 21596,
+    "cdn_age_s": 8370,
     "error": null
    },
    {
@@ -77,15 +78,15 @@
   "last_run_warns": 3
  },
  "freshness": {
-  "generated_at": "2026-08-19T21:35:03.929136+09:00",
+  "generated_at": "2026-08-19T22:40:43.110912+09:00",
   "summary": {
-   "fresh": 58,
-   "stale": 0,
+   "fresh": 57,
+   "stale": 1,
    "closed": 2,
    "discontinued": 2,
    "p0": {
     "total": 6,
-    "fresh": 4,
+    "fresh": 3,
     "closed": 2,
     "active": 4
    },
@@ -102,7 +103,13 @@
     "active": 35
    }
   },
-  "stale_p0": [],
+  "stale_p0": [
+   {
+    "id": "crypto",
+    "label": "크립토 시세·파생",
+    "age_min": 98.0
+   }
+  ],
   "stale_other": []
  }
 }
