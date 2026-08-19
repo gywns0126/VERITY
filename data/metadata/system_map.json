@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-08-19T20:22:32.815193+09:00",
+  "generated_at": "2026-08-19T20:51:17.699440+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 286076,
-    "python_modules": 884,
-    "tsx_components": 133,
+    "code_lines_tsx_py": 286128,
+    "python_modules": 888,
+    "tsx_components": 131,
     "json_data_files": 1770,
     "json_total_tracked": 1789,
     "workflows": 78,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 7571
+    "git_tracked_files": 7573
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 73,
+      "count": 74,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -83,6 +83,7 @@
         "scripts/dart_kr_backfill.py",
         "scripts/dart_kr_fin_backfill.py",
         "scripts/dart_quarterly_gap_backfill.py",
+        "scripts/dart_revenue_backfill.py",
         "scripts/hourly_pulse_send.py",
         "scripts/kr_sector_dart_fallback.py",
         "scripts/scout_penny.py",
@@ -700,9 +701,9 @@
     },
     "surface": {
       "label": "출력",
-      "count": 133,
+      "count": 131,
       "by_group": {
-        "framer-components/public-probe": 72,
+        "framer-components/public-probe": 70,
         "operator-web/app/components": 32,
         "admin": 15,
         "framer-components/crypto-public": 7,
@@ -731,9 +732,9 @@
     }
   },
   "python_by_dir": {
-    "api": 444,
-    "tests": 244,
-    "scripts": 124,
+    "api": 445,
+    "tests": 246,
+    "scripts": 125,
     "vercel-api": 59,
     "server": 7,
     ".github": 6
