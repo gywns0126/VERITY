@@ -214,12 +214,67 @@ def _check_private_docs_sync() -> tuple[str | None, str | None]:
     in_public = {l for l in pub.stdout.splitlines() if l}
     only_private = [p for p in dirty if p not in in_public]
     if only_private:
+        # 🚨 2026-08-19 — **방향을 본다.** 종전은 "미커밋" 만 보고 무조건 커밋을 지시했는데,
+        #   워킹트리가 HEAD 보다 **낡은** 경우가 있다. 그때 지시대로 커밋하면 롤백이다.
+        #   실측: data/us_analyst_consensus.json 워킹트리 generated_at 2026-08-17T08:10
+        #   (5,278종목) vs private HEAD 2026-08-19T08:12(5,274종목) — 이틀 치 역행.
+        #   private 전용 파일은 public 사본이 없어 **대조군이 없다** = 사람이 알아채기 어렵다.
+        #   그래서 게이트가 대신 방향을 판정한다.
+        stale = _older_than_head(gd, only_private)
+        if stale:
+            return (f"private 전용 파일 {len(stale)}건이 **HEAD 보다 낡았다** — 커밋하면 "
+                    f"롤백이다. 커밋 말고 원복할 것:\n  "
+                    + "\n  ".join(stale[:8])
+                    + "\n  git --git-dir=.git-private --work-tree=. checkout HEAD -- <경로>"), None
         return (f"private 전용 파일 {len(only_private)}건 미커밋 — public 에 사본이 없어 "
                 f"**이 디스크가 유일본**이다 (미커밋 총 {len(dirty)}건):\n  "
                 + "\n  ".join(only_private[:8])
                 + "\n  git --git-dir=.git-private --work-tree=. add -f <경로> && … commit && … push"), None
     return None, (f"private 미커밋 {len(dirty)}건 (전부 public 에도 있어 SoT 는 무사): "
                   + ", ".join(dirty[:5]))
+
+
+
+
+def _older_than_head(gd: str, paths: list) -> list:
+    """워킹트리 기준일 < HEAD 기준일인 JSON 만 골라낸다.
+
+    판정 근거 = 파일이 스스로 적어 둔 생성 시각(`_meta.generated_at` 등). 파일 mtime 은
+    쓰지 않는다 — 체크아웃·복사로 갱신돼 내용 신선도와 무관하다
+    (같은 함정이 CI 이름맵 30일 게이트를 영구 무력화했다).
+    시각을 못 읽으면 **판정하지 않는다**(빈 목록) — 모르는 것을 낡았다고 하지 않는다.
+    """
+    def _ts(blob: str):
+        try:
+            d = json.loads(blob)
+        except Exception:
+            return None
+        m = d.get("_meta") if isinstance(d, dict) else None
+        if not isinstance(m, dict):
+            return None
+        for k in ("generated_at", "collected_at", "as_of", "updated_at"):
+            v = m.get(k)
+            if isinstance(v, str) and len(v) >= 10:
+                return v
+        return None
+    out = []
+    for rel in paths:
+        if not rel.lower().endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(ROOT, rel), encoding="utf-8") as f:
+                cur = _ts(f.read())
+        except OSError:
+            continue
+        r = subprocess.run(["git", "--git-dir=" + gd, "--work-tree=" + ROOT,
+                            "show", "HEAD:" + rel],
+                           capture_output=True, text=True, timeout=20, cwd=ROOT)
+        if r.returncode != 0:
+            continue
+        head = _ts(r.stdout)
+        if cur and head and cur < head:
+            out.append(f"{rel} (디스크 {cur[:19]} < HEAD {head[:19]})")
+    return out
 
 
 CONFLICT_RE = re.compile(r"^(<{7} |={7}$|>{7} )", re.M)
