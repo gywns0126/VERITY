@@ -268,7 +268,12 @@ export default function PublicGlassboxTab(props: Props) {
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive) return
-                if (d && d.gate) {
+                // 🚨 2026-08-19 — 종전 조건은 `d && d.gate` 였다. 백엔드가 표본수 게이트
+                //   폐기 정합으로 `gate` 를 **null** 로 보내기 시작하자(§7-1) 이 조건이
+                //   항상 거짓이 되어, 데이터가 정상 도착했는데도 "검증 데이터를 불러오지
+                //   못했어요" 를 띄웠다. **로드 판정을 폐기된 필드에 걸어둔 것**이 결함이다.
+                //   이 컴포넌트가 실제로 렌더하는 것은 `signals` 이므로 그 기준으로 판정한다.
+                if (d && Array.isArray(d.signals)) {
                     setData(d)
                     try {
                         sessionStorage.setItem(
