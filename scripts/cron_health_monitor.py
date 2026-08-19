@@ -300,6 +300,25 @@ _SWEEP_KNOWN_DEGRADED = {
     "nps_employment.yml": "러너 IP 차단(월 16~25일 재시도 창)",
 }
 
+# 🚨 2026-08-19 신설 — **의도된 게이트 실패**. `exit 1` 을 고장이 아니라 **알림 채널**로
+#   쓰는 워크플로들이다. 감사가 P0 를 찾으면 exit 1 로 빨간불을 켜는 설계라서,
+#   `conclusion == failure` 를 그대로 "silent 실패" 로 보고하면 **정반대**가 된다 —
+#   조용하지 않았고 그게 신호였다.
+#
+#   실측 계기 (2026-08-19 cron health FAIL) — 셋 다 "감시목록 밖 silent 실패" 로 보고됐는데
+#   로그를 열어보니 전부 설계된 exit 1 이었다:
+#     · attribution_freshness_audit  "귀속·신선도 감사 P0 발견 — run 로그/summary 확인" exit 1
+#     · self_assets_weekly           cron_health=ALERT · vams_hit=WARN (yml 주석이 직접 명시)
+#     · site_audit                   "[site_audit] FAIL N건 — exit 1 (게이트 빨강)"
+#
+#   🚨 등급을 낮추되 **삼키지 않는다.** 문구를 "게이트 발동" 으로 바꿔 무엇을 보라고 지목한다.
+#   같은 형태의 오분류를 같은 날 `public_data` 알림에서도 고쳤다(비핵심 소스가 🔴 를 내던 것).
+_SWEEP_INTENTIONAL_GATE = {
+    "attribution_freshness_audit.yml": "귀속·신선도 감사 P0 발견 시 exit 1 (설계)",
+    "self_assets_weekly.yml": "자기 자산 정체 ALERT 시 exit 1 (설계 — trail 은 always() 로 커밋됨)",
+    "site_audit.yml": "사이트 감사 FAIL 시 exit 1 (게이트 빨강, 설계)",
+}
+
 # 연속 실패 임계 — 1~2회는 transient(러너 IP 추첨·게이트웨이 hiccup) 로 흡수하고,
 # 3연속부터는 "스스로 낫지 않는 고장" 으로 본다. 2026-06-17 tests.yml 5연속 21h 학습의 일반화.
 _SWEEP_PERSISTENT_STREAK = 3
@@ -418,8 +437,11 @@ def _sweep_severity_and_findings(
 
     CI allowlist(_SWEEP_CI_CRITICAL) 실패 = 실 코드 회귀 → FAIL 격상(🔴).
     3연속 이상 실패(_SWEEP_PERSISTENT_STREAK) = 스스로 낫지 않는 고장 → FAIL 격상(🔴).
-      단 아래 둘은 격상 제외:
+      단 아래 셋은 격상 제외:
         - _SWEEP_KNOWN_DEGRADED (원인 확정 + 조치가 시간 대기)
+        - 🚨 _SWEEP_INTENTIONAL_GATE (2026-08-19 신설) — `exit 1` 이 **고장이 아니라 신호**인 것.
+          감사가 P0 를 찾으면 빨간불을 켜는 설계라, 이걸 "silent 실패" 로 보고하면 정반대다.
+          조용하지 않았고 그게 신호였다. 등급은 🟡 로 내리되 **삼키지 않고** 무엇을 보라고 지목한다.
         - 🚨 **산출물이 신선한 경우** — 그 워크플로가 만드는 freshness 스트림이 전부 stale 아님.
 
     산출물 게이트가 필요한 이유(2026-08-09): run 실패는 건강의 대리 지표일 뿐이고,
@@ -453,6 +475,7 @@ def _sweep_severity_and_findings(
             int(wf.get("streak") or 0) >= _SWEEP_PERSISTENT_STREAK
             and wf["workflow"] not in _SWEEP_KNOWN_DEGRADED
             and wf["workflow"] not in _SWEEP_CI_CRITICAL  # CI 는 아래 has_ci 가 이미 격상
+            and wf["workflow"] not in _SWEEP_INTENTIONAL_GATE  # exit 1 이 신호인 것
             and _fresh_artifacts(wf) is None
         )
 
@@ -480,6 +503,12 @@ def _sweep_severity_and_findings(
             findings.append(
                 f"⚠ {wf['workflow']} {streak}연속 실패 ({age_txt}) — 산출물은 신선"
                 f"({'·'.join(_fresh_artifacts(wf) or [])}), 실행만 실패"
+            )
+        elif wf["workflow"] in _SWEEP_INTENTIONAL_GATE:
+            # 🚨 고장이 아니라 게이트 발동 — 삼키지 않고 "무엇을 보라" 로 바꾼다
+            findings.append(
+                f"🟡 {wf['workflow']} 게이트 발동 ({age_txt}{streak_txt}) "
+                f"— {_SWEEP_INTENTIONAL_GATE[wf['workflow']]}. run 로그에서 발견 내용 확인"
             )
         elif wf["workflow"] in _SWEEP_KNOWN_DEGRADED:
             findings.append(
@@ -967,8 +996,14 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         if _stale_p0:
             severity = "FAIL"
             findings.append(
+                # 🚨 2026-08-19 — 임계를 `:.0f` 로 찍어 **90분(1.5h)이 "2h" 로 반올림**됐다.
+                #   알림에 "crypto 1.9h>2h" 가 나갔는데 1.9>2 는 거짓이라 읽는 사람이
+                #   판정을 의심하게 된다. 판정은 정확했고 **표시만 거짓**이었다.
+                #   임계는 분 단위 원본을 그대로 쓰고, 시간 환산은 소수 1자리로 맞춘다.
                 "freshness P0 stale: " + ", ".join(
-                    f"{r['id']} {r.get('age_eff_min', 0) / 60:.1f}h>{(r.get('max_age_min') or 0) / 60:.0f}h"
+                    f"{r['id']} {r.get('age_eff_min', 0) / 60:.1f}h"
+                    f">{(r.get('max_age_min') or 0) / 60:.1f}h"
+                    f"({r.get('max_age_min') or 0:.0f}분)"
                     for r in _stale_p0
                 )
             )
