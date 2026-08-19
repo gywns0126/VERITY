@@ -138,15 +138,28 @@ PM 지시 2026-08-19 "고쳐. 내가 복붙할게". 파일 = `public-probe/` 아
 
 ---
 
-## ⏳ 지금 복붙 필요 — dark mode html-first fix (새로고침 '부분 라이트' 근본 fix)
+## 🟡 라이브 반영 여부 미확인 — dark mode html-first fix
 
-body-first `readBodyDark` → html-first 로 정정. body-first 는 Framer 정적 export 의 light body 에 단락돼 새로고침 시 라이트로 stuck. >60KB 라 MCP push 불가.
+🚨 **2026-08-19 정정 — repo 파일은 셋 다 이미 html-first 다.** PM 지적("파일 업데이트 안됐던데")으로
+실측했다. 세 파일 모두 `html[data-an-theme]` → `body[data-framer-theme]` → `verity_theme` 순서이고
+`body-first 금지 — 되돌리지 말 것` 가드 주석까지 들어 있다.
 
-| repo 파일 | 라이브 코드파일 (id) | 반영 내용 | 상태 |
-|---|---|---|---|
-| `public-probe/PublicStockReport.tsx` | PublicStockReport (`wQArrWb`, 400KB) | readBodyDark html-first (+ 이전 별 채움 픽스 포함) | ⏳ 복붙 |
-| `public-probe/PublicHoldingsTab.tsx` | PublicHoldingsTab (`S2WFHHW`, 191KB) | readBodyDark html-first | ⏳ 복붙 |
-| `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`, 27KB) | readBodyDark html-first | ⏳ 복붙 |
+즉 **이 항목은 "파일을 고쳐야 한다" 가 아니라 "라이브에 붙었는지 모른다" 였다.** 큐가
+7/23 이후 갱신되지 않아 ⏳ 로 남아 있었을 뿐이다.
+
+| repo 파일 | 라이브 코드파일 (id) | repo 상태 | 최종 수정 | 라이브 반영 |
+|---|---|---|---|---|
+| `public-probe/PublicStockReport.tsx` | PublicStockReport (`wQArrWb`, 400KB) | ✅ html-first 적용됨 | 08-09 | ❓ 미확인 |
+| `public-probe/PublicHoldingsTab.tsx` | PublicHoldingsTab (`S2WFHHW`, 191KB) | ✅ html-first + CSS 변수 | **08-19**(오늘 CDN 수정 포함) | ❓ 미확인 |
+| `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`, 27KB) | ✅ html-first 적용됨 | 07-23 | ❓ 미확인 |
+
+**판단 근거** — 새로고침 시 "부분 라이트" 가 **안 나오면** 라이브에 이미 반영된 것이다.
+나오면 그 파일만 붙이면 된다. 🚨 `PublicHoldingsTab` 은 오늘 CDN 우회 제거분이 들어갔으므로
+**어느 쪽이든 붙여야 한다**(이미 15파일 큐에서 붙였다면 완료).
+
+🚨 **교훈 — 큐 항목은 "파일 상태" 가 아니라 "라이브 반영 여부" 를 추적한다.**
+파일이 이미 고쳐졌는데 ⏳ 로 남아 있으면 다음 세션이 없는 일을 하려 든다.
+닫을 때 repo 상태와 라이브 상태를 **따로** 적는다.
 
 ## ✅ 라이브 이미 반영됨 (MCP push + byte-verify 완료 · 복붙 불요)
 
