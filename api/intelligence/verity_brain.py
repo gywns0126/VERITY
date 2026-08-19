@@ -1081,15 +1081,58 @@ _YIELD_MAX_PENALTY = 0.10   # 기존 penalty 축들과 동급(총합 cap 0.30 �
 _yield_hist_cache: Optional[List[float]] = None
 
 
+# ── 백분위 창 사양 (사전 고정, 2026-08-19 PM 승인) ─────────────────────────
+# 🚨 White(2000, Econometrica) "A Reality Check for Data Snooping" 기준 —
+#   룩백 창 길이는 **자유 파라미터**이고, 여러 창을 돌려보고 좋은 걸 고르면 그 자체가
+#   데이터 스누핑이다(Rossi&Inoue 2012 JBES 도 동일 경고). 그래서 값을 여기 **고정**하고
+#   근거를 함께 남긴다. 변경은 사전등록 + 사유 명시로만 — 성능 보고 고르는 건 금지.
+#
+# 🚨 실측 경고 (2026-08-19): 의도는 252 스냅샷(≈1년)이나 `data/history/` 실파일이
+#   118개(2026-04-05~)뿐이라 **실효 창이 약 4.5개월**이다. 그 창에서 10Y 범위가
+#   4.260~4.750%(폭 0.49%p) 라 백분위 99.2 는 "역사적 고금리" 가 아니라
+#   **"최근 4.5개월 중 최고"** 를 뜻한다. 이 사실을 산출물이 자기 신고한다(아래 meta).
+_YIELD_PCT_WINDOW = 252          # 스냅샷 개수 상한. 파일이 적으면 실효 창이 그만큼 짧다
+_YIELD_PCT_MIN_SAMPLE = 60       # 미만이면 None(판정 보류) — 조용한 0 페널티 방지
+
+
+def _cape_pct_meta(cape_pct: Optional[float]) -> Dict[str, Any]:
+    """CAPE 백분위 사양 + 포화 여부. market_horizon 은 지연 import(순환 회피)."""
+    try:
+        from api.intelligence.market_horizon import _CAPE_TABLE_SPEC
+        spec = dict(_CAPE_TABLE_SPEC)
+    except Exception:  # noqa: BLE001 — 사양 신고 실패가 사이징을 죽이지 않는다
+        return {"unavailable": True}
+    spec["percentile_used"] = cape_pct
+    spec["saturated"] = bool(cape_pct is not None and cape_pct >= spec.get("table_max_percentile", 99))
+    return spec
+
+
+def yield_percentile_spec() -> Dict[str, Any]:
+    """창 사양 자기 신고 — 산출물만 봐도 어떤 분포에서 나온 백분위인지 알 수 있게."""
+    hist = _yield_hist_cache if _yield_hist_cache is not None else []
+    return {
+        "method": "rolling_snapshot_percentile",
+        "window_requested": _YIELD_PCT_WINDOW,
+        "window_actual": len(hist),
+        "min_sample": _YIELD_PCT_MIN_SAMPLE,
+        "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
+        "note": ("창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. "
+                 "사전 고정 사양(White 2000) — 변경은 사전등록 필요"),
+    }
+
+
 def _yield_percentile(y10: Optional[float]) -> Optional[float]:
-    """현재 10년물이 최근 252 스냅샷 분포에서 몇 퍼센타일인가. 표본 <60 이면 None(판정 보류)."""
+    """현재 10년물이 최근 창 분포에서 몇 퍼센타일인가. 표본 부족이면 None(판정 보류).
+
+    창 사양은 `_YIELD_PCT_WINDOW` / `_YIELD_PCT_MIN_SAMPLE` 에 **사전 고정**돼 있다.
+    """
     global _yield_hist_cache
     if y10 is None:
         return None
     if _yield_hist_cache is None:
         vals: List[float] = []
         try:
-            for f in sorted(glob.glob(os.path.join(DATA_DIR, "history", "20??-??-??.json")))[-252:]:
+            for f in sorted(glob.glob(os.path.join(DATA_DIR, "history", "20??-??-??.json")))[-_YIELD_PCT_WINDOW:]:
                 try:
                     with open(f, encoding="utf-8") as fh:
                         _m = (json.load(fh).get("macro") or {})
@@ -1102,11 +1145,11 @@ def _yield_percentile(y10: Optional[float]) -> Optional[float]:
             vals = []
         _yield_hist_cache = vals
     hist = _yield_hist_cache
-    if len(hist) < 60:
+    if len(hist) < _YIELD_PCT_MIN_SAMPLE:
         # 🚨 조용한 실패 금지 — 2026-08-06 구현 중 실제로 import 누락으로 vals=[] 가 되어
         # 전 구간 페널티 0 이 됐다(에러 없이). 표본 부족은 stderr 로 드러낸다.
         import sys as _sys
-        print(f"[yield_pct] 표본 부족 N={len(hist)}<60 — 금리 페널티 미적용(판정 보류)",
+        print(f"[yield_pct] 표본 부족 N={len(hist)}<{_YIELD_PCT_MIN_SAMPLE} — 금리 페널티 미적용(판정 보류)",
               file=_sys.stderr)
         return None
     below = sum(1 for v in hist if v <= y10)
@@ -1203,6 +1246,14 @@ def _compute_macro_multiplier(stock: Dict[str, Any],
         "version": "v1_2026_08_06",
         "rule_reference": ("perplexity_caution_answers_2026_05_18.md B1+B2 + "
                            "PREREG_YIELD_SHIELD_REDESIGN_2026_08_06 (금리축 사이징 이전)"),
+        # 🚨 2026-08-19 (PM 승인) — 백분위 **창 사양을 산출물이 자기 신고**한다.
+        #   값(99.2)만 보면 그게 143년 분포의 99분위인지 4.5개월 창의 순위인지 알 수 없다.
+        #   그 구분이 없어서 "역사적 고금리" 로 오독될 수 있었다. White(2000) 사전 고정
+        #   요건도 사양이 드러나 있어야 충족된다. 신고 추가일 뿐 **임계·값 변경 0**.
+        "percentile_spec": {
+            "yield": yield_percentile_spec(),
+            "cape": _cape_pct_meta(cape_pct),
+        },
     }
     return multiplier, meta
 

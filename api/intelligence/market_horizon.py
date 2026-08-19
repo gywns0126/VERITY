@@ -50,10 +50,48 @@ def recession_prob_12m(spread_3m_10y: Optional[float]) -> Optional[float]:
 # ──────────────────────────────────────────────────────────────
 # monthly CAPE 분포 근사 (Shiller online dataset 기반).
 # V0 hardcoded; V1 에서 actual historical series 동적 계산.
+#
+# ── 창 사양 (사전 고정, 2026-08-19 PM 승인) ────────────────────────────────
+# 🚨 이 표는 **1881~2024 전 기간 정적 분포**다. 롤링 창이 아니라 고정 테이블이므로
+#   룩어헤드는 없으나, White(2000) 기준의 "사전 고정" 요건을 만족시키려면 사양이
+#   명시돼 있어야 한다. 여기 고정하고, 변경은 사전등록 + 사유 명시로만 한다.
+#
+# 🚨 실측 경고 (2026-08-19): 표 최상단이 (99, 40.0) 이라 **CAPE 가 40 을 넘으면
+#   값과 무관하게 항상 99** 를 반환한다. 현재 CAPE 42.06 → 99(포화).
+#   이것이 `cape_penalty` 가 상한에 붙는 직접 원인이다. V1(동적 계열) 미구현 상태.
+#   포화 여부는 `cape_percentile_meta()` 가 자기 신고한다 — 값만 보면 알 수 없다.
+_CAPE_TABLE_SPEC = {
+    "method": "static_table_linear_interp",
+    "source": "Shiller online dataset (monthly CAPE) 근사",
+    "coverage": "1881~2024",
+    "table_max_value": 40.0,      # 이 값을 넘는 입력은 전부 99 로 포화
+    "table_max_percentile": 99,
+    "dynamic_v1_implemented": False,
+    "note": "사전 고정 사양(White 2000) — 변경은 사전등록 필요",
+}
 _CAPE_PERCENTILE_TABLE: List[tuple] = [
     (5, 6.5), (10, 8.5), (25, 11.0), (50, 16.0),
     (75, 22.0), (85, 26.5), (90, 30.0), (95, 33.0), (99, 40.0),
 ]
+
+
+def cape_percentile_meta(cape: Optional[float]) -> Dict[str, Any]:
+    """CAPE 백분위의 **사양과 포화 여부**를 함께 신고한다.
+
+    🚨 `cape_percentile()` 반환값만 보면 99 가 "표 상단에 걸린 것" 인지
+    "실제로 99 분위" 인지 구분되지 않는다. 그 구분을 여기서 만든다.
+    """
+    saturated = bool(cape is not None and cape > _CAPE_TABLE_SPEC["table_max_value"])
+    return {
+        **_CAPE_TABLE_SPEC,
+        "input": cape,
+        "percentile": cape_percentile(cape),
+        "saturated": saturated,
+        "saturation_note": (
+            f"입력 {cape} > 표 최댓값 {_CAPE_TABLE_SPEC['table_max_value']} — "
+            "표 상단 포화라 값이 더 커져도 백분위는 변하지 않는다"
+        ) if saturated else None,
+    }
 
 
 def cape_percentile(cape: Optional[float]) -> Optional[int]:
