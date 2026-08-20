@@ -9,7 +9,10 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 종목 = prop ticker → 없으면 URL ?q → verity_last_ticker. 6자리=KR / 그 외=US 소스 분기.
  *   리포트 페이지 in-page 전환(replaceState) 추종 위해 ?q 폴링(1s)으로 종목 동기화.
  * 이름 = stock_report_public(KR)/us_stock_report_public(US)에서 ticker→name 매핑(있으면). 없어도 링크는 ticker로 동작.
- * 테마 = body[data-framer-theme] 자가 추종.
+ * 🚨 2026-08-21 테마 = 자체 내장 CSS 변수(--an-cr-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+ *   <style>{AN_PALETTE} 를 두 반환 분기 모두에 넣는다(조기 반환 누락 = 그 화면만 색 죽음).
+ *   SVG 는 stroke 프레젠테이션 attribute 대신 style 로 준다 — 거기서는 CSS 변수가 해석되지 않는다.
+ *   되돌리지 말 것.
  */
 
 interface Props {
@@ -47,6 +50,23 @@ const DARK = {
 }
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-cr-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+//   prefix `cr` = CompanyReports. 기존 사용 중 prefix(exh hld mb mbr mkt nws plc psm thn trv vcp)와 충돌 없음.
+const _ANP = "cr"
+const AN_PALETTE =
+    "body{" +
+    Object.keys(LIGHT)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k])
+        .join(";") +
+    "}" +
+    'body[data-framer-theme="dark"]{' +
+    Object.keys(DARK)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k])
+        .join(";") +
+    "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 function readTickerFromUrl(): string {
     if (typeof window === "undefined") return ""
@@ -109,49 +129,12 @@ function linksFor(tk: string): { label: string; src: string; url: string }[] {
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement
-        ? document.documentElement.dataset.anTheme
-        : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
-// 마운트/토글 재판독 SoT — verity_theme(localStorage) 우선 → html[data-an-theme] → body[data-framer-theme].
-// 791d29f7e 에서 8개 컴포넌트에 적용된 패턴(effect 가 body 만 읽어 init 을 라이트로 덮어쓰던 버그) — 이 파일이 누락되어 있었음.
-function readBodyDark(): boolean {
-    if (typeof document === "undefined") return false
-    try {
-        const pref =
-            typeof localStorage !== "undefined"
-                ? localStorage.getItem("verity_theme")
-                : null
-        if (pref === "dark") return true
-        if (pref === "light") return false
-        const h = document.documentElement
-            ? document.documentElement.dataset.anTheme
-            : null
-        if (h === "dark") return true
-        if (h === "light") return false
-        if (document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
-}
+// 🚨 2026-08-21 — JS 다크 감지 전면 제거. 종전에는 `__anHyd`/`anReadDark`/`readBodyDark` +
+//   MutationObserver 로 테마를 자바스크립트가 읽어 상태에 넣고, 색을 그 상태로 갈랐다.
+//   그 방식은 첫 페인트가 항상 라이트여서 페이지 이동마다 번쩍였고(그래서 __anHyd 같은
+//   회피 코드가 붙었다), 정적 HTML 에서는 아예 라이트로 굳었다.
+//   이제 색은 `body[data-framer-theme]` 에 걸린 **CSS 변수**가 정한다 — 자바스크립트가
+//   테마를 알 필요도, 리렌더할 필요도 없다. 되돌리지 말 것.
 
 export default function PublicCompanyReports(props: Props) {
     // ETF/ETN 선택 시 자기 숨김 — StockReport 가 body[data-verity-asset-kind] 신호 발행 (2026-07-10)
@@ -169,32 +152,10 @@ export default function PublicCompanyReports(props: Props) {
         })
         return () => obs.disconnect()
     }, [])
-    const { ticker, krUniverseUrl, usUniverseUrl, dark } = props
+    const { ticker, krUniverseUrl, usUniverseUrl } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-
-    const [themeDark, setThemeDark] = useState<boolean>(() =>
-        RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()
-    )
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (
-            typeof MutationObserver === "undefined" ||
-            typeof document === "undefined" ||
-            !document.body
-        )
-            return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, {
-            attributes: true,
-            attributeFilter: ["data-framer-theme"],
-        })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    const isDark = onCanvas ? !!dark : themeDark
-    const C = isDark ? DARK : LIGHT
+    // 🚨 테마 상태 없음 — 색은 모듈 최상단 `C`(= CSS 변수 참조)가 정한다.
+    //   `dark` prop 은 캔버스 잔존물이라 property control 라벨이 "Dark(미사용)" 이다.
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -292,6 +253,8 @@ export default function PublicCompanyReports(props: Props) {
     if (!tk) {
         return (
             <div ref={rootRef} style={wrap}>
+                {/* 🚨 이 분기에도 팔레트가 필요하다 — 조기 반환에서 빠지면 이 화면만 색이 죽는다 */}
+                <style>{AN_PALETTE}</style>
                 <div
                     style={{
                         ...card,
@@ -310,6 +273,7 @@ export default function PublicCompanyReports(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
             <div style={card}>
                 <div
                     style={{
@@ -406,12 +370,15 @@ export default function PublicCompanyReports(props: Props) {
                                 }}
                             >
                                 원문
+                                {/* 🚨 stroke 를 프레젠테이션 attribute 로 주면 안 된다 —
+                                    CSS 변수가 거기서는 해석되지 않아 선이 사라진다.
+                                    반드시 style 로 넘긴다(테마 codemod 3번 항목). */}
                                 <svg
                                     width="13"
                                     height="13"
                                     viewBox="0 0 24 24"
                                     fill="none"
-                                    stroke={C.vt}
+                                    style={{ stroke: C.vt }}
                                     strokeWidth="2.4"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
@@ -456,9 +423,11 @@ addPropertyControls(PublicCompanyReports, {
         title: "US Universe",
         defaultValue: DEF_US,
     },
+    // 🚨 CSS 변수 전환 후 이 토글은 색을 바꾸지 않는다(캔버스 잔존). 지우면 기존 인스턴스의
+    //   저장된 prop 이 깨지므로 라벨만 바꿔 남긴다.
     dark: {
         type: ControlType.Boolean,
-        title: "Dark",
+        title: "Dark(미사용)",
         defaultValue: false,
         enabledTitle: "On",
         disabledTitle: "Off",

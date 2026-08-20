@@ -4,7 +4,38 @@ MCP 로 라이브 반영이 위험한(>60KB, write-loss) 공개 컴포넌트. **
 
 > Claude 세션/에이전트는 Framer 공개 컴포넌트 작업 진입 시 **이 파일을 먼저 읽고** 중복/롤백 회피 (RULE 11).
 
-최종 갱신: 2026-08-19
+최종 갱신: 2026-08-21
+
+---
+
+## 🟡 대기 (2026-08-21) — 기업 리포트·자료 다크모드 CSS 전환
+
+PM 지시 "기업 리포트·자료 컴포넌트 css로 바꿔서 다크모드 연동".
+
+| repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
+|---|---|---|---|
+| `public-probe/PublicCompanyReports.tsx` | PublicCompanyReports (`qqqztxj`) | JS 다크 감지 제거 → CSS 변수 `--an-cr-*` 구동 | 🟡 **복붙 대기** |
+
+RULE 11 3-way 확인 완료 — 라이브 고유 마커 9종(`__anHyd`·`anReadDark`·`791d29f7e`·
+`verityAssetKind`·`verity_theme`·`data-an-theme`·네이버/EDGAR URL 3종)이 repo 미러에
+**전부 있고** repo 미러 = `origin/main`. 즉 **stale 미러로 라이브를 덮는 상황이 아니다.**
+
+바뀐 것: `__anHyd`/`anReadDark`/`readBodyDark` + 테마 MutationObserver 삭제 →
+모듈 최상단 `AN_PALETTE`(`body` / `body[data-framer-theme="dark"]`) + `C` = `var(--an-cr-*)`.
+`data-verity-asset-kind` 옵저버(ETF 숨김)는 **테마와 무관하므로 유지**했다.
+
+🚨 함정 2개를 미리 막았다:
+- `<style>{AN_PALETTE}</style>` 를 **반환 분기 2곳 모두**에 넣었다. 조기 반환(종목 미선택)에서
+  빠뜨리면 그 화면만 색이 죽는다.
+- SVG 화살표의 `stroke={C.vt}` → `style={{ stroke: C.vt }}`. 프레젠테이션 attribute 에서는
+  CSS 변수가 해석되지 않아 선이 사라진다.
+
+검증 = esbuild 통과 · JS 다크 감지 코드 0(주석만 잔존) · `C.<key>` 7종 전부 LIGHT/DARK 에 존재 ·
+LIGHT↔DARK 키 불일치 0 · `tests/test_tsx_syntax.py` 전수 통과.
+
+🚨 **아래 규율의 "dark 판정 = html-first `readBodyDark`" 는 아직 전환 안 된 컴포넌트용이다.**
+CSS 변수로 전환한 컴포넌트는 JS 가 테마를 읽지 않는 것이 정답이라, 이 항목은 위반이 아니다
+([[project_theme_branch_divergence_2026_07_31]] codemod 1~5).
 
 ---
 
