@@ -65,7 +65,8 @@ def test_tsx_gate_is_live_in_ci():
         pytest.skip("로컬 환경 — 이 계약은 CI 전용")
     assert _esbuild_ok(), (
         "CI 에 node_modules 가 없어 tsx 문법 게이트가 꺼진다. "
-        "`.github/workflows/tests.yml` 의 'Install node deps (esbuild)' 단계를 확인할 것")
+        "`.github/workflows/tests.yml` 의 'Install esbuild (tsx 문법 게이트용)' 단계를 확인할 것. "
+        "🚨 루트 package.json/lock 은 .gitignore 대상이라 `npm ci` 는 쓸 수 없다 — 직접 설치다")
 
 
 @pytest.mark.skipif(not _esbuild_ok(), reason="esbuild(node_modules) 부재 — 로컬/CI 환경 확인 필요")
