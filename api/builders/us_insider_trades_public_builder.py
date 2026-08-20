@@ -21,6 +21,7 @@ import json
 import os
 import sys
 import time
+import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -197,6 +198,111 @@ def _form4_issuer(xml_text: str) -> Tuple[str, str]:
             _txt(iss.find("issuerTradingSymbol")).strip().upper())
 
 
+# ── sell-to-cover / 10b5-1 판별 (2026-08-21) ──────────────────────────────
+# 🚨 **`_parse_form4` 의 P/S 합산 규칙은 건드리지 않는다.** 판정을 바꾸는 게 아니라
+#   사실을 더 싣는 것이므로 별도 순수 함수로 분리했다(시그니처 변경 0 = SPCX 수정분 보호).
+#
+# 외부 확인(퍼플렉시티 2026-08-21, PM 수신):
+#   · Form 4 에 sell-to-cover 전용 코드는 **없다** — 재량 매도와 둘 다 `S` 다.
+#   · 벤더 실무는 ① M+S 시간적 결합(기계적 1차 필터) ② 각주 텍스트(정밀) ③ 보유 순증(보조)
+#     **셋을 병행**한다. 단일 업계 표준은 없고, Bloomberg·FactSet 로직은 비공개(증거 불충분).
+#   · SEC 2024 가이던스도 "sell-to-cover transaction" 을 정의하고 10b5-1(c) 예외를 인정한다.
+#   → 그래서 **3신호 중 2개 이상 일치**를 채택 기준으로 하고, 어느 신호가 켜졌는지 신고한다.
+#
+# 🚨 **Cohen–Malloy–Pomorski(2012, JF) 의 routine/opportunistic 과 섞지 말 것.**
+#   그쪽은 거래 코드·사유를 전혀 안 보고 "과거 3년 연속 같은 캘린더월" 만 쓴다(롤링 3년 창).
+#   sell-to-cover 라도 매년 같은 달이면 routine 이 되고, 재량 매도라도 패턴 없으면
+#   opportunistic 이다. 한 필드에 합치면 둘 다 망가진다 — 도입한다면 **별 축·별 필드**.
+#
+# 🚨 **미커버 축 = 플랜 종료(termination).** 종료는 Form 4 가 아니라 다음 10-Q/10-K 로
+#   지연 공시돼 우리가 못 본다. 개정 후에도 종료 뒤 양(+)의 초과수익이 관측된다
+#   (Columbia Blue Sky 2025). 덮지 말고 결손으로 남긴다.
+_STC_PAT = re.compile(
+    r"sell[\s‐-―-]*to[\s‐-―-]*cover"
+    r"|to\s+cover\s+(?:the\s+)?(?:exercise\s+price|applicable\s+)?(?:tax|withholding)"
+    r"|(?:tax|withholding)\s+(?:withholding|taxes?|obligations?)"
+    r"|satisf(?:y|ying)\s+(?:the\s+)?(?:tax|withholding)",
+    re.I,
+)
+# "adopted on May 4, 2026" / "adopted May 4, 2026" / "adopted on 2026-05-04"
+_PLAN_DATE_PAT = re.compile(
+    r"adopted\s+(?:on\s+)?((?:\d{4}-\d{2}-\d{2})|(?:[A-Z][a-z]+\s+\d{1,2},\s+\d{4}))",
+    re.I,
+)
+
+
+def _daydiff(a: str, b: str) -> Optional[int]:
+    try:
+        return abs((datetime.fromisoformat(a) - datetime.fromisoformat(b)).days)
+    except (ValueError, TypeError):
+        return None
+
+
+def _form4_flags(xml_text: str) -> Dict[str, Any]:
+    """Form 4 부가 사실 — sell_to_cover(3신호 ≥2) · plan_10b51(체크박스).
+
+    판정(등급·순매수)에는 관여하지 않는다. 소비처가 `code S` 를 재량 매도로
+    오독하지 않도록 **사실을 병기**하는 것이 유일한 목적이다.
+    """
+    out: Dict[str, Any] = {}
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return out
+
+    # ── 10b5-1 체크박스 (2023-04-01 제출분부터 의무) ──
+    chk = _txt(root.find(".//aff10b5One"))
+    if chk:
+        out["plan_10b51"] = chk in ("1", "true")
+
+    foot = " ".join(
+        (e.text or "") for e in root.iter("footnote")
+    ) + " " + " ".join((e.text or "") for e in root.iter("footnoteId"))
+
+    if out.get("plan_10b51"):
+        m = _PLAN_DATE_PAT.search(foot)
+        if m:
+            out["plan_adopted"] = m.group(1)
+
+    # ── 3신호 ──
+    m_dates, s_dates = [], []
+    acq = dis = 0.0
+    for tx in root.iter("nonDerivativeTransaction"):
+        code = _txt(tx.find(".//transactionCode")).upper()
+        d = _txt(tx.find(".//transactionDate/value"))
+        sh = _float(_txt(tx.find(".//transactionShares/value")))
+        ad = _txt(tx.find(".//transactionAcquiredDisposedCode/value")).upper()
+        if ad == "A":
+            acq += sh
+        elif ad == "D":
+            dis += sh
+        if code == "M" and d:
+            m_dates.append(d)
+        elif code == "S" and d:
+            s_dates.append(d)
+
+    if not s_dates:
+        return out  # 매도가 없으면 판별 대상이 아니다
+
+    # ① M+S 결합 — S 가 M 과 같은날 또는 익영업일(주말 고려 ≤3일)
+    pairing = any(
+        (dd := _daydiff(s, m)) is not None and dd <= 3
+        for s in s_dates for m in m_dates
+    )
+    # ② 각주 텍스트
+    footnote_hit = bool(_STC_PAT.search(foot))
+    # ③ 보유 순증 — 행사 취득이 매도보다 크면 재량 매도가 아니다
+    net_increase = acq > dis
+
+    hits = [n for n, v in (("pairing", pairing), ("footnote", footnote_hit),
+                           ("net_increase", net_increase)) if v]
+    # 🚨 리스트가 아니라 문자열로 싣는다 — 조인 렌더(`ticker_facts._fmt_data`)가 리스트를
+    #   중첩 블록으로 접어 행이 흩어진다. 소비자는 split("+") 로 그대로 되돌릴 수 있다.
+    out["stc_signals"] = "+".join(hits) if hits else "none"
+    out["sell_to_cover"] = len(hits) >= 2
+    return out
+
+
 def _parse_form4(xml_text: str) -> Optional[Tuple[str, str, float, str, str]]:
     """form4.xml → (person, position, net_shares, code, last_date).
 
@@ -336,14 +442,19 @@ def main() -> int:
                     buy_n += 1
                 elif net < 0:
                     sell_n += 1
-                trades.append({
+                _t = {
                     "date": last_date or dates[i],
                     "person": person,
                     "position": position,
                     "change": int(net),            # +취득 / −처분 (주)
                     "code": code,                  # P=공개매수 / S=공개매도 / A·M·G 등
                     "source_url": SEC_INDEX.format(cik=int(cik), accn_nodash=accn_nodash, accn=accn),
-                })
+                }
+                # 🚨 `code S` 를 재량 매도로 오독하지 않게 하는 부가 사실. 판정 불변.
+                #    실측 2026-08-20 MRNA — CEO "급등 13일 전 499,246주 매도" 가 실제로는
+                #    8/10 만료 옵션 강제행사의 sell-to-cover 였고 보유는 순증 +252,469 였다.
+                _t.update(_form4_flags(xr.text))
+                trades.append(_t)
 
             if trades:
                 trades.sort(key=lambda t: t["date"], reverse=True)
