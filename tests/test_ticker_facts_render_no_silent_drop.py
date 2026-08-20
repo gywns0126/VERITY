@@ -98,14 +98,25 @@ def test_us_가격축이_실호출로_존재한다():
         #   🚨 그렇다고 skip 으로 뭉개면 경로가 진짜 죽어도 모른다 — 두 경우를 가른다:
         #     벤더가 안 닿음  → skip(사유 기록)   ·   닿는데 값이 없음 → 진짜 결함, fail
         #   판별은 `_us_quote` 와 **같은 URL·같은 헤더**로 한 번 더 때려서 한다.
+        #   🚨 2026-08-21 정정 — 위 2분기는 **틀렸다**. 상태가 셋이다:
+        #     ① 응답 없음        → 차단·네트워크 실패
+        #     ② 응답은 오는데 거절 → 야후가 200 으로 `chart.error`(Unauthorized 등)를 준다
+        #     ③ 응답도 데이터도 정상인데 파싱이 못 꺼냄 → **이것만 우리 결함**
+        #   응답의 **진위(truthiness)만** 보면 ②가 ③으로 둔갑한다. 실제로 그렇게 CI 를
+        #   한 번 더 빨갛게 만들었다 — 내가 방금 만든 가드가 같은 함정을 밟았다
+        #   ([[feedback_green_check_is_not_safety]] · 채워진 응답이 더 위험하다).
+        import pytest
         doc = tf._fetch_json(
             "https://query1.finance.yahoo.com/v8/finance/chart/QQQ?range=1mo&interval=1d",
             None, {"User-Agent": "Mozilla/5.0"},
         )
         if not doc:
-            import pytest
-            pytest.skip("야후가 이 러너에서 안 닿는다(러너 IP 차단 추정) — 경로 결함과 구분 불가")
-        raise AssertionError("US 시세 실호출 경로가 죽었다 — 벤더는 닿는데 값이 안 나온다")
+            pytest.skip("야후 응답 없음(러너 IP 차단 추정) — 경로 결함과 구분 불가")
+        chart = (doc or {}).get("chart") or {}
+        if chart.get("error") or not (chart.get("result") or []):
+            pytest.skip(f"야후가 데이터를 거부했다(벤더측) — chart.error={chart.get('error')!r}")
+        raise AssertionError(
+            "US 시세 실호출 경로가 죽었다 — 벤더가 result 를 줬는데 파싱이 값을 못 꺼낸다")
     assert q.get("현재가"), "현재가 축이 비었다"
     assert q.get("통화") == "USD" and q.get("_as_of")
     assert tf._us_quote("005930") is None, "KR 은 KIS·금융위 담당 — 이 경로를 타면 안 된다"
