@@ -18,6 +18,7 @@ esbuild 는 `node_modules` 에 이미 있다(0.28.1). 없으면 이 테스트는
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import shutil
 import subprocess
@@ -46,6 +47,25 @@ def _esbuild_ok() -> bool:
     if not (_ROOT / "node_modules").exists():
         return False
     return shutil.which("npx") is not None
+
+
+def test_tsx_gate_is_live_in_ci():
+    """🚨 CI 에서는 skip 을 허용하지 않는다.
+
+    2026-08-21 발견 — 이 게이트는 신설(8/19) 이래 **CI 에서 한 번도 돈 적이 없었다**.
+    러너에 `node_modules` 가 없어 매 run 이 `SKIPPED (esbuild 부재)` 였다. 사유를 남겼으니
+    조용한 실패는 아니지만, 실질은 로컬 전용이라 게이트를 만든 목적 자체를 못 채웠다
+    (목적 = 로컬에서만 보다가 깨진 컴포넌트를 라이브로 내보낸 사고의 재발 방지).
+
+    그래서 부재를 **CI 에서만 실패로 승격**한다. 로컬은 종전대로 graceful skip —
+    node 없이 파이썬만 돌리는 환경을 막을 이유가 없다.
+    아래 `test_all_tsx_parses` 의 skipif 는 그대로 두되, CI 에서는 이 계약이 먼저 깨진다.
+    """
+    if not os.environ.get("CI"):
+        pytest.skip("로컬 환경 — 이 계약은 CI 전용")
+    assert _esbuild_ok(), (
+        "CI 에 node_modules 가 없어 tsx 문법 게이트가 꺼진다. "
+        "`.github/workflows/tests.yml` 의 'Install node deps (esbuild)' 단계를 확인할 것")
 
 
 @pytest.mark.skipif(not _esbuild_ok(), reason="esbuild(node_modules) 부재 — 로컬/CI 환경 확인 필요")

@@ -40,6 +40,24 @@ jobs:
           pip install -r server/requirements.txt
           pip install pytest pytest-cov
 
+      # 🚨 2026-08-21 신설 — tsx 문법 게이트가 CI 에서 **한 번도 돈 적이 없었다**.
+      #   `tests/test_tsx_syntax.py` 는 `node_modules` 가 없으면 사유를 남기고 skip 하는데,
+      #   러너에는 node_modules 가 없어 매 run 이 `SKIPPED (esbuild(node_modules) 부재)` 였다.
+      #   조용한 통과는 아니었지만 실질은 **로컬 전용 게이트**였다 — 그 게이트를 만든 계기가
+      #   정확히 "로컬에서만 검사하다 깨진 컴포넌트가 라이브로 나간 것" 이라 앞뒤가 안 맞는다.
+      #   (2026-08-19 PublicGlassboxTab 문법 파손 — 회귀 2,431건 전부 통과한 채 라이브 에러)
+      #   esbuild 는 이미 package.json devDependencies 에 있다. 러너에 설치만 하면 게이트가 산다.
+      - name: Setup Node 24 (tsx 문법 게이트용)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install node deps (esbuild)
+        # `npm ci` = lockfile 고정 설치. package.json 과 어긋나면 **실패**하므로
+        # 의존성 드리프트도 여기서 잡힌다(로컬 `npm ci --dry-run` = up to date 확인).
+        run: npm ci
+
       - name: Syntax sanity (ast.parse on all .py)
         run: |
           python -c "
