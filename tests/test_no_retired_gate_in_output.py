@@ -110,3 +110,36 @@ def test_known_pending_surfaces_are_recorded():
     """
     assert len(KNOWN_PENDING) >= 3
     assert any("framer" in p for p in KNOWN_PENDING)
+
+
+# ── 2026-08-20 확장: 워크플로 주석 ─────────────────────────────────────────
+# 위 테스트는 "주석·docstring 에는 이력으로 남겨도 된다" 를 전제로 문자열만 본다. 맞는 전제다.
+# 그런데 2026-08-20 에 그 틈으로 다른 형태가 발견됐다 — `.github/workflows/daily_analysis_full.yml`
+# 주석 3곳이 폐기된 게이트를 **이력이 아니라 그 step 이 존재하는 현재 근거로** 인용하고 있었다:
+#     "엔진 미사용 신호 forward IC trail 누적(N≥252 2027 검증용)"
+#     "N=252 IC 게이트(2027-05) 읽기 준비"
+# 이건 사용자 노출은 아니지만 **다음 세션이 읽고 그대로 믿는 자리**다(RULE 12 ③).
+# 마커 유무만으로는 이력과 살아있는 인용을 못 가른다 → **부고(訃告) 동반 여부**로 가른다.
+WF_DIR = ".github/workflows"
+OBITUARY = ("폐기", "종전", "§7-1", "7-1 ", "retired")
+OBITUARY_RADIUS = 3   # 같은 줄 ± 3줄 안에 부고가 있으면 이력 인용으로 인정
+
+
+def test_workflow_comments_cite_retired_gate_only_with_obituary():
+    """🚨 워크플로 주석이 폐기 게이트를 인용하려면 폐기 사실을 같이 적어야 한다."""
+    hits = []
+    base = _ROOT / WF_DIR
+    for path in sorted(base.glob("*.yml")) if base.exists() else []:
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for i, line in enumerate(lines):
+            if not any(m in line for m in RETIRED_MARKERS):
+                continue
+            lo, hi = max(0, i - OBITUARY_RADIUS), min(len(lines), i + OBITUARY_RADIUS + 1)
+            near = "\n".join(lines[lo:hi])
+            if not any(o in near for o in OBITUARY):
+                hits.append(f"{path.relative_to(_ROOT)}:{i + 1} — {line.strip()[:90]}")
+    assert not hits, (
+        "워크플로 주석이 폐기된 N=252/2027-05 게이트를 **살아있는 근거처럼** 인용한다 "
+        "(§7-1, PM 2026-08-15 폐기).\n"
+        "이력으로 남기려면 같은 자리에 폐기 사실을 함께 적을 것 — 다음 세션이 그대로 믿는다.\n  "
+        + "\n  ".join(hits))

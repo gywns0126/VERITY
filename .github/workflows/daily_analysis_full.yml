@@ -627,7 +627,11 @@ jobs:
 
       - name: KR 종목 관측 신호 raw 적재 (v0, RULE 7 관측 only · 주간)
         # 내부자·수급·희석·총수일가 raw → data/observations/kr_cross_section_observations.jsonl (금요일만 self-run, 점수 0).
-        # 엔진 미사용 신호 forward IC trail 누적(N≥252 2027 검증용). spec docs/kr_cross_section_observation_spec_v0.
+        # 엔진 미사용 신호 forward IC trail 누적. spec docs/kr_cross_section_observation_spec_v0.
+        # 🚨 2026-08-20 죽은 전제 제거 — 종전엔 '(N≥252 2027 검증용)' 이었다. 그 표본 수 게이트는
+        #   §7-1(PM 2026-08-15)로 폐기됐다. 폐기 사유가 정확히 이 형태다: 출력이 언제나 '더 모아라'.
+        #   🚨 대체 관문 §7-3(검출하한 신고)은 **PM 승인 대기** → 이 trail 은 현재 **유효한 등록 근거가
+        #   없는 상태로 누적 중**이다. 등록하거나 멈추거나 = PM 결정 대상(검증 큐 등재).
         # 공개 빌더(insider/flow/forensics/stock_report) 뒤. KIS 0. broad git add data/ = RULE 4(observations 디렉토리 자동).
         # 🚨 2026-08-20 `!cancelled()` 추가 — 2026-08-14(금) full 3연속 실패로 그 주 행이 영구 결손.
         #   빌더 자체 입력 신선도 게이트가 stale 값 적재를 막으므로 안전(위 헤더 주석 참조).
@@ -704,8 +708,10 @@ jobs:
         # 2026-06-13 — ML(XGB up_probability) shadow trail 동시 채점 (별 trail/ic_history, source-agnostic scorer 재사용).
         #   ai_upside_relax override 정당성 검증 자료 누적. 관측 only. spec docs/ml_shadow_prediction_spec_v0_2026_06_13.md.
         # 2026-06-13 — 관측-only 신호(AAII/NAAIM/FINRA/Form4) market-level trail 채점 (별 trail/ic_history,
-        #   market-level scorer = snapshot market_summary index level diff 재사용). "N≥252 wire 가치" 판정 자료
+        #   market-level scorer = snapshot market_summary index level diff 재사용). wire 가치 판정 자료
         #   누적. 관측 only — 결정 피드백 0. spec docs/observation_signal_trails_spec_v0_2026_06_13.md.
+        #   🚨 2026-08-20 — 종전 표기 "N≥252 wire 가치" 의 N≥252 는 §7-1 로 폐기된 게이트다.
+        #   판정 기준은 표본 수가 아니라 §7-3 검출하한이다(승인 대기).
         continue-on-error: true
         run: |
           python scripts/score_predictions.py
@@ -720,7 +726,9 @@ jobs:
         # 2026-06-13 — score 직후 실행 (채점 → 집계 순서). 기존 *_ic_history 산출물(brain/ml/
         # factor) + trail 원본(shadow/sector)을 read-only 재집계 → data/validation_summary.json.
         # 신규 산식 0 / 결정 피드백 0 (RULE 7). 모든 항목 "가설(N=X)" 라벨 + hit_rate 병기.
-        # N=252 IC 게이트(2027-05) 읽기 준비 + 운영자 크레덴셜. 다음 step git add data/ (broad) = RULE 4.
+        # 운영자 크레덴셜. 다음 step git add data/ (broad) = RULE 4.
+        # 🚨 2026-08-20 — 종전엔 'N=252 IC 게이트(2027-05) 읽기 준비' 였다. 그 게이트는 §7-1 로 폐기됐고
+        #   폐기 사유가 이 산출물이었다(validation_summary._gate_status 가 폐기 목표 진척률을 계산).
         # graceful: 입력 결손 시 exit 0. spec docs/validation_summary_spec_v0_2026_06_13.md.
         continue-on-error: true
         run: python scripts/build_validation_summary.py
