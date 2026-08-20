@@ -4088,12 +4088,40 @@ def main():
     prev_recs_all = portfolio.get("recommendations", [])
     if is_us_mode:
         kept = [r for r in prev_recs_all if r.get("currency") != "USD"]
-        merged = kept + candidates
+        # 🚨 2026-08-21 — `kept + candidates` 였다. 아래 dedup 이 **먼저 온 것을 채택**하므로
+        #   중복 티커에서 **이월(stale) 레코드가 신규를 이겼다**. 바로 아래 주석이
+        #   "신규 우선" 이라 선언하는데 코드가 반대였다 = 코드를 주석에 맞춘다.
+        #   scope=all 런에서는 이 분기를 안 타 잠복이었고(실측 최근 full run 3/3 이 scope=all),
+        #   `a0d6105f0` 로 full_us 가 부활하면서 발현 가능해졌다.
+        merged = candidates + kept
         print(f"  [MERGE] 기존 KR {len(kept)}개 보존 + 신규 US {len(candidates)}개")
     else:
         kept = [r for r in prev_recs_all if r.get("currency") == "USD"]
         merged = candidates + kept
         print(f"  [MERGE] 신규 KR+US {len(candidates)}개 + 기존 US-only {len(kept)}개 보존")
+    # 🚨 2026-08-21 — 이월 레코드 자기신고. 이월 자체는 **유지**한다(재분석은 런타임 비용이
+    #   크고 이미 60분 타임아웃 이력이 있다). 문제는 이월분이 `verity_brain.grade` ·
+    #   `overrides_applied`(거시 캡) 를 **다른 시장 국면에서 계산된 채** 달고 온다는 것이다.
+    #   실측 8/20 — `kr_decoupling_weak` 캡이 KOSPI −5.8% 국면에서 정당하게 붙었는데,
+    #   KOSPI 가 +6% 로 뒤집힌 뒤에도 이월로 계속 살아 BUY 7건을 전부 WATCH 로 덮었다.
+    #   소비자가 "지금 계산된 값" 과 "이월된 값" 을 구분할 수 있어야 한다 (RULE 12).
+    _fresh_tickers = {r.get("ticker") for r in candidates}
+    _carried_n = 0
+    for r in kept:
+        if r.get("ticker") in _fresh_tickers:
+            continue  # dedup 에서 신규가 이기므로 이월 아님
+        r["_carried"] = {
+            "as_of": r.get("collected_at") or portfolio.get("updated_at"),
+            "reason": "opposite_market_scope",
+            "frozen_fields": ["verity_brain", "overrides_applied",
+                              "multi_factor", "technical"],
+            "note": "이 레코드는 이번 런에서 재분석되지 않았다 — 등급·거시캡은 이월 시점 기준",
+        }
+        _carried_n += 1
+    # 신규로 재분석된 레코드는 과거 이월 스탬프를 지운다 (stale 스탬프 잔존 방지)
+    for r in candidates:
+        r.pop("_carried", None)
+
     # 중복 제거 (ticker 기준, 신규 우선)
     seen_tickers = set()
     deduped = []
@@ -4102,6 +4130,7 @@ def main():
         if tk not in seen_tickers:
             seen_tickers.add(tk)
             deduped.append(r)
+    print(f"  [MERGE] 이월 자기신고 {_carried_n}건 (_carried 스탬프)")
     portfolio["recommendations"] = deduped
     candidates = deduped
 

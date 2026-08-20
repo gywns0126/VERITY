@@ -333,6 +333,25 @@ _CASH_TAGS = (
     "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsIncludingDisposalGroupAndDiscontinuedOperations",
 )
 
+# 🚨 2026-08-21 — 현금성자산만 보면 런웨이가 통째로 틀린다. MRNA 실측(2026-06-30):
+#   `현금` $1,723M 뿐인데 매도가능증권 유동 $3,415M + 비유동 $1,772M 을 더하면
+#   **$6,910M** 이다. 연 소진 ~$2.5B 기준 런웨이가 **8개월 ↔ 2.7년**으로 갈린다.
+#   바이오·성장주는 대부분의 유동성을 증권으로 들고 있어 이 결손이 판단을 뒤집는다.
+#   회사 자신도 "cash, cash equivalents and investments" 로 합산 보고한다.
+#   🚨 단 **기간말이 같을 때만 더한다** — 위 RCAT 사고와 같은 계열(기간 어긋난 합산이
+#   숫자가 그럴듯해서 더 위험). 태그 교체 대응은 _fresh_first 가 담당.
+_INVEST_CURRENT_TAGS = (
+    "AvailableForSaleSecuritiesDebtSecuritiesCurrent",
+    "MarketableSecuritiesCurrent",
+    "ShortTermInvestments",
+    "OtherShortTermInvestments",
+)
+_INVEST_NONCURRENT_TAGS = (
+    "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent",
+    "MarketableSecuritiesNoncurrent",
+    "LongTermInvestments",
+)
+
 
 def _anchor_end(facts: Dict[str, Any]) -> Optional[str]:
     """최신 보고 기간말 — 신선도 판정의 기준점. dei 표지일과 매출·손익 기간말 중 최신."""
@@ -804,19 +823,41 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
             fin["순손익"] = f"${ni['val']:,.0f} (기준 {ni['end']})"
         if cash:
             fin["현금"] = f"${cash['val']:,.0f} (기준 {cash['end']})"
-        # 런웨이는 현금과 영업현금흐름이 **같은 기간말**일 때만 낸다. 기간이 어긋난 조합은
+        # 🚨 현금 + 투자 = 실제 유동성. 기간말이 현금과 **정확히 일치하는 것만** 더한다.
+        inv_c = _fresh_first(facts, _INVEST_CURRENT_TAGS, "USD", anchor)
+        inv_nc = _fresh_first(facts, _INVEST_NONCURRENT_TAGS, "USD", anchor)
+        liq = None
+        if cash:
+            parts = [("현금성", float(cash["val"]))]
+            for label, rec in (("투자(유동)", inv_c), ("투자(비유동)", inv_nc)):
+                if rec and rec.get("end") == cash["end"]:
+                    parts.append((label, float(rec["val"])))
+            if len(parts) > 1:
+                liq = {"val": sum(v for _, v in parts), "end": cash["end"]}
+                fin["유동성(현금+투자)"] = (
+                    f"${liq['val']:,.0f} (기준 {liq['end']}) — "
+                    + " + ".join(f"{k} ${v:,.0f}" for k, v in parts)
+                )
+        # 런웨이는 **유동성과 영업현금흐름이 같은 기간말**일 때만 낸다. 기간이 어긋난 조합은
         # 숫자가 그럴듯해서 더 위험하다(위 RCAT 사고).
-        if (cash and ocf and float(ocf.get("val") or 0) < 0
-                and cash["end"] == ocf["end"]):
+        # 🚨 분모는 유동성이 있으면 유동성, 없으면 현금 — **어느 쪽을 썼는지 반드시 신고**한다
+        #    (RULE 12 산출물 자기신고). 기준이 안 보이면 소비자가 8개월/2.7년을 구분 못 한다.
+        _base = liq if liq else cash
+        _base_label = "현금+투자" if liq else "현금성자산만"
+        if (_base and ocf and float(ocf.get("val") or 0) < 0
+                and _base["end"] == ocf["end"]):
             try:
                 dur = (date.fromisoformat(ocf["end"]) - date.fromisoformat(ocf["start"])).days
             except (ValueError, TypeError):
                 dur = 0
             q = abs(float(ocf["val"]))
             if q > 0 and 80 <= dur <= 100:
-                fin["런웨이(단순)"] = f"약 {float(cash['val']) / q:.1f}분기 (분기 소진 기준)"
-        elif cash and ocf:
-            fin["런웨이"] = "미산출 — 현금·영업현금흐름 기간말 불일치 또는 소진 없음"
+                fin["런웨이(단순)"] = (
+                    f"약 {float(_base['val']) / q:.1f}분기 "
+                    f"(분기 소진 기준 · 분모={_base_label})"
+                )
+        elif _base and ocf:
+            fin["런웨이"] = "미산출 — 유동성·영업현금흐름 기간말 불일치 또는 소진 없음"
 
         # 🚨 아래는 전부 "내가 손으로 계산하지 않게" 하려고 넣는다. 2026-08-15 SPCX 실측:
         #    424B4 표지의 공모주식수 × 공모가로 "조달 $75B" 를 만들어 답했는데, 실제
