@@ -1,24 +1,22 @@
 {
  "_meta": {
-  "generated_at": "2026-08-20T08:18:50.220215+09:00",
+  "generated_at": "2026-08-20T09:54:57.901984+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "red",
  "reasons": [
   "P0 stale 1건",
-  "커버리지 회귀 경고 3건",
-  "비P0 stale 1건",
-  "CDN age 60217s > 120s(스테일 서빙)"
+  "CDN age 48823s > 120s(스테일 서빙)"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-20T08:18:50.168612+09:00",
+  "generated_at": "2026-08-20T09:54:57.864737+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 60217,
+  "max_cdn_age_s": 48823,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -28,7 +26,7 @@
      "PBR": 80.2
     },
     "total": 1790,
-    "cdn_age_s": 49819,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -39,7 +37,7 @@
      "PBR": 73.5
     },
     "total": 5069,
-    "cdn_age_s": 38621,
+    "cdn_age_s": 48823,
     "error": null
    },
    {
@@ -50,7 +48,7 @@
      "PBR": 73.5
     },
     "total": 3924,
-    "cdn_age_s": 60217,
+    "cdn_age_s": 48820,
     "error": null
    },
    {
@@ -64,7 +62,7 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-08-19T19:59:39.383299+09:00",
+  "generated_at": "2026-08-20T08:21:26.718084+09:00",
   "kr_total": 1790,
   "us_total": 5069,
   "core_fill_pct": {
@@ -75,20 +73,20 @@
   },
   "last_run_blocked": false,
   "last_run_fails": 0,
-  "last_run_warns": 3
+  "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-08-20T08:18:47.399136+09:00",
+  "generated_at": "2026-08-20T09:54:50.077459+09:00",
   "summary": {
-   "fresh": 56,
-   "stale": 2,
-   "closed": 2,
+   "fresh": 59,
+   "stale": 1,
+   "closed": 0,
    "discontinued": 2,
    "p0": {
     "total": 6,
-    "fresh": 3,
-    "closed": 2,
-    "active": 4
+    "fresh": 5,
+    "closed": 0,
+    "active": 6
    },
    "p1": {
     "total": 20,
@@ -98,20 +96,18 @@
    },
    "p2": {
     "total": 36,
-    "fresh": 34,
+    "fresh": 35,
     "closed": 0,
     "active": 35
    }
   },
   "stale_p0": [
    {
-    "id": "crypto",
-    "label": "크립토 시세·파생",
-    "age_min": 105.3
+    "id": "dart_catalyst_alerts",
+    "label": "DART 공시 알림",
+    "age_min": 156.3
    }
   ],
-  "stale_other": [
-   "securities_lending"
-  ]
+  "stale_other": []
  }
 }
