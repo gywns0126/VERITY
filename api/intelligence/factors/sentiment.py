@@ -261,6 +261,22 @@ def _compute_sentiment_score(
     if not isinstance(total, (int, float)) or math.isnan(total) or math.isinf(total):
         total = 0.0
 
+    # ── G6 결측 자기신고 (PREREG_BASELINE_V1_LITERATURE_2026_08_16 §G4 → G6, 2026-08-20) ──
+    # 🚨 산식 변경 0. 신고만 추가한다.
+    # 왜: 이 블록은 결측 신고 필드가 **아예 없었다**. `_safe_float(x, 50.0)` 계열이 조용히
+    # 중립을 채우는데 산출물에는 값만 남아, 정확히 50 이 결측 대입인지 실제 값인지
+    # 구분이 불가능했다. G4 실측(66종목) — 활성 4축 중 종목당 평균 **2.00개**가 정확히 50,
+    # `geopolitical_score` 는 97.0%. 그 상태에서 중립 대입은 횡단면 σ 를 3.66 으로,
+    # 결측 제외 재정규(10.52) 대비 **2.88배 압축**한다.
+    # 한계 명시: "정확히 50" 은 결측의 **필요조건이지 충분조건이 아니다**(실제 값이 50 일 수
+    # 있다). 그래서 필드명을 missing 이 아니라 `neutral_valued` 로 둔다 — 과잉 주장 금지.
+    _active_keys = [k for k in components if active_w.get(k, 0) > 0]
+    _neutral = sorted(k for k in _active_keys
+                      if isinstance(components.get(k), (int, float))
+                      and abs(float(components[k]) - 50.0) < 1e-9)
+    _aw_total = sum(active_w.get(k, 0) for k in _active_keys)
+    _aw_neutral = sum(active_w.get(k, 0) for k in _neutral)
+
     return {
         "score": round(_clip(total)),
         "components": {k: round(v, 2) if isinstance(v, (int, float)) else v
@@ -270,4 +286,13 @@ def _compute_sentiment_score(
         # 산출물 자기신고 (RULE 12) — 이 점수는 종목 레벨 4요소만 반영한다.
         "market_level_excluded": list(_MARKET_LEVEL_EXCLUDED),
         "selection_basis": "stock_level_4 (2026-08-15 재편 — PREREG_FORMULA_RESTRUCTURE)",
+        # ── G6 ──
+        "active_axes": sorted(_active_keys),          # 🚨 분모 먼저 (RULE 13)
+        "neutral_valued": _neutral,                   # 값이 정확히 50 인 활성 축
+        "neutral_weight_share": round(_aw_neutral / _aw_total, 4) if _aw_total else None,
+        "neutral_fill_policy": "impute_50",           # vs volatility 내부의 exclude_renormalize
+        "neutral_note": (
+            "정확히 50 은 결측 대입일 수도 실제 값일 수도 있다 — 생산자가 구분을 주지 않는다. "
+            "이 필드는 그 모호성 자체를 신고한다. 처분 = PREREG_BASELINE_V1_LITERATURE_2026_08_16 §G6."
+        ),
     }

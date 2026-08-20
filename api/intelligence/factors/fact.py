@@ -330,6 +330,16 @@ def _compute_kis_fact_bonus(stock: Dict[str, Any]) -> Dict[str, Any]:
 
 # ─── Fact Score (메인) ──────────────────────────────────────
 
+# 🚨 G6 (2026-08-20) — `_missing` 로직이 **추가할 수 있는** 축 전수.
+# 아래 본문의 `_missing.add(...)` 목록과 반드시 일치해야 한다
+# (강제 = tests/test_coverage_degeneracy_selfreport.py::test_tracked_axes_match_code).
+# 이 집합과 `fact_score.weights` 의 가중치>0 축이 겹치지 않으면 data_coverage 는 상수가 된다.
+_TRACKED_MISSING_AXES = (
+    "multi_factor", "consensus", "prediction", "backtest", "timing",
+    "analyst_report", "dart_health", "perplexity_risk", "us_fscore",
+)
+
+
 def _compute_fact_score(
     stock: Dict[str, Any],
     portfolio: Optional[Dict[str, Any]] = None,
@@ -566,6 +576,34 @@ def _compute_fact_score(
     _present_w = sum(w.get(k, 0) for k in components if k not in _missing)
     data_coverage = (_present_w / _total_w) if _total_w > 0 else 0.0
 
+    # ── 🚨 G6 (PREREG_BASELINE_V1_LITERATURE_2026_08_16 §G4 → G6, 2026-08-20) ──
+    # data_coverage 는 **가중치로 가중된** 비율이라, 추적 결측 축과 가중 축의 교집합이
+    # 비면 어떤 입력에서도 정확히 1.0 이 된다. 지금이 그 상태다:
+    #   · 가중치>0 = graham_value · canslim_growth · quant_quality · quant_volatility (4)
+    #   · `_missing` 추적 = multi_factor · consensus · prediction · backtest · timing ·
+    #     analyst_report · dart_health · perplexity_risk · us_fscore (9)
+    #   · 교집합 = **0** → data_coverage ≡ 1.0 (2026-08-20 실측 66/66 전부 1.0)
+    # 2026-08-16 문헌 4축 전환의 부작용이다. 이 필드의 목적("저점수가 데이터 부재인가
+    # 실제 약신호인가")이 그때부터 작동을 멈췄는데 **아무도 못 잡았다** —
+    # 기존 테스트는 IC 동결용 `가중치 0` 분기를 조용히 타서 전부 통과한다
+    # ([[feedback_green_check_is_not_safety]] 검사 통과 ≠ 안전).
+    # 🚨 산식 변경 0 · data_coverage 값 불변(계약 보존). 아래는 **신고만** 추가한다.
+    _weighted_axes = sorted(k for k in components if w.get(k, 0) > 0)
+    _overlap = sorted(set(_weighted_axes) & set(_TRACKED_MISSING_AXES))
+    coverage_scope = {
+        "weighted_axes": _weighted_axes,
+        "weighted_axis_count": len(_weighted_axes),
+        "tracked_missing_axes": sorted(_TRACKED_MISSING_AXES),
+        "overlap_with_tracked": _overlap,
+        # 교집합이 비면 이 지표는 상수다 — 값이 1.0 이어도 "커버리지 완전" 을 뜻하지 않는다
+        "is_degenerate": len(_overlap) == 0,
+        "note": (
+            "is_degenerate=true 이면 data_coverage 는 입력과 무관하게 1.0 이다. "
+            "커버리지 완전이 아니라 **측정 불능**을 뜻한다. "
+            "처분 = PREREG_BASELINE_V1_LITERATURE_2026_08_16 §G6."
+        ),
+    }
+
     total = 0.0
     for key, val in components.items():
         total += val * w.get(key, 0)
@@ -714,6 +752,9 @@ def _compute_fact_score(
         "score": round(_clip(total)),
         "components": {k: round(v, 1) for k, v in components.items() if isinstance(v, (int, float))},
         "data_coverage": round(data_coverage, 3),
+        # 🚨 G6 (2026-08-20) — 위 data_coverage 를 **믿어도 되는지** 를 같이 신고한다.
+        #   is_degenerate=true 면 값이 1.0 이어도 "커버리지 완전" 이 아니라 **측정 불능**이다.
+        "coverage_scope": coverage_scope,
         "missing_components": sorted(_missing),
         # 🚨 2026-08-18 (R6) — 팩터 **내부** 미측정 하위축. 점수 영향 0, 보고 전용.
         #   `missing_components`(바깥, 중립 50 대입)와 **정책이 다르다**: 안쪽은 못 잰 축을
