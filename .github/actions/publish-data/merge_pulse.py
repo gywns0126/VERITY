@@ -91,6 +91,12 @@ def main(portfolio_path: str, pulse_path: str) -> int:
             key = str(tk) if is_us else str(tk).zfill(6)
             if key in prices and prices[key]:
                 r["price"] = prices[key]
+                # 🚨 2026-08-20 — current_price 동반 갱신. 12줄 위 holdings 분기(81)는
+                #   갱신하는데 추천만 price 에서 멈춰 있었다. action.yml 의 이 블록 주석이
+                #   "holdings/recommendations current_price 가 1분 fresh" 라고 **의도를
+                #   명시**하므로 설계가 아니라 누락이다. 점수 입력 아님(consensus 호출부
+                #   2곳 전수가 price 를 넘김) → 산식 무변경.
+                r["current_price"] = prices[key]
 
     p["price_pulse_meta"] = {
         "updated_at": pulse.get("updated_at"),

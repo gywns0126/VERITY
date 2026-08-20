@@ -2442,6 +2442,14 @@ def main():
             if tk in price_map:
                 p = price_map[tk]
                 stock["price"] = p
+                # 🚨 2026-08-20 — current_price 동반 갱신. 12줄 위 holdings 분기(2435)는
+                #   갱신하는데 추천만 price 에서 멈춰 있었다. 섹션 헤더가 "보유·추천 종목
+                #   시세 갱신"(2426) 이고 publish 쪽 action.yml 주석도 "recommendations
+                #   current_price 1분 fresh" 라 **의도는 갱신**이었다. 실측 9일 지속 —
+                #   8/12 40/40 · 8/19 44/56 · 8/20 59/66 이 cp≠p, 최대 괴리 15%.
+                #   점수 입력 아님(consensus 는 호출부 2곳 전수가 price 를 넘긴다) →
+                #   산식 무변경. 소비처 = 긴급알림(2481)·trade_plan_followup·수익률 표시.
+                stock["current_price"] = p
                 sl = stock.get("sparkline")
                 if isinstance(sl, list) and len(sl) > 0:
                     stock["sparkline"] = sl[:-1] + [round(p, 2 if s_is_us else 0)]
@@ -4749,7 +4757,15 @@ def main():
         _price = _rec.get("price")
         if _price is None:
             continue
-        _rec.setdefault("current_price", _price)
+        # 🚨 2026-08-20 — setdefault → 명시 대입. current_price 는 **live 가 의도**인데
+        #   (tests/test_rec_price_snapshot.py:26,34 이 price 와 동일함을 assert)
+        #   setdefault 는 값이 이미 있으면 no-op 이라 한번 굳으면 영영 안 풀렸다.
+        #   scope=all 런은 반대 시장 레코드를 통째 이월하므로(4087~4097 `kept`)
+        #   이월분의 current_price 가 그대로 따라와 no-op 이 영구화된다.
+        #   이 줄이 있어야 다음 full run 에서 기존 오염분까지 자가 복구된다.
+        _rec["current_price"] = _price
+        # rec_price 는 setdefault 유지 — 추천 시점 진입가 고정이 **설계**다
+        # (같은 테스트 35행 "유지됨 — 추천 시점 고정"). 절대 명시 대입으로 바꾸지 말 것.
         _rec.setdefault("rec_price", _prev_rec_price_map.get(_rec.get("ticker"), _price))
 
     # ── trade_plan v0_heuristic 산출 + 진입 후보 로깅 ──
