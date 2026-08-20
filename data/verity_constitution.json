@@ -560,27 +560,12 @@
     },
     "brain_score_formula": "brain_score = fact_score * w_fact + sentiment_score * w_sentiment + vci_bonus",
     "brain_weights": {
-      "description": "경제 사이클 분면별 fact/sentiment 가중치. 수축기일수록 감성 노이즈가 커지므로 fact 비중을 높인다.",
-      "growth_up_inflation_down": {
-        "fact": 0.65,
-        "sentiment": 0.35
-      },
-      "growth_up_inflation_up": {
-        "fact": 0.7,
-        "sentiment": 0.3
-      },
-      "growth_down_inflation_down": {
-        "fact": 0.8,
-        "sentiment": 0.2
-      },
-      "growth_down_inflation_up": {
-        "fact": 0.85,
-        "sentiment": 0.15
-      },
+      "description": "fact/sentiment 가중치. 🚨 2026-08-21 G9-c 이후 **단일 비율 0.7/0.3** 만 사용한다. 종전 '경제 사이클 분면별' 조정은 임의 구간 설정이라 제거됐다(_note_2026_08_21_G9c).",
       "default": {
         "fact": 0.7,
         "sentiment": 0.3
-      }
+      },
+      "_note_2026_08_21_G9c": "🚨 국면별 가중 4종 제거 (RULE 7 쿼터 1 소모 · PM 승인 2026-08-21). 제거분 = {\"growth_up_inflation_down\": {\"fact\": 0.65, \"sentiment\": 0.35}, \"growth_up_inflation_up\": {\"fact\": 0.7, \"sentiment\": 0.3}, \"growth_down_inflation_down\": {\"fact\": 0.8, \"sentiment\": 0.2}, \"growth_down_inflation_up\": {\"fact\": 0.85, \"sentiment\": 0.15}}. 근거 = 외부 자문 Q4 회신 — '국면별 조정은 임의 구간 설정을 버리고 롤링 IC 추정치로 재산출하거나, 근거 부족을 인정하고 단일 비율로 되돌린다'. 롤링 IC 는 검출하한 미달로 산출 불가이므로 후자를 택했다. 실사용 이력 = 과거 60일자 누적 growth_up_inflation_down 2,552회(0.65/0.35) · growth_up_inflation_up 67회(0.7/0.3). 🚨 분면 판정 자체는 유지한다 — quadrant_info 는 섹터 패널티 등에서 계속 쓰인다. 가중 매핑만 제거. default 0.7/0.3 도 출처 없는 값이나 Q8 대로 통계로 유도 불가라 현행 유지. 사전등록 = PREREG_BASELINE_V1_LITERATURE_2026_08_16 §G10·G9-c."
     },
     "quadrant_override": null,
     "vci_bonus_rules": {

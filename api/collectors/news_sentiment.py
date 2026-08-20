@@ -254,7 +254,21 @@ def analyze_sentiment(headlines: List, lang: str = "kr") -> Dict:
         score_fn = _score_headline_en if lang == "en" else _score_headline
         weight, label = score_fn(title)
         weighted_sum += weight * recency
-        total_weight += recency
+        # ── G10 (2026-08-21 · RULE 7 쿼터 1 소모 · PM 승인) ─────────────────────
+        # 🚨 중립(사전 미매칭, weight 0)을 **분모에서 제외**한다.
+        #   근거 = Antweiler & Frank (2004, JF) 가 M_hold 를 분모에서 명시 배제하고,
+        #   Ke·Kelly·Xiu (SSESTM) 는 감성 단어 집합 스크리닝으로 미매칭을 처음부터 제외한다.
+        #   외부 자문 Q1 회신 — "'미매칭 = 0 으로 평균 산입' 이라는 현재 방식과 정확히
+        #   일치하는 표준 관행은 확인되지 않았다".
+        #   실측 근거: 헤드라인 245건 중 **63.7% 가 사전 미매칭**이라 신호의 3분의 2가
+        #   0 으로 눌려 왔다. 그 결과 49종목이 **10개 값**으로만 갈려 동점 93.9%.
+        #   🚨 주장은 분산이 아니라 **해상도**다 — 동점인 두 종목은 어떤 IC 로도 구분되지 않는다
+        #   (Q3 의 "분산을 IC 대리변수로 오용" 경고 회피).
+        #   분자는 불변이다(중립은 어차피 0 기여). 함수 형태(로그오즈/비율)는 바꾸지 않는다 —
+        #   순위상관 1.000 이고 G8 재표준화가 스케일을 재조정하므로 최소 변경만 한다.
+        #   사전등록 = PREREG_BASELINE_V1_LITERATURE_2026_08_16 §G10·G9-c.
+        if label != "neutral":
+            total_weight += recency
 
         if label == "positive":
             pos_count += 1
