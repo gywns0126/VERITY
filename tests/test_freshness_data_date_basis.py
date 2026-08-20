@@ -18,7 +18,14 @@ from datetime import datetime, timedelta, timezone
 import scripts.freshness_shadow_monitor as fm
 
 KST = timezone(timedelta(hours=9))
-_DATA_DATE_STREAMS = {"kr_index_daily", "hot_stock", "securities_lending"}
+# 🚨 2026-08-20 `kr_close_latest` 추가 — 이 집합을 넓히는 것은 아래 계약이 **의도적으로**
+#   하라고 요구하는 절차다(`test_no_other_stream_uses_data_date_basis` 주석). 재검토 결과:
+#   같은 워크플로(`kr_chart_daily.yml`)가 만드는 형제이고 `_meta.as_of` 포맷도 동일한
+#   8자리(`20260819`), 임계도 형제 `kr_index_daily` 와 같은 4320분이다. T+1 소스라 금→월
+#   최악 72h 를 감당해야 하므로 그 아래로 두면 월요일마다 오탐한다.
+#   🚨 이 줄을 안 고쳐서 CI 가 빨갛게 됐다 — 등재 커밋 때 **내 테스트 파일만** 돌리고
+#   전체 스위트를 돌리지 않았다(RULE 13: 표본을 전수로 읽음).
+_DATA_DATE_STREAMS = {"kr_index_daily", "hot_stock", "securities_lending", "kr_close_latest"}
 
 
 # ── 날짜-only 파싱 ──

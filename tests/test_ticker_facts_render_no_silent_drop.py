@@ -91,7 +91,22 @@ def test_us_가격축이_실호출로_존재한다():
     코드에는 "가격 언급 금지" 가드를 넣었다 — 손으로 되는 걸 코드가 못 하게 한 셈).
     """
     q = tf._us_quote("QQQ")
-    assert q and q.get("현재가"), "US 시세 실호출 경로가 죽었다"
+    if not q:
+        # 🚨 2026-08-20 — 이 단언이 CI 를 빨갛게 만들고 있었다. 야후는 GitHub 러너 IP 를
+        #   막는데(같은 뿌리 = kr_chart_daily 17:23·20:23 슬롯 실패), 로컬 한국 IP 에서는
+        #   통과해 **로컬 초록 / CI 빨강** 이 됐다. 그대로 두면 CI 빨강이 신호를 잃는다.
+        #   🚨 그렇다고 skip 으로 뭉개면 경로가 진짜 죽어도 모른다 — 두 경우를 가른다:
+        #     벤더가 안 닿음  → skip(사유 기록)   ·   닿는데 값이 없음 → 진짜 결함, fail
+        #   판별은 `_us_quote` 와 **같은 URL·같은 헤더**로 한 번 더 때려서 한다.
+        doc = tf._fetch_json(
+            "https://query1.finance.yahoo.com/v8/finance/chart/QQQ?range=1mo&interval=1d",
+            None, {"User-Agent": "Mozilla/5.0"},
+        )
+        if not doc:
+            import pytest
+            pytest.skip("야후가 이 러너에서 안 닿는다(러너 IP 차단 추정) — 경로 결함과 구분 불가")
+        raise AssertionError("US 시세 실호출 경로가 죽었다 — 벤더는 닿는데 값이 안 나온다")
+    assert q.get("현재가"), "현재가 축이 비었다"
     assert q.get("통화") == "USD" and q.get("_as_of")
     assert tf._us_quote("005930") is None, "KR 은 KIS·금융위 담당 — 이 경로를 타면 안 된다"
 

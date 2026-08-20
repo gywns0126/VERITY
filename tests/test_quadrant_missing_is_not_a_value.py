@@ -120,5 +120,38 @@ def test_full_history_replay_matches_measurement():
     assert c["growth_down_inflation_down"] == 0, \
         "growth_down 이 다시 나온다 — fallback 부활 또는 실입력 변화"
     assert c["unknown"] > 0, "unknown 이 0 — 센티넬이 작동하지 않는다"
-    # 🚨 분모를 함께 고정한다 (RULE 13)
-    assert c["unknown"] + c["growth_up_inflation_down"] == sum(c.values())
+
+    # 🚨 2026-08-20 — `growth_up_inflation_up` 이 처음 나왔다(`2026-08-20.json` 1일).
+    #   이 테스트가 요구한 대로 어느 쪽인지 갈랐다: **입력 변화이지 로직 변화가 아니다.**
+    #   해당 일자 근거 = inflation_z **+1.008**(12개월 롤링 z 부호) · gdp_growth 2.45 ·
+    #   cpi_yoy 2.789 · source `ecos.901Y009.headline_kr`. 종전 118일은 z<0 이라
+    #   inflation_down 뿐이었다. 즉 지표가 부호를 넘긴 것이고 센티넬은 정상이다.
+    #
+    #   🚨 그래서 **분모 고정을 목록 확장으로 때우지 않는다** — 그러면 다음 신규 사분면도
+    #   똑같이 목록에 밀어넣게 되어 테스트가 고무도장이 된다. 대신 라벨과 근거값이
+    #   **서로 맞는지**를 본다(부호 불일치 = 진짜 로직 결함).
+    assert set(c) <= {"unknown", "growth_up_inflation_down", "growth_up_inflation_up"}, dict(c)
+    assert sum(c.values()) == len(files) - sum(1 for f in files if _unreadable(f)), dict(c)
+
+    for f in files:
+        try:
+            with open(f, encoding="utf-8") as fh:
+                q = detect_economic_quadrant(json.load(fh))
+        except (OSError, ValueError):
+            continue
+        z = q.get("inflation_z")
+        if q["quadrant"] == "unknown" or z is None:
+            continue
+        if q["quadrant"].endswith("inflation_up"):
+            assert z > 0, (f, q["quadrant"], z)
+        elif q["quadrant"].endswith("inflation_down"):
+            assert z <= 0, (f, q["quadrant"], z)
+
+
+def _unreadable(path) -> bool:
+    try:
+        with open(path, encoding="utf-8") as fh:
+            json.load(fh)
+        return False
+    except (OSError, ValueError):
+        return True
