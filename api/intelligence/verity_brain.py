@@ -301,18 +301,47 @@ def detect_economic_quadrant(portfolio: Dict[str, Any]) -> Dict[str, Any]:
                 ),
             }
 
-    if cpi_yoy is None:
-        pce = fred.get("pce_yoy", {}).get("value")
-        if pce is not None:
-            cpi_yoy = float(pce)
-        else:
-            cpi_yoy = 2.5
+    # ── 인플레 축 — F-c 시행 (PREREG_INFLATION_AXIS_2026_08_20, PM 승인 2026-08-20) ──
+    # 🚨 종전은 **미국 core CPI(CPILFESL)에 headline 관행 임계 3.0%** 를 대고 있었다.
+    #   Q10 이 세 층위에서 동시에 부정했다:
+    #     · Bridgewater 원전은 지표를 특정하지 않고 핵심이 **"기대 대비 서프라이즈"**
+    #     · 후속 4분면 구현 관행은 **headline CPI** (core·PCE 를 축으로 쓴 공개 연구 없음)
+    #     · 임계 관행은 절대 수준이 아니라 **변화·z-score**. 절대 3% 사례는 미발견
+    #     · core 는 headline 보다 평균이 낮다(IMF Ball 2023 · ECB 2018) → 과소분류
+    #     · 🚨 한국 포트폴리오면 **한국 CPI** 가 관행(한국은행 CPI 2% 타게팅)
+    #   실측: 118일 중 임계 초과 **0/80** — inflation_up 계열 2개가 한 번도 안 나왔다.
+    #
+    #   F-c = **한국 headline CPI(ECOS 901Y009 총지수) YoY 의 12M 롤링 z 부호.**
+    #   임계가 아예 없어 자유 파라미터가 창 하나뿐이다(그 창도 외생 고정값).
+    #
+    # 🚨 결측 시 **값을 만들지 않는다**(B1 센티넬 규율). 종전 `cpi_yoy = 2.5` 하드코드
+    #   fallback 은 폐기했다 — 임계 3.0 과 맞물려 구조적으로 inflation_down 을 주입했다.
+    #   🚨 미국 core 로 되돌아가지도 않는다: 그 경로 자체가 위 실측(0/80)의 원인이다.
+    kr_axis = fred.get("korea_cpi_axis") or {}
+    inflation_up = kr_axis.get("inflation_up")
+    if not isinstance(inflation_up, bool):
+        return {
+            "quadrant": "unknown",
+            "label": "판정 보류 (인플레 입력 결손)",
+            "favored": [],
+            "unfavored": [],
+            "crypto_bias": "neutral",
+            "gdp_growth": round(float(gdp_growth), 2) if gdp_growth is not None else None,
+            "cpi_yoy": None,
+            "quadrant_source": "unknown",
+            "inflation_source": "unknown",
+            "unknown_reason": (
+                "fred.korea_cpi_axis 결손 — 한국 CPI(ECOS 901Y009) 수집 실패. "
+                "종전 cpi_yoy=2.5 하드코드 fallback 과 미국 core 경로는 "
+                "PREREG_INFLATION_AXIS_2026_08_20 으로 폐기됐다(둘 다 구조적으로 "
+                "inflation_down 을 주입했다 — 실측 0/80)"
+            ),
+            # 관측용 병기 — 판정에는 쓰지 않는다
+            "us_core_cpi_yoy_observed": cpi_yoy,
+        }
 
     gdp_growth = float(gdp_growth) if gdp_growth is not None else 0
-    cpi_yoy = float(cpi_yoy)
-
     growth_up = gdp_growth > 1.5
-    inflation_up = cpi_yoy > 3.0
 
     if growth_up and inflation_up:
         quadrant = "growth_up_inflation_up"
@@ -333,7 +362,14 @@ def detect_economic_quadrant(portfolio: Dict[str, Any]) -> Dict[str, Any]:
         "unfavored": q_cfg.get("unfavored", []),
         "crypto_bias": q_cfg.get("crypto_bias", "neutral"),
         "gdp_growth": round(gdp_growth, 2),
-        "cpi_yoy": round(cpi_yoy, 2),
+        "cpi_yoy": kr_axis.get("yoy_pct"),
+        # 🚨 인플레 축 자기신고 — 어떤 지표·형태로 판정했는지 산출물이 직접 말한다
+        "inflation_source": "ecos.901Y009.headline_kr",
+        "inflation_form": kr_axis.get("form"),
+        "inflation_z": kr_axis.get("z"),
+        "inflation_window_months": kr_axis.get("window_months"),
+        # 관측용 병기 — 두 값이 다르다는 사실이 보여야 한다. 판정에는 쓰지 않는다.
+        "us_core_cpi_yoy_observed": cpi_yoy,
         # 🚨 B1 자기신고 — 어떤 입력으로 판정했는지 산출물이 직접 말한다(RULE 12).
         #   'fred.gdp_growth' 는 이름과 달리 GDP 실측이 아니라 침체확률 선형변환이다
         #   (macro_field_audit 2026-08-19 특정). 그 사실도 함께 신고한다.

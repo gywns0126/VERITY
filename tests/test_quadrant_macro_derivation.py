@@ -13,44 +13,75 @@ from __future__ import annotations
 from api.intelligence.verity_brain import detect_economic_quadrant
 
 
-def _portfolio_with_fred(fred_block: dict, mood_score: int = 50) -> dict:
-    """detect_economic_quadrant 입력용 최소 portfolio dict."""
+# 🚨 2026-08-20 F-c — 인플레 축이 **한국 CPI(ECOS)** 로 바뀌었다
+#   (PREREG_INFLATION_AXIS_2026_08_20). 이 헬퍼는 **성장 축** 테스트용이므로
+#   인플레 축을 기본 주입해 unknown 으로 빠지지 않게 한다.
+#   인플레 축 자체의 계약은 tests/test_inflation_axis_kr_cpi.py 가 잠근다.
+_KR_AXIS_DOWN = {"inflation_up": False, "z": -0.8, "yoy_pct": 1.5,
+                 "form": "rolling_z_sign_only", "window_months": 12}
+_KR_AXIS_UP = {"inflation_up": True, "z": 1.0, "yoy_pct": 3.2,
+               "form": "rolling_z_sign_only", "window_months": 12}
+
+
+def _portfolio_with_fred(fred_block: dict, mood_score: int = 50,
+                         kr_axis: dict = None) -> dict:
+    """detect_economic_quadrant 입력용 최소 portfolio dict.
+
+    kr_axis 미지정 시 **인플레 DOWN** 을 넣는다(성장 축만 검증하는 테스트용).
+    `kr_axis=False` 를 주면 인플레 축을 아예 빼서 결손 경로를 검증할 수 있다.
+    """
+    fred = dict(fred_block)
+    if kr_axis is not False:
+        fred["korea_cpi_axis"] = kr_axis or _KR_AXIS_DOWN
     return {
         "macro": {
-            "fred": fred_block,
+            "fred": fred,
             "market_mood": {"score": mood_score},
         }
     }
 
 
 class TestF1CpiYoyDerivation:
-    """F1: cpi_yoy 가 fred.cpi_yoy.value 로 정상 전달되는지."""
+    """🚨 2026-08-20 F-c 로 **계약이 뒤집혔다**(PREREG_INFLATION_AXIS_2026_08_20).
 
-    def test_cpi_yoy_above_3_triggers_inflation_up(self):
-        """cpi_yoy 3.5 > 임계 3.0 → inflation_up = True."""
+    종전 이 클래스는 *"미국 core CPI(`fred.cpi_yoy`) + 절대 임계 3.0"* 을 고정했다.
+    Q10 이 그 설계를 세 층위에서 동시에 부정했고(원전=서프라이즈 / 관행=headline /
+    임계=변화·z-score / core 는 headline 보다 평균이 낮다 / 한국은 한국 CPI),
+    실측으로도 118일 중 임계 초과 **0/80** 이라 inflation_up 이 구조적으로 도달 불가였다.
+
+    이제 인플레 축은 **한국 headline CPI(ECOS 901Y009) YoY 의 12M 롤링 z 부호**다.
+    `fred.cpi_yoy`(미국 core)는 **관측용 병기**로만 남고 판정에 쓰이지 않는다.
+    """
+
+    def test_us_core_cpi_no_longer_decides(self):
+        """🚨 미국 core 가 3.0 을 넘어도 판정은 한국 축이 한다."""
         fred = {
-            "cpi_yoy": {"value": 3.5, "date": "2026-04-01"},
+            "cpi_yoy": {"value": 9.9, "date": "2026-04-01"},   # 미국 core 극단값
             "gdp_growth": {"value": 2.0, "date": "2026-03-01"},
         }
-        result = detect_economic_quadrant(_portfolio_with_fred(fred))
-        assert result["cpi_yoy"] == 3.5
-        assert result["quadrant"] == "growth_up_inflation_up"
+        result = detect_economic_quadrant(_portfolio_with_fred(fred))   # kr=DOWN
+        assert result["quadrant"] == "growth_up_inflation_down", "미국 core 가 개입했다"
+        assert result["us_core_cpi_yoy_observed"] == 9.9, "관측 병기가 사라졌다"
 
-    def test_cpi_yoy_below_3_yields_inflation_down(self):
-        """cpi_yoy 2.99 < 임계 3.0 → inflation_up = False (간발의 차)."""
-        fred = {
-            "cpi_yoy": {"value": 2.99, "date": "2026-04-01"},
-            "gdp_growth": {"value": 2.35, "date": "2026-03-01"},
-        }
-        result = detect_economic_quadrant(_portfolio_with_fred(fred))
-        assert result["cpi_yoy"] == 2.99
-        assert result["quadrant"] == "growth_up_inflation_down"
-
-    def test_missing_cpi_yoy_falls_back_to_hardcode(self):
-        """회귀 검증 — fred.cpi_yoy 부재 시 2.5 하드코드 fallback (회귀 시그널)."""
+    def test_kr_axis_decides_inflation_up(self):
         fred = {"gdp_growth": {"value": 2.0}}
-        result = detect_economic_quadrant(_portfolio_with_fred(fred))
-        assert result["cpi_yoy"] == 2.5  # 회귀 fallback 작동 (의도적)
+        result = detect_economic_quadrant(
+            _portfolio_with_fred(fred, kr_axis=_KR_AXIS_UP))
+        assert result["quadrant"] == "growth_up_inflation_up"
+        assert result["inflation_source"] == "ecos.901Y009.headline_kr"
+
+    def test_missing_inflation_input_returns_unknown(self):
+        """🚨 종전 이름은 `test_missing_cpi_yoy_falls_back_to_hardcode` 였고
+        *"부재 시 2.5 하드코드 fallback (의도적)"* 을 고정하고 있었다.
+
+        그 fallback 은 임계 3.0 과 맞물려 **구조적으로 inflation_down 을 주입**했다.
+        B1(성장 축)과 같은 계열이라 함께 폐기했다 — **결측은 값이 아니다.**
+        """
+        fred = {"gdp_growth": {"value": 2.0}}
+        result = detect_economic_quadrant(_portfolio_with_fred(fred, kr_axis=False))
+        assert result["quadrant"] == "unknown"
+        assert result["cpi_yoy"] is None, "결측인데 숫자가 만들어졌다"
+        assert result["cpi_yoy"] != 2.5
 
 
 class TestF2GdpGrowthProxy:
@@ -92,7 +123,9 @@ class TestF2GdpGrowthProxy:
             "gdp_growth": {"value": expected},
             "cpi_yoy": {"value": 4.0},
         }
-        result = detect_economic_quadrant(_portfolio_with_fred(fred))
+        # 🚨 인플레 축은 이제 한국 CPI 가 정한다 — UP 을 명시 주입
+        result = detect_economic_quadrant(
+            _portfolio_with_fred(fred, kr_axis=_KR_AXIS_UP))
         assert result["gdp_growth"] == -1.5
         assert result["quadrant"] == "growth_down_inflation_up"
 

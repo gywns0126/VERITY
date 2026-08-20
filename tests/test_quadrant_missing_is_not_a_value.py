@@ -18,10 +18,18 @@ import pytest
 from api.intelligence.verity_brain import detect_economic_quadrant
 
 
-def _pf(fred=None, mood=None):
+# 🚨 2026-08-20 F-c — 인플레 축이 한국 CPI 로 바뀌었다. 이 파일은 **성장 축** 계약이므로
+#   인플레 축을 기본 주입해 unknown 으로 빠지지 않게 한다(인플레 계약은 별도 파일).
+_KR_AXIS = {"inflation_up": False, "z": -0.8, "yoy_pct": 1.5,
+            "form": "rolling_z_sign_only", "window_months": 12}
+
+
+def _pf(fred=None, mood=None, with_inflation=True):
     macro = {}
     if fred is not None:
-        macro["fred"] = fred
+        macro["fred"] = dict(fred)
+    if with_inflation:
+        macro.setdefault("fred", {})["korea_cpi_axis"] = _KR_AXIS
     if mood is not None:
         macro["market_mood"] = {"score": mood}
     return {"macro": macro}
