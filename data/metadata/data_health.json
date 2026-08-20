@@ -1,21 +1,22 @@
 {
  "_meta": {
-  "generated_at": "2026-08-21T03:30:39.307652+09:00",
+  "generated_at": "2026-08-21T04:26:59.178410+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
  "reasons": [
-  "CDN age 14391s > 120s(스테일 서빙)"
+  "비P0 stale 1건",
+  "CDN age 17771s > 120s(스테일 서빙)"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-21T03:30:39.255906+09:00",
+  "generated_at": "2026-08-21T04:26:59.126260+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 14391,
+  "max_cdn_age_s": 17771,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -25,7 +26,7 @@
      "PBR": 80.2
     },
     "total": 1790,
-    "cdn_age_s": 14391,
+    "cdn_age_s": 17771,
     "error": null
    },
    {
@@ -36,7 +37,7 @@
      "PBR": 73.5
     },
     "total": 5069,
-    "cdn_age_s": 14389,
+    "cdn_age_s": 17769,
     "error": null
    },
    {
@@ -47,7 +48,7 @@
      "PBR": 73.5
     },
     "total": 3924,
-    "cdn_age_s": 14387,
+    "cdn_age_s": 17767,
     "error": null
    },
    {
@@ -75,10 +76,10 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-08-21T03:30:35.026688+09:00",
+  "generated_at": "2026-08-21T04:26:54.845399+09:00",
   "summary": {
-   "fresh": 60,
-   "stale": 0,
+   "fresh": 59,
+   "stale": 1,
    "closed": 2,
    "discontinued": 2,
    "p0": {
@@ -95,12 +96,14 @@
    },
    "p2": {
     "total": 37,
-    "fresh": 36,
+    "fresh": 35,
     "closed": 0,
     "active": 36
    }
   },
   "stale_p0": [],
-  "stale_other": []
+  "stale_other": [
+   "trade_analysis"
+  ]
  }
 }
