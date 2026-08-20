@@ -1,28 +1,157 @@
 {
  "_meta": {
-  "generated_at": "2026-08-19T14:05:25+09:00",
+  "generated_at": "2026-08-20T14:12:58+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 32,
+  "sessions_scanned": 33,
   "sessions_missed": [],
   "counts": {
-   "filings": 921,
-   "companies": 269,
+   "filings": 939,
+   "companies": 271,
    "by_stage": {
-    "신청": 103,
-    "정정(심사중)": 110,
-    "가격확정": 11,
-    "거래소등록": 45
+    "신청": 104,
+    "정정(심사중)": 109,
+    "가격확정": 12,
+    "거래소등록": 46
    },
-   "spac_likely": 38,
-   "has_ticker_now": 205,
+   "spac_likely": 39,
+   "has_ticker_now": 207,
    "priced_secondary_excluded": 10,
-   "foreign_issuer": 70,
+   "foreign_issuer": 71,
    "priced_parse_ok": 8
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
  },
  "items": [
+  {
+   "cik": "2132582",
+   "name": "Lyntris Inc.",
+   "forms": {
+    "424B4": 1,
+    "8-A12B": 1,
+    "CERT": 1,
+    "S-1/A": 3,
+    "S-1": 1
+   },
+   "first_filed": "20260723",
+   "last_filed": "20260819",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 3,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2132582&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3812",
+    "sic_desc": "Search, Detection, Navigation, Guidance, Aeronautical Sys",
+    "is_blank_check": false,
+    "ticker": "LYNX",
+    "region": "DALLAS, TX",
+    "state_of_inc": "DE"
+   },
+   "pre_existing_reporter": false,
+   "pricing": {
+    "parse_ok": false,
+    "reason": "주식수 문구 없음",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/2132582/000119312526356916/d23330d424b4.htm"
+   }
+  },
+  {
+   "cik": "2133719",
+   "name": "NorthStrive Acquisition Corp I.",
+   "forms": {
+    "424B4": 1,
+    "8-A12B": 1,
+    "CERT": 1,
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20260722",
+   "last_filed": "20260819",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2133719&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": "NSAI",
+    "region": "GRAND CAYMAN",
+    "state_of_inc": "E9"
+   },
+   "pre_existing_reporter": false,
+   "pricing": {
+    "parse_ok": false,
+    "reason": "주식수 문구 없음",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/2133719/000121390026091457/ea0298151-04.htm"
+   }
+  },
+  {
+   "cik": "2087035",
+   "name": "AfterNext Acquisition I Corp.",
+   "forms": {
+    "8-A12B": 1,
+    "CERT": 1,
+    "S-1/A": 4
+   },
+   "first_filed": "20260708",
+   "last_filed": "20260819",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 4,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2087035&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": null,
+    "region": "SINGAPORE",
+    "state_of_inc": "E9"
+   }
+  },
+  {
+   "cik": "2133239",
+   "name": "Southern Cross Acquisition II Corp.",
+   "forms": {
+    "S-1/A": 2,
+    "8-A12B": 1,
+    "CERT": 1,
+    "S-1": 1
+   },
+   "first_filed": "20260709",
+   "last_filed": "20260819",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2133239&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": "SCAT",
+    "region": "NEW YORK, NY",
+    "state_of_inc": "E9"
+   }
+  },
   {
    "cik": "2134856",
    "name": "Karman Line Acquisition Corp.",
@@ -143,64 +272,6 @@
    }
   },
   {
-   "cik": "2132582",
-   "name": "Lyntris Inc.",
-   "forms": {
-    "8-A12B": 1,
-    "CERT": 1,
-    "S-1/A": 3,
-    "S-1": 1
-   },
-   "first_filed": "20260723",
-   "last_filed": "20260817",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 3,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2132582&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "3812",
-    "sic_desc": "Search, Detection, Navigation, Guidance, Aeronautical Sys",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "DALLAS, TX",
-    "state_of_inc": "DE"
-   }
-  },
-  {
-   "cik": "2133719",
-   "name": "NorthStrive Acquisition Corp I.",
-   "forms": {
-    "8-A12B": 1,
-    "CERT": 1,
-    "S-1/A": 1,
-    "S-1": 1
-   },
-   "first_filed": "20260722",
-   "last_filed": "20260817",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2133719&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": null,
-    "region": "GRAND CAYMAN",
-    "state_of_inc": "E9"
-   }
-  },
-  {
    "cik": "2006960",
    "name": "Londian Wason New Energy Tech Inc.",
    "forms": {
@@ -224,7 +295,7 @@
     "sic": "3390",
     "sic_desc": "Miscellaneous Primary Metal Products",
     "is_blank_check": false,
-    "ticker": null,
+    "ticker": "FOIL",
     "region": "SHENZHEN, F4",
     "state_of_inc": "E9"
    },
@@ -441,35 +512,6 @@
     "ticker": "FBDT",
     "region": "BALTIMORE, MD",
     "state_of_inc": "DE"
-   }
-  },
-  {
-   "cik": "2133239",
-   "name": "Southern Cross Acquisition II Corp.",
-   "forms": {
-    "8-A12B": 1,
-    "CERT": 1,
-    "S-1/A": 1,
-    "S-1": 1
-   },
-   "first_filed": "20260709",
-   "last_filed": "20260811",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2133239&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "SCAT",
-    "region": "NEW YORK, NY",
-    "state_of_inc": "E9"
    }
   },
   {
@@ -1380,12 +1422,6 @@
     "ticker": "STDN",
     "region": "OAK RIDGE, TN",
     "state_of_inc": "DE"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "공모가 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2086716/000121390026078747/ea0276071-13.htm"
    }
   },
   {
@@ -1415,12 +1451,6 @@
     "ticker": "JONE",
     "region": "NEW YORK, NY",
     "state_of_inc": "E9"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "주식수 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2129056/000121390026078066/ea0285792-05.htm"
    }
   },
   {
@@ -1536,6 +1566,35 @@
     "region": "GEORGE TOWN",
     "state_of_inc": "E9"
    }
+  },
+  {
+   "cik": "1317685",
+   "name": "Alliance Laundry Holdings Inc.",
+   "forms": {
+    "424B4": 1,
+    "S-1MEF": 1,
+    "S-1": 1
+   },
+   "first_filed": "20260817",
+   "last_filed": "20260819",
+   "lineage": true,
+   "stage": 3,
+   "stage_ko": "가격확정",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1317685&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3580",
+    "sic_desc": "Refrigeration & Service Industry Machinery",
+    "is_blank_check": false,
+    "ticker": "ALH",
+    "region": "RIPON, WI",
+    "state_of_inc": "DE"
+   },
+   "pre_existing_reporter": true
   },
   {
    "cik": "1108205",
@@ -1819,8 +1878,7 @@
     "ticker": "AEON",
     "region": "ALISO VIEJO, CA",
     "state_of_inc": "DE"
-   },
-   "pre_existing_reporter": true
+   }
   },
   {
    "cik": "2069785",
@@ -1846,6 +1904,32 @@
     "is_blank_check": false,
     "ticker": "GLOO",
     "region": "BOULDER, CO",
+    "state_of_inc": "DE"
+   }
+  },
+  {
+   "cik": "2064768",
+   "name": "Canary Staked TRX ETF",
+   "forms": {
+    "S-1/A": 2
+   },
+   "first_filed": "20260724",
+   "last_filed": "20260819",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2064768&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6221",
+    "sic_desc": "Commodity Contracts Brokers & Dealers",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "BRENTWOOD, TN",
     "state_of_inc": "DE"
    }
   },
@@ -1892,16 +1976,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2113060&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7372",
-    "sic_desc": "Services-Prepackaged Software",
-    "is_blank_check": false,
-    "ticker": "IQMX",
-    "region": "02150 ESPOO",
-    "state_of_inc": "H9"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2113060&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2085836",
@@ -1918,16 +1993,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2085836&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7311",
-    "sic_desc": "Services-Advertising Agencies",
-    "is_blank_check": false,
-    "ticker": "POCH",
-    "region": "HONG KONG",
-    "state_of_inc": "E9"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2085836&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1460702",
@@ -1945,16 +2011,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1460702&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6199",
-    "sic_desc": "Finance Services",
-    "is_blank_check": false,
-    "ticker": "AIXC",
-    "region": "EL SEGUNDO, CA",
-    "state_of_inc": "DE"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1460702&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1786471",
@@ -2375,23 +2432,6 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2050020&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2087035",
-   "name": "AfterNext Acquisition I Corp.",
-   "forms": {
-    "S-1/A": 4
-   },
-   "first_filed": "20260708",
-   "last_filed": "20260810",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 4,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2087035&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "930245",
@@ -3068,23 +3108,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1035422&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2064768",
-   "name": "Canary Staked TRX ETF",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260724",
-   "last_filed": "20260724",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2064768&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2115027",
@@ -3795,6 +3818,40 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2039461&type=S-1&dateb=&owner=include&count=20"
   },
   {
+   "cik": "2004024",
+   "name": "Lianhe Sowell International Group Ltd",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20260819",
+   "last_filed": "20260819",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2004024&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2019793",
+   "name": "XCF Global, Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20260819",
+   "last_filed": "20260819",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2019793&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
    "cik": "2147557",
    "name": "HUALINK TECH INC",
    "forms": {
@@ -3844,24 +3901,6 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2098969&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1317685",
-   "name": "Alliance Laundry Holdings Inc.",
-   "forms": {
-    "S-1MEF": 1,
-    "S-1": 1
-   },
-   "first_filed": "20260817",
-   "last_filed": "20260818",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1317685&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2104827",
