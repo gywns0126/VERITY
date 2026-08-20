@@ -8,6 +8,7 @@
 - v3: 영문 뉴스(Google News RSS) + 영문 키워드 사전 추가
 """
 import re
+import sys
 import time
 import requests
 from typing import List, Dict, Tuple, Optional
@@ -62,6 +63,13 @@ HEADERS = {
 }
 
 
+# 🚨 수집 자기신고 (2026-08-20) — 조용한 실패를 막는다.
+# 132일간 KR 뉴스가 0건이었는데 신호가 없었던 이유 = `except: return []` 였다.
+# 소비자(get_stock_sentiment)가 이 값을 산출물에 실어 "뉴스 없음" 과 "파서 죽음" 을 가른다.
+FETCH_DIAG = {"ok": 0, "empty": 0, "errors": 0,
+              "last_error": None, "last_empty_query": None}
+
+
 def fetch_news_with_links(query: str, count: int = 10) -> List[Dict[str, str]]:
     """네이버 뉴스 검색에서 헤드라인 + 기사 URL 수집.
 
@@ -88,7 +96,24 @@ def fetch_news_with_links(query: str, count: int = 10) -> List[Dict[str, str]]:
                 seen.add(title)
                 results.append({"title": title, "url": url})
 
-        # 방법 2: JSON 임베드 regex fallback (네이버 SSR JSON 구조 대응)
+        # ── 방법 2 (2026-08-20 신설): sds-comps 마크업 ────────────────────────
+        # 🚨 네이버가 검색 결과를 `sds-comps-*` 컴포넌트로 갈아타면서 `a.news_tit` 가
+        #   **0건**이 됐다. 아래 방법 3(regex)도 `"link"` 가 0건이라 zip 이 빈 결과를 내
+        #   두 경로가 동시에 죽었고, 말미의 `except: return []` 가 조용히 삼켰다.
+        #   실측(2026-08-20, git 전수 131 일자): **2026-04-11 이후 121일 검사 전부 0건**,
+        #   마지막 정상은 2026-04-10(KR 30/30 · hc 15). **132일간 KR 뉴스 감성 = 상수 50.**
+        #   클래스 해시(`fender-ui_*`)는 불안정하므로 의미 토큰만 부분 매칭한다.
+        if not results:
+            for span in soup.select('span[class*="sds-comps-text-type-headline"]'):
+                title = span.get_text(" ", strip=True)
+                title = re.sub(r"<[^>]+>", "", title).replace("\\", "").strip()
+                a = span.find_parent("a")
+                url = (a.get("href") or "") if a else ""
+                if title and len(title) >= 8 and url and title not in seen and title not in skip_words:
+                    seen.add(title)
+                    results.append({"title": title, "url": url})
+
+        # 방법 3: JSON 임베드 regex fallback (네이버 SSR JSON 구조 대응)
         if not results:
             raw_titles = re.findall(r'"title":"([^"]{5,120})"', html)
             raw_links  = re.findall(r'"link":"(https?://[^"]+)"', html)
@@ -98,8 +123,23 @@ def fetch_news_with_links(query: str, count: int = 10) -> List[Dict[str, str]]:
                     seen.add(t)
                     results.append({"title": t, "url": l})
 
+        # 🚨 조용한 실패 금지 ([[feedback_cluster_silent_defect]] "건수 0 + 성공 종료").
+        #   HTTP 200 인데 0건이면 그건 "뉴스가 없다" 가 아니라 **파서가 죽은 것**이다.
+        #   132일을 놓친 이유가 정확히 이 신호의 부재였다.
+        if not results:
+            FETCH_DIAG["empty"] += 1
+            FETCH_DIAG["last_empty_query"] = query
+            print(f"[news_sentiment] ⚠️ 0건 — 셀렉터 무효 의심 "
+                  f"(query={query!r} · HTTP {resp.status_code} · {len(html):,}B)",
+                  file=sys.stderr)
+        else:
+            FETCH_DIAG["ok"] += 1
         return results[:count]
-    except Exception:
+    except Exception as exc:  # noqa: BLE001
+        FETCH_DIAG["errors"] += 1
+        FETCH_DIAG["last_error"] = f"{type(exc).__name__}: {exc}"
+        print(f"[news_sentiment] ⚠️ 수집 실패 (query={query!r}) — {type(exc).__name__}: {exc}",
+              file=sys.stderr)
         return []
 
 
