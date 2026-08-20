@@ -246,7 +246,7 @@
     "_live_source": "api/analyzers/multi_factor.py :: BASE_WEIGHTS / RISK_OFF_WEIGHTS / RISK_ON_WEIGHTS"
   },
   "sentiment_score": {
-    "description": "심리/감성 기반 종합 점수 (0~100). V5.2: 전체 13개 소스 가중치 합 = 1.0",
+    "description": "심리/감성 기반 종합 점수 (0~100). 🚨 2026-08-21 정정 — 종전 표기 '전체 13개 소스 가중치 합 = 1.0' 은 2026-08-15 구조 재편(PREREG_FORMULA_RESTRUCTURE, RULE 7 1회·PM 승인) 이후 사실과 달랐다. 실제 = 등록 13개 중 가중치>0 은 4개, 합 0.42 (시장 레벨 9요소는 가중 0 — 계산·기록만). 합 1.0 은 factors/sentiment.py 가 활성 가중만 재정규화한 결과이지 등록값의 합이 아니다. 산식 변경 0 — 설명 문자열만 정정.",
     "weights": {
       "news_sentiment": 0.175,
       "x_sentiment": 0.0,
