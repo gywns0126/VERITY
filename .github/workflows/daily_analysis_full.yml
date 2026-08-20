@@ -626,8 +626,15 @@ jobs:
         run: python -m api.builders.kr_flow_spike_observer
 
       - name: KR 종목 관측 신호 raw 적재 (v0, RULE 7 관측 only · 주간)
-        # 내부자·수급·희석·총수일가 raw → data/observations/kr_cross_section_observations.jsonl (금요일만 self-run, 점수 0).
+        # 내부자·수급·희석 raw → data/observations/kr_cross_section_observations.jsonl (금요일만 self-run, 점수 0).
         # 엔진 미사용 신호 forward IC trail 누적. spec docs/kr_cross_section_observation_spec_v0.
+        # 🚨 2026-08-20 컬럼별 주기 정합(PM 승인 옵션 B) — 8주 실측에서 시변 성격이 갈렸다:
+        #   flow(foreign/inst, 주간 ρ 0.240·값변경 79.5%) = 주간 유지 · insider(ρ 0.986)·dilution(ρ 0.933)
+        #   = 28일 · family_pct(ρ 1.000·8주 변경 0%, 공정위 연 1회) = **시계열 제외**(같은 값 8번 복사였다.
+        #   현재값은 stock_report_public.ownership.family_pct 에 매일 발행되므로 참조처가 이미 있다).
+        #   🚨 주기 판정은 달력이 아니라 trail 자체(마지막 적재 후 28일 또는 미적재 컬럼) — 달력 규칙은
+        #   그 주 run 이 죽으면 한 달을 건너뛴다(8/14 결손이 그 형태). 행마다 cadence 필드로 신고.
+        #   읽는 법 = 같은 디렉토리 kr_cross_section_observations_meta.json (사이드카 자기신고).
         # 🚨 2026-08-20 죽은 전제 제거 — 종전엔 '(N≥252 2027 검증용)' 이었다. 그 표본 수 게이트는
         #   §7-1(PM 2026-08-15)로 폐기됐다. 폐기 사유가 정확히 이 형태다: 출력이 언제나 '더 모아라'.
         #   🚨 대체 관문 §7-3(검출하한 신고)은 **PM 승인 대기** → 이 trail 은 현재 **유효한 등록 근거가
