@@ -75,3 +75,101 @@ def test_dispatch_sends_client_payload_field():
     """`_dispatch` 가 payload 를 GitHub 규격 필드명으로 싣는다."""
     src = (_ROOT / "vercel-api" / "api" / "cron" / "dispatch_pulse.py").read_text(encoding="utf-8")
     assert '"client_payload"' in src, "client_payload 키가 없다 — GitHub 이 모드를 못 받는다"
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# 🚨 2026-08-20 추가 — 위 4건은 전부 **소스 문자열 grep** 이라, 분기가 지워져도
+#    통과한다. 그런데 페이로드를 싣는 슬롯은 UTC 21:30 화~금 **하나뿐**이라
+#    8/20 수정 이후 첫 발화가 8/21 06:30 KST 다. 즉 실제로 나가는 바이트를
+#    아무도 본 적이 없는 상태로 첫 운영 발화를 맞게 된다.
+#    아래는 urlopen 을 가로채 **전송 바디를 직접 검사**한다.
+#    ([[feedback_green_check_is_not_safety]] — 통과가 안전을 뜻하지 않는다)
+# ──────────────────────────────────────────────────────────────────────────
+
+def _capture_dispatch(evt_item):
+    """`_split_event` → `_dispatch` 를 실제로 태우고 전송 바디를 돌려준다."""
+    import json as _json
+
+    m = _dp()
+    m.GH_PAT = "test-pat"
+    sent = {}
+
+    class _Resp:
+        status = 204
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def _fake_urlopen(req, timeout=None):
+        sent["url"] = req.full_url
+        sent["method"] = req.get_method()
+        sent["body"] = _json.loads(req.data.decode("utf-8"))
+        return _Resp()
+
+    m.urllib.request.urlopen = _fake_urlopen
+    evt, payload = m._split_event(evt_item)
+    status, _ = m._dispatch(evt, payload)
+    sent["status"] = status
+    return sent
+
+
+def test_us_slot_wire_body_carries_mode():
+    """🚨 실제 US 슬롯 항목을 그대로 태워, GitHub 에 나가는 바디를 검사한다."""
+    ev = _full_events(datetime(2026, 8, 19, 21, 30, tzinfo=timezone.utc))
+    sent = _capture_dispatch(ev[0])
+
+    assert sent["method"] == "POST"
+    assert sent["url"].endswith("/dispatches"), sent["url"]
+    # event_type 이 str 이 아니면 GitHub 이 422 를 낸다 (튜플 미해체 회귀)
+    assert isinstance(sent["body"]["event_type"], str), sent["body"]
+    assert sent["body"]["event_type"] == "daily_analysis_full", sent["body"]
+    assert sent["body"]["client_payload"] == {"mode": "full_us"}, sent["body"]
+    assert sent["status"] == 204
+
+
+def test_kr_slot_wire_body_omits_client_payload():
+    """KR 슬롯은 client_payload 키 자체가 없어야 한다 — 빈 dict 도 아니다.
+
+    빈 dict 를 보내면 워크플로의 `-n "$DISPATCH_MODE"` 는 어차피 거짓이라 결과는
+    같지만, '모드를 의도적으로 안 실었다' 와 '실었는데 비었다' 가 구분되지 않는다.
+    """
+    ev = _full_events(datetime(2026, 8, 20, 7, 50, tzinfo=timezone.utc))
+    sent = _capture_dispatch(ev[0])
+    assert "client_payload" not in sent["body"], sent["body"]
+    assert sent["body"] == {"event_type": "daily_analysis_full"}
+
+
+def test_split_event_handles_both_shapes():
+    """문자열 항목과 튜플 항목 양쪽 — 핸들러가 쓰는 그 함수를 직접 검사한다."""
+    m = _dp()
+    assert m._split_event("price_pulse") == ("price_pulse", None)
+    assert m._split_event(("daily_analysis_full", {"mode": "full_us"})) == (
+        "daily_analysis_full", {"mode": "full_us"})
+
+
+def test_handler_uses_split_event_not_inline_unpack():
+    """핸들러가 헬퍼를 쓰는지 고정 — 인라인으로 되돌리면 위 테스트가 무력해진다."""
+    src = (_ROOT / "vercel-api" / "api" / "cron" / "dispatch_pulse.py").read_text(encoding="utf-8")
+    assert "_split_event(raw_evt)" in src, "핸들러가 _split_event 를 거치지 않는다"
+
+
+def test_cron_fallback_string_matches_actual_schedule():
+    """🚨 fallback 이 죽지 않았는지 — 워크플로 cron 목록과 분기 문자열을 대조한다.
+
+    dispatch 가 주 경로이고 GH schedule 은 fallback 이다. 그런데 fallback 분기는
+    cron **문자열 완전일치**라, 스케줄을 옮기면 조용히 `else → full` 로 떨어진다
+    (에러도 알림도 없다). 실제 cron 목록에 없는 문자열을 분기가 기다리고 있으면 실패시킨다.
+    """
+    wf = _ROOT / ".github" / "workflows" / "daily_analysis_full.yml"
+    src = wf.read_text(encoding="utf-8")
+    doc = yaml.safe_load(src)
+    # 🚨 YAML 1.1 은 `on:` 을 **불리언 True** 로 읽는다. doc["on"] 은 KeyError 다.
+    on = doc.get("on", doc.get(True))
+    schedules = {c["cron"] for c in on["schedule"]}
+
+    import re
+    branch_strings = set(re.findall(r'\$CRON" = "([^"]+)"', src))
+    # 신·구 병기가 허용된 것들(주석에 사유 기재)은 실제 목록에 없어도 무해하다.
+    us_slot = "30 21 * * 2-5"
+    assert us_slot in branch_strings, "미장 fallback 분기 문자열이 사라졌다"
+    assert us_slot in schedules, (
+        f"미장 cron 이 옮겨졌는데 분기가 그대로다 — schedule 경로가 full 로 떨어진다: {schedules}")

@@ -197,6 +197,22 @@ def _is_hourly_pulse_slot(now_utc: datetime) -> bool:
     return False
 
 
+def _split_event(evt) -> tuple[str, dict | None]:
+    """`_resolve_events` 항목을 (event_type, payload) 로 가른다.
+
+    🚨 2026-08-20 — 항목은 문자열이거나 (event_type, payload) 튜플이다. 튜플을 그대로
+    `_dispatch` 에 넘기면 event_type 이 리스트로 직렬화돼 GitHub 이 422 를 낸다.
+
+    핸들러 안에 있던 2줄을 함수로 뺐다. 이유 = **이 경로는 아직 한 번도 실행된 적이 없다**.
+    페이로드를 싣는 슬롯은 UTC 21:30 화~금 하나뿐이라, 8/20 수정 이후 첫 발화가
+    8/21 06:30 KST 다. 그때 처음 도는 코드를 테스트가 못 만지는 상태로 두지 않는다
+    (기존 테스트 4건은 전부 **소스 문자열 grep** 이라 이 분기가 지워져도 통과한다).
+    """
+    if isinstance(evt, tuple):
+        return evt[0], evt[1]
+    return evt, None
+
+
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         # Vercel Cron 은 자동으로 Authorization: Bearer <CRON_SECRET> 헤더 송신
@@ -212,13 +228,8 @@ class handler(BaseHTTPRequestHandler):
         now_utc = datetime.now(timezone.utc)
         events = _resolve_events(now_utc)
         results = []
-        for evt in events:
-            # 🚨 2026-08-20 — 항목이 문자열이거나 (event_type, payload) 튜플이다.
-            #   payload 는 워크플로 모드 분기용(예: KST 06:30 = full_us). 튜플을 그대로
-            #   넘기면 event_type 이 리스트로 직렬화돼 GitHub 이 422 를 낸다.
-            _payload = None
-            if isinstance(evt, tuple):
-                evt, _payload = evt
+        for raw_evt in events:
+            evt, _payload = _split_event(raw_evt)
             status, detail = _dispatch(evt, _payload)
             results.append({"event": evt, "payload": _payload,
                             "status": status, "detail": detail})
