@@ -173,3 +173,72 @@ def test_cron_fallback_string_matches_actual_schedule():
     assert us_slot in branch_strings, "미장 fallback 분기 문자열이 사라졌다"
     assert us_slot in schedules, (
         f"미장 cron 이 옮겨졌는데 분기가 그대로다 — schedule 경로가 full 로 떨어진다: {schedules}")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# 보정 슬롯 (2026-08-20) — 30분 수집기가 하루 27~36회만 돌던 것(기대 48).
+# 워크플로 실패 0건 = 고장이 아니라 **dispatch 호출 누락**. 5분 뒤 한 번 더 기회를 주되,
+# 정규 슬롯이 이미 돌았으면 건너뛴다.
+# ──────────────────────────────────────────────────────────────────────────
+
+def test_backup_slot_fires_at_5_and_35():
+    m = _dp()
+    for minute in (5, 35):
+        got = m._resolve_backup_events(datetime(2026, 8, 20, 13, minute, tzinfo=timezone.utc))
+        assert [e for e, _ in got] == ["macro_collect", "crypto_collect"], (minute, got)
+        assert all(w.endswith(".yml") for _, w in got), got
+
+
+def test_backup_slot_is_empty_on_regular_and_other_minutes():
+    m = _dp()
+    for minute in (0, 30, 7, 10, 50, 55):
+        assert m._resolve_backup_events(
+            datetime(2026, 8, 20, 13, minute, tzinfo=timezone.utc)) == [], minute
+
+
+def test_backup_never_touches_the_us_slot():
+    """🚨 미장 full_us 는 21:30. 보정 슬롯이 그 자리에 끼어들면 안 된다."""
+    m = _dp()
+    assert m._resolve_backup_events(datetime(2026, 8, 20, 21, 30, tzinfo=timezone.utc)) == []
+    # 보정 대상에 무거운 파이프라인이 섞이지 않았는지도 고정
+    names = {e for slot in m._BACKUP_SLOTS.values() for e, _ in slot}
+    assert names == {"macro_collect", "crypto_collect"}, names
+
+
+def test_ran_recently_is_fail_open():
+    """판단 실패 = False(= 보정 발화). 모를 때 메우는 쪽이 이 슬롯의 목적이다."""
+    m = _dp()
+    m.GH_PAT = "test-pat"
+
+    def _boom(req, timeout=None):
+        raise OSError("network down")
+
+    m.urllib.request.urlopen = _boom
+    assert m._ran_recently("crypto_collect.yml", 20,
+                           datetime(2026, 8, 20, 13, 35, tzinfo=timezone.utc)) is False
+
+    m.GH_PAT = ""      # 토큰 부재도 같은 방향
+    assert m._ran_recently("crypto_collect.yml", 20,
+                           datetime(2026, 8, 20, 13, 35, tzinfo=timezone.utc)) is False
+
+
+def test_ran_recently_reads_created_at_window():
+    """정규 슬롯 발화(5분 전) = True → 건너뜀 / 35분 전 = False → 보정 발화."""
+    import io
+    import json as _json
+    m = _dp()
+    m.GH_PAT = "test-pat"
+    now = datetime(2026, 8, 20, 13, 35, tzinfo=timezone.utc)
+
+    def _mk(created_iso):
+        class _R:
+            def read(self): return _json.dumps(
+                {"workflow_runs": [{"created_at": created_iso}]}).encode()
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        return lambda req, timeout=None: _R()
+
+    m.urllib.request.urlopen = _mk("2026-08-20T13:30:12Z")   # 5분 전 = 정규 슬롯
+    assert m._ran_recently("crypto_collect.yml", 20, now) is True
+    m.urllib.request.urlopen = _mk("2026-08-20T13:00:09Z")   # 35분 전 = 앞앞 슬롯
+    assert m._ran_recently("crypto_collect.yml", 20, now) is False

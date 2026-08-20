@@ -197,6 +197,70 @@ def _is_hourly_pulse_slot(now_utc: datetime) -> bool:
     return False
 
 
+# ── 보정 슬롯 (2026-08-20 신설) ────────────────────────────────────────────
+# 🚨 실측: 30분 수집기가 하루 27~36회만 돈다(기대 48). 워크플로 실패는 **0건** —
+#   전부 success 다. 즉 고장난 것은 수집기가 아니라 **dispatch 호출 자체가 안 온 것**이다.
+#   macro_collect 와 crypto_collect 의 일별 횟수가 거의 같다(28/28·32/32·21/21)는 점이
+#   근거다. 둘은 같은 호출에서 나가므로, 함께 빠졌다면 빠진 것은 호출 하나다.
+#
+# 🚨 "매칭 창을 넓히자"(`minute % 30 <= 2`)는 **효과가 없다** — 늦게 오는 게 아니라
+#   안 오는 것이다. 발화한 run 의 분(minute) 분포가 30분:55 · 00분:41 로 촘촘하고
+#   31/01분은 4건뿐이라 지터 가설이 서지 않는다. 그래서 창이 아니라 **재시도**다.
+#
+# 정규 슬롯(0/30분) 5분 뒤에 한 번 더 기회를 준다. 단 무조건 쏘지 않는다 —
+# 정규 슬롯이 이미 돌았으면 건너뛴다. 정상일 때 추가 런 0, 누락일 때만 메운다.
+_BACKUP_SLOTS: dict[int, list[tuple[str, str]]] = {
+    5: [("macro_collect", "macro_collect.yml"), ("crypto_collect", "crypto_collect.yml")],
+    35: [("macro_collect", "macro_collect.yml"), ("crypto_collect", "crypto_collect.yml")],
+}
+# 정규↔보정 간격 5분 + 여유. 정규 슬롯 간격이 30분이라 20분이면 앞 슬롯만 본다.
+_BACKUP_WINDOW_MIN = 20
+
+
+def _resolve_backup_events(now_utc: datetime) -> list[tuple[str, str]]:
+    """보정 슬롯 후보 — (event_type, workflow_file). 순수 함수(I/O 0).
+
+    `_resolve_events` 를 건드리지 않는다. 그쪽은 미장 `full_us` 경로가 지나가는
+    자리이고 단위 테스트가 직접 호출하므로, 네트워크가 필요한 판단을 섞지 않는다.
+    """
+    return list(_BACKUP_SLOTS.get(now_utc.minute, []))
+
+
+def _ran_recently(workflow_file: str, minutes: int, now_utc: datetime) -> bool:
+    """해당 워크플로가 최근 `minutes` 분 안에 만들어진 run 을 갖는가.
+
+    🚨 판단 실패(토큰 없음·API 오류·형식 이상) = **False** 를 돌려준다. 즉 fail-open 이라
+    한 번 더 쏜다. 이 슬롯의 목적이 누락 보정이므로, 모를 때는 메우는 쪽이 맞다.
+    중복 발화의 대가는 수집 런 1회(timeout 5분·멱등)뿐이고, 반대 방향의 대가는
+    신선도 갭이다.
+    """
+    if not GH_PAT:
+        return False
+    url = (f"https://api.github.com/repos/{GH_REPO}/actions/workflows/"
+           f"{urllib.parse.quote(workflow_file)}/runs?per_page=1")
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {GH_PAT}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "verity-vercel-dispatch/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            runs = (json.loads(resp.read().decode("utf-8")) or {}).get("workflow_runs") or []
+        if not runs:
+            return False
+        created = str(runs[0].get("created_at") or "")
+        if created.endswith("Z"):
+            created = created[:-1] + "+00:00"
+        age_min = (now_utc - datetime.fromisoformat(created)).total_seconds() / 60
+        return 0 <= age_min <= minutes
+    except Exception:
+        return False
+
+
 def _split_event(evt) -> tuple[str, dict | None]:
     """`_resolve_events` 항목을 (event_type, payload) 로 가른다.
 
@@ -233,6 +297,18 @@ class handler(BaseHTTPRequestHandler):
             status, detail = _dispatch(evt, _payload)
             results.append({"event": evt, "payload": _payload,
                             "status": status, "detail": detail})
+
+        # 보정 슬롯 — 정규 슬롯이 이미 돌았으면 건너뛴다(추가 런 0).
+        # 🚨 건너뛴 것도 결과에 남긴다. 조용히 지나가면 보정이 작동하는지 영영 모른다
+        #    (건수 0 + 성공 종료 = 결손 은폐. 이 저장소가 반복해서 당한 형태다).
+        for evt, wf_file in _resolve_backup_events(now_utc):
+            if _ran_recently(wf_file, _BACKUP_WINDOW_MIN, now_utc):
+                results.append({"event": evt, "payload": None, "status": 200,
+                                "detail": f"backup-skip: 정규 슬롯 {_BACKUP_WINDOW_MIN}분 내 발화 확인"})
+                continue
+            status, detail = _dispatch(evt, None)
+            results.append({"event": evt, "payload": None, "status": status,
+                            "detail": f"backup-fire: {detail}"})
 
         all_ok = all(200 <= r["status"] < 300 for r in results)
         out = {
