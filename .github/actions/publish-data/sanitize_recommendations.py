@@ -49,6 +49,11 @@ STRIP_KEYS = {
     # 2026-08-03 display_verdict 게이트 — LLM 합의 원본(참고 관측)은 비공개.
     # display_verdict 자체는 STRIP_PAT(r"verdict") 자동 포착. recommendation 문자열만 공개.
     "analyst_view",
+    # 🚨 2026-08-21 — 이월 자기신고 스탬프(api/main.py MERGE). 오퍼레이터 진단용이다.
+    #   `frozen_fields` 가 verity_brain·overrides_applied·multi_factor 를 **이름으로**
+    #   담는데 셋 다 이미 STRIP_KEYS 대상 = 값은 막고 구조 이름은 새는 형태가 된다.
+    #   공개 Blob 계약은 "팩트+뉴스+recommendation+consensus" 이고 이월 여부는 그 밖이다.
+    "_carried",
     # 2026-08-04 신호 필터 F2·F3 진단 flag (PREREG_SIGNAL_FILTERS) — 자체 산식 파생, 오퍼레이터 전용.
     "value_guards",
     # 🚨 2026-08-18 애널리스트 컨센서스 3키 (PM 결정 — 공개 발행 금지, 백엔드 유지).
