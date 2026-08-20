@@ -30,6 +30,10 @@ BANNED_FIELDS = (
     "target_price", "price_target", "kis_target_price", "single_consensus_target_price",
     "investment_opinion", "investment_opinion_numeric", "kis_opinion", "kis_analyst_firm",
     "analyst_consensus", "target_price_source",
+    # 🚨 2026-08-20 — yfinance 컨센서스 오퍼레이터 주입분(PM "백에는 연동, 알파콘솔에서만 사용").
+    #   원본 `us_analyst_consensus.json` 이 manifest `banned` 이므로 파생 필드도 같은 class 다.
+    #   이름이 달라 `analyst_consensus` 키에 안 걸린다 — 별도로 막는다.
+    "analyst_consensus_yf", "target_mean", "target_high", "target_low",
 )
 
 
@@ -88,3 +92,32 @@ def test_sanitizer_does_not_touch_source_data():
     recs = doc if isinstance(doc, list) else (doc.get("recommendations") or [])
     assert any(isinstance(r, dict) and r.get("consensus") for r in recs), \
         "원본에서 consensus 가 사라졌다 — 발행본만 strip 해야 한다"
+
+
+def test_operator_only_consensus_is_attached_but_not_published():
+    """🚨 백엔드 연동 + 발행 차단이 **동시에** 성립하는지 (PM 2026-08-20).
+
+    운영 풀 US 는 `us_analyst_consensus.json`(yfinance 5,274종목)에 49/49 전량 있는데
+    `recommendations` 에는 안 붙어 있었고, 대신 Finnhub 값이 자리를 잡고 있었다.
+    Finnhub 는 무료 플랜에서 `stock/price-target` 403 이라 목표가가 전부 0 이고 커버도
+    29/49 였다 — **좋은 소스가 있는데 나쁜 소스가 자리를 차지한** 형태.
+
+    지시 = 백엔드에는 연동하되 알파콘솔(오퍼레이터)에서만 쓴다. 공개 발행 금지는
+    2중 가드로 성립한다: ① manifest `banned` ② 발행 sanitizer STRIP_KEYS.
+    """
+    import importlib
+    sys.path.insert(0, str(_ACTION))
+    mod = importlib.import_module("sanitize_recommendations")
+    assert "analyst_consensus_yf" in mod.STRIP_KEYS, (
+        "오퍼레이터 주입분이 발행 strip 에 없다 — 공개로 나간다")
+
+    src = (_ROOT / "api" / "main.py").read_text(encoding="utf-8")
+    assert "analyst_consensus_yf" in src, "백엔드 주입이 사라졌다"
+    assert "us_analyst_consensus.json" in src, "주입 소스 경로가 사라졌다"
+    # 🚨 Finnhub 값을 덮지 않는다 — 소스가 섞이면 산출물에서 어느 쪽인지 못 가린다
+    assert 'stock["analyst_consensus"] = ' not in src.split("analyst_consensus_yf")[1][:2000], (
+        "주입이 Finnhub 키를 덮어쓴다 — 출처가 섞인다")
+
+    man = json.loads((_ROOT / "data" / "manifest.json").read_text(encoding="utf-8"))
+    banned = {b.get("file") for b in man.get("banned", [])}
+    assert "data/us_analyst_consensus.json" in banned, "원본이 banned 목록에서 빠졌다"

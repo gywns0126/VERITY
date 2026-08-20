@@ -57,6 +57,9 @@ STRIP_KEYS = {
     #     이미 STRIP_KEYS 에 있어 함께 빠진다.
     #   analyst_report_summary = recent_reports[].target_price (7건) 보유.
     "consensus", "analyst_consensus", "analyst_report_summary",
+    # 2026-08-20 — yfinance 컨센서스 오퍼레이터 주입분(api/main.py). 원본 파일이 manifest
+    #   `banned` 이므로 파생 필드도 같은 class 다. 이름이 달라 위 키에 안 걸린다.
+    "analyst_consensus_yf",
 }
 # 패턴 백스톱 — 미래 추가 점수/등급/판정 필드 누출 방지 (consensus/recommendation/팩트 미포착)
 STRIP_PAT = re.compile(r"brain|score_break|verdict|fscore|lynch", re.IGNORECASE)

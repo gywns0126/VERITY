@@ -4137,6 +4137,59 @@ def main():
     except Exception as _usf_e:
         print(f"  us_fscore 주입 실패(무시): {_usf_e}")
 
+    # ── US 애널리스트 컨센서스 주입 (2026-08-20, PM 지시) ─────────────────────────
+    # 🚨 **오퍼레이터(알파콘솔) 전용.** 공개 발행에는 나가지 않는다 — 2중 차단:
+    #   ① `data/us_analyst_consensus.json` = manifest `banned` (yfinance 재배포 권리 없음,
+    #      PM 2026-07-10 · blob 404 실측 8/16)
+    #   ② 발행 sanitizer STRIP_KEYS 에 `analyst_consensus` 포함 (2026-08-18)
+    #   즉 "백엔드에는 연동, 알파콘솔에서만 사용" 이라는 지시가 기존 가드로 이미 성립한다.
+    #
+    # WHY: 원본은 5,274종목을 매일 받고 있는데(운영 풀 US 49 중 **49/49** 보유) 이 값이
+    #   `recommendations` 에 안 붙어, 대신 Finnhub 값이 그 자리를 차지하고 있었다.
+    #   Finnhub 는 무료 플랜에서 `stock/price-target` 403 이라 **목표가가 전부 0** 이고
+    #   커버도 29/49 다. 좋은 소스가 있는데 나쁜 소스가 자리를 잡고 있던 형태
+    #   (2026-08-20 실측 · `us_fin_annual_compact` 미부착과 같은 형태).
+    #
+    # 🚨 점수 영향 0 — 헌법 `fact_score.weights` 는 문헌 4축뿐이고 `analyst_consensus` 는
+    #   가중이 없다. 관측·판단 보조 자료로만 실린다 (RULE 7 쿼터 미소모).
+    # 🚨 Finnhub 값을 덮지 않는다 — `analyst_consensus_yf` 로 따로 싣는다. 같은 키에 두 소스를
+    #   섞으면 어느 쪽인지 산출물에서 갈리지 않는다([[feedback_source_attribution_discipline]]).
+    try:
+        _ac_path = os.path.join(DATA_DIR, "us_analyst_consensus.json")
+        if os.path.exists(_ac_path):
+            with open(_ac_path, encoding="utf-8") as _acf:
+                _ac_doc = json.load(_acf) or {}
+            _ac_rows = _ac_doc.get("stocks") or []
+            _ac_map = {str(r.get("ticker", "")).upper(): r for r in _ac_rows}
+            _ac_asof = (_ac_doc.get("_meta") or {}).get("generated_at")
+            _ac_n = 0
+            for stock in candidates:
+                if stock.get("currency") != "USD":
+                    continue
+                row = _ac_map.get(str(stock.get("ticker", "")).upper())
+                if not row:
+                    continue
+                stock["analyst_consensus_yf"] = {
+                    "rec_key": row.get("rec_key"),
+                    "rec_mean": row.get("rec_mean"),
+                    "num_analysts": row.get("num_analysts"),
+                    "target_mean": row.get("target_mean"),
+                    "target_high": row.get("target_high"),
+                    "target_low": row.get("target_low"),
+                    "upside_pct": row.get("upside_pct"),
+                    "counts": row.get("counts"),
+                    # 🚨 as_of 필수 — 어제 값을 오늘 값으로 읽는 사고 차단
+                    #   ([[feedback_cluster_silent_defect]] 상한 도달 rows[-1] 둔갑)
+                    "as_of": row.get("collected_at") or _ac_asof,
+                    "source": "yfinance (Yahoo Finance 애널리스트 집계)",
+                    "publish": False,
+                }
+                _ac_n += 1
+            print(f"  analyst_consensus_yf 주입: {_ac_n}종목 "
+                  f"(오퍼레이터 전용 · 발행 제외 · as_of {str(_ac_asof)[:16]})")
+    except Exception as _ac_e:
+        print(f"  analyst_consensus_yf 주입 실패(무시): {_ac_e}")
+
     # new_listings 주입 — 막스 5번째 사이클 신호 "신규 딜 품질" source.
     # data/new_listings.json (월 1회 KRX IPO collector cron 커밋) read-only.
     # market_horizon.classify_new_listing_quality 가 portfolio["new_listings"] 6키 소비.
