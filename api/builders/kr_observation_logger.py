@@ -185,6 +185,70 @@ COLUMN_NATURE = {
 }
 CADENCE_CHANGE_DATE = "2026-08-21"
 
+# §7-3 (8) "관측 주기 = 정보 주기" 가 정한 지평. 가격류 = 1~20일 · 가치/이벤트류 = 1~12개월.
+#   🚨 이 표는 §7-3 (7) 의 독립관측 k 를 계산하기 위한 것이지 채점용이 아니다(RULE 7 관측 only).
+HORIZONS = {
+    "flow":     [("fwd5d", 5), ("fwd20d", 20)],
+    "insider":  [("fwd1m", 30), ("fwd3m", 90)],
+    "dilution": [("fwd3m", 90)],
+}
+
+
+def _evidence_class(k: int) -> str:
+    """§7-3 (7) 외부검증 채택분 — k<3 설계상 판정 불가 · k<10 exploratory · 이상 confirmatory."""
+    if k < 3:
+        return "판정 불가(설계상)"
+    return "exploratory" if k < 10 else "confirmatory"
+
+
+def _power_selfreport(date_str: str) -> Dict[str, Any]:
+    """🚨 이 trail 이 지금 무엇을 판정할 수 있는지 스스로 신고한다.
+
+    §7-1 이 폐기한 것은 '표본 수 게이트' 이고, 폐기 사유는 **기본 출력이 "더 모아라" 인 것**이었다.
+    그래서 여기 출력은 "얼마나 모았나" 가 아니라 **"이 설계로 무엇이 판정 가능한가"** 다.
+    k 가 안 오르는 칸은 더 모을 일이 아니라 **설계를 바꾸거나 확증 없이 갈 일**이다.
+
+    k = §7-3 (7) 독립관측 = span // 지평, 관측 횟수 상한. 겹침 관측을 n 으로 쓰면 검정력
+    관문 자체가 오염된다(실측 t 부풀림 2.3~2.5배).
+    """
+    dates = sorted({str(r) for r in _observed_dates()})
+    if not dates:
+        return {}
+    d0 = datetime.strptime(dates[0], "%Y-%m-%d").date()
+    d1 = datetime.strptime(max(dates[-1], date_str), "%Y-%m-%d").date()
+    span = (d1 - d0).days
+    out: Dict[str, Any] = {
+        "_설명": "k = 독립관측(§7-3 (7)) = span // 지평. k<3 = 이 칸은 설계상 판정 불가.",
+        "_출력_의미": "'더 모아라' 가 아니라 '지금 무엇이 판정 가능한가' 다(§7-1 폐기 사유 정합).",
+        "observed_dates": len(dates), "span_days": span,
+    }
+    for g, hzs in HORIZONS.items():
+        for label, days in hzs:
+            k = min(len(dates), span // days) if days else 0
+            out[f"{g}.{label}"] = {"horizon_days": days, "k": k, "evidence_class": _evidence_class(k)}
+    return out
+
+
+def _observed_dates() -> List[str]:
+    """trail 의 관측 날짜 집합(중복 제거)."""
+    seen = set()
+    if not os.path.exists(OUT_PATH):
+        return []
+    try:
+        with open(OUT_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    d = json.loads(line).get("date")
+                except json.JSONDecodeError:
+                    continue
+                if d:
+                    seen.add(str(d))
+    except OSError:
+        pass
+    return sorted(seen)
+
 
 def _write_meta(date_str: str, due: List[str], stale: List[str]) -> None:
     """산출물이 자기 입으로 말하게 한다(RULE 12 ②) — 주기 정책·컬럼 성격·경계 신고.
@@ -226,6 +290,7 @@ def _write_meta(date_str: str, due: List[str], stale: List[str]) -> None:
             ),
             "pm_approval": "2026-08-20 옵션 B",
         },
+        "🚨 판정 가능성 자기신고 (§7-3 (7)·(8))": _power_selfreport(date_str),
         "retired_columns": RETIRED_COLS,
         "last_run": {"due_groups": due, "stale_inputs": stale},
     }

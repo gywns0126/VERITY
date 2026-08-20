@@ -220,3 +220,43 @@ class TestMetaSidecar:
         # 주기 근거 수치가 실측이라는 것과 측정 창이 남아야 한다
         assert m["column_nature_measured_2026_06_21__2026_08_07"]["foreign_net"]["weekly_rank_rho"] == 0.240
         assert m["retired_columns"]["family_pct"]
+
+
+class TestPowerSelfReport:
+    """🚨 §7-1 이 폐기한 것은 표본 수 게이트이고, 폐기 사유는 **기본 출력이 '더 모아라'** 인 것이었다.
+
+    그래서 이 신고의 출력은 "얼마나 모았나" 가 아니라 **"지금 무엇이 판정 가능한가"** 여야 한다.
+    k 가 안 오르는 칸은 더 모을 일이 아니라 설계를 바꾸거나 확증 없이 갈 일이다.
+    """
+
+    def test_k_and_evidence_class_reported_per_horizon(self, env):
+        env()
+        assert ob.main() == 0
+        blk = json.load(open(env.meta, encoding="utf-8"))["🚨 판정 가능성 자기신고 (§7-3 (7)·(8))"]
+        # 지평은 §7-3 (8) — 가격류 1~20일 / 이벤트·가치류 1~12개월
+        assert blk["flow.fwd5d"]["horizon_days"] == 5
+        assert blk["insider.fwd1m"]["horizon_days"] == 30
+        # 첫 관측 1회 = span 0 → 어떤 지평도 판정 불가여야 한다
+        for key, v in blk.items():
+            if isinstance(v, dict) and "k" in v:
+                assert v["k"] == 0 and v["evidence_class"] == "판정 불가(설계상)"
+
+    def test_evidence_class_thresholds(self):
+        # §7-3 (7) 외부검증 채택 임계 — k<3 판정 불가 · k<10 exploratory · 이상 confirmatory
+        assert ob._evidence_class(0) == "판정 불가(설계상)"
+        assert ob._evidence_class(2) == "판정 불가(설계상)"
+        assert ob._evidence_class(3) == "exploratory"
+        assert ob._evidence_class(9) == "exploratory"
+        assert ob._evidence_class(10) == "confirmatory"
+
+    def test_k_uses_span_not_row_count(self, env):
+        # 🚨 겹침 관측 수를 n 으로 쓰면 검정력 관문 자체가 오염된다(t 부풀림 2.3~2.5배 실측).
+        #    같은 날 여러 행이 있어도 k 는 오르지 않아야 한다.
+        env()
+        for _ in range(5):
+            env.seed(3, ["foreign_net"])            # 3일 전 날짜로 5행(=관측 1회)
+        assert ob.main() == 0
+        blk = json.load(open(env.meta, encoding="utf-8"))["🚨 판정 가능성 자기신고 (§7-3 (7)·(8))"]
+        assert blk["observed_dates"] == 2, "같은 날 5행 + 오늘 1행 = 관측 2회(행 6개 아님)"
+        assert blk["span_days"] == 3
+        assert blk["flow.fwd5d"]["k"] == 0, "span 3일 < 지평 5일 → 독립관측 0"
