@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-20T22:32:56+09:00",
+  "collected_at": "2026-08-20T23:02:19+09:00",
   "macro": {
     "usd_krw": {
       "value": 1393.48,
@@ -1406,21 +1406,6 @@
       "d_day": 5
     },
     {
-      "name": "미국 PCE 물가지수",
-      "severity": "high",
-      "impact_area": [
-        "물가",
-        "금리기대"
-      ],
-      "impact": "Fed 선호 인플레 지표. CPI와 유사하나 실질 정책 영향 큼",
-      "action": "CPI와 교차 확인, 인플레 추세 판단",
-      "date": "2026-08-25",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 21,
-      "d_day": 5
-    },
-    {
       "name": "미국 주택착공",
       "severity": "low",
       "impact_area": [
@@ -1525,12 +1510,18 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 33.66
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 156.32
   },
   "schema_version": "v0"
 }
