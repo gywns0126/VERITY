@@ -1,0 +1,125 @@
+{
+ "_meta": {
+  "generated_at": "2026-08-21T07:55:20.033131+09:00",
+  "for_date": "2026-08-21",
+  "trail": "kr_cross_section_observations.jsonl",
+  "note": "관측 only · 점수·방향·조합식 0(RULE 7). 이 파일은 trail 의 읽는 법이다."
+ },
+ "🚨 등록 상태": "이 trail 의 종전 근거였던 표본 수 게이트는 §7-1(PM 2026-08-15)로 폐기됐다. 대체 관문 §7-3(검출하한 신고)은 PM 승인 대기 → 현재 유효한 등록 근거 없음. 표본을 더 쌓는 것 자체는 결론이 아니다.",
+ "cadence_policy": {
+  "rule": "달력이 아니라 trail 자체로 판정 — 마지막 적재 후 N일 경과 또는 미적재 컬럼 보유",
+  "why_not_calendar": "달력 규칙은 그 주 run 이 죽으면 한 달을 건너뛴다(2026-08-14 결손이 그 형태)",
+  "groups": {
+   "flow": {
+    "days": 0,
+    "cols": [
+     "foreign_net",
+     "inst_net"
+    ]
+   },
+   "insider": {
+    "days": 28,
+    "cols": [
+     "insider_net",
+     "insider_buy_n",
+     "insider_sell_n",
+     "insider_net_365d",
+     "insider_buy_n_365d",
+     "insider_sell_n_365d"
+    ]
+   },
+   "dilution": {
+    "days": 28,
+    "cols": [
+     "dilution_count"
+    ]
+   }
+  }
+ },
+ "key_semantics": {
+  "키 부재": "미표집 — 그 주 표집 주기가 아니었다",
+  "null": "표집했으나 입력 산출물이 stale(같은 run 의 상류 빌더 skip)",
+  "stale_inputs": "null 이 난 소스 이름. 정상 주엔 키 자체가 없다"
+ },
+ "column_nature_measured_2026_06_21__2026_08_07": {
+  "foreign_net": {
+   "group": "flow",
+   "weekly_rank_rho": 0.24,
+   "weekly_change_rate": 0.795,
+   "n": 1540
+  },
+  "inst_net": {
+   "group": "flow",
+   "weekly_rank_rho": 0.273,
+   "weekly_change_rate": 0.76,
+   "n": 1540
+  },
+  "insider_net": {
+   "group": "insider",
+   "weekly_rank_rho": 0.986,
+   "weekly_change_rate": 0.132,
+   "n": 1460
+  },
+  "dilution_count": {
+   "group": "dilution",
+   "weekly_rank_rho": 0.933,
+   "weekly_change_rate": 0.054,
+   "n": 1946
+  },
+  "family_pct": {
+   "group": "(제외)",
+   "weekly_rank_rho": 1.0,
+   "weekly_change_rate": 0.0,
+   "n": 321
+  }
+ },
+ "cadence_change": {
+  "date": "2026-08-21",
+  "before": "전 컬럼 주 1회",
+  "after": "flow 주간 · insider/dilution 28일 · family_pct 시계열 제외",
+  "why": "컬럼별 시변 성격이 완전히 달랐다 — 한쪽은 과표집, 한쪽은 같은 값 복사",
+  "🚨 read_across_boundary": "이 날짜 앞뒤로 표집 빈도가 다르다. 행 수를 관측 수로 세면 앞뒤가 섞인다 — 반드시 행의 cadence 필드로 잘라서 볼 것(RULE 13 ⑤)",
+  "pm_approval": "2026-08-20 옵션 B"
+ },
+ "🚨 판정 가능성 자기신고 (§7-3 (7)·(8))": {
+  "_설명": "k = 독립관측(§7-3 (7)) = span // 지평. k<3 = 이 칸은 설계상 판정 불가.",
+  "_출력_의미": "'더 모아라' 가 아니라 '지금 무엇이 판정 가능한가' 다(§7-1 폐기 사유 정합).",
+  "observed_dates": 9,
+  "span_days": 61,
+  "flow.fwd5d": {
+   "horizon_days": 5,
+   "k": 9,
+   "evidence_class": "exploratory"
+  },
+  "flow.fwd20d": {
+   "horizon_days": 20,
+   "k": 3,
+   "evidence_class": "exploratory"
+  },
+  "insider.fwd1m": {
+   "horizon_days": 30,
+   "k": 2,
+   "evidence_class": "판정 불가(설계상)"
+  },
+  "insider.fwd3m": {
+   "horizon_days": 90,
+   "k": 0,
+   "evidence_class": "판정 불가(설계상)"
+  },
+  "dilution.fwd3m": {
+   "horizon_days": 90,
+   "k": 0,
+   "evidence_class": "판정 불가(설계상)"
+  }
+ },
+ "retired_columns": {
+  "family_pct": "공정위 연 1회 갱신 — 8주 변경 0%. stock_report_public.ownership.family_pct 참조"
+ },
+ "last_run": {
+  "due_groups": [
+   "flow",
+   "insider"
+  ],
+  "stale_inputs": []
+ }
+}

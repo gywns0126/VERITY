@@ -1,15 +1,15 @@
 {
- "as_of": "2026-08-20T18:19:41+09:00",
+ "as_of": "2026-08-21T07:57:45+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
   "ledger_integrity",
-  "key_coverage",
   "guard_inputs",
   "exit_paths",
   "as_of_staleness"
  ],
  "known_unresolved": [
+  "key_coverage",
   "rule_discrimination",
   "flag_coverage",
   "input_constancy"
@@ -18,7 +18,7 @@
  "checks": {
   "ledger_integrity": {
    "ok": false,
-   "episodes": 26,
+   "episodes": 27,
    "phantom_sells": 59,
    "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
@@ -36,39 +36,15 @@
      ]
     },
     {
-     "key": "asset_turnover",
-     "modules": [
-      "quality.py"
-     ]
-    },
-    {
      "key": "close",
      "modules": [
       "fact.py"
      ]
     },
     {
-     "key": "gross_margin",
-     "modules": [
-      "quality.py"
-     ]
-    },
-    {
-     "key": "gross_profit",
-     "modules": [
-      "quality.py"
-     ]
-    },
-    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
-     ]
-    },
-    {
-     "key": "net_income",
-     "modules": [
-      "quality.py"
      ]
     },
     {
@@ -85,18 +61,6 @@
     },
     {
      "key": "prev_year",
-     "modules": [
-      "quality.py"
-     ]
-    },
-    {
-     "key": "retained_earnings",
-     "modules": [
-      "quality.py"
-     ]
-    },
-    {
-     "key": "revenue",
      "modules": [
       "quality.py"
      ]
@@ -120,42 +84,28 @@
      ]
     },
     {
-     "key": "total_assets",
-     "modules": [
-      "quality.py"
-     ]
-    },
-    {
      "key": "total_debt",
      "modules": [
       "quality.py"
      ]
-    },
-    {
-     "key": "working_capital",
-     "modules": [
-      "quality.py"
-     ]
     }
    ],
-   "thin_keys": [
-    {
-     "key": "analyst_report_summary",
-     "coverage": "3/66"
-    }
-   ],
-   "detail": "레코드에 한 번도 없는 키 18종 — 해당 채점 축이 조용히 죽어 있다",
-   "status": "REGRESSION"
+   "thin_keys": [],
+   "detail": "레코드에 한 번도 없는 키 10종 — 해당 채점 축이 조용히 죽어 있다",
+   "baseline": {
+    "dead_keys": 10
+   },
+   "status": "KNOWN"
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 99,
+   "snapshots": 100,
    "cap_rules_checked": 7,
    "degenerate_rules": [
     {
@@ -171,9 +121,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 9,
-   "days_without_any_cap_pct": 9.1,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.0%). cap 없는 날 9/99일",
+   "days_without_any_cap": 10,
+   "days_without_any_cap_pct": 10.0,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.0%). cap 없는 날 10/100일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -184,14 +134,10 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 11,
-   "stock_days": 4669,
+   "stock_days": 4747,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
-     "fired": 0
-    },
-    {
-     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
@@ -199,11 +145,15 @@
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
      "rule": "SEC 8-K 리스크 공시:",
+     "fired": 0
+    },
+    {
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
@@ -274,27 +224,27 @@
   },
   "guard_inputs": {
    "ok": false,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "coverage": {
     "sector": {
-     "filled": 11,
-     "total": 11,
+     "filled": 10,
+     "total": 10,
      "guard": "섹터 35% 상한"
     },
     "beta": {
      "filled": 0,
-     "total": 11,
+     "total": 10,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 11,
-     "total": 11,
+     "filled": 10,
+     "total": 10,
      "guard": "팩터 쏠림 차단"
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 39,
-    "scored": 54,
+    "with_pct": 31,
+    "scored": 31,
     "ok": true
    },
    "dead_guards": [
@@ -302,14 +252,14 @@
      "field": "beta",
      "guard": "포트폴리오 베타 1.5 상한",
      "filled": 0,
-     "total": 11
+     "total": 10
     }
    ],
    "detail": "입력 전무한 가드 1종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta)"
   },
   "exit_paths": {
    "ok": false,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "no_profit_exit": [
     {
      "name": "파마리서치",
