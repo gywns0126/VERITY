@@ -227,9 +227,20 @@ jobs:
         run: |
           CRON="${{ github.event.schedule }}"
           MANUAL="${{ github.event.inputs.mode }}"
+          # 🚨 2026-08-20 — Vercel dispatch 가 실어 보내는 모드. 종전에는 이 경로가 없어
+          #   dispatch 트리거 시 CRON="" → 모든 elif 불일치 → else → mode=full 로 흘렀다.
+          #   KST 06:30(UTC 21:30) 슬롯은 full_us(미장 전체)여야 하는데 매번 full 이 되어
+          #   미장 수집이 상위 10개로 잘렸다 — 실측 2026-08-20 06:30 run
+          #   `[5.71] 미장 데이터 수집 — 상위 10개`. Finnhub 커버 29/49 의 원인이다.
+          #   🚨 GH schedule 은 이제 사실상 안 쓰인다(dispatch 가 먼저 잡는다). 그래도 CRON
+          #   분기는 남긴다 — dispatch 가 죽었을 때의 fallback 이고, 지우면 그 경로가 조용히
+          #   full 로 떨어진다.
+          DISPATCH_MODE="${{ github.event.client_payload.mode }}"
           DAY_OF_MONTH=$(TZ=Asia/Seoul date +%d)
           if [ -n "$MANUAL" ]; then
             echo "mode=$MANUAL" >> $GITHUB_OUTPUT
+          elif [ -n "$DISPATCH_MODE" ]; then
+            echo "mode=$DISPATCH_MODE" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "7 1 4 1 *" ]; then
             echo "mode=periodic_annual" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "7 1 3 1,7 *" ]; then

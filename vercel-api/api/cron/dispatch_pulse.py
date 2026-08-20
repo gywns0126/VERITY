@@ -31,11 +31,25 @@ GH_PAT = os.environ.get("GH_DISPATCH_PAT", "")
 CRON_SECRET = os.environ.get("CRON_SECRET", "")
 
 
-def _dispatch(event_type: str) -> tuple[int, str]:
+def _dispatch(event_type: str, payload: dict | None = None) -> tuple[int, str]:
+    """🚨 2026-08-20 — `client_payload` 추가. 종전에는 event_type 만 보냈다.
+
+    그래서 `daily_analysis_full` 워크플로의 모드 분기(`github.event.schedule` 문자열 매칭)가
+    **dispatch 경로에서 항상 빈 문자열**을 받아 `else → mode=full` 로 흘렀다.
+    KST 06:30(UTC 21:30) 슬롯은 `full_us`(미장 전체) 여야 하는데 매번 `full`(상위 10개)로
+    돌아, 미장 수집이 49종목 중 10개로 잘리고 있었다 — 실측 2026-08-20 06:30 run
+    `[5.71] 미장 데이터 수집 — 상위 10개`. Finnhub 커버가 29/49 로 보이던 원인이다.
+
+    워크플로 주석이 이미 경고했던 함정이다(*"cron 문자열 매칭이라 … else 로 흘러간다"*).
+    dispatch 는 schedule 이 아니므로 그 매칭이 **구조적으로** 성립하지 않는다.
+    """
     if not GH_PAT:
         return 500, "GH_DISPATCH_PAT not set"
     url = f"https://api.github.com/repos/{GH_REPO}/dispatches"
-    body = json.dumps({"event_type": event_type}).encode("utf-8")
+    _body: dict = {"event_type": event_type}
+    if payload:
+        _body["client_payload"] = payload
+    body = json.dumps(_body).encode("utf-8")
     req = urllib.request.Request(
         url,
         data=body,
@@ -134,8 +148,11 @@ def _resolve_events(now_utc: datetime) -> list[str]:
     if hour == 7 and minute == 50 and is_weekday:
         events.append("daily_analysis_full")
     # daily_analysis_full US 마감 — UTC 21:30 Tue-Fri = KST 06:30 Wed-Sat
+    # 🚨 2026-08-20 — 이 슬롯은 **full_us**(미장 전체)다. dispatch 는 `github.event.schedule`
+    #   이 비어 워크플로가 모드를 못 가리므로 payload 로 명시한다. 안 실으면 else 로 흘러
+    #   `full`(미장 상위 10개)이 되고, 미장 마감 분석이 통째로 얕아진다.
     if hour == 21 and minute == 30 and py_wd in (1, 2, 3, 4):
-        events.append("daily_analysis_full")
+        events.append(("daily_analysis_full", {"mode": "full_us"}))
     # universe_scan KR 마감 직후 — UTC 06:30 = KST 15:30 Mon-Fri
     if hour == 6 and minute == 30 and is_weekday:
         events.append("universe_scan")
@@ -196,8 +213,15 @@ class handler(BaseHTTPRequestHandler):
         events = _resolve_events(now_utc)
         results = []
         for evt in events:
-            status, detail = _dispatch(evt)
-            results.append({"event": evt, "status": status, "detail": detail})
+            # 🚨 2026-08-20 — 항목이 문자열이거나 (event_type, payload) 튜플이다.
+            #   payload 는 워크플로 모드 분기용(예: KST 06:30 = full_us). 튜플을 그대로
+            #   넘기면 event_type 이 리스트로 직렬화돼 GitHub 이 422 를 낸다.
+            _payload = None
+            if isinstance(evt, tuple):
+                evt, _payload = evt
+            status, detail = _dispatch(evt, _payload)
+            results.append({"event": evt, "payload": _payload,
+                            "status": status, "detail": detail})
 
         all_ok = all(200 <= r["status"] < 300 for r in results)
         out = {
