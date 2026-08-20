@@ -68,6 +68,65 @@ def compute_grade_share_diff(
     return {g: round((curr_p[g] - base_p[g]) * 100, 2) for g in GRADES}
 
 
+# ── 등급 도달 가능성 자기신고 (G1, PREREG_BASELINE_V1_LITERATURE_2026_08_16 개정 2026-08-20) ──
+# 왜 여기인가: 임계가 관측 범위 밖이면 그 등급은 영구 0 인데, PSI 는 "비중이 안 변했다"
+# 로 읽어 **가장 안정된 등급**처럼 보고한다. 드리프트 모니터가 도달 불가를 못 보는
+# 구조라서, 같은 산출물에 도달 여부를 같이 신고한다 (RULE 12 #2 — 산출물이 자기 입으로).
+#
+# 🚨 이 함수는 임계를 **읽기만** 한다. 조정은 RULE 7 쿼터 사안이며 G3(관측 분포에 맞춘
+# 하향)는 곡선 맞추기로 거절됐다. 여기서 임계를 바꾸지 말 것.
+#
+# 실측 근거 (2026-08-20 · 분모 3,061 종목-일 · 80일 · data/history/*/brain_results.json):
+#   brain_score 최대 69 · p99 65 → 임계 75 도달 0/3,061 · 0/80 일자.
+#   별도 분모(등급 원장 3,396 종목-일 · 92일): BUY 도 1.355% → 실질 3등급 운영.
+_PROVENANCE_KNOWN = ("CAUTION",)   # 헌법 _note_2026_05_16 만 출처 기록 보유
+
+
+def compute_grade_reachability(
+    baseline_dist: Dict[str, int], current_dist: Dict[str, int],
+) -> Dict[str, Any]:
+    """등급별 실제 발생 여부 자기신고 — 분모(종목-일)를 함께 신고한다.
+
+    RULE 13 정합: 비중만 신고하면 "0%" 가 표본 부족인지 도달 불가인지 갈리지 않는다.
+    그래서 항상 N/M 형태로 낸다.
+    """
+    pooled = {g: baseline_dist.get(g, 0) + current_dist.get(g, 0) for g in GRADES}
+    total = sum(pooled.values())
+    grades_cfg: Dict[str, Any] = {}
+    try:
+        from api.intelligence.verity_brain import _load_constitution
+        grades_cfg = (_load_constitution().get("decision_tree") or {}).get("grades") or {}
+    except Exception:
+        grades_cfg = {}
+
+    per_grade: Dict[str, Any] = {}
+    never_fired: List[str] = []
+    for g in GRADES:
+        n = pooled[g]
+        if n == 0 and total > 0:
+            never_fired.append(g)
+        per_grade[g] = {
+            "count": n,
+            "share_pct": round(n / total * 100, 3) if total else None,
+            "min_brain_score": (grades_cfg.get(g) or {}).get("min_brain_score"),
+            # 🚨 임계 출처가 기록돼 있는가. 없으면 "상속된 값" 이라는 사실이 보여야 한다
+            "threshold_provenance": "recorded" if g in _PROVENANCE_KNOWN else "unrecorded",
+        }
+
+    return {
+        "denominator_stock_days": total,          # 🚨 분모 먼저 (RULE 13)
+        "per_grade": per_grade,
+        "never_fired": never_fired,
+        "effective_grade_count": sum(1 for g in GRADES if pooled[g] > 0),
+        "declared_grade_count": len(GRADES),
+        "note": (
+            "임계 미조정 상태의 자기신고. never_fired 는 결함 신고가 아니라 "
+            "'이 등급은 관측 창에서 한 번도 안 나왔다' 는 사실 기록이다. "
+            "처분 = PREREG_BASELINE_V1_LITERATURE_2026_08_16 개정 §(G1/G2/G3)."
+        ),
+    }
+
+
 def detect_regime_flags(portfolio: Dict[str, Any]) -> List[str]:
     """외생 regime flag 감지 (NQ3 권장).
 
@@ -261,6 +320,7 @@ def evaluate_grade_drift(
     return {
         "psi": psi,
         "psi_tier": psi_tier,
+        "grade_reachability": compute_grade_reachability(baseline_dist, current_dist),
         "share_diff": share_diff,
         "max_share_change_pp": max_share_change,
         "regime_flags": regime_flags,
