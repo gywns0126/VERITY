@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-20T08:24:12+09:00",
+ "as_of": "2026-08-20T18:19:41+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -149,7 +149,7 @@
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 10,
+   "holdings_checked": 11,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -171,9 +171,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 8,
-   "days_without_any_cap_pct": 8.1,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.0%). cap 없는 날 8/99일",
+   "days_without_any_cap": 9,
+   "days_without_any_cap_pct": 9.1,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.0%). cap 없는 날 9/99일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -191,19 +191,19 @@
      "fired": 0
     },
     {
-     "rule": "계속기업 불확실성 (감사인 명시)",
-     "fired": 0
-    },
-    {
      "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
      "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "fired": 0
+    },
+    {
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
@@ -254,13 +254,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 11,
+     "n_present": 17,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 11,
+     "n_present": 17,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -274,21 +274,21 @@
   },
   "guard_inputs": {
    "ok": false,
-   "holdings_checked": 10,
+   "holdings_checked": 11,
    "coverage": {
     "sector": {
-     "filled": 10,
-     "total": 10,
+     "filled": 11,
+     "total": 11,
      "guard": "섹터 35% 상한"
     },
     "beta": {
      "filled": 0,
-     "total": 10,
+     "total": 11,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 10,
-     "total": 10,
+     "filled": 11,
+     "total": 11,
      "guard": "팩터 쏠림 차단"
     }
    },
@@ -302,19 +302,19 @@
      "field": "beta",
      "guard": "포트폴리오 베타 1.5 상한",
      "filled": 0,
-     "total": 10
+     "total": 11
     }
    ],
    "detail": "입력 전무한 가드 1종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta)"
   },
   "exit_paths": {
    "ok": false,
-   "holdings_checked": 10,
+   "holdings_checked": 11,
    "no_profit_exit": [
     {
      "name": "파마리서치",
      "qty": 1.0,
-     "return_pct": 21.24,
+     "return_pct": 28.22,
      "past_target_2": false
     }
    ],
