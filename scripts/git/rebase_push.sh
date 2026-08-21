@@ -29,6 +29,13 @@ pre_markers="$(scan_markers)"
 $pre_markers"
 
 pre_stash="$(git stash list | wc -l | tr -d ' ')"
+# 🚨 재시도 루프 (2026-08-22 추가) — fetch 와 push 사이에 타 세션이 push 하면
+#   non-fast-forward 로 거부된다. 실제로 발생했다. 이 저장소 워크플로들도 같은 이유로
+#   5회 재시도한다(universe_scan.yml 선례). 조용히 성공한 척하지 않고, 매 시도마다
+#   stash·마커 검증을 다시 통과해야 push 한다.
+for attempt in 1 2 3 4 5; do
+[ "$attempt" -gt 1 ] && echo "🔁 재시도 $attempt/5 (타 세션 push 레이스)"
+
 # 🚨 fetch 를 **먼저** 한다 (2026-08-22 자가 발견 결함).
 #   초판은 fetch 전에 ahead 를 세서 **낡은 origin/BRANCH ref** 로 판단했다.
 #   타 세션이 그 사이 push 했으면 "푸시할 커밋 없음" 으로 잘못 빠져나간다.
@@ -87,6 +94,12 @@ fi
 [ $rc -ne 0 ] && fail "rebase 실패 (rc=$rc) — push 하지 않았다"
 
 # ── push ──────────────────────────────────────────────────
-git push -q origin "$BRANCH" || fail "push 실패"
-echo "✅ push 완료 · $(git log --oneline -1)"
-echo "   충돌 마커 0 · stash $post_stash 건(변동 없음)"
+if git push -q origin "$BRANCH" 2>/dev/null; then
+    echo "✅ push 완료 · $(git log --oneline -1)"
+    echo "   충돌 마커 0 · stash $post_stash 건(변동 없음)$([ "$attempt" -gt 1 ] && echo " · 시도 $attempt회")"
+    exit 0
+fi
+echo "   push 거부(원격 선행) — 재fetch 후 다시 시도"
+sleep 2
+done
+fail "5회 재시도 후에도 push 실패 — 원격이 계속 앞선다. 수동 확인 필요."
