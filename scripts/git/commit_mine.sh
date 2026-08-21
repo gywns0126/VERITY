@@ -56,7 +56,11 @@ IDX="$(mktemp -t verity_idx.XXXXXX)"
 export GIT_INDEX_FILE="$IDX"
 "${G[@]}" read-tree HEAD || fail "read-tree 실패"
 for p in "${PATHS[@]}"; do
-    "${G[@]}" add -- "$p" || fail "add 실패: $p"     # 경로 1개씩 (원자 실패 회피)
+    # 🚨 -f 필수 — 보조 repo(.git-private)도 공유 .gitignore 의 `/docs/` 를 읽어
+    #   **이미 추적 중인 파일의 수정분까지** 차단한다(2026-08-16 실측). -f 없으면
+    #   add 가 비영 종료하는데 뒤이은 단계가 그대로 진행돼 "완료" 로 보인다.
+    #   메인 repo 에서는 -f 가 무해하다(gitignore 대상을 지정할 일이 없으므로).
+    "${G[@]}" add -f -- "$p" || fail "add 실패: $p"    # 경로 1개씩 (원자 실패 회피)
 done
 
 # ── 4. 🚨 assert — HEAD 대비 달라진 경로가 **지정 경로뿐**인가 ──

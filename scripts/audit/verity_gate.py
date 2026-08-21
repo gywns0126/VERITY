@@ -388,6 +388,8 @@ def hook_stop() -> int:
 _GIT_ADD_RE = re.compile(r"git\s+(?:-C\s+\S+\s+)?(?:--git-dir=\S+\s+)?(?:--work-tree=\S+\s+)?add\s+([^&|;]*)")
 # P4 — autostash 체인 탐지용. `git push`, `git -C <dir> push` 등을 모두 잡는다.
 _GIT_PUSH_RE = re.compile(r"\bgit\s+(?:-\S+\s+|--\S+=\S+\s+)*push\b")
+# P5 — add 후 커밋 없이 끝나는 것 탐지용. `git commit`, `git --git-dir=X commit` 포함.
+_GIT_COMMIT_RE = re.compile(r"\bgit\s+(?:-\S+\s+|--\S+=\S+\s+)*commit\b")
 _GIT_COMMIT_RE = re.compile(r"git\s+(?:-C\s+\S+\s+)?(?:--git-dir=\S+\s+)?(?:--work-tree=\S+\s+)?commit\b")
 
 
@@ -483,6 +485,20 @@ def hook_pretool() -> int:
                      "**pop 충돌에도 exit 0** 이라 체인이 통과해 오염이 남은 채 push 된다 "
                      "(2026-08-21 실사고). 안전 경로: `bash scripts/git/rebase_push.sh` "
                      "— rebase 직후 stash 잔여수·충돌 마커를 assert 하고 어긋나면 push 하지 않는다.")
+
+    # P5 — 스테이징만 하고 커밋하지 않는 것 차단 (2026-08-21 실사고 클래스, 반대 방향)
+    #   🚨 공유 인덱스에 올려둔 파일은 **다음 커밋을 하는 세션이 가져간다.**
+    #   실측: 내가 가드 2파일을 add 한 뒤 커밋 전에, 타 세션이 커밋하면서 통째로 삼켰고
+    #   그 커밋 메시지에는 내 작업의 출처가 없다(a029e825e). 크론·타 세션이 상시 커밋하는
+    #   트리에서 add 와 commit 사이의 창은 몇 분이고, 그 창이 곧 사고 확률이다.
+    #   → add 를 쓰려면 같은 명령에서 commit 까지 끝내라(창 ≈ 0). 더 나은 경로는
+    #     인덱스 자체를 격리하는 scripts/git/commit_mine.sh 다.
+    if _GIT_ADD_RE.search(bare) and not _GIT_COMMIT_RE.search(bare):
+        return _deny("`git add` 만 하고 끝내지 말 것 — 공유 인덱스에 남은 스테이징은 "
+                     "**다음에 커밋하는 세션이 가져간다**(2026-08-21 실사고: 내 가드 2파일이 "
+                     "타 세션 커밋 a029e825e 에 출처 없이 딸려 들어감). "
+                     "같은 명령에서 commit 까지 끝내거나, 인덱스를 격리하는 "
+                     "`bash scripts/git/commit_mine.sh -m \"메시지\" -- 경로...` 를 쓸 것.")
     return 0
 
 
@@ -553,10 +569,20 @@ def _selftest() -> int:  # noqa: C901 — 케이스 나열
     r = run("pretool", {"tool_name": "Bash", "tool_input": {"command": "git add data/a.txt data/b_*.json"}})
     case("pretool: 다중 경로+글롭 → deny (8/9 클래스)",
          (r.get("hookSpecificOutput") or {}).get("permissionDecision") == "deny")
+    # P5 (2026-08-21) — 단일 명시 경로라도 **커밋 없이 끝나면** 차단으로 바뀌었다.
+    #   공유 인덱스에 남은 스테이징은 다음에 커밋하는 세션이 가져간다(실사고 a029e825e).
     r = run("pretool", {"tool_name": "Bash", "tool_input": {"command": "git add data/analysis/prereg_x.json"}})
-    case("pretool: 단일 명시 경로 → allow", r == {})
-    r = run("pretool", {"tool_name": "Bash", "tool_input": {"command": "git add 'data/my file.json' && git push"}})
-    case("pretool: 따옴표 경로 → allow", r == {})
+    case("pretool: P5 — add 만 하고 끝 → deny",
+         (r.get("hookSpecificOutput") or {}).get("permissionDecision") == "deny")
+    r = run("pretool", {"tool_name": "Bash", "tool_input": {
+        "command": "git add data/analysis/prereg_x.json && git commit -q -m x"}})
+    case("pretool: 단일 명시 경로 + 같은 명령 커밋 → allow", r == {})
+    r = run("pretool", {"tool_name": "Bash", "tool_input": {
+        "command": "git add 'data/my file.json' && git commit -m x"}})
+    case("pretool: 따옴표 경로 + 커밋 → allow", r == {})
+    r = run("pretool", {"tool_name": "Bash", "tool_input": {
+        "command": "bash scripts/git/commit_mine.sh -m x -- data/analysis/prereg_x.json"}})
+    case("pretool: 인덱스 격리 스크립트 → allow", r == {})
     r = run("pretool", {"tool_name": "Bash", "tool_input": {
         "command": "git commit -m 'DATA: 실발화 증명(git add -A --dry-run 거부) 기록'"}})
     case("pretool: 메시지 안 'git add -A' 인용 → allow (8/16 실전 오탐 재발 방지)", r == {})
