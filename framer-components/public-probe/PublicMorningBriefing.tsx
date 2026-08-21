@@ -85,8 +85,16 @@ const DARK = {
 //   (이미 마이그레이션된 36개 공개 컴포넌트와 동일 문법 — 프레이머 네이티브 테마 정합)
 const _ANP = "mbr"
 const AN_PALETTE =
-    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
-    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+    "body{" +
+    Object.keys(LIGHT)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k])
+        .join(";") +
+    "}" +
+    'body[data-framer-theme="dark"]{' +
+    Object.keys(DARK)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k])
+        .join(";") +
+    "}"
 const C: Record<string, string> = {}
 for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 const FONT =
@@ -281,14 +289,14 @@ function FlagIcon(props: { code: string; size?: number }) {
  */
 // 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
 
-
 /* 🚨 2026-07-29 미장 링크 사고 — usStockPath 기본값이 "/us/stock" 이었는데 **그 페이지는 존재한 적이 없다**
    (실측: https://www.alphanest.kr/us/stock?q=AAPL → 404). 둥지 보유종목·브리핑·커뮤니티에서 미국 종목을
    누르면 전부 빈 404 로 떨어졌다. 리포트 페이지가 미장도 처리하므로 같은 경로로 보낸다.
    캔버스 인스턴스에 옛 값이 남아 있어도 여기서 흡수한다 — 되돌리지 말 것. */
 function _usPath(us: any, kr: any): string {
     const v = String(us || "").replace(/\/+$/, "")
-    if (!v || v === "/us/stock") return String(kr || "").replace(/\/+$/, "") || "/stock"
+    if (!v || v === "/us/stock")
+        return String(kr || "").replace(/\/+$/, "") || "/stock"
     return v
 }
 
@@ -309,6 +317,13 @@ export default function PublicMorningBriefing(props: Props) {
 
     // ① 내 자산 상태
     const [rows, setRows] = useState<any[]>(SAMPLE_HOLD)
+    // 🚨 2026-08-22 — "내 보유 종목 소식". 회원별 서버 발행이 아니라 **전역 색인 1개**를
+    //   받아 브라우저가 위 rows(보유) 와 교차한다. 인증·보유목록은 위 /api/holdings 재사용.
+    //   🚨 겹침 0이면 **섹션 자체를 렌더하지 않는다** — 빈 섹션이 매일 뜨는 걸 막는 것이
+    //   이 설계의 핵심이다(전용 섹션 신설을 처음에 반대했던 이유이고, 그 절충안이다).
+    //   RULE 6 = LLM 0(결정론적 교차) · RULE 7 = 공시 제목 원문 + 지분율, 점수·추천 0.
+    const [nestIdx, setNestIdx] = useState<Record<string, any> | null>(null)
+    const [npsMap, setNpsMap] = useState<Record<string, number> | null>(null)
     const [closes, setCloses] = useState<
         Record<string, { last: number; prev: number | null }>
     >({})
@@ -339,6 +354,65 @@ export default function PublicMorningBriefing(props: Props) {
     }, [])
 
     // 테마 자가감지
+    // 보유 ∩ 색인 = 내 종목 소식. 🚨 겹침 0이면 아래에서 섹션을 통째로 안 그린다.
+    const myNews = useMemo(() => {
+        if (!nestIdx || !Array.isArray(rows) || !rows.length) return []
+        const out: any[] = []
+        for (const h of rows) {
+            const tk = String((h && h.ticker) || "")
+            if (!tk) continue
+            const ent = nestIdx[tk]
+            const pct = npsMap ? npsMap[tk] : undefined
+            const evs = ent && Array.isArray(ent.ev) ? ent.ev : []
+            if (!evs.length && !(pct > 0)) continue
+            out.push({
+                ticker: tk,
+                name: (h && h.name) || (ent && ent.n) || tk,
+                nps: pct > 0 ? pct : null,
+                ev: evs.slice(0, 2),
+            })
+        }
+        // 공시가 있는 종목을 위로 (국민연금만 있는 건 아래)
+        out.sort((a, b) => b.ev.length - a.ev.length)
+        return out
+    }, [nestIdx, npsMap, rows])
+
+    // 내 종목 소식 재료 — 티커 색인(최근 3일 공시) + 국민연금 대량보유. 각 1회.
+    // 🚨 원본 피드(us_disclosure_feed 4.1MB + KR 862KB)를 직접 받지 않는다 — 서버에서
+    //   최근 3일·종목당 3건으로 압축한 색인(178KB)을 쓴다.
+    // 🚨 국민연금 원천 = 5% 이상 대량보유 공시. 색인에 없다 = "5% 미만" 이지 미보유가 아니다.
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        fetch(
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nest_briefing_index.json"
+        )
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (alive && d && d.tickers) setNestIdx(d.tickers)
+            })
+            .catch(() => {})
+        fetch(
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nps_holdings.json"
+        )
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const arr = d && (d.holdings || d.full)
+                if (!alive || !Array.isArray(arr)) return
+                const m: Record<string, number> = {}
+                for (const x of arr) {
+                    const tk = x && x.ticker ? String(x.ticker) : ""
+                    const p = Number(x && x.pct)
+                    if (tk && p > 0 && isFinite(p)) m[tk] = Math.max(m[tk] || 0, p)
+                }
+                setNpsMap(m)
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [onCanvas])
+
     // 보유종목 로드 (/api/holdings)
     const loadHoldings = useCallback(() => {
         if (onCanvas) return
@@ -435,7 +509,11 @@ export default function PublicMorningBriefing(props: Props) {
                 // "YYYYMMDD" → "YYYY-MM-DD" (표기부가 slice(5) 로 월/일을 뽑는다)
                 if (ao.length === 8)
                     setCloseDate(
-                        ao.slice(0, 4) + "-" + ao.slice(4, 6) + "-" + ao.slice(6)
+                        ao.slice(0, 4) +
+                            "-" +
+                            ao.slice(4, 6) +
+                            "-" +
+                            ao.slice(6)
                     )
             })
             .catch(() => {})
@@ -478,7 +556,8 @@ export default function PublicMorningBriefing(props: Props) {
             })
             .catch(fallback)
         const onBack = () => {
-            if (document.visibilityState === "visible") setReloadTick((t) => t + 1)
+            if (document.visibilityState === "visible")
+                setReloadTick((t) => t + 1)
         }
         document.addEventListener("visibilitychange", onBack)
         window.addEventListener("focus", onBack)
@@ -1114,6 +1193,94 @@ export default function PublicMorningBriefing(props: Props) {
                             </div>
                         )}
 
+                        {/* 내 종목 소식 — 🚨 겹침 0이면 렌더 안 함(빈 섹션 방지).
+                            데모/캔버스에서도 안 그린다(가짜 개인화 방지). */}
+                        {!isDemo && myNews.length > 0 && (
+                            <div style={{ marginBottom: 32 }}>
+                                <div
+                                    style={{
+                                        fontSize: 11.5,
+                                        fontWeight: 800,
+                                        color: C.sub,
+                                        letterSpacing: "0.3px",
+                                        marginBottom: 10,
+                                    }}
+                                >
+                                    내 보유 종목 소식
+                                    <span
+                                        style={{
+                                            color: C.faint,
+                                            fontWeight: 700,
+                                            marginLeft: 6,
+                                        }}
+                                    >
+                                        {myNews.length}종목 · 최근 3일 공시
+                                    </span>
+                                </div>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: 7,
+                                    }}
+                                >
+                                    {myNews.map((m: any) => (
+                                        <div key={m.ticker}>
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 6,
+                                                    flexWrap: "wrap",
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        fontSize: 13.5,
+                                                        fontWeight: 700,
+                                                        color: C.ink,
+                                                    }}
+                                                >
+                                                    {m.name}
+                                                </span>
+                                                {m.nps != null && (
+                                                    <span
+                                                        style={{
+                                                            fontSize: 10.5,
+                                                            fontWeight: 700,
+                                                            color: C.sub,
+                                                            background: C.line,
+                                                            borderRadius: 999,
+                                                            padding: "2px 7px",
+                                                        }}
+                                                        title="국민연금 5% 이상 대량보유 공시 기준"
+                                                    >
+                                                        국민연금{" "}
+                                                        {m.nps.toFixed(2)}%
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {m.ev.map((e: any, i: number) => (
+                                                <div
+                                                    key={i}
+                                                    style={{
+                                                        fontSize: 11.5,
+                                                        color: C.sub,
+                                                        fontWeight: 600,
+                                                        marginTop: 2,
+                                                        lineHeight: 1.45,
+                                                    }}
+                                                >
+                                                    {String(e.d || "").slice(5)}{" "}
+                                                    · {String(e.t || "")}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* 섹션들 */}
                         {secs.map((s: any, si: number) => {
                             const isBannerSec = si === 0 && !!banner
@@ -1156,9 +1323,15 @@ export default function PublicMorningBriefing(props: Props) {
                                         <span style={secNote}>
                                             {isBannerSec
                                                 ? (s.as_of
-                                                      ? String(s.as_of).slice(4, 6) +
+                                                      ? String(s.as_of).slice(
+                                                            4,
+                                                            6
+                                                        ) +
                                                         "." +
-                                                        String(s.as_of).slice(6, 8) +
+                                                        String(s.as_of).slice(
+                                                            6,
+                                                            8
+                                                        ) +
                                                         " 종가 기준 · "
                                                       : "") +
                                                   "섹터 · 거래대금 · 같은 날 공시"

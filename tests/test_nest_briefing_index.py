@@ -77,3 +77,37 @@ def test_publish_allowlist_registered():
 def test_workflow_registered():
     w = (ROOT / ".github" / "workflows" / "daily_briefing.yml").read_text(encoding="utf-8")
     assert "nest_briefing_index_builder" in w, "빌더가 어느 워크플로에도 없다(RULE 4/8)"
+
+
+# ── 브리핑 섹션 (2026-08-22) ────────────────────────────────
+BRIEF = ROOT / "framer-components" / "public-probe" / "PublicMorningBriefing.tsx"
+
+
+def test_briefing_section_hides_when_no_overlap():
+    """🚨 절충안의 핵심 — 보유∩색인이 0이면 섹션을 통째로 안 그린다.
+
+    전용 섹션을 처음에 반대했던 이유가 "겹침 0인 날 빈 섹션이 뜬다" 였고,
+    이 조건이 그 반대를 보장한다. 조건을 풀면 매일 빈 섹션이 뜬다.
+    """
+    if not BRIEF.exists():
+        pytest.skip("브리핑 컴포넌트 없음")
+    s = BRIEF.read_text(encoding="utf-8")
+    assert "myNews" in s, "내 종목 소식 파생값이 사라졌다"
+    assert "myNews.length > 0 &&" in s, "겹침 0일 때 섹션을 숨기는 조건이 사라졌다"
+    assert "!isDemo &&" in s, "데모 상태에서 가짜 개인화가 보이면 안 된다"
+
+
+def test_briefing_reads_index_not_raw_feeds():
+    if not BRIEF.exists():
+        pytest.skip("브리핑 컴포넌트 없음")
+    s = BRIEF.read_text(encoding="utf-8")
+    assert "nest_briefing_index.json" in s
+    assert "us_disclosure_feed.json" not in s, "원본 4.1MB 피드 직접 사용 금지"
+
+
+def test_briefing_never_claims_nps_absence():
+    if not BRIEF.exists():
+        pytest.skip("브리핑 컴포넌트 없음")
+    s = BRIEF.read_text(encoding="utf-8")
+    for bad in ("국민연금 미보유", "국민연금 없음"):
+        assert bad not in s, f"부재를 단정하는 문구: {bad}"
