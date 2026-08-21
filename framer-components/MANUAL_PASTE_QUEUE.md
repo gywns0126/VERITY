@@ -8,7 +8,7 @@ MCP 로 라이브 반영이 위험한(>60KB, write-loss) 공개 컴포넌트. **
 
 ---
 
-## 🟠 대기 (2026-08-22) — 시장 브리핑에 "내 보유 종목 소식" 섹션
+## ✅ 완료 (2026-08-22 PM 복붙 · MCP 라이브 검증) — 시장 브리핑 "내 보유 종목 소식"
 
 **PM 요청**: 보유 종목 소식이 **브리핑에도** 보여야 한다(둥지 배지만으로는 부족).
 **절충안 채택** — 전용 섹션을 넣되 **겹침 0이면 섹션 자체를 렌더하지 않는다**.
@@ -36,12 +36,12 @@ MCP 로 라이브 반영이 위험한(>60KB, write-loss) 공개 컴포넌트. **
 
 | repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
 |---|---|---|---|
-| `public-probe/PublicMorningBriefing.tsx` | PublicMorningBriefing (`AUFKK5X`) | 상태 2 + fetch 훅 + `myNews` 섹션(겹침 0시 미렌더) | 🟠 **복붙 대기** |
+| `public-probe/PublicMorningBriefing.tsx` | PublicMorningBriefing (`AUFKK5X`) | 상태 2 + fetch 훅 + `myNews` 섹션(겹침 0시 미렌더) | ✅ **복붙 완료 2026-08-22** — 마커 8/8 확인, 라이브 vs repo 공백 제외 동일 |
 
 ---
 
 
-## 🟠 대기 (2026-08-21) — 둥지 브리핑: 보유종목 공시 + 국민연금 배지
+## ✅ 완료 (2026-08-22 PM 복붙 · MCP 라이브 검증) — 둥지 보유종목 공시 + 국민연금 배지
 
 **PM 요청**: *"각 회원이 둥지에 보유한 종목이 수파베이스로 저장되니, 그 종목들에 대한
 긴급 뉴스 등이 요약으로 나오는 데일리 브리핑이 필요"* + *"국민연금이 보유하고 있는지"*.
@@ -75,7 +75,7 @@ RULE 6 = LLM 0(결정론적 조회) · RULE 7 = 공시 제목 원문 그대로 +
 
 | repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
 |---|---|---|---|
-| `public-probe/PublicHoldingsTab.tsx` | PublicHoldingsTab (`S2WFHHW`) | 상태 2 + fetch 훅 1 + `NestBadges` 컴포넌트 | 🟠 **복붙 대기** |
+| `public-probe/PublicHoldingsTab.tsx` | PublicHoldingsTab (`S2WFHHW`) | 상태 2 + fetch 훅 1 + `NestBadges` 컴포넌트 | ✅ **복붙 완료 2026-08-22** — 마커 7/7 확인. 라이브 차이는 포매터 후행쉼표 1개뿐 |
 
 ---
 

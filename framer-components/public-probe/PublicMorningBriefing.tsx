@@ -403,7 +403,8 @@ export default function PublicMorningBriefing(props: Props) {
                 for (const x of arr) {
                     const tk = x && x.ticker ? String(x.ticker) : ""
                     const p = Number(x && x.pct)
-                    if (tk && p > 0 && isFinite(p)) m[tk] = Math.max(m[tk] || 0, p)
+                    if (tk && p > 0 && isFinite(p))
+                        m[tk] = Math.max(m[tk] || 0, p)
                 }
                 setNpsMap(m)
             })

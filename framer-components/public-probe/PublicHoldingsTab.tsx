@@ -749,7 +749,13 @@ function NestBadges(props: {
                 </span>
             ))}
             {evs.length > 2 && (
-                <span style={{ ...chip, background: "transparent", color: C.faint }}>
+                <span
+                    style={{
+                        ...chip,
+                        background: "transparent",
+                        color: C.faint,
+                    }}
+                >
                     +{evs.length - 2}
                 </span>
             )}
@@ -983,7 +989,8 @@ export default function PublicHoldingsTab(props: Props) {
                 for (const x of arr) {
                     const tk = x && x.ticker ? String(x.ticker) : ""
                     const p = Number(x && x.pct)
-                    if (tk && p > 0 && isFinite(p)) m[tk] = Math.max(m[tk] || 0, p)
+                    if (tk && p > 0 && isFinite(p))
+                        m[tk] = Math.max(m[tk] || 0, p)
                 }
                 setNpsMap(m)
             })
@@ -2515,12 +2522,12 @@ export default function PublicHoldingsTab(props: Props) {
                                                         주 · 비중{" "}
                                                         {h._weight.toFixed(0)}%
                                                         <NestBadges
-                                                        h={h}
-                                                        nestIdx={nestIdx}
-                                                        npsMap={npsMap}
-                                                        C={C}
-                                                    />
-                                                </div>
+                                                            h={h}
+                                                            nestIdx={nestIdx}
+                                                            npsMap={npsMap}
+                                                            C={C}
+                                                        />
+                                                    </div>
                                                 </div>
                                                 {!narrow && (
                                                     <div
