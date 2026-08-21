@@ -35,7 +35,22 @@
     "maintenance": false,
     "warn_days": 7.0
   },
-  "pre_registration_pending": [],
+  "pre_registration_pending": [
+    {
+      "sha": "d052a02f",
+      "date": "2026-08-21",
+      "subject": "feat(audit): Q7 상태 검사 시행 + 헌법 설명 문자열 정정 (쿼터 0)",
+      "is_candidate": true,
+      "has_pm": false,
+      "has_why": true,
+      "has_data": true,
+      "has_expected": true,
+      "missing": [
+        "PM=approved"
+      ],
+      "passed": false
+    }
+  ],
   "alert_volume_24h": {
     "sent": 15,
     "dedupe_skip": 8,
@@ -58,10 +73,15 @@
     "quarter": "2026Q3",
     "start": "2026-07-01",
     "end": "2026-09-30",
-    "count": 3,
+    "count": 4,
     "limit": 4,
-    "status": "OK",
+    "status": "AT_LIMIT",
     "commits": [
+      {
+        "sha": "d052a02f",
+        "date": "2026-08-21",
+        "subject": "feat(audit): Q7 상태 검사 시행 + 헌법 설명 문자열 정정 (쿼터 0)"
+      },
       {
         "sha": "403bcac0",
         "date": "2026-08-03",
@@ -78,6 +98,6 @@
         "subject": "fix(brain): fact_score LLM 정성점수 정직화 4종 (RULE 7 사전등록)"
       }
     ],
-    "as_of": "2026-08-20T10:52:39+09:00"
+    "as_of": "2026-08-21T10:58:41+09:00"
   }
 }
