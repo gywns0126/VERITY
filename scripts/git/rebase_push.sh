@@ -15,7 +15,15 @@ set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 BRANCH="${1:-main}"
-MARK_PATHS=(data api scripts operator-web/app vercel-api/api .github framer-components tests)
+# 🚨 2026-08-22 적대적 검증에서 발견 — 초판은 docs·server·supabase·private·루트 파일을
+#   통째로 빼먹었다. docs/ 는 사전등록을 매일 쓰는 곳이고 private repo 로 가는 경로라
+#   거기 마커가 남으면 검사에 안 걸린 채 커밋된다. 존재하는 디렉토리만 추린다.
+MARK_DIRS=(data api scripts docs operator-web/app vercel-api/api .github framer-components
+           tests server supabase private)
+MARK_PATHS=()
+for _d in "${MARK_DIRS[@]}"; do [ -d "$_d" ] && MARK_PATHS+=("$_d"); done
+# 루트 레벨 텍스트 파일(CLAUDE.md 등)도 포함 — 디렉토리 스캔이 놓치는 자리
+for _f in ./*.md ./*.json ./*.yml ./*.yaml; do [ -f "$_f" ] && MARK_PATHS+=("$_f"); done
 
 scan_markers() {
     grep -rl '^<<<<<<< ' "${MARK_PATHS[@]}" 2>/dev/null | grep -v '/node_modules/' || true

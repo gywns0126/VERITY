@@ -390,6 +390,9 @@ _GIT_ADD_RE = re.compile(r"git\s+(?:-C\s+\S+\s+)?(?:--git-dir=\S+\s+)?(?:--work-
 _GIT_PUSH_RE = re.compile(r"\bgit\s+(?:-\S+\s+|--\S+=\S+\s+)*push\b")
 # P5 — add 후 커밋 없이 끝나는 것 탐지용. `git commit`, `git --git-dir=X commit` 포함.
 _GIT_COMMIT_RE = re.compile(r"\bgit\s+(?:-\S+\s+|--\S+=\S+\s+)*commit\b")
+# P6 — commit -a / -am / --all 탐지. 🚨 `--amend` 는 잡지 않는다(단일 `-` 만 매칭).
+#   단축 플래그 묶음(-am, -aq …) 안의 'a' 도 잡아야 하므로 문자 집합으로 본다.
+_COMMIT_ALL_RE = re.compile(r"(?:^|\s)(?:-[A-Za-z]*a[A-Za-z]*|--all)(?=\s|$)")
 _GIT_COMMIT_RE = re.compile(r"git\s+(?:-C\s+\S+\s+)?(?:--git-dir=\S+\s+)?(?:--work-tree=\S+\s+)?commit\b")
 
 
@@ -498,6 +501,19 @@ def hook_pretool() -> int:
                      "**다음에 커밋하는 세션이 가져간다**(2026-08-21 실사고: 내 가드 2파일이 "
                      "타 세션 커밋 a029e825e 에 출처 없이 딸려 들어감). "
                      "같은 명령에서 commit 까지 끝내거나, 인덱스를 격리하는 "
+                     "`bash scripts/git/commit_mine.sh -m \"메시지\" -- 경로...` 를 쓸 것.")
+
+    # P6 — commit -a/--all 차단 (2026-08-22 적대적 검증에서 발견한 구멍)
+    #   🚨 `git commit -a` 는 **추적 중인 모든 수정 파일**을 자동 스테이징한다.
+    #   이 저장소는 크론·타 세션 때문에 상시 30건 이상 더티라, 한 번이면 남의 작업이
+    #   통째로 내 커밋에 실린다 — 이미 차단된 `git add -A` 보다 더 나쁘다(add 는 최소한
+    #   명령에 흔적이라도 남지만 -a 는 커밋 메시지만 보면 무엇이 들어갔는지 안 보인다).
+    #   P2/P3/P5 는 `git add` 만 보므로 이 경로는 통째로 비어 있었다.
+    if _GIT_COMMIT_RE.search(bare) and _COMMIT_ALL_RE.search(bare):
+        return _deny("`git commit -a/--all` 금지 — 추적 중인 **모든 수정 파일**이 자동 "
+                     "스테이징된다. 이 트리는 크론·타 세션으로 상시 30건 이상 더티라 "
+                     "남의 작업이 통째로 실린다(`git add -A` 보다 나쁘다: 커밋 메시지만 "
+                     "봐서는 무엇이 들어갔는지 안 보인다). "
                      "`bash scripts/git/commit_mine.sh -m \"메시지\" -- 경로...` 를 쓸 것.")
     return 0
 
