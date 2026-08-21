@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-21T18:00:37.762601+09:00",
+  "generated_at": "2026-08-22T07:56:03.859495+09:00",
   "spec_version": "v0",
   "gate": null,
   "rule7_disclaimer": "모든 항목 = 자기 산식 가설 (관측 only, 결정 피드백 0). N<30 통계 무의미 / N<100 예비. hit_rate 단독 해석 금지 — expectancy + CI95 + N 병기. 검정력 미달 구간에서는 통계 판정이 무의미하다 (검증 틀 v2 §7-3 승인 대기).",
@@ -7,8 +7,8 @@
     {
       "signal": "brain_production",
       "status": "채점 진행 중",
-      "n": 1709,
-      "n_eff": 12.0,
+      "n": 1772,
+      "n_eff": 12.2,
       "label": "통계 무의미 (N<30)",
       "gate_status": "가설 (유의성 미달 · 유효 관측 12)",
       "source": "prediction_ic_history.jsonl (Brain 종합 verdict, prediction_scoring v0)"
@@ -16,8 +16,8 @@
     {
       "signal": "xgb_ml",
       "status": "채점 진행 중",
-      "n": 1439,
-      "n_eff": 9.8,
+      "n": 1502,
+      "n_eff": 10.0,
       "label": "통계 무의미 (N<30)",
       "gate_status": "가설 (유의성 미달 · 유효 관측 10)",
       "source": "ml_prediction_ic_history.jsonl (XGB up_probability shadow, source-agnostic scorer 재사용)"
