@@ -15,6 +15,11 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 /* 🚨🚨 롤백 방지 가드 (2026-07-23) — CLAUDE.md RULE 11. 지우거나 되돌리지 말 것. 🚨🚨
  *
  * 이 repo .tsx = 라이브 Framer(AlphaNest 공개 프로젝트)의 미러. 양방향 stale 가능(라이브 편집 미반영 또는 그 반대).
+ * 되돌리면 안 되는 동작 (2026-08-21 추가):
+ *   · 초기 월 = **오늘 기준 계산**. 날짜 리터럴({ y: 2026, m: 6 } 등) 재도입 금지 —
+ *     최초 구현일엔 맞다가 달이 바뀌면 조용히 빈 그리드가 된다(8/1~8/21 실제 3주간 발생).
+ *   · fetch 후 **데이터 있는 최근접 월 자동 이동**(jumpedRef 로 1회만). 이게 위 결함의 안전망이다.
+ *     종전엔 주석만 있고 구현이 비어 있어 안전망이 작동하지 않았다.
  * 되돌리면 안 되는 레이아웃:
  *   · 우측 이벤트 리스트("종목 스크롤창") = 데스크톱에서 height = 좌측 캘린더 카드 offsetHeight(calH, calRef ResizeObserver, border-box) 정확 매칭 + overflowY:auto(스크롤).
  *     static height/maxHeight(560 등)나 alignItems 로 되돌리지 말 것 — 정적값은 캘린더 높이와 안 맞음(2026-07-23 사고).
@@ -126,7 +131,15 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
     const [data, setData] = useState<any>(onCanvas ? DEMO : null)
-    const [cur, setCur] = useState<{ y: number; m: number }>(() => ({ y: 2026, m: 6 })) // m=0-index (6=July)
+    // 🚨 2026-08-21 — 하드코딩 { y: 2026, m: 6 }(7월) 제거. 절대 되돌리지 말 것.
+    //   최초 구현(2026-07-12)엔 그달이 현재였으나 8/1 부터 조용히 틀렸다 —
+    //   2026-07 은 이벤트 0건이라 3주간 **빈 그리드**가 떴다(= "캘린더 작동 안 됨").
+    //   날짜 리터럴을 다시 넣지 말 것. 오늘 기준으로만 연다.
+    const [cur, setCur] = useState<{ y: number; m: number }>(() => {
+        const t = new Date()
+        return { y: t.getFullYear(), m: t.getMonth() }
+    })
+    const jumpedRef = useRef(false)   // 초기 자동이동 1회만 (사용자 이동을 덮지 않게)
     const [selDate, setSelDate] = useState<string>("")
     const [catFilter, setCatFilter] = useState<string>("")
     const [w, setW] = useState(0)
@@ -171,6 +184,25 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                 setData(d)
                 try { sessionStorage.setItem("calendar_public", JSON.stringify(d)) } catch (e) {}
                 // 데이터 있는 가장 가까운 달로 초기 이동 (오늘 포함 월 우선)
+                // 🚨 2026-08-21 — 이 주석은 있었는데 **구현이 비어 있었다**. 안전망이 없어
+                //   위 하드코딩 결함이 그대로 화면에 나왔다. 주석만 남기고 지우지 말 것.
+                if (!jumpedRef.current) {
+                    jumpedRef.current = true
+                    const months = new Set<string>()
+                    for (const e of d.events) if (e && e.date) months.add(String(e.date).slice(0, 7))
+                    const t = new Date()
+                    const curKey = t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0")
+                    if (months.size && !months.has(curKey)) {
+                        const idx = (k: string) => Number(k.slice(0, 4)) * 12 + Number(k.slice(5, 7)) - 1
+                        const here = idx(curKey)
+                        // 최근접 우선, 동률이면 미래 쪽(다가올 이벤트가 지난 것보다 유용)
+                        const best = [...months].sort((a, b) => {
+                            const da = Math.abs(idx(a) - here), db = Math.abs(idx(b) - here)
+                            return da !== db ? da - db : idx(b) - idx(a)
+                        })[0]
+                        if (alive && best) setCur({ y: Number(best.slice(0, 4)), m: Number(best.slice(5, 7)) - 1 })
+                    }
+                }
             })
             .catch(() => { try { const c = sessionStorage.getItem("calendar_public"); if (alive && c) setData(JSON.parse(c)) } catch (e) {} })
         return () => { alive = false }
