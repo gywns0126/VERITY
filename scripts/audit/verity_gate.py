@@ -386,6 +386,8 @@ def hook_stop() -> int:
 # ── PreToolUse (Bash) ────────────────────────────────────────
 
 _GIT_ADD_RE = re.compile(r"git\s+(?:-C\s+\S+\s+)?(?:--git-dir=\S+\s+)?(?:--work-tree=\S+\s+)?add\s+([^&|;]*)")
+# P4 — autostash 체인 탐지용. `git push`, `git -C <dir> push` 등을 모두 잡는다.
+_GIT_PUSH_RE = re.compile(r"\bgit\s+(?:-\S+\s+|--\S+=\S+\s+)*push\b")
 _GIT_COMMIT_RE = re.compile(r"git\s+(?:-C\s+\S+\s+)?(?:--git-dir=\S+\s+)?(?:--work-tree=\S+\s+)?commit\b")
 
 
@@ -456,8 +458,9 @@ def hook_pretool() -> int:
             return _deny("RULE 9 위반 — commit 명령 텍스트에 금지 동사 형태 "
                          f"{len(hits)}종: {', '.join(hits[:8])}. 대체 동사 정답표로 수정 후 재시도.")
 
-    # P2/P3 — git add 규율 (따옴표 내부 제외 — 명령 구조만)
-    for m in _GIT_ADD_RE.finditer(_strip_quoted(cmd)):
+    # P2/P3/P4 — git 규율 (따옴표 내부 제외 — 명령 구조만)
+    bare = _strip_quoted(cmd)
+    for m in _GIT_ADD_RE.finditer(bare):
         toks = _split_paths(m.group(1))
         flags = [t for t in toks if t.startswith("-")]
         paths = [t for t in toks if not t.startswith("-")]
@@ -468,6 +471,18 @@ def hook_pretool() -> int:
         if len(paths) >= 2 and any(re.search(r"[*?\[]", p) for p in paths):
             return _deny("git add 한 줄에 다중 경로+글롭 혼합 금지 (RULE 1, 8/9 사고 — 글롭 "
                          "미매칭 시 add 전체가 원자 실패해 멀쩡한 경로까지 미스테이징). 파일별로 나눠 add.")
+
+    # P4 — `--autostash` 와 push 를 한 줄에 잇는 것 차단 (2026-08-21 실사고 클래스)
+    #   🚨 `git rebase --autostash` 는 **pop 충돌에도 exit 0** 이라 `&&` 가 그대로 통과한다.
+    #   실측: 작업트리 36파일이 stash 되고 data/price_pulse.json 이 충돌해 마커가 남았는데
+    #   push 는 성공해, 성공 신호만 보고 오염을 놓쳤다. 공유 트리(크론·타 세션 상시 더티 37건)
+    #   에서 이 조합은 구조적으로 위험하다. 검사를 사이에 끼우도록 **분리를 강제**한다.
+    #   ([[feedback_autostash_conflict_exits_zero]] · 안전 경로 = scripts/git/rebase_push.sh)
+    if "--autostash" in bare and _GIT_PUSH_RE.search(bare):
+        return _deny("`--autostash` 와 `git push` 를 한 명령줄에 잇지 말 것 — rebase 는 "
+                     "**pop 충돌에도 exit 0** 이라 체인이 통과해 오염이 남은 채 push 된다 "
+                     "(2026-08-21 실사고). 안전 경로: `bash scripts/git/rebase_push.sh` "
+                     "— rebase 직후 stash 잔여수·충돌 마커를 assert 하고 어긋나면 push 하지 않는다.")
     return 0
 
 

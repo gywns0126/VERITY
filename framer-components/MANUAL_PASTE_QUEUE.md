@@ -47,7 +47,7 @@ RULE 6 = LLM 0(결정론적 조회) · RULE 7 = 공시 제목 원문 그대로 +
 ---
 
 
-## 🔴 대기 (2026-08-21) — 🚨 투자 캘린더 빈 화면 (라이브 장애 · 최우선)
+## ✅ 완료 (2026-08-22 PM 복붙 · 라이브 검증) — 투자 캘린더 빈 화면 수정
 
 **증상**: PM 신고 "투자 캘린더 작동 안 됨". 실측 = **2026-08-01 부터 3주간 빈 그리드**.
 **원인 2겹** (둘 다 `PublicCalendar.tsx`):
@@ -70,7 +70,7 @@ RULE 6 = LLM 0(결정론적 조회) · RULE 7 = 공시 제목 원문 그대로 +
 
 | repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
 |---|---|---|---|
-| `public-probe/PublicCalendar.tsx` | PublicCalendar | 초기월 하드코딩 제거 + 최근접 월 자동이동 구현 | 🔴 **복붙 대기 (장애)** |
+| `public-probe/PublicCalendar.tsx` | PublicCalendar (`dwTN2Ws`) | 초기월 하드코딩 제거 + 최근접 월 자동이동 구현 | ✅ **복붙 완료 2026-08-22** — MCP readCodeFile 로 라이브 검증(초기월 `new Date()` · `jumpedRef` · 가드 주석 전부 반영) |
 
 ---
 

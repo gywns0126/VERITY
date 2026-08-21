@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import datetime as _dt
 import re
 import sys
 from datetime import datetime, timezone, timedelta
@@ -30,6 +31,10 @@ _DATA = os.path.join(_ROOT, "data")
 
 DISCLOSURE_PATH = os.path.join(_DATA, "public_disclosure_feed.json")
 DIVIDENDS_PATH = os.path.join(_DATA, "dividends_kr.json")
+
+# 과거 이벤트 보존 창. 미래 이벤트는 창과 무관하게 전부 남는다.
+# 90일 = 분기 한 사이클. 지난 분기 배당락·공시까지는 맥락으로 유용하고 그 이전은 아니다.
+PAST_WINDOW_DAYS = 90
 IPO_PATH = os.path.join(_DATA, "ipo_watch.json")
 NAMES_PATH = os.path.join(_DATA, "kr_stock_names.json")
 OUTPUT_PATH = os.path.join(_DATA, "calendar_public.json")
@@ -153,6 +158,29 @@ def build() -> Dict[str, Any]:
             })
             n_ipo += 1
 
+    # 🚨 2026-08-21 — 과거 이벤트 창(PAST_WINDOW_DAYS). 미래는 전부 남긴다.
+    #   사고: 배당 1,322건(전체의 88%)이 **2025-12-30 하루**에 박제돼 있었다.
+    #   한국 결산배당 ex_date 가 12월 말에 몰리는데 우리가 가진 건 2025 결산분뿐이고
+    #   2026 결산배당은 11~12월에나 공시된다(dividends_kr.json 실측 = ex_date 2025-12 가
+    #   1,322/1,322 = 100%, dividend_type 전부 year_end).
+    #   그 결과 ① 2026 어느 달을 열어도 배당 0건 ② 월별 카운트·전체 통계가 8개월 전
+    #   하루로 왜곡 ③ 배당 필터 칩이 사실상 죽은 칩. 지나간 배당락은 캘린더가 아니라
+    #   종목 상세의 배당 이력이 답할 영역이다.
+    #   🚨 잘라낸 건수를 신고한다 — "배당이 원래 없다" 와 "창 밖이라 뺐다" 는 다른 사실이다.
+    _cut = (_dt.date.fromisoformat(_now()[:10]) - _dt.timedelta(days=PAST_WINDOW_DAYS)).isoformat()
+    _before = len(events)
+    _dropped: Dict[str, int] = {}
+    kept = []
+    for e in events:
+        if e["date"] < _cut:
+            _dropped[e["type"]] = _dropped.get(e["type"], 0) + 1
+            continue
+        kept.append(e)
+    events = kept
+    n_disc = sum(1 for e in events if e["type"] == "disclosure")
+    n_div = sum(1 for e in events if e["type"] == "dividend")
+    n_ipo = sum(1 for e in events if e["type"] == "ipo")
+
     events.sort(key=lambda e: (e["date"], e["type"]))
     out = {
         "_meta": {
@@ -161,6 +189,11 @@ def build() -> Dict[str, Any]:
             "note": "이벤트 = 공개 사실. 포렌식 태그(희석/자사주 등)는 공시 제목 분류일 뿐 점수·추천 아님 (RULE 7). "
                     "실적발표 예정일·락업해제 = 소스 미보유로 미포함.",
             "counts": {"disclosure": n_disc, "dividend": n_div, "ipo": n_ipo, "total": len(events)},
+            # 자기신고 — 소비자가 "없음" 과 "창 밖" 을 구분할 수 있어야 한다
+            "past_window_days": PAST_WINDOW_DAYS,
+            "past_cutoff": _cut,
+            "dropped_past": _dropped,
+            "dropped_total": _before - len(events),
         },
         "events": events,
     }
