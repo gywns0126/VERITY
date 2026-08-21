@@ -117,6 +117,17 @@ def _authenticate(h) -> Optional[tuple]:
 
 
 def _num(v, default=None):
+    """숫자 파싱. 🚨 2026-08-22 — 쉼표/단위가 붙은 문자열을 정규화한다.
+
+    사고: 프론트에서 "2,000,000" 이 오면 float() 이 ValueError -> default 0 이 되어
+    **조용히 0 으로 저장**됐다(DB 실측 = 삼성전자·하이닉스 둘 다 avg_cost 0.0).
+    avg_cost=0 이면 화면이 현재가로 대체 표시해 "값이 바뀐 것처럼" 보인다
+    (PublicHoldingsTab 의 cur 폴백). 프론트에서도 막지만 서버가 최종 방어선이다.
+    """
+    if isinstance(v, str):
+        for ch in (",", " ", "\u20a9", "$", "\uc6d0"):
+            v = v.replace(ch, "")
+        v = v.strip()
     try:
         x = float(v)
         if x != x or x in (float("inf"), float("-inf")):
@@ -170,10 +181,16 @@ class handler(BaseHTTPRequestHandler):
         ticker = str(body.get("ticker", "")).strip()
         if not ticker:
             return _json_response(self, {"error": "ticker 필요"}, 400)
-        shares = _num(body.get("shares"), 0)
-        avg_cost = _num(body.get("avg_cost"), 0)
-        if shares is None or shares < 0 or avg_cost is None or avg_cost < 0:
-            return _json_response(self, {"error": "shares·avg_cost 는 0 이상 숫자"}, 400)
+        shares = _num(body.get("shares"))
+        avg_cost = _num(body.get("avg_cost"))
+        # 🚨 0 을 정상값으로 받지 않는다. 종전엔 default 0 + `>= 0` 이라 파싱 실패가
+        #   조용히 통과했다 — 사용자는 저장됐다고 믿는데 평단이 0 이 된다(2026-08-22 사고).
+        if shares is None or shares <= 0 or avg_cost is None or avg_cost <= 0:
+            return _json_response(
+                self,
+                {"error": "shares·avg_cost 는 0 보다 큰 숫자여야 합니다 (쉼표·단위 없이)"},
+                400,
+            )
 
         payload = {
             "ticker": ticker,

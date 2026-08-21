@@ -829,6 +829,7 @@ export default function PublicHoldingsTab(props: Props) {
     const [nestIdx, setNestIdx] = useState<Record<string, any> | null>(null) // 티커→최근 공시
     const [npsMap, setNpsMap] = useState<Record<string, number> | null>(null) // 티커→국민연금 지분%
     const [q, setQ] = useState("") // 종목 검색어
+    const [popErr, setPopErr] = useState<string>("") // 팝업 입력 오류 — 조용한 0 저장 방지
     const [pop, setPop] = useState<any>(null) // 추가/수정 팝업 {id?, ticker, name, market, shares, avg_cost}
     // 거래 기록(실현손익) — 본인 매매 이력. RULE 7 사실 기록, 순위·배지·공개 없음. /api/trades.
     const [tradeData, setTradeData] = useState<{ trades: any[]; summary: any }>(
@@ -1124,23 +1125,45 @@ export default function PublicHoldingsTab(props: Props) {
             avg_cost: String(h.avg_cost ?? ""),
         })
     }
+    // 🚨 2026-08-22 — 쉼표 입력이 조용히 0 으로 저장되던 것. PM 실사고:
+    //   "하이닉스 10주를 2,000,000원에 샀다고 올렸는데 자동으로 1,690,000원으로 되더라".
+    //   Number("2,000,000") = NaN → `|| 0` 이 0 으로 만들고, 서버 float() 도 ValueError →
+    //   default 0. avg_cost=0 이면 평가 화면이 현재가로 대체 표시해(1344행) **바뀐 것처럼
+    //   보인다**. 실제로는 입력이 버려진 것이다. DB 실측 = 삼성전자·하이닉스 둘 다 0.0.
+    //   🚨 에러가 안 뜨는 게 핵심 — 서버가 0 을 정상값으로 받는다(avg_cost >= 0 통과).
+    //   되돌리지 말 것: 정규화 + **파싱 실패 시 저장 차단**(조용한 0 금지).
+    const parseNum = (v: any): number | null => {
+        const t = String(v == null ? "" : v)
+            .replace(/[,\s₩$원]/g, "")
+            .trim()
+        if (!t) return null
+        const n = Number(t)
+        return isFinite(n) && n >= 0 ? n : null
+    }
     const savePop = useCallback(() => {
         const token = getToken()
         if (!token || !pop) return
+        const sh = parseNum(pop.shares)
+        const av = parseNum(pop.avg_cost)
+        if (sh === null || av === null || sh <= 0 || av <= 0) {
+            setPopErr("수량과 평단을 숫자로 입력해 주세요 (쉼표·단위 없이)")
+            return
+        }
+        setPopErr("")
         setBusy(true)
         const isEdit = !!pop.id
         const body = isEdit
             ? {
                   id: pop.id,
-                  shares: Number(pop.shares) || 0,
-                  avg_cost: Number(pop.avg_cost) || 0,
+                  shares: sh,
+                  avg_cost: av,
               }
             : {
                   ticker: String(pop.ticker).trim(),
                   name: String(pop.name).trim(),
                   market: pop.market,
-                  shares: Number(pop.shares) || 0,
-                  avg_cost: Number(pop.avg_cost) || 0,
+                  shares: sh,
+                  avg_cost: av,
               }
         fetch(base + "/api/holdings", {
             method: isEdit ? "PATCH" : "POST",
