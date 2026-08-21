@@ -12,6 +12,7 @@ PM 요청: 회원이 둥지에 보유한 종목의 최근 공시 + 국민연금 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -111,3 +112,32 @@ def test_briefing_never_claims_nps_absence():
     s = BRIEF.read_text(encoding="utf-8")
     for bad in ("국민연금 미보유", "국민연금 없음"):
         assert bad not in s, f"부재를 단정하는 문구: {bad}"
+
+
+def test_badges_do_not_grow_row_height():
+    """🚨 PM 2026-08-22 — "세로로 배치하지 말고 스택 높이 변화 없이".
+
+    종전 NestBadges 가 flexWrap:"wrap" + marginTop 이라 칩이 줄바꿈되며 보유 행이
+    4줄까지 늘었다(국민연금 1 + 공시 2 + "+1"). 보유 목록은 행 높이가 고정이어야
+    스캔이 된다 — 새 줄을 만들지 않고 한 줄 안에서 넘치면 자른다.
+    """
+    if not TSX.exists():
+        pytest.skip("컴포넌트 없음")
+    s = TSX.read_text(encoding="utf-8")
+    i = s.find("function NestBadges")
+    assert i > 0
+    # 🚨 함수 경계로 정확히 자른다. `\nfunction ` 로 찾으면 파일 끝까지 잡히고(199KB),
+    #    고정 길이로 자르면 함수 밖 코드가 섞인다 — 둘 다 내가 1차에 겪은 오탐이다.
+    end = s.find("\n}\n", i)
+    blk = s[i:end]
+    # 🚨 주석 제외 — 이 함수의 경고 주석이 "flexWrap:\"wrap\" 을 되돌리지 말 것" 이라
+    #    주석째로 검사하면 경고문 자체가 위반으로 잡힌다(별 테스트에서 같은 형태를 겪었다).
+    code = re.sub(r"^\s*//.*$", "", blk, flags=re.M)
+    assert 'flexWrap: "wrap"' not in code, "배지가 줄바꿈된다 — 행 높이가 늘어난다"
+    assert "marginTop" not in code, "배지가 새 줄로 내려간다 — 인라인이어야 한다"
+    assert 'display: "inline-flex"' in code, "인라인 배치가 아니다"
+    assert 'overflow: "hidden"' in code, "넘칠 때 자르지 않으면 부모를 밀어낸다"
+    # 배지를 품는 서브라인도 한 줄로 고정돼야 한다
+    assert 'whiteSpace: "nowrap"' in s[s.find("<NestBadges") - 1200:s.find("<NestBadges")], (
+        "배지를 담는 줄에 nowrap 이 없다 — 긴 공시 제목에서 줄바꿈된다"
+    )

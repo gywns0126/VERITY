@@ -551,6 +551,32 @@ function FlagIcon(props: { code: string; size?: number }) {
     )
 }
 
+/* 관심/보유 별 — 🚨 PublicStockReport 헤더 별과 **같은 자산**이다(2026-08-22 PM 지시
+   "리포트에서 쓰는것처럼 노랑색 모서리가 둥근 별"). 종전엔 문자 ★ 를 보라색으로 썼는데
+   같은 사이트에서 같은 뜻의 마크가 두 형태로 보였다.
+   · 소프트골드 #f6b93b + strokeLinejoin="round" 로 꼭짓점을 둥글린다(토스풍, 2026-06-22 확정)
+   · 문자 ★ 로 되돌리지 말 것 — 폰트마다 모양·굵기가 달라 렌더가 흔들린다.
+   · path 는 리포트와 동일. 한쪽만 바꾸면 두 화면이 갈린다. */
+const AN_STAR_GOLD = "#f6b93b"
+function StarMark(props: { size?: number; color?: string }) {
+    const sz = props.size || 16
+    const c = props.color || AN_STAR_GOLD
+    return (
+        <svg
+            width={sz}
+            height={sz}
+            viewBox="0 0 24 24"
+            style={{ fill: c, stroke: c, flexShrink: 0 }}
+            strokeWidth={2.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.685 21.5a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.45 10.286a.53.53 0 0 1 .294-.903l5.165-.756a2.122 2.122 0 0 0 1.597-1.16z" />
+        </svg>
+    )
+}
+
 function Logo(props: {
     ticker: string
     name: string
@@ -702,64 +728,64 @@ function NestBadges(props: {
     const evs: any[] = ent && Array.isArray(ent.ev) ? ent.ev : []
     const pct = npsMap ? npsMap[tk] : undefined
     if (!evs.length && !(pct > 0)) return null
+    // 🚨 2026-08-22 PM — "세로로 배치하지 말고 스택 높이 변화 없이 표시".
+    //   종전 flexWrap:"wrap" + marginTop 이라 칩이 줄바꿈되며 **행 높이가 늘었다**
+    //   (국민연금 1 + 공시 2 + "+1" = 4줄). 보유 목록은 한 행 높이가 고정이어야
+    //   스캔이 된다. 그래서 **새 줄을 만들지 않고** 한 줄 안에서 넘치면 자른다.
+    //   · nowrap + overflow hidden = 줄바꿈 금지, 넘치면 잘림
+    //   · minWidth 0 = flex 자식이 줄어들 수 있게(안 주면 부모를 밀어낸다)
+    //   · 공시는 1건만 + 나머지는 개수로. 제목 전문은 title 툴팁에 남긴다
+    //   🚨 flexWrap:"wrap" 이나 marginTop 을 되돌리지 말 것 — 행 높이가 다시 흔들린다.
     const chip: CSSProperties = {
         fontSize: 10.5,
         fontWeight: 700,
-        padding: "2px 7px",
+        padding: "1px 6px",
         borderRadius: 999,
         whiteSpace: "nowrap",
-        lineHeight: 1.5,
+        lineHeight: 1.45,
+        flexShrink: 0,
     }
+    const rest = evs.length - 1
     return (
-        <div
+        <span
             style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 5,
-                marginTop: 5,
+                display: "inline-flex",
                 alignItems: "center",
+                gap: 4,
+                minWidth: 0,
+                overflow: "hidden",
+                marginLeft: 6,
+                verticalAlign: "middle",
             }}
         >
             {pct > 0 && (
                 <span
-                    style={{
-                        ...chip,
-                        background: C.line,
-                        color: C.sub,
-                    }}
+                    style={{ ...chip, background: C.line, color: C.sub }}
                     title="국민연금 5% 이상 대량보유 공시 기준"
                 >
-                    국민연금 {pct.toFixed(2)}%
+                    연금 {pct.toFixed(1)}%
                 </span>
             )}
-            {evs.slice(0, 2).map((e, i) => (
+            {evs.length > 0 && (
                 <span
-                    key={i}
                     style={{
                         ...chip,
                         background: C.line,
                         color: C.sub,
-                        maxWidth: 190,
+                        flexShrink: 1,
+                        minWidth: 0,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                     }}
-                    title={(e.d || "") + " " + (e.t || "")}
+                    title={evs
+                        .map((e) => (e.d || "") + " " + (e.t || ""))
+                        .join("\n")}
                 >
-                    {String(e.t || "").slice(0, 22)}
-                </span>
-            ))}
-            {evs.length > 2 && (
-                <span
-                    style={{
-                        ...chip,
-                        background: "transparent",
-                        color: C.faint,
-                    }}
-                >
-                    +{evs.length - 2}
+                    {String(evs[0].t || "").slice(0, 14)}
+                    {rest > 0 ? " +" + rest : ""}
                 </span>
             )}
-        </div>
+        </span>
     )
 }
 
@@ -2334,9 +2360,9 @@ export default function PublicHoldingsTab(props: Props) {
                                                                     style={{
                                                                         border: "none",
                                                                         background:
-                                                                            C.vgS,
+                                                                            "transparent",
                                                                         cursor: "pointer",
-                                                                        color: C.vg,
+                                                                        color: AN_STAR_GOLD,
                                                                         borderRadius: 999,
                                                                         width: 30,
                                                                         height: 30,
@@ -2351,7 +2377,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                                             "center",
                                                                     }}
                                                                 >
-                                                                    ★
+                                                                    <StarMark size={17} />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -2383,9 +2409,10 @@ export default function PublicHoldingsTab(props: Props) {
                                                         lineHeight: 1.5,
                                                     }}
                                                 >
-                                                    종목을 검색해 ★ 를 누르면
-                                                    수량·평단 입력 후 바로
-                                                    추가돼요.
+                                                    종목을 검색해{" "}
+                                                    <StarMark size={13} /> 를
+                                                    누르면 수량·평단 입력 후
+                                                    바로 추가돼요.
                                                 </div>
                                             )}
                                         </div>
@@ -2515,6 +2542,16 @@ export default function PublicHoldingsTab(props: Props) {
                                                             color: C.faint,
                                                             fontWeight: 600,
                                                             marginTop: 2,
+                                                            // 🚨 2026-08-22 PM "스택 높이 변화 없이" — 이 줄은 **한 줄로 고정**한다.
+                                                            //   배지(NestBadges)가 여기 인라인으로 들어오므로 nowrap 이 없으면
+                                                            //   긴 공시 제목에서 줄바꿈돼 행 높이가 늘어난다(종전 4줄 사고).
+                                                            //   overflow hidden 과 함께여야 잘림이 성립한다. 되돌리지 말 것.
+                                                            whiteSpace: "nowrap",
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            minWidth: 0,
                                                         }}
                                                     >
                                                         {h.ticker} ·{" "}
