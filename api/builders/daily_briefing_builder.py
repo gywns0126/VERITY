@@ -356,9 +356,21 @@ def main() -> int:
         }
         with open(OUT_PATH, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False)
+        # 🚨 2026-08-21 — 등장 티커를 남긴다. 종전엔 date/n_sections/n_items 카운트뿐이라
+        #   307일치가 쌓여 있어도 "회원 보유종목과 며칠에 한 번 겹치나" 를 **소급 측정할 수
+        #   없었다**. 브리핑 개인화(보유 종목 승격) 가치를 판정할 유일한 근거가 이 목록이다.
+        #   실측 참고(8/21) — 종목 항목 41건·고유 KR 30·US 11 / VAMS 11종목 겹침 1 ·
+        #   대형주 10 가정 겹침 4. 표본 1일이라 이 값으로 설계를 정하지 않는다.
+        #   🚨 이 파일은 **run 마다 append** 된다(하루 여러 행). 분석 시 date 로 dedupe 할 것 —
+        #   generated_at 을 함께 남기는 이유가 그것이다(마지막 행 채택).
+        _tks = sorted({i["ticker"] for s in sections for i in (s.get("items") or [])
+                       if isinstance(i, dict) and i.get("ticker")})
         with open(HIST_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps({"date": out["date"], "n_sections": len(sections),
-                                "n_items": sum(len(s["items"]) for s in sections)}, ensure_ascii=False) + "\n")
+            f.write(json.dumps({"date": out["date"], "generated_at": out["generated_at"],
+                                "n_sections": len(sections),
+                                "n_items": sum(len(s["items"]) for s in sections),
+                                "n_tickers": len(_tks), "tickers": _tks},
+                               ensure_ascii=False) + "\n")
         print(f"[daily_briefing] logged=True · {out['date']} · 섹션 {len(sections)} · "
               f"항목 {sum(len(s['items']) for s in sections)} -> {os.path.relpath(OUT_PATH, _ROOT)}", file=sys.stderr)
         ok = True
