@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-21T07:57:45+09:00",
+ "as_of": "2026-08-21T18:01:05+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -99,7 +99,7 @@
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 10,
+   "holdings_checked": 11,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -133,8 +133,8 @@
   "flag_coverage": {
    "ok": false,
    "rules_defined": 24,
-   "rules_fired": 11,
-   "stock_days": 4747,
+   "rules_fired": 12,
+   "stock_days": 4716,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -149,11 +149,11 @@
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
@@ -177,10 +177,6 @@
      "fired": 0
     },
     {
-     "rule": "공매도 비율",
-     "fired": 0
-    },
-    {
      "rule": "신용잔고율",
      "fired": 0
     },
@@ -190,7 +186,7 @@
     }
    ],
    "always_fired": [],
-   "detail": "정의 24종 중 발동 11종 · 미발동 13종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
+   "detail": "정의 24종 중 발동 12종 · 미발동 12종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
    "note": "미발동 규칙은 **확인 대상**이지 판정이 아니다. 계속기업 불확실성·불성실공시 같은 규칙은 107일 0건이 정상일 수 있다. 반면 입력 필드가 항상 결손이면 배선 결함이다. 임계 조정은 사전등록 대상(RULE 7).",
    "baseline": {
     "never_fired": 13
@@ -224,27 +220,27 @@
   },
   "guard_inputs": {
    "ok": false,
-   "holdings_checked": 10,
+   "holdings_checked": 11,
    "coverage": {
     "sector": {
-     "filled": 10,
-     "total": 10,
+     "filled": 11,
+     "total": 11,
      "guard": "섹터 35% 상한"
     },
     "beta": {
      "filled": 0,
-     "total": 10,
+     "total": 11,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 10,
-     "total": 10,
+     "filled": 11,
+     "total": 11,
      "guard": "팩터 쏠림 차단"
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 31,
-    "scored": 31,
+    "with_pct": 28,
+    "scored": 28,
     "ok": true
    },
    "dead_guards": [
@@ -252,19 +248,19 @@
      "field": "beta",
      "guard": "포트폴리오 베타 1.5 상한",
      "filled": 0,
-     "total": 10
+     "total": 11
     }
    ],
    "detail": "입력 전무한 가드 1종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta)"
   },
   "exit_paths": {
    "ok": false,
-   "holdings_checked": 10,
+   "holdings_checked": 11,
    "no_profit_exit": [
     {
      "name": "파마리서치",
      "qty": 1.0,
-     "return_pct": 28.22,
+     "return_pct": 24.18,
      "past_target_2": false
     }
    ],
@@ -308,9 +304,17 @@
       "target_1": 1,
       "target_2": 0
      }
+    },
+    {
+     "name": "AMG",
+     "qty": 2.0,
+     "splittable": {
+      "target_1": 1,
+      "target_2": 0
+     }
     }
    ],
-   "detail": "이익 확정 경로 0인 보유 1건 — 출구가 손절뿐이다 (사다리 불능 5건 별도)",
+   "detail": "이익 확정 경로 0인 보유 1건 — 출구가 손절뿐이다 (사다리 불능 6건 별도)",
    "status": "REGRESSION"
   },
   "as_of_staleness": {
