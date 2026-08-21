@@ -29,12 +29,15 @@ pre_markers="$(scan_markers)"
 $pre_markers"
 
 pre_stash="$(git stash list | wc -l | tr -d ' ')"
+# 🚨 fetch 를 **먼저** 한다 (2026-08-22 자가 발견 결함).
+#   초판은 fetch 전에 ahead 를 세서 **낡은 origin/BRANCH ref** 로 판단했다.
+#   타 세션이 그 사이 push 했으면 "푸시할 커밋 없음" 으로 잘못 빠져나간다.
+git fetch -q origin "$BRANCH" || fail "fetch 실패"
 ahead="$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo 0)"
 [ "$ahead" = "0" ] && { echo "푸시할 커밋 없음 — 종료"; exit 0; }
 echo "미푸시 커밋 $ahead 건 · 기존 stash $pre_stash 건"
 
-# ── fetch + rebase ────────────────────────────────────────
-git fetch -q origin "$BRANCH" || fail "fetch 실패"
+# ── rebase ────────────────────────────────────────────────
 git rebase --autostash "origin/$BRANCH"
 rc=$?
 
