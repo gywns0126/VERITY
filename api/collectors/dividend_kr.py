@@ -181,6 +181,14 @@ def fetch_tier0_pykrx(ticker: str, year: Optional[int] = None) -> Optional[dict]
     dps = float(dps_values[-1])
     return {
         "ex_date": _estimate_ex_date(year, "year_end"),
+        # 🚨 2026-08-22 — ex_date 는 **추정치**다. alotMatter/pykrx 어느 쪽도 배당락일을
+        #   주지 않아 _estimate_ex_date() 가 "{연도}-12-30" 을 넣는다. 실측(2026-08-22):
+        #   dividends_kr.json 1,322행의 ex_date 가 **전부 정확히 2025-12-30** = 100% 추정.
+        #   그런데 소비처(캘린더)가 이걸 확정 사실처럼 표시하고 있었다(RULE 7 위반 소지).
+        #   🚨 한국은 배당절차 개선으로 배당기준일이 배당액 결정 **이후**로 이동 중이라
+        #   12/30 가정은 시간이 갈수록 빗나간다. 확정일이 필요하면 현금·현물배당결정
+        #   공시 본문의 배당기준일을 봐야 한다(Tier 2 확장 = 별건, 쿼터 설계 필요).
+        "ex_date_estimated": True,
         "announced_amount_per_share": dps,
         "confirmed_amount_per_share": dps,
         "is_confirmed": True,  # 과거 확정값
@@ -235,6 +243,14 @@ def fetch_tier1_dart_annual(ticker: str, bsns_year: Optional[int] = None) -> Opt
 
     return {
         "ex_date": _estimate_ex_date(bsns_year, "year_end"),
+        # 🚨 2026-08-22 — ex_date 는 **추정치**다. alotMatter/pykrx 어느 쪽도 배당락일을
+        #   주지 않아 _estimate_ex_date() 가 "{연도}-12-30" 을 넣는다. 실측(2026-08-22):
+        #   dividends_kr.json 1,322행의 ex_date 가 **전부 정확히 2025-12-30** = 100% 추정.
+        #   그런데 소비처(캘린더)가 이걸 확정 사실처럼 표시하고 있었다(RULE 7 위반 소지).
+        #   🚨 한국은 배당절차 개선으로 배당기준일이 배당액 결정 **이후**로 이동 중이라
+        #   12/30 가정은 시간이 갈수록 빗나간다. 확정일이 필요하면 현금·현물배당결정
+        #   공시 본문의 배당기준일을 봐야 한다(Tier 2 확장 = 별건, 쿼터 설계 필요).
+        "ex_date_estimated": True,
         "announced_amount_per_share": amount,
         "confirmed_amount_per_share": amount,
         "is_confirmed": True,  # 사업보고서 기재 = 주총 확정 후

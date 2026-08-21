@@ -132,12 +132,17 @@ def build() -> Dict[str, Any]:
                     continue
                 amt = r.get("confirmed_amount_per_share") or r.get("announced_amount_per_share")
                 conf = bool(r.get("is_confirmed"))
+                # 🚨 is_confirmed 는 **금액** 확정 여부이지 날짜가 아니다. 날짜는 별개로
+                #   추정일 수 있다(alotMatter 가 배당락일을 안 줘서 12/30 로 추정).
+                #   확정 금액 + 추정 날짜를 "배당락" 으로만 쓰면 날짜가 사실로 읽힌다.
+                est = bool(r.get("ex_date_estimated"))
                 events.append({
                     "date": date, "type": "dividend", "cat": "dividend",
-                    "tag": "배당락" + ("" if conf else "(예상)"),
+                    "tag": "배당락" + ("(추정일)" if est else ("" if conf else "(예상)")),
                     "ticker": tk, "name": nm,
                     "title": (f"주당 {int(amt):,}원 " if amt else "") + "배당락",
                     "url": "", "market": "KR",
+                    "date_estimated": est,
                 })
                 n_div += 1
 
