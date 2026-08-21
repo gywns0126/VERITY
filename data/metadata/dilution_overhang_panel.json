@@ -1,0 +1,207 @@
+{
+ "_meta": {
+  "prereg": "docs/PREREG_DILUTION_INSIDER_CROSS_2026_08_21.md (개정 4차)",
+  "definition": "시점 T 유효 오버행 = cvrqpd_bgd<=T<=cvrqpd_edd 인 CB/BW 의 총수대비% 합",
+  "caveat": "🚨 잔량이 아니라 잔량의 상한 — 전환 실행분 미반영",
+  "detect_floor_d": 0.37,
+  "brain_input": false,
+  "publish": false,
+  "n_obs": 217181,
+  "n_ticker": 2360,
+  "inst_used": 2722,
+  "inst_dropped": 165,
+  "n_terminal_obs": 7886,
+  "month_fixed_effect": "각 지평의 *_ex = 같은 달 횡단면 평균 차감(§5-5)",
+  "terminal_rule": "지평 내 시계열 종료 시 마지막 거래가 사용. 일괄 -100% 아님(합병·자진상폐 프리미엄 때문). 정리매매가도 0 이 아니라 실손실 과소평가"
+ },
+ "H1": {
+  "m3": {
+   "n_overhang": 14382,
+   "n_none": 202794,
+   "mean_overhang": 0.06582,
+   "mean_none": 0.03199,
+   "cohen_d": 0.0714,
+   "detectable": false
+  },
+  "m6": {
+   "n_overhang": 14382,
+   "n_none": 202791,
+   "mean_overhang": 0.11251,
+   "mean_none": 0.06143,
+   "cohen_d": 0.0627,
+   "detectable": false
+  },
+  "m3_ex": {
+   "n_overhang": 14382,
+   "n_none": 202794,
+   "mean_overhang": 0.02404,
+   "mean_none": -0.00171,
+   "cohen_d": 0.0554,
+   "detectable": false
+  },
+  "m6_ex": {
+   "n_overhang": 14382,
+   "n_none": 202791,
+   "mean_overhang": 0.02989,
+   "mean_none": -0.00212,
+   "cohen_d": 0.0398,
+   "detectable": false
+  }
+ },
+ "H3": {
+  "m3": [
+   {
+    "quintile": 1,
+    "ov_med": 4.94,
+    "ret_mean": 0.05191,
+    "n": 2876
+   },
+   {
+    "quintile": 2,
+    "ov_med": 10.35,
+    "ret_mean": 0.05127,
+    "n": 2876
+   },
+   {
+    "quintile": 3,
+    "ov_med": 16.15,
+    "ret_mean": 0.03364,
+    "n": 2876
+   },
+   {
+    "quintile": 4,
+    "ov_med": 25.74,
+    "ret_mean": 0.04918,
+    "n": 2876
+   },
+   {
+    "quintile": 5,
+    "ov_med": 58.91,
+    "ret_mean": 0.14312,
+    "n": 2876
+   }
+  ],
+  "m6": [
+   {
+    "quintile": 1,
+    "ov_med": 4.94,
+    "ret_mean": 0.09604,
+    "n": 2876
+   },
+   {
+    "quintile": 2,
+    "ov_med": 10.35,
+    "ret_mean": 0.0777,
+    "n": 2876
+   },
+   {
+    "quintile": 3,
+    "ov_med": 16.15,
+    "ret_mean": 0.03294,
+    "n": 2876
+   },
+   {
+    "quintile": 4,
+    "ov_med": 25.74,
+    "ret_mean": 0.08985,
+    "n": 2876
+   },
+   {
+    "quintile": 5,
+    "ov_med": 58.91,
+    "ret_mean": 0.26666,
+    "n": 2876
+   }
+  ],
+  "m3_ex": [
+   {
+    "quintile": 1,
+    "ov_med": 4.94,
+    "ret_mean": 0.01373,
+    "n": 2876
+   },
+   {
+    "quintile": 2,
+    "ov_med": 10.35,
+    "ret_mean": 0.01196,
+    "n": 2876
+   },
+   {
+    "quintile": 3,
+    "ov_med": 16.15,
+    "ret_mean": -0.00709,
+    "n": 2876
+   },
+   {
+    "quintile": 4,
+    "ov_med": 25.74,
+    "ret_mean": 0.00565,
+    "n": 2876
+   },
+   {
+    "quintile": 5,
+    "ov_med": 58.91,
+    "ret_mean": 0.09595,
+    "n": 2876
+   }
+  ],
+  "m6_ex": [
+   {
+    "quintile": 1,
+    "ov_med": 4.94,
+    "ret_mean": 0.01987,
+    "n": 2876
+   },
+   {
+    "quintile": 2,
+    "ov_med": 10.35,
+    "ret_mean": -0.00057,
+    "n": 2876
+   },
+   {
+    "quintile": 3,
+    "ov_med": 16.15,
+    "ret_mean": -0.04843,
+    "n": 2876
+   },
+   {
+    "quintile": 4,
+    "ov_med": 25.74,
+    "ret_mean": 0.00105,
+    "n": 2876
+   },
+   {
+    "quintile": 5,
+    "ov_med": 58.91,
+    "ret_mean": 0.1781,
+    "n": 2876
+   }
+  ]
+ },
+ "H4": {
+  "m3": {
+   "n_freq2plus": 3497,
+   "n_freq0": 206768,
+   "cohen_d": 0.0417,
+   "detectable": false
+  },
+  "m6": {
+   "n_freq2plus": 3497,
+   "n_freq0": 206765,
+   "cohen_d": 0.0096,
+   "detectable": false
+  },
+  "m3_ex": {
+   "n_freq2plus": 3497,
+   "n_freq0": 206768,
+   "cohen_d": 0.0152,
+   "detectable": false
+  },
+  "m6_ex": {
+   "n_freq2plus": 3497,
+   "n_freq0": 206765,
+   "cohen_d": -0.0166,
+   "detectable": false
+  }
+ }
+}

@@ -51,12 +51,48 @@ MAPPING = os.path.join(DATA, "mapping.json")
 KEEP = (
     "rcept_no", "corp_code", "corp_name", "bddd",          # 식별·날짜
     "bd_knd", "bd_fta", "bd_mtd", "bdis_mthn",             # 사채 성격·총액·만기·공모여부
-    "cv_prc", "cv_rt", "cvisstk_cnt", "cvisstk_tisstk_vs", # 🚨 전환가·비율·주식수·총수대비%
-    "cvrqpd_bgd", "cvrqpd_edd",                            # 🚨 전환청구 기간
-    "act_mktprcfl_cvprc_lwtrsprc",                         # 🚨 리픽싱 최저조정가
+    "cv_prc", "cv_rt", "cvisstk_cnt", "cvisstk_tisstk_vs", # CB — 전환가·비율·주식수·총수대비%
+    "cvrqpd_bgd", "cvrqpd_edd",                            # CB — 전환청구 기간
+    # 🚨 2026-08-21 추가 — BW 는 필드명이 **완전히 다르다**. 이걸 몰라서 BW 187건이
+    #   전부 빈 값이 됐고 분석에서 100% 탈락했다(제외 630 중 187). 실측으로 확인.
+    "ex_prc", "ex_rt", "nstk_isstk_cnt", "nstk_isstk_tisstk_vs",   # BW — 행사가·비율·주식수·총수대비%
+    "expd_bgd", "expd_edd",                                        # BW — 행사 기간
+    "act_mktprcfl_cvprc_lwtrsprc",                         # 리픽싱 최저조정가 (양쪽 공통)
     "ex_sm_r",                                             # 전환 제한 특약
 )
 ENDPOINTS = (("cvbdIsDecsn", "CB"), ("bdwtIsDecsn", "BW"))
+
+# 🚨 CB/BW 를 공통 키로 정규화한다. 분석기가 두 이름 체계를 알 필요가 없게.
+_ALIAS = {
+    "CB": {"x_prc": "cv_prc", "x_cnt": "cvisstk_cnt", "x_pct": "cvisstk_tisstk_vs",
+           "x_bgd": "cvrqpd_bgd", "x_edd": "cvrqpd_edd"},
+    "BW": {"x_prc": "ex_prc", "x_cnt": "nstk_isstk_cnt", "x_pct": "nstk_isstk_tisstk_vs",
+           "x_bgd": "expd_bgd", "x_edd": "expd_edd"},
+}
+
+
+def _num(v):
+    s = str(v or "").replace(",", "").strip()
+    if s in ("", "-", "None"):
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def _normalize(item: dict, kind: str) -> dict:
+    """공통 키 x_* 를 채운다. 🚨 2015~2016 공시는 주식수를 안 싣는다(실측 99%/94% 결측) —
+    사채총액 ÷ 행사가로 **유도**하고 `x_cnt_derived` 로 신고한다. 숨기지 않는다."""
+    a = _ALIAS[kind]
+    for k, src in a.items():
+        item[k] = item.get(src)
+    if _num(item.get("x_cnt")) is None:
+        fta, prc = _num(item.get("bd_fta")), _num(item.get("x_prc"))
+        if fta and prc:
+            item["x_cnt"] = int(fta / prc)
+            item["x_cnt_derived"] = True
+    return item
 
 
 def _key() -> str:
@@ -151,7 +187,7 @@ def main() -> int:
             for x in rows:
                 item = {k: x.get(k) for k in KEEP}
                 item["kind"] = kind
-                rec["instruments"].append(item)
+                rec["instruments"].append(_normalize(item, kind))
             time.sleep(a.sleep)
         if not ok and not rec["instruments"]:
             continue          # 🚨 실패는 기록하지 않는다 — 다음 run 이 재시도한다
