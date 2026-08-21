@@ -1301,6 +1301,9 @@ ROUTES = {
     "verification": _make_operator_file_handler("verification_report.json"),
     # 중용 목표비중(③척추) — 태생 봉인 자산. authed=본인전용이라 노출 아님(공개 blob fallback 도 없음 — gitignore).
     "moderation_portfolio": _make_operator_file_handler("moderation_portfolio.json"),
+    # 2026-08-21 멀티배거 워치 — 오퍼레이터(알파콘솔) 전용. 종목 신호라 공개 노출 금지.
+    #   🚨 생산물 _meta.decision_use=False (로깅 전용, active gate 2026-09) — UI 가 관측으로만 쓴다.
+    "multibagger": _make_operator_file_handler("multibagger_watch.json"),
 }
 
 # 운영 변경(POST/DELETE) + 목록(GET) 라우트 — method-aware.

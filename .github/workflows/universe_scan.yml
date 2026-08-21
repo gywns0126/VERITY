@@ -198,6 +198,19 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python scripts/upload_operator_data_to_supabase.py --only candidates_diff || echo "[cand_diff] upload skip"
 
+      - name: Build + upload 멀티배거 발행물 (알파콘솔 전용)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # multibagger_watch.jsonl(누적) → data/multibagger_watch.json(최신 일자·상위 120).
+          # 🚨 산식 변경 0 · 신호 재계산 0 — 잘라내기 + 자기신고(로깅 전용·커버리지)만 한다.
+          # 🚨 --only 로 좁힌다 — 전체 업로드는 타 워크플로 산출물을 stale 로 덮는다(위 선례).
+          # 실패해도 스캔 결과를 버리지 않는다 — 발행물은 부차 산출물이다.
+          python3 api/builders/multibagger_operator_builder.py \
+            && python scripts/upload_operator_data_to_supabase.py --only multibagger_watch \
+            || echo "[multibagger] 발행물 생성/업로드 skip"
+
       - name: Commit data/universe_candidates.json
         run: |
           git config user.name "AI Stock Bot"
@@ -240,6 +253,10 @@ jobs:
           # 🚨 RULE 4: 위 specific git add 패턴이라 이 줄이 없으면 신 trail 이 silent 손실된다.
           # 유니버스 행과 스키마가 달라 별 파일 (섞으면 소비자가 동질 population 가정하다 깨짐).
           git add data/metadata/multibagger_holdings.jsonl 2>/dev/null || true
+          # multibagger_watch.json — 알파콘솔 발행물(위 빌드 스텝 산출). 업로드는 Supabase 로
+          # 이미 갔으나 커밋해 두어야 다음 run·감사에서 무엇을 발행했는지 재현된다.
+          # 🚨 RULE 4: specific add 패턴이라 이 줄이 없으면 신 파일이 silent 손실된다.
+          git add data/multibagger_watch.json 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔍 universe_candidates ${TIME_KST}"

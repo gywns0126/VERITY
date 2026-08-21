@@ -27,6 +27,7 @@ import NewsTicker, { type NewsItem } from "./components/NewsTicker"
 import PanelBoundary from "./components/PanelBoundary"
 import BalanceCard from "./components/BalanceCard"
 import CandidatesDiff from "./components/CandidatesDiff"
+import MultibaggerPanel from "./components/MultibaggerPanel"
 
 export default function Home() {
     const dark = useDark()
@@ -164,6 +165,9 @@ export default function Home() {
                         </PanelBoundary>
                         <PanelBoundary name="후보변경">
                             <CandidatesDiff />
+                        </PanelBoundary>
+                        <PanelBoundary name="멀티배거">
+                            <MultibaggerPanel />
                         </PanelBoundary>
                         <RailTitle t="이벤트 피드" n="T1 보유 · T2 후보 · T3 참고" ink={c.ink} faint={c.faint} />
                         <PanelBoundary name="피드">
