@@ -52,6 +52,13 @@ jobs:
       - name: 브리핑 조립 (순수 변환)
         run: python -m api.builders.daily_briefing_builder
 
+      # 🚨 둥지(보유종목) 브리핑용 티커 색인 — 같은 재료(DART/SEC 공시 피드)라 같은 슬롯에서 만든다.
+      #   회원별 발행이 아니라 **전역 색인 1개**다. 브라우저가 /api/holdings 로 받은 본인 티커만
+      #   골라 렌더하므로 회원 수와 무관하게 blob 캐시 1개로 끝난다.
+      #   RULE 4 = 산출 data/nest_briefing_index.json 은 아래 git add data/ (broad) 가 커버.
+      - name: 둥지 브리핑 색인
+        run: python -m api.builders.nest_briefing_index_builder
+
       - name: Commit + push (변경 시만)
         if: always()
         run: |

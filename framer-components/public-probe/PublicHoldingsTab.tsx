@@ -83,10 +83,19 @@ const DARK = {
 //   CSS 변수는 body[data-framer-theme] 에 직접 걸려 Framer 가 테마를 바꾸는 순간 같이 바뀐다.
 const _ANP = "hld"
 const AN_PALETTE =
-    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
-    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+    "body{" +
+    Object.keys(LIGHT)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k])
+        .join(";") +
+    "}" +
+    'body[data-framer-theme="dark"]{' +
+    Object.keys(DARK)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k])
+        .join(";") +
+    "}"
 const CVAR: Record<string, string> = {}
-for (const _k of Object.keys(LIGHT)) CVAR[_k] = "var(--an-" + _ANP + "-" + _k + ")"
+for (const _k of Object.keys(LIGHT))
+    CVAR[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
@@ -110,7 +119,9 @@ function anReadCcy(): string {
     }
 }
 function useAnCcy(onCanvas: boolean): [string, (v: string) => void] {
-    const [ccy, setCcy] = useState<string>(() => (onCanvas ? "USD" : anReadCcy()))
+    const [ccy, setCcy] = useState<string>(() =>
+        onCanvas ? "USD" : anReadCcy()
+    )
     useEffect(() => {
         if (onCanvas) return
         const read = () => setCcy(anReadCcy())
@@ -135,7 +146,11 @@ function useAnCcy(onCanvas: boolean): [string, (v: string) => void] {
         },
     ]
 }
-function useAnFx(onCanvas: boolean): { rate: number; asOf: string; ok: boolean } {
+function useAnFx(onCanvas: boolean): {
+    rate: number
+    asOf: string
+    ok: boolean
+} {
     const [fx, setFx] = useState<any>(null)
     useEffect(() => {
         if (onCanvas || fx) return
@@ -175,7 +190,6 @@ function useAnFx(onCanvas: boolean): { rate: number; asOf: string; ok: boolean }
         ? { rate: fx.rate, asOf: fx.asOf, ok: true }
         : { rate: FX_FALLBACK, asOf: "", ok: false }
 }
-
 
 // ── Brandfetch 로고 (토스 핫링킹 제거 2026-07-10) — logo_map(빌드타임 확정) + US 티커 규칙 + 이니셜 폴백 ──
 const BF_CID = "1idalDez9T7KlggM8qX" // 공개 임베드 client id (Logo Link 전용)
@@ -634,7 +648,9 @@ function readBodyDark(): boolean {
     // 🚨 body-first 금지 — Framer 정적 export 가 새로고침에 body 를 light 로 두면 verity 이전에 단락 → 부분 라이트(2026-07-23). 되돌리지 말 것.
     try {
         if (typeof document !== "undefined") {
-            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+            const h = document.documentElement
+                ? document.documentElement.dataset.anTheme
+                : null
             if (h === "dark") return true
             if (h === "light") return false
             if (document.body) {
@@ -643,7 +659,10 @@ function readBodyDark(): boolean {
                 if (a === "light") return false
             }
         }
-        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        const s =
+            typeof localStorage !== "undefined"
+                ? localStorage.getItem("verity_theme")
+                : null
         if (s === "dark") return true
     } catch (e) {}
     return false
@@ -660,8 +679,82 @@ function readBodyDark(): boolean {
    캔버스 인스턴스에 옛 값이 남아 있어도 여기서 흡수한다 — 되돌리지 말 것. */
 function _usPath(us: any, kr: any): string {
     const v = String(us || "").replace(/\/+$/, "")
-    if (!v || v === "/us/stock") return String(kr || "").replace(/\/+$/, "") || "/stock"
+    if (!v || v === "/us/stock")
+        return String(kr || "").replace(/\/+$/, "") || "/stock"
     return v
+}
+
+/* 둥지 배지 — 보유 종목의 ① 최근 공시(3일창) ② 국민연금 대량보유(5%+).
+   🚨 RULE 7 — 공시 제목은 DART/SEC **원문 그대로**, 지분율은 공시 수치. 점수·등급·추천 0.
+   🚨 국민연금은 5% 이상 대량보유 공시가 원천이라 **없음 ≠ 미보유**. 색인에 없으면 아무것도
+      표시하지 않는다(= "5% 미만"). 부재를 보유하지 않는다고 단정하는 문구는 거짓이 된다.
+   🚨 색인 로드 전(null)에는 아무것도 그리지 않는다 — 없음을 단정하지 않기 위해서다. */
+function NestBadges(props: {
+    h: any
+    nestIdx: Record<string, any> | null
+    npsMap: Record<string, number> | null
+    C: any
+}) {
+    const { h, nestIdx, npsMap, C } = props
+    const tk = String(h && h.ticker ? h.ticker : "")
+    if (!tk) return null
+    const ent = nestIdx ? nestIdx[tk] : null
+    const evs: any[] = ent && Array.isArray(ent.ev) ? ent.ev : []
+    const pct = npsMap ? npsMap[tk] : undefined
+    if (!evs.length && !(pct > 0)) return null
+    const chip: CSSProperties = {
+        fontSize: 10.5,
+        fontWeight: 700,
+        padding: "2px 7px",
+        borderRadius: 999,
+        whiteSpace: "nowrap",
+        lineHeight: 1.5,
+    }
+    return (
+        <div
+            style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 5,
+                marginTop: 5,
+                alignItems: "center",
+            }}
+        >
+            {pct > 0 && (
+                <span
+                    style={{
+                        ...chip,
+                        background: C.line,
+                        color: C.sub,
+                    }}
+                    title="국민연금 5% 이상 대량보유 공시 기준"
+                >
+                    국민연금 {pct.toFixed(2)}%
+                </span>
+            )}
+            {evs.slice(0, 2).map((e, i) => (
+                <span
+                    key={i}
+                    style={{
+                        ...chip,
+                        background: C.line,
+                        color: C.sub,
+                        maxWidth: 190,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                    }}
+                    title={(e.d || "") + " " + (e.t || "")}
+                >
+                    {String(e.t || "").slice(0, 22)}
+                </span>
+            ))}
+            {evs.length > 2 && (
+                <span style={{ ...chip, background: "transparent", color: C.faint }}>
+                    +{evs.length - 2}
+                </span>
+            )}
+        </div>
+    )
 }
 
 export default function PublicHoldingsTab(props: Props) {
@@ -697,13 +790,21 @@ export default function PublicHoldingsTab(props: Props) {
     const [catFlow, setCatFlow] = useState<Record<string, number>>({}) // etf_flow 자산군 누적 흐름(사실, 분산 탭)
     const [targetKr, setTargetKr] = useState<number | null>(null) // 목표 국내 비중 %(사용자 설정, null=현재값)
     const [universe, setUniverse] = useState<any[]>([]) // 검색 유니버스(universe_search, KR+US)
+    // 🚨 2026-08-21 — 둥지 브리핑. 보유 종목의 최근 공시 + 국민연금 대량보유.
+    //   회원별 서버 발행이 아니라 **전역 색인 1개**를 받아 브라우저가 본인 티커만 고른다
+    //   (회원 수와 무관하게 blob 캐시 1개). 인증·보유목록은 이미 위 /api/holdings 배선 재사용.
+    //   RULE 6 = LLM 0(결정론적 조회) · RULE 7 = 공시 사실·지분율만, 점수·추천 0.
+    const [nestIdx, setNestIdx] = useState<Record<string, any> | null>(null) // 티커→최근 공시
+    const [npsMap, setNpsMap] = useState<Record<string, number> | null>(null) // 티커→국민연금 지분%
     const [q, setQ] = useState("") // 종목 검색어
     const [pop, setPop] = useState<any>(null) // 추가/수정 팝업 {id?, ticker, name, market, shares, avg_cost}
     // 거래 기록(실현손익) — 본인 매매 이력. RULE 7 사실 기록, 순위·배지·공개 없음. /api/trades.
-    const [tradeData, setTradeData] = useState<{ trades: any[]; summary: any }>(() => ({
-        trades: [],
-        summary: { by_ticker: [], total_realized_pnl: 0 },
-    }))
+    const [tradeData, setTradeData] = useState<{ trades: any[]; summary: any }>(
+        () => ({
+            trades: [],
+            summary: { by_ticker: [], total_realized_pnl: 0 },
+        })
+    )
     const [tradesLoading, setTradesLoading] = useState(false)
     // 캔버스 전용 목업 주입 — 마운트 후라 정적 HTML 에는 절대 포함되지 않음.
     //   라이브 미로그인 목업은 loadHoldings 의 토큰 부재 분기가 담당(로그아웃 전환도 그쪽이 처리).
@@ -771,7 +872,9 @@ export default function PublicHoldingsTab(props: Props) {
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_flow.json")
+        fetch(
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_flow.json"
+        )
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive || !d || !Array.isArray(d.etfs)) return
@@ -839,7 +942,9 @@ export default function PublicHoldingsTab(props: Props) {
     useEffect(() => {
         if (onCanvas || (!showAdd && !showTAdd) || universe.length) return
         let alive = true
-        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json")
+        fetch(
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
+        )
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const a = d && (Array.isArray(d) ? d : d.stocks)
@@ -851,6 +956,43 @@ export default function PublicHoldingsTab(props: Props) {
         }
     }, [onCanvas, showAdd, showTAdd, universe.length])
 
+    // 둥지 브리핑 재료 — 티커 색인(공시) + 국민연금 대량보유. 각 1회.
+    // 🚨 기존 피드를 직접 받지 않는 이유 = 크기. us_disclosure_feed 4.1MB + KR 862KB 를
+    //    브라우저가 받을 수 없어 서버에서 최근 3일·종목당 3건으로 압축한 색인을 쓴다(178KB).
+    // 🚨 국민연금은 **5% 이상 대량보유 공시**가 원천이다. 색인에 없다 = "미보유"가 아니라
+    //    "5% 미만"이다. 아래 렌더에서 그렇게 표기한다 — 오독 방지.
+    useEffect(() => {
+        if (onCanvas || isDemo) return
+        let alive = true
+        fetch(
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nest_briefing_index.json"
+        )
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (alive && d && d.tickers) setNestIdx(d.tickers)
+            })
+            .catch(() => {})
+        fetch(
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nps_holdings.json"
+        )
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const arr = d && (d.holdings || d.full)
+                if (!alive || !Array.isArray(arr)) return
+                const m: Record<string, number> = {}
+                for (const x of arr) {
+                    const tk = x && x.ticker ? String(x.ticker) : ""
+                    const p = Number(x && x.pct)
+                    if (tk && p > 0 && isFinite(p)) m[tk] = Math.max(m[tk] || 0, p)
+                }
+                setNpsMap(m)
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [onCanvas, isDemo])
+
     /* 평가 기준가 — kr_close_latest.json (금융위 공공데이터 직전 거래일 종가, 전 종목 동일 기준일).
        🚨 되돌리지 말 것 (2026-07-31 수익률 부호 역전 사고) — 옛 소스 = stock_flow_5d.json 의
        마지막 close. 그 파일은 시총순 회전 수집(하루 500종목)이라 **종목마다 종가 날짜가 제각각**
@@ -860,7 +1002,9 @@ export default function PublicHoldingsTab(props: Props) {
     useEffect(() => {
         if (onCanvas || isDemo) return
         let alive = true
-        fetch("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_close_latest.json")
+        fetch(
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_close_latest.json"
+        )
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 const pm = d && d.prices
@@ -2370,7 +2514,13 @@ export default function PublicHoldingsTab(props: Props) {
                                                         {Number(h.shares) || 0}
                                                         주 · 비중{" "}
                                                         {h._weight.toFixed(0)}%
-                                                    </div>
+                                                        <NestBadges
+                                                        h={h}
+                                                        nestIdx={nestIdx}
+                                                        npsMap={npsMap}
+                                                        C={C}
+                                                    />
+                                                </div>
                                                 </div>
                                                 {!narrow && (
                                                     <div
@@ -2516,8 +2666,8 @@ export default function PublicHoldingsTab(props: Props) {
                                         {closeAsOf
                                             ? `${fmtAsOf(closeAsOf)} 종가`
                                             : "직전 거래일 종가"}{" "}
-                                        × 보유수량 − 입력 평단 (단순 계산·사실) ·
-                                        종가 = 금융위 공공데이터(T+1) · 실시간
+                                        × 보유수량 − 입력 평단 (단순 계산·사실)
+                                        · 종가 = 금융위 공공데이터(T+1) · 실시간
                                         시세는 리포트에서
                                     </div>
                                 </>
@@ -3115,7 +3265,8 @@ export default function PublicHoldingsTab(props: Props) {
                                         >
                                             22%(과표 3억↓)·27.5%(초과) · 손실
                                             연내통산(이월 없음) · 환율{" "}
-                                            {Math.round(FX).toLocaleString()}원/$
+                                            {Math.round(FX).toLocaleString()}
+                                            원/$
                                             {fxInfo.ok ? "" : " (기본값)"}
                                             가정
                                         </div>
@@ -3460,439 +3611,542 @@ export default function PublicHoldingsTab(props: Props) {
                                         실제 내역으로 바뀌어 빈 상태가 번쩍인다(2026-07-27 PM 지적 동일 계열). */}
                                     {tradesLoading ? (
                                         <>
-                                            <div style={{ ...cardS, padding: "18px 18px" }}>
+                                            <div
+                                                style={{
+                                                    ...cardS,
+                                                    padding: "18px 18px",
+                                                }}
+                                            >
                                                 <div style={sk(140, 12, 6)} />
-                                                <div style={{ ...sk(190, 26, 8), marginTop: 10 }} />
-                                                <div style={{ ...sk(240, 11, 6), marginTop: 10 }} />
+                                                <div
+                                                    style={{
+                                                        ...sk(190, 26, 8),
+                                                        marginTop: 10,
+                                                    }}
+                                                />
+                                                <div
+                                                    style={{
+                                                        ...sk(240, 11, 6),
+                                                        marginTop: 10,
+                                                    }}
+                                                />
                                             </div>
-                                            <div style={{ ...cardS, padding: "16px 18px", marginTop: 10 }}>
+                                            <div
+                                                style={{
+                                                    ...cardS,
+                                                    padding: "16px 18px",
+                                                    marginTop: 10,
+                                                }}
+                                            >
                                                 <div style={sk(72, 13, 6)} />
                                                 {[0, 1, 2].map((i) => (
                                                     <div
                                                         key={i}
                                                         style={{
                                                             display: "flex",
-                                                            alignItems: "center",
+                                                            alignItems:
+                                                                "center",
                                                             gap: 10,
                                                             marginTop: 14,
                                                         }}
                                                     >
-                                                        <div style={sk(30, 30, 10)} />
-                                                        <div style={{ flex: 1 }}>
-                                                            <div style={sk("42%", 12, 6)} />
-                                                            <div style={{ ...sk("28%", 10, 6), marginTop: 6 }} />
+                                                        <div
+                                                            style={sk(
+                                                                30,
+                                                                30,
+                                                                10
+                                                            )}
+                                                        />
+                                                        <div
+                                                            style={{ flex: 1 }}
+                                                        >
+                                                            <div
+                                                                style={sk(
+                                                                    "42%",
+                                                                    12,
+                                                                    6
+                                                                )}
+                                                            />
+                                                            <div
+                                                                style={{
+                                                                    ...sk(
+                                                                        "28%",
+                                                                        10,
+                                                                        6
+                                                                    ),
+                                                                    marginTop: 6,
+                                                                }}
+                                                            />
                                                         </div>
-                                                        <div style={sk(84, 13, 6)} />
+                                                        <div
+                                                            style={sk(
+                                                                84,
+                                                                13,
+                                                                6
+                                                            )}
+                                                        />
                                                     </div>
                                                 ))}
                                             </div>
                                         </>
                                     ) : (
-                                    <>
-                                    {/* 실현손익 합계 (매도 확정분) */}
-                                    <div
-                                        style={{
-                                            ...cardS,
-                                            padding: "18px 18px",
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                fontSize: 12,
-                                                color: C.faint,
-                                                fontWeight: 700,
-                                            }}
-                                        >
-                                            실현손익 합계 · 매도 확정분(사실)
-                                        </div>
-                                        <div
-                                            style={{
-                                                fontSize: 27,
-                                                fontWeight: 800,
-                                                letterSpacing: "-1px",
-                                                margin: "3px 0",
-                                                color: plColor(realizedKrw),
-                                            }}
-                                        >
-                                            {(realizedKrw > 0 ? "+" : "") +
-                                                money(realizedKrw)}
-                                        </div>
-                                        <div
-                                            style={{
-                                                fontSize: 12,
-                                                color: C.faint,
-                                                fontWeight: 600,
-                                                marginTop: 4,
-                                            }}
-                                        >
-                                            이동평균 매입가 차감(사실) · 거래{" "}
-                                            {(tradeData.trades || []).length}건
-                                            {tHasUs
-                                                ? ` · 미국주식 환율 ${Math.round(FX).toLocaleString()}원/$${fxInfo.ok ? "" : " (기본값)"}`
-                                                : ""}
-                                        </div>
-                                    </div>
-
-                                    {/* 종목별 실현손익 + 잔여 보유 */}
-                                    {tByTicker.length > 0 && (
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                flexDirection: "column",
-                                                gap: 8,
-                                                marginTop: 12,
-                                            }}
-                                        >
-                                            {tByTicker.map((s: any) => {
-                                                const us =
-                                                    String(s.market) === "us"
-                                                return (
-                                                    <div
-                                                        key={s.ticker}
-                                                        onClick={() =>
-                                                            goStock(s)
-                                                        }
-                                                        role="link"
-                                                        tabIndex={0}
-                                                        style={{
-                                                            display: "flex",
-                                                            alignItems:
-                                                                "center",
-                                                            gap: 12,
-                                                            background: C.card,
-                                                            borderRadius: 16,
-                                                            padding:
-                                                                "13px 15px",
-                                                            boxShadow:
-                                                                "0 1px 3px rgba(0,0,0,0.04)",
-                                                            cursor: "pointer",
-                                                        }}
-                                                    >
-                                                        <Logo
-                                                            ticker={s.ticker}
-                                                            name={s.name}
-                                                            market={s.market}
-                                                            C={C}
-                                                            size={36}
-                                                        />
-                                                        <div
-                                                            style={{
-                                                                minWidth: 0,
-                                                                flex: 1,
-                                                            }}
-                                                        >
-                                                            <div
-                                                                style={{
-                                                                    fontSize: 14.5,
-                                                                    fontWeight: 700,
-                                                                    whiteSpace:
-                                                                        "nowrap",
-                                                                    overflow:
-                                                                        "hidden",
-                                                                    textOverflow:
-                                                                        "ellipsis",
-                                                                }}
-                                                            >
-                                                                {s.name ||
-                                                                    s.ticker}
-                                                            </div>
-                                                            <div
-                                                                style={{
-                                                                    fontSize: 11.5,
-                                                                    color: C.faint,
-                                                                    fontWeight: 600,
-                                                                    marginTop: 2,
-                                                                }}
-                                                            >
-                                                                {Number(
-                                                                    s.open_shares
-                                                                ) > 0
-                                                                    ? `보유 ${s.open_shares}주 · 평단 ${px(Number(s.open_avg_cost) || 0, us, ccy, FX)}`
-                                                                    : "전량 매도"}
-                                                            </div>
-                                                        </div>
-                                                        <div
-                                                            style={{
-                                                                textAlign:
-                                                                    "right",
-                                                                flexShrink: 0,
-                                                            }}
-                                                        >
-                                                            <div
-                                                                style={{
-                                                                    fontSize: 14.5,
-                                                                    fontWeight: 800,
-                                                                    color: plColor(
-                                                                        Number(
-                                                                            s.realized_pnl
-                                                                        ) || 0
-                                                                    ),
-                                                                }}
-                                                            >
-                                                                {((Number(
-                                                                    s.realized_pnl
-                                                                ) || 0) > 0
-                                                                    ? "+"
-                                                                    : "") +
-                                                                    px(
-                                                                        Number(
-                                                                            s.realized_pnl
-                                                                        ) || 0,
-                                                                        us,
-                        ccy,
-                        FX
-                                                                    )}
-                                                            </div>
-                                                            <div
-                                                                style={{
-                                                                    fontSize: 11.5,
-                                                                    color: C.faint,
-                                                                    fontWeight: 600,
-                                                                    marginTop: 2,
-                                                                }}
-                                                            >
-                                                                실현손익
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )
-                                            })}
-                                        </div>
-                                    )}
-
-                                    {/* 거래 이력 (원장) */}
-                                    <div
-                                        style={{
-                                            ...cardS,
-                                            padding: "16px 17px",
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                fontSize: 12.5,
-                                                fontWeight: 800,
-                                                marginBottom: 6,
-                                            }}
-                                        >
-                                            거래 이력
-                                        </div>
-                                        {tLedger.length === 0 ? (
+                                        <>
+                                            {/* 실현손익 합계 (매도 확정분) */}
                                             <div
                                                 style={{
-                                                    fontSize: 12,
-                                                    color: C.faint,
-                                                    fontWeight: 600,
-                                                    padding: "10px 2px",
+                                                    ...cardS,
+                                                    padding: "18px 18px",
                                                 }}
                                             >
-                                                아직 기록한 거래가 없어요.{" "}
-                                                {isDemo
-                                                    ? "로그인하면"
-                                                    : "+ 거래 추가로"}{" "}
-                                                매수·매도를 남겨보세요.
+                                                <div
+                                                    style={{
+                                                        fontSize: 12,
+                                                        color: C.faint,
+                                                        fontWeight: 700,
+                                                    }}
+                                                >
+                                                    실현손익 합계 · 매도
+                                                    확정분(사실)
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: 27,
+                                                        fontWeight: 800,
+                                                        letterSpacing: "-1px",
+                                                        margin: "3px 0",
+                                                        color: plColor(
+                                                            realizedKrw
+                                                        ),
+                                                    }}
+                                                >
+                                                    {(realizedKrw > 0
+                                                        ? "+"
+                                                        : "") +
+                                                        money(realizedKrw)}
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: 12,
+                                                        color: C.faint,
+                                                        fontWeight: 600,
+                                                        marginTop: 4,
+                                                    }}
+                                                >
+                                                    이동평균 매입가 차감(사실) ·
+                                                    거래{" "}
+                                                    {
+                                                        (tradeData.trades || [])
+                                                            .length
+                                                    }
+                                                    건
+                                                    {tHasUs
+                                                        ? ` · 미국주식 환율 ${Math.round(FX).toLocaleString()}원/$${fxInfo.ok ? "" : " (기본값)"}`
+                                                        : ""}
+                                                </div>
                                             </div>
-                                        ) : (
-                                            tLedger.map((t: any, i: number) => {
-                                                const us =
-                                                    String(t.market) === "us"
-                                                const isBuy = t.side === "buy"
-                                                return (
-                                                    <div
-                                                        key={t.id || i}
-                                                        style={{
-                                                            display: "flex",
-                                                            alignItems:
-                                                                "center",
-                                                            gap: 11,
-                                                            padding: "10px 0",
-                                                            borderTop:
-                                                                i === 0
-                                                                    ? "none"
-                                                                    : "1px solid " +
-                                                                      C.line,
-                                                        }}
-                                                    >
-                                                        <Logo
-                                                            ticker={t.ticker}
-                                                            name={t.name}
-                                                            market={t.market}
-                                                            C={C}
-                                                            size={30}
-                                                        />
-                                                        <div
-                                                            style={{
-                                                                minWidth: 0,
-                                                                flex: 1,
-                                                            }}
-                                                        >
+
+                                            {/* 종목별 실현손익 + 잔여 보유 */}
+                                            {tByTicker.length > 0 && (
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        flexDirection: "column",
+                                                        gap: 8,
+                                                        marginTop: 12,
+                                                    }}
+                                                >
+                                                    {tByTicker.map((s: any) => {
+                                                        const us =
+                                                            String(s.market) ===
+                                                            "us"
+                                                        return (
                                                             <div
+                                                                key={s.ticker}
+                                                                onClick={() =>
+                                                                    goStock(s)
+                                                                }
+                                                                role="link"
+                                                                tabIndex={0}
                                                                 style={{
-                                                                    fontSize: 13.5,
-                                                                    fontWeight: 700,
-                                                                    whiteSpace:
-                                                                        "nowrap",
-                                                                    overflow:
-                                                                        "hidden",
-                                                                    textOverflow:
-                                                                        "ellipsis",
                                                                     display:
                                                                         "flex",
                                                                     alignItems:
                                                                         "center",
-                                                                    gap: 6,
+                                                                    gap: 12,
+                                                                    background:
+                                                                        C.card,
+                                                                    borderRadius: 16,
+                                                                    padding:
+                                                                        "13px 15px",
+                                                                    boxShadow:
+                                                                        "0 1px 3px rgba(0,0,0,0.04)",
+                                                                    cursor: "pointer",
                                                                 }}
                                                             >
-                                                                <span
+                                                                <Logo
+                                                                    ticker={
+                                                                        s.ticker
+                                                                    }
+                                                                    name={
+                                                                        s.name
+                                                                    }
+                                                                    market={
+                                                                        s.market
+                                                                    }
+                                                                    C={C}
+                                                                    size={36}
+                                                                />
+                                                                <div
                                                                     style={{
-                                                                        fontSize: 10.5,
-                                                                        fontWeight: 800,
-                                                                        color: isBuy
-                                                                            ? C.down
-                                                                            : C.up,
-                                                                        background:
-                                                                            isBuy
-                                                                                ? C.buyS
-                                                                                : C.sellS,
-                                                                        borderRadius: 6,
-                                                                        padding:
-                                                                            "2px 6px",
+                                                                        minWidth: 0,
+                                                                        flex: 1,
+                                                                    }}
+                                                                >
+                                                                    <div
+                                                                        style={{
+                                                                            fontSize: 14.5,
+                                                                            fontWeight: 700,
+                                                                            whiteSpace:
+                                                                                "nowrap",
+                                                                            overflow:
+                                                                                "hidden",
+                                                                            textOverflow:
+                                                                                "ellipsis",
+                                                                        }}
+                                                                    >
+                                                                        {s.name ||
+                                                                            s.ticker}
+                                                                    </div>
+                                                                    <div
+                                                                        style={{
+                                                                            fontSize: 11.5,
+                                                                            color: C.faint,
+                                                                            fontWeight: 600,
+                                                                            marginTop: 2,
+                                                                        }}
+                                                                    >
+                                                                        {Number(
+                                                                            s.open_shares
+                                                                        ) > 0
+                                                                            ? `보유 ${s.open_shares}주 · 평단 ${px(Number(s.open_avg_cost) || 0, us, ccy, FX)}`
+                                                                            : "전량 매도"}
+                                                                    </div>
+                                                                </div>
+                                                                <div
+                                                                    style={{
+                                                                        textAlign:
+                                                                            "right",
                                                                         flexShrink: 0,
                                                                     }}
                                                                 >
-                                                                    {isBuy
-                                                                        ? "매수"
-                                                                        : "매도"}
-                                                                </span>
-                                                                <span
+                                                                    <div
+                                                                        style={{
+                                                                            fontSize: 14.5,
+                                                                            fontWeight: 800,
+                                                                            color: plColor(
+                                                                                Number(
+                                                                                    s.realized_pnl
+                                                                                ) ||
+                                                                                    0
+                                                                            ),
+                                                                        }}
+                                                                    >
+                                                                        {((Number(
+                                                                            s.realized_pnl
+                                                                        ) ||
+                                                                            0) >
+                                                                        0
+                                                                            ? "+"
+                                                                            : "") +
+                                                                            px(
+                                                                                Number(
+                                                                                    s.realized_pnl
+                                                                                ) ||
+                                                                                    0,
+                                                                                us,
+                                                                                ccy,
+                                                                                FX
+                                                                            )}
+                                                                    </div>
+                                                                    <div
+                                                                        style={{
+                                                                            fontSize: 11.5,
+                                                                            color: C.faint,
+                                                                            fontWeight: 600,
+                                                                            marginTop: 2,
+                                                                        }}
+                                                                    >
+                                                                        실현손익
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+
+                                            {/* 거래 이력 (원장) */}
+                                            <div
+                                                style={{
+                                                    ...cardS,
+                                                    padding: "16px 17px",
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        fontSize: 12.5,
+                                                        fontWeight: 800,
+                                                        marginBottom: 6,
+                                                    }}
+                                                >
+                                                    거래 이력
+                                                </div>
+                                                {tLedger.length === 0 ? (
+                                                    <div
+                                                        style={{
+                                                            fontSize: 12,
+                                                            color: C.faint,
+                                                            fontWeight: 600,
+                                                            padding: "10px 2px",
+                                                        }}
+                                                    >
+                                                        아직 기록한 거래가
+                                                        없어요.{" "}
+                                                        {isDemo
+                                                            ? "로그인하면"
+                                                            : "+ 거래 추가로"}{" "}
+                                                        매수·매도를 남겨보세요.
+                                                    </div>
+                                                ) : (
+                                                    tLedger.map(
+                                                        (t: any, i: number) => {
+                                                            const us =
+                                                                String(
+                                                                    t.market
+                                                                ) === "us"
+                                                            const isBuy =
+                                                                t.side === "buy"
+                                                            return (
+                                                                <div
+                                                                    key={
+                                                                        t.id ||
+                                                                        i
+                                                                    }
                                                                     style={{
-                                                                        whiteSpace:
-                                                                            "nowrap",
-                                                                        overflow:
-                                                                            "hidden",
-                                                                        textOverflow:
-                                                                            "ellipsis",
+                                                                        display:
+                                                                            "flex",
+                                                                        alignItems:
+                                                                            "center",
+                                                                        gap: 11,
+                                                                        padding:
+                                                                            "10px 0",
+                                                                        borderTop:
+                                                                            i ===
+                                                                            0
+                                                                                ? "none"
+                                                                                : "1px solid " +
+                                                                                  C.line,
                                                                     }}
                                                                 >
-                                                                    {t.name ||
-                                                                        t.ticker}
-                                                                </span>
-                                                            </div>
-                                                            <div
-                                                                style={{
-                                                                    fontSize: 11,
-                                                                    color: C.faint,
-                                                                    fontWeight: 600,
-                                                                    marginTop: 2,
-                                                                }}
-                                                            >
-                                                                {t.traded_at ||
-                                                                    "—"}{" "}
-                                                                ·{" "}
-                                                                {Number(
-                                                                    t.shares
-                                                                ) || 0}
-                                                                주 @{" "}
-                                                                {px(
-                                                                    Number(
-                                                                        t.price
-                                                                    ) || 0,
-                                                                    us,
-                        ccy,
-                        FX
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <div
-                                                            style={{
-                                                                fontSize: 13,
-                                                                fontWeight: 800,
-                                                                color: C.ink,
-                                                                fontVariantNumeric:
-                                                                    "tabular-nums",
-                                                                flexShrink: 0,
-                                                                textAlign:
-                                                                    "right",
-                                                            }}
-                                                        >
-                                                            {px(
-                                                                (Number(
-                                                                    t.shares
-                                                                ) || 0) *
-                                                                    (Number(
-                                                                        t.price
-                                                                    ) || 0),
-                                                                us,
-                                                                ccy,
-                                                                FX
-                                                            )}
-                                                        </div>
-                                                        {!isDemo && t.id && (
-                                                            <button
-                                                                onClick={() =>
-                                                                    openTEdit(t)
-                                                                }
-                                                                title="거래 수정"
-                                                                style={{
-                                                                    border: "none",
-                                                                    background:
-                                                                        "transparent",
-                                                                    cursor: "pointer",
-                                                                    color: C.faint,
-                                                                    fontSize: 12,
-                                                                    fontWeight: 700,
-                                                                    padding:
-                                                                        "0 2px",
-                                                                    flexShrink: 0,
-                                                                }}
-                                                            >
-                                                                수정
-                                                            </button>
-                                                        )}
-                                                        {!isDemo && t.id && (
-                                                            <button
-                                                                onClick={() =>
-                                                                    delTrade(
-                                                                        t.id
-                                                                    )
-                                                                }
-                                                                title="삭제"
-                                                                style={{
-                                                                    border: "none",
-                                                                    background:
-                                                                        "transparent",
-                                                                    cursor: "pointer",
-                                                                    color: C.faint,
-                                                                    fontSize: 16,
-                                                                    fontWeight: 700,
-                                                                    padding:
-                                                                        "0 2px",
-                                                                    flexShrink: 0,
-                                                                }}
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                )
-                                            })
-                                        )}
-                                    </div>
+                                                                    <Logo
+                                                                        ticker={
+                                                                            t.ticker
+                                                                        }
+                                                                        name={
+                                                                            t.name
+                                                                        }
+                                                                        market={
+                                                                            t.market
+                                                                        }
+                                                                        C={C}
+                                                                        size={
+                                                                            30
+                                                                        }
+                                                                    />
+                                                                    <div
+                                                                        style={{
+                                                                            minWidth: 0,
+                                                                            flex: 1,
+                                                                        }}
+                                                                    >
+                                                                        <div
+                                                                            style={{
+                                                                                fontSize: 13.5,
+                                                                                fontWeight: 700,
+                                                                                whiteSpace:
+                                                                                    "nowrap",
+                                                                                overflow:
+                                                                                    "hidden",
+                                                                                textOverflow:
+                                                                                    "ellipsis",
+                                                                                display:
+                                                                                    "flex",
+                                                                                alignItems:
+                                                                                    "center",
+                                                                                gap: 6,
+                                                                            }}
+                                                                        >
+                                                                            <span
+                                                                                style={{
+                                                                                    fontSize: 10.5,
+                                                                                    fontWeight: 800,
+                                                                                    color: isBuy
+                                                                                        ? C.down
+                                                                                        : C.up,
+                                                                                    background:
+                                                                                        isBuy
+                                                                                            ? C.buyS
+                                                                                            : C.sellS,
+                                                                                    borderRadius: 6,
+                                                                                    padding:
+                                                                                        "2px 6px",
+                                                                                    flexShrink: 0,
+                                                                                }}
+                                                                            >
+                                                                                {isBuy
+                                                                                    ? "매수"
+                                                                                    : "매도"}
+                                                                            </span>
+                                                                            <span
+                                                                                style={{
+                                                                                    whiteSpace:
+                                                                                        "nowrap",
+                                                                                    overflow:
+                                                                                        "hidden",
+                                                                                    textOverflow:
+                                                                                        "ellipsis",
+                                                                                }}
+                                                                            >
+                                                                                {t.name ||
+                                                                                    t.ticker}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div
+                                                                            style={{
+                                                                                fontSize: 11,
+                                                                                color: C.faint,
+                                                                                fontWeight: 600,
+                                                                                marginTop: 2,
+                                                                            }}
+                                                                        >
+                                                                            {t.traded_at ||
+                                                                                "—"}{" "}
+                                                                            ·{" "}
+                                                                            {Number(
+                                                                                t.shares
+                                                                            ) ||
+                                                                                0}
+                                                                            주 @{" "}
+                                                                            {px(
+                                                                                Number(
+                                                                                    t.price
+                                                                                ) ||
+                                                                                    0,
+                                                                                us,
+                                                                                ccy,
+                                                                                FX
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div
+                                                                        style={{
+                                                                            fontSize: 13,
+                                                                            fontWeight: 800,
+                                                                            color: C.ink,
+                                                                            fontVariantNumeric:
+                                                                                "tabular-nums",
+                                                                            flexShrink: 0,
+                                                                            textAlign:
+                                                                                "right",
+                                                                        }}
+                                                                    >
+                                                                        {px(
+                                                                            (Number(
+                                                                                t.shares
+                                                                            ) ||
+                                                                                0) *
+                                                                                (Number(
+                                                                                    t.price
+                                                                                ) ||
+                                                                                    0),
+                                                                            us,
+                                                                            ccy,
+                                                                            FX
+                                                                        )}
+                                                                    </div>
+                                                                    {!isDemo &&
+                                                                        t.id && (
+                                                                            <button
+                                                                                onClick={() =>
+                                                                                    openTEdit(
+                                                                                        t
+                                                                                    )
+                                                                                }
+                                                                                title="거래 수정"
+                                                                                style={{
+                                                                                    border: "none",
+                                                                                    background:
+                                                                                        "transparent",
+                                                                                    cursor: "pointer",
+                                                                                    color: C.faint,
+                                                                                    fontSize: 12,
+                                                                                    fontWeight: 700,
+                                                                                    padding:
+                                                                                        "0 2px",
+                                                                                    flexShrink: 0,
+                                                                                }}
+                                                                            >
+                                                                                수정
+                                                                            </button>
+                                                                        )}
+                                                                    {!isDemo &&
+                                                                        t.id && (
+                                                                            <button
+                                                                                onClick={() =>
+                                                                                    delTrade(
+                                                                                        t.id
+                                                                                    )
+                                                                                }
+                                                                                title="삭제"
+                                                                                style={{
+                                                                                    border: "none",
+                                                                                    background:
+                                                                                        "transparent",
+                                                                                    cursor: "pointer",
+                                                                                    color: C.faint,
+                                                                                    fontSize: 16,
+                                                                                    fontWeight: 700,
+                                                                                    padding:
+                                                                                        "0 2px",
+                                                                                    flexShrink: 0,
+                                                                                }}
+                                                                            >
+                                                                                ×
+                                                                            </button>
+                                                                        )}
+                                                                </div>
+                                                            )
+                                                        }
+                                                    )
+                                                )}
+                                            </div>
 
-                                    <div
-                                        style={{
-                                            textAlign: "center",
-                                            fontSize: 11,
-                                            color: C.faint,
-                                            fontWeight: 600,
-                                            marginTop: 13,
-                                            lineHeight: 1.5,
-                                        }}
-                                    >
-                                        실현손익 = 매도가 − 이동평균 매입가
-                                        (단순 계산·사실) · 본인 기록용 ·
-                                        순위·배지·공개 없음 · 투자자문 아님
-                                    </div>
-                                    </>
+                                            <div
+                                                style={{
+                                                    textAlign: "center",
+                                                    fontSize: 11,
+                                                    color: C.faint,
+                                                    fontWeight: 600,
+                                                    marginTop: 13,
+                                                    lineHeight: 1.5,
+                                                }}
+                                            >
+                                                실현손익 = 매도가 − 이동평균
+                                                매입가 (단순 계산·사실) · 본인
+                                                기록용 · 순위·배지·공개 없음 ·
+                                                투자자문 아님
+                                            </div>
+                                        </>
                                     )}
                                 </>
                             )
