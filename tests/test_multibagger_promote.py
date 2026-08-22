@@ -104,3 +104,49 @@ def test_denominator_is_reported(emit):
 def test_below_threshold_is_not_promoted(emit):
     out = emit([_row("000001", 1)], [_full("000001")])
     assert out["promoted_n"] == 0
+
+
+# ── 🚨 병합 (시행 전 검증에서 분리한 경로) ─────────────────────
+
+def test_merge_is_idempotent(tmp_path, monkeypatch):
+    """재병합해도 후보가 늘지 않아야 한다 — cron 재실행·재시도에서 중복 유입 방지."""
+    from api.builders import universe_scan_builder as usb
+    p = tmp_path / "promote.json"
+    rec = _full("000001"); rec["promoted_by"] = {"source": "multibagger"}
+    p.write_text(json.dumps({"candidates": [rec], "eligible_n": 1, "cap": 20}),
+                 encoding="utf-8")
+    base = [_full("999999")]
+    out1, kr1, _ = usb.merge_promoted(base, path=str(p))
+    out2, kr2, _ = usb.merge_promoted(out1, path=str(p))
+    assert len(out1) == 2 and len(out2) == 2, "재병합에서 중복이 늘었다"
+    assert kr1 == 1 and kr2 == 0
+
+
+def test_merge_does_not_evict_existing(tmp_path):
+    """기존 후보를 밀어내지 않는다 — 추가만."""
+    from api.builders import universe_scan_builder as usb
+    p = tmp_path / "promote.json"
+    p.write_text(json.dumps({"candidates": [_full("000001")], "eligible_n": 1, "cap": 20}),
+                 encoding="utf-8")
+    base = [_full(f"{i:06d}") for i in range(900000, 900005)]
+    out, _, _ = usb.merge_promoted(base, path=str(p))
+    assert all(c in out for c in base), "기존 후보가 사라졌다"
+    assert len(out) == len(base) + 1
+
+
+def test_merge_survives_missing_file(tmp_path):
+    """승격 파일이 없어도(=신호 미산출) 스캔이 죽지 않는다."""
+    from api.builders import universe_scan_builder as usb
+    base = [_full("999999")]
+    out, n, meta = usb.merge_promoted(base, path=str(tmp_path / "nope.json"))
+    assert out == base and n == 0 and meta == {}
+
+
+def test_cap_is_env_overridable(monkeypatch):
+    """🚨 런타임 가드(130분)에 닿으면 **코드 배포 없이** 줄일 수 있어야 한다."""
+    import importlib
+    monkeypatch.setenv("MULTIBAGGER_PROMOTE_CAP", "3")
+    m = importlib.reload(mw)
+    assert m.PROMOTE_CAP == 3
+    monkeypatch.delenv("MULTIBAGGER_PROMOTE_CAP")
+    importlib.reload(m)

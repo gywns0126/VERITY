@@ -24,7 +24,7 @@ import os
 import sys
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -143,29 +143,8 @@ def build() -> Dict[str, Any]:
     #   가장 높은 분위이기도 하다 — 하방 배제는 PM 결정으로 미뤄졌다. 조용히 넣지 않고
     #   `promoted_by` 태그 + 진단으로 **분리 집계 가능**하게 남긴다.
     # 추가만 한다 — 기존 후보를 밀어내지 않고, red_flags·auto_avoid·채점은 그대로 받는다.
-    promoted_n = 0
-    promote_meta: Dict[str, Any] = {}
-    try:
-        _pp = os.path.join(_REPO_ROOT, "data", "metadata", "multibagger_promote.json")
-        if os.path.exists(_pp):
-            with open(_pp, encoding="utf-8") as f:
-                _pj = json.load(f)
-            _have = {c.get("ticker") for c in candidates if isinstance(c, dict)}
-            _add = [c for c in (_pj.get("candidates") or [])
-                    if isinstance(c, dict) and c.get("ticker") and c["ticker"] not in _have]
-            if _add:
-                candidates = candidates + _add
-                promoted_n = len(_add)
-                kr_count += sum(1 for c in _add if (c.get("currency") or "") != "USD")
-            promote_meta = {k: _pj.get(k) for k in
-                            ("as_of", "watch_n", "eligible_n", "cap", "promoted_n",
-                             "dropped_no_full_record", "min_alert")}
-            sys.stderr.write(
-                f"[universe_scan] 멀티배거 승격 병합 {promoted_n}건 "
-                f"(대상 {_pj.get('eligible_n')} · 상한 {_pj.get('cap')} · 중복제외 "
-                f"{len(_pj.get('candidates') or []) - promoted_n})\n")
-    except Exception as _pe:  # noqa: BLE001 — 승격 병합 실패가 스캔을 죽이지 않는다
-        sys.stderr.write(f"[universe_scan] 승격 병합 skip: {type(_pe).__name__}: {_pe}\n")
+    candidates, promoted_n, promote_meta = merge_promoted(candidates)
+    kr_count += promoted_n if promoted_n else 0
 
     # US 유니버스 소스 de-silence — 캐시 부재 시 fallback(S&P100+core) 명시.
     # universe_us.json gitignored + 생성기 없음 → 상시 fallback. silent degradation 아닌 의식 상태.
@@ -199,6 +178,43 @@ def build() -> Dict[str, Any]:
         "diagnostics": diagnostics,
         "schema_version": "v0",
     }
+
+
+PROMOTE_PATH = os.path.join(_REPO_ROOT, "data", "metadata", "multibagger_promote.json")
+
+
+def merge_promoted(candidates: List[Dict[str, Any]],
+                   path: Optional[str] = None) -> tuple:
+    """멀티배거 승격분을 후보에 **추가**한다. 기존 후보를 밀어내지 않는다.
+
+    Returns: (candidates, promoted_n, promote_meta)
+
+    🚨 별 함수로 뺀 이유 = 인라인이면 58분짜리 스캔을 돌려야만 검증된다.
+       배선을 만들고 다음 cron 까지 못 재는 상태가 오늘 반복된 사고 패턴이다.
+    """
+    pp = path or PROMOTE_PATH
+    try:
+        if not os.path.exists(pp):
+            return candidates, 0, {}
+        with open(pp, encoding="utf-8") as f:
+            pj = json.load(f)
+        have = {c.get("ticker") for c in candidates if isinstance(c, dict)}
+        add = [c for c in (pj.get("candidates") or [])
+               if isinstance(c, dict) and c.get("ticker") and c["ticker"] not in have]
+        meta = {k: pj.get(k) for k in
+                ("as_of", "watch_n", "eligible_n", "cap", "promoted_n",
+                 "dropped_no_full_record", "min_alert")}
+        meta["merged_n"] = len(add)
+        meta["dup_skipped"] = len(pj.get("candidates") or []) - len(add)
+        sys.stderr.write(
+            f"[universe_scan] 멀티배거 승격 병합 {len(add)}건 "
+            f"(대상 {pj.get('eligible_n')} · 상한 {pj.get('cap')} · "
+            f"중복제외 {meta['dup_skipped']})\n")
+        kr_added = sum(1 for c in add if (c.get("currency") or "") != "USD")
+        return candidates + add, kr_added, meta
+    except Exception as e:  # noqa: BLE001 — 승격 병합 실패가 스캔을 죽이지 않는다
+        sys.stderr.write(f"[universe_scan] 승격 병합 skip: {type(e).__name__}: {e}\n")
+        return candidates, 0, {}
 
 
 def _atomic_write(path: str, data: Dict[str, Any]) -> None:

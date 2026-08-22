@@ -201,8 +201,14 @@ def build_holding_flowers(portfolio: Optional[Dict[str, Any]] = None,
 # 그래서 **조용히 넣지 않는다**: 전체 레코드를 그대로 싣고(얇은 레코드는 하류 점수를
 # 결측으로 만든다), `promoted_by` 태그를 달아 사후에 이 결정의 성적만 분리 집계할 수
 # 있게 한다. 기존 필터·red_flag·auto_avoid 를 우회하지 않는다 — 채점은 그대로 받는다.
-PROMOTE_MIN_ALERT = 2
-PROMOTE_CAP = 20          # 🚨 상한 — 78 전부면 유니버스가 4배가 되어 런타임 예산을 깬다
+PROMOTE_MIN_ALERT = int(os.environ.get("MULTIBAGGER_PROMOTE_MIN_ALERT", "2"))
+# 🚨 상한 — 78 전부면 유니버스가 4배가 되어 런타임 예산을 깬다.
+#   env 로 뺀 이유(2026-08-22 시행 전 검증): 비용이 붙는 곳은 universe_scan 이 아니라
+#   **daily_analysis_full** 이고(실측 42·68·42·72분), 후보 25→45(+80%)가 비례하면
+#   72×1.8 ≈ 130분으로 내부 가드 `_MODE_MAX_SECONDS["full"]=130분`에 **정확히 닿는다.**
+#   닿으면 코드 배포 없이 워크플로 env 로 즉시 줄일 수 있어야 한다 —
+#   재배포를 기다리는 사이 매 run 이 잘린다(runtime_cutoff 자기신고는 되지만 산출은 준다).
+PROMOTE_CAP = int(os.environ.get("MULTIBAGGER_PROMOTE_CAP", "20"))
 _PROMOTE_PATH = os.path.join(DATA_DIR, "metadata", "multibagger_promote.json")
 
 
