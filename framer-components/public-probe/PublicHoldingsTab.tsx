@@ -328,7 +328,10 @@ const BROKER_URL =
 // ── 세제 상수 (SoT = api/trading/account_profile.py, 2026 시행값) — inline 미러, 변경 시 동기화 ──
 const TAX = {
     KR_TXN: 0.002, // 증권거래세 KOSPI/KOSDAQ (농특세 포함, 2026)
-    KR_MAJOR_AMT: 1_000_000_000, // 대주주 종목당 보유 기준 = 10억 (양도세 과세)
+    // 🚨 2026-08-22 정정 10억→50억. 종전 값은 '2025-12 환원 통과' 라는 틀린 전제였다 —
+    //   실제는 채택 안 됨, 현행 50억 유지(기재부·정책브리핑·국회예산정책처·KDI 4출처).
+    //   SoT = api/trading/account_profile.py · 동기 가드 = tests/test_tax_constants_sync.py
+    KR_MAJOR_AMT: 5_000_000_000, // 대주주 종목당 보유 평가액 기준 = 50억 (양도세 과세)
     US_CGT: 0.22, // 해외주식 양도세 (과표 3억 이하)
     US_CGT_HIGH: 0.275, // 과표 3억 초과분
     US_DEDUCT: 2_500_000, // 해외 양도소득 기본공제 (연, 합산)
