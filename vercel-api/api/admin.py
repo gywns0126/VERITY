@@ -1304,6 +1304,8 @@ ROUTES = {
     # 2026-08-21 멀티배거 워치 — 오퍼레이터(알파콘솔) 전용. 종목 신호라 공개 노출 금지.
     #   🚨 생산물 _meta.decision_use=False (로깅 전용, active gate 2026-09) — UI 가 관측으로만 쓴다.
     "multibagger": _make_operator_file_handler("multibagger_watch.json"),
+    # 2026-08-22 멀티배거 선별 리스트 — 승격→채점 결과 분리 집계(PM 지시).
+    "multibagger_picks": _make_operator_file_handler("multibagger_picks.json"),
 }
 
 # 운영 변경(POST/DELETE) + 목록(GET) 라우트 — method-aware.

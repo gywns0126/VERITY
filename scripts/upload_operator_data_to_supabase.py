@@ -39,6 +39,9 @@ UPLOADS = [
     # 2026-08-21 멀티배거 워치(오퍼레이터 전용) — 종목 신호라 공개 발행 금지(유사투자자문 회피).
     #   🚨 생산물이 "로깅 전용 — 결정 0" 을 자기신고하므로 UI 도 관측으로만 표시한다.
     ("data/multibagger_watch.json", "_operator/multibagger_watch.json", "application/json"),
+    # 2026-08-22 멀티배거 선별 리스트(PM 지시) — 승격→채점 결과를 일반 후보와 분리.
+    #   🚨 이 결정의 성적을 나중에 분리 집계하려면 리스트가 남아야 한다.
+    ("data/multibagger_picks.json", "_operator/multibagger_picks.json", "application/json"),
     # 2026-08-07 드리프트 점검 — 목표비중 파생물이라 동일 봉인 등급.
     #   🚨 gitignore 라 git add 로는 전달 불가 — 이 목록이 유일한 전달 경로다(RULE 4 등가).
     ("data/rebalance_review.json", "_operator/rebalance_review.json", "application/json"),

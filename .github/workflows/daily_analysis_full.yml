@@ -867,6 +867,14 @@ jobs:
             exit 1
           fi
 
+      - name: 멀티배거 선별 리스트 갱신 (채점 반영 · 알파콘솔 전용)
+        # 🚨 여기가 등급이 붙는 시점이다. universe_scan 쪽 빌드는 승격 직후라 아직
+        #   미채점(waiting)이고, 이 run 의 portfolio.json 이 brain_score·grade 를 갖는다.
+        #   업로드는 아래 스텝(전체 업로드)이 이어받으므로 생성만 한다.
+        # 실패해도 발행을 막지 않는다 — 부차 산출물이다.
+        if: always() && steps.coverage_gate.outcome != 'failure'
+        run: python3 api/builders/multibagger_picks_builder.py || echo "[multibagger_picks] skip"
+
       - name: Upload operator full data to private Supabase Storage
         # VERITY↔AlphaNest 분리 Stage 1 (2026-07-23): full portfolio.json → verity-reports private bucket.
         # /api/admin(?type=portfolio_full, authed=is_admin/토큰) 이 서빙 → 오퍼레이터 콘솔이 공개 blob 대신

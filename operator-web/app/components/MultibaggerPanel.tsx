@@ -34,6 +34,23 @@ type Meta = {
 }
 type Payload = { _meta?: Meta; items?: Item[] }
 
+// 선별 리스트 — 승격→채점 결과를 일반 후보와 분리(PM 지시 2026-08-22).
+// 🚨 섞으면 "몇 개가 살아남았나" 를 못 센다. 세 갈래를 그대로 보여준다.
+type Pick = {
+    ticker?: string; name?: string; alert_count?: number; fired?: string[]
+    brain_score?: number | null; grade?: string | null
+}
+type PicksMeta = {
+    watch_date?: string; eligible_n?: number; promoted_n?: number
+    scored_n?: number; waiting_n?: number; capped_out_n?: number
+    grade_dist?: Record<string, number>
+}
+type Picks = { _meta?: PicksMeta; scored?: Pick[]; promoted?: Pick[]; watching?: Pick[] }
+
+const GRADE_COLOR: Record<string, "up" | "down" | "vt"> = {
+    STRONG_BUY: "up", BUY: "up", WATCH: "vt", CAUTION: "down", AVOID: "down",
+}
+
 // 신호 키 → 짧은 한글 라벨. 없는 키는 원문 그대로 보여준다(조용한 누락 방지).
 const LABEL: Record<string, string> = {
     revenue_acceleration: "매출가속",
@@ -48,6 +65,7 @@ export default function MultibaggerPanel() {
     const [d, setD] = useState<Payload | null>(null)
     const [err, setErr] = useState<string>("")
     const [open, setOpen] = useState<string>("")
+    const [picks, setPicks] = useState<Picks | null>(null)
 
     useEffect(() => {
         let cancelled = false
@@ -55,6 +73,9 @@ export default function MultibaggerPanel() {
             if (cancelled) return
             if (r.ok) setD(r.data)
             else setErr(r.error === "auth" ? "로그인 필요" : `불러오기 실패 (${r.status})`)
+        })
+        fetchOperator<Picks>("multibagger_picks").then((r) => {
+            if (!cancelled && r.ok) setPicks(r.data)
         })
         return () => {
             cancelled = true
@@ -65,6 +86,8 @@ export default function MultibaggerPanel() {
     const items = d?.items || []
     // 🚨 alert 2건 이상만 화면에 — 1건은 오늘 353/429 라 목록이 아니라 소음이 된다.
     const shown = items.filter((it) => (it.alert_count || 0) >= 2)
+    const pm = picks?._meta
+    const scored = picks?.scored || []
 
     if (err) {
         return (
@@ -110,6 +133,55 @@ export default function MultibaggerPanel() {
                 >
                     매출가속의 <b>연속성 방어가 꺼진</b> 종목 {m.acceleration_uncovered_n}/{m.universe_n}
                     {" "}({m.acceleration_uncovered_pct}%) — DART 분기매출 백필 미완
+                </div>
+            )}
+
+            {/* 🚨 선별 리스트 — 승격→채점이 어디까지 갔는지. 분모 없이 목록만 보면 전수로 읽힌다 */}
+            {pm && (pm.eligible_n || 0) > 0 && (
+                <div style={{ marginTop: 9, paddingTop: 8, borderTop: `1px solid ${c.line}` }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 800, color: c.ink, marginBottom: 4 }}>
+                        선별 경로
+                    </div>
+                    <div style={{ fontSize: 10, color: c.sub, ...NUM, lineHeight: 1.6 }}>
+                        신호 {pm.eligible_n} → 승격 {pm.promoted_n ?? 0} → <b style={{ color: c.ink }}>채점 {pm.scored_n ?? 0}</b>
+                        {(pm.waiting_n || 0) > 0 && <> · 대기 {pm.waiting_n}</>}
+                        {(pm.capped_out_n || 0) > 0 && <> · 상한에 밀림 {pm.capped_out_n}</>}
+                    </div>
+                    {scored.length > 0 ? (
+                        <div style={{ marginTop: 5 }}>
+                            {scored.map((p) => {
+                                const gk = GRADE_COLOR[p.grade || ""] || "vt"
+                                const col = gk === "up" ? c.up : gk === "down" ? c.down : c.vt
+                                const bg = gk === "up" ? c.upS : gk === "down" ? c.downS : c.vtS
+                                return (
+                                    <div
+                                        key={p.ticker}
+                                        onClick={() => p.ticker && selectTicker(p.ticker, p.name)}
+                                        style={{ display: "flex", alignItems: "center", gap: 6,
+                                                 padding: "4px 2px", cursor: "pointer" }}
+                                    >
+                                        <span style={{ fontSize: 9, fontWeight: 800, color: col, background: bg,
+                                                       borderRadius: 5, padding: "1px 5px", flexShrink: 0 }}>
+                                            {p.grade || "–"}
+                                        </span>
+                                        <span style={{ fontSize: 11.5, fontWeight: 700, color: c.ink,
+                                                       minWidth: 0, overflow: "hidden",
+                                                       textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                            {p.name || p.ticker}
+                                        </span>
+                                        <span style={{ fontSize: 9.5, color: c.faint, marginLeft: "auto",
+                                                       flexShrink: 0, ...NUM }}>
+                                            {p.brain_score ?? "–"}
+                                        </span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    ) : (
+                        <div style={{ fontSize: 10, color: c.faint, marginTop: 4 }}>
+                            아직 채점된 승격 종목 없음 — 다음 분석 run 후 표시
+                        </div>
+                    )}
                 </div>
             )}
 
