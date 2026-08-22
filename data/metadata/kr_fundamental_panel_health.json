@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-08-22T23:28:43.816466+09:00",
+ "generated_at": "2026-08-23T00:16:44.958134+09:00",
  "source": "data/dart_quarterly_snapshots.jsonl",
  "raw_rows": 153488,
  "panel_rows": 72505,
@@ -7,6 +7,19 @@
   "duplicate_ticker_quarter": 80497,
   "quarter_end_not_quarter_end": 0,
   "parse_error": 0
+ },
+ "zero_overwrite_rescued": 1,
+ "derived_q4": {
+  "rows_flagged": {
+   "q4_derived": 16054,
+   "q4_vintage_mixed": 12485,
+   "ttm_includes_derived_q4": 44429,
+   "ttm_total": 60483
+  },
+  "absolute_amplification": "1x — 이 산식엔 나눗셈이 없다. 분모로 나누는 역산(예: 월평균→구간금리)의 10~15x 와 구조가 다르다",
+  "q4_leverage_meaning": "상대오차 증폭 |FY|/|Q4|. 값이 클수록 Q4 가 FY 대비 작아 같은 절대오차가 큰 상대오차가 된다",
+  "vintage_note": "q4_vintage_mixed = 4분기가 서로 다른 수집 시점에서 온 경우. 그 사이 재작성분이 통째로 잔차에 실린다 — 실측 고증폭(>10x) 발생이 혼합 쪽 1.45배, 비교 가능한 5개 연도 전부 같은 방향",
+  "ttm_note": "12-31 행 TTM 은 Q1+Q2+Q3+(FY−Q1−Q2−Q3)=FY 라 잔차가 상쇄된다. ttm_includes_derived_q4 는 직전 연도 잔차를 진 행만 True"
  },
  "excluded_non_calendar_fiscal": {
   "rows": 486,
@@ -36,7 +49,7 @@
  ],
  "filled": {
   "roa": {
-   "n": 71784,
+   "n": 71785,
    "pct": 99.0
   },
   "debt_ratio": {
@@ -65,10 +78,10 @@
   }
  },
  "accrual_ratio": {
-  "computed": 59243,
+  "computed": 59244,
   "pct": 81.7,
   "skipped_reasons": {
-   "roa_too_small": 13262
+   "roa_too_small": 13261
   },
   "definition": "(순이익 − 영업현금흐름) / 총자산. 총자산은 순이익/ROA 로 역산 (패널에 총자산 컬럼이 없음). |ROA| < 0.5% 는 역산 불안정으로 제외."
  },

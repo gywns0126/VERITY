@@ -44,6 +44,20 @@ _METRICS = ("roa", "debt_ratio", "current_ratio", "gross_margin",
             "asset_turnover", "operating_cashflow", "net_income")
 
 
+def _dedup_rank(r: Dict[str, Any]) -> Tuple[int, str]:
+    """중복 레코드 우선순위 — 🚨 **실값 보유가 최신성보다 앞선다.**
+
+    계약(load_bearing)이 이미 "net_income = 0 은 결측 의심, 실적 0 으로 단정 금지"
+    라고 명시하므로 선택 단계에서도 0 을 결측으로 다룬다. 실측 007680
+    2025-12-31 = 6회 수집 중 실값(-85.0억)은 1회뿐인데 최신본(7/24)이 0 이라
+    패널에 0 이 실렸다. ocf 는 6회 모두 -693.8억으로 동일 = 파싱 누락 확정이고,
+    실값 레코드가 roa 까지 더 갖고 있어 선택이 열등해지지 않는다.
+    전수 파급 = net_income 1건 · operating_cashflow 0건.
+    """
+    ni = r.get("net_income")
+    return (1 if (ni is not None and ni != 0) else 0, str(r.get("fetched_at") or ""))
+
+
 def _is_month_end(iso: str) -> bool:
     """YYYY-MM-DD 가 분기말로 성립하는 월말인가.
 
@@ -105,6 +119,7 @@ def _add_ttm(rows: List[Dict[str, Any]]) -> None:
     for tk, qs in by_tk.items():
         years = sorted({q[:4] for q in qs})
         q3m: Dict[str, Dict[str, Optional[float]]] = {}     # 분기말 → 3개월치
+        derived_q4: Dict[str, bool] = {}                    # 12-31 분기말 → Q4 역산 여부
         for y in years:
             k = {m: f"{y}-{m}" for m in ("03-31", "06-30", "09-30", "12-31")}
             for fld in ("net_income", "operating_cashflow"):
@@ -115,6 +130,25 @@ def _add_ttm(rows: List[Dict[str, Any]]) -> None:
                     q3m.setdefault(kk, {})[fld] = vv
                 q4 = (fy - (v1 + v2 + v3)) if None not in (fy, v1, v2, v3) else None
                 q3m.setdefault(k["12-31"], {})[fld] = q4
+                if fld == "net_income" and q4 is not None:
+                    derived_q4[k["12-31"]] = True
+                    fyr = qs.get(k["12-31"])
+                    if fyr is not None:
+                        # 🚨 이 행의 net_income 은 **연간**이고, TTM 이 쓰는 4분기차
+                        #    Q4 는 보고치가 아니라 **잔차**다. 하류가 둘을 구분할
+                        #    수단이 없으면 측정치처럼 읽힌다.
+                        fyr["q4_derived"] = True
+                        if q4 != 0 and fy:
+                            # 🚨 **상대**오차 증폭(|FY|/|Q4|)이다. 절대증폭은 1x —
+                            #    이 산식엔 나눗셈이 없다. 분모로 나누는 역산
+                            #    (예: FOMC 월평균→회의후금리, 10~15x)과 구조가 다르다.
+                            fyr["q4_leverage"] = round(abs(fy) / abs(q4), 2)
+                        fa = {str((qs.get(k[m]) or {}).get("fetched_at") or "")[:10]
+                              for m in ("03-31", "06-30", "09-30", "12-31")}
+                        # 4분기가 서로 다른 수집 시점에서 왔으면 그 사이 재작성분이
+                        # 통째로 잔차에 실린다 — 실측: 혼합 쪽 고증폭(>10x) 발생이
+                        # 1.45배, 비교 가능한 5개 연도 전부 같은 방향(2019~2023).
+                        fyr["q4_vintage_mixed"] = len(fa) > 1
         order = sorted(q3m)
         for i, qe in enumerate(order):
             if i < 3 or qe not in qs:
@@ -129,6 +163,12 @@ def _add_ttm(rows: List[Dict[str, Any]]) -> None:
                 vals = [q3m[w].get(fld) for w in win]
                 if all(v is not None for v in vals):
                     rec[out] = round(sum(vals), 1)
+            if rec.get("net_income_ttm") is not None:
+                # 🚨 창의 **마지막 칸은 제외**한다. 12-31 행의 TTM 은
+                #    Q1+Q2+Q3+(FY−Q1−Q2−Q3) = FY 라 잔차가 정확히 상쇄된다.
+                #    직전 연도의 역산 Q4 가 창에 들어올 때만 잔차를 진다.
+                rec["ttm_includes_derived_q4"] = any(derived_q4.get(w, False)
+                                                     for w in win[:-1])
             if rec.get("net_income_ttm") is not None and rec.get("assets"):
                 rec["roa_ttm"] = round(rec["net_income_ttm"] / rec["assets"] * 100.0, 4)
 
@@ -150,6 +190,7 @@ def build() -> Dict[str, Any]:
 
     raw = dup = bad_qe = parse_err = fiscal_rows = 0
     fiscal_tickers: set = set()
+    newest: Dict[Tuple[str, str], Dict[str, Any]] = {}   # 순수 최신 선택(대조용)
     best: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
     with open(SRC, encoding="utf-8") as f:
@@ -186,12 +227,23 @@ def build() -> Dict[str, Any]:
                 continue
             key = (tk, qe)
             # ② 중복 → fetched_at 최신 1건만 채택
+            # 🚨 구(舊) 규칙(순수 최신)이 무엇을 골랐을지 따로 추적한다 — **continue
+            #    보다 먼저** 해야 한다. 뒤에 두면 rank 로 탈락한 레코드를 못 봐서
+            #    대조군이 비고 카운터가 0 이 된다(실제로 그렇게 틀렸다).
+            #    교체 횟수를 세도 안 된다 — 중간 단계까지 잡혀 7,473 으로 부푼다.
+            pn = newest.get(key)
+            if pn is None or str(r.get("fetched_at") or "") > str(pn.get("fetched_at") or ""):
+                newest[key] = r
             prev = best.get(key)
             if prev is not None:
                 dup += 1
-                if str(r.get("fetched_at") or "") <= str(prev.get("fetched_at") or ""):
+                if _dedup_rank(r) <= _dedup_rank(prev):
                     continue
             best[key] = r
+
+    zero_rescued = sum(
+        1 for k, sel in best.items()
+        if (newest.get(k, {}).get("net_income") == 0) and sel.get("net_income") not in (0, None))
 
     rows = []
     acc_ok = 0
@@ -254,6 +306,21 @@ def build() -> Dict[str, Any]:
             "quarter_end_not_quarter_end": bad_qe,
             "parse_error": parse_err,
         },
+        # 🚨 최신본이 0(=결측)이라 실값을 덮을 뻔한 건. 0 이면 조용히 사라진다.
+        "zero_overwrite_rescued": zero_rescued,   # 구 규칙이 0 을 남겼을 건 수
+        # 🚨 역산 Q4 자기신고 (RULE 12 §2) — 하류가 보고치와 잔차를 구분할 수 있게.
+        "derived_q4": {
+            "rows_flagged": None,          # build 말미에 채운다
+            "absolute_amplification": "1x — 이 산식엔 나눗셈이 없다. 분모로 나누는 "
+                                      "역산(예: 월평균→구간금리)의 10~15x 와 구조가 다르다",
+            "q4_leverage_meaning": "상대오차 증폭 |FY|/|Q4|. 값이 클수록 Q4 가 FY 대비 작아 "
+                                   "같은 절대오차가 큰 상대오차가 된다",
+            "vintage_note": "q4_vintage_mixed = 4분기가 서로 다른 수집 시점에서 온 경우. "
+                            "그 사이 재작성분이 통째로 잔차에 실린다 — 실측 고증폭(>10x) "
+                            "발생이 혼합 쪽 1.45배, 비교 가능한 5개 연도 전부 같은 방향",
+            "ttm_note": "12-31 행 TTM 은 Q1+Q2+Q3+(FY−Q1−Q2−Q3)=FY 라 잔차가 상쇄된다. "
+                        "ttm_includes_derived_q4 는 직전 연도 잔차를 진 행만 True",
+        },
         # 🚨 상류는 정확한데 패널이 안 담는 구간 = 조용한 손실. 개수·종목으로 신고한다.
         "excluded_non_calendar_fiscal": {
             "rows": fiscal_rows,
@@ -276,6 +343,12 @@ def build() -> Dict[str, Any]:
                           "(패널에 총자산 컬럼이 없음). |ROA| < 0.5% 는 역산 불안정으로 제외.",
         },
         "note": "측정정화 전용. 판정·점수 0(RULE 7). 스코어 통합은 사전등록 게이트 통과 후(트랙 B).",
+    }
+    health["derived_q4"]["rows_flagged"] = {
+        "q4_derived": sum(1 for r in rows if r.get("q4_derived")),
+        "q4_vintage_mixed": sum(1 for r in rows if r.get("q4_vintage_mixed")),
+        "ttm_includes_derived_q4": sum(1 for r in rows if r.get("ttm_includes_derived_q4")),
+        "ttm_total": sum(1 for r in rows if r.get("net_income_ttm") is not None),
     }
     tmp = OUT_HEALTH + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:

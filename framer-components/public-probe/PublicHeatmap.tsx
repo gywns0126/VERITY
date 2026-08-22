@@ -913,9 +913,19 @@ export default function PublicHeatmap(props: Props) {
             <div style={{ marginBottom: 8 }}>{legend()}</div>
 
             {/* 트리맵 외곽 (클립 X — 호버 카드가 잘리지 않도록) */}
+            {/* 🚨 되돌리지 말 것 — isolation:"isolate" 는 스택 문맥 생성용이다.
+                position:"relative" 만으로는 스택 문맥이 안 생겨서 내부 zIndex(줌 컨트롤 18 ·
+                호버카드 20)가 프레이머 페이지 루트까지 올라가 관심종목 패널 위에 그려졌다
+                (2026-08-23 PM 신고, 확대·축소 버튼이 관심종목 카드를 뚫고 나옴).
+                이걸 빼면 같은 겹침이 그대로 재발한다. 내부 상하 순서는 안 바뀐다. */}
             <div
                 ref={chartRef}
-                style={{ position: "relative", width: "100%", height: chartH }}
+                style={{
+                    position: "relative",
+                    isolation: "isolate",
+                    width: "100%",
+                    height: chartH,
+                }}
             >
                 {/* 타일 클립 레이어 (overflow hidden = 줌/팬 타일만 가둠) */}
                 <div
