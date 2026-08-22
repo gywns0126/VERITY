@@ -8,6 +8,37 @@ MCP 로 라이브 반영이 위험한(>60KB, write-loss) 공개 컴포넌트. **
 
 ---
 
+## 🟠 대기 (2026-08-23) — 미장 심화 카드에 Form 144 섹션 추가
+
+`PublicStockDetailUS` 는 PM 이 이미 라이브 생성·배치 완료(`bNt5ZZI`, `/stock` 리포트 바로
+아래 `ssEgfz7ly`). **그 뒤에 Form 144 섹션이 추가돼 repo 가 앞선 상태다.**
+
+🚨 **착수하며 발견한 결함 — 집계 절단이 조용했다.**
+`notices` 길이 분포가 1건 494 · 2건 336 · 3건 238 로 줄다가 **12건에서 504 로 튄다** =
+`PER_TICKER_CAP = 12` 의 절단면. 그런데 `notice_count`·`total_value_usd` 가 12건 기준인데
+잘렸다는 표시가 없어 화면이 **"AMZN 12건 · $41억" 을 전량으로 읽는다**(2,463 중 **504종목 =
+20.5%** 해당). 빌더에 `notices_in_window`·`truncated` 자기신고를 추가했고, 화면은
+`12건+` 로 표기한다. 🚨 `merged = prev + fresh` 라 **이전 스냅샷엔 새 필드가 없어**
+소비처가 `truncated || notice_count >= 12` 폴백으로 판정한다.
+
+🚨 **화면에서 가장 중요한 줄** = "팔겠다고 미리 낸 신고이고 체결이 아닙니다. 신고 후 실제로
+팔지 않는 경우도 흔하고, 보수로 받은 주식의 세금 납부용 매도도 여기에 들어갑니다."
+Form 4 의 sell-to-cover 교훈이 이 폼에도 그대로 걸린다
+([[feedback_form4_sell_to_cover_not_discretionary_sale]]). 이 문구 제거 금지.
+
+**같이 들어간 것** = 발행 allowlist 에 `us_form144.json` 등재(`.github/actions/publish-data`).
+🔔 **blob 발행은 다음 정기 run 후** — 붙여넣어도 Form 144 섹션만 그때까지 안 보인다(정상,
+데이터 없으면 섹션이 스스로 숨는다). 나머지 3섹션(공매도·5%+대량보유·8-K)은 즉시 보인다.
+
+검증: esbuild 종료코드 0 · 대외 금지문자열 0 · RULE 9 0 · 절단 표기 실데이터 대조
+(AMZN·FANG·DOCN `12건+` / OMER `4건`).
+
+| repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
+|---|---|---|---|
+| `public-probe/PublicStockDetailUS.tsx` | PublicStockDetailUS (`bNt5ZZI`) | Form 144 섹션 추가 + 절단 표기 | 🟠 **복붙 대기** |
+
+---
+
 ## 🟠 대기 (2026-08-22) — 세금 탭 전제 명시 (계산 무변경)
 
 **검증 결과 계산은 정확하다** — 손계산 대조 통과(US 1,000만 → (1,000만−250만)×22% = 165만 ·
