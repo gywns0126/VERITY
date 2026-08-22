@@ -256,6 +256,51 @@ def check_esbuild(rep: Report) -> None:
 
 
 # ── 5. RULE 9 — 사용자 노출 문자열 금지 동사 ──────────────────────
+def check_tax_sync(rep: Report) -> None:
+    """세제 상수 3소스 동기 — SoT(account_profile.py) vs 둥지 세금 탭 복제본.
+
+    🚨 2026-08-22 신설. 둥지 "예상 세금" 탭이 SoT 를 **복제**하는데 헤더의
+    "변경 시 동기화" 는 문구일 뿐 강제가 없었다. 지금 일치하는 건 SoT 가
+    2026-06-29 이후 안 바뀌었기 때문이고, 다음 개정 때 한쪽만 고쳐지면
+    **틀린 세금액이 사용자 판단에 들어간다**(에러 없이 그럴듯하게).
+    🚨 파싱이 빈손이면 PASS 시키지 않는다 — 그게 이 종류 가드의 대표 실패다.
+    """
+    sot_p = os.path.join(REPO_ROOT, "api", "trading", "account_profile.py")
+    tsx_p = os.path.join(REPO_ROOT, "framer-components", "public-probe", "PublicHoldingsTab.tsx")
+    pairs = {
+        "KR_TXN": "KR_TRANSACTION_TAX",
+        "KR_MAJOR_AMT": "KR_MAJOR_SHAREHOLDER_AMOUNT",
+        "US_CGT": "US_CAPITAL_GAINS_TAX",
+        "US_CGT_HIGH": "US_CAPITAL_GAINS_TAX_HIGH",
+        "US_DEDUCT": "US_CAPITAL_GAINS_DEDUCTION",
+        "US_BRACKET": "US_CAPITAL_GAINS_HIGH_THRESHOLD",
+    }
+    try:
+        sot_src = open(sot_p, encoding="utf-8").read()
+        tsx_src = open(tsx_p, encoding="utf-8").read()
+    except Exception as e:
+        rep.add("tax.sync", "FAIL", f"파일 읽기 실패: {e}")
+        return
+    f = lambda x: float(x.replace("_", ""))
+    sot = {m.group(1): f(m.group(2)) for m in
+           re.finditer(r"^([A-Z][A-Z0-9_]+)\s*=\s*([0-9][0-9_.]*)\s*(?:#.*)?$", sot_src, re.M)}
+    i = tsx_src.find("const TAX = {")
+    blk = tsx_src[i:tsx_src.find("}", i)] if i >= 0 else ""
+    flat = re.sub(r"\s+", " ", blk)   # 프레이머 포매터 내성
+    dup = {m.group(1): f(m.group(2)) for m in
+           re.finditer(r"([A-Z][A-Z0-9_]*)\s*:\s*([0-9][0-9_.]*)", flat)}
+    if len(sot) < 6 or len(dup) != len(pairs):
+        rep.add("tax.sync", "FAIL",
+                f"파싱 실패 — SoT {len(sot)}개 · 복제 {len(dup)}개(기대 {len(pairs)}). 형식 변경 의심")
+        return
+    bad = [f"{a}={dup.get(a)}!={b}={sot.get(b)}" for a, b in pairs.items()
+           if dup.get(a) != sot.get(b)]
+    if bad:
+        rep.add("tax.sync", "FAIL", f"{len(bad)}건 불일치: {'; '.join(bad[:3])}")
+    else:
+        rep.add("tax.sync", "PASS", f"세제 상수 {len(pairs)}/{len(pairs)} SoT 일치")
+
+
 def check_rule9(rep: Report) -> None:
     # python 사용자 노출 string (error/body/message/return JSON), 주석 제외
     py_hits = []
@@ -367,6 +412,7 @@ def main() -> int:
     # 정적 검사 (항상)
     check_esbuild(rep)
     check_rule9(rep)
+    check_tax_sync(rep)
 
     # 네트워크 검사
     if not args.no_net:
