@@ -531,7 +531,8 @@
    "size_bytes": 647,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
-    "api/builders/crypto_collect_builder.py"
+    "api/builders/crypto_collect_builder.py",
+    "scripts/audit/crypto_trigger_watch.py"
    ]
   },
   {
@@ -543,7 +544,8 @@
    "size_bytes": 530563,
    "producers": [
     "api/collectors/crypto_regime_history.py",
-    "api/collectors/crypto_exogenous_history.py"
+    "api/collectors/crypto_exogenous_history.py",
+    "scripts/audit/crypto_trigger_watch.py"
    ]
   },
   {
@@ -855,7 +857,7 @@
    "publish": true,
    "sla": "dart_quarterly_public:P2",
    "contract": null,
-   "size_bytes": 9801421,
+   "size_bytes": 9805040,
    "producers": [
     "api/builders/us_quarterly_public_builder.py",
     "api/builders/entrance_map_builder.py",
@@ -868,7 +870,7 @@
    "publish": false,
    "sla": "dart_quarterly_snapshots:P1",
    "contract": null,
-   "size_bytes": 47032167,
+   "size_bytes": 47039689,
    "producers": [
     "api/main.py",
     "api/quant/backtest/kr_fundamental.py",
@@ -1503,7 +1505,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 65548,
+   "size_bytes": 66089,
    "producers": [
     "scripts/audit/build_data_manifest.py"
    ]
