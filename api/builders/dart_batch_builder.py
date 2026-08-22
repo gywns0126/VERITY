@@ -232,8 +232,49 @@ def _atomic_write(path: str, data: Dict[str, Any]) -> None:
 
 _REPRT_END_MMDD = {"11013": "03-31", "11012": "06-30", "11014": "09-30", "11011": "12-31"}
 
+# 🚨 2026-08-22 — 위 표는 **12월 결산을 가정**한다. 비12월 결산 법인은 회계연도 종료가
+#   다르므로 같은 reprt_code 라도 분기말이 다르다. 그대로 두면 매 수집이 **같은 칸에
+#   덮어쓰기만** 한다 — 실측 021820(세원정공, 6월 결산): 2026-06~08 두 달간 12번 수집했는데
+#   전부 `2025-12-31` 이라 고유 분기가 3개뿐이고 조인의 MIN_QUARTERS=4 에서 탈락했다.
+#   **수집을 아무리 자주 해도 정보가 안 늘어난다.**
+#   전수 조회(DART company.json acc_mt, 2,772종목) 결과 비12월은 **53종목(1.9%)** 이다.
+#   98.1% 는 현행이 맞으므로 표를 갈아엎지 않고 **해당 종목만 결산월로 보정**한다.
+_FISCAL_MONTH_PATH = os.path.join(os.path.dirname(OUTPUT_PATH), "kr_fiscal_month.json")
+_MMDD_BY_MONTH = {"01": "31", "02": "28", "03": "31", "04": "30", "05": "31", "06": "30",
+                  "07": "31", "08": "31", "09": "30", "10": "31", "11": "30", "12": "31"}
+_fiscal_cache: Dict[str, str] | None = None
 
-def _quarter_end_iso(report_date, reprt_code, fetched_at: str) -> str:
+
+def _fiscal_month(ticker: str) -> str:
+    """결산월('01'~'12'). 맵이 없거나 미수록이면 '12'(현행 가정) — 안전측."""
+    global _fiscal_cache
+    if _fiscal_cache is None:
+        try:
+            with open(_FISCAL_MONTH_PATH, encoding="utf-8") as f:
+                _fiscal_cache = (json.load(f) or {}).get("map") or {}
+        except (OSError, ValueError):
+            _fiscal_cache = {}
+    return str(_fiscal_cache.get(str(ticker)) or "12")
+
+
+def _shift_mmdd(mmdd: str, fiscal_month: str) -> str:
+    """12월 결산 기준 분기말(mmdd)을 해당 결산월 기준으로 이동.
+
+    reprt_code 는 **회계연도 내 순번**이다 — 11013=1Q, 11012=반기, 11014=3Q, 11011=연간.
+    12월 결산에서 1Q 말이 03-31 인 것은 '결산월 + 3개월' 이라는 뜻이므로,
+    결산월 M 이면 1Q 말 = M+3 월말이다.
+    """
+    if fiscal_month == "12":
+        return mmdd
+    off = {"03-31": 3, "06-30": 6, "09-30": 9, "12-31": 12}.get(mmdd)
+    if off is None:
+        return mmdd
+    m = (int(fiscal_month) + off - 1) % 12 + 1
+    mm = f"{m:02d}"
+    return f"{mm}-{_MMDD_BY_MONTH[mm]}"
+
+
+def _quarter_end_iso(report_date, reprt_code, fetched_at: str, ticker: str = "") -> str:
     """진짜 분기 종료일 (YYYY-MM-DD) 산출.
 
     [WHY] 2026-05-20 fscore_delta 인프라 audit — 이전 = fetched_at[:10] (수집 날짜)
@@ -248,6 +289,9 @@ def _quarter_end_iso(report_date, reprt_code, fetched_at: str) -> str:
         return rd[:10]
     if len(rd) == 4 and rd.isdigit():
         suffix = _REPRT_END_MMDD.get(str(reprt_code) if reprt_code else "11011", "12-31")
+        # 🚨 비12월 결산 보정 (위 _shift_mmdd 주석 참조). ticker 미지정이면 현행 유지.
+        if ticker:
+            suffix = _shift_mmdd(suffix, _fiscal_month(ticker))
         return f"{rd}-{suffix}"
     # 🚨 2026-08-07 — 산출 불가 시 **수집일을 쓰지 않는다**(빈 문자열 반환).
     #   5/20 에 같은 결함을 한 번 고쳤는데(1,867건) 이 폴백이 남아 계속 오염을 생산했다:
@@ -286,7 +330,7 @@ def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
         with open(snapshots_path, "a", encoding="utf-8") as f:
             for ticker, fund in fundamentals.items():
                 reprt_code = fund.get("reprt_code") or "11011"  # 연간 default
-                quarter_end = _quarter_end_iso(fund.get("report_date"), reprt_code, fetched_at)
+                quarter_end = _quarter_end_iso(fund.get("report_date"), reprt_code, fetched_at, ticker)
                 if not quarter_end:
                     skipped_no_qend += 1
                     continue        # 분기말 미산출 = 시계열에 넣지 않는다(가짜 날짜 금지)

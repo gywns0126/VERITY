@@ -30,6 +30,37 @@ INPUT_PATH = os.path.join(_ROOT, "data", "dart_quarterly_snapshots.jsonl")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "dart_quarterly_public.json")
 
 FISCAL_ENDS = {"03-31", "06-30", "09-30", "12-31"}
+
+# 🚨 2026-08-22 — 위 집합은 **12월 결산 전용**이다. 비12월 결산 법인의 분기말은
+#   결산월+3/6/9/12 개월이라 이 집합에 없다 — 실측: 결산월 01·02·04·05·07·08·11
+#   (14종목)의 분기말이 `01-31`·`02-28`·`05-31` 등이라 **전부 junk 로 폐기**됐다.
+#   (3·6·9·12월 결산 39종목은 우연히 같은 집합이라 통과한다.)
+#   quarter_end 소급 정정 직후 이 필터가 종목 10개를 떨어뜨린 것이 실측 증거다
+#   (2,532 → 2,522 · non-fiscal 2,631 → 3,117).
+#   그래서 **종목별 결산월로 허용 집합을 만든다.** 맵 미수록이면 종전 집합(안전측).
+_FISCAL_MONTH_PATH = os.path.join(os.path.dirname(OUTPUT_PATH), "kr_fiscal_month.json")
+_MMDD_LAST = {"01": "31", "02": "28", "03": "31", "04": "30", "05": "31", "06": "30",
+              "07": "31", "08": "31", "09": "30", "10": "31", "11": "30", "12": "31"}
+_fiscal_map: Dict[str, str] | None = None
+
+
+def _allowed_ends(ticker: str) -> set:
+    """그 종목의 회계 분기말 4개. 결산월 미상이면 12월 결산 기본값."""
+    global _fiscal_map
+    if _fiscal_map is None:
+        try:
+            with open(_FISCAL_MONTH_PATH, encoding="utf-8") as f:
+                _fiscal_map = (json.load(f) or {}).get("map") or {}
+        except (OSError, ValueError):
+            _fiscal_map = {}
+    fm = str(_fiscal_map.get(str(ticker)) or "12")
+    if fm == "12":
+        return FISCAL_ENDS
+    out = set()
+    for off in (3, 6, 9, 12):
+        m = (int(fm) + off - 1) % 12 + 1
+        out.add(f"{m:02d}-{_MMDD_LAST[f'{m:02d}']}")
+    return out
 RATIO_KEYS = ("debt_ratio", "roa", "current_ratio", "gross_margin", "asset_turnover")
 MIN_QUARTERS = 4   # 컴포넌트 게이트(series<4 = 미표시) 정합
 
@@ -80,7 +111,7 @@ def build() -> Dict[str, Any]:
             qe = str(row.get("quarter_end") or "").strip()
             if not ticker or len(qe) < 10:
                 continue
-            if qe[5:10] not in FISCAL_ENDS:   # fetch-날짜 junk 제거
+            if qe[5:10] not in _allowed_ends(ticker):   # fetch-날짜 junk 제거(결산월 반영)
                 bad_dates += 1
                 continue
             q: Dict[str, Any] = {"q": qe}
