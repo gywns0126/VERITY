@@ -44036,5 +44036,533 @@
         "self_selection_bias": false
       }
     }
+  },
+  {
+    "date": "2026-08-23T00:46:37+09:00",
+    "date_key": "2026-08-23",
+    "forward_days": 7,
+    "sample_universe": "recommendations_post_filter",
+    "range_restricted": true,
+    "self_selection_factors": [
+      "safety_score"
+    ],
+    "factors": {
+      "multi_factor": {
+        "ic_mean": 0.05785,
+        "icir": 0.245,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "momentum": {
+        "ic_mean": -0.11668,
+        "icir": -0.499,
+        "significant": true,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "quality": {
+        "ic_mean": 0.01599,
+        "icir": 0.061,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "volatility": {
+        "ic_mean": 0.02534,
+        "icir": 0.124,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "mean_reversion": {
+        "ic_mean": 0.10995,
+        "icir": 0.489,
+        "significant": true,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "fundamental": {
+        "ic_mean": 0.09121,
+        "icir": 0.472,
+        "significant": true,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "technical": {
+        "ic_mean": 0.00412,
+        "icir": 0.021,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "flow": {
+        "ic_mean": 0.11038,
+        "icir": 0.503,
+        "significant": true,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "sentiment": {
+        "ic_mean": 0.07562,
+        "icir": 0.332,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "consensus": {
+        "ic_mean": 0.06305,
+        "icir": 0.24,
+        "significant": false,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "prediction": {
+        "ic_mean": 0.01592,
+        "icir": 0.084,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "timing": {
+        "ic_mean": 0.06112,
+        "icir": 0.417,
+        "significant": true,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "brain_score": {
+        "ic_mean": 0.05029,
+        "icir": 0.261,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "safety_score": {
+        "ic_mean": 0.16444,
+        "icir": 0.727,
+        "significant": true,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": true
+      },
+      "perplexity_risk": {
+        "ic_mean": 0.03104,
+        "icir": 0.086,
+        "significant": false,
+        "decay": true,
+        "sample_count": 45,
+        "self_selection_bias": false
+      }
+    }
+  },
+  {
+    "date": "2026-08-23T00:46:39+09:00",
+    "date_key": "2026-08-23",
+    "forward_days": 14,
+    "sample_universe": "recommendations_post_filter",
+    "range_restricted": true,
+    "self_selection_factors": [
+      "safety_score"
+    ],
+    "factors": {
+      "multi_factor": {
+        "ic_mean": 0.12044,
+        "icir": 0.677,
+        "significant": true,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "momentum": {
+        "ic_mean": -0.1553,
+        "icir": -0.615,
+        "significant": true,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "quality": {
+        "ic_mean": 0.0262,
+        "icir": 0.085,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "volatility": {
+        "ic_mean": 0.06936,
+        "icir": 0.276,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "mean_reversion": {
+        "ic_mean": 0.12896,
+        "icir": 0.645,
+        "significant": true,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "fundamental": {
+        "ic_mean": 0.19617,
+        "icir": 0.791,
+        "significant": true,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "technical": {
+        "ic_mean": 0.01634,
+        "icir": 0.076,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "flow": {
+        "ic_mean": 0.0908,
+        "icir": 0.367,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "sentiment": {
+        "ic_mean": 0.11737,
+        "icir": 0.418,
+        "significant": true,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "consensus": {
+        "ic_mean": 0.08218,
+        "icir": 0.268,
+        "significant": false,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "prediction": {
+        "ic_mean": 0.0414,
+        "icir": 0.206,
+        "significant": false,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "timing": {
+        "ic_mean": 0.09142,
+        "icir": 0.49,
+        "significant": true,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "brain_score": {
+        "ic_mean": 0.0734,
+        "icir": 0.404,
+        "significant": true,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "safety_score": {
+        "ic_mean": 0.17216,
+        "icir": 0.638,
+        "significant": true,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": true
+      },
+      "perplexity_risk": {
+        "ic_mean": 0.16835,
+        "icir": 0.439,
+        "significant": true,
+        "decay": true,
+        "sample_count": 40,
+        "self_selection_bias": false
+      }
+    }
+  },
+  {
+    "date": "2026-08-23T00:46:42+09:00",
+    "date_key": "2026-08-23",
+    "forward_days": 30,
+    "sample_universe": "recommendations_post_filter",
+    "range_restricted": true,
+    "self_selection_factors": [
+      "safety_score"
+    ],
+    "factors": {
+      "multi_factor": {
+        "ic_mean": 0.03058,
+        "icir": 0.109,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "momentum": {
+        "ic_mean": -0.32435,
+        "icir": -1.021,
+        "significant": true,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "quality": {
+        "ic_mean": -0.04654,
+        "icir": -0.143,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "volatility": {
+        "ic_mean": -0.00273,
+        "icir": -0.007,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "mean_reversion": {
+        "ic_mean": 0.11442,
+        "icir": 0.442,
+        "significant": true,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "fundamental": {
+        "ic_mean": 0.15493,
+        "icir": 0.616,
+        "significant": true,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "technical": {
+        "ic_mean": 0.10667,
+        "icir": 0.378,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "flow": {
+        "ic_mean": 0.05434,
+        "icir": 0.162,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "sentiment": {
+        "ic_mean": 0.21956,
+        "icir": 0.878,
+        "significant": true,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "consensus": {
+        "ic_mean": -0.09662,
+        "icir": -0.293,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "prediction": {
+        "ic_mean": 0.03933,
+        "icir": 0.178,
+        "significant": false,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "timing": {
+        "ic_mean": 0.14983,
+        "icir": 0.506,
+        "significant": true,
+        "decay": true,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "brain_score": {
+        "ic_mean": 0.00145,
+        "icir": 0.005,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": false
+      },
+      "safety_score": {
+        "ic_mean": 0.04213,
+        "icir": 0.14,
+        "significant": false,
+        "decay": false,
+        "sample_count": 53,
+        "self_selection_bias": true
+      },
+      "perplexity_risk": {
+        "ic_mean": -0.0577,
+        "icir": -0.136,
+        "significant": false,
+        "decay": false,
+        "sample_count": 29,
+        "self_selection_bias": false
+      }
+    }
+  },
+  {
+    "date": "2026-08-23T00:46:45+09:00",
+    "date_key": "2026-08-23",
+    "forward_days": 63,
+    "sample_universe": "recommendations_post_filter",
+    "range_restricted": true,
+    "self_selection_factors": [
+      "safety_score"
+    ],
+    "factors": {
+      "multi_factor": {
+        "ic_mean": -0.21574,
+        "icir": -0.728,
+        "significant": true,
+        "decay": false,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "momentum": {
+        "ic_mean": -0.08118,
+        "icir": -0.16,
+        "significant": false,
+        "decay": false,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "quality": {
+        "ic_mean": 0.12936,
+        "icir": 0.381,
+        "significant": false,
+        "decay": false,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "volatility": {
+        "ic_mean": 0.14343,
+        "icir": 0.304,
+        "significant": false,
+        "decay": true,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "mean_reversion": {
+        "ic_mean": 0.07532,
+        "icir": 0.183,
+        "significant": false,
+        "decay": false,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "fundamental": {
+        "ic_mean": -0.14553,
+        "icir": -0.365,
+        "significant": false,
+        "decay": false,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "technical": {
+        "ic_mean": -0.16814,
+        "icir": -0.573,
+        "significant": true,
+        "decay": false,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "flow": {
+        "ic_mean": 0.09268,
+        "icir": 0.234,
+        "significant": false,
+        "decay": true,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "sentiment": {
+        "ic_mean": 0.12988,
+        "icir": 0.35,
+        "significant": false,
+        "decay": true,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "consensus": {
+        "ic_mean": 0.09704,
+        "icir": 0.385,
+        "significant": false,
+        "decay": false,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "prediction": {
+        "ic_mean": -0.13969,
+        "icir": -0.427,
+        "significant": true,
+        "decay": false,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "timing": {
+        "ic_mean": -0.23512,
+        "icir": -1.122,
+        "significant": true,
+        "decay": false,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "brain_score": {
+        "ic_mean": -0.0151,
+        "icir": -0.034,
+        "significant": false,
+        "decay": false,
+        "sample_count": 40,
+        "self_selection_bias": false
+      },
+      "safety_score": {
+        "ic_mean": -0.25353,
+        "icir": -0.588,
+        "significant": true,
+        "decay": false,
+        "sample_count": 40,
+        "self_selection_bias": true
+      },
+      "perplexity_risk": {
+        "ic_mean": -0.09762,
+        "icir": -0.321,
+        "significant": false,
+        "decay": false,
+        "sample_count": 8,
+        "self_selection_bias": false
+      }
+    }
   }
 ]
