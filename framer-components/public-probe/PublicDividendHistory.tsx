@@ -117,23 +117,40 @@ export default function PublicDividendHistory(props: Props) {
         return () => ro.disconnect()
     }, [])
 
-    /* 종목 = prop 우선, 없으면 URL ?q. in-page 전환 추종 1s 폴링(형제 카드와 동일 규약). */
+    /* 종목 = prop 우선, 없으면 URL ?q → localStorage.
+     *
+     * 🚨 in-page 전환은 `verity-ticker-change` 로 온다. StockReport.goTicker() 가
+     *   localStorage + history.replaceState + 이 커스텀 이벤트 셋을 함께 쏘는데,
+     *   **replaceState 는 popstate 를 발생시키지 않는다** — popstate 만 달면 페이지 안에서
+     *   종목을 바꿔도 안 울리고 폴링(최대 1s 지연)에만 의존하게 된다.
+     *   LiveChart·StockBrief·DecisionPanel·ThesisNote·AISynthesis 가 전부 이 이벤트를 듣는다.
+     *   폴링은 그 이벤트를 놓친 경우의 안전망으로만 남긴다.
+     */
     useEffect(() => {
         if (onCanvas) return
         const propTk = String(props.ticker || "").trim().toUpperCase()
         if (propTk) { setTk(propTk); return }
         const sync = () => { const u = readTickerFromUrl(); if (u) setTk((cur) => (cur === u ? cur : u)) }
         sync()
+        window.addEventListener("verity-ticker-change", sync)
         window.addEventListener("popstate", sync)
         const iv = setInterval(sync, 1000)
-        return () => { window.removeEventListener("popstate", sync); clearInterval(iv) }
+        return () => {
+            window.removeEventListener("verity-ticker-change", sync)
+            window.removeEventListener("popstate", sync)
+            clearInterval(iv)
+        }
     }, [props.ticker, onCanvas])
 
     useEffect(() => {
         if (onCanvas) return
         const code = String(tk).trim()
-        if (!/^\d{6}$/.test(code)) { setSec(null); return }   // KR 종목코드만
+        if (!/^\d{6}$/.test(code)) { setSec(null); setClose(null); return }   // KR 종목코드만
         let alive = true
+        // 🚨 종목이 바뀌면 **먼저 비운다.** blob 이 11MB 라 첫 fetch 가 느린데, 그동안
+        //   이전 종목의 배당이 새 종목 화면에 남아 보인다. 빈 화면보다 나쁜 오류다.
+        setSec(null)
+        setClose(null)
         fetch(props.reportUrl || REPORT_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
