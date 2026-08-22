@@ -2400,7 +2400,11 @@ export default function PublicHoldingsTab(props: Props) {
                                                                             "center",
                                                                     }}
                                                                 >
-                                                                    <StarMark size={17} />
+                                                                    <StarMark
+                                                                        size={
+                                                                            17
+                                                                        }
+                                                                    />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -2569,11 +2573,14 @@ export default function PublicHoldingsTab(props: Props) {
                                                             //   배지(NestBadges)가 여기 인라인으로 들어오므로 nowrap 이 없으면
                                                             //   긴 공시 제목에서 줄바꿈돼 행 높이가 늘어난다(종전 4줄 사고).
                                                             //   overflow hidden 과 함께여야 잘림이 성립한다. 되돌리지 말 것.
-                                                            whiteSpace: "nowrap",
+                                                            whiteSpace:
+                                                                "nowrap",
                                                             overflow: "hidden",
-                                                            textOverflow: "ellipsis",
+                                                            textOverflow:
+                                                                "ellipsis",
                                                             display: "flex",
-                                                            alignItems: "center",
+                                                            alignItems:
+                                                                "center",
                                                             minWidth: 0,
                                                         }}
                                                     >

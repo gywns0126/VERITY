@@ -132,12 +132,22 @@ def test_badges_do_not_grow_row_height():
     blk = s[i:end]
     # 🚨 주석 제외 — 이 함수의 경고 주석이 "flexWrap:\"wrap\" 을 되돌리지 말 것" 이라
     #    주석째로 검사하면 경고문 자체가 위반으로 잡힌다(별 테스트에서 같은 형태를 겪었다).
-    code = re.sub(r"^\s*//.*$", "", blk, flags=re.M)
+    code = re.sub(r"\s+", " ", re.sub(r"^\s*//.*$", "", blk, flags=re.M))
     assert 'flexWrap: "wrap"' not in code, "배지가 줄바꿈된다 — 행 높이가 늘어난다"
     assert "marginTop" not in code, "배지가 새 줄로 내려간다 — 인라인이어야 한다"
     assert 'display: "inline-flex"' in code, "인라인 배치가 아니다"
     assert 'overflow: "hidden"' in code, "넘칠 때 자르지 않으면 부모를 밀어낸다"
-    # 배지를 품는 서브라인도 한 줄로 고정돼야 한다
-    assert 'whiteSpace: "nowrap"' in s[s.find("<NestBadges") - 1200:s.find("<NestBadges")], (
+    # 배지를 품는 서브라인도 한 줄로 고정돼야 한다.
+    # 🚨 프레이머 포매터가 `whiteSpace:` 와 `"nowrap"` 을 **줄바꿈으로 쪼갠다**
+    #    (`size={ 17 }` 처럼 공백도 넣는다). 원문 문자열로 찾으면 라이브 판에서
+    #    없는 것처럼 보인다 — 실제로 2026-08-22 에 "속성이 빠졌다" 고 오진할 뻔했다.
+    #    그래서 **공백 평탄화 후** 검사한다. 거리 기준(앞 N자)도 주석 길이에 흔들려 못 쓴다.
+    j = s.find("<NestBadges")
+    assert j > 0, "배지가 어디에도 부착되지 않았다"
+    flat = re.sub(r"\s+", " ", s[:j])
+    i = flat.rfind("fontSize: 11.5")
+    assert i > 0, "배지를 담는 서브라인을 못 찾았다"
+    subline = flat[i:]
+    assert 'whiteSpace: "nowrap"' in subline, (
         "배지를 담는 줄에 nowrap 이 없다 — 긴 공시 제목에서 줄바꿈된다"
     )
