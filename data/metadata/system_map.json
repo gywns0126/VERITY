@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-22T23:42:40.589295+09:00",
+  "generated_at": "2026-08-23T00:01:49.671236+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 297931,
-    "python_modules": 948,
+    "code_lines_tsx_py": 298529,
+    "python_modules": 950,
     "tsx_components": 131,
-    "json_data_files": 1788,
-    "json_total_tracked": 1807,
-    "workflows": 78,
-    "scheduled_workflows": 62,
-    "cron_triggers": 73,
-    "git_tracked_files": 7647
+    "json_data_files": 1789,
+    "json_total_tracked": 1808,
+    "workflows": 79,
+    "scheduled_workflows": 63,
+    "cron_triggers": 74,
+    "git_tracked_files": 7651
   },
   "subsystems": {
     "ingest": {
@@ -177,8 +177,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 78,
-      "scheduled": 62,
+      "count": 79,
+      "scheduled": 63,
       "workflows": [
         {
           "name": "analyst_reports",
@@ -326,6 +326,13 @@
           "name": "dart_quarterly_backfill",
           "crons": [
             "0 11 * * *"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "dividend_ksd",
+          "crons": [
+            "41 21 * * *"
           ],
           "scheduled": true
         },
@@ -725,7 +732,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1788
+      "count": 1789
     },
     "validation": {
       "label": "검증",
@@ -740,8 +747,8 @@
     }
   },
   "python_by_dir": {
-    "api": 450,
-    "tests": 280,
+    "api": 451,
+    "tests": 281,
     "scripts": 146,
     "vercel-api": 59,
     "server": 7,
