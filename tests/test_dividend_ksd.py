@@ -171,3 +171,25 @@ def test_derivable_fields_not_stored():
     for ent in list(body.values())[:200]:
         for r in ent.get("rows") or []:
             assert "cash_dividend_rate_pct" not in r, "파생 가능한 값이 행에 저장됐다"
+
+
+def test_meta_carries_license_and_caveats():
+    """🚨 공개 배선하는 세션이 메타만 봐도 제약을 알아야 한다.
+
+    이용허락범위 = 공공저작물 **제2유형(출처표시 + 상업적 이용금지)** 이고,
+    상업적 활용에는 한국예탁결제원 정보이용계약이 선행돼야 한다(유료화 시점 직결).
+    문서에만 적으면 3일이면 샌다(RULE 12) — 산출물이 스스로 신고한다.
+    """
+    meta = _ledger().get("_meta") or {}
+    assert "제2유형" in str(meta.get("license", "")), "라이선스 유형 신고 소실"
+    assert meta.get("attribution_required") == "한국예탁결제원", (
+        "출처표시 대상이 사라졌다 — 금융위가 아니라 예탁결제원이다"
+    )
+    assert "정보이용계약" in str(meta.get("commercial_use", "")), (
+        "상업적 이용 제약 신고 소실 — 유료화 시점에 걸린다"
+    )
+    caveats = meta.get("public_exposure_caveats") or []
+    assert len(caveats) >= 3, "공개 노출 함정 신고가 줄었다"
+    assert any("기준일 당일" in c for c in caveats), (
+        "기준일 당일 매수로는 못 받는다는 경고가 사라졌다"
+    )

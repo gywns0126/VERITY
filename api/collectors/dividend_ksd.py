@@ -318,6 +318,20 @@ def build_meta(db: Dict[str, Dict[str, Any]], bas_dt: str, raw_n: int,
         "ex_date_provided": False,
         "axis": "회차별(기준일 단위). DART dividends_kr.json 은 연간 합계라 축이 다름.",
         "market": "KR only (ISIN KR 99.99% · 해외법인 국내상장분 소수 포함)",
+        # 🚨 공개 노출 전에 반드시 읽을 것 — 이 원장은 라이선스가 걸려 있다.
+        "license": "공공저작물 제2유형 — 출처표시 + 상업적 이용금지",
+        "attribution_required": "한국예탁결제원",
+        "commercial_use": (
+            "금지. 상업적 활용 시 한국예탁결제원과 정보이용계약 필요"
+            " (portal@ksd.or.kr). 현재 AlphaNest 는 무료·광고 0 이라 제2유형 안."
+            " 🚨 유료화 시점에 계약이 선행돼야 한다."
+        ),
+        "public_exposure_caveats": [
+            "배당기준일 당일 매수로는 배당을 못 받는다 — 화면에 기준일만 띄우면 오도된다",
+            f"dps 0 행이 {sum(1 for r in rows if not r.get('dps'))}건 "
+            f"({sum(1 for r in rows if not r.get('dps')) / n * 100:.1f}%, 무배당 포함) — 필터 필요",
+            "우리 검색 유니버스 밖 종목이 섞여 있다 (ticker_non_numeric 참조)",
+        ],
     }
 
 
