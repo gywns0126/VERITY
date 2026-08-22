@@ -1,0 +1,92 @@
+name: Dividend KSD (배당기준일 원장 — 예탁결제원)
+
+# 금융위원회_주식배당정보(한국예탁결제원) → data/dividends_kr_ksd.json
+#
+# 왜 별 워크플로인가 — 기존 배당 수집(dividend_kr, VAMS 사이클 내부)은 **사업보고서 연간 합계**
+# 이고 날짜가 추정치다. 이건 **회차별 배당기준일 실날짜** 원장이라 축이 다르다.
+# 🚨 두 원장을 섞지 않는다(067900 단위오류와 같은 형태의 사고).
+#
+# 주기 — 원천이 하루 단위로 통째 재적재되고 값 변동은 드물다. 매일 새벽 1회로 충분하고,
+# 수집기가 본문 무변경이면 파일을 안 건드려 5.45MB 가 매일 커밋되지 않는다.
+#
+# 🚨 basDt 날짜 고정 금지 — 적재일 하나에만 데이터가 있고 그 날짜가 이동한다.
+#   수집기 discover_bas_dt() 가 최근 14일을 역순 탐색한다.
+
+on:
+  schedule:
+    # 매일 KST 06:41 (UTC 21:41) — 정각·고부하 회피 offset
+    - cron: '41 21 * * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  # 🚨 `verity-data-write` 에 넣지 않는다. 그 그룹은 16개 워크플로가 공유하고
+  #   `daily_analysis` 가 **매시간** 도착하는데, GitHub 은 cancel-in-progress=false 여도
+  #   **pending 슬롯이 1개**라 대기열이 매시간 통째로 갈아치워진다(2026-08-11 실측 기아).
+  #   시각 이동으로는 못 고친다 — `universe_scan` 선례대로 **그룹 분리**가 답이다.
+  #   이 워크플로가 쓰는 파일(dividends_kr_ksd.json)은 다른 워크플로가 안 건드리므로
+  #   직렬화가 필요 없고, main push 경합은 아래 8회 재시도 루프가 흡수한다.
+  group: verity-dividend-ksd
+  cancel-in-progress: false
+
+jobs:
+  dividend-ksd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Collect KSD dividend record dates
+        env:
+          # 🚨 VERITY_MODE=prod 명시 필수 — default 'dev' 면 api.mocks 가 fixture 를 반환한다.
+          VERITY_MODE: prod
+          # 공공데이터포털 키. 이 서비스(GetStocDiviInfoService_V2) 활용신청 2026-08-22 완료.
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+        run: python -m api.collectors.dividend_ksd
+
+      - name: Commit & push ledger
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          # RULE 4 — 신규 데이터 파일은 워크플로 git add 에 명시해야 커밋된다.
+          # 🚨 파일별로 나눠서 add (한 줄 글롭 묶음은 미매칭 시 통째 실패 — 8/9 KIS 사고)
+          git add data/dividends_kr_ksd.json
+          if git diff --staged --quiet; then
+            echo "변경 없음 (수집기 무변경 가드 또는 동일 적재일) — commit skip"
+            exit 0
+          fi
+          git commit -m "💰 dividend_ksd 배당기준일 원장 $(TZ=Asia/Seoul date +%Y-%m-%d)"
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
+          # 재시도 8회 + 지터 — main push 워크플로가 다수라 고정 간격은 재충돌한다.
+          for i in 1 2 3 4 5 6 7 8; do
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
+            WAIT=$(( i * 7 + RANDOM % 15 ))
+            echo "Push attempt $i failed, retrying in ${WAIT}s (jittered)..."
+            sleep "$WAIT"
+          done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::All 8 push attempts failed (main 경합) — 다음 스케줄에서 재시도"
+            exit 1
+          fi
