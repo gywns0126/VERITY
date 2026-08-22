@@ -264,6 +264,14 @@ jobs:
           # 이미 갔으나 커밋해 두어야 다음 run·감사에서 무엇을 발행했는지 재현된다.
           # 🚨 RULE 4: specific add 패턴이라 이 줄이 없으면 신 파일이 silent 손실된다.
           git add data/multibagger_watch.json 2>/dev/null || true
+          # 🚨 2026-08-22 전수 감사에서 발견한 누락 2건 — RULE 4.
+          # multibagger_promote.json: 이 run 에서 만들고 같은 run 이 병합하므로 스캔은
+          #   되지만, **daily_analysis 는 다른 run** 이라 커밋 안 되면 파일이 없다.
+          #   그러면 picks_builder 가 승격분을 전부 'capped_out' 으로 오분류한다.
+          git add data/metadata/multibagger_promote.json 2>/dev/null || true
+          # multibagger_picks.json: daily_analysis 는 broad `git add data/` 라 자동이지만
+          #   universe_scan 은 specific add 라 여기서 명시해야 한다.
+          git add data/multibagger_picks.json 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔍 universe_candidates ${TIME_KST}"
