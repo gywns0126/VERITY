@@ -67,9 +67,9 @@ DOM 순서와 무관하다. 관심종목이 마지막 자식인데도 밀린 이
 
 | repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
 |---|---|---|---|
-| `public-probe/PublicHeatmap.tsx` | PublicHeatmap (`m5rK79f`) | **파일 전체 교체** — 팔레트판 복원 + isolation | 🔴 **긴급 복붙(통짜)** |
+| `public-probe/PublicHeatmap.tsx` | PublicHeatmap (`m5rK79f`) | **파일 전체 교체** — 팔레트판 복원 + isolation | ✅ **완료(2026-08-23, PM 복붙 · MCP 정량 검증)** |
 
-### 🔴 사고 — 1줄 지시였는데 통짜로 들어가 라이브가 되돌아갔다 (2026-08-23)
+### ✅ 해소 — 1줄 지시였는데 통짜로 들어가 라이브가 되돌아갔다 (2026-08-23, 같은 날 복구)
 
 **repo 미러가 stale 이었다.** main 의 히트맵은 `readBodyDark()`+MutationObserver **JS 다크 감지**
 계열이고, 라이브는 2026-07-24 개편으로 **CSS 변수(`--an-hm-*`, `AN_PALETTE`)** 계열이었다.
@@ -85,8 +85,13 @@ DOM 순서와 무관하다. 관심종목이 마지막 자식인데도 밀린 이
   `isDark`·`MutationObserver` 뭉치다. squarify·zoom·touch·hover·샘플·컨트롤 전부 동일
 - esbuild 구문 검사 통과
 
-🚨 **이번엔 통짜 교체가 맞다.** 계열이 다르므로 한 줄 수정으로는 못 돌린다.
-Framer 버전 기록으로 직전 판 복원 후 isolation 만 넣는 쪽이 더 안전하면 그쪽을 우선할 것.
+✅ **복구 확인(PM: "다크모드 잘됨") + MCP 정량 검증.** 눈대중 대신 3단 대조를 돌렸다:
+문자 수 63,119(라이브) vs 43,106(repo) → **공백 제거 시 26,001 vs 25,938, 차 63자**
+→ `difflib` 로 구간을 찍으니 **전부 프리티어 정규화**(후행 쉼표 추가·세미콜론 제거·괄호 정리·
+JSX `{""}`). 식별자 개수 11종 전수 일치(`AN_PALETTE` 3·`readBodyDark` 0·`isolation` 1).
+**의미 차이 0.**
+
+🚨 이 3단 대조가 CLAUDE.md RULE 11 ② 에 의무로 등재됐다 — 눈대중 판정 금지.
 
 ---
 
