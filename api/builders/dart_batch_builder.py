@@ -74,7 +74,31 @@ def _build_kr_universe_tickers() -> List[str]:
             sys.stderr.write(f"[dart_batch] KR universe build 실패 (시도 {attempt+1}/3): {e}\n")
         if attempt < 2:
             time.sleep(3 * (attempt + 1))
-    return [str(e["ticker"]).zfill(6) for e in kr_entries if e.get("ticker")]
+    tickers = [str(e["ticker"]).zfill(6) for e in kr_entries if e.get("ticker")]
+
+    # 🚨 2026-08-22 — 발행 유니버스와 union. 두 유니버스가 어긋나 결손이 났다.
+    #   실측: 수집 대상 1,611 vs 사이트 노출(stock_report_public) 1,790 → **179종목이 시도조차 안 됨**.
+    #   그 결과 financials 채움율 80.2%, 미보유 355종목. 그중 '일반' 339 중 332(98%)는
+    #   fin_series(재무 시계열)를 이미 갖고 있었다 — 데이터 부재가 아니라 **대상 목록 누락**이다.
+    #   미수집 10종목을 DART 에 직접 물어보니 **10/10 존재**(계정 98~195행). 소스는 충분했다.
+    #   같은 계열 재발 = 2026-08-09 중소형주 채움(ALL_STOCKS 45 하드코딩·pool 20).
+    #     수집기 유니버스가 발행 유니버스보다 좁은 구조가 반복된다 → union 으로 구조적으로 막는다.
+    #   비용: DART 호출 +179 (일 20K 한도의 0.9%) · 런타임 +~20초. reuse 캐시가 있어 2회차부턴 더 적다.
+    try:
+        pub = os.path.join(_REPO_ROOT, "data", "stock_report_public.json")
+        with open(pub, "r", encoding="utf-8") as f:
+            extra = [str(x.get("ticker") or "").zfill(6)
+                     for x in (json.load(f).get("stocks") or [])
+                     if str(x.get("ticker") or "").isdigit()]
+        before = len(tickers)
+        tickers = sorted(set(tickers) | set(extra))
+        if len(tickers) > before:
+            sys.stderr.write(f"[dart_batch] 발행 유니버스 union +{len(tickers)-before} "
+                             f"({before} -> {len(tickers)})\n")
+    except Exception as e:  # noqa: BLE001
+        # 🚨 union 실패는 치명이 아니다 — 기존 유니버스로 계속 간다(결손이 늘 뿐 새로 깨지지 않음).
+        sys.stderr.write(f"[dart_batch] 발행 유니버스 union 실패(무시): {e!r}\n")
+    return tickers
 
 
 def _current_bsns_year() -> str:
