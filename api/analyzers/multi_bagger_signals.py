@@ -1,9 +1,13 @@
 """multi_bagger_signals — Multi-bagger Watch 결정 22 5 신호 정량 함수.
 
 memory project_multi_bagger_watch 결정 22 — 텐버거 후보 신호 (매도 자제 보조).
-정식 active 운영 = 2026-09 이후 (Phase 2-D 안정화 + 1년 paper trading).
-
-이 모듈은 **코드 구현만** — 운영 적용은 후속 (multi_bagger_signals_active env gate).
+🚨 active gate 개방 = **2026-08-22 (PM 승인, 앞당김)**. 종전 "2026-09 이후" 표기 폐기.
+   열린 것은 `hold_pnl_threshold` **하나뿐**이고 소비자는 **보유 종목의 첫 익절 유예**다.
+   나머지 3신호(revenue_acceleration·operating_leverage·category_leader)는 여전히
+   **로깅 전용** — 2026-08-21 전향 검정이 상방 선별력을 검출하한 미달로 냈기 때문이다.
+   🚨 종전 독스트링의 "multi_bagger_signals_active env gate" 는 **실재한 적이 없다**
+   (config.py 에 없음). 게이트는 플래그가 아니라 소비자 구현이었다.
+   등록 = PREREG_MULTIBAGGER_ACTIVE_GATE_2026_08_22.
 
 4 신호 (2026-08-07 PM 승인 — industry_s_curve 폐기로 5 → 4):
   1. revenue_acceleration (Mauboussin & Rappaport, Expectations Investing 2001)
@@ -277,7 +281,14 @@ def detect_hold_pnl_threshold(stock: Dict[str, Any]) -> Dict[str, Any]:
     #   Lynch 의 "꽃을 뽑지 마라"는 **이미 보유한 포지션**에 대한 규칙인데, 유일한 호출자
     #   multibagger_watch 는 **유니버스 스캔(미보유 KR 소형주)** 에 이걸 돌린다.
     #   hold_days 보유 레코드 = 0 / 29,271. 구조상 발동할 수 없다.
-    #   ⚠️ 2026-09 active gate 전 결정 필요: 보유 종목 쪽으로 소비자 이전 / 신호 폐기.
+    #   ✅ **결정 완료 (A, PM 승인 2026-08-22)** — 소비자를 **보유 종목**으로 확정한다.
+    #   유일한 소비자는 `multibagger_watch.build_holding_flowers`(보유) 이고, 유니버스
+    #   스캔은 이 신호를 평가하지 않는다. 그리고 active gate 가 열려
+    #   `vams.engine.check_partial_exit` 이 발동 시 **첫 익절(target_1) 한 단계를 유예**한다.
+    #   🚨 손절(check_stop_loss)에는 붙이지 않는다 — 2026-08-21 전향 검정에서 유일하게
+    #   유의했던 축이 하방 회피이고 손절이 그것을 잡는 장치다. 계약 테스트가 고정한다
+    #   (tests/test_multibagger_active_gate.py::test_stop_loss_never_reads_the_multibagger_signal).
+    #   등록 = PREREG_MULTIBAGGER_ACTIVE_GATE_2026_08_22.
     # 🚨 `or` 체인 금지 — 보유 0일·수익률 0.0% 이 falsy 라 None 으로 무너진다.
     #   실측(2026-08-07): 당일 매수 F&F(보유 0일)가 "적용 불가"로 기록됐다.
     #   결측(모름)과 0(실측값)은 다른 것이다 — 8/6 공매도 등록의 결측 원칙과 같은 축.

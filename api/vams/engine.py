@@ -1427,6 +1427,37 @@ def check_partial_exit(
         h["target_id"] for h in holding.get("exit_history", []) if h.get("status") == "executed"
     }
 
+    # ── 🚨 멀티배거 active gate B (PREREG_MULTIBAGGER_ACTIVE_GATE_2026_08_22, PM 승인) ──
+    # Lynch *One Up*(1989) "꽃을 뽑지 마라" — 오래 들고 크게 오른 포지션의 **첫 익절 한
+    # 단계만** 미룬다. 전량 보유 유예가 아니다(되돌릴 수 있는 최소 개입).
+    #
+    # 🚨 **익절에만 붙는다. 손절(check_stop_loss)에는 절대 붙이지 않는다.**
+    #   2026-08-21 전향 검정(US 28년·창 5개)에서 유일하게 유의했던 축이 **하방 회피**다
+    #   (상방 10배 선별은 5가설 중 4개가 검출하한 미달). 손절이 그 하방을 잡는 장치이므로
+    #   멀티배거 신호로 손절을 유예하면 **유일하게 작동하는 것을 끄는 셈**이 된다.
+    #   Lynch 원칙도 "손실을 견뎌라" 가 아니라 "이익을 너무 일찍 실현하지 마라" 다.
+    #
+    # 🚨 임계(보유 180일 · +50%)는 기존 신호 그대로다. 신설·조정 0.
+    #   실측 2026-08-21: 보유 10종목 최장 42일·최고 +25.1% → **발동 0**.
+    #   VAMS 리셋(5/17) 때문에 2026-11-13 이전 발동은 구조적으로 불가하다.
+    #   그때 급히 정하면 분포를 보고 정하게 되므로(곡선 맞추기) 지금 정해 둔다.
+    defer_first = False
+    try:
+        from api.analyzers.multi_bagger_signals import detect_hold_pnl_threshold
+        _flower = detect_hold_pnl_threshold(holding) or {}
+        defer_first = bool(_flower.get("triggered"))
+        if defer_first:
+            holding["multibagger_defer"] = {
+                "target_deferred": "target_1",
+                "reason": _flower.get("reason"),
+                "basis": "PREREG_MULTIBAGGER_ACTIVE_GATE_2026_08_22 (Lynch 꽃을 뽑지 마라)",
+                "at": now_kst().strftime("%Y-%m-%d %H:%M"),
+            }
+    except Exception as _mbe:  # noqa: BLE001 — 신호 실패가 익절을 죽이지 않는다(fail-open)
+        import sys as _sys
+        print(f"[vams] multibagger defer 평가 skip: {type(_mbe).__name__}: {_mbe}",
+              file=_sys.stderr)
+
     results = []
     # 순서대로 평가 — target_1 → target_2. target_3 (트레일링) 은 check_stop_loss 가 처리.
     for target_id in ("target_1", "target_2"):
@@ -1435,6 +1466,8 @@ def check_partial_exit(
             continue
         if target_id in executed_target_ids:
             continue
+        if defer_first and target_id == "target_1":
+            continue  # 🚨 한 단계만 유예 — target_2 는 그대로 평가된다
         target_price = target.get("price")
         if target_price is None:
             continue
