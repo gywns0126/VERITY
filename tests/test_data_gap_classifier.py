@@ -80,3 +80,47 @@ class TestUnknownStaysUnknown:
         '원천에 재무제표가 없는 회사' 라는 거짓 사실이 리포트에 실린다.
         """
         assert gap.probe_dart("000000") is None
+
+
+class TestValueLevelCheck:
+    """🚨 키 존재 ≠ 값 존재. 이걸 안 가르면 '고칠 수 있는 결손' 이 통째로 거짓이 된다.
+
+    실측(2026-08-22): real_estate 를 키 존재만으로 재니 ③파싱실패 **560건** 이 나왔다.
+    값까지 보니 **561건이 투자부동산을 원래 안 가진 회사**(④정상부재)였고 실제 결손은 31건.
+    refillable 591 → 31. 그대로 신고했으면 없는 일을 고치러 갔다.
+    """
+
+    def test_zero_investment_property_is_absence_not_failure(self):
+        rows = [{"period": "annual", "fundamentals": {"investment_property": 0}}]
+        assert gap._re_has_value(rows) is False
+
+    def test_real_value_is_detected(self):
+        rows = [{"period": "annual", "fundamentals": {"investment_property": 1234567}}]
+        assert gap._re_has_value(rows) is True
+
+    def test_quarterly_rows_ignored(self):
+        """연간(annual)만 본다 — 분기 행을 섞으면 기준이 흔들린다."""
+        rows = [{"period": "quarter", "fundamentals": {"investment_property": 999}}]
+        assert gap._re_has_value(rows) is False
+
+    def test_garbage_value_does_not_crash_or_claim(self):
+        for bad in (None, "", "N/A", {}):
+            rows = [{"period": "annual", "fundamentals": {"investment_property": bad}}]
+            assert gap._re_has_value(rows) is False
+
+
+class TestSourceMappingRegistered:
+    """원천 매핑은 **코드에서 읽어** 등록한다. 추측이면 ①이 거짓으로 뜬다."""
+
+    def test_four_fields_have_sources(self):
+        for f in ("financials", "peer", "calendar", "real_estate"):
+            assert gap.FIELDS.get(f), f"{f} 원천 미등록 — 전부 '미분류' 로 떨어진다"
+
+    def test_peer_requires_both_sources(self):
+        """_peer(tk, fundamentals, sector_map, …) — 둘 다 있어야 생성된다(builder:1212)."""
+        labels = {lbl for _f, _p, _k, lbl in gap.FIELDS["peer"]}
+        assert labels == {"DART 재무", "섹터맵"}
+
+    def test_unverified_field_stays_unregistered(self):
+        """🚨 fin_series 는 배선 미확인이라 비워둔다 — 추측 등록보다 '미분류' 가 정직하다."""
+        assert gap.FIELDS.get("fin_series") == []

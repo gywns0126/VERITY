@@ -41,17 +41,49 @@ _DATA = os.path.join(_ROOT, "data")
 _META = os.path.join(_DATA, "metadata")
 OUT = os.path.join(_META, "data_gap_report.json")
 
-# 측정 대상 = 리포트 필드 : (그 필드를 채우는 원천 파일, 원천 내 종목 맵 경로)
+# 측정 대상 = 리포트 필드 : 그 필드를 채우는 **필수 원천** 목록.
+#   (파일, 종목맵 경로, 라벨). kind="map" = dict 키가 티커 / "rows" = 리스트 안 ticker 필드.
+# 🚨 코드에서 실제 배선을 읽어 등록했다(stock_report_public_builder). 추측 금지 —
+#   원천을 잘못 매핑하면 ①(유니버스 누락)이 거짓으로 뜨고, 고칠 게 없는 걸 고치러 간다.
 FIELDS = {
-    "financials": ("dart_fundamentals_kr.json", ("fundamentals",)),
-    "fin_series": (None, None),          # 원천이 여러 곳 — 유니버스 누락만 판정
-    "peer": (None, None),
-    "real_estate": (None, None),
-    "calendar": (None, None),
+    # _financials(fundamentals.get(tk))            — builder:1172
+    "financials": [("dart_fundamentals_kr.json", ("fundamentals",), "map", "DART 재무")],
+    # _peer(tk, fundamentals, sector_map, …)       — builder:1212. 둘 다 있어야 생성된다
+    "peer": [("dart_fundamentals_kr.json", ("fundamentals",), "map", "DART 재무"),
+             ("kr_sector_map.json", ("map",), "map", "섹터맵")],
+    # _kr_earnings_window(earn_pats.get(tk))       — builder:1179
+    "calendar": [("kr_earnings_pattern.json", ("patterns",), "map", "실적발표 패턴")],
+    # _load_real_estate_history() = fin_history rows(annual) 투자부동산 — builder:989·1277
+    "real_estate": [("dart_kr_fin_history.json", ("rows",), "rows", "연간재무 백필")],
+    # _load_fin_series() — 원천 배선 미확인이라 등록하지 않는다(추측 금지 → '미분류'로 남음)
+    "fin_series": [],
 }
 # ④ 정상 부재 판정 — 이름 패턴
 _SPAC = re.compile(r"스팩|기업인수목적|제\d+호")
 _PREF = re.compile(r"우[BC]?$")
+
+
+def _re_has_value(entries) -> bool:
+    """real_estate 전용 — 원천에 **실제 투자부동산 금액**이 있는가.
+
+    🚨 키 존재만으로 ③파싱실패 를 매기면 안 된다. 투자부동산이 **원래 없는 회사**가 다수이고
+       (첫 실행에서 560건이 그렇게 오분류됐다), 그건 ④정상부재이지 우리 결함이 아니다.
+       591건을 '고칠 수 있는 결손' 이라 신고하면 없는 일을 고치러 간다.
+    """
+    for r in entries or []:
+        if not isinstance(r, dict) or r.get("period") != "annual":
+            continue
+        f = r.get("fundamentals") or {}
+        try:
+            if float(f.get("investment_property") or 0) > 0:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
+# 필드별 "원천에 값이 실제로 있는가" 검사. 없으면 키 존재만 본다.
+VALUE_CHECK = {"real_estate": _re_has_value}
 
 
 def _load(path, default=None):
@@ -121,8 +153,23 @@ def main():
            if str(s.get("ticker") or "").isdigit()}
 
     field = a.field
-    src_file, src_path = FIELDS.get(field, (None, None))
-    src_map = _dig(_load(src_file, {}), src_path) if src_file else {}
+    sources = FIELDS.get(field) or []
+    # 원천별 보유 티커 집합 — rows 형은 리스트 안 ticker 필드를 모은다
+    src_keys = []
+    for fname, path, kind, label in sources:
+        doc = _dig(_load(fname, {}), path)
+        if kind == "rows":
+            grouped = {}
+            for r in (doc or []):
+                if isinstance(r, dict) and r.get("ticker"):
+                    grouped.setdefault(str(r["ticker"]), []).append(r)
+            entries = grouped
+        else:
+            entries = dict(doc or {})
+        keys = set(entries)
+        src_keys.append((label, fname, keys, entries))
+        print(f"[gap]   원천 {label}({fname}) 보유 {len(keys)}종목", file=sys.stderr)
+    probe_ok = any(f == "dart_fundamentals_kr.json" for f, _, _, _ in sources)
 
     missing = [(t, uni[t]) for t in uni
                if not (next((s for s in stocks if str(s.get("ticker")) == t), {}) or {}).get(field)]
@@ -133,16 +180,24 @@ def main():
         if why:
             rows.append({"ticker": tk, "name": nm, "cause": "④정상부재", "detail": why})
             continue
-        if src_file and tk not in src_map:
-            # 원천 수집 결과에 키 자체가 없다 = 물어본 적이 없다
-            rows.append({"ticker": tk, "name": nm, "cause": "①유니버스누락",
-                         "detail": f"{src_file} 에 키 없음"})
-            continue
-        if not src_file:
+        if not sources:
             rows.append({"ticker": tk, "name": nm, "cause": "미분류", "detail": "원천 매핑 미등록"})
             continue
-        # 키는 있는데 값이 비었다 → 원천을 물어봐야 ②/③ 이 갈린다
-        if probed < a.probe:
+        # 🚨 원천이 티커는 갖고 있으나 **값이 0/부재** = 정상 부재다(우리 결함 아님)
+        vchk = VALUE_CHECK.get(field)
+        if vchk and all(tk in keys for _l, _f, keys, _e in src_keys):
+            if not any(vchk(entries.get(tk)) for _l, _f, _k, entries in src_keys):
+                rows.append({"ticker": tk, "name": nm, "cause": "④정상부재",
+                             "detail": "원천에 해당 값 없음(보유 자체가 없음)"})
+                continue
+        lack = [lbl for lbl, _f, keys, _e in src_keys if tk not in keys]
+        if lack:
+            # 필수 원천 중 하나라도 이 종목을 안 갖고 있다 = 그 원천이 물어본 적이 없다
+            rows.append({"ticker": tk, "name": nm, "cause": "①유니버스누락",
+                         "detail": "원천 미보유: " + "·".join(lack)})
+            continue
+        # 원천은 다 갖고 있는데 리포트 값이 비었다 → ②/③. DART 계열만 원천 조회로 갈 수 있다
+        if probe_ok and probed < a.probe:
             probed += 1
             has = probe_dart(tk)
             if has is True:
@@ -153,6 +208,11 @@ def main():
                              "detail": "원천에도 없음"})
             else:
                 rows.append({"ticker": tk, "name": nm, "cause": "미분류", "detail": "원천 조회 실패"})
+        elif not probe_ok:
+            # 🚨 원천 조회 경로가 없는 필드는 ②/③ 을 가를 수 없다. ②로 떨어뜨리지 않는다 —
+            #    '원천에 없다' 는 확인되지 않은 주장이 되고, 그러면 고칠 결손이 사라진다.
+            rows.append({"ticker": tk, "name": nm, "cause": "③파싱실패",
+                         "detail": "원천 보유 확인됨 · 리포트 값 빔(조립 단계 문제)"})
         else:
             rows.append({"ticker": tk, "name": nm, "cause": "미분류", "detail": "probe 예산 소진"})
 
