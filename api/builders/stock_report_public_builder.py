@@ -1325,6 +1325,25 @@ def main() -> int:
                     _re["note"] = ("장부가 ÷ 시총 (가설 · 시가 아님 · 토지 취득원가라 실제 시가는 "
                                    "더 높을 수 있음) · DART")
 
+        # 배당 이력 부착 (2026-08-23) — 한국예탁결제원 배당기준일 원장.
+        #   PM 결정 = 단독 배당 페이지·스크리너는 취소(8/09, 토스 후발 열위)이나
+        #   **리포트 안의 한 파트**는 별개다. 여기서만 붙인다.
+        try:
+            from api.collectors.dividend_ksd import load_dividends_ledger_for_report
+            _div_map = load_dividends_ledger_for_report()
+            _n_div = 0
+            for s in stocks:
+                sec = _div_map.get(s["ticker"])
+                if sec:
+                    s["dividends"] = sec
+                    _n_div += 1
+            print(f"[stock_report_public] 배당 이력 부착 {_n_div}/{len(stocks)} 종목 (KSD)",
+                  file=sys.stderr)
+        except Exception as _de:  # noqa: BLE001
+            # 🚨 배당 결손이 리포트 전체를 막지 않는다. 다만 조용히 넘기지 않고 신고한다.
+            _n_div = 0
+            print(f"[stock_report_public] 배당 부착 실패(리포트는 계속): {_de}", file=sys.stderr)
+
         # 정렬: rich 먼저 → 공시 많은 순 → ticker
         stocks.sort(key=lambda s: (s.get("rich", False), len(s.get("disclosures", [])), s["ticker"]), reverse=True)
         for s in stocks:
@@ -1347,7 +1366,10 @@ def main() -> int:
         out = {
             "_meta": {
                 "generated_at": _now_kst().isoformat(),
-                "source": "DART(전자공시·재무) · 공정위 · FnGuide 집계 · KRX",
+                # 🚨 한국예탁결제원 = 배당 원장 출처. 라이선스 제2유형(출처표시 + 상업적
+                #   이용금지)이라 표기 의무이고, 유료화 시 정보이용계약이 선행돼야 한다.
+                "source": ("DART(전자공시·재무) · 공정위 · FnGuide 집계 · KRX · "
+                           "한국예탁결제원(배당)"),
                 "count": len(stocks),
                 "rich_count": len(rich_by_ticker),
                 "note": "공개 사실만 (RULE 7 allowlist) — 점수·등급·추천 비노출. 컨센서스=증권사 집계(자체 의견 아님). 가격은 클라이언트 라이브 조회.",

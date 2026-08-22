@@ -434,6 +434,72 @@ def get_upcoming(days_ahead: int = 90) -> List[dict]:
     )
 
 
+# ──────────────────────────────────────────────────────────────
+# 공개 리포트용 섹션
+# ──────────────────────────────────────────────────────────────
+
+# 🚨 라이선스 제2유형 = **출처표시 의무**. 이 문구가 화면에 닿는 경로다 — 지우지 말 것.
+#   그리고 배당기준일은 배당락일이 아니다. 기준일 당일에 사면 받지 못한다.
+_REPORT_NOTE = (
+    "배당기준일 기준 · 한국예탁결제원 · 기준일 당일 매수로는 받지 못하며 "
+    "그 전에 보유해야 함 (배당락일 아님)"
+)
+_REPORT_RECENT_N = 8
+
+
+def build_report_section(entry: Dict[str, Any],
+                         today: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """티커 1건 → 공개 리포트에 실을 배당 파트. 배당 이력이 없으면 None.
+
+    🚨 dps 0 행은 **이력에서 빼되 세는 데는 쓴다** — 무배당 28,690건(전체 57.8%)을
+    그대로 뿌리면 화면이 0원으로 도배되지만, 그 행이 있어야 "몇 해나 배당했나" 가 나온다.
+    🚨 배당수익률은 여기서 계산하지 않는다 — 리포트 가격은 클라이언트 라이브 조회라
+    빌더가 시점 다른 가격으로 나누면 조용히 틀린다.
+    """
+    rows = (entry or {}).get("rows") or []
+    if not rows:
+        return None
+    today = today or now_kst().strftime("%Y-%m-%d")
+    paid = [r for r in rows if (r.get("dps") or 0) > 0]
+    if not paid:
+        return None
+
+    # 최근 12개월(기준일 기준) 합 — 분기·중간배당을 합쳐야 연 배당이 된다.
+    y1 = f"{int(today[:4]) - 1}{today[4:]}"
+    ttm = sum(r["dps"] for r in paid if y1 < r["date"] <= today)
+    # 🚨 창을 "오늘 - 10년" 으로 자르면 경계 연도가 **둘** 걸려 11 이 나온다
+    #   (실측 삼성전자 paid_years_10y=11). 화면에서 "10년 중 11년" 으로 읽힌다.
+    #   연도 단위 질문이므로 창도 **연도 단위**로 자른다 — 올해 포함 최근 10개 연도.
+    y_from = int(today[:4]) - 9
+    years_paid = {r["date"][:4] for r in paid if int(r["date"][:4]) >= y_from}
+
+    upcoming = [r for r in rows if r["date"] > today and (r.get("dps") or 0) > 0]
+    recent = list(reversed(paid))[:_REPORT_RECENT_N]
+    return {
+        "recent": [{"record_date": r["date"], "pay_date": r.get("pay_date"),
+                    "dps": r["dps"]} for r in recent],
+        "ttm_dps": round(ttm, 2) if ttm else None,
+        "latest_record_date": recent[0]["date"] if recent else None,
+        "latest_pay_date": recent[0].get("pay_date") if recent else None,
+        "paid_years_10y": len(years_paid),
+        "upcoming_record_date": upcoming[0]["date"] if upcoming else None,
+        "stock_kind": (entry or {}).get("stock_kind"),
+        "source": "한국예탁결제원(KSD) · 금융위 공공데이터",
+        "note": _REPORT_NOTE,
+    }
+
+
+def load_dividends_ledger_for_report() -> Dict[str, Dict[str, Any]]:
+    """티커 → 리포트 섹션 맵. 빌더가 이것만 호출한다."""
+    today = now_kst().strftime("%Y-%m-%d")
+    out: Dict[str, Dict[str, Any]] = {}
+    for tk, ent in load_ledger().items():
+        sec = build_report_section(ent, today)
+        if sec:
+            out[tk] = sec
+    return out
+
+
 if __name__ == "__main__":
     m = collect()
     print(json.dumps(m, ensure_ascii=False, indent=1))

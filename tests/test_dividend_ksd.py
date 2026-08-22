@@ -193,3 +193,69 @@ def test_meta_carries_license_and_caveats():
     assert any("기준일 당일" in c for c in caveats), (
         "기준일 당일 매수로는 못 받는다는 경고가 사라졌다"
     )
+
+
+# ── 공개 리포트 섹션 계약 ──────────────────────────────────────
+
+def _section(ticker: str):
+    """🚨 `load_ledger()` 를 쓰지 않는다 — conftest 가 테스트마다 DATA_DIR 을 tmp 로
+    격리해서(실 data/ 보호) 로더가 빈 맵을 준다. 다른 계약 테스트와 같이 파일을 직독한다.
+    """
+    from api.collectors.dividend_ksd import build_report_section
+    ent = _ledger().get(ticker)
+    if not ent:
+        pytest.skip(f"{ticker} 원장 미보유")
+    return build_report_section(ent, today="2026-08-23")
+
+
+def test_report_section_carries_attribution():
+    """🚨 라이선스 제2유형 = 출처표시 의무. 이 문구가 화면에 닿는 유일한 경로다."""
+    sec = _section("005930")
+    assert "한국예탁결제원" in sec["source"], "출처표시가 사라졌다 — 라이선스 위반"
+    assert "한국예탁결제원" in sec["note"]
+
+
+def test_report_section_warns_record_date_is_not_ex_date():
+    """기준일 당일에 사면 못 받는다 — 이 경고가 빠지면 사용자가 틀린 날에 산다."""
+    sec = _section("005930")
+    assert "당일 매수로는 받지 못" in sec["note"], "기준일 오도 경고 소실"
+    assert "배당락일 아님" in sec["note"]
+
+
+def test_report_section_excludes_zero_dps_rows():
+    """무배당 28,690건(전체 57.8%)을 그대로 실으면 화면이 0원으로 도배된다."""
+    for tk in ("005930", "033780", "000270"):
+        sec = _section(tk)
+        if not sec:
+            continue
+        assert all(r["dps"] > 0 for r in sec["recent"]), f"{tk} 0원 행이 이력에 실렸다"
+
+
+def test_paid_years_window_is_year_bounded():
+    """🚨 '오늘-10년' 으로 자르면 경계 연도가 둘 걸려 11 이 나온다(실측).
+
+    화면에서 "10년 중 11년" 으로 읽히므로 창을 연도 단위로 자른다.
+    """
+    for tk in ("005930", "033780", "000270", "035420"):
+        sec = _section(tk)
+        if not sec:
+            continue
+        assert 0 <= sec["paid_years_10y"] <= 10, (
+            f"{tk} paid_years_10y={sec['paid_years_10y']} — 10 을 넘을 수 없다"
+        )
+
+
+def test_ttm_sums_quarterly_rounds():
+    """분기·중간배당을 합쳐야 연 배당이 된다 — 삼성전자 4회차 합."""
+    sec = _section("005930")
+    got = sum(r["dps"] for r in sec["recent"]
+              if "2025-08-23" < r["record_date"] <= "2026-08-23")
+    assert sec["ttm_dps"] == pytest.approx(got), "TTM 합이 회차 합과 다르다"
+
+
+def test_builder_wires_dividends():
+    """빌더가 배당 파트를 실제로 부착하는가 (배선 소실 감시)."""
+    b = (ROOT / "api" / "builders" / "stock_report_public_builder.py").read_text(
+        encoding="utf-8")
+    assert "load_dividends_ledger_for_report" in b, "빌더 배선이 사라졌다"
+    assert 's["dividends"]' in b, "리포트에 배당 키를 안 넣는다"
