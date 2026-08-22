@@ -265,8 +265,13 @@ def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
     api/utils/fscore_delta.py 의 load_quarterly_snapshots 가 ticker 별 YoY 비교.
 
     schema (jsonl 1줄):
-        {ticker, quarter_end (진짜 분기 종료일 YYYY-MM-DD), reprt_code,
-         roa, debt_ratio, current_ratio, gross_margin, asset_turnover, fetched_at}
+        {ticker, quarter_end (진짜 분기 종료일 YYYY-MM-DD), reprt_code, fs_div,
+         roa, debt_ratio, current_ratio, gross_margin, asset_turnover,
+         revenue(8/19 추가), operating_profit(8/22 추가), operating_cashflow, net_income,
+         fetched_at}
+    🚨 이 목록이 **우리가 버리지 않기로 한 것의 명세**다. 수집기(dart_fundamentals)는
+    이보다 훨씬 많이 파싱한다 — 필요해지면 여기 추가하고 재수집한다. 두 번 같은 자리에서
+    필드를 버렸다(revenue 8/19 · operating_profit 8/22).
 
     중복 누적 OK — load 시 (ticker + quarter_end) 별 최신 fetched_at 만 사용 (dedupe).
     """
@@ -301,6 +306,15 @@ def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
                     #   보강이 448/448 전량 미작동이었다(설계된 방어가 통째로 죽어 있었다).
                     #   소비 = api/utils/quarterly_revenue.build_series
                     "revenue": fund.get("revenue"),
+                    # 🚨 2026-08-22 — operating_profit 을 싣는다. **추가 API 호출 0** (같은 이유).
+                    #   실측 155,228행 중 operating_profit **0건**이었다. 수집기는 138행에서
+                    #   `dart_OperatingIncomeLoss` 를 이미 파싱하고 209행에서 쓰기까지 하는데
+                    #   스냅샷에만 안 실렸다 — 8/19 revenue 수리와 **정확히 같은 자리**다.
+                    #   🚨 왜 치명적인가: net_income 은 98.8% 채워져 있지만 **본업을 못 본다.**
+                    #   실사례 021820(세원정공) — 연간 순이익 488억 중 지분법 230 + 금융수익 135
+                    #   이라 영업이익은 170억이고, 최근 분기는 **−6.7억 적자**다. 순이익만 보면
+                    #   "PER 2 의 초저평가" 로 읽히고 적자 전환이 안 보인다.
+                    "operating_profit": fund.get("operating_profit"),
                     "operating_cashflow": fund.get("operating_cashflow"),
                     "net_income": fund.get("net_income"),
                     "fetched_at": fetched_at,

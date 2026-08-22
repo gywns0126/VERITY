@@ -3,7 +3,9 @@
 입력: data/dart_quarterly_snapshots.jsonl (dart_quarterly_backfill / dart_batch 누적)
   각 라인 = {ticker, quarter_end, roa, debt_ratio, current_ratio, gross_margin, asset_turnover, fetched_at}
 출력: data/dart_quarterly_public.json — us_quarterly_public.json 과 동일 스키마
-  {stocks: {ticker: {quarters: [{q, debt_ratio, roa, current_ratio, gross_margin, asset_turnover}]}}}
+  {stocks: {ticker: {quarters: [{q, debt_ratio, roa, current_ratio, gross_margin, asset_turnover,
+                                 revenue, operating_profit, net_income}]}}}
+  🚨 손익 3종은 **최근 12분기에만** 실린다(발행 용량). 비율은 전 기간.
   → PublicQuarterlyTrend 컴포넌트 무변환 재사용 (quarterlyUrl 기본값이 이 파일).
 
 🚨 데이터 질 가드:
@@ -30,6 +32,18 @@ OUTPUT_PATH = os.path.join(_ROOT, "data", "dart_quarterly_public.json")
 FISCAL_ENDS = {"03-31", "06-30", "09-30", "12-31"}
 RATIO_KEYS = ("debt_ratio", "roa", "current_ratio", "gross_margin", "asset_turnover")
 MIN_QUARTERS = 4   # 컴포넌트 게이트(series<4 = 미표시) 정합
+
+# 🚨 2026-08-22 — 손익 절대금액을 싣는다. 종전에는 **비율 5종만** 나가서
+#   "적자 전환" 이 원리적으로 안 보였다. 실사례 021820(세원정공):
+#   연간 순이익 488억(지분법 230 + 금융수익 135 포함)이라 초저평가로 읽히는데
+#   분기 영업이익은 81 → 78 → 51 → **−6.7억** 이다. 비율만으로는 이 전환을 못 본다.
+#   net_income 만으로도 부족하다 — 본업과 영업외가 섞이기 때문이다.
+PL_KEYS = ("revenue", "operating_profit", "net_income")
+# 🚨 최근 N분기만 싣는다 — 이 파일은 **발행 대상**이고 Vercel 전송비가 붙는다.
+#   실측: 전량 추가 = 8.65 → 14.66MB(1.69배, 발행 총량 89.9MB 대비 +6.7%).
+#   12분기(3년)면 적자 전환(4)·YoY(8)·2Q 연속가속(8~12)을 전부 덮으면서 +2.57MB 다.
+#   비율은 종전대로 전 기간 유지한다(가벼움).
+PL_RECENT_Q = 12
 
 # 🚨 magnitude 가드 — DART 원천 XBRL 오류(누적-분기 혼입/원가 태그 오류)로 팽창한 값 auto-null.
 #   정의·물리 불가능만 격리(오탐 0). self-ref outlier 는 오탐 과다(133 hit 대부분 정상 사업 mix)로
@@ -85,7 +99,19 @@ def build() -> Dict[str, Any]:
                         magnitude_dropped += 1   # 정의·물리 불가능 → null 처리(행은 유지)
                         continue
                 q[k] = fv
-            if len(q) <= 1:   # 비율 전부 null
+            # 🚨 손익은 여기서 담고, 분기 수 제한은 종목 단위 정렬 후에 적용한다
+            #   (여기서 자르면 어느 분기가 최근인지 알 수 없다).
+            for k in PL_KEYS:
+                v = row.get(k)
+                if v is None:
+                    continue
+                try:
+                    q[k] = int(v)
+                except (TypeError, ValueError):
+                    continue
+            # 🚨 종전 조건은 "비율 전부 null 이면 행 폐기" 였다. 손익만 있는 행이
+            #   통째로 버려져 왔다 — 021820 이 분기 4개 미만으로 탈락한 원인 중 하나다.
+            if len(q) <= 1:   # q 키 하나뿐 = 비율·손익 모두 없음
                 continue
             fetched = str(row.get("fetched_at") or "")
             slot = by_ticker.setdefault(ticker, {})
@@ -99,6 +125,10 @@ def build() -> Dict[str, Any]:
         if len(quarters) < MIN_QUARTERS:
             continue
         quarters.sort(key=lambda x: str(x["q"]))
+        # 🚨 손익은 최근 PL_RECENT_Q 개에만 남긴다(발행 용량 — 위 상수 주석 참조).
+        for qq in quarters[:-PL_RECENT_Q] if len(quarters) > PL_RECENT_Q else []:
+            for k in PL_KEYS:
+                qq.pop(k, None)
         stocks[ticker] = {"quarters": quarters}
 
     return {
