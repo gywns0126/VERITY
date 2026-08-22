@@ -1447,13 +1447,30 @@ export default function PublicHoldingsTab(props: Props) {
     //   실측 2026-08-22 삼성전자 기준가 119,900 vs 현재 271,000(+126%)로 2배 넘게 부풀어
     //   실제 기준의 절반 이하 보유액에서도 대주주로 표시됐다.
     //   🚨 기준가를 못 받았으면 **판정하지 않는다**(현재가로 대체 금지 — 그게 원래 결함이다).
-    const krMajorRows = krRows.filter((h) => {
+    /* 대주주 판정 — 경로가 둘이다(소득세법 시행령 §157).
+       ① 기준일 판정  직전 사업연도 종료일 종가 × 보유수 (§157⑥)
+       ② 연중 취득    "직전 사업연도 종료일에 미달했더라도 그 후 취득으로 기준을 충족하게 되면
+                      **그 취득일 이후부터** 대주주로 본다" → 취득 평가액(평단 × 보유수)으로 판정
+       🚨 ②는 신규 상장 전용이 아니다. 기준일에 미달했다가 연중 매수로 넘어선 경우도 포함된다.
+          그래서 ①이 미달이어도 ②를 반드시 본다 — ①만 보면 연중에 넘어선 보유가 통째로 빠진다.
+       🚨 우리가 가진 것은 **현재 보유수**뿐이라 ①은 근사다(기준일 보유수는 모른다).
+          그 한계를 화면에 적는다 — 숨기면 정확한 판정으로 오독된다. */
+    const majorPath = (h: any): "" | "basis" | "acq" => {
+        const shares = Number(h.shares) || 0
+        if (shares <= 0) return ""
         const b = Number(basisPx[String(h.ticker)]) || 0
-        if (b <= 0) return false
-        return (Number(h.shares) || 0) * b >= TAX.KR_MAJOR_AMT
-    })
+        if (b > 0 && shares * b >= TAX.KR_MAJOR_AMT) return "basis"
+        const cost = Number(h.avg_cost) || 0
+        if (cost > 0 && shares * cost >= TAX.KR_MAJOR_AMT) return "acq"
+        return ""
+    }
+    const krMajorRows = krRows.filter((h) => majorPath(h) !== "")
+    const krMajorAcqOnly = krRows.filter((h) => majorPath(h) === "acq").length
+    // 기준가도 평단도 없어 어느 경로로도 판정 못 하는 종목 = 보류(현재가로 대체 금지)
     const krMajorUnknown = krRows.filter(
-        (h) => !(Number(basisPx[String(h.ticker)]) > 0)
+        (h) =>
+            !(Number(basisPx[String(h.ticker)]) > 0) &&
+            !(Number(h.avg_cost) > 0)
     ).length
 
     // ── 분산(조합) 사실 계산 — 비중·집중도·목표갭 ──
@@ -3310,8 +3327,13 @@ export default function PublicHoldingsTab(props: Props) {
                                                 {basisAsOf
                                                     ? `${basisAsOf.slice(0, 4)}-${basisAsOf.slice(4, 6)}-${basisAsOf.slice(6, 8)} 종가`
                                                     : "직전 사업연도 종료일 종가"}{" "}
-                                                — 현재가 아님. 지분율(코스피 1%
-                                                ·코스닥 2%) 요건은 별도이며 정확
+                                                — 현재가 아님.
+                                                {krMajorAcqOnly > 0
+                                                    ? ` 그중 ${krMajorAcqOnly}종목은 연중 취득 기준(평단×보유수) 적용 — 기준일에 미달했거나 상장 전이었습니다.`
+                                                    : ""}{" "}
+                                                지분율(코스피 1%·코스닥 2%) 요건은
+                                                별도. 기준일 보유수는 알 수 없어
+                                                현재 보유수로 근사했습니다 — 정확
                                                 판정은 세무사 확인.
                                             </div>
                                         )}
@@ -3325,7 +3347,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                 }}
                                             >
                                                 판정 보류 {krMajorUnknown}종목 —
-                                                직전 사업연도 종료일 종가 미보유.
+                                                기준일 종가·평단 모두 미보유.
                                                 현재가로 대체하지 않습니다.
                                             </div>
                                         )}
