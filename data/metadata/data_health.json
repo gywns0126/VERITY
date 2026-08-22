@@ -1,22 +1,21 @@
 {
  "_meta": {
-  "generated_at": "2026-08-22T09:54:18.648081+09:00",
+  "generated_at": "2026-08-22T11:13:43.398404+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "red",
+ "status": "amber",
  "reasons": [
-  "배달 검증 실패 1건",
-  "CDN age 58844s > 120s(스테일 서빙)"
+  "CDN age 63607s > 120s(스테일 서빙)"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-22T09:54:18.600447+09:00",
-  "ok": false,
-  "failed": 1,
-  "max_cdn_age_s": 58844,
+  "generated_at": "2026-08-22T11:13:43.153244+09:00",
+  "ok": true,
+  "failed": 0,
+  "max_cdn_age_s": 63607,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -26,7 +25,7 @@
      "PBR": 80.2
     },
     "total": 1790,
-    "cdn_age_s": 0,
+    "cdn_age_s": 4763,
     "error": null
    },
    {
@@ -37,7 +36,7 @@
      "PBR": 73.5
     },
     "total": 5067,
-    "cdn_age_s": 48770,
+    "cdn_age_s": 53533,
     "error": null
    },
    {
@@ -48,16 +47,16 @@
      "PBR": 73.5
     },
     "total": 3924,
-    "cdn_age_s": 58844,
+    "cdn_age_s": 63607,
     "error": null
    },
    {
     "file": "_verity_data_push_recency",
-    "ok": false,
+    "ok": true,
     "pct": null,
     "total": null,
     "cdn_age_s": null,
-    "error": "조회 실패: HTTP Error 403: rate limit exceeded"
+    "error": null
    }
   ]
  },
@@ -76,7 +75,7 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-08-22T09:54:13.845236+09:00",
+  "generated_at": "2026-08-22T11:13:39.295847+09:00",
   "summary": {
    "fresh": 32,
    "stale": 0,
