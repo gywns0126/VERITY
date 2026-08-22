@@ -57,6 +57,16 @@ jobs:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
         run: python api/collectors/fsc_index_prices.py --mode daily || echo "지수 수집 실패(무해)"
 
+      - name: 대주주 판정 기준가 (직전 사업연도 종료일 종가)
+        # 🚨 2026-08-22 신설. 세금 탭이 대주주를 **현재가**로 판정하고 있었다 —
+        #   법령(소득세법 시행령 §157⑥)은 직전 사업연도 종료일 종가다.
+        #   실측 격차: 삼성전자 기준가 119,900 vs 현재 271,000(+126%) → 실제 기준의
+        #   절반 이하 보유액에서도 대주주로 표시됐다.
+        #   일봉 수집 **직후**에 돈다(입력이 그 run 산출이라 항상 최신).
+        #   값은 연 1회(역년 말)만 바뀌지만 매일 돌아도 no-op 수준이라 별도 cron 불요.
+        continue-on-error: true
+        run: python -m api.builders.kr_prior_fy_close_builder
+
       - name: Commit data/kr_chart_daily/ + kr_index_daily.json
         run: |
           git config user.name "AI Stock Bot"
@@ -64,6 +74,9 @@ jobs:
           # 🚨 RULE 4 — 신 산출물은 git add 정합 의무. kr_close_latest.json = 보유종목 평가 기준가
           #   (2026-07-31 신설, 청크 파생 평면 맵). 누락 시 사이트가 옛 종가로 수익률 계산.
           git add data/kr_chart_daily/ data/kr_index_daily.json data/hot_stock.json data/kr_close_latest.json
+          # 2026-08-22 신설 — 대주주 판정 기준가. 🚨 별도 줄 + || true 인 이유:
+          #   첫 run 엔 파일이 없어 위 원자 묶음에 넣으면 스테이징 전체가 실패한다(8/9 사고 형태).
+          git add data/kr_prior_fy_close.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "[kr_chart_daily] no changes"
             exit 0

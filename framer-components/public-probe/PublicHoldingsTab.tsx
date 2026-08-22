@@ -25,7 +25,7 @@ import {
  * 🚩 국기 = circle-flags SVG(Logo/FlagIcon) — 이모지 금지(싸구려). 데모 = 단순 CTA(3D목업 X).
  *
  * 예상 세금 탭: 보유(같은 데이터) → 매도 가정 비용 추정.
- *   세금(법정·증권사 무관) = KR 양도세 0%(비과세 ~2029)+증권거래세 0.20% / US 양도세 22%·27.5%·250만 공제(누진) / 대주주 10억 경고.
+ *   세금(법정·증권사 무관) = KR 양도세 0%(비과세 ~2029)+증권거래세 0.20% / US 양도세 22%·27.5%·250만 공제(누진) / 대주주 50억 경고(직전 사업연도말 종가 기준).
  *   수수료(증권사별) = broker_guide.json domestic_fee/overseas_fee × 매도금액.
  *   세제 SoT = api/trading/account_profile.py (변경 시 TAX 상수 동기화). RULE 7 사실+세무사 면책, RULE 6 LLM 0.
  */
@@ -807,6 +807,10 @@ export default function PublicHoldingsTab(props: Props) {
     //   캔버스 프리뷰는 마운트 후 useEffect 로만 주입 → 첫 페인트는 어떤 렌더타깃에서도 목업 0.
     const [rows, setRows] = useState<any[]>([])
     const [closes, setCloses] = useState<Record<string, number>>({}) // KR 종가(kr_close_latest) — 실시간 아님
+    // 🚨 대주주 판정 **전용** 기준가 — 직전 사업연도 종료일 종가(소득세법 시행령 §157⑥).
+    //   손익·평가액은 현재가를 쓴다. 이 둘을 섞으면 안 된다.
+    const [basisPx, setBasisPx] = useState<Record<string, number>>({})
+    const [basisAsOf, setBasisAsOf] = useState<string>("")
     const [closeAsOf, setCloseAsOf] = useState<string>("") // YYYYMMDD — 화면에 기준일 명시
     const [isDemo, setIsDemo] = useState(true)
     const [loading, setLoading] = useState<boolean>(() =>
@@ -1053,6 +1057,23 @@ export default function PublicHoldingsTab(props: Props) {
                 }
                 setCloses(m)
                 setCloseAsOf(String((d._meta && d._meta.as_of) || ""))
+            })
+            .catch(() => {})
+        // 대주주 판정 기준가 — 실패해도 손익 표시는 멀쩡하다(판정만 보류)
+        fetch(
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_prior_fy_close.json"
+        )
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const pm = d && d.prices
+                if (!alive || !pm || typeof pm !== "object") return
+                const m: Record<string, number> = {}
+                for (const tk of Object.keys(pm)) {
+                    const c = Number(pm[tk])
+                    if (c > 0 && isFinite(c)) m[tk] = c
+                }
+                setBasisPx(m)
+                setBasisAsOf(String((d._meta && d._meta.requested_date) || ""))
             })
             .catch(() => {})
         return () => {
@@ -1421,7 +1442,19 @@ export default function PublicHoldingsTab(props: Props) {
     const usCommission = usProceeds * parseFee(broker && broker.overseas_fee)
     const totalTax = krTxnTax + usCgt
     const totalCommission = krCommission + usCommission
-    const krMajorRows = krRows.filter((h) => h._val >= TAX.KR_MAJOR_AMT)
+    // 🚨 대주주 판정은 **현재가가 아니라 직전 사업연도 종료일 종가**로 한다
+    //   (소득세법 시행령 §157⑥). 종전에는 _val(현재가 기준)로 재고 있었다 —
+    //   실측 2026-08-22 삼성전자 기준가 119,900 vs 현재 271,000(+126%)로 2배 넘게 부풀어
+    //   실제 기준의 절반 이하 보유액에서도 대주주로 표시됐다.
+    //   🚨 기준가를 못 받았으면 **판정하지 않는다**(현재가로 대체 금지 — 그게 원래 결함이다).
+    const krMajorRows = krRows.filter((h) => {
+        const b = Number(basisPx[String(h.ticker)]) || 0
+        if (b <= 0) return false
+        return (Number(h.shares) || 0) * b >= TAX.KR_MAJOR_AMT
+    })
+    const krMajorUnknown = krRows.filter(
+        (h) => !(Number(basisPx[String(h.ticker)]) > 0)
+    ).length
 
     // ── 분산(조합) 사실 계산 — 비중·집중도·목표갭 ──
     const krVal = krRows.reduce((a, b) => a + b._val, 0)
@@ -3272,9 +3305,28 @@ export default function PublicHoldingsTab(props: Props) {
                                                             h.name || h.ticker
                                                     )
                                                     .join(", ")}{" "}
-                                                (종목당 10억+ 보유 시 양도세
-                                                과세 대상). 시행령 공포일·정확
+                                                (종목당 50억+ 보유 시 양도세
+                                                과세 대상). 판정 기준 ={" "}
+                                                {basisAsOf
+                                                    ? `${basisAsOf.slice(0, 4)}-${basisAsOf.slice(4, 6)}-${basisAsOf.slice(6, 8)} 종가`
+                                                    : "직전 사업연도 종료일 종가"}{" "}
+                                                — 현재가 아님. 지분율(코스피 1%
+                                                ·코스닥 2%) 요건은 별도이며 정확
                                                 판정은 세무사 확인.
+                                            </div>
+                                        )}
+                                        {krMajorUnknown > 0 && (
+                                            <div
+                                                style={{
+                                                    color: C.sub,
+                                                    fontSize: 11,
+                                                    lineHeight: 1.5,
+                                                    marginTop: 6,
+                                                }}
+                                            >
+                                                판정 보류 {krMajorUnknown}종목 —
+                                                직전 사업연도 종료일 종가 미보유.
+                                                현재가로 대체하지 않습니다.
                                             </div>
                                         )}
                                     </div>
@@ -3471,7 +3523,7 @@ export default function PublicHoldingsTab(props: Props) {
                                         </div>
                                         {[
                                             "국내 상장주식 양도세 = 비과세 (금투세 폐지 2024-12-10, 2029년까지 유지 기조)",
-                                            "대주주(종목당 보유 10억+) 는 국내도 양도세 과세 — 시행령 공포일 확인 필요",
+                                            "대주주(종목당 보유 50억+, 직전 사업연도 종료일 종가 기준) 는 국내도 양도세 과세 — 지분율 요건 별도",
                                             "해외주식 양도세 = 22% (과표 3억↓), 연 250만 기본공제(국가 합산), 손익 연내통산",
                                             "수수료는 증권사별로 다름 — 세금(양도세·거래세)은 법정으로 증권사 무관",
                                             "가상자산 양도세 = 2027-01-01~ 22% (연 250만 공제) — 본 추적기는 주식만 계산",
