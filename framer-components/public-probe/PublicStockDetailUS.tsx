@@ -38,6 +38,12 @@ const B = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 const SHORT_URL = B + "/us_short_interest.json"
 const HOLD_URL = B + "/us_major_holdings.json"
 const FORENSIC_URL = B + "/us_disclosure_forensics.json"
+const F144_URL = B + "/us_form144.json"
+
+// 🚨 빌더의 종목당 파싱 상한. 상한에 닿은 종목은 notice_count 가 창 안 전량이 아니다.
+//   빌더가 `truncated` 를 신고하지만 **이전 스냅샷 레코드에는 그 필드가 없다**
+//   (merged = prev + fresh 구조라 재수집 전까지 남는다) → 개수로도 판정하는 폴백을 둔다.
+const F144_CAP = 12
 
 // 8-K 분류 → 한국어.
 // 🚨 키를 **추측하지 말 것.** 첫 판본이 `delisting`·`auditor`·`default`·`material_agreement`
@@ -64,6 +70,8 @@ interface ShortRec { ticker: string; short_pct?: number; short_pct_prior?: numbe
 interface Filing { date?: string; type?: string; filer?: string; pct?: number | null; shares?: number; class?: string; source_url?: string }
 interface HoldRec { ticker: string; latest_pct?: number; n_13d?: number; n_13g?: number; total?: number; window_total?: number; truncated?: boolean; omitted?: number; filings?: Filing[] }
 interface ForRec { ticker: string; counts?: Record<string, number>; n_8k?: number; latest_8k?: string }
+interface F144Notice { person?: string; relationship?: string; units?: number; value_usd?: number; value_suspect?: boolean; approx_sale_date?: string; broker?: string; filing_date?: string; source_url?: string }
+interface F144Rec { ticker: string; notice_count?: number; notices_in_window?: number; truncated?: boolean; total_value_usd?: number | null; latest_filing_date?: string; notices?: F144Notice[] }
 
 const SAMPLE_S: ShortRec = { ticker: "AAPL", short_pct: 6.42, short_pct_prior: 5.18, days_to_cover: 2.1, shares_short: 98123456, report_date: "2026-07-31", trend: "up" }
 // 🚨 캔버스 샘플 숫자 주의 — 대외 산출물 금지문자열 self-check 는 특정 자릿수 패턴을 잡는데,
@@ -71,7 +79,17 @@ const SAMPLE_S: ShortRec = { ticker: "AAPL", short_pct: 6.42, short_pct_prior: 5
 //   자기검사가 늑대를 외치면 다음 세션이 무시하게 되므로, 샘플 값은 그 패턴을 피해서 고른다.
 //   🚨 이 주석에 패턴이나 금지어를 그대로 적지 말 것 — 설명문 자체가 또 걸린다(두 번째로 걸림).
 const SAMPLE_H: HoldRec = { ticker: "AAPL", latest_pct: 8.3, n_13d: 0, n_13g: 3, total: 3, filings: [{ date: "2026-02-14", type: "13G/A", filer: "Vanguard Group Inc", pct: 8.3, shares: 1234567890, class: "Common Stock", source_url: "#" }] }
-const SAMPLE_F: ForRec = { ticker: "AAPL", counts: { material_agreement: 2 }, n_8k: 11, latest_8k: "2026-08-01" }
+// 🚨 counts 키는 실제 분류 키(FLAG_KO)만 쓴다 — 없는 키를 쓰면 캔버스 미리보기에
+//   라벨 대신 영문 원키가 뜬다(첫 판본이 `material_agreement` 라는 없는 키를 썼다).
+const SAMPLE_F: ForRec = { ticker: "AAPL", counts: { mna: 2, dilution: 1 }, n_8k: 11, latest_8k: "2026-08-01" }
+const SAMPLE_144: F144Rec = {
+    ticker: "AAPL", notice_count: 12, notices_in_window: 19, truncated: true,
+    total_value_usd: 63871234, latest_filing_date: "2026-08-21",
+    notices: [
+        { person: "TIM COOK", relationship: "Officer", units: 223986, value_usd: 51230000, approx_sale_date: "2026-08-21", broker: "Morgan Stanley", filing_date: "2026-08-21", source_url: "#" },
+        { person: "Katherine Adams", relationship: "Officer", units: 55182, value_usd: 12640000, approx_sale_date: "2026-08-18", broker: "Fidelity", filing_date: "2026-08-18", source_url: "#" },
+    ],
+}
 
 function readTickerFromUrl(): string {
     if (typeof window === "undefined") return ""
@@ -95,7 +113,7 @@ const pct = (v: any, d = 2) => {
     return isFinite(n) ? n.toFixed(d) + "%" : "—"
 }
 
-interface Props { ticker: string; shortUrl: string; holdUrl: string; forensicUrl: string; dark: boolean }
+interface Props { ticker: string; shortUrl: string; holdUrl: string; forensicUrl: string; f144Url: string; dark: boolean }
 
 /**
  * @framerSupportedLayoutWidth any
@@ -109,6 +127,7 @@ export default function PublicStockDetailUS(props: Props) {
     const [sh, setSh] = useState<ShortRec | null>(onCanvas ? SAMPLE_S : null)
     const [hold, setHold] = useState<HoldRec | null>(onCanvas ? SAMPLE_H : null)
     const [fx, setFx] = useState<ForRec | null>(onCanvas ? SAMPLE_F : null)
+    const [f144, setF144] = useState<F144Rec | null>(onCanvas ? SAMPLE_144 : null)
 
     // ETF/ETN 선택 시 자기 숨김 — StockReport 가 body[data-verity-asset-kind] 발행
     const [assetKind, setAssetKind] = useState<string>("stock")
@@ -152,10 +171,10 @@ export default function PublicStockDetailUS(props: Props) {
         if (onCanvas) return
         const code = String(tk).trim().toUpperCase()
         // 🚨 미장 전용 — KR 6자리 숫자는 대상 아님(PublicStockDetailKR 담당)
-        if (!code || /^\d{6}$/.test(code)) { setSh(null); setHold(null); setFx(null); return }
+        if (!code || /^\d{6}$/.test(code)) { setSh(null); setHold(null); setFx(null); setF144(null); return }
         let alive = true
         // 종목이 바뀌면 먼저 비운다 — 이전 종목 숫자가 새 종목 화면에 남는 것은 빈 화면보다 나쁘다.
-        setSh(null); setHold(null); setFx(null)
+        setSh(null); setHold(null); setFx(null); setF144(null)
         const pick = (d: any) =>
             d && Array.isArray(d.stocks) ? d.stocks.find((s: any) => String(s && s.ticker).toUpperCase() === code) || null : null
 
@@ -163,11 +182,13 @@ export default function PublicStockDetailUS(props: Props) {
             .then((d) => { if (alive) setSh(pick(d)) }).catch(() => { if (alive) setSh(null) })
         fetch(props.forensicUrl || FORENSIC_URL).then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive) setFx(pick(d)) }).catch(() => { if (alive) setFx(null) })
+        fetch(props.f144Url || F144_URL).then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (alive) setF144(pick(d)) }).catch(() => { if (alive) setF144(null) })
         // 🚨 8MB — 카드 표시 여부를 여기 걸지 않는다. 가벼운 둘로 먼저 뜨고 이건 뒤에 채운다.
         fetch(props.holdUrl || HOLD_URL).then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (alive) setHold(pick(d)) }).catch(() => { if (alive) setHold(null) })
         return () => { alive = false }
-    }, [tk, props.shortUrl, props.holdUrl, props.forensicUrl, onCanvas])
+    }, [tk, props.shortUrl, props.holdUrl, props.forensicUrl, props.f144Url, onCanvas])
 
     if (assetKind === "etf") return null
 
@@ -176,7 +197,13 @@ export default function PublicStockDetailUS(props: Props) {
     const hasHold = !!(hold && (filings.length || Number(hold.total) > 0))
     const flags = fx && fx.counts ? Object.entries(fx.counts).filter(([, v]) => Number(v) > 0) : []
     const hasFx = !!(fx && (flags.length || Number(fx.n_8k) > 0))
-    if (!hasShort && !hasHold && !hasFx) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
+    const f144Notices = (f144 && Array.isArray(f144.notices) ? f144.notices : []).slice(0, 5)
+    const hasF144 = !!(f144 && f144Notices.length)
+    // 🚨 빌더 상한(12)에 닿은 종목은 신고 건수·총액이 창 안 전량이 아니다.
+    //   `truncated` 는 재수집된 레코드에만 있으므로 개수로도 판정한다.
+    const f144Trunc = !!(f144 && (f144.truncated || Number(f144.notice_count) >= F144_CAP))
+    const f144InWindow = Number(f144 && f144.notices_in_window)
+    if (!hasShort && !hasHold && !hasFx && !hasF144) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
 
     const narrow = w > 0 && w < 560
     const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: narrow ? "0 12px" : "0 18px", boxSizing: "border-box", color: C.ink, display: "flex", flexDirection: "column", gap: 12 }
@@ -265,6 +292,52 @@ export default function PublicStockDetailUS(props: Props) {
                 </div>
             )}
 
+            {hasF144 && (
+                <div style={card}>
+                    {title("내부자 매도 예정 신고", "SEC Form 144 · 최근 180일")}
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                        <span style={{ fontFamily: HEAD, fontSize: narrow ? 19 : 22, fontWeight: 800, color: C.vt, letterSpacing: "-0.6px" }}>
+                            {num(f144 && f144.notice_count)}{f144Trunc ? "건+" : "건"}
+                        </span>
+                        {f144 && Number(f144.total_value_usd) > 0 ? (
+                            <span style={{ fontSize: 12.5, fontWeight: 700 }}>신고금액 ${num(f144.total_value_usd)}</span>
+                        ) : null}
+                        {f144 && f144.latest_filing_date ? (
+                            <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>· 최근 {md(f144.latest_filing_date)}</span>
+                        ) : null}
+                    </div>
+                    {/* 🚨 이게 이 카드에서 가장 중요한 줄이다 — 예정 신고를 체결로 읽으면 통째로 틀린다. */}
+                    <div style={{ fontSize: 11, fontWeight: 700, color: C.warn, background: C.warnS, borderRadius: 8, padding: "7px 10px", lineHeight: 1.5, marginBottom: 10 }}>
+                        팔겠다고 미리 낸 신고이고 체결이 아닙니다. 신고 후 실제로 팔지 않는 경우도 흔하고,
+                        보수로 받은 주식의 세금 납부용 매도도 여기에 들어갑니다.
+                    </div>
+                    <div>
+                        {f144Notices.map((n, i) => (
+                            <div key={i} style={{ padding: "9px 0", borderTop: i === 0 ? "none" : "1px solid " + C.line }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        {n.source_url ? <a href={n.source_url} target="_blank" rel="noopener" style={{ color: "inherit", textDecoration: "none" }}>{n.person || "—"}</a> : (n.person || "—")}
+                                    </span>
+                                    {n.value_usd && !n.value_suspect ? (
+                                        <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: C.vt }}>${num(n.value_usd)}</span>
+                                    ) : null}
+                                    <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: C.faint }}>{md(n.approx_sale_date || n.filing_date)}</span>
+                                </div>
+                                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 3 }}>
+                                    {[n.relationship, n.units ? num(n.units) + "주" : null, n.broker].filter(Boolean).join(" · ")}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 11, lineHeight: 1.55 }}>
+                        SEC EDGAR Form 144 공시 사실 · 체결 여부는 Form 4 에서 확인해야 합니다
+                        {f144Trunc ? (isFinite(f144InWindow) && f144InWindow > 0
+                            ? ` · 이 기간 신고 ${num(f144InWindow)}건 중 최근 ${num(f144 && f144.notice_count)}건만 집계`
+                            : ` · 종목당 집계 상한 ${F144_CAP}건에 닿아 실제 신고는 더 많습니다`) : ""}
+                    </div>
+                </div>
+            )}
+
             {hasFx && (
                 <div style={card}>
                     {title("8-K 이력", "SEC 수시공시 · 최근 2년")}
@@ -295,5 +368,6 @@ addPropertyControls(PublicStockDetailUS, {
     shortUrl: { type: ControlType.String, title: "Short URL", defaultValue: SHORT_URL },
     holdUrl: { type: ControlType.String, title: "Holdings URL", defaultValue: HOLD_URL },
     forensicUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: FORENSIC_URL },
+    f144Url: { type: ControlType.String, title: "Form144 URL", defaultValue: F144_URL },
     dark: { type: ControlType.Boolean, title: "Dark(캔버스 미리보기)", defaultValue: false },
 })

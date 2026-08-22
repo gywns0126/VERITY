@@ -217,6 +217,13 @@ def build() -> int:
         dates = rec.get("filingDate", [])
         accns = rec.get("accessionNumber", [])
 
+        # 🚨 창 안의 144 **전체 건수를 먼저 센다.** 아래 루프는 PER_TICKER_CAP(12)에서 끊는데,
+        #    그 사실이 산출물에 없으면 화면이 "12건" 을 전량으로 읽는다(2026-08-23 실측 —
+        #    notices 길이 분포가 1건 494·2건 336·3건 238 로 줄다가 **12건에서 504 로 튄다** =
+        #    자연 분포가 아니라 절단면). notice_count·total_value_usd 도 12건 기준이라
+        #    대형주가 과소 표기된다. 세는 비용은 0 이다 — 이미 훑는 배열이다.
+        in_window = sum(1 for i in range(len(forms))
+                        if forms[i] == "144" and dates[i] >= cutoff)
         notices: List[Dict[str, Any]] = []
         per = 0
         for i in range(len(forms)):
@@ -258,6 +265,10 @@ def build() -> int:
         fresh[tk] = {
             "ticker": tk,
             "notice_count": len(notices),
+            # 🚨 창 안 실제 건수와 절단 여부를 함께 신고한다. notice_count 는 파싱한 수이지
+            #    창 안 전량이 아니다 — 소비처가 "이상" 으로 표기할 수 있어야 한다.
+            "notices_in_window": in_window,
+            "truncated": in_window > len(notices),
             "total_value_usd": round(total_value, 2) if total_value else None,
             "latest_filing_date": notices[0].get("filing_date"),
             "notices": notices[:MAX_FILINGS],
@@ -276,11 +287,17 @@ def build() -> int:
             "window_days": WINDOW_DAYS,
             "stock_count": len(stocks),
             "notice_count": sum(s.get("notice_count") or 0 for s in stocks),
+            # 🚨 절단 규모 자기신고 — 이게 없으면 소비처가 12건을 전량으로 읽는다.
+            "per_ticker_cap": PER_TICKER_CAP,
+            "truncated_tickers": sum(1 for s in stocks if s.get("truncated")),
+            "notices_in_window_total": sum(s.get("notices_in_window") or 0 for s in stocks),
             "touched_this_run": touched,
             "fresh_this_run": len(fresh),
             "calls": calls,
             "note": "🚨 '매도 예정' 신고이지 체결이 아니다 — 신고 후 미집행도 흔하다. "
-                    "Form 4(사후 체결)와 시점이 반대인 별개 축. 공시 사실만, 점수·신호 0(RULE 7).",
+                    "Form 4(사후 체결)와 시점이 반대인 별개 축. 공시 사실만, 점수·신호 0(RULE 7). "
+                    f"🚨 종목당 파싱 상한 {PER_TICKER_CAP}건 — truncated=true 인 종목은 "
+                    "notice_count·total_value_usd 가 창 안 전량이 아니라 상한까지의 값이다.",
         },
         "stocks": stocks,
     }
