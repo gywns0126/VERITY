@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-23T00:01:49.671236+09:00",
+  "generated_at": "2026-08-23T00:32:17.520273+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 298529,
+    "code_lines_tsx_py": 299040,
     "python_modules": 950,
-    "tsx_components": 131,
+    "tsx_components": 132,
     "json_data_files": 1789,
     "json_total_tracked": 1808,
     "workflows": 79,
     "scheduled_workflows": 63,
     "cron_triggers": 74,
-    "git_tracked_files": 7651
+    "git_tracked_files": 7652
   },
   "subsystems": {
     "ingest": {
@@ -332,7 +332,7 @@
         {
           "name": "dividend_ksd",
           "crons": [
-            "41 21 * * *"
+            "47 5 * * *"
           ],
           "scheduled": true
         },
@@ -716,9 +716,9 @@
     },
     "surface": {
       "label": "출력",
-      "count": 131,
+      "count": 132,
       "by_group": {
-        "framer-components/public-probe": 69,
+        "framer-components/public-probe": 70,
         "operator-web/app/components": 33,
         "admin": 15,
         "framer-components/crypto-public": 7,
