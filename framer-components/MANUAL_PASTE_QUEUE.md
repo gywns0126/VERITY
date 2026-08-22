@@ -67,7 +67,26 @@ DOM 순서와 무관하다. 관심종목이 마지막 자식인데도 밀린 이
 
 | repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
 |---|---|---|---|
-| `public-probe/PublicHeatmap.tsx` | PublicHeatmap | `isolation:"isolate"` 1줄 (스택 문맥 생성) | 🟠 **복붙 대기(1줄)** |
+| `public-probe/PublicHeatmap.tsx` | PublicHeatmap (`m5rK79f`) | **파일 전체 교체** — 팔레트판 복원 + isolation | 🔴 **긴급 복붙(통짜)** |
+
+### 🔴 사고 — 1줄 지시였는데 통짜로 들어가 라이브가 되돌아갔다 (2026-08-23)
+
+**repo 미러가 stale 이었다.** main 의 히트맵은 `readBodyDark()`+MutationObserver **JS 다크 감지**
+계열이고, 라이브는 2026-07-24 개편으로 **CSS 변수(`--an-hm-*`, `AN_PALETTE`)** 계열이었다.
+그 상태로 repo 전문이 붙어 들어가 라이브가 JS 감지판으로 회귀 → **히트맵만 라이트로 남는
+"부분 라이트"**(PM 스크린샷). 라이브 파일 헤더의 *"되돌리지 말 것"* 을 정확히 되돌렸다.
+
+🚨 **원인은 내(세션) 보고다.** "라이브 = repo 동일, 드리프트 0" 이라고 했는데 zIndex 5개만
+눈으로 맞춰본 것이었다. 문자 수만 셌어도 **43K vs 68K** 로 즉시 드러났다.
+
+**복원본 = `b13d0f5fd`(팔레트판) + isolation + 가드주석 = 43,106자.** 근거:
+- 저빈도 문자열 **22/22** 일치 · 구조 마커 **17/17** 일치 (붙여넣기 직전 라이브 read 와 대조)
+- 기능 손실 0 — 공백 제거 시 main 과의 차이는 **+3,746자뿐**이고 전부 `readBodyDark`·
+  `isDark`·`MutationObserver` 뭉치다. squarify·zoom·touch·hover·샘플·컨트롤 전부 동일
+- esbuild 구문 검사 통과
+
+🚨 **이번엔 통짜 교체가 맞다.** 계열이 다르므로 한 줄 수정으로는 못 돌린다.
+Framer 버전 기록으로 직전 판 복원 후 isolation 만 넣는 쪽이 더 안전하면 그쪽을 우선할 것.
 
 ---
 
