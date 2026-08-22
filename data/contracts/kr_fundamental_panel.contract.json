@@ -1,36 +1,59 @@
 {
-  "_meta": {
-    "contract_for": "kr_fundamental_panel.jsonl",
-    "created": "2026-08-16",
-    "sot": "api/builders (분기 재무 패널) · docs/FACTOR_ENGINE_DESIGN_2026_08_16.md 분모 실측",
-    "why": "PIT 매핑(+45일)과 accrual 부호는 코드에만 암묵이었다 — 소비자가 어기면 look-ahead·부호 반전. 계약으로 강제 (구조 재검증 2026-08-16)."
+ "_meta": {
+  "contract_for": "kr_fundamental_panel.jsonl",
+  "created": "2026-08-16",
+  "sot": "api/builders (분기 재무 패널) · docs/FACTOR_ENGINE_DESIGN_2026_08_16.md 분모 실측",
+  "why": "PIT 매핑(+45일)과 accrual 부호는 코드에만 암묵이었다 — 소비자가 어기면 look-ahead·부호 반전. 계약으로 강제 (구조 재검증 2026-08-16)."
+ },
+ "file": "data/metadata/kr_fundamental_panel.jsonl",
+ "row_unit": "분기 × 종목 (2016-03 ~ · 분기당 중앙 ~1,785종목)",
+ "required_fields": {
+  "ticker": "str 6자리 KRX 티커",
+  "period": "str (Q)",
+  "quarter_end": "str YYYY-MM-DD",
+  "roa": "number|null",
+  "gross_margin": "number|null",
+  "accrual_ratio": "number|null",
+  "debt_ratio": "number|null",
+  "current_ratio": "number|null",
+  "asset_turnover": "number|null",
+  "operating_cashflow": "number|null",
+  "assets": "number|null",
+  "net_income": "number|null",
+  "equity": "number|null"
+ },
+ "load_bearing_semantics": [
+  "PIT: quarter_end + 45일 이후에만 관측 가능으로 취급 의무 (법정 분기공시 기한). 미적용 = look-ahead. factor.py FUND_LAG_DAYS=45 선례.",
+  "accrual_ratio 는 높을수록 발생액 과다 = 악재. 신호로 쓸 때는 부호 반전(−accrual) — factor.py accrual_inv 선례. debt_ratio 동일 (debt_inv).",
+  "net_income = 0 은 결측 의심 — 2026-07-17 파서 fix 이전 수집분이 0 으로 저장된 이력 (7/24 백필 체크포인트 리셋으로 재수집). 0 을 실적 0 으로 단정 금지.",
+  "재무값 = as-restated (일괄 수집) — 원 공시값 아님, 정정 look-ahead 소지.",
+  "quarter_end 는 달력분기말 4값만 — 형식(YYYY-MM-DD)만 보면 수집일 유입을 못 막는다. 실측 2026-06-07/15/22/28 201행이 월만 보던 가드를 통과해 8/12 패널에 남았다(값 전부 0). 🚨 비12월 결산 13종목(486행)은 상류가 정확히 기록하는데도 이 패널에는 없다 — TTM 이 달력분기 4칸을 가정하기 때문. 부재는 결손이 아니라 설계이며 health 의 excluded_non_calendar_fiscal 이 종목명까지 신고한다."
+ ],
+ "consumer_duties": [
+  "월말 매핑 시 quarter_end+45일 ≤ 관측일 조건의 최신 분기만 사용",
+  "accrual/debt 는 반전 후 신호화, 원값 그대로 랭킹 금지",
+  "N_t(단면 표본) < 100 인 시점 제외 + 제외 수 신고 (factor.py MIN_N_T 선례)"
+ ],
+ "validation_rules": {
+  "field_regex": {
+   "ticker": "^\\d{6}$",
+   "quarter_end": "^(19|20)\\d{2}-(03-31|06-30|09-30|12-31)$"
   },
-  "file": "data/metadata/kr_fundamental_panel.jsonl",
-  "row_unit": "분기 × 종목 (2016-03 ~ · 분기당 중앙 ~1,785종목)",
-  "required_fields": {
-    "ticker": "str 6자리 KRX 티커",
-    "period": "str (Q)",
-    "quarter_end": "str YYYY-MM-DD",
-    "roa": "number|null", "gross_margin": "number|null",
-    "accrual_ratio": "number|null", "debt_ratio": "number|null",
-    "current_ratio": "number|null", "asset_turnover": "number|null",
-    "operating_cashflow": "number|null", "assets": "number|null",
-    "net_income": "number|null", "equity": "number|null"
-  },
-  "load_bearing_semantics": [
-    "PIT: quarter_end + 45일 이후에만 관측 가능으로 취급 의무 (법정 분기공시 기한). 미적용 = look-ahead. factor.py FUND_LAG_DAYS=45 선례.",
-    "accrual_ratio 는 높을수록 발생액 과다 = 악재. 신호로 쓸 때는 부호 반전(−accrual) — factor.py accrual_inv 선례. debt_ratio 동일 (debt_inv).",
-    "net_income = 0 은 결측 의심 — 2026-07-17 파서 fix 이전 수집분이 0 으로 저장된 이력 (7/24 백필 체크포인트 리셋으로 재수집). 0 을 실적 0 으로 단정 금지.",
-    "재무값 = as-restated (일괄 수집) — 원 공시값 아님, 정정 look-ahead 소지."
+  "nullable": [
+   "roa",
+   "gross_margin",
+   "accrual_ratio",
+   "debt_ratio",
+   "current_ratio",
+   "asset_turnover",
+   "operating_cashflow",
+   "assets",
+   "net_income",
+   "equity",
+   "fetched_at"
   ],
-  "consumer_duties": [
-    "월말 매핑 시 quarter_end+45일 ≤ 관측일 조건의 최신 분기만 사용",
-    "accrual/debt 는 반전 후 신호화, 원값 그대로 랭킹 금지",
-    "N_t(단면 표본) < 100 인 시점 제외 + 제외 수 신고 (factor.py MIN_N_T 선례)"
-  ],
-  "validation_rules": {
-    "field_regex": {"ticker": "^\\d{6}$", "quarter_end": "^(19|20)\\d{2}-\\d{2}-\\d{2}$"},
-    "nullable": ["roa", "gross_margin", "accrual_ratio", "debt_ratio", "current_ratio", "asset_turnover", "operating_cashflow", "assets", "net_income", "equity", "fetched_at"],
-    "non_negative": ["assets"]
-  }
+  "non_negative": [
+   "assets"
+  ]
+ }
 }

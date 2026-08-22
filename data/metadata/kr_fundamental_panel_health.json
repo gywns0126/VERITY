@@ -1,54 +1,74 @@
 {
- "generated_at": "2026-08-12T01:11:32.357463+09:00",
+ "generated_at": "2026-08-22T23:28:43.816466+09:00",
  "source": "data/dart_quarterly_snapshots.jsonl",
- "raw_rows": 143654,
- "panel_rows": 71339,
+ "raw_rows": 153488,
+ "panel_rows": 72505,
  "dropped": {
-  "duplicate_ticker_quarter": 70106,
-  "quarter_end_not_quarter_end": 2209,
+  "duplicate_ticker_quarter": 80497,
+  "quarter_end_not_quarter_end": 0,
   "parse_error": 0
  },
- "tickers": 2800,
- "quarters": 46,
+ "excluded_non_calendar_fiscal": {
+  "rows": 486,
+  "tickers": 13,
+  "ticker_list": [
+   "004310",
+   "093380",
+   "334890",
+   "338100",
+   "357120",
+   "365550",
+   "417310",
+   "432320",
+   "448730",
+   "451800",
+   "950170",
+   "950180",
+   "950250"
+  ],
+  "reason": "비12월 결산법인의 실제 분기말. TTM 이 달력분기 4칸을 가정하므로 현재 패널 대상 밖 — 편입 여부는 PM 결정 대기. 윤년 02-28 포함(상류 _MMDD_BY_MONTH 가 윤년 미대응, 15행/4종목)."
+ },
+ "tickers": 2751,
+ "quarters": 44,
  "quarter_range": [
   "2016-03-31",
   "2026-12-31"
  ],
  "filled": {
   "roa": {
-   "n": 70247,
-   "pct": 98.5
+   "n": 71784,
+   "pct": 99.0
   },
   "debt_ratio": {
-   "n": 70425,
-   "pct": 98.7
+   "n": 71709,
+   "pct": 98.9
   },
   "current_ratio": {
-   "n": 70094,
-   "pct": 98.3
+   "n": 71421,
+   "pct": 98.5
   },
   "gross_margin": {
-   "n": 62706,
-   "pct": 87.9
+   "n": 63927,
+   "pct": 88.2
   },
   "asset_turnover": {
-   "n": 70222,
-   "pct": 98.4
+   "n": 71592,
+   "pct": 98.7
   },
   "operating_cashflow": {
-   "n": 71339,
+   "n": 72505,
    "pct": 100.0
   },
   "net_income": {
-   "n": 71339,
+   "n": 72505,
    "pct": 100.0
   }
  },
  "accrual_ratio": {
-  "computed": 57943,
-  "pct": 81.2,
+  "computed": 59243,
+  "pct": 81.7,
   "skipped_reasons": {
-   "roa_too_small": 13396
+   "roa_too_small": 13262
   },
   "definition": "(순이익 − 영업현금흐름) / 총자산. 총자산은 순이익/ROA 로 역산 (패널에 총자산 컬럼이 없음). |ROA| < 0.5% 는 역산 불안정으로 제외."
  },

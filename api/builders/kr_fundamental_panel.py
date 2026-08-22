@@ -25,6 +25,7 @@ macro 12)를 "히스토리 부재" 한 덩어리로 적었다. 2026-08-09 실측
 """
 from __future__ import annotations
 
+import calendar
 import json
 import os
 import sys
@@ -38,9 +39,29 @@ SRC = os.path.join(DATA_DIR, "dart_quarterly_snapshots.jsonl")
 OUT_PANEL = os.path.join(DATA_DIR, "metadata", "kr_fundamental_panel.jsonl")
 OUT_HEALTH = os.path.join(DATA_DIR, "metadata", "kr_fundamental_panel_health.json")
 
-_QUARTER_MONTHS = {"03", "06", "09", "12"}
+_CALENDAR_QUARTER_ENDS = {"03-31", "06-30", "09-30", "12-31"}
 _METRICS = ("roa", "debt_ratio", "current_ratio", "gross_margin",
             "asset_turnover", "operating_cashflow", "net_income")
+
+
+def _is_month_end(iso: str) -> bool:
+    """YYYY-MM-DD 가 분기말로 성립하는 월말인가.
+
+    🚨 윤년 02-28 을 True 로 둔다. 상류 `dart_batch_builder._MMDD_BY_MONTH` 가
+    {"02": "28"} 정적 표라 윤년(2016·2020·2024)에도 02-28 을 쓴다 — 실측 15행 /
+    4종목(004310·093380·334890·417310) 전부 비12월 결산 실분기말이다.
+    이걸 빼면 멀쩡한 회계 분기가 '기형 날짜' 로 오분류된다.
+    """
+    try:
+        y, m, d = int(iso[:4]), int(iso[5:7]), int(iso[8:10])
+    except (ValueError, IndexError):
+        return False
+    if m == 2 and d == 28:
+        return True
+    try:
+        return d == calendar.monthrange(y, m)[1]
+    except calendar.IllegalMonthError:
+        return False
 
 
 def _num(v) -> Optional[float]:
@@ -127,7 +148,8 @@ def build() -> Dict[str, Any]:
     if not os.path.exists(SRC):
         return {"status": "no_source", "path": SRC}
 
-    raw = dup = bad_qe = parse_err = 0
+    raw = dup = bad_qe = parse_err = fiscal_rows = 0
+    fiscal_tickers: set = set()
     best: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
     with open(SRC, encoding="utf-8") as f:
@@ -146,8 +168,20 @@ def build() -> Dict[str, Any]:
             if not tk or len(qe) != 10:
                 bad_qe += 1
                 continue
-            # ① 분기말이 아닌 날짜 = 수집일이 들어간 행 → 폐기
-            if qe[5:7] not in _QUARTER_MONTHS:
+            # ① 🚨 분기말 판정은 **월이 아니라 일까지** 본다. 월만 보면 6월 수집일
+            #    (2026-06-07 등)이 월 "06" 이라 그대로 통과한다 — 실제로 201행이
+            #    통과해 8/12 패널에 남았다(net_income·ocf 전부 0, assets 없음).
+            if qe[5:] in _CALENDAR_QUARTER_ENDS:
+                pass
+            elif _is_month_end(qe):
+                # 비12월 결산법인의 진짜 분기말(05-31 · 11-30 …). 상류 3a001e283 이
+                # 결산월 기준으로 정확히 기록하기 시작했다. TTM 이 달력분기 4칸을
+                # 가정하므로 아직 담지 않되, 🚨 수집일 유입과 **구분해 신고**한다 —
+                # 뭉뚱그리면 상류가 정확해진 순간 종목이 사라진 걸 아무도 모른다.
+                fiscal_rows += 1
+                fiscal_tickers.add(tk)
+                continue
+            else:
                 bad_qe += 1
                 continue
             key = (tk, qe)
@@ -219,6 +253,15 @@ def build() -> Dict[str, Any]:
             "duplicate_ticker_quarter": dup,
             "quarter_end_not_quarter_end": bad_qe,
             "parse_error": parse_err,
+        },
+        # 🚨 상류는 정확한데 패널이 안 담는 구간 = 조용한 손실. 개수·종목으로 신고한다.
+        "excluded_non_calendar_fiscal": {
+            "rows": fiscal_rows,
+            "tickers": len(fiscal_tickers),
+            "ticker_list": sorted(fiscal_tickers),
+            "reason": "비12월 결산법인의 실제 분기말. TTM 이 달력분기 4칸을 가정하므로 "
+                      "현재 패널 대상 밖 — 편입 여부는 PM 결정 대기. 윤년 02-28 포함"
+                      "(상류 _MMDD_BY_MONTH 가 윤년 미대응, 15행/4종목).",
         },
         "tickers": len(tickers),
         "quarters": len(quarters),

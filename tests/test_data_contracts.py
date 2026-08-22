@@ -36,3 +36,49 @@ def test_manifest_three_way():
     r = subprocess.run([sys.executable, MANIFEST_CHECK, "--check"],
                        capture_output=True, text=True, timeout=180)
     assert r.returncode == 0, f"대장 3자 대조 위반:\n{r.stdout[-2000:]}"
+
+
+PANEL = os.path.join(ROOT, "data", "metadata", "kr_fundamental_panel.jsonl")
+PANEL_HEALTH = os.path.join(ROOT, "data", "metadata", "kr_fundamental_panel_health.json")
+
+
+def test_panel_quarter_end_is_calendar_quarter_full_scan():
+    """quarter_end 전수 검사 — 계약 검증기는 600행 표본이라 저빈도 오염을 놓친다.
+
+    실측 2026-08-22: 수집일이 quarter_end 로 유입된 201행이 8/12 패널에 남아 있었다
+    (72,505 중 0.28%). 빌더 가드가 월("06")만 보고 일을 안 봐서 2026-06-07/15/22/28 이
+    통과했다. 표본 600 이면 검출 확률 ~82% — 즉 놓칠 수 있었다. 분모를 전부 본다.
+    """
+    import json as _json
+    if not os.path.exists(PANEL):
+        return  # 패널 미생성 환경(CI 경량) — 검증기와 동일하게 스킵
+    ok = {"03-31", "06-30", "09-30", "12-31"}
+    bad, total = [], 0
+    with open(PANEL, encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            total += 1
+            qe = _json.loads(line)["quarter_end"]
+            if len(qe) != 10 or qe[5:] not in ok:
+                if len(bad) < 5:
+                    bad.append(qe)
+    assert total > 0, "패널이 비었다"
+    assert not bad, f"달력분기말 아닌 quarter_end (전수 {total}행 중): {bad}"
+
+
+def test_panel_health_reports_non_calendar_fiscal_exclusion():
+    """비12월 결산 제외를 health 가 개수+종목으로 신고하는가 (조용한 손실 차단).
+
+    상류 3a001e283 이 결산월 기준 quarter_end 를 정확히 기록하기 시작한 순간
+    패널은 그 13종목을 통째로 잃었다. 신고가 없으면 아무도 모른다.
+    """
+    import json as _json
+    if not os.path.exists(PANEL_HEALTH):
+        return
+    h = _json.load(open(PANEL_HEALTH, encoding="utf-8"))
+    ex = h.get("excluded_non_calendar_fiscal")
+    assert isinstance(ex, dict), "health 에 excluded_non_calendar_fiscal 신고가 없다"
+    for k in ("rows", "tickers", "ticker_list", "reason"):
+        assert k in ex, f"신고 항목 누락: {k}"
+    assert len(ex["ticker_list"]) == ex["tickers"], "종목 수와 목록 길이 불일치"
