@@ -74,6 +74,19 @@ jobs:
             python -m api.collectors.crypto_regime_history
           fi
 
+      - name: 트리거 감시 (FNG 과열 · 펀딩 과열 · ETF 순유출 · 바이백 시행일)
+        # 🚨 2026-08-22 신설. 8/20~22 BTC +20% 급등 때 "무엇이 바뀌면 판단을 바꾸나" 가
+        #   사람 머릿속에만 있었다. 그 조건을 기계로 옮긴다.
+        #   임계 = 전부 기존 상수 재사용(FNG_EXTREME_GREED=75 · CRYPTO_FUNDING_OVERHEAT=0.06).
+        #   🚨 레짐 call 전이는 **일부러 뺐다** — 60일에 23회(2.6일마다) 뒤집혀 알림 폭주.
+        #   🚨 TIDE regime_watch(FNG>60 국면 도래·게이트 k)와 축이 다르다. 중복 아님.
+        #   전이만 알린다(CONFIRM_DAYS=3). 수집 직후라 값이 항상 그 run 의 최신이다.
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/audit/crypto_trigger_watch.py
+
       - name: Commit data/crypto_*.json
         # main 영속화 (빌더 산출물 main commit 의무). 빈 변경 시 no-op. push 5회 retry.
         run: |
@@ -88,6 +101,10 @@ jobs:
           git add data/upbit_orderbook_slippage.jsonl 2>/dev/null || true
           # 2026-08-17 신설 — 레짐 ⑤⑥ 차원 활성 전제 이력(일 1회 갱신). RULE 4 정합.
           git add data/crypto_regime_history.json 2>/dev/null || true
+          # 2026-08-22 신설 — 트리거 전이 판정용 관측 이력(append-only).
+          # 🚨 위 원자 묶음이 아니라 별도 줄인 이유 = 첫 run 엔 이 파일이 없다. 묶음에 넣으면
+          #   미존재 경로 하나가 add 전체를 실패시켜 멀쩡한 산출물까지 커밋이 안 된다(8/9 사고).
+          git add data/observations/crypto_trigger_trail.jsonl 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🪙 crypto_collect ${TIME_KST}"
