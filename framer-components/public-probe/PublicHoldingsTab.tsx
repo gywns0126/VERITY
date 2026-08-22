@@ -1394,7 +1394,13 @@ export default function PublicHoldingsTab(props: Props) {
         .sort((a, b) => b._val - a._val)
     const plColor = (v: number) => (v > 0 ? C.up : v < 0 ? C.down : C.faint)
 
-    // ── 예상 세금 + 수수료 (매도 가정) ──
+    // ── 예상 세금 + 수수료 (🚨 **전량 매도** 가정) ──
+    //   2026-08-22 검증: 손계산 대조 통과(US 1,000만 → (1,000만−250만)×22% = 165만 ·
+    //   4억 → 3억×22%+9,750만×27.5% = 9,281만 · 손실 시 과세표준 0).
+    //   🚨 다만 usGainSum 은 **보유 전 종목 손익의 단순 합**이다. 실제 양도세는 그 해에
+    //   **실현한 것만** 통산하므로, 일부만 팔면 미실현 손실이 차감되지 않아 실제 세금이
+    //   더 크다. 계산을 바꾸지 않고 **전제를 화면에 명시**한다(헤더 "전량 매도" + 하단 설명).
+    //   숫자를 조용히 낙관 쪽으로 보여주는 게 이 화면에서 가장 위험하다.
     const krRows = evald.filter((h) => !h._us)
     const usRows = evald.filter((h) => h._us)
     const krProceeds = krRows.reduce((a, b) => a + b._val, 0)
@@ -3122,8 +3128,8 @@ export default function PublicHoldingsTab(props: Props) {
                                                 fontWeight: 700,
                                             }}
                                         >
-                                            매도 가정 시 예상 비용 (세금 +
-                                            수수료)
+                                            <b>전량 매도</b> 가정 시 예상 비용
+                                            (세금 + 수수료)
                                         </div>
                                         <div
                                             style={{
@@ -3503,7 +3509,11 @@ export default function PublicHoldingsTab(props: Props) {
                                             lineHeight: 1.5,
                                         }}
                                     >
-                                        세율·공제는 2026 시행값(사실). 추정·관측
+                                        세율·공제는 2026 시행값(사실). 🚨 해외
+                                        양도세는 <b>보유 전량을 같은 해에 판다고
+                                        가정</b>해 이익·손실을 통산한 값이에요 —
+                                        일부만 팔면 손실 종목이 차감되지 않아
+                                        실제 세금은 더 클 수 있어요. 추정·관측
                                         보조용 — 실제 납세 판단은 세무사 확인.
                                         절세 자문 아님.
                                     </div>

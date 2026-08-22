@@ -86,3 +86,28 @@ def test_component_still_declares_sot():
     """SoT 표기가 사라지면 다음 사람이 어디를 고쳐야 할지 모른다."""
     src = TSX.read_text(encoding="utf-8")
     assert "account_profile.py" in src, "세제 SoT 표기가 헤더에서 사라졌다"
+
+
+# ── 계산 전제 명시 (2026-08-22) ──────────────────────────────
+def test_tax_tab_states_full_liquidation_assumption():
+    """🚨 usGainSum 은 보유 전 종목 손익의 **단순 합**이다.
+
+    실제 해외 양도세는 그 해에 **실현한 것만** 통산한다. 일부만 팔면 미실현 손실이
+    차감되지 않아 실제 세금이 더 크다 — 즉 이 화면은 **낙관 쪽으로 치우친다**.
+    계산을 바꾸는 대신 전제를 명시했다. 그 문구가 사라지면 숫자가 사실로 읽힌다.
+    """
+    s = TSX.read_text(encoding="utf-8")
+    flat = re.sub(r"\s+", " ", s)
+    assert "<b>전량 매도</b> 가정" in flat, "헤더의 전량 매도 전제 표기가 사라졌다"
+    assert "일부만 팔면 손실 종목이 차감되지 않아" in flat, (
+        "손익통산 전제 설명이 사라졌다 — 세금이 실제보다 적게 보인다"
+    )
+
+
+def test_us_tax_math_is_progressive_with_deduction():
+    """공제·누진 구조가 유지되는지 — 상수만 맞고 식이 틀리면 가드가 무의미하다."""
+    s = TSX.read_text(encoding="utf-8")
+    flat = re.sub(r"\s+", " ", s)
+    assert "Math.max(0, usGainSum - TAX.US_DEDUCT)" in flat, "기본공제 차감이 사라졌다"
+    assert "TAX.US_BRACKET * TAX.US_CGT" in flat, "3억 분기점 누진 계산이 사라졌다"
+    assert "usTaxable <= TAX.US_BRACKET" in flat, "분기 조건이 사라졌다"
