@@ -1,20 +1,20 @@
 {
  "_meta": {
-  "generated_at": "2026-08-21T14:10:22+09:00",
+  "generated_at": "2026-08-22T13:59:16+09:00",
   "lookback_days": 45,
   "sessions_scanned": 33,
   "sessions_missed": [],
   "counts": {
-   "filings": 940,
-   "companies": 271,
+   "filings": 927,
+   "companies": 276,
    "by_stage": {
-    "신청": 103,
-    "정정(심사중)": 111,
+    "신청": 106,
+    "정정(심사중)": 113,
     "가격확정": 13,
     "거래소등록": 44
    },
-   "spac_likely": 39,
-   "has_ticker_now": 205,
+   "spac_likely": 40,
+   "has_ticker_now": 210,
    "priced_secondary_excluded": 10,
    "foreign_issuer": 71,
    "priced_parse_ok": 7
@@ -23,6 +23,42 @@
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
  },
  "items": [
+  {
+   "cik": "2111846",
+   "name": "Game Your Game Inc.",
+   "forms": {
+    "S-1": 1,
+    "424B4": 1,
+    "CERT": 1,
+    "8-A12B": 1,
+    "S-1/A": 1
+   },
+   "first_filed": "20260720",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2111846&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7372",
+    "sic_desc": "Services-Prepackaged Software",
+    "is_blank_check": false,
+    "ticker": "GYGY",
+    "region": "PALO ALTO, CA",
+    "state_of_inc": "DE"
+   },
+   "pre_existing_reporter": false,
+   "pricing": {
+    "parse_ok": false,
+    "reason": "공모가 문구 없음",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/2111846/000121390026082494/ea0275919-11.htm"
+   }
+  },
   {
    "cik": "1892704",
    "name": "First Breach, Inc.",
@@ -174,7 +210,7 @@
    "amend_count": 4,
    "is_foreign_issuer": false,
    "is_spac_likely": true,
-   "has_ticker_now": false,
+   "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2087035&type=S-1&dateb=&owner=include&count=20",
    "profile": {
     "available": true,
@@ -863,7 +899,7 @@
     "sic": "6770",
     "sic_desc": "Blank Checks",
     "is_blank_check": true,
-    "ticker": "FJDIU",
+    "ticker": "FJDI",
     "region": "TEMPE, AZ",
     "state_of_inc": "E9"
    },
@@ -1095,41 +1131,6 @@
     "gross_usd": 142182315,
     "source_url": "https://www.sec.gov/Archives/edgar/data/1787117/000110465926088733/tm2513004-17_424b4.htm",
     "note": "424B4 본문 자체 파싱(🧮) — 인수인 초과배정 미반영. 확정치는 원문 확인."
-   }
-  },
-  {
-   "cik": "2111846",
-   "name": "Game Your Game Inc.",
-   "forms": {
-    "424B4": 1,
-    "CERT": 1,
-    "8-A12B": 1,
-    "S-1/A": 1
-   },
-   "first_filed": "20260720",
-   "last_filed": "20260729",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2111846&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7372",
-    "sic_desc": "Services-Prepackaged Software",
-    "is_blank_check": false,
-    "ticker": "GYGY",
-    "region": "PALO ALTO, CA",
-    "state_of_inc": "DE"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "공모가 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2111846/000121390026082494/ea0275919-11.htm"
    }
   },
   {
@@ -1371,14 +1372,14 @@
     "424B4": 1,
     "8-A12B": 1,
     "CERT": 1,
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20260707",
+   "first_filed": "20260715",
    "last_filed": "20260716",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -1654,14 +1655,14 @@
    "name": "Professional Diversity Network, Inc.",
    "forms": {
     "424B4": 1,
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20260707",
+   "first_filed": "20260728",
    "last_filed": "20260813",
    "lineage": true,
    "stage": 3,
    "stage_ko": "가격확정",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -1739,15 +1740,14 @@
    "name": "Elong Power Holding Ltd.",
    "forms": {
     "424B4": 2,
-    "F-1": 2,
-    "F-1/A": 1
+    "F-1": 1
    },
-   "first_filed": "20260707",
+   "first_filed": "20260713",
    "last_filed": "20260804",
    "lineage": true,
    "stage": 3,
    "stage_ko": "가격확정",
-   "amend_count": 1,
+   "amend_count": 0,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -1876,6 +1876,187 @@
    }
   },
   {
+   "cik": "2075335",
+   "name": "ROZE AI INC.",
+   "forms": {
+    "F-1/A": 3
+   },
+   "first_filed": "20260727",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 3,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2075335&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7373",
+    "sic_desc": "Services-Computer Integrated Systems Design",
+    "is_blank_check": false,
+    "ticker": "ROZE",
+    "region": "VANCOUVER",
+    "state_of_inc": "A1"
+   }
+  },
+  {
+   "cik": "888721",
+   "name": "TRINITY BIOTECH PLC",
+   "forms": {
+    "F-1/A": 1
+   },
+   "first_filed": "20260821",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=888721&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2835",
+    "sic_desc": "In Vitro & In Vivo Diagnostic Substances",
+    "is_blank_check": false,
+    "ticker": "TRIB",
+    "region": "WICKLOW",
+    "state_of_inc": "L2"
+   }
+  },
+  {
+   "cik": "2088375",
+   "name": "Turbogen Ltd.",
+   "forms": {
+    "F-1/A": 1
+   },
+   "first_filed": "20260821",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2088375&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "4931",
+    "sic_desc": "Electric & Other Services Combined",
+    "is_blank_check": false,
+    "ticker": "TRBG",
+    "region": "PETACH TIKVA",
+    "state_of_inc": "L3"
+   }
+  },
+  {
+   "cik": "2097903",
+   "name": "UDynamics Ltd",
+   "forms": {
+    "F-1/A": 1
+   },
+   "first_filed": "20260821",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2097903&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2135163",
+   "name": "Albatross Acquisition Corp",
+   "forms": {
+    "S-1/A": 2
+   },
+   "first_filed": "20260803",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2135163&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1649739",
+   "name": "BayFirst Financial Corp.",
+   "forms": {
+    "S-1/A": 4,
+    "S-1": 1
+   },
+   "first_filed": "20260813",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 4,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1649739&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2095476",
+   "name": "Dune Acquisition Corp III",
+   "forms": {
+    "S-1/A": 2
+   },
+   "first_filed": "20260728",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2095476&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2065821",
+   "name": "Little West Holdings Inc.",
+   "forms": {
+    "S-1/A": 2
+   },
+   "first_filed": "20260724",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2065821&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2128462",
+   "name": "Three Lions Acquisition Corp.",
+   "forms": {
+    "S-1/A": 1
+   },
+   "first_filed": "20260821",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2128462&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
    "cik": "1948294",
    "name": "CL Workshop Group Ltd",
    "forms": {
@@ -1891,16 +2072,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1948294&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2400",
-    "sic_desc": "Lumber & Wood Products (No Furniture)",
-    "is_blank_check": false,
-    "ticker": "NWGL",
-    "region": "MACAU S.A.R",
-    "state_of_inc": "D8"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1948294&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2092291",
@@ -1918,43 +2090,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2092291&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "4581",
-    "sic_desc": "Airports, Flying Fields & Airport Terminal Services",
-    "is_blank_check": false,
-    "ticker": "TIWD",
-    "region": "CHEUNG SHA WAN, KOWLOON",
-    "state_of_inc": "E9"
-   }
-  },
-  {
-   "cik": "1649739",
-   "name": "BayFirst Financial Corp.",
-   "forms": {
-    "S-1/A": 2,
-    "S-1": 1
-   },
-   "first_filed": "20260813",
-   "last_filed": "20260820",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1649739&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6022",
-    "sic_desc": "State Commercial Banks",
-    "is_blank_check": false,
-    "ticker": "BAFN",
-    "region": "ST PETERSBURG, FL",
-    "state_of_inc": "FL"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2092291&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "720762",
@@ -2024,7 +2160,7 @@
    "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
-   "has_ticker_now": false,
+   "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2064768&type=S-1&dateb=&owner=include&count=20"
   },
   {
@@ -2414,23 +2550,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2024258&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2075335",
-   "name": "ROZE AI INC.",
-   "forms": {
-    "F-1/A": 2
-   },
-   "first_filed": "20260727",
-   "last_filed": "20260811",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2075335&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "1487718",
    "name": "AMERICAN BATTERY MATERIALS, INC.",
    "forms": {
@@ -2591,14 +2710,14 @@
    "cik": "1900851",
    "name": "Ambitious Entertainment, Inc.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20260707",
+   "first_filed": "20260806",
    "last_filed": "20260806",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
@@ -2724,23 +2843,6 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1875655&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2135163",
-   "name": "Albatross Acquisition Corp",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260803",
-   "last_filed": "20260803",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2135163&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2067111",
@@ -2968,23 +3070,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2076148&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2095476",
-   "name": "Dune Acquisition Corp III",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260728",
-   "last_filed": "20260728",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2095476&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2137360",
    "name": "Youmi Inc.",
    "forms": {
@@ -3191,23 +3276,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1585608&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2065821",
-   "name": "Little West Holdings Inc.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260724",
-   "last_filed": "20260724",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2065821&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1640043",
@@ -3726,40 +3794,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2038439&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2112466",
-   "name": "Silentium Ltd.",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20260707",
-   "last_filed": "20260707",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2112466&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2123169",
-   "name": "Luvulis Corp",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260707",
-   "last_filed": "20260707",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123169&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "61004",
    "name": "LGL GROUP INC",
    "forms": {
@@ -3829,6 +3863,91 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2039461&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1677077",
+   "name": "Alzamend Neuro, Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20260821",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1677077&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1671584",
+   "name": "Aptevo Therapeutics Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20260821",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1671584&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2091680",
+   "name": "Bitari Inc",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20260821",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2091680&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2131613",
+   "name": "CoVolt Power, Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20260821",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2131613&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1544227",
+   "name": "Tempest Therapeutics, Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20260821",
+   "last_filed": "20260821",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1544227&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1981662",
@@ -4014,7 +4133,7 @@
    "amend_count": 0,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
-   "has_ticker_now": false,
+   "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2104827&type=S-1&dateb=&owner=include&count=20"
   },
   {
@@ -4286,7 +4405,7 @@
    "amend_count": 0,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
-   "has_ticker_now": true,
+   "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2027262&type=S-1&dateb=&owner=include&count=20"
   },
   {
@@ -5546,40 +5665,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1866226&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1995704",
-   "name": "Cuprina Holdings (Cayman) LTD",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20260707",
-   "last_filed": "20260707",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1995704&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1990251",
-   "name": "Wellchange Holdings Co Ltd",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20260707",
-   "last_filed": "20260707",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1990251&type=S-1&dateb=&owner=include&count=20"
   }
  ]
 }
