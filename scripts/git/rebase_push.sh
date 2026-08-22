@@ -14,6 +14,19 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
+# 🚨 --git-dir 지원 (2026-08-22) — 보조 repo(.git-private)도 같은 트리를 공유하므로
+#   같은 위험(autostash 가 크론·타 세션 파일을 담고 pop 충돌)을 그대로 겪는다.
+#   초판은 메인 전용이라 private push 를 손으로 하게 됐고, 그러다 게이트 P4 에 걸렸다.
+GITDIR=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --git-dir) GITDIR="$2"; shift 2 ;;
+        *) break ;;
+    esac
+done
+GIT=(git)
+[ -n "$GITDIR" ] && GIT=(git --git-dir="$GITDIR" --work-tree=.)
+
 BRANCH="${1:-main}"
 # 🚨 2026-08-22 적대적 검증에서 발견 — 초판은 docs·server·supabase·private·루트 파일을
 #   통째로 빼먹었다. docs/ 는 사전등록을 매일 쓰는 곳이고 private repo 로 가는 경로라
@@ -36,7 +49,7 @@ pre_markers="$(scan_markers)"
 [ -n "$pre_markers" ] && fail "이미 충돌 마커가 있다 — 먼저 해소할 것:
 $pre_markers"
 
-pre_stash="$(git stash list | wc -l | tr -d ' ')"
+pre_stash="$("${GIT[@]}" stash list | wc -l | tr -d ' ')"
 # 🚨 재시도 루프 (2026-08-22 추가) — fetch 와 push 사이에 타 세션이 push 하면
 #   non-fast-forward 로 거부된다. 실제로 발생했다. 이 저장소 워크플로들도 같은 이유로
 #   5회 재시도한다(universe_scan.yml 선례). 조용히 성공한 척하지 않고, 매 시도마다
@@ -47,17 +60,17 @@ for attempt in 1 2 3 4 5; do
 # 🚨 fetch 를 **먼저** 한다 (2026-08-22 자가 발견 결함).
 #   초판은 fetch 전에 ahead 를 세서 **낡은 origin/BRANCH ref** 로 판단했다.
 #   타 세션이 그 사이 push 했으면 "푸시할 커밋 없음" 으로 잘못 빠져나간다.
-git fetch -q origin "$BRANCH" || fail "fetch 실패"
-ahead="$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo 0)"
+"${GIT[@]}" fetch -q origin "$BRANCH" || fail "fetch 실패"
+ahead="$("${GIT[@]}" rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo 0)"
 [ "$ahead" = "0" ] && { echo "푸시할 커밋 없음 — 종료"; exit 0; }
 echo "미푸시 커밋 $ahead 건 · 기존 stash $pre_stash 건"
 
 # ── rebase ────────────────────────────────────────────────
-git rebase --autostash "origin/$BRANCH"
+"${GIT[@]}" rebase --autostash "origin/$BRANCH"
 rc=$?
 
 # 🚨 핵심 — exit 0 을 믿지 않는다. 실제 상태를 본다.
-post_stash="$(git stash list | wc -l | tr -d ' ')"
+post_stash="$("${GIT[@]}" stash list | wc -l | tr -d ' ')"
 post_markers="$(scan_markers)"
 
 if [ -n "$post_markers" ]; then
@@ -73,7 +86,7 @@ if [ -n "$post_markers" ]; then
         fail "data/ 밖 충돌 — 자동 해소하지 않는다. **push 하지 않았다**:$manual"
     fi
     for f in $auto; do
-        git checkout "origin/$BRANCH" -- "$f" 2>/dev/null || fail "복원 실패: $f"
+        "${GIT[@]}" checkout "origin/$BRANCH" -- "$f" 2>/dev/null || fail "복원 실패: $f"
     done
     echo "🔧 파이프라인 산출물 자동 해소(origin 판 복원):$auto"
     post_markers="$(scan_markers)"
@@ -85,25 +98,25 @@ $post_markers
 복구:
   1) 각 파일의 양쪽을 대조 (보통 origin 판이 더 최신인 크론 산출물)
   2) git checkout origin/$BRANCH -- <경로>   ← 삭제 아님, 복원
-  3) git stash show --name-only stash@{0} 으로 잔여 확인 후 drop
+  3) "${GIT[@]}" stash show --name-only stash@{0} 으로 잔여 확인 후 drop
   4) 이 스크립트 재실행"
 fi
 if [ "$post_stash" != "$pre_stash" ]; then
     # 자동 해소했다면 남은 stash 가 data/ 전용인지 확인 후 정리
-    if [ -n "${auto:-}" ] && [ -z "$(git stash show --name-only stash@{0} 2>/dev/null | grep -v "^data/")" ]; then
-        git stash drop >/dev/null 2>&1 && echo "🔧 잔여 autostash 정리(전부 data/)"
-        post_stash="$(git stash list | wc -l | tr -d ' ')"
+    if [ -n "${auto:-}" ] && [ -z "$("${GIT[@]}" stash show --name-only stash@{0} 2>/dev/null | grep -v "^data/")" ]; then
+        "${GIT[@]}" stash drop >/dev/null 2>&1 && echo "🔧 잔여 autostash 정리(전부 data/)"
+        post_stash="$("${GIT[@]}" stash list | wc -l | tr -d ' ')"
     fi
 fi
 if [ "$post_stash" != "$pre_stash" ]; then
     fail "stash 잔여수가 $pre_stash → $post_stash 로 변했다 = pop 미완. **push 하지 않았다**.
-  git stash list / git stash show --name-only stash@{0} 확인 후 해소하고 재실행."
+  "${GIT[@]}" stash list / "${GIT[@]}" stash show --name-only stash@{0} 확인 후 해소하고 재실행."
 fi
 [ $rc -ne 0 ] && fail "rebase 실패 (rc=$rc) — push 하지 않았다"
 
 # ── push ──────────────────────────────────────────────────
-if git push -q origin "$BRANCH" 2>/dev/null; then
-    echo "✅ push 완료 · $(git log --oneline -1)"
+if "${GIT[@]}" push -q origin "$BRANCH" 2>/dev/null; then
+    echo "✅ push 완료 · $("${GIT[@]}" log --oneline -1)"
     echo "   충돌 마커 0 · stash $post_stash 건(변동 없음)$([ "$attempt" -gt 1 ] && echo " · 시도 $attempt회")"
     exit 0
 fi
