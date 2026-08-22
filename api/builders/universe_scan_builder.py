@@ -135,6 +135,38 @@ def build() -> Dict[str, Any]:
             )
     kr_starved = kr_count == 0
 
+    # ── 상승 신호 승격 병합 (PREREG_MULTIBAGGER_UPSIDE_FUNNEL_2026_08_22, PM 지시) ──
+    # PM "그럼 상승 신호만 잡아." 🚨 실측 문제: alert>=2 인 78종목이 후보(25)·운영풀(38)
+    #   어디에도 없었다(교집합 **0**). 신호가 켜져도 구조적으로 매수 후보가 못 됐다.
+    # 🚨 이 병합은 **필터가 뺀 소형주를 신호로 되살리는 것**이다(승격분 시총 중앙 1,709억
+    #   = 필터 통과분 5.06조의 1/30). 2026-08-21 전향 검정상 그 구간은 90% 손실 확률이
+    #   가장 높은 분위이기도 하다 — 하방 배제는 PM 결정으로 미뤄졌다. 조용히 넣지 않고
+    #   `promoted_by` 태그 + 진단으로 **분리 집계 가능**하게 남긴다.
+    # 추가만 한다 — 기존 후보를 밀어내지 않고, red_flags·auto_avoid·채점은 그대로 받는다.
+    promoted_n = 0
+    promote_meta: Dict[str, Any] = {}
+    try:
+        _pp = os.path.join(_REPO_ROOT, "data", "metadata", "multibagger_promote.json")
+        if os.path.exists(_pp):
+            with open(_pp, encoding="utf-8") as f:
+                _pj = json.load(f)
+            _have = {c.get("ticker") for c in candidates if isinstance(c, dict)}
+            _add = [c for c in (_pj.get("candidates") or [])
+                    if isinstance(c, dict) and c.get("ticker") and c["ticker"] not in _have]
+            if _add:
+                candidates = candidates + _add
+                promoted_n = len(_add)
+                kr_count += sum(1 for c in _add if (c.get("currency") or "") != "USD")
+            promote_meta = {k: _pj.get(k) for k in
+                            ("as_of", "watch_n", "eligible_n", "cap", "promoted_n",
+                             "dropped_no_full_record", "min_alert")}
+            sys.stderr.write(
+                f"[universe_scan] 멀티배거 승격 병합 {promoted_n}건 "
+                f"(대상 {_pj.get('eligible_n')} · 상한 {_pj.get('cap')} · 중복제외 "
+                f"{len(_pj.get('candidates') or []) - promoted_n})\n")
+    except Exception as _pe:  # noqa: BLE001 — 승격 병합 실패가 스캔을 죽이지 않는다
+        sys.stderr.write(f"[universe_scan] 승격 병합 skip: {type(_pe).__name__}: {_pe}\n")
+
     # US 유니버스 소스 de-silence — 캐시 부재 시 fallback(S&P100+core) 명시.
     # universe_us.json gitignored + 생성기 없음 → 상시 fallback. silent degradation 아닌 의식 상태.
     _us_cache = os.path.join(_REPO_ROOT, "data", "cache", "universe_us.json")
@@ -154,6 +186,10 @@ def build() -> Dict[str, Any]:
         "ramp_up_note": "5000 = cap(상한), 목표 아님 — 실 유니버스 = 품질 floor 통과 전체",
         "elapsed_s": elapsed,
         "used_prev_snapshot": used_prev,
+        # 🚨 승격 자기신고 — 몇 건이 필터를 우회해 들어왔는지 산출물이 스스로 말한다.
+        #   안 남기면 나중에 성적이 무엇 덕분/때문인지 갈리지 않는다(RULE 12).
+        "multibagger_promoted": promoted_n,
+        "multibagger_promote_meta": promote_meta,
         "error": error,
     }
 

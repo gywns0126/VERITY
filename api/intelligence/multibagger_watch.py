@@ -183,6 +183,77 @@ def build_holding_flowers(portfolio: Optional[Dict[str, Any]] = None,
     return out
 
 
+# ── 상승 신호 승격 (PREREG_MULTIBAGGER_UPSIDE_FUNNEL_2026_08_22, PM 지시) ───────────
+# PM: "그럼 상승 신호만 잡아."
+#
+# 🚨 문제였던 것: alert>=2 인 78종목이 유니버스 후보(25)·운영 풀(38) 어디에도 없었다
+#   (교집합 **0**). 신호가 산출돼도 구조적으로 매수 후보가 될 수 없었다.
+#   임계·가중의 문제가 아니라 **깔때기에 입구가 없었다.**
+#
+# 🚨 내가 남기는 반대 의견 (PM 결정 존중, 기록 의무):
+#   2026-08-21 전향 검정(US 28년·창 5개) — 상방 10배 선별은 5가설 중 4개가 검출하한
+#   미달인데 하방(90% 손실 회피)은 4/5 유의였다. 그리고 상방에 유리한 꼬리가 5가설
+#   **전부 하위 20%**(소형·저마진·저퀄리티·저건전성)이고 **같은 특성이 90% 손실 확률도
+#   올린다**(altman_z 하위 20% = 35.15%). 실측상 승격 대상의 시총 중앙(1,709억)은
+#   필터 통과분(5.06조)의 **1/30** 이라 정확히 그 하위 분위 모집단이다.
+#   → 상승만 켜고 하방 배제를 미루면 복권을 사는 구조가 된다.
+#
+# 그래서 **조용히 넣지 않는다**: 전체 레코드를 그대로 싣고(얇은 레코드는 하류 점수를
+# 결측으로 만든다), `promoted_by` 태그를 달아 사후에 이 결정의 성적만 분리 집계할 수
+# 있게 한다. 기존 필터·red_flag·auto_avoid 를 우회하지 않는다 — 채점은 그대로 받는다.
+PROMOTE_MIN_ALERT = 2
+PROMOTE_CAP = 20          # 🚨 상한 — 78 전부면 유니버스가 4배가 되어 런타임 예산을 깬다
+_PROMOTE_PATH = os.path.join(DATA_DIR, "metadata", "multibagger_promote.json")
+
+
+def _emit_promote(rows: List[Dict[str, Any]], stocks: List[Dict[str, Any]]) -> None:
+    """alert>=N 종목의 **전체 스캔 레코드**를 승격 파일로 낸다.
+
+    🚨 워치 레코드(7필드)가 아니라 원본 스캔 레코드(55필드)를 실어야 한다.
+    얇은 레코드를 유니버스에 넣으면 하류가 전부 결측으로 채점해 조용히 쓰레기가 된다.
+    """
+    by_ticker = {s.get("ticker"): s for s in (stocks or []) if s.get("ticker")}
+    picked = sorted(
+        (r for r in rows if int(r.get("alert_count") or 0) >= PROMOTE_MIN_ALERT),
+        key=lambda r: -int(r.get("alert_count") or 0),
+    )[:PROMOTE_CAP]
+    out = []
+    missing = 0
+    for r in picked:
+        full = by_ticker.get(r.get("ticker"))
+        if not full:
+            missing += 1
+            continue      # 🚨 전체 레코드가 없으면 **넣지 않는다** (얇은 대체 금지)
+        rec = dict(full)
+        rec["promoted_by"] = {
+            "source": "multibagger",
+            "alert_count": r.get("alert_count"),
+            "fired": sorted(k for k, v in (r.get("signals") or {}).items()
+                            if isinstance(v, dict) and v.get("triggered")),
+            "basis": "PREREG_MULTIBAGGER_UPSIDE_FUNNEL_2026_08_22",
+        }
+        out.append(rec)
+    payload = {
+        "as_of": now_kst().isoformat(),
+        # 🚨 분모 먼저 (RULE 13)
+        "watch_n": len(rows),
+        "eligible_n": sum(1 for r in rows if int(r.get("alert_count") or 0) >= PROMOTE_MIN_ALERT),
+        "cap": PROMOTE_CAP,
+        "promoted_n": len(out),
+        "dropped_no_full_record": missing,
+        "min_alert": PROMOTE_MIN_ALERT,
+        "note": ("상승 신호 승격분 — 필터가 뺀 KR 소형주를 신호로 되살린 것이다. "
+                 "🚨 하방 배제는 적용되지 않았다(PM 결정). 성적은 promoted_by 로 분리 집계할 것."),
+        "candidates": out,
+    }
+    os.makedirs(os.path.dirname(_PROMOTE_PATH), exist_ok=True)
+    with open(_PROMOTE_PATH, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, default=str)
+    import sys as _sys
+    print(f"[multibagger_watch] 승격 {len(out)}/{payload['eligible_n']} "
+          f"(상한 {PROMOTE_CAP} · 전체레코드 없어 제외 {missing})", file=_sys.stderr)
+
+
 def run_watch(stocks: List[Dict[str, Any]], path: Optional[str] = None,
               portfolio: Optional[Dict[str, Any]] = None,
               hold_path: Optional[str] = None) -> int:
@@ -191,7 +262,13 @@ def run_watch(stocks: List[Dict[str, Any]], path: Optional[str] = None,
     유니버스 스캔(KR 소형주 텐버거 후보) + 보유 종목 hold_pnl 평가 두 축을 함께 기록한다.
     보유 축 실패가 유니버스 축을 죽이지 않는다.
     """
-    n = log_watch(build_watch(stocks), path=path)
+    rows = build_watch(stocks)
+    n = log_watch(rows, path=path)
+    try:
+        _emit_promote(rows, stocks)
+    except Exception as e:  # noqa: BLE001 — 승격 산출 실패가 로깅을 죽이지 않는다
+        import sys as _sys
+        print(f"[multibagger_watch] promote skip: {type(e).__name__}: {e}", file=_sys.stderr)
     try:
         n += log_watch(build_holding_flowers(portfolio), path=hold_path or _HOLD_PATH)
     except Exception as e:  # noqa: BLE001 — 관측 실패가 funnel 을 죽이지 않는다
