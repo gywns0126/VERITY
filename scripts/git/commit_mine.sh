@@ -62,11 +62,18 @@ IDX="$(mktemp -t verity_idx.XXXXXX)"
 export GIT_INDEX_FILE="$IDX"
 "${G[@]}" read-tree HEAD || fail "read-tree 실패"
 for p in "${PATHS[@]}"; do
-    # 🚨 -f 필수 — 보조 repo(.git-private)도 공유 .gitignore 의 `/docs/` 를 읽어
-    #   **이미 추적 중인 파일의 수정분까지** 차단한다(2026-08-16 실측). -f 없으면
-    #   add 가 비영 종료하는데 뒤이은 단계가 그대로 진행돼 "완료" 로 보인다.
-    #   메인 repo 에서는 -f 가 무해하다(gitignore 대상을 지정할 일이 없으므로).
-    "${G[@]}" add -f -- "$p" || fail "add 실패: $p"    # 경로 1개씩 (원자 실패 회피)
+    # 🚨 -f 는 **--git-dir 이 지정된 보조 repo 에서만** 쓴다 (2026-08-22 사고 후 한정).
+    #   보조 repo(.git-private)는 공유 .gitignore 의 `/docs/` 를 읽어 이미 추적 중인
+    #   파일의 수정분까지 차단하므로 -f 가 필요하다(2026-08-16 실측).
+    #   🚨 그런데 초판은 -f 를 **무조건** 써서 public 에서 gitignore 보호막을 뚫었다 —
+    #   실사고: docs/INDEX.md 245줄이 public repo 에 실렸다(커밋 2528e214b, 즉시 제거).
+    #   CLAUDE.md 하이브리드 절 = "public .git 에 docs/ 재추가 절대 금지".
+    #   public 기본 경로에서는 -f 없이 간다 — gitignore 가 설계대로 막아야 한다.
+    if [ -n "$GITDIR" ]; then
+        "${G[@]}" add -f -- "$p" || fail "add 실패: $p"
+    else
+        "${G[@]}" add -- "$p" || fail "add 실패(무시 대상일 수 있다 — public 은 -f 금지): $p"
+    fi
 done
 
 # ── 4. 🚨 assert — HEAD 대비 달라진 경로가 **지정 경로뿐**인가 ──
