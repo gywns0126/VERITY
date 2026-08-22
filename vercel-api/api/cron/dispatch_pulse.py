@@ -111,7 +111,16 @@ def _resolve_events(now_utc: datetime) -> list[str]:
     # macro_collect — 매 30분 24/7 (글로벌 매크로/환율/금리, freshness_sla schedule="always").
     # 2026-07-01: GH schedule '*/30' silent-skip 으로 macro 신선도 8h 갭 → schedule 폐기·dispatch 단일통로
     #   (daily_realtime 패턴). 미장/FX 는 야간(KST)에도 움직이므로 세션 게이트 없이 항상.
-    if minute % 30 == 0:
+    # 🚨 2026-08-22 — `== 0` 에서 `< 5` 로 넓혔다. **자기 계측 실험이다.**
+    #   Vercel cron 은 0,5,7,10,… 에만 예약돼 있어 **1~4 분에는 예약 자체가 없다**.
+    #   따라서 이 창이 새로 잡는 것은 오직 **:00 예약분이 늦게 실행된 경우**뿐이다.
+    #   즉 이 한 줄이 가설을 가른다:
+    #     실행 밀림이 원인 → 1~4 분에 run 이 생기고 정시 발화율이 오른다
+    #     호출 자체가 결손  → 아무 변화 없다 (되돌린다)
+    #   🚨 보정 슬롯(5/35)과 겹치지 않는다(`< 5` 이므로). 겹쳐도 `_ran_recently` 가 막는다.
+    #   🚨 종전에 내가 "창 확대는 효과 0" 이라 단정했는데 그 근거가 **순환**이었다 —
+    #      발화한 run 의 분 분포로 발화 못 한 호출을 추론했다. 그래서 실험으로 되돌린다.
+    if minute % 30 < 5:
         events.append("macro_collect")
         # crypto_collect — 매 30분 24/7 (크립토 시세·파생, freshness_sla schedule="always", SLA 90분).
         # 2026-07-12: GH schedule '5,35' silent-skip 으로 최대 3~4h 갭 → dispatch 단일통로 이전(macro 패턴).
