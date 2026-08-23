@@ -1,0 +1,141 @@
+{
+ "_meta": {
+  "score_system": {
+   "name": "factor_engine_kr_v1",
+   "axes": [
+    "bp",
+    "roa",
+    "cfoa",
+    "ep",
+    "dy",
+    "asset_turnover"
+   ],
+   "is_operational": false,
+   "note": "B군 횡단면 팩터 IC. 운영 가중·게이트에 미연결 — 본 등록은 연결을 승인하지 않는다",
+   "do_not_read_as": "이 결과를 '우리 시스템이 검증됐다' 로 읽지 말 것. 운영 점수는 ['fact_score', 'safety_pct', 'sentiment_score', 'vci'] 이다"
+  },
+  "min_detectable": {
+   "unit": "IC(Spearman)",
+   "t_target": 3.0,
+   "domain": "ic",
+   "ceiling_source": "DOMAIN_CEILINGS[ic]",
+   "plausible_max": 0.1,
+   "warn_at": 0.05,
+   "per_test_floor": {
+    "bp": 0.0785,
+    "roa": 0.0419,
+    "cfoa": 0.0381
+   },
+   "median_floor": 0.0419,
+   "incapable_tests": [],
+   "warned_tests": [
+    "bp"
+   ],
+   "missing_se_tests": [],
+   "verdict": "판정력 있음 (경고 구간 포함)"
+  },
+  "contract_version": "2026-08-16",
+  "observations": {
+   "purpose": "hypothesis_test",
+   "k_independent": 24,
+   "horizon": "fwd1m",
+   "note": "Frozen OOS 2024-08~2026-07 비중복 월말. 🚨 개봉 1회 소진(설계 계약 §7-3b)",
+   "evidence_class": "confirmatory_eligible",
+   "verdict": "확증 가능 — k=24"
+  },
+  "prereg": "docs/PREREG_FACTOR_OOS_2026_08_23.md",
+  "design_contract": "docs/FACTOR_ENGINE_DESIGN_2026_08_16.md",
+  "executed_at": "2026-08-23T15:37:27.339153+09:00",
+  "is_baseline": "data/analysis/factor_engine_kr_v1.json (2026-08-16, IS 2019-12~2024-07)",
+  "method_reproduction": {
+   "check": "동일 구현으로 IS 구간 복원",
+   "bp": "0.0861/t5.69 = 발표치 정확 일치",
+   "ep": "0.0528/t4.44 = 정확 일치",
+   "dy": "0.0617/t3.42 = 정확 일치",
+   "note": "roa·cfoa·asset_turnover 미세차 = 2026-08-23 펀더 패널 재빌드(71,339→72,505행) 반영분"
+  },
+  "execution_defect_fixed": "🚨 1차 실행에서 v1.1 기업행동 스크린(CA_SCREEN 0.25) 누락 — 무수정 종가의 가짜 수익률이 유입됐다. 적용 후 재실행이 본 결과 (bp 0.0909→0.0890). 누락분은 보고하지 않았다",
+  "carried_limitations": [
+   "🚨 생존편향 **미해소** — 상폐 편입이 실제로 바꾼 관측은 155/63,396 = 0.244%. 결론을 흔들 질량이 아니었으므로 '상폐 편입 후에도 견고' 라고 읽으면 안 된다. 밸류 패널이 월말 생존 종목만 담아 소멸 이전 구간이 이미 빠져 있는 구조적 한계",
+   "유동성/거래대금 미통제 — 패널에 필드 없음 (설계 문서 v2 후속)",
+   "재무값 as-restated — 정정공시 look-ahead 소지",
+   "상폐 haircut 0.70 = 자체 가정, 문헌 근거 없음 (kr_fundamental.py:71 선례 재사용)"
+  ]
+ },
+ "window": {
+  "oos_months": 24,
+  "range": [
+   20240831,
+   20260731
+  ],
+  "observations_stock_month": 63396,
+  "delisted_path_restored": 155,
+  "delisted_tickers": 155
+ },
+ "primary_hypothesis": [
+  "bp",
+  "roa",
+  "cfoa"
+ ],
+ "underpowered_reported_only": [
+  "ep",
+  "dy",
+  "asset_turnover"
+ ],
+ "results": {
+  "bp": {
+   "is_ic": 0.0861,
+   "oos_ic_incl": 0.089,
+   "t_incl": 3.4,
+   "oos_ic_excl": 0.0889,
+   "t_excl": 3.36,
+   "detectable_floor": 0.0687,
+   "verdict": "통과"
+  },
+  "roa": {
+   "is_ic": 0.0593,
+   "oos_ic_incl": 0.098,
+   "t_incl": 7.02,
+   "oos_ic_excl": 0.0969,
+   "t_excl": 6.93,
+   "detectable_floor": 0.0405,
+   "verdict": "통과"
+  },
+  "cfoa": {
+   "is_ic": 0.0439,
+   "oos_ic_incl": 0.0725,
+   "t_incl": 5.71,
+   "oos_ic_excl": 0.0725,
+   "t_excl": 5.65,
+   "detectable_floor": 0.0282,
+   "verdict": "통과"
+  },
+  "ep": {
+   "is_ic": 0.0528,
+   "oos_ic_incl": 0.0726,
+   "t_incl": 2.99,
+   "oos_ic_excl": 0.0717,
+   "t_excl": 2.95,
+   "detectable_floor": 0.054,
+   "verdict": "판정 불가(검정력 부족 — 사전 고정)"
+  },
+  "dy": {
+   "is_ic": 0.0617,
+   "oos_ic_incl": 0.0801,
+   "t_incl": 2.15,
+   "oos_ic_excl": 0.08,
+   "t_excl": 2.14,
+   "detectable_floor": 0.0819,
+   "verdict": "판정 불가(검정력 부족 — 사전 고정)"
+  },
+  "asset_turnover": {
+   "is_ic": 0.0299,
+   "oos_ic_incl": 0.0325,
+   "t_incl": 3.18,
+   "oos_ic_excl": 0.0325,
+   "t_excl": 3.13,
+   "detectable_floor": 0.0357,
+   "verdict": "판정 불가(검정력 부족 — 사전 고정)"
+  }
+ }
+}
