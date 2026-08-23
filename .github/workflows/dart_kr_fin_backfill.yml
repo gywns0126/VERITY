@@ -4,6 +4,11 @@ name: DART KR 연간재무 백필 (재무추이 부활)
 # 빌더 _load_fin_series 가 merge → 리포트 '재무추이' 섹션 대부분 종목 부활 (현 30종목 → universe).
 # DART only — KIS 무관(RULE 1). proven fetcher(dart_fundamentals) 재사용·캐시(dart_kr_cache). resume+quota-cap.
 #
+# 🚨 2026-08-23 — 재개 상태를 (티커, 연도) **셀 단위**로 바꿨다. 종전 티커 단위 `done` 은
+#    07-06 오염행 purge 72칸(37종목)을 재큐하지 못해 48칸이 48일간 얼어 있었다
+#    (삼성전자 9년 포함, 알림·에러 0). 신규 산출물 = data/dart_kr_fin_history_missing.json
+#    (빈 응답 시도 원장). 이 파일 스테이징 누락 = 매 run 이 같은 빈 칸을 재조회 = 쿼터 낭비.
+#
 # 저빈도 자가완주 cron (2026-07-04, 커버리지 스프린트 — fin_series 4%→95%):
 #    KST 05:30 일 1회 drip, scheduled run cap 3000. 쿼터 산수 = 카탈리스트(평일 8K/주말 12K) +
 #    분기 drip 1.5K + 연간 3K + 일상 ops ≈ 평일 14~16K < 20K. 완주 후 run = done-set skip 무비용 no-op.
@@ -68,7 +73,14 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/dart_kr_fin_history.json data/dart_kr_fin_history_done.json data/dart_kr_cache 2>/dev/null || true
+          # 🚨 RULE 4 — 신규 산출물은 **파일마다 나눠서** 스테이징. 한 줄로 묶으면 하나가
+          #   없을 때 통째로 실패해 멀쩡한 산출물까지 스테이징되지 않는다(8/9 KIS 락 사고).
+          for f in data/dart_kr_fin_history.json \
+                   data/dart_kr_fin_history_done.json \
+                   data/dart_kr_fin_history_missing.json \
+                   data/dart_kr_cache; do
+            git add "$f" 2>/dev/null || echo "::notice::$f 없음(이번 run 미산출)"
+          done
           git diff --staged --quiet && { echo "변경 없음"; exit 0; }
           git commit -m "data(alpha-nest): KR 연간재무 백필 누적 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') (재무추이)"
           BRANCH="${{ github.ref_name }}"

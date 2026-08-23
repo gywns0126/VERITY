@@ -354,6 +354,59 @@ def fetch_property_assets(corp_code: str, bsns_year: str) -> Dict[str, Any]:
 
 # ── 5.6. 현금흐름표 ────────────────────────────────────
 
+# 「1. 사업의 개요」 소제목 — 줄 전체가 소제목인 형태만. 괄호 수식어 허용
+#   (실측: 카카오 '1. (제조서비스업)사업의 개요'). 섹션 슬라이스 선택에 쓴다.
+_BIZ_OVERVIEW_HEAD = re.compile(
+    r"(?m)^[ \t]*(?:[1１]\s*[.)]|가\s*[.)])?\s*(?:[\(（][^)）\n]{0,20}[\)）])?"
+    r"\s*사업의?\s*개요\s*(?:[\(（][^)）\n]{0,20}[\)）])?\s*$")
+
+
+def _select_business_section(cleaned: str) -> str:
+    """정제 텍스트에서 'II. 사업의 내용' 섹션을 고른다. 네트워크 무관 순수 함수.
+
+    분리 이유 = 선택 규칙이 두 번 틀렸고(최장 매칭 / pat1 조기 확정) 둘 다
+    **실호출 없이는 검증이 불가능한 자리**에 있었다. 이제 테스트가 고정한다.
+    """
+    # 🚨 2026-08-23 — 캡처 그룹에 **소제목을 포함**시켰다(종전은 소제목을 소비하고 뒤만 캡처).
+    #   소제목이 없으면 하류가 「1. 사업의 개요」를 찾을 수가 없다 — 삼성전기가 그 형태였다
+    #   (본문 5,442자가 정확히 개요인데 머리가 잘려 앵커 0).
+    patterns = [
+        r"(?is)((?:Ⅱ|II|2)[\.\s]+사업의\s*내용.*?)(?:Ⅲ|III|3)[\.\s]+(?:재무|경영진단|보고서에)",
+        r"(?is)(사업의\s*내용.*?)재무에\s*관한\s*사항",
+        r"(?is)(사업의\s*개요.*?)(?:이사의\s*경영진단|재무제표)",
+    ]
+    # 🚨 2026-08-23 — 종전 선택 규칙 `max(matches, key=len)` 은 **틀렸다**.
+    #   가장 긴 매칭 = 목차·상호참조("…「II. 사업의 내용」을 참고")에서 시작해 다음
+    #   "III. 재무" 까지 통째로 삼킨 스팬이다. 실측(삼성전자 2025 사업보고서):
+    #     pat1 매칭 4개 = 5,083 / **39,270** / 22 / 131,262자.
+    #     최장 131,262자는 'I. 회사의 개요'의 종속기업 표에서 시작하고, 60,000자 상한에
+    #     잘려 「1. 사업의 개요」가 **통째로 사라졌다**. 진짜 섹션은 39,270자짜리로
+    #     첫 줄이 정확히 '1. 사업의 개요' 다.
+    #   증상은 **대형주일수록 심하다** — 시총 상위 60 중 23종목이 이 형태였다.
+    #   새 규칙 = ① 소제목을 머리에 가진 매칭 중 실질 길이(>600)를 가진 것을 우선
+    #            ② 그런 매칭이 있는 **첫 패턴**에서 확정 (없으면 다음 패턴으로 넘어간다)
+    #            ③ 어느 패턴에도 없으면 종전대로 최장 매칭 (하위호환)
+    #   ②가 핵심이다 — 종전엔 pat1 이 600자만 넘기면 확정해서, 소제목 없는 잘못된
+    #   스팬으로 끝나고 pat3 의 정답에 도달하지 못했다(현대차·SK 실측).
+    section = ""
+    best_headless = ""
+    for pat in patterns:
+        matches = re.findall(pat, cleaned)
+        if not matches:
+            continue
+        headed = [m for m in matches
+                  if _BIZ_OVERVIEW_HEAD.search(m[:600]) and len(m.strip()) > 600]
+        if headed:
+            section = max(headed, key=len).strip()
+            break
+        cand = max(matches, key=len).strip()
+        if len(cand) > len(best_headless):
+            best_headless = cand
+    if not section:
+        section = best_headless
+    return section
+
+
 def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year: str) -> Dict[str, Any]:
     """단일 rcept_no document.xml fetch + ZIP 해제 + 'II. 사업의 내용' 슬라이스.
 
@@ -437,18 +490,7 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
 
     # "II. 사업의 내용" ~ "III. 재무에 관한 사항" 사이 슬라이스.
     # 한국 사업보고서 표준 목차에 기반.
-    patterns = [
-        r"(?is)(?:Ⅱ|II|2)[\.\s]+사업의\s*내용(.*?)(?:Ⅲ|III|3)[\.\s]+(?:재무|경영진단|보고서에)",
-        r"(?is)사업의\s*내용(.*?)재무에\s*관한\s*사항",
-        r"(?is)사업의\s*개요(.*?)(?:이사의\s*경영진단|재무제표)",
-    ]
-    section = ""
-    for pat in patterns:
-        matches = re.findall(pat, cleaned)
-        if matches:
-            section = max(matches, key=len).strip()
-            if len(section) > 600:
-                break
+    section = _select_business_section(cleaned)
 
     if not section or len(section) < 300:
         return {

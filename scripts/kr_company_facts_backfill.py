@@ -65,7 +65,10 @@ DIVIDENDS_PATH = os.path.join(DATA, "dividends_kr.json")
 #   3개 연도 × 개별/연결 6행으로 준다 — LLM 보다 많고, 비용 0, 검증 가능.
 #   ⚠️ 종전 주석의 "추가 DART 호출 0" 도 틀렸다 — raw 캐시가 없었다(7d4e3ff01 에서 신설).
 LLM_AXES = {"related_party", "litigation", "business"}
-FREE_AXES = {"dividends", "cb_bw", "shareholders", "chain", "kam"}
+# 🚨 2026-08-23 `overview` 신설 — 사업보고서 「1. 사업의 개요」 원문 발췌.
+#   kam 과 같은 원천(`raw_text`)이라 LLM 0 · 과금 0. 요약이 아니라 **원문 발췌**라
+#   모델이 손댈수록 사실이 흐려진다 (KAM 선례 = 구조가 있으면 결정론이 이긴다).
+FREE_AXES = {"dividends", "cb_bw", "shareholders", "chain", "kam", "overview"}
 ALL_AXES = FREE_AXES | LLM_AXES
 
 
@@ -363,6 +366,35 @@ def run_chain(univ, year, delay, dry, limit=None) -> Dict[str, int]:
     return {"todo": len(todo), "ok": ok}
 
 
+def run_overview(univ, year, delay, dry, limit=None) -> Dict[str, int]:
+    """사업의 개요 원문 발췌 — `dart_business_overview.json` upsert. LLM 0 · 과금 0.
+
+    🚨 `--limit` 은 **미보유 종목에만** 적용한다. `run_llm_axis` 처럼 전체에 걸면
+    이미 채운 앞쪽 종목이 한도를 다 먹어 뒤쪽이 영원히 안 채워진다 (2026-08-17 kam 학습의
+    같은 계열 함정). 보유 판정 = 같거나 더 최신 사업연도 행 + 본문 존재.
+    """
+    from api.analyzers.dart_business_overview import analyze_all_overview, load_cache
+
+    sd = _stocks_dict(univ, year)
+    total = len(sd)
+    have = (load_cache().get("rows") or {})
+    rest = [tk for tk in sd
+            if not (str((have.get(tk) or {}).get("bsns_year") or "") >= str(year)
+                    and (have.get(tk) or {}).get("text"))]
+    if limit:
+        rest = _cap(rest, limit)
+    sd = {tk: sd[tk] for tk in rest}
+    print(f"  [overview] 대상 {len(sd)}/{total} (보유 {total - len(rest) if not limit else '…'} 제외)"
+          + (f" · --limit {limit}" if limit else "")
+          + "  결정론 파싱 (LLM 0 · 과금 0)")
+    if dry or not sd:
+        return {"todo": len(sd), "ok": 0}
+    res = analyze_all_overview(sd)
+    ok = sum(1 for tk in sd if tk in res)
+    print(f"  [overview] 결과 {ok}/{len(sd)}")
+    return {"todo": len(sd), "ok": ok}
+
+
 def run_llm_axis(axis, univ, year, delay, dry, limit=None) -> Dict[str, int]:
     """related_party / litigation / business / kam — Gemini. 캐시 스킵 내장.
 
@@ -438,6 +470,8 @@ def main() -> int:
                 summary[ax] = run_shareholders(univ, a.year, a.delay, a.dry_run, a.limit)
             elif ax == "chain":
                 summary[ax] = run_chain(univ, a.year, a.delay, a.dry_run, a.limit)
+            elif ax == "overview":
+                summary[ax] = run_overview(univ, a.year, a.delay, a.dry_run, a.limit)
             else:
                 summary[ax] = run_llm_axis(ax, univ, a.year, a.delay, a.dry_run, a.limit)
         except Exception as e:  # noqa: BLE001 — 한 축 실패가 다른 축을 막지 않는다

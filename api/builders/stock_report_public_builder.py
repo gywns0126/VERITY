@@ -41,6 +41,17 @@ SECTOR_MAP_PATH = os.path.join(_ROOT, "data", "kr_sector_map.json")
 KRXMKTCAP_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
 DART_KR_BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_kr_backfill_result.json")
 DART_KR_FIN_HISTORY_PATH = os.path.join(_ROOT, "data", "dart_kr_fin_history.json")  # 광범위 연간재무 백필(재무추이 부활)
+# 사업보고서 「II. 사업의 내용 › 1. 사업의 개요」 원문 발췌 (2026-08-23 신설)
+BIZ_OVERVIEW_PATH = os.path.join(_ROOT, "data", "dart_business_overview.json")
+# 발행 본문 상한. 로컬 원장은 2,500자까지 보관하고, 공개 payload 만 여기서 줄인다.
+#   🚨 상한을 넘겨 자른 사실은 종목마다 `truncated` 로 신고한다 — 조용히 자르면
+#   원문 대조가 불가능해진다(Form 144 12건 절단 학습과 같은 계열).
+#   🚨 600 인 이유 = **payload 예산**. 이 blob 은 공개 페이지가 통째로 받는다(12.85MB).
+#   한글은 UTF-8 3바이트라 1,200자 × 1,092종목이면 **+3.03MB(+23.6%)** 였다(실측).
+#   600 이면 +1.5MB 선. 전문이 필요하면 별 blob + 지연 로드가 맞고, 그건 Framer 작업이
+#   따라붙는 별건이다. 원문 전체는 `data/dart_business_overview.json` 에 남아 있고
+#   오퍼레이터 조인(ticker_facts)은 그쪽을 읽으므로 판단 품질은 이 상한과 무관하다.
+BIZ_OVERVIEW_PUBLISH_CHARS = 600
 OUTPUT_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
 
 # 동종업계 비교 = 섹터별 중앙값. PER/PBR = KRX 시총 ÷ DART 순익·자기자본 자체계산(src="val"),
@@ -729,6 +740,18 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
                 v["_per_in"] = {"mktcap": mktcap, "net_income": ni}
         except (TypeError, ValueError):
             pass
+        # PSR = 시가총액 ÷ 매출. build_rich 와 **같은 산식·같은 sanity 가드**(0<psr<=100).
+        #   2026-08-23 — 종전엔 운영풀(rich) 경로에만 있어 10/1,790 이었다. 입력(KRX 시총 ·
+        #   DART 매출)은 전 종목에 있었으므로 결손은 소스가 아니라 **부착 경로**였다.
+        try:
+            rv = float(f.get("revenue")) if f.get("revenue") is not None else None
+            if rv and rv > 0:
+                _psr = mktcap / rv
+                if 0 < _psr <= 100:
+                    v["PSR"] = round(_psr, 2)
+                    v["_psr_in"] = {"mktcap": mktcap, "revenue": rv}
+        except (TypeError, ValueError):
+            pass
         try:
             shares = float(km.get("shares") or 0)
         except (TypeError, ValueError):
@@ -776,6 +799,15 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
         if ni and ni > 0:
             v["PER"] = round(mktcap / ni, 2)
             v["_per_in"] = {"mktcap": mktcap, "net_income": ni, "fiscal_year": latest.get("year")}
+        try:
+            rv = float(latest.get("revenue")) if latest.get("revenue") is not None else None
+        except (TypeError, ValueError):
+            rv = None
+        if rv and rv > 0:
+            _psr = mktcap / rv
+            if 0 < _psr <= 100:
+                v["PSR"] = round(_psr, 2)
+                v["_psr_in"] = {"mktcap": mktcap, "revenue": rv, "fiscal_year": latest.get("year")}
         out[tk] = v
     return out
 
@@ -1199,9 +1231,20 @@ def main() -> int:
                     qin = val.get("_pbr_in") or {}
                     if qin:
                         fc["PBR"] = f"시가총액 {_fmt_won_signed(qin.get('mktcap'))} ÷ 자기자본 {_fmt_won_signed(qin.get('equity'))}"
-                if val.get("BPS") is not None and tk in rich_by_ticker:
-                    # rich(운영풀)에만 부착 — 기존 BPS 노출 범위 유지. light 전 종목 확산 금지
-                    # (유리박스 공개 화이트리스트 = 필드 신규 확산 금지).
+                if val.get("PSR") is not None:
+                    s["facts"]["PSR"] = f"{float(val['PSR']):,.2f}배"
+                    fn["PSR"] = "자체계산"
+                    sin = val.get("_psr_in") or {}
+                    if sin:
+                        fc["PSR"] = (f"시가총액 {_fmt_won_signed(sin.get('mktcap'))} "
+                                     f"÷ 매출 {_fmt_won_signed(sin.get('revenue'))}")
+                if val.get("BPS") is not None:
+                    # 🚨 2026-08-23 — 종전 `and tk in rich_by_ticker` 제한을 **풀었다**.
+                    #   근거: BPS 는 이미 공개 중인 필드이고(운영풀 18종목), 값은
+                    #   `_valuation_map` 이 **전 종목에 대해 이미 계산**하고 있었다.
+                    #   즉 결손은 새 정보 공개가 아니라 **부착 범위**였다(18 → 1,435).
+                    #   산식·입력·sanity 가드 전부 무변경. 되돌리려면 이 조건만 복원하면 된다.
+                    #   RULE 7 = 자기 산식·점수 비노출인데 BPS 는 DART 공시값 나눗셈이라 해당 없음.
                     s["facts"]["BPS"] = f"{float(val['BPS']):,.0f}원"
                     fn["BPS"] = "자체계산"
                     bin_ = val.get("_bps_in") or {}
@@ -1332,17 +1375,68 @@ def main() -> int:
             from api.collectors.dividend_ksd import load_dividends_ledger_for_report
             _div_map = load_dividends_ledger_for_report()
             _n_div = 0
+            _n_dps = 0
             for s in stocks:
                 sec = _div_map.get(s["ticker"])
                 if sec:
                     s["dividends"] = sec
                     _n_div += 1
-            print(f"[stock_report_public] 배당 이력 부착 {_n_div}/{len(stocks)} 종목 (KSD)",
-                  file=sys.stderr)
+                    # 주당배당금(TTM) 을 facts 에도 올린다 — 🚨 신규 공개가 아니다.
+                    #   같은 값이 이 payload 의 `dividends.ttm_dps` 로 이미 나가고 있고,
+                    #   여기서는 요약 카드가 읽는 자리에 같은 사실을 복제할 뿐이다.
+                    #   🚨 배당수익률(=DPS÷주가)은 **여기서 계산하지 않는다** — 이 리포트는
+                    #   가격을 싣지 않는다(클라이언트 라이브 조회). 시총÷주식수로 주가를
+                    #   역산해 붙이면 회전 수집 시점의 값이 '현재 수익률' 로 둔갑한다
+                    #   ([[feedback_snapshot_cannot_answer_point_in_time]]).
+                    _dps = sec.get("ttm_dps")
+                    if _dps:
+                        s.setdefault("facts", {})["주당배당금(1년)"] = f"{float(_dps):,.0f}원"
+                        s.setdefault("facts_note", {})["주당배당금(1년)"] = "한국예탁결제원"
+                        _n_dps += 1
+            print(f"[stock_report_public] 배당 이력 부착 {_n_div}/{len(stocks)} 종목 "
+                  f"(KSD · 주당배당금 fact {_n_dps})", file=sys.stderr)
         except Exception as _de:  # noqa: BLE001
             # 🚨 배당 결손이 리포트 전체를 막지 않는다. 다만 조용히 넘기지 않고 신고한다.
             _n_div = 0
             print(f"[stock_report_public] 배당 부착 실패(리포트는 계속): {_de}", file=sys.stderr)
+
+        # 사업의 개요 부착 (2026-08-23) — DART 사업보고서 원문 발췌.
+        #   🚨 요약이 아니라 **원문 발췌**다. LLM 0 (RULE 6 — 신규 narrative 컴포넌트 아님).
+        #   종전 `business` 는 운영풀 태그라인이라 16/1,790(0.9%)뿐이었다.
+        try:
+            from api.analyzers.dart_business_overview import _cut_at_sentence as _cut_sent
+            with open(BIZ_OVERVIEW_PATH, encoding="utf-8") as _bf:
+                _bo = json.load(_bf)
+            _bo_rows = _bo.get("rows") or {}
+            _n_bo = _n_bo_trunc = 0
+            for s in stocks:
+                row = _bo_rows.get(s["ticker"])
+                if not row or not row.get("text"):
+                    continue
+                _txt, _cut = _cut_sent(row["text"], BIZ_OVERVIEW_PUBLISH_CHARS)
+                s["business_overview"] = {
+                    "text": _txt,
+                    "chars": len(_txt),
+                    # 원장에서 이미 잘렸거나(2,500자) 발행 상한에서 또 잘렸으면 True
+                    "truncated": bool(row.get("truncated")) or _cut,
+                    "fiscal_year": row.get("bsns_year"),
+                    "filed_at": row.get("rcept_dt"),
+                    "report": row.get("report_nm"),
+                    "source": "DART 사업보고서 II. 사업의 내용 › 1. 사업의 개요",
+                    "url": (DART + str(row.get("rcept_no"))) if row.get("rcept_no") else None,
+                }
+                _n_bo += 1
+                _n_bo_trunc += 1 if s["business_overview"]["truncated"] else 0
+            print(f"[stock_report_public] 사업의 개요 부착 {_n_bo}/{len(stocks)} 종목 "
+                  f"(원장 {len(_bo_rows)} · 절단 {_n_bo_trunc})", file=sys.stderr)
+        except FileNotFoundError:
+            _n_bo = 0
+            print("[stock_report_public] 사업의 개요 원장 없음 — 부착 0 (리포트는 계속)",
+                  file=sys.stderr)
+        except Exception as _boe:  # noqa: BLE001
+            _n_bo = 0
+            print(f"[stock_report_public] 사업의 개요 부착 실패(리포트는 계속): {_boe}",
+                  file=sys.stderr)
 
         # 정렬: rich 먼저 → 공시 많은 순 → ticker
         stocks.sort(key=lambda s: (s.get("rich", False), len(s.get("disclosures", [])), s["ticker"]), reverse=True)
@@ -1372,6 +1466,10 @@ def main() -> int:
                            "한국예탁결제원(배당)"),
                 "count": len(stocks),
                 "rich_count": len(rich_by_ticker),
+                # 🚨 RULE 12 ② — 산출물이 자기 커버리지를 스스로 신고한다.
+                #   분모 없이 "붙였다" 고만 쓰면 하류가 표본을 전수로 읽는다(RULE 13).
+                "business_overview_count": _n_bo,
+                "dividends_count": _n_div,
                 "note": "공개 사실만 (RULE 7 allowlist) — 점수·등급·추천 비노출. 컨센서스=증권사 집계(자체 의견 아님). 가격은 클라이언트 라이브 조회.",
             },
             "stocks": stocks,

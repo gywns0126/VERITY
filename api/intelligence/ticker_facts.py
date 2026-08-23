@@ -124,6 +124,10 @@ LOCAL_FILES = [
     #   숫자로 접고 종목별 행을 버렸다. 같은 바이트에서 종목 축만 사라지던 것이라 수집이 아니라
     #   폐기가 결손이었다. threshold/FTD 는 신규. 상세 = api/collectors/us_short_pressure.py
     ("data/us_short_pressure.json", "US 공매도 압력(FINRA·Reg SHO·FTD)", True),
+    # 🚨 2026-08-23 신설 — 사업보고서 「1. 사업의 개요」 원문 발췌(LLM 0, 정규식 슬라이스).
+    #   PM 지적 = "원문을 이미 받아놓고 개요를 안 뽑고 있다". 종전 조인에는 회사가
+    #   **무엇을 하는 회사인지** 말해 주는 축이 없었다 — 섹터 라벨(5자)이 전부였다.
+    ("data/dart_business_overview.json", "사업의 개요(DART 사업보고서 원문)", False),
 ]
 
 # 오퍼레이터 private bucket (Supabase). 인증 없으면 skip.
