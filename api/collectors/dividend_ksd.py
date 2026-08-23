@@ -37,6 +37,8 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
@@ -49,15 +51,28 @@ _ENDPOINT = (
 )
 _PAGE_SIZE = 10000
 _MAX_PAGES = 30          # 71,669행 기준 8 페이지. 상한은 폭주 방지용 여유.
-_TIMEOUT = 90
+
+# 🚨 타임아웃은 **바깥 예산 안에** 들어와야 한다 (2026-08-23 실사고).
+#   첫 판본은 탐색·페이징 모두 90s 였다 — 최악 (15탐색 + 8페이징) × 90s = **34.5분** 인데
+#   워크플로 `timeout-minutes` 는 **15분**이었다. 개별 호출은 각자 넉넉한데 **합이 넘는다.**
+#   결과: 8/23 15:15 정기 run 이 탐색 구간에서 13분 40초를 태우다 **cancelled**(N=2 실패).
+#   같은 형태를 같은 날 `vercel-api/api/admin.py` 에서도 고쳤다(내부 합 27s vs maxDuration 15s).
+#   → 탐색은 `numOfRows=1` 짜리 가벼운 호출이라 짧게, 전량 페이징만 넉넉히.
+_TIMEOUT = 60            # 전량 페이징(10,000행/호출)
+_DISCOVER_TIMEOUT = 12   # 적재일 탐색 — 1행짜리 프로브라 길 이유가 없다
 _DISCOVER_LOOKBACK = 14  # 최신 적재일 역순 탐색 창(일)
+# 수집 전체 예산 — 넘으면 다음 스케줄에 맡긴다(job 이 잘려 로그도 안 남는 것보다 낫다).
+_BUDGET_SEC = int(os.environ.get("KSD_BUDGET_SEC", "540") or "540")   # 9분 < timeout-minutes
+# 티커 6자 충돌 기록(정규화 1회분) — _meta 자기신고용
+_LAST_COLLISIONS: Dict[str, Any] = {}
 
 
 # ──────────────────────────────────────────────────────────────
 # 원천 호출
 # ──────────────────────────────────────────────────────────────
 
-def _call(bas_dt: str, page: int, rows: int) -> Tuple[Optional[int], List[dict]]:
+def _call(bas_dt: str, page: int, rows: int,
+          tmo: Optional[float] = None) -> Tuple[Optional[int], List[dict]]:
     """1회 호출 → (totalCount, items). 실패는 (None, []).
 
     🚨 실패를 0 으로 흡수하지 않는다 — totalCount=None(호출 실패) 과 0(데이터 없음)은
@@ -73,7 +88,7 @@ def _call(bas_dt: str, page: int, rows: int) -> Tuple[Optional[int], List[dict]]
                 "pageNo": page,
                 "basDt": bas_dt,
             },
-            timeout=_TIMEOUT,
+            timeout=tmo or _TIMEOUT,
         )
     except requests.RequestException as e:
         print(f"[dividend_ksd] {bas_dt} p{page} 호출 실패: {type(e).__name__}")
@@ -105,9 +120,16 @@ def discover_bas_dt(lookback_days: int = _DISCOVER_LOOKBACK) -> Optional[str]:
     from datetime import timedelta
 
     today = now_kst().date()
+    t0 = time.monotonic()
     for back in range(lookback_days + 1):
+        # 🚨 탐색이 전체 예산의 절반을 넘게 먹으면 멈춘다 — 여기서 다 태우면
+        #   정작 수집을 못 하고 job 이 잘린다(8/23 실사고).
+        if time.monotonic() - t0 > _BUDGET_SEC * 0.5:
+            print(f"[dividend_ksd] 적재일 탐색 예산 초과 ({back}일 훑음) — 이번 run 포기",
+                  file=sys.stderr)
+            return None
         d = (today - timedelta(days=back)).strftime("%Y%m%d")
-        total, _ = _call(d, page=1, rows=1)
+        total, _ = _call(d, page=1, rows=1, tmo=_DISCOVER_TIMEOUT)
         if total:
             return d
     return None
@@ -116,7 +138,12 @@ def discover_bas_dt(lookback_days: int = _DISCOVER_LOOKBACK) -> Optional[str]:
 def fetch_all(bas_dt: str) -> List[dict]:
     """해당 적재일 전량 페이징."""
     out: List[dict] = []
+    t0 = time.monotonic()
     for page in range(1, _MAX_PAGES + 1):
+        if time.monotonic() - t0 > _BUDGET_SEC:
+            raise RuntimeError(
+                f"KSD 페이징 예산 초과 (basDt={bas_dt}, {page-1}페이지 수집, "
+                f"{_BUDGET_SEC}s) — 부분 원장을 남기지 않는다")
         total, items = _call(bas_dt, page=page, rows=_PAGE_SIZE)
         if total is None:
             # 중간 실패 = 부분 원장을 만들지 않는다. 통째로 포기.
@@ -168,12 +195,28 @@ def normalize(rows: List[dict]) -> Dict[str, Dict[str, Any]]:
     회차 행에는 변하는 것만 남긴다. 파생 가능한 값은 저장하지 않는다 —
     `stckGenrCashDvdnRt`(액면 대비 배당률) = dps ÷ par × 100 이라 재계산된다.
     """
+    # 🚨 **티커 충돌을 순서 운에 맡기지 않는다** (2026-08-23 실측 사고).
+    #   `_ticker_of()` 는 ISIN 을 6자로 자르는데, 신형우선주는 서로 다른 종목이 같은 6자로
+    #   겹친다 — `KR714276K044`(8우선주) 와 `KR714276K010`(5우선주) 가 둘 다 `14276K`.
+    #   첫 판본은 `setdefault` 라 **먼저 온 쪽**이 이겼고, 원천 응답 순서가 적재일마다
+    #   달라져 **23종목이 매일 뒤바뀌었다**(→ 내용 무변경인데 파일이 매일 갱신).
+    #   ISIN 오름차순으로 **결정적으로** 고정한다. 충돌 자체는 `_meta` 에 신고한다.
+    rows = sorted(rows, key=lambda r: (str(r.get("isinCd") or ""),
+                                       str(r.get("dvdnBasDt") or "")))
     db: Dict[str, Dict[str, Any]] = {}
+    seen_isin: Dict[str, str] = {}
+    collisions: Dict[str, set] = {}
     for r in rows:
         tk = _ticker_of(r)
         rec_dt = _iso(r.get("dvdnBasDt"))
         if not tk or not rec_dt:
             continue
+        isin = str(r.get("isinCd") or "")
+        if tk in seen_isin and seen_isin[tk] != isin:
+            # 같은 6자 티커에 다른 ISIN — 채택본(먼저 정렬된 것)만 쓰고 나머지는 버린다.
+            collisions.setdefault(tk, {seen_isin[tk]}).add(isin)
+            continue
+        seen_isin[tk] = isin
         ent = db.setdefault(tk, {
             "stock_kind": (r.get("scrsItmsKcdNm") or "").strip() or None,
             "par_value": _num(r.get("stckParPrc")),
@@ -202,6 +245,14 @@ def normalize(rows: List[dict]) -> Dict[str, Dict[str, Any]]:
         ent["rows"].append(row)
     for tk in db:
         db[tk]["rows"].sort(key=lambda x: x["date"])
+    if collisions:
+        # 🚨 조용히 합치지 않는다 — 몇 종목이 겹쳤고 어떤 ISIN 이 버려졌는지 남긴다.
+        _LAST_COLLISIONS.clear()
+        _LAST_COLLISIONS.update({k: sorted(v) for k, v in collisions.items()})
+        print(f"[dividend_ksd] 티커 6자 충돌 {len(collisions)}종목 — ISIN 오름차순 채택",
+              file=sys.stderr)
+    else:
+        _LAST_COLLISIONS.clear()
     return db
 
 
@@ -310,6 +361,9 @@ def build_meta(db: Dict[str, Dict[str, Any]], bas_dt: str, raw_n: int,
         #   이들은 우리 검색 유니버스에 0/569 로 없다(KSD 는 예탁 대상 전체라 KRX
         #   상장분만 담지 않는다). 거르지 않고 두되 분모를 신고한다.
         "ticker_non_numeric": sum(1 for t in db if not t.isdigit()),
+        # 🚨 같은 6자 티커에 ISIN 이 둘 이상 — 신형우선주 계열. 채택 규칙 = ISIN 오름차순.
+        "ticker_isin_collisions": len(_LAST_COLLISIONS),
+        "ticker_isin_collision_sample": dict(list(_LAST_COLLISIONS.items())[:5]),
         "stock_kind_counts": dict(sorted(kinds.items(), key=lambda x: -x[1])[:8]),
         "record_year_counts": dict(sorted(years.items(), reverse=True)[:10]),
         "cross_check_dart": cross,
@@ -371,8 +425,21 @@ def collect(save: bool = True) -> Dict[str, Any]:
             old_body = {k: v for k, v in old.items() if not k.startswith("_")}
             same_body = json.dumps(old_body, ensure_ascii=False, sort_keys=True,
                                    separators=(",", ":")) == body_new
-            if same_body and old_meta.get("bas_dt") == bas_dt:
-                meta["write_skipped"] = "무변경 (본문 동일 · 동일 적재일)"
+            # 🚨 적재일이 바뀌어도 **본문이 같으면 쓰지 않는다** (2026-08-23 실측 정정).
+            #   data.go.kr 은 같은 데이터를 매일 새 `basDt` 로 다시 올린다 —
+            #   `bas_dt` 까지 비교 조건에 넣으면 내용이 같아도 **매일 5.45MB 를 커밋**하게 되어
+            #   무변경 가드를 넣은 이유가 통째로 무력화된다(첫 판본이 그랬다).
+            #   `_meta.bas_dt` 는 "현재 본문이 어느 적재분에서 왔는가" 이므로 옛 날짜가 맞다.
+            #   관측한 최신 적재일은 로그로만 남긴다.
+            if same_body:
+                old_bd = old_meta.get("bas_dt")
+                note = "무변경 (본문 동일)"
+                if old_bd != bas_dt:
+                    note += f" · 적재일 {old_bd}→{bas_dt} 이동했으나 내용 동일"
+                    print(f"[dividend_ksd] {note}", file=sys.stderr)
+                meta["write_skipped"] = note
+                meta["observed_bas_dt"] = bas_dt
+                meta["bas_dt"] = old_bd or bas_dt
                 return meta
         except Exception:
             pass  # 손상된 기존 파일 = 그냥 새로 쓴다

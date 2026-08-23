@@ -259,3 +259,64 @@ def test_builder_wires_dividends():
         encoding="utf-8")
     assert "load_dividends_ledger_for_report" in b, "빌더 배선이 사라졌다"
     assert 's["dividends"]' in b, "리포트에 배당 키를 안 넣는다"
+
+
+# ── 8/23 N=2 실패에서 나온 계약 ──────────────────────────────
+
+def test_timeouts_fit_inside_job_budget():
+    """🚨 N=2 가 여기서 죽었다 — 내부 타임아웃 합이 워크플로 timeout-minutes 를 넘었다.
+
+    첫 판본: 탐색 15회 × 90s + 페이징 8회 × 90s = **34.5분** vs `timeout-minutes: 15`.
+    8/23 15:15 정기 run 이 탐색 구간에서 13분 40초를 태우다 cancelled.
+    admin.py 에서 같은 날 고친 것과 **같은 형태**(내부 합 > 바깥 예산)다.
+    """
+    import re
+    from api.collectors import dividend_ksd as m
+
+    wf = (ROOT / ".github" / "workflows" / "dividend_ksd.yml").read_text(encoding="utf-8")
+    mm = re.search(r"timeout-minutes:\s*(\d+)", wf)
+    assert mm, "워크플로 timeout-minutes 가 없다"
+    job_budget = int(mm.group(1)) * 60
+    assert m._BUDGET_SEC < job_budget, (
+        f"수집 예산 {m._BUDGET_SEC}s 가 job 예산 {job_budget}s 이상 — 또 잘린다"
+    )
+    worst_discover = (m._DISCOVER_LOOKBACK + 1) * m._DISCOVER_TIMEOUT
+    assert worst_discover < m._BUDGET_SEC, (
+        f"탐색 최악 {worst_discover}s 가 수집 예산을 다 먹는다"
+    )
+
+
+def test_budget_guards_present():
+    s = COL.read_text(encoding="utf-8")
+    assert "_BUDGET_SEC" in s, "수집 예산 상수가 사라졌다"
+    assert "탐색 예산 초과" in s, "탐색 예산 감시가 사라졌다"
+    assert "페이징 예산 초과" in s, "페이징 예산 감시가 사라졌다"
+
+
+def test_ticker_collision_is_deterministic_and_reported():
+    """🚨 같은 6자 티커에 ISIN 이 여럿이다(신형우선주). 순서 운에 맡기면 매일 뒤바뀐다.
+
+    첫 판본은 `setdefault` 라 먼저 온 쪽이 이겼고, 원천 응답 순서가 적재일마다 달라
+    내용이 같은데도 파일이 매일 갱신됐다(23종목 뒤바뀜 실측).
+    """
+    s = COL.read_text(encoding="utf-8")
+    assert "rows = sorted(rows" in s, "결정적 정렬이 사라졌다 — 충돌 승자가 순서에 좌우된다"
+    meta = _ledger().get("_meta") or {}
+    assert "ticker_isin_collisions" in meta, "충돌을 조용히 합치고 있다"
+
+
+def test_collisions_do_not_touch_numeric_universe():
+    """충돌은 신형우선주 계열이고 우리 유니버스(6자리 숫자)와 겹치지 않아야 한다."""
+    meta = _ledger().get("_meta") or {}
+    sample = meta.get("ticker_isin_collision_sample") or {}
+    numeric = [t for t in sample if str(t).isdigit()]
+    assert not numeric, f"6자리 숫자 티커가 충돌에 섞였다 — 실데이터 손실: {numeric}"
+
+
+def test_noop_guard_ignores_bas_dt_when_body_same():
+    """🚨 적재일은 매일 바뀐다 — 그걸 비교에 넣으면 내용이 같아도 매일 5.45MB 를 커밋한다."""
+    s = COL.read_text(encoding="utf-8")
+    assert 'old_meta.get("bas_dt") == bas_dt' not in s, (
+        "무변경 판정에 적재일이 다시 들어갔다 — 가드가 무력화된다"
+    )
+    assert "if same_body:" in s, "본문 기준 무변경 판정이 사라졌다"
