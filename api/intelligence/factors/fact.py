@@ -755,6 +755,12 @@ def _compute_fact_score(
         # 🚨 G6 (2026-08-20) — 위 data_coverage 를 **믿어도 되는지** 를 같이 신고한다.
         #   is_degenerate=true 면 값이 1.0 이어도 "커버리지 완전" 이 아니라 **측정 불능**이다.
         "coverage_scope": coverage_scope,
+        # 🚨 2026-08-23 — **런타임 가중을 산출물에 신고한다** (RULE 12 §2). 되돌리지 말 것.
+        #   종전 산출물의 `fact_score.weights` 는 null 이었다. 헌법 정적표
+        #   (graham .28 / canslim .19 / quant_quality .28 / quant_volatility .25)로 재계산하면
+        #   38중 33만 맞는다 — IC 보정·레짐 보정·재정규화가 얹혀 종목마다 실가중이 다르기 때문이다.
+        #   즉 **산출물만으로 점수를 재현할 수 없었다.** 여기 실가중을 실어 재현 가능하게 한다.
+        "weights_effective": {k: round(v, 4) for k, v in w.items() if isinstance(v, (int, float)) and v > 0},
         "missing_components": sorted(_missing),
         # 🚨 2026-08-18 (R6) — 팩터 **내부** 미측정 하위축. 점수 영향 0, 보고 전용.
         #   `missing_components`(바깥, 중립 50 대입)와 **정책이 다르다**: 안쪽은 못 잰 축을

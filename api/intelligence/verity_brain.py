@@ -1834,9 +1834,15 @@ def _build_reasoning(
     )
 
     fc = fact["components"]
-    core_keys = {"multi_factor", "consensus", "prediction", "backtest",
-                 "timing", "commodity_margin", "export_trade"}
-    core_fc = {k: v for k, v in fc.items() if k in core_keys}
+    # 🚨 2026-08-23 — 최강/최약은 **점수를 만든 축** 안에서 고른다. 되돌리지 말 것.
+    #   종전 core_keys 는 8/16 문헌 전환 **이전** 15축 시절의 하드코딩
+    #   (multi_factor·consensus·prediction·backtest·timing·commodity_margin·export_trade)이라
+    #   현행 가중축(graham_value·canslim_growth·quant_quality·quant_volatility)과 **교집합 0** 이다.
+    #   그래서 운영풀 38/38 전부 "팩트 최강 prediction(80)" 처럼 **기여 0 인 축**으로 종목을
+    #   설명하고 있었다. 점수는 안 바뀐다 — 설명이 점수를 만든 축을 가리키게 하는 정명 조치다.
+    _weighted = list((fact.get("coverage_scope") or {}).get("weighted_axes") or [])
+    core_fc = {k: v for k, v in fc.items()
+               if k in _weighted and isinstance(v, (int, float))}
     if core_fc:
         top_fact = max(core_fc, key=core_fc.get)
         bottom_fact = min(core_fc, key=core_fc.get)
