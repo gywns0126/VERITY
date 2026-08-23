@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useCallback, useEffect, useState, type CSSProperties } from "react"
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
  * AlphaNest 로그인/회원가입 — 공개 터미널(승인제 없음, 즉시 가입). 이메일 + 구글.
@@ -55,8 +55,26 @@ function emitAuthChange() {
     if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(AUTH_EVENT))
 }
 
+// 🚨 되돌리지 말 것 (2026-08-23) — 타임아웃 없이 fetch 를 await 하면 응답이 영영 안 올 때
+// submit 의 finally 가 실행되지 않아 busy 가 true 로 고착되고, 두 버튼 다 disabled={busy} 라
+// 사용자는 새로고침 말고는 재시도할 방법이 없다(PM 신고 "처리 중…" 무한).
+const FETCH_TIMEOUT_MS = 15000
+async function timedFetch(url: string, init: RequestInit, ms: number = FETCH_TIMEOUT_MS): Promise<Response> {
+    if (typeof AbortController === "undefined") return fetch(url, init)
+    const ac = new AbortController()
+    const timer = setTimeout(() => ac.abort(), ms)
+    try {
+        return await fetch(url, { ...init, signal: ac.signal })
+    } catch (e: any) {
+        if (e && e.name === "AbortError") throw new Error("서버 응답이 없습니다. 잠시 후 다시 시도해주세요.")
+        throw e
+    } finally {
+        clearTimeout(timer)
+    }
+}
+
 async function supaFetch(url: string, anonKey: string, opts: RequestInit = {}): Promise<any> {
-    const res = await fetch(url, {
+    const res = await timedFetch(url, {
         ...opts,
         headers: {
             "Content-Type": "application/json",
@@ -80,7 +98,8 @@ async function ensureProfile(supabaseUrl: string, anonKey: string, accessToken: 
             status: "pending",
         }
         if (consent) payload.consent_given_at = new Date().toISOString()
-        await fetch(`${supabaseUrl}/rest/v1/profiles`, {
+        // 🚨 토큰 발급 성공 **후** await 되는 지점이다 — 여기서 멈추면 saveSession 전에 고착된다. 되돌리지 말 것.
+        await timedFetch(`${supabaseUrl}/rest/v1/profiles`, {
             method: "POST",
             headers: {
                 apikey: anonKey,
@@ -268,6 +287,8 @@ export default function AlphaNestAuth(props: Props) {
     const [displayName, setDisplayName] = useState("")
     const [agreed, setAgreed] = useState(false)
     const [busy, setBusy] = useState(false)
+    // 구글 OAuth 로 이탈을 "시도" 했는지 — busy 고착 해제 판단용(이메일 제출과 구분).
+    const navPendingRef = useRef(false)
     const [err, setErr] = useState("")
     const [ok, setOk] = useState("")
 
@@ -286,7 +307,7 @@ export default function AlphaNestAuth(props: Props) {
                 const expRaw = params.get("expires_at") || params.get("expires_in") || ""
                 if (!at) return false
                 const expires_at = Number(expRaw) > 1e9 ? Number(expRaw) : Date.now() / 1000 + Number(expRaw || 3600)
-                const ures = await fetch(`${url}/auth/v1/user`, { headers: { apikey: anonKey, Authorization: `Bearer ${at}` } })
+                const ures = await timedFetch(`${url}/auth/v1/user`, { headers: { apikey: anonKey, Authorization: `Bearer ${at}` } })
                 const u = await ures.json().catch(() => null)
                 if (!ures.ok || !u || !u.id) { setErr("로그인 처리 실패 — 다시 시도해주세요"); return false }
                 const s: SupaSession = { access_token: at, refresh_token: rt, expires_at, user: { id: u.id, email: u.email, user_metadata: u.user_metadata } }
@@ -331,6 +352,24 @@ export default function AlphaNestAuth(props: Props) {
         return () => { alive = false; window.removeEventListener(AUTH_EVENT, onAuth); window.removeEventListener("storage", onAuth); clearInterval(timer) }
     }, [url, anonKey, onCanvas])
 
+    // 🚨 되돌리지 말 것 (2026-08-23) — busy 고착 해제 2경로.
+    // ① bfcache: 구글로 이탈했다가 뒤로가기로 돌아오면 브라우저가 React 상태를 그대로 복원해
+    //    busy=true 가 살아 돌아온다. 이때 두 버튼 다 disabled 라 사용자는 아무것도 못 한다.
+    // ② 탭 복귀: 이탈이 아예 일어나지 않았는데(임베드 top-navigation 차단 등) busy 만 켜진 경우.
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        // 🚨 focus 를 무조건 해제하면 이메일 제출이 진행 중일 때도 busy 가 풀려 이중 제출이 난다.
+        //    구글 이탈을 시도한 경우(navPendingRef)로만 좁힌다.
+        const unstick = () => { if (navPendingRef.current) { navPendingRef.current = false; setBusy(false) } }
+        const onPageShow = (e: any) => { if (e && e.persisted) { navPendingRef.current = false; setBusy(false) } }
+        window.addEventListener("pageshow", onPageShow)
+        window.addEventListener("focus", unstick)
+        return () => {
+            window.removeEventListener("pageshow", onPageShow)
+            window.removeEventListener("focus", unstick)
+        }
+    }, [onCanvas])
+
     const submit = useCallback(async () => {
         if (busy) return
         setErr(""); setOk("")
@@ -372,7 +411,25 @@ export default function AlphaNestAuth(props: Props) {
         setBusy(true)
         // 🚨 복귀 보존 — origin+pathname+search(?next 포함). 구글 복귀 후 resolveNext 가 원래 페이지로.
         const back = (redirectUrl || "").trim() || currentBack()
-        if (typeof window !== "undefined") window.location.href = getGoogleOAuthUrl(url, back, anonKey)
+        if (typeof window === "undefined") { setBusy(false); return }
+        // 🚨 되돌리지 말 것 (2026-08-23) — 이동이 실패해도(임베드 차단·URL 무효·anonKey 공백)
+        // 이 함수엔 finally 가 없어 busy 가 영구 true 로 남는다. 이동이 성공하면 페이지가 사라지므로
+        // 이 타이머는 실행되지 않는다 = 정상 경로에 영향 0.
+        navPendingRef.current = true
+        try {
+            window.location.href = getGoogleOAuthUrl(url, back, anonKey)
+        } catch {
+            navPendingRef.current = false
+            setBusy(false)
+            setErr("구글 로그인 페이지로 이동하지 못했습니다. 다시 시도해주세요.")
+            return
+        }
+        setTimeout(() => {
+            if (!navPendingRef.current) return
+            navPendingRef.current = false
+            setBusy(false)
+            setErr("구글 로그인 페이지로 이동하지 못했습니다. 다시 시도해주세요.")
+        }, 10000)
     }
 
     const logout = async () => {

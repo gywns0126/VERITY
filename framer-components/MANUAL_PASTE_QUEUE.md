@@ -8,6 +8,44 @@ MCP 로 라이브 반영이 위험한(>60KB, write-loss) 공개 컴포넌트. **
 
 ---
 
+## 🔴 대기 (2026-08-23) — 로그인 카드가 "처리 중…" 에서 영구히 멈춘다
+
+PM 신고 스크린샷: `/login` 카드가 **처리 중…** 인 채 이메일·비밀번호 칸은 **비어 있다**.
+
+🚨 **재현하지 못했다.** Chrome 확장 미연결이라 라이브 페이지를 못 열었고, DB 조회는 분류기가
+막았다. 아래는 **코드에서 확정되는 결함**이고 신고 상태와 정합하나, **원인 확정은 아니다.**
+
+**확정 결함 = `busy` 를 되돌릴 경로가 없다.** `googleLogin` 은 `setBusy(true)` 후
+`window.location.href` 만 세우고 **`finally` 가 없다.** 이동이 일어나지 않으면 busy 가 영구
+true 이고, 두 버튼 다 `disabled={busy}` 라 **새로고침 말고는 재시도할 방법이 없다.**
+🚨 **입력칸이 비어 있는 것이 이 경로를 가리킨다** — 이메일 제출은 빈 입력을 `setBusy` 전에
+반려하므로 "빈 칸 + 처리 중" 조합이 나올 수 없다.
+
+가장 그럴듯한 촉발 = **bfcache**. 구글로 이탈했다가 **뒤로가기**로 돌아오면 브라우저가 React
+상태를 통째로 복원해 `busy=true` 가 살아 돌아온다. 되돌아온 이유는 별도 축이다 — Supabase
+Auth → URL Configuration 의 **Redirect URLs 에 AlphaNest 도메인이 없으면** 구글 복귀가
+Site URL(VERITY)로 튄다(코드 상단 주석의 수동 선행 항목). **PM 확인 필요.**
+
+**조치 5** ① `timedFetch` 신설 15s — 타임아웃 없는 `await fetch` 는 `submit` 의 `finally`
+자체에 도달하지 못한다 ② `supaFetch` 경유 ③ `ensureProfile` 경유 — 🚨 **토큰 발급 성공
+'후' 에 await 되는 지점**이라 여기서 멈추면 `saveSession` 전에 고착된다 ④ `consumeHash` 의
+`/auth/v1/user` 경유 ⑤ `pageshow(persisted)` + `focus` 에서 busy 해제 · 이동 미발생 시
+10초 후 해제 + 사유 표시. 🚨 `focus` 해제는 **구글 이탈 시도(`navPendingRef`)에만** 건다 —
+무조건 풀면 이메일 제출 중에 busy 가 풀려 **이중 제출**이 난다.
+
+검증 = esbuild 종료코드 0 · RULE 9 0건. 🚨 **런타임 미검증**(재현 못 함) — 정적 통과는
+안전이 아니다([[feedback_green_check_is_not_safety]]).
+
+🚨 **드리프트 미확인** — 라이브 read 는 했으나 결과가 파일로 안 떨어져 정량 3단 대조를 못 했다.
+라이브는 prettier 포맷이 미러와 다르다. **26KB 라 60KB 위험선 아래**이므로 MCP 수술 삽입이
+가능하나, 공개 사이트 변경이라 **PM 승인 후** 반영한다.
+
+| repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
+|---|---|---|---|
+| `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`) | busy 고착 해제 5건 | 🔴 **PM 승인 대기** |
+
+---
+
 ## 🟠 대기 (2026-08-23) — 시장 브리핑 미로그인 CTA 문구 (1줄)
 
 PM 지시: 브리핑 카드 "내 자산" CTA 의 **"바로 봐요" → "바로 볼 수 있어요"**.
