@@ -7,12 +7,12 @@
   "fact_score": {
     "description": "객관적 수치 기반 종합 점수 (0~100)",
     "weights": {
-      "graham_value": 0.25,
-      "canslim_growth": 0.25,
-      "quant_quality": 0.25,
+      "graham_value": 0.28,
+      "canslim_growth": 0.19,
+      "quant_quality": 0.28,
       "quant_volatility": 0.25
     },
-    "notes": "베이스라인 v1.0 (2026-08-16) — 문헌 4군 동일가중. 가치=Graham · 성장=O'Neil CANSLIM · 퀄리티=Piotroski/Novy-Marx/Altman · 저변동=Ang et al. 채택·제외 근거는 _basis_2026_08_16 참조. 동결 상태이며 개정은 next_review 주기로만.",
+    "notes": "베이스라인 v1.0 (2026-08-16) — 문헌 4군 동일가중. 가치=Graham · 성장=O'Neil CANSLIM · 퀄리티=Piotroski/Novy-Marx/Altman · 저변동=Ang et al. 채택·제외 근거는 _basis_2026_08_16 참조. 동결 상태이며 개정은 next_review 주기로만. · 🚨 v1.1 틸트(2026-08-23, PREREG_FACTOR_CONNECT_2026_08_23, PM 승인·RULE 7 쿼터 소모): 0.25×4 → 0.28/0.19/0.28/0.25. 근거 = Frozen OOS 24개월 전향 확증(bp t3.40·roa t7.02·cfoa t5.71), 1/N 의 원 전제('군별 상대 성과 추정 불가')가 소멸. canslim_growth 만 자기 검정 증거 0 이라 단독 재원. quant_volatility 는 별도 검정(#42) 불가침. 되돌림 = R1~R5 상속 + R-f1(2027-08 신규 12개월 부호 판정, 슬롯별 0.25 복귀)",
     "_v0_weights_2026_08_16": {
       "equity_brief_verdict": 0.03,
       "us_fscore": 0.03,
@@ -150,7 +150,8 @@
         "external_verification": "퍼플렉시티 1차 출처 조회(2026-08-17) — Asness-Frazzini-Pedersen 2019 QMJ(RAS 24(1) 34-112, DOI 10.1007/s11142-018-9470-2)는 순위→z-score→단순평균이 표준이라 명시. 구간화는 표준이 아니며 경계 선택 자체가 은닉 자유도다. 우리 다단계 임계 배점은 F-score 의 0/1 이진성과 달라 배점 크기가 추정 파라미터 = Altman Z 회귀계수와 같은 범주.",
         "score_change": "없음 — 라벨만 정정. 산식·임계·가중 전부 불변 (RULE 7 쿼터 미소모)",
         "next": "z-score 동일가중 전환 = PREREG_ZSCORE_EQUAL_WEIGHT_2026_08_17.md (PM 승인 대기, 쿼터 소모)"
-      }
+      },
+      "weighting_superseded_2026_08_23": "🚨 좌측 1/N 근거의 전제가 바뀌었다 — '추정 불가' 는 2026-08-23 Frozen OOS 개봉(사전등록·임계 사전 고정·개봉 1회)으로 밸류·수익성에 한해 해소. 성장(canslim)은 여전히 무증거. DGU 2009 경고는 존중해 크기는 ±0.03 소폭 고정"
     },
     "_runtime_note_2026_08_16": {
       "status": "🚨 베이스라인 v1.0 (2026-08-16) 이후 — 이 weights 가 곧 실효 가중이다. 문서와 런타임이 처음으로 일치한다.",

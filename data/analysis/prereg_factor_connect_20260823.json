@@ -1,0 +1,89 @@
+{
+ "_meta": {
+  "score_system": {
+   "name": "fact_score",
+   "axes": [
+    "graham_value",
+    "canslim_growth",
+    "quant_quality",
+    "quant_volatility"
+   ],
+   "is_operational": true,
+   "note": "운영 점수 — v1.1 틸트. PM 승인 2026-08-23 · RULE 7 쿼터 소모 · 동결 해제"
+  },
+  "min_detectable": {
+   "unit": "IC(Spearman) — R-f1 12개월 재측정 기준",
+   "t_target": 3.0,
+   "domain": "ic",
+   "ceiling_source": "DOMAIN_CEILINGS[ic]",
+   "plausible_max": 0.1,
+   "warn_at": 0.05,
+   "per_test_floor": {
+    "bp_slot": 0.0972,
+    "roa_slot": 0.0573,
+    "cfoa_slot": 0.0399
+   },
+   "median_floor": 0.0573,
+   "incapable_tests": [],
+   "warned_tests": [
+    "bp_slot",
+    "roa_slot"
+   ],
+   "missing_se_tests": [],
+   "verdict": "판정력 있음 (경고 구간 포함)"
+  },
+  "contract_version": "2026-08-16",
+  "observations": {
+   "purpose": "execution_check",
+   "k_independent": null,
+   "horizon": "",
+   "note": "가설 검정은 PREREG_FACTOR_OOS(개봉 소진)에서 종료. 본 건은 채택 집행",
+   "evidence_class": "not_a_test",
+   "do_not_read_as": "집행 확인이다. 가설 검정 결과로 인용하지 말 것"
+  },
+  "prereg": "docs/PREREG_FACTOR_CONNECT_2026_08_23.md",
+  "executed_at": "2026-08-23T18:30:31.685705+09:00",
+  "pm_approval": "2026-08-23 '동결 해제하고 쿼터 승인' + '숫자는 네가 추천하는대로'(등록값 위임 채택)",
+  "quota": "RULE 7 산식 조정 1회 소모 — 재조정 불가 전제 설계",
+  "carried_limitations": [
+   "유동성/거래대금 미통제(v2)",
+   "as-restated look-ahead",
+   "패널 무이력 상폐 64종목 미측정",
+   "24개월=단일 거시 시대(반기 분해로 완화)"
+  ]
+ },
+ "change": {
+  "target": "data/verity_constitution.json fact_score.weights",
+  "before": {
+   "graham_value": 0.25,
+   "canslim_growth": 0.25,
+   "quant_quality": 0.25,
+   "quant_volatility": 0.25
+  },
+  "after": {
+   "graham_value": 0.28,
+   "canslim_growth": 0.19,
+   "quant_quality": 0.28,
+   "quant_volatility": 0.25
+  },
+  "design": "2슬롯(roa/cfoa IC corr +0.88) · 무증거 축 canslim 단독 재원 · volatility 불가침 · 크기 ±0.03=판단(기준 3개 사전 고정)",
+  "guard": "verify_constitution_weights 통과(합 1.0·축 집합 불변 — 개별 값 비검사 확인)"
+ },
+ "revert": {
+  "inherited": "R1~R5 (§7-C 전부 시행 확인)",
+  "R_f1": "2027-08 신규 축적 12개월(2026-08~2027-07, OOS 재사용 아님) fwd1m IC 슬롯별 부호 판정 — 음수면 그 슬롯만 0.25 복귀. 부호 판정 = 방향 오류 안전핀(검출력 낮음 자인)",
+  "not_a_trigger": "bp 가뭄(무신호 반기)은 되돌림 사유 아님 — 사전에 알려진 성질(양월 18/23)"
+ },
+ "rescore_diff": {
+  "n": 38,
+  "skipped": 0,
+  "delta_fact": {
+   "mean": 0.29,
+   "median": 0.48,
+   "min": -1.59,
+   "max": 1.68
+  },
+  "grade_boundary_cross_base_threshold": [],
+  "caveat": "경계 판정은 기본 임계만 — 강등·red_flag·보너스 재평가는 미시뮬. 실측은 N=2 cron 재채점으로"
+ }
+}
