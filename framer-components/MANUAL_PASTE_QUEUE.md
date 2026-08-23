@@ -23,6 +23,13 @@ PM 신고 스크린샷: `/login` 카드가 **처리 중…** 인 채 이메일·
 bfcache 복원이면 `pageshow(persisted)` 가 먼저 해제한다 — 둘 다 메시지가 안 뜬다.)
 남은 후보 = **accounts.google.com 으로의 이동을 확장/네트워크가 취소**하는 축.
 
+✅ **라이브 반영 검증 방식 = 발행 번들 실측(추론 아님).** MCP 쓰기는 하지 않았다 —
+`updateCodeFile` 미호출, 라이브에는 읽기만. 반영 주체는 **PM 복붙**이다. 확인은 발행 사이트가
+실제로 받는 번들
+`framerusercontent.com/sites/2QiUuP9OY5me9trZ46mVcJ/Zpt_YHB0KN…`(24,158 B)을 받아
+마커 3종(`이동하지 못했습니다` · `서버 응답이 없습니다` · `pageshow`) **전부 존재**로 했다.
+🚨 종전 기재 "신 문구 발현으로 확인" 은 **추론**이었다 — 같은 결론이지만 근거가 달랐다.
+
 ✅ **브라우저 실측(8/23, PM Chrome 연동 후) = 전 구간 정상 통과.** `/login` 에서 구글 버튼
 1회 클릭 → Supabase `/authorize` → 구글(계정 선택 화면 없이 즉시 통과) → `/auth/v1/callback`
 → `https://www.alphanest.kr/login#access_token=…` → `consumeHash` → `afterLoginPath=/me`
@@ -77,7 +84,7 @@ Site URL(VERITY)로 튄다(코드 상단 주석의 수동 선행 항목). **PM �
 
 | repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
 |---|---|---|---|
-| `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`) | busy 고착 해제 5건 | ✅ **복붙 완료**(PM 8/23 — 신 문구 발현으로 확인) · 증상 미재현 |
+| `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`) | busy 고착 해제 5건 | ✅ **복붙 완료·발행 번들 실측**(PM 8/23) · 증상 미재현 |
 
 ---
 
