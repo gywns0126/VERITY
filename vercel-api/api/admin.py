@@ -51,6 +51,74 @@ SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 _PORTFOLIO_CACHE: Dict[str, Any] = {"data": None, "fetched_at": 0}
 _PORTFOLIO_TTL = 60
 
+# ──────────────────────────────────────────────────────────────────────
+# 요청 예산 (2026-08-23 신설)
+#
+# 🚨 왜 — 이 파일의 `vercel.json` maxDuration 은 **15초**인데, 인증된 요청 하나가 타는
+#   외부 호출의 고정 타임아웃 합은 최악 **27초**였다(인증 5 + 관리자확인 6 + 감사로그 6 +
+#   데이터조회 10). 개별 호출은 각자 예산 안이지만 **합이 함수 예산을 넘는다.**
+#   그러면 상류가 조금만 느려질 때 우리 코드가 에러를 내기 전에 플랫폼이 먼저 끊어
+#   **원인이 안 적힌 504** 가 나간다. 화면은 "왜 안 되는지 모름" 상태가 된다.
+#   (실측 2026-08-23: 평시 쿼리 합 1.96s 라 아직 안 터진다 — 지금 고치는 건 잠재 결함이다.)
+#
+# 해법 = 요청 시작 시각을 기준으로 **남은 예산 안으로 매 호출 타임아웃을 깎는다.**
+#   예산이 바닥나면 504 를 기다리지 않고 **어느 단계에서 막혔는지 담아 503** 으로 끝낸다.
+_REQ_BUDGET_SEC = float(os.environ.get("ADMIN_REQ_BUDGET_SEC", "12") or "12")  # maxDuration 15 - 여유 3
+_MIN_TMO = 0.6          # 이보다 적게 남았으면 시도 자체가 무의미
+_budget: Dict[str, Any] = {"t0": 0.0, "stage": "start"}
+
+
+class _BudgetExceeded(Exception):
+    """요청 예산 소진 — 플랫폼 504 대신 우리가 원인을 적어 끝낸다."""
+
+    def __init__(self, stage: str, spent: float):
+        super().__init__(f"budget exceeded at {stage} ({spent:.1f}s)")
+        self.stage = stage
+        self.spent = spent
+
+
+def _budget_start() -> None:
+    _budget["t0"] = time.monotonic()
+    _budget["stage"] = "start"
+
+
+def _budget_timeout_response(h: Any, e: "_BudgetExceeded", endpoint: str) -> None:
+    """예산 소진 → 503. 🚨 504 와 달리 **어디서 막혔는지** 화면이 읽을 수 있다.
+
+    504 는 플랫폼이 함수를 끊은 것이라 본문이 없다 — 관리자 화면에 "왜 안 되는지 모름" 만
+    남는다(2026-08-23 PM 신고가 정확히 그 상태였다). 여기서는 단계·경과·예산을 실어 보낸다.
+    """
+    _logger.error("admin budget exceeded: endpoint=%s stage=%s spent=%.1fs",
+                  endpoint, e.stage, e.spent)
+    write_response(h, 503, {
+        "error": "upstream_slow",
+        "endpoint": endpoint,
+        "stage": e.stage,
+        "spent_sec": round(e.spent, 1),
+        "budget_sec": _REQ_BUDGET_SEC,
+        "detail": "상류 응답이 느려 요청 예산 안에 끝내지 못했어요. 잠시 후 다시 시도해 주세요.",
+    })
+
+
+def _stage(name: str) -> None:
+    """현재 단계 표시 — 예산 소진 시 응답에 실린다."""
+    _budget["stage"] = name
+
+
+def _t(want: float) -> float:
+    """남은 예산 안으로 요청 타임아웃을 깎는다.
+
+    🚨 `timeout=_t(10)` 을 그대로 쓰면 앞 단계가 8초를 먹었을 때 합이 18초가 되어 함수가 죽는다.
+    남은 시간이 `_MIN_TMO` 미만이면 호출하지 않고 예산 소진으로 끝낸다.
+    """
+    if not _budget["t0"]:      # 진입점 밖(모듈 로드·테스트) — 예산 미적용
+        return want
+    spent = time.monotonic() - _budget["t0"]
+    left = _REQ_BUDGET_SEC - spent
+    if left < _MIN_TMO:
+        raise _BudgetExceeded(_budget["stage"], spent)
+    return max(_MIN_TMO, min(float(want), left))
+
 # 2026-07-23 VERITY↔AlphaNest 분리 Stage 1: 오퍼레이터 full portfolio = private Supabase Storage.
 # 공개 blob(sanitize 예정)과 별도. fetch_portfolio 가 이 private 소스 우선, 미populate/실패 시 공개 blob fallback.
 OPERATOR_BUCKET = os.environ.get("OPERATOR_BUCKET", "verity-reports")
@@ -67,7 +135,7 @@ def _download_operator_file(path: str) -> Optional[Any]:
             f"{SUPABASE_URL}/storage/v1/object/{OPERATOR_BUCKET}/{path}",
             headers={"apikey": SUPABASE_SERVICE_ROLE_KEY,
                      "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}"},
-            timeout=10,
+            timeout=_t(10),
         )
         if r.status_code == 200:
             return r.json()
@@ -92,7 +160,7 @@ def fetch_portfolio() -> Optional[dict]:
     data = _download_operator_portfolio()
     if data is None:
         try:
-            r = requests.get(PORTFOLIO_URL, timeout=10)
+            r = requests.get(PORTFOLIO_URL, timeout=_t(10))
             r.raise_for_status()
             data = r.json()
         except (requests.RequestException, ValueError) as e:
@@ -121,7 +189,7 @@ def verify_admin_jwt(jwt: str) -> bool:
         r = requests.get(
             f"{SUPABASE_URL}/auth/v1/user",
             headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"},
-            timeout=5,
+            timeout=_t(5),
         )
         if r.status_code != 200:
             return False
@@ -132,7 +200,7 @@ def verify_admin_jwt(jwt: str) -> bool:
             f"{SUPABASE_URL}/rest/v1/profiles",
             params={"id": f"eq.{user_id}", "select": "is_admin"},
             headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"},
-            timeout=5,
+            timeout=_t(5),
         )
         if p.status_code != 200:
             return False
@@ -709,7 +777,7 @@ def _caller_identity(headers_dict: Dict[str, str]) -> Dict[str, Optional[str]]:
     jwt = auth.split(" ", 1)[1].strip()
     try:
         r = requests.get(f"{SUPABASE_URL}/auth/v1/user",
-                         headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"}, timeout=5)
+                         headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"}, timeout=_t(5))
         if r.status_code == 200:
             u = r.json()
             return {"id": u.get("id"), "email": u.get("email")}
@@ -724,7 +792,7 @@ def _is_super_admin(user_id: Optional[str]) -> bool:
         return False
     try:
         r = requests.get(f"{SUPABASE_URL}/rest/v1/profiles", headers=_svc_headers(),
-                         params={"id": f"eq.{user_id}", "select": "is_super_admin"}, timeout=6)
+                         params={"id": f"eq.{user_id}", "select": "is_super_admin"}, timeout=_t(6))
         if r.status_code == 200:
             rows = r.json()
             return bool(rows and rows[0].get("is_super_admin") is True)
@@ -742,7 +810,7 @@ def _audit(actor: dict, action: str, target_type: str, target_id: Optional[str],
                       json={"actor_id": actor.get("id"), "actor_email": actor.get("email"),
                             "action": action, "target_type": target_type,
                             "target_id": str(target_id) if target_id else None,
-                            "detail": detail or {}}, timeout=6)
+                            "detail": detail or {}}, timeout=_t(6))
     except requests.RequestException as e:
         _logger.warning("audit write failed: %s", e)
 
@@ -762,7 +830,7 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
         if q:
             qp["or"] = f"(email.ilike.*{q}*,nickname.ilike.*{q}*,display_name.ilike.*{q}*)"
         r = requests.get(f"{SUPABASE_URL}/rest/v1/profiles",
-                         headers=_svc_headers({"Prefer": "count=exact"}), params=qp, timeout=10)
+                         headers=_svc_headers({"Prefer": "count=exact"}), params=qp, timeout=_t(10))
         # PostgREST count=exact + 부분범위(limit<total) = 206 Partial Content(정상). 206 도 성공으로 수용.
         if r.status_code not in (200, 206):
             return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
@@ -804,7 +872,7 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
             return {"_status": 400, "_body": {"error": "unknown_action", "valid": ["ban", "unban", "update"]}}
         r = requests.patch(f"{SUPABASE_URL}/rest/v1/profiles",
                            headers=_svc_headers({"Prefer": "return=representation"}),
-                           params={"id": f"eq.{uid}"}, json=patch, timeout=10)
+                           params={"id": f"eq.{uid}"}, json=patch, timeout=_t(10))
         if r.status_code not in (200, 204):
             return {"_status": 502, "_body": {"error": "update_failed", "detail": r.text[:200]}}
         _audit(actor, audit_action, "user", uid, patch)
@@ -816,7 +884,7 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
         uid = str(body.get("user_id", "")).strip()
         if not uid or not body.get("confirm"):
             return {"_status": 400, "_body": {"error": "user_id_and_confirm_required"}}
-        r = requests.delete(f"{SUPABASE_URL}/auth/v1/admin/users/{uid}", headers=_svc_headers(), timeout=10)
+        r = requests.delete(f"{SUPABASE_URL}/auth/v1/admin/users/{uid}", headers=_svc_headers(), timeout=_t(10))
         if r.status_code not in (200, 204):
             return {"_status": 502, "_body": {"error": "delete_failed", "detail": r.text[:200]}}
         _audit(actor, "delete_user", "user", uid, {"email": body.get("email")})
@@ -843,7 +911,7 @@ def handle_growth_stats(handler, method: str, body: dict) -> dict:
         if extra:
             params.update(extra)
         try:
-            r = requests.get(f"{SUPABASE_URL}/rest/v1/{table}", headers=_svc_headers({"Prefer": "count=exact"}), params=params, timeout=10)
+            r = requests.get(f"{SUPABASE_URL}/rest/v1/{table}", headers=_svc_headers({"Prefer": "count=exact"}), params=params, timeout=_t(10))
             cr = r.headers.get("Content-Range", "")
             if "/" in cr:
                 return int(cr.split("/")[-1])
@@ -869,7 +937,7 @@ def handle_growth_stats(handler, method: str, body: dict) -> dict:
     daily: Dict[str, int] = {}
     try:
         r = requests.get(f"{SUPABASE_URL}/rest/v1/profiles", headers=_svc_headers(),
-                         params={"select": "created_at", "created_at": f"gte.{d30}", "limit": "5000"}, timeout=10)
+                         params={"select": "created_at", "created_at": f"gte.{d30}", "limit": "5000"}, timeout=_t(10))
         if r.status_code == 200:
             for row in r.json():
                 ca = str(row.get("created_at", ""))[:10]
@@ -895,7 +963,7 @@ def handle_audit_log(handler, method: str, body: dict) -> dict:
     limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
     sel = "id,actor_email,action,target_type,target_id,detail,created_at"
     r = requests.get(f"{SUPABASE_URL}/rest/v1/admin_audit_log", headers=_svc_headers(),
-                     params={"select": sel, "order": "created_at.desc", "limit": str(limit)}, timeout=10)
+                     params={"select": sel, "order": "created_at.desc", "limit": str(limit)}, timeout=_t(10))
     if r.status_code != 200:
         return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
     return {"_status": 200, "_body": {"items": r.json()}}
@@ -938,7 +1006,7 @@ def handle_notices(handler, method: str, body: dict) -> dict:
         limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
         r = requests.get(f"{SUPABASE_URL}/rest/v1/notices", headers=_svc_headers(),
                          params={"select": "id,kind,title,body,link,pinned,starts_at,ends_at,is_active,created_at,updated_at",
-                                 "order": "pinned.desc,created_at.desc", "limit": str(limit)}, timeout=10)
+                                 "order": "pinned.desc,created_at.desc", "limit": str(limit)}, timeout=_t(10))
         if r.status_code == 404 or "PGRST205" in (r.text or ""):
             # 🚨 027 미적용 = 흔한 상태. 502 로 뭉개면 화면에 "HTTP 502" 만 떠 원인을 못 봄(2026-07-27 실사고).
             return {"_status": 200, "_body": {"items": [], "migration_required": "027_notices"}}
@@ -954,7 +1022,7 @@ def handle_notices(handler, method: str, body: dict) -> dict:
                 return {"_status": 400, "_body": {"error": "no_fields"}}
             r = requests.patch(f"{SUPABASE_URL}/rest/v1/notices",
                                headers=_svc_headers({"Prefer": "return=representation"}),
-                               params={"id": f"eq.{nid}"}, json=payload, timeout=10)
+                               params={"id": f"eq.{nid}"}, json=payload, timeout=_t(10))
             if r.status_code not in (200, 204):
                 return {"_status": 502, "_body": {"error": "update_failed", "detail": r.text[:200]}}
             _audit(actor, "update_notice", "notice", nid, {"fields": sorted(payload.keys())})
@@ -967,7 +1035,7 @@ def handle_notices(handler, method: str, body: dict) -> dict:
         payload["created_by"] = actor.get("id")
         r = requests.post(f"{SUPABASE_URL}/rest/v1/notices",
                           headers=_svc_headers({"Prefer": "return=representation"}),
-                          json=payload, timeout=10)
+                          json=payload, timeout=_t(10))
         if r.status_code not in (200, 201):
             return {"_status": 502, "_body": {"error": "insert_failed", "detail": r.text[:200]}}
         rows = r.json() if r.text else []
@@ -981,7 +1049,7 @@ def handle_notices(handler, method: str, body: dict) -> dict:
             return {"_status": 400, "_body": {"error": "id_required"}}
         r = requests.delete(f"{SUPABASE_URL}/rest/v1/notices",
                             headers=_svc_headers({"Prefer": "return=minimal"}),
-                            params={"id": f"eq.{nid}"}, timeout=10)
+                            params={"id": f"eq.{nid}"}, timeout=_t(10))
         if r.status_code not in (200, 204):
             return {"_status": 502, "_body": {"error": "delete_failed", "detail": r.text[:200]}}
         _audit(actor, "delete_notice", "notice", nid, None)
@@ -1002,11 +1070,11 @@ def handle_community_moderation(handler, method: str, body: dict) -> dict:
         if view == "reports":
             sel = "id,reason,created_at,reporter_id,thesis:thesis_id(id,user_id,ticker,stance,note,is_public,hidden,created_at)"
             r = requests.get(f"{SUPABASE_URL}/rest/v1/thesis_reports", headers=_svc_headers(),
-                             params={"select": sel, "order": "created_at.desc", "limit": str(limit)}, timeout=10)
+                             params={"select": sel, "order": "created_at.desc", "limit": str(limit)}, timeout=_t(10))
         else:  # posts — 전체 공개 글
             sel = "id,user_id,ticker,market,stance,note,is_public,hidden,created_at"
             r = requests.get(f"{SUPABASE_URL}/rest/v1/user_thesis", headers=_svc_headers(),
-                             params={"select": sel, "order": "created_at.desc", "limit": str(limit), "is_public": "eq.true"}, timeout=10)
+                             params={"select": sel, "order": "created_at.desc", "limit": str(limit), "is_public": "eq.true"}, timeout=_t(10))
         if r.status_code != 200:
             return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
         return {"_status": 200, "_body": {"items": r.json(), "view": view}}
@@ -1019,7 +1087,7 @@ def handle_community_moderation(handler, method: str, body: dict) -> dict:
         if action in ("hide", "unhide"):
             r = requests.patch(f"{SUPABASE_URL}/rest/v1/user_thesis",
                                headers=_svc_headers({"Prefer": "return=minimal"}),
-                               params={"id": f"eq.{tid}"}, json={"hidden": action == "hide"}, timeout=10)
+                               params={"id": f"eq.{tid}"}, json={"hidden": action == "hide"}, timeout=_t(10))
             if r.status_code not in (200, 204):
                 return {"_status": 502, "_body": {"error": "update_failed", "detail": r.text[:200]}}
             _audit(actor, action + "_post", "thesis", tid, None)
@@ -1031,7 +1099,7 @@ def handle_community_moderation(handler, method: str, body: dict) -> dict:
         if not tid:
             return {"_status": 400, "_body": {"error": "thesis_id_required"}}
         r = requests.delete(f"{SUPABASE_URL}/rest/v1/user_thesis",
-                            headers=_svc_headers({"Prefer": "return=minimal"}), params={"id": f"eq.{tid}"}, timeout=10)
+                            headers=_svc_headers({"Prefer": "return=minimal"}), params={"id": f"eq.{tid}"}, timeout=_t(10))
         if r.status_code not in (200, 204):
             return {"_status": 502, "_body": {"error": "delete_failed", "detail": r.text[:200]}}
         _audit(actor, "delete_post", "thesis", tid, None)
@@ -1072,7 +1140,7 @@ def _sec_refresh_blocklist() -> None:
     try:
         r = requests.get(f"{SUPABASE_URL}/rest/v1/blocked_ips", headers=_svc_headers(),
                          params={"select": "ip", "or": f"(expires_at.is.null,expires_at.gt.{_sec_iso(time.time())})"},
-                         timeout=4)
+                         timeout=_t(4))
         if r.status_code == 200:
             _sec_blocked = {row["ip"] for row in r.json() if row.get("ip")}
             _sec_blocked_ts = time.time()
@@ -1096,7 +1164,7 @@ def _sec_note_unauthorized(ip: str, path: str, method: str, ua: str, reason: str
                       headers=_svc_headers({"Prefer": "return=minimal"}),
                       json={"ip": ip, "path": (path or "")[:400], "method": method,
                             "user_agent": (ua or "")[:400], "reason": reason, "surface": "vercel"},
-                      timeout=4)
+                      timeout=_t(4))
     except requests.RequestException:
         pass
     if not _SEC_BLOCK_ENABLED:
@@ -1105,7 +1173,7 @@ def _sec_note_unauthorized(ip: str, path: str, method: str, ua: str, reason: str
         since = _sec_iso(time.time() - 1800)
         r = requests.get(f"{SUPABASE_URL}/rest/v1/security_probe_log",
                          headers=_svc_headers({"Prefer": "count=exact"}),
-                         params={"select": "id", "ip": f"eq.{ip}", "created_at": f"gte.{since}"}, timeout=4)
+                         params={"select": "id", "ip": f"eq.{ip}", "created_at": f"gte.{since}"}, timeout=_t(4))
         cr = r.headers.get("Content-Range", "")
         tail = cr.split("/")[-1] if "/" in cr else ""
         cnt = int(tail) if tail.isdigit() else 0
@@ -1114,7 +1182,7 @@ def _sec_note_unauthorized(ip: str, path: str, method: str, ua: str, reason: str
                           headers=_svc_headers({"Prefer": "resolution=merge-duplicates,return=minimal"}),
                           json={"ip": ip, "reason": reason, "hits": cnt, "auto": True,
                                 "surface": "vercel", "created_by": "auto",
-                                "expires_at": _sec_iso(time.time() + _SEC_TTL)}, timeout=4)
+                                "expires_at": _sec_iso(time.time() + _SEC_TTL)}, timeout=_t(4))
             _sec_blocked.add(ip)
     except requests.RequestException:
         pass
@@ -1130,7 +1198,7 @@ def handle_security(handler, method: str, body: dict) -> dict:
         try:
             r = requests.get(f"{SUPABASE_URL}/rest/v1/security_probe_log", headers=_svc_headers(),
                              params={"select": "ip,path,method,user_agent,country,reason,surface,created_at",
-                                     "order": "created_at.desc", "limit": "200"}, timeout=10)
+                                     "order": "created_at.desc", "limit": "200"}, timeout=_t(10))
             if r.status_code == 200:
                 probes = r.json()
         except requests.RequestException:
@@ -1140,7 +1208,7 @@ def handle_security(handler, method: str, body: dict) -> dict:
             r = requests.get(f"{SUPABASE_URL}/rest/v1/blocked_ips", headers=_svc_headers(),
                              params={"select": "ip,reason,hits,auto,surface,created_by,created_at,expires_at",
                                      "or": f"(expires_at.is.null,expires_at.gt.{_sec_iso(time.time())})",
-                                     "order": "created_at.desc", "limit": "500"}, timeout=10)
+                                     "order": "created_at.desc", "limit": "500"}, timeout=_t(10))
             if r.status_code == 200:
                 blocked = r.json()
         except requests.RequestException:
@@ -1164,7 +1232,7 @@ def handle_security(handler, method: str, body: dict) -> dict:
             r = requests.post(f"{SUPABASE_URL}/rest/v1/blocked_ips",
                               headers=_svc_headers({"Prefer": "resolution=merge-duplicates,return=minimal"}),
                               json={"ip": ip, "reason": reason, "auto": False, "surface": "manual",
-                                    "created_by": actor.get("email") or "admin", "expires_at": None}, timeout=10)
+                                    "created_by": actor.get("email") or "admin", "expires_at": None}, timeout=_t(10))
             if r.status_code not in (200, 201, 204):
                 return {"_status": 502, "_body": {"error": "block_failed", "detail": r.text[:200]}}
             _sec_blocked.add(ip)
@@ -1173,7 +1241,7 @@ def handle_security(handler, method: str, body: dict) -> dict:
         if action == "unblock":
             r = requests.delete(f"{SUPABASE_URL}/rest/v1/blocked_ips",
                                 headers=_svc_headers({"Prefer": "return=minimal"}),
-                                params={"ip": f"eq.{ip}"}, timeout=10)
+                                params={"ip": f"eq.{ip}"}, timeout=_t(10))
             if r.status_code not in (200, 204):
                 return {"_status": 502, "_body": {"error": "unblock_failed", "detail": r.text[:200]}}
             _sec_blocked.discard(ip)
@@ -1264,7 +1332,7 @@ def _make_operator_file_handler(public_name: str):
         if data is None:
             # 전환기 fallback: 공개 blob 제거 전엔 존재 (제거 후 private 만).
             try:
-                r = requests.get(_BLOB_BASE + public_name, timeout=10)
+                r = requests.get(_BLOB_BASE + public_name, timeout=_t(10))
                 r.raise_for_status()
                 data = r.json()
             except (requests.RequestException, ValueError):
@@ -1325,25 +1393,32 @@ class handler(BaseHTTPRequestHandler):
 
     def _mod_dispatch(self, method: str):
         # 운영 변경/목록 (member_management · community_moderation) — 공통 인증 + method-aware.
+        _budget_start()
         hdrs = headers_to_dict(self)
         ip = _sec_client_ip(hdrs)
-        if _sec_is_blocked(ip):
-            write_response(self, 403, {"error": "forbidden"})
-            return
-        ok, reason = authorize(hdrs)
-        if not ok:
-            _sec_note_unauthorized(ip, self.path, method, hdrs.get("user-agent", ""))
-            write_response(self, 401, {"error": "unauthorized", "reason": reason})
-            return
-        endpoint = (parse_qs(urlparse(self.path).query).get("type", [""])[0] or "").strip()
-        fn = MOD_ROUTES.get(endpoint)
-        if not fn:
-            write_response(self, 400, {"error": "unknown_endpoint", "valid": list(MOD_ROUTES.keys())})
-            return
-        body = _read_body(self) if method in ("POST", "DELETE") else {}
+        endpoint = ""
         try:
+            _stage("blocklist")
+            if _sec_is_blocked(ip):
+                write_response(self, 403, {"error": "forbidden"})
+                return
+            _stage("authorize")
+            ok, reason = authorize(hdrs)
+            if not ok:
+                _sec_note_unauthorized(ip, self.path, method, hdrs.get("user-agent", ""))
+                write_response(self, 401, {"error": "unauthorized", "reason": reason})
+                return
+            endpoint = (parse_qs(urlparse(self.path).query).get("type", [""])[0] or "").strip()
+            fn = MOD_ROUTES.get(endpoint)
+            if not fn:
+                write_response(self, 400, {"error": "unknown_endpoint", "valid": list(MOD_ROUTES.keys())})
+                return
+            body = _read_body(self) if method in ("POST", "DELETE") else {}
+            _stage(endpoint)
             result = fn(self, method, body)
             write_response(self, result.get("_status", 200), result.get("_body") or {})
+        except _BudgetExceeded as e:
+            _budget_timeout_response(self, e, endpoint or "mod")
         except Exception as e:  # noqa: BLE001
             _logger.error("admin mod %s %s error: %s", method, endpoint, e, exc_info=True)
             write_response(self, 500, {"error": "internal", "endpoint": endpoint})
@@ -1355,15 +1430,22 @@ class handler(BaseHTTPRequestHandler):
         self._mod_dispatch("DELETE")
 
     def do_GET(self):
+        _budget_start()
         hdrs = headers_to_dict(self)
         ip = _sec_client_ip(hdrs)
-        if _sec_is_blocked(ip):
-            write_response(self, 403, {"error": "forbidden"})
-            return
-        ok, reason = authorize(hdrs)
-        if not ok:
-            _sec_note_unauthorized(ip, self.path, "GET", hdrs.get("user-agent", ""))
-            write_response(self, 401, {"error": "unauthorized", "reason": reason})
+        try:
+            _stage("blocklist")
+            if _sec_is_blocked(ip):
+                write_response(self, 403, {"error": "forbidden"})
+                return
+            _stage("authorize")
+            ok, reason = authorize(hdrs)
+            if not ok:
+                _sec_note_unauthorized(ip, self.path, "GET", hdrs.get("user-agent", ""))
+                write_response(self, 401, {"error": "unauthorized", "reason": reason})
+                return
+        except _BudgetExceeded as e:
+            _budget_timeout_response(self, e, "auth")
             return
 
         parsed = urlparse(self.path)
@@ -1385,8 +1467,11 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
+            _stage(endpoint)
             result = fn(self)
             write_response(self, result.get("_status", 200), result.get("_body") or {})
+        except _BudgetExceeded as e:
+            _budget_timeout_response(self, e, endpoint)
         except Exception as e:  # noqa: BLE001
             _logger.error("admin %s error: %s", endpoint, e, exc_info=True)
             write_response(self, 500, {"error": "internal", "endpoint": endpoint})
