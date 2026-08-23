@@ -15,6 +15,14 @@ PM 신고 스크린샷: `/login` 카드가 **처리 중…** 인 채 이메일·
 🚨 **재현하지 못했다.** Chrome 확장 미연결이라 라이브 페이지를 못 열었고, DB 조회는 분류기가
 막았다. 아래는 **코드에서 확정되는 결함**이고 신고 상태와 정합하나, **원인 확정은 아니다.**
 
+✅ **PM 확인(8/23) = "구글로 로그인은 끝났는데 돌아오니 저 상태".** 구글 경로 확정.
+🚨 **그러면 이 수정은 화면 고착만 푼다 — 로그인 자체는 여전히 안 될 수 있다.** 복귀가
+로그인된 상태로 착지하지 않았다는 뜻이므로 **Supabase Auth → URL Configuration** 축이 남는다:
+`redirectUrl=""` 이라 복귀 주소는 `currentBack()` = `https://www.alphanest.kr/login` 이고,
+이 주소(또는 와일드카드)가 **Redirect URLs 에 없으면 Supabase 가 Site URL(VERITY)로 튕긴다**
+(컴포넌트 상단 주석의 수동 선행 항목). PM 확인 = 구글 인증 직후 **주소창 도메인** 과
+해시가 `#access_token=` 인지 `#error=` 인지.
+
 **확정 결함 = `busy` 를 되돌릴 경로가 없다.** `googleLogin` 은 `setBusy(true)` 후
 `window.location.href` 만 세우고 **`finally` 가 없다.** 이동이 일어나지 않으면 busy 가 영구
 true 이고, 두 버튼 다 `disabled={busy}` 라 **새로고침 말고는 재시도할 방법이 없다.**
@@ -36,13 +44,18 @@ Site URL(VERITY)로 튄다(코드 상단 주석의 수동 선행 항목). **PM �
 검증 = esbuild 종료코드 0 · RULE 9 0건. 🚨 **런타임 미검증**(재현 못 함) — 정적 통과는
 안전이 아니다([[feedback_green_check_is_not_safety]]).
 
-🚨 **드리프트 미확인** — 라이브 read 는 했으나 결과가 파일로 안 떨어져 정량 3단 대조를 못 했다.
-라이브는 prettier 포맷이 미러와 다르다. **26KB 라 60KB 위험선 아래**이므로 MCP 수술 삽입이
-가능하나, 공개 사이트 변경이라 **PM 승인 후** 반영한다.
+**드리프트 대조 — 선언·마커 단위까지만 했다.** 라이브 read 는 전문을 했으나 결과가 파일로
+떨어지지 않아 **바이트 3단 대조는 못 했다.** 대신 미러의 선언 28개(SESSION_KEY … readBodyDark
++ addPropertyControls)와 주석 날짜 마커 3개(2026-07-13·07-20·07-23)를 라이브 전문과 대조해
+**라이브 전용 구성물 0** 을 확인했다. 라이브는 prettier 포맷만 다르다.
+
+🚨 **반영은 PM 복붙으로 한다(권장 정정).** `updateCodeFile` 은 **전체 내용 교체**라 내가 700줄을
+다시 써 보내야 하고, 한 줄만 흘려도 **공개 사이트 로그인 경로**가 통째로 죽는다. repo 파일을
+그대로 복사하면 바이트가 정의상 정확하다. 종전 "MCP 직접 반영 권장" 은 이 제약을 빠뜨린 판단이다.
 
 | repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
 |---|---|---|---|
-| `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`) | busy 고착 해제 5건 | 🔴 **PM 승인 대기** |
+| `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`) | busy 고착 해제 5건 | 🔴 **복붙 대기**(전체 교체) |
 
 ---
 
