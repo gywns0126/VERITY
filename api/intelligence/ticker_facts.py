@@ -237,6 +237,19 @@ def resolve_ticker(q: str) -> Tuple[str, str]:
                 return str(r.get("ticker") or ""), str(r.get("name") or "")
         return "", ""
 
+    # 🚨 2026-08-23 순서 교정 — 종전엔 KR 이름 매칭(부분 포함)이 US 심볼 패스스루보다 **앞**이라
+    # 심볼 모양 질의가 조용히 엉뚱한 KR 종목으로 끌려갔다. 실측 US 심볼 10,373 중 **252건(2.43%)**:
+    # `AMG`→SAMG엔터 · `V`→NAVER · `KO`→KODEX 200 · `GE`→TIGER 200 · `CMG`→CMG제약.
+    # 조인이 그 종목 사실로 가득 차 돌아와 **틀린 걸 알아챌 신호가 0** 이었다.
+    # 교정 = KR **정확일치** → US 심볼(실재 확인) → KR 접두 → KR 부분 → US 이름.
+    # 정확일치를 앞에 두어 'CMG제약' 처럼 이름을 다 친 질의는 종전대로 KR 로 간다. 되돌리지 말 것.
+    exact_tk, exact_nm = _match_exact_only(rows, low)
+    if exact_tk:
+        return exact_tk, exact_nm
+    u_early = s.upper()
+    if re.fullmatch(r"[A-Z]{1,5}([.-][A-Z])?", u_early) and _is_known_us_symbol(u_early):
+        return u_early, _us_display_name(u_early) or u_early
+
     tk, nm = _match(rows)
     if tk:
         return tk, nm
@@ -251,6 +264,30 @@ def resolve_ticker(q: str) -> Tuple[str, str]:
     #   매칭으로 MUB 에 끌려간다. 심볼 모양이면 심볼로 확정하고, 아닐 때만 이름을 뒤진다.
     uni_all = _fetch_json(f"{BLOB}/universe_search.json", "universe_all") or {}
     return _match(uni_all.get("stocks") if isinstance(uni_all, dict) else None)
+
+
+
+def _match_exact_only(rowset: Any, low: str) -> Tuple[str, str]:
+    """이름 **정확일치** 만. resolve_ticker 의 순서 교정용(2026-08-23)."""
+    for r in rowset or []:
+        if not isinstance(r, dict):
+            continue
+        if str(r.get("name") or "").lower() == low:
+            return str(r.get("ticker") or ""), str(r.get("name") or "")
+    return "", ""
+
+
+def _is_known_us_symbol(u: str) -> bool:
+    """US 유니버스에 실재하는 심볼인가. 🚨 실재 확인 없이 심볼 모양만으로 US 로 보내면
+    오타·약칭이 전부 US 로 새어 KR 조회가 죽는다(반대 방향 사고)."""
+    uni = _fetch_json(f"{BLOB}/universe_search.json", "universe_all") or {}
+    rows = uni.get("stocks") if isinstance(uni, dict) else None
+    if not isinstance(rows, list):
+        return False
+    for r in rows:
+        if isinstance(r, dict) and str(r.get("ticker") or "").upper() == u:
+            return True
+    return False
 
 
 def _us_display_name(u: str) -> str:
