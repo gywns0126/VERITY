@@ -1067,7 +1067,9 @@ def execute_buy(
         "total_cost": actual_cost,
         "return_pct": 0.0,
         "buy_date": now_kst().strftime("%Y-%m-%d"),
-        "buy_reason": stock.get("ai_verdict", "AI 추천"),
+        "buy_reason": _buy_reason_with_basis(stock),
+        # 🚨 2026-08-23 신설 — 체결 근거 자기신고. 되돌리지 말 것.
+        "decision_basis": _decision_basis(stock),
         "safety_score": stock.get("safety_score", 0),
         "buy_slippage_bps": round(slippage_bps, 2),
         # Sprint 11 결함 3 — sizing audit
@@ -1147,12 +1149,67 @@ def execute_buy(
         "quantity": quantity,
         "total": actual_cost,
         "reason": holding["buy_reason"],
+        "decision_basis": holding.get("decision_basis"),
         "rule_id": f"verdict_{stock.get('recommendation', 'BUY')}",  # FOMO 정합
         "mode_tag": holding.get("mode_tag", "moderate"),  # Capital 3-Tier 정합
     })
 
     print(f"[VAMS] 매수: {stock['name']} {quantity}주 @ {price:,.0f}원 (슬리피지 {slippage_bps:.1f}bp, 총 {actual_cost:,}원)")
     return holding
+
+
+
+def _decision_basis(stock: dict) -> dict:
+    """체결이 어느 산식을 따랐는지 기록에 남긴다 (2026-08-23 신설).
+
+    🚨 사고 경위 — AMG(8/21 매수). 한 레코드에 점수가 둘 있다:
+      · `verity_brain.grade` = BUY (brain_score 65)  ← `recommendation` 이 따르는 값 = **체결 근거**
+      · `multi_factor.grade` = 관망 (multi_score 52) ← `ai_verdict` 문자열이 따르는 값
+    buy_reason 이 ai_verdict 를 그대로 썼기 때문에 거래 로그에 "멀티팩터 53점 (관망)" 이 남아
+    **체결 근거와 감사 흔적이 어긋났다.** 두 점수 중 어느 쪽이 옳은지는 여기서 판정하지 않는다
+    (전향 IC 비교 사안). 여기서 하는 일은 **무엇을 따랐는지 신고**하는 것뿐이다 — 임계 무변경.
+    """
+    brain = stock.get("verity_brain") or {}
+    mf = stock.get("multi_factor") or {}
+    basis = {
+        "recommendation": stock.get("recommendation"),
+        "recommendation_source": stock.get("_recommendation_source") or "verity_brain",
+        "brain_score": brain.get("brain_score"),
+        "brain_grade": brain.get("grade"),
+        "multi_score": mf.get("multi_score"),
+        "multi_grade": mf.get("grade"),
+        "ai_verdict_source": "multi_factor",
+    }
+    # 갈림 판정 = **체결된 등급**(recommendation) vs 멀티팩터 등급. 둘 다 알 때만 비교한다.
+    exec_rank = _grade_rank(stock.get("recommendation"))
+    mf_rank = _grade_rank_ko(mf.get("grade"))
+    basis["scores_disagree"] = exec_rank >= 0 and mf_rank >= 0 and exec_rank != mf_rank
+    return basis
+
+
+_GRADE_RANK = {"STRONG_BUY": 4, "BUY": 3, "WATCH": 2, "CAUTION": 1, "AVOID": 0}
+_GRADE_RANK_KO = {"매수": 3, "관망": 2, "주의": 1, "회피": 0}
+
+
+def _grade_rank(g) -> int:
+    return _GRADE_RANK.get(str(g or "").upper(), -1)
+
+
+def _grade_rank_ko(g) -> int:
+    return _GRADE_RANK_KO.get(str(g or "").strip(), -1)
+
+
+def _buy_reason_with_basis(stock: dict) -> str:
+    """사유 문자열이 **체결 근거**를 말하게 한다. 두 점수가 갈릴 때만 병기한다."""
+    verdict = stock.get("ai_verdict") or "AI 추천"
+    b = _decision_basis(stock)
+    if not b.get("scores_disagree"):
+        return verdict
+    return (
+        f"{b.get('recommendation')} 체결 — 근거 {b.get('recommendation_source')} "
+        f"{b.get('brain_grade')}({b.get('brain_score')}) · 참고 멀티팩터 "
+        f"{b.get('multi_grade')}({b.get('multi_score')})"
+    )
 
 
 def _append_exit_log(record: dict) -> None:

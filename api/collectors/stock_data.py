@@ -2,9 +2,11 @@
 KOSPI/KOSDAQ 지수: pykrx(KRX) 우선, 실패 시 yfinance.
 해외 지수(NDX, S&P500): yfinance.
 """
+import json
+import os
 import time as _perf
 from datetime import timedelta
-from typing import Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 import yfinance as yf
@@ -441,6 +443,36 @@ def _market_cap_or_fallback(market_cap, shares_outstanding, price) -> int:
     return int(market_cap) if market_cap else 0
 
 
+_US_MCAP_CACHE: Dict[str, Any] = {}
+
+
+def _us_market_cap_cached(ticker: str) -> Tuple[int, str]:
+    """3단 폴백 — yfinance 가 marketCap·sharesOutstanding 을 **둘 다** 안 줄 때.
+
+    2026-08-23: 운영풀 38 중 2건(ADI·AMG)이 `market_cap 0` 으로 발행됐다. 0 은 '작다'로도
+    '모른다'로도 읽히는데 하류 정렬·필터는 숫자로 받는다.
+    🚨 이 소스는 **stale 하다** — `us_market_caps.json` 은 주기 생성물이라 오늘 값이 아니다.
+    그래서 값만 돌려주지 않고 `generated_at` 을 같이 돌려주고, 호출부가 레코드에
+    `market_cap_source`·`market_cap_as_of` 를 찍는다. 신선한 값으로 오독되면 안 된다.
+    """
+    if not _US_MCAP_CACHE:
+        _US_MCAP_CACHE["caps"], _US_MCAP_CACHE["as_of"] = {}, ""
+        try:
+            path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                os.path.abspath(__file__)))), "data", "us_market_caps.json")
+            with open(path, encoding="utf-8") as fh:
+                blob = json.load(fh) or {}
+            _US_MCAP_CACHE["caps"] = blob.get("market_caps") or {}
+            _US_MCAP_CACHE["as_of"] = str(blob.get("generated_at") or "")
+        except (OSError, json.JSONDecodeError, TypeError):
+            pass
+    try:
+        v = float(_US_MCAP_CACHE["caps"].get(str(ticker).upper()) or 0)
+    except (TypeError, ValueError):
+        return 0, ""
+    return (int(v), _US_MCAP_CACHE["as_of"]) if v > 0 else (0, "")
+
+
 def get_stock_data(
     ticker_yf: str,
     period: str = "1y",
@@ -547,6 +579,12 @@ def get_stock_data(
         # market_cap fallback (2026-06-07 action_queue aed82498) — yfinance marketCap
         # 간헐 누락(TMO/SOFI 등) 시 sharesOutstanding × price 로 산출 → Ackman/원본 Altman 평가 복구.
         market_cap = _market_cap_or_fallback(market_cap, shares_outstanding, price)
+        # 3단 폴백 — yfinance 가 둘 다 못 준 US 종목(2026-08-23 ADI·AMG). 출처·기준일 동봉 의무.
+        _mcap_src, _mcap_as_of = "", ""
+        if not market_cap and currency == "USD":
+            market_cap, _mcap_as_of = _us_market_cap_cached(ticker_short)
+            if market_cap:
+                _mcap_src = "us_market_caps.json"
 
         company_type = _resolve_company_type(info.get("sector", ""), info.get("industry", ""))
 
@@ -600,6 +638,10 @@ def get_stock_data(
             result["operating_cashflow"] = int(operating_cashflow)
         if shares_outstanding is not None:
             result["shares_outstanding"] = int(shares_outstanding)
+        if _mcap_src:
+            # 🚨 stale 표기 — 이 두 키가 있으면 market_cap 은 오늘 값이 아니다. 제거 금지.
+            result["market_cap_source"] = _mcap_src
+            result["market_cap_as_of"] = _mcap_as_of
         if held_pct_insiders is not None:
             result["held_pct_insiders"] = round(float(held_pct_insiders) * 100, 2)
         if held_pct_institutions is not None:
