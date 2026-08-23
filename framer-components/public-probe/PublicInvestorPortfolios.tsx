@@ -68,11 +68,19 @@ const AN_IPF_CSS = `
 .an-ipf-detail{padding:18px 20px 22px}
 .an-ipf-tbl{min-width:460px}
 .an-ipf-bar{width:100px}
+.an-ipf-hdr{align-items:flex-end}
+.an-ipf-fxcol{align-items:flex-end}
+.an-ipf-fxtoggle{align-self:flex-end}
+.an-ipf-fxrate{text-align:right}
 @media (max-width:700px){
 .an-ipf-side{flex-basis:100%;position:static;max-height:340px;margin-bottom:14px}
 .an-ipf-detail{padding:16px 14px 18px}
 .an-ipf-tbl{min-width:340px}
 .an-ipf-bar{width:64px}
+.an-ipf-hdr{flex-direction:column;align-items:flex-start}
+.an-ipf-fxcol{align-items:flex-start}
+.an-ipf-fxtoggle{align-self:flex-start}
+.an-ipf-fxrate{text-align:left}
 }
 `
 
@@ -829,21 +837,34 @@ export default function PublicInvestorPortfolios(props: {
             <style>{AN_IPF_CSS}</style>
 
             {/* 헤더 + 통화 토글 */}
+            {/* 🚨 2026-08-24 PM "버튼이 우측으로 쏠림" — 되돌리지 말 것.
+                원인 = `flexWrap:wrap`. 좁은 폭에서 우측 열이 **자기 줄로 접히면서**
+                내용 폭(= 환율 문구 폭)으로 줄고, 그 안의 `align-items:flex-end` 가
+                토글을 문구 오른쪽 끝으로 밀었다. 그래서 좌·우 어디에도 안 맞는
+                어중간한 위치가 됐다(= 쏠림). 8/09 3연속 수정은 **데스크톱 우측 여백**
+                건이라 이건 다른 원인이다 — 그 수정들을 되돌린 것이 아니다.
+                해법 = ① `nowrap` 으로 "접혔는데 우측정렬" 상태 자체를 없애고
+                       ② 700px 이하에서만 세로 스택 + 좌측정렬(미디어쿼리).
+                🚨 align-items / flex-direction = AN_IPF_CSS. 인라인 금지
+                   (인라인이 미디어쿼리를 덮는다 — 이 파일의 기존 규약). */}
             <div
+                className="an-ipf-hdr"
                 style={{
                     display: "flex",
-                    flexWrap: "wrap",
+                    flexWrap: "nowrap",
                     gap: 14,
                     justifyContent: "space-between",
-                    alignItems: "flex-end",
                     marginBottom: 18,
                 }}
             >
                 <div>
                     <div
                         style={{
-                            fontSize: 24,
-                            fontWeight: 800,
+                            // 🚨 라이브(Framer)에서 PM 이 직접 줄인 값 — repo 로 역동기(2026-08-24).
+                            //   repo 는 24/800 이었고 라이브가 20/700 이었다. 통짜 복붙으로
+                            //   덮었으면 이 변경이 조용히 사라진다(RULE 11 3소스 동기화).
+                            fontSize: 20,
+                            fontWeight: 700,
                             letterSpacing: "-0.022em",
                             color: C.ink,
                         }}
@@ -859,24 +880,27 @@ export default function PublicInvestorPortfolios(props: {
                     토글 컨테이너가 블록 레벨 flex 라 그 폭까지 늘어나 KRW 오른쪽에 빈 공간이 생겼다.
                     alignItems:flex-end 로 토글을 내용 폭으로 줄이고 문구와 오른쪽을 맞춘다. */}
                 <div
+                    className="an-ipf-fxcol"
                     style={{
                         display: "flex",
                         flexDirection: "column",
-                        alignItems: "flex-end",
+                        // align-items = AN_IPF_CSS (미디어쿼리). 인라인 금지.
                     }}
                 >
                     <div
+                        className="an-ipf-fxtoggle"
                         style={{
                             // 🚨 되돌리지 말 것 (2026-08-09 PM, 3번째 수정).
                             //   `display:flex` + 자식 `width:62` 로는 우측 여백이 안 잡혔다.
                             //   inline-grid + gridAutoColumns:1fr = 두 칸이 **가장 넓은 글자 기준
                             //   같은 폭**으로 잡히고(전환해도 안 흔들림), 컨테이너는 내용 폭에서 멈춘다.
-                            //   width:fit-content + alignSelf 로 부모가 늘려도 안 늘어나게 이중으로 건다.
+                            //   width:fit-content + align-self 로 부모가 늘려도 안 늘어나게 이중으로 건다.
+                            //   🚨 align-self 는 AN_IPF_CSS 로 옮겼다(2026-08-24) — 이중 방어는
+                            //   그대로이고, 좁은 폭에서만 flex-start 로 뒤집기 위해서다. 인라인 금지.
                             display: "inline-grid",
                             gridAutoFlow: "column",
                             gridAutoColumns: "1fr",
                             width: "fit-content",
-                            alignSelf: "flex-end",
                             background: C.hi,
                             borderRadius: 999,
                             padding: 3,
@@ -916,11 +940,12 @@ export default function PublicInvestorPortfolios(props: {
                         KRW 일 때만 그리면 전환할 때마다 이 줄이 생겼다 사라져 아래가 밀린다.
                         USD 로 보고 있어도 "무슨 환율로 환산되는지" 를 먼저 아는 편이 낫다. */}
                     <div
+                        className="an-ipf-fxrate"
                         style={{
                             fontSize: 11.5,
                             color: C.faint,
                             marginTop: 5,
-                            textAlign: "right",
+                            // text-align = AN_IPF_CSS (미디어쿼리). 인라인 금지.
                         }}
                     >
                         1달러 = {fx.rate.toLocaleString()}원

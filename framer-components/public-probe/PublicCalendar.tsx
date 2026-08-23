@@ -280,7 +280,7 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
             <div ref={rootRef} style={wrap}>
                 <div style={cardS}>
                     <div style={{ ...sk, width: 120, height: 22 }} />
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 8, marginTop: 20 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 8, marginTop: 20 }}>
                         {Array.from({ length: 35 }).map((_, i) => <div key={i} style={{ ...sk, height: narrow ? 34 : 46 }} />)}
                     </div>
                 </div>
@@ -334,7 +334,13 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                             </button>
                         </div>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: narrow ? 2 : 4 }}>
+                    {/* 🚨 minmax(0,1fr) — 되돌리지 말 것 (2026-08-24 PM "폭 좁아지면 삐져나옴").
+                        `1fr` 은 `minmax(auto,1fr)` 이라 열이 **내용 최소폭 아래로 못 줄어든다**.
+                        셀 최소폭 = 점 3개(5px×3) + 간격(3px×2) + "+11"(≈15px) + 버튼 UA 기본
+                        padding(≈12px) ≈ 51px. × 7열 + 그리드 간격 12 + 카드/래퍼 좌우 여백 56
+                        ≈ **425px** 라, 그 아래에서는 7번째 열(Sun)이 카드 밖으로 밀려 잘렸다.
+                        minmax(0, ·) 가 최소폭 바닥을 0 으로 풀어 준다. */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: narrow ? 2 : 4 }}>
                         {WEEK.map((wd, i) => (
                             <div key={wd} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: i >= 5 ? C.faint : C.sub, paddingBottom: 8 }}>{wd}</div>
                         ))}
@@ -349,6 +355,10 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
                                 <button key={i} onClick={() => setSelDate(isSel ? "" : ds)} disabled={!inMonth && evs.length === 0}
                                     style={{
                                         position: "relative", border: "none", cursor: inMonth || evs.length ? "pointer" : "default", fontFamily: FONT,
+                                        // 🚨 되돌리지 말 것 (2026-08-24). padding 0 = 버튼 UA 기본 여백(≈1px 6px)이
+                                        //   셀마다 12px, 7열이면 84px 를 먹었다. minWidth 0 = 그리드 자식이
+                                        //   내용 최소폭 아래로 줄어들 수 있게 (minmax(0,1fr) 와 한 쌍).
+                                        padding: 0, minWidth: 0,
                                         height: narrow ? 44 : 56, borderRadius: 12, background: isSel ? C.today : (evs.length ? C.hi : "transparent"),
                                         color: isSel ? C.todayInk : inMonth ? C.ink : C.faint, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
                                         fontWeight: isToday ? 800 : 600, transition: "background 0.12s",
