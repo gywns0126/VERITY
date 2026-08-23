@@ -835,7 +835,7 @@ export default function PublicMorningBriefing(props: Props) {
                         }}
                     >
                         <span style={{ color: C.vg }}>내 자산</span> —
-                        로그인하면 보유종목 증감을 여기서 바로 봐요
+                        로그인하면 보유종목 증감을 여기서 바로 볼 수 있어요
                     </div>
                     <span
                         style={{
