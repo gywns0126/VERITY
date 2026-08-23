@@ -7,6 +7,7 @@ regime_diagnostics 의 trailing/leading score 평균으로 판정.
 """
 from __future__ import annotations
 
+from api.intelligence.factors._common import _load_constitution
 from api.intelligence.verity_brain import _compute_fact_score
 
 
@@ -82,8 +83,20 @@ class TestRegimeSwitchApplied:
         rw = fs.get("regime_weighting") or {}
         assert rw["applied"] is True
         assert rw["mode"] == "mixed_balanced"
-        # mixed 에선 graham/canslim 가중치 동일 (default 와 같음)
-        assert abs(rw["graham_weight"] - rw["canslim_weight"]) < 0.001
+        # 🚨 2026-08-23 정정 — 종전엔 `graham == canslim` 을 검사했다. 그건 헌법이 0.25×4
+        #   동일가중이던 시절의 값을 테스트에 굳힌 것이고, v1.1 틸트(`8f60f75c2`,
+        #   PREREG_FACTOR_CONNECT_2026_08_23, PM 승인 · RULE 7 쿼터 소모)가 0.28/0.19 로
+        #   바꾸자 **설계는 정상인데 테스트만 적색**이 됐다.
+        #   이 테스트의 본래 의도 = "mixed 에서는 레짐 틸트를 걸지 않는다" 이므로,
+        #   숫자를 굳히지 말고 **헌법 기본값과 일치하는지**로 검사한다. 앞으로 가중이 또
+        #   개정돼도 이 테스트는 안 깨진다. 되돌리지 말 것.
+        base = (_load_constitution().get("fact_score") or {}).get("weights") or {}
+        assert abs(rw["graham_weight"] - base["graham_value"]) < 0.001, (
+            f"mixed 인데 graham 이 헌법 기본값에서 벗어났다: {rw['graham_weight']} vs {base['graham_value']}"
+        )
+        assert abs(rw["canslim_weight"] - base["canslim_growth"]) < 0.001, (
+            f"mixed 인데 canslim 이 헌법 기본값에서 벗어났다: {rw['canslim_weight']} vs {base['canslim_growth']}"
+        )
 
     def test_leading_weighted_more(self):
         """trailing=0.5, leading=-0.5 → 평균 가중에서 leading 1.5x 적용 →
