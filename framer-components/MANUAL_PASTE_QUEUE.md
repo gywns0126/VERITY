@@ -16,6 +16,18 @@ PM 신고 스크린샷: `/login` 카드가 **처리 중…** 인 채 이메일·
 막았다. 아래는 **코드에서 확정되는 결함**이고 신고 상태와 정합하나, **원인 확정은 아니다.**
 
 ✅ **PM 확인(8/23) = "구글로 로그인은 끝났는데 돌아오니 저 상태".** 구글 경로 확정.
+✅ **복붙 후 재관측 = "10초쯤 멈췄다가 메시지 · 주소창이 잠깐 바뀌었다가 돌아왔다".**
+🚨 **이 조합이 원인을 좁힌다** — 10초 타이머가 발화했다는 건 **그 페이지의 JS 문맥이 살아
+있었다**는 뜻이다. 즉 브라우저가 구글로 **떠났다가 되돌아온 게 아니라, 이동이 시작됐다
+중단되고 원래 문서가 그대로 남았다.** (떠났다 돌아왔으면 새 로드로 타이머가 사라지거나,
+bfcache 복원이면 `pageshow(persisted)` 가 먼저 해제한다 — 둘 다 메시지가 안 뜬다.)
+남은 후보 = **accounts.google.com 으로의 이동을 확장/네트워크가 취소**하는 축.
+
+**Supabase 축 실측(GET 2회, 부작용 0)** — `/auth/v1/authorize` 는 정상이다: 302 →
+`accounts.google.com`, `client_id=684365722039-…`, `redirect_uri=…/auth/v1/callback`,
+`redirect_to=https://www.alphanest.kr/login` 동봉. 🚨 **단 이것으로 Redirect URLs 허용목록을
+증명하지 못한다** — 대조군 `redirect_to=https://example.com/x` 도 **같은 302** 를 받는다.
+검증은 `/authorize` 가 아니라 `/callback` 단계에서 일어난다. **허용목록 축은 미검증 존치.**
 🚨 **그러면 이 수정은 화면 고착만 푼다 — 로그인 자체는 여전히 안 될 수 있다.** 복귀가
 로그인된 상태로 착지하지 않았다는 뜻이므로 **Supabase Auth → URL Configuration** 축이 남는다:
 `redirectUrl=""` 이라 복귀 주소는 `currentBack()` = `https://www.alphanest.kr/login` 이고,
