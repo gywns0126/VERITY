@@ -23,6 +23,16 @@ PM 신고 스크린샷: `/login` 카드가 **처리 중…** 인 채 이메일·
 bfcache 복원이면 `pageshow(persisted)` 가 먼저 해제한다 — 둘 다 메시지가 안 뜬다.)
 남은 후보 = **accounts.google.com 으로의 이동을 확장/네트워크가 취소**하는 축.
 
+✅ **브라우저 실측(8/23, PM Chrome 연동 후) = 전 구간 정상 통과.** `/login` 에서 구글 버튼
+1회 클릭 → Supabase `/authorize` → 구글(계정 선택 화면 없이 즉시 통과) → `/auth/v1/callback`
+→ `https://www.alphanest.kr/login#access_token=…` → `consumeHash` → `afterLoginPath=/me`
+이동까지 **끊김 없이 완료**, `/me` 에 로그인 상태로 착지(관리자).
+🚨 **이로써 Redirect URLs 축은 해소된다** — callback 이 `alphanest.kr/login` 을 받아 그리로
+되돌려줬다는 것이 곧 허용목록 등재의 증거다. 종전 "허용목록 의심" 은 **기각**.
+🚨 **동시에 원래 증상은 재현되지 않았다.** 따라서 "고쳤다" 고 말할 수 없다 — 이번 수정은
+막다른 골목(재시도 불가)을 없앤 것이고, 중단의 원인은 **미규명**이다. 재발 시 확보할 것 =
+주소창 URL 전문 + 콘솔 에러 + 다른 브라우저/시크릿 재현 여부.
+
 **Supabase 축 실측(GET 2회, 부작용 0)** — `/auth/v1/authorize` 는 정상이다: 302 →
 `accounts.google.com`, `client_id=684365722039-…`, `redirect_uri=…/auth/v1/callback`,
 `redirect_to=https://www.alphanest.kr/login` 동봉. 🚨 **단 이것으로 Redirect URLs 허용목록을
@@ -67,7 +77,7 @@ Site URL(VERITY)로 튄다(코드 상단 주석의 수동 선행 항목). **PM �
 
 | repo 파일 | 라이브 코드파일 | 반영 내용 | 상태 |
 |---|---|---|---|
-| `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`) | busy 고착 해제 5건 | 🔴 **복붙 대기**(전체 교체) |
+| `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`) | busy 고착 해제 5건 | ✅ **복붙 완료**(PM 8/23 — 신 문구 발현으로 확인) · 증상 미재현 |
 
 ---
 
