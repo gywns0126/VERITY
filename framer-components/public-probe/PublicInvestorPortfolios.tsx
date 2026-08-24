@@ -933,6 +933,39 @@ export default function PublicInvestorPortfolios(props: {
     const smCur: any = smTicker ? smByTicker[smTicker] || null : null
     // 미커버 안내 — 입력이 있는데 제안 0 + 선택 0 (분모를 함께 말한다)
     const smNoHit = !!smQn && smSuggests.length === 0 && !smTicker
+    // 한글명 조인 (universe) — top10 행 표기용
+    const uniKoMap: Record<string, string> = useMemo(() => {
+        const m: Record<string, string> = {}
+        for (const r of searchRows) if (r.name_ko) m[r.ticker] = r.name_ko
+        return m
+    }, [searchRows])
+    // ── 이번 분기 거장 순매수 TOP 10 (검색 대기 화면 기본 노출, PM 승인 8/25) ──
+    // 🚨 기준 = 펀드 수 (신규 + 증액 − 감액). value_change_usd 로 랭킹하지 말 것 —
+    //   그 필드는 주가 등락 + 실제 매매가 섞여 있어(13F 메모리 필드 규약) "순매수" 라벨과
+    //   어긋난다. change_type 은 주식수 delta 기준이라 순수 매매 행동 = 라벨 정직.
+    //   '수익률' 라벨 절대 금지(트랙 고정 규율)와 같은 뿌리.
+    const smTop10: any[] = useMemo(() => {
+        const scored = smStocks
+            .map((s: any) => {
+                let nw = 0,
+                    inc = 0,
+                    dec = 0
+                for (const h of s.holders || []) {
+                    if (h.change_type === "NEW") nw++
+                    else if (h.change_type === "INCREASED") inc++
+                    else if (h.change_type === "DECREASED") dec++
+                }
+                return { ...s, _nw: nw, _inc: inc, _dec: dec, _net: nw + inc - dec }
+            })
+            .filter((s: any) => s._net > 0)
+        scored.sort(
+            (a: any, b: any) =>
+                b._net - a._net ||
+                b._nw + b._inc - (a._nw + a._inc) ||
+                b.total_value_usd - a.total_value_usd
+        )
+        return scored.slice(0, 10)
+    }, [smStocks])
     // 펀드명 클릭 → 좌측 인물 목록의 해당 운용사로 점프 (두 축이 같은 16개 명단)
     const jumpToFund = (fund: string) => {
         const i = list.findIndex(
@@ -1654,6 +1687,126 @@ export default function PublicInvestorPortfolios(props: {
                         </div>
                         </>
                         )}
+                    </div>
+                )}
+
+                {/* 검색 대기 화면 — 이번 분기 거장 순매수 TOP 10 (탐색 진입점) */}
+                {!smQn && !smTicker && smTop10.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "baseline",
+                                gap: 8,
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            <span style={{ fontSize: 13.5, fontWeight: 750 }}>
+                                이번 분기 거장 순매수 TOP 10
+                            </span>
+                            <span style={{ fontSize: 11.5, color: C.faint }}>
+                                신규+증액−감액 펀드 수 기준 · 13F 분기 공시
+                            </span>
+                        </div>
+                        <div
+                            style={{
+                                marginTop: 6,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 2,
+                            }}
+                        >
+                            {smTop10.map((s: any, i: number) => (
+                                <div
+                                    key={s.ticker}
+                                    onClick={() => setSmTicker(s.ticker)}
+                                    onKeyDown={(ev: any) => {
+                                        if (ev.key === "Enter")
+                                            setSmTicker(s.ticker)
+                                    }}
+                                    role="button"
+                                    tabIndex={0}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 10,
+                                        padding: "8px 6px",
+                                        borderRadius: 10,
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            width: 18,
+                                            flexShrink: 0,
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            color: i < 3 ? C.vt : C.faint,
+                                            textAlign: "center",
+                                            ...NUM,
+                                        }}
+                                    >
+                                        {i + 1}
+                                    </span>
+                                    <TickerLogo ticker={s.ticker} C={C} />
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                        <div
+                                            style={{
+                                                fontSize: 13.5,
+                                                fontWeight: 700,
+                                                color: C.ink,
+                                                whiteSpace: "nowrap",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                            }}
+                                        >
+                                            {uniKoMap[s.ticker] ||
+                                                (s.name && s.name !== s.ticker
+                                                    ? s.name
+                                                    : s.ticker)}
+                                        </div>
+                                        <div
+                                            style={{
+                                                fontSize: 11,
+                                                color: C.faint,
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            {s.ticker} · 보유 {s.holder_count}개 펀드
+                                        </div>
+                                    </div>
+                                    <div
+                                        style={{
+                                            flexShrink: 0,
+                                            textAlign: "right",
+                                            paddingRight: 4,
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                fontSize: 12.5,
+                                                fontWeight: 750,
+                                                color: C.up,
+                                                ...NUM,
+                                            }}
+                                        >
+                                            순매수 +{s._net}
+                                        </div>
+                                        <div
+                                            style={{
+                                                fontSize: 10.5,
+                                                color: C.faint,
+                                                fontWeight: 600,
+                                                ...NUM,
+                                            }}
+                                        >
+                                            신규 {s._nw} · 증액 {s._inc} · 감액{" "}
+                                            {s._dec}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
