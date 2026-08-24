@@ -47,7 +47,10 @@ export default function TopBar({ active }: { active: "terminal" | "macro" | "sys
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 18px", background: c.card, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", flexShrink: 0, position: "relative", zIndex: 40 }}>
             {/* 브랜드 = 로고(좌) + 알파콘솔 잉크색(우). 2026-08-20 PM 확정 — 공개 터미널(알파네스트)과
-                구분되도록 오퍼레이터는 "알파콘솔". 8/04 패밀리룩(알파파운더 폐지)은 유지 — 로고·색은 공유한다 */}
+                구분되도록 오퍼레이터는 "알파콘솔". 8/04 패밀리룩(알파파운더 폐지)은 유지.
+                🚨 2026-08-25 PM 결정 — 알 색 분리: 공개=보라 #6B51EA / 콘솔=진골드 #E0A82E (golden goose
+                서사, 둥지 #3A4268 은 공유 = 같은 집안·황금알). "로고·색 공유" 종전 문구는 이날 폐기.
+                에셋 = /alphanest-logo.svg(TopBar·login 공용) · app/icon.svg(파비콘) · app/apple-icon.png(홈화면) */}
             <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/alphanest-logo.svg" alt="" width={22} height={22} style={{ display: "block" }} />
