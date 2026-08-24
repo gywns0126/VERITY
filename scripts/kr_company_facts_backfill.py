@@ -366,30 +366,47 @@ def run_chain(univ, year, delay, dry, limit=None) -> Dict[str, int]:
     return {"todo": len(todo), "ok": ok}
 
 
-def run_overview(univ, year, delay, dry, limit=None) -> Dict[str, int]:
+def run_overview(univ, year, delay, dry, limit=None, retry_exhausted=False) -> Dict[str, int]:
     """사업의 개요 원문 발췌 — `dart_business_overview.json` upsert. LLM 0 · 과금 0.
 
     🚨 `--limit` 은 **미보유 종목에만** 적용한다. `run_llm_axis` 처럼 전체에 걸면
     이미 채운 앞쪽 종목이 한도를 다 먹어 뒤쪽이 영원히 안 채워진다 (2026-08-17 kam 학습의
     같은 계열 함정). 보유 판정 = 같거나 더 최신 사업연도 행 + 본문 존재.
+
+    🚨 2026-08-24 — **반려 원장(`misses`)을 대상 산정에서 뺀다.** 종전엔 보유 판정이
+    "성공 행 존재" 하나뿐이라 게이트 반려 종목이 매 run 다시 문서를 받아 다시 반려됐다
+    (실측 한화에어로·고려아연·한국항공우주·오뚜기·남선알미늄). 드립이 수렴하면 매 run
+    예산이 **전부** 같은 반려 재조회에 쓰인다. 상한 도달분은 `--retry-exhausted` 로만 연다.
     """
-    from api.analyzers.dart_business_overview import analyze_all_overview, load_cache
+    from api.analyzers.dart_business_overview import (
+        MAX_OVERVIEW_ATTEMPTS, analyze_all_overview, load_cache)
 
     sd = _stocks_dict(univ, year)
     total = len(sd)
-    have = (load_cache().get("rows") or {})
+    _cache = load_cache()
+    have = (_cache.get("rows") or {})
+    misses = (_cache.get("misses") or {})
     rest = [tk for tk in sd
             if not (str((have.get(tk) or {}).get("bsns_year") or "") >= str(year)
                     and (have.get(tk) or {}).get("text"))]
+    n_have = total - len(rest)
+    if not retry_exhausted:
+        _before = len(rest)
+        rest = [tk for tk in rest
+                if int((misses.get(tk) or {}).get("n", 0)) < MAX_OVERVIEW_ATTEMPTS]
+        n_exh = _before - len(rest)
+    else:
+        n_exh = 0
     if limit:
         rest = _cap(rest, limit)
     sd = {tk: sd[tk] for tk in rest}
-    print(f"  [overview] 대상 {len(sd)}/{total} (보유 {total - len(rest) if not limit else '…'} 제외)"
+    print(f"  [overview] 대상 {len(sd)}/{total} (보유 {n_have} · 시도소진 {n_exh} 제외)"
           + (f" · --limit {limit}" if limit else "")
+          + (" · --retry-exhausted" if retry_exhausted else "")
           + "  결정론 파싱 (LLM 0 · 과금 0)")
     if dry or not sd:
         return {"todo": len(sd), "ok": 0}
-    res = analyze_all_overview(sd)
+    res = analyze_all_overview(sd, retry_exhausted=retry_exhausted)
     ok = sum(1 for tk in sd if tk in res)
     print(f"  [overview] 결과 {ok}/{len(sd)}")
     return {"todo": len(sd), "ok": ok}
@@ -439,6 +456,8 @@ def main() -> int:
     ap.add_argument("--delay", type=float, default=0.15)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--allow-llm", action="store_true", help="LLM 축 실행 명시 승인")
+    ap.add_argument("--retry-exhausted", action="store_true",
+                    help="overview: 시도 상한에 걸린 반려 종목까지 다시 조회(원장 초기화 없이 1회 강제)")
     a = ap.parse_args()
 
     axes = [x.strip() for x in a.axes.split(",") if x.strip()]
@@ -482,7 +501,8 @@ def main() -> int:
                 #   비용은 그대로 --limit 로 묶인다(200종목 ≈ 400콜).
                 _univ_ov = (univ if a.universe == "market"
                             else build_universe("market", a.limit, (a.ticker or "").strip() or None))
-                summary[ax] = run_overview(_univ_ov, a.year, a.delay, a.dry_run, a.limit)
+                summary[ax] = run_overview(_univ_ov, a.year, a.delay, a.dry_run, a.limit,
+                                           retry_exhausted=a.retry_exhausted)
             else:
                 summary[ax] = run_llm_axis(ax, univ, a.year, a.delay, a.dry_run, a.limit)
         except Exception as e:  # noqa: BLE001 — 한 축 실패가 다른 축을 막지 않는다

@@ -177,6 +177,13 @@ from api.config import DATA_DIR, now_kst   # noqa: E402
 
 CACHE_PATH = os.path.join(DATA_DIR, "dart_business_overview.json")
 _FLUSH_EVERY = 50          # 증분 저장 주기 — 긴 배치가 죽어도 파싱분을 버리지 않는다(kam 학습)
+# 🚨 2026-08-24 신설 — 반려 원장(`misses`). 종전엔 재개 신호가 "성공 행 존재" **하나뿐**이라
+#   *아직 안 해봄* 과 *해봤는데 게이트가 반려* 를 구분할 수 없었다. 그래서 반려 종목이
+#   **매 run 다시 문서를 받아** 다시 반려됐다(실측: 남선알미늄 06:33 run, 한화에어로·고려아연·
+#   한국항공우주·오뚜기 21:00 run — 종목당 4~11초 · DART 2콜). 드립이 수렴하면 매 run 예산이
+#   전부 같은 반려 재조회에 쓰이고, 그 사실은 어디에도 안 남는다.
+#   = `dart_kr_fin_backfill` 셀 원장과 **같은 결함 계열**([[feedback_purge_erases_the_requeue_signal]]).
+MAX_OVERVIEW_ATTEMPTS = 2
 
 
 def load_cache() -> Dict[str, Any]:
@@ -201,7 +208,8 @@ def save_cache(cache: Dict[str, Any]) -> None:
 
 def analyze_all_overview(stocks: Dict[str, Any],
                          auto_fetch_missing: bool = True,
-                         max_chars: int = DEFAULT_MAX_CHARS) -> Dict[str, Dict[str, Any]]:
+                         max_chars: int = DEFAULT_MAX_CHARS,
+                         retry_exhausted: bool = False) -> Dict[str, Dict[str, Any]]:
     """stocks dict 일괄 사업의 개요 추출. LLM 0 · 과금 0.
 
     `raw_text` 우선순위 = (1) 넘겨받은 `business_facilities_raw.raw_text`,
@@ -210,11 +218,14 @@ def analyze_all_overview(stocks: Dict[str, Any],
        커버리지 0 을 조용히 유지했다(2026-08-16 학습).
 
     증분 = 같은 티커에 **같거나 더 최신 사업연도** 행이 이미 있으면 건너뛴다.
+    반려는 `misses` 원장에 시도 횟수로 남고, 상한(MAX_OVERVIEW_ATTEMPTS) 도달분은
+    `retry_exhausted` 없이는 다시 두드리지 않는다.
     """
     cache = load_cache()
     rows: Dict[str, Any] = cache.get("rows") or {}
+    misses: Dict[str, Any] = dict(cache.get("misses") or {})
     out: Dict[str, Dict[str, Any]] = {}
-    fresh = cached = skipped = 0
+    fresh = cached = skipped = exhausted_skip = 0
     reject_reasons: Dict[str, int] = {}
 
     for ticker, info in (stocks or {}).items():
@@ -228,6 +239,11 @@ def analyze_all_overview(stocks: Dict[str, Any],
         if prev and str(prev.get("bsns_year") or "") >= year and prev.get("text"):
             out[ticker] = prev
             cached += 1
+            continue
+
+        # 🚨 시도 상한 도달분은 **문서를 받지 않는다** — 여기가 낭비의 발생점이었다.
+        if not retry_exhausted and int((misses.get(ticker) or {}).get("n", 0)) >= MAX_OVERVIEW_ATTEMPTS:
+            exhausted_skip += 1
             continue
 
         bf = info.get("business_facilities_raw") or {}
@@ -249,30 +265,53 @@ def analyze_all_overview(stocks: Dict[str, Any],
             r = (res.get("reason") or "no_raw_text").split("(")[0]
             reject_reasons[r] = reject_reasons.get(r, 0) + 1
             skipped += 1
-            sys.stderr.write(f"[overview] {ticker} {str(name)[:12]} fetch {t_fetch:4.1f}s · skip {r}\n")
+            prev_m = misses.get(ticker) or {}
+            misses[ticker] = {"n": int(prev_m.get("n", 0)) + 1,
+                              "last": now_kst().date().isoformat(),
+                              "reason": res.get("reason") or "no_raw_text",
+                              "name": str(name)[:20], "bsns_year": year,
+                              "raw_len": res.get("raw_len", 0)}
+            sys.stderr.write(f"[overview] {ticker} {str(name)[:12]} fetch {t_fetch:4.1f}s · skip {r}"
+                             f" (누적 {misses[ticker]['n']}/{MAX_OVERVIEW_ATTEMPTS})\n")
             continue
 
         rows[ticker] = row
         out[ticker] = row
+        misses.pop(ticker, None)      # 채워졌으면 반려 원장에서 뺀다
         fresh += 1
         sys.stderr.write(f"[overview] {ticker} {str(name)[:12]} fetch {t_fetch:4.1f}s · {row['char_count']}자\n")
         sys.stderr.flush()
 
         if fresh % _FLUSH_EVERY == 0:
             cache["rows"] = rows
+            cache["misses"] = misses
             cache["_meta"] = {**(cache.get("_meta") or {}), "updated_at": now_kst().isoformat(),
                               "_partial": True}
             save_cache(cache)
 
-    if fresh:
+    if fresh or skipped or exhausted_skip:
         cache["rows"] = rows
+        cache["misses"] = misses
         meta = dict(cache.get("_meta") or {})
+        by_reason: Dict[str, int] = {}
+        for v in misses.values():
+            k = str(v.get("reason") or "?").split("(")[0]
+            by_reason[k] = by_reason.get(k, 0) + 1
         meta.update({"updated_at": now_kst().isoformat(), "_partial": False,
                      "_method": "deterministic_regex_slice",
+                     # 🚨 RULE 12 ② — 반려 꼬리를 산출물이 스스로 신고한다.
+                     #   개수만이 아니라 **이름으로** 남겨야 다음 세션이 열거할 수 있다(RULE 13 ③).
+                     "misses_n": len(misses),
+                     "misses_exhausted_n": sum(
+                         1 for v in misses.values()
+                         if int(v.get("n", 0)) >= MAX_OVERVIEW_ATTEMPTS),
+                     "misses_by_reason": by_reason,
+                     "max_overview_attempts": MAX_OVERVIEW_ATTEMPTS,
                      "last_axis_run": {"fresh": fresh, "cached": cached, "skipped": skipped,
+                                       "exhausted_skip": exhausted_skip,
                                        "rejects": reject_reasons}})
         cache["_meta"] = meta
         save_cache(cache)
-    logger.info("[overview] 신규 %d · 캐시 %d · 스킵 %d · 반려 %s",
-                fresh, cached, skipped, reject_reasons)
+    logger.info("[overview] 신규 %d · 캐시 %d · 반려 %d · 시도소진 skip %d · 사유 %s",
+                fresh, cached, skipped, exhausted_skip, reject_reasons)
     return out

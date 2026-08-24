@@ -151,3 +151,85 @@ def test_row_from_doc_carries_provenance():
 
 def test_row_from_doc_returns_none_on_reject():
     assert row_from_doc({"raw_text": "표\n\n표\n\n표"}, "00000000", "2025") is None
+
+
+# ── 반려 원장 (2026-08-24 신설) ───────────────────────────────────────────────
+"""
+## 왜
+
+재개 신호가 "성공 행 존재" **하나뿐**이면 *아직 안 해봄* 과 *해봤는데 게이트가 반려* 를
+구분할 수 없다. 그러면 반려 종목이 **매 run 다시 문서를 받아** 다시 반려된다.
+
+실측(2026-08-24 CI 로그): `008350 남선알미늄`(06:33 run) · `012450 한화에어로스페이스`
+`010130 고려아연` `047810 한국항공우주` `007310 오뚜기`(21:00 run) — 종목당 4~11초 · DART 2콜.
+드립이 수렴하면 매 run 예산이 **전부** 같은 반려 재조회에 쓰이고, 그 사실은 어디에도 안 남는다.
+= `dart_kr_fin_backfill` 셀 원장과 같은 결함 계열.
+"""
+import json as _json
+import os as _os
+
+
+def _seed(tmp_path, monkeypatch, rows=None, misses=None):
+    import api.analyzers.dart_business_overview as M
+    p = str(tmp_path / "overview.json")
+    monkeypatch.setattr(M, "CACHE_PATH", p)
+    with open(p, "w", encoding="utf-8") as f:
+        _json.dump({"rows": rows or {}, "misses": misses or {}}, f, ensure_ascii=False)
+    return M
+
+
+def _stock(tk="005930"):
+    return {tk: {"corp_code": "00126380", "name": "삼성전자", "bsns_year": "2025"}}
+
+
+def test_reject_is_recorded_with_name_and_reason(tmp_path, monkeypatch):
+    """🚨 반려는 개수가 아니라 **이름+사유**로 남는다 — 다음 세션이 열거할 수 있어야 한다."""
+    M = _seed(tmp_path, monkeypatch)
+    stocks = _stock()
+    stocks["005930"]["business_facilities_raw"] = {"raw_text": "표\n\n표\n\n표"}
+    M.analyze_all_overview(stocks, auto_fetch_missing=False)
+    led = M.load_cache()
+    assert led["misses"]["005930"]["n"] == 1
+    assert led["misses"]["005930"]["name"] == "삼성전자"
+    assert led["misses"]["005930"]["reason"]
+    assert led["_meta"]["misses_n"] == 1
+    assert led["_meta"]["misses_by_reason"]
+
+
+def _exhausted():
+    import api.analyzers.dart_business_overview as M
+    return {"005930": {"n": M.MAX_OVERVIEW_ATTEMPTS, "last": "2026-08-24",
+                       "reason": "anchor_not_found"}}
+
+
+def test_exhausted_ticker_is_not_fetched_again(tmp_path, monkeypatch):
+    """🚨 상한 도달분은 **문서를 받지 않는다** — 여기가 낭비의 발생점이었다."""
+    M = _seed(tmp_path, monkeypatch, misses=_exhausted())
+    calls = []
+
+    def _boom(cc, y):
+        calls.append(cc)
+        return {"raw_text": "x"}
+
+    monkeypatch.setattr("api.collectors.DartScout.fetch_business_facilities_raw", _boom)
+    M.analyze_all_overview(_stock(), auto_fetch_missing=True)
+    assert calls == [], "시도 상한 도달분에 fetch 가 나갔다"
+
+
+def test_retry_exhausted_reopens(tmp_path, monkeypatch):
+    M = _seed(tmp_path, monkeypatch, misses=_exhausted())
+    stocks = _stock()
+    stocks["005930"]["business_facilities_raw"] = {"raw_text": "표\n\n표"}
+    M.analyze_all_overview(stocks, auto_fetch_missing=False, retry_exhausted=True)
+    assert M.load_cache()["misses"]["005930"]["n"] == M.MAX_OVERVIEW_ATTEMPTS + 1
+
+
+def test_success_clears_the_miss(tmp_path, monkeypatch):
+    M = _seed(tmp_path, monkeypatch,
+              misses={"005930": {"n": 1, "last": "2026-08-24", "reason": "too_short"}})
+    stocks = _stock()
+    stocks["005930"]["business_facilities_raw"] = {"raw_text": _doc("1. 사업의 개요")}
+    M.analyze_all_overview(stocks, auto_fetch_missing=False)
+    led = M.load_cache()
+    assert "005930" not in led["misses"]
+    assert led["rows"]["005930"]["char_count"] > 0
