@@ -49,3 +49,34 @@ def test_cusip_cache_roundtrip(tmp_path, monkeypatch):
     cache = cr.load_cache()
     assert cache["037833100"] == "AAPL"
     assert cache["BADCUSIP0"] is None      # 영구 미스도 캐시(재조회 방지)
+
+
+# ── held_since (연속 보유 시작) — 2026-08-24 검색창 축 ─────────────────────────
+
+_QS = [  # 오래된 → 최근 (빌더 계약과 동일 방향)
+    ("2024-06-30", {"A", "B"}),
+    ("2024-09-30", {"A", "B", "C"}),
+    ("2024-12-31", {"A", "C"}),        # B 청산
+    ("2025-03-31", {"A", "B", "C"}),   # B 재매수
+]
+
+
+def test_held_since_consecutive_full_window_is_floor():
+    since, q, floor = b._held_since(_QS, "A")
+    assert since == "2024-06-30" and q == 4 and floor is True   # 창 상한 도달
+
+
+def test_held_since_gap_resets_to_rebuy_quarter():
+    # B 는 2024-12-31 에 끊겼다 — "언제부터 계속 보유" = 재매수 분기(2025-03-31)만.
+    since, q, floor = b._held_since(_QS, "B")
+    assert since == "2025-03-31" and q == 1 and floor is False
+
+
+def test_held_since_partial_window_not_floor():
+    since, q, floor = b._held_since(_QS, "C")
+    assert since == "2024-09-30" and q == 3 and floor is False
+
+
+def test_held_since_absent_and_empty():
+    assert b._held_since(_QS, "ZZZ") == (None, 0, False)
+    assert b._held_since([], "A") == (None, 0, False)

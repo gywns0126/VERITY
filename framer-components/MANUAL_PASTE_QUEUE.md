@@ -8,6 +8,41 @@ MCP 로 라이브 반영이 위험한(>60KB, write-loss) 공개 컴포넌트. **
 
 ---
 
+## 🟠 대기 (2026-08-24) — 거장 페이지: 종목 클릭 → 리포트 이동
+
+**대상** = `PublicInvestorPortfolios.tsx` (`Ayy74xh`) · **repo 파일 통째로 복붙 가능.**
+base = 오늘(8/24) 역동기 완료본(아래 "통화 토글" 완료 항목의 정량 대조 4/4) 위에 3개소만 추가.
+단, PM 이 그 복붙 이후 라이브를 또 손댔다면 통짜 금지 — 아래 3개소만 수동 반영:
+
+1. props 타입에 `stockPath?: string` 추가 + 함수 첫머리에 `stockPath`/`goStock` 상수 2개
+   (검색 마커: `// 종목 클릭 → 리포트 페이지`)
+2. 보유 종목 `<tr key={h.cusip}>` → onClick/onKeyDown/tabIndex/role/cursor 부여
+   (검색 마커: `onClick={() => goStock(h.ticker)}`)
+3. addPropertyControls 끝에 `stockPath` 컨트롤 (기본 `/stock`)
+
+효과 = 보유 종목 행 클릭 시 `/stock?q=티커` 이동 (AlphaNestFeed·PublicETFFlow 와 동일 규약).
+캔버스에서는 이동 안 함(onCanvas 가드). 검증 마커 = 발행 번들에 `goStock` 은 미니파이로
+사라질 수 있으니 **문자열 `"?q="` + `종목 페이지 경로`(컨트롤 타이틀)** 로 grep.
+
+---
+
+## 🟠 대기 (2026-08-24) — 신규: 거장 보유 검색 (종목 역조회)
+
+**대상** = `PublicSmartMoneySearch.tsx` · **신규 코드파일** (라이브에 없음 — 드리프트 없음, 통짜).
+절차 = Framer 코드파일 신규 생성 "PublicSmartMoneySearch.tsx" → repo 파일 전체 붙여넣기 →
+거장 페이지 캔버스에 배치(위치 = PM 판단, 거장 카드 위/아래 권장).
+
+내용 = 검색창(티커/회사명) → 해당 종목을 **누가(16개 운용사) · 얼마나(평가액·펀드 내 비중·
+주식수) · 언제부터(연속 보유 시작, 9분기 역추적) · 분기 변화(신규/증액/감액/유지)** 표.
+행마다 보유 기준일(report_date) 노출, 하단 caveat = 45일 지연·롱온리 (13F 메모리 계약).
+종목 헤더 "종목 리포트 →" 버튼 = `/stock?q=`. 환율 토글 = macro_snapshot (형제 패턴 동일).
+
+🚨 **데이터 선행 조건** — `held_since`·`weight_in_fund_pct`·`_meta.funds` 는 8/24 빌더
+확장분이라 **`us_smart_money_13f` 워크플로가 한 번 돌아 blob 재발행된 뒤** 채워진다.
+그 전에 배치해도 깨지지 않음(해당 칸 "—" 표시).
+
+---
+
 ## ✅ 완료 (2026-08-24 PM 복붙 · 발행 번들 실측) — 거장 통화 토글 우측 쏠림
 
 PM 스크린샷: 설명 문구·환율 문구는 왼쪽에 붙어 있는데 **USD/KRW 토글만 어중간하게 오른쪽**.

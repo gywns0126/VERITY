@@ -409,15 +409,16 @@ def _implied_prices(rows: list[dict]) -> dict:
             if (r.get("shares") or 0) > 0 and (r.get("value_usd") or 0) > 0}
 
 
-def compute_replication_returns(cik: str, quarters: int = 9) -> list[dict]:
-    """분기별 복제 수익률 시계열 (오래된 분기 → 최근 순).
+def get_quarter_snapshots(cik: str, quarters: int = 9,
+                          filings: Optional[list] = None) -> list[tuple]:
+    """분기 보유 스냅샷 [(report_date, rows)] — 오래된 → 최근 순.
 
     과거 제출본은 불변이라 accession_no 키로 영구 캐시 — 재run 시 SEC 재조회 없음.
+    rows = [{cusip, value_usd, shares}] (issuer 등은 캐시에 없음 — cusip 존재 판정·내재가 용도).
+    filings 를 넘기면 get_recent_13f_filings 재호출 없이 그 목록을 쓴다 (호출자 절약).
     """
-    filings = get_recent_13f_filings(cik, n=quarters)
-    if len(filings) < 2:
-        return []
-
+    if filings is None:
+        filings = get_recent_13f_filings(cik, n=quarters)
     cache = _load_quarter_cache()
     dirty = False
     snaps: list[tuple] = []
@@ -439,6 +440,14 @@ def compute_replication_returns(cik: str, quarters: int = 9) -> list[dict]:
 
     snaps = [s for s in snaps if s[0] and s[1]]
     snaps.sort(key=lambda s: s[0])               # 오래된 → 최근
+    return snaps
+
+
+def compute_replication_returns(cik: str, quarters: int = 9) -> list[dict]:
+    """분기별 복제 수익률 시계열 (오래된 분기 → 최근 순)."""
+    snaps = get_quarter_snapshots(cik, quarters=quarters)
+    if len(snaps) < 2:
+        return []
     out: list[dict] = []
     for (d0, h0), (d1, h1) in zip(snaps, snaps[1:]):
         p0, p1 = _implied_prices(h0), _implied_prices(h1)

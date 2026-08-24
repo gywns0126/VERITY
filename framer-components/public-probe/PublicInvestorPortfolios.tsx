@@ -673,8 +673,17 @@ export default function PublicInvestorPortfolios(props: {
     macroUrl?: string
     dark?: boolean
     topN?: number
+    stockPath?: string
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    // 종목 클릭 → 리포트 페이지 (/stock?q=티커 — AlphaNestFeed·PublicETFFlow 와 동일 규약)
+    const stockPath = (props.stockPath || "/stock").replace(/\/+$/, "")
+    const goStock = (tk?: string | null) => {
+        if (!tk || onCanvas) return
+        try {
+            window.location.href = stockPath + "?q=" + encodeURIComponent(tk)
+        } catch (e) {}
+    }
     // 모바일 대응 — 루트 실폭 측정 (PublicCalendar 등 형제 컴포넌트와 동일 관례).
     // 좌 330px + 우 1fr 2단이라 620 미만에서는 두 열이 다 뭉개진다 → 세로 스택으로 전환.
     const rootRef = useRef<HTMLDivElement | null>(null)
@@ -1572,7 +1581,18 @@ export default function PublicInvestorPortfolios(props: {
                             </thead>
                             <tbody>
                                 {(cur.top_holdings || []).slice(0, topN).map((h: any) => (
-                                    <tr key={h.cusip}>
+                                    <tr
+                                        key={h.cusip}
+                                        onClick={() => goStock(h.ticker)}
+                                        onKeyDown={(ev: any) => {
+                                            if (ev.key === "Enter") goStock(h.ticker)
+                                        }}
+                                        tabIndex={h.ticker ? 0 : -1}
+                                        role={h.ticker ? "link" : undefined}
+                                        style={{
+                                            cursor: h.ticker ? "pointer" : "default",
+                                        }}
+                                    >
                                         <td
                                             style={{
                                                 padding: "9px 9px",
@@ -1735,5 +1755,10 @@ addPropertyControls(PublicInvestorPortfolios, {
         min: 3,
         max: 50,
         step: 1,
+    },
+    stockPath: {
+        type: ControlType.String,
+        title: "종목 페이지 경로",
+        defaultValue: "/stock",
     },
 })
