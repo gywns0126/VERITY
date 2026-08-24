@@ -117,7 +117,11 @@ fi
 # ── push ──────────────────────────────────────────────────
 if "${GIT[@]}" push -q origin "$BRANCH" 2>/dev/null; then
     echo "✅ push 완료 · $("${GIT[@]}" log --oneline -1)"
-    echo "   충돌 마커 0 · stash $post_stash 건(변동 없음)$([ "$attempt" -gt 1 ] && echo " · 시도 $attempt회")"
+    # 🚨 중괄호 필수. 중괄호 없이 한글을 바로 이어 붙이면 bash 가 그 한글까지 변수명으로
+    #   읽어 없는 변수를 찾고, `set -u` 아래에서 unbound variable 로 죽는다.
+    #   2026-08-22~25 실사고 — 서브셸 안이라 push 자체는 성공해서 경고만 남긴 채 3일 살아남았다.
+    #   기계 가드 = tests/test_shell_var_hangul_boundary.py (주석 제외 전수 스캔)
+    echo "   충돌 마커 0 · stash $post_stash 건(변동 없음)$([ "$attempt" -gt 1 ] && echo " · 시도 ${attempt}회")"
     exit 0
 fi
 echo "   push 거부(원격 선행) — 재fetch 후 다시 시도"
