@@ -930,11 +930,19 @@ def execute_buy(
     if stock["ticker"] in held_tickers:
         return None
 
-    invest_amount = min(max_per_stock, cash * 0.9)
+    # 🚨 2026-08-25 — 사이징 체인 자기신고. 되돌리지 말 것.
+    #   brain 산출물의 `position_guide.recommended_pct`(등급별 % 상한)는 **집행에 쓰이지 않는다.**
+    #   실제 집행은 아래 4단이다: min(max_per_stock, 현금×0.9) → Kelly → 변동성 → 매크로.
+    #   두 값이 크게 갈린다 — 실측 2026-08-25 쿠쿠홀딩스: position_guide 3%(=29만) vs 실집행 10.7%(=104만).
+    #   표시값을 규칙으로 읽어 잘못 답한 사고가 있었다. 체인을 기록에 남겨 다시 갈리지 않게 한다.
+    _size_base = min(max_per_stock, cash * 0.9)
+    invest_amount = _size_base
     brain_score = stock.get("brain_score", 0) or stock.get("verity_brain", {}).get("brain_score", 50)
     invest_amount = _apply_fractional_kelly(invest_amount, brain_score)
+    _size_after_kelly = invest_amount
     # Sprint 11 결함 3 — 변동성 기반 sizing 보정 (ATR proxy)
     invest_amount, vol_meta = _apply_volatility_adj(invest_amount, stock)
+    _size_after_vol = invest_amount
     # Regime-aware position sizing (2026-05-23 PM 승인, RULE 7) — macro/regime multiplier 를
     # 점수가 아닌 사이징에 적용. macro 비관(고밸류/CAPE/통화) 시 포지션 0.7~1.0× 축소.
     # 신호(grade) ⊥ 사이징(macro). 근거: project_regime_aware_position_sizing (5/19 학술).
@@ -1076,6 +1084,21 @@ def execute_buy(
         "volatility_adj": vol_meta,
         # 2026-05-23 RULE 7 — regime-aware 사이징 적용 multiplier (audit)
         "macro_size_multiplier": round(macro_size_mult, 3),
+        # 🚨 사이징 자기신고 (2026-08-25) — 어느 값이 크기를 정했는지. 되돌리지 말 것.
+        "sizing_chain": {
+            "executor": "vams.execute_buy",
+            "max_per_stock": max_per_stock,
+            "cash_at_entry": round(cash),
+            "base": round(_size_base),
+            "base_binding": "max_per_stock" if max_per_stock <= cash * 0.9 else "cash*0.9",
+            "after_kelly": round(_size_after_kelly),
+            "after_volatility": round(_size_after_vol),
+            "after_macro": round(invest_amount),
+            "brain_position_guide_pct": (
+                (stock.get("verity_brain") or {}).get("position_guide") or {}
+            ).get("recommended_pct"),
+            "note": "brain_position_guide_pct 는 참고값이며 집행에 쓰이지 않는다",
+        },
         # Phase 1.1 — ATR 기반 동적 손절 (개별 산출값)
         "stop_loss_pct_individual": individual_stop_pct,
         "stop_loss_method": stop_loss_method,

@@ -1439,6 +1439,14 @@ def _compute_position_guide(
         "kelly_raw_pct": round(kelly_raw, 1),
         "max_pct": max_pct,
         "rationale": rationale,
+        # 🚨 2026-08-25 — 이 블록은 **집행자가 아니다.** 되돌리지 말 것.
+        #   실제 매수 크기는 vams.execute_buy 가 정한다:
+        #     min(profile.max_per_stock, 현금×0.9) → Kelly → 변동성 → 매크로.
+        #   두 값은 크게 갈린다 — 실측 2026-08-25 쿠쿠홀딩스 = 여기 3%(29만) vs 실집행 10.7%(104만).
+        #   이 필드를 규칙으로 읽어 잘못 답한 사고가 있어, 산출물이 스스로 신고하게 한다(RULE 12 §2).
+        "is_executor": False,
+        "executor": "vams.execute_buy (profile.max_per_stock 기반)",
+        "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님",
     }
 
 

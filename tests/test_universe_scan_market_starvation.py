@@ -42,6 +42,12 @@ def snap(tmp_path, monkeypatch):
     """OUTPUT_PATH 를 tmp 로 돌리고, 이번 run 산출을 주입하는 헬퍼 반환."""
     out = tmp_path / "universe_candidates.json"
     monkeypatch.setattr(USB, "OUTPUT_PATH", str(out))
+    # 🚨 2026-08-25 — 승격 소스도 격리한다. 되돌리지 말 것.
+    #   `merge_promoted`(6e0a2cfa9, 상승 신호 승격)가 실제 `data/metadata/multibagger_promote.json`
+    #   을 읽는데 이 픽스처가 그걸 안 막았다. 8/24 크론이 그 파일을 승격 20종목으로 채우자
+    #   기대 2 vs 실제 22 로 깨졌다 — **기능 결함이 아니라 테스트가 실데이터를 새로 읽은 것**이다.
+    #   그전까지 통과한 이유는 파일이 비어 있었기 때문일 뿐이다(초록이 안전이 아니었던 사례).
+    monkeypatch.setattr(USB, "PROMOTE_PATH", str(tmp_path / "no_promote.json"))
 
     def _run(this_run, prev=None):
         if prev is not None:
