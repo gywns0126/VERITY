@@ -67,7 +67,7 @@ const AN_IPF_CSS = `
 .an-ipf-side{flex:1 1 300px;position:sticky;top:12px;max-height:calc(100vh - 24px);margin-bottom:0}
 .an-ipf-detail{padding:18px 20px 22px}
 .an-ipf-tbl{min-width:460px}
-.an-ipf-smstbl{min-width:640px}
+.an-ipf-smstbl{min-width:700px}
 .an-ipf-bar{width:100px}
 .an-ipf-hdr{align-items:flex-end}
 .an-ipf-fxcol{align-items:flex-end}
@@ -77,7 +77,7 @@ const AN_IPF_CSS = `
 .an-ipf-side{flex-basis:100%;position:static;max-height:340px;margin-bottom:14px}
 .an-ipf-detail{padding:16px 14px 18px}
 .an-ipf-tbl{min-width:340px}
-.an-ipf-smstbl{min-width:520px}
+.an-ipf-smstbl{min-width:560px}
 .an-ipf-bar{width:64px}
 .an-ipf-hdr{flex-direction:column;align-items:flex-start}
 .an-ipf-fxcol{align-items:flex-start}
@@ -112,9 +112,9 @@ const SM_CANVAS_SAMPLE = {
             total_value_usd: 48817177284,
             holder_count: 3,
             holders: [
-                { fund: "Berkshire Hathaway", shares: 78791167, value_usd: 28157599351, weight_in_fund_pct: 9.41, change_type: "INCREASED", value_change_usd: 12557527438, held_since: "2025-09-30", quarters_held: 4, held_since_floor: false },
-                { fund: "Fisher Asset Management", shares: 39989840, value_usd: 14291169577, weight_in_fund_pct: 4.26, change_type: "HELD", value_change_usd: 0, held_since: "2024-06-30", quarters_held: 9, held_since_floor: true },
-                { fund: "AQR Capital", shares: 18000000, value_usd: 6368408356, weight_in_fund_pct: 0.73, change_type: "NEW", value_change_usd: 6368408356, held_since: "2024-06-30", quarters_held: 9, held_since_floor: true },
+                { fund: "Berkshire Hathaway", shares: 78791167, value_usd: 28157599351, weight_in_fund_pct: 9.41, change_type: "INCREASED", value_change_usd: 12557527438, held_since: "2025-09-30", quarters_held: 4, held_since_floor: false, held_since_qend_price_usd: 254.72, qend_price_usd: 357.37 },
+                { fund: "Fisher Asset Management", shares: 39989840, value_usd: 14291169577, weight_in_fund_pct: 4.26, change_type: "HELD", value_change_usd: 0, held_since: "2024-06-30", quarters_held: 9, held_since_floor: true, held_since_qend_price_usd: 182.15, qend_price_usd: 357.37 },
+                { fund: "AQR Capital", shares: 18000000, value_usd: 6368408356, weight_in_fund_pct: 0.73, change_type: "NEW", value_change_usd: 6368408356, held_since: "2024-06-30", quarters_held: 9, held_since_floor: true, held_since_qend_price_usd: 182.15, qend_price_usd: 357.37 },
             ],
         },
     ],
@@ -170,6 +170,21 @@ function fmtMoney(v: number | null | undefined, krw: boolean, fx: number): strin
     if (w >= 1e12) return (w / 1e12).toFixed(1) + "조원"
     if (w >= 1e8) return Math.round(w / 1e8).toLocaleString() + "억원"
     return Math.round(w / 1e4).toLocaleString() + "만원"
+}
+
+// 주당 가격 표기 — *_qend_price_usd (분기말 공시 내재가). 🚨 매수 체결가 아님(13F 미공시)
+// — 라벨은 "편입 분기가" 류만, '매수가' 단독 표기 금지.
+function fmtPrice(v: number | null | undefined, krw: boolean, fx: number): string {
+    if (v == null || !Number.isFinite(v)) return "—"
+    if (!krw)
+        return (
+            "$" +
+            v.toLocaleString(undefined, {
+                minimumFractionDigits: v < 10 ? 2 : 0,
+                maximumFractionDigits: 2,
+            })
+        )
+    return Math.round(v * fx).toLocaleString() + "원"
 }
 
 const signed = (v: number | null | undefined) =>
@@ -1541,7 +1556,7 @@ export default function PublicInvestorPortfolios(props: {
                             >
                                 <thead>
                                     <tr>
-                                        {["운용사", "평가액", "펀드 내 비중", "주식수", "보유 시작", "기준일", "분기 변화"].map(
+                                        {["운용사", "평가액", "펀드 내 비중", "주식수", "보유 시작", "편입 분기가", "기준일", "분기 변화"].map(
                                             (h, i) => (
                                                 <th
                                                     key={h}
@@ -1644,6 +1659,23 @@ export default function PublicInvestorPortfolios(props: {
                                                 style={{
                                                     padding: "9px 9px",
                                                     ...NUM,
+                                                    fontSize: 13,
+                                                    textAlign: "right",
+                                                    borderTop: `1px solid ${C.line}`,
+                                                    whiteSpace: "nowrap",
+                                                    color: C.sub,
+                                                }}
+                                            >
+                                                {fmtPrice(
+                                                    h.held_since_qend_price_usd,
+                                                    krw,
+                                                    fx.rate
+                                                )}
+                                            </td>
+                                            <td
+                                                style={{
+                                                    padding: "9px 9px",
+                                                    ...NUM,
                                                     fontSize: 12.5,
                                                     textAlign: "right",
                                                     borderTop: `1px solid ${C.line}`,
@@ -1683,7 +1715,9 @@ export default function PublicInvestorPortfolios(props: {
                             "보유 시작"은 최근 {smMeta.held_since_window_quarters || 9}개 분기
                             공시로 역추적한 연속 보유 시작이며, "이전부터"는 추적 범위 이전부터
                             보유 중이라는 뜻이에요. 13F 는 분기말 보유를 최대 45일 뒤에
-                            제출하므로 현재 보유와 다를 수 있어요.
+                            제출하므로 현재 보유와 다를 수 있어요. "편입 분기가"는 그
+                            분기말 공시 평가액÷주식수(내재가)로, 실제 매수 체결가가
+                            아니에요 — 13F 는 체결가를 공시하지 않아요.
                         </div>
                         </>
                         )}

@@ -54,20 +54,22 @@ HELD_SINCE_QUARTERS = 9       # 연속 보유 역추적 창 (13f_quarter_cache �
 
 
 def _held_since(qsets: List[tuple], cusip: str):
-    """(held_since, quarters_held, floor) — 연속 보유 시작 분기 기준일.
+    """(held_since, quarters_held, floor, qend_price) — 연속 보유 시작 분기 기준.
 
-    qsets = [(report_date, {cusip,...})] 오래된 → 최근 (최근 = 현 분기).
+    qsets = [(report_date, {cusip: 분기말 내재가 or None})] 오래된 → 최근 (최근 = 현 분기).
     최근 분기부터 과거로 걸으며 cusip 이 끊기는 지점에서 멈춘다 — 중간에 청산 후
     재매수한 과거 구간은 세지 않는다 ("언제부터 계속 보유" 의 정의).
     floor=True = 추적창 최고령 분기까지 연속 보유 → 실제 시작은 그 이전일 수 있다.
+    qend_price = 연속 보유 시작 **분기말**의 내재가(value/shares) — 🚨 매수 체결가가
+    아니다(13F 는 체결가 미공시). 화면 라벨을 '매수가' 로 달지 말 것.
     """
-    since, q = None, 0
+    since, q, price = None, 0, None
     for date, cusips in reversed(qsets):
         if cusip in cusips:
-            since, q = date, q + 1
+            since, q, price = date, q + 1, cusips.get(cusip)
         else:
             break
-    return since, q, q > 0 and q == len(qsets)
+    return since, q, q > 0 and q == len(qsets), price
 
 
 def _holdings_with_change(curr: List[dict], prev: List[dict]) -> List[dict]:
@@ -109,7 +111,18 @@ def main() -> int:
                 "report_date": recent[0].get("report_date"),
                 "filed_at": recent[0].get("filed_at"),
                 "total_value_usd": sum((h.get("value_usd") or 0) for h in curr_full),
-                "qsets": [(d, {r["cusip"] for r in rows}) for d, rows in snaps],
+                # cusip → 분기말 내재가 (0/결측 = None — 가짜 0 금지)
+                "qsets": [
+                    (d, {
+                        r["cusip"]: (
+                            round(r["value_usd"] / r["shares"], 2)
+                            if (r.get("shares") or 0) > 0 and (r.get("value_usd") or 0) > 0
+                            else None
+                        )
+                        for r in rows
+                    })
+                    for d, rows in snaps
+                ],
             }
             print(f"[smart_money] {name}: 현 {len(curr)} 보유 (filed {recent[0].get('filed_at')}) · 스냅샷 {len(snaps)}분기", file=sys.stderr)
 
@@ -137,7 +150,7 @@ def main() -> int:
                 })
                 m = fund_meta.get(fund, {})
                 ft = m.get("total_value_usd") or 0
-                since, q_held, floor = _held_since(m.get("qsets") or [], str(h["cusip"]).upper())
+                since, q_held, floor, since_px = _held_since(m.get("qsets") or [], str(h["cusip"]).upper())
                 e["total_value_usd"] += h["value_usd"]
                 e["holder_count"] += 1
                 e["holders"].append({
@@ -153,6 +166,15 @@ def main() -> int:
                     "held_since": since,
                     "quarters_held": q_held,
                     "held_since_floor": floor,
+                    # 편입(연속 보유 시작) 분기말 내재가 — 🚨 매수 체결가 아님(13F 미공시).
+                    # 화면 라벨 = "편입 분기말 기준가" 류만. '매수가' 단독 표기 금지.
+                    "held_since_qend_price_usd": since_px,
+                    # 최신 분기말 내재가 (동일 산식 value/shares — 비교 축)
+                    "qend_price_usd": (
+                        round(h["value_usd"] / h["shares"], 2)
+                        if (h.get("shares") or 0) > 0 and (h.get("value_usd") or 0) > 0
+                        else None
+                    ),
                 })
 
         for e in agg.values():
@@ -174,7 +196,7 @@ def main() -> int:
                     for f, m in fund_meta.items()
                 },
                 "held_since_window_quarters": HELD_SINCE_QUARTERS,
-                "note": "보유 사실만 — 펀드·주식수·평가액·QoQ 변동(NEW/INCREASED/DECREASED/HELD). 자체 점수·매매신호 아님 (RULE 7). 13F=분기말+45일 지연 공시·롱 미국주식만. 인덱스펀드 제외(집중형만). held_since=연속 보유 시작 분기말(추적창 " + str(HELD_SINCE_QUARTERS) + "분기, held_since_floor=창 상한 도달 → 실제 시작은 그 이전일 수 있음).",
+                "note": "보유 사실만 — 펀드·주식수·평가액·QoQ 변동(NEW/INCREASED/DECREASED/HELD). 자체 점수·매매신호 아님 (RULE 7). 13F=분기말+45일 지연 공시·롱 미국주식만. 인덱스펀드 제외(집중형만). held_since=연속 보유 시작 분기말(추적창 " + str(HELD_SINCE_QUARTERS) + "분기, held_since_floor=창 상한 도달 → 실제 시작은 그 이전일 수 있음). *_qend_price_usd=분기말 공시 내재가(value/shares) — 매수 체결가 아님(13F 미공시).",
             },
             "stocks": stocks,
         }
