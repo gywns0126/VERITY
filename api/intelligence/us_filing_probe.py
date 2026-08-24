@@ -233,7 +233,8 @@ def _doc_url(cik: str, accession: str, doc: str) -> str:
             f"{accession.replace('-', '')}/{doc}")
 
 
-def _doc_text(cik: str, accession: str, doc: str, limit: int = 1_500_000) -> Optional[str]:
+def _doc_text(cik: str, accession: str, doc: str, limit: int = 1_500_000,
+              meta: Optional[Dict[str, Any]] = None, purpose: str = "") -> Optional[str]:
     """공시 원문 텍스트. 대형 투서(50만자+)가 있어 상한을 둔다.
 
     🚨 **스트립을 먼저, 절단을 나중에** 한다. 이전 구현은 `_strip_html(raw[:limit*4])` 로
@@ -244,6 +245,16 @@ def _doc_text(cik: str, accession: str, doc: str, limit: int = 1_500_000) -> Opt
     12MB 스트립 실측 0.09초 — 순서를 뒤집는 비용이 없다.
     태그 비중은 문서마다 다르므로 **절단 여부는 스트립 후에만 판정할 수 있다**
     ([[feedback_api_row_limit_truncation_stale_value]] 계열: 상한이 조용히 값을 바꾼다).
+
+    🚨 **절단 사실을 호출자에게 돌려준다** (2026-08-24 신설, `meta` out-param).
+    종전엔 stderr 로그만 찍고 반환값은 그냥 문자열이라, **호출자가 잘린 줄 모른 채**
+    "전문 검색 확인(추정 아님)" 같은 **부재 단정**을 만들었다. 실측(XE 10-Q 2026-08-13):
+    본문 501,923자인데 표지 경로가 250,000자만 읽었고, NRC 51건 중 51건 · HALEU 44건 중
+    36건 · construction permit 3건 중 3건이 **전부 미독 구간**에 있었다.
+    이번엔 부문 주석 결론이 우연히 맞았지만, 맞은 것과 근거가 성립한 것은 다르다.
+    → `meta` 를 넘긴 호출자는 `truncated` / `full_chars` / `dropped_chars` 를 받아
+      부재 문구를 조건부로 만든다. `purpose` 는 로그에서 **의도된 제한 읽기**(표지·락업 등)와
+      **본문 전수 검색**을 구분하기 위한 라벨이다.
     """
     if not doc:
         return None
@@ -251,12 +262,33 @@ def _doc_text(cik: str, accession: str, doc: str, limit: int = 1_500_000) -> Opt
     if not isinstance(raw, str):
         return None
     txt = _strip_html(raw)
-    if len(txt) > limit:
+    full = len(txt)
+    truncated = full > limit
+    if meta is not None:
+        meta.update({"full_chars": full, "kept_chars": min(full, limit),
+                     "dropped_chars": max(0, full - limit), "truncated": truncated})
+    if truncated:
         # 조용히 자르지 않는다 — 무엇을 못 봤는지 로그로 신고한다.
-        print(f"[us_filing_probe] 본문 절단: {doc} {len(txt):,}자 → {limit:,}자 "
-              f"(뒤쪽 {len(txt) - limit:,}자 미확인)", file=_sys.stderr)
+        tag = f"[{purpose}] " if purpose else ""
+        print(f"[us_filing_probe] {tag}본문 절단: {doc} {full:,}자 → {limit:,}자 "
+              f"(뒤쪽 {full - limit:,}자 미확인)", file=_sys.stderr)
     return txt[:limit]
 
+
+
+def _absence_phrase(what: str, src: str, meta: Dict[str, Any]) -> str:
+    """부재 주장 문구 — **읽은 범위를 반드시 동봉한다**.
+
+    🚨 "없다" 는 "있다" 보다 비싸다(verity-stock 관문 1번). 전량을 읽었으면 그렇게 적고,
+    잘렸으면 **부재 단정을 하지 않는다**. 실측 계기 = XE 10-Q 501,923자 중 250,000자만
+    읽고도 하류가 "전문 검색 확인(추정 아님)" 을 그대로 인용할 수 있던 구조.
+    """
+    full = int(meta.get("full_chars") or 0)
+    if meta.get("truncated"):
+        return (f"{what} — 🚨 다만 {src} 본문 {full:,}자 중 "
+                f"{int(meta.get('kept_chars') or 0):,}자만 검색했다"
+                f"(뒤쪽 {int(meta.get('dropped_chars') or 0):,}자 미확인). **부재 단정 아님.**")
+    return f"{what} — {src} 전문 검색 확인(추정 아님 · {full:,}자 전량)"
 
 # ── 공시 이력 ─────────────────────────────────────────────────────────────
 
@@ -418,7 +450,11 @@ def _cover_shares(cik: str, rows: List[Dict[str, Any]]) -> Optional[Dict[str, An
         return None
     # 상한 여유 — SPCX 10-Q 실측에서 표지 문구가 44,123자 지점에 있었다(iXBRL 헤더가
     # 앞을 길게 먹는다). 60K 로 두면 서문이 조금만 길어도 표지를 놓친다.
-    txt = _doc_text(cik, latest["accessionNumber"], latest["primaryDocument"], limit=250_000)
+    # purpose 라벨 = 로그에서 **의도된 제한 읽기**와 본문 전수 검색을 구분한다.
+    #   이 경로는 표지 발행주식만 필요해 250K 로 끊는 것이 설계다 — 절단 로그가
+    #   "본문을 못 봤다" 로 오독되지 않게 한다(2026-08-24).
+    txt = _doc_text(cik, latest["accessionNumber"], latest["primaryDocument"], limit=250_000,
+                    purpose="표지 발행주식(제한 읽기)")
     if not txt:
         return None
     anchor = _COVER_ANCHOR_PAT.search(txt)
@@ -670,7 +706,8 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
                 if 0 <= (date.fromisoformat(x["filingDate"]) - d0).days <= 14]
         if not near:
             continue
-        txt = _doc_text(cik, r["accessionNumber"], r["primaryDocument"], limit=200_000)
+        txt = _doc_text(cik, r["accessionNumber"], r["primaryDocument"], limit=200_000,
+                        purpose="락업 조항(제한 읽기)")
         if not txt or not _EQUITY_LINE_PAT.search(txt):
             continue
         m = re.search(r"up to (?:the lesser of \(i\)\s*)?([\d,]{7,})\s*shares", txt, re.I)
@@ -697,7 +734,7 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
         OKLO 2026-05-13 도 동일. 즉 표지 기반 판정은 구조적으로 틀린다.
         """
         parts = []
-        t0 = _doc_text(cik, accn, primary, limit=200_000)
+        t0 = _doc_text(cik, accn, primary, limit=200_000, purpose="ATM·셸프(제한 읽기)")
         if t0:
             parts.append(t0)
         idx = _fetch(_doc_url(cik, accn, "index.json"), f"idx_{accn}.json", _TTL_DOC, as_json=True)
@@ -712,7 +749,7 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
                         and not nm.lower().startswith("r")):     # R1.htm = XBRL 렌더
                     names.append(nm)
         for nm in names[:3]:
-            t = _doc_text(cik, accn, nm, limit=200_000)
+            t = _doc_text(cik, accn, nm, limit=200_000, purpose="ATM·셸프 첨부(제한 읽기)")
             if t:
                 parts.append(t)
         return "\n".join(parts)
@@ -790,13 +827,18 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
     latest_fin = next((r for r in sorted(rows, key=lambda r: r["filingDate"], reverse=True)
                        if r["form"] in ("10-K", "10-Q")), None)
     if latest_fin:
+        _gm: Dict[str, Any] = {}
         txt = _doc_text(cik, latest_fin["accessionNumber"], latest_fin["primaryDocument"],
-                        limit=800_000)
+                        limit=800_000, meta=_gm, purpose="going-concern 전수")
         if txt:
             hit = _GOING_CONCERN_PAT.search(txt)
-            out["계속기업 의문(going concern)"] = (
-                f"있음 — {latest_fin['form']} ({latest_fin['filingDate']}) 본문 확인"
-                if hit else f"미검출 — {latest_fin['form']} ({latest_fin['filingDate']}) 본문 확인")
+            _sig = f"{latest_fin['form']} ({latest_fin['filingDate']})"
+            if hit:
+                # 있음 = 발견이라 절단과 무관하게 성립한다.
+                out["계속기업 의문(going concern)"] = f"있음 — {_sig} 본문 확인"
+            else:
+                # 🚨 없음은 있음보다 비싸다 — 어디까지 읽었는지 없이 부재를 단정하지 않는다.
+                out["계속기업 의문(going concern)"] = _absence_phrase("미검출", _sig, _gm)
 
     # ── 최근 분기 매출·손익 (조인에 10-Q 가 없던 결손 ①의 실질 보완) ──
     if facts:
@@ -938,7 +980,9 @@ def _segment_block(cik: str, rows: List[Dict[str, Any]]) -> Optional[Dict[str, A
                    if r["form"] in ("10-Q", "10-K", "10-K/A", "10-Q/A")), None)
     if not latest:
         return None
-    txt = _doc_text(cik, latest["accessionNumber"], latest["primaryDocument"])
+    _sm: Dict[str, Any] = {}
+    txt = _doc_text(cik, latest["accessionNumber"], latest["primaryDocument"],
+                    meta=_sm, purpose="부문 주석 전수")
     if not txt:
         return None
     src = f"{latest['form']} {latest['filingDate']}"
@@ -965,7 +1009,8 @@ def _segment_block(cik: str, rows: List[Dict[str, Any]]) -> Optional[Dict[str, A
 
     if not out:
         # 🚨 "안 찾아봄" 과 "찾아봤는데 없음" 의 구분. 이게 없으면 부재 주장을 못 한다.
-        return {"부문 주석": f"본문에 부문·매출분해 주석 없음 — {src} 전문 검색 확인(추정 아님)"}
+        #   그리고 "찾아봤는데 없음" 은 **어디까지 찾아봤는지**가 붙어야 성립한다(2026-08-24).
+        return {"부문 주석": _absence_phrase("본문에 부문·매출분해 주석 없음", src, _sm)}
     return out
 
 
