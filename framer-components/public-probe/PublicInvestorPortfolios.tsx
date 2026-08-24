@@ -67,6 +67,7 @@ const AN_IPF_CSS = `
 .an-ipf-side{flex:1 1 300px;position:sticky;top:12px;max-height:calc(100vh - 24px);margin-bottom:0}
 .an-ipf-detail{padding:18px 20px 22px}
 .an-ipf-tbl{min-width:460px}
+.an-ipf-smstbl{min-width:640px}
 .an-ipf-bar{width:100px}
 .an-ipf-hdr{align-items:flex-end}
 .an-ipf-fxcol{align-items:flex-end}
@@ -76,6 +77,7 @@ const AN_IPF_CSS = `
 .an-ipf-side{flex-basis:100%;position:static;max-height:340px;margin-bottom:14px}
 .an-ipf-detail{padding:16px 14px 18px}
 .an-ipf-tbl{min-width:340px}
+.an-ipf-smstbl{min-width:520px}
 .an-ipf-bar{width:64px}
 .an-ipf-hdr{flex-direction:column;align-items:flex-start}
 .an-ipf-fxcol{align-items:flex-start}
@@ -89,6 +91,33 @@ const KO_CHANGE: Record<string, string> = {
     INCREASED: "증액",
     DECREASED: "감액",
     HELD: "유지",
+}
+
+// 종목 역조회(거장 보유 검색) 캔버스 샘플 — fetch 없는 캔버스 렌더에서 빈 화면 방지
+const SM_CANVAS_SAMPLE = {
+    _meta: {
+        managers: ["Berkshire Hathaway", "Fisher Asset Management", "AQR Capital"],
+        count: 1021,
+        held_since_window_quarters: 9,
+        funds: {
+            "Berkshire Hathaway": { report_date: "2026-06-30", filed_at: "2026-08-14" },
+            "Fisher Asset Management": { report_date: "2026-06-30", filed_at: "2026-08-12" },
+            "AQR Capital": { report_date: "2026-06-30", filed_at: "2026-08-13" },
+        },
+    },
+    stocks: [
+        {
+            ticker: "GOOGL",
+            name: "ALPHABET INC",
+            total_value_usd: 48817177284,
+            holder_count: 3,
+            holders: [
+                { fund: "Berkshire Hathaway", shares: 78791167, value_usd: 28157599351, weight_in_fund_pct: 9.41, change_type: "INCREASED", value_change_usd: 12557527438, held_since: "2025-09-30", quarters_held: 4, held_since_floor: false },
+                { fund: "Fisher Asset Management", shares: 39989840, value_usd: 14291169577, weight_in_fund_pct: 4.26, change_type: "HELD", value_change_usd: 0, held_since: "2024-06-30", quarters_held: 9, held_since_floor: true },
+                { fund: "AQR Capital", shares: 18000000, value_usd: 6368408356, weight_in_fund_pct: 0.73, change_type: "NEW", value_change_usd: 6368408356, held_since: "2024-06-30", quarters_held: 9, held_since_floor: true },
+            ],
+        },
+    ],
 }
 
 function readBodyDark(): boolean {
@@ -105,6 +134,15 @@ function readBodyDark(): boolean {
 }
 
 const dot = (s?: string | null) => (s || "").replace(/-/g, ".")
+// "2024-09-30" → "2024.09" (분기 식별엔 연.월이면 충분 — 말일 표기는 소음)
+const ym = (s?: string | null) => (s ? dot(s).slice(0, 7) : "—")
+
+// "언제부터" 표기 — held_since_floor(추적창 상한 도달)면 "이전부터".
+// 실제 보유 시작이 추적창(9분기)보다 과거일 수 있다는 뜻 — 단정 표기 금지.
+const heldSinceLabel = (h: any): string => {
+    if (!h || !h.held_since) return "—"
+    return h.held_since_floor ? ym(h.held_since) + " 이전부터" : ym(h.held_since) + "부터"
+}
 
 function daysBetween(a?: string | null, b?: string | null): number | null {
     if (!a || !b) return null
@@ -671,6 +709,7 @@ function StyleMap({
 export default function PublicInvestorPortfolios(props: {
     dataUrl?: string
     macroUrl?: string
+    searchUrl?: string
     dark?: boolean
     topN?: number
     stockPath?: string
@@ -699,6 +738,10 @@ export default function PublicInvestorPortfolios(props: {
         rate: FX_FALLBACK,
         asOf: null,
     })
+    // 종목 역조회 (거장 보유 검색) — us_smart_money_13f.json (종목 축, 같은 13F 원천)
+    const [sm, setSm] = useState<any>(onCanvas ? SM_CANVAS_SAMPLE : null)
+    const [smQ, setSmQ] = useState("")
+    const [smTicker, setSmTicker] = useState<string | null>(null)
 
     useEffect(() => {
         if (onCanvas) return
@@ -750,6 +793,21 @@ export default function PublicInvestorPortfolios(props: {
         }
     }, [onCanvas, props.macroUrl])
 
+    // 종목 축 데이터 — 검색창을 처음 쓸 때가 아니라 마운트 시 로드 (400KB 급, 입력 지연 방지)
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        fetch(props.searchUrl || BLOB + "/us_smart_money_13f.json")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (alive && d && Array.isArray(d.stocks)) setSm(d)
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [onCanvas, props.searchUrl])
+
     useEffect(() => {
         const el = rootRef.current
         if (!el || typeof ResizeObserver === "undefined") return
@@ -768,6 +826,43 @@ export default function PublicInvestorPortfolios(props: {
     )
     const cur = list[Math.min(sel, Math.max(list.length - 1, 0))] || null
     const topN = Math.max(3, props.topN ?? 25)
+
+    // ── 종목 역조회 (검색) ──────────────────────────────────────────────────
+    const smStocks: any[] = useMemo(
+        () => (sm && Array.isArray(sm.stocks) ? sm.stocks : []),
+        [sm]
+    )
+    const smMeta = (sm && sm._meta) || {}
+    const smFunds: Record<string, any> = smMeta.funds || {}
+    const smQn = smQ.trim().toUpperCase()
+    // 티커 전방일치 우선, 회사명(nameOfIssuer) 부분일치 후순위. 최대 8건.
+    const smSuggests: any[] = useMemo(() => {
+        if (!smQn) return []
+        const byTicker: any[] = []
+        const byName: any[] = []
+        for (const s of smStocks) {
+            const tk = String(s.ticker || "").toUpperCase()
+            const nm = String(s.name || "").toUpperCase()
+            if (tk.startsWith(smQn)) byTicker.push(s)
+            else if (nm.includes(smQn)) byName.push(s)
+            if (byTicker.length >= 8) break
+        }
+        return byTicker.concat(byName).slice(0, 8)
+    }, [smStocks, smQn])
+    const smCur: any = useMemo(
+        () => smStocks.find((s) => s.ticker === smTicker) || null,
+        [smStocks, smTicker]
+    )
+    // 미커버 안내 — 입력이 있는데 제안 0 + 선택 0 (분모를 함께 말한다)
+    const smNoHit = !!smQn && smSuggests.length === 0 && !smCur
+    // 펀드명 클릭 → 좌측 인물 목록의 해당 운용사로 점프 (두 축이 같은 16개 명단)
+    const jumpToFund = (fund: string) => {
+        const i = list.findIndex(
+            (v: any) =>
+                String(v.institution || "").toUpperCase() === String(fund || "").toUpperCase()
+        )
+        if (i >= 0) setSel(i)
+    }
 
     const money = (v: any) => fmtMoney(v, krw, fx.rate)
     const tone = (v: any) =>
@@ -1041,6 +1136,356 @@ export default function PublicInvestorPortfolios(props: {
                     위치는 공시 숫자를 그대로 옮긴 것이며 좋고 나쁨을 뜻하지 않습니다.
                     현금·채권·공매도는 이 공시에 없어 반영되지 않습니다.
                 </div>
+            </div>
+
+            {/* ── 종목 역조회 — "이 종목, 누가 얼마나 언제부터 들고 있나" ──────────
+                입력창 = 보더/아웃라인 금지(배경 채움만) — 공개 입력 규약.
+                🚨 isolation:isolate — 제안 드롭다운의 양수 z-index 가 페이지 루트로
+                새는 것을 컴포넌트 안에 가둔다(z-index 대증요법 금지 규율). */}
+            <div style={{ isolation: "isolate", marginBottom: 18 }}>
+                <div style={{ position: "relative" }}>
+                    <input
+                        value={smQ}
+                        onChange={(e) => {
+                            setSmQ(e.target.value)
+                            setSmTicker(null)
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && smSuggests.length > 0) {
+                                setSmTicker(smSuggests[0].ticker)
+                                setSmQ(smSuggests[0].ticker)
+                            }
+                        }}
+                        placeholder="종목 검색 — 어떤 거장이 언제부터 들고 있는지 (예: NVDA, APPLE)"
+                        aria-label="거장 보유 종목 검색"
+                        style={{
+                            width: "100%",
+                            boxSizing: "border-box",
+                            border: "none",
+                            outline: "none",
+                            background: C.card,
+                            color: C.ink,
+                            borderRadius: 14,
+                            padding: "13px 16px",
+                            fontSize: 14.5,
+                            fontWeight: 600,
+                            fontFamily: FONT,
+                        }}
+                    />
+                    {smSuggests.length > 0 && !smCur && (
+                        <div
+                            style={{
+                                position: "absolute",
+                                top: "calc(100% + 6px)",
+                                left: 0,
+                                right: 0,
+                                zIndex: 1,
+                                background: C.card,
+                                borderRadius: 14,
+                                boxShadow: themeDark
+                                    ? "0 8px 24px rgba(0,0,0,0.45)"
+                                    : "0 8px 24px rgba(25,31,40,0.10)",
+                                overflow: "hidden",
+                            }}
+                        >
+                            {smSuggests.map((s: any, i: number) => (
+                                <div
+                                    key={s.ticker}
+                                    onClick={() => {
+                                        setSmTicker(s.ticker)
+                                        setSmQ(s.ticker)
+                                    }}
+                                    onKeyDown={(ev: any) => {
+                                        if (ev.key === "Enter") {
+                                            setSmTicker(s.ticker)
+                                            setSmQ(s.ticker)
+                                        }
+                                    }}
+                                    role="option"
+                                    tabIndex={0}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 10,
+                                        padding: "10px 14px",
+                                        cursor: "pointer",
+                                        borderTop: i === 0 ? "none" : `1px solid ${C.line}`,
+                                    }}
+                                >
+                                    <TickerLogo ticker={s.ticker} C={C} />
+                                    <span style={{ fontSize: 13.5, fontWeight: 700 }}>
+                                        {s.ticker}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: 12.5,
+                                            color: C.faint,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                            flex: 1,
+                                        }}
+                                    >
+                                        {s.name && s.name !== s.ticker ? s.name : ""}
+                                    </span>
+                                    <span style={{ fontSize: 12, color: C.sub, ...NUM }}>
+                                        {s.holder_count}개 펀드
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {smNoHit && (
+                    <div style={{ marginTop: 10, fontSize: 12.5, color: C.sub }}>
+                        "{smQ.trim()}" 은(는) 추적 대상에 없어요. 검색 범위는 이{" "}
+                        {(smMeta.managers || []).length}개 운용사가 보유한 미국 주식{" "}
+                        {(smMeta.count || 0).toLocaleString()}종목 — 이 펀드들이 담지 않은
+                        종목은 나오지 않아요.
+                    </div>
+                )}
+
+                {smCur && (
+                    <div
+                        style={{
+                            marginTop: 10,
+                            background: C.card,
+                            borderRadius: 16,
+                            padding: "15px 16px 13px",
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            <TickerLogo ticker={smCur.ticker} C={C} />
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontSize: 15.5, fontWeight: 750 }}>
+                                    {smCur.ticker}
+                                    {smCur.name && smCur.name !== smCur.ticker && (
+                                        <span
+                                            style={{
+                                                marginLeft: 8,
+                                                fontSize: 12.5,
+                                                fontWeight: 550,
+                                                color: C.faint,
+                                            }}
+                                        >
+                                            {smCur.name}
+                                        </span>
+                                    )}
+                                </div>
+                                <div
+                                    style={{
+                                        marginTop: 2,
+                                        fontSize: 12.5,
+                                        color: C.sub,
+                                        ...NUM,
+                                    }}
+                                >
+                                    거장 {smCur.holder_count}개 펀드 보유 · 합산{" "}
+                                    {fmtMoney(smCur.total_value_usd, krw, fx.rate)}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => goStock(smCur.ticker)}
+                                style={{
+                                    border: "none",
+                                    outline: "none",
+                                    cursor: "pointer",
+                                    background: C.vtS,
+                                    color: C.vt,
+                                    borderRadius: 999,
+                                    padding: "7px 13px",
+                                    fontSize: 12.5,
+                                    fontWeight: 700,
+                                    fontFamily: FONT,
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                종목 리포트 →
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setSmTicker(null)
+                                    setSmQ("")
+                                }}
+                                aria-label="검색 결과 닫기"
+                                style={{
+                                    border: "none",
+                                    outline: "none",
+                                    cursor: "pointer",
+                                    background: C.hi,
+                                    color: C.sub,
+                                    borderRadius: 999,
+                                    padding: "7px 12px",
+                                    fontSize: 12.5,
+                                    fontWeight: 650,
+                                    fontFamily: FONT,
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div style={{ overflowX: "auto", marginTop: 10 }}>
+                            <table
+                                className="an-ipf-smstbl"
+                                style={{ width: "100%", borderCollapse: "collapse" }}
+                            >
+                                <thead>
+                                    <tr>
+                                        {["운용사", "평가액", "펀드 내 비중", "주식수", "보유 시작", "기준일", "분기 변화"].map(
+                                            (h, i) => (
+                                                <th
+                                                    key={h}
+                                                    style={{
+                                                        fontSize: 11.5,
+                                                        fontWeight: 650,
+                                                        letterSpacing: "0.07em",
+                                                        color: C.faint,
+                                                        textAlign: i === 0 ? "left" : "right",
+                                                        padding: "8px 9px",
+                                                        whiteSpace: "nowrap",
+                                                    }}
+                                                >
+                                                    {h}
+                                                </th>
+                                            )
+                                        )}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(smCur.holders || []).map((h: any) => (
+                                        <tr key={h.fund}>
+                                            <td
+                                                onClick={() => jumpToFund(h.fund)}
+                                                onKeyDown={(ev: any) => {
+                                                    if (ev.key === "Enter") jumpToFund(h.fund)
+                                                }}
+                                                tabIndex={0}
+                                                role="button"
+                                                title="아래 목록에서 이 운용사 포트폴리오 보기"
+                                                style={{
+                                                    padding: "9px 9px",
+                                                    fontSize: 13.5,
+                                                    fontWeight: 650,
+                                                    borderTop: `1px solid ${C.line}`,
+                                                    whiteSpace: "nowrap",
+                                                    cursor: "pointer",
+                                                }}
+                                            >
+                                                {h.fund}
+                                            </td>
+                                            <td
+                                                style={{
+                                                    padding: "9px 9px",
+                                                    ...NUM,
+                                                    fontSize: 13.5,
+                                                    textAlign: "right",
+                                                    borderTop: `1px solid ${C.line}`,
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {fmtMoney(h.value_usd, krw, fx.rate)}
+                                            </td>
+                                            <td
+                                                style={{
+                                                    padding: "9px 9px",
+                                                    ...NUM,
+                                                    fontSize: 13.5,
+                                                    textAlign: "right",
+                                                    borderTop: `1px solid ${C.line}`,
+                                                }}
+                                            >
+                                                {h.weight_in_fund_pct == null
+                                                    ? "—"
+                                                    : h.weight_in_fund_pct.toFixed(2) + "%"}
+                                            </td>
+                                            <td
+                                                style={{
+                                                    padding: "9px 9px",
+                                                    ...NUM,
+                                                    fontSize: 13.5,
+                                                    textAlign: "right",
+                                                    borderTop: `1px solid ${C.line}`,
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {Math.round(h.shares || 0).toLocaleString()}
+                                            </td>
+                                            <td
+                                                style={{
+                                                    padding: "9px 9px",
+                                                    ...NUM,
+                                                    fontSize: 13,
+                                                    textAlign: "right",
+                                                    borderTop: `1px solid ${C.line}`,
+                                                    whiteSpace: "nowrap",
+                                                    color: C.sub,
+                                                }}
+                                            >
+                                                {heldSinceLabel(h)}
+                                                {h.quarters_held > 0 && (
+                                                    <span style={{ color: C.faint }}>
+                                                        {" "}
+                                                        ({h.quarters_held}분기
+                                                        {h.held_since_floor ? "+" : ""})
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td
+                                                style={{
+                                                    padding: "9px 9px",
+                                                    ...NUM,
+                                                    fontSize: 12.5,
+                                                    textAlign: "right",
+                                                    borderTop: `1px solid ${C.line}`,
+                                                    whiteSpace: "nowrap",
+                                                    color: C.faint,
+                                                }}
+                                            >
+                                                {ym((smFunds[h.fund] || {}).report_date)}
+                                            </td>
+                                            <td
+                                                style={{
+                                                    padding: "9px 9px",
+                                                    textAlign: "right",
+                                                    borderTop: `1px solid ${C.line}`,
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        display: "inline-block",
+                                                        padding: "2.5px 9px",
+                                                        borderRadius: 999,
+                                                        fontSize: 11.5,
+                                                        fontWeight: 650,
+                                                        background: chipBg(h.change_type),
+                                                        color: chipFg(h.change_type),
+                                                    }}
+                                                >
+                                                    {KO_CHANGE[h.change_type] || h.change_type}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style={{ marginTop: 8, fontSize: 12, color: C.faint, lineHeight: 1.55 }}>
+                            "보유 시작"은 최근 {smMeta.held_since_window_quarters || 9}개 분기
+                            공시로 역추적한 연속 보유 시작이며, "이전부터"는 추적 범위 이전부터
+                            보유 중이라는 뜻이에요. 13F 는 분기말 보유를 최대 45일 뒤에
+                            제출하므로 현재 보유와 다를 수 있어요.
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div
@@ -1747,6 +2192,11 @@ addPropertyControls(PublicInvestorPortfolios, {
         type: ControlType.String,
         title: "환율 URL",
         defaultValue: BLOB + "/macro_snapshot.json",
+    },
+    searchUrl: {
+        type: ControlType.String,
+        title: "종목 검색 데이터 URL",
+        defaultValue: BLOB + "/us_smart_money_13f.json",
     },
     topN: {
         type: ControlType.Number,
