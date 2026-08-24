@@ -4,6 +4,10 @@ name: US Major Holdings (SEC 13D/13G)
 # 美 5%+ 대량보유 SC 13D(행동주의)/13G(수동) = KR 5%+ 대량보유의 美 짝. 공개 forensics.
 # 비용: 무료(SEC EDGAR). per-ticker CIK submissions(13D/G cross-index) — Form4 와 동일 패턴.
 # 전 종목(sp1500 1505) rotation + carry-forward. 소유=느린 이벤트라 주 3회로 충분.
+#
+# 🚨 2026-08-24 — 락업 창 관측(`scripts/watch/lockup_window_watch.py`)을 이 워크플로에 얹었다.
+#   13G 를 갱신하는 자리가 여기라 직후에 읽는 게 맞고, 신규 수집이 0 이라 별도 cron 이 필요 없다.
+#   산출물 = data/metadata/lockup_watch.jsonl (append-only, 판정 0).
 
 on:
   schedule:
@@ -51,12 +55,25 @@ jobs:
           US_HOLDINGS_MAX_SECONDS: ${{ github.event.inputs.max_seconds || '2100' }}
         run: python -m api.builders.us_major_holdings_public_builder
 
+      - name: Lockup window watch (관측 기록 · 판정 0)
+        # 🚨 2026-08-24 신설 (PM 지시). 락업 만기 창의 수급 3축을 **숫자만** 적는다.
+        #   신규 수집 0 · 네트워크 0 · DART/SEC 쿼터 0 — 방금 갱신한 13G 와 이미 수집된
+        #   공매도·FTD 발행물을 읽기만 한다. 그래서 별도 cron 을 만들지 않고 여기 붙였다
+        #   (신규 워크플로 = RULE 8 N=2 부담 + concurrency 슬롯).
+        #   판정·경보 문구 금지 (RULE 7). 해석은 터미널 대화가 한다.
+        continue-on-error: true
+        run: python scripts/watch/lockup_window_watch.py
+
       - name: Commit data/us_major_holdings.json
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/us_major_holdings.json
+          # 🚨 RULE 4 — 신규 산출물은 **파일마다 나눠서** 스테이징. 한 줄로 묶으면 하나가
+          #   없을 때 통째로 실패해 멀쩡한 산출물까지 안 올라간다(8/9 KIS 락 사고).
+          for f in data/us_major_holdings.json data/metadata/lockup_watch.jsonl; do
+            git add "$f" 2>/dev/null || echo "::notice::$f 없음(이번 run 미산출)"
+          done
           if git diff --staged --quiet; then
             echo "[us_holdings] no changes"
             exit 0
