@@ -834,20 +834,33 @@ export default function PublicInvestorPortfolios(props: {
     )
     const smMeta = (sm && sm._meta) || {}
     const smFunds: Record<string, any> = smMeta.funds || {}
-    const smQn = smQ.trim().toUpperCase()
-    // 티커 전방일치 우선, 회사명(nameOfIssuer) 부분일치 후순위. 최대 8건.
+    const smQn = smQ.trim().toLowerCase()
+    // 🚨 매칭 = 사이트 공통 검색창 규약(PublicHoldingsTab 원형과 동일):
+    //   substring 포함 매칭 + 랭킹(티커 정확 > 이름 정확 > 티커 접두 > 이름 접두 > 포함) > 상위 8.
+    //   전방일치 전용으로 바꾸지 말 것 — 타 검색창과 결과가 달라진다(PM 2026-08-24 지적).
     const smSuggests: any[] = useMemo(() => {
         if (!smQn) return []
-        const byTicker: any[] = []
-        const byName: any[] = []
-        for (const s of smStocks) {
-            const tk = String(s.ticker || "").toUpperCase()
-            const nm = String(s.name || "").toUpperCase()
-            if (tk.startsWith(smQn)) byTicker.push(s)
-            else if (nm.includes(smQn)) byName.push(s)
-            if (byTicker.length >= 8) break
+        const rk = (x: any) => {
+            const t = String(x.ticker || "").toLowerCase()
+            const n = String(x.name || "").toLowerCase()
+            return t === smQn
+                ? 0
+                : n === smQn
+                  ? 1
+                  : t.indexOf(smQn) === 0
+                    ? 2
+                    : n.indexOf(smQn) === 0
+                      ? 3
+                      : 4
         }
-        return byTicker.concat(byName).slice(0, 8)
+        return smStocks
+            .filter(
+                (x: any) =>
+                    String(x.ticker || "").toLowerCase().includes(smQn) ||
+                    String(x.name || "").toLowerCase().includes(smQn)
+            )
+            .sort((a: any, b: any) => rk(a) - rk(b))
+            .slice(0, 8)
     }, [smStocks, smQn])
     const smCur: any = useMemo(
         () => smStocks.find((s) => s.ticker === smTicker) || null,
@@ -1139,12 +1152,41 @@ export default function PublicInvestorPortfolios(props: {
             </div>
 
             {/* ── 종목 역조회 — "이 종목, 누가 얼마나 언제부터 들고 있나" ──────────
-                입력창 = 보더/아웃라인 금지(배경 채움만) — 공개 입력 규약.
-                🚨 isolation:isolate — 제안 드롭다운의 양수 z-index 가 페이지 루트로
-                새는 것을 컴포넌트 안에 가둔다(z-index 대증요법 금지 규율). */}
-            <div style={{ isolation: "isolate", marginBottom: 18 }}>
+                🚨 검색창 디자인·방식 = 사이트 공통 규약 그대로 (PM 2026-08-24 "다른
+                컴포넌트랑 다르다" 지적 후 정렬). 원형 = PublicNPSHoldings(돋보기 SVG +
+                회색 필드 radius 12 + × 클리어, 보더/아웃라인 0) + PublicHoldingsTab
+                (결과 = 입력 아래 인라인 목록 · 로고+이름/티커 2줄 · 상위 8 · 선택 시
+                입력 초기화). 오버레이 드롭다운으로 되돌리지 말 것. */}
+            <div
+                style={{
+                    background: C.card,
+                    borderRadius: 16,
+                    padding: "14px 15px",
+                    marginBottom: 18,
+                }}
+            >
                 <div style={{ position: "relative" }}>
+                    <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke={C.faint}
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        style={{
+                            position: "absolute",
+                            left: 13,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            pointerEvents: "none",
+                        }}
+                    >
+                        <circle cx="11" cy="11" r="7" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
                     <input
+                        type="text"
                         value={smQ}
                         onChange={(e) => {
                             setSmQ(e.target.value)
@@ -1153,108 +1195,144 @@ export default function PublicInvestorPortfolios(props: {
                         onKeyDown={(e) => {
                             if (e.key === "Enter" && smSuggests.length > 0) {
                                 setSmTicker(smSuggests[0].ticker)
-                                setSmQ(smSuggests[0].ticker)
+                                setSmQ("")
                             }
                         }}
-                        placeholder="종목 검색 — 어떤 거장이 언제부터 들고 있는지 (예: NVDA, APPLE)"
+                        placeholder="종목명·코드 검색 — 어떤 거장이 들고 있는지"
                         aria-label="거장 보유 종목 검색"
                         style={{
                             width: "100%",
                             boxSizing: "border-box",
                             border: "none",
-                            outline: "none",
-                            background: C.card,
+                            background: C.bg,
                             color: C.ink,
-                            borderRadius: 14,
-                            padding: "13px 16px",
-                            fontSize: 14.5,
-                            fontWeight: 600,
+                            borderRadius: 12,
+                            padding: "11px 32px 11px 36px",
+                            fontSize: 13,
                             fontFamily: FONT,
+                            outline: "none",
+                            WebkitAppearance: "none",
                         }}
                     />
-                    {smSuggests.length > 0 && !smCur && (
-                        <div
+                    {smQ && (
+                        <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                                setSmQ("")
+                                setSmTicker(null)
+                            }}
                             style={{
                                 position: "absolute",
-                                top: "calc(100% + 6px)",
-                                left: 0,
-                                right: 0,
-                                zIndex: 1,
-                                background: C.card,
-                                borderRadius: 14,
-                                boxShadow: themeDark
-                                    ? "0 8px 24px rgba(0,0,0,0.45)"
-                                    : "0 8px 24px rgba(25,31,40,0.10)",
-                                overflow: "hidden",
+                                right: 10,
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                color: C.faint,
+                                fontSize: 14,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                lineHeight: 1,
                             }}
                         >
-                            {smSuggests.map((s: any, i: number) => (
-                                <div
-                                    key={s.ticker}
-                                    onClick={() => {
-                                        setSmTicker(s.ticker)
-                                        setSmQ(s.ticker)
-                                    }}
-                                    onKeyDown={(ev: any) => {
-                                        if (ev.key === "Enter") {
-                                            setSmTicker(s.ticker)
-                                            setSmQ(s.ticker)
-                                        }
-                                    }}
-                                    role="option"
-                                    tabIndex={0}
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 10,
-                                        padding: "10px 14px",
-                                        cursor: "pointer",
-                                        borderTop: i === 0 ? "none" : `1px solid ${C.line}`,
-                                    }}
-                                >
-                                    <TickerLogo ticker={s.ticker} C={C} />
-                                    <span style={{ fontSize: 13.5, fontWeight: 700 }}>
-                                        {s.ticker}
-                                    </span>
-                                    <span
-                                        style={{
-                                            fontSize: 12.5,
-                                            color: C.faint,
-                                            overflow: "hidden",
-                                            textOverflow: "ellipsis",
-                                            whiteSpace: "nowrap",
-                                            flex: 1,
-                                        }}
-                                    >
-                                        {s.name && s.name !== s.ticker ? s.name : ""}
-                                    </span>
-                                    <span style={{ fontSize: 12, color: C.sub, ...NUM }}>
-                                        {s.holder_count}개 펀드
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
+                            ×
+                        </span>
                     )}
                 </div>
 
+                {smSuggests.length > 0 && !smCur && (
+                    <div
+                        style={{
+                            marginTop: 8,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 2,
+                        }}
+                    >
+                        {smSuggests.map((s: any) => (
+                            <div
+                                key={s.ticker}
+                                onClick={() => {
+                                    setSmTicker(s.ticker)
+                                    setSmQ("")
+                                }}
+                                onKeyDown={(ev: any) => {
+                                    if (ev.key === "Enter") {
+                                        setSmTicker(s.ticker)
+                                        setSmQ("")
+                                    }
+                                }}
+                                role="option"
+                                tabIndex={0}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 10,
+                                    padding: "8px 6px",
+                                    borderRadius: 10,
+                                    cursor: "pointer",
+                                }}
+                            >
+                                <TickerLogo ticker={s.ticker} C={C} />
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div
+                                        style={{
+                                            fontSize: 13.5,
+                                            fontWeight: 700,
+                                            color: C.ink,
+                                            whiteSpace: "nowrap",
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                        }}
+                                    >
+                                        {s.name && s.name !== s.ticker
+                                            ? s.name
+                                            : s.ticker}
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            color: C.faint,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        {s.ticker} · US
+                                    </div>
+                                </div>
+                                <span
+                                    style={{
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: C.faint,
+                                        flexShrink: 0,
+                                        paddingRight: 4,
+                                        ...NUM,
+                                    }}
+                                >
+                                    {s.holder_count}개 펀드
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {smNoHit && (
-                    <div style={{ marginTop: 10, fontSize: 12.5, color: C.sub }}>
-                        "{smQ.trim()}" 은(는) 추적 대상에 없어요. 검색 범위는 이{" "}
-                        {(smMeta.managers || []).length}개 운용사가 보유한 미국 주식{" "}
-                        {(smMeta.count || 0).toLocaleString()}종목 — 이 펀드들이 담지 않은
-                        종목은 나오지 않아요.
+                    <div
+                        style={{
+                            padding: "16px 0 8px",
+                            textAlign: "center",
+                            color: C.faint,
+                            fontSize: 13,
+                            fontWeight: 600,
+                        }}
+                    >
+                        "{smQ.trim()}" 검색 결과 없음 — 범위는 집중형{" "}
+                        {(smMeta.managers || []).length}개 운용사 보유 미국 주식{" "}
+                        {(smMeta.count || 0).toLocaleString()}종목
                     </div>
                 )}
 
                 {smCur && (
-                    <div
-                        style={{
-                            marginTop: 10,
-                            background: C.card,
-                            borderRadius: 16,
-                            padding: "15px 16px 13px",
-                        }}
-                    >
+                    <div style={{ marginTop: 12 }}>
                         <div
                             style={{
                                 display: "flex",
