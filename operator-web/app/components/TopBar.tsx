@@ -45,7 +45,7 @@ export default function TopBar({ active }: { active: "terminal" | "macro" | "sys
     })
 
     return (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 18px", background: c.card, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", flexShrink: 0, position: "relative", zIndex: 40 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, rowGap: 8, flexWrap: "wrap", padding: "9px 14px", background: c.card, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", flexShrink: 0, position: "relative", zIndex: 40 }}>{/* flexWrap = 모바일에서 검색·계정줄이 아랫줄로 (데스크탑 = 그대로 한 줄) */}
             {/* 브랜드 = 로고(좌) + 알파콘솔 잉크색(우). 2026-08-20 PM 확정 — 공개 터미널(알파네스트)과
                 구분되도록 오퍼레이터는 "알파콘솔". 8/04 패밀리룩(알파파운더 폐지)은 유지.
                 🚨 2026-08-25 PM 결정 — 알 색 분리: 공개=보라 #6B51EA / 콘솔=진골드 #E0A82E (golden goose

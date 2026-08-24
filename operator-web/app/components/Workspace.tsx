@@ -265,7 +265,7 @@ export default function Workspace({
 
             {/* 본문 — 호가 래더 + 티켓 */}
             {isKR ? (
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(240px, 320px) minmax(200px, 1fr)", gap: 14, alignItems: "start" }}>
+                <div className="af-duo">{/* 모바일 ≤640px = 1열 (globals.css) */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5, fontWeight: 700, color: c.faint, padding: "0 4px 4px" }}>
                             <span>잔량</span>

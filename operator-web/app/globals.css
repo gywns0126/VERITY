@@ -182,3 +182,25 @@ body {
         animation: none;
     }
 }
+
+/* 모바일 폭 대응 (PM 2026-08-25 "모바일에서 깨져 보임") — 데스크탑 무변경, ≤640px 에서만 1열.
+   🚨 inline style 은 media query 가 불가라 이 두 grid 만 클래스로 뺐다. 나머지 auto-fit grid 는
+   inline `minmax(min(Npx,100%),1fr)` 로 해결(넓은 화면 = Npx 그대로라 데스크탑 동일). */
+.af-duo {
+    display: grid;
+    grid-template-columns: minmax(240px, 320px) minmax(200px, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+.af-hero2 {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+}
+@media (max-width: 640px) {
+    .af-duo,
+    .af-hero2 {
+        grid-template-columns: 1fr;
+    }
+}

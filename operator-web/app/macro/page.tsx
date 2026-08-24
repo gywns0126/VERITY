@@ -121,7 +121,7 @@ export default function MacroPage() {
             <div style={{ maxWidth: 1560, margin: "0 auto", padding: "14px 18px 30px", display: "flex", flexDirection: "column", gap: 12 }}>
 
                 {/* 분석기 노트 + 신선 사실 */}
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)", gap: 12, alignItems: "start" }}>
+                <div className="af-hero2">{/* 모바일 ≤640px = 1열 (globals.css) */}
                     <PanelBoundary name="분석기">
                         <div style={{ ...cardStyle(c, MAIN_PAD) }}>
                             {secTitle("거시 분석기 — 오늘의 데스크 노트", `3종 LLM · 평일 07:50${syn?.generated_at ? ` · 생성 ${String(syn.generated_at).slice(5, 16).replace("T", " ")}` : ""}`)}
@@ -206,7 +206,7 @@ export default function MacroPage() {
                 <PanelBoundary name="섹터">
                     <div style={{ ...cardStyle(c, MAIN_PAD) }}>
                         {secTitle("섹터 보드", `${sectors.length}개 업종 · 등락률순`, c.up)}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))", gap: 14 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(330px, 100%), 1fr))", gap: 14 }}>
                             <SectorList c={c} title="핫 섹터" rows={hot} accent={c.up} />
                             <SectorList c={c} title="부진 섹터" rows={cold} accent={c.down} />
                         </div>
@@ -232,7 +232,7 @@ export default function MacroPage() {
                 </PanelBoundary>
 
                 {/* 로테이션 + 시장 지평 */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 12, alignItems: "start" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(380px, 100%), 1fr))", gap: 12, alignItems: "start" }}>
                     <PanelBoundary name="로테이션">
                         <div style={{ ...cardStyle(c, MAIN_PAD) }}>
                             {secTitle("섹터 로테이션", rot?.cycle_label || "")}
@@ -290,7 +290,7 @@ export default function MacroPage() {
                 <PanelBoundary name="이벤트">
                     <div style={{ ...cardStyle(c, MAIN_PAD) }}>
                         {secTitle("이벤트 캘린더", `지정학 · 정책 · ${events.length}건`, c.amber)}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 10 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(330px, 100%), 1fr))", gap: 10 }}>
                             {events.map((e, i) => {
                                 const high = String(e.severity || "").toLowerCase() === "high"
                                 const dd = (e as { d_day?: string | number }).d_day
@@ -320,7 +320,7 @@ export default function MacroPage() {
                         {whales.length === 0 ? (
                             <div style={{ fontSize: 12, color: c.sub }}>불러오는 중이거나 미발행.</div>
                         ) : (
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(300px, 100%), 1fr))", gap: 10 }}>
                                 {whales.slice(0, 8).map((w, i) => {
                                     const holds = (w.holdings_capped || w.holdings || []).slice().sort((a, b) => (b.weight_pct || 0) - (a.weight_pct || 0)).slice(0, 3)
                                     const rep = w.trailing_4q_replication_pct
@@ -354,7 +354,7 @@ export default function MacroPage() {
                 </PanelBoundary>
 
                 {/* 헤드라인 2열 — 전체 아우름 (기본 12, 전체 토글) */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 12, alignItems: "start" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(380px, 100%), 1fr))", gap: 12, alignItems: "start" }}>
                     <PanelBoundary name="월가">
                         <HeadlineCard c={c} title="월가 · 글로벌" items={pf?.bloomberg_google_headlines || []} />
                     </PanelBoundary>

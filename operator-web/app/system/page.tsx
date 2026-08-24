@@ -61,7 +61,7 @@ export default function SystemPage() {
         <main style={{ minHeight: "100vh", background: c.bg, color: c.ink, fontFamily: FONT, WebkitFontSmoothing: "antialiased" }}>
             <TopBar active="system" />
             <div style={{ maxWidth: 1560, margin: "0 auto", padding: "14px 18px 28px", display: "flex", flexDirection: "column", gap: 12 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 12, alignItems: "start" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(380px, 100%), 1fr))", gap: 12, alignItems: "start" }}>
                     <PanelBoundary name="운영 콕핏">
                         <CockpitCard />
                     </PanelBoundary>
@@ -80,7 +80,7 @@ export default function SystemPage() {
                     <BrainMonitorPanel postmortem={pf?.postmortem} />
                 </PanelBoundary>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 12, alignItems: "start" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(380px, 100%), 1fr))", gap: 12, alignItems: "start" }}>
                     <ModerationPanel />
                     <ControlPanel />
                     <VerificationPanel />
