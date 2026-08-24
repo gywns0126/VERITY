@@ -120,6 +120,15 @@ const SM_CANVAS_SAMPLE = {
     ],
 }
 
+// 검색 인덱스 캔버스 샘플 — universe_search.json 동일 필드 (name_ko = 한글 검색 축)
+const UNI_CANVAS_SAMPLE = {
+    stocks: [
+        { ticker: "GOOGL", name: "Alphabet Inc.", name_ko: "알파벳", market: "US" },
+        { ticker: "AAPL", name: "Apple Inc.", name_ko: "애플", market: "US" },
+        { ticker: "NVDA", name: "Nvidia Corporation", name_ko: "엔비디아", market: "US" },
+    ],
+}
+
 function readBodyDark(): boolean {
     try {
         const _lsPref =
@@ -710,6 +719,7 @@ export default function PublicInvestorPortfolios(props: {
     dataUrl?: string
     macroUrl?: string
     searchUrl?: string
+    universeUrl?: string
     dark?: boolean
     topN?: number
     stockPath?: string
@@ -740,6 +750,9 @@ export default function PublicInvestorPortfolios(props: {
     })
     // 종목 역조회 (거장 보유 검색) — us_smart_money_13f.json (종목 축, 같은 13F 원천)
     const [sm, setSm] = useState<any>(onCanvas ? SM_CANVAS_SAMPLE : null)
+    // 🚨 검색 인덱스 = universe_search.json (사이트 전 검색창 공통 소스 — 한글명 name_ko 포함).
+    //   13F name(SEC 영문 issuer)만으로 매칭하면 "애플" 이 안 나온다(PM 8/24 격분 사고).
+    const [uni, setUni] = useState<any>(onCanvas ? UNI_CANVAS_SAMPLE : null)
     const [smQ, setSmQ] = useState("")
     const [smTicker, setSmTicker] = useState<string | null>(null)
 
@@ -808,6 +821,21 @@ export default function PublicInvestorPortfolios(props: {
         }
     }, [onCanvas, props.searchUrl])
 
+    // 검색 인덱스 — universe_search.json (HoldingsTab 등 전 검색창과 동일 소스·동일 필드)
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        fetch(props.universeUrl || BLOB + "/universe_search.json")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (alive && d && Array.isArray(d.stocks)) setUni(d)
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [onCanvas, props.universeUrl])
+
     useEffect(() => {
         const el = rootRef.current
         if (!el || typeof ResizeObserver === "undefined") return
@@ -834,40 +862,77 @@ export default function PublicInvestorPortfolios(props: {
     )
     const smMeta = (sm && sm._meta) || {}
     const smFunds: Record<string, any> = smMeta.funds || {}
-    const smQn = smQ.trim().toLowerCase()
+    const smQraw = smQ.trim()
+    const smQn = smQraw.toLowerCase()
+    const smByTicker: Record<string, any> = useMemo(() => {
+        const m: Record<string, any> = {}
+        for (const s of smStocks) m[String(s.ticker)] = s
+        return m
+    }, [smStocks])
+    // 검색 대상 = universe_search 의 미국 전 종목 (검수 2026-08-24: US 5,324 · 거장 보유
+    // 1,021 전수 매칭 100% · 한글명 989/1,021). 거장 미보유 종목도 탐색은 되고,
+    // 선택하면 "보유 없음" + 리포트 이동을 준다 — 검색이 막다른 골목이 되지 않게.
+    const searchRows: any[] = useMemo(() => {
+        const rows: any[] = uni && Array.isArray(uni.stocks) ? uni.stocks : []
+        const us = rows.filter(
+            (r: any) => String(r.market || "").toLowerCase() === "us"
+        )
+        if (!us.length)
+            // universe 미로딩/실패 폴백 — 거장 보유분만이라도 검색되게 (영문명 한정)
+            return smStocks.map((s: any) => ({
+                ticker: s.ticker,
+                name: s.name,
+                name_ko: "",
+                holder_count: s.holder_count || 0,
+            }))
+        return us.map((r: any) => ({
+            ticker: r.ticker,
+            name: r.name || r.ticker,
+            name_ko: r.name_ko || "",
+            holder_count: (smByTicker[r.ticker] || {}).holder_count || 0,
+        }))
+    }, [uni, smStocks, smByTicker])
     // 🚨 매칭 = 사이트 공통 검색창 규약(PublicHoldingsTab 원형과 동일):
-    //   substring 포함 매칭 + 랭킹(티커 정확 > 이름 정확 > 티커 접두 > 이름 접두 > 포함) > 상위 8.
-    //   전방일치 전용으로 바꾸지 말 것 — 타 검색창과 결과가 달라진다(PM 2026-08-24 지적).
+    //   ticker/영문명 = 소문자 substring · 한글명 = raw substring(한글은 대소문자 없음).
+    //   랭킹 = 정확 > 접두 > 포함, 동순위는 거장 보유 많은 쪽 먼저. 상위 8.
+    //   전방일치 전용·영문명 단독 매칭으로 되돌리지 말 것(8/24 "애플" 미검색 사고).
     const smSuggests: any[] = useMemo(() => {
         if (!smQn) return []
         const rk = (x: any) => {
             const t = String(x.ticker || "").toLowerCase()
             const n = String(x.name || "").toLowerCase()
+            const k = String(x.name_ko || "")
             return t === smQn
                 ? 0
-                : n === smQn
+                : n === smQn || k === smQraw
                   ? 1
                   : t.indexOf(smQn) === 0
                     ? 2
-                    : n.indexOf(smQn) === 0
+                    : n.indexOf(smQn) === 0 || (k && k.indexOf(smQraw) === 0)
                       ? 3
                       : 4
         }
-        return smStocks
+        return searchRows
             .filter(
                 (x: any) =>
                     String(x.ticker || "").toLowerCase().includes(smQn) ||
-                    String(x.name || "").toLowerCase().includes(smQn)
+                    String(x.name || "").toLowerCase().includes(smQn) ||
+                    String(x.name_ko || "").includes(smQraw)
             )
-            .sort((a: any, b: any) => rk(a) - rk(b))
+            .sort(
+                (a: any, b: any) =>
+                    rk(a) - rk(b) || (b.holder_count || 0) - (a.holder_count || 0)
+            )
             .slice(0, 8)
-    }, [smStocks, smQn])
-    const smCur: any = useMemo(
-        () => smStocks.find((s) => s.ticker === smTicker) || null,
-        [smStocks, smTicker]
+    }, [searchRows, smQn, smQraw])
+    // 선택 종목 — smSel = 검색 인덱스 행(이름용), smCur = 거장 보유 데이터(없으면 미보유)
+    const smSel: any = useMemo(
+        () => searchRows.find((s) => s.ticker === smTicker) || null,
+        [searchRows, smTicker]
     )
+    const smCur: any = smTicker ? smByTicker[smTicker] || null : null
     // 미커버 안내 — 입력이 있는데 제안 0 + 선택 0 (분모를 함께 말한다)
-    const smNoHit = !!smQn && smSuggests.length === 0 && !smCur
+    const smNoHit = !!smQn && smSuggests.length === 0 && !smTicker
     // 펀드명 클릭 → 좌측 인물 목록의 해당 운용사로 점프 (두 축이 같은 16개 명단)
     const jumpToFund = (fund: string) => {
         const i = list.findIndex(
@@ -1284,9 +1349,10 @@ export default function PublicInvestorPortfolios(props: {
                                             textOverflow: "ellipsis",
                                         }}
                                     >
-                                        {s.name && s.name !== s.ticker
-                                            ? s.name
-                                            : s.ticker}
+                                        {s.name_ko ||
+                                            (s.name && s.name !== s.ticker
+                                                ? s.name
+                                                : s.ticker)}
                                     </div>
                                     <div
                                         style={{
@@ -1302,13 +1368,16 @@ export default function PublicInvestorPortfolios(props: {
                                     style={{
                                         fontSize: 11,
                                         fontWeight: 700,
-                                        color: C.faint,
+                                        color:
+                                            s.holder_count > 0 ? C.vt : C.faint,
                                         flexShrink: 0,
                                         paddingRight: 4,
                                         ...NUM,
                                     }}
                                 >
-                                    {s.holder_count}개 펀드
+                                    {s.holder_count > 0
+                                        ? `거장 ${s.holder_count}개 펀드`
+                                        : "거장 보유 없음"}
                                 </span>
                             </div>
                         ))}
@@ -1325,13 +1394,13 @@ export default function PublicInvestorPortfolios(props: {
                             fontWeight: 600,
                         }}
                     >
-                        "{smQ.trim()}" 검색 결과 없음 — 범위는 집중형{" "}
-                        {(smMeta.managers || []).length}개 운용사 보유 미국 주식{" "}
-                        {(smMeta.count || 0).toLocaleString()}종목
+                        "{smQraw}" 검색 결과 없음 — 미국 상장{" "}
+                        {searchRows.length.toLocaleString()}종목 기준 (한국 종목은 13F
+                        공시 대상이 아니에요)
                     </div>
                 )}
 
-                {smCur && (
+                {smTicker && (
                     <div style={{ marginTop: 12 }}>
                         <div
                             style={{
@@ -1341,22 +1410,24 @@ export default function PublicInvestorPortfolios(props: {
                                 flexWrap: "wrap",
                             }}
                         >
-                            <TickerLogo ticker={smCur.ticker} C={C} />
+                            <TickerLogo ticker={smTicker} C={C} />
                             <div style={{ minWidth: 0, flex: 1 }}>
                                 <div style={{ fontSize: 15.5, fontWeight: 750 }}>
-                                    {smCur.ticker}
-                                    {smCur.name && smCur.name !== smCur.ticker && (
-                                        <span
-                                            style={{
-                                                marginLeft: 8,
-                                                fontSize: 12.5,
-                                                fontWeight: 550,
-                                                color: C.faint,
-                                            }}
-                                        >
-                                            {smCur.name}
-                                        </span>
-                                    )}
+                                    {(smSel && smSel.name_ko) || smTicker}
+                                    <span
+                                        style={{
+                                            marginLeft: 8,
+                                            fontSize: 12.5,
+                                            fontWeight: 550,
+                                            color: C.faint,
+                                        }}
+                                    >
+                                        {smSel && smSel.name_ko
+                                            ? smTicker
+                                            : (smSel && smSel.name) ||
+                                              (smCur && smCur.name) ||
+                                              ""}
+                                    </span>
                                 </div>
                                 <div
                                     style={{
@@ -1366,12 +1437,13 @@ export default function PublicInvestorPortfolios(props: {
                                         ...NUM,
                                     }}
                                 >
-                                    거장 {smCur.holder_count}개 펀드 보유 · 합산{" "}
-                                    {fmtMoney(smCur.total_value_usd, krw, fx.rate)}
+                                    {smCur
+                                        ? `거장 ${smCur.holder_count}개 펀드 보유 · 합산 ${fmtMoney(smCur.total_value_usd, krw, fx.rate)}`
+                                        : `거장 ${(smMeta.managers || []).length || 16}개 운용사 보유 없음`}
                                 </div>
                             </div>
                             <button
-                                onClick={() => goStock(smCur.ticker)}
+                                onClick={() => goStock(smTicker)}
                                 style={{
                                     border: "none",
                                     outline: "none",
@@ -1411,6 +1483,24 @@ export default function PublicInvestorPortfolios(props: {
                             </button>
                         </div>
 
+                        {!smCur && (
+                            <div
+                                style={{
+                                    marginTop: 10,
+                                    padding: "12px 0 4px",
+                                    fontSize: 12.5,
+                                    color: C.sub,
+                                    lineHeight: 1.6,
+                                }}
+                            >
+                                추적 중인 집중형 {(smMeta.managers || []).length || 16}개
+                                운용사의 최근 13F 공시에는 이 종목이 없어요. 인덱스펀드
+                                보유는 집계하지 않아요(신호 희석). 종목 자체 분석은 위
+                                "종목 리포트" 에서 볼 수 있어요.
+                            </div>
+                        )}
+                        {smCur && (
+                        <>
                         <div style={{ overflowX: "auto", marginTop: 10 }}>
                             <table
                                 className="an-ipf-smstbl"
@@ -1562,6 +1652,8 @@ export default function PublicInvestorPortfolios(props: {
                             보유 중이라는 뜻이에요. 13F 는 분기말 보유를 최대 45일 뒤에
                             제출하므로 현재 보유와 다를 수 있어요.
                         </div>
+                        </>
+                        )}
                     </div>
                 )}
             </div>
@@ -2275,6 +2367,11 @@ addPropertyControls(PublicInvestorPortfolios, {
         type: ControlType.String,
         title: "종목 검색 데이터 URL",
         defaultValue: BLOB + "/us_smart_money_13f.json",
+    },
+    universeUrl: {
+        type: ControlType.String,
+        title: "검색 인덱스 URL (한글명)",
+        defaultValue: BLOB + "/universe_search.json",
     },
     topN: {
         type: ControlType.Number,
