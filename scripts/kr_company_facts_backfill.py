@@ -471,7 +471,18 @@ def main() -> int:
             elif ax == "chain":
                 summary[ax] = run_chain(univ, a.year, a.delay, a.dry_run, a.limit)
             elif ax == "overview":
-                summary[ax] = run_overview(univ, a.year, a.delay, a.dry_run, a.limit)
+                # 🚨 2026-08-24 N=2 감사에서 발견 — 개요 축만 **market** 유니버스로 돈다.
+                #   다른 축은 코너(중·소형주 채움)가 목적이지만 개요는 **공개 리포트 표면**
+                #   자산이고, 리포트 유니버스(1,789) ⊄ corner(1,513) 다. 실측:
+                #     corner 미보유 20 · report 미보유 243 · 그 243 중 corner 소속은 **16**.
+                #   즉 코너로 돌면 다음 run 에 20건 채우고 **영구 no-op** 이 되면서 리포트는
+                #   86.4% 에서 멈춘다 — 남은 227종목(대형주 다수)에 영영 못 닿는다.
+                #   market 은 시총 내림차순이고 미보유 우선이라 **많이 보는 종목부터** 채운다
+                #   ([[feedback_largest_names_break_heuristics_first]]).
+                #   비용은 그대로 --limit 로 묶인다(200종목 ≈ 400콜).
+                _univ_ov = (univ if a.universe == "market"
+                            else build_universe("market", a.limit, (a.ticker or "").strip() or None))
+                summary[ax] = run_overview(_univ_ov, a.year, a.delay, a.dry_run, a.limit)
             else:
                 summary[ax] = run_llm_axis(ax, univ, a.year, a.delay, a.dry_run, a.limit)
         except Exception as e:  # noqa: BLE001 — 한 축 실패가 다른 축을 막지 않는다
