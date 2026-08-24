@@ -2824,6 +2824,34 @@ def main():
     except Exception as _r1_e:  # noqa: BLE001
         print(f"  [pool R1] 스킵: {type(_r1_e).__name__}: {_r1_e}")
 
+    # ── STEP 2.16: 거장 순매수 TOP 10 강제 편입 (PM 지시 2026-08-25) ──
+    # 공개 거장 페이지의 순매수 TOP 10 = 리포트 유입 표면 — 사용자가 그 목록을 보고
+    # 종목 리포트로 들어오므로, 그 종목들은 분석·리포트 파이프라인에 무조건 존재해야 한다.
+    # 발견 경위 = 로테이션 상태 미영속로 지명이 알파벳 앞줄 동결 → V(순번 1,387/1,505)가
+    # 콘솔에 영영 미도달 (kickoff 상류 발견 ③). 이 스텝은 로테이션과 무관하게 보장한다.
+    # 🚨 랭킹 = PublicInvestorPortfolios TOP 10 과 동일 산식 (펀드 수 신규+증액−감액 —
+    #    value_change 랭킹 금지: 주가 등락 혼재). 두 산식이 갈리면 화면과 편입이 어긋난다.
+    try:
+        with open(os.path.join(DATA_DIR, "us_smart_money_13f.json"), encoding="utf-8") as _sf:
+            _sm_stocks = (json.load(_sf).get("stocks") or [])
+        _sm_scored = []
+        for _s in _sm_stocks:
+            _hs = _s.get("holders") or []
+            _nw = sum(1 for _h in _hs if _h.get("change_type") == "NEW")
+            _inc = sum(1 for _h in _hs if _h.get("change_type") == "INCREASED")
+            _dec = sum(1 for _h in _hs if _h.get("change_type") == "DECREASED")
+            _net = _nw + _inc - _dec
+            if _net > 0 and _s.get("ticker"):
+                _sm_scored.append((_net, _nw + _inc, _s.get("total_value_usd") or 0, str(_s["ticker"])))
+        _sm_scored.sort(key=lambda x: (-x[0], -x[1], -x[2]))
+        _sm_items = [{"ticker": _tk, "market": "us"} for _n, _b, _v, _tk in _sm_scored[:10]]
+        if _sm_items:
+            _sm_added = _merge_watch_items_into_candidates(candidates, _sm_items)
+            if _sm_added:
+                print(f"  + [pool 13F] 거장 순매수 TOP{len(_sm_items)} 강제 편입 {_sm_added}개 (총 {len(candidates)}개)")
+    except Exception as _sm_e:  # noqa: BLE001
+        print(f"  [pool 13F] 스킵: {type(_sm_e).__name__}: {_sm_e}")
+
     # ── STEP 3: quick + full — 기술적 + 수급 + 컨센서스 ──
     print("\n[3] 기술적 분석 + 수급 + 컨센서스")
     macro_mood = macro.get("market_mood", {"score": 50, "label": "중립"})

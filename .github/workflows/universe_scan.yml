@@ -238,6 +238,12 @@ jobs:
           # 65 거래일 SHADOW 검증 게이트 (TG-1, 8월 말 PRODUCTION) 정합 위해 누적 필수.
           # 5번째 같은 패턴 (KIS lock / fred_health / runtime_load 후속).
           git add data/wide_scan_log.jsonl 2>/dev/null || true
+          # 🚨 분석 로테이션 상태 — 8/12 도입 후 미영속 = 6번째 같은 패턴 (RULE 4).
+          # 이 파일이 안 실리면 지명이 매 run cold start → 티커 asc 동결 (8/25 실측:
+          # US 지명 A~AMG 고정 · KR 71% 저코드 · V 순번 1,387/1,505 영구 미도달).
+          # "돌아가며 전부 본다"(PR #357) 설계의 전제라 제거 금지. 실패는 echo 로 가시화.
+          git add data/metadata/analysis_rotation_state.json 2>/dev/null || echo "[rotation] state 파일 없음 — cold start run (지명 미실행이면 정상)"
+          git add data/metadata/analysis_rotation_log.jsonl 2>/dev/null || echo "[rotation] log 파일 없음"
           # stock_history/YYYY-Qn.jsonl — 분기 시계열 5,000 raw 누적(append_universe_snapshot, wide_scan 옆 hook).
           # 🚨 7번째 RULE 4 violation (2026-07-01 audit): 05-11 inline scan 제거로 daily_full(broad git add data/)
           #   → universe_scan(specific add)로 이전될 때 stock_history 누락 → 50일 silent freeze(05-11~06-30).
