@@ -1283,15 +1283,25 @@ def _update_simulation_stats(portfolio: dict):
     #   다만 자산 리셋은 하지 않으므로 창을 통째로 옮기지 않고 **양쪽을 다 노출**한다 —
     #   집계 창은 reset_at 유지(누적 N 보존), 규칙 변경 이후만의 집계를 별도 필드로 병기.
     #   어느 창을 게이트에 쓸지는 PM 결정 사항이며 여기서 임의로 바꾸지 않는다.
-    rule_changes = vams.get("rule_change_log") or []
-    last_rule_change = None
-    if isinstance(rule_changes, list) and rule_changes:
-        try:
-            last_rule_change = str(sorted(
-                (str(r.get("at") or "") for r in rule_changes if isinstance(r, dict))
-            )[-1])[:10] or None
-        except (TypeError, ValueError):
-            last_rule_change = None
+    # 🚨 2026-08-25 — 전용 jsonl 을 읽되 **매매 행동을 바꾼 것만** 센다. 되돌리지 말 것.
+    #   종전엔 portfolio.json 의 legacy 리스트만 읽었고 그건 크론 재생성물이라 늘 비어 있어서
+    #   `rule_change_at` 이 null 이었다. 그 결과 게이트가 손절 캡 −5% 시절 22거래를 현 성적에
+    #   섞어 세고 있었다(전체 −0.336R = before −0.588R + after +1.386R).
+    #   🚨 그런데 이 원장은 **공유 파일**이라 그냥 max(at) 을 잡으면 안 된다 — 실측 124행 중
+    #   122행이 `fx_hedge_regime` 운영 이벤트이고, 그걸 세면 경계가 8/17 로 밀린다.
+    #   또 8/16 `vams_stoploss_priority` 는 "기각 확정 · 코드·임계 변경 0" 이라 행동 경계가 아니다.
+    rule_changes = list(vams.get("rule_change_log") or [])
+    try:
+        _rl = os.path.join(DATA_DIR, "metadata", "rule_change_log.jsonl")
+        with open(_rl, encoding="utf-8") as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line:
+                    rule_changes.append(json.loads(_line))
+    except (OSError, json.JSONDecodeError):
+        pass
+    _boundaries = _vams_behavior_boundaries(rule_changes)
+    last_rule_change = _boundaries[-1][:10] if _boundaries else None
 
     def _in_window(ev: dict) -> bool:
         if not reset_at:
@@ -1347,6 +1357,12 @@ def _update_simulation_stats(portfolio: dict):
         "window_start": reset_at,
         # 규칙 변경 이후만의 집계 — 게이트 창 전환 여부는 PM 결정(임의 전환 금지).
         "rule_change_at": last_rule_change,
+        # 🚨 2026-08-25 — 경계 **양쪽**을 게이트와 같은 지표로 신고한다. 되돌리지 말 것.
+        #   종전엔 post 쪽 거래수·실현손익만 실어서, 다음 세션이 전체 기대값 −0.336R 을
+        #   "현재 시스템 성적" 으로 읽었다(내가 그랬다). 실제로는 27거래 중 22거래가
+        #   손절 캡 −5% 시절이고, 캡 −20% 복원(4a2c3f4ee) 이후는 5거래뿐이다.
+        #   🚨 판정(overall)은 **바꾸지 않는다** — 창 전환은 PM 결정이다. 신고만 한다.
+        "segments": _rule_change_segments(sells, last_rule_change),
         "post_rule_change": (
             {
                 "trades": sum(1 for e in sells if str(e.get("date", ""))[:10] >= last_rule_change),
@@ -1363,6 +1379,77 @@ def _update_simulation_stats(portfolio: dict):
         "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
     portfolio["vams"] = vams
+
+
+
+
+# 🚨 매매 행동을 실제로 바꾼 VAMS 규칙 변경만 경계로 센다 (2026-08-25).
+#   제외 ① `fx_hedge_regime` — 환헷지 운영 이벤트(124행 중 122행). 체결 규칙이 아니다.
+#          ② 기각·무변경 기록 — 결정은 남기되 행동은 안 바뀌었다(8/16 vams_stoploss_priority).
+_NON_RULE_EVENTS = frozenset({"fx_hedge_regime"})
+_NO_CHANGE_MARKS = ("변경 0", "기각", "❌")
+
+
+def _vams_behavior_boundaries(rows):
+    """행동 경계 날짜 목록(오름차순). 없으면 빈 리스트."""
+    out = []
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        if str(r.get("rule") or "") in _NON_RULE_EVENTS:
+            continue
+        to = str(r.get("to") or "")
+        if any(m in to for m in _NO_CHANGE_MARKS):
+            continue
+        at = str(r.get("at") or "")
+        if at:
+            out.append(at)
+    return sorted(out)
+
+
+def _rule_change_segments(sells, boundary):
+    """규칙 변경 경계 양쪽을 **게이트와 같은 지표**로 집계한다 (2026-08-25 신설).
+
+    🚨 RULE 13 ⑤ — 창 안에 변경 경계가 있으면 하나의 평균은 두 시스템을 섞는다.
+       실측 2026-08-25: 전체 −0.336R 인데 before(캡 −5%) −0.588R / after(캡 −20%) +1.386R
+       로 **부호가 뒤집힌다**. 섞은 값을 현재 성적으로 읽으면 이미 고친 결함을 계속 센다.
+    🚨 판정에 쓰지 않는다. 게이트 창 전환은 PM 결정이며 여기서 바꾸지 않는다.
+    """
+    if not boundary:
+        return {"boundary": None, "note": "규칙 변경 미기록 — data/metadata/rule_change_log.jsonl 확인"}
+
+    def _agg(rows):
+        p = [float(e.get("pnl") or 0) for e in rows]
+        if not p:
+            return {"trades": 0}
+        wins = [x for x in p if x > 0]
+        losses = [x for x in p if x <= 0]
+        avg_w = sum(wins) / len(wins) if wins else 0.0
+        avg_l = sum(losses) / len(losses) if losses else 0.0
+        pl = abs(avg_w / avg_l) if (wins and losses and avg_l) else None
+        wr = len(wins) / len(p)
+        exp_r = (wr * pl - (1 - wr)) if pl is not None else None
+        return {
+            "trades": len(p),
+            "wins": len(wins),
+            "losses": len(losses),
+            "win_rate": round(wr, 4),
+            "pl_ratio": round(pl, 3) if pl is not None else None,
+            "expectancy_r": round(exp_r, 3) if exp_r is not None else None,
+            "realized_pnl": round(sum(p), 2),
+        }
+
+    before = [e for e in sells if str(e.get("date", ""))[:10] < boundary]
+    after = [e for e in sells if str(e.get("date", ""))[:10] >= boundary]
+    return {
+        "boundary": boundary,
+        "what_changed": "VAMS 손절 캡 −5% → −20% (ATR 개별 손절선 복원) · commit 4a2c3f4ee",
+        "before": _agg(before),
+        "after": _agg(after),
+        "used_by_gate": False,
+        "note": "게이트는 전체 창(reset_at~)으로 판정한다. 이 분해는 신고 전용 — "
+                "창 전환은 PM 결정이며 임의 전환 금지. after 표본이 얇으면 성적으로 읽지 말 것.",
+    }
 
 
 # #1 AI 리더보드 피드백 루프 — 상수 (evolver 와 철학 맞춤: 최소샘플 + delta cap)
