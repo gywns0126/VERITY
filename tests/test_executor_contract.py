@@ -30,8 +30,9 @@ from api.observability.executor_contract import (
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 🚨 래칫 상한 — 2026-08-25 실측 기준선.
-#   현재 10건. 다음 universe_scan 이 돌면 position_guide 가 신고를 달고 나와 **9 로 내려간다**.
-#   알려진 다음 표적 = `trade_plan.position_pct`(집행 아님, entry_zone·position_pct 모두 참고값).
+#   현재 10건(산출물 기준). 코드는 이미 둘을 고쳤으므로 다음 universe_scan 이 돌면
+#   position_guide·trade_plan 이 신고를 달고 나와 **8 로 내려간다**.
+#   🚨 산출물 기준이라 코드 수정이 즉시 반영되지 않는다 — 그래서 코드 단 검사를 아래에 따로 둔다.
 #   🚨 **이 숫자를 올려서 통과시키지 말 것.** 올리는 순간 클래스 가드가 죽는다.
 #   내려가는 방향으로만 갱신한다.
 MAX_UNDECLARED = 10
@@ -89,6 +90,22 @@ def test_undeclared_blocks_do_not_increase():
         "→ 새 블록에 executor_contract.declare_advisory / declare_executed 를 붙일 것. "
         "상한을 올려서 통과시키지 말 것."
     )
+
+
+def test_known_advisory_blocks_declare_in_code():
+    """🚨 산출물 래칫은 다음 run 까지 늦다 — 코드 단에서 즉시 검사한다.
+
+    실제로 오독 이력이 있는 두 블록(position_guide · trade_plan)이 대상이다.
+    """
+    from api.intelligence.verity_brain import _compute_position_guide
+    from api.trade_planner import _ADVISORY
+
+    g = _compute_position_guide(75, "WATCH", {})
+    assert g.get("is_executor") is False and "." in g.get("executor", ""), g
+
+    assert _ADVISORY.get("is_executor") is False
+    assert "execute_buy" in _ADVISORY["executor"], _ADVISORY["executor"]
+    assert "집행값 아님" in _ADVISORY["scope"], _ADVISORY["scope"]
 
 
 def test_fact_score_reports_runtime_weights():

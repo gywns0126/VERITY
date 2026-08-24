@@ -43,6 +43,14 @@ def _skeleton(rec: str, note: str = "기술적 데이터 부족 — 산출 보�
     }
 
 
+# 🚨 trade_plan 은 참고 계획이지 집행자가 아니다 (2026-08-25). executor_contract 계약.
+_ADVISORY = {
+    "is_executor": False,
+    "executor": "vams.execute_buy (사이징) · vams.engine.check_exit (손절)",
+    "scope": "참고 계획 — position_pct·entry_zone·stop_loss 모두 집행값 아님",
+}
+
+
 def build_trade_plan_v0(stock: dict, judgment: dict) -> dict:
     rec = judgment.get("recommendation", "WATCH")
     tech = stock.get("technical", {}) or {}
@@ -249,6 +257,13 @@ def build_trade_plan_v0(stock: dict, judgment: dict) -> dict:
         "expected_return": expected_return_proxy,  # v1 prep — brain_score proxy. 백테스트 quintile 후속
         "version": "v0_heuristic_v1_prep",
         "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀.",
+        # 🚨 2026-08-25 — 이 블록은 **집행자가 아니다.** 되돌리지 말 것.
+        #   `position_pct`·`entry_zone`·`stop_loss` 는 참고 계획값이고, 실제 매수 크기·손절은
+        #   vams.execute_buy(사이징) / vams.engine.check_exit(손절) 가 정한다.
+        #   실측 2026-08-25 쿠쿠홀딩스 = 여기 position_pct 2.3% · position_guide 3% 인데
+        #   실집행은 10.7%(104만) 였다. 두 참고값을 규칙으로 읽어 잘못 답한 사고가 있다.
+        #   계약 = api/observability/executor_contract.declare_advisory
+        **_ADVISORY,
     }
 
 
