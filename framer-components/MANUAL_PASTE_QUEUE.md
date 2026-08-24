@@ -8,7 +8,7 @@ MCP 로 라이브 반영이 위험한(>60KB, write-loss) 공개 컴포넌트. **
 
 ---
 
-## 🟠 대기 (2026-08-24) — 거장 포트폴리오 통화 토글이 좁은 폭에서 우측으로 쏠린다
+## ✅ 완료 (2026-08-24 PM 복붙 · 발행 번들 실측) — 거장 통화 토글 우측 쏠림
 
 PM 스크린샷: 설명 문구·환율 문구는 왼쪽에 붙어 있는데 **USD/KRW 토글만 어중간하게 오른쪽**.
 
@@ -29,9 +29,24 @@ repo 로 **역동기 완료**. 즉 지금 repo = 라이브 + 이번 수정 → *
 
 **대상** = `PublicInvestorPortfolios.tsx` (`Ayy74xh`) · repo 파일 통째로.
 
+
+✅ **반영 실측 (전언 아님).** 발행 사이트 HTML 에서 `framerusercontent.com/sites/2QiUuP9OY5me9trZ46mVcJ/*.mjs`
+번들 19개를 받아 마커 grep:
+
+| 번들 | 마커 | 결과 |
+|---|---|---|
+| `ytmlOwIjqrPV…DPgtZSwA.mjs` (33,299 B) | `an-ipf-hdr` `an-ipf-fxcol` `an-ipf-fxtoggle` `an-ipf-fxrate` | **4/4 존재** (대조군 `an-ipf-side` 도 존재) |
+| 〃 | `flex-direction:column;align-items:flex-start` | 1건 = 미디어쿼리 블록 착지 |
+| 〃 | `fontSize:20` | 2건 — 🚨 PM 이 라이브에서 줄인 제목값 **보존 확인**(역동기가 맞았다) |
+| `iRg0Vtg83bJ7…bGfBcuZv.mjs` (60,334 B) | `repeat(7, minmax(0, 1fr))` | 2건(스켈레톤+본 그리드) · 구버전 `repeat(7,1fr)` **0건** |
+| 〃 | `padding:0` / `minWidth:0` | 셀 버튼 착지 확인 |
+
+🚨 `jumpedRef` 같은 **지역 변수명은 0건이 정상** — 미니파이로 이름이 바뀐다. 클래스명·문자열
+리터럴만 마커로 쓸 것.
+
 ---
 
-## 🟠 대기 (2026-08-24) — 투자 캘린더가 좁은 폭에서 Sun 열이 잘린다
+## ✅ 완료 (2026-08-24 PM 복붙 · 발행 번들 실측) — 투자 캘린더 Sun 열 잘림
 
 PM: "폭이 좁아지면 삐져나옴. 380px 까진 괜찮은데 아이폰 미니는 비율이 살짝 깨져 보임."
 
@@ -57,6 +72,21 @@ PM: "폭이 좁아지면 삐져나옴. 380px 까진 괜찮은데 아이폰 미�
    (바로 아래 줄이 `gap: 8,` 인 쪽)
 2. 본 그리드 같은 줄 → 같은 값 (바로 아래 줄이 `gap: narrow ? 2 : 4,` 인 쪽)
 3. 날짜 셀 `<button>` style 의 `border: "none",` 다음 줄에 `padding: 0,` 과 `minWidth: 0,` 추가
+
+
+✅ **반영 실측 (전언 아님).** 발행 사이트 HTML 에서 `framerusercontent.com/sites/2QiUuP9OY5me9trZ46mVcJ/*.mjs`
+번들 19개를 받아 마커 grep:
+
+| 번들 | 마커 | 결과 |
+|---|---|---|
+| `ytmlOwIjqrPV…DPgtZSwA.mjs` (33,299 B) | `an-ipf-hdr` `an-ipf-fxcol` `an-ipf-fxtoggle` `an-ipf-fxrate` | **4/4 존재** (대조군 `an-ipf-side` 도 존재) |
+| 〃 | `flex-direction:column;align-items:flex-start` | 1건 = 미디어쿼리 블록 착지 |
+| 〃 | `fontSize:20` | 2건 — 🚨 PM 이 라이브에서 줄인 제목값 **보존 확인**(역동기가 맞았다) |
+| `iRg0Vtg83bJ7…bGfBcuZv.mjs` (60,334 B) | `repeat(7, minmax(0, 1fr))` | 2건(스켈레톤+본 그리드) · 구버전 `repeat(7,1fr)` **0건** |
+| 〃 | `padding:0` / `minWidth:0` | 셀 버튼 착지 확인 |
+
+🚨 `jumpedRef` 같은 **지역 변수명은 0건이 정상** — 미니파이로 이름이 바뀐다. 클래스명·문자열
+리터럴만 마커로 쓸 것.
 
 ---
 
