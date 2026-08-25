@@ -900,12 +900,26 @@ export default function PublicInvestorPortfolios(props: {
                 name_ko: "",
                 holder_count: s.holder_count || 0,
             }))
-        return us.map((r: any) => ({
+        const rows2 = us.map((r: any) => ({
             ticker: r.ticker,
             name: r.name || r.ticker,
             name_ko: r.name_ko || "",
             holder_count: (smByTicker[r.ticker] || {}).holder_count || 0,
         }))
+        // 🚨 합집합 — 거장 보유인데 universe 밖인 종목(해외 ADR 등, 2026-08-25 실측 TSM
+        //   8펀드 보유가 universe_search US 에 없음)을 뒤에 붙인다. 안 붙이면 데이터가
+        //   있어도 검색이 "보유 없음" 거짓을 만든다. 이름 = 13F issuer 영문(한글명 없음).
+        const usSet = new Set(rows2.map((r: any) => r.ticker))
+        for (const s of smStocks) {
+            if (!usSet.has(s.ticker))
+                rows2.push({
+                    ticker: s.ticker,
+                    name: s.name,
+                    name_ko: "",
+                    holder_count: s.holder_count || 0,
+                })
+        }
+        return rows2
     }, [uni, smStocks, smByTicker])
     // 🚨 매칭 = 사이트 공통 검색창 규약(PublicHoldingsTab 원형과 동일):
     //   ticker/영문명 = 소문자 substring · 한글명 = raw substring(한글은 대소문자 없음).

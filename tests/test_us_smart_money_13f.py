@@ -83,3 +83,20 @@ def test_held_since_partial_window_not_floor():
 def test_held_since_absent_and_empty():
     assert b._held_since(_QS, "ZZZ") == (None, 0, False, None)
     assert b._held_since([], "A") == (None, 0, False, None)
+
+
+# ── 필터 재정의 (2026-08-25, PM 승인: sp1500 게이트 → ETF 제외만) ──────────────
+
+def test_norm_us_ticker_class_share_formats():
+    assert b._norm_us_ticker("BRK/B") == "BRK-B"   # Gates 재단 실측 누락 케이스
+    assert b._norm_us_ticker("brk.b") == "BRK-B"
+    assert b._norm_us_ticker(" TSM ") == "TSM"
+    assert b._norm_us_ticker(None) == ""
+
+
+def test_load_etf_set_contains_index_etfs():
+    s = b._load_etf_set()
+    # 인물축 상위25 실측에서 걸러져야 하는 ETF 들 (SPY·IVV·IEF)
+    assert {"SPY", "IVV", "IEF"} <= s
+    # 개별주는 ETF 집합에 없어야 한다
+    assert "TSM" not in s and "BRK-B" not in s

@@ -53,6 +53,42 @@ TOP_HOLDINGS_PER_FUND = 300   # 펀드당 평가액 상위 N (롱테일 컷 — 
 HELD_SINCE_QUARTERS = 9       # 연속 보유 역추적 창 (13f_quarter_cache 재사용 — 복제 수익률과 동일 창)
 
 
+def _norm_us_ticker(tk) -> str:
+    """13F/OpenFIGI 클래스주 표기 정규화 — 'BRK/B' → 'BRK-B'.
+
+    2026-08-25 실측: Gates 재단 최대 보유 BRK/B 가 슬래시 표기라 sp1500·universe 의
+    'BRK-B' 와 조인 실패 → 종목 축에서 통째 누락. 포맷 차이지 멤버십 차이가 아니다.
+    """
+    return str(tk or "").strip().upper().replace("/", "-").replace(".", "-")
+
+
+def _load_etf_set() -> set:
+    """ETF 티커 집합 (제외용) — us_etf_universe + universe_search(market=ETF) 합집합.
+
+    🚨 2026-08-25 PM 승인 필터 재정의: 종전 'sp1500 만 유지' → 'ETF 만 제외'.
+    sp1500 게이트가 거장 실보유 개별주(TSM 8펀드·BRK-B·KOF ADR)를 잘라
+    거장 검색이 "보유 없음" 거짓 표면을 만들었다. ETF 제외 취지(신호 희석 방지)만 유지.
+    """
+    s: set = set()
+    for path, pick in (
+        (os.path.join(_ROOT, "data", "us_etf_universe.json"), None),
+        (os.path.join(_ROOT, "data", "universe_search.json"), "ETF"),
+    ):
+        try:
+            with open(path, encoding="utf-8") as f:
+                doc = json.load(f)
+            rows = doc.get("stocks") if isinstance(doc, dict) else doc
+            for r in rows or []:
+                tk = r.get("ticker") if isinstance(r, dict) else r
+                if pick and str((r or {}).get("market", "")).upper() != pick:
+                    continue
+                if tk:
+                    s.add(_norm_us_ticker(tk))
+        except (OSError, json.JSONDecodeError, AttributeError):
+            continue
+    return s
+
+
 def _held_since(qsets: List[tuple], cusip: str):
     """(held_since, quarters_held, floor, qend_price) — 연속 보유 시작 분기 기준.
 
@@ -135,12 +171,20 @@ def main() -> int:
         all_cusips = {h["cusip"] for hs in fund_holdings.values() for h in hs if h.get("cusip")}
         cmap = resolve_cusips(all_cusips)
 
-        # 3) sp1500 per-ticker 집계
+        # 3) per-ticker 집계 — 개별주 전수 유지, ETF 만 제외 (PM 승인 2026-08-25).
+        #    종전 sp1500 게이트는 거장 실보유 개별주를 잘랐다(TSM 8펀드 → "보유 없음" 거짓).
+        etf_set = _load_etf_set()
+        etf_excluded_n = 0
+        unresolved_n = 0
         agg: Dict[str, Dict[str, Any]] = {}
         for fund, hs in fund_holdings.items():
             for h in hs:
-                tk = cmap.get(str(h["cusip"]).upper())
-                if not tk or tk not in sp1500:
+                tk = _norm_us_ticker(cmap.get(str(h["cusip"]).upper()))
+                if not tk:
+                    unresolved_n += 1
+                    continue
+                if tk in etf_set:
+                    etf_excluded_n += 1
                     continue
                 e = agg.setdefault(tk, {
                     "ticker": tk,
@@ -196,6 +240,14 @@ def main() -> int:
                     for f, m in fund_meta.items()
                 },
                 "held_since_window_quarters": HELD_SINCE_QUARTERS,
+                # 필터 자기신고 (2026-08-25 재정의: sp1500 게이트 → ETF 제외만) —
+                # 분모를 숨기면 "전부 커버" 로 오독된다 (RULE 13).
+                "filter": {
+                    "rule": "개별주 전수 유지 · ETF 제외 (신호 희석 방지)",
+                    "etf_excluded_n": etf_excluded_n,
+                    "unresolved_cusip_n": unresolved_n,
+                    "non_sp1500_kept_n": sum(1 for t in agg if t not in sp1500),
+                },
                 "note": "보유 사실만 — 펀드·주식수·평가액·QoQ 변동(NEW/INCREASED/DECREASED/HELD). 자체 점수·매매신호 아님 (RULE 7). 13F=분기말+45일 지연 공시·롱 미국주식만. 인덱스펀드 제외(집중형만). held_since=연속 보유 시작 분기말(추적창 " + str(HELD_SINCE_QUARTERS) + "분기, held_since_floor=창 상한 도달 → 실제 시작은 그 이전일 수 있음). *_qend_price_usd=분기말 공시 내재가(value/shares) — 매수 체결가 아님(13F 미공시).",
             },
             "stocks": stocks,
