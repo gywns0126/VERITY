@@ -350,6 +350,35 @@ def _log_backtest_gap_safe(ticker: str, signal_price: float, fill_price: float,
         logger.debug("backtest_gap 기록 실패: %s", e)
 
 
+# 등록 E2 밴드 (PREREG_AUTO_EXECUTION_GATE_2026_08_03 · 부기 2026-08-26) —
+# 🚨 임계 변경 금지. 8/26 배선은 이 판정의 **가격 입력을 실시간으로** 올린 것뿐이다.
+E2_FILL_BAND = 0.02
+
+
+def check_live_band(
+    live_price: Optional[float],
+    signal_price: float,
+    band: float = E2_FILL_BAND,
+) -> Dict[str, Any]:
+    """집행 직전 실시간가 E2 판정 (PM 승인 2026-08-26 — 규칙 무변경, 입력 충실도만).
+
+    - live 있음 + 밴드 내  → ok, 제출가 = 실시간가 (source=live_quote)
+    - live 있음 + 밴드 밖  → 미집행 (추격 금지 — E2 등록 규칙 그대로)
+    - live 없음(조회 실패) → ok, 제출가 = 신호가 (source=signal_price_fallback,
+      종전 동작과 동일 — 실시간 조회가 죽어도 집행이 멎지 않게 폴백)
+    """
+    if not signal_price or signal_price <= 0:
+        return {"ok": False, "submit_price": None, "source": "invalid_signal", "band_pct": None}
+    if live_price is None or live_price <= 0:
+        return {"ok": True, "submit_price": signal_price,
+                "source": "signal_price_fallback", "band_pct": None}
+    b = abs(live_price / signal_price - 1.0)
+    # 부동소수 경계 보호 — 정확히 ±2% 는 통과 (등록 문언 "±2% 밴드" = 경계 포함)
+    if b > band + 1e-9:
+        return {"ok": False, "submit_price": None, "source": "live_quote", "band_pct": b}
+    return {"ok": True, "submit_price": live_price, "source": "live_quote", "band_pct": b}
+
+
 def execute(
     orders: List[TradeOrder],
     broker: Any,
@@ -400,12 +429,40 @@ def execute(
                 "regime": getattr(o, "regime", None),
                 "vams_profile": getattr(o, "profile", None),
             }
+            # ── 집행 직전 실시간가 참조 (PM 승인 2026-08-26) ──
+            # KR 만 배선 (주문 자체가 KR 전용 — US 는 PM 결정 전 미배선).
+            # 판정 실패(밴드 이탈) = 추격하지 않고 미집행 — E2 등록 규칙 그대로.
+            _live = None
+            if o.market == "KR":
+                try:
+                    _q = broker.get_current_price(o.ticker)
+                    _live = float(_q.get("stck_prpr") or 0) or None
+                except Exception:
+                    _live = None
+            _chk = check_live_band(_live, float(o.price or 0))
+            if not _chk["ok"]:
+                result = {
+                    **base_record,
+                    "status": "BLOCKED", "order_id": "",
+                    "filled_qty": 0, "filled_price": 0,
+                    "success": False, "pnl": 0,
+                    "fill_source": _chk["source"], "live_price": _live,
+                    "message": (
+                        f"E2 실시간 밴드 이탈 {_chk['band_pct']:.2%} — 미집행(추격 금지)"
+                        if _chk["band_pct"] is not None else "신호가 무효 — 미집행"
+                    ),
+                }
+                results.append(result)
+                history.append(result)
+                continue
+            _submit = _chk["submit_price"]
+
             try:
                 if o.market == "KR":
                     side_enum = OrderSide.BUY if o.side == "BUY" else OrderSide.SELL
                     res: OrderResult = broker.place_order(
                         ticker=o.ticker, side=side_enum, qty=o.qty,
-                        price=int(o.price), order_type="00",
+                        price=int(_submit), order_type="00",
                         context=trade_context,
                     )
                 else:
@@ -420,10 +477,13 @@ def execute(
                     "status": "FILLED" if res.success else "FAILED",
                     "order_id": res.order_id or "",
                     "filled_qty": res.filled_qty or o.qty,
-                    "filled_price": res.filled_price or o.price,
+                    "filled_price": res.filled_price or _submit,
                     "success": res.success,
                     "message": res.message,
                     "pnl": (getattr(res, "raw", {}) or {}).get("pnl", 0),
+                    "fill_source": _chk["source"],
+                    "live_price": _live,
+                    "submit_price": _submit,
                 }
                 # backtest_gap 호출자 연결 — 시그널 가격(o.price) vs 체결가(res.filled_price) 갭 측정
                 if res.success and o.price and res.filled_price:

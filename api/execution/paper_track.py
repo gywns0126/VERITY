@@ -93,6 +93,35 @@ def _price(r: Optional[Dict[str, Any]]) -> Optional[float]:
         return None
 
 
+def _live_quotes(tickers: List[str]) -> Dict[str, float]:
+    """KR 티커 실시간 현재가 일괄 조회 (KIS cache_only — 토큰 신규 발급 0, RULE 1 정합).
+
+    PM 승인 2026-08-26 "매매시 실시간 참고" — 체결가 충실도 배선. 🚨 원칙:
+    **판정 입력(E/S/X 등록 규칙)은 run 스냅샷 그대로, 체결가만 실시간.**
+    실패·토큰 부재 시 = 빈 dict → 호출부가 스냅샷 폴백 + fill_source 자기신고
+    (체결 방식 변경은 측정 창 경계를 만들므로 체결 단위로 전후 분리 가능해야 한다).
+    """
+    out: Dict[str, float] = {}
+    if not tickers:
+        return out
+    try:
+        from api.trading.kis_broker import KISBroker
+        b = KISBroker(cache_only=True)
+        if not b.is_configured():
+            return out
+        for tk in dict.fromkeys(tickers):
+            try:
+                q = b.get_current_price(tk)
+                p = float(q.get("stck_prpr") or 0)
+                if p > 0:
+                    out[tk] = p
+            except Exception:
+                continue
+    except Exception:
+        return out
+    return out
+
+
 def run_paper_track(analyzed: List[Dict[str, Any]], data_dir: str) -> Dict[str, Any]:
     """등록 규칙 가상 집행 1사이클. 반환 = portfolio["exec_paper"] 요약 (오퍼레이터 전용)."""
     state_path = os.path.join(data_dir, "exec_paper_state.json")
@@ -103,7 +132,7 @@ def run_paper_track(analyzed: List[Dict[str, Any]], data_dir: str) -> Dict[str, 
         "version": "v0", "initialized": today, "cash": float(INITIAL_CAPITAL),
         "positions": {}, "pending": [], "last_date": None, "trades": 0, "realized_pnl": 0.0,
     }
-    flags: List[str] = ["e2_next_run_fill", "e3_1m_proxy"]
+    flags: List[str] = ["e2_next_run_fill", "e3_1m_proxy", "fill_live_quote_20260826"]
 
     kr = [r for r in analyzed if _is_kr(r)]
     by_tk = {str(r.get("ticker")): r for r in kr}
@@ -116,10 +145,17 @@ def run_paper_track(analyzed: List[Dict[str, Any]], data_dir: str) -> Dict[str, 
         return _summary(state, by_tk, ["gate_not_live"])
 
     # ── 1) pending 체결 (E2: 이전 run 신호 → 이번 run 가격, ±2% 밴드) ──
+    # 체결가 = 실시간 조회 우선(PM 8/26), 실패 시 run 스냅샷 폴백 — fill_source 자기신고.
+    live_px = _live_quotes(
+        [od["ticker"] for od in state.get("pending", [])]
+        + list(state.get("positions", {}).keys())
+    )
     still_pending: List[Dict[str, Any]] = []
     for od in state.get("pending", []):
         r = by_tk.get(od["ticker"])
-        px = _price(r)
+        _pl = live_px.get(od["ticker"])
+        px = _pl if _pl is not None else _price(r)
+        fill_src = "live_quote" if _pl is not None else "run_snapshot"
         if px is None:
             od["missing_fills"] = od.get("missing_fills", 0) + 1
             if od["missing_fills"] <= 2:
@@ -142,11 +178,12 @@ def run_paper_track(analyzed: List[Dict[str, Any]], data_dir: str) -> Dict[str, 
             state["cash"] -= qty * px
             state["positions"][od["ticker"]] = {
                 "qty": qty, "buy_price": px, "buy_date": today, "missing_days": 0,
-                "signal_snapshot": od.get("signal_snapshot"),
+                "signal_snapshot": od.get("signal_snapshot"), "fill_source": fill_src,
             }
             state["trades"] += 1
             _append_ledger(ledger_path, {"type": "fill_buy", "ticker": od["ticker"], "price": px,
-                                         "qty": qty, "krw": qty * px, "order": od})
+                                         "qty": qty, "krw": qty * px, "fill_source": fill_src,
+                                         "order": od})
         else:  # sell
             pos = state["positions"].pop(od["ticker"], None)
             if pos:
@@ -156,7 +193,8 @@ def run_paper_track(analyzed: List[Dict[str, Any]], data_dir: str) -> Dict[str, 
                 state["realized_pnl"] += pnl
                 state["trades"] += 1
                 _append_ledger(ledger_path, {"type": "fill_sell", "ticker": od["ticker"], "price": px,
-                                             "qty": pos["qty"], "pnl": round(pnl), "reason": od.get("reason")})
+                                             "qty": pos["qty"], "pnl": round(pnl),
+                                             "fill_source": fill_src, "reason": od.get("reason")})
     state["pending"] = still_pending
 
     # ── 2) 보유 청산 판정 (X 규칙) ──
@@ -170,17 +208,23 @@ def run_paper_track(analyzed: List[Dict[str, Any]], data_dir: str) -> Dict[str, 
                 _append_ledger(ledger_path, {"type": "exit_signal", "ticker": tk, "rule": "X4"})
             continue
         pos["missing_days"] = 0
+        # 🚨 판정(X1~X3)은 run 스냅샷 가격 — 등록 규칙의 판정 입력을 바꾸지 않는다.
+        #    실시간은 X2 즉시 청산의 **체결가**에만 쓴다 (fill_source 자기신고).
         px = _price(r)
         badge = str(r.get("recommendation") or "")
         if badge == "AVOID" and px:  # X2 즉시
-            proceeds = pos["qty"] * px
-            pnl = (px - pos["buy_price"]) * pos["qty"]
+            _fl = live_px.get(tk)
+            fill_px = _fl if _fl is not None else px
+            _fsrc = "live_quote" if _fl is not None else "run_snapshot"
+            proceeds = pos["qty"] * fill_px
+            pnl = (fill_px - pos["buy_price"]) * pos["qty"]
             state["cash"] += proceeds
             state["realized_pnl"] += pnl
             state["trades"] += 1
             state["positions"].pop(tk)
-            _append_ledger(ledger_path, {"type": "fill_sell", "ticker": tk, "price": px,
-                                         "qty": pos["qty"], "pnl": round(pnl), "reason": "x2_avoid_immediate"})
+            _append_ledger(ledger_path, {"type": "fill_sell", "ticker": tk, "price": fill_px,
+                                         "qty": pos["qty"], "pnl": round(pnl),
+                                         "fill_source": _fsrc, "reason": "x2_avoid_immediate"})
             continue
         queued = any(o["ticker"] == tk and o["side"] == "sell" for o in state["pending"])
         if not queued and badge in ("CAUTION",):  # X1 익일
