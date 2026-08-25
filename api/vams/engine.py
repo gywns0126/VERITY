@@ -907,6 +907,31 @@ def _apply_volatility_adj(invest_amount: float, stock: dict) -> tuple:
     }
 
 
+def _effective_max_per_stock(profile_abs: float, vams: dict) -> tuple:
+    """실효 종목당 상한 = min(프로필 절대액, 총자산 × VAMS_MAX_PER_STOCK_PCT).
+
+    🚨 2026-08-25 PREREG_MICRO_PROFILE (PM 승인·RULE 7 쿼터 1) — 스케일 불변화.
+      절대액 200만은 1,000만 시뮬에서 20.6% 로 작동했지만 100만 시드에서는 시드보다 커서
+      무력화되고 현금×0.9 만 남아 **1종목 50~90% 집중**이 된다(엔진 함수 실측).
+      비율 상한이 이를 5~8종목 분산으로 만든다.
+    🚨 총자산 < 1,000만이면 시뮬도 비례 축소된다(등록 §2-보정, 현재 −2.7%) — 의도된 동작.
+    🚨 총자산 결측/0 이면 절대액 폴백 — 비율을 0 에 곱해 사이징을 죽이는 조용한 실패 방지
+      ([[feedback_silent_zero_fallback_looks_plausible]] 계열).
+    Returns: (실효 상한, 바인딩 라벨)
+    """
+    from api.config import VAMS_MAX_PER_STOCK_PCT
+    try:
+        ta = float(vams.get("total_asset") or 0)
+    except (TypeError, ValueError):
+        ta = 0.0
+    if VAMS_MAX_PER_STOCK_PCT <= 0 or ta <= 0:
+        return float(profile_abs), "max_per_stock_abs"
+    pct_cap = ta * VAMS_MAX_PER_STOCK_PCT
+    if pct_cap < profile_abs:
+        return pct_cap, "total_asset_pct"
+    return float(profile_abs), "max_per_stock_abs"
+
+
 def execute_buy(
     portfolio: dict,
     stock: dict,
@@ -916,7 +941,7 @@ def execute_buy(
     """프로필 기반 가상 매수 (USD 종목은 원화 환산 후 동일 로직). 슬리피지 반영.
     V6: Half-Kelly 스케일링 적용."""
     p = _get_profile(profile)
-    max_per_stock = p["max_per_stock"]
+    max_per_stock, _mps_binding = _effective_max_per_stock(p["max_per_stock"], portfolio["vams"])
 
     cash = portfolio["vams"]["cash"]
     is_us = stock.get("currency") == "USD"
@@ -1090,7 +1115,9 @@ def execute_buy(
             "max_per_stock": max_per_stock,
             "cash_at_entry": round(cash),
             "base": round(_size_base),
-            "base_binding": "max_per_stock" if max_per_stock <= cash * 0.9 else "cash*0.9",
+            # 2026-08-25 PREREG_MICRO_PROFILE — max_per_stock 자체가 abs/pct 중 어느 쪽인지까지 신고.
+            "max_per_stock_binding": _mps_binding,
+            "base_binding": ("max_per_stock" if max_per_stock <= cash * 0.9 else "cash*0.9"),
             "after_kelly": round(_size_after_kelly),
             "after_volatility": round(_size_after_vol),
             "after_macro": round(invest_amount),

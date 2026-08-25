@@ -374,6 +374,12 @@ VAMS_PROFILES = {
 # 하위 호환: 개별 상수를 참조하는 코드가 있을 수 있으므로 활성 프로필에서 파생
 _active_vams = VAMS_PROFILES.get(VAMS_ACTIVE_PROFILE, VAMS_PROFILES["moderate"])
 VAMS_MAX_PER_STOCK = _env_int("VAMS_MAX_PER_STOCK", _active_vams["max_per_stock"])
+# 🚨 2026-08-25 PREREG_MICRO_PROFILE (PM 승인·RULE 7 쿼터 1) — max_per_stock 스케일 불변화.
+#   실효 상한 = min(절대액, 총자산 × 이 비율). 0.20 = 현행 200만이 1,000만 시뮬에서 실효하던
+#   비율(20.6%)의 내림 고정 — 새 임계가 아니라 단위 변환이다. 100만 시드에서 1종목 50~90%
+#   집중(실측)을 5~8종목 분산으로 만든다. 총자산 < 1,000만이면 시뮬도 비례 축소(§2-보정,
+#   현재 972.9만에서 −2.7% — 의도된 스케일 불변). 되돌림 = 이 값을 0 으로(env 오버라이드).
+VAMS_MAX_PER_STOCK_PCT = _env_float("VAMS_MAX_PER_STOCK_PCT", 0.20)
 VAMS_STOP_LOSS_PCT = _active_vams["stop_loss_pct"]
 VAMS_TRAILING_STOP_PCT = _active_vams["trailing_stop_pct"]
 VAMS_MAX_HOLD_DAYS = _active_vams["max_hold_days"]
