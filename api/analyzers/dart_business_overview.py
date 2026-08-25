@@ -209,7 +209,8 @@ def save_cache(cache: Dict[str, Any]) -> None:
 def analyze_all_overview(stocks: Dict[str, Any],
                          auto_fetch_missing: bool = True,
                          max_chars: int = DEFAULT_MAX_CHARS,
-                         retry_exhausted: bool = False) -> Dict[str, Dict[str, Any]]:
+                         retry_exhausted: bool = False,
+                         deadline: Optional[float] = None) -> Dict[str, Dict[str, Any]]:
     """stocks dict 일괄 사업의 개요 추출. LLM 0 · 과금 0.
 
     `raw_text` 우선순위 = (1) 넘겨받은 `business_facilities_raw.raw_text`,
@@ -225,7 +226,7 @@ def analyze_all_overview(stocks: Dict[str, Any],
     rows: Dict[str, Any] = cache.get("rows") or {}
     misses: Dict[str, Any] = dict(cache.get("misses") or {})
     out: Dict[str, Dict[str, Any]] = {}
-    fresh = cached = skipped = exhausted_skip = 0
+    fresh = cached = skipped = exhausted_skip = budget_stopped = 0
     reject_reasons: Dict[str, int] = {}
 
     for ticker, info in (stocks or {}).items():
@@ -239,6 +240,11 @@ def analyze_all_overview(stocks: Dict[str, Any],
         if prev and str(prev.get("bsns_year") or "") >= year and prev.get("text"):
             out[ticker] = prev
             cached += 1
+            continue
+
+        # 🚨 축 예산 — 한 축이 job 전체를 먹으면 뒤 축이 시작조차 못 한다(2026-08-25 실사고).
+        if deadline and time.time() > deadline:
+            budget_stopped += 1
             continue
 
         # 🚨 시도 상한 도달분은 **문서를 받지 않는다** — 여기가 낭비의 발생점이었다.
@@ -309,9 +315,13 @@ def analyze_all_overview(stocks: Dict[str, Any],
                      "max_overview_attempts": MAX_OVERVIEW_ATTEMPTS,
                      "last_axis_run": {"fresh": fresh, "cached": cached, "skipped": skipped,
                                        "exhausted_skip": exhausted_skip,
+                                       "budget_stopped": budget_stopped,
                                        "rejects": reject_reasons}})
         cache["_meta"] = meta
         save_cache(cache)
-    logger.info("[overview] 신규 %d · 캐시 %d · 반려 %d · 시도소진 skip %d · 사유 %s",
-                fresh, cached, skipped, exhausted_skip, reject_reasons)
+    if budget_stopped:
+        sys.stderr.write(f"[overview] ⏱ 축 예산 소진 — {budget_stopped}종목 미시도"
+                         f"(다음 run 이어받음)\n")
+    logger.info("[overview] 신규 %d · 캐시 %d · 반려 %d · 시도소진 skip %d · 예산중단 %d · 사유 %s",
+                fresh, cached, skipped, exhausted_skip, budget_stopped, reject_reasons)
     return out

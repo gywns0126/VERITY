@@ -334,7 +334,7 @@ def _save_shareholders(path, by, year):
     os.replace(tmp, path)
 
 
-def run_chain(univ, year, delay, dry, limit=None) -> Dict[str, int]:
+def run_chain(univ, year, delay, dry, limit=None, deadline=None) -> Dict[str, int]:
     """주요 매출처 스니펫 — DART 사업보고서 원문 앵커 추출. LLM 0.
 
     기존 파이프라인은 full run 당 `candidates[:5]` 만 돌아 31종에서 멈춰 있었다.
@@ -350,7 +350,16 @@ def run_chain(univ, year, delay, dry, limit=None) -> Dict[str, int]:
     if dry or not todo:
         return {"todo": len(todo), "ok": 0}
     ok = 0
+    stopped = 0
     for i, (tk, nm) in enumerate(todo, 1):
+        # 🚨 축 예산 — 이 축이 job 전체를 먹으면 뒤 축이 **시작조차 못 한다**.
+        #   실측 2026-08-25: chain 이 88분을 쓰고 타임아웃해 overview 가 굶었다
+        #   (8/22 도 51분·수확 3/200 으로 같은 형태였다).
+        if deadline and time.time() > deadline:
+            stopped = len(todo) - i + 1
+            print(f"  [chain] ⏱ 축 예산 소진 — {stopped}종목 남기고 중단(다음 run 이어받음)",
+                  flush=True)
+            break
         mkt = (corner.get(tk) or {}).get("market") or "KS"
         try:
             r = scout_major_customer_snippets(f"{tk}.{mkt}")
@@ -362,11 +371,13 @@ def run_chain(univ, year, delay, dry, limit=None) -> Dict[str, int]:
         if i % 100 == 0:
             print(f"    … {i}/{len(todo)} (스니펫 확보 {ok})", flush=True)
         time.sleep(delay)
-    print(f"  [chain] 신규 {ok} / 시도 {len(todo)}")
-    return {"todo": len(todo), "ok": ok}
+    print(f"  [chain] 신규 {ok} / 시도 {len(todo) - stopped}"
+          + (f" · ⏱ 예산으로 {stopped} 미시도" if stopped else ""))
+    return {"todo": len(todo), "ok": ok, "budget_stopped": stopped}
 
 
-def run_overview(univ, year, delay, dry, limit=None, retry_exhausted=False) -> Dict[str, int]:
+def run_overview(univ, year, delay, dry, limit=None, retry_exhausted=False,
+                 deadline=None) -> Dict[str, int]:
     """사업의 개요 원문 발췌 — `dart_business_overview.json` upsert. LLM 0 · 과금 0.
 
     🚨 `--limit` 은 **미보유 종목에만** 적용한다. `run_llm_axis` 처럼 전체에 걸면
@@ -406,7 +417,7 @@ def run_overview(univ, year, delay, dry, limit=None, retry_exhausted=False) -> D
           + "  결정론 파싱 (LLM 0 · 과금 0)")
     if dry or not sd:
         return {"todo": len(sd), "ok": 0}
-    res = analyze_all_overview(sd, retry_exhausted=retry_exhausted)
+    res = analyze_all_overview(sd, retry_exhausted=retry_exhausted, deadline=deadline)
     ok = sum(1 for tk in sd if tk in res)
     print(f"  [overview] 결과 {ok}/{len(sd)}")
     return {"todo": len(sd), "ok": ok}
@@ -456,6 +467,9 @@ def main() -> int:
     ap.add_argument("--delay", type=float, default=0.15)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--allow-llm", action="store_true", help="LLM 축 실행 명시 승인")
+    ap.add_argument("--axis-budget", type=int, default=1500,
+                    help="축별 wall-clock 상한(초, 기본 1500=25분). 0=무제한. "
+                         "🚨 한 축이 job 전체를 먹어 뒤 축이 굶는 것을 막는다")
     ap.add_argument("--retry-exhausted", action="store_true",
                     help="overview: 시도 상한에 걸린 반려 종목까지 다시 조회(원장 초기화 없이 1회 강제)")
     a = ap.parse_args()
@@ -480,6 +494,8 @@ def main() -> int:
     t0 = time.time()
     summary = {}
     for ax in axes:
+        # 🚨 축마다 **새로** 예산을 준다. 누적 예산으로 두면 앞 축이 다 쓰고 뒤 축이 0 이 된다.
+        _dl = (time.time() + a.axis_budget) if a.axis_budget else None
         try:
             if ax == "dividends":
                 summary[ax] = run_dividends(univ, a.year, a.delay, a.dry_run, a.limit)
@@ -488,7 +504,7 @@ def main() -> int:
             elif ax == "shareholders":
                 summary[ax] = run_shareholders(univ, a.year, a.delay, a.dry_run, a.limit)
             elif ax == "chain":
-                summary[ax] = run_chain(univ, a.year, a.delay, a.dry_run, a.limit)
+                summary[ax] = run_chain(univ, a.year, a.delay, a.dry_run, a.limit, deadline=_dl)
             elif ax == "overview":
                 # 🚨 2026-08-24 N=2 감사에서 발견 — 개요 축만 **market** 유니버스로 돈다.
                 #   다른 축은 코너(중·소형주 채움)가 목적이지만 개요는 **공개 리포트 표면**
@@ -502,7 +518,7 @@ def main() -> int:
                 _univ_ov = (univ if a.universe == "market"
                             else build_universe("market", a.limit, (a.ticker or "").strip() or None))
                 summary[ax] = run_overview(_univ_ov, a.year, a.delay, a.dry_run, a.limit,
-                                           retry_exhausted=a.retry_exhausted)
+                                           retry_exhausted=a.retry_exhausted, deadline=_dl)
             else:
                 summary[ax] = run_llm_axis(ax, univ, a.year, a.delay, a.dry_run, a.limit)
         except Exception as e:  # noqa: BLE001 — 한 축 실패가 다른 축을 막지 않는다
@@ -514,6 +530,8 @@ def main() -> int:
     def _stalled(v):
         if "error" in v:
             return True
+        if v.get("budget_stopped"):
+            return False   # 예산으로 끊긴 것은 진척이다(다음 run 이어받음) — 정체 아님
         # progressed 가 있으면 그걸 본다(배당: 갱신 + 무배당 확정). 없으면 ok.
         moved = v.get("progressed", v.get("ok", 0))
         return moved == 0 and v.get("todo", 0) > 0
