@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-24T18:32:02+09:00",
+ "as_of": "2026-08-25T19:03:41+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -105,7 +105,7 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 103,
+   "snapshots": 104,
    "cap_rules_checked": 7,
    "degenerate_rules": [
     {
@@ -121,9 +121,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 11,
-   "days_without_any_cap_pct": 10.7,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.0%). cap 없는 날 11/103일",
+   "days_without_any_cap": 12,
+   "days_without_any_cap_pct": 11.5,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.0%). cap 없는 날 12/104일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -134,7 +134,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 4854,
+   "stock_days": 4925,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -200,13 +200,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 16,
+     "n_present": 26,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 16,
+     "n_present": 26,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -260,7 +260,7 @@
     {
      "name": "파마리서치",
      "qty": 1.0,
-     "return_pct": 28.99,
+     "return_pct": 28.53,
      "past_target_2": false
     }
    ],
