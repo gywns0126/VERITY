@@ -155,10 +155,12 @@ def main() -> int:
     start = max(last + timedelta(days=1), today_et - timedelta(days=LOOKBACK_MAX_DAYS))
 
     tickers: List[str] = []
+    day_ticks: List[Tuple[date, List[str]]] = []   # 일자별 '이 날 처음 등장한' 티커
     pattern_hits: List[Tuple[str, str, str]] = []
     processed_through = last
     d = start
     while d < today_et:  # 당일(ET)은 인덱스 미완성 — 전일까지
+        day_new: List[str] = []
         if d.weekday() < 5:
             filers = _fetch_day_filers(d)
             if filers is None:
@@ -168,8 +170,10 @@ def main() -> int:
             hit = sorted({cik_map[c] for c, _f in filers if c in cik_map})
             pattern_hits.extend((cik_map[c], f, d.isoformat()) for c, f in filers if c in cik_map)
             print(f"[us_fin_incr] {d}: 10-K/Q 제출 {len(filers)} 건, 유니버스 교집합 {len(hit)}", file=sys.stderr)
-            tickers.extend(t for t in hit if t not in tickers)
+            day_new = [t for t in hit if t not in tickers]
+            tickers.extend(day_new)
             time.sleep(THROTTLE_SEC)
+        day_ticks.append((d, day_new))
         processed_through = d
         d += timedelta(days=1)
 
@@ -183,11 +187,32 @@ def main() -> int:
                          "updated_at": datetime.now(KST).isoformat(), "last_run_tickers": []})
         return 0
 
-    capped = tickers[: args.cap]
+    # 🚨 캡 = 일 단위 프리픽스 패킹 (2026-08-25 데드락 수리). 종전 '통짜 절단 + state 전면
+    #    미전진' 은 어닝시즌(일합 > 캡)에 **매 run 미전진 → 영구 동결**을 만들었다 —
+    #    실측: 7/23 이후 33일간 last_processed=7/22 고착, 홈 브리핑이 한 달 전 종목을
+    #    '밤사이 공시'로 표시. '다음 run 이월' 은 슬라이딩 창(start=max(last+1, today−7))
+    #    이 창을 앞으로 밀어버려 실제로는 일어나지 않는 허구였다.
+    #    이제: 날짜순으로 하루치가 캡에 통째로 들어갈 때까지 담고, state 는 **완전히
+    #    담긴 마지막 날**까지 전진. 다음 run 이 그 다음 날부터 이어간다(진짜 이월).
+    capped: List[str] = []
+    advance_through = last
+    part_day = None
+    for dd, ts in day_ticks:
+        if len(capped) + len(ts) <= args.cap:
+            capped.extend(ts)
+            advance_through = dd
+        else:
+            room = args.cap - len(capped)
+            if room > 0 and not capped:
+                # 단일 일자가 캡 초과(전 캡을 혼자 소진) — 부분 수집하되 그 날은 미완이므로
+                # state 는 전날까지. 다음 run 이 같은 날을 재시도한다(멱등·1일로 유계).
+                capped.extend(ts[:room])
+                part_day = dd
+            break
     dropped = len(tickers) - len(capped)
     if dropped > 0:
-        # 🚨 캡 초과 = 침묵 누락 금지 — 로그 + state 미전진으로 다음 run 이 이어감
-        print(f"[us_fin_incr] 캡 {args.cap} 초과 — {dropped}종목 다음 run 이월 (state 미전진)", file=sys.stderr)
+        print(f"[us_fin_incr] 캡 {args.cap} 초과 — {dropped}종목 이월, state 는 "
+              f"{advance_through} 까지 전진{f' (부분 일자 {part_day})' if part_day else ''}", file=sys.stderr)
 
     if args.dry_run:
         print(f"[us_fin_incr] dry-run — 재수집 대상 {len(capped)}: {capped}", file=sys.stderr)
@@ -204,9 +229,15 @@ def main() -> int:
     print(f"[us_fin_incr] logged=True · 재수집 {len(ok)} OK / {len(fail)} FAIL"
           f"{' · FAIL=' + ','.join(fail) if fail else ''}", file=sys.stderr)
 
-    # state 전진 = 이월 없고 실패 없을 때만 (실패분 다음 run 재시도 — 멱등)
-    if dropped == 0 and not fail:
-        _save_state({"last_processed": processed_through.isoformat(),
+    # state 전진 = 실패 없을 때 advance_through 까지 (이월분은 다음 run 이 이어감).
+    # 🚨 실패 시에도 last_run_tickers·updated_at 은 갱신한다 — 이 필드는 홈 브리핑의
+    #    '밤사이 공시' 원천이라, 동결되면 사용자에게 한 달 전 종목이 계속 나간다(실사고).
+    #    last_processed 만 옛값 유지 → 다음 run 이 같은 창을 재시도(멱등).
+    if not fail:
+        _save_state({"last_processed": advance_through.isoformat(),
+                     "updated_at": datetime.now(KST).isoformat(), "last_run_tickers": ok})
+    else:
+        _save_state({"last_processed": last.isoformat(),
                      "updated_at": datetime.now(KST).isoformat(), "last_run_tickers": ok})
     return 0 if not fail else 1
 
