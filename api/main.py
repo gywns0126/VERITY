@@ -2836,6 +2836,10 @@ def main():
             _sm_stocks = (json.load(_sf).get("stocks") or [])
         _sm_scored = []
         for _s in _sm_stocks:
+            # ETF 는 데이터엔 있으나(PM 8/25 "ETF 는 필수지" — 보유 사실) 강제편입 제외:
+            # 분석 파이프는 개별주 전용이고 ETF 매수는 개별 종목 확신 신호가 아니다.
+            if _s.get("is_etf"):
+                continue
             _hs = _s.get("holders") or []
             _nw = sum(1 for _h in _hs if _h.get("change_type") == "NEW")
             _inc = sum(1 for _h in _hs if _h.get("change_type") == "INCREASED")

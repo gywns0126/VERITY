@@ -171,10 +171,13 @@ def main() -> int:
         all_cusips = {h["cusip"] for hs in fund_holdings.values() for h in hs if h.get("cusip")}
         cmap = resolve_cusips(all_cusips)
 
-        # 3) per-ticker 집계 — 개별주 전수 유지, ETF 만 제외 (PM 승인 2026-08-25).
-        #    종전 sp1500 게이트는 거장 실보유 개별주를 잘랐다(TSM 8펀드 → "보유 없음" 거짓).
+        # 3) per-ticker 집계 — 보유 사실 전수 유지 (PM 2026-08-25 "ETF 는 필수지").
+        #    종전 sp1500 게이트는 거장 실보유 개별주를 잘랐고(TSM 8펀드 → "보유 없음" 거짓),
+        #    1차 정비의 ETF 제외도 같은 종류의 거짓이었다(브리지워터 SPY 보유 = 사실).
+        #    🚨 분리 설계: 데이터·검색·보유 표 = ETF 포함(is_etf 플래그) /
+        #    순매수 TOP10 랭킹·콘솔 강제편입 = 개별주만(소비자가 is_etf 로 거른다 —
+        #    ETF 매수는 개별 종목 확신이 아니라 랭킹 신호 희석).
         etf_set = _load_etf_set()
-        etf_excluded_n = 0
         unresolved_n = 0
         agg: Dict[str, Dict[str, Any]] = {}
         for fund, hs in fund_holdings.items():
@@ -183,13 +186,12 @@ def main() -> int:
                 if not tk:
                     unresolved_n += 1
                     continue
-                if tk in etf_set:
-                    etf_excluded_n += 1
-                    continue
                 e = agg.setdefault(tk, {
                     "ticker": tk,
                     # nameOfIssuer (13F 원문) — 검색창 회사명 매칭용. 없으면 티커 유지.
                     "name": (h.get("issuer") or "").strip() or tk,
+                    # ETF 플래그 — 표면은 포함, 랭킹·강제편입 소비자는 이 값으로 거른다.
+                    "is_etf": tk in etf_set,
                     "total_value_usd": 0.0, "holder_count": 0, "holders": [],
                 })
                 m = fund_meta.get(fund, {})
@@ -240,11 +242,11 @@ def main() -> int:
                     for f, m in fund_meta.items()
                 },
                 "held_since_window_quarters": HELD_SINCE_QUARTERS,
-                # 필터 자기신고 (2026-08-25 재정의: sp1500 게이트 → ETF 제외만) —
+                # 필터 자기신고 (2026-08-25 2차: PM "ETF 는 필수지" — 보유 사실 전수 포함) —
                 # 분모를 숨기면 "전부 커버" 로 오독된다 (RULE 13).
                 "filter": {
-                    "rule": "개별주 전수 유지 · ETF 제외 (신호 희석 방지)",
-                    "etf_excluded_n": etf_excluded_n,
+                    "rule": "보유 사실 전수 (ETF 포함, is_etf 플래그) · 순매수 랭킹·강제편입 소비자만 개별주 필터",
+                    "etf_kept_n": sum(1 for s in agg.values() if s.get("is_etf")),
                     "unresolved_cusip_n": unresolved_n,
                     "non_sp1500_kept_n": sum(1 for t in agg if t not in sp1500),
                 },

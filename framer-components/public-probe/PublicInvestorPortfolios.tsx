@@ -905,6 +905,7 @@ export default function PublicInvestorPortfolios(props: {
             name: r.name || r.ticker,
             name_ko: r.name_ko || "",
             holder_count: (smByTicker[r.ticker] || {}).holder_count || 0,
+            is_etf: !!(smByTicker[r.ticker] || {}).is_etf,
         }))
         // 🚨 합집합 — 거장 보유인데 universe 밖인 종목(해외 ADR 등, 2026-08-25 실측 TSM
         //   8펀드 보유가 universe_search US 에 없음)을 뒤에 붙인다. 안 붙이면 데이터가
@@ -917,6 +918,7 @@ export default function PublicInvestorPortfolios(props: {
                     name: s.name,
                     name_ko: "",
                     holder_count: s.holder_count || 0,
+                    is_etf: !!s.is_etf,
                 })
         }
         return rows2
@@ -975,6 +977,9 @@ export default function PublicInvestorPortfolios(props: {
     //   '수익률' 라벨 절대 금지(트랙 고정 규율)와 같은 뿌리.
     const smTop10: any[] = useMemo(() => {
         const scored = smStocks
+            // ETF 는 보유 표·검색엔 나오지만(PM 8/25 "ETF 는 필수지" — 사실 표면)
+            // 순매수 랭킹에서는 제외 — ETF 매수는 개별 종목 확신이 아니라 신호 희석.
+            .filter((s: any) => !s.is_etf)
             .map((s: any) => {
                 let nw = 0,
                     inc = 0,
@@ -1423,7 +1428,7 @@ export default function PublicInvestorPortfolios(props: {
                                             fontWeight: 600,
                                         }}
                                     >
-                                        {s.ticker} · US
+                                        {s.ticker} · {s.is_etf ? "ETF" : "US"}
                                     </div>
                                 </div>
                                 <span
@@ -1499,9 +1504,12 @@ export default function PublicInvestorPortfolios(props: {
                                         ...NUM,
                                     }}
                                 >
-                                    {smCur
-                                        ? `거장 ${smCur.holder_count}개 펀드 보유 · 합산 ${fmtMoney(smCur.total_value_usd, krw, fx.rate)}`
-                                        : `거장 ${(smMeta.managers || []).length || 16}개 운용사 보유 없음`}
+                                    {((smSel && smSel.is_etf) || (smCur && smCur.is_etf)
+                                        ? "ETF · "
+                                        : "") +
+                                        (smCur
+                                            ? `거장 ${smCur.holder_count}개 펀드 보유 · 합산 ${fmtMoney(smCur.total_value_usd, krw, fx.rate)}`
+                                            : `거장 ${(smMeta.managers || []).length || 16}개 운용사 보유 없음`)}
                                 </div>
                             </div>
                             <button
@@ -1555,10 +1563,10 @@ export default function PublicInvestorPortfolios(props: {
                                     lineHeight: 1.6,
                                 }}
                             >
-                                추적 중인 집중형 {(smMeta.managers || []).length || 16}개
-                                운용사의 최근 13F 공시에는 이 종목이 없어요. 인덱스펀드
-                                보유는 집계하지 않아요(신호 희석). 종목 자체 분석은 위
-                                "종목 리포트" 에서 볼 수 있어요.
+                                추적 중인 {(smMeta.managers || []).length || 16}개 운용사
+                                (집중형 액티브 — 인덱스 운용사 제외)의 최근 13F 공시에는 이
+                                종목이 없어요. 종목 자체 분석은 위 "종목 리포트" 에서 볼 수
+                                있어요.
                             </div>
                         )}
                         {smCur && (
