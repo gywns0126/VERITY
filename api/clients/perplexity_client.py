@@ -35,6 +35,7 @@ def call_perplexity(
     search_domain_filter: Optional[list] = None,
     search_recency_filter: Optional[str] = None,
     response_format: Optional[dict] = None,
+    caller: str = "clients_pplx",
 ) -> Dict[str, Any]:
     """Perplexity Sonar API 단일 호출.
 
@@ -43,6 +44,10 @@ def call_perplexity(
         search_domain_filter: ["sec.gov", "investor.tesla.com"] 등 domain 제한
         search_recency_filter: "hour" / "day" / "week" / "month" / "year"
         model: 호출별 override (default = PERPLEXITY_MODEL = sonar-pro)
+        caller: 원장(llm_cost) call_type 라벨. 🚨 2026-08-25 — 8월 419호출 중 416이
+            기본값 "clients_pplx" 하나로 뭉쳐 소비자 8곳 중 누가 썼는지 원장으로 구분
+            불가했다(시간대 클러스터로 역추정해야 했음). 신규 호출부는 반드시 지정할 것 —
+            tests/test_perplexity_caller_labels.py 가 미지정 호출부를 막는다.
 
     Returns:
         성공: {"content": str, "citations": list, "model": str, "usage": dict}
@@ -90,7 +95,7 @@ def call_perplexity(
 
     try:  # 관측 배선 — import 실패해도 본업 무영향
         from api.metadata.llm_cost import log_perplexity
-        log_perplexity(data, str(payload.get("model") or ""), "clients_pplx")
+        log_perplexity(data, str(payload.get("model") or ""), caller)
     except Exception:  # noqa: BLE001
         pass
 

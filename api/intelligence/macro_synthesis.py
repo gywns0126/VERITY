@@ -104,7 +104,7 @@ def _perplexity_fresh() -> Dict[str, Any]:
         "너는 사실 수집기다. 의견·추천·전망 금지. 확인된 사실과 출처만 4~6줄. "
         "평문으로만 — 마크다운 굵게(**)·헤딩(#)·이모지 금지."
     )
-    r = call_perplexity(q, system_prompt=sysp, max_tokens=800, search_recency_filter="day")
+    r = call_perplexity(q, system_prompt=sysp, max_tokens=800, search_recency_filter="day", caller="macro_synthesis")
     if r.get("error"):
         return {"error": r["error"]}
     return {"content": r.get("content", ""), "citations": r.get("citations", []), "model": r.get("model")}

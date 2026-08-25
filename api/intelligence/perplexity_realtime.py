@@ -139,7 +139,7 @@ def research_macro_event(event: Dict[str, Any]) -> Dict[str, Any]:
         "Cite specific analyst or institution views from the last 48 hours."
     )
 
-    result = call_perplexity(query, system_prompt=_get_macro_system(), max_tokens=1500)
+    result = call_perplexity(query, system_prompt=_get_macro_system(), max_tokens=1500, caller="macro_event")
     if "error" in result:
         return {"event": name, "error": result["error"]}
 
@@ -200,7 +200,7 @@ def research_earnings(stock: Dict[str, Any]) -> Dict[str, Any]:
         "Start your answer with one word: BEAT, MISS, or INLINE."
     )
 
-    result = call_perplexity(query, system_prompt=_get_earnings_system(), max_tokens=1200)
+    result = call_perplexity(query, system_prompt=_get_earnings_system(), max_tokens=1200, caller="earnings_research")
     if "error" in result:
         return {"ticker": ticker, "error": result["error"]}
 
@@ -261,7 +261,7 @@ def research_stock_risk(stock: Dict[str, Any]) -> Dict[str, Any]:
         'Only report confirmed facts with sources. If nothing significant found, say "No material external risks found."'
     )
 
-    result = call_perplexity(query, system_prompt=_get_risk_system(), max_tokens=1200)
+    result = call_perplexity(query, system_prompt=_get_risk_system(), max_tokens=1200, caller="stock_risk_scan")
     if "error" in result:
         return {"ticker": ticker, "error": result["error"]}
 

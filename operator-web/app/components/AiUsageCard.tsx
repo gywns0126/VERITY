@@ -56,7 +56,10 @@ export default function AiUsageCard({ cost, brainQuality }: { cost?: CostMonitor
                     {row("Claude 호출", `${claude.toLocaleString()}회`)}
                     {row("Claude 토큰", (m.claude_tokens || 0).toLocaleString())}
                     {row("Gemini (stock/report/Pro)", `${m.gemini_stock_calls || 0} / ${m.gemini_report_calls || 0} / ${m.gemini_pro_calls || 0}`)}
-                    {row("Perplexity 호출", `${(m.perplexity_calls || 0).toLocaleString()}회`)}
+                    {/* 🚨 2026-08-26 — 이 값은 main run 내부 카운트다. 배치 워크플로(브리프·테마 등,
+                        8월 실측 ~130회)는 빠진다. 전수는 llm_cost.jsonl 원장 — 라벨 없이 두면
+                        "8월 퍼플렉시티 전체" 로 읽힌다(실제 그렇게 읽혔다). 되돌리지 말 것. */}
+                    {row("Perplexity 호출 (run 내 · 배치 별도)", `${(m.perplexity_calls || 0).toLocaleString()}회`)}
                 </div>
             )}
 

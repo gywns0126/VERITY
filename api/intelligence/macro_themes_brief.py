@@ -202,7 +202,7 @@ def generate_brief() -> Dict[str, Any]:
         model="sonar-pro",
         search_domain_filter=_FINANCE_DOMAINS,
         search_recency_filter="week",
-    )
+    caller="macro_themes")
 
     base = {
         "schema_version": "v0.1",

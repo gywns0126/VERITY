@@ -135,7 +135,7 @@ def _perplexity_fresh(ticker: str, name: str) -> Dict[str, Any]:
         "너는 사실 수집기다. 의견·추천·전망 금지. 확인된 사실과 출처만 3~5줄. "
         "평문으로만 써라 — 마크다운 굵게(**)·헤딩(#)·이모지 금지."
     )
-    r = call_perplexity(q, system_prompt=sysp, max_tokens=700, search_recency_filter="week")
+    r = call_perplexity(q, system_prompt=sysp, max_tokens=700, search_recency_filter="week", caller="tri_llm_fresh")
     if r.get("error"):
         return {"error": r["error"]}
     try:

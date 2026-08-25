@@ -300,7 +300,7 @@ def _fetch_fee(broker: str) -> dict:
             temperature=0.0,
             search_domain_filter=domains,
             response_format=_FEE_FORMAT,
-        )
+        caller="broker_guide")
         if res.get("error"):
             continue
         try:
@@ -350,7 +350,7 @@ def _fetch_overseas_fee(broker: str) -> dict:
             temperature=0.0,
             search_domain_filter=domains,
             response_format=_FEE_FORMAT,
-        )
+        caller="broker_guide")
         if res.get("error"):
             continue
         try:
@@ -399,7 +399,7 @@ def _fetch_fx_fee(broker: str) -> dict:
             temperature=0.0,
             search_domain_filter=domains,
             response_format=_FEE_FORMAT,
-        )
+        caller="broker_guide")
         if res.get("error"):
             continue
         try:
@@ -468,7 +468,7 @@ def collect(force: bool = False) -> dict:
         max_tokens=5200,
         temperature=0.05,
         response_format=_RESPONSE_FORMAT,
-    )
+    caller="broker_guide")
     if res.get("error"):
         print(f"[broker_guide] Perplexity 실패 — 직전 유지: {res['error']}")
         return {"status": "error", "kept_prev": prev is not None, "detail": res["error"]}

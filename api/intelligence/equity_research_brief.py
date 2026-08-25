@@ -252,7 +252,7 @@ def generate_brief(ticker: str) -> Dict[str, Any]:
         # search_mode 제거 (default 'web') — analyst_consensus 채움 위해
         search_domain_filter=_FINANCE_DOMAINS,
         search_recency_filter="month",
-    )
+    caller="equity_brief")
 
     if "error" in res:
         return {
