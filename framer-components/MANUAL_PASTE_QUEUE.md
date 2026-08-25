@@ -725,3 +725,20 @@ PM 지시 2026-08-19 "고쳐. 내가 복붙할게". 파일 = `public-probe/` 아
 - **복붙 후**: 위 표 상태를 ✅ 로 갱신.
 - **repo 상단 "되돌리지 말 것" 가드 주석 삭제 금지** (dark html-first·별 채움 등).
 - **dark 판정 = html-first `readBodyDark`** (html[data-an-theme] → body[data-framer-theme] → verity_theme). body-first 금지.
+
+---
+
+## ✅ 완료 (2026-08-25) — PublicStockDetailKR 기관·사업장 영구 미표시 (MCP surgical · RULE ④ 예외 절차)
+
+**결함**: `d.stocks[tk]` 가 배열(1,789)을 티커 문자열로 인덱싱 → 항상 undefined →
+기관 26·사업장 29종목 파트가 라이브에서 영구 미표시. forensics 쪽은 dict 라 정상 —
+**두 발행물의 stocks 형태가 다르다**(report=배열 / forensics=dict).
+
+**절차**: 라이브 read → 🚨 **repo 미러가 또 stale 시대판**(라이브=팔레트 `--an-sdk-*` /
+repo=구 JS 감지판) — 장문 프로브 7종 중 `_ANP "sdk"` 불일치로 검출, 히트맵(8/23)과 두 번째.
+→ 라이브 전사(비테마 본문 = HEAD 와 diff 75줄 전량 테마 전환분으로 분류 = 전사 정합 증명)
+→ 수정 블록 삽입 → updateCodeFile(typecheck 0) → 재read 로 수정 블록·버전 해시 갱신 확인.
+repo 미러 = 라이브판으로 교체 완료(시대판 정합 회복).
+
+🚨 **미러 stale 2건째 = 계급 문제.** public-probe 74파일 전수의 시대판 감사(라이브 vs 미러
+팔레트 마커 대조)가 필요하다 — 별도 세션 의제.
