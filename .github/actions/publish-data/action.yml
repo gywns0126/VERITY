@@ -60,6 +60,15 @@ runs:
         #   대체 = 리포트 내 출처 링크아웃(구현 완료) · 숫자 부활 = 유료 티어 Polygon×Benzinga
         #   정식 라이선스($99/월) 계약 후에만. 세션 간 재추가 핑퐁 2회(9c8397eea·414ff9431) —
         #   이 결정 변경 = PM 재승인 + memory(project_kr_index_public_data_2026_07_08) 갱신 필수.
+        # 🚫 us_eps_revision.json 발행 금지 (2026-08-25 판정) — yfinance eps_trend/eps_revisions =
+        #   애널리스트 추정치 리비전 = 위 us_analyst_consensus 와 **동일 권리 계열**(Benzinga/S&P
+        #   재배포 blocker). 숫자 부활 = 유료 라이선스 후에만(7/10 결정 준용). 오퍼레이터(비공개)는 사용 가능.
+        # 🚫 us_fin_annual_compact.json 발행 불필요 (2026-08-25 실측) — 발행 리포트
+        #   us_stock_report_public.fin_series 가 이미 연간 재무를 실어 나른다(4,154/5,067=82%,
+        #   compact 4,392 중 리포트 밖 종목 1). 이 파일 정체 = CI 캐시 폴백(내부물). 중복 발행 금지.
+        # 🟠 us_options.json = PM 결정 대기 (2026-08-25) — yfinance 옵션체인(IV·OI·거래량) =
+        #   OPRA 계열 거래소 파생 데이터, 재배포 권리 회색. FINRA(us_short_interest, 자유 재배포)와
+        #   다른 계급. 절충안 = 파생 집계만(P/C·ATM IV) 발행 — 결정 전 재추가 금지.
         # 🚫 consensus_data.json 도 발행 제외 (2026-07-21 전수감사, PM "긴급도순 ㄱㄱ" 승인) —
         #   KR 브로커 목표가/투자의견(예: target_price 911524·"매수")로 us_analyst_consensus 와 동일
         #   법적 class(재배포 blocker·법률큐). 소비처 0 확인(framer+vercel-api grep 전무). 7/10 결정 정합 확장.
