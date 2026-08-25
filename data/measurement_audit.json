@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-25T19:03:41+09:00",
+ "as_of": "2026-08-26T08:48:17+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -18,7 +18,7 @@
  "checks": {
   "ledger_integrity": {
    "ok": false,
-   "episodes": 27,
+   "episodes": 28,
    "phantom_sells": 59,
    "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
@@ -99,13 +99,13 @@
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 104,
+   "snapshots": 105,
    "cap_rules_checked": 7,
    "degenerate_rules": [
     {
@@ -121,9 +121,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 12,
-   "days_without_any_cap_pct": 11.5,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.0%). cap 없는 날 12/104일",
+   "days_without_any_cap": 13,
+   "days_without_any_cap_pct": 12.4,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.0%). cap 없는 날 13/105일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -134,14 +134,10 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 4925,
+   "stock_days": 4996,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
-     "fired": 0
-    },
-    {
-     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
@@ -149,11 +145,15 @@
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
      "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "fired": 0
+    },
+    {
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
@@ -220,27 +220,27 @@
   },
   "guard_inputs": {
    "ok": false,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "coverage": {
     "sector": {
-     "filled": 11,
-     "total": 11,
+     "filled": 10,
+     "total": 10,
      "guard": "섹터 35% 상한"
     },
     "beta": {
      "filled": 0,
-     "total": 11,
+     "total": 10,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 11,
-     "total": 11,
+     "filled": 10,
+     "total": 10,
      "guard": "팩터 쏠림 차단"
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 26,
-    "scored": 26,
+    "with_pct": 25,
+    "scored": 25,
     "ok": true
    },
    "dead_guards": [
@@ -248,14 +248,14 @@
      "field": "beta",
      "guard": "포트폴리오 베타 1.5 상한",
      "filled": 0,
-     "total": 11
+     "total": 10
     }
    ],
    "detail": "입력 전무한 가드 1종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta)"
   },
   "exit_paths": {
    "ok": false,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "no_profit_exit": [
     {
      "name": "파마리서치",
@@ -290,14 +290,6 @@
      }
     },
     {
-     "name": "EXE",
-     "qty": 3.0,
-     "splittable": {
-      "target_1": 1,
-      "target_2": 0
-     }
-    },
-    {
      "name": "ALB",
      "qty": 2.0,
      "splittable": {
@@ -314,7 +306,7 @@
      }
     }
    ],
-   "detail": "이익 확정 경로 0인 보유 1건 — 출구가 손절뿐이다 (사다리 불능 6건 별도)",
+   "detail": "이익 확정 경로 0인 보유 1건 — 출구가 손절뿐이다 (사다리 불능 5건 별도)",
    "status": "REGRESSION"
   },
   "as_of_staleness": {
