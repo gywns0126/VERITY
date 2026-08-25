@@ -20,6 +20,7 @@ import VerificationPanel from "../components/VerificationPanel"
 import CockpitCard from "../components/CockpitCard"
 import SystemMapCard from "../components/SystemMapCard"
 import CapitalPathCard from "../components/CapitalPathCard"
+import GateProgressPanel from "../components/GateProgressPanel"
 import AiUsageCard from "../components/AiUsageCard"
 import BrainMonitorPanel from "../components/BrainMonitorPanel"
 import PanelBoundary from "../components/PanelBoundary"
@@ -67,6 +68,9 @@ export default function SystemPage() {
                     </PanelBoundary>
                     <PanelBoundary name="한눈에 보기">
                         <SystemMapCard />
+                    </PanelBoundary>
+                    <PanelBoundary name="실자금 게이트">
+                        <GateProgressPanel vams={pf?.vams} />
                     </PanelBoundary>
                     <PanelBoundary name="자본 path">
                         <CapitalPathCard vams={pf?.vams} />

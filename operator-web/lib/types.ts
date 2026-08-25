@@ -57,11 +57,45 @@ export type Holding = {
     return_pct?: number
 }
 
+export type GateMetric = {
+    pass?: boolean | null
+    [k: string]: unknown
+}
+
+export type GateSegment = {
+    trades?: number
+    wins?: number
+    losses?: number
+    win_rate?: number
+    pl_ratio?: number
+    expectancy_r?: number
+    realized_pnl?: number
+}
+
 export type Vams = {
     total_asset?: number
     cash?: number
     holdings?: Holding[]
     total_return_pct?: number
+    validation_report?: {
+        overall?: string
+        window?: { start?: string; end?: string; days?: number }
+        sample_checks?: { days_ok?: boolean; trades_ok?: boolean; days_required?: number; trades_required?: number }
+        metrics?: Record<string, GateMetric>
+        computed_at?: string
+    }
+    simulation_stats?: {
+        total_trades?: number
+        // 2026-08-25 신설 (api/main.py _rule_change_segments) — 다음 run 부터 존재.
+        segments?: {
+            boundary?: string | null
+            what_changed?: string
+            before?: GateSegment
+            after?: GateSegment
+            used_by_gate?: boolean
+            note?: string
+        }
+    }
 }
 
 export type Brain = { brain_score?: number; grade_label?: string; grade?: string }
