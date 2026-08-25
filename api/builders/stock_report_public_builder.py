@@ -43,6 +43,12 @@ DART_KR_BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_kr_backfill_result.jso
 DART_KR_FIN_HISTORY_PATH = os.path.join(_ROOT, "data", "dart_kr_fin_history.json")  # 광범위 연간재무 백필(재무추이 부활)
 # 사업보고서 「II. 사업의 내용 › 1. 사업의 개요」 원문 발췌 (2026-08-23 신설)
 BIZ_OVERVIEW_PATH = os.path.join(_ROOT, "data", "dart_business_overview.json")
+# 🚨 2026-08-25 — 개요는 **별 blob 으로 분리**한다. 메인 리포트에 실으면 목록·검색 화면까지
+#   개요를 받는다. 실측 = 메인 16.16MB 중 개요가 2.50MB(15.5%·1,747종목)였고,
+#   `stock_slice` 는 콜드 인스턴스마다 이 원본을 통째로 받는다(8월 Fast Origin Transfer
+#   236GB·$63.79 = 최대 과금 축). 상세 화면에서만 지연 로드하도록 파일을 나눈다.
+#   ([[project_vercel_infra]] · 8/18 전송량 정렬 a680807f5 와 같은 근거)
+BIZ_OVERVIEW_PUBLIC_PATH = os.path.join(_ROOT, "data", "kr_business_overview_public.json")
 # 발행 본문 상한. 로컬 원장은 2,500자까지 보관하고, 공개 payload 만 여기서 줄인다.
 #   🚨 상한을 넘겨 자른 사실은 종목마다 `truncated` 로 신고한다 — 조용히 자르면
 #   원문 대조가 불가능해진다(Form 144 12건 절단 학습과 같은 계열).
@@ -1408,13 +1414,15 @@ def main() -> int:
             with open(BIZ_OVERVIEW_PATH, encoding="utf-8") as _bf:
                 _bo = json.load(_bf)
             _bo_rows = _bo.get("rows") or {}
+            _bo_out: Dict[str, Any] = {}
             _n_bo = _n_bo_trunc = 0
             for s in stocks:
                 row = _bo_rows.get(s["ticker"])
                 if not row or not row.get("text"):
                     continue
                 _txt, _cut = _cut_sent(row["text"], BIZ_OVERVIEW_PUBLISH_CHARS)
-                s["business_overview"] = {
+                _bo_out[s["ticker"]] = {
+                    "name": s.get("name"),
                     "text": _txt,
                     "chars": len(_txt),
                     # 원장에서 이미 잘렸거나(2,500자) 발행 상한에서 또 잘렸으면 True
@@ -1426,9 +1434,27 @@ def main() -> int:
                     "url": (DART + str(row.get("rcept_no"))) if row.get("rcept_no") else None,
                 }
                 _n_bo += 1
-                _n_bo_trunc += 1 if s["business_overview"]["truncated"] else 0
-            print(f"[stock_report_public] 사업의 개요 부착 {_n_bo}/{len(stocks)} 종목 "
-                  f"(원장 {len(_bo_rows)} · 절단 {_n_bo_trunc})", file=sys.stderr)
+                _n_bo_trunc += 1 if _bo_out[s["ticker"]]["truncated"] else 0
+            # 🚨 메인 리포트에 싣지 않는다 — 별 blob 으로 나간다(전송량 축, 위 상수 주석 참조).
+            _bo_payload = {
+                "_meta": {
+                    "generated_at": _now_kst().isoformat(),
+                    "source": "DART 사업보고서 II. 사업의 내용 › 1. 사업의 개요 (원문 발췌 · LLM 0)",
+                    "count": len(_bo_out),
+                    "universe": len(stocks),
+                    "publish_chars": BIZ_OVERVIEW_PUBLISH_CHARS,
+                    "truncated_n": _n_bo_trunc,
+                    "note": ("공개 사실만 (RULE 7) — 원문 발췌이고 요약·해석이 아니다. "
+                             "메인 리포트에서 분리 발행(2026-08-25, 전송량 과금)."),
+                },
+                "rows": _bo_out,
+            }
+            with open(BIZ_OVERVIEW_PUBLIC_PATH, "w", encoding="utf-8") as _bwf:
+                json.dump(_bo_payload, _bwf, ensure_ascii=False)
+            print(f"[stock_report_public] 사업의 개요 **별 파일** {_n_bo}/{len(stocks)} 종목 "
+                  f"(원장 {len(_bo_rows)} · 절단 {_n_bo_trunc}) -> "
+                  f"{os.path.relpath(BIZ_OVERVIEW_PUBLIC_PATH, _ROOT)} "
+                  f"({os.path.getsize(BIZ_OVERVIEW_PUBLIC_PATH)/1e6:.2f}MB)", file=sys.stderr)
         except FileNotFoundError:
             _n_bo = 0
             print("[stock_report_public] 사업의 개요 원장 없음 — 부착 0 (리포트는 계속)",
@@ -1468,7 +1494,10 @@ def main() -> int:
                 "rich_count": len(rich_by_ticker),
                 # 🚨 RULE 12 ② — 산출물이 자기 커버리지를 스스로 신고한다.
                 #   분모 없이 "붙였다" 고만 쓰면 하류가 표본을 전수로 읽는다(RULE 13).
+                # 🚨 개요는 이 파일에 없다 — kr_business_overview_public.json 로 분리(2026-08-25).
+                #   숫자만 남겨 하류가 "없다" 와 "다른 파일에 있다" 를 구분하게 한다.
                 "business_overview_count": _n_bo,
+                "business_overview_file": "kr_business_overview_public.json",
                 "dividends_count": _n_div,
                 "note": "공개 사실만 (RULE 7 allowlist) — 점수·등급·추천 비노출. 컨센서스=증권사 집계(자체 의견 아님). 가격은 클라이언트 라이브 조회.",
             },

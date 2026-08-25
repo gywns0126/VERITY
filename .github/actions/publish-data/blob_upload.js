@@ -125,6 +125,9 @@ const MAX_AGE_RULES = [
     [/^etf_hist\//, 21600],
     [/^(us_stock_report_us_smallcap|us_smallcap_corner_filters|logo_map|us_earnings_pattern|etf_flow)\.json$/, 21600],
     [/^(stock_report_public|disclosure_forensics|insider_trades|us_etf|ai_synthesis|us_short_interest|stock_flow_5d|kr_index_daily)\.json$/, 7200],
+    // 2026-08-25 — 개요를 메인 리포트에서 분리 발행. 갱신 주기가 같으므로(일 1.4회)
+    //   같은 7200s. 분리 자체가 목적이다 — 목록·검색 화면이 2.50MB 를 안 받게 한다.
+    [/^kr_business_overview_public\.json$/, 7200],
 ];
 const DEFAULT_MAX_AGE = 600; // 일 2회 갱신군 (portfolio·recommendations 등)
 function maxAgeFor(blobPath) {
