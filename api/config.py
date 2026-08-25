@@ -188,7 +188,12 @@ VAMS_ACTIVE_PROFILE: str = os.environ.get("VAMS_ACTIVE_PROFILE", "moderate").str
 #   · KR 일반주: 매도 시 증권거래세 부과 (아래 KR_STOCK 세율)
 #   · KR ETF   : 증권거래세 면제 (매매차익은 배당소득세)
 #   · US 주식/ETF: 증권거래세 없음 (양도세 22% × 250만원 공제는 별도 — 아래 US 양도세 분기에서 처리)
-VAMS_SELL_TAX_KR_STOCK = _env_float("VAMS_SELL_TAX_KR_STOCK", 0.0018)   # KR 일반주 매도세
+# 🚨 EXTERNAL_PIN (2026-08-25 확인) — KR 매도 거래세+농특세 합산 = **0.20%** (2026-01-01 양도분부터).
+#   코스피 거래세 0.05%+농특세 0.15% · 코스닥 0.20% (금투세 폐지로 탄력세율 2023 수준 환원).
+#   출처 = 토스증권 수수료 고지(Perplexity 회수) + 헤럴드경제/키움자산운용 교차 3곳 일치.
+#   종전 0.0018 은 구법(2025 이전) 값 = 비용 과소 → 시뮬 성적이 **낙관 방향**이었다.
+#   세율 재확인 주기 = 연 1회(1월) 또는 세법 개정 보도 시.
+VAMS_SELL_TAX_KR_STOCK = _env_float("VAMS_SELL_TAX_KR_STOCK", 0.0020)   # KR 일반주 매도세
 VAMS_SELL_TAX_KR_ETF = _env_float("VAMS_SELL_TAX_KR_ETF", 0.0)          # KR ETF 면제
 VAMS_SELL_TAX_US = _env_float("VAMS_SELL_TAX_US", 0.0)                  # US 거래세 (SEC fee 무시 수준)
 VAMS_SELL_TAX_RATE = VAMS_SELL_TAX_KR_STOCK  # 하위 호환 별칭 (기존 코드가 참조하던 이름)
