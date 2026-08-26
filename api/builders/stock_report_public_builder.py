@@ -717,7 +717,8 @@ def _median(vals: List[float]) -> Optional[float]:
 
 
 def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
-                   fin_series: Optional[Dict[str, List[Dict[str, Any]]]] = None) -> Dict[str, Dict[str, float]]:
+                   fin_series: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+                   panel_facts: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Dict[str, float]]:
     """PER/PBR/BPS 자체계산: KRX 공식 시총·발행주식수 ÷ DART 순이익·자기자본.
     (자기자본 = 자산/(1+부채비율/100), BPS = 자기자본/발행주식수).
 
@@ -780,6 +781,39 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
             pass
         if v:
             out[tk] = v
+
+    # 분기 패널 소스 종목 보강 (2026-08-26) — 시총 + PER(TTM) + PBR(최신 분기 자기자본).
+    # fin_series 폴백과 같은 자체계산 선례(시총 ÷ DART 공시 실값)이며 TTM 기준. RULE 7 사실만.
+    for tk, pf in (panel_facts or {}).items():
+        if tk in out:
+            continue
+        km = krx_map.get(tk)
+        if not km:
+            continue
+        try:
+            mktcap = float(km.get("mktcap") or 0)
+        except (TypeError, ValueError):
+            continue
+        if mktcap <= 0:
+            continue
+        v: Dict[str, Any] = {"mktcap": mktcap}
+        try:
+            ni = float(pf.get("net_income_ttm") or 0)
+            if ni > 0:
+                v["PER"] = round(mktcap / ni, 2)
+                v["_per_in"] = {"mktcap": mktcap, "net_income_ttm": ni,
+                                "quarter_end": pf.get("quarter_end"), "basis": "ttm"}
+        except (TypeError, ValueError):
+            pass
+        try:
+            eq = float(pf.get("equity") or 0)
+            if eq > 0:
+                v["PBR"] = round(mktcap / eq, 2)
+                v["_pbr_in"] = {"mktcap": mktcap, "equity": eq,
+                                "quarter_end": pf.get("quarter_end")}
+        except (TypeError, ValueError):
+            pass
+        out[tk] = v
 
     # fundamentals 결측 종목 보강 — 시총 + PER 만 (근거: KRX 공식 시총 ÷ DART 공시 순이익).
     # 이 종목들은 위 루프가 아예 훑지 않아 시총조차 없었고, 그래서 정렬·필터·동종비교에서
@@ -981,6 +1015,65 @@ def _ownership_from_official(off: Optional[Dict[str, Any]]) -> Optional[Dict[str
     return out
 
 
+def _load_panel_facts() -> Dict[str, Dict[str, Any]]:
+    """분기 재무 패널 → 발행 품질 통과 티커의 최신 사실 (2026-08-26 유니버스 4번째 소스).
+
+    🚨 왜: 발행 유니버스가 fundamentals ∪ rich ∪ fin_series 라, **분기 패널(2,751종)에
+    재무가 멀쩡히 있어도** 세 소스에 못 들면 종목이 통째로 빠졌다 — 실측 726종목
+    (시총≥50억), 그중 한국금융지주(10.7조)·한화(6.3조) 포함. 8/8 동우팜(fin_series
+    소스 누락)과 같은 클래스의 소스 하나 더.
+
+    품질 게이트(발행 최소선): 최근 분기 ≤390일 + 4분기 이상 이력.
+    구조 필터 = hard_floor R4~R6 정합(우선주·외국주권·스팩) — 발행도 보통주만.
+    값 = DART 공시 실값의 합산(TTM)·최신 분기 스톡 — 자체 산식·점수 없음(RULE 7).
+    """
+    from datetime import date, timedelta
+    path = os.path.join(_ROOT, "data", "metadata", "kr_fundamental_panel.jsonl")
+    if not os.path.exists(path):
+        return {}
+    cutoff = (date.today() - timedelta(days=390)).isoformat()
+    rows_by: Dict[str, List[Dict[str, Any]]] = {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                r = json.loads(line)
+                rows_by.setdefault(str(r.get("ticker") or ""), []).append(r)
+    except (OSError, ValueError):
+        return {}
+    try:
+        from api.analyzers.hard_floor import is_spac as _is_spac
+    except ImportError:
+        _is_spac = lambda _n: False  # noqa: E731 — 폴백: 스팩 필터만 생략
+    _names_doc = _load_json(os.path.join(_ROOT, "data", "kr_stock_names.json"), {})
+    _panel_names = (_names_doc.get("by_ticker") or _names_doc.get("names") or _names_doc
+                    if isinstance(_names_doc, dict) else {}) or {}
+    if _panel_names and not isinstance(next(iter(_panel_names.values()), ""), str):
+        _panel_names = {k: (v.get("name") if isinstance(v, dict) else str(v)) for k, v in _panel_names.items()}
+    out: Dict[str, Dict[str, Any]] = {}
+    for tk, rows in rows_by.items():
+        if len(tk) != 6 or tk[-1] != "0" or tk[0] == "9":   # R4 우선주 · R5 외국주권
+            continue
+        rows.sort(key=lambda r: str(r.get("quarter_end") or ""))
+        last = rows[-1]
+        qe = str(last.get("quarter_end") or "")
+        if len(rows) < 4 or qe < cutoff:
+            continue
+        nm = _panel_names.get(tk) or ""
+        if _is_spac(str(nm)):                                # R6 스팩
+            continue
+        out[tk] = {
+            "quarter_end": qe,
+            "n_quarters": len(rows),
+            "net_income_ttm": last.get("net_income_ttm"),
+            "equity": last.get("equity"),
+            "roa_ttm": last.get("roa_ttm"),
+            "debt_ratio": last.get("debt_ratio"),
+        }
+    return out
+
+
 def _load_fin_series() -> Dict[str, List[Dict[str, Any]]]:
     """DART KR backfill → ticker별 연도 재무 시계열 (매출/영업이익/순익).
 
@@ -1060,6 +1153,8 @@ def main() -> int:
         fund_doc = _load_json(FUND_PATH, {})
         fundamentals = (fund_doc.get("fundamentals") if isinstance(fund_doc, dict) else {}) or {}
         fin_series = _load_fin_series()
+        panel_facts = _load_panel_facts()
+        print(f"  [패널 소스] 발행 품질 통과 {len(panel_facts)}종")
         _dart_holders = (_load_json(KR_OWNERSHIP_PATH, {}) or {}).get("holders") or {}
         real_estate_map = _load_real_estate_history()
         # 유형자산 주석 LLM 토지·건물 장부가 map — recommendations facilities_parser(고빈도) 유래.
@@ -1131,7 +1226,8 @@ def main() -> int:
         print(f"  [light 보강] lynch {len(_lynch_map)} · 최대주주 {len(_owner_map)} · "
               f"CB/BW {len(_overhang_map)} · 공급망 {len(_chain_map)}")
 
-        universe = set(fundamentals.keys()) | set(rich_by_ticker.keys()) | set(fin_series.keys())
+        universe = (set(fundamentals.keys()) | set(rich_by_ticker.keys())
+                    | set(fin_series.keys()) | set(panel_facts.keys()))
         stocks: List[Dict[str, Any]] = []
         for tk in universe:
             if tk in rich_by_ticker:
@@ -1146,13 +1242,13 @@ def main() -> int:
                 # 연간재무 시계열(fin_series)도 실체로 인정한다 — DART 공시 실값이고
                 # 1013행에서 종목에 부착되어 추이 그래프로 렌더된다. 이걸 제외하면
                 # fundamentals 결측 종목이 "검색은 되는데 리포트는 빈" 상태가 된다.
-                if light["facts"] or light["disclosures"] or fin_series.get(tk):
+                if light["facts"] or light["disclosures"] or fin_series.get(tk) or panel_facts.get(tk):
                     stocks.append(light)
 
         # PER/PBR 자체계산 (KRX 공식 시총 ÷ DART) + 동종업계 비교 준비
         krx_doc = _load_json(KRXMKTCAP_PATH, {})
         krx_map = (krx_doc.get("map") if isinstance(krx_doc, dict) else {}) or {}
-        valuation = _valuation_map(fundamentals, krx_map, fin_series) if krx_map else {}
+        valuation = _valuation_map(fundamentals, krx_map, fin_series, panel_facts) if krx_map else {}
         sector_doc = _load_json(SECTOR_MAP_PATH, {})
         sector_map = (sector_doc.get("map") if isinstance(sector_doc, dict) else {}) or {}
         sector_medians = _sector_medians(fundamentals, sector_map, valuation) if sector_map else {}
