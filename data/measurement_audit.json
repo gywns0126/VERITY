@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-26T08:48:17+09:00",
+ "as_of": "2026-08-26T18:09:55+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -106,10 +106,16 @@
   "rule_discrimination": {
    "ok": false,
    "snapshots": 105,
-   "cap_rules_checked": 7,
+   "cap_rules_checked": 8,
    "degenerate_rules": [
     {
      "rule": "oil_geopolitical_shock",
+     "fired_days": 1,
+     "activation_pct": 1.0,
+     "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
+    },
+    {
+     "rule": "perplexity_event_critical",
      "fired_days": 1,
      "activation_pct": 1.0,
      "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
@@ -121,9 +127,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 13,
-   "days_without_any_cap_pct": 12.4,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.0%). cap 없는 날 13/105일",
+   "days_without_any_cap": 12,
+   "days_without_any_cap_pct": 11.4,
+   "detail": "상시/미발동 등급 규칙 2종 — oil_geopolitical_shock(1.0%), perplexity_event_critical(1.0%). cap 없는 날 12/105일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -134,18 +140,18 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 4996,
+   "stock_days": 4995,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
      "fired": 0
     },
     {
-     "rule": "외인·기관 순매도 상위 (KIS)",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
-     "rule": "계속기업 불확실성 (감사인 명시)",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
@@ -200,13 +206,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 26,
+     "n_present": 30,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 26,
+     "n_present": 30,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -260,7 +266,7 @@
     {
      "name": "파마리서치",
      "qty": 1.0,
-     "return_pct": 28.53,
+     "return_pct": 37.05,
      "past_target_2": false
     }
    ],
