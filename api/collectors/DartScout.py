@@ -15,6 +15,7 @@ DartScout — OpenDART 핵심 데이터 수집기
 """
 import functools
 import gzip
+import html as _html
 import json
 import os
 import re
@@ -354,6 +355,42 @@ def fetch_property_assets(corp_code: str, bsns_year: str) -> Dict[str, Any]:
 
 # ── 5.6. 현금흐름표 ────────────────────────────────────
 
+# 🚨 태그명을 **ASCII 로 한정**한다 — 되돌리지 말 것 (2026-08-26).
+#   순진한 `<[^>]+>` 는 본문의 한글 꺾쇠를 태그로 오인해 지운다. 실측(삼성전자 사업보고서):
+#   `<TV시장점유율추이>` `<DRAM시장점유율추이>` 등 **표 제목 5건이 통째로 삭제**됐다
+#   (BeautifulSoup 대비 66자 손실). 태그명이 ASCII 로 시작하고 그 뒤가 공백/`/`/`>` 여야
+#   태그로 본다 — `<TV시장…>` 은 `TV` 다음이 한글이라 매칭되지 않는다.
+_XML_TAG_RE = re.compile(r"(?s)</?[A-Za-z][A-Za-z0-9:._-]*(?:\s[^>]*?)?/?>")
+_XML_COMMENT_RE = re.compile(r"(?s)<!--.*?-->")
+_XML_CDATA_RE = re.compile(r"(?s)<!\[CDATA\[(.*?)\]\]>")
+_XML_DECL_RE = re.compile(r"(?s)<[!?][^>]*>")
+_XML_SCRIPT_RE = re.compile(r"(?is)<(script|style)[^>]*>.*?</\1>")
+# 본문/원시 비율 하한. 실측 5개 문서 = 5.51~8.31%. 1% 미만이면 스트립이 문서 형태를
+# 못 따라간 것으로 보고 BeautifulSoup 으로 되돌린다(안전망).
+_STRIP_MIN_RATIO = 0.01
+
+
+def _fast_doc_text(raw_xml: str) -> str:
+    """DART 문서 XML → 본문 텍스트. BeautifulSoup `get_text("\n")` 등가, **13~16배 빠름**.
+
+    🚨 왜 바꿨나 (2026-08-26) — 구간 계측에서 `BeautifulSoup(html.parser)` 가
+    **전체 소요의 80%** 였다(13.84MB 문서에서 4.94s / 6.17s). 개요 드립이 종목당
+    3~7초 → 25~38초로 느려진 원인이고, 이 속도면 잔여 479종목에 18일이 걸린다.
+    실측 5개 문서(9.0~16.2MB)에서 **슬라이스 결과가 공백 제거 기준 전건 동일**하고
+    3.78~5.64s → 0.25~0.42s 로 줄었다.
+
+    🚨 2026-05-26 의 `lxml-xml` 교훈은 유효하다 — 그건 **파서가 비표준 구조에서 본문을
+    조용히 버린** 사건이었다. 여기는 파싱하지 않고 태그만 지우므로 같은 실패를 하지
+    않는다. 다만 형태를 못 따라갈 가능성에 대비해 호출부에 비율 안전망을 둔다.
+    """
+    s = _XML_COMMENT_RE.sub(" ", raw_xml)
+    s = _XML_CDATA_RE.sub(r"\1", s)
+    s = _XML_DECL_RE.sub(" ", s)
+    s = _XML_SCRIPT_RE.sub("\n", s)
+    s = _XML_TAG_RE.sub("\n", s)
+    return _html.unescape(s)
+
+
 # 「1. 사업의 개요」 소제목 — 줄 전체가 소제목인 형태만. 괄호 수식어 허용
 #   (실측: 카카오 '1. (제조서비스업)사업의 개요'). 섹션 슬라이스 선택에 쓴다.
 _BIZ_OVERVIEW_HEAD = re.compile(
@@ -473,18 +510,26 @@ def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year
     # HTML-like 태그 (TABLE/P/SPAN) 사용 → html.parser 가 정합. lxml-xml strict 룰이
     # DART 의 비표준 속성/구조에서 본문 누락 → section_not_found 의 두 번째 root cause.
     try:
-        import warnings
-        from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", XMLParsedAsHTMLWarning)
-            soup = BeautifulSoup(raw_text, "html.parser")
-        for tag in soup.find_all(["script", "style"]):
-            tag.decompose()
-        text = soup.get_text("\n")
+        text = _fast_doc_text(raw_text)
+        # 🚨 안전망 — 스트립이 문서 형태를 못 따라가면 조용히 빈 본문이 나온다.
+        #   실측 비율 5.51~8.31% 대비 1% 하한. 미달이면 BeautifulSoup 으로 되돌린다.
+        if raw_text and len(re.sub(r"\s", "", text)) < len(raw_text) * _STRIP_MIN_RATIO:
+            import warnings
+            from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
+            print(f"[DartScout] 스트립 비율 미달 — BeautifulSoup 폴백 ({rcept_no})",
+                  file=sys.stderr)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", XMLParsedAsHTMLWarning)
+                soup = BeautifulSoup(raw_text, "html.parser")
+            for tag in soup.find_all(["script", "style"]):
+                tag.decompose()
+            text = soup.get_text("\n")
     except Exception as e:
         return {"error": f"parse:{e}", "rcept_no": rcept_no}
 
-    import re
+    # 🚨 함수 지역 `import re` 제거 (2026-08-26). 모듈 최상단에 이미 있고, 여기 두면
+    #   `re` 가 **함수 전체에서 지역변수**가 되어 이 줄보다 위에서 쓰는 코드가
+    #   `referenced before assignment` 로 죽는다 — 안전망을 넣자마자 그렇게 됐다.
     cleaned = re.sub(r"[ \t]+", " ", text)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
 
@@ -633,6 +678,9 @@ def _list_reports(corp_code: str, bgn_de: str, end_de: str, detail_ty: str) -> L
 
 _RAW_CACHE_DIR = os.path.join(DATA_DIR, "dart_raw_cache")
 _RAW_CACHE_MIN_CHARS = 500          # downstream MIN_RAW_TEXT_LENGTH 과 동일 기준
+# 한 detail_ty 안에서 시도할 최대 후보 수. 정정본이 문서 없이 올라오는 경우 대비
+# (2026-08-26). list.json 은 page_count 5 라 후보가 애초에 최대 5건이다.
+_MAX_REPORT_CANDIDATES = 3
 
 
 def _raw_cache_path(corp_code: str, bsns_year: str) -> str:
@@ -803,20 +851,29 @@ def fetch_business_facilities_raw(
         if not candidates:
             continue
 
-        latest = candidates[0]
-        rcept_no = latest.get("rcept_no", "")
-        if not rcept_no:
-            continue
+        # 🚨 첫 후보만 보지 않는다 — 되돌리지 말 것 (2026-08-26).
+        #   종전 `candidates[0]` 은 **최신 1건만** 시도했다. 그 최신이 `[첨부정정]`/`[기재정정]`
+        #   이면 document.xml 이 **status 014(파일이 존재하지 않습니다)** 로 오고, A001 전체가
+        #   실패해 A002(반기보고서)로 떨어진다. 실측 = 한화에어로스페이스(012450) —
+        #   `[첨부정정]사업보고서 20260319000633` 은 파일 없음, 원본 `20260316001112` 는 정상이고
+        #   거기서 개요 2,500자가 나온다. 조인에 `반기보고서 (2026.06)` 가 실린 이유가 이것이다.
+        #   정상 경로에서는 첫 후보가 바로 성공하므로 **추가 호출 0** 이다.
+        for latest in candidates[:_MAX_REPORT_CANDIDATES]:
+            rcept_no = latest.get("rcept_no", "")
+            if not rcept_no:
+                continue
 
-        result = _extract_section_from_rcept(rcept_no, latest, bsns_year)
-        if result.get("raw_text"):
-            result["source_report_ty"] = detail_ty
-            if result.get("char_count", 0) >= 500:
-                _raw_cache_put(corp_code, bsns_year, result)
-                return result  # downstream MIN 충족 → 즉시 반환
-            attempts.append(result)
-        else:
+            result = _extract_section_from_rcept(rcept_no, latest, bsns_year)
+            if result.get("raw_text"):
+                result["source_report_ty"] = detail_ty
+                if result.get("char_count", 0) >= 500:
+                    _raw_cache_put(corp_code, bsns_year, result)
+                    return result  # downstream MIN 충족 → 즉시 반환
+                attempts.append(result)
+                break              # 본문은 있으나 짧음 = 정정 문제가 아니다. 다음 ty 로.
             last_error = result
+            print(f"[DartScout] {corp_code} {detail_ty} "
+                  f"{latest.get('report_nm','')[:24]} 본문 없음 — 다음 후보", file=sys.stderr)
 
     if attempts:
         # 500 미달이지만 raw_text 있음 — 가장 긴 것 반환.
