@@ -184,6 +184,18 @@ _FLUSH_EVERY = 50          # 증분 저장 주기 — 긴 배치가 죽어도 �
 #   전부 같은 반려 재조회에 쓰이고, 그 사실은 어디에도 안 남는다.
 #   = `dart_kr_fin_backfill` 셀 원장과 **같은 결함 계열**([[feedback_purge_erases_the_requeue_signal]]).
 MAX_OVERVIEW_ATTEMPTS = 2
+# 🚨 2026-08-26 — **정본은 사업보고서다.** `[첨부정정]` 이 문서 없이 올라오면 A001 이 통째로
+#   실패해 반기·분기보고서로 떨어지는데(실측 71행), 그 행도 `text` 가 있어 드립이 건너뛴다
+#   = 폴백을 고쳐도 자동 전파되지 않는다. 재개 신호가 "성공 행 존재" 하나뿐인 그 결함의
+#   또 다른 얼굴이다([[feedback_purge_erases_the_requeue_signal]]).
+#   → 비사업보고서 출처 행은 이 횟수까지 **정본 재시도** 대상으로 본다. 신규 상장처럼
+#     사업보고서가 애초에 없는 종목이 영구 재조회되지 않도록 상한을 둔다.
+MAX_ANNUAL_RETRY = 2
+
+
+def is_annual(report_nm) -> bool:
+    """정본(사업보고서) 여부. `[기재정정]사업보고서` 도 정본이다."""
+    return "사업보고서" in str(report_nm or "")
 
 
 def load_cache() -> Dict[str, Any]:
@@ -238,9 +250,12 @@ def analyze_all_overview(stocks: Dict[str, Any],
 
         prev = rows.get(ticker)
         if prev and str(prev.get("bsns_year") or "") >= year and prev.get("text"):
-            out[ticker] = prev
-            cached += 1
-            continue
+            # 🚨 비사업보고서로 채워진 행은 정본 재시도 대상(상한 내). 위 상수 주석 참조.
+            if is_annual(prev.get("report_nm")) or \
+                    int(prev.get("annual_retry") or 0) >= MAX_ANNUAL_RETRY:
+                out[ticker] = prev
+                cached += 1
+                continue
 
         # 🚨 축 예산 — 한 축이 job 전체를 먹으면 뒤 축이 시작조차 못 한다(2026-08-25 실사고).
         if deadline and time.time() > deadline:
@@ -281,6 +296,9 @@ def analyze_all_overview(stocks: Dict[str, Any],
                              f" (누적 {misses[ticker]['n']}/{MAX_OVERVIEW_ATTEMPTS})\n")
             continue
 
+        # 정본을 못 받았으면 재시도 횟수를 행에 남긴다(상한 도달 시 그만 둔다).
+        if not is_annual(row.get("report_nm")):
+            row["annual_retry"] = int((prev or {}).get("annual_retry") or 0) + 1
         rows[ticker] = row
         out[ticker] = row
         misses.pop(ticker, None)      # 채워졌으면 반려 원장에서 뺀다

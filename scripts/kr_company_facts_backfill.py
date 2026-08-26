@@ -390,16 +390,21 @@ def run_overview(univ, year, delay, dry, limit=None, retry_exhausted=False,
     예산이 **전부** 같은 반려 재조회에 쓰인다. 상한 도달분은 `--retry-exhausted` 로만 연다.
     """
     from api.analyzers.dart_business_overview import (
-        MAX_OVERVIEW_ATTEMPTS, analyze_all_overview, load_cache)
+        MAX_ANNUAL_RETRY, MAX_OVERVIEW_ATTEMPTS, analyze_all_overview, is_annual, load_cache)
 
     sd = _stocks_dict(univ, year)
     total = len(sd)
     _cache = load_cache()
     have = (_cache.get("rows") or {})
     misses = (_cache.get("misses") or {})
-    rest = [tk for tk in sd
-            if not (str((have.get(tk) or {}).get("bsns_year") or "") >= str(year)
-                    and (have.get(tk) or {}).get("text"))]
+    def _satisfied(tk):
+        r = have.get(tk) or {}
+        if not (str(r.get("bsns_year") or "") >= str(year) and r.get("text")):
+            return False
+        # 🚨 비사업보고서 출처는 정본 재시도 대상 — 상한까지만.
+        return is_annual(r.get("report_nm")) or int(r.get("annual_retry") or 0) >= MAX_ANNUAL_RETRY
+
+    rest = [tk for tk in sd if not _satisfied(tk)]
     n_have = total - len(rest)
     if not retry_exhausted:
         _before = len(rest)
