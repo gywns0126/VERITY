@@ -46,18 +46,28 @@ const SAMPLE: DataHealth = {
 }
 
 function readBodyDark(): boolean {
+    // 🚨 판독 순서 고정 — 되돌리지 말 것 (2026-07-23 공개 컴포넌트 fix, 2026-08-27 관리자 이관).
+    //   ① html[data-an-theme] = Custom Code 헤드 스크립트가 **페인트 전 동기** 세팅(레이스 제거)
+    //   ② body[data-framer-theme] = 토글
+    //   ③ localStorage
+    //   🚨 body-first 로 되돌리지 말 것 — Framer 네이티브가 새로고침 때 body 를 OS 로 리셋해
+    //     **부분 라이트 회귀**가 난다. 관리자 11개가 이 옛 방식으로 남아 있었다(2026-08-27 PM 신고
+    //     "다크모드 시에 그 부분만 라이트가 됨").
+    //   🚨 OS 설정(prefers-color-scheme)은 **보지 않는다** — 로드마다 뒤집힌다. 종전 관리자 변종이
+    //     마지막 폴백으로 matchMedia 를 써서, 사이트가 다크여도 OS 가 라이트면 라이트로 그렸다.
     try {
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
+        if (typeof document !== "undefined") {
+            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+            if (h === "dark") return true
+            if (h === "light") return false
+            if (document.body) {
+                const a = document.body.dataset.framerTheme
+                if (a === "dark") return true
+                if (a === "light") return false
+            }
         }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) return window.matchMedia("(prefers-color-scheme: dark)").matches
+        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        if (s === "dark") return true
     } catch (e) {}
     return false
 }
@@ -82,7 +92,7 @@ interface Props { dataUrl: string; refreshSec: number; dark: boolean }
 /* 🚨 2026-07-27 /admin 최초 로딩 스켈레톤 — "…로딩" 텍스트 한 줄이면 카드 높이가 0에 가깝다가
    데이터 도착 순간 튀어오른다. 실제 레이아웃과 같은 골격을 먼저 깔아 점프를 없앤다(PM 지적). */
 const ADM_SK_KEYS = "@keyframes admSk{0%{background-position:-400px 0}100%{background-position:400px 0}}"
-function admSk(C: any, w: any, h: number, r: number = 6): CSSProperties {
+function admSk(C: any, w: any, h: number, r: number = 6): React.CSSProperties {
     return {
         width: w, height: h, borderRadius: r, flexShrink: 0,
         background: `linear-gradient(90deg, ${C.grid || C.line} 25%, ${C.line} 37%, ${C.grid || C.line} 63%)`,
