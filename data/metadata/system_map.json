@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-08-27T11:48:37.697235+09:00",
+  "generated_at": "2026-08-27T22:14:09.805588+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 304038,
-    "python_modules": 978,
+    "code_lines_tsx_py": 304608,
+    "python_modules": 981,
     "tsx_components": 133,
-    "json_data_files": 1808,
-    "json_total_tracked": 1827,
+    "json_data_files": 1809,
+    "json_total_tracked": 1828,
     "workflows": 79,
     "scheduled_workflows": 63,
     "cron_triggers": 74,
-    "git_tracked_files": 7698
+    "git_tracked_files": 7708
   },
   "subsystems": {
     "ingest": {
@@ -468,7 +468,7 @@
         {
           "name": "nps_employment",
           "crons": [
-            "0 20 15-24 * *"
+            "0 20 15-31 * *"
           ],
           "scheduled": true
         },
@@ -734,33 +734,33 @@
     },
     "data": {
       "label": "데이터",
-      "count": 1808
+      "count": 1809
     },
     "validation": {
       "label": "검증",
-      "n_trading_days": 71,
-      "n_calendar_days": 101,
+      "n_trading_days": 72,
+      "n_calendar_days": 102,
       "next_milestone": {
         "next_n": 100,
-        "days_remaining": 29,
+        "days_remaining": 28,
         "label": "예비 결과 (binomial 95% CI ±10%p)"
       },
-      "as_of": "2026-08-26T11:07:01+09:00"
+      "as_of": "2026-08-27T19:03:32+09:00"
     }
   },
   "python_by_dir": {
     "api": 453,
-    "tests": 302,
-    "scripts": 151,
+    "tests": 304,
+    "scripts": 152,
     "vercel-api": 59,
     "server": 7,
     ".github": 6
   },
   "funnel": {
-    "investable_real": 2794,
+    "investable_real": 2739,
     "cap": 5000,
     "stages": [
-      2794,
+      2739,
       300,
       100,
       25
@@ -771,7 +771,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2794 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2739 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
@@ -779,7 +779,7 @@
       "warn": 0,
       "alert": 0
     },
-    "infra_as_of": "2026-08-26T09:36:33+09:00",
+    "infra_as_of": "2026-08-27T14:28:40+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
