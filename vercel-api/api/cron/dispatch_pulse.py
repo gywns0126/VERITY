@@ -232,7 +232,12 @@ def _resolve_backup_events(now_utc: datetime) -> list[tuple[str, str]]:
     `_resolve_events` 를 건드리지 않는다. 그쪽은 미장 `full_us` 경로가 지나가는
     자리이고 단위 테스트가 직접 호출하므로, 네트워크가 필요한 판단을 섞지 않는다.
     """
-    return list(_BACKUP_SLOTS.get(now_utc.minute, []))
+    out = list(_BACKUP_SLOTS.get(now_utc.minute, []))
+    # KSD 일일 수집 — GH 05:47 cron 누락을 05:55, 06:15 두 번 확인한다.
+    # 최근 run 이 있으면 handler 의 _ran_recently 가 건너뛰므로 정상일 추가 실행은 0이다.
+    if (now_utc.hour, now_utc.minute) in ((5, 55), (6, 15)):
+        out.append(("dividend_ksd", "dividend_ksd.yml"))
+    return out
 
 
 def _ran_recently(workflow_file: str, minutes: int, now_utc: datetime) -> bool:

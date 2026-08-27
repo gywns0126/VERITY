@@ -196,6 +196,24 @@ def test_backup_slot_is_empty_on_regular_and_other_minutes():
             datetime(2026, 8, 20, 13, minute, tzinfo=timezone.utc)) == [], minute
 
 
+def test_dividend_backup_slots_are_time_scoped():
+    """KSD 보정은 UTC 05:55/06:15에만 있고 매시간 발화하지 않는다."""
+    m = _dp()
+    for hour, minute in ((5, 55), (6, 15)):
+        got = m._resolve_backup_events(
+            datetime(2026, 8, 27, hour, minute, tzinfo=timezone.utc))
+        assert ("dividend_ksd", "dividend_ksd.yml") in got
+    assert ("dividend_ksd", "dividend_ksd.yml") not in m._resolve_backup_events(
+        datetime(2026, 8, 27, 7, 55, tzinfo=timezone.utc))
+
+
+def test_dividend_workflow_accepts_repository_dispatch():
+    src = (_ROOT / ".github" / "workflows" / "dividend_ksd.yml").read_text(encoding="utf-8")
+    assert "repository_dispatch:" in src
+    assert "types: [dividend_ksd]" in src
+    yaml.safe_load(src)
+
+
 def test_backup_never_touches_the_us_slot():
     """🚨 미장 full_us 는 21:30. 보정 슬롯이 그 자리에 끼어들면 안 된다."""
     m = _dp()

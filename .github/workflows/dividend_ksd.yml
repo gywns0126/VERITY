@@ -22,6 +22,8 @@ on:
     # 매일 KST 14:47 (UTC 05:47) — 금융위 13시 갱신 이후 + 기존 슬롯(05:00·05:23) 회피
     - cron: '47 5 * * *'
   workflow_dispatch:
+  repository_dispatch:
+    types: [dividend_ksd]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -55,7 +57,9 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        # 이 수집기는 requests와 api.config의 dotenv만 필요하다. 전체 requirements는 캐시만 약 989MB였고
+        # 실제 수집보다 설치가 길어 외부 장애 진단과 재시도를 늦췄다.
+        run: pip install requests python-dotenv
 
       - name: Collect KSD dividend record dates
         env:

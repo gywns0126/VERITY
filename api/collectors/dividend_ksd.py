@@ -61,10 +61,14 @@ _MAX_PAGES = 30          # 71,669행 기준 8 페이지. 상한은 폭주 방지
 _TIMEOUT = 60            # 전량 페이징(10,000행/호출)
 _DISCOVER_TIMEOUT = 12   # 적재일 탐색 — 1행짜리 프로브라 길 이유가 없다
 _DISCOVER_LOOKBACK = 14  # 최신 적재일 역순 탐색 창(일)
+_DISCOVER_ATTEMPTS = 3   # 연결 장애 시 같은 날짜를 재시도한 뒤 과거 날짜 탐색을 중단
+_DISCOVER_BACKOFF_SEC = (1, 3)
 # 수집 전체 예산 — 넘으면 다음 스케줄에 맡긴다(job 이 잘려 로그도 안 남는 것보다 낫다).
 _BUDGET_SEC = int(os.environ.get("KSD_BUDGET_SEC", "540") or "540")   # 9분 < timeout-minutes
 # 티커 6자 충돌 기록(정규화 1회분) — _meta 자기신고용
 _LAST_COLLISIONS: Dict[str, Any] = {}
+_LAST_CALL_STATE = "not_called"
+_LAST_DISCOVERY: Dict[str, Any] = {}
 
 
 # ──────────────────────────────────────────────────────────────
@@ -78,6 +82,8 @@ def _call(bas_dt: str, page: int, rows: int,
     🚨 실패를 0 으로 흡수하지 않는다 — totalCount=None(호출 실패) 과 0(데이터 없음)은
     다른 사건이다([[feedback_silent_zero_fallback_looks_plausible]]).
     """
+    global _LAST_CALL_STATE
+    _LAST_CALL_STATE = "transport_error"
     try:
         r = requests.get(
             _ENDPOINT,
@@ -94,6 +100,7 @@ def _call(bas_dt: str, page: int, rows: int,
         print(f"[dividend_ksd] {bas_dt} p{page} 호출 실패: {type(e).__name__}")
         return None, []
     if r.status_code != 200:
+        _LAST_CALL_STATE = "http_error"
         print(f"[dividend_ksd] {bas_dt} p{page} HTTP {r.status_code}: {r.text[:160]}")
         return None, []
     try:
@@ -101,6 +108,7 @@ def _call(bas_dt: str, page: int, rows: int,
     except Exception:
         # 인증 오류는 OpenAPI_ServiceResponse 로 온다 — 200 이어도 본문이 다르다.
         print(f"[dividend_ksd] {bas_dt} p{page} 본문 파싱 실패: {r.text[:200]}")
+        _LAST_CALL_STATE = "auth_or_parse_error"
         return None, []
     items = body.get("items") or {}
     arr = items.get("item") if isinstance(items, dict) else None
@@ -108,7 +116,30 @@ def _call(bas_dt: str, page: int, rows: int,
         arr = []
     elif isinstance(arr, dict):
         arr = [arr]
-    return body.get("totalCount"), arr
+    total = body.get("totalCount")
+    _LAST_CALL_STATE = "valid_with_data" if total else "valid_but_empty"
+    return total, arr
+
+
+def _probe_with_retry(bas_dt: str) -> Tuple[Optional[int], List[dict], int]:
+    """적재일 프로브. 연결 실패만 짧게 재시도하고 호출 횟수를 신고한다."""
+    for attempt in range(1, _DISCOVER_ATTEMPTS + 1):
+        total, items = _call(bas_dt, page=1, rows=1, tmo=_DISCOVER_TIMEOUT)
+        if total is not None:
+            return total, items, attempt
+        if attempt < _DISCOVER_ATTEMPTS:
+            time.sleep(_DISCOVER_BACKOFF_SEC[attempt - 1])
+    return None, [], _DISCOVER_ATTEMPTS
+
+
+def _cached_bas_dt() -> Optional[str]:
+    """마지막 정상 원장의 적재일. 최신일 0건일 때 두 번째 후보로만 사용한다."""
+    try:
+        with open(_LEDGER_PATH, encoding="utf-8") as f:
+            bas_dt = str((json.load(f).get("_meta") or {}).get("bas_dt") or "")
+        return bas_dt if len(bas_dt) == 8 and bas_dt.isdigit() else None
+    except Exception:
+        return None
 
 
 def discover_bas_dt(lookback_days: int = _DISCOVER_LOOKBACK) -> Optional[str]:
@@ -119,19 +150,43 @@ def discover_bas_dt(lookback_days: int = _DISCOVER_LOOKBACK) -> Optional[str]:
     """
     from datetime import timedelta
 
+    global _LAST_DISCOVERY
+    _LAST_DISCOVERY = {
+        "status": "running", "dates_checked": 0, "calls_attempted": 0,
+        "calls_succeeded": 0, "empty_dates": 0, "last_call_state": None,
+    }
     today = now_kst().date()
     t0 = time.monotonic()
-    for back in range(lookback_days + 1):
+    dates = [(today - timedelta(days=back)).strftime("%Y%m%d")
+             for back in range(lookback_days + 1)]
+    cached = _cached_bas_dt()
+    if cached and cached in dates[1:]:
+        dates.remove(cached)
+        dates.insert(1, cached)
+    for d in dates:
         # 🚨 탐색이 전체 예산의 절반을 넘게 먹으면 멈춘다 — 여기서 다 태우면
         #   정작 수집을 못 하고 job 이 잘린다(8/23 실사고).
         if time.monotonic() - t0 > _BUDGET_SEC * 0.5:
-            print(f"[dividend_ksd] 적재일 탐색 예산 초과 ({back}일 훑음) — 이번 run 포기",
+            checked = _LAST_DISCOVERY["dates_checked"]
+            _LAST_DISCOVERY["status"] = "budget_exhausted"
+            print(f"[dividend_ksd] 적재일 탐색 예산 초과 ({checked}일 훑음) — 이번 run 포기",
                   file=sys.stderr)
             return None
-        d = (today - timedelta(days=back)).strftime("%Y%m%d")
-        total, _ = _call(d, page=1, rows=1, tmo=_DISCOVER_TIMEOUT)
+        total, _, attempts = _probe_with_retry(d)
+        _LAST_DISCOVERY["dates_checked"] += 1
+        _LAST_DISCOVERY["calls_attempted"] += attempts
+        _LAST_DISCOVERY["last_call_state"] = _LAST_CALL_STATE
+        if total is None:
+            # 같은 날짜가 3회 연속 실패하면 날짜 문제가 아니라 원천 연결 장애다.
+            _LAST_DISCOVERY["status"] = "source_unavailable"
+            return None
+        _LAST_DISCOVERY["calls_succeeded"] += 1
         if total:
+            _LAST_DISCOVERY["status"] = "found"
+            _LAST_DISCOVERY["bas_dt"] = d
             return d
+        _LAST_DISCOVERY["empty_dates"] += 1
+    _LAST_DISCOVERY["status"] = "no_data_in_window"
     return None
 
 
@@ -399,8 +454,16 @@ def collect(save: bool = True) -> Dict[str, Any]:
         raise RuntimeError("PUBLIC_DATA_API_KEY 미설정")
     bas_dt = discover_bas_dt()
     if not bas_dt:
+        st = _LAST_DISCOVERY.get("status")
+        done = _LAST_DISCOVERY.get("calls_succeeded", 0)
+        total = _LAST_DISCOVERY.get("calls_attempted", 0)
+        if st == "source_unavailable":
+            raise RuntimeError(
+                f"KSD 원천 연결 불가 (성공 호출 {done}/{total}, "
+                f"last={_LAST_DISCOVERY.get('last_call_state')}) — 기존 원장 보존")
         raise RuntimeError(
-            f"유효 적재일 미발견 (최근 {_DISCOVER_LOOKBACK}일 전부 totalCount=0)")
+            f"유효 적재일 미발견 (정상 응답 {_LAST_DISCOVERY.get('empty_dates', 0)}일, "
+            f"성공 호출 {done}/{total})")
     raw = fetch_all(bas_dt)
     if not raw:
         raise RuntimeError(f"KSD 응답 0건 (basDt={bas_dt})")
@@ -515,7 +578,8 @@ _REPORT_RECENT_N = 8
 
 
 def build_report_section(entry: Dict[str, Any],
-                         today: Optional[str] = None) -> Optional[Dict[str, Any]]:
+                         today: Optional[str] = None,
+                         ledger_meta: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     """티커 1건 → 공개 리포트에 실을 배당 파트. 배당 이력이 없으면 None.
 
     🚨 dps 0 행은 **이력에서 빼되 세는 데는 쓴다** — 무배당 28,690건(전체 57.8%)을
@@ -542,6 +606,7 @@ def build_report_section(entry: Dict[str, Any],
 
     upcoming = [r for r in rows if r["date"] > today and (r.get("dps") or 0) > 0]
     recent = list(reversed(paid))[:_REPORT_RECENT_N]
+    ledger_meta = ledger_meta or {}
     return {
         "recent": [{"record_date": r["date"], "pay_date": r.get("pay_date"),
                     "dps": r["dps"]} for r in recent],
@@ -552,6 +617,8 @@ def build_report_section(entry: Dict[str, Any],
         "upcoming_record_date": upcoming[0]["date"] if upcoming else None,
         "stock_kind": (entry or {}).get("stock_kind"),
         "source": "한국예탁결제원(KSD) · 금융위 공공데이터",
+        "source_bas_dt": ledger_meta.get("bas_dt"),
+        "source_generated_at": ledger_meta.get("generated_at"),
         "note": _REPORT_NOTE,
     }
 
@@ -560,8 +627,16 @@ def load_dividends_ledger_for_report() -> Dict[str, Dict[str, Any]]:
     """티커 → 리포트 섹션 맵. 빌더가 이것만 호출한다."""
     today = now_kst().strftime("%Y-%m-%d")
     out: Dict[str, Dict[str, Any]] = {}
-    for tk, ent in load_ledger().items():
-        sec = build_report_section(ent, today)
+    try:
+        with open(_LEDGER_PATH, encoding="utf-8") as f:
+            raw = json.load(f)
+    except Exception:
+        raw = {}
+    ledger_meta = raw.get("_meta") or {}
+    for tk, ent in raw.items():
+        if tk.startswith("_"):
+            continue
+        sec = build_report_section(ent, today, ledger_meta)
         if sec:
             out[tk] = sec
     return out

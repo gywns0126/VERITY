@@ -293,6 +293,55 @@ def test_budget_guards_present():
     assert "페이징 예산 초과" in s, "페이징 예산 감시가 사라졌다"
 
 
+def test_discovery_stops_after_transport_outage(monkeypatch):
+    """연결 장애를 14일 데이터 0건으로 오인하거나 15일 연속 호출하지 않는다."""
+    from api.collectors import dividend_ksd as m
+    calls = []
+
+    def fail(*args, **kwargs):
+        calls.append(args[0])
+        m._LAST_CALL_STATE = "transport_error"
+        return None, []
+
+    monkeypatch.setattr(m, "_call", fail)
+    monkeypatch.setattr(m.time, "sleep", lambda _: None)
+    assert m.discover_bas_dt() is None
+    assert len(calls) == m._DISCOVER_ATTEMPTS
+    assert len(set(calls)) == 1
+    assert m._LAST_DISCOVERY["status"] == "source_unavailable"
+    assert m._LAST_DISCOVERY["calls_succeeded"] == 0
+
+
+def test_discovery_continues_only_after_valid_empty(monkeypatch):
+    """정상 0건이면 과거 날짜를 찾고, 연결 실패와 구분한다."""
+    from api.collectors import dividend_ksd as m
+    seq = iter([(0, []), (123, [{}])])
+
+    def probe(*args, **kwargs):
+        out = next(seq)
+        m._LAST_CALL_STATE = "valid_with_data" if out[0] else "valid_but_empty"
+        return out
+
+    monkeypatch.setattr(m, "_call", probe)
+    monkeypatch.setattr(m, "_cached_bas_dt", lambda: None)
+    got = m.discover_bas_dt(lookback_days=1)
+    assert got is not None
+    assert m._LAST_DISCOVERY["status"] == "found"
+    assert m._LAST_DISCOVERY["calls_succeeded"] == 2
+    assert m._LAST_DISCOVERY["empty_dates"] == 1
+
+
+def test_report_section_carries_ledger_freshness():
+    from api.collectors.dividend_ksd import build_report_section
+    ent = {"rows": [{"date": "2025-12-31", "pay_date": "2026-04-01", "dps": 100}]}
+    sec = build_report_section(
+        ent, "2026-08-27",
+        {"bas_dt": "20260823", "generated_at": "2026-08-24T15:28:35+09:00"},
+    )
+    assert sec["source_bas_dt"] == "20260823"
+    assert sec["source_generated_at"].startswith("2026-08-24")
+
+
 def test_ticker_collision_is_deterministic_and_reported():
     """🚨 같은 6자 티커에 ISIN 이 여럿이다(신형우선주). 순서 운에 맡기면 매일 뒤바뀐다.
 
