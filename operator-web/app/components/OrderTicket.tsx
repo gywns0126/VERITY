@@ -245,7 +245,7 @@ export default function OrderTicket({ ticker, name, presetPrice, livePrice }: Pr
     })
     const inputSt = {
         width: "100%", boxSizing: "border-box" as const,
-        background: dark ? c.bg : c.track, color: c.ink, border: "none", borderRadius: 10,
+        background: c.field, color: c.ink, border: "none", borderRadius: 10,
         padding: "9px 12px", fontSize: 13, fontFamily: FONT, outline: "none",
         fontVariantNumeric: "tabular-nums" as const,
     }

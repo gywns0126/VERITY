@@ -74,8 +74,8 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
         }
     }
 
-    const inputBg = dark ? c.bg : c.track
-    const hover = dark ? "rgba(169,155,255,0.14)" : "rgba(108,92,231,0.08)"
+    const inputBg = c.field
+    const hover = "var(--af-hover)"
 
     function Row({ item, k, active }: { item: Stock; k: string; active?: boolean }) {
         const isUS = item.market === "US"

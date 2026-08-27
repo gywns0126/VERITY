@@ -74,7 +74,7 @@ export default function Login() {
                                 onChange={(e) => setPaste(e.target.value)}
                                 rows={3}
                                 placeholder='{"access_token":"..."}'
-                                style={{ background: dark ? c.bg : c.track, color: c.ink, border: "none", borderRadius: 10, padding: "10px 13px", fontSize: 11.5, fontFamily: FONT, outline: "none", resize: "vertical" }}
+                                style={{ background: c.field, color: c.ink, border: "none", borderRadius: 10, padding: "10px 13px", fontSize: 11.5, fontFamily: FONT, outline: "none", resize: "vertical" }}
                             />
                             <button onClick={doImport} disabled={!paste.trim()} style={{ border: "none", borderRadius: 10, padding: "9px 0", fontSize: 12.5, fontWeight: 700, fontFamily: FONT, cursor: paste.trim() ? "pointer" : "default", background: paste.trim() ? c.hi : c.track, color: paste.trim() ? c.ink : c.faint }}>
                                 세션 적용

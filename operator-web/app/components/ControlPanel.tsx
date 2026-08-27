@@ -106,7 +106,7 @@ export default function ControlPanel() {
                     step={step}
                     value={d[key]}
                     onChange={(e) => setDraft({ ...(draft || active), [key]: Number(e.target.value) })}
-                    style={{ background: dark ? c.bg : c.track, color: c.ink, border: "none", borderRadius: 10, padding: "9px 11px", fontSize: 13, fontFamily: FONT, outline: "none", fontVariantNumeric: "tabular-nums" }}
+                    style={{ background: c.field, color: c.ink, border: "none", borderRadius: 10, padding: "9px 11px", fontSize: 13, fontFamily: FONT, outline: "none", fontVariantNumeric: "tabular-nums" }}
                 />
             </label>
         )
@@ -128,7 +128,7 @@ export default function ControlPanel() {
                             value={total || ""}
                             placeholder="예: 8000000"
                             onChange={(e) => saveTotal(Number(e.target.value) || 0)}
-                            style={{ background: dark ? c.bg : c.track, color: c.ink, border: "none", borderRadius: 10, padding: "9px 11px", fontSize: 13, fontFamily: FONT, outline: "none", width: 150, ...NUM }}
+                            style={{ background: c.field, color: c.ink, border: "none", borderRadius: 10, padding: "9px 11px", fontSize: 13, fontFamily: FONT, outline: "none", width: 150, ...NUM }}
                         />
                     </label>
                     <span style={{ fontSize: 11, fontWeight: 700, color: c.vt, background: c.vtS, borderRadius: 8, padding: "5px 10px" }}>
@@ -149,7 +149,7 @@ export default function ControlPanel() {
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
                         placeholder="변경 사유 (필수 — RULE 7 기록)"
-                        style={{ flex: 1, minWidth: 200, background: dark ? c.bg : c.track, color: c.ink, border: "none", borderRadius: 10, padding: "9px 11px", fontSize: 12.5, fontFamily: FONT, outline: "none" }}
+                        style={{ flex: 1, minWidth: 200, background: c.field, color: c.ink, border: "none", borderRadius: 10, padding: "9px 11px", fontSize: 12.5, fontFamily: FONT, outline: "none" }}
                     />
                     <button onClick={apply} disabled={!draft} style={{ border: "none", borderRadius: 10, padding: "9px 14px", fontSize: 12.5, fontWeight: 800, fontFamily: FONT, cursor: draft ? "pointer" : "default", background: draft ? c.vt : c.hi, color: draft ? "#fff" : c.faint }}>
                         override 적용

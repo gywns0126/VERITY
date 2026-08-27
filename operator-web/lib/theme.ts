@@ -29,9 +29,24 @@ const DARK = {
     green: "#34e08a", greenS: "#12241c", amber: "#f0a020", amberS: "#2a2013",
 }
 
-export type Palette = typeof LIGHT
+const CSS_PALETTE = {
+    bg: "var(--af-bg)", card: "var(--af-card)", ink: "var(--af-ink)",
+    sub: "var(--af-sub)", faint: "var(--af-faint)", line: "var(--af-line)",
+    track: "var(--af-track)", hi: "var(--af-hi)", vt: "var(--af-vt)",
+    vtS: "var(--af-vt-s)", up: "var(--af-up)", down: "var(--af-down)",
+    upS: "var(--af-up-s)", downS: "var(--af-down-s)", green: "var(--af-green)",
+    greenS: "var(--af-green-s)", amber: "var(--af-amber)", amberS: "var(--af-amber-s)",
+    field: "var(--af-field)",
+}
 
-export function palette(dark: boolean): Palette {
+export type Palette = typeof CSS_PALETTE
+
+export function palette(_dark: boolean): Palette {
+    return CSS_PALETTE
+}
+
+// iframe srcDoc 등 부모 문서의 CSS 변수를 읽지 못하는 표면 전용.
+export function rawPalette(dark: boolean) {
     return dark ? DARK : LIGHT
 }
 
@@ -43,7 +58,8 @@ export const RAIL_PAD = "14px 16px"
 export const MAIN_PAD = "16px 18px"
 // 클릭 가능 행 hover (StockSearch 기존 문법 승격 — 어포던스)
 export function hoverBg(dark: boolean): string {
-    return dark ? "rgba(169,155,255,0.10)" : "rgba(108,92,231,0.06)"
+    void dark
+    return "var(--af-hover)"
 }
 
 // 토스식 부드러운 카드 (radius 16, 아주 옅은 그림자) — AlphaNest 표준.

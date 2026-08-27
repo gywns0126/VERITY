@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import "./globals.css"
 
+const THEME_BOOTSTRAP = `(function(){try{var t=localStorage.getItem("verity_theme");var d=t==="dark"||(t!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.setAttribute("data-theme",d?"dark":"light")}catch(e){}})()`
+
 // 오퍼레이터 전용(비공개) — 색인 금지.
 export const metadata: Metadata = {
     // 🚨 2026-08-20 PM 확정 — 오퍼레이터 이름 = "알파콘솔".
@@ -12,7 +14,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
-        <html lang="ko">
+        <html lang="ko" suppressHydrationWarning>
+            <head>
+                <script data-verity-theme-bootstrap dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+            </head>
             <body>{children}</body>
         </html>
     )

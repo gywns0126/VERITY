@@ -2,6 +2,100 @@
 
 :root {
     color-scheme: light dark;
+    --af-bg: #f2f4f6;
+    --af-card: #ffffff;
+    --af-ink: #191f28;
+    --af-sub: #4e5968;
+    --af-faint: #8b95a1;
+    --af-line: #e5e8eb;
+    --af-track: #eef1f4;
+    --af-hi: #f6f7f9;
+    --af-vt: #6c5ce7;
+    --af-vt-s: #f0edff;
+    --af-up: #f04452;
+    --af-down: #3182f6;
+    --af-up-s: #fff0f1;
+    --af-down-s: #eef4ff;
+    --af-green: #15c47e;
+    --af-green-s: #eafaf3;
+    --af-amber: #ff9500;
+    --af-amber-s: #fff6e9;
+    --af-field: #eef1f4;
+    --af-hover: rgba(108, 92, 231, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+        --af-bg: #0f1318;
+        --af-card: #171c23;
+        --af-ink: #e3e7ec;
+        --af-sub: #9aa4b1;
+        --af-faint: #828d9b;
+        --af-line: #252b34;
+        --af-track: #222a33;
+        --af-hi: #1e242c;
+        --af-vt: #a99bff;
+        --af-vt-s: #241f3a;
+        --af-up: #f04452;
+        --af-down: #4a90f0;
+        --af-up-s: #2a1a1d;
+        --af-down-s: #1b2740;
+        --af-green: #34e08a;
+        --af-green-s: #12241c;
+        --af-amber: #f0a020;
+        --af-amber-s: #2a2013;
+        --af-field: #0f1318;
+        --af-hover: rgba(169, 155, 255, 0.10);
+    }
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --af-bg: #0f1318;
+    --af-card: #171c23;
+    --af-ink: #e3e7ec;
+    --af-sub: #9aa4b1;
+    --af-faint: #828d9b;
+    --af-line: #252b34;
+    --af-track: #222a33;
+    --af-hi: #1e242c;
+    --af-vt: #a99bff;
+    --af-vt-s: #241f3a;
+    --af-up: #f04452;
+    --af-down: #4a90f0;
+    --af-up-s: #2a1a1d;
+    --af-down-s: #1b2740;
+    --af-green: #34e08a;
+    --af-green-s: #12241c;
+    --af-amber: #f0a020;
+    --af-amber-s: #2a2013;
+    --af-field: #0f1318;
+    --af-hover: rgba(169, 155, 255, 0.10);
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+    --af-bg: #f2f4f6;
+    --af-card: #ffffff;
+    --af-ink: #191f28;
+    --af-sub: #4e5968;
+    --af-faint: #8b95a1;
+    --af-line: #e5e8eb;
+    --af-track: #eef1f4;
+    --af-hi: #f6f7f9;
+    --af-vt: #6c5ce7;
+    --af-vt-s: #f0edff;
+    --af-up: #f04452;
+    --af-down: #3182f6;
+    --af-up-s: #fff0f1;
+    --af-down-s: #eef4ff;
+    --af-green: #15c47e;
+    --af-green-s: #eafaf3;
+    --af-amber: #ff9500;
+    --af-amber-s: #fff6e9;
+    --af-field: #eef1f4;
+    --af-hover: rgba(108, 92, 231, 0.06);
 }
 
 html,
@@ -10,40 +104,13 @@ body {
     padding: 0;
 }
 
-:root {
-    /* 국기 배지 테두리 등 컴포넌트가 참조하는 카드색 (StockLogo) */
-    --af-card: #ffffff;
-}
-@media (prefers-color-scheme: dark) {
-    :root {
-        --af-card: #171c23;
-    }
-}
-:root[data-theme="dark"] {
-    --af-card: #171c23;
-}
-:root[data-theme="light"] {
-    --af-card: #ffffff;
-}
-
 body {
     font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
         system-ui, sans-serif;
     /* 공개 알파네스트 표준 배경 (PublicInvestorPortfolios/NPSHoldings 정합) */
-    background: #f2f4f6;
+    background: var(--af-bg);
+    color: var(--af-ink);
     -webkit-font-smoothing: antialiased;
-}
-
-@media (prefers-color-scheme: dark) {
-    body {
-        background: #0f1318;
-    }
-}
-:root[data-theme="dark"] body {
-    background: #0f1318;
-}
-:root[data-theme="light"] body {
-    background: #f2f4f6;
 }
 
 /* v3.1 터미널 — 3컬럼 그리드 (승인 목업 정합). 경계=배경대비, 외곽선 없음.

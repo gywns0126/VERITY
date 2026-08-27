@@ -20,7 +20,7 @@
 //      srcDoc CSS 의 border:0 가 안쪽까지 닿지 않는다 → iframe 을 사방 3px 크게 잡고
 //      margin -3px 로 당겨(overscan) 래퍼의 overflow:hidden 이 테두리를 먹게 한다.
 //   ④ 우리 기간탭을 얹지 않는다 — 위젯이 자체 withdateranges 를 갖고 있어 죽은 버튼이 된다.
-import { useDark, palette, FONT } from "@/lib/theme"
+import { useDark, palette, rawPalette, FONT } from "@/lib/theme"
 
 const TV_EMBED_SRC = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js"
 
@@ -62,6 +62,7 @@ function tvWidgetHtml(symbol: string, dark: boolean, bg: string): string {
 export default function TVChart({ symbol, height = 380 }: { symbol: string; height?: number }) {
     const dark = useDark()
     const c = palette(dark)
+    const raw = rawPalette(dark)
     const sym = String(symbol || "").trim().toUpperCase()
     if (!sym) return null
     const h = Math.max(240, height)
@@ -72,7 +73,7 @@ export default function TVChart({ symbol, height = 380 }: { symbol: string; heig
                 <iframe
                     key={sym + (dark ? "-d" : "-l")}
                     title={sym + " 차트"}
-                    srcDoc={tvWidgetHtml(sym, dark, c.card)}
+                    srcDoc={tvWidgetHtml(sym, dark, raw.card)}
                     style={{ width: "calc(100% + 6px)", height: "calc(100% + 6px)", margin: -3, border: "none", display: "block", background: c.card }}
                     loading="lazy"
                     sandbox="allow-scripts allow-same-origin allow-popups"
