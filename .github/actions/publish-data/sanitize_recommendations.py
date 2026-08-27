@@ -54,6 +54,8 @@ STRIP_KEYS = {
     #   담는데 셋 다 이미 STRIP_KEYS 대상 = 값은 막고 구조 이름은 새는 형태가 된다.
     #   공개 Blob 계약은 "팩트+뉴스+recommendation+consensus" 이고 이월 여부는 그 밖이다.
     "_carried",
+    # 2026-08-27 — stock_filter 내부 분류 플래그. 공개 소비자는 없고 진단에만 사용한다.
+    "_turnaround",
     # 2026-08-04 신호 필터 F2·F3 진단 flag (PREREG_SIGNAL_FILTERS) — 자체 산식 파생, 오퍼레이터 전용.
     "value_guards",
     # 🚨 2026-08-18 애널리스트 컨센서스 3키 (PM 결정 — 공개 발행 금지, 백엔드 유지).

@@ -46,6 +46,7 @@ import requests
 from api.config import DATA_DIR, PUBLIC_DATA_API_KEY, now_kst
 
 _LEDGER_PATH = os.path.join(DATA_DIR, "dividends_kr_ksd.json")
+_DART_LEDGER_PATH = os.path.join(DATA_DIR, "dividends_kr.json")
 _ENDPOINT = (
     "https://apis.data.go.kr/1160100/GetStocDiviInfoService_V2/getDiviInfo_V2"
 )
@@ -325,11 +326,24 @@ def cross_check_dart(db: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     067900 을 `implausible_reason` 까지 달아 잡아둔 상태라, 그걸 신규 발견으로 세면
     가드가 작동 중인데도 매번 새 사고처럼 보인다.
     """
+    # `api.collectors` 패키지는 시장 수집기를 eager import한다. KSD workflow는 의도적으로
+    # requests/python-dotenv만 설치하므로 하위 모듈 import도 yfinance 등에서 실패할 수 있다.
+    # 교차검증에 필요한 것은 JSON 원장뿐이라 파일을 직접 읽어 최소 의존성 경계를 지킨다.
     try:
-        from api.collectors.dividend_kr import load_dividends_db
-        dart = load_dividends_db()
+        with open(_DART_LEDGER_PATH, "r", encoding="utf-8") as f:
+            dart = json.load(f)
+        if not isinstance(dart, dict):
+            raise ValueError("DART 원장이 dict가 아님")
     except Exception as e:
-        return {"status": "skip", "reason": f"DART 원장 로드 실패: {type(e).__name__}"}
+        return {
+            "status": "skip",
+            "reason": f"DART 원장 로드 실패: {type(e).__name__}",
+            "dart_rows_checked": 0,
+            "amount_matched": 0,
+            "unit_error_new": 0,
+            "unit_error_already_flagged": 0,
+            "suspects": [],
+        }
 
     checked = matched = ratio_flag = known_flag = 0
     flags: List[dict] = []

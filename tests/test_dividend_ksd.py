@@ -120,6 +120,13 @@ def test_cross_check_separates_known_flags():
     )
 
 
+def test_cross_check_avoids_collectors_package_import():
+    """최소 의존 workflow에서 api.collectors eager import가 다시 생기지 않는다."""
+    s = _src()
+    assert "from api.collectors.dividend_kr import" not in s
+    assert '_DART_LEDGER_PATH = os.path.join(DATA_DIR, "dividends_kr.json")' in s
+
+
 # ── 원장 본문 계약 ─────────────────────────────────────────────
 
 def test_every_row_has_record_date_and_no_ex_date():
