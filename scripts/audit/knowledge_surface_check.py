@@ -7,12 +7,13 @@
 
 검사 7종:
   1 kickoff ≤60줄 + 필수 섹션(진입어·SoT 지도·죽은 전제)
-  2 CLAUDE.md·AGENTS.md 바이트 동일 + 13룰 헤더 전부 존재 (+30KB 경고)
+  2 CLAUDE.md·AGENTS.md 바이트 동일 + 14룰 헤더 전부 존재 (+30KB 경고)
   3 MEMORY.md [[링크]] 전수 → 파일 존재 (인덱스 dangling 0)
   4 메모리 BFS 전 도달(고아 0) + frontmatter name=파일명 + P2 스텁→클러스터 섹션 무결
   5 docs/*.md 전수 ↔ INDEX.md 등재 대조 (미등재·유령)
   6 model_registry 스키마 + next_review 기한 초과 신고
   7 상설 감사 신선도 (ic_overlap_audit ≤100일)
+  8 로컬 agent rules 가 현재 루트 정본을 가리키며 폐기된 구조를 재도입하지 않는지
 
 🚨 로컬 전용 — 메모리 디렉터리(~/.claude)는 CI 러너에 없다. cron 편입 금지.
 사용: python3 scripts/audit/knowledge_surface_check.py  (세션 시작/종료 시 1회 권장)
@@ -38,6 +39,7 @@ KICKOFF_MAX_LINES = 60
 AGENT_RULES_WARN_BYTES = 30_000
 MEMORY_WARN_BYTES = 20_000
 AUDIT_STALE_DAYS = 100
+CURSOR_RULE_DIR = os.path.join(ROOT, ".cursor", "rules")
 
 issues: list[dict] = []
 warns: list[dict] = []
@@ -76,7 +78,7 @@ def check_agent_rules() -> dict:
     if s != a:
         issue("agent_rules", "CLAUDE.md와 AGENTS.md 바이트 불일치 — 같은 턴에 동기화할 것")
     rules = sorted(int(x) for x in re.findall(r"^## 🚨 RULE (\d+)", s, re.M))
-    expected = list(range(1, 14))
+    expected = list(range(1, 15))
     missing = [r for r in expected if r not in rules]
     if missing:
         issue("agent_rules", f"RULE 헤더 부재: {missing}")
@@ -220,6 +222,32 @@ def check_audit_freshness() -> dict:
         return {}
 
 
+# ── 8 로컬 agent rules drift ─────────────────────────────────
+def check_cursor_rules() -> dict:
+    paths = sorted(glob.glob(os.path.join(CURSOR_RULE_DIR, "*.mdc")))
+    legacy = {
+        "raw_github_portfolio": "raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+        "legacy_neon": "#B5FF19",
+        "fixed_python39": "Python 3.9+",
+        "github_pages_portfolio": "portfolio.json` (GitHub Pages",
+    }
+    hits = []
+    for p in paths:
+        body = read(p)
+        for name, needle in legacy.items():
+            if needle in body:
+                hits.append(f"{os.path.basename(p)}:{name}")
+    required = {
+        "global.mdc", "framer.mdc", "python-backend.mdc", "large-system-audit.mdc",
+    }
+    missing = sorted(required - {os.path.basename(p) for p in paths})
+    if hits:
+        issue("cursor_rules", f"폐기된 구조 재등장 {len(hits)}: {hits}")
+    if missing:
+        issue("cursor_rules", f"필수 rule 부재: {missing}")
+    return {"files": len(paths), "legacy_hits": len(hits), "missing": missing}
+
+
 def main() -> int:
     stats = {
         "kickoff": check_kickoff(),
@@ -228,6 +256,7 @@ def main() -> int:
         "docs_index": check_docs_index(),
         "registry": check_registry(),
         "freshness": check_audit_freshness(),
+        "cursor_rules": check_cursor_rules(),
     }
     print("═" * 64)
     print("지식 표면 자가검사 (P4)")
@@ -254,7 +283,7 @@ def main() -> int:
 
     payload = {"_meta": {"artifact": "knowledge_surface_report",
                          "generated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-                         "checks": 7, "local_only": True},
+                         "checks": 8, "local_only": True},
                "stats": stats, "issues": issues, "warns": warns}
     os.makedirs(os.path.dirname(REPORT), exist_ok=True)
     json.dump(payload, open(REPORT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)

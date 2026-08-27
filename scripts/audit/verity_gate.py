@@ -50,6 +50,10 @@ WATCH_L1 = [
     os.path.join(ROOT, "AGENTS.md"),
     os.path.join(MEM, "MEMORY.md"),
     os.path.join(MEM, "project_next_session_kickoff.md"),
+    os.path.join(ROOT, ".cursor", "rules", "global.mdc"),
+    os.path.join(ROOT, ".cursor", "rules", "framer.mdc"),
+    os.path.join(ROOT, ".cursor", "rules", "python-backend.mdc"),
+    os.path.join(ROOT, ".cursor", "rules", "large-system-audit.mdc"),
 ]
 
 # RULE 9 — CLAUDE.md 의 정규식과 동일 어미 집합 + 복합어 오탐 제외(임박/압박/촉박/속박/쪽박/수박/대박).
