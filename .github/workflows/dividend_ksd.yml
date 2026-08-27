@@ -67,7 +67,9 @@ jobs:
           VERITY_MODE: prod
           # 공공데이터포털 키. 이 서비스(GetStocDiviInfoService_V2) 활용신청 2026-08-22 완료.
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
-        run: python -m api.collectors.dividend_ksd
+        # `api.collectors.__init__`는 yfinance 등 무관 수집기를 eager import한다.
+        # 직접 실행해 KSD 수집기의 최소 의존성 경계를 보존한다.
+        run: PYTHONPATH=. python api/collectors/dividend_ksd.py
 
       - name: Commit & push ledger
         run: |

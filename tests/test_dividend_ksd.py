@@ -261,6 +261,13 @@ def test_builder_wires_dividends():
     assert 's["dividends"]' in b, "리포트에 배당 키를 안 넣는다"
 
 
+def test_workflow_uses_isolated_collector_entrypoint():
+    """패키지 __init__의 무관한 yfinance import가 KSD 실행을 막지 않아야 한다."""
+    wf = (ROOT / ".github" / "workflows" / "dividend_ksd.yml").read_text(encoding="utf-8")
+    assert "PYTHONPATH=. python api/collectors/dividend_ksd.py" in wf
+    assert "python -m api.collectors.dividend_ksd" not in wf
+
+
 # ── 8/23 N=2 실패에서 나온 계약 ──────────────────────────────
 
 def test_timeouts_fit_inside_job_budget():
