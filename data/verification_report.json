@@ -1,21 +1,21 @@
 {
   "performance": {
-    "hit_rate_7d": null,
+    "hit_rate_7d": 37.5,
     "hit_rate_14d": null,
     "hit_rate_30d": null,
-    "avg_return_7d": null,
+    "avg_return_7d": -0.97,
     "avg_return_14d": null,
     "sharpe_14d": null,
-    "hit_rate_7d_net": null,
+    "hit_rate_7d_net": 7.7,
     "hit_rate_14d_net": null,
     "hit_rate_30d_net": null,
-    "avg_return_7d_net": null,
+    "avg_return_7d_net": -20.23,
     "avg_return_14d_net": null,
     "delisted_count_30d": 0
   },
   "_corrections_meta": {
     "version": "1.0",
-    "applied_at": "2026-08-26 17:35:45.077069+09:00",
+    "applied_at": "2026-08-27 11:00:13.202826+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": -50.0,
     "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
@@ -23,7 +23,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
-      "fixed_at": "2026-08-26 17:35:45.077072+09:00"
+      "fixed_at": "2026-08-27 11:00:13.202844+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -36,24 +36,18 @@
       "mean_reversion"
     ],
     "weakening": [
-      "volatility",
       "flow",
       "perplexity_risk"
     ],
     "decaying": [
+      "volatility",
       "momentum"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "timing",
-      "multiplier": 0.0,
-      "status": "DEAD",
-      "ic_recent": 0.0
-    },
-    {
-      "factor": "multi_factor",
+      "factor": "prediction",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
@@ -65,12 +59,18 @@
       "ic_recent": 0.0
     },
     {
-      "factor": "prediction",
+      "factor": "multi_factor",
+      "multiplier": 0.0,
+      "status": "DEAD",
+      "ic_recent": 0.0
+    },
+    {
+      "factor": "timing",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-08-26 17:35:45.099993+09:00"
+  "generated_at": "2026-08-27 11:00:13.231368+09:00"
 }

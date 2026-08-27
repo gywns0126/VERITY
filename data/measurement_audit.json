@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-26T18:09:55+09:00",
+ "as_of": "2026-08-27T11:55:40+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -90,7 +90,12 @@
      ]
     }
    ],
-   "thin_keys": [],
+   "thin_keys": [
+    {
+     "key": "equity_research_brief",
+     "coverage": "2/80"
+    }
+   ],
    "detail": "레코드에 한 번도 없는 키 10종 — 해당 채점 축이 조용히 죽어 있다",
    "baseline": {
     "dead_keys": 10
@@ -105,19 +110,19 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 105,
+   "snapshots": 106,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
-     "rule": "oil_geopolitical_shock",
-     "fired_days": 1,
-     "activation_pct": 1.0,
+     "rule": "perplexity_event_critical",
+     "fired_days": 2,
+     "activation_pct": 1.9,
      "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
     },
     {
-     "rule": "perplexity_event_critical",
+     "rule": "oil_geopolitical_shock",
      "fired_days": 1,
-     "activation_pct": 1.0,
+     "activation_pct": 0.9,
      "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
     }
    ],
@@ -128,8 +133,8 @@
     "watch_pct": 85.0
    },
    "days_without_any_cap": 12,
-   "days_without_any_cap_pct": 11.4,
-   "detail": "상시/미발동 등급 규칙 2종 — oil_geopolitical_shock(1.0%), perplexity_event_critical(1.0%). cap 없는 날 12/105일",
+   "days_without_any_cap_pct": 11.3,
+   "detail": "상시/미발동 등급 규칙 2종 — perplexity_event_critical(1.9%), oil_geopolitical_shock(0.9%). cap 없는 날 12/106일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -140,7 +145,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 4995,
+   "stock_days": 5093,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -206,13 +211,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 30,
+     "n_present": 11,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 30,
+     "n_present": 11,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -245,8 +250,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 25,
-    "scored": 25,
+    "with_pct": 35,
+    "scored": 35,
     "ok": true
    },
    "dead_guards": [
@@ -266,7 +271,7 @@
     {
      "name": "파마리서치",
      "qty": 1.0,
-     "return_pct": 37.05,
+     "return_pct": 35.04,
      "past_target_2": false
     }
    ],
