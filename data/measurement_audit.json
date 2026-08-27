@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-27T11:55:40+09:00",
+ "as_of": "2026-08-27T18:33:41+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -93,7 +93,7 @@
    "thin_keys": [
     {
      "key": "equity_research_brief",
-     "coverage": "2/80"
+     "coverage": "1/83"
     }
    ],
    "detail": "레코드에 한 번도 없는 키 10종 — 해당 채점 축이 조용히 죽어 있다",
@@ -145,7 +145,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 5093,
+   "stock_days": 5092,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -160,11 +160,11 @@
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
@@ -211,13 +211,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 11,
+     "n_present": 18,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 11,
+     "n_present": 18,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -250,8 +250,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 35,
-    "scored": 35,
+    "with_pct": 39,
+    "scored": 39,
     "ok": true
    },
    "dead_guards": [
@@ -271,7 +271,7 @@
     {
      "name": "파마리서치",
      "qty": 1.0,
-     "return_pct": 35.04,
+     "return_pct": 34.11,
      "past_target_2": false
     }
    ],
@@ -325,10 +325,11 @@
    "axes_checked": 2,
    "stale_axes": [],
    "missing_as_of": [
+    "bonds.json:kr_corp_spreads.date",
     "bonds.json:yield_curves.kr.curve_as_of"
    ],
    "absent_sources": [],
-   "detail": "노후 0축 · as_of 부재 1축 — as_of 가 없으면 노후를 구조적으로 확인할 수 없다"
+   "detail": "노후 0축 · as_of 부재 2축 — as_of 가 없으면 노후를 구조적으로 확인할 수 없다"
   }
  },
  "note": "측정 오염 자동 검출 — 8/5 감사가 잡아낸 3대조 + 8/6 신설 규칙 판별력 검사. 점수 입력 0(관측 전용). status FAIL = **알려진 baseline 초과 = 신규 발생**. KNOWN = 미해결분이 알려진 범위 안(태스크 #19/#20). 매일 FAIL 이면 아무도 읽지 않는다는 8/6 학습 반영."
