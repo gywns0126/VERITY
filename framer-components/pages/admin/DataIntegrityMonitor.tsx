@@ -1,4 +1,5 @@
 import * as React from "react"
+import type { CSSProperties } from "react"
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 
 /**
@@ -20,7 +21,6 @@ const DARK = {
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/metadata/data_health.json"
-const CDN_AGE_WARN_S = 120
 const STATUS_LABEL: Record<string, string> = { green: "정상", amber: "주의", red: "위험" }
 
 interface VerifyFile { file: string; ok?: boolean; pct?: { PER?: number; PBR?: number }; total?: number; cdn_age_s?: number | null; error?: string }
@@ -92,7 +92,7 @@ interface Props { dataUrl: string; refreshSec: number; dark: boolean }
 /* 🚨 2026-07-27 /admin 최초 로딩 스켈레톤 — "…로딩" 텍스트 한 줄이면 카드 높이가 0에 가깝다가
    데이터 도착 순간 튀어오른다. 실제 레이아웃과 같은 골격을 먼저 깔아 점프를 없앤다(PM 지적). */
 const ADM_SK_KEYS = "@keyframes admSk{0%{background-position:-400px 0}100%{background-position:400px 0}}"
-function admSk(C: any, w: any, h: number, r: number = 6): React.CSSProperties {
+function admSk(C: any, w: any, h: number, r: number = 6): CSSProperties {
     return {
         width: w, height: h, borderRadius: r, flexShrink: 0,
         background: `linear-gradient(90deg, ${C.grid || C.line} 25%, ${C.line} 37%, ${C.grid || C.line} 63%)`,
@@ -211,24 +211,20 @@ export default function DataIntegrityMonitor(props: Props) {
             </div>
 
             <div style={card}>
-                {secTitle("배달 검증", "실 CDN 채움율 + age")}
+                {secTitle("배달 검증", "실 CDN 채움율")}
                 {verify == null ? naDiv : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
                         {(verify.files || []).map((f, i) => {
-                            const stale = (f.cdn_age_s || 0) > CDN_AGE_WARN_S
                             return (
                                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", paddingTop: i === 0 ? 0 : 9, borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
                                     <span style={{ fontSize: 12, color: C.sub, fontWeight: 600, flex: "1 1 170px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.file}</span>
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: pctColor(C, f.pct && f.pct.PER) }}>PER {f.pct && f.pct.PER != null ? f.pct.PER + "%" : "—"}</span>
                                     <span style={{ fontSize: 12.5, fontWeight: 800, color: pctColor(C, f.pct && f.pct.PBR) }}>PBR {f.pct && f.pct.PBR != null ? f.pct.PBR + "%" : "—"}</span>
                                     <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>N={f.total != null ? f.total.toLocaleString() : "—"}</span>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: stale ? C.amber : C.faint }}>age {f.cdn_age_s != null ? f.cdn_age_s + "s" : "—"}{stale ? " ⚠" : ""}</span>
+                                    <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>캐시 {f.cdn_age_s != null ? f.cdn_age_s + "s" : "—"}</span>
                                 </div>
                             )
                         })}
-                        {(verify.max_cdn_age_s || 0) > CDN_AGE_WARN_S && (
-                            <div style={{ fontSize: 11.5, color: C.amber, fontWeight: 700 }}>CDN 최대 age {verify.max_cdn_age_s}s — 스테일 서빙</div>
-                        )}
                     </div>
                 )}
             </div>

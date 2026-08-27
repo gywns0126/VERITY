@@ -74,8 +74,12 @@ def _section_coverage(arr: list) -> dict:
     return out
 
 
-def _baseline_from_history(fname: str) -> dict:
-    """과거 기록에서 파일별 최고 커버리지·최대 N 회수. 기록 없으면 빈 dict(첫 실행 = 통과)."""
+def _baseline_from_history(fname: str, current_total: int) -> dict:
+    """현재와 분모가 동급인 과거 기록에서 최고 커버리지·최대 N을 회수한다.
+
+    유니버스 확대 전의 높은 비율을 확대 후 분모와 비교하면 신규 종목 유입을 데이터
+    손실로 오판한다. 현재 N의 허용 오차 안에 있는 이력만 동일 cohort로 취급한다.
+    """
     best: dict = {}
     best_n = 0
     try:
@@ -91,11 +95,16 @@ def _baseline_from_history(fname: str) -> dict:
         for r in rec.get("results") or []:
             if r.get("file") != fname:
                 continue
+            n = r.get("total")
+            if not isinstance(n, int) or n <= 0:
+                continue
+            delta_pct = abs(n - current_total) * 100.0 / max(current_total, 1)
+            if delta_pct > _RATCHET_N_TOL:
+                continue
             for k, v in (r.get("coverage") or {}).items():
                 if isinstance(v, (int, float)) and v > best.get(k, -1):
                     best[k] = v
-            n = r.get("total")
-            if isinstance(n, int) and n > best_n:
+            if n > best_n:
                 best_n = n
     if best_n:
         best["_total"] = best_n
@@ -142,7 +151,7 @@ def verify_one(fname: str, cfg: dict) -> dict:
     # 섹션 커버리지 + 래칫(회귀 방지). 붕괴(floor)와 별개로 **후퇴**를 잡는다.
     cov = _section_coverage(arr)
     res["coverage"] = cov
-    base = _baseline_from_history(fname)
+    base = _baseline_from_history(fname, total)
     drops = []
     for k, v in cov.items():
         b = base.get(k)

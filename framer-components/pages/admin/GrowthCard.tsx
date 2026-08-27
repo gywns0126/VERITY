@@ -22,6 +22,7 @@ const DARK = {
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const SESSION_KEY = "verity_supabase_session"
+const AUTH_EVENT = "verity_auth_change"
 
 function readBodyDark(): boolean {
     // 🚨 판독 순서 고정 — 되돌리지 말 것 (2026-07-23 공개 컴포넌트 fix, 2026-08-27 관리자 이관).
@@ -170,6 +171,19 @@ export default function GrowthCard(props: Props) {
     }, [apiBase, onCanvas])
 
     useEffect(() => { load() }, [load])
+
+    // PublicSessionKeeper가 만료 토큰을 갱신하면 새 access token으로 즉시 재조회한다.
+    // 이 리스너가 없으면 최초 403이 화면에 남아 수동 새로고침 전까지 복구되지 않는다.
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        const onAuth = () => load()
+        window.addEventListener(AUTH_EVENT, onAuth)
+        window.addEventListener("storage", onAuth)
+        return () => {
+            window.removeEventListener(AUTH_EVENT, onAuth)
+            window.removeEventListener("storage", onAuth)
+        }
+    }, [load, onCanvas])
 
     const wrap: CSSProperties = { width: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: 16, display: "flex", flexDirection: "column", gap: 12 }
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "15px 17px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }

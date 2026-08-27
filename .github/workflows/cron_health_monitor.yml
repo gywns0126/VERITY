@@ -44,7 +44,8 @@ concurrency:
 jobs:
   monitor:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # requirements 설치 + 실물 검증 + monitor가 최근 실측 5분을 넘겨 commit 전 취소됨.
+    timeout-minutes: 10
 
     steps:
       - name: Checkout

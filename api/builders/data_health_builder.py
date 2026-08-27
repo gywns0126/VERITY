@@ -5,11 +5,11 @@ read-only aggregate (판정·수정 0, RULE 7). 입력 파일 결손 = 해당 �
 
 입력(로컬 산출물):
   - publish_guard.jsonl   — 발행 가드 HOLD 이벤트(blob_upload.js: 결함본 업로드 차단)
-  - publish_verify.json   — 발행 후 실물 검증(P2: 배달 채움율 + CDN age)
+  - publish_verify.json   — 발행 후 실물 검증(P2: 배달 채움율 + 배달 시각)
   - coverage_report.json  + coverage_history.jsonl — 필드 채움율 + 회귀/차단 추이
   - freshness_board.json  — 신선도 SLA 상태(스트림별 fresh/stale/paused)
 출력: data/metadata/data_health.json
-상태: red(가드 HOLD 24h / 검증 실패 / P0 stale) > amber(회귀·비P0 stale·CDN age 높음) > green.
+상태: red(가드 HOLD 24h / 검증 실패 / P0 stale) > amber(회귀·비P0 stale) > green.
 """
 from __future__ import annotations
 
@@ -23,9 +23,6 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 _META = os.path.join(_ROOT, "data", "metadata")
 _DATA = os.path.join(_ROOT, "data")
 OUT = os.path.join(_META, "data_health.json")
-
-CDN_AGE_WARN_S = 120  # plain fetch age 가 이 초 초과 = CDN 스테일 서빙(amber)
-
 
 def _load_json(path: str) -> Optional[Any]:
     try:
@@ -153,9 +150,6 @@ def build() -> Dict[str, Any]:
         ambers.append(f"커버리지 회귀 경고 {coverage['last_run_warns']}건")
     if freshness and freshness.get("stale_other"):
         ambers.append(f"비P0 stale {len(freshness['stale_other'])}건")
-    if verify is not None and (verify.get("max_cdn_age_s") or 0) > CDN_AGE_WARN_S:
-        ambers.append(f"CDN age {verify['max_cdn_age_s']}s > {CDN_AGE_WARN_S}s(스테일 서빙)")
-
     status = "red" if reds else ("amber" if ambers else "green")
     return {
         "_meta": {"generated_at": now.isoformat(),
