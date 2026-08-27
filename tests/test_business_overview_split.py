@@ -29,6 +29,7 @@ BUILDER = _ROOT / "api" / "builders" / "stock_report_public_builder.py"
 ACTION = _ROOT / ".github" / "actions" / "publish-data" / "action.yml"
 BLOBJS = _ROOT / ".github" / "actions" / "publish-data" / "blob_upload.js"
 STOCK_SLICE = _ROOT / "vercel-api" / "api" / "stock_slice.py"
+REPORT_UI = _ROOT / "framer-components" / "public-probe" / "PublicStockReport.tsx"
 FNAME = "kr_business_overview_public.json"
 
 
@@ -87,3 +88,15 @@ def test_published_payload_shape_if_present():
     for k in ("text", "chars", "truncated", "source", "fiscal_year"):
         assert k in row, f"출처 추적 필드 누락: {k}"
     assert row["chars"] <= d["_meta"]["publish_chars"] + 2   # 문장 경계 절단 여유
+
+
+def test_public_report_renders_the_requested_overview_with_source():
+    """슬라이스 1건을 공개 리포트가 원문·출처·절단 표기와 함께 소비한다."""
+    src = REPORT_UI.read_text(encoding="utf-8")
+    assert "businessOverviewMap" in src
+    assert "merge(setBusinessOverviewMap, d.business_overview)" in src
+    assert '"사업의 개요"' in src
+    assert "businessOverview.text" in src
+    assert "businessOverview.source" in src
+    assert "businessOverview.truncated" in src
+    assert "DART 원문 ↗" in src
