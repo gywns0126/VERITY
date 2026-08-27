@@ -703,7 +703,7 @@ PM 지시 2026-08-19 "고쳐. 내가 복붙할게". 파일 = `public-probe/` 아
 
 | repo 파일 | 라이브 코드파일 (id) | repo 상태 | 최종 수정 | 라이브 반영 |
 |---|---|---|---|---|
-| `public-probe/PublicStockReport.tsx` | PublicStockReport (`wQArrWb`, 400KB) | ✅ html-first 적용됨 | 08-09 | ❓ 미확인 |
+| `public-probe/PublicStockReport.tsx` | PublicStockReport (`wQArrWb`, 492KB) | ✅ html-first + 사업의 개요 | **08-27** | ✅ MCP 반영·바이트 검증 |
 | `public-probe/PublicHoldingsTab.tsx` | PublicHoldingsTab (`S2WFHHW`, 191KB) | ✅ html-first + CSS 변수 | **08-19**(오늘 CDN 수정 포함) | ❓ 미확인 |
 | `public-probe/PublicAuth.tsx` | PublicAuth (`k5Rb6uP`, 27KB) | ✅ html-first 적용됨 | 07-23 | ❓ 미확인 |
 
@@ -725,6 +725,13 @@ PM 지시 2026-08-19 "고쳐. 내가 복붙할게". 파일 = `public-probe/` 아
 
 ## 📌 참고 — 이미 복붙 완료된 과거 항목
 - PublicStockReport 별 연회색 채움 · SmallcapScreenerAll · PublicPerspectiveMaps (dark html-first) — 완료
+
+## ✅ 코드 반영 완료 / Publish 대기 (2026-08-27)
+
+- `PublicStockReport` (`wQArrWb`) — `stock_slice.business_overview` 1건을 받아 DART 원문 발췌·접수일·절단 여부·원문 링크 표시. 라이브 재읽기 바이트 동일, Framer typecheck 0.
+- `SecurityCard` (`TqSqp7W`) — 테마 판독을 `html[data-an-theme]` → `body[data-framer-theme]` → 저장 선호 순서로 통일. 라이브·미러 바이트 동일.
+- `PublicThemeToggle` (`W_KF9F5`) — 라이브가 미러보다 신선해 라이브를 기준으로 미러 갱신. 라이브·미러 바이트 동일.
+- **Publish 상태** — MCP 코드 저장까지 완료. 마지막 Production 배포 시각은 `2026-08-27 22:08 KST`로 위 변경 전이므로 Framer의 Publish는 별도 필요.
 
 ---
 
