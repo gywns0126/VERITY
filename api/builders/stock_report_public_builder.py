@@ -418,12 +418,12 @@ def _consensus_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return out or None
 
 
-def _verity_lens_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def _verity_lens_from_lynch(lynch: Any) -> Optional[Dict[str, Any]]:
     """VERITY 관측 lens — '컨센서스 위에 얹는' 차별 view (토스·키움·LLM 미보유).
-    규칙 기반 사실 분류(lynch_kr)만 발행. 자체 산식 점수·등급·매매의견
+    중앙 산출물(kr_lynch_class.by_ticker)의 규칙 기반 분류만 발행. 자체 산식 점수·등급·매매의견
     (verity_brain/brain_score/grade, multi_factor grade·multi_score, safety_score,
     recommendation, confidence)은 RULE 7대로 검증 게이트 통과 전까지 발행 제외."""
-    lynch = rec.get("lynch_kr") or {}
+    lynch = lynch if isinstance(lynch, dict) else {}
     cls = lynch.get("class")
     if not cls:
         return None
@@ -441,6 +441,11 @@ def _verity_lens_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         },
         "note": "Peter Lynch 분류 룰을 공개 재무 사실에 적용한 관측 — 자체 점수·매매의견 아님. 종합점수는 검증 통과 후 공개.",
     }
+
+
+def _verity_lens_from_rec(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """빌드 중간 호환용. 최종 발행은 중앙 kr_lynch_class 값으로 다시 고정한다."""
+    return _verity_lens_from_lynch(rec.get("lynch_kr"))
 
 
 def _fmt_won(v: Any) -> Optional[str]:
@@ -897,6 +902,44 @@ def _normalize_dart_facts(s: Dict[str, Any], fund: Optional[Dict[str, Any]]) -> 
             facts.pop(key, None)  # 결손의 0 인코딩 — 사실인 척하지 않는다
 
 
+def _apply_krx_market_facts(s: Dict[str, Any], km: Optional[Dict[str, Any]]) -> None:
+    """공개 시가총액·발행주식수는 KRX 공식 스냅샷으로 항상 덮어쓴다.
+
+    recommendations의 market_cap/shares_outstanding은 유통 기준 또는 외부 추정치일 수 있다.
+    같은 라벨에 두 정의가 섞이면 facts·header·overview가 서로 다른 숫자를 보이므로,
+    공개 기본 라벨은 KRX 공식값 하나로 고정한다. 유통시총은 별도 라벨·출처 계약 전까지
+    공개하지 않는다.
+    """
+    if not isinstance(km, dict):
+        return
+    try:
+        mktcap = float(km.get("mktcap") or 0)
+    except (TypeError, ValueError):
+        mktcap = 0.0
+    if mktcap > 0:
+        cap = _fmt_cap(mktcap)
+        s.setdefault("facts", {})["시가총액"] = cap
+        s.setdefault("facts_note", {})["시가총액"] = "KRX 공식 시가총액"
+        header = s.get("header")
+        if not isinstance(header, dict):
+            header = {}
+            s["header"] = header
+        header["market_cap"] = cap
+
+    try:
+        shares = float(km.get("shares") or 0)
+    except (TypeError, ValueError):
+        shares = 0.0
+    if shares > 0:
+        overview = s.get("overview")
+        if not isinstance(overview, dict):
+            overview = {}
+            s["overview"] = overview
+        overview["shares"] = (f"{shares / 1e8:,.2f}억주" if shares >= 1e8
+                              else f"{shares:,.0f}주")
+        overview["shares_source"] = "KRX 상장주식수"
+
+
 def _metric_val(tk: str, src: str, fundamentals: Dict[str, Any], valuation: Dict[str, Any]) -> Optional[float]:
     if src in ("PER", "PBR"):
         v = (valuation.get(tk) or {}).get(src)
@@ -1303,6 +1346,11 @@ def main() -> int:
             tk = s["ticker"]
             _normalize_kr_identity(s, tk, _name_market)
             _normalize_dart_facts(s, fundamentals.get(tk))
+            # 중앙 Lynch 산출물만 최종 발행한다. recommendations 내장 분류는 입력 시점과
+            # 성장률 정의가 달라 같은 종목이 rich/light 경로에서 다르게 보일 수 있다.
+            s["verity_lens"] = _verity_lens_from_lynch(_lynch_map.get(tk))
+            # 공개 시장 규모의 단일 진실 소스. rich 경로의 유통 기준 추정값도 여기서 교체한다.
+            _apply_krx_market_facts(s, krx_map.get(tk))
             fin = _financials(fundamentals.get(tk))
             if fin:
                 s["financials"] = fin
@@ -1318,9 +1366,6 @@ def main() -> int:
             if val:
                 fn = s.setdefault("facts_note", {})
                 fc = s.setdefault("facts_calc", {})
-                mc = val.get("mktcap")
-                if mc and mc > 0:
-                    s["facts"].setdefault("시가총액", _fmt_cap(mc))  # 전 종목 시총 (KRX 공식) — 정렬·필터 언락
                 if val.get("PER") is not None:
                     s["facts"]["PER"] = _num(val["PER"], "", 1)
                     fn["PER"] = "자체계산"
@@ -1398,15 +1443,9 @@ def main() -> int:
             if s.get("ownership"):
                 _annotate_person_links(s["ownership"], str(s.get("name") or ""))
 
-            # 기업개요 보강 — shares(KRX 상장주식수)+sector(sector_map) fallback. 죽은섹션(overview 1%) 살림(백필 0, 사실만).
+            # 기업개요 보강 — shares는 위 _apply_krx_market_facts가 공식값으로 교체한다.
+            # sector는 sector_map fallback. 죽은섹션(overview 1%) 살림(백필 0, 사실만).
             ov = s.get("overview") or {}
-            if not ov.get("shares"):
-                shr = (krx_map.get(tk) or {}).get("shares")
-                try:
-                    if shr and float(shr) > 0:
-                        ov["shares"] = f"{float(shr) / 1e8:,.2f}억주" if float(shr) >= 1e8 else f"{float(shr):,.0f}주"
-                except (TypeError, ValueError):
-                    pass
             if not ov.get("sector"):
                 sk = (sector_map.get(tk) or {}).get("sector_ko")
                 if sk:
