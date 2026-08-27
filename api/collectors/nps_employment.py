@@ -37,6 +37,10 @@ BASE = "http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2"
 THROTTLE = 0.0           # 병렬화(8워커)가 동시성 상한 = rate 제어. 워커당 추가 sleep 불필요
 MAX_MATCH_DETAIL = 4     # 동명 사업장 상세 조회 상한 (다지점 합산)
 
+# 원천 최신월 탐침용 대표 법인. 전체 수집 전에 월 공개 여부만 확인하므로 상세 API는 호출하지 않는다.
+# 서로 다른 대형 법인 3곳이 같은 월을 제공할 때만 그 월을 원천 최신월로 채택한다.
+SOURCE_MONTH_PROBES = ("삼성전자", "현대자동차", "엘지전자")
+
 
 def _key() -> str:
     try:
@@ -156,6 +160,32 @@ NAME_ALIAS = {
 def _candidates(name: str) -> set:
     n = _norm(name)
     return {n, f"{n}(주)", f"(주){n}", f"주식회사{n}", f"{n}주식회사"}
+
+
+def probe_source_latest_month(key: Optional[str] = None) -> Optional[str]:
+    """공단 원천이 공통으로 제공하는 최신 귀속월을 소수 호출로 확인한다.
+
+    한 법인만 먼저 갱신되는 부분 공개를 전체 공개로 오인하지 않도록 3개 대표 법인의
+    정확일치 레코드에 모두 존재하는 가장 최신 월을 반환한다.
+    """
+    key = key or _key()
+    if not key:
+        return None
+    month_sets = []
+    for name in SOURCE_MONTH_PROBES:
+        norm_name = _norm(name)
+        cands = _candidates(name)
+        body = _get("getBassInfoSearchV2", {
+            "wkplNm": f"{norm_name}(주)", "numOfRows": 100, "pageNo": 1,
+        }, key)
+        rows = [it for it in _items(body) if _norm(it.get("wkplNm")) in cands]
+        months = {str(it.get("dataCrtYm") or "") for it in rows
+                  if re.match(r"^20\d{4}$", str(it.get("dataCrtYm") or ""))}
+        if not months:
+            return None
+        month_sets.append(months)
+    common = set.intersection(*month_sets)
+    return max(common) if common else None
 
 
 def _one(tk: str, name: str, key: str, ym: str) -> Optional[Dict[str, Any]]:
@@ -402,4 +432,11 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if "--source-latest" in sys.argv:
+        latest = probe_source_latest_month()
+        if latest:
+            print(latest)
+            sys.exit(0)
+        print("[nps_emp] 원천 최신월 탐침 실패", file=sys.stderr)
+        sys.exit(1)
     sys.exit(main())

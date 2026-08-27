@@ -27,11 +27,10 @@ on:
     #   → apis.data.go.kr 이 일부 해외/GH 대역을 드롭한다. 러너 IP 는 실행마다 달라지므로
     #     "언젠가 좋은 IP 에 걸린다". 같은 패턴 선례 = yfinance curl_cffi(Yahoo GH IP 차단).
     #
-    #   서킷 브레이커(dfbba6a) 덕에 차단된 run 은 ~1분에 끝난다. 그래서 회차를 늘리는 편이
-    #   비용 대비 확실하다 — 공단 갱신일(15일) 이후 열흘간 매일 시도해 좋은 IP 를 만나면
-    #   그때 완주한다. 이미 최신이면 병합이 같은 값을 덮어써 사실상 no-op.
-    #   최악(열흘 전부 차단) = 약 10분 소모, 데이터는 종전 스냅샷 그대로 보존.
-    - cron: '0 20 15-24 * *'   # UTC 20:00 = KST 익일 05:00, 매월 16~25일
+    #   2026-08-27: 7월 자료가 8/25 실행 뒤에 공개되어 다음 수집이 9/16까지 밀리는 공백 확인.
+    #   월말까지 매일 원천 최신월만 3개 법인으로 탐침하고, 새 월일 때만 전량 수집한다.
+    #   최신월이 같으면 API 3콜로 종료하므로 Actions/API 부하는 종전 전량 재수집보다 작다.
+    - cron: '0 20 15-31 * *'   # UTC 20:00 = KST 익일 05:00, 매월 16일~월말
   workflow_dispatch:
     inputs:
       limit:
@@ -64,7 +63,23 @@ jobs:
       - name: Install deps
         run: pip install requests
 
+      - name: Probe source month
+        if: ${{ github.event_name == 'schedule' }}
+        id: probe
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+        run: |
+          remote_month="$(python api/collectors/nps_employment.py --source-latest)"
+          local_month="$(python -c 'import json; print((json.load(open("data/nps_employment.json")).get("_meta") or {}).get("data_ym_latest") or "")')"
+          echo "원천 최신월=${remote_month} · 산출물 최신월=${local_month}"
+          if [[ -z "$local_month" || "$remote_month" > "$local_month" ]]; then
+            echo "needs_full=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "needs_full=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Collect NPS employment
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.probe.outputs.needs_full == 'true' }}
         env:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
           NPS_EMP_LIMIT: ${{ github.event.inputs.limit || '0' }}
@@ -72,18 +87,19 @@ jobs:
 
       - name: Commit data
         # 스모크 테스트(limit>0)는 부분 결과라 정식 스냅샷으로 커밋하지 않는다.
-        if: ${{ (github.event.inputs.limit || '0') == '0' }}
+        if: ${{ (github.event.inputs.limit || '0') == '0' && (github.event_name == 'workflow_dispatch' || steps.probe.outputs.needs_full == 'true') }}
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "actions@github.com"
           git pull --rebase --autostash origin main || true
-          git add data/
+          git add data/nps_employment.json
+          git add data/nps_employment_history.jsonl
           git diff --cached --quiet && echo "no changes" && exit 0
           git commit -m "📊 nps_employment 월간 수집 $(date -u -d '+9 hours' +%Y-%m-%d)"
           git push origin main
 
       - name: Publish (VERITY-data + Vercel Blob)
-        if: ${{ (github.event.inputs.limit || '0') == '0' }}
+        if: ${{ (github.event.inputs.limit || '0') == '0' && (github.event_name == 'workflow_dispatch' || steps.probe.outputs.needs_full == 'true') }}
         continue-on-error: true
         uses: ./.github/actions/publish-data
         with:
