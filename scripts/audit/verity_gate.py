@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""verity_gate — 하네스 강제 게이트 (Stop + PreToolUse). 2026-08-16 구조 재검증 후 시행.
+"""verity_gate — 하네스 강제 게이트 (UserPromptSubmit + Stop + PreToolUse).
 
 왜: 룰 준수 자체가 주의(확률)로 실행되는 것이 재발의 생성기다 (RULE 13 근본 원인 절).
 재검증 실측 — 완전 하네스형 가드(Edit old_string·prereg pytest·P4 검사기) 재발 0 vs
@@ -25,7 +25,7 @@ PreToolUse(Bash) 게이트 (도구 실행 전 차단):
     (조용히 죽는 가드 = RULE 1 8/9 학습. 벽돌 게이트 = 모든 턴 차단이라 fail-closed 불가.)
   - 루프 가드: stop_hook_active=true 면 즉시 통과 (차단→재시도→재차단 무한루프 방지).
 
-배선: .claude/settings.local.json (gitignored — 본 파일 하단 WIRING 참조로 재구성 가능).
+배선: 프로젝트 `.claude/settings.local.json` + `.codex/hooks.json`.
 셀프테스트: python3 scripts/audit/verity_gate.py --selftest
 """
 from __future__ import annotations
@@ -47,6 +47,7 @@ PREREG_TEST = os.path.join(ROOT, "tests", "test_prereg_artifact_contract.py")
 # 층1 자동로드 파일 — 이들이 변한 턴에서만 표면 검사를 돈다
 WATCH_L1 = [
     os.path.join(ROOT, "CLAUDE.md"),
+    os.path.join(ROOT, "AGENTS.md"),
     os.path.join(MEM, "MEMORY.md"),
     os.path.join(MEM, "project_next_session_kickoff.md"),
 ]
@@ -327,19 +328,25 @@ def hook_stop() -> int:
         return 0  # 루프 가드
 
     # S1 — RULE 9 (응답 레벨: 유일하게 기계가 없던 자리)
+    direct_text = payload.get("last_assistant_message")
     tp = payload.get("transcript_path") or ""
-    if tp and os.path.exists(tp):
+    if isinstance(direct_text, str):
+        text = direct_text
+    elif tp and os.path.exists(tp):
         try:
             text = _last_response_text(tp)
-            hits = sorted({m.group(0) for m in RULE9_RE.finditer(text)})
-            if hits:
-                _out({"decision": "block",
-                      "reason": ("RULE 9 위반 — 직전 응답에 금지 동사 형태 "
-                                 f"{len(hits)}종: {', '.join(hits[:8])}. "
-                                 "대체 동사 정답표(CLAUDE.md RULE 9)로 바꿔 다시 응답할 것.")})
-                return 0
         except Exception as e:  # noqa: BLE001 — S1 실패가 S2/S3 를 막으면 안 됨
             _out({"systemMessage": f"[verity_gate:stop/S1] transcript 파싱 실패(통과): {e!r}"})
+            text = ""
+    else:
+        text = ""
+    hits = sorted({m.group(0) for m in RULE9_RE.finditer(text)})
+    if hits:
+        _out({"decision": "block",
+              "reason": ("RULE 9 위반 — 직전 응답에 금지 동사 형태 "
+                         f"{len(hits)}종: {', '.join(hits[:8])}. "
+                         "루트 지침 RULE 9의 대체 동사로 바꿔 다시 응답할 것.")})
+        return 0
 
     # S2 — 지식 표면 (조건부)
     try:
@@ -518,6 +525,33 @@ def hook_pretool() -> int:
     return 0
 
 
+def hook_context() -> int:
+    """기존 세션도 다음 사용자 프롬프트부터 최신 루트 지침을 다시 확인하게 한다."""
+    try:
+        payload = json.load(sys.stdin)
+    except ValueError as e:
+        return _fail_open("context/stdin", e)
+    cwd = os.path.realpath(payload.get("cwd") or "")
+    root = os.path.realpath(ROOT)
+    if cwd != root and not cwd.startswith(root + os.sep):
+        return 0
+    try:
+        import hashlib
+        body = open(os.path.join(ROOT, "AGENTS.md"), "rb").read()
+        digest = hashlib.sha256(body).hexdigest()[:12]
+    except OSError as e:
+        return _fail_open("context/read", e)
+    _out({"hookSpecificOutput": {
+        "hookEventName": "UserPromptSubmit",
+        "additionalContext": (
+            f"VERITY 루트 지침 revision={digest}. 이번 행동 전에 현재 작업 경로의 "
+            "AGENTS.md 또는 CLAUDE.md를 읽고, 오래된 세션 기억보다 현재 파일을 우선하라. "
+            "두 파일은 바이트 동일 미러이며 RULE 1~13이 적용된다."
+        )
+    }})
+    return 0
+
+
 # ── 셀프테스트 ────────────────────────────────────────────────
 
 def _selftest() -> int:  # noqa: C901 — 케이스 나열
@@ -559,6 +593,9 @@ def _selftest() -> int:  # noqa: C901 — 케이스 나열
     # (전제: 셀프테스트 시점의 repo 는 표면 정합 — 아니라면 그것 자체가 잡아야 할 위반이다.)
     r = run("stop", {"transcript_path": mk_transcript("오늘 " + bad_word + " 확인"), "stop_hook_active": False})
     case("stop: 위반 응답 → block", r.get("decision") == "block")
+    r = run("stop", {"last_assistant_message": "오늘 " + bad_word + " 확인",
+                     "stop_hook_active": False})
+    case("stop: Codex 직접 응답 필드 위반 → block", r.get("decision") == "block")
     r = run("stop", {"transcript_path": mk_transcript("정상 응답 텍스트. 고정했다."), "stop_hook_active": False})
     case("stop: 정상 응답 → pass", r.get("decision") != "block")
     r = run("stop", {"transcript_path": mk_transcript("오늘 " + bad_word), "stop_hook_active": True})
@@ -599,6 +636,13 @@ def _selftest() -> int:  # noqa: C901 — 케이스 나열
     r = run("pretool", {"tool_name": "Bash", "tool_input": {
         "command": "bash scripts/git/commit_mine.sh -m x -- data/analysis/prereg_x.json"}})
     case("pretool: 인덱스 격리 스크립트 → allow", r == {})
+
+    # UserPromptSubmit — 기존 세션에도 현재 루트 지침 revision을 주입한다.
+    r = run("context", {"cwd": ROOT, "hook_event_name": "UserPromptSubmit", "prompt": "test"})
+    ctx = (r.get("hookSpecificOutput") or {}).get("additionalContext", "")
+    case("context: 프로젝트 cwd → 최신 지침 주입", "revision=" in ctx and "RULE 1~13" in ctx)
+    r = run("context", {"cwd": td, "hook_event_name": "UserPromptSubmit", "prompt": "test"})
+    case("context: 프로젝트 외 cwd → pass", r == {})
     r = run("pretool", {"tool_name": "Bash", "tool_input": {
         "command": "git commit -m 'DATA: 실발화 증명(git add -A --dry-run 거부) 기록'"}})
     case("pretool: 메시지 안 'git add -A' 인용 → allow (8/16 실전 오탐 재발 방지)", r == {})
@@ -665,12 +709,14 @@ def _selftest() -> int:  # noqa: C901 — 케이스 나열
     return 0 if ok else 1
 
 
-# ── WIRING (재구성용 기록 — settings.local.json 은 gitignored) ─
+# ── WIRING (재구성용 기록) ─
 # "hooks": {
 #   "Stop": [{"hooks": [{"type": "command", "timeout": 45,
 #     "command": "/usr/bin/python3 '/Users/macbookpro/Desktop/배리티 터미널/scripts/audit/verity_gate.py' --hook stop"}]}],
 #   "PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "timeout": 15,
-#     "command": "/usr/bin/python3 '/Users/macbookpro/Desktop/배리티 터미널/scripts/audit/verity_gate.py' --hook pretool"}]}]
+#     "command": "/usr/bin/python3 '/Users/macbookpro/Desktop/배리티 터미널/scripts/audit/verity_gate.py' --hook pretool"}]}],
+#   "UserPromptSubmit": [{"hooks": [{"type": "command", "timeout": 5,
+#     "command": "/usr/bin/python3 '/Users/macbookpro/Desktop/배리티 터미널/scripts/audit/verity_gate.py' --hook context"}]}]
 # }
 
 def main() -> int:
@@ -681,7 +727,9 @@ def main() -> int:
         return hook_stop()
     if hook == "pretool":
         return hook_pretool()
-    print("usage: verity_gate.py --hook stop|pretool | --selftest", file=sys.stderr)
+    if hook == "context":
+        return hook_context()
+    print("usage: verity_gate.py --hook stop|pretool|context | --selftest", file=sys.stderr)
     return 2
 
 

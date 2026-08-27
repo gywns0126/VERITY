@@ -7,7 +7,7 @@
 
 검사 7종:
   1 kickoff ≤60줄 + 필수 섹션(진입어·SoT 지도·죽은 전제)
-  2 CLAUDE.md 13룰 헤더 전부 존재 (+30KB 경고)
+  2 CLAUDE.md·AGENTS.md 바이트 동일 + 13룰 헤더 전부 존재 (+30KB 경고)
   3 MEMORY.md [[링크]] 전수 → 파일 존재 (인덱스 dangling 0)
   4 메모리 BFS 전 도달(고아 0) + frontmatter name=파일명 + P2 스텁→클러스터 섹션 무결
   5 docs/*.md 전수 ↔ INDEX.md 등재 대조 (미등재·유령)
@@ -35,7 +35,7 @@ KICKOFF = os.path.join(MEM, "project_next_session_kickoff.md")
 REPORT = os.path.join(ROOT, "data", "metadata", "knowledge_surface_report.json")
 
 KICKOFF_MAX_LINES = 60
-CLAUDE_WARN_BYTES = 30_000
+AGENT_RULES_WARN_BYTES = 30_000
 MEMORY_WARN_BYTES = 20_000
 AUDIT_STALE_DAYS = 100
 
@@ -67,19 +67,24 @@ def check_kickoff() -> dict:
     return {"lines": n, "max": KICKOFF_MAX_LINES}
 
 
-# ── 2 CLAUDE.md ──────────────────────────────────────────────
-def check_claude() -> dict:
-    p = os.path.join(ROOT, "CLAUDE.md")
-    s = read(p)
+# ── 2 런타임 루트 지침 ──────────────────────────────────────
+def check_agent_rules() -> dict:
+    claude = os.path.join(ROOT, "CLAUDE.md")
+    agents = os.path.join(ROOT, "AGENTS.md")
+    s = read(claude)
+    a = read(agents)
+    if s != a:
+        issue("agent_rules", "CLAUDE.md와 AGENTS.md 바이트 불일치 — 같은 턴에 동기화할 것")
     rules = sorted(int(x) for x in re.findall(r"^## 🚨 RULE (\d+)", s, re.M))
     expected = list(range(1, 14))
     missing = [r for r in expected if r not in rules]
     if missing:
-        issue("claude", f"RULE 헤더 부재: {missing}")
-    size = os.path.getsize(p)
-    if size > CLAUDE_WARN_BYTES:
-        warn("claude", f"{size:,}B > {CLAUDE_WARN_BYTES:,}B — P3 다이어트 재검토")
-    return {"rules": rules, "bytes": size}
+        issue("agent_rules", f"RULE 헤더 부재: {missing}")
+    sizes = {"CLAUDE.md": os.path.getsize(claude), "AGENTS.md": os.path.getsize(agents)}
+    for name, size in sizes.items():
+        if size > AGENT_RULES_WARN_BYTES:
+            warn("agent_rules", f"{name} {size:,}B > {AGENT_RULES_WARN_BYTES:,}B — P3 다이어트 재검토")
+    return {"rules": rules, "bytes": sizes, "byte_identical": s == a}
 
 
 # ── 3·4 메모리 ───────────────────────────────────────────────
@@ -218,7 +223,7 @@ def check_audit_freshness() -> dict:
 def main() -> int:
     stats = {
         "kickoff": check_kickoff(),
-        "claude": check_claude(),
+        "agent_rules": check_agent_rules(),
         "memory": check_memory(),
         "docs_index": check_docs_index(),
         "registry": check_registry(),
@@ -228,8 +233,10 @@ def main() -> int:
     print("지식 표면 자가검사 (P4)")
     print("═" * 64)
     k = stats["kickoff"]; m = stats["memory"]; d = stats["docs_index"]; r = stats["registry"]
-    print(f"층1  kickoff {k.get('lines')}/{k.get('max')}줄 · CLAUDE {stats['claude'].get('bytes',0):,}B "
-          f"(룰 {len(stats['claude'].get('rules',[]))}) ")
+    ar = stats["agent_rules"]
+    print(f"층1  kickoff {k.get('lines')}/{k.get('max')}줄 · 루트 지침 "
+          f"{ar.get('bytes', {}).get('CLAUDE.md', 0):,}B · 동일 {ar.get('byte_identical')} "
+          f"(룰 {len(ar.get('rules', []))}) ")
     print(f"층3  메모리 {m.get('files')} · 도달 {m.get('reachable')} · 고아 {m.get('orphans')}")
     print(f"층2  docs {d.get('docs')} · 등재 {d.get('listed')} · 미등재 {d.get('unlisted')} · 유령 {d.get('ghosts')}")
     print(f"달력 registry {r.get('models',0)}모델 · 기한초과 {r.get('overdue',0)} · "
