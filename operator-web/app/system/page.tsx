@@ -12,6 +12,7 @@ import { useDark, palette, FONT } from "@/lib/theme"
 import { isAuthed } from "@/lib/auth"
 import { fetchPortfolioSlim } from "@/lib/api"
 import { captureOAuthHash, refreshIfNeeded } from "@/lib/supabase"
+import { useDataRefreshEpoch } from "@/lib/useDataRefreshEpoch"
 import type { PortfolioFull } from "@/lib/types"
 import TopBar from "../components/TopBar"
 import ModerationPanel from "../components/ModerationPanel"
@@ -30,6 +31,7 @@ export default function SystemPage() {
     const c = palette(dark)
     const [authed, setAuthed] = useState<boolean | null>(null)
     const [pf, setPf] = useState<PortfolioFull | null>(null)
+    const refreshEpoch = useDataRefreshEpoch()
 
     useEffect(() => {
         captureOAuthHash()
@@ -52,7 +54,7 @@ export default function SystemPage() {
         return () => {
             cancelled = true
         }
-    }, [authed])
+    }, [authed, refreshEpoch])
 
     if (authed === null) {
         return <main style={{ minHeight: "100vh", background: c.bg }} />

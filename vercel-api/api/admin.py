@@ -1114,8 +1114,6 @@ def handle_community_moderation(handler, method: str, body: dict) -> dict:
 # ──────────────────────────────────────────────────────────────────────
 
 _SEC_BLOCK_ENABLED = os.environ.get("SEC_DISABLED", "").strip() not in ("1", "true", "True")
-_SEC_THRESHOLD = int(os.environ.get("SEC_BLOCK_THRESHOLD", "5") or "5")
-_SEC_TTL = int(os.environ.get("SEC_BLOCK_TTL_SEC", str(24 * 3600)) or str(24 * 3600))
 _sec_blocked: set = set()
 _sec_blocked_ts = 0.0
 
@@ -1156,7 +1154,12 @@ def _sec_is_blocked(ip: str) -> bool:
 
 
 def _sec_note_unauthorized(ip: str, path: str, method: str, ua: str, reason: str = "admin_unauth") -> None:
-    """무단 접근(어드민 인증 실패) 로깅 + 30분 내 임계 초과 시 자동 차단."""
+    """어드민 인증 실패를 관측용으로 기록한다.
+
+    만료된 브라우저 세션은 여러 패널을 동시에 재조회하므로 짧은 시간에 401이 반복될 수 있다.
+    인증 실패만으로 공유 blocked_ips에 추가하면 같은 IP의 Railway 시세까지 함께 차단된다.
+    실제 자동 차단은 Railway SecurityMiddleware의 명백한 스캔 패턴에만 맡긴다.
+    """
     if not (ip and _svc_ready()):
         return
     try:
@@ -1165,25 +1168,6 @@ def _sec_note_unauthorized(ip: str, path: str, method: str, ua: str, reason: str
                       json={"ip": ip, "path": (path or "")[:400], "method": method,
                             "user_agent": (ua or "")[:400], "reason": reason, "surface": "vercel"},
                       timeout=_t(4))
-    except requests.RequestException:
-        pass
-    if not _SEC_BLOCK_ENABLED:
-        return
-    try:
-        since = _sec_iso(time.time() - 1800)
-        r = requests.get(f"{SUPABASE_URL}/rest/v1/security_probe_log",
-                         headers=_svc_headers({"Prefer": "count=exact"}),
-                         params={"select": "id", "ip": f"eq.{ip}", "created_at": f"gte.{since}"}, timeout=_t(4))
-        cr = r.headers.get("Content-Range", "")
-        tail = cr.split("/")[-1] if "/" in cr else ""
-        cnt = int(tail) if tail.isdigit() else 0
-        if cnt >= _SEC_THRESHOLD:
-            requests.post(f"{SUPABASE_URL}/rest/v1/blocked_ips",
-                          headers=_svc_headers({"Prefer": "resolution=merge-duplicates,return=minimal"}),
-                          json={"ip": ip, "reason": reason, "hits": cnt, "auto": True,
-                                "surface": "vercel", "created_by": "auto",
-                                "expires_at": _sec_iso(time.time() + _SEC_TTL)}, timeout=_t(4))
-            _sec_blocked.add(ip)
     except requests.RequestException:
         pass
 

@@ -9,6 +9,7 @@ import { useDark, palette, cardStyle, FONT, NUM, MAIN_PAD, type Palette } from "
 import { fetchOperator, fetchPortfolioSlim, fetchPublic } from "@/lib/api"
 import { isAuthed } from "@/lib/auth"
 import { captureOAuthHash, refreshIfNeeded } from "@/lib/supabase"
+import { useDataRefreshEpoch } from "@/lib/useDataRefreshEpoch"
 import type { PortfolioFull, SectorRow } from "@/lib/types"
 import TopBar from "../components/TopBar"
 import PanelBoundary from "../components/PanelBoundary"
@@ -48,6 +49,7 @@ export default function MacroPage() {
     const [syn, setSyn] = useState<MacroSyn | null>(null)
     const [whales, setWhales] = useState<Investor[]>([])
     const [allSectors, setAllSectors] = useState(false)
+    const refreshEpoch = useDataRefreshEpoch()
 
     useEffect(() => {
         captureOAuthHash()
@@ -91,7 +93,7 @@ export default function MacroPage() {
         return () => {
             cancelled = true
         }
-    }, [authed])
+    }, [authed, refreshEpoch])
 
     if (authed === null) return <main style={{ minHeight: "100vh", background: c.bg }} />
 
@@ -454,4 +456,3 @@ function HeadlineCard({ c, title, items }: { c: Palette; title: string; items: A
         </div>
     )
 }
-

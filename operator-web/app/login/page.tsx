@@ -4,15 +4,12 @@
 import { useEffect, useState } from "react"
 import { useDark, palette, cardStyle, FONT } from "@/lib/theme"
 import { isAuthed } from "@/lib/auth"
-import { captureOAuthHash, googleAuthUrl, importSessionJson } from "@/lib/supabase"
+import { captureOAuthHash, googleAuthUrl } from "@/lib/supabase"
 
 export default function Login() {
     const dark = useDark()
     const c = palette(dark)
     const [ready, setReady] = useState(false)
-    const [paste, setPaste] = useState("")
-    const [showPaste, setShowPaste] = useState(false)
-    const [err, setErr] = useState("")
 
     useEffect(() => {
         captureOAuthHash()
@@ -25,16 +22,6 @@ export default function Login() {
 
     function google() {
         window.location.href = googleAuthUrl(window.location.origin + "/login")
-    }
-
-    function doImport() {
-        setErr("")
-        try {
-            importSessionJson(paste)
-            window.location.replace("/")
-        } catch (e) {
-            setErr("세션 JSON 해석 실패: " + String((e as Error).message || e))
-        }
     }
 
     return (
@@ -61,27 +48,6 @@ export default function Login() {
                         로그인하면 계좌 HUD·보유·추천·호가·주문·3종 LLM 종합이 열립니다. 세션은 이 브라우저에만 저장됩니다.
                     </div>
 
-                    <button onClick={() => setShowPaste((v) => !v)} style={{ border: "none", background: "transparent", color: c.faint, fontSize: 10.5, cursor: "pointer", fontFamily: FONT, textAlign: "left", padding: 0 }}>
-                        {showPaste ? "접기" : "세션 복구 (비상용)"}
-                    </button>
-                    {showPaste ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                            <div style={{ fontSize: 11, color: c.sub, lineHeight: 1.5 }}>
-                                구글 복귀가 안 될 때만: 알파네스트 탭 콘솔(F12)의 <span style={{ color: c.ink }}>localStorage.getItem(&#39;verity_supabase_session&#39;)</span> 값을 붙여넣으세요.
-                            </div>
-                            <textarea
-                                value={paste}
-                                onChange={(e) => setPaste(e.target.value)}
-                                rows={3}
-                                placeholder='{"access_token":"..."}'
-                                style={{ background: dark ? c.bg : c.track, color: c.ink, border: "none", borderRadius: 10, padding: "10px 13px", fontSize: 11.5, fontFamily: FONT, outline: "none", resize: "vertical" }}
-                            />
-                            <button onClick={doImport} disabled={!paste.trim()} style={{ border: "none", borderRadius: 10, padding: "9px 0", fontSize: 12.5, fontWeight: 700, fontFamily: FONT, cursor: paste.trim() ? "pointer" : "default", background: paste.trim() ? c.hi : c.track, color: paste.trim() ? c.ink : c.faint }}>
-                                세션 적용
-                            </button>
-                        </div>
-                    ) : null}
-                    {err ? <div style={{ fontSize: 11.5, color: c.up, lineHeight: 1.4 }}>{err}</div> : null}
                 </div>
             ) : null}
         </main>

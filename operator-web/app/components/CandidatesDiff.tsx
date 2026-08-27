@@ -21,11 +21,18 @@ export default function CandidatesDiff() {
     const dark = useDark()
     const c = palette(dark)
     const [d, setD] = useState<Diff | null>(null)
+    const [status, setStatus] = useState<"loading" | "ok" | "error">("loading")
 
     useEffect(() => {
         let cancelled = false
         fetchOperator<Diff>("candidates_diff").then((r) => {
-            if (!cancelled && r.ok) setD(r.data)
+            if (cancelled) return
+            if (r.ok) {
+                setD(r.data)
+                setStatus("ok")
+            } else {
+                setStatus("error")
+            }
         })
         return () => {
             cancelled = true
@@ -34,7 +41,10 @@ export default function CandidatesDiff() {
 
     const added = d?.added || []
     const removed = d?.removed || []
-    if (!d || (added.length === 0 && removed.length === 0)) return null
+    if (status === "error") {
+        return <div style={{ ...cardStyle(c, RAIL_PAD), fontFamily: FONT, fontSize: 11.5, color: c.down, fontWeight: 700 }}>후보 변경 데이터 조회 실패</div>
+    }
+    if (status === "loading" || !d || (added.length === 0 && removed.length === 0)) return null
 
     const row = (it: Item, kind: "in" | "out") => {
         const col = kind === "in" ? c.up : c.down

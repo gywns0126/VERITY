@@ -80,10 +80,14 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
     function Row({ item, k, active }: { item: Stock; k: string; active?: boolean }) {
         const isUS = item.market === "US"
         return (
-            <div
+            <button
+                type="button"
                 key={k}
+                id={`af-search-option-${k}`}
+                role="option"
+                aria-selected={Boolean(active)}
                 onClick={() => select(item)}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 11px", borderRadius: 10, cursor: "pointer", gap: 8, background: active ? hover : "transparent" }}
+                style={{ display: "flex", width: "100%", border: "none", fontFamily: FONT, textAlign: "left", alignItems: "center", justifyContent: "space-between", padding: "9px 11px", borderRadius: 10, cursor: "pointer", gap: 8, background: active ? hover : "transparent" }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = hover }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = active ? hover : "transparent" }}
             >
@@ -96,13 +100,16 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
                 <span style={{ fontSize: 10, fontWeight: 700, color: isUS ? c.down : c.vt, background: isUS ? c.downS : c.vtS, borderRadius: 6, padding: "2px 6px" }}>
                     {isUS ? "US" : "KR"}
                 </span>
-            </div>
+            </button>
         )
     }
 
     // floating = 커맨드바 모드: 결과를 입력창 아래 절대배치 드롭다운으로 (레이아웃 밀림 0).
     const resultsBox = results.length > 0 ? (
         <div
+            id="af-search-results"
+            role="listbox"
+            aria-label="종목 검색 결과"
             style={{
                 background: c.card,
                 borderRadius: 14,
@@ -131,6 +138,12 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
         <div style={{ fontFamily: FONT, width: "100%", boxSizing: "border-box", position: floating ? "relative" : "static" }}>
             <input
                 id="af-search"
+                role="combobox"
+                aria-label="종목 검색"
+                aria-autocomplete="list"
+                aria-expanded={results.length > 0}
+                aria-controls="af-search-results"
+                aria-activedescendant={idx >= 0 && results[idx] ? `af-search-option-${results[idx].ticker}${idx}` : undefined}
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setIdx(-1) }}
                 onKeyDown={(e) => {
@@ -149,9 +162,9 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         {recent.map((it, i) =>
                             it ? (
-                                <span key={(it.ticker || "") + i} onClick={() => select(it)} style={{ fontSize: 12, color: c.ink, background: inputBg, borderRadius: 999, padding: "6px 11px", cursor: "pointer" }}>
+                                <button type="button" key={(it.ticker || "") + i} onClick={() => select(it)} style={{ border: "none", fontFamily: FONT, fontSize: 12, color: c.ink, background: inputBg, borderRadius: 999, padding: "6px 11px", cursor: "pointer" }}>
                                     {it.name || it.ticker}
-                                </span>
+                                </button>
                             ) : null
                         )}
                     </div>

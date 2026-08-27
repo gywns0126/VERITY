@@ -18,6 +18,7 @@ GET  /api/order → Railway /api/order (잔고)
 """
 from http.server import BaseHTTPRequestHandler
 import json
+import hashlib
 import math
 import logging
 import os
@@ -103,6 +104,59 @@ _DAILY_COUNT_LIMIT_DEFAULT = int(os.environ.get("ORDER_DAILY_COUNT_LIMIT", "50")
 _ORDER_DEDUPE: dict = {}
 _ORDER_DEDUPE_TTL = 30
 _DAILY_ORDER_COUNT: dict = {}
+
+
+def _shared_reserve(user: dict, normalized: dict) -> Optional[Tuple[bool, str]]:
+    """Supabase RPC로 인스턴스 공용 주문 슬롯을 원자적으로 예약한다.
+
+    마이그레이션 전환기에는 RPC 부재만 None으로 반환해 기존 인메모리 가드를 유지한다.
+    그 외 오류는 안전하게 주문을 거절한다.
+    """
+    if not (sb.SUPABASE_URL and sb.SUPABASE_ANON_KEY):
+        return None
+    canonical = json.dumps(
+        {
+            "ticker": normalized["ticker"],
+            "side": normalized["side"],
+            "qty": normalized["qty"],
+            "price": normalized["price"],
+            "order_type": normalized["order_type"],
+            "market": normalized["market"],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    order_hash = hashlib.sha256(canonical).hexdigest()
+    daily_limit = int(user["limits"].get("daily_order_count_limit", _DAILY_COUNT_LIMIT_DEFAULT))
+    try:
+        r = requests.post(
+            f"{sb.SUPABASE_URL}/rest/v1/rpc/reserve_order_slot",
+            headers={
+                "apikey": sb.SUPABASE_ANON_KEY,
+                "Authorization": f"Bearer {user['jwt']}",
+                "Content-Type": "application/json",
+            },
+            json={"p_order_hash": order_hash, "p_daily_limit": daily_limit},
+            timeout=8,
+        )
+        if r.status_code in (404, 405) or (r.status_code == 400 and "PGRST202" in r.text):
+            _logger.warning("reserve_order_slot RPC unavailable — using transition memory guard")
+            return None
+        if r.status_code != 200:
+            _logger.error("reserve_order_slot failed: status=%s body=%s", r.status_code, r.text[:200])
+            return False, "order safety ledger unavailable"
+        payload = r.json()
+        if payload.get("ok") is True:
+            return True, ""
+        reason = payload.get("reason")
+        if reason == "duplicate":
+            return False, "duplicate order within 30s"
+        if reason == "daily_limit":
+            return False, "daily order count exceeded"
+        return False, "order safety ledger rejected request"
+    except (requests.RequestException, ValueError) as e:
+        _logger.error("reserve_order_slot error: %s", e)
+        return False, "order safety ledger unavailable"
 
 
 def _safe_err(exc, public_msg: str = "Internal error") -> str:
@@ -334,25 +388,34 @@ class handler(BaseHTTPRequestHandler):
             self._json(400, {"error": msg})
             return
 
-        now = time.time()
-        dedupe_key = (
-            f"{user['user_id']}:{normalized['ticker']}:{normalized['side']}:"
-            f"{normalized['qty']}:{normalized['price']}:{normalized['order_type']}"
-        )
-        last = _ORDER_DEDUPE.get(dedupe_key, 0)
-        if now - last < _ORDER_DEDUPE_TTL:
-            self._json(429, {"error": "duplicate order within 30s"})
-            return
-        _ORDER_DEDUPE[dedupe_key] = now
-        _prune_dedupe(now)
+        shared = _shared_reserve(user, normalized)
+        if shared is not None:
+            reserved, reserve_error = shared
+            if not reserved:
+                self._json(429 if "duplicate" in reserve_error or "daily" in reserve_error else 503,
+                           {"error": reserve_error})
+                return
+        else:
+            # 마이그레이션 전환기 한정 폴백. 032 적용 뒤에는 RPC가 항상 이 경로보다 우선한다.
+            now = time.time()
+            dedupe_key = (
+                f"{user['user_id']}:{normalized['ticker']}:{normalized['side']}:"
+                f"{normalized['qty']}:{normalized['price']}:{normalized['order_type']}"
+            )
+            last = _ORDER_DEDUPE.get(dedupe_key, 0)
+            if now - last < _ORDER_DEDUPE_TTL:
+                self._json(429, {"error": "duplicate order within 30s"})
+                return
+            _ORDER_DEDUPE[dedupe_key] = now
+            _prune_dedupe(now)
 
-        day_key = f"{user['user_id']}:{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
-        cnt = _DAILY_ORDER_COUNT.get(day_key, 0)
-        daily_limit = int(user["limits"].get("daily_order_count_limit", _DAILY_COUNT_LIMIT_DEFAULT))
-        if cnt >= daily_limit:
-            self._json(429, {"error": "daily order count exceeded"})
-            return
-        _DAILY_ORDER_COUNT[day_key] = cnt + 1
+            day_key = f"{user['user_id']}:{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+            cnt = _DAILY_ORDER_COUNT.get(day_key, 0)
+            daily_limit = int(user["limits"].get("daily_order_count_limit", _DAILY_COUNT_LIMIT_DEFAULT))
+            if cnt >= daily_limit:
+                self._json(429, {"error": "daily order count exceeded"})
+                return
+            _DAILY_ORDER_COUNT[day_key] = cnt + 1
 
         try:
             r = requests.post(

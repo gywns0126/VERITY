@@ -12,6 +12,7 @@ import { useDark, palette, FONT } from "@/lib/theme"
 import { fetchPortfolioSlim, fetchPublic } from "@/lib/api"
 import { isAuthed } from "@/lib/auth"
 import { captureOAuthHash, refreshIfNeeded } from "@/lib/supabase"
+import { useDataRefreshEpoch } from "@/lib/useDataRefreshEpoch"
 import type { AlertItem, MarketExplain, PortfolioFull } from "@/lib/types"
 import TopBar from "./components/TopBar"
 import MarketStrip from "./components/MarketStrip"
@@ -37,6 +38,7 @@ export default function Home() {
     const [pfStatus, setPfStatus] = useState<"loading" | "ok" | "error">("loading")
     const [alerts, setAlerts] = useState<AlertItem[]>([])
     const [alertsLoaded, setAlertsLoaded] = useState(false)
+    const refreshEpoch = useDataRefreshEpoch()
 
     // 인증 게이트 — 미인증 = /login
     useEffect(() => {
@@ -84,7 +86,7 @@ export default function Home() {
         return () => {
             cancelled = true
         }
-    }, [authed])
+    }, [authed, refreshEpoch])
 
     if (authed === null) {
         return <main style={{ minHeight: "100vh", background: c.bg }} />
@@ -127,7 +129,7 @@ export default function Home() {
 
             <div className="af-frame" style={{ maxWidth: 1560, margin: "0 auto", padding: "12px 18px 10px", boxSizing: "border-box" }}>
                 {/* R1 계좌 헤드업 + R2 P0 + R3 시장 — 상단 고정 구역 */}
-                <AccountHud vams={pf?.vams} status={pfStatus} />
+                <AccountHud vams={pf?.vams} status={pfStatus} updatedAt={pf?.updated_at} />
                 <P0Line alerts={alerts} holdTickers={holdT} />
                 <MarketStrip explain={explain} />
                 <NewsTicker items={newsItems} />

@@ -10,7 +10,7 @@ function won(v: number): string {
     return Math.round(v).toLocaleString() + "원"
 }
 
-export default function AccountHud({ vams, status }: { vams?: Vams; status: "loading" | "ok" | "error" }) {
+export default function AccountHud({ vams, status, updatedAt }: { vams?: Vams; status: "loading" | "ok" | "error"; updatedAt?: string }) {
     const dark = useDark()
     const c = palette(dark)
     const holds = vams?.holdings || []
@@ -72,7 +72,7 @@ export default function AccountHud({ vams, status }: { vams?: Vams; status: "loa
             </div>
 
             <span style={{ marginLeft: "auto", fontSize: 10.5, color: c.faint, ...NUM }}>
-                {asof ? `시세 ${asof} · ` : ""}보유 {holds.length}종목
+                {asof ? `시세 ${asof} · ` : ""}{updatedAt ? `스냅샷 ${String(updatedAt).slice(5, 16).replace("T", " ")} · ` : ""}보유 {holds.length}종목
             </span>
         </div>
     )

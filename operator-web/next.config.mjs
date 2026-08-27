@@ -1,5 +1,11 @@
+import { dirname } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const appRoot = dirname(fileURLToPath(import.meta.url))
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    turbopack: { root: appRoot },
     // 오퍼레이터 전용(비공개). 검색엔진 색인 방지 헤더.
     async headers() {
         return [

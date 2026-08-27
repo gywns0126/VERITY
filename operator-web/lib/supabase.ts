@@ -86,20 +86,6 @@ export function captureOAuthHash(): boolean {
     return true
 }
 
-/** 세션 JSON 붙여넣기 폴백 — 공개사이트 콘솔의 verity_supabase_session 값 그대로. */
-export function importSessionJson(raw: string): Session {
-    const s = JSON.parse(raw.trim())
-    if (!s || typeof s.access_token !== "string" || !s.access_token) throw new Error("access_token 없는 JSON")
-    const sess: Session = {
-        access_token: s.access_token,
-        refresh_token: s.refresh_token || "",
-        expires_at: Number(s.expires_at) || Math.floor(Date.now() / 1000) + 3600,
-        user_email: s.user_email || s.email,
-    }
-    saveSession(sess)
-    return sess
-}
-
 /** 만료 임박 시 refresh — 성공 true. 다중 탭 락(SessionKeeper 패턴, 회전 충돌 방지). */
 export async function refreshIfNeeded(): Promise<boolean> {
     const s = loadSession()

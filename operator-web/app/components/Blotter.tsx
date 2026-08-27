@@ -1,6 +1,5 @@
 "use client"
-// Blotter — 주문 블로터 (기관 OMS 문법: 블로터 = primary interface). v1 = 이 브라우저에서
-// 낸 주문의 접수/거부 기록 (localStorage af_blotter, OrderTicket 이 기록·이벤트 발신).
+// 주문 요청 기록 — 이 브라우저에서 낸 요청의 접수/거부 응답(localStorage af_blotter).
 // 체결·정정·취소 동기화(KIS 체결통보)는 후속.
 import { useEffect, useState } from "react"
 import { useDark, palette, cardStyle, FONT, NUM, CARD_TITLE, MAIN_PAD } from "@/lib/theme"
@@ -58,7 +57,7 @@ export default function Blotter() {
     return (
         <div style={{ ...cardStyle(c, MAIN_PAD), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                <span style={{ ...CARD_TITLE, color: c.ink }}>주문 블로터</span>
+                <span style={{ ...CARD_TITLE, color: c.ink }}>주문 요청 기록</span>
                 <button onClick={clear} style={{ border: "none", background: "transparent", color: c.faint, fontSize: 10.5, cursor: "pointer", fontFamily: FONT, padding: 0 }}>
                     비우기
                 </button>
@@ -81,7 +80,7 @@ export default function Blotter() {
                     </div>
                 )
             })}
-            <div style={{ fontSize: 9.5, color: c.faint }}>이 브라우저에서 낸 주문 기록 · 체결 동기화 후속</div>
+            <div style={{ fontSize: 9.5, color: c.faint }}>체결 원장 아님 · 이 브라우저의 접수/거부 응답만 표시 · 체결·정정·취소는 증권사에서 확인</div>
         </div>
     )
 }

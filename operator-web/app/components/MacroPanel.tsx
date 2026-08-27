@@ -34,7 +34,7 @@ export default function MacroPanel({ data }: { data: PortfolioFull | null }) {
     const dark = useDark()
     const c = palette(dark)
     const [syn, setSyn] = useState<MacroSyn | null>(null)
-    const [synStatus, setSynStatus] = useState<"loading" | "ok" | "none">("loading")
+    const [synStatus, setSynStatus] = useState<"loading" | "ok" | "none" | "error">("loading")
 
     useEffect(() => {
         let cancelled = false
@@ -43,8 +43,10 @@ export default function MacroPanel({ data }: { data: PortfolioFull | null }) {
             if (r.ok && r.data?.sources?.claude?.content) {
                 setSyn(r.data)
                 setSynStatus("ok")
-            } else {
+            } else if (r.ok) {
                 setSynStatus("none")
+            } else {
+                setSynStatus("error")
             }
         })
         return () => {
@@ -100,6 +102,10 @@ export default function MacroPanel({ data }: { data: PortfolioFull | null }) {
                 </div>
                 {synStatus === "loading" ? (
                     <div style={{ fontSize: 11.5, color: c.faint }}>불러오는 중…</div>
+                ) : synStatus === "error" ? (
+                    <div style={{ fontSize: 11.5, color: c.down, lineHeight: 1.5, fontWeight: 700 }}>
+                        거시 분석기 조회 실패 — 인증·발행 상태를 확인하세요.
+                    </div>
                 ) : synStatus === "none" ? (
                     <div style={{ fontSize: 11.5, color: c.sub, lineHeight: 1.5 }}>
                         아직 미적재 — 평일 07:50 장전 배치 후 자동 표시됩니다.

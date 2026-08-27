@@ -1,11 +1,11 @@
 "use client"
 // ControlPanel — 매매 기준 제어판 (갭3, PREREG_TRADING_BANDS Part D · PM 승인 2026-08-02).
 // 총액 → tier 자동 밴드(api/portfolio/band_scaler.py 와 동일 표 — 수정 시 양쪽 동기 의무) +
-// 최종 관리자 강제 override. 🚨 RULE 7: 임계 조정 = 사전등록·승인 1회 원칙 — 모든 override 는
-// 사유 필수 + 이력 기록(불변 append) + 기본값 복귀 제공. 반복 무기록 조정(곡선맞추기) 차단.
+// 브라우저 로컬 시뮬레이션. 실제 band_scaler/rebalance 입력과 연결되지 않으므로 강제 override 로
+// 오인시키지 않는다. 서버 연동 전까지 값과 이력은 이 브라우저에서만 유지한다.
 // 표시값 철학 — 자동 매매 없음. 외곽선/이모지/좌측바 금지(경계=채움색).
 import { useEffect, useState } from "react"
-import { useDark, palette, cardStyle, FONT, NUM, type Palette } from "@/lib/theme"
+import { useDark, palette, cardStyle, FONT, NUM } from "@/lib/theme"
 
 const VAL_KEY = "af_total_value_krw"
 const OVR_KEY = "af_band_overrides" // {values:{...}|null, log:[{ts,values,reason}]}
@@ -86,7 +86,7 @@ export default function ControlPanel() {
         persist(draft, [row, ...log].slice(0, 50))
         setDraft(null)
         setReason("")
-        setMsg("override 적용·기록됨")
+        setMsg("로컬 시뮬레이션 적용됨")
     }
     function resetDefault() {
         const row: LogRow = { ts: new Date().toISOString().slice(0, 16).replace("T", " "), values: null, reason: "기본값 복귀" }
@@ -116,8 +116,8 @@ export default function ControlPanel() {
         <div style={{ fontFamily: FONT, display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ ...cardStyle(c), display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: c.ink }}>매매 기준 제어판</span>
-                    <span style={{ fontSize: 10, color: c.faint }}>표시값 · 자동 매매 아님 · 사전등록 tier</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: c.ink }}>매매 기준 시뮬레이터</span>
+                    <span style={{ fontSize: 10, color: c.faint }}>이 브라우저에서만 계산 · 실제 주문·리밸런싱 미연동</span>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 10, flexWrap: "wrap" }}>
@@ -134,7 +134,7 @@ export default function ControlPanel() {
                     <span style={{ fontSize: 11, fontWeight: 700, color: c.vt, background: c.vtS, borderRadius: 8, padding: "5px 10px" }}>
                         tier {t.tier} · 밴드 ×{t.mult} · 드리프트 ±{t.drift}% · 최소 {num(t.minTrade)}원
                     </span>
-                    {ovr ? <span style={{ fontSize: 11, fontWeight: 700, color: c.amber, background: c.amberS, borderRadius: 8, padding: "5px 10px" }}>override 활성</span> : null}
+                    {ovr ? <span style={{ fontSize: 11, fontWeight: 700, color: c.amber, background: c.amberS, borderRadius: 8, padding: "5px 10px" }}>로컬 조정 활성</span> : null}
                 </div>
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -152,7 +152,7 @@ export default function ControlPanel() {
                         style={{ flex: 1, minWidth: 200, background: dark ? c.bg : c.track, color: c.ink, border: "none", borderRadius: 10, padding: "9px 11px", fontSize: 12.5, fontFamily: FONT, outline: "none" }}
                     />
                     <button onClick={apply} disabled={!draft} style={{ border: "none", borderRadius: 10, padding: "9px 14px", fontSize: 12.5, fontWeight: 800, fontFamily: FONT, cursor: draft ? "pointer" : "default", background: draft ? c.vt : c.hi, color: draft ? "#fff" : c.faint }}>
-                        override 적용
+                        로컬 적용
                     </button>
                     <button onClick={resetDefault} style={{ border: "none", borderRadius: 10, padding: "9px 14px", fontSize: 12.5, fontWeight: 700, fontFamily: FONT, cursor: "pointer", background: c.hi, color: c.sub }}>
                         기본값 복귀
@@ -160,13 +160,13 @@ export default function ControlPanel() {
                 </div>
                 {msg ? <div style={{ fontSize: 11, color: c.amber }}>{msg}</div> : null}
                 <div style={{ fontSize: 10.5, color: c.faint, lineHeight: 1.5 }}>
-                    자동 = 총액 tier(사전등록 승인 표) · override = 최종 관리자 강제, 전 건 사유+이력 기록(RULE 7 반복 무기록 조정 차단)
+                    자동값과 조정값은 비교용입니다. 실제 설정은 서버의 사전등록 band_scaler를 사용합니다.
                 </div>
             </div>
 
             {log.length ? (
                 <div style={{ ...cardStyle(c, "12px 15px"), display: "flex", flexDirection: "column", gap: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: c.faint }}>변경 이력 (append-only)</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: c.faint }}>이 브라우저의 시뮬레이션 이력</span>
                     {log.slice(0, 6).map((r, i) => (
                         <div key={i} style={{ display: "flex", gap: 8, fontSize: 11.5, paddingTop: i === 0 ? 0 : 5, borderTop: i === 0 ? "none" : `1px solid ${c.line}` }}>
                             <span style={{ color: c.faint, whiteSpace: "nowrap", ...NUM }}>{r.ts}</span>

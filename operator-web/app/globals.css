@@ -10,6 +10,14 @@ body {
     padding: 0;
 }
 
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+    outline: 3px solid rgba(108, 92, 231, 0.42) !important;
+    outline-offset: 2px;
+}
+
 :root {
     /* 국기 배지 테두리 등 컴포넌트가 참조하는 카드색 (StockLogo) */
     --af-card: #ffffff;
