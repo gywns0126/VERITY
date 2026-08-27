@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-28T04:56:50+09:00",
+ "as_of": "2026-08-28T07:39:10+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -42,6 +42,12 @@
     },
     {
      "key": "close",
+     "modules": [
+      "fact.py"
+     ]
+    },
+    {
+     "key": "equity_research_brief",
      "modules": [
       "fact.py"
      ]
@@ -139,23 +145,19 @@
    ],
    "thin_keys": [
     {
-     "key": "equity_research_brief",
-     "coverage": "1/75"
-    },
-    {
      "key": "kis_financial_ratio",
-     "coverage": "1/75"
-    },
-    {
-     "key": "kis_credit_balance",
-     "coverage": "1/75"
+     "coverage": "1/46"
     },
     {
      "key": "kis_short_sale",
-     "coverage": "1/75"
+     "coverage": "1/46"
+    },
+    {
+     "key": "kis_credit_balance",
+     "coverage": "1/46"
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 18종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 19종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
@@ -208,11 +210,11 @@
      "fired": 0
     },
     {
-     "rule": "외인·기관 순매도 상위 (KIS)",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
-     "rule": "계속기업 불확실성 (감사인 명시)",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
@@ -289,8 +291,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 53,
-    "scored": 53,
+    "with_pct": 24,
+    "scored": 24,
     "ok": true
    },
    "dead_guards": [
