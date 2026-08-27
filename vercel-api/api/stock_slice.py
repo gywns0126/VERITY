@@ -37,6 +37,7 @@ KR_SOURCES = {
     "lending": "securities_lending.json",
     "supply": "supply_demand.json",
     "employment": "nps_employment.json",
+    "overview": "kr_business_overview_public.json",
 }
 # 美 = 리포트 슬라이스만 (내부자·13F·컨센서스는 /api/verity/us-forensics 가 이미 per-ticker).
 US_SOURCES = {
@@ -57,7 +58,7 @@ _CACHE = {}  # fname -> (epoch, doc)
 #   준실시간 축(flow·supply·warn)만 짧게 남긴다.
 _TTL_BY_SOURCE = {
     "report": 7200, "report_smallcap": 21600, "forensics": 7200,
-    "insider": 7200, "lending": 7200, "employment": 7200,
+    "insider": 7200, "lending": 7200, "employment": 7200, "overview": 21600,
     "flow": 1800, "supply": 1800, "warn": 1800,
 }
 _FNAME_TTL = None
@@ -129,6 +130,9 @@ def _slice(doc, ticker):
             if isinstance(s, dict) and str(s.get("ticker") or "").upper() == ticker:
                 return s
         return None
+    rows = doc.get("rows")
+    if isinstance(rows, dict):
+        return rows.get(ticker) or rows.get(ticker.upper()) or rows.get(ticker.lower())
     m = doc.get("flows") or doc.get("warnings") or doc
     if isinstance(m, dict):
         return m.get(ticker) or m.get(ticker.upper())
@@ -193,6 +197,8 @@ class handler(BaseHTTPRequestHandler):
             out["lend_as_of"] = _meta_field(docs.get("lending"), "as_of")
             out["supply"] = _slice(docs.get("supply"), ticker)
             out["employment"] = _employment_gate(_slice(docs.get("employment"), ticker))
+            out["business_overview"] = _slice(docs.get("overview"), ticker)
+            out["business_overview_as_of"] = _meta_field(docs.get("overview"), "generated_at")
         else:
             report = _slice(docs.get("report"), ticker) or _slice(docs.get("report_smallcap"), ticker)
             out["report"] = report

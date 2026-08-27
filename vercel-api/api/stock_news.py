@@ -263,13 +263,35 @@ def _fetch_google_news(query, limit=20):
 def _name_in_title(name, title):
     """종목명이 제목에 '단어 경계'로 등장하는지 — 앞 글자가 한글/영숫자면 다른 단어의 꼬리.
     예: '하이닉스' 제목에 '이닉스' 검색 = 하[이닉스] 부분매칭 → 오매칭(2026-07-10 사용자 보고).
-    한국어는 조사(가/는/도)가 이름 뒤에 바로 붙으므로 뒤 경계는 검사하지 않음."""
+    한국어 1~2자 핵심어는 뒤 경계도 본다. '쿠쿠'는 허용하지만 '쿠쿠렐라'는 제외한다.
+    짧은 이름 뒤 조사는 허용한다."""
     if not name or not title:
         return False
     try:
-        return re.search(r"(?<![가-힣A-Za-z0-9])" + re.escape(name), title) is not None
+        pat = r"(?<![가-힣A-Za-z0-9])" + re.escape(name)
+        if len(name) <= 2 and re.fullmatch(r"[가-힣]+", name):
+            pat += r"(?=$|[^가-힣A-Za-z0-9]|[은는이가을를의와과도에로])"
+        return re.search(pat, title) is not None
     except re.error:
         return name in title
+
+
+def _safe_search_core(core):
+    """Google 광역 검색에 쓸 수 있는 충분히 구체적인 핵심어인지."""
+    if not core:
+        return False
+    if re.fullmatch(r"[가-힣]+", core):
+        return len(core) >= 3
+    return len(core) >= 2
+
+
+def _entity_matches_title(name, core, title, related_disclosure=None):
+    """종목명 또는 안전한 축약명이 제목에 있어야 한다. 종목 공시 연결은 예외로 인정한다."""
+    if _name_in_title(name, title):
+        return True
+    if core and core != name and _name_in_title(core, title):
+        return True
+    return related_disclosure is not None
 
 
 def fetch_stock_news(code, name="", max_items=15, pages=2):
@@ -285,7 +307,9 @@ def fetch_stock_news(code, name="", max_items=15, pages=2):
     try:
         with ThreadPoolExecutor(max_workers=2) as ex:
             f_naver = ex.submit(_fetch_search_api, nm, 30)
-            f_google = ex.submit(_fetch_google_news, core or nm)
+            # 1~2자 한국어 핵심어는 광역 검색 금지. '쿠쿠' 검색이 '쿠쿠렐라'를 대량
+            # 유입시킨 실사례가 있어, 이 경우 전체 종목명을 사용한다.
+            f_google = ex.submit(_fetch_google_news, core if _safe_search_core(core) else nm)
             raw = (f_naver.result() or []) + (f_google.result() or [])
     except Exception as e:  # noqa: BLE001
         _logger.warning("news 병렬 fetch 실패: %s", e)
@@ -308,7 +332,7 @@ def fetch_stock_news(code, name="", max_items=15, pages=2):
                 c["item"], c["cred"], c["dt"] = it, cred, dt
 
     disc = _disclosures_for(code)  # 짬뽕 — 종목 공시 인덱스
-    kept, spill = [], []
+    kept = []
     for c in clusters.values():
         it, dt = c["item"], c["dt"]
         cat = _category(it["title"])
@@ -320,17 +344,13 @@ def fetch_stock_news(code, name="", max_items=15, pages=2):
             "related_disclosure": related,
             "_sort": dt.timestamp() if dt else 0,
         }
-        # 노이즈 판정 (2026-07-10 경계매칭 강화 — 이닉스 페이지에 하이닉스 기사 유입 fix):
-        #  · 제목에 핵심토큰이 '부분매칭으로만' 존재(하[이닉스]) = 다른 종목 기사 강신호 → 카테고리 무관 spill
-        #  · '시장' 카테고리 + 경계매칭 없음 → spill (기존 룰의 경계 강화)
-        #  · 제목에 토큰 자체가 없는 비'시장' 기사 = 검색 질의 연관성 신뢰(기존 동작 유지)
-        _embedded_only = bool(core) and (core in it["title"]) and not _name_in_title(core, it["title"])
-        _market_nomatch = cat == "시장" and bool(core) and not _name_in_title(core, it["title"])
-        (spill if (_embedded_only or _market_nomatch) else kept).append(rec)
+        # 검색 결과 수를 채우기 위해 엔티티 불일치 기사를 되살리지 않는다. 종목명/축약명
+        # 경계 매칭 또는 종목 공시 연결이 있는 기사만 남긴다. 적은 결과가 오탐보다 낫다.
+        if _entity_matches_title(nm, core, it["title"], related):
+            kept.append(rec)
 
     kept.sort(key=lambda x: x["_sort"], reverse=True)
-    spill.sort(key=lambda x: x["_sort"], reverse=True)
-    out = kept if len(kept) >= 6 else kept + spill   # soft filter — 과필터로 빈약해지면 노이즈도 보충
+    out = kept
     # 30일 표시 창(PM 2026-07-12) — 종목 뉴스는 드물어 최근 30일 우선. now/_sort 모두 UTC-naive .timestamp()라 상대비교 정합.
     #   soft — 30일 내가 6건 미만이면 오래된 것도 유지(빈약 방지). 시장 플래시(7일)보다 김: 한 종목 뉴스 발생 저빈도.
     cutoff = now.timestamp() - 30 * 86400

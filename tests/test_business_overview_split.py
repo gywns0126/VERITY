@@ -20,6 +20,7 @@ Aug 1–26 인프라 $112.12 중 **Fast Origin Transfer $63.79 (236 GB)** 가 �
 """
 from __future__ import annotations
 
+import importlib.util
 import re
 from pathlib import Path
 
@@ -27,6 +28,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 BUILDER = _ROOT / "api" / "builders" / "stock_report_public_builder.py"
 ACTION = _ROOT / ".github" / "actions" / "publish-data" / "action.yml"
 BLOBJS = _ROOT / ".github" / "actions" / "publish-data" / "blob_upload.js"
+STOCK_SLICE = _ROOT / "vercel-api" / "api" / "stock_slice.py"
 FNAME = "kr_business_overview_public.json"
 
 
@@ -55,6 +57,21 @@ def test_new_blob_has_an_explicit_cdn_cache_rule():
     m = re.search(r"kr_business_overview_public\\?\.json\$/,\s*(\d+)", js)
     assert m, "CDN 캐시 규칙 미등록 — 기본 600s 로 떨어진다"
     assert int(m.group(1)) >= 3600, f"캐시가 너무 짧다({m.group(1)}s) — 갱신은 일 1.4회다"
+
+
+def test_stock_slice_returns_only_the_requested_overview():
+    """브라우저가 개요 원장 전체를 받지 않고 종목 1건만 받는다."""
+    src = STOCK_SLICE.read_text(encoding="utf-8")
+    assert '"overview": "kr_business_overview_public.json"' in src
+    assert 'out["business_overview"] = _slice(docs.get("overview"), ticker)' in src
+    assert 'out["business_overview_as_of"] = _meta_field(docs.get("overview"), "generated_at")' in src
+
+    spec = importlib.util.spec_from_file_location("stock_slice_overview_contract", STOCK_SLICE)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    row = {"text": "반도체 제품을 제조한다.", "fiscal_year": 2025}
+    assert mod._slice({"rows": {"005930": row}}, "005930") == row
 
 
 def test_published_payload_shape_if_present():
