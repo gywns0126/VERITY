@@ -50,6 +50,9 @@ OUTPUT_PATH = os.path.join(DATA_DIR, "freshness_board.json")
 #   남겨 "미감시"를 명시하되, 공개 board 에서 discontinued(수집 중단)로 오표기되지 않게 제외.
 EXCLUDE_IDS = {
     "analyst_reports",
+    # 이 빌더가 덮어쓰기 직전에 이전 출력 파일을 읽으면 자기 자신을 stale로 판정한다.
+    # 생성 성공 여부는 cron workflow와 data_health generated_at에서 별도로 확인한다.
+    "freshness_board",
     "kr_stock_names", "kr_earnings_pattern", "us_earnings_pattern", "recommendations",
 }
 
