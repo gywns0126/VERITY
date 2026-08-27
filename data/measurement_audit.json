@@ -1,18 +1,17 @@
 {
- "as_of": "2026-08-27T18:33:41+09:00",
+ "as_of": "2026-08-28T04:56:50+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
   "ledger_integrity",
+  "key_coverage",
   "guard_inputs",
   "exit_paths",
   "as_of_staleness"
  ],
  "known_unresolved": [
-  "key_coverage",
   "rule_discrimination",
-  "flag_coverage",
-  "input_constancy"
+  "flag_coverage"
  ],
  "skipped": [],
  "checks": {
@@ -36,15 +35,39 @@
      ]
     },
     {
+     "key": "asset_turnover",
+     "modules": [
+      "quality.py"
+     ]
+    },
+    {
      "key": "close",
      "modules": [
       "fact.py"
      ]
     },
     {
+     "key": "gross_margin",
+     "modules": [
+      "quality.py"
+     ]
+    },
+    {
+     "key": "gross_profit",
+     "modules": [
+      "quality.py"
+     ]
+    },
+    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
+     ]
+    },
+    {
+     "key": "net_income",
+     "modules": [
+      "quality.py"
      ]
     },
     {
@@ -61,6 +84,18 @@
     },
     {
      "key": "prev_year",
+     "modules": [
+      "quality.py"
+     ]
+    },
+    {
+     "key": "retained_earnings",
+     "modules": [
+      "quality.py"
+     ]
+    },
+    {
+     "key": "revenue",
      "modules": [
       "quality.py"
      ]
@@ -84,7 +119,19 @@
      ]
     },
     {
+     "key": "total_assets",
+     "modules": [
+      "quality.py"
+     ]
+    },
+    {
      "key": "total_debt",
+     "modules": [
+      "quality.py"
+     ]
+    },
+    {
+     "key": "working_capital",
      "modules": [
       "quality.py"
      ]
@@ -93,14 +140,23 @@
    "thin_keys": [
     {
      "key": "equity_research_brief",
-     "coverage": "1/83"
+     "coverage": "1/75"
+    },
+    {
+     "key": "kis_financial_ratio",
+     "coverage": "1/75"
+    },
+    {
+     "key": "kis_credit_balance",
+     "coverage": "1/75"
+    },
+    {
+     "key": "kis_short_sale",
+     "coverage": "1/75"
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 10종 — 해당 채점 축이 조용히 죽어 있다",
-   "baseline": {
-    "dead_keys": 10
-   },
-   "status": "KNOWN"
+   "detail": "레코드에 한 번도 없는 키 18종 — 해당 채점 축이 조용히 죽어 있다",
+   "status": "REGRESSION"
   },
   "price_scale": {
    "ok": true,
@@ -110,13 +166,13 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 106,
+   "snapshots": 107,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
      "rule": "perplexity_event_critical",
-     "fired_days": 2,
-     "activation_pct": 1.9,
+     "fired_days": 3,
+     "activation_pct": 2.8,
      "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
     },
     {
@@ -133,8 +189,8 @@
     "watch_pct": 85.0
    },
    "days_without_any_cap": 12,
-   "days_without_any_cap_pct": 11.3,
-   "detail": "상시/미발동 등급 규칙 2종 — perplexity_event_critical(1.9%), oil_geopolitical_shock(0.9%). cap 없는 날 12/106일",
+   "days_without_any_cap_pct": 11.2,
+   "detail": "상시/미발동 등급 규칙 2종 — perplexity_event_critical(2.8%), oil_geopolitical_shock(0.9%). cap 없는 날 12/107일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -145,18 +201,18 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 5092,
+   "stock_days": 5167,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
      "fired": 0
     },
     {
-     "rule": "계속기업 불확실성 (감사인 명시)",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
-     "rule": "외인·기관 순매도 상위 (KIS)",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
@@ -205,29 +261,12 @@
    "status": "KNOWN"
   },
   "input_constancy": {
-   "ok": false,
+   "ok": true,
    "inputs_checked": 9,
-   "varying": 5,
-   "constant_inputs": [
-    {
-     "input": "kis_credit_balance.credit_rate",
-     "n_present": 18,
-     "constant_value": 0.0,
-     "severity": "high"
-    },
-    {
-     "input": "kis_financial_ratio.current_ratio",
-     "n_present": 18,
-     "constant_value": 0.0,
-     "severity": "high"
-    }
-   ],
-   "detail": "전 종목 동일값 입력 2종 — kis_credit_balance.credit_rate=0.0, kis_financial_ratio.current_ratio=0.0. 측정이 아니라 상위 공백 의심(규칙이 영원히 발동 못 한다).",
-   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다.",
-   "baseline": {
-    "constant_inputs": 2
-   },
-   "status": "KNOWN"
+   "varying": 2,
+   "constant_inputs": [],
+   "detail": "입력 값 분산 정상",
+   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다."
   },
   "guard_inputs": {
    "ok": false,
@@ -250,8 +289,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 39,
-    "scored": 39,
+    "with_pct": 53,
+    "scored": 53,
     "ok": true
    },
    "dead_guards": [
