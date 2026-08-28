@@ -19,8 +19,8 @@
   · sector          — 시간 불변에 가까워 소급 안전
   · quant_factors   — 🚨 **현재 스코어이지 매수 시점 스코어가 아니다.** 가드는 현재
                       포트폴리오 쏠림을 보므로 현재값이 오히려 정합. 출처·시점을 행에 남긴다.
-  · beta            — 추천 파이프라인에 **키 자체가 없다.** 여기서도 못 메운다.
-                      베타 가드 부활 = 파이프라인에 beta 공급 추가가 선행 (별건).
+  · beta            — full 분석 backtest 가 동일 시장지수(KR=KOSPI, US=S&P 500) 대비
+                      일간수익률 beta 를 산출한다. 채점에는 연결하지 않고 VAMS 가드에만 쓴다.
 
 멱등: 필드가 이미 있으면 건드리지 않는다. 소스에 없는 종목은 그대로 두고 신고한다
 (없는 값을 지어내지 않는다).
@@ -48,7 +48,7 @@ def _rec_index() -> Dict[str, Dict[str, Any]]:
 
 
 def run(portfolio: Dict[str, Any]) -> Dict[str, Any]:
-    """보유의 sector / multi_factor.quant_factors 결측을 recommendations 로 채운다."""
+    """보유의 sector / beta / multi_factor.quant_factors 결측을 recommendations 로 채운다."""
     holdings = (portfolio.get("vams") or {}).get("holdings") or []
     idx = _rec_index()
     filled = 0
@@ -57,7 +57,8 @@ def run(portfolio: Dict[str, Any]) -> Dict[str, Any]:
         need_sector = not h.get("sector")
         qf = (h.get("multi_factor") or {}).get("quant_factors") or {}
         need_qf = not qf
-        if not (need_sector or need_qf):
+        need_beta = h.get("beta") is None
+        if not (need_sector or need_qf or need_beta):
             continue
         src = idx.get(str(h.get("ticker")))
         if not src:
@@ -73,6 +74,13 @@ def run(portfolio: Dict[str, Any]) -> Dict[str, Any]:
                     if k in _FACTOR_KEYS and isinstance(v, (int, float))}
             if slim:
                 h.setdefault("multi_factor", {})["quant_factors"] = slim
+                changed = True
+        if need_beta:
+            beta = src.get("beta")
+            if beta is None:
+                beta = (src.get("backtest") or {}).get("beta")
+            if isinstance(beta, (int, float)):
+                h["beta"] = float(beta)
                 changed = True
         if changed:
             # 출처·시점 명시 — 소급값(quant_factors 는 현재 스코어)임을 숨기지 않는다

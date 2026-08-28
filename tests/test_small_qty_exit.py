@@ -36,10 +36,11 @@ def test_single_share_activates_trailing_on_price_reach():
     assert h["quantity"] == 1
 
 
-def test_below_target2_does_not_activate():
+def test_single_share_activates_at_first_reachable_profit_target():
     h = _holding(qty=1, price=160.0)          # target_1 초과, target_2 미달
     check_partial_exit(_pf(h), h, [], None)
-    assert h["trailing_active"] is False
+    assert h["trailing_active"] is True
+    assert h["quantity"] == 1
 
 
 def test_normal_qty_still_executes_and_activates():

@@ -34,7 +34,7 @@ from scripts.cron_health_monitor import (  # noqa: E402
 )
 
 
-def _wf(name, streak=1, age=56):
+def _wf(name, streak=1, age=6):
     return {"workflow": name, "conclusion": "failure", "age_h": age, "streak": streak}
 
 
@@ -61,6 +61,14 @@ def test_intentional_gate_not_escalated_by_streak():
     sev, findings = _sweep_severity_and_findings([_wf("site_audit.yml", streak=5)], "PASS")
     assert sev != "FAIL", f"연속 게이트 발동이 FAIL 로 격상됐다: {sev}"
     assert not any("스스로 낫지 않는 고장" in f for f in findings)
+
+
+def test_old_intentional_gate_does_not_keep_current_health_yellow():
+    sev, findings = _sweep_severity_and_findings(
+        [_wf("attribution_freshness_audit.yml", age=317)], "PASS"
+    )
+    assert sev == "PASS"
+    assert findings == []
 
 
 def test_real_breakage_still_escalates():

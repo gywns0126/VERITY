@@ -458,6 +458,16 @@ def _sweep_severity_and_findings(
     if not workflow_failures:
         return base_severity, findings
 
+    # 의도된 게이트는 발견 직후 확인용 신호다. 최신 실패가 오래 남는 GitHub UI 특성 때문에
+    # 24시간 뒤에도 현재 장애처럼 매 report 에 반복 노출하지 않는다.
+    workflow_failures = [
+        w for w in workflow_failures
+        if not (w.get("workflow") in _SWEEP_INTENTIONAL_GATE
+                and w.get("age_h") is not None and float(w["age_h"]) > 24.0)
+    ]
+    if not workflow_failures:
+        return base_severity, findings
+
     _streams = wf_streams or {}
     _stale = set(stale_ids or [])
 

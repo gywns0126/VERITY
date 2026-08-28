@@ -23,6 +23,28 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from api.config import DATA_DIR  # noqa: E402
 
 
+def _previous_failing(current_as_of: str) -> list[str]:
+    """trail 의 직전 실행 failing 집합. 현재 실행 행은 as_of 로 제외한다."""
+    trail = os.path.join(DATA_DIR, "metadata", "measurement_audit_trail.jsonl")
+    try:
+        with open(trail, encoding="utf-8") as f:
+            rows = [json.loads(line) for line in f if line.strip()]
+    except (OSError, json.JSONDecodeError):
+        return []
+    for row in reversed(rows):
+        if str(row.get("as_of")) == str(current_as_of):
+            continue
+        value = row.get("failing")
+        if isinstance(value, list):
+            return sorted(str(x) for x in value)
+        # 구 trail 은 failing 집합이 없어 동일 여부를 증명할 수 없다. 한 번은 발송하고
+        # 신 포맷이 쌓인 다음 실행부터 상태 전이로 판정한다.
+        if row.get("status") == "FAIL":
+            return []
+        return []
+    return []
+
+
 def main() -> int:
     path = os.path.join(DATA_DIR, "measurement_audit.json")
     try:
@@ -36,6 +58,11 @@ def main() -> int:
     failing = audit.get("failing") or []
     if status != "FAIL" or not failing:
         print(f"[measurement_audit_push] status={status} — 신규 없음, 발송 안 함")
+        return 0
+
+    previous = _previous_failing(str(audit.get("as_of") or ""))
+    if sorted(str(x) for x in failing) == previous:
+        print(f"[measurement_audit_push] FAIL 지속 상태 — 재발송 안 함: {sorted(failing)}")
         return 0
 
     checks = audit.get("checks") or {}

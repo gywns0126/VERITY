@@ -149,7 +149,7 @@ def test_run_separates_fail_from_known(monkeypatch, tmp_path):
     _days(tmp_path, 60, lambda i: [("a", "WATCH")] if i < 20 else [("obs", None)])
     monkeypatch.setattr(MA, "OUT_PATH", str(tmp_path / "o.json"))
     monkeypatch.setattr(MA, "TRAIL_PATH", str(tmp_path / "m" / "t.jsonl"))
-    monkeypatch.setattr(MA, "audit_ledger", lambda: {"ok": False, "phantom_sells": 58})
+    monkeypatch.setattr(MA, "audit_ledger", lambda: {"ok": False, "phantom_sells": 59})
     monkeypatch.setattr(MA, "audit_key_coverage", lambda root=".": {"ok": False, "dead_keys": [0] * 10})
     monkeypatch.setattr(MA, "audit_price_scale", lambda: {"ok": False, "scale_mismatches": [0]})
     monkeypatch.setattr(MA, "audit_flag_coverage", lambda root=".": {"ok": False, "never_fired": [0] * 13})
@@ -164,7 +164,7 @@ def test_run_flags_regression_over_baseline(monkeypatch, tmp_path):
     _days(tmp_path, 60, lambda i: [("a", "WATCH")] if i < 20 else [("obs", None)])
     monkeypatch.setattr(MA, "OUT_PATH", str(tmp_path / "o.json"))
     monkeypatch.setattr(MA, "TRAIL_PATH", str(tmp_path / "m" / "t.jsonl"))
-    monkeypatch.setattr(MA, "audit_ledger", lambda: {"ok": False, "phantom_sells": 59})   # +1
+    monkeypatch.setattr(MA, "audit_ledger", lambda: {"ok": False, "phantom_sells": 60})   # +1
     monkeypatch.setattr(MA, "audit_key_coverage", lambda root=".": {"ok": True, "dead_keys": []})
     monkeypatch.setattr(MA, "audit_price_scale", lambda: {"ok": True, "scale_mismatches": []})
     out = MA.run(str(tmp_path))

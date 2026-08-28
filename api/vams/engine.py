@@ -240,6 +240,34 @@ def load_history() -> list:
     return []
 
 
+def _assert_exit_state_matches_ledger(portfolio: dict, history: list) -> None:
+    """오래된 portfolio 로 이미 청산된 종목을 다시 매도하는 cross-run race 차단.
+
+    GitHub Actions runner 간에는 로컬 파일 lock 을 공유할 수 없다. 한 run 이 SELL 을
+    커밋한 뒤 먼저 시작한 다른 run 이 옛 portfolio 를 계속 들고 있으면 같은 잔여수량을
+    다시 SELL 로 기록할 수 있다. 원장은 이미 닫혔는데 portfolio 에만 남은 종목은
+    저장하면 안 되는 stale snapshot 이므로, 어떤 자금 이동보다 먼저 중단한다.
+    """
+    holdings = ((portfolio.get("vams") or {}).get("holdings")) or []
+    if not holdings or not history:
+        return
+    from api.vams.trade_ledger import reconstruct
+    open_positions = reconstruct(history)["open_positions"]
+    stale_closed = []
+    for holding in holdings:
+        ticker = str(holding.get("ticker") or holding.get("name") or "")
+        if not ticker:
+            continue
+        if float(open_positions.get(ticker, 0) or 0) <= 0:
+            stale_closed.append(ticker)
+    if stale_closed:
+        raise RuntimeError(
+            "VAMS stale portfolio 감지 — 원장은 이미 청산됐으나 portfolio 에 남은 종목: "
+            + ",".join(sorted(stale_closed))
+            + ". 중복 매도와 stale 발행을 막기 위해 사이클 중단"
+        )
+
+
 def _sanitize_nan(obj):
     """JSON 호환을 위해 NaN/Infinity/numpy/pandas 타입을 Python 네이티브로 변환.
     allow_nan=False 저장 시 2차 방어선 역할."""
@@ -547,6 +575,18 @@ def _num(v, default: float) -> float:
     return f if f == f else default          # NaN 방어
 
 
+def _guard_beta(stock: dict) -> Optional[float]:
+    """VAMS 가드 전용 beta. 채점에는 연결하지 않는다."""
+    raw = stock.get("beta")
+    if raw is None:
+        raw = (stock.get("backtest") or {}).get("beta")
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if math.isfinite(value) else None
+
+
 def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
     """V6: 매수 전 포트폴리오 레벨 노출 상한 체크.
     섹터 집중, 베타, 테마 집중을 확인해 blocked/reason 반환."""
@@ -574,7 +614,7 @@ def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
         h_sector = (h.get("sector") or "Unknown").strip()
         sector_exposure[h_sector] = sector_exposure.get(h_sector, 0) + h_pct
 
-        h_beta_raw = h.get("beta")
+        h_beta_raw = _guard_beta(h)
         if h_beta_raw is None:
             beta_missing += 1
         h_beta = _num(h_beta_raw, 1.0)
@@ -603,7 +643,7 @@ def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
 
     if portfolio_weight_sum > 0:
         current_beta = portfolio_beta_sum / portfolio_weight_sum
-        cand_beta = _num(candidate_stock.get("beta"), 1.0)   # 후보도 동일 None 함정
+        cand_beta = _num(_guard_beta(candidate_stock), 1.0)   # 후보도 동일 None 함정
         new_beta = (portfolio_beta_sum + cand_beta * cand_pct) / (portfolio_weight_sum + cand_pct)
         if new_beta > VAMS_MAX_PORTFOLIO_BETA:
             return {
@@ -1149,9 +1189,9 @@ def execute_buy(
         # 베타 1.5 상한·팩터쏠림 가드가 h.get("sector")/h.get("beta")/h["multi_factor"]
         # ["quant_factors"] 를 읽는데 **셋 다 저장된 적이 없어** 가드가 한 번도 안 걸렸다
         # (2026-08-11 실측 0/11 — 섹터는 전부 "Unknown" 으로 뭉쳐 후보 섹터 노출이 항상 0).
-        # beta 는 추천 파이프라인에 키 자체가 없어 None 저장 — 가드 부활은 별건.
+        # beta 는 full backtest 의 동일 시장지수 대비 값을 가드 전용으로 저장한다.
         "sector": stock.get("sector"),
-        "beta": stock.get("beta"),
+        "beta": _guard_beta(stock),
         "multi_factor": {"quant_factors": {
             k: v for k, v in (((stock.get("multi_factor") or {}).get("quant_factors")
                                or {}).items())
@@ -1585,8 +1625,14 @@ def check_partial_exit(
             # 영구 False 였고, check_stop_loss 는 exit_targets 보유에 이 플래그를 요구하므로
             # **1주 포지션은 이익을 확정할 코드 경로가 하나도 없었다**(출구 = −20% 손절뿐).
             # 실측 2026-08-11: 보유 11건 중 6건이 사다리 일부/전부 불능, NEM 은 target_2
-            # 가격을 넘겼는데도 미활성. 원 주석이 "2R **도달** 시" 이므로 설계 의도 복원이다.
-            if target_id == "target_2":
+            # 가격을 넘겼는데도 미활성. 두 분할 수량이 모두 0인 포지션은 target_1 도달
+            # 시점부터 트레일링이 유일한 이익 확정 경로이므로 즉시 활성화한다.
+            _qty = float(holding.get("quantity") or 0)
+            _all_tranches_zero = all(
+                int(_qty * float((targets.get(tid) or {}).get("exit_pct") or 0) / 100) < 1
+                for tid in ("target_1", "target_2")
+            )
+            if target_id == "target_2" or _all_tranches_zero:
                 holding["trailing_active"] = True
             r = execute_partial_sell(portfolio, holding, target_id, target, history, profile)
             results.append(r)
@@ -1880,6 +1926,9 @@ def run_vams_cycle(
     p = _get_profile(profile)
     history = load_history()
     alerts = []
+
+    # cross-run stale snapshot 은 이후 매도·현금 이동 전에 차단해야 한다.
+    _assert_exit_state_matches_ledger(portfolio, history)
 
     # 0. β FX 헷지 pending 진입 1회 소비 (cash→reserve, holdings 외 = auto-sell 제외)
     _consume_pending_fx_hedge(portfolio)

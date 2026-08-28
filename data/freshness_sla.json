@@ -344,6 +344,16 @@
    "known_issue": "독립 git add 경로 없음 → 신선도 보장 약함(6/18 이후 정체 흔적)."
   },
   {
+   "id": "dividends_kr_ksd",
+   "file": "dividends_kr_ksd.json",
+   "max_age_minutes": 4320,
+   "owner": "ci",
+   "schedule": "weekday",
+   "cadence": "평일 1회 dividend_ksd.yml",
+   "criticality": "P2",
+   "known_issue": "KSD 원천 transport 실패 시 기존 원장을 보존하며, 워크플로 실패와 산출물 노후를 분리 판정한다."
+  },
+  {
    "id": "public_disclosure_feed",
    "file": "public_disclosure_feed.json",
    "max_age_minutes": 4320,

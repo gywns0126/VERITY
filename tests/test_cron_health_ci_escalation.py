@@ -133,6 +133,7 @@ def test_workflow_stream_map_reads_real_registry():
     assert "kr_chart_daily.yml" in mp
     assert "kr_index_daily" in mp["kr_chart_daily.yml"]
     assert "crypto" in mp.get("crypto_collect.yml", [])
+    assert "dividends_kr_ksd" in mp.get("dividend_ksd.yml", [])
 
 
 def test_known_degraded_never_escalates():

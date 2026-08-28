@@ -25,6 +25,40 @@ except Exception:
     _YF_SESSION = None
 
 
+_BENCHMARK_RETURNS: Dict[str, pd.Series] = {}
+
+
+def _beta_from_returns(stock_returns: pd.Series, benchmark_returns: pd.Series) -> Optional[float]:
+    """동일 날짜 일간수익률로 beta 산출. 60개 미만이면 미측정으로 둔다."""
+    aligned = pd.concat(
+        [stock_returns.rename("stock"), benchmark_returns.rename("benchmark")], axis=1
+    ).dropna().tail(252)
+    if len(aligned) < 60:
+        return None
+    variance = float(aligned["benchmark"].var())
+    if not np.isfinite(variance) or variance <= 0:
+        return None
+    beta = float(aligned["stock"].cov(aligned["benchmark"]) / variance)
+    return round(beta, 4) if np.isfinite(beta) else None
+
+
+def _benchmark_returns(ticker_yf: str) -> Optional[pd.Series]:
+    market = "KR" if str(ticker_yf).endswith((".KS", ".KQ")) else "US"
+    if market in _BENCHMARK_RETURNS:
+        return _BENCHMARK_RETURNS[market]
+    symbol = "^KS11" if market == "KR" else "^GSPC"
+    try:
+        t = yf.Ticker(symbol, session=_YF_SESSION) if _YF_SESSION else yf.Ticker(symbol)
+        close = t.history(period="1y")["Close"].dropna()
+        returns = close.pct_change().dropna()
+        if len(returns) < 60:
+            return None
+        _BENCHMARK_RETURNS[market] = returns
+        return returns
+    except Exception:
+        return None
+
+
 def backtest_stock(ticker_yf: str, hold_days: int = 5, lookback: str = "1y") -> Dict:
     """
     단일 종목 백테스트
@@ -51,6 +85,8 @@ def backtest_stock(ticker_yf: str, hold_days: int = 5, lookback: str = "1y") -> 
     _returns = close.pct_change().dropna()
     _vol_20d = float(_returns.tail(20).std()) if len(_returns) >= 20 else None
     _vol_60d = float(_returns.tail(60).std()) if len(_returns) >= 60 else None
+    _bench = _benchmark_returns(ticker_yf)
+    _beta = _beta_from_returns(_returns, _bench) if _bench is not None else None
 
     delta = close.diff()
     gain = delta.where(delta > 0, 0.0)
@@ -103,7 +139,8 @@ def backtest_stock(ticker_yf: str, hold_days: int = 5, lookback: str = "1y") -> 
 
     if not trades:
         # trades 없어도 vol 자체는 valid → A5 vol attach 보존
-        return {**_empty_result(), "volatility_20d": _vol_20d, "volatility_60d": _vol_60d}
+        return {**_empty_result(), "volatility_20d": _vol_20d,
+                "volatility_60d": _vol_60d, "beta": _beta}
 
     returns = [t["return_pct"] for t in trades]
     wins = sum(1 for t in trades if t["win"])
@@ -137,6 +174,7 @@ def backtest_stock(ticker_yf: str, hold_days: int = 5, lookback: str = "1y") -> 
         "recent_trades": trades[-3:],
         "volatility_20d": _vol_20d,
         "volatility_60d": _vol_60d,
+        "beta": _beta,
     }
 
 
@@ -155,6 +193,7 @@ def _empty_result() -> Dict:
         "recent_trades": [],
         "volatility_20d": None,
         "volatility_60d": None,
+        "beta": None,
     }
 
 

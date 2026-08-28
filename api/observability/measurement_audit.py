@@ -471,7 +471,9 @@ def audit_rule_discrimination() -> Dict[str, Any]:
 #   고정하고 status 를 KNOWN 으로 내린다. 값이 커지면 즉시 FAIL 로 복귀한다.
 #   해소 시 이 baseline 을 낮추는 것이 완료 조건이다(태스크 #19/#20).
 _KNOWN_BASELINE = {
-    "ledger_integrity": {"phantom_sells": 58},      # 8/5 확인 과거분. 초과 = 재발
+    # 8/13 cross-run stale portfolio 로 티쓰리 중복 청산 1건이 추가됐다. 원인은
+    # engine 의 ledger 대조 fail-closed 가드로 차단하고, 감사 원문은 보존한다.
+    "ledger_integrity": {"phantom_sells": 59},      # 8/28 확인 누적 과거분. 초과 = 재발
     "key_coverage": {"dead_keys": 10},              # 태스크 #20
     # 🚨 2026-08-07 — 3 → 0 하향. 통화 마이그레이션(#300) 적용 후 실 cron 에서 불일치
     #   0건 확인(price_scale ok=True). baseline 을 낮추는 것이 해소의 정의다 —
@@ -558,6 +560,7 @@ def run(root: str = ".") -> Dict[str, Any]:
     os.makedirs(os.path.dirname(TRAIL_PATH), exist_ok=True)
     with open(TRAIL_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps({"as_of": out["as_of"], "status": out["status"],
+                            "failing": out["failing"],
                             "phantom_sells": checks["ledger_integrity"].get("phantom_sells"),
                             "dead_keys": len(checks["key_coverage"].get("dead_keys") or []),
                             "scale_mismatches": len(checks["price_scale"].get("scale_mismatches") or []),
@@ -734,4 +737,3 @@ def audit_input_constancy() -> Dict[str, Any]:
         }
     except Exception as e:  # noqa: BLE001
         return {"ok": None, "skipped": f"{type(e).__name__}: {e}"[:120]}
-

@@ -92,7 +92,12 @@ def _forward_fill_curve(fresh, prev, order):
         if t not in have:
             pv = prev_map.get(t)
             if pv and pv.get("yield") is not None:
-                merged.append({"tenor": t, "yield": pv["yield"], "stale": True})
+                # 관측일은 값의 provenance 다. carry-forward 때 제거하면 값은 남아도
+                # measurement_audit 가 노후를 판정할 수 없어 신선도가 조용히 죽는다.
+                carried_point = {"tenor": t, "yield": pv["yield"], "stale": True}
+                if pv.get("as_of"):
+                    carried_point["as_of"] = pv["as_of"]
+                merged.append(carried_point)
                 carried.append(t)
     idx = {t: i for i, t in enumerate(order)}
     merged.sort(key=lambda c: idx.get(c.get("tenor"), 99))
@@ -134,6 +139,11 @@ def get_full_yield_curve_data(prev_bonds: Optional[Dict[str, Any]] = None) -> Di
             "curve": kr_curve,
             "curve_shape": kr_data.get("curve_shape", "unknown"),
         }
+        kr_as_ofs = [str(c.get("as_of")) for c in kr_curve if c.get("as_of")]
+        if kr_data.get("curve_as_of"):
+            kr_block["curve_as_of"] = kr_data["curve_as_of"]
+        elif kr_as_ofs:
+            kr_block["curve_as_of"] = max(kr_as_ofs)
         if kr_carried:
             kr_block["stale_tenors"] = kr_carried
         yield_curves["kr"] = kr_block
@@ -181,6 +191,11 @@ def get_full_yield_curve_data(prev_bonds: Optional[Dict[str, Any]] = None) -> Di
     kr_corp = kr_data.get("kr_corp_spreads")
     if kr_corp:
         result["kr_corp_spreads"] = kr_corp
+    elif isinstance(prev_bonds, dict) and prev_bonds.get("kr_corp_spreads"):
+        # KR 원천이 일시 실패해도 직전 관측일과 값을 보존한다. updated_at 을 새 수집
+        # 시각으로 가장하지 않고 stale 만 추가해 노후 감사가 계속 작동하게 한다.
+        result["kr_corp_spreads"] = dict(prev_bonds["kr_corp_spreads"])
+        result["kr_corp_spreads"]["stale"] = True
 
     return result
 
