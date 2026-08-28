@@ -1,7 +1,7 @@
 {
- "as_of": "2026-08-28T15:38:02+09:00",
+ "as_of": "2026-08-28T18:45:58+09:00",
  "version": "short_sale_trail_v0",
- "n_observations": 5270,
+ "n_observations": 5241,
  "window_start": null,
  "thresholds_observed": {
   "kr_auto_avoid": 15.0,
@@ -10,7 +10,7 @@
  },
  "KR": {
   "auto_avoid": {
-   "n_observations": 112,
+   "n_observations": 111,
    "n_tickers": 23,
    "fwd_20d": {
     "n_tickers": 13,
@@ -30,8 +30,8 @@
    }
   },
   "downgrade": {
-   "n_observations": 325,
-   "n_tickers": 48,
+   "n_observations": 327,
+   "n_tickers": 49,
    "fwd_20d": {
     "n_tickers": 23,
     "n_observations": 197,
@@ -50,8 +50,8 @@
    }
   },
   "clean": {
-   "n_observations": 434,
-   "n_tickers": 66,
+   "n_observations": 433,
+   "n_tickers": 65,
    "fwd_20d": {
     "n_tickers": 23,
     "n_observations": 138,
@@ -132,7 +132,7 @@
    }
   },
   "clean": {
-   "n_observations": 1922,
+   "n_observations": 1898,
    "n_tickers": 96,
    "fwd_20d": {
     "n_tickers": 0,
@@ -152,7 +152,7 @@
    }
   },
   "missing": {
-   "n_observations": 1192,
+   "n_observations": 1187,
    "n_tickers": 104,
    "fwd_20d": {
     "n_tickers": 0,
@@ -175,7 +175,7 @@
  "labels": [
   "통계 무의미 — auto_avoid 고유 종목 N=13 < 20 (관측 51건이지만 같은 종목 반복. 등록 §6 게이트)",
   "[관측] auto_avoid -1.95% > clean -3.09% (종목 N=13) — 방향은 규칙과 반대지만 표본 미달로 판정 보류. N≥20 까지 조정 금지",
-  "US 지표 결측 1192건 — clean 과 분리 집계됨(무혐의 통과 아님)",
+  "US 지표 결측 1187건 — clean 과 분리 집계됨(무혐의 통과 아님)",
   "KR 지표 결측 1283건 — 수집 이전 기간 포함. clean 과 분리 집계"
  ],
  "brain_input": false,
