@@ -101,6 +101,16 @@ def test_fresh_artifacts_block_escalation():
     assert all("🔴" not in x for x in findings)
 
 
+def test_single_failure_with_fresh_artifact_is_not_called_unmonitored():
+    mp = {"dividend_ksd.yml": ["dividends_kr_ksd"]}
+    sev, findings = m._sweep_severity_and_findings(
+        [_fail("dividend_ksd.yml", streak=1)], "PASS", stale_ids=[], wf_streams=mp
+    )
+    assert sev == "WARNING"
+    assert any("산출물은 신선" in x and "dividends_kr_ksd" in x for x in findings)
+    assert all("감시목록 밖" not in x for x in findings)
+
+
 def test_stale_artifact_still_escalates():
     # 같은 3연속인데 스트림이 stale = 진짜 고장 → 격상.
     sev, findings = m._sweep_severity_and_findings(

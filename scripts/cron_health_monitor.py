@@ -509,9 +509,9 @@ def _sweep_severity_and_findings(
             findings.append(
                 f"🔴 {wf['workflow']} {streak}연속 실패 ({age_txt}) — 스스로 낫지 않는 고장, 원인 진단 필요"
             )
-        elif streak >= _SWEEP_PERSISTENT_STREAK and _fresh_artifacts(wf):
+        elif _fresh_artifacts(wf):
             findings.append(
-                f"⚠ {wf['workflow']} {streak}연속 실패 ({age_txt}) — 산출물은 신선"
+                f"⚠ {wf['workflow']} 최신 run {wf['conclusion']} ({age_txt}{streak_txt}) — 산출물은 신선"
                 f"({'·'.join(_fresh_artifacts(wf) or [])}), 실행만 실패"
             )
         elif wf["workflow"] in _SWEEP_INTENTIONAL_GATE:
