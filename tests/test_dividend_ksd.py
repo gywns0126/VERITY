@@ -375,4 +375,6 @@ def test_noop_guard_ignores_bas_dt_when_body_same():
     assert 'old_meta.get("bas_dt") == bas_dt' not in s, (
         "무변경 판정에 적재일이 다시 들어갔다 — 가드가 무력화된다"
     )
-    assert "if same_body:" in s, "본문 기준 무변경 판정이 사라졌다"
+    assert "if same_body and same_cross_check:" in s, (
+        "본문 기준 무변경 판정 또는 교차검증 메타 복구 경로가 사라졌다"
+    )

@@ -494,13 +494,16 @@ def collect(save: bool = True) -> Dict[str, Any]:
             old_body = {k: v for k, v in old.items() if not k.startswith("_")}
             same_body = json.dumps(old_body, ensure_ascii=False, sort_keys=True,
                                    separators=(",", ":")) == body_new
+            same_cross_check = old_meta.get("cross_check_dart") == meta.get("cross_check_dart")
             # 🚨 적재일이 바뀌어도 **본문이 같으면 쓰지 않는다** (2026-08-23 실측 정정).
             #   data.go.kr 은 같은 데이터를 매일 새 `basDt` 로 다시 올린다 —
             #   `bas_dt` 까지 비교 조건에 넣으면 내용이 같아도 **매일 5.45MB 를 커밋**하게 되어
             #   무변경 가드를 넣은 이유가 통째로 무력화된다(첫 판본이 그랬다).
             #   `_meta.bas_dt` 는 "현재 본문이 어느 적재분에서 왔는가" 이므로 옛 날짜가 맞다.
             #   관측한 최신 적재일은 로그로만 남긴다.
-            if same_body:
+            # 본문이 같아도 교차검증 계약이 복구·변경되면 메타를 갱신해야 한다.
+            # 이를 무시하면 결함 상태가 원장에 영구 고정되고 CI도 계속 실패한다.
+            if same_body and same_cross_check:
                 old_bd = old_meta.get("bas_dt")
                 note = "무변경 (본문 동일)"
                 if old_bd != bas_dt:
