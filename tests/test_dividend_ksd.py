@@ -112,9 +112,14 @@ def test_meta_counts_match_body():
     assert meta["row_count"] == rows, "행 수 자기신고 불일치"
 
 
-def test_cross_check_separates_known_flags():
+def test_cross_check_separates_known_flags(monkeypatch):
     """🚨 이미 원장이 신고한 건(067900)을 신규 발견으로 세면 안 된다."""
-    cc = _ledger()["_meta"]["cross_check_dart"]
+    from api.collectors import dividend_ksd as collector
+
+    ledger = _ledger()
+    body = {k: v for k, v in ledger.items() if not k.startswith("_")}
+    monkeypatch.setattr(collector, "DATA_DIR", str(ROOT / "data"))
+    cc = collector.cross_check_dart(body)
     assert "unit_error_new" in cc and "unit_error_already_flagged" in cc, (
         "신규/기신고 구분이 사라졌다 — 작동 중인 가드가 매번 새 사고로 보인다"
     )
