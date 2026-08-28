@@ -1,9 +1,9 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useRef, useState, type CSSProperties } from "react"
+import { useEffect, useRef, useState, startTransition, type CSSProperties } from "react"
 
 /**
  * AlphaNest 공개 — KR 종목 심화 (기관·국민연금 대량보유 + 사업장 + 공시 forensics). DART 사실만.
- * 🚨 RULE 7 — 위험점수·심각도·해석 0. 사실만. 데이터 = stock_report_public.json + kr_forensics_public.json.
+ * 🚨 RULE 7 — 위험점수·심각도·해석 0. 사실만. 데이터 = stock_slice 종목별 사실 번들.
  *
  * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-sdk-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
  *   <style>{AN_PALETTE} 정적 HTML 정합. 되돌리지 말 것.
@@ -23,6 +23,7 @@ for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 const REPORT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
 const FORENSICS_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_forensics_public.json"
+const DEFAULT_API = "https://project-yw131.vercel.app"
 
 const FSECTIONS: { key: string; label: string }[] = [
     { key: "related_party_transactions", label: "특수관계자 거래" },
@@ -37,7 +38,16 @@ const SAMPLE_REC: any = {
 }
 const SAMPLE_FOR: any = { related_party_transactions: ["상대방: 계열사 등 / 유형: 제품매출 / 규모: 1,505억원 (영업수익의 약 75%)"], contingent_liabilities: ["금융기관 지급보증 USD 137백만 등"], cb_bw: { n_instruments: 2, dilution_pct: 12.5, instruments: [{ type: "CB", issue_amount: 50000000000, strike: 50000, resolved_date: "20250601" }, { type: "BW", issue_amount: 10000000000, strike: 40000, resolved_date: "20240301" }], note: "DART 주요사항보고 발행 기준(전환·상환 미반영) · 희석률=발행가능÷발행주식" }, year: "2025", source_note: "DART 사업보고서 원문 사실 · 자체 위험판단 아님" }
 
-export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?: string; forensicsUrl?: string; dark?: boolean }) {
+function readTickerFromUrl(): string {
+    if (typeof window === "undefined") return ""
+    try {
+        const queryTicker = (new URLSearchParams(window.location.search).get("q") || "").trim()
+        if (queryTicker) return queryTicker.toUpperCase()
+        return (window.localStorage.getItem("verity_last_ticker") || "").trim().toUpperCase()
+    } catch { return "" }
+}
+
+export default function PublicStockDetailKR(props: { ticker?: string; apiBase?: string; reportUrl?: string; forensicsUrl?: string; dark?: boolean }) {
     // ETF/ETN 선택 시 자기 숨김 — StockReport 가 body[data-verity-asset-kind] 신호 발행 (2026-07-10)
     const [assetKind, setAssetKind] = useState<string>("stock")
     useEffect(() => {
@@ -50,6 +60,7 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
         return () => obs.disconnect()
     }, [])
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    const [tk, setTk] = useState<string>(() => String(props.ticker || "").trim().toUpperCase())
     const [rec, setRec] = useState<any>(onCanvas ? SAMPLE_REC : null)
     const [forensics, setForensics] = useState<any>(onCanvas ? SAMPLE_FOR : null)
     const rootRef = useRef<HTMLDivElement>(null)
@@ -63,34 +74,74 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
         return () => ro.disconnect()
     }, [])
 
+    /* 종목 = prop 우선, 없으면 URL ?q. 페이지 내 종목 전환도 추종. */
     useEffect(() => {
-        if (onCanvas || !props.ticker) return
+        if (onCanvas || typeof window === "undefined") return
+        const propTicker = String(props.ticker || "").trim().toUpperCase()
+        if (propTicker) {
+            startTransition(() => setTk(propTicker))
+            return
+        }
+        const sync = () => {
+            const next = readTickerFromUrl()
+            if (next) startTransition(() => setTk((current) => current === next ? current : next))
+        }
+        sync()
+        window.addEventListener("popstate", sync)
+        const interval = window.setInterval(sync, 1000)
+        return () => {
+            window.removeEventListener("popstate", sync)
+            window.clearInterval(interval)
+        }
+    }, [props.ticker, onCanvas])
+
+    useEffect(() => {
+        if (onCanvas || !tk) return
         let alive = true
-        const tk = String(props.ticker)
-        fetch(props.reportUrl || REPORT_URL)
+        startTransition(() => { setRec(null); setForensics(null) })
+        const base = String(props.apiBase || DEFAULT_API).replace(/\/+$/, "")
+        const legacyFallback = () => Promise.all([
+            fetch(props.reportUrl || REPORT_URL).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+            fetch(props.forensicsUrl || FORENSICS_URL).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ]).then(([reportDoc, forensicsDoc]) => {
+            if (!alive) return
+            // 🚨 복구 경로의 report stocks는 배열, forensics stocks는 dict다. 형태 방어 유지.
+            const arr = reportDoc && reportDoc.stocks
+            const report = Array.isArray(arr) ? arr.find((s: any) => String(s && s.ticker) === tk) || null : arr ? arr[tk] || null : null
+            const detail = forensicsDoc && forensicsDoc.stocks ? forensicsDoc.stocks[tk] || null : null
+            startTransition(() => { setRec(report); setForensics(detail) })
+        })
+        // 정상 경로: 전 종목 15.7MB 대신 선택 종목 사실 번들만 로드.
+        fetch(base + "/api/stock_slice?ticker=" + encodeURIComponent(tk))
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!alive) return
-                // 🚨 stock_report_public.stocks = **배열**(1,789) — 종전 d.stocks[tk] 는 티커
-                //    문자열로 배열을 인덱싱해 항상 undefined = 기관 26·사업장 29종목이 라이브에서
-                //    영구 미표시였다(2026-08-25 수리). forensics 쪽은 dict 라 [tk] 가 맞음 — 두
-                //    발행물의 stocks 형태가 다르다. 형태 방어: 배열이면 find, dict 면 키.
-                const arr = d && d.stocks
-                setRec(Array.isArray(arr) ? arr.find((s: any) => String(s && s.ticker) === tk) || null : arr ? arr[tk] || null : null)
+                if (!d || d.status !== "ok") return legacyFallback()
+                startTransition(() => {
+                    setRec(d.report || null)
+                    setForensics(d.forensics || null)
+                })
             })
-            .catch(() => { if (alive) setRec(null) })
-        fetch(props.forensicsUrl || FORENSICS_URL)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { if (alive) setForensics(d && d.stocks ? d.stocks[tk] || null : null) })
-            .catch(() => { if (alive) setForensics(null) })
+            .catch(legacyFallback)
         return () => { alive = false }
-    }, [props.ticker, props.reportUrl, props.forensicsUrl, onCanvas])
+    }, [tk, props.apiBase, props.reportUrl, props.forensicsUrl, onCanvas])
 
     const inst = rec && rec.institutional
     const fac = rec && rec.facilities
     const hasInst = inst && Array.isArray(inst.holders) && inst.holders.length > 0
-    const hasFac = fac && (Array.isArray(fac.facilities) || fac.headquarters)
+    const hasFac = fac && ((Array.isArray(fac.facilities) && fac.facilities.length > 0) || !!(fac.headquarters && fac.headquarters.location))
     const hasFor = forensics && (FSECTIONS.some((s) => Array.isArray(forensics[s.key]) && forensics[s.key].length) || (forensics.cb_bw && forensics.cb_bw.n_instruments > 0))
+    const coverageBlocks = [
+        { label: "기관·대량보유", hit: !!hasInst },
+        { label: "사업장·설비", hit: !!hasFac },
+        { label: "특수관계자", hit: !!(forensics && Array.isArray(forensics.related_party_transactions) && forensics.related_party_transactions.length) },
+        { label: "우발부채·보증", hit: !!(forensics && Array.isArray(forensics.contingent_liabilities) && forensics.contingent_liabilities.length) },
+        { label: "소송", hit: !!(forensics && Array.isArray(forensics.pending_litigation) && forensics.pending_litigation.length) },
+        { label: "제재", hit: !!(forensics && Array.isArray(forensics.material_sanctions) && forensics.material_sanctions.length) },
+        { label: "CB·BW", hit: !!(forensics && forensics.cb_bw && forensics.cb_bw.n_instruments > 0) },
+    ]
+    const coverageHit = coverageBlocks.filter((b) => b.hit)
+    const coverageMiss = coverageBlocks.filter((b) => !b.hit)
     const narrow = w > 0 && w < 420
     if (!hasInst && !hasFac && !hasFor) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
 
@@ -109,6 +160,24 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
     return (
         <div ref={rootRef} style={wrap}>
             <style>{AN_PALETTE}</style>
+            <div>
+                {title("근거 커버리지", `표시 블록 ${coverageHit.length}/${coverageBlocks.length}`)}
+                <div style={card}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {coverageHit.map((b) => (
+                            <span key={b.label} style={{ fontSize: 10.5, fontWeight: 800, color: C.vt, background: C.vtS, borderRadius: 6, padding: "3px 7px" }}>{b.label}</span>
+                        ))}
+                    </div>
+                    {coverageMiss.length > 0 && (
+                        <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.55, marginTop: coverageHit.length ? 8 : 0 }}>
+                            미표시 {coverageMiss.length}개 · {coverageMiss.map((b) => b.label).join(" · ")}
+                        </div>
+                    )}
+                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.55, marginTop: 7 }}>
+                        미표시는 현재 공개 산출물에서 표시 가능한 레코드를 찾지 못한 상태이며, 해당 사실의 부재를 확정하지 않아요.{forensics && forensics.year ? ` · 사업보고서 ${forensics.year}` : ""}
+                    </div>
+                </div>
+            </div>
             {hasInst && (
                 <div>
                     {title("기관·국민연금 대량보유", "DART 5%+ 보고 · 사실")}
@@ -209,6 +278,7 @@ export default function PublicStockDetailKR(props: { ticker?: string; reportUrl?
 
 addPropertyControls(PublicStockDetailKR, {
     ticker: { type: ControlType.String, title: "종목코드", defaultValue: "" },
+    apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
     reportUrl: { type: ControlType.String, title: "Report URL", defaultValue: REPORT_URL },
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: FORENSICS_URL },
     dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false },
