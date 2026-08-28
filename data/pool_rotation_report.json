@@ -1,8 +1,8 @@
 {
- "as_of": "2026-08-29T00:52:55+09:00",
+ "as_of": "2026-08-29T06:30:39+09:00",
  "version": "v0 (PREREG_POOL_ROTATION_2026_08_04 — 보고서만, 집행 없음)",
- "evidence_days": 24,
- "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 24일. 미달 임계는 발동하지 않음",
+ "evidence_days": 25,
+ "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 25일. 미달 임계는 발동하지 않음",
  "pool": {
   "size": 46,
   "kr": 19,
@@ -59,18 +59,39 @@
  ],
  "watch_streaks": [
   {
+   "ticker": "V",
+   "avoid_streak": 5,
+   "pollution_streak": 0,
+   "lowliq_streak": 0,
+   "evidence_days": 5
+  },
+  {
+   "ticker": "CME",
+   "avoid_streak": 5,
+   "pollution_streak": 0,
+   "lowliq_streak": 0,
+   "evidence_days": 5
+  },
+  {
+   "ticker": "UNP",
+   "avoid_streak": 5,
+   "pollution_streak": 0,
+   "lowliq_streak": 0,
+   "evidence_days": 5
+  },
+  {
    "ticker": "094970",
    "avoid_streak": 0,
    "pollution_streak": 0,
-   "lowliq_streak": 11,
-   "evidence_days": 24
+   "lowliq_streak": 12,
+   "evidence_days": 25
   },
   {
    "ticker": "418470",
    "avoid_streak": 0,
    "pollution_streak": 0,
-   "lowliq_streak": 10,
-   "evidence_days": 24
+   "lowliq_streak": 11,
+   "evidence_days": 25
   }
  ],
  "candidate_supply": {

@@ -1,10 +1,9 @@
 {
- "as_of": "2026-08-29T00:52:29+09:00",
+ "as_of": "2026-08-29T06:30:37+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
-  "key_coverage",
-  "guard_inputs"
+  "key_coverage"
  ],
  "known_unresolved": [
   "ledger_integrity",
@@ -46,15 +45,6 @@
      "key": "close",
      "modules": [
       "fact.py"
-     ]
-    },
-    {
-     "key": "dart_financials",
-     "modules": [
-      "moat.py",
-      "quality.py",
-      "red_flags.py",
-      "value_guards.py"
      ]
     },
     {
@@ -154,8 +144,13 @@
      ]
     }
    ],
-   "thin_keys": [],
-   "detail": "레코드에 한 번도 없는 키 20종 — 해당 채점 축이 조용히 죽어 있다",
+   "thin_keys": [
+    {
+     "key": "analyst_report_summary",
+     "coverage": "1/46"
+    }
+   ],
+   "detail": "레코드에 한 번도 없는 키 19종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
@@ -166,13 +161,13 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 107,
+   "snapshots": 108,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
      "rule": "perplexity_event_critical",
-     "fired_days": 3,
-     "activation_pct": 2.8,
+     "fired_days": 4,
+     "activation_pct": 3.7,
      "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
     },
     {
@@ -189,8 +184,8 @@
     "watch_pct": 85.0
    },
    "days_without_any_cap": 12,
-   "days_without_any_cap_pct": 11.2,
-   "detail": "상시/미발동 등급 규칙 2종 — perplexity_event_critical(2.8%), oil_geopolitical_shock(0.9%). cap 없는 날 12/107일",
+   "days_without_any_cap_pct": 11.1,
+   "detail": "상시/미발동 등급 규칙 2종 — perplexity_event_critical(3.7%), oil_geopolitical_shock(0.9%). cap 없는 날 12/108일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -201,7 +196,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 5138,
+   "stock_days": 5184,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -216,11 +211,11 @@
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
@@ -267,13 +262,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 19,
+     "n_present": 10,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 19,
+     "n_present": 10,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -286,7 +281,7 @@
    "status": "KNOWN"
   },
   "guard_inputs": {
-   "ok": false,
+   "ok": true,
    "holdings_checked": 10,
    "coverage": {
     "sector": {
@@ -295,7 +290,7 @@
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 0,
+     "filled": 10,
      "total": 10,
      "guard": "포트폴리오 베타 1.5 상한"
     },
@@ -310,15 +305,8 @@
     "scored": 24,
     "ok": true
    },
-   "dead_guards": [
-    {
-     "field": "beta",
-     "guard": "포트폴리오 베타 1.5 상한",
-     "filled": 0,
-     "total": 10
-    }
-   ],
-   "detail": "입력 전무한 가드 1종 — 코드에 존재하나 한 번도 발동할 수 없다: 포트폴리오 베타 1.5 상한(beta)"
+   "dead_guards": [],
+   "detail": "가드 입력 정합"
   },
   "exit_paths": {
    "ok": true,
