@@ -1,17 +1,15 @@
 {
- "as_of": "2026-08-22T11:27:50+09:00",
+ "as_of": "2026-08-29T00:52:55+09:00",
  "version": "v0 (PREREG_POOL_ROTATION_2026_08_04 — 보고서만, 집행 없음)",
- "evidence_days": 18,
- "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 18일. 미달 임계는 발동하지 않음",
+ "evidence_days": 24,
+ "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 24일. 미달 임계는 발동하지 않음",
  "pool": {
-  "size": 38,
-  "kr": 18,
+  "size": 46,
+  "kr": 19,
   "kr_floor": 20,
-  "kr_deficit": 2,
-  "size_note": "정원 미달 38 < 55",
-  "sector_over_cap": {
-   "Industrials": 26.3
-  }
+  "kr_deficit": 1,
+  "size_note": "정원 미달 46 < 55",
+  "sector_over_cap": {}
  },
  "r1_held": [
   "000270",
@@ -23,56 +21,62 @@
   "ALB",
   "AMG",
   "DVN",
-  "EXE",
   "KMT"
  ],
  "r1_held_out_of_pool": [],
  "exits": [],
  "entries": [
   {
-   "ticker": "208710",
-   "name": "포톤",
+   "ticker": "007110",
+   "name": "일신석재",
    "source": "smallcap",
-   "trading_value": 1161102809
-  },
-  {
-   "ticker": "042110",
-   "name": "에스씨디",
-   "source": "smallcap",
-   "trading_value": 2924155419
+   "trading_value": 1766706875
   },
   {
    "ticker": "012690",
    "name": "모나리자",
    "source": "smallcap",
-   "trading_value": 10594454749
-  },
-  {
-   "ticker": "003310",
-   "name": "대주산업",
-   "source": "smallcap",
-   "trading_value": 2138827335
+   "trading_value": 1836327683
   },
   {
    "ticker": "228340",
    "name": "동양파일",
    "source": "smallcap",
-   "trading_value": 3154317119
+   "trading_value": 3547229365
+  },
+  {
+   "ticker": "111710",
+   "name": "남화산업",
+   "source": "smallcap",
+   "trading_value": 1557872684
+  },
+  {
+   "ticker": "475430",
+   "name": "키스트론",
+   "source": "smallcap",
+   "trading_value": 2164171862
   }
  ],
  "watch_streaks": [
   {
-   "ticker": "ADBE",
-   "avoid_streak": 9,
+   "ticker": "094970",
+   "avoid_streak": 0,
    "pollution_streak": 0,
-   "lowliq_streak": 0,
-   "evidence_days": 12
+   "lowliq_streak": 11,
+   "evidence_days": 24
+  },
+  {
+   "ticker": "418470",
+   "avoid_streak": 0,
+   "pollution_streak": 0,
+   "lowliq_streak": 10,
+   "evidence_days": 24
   }
  ],
  "candidate_supply": {
-  "funnel_total": 25,
+  "funnel_total": 24,
   "funnel_kr_out_of_pool": 0,
-  "smallcap_total": 1227,
+  "smallcap_total": 1631,
   "smallcap_liquidity_field_missing": false
  },
  "swap_cap": 5,

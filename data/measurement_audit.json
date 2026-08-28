@@ -1,14 +1,13 @@
 {
- "as_of": "2026-08-28T18:46:04+09:00",
+ "as_of": "2026-08-29T00:52:29+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
-  "ledger_integrity",
   "key_coverage",
-  "guard_inputs",
-  "as_of_staleness"
+  "guard_inputs"
  ],
  "known_unresolved": [
+  "ledger_integrity",
   "rule_discrimination",
   "flag_coverage",
   "input_constancy"
@@ -22,7 +21,10 @@
    "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
    "detail": "보유 0 상태 매도 59건 (손익 -1,332,835원) — 집계에서 배제됨. 신규 발생이면 원장 오염 재발",
-   "status": "REGRESSION"
+   "baseline": {
+    "phantom_sells": 59
+   },
+   "status": "KNOWN"
   },
   "key_coverage": {
    "ok": false,
@@ -44,6 +46,15 @@
      "key": "close",
      "modules": [
       "fact.py"
+     ]
+    },
+    {
+     "key": "dart_financials",
+     "modules": [
+      "moat.py",
+      "quality.py",
+      "red_flags.py",
+      "value_guards.py"
      ]
     },
     {
@@ -144,7 +155,7 @@
     }
    ],
    "thin_keys": [],
-   "detail": "레코드에 한 번도 없는 키 19종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 20종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
@@ -197,11 +208,11 @@
      "fired": 0
     },
     {
-     "rule": "외인·기관 순매도 상위 (KIS)",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
-     "rule": "계속기업 불확실성 (감사인 명시)",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
@@ -358,15 +369,12 @@
    "detail": "확정 경로 정합 (사다리 불능 5건 — 고가주 잔존분)"
   },
   "as_of_staleness": {
-   "ok": false,
+   "ok": true,
    "axes_checked": 2,
    "stale_axes": [],
-   "missing_as_of": [
-    "bonds.json:kr_corp_spreads.date",
-    "bonds.json:yield_curves.kr.curve_as_of"
-   ],
+   "missing_as_of": [],
    "absent_sources": [],
-   "detail": "노후 0축 · as_of 부재 2축 — as_of 가 없으면 노후를 구조적으로 확인할 수 없다"
+   "detail": "관측일 정합"
   }
  },
  "note": "측정 오염 자동 검출 — 8/5 감사가 잡아낸 3대조 + 8/6 신설 규칙 판별력 검사. 점수 입력 0(관측 전용). status FAIL = **알려진 baseline 초과 = 신규 발생**. KNOWN = 미해결분이 알려진 범위 안(태스크 #19/#20). 매일 FAIL 이면 아무도 읽지 않는다는 8/6 학습 반영."
