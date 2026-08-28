@@ -325,11 +325,17 @@ def cross_check_dart(db: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     067900 을 `implausible_reason` 까지 달아 잡아둔 상태라, 그걸 신규 발견으로 세면
     가드가 작동 중인데도 매번 새 사고처럼 보인다.
     """
+    # 이 워크플로는 수집기를 파일 경로로 직접 실행한다. 그 환경에서 다른 collector
+    # import 가 실패해 교차검증 필드 전체가 사라진 실측이 있어, 필요한 정본 JSON을
+    # 직접 읽는다. 읽기 실패는 원인까지 신고하며 본 KSD 수집은 유지한다.
     try:
-        from api.collectors.dividend_kr import load_dividends_db
-        dart = load_dividends_db()
+        with open(os.path.join(DATA_DIR, "dividends_kr.json"), encoding="utf-8") as f:
+            dart = json.load(f)
+        if not isinstance(dart, dict):
+            raise TypeError("dividends_kr root is not object")
     except Exception as e:
-        return {"status": "skip", "reason": f"DART 원장 로드 실패: {type(e).__name__}"}
+        return {"status": "skip",
+                "reason": f"DART 원장 로드 실패: {type(e).__name__}: {e}"[:160]}
 
     checked = matched = ratio_flag = known_flag = 0
     flags: List[dict] = []
