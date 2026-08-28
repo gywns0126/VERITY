@@ -20,16 +20,16 @@
     },
     "14d": {
       "hit_rate_net": 20.0,
-      "avg_return_net": -20.5,
+      "avg_return_net": -19.99,
       "hit_rate_gross": 33.3,
-      "avg_return_gross": -0.43,
+      "avg_return_gross": 0.42,
       "skipped_no_t_plus_1": 0,
       "rec_price_basis": "T_plus_1_open_snapshot",
       "hit_rate": 33.3,
-      "avg_return": -0.43,
+      "avg_return": 0.42,
       "max_return": 3.88,
       "min_return": -50.0,
-      "sharpe": -0.11,
+      "sharpe": 0.14,
       "total_recs": 3,
       "total_recs_with_delisted": 5,
       "hits": 1,
@@ -75,6 +75,24 @@
       "hit": true
     },
     {
+      "ticker": "042660",
+      "name": "한화오션",
+      "rec_date": "2026-08-14",
+      "rec_price": 90700.0,
+      "current_price": 89600.0,
+      "return_pct_gross": -1.21,
+      "return_pct_net": -1.34,
+      "slippage_pct": 0.1,
+      "hit_gross": false,
+      "hit_net": false,
+      "period": "14d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": -1.21,
+      "hit": false
+    },
+    {
       "ticker": "GOOGL",
       "name": "Alphabet",
       "rec_date": "2026-08-14",
@@ -91,30 +109,12 @@
       "source": "gemini",
       "return_pct": -1.42,
       "hit": false
-    },
-    {
-      "ticker": "042660",
-      "name": "한화오션",
-      "rec_date": "2026-08-14",
-      "rec_price": 90700.0,
-      "current_price": 87300.0,
-      "return_pct_gross": -3.75,
-      "return_pct_net": -3.88,
-      "slippage_pct": 0.1,
-      "hit_gross": false,
-      "hit_net": false,
-      "period": "14d",
-      "recommendation": "WATCH",
-      "brain_score": null,
-      "source": "gemini",
-      "return_pct": -3.75,
-      "hit": false
     }
   ],
-  "updated_at": "2026-08-28 07:01:18.523468+09:00",
+  "updated_at": "2026-08-28 14:59:44.381319+09:00",
   "_corrections_meta": {
     "version": "1.0",
-    "applied_at": "2026-08-28 07:01:18.523487+09:00",
+    "applied_at": "2026-08-28 14:59:44.381346+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": -50.0,
     "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
@@ -122,7 +122,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
-      "fixed_at": "2026-08-28 07:01:18.523491+09:00"
+      "fixed_at": "2026-08-28 14:59:44.381350+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
