@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-29T13:50:22+09:00",
+ "as_of": "2026-08-29T16:36:59+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -45,6 +45,15 @@
      "key": "close",
      "modules": [
       "fact.py"
+     ]
+    },
+    {
+     "key": "dart_financials",
+     "modules": [
+      "moat.py",
+      "quality.py",
+      "red_flags.py",
+      "value_guards.py"
      ]
     },
     {
@@ -150,7 +159,7 @@
      "coverage": "1/46"
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 19종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 20종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
@@ -203,19 +212,19 @@
      "fired": 0
     },
     {
-     "rule": "계속기업 불확실성 (감사인 명시)",
-     "fired": 0
-    },
-    {
      "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
      "rule": "SEC 8-K 리스크 공시:",
+     "fired": 0
+    },
+    {
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
