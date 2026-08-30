@@ -2142,14 +2142,16 @@ export default function PublicHoldingsTab(props: Props) {
                     justifyContent: "space-between",
                     gap: 10,
                     flexWrap: "wrap",
+                    marginInline: 2,
                 }}
             >
                 <div style={{ minWidth: 0 }}>
                     <div
                         style={{
-                            fontSize: narrow ? 18 : 20,
+                            fontSize: 18,
                             fontWeight: 800,
-                            letterSpacing: "-0.5px",
+                            letterSpacing: "-0.4px",
+                            lineHeight: 1.3,
                         }}
                     >
                         나만의 둥지

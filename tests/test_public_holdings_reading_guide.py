@@ -4,6 +4,18 @@ from pathlib import Path
 COMPONENT = Path("framer-components/public-probe/PublicHoldingsTab.tsx")
 
 
+def test_nest_page_title_matches_public_page_header_standard():
+    source = COMPONENT.read_text(encoding="utf-8")
+    title_at = source.index("나만의 둥지")
+    title_block = source[title_at - 500 : title_at]
+    assert "fontSize: 18" in title_block
+    assert "fontWeight: 800" in title_block
+    assert 'letterSpacing: "-0.4px"' in title_block
+    assert "lineHeight: 1.3" in title_block
+    assert "marginInline: 2" in title_block
+    assert "fontSize: narrow ? 18 : 20" not in title_block
+
+
 def source() -> str:
     return COMPONENT.read_text(encoding="utf-8")
 
