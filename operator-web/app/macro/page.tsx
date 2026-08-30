@@ -24,7 +24,8 @@ const MACRO_LABELS: Record<string, string> = {
 }
 
 type GmCite = { title?: string; uri?: string }
-type SynSource = { content?: string; model?: string; citations?: string[]; gm_citations?: GmCite[] }
+type CitationRef = { n?: number; url?: string }
+type SynSource = { content?: string; model?: string; citations?: string[]; citation_refs?: CitationRef[]; gm_citations?: GmCite[] }
 type MacroSyn = { generated_at?: string; sources?: { claude?: SynSource; perplexity?: SynSource; gemini?: SynSource } }
 type Holding13F = { ticker?: string; weight_pct?: number; change_type?: string }
 type Investor = {
@@ -38,13 +39,22 @@ type Investor = {
     report_date?: string
 }
 
-function citedSources(content: string | undefined, citations: string[] | undefined): Array<{ n: number; url: string }> {
-    if (!citations?.length) return []
+function citationView(content: string | undefined, citations: string[] | undefined, refs: CitationRef[] | undefined) {
     const nums = Array.from(String(content || "").matchAll(/\[(\d+)\]/g))
         .map((m) => Number(m[1]))
-        .filter((n, i, all) => n >= 1 && n <= citations.length && all.indexOf(n) === i)
-    const selected = nums.length ? nums : citations.slice(0, 5).map((_, i) => i + 1)
-    return selected.map((n) => ({ n, url: citations[n - 1] })).filter((x) => Boolean(x.url))
+        .filter((n, i, all) => n >= 1 && all.indexOf(n) === i)
+    const exact = (refs || []).filter((x): x is { n: number; url: string } => typeof x.n === "number" && Boolean(x.url))
+    if (exact.length) {
+        const byNumber = new Map(exact.map((x) => [x.n, x.url]))
+        return {
+            links: nums.filter((n) => byNumber.has(n)).map((n) => ({ key: `ref-${n}`, label: `근거 [${n}]`, url: byNumber.get(n)! })),
+            note: nums.some((n) => !byNumber.has(n)) ? `URL 미수록: ${nums.filter((n) => !byNumber.has(n)).map((n) => `[${n}]`).join(", ")}` : "",
+        }
+    }
+    return {
+        links: (citations || []).slice(0, 6).map((url, i) => ({ key: `legacy-${i}`, label: `검증 URL ${i + 1}`, url })),
+        note: citations?.length ? "본문 인용번호와 URL 배열의 정확한 매핑이 아직 발행되지 않았습니다." : "",
+    }
 }
 
 function plain(t?: string): string {
@@ -117,6 +127,7 @@ export default function MacroPage() {
     const macro = pf?.macro || {}
     const cl = syn?.sources?.claude
     const px = syn?.sources?.perplexity
+    const pxCitationView = citationView(px?.content, px?.citations, px?.citation_refs)
 
     // 알파네스트 섹션 문법 — 컬러 닷 아이브로 + 타이틀 + 메타 (좌측 바 아님, 닷만)
     const secTitle = (t: string, n?: string, dot?: string) => (
@@ -150,13 +161,14 @@ export default function MacroPage() {
                             {px?.content ? (
                                 <>
                                     <div style={{ fontSize: 12, color: c.sub, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{plain(px.content)}</div>
-                                    {citedSources(px.content, px.citations).length ? (
+                                    {pxCitationView.links.length ? (
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                                            {citedSources(px.content, px.citations).map((x) => (
-                                                <a key={x.n} href={x.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.vt, textDecoration: "none" }}>근거 [{x.n}]</a>
+                                            {pxCitationView.links.map((x) => (
+                                                <a key={x.key} href={x.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.vt, textDecoration: "none" }}>{x.label}</a>
                                             ))}
                                         </div>
                                     ) : null}
+                                    {pxCitationView.note ? <div style={{ marginTop: 6, fontSize: 10, color: c.amber }}>{pxCitationView.note}</div> : null}
                                     {/* 국내 근거 — Gemini 구글 그라운딩(T1/T2 필터 통과분만, source_tiers) */}
                                     {(syn?.sources?.gemini as SynSource | undefined)?.gm_citations?.length ? (
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>

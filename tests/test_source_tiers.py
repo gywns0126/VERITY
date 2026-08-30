@@ -1,5 +1,6 @@
 """source_tiers 단위 — 출처 신뢰 tier(데이터 필터 5번째 겹, 2026-08-03)."""
 from api.intelligence.source_tiers import domain_of, tier_of, is_blocked, filter_citations
+from api.intelligence.macro_synthesis import _filter_citation_refs
 
 
 def test_tier_levels():
@@ -27,6 +28,17 @@ def test_filter_citations_orders_and_caps():
     assert out[0].endswith("/4") and out[1].endswith("/3")
     assert all("tistory" not in u for u in out)
     assert len(out) == 3
+
+
+def test_macro_citation_filter_preserves_original_reference_numbers():
+    urls = [
+        "https://smallblog.example.com/1",
+        "https://www.hankyung.com/2",
+        "https://www.bok.or.kr/3",
+    ]
+    filtered, refs = _filter_citation_refs(urls, limit=2)
+    assert filtered == [urls[2], urls[1]]
+    assert refs == [{"n": 3, "url": urls[2]}, {"n": 2, "url": urls[1]}]
 
 
 def test_domain_of():

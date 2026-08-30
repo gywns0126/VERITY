@@ -110,6 +110,23 @@ def _perplexity_fresh() -> Dict[str, Any]:
     return {"content": r.get("content", ""), "citations": r.get("citations", []), "model": r.get("model")}
 
 
+def _filter_citation_refs(urls: Any, limit: int = 6) -> tuple[List[str], List[Dict[str, Any]]]:
+    """품질 필터 뒤에도 Perplexity 본문의 원래 인용 번호를 보존한다."""
+    raw = [u for u in (urls or []) if isinstance(u, str) and u]
+    from api.intelligence.source_tiers import filter_citations
+
+    filtered = filter_citations(raw, limit=limit)
+    used: set[int] = set()
+    refs: List[Dict[str, Any]] = []
+    for url in filtered:
+        for index, original in enumerate(raw, start=1):
+            if index not in used and original == url:
+                refs.append({"n": index, "url": url})
+                used.add(index)
+                break
+    return filtered, refs
+
+
 # 그라운딩 검증 모델 — 2026-08-03 프로브에서 google_search 그라운딩 정합 실측
 # (코스피·미10y 정확 일치, 환각 0, 국내 주류 출처). flash-lite 는 그라운딩 미검증이라 명시 고정.
 _GEMINI_GROUNDED_MODEL = "gemini-2.5-flash"
@@ -238,8 +255,7 @@ def synthesize_macro(force: bool = False) -> Dict[str, Any]:
     px = _perplexity_fresh()
     # Perplexity citations 도 차단 겹 통과 (source_tiers)
     try:
-        from api.intelligence.source_tiers import filter_citations
-        px["citations"] = filter_citations(px.get("citations") or [], limit=6)
+        px["citations"], px["citation_refs"] = _filter_citation_refs(px.get("citations") or [], limit=6)
     except Exception:
         pass
     fresh_txt = px.get("content") or ("(신선 사실 수집 실패: " + str(px.get("error")) + ")")
@@ -253,6 +269,7 @@ def synthesize_macro(force: bool = False) -> Dict[str, Any]:
         "grounding": grounding,
         "sources": {
             "perplexity": {"content": px.get("content"), "citations": px.get("citations"),
+                           "citation_refs": px.get("citation_refs"),
                            "model": px.get("model"), "error": px.get("error")},
             "gemini": {"content": gm.get("content"), "model": gm.get("model"), "error": gm.get("error"),
                        "gm_citations": gm.get("citations")},
