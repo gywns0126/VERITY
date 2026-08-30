@@ -817,6 +817,7 @@ export default function PublicHoldingsTab(props: Props) {
         onCanvas ? false : !!getToken()
     )
     const [showAdd, setShowAdd] = useState(false)
+    const [nestGuideOpen, setNestGuideOpen] = useState(false)
     const [busy, setBusy] = useState(false)
     const [themeDark, setThemeDark] = useState<boolean>(() =>
         RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()
@@ -2203,6 +2204,67 @@ export default function PublicHoldingsTab(props: Props) {
                     </button>
                 )}
             </div>
+
+            <section
+                style={{
+                    background: C.card,
+                    borderRadius: 16,
+                    padding: narrow ? "14px 15px" : "16px 17px",
+                    marginTop: 12,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                }}
+            >
+                <button
+                    type="button"
+                    onClick={() => setNestGuideOpen((value) => !value)}
+                    aria-expanded={nestGuideOpen}
+                    aria-controls="nest-reading-guide"
+                    style={{
+                        width: "100%",
+                        border: "none",
+                        padding: 0,
+                        background: "transparent",
+                        color: C.ink,
+                        fontFamily: FONT,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        textAlign: "left",
+                    }}
+                >
+                    <span style={{ minWidth: 0 }}>
+                        <span style={{ display: "block", color: C.vg, fontSize: 10.5, fontWeight: 800 }}>보유 맥락 읽기</span>
+                        <span style={{ display: "block", marginTop: 3, fontSize: 15, fontWeight: 800 }}>자본 규모보다 먼저 확인할 순서</span>
+                    </span>
+                    <span style={{ flexShrink: 0, color: C.vg, background: C.vgS, borderRadius: 999, padding: "6px 9px", fontSize: 10.5, fontWeight: 800 }}>
+                        {nestGuideOpen ? "접기" : "처음이라면 · 펼치기"}
+                    </span>
+                </button>
+                {nestGuideOpen ? (
+                    <div id="nest-reading-guide">
+                        <p style={{ margin: "12px 0 0", color: C.sub, fontSize: 11.5, lineHeight: 1.65 }}>
+                            자본 규모는 무엇을 살지보다 확인 순서를 바꿉니다. 경험이 적을수록 평가손익보다 입력값·기준일·분모를 먼저 확인하세요.
+                        </p>
+                        <ol style={{ margin: "12px 0 0", paddingLeft: 20, display: "grid", gap: 9, color: C.sub, fontSize: 11.5, lineHeight: 1.55 }}>
+                            <li><b style={{ color: C.ink }}>입력값</b> — 수량·평균단가·통화가 실제 계좌와 맞는지 확인합니다.</li>
+                            <li><b style={{ color: C.ink }}>집중도</b> — 자본이 클수록 단일 종목·업종·지역 집중과 현금화 가능성을 먼저 확인합니다.</li>
+                            <li><b style={{ color: C.ink }}>평가손익</b> — 현재가 기준일과 환율 기준일을 확인한 뒤 읽습니다.</li>
+                            <li><b style={{ color: C.ink }}>공시·세금 사실</b> — 보유 종목 공시와 세금 기준일을 예상 수익과 섞지 않습니다.</li>
+                        </ol>
+                        <div style={{ marginTop: 12, padding: "9px 10px", borderRadius: 10, background: C.bg, color: C.faint, fontSize: 10.5, lineHeight: 1.55 }}>
+                            함께 볼 것: 원가 분모 + 가격·환율 기준일 + 집중도. 자본 규모나 경험 수준만으로 위험성향과 적합 자산을 판정하지 않습니다.
+                        </div>
+                        <nav aria-label="다음으로 볼 페이지" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                            <span style={{ color: C.faint, fontSize: 10.5, fontWeight: 800 }}>다음으로 볼 곳</span>
+                            {([["종목 확인", "/stock"], ["보유 종목 공시", "/disclosure"], ["시장 환경", "/market"]] as const).map(([label, path]) => (
+                                <a key={path} href={path} style={{ color: C.vg, background: C.vgS, borderRadius: 999, padding: "5px 9px", fontSize: 10.5, fontWeight: 800, textDecoration: "none" }}>{label}</a>
+                            ))}
+                        </nav>
+                    </div>
+                ) : null}
+            </section>
 
             {loading ? (
                 <>
