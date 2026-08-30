@@ -94,72 +94,104 @@ const KO_CHANGE: Record<string, string> = {
 }
 
 // 초보자용 인물 증명 카드. 공시 숫자와 전기적 사실을 섞지 않는다.
-// 경력·업적 = 각 인물 profile.source_url(위키백과)에서 확인 가능한 사실만 짧게 정리.
+// 경력·업적 = 운용사·재단·대학 등 공식 원문에서 확인 가능한 사실만 짧게 정리.
 // 공시 자산·대표 보유 = 아래에서 최신 SEC 13F 필드로 계산해 기준일과 함께 표시한다.
-const PROFILE_PROOFS: Record<string, { career: string; achievement: string }> = {
+const PROFILE_PROOFS: Record<string, { career: string; achievement: string; sourceLabel: string; sourceUrl: string }> = {
     "Berkshire Hathaway": {
         career: "1956년 투자조합 설립 · 1965년부터 버크셔 경영",
         achievement: "버크셔를 보험·투자 중심의 장기 복리 기업으로 성장시켰습니다.",
+        sourceLabel: "Berkshire Hathaway 공식 주주서한",
+        sourceUrl: "https://www.berkshirehathaway.com/letters/letters.html",
     },
     "Bridgewater Associates": {
         career: "1975년 브리지워터 설립",
         achievement: "기관 자산배분과 글로벌 매크로 투자로 세계적 운용사를 만들었습니다.",
+        sourceLabel: "Bridgewater 공식 창업자 소개",
+        sourceUrl: "https://www.bridgewater.com/our-founder",
     },
     "Renaissance Technologies": {
         career: "1982년 르네상스 테크놀로지스 설립",
         achievement: "수학 모델과 알고리즘을 활용한 퀀트 투자의 대표적 선구자입니다.",
+        sourceLabel: "Renaissance Technologies 공식 자료",
+        sourceUrl: "https://www.rentec.com/pdf/careers_brochure.pdf",
     },
     "Pershing Square": {
         career: "2004년 퍼싱 스퀘어 설립",
         achievement: "소수 기업에 집중해 변화를 요구하는 주주행동주의 투자로 알려졌습니다.",
+        sourceLabel: "Pershing Square 공식 소개",
+        sourceUrl: "https://pershingsquareholdings.com/about-us/",
     },
     "Third Point LLC": {
         career: "1995년 서드포인트 설립",
         achievement: "기업 사건과 변화에 투자하는 이벤트 드리븐·행동주의 투자자입니다.",
+        sourceLabel: "Third Point 공식 리더십",
+        sourceUrl: "https://www.thirdpoint.com/",
     },
     "Tiger Global": {
         career: "2001년 타이거 글로벌 설립",
         achievement: "상장·비상장 기술기업을 함께 다루는 성장주 투자로 알려졌습니다.",
+        sourceLabel: "Tiger Global 공식 창업자 소개",
+        sourceUrl: "https://www.tigerglobal.com/chase-coleman",
     },
     "ARK Invest": {
         career: "2014년 ARK Invest 설립",
         achievement: "파괴적 혁신 기업을 묶은 테마형 ETF를 대중에게 알렸습니다.",
+        sourceLabel: "ARK Invest 공식 이사회 소개",
+        sourceUrl: "https://www.ark-invest.com/board-of-directors",
     },
     Point72: {
         career: "1992년 SAC 설립 · 2014년 Point72 출범",
         achievement: "다수의 전문 운용팀을 결합한 멀티매니저 투자 조직을 구축했습니다.",
+        sourceLabel: "Point72 공식 연혁",
+        sourceUrl: "https://point72.com/what-we-do/",
     },
     "Duquesne Family Office": {
         career: "1981년 Duquesne Capital 설립",
         achievement: "1988~2000년 퀀텀펀드 수석 운용자로 조지 소로스와 함께했습니다.",
+        sourceLabel: "UC Berkeley 공식 인물 자료",
+        sourceUrl: "https://gspp.berkeley.edu/assets/uploads/page/Druckenmiller_Bio.pdf",
     },
     "Soros Fund Management": {
-        career: "1970년 Soros Fund Management 설립",
-        achievement: "통화·금리·정책 변화를 활용하는 글로벌 매크로 투자로 알려졌습니다.",
+        career: "1970년 자신의 헤지펀드 출범",
+        achievement: "금융시장에서 축적한 자본을 세계적 공익재단 설립으로 확장했습니다.",
+        sourceLabel: "Open Society Foundations 공식 소개",
+        sourceUrl: "https://www.opensocietyfoundations.org/george-soros",
     },
     "TCI Fund Management": {
-        career: "2003년 TCI Fund Management 설립",
-        achievement: "기업에 자본 배분 개선을 요구하는 집중형 행동주의 투자자입니다.",
+        career: "TCI Fund Management를 설립한 헤지펀드 매니저",
+        achievement: "투자 사업과 연결된 CIFF를 세계적 아동 중심 독립재단으로 성장시켰습니다.",
+        sourceLabel: "CIFF 공식 연혁",
+        sourceUrl: "https://ciff.org/our-story/",
     },
     "Viking Global": {
         career: "1999년 Viking Global 공동 설립",
         achievement: "기업 분석을 바탕으로 롱·숏 주식을 운용하는 조직을 성장시켰습니다.",
+        sourceLabel: "Viking Global 공식 리더십",
+        sourceUrl: "https://vikingglobal.com/our-team/",
     },
     "AQR Capital": {
         career: "1998년 AQR Capital 공동 설립",
         achievement: "가치·모멘텀 같은 팩터를 체계적으로 활용하는 퀀트 투자자입니다.",
+        sourceLabel: "AQR 공식 리더십",
+        sourceUrl: "https://www.aqr.com/our-firm/leadership/cliff-asness",
     },
     "Fisher Asset Management": {
         career: "1979년 Fisher Investments 설립",
-        achievement: "Forbes 투자 칼럼을 1984~2017년 연재하고 투자서 11권을 썼습니다.",
+        achievement: "가격매출비율을 투자 분석에 활용한 연구와 장기간의 투자 칼럼으로 알려졌습니다.",
+        sourceLabel: "Fisher Investments 공식 리더십",
+        sourceUrl: "https://www.fisherinvestments.com/en-us/about/leadership/ken-fisher",
     },
     "Tudor Investment": {
         career: "1980년 Tudor Investment 설립",
         achievement: "거시 흐름과 추세를 활용하는 선물·헤지펀드 운용으로 알려졌습니다.",
+        sourceLabel: "Tudor 공식 소개",
+        sourceUrl: "https://www.tudor.com/about/",
     },
     "Gates Foundation Trust": {
         career: "1975년 Microsoft 공동 설립",
         achievement: "개인용 컴퓨터 산업 성장과 대규모 재단 자산 운용의 기반을 만들었습니다.",
+        sourceLabel: "Gates Foundation 공식 리더십",
+        sourceUrl: "https://www.gatesfoundation.org/about/leadership/bill-gates",
     },
 }
 
@@ -420,12 +452,12 @@ const CANVAS_SAMPLE = {
                 { to: "2025-12-31", return_pct: 4.58, coverage_pct: 99.3 },
                 { to: "2026-03-31", return_pct: -0.86, coverage_pct: 95.7 },
             ],
-            // 캔버스에서도 아바타·출처가 보이도록 실데이터와 같은 형태로 채운다(빈 렌더 금지).
+            // 캔버스에서도 아바타가 보이도록 실데이터와 같은 형태로 채운다(빈 렌더 금지).
             profile: {
                 name: "워런 버핏",
                 summary: "",
-                source: "위키백과",
-                source_url: "https://ko.wikipedia.org/wiki/워런_버핏",
+                source: "Berkshire Hathaway",
+                source_url: "https://www.berkshirehathaway.com/letters/letters.html",
                 image: {
                     url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Warren_Buffett_KU_Visit.jpg/330px-Warren_Buffett_KU_Visit.jpg",
                     artist: "Mark Hirschey",
@@ -2318,9 +2350,9 @@ export default function PublicInvestorPortfolios(props: {
                                     </div>
                                 ))}
                             </div>
-                            {cur.profile?.source_url ? (
+                            {proof.sourceUrl ? (
                                 <a
-                                    href={cur.profile.source_url}
+                                    href={proof.sourceUrl}
                                     target="_blank"
                                     rel="noopener"
                                     style={{
@@ -2331,70 +2363,28 @@ export default function PublicInvestorPortfolios(props: {
                                         fontSize: 11.5,
                                     }}
                                 >
-                                    경력·업적 출처 · 위키백과 ↗
+                                    경력·업적 출처 · {proof.sourceLabel} ↗
                                 </a>
                             ) : null}
-                        </div>
-                    ) : null}
-
-                    {cur.profile && cur.profile.summary ? (
-                        <details
-                            style={{
-                                marginTop: 9,
-                                background: C.hi,
-                                borderRadius: 13,
-                                padding: "10px 14px",
-                                fontSize: 13,
-                                color: C.sub,
-                                lineHeight: 1.68,
-                            }}
-                        >
-                            <summary
-                                style={{
-                                    cursor: "pointer",
-                                    color: C.sub,
-                                    fontSize: 12.5,
-                                    fontWeight: 700,
-                                }}
-                            >
-                                인물 자세히 보기
-                            </summary>
-                            <div style={{ marginTop: 9 }}>
-                                {cur.profile.summary_ko || cur.profile.summary}
-                                {cur.profile.source_url ? (
-                                    <div style={{ marginTop: 7 }}>
+                            {/* 사진 출처는 사실 근거와 분리하고 자유 라이선스 표시만 유지한다. */}
+                            {cur.profile?.image ? (
+                                <div style={{ marginTop: 4, fontSize: 10.5, color: C.faint }}>
+                                    사진 {cur.profile.image.artist ? cur.profile.image.artist + " · " : ""}
+                                    {cur.profile.image.license_url ? (
                                         <a
-                                            href={cur.profile.source_url}
+                                            href={cur.profile.image.license_url}
                                             target="_blank"
                                             rel="noopener"
-                                            style={{ color: C.vt, textDecoration: "none", fontSize: 12 }}
+                                            style={{ color: C.faint, textDecoration: "underline" }}
                                         >
-                                            위키백과 · {cur.profile.name}
-                                            {cur.profile.summary_ko ? " · 자동 번역" : ""}
+                                            {cur.profile.image.license}
                                         </a>
-                                    </div>
-                                ) : null}
-                                {/* 사진 저작자 표시는 접힌 상세 안에서도 보존한다. */}
-                                {cur.profile.image ? (
-                                    <div style={{ marginTop: 4, fontSize: 11.5, color: C.faint }}>
-                                        사진{" "}
-                                        {cur.profile.image.artist ? cur.profile.image.artist + " · " : ""}
-                                        {cur.profile.image.license_url ? (
-                                            <a
-                                                href={cur.profile.image.license_url}
-                                                target="_blank"
-                                                rel="noopener"
-                                                style={{ color: C.faint, textDecoration: "underline" }}
-                                            >
-                                                {cur.profile.image.license}
-                                            </a>
-                                        ) : (
-                                            cur.profile.image.license
-                                        )}
-                                    </div>
-                                ) : null}
-                            </div>
-                        </details>
+                                    ) : (
+                                        cur.profile.image.license
+                                    )}
+                                </div>
+                            ) : null}
+                        </div>
                     ) : null}
 
                     {/* 요약 지표 */}
@@ -2704,8 +2694,9 @@ export default function PublicInvestorPortfolios(props: {
                 }}
             >
                 출처 — SEC EDGAR 13F-HR. 티커는 OpenFIGI로 CUSIP을 변환했으며 변환되지 않은
-                항목은 CUSIP으로 표시합니다. 인물 소개와 사진은 위키미디어에서 가져왔으며
-                자유 라이선스로 확인된 것만 실었습니다. 저작자와 라이선스는 각 카드에 표기했습니다.
+                항목은 CUSIP으로 표시합니다. 경력과 업적은 운용사·재단·대학의 공식 원문을
+                연결했습니다. 사진은 위키미디어 자유 라이선스 자료만 사용하며 저작자와
+                라이선스는 각 카드에 표기했습니다.
                 종목 로고는 토스 제공입니다.
                 운용사명 옆 인물은 대표 연관 인물이며 현재 운용 주체와 다를 수 있습니다.
             </div>
