@@ -12,8 +12,13 @@ def test_nest_page_title_matches_public_page_header_standard():
     assert "fontWeight: 800" in title_block
     assert 'letterSpacing: "-0.4px"' in title_block
     assert "lineHeight: 1.3" in title_block
-    assert "marginInline: 2" in title_block
     assert "fontSize: narrow ? 18 : 20" not in title_block
+    wrap = source[source.index("const wrap: CSSProperties") : source.index("const cardS")]
+    assert "maxWidth: 1000" in wrap
+    assert 'margin: "0 auto"' in wrap
+    assert 'background: "transparent"' in wrap
+    assert 'padding: "8px clamp(14px, 2vw, 20px) 20px"' in wrap
+    assert "marginInline: 2" not in title_block
 
 
 def source() -> str:

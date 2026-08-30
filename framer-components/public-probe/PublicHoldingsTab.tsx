@@ -1378,7 +1378,6 @@ export default function PublicHoldingsTab(props: Props) {
     )
 
     const narrow = w > 0 && w < 560
-    const pad = narrow ? 12 : 18
 
     /* 평가 — 기준가 없는 종목(미국·ETF·거래정지)은 0% 로 위장하지 않는다(_priced=false).
        옛 코드는 종가가 없으면 평단을 현재가로 써서 "정확히 0.0%" 를 표시했다 — 사용자가 손익 0
@@ -1538,13 +1537,15 @@ export default function PublicHoldingsTab(props: Props) {
     }
     const wrap: CSSProperties = {
         width: "100%",
+        maxWidth: 1000,
+        margin: "0 auto",
         height: "100%",
         maxHeight: "100%",
         overflowY: "auto",
         overflowX: "hidden",
-        background: C.bg,
+        background: "transparent",
         fontFamily: FONT,
-        padding: `0 ${pad}px`,
+        padding: "8px clamp(14px, 2vw, 20px) 20px",
         boxSizing: "border-box",
         color: C.ink,
     }
@@ -2142,7 +2143,6 @@ export default function PublicHoldingsTab(props: Props) {
                     justifyContent: "space-between",
                     gap: 10,
                     flexWrap: "wrap",
-                    marginInline: 2,
                 }}
             >
                 <div style={{ minWidth: 0 }}>
