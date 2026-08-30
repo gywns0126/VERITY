@@ -382,7 +382,16 @@ export default function PublicMenuAccount(props: {
     if (!loggedIn) {
         return (
             <div
+                role="button"
+                tabIndex={0}
+                aria-label="계정으로 투자 기록 관리"
                 onClick={() => go(loginRedirect)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        go(loginRedirect)
+                    }
+                }}
                 onMouseEnter={() => setBtnHov(true)}
                 onMouseLeave={() => setBtnHov(false)}
                 style={{
@@ -400,14 +409,13 @@ export default function PublicMenuAccount(props: {
                 }}
             >
                 <SignIn size={17} color={loginText} weight="bold" />
-                <span
-                    style={{
-                        fontWeight: 800,
-                        fontSize: 13.5,
-                        color: loginText,
-                    }}
-                >
-                    로그인 / 회원가입
+                <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                    <span style={{ fontWeight: 800, fontSize: 13.5, color: loginText }}>
+                        계정으로 기록 관리
+                    </span>
+                    <span style={{ marginTop: 1, fontWeight: 650, fontSize: 10.5, lineHeight: 1.3, color: loginText, opacity: 0.82 }}>
+                        저장·동기화에는 로그인이 필요합니다
+                    </span>
                 </span>
             </div>
         )

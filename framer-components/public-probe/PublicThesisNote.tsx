@@ -428,14 +428,14 @@ export default function PublicThesisNote(props: Props) {
                     style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, fontFamily: FONT, fontWeight: 500, background: C.bg, color: C.ink, outline: "none", resize: "vertical", lineHeight: 1.5 }} />
                 {/* 커뮤니티 공개 토글 — 기본 비공개. 익명(로컬 저장)은 서버행이 없어 공개 불가. */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, paddingTop: 11, borderTop: `1px solid ${C.line}` }}>
-                    <button onClick={() => { if (onCanvas) return; if (!token) { setPubMsg("로그인하면 공개할 수 있어요"); return } setIsPublic(!isPublic); setPubMsg("") }}
+                    <button onClick={() => { if (onCanvas) return; if (!token) { setPubMsg("공개 기록은 작성자 식별이 필요합니다. 로그인 후 공개할 수 있습니다."); return } setIsPublic(!isPublic); setPubMsg("") }}
                         aria-label="커뮤니티에 공개" role="switch" aria-checked={isPublic}
                         style={{ width: 42, height: 24, borderRadius: 999, border: "none", cursor: token ? "pointer" : "default", background: isPublic ? C.vtBtn : C.line, position: "relative", flexShrink: 0, padding: 0, transition: "background 150ms", opacity: token ? 1 : 0.55 }}>
                         <span style={{ position: "absolute", top: 3, left: isPublic ? 21 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 150ms", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
                     </button>
                     <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>커뮤니티에 공개</div>
-                        <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.4 }}>{token ? "공개하면 별명으로 이 종목의 공개 관점에 보여요 · 개인 의견 표시" : "로그인 후 공개할 수 있어요"}</div>
+                        <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, lineHeight: 1.4 }}>{token ? "공개하면 별명으로 이 종목의 공개 관점에 보여요 · 개인 의견 표시" : "작성자 식별과 수정 이력 보존을 위해 로그인이 필요합니다"}</div>
                     </div>
                 </div>
                 {pubMsg && <div style={{ fontSize: 11.5, fontWeight: 700, color: C.up, marginTop: 6 }}>{pubMsg}</div>}
@@ -443,7 +443,7 @@ export default function PublicThesisNote(props: Props) {
                     <button onClick={save} style={{ flex: 1, border: "none", cursor: "pointer", fontFamily: FONT, padding: "11px 0", borderRadius: 11, fontSize: 13, fontWeight: 800, background: C.vtBtn, color: "#fff" }}>기록</button>
                     {thesis && <button onClick={() => { setEditing(false); setStance(thesis.stance); setNote(thesis.note || ""); setIsPublic(!!thesis.isPublic) }} style={{ flexShrink: 0, cursor: "pointer", fontFamily: FONT, padding: "11px 16px", borderRadius: 11, fontSize: 13, fontWeight: 700, background: "transparent", color: C.faint, border: `1px solid ${C.line}` }}>취소</button>}
                 </div>
-                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{token ? "내 계정에 저장 — 어느 기기서나 동일" : "이 기기에 저장 · 로그인하면 계정에 저장돼 어디서나 보여요"} · 기록 시점 가격 동결로 재방문 시 변화 표시</div>
+                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 9, lineHeight: 1.5 }}>{token ? "계정에 저장되어 다른 기기에서도 불러올 수 있습니다" : "현재 기기에 임시 저장됩니다 · 기록을 보존하고 다른 기기에서 불러오려면 로그인이 필요합니다"} · 기록 시점 가격 동결로 재방문 시 변화 표시</div>
             </div>
             {feedSection}
         </div>

@@ -481,6 +481,9 @@ export default function AlphaNestAuth(props: Props) {
                         <AlphaLogo size={26} />
                         <span style={{ fontSize: 19, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>ALPHANEST</span>
                     </div>
+                    <div style={{ maxWidth: 290, textAlign: "center", fontSize: 11.5, lineHeight: 1.55, fontWeight: 600, color: C.sub }}>
+                        개인 투자 기록을 보관하려면 계정이 필요합니다.<br />시장 정보와 종목 리포트는 로그인 없이 볼 수 있습니다.
+                    </div>
                 </div>
 
                 {/* 모드 탭 */}
@@ -490,7 +493,7 @@ export default function AlphaNestAuth(props: Props) {
                         return (
                             <button key={m} onClick={() => { setMode(m); setErr(""); setOk("") }}
                                 style={{ flex: 1, border: "none", padding: "8px 0", borderRadius: 9, cursor: "pointer", fontFamily: FONT, fontSize: 13, fontWeight: 700, background: active ? C.card : "transparent", color: active ? C.vg : C.sub, boxShadow: active ? "0 1px 3px rgba(0,0,0,0.10)" : "none" }}>
-                                {m === "login" ? "로그인" : "회원가입"}
+                                {m === "login" ? "로그인" : "계정 만들기"}
                             </button>
                         )
                     })}
@@ -523,7 +526,7 @@ export default function AlphaNestAuth(props: Props) {
 
                 <button onClick={submit} disabled={busy}
                     style={{ width: "100%", marginTop: 16, padding: "13px 0", border: "none", borderRadius: 12, cursor: busy ? "default" : "pointer", fontFamily: FONT, fontSize: 14, fontWeight: 800, background: C.vg, color: "#ffffff", opacity: busy ? 0.6 : 1 }}>
-                    {busy ? "처리 중…" : mode === "login" ? "로그인" : "회원가입"}
+                    {busy ? "처리 중…" : mode === "login" ? "로그인" : "계정 만들기"}
                 </button>
 
                 {/* 구분선 */}
@@ -536,7 +539,7 @@ export default function AlphaNestAuth(props: Props) {
                 <button onClick={googleLogin} disabled={busy}
                     style={{ width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, cursor: busy ? "default" : "pointer", fontFamily: FONT, fontSize: 13.5, fontWeight: 700, padding: "11px 16px", borderRadius: 12, opacity: busy ? 0.6 : 1 }}>
                     <GoogleG size={18} />
-                    Google로 계속하기
+                    Google 계정으로 계속
                 </button>
             </div>
         </div>
