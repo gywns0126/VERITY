@@ -700,7 +700,7 @@ function StyleMap({
                 viewBox={`0 0 ${w} ${H}`}
                 style={{ display: "block" }}
                 role="img"
-                aria-label="집중도와 분기 기복으로 본 운용사 분포"
+                aria-label="상위 10종목 집중도와 분기별 복제 수익률 기복으로 본 운용사 분포"
             >
                 {(narrow ? [0, 50, 100] : [0, 25, 50, 75, 100]).map((g) => (
                     <g key={g}>
@@ -735,7 +735,7 @@ function StyleMap({
                     fontSize={11}
                     fontWeight={600}
                 >
-                    상위 10종목 비중 — 오른쪽일수록 몇 개에 몰아서
+                    분산형 ← 상위 10종목 집중 →
                 </text>
                 <text
                     x={12}
@@ -747,7 +747,7 @@ function StyleMap({
                     fontWeight={600}
                     transform={`rotate(-90 12 ${PAD.t + innerH / 2})`}
                 >
-                    {narrow ? "분기 기복 ↑" : "분기 기복 — 위일수록 출렁임"}
+                    {narrow ? "기복 큼 ↑" : "분기별 복제 수익률 기복 ↑"}
                 </text>
                 {/* 🚨 선택 점을 마지막에 그린다. SVG 는 문서 순서대로 덮으므로 그냥 map 하면
                     뒤 인덱스 점들이 선택 점의 이름표를 가린다(2026-08-01 PM 스크린샷 — "켄 피셔"
@@ -1368,14 +1368,18 @@ export default function PublicInvestorPortfolios(props: {
                 </div>
                 <div
                     style={{
-                        color: C.faint,
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "5px 12px",
+                        color: C.sub,
                         fontSize: 12.5,
-                        margin: "4px 0 6px",
-                        lineHeight: 1.55,
+                        margin: "7px 0 8px",
+                        lineHeight: 1.5,
                     }}
                 >
-                    점을 누르면 아래에서 자세히 볼 수 있습니다. 오른쪽일수록 소수 종목에
-                    몰아서 담았고, 위일수록 분기마다 성과가 출렁였습니다.
+                    <span>→ 오른쪽: 상위 10종목에 더 집중</span>
+                    <span>↑ 위쪽: 분기별 복제 수익률의 기복이 더 큼</span>
+                    <span style={{ color: C.faint }}>점을 누르면 상세 포트폴리오로 이동</span>
                 </div>
                 <StyleMap list={list} sel={sel} onPick={setSel} C={C} />
                 <div
@@ -1383,11 +1387,12 @@ export default function PublicInvestorPortfolios(props: {
                         fontSize: 11.5,
                         color: C.faint,
                         lineHeight: 1.55,
-                        paddingBottom: 6,
+                        marginTop: 12,
+                        padding: "10px 0 6px",
+                        borderTop: `1px solid ${C.line}`,
                     }}
                 >
-                    위치는 공시 숫자를 그대로 옮긴 것이며 좋고 나쁨을 뜻하지 않습니다.
-                    현금·채권·공매도는 이 공시에 없어 반영되지 않습니다.
+                    참고 · 위치는 우열 순위가 아니며, 13F에 없는 현금·채권·공매도는 제외됩니다.
                 </div>
             </div>
 

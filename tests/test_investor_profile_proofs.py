@@ -78,3 +78,15 @@ def test_wikipedia_biography_is_not_rendered_as_factual_evidence():
     assert "profile.summary" not in render
     assert "profile.source_url" not in render
     assert "위키백과" not in render
+
+
+def test_style_map_explains_axes_directly_and_separates_the_caveat():
+    source = COMPONENT.read_text(encoding="utf-8")
+    assert "→ 오른쪽: 상위 10종목에 더 집중" in source
+    assert "↑ 위쪽: 분기별 복제 수익률의 기복이 더 큼" in source
+    assert "분산형 ← 상위 10종목 집중 →" in source
+    assert "참고 · 위치는 우열 순위가 아니며" in source
+    assert 'marginTop: 12' in source
+    assert 'borderTop: `1px solid ${C.line}`' in source
+    assert "오른쪽일수록 몇 개에 몰아서" not in source
+    assert "위일수록 출렁임" not in source
