@@ -36,3 +36,8 @@ def test_guide_has_no_data_or_ai_call() -> None:
     text = source()
     for token in ("fetch(", "XMLHttpRequest", "EventSource", "WebSocket", "generateText", "streamText"):
         assert token not in text
+
+
+def test_guide_has_no_outline() -> None:
+    text = source()
+    assert 'border: `1px solid ${C.line}`' not in text

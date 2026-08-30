@@ -76,7 +76,7 @@ export default function PublicPageReadingGuide(props: Props) {
 
     return (
         <div style={shell}>
-            <section style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, boxSizing: "border-box" }}>
+            <section style={{ background: C.card, borderRadius: 16, padding: 16, boxSizing: "border-box" }}>
                 <button
                     type="button"
                     onClick={() => setOpen((value) => !value)}
