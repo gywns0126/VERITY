@@ -242,6 +242,9 @@ export default function PublicMenuAccount(props: {
     const [profile, setProfile] = useState<ProfileRow | null>(() =>
         isCanvas ? null : loadCachedProfile()
     )
+    // SSR/페이지 전환 중에는 인증 판정 전 로그아웃 CTA를 노출하지 않는다.
+    // 동일 높이의 투명 자리만 유지해 보라색 CTA → 회원 카드 전환 플래시를 막는다.
+    const [authReady, setAuthReady] = useState<boolean>(isCanvas)
     const [busy, setBusy] = useState(false)
     const [btnHov, setBtnHov] = useState(false)
     const [cardHov, setCardHov] = useState(false)
@@ -253,6 +256,7 @@ export default function PublicMenuAccount(props: {
         if (isCanvas) return
         const s = loadSession()
         setSession(s)
+        setAuthReady(true)
         if (s && s.access_token && s.user && s.user.id) {
             fetchProfile(
                 url,
@@ -357,6 +361,25 @@ export default function PublicMenuAccount(props: {
         placeholderNode
     )
 
+    if (!authReady) {
+        return variant === "avatar" ? (
+            <div
+                aria-hidden="true"
+                style={{ ...circle, visibility: "hidden", ...style }}
+            />
+        ) : (
+            <div
+                aria-hidden="true"
+                style={{
+                    width: "100%",
+                    minHeight: 54,
+                    visibility: "hidden",
+                    ...style,
+                }}
+            />
+        )
+    }
+
     // ── variant: avatar (프로필 링크 버튼용) — hover 살짝 어둡게(brightness) ──
     if (variant === "avatar") {
         return (
@@ -411,10 +434,10 @@ export default function PublicMenuAccount(props: {
                 <SignIn size={17} color={loginText} weight="bold" />
                 <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
                     <span style={{ fontWeight: 800, fontSize: 13.5, color: loginText }}>
-                        계정으로 기록 관리
+                        로그인하고 기록 보관
                     </span>
                     <span style={{ marginTop: 1, fontWeight: 650, fontSize: 10.5, lineHeight: 1.3, color: loginText, opacity: 0.82 }}>
-                        저장·동기화에는 로그인이 필요합니다
+                        기기 간 동기화
                     </span>
                 </span>
             </div>

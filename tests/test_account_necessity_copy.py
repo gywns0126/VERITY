@@ -9,9 +9,17 @@ PUBLIC = ROOT / "framer-components" / "public-probe"
 
 def test_menu_explains_storage_requirement() -> None:
     source = (PUBLIC / "PublicMenuAccount.tsx").read_text(encoding="utf-8")
-    assert "계정으로 기록 관리" in source
-    assert "저장·동기화에는 로그인이 필요합니다" in source
+    assert "로그인하고 기록 보관" in source
+    assert "기기 간 동기화" in source
     assert "무료로" not in source
+
+
+def test_menu_hides_guest_cta_until_auth_is_ready() -> None:
+    source = (PUBLIC / "PublicMenuAccount.tsx").read_text(encoding="utf-8")
+    assert "const [authReady, setAuthReady]" in source
+    assert "setAuthReady(true)" in source
+    assert "if (!authReady)" in source
+    assert 'visibility: "hidden"' in source
 
 
 def test_auth_explains_public_and_account_boundaries() -> None:
