@@ -76,6 +76,10 @@ function sha256(buf) {
 }
 
 const SKIP_FILES = new Set(["README.md", "_manifest.txt"]);
+// GitHub 공개 데이터 전용. 종목변화 445개 조각을 공용 publish마다 Blob에 다시
+// 올리면 무관한 workflow까지 Blob 작업/전송 비용을 만든다. VERITY-data에는
+// 계속 발행하되 Blob dual-write 대상에서는 제외한다.
+const SKIP_DIRECTORIES = new Set(["stock_change_public"]);
 // 시세 재배포 컴플라이언스(2026-07-03 Phase 2) — 발행 중단된 KRX-raw 파일의 잔존 blob 스냅샷 삭제(멱등).
 // allowlist 제거만으론 마지막 업로드본이 public URL 에 계속 서빙됨 → 매 run del 로 확정 차단.
 // del 은 blob URL 기준(pathname 은 SDK 버전 의존) — 스토어 host 는 사이트 컴포넌트들이 쓰는 고정 URL.
@@ -202,6 +206,10 @@ async function main() {
     const entries = [];
     for (const f of fs.readdirSync(dir)) {
         if (SKIP_FILES.has(f) || f.startsWith("_")) continue;
+        if (SKIP_DIRECTORIES.has(f)) {
+            console.log(`  [cost-guard] ${f}/ — GitHub 공개 데이터 전용, Blob 업로드 제외`);
+            continue;
+        }
         const fp = path.join(dir, f);
         const stat = fs.statSync(fp);
         if (stat.isDirectory()) {

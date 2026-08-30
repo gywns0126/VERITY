@@ -251,8 +251,9 @@ runs:
           fi
         done
 
-        # ── stock_change_public/ 조각 발행 ──
+        # ── stock_change_public/ 조각 발행 (VERITY-data 전용) ──
         # 종목 화면이 2,495종목 단일 JSON을 받지 않도록 티커 앞 세 자리 단위로 나눈다.
+        # Blob 반복 업로드는 비용 방지를 위해 blob_upload.js에서 제외한다.
         mkdir -p _public_dist/stock_change_public
         for f in $(git ls-tree --name-only origin/main:data/stock_change_public 2>/dev/null); do
           if git show "origin/main:data/stock_change_public/$f" > "_public_dist/stock_change_public/$f" 2>/dev/null && [ -s "_public_dist/stock_change_public/$f" ]; then

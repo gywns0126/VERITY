@@ -6,7 +6,7 @@ import { startTransition, useEffect, useMemo, useRef, useState, type CSSProperti
  * 추천·점수·전망을 만들지 않으며 결손 소스도 커버리지에 그대로 신고한다.
  */
 
-const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_change_public"
+const DEFAULT_URL = "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/stock_change_public"
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
 const LIGHT = {
