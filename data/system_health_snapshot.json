@@ -1,13 +1,13 @@
 {
   "system_health": {
     "status": "error",
-    "checked_at": "2026-08-31T04:10:00+09:00",
+    "checked_at": "2026-08-31T05:09:59+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 17110,
+    "elapsed_ms": 17167,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 937,
+        "latency_ms": 1019,
         "detail": "정상",
         "attempts": 1
       },
@@ -19,13 +19,13 @@
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 306,
+        "latency_ms": 519,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 137,
+        "latency_ms": 127,
         "detail": "정상",
         "attempts": 1
       },
@@ -37,49 +37,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 924,
+        "latency_ms": 743,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 832,
+        "latency_ms": 1273,
         "detail": "정상",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1779,
+        "latency_ms": 1012,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 13296,
+        "latency_ms": 13421,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260827)",
         "attempts": 1
       },
       "ecos": {
         "status": "error",
-        "latency_ms": 16626,
+        "latency_ms": 16723,
         "detail": "HTTPSConnectionPool(host='ecos.bok.or.kr', port=443): Max retries exceeded with url: /api/StatisticSearch/8BT2P4G4NSU61M",
         "attempts": 2
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 102,
+        "latency_ms": 174,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 136,
+        "latency_ms": 185,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 148,
+        "latency_ms": 150,
         "detail": "정상",
         "attempts": 1
       },
@@ -94,8 +94,8 @@
       "status": "running",
       "conclusion": "in_progress",
       "workflow": "Stock Analysis Pipeline (Quick — Off-hours)",
-      "started_at": "2026-08-30T19:07:51Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/33330003423",
+      "started_at": "2026-08-30T20:07:51Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/33332779480",
       "detail": "Stock Analysis Pipeline (Quick — Off-hours): in_progress"
     },
     "data_recency": {
@@ -104,43 +104,43 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-08-31 04:08",
+          "last_updated": "2026-08-31 05:08",
           "age_hours": 0.02,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-08-31 04:08",
+          "last_updated": "2026-08-31 05:08",
           "age_hours": 0.02,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-08-31 04:08",
+          "last_updated": "2026-08-31 05:08",
           "age_hours": 0.02,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-08-31 04:08",
+          "last_updated": "2026-08-31 05:08",
           "age_hours": 0.02,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-08-31 04:08",
+          "last_updated": "2026-08-31 05:08",
           "age_hours": 0.02,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-08-31 04:08",
+          "last_updated": "2026-08-31 05:08",
           "age_hours": 0.02,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-08-31 04:08",
+          "last_updated": "2026-08-31 05:08",
           "age_hours": 0.02,
           "threshold_hours": 1
         }
@@ -149,10 +149,10 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "422dad7",
-      "remote_message": "📊 macro_snapshot 2026-08-31T04:03",
-      "remote_date": "2026-08-30T19:03:46Z",
-      "local_sha": "422dad7"
+      "remote_sha": "e6c5cbf",
+      "remote_message": "📊 macro_snapshot 2026-08-31T05:03",
+      "remote_date": "2026-08-30T20:03:41Z",
+      "local_sha": "e6c5cbf"
     },
     "errors": [
       "ecos API 오류 — HTTPSConnectionPool(host='ecos.bok.or.kr', port=443): Max retries exceeded with url: /api/StatisticSearch/8BT2P4G4NSU61M"
@@ -160,7 +160,7 @@
     "warnings": [],
     "overall_status": "error"
   },
-  "updated_at": "2026-08-31T04:10:06+09:00",
+  "updated_at": "2026-08-31T05:10:03+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
