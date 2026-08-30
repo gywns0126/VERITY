@@ -90,6 +90,9 @@ jobs:
         if: steps.collect.outputs.new != '0'
         run: |
           python -m api.builders.public_disclosure_feed_builder
+          # 종목 변화 센터 = 기존 공개 산출 조인. 티커 앞 세 자리 조각 + 커버리지 요약.
+          # 외부 호출·점수·추천 0. data/ 명시 범위 안에서 state와 조각을 함께 보존한다.
+          python -m api.builders.stock_change_public_builder
           # 투자 캘린더 = 공시피드+배당락+IPO 재배열 (2026-07-12, KIS 무관·신규수집 0). git add data/ 로 자동 포함.
           python -m api.builders.calendar_public_builder || echo "[calendar] build 실패(비차단)"
           # 긴급 팝업 피드 (2026-08-01) = 임원/대주주 대량거래(금액=주식수×평가기준가) + 긴급공시(sev3).
