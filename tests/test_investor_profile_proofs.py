@@ -1,0 +1,44 @@
+"""거장 페이지의 초보자용 인물 증명 카드 계약."""
+
+import json
+import re
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+COMPONENT = ROOT / "framer-components/public-probe/PublicInvestorPortfolios.tsx"
+DATA = ROOT / "data/us_investor_portfolios.json"
+
+
+def _proof_block() -> str:
+    source = COMPONENT.read_text(encoding="utf-8")
+    return source[source.index("const PROFILE_PROOFS") : source.index("// 종목 역조회")]
+
+
+def _proof_keys() -> set[str]:
+    block = _proof_block()
+    quoted = re.findall(r'^\s{4}"([^"]+)":\s*\{', block, re.MULTILINE)
+    bare = re.findall(r"^\s{4}([A-Za-z][A-Za-z0-9]*):\s*\{", block, re.MULTILINE)
+    return set(quoted + bare)
+
+
+def test_every_published_investor_has_a_proof_card():
+    payload = json.loads(DATA.read_text(encoding="utf-8"))
+    institutions = {item["institution"] for item in payload["investors"]}
+    assert len(institutions) == 16
+    assert _proof_keys() == institutions
+
+
+def test_proof_card_has_the_four_requested_fields_and_safe_labels():
+    source = COMPONENT.read_text(encoding="utf-8")
+    for label in ("주요 경력", "13F 공시 자산", "대표 업적", "대표 보유"):
+        assert label in source
+    assert "전체 AUM 아님" in source
+    assert "인물 자세히 보기" in source
+    assert "slice(0, 3)" in source
+
+
+def test_curated_proofs_do_not_publish_net_worth_claims():
+    block = _proof_block().lower()
+    assert "순자산" not in block
+    assert "net worth" not in block

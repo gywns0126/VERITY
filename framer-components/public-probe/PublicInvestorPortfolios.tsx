@@ -93,6 +93,76 @@ const KO_CHANGE: Record<string, string> = {
     HELD: "유지",
 }
 
+// 초보자용 인물 증명 카드. 공시 숫자와 전기적 사실을 섞지 않는다.
+// 경력·업적 = 각 인물 profile.source_url(위키백과)에서 확인 가능한 사실만 짧게 정리.
+// 공시 자산·대표 보유 = 아래에서 최신 SEC 13F 필드로 계산해 기준일과 함께 표시한다.
+const PROFILE_PROOFS: Record<string, { career: string; achievement: string }> = {
+    "Berkshire Hathaway": {
+        career: "1956년 투자조합 설립 · 1965년부터 버크셔 경영",
+        achievement: "버크셔를 보험·투자 중심의 장기 복리 기업으로 성장시켰습니다.",
+    },
+    "Bridgewater Associates": {
+        career: "1975년 브리지워터 설립",
+        achievement: "기관 자산배분과 글로벌 매크로 투자로 세계적 운용사를 만들었습니다.",
+    },
+    "Renaissance Technologies": {
+        career: "1982년 르네상스 테크놀로지스 설립",
+        achievement: "수학 모델과 알고리즘을 활용한 퀀트 투자의 대표적 선구자입니다.",
+    },
+    "Pershing Square": {
+        career: "2004년 퍼싱 스퀘어 설립",
+        achievement: "소수 기업에 집중해 변화를 요구하는 주주행동주의 투자로 알려졌습니다.",
+    },
+    "Third Point LLC": {
+        career: "1995년 서드포인트 설립",
+        achievement: "기업 사건과 변화에 투자하는 이벤트 드리븐·행동주의 투자자입니다.",
+    },
+    "Tiger Global": {
+        career: "2001년 타이거 글로벌 설립",
+        achievement: "상장·비상장 기술기업을 함께 다루는 성장주 투자로 알려졌습니다.",
+    },
+    "ARK Invest": {
+        career: "2014년 ARK Invest 설립",
+        achievement: "파괴적 혁신 기업을 묶은 테마형 ETF를 대중에게 알렸습니다.",
+    },
+    Point72: {
+        career: "1992년 SAC 설립 · 2014년 Point72 출범",
+        achievement: "다수의 전문 운용팀을 결합한 멀티매니저 투자 조직을 구축했습니다.",
+    },
+    "Duquesne Family Office": {
+        career: "1981년 Duquesne Capital 설립",
+        achievement: "1988~2000년 퀀텀펀드 수석 운용자로 조지 소로스와 함께했습니다.",
+    },
+    "Soros Fund Management": {
+        career: "1970년 Soros Fund Management 설립",
+        achievement: "통화·금리·정책 변화를 활용하는 글로벌 매크로 투자로 알려졌습니다.",
+    },
+    "TCI Fund Management": {
+        career: "2003년 TCI Fund Management 설립",
+        achievement: "기업에 자본 배분 개선을 요구하는 집중형 행동주의 투자자입니다.",
+    },
+    "Viking Global": {
+        career: "1999년 Viking Global 공동 설립",
+        achievement: "기업 분석을 바탕으로 롱·숏 주식을 운용하는 조직을 성장시켰습니다.",
+    },
+    "AQR Capital": {
+        career: "1998년 AQR Capital 공동 설립",
+        achievement: "가치·모멘텀 같은 팩터를 체계적으로 활용하는 퀀트 투자자입니다.",
+    },
+    "Fisher Asset Management": {
+        career: "1979년 Fisher Investments 설립",
+        achievement: "Forbes 투자 칼럼을 1984~2017년 연재하고 투자서 11권을 썼습니다.",
+    },
+    "Tudor Investment": {
+        career: "1980년 Tudor Investment 설립",
+        achievement: "거시 흐름과 추세를 활용하는 선물·헤지펀드 운용으로 알려졌습니다.",
+    },
+    "Gates Foundation Trust": {
+        career: "1975년 Microsoft 공동 설립",
+        achievement: "개인용 컴퓨터 산업 성장과 대규모 재단 자산 운용의 기반을 만들었습니다.",
+    },
+}
+
 // 종목 역조회(거장 보유 검색) 캔버스 샘플 — fetch 없는 캔버스 렌더에서 빈 화면 방지
 const SM_CANVAS_SAMPLE = {
     _meta: {
@@ -1034,6 +1104,12 @@ export default function PublicInvestorPortfolios(props: {
     const rs: any[] = Array.isArray(cur?.quarterly_replication_returns)
         ? cur.quarterly_replication_returns
         : []
+    const proof = PROFILE_PROOFS[cur?.institution] || null
+    const representativeHoldings = (cur?.top_holdings || [])
+        .filter((h: any) => h.ticker)
+        .slice(0, 3)
+        .map((h: any) => h.ticker)
+        .join(" · ")
 
     const chipBg = (t: string) =>
         t === "NEW"
@@ -2176,68 +2252,149 @@ export default function PublicInvestorPortfolios(props: {
                         </div>
                     </div>
 
-                    {cur.profile && cur.profile.summary ? (
+                    {proof ? (
                         <div
                             style={{
                                 marginTop: 14,
                                 background: C.hi,
                                 borderRadius: 13,
-                                padding: "12px 14px",
+                                padding: "13px 14px",
+                            }}
+                        >
+                            <div style={{ fontSize: 12.5, fontWeight: 750, color: C.ink }}>
+                                숫자로 먼저 보는 인물
+                            </div>
+                            <div
+                                style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))",
+                                    gap: 8,
+                                    marginTop: 9,
+                                }}
+                            >
+                                {[
+                                    { l: "주요 경력", v: proof.career },
+                                    {
+                                        l: "13F 공시 자산",
+                                        v: money(cur.disclosed_value_usd),
+                                        sub: `${dot(cur.report_date)} 기준 · 전체 AUM 아님`,
+                                    },
+                                    { l: "대표 업적", v: proof.achievement },
+                                    {
+                                        l: "대표 보유",
+                                        v: representativeHoldings || "확인 가능한 티커 없음",
+                                        sub: `${dot(cur.report_date)} 평가액 상위 3종목`,
+                                    },
+                                ].map((x) => (
+                                    <div
+                                        key={x.l}
+                                        style={{
+                                            background: C.card,
+                                            borderRadius: 11,
+                                            padding: "10px 11px",
+                                            minWidth: 0,
+                                        }}
+                                    >
+                                        <div style={{ fontSize: 11, color: C.faint, fontWeight: 650 }}>
+                                            {x.l}
+                                        </div>
+                                        <div
+                                            style={{
+                                                marginTop: 4,
+                                                fontSize: x.l === "대표 업적" ? 12.5 : 13.5,
+                                                lineHeight: 1.48,
+                                                color: C.ink,
+                                                fontWeight: x.l === "13F 공시 자산" ? 750 : 650,
+                                                ...(x.l === "13F 공시 자산" ? NUM : {}),
+                                            }}
+                                        >
+                                            {x.v}
+                                        </div>
+                                        {x.sub ? (
+                                            <div style={{ marginTop: 3, fontSize: 10.5, color: C.faint }}>
+                                                {x.sub}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                ))}
+                            </div>
+                            {cur.profile?.source_url ? (
+                                <a
+                                    href={cur.profile.source_url}
+                                    target="_blank"
+                                    rel="noopener"
+                                    style={{
+                                        display: "inline-block",
+                                        marginTop: 8,
+                                        color: C.vt,
+                                        textDecoration: "none",
+                                        fontSize: 11.5,
+                                    }}
+                                >
+                                    경력·업적 출처 · 위키백과 ↗
+                                </a>
+                            ) : null}
+                        </div>
+                    ) : null}
+
+                    {cur.profile && cur.profile.summary ? (
+                        <details
+                            style={{
+                                marginTop: 9,
+                                background: C.hi,
+                                borderRadius: 13,
+                                padding: "10px 14px",
                                 fontSize: 13,
                                 color: C.sub,
                                 lineHeight: 1.68,
                             }}
                         >
-                            {cur.profile.summary_ko || cur.profile.summary}
-                            {cur.profile.source_url ? (
-                                <div style={{ marginTop: 7 }}>
-                                    <a
-                                        href={cur.profile.source_url}
-                                        target="_blank"
-                                        rel="noopener"
-                                        style={{
-                                            color: C.vt,
-                                            textDecoration: "none",
-                                            fontSize: 12,
-                                        }}
-                                    >
-                                        위키백과 · {cur.profile.name}
-                                        {cur.profile.summary_ko ? " · 자동 번역" : ""}
-                                    </a>
-                                </div>
-                            ) : null}
-                            {/* 🚨 사진 저작자 표시 = CC BY·BY-SA 의무 사항. 지우지 말 것.
-                                표기 없이 쓰면 라이선스 위반이다. */}
-                            {cur.profile.image ? (
-                                <div
-                                    style={{
-                                        marginTop: 4,
-                                        fontSize: 11.5,
-                                        color: C.faint,
-                                    }}
-                                >
-                                    사진{" "}
-                                    {cur.profile.image.artist
-                                        ? cur.profile.image.artist + " · "
-                                        : ""}
-                                    {cur.profile.image.license_url ? (
+                            <summary
+                                style={{
+                                    cursor: "pointer",
+                                    color: C.sub,
+                                    fontSize: 12.5,
+                                    fontWeight: 700,
+                                }}
+                            >
+                                인물 자세히 보기
+                            </summary>
+                            <div style={{ marginTop: 9 }}>
+                                {cur.profile.summary_ko || cur.profile.summary}
+                                {cur.profile.source_url ? (
+                                    <div style={{ marginTop: 7 }}>
                                         <a
-                                            href={cur.profile.image.license_url}
+                                            href={cur.profile.source_url}
                                             target="_blank"
                                             rel="noopener"
-                                            style={{
-                                                color: C.faint,
-                                                textDecoration: "underline",
-                                            }}
+                                            style={{ color: C.vt, textDecoration: "none", fontSize: 12 }}
                                         >
-                                            {cur.profile.image.license}
+                                            위키백과 · {cur.profile.name}
+                                            {cur.profile.summary_ko ? " · 자동 번역" : ""}
                                         </a>
-                                    ) : (
-                                        cur.profile.image.license
-                                    )}
-                                </div>
-                            ) : null}
-                        </div>
+                                    </div>
+                                ) : null}
+                                {/* 사진 저작자 표시는 접힌 상세 안에서도 보존한다. */}
+                                {cur.profile.image ? (
+                                    <div style={{ marginTop: 4, fontSize: 11.5, color: C.faint }}>
+                                        사진{" "}
+                                        {cur.profile.image.artist ? cur.profile.image.artist + " · " : ""}
+                                        {cur.profile.image.license_url ? (
+                                            <a
+                                                href={cur.profile.image.license_url}
+                                                target="_blank"
+                                                rel="noopener"
+                                                style={{ color: C.faint, textDecoration: "underline" }}
+                                            >
+                                                {cur.profile.image.license}
+                                            </a>
+                                        ) : (
+                                            cur.profile.image.license
+                                        )}
+                                    </div>
+                                ) : null}
+                            </div>
+                        </details>
                     ) : null}
 
                     {/* 요약 지표 */}
