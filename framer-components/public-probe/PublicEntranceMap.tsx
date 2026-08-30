@@ -152,19 +152,29 @@ function anReadDark(): boolean {
 }
 
 export default function PublicEntranceMap(props: {
-    width?: number
     dark?: boolean
     dataUrl?: string
     stockPath?: string
     discoverPath?: string
     explorePath?: string
     validationPath?: string
+    portfolioPath?: string
+    disclosurePath?: string
 }) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [themeDark, setThemeDark] = useState<boolean>(() =>
         onCanvas ? !!props.dark : anReadDark()
     )
     const [data, setData] = useState<any>(onCanvas ? SAMPLE : null)
+    const [guideOpen, setGuideOpen] = useState<boolean>(() => {
+        if (onCanvas || typeof window === "undefined") return true
+        try {
+            return localStorage.getItem("an_research_guide_seen") !== "1"
+        } catch (e) {
+            return false
+        }
+    })
+    const [guideKey, setGuideKey] = useState<string>("")
 
     useEffect(() => {
         if (onCanvas) return
@@ -211,6 +221,8 @@ export default function PublicEntranceMap(props: {
     const discoverPath = props.discoverPath || "/discover"
     const explorePath = props.explorePath || "/market"
     const validationPath = props.validationPath || "/glassbox"
+    const portfolioPath = props.portfolioPath || "/nest"
+    const disclosurePath = props.disclosurePath || "/disclosure"
 
     const go = (path: string) => {
         if (onCanvas || typeof window === "undefined") return
@@ -219,9 +231,85 @@ export default function PublicEntranceMap(props: {
         } catch (e) {}
     }
 
+    const rememberGuide = () => {
+        if (onCanvas) return
+        try {
+            localStorage.setItem("an_research_guide_seen", "1")
+        } catch (e) {}
+    }
+
+    const guides = [
+        {
+            k: "stock",
+            q: "특정 종목을 알아보고 싶어요",
+            short: "종목 분석",
+            path: stockPath,
+            cta: "종목 검색부터 시작",
+            steps: [
+                ["최근 변화", "가격·사업·고용·자본조달에서 달라진 사실"],
+                ["기업 이해", "사업·재무 추이와 동종 기업 비교"],
+                ["위험 확인", "수급·공시·내부자·희석 이력"],
+            ],
+        },
+        {
+            k: "market",
+            q: "오늘 시장을 이해하고 싶어요",
+            short: "시장 이해",
+            path: explorePath,
+            cta: "시장판부터 보기",
+            steps: [
+                ["시장 흐름", "지수와 상승·하락 종목의 실제 분포"],
+                ["업종 비교", "업종 중앙값과 외국인·기관 수급"],
+                ["관점 확장", "거시 환경과 여러 분류 렌즈로 재확인"],
+            ],
+        },
+        {
+            k: "quality",
+            q: "좋은 기업인지 확인하고 싶어요",
+            short: "기업 확인",
+            path: stockPath,
+            cta: "기업 검색부터 시작",
+            steps: [
+                ["사업 구조", "무엇으로 매출과 이익을 만드는지"],
+                ["재무 변화", "매출·이익·현금흐름의 기간별 추이"],
+                ["반대 근거", "희석·공시·수급에서 놓친 위험"],
+            ],
+        },
+        {
+            k: "portfolio",
+            q: "내 포트폴리오 위험을 점검하고 싶어요",
+            short: "포트폴리오",
+            path: portfolioPath,
+            cta: "보유자산부터 보기",
+            steps: [
+                ["보유 현황", "평가액과 종목별 변화 확인"],
+                ["집중도", "종목·업종·시장·통화 노출 확인"],
+                ["원인 추적", "변화가 큰 종목의 공시와 재무 확인"],
+            ],
+        },
+        {
+            k: "change",
+            q: "공시와 기업 변화를 확인하고 싶어요",
+            short: "공시 변화",
+            path: disclosurePath,
+            cta: "최근 공시부터 보기",
+            steps: [
+                ["새 공시", "최근 제출과 정정 여부 확인"],
+                ["자본 변화", "유상증자·CB·자기주식 관련 이력"],
+                ["교차 확인", "내부자·수급·사업 변화와 함께 보기"],
+            ],
+        },
+    ]
+    const selectedGuide = guides.find((g) => g.k === guideKey)
+    const pickGuide = (key: string) => {
+        setGuideKey(key)
+        setGuideOpen(true)
+        rememberGuide()
+    }
+
     // 배경 = 투명 (페이지 /Theme/PageBg 그대로 비침) — 자기 C.bg(#16181d) 칠하면 페이지 다크(#0f1318)와 불일치 (2026-07-13 fix)
     const wrap: any = {
-        width: props.width || 380,
+        width: "100%",
         maxWidth: "100%",
         fontFamily: FONT,
         background: "transparent",
@@ -229,19 +317,8 @@ export default function PublicEntranceMap(props: {
         padding: "0 14px",
         boxSizing: "border-box",
     }
-    if (!data)
-        return (
-            <div style={wrap}>
-                <div
-                    style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}
-                >
-                    지도 준비 중…
-                </div>
-            </div>
-        )
-
     const byId: Record<string, any> = {}
-    for (const a of data.assets || []) if (a && a.id) byId[a.id] = a
+    for (const a of data?.assets || []) if (a && a.id) byId[a.id] = a
     const cnt = (id: string) => (byId[id] ? byId[id].count : null)
     const age = (id: string) => (byId[id] ? fmtAge(byId[id].as_of) : "")
 
@@ -321,7 +398,7 @@ export default function PublicEntranceMap(props: {
         },
     ]
 
-    const gate = data.validation_gate
+    const gate = data?.validation_gate
 
     return (
         <div style={wrap}>
@@ -333,6 +410,127 @@ export default function PublicEntranceMap(props: {
                 .entCard:hover{transform:translateY(-2px)}
                 @media (prefers-reduced-motion: reduce){.entChip{animation:none}.entCard{transition:none}}
             `}</style>
+            <section
+                aria-labelledby="research-guide-title"
+                style={{
+                    background: C.card,
+                    borderRadius: 18,
+                    padding: "16px 16px 15px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                    marginBottom: 28,
+                }}
+            >
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 12,
+                    }}
+                >
+                    <div>
+                        <div
+                            id="research-guide-title"
+                            style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.3px" }}
+                        >
+                            무엇을 확인할까요?
+                        </div>
+                        <div style={{ marginTop: 3, color: C.faint, fontSize: 11.5, fontWeight: 600, lineHeight: 1.5 }}>
+                            질문을 고르면 알파네스트 안에서 확인할 순서를 보여드려요
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setGuideOpen((v) => !v)
+                            rememberGuide()
+                        }}
+                        aria-expanded={guideOpen}
+                        style={{
+                            flexShrink: 0,
+                            border: "none",
+                            background: "transparent",
+                            color: C.violet,
+                            fontFamily: FONT,
+                            fontSize: 11.5,
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            padding: "2px 0",
+                        }}
+                    >
+                        {guideOpen ? "접기" : "길잡이 보기"}
+                    </button>
+                </div>
+
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 12 }}>
+                    {guides.map((g) => (
+                        <button
+                            key={g.k}
+                            type="button"
+                            onClick={() => pickGuide(g.k)}
+                            aria-pressed={guideKey === g.k}
+                            style={{
+                                border: "none",
+                                borderRadius: 10,
+                                padding: "8px 10px",
+                                background: guideKey === g.k ? C.violet : C.violetSoft,
+                                color: guideKey === g.k ? "#fff" : C.violet,
+                                fontFamily: FONT,
+                                fontSize: 11.5,
+                                fontWeight: 800,
+                                cursor: "pointer",
+                            }}
+                        >
+                            {guideOpen ? g.q : g.short}
+                        </button>
+                    ))}
+                </div>
+
+                {guideOpen && selectedGuide && (
+                    <div style={{ marginTop: 14, borderTop: `1px solid ${C.line}`, paddingTop: 5 }}>
+                        {selectedGuide.steps.map(([title, detail], index) => (
+                            <div
+                                key={title}
+                                style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "24px minmax(0,1fr)",
+                                    gap: 9,
+                                    padding: "10px 0",
+                                    borderBottom: index < selectedGuide.steps.length - 1 ? `1px solid ${C.line}` : "none",
+                                }}
+                            >
+                                <span style={{ width: 24, height: 24, borderRadius: 8, background: C.violetSoft, color: C.violet, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 800 }}>
+                                    {index + 1}
+                                </span>
+                                <div>
+                                    <div style={{ color: C.ink, fontSize: 12.5, fontWeight: 800 }}>{title}</div>
+                                    <div style={{ color: C.faint, fontSize: 11, fontWeight: 600, lineHeight: 1.5, marginTop: 2 }}>{detail}</div>
+                                </div>
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={() => go(selectedGuide.path)}
+                            style={{
+                                width: "100%",
+                                marginTop: 8,
+                                border: "none",
+                                borderRadius: 11,
+                                padding: "11px 12px",
+                                background: C.violet,
+                                color: "#fff",
+                                fontFamily: FONT,
+                                fontSize: 12.5,
+                                fontWeight: 800,
+                                cursor: "pointer",
+                            }}
+                        >
+                            {selectedGuide.cta} →
+                        </button>
+                    </div>
+                )}
+            </section>
+
             {/* 헤더 */}
             <div style={{ marginBottom: 10 }}>
                 <div
@@ -342,7 +540,7 @@ export default function PublicEntranceMap(props: {
                         letterSpacing: "-0.4px",
                     }}
                 >
-                    알파네스트가 가진 것
+                    전체 데이터 지도
                 </div>
                 <div
                     style={{
@@ -353,11 +551,16 @@ export default function PublicEntranceMap(props: {
                         lineHeight: 1.5,
                     }}
                 >
-                    전부 출처 있는 사실 · 숫자는 오늘 기준 실측 · 매일 자동 갱신
+                    직접 둘러보고 싶다면 데이터 종류와 기준시각에서 시작하세요
                 </div>
             </div>
 
             {/* 자산 카드 그리드 */}
+            {!data && (
+                <div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>
+                    데이터 지도 준비 중…
+                </div>
+            )}
             <div
                 style={{
                     display: "grid",
@@ -373,7 +576,7 @@ export default function PublicEntranceMap(props: {
                         onClick={() => go(c.p)}
                         style={{
                             background: C.card,
-                            borderRadius: 14,
+                            borderRadius: 16,
                             padding: 13,
                             boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                             cursor: "pointer",
@@ -464,7 +667,7 @@ export default function PublicEntranceMap(props: {
                         onClick={() => go(validationPath)}
                         style={{
                             background: C.violetSoft,
-                            borderRadius: 14,
+                            borderRadius: 16,
                             padding: 13,
                             cursor: "pointer",
                         }}
@@ -557,7 +760,6 @@ export default function PublicEntranceMap(props: {
 }
 
 addPropertyControls(PublicEntranceMap, {
-    width: { type: ControlType.Number, title: "Width", defaultValue: 380 },
     dark: {
         type: ControlType.Boolean,
         title: "Dark",
@@ -589,5 +791,15 @@ addPropertyControls(PublicEntranceMap, {
         type: ControlType.String,
         title: "Validation Path",
         defaultValue: "/glassbox",
+    },
+    portfolioPath: {
+        type: ControlType.String,
+        title: "Portfolio Path",
+        defaultValue: "/nest",
+    },
+    disclosurePath: {
+        type: ControlType.String,
+        title: "Disclosure Path",
+        defaultValue: "/disclosure",
     },
 })
