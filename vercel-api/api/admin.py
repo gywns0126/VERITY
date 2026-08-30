@@ -893,9 +893,55 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
     return {"_status": 405, "_body": {"error": "method_not_allowed"}}
 
 
+def _visit_stats_from_rows(rows: list, now: Any) -> dict:
+    """익명 방문 일별 행을 KST 날짜 기준 관리자 집계로 변환한다."""
+    from datetime import date, timedelta
+
+    today = now.date()
+    start_7 = today - timedelta(days=6)
+    start_30 = today - timedelta(days=29)
+    by_day: Dict[str, set] = {}
+    days_by_visitor: Dict[str, set] = {}
+    visits_30d = 0
+    for row in rows if isinstance(rows, list) else []:
+        visitor = str((row or {}).get("visitor_id") or "")
+        day_text = str((row or {}).get("visit_date") or "")[:10]
+        if not visitor or len(day_text) != 10:
+            continue
+        try:
+            day = date.fromisoformat(day_text)
+        except ValueError:
+            continue
+        if day < start_30 or day > today:
+            continue
+        by_day.setdefault(day_text, set()).add(visitor)
+        days_by_visitor.setdefault(visitor, set()).add(day_text)
+        try:
+            visits_30d += max(0, int((row or {}).get("visit_count") or 0))
+        except (TypeError, ValueError):
+            pass
+
+    visitors_30d = len(days_by_visitor)
+    returning = sum(1 for days in days_by_visitor.values() if len(days) >= 2)
+    daily = []
+    for i in range(29, -1, -1):
+        day_text = (today - timedelta(days=i)).isoformat()
+        daily.append({"date": day_text, "count": len(by_day.get(day_text, set()))})
+    return {
+        "status": "measured",
+        "today": len(by_day.get(today.isoformat(), set())),
+        "d7": len({v for v, days in days_by_visitor.items() if any(d >= start_7.isoformat() for d in days)}),
+        "d30": visitors_30d,
+        "returning_30d": returning,
+        "return_rate_30d_pct": round(returning / visitors_30d * 100, 1) if visitors_30d else None,
+        "visitor_days_30d": sum(len(days) for days in days_by_visitor.values()),
+        "visits_30d": visits_30d,
+        "daily": daily,
+    }
+
+
 def handle_growth_stats(handler, method: str, body: dict) -> dict:
-    # 성장·사용 통계 (AlphaNest 자체 데이터) — 가입 추이·회원·커뮤니티 활동. GET only.
-    # Framer 애널리틱스(방문자/페이지뷰)는 API 부재로 별개 — 여기선 전환·활동(product growth) 집계.
+    # 성장·사용 통계 (AlphaNest 자체 데이터) — 익명 방문·가입 추이·회원·커뮤니티 활동. GET only.
     if not _svc_ready():
         return {"_status": 503, "_body": {"error": "service_role_unconfigured"}}
     if method != "GET":
@@ -933,6 +979,39 @@ def handle_growth_stats(handler, method: str, body: dict) -> dict:
         "d7": _count("user_thesis", {"created_at": f"gte.{d7}"}),
     }
 
+    # PublicSessionKeeper → record_site_visit RPC가 기록한 익명 일별 방문.
+    # 페이지·검색어·종목·IP는 저장하지 않고 visitor_id와 KST 날짜만 집계한다.
+    visitors = {
+        "status": "unavailable",
+        "today": None,
+        "d7": None,
+        "d30": None,
+        "returning_30d": None,
+        "return_rate_30d_pct": None,
+        "visitor_days_30d": None,
+        "visits_30d": None,
+        "daily": [],
+    }
+    try:
+        cutoff_date = (now - timedelta(days=29)).strftime("%Y-%m-%d")
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/site_visit_days",
+            headers=_svc_headers(),
+            params={
+                "select": "visitor_id,visit_date,visit_count",
+                "visit_date": f"gte.{cutoff_date}",
+                "order": "visit_date.asc",
+                "limit": "50000",
+            },
+            timeout=_t(10),
+        )
+        if r.status_code == 200:
+            visitors = _visit_stats_from_rows(r.json() or [], now)
+        elif r.status_code != 404:
+            _logger.warning("site_visit_days fetch %s: %s", r.status_code, r.text[:200])
+    except (requests.RequestException, ValueError) as e:
+        _logger.warning("site_visit_days fetch failed: %s", e)
+
     # 최근 30일 일별 가입 (created_at 버킷팅)
     daily: Dict[str, int] = {}
     try:
@@ -950,7 +1029,7 @@ def handle_growth_stats(handler, method: str, body: dict) -> dict:
         day = (now - timedelta(days=i)).strftime("%Y-%m-%d")
         series.append({"date": day, "count": daily.get(day, 0)})
 
-    return {"_status": 200, "_body": {"members": members, "community": community, "signups_daily": series}}
+    return {"_status": 200, "_body": {"visitors": visitors, "members": members, "community": community, "signups_daily": series}}
 
 
 def handle_audit_log(handler, method: str, body: dict) -> dict:
