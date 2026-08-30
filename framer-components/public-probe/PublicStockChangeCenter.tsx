@@ -114,6 +114,7 @@ export default function PublicStockChangeCenter(props: Props) {
     const [payload, setPayload] = useState<any>(() => onCanvas ? SAMPLE : null)
     const [error, setError] = useState("")
     const [expanded, setExpanded] = useState(false)
+    const [guideOpen, setGuideOpen] = useState(false)
     const [themeDark, setThemeDark] = useState(!!props.dark)
     const [width, setWidth] = useState(0)
     const dark = onCanvas ? !!props.dark : themeDark
@@ -191,7 +192,7 @@ export default function PublicStockChangeCenter(props: Props) {
 
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: 16, boxSizing: "border-box", minWidth: 0 }
     // 인접 /stock 컴포넌트와 동일한 외곽 여백. 되돌리지 말 것.
-    const shell: CSSProperties = { width: "100%", padding: `0 ${narrow ? 12 : 18}px`, boxSizing: "border-box", fontFamily: FONT }
+    const shell: CSSProperties = { width: "100%", padding: "0 clamp(14px, 2vw, 20px)", boxSizing: "border-box", fontFamily: FONT }
     const title: CSSProperties = { margin: 0, color: C.ink, fontSize: 15, fontWeight: 800, letterSpacing: "-0.25px" }
     const sub: CSSProperties = { color: C.faint, fontSize: 10.5, lineHeight: 1.5 }
 
@@ -207,8 +208,38 @@ export default function PublicStockChangeCenter(props: Props) {
                     <h2 style={{ margin: "3px 0 0", fontSize: 20, fontWeight: 850, letterSpacing: "-0.5px" }}>{stock.name} <span style={{ color: C.faint, fontSize: 12 }}>{ticker}</span></h2>
                     <div style={{ ...sub, marginTop: 5 }}>생성 {dateText(String(meta.generated_at || "").slice(0, 10))} · 기존 사실 조인 · 추천·점수 없음</div>
                 </div>
-                <div style={{ flexShrink: 0, borderRadius: 999, padding: "6px 9px", background: C.violetSoft, color: C.violet, fontSize: 10.5, fontWeight: 800 }}>표시 소스 {coverage.hit}/{coverage.total}</div>
+                <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-end", gap: 6, flexDirection: narrow ? "column" : "row" }}>
+                    <button
+                        type="button"
+                        onClick={() => startTransition(() => setGuideOpen((value) => !value))}
+                        aria-expanded={guideOpen}
+                        aria-controls="stock-reading-guide"
+                        style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: "6px 9px", background: C.card2, color: C.sub, fontFamily: FONT, fontSize: 10.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                        {guideOpen ? "읽는 법 닫기" : "처음이라면 · 읽는 법"}
+                    </button>
+                    <div style={{ borderRadius: 999, padding: "6px 9px", background: C.violetSoft, color: C.violet, fontSize: 10.5, fontWeight: 800, whiteSpace: "nowrap" }}>표시 소스 {coverage.hit}/{coverage.total}</div>
+                </div>
             </header>
+
+            {guideOpen && (
+                <section id="stock-reading-guide" style={{ ...card, border: `1px solid ${C.line}` }} aria-labelledby="stock-reading-guide-title">
+                    <h3 id="stock-reading-guide-title" style={title}>이 종목을 읽는 순서</h3>
+                    <div style={{ ...sub, marginTop: 5 }}>수치 하나의 높고 낮음보다 기준일과 서로 다른 자료의 방향이 맞는지 확인하세요.</div>
+                    <ol style={{ margin: "12px 0 0", paddingLeft: 20, display: "grid", gap: 9, color: C.sub, fontSize: 11.5, lineHeight: 1.55 }}>
+                        <li><b style={{ color: C.ink }}>최근 변화</b> — 두 거래일의 가격·수급 변화가 무엇인지 먼저 확인합니다.</li>
+                        <li><b style={{ color: C.ink }}>사업 변화</b> — 사업보고서 문장 추가·삭제를 보고 DART 원문으로 맥락을 확인합니다.</li>
+                        <li><b style={{ color: C.ink }}>고용과 실적</b> — 기준 시점이 다른 두 자료를 나란히 보되 인과관계로 해석하지 않습니다.</li>
+                        <li><b style={{ color: C.ink }}>자본조달과 희석</b> — 공시된 가능성과 실제 발행·전환을 구분해 확인합니다.</li>
+                    </ol>
+                    <div style={{ marginTop: 13, paddingTop: 11, borderTop: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                        <span style={{ ...sub, fontWeight: 800 }}>다음으로 볼 곳</span>
+                        <a href={`/disclosure?q=${encodeURIComponent(ticker)}`} style={{ color: C.violet, background: C.violetSoft, borderRadius: 999, padding: "5px 9px", fontSize: 10.5, fontWeight: 800, textDecoration: "none" }}>공시 원문</a>
+                        <a href={`/glassbox?q=${encodeURIComponent(ticker)}`} style={{ color: C.violet, background: C.violetSoft, borderRadius: 999, padding: "5px 9px", fontSize: 10.5, fontWeight: 800, textDecoration: "none" }}>분석 근거</a>
+                        <a href="/nest" style={{ color: C.violet, background: C.violetSoft, borderRadius: 999, padding: "5px 9px", fontSize: 10.5, fontWeight: 800, textDecoration: "none" }}>보유 맥락</a>
+                    </div>
+                </section>
+            )}
 
             {missing.length > 0 && <div role="status" style={{ padding: "9px 12px", borderRadius: 10, background: C.card2, color: C.faint, fontSize: 10.5 }}>미조회·결손: {missing.join(", ")}</div>}
 
