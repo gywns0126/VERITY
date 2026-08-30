@@ -20,36 +20,18 @@ const DARK = {
     line: "#252b34", grid: "#1e242c", up: "#f04452", upS: "#2a1a1d", down: "#5b9bff",
     green: "#34e08a", greenS: "#0f241c", amber: "#ff9500", amberS: "#2a2113", vt: "#a99bff", vtS: "#241f3a", onAccent: "#0f1318",
 }
+// CSS가 body[data-framer-theme]를 직접 따라간다. 테마 변경에 React 상태/Observer를 사용하지 않는다.
+const ADMIN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-admin-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-admin-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: any = {}
+for (const k of Object.keys(LIGHT)) C[k] = "var(--an-admin-" + k + ")"
+
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const SESSION_KEY = "verity_supabase_session"
+const PAGE_SIZE = 20
 
-function readBodyDark(): boolean {
-    // 🚨 판독 순서 고정 — 되돌리지 말 것 (2026-07-23 공개 컴포넌트 fix, 2026-08-27 관리자 이관).
-    //   ① html[data-an-theme] = Custom Code 헤드 스크립트가 **페인트 전 동기** 세팅(레이스 제거)
-    //   ② body[data-framer-theme] = 토글
-    //   ③ localStorage
-    //   🚨 body-first 로 되돌리지 말 것 — Framer 네이티브가 새로고침 때 body 를 OS 로 리셋해
-    //     **부분 라이트 회귀**가 난다. 관리자 11개가 이 옛 방식으로 남아 있었다(2026-08-27 PM 신고
-    //     "다크모드 시에 그 부분만 라이트가 됨").
-    //   🚨 OS 설정(prefers-color-scheme)은 **보지 않는다** — 로드마다 뒤집힌다. 종전 관리자 변종이
-    //     마지막 폴백으로 matchMedia 를 써서, 사이트가 다크여도 OS 가 라이트면 라이트로 그렸다.
-    try {
-        if (typeof document !== "undefined") {
-            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-            if (h === "dark") return true
-            if (h === "light") return false
-            if (document.body) {
-                const a = document.body.dataset.framerTheme
-                if (a === "dark") return true
-                if (a === "light") return false
-            }
-        }
-        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (s === "dark") return true
-    } catch (e) {}
-    return false
-}
 function loadToken(): string {
     if (typeof window === "undefined") return ""
     try {
@@ -127,14 +109,13 @@ function AdmSkeletonRows(props: { C: any; rows?: number }) {
 export default function MemberAdminCard(props: Props) {
     const apiBase = (props.apiBase || DEFAULT_API).replace(/\/+$/, "")
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
-    const C = (onCanvas ? !!props.dark : themeDark) ? DARK : LIGHT
     const meId = loadUserId()
 
     const [members, setMembers] = useState<Member[]>(onCanvas ? SAMPLE : [])
     const [total, setTotal] = useState<number | null>(onCanvas ? SAMPLE.length : null)
     const [callerSuper, setCallerSuper] = useState<boolean>(onCanvas)
     const [q, setQ] = useState("")
+    const [page, setPage] = useState(0)
     const [loading, setLoading] = useState(false)
     const [err, setErr] = useState("")
     const [msg, setMsg] = useState("")
@@ -146,22 +127,12 @@ export default function MemberAdminCard(props: Props) {
     const [adminId, setAdminId] = useState("")
     const [busy, setBusy] = useState("")
 
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (typeof MutationObserver === "undefined" || !document.body) return
-        const o = new MutationObserver(read)
-        o.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => o.disconnect()
-    }, [onCanvas])
-
-    const load = useCallback((query: string) => {
+    const load = useCallback((query: string, pageIndex: number) => {
         if (onCanvas) return
         const token = loadToken()
         if (!token) { setErr("관리자 로그인이 필요해요"); return }
         setLoading(true); setErr("")
-        const url = `${apiBase}/api/admin?type=member_management&limit=100${query ? "&q=" + encodeURIComponent(query) : ""}`
+        const url = `${apiBase}/api/admin?type=member_management&limit=${PAGE_SIZE}&offset=${pageIndex * PAGE_SIZE}${query ? "&q=" + encodeURIComponent(query) : ""}`
         fetch(url, { headers: { Authorization: "Bearer " + token }, cache: "no-store" })
             .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
             .then((d) => { setMembers(Array.isArray(d.members) ? d.members : []); setTotal(d.total != null ? d.total : null); setCallerSuper(d.caller_is_super === true) })
@@ -169,7 +140,7 @@ export default function MemberAdminCard(props: Props) {
             .finally(() => setLoading(false))
     }, [apiBase, onCanvas])
 
-    useEffect(() => { load("") }, [load])
+    useEffect(() => { load("", 0) }, [load])
 
     const act = async (m: Member, opts: { method?: string; body: any; ok: string }) => {
         if (onCanvas) return
@@ -186,7 +157,7 @@ export default function MemberAdminCard(props: Props) {
             if (!r.ok) throw new Error(d.error || ("HTTP " + r.status))
             setMsg(opts.ok)
             setOpenId(""); setBanId(""); setBanReason(""); setDelId(""); setDelEmail(""); setAdminId("")
-            load(q)
+            load(q, page)
         } catch (e: any) {
             setErr("실패: " + (e && e.message ? e.message : e))
         } finally {
@@ -198,9 +169,19 @@ export default function MemberAdminCard(props: Props) {
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "15px 17px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
     const chip = (bg: string, fg: string): CSSProperties => ({ fontSize: 11, fontWeight: 800, color: fg, background: bg, borderRadius: 7, padding: "2px 8px" })
     const btn = (bg: string, fg: string): CSSProperties => ({ border: "none", cursor: "pointer", fontFamily: FONT, fontSize: 12, fontWeight: 800, background: bg, color: fg, borderRadius: 9, padding: "7px 12px" })
+    const totalCount = total == null ? members.length : total
+    const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+    const rangeStart = totalCount === 0 ? 0 : page * PAGE_SIZE + 1
+    const rangeEnd = Math.min(totalCount, page * PAGE_SIZE + members.length)
+    const movePage = (next: number) => {
+        if (loading || next < 0 || next >= pageCount) return
+        setPage(next); setOpenId(""); setBanId(""); setDelId(""); setAdminId("")
+        load(q, next)
+    }
 
     return (
         <div style={wrap}>
+            <style>{ADMIN_PALETTE}</style>
             <div style={card}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
                     <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.4px" }}>회원 관리</span>
@@ -209,10 +190,10 @@ export default function MemberAdminCard(props: Props) {
                     <span style={{ marginLeft: "auto", fontSize: 11, color: C.faint, fontWeight: 600 }}>{loading ? "불러오는 중…" : ""}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                    <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load(q)}
+                    <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { setPage(0); load(q, 0) } }}
                         placeholder="이메일·별명·이름 검색"
                         style={{ flex: 1, border: "none", background: C.grid, color: C.ink, borderRadius: 11, padding: "11px 13px", fontSize: 13.5, fontFamily: FONT, outline: "none", boxSizing: "border-box" }} />
-                    <button onClick={() => load(q)} style={btn(C.vt, C.onAccent)}>검색</button>
+                    <button onClick={() => { setPage(0); load(q, 0) }} style={btn(C.vt, C.onAccent)}>검색</button>
                 </div>
                 {err && <div style={{ fontSize: 12, color: C.up, fontWeight: 700, marginTop: 10 }}>{err}</div>}
                 {msg && <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginTop: 10 }}>{msg}</div>}
@@ -293,6 +274,12 @@ export default function MemberAdminCard(props: Props) {
                         </div>
                     )
                 })}
+            </div>
+            <div style={{ ...card, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>표시 {rangeStart.toLocaleString()}–{rangeEnd.toLocaleString()} / 전체 {totalCount.toLocaleString()}</span>
+                <span style={{ marginLeft: "auto", fontSize: 11, color: C.faint, fontWeight: 700 }}>{page + 1} / {pageCount}</span>
+                <button disabled={page <= 0 || loading} onClick={() => movePage(page - 1)} style={{ ...btn(C.grid, C.sub), opacity: page <= 0 ? 0.45 : 1 }}>이전</button>
+                <button disabled={page + 1 >= pageCount || loading} onClick={() => movePage(page + 1)} style={{ ...btn(C.grid, C.sub), opacity: page + 1 >= pageCount ? 0.45 : 1 }}>다음</button>
             </div>
             <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600 }}>부관리자 지정/해제 = 최종 관리자만 · 본인 계정 강등 불가 · 모든 변경 감사 로그 기록</div>
         </div>

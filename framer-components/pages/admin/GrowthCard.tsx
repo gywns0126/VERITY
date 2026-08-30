@@ -3,9 +3,9 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
 
 /**
  * GrowthCard — AlphaNest 성장·사용 통계 (AlphaNest 스타일).
- * 소스: /api/admin?type=growth_stats (is_admin · service_role). 가입 추이·회원·커뮤니티 활동.
+ * 소스: /api/admin?type=growth_stats (is_admin · service_role). 익명 방문·가입 추이·회원·커뮤니티 활동.
  * 핵심 #1 = "사이트가 성장하고 있는가" (feedback_site_growth_is_core).
- * ⚠ 방문자/페이지뷰(트래픽)는 Framer 애널리틱스 탭에서 별도 확인 — API 부재로 여기 미포함.
+ * 방문자 = PublicSessionKeeper → site_visit_days. 페이지·검색어·종목·IP는 저장하지 않는다.
  * 다크감지. 접근차단 = 페이지 AdminGate.
  */
 
@@ -19,37 +19,18 @@ const DARK = {
     line: "#252b34", grid: "#1e242c", up: "#f04452", down: "#5b9bff",
     green: "#34e08a", amber: "#ff9500", vt: "#a99bff", vtS: "#241f3a",
 }
+// CSS가 body[data-framer-theme]를 직접 따라간다. 테마 변경에 React 상태/Observer를 사용하지 않는다.
+const ADMIN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-admin-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-admin-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: any = {}
+for (const k of Object.keys(LIGHT)) C[k] = "var(--an-admin-" + k + ")"
+
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const SESSION_KEY = "verity_supabase_session"
 const AUTH_EVENT = "verity_auth_change"
 
-function readBodyDark(): boolean {
-    // 🚨 판독 순서 고정 — 되돌리지 말 것 (2026-07-23 공개 컴포넌트 fix, 2026-08-27 관리자 이관).
-    //   ① html[data-an-theme] = Custom Code 헤드 스크립트가 **페인트 전 동기** 세팅(레이스 제거)
-    //   ② body[data-framer-theme] = 토글
-    //   ③ localStorage
-    //   🚨 body-first 로 되돌리지 말 것 — Framer 네이티브가 새로고침 때 body 를 OS 로 리셋해
-    //     **부분 라이트 회귀**가 난다. 관리자 11개가 이 옛 방식으로 남아 있었다(2026-08-27 PM 신고
-    //     "다크모드 시에 그 부분만 라이트가 됨").
-    //   🚨 OS 설정(prefers-color-scheme)은 **보지 않는다** — 로드마다 뒤집힌다. 종전 관리자 변종이
-    //     마지막 폴백으로 matchMedia 를 써서, 사이트가 다크여도 OS 가 라이트면 라이트로 그렸다.
-    try {
-        if (typeof document !== "undefined") {
-            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-            if (h === "dark") return true
-            if (h === "light") return false
-            if (document.body) {
-                const a = document.body.dataset.framerTheme
-                if (a === "dark") return true
-                if (a === "light") return false
-            }
-        }
-        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (s === "dark") return true
-    } catch (e) {}
-    return false
-}
 function loadToken(): string {
     if (typeof window === "undefined") return ""
     try {
@@ -64,6 +45,11 @@ function nStr(v: any): string {
     if (v == null) return "—"
     const x = Number(v)
     return isFinite(x) ? x.toLocaleString("en-US") : "—"
+}
+function pctStr(v: any): string {
+    if (v == null) return "—"
+    const x = Number(v)
+    return isFinite(x) ? `${x.toLocaleString("en-US")}%` : "—"
 }
 function smooth(pts: { x: number; y: number }[]): string {
     if (pts.length === 0) return ""
@@ -86,12 +72,14 @@ function smooth(pts: { x: number; y: number }[]): string {
 }
 
 interface Stats {
+    visitors?: { status?: string; today?: number; d7?: number; d30?: number; returning_30d?: number; return_rate_30d_pct?: number; visitor_days_30d?: number; visits_30d?: number; daily?: Array<{ date: string; count: number }> }
     members?: { total?: number; d1?: number; d7?: number; d30?: number; pending?: number; banned?: number }
     community?: { total?: number; public?: number; d7?: number }
     signups_daily?: Array<{ date: string; count: number }>
 }
 
 const SAMPLE: Stats = {
+    visitors: { status: "measured", today: 128, d7: 684, d30: 2140, returning_30d: 512, return_rate_30d_pct: 23.9, visitor_days_30d: 3188, visits_30d: 3324 },
     members: { total: 342, d1: 4, d7: 28, d30: 121, pending: 6, banned: 2 },
     community: { total: 156, public: 89, d7: 17 },
     signups_daily: (() => {
@@ -142,21 +130,10 @@ function AdmSkeletonTiles(props: { C: any; card: CSSProperties; groups?: number;
 export default function GrowthCard(props: Props) {
     const apiBase = (props.apiBase || DEFAULT_API).replace(/\/+$/, "")
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
-    const C = (onCanvas ? !!props.dark : themeDark) ? DARK : LIGHT
     const [st, setSt] = useState<Stats | null>(onCanvas ? SAMPLE : null)
+    const [detailsOpen, setDetailsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [err, setErr] = useState("")
-
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (typeof MutationObserver === "undefined" || !document.body) return
-        const o = new MutationObserver(read)
-        o.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => o.disconnect()
-    }, [onCanvas])
 
     const load = useCallback(() => {
         if (onCanvas) return
@@ -189,11 +166,14 @@ export default function GrowthCard(props: Props) {
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "15px 17px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
     const num: CSSProperties = { fontVariantNumeric: "tabular-nums" }
 
-    if (err && !st) return <div style={wrap}><div style={{ ...card, color: C.up, fontSize: 13, fontWeight: 700 }}>성장 통계 로드 실패: {err.slice(0, 90)}</div></div>
-    if (!st) return <div style={wrap}><AdmSkeletonTiles C={C} card={card} groups={2} tiles={4} /></div>
+    if (err && !st) return <div style={wrap}>
+            <style>{ADMIN_PALETTE}</style><div style={{ ...card, color: C.up, fontSize: 13, fontWeight: 700 }}>성장 통계 로드 실패: {err.slice(0, 90)}</div></div>
+    if (!st) return <div style={wrap}>
+            <style>{ADMIN_PALETTE}</style><AdmSkeletonTiles C={C} card={card} groups={2} tiles={4} /></div>
 
     const m = st.members || {}
     const c = st.community || {}
+    const v = st.visitors || {}
     const series = st.signups_daily || []
     const counts = series.map((s) => Number(s.count) || 0)
     const mx = Math.max(1, ...counts)
@@ -212,49 +192,52 @@ export default function GrowthCard(props: Props) {
 
     return (
         <div style={wrap}>
+            <style>{ADMIN_PALETTE}</style>
             <div style={card}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
-                    <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.4px" }}>성장 · 사용</span>
-                    <span style={{ marginLeft: "auto", fontSize: 11, color: C.faint, fontWeight: 600, cursor: "pointer" }} onClick={load}>{loading ? "불러오는 중…" : "새로고침"}</span>
+                    <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.4px" }}>한눈에 보기</span>
+                    <button onClick={() => setDetailsOpen((x) => !x)} style={{ marginLeft: "auto", border: "none", background: "transparent", color: C.vt, fontSize: 11, fontWeight: 800, cursor: "pointer" }}>{detailsOpen ? "상세 접기" : "상세 보기"}</button>
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {tile("오늘 방문", v.today, C.green)}
+                    {tile("7일 방문", v.d7, C.vt)}
                     {tile("총 회원", m.total, C.vt)}
-                    {tile("오늘 신규", m.d1, C.green)}
                     {tile("7일 신규", m.d7, C.green)}
-                    {tile("30일 신규", m.d30)}
+                    {tile("제재", m.banned, (Number(m.banned) || 0) > 0 ? C.up : undefined)}
+                    {tile("공개 글", c.public)}
                 </div>
+                {v.status !== "measured" && <div style={{ fontSize: 11, color: C.amber, fontWeight: 700, marginTop: 8 }}>방문 측정 연결을 확인해주세요</div>}
                 {err && <div style={{ fontSize: 12, color: C.up, fontWeight: 700, marginTop: 10 }}>{err}</div>}
             </div>
 
-            <div style={card}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
-                    <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px" }}>가입 추이</span>
-                    <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>최근 30일 · 합 {nStr(sum30)}</span>
+            {detailsOpen && <>
+                <div style={card}>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+                        <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px" }}>방문 · 가입 상세</span>
+                        <button onClick={load} style={{ border: "none", background: "transparent", color: C.faint, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>{loading ? "불러오는 중…" : "새로고침"}</button>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {tile("30일 방문", v.d30)}
+                        {tile("30일 재방문", v.returning_30d, C.green)}
+                        {tile("오늘 신규", m.d1, C.green)}
+                        {tile("30일 신규", m.d30)}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 8, lineHeight: 1.5 }}>재방문율 {pctStr(v.return_rate_30d_pct)} · 방문일수 {nStr(v.visitor_days_30d)} · 방문 기록 {nStr(v.visits_30d)}회 · 7일 글 {nStr(c.d7)}</div>
                 </div>
-                {pts.length >= 2 ? (
-                    <svg width="100%" viewBox={`0 0 ${CW} ${CH}`} style={{ display: "block" }} preserveAspectRatio="none">
-                        {areaPath && <path d={areaPath} fill={C.vt} fillOpacity={0.1} />}
-                        <path d={linePath} fill="none" stroke={C.vt} strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r={3.4} fill={C.vt} />
-                    </svg>
-                ) : (
-                    <div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>추이 데이터가 아직 부족해요</div>
-                )}
-                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>실가입 기준(전환) · 방문자·페이지뷰는 Framer 애널리틱스에서 확인</div>
-            </div>
-
-            <div style={card}>
-                <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px", marginBottom: 12 }}>커뮤니티 · 상태</div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {tile("공개 글", c.public, C.vt)}
-                    {tile("7일 글", c.d7, C.green)}
-                    {/* 🚨 2026-07-27 "승인 대기" 타일 제거 — AlphaNest 는 승인제가 아닌데 profiles.status 기본값
-                        'pending'(007) 때문에 신규 가입자 수가 경고색(amber)으로 떠서 승인 절차가 밀린 것처럼 읽혔음.
-                        실제 게이트 없음(PublicAuth 미검사 · 서버/RLS 'approved' 검사 0건). 'approved' 는 VERITY
-                        운영 콘솔(AuthPage) 전용이라 그쪽 대시보드의 승인 카드는 그대로 둔다. */}
-                    {tile("제재됨", m.banned, (Number(m.banned) || 0) > 0 ? C.up : undefined)}
+                <div style={card}>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+                        <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px" }}>가입 추이</span>
+                        <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>최근 30일 · 합 {nStr(sum30)}</span>
+                    </div>
+                    {pts.length >= 2 ? (
+                        <svg width="100%" viewBox={`0 0 ${CW} ${CH}`} style={{ display: "block" }} preserveAspectRatio="none">
+                            {areaPath && <path d={areaPath} fill={C.vt} fillOpacity={0.1} />}
+                            <path d={linePath} fill="none" stroke={C.vt} strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                            <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r={3.4} fill={C.vt} />
+                        </svg>
+                    ) : <div style={{ fontSize: 12.5, color: C.faint, fontWeight: 600 }}>추이 데이터가 아직 부족해요</div>}
                 </div>
-            </div>
+            </>}
         </div>
     )
 }

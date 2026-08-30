@@ -17,41 +17,23 @@ const DARK = {
     line: "#252b34", grid: "#1e242c", up: "#f04452", down: "#5b9bff",
     green: "#34e08a", greenS: "#0f241c", amber: "#ff9500", amberS: "#2a2113", vt: "#a99bff", vtS: "#241f3a",
 }
+// CSS가 body[data-framer-theme]를 직접 따라간다. 테마 변경에 React 상태/Observer를 사용하지 않는다.
+const ADMIN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-admin-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-admin-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: any = {}
+for (const k of Object.keys(LIGHT)) C[k] = "var(--an-admin-" + k + ")"
+
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const SESSION_KEY = "verity_supabase_session"
+const PAGE_SIZE = 20
 const ACTIONS: Record<string, { t: string; c: string }> = {
     ban_user: { t: "회원 제재", c: "amber" }, unban_user: { t: "제재 해제", c: "green" },
     delete_user: { t: "회원 삭제", c: "up" }, update_profile: { t: "정보 수정", c: "vt" },
     delete_post: { t: "글 삭제", c: "up" }, hide_post: { t: "글 숨김", c: "amber" }, unhide_post: { t: "숨김 해제", c: "green" },
 }
 
-function readBodyDark(): boolean {
-    // 🚨 판독 순서 고정 — 되돌리지 말 것 (2026-07-23 공개 컴포넌트 fix, 2026-08-27 관리자 이관).
-    //   ① html[data-an-theme] = Custom Code 헤드 스크립트가 **페인트 전 동기** 세팅(레이스 제거)
-    //   ② body[data-framer-theme] = 토글
-    //   ③ localStorage
-    //   🚨 body-first 로 되돌리지 말 것 — Framer 네이티브가 새로고침 때 body 를 OS 로 리셋해
-    //     **부분 라이트 회귀**가 난다. 관리자 11개가 이 옛 방식으로 남아 있었다(2026-08-27 PM 신고
-    //     "다크모드 시에 그 부분만 라이트가 됨").
-    //   🚨 OS 설정(prefers-color-scheme)은 **보지 않는다** — 로드마다 뒤집힌다. 종전 관리자 변종이
-    //     마지막 폴백으로 matchMedia 를 써서, 사이트가 다크여도 OS 가 라이트면 라이트로 그렸다.
-    try {
-        if (typeof document !== "undefined") {
-            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-            if (h === "dark") return true
-            if (h === "light") return false
-            if (document.body) {
-                const a = document.body.dataset.framerTheme
-                if (a === "dark") return true
-                if (a === "light") return false
-            }
-        }
-        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (s === "dark") return true
-    } catch (e) {}
-    return false
-}
 function loadToken(): string {
     if (typeof window === "undefined") return ""
     try {
@@ -115,47 +97,47 @@ function AdmSkeletonRows(props: { C: any; rows?: number }) {
 export default function AuditLogCard(props: Props) {
     const apiBase = (props.apiBase || DEFAULT_API).replace(/\/+$/, "")
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
-    const C = (onCanvas ? !!props.dark : themeDark) ? DARK : LIGHT
     const [rows, setRows] = useState<Row[]>(onCanvas ? SAMPLE : [])
+    const [total, setTotal] = useState<number | null>(onCanvas ? SAMPLE.length : null)
+    const [page, setPage] = useState(0)
+    const [openId, setOpenId] = useState("")
     const [loading, setLoading] = useState(false)
     const [err, setErr] = useState("")
 
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (typeof MutationObserver === "undefined" || !document.body) return
-        const o = new MutationObserver(read)
-        o.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => o.disconnect()
-    }, [onCanvas])
-
-    const load = useCallback(() => {
+    const load = useCallback((pageIndex: number) => {
         if (onCanvas) return
         const token = loadToken()
         if (!token) { setErr("관리자 로그인이 필요해요"); return }
         setLoading(true); setErr("")
-        fetch(`${apiBase}/api/admin?type=audit_log&limit=100`, { headers: { Authorization: "Bearer " + token }, cache: "no-store" })
+        fetch(`${apiBase}/api/admin?type=audit_log&limit=${PAGE_SIZE}&offset=${pageIndex * PAGE_SIZE}`, { headers: { Authorization: "Bearer " + token }, cache: "no-store" })
             .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
-            .then((d) => setRows(Array.isArray(d.items) ? d.items : []))
+            .then((d) => { setRows(Array.isArray(d.items) ? d.items : []); setTotal(d.total != null ? d.total : null) })
             .catch((e) => setErr("불러오기 실패: " + (e && e.message ? e.message : e)))
             .finally(() => setLoading(false))
     }, [apiBase, onCanvas])
 
-    useEffect(() => { load() }, [load])
+    useEffect(() => { load(0) }, [load])
 
     const wrap: CSSProperties = { width: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: 16, display: "flex", flexDirection: "column", gap: 12 }
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "15px 17px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
     const colorOf = (k?: string) => (k === "up" ? C.up : k === "green" ? C.green : k === "amber" ? C.amber : C.vt)
     const bgOf = (k?: string) => (k === "up" ? C.grid : k === "green" ? C.greenS : k === "amber" ? C.amberS : C.vtS)
+    const totalCount = total == null ? rows.length : total
+    const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+    const rangeStart = totalCount === 0 ? 0 : page * PAGE_SIZE + 1
+    const rangeEnd = Math.min(totalCount, page * PAGE_SIZE + rows.length)
+    const movePage = (next: number) => {
+        if (loading || next < 0 || next >= pageCount) return
+        setPage(next); setOpenId(""); load(next)
+    }
 
     return (
         <div style={wrap}>
+            <style>{ADMIN_PALETTE}</style>
             <div style={card}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                     <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.4px" }}>관리자 조치 로그</span>
-                    <span style={{ marginLeft: "auto", fontSize: 11, color: C.faint, fontWeight: 600, cursor: "pointer" }} onClick={load}>{loading ? "불러오는 중…" : "새로고침"}</span>
+                    <button style={{ marginLeft: "auto", border: "none", background: "transparent", fontSize: 11, color: C.faint, fontWeight: 700, cursor: "pointer" }} onClick={() => load(page)}>{loading ? "불러오는 중…" : "새로고침"}</button>
                 </div>
                 {err && <div style={{ fontSize: 12, color: C.up, fontWeight: 700, marginTop: 10 }}>{err}</div>}
             </div>
@@ -167,20 +149,31 @@ export default function AuditLogCard(props: Props) {
                     <div style={{ fontSize: 13, color: C.faint, fontWeight: 600 }}>기록된 조치가 없어요</div>
                 ) : rows.map((r, i) => {
                     const a = ACTIONS[r.action || ""] || { t: r.action || "조치", c: "vt" }
+                    const opened = openId === r.id
                     const detailStr = r.detail && typeof r.detail === "object" ? Object.keys(r.detail).map((k) => `${k}: ${r.detail[k]}`).join(" · ") : ""
                     return (
-                        <div key={r.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", paddingTop: i === 0 ? 0 : 11, marginTop: i === 0 ? 0 : 11, borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                        <div key={r.id} role="button" tabIndex={0} aria-expanded={opened}
+                            onClick={() => setOpenId(opened ? "" : r.id)}
+                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenId(opened ? "" : r.id) } }}
+                            style={{ display: "flex", gap: 10, alignItems: "flex-start", paddingTop: i === 0 ? 0 : 11, marginTop: i === 0 ? 0 : 11, borderTop: i === 0 ? "none" : `1px solid ${C.line}`, cursor: "pointer", outline: "none" }}>
                             <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: colorOf(a.c), background: bgOf(a.c), borderRadius: 7, padding: "3px 9px" }}>{a.t}</span>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink }}>
                                     {r.target_type === "user" ? "회원" : "글"} <span style={{ color: C.faint, fontWeight: 600 }}>{r.target_id ? r.target_id.slice(0, 8) : "—"}</span>
-                                    {detailStr && <span style={{ color: C.sub, fontWeight: 600 }}> · {detailStr}</span>}
+                                    <span style={{ float: "right", color: C.faint, transform: opened ? "rotate(90deg)" : "none" }}>›</span>
                                 </div>
                                 <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 2 }}>{r.actor_email || "—"} · {fmtTs(r.created_at)}</div>
+                                {opened && detailStr && <div style={{ marginTop: 7, padding: "8px 10px", borderRadius: 9, background: C.grid, color: C.sub, fontSize: 11.5, fontWeight: 600, lineHeight: 1.55, overflowWrap: "anywhere" }}>{detailStr}</div>}
                             </div>
                         </div>
                     )
                 })}
+            </div>
+            <div style={{ ...card, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>표시 {rangeStart.toLocaleString()}–{rangeEnd.toLocaleString()} / 전체 {totalCount.toLocaleString()}</span>
+                <span style={{ marginLeft: "auto", fontSize: 11, color: C.faint, fontWeight: 700 }}>{page + 1} / {pageCount}</span>
+                <button disabled={page <= 0 || loading} onClick={() => movePage(page - 1)} style={{ border: "none", borderRadius: 9, padding: "7px 12px", background: C.grid, color: C.sub, fontWeight: 800, opacity: page <= 0 ? 0.45 : 1 }}>이전</button>
+                <button disabled={page + 1 >= pageCount || loading} onClick={() => movePage(page + 1)} style={{ border: "none", borderRadius: 9, padding: "7px 12px", background: C.grid, color: C.sub, fontWeight: 800, opacity: page + 1 >= pageCount ? 0.45 : 1 }}>다음</button>
             </div>
             <div style={{ textAlign: "center", fontSize: 11, color: C.faint, fontWeight: 600 }}>모든 관리자 조치는 여기 기록돼요 · 읽기 전용</div>
         </div>

@@ -1039,13 +1039,24 @@ def handle_audit_log(handler, method: str, body: dict) -> dict:
     if method != "GET":
         return {"_status": 405, "_body": {"error": "method_not_allowed"}}
     params = parse_qs(urlparse(handler.path).query)
-    limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
+    limit = min(200, max(1, int((params.get("limit", ["20"])[0] or "20"))))
+    offset = max(0, int((params.get("offset", ["0"])[0] or "0")))
     sel = "id,actor_email,action,target_type,target_id,detail,created_at"
-    r = requests.get(f"{SUPABASE_URL}/rest/v1/admin_audit_log", headers=_svc_headers(),
-                     params={"select": sel, "order": "created_at.desc", "limit": str(limit)}, timeout=_t(10))
-    if r.status_code != 200:
+    r = requests.get(f"{SUPABASE_URL}/rest/v1/admin_audit_log",
+                     headers=_svc_headers({"Prefer": "count=exact"}),
+                     params={"select": sel, "order": "created_at.desc", "limit": str(limit),
+                             "offset": str(offset)}, timeout=_t(10))
+    if r.status_code not in (200, 206):
         return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
-    return {"_status": 200, "_body": {"items": r.json()}}
+    total = None
+    cr = r.headers.get("Content-Range", "")
+    if "/" in cr:
+        try:
+            total = int(cr.split("/")[-1])
+        except ValueError:
+            pass
+    return {"_status": 200, "_body": {"items": r.json(), "total": total,
+                                        "limit": limit, "offset": offset}}
 
 
 _NOTICE_KINDS = ("notice", "event")
