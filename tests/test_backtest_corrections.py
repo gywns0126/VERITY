@@ -11,6 +11,31 @@ from api.intelligence.backtest_archive import (
 )
 
 
+def test_verification_report_exposes_sample_and_ci(monkeypatch, tmp_path):
+    import api.intelligence.backtest_archive as mod
+
+    monkeypatch.setattr(mod, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        mod,
+        "evaluate_past_recommendations",
+        lambda: {
+            "periods": {
+                "7d": {"hit_rate": 50.0, "avg_return": 1.0, "sharpe": 0.2, "total_recs": 2, "hits": 1},
+                "14d": {"hit_rate": 75.0, "avg_return": 2.0, "sharpe": 0.4, "total_recs": 4, "hits": 3},
+                "30d": {"hit_rate": None, "avg_return": None, "sharpe": None, "total_recs": 0, "hits": 0},
+            },
+            "_corrections_meta": {},
+        },
+    )
+    report = mod.generate_verification_report()
+    perf = report["performance"]
+    assert perf["hit_rate_14d"] == 75.0
+    assert perf["sample_14d"] == 4
+    assert perf["hits_14d"] == 3
+    assert perf["hit_rate_14d_ci95"] == [30.1, 95.4]
+    assert perf["hit_rate_30d_ci95"] is None
+
+
 class TestSlippageTier:
     def test_large_cap(self):
         # 시총 10조+ → 0.1% (KOSPI 대형)

@@ -19,7 +19,7 @@ const CONSOLES: Array<{ name: string; url: string }> = [
     { name: "Perplexity — Billing", url: "https://console.perplexity.ai/group/ac387575-4266-40d5-96cc-d1e31462525f/billing" },
 ]
 
-export default function AiUsageCard({ cost, brainQuality }: { cost?: CostMonitor; brainQuality?: BrainQuality }) {
+export default function AiUsageCard({ cost, brainQuality, status = "ok" }: { cost?: CostMonitor; brainQuality?: BrainQuality; status?: "loading" | "ok" | "error" }) {
     const dark = useDark()
     const c = palette(dark)
     const m = cost?.monthly_usage || {}
@@ -49,7 +49,9 @@ export default function AiUsageCard({ cost, brainQuality }: { cost?: CostMonitor
                 <span style={{ marginLeft: "auto", fontSize: 10, color: c.faint }}>호출 수만 정확 · 청구액은 콘솔에서</span>
             </div>
 
-            {!cost ? (
+            {status === "error" ? (
+                <span style={{ fontSize: 11.5, color: c.down }}>AI 사용량 원천을 불러오지 못했습니다.</span>
+            ) : !cost ? (
                 <span style={{ fontSize: 11.5, color: c.faint }}>사용량 로딩…</span>
             ) : (
                 <div style={{ background: c.hi, borderRadius: 12, padding: "9px 11px" }}>

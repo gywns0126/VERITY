@@ -32,6 +32,7 @@ export default function SystemPage() {
     const [authed, setAuthed] = useState<boolean | null>(null)
     const [pf, setPf] = useState<PortfolioFull | null>(null)
     const refreshEpoch = useDataRefreshEpoch()
+    const [pfStatus, setPfStatus] = useState<"loading" | "ok" | "error">("loading")
 
     useEffect(() => {
         captureOAuthHash()
@@ -48,9 +49,24 @@ export default function SystemPage() {
     useEffect(() => {
         if (!authed) return
         let cancelled = false
-        fetchPortfolioSlim<PortfolioFull>().then((r) => {
-            if (!cancelled && r.ok) setPf(r.data)
-        })
+        setPfStatus("loading")
+        async function load() {
+            let r = await fetchPortfolioSlim<PortfolioFull>()
+            // 상류의 일시 실패가 영구 로딩으로 남지 않게 한 번만 자동 재시도한다.
+            if (!r.ok && r.error !== "auth") {
+                await new Promise((resolve) => setTimeout(resolve, 1200))
+                if (cancelled) return
+                r = await fetchPortfolioSlim<PortfolioFull>()
+            }
+            if (cancelled) return
+            if (r.ok) {
+                setPf(r.data)
+                setPfStatus("ok")
+            } else {
+                setPfStatus("error")
+            }
+        }
+        load()
         return () => {
             cancelled = true
         }
@@ -72,13 +88,13 @@ export default function SystemPage() {
                         <SystemMapCard />
                     </PanelBoundary>
                     <PanelBoundary name="실자금 게이트">
-                        <GateProgressPanel vams={pf?.vams} />
+                        <GateProgressPanel vams={pf?.vams} status={pfStatus} />
                     </PanelBoundary>
                     <PanelBoundary name="자본 path">
-                        <CapitalPathCard vams={pf?.vams} />
+                        <CapitalPathCard vams={pf?.vams} status={pfStatus} />
                     </PanelBoundary>
                     <PanelBoundary name="AI 사용량">
-                        <AiUsageCard cost={pf?.cost_monitor} brainQuality={pf?.brain_quality} />
+                        <AiUsageCard cost={pf?.cost_monitor} brainQuality={pf?.brain_quality} status={pfStatus} />
                     </PanelBoundary>
                 </div>
 

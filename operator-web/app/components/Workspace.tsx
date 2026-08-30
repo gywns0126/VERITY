@@ -314,7 +314,7 @@ export default function Workspace({
 
             {/* 3종 LLM 종합 — 동일 링크그룹 (자체 verity-ticker 수신) */}
             <div style={{ borderTop: `1px solid ${c.line}`, paddingTop: 12 }}>
-                <TriSynthesisPanel />
+                <TriSynthesisPanel ticker={ticker} />
             </div>
         </div>
     )

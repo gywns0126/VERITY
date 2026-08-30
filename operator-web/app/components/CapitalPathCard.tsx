@@ -77,12 +77,12 @@ function fmtKRW(n?: number | null): string {
 }
 
 function currentTier(totalAsset?: number | null): TierSpec {
-    if (totalAsset == null) return TIERS[0]
+    if (totalAsset == null || totalAsset < TIERS[0].min_krw) return TIERS[0]
     for (const t of TIERS) if (totalAsset >= t.min_krw && totalAsset < t.max_krw) return t
     return TIERS[TIERS.length - 1]
 }
 
-export default function CapitalPathCard({ vams }: { vams?: Vams }) {
+export default function CapitalPathCard({ vams, status = "ok" }: { vams?: Vams; status?: "loading" | "ok" | "error" }) {
     const dark = useDark()
     const c = palette(dark)
     const [expanded, setExpanded] = useState(false)
@@ -102,7 +102,8 @@ export default function CapitalPathCard({ vams }: { vams?: Vams }) {
     const utilizationPct = tier.max_holdings_aggressive > 0 ? Math.round((holdings.length / tier.max_holdings_aggressive) * 100) : null
 
     const wrap = { ...cardStyle(c, RAIL_PAD), fontFamily: FONT, display: "flex", flexDirection: "column" as const, gap: 10 }
-    if (!vams) return <div style={wrap}><span style={{ fontSize: 12, color: c.faint }}>자본 path 로딩…</span></div>
+    if (status === "error") return <div style={wrap}><span style={{ fontSize: 12, color: c.down }}>자본 path 원천을 불러오지 못했습니다.</span></div>
+    if (status === "loading" || !vams) return <div style={wrap}><span style={{ fontSize: 12, color: c.faint }}>자본 path 로딩…</span></div>
 
     const sub = (label: string, value: string, tone?: "ok" | "warn") => (
         <div key={label} style={{ background: c.hi, borderRadius: 10, padding: "7px 9px" }}>

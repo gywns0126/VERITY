@@ -124,7 +124,7 @@ export default function SystemMapCard() {
 
             <div style={{ display: "flex", gap: 6 }}>
                 {box("데이터", "data", fmt(cnt("data")), "발행 JSON")}
-                {box("검증", "validation", `N=${valN}`, valNext.label ? String(valNext.label).slice(0, 26) : "거래일", true)}
+                {box("검증", "validation", `N=${valN}`, valNext.label ? String(valNext.label) : "거래일", true)}
             </div>
 
             {stages.length > 0 ? (

@@ -51,7 +51,9 @@ export type Holding = {
     name?: string
     currency?: string
     buy_price?: number
+    buy_price_original?: number
     current_price?: number
+    entry_fx_rate?: number
     quantity?: number
     total_cost?: number
     return_pct?: number

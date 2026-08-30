@@ -1,6 +1,6 @@
 "use client"
 // TriSynthesisPanel — 3종 LLM 종합 분석 (② 판단 층 센터피스, 오퍼레이터 전용). 공개 알파네스트 디자인.
-// StockSearch 가 쏜 verity-ticker / ?q= / verity_last_ticker 수신해 해당 종목 종합 표시.
+// Workspace의 단일 선택 상태를 받아 해당 종목 종합을 표시한다.
 // 되돌리지 말 것: fetchOperator("tri_synthesis") 만 읽음(Brain grounding=오퍼레이터 전용). 공개 blob 직독 금지.
 //   RULE 7: LLM 의견=의견(provenance 분리 표기), Brain=가설 라벨 필수.
 import { useEffect, useState } from "react"
@@ -20,40 +20,17 @@ type Syn = {
 }
 type Data = { syntheses?: Record<string, Syn> }
 
-function initialTicker(): string {
-    try {
-        const u = new URL(window.location.href)
-        const q = u.searchParams.get("q")
-        if (q) return q.toUpperCase()
-        const last = localStorage.getItem("verity_last_ticker")
-        if (last) return last.toUpperCase()
-    } catch {}
-    return ""
-}
-
-export default function TriSynthesisPanel() {
+export default function TriSynthesisPanel({ ticker }: { ticker: string }) {
     const dark = useDark()
     const c = palette(dark)
     const [data, setData] = useState<Data | null>(null)
     const [status, setStatus] = useState<"loading" | "ok" | "auth" | "error">("loading")
-    const [ticker, setTicker] = useState("")
     // 온디맨드 — 알파네스트 발행 사실 조인 + 요청 시 3종 LLM
     const [ask, setAsk] = useState<AskResult | null>(null)
     const [factsLoading, setFactsLoading] = useState(false)
     const [askErr, setAskErr] = useState("")
     // 사실 = 기본 펼침 (PM 2026-08-04: 질문창·온디맨드 LLM 제거 — 클로드 세션이 상위호환)
     const [openFacts, setOpenFacts] = useState(true)
-
-    useEffect(() => {
-        setTicker(initialTicker())
-        function onTicker(e: Event) {
-            const d = (e as CustomEvent).detail
-            const t = d && d.ticker ? String(d.ticker).toUpperCase() : ""
-            if (t) setTicker(t)
-        }
-        window.addEventListener("verity-ticker", onTicker)
-        return () => window.removeEventListener("verity-ticker", onTicker)
-    }, [])
 
     useEffect(() => {
         let cancelled = false
@@ -193,7 +170,7 @@ export default function TriSynthesisPanel() {
                 <div style={{ color: c.sub, fontSize: 13, lineHeight: 1.55 }}>
                     {ticker ? `${ticker} — 사전 종합(주 1회)은 추천 상위만.` : "종목을 검색해 선택하세요."}
                     <br />
-                    아래는 이 종목의 보유 사실 전부(출처·기준일 포함) — 깊은 분석은 클로드 세션에서.
+                    아래는 현재 발행된 사실(출처·기준일 포함) — 깊은 분석은 클로드 세션에서.
                 </div>
                 {onDemand}
             </div>

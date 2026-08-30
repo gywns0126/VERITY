@@ -366,6 +366,32 @@ def generate_verification_report() -> Dict[str, Any]:
     decaying = ic_data.get("decaying_factors", [])
     weakening = ic_data.get("weakening_factors", [])
 
+    def _wilson_ci_pct(hits: Any, total: Any) -> Optional[List[float]]:
+        """이항 적중률의 Wilson 95% CI를 퍼센트 단위로 반환한다."""
+        try:
+            n = int(total)
+            k = int(hits)
+        except (TypeError, ValueError):
+            return None
+        if n <= 0 or k < 0 or k > n:
+            return None
+        z = 1.959963984540054
+        p = k / n
+        den = 1 + z * z / n
+        center = (p + z * z / (2 * n)) / den
+        half = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / den
+        return [round(max(0.0, center - half) * 100, 1), round(min(1.0, center + half) * 100, 1)]
+
+    def _period_meta(period: str) -> Dict[str, Any]:
+        row = periods.get(period) or {}
+        n = row.get("total_recs")
+        hits = row.get("hits")
+        return {"sample": n, "hits": hits, "ci95": _wilson_ci_pct(hits, n)}
+
+    meta_7d = _period_meta("7d")
+    meta_14d = _period_meta("14d")
+    meta_30d = _period_meta("30d")
+
     adj_applied = []
     for factor, info in ic_adj.get("adjustments", {}).items():
         m = info.get("multiplier", 1.0)
@@ -384,6 +410,15 @@ def generate_verification_report() -> Dict[str, Any]:
             "hit_rate_7d": hit_7d,
             "hit_rate_14d": hit_14d,
             "hit_rate_30d": hit_30d,
+            "sample_7d": meta_7d["sample"],
+            "sample_14d": meta_14d["sample"],
+            "sample_30d": meta_30d["sample"],
+            "hits_7d": meta_7d["hits"],
+            "hits_14d": meta_14d["hits"],
+            "hits_30d": meta_30d["hits"],
+            "hit_rate_7d_ci95": meta_7d["ci95"],
+            "hit_rate_14d_ci95": meta_14d["ci95"],
+            "hit_rate_30d_ci95": meta_30d["ci95"],
             "avg_return_7d": (periods.get("7d") or {}).get("avg_return"),
             "avg_return_14d": (periods.get("14d") or {}).get("avg_return"),
             "sharpe_14d": (periods.get("14d") or {}).get("sharpe"),

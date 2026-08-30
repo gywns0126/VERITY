@@ -79,7 +79,7 @@ export default function PicksTable({ recs, status }: { recs: Rec[]; status: "loa
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
                     <span style={{ ...CARD_TITLE, color: c.ink }}>오늘의 추천</span>
-                    <span style={{ fontSize: 10, color: c.faint }}>스캔 5,000 → 후보 25 → 추천 {recs.length} → 중용 사이징</span>
+                    <span style={{ fontSize: 10, color: c.faint }}>판단표 {recs.length} · 매수 {buys.length} · 관망 이하 {rest.length} → 중용 사이징</span>
                 </div>
                 <span style={{ fontSize: 10, color: c.faint }}>가설 · 검증 축적 중</span>
             </div>

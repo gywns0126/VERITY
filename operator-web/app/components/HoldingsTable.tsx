@@ -53,9 +53,12 @@ export default function HoldingsTable({ holdings, status }: { holdings: Holding[
                     const evalAmt = (h.quantity || 0) * px
                     const isUS = h.currency === "USD"
                     const col = pnlPct === null ? c.faint : pnlPct > 0 ? c.up : pnlPct < 0 ? c.down : c.faint
-                    const fmtPx = isUS ? `$${px.toFixed(2)}` : Math.round(px).toLocaleString()
-                    const fmtEval = isUS ? `$${evalAmt.toFixed(0)}` : Math.round(evalAmt).toLocaleString()
-                    const fmtBuy = isUS ? `$${buy.toFixed(2)}` : Math.round(buy).toLocaleString()
+                    // VAMS SoT의 buy_price/current_price는 총자산 합산용 KRW 환산값이다.
+                    // currency=USD만 보고 달러 기호를 붙이면 $64,000처럼 1,400배 큰 가격으로 오독된다.
+                    const fmtPx = `${Math.round(px).toLocaleString()}원`
+                    const fmtEval = `${Math.round(evalAmt).toLocaleString()}원`
+                    const fmtBuy = `${Math.round(buy).toLocaleString()}원`
+                    const entryUsd = isUS && typeof h.buy_price_original === "number" ? ` · 진입 $${h.buy_price_original.toFixed(2)}` : ""
                     return (
                         <div
                             key={h.ticker}
@@ -70,7 +73,7 @@ export default function HoldingsTable({ holdings, status }: { holdings: Holding[
                                     {h.name || h.ticker}
                                 </span>
                                 <span style={{ fontSize: 10.5, color: c.faint, ...NUM }}>
-                                    {(h.quantity || 0).toLocaleString()}주 · 평단 {fmtBuy}
+                                    {(h.quantity || 0).toLocaleString()}주 · {isUS ? "환산평단" : "평단"} {fmtBuy}{entryUsd}
                                 </span>
                             </div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 1, alignItems: "flex-end", flexShrink: 0 }}>

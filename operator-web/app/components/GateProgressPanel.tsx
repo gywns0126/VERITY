@@ -33,7 +33,7 @@ const GATE_LABELS: Record<string, string> = {
     cost_efficiency: "비용효율",
 }
 
-export default function GateProgressPanel({ vams }: { vams?: Vams }) {
+export default function GateProgressPanel({ vams, status = "ok" }: { vams?: Vams; status?: "loading" | "ok" | "error" }) {
     const dark = useDark()
     const c = palette(dark)
     const vr = vams?.validation_report
@@ -50,6 +50,17 @@ export default function GateProgressPanel({ vams }: { vams?: Vams }) {
     const passN = judged.filter((m) => m.pass).length
 
     const sub: CSSProperties = { fontSize: 11.5, color: c.sub, lineHeight: 1.55 }
+
+    if (status !== "ok") {
+        return (
+            <section style={cardStyle(c)}>
+                <h2 style={{ ...CARD_TITLE, margin: 0 }}>실자금 게이트</h2>
+                <div style={{ ...sub, marginTop: 10, color: status === "error" ? c.down : c.faint }}>
+                    {status === "error" ? "게이트 원천을 불러오지 못했습니다." : "게이트 로딩…"}
+                </div>
+            </section>
+        )
+    }
 
     return (
         <section style={cardStyle(c)}>

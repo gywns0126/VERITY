@@ -32,9 +32,19 @@ type Investor = {
     person?: string
     disclosed_style?: string
     holdings?: Holding13F[]
-    holdings_capped?: Holding13F[]
+    holdings_capped?: boolean
+    top_holdings?: Holding13F[]
     trailing_4q_replication_pct?: number
     report_date?: string
+}
+
+function citedSources(content: string | undefined, citations: string[] | undefined): Array<{ n: number; url: string }> {
+    if (!citations?.length) return []
+    const nums = Array.from(String(content || "").matchAll(/\[(\d+)\]/g))
+        .map((m) => Number(m[1]))
+        .filter((n, i, all) => n >= 1 && n <= citations.length && all.indexOf(n) === i)
+    const selected = nums.length ? nums : citations.slice(0, 5).map((_, i) => i + 1)
+    return selected.map((n) => ({ n, url: citations[n - 1] })).filter((x) => Boolean(x.url))
 }
 
 function plain(t?: string): string {
@@ -81,7 +91,7 @@ export default function MacroPage() {
                         person: w.person,
                         trailing_4q_replication_pct: w.trailing_4q_replication_pct,
                         report_date: w.report_date,
-                        holdings_capped: (w.holdings_capped || w.holdings || [])
+                        top_holdings: (Array.isArray(w.top_holdings) ? w.top_holdings : Array.isArray(w.holdings) ? w.holdings : [])
                             .slice()
                             .sort((a, b) => (b.weight_pct || 0) - (a.weight_pct || 0))
                             .slice(0, 5)
@@ -140,10 +150,10 @@ export default function MacroPage() {
                             {px?.content ? (
                                 <>
                                     <div style={{ fontSize: 12, color: c.sub, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{plain(px.content)}</div>
-                                    {px.citations?.length ? (
+                                    {citedSources(px.content, px.citations).length ? (
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                                            {px.citations.slice(0, 5).map((u, i) => (
-                                                <a key={i} href={u} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.vt, textDecoration: "none" }}>글로벌 {i + 1}</a>
+                                            {citedSources(px.content, px.citations).map((x) => (
+                                                <a key={x.n} href={x.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.vt, textDecoration: "none" }}>근거 [{x.n}]</a>
                                             ))}
                                         </div>
                                     ) : null}
@@ -152,7 +162,7 @@ export default function MacroPage() {
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
                                             {(syn!.sources!.gemini!.gm_citations || []).slice(0, 6).map((g, i) => (
                                                 <a key={i} href={g.uri || "#"} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.green, textDecoration: "none" }}>
-                                                    국내 {g.title || i + 1}
+                                                    Gemini 근거 · {g.title || i + 1}
                                                 </a>
                                             ))}
                                         </div>
@@ -324,7 +334,8 @@ export default function MacroPage() {
                         ) : (
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(300px, 100%), 1fr))", gap: 10 }}>
                                 {whales.slice(0, 8).map((w, i) => {
-                                    const holds = (w.holdings_capped || w.holdings || []).slice().sort((a, b) => (b.weight_pct || 0) - (a.weight_pct || 0)).slice(0, 3)
+                                    const sourceHolds = Array.isArray(w.top_holdings) ? w.top_holdings : Array.isArray(w.holdings) ? w.holdings : []
+                                    const holds = sourceHolds.slice().sort((a, b) => (b.weight_pct || 0) - (a.weight_pct || 0)).slice(0, 3)
                                     const rep = w.trailing_4q_replication_pct
                                     return (
                                         <div key={i} style={{ background: c.hi, borderRadius: 10, padding: "9px 11px", display: "flex", flexDirection: "column", gap: 5 }}>

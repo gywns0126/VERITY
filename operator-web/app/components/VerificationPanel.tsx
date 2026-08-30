@@ -15,6 +15,12 @@ type Perf = {
     avg_return_14d?: number | null
     sharpe_14d?: number | null
     delisted_count_30d?: number | null
+    sample_7d?: number | null
+    sample_14d?: number | null
+    sample_30d?: number | null
+    hit_rate_7d_ci95?: [number, number] | null
+    hit_rate_14d_ci95?: [number, number] | null
+    hit_rate_30d_ci95?: [number, number] | null
 }
 type FactorHealth = { healthy?: string[]; weakening?: string[]; decaying?: string[]; total_factors?: number }
 type IcAdj = { factor?: string; ic_recent?: number; multiplier?: number; status?: string }
@@ -29,7 +35,14 @@ type Report = {
 
 function hasPerf(p?: Perf): boolean {
     if (!p) return false
-    return [p.hit_rate_7d, p.hit_rate_14d, p.hit_rate_30d, p.avg_return_14d, p.sharpe_14d].some((v) => typeof v === "number" && isFinite(v as number))
+    return (
+        typeof p.hit_rate_14d === "number" &&
+        typeof p.avg_return_14d === "number" &&
+        typeof p.sample_14d === "number" &&
+        p.sample_14d > 0 &&
+        Array.isArray(p.hit_rate_14d_ci95) &&
+        p.hit_rate_14d_ci95.length === 2
+    )
 }
 
 export default function VerificationPanel() {
@@ -68,6 +81,7 @@ export default function VerificationPanel() {
     const fh = rep.factor_health || {}
     const ic = (rep.ic_adjustments_active || []).slice(0, 6)
     const perfLive = hasPerf(rep.performance)
+    const unclassified = Math.max(0, (fh.total_factors || 0) - (fh.healthy || []).length - (fh.weakening || []).length - (fh.decaying || []).length)
     const genAt = String(rep.generated_at || "").slice(0, 16).replace("T", " ").replace(/\.\d+/, "")
 
     return (
@@ -114,6 +128,7 @@ export default function VerificationPanel() {
                         <FactorChip c={c} label="건강" n={(fh.healthy || []).length} color={c.green} soft={c.greenS} />
                         <FactorChip c={c} label="약화" n={(fh.weakening || []).length} color={c.amber} soft={c.amberS} />
                         <FactorChip c={c} label="쇠퇴" n={(fh.decaying || []).length} color={c.faint} soft={c.hi} />
+                        {unclassified > 0 ? <FactorChip c={c} label="미분류" n={unclassified} color={c.sub} soft={c.hi} /> : null}
                     </div>
                 </div>
             ) : null}
@@ -157,24 +172,25 @@ function FactorChip({ c, label, n, color, soft }: { c: Palette; label: string; n
 }
 
 function PerfLive({ c, p }: { c: Palette; p: Perf }) {
-    // 🚨 RULE 7: hit rate 단독 금지 — 표본수 캐비엇 항상 병기.
-    const cell = (k: string, v: number | null | undefined, pct = true) =>
-        typeof v === "number" && isFinite(v) ? (
+    // 값은 생성기에서 이미 퍼센트 단위다. 적중률은 N·Wilson 95% CI와 함께만 표시한다.
+    const hitCell = (k: string, v: number | null | undefined, n: number | null | undefined, ci: [number, number] | null | undefined) =>
+        typeof v === "number" && isFinite(v) && typeof n === "number" && n > 0 && Array.isArray(ci) ? (
             <span style={{ fontSize: 12, color: c.sub }}>
-                {k} <b style={{ color: c.ink, ...NUM }}>{pct ? (v * 100).toFixed(1) + "%" : v.toFixed(2)}</b>
+                {k} <b style={{ color: c.ink, ...NUM }}>{v.toFixed(1)}%</b>
+                <span style={{ color: c.faint, ...NUM }}> · N={n} · 95% CI {ci[0].toFixed(1)}~{ci[1].toFixed(1)}%</span>
             </span>
         ) : null
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                {cell("hit 7d", p.hit_rate_7d)}
-                {cell("hit 14d", p.hit_rate_14d)}
-                {cell("hit 30d", p.hit_rate_30d)}
-                {cell("평균수익 14d", p.avg_return_14d)}
-                {cell("Sharpe 14d", p.sharpe_14d, false)}
+                {hitCell("hit 7d", p.hit_rate_7d, p.sample_7d, p.hit_rate_7d_ci95)}
+                {hitCell("hit 14d", p.hit_rate_14d, p.sample_14d, p.hit_rate_14d_ci95)}
+                {hitCell("hit 30d", p.hit_rate_30d, p.sample_30d, p.hit_rate_30d_ci95)}
+                {typeof p.avg_return_14d === "number" ? <span style={{ fontSize: 12, color: c.sub }}>기대수익(평균) 14d <b style={{ color: c.ink, ...NUM }}>{p.avg_return_14d.toFixed(2)}%</b></span> : null}
+                {typeof p.sharpe_14d === "number" ? <span style={{ fontSize: 12, color: c.sub }}>Sharpe 14d <b style={{ color: c.ink, ...NUM }}>{p.sharpe_14d.toFixed(2)}</b></span> : null}
             </div>
             <div style={{ fontSize: 11, color: c.amber, lineHeight: 1.5 }}>
-                예비 결과 — 표본수·신뢰구간 확인 전 판단 유보.
+                예비 결과 — 표본수와 신뢰구간이 넓으면 판단을 유보합니다.
             </div>
         </div>
     )
