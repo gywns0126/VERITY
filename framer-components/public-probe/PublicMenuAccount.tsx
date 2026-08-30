@@ -242,9 +242,11 @@ export default function PublicMenuAccount(props: {
     const [profile, setProfile] = useState<ProfileRow | null>(() =>
         isCanvas ? null : loadCachedProfile()
     )
-    // SSR/페이지 전환 중에는 인증 판정 전 로그아웃 CTA를 노출하지 않는다.
-    // 동일 높이의 투명 자리만 유지해 보라색 CTA → 회원 카드 전환 플래시를 막는다.
-    const [authReady, setAuthReady] = useState<boolean>(isCanvas)
+    // 유효한 로컬 세션은 첫 렌더부터 회원 카드로 표시한다.
+    // 세션 판정이 필요한 경우에만 같은 형태의 중립 스켈레톤을 유지한다.
+    const [authReady, setAuthReady] = useState<boolean>(() =>
+        isCanvas || (typeof window !== "undefined" && !!loadSession())
+    )
     const [busy, setBusy] = useState(false)
     const [btnHov, setBtnHov] = useState(false)
     const [cardHov, setCardHov] = useState(false)
@@ -365,18 +367,51 @@ export default function PublicMenuAccount(props: {
         return variant === "avatar" ? (
             <div
                 aria-hidden="true"
-                style={{ ...circle, visibility: "hidden", ...style }}
-            />
+                style={{ ...circle, background: fill, opacity: 0.72, ...style }}
+            >
+                <User
+                    size={Math.round(avatarSize * 0.52)}
+                    color={sub}
+                    weight="fill"
+                />
+            </div>
         ) : (
             <div
                 aria-hidden="true"
                 style={{
                     width: "100%",
                     minHeight: 54,
-                    visibility: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    padding: "8px 10px",
+                    boxSizing: "border-box",
+                    borderRadius: 13,
+                    background: fill,
                     ...style,
                 }}
-            />
+            >
+                <div style={{ ...circle, background: hexA(sub, 0.13) }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                        style={{
+                            width: "44%",
+                            height: 9,
+                            borderRadius: 6,
+                            background: hexA(sub, 0.16),
+                        }}
+                    />
+                    <div
+                        style={{
+                            width: "64%",
+                            height: 7,
+                            marginTop: 7,
+                            borderRadius: 5,
+                            background: hexA(sub, 0.1),
+                        }}
+                    />
+                </div>
+            </div>
         )
     }
 

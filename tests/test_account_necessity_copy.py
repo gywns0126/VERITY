@@ -14,12 +14,14 @@ def test_menu_explains_storage_requirement() -> None:
     assert "무료로" not in source
 
 
-def test_menu_hides_guest_cta_until_auth_is_ready() -> None:
+def test_menu_preserves_account_shape_until_auth_is_ready() -> None:
     source = (PUBLIC / "PublicMenuAccount.tsx").read_text(encoding="utf-8")
     assert "const [authReady, setAuthReady]" in source
+    assert 'typeof window !== "undefined" && !!loadSession()' in source
     assert "setAuthReady(true)" in source
     assert "if (!authReady)" in source
-    assert 'visibility: "hidden"' in source
+    assert 'visibility: "hidden"' not in source
+    assert 'background: hexA(sub, 0.13)' in source
 
 
 def test_auth_explains_public_and_account_boundaries() -> None:
