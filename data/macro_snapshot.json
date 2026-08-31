@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-31T20:33:21+09:00",
+  "collected_at": "2026-08-31T21:02:31+09:00",
   "macro": {
     "usd_krw": {
       "value": 1367.36,
@@ -1491,21 +1491,6 @@
       "d_day": 10
     },
     {
-      "name": "미국 기존주택판매",
-      "severity": "low",
-      "impact_area": [
-        "부동산",
-        "소비"
-      ],
-      "impact": "미국 주택시장 수요 온도계. 모기지 금리 민감",
-      "action": "금리 사이클 전환기 주목",
-      "date": "2026-09-10",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 291,
-      "d_day": 10
-    },
-    {
       "name": "미국 주간 실업수당 청구",
       "severity": "medium",
       "impact_area": [
@@ -1566,12 +1551,18 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 32.09
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 160.71
   },
   "schema_version": "v0"
 }
