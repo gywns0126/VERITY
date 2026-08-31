@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-31T18:06:06+09:00",
+ "as_of": "2026-09-01T01:40:35+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -8,8 +8,7 @@
  "known_unresolved": [
   "ledger_integrity",
   "rule_discrimination",
-  "flag_coverage",
-  "input_constancy"
+  "flag_coverage"
  ],
  "skipped": [],
  "checks": {
@@ -138,12 +137,7 @@
      ]
     }
    ],
-   "thin_keys": [
-    {
-     "key": "analyst_report_summary",
-     "coverage": "1/47"
-    }
-   ],
+   "thin_keys": [],
    "detail": "레코드에 한 번도 없는 키 18종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
@@ -155,15 +149,9 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 109,
+   "snapshots": 110,
    "cap_rules_checked": 8,
    "degenerate_rules": [
-    {
-     "rule": "perplexity_event_critical",
-     "fired_days": 5,
-     "activation_pct": 4.6,
-     "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
-    },
     {
      "rule": "oil_geopolitical_shock",
      "fired_days": 1,
@@ -178,8 +166,8 @@
     "watch_pct": 85.0
    },
    "days_without_any_cap": 12,
-   "days_without_any_cap_pct": 11.0,
-   "detail": "상시/미발동 등급 규칙 2종 — perplexity_event_critical(4.6%), oil_geopolitical_shock(0.9%). cap 없는 날 12/109일",
+   "days_without_any_cap_pct": 10.9,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(0.9%). cap 없는 날 12/110일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -190,7 +178,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 5231,
+   "stock_days": 5276,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -205,11 +193,11 @@
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
@@ -250,29 +238,12 @@
    "status": "KNOWN"
   },
   "input_constancy": {
-   "ok": false,
+   "ok": true,
    "inputs_checked": 9,
-   "varying": 5,
-   "constant_inputs": [
-    {
-     "input": "kis_credit_balance.credit_rate",
-     "n_present": 19,
-     "constant_value": 0.0,
-     "severity": "high"
-    },
-    {
-     "input": "kis_financial_ratio.current_ratio",
-     "n_present": 19,
-     "constant_value": 0.0,
-     "severity": "high"
-    }
-   ],
-   "detail": "전 종목 동일값 입력 2종 — kis_credit_balance.credit_rate=0.0, kis_financial_ratio.current_ratio=0.0. 측정이 아니라 상위 공백 의심(규칙이 영원히 발동 못 한다).",
-   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다.",
-   "baseline": {
-    "constant_inputs": 2
-   },
-   "status": "KNOWN"
+   "varying": 2,
+   "constant_inputs": [],
+   "detail": "입력 값 분산 정상",
+   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다."
   },
   "guard_inputs": {
    "ok": true,
