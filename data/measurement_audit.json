@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-29T16:36:59+09:00",
+ "as_of": "2026-08-31T18:06:06+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -15,7 +15,7 @@
  "checks": {
   "ledger_integrity": {
    "ok": false,
-   "episodes": 28,
+   "episodes": 31,
    "phantom_sells": 59,
    "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
@@ -43,21 +43,6 @@
     },
     {
      "key": "close",
-     "modules": [
-      "fact.py"
-     ]
-    },
-    {
-     "key": "dart_financials",
-     "modules": [
-      "moat.py",
-      "quality.py",
-      "red_flags.py",
-      "value_guards.py"
-     ]
-    },
-    {
-     "key": "equity_research_brief",
      "modules": [
       "fact.py"
      ]
@@ -156,27 +141,27 @@
    "thin_keys": [
     {
      "key": "analyst_report_summary",
-     "coverage": "1/46"
+     "coverage": "1/47"
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 20종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 18종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 10,
+   "holdings_checked": 7,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 108,
+   "snapshots": 109,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
      "rule": "perplexity_event_critical",
-     "fired_days": 4,
-     "activation_pct": 3.7,
+     "fired_days": 5,
+     "activation_pct": 4.6,
      "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
     },
     {
@@ -193,8 +178,8 @@
     "watch_pct": 85.0
    },
    "days_without_any_cap": 12,
-   "days_without_any_cap_pct": 11.1,
-   "detail": "상시/미발동 등급 규칙 2종 — perplexity_event_critical(3.7%), oil_geopolitical_shock(0.9%). cap 없는 날 12/108일",
+   "days_without_any_cap_pct": 11.0,
+   "detail": "상시/미발동 등급 규칙 2종 — perplexity_event_critical(4.6%), oil_geopolitical_shock(0.9%). cap 없는 날 12/109일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -205,14 +190,10 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 5184,
+   "stock_days": 5231,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
-     "fired": 0
-    },
-    {
-     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
@@ -220,11 +201,15 @@
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
      "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "fired": 0
+    },
+    {
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
@@ -271,13 +256,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 10,
+     "n_present": 19,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 10,
+     "n_present": 19,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -291,21 +276,21 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 10,
+   "holdings_checked": 7,
    "coverage": {
     "sector": {
-     "filled": 10,
-     "total": 10,
+     "filled": 7,
+     "total": 7,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 10,
-     "total": 10,
+     "filled": 7,
+     "total": 7,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 10,
-     "total": 10,
+     "filled": 7,
+     "total": 7,
      "guard": "팩터 쏠림 차단"
     }
    },
@@ -319,7 +304,7 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 10,
+   "holdings_checked": 7,
    "no_profit_exit": [],
    "ladder_broken": [
     {
@@ -331,24 +316,8 @@
      }
     },
     {
-     "name": "파마리서치",
-     "qty": 1.0,
-     "splittable": {
-      "target_1": 0,
-      "target_2": 0
-     }
-    },
-    {
      "name": "LG",
      "qty": 3.0,
-     "splittable": {
-      "target_1": 1,
-      "target_2": 0
-     }
-    },
-    {
-     "name": "ALB",
-     "qty": 2.0,
      "splittable": {
       "target_1": 1,
       "target_2": 0
@@ -363,7 +332,7 @@
      }
     }
    ],
-   "detail": "확정 경로 정합 (사다리 불능 5건 — 고가주 잔존분)"
+   "detail": "확정 경로 정합 (사다리 불능 3건 — 고가주 잔존분)"
   },
   "as_of_staleness": {
    "ok": true,

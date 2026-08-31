@@ -1,33 +1,33 @@
 {
-  "as_of": "2026-08-29 16:36",
+  "as_of": "2026-08-31 18:05",
   "validation_start": "2026-05-17",
   "validation_overall": "FAIL",
   "validation_progress": 0.5,
   "validation_progress_pct": 50.0,
   "gates": {
     "days": {
-      "current": 93,
+      "current": 94,
       "target": 60,
       "progress": 1.0,
       "remaining": 0,
       "unit": "거래일"
     },
     "trades": {
-      "current": 28,
+      "current": 31,
       "target": 20,
       "progress": 1.0,
       "remaining": 0,
       "unit": "건"
     },
     "expectancy": {
-      "current": -0.344,
+      "current": -0.284,
       "target": 0.25,
       "progress": 0.0,
       "remaining": null,
       "unit": "R"
     },
     "sqn": {
-      "current": -1.291,
+      "current": -1.071,
       "target": 1.7,
       "progress": 0.0,
       "remaining": null,
@@ -46,7 +46,7 @@
       "label": "레버리지 (일일 L배)",
       "status": "LOCKED",
       "unlock_condition": "VAMS 검증 overall == PASS",
-      "countdown": "expectancy -0.344/0.25 + sqn -1.291/1.7",
+      "countdown": "expectancy -0.284/0.25 + sqn -1.071/1.7",
       "note": "모델 존재 (scripts/arena_sim_prototype.py). 해제 후 PM 수동 활성."
     },
     {
@@ -54,7 +54,7 @@
       "label": "숏 / 인버스",
       "status": "LOCKED",
       "unlock_condition": "VAMS PASS + 수동 venue 결정 (별도)",
-      "countdown": "expectancy -0.344/0.25 + sqn -1.291/1.7",
+      "countdown": "expectancy -0.284/0.25 + sqn -1.071/1.7",
       "note": "현물 거래소(업비트/KIS) 부재 — 해외 파생·인버스 ETF venue 결정 필요. Tier-up 큐."
     }
   ],

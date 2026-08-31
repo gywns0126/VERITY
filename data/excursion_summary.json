@@ -1,27 +1,26 @@
 {
- "as_of": "2026-08-29T16:36:48+09:00",
+ "as_of": "2026-08-31T18:05:55+09:00",
  "version": "excursion_v0",
  "window_start": "2026-05-17",
- "n_episodes": 14,
+ "n_episodes": 15,
  "market": "KR",
  "mfe": {
-  "mean": 8.74,
-  "median": 5.14,
-  "max": 38.89
+  "mean": 10.88,
+  "median": 5.47,
+  "max": 40.78
  },
  "mae": {
-  "mean": -9.16,
-  "median": -9.02,
+  "mean": -8.59,
+  "median": -8.96,
   "min": -12.45,
   "winner_mae_p75": null
  },
  "counts": {
-  "wins": 1,
+  "wins": 2,
   "losses": 13
  },
  "labels": [
-  "통계 무의미 (N=14 < 30)",
-  "MAE 평균이 MFE 평균보다 큼 — 진입 후 하락 폭이 상승 폭을 넘는다(진입 타이밍/신호 축 점검)"
+  "통계 무의미 (N=15 < 30)"
  ],
  "brain_input": false,
  "note": "청산 episode MAE/MFE 관측 — 손절·익절 임계 재등록의 판정 근거. 점수·집행 입력 0. 정의: Sweeney(1996) MAE/MFE 프레임."
