@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-31T23:32:32+09:00",
+  "collected_at": "2026-09-01T00:03:25+09:00",
   "macro": {
     "usd_krw": {
       "value": 1368.07,
@@ -1366,7 +1366,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-08-31T23:33:13+09:00",
+    "updated_at": "2026-09-01T00:04:25+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.79,
       "us_ig_risk": "LOW",
@@ -1376,7 +1376,7 @@
     },
     "kr_corp_spreads": {
       "date": "20260831",
-      "collected_at": "2026-08-31T23:33:13+09:00",
+      "collected_at": "2026-09-01T00:04:25+09:00",
       "grades": {
         "AA-": {
           "yield": 4.516,
@@ -1404,7 +1404,7 @@
       "impact": "50선 기준. 상회 시 경기 확장, 하회 시 수축. 주식시장 방향성 선행",
       "action": "50선 돌파/이탈 시 경기민감주 비중 조절",
       "source": "ISM",
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "ISM 서비스 PMI",
@@ -1418,7 +1418,7 @@
       "impact": "미국 GDP 70%인 서비스업 체감경기. 제조업 PMI와 교차 확인",
       "action": "서비스 견조 시 소프트랜딩 시나리오 우호",
       "source": "ISM",
-      "d_day": 3
+      "d_day": 2
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1433,7 +1433,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 3
+      "d_day": 2
     },
     {
       "name": "미국 고용지표 (NFP)",
@@ -1449,7 +1449,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 50,
-      "d_day": 4
+      "d_day": 3
     },
     {
       "name": "ECB 통화정책회의",
@@ -1464,7 +1464,7 @@
       "country": "유럽",
       "source": "ECB",
       "date": "2026-09-10",
-      "d_day": 10
+      "d_day": 9
     },
     {
       "name": "미국 PPI 발표",
@@ -1479,7 +1479,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 46,
-      "d_day": 10
+      "d_day": 9
     },
     {
       "name": "미국 기존주택판매",
@@ -1494,7 +1494,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 291,
-      "d_day": 10
+      "d_day": 9
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1509,7 +1509,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 10
+      "d_day": 9
     },
     {
       "name": "옵션만기일 (한국)",
@@ -1523,7 +1523,7 @@
       "impact": "프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
       "action": "만기일 장중 단기 매매 자제",
       "source": "KRX",
-      "d_day": 10
+      "d_day": 9
     },
     {
       "name": "Michigan 소비자심리 예비치",
@@ -1537,7 +1537,7 @@
       "impact": "미국 소비자 기대 인플레이션 포함. Fed도 주시하는 지표",
       "action": "소비재·리테일 섹터 감정 판단",
       "source": "UMich",
-      "d_day": 11
+      "d_day": 10
     },
     {
       "name": "미국 CPI 발표",
@@ -1553,16 +1553,20 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 10,
-      "d_day": 11
+      "d_day": 10
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 55.14
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 136.24
   },
   "schema_version": "v0"
 }
