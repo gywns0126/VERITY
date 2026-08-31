@@ -1,19 +1,21 @@
 {
  "_meta": {
-  "generated_at": "2026-08-31T06:50:15.627127+09:00",
+  "generated_at": "2026-08-31T09:09:58.892930+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "green",
- "reasons": [],
+ "status": "red",
+ "reasons": [
+  "P0 stale 1건"
+ ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-08-31T06:50:15.585873+09:00",
+  "generated_at": "2026-08-31T09:09:58.840016+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 27122,
+  "max_cdn_age_s": 20781,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -23,7 +25,7 @@
      "PBR": 87.6
     },
     "total": 2495,
-    "cdn_age_s": 27121,
+    "cdn_age_s": 20781,
     "error": null
    },
    {
@@ -34,7 +36,7 @@
      "PBR": 73.7
     },
     "total": 5070,
-    "cdn_age_s": 27122,
+    "cdn_age_s": 20778,
     "error": null
    },
    {
@@ -45,7 +47,7 @@
      "PBR": 73.5
     },
     "total": 3924,
-    "cdn_age_s": 25877,
+    "cdn_age_s": 20775,
     "error": null
    },
    {
@@ -73,17 +75,17 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-08-31T06:50:10.127541+09:00",
+  "generated_at": "2026-08-31T09:09:55.408544+09:00",
   "summary": {
-   "fresh": 60,
-   "stale": 0,
-   "closed": 2,
+   "fresh": 61,
+   "stale": 1,
+   "closed": 0,
    "discontinued": 2,
    "p0": {
     "total": 6,
-    "fresh": 4,
-    "closed": 2,
-    "active": 4
+    "fresh": 5,
+    "closed": 0,
+    "active": 6
    },
    "p1": {
     "total": 21,
@@ -98,7 +100,13 @@
     "active": 36
    }
   },
-  "stale_p0": [],
+  "stale_p0": [
+   {
+    "id": "dart_catalyst_alerts",
+    "label": "DART 공시 알림",
+    "age_min": 549.9
+   }
+  ],
   "stale_other": []
  }
 }
