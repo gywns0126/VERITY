@@ -48,10 +48,14 @@ def test_shared_reservation_accepts_and_hashes(monkeypatch) -> None:
     order = {"ticker": "005930", "side": "BUY", "qty": 1, "price": 70000,
              "order_type": "00", "market": "kr"}
 
-    assert mod._shared_reserve(user, order) == (True, "")
+    policy = {"mode": "advised", "override_reason": None, "live_price": 70000}
+    assert mod._shared_reserve(user, order, policy) == (True, "")
     assert seen["url"].endswith("/rest/v1/rpc/reserve_order_slot")
     assert len(seen["json"]["p_order_hash"]) == 64
     assert seen["json"]["p_daily_limit"] == 5
+    assert seen["json"]["p_policy_mode"] == "advised"
+    assert seen["json"]["p_policy_snapshot"] == policy
+    assert seen["json"]["p_override_reason"] is None
 
 
 def test_shared_reservation_fails_closed_on_rpc_error(monkeypatch) -> None:

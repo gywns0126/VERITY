@@ -279,8 +279,8 @@ def _compute_kpi(obs: dict, portfolio: dict) -> dict:
     }
 
 
-def _build_topology(obs: dict) -> dict:
-    """알파브레인 풀 토폴로지 — 모든 데이터 소스 + fact_score 13 + 엔진 + 출력.
+def _build_topology(obs: dict, portfolio: Optional[dict] = None) -> dict:
+    """알파브레인 토폴로지 — 발행 산출물의 실효 fact 가중을 우선한다.
 
     sub_cluster 로 input 을 5 그룹 분리 (price/financial/macro/news/ai).
     """
@@ -367,22 +367,36 @@ def _build_topology(obs: dict) -> dict:
                           _src_status(src), _src_fresh(src) or 0, "신선도(분)",
                           description=desc, related=[src]))
 
-    # ── ENGINE — fact_score 13 + sentiment/risk/vci/xgb (17) ──
-    # fact_score 13 (verity_constitution weights 순)
+    # ── ENGINE — 발행 산출물이 신고한 실효 fact 가중 + 신호 엔진 ──
+    _fact_labels = {
+        "graham_value": ("Graham", "그레이엄 가치·안전마진"),
+        "canslim_growth": ("CANSLIM", "오닐 CANSLIM 성장·상대강도"),
+        "quant_quality": ("Quality", "Piotroski·Novy-Marx·Altman 퀄리티"),
+        "quant_volatility": ("Low Vol", "실현변동성·베타·고유변동성"),
+    }
+    effective_weights: Dict[str, float] = {}
+    weight_source = "constitution_fallback"
+    for rec in ((portfolio or {}).get("recommendations") or []):
+        fact = ((rec.get("verity_brain") or {}).get("fact_score") or {}) if isinstance(rec, dict) else {}
+        candidate = fact.get("weights_effective") or {}
+        if isinstance(candidate, dict):
+            effective_weights = {
+                str(k): float(v) for k, v in candidate.items()
+                if k in _fact_labels and isinstance(v, (int, float)) and v > 0
+            }
+        if effective_weights:
+            weight_source = "issued.weights_effective"
+            break
+    if not effective_weights:
+        effective_weights = {
+            "graham_value": 0.28,
+            "canslim_growth": 0.19,
+            "quant_quality": 0.28,
+            "quant_volatility": 0.25,
+        }
     fact_components = [
-        ("multi_factor", "Multi-Factor", 0.1876, "P/E + P/B + ROE + Momentum"),
-        ("consensus", "Consensus", 0.1279, "Gemini ↔ Claude 합치"),
-        ("prediction", "Prediction", 0.0853, "XGBoost 5일 상승확률"),
-        ("backtest", "Backtest", 0.0682, "30일 white-box 적중률"),
-        ("timing", "Timing", 0.0597, "RSI/MACD/볼린저"),
-        ("commodity_margin", "Commodity", 0.0341, "원자재-마진 영향"),
-        ("export_trade", "Export", 0.0682, "수출 의존도 기반"),
-        ("moat_quality", "Moat", 0.0853, "경제적 해자 (Buffett)"),
-        ("graham_value", "Graham", 0.0682, "벤저민 그레이엄 가치"),
-        ("canslim_growth", "CANSLIM", 0.0682, "윌리엄 오닐 성장"),
-        ("analyst_report", "Analyst", 0.0784, "애널리스트 컨센서스"),
-        ("dart_health", "DART Health", 0.049, "재무 건전성"),
-        ("perplexity_risk", "PPL Risk", 0.02, "Perplexity 리스크"),
+        (fid, _fact_labels[fid][0], weight, _fact_labels[fid][1])
+        for fid, weight in effective_weights.items()
     ]
     for fid, label, weight, desc in fact_components:
         h = "warning" if fid in negs_set else ("ok" if avg_score else "unknown")
@@ -431,47 +445,32 @@ def _build_topology(obs: dict) -> dict:
     # ── EDGES — 데이터 흐름 (의미 있는 연결) ──
     edges = []
 
-    # 가격 → multi_factor / prediction / timing / xgb / backtest
+    # 가격 → CANSLIM / 저변동 / XGBoost 관측
     for src in ("yfinance", "kis", "krx_open_api", "polygon", "finnhub"):
-        for tgt, w in [("multi_factor", 0.9), ("prediction", 0.7),
-                       ("timing", 0.6), ("backtest", 0.5)]:
+        for tgt, w in [("canslim_growth", 0.8), ("quant_volatility", 0.9)]:
             edges.append({"from": f"src_{src}", "to": f"eng_{tgt}", "strength": w})
         edges.append({"from": f"src_{src}", "to": "eng_xgb", "strength": 0.8})
 
-    # 재무 → dart_health / graham_value / canslim_growth / moat_quality
+    # 재무 → 현재 활성 가치·성장·퀄리티
     for src in ("dart", "sec_edgar"):
-        for tgt, w in [("dart_health", 1.0), ("graham_value", 0.85),
-                       ("canslim_growth", 0.8), ("moat_quality", 0.75),
-                       ("analyst_report", 0.5)]:
+        for tgt, w in [("graham_value", 0.9), ("canslim_growth", 0.8),
+                       ("quant_quality", 1.0)]:
             edges.append({"from": f"src_{src}", "to": f"eng_{tgt}", "strength": w})
-    edges.append({"from": "src_kipris", "to": "eng_moat_quality", "strength": 0.6})
 
-    # 매크로 → eng_risk + commodity / export
+    # 매크로 → 리스크 필터
     for src in ("fred", "ecos", "public_data"):
         edges.append({"from": f"src_{src}", "to": "eng_risk", "strength": 0.85})
-        edges.append({"from": f"src_{src}", "to": "eng_commodity_margin", "strength": 0.6})
-        edges.append({"from": f"src_{src}", "to": "eng_export_trade", "strength": 0.6})
 
-    # 뉴스 → sentiment / perplexity_risk
+    # 뉴스 → sentiment
     edges.append({"from": "src_rss", "to": "eng_sentiment", "strength": 0.9})
     edges.append({"from": "src_x", "to": "eng_sentiment", "strength": 0.8})
-    edges.append({"from": "src_rss", "to": "eng_perplexity_risk", "strength": 0.5})
 
-    # AI → consensus / analyst_report / perplexity_risk
-    edges.append({"from": "src_gemini", "to": "eng_consensus", "strength": 0.9})
-    edges.append({"from": "src_anthropic", "to": "eng_consensus", "strength": 0.9})
-    edges.append({"from": "src_gemini", "to": "eng_analyst_report", "strength": 0.7})
-    edges.append({"from": "src_anthropic", "to": "eng_moat_quality", "strength": 0.5})
-    edges.append({"from": "src_perplexity", "to": "eng_perplexity_risk", "strength": 1.0})
-
-    # 엔진 내부 흐름: fact_score 13 → out_score
+    # 엔진 내부 흐름: 실효 fact 축 → out_score
     for fid, _, _, _ in fact_components:
         edges.append({"from": f"eng_{fid}", "to": "out_score", "strength": 0.6})
 
     # signal 4 → vci → out_score
     edges.append({"from": "eng_sentiment", "to": "eng_vci", "strength": 0.8})
-    edges.append({"from": "eng_xgb", "to": "eng_prediction", "strength": 0.9})
-    edges.append({"from": "eng_xgb", "to": "out_score", "strength": 0.7})
     edges.append({"from": "eng_vci", "to": "out_score", "strength": 0.85})
     edges.append({"from": "eng_risk", "to": "out_score", "strength": 0.7})
 
@@ -491,7 +490,12 @@ def _build_topology(obs: dict) -> dict:
         a, b = node_health.get(e["from"], "unknown"), node_health.get(e["to"], "unknown")
         e["health"] = a if order.get(a, 0) >= order.get(b, 0) else b
 
-    return {"nodes": nodes, "edges": edges}
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "fact_axis_count": len(fact_components),
+        "fact_axis_source": weight_source,
+    }
 
 
 def handle_brain_health(request_handler) -> dict:
@@ -504,7 +508,7 @@ def handle_brain_health(request_handler) -> dict:
             "kpi": {"brain_health_score": None, "data_freshness_minutes": None,
                    "drift_score": 0, "confidence": None},
             "data_health_meta": {}, "drift_meta": {}, "trust": {},
-            "topology": _build_topology({}), "alerts": [],
+            "topology": _build_topology({}, portfolio), "alerts": [],
             "checked_at": None, "status": "no_observability_data",
             "hint": "main.py full 모드 아직 미실행 — 첫 cron 후 데이터 누적",
         }}
@@ -521,7 +525,7 @@ def handle_brain_health(request_handler) -> dict:
             "comparable_count": (obs.get("drift") or {}).get("comparable_count"),
         },
         "trust": obs.get("trust") or {},
-        "topology": _build_topology(obs),
+        "topology": _build_topology(obs, portfolio),
         "alerts": [],
         "checked_at": obs.get("checked_at"),
     }}

@@ -32,6 +32,8 @@ def _reload(monkeypatch, env: dict):
 
     # Stub: api.supabase_client (vercel-only 의존성)
     stub = types.ModuleType("api.supabase_client")
+    stub.SUPABASE_URL = ""
+    stub.SUPABASE_ANON_KEY = ""
     stub.verify_jwt = MagicMock(return_value=None)
     stub.select = MagicMock(return_value=[])
     monkeypatch.setitem(sys.modules, "api.supabase_client", stub)
@@ -206,3 +208,15 @@ def test_market_order_zero_price_still_allowed(monkeypatch):
                                  "qty": 1, "price": 0, "market": "kr"})
     assert ok, msg
     assert n["price"] == 0
+
+
+def test_numeric_side_is_canonicalized(monkeypatch):
+    mod = _reload(monkeypatch, env={"RAILWAY_SHARED_SECRET": "x"})
+    ok, msg, buy = _validate(mod, {"ticker": "005930", "side": "02", "order_type": "00",
+                                   "qty": 1, "price": 70000, "market": "kr"})
+    assert ok, msg
+    assert buy["side"] == "BUY"
+    ok, msg, sell = _validate(mod, {"ticker": "005930", "side": "01", "order_type": "00",
+                                    "qty": 1, "price": 70000, "market": "kr"})
+    assert ok, msg
+    assert sell["side"] == "SELL"

@@ -25,7 +25,7 @@ import os
 import re
 import time
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
@@ -43,6 +43,8 @@ _RAILWAY_URL = (
 # Vercel ↔ Railway 서버 간 공유 비밀 (클라이언트 미노출).
 # Railway 측에서 X-Service-Auth 헤더를 검증. 미설정 시 모든 주문 요청 503.
 _RAILWAY_SHARED_SECRET = (os.environ.get("RAILWAY_SHARED_SECRET") or "").strip().strip('"')
+_SUPABASE_SERVICE_ROLE_KEY = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
+_OPERATOR_BUCKET = os.environ.get("OPERATOR_BUCKET", "verity-reports")
 
 _CORS_HEADERS = ("Content-Type", "Authorization")
 
@@ -98,6 +100,16 @@ _MAX_ORDER_VALUE_KRW_DEFAULT = int(os.environ.get("ORDER_MAX_VALUE_KRW", "100000
 _MAX_PRICE_USD = float(os.environ.get("ORDER_MAX_PRICE_USD", "100000"))
 _MAX_ORDER_VALUE_USD_DEFAULT = float(os.environ.get("ORDER_MAX_VALUE_USD", "7000"))
 _DAILY_COUNT_LIMIT_DEFAULT = int(os.environ.get("ORDER_DAILY_COUNT_LIMIT", "50"))
+_ORDER_POLICY_MODE = os.environ.get("ORDER_POLICY_MODE", "advised").strip().lower()
+_ORDER_PRICE_BAND_PCT = float(os.environ.get("ORDER_PRICE_BAND_PCT", "0.05"))
+_MICRO_SEED_MAX_KRW = int(os.environ.get("ORDER_MICRO_SEED_MAX_KRW", "2000000"))
+_MICRO_MAX_NAME_PCT = float(os.environ.get("ORDER_MICRO_MAX_NAME_PCT", "0.25"))
+_MICRO_MAX_TOTAL_PCT = float(os.environ.get("ORDER_MICRO_MAX_TOTAL_PCT", "0.60"))
+_MICRO_MAX_HOLDINGS = int(os.environ.get("ORDER_MICRO_MAX_HOLDINGS", "8"))
+_MICRO_MIN_ORDER_KRW = int(os.environ.get("ORDER_MICRO_MIN_ORDER_KRW", "20000"))
+_STANDARD_MAX_NAME_PCT = float(os.environ.get("ORDER_STANDARD_MAX_NAME_PCT", "0.15"))
+_STANDARD_MAX_TOTAL_PCT = float(os.environ.get("ORDER_STANDARD_MAX_TOTAL_PCT", "0.60"))
+_ALLOW_MEMORY_FALLBACK = os.environ.get("ORDER_ALLOW_MEMORY_FALLBACK", "0") == "1"
 
 # 인메모리 중복 방지 (서버리스 한계로 인스턴스별 상태 — 완전 중복 차단은 아님).
 # 실 배포에는 Upstash/Redis 권장.
@@ -106,14 +118,224 @@ _ORDER_DEDUPE_TTL = 30
 _DAILY_ORDER_COUNT: dict = {}
 
 
-def _shared_reserve(user: dict, normalized: dict) -> Optional[Tuple[bool, str]]:
+def _to_float(value, default: float = 0.0) -> float:
+    try:
+        parsed = float(str(value or "0").replace(",", ""))
+        return parsed if math.isfinite(parsed) else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _parse_kst_iso(value) -> Optional[datetime]:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _is_buy(side: str) -> bool:
+    return side in ("BUY", "02")
+
+
+def _kr_market_open(now: Optional[datetime] = None) -> bool:
+    kst = timezone(timedelta(hours=9))
+    current = (now or datetime.now(kst)).astimezone(kst)
+    if current.weekday() >= 5:
+        return False
+    minute = current.hour * 60 + current.minute
+    return 9 * 60 <= minute <= 15 * 60 + 30
+
+
+def _download_moderation() -> Optional[dict]:
+    if not (sb.SUPABASE_URL and _SUPABASE_SERVICE_ROLE_KEY):
+        return None
+    try:
+        response = requests.get(
+            f"{sb.SUPABASE_URL}/storage/v1/object/{_OPERATOR_BUCKET}/_operator/moderation_portfolio.json",
+            headers={
+                "apikey": _SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {_SUPABASE_SERVICE_ROLE_KEY}",
+            },
+            timeout=8,
+        )
+        if response.status_code == 200:
+            payload = response.json()
+            return payload if isinstance(payload, dict) else None
+        _logger.warning("moderation policy fetch status=%s", response.status_code)
+    except (requests.RequestException, ValueError) as exc:
+        _logger.warning("moderation policy fetch failed: %s", exc)
+    return None
+
+
+def _balance_policy_view(balance: dict, ticker: str) -> dict:
+    rows = balance.get("output1") if isinstance(balance, dict) else None
+    rows = rows if isinstance(rows, list) else []
+    current_qty = 0
+    current_name_value = 0.0
+    invested_value = 0.0
+    holding_count = 0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        qty = int(_to_float(row.get("hldg_qty") or row.get("ovrs_cblc_qty")))
+        if qty <= 0:
+            continue
+        holding_count += 1
+        code = str(row.get("pdno") or row.get("ovrs_pdno") or "").strip()
+        price = _to_float(
+            row.get("prpr") or row.get("now_pric2") or row.get("ovrs_now_pric1")
+        )
+        value = _to_float(
+            row.get("evlu_amt") or row.get("ovrs_stck_evlu_amt") or qty * price
+        )
+        invested_value += max(value, 0.0)
+        if code == ticker:
+            current_qty += qty
+            current_name_value += max(value, 0.0)
+
+    summary = balance.get("output2") if isinstance(balance, dict) else None
+    if isinstance(summary, list):
+        summary = summary[0] if summary else {}
+    summary = summary if isinstance(summary, dict) else {}
+    cash = _to_float(summary.get("dnca_tot_amt") or summary.get("frcr_dncl_amt_2"))
+    total_asset = _to_float(summary.get("tot_evlu_amt") or summary.get("tot_asst_amt"))
+    return {
+        "cash": cash,
+        "total_asset": total_asset,
+        "current_qty": current_qty,
+        "current_name_value": current_name_value,
+        "invested_value": invested_value,
+        "holding_count": holding_count,
+    }
+
+
+def _evaluate_order_policy(
+    normalized: dict,
+    limits: dict,
+    balance: dict,
+    quote: dict,
+    moderation: Optional[dict] = None,
+    override_reason: str = "",
+    market_open: Optional[bool] = None,
+) -> Tuple[bool, str, dict]:
+    """Evaluate the execution contract using fresh quote and account state."""
+    mode = _ORDER_POLICY_MODE if _ORDER_POLICY_MODE in {"manual", "advised", "enforced"} else "advised"
+    if normalized["market"] != "kr":
+        return False, "US order policy is not enabled", {}
+    if not (_kr_market_open() if market_open is None else market_open):
+        return False, "KR market is closed", {}
+    if mode == "manual" and not override_reason.strip():
+        return False, "manual mode requires override_reason", {}
+
+    live_price = _to_float(quote.get("price"))
+    if live_price <= 0:
+        return False, "live price unavailable", {}
+    order_type = normalized["order_type"]
+    requested_price = _to_float(normalized["price"])
+    execution_price = live_price if order_type == "01" else requested_price
+    if execution_price <= 0:
+        return False, "execution price unavailable", {}
+    if order_type == "00":
+        gap = abs(requested_price / live_price - 1.0)
+        if gap > _ORDER_PRICE_BAND_PCT:
+            return False, "limit price exceeds live-price band", {}
+        upper = _to_float(quote.get("upper_limit"))
+        lower = _to_float(quote.get("lower_limit"))
+        if upper > 0 and requested_price > upper:
+            return False, "limit price exceeds exchange upper limit", {}
+        if lower > 0 and requested_price < lower:
+            return False, "limit price is below exchange lower limit", {}
+
+    view = _balance_policy_view(balance, normalized["ticker"])
+    seed = _to_float(limits.get("seed_krw"))
+    capital_base = seed if seed > 0 else view["total_asset"]
+    if capital_base <= 0:
+        return False, "capital base unavailable", {}
+
+    is_micro = capital_base <= _MICRO_SEED_MAX_KRW
+    max_name_pct = _MICRO_MAX_NAME_PCT if is_micro else _STANDARD_MAX_NAME_PCT
+    max_total_pct = _MICRO_MAX_TOTAL_PCT if is_micro else _STANDARD_MAX_TOTAL_PCT
+    order_value = normalized["qty"] * execution_price
+    buying = _is_buy(normalized["side"])
+    signed_value = order_value if buying else -order_value
+    post_name_value = max(0.0, view["current_name_value"] + signed_value)
+    post_total_value = max(0.0, view["invested_value"] + signed_value)
+
+    if buying:
+        if order_value > view["cash"]:
+            return False, "insufficient cash", {}
+        if is_micro and order_value < _MICRO_MIN_ORDER_KRW:
+            return False, "order is below micro-profile minimum", {}
+        if view["current_qty"] == 0 and is_micro and view["holding_count"] >= _MICRO_MAX_HOLDINGS:
+            return False, "micro-profile holding count exceeded", {}
+        if post_name_value / capital_base > max_name_pct + 1e-9:
+            return False, "post-trade single-name exposure exceeded", {}
+        if post_total_value / capital_base > max_total_pct + 1e-9:
+            return False, "post-trade total exposure exceeded", {}
+    elif normalized["qty"] > view["current_qty"]:
+        return False, "sell quantity exceeds live holdings", {}
+
+    target_weight = None
+    moderation_fresh = False
+    moderation_version = None
+    if isinstance(moderation, dict) and moderation.get("status") == "ok":
+        target_weight = _to_float((moderation.get("weights") or {}).get(normalized["ticker"]), -1.0)
+        moderation_version = moderation.get("method") or moderation.get("version")
+        generated = _parse_kst_iso(moderation.get("generated_at"))
+        moderation_fresh = bool(
+            generated and 0 <= (datetime.now(timezone.utc) - generated.astimezone(timezone.utc)).total_seconds() <= 36 * 3600
+        )
+    if mode == "enforced":
+        if not moderation_fresh:
+            return False, "current moderation target unavailable", {}
+        if target_weight is None or target_weight <= 0:
+            return False, "ticker is not in the enforced target portfolio", {}
+        if post_name_value / capital_base > target_weight + 1e-9:
+            return False, "order exceeds enforced target weight", {}
+
+    snapshot = {
+        "mode": mode,
+        "capital_profile": "micro" if is_micro else "standard",
+        "capital_base_krw": round(capital_base),
+        "live_price": live_price,
+        "price_band_pct": _ORDER_PRICE_BAND_PCT,
+        "current_qty": view["current_qty"],
+        "post_name_pct": round(post_name_value / capital_base, 6),
+        "post_total_pct": round(post_total_value / capital_base, 6),
+        "max_name_pct": max_name_pct,
+        "max_total_pct": max_total_pct,
+        "target_weight": target_weight if target_weight is not None and target_weight >= 0 else None,
+        "target_current": moderation_fresh,
+        "target_version": moderation_version,
+        "override_reason": override_reason.strip()[:300] or None,
+        "executor": {
+            "is_executor": True,
+            "executor": "vercel-api.api.order._evaluate_order_policy",
+            "owner": "server_order_policy",
+        },
+    }
+    return True, "", snapshot
+
+
+def _shared_reserve(
+    user: dict,
+    normalized: dict,
+    policy_snapshot: Optional[dict] = None,
+) -> Optional[Tuple[bool, str]]:
     """Supabase RPC로 인스턴스 공용 주문 슬롯을 원자적으로 예약한다.
 
-    마이그레이션 전환기에는 RPC 부재만 None으로 반환해 기존 인메모리 가드를 유지한다.
-    그 외 오류는 안전하게 주문을 거절한다.
+    기본은 내구성 원장이 없으면 주문을 거절한다. 서버리스 인스턴스별
+    인메모리 폴백은 명시적인 전환기 플래그가 있을 때만 허용한다.
     """
     if not (sb.SUPABASE_URL and sb.SUPABASE_ANON_KEY):
-        return None
+        if _ALLOW_MEMORY_FALLBACK:
+            return None
+        return False, "order safety ledger unavailable"
     canonical = json.dumps(
         {
             "ticker": normalized["ticker"],
@@ -136,12 +358,20 @@ def _shared_reserve(user: dict, normalized: dict) -> Optional[Tuple[bool, str]]:
                 "Authorization": f"Bearer {user['jwt']}",
                 "Content-Type": "application/json",
             },
-            json={"p_order_hash": order_hash, "p_daily_limit": daily_limit},
+            json={
+                "p_order_hash": order_hash,
+                "p_daily_limit": daily_limit,
+                "p_policy_mode": (policy_snapshot or {}).get("mode", "unknown"),
+                "p_policy_snapshot": policy_snapshot or {},
+                "p_override_reason": (policy_snapshot or {}).get("override_reason"),
+            },
             timeout=8,
         )
         if r.status_code in (404, 405) or (r.status_code == 400 and "PGRST202" in r.text):
-            _logger.warning("reserve_order_slot RPC unavailable — using transition memory guard")
-            return None
+            _logger.error("reserve_order_slot policy RPC unavailable — refusing order")
+            if _ALLOW_MEMORY_FALLBACK:
+                return None
+            return False, "order safety ledger migration required"
         if r.status_code != 200:
             _logger.error("reserve_order_slot failed: status=%s body=%s", r.status_code, r.text[:200])
             return False, "order safety ledger unavailable"
@@ -185,13 +415,14 @@ class handler(BaseHTTPRequestHandler):
             "max_order_krw": _MAX_ORDER_VALUE_KRW_DEFAULT,
             "daily_order_count_limit": _DAILY_COUNT_LIMIT_DEFAULT,
             "broker_slug": None,
+            "seed_krw": None,
         }
         try:
             rows = sb.select(
                 "profiles",
                 {
                     "id": f"eq.{user_id}",
-                    "select": "order_enabled,max_order_krw,daily_order_count_limit,broker_slug",
+                    "select": "order_enabled,max_order_krw,daily_order_count_limit,broker_slug,seed_krw",
                     "limit": "1",
                 },
                 user_jwt=jwt,
@@ -207,6 +438,7 @@ class handler(BaseHTTPRequestHandler):
                     row.get("daily_order_count_limit") or defaults["daily_order_count_limit"]
                 ),
                 "broker_slug": slug if _SLUG_RE.match(slug) else None,
+                "seed_krw": int(row["seed_krw"]) if _to_float(row.get("seed_krw")) > 0 else None,
             }
         except Exception as e:
             _logger.warning("order limits lookup failed: %s", e)
@@ -260,6 +492,49 @@ class handler(BaseHTTPRequestHandler):
         out["X-Verity-Broker"] = user["limits"]["broker_slug"]
         return out
 
+    def _fetch_policy_inputs(
+        self,
+        user: dict,
+        normalized: dict,
+    ) -> Tuple[Optional[dict], Optional[dict], str]:
+        """Fetch account state and a timestamped quote immediately before reservation."""
+        if normalized["market"] != "kr":
+            return None, None, "US order policy is not enabled"
+        try:
+            headers = self._proxy_headers(user)
+            balance_response = requests.get(
+                f"{_RAILWAY_URL}/api/order",
+                params={"market": "kr"},
+                headers=headers,
+                timeout=12,
+            )
+            if balance_response.status_code != 200:
+                return None, None, "live balance unavailable"
+            balance = balance_response.json()
+            if not isinstance(balance, dict) or balance.get("error"):
+                return None, None, "live balance unavailable"
+
+            quote_response = requests.get(
+                f"{_RAILWAY_URL}/quotes",
+                params={"tickers": normalized["ticker"]},
+                headers=headers,
+                timeout=8,
+            )
+            if quote_response.status_code != 200:
+                return None, None, "live quote unavailable"
+            quote_payload = quote_response.json()
+            quote = (quote_payload.get("quotes") or {}).get(normalized["ticker"])
+            quote_asof = _parse_kst_iso(quote_payload.get("asof"))
+            if not isinstance(quote, dict) or quote_asof is None:
+                return None, None, "live quote unavailable"
+            age = (datetime.now(timezone.utc) - quote_asof.astimezone(timezone.utc)).total_seconds()
+            if age < -30 or age > 120:
+                return None, None, "live quote is stale"
+            return balance, quote, ""
+        except (requests.RequestException, ValueError, TypeError) as exc:
+            _logger.error("order policy input fetch failed: %s", exc)
+            return None, None, "order policy inputs unavailable"
+
     def _validate_order(self, body: dict, limits: dict) -> Tuple[bool, str, Optional[dict]]:
         if not isinstance(body, dict):
             return False, "invalid body", None
@@ -272,6 +547,7 @@ class handler(BaseHTTPRequestHandler):
             return False, "invalid ticker", None
         if side not in _ALLOWED_SIDES:
             return False, "invalid side (BUY/SELL/01/02)", None
+        side = {"01": "SELL", "02": "BUY"}.get(side, side)
         if order_type not in _ALLOWED_ORDER_TYPES:
             return False, "invalid order_type (00=limit, 01=market)", None
         if market not in _ALLOWED_MARKETS:
@@ -388,7 +664,24 @@ class handler(BaseHTTPRequestHandler):
             self._json(400, {"error": msg})
             return
 
-        shared = _shared_reserve(user, normalized)
+        override_reason = str(body.get("override_reason", "")).strip()[:300]
+        balance, quote, input_error = self._fetch_policy_inputs(user, normalized)
+        if balance is None or quote is None:
+            self._json(503, {"error": input_error or "order policy inputs unavailable"})
+            return
+        policy_ok, policy_error, policy_snapshot = _evaluate_order_policy(
+            normalized,
+            user["limits"],
+            balance,
+            quote,
+            moderation=_download_moderation(),
+            override_reason=override_reason,
+        )
+        if not policy_ok:
+            self._json(409, {"error": policy_error})
+            return
+
+        shared = _shared_reserve(user, normalized, policy_snapshot)
         if shared is not None:
             reserved, reserve_error = shared
             if not reserved:
@@ -418,9 +711,10 @@ class handler(BaseHTTPRequestHandler):
             _DAILY_ORDER_COUNT[day_key] = cnt + 1
 
         try:
+            upstream_order = {**normalized, "side": normalized["side"].lower()}
             r = requests.post(
                 f"{_RAILWAY_URL}/api/order",
-                json=normalized,
+                json=upstream_order,
                 headers=self._proxy_headers(user),
                 timeout=12,
             )
@@ -428,6 +722,8 @@ class handler(BaseHTTPRequestHandler):
                 payload = r.json()
             except Exception:
                 payload = {"success": False, "message": "upstream returned non-JSON"}
+            if isinstance(payload, dict):
+                payload["order_policy"] = policy_snapshot
             self._json(r.status_code, payload)
         except Exception as e:
             self._json(502, {"success": False, "message": _safe_err(e, "프록시 호출 실패")})
