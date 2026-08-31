@@ -140,6 +140,10 @@ export default function PublicWatchlist(props: Props) {
     const [w, setW] = useState(0)
     const [watch, setWatch] = useState<any[]>([])
     const [held, setHeld] = useState<any[]>([])
+    const [watchHydrated, setWatchHydrated] = useState(onCanvas)
+    const [holdingsStatus, setHoldingsStatus] = useState<"loading" | "ready" | "error">(
+        onCanvas ? "ready" : "loading"
+    )
     const [universe, setUniverse] = useState<any[]>([])
     const [theses, setTheses] = useState<Record<string, any>>({})
     const [adding, setAdding] = useState(false)
@@ -171,25 +175,53 @@ export default function PublicWatchlist(props: Props) {
         return () => ro.disconnect()
     }, [])
 
-    useEffect(() => { if (!onCanvas) { sessionResetScratch(); setWatch(loadWatch()) } }, [onCanvas])
+    useEffect(() => {
+        if (onCanvas) return
+        sessionResetScratch()
+        setWatch(loadWatch())
+        setWatchHydrated(true)
+    }, [onCanvas])
 
     /* 보유종목(둥지, /api/holdings) — 로그인 시 관심종목에 합쳐 '보유' 표시. 로그인/보유변경 시 재조회. */
     useEffect(() => {
-        if (onCanvas) { setHeld([]); return }
-        const load = () => {
+        if (onCanvas) { setHeld([]); setHoldingsStatus("ready"); return }
+        let alive = true
+        let requestId = 0
+        const load = async () => {
+            const currentRequest = ++requestId
             const token = loadToken()
-            if (!token) { setHeld([]); return }
-            fetch(base + "/api/holdings", { headers: { Authorization: "Bearer " + token }, cache: "no-store" })
-                .then((r) => (r.ok ? r.json() : null))
-                .then((d) => { const a = Array.isArray(d) ? d : (d && Array.isArray(d.holdings) ? d.holdings : []); setHeld(Array.isArray(a) ? a : []) })
-                .catch(() => {})
+            if (!token) {
+                if (alive && currentRequest === requestId) {
+                    setHeld([])
+                    setHoldingsStatus("ready")
+                }
+                return
+            }
+            setHoldingsStatus("loading")
+            try {
+                const response = await fetch(base + "/api/holdings", { headers: { Authorization: "Bearer " + token }, cache: "no-store" })
+                if (!response.ok) throw new Error("holdings request failed")
+                const data = await response.json()
+                const next = Array.isArray(data) ? data : (data && Array.isArray(data.holdings) ? data.holdings : [])
+                if (alive && currentRequest === requestId) {
+                    setHeld(Array.isArray(next) ? next : [])
+                    setHoldingsStatus("ready")
+                }
+            } catch {
+                if (alive && currentRequest === requestId) setHoldingsStatus("error")
+            }
         }
         load()
         if (typeof window === "undefined") return
         window.addEventListener("verity_auth_change", load)
         window.addEventListener("verity_holdings_change", load)
         window.addEventListener("storage", load)
-        return () => { window.removeEventListener("verity_auth_change", load); window.removeEventListener("verity_holdings_change", load); window.removeEventListener("storage", load) }
+        return () => {
+            alive = false
+            window.removeEventListener("verity_auth_change", load)
+            window.removeEventListener("verity_holdings_change", load)
+            window.removeEventListener("storage", load)
+        }
     }, [onCanvas, base])
 
     /* 내 관점(thesis) 로드 — mount + focus/이벤트 재읽기(다른 페이지서 기록 반영) */
@@ -277,6 +309,8 @@ export default function PublicWatchlist(props: Props) {
         return arr
     }, [watch, held])
 
+    const personalDataPending = !watchHydrated || (holdingsStatus === "loading" && rows.length === 0)
+
 
     const wrap: CSSProperties = {
         width: "100%", height: "100%", maxHeight: "100%", overflowY: "auto", overflowX: "hidden",
@@ -295,7 +329,20 @@ export default function PublicWatchlist(props: Props) {
                 <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginTop: 3 }}>검색 → 추가 · 보유종목 자동 표시 · 내 관점 배지</div>
 
                 <div style={{ marginTop: 9 }}>
-                    {rows.length === 0 && (
+                    {personalDataPending && (
+                        <div aria-live="polite" style={{ padding: "13px 0", display: "grid", gap: 7 }}>
+                            {["72%", "54%"].map((width) => (
+                                <div key={width} style={{ width, height: 10, margin: "0 auto", borderRadius: 999, background: C.chip }} />
+                            ))}
+                            <div style={{ marginTop: 2, fontSize: 11.5, color: C.faint, fontWeight: 600, textAlign: "center" }}>내 종목 불러오는 중</div>
+                        </div>
+                    )}
+                    {!personalDataPending && holdingsStatus === "error" && rows.length === 0 && (
+                        <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, padding: "13px 0", textAlign: "center", lineHeight: 1.6 }}>
+                            내 종목을 불러오지 못했어요.<br />잠시 후 다시 확인해 주세요.
+                        </div>
+                    )}
+                    {!personalDataPending && holdingsStatus === "ready" && rows.length === 0 && (
                         <div style={{ fontSize: 11.5, color: C.faint, fontWeight: 600, padding: "13px 0", textAlign: "center", lineHeight: 1.6 }}>
                             아직 관심종목이 없어요.<br />아래에서 추가해 보세요.
                         </div>
