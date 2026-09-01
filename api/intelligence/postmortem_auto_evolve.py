@@ -3,11 +3,11 @@
 🚨 현 상태 (2026-06-03 RULE 10 audit 정정): 이 모듈은 quarantined_factors / weight_adjustments
 를 산출해 LEDGER_PATH 에 **적재·관측만** 한다. 산출물을 fact.py / verity_brain.py 의 실제
 brain 점수에 반영하는 소비 hook 은 **의도적으로 미연결**이다 (이전 docstring "자동 반영" 표기는
-과장 — 실제 적용 경로 0). 이유: 유효 학습 N 부족 (factor_decay IC 경로가 2026-05-23 PM 결정으로
-동결된 것과 동일 맥락) → N<365 에서 misleading_factor 기반 자동 factor 끄기 = 곡선맞추기 위험
-(RULE 7 / overfit guard). 적재된 ledger 는 향후 N 마일스톤 도달 시 적용 활성화의 입력 + 현재는
-관측 trail. **적용(brain 반영) 활성화 = 유효 N 마일스톤 + PM 재승인 시에만** (factor_decay 동결
-해제와 동기). 그 전까지 ledger 는 dead-end 가 아니라 의도된 관측 단계.
+과장 — 실제 적용 경로 0). 이유: 자동 가중 변경을 허용할 사전 검정력 설계가 승인되지 않았고,
+misleading_factor 기반 자동 factor 끄기는 곡선맞추기 위험이 있기 때문이다.
+고정 N 누적 조건은 2026-08-15 폐기됐다. 적재된 ledger 는 현재 관측 trail이며,
+**적용(brain 반영) 활성화 = 검출하한을 신고하는 사전 검정력 관문 + PM 재승인**으로만 가능하다
+(factor_decay 동결 해제와 동기). 그 전까지 ledger 는 dead-end 가 아니라 의도된 관측 단계다.
 
 연관:
   - audit BRAIN_SELF_GROWTH P1-1

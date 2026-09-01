@@ -12,9 +12,12 @@ Claude Sonnet에게 현재 constitution 가중치 + 최근 성과 데이터를 �
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
+import sys
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import anthropic
@@ -30,15 +33,57 @@ from api.config import (
     STRATEGY_REGISTRY_PATH,
     STRATEGY_MAX_WEIGHT_DELTA,
     STRATEGY_MAX_CUMULATIVE_DRIFT,
-    STRATEGY_MIN_SNAPSHOT_DAYS,
-    STRATEGY_MIN_SNAPSHOT_DAYS_FORCED,
     STRATEGY_MIN_OOS_DAYS,
-    STRATEGY_MIN_VALIDATION_N,
     now_kst,
 )
 
 _CONSTITUTION_PATH = os.path.join(DATA_DIR, "verity_constitution.json")
 _CONSTITUTION_BACKUP_DIR = os.path.join(DATA_DIR, "constitution_backups")
+_PROPOSAL_TTL_HOURS = 168
+_MUTATION_POLICY_DEFAULT = "frozen"
+
+
+class ProposalValidationError(ValueError):
+    """A proposal no longer matches the constitution it was created against."""
+
+
+def _constitution_sha256(constitution: Dict[str, Any]) -> str:
+    canonical = json.dumps(
+        constitution,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def _proposal_context(
+    constitution: Dict[str, Any],
+    registry: Dict[str, Any],
+) -> Dict[str, Any]:
+    created = now_kst()
+    return {
+        "base_registry_version": registry.get("current_version"),
+        "base_constitution_version": constitution.get("version"),
+        "base_constitution_sha256": _constitution_sha256(constitution),
+        "created_at": created.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        "expires_at": (created + timedelta(hours=_PROPOSAL_TTL_HOURS)).strftime(
+            "%Y-%m-%dT%H:%M:%S+09:00"
+        ),
+    }
+
+
+def _parse_kst_iso(value: Any) -> Optional[datetime]:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=now_kst().tzinfo)
+    return parsed
 
 _SYSTEM_PROMPT = """너는 15년 차 퀀트 리서치 헤드다. VERITY 시스템의 투자 판단 가중치를 최적화하는 역할이다.
 
@@ -121,26 +166,48 @@ def _load_registry() -> Dict[str, Any]:
         reg.setdefault("circuit_breaker", dict(_CIRCUIT_BREAKER_DEFAULTS))
         for k, v in _CIRCUIT_BREAKER_DEFAULTS.items():
             reg["circuit_breaker"].setdefault(k, v)
+        reg.setdefault("mutation_policy", {
+            "mode": _MUTATION_POLICY_DEFAULT,
+            "requires_pm_approval": True,
+        })
+        reg.setdefault("invalidated_proposals", [])
+        reg["auto_approve"] = False
+        stats = reg.setdefault("cumulative_stats", {})
+        stats.setdefault("accepted", 0)
+        stats.setdefault("rejected", 0)
+        stats.setdefault("invalidated", 0)
+        if "unclassified" not in stats:
+            pending_count = 1 if reg.get("pending_proposal") else 0
+            classified = (
+                stats["accepted"]
+                + stats["rejected"]
+                + stats["invalidated"]
+                + pending_count
+            )
+            stats["unclassified"] = max(
+                int(stats.get("total_proposals", 0)) - classified,
+                0,
+            )
         return reg
     except (FileNotFoundError, json.JSONDecodeError):
         return {
             "current_version": 1,
             "auto_approve": False,
-            "auto_approve_threshold": {
-                "min_proposals": 10,
-                "hit_rate_pct": 80,
-                "bull_hit_rate_pct": 75,
-                "bear_hit_rate_pct": 70,
-            },
             "circuit_breaker": dict(_CIRCUIT_BREAKER_DEFAULTS),
             "cumulative_stats": {
                 "total_proposals": 0, "accepted": 0, "rejected": 0,
+                "invalidated": 0, "unclassified": 0,
                 "hit_count": 0, "hit_rate_pct": 0,
                 "bull_proposals": 0, "bull_hits": 0, "bull_hit_rate_pct": 0,
                 "bear_proposals": 0, "bear_hits": 0, "bear_hit_rate_pct": 0,
             },
             "versions": [],
             "pending_proposal": None,
+            "invalidated_proposals": [],
+            "mutation_policy": {
+                "mode": _MUTATION_POLICY_DEFAULT,
+                "requires_pm_approval": True,
+            },
         }
 
 
@@ -594,13 +661,14 @@ def validate_proposal(
     fact_changes = changes.get("fact_score_weights")
     if fact_changes:
         current = constitution.get("fact_score", {}).get("weights", {})
+        unknown = sorted(set(fact_changes) - set(current))
+        if unknown:
+            return False, f"존재하지 않는 fact 키: {', '.join(unknown)}"
         merged = {**current, **fact_changes}
         total = sum(merged.values())
         if abs(total - 1.0) > 0.01:
             return False, f"fact_score 가중치 합 {total:.3f} != 1.0"
         for k, v in fact_changes.items():
-            if k not in current:
-                return False, f"존재하지 않는 fact 키: {k}"
             # Brain Audit §2-E: 값 범위 검증 — 음수/이상치 weight 차단
             if not (0 <= v <= 0.5):
                 return False, f"fact.{k}={v} out of [0, 0.5]"
@@ -620,13 +688,14 @@ def validate_proposal(
     sent_changes = changes.get("sentiment_score_weights")
     if sent_changes:
         current = constitution.get("sentiment_score", {}).get("weights", {})
+        unknown = sorted(set(sent_changes) - set(current))
+        if unknown:
+            return False, f"존재하지 않는 sentiment 키: {', '.join(unknown)}"
         merged = {**current, **sent_changes}
         total = sum(merged.values())
         if abs(total - 1.0) > 0.01:
             return False, f"sentiment 가중치 합 {total:.3f} != 1.0"
         for k, v in sent_changes.items():
-            if k not in current:
-                return False, f"존재하지 않는 sentiment 키: {k}"
             # Brain Audit §2-E: 값 범위 검증 — 음수/이상치 weight 차단
             if not (0 <= v <= 0.5):
                 return False, f"sentiment.{k}={v} out of [0, 0.5]"
@@ -645,6 +714,12 @@ def validate_proposal(
 
     grade_changes = changes.get("grade_thresholds")
     if grade_changes:
+        current_grades = (
+            (constitution.get("decision_tree") or {}).get("grades") or {}
+        )
+        unknown = sorted(set(grade_changes) - set(current_grades))
+        if unknown:
+            return False, f"존재하지 않는 grade 키: {', '.join(unknown)}"
         for grade, score in grade_changes.items():
             if not (0 <= score <= 100):
                 return False, f"{grade} 임계값 {score}이 0~100 범위 밖"
@@ -683,11 +758,107 @@ def simulate_proposal(
 
 # ── 제안 적용 ────────────────────────────────────────────
 
-def apply_proposal(proposal: Dict[str, Any], backtest_result: Dict[str, Any]):
+def validate_proposal_context(
+    approval_context: Dict[str, Any],
+    constitution: Dict[str, Any],
+    registry: Dict[str, Any],
+) -> tuple[bool, str]:
+    """Fail closed when proposal provenance is missing, expired, or stale."""
+    required = {
+        "base_registry_version",
+        "base_constitution_version",
+        "base_constitution_sha256",
+        "created_at",
+        "expires_at",
+    }
+    missing = sorted(required - set(approval_context or {}))
+    if missing:
+        return False, f"proposal context missing: {', '.join(missing)}"
+
+    expires_at = _parse_kst_iso(approval_context.get("expires_at"))
+    if expires_at is None:
+        return False, "proposal expiry is invalid"
+    if now_kst() >= expires_at:
+        return False, "proposal expired"
+
+    if approval_context.get("base_registry_version") != registry.get("current_version"):
+        return False, "registry version changed after proposal creation"
+    if approval_context.get("base_constitution_version") != constitution.get("version"):
+        return False, "constitution version changed after proposal creation"
+    if approval_context.get("base_constitution_sha256") != _constitution_sha256(constitution):
+        return False, "constitution content changed after proposal creation"
+    return True, "proposal context valid"
+
+
+def _invalidate_pending(registry: Dict[str, Any], reason: str) -> None:
+    pending = registry.get("pending_proposal")
+    if not pending:
+        return
+    archived = dict(pending)
+    archived["status"] = "invalidated_stale"
+    archived["invalidated_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+    archived["invalidation_reason"] = reason
+    registry.setdefault("invalidated_proposals", []).append(archived)
+    registry["pending_proposal"] = None
+    stats = registry.setdefault("cumulative_stats", {})
+    stats["invalidated"] = stats.get("invalidated", 0) + 1
+
+
+def approve_pending_proposal() -> int:
+    """Revalidate and apply the one pending proposal as a single approval path."""
+    registry = _load_registry()
+    pending = registry.get("pending_proposal")
+    if not pending:
+        raise ProposalValidationError("no pending proposal")
+
+    constitution = _load_constitution()
+    context = pending.get("approval_context") or {}
+    valid, reason = validate_proposal_context(context, constitution, registry)
+    if not valid:
+        _invalidate_pending(registry, reason)
+        _save_registry(registry)
+        raise ProposalValidationError(reason)
+
+    proposal = pending.get("proposal") or {}
+    proposal_valid, proposal_reason = validate_proposal(proposal, constitution)
+    if not proposal_valid:
+        _invalidate_pending(registry, proposal_reason)
+        _save_registry(registry)
+        raise ProposalValidationError(proposal_reason)
+
+    new_version = apply_proposal(
+        proposal,
+        pending.get("backtest_result") or {},
+        approval_context=context,
+    )
+    latest = _load_registry()
+    latest["pending_proposal"] = None
+    stats = latest.setdefault("cumulative_stats", {})
+    stats["hit_count"] = stats.get("hit_count", 0) + 1
+    accepted = stats.get("accepted", 0)
+    if accepted > 0:
+        stats["hit_rate_pct"] = round(stats["hit_count"] / accepted * 100, 1)
+    _save_registry(latest)
+    return new_version
+
+
+def apply_proposal(
+    proposal: Dict[str, Any],
+    backtest_result: Dict[str, Any],
+    approval_context: Optional[Dict[str, Any]] = None,
+):
     """제안을 constitution에 반영하고 registry에 버전 기록.
     롤백을 위해 변경 전 가중치/임계값 스냅샷을 registry.versions[].pre_change_snapshot 에 저장."""
     constitution = _load_constitution()
     registry = _load_registry()
+    context_valid, context_reason = validate_proposal_context(
+        approval_context or {}, constitution, registry
+    )
+    if not context_valid:
+        raise ProposalValidationError(context_reason)
+    proposal_valid, proposal_reason = validate_proposal(proposal, constitution)
+    if not proposal_valid:
+        raise ProposalValidationError(proposal_reason)
     changes = proposal.get("changes", {})
 
     # ── 변경 전 스냅샷 (rollback_strategy가 사용) ──
@@ -751,7 +922,7 @@ def apply_proposal(proposal: Dict[str, Any], backtest_result: Dict[str, Any]):
     stats = registry.setdefault("cumulative_stats", {})
     stats["accepted"] = stats.get("accepted", 0) + 1
 
-    _check_auto_approve_transition(registry)
+    registry["auto_approve"] = False
     _save_registry(registry)
 
     return new_version
@@ -1007,114 +1178,6 @@ def _compute_rolling_metrics(versions: List[Dict[str, Any]], window: int = 8) ->
     }
 
 
-def _should_circuit_break(rolling: Dict[str, Any], cb_cfg: Dict[str, Any]) -> Optional[str]:
-    """서킷 브레이커 발동 조건 검사. 발동 시 사유 문자열 반환, 아니면 None."""
-    if rolling["count"] < 3:
-        return None
-
-    min_hit = cb_cfg.get("min_rolling_hit_rate_pct", 55)
-    if rolling["hit_rate"] < min_hit:
-        return f"롤링 적중률 {rolling['hit_rate']:.0f}% < {min_hit}%"
-
-    min_sharpe = cb_cfg.get("min_rolling_sharpe_improvement", -0.10)
-    if rolling["avg_sharpe_improvement"] < min_sharpe:
-        return (
-            f"평균 Sharpe 개선 {rolling['avg_sharpe_improvement']:.2f} < {min_sharpe}"
-        )
-
-    max_mdd = cb_cfg.get("max_rolling_mdd_pct", 15)
-    if rolling["max_mdd"] > max_mdd:
-        return f"최대 MDD {rolling['max_mdd']:.1f}% > {max_mdd}%"
-
-    trend = rolling.get("sharpe_trend", [])
-    if len(trend) >= 3 and all(t < 0 for t in trend):
-        return f"Sharpe 3연속 하락: {[round(t, 2) for t in trend]}"
-
-    return None
-
-
-def _check_auto_approve_transition(registry: Dict[str, Any]):
-    """양방향 자동 승인 전환 + 서킷 브레이커.
-
-    활성화 조건 (ALL):
-      - 누적 제안 10건+
-      - 누적 적중률 80%+
-      - 강세 레짐 적중률 75%+ (최소 3건)
-      - 약세 레짐 적중률 70%+ (최소 3건)
-      - 롤링 윈도우 적중률 65%+ (최소 5건)
-      - 쿨다운 완료 (서킷 브레이커 후 5건 수동 승인)
-
-    비활성화 조건 (ANY → 서킷 브레이커):
-      - 롤링 적중률 < 55%
-      - 평균 Sharpe 개선 < -0.10
-      - 최대 MDD > 15%
-      - Sharpe 3연속 하락
-    """
-    threshold = registry.get("auto_approve_threshold", {})
-    stats = registry.get("cumulative_stats", {})
-    versions = registry.get("versions", [])
-    cb_cfg = registry.get("circuit_breaker", dict(_CIRCUIT_BREAKER_DEFAULTS))
-    window = cb_cfg.get("rolling_window", 8)
-
-    rolling = _compute_rolling_metrics(versions, window)
-
-    if registry.get("auto_approve"):
-        reason = _should_circuit_break(rolling, cb_cfg)
-        if reason:
-            registry["auto_approve"] = False
-            cb_cfg["triggered_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
-            cb_cfg["reason"] = reason
-            cb_cfg["proposals_since_trigger"] = 0
-            registry["circuit_breaker"] = cb_cfg
-            print(f"  [V2] 🚨 서킷 브레이커 발동: {reason} → 자동 승인 해제")
-            try:
-                from api.notifications.telegram import send_message
-                send_message(
-                    f"🚨 Brain V2 서킷 브레이커 발동\n"
-                    f"사유: {reason}\n"
-                    f"롤링 적중률: {rolling['hit_rate']:.0f}% | "
-                    f"Sharpe 개선: {rolling['avg_sharpe_improvement']:.2f} | "
-                    f"MDD: {rolling['max_mdd']:.1f}%\n"
-                    f"→ 자동 승인 해제됨. 수동 승인 모드로 전환."
-                )
-            except Exception:
-                pass
-        return
-
-    cooldown_required = cb_cfg.get("cooldown_proposals", 5)
-    proposals_since = cb_cfg.get("proposals_since_trigger", 0)
-    had_breaker = cb_cfg.get("triggered_at") is not None
-    if had_breaker and proposals_since < cooldown_required:
-        cb_cfg["proposals_since_trigger"] = proposals_since + 1
-        registry["circuit_breaker"] = cb_cfg
-        return
-
-    cumulative_ok = all([
-        stats.get("total_proposals", 0) >= threshold.get("min_proposals", 10),
-        stats.get("hit_rate_pct", 0) >= threshold.get("hit_rate_pct", 80),
-        stats.get("bull_proposals", 0) >= 3
-        and stats.get("bull_hit_rate_pct", 0) >= threshold.get("bull_hit_rate_pct", 75),
-        stats.get("bear_proposals", 0) >= 3
-        and stats.get("bear_hit_rate_pct", 0) >= threshold.get("bear_hit_rate_pct", 70),
-    ])
-
-    rolling_ok = rolling["count"] >= 5 and rolling["hit_rate"] >= 65
-
-    if cumulative_ok and rolling_ok:
-        registry["auto_approve"] = True
-        cb_cfg["triggered_at"] = None
-        cb_cfg["reason"] = ""
-        cb_cfg["proposals_since_trigger"] = 0
-        registry["circuit_breaker"] = cb_cfg
-        print(
-            f"  [V2] 자동 승인 모드 전환: "
-            f"누적 {stats.get('hit_rate_pct', 0):.1f}% | "
-            f"롤링 {rolling['hit_rate']:.1f}% | "
-            f"강세 {stats.get('bull_hit_rate_pct', 0):.1f}% | "
-            f"약세 {stats.get('bear_hit_rate_pct', 0):.1f}%"
-        )
-
-
 # ── 제안 발송 (텔레그램) ──────────────────────────────────
 
 def send_strategy_proposal(proposal: Dict[str, Any], backtest_result: Dict[str, Any]) -> bool:
@@ -1157,21 +1220,6 @@ def send_strategy_proposal(proposal: Dict[str, Any], backtest_result: Dict[str, 
 
 # ── 메인 진화 루프 ────────────────────────────────────────
 
-def _validation_trade_count(portfolio: Dict[str, Any]) -> int:
-    """가중치 변경 정당화에 필요한 OUTCOME 표본 = VAMS 종료 거래(SELL+pnl) 수.
-
-    스냅샷 *일수*(가격 데이터)와 다름 — 거래 결과가 weight 검증의 실제 표본이다.
-    불명 시 0(보수적 = block). 2026-06-05 N-gate.
-    """
-    try:
-        from api.vams.engine import load_history
-        hist = load_history() or []
-        return sum(1 for h in hist
-                   if h.get("type") == "SELL" and h.get("pnl") is not None)
-    except Exception:
-        return 0
-
-
 def run_evolution_cycle(
     portfolio: Dict[str, Any],
     trigger_context: Optional[Dict[str, Any]] = None,
@@ -1187,9 +1235,7 @@ def run_evolution_cycle(
             - days_available: 분석에 사용된 스냅샷 일수
             - hit_rate_pct: 리포트 내 적중률
             - brain_accuracy: 브레인 등급 정확도 분석 결과
-        force: 수동 trigger — 스냅샷 기준을 STRATEGY_MIN_SNAPSHOT_DAYS_FORCED
-            (기본 5일) 로 완화. 디버깅/첫 발화용. 여전히 MAX_WEIGHT_DELTA 와
-            MAX_CUMULATIVE_DRIFT 는 과적합 방어로 작동.
+        force: 수동 trigger 표기. 고정 표본 조건을 완화하거나 승인 권한을 주지 않는다.
     """
     from api.workflows.archiver import list_available_dates
 
@@ -1210,33 +1256,30 @@ def run_evolution_cycle(
         "generated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
 
-    # 2026-06-05 🚨 검증-N 게이트 — 스냅샷 일수만으론 곡선맞추기 방어 불충분.
-    # 가중치 변경은 종료 거래(OUTCOME) 표본이 충분해야 정당. N<MIN 이면 제안·백테스트·
-    # 텔레그램·auto_apply 전부 차단(이론 고정 단계). 6/5 사고: BUY=0/거래 0 인데 가격
-    # 스냅샷에 28축 재가중 제안. force(수동 디버그)도 N-gate 적용 — 거래 0 에서 weight
-    # 변경은 디버그여도 무의미·위험.
-    _val_n = _validation_trade_count(portfolio)
-    if _val_n < STRATEGY_MIN_VALIDATION_N:
-        result["status"] = "n_gated"
-        result["reason"] = (
-            f"검증 표본 부족 — 종료 거래 {_val_n} < {STRATEGY_MIN_VALIDATION_N}. "
-            f"가중치 이론 고정 단계 (가격 스냅샷 기반 재가중 = 곡선맞추기 회피)")
-        result["validation_n"] = _val_n
-        print(f"  [V2] 🚨 N-gate: 종료거래 {_val_n} < {STRATEGY_MIN_VALIDATION_N} "
-              f"→ 전략 제안 억제 (곡선맞추기 회피)")
+    registry = _load_registry()
+    mutation_mode = (registry.get("mutation_policy") or {}).get(
+        "mode", _MUTATION_POLICY_DEFAULT
+    )
+    if mutation_mode == "frozen":
+        result["status"] = "formula_frozen"
+        result["reason"] = "formula mutation is frozen pending explicit PM approval"
+        return result
+    if mutation_mode != "manual_only":
+        result["status"] = "mutation_policy_blocked"
+        result["reason"] = f"unsupported mutation policy: {mutation_mode}"
         return result
 
-    min_days = STRATEGY_MIN_SNAPSHOT_DAYS_FORCED if force else STRATEGY_MIN_SNAPSHOT_DAYS
     dates = list_available_dates()
-    if len(dates) < min_days:
-        result["reason"] = f"스냅샷 {len(dates)}일 < 최소 {min_days}일{' (forced)' if force else ''}"
-        return result
+    result["evidence"] = {
+        "snapshot_days": len(dates),
+        "fixed_sample_gate": False,
+        "approval_mode": "manual_only",
+    }
 
     if not ANTHROPIC_API_KEY:
         result["reason"] = "ANTHROPIC_API_KEY 미설정"
         return result
 
-    registry = _load_registry()
     if registry.get("pending_proposal"):
         result["status"] = "pending"
         result["reason"] = "이전 제안 승인/거절 대기 중"
@@ -1386,62 +1429,22 @@ def run_evolution_cycle(
         except Exception as e:
             print(f"  [V2] Pool check 실패 (sequential 폴백): {e}", file=sys.stderr)
 
-    if registry.get("auto_approve"):
-        proposed_mdd = bt_result.get("max_drawdown", 0)
-        current_mdd = current_bt.get("max_drawdown", 0)
-        if proposed_mdd > current_mdd * 1.2 and current_mdd > 0:
-            result["status"] = "rejected_by_mdd"
-            result["reason"] = (
-                f"MDD 악화: 현행 {current_mdd:.2f}% → 제안 {proposed_mdd:.2f}% "
-                f"(허용 범위 {current_mdd * 1.2:.2f}% 초과)"
-            )
-            print(f"  [V2] {result['reason']}")
-            _record_auto_reject("mdd")
-            return result
-
-        actual_oos = bt_result.get("total_trades", 0)
-        if oos_days < STRATEGY_MIN_OOS_DAYS:
-            result["status"] = "rejected_by_oos"
-            result["reason"] = f"OOS 기간 부족: {oos_days}일 < 최소 {STRATEGY_MIN_OOS_DAYS}일"
-            print(f"  [V2] {result['reason']}")
-            _record_auto_reject("oos_days")
-            return result
-
-        rolling_pre = _compute_rolling_metrics(
-            registry.get("versions", []),
-            registry.get("circuit_breaker", {}).get("rolling_window", 8),
-        )
-
-        print("  [V2] 자동 승인 모드 → 즉시 적용")
-        new_ver = apply_proposal(proposal, bt_result)
-        result["status"] = "auto_applied"
-        result["new_version"] = new_ver
-        result["proposal"] = proposal
-        result["backtest"] = bt_result
-        result["rolling_metrics"] = rolling_pre
-
-        try:
-            from api.notifications.telegram import send_message
-            send_message(
-                f"🧠 Brain V2 자동 적용 완료 (v{new_ver})\n"
-                f"트리거: {period_label} ({ctx.get('period_end', '')})\n"
-                f"레짐: {regime} | OOS: {oos_days}일\n"
-                f"사유: {proposal.get('reason', '?')}\n"
-                f"Sharpe: {current_bt.get('sharpe', 0):.2f} → {bt_result.get('sharpe', 0):.2f}\n"
-                f"MDD: {current_mdd:.2f}% → {proposed_mdd:.2f}%\n"
-                f"롤링 적중률: {rolling_pre['hit_rate']:.0f}%"
-            )
-        except Exception:
-            pass
-
-        return result
+    approval_context = _proposal_context(constitution, registry)
 
     registry["pending_proposal"] = {
         "proposal": proposal,
         "backtest_result": bt_result,
         "trigger": period,
         "period_end": ctx.get("period_end", ""),
-        "proposed_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        "proposed_at": approval_context["created_at"],
+        "expires_at": approval_context["expires_at"],
+        "approval_context": approval_context,
+        "evidence": {
+            **result["evidence"],
+            "backtest_span_days": bt_result.get("actual_span_days"),
+            "backtest_trades": bt_result.get("total_trades"),
+            "trail_sufficient": bt_result.get("trail_sufficient"),
+        },
     }
     _save_registry(registry)
 
@@ -1487,6 +1490,7 @@ def get_strategy_status() -> Dict[str, Any]:
             ) if cb.get("triggered_at") else 0,
         },
         "pending": registry.get("pending_proposal") is not None,
+        "mutation_policy": registry.get("mutation_policy", {}),
         "fact_weights": constitution.get("fact_score", {}).get("weights", {}),
         "sentiment_weights": constitution.get("sentiment_score", {}).get("weights", {}),
     }

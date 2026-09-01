@@ -8,8 +8,8 @@
 그런데 `rule_change_at` 이 `null` 이었다 — 변경이 어디에도 기록되지 않아 원장이 경계를 몰랐고,
 나는 섞인 평균을 "현재 시스템 성적" 으로 읽었다(RULE 13 ⑤ 창 안의 변경 경계).
 
-🚨 **판정은 바꾸지 않는다.** 게이트 창 전환은 PM 결정이다. 이 테스트가 지키는 것은
-"경계가 있으면 산출물이 양쪽을 말한다" 하나다.
+The active gate uses the post-change segment; the earlier segment remains a
+legacy diagnostic so mixed-rule performance cannot return.
 """
 import json
 import os
@@ -40,12 +40,11 @@ def test_splits_at_boundary_with_gate_metrics():
     assert out["after"]["pl_ratio"] == 4.0
 
 
-def test_does_not_touch_the_verdict():
-    """🚨 신고 전용이라는 표시가 사라지면 다음 세션이 창을 옮겨도 된다고 읽는다."""
+def test_post_change_segment_is_the_active_gate_window():
     out = _rule_change_segments([_ep("2026-07-01", -100)], "2026-08-09")
-    assert out["used_by_gate"] is False
-    assert "PM 결정" in out["note"]
-    assert "임의 전환 금지" in out["note"]
+    assert out["used_by_gate"] is True
+    assert "현행 게이트 정본" in out["note"]
+    assert "legacy diagnostic" in out["note"]
 
 
 def test_missing_boundary_is_reported_not_silent():

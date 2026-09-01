@@ -9,6 +9,8 @@ Phase 2 Stress (9월) / Attribution (12-1월) sprint 박을 때 pass wire.
 """
 from __future__ import annotations
 
+import json
+
 from api.vams.validation import (
     _daily_log_returns,
     _daily_simple_returns,
@@ -50,6 +52,14 @@ def test_validation_report_new_keys_insufficient_data():
         snapshots_dir="/tmp/__verity_nonexistent_snapshots__",
     )
     assert report["overall"] == "INSUFFICIENT_DATA"
+    assert report["window"]["validation_start_configured"] == "2026-08-09"
+    assert report["window"]["used_by_gate"] is True
+    assert report["legacy_diagnostic"]["used_by_gate"] is False
+    assert report["sample_checks"]["gate_binding"] is False
+    assert report["_meta"]["score_system"]["is_operational"] is True
+    gate_meta = report["_meta"]["gate_metrics"]
+    assert gate_meta["required_count"] == 9
+    assert gate_meta["measured_count"] + len(gate_meta["missing"]) == 9
     metrics = report["metrics"]
     # 신 4 키 박혀 있어야
     for k in ("sortino", "calmar", "alpha_beta", "capture_ratios"):
@@ -82,3 +92,27 @@ def test_overall_verdict_unaffected_by_informational_metrics():
         assert metrics[k]["pass"] is None
     # overall 박은 부분 = INSUFFICIENT_DATA (snapshots 없음) — 신 키 영향 0
     assert report["overall"] == "INSUFFICIENT_DATA"
+
+
+def test_low_sample_is_reported_but_not_used_as_a_gate(tmp_path):
+    for day, asset, kospi in [
+        ("2026-08-09", 10_000_000, 2500),
+        ("2026-08-10", 10_100_000, 2510),
+        ("2026-08-11", 10_200_000, 2520),
+    ]:
+        (tmp_path / f"{day}.json").write_text(json.dumps({
+            "vams": {"total_asset": asset},
+            "market_summary": {"kospi": {"value": kospi}},
+        }), encoding="utf-8")
+
+    report = compute_validation_report(
+        portfolio={},
+        history=[],
+        snapshots_dir=str(tmp_path),
+        start_date="2026-08-09",
+    )
+    assert report["sample_checks"]["days_ok"] is False
+    assert report["sample_checks"]["gate_binding"] is False
+    assert report["metrics"]["cumulative_return"]["pass"] is not None
+    assert report["_meta"]["evidence_status"] == "STATISTICALLY_UNINFORMATIVE"
+    assert report["_meta"]["gate_metrics"]["required_count"] == 9

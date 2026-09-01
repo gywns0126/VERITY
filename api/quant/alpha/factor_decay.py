@@ -291,9 +291,10 @@ def compute_ic_weight_adjustments() -> Dict[str, Any]:
       - analyze_factor_decay (측정·리포트) 는 호출 안 함 (적용 ⊥ 측정 분리, 후속 sprint)
 
     재개 trigger (RULE 7 1회 권한 보존):
-      - 유효-N 마일스톤 (non-overlapping 또는 Newey-West 보정) 도달
+      - non-overlapping 또는 Newey-West 보정과 |t|=3 검출하한을 사전 신고
       - 30d primary 전환 + marginal IC + PM 사전등록 재합의
       - 현 7d-standalone-snapshotN 방식 폐기
+      - 목표 표본수나 재개 시점은 지어내지 않음
     """
     _FROZEN_DISABLE = {"multi_factor", "consensus", "prediction", "timing"}
     adjustments: Dict[str, Dict[str, Any]] = {}

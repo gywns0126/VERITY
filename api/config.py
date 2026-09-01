@@ -269,12 +269,16 @@ VAMS_KR_GEUMTU_HIGH_THRESHOLD_KRW = _env_int("VAMS_KR_GEUMTU_HIGH_THRESHOLD_KRW"
 # 공식 판정 시작일. "YYYY-MM-DD" 포맷. 빈값이면 모든 데이터 사용(=비활성).
 # 이 날짜 이전의 스냅샷·매매는 validation_report 계산에서 자동 제외된다.
 # compute_adjusted_return은 VAMS total_asset과의 일관성을 위해 필터링하지 않음.
-# 2026-05-31 PM 승인: VAMS 5/17 reset 에 validation window 고정 (pre-reset 4/05~ 47일 혼입 제거).
-# reset 전 archived 스냅샷이 cumulative/benchmark 를 왜곡(벤치 +57.63%/47일 비현실) → post-reset 14일 정합.
-# RULE 7 정합 (reset = 방법론 이벤트, 결과기반 tweak 아님). env 설정 시 override.
-VAMS_VALIDATION_START_DATE: str = os.environ.get("VAMS_VALIDATION_START_DATE", "2026-05-17").strip()
-VAMS_VALIDATION_MIN_DAYS = _env_int("VAMS_VALIDATION_MIN_DAYS", 60)              # 최소 거래일 (≈3개월)
-VAMS_VALIDATION_MIN_TRADES = _env_int("VAMS_VALIDATION_MIN_TRADES", 20)          # 최소 완료 매매 건수
+# PM-approved measurement boundary: the active -20% stop-loss behavior began 2026-08-09.
+# 2026-05-17 remains a legacy diagnostic boundary only. Environment overrides are
+# accepted for reproducibility, but every artifact reports the chosen boundary.
+VAMS_VALIDATION_START_DATE: str = os.environ.get("VAMS_VALIDATION_START_DATE", "2026-08-09").strip()
+VAMS_VALIDATION_LEGACY_START_DATE = "2026-05-17"
+VAMS_GATE_RULE_VERSION = "vams-gate-window-2026-08-09-v1"
+# Historical sample thresholds remain diagnostics only. They do not authorize or
+# block a verdict; the artifact reports T, N, evidence status, and detection floor.
+VAMS_VALIDATION_MIN_DAYS = _env_int("VAMS_VALIDATION_MIN_DAYS", 60)
+VAMS_VALIDATION_MIN_TRADES = _env_int("VAMS_VALIDATION_MIN_TRADES", 20)
 VAMS_PASS_EXCESS_RETURN_PP = _env_float("VAMS_PASS_EXCESS_RETURN_PP", 0.0)       # 벤치마크 대비 초과수익 (%p)
 VAMS_PASS_MDD_RATIO = _env_float("VAMS_PASS_MDD_RATIO", 1.0)                     # |VAMS MDD| / |벤치 MDD| 상한
 VAMS_PASS_WIN_RATE = _env_float("VAMS_PASS_WIN_RATE", 0.55)                      # 승률 하한 (55%, Van Tharp 최소 진입 임계)
@@ -552,15 +556,8 @@ STRATEGY_MAX_WEIGHT_DELTA = _env_float("STRATEGY_MAX_WEIGHT_DELTA", 0.05)
 # 누적 드리프트 상한 — 초기 baseline(versions[0].pre_change_snapshot) 대비 단일 가중치의
 # 절대 변화량이 이 값을 초과하면 제안 거부. 같은 방향 N회 누적 표류 방어.
 STRATEGY_MAX_CUMULATIVE_DRIFT = _env_float("STRATEGY_MAX_CUMULATIVE_DRIFT", 0.20)
-# 진화에 필요한 최소 스냅샷 일수 — 첫 발화 앞당김 (기본 10일, 강제 시 5일).
-# 과적합 방지는 STRATEGY_MAX_WEIGHT_DELTA(±0.05) + MAX_CUMULATIVE_DRIFT(0.20) 가 담당.
-STRATEGY_MIN_SNAPSHOT_DAYS = _env_int("STRATEGY_MIN_SNAPSHOT_DAYS", 10)
-STRATEGY_MIN_SNAPSHOT_DAYS_FORCED = _env_int("STRATEGY_MIN_SNAPSHOT_DAYS_FORCED", 5)
-# 2026-06-05 🚨 검증-N 게이트 — 스냅샷 *일수*(가격)로만 게이트하면 종료 거래 0건이어도
-# 최근 가격 움직임에 가중치 재fit(곡선맞추기). 가중치 변경은 OUTCOME 표본(종료 거래)이
-# 충분해야 정당 → N<MIN 이면 제안 자체 억제(이론 고정 단계, feedback_threshold_calibration
-# _overfit_guard N<50). 6/5 사고: proposer 가 "원달러 +1% + urgent 7건"(초단기)에 28축 재가중.
-STRATEGY_MIN_VALIDATION_N = _env_int("STRATEGY_MIN_VALIDATION_N", 50)
+# 고정 T/N 누적 조건은 2026-08-15 폐기됐다. 제안 산출물은 관측량과
+# 검출하한을 신고하며, 가중치 변경은 PM 수동 승인 경로만 사용한다.
 # 자동 적용 시 최소 Out-of-Sample 검증 기간 (일).
 # Perplexity Q4 (2026-05-17) 학계 자문: 30 → 90.
 # T=22 거래일 SE(SR)≈±0.22 노이즈 폭발. Lopez de Prado MinTRL 기준 90~120일 권장.

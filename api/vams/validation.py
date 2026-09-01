@@ -1,8 +1,8 @@
 """
-VAMS Validation — 사전 약속 판정 기준을 코드에 고정.
+VAMS Validation — active behavior window and registered thresholds.
 
-3·6·12개월 체크포인트에서 "실거래로 전환해도 되는가"를 판정하는 6개 지표.
-결과 본 후 기준을 조정하지 않도록 임계값은 config.py 환경변수로만 변경 가능.
+The active window is separate from legacy diagnostics. T/N are reported as
+evidence diagnostics; fixed sample counts do not authorize a verdict.
 
 입력:
   - data/history/YYYY-MM-DD.json 일일 스냅샷
@@ -17,9 +17,13 @@ VAMS Validation — 사전 약속 판정 기준을 코드에 고정.
   4) profit_loss_ratio   평균수익 / |평균손실|
   5) sharpe              연율 샤프 (rf=0)
   6) regime_coverage     벤치마크가 -X% 조정 도달 여부
+  7) expectancy          완료 거래 기대값(R)
+  8) sqn                 완료 거래 품질
+  9) cost_efficiency     비용 누수가 초과수익을 잠식하는지
 
 overall:
-  - INSUFFICIENT_DATA: 최소 샘플(일수·매매수) 미달
+  - INSUFFICIENT_DATA: 필수 시계열 부재
+  - MEASUREMENT_INCOMPLETE: 판정 지표 일부 측정 불가
   - FAIL:              샤프 < VAMS_REDESIGN_SHARPE 즉시 실패, 또는 2개 이상 미달
   - WATCH:             1개 미달 (관찰 지속)
   - PASS:              전 지표 통과
@@ -46,11 +50,24 @@ from api.config import (
     VAMS_VALIDATION_MIN_DAYS,
     VAMS_VALIDATION_MIN_TRADES,
     VAMS_VALIDATION_START_DATE,
+    VAMS_VALIDATION_LEGACY_START_DATE,
+    VAMS_GATE_RULE_VERSION,
     now_kst,
 )
 
 _DEFAULT_SNAPSHOTS_DIR = os.path.join(DATA_DIR, "history")
 _TRADING_DAYS_PER_YEAR = 252
+_GATE_METRIC_KEYS = (
+    "cumulative_return",
+    "mdd",
+    "win_rate",
+    "profit_loss_ratio",
+    "expectancy",
+    "sqn",
+    "sharpe",
+    "regime_coverage",
+    "cost_efficiency",
+)
 
 
 def _parse_start_date(start_date: Optional[str]) -> Optional[datetime]:
@@ -238,7 +255,7 @@ def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
         return {
             "trades": 0, "wins": 0, "losses": 0,
             "win_rate": None, "avg_win": None, "avg_loss": None, "pl_ratio": None,
-            "expectancy_r": None, "sqn": None,
+            "expectancy_r": None, "sqn": None, "r_std": None,
         }
     wins = [p for p in pnls if p > 0]
     losses = [p for p in pnls if p < 0]
@@ -254,10 +271,12 @@ def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
     # SQN (Van Tharp System Quality Number, 2026-06-07 Perplexity) = mean(R)/σ(R) × √min(N,100).
     # expectancy(일관성=σ) + 표본(N) 동시 반영 → raw expectancy 보다 robust. R = pnl/|avg_loss|.
     sqn = None
+    r_std = None
     _abs_loss = abs(avg_loss) if avg_loss < 0 else None
     if _abs_loss and len(pnls) >= 2:
         r_mults = [p / _abs_loss for p in pnls]
         sd_r = statistics.pstdev(r_mults)
+        r_std = round(sd_r, 6)
         if sd_r > 0:
             sqn = round((statistics.mean(r_mults) / sd_r) * math.sqrt(min(len(pnls), 100)), 3)
     return {
@@ -270,6 +289,7 @@ def _trade_stats(history: List[dict], start_date: Optional[str] = None) -> dict:
         "pl_ratio": round(pl_ratio, 3) if pl_ratio is not None else None,
         "expectancy_r": expectancy_r,
         "sqn": sqn,
+        "r_std": r_std,
     }
 
 
@@ -308,6 +328,8 @@ def compute_validation_report(
         "end": dates[-1] if dates else None,
         "days": len(dates),
         "snapshot_count": len(snapshots),
+        "rule_version": VAMS_GATE_RULE_VERSION,
+        "used_by_gate": True,
     }
 
     trade = _trade_stats(history, start_date=start_date)
@@ -339,7 +361,7 @@ def compute_validation_report(
         "benchmark_return_pct": bench_ret,
         "excess_pp": excess_pp,
         "threshold_pp": VAMS_PASS_EXCESS_RETURN_PP,
-        "pass": _p(excess_pp >= VAMS_PASS_EXCESS_RETURN_PP, not series_ok or not days_ok),
+        "pass": _p(excess_pp >= VAMS_PASS_EXCESS_RETURN_PP, not series_ok),
     }
     m_mdd = {
         "vams_mdd_pct": vams_mdd,
@@ -348,7 +370,7 @@ def compute_validation_report(
         "threshold_ratio": VAMS_PASS_MDD_RATIO,
         "pass": _p(
             mdd_ratio is not None and mdd_ratio <= VAMS_PASS_MDD_RATIO,
-            not series_ok or mdd_ratio is None or not days_ok,
+            not series_ok or mdd_ratio is None,
         ),
     }
     m_win = {
@@ -356,7 +378,7 @@ def compute_validation_report(
         "threshold": VAMS_PASS_WIN_RATE,
         "pass": _p(
             trade["win_rate"] is not None and trade["win_rate"] >= VAMS_PASS_WIN_RATE,
-            not trades_ok,
+            trade["win_rate"] is None,
         ),
     }
     m_pl = {
@@ -366,7 +388,7 @@ def compute_validation_report(
         "threshold": VAMS_PASS_PROFIT_LOSS_RATIO,
         "pass": _p(
             trade["pl_ratio"] is not None and trade["pl_ratio"] >= VAMS_PASS_PROFIT_LOSS_RATIO,
-            trade["pl_ratio"] is None or not trades_ok,
+            trade["pl_ratio"] is None,
         ),
     }
     # Expectancy AND-gate (2026-05-16 Perplexity MED-D1 승인, config 정의 → 본 구현 88b40aa2).
@@ -378,7 +400,7 @@ def compute_validation_report(
         "threshold": VAMS_MIN_EXPECTANCY_R,
         "pass": _p(
             trade["expectancy_r"] is not None and trade["expectancy_r"] >= VAMS_MIN_EXPECTANCY_R,
-            trade["expectancy_r"] is None or not trades_ok,
+            trade["expectancy_r"] is None,
         ),
     }
     # SQN gate (Van Tharp System Quality Number ≥ 1.7 "Average", 2026-06-07 Perplexity).
@@ -388,7 +410,7 @@ def compute_validation_report(
         "threshold": VAMS_MIN_SQN,
         "pass": _p(
             trade["sqn"] is not None and trade["sqn"] >= VAMS_MIN_SQN,
-            trade["sqn"] is None or not trades_ok,
+            trade["sqn"] is None,
         ),
     }
     if sharpe is None:
@@ -408,14 +430,14 @@ def compute_validation_report(
         "significance": _sharpe_significance(vams_series),
         "pass": _p(
             sharpe is not None and sharpe >= VAMS_PASS_SHARPE,
-            sharpe is None or not days_ok,
+            sharpe is None,
         ),
     }
     m_regime = {
         "covered": regime_covered,
         "peak_drawdown_pct": bench_mdd,
         "threshold_pct": -float(VAMS_REGIME_DRAWDOWN_PCT),
-        "pass": _p(regime_covered, not series_ok or not days_ok),
+        "pass": _p(regime_covered, not series_ok),
     }
 
     # 2026-05-29 — risk_metrics.py wrapper (5/17 dead code) wire.
@@ -477,7 +499,7 @@ def compute_validation_report(
         "threshold_ratio_max": 0.5,
         "pass": _p(
             alpha > 0 and gap_pp_total is not None and cost_ratio is not None and cost_ratio < 0.5,
-            not series_ok or not days_ok or gap_pp_total is None,
+            not series_ok or gap_pp_total is None,
         ),
     }
 
@@ -499,16 +521,23 @@ def compute_validation_report(
     }
 
     # ---- overall ----
-    insufficient = not (days_ok and trades_ok and series_ok)
-    computed = [m["pass"] for m in metrics.values() if m["pass"] is not None]
+    measured_gate_keys = [
+        key for key in _GATE_METRIC_KEYS if metrics[key]["pass"] is not None
+    ]
+    missing_gate_keys = [
+        key for key in _GATE_METRIC_KEYS if metrics[key]["pass"] is None
+    ]
+    computed = [metrics[key]["pass"] for key in measured_gate_keys]
     failed = sum(1 for p in computed if p is False)
 
-    if insufficient:
+    if not series_ok:
         overall = "INSUFFICIENT_DATA"
+    elif missing_gate_keys:
+        overall = "MEASUREMENT_INCOMPLETE"
     elif sharpe is not None and sharpe < VAMS_REDESIGN_SHARPE:
         overall = "FAIL"  # 샤프 재설계 임계는 즉시 실패
     elif not computed:
-        overall = "INSUFFICIENT_DATA"
+        overall = "MEASUREMENT_INCOMPLETE"
     elif failed == 0:
         overall = "PASS"
     elif failed == 1:
@@ -516,7 +545,40 @@ def compute_validation_report(
     else:
         overall = "FAIL"
 
+    n_trades = trade["trades"]
+    if n_trades < 30:
+        evidence_status = "STATISTICALLY_UNINFORMATIVE"
+    elif n_trades < 100:
+        evidence_status = "PRELIMINARY"
+    else:
+        evidence_status = "MATURE"
+    detection_floor = None
+    if n_trades >= 2 and trade.get("r_std") is not None:
+        detection_floor = round(3.0 * float(trade["r_std"]) / math.sqrt(n_trades), 3)
+
     return {
+        "_meta": {
+            "score_system": {
+                "name": "VAMS realized trade ledger",
+                "is_operational": True,
+                "rule_version": VAMS_GATE_RULE_VERSION,
+            },
+            "min_detectable": {
+                "method": "abs_t_3",
+                "unit": "R",
+                "n": n_trades,
+                "sigma_r": trade.get("r_std"),
+                "effect_r": detection_floor,
+            },
+            "evidence_status": evidence_status,
+            "gate_metrics": {
+                "required": list(_GATE_METRIC_KEYS),
+                "required_count": len(_GATE_METRIC_KEYS),
+                "measured": measured_gate_keys,
+                "measured_count": len(measured_gate_keys),
+                "missing": missing_gate_keys,
+            },
+        },
         "overall": overall,
         "window": window,
         "sample_checks": {
@@ -525,6 +587,13 @@ def compute_validation_report(
             "trades_ok": trades_ok,
             "trades_required": VAMS_VALIDATION_MIN_TRADES,
             "series_ok": series_ok,
+            "diagnostic_only": True,
+            "gate_binding": False,
+        },
+        "legacy_diagnostic": {
+            "window_start": VAMS_VALIDATION_LEGACY_START_DATE,
+            "used_by_gate": False,
+            "note": "legacy boundary retained for comparison only",
         },
         "metrics": metrics,
         "thresholds": {

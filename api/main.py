@@ -1161,8 +1161,6 @@ def _run_growth_trigger(
         print(f"  결과: {status}")
         if status == "pending_approval":
             print(f"  → 텔레그램 승인 대기 중")
-        elif status == "auto_applied":
-            print(f"  → 자동 적용 완료 (v{result.get('new_version', '?')})")
         elif status == "no_change":
             print(f"  → Claude: 현행 유지 ({result.get('reason', '')[:60]})")
 
@@ -1446,9 +1444,8 @@ def _rule_change_segments(sells, boundary):
         "what_changed": "VAMS 손절 캡 −5% → −20% (ATR 개별 손절선 복원) · commit 4a2c3f4ee",
         "before": _agg(before),
         "after": _agg(after),
-        "used_by_gate": False,
-        "note": "게이트는 전체 창(reset_at~)으로 판정한다. 이 분해는 신고 전용 — "
-                "창 전환은 PM 결정이며 임의 전환 금지. after 표본이 얇으면 성적으로 읽지 말 것.",
+        "used_by_gate": True,
+        "note": "2026-08-09 이후 구간이 현행 게이트 정본이다. before 구간은 legacy diagnostic only.",
     }
 
 
@@ -5396,7 +5393,7 @@ def main():
             # 2026-05-24 wire / 2026-06-03 정정: ledger 적재·관측 only.
             # postmortem.misleading_factors → EWMA factor weight learning + ledger 적재.
             # ⚠ quarantine 결과는 brain 점수에 자동 반영 안 함 (N 부족 — factor_decay 5/23 동결과
-            # 일관, RULE 7 곡선맞추기 방지). 적용 활성화 = 유효 N 마일스톤 + PM 재승인.
+            # 일관, RULE 7 곡선맞추기 방지). 적용 활성화 = 사전 검정력 관문 승인 + PM 재승인.
             try:
                 from api.intelligence.postmortem_auto_evolve import evaluate_and_persist
                 _ae = evaluate_and_persist(portfolio)
@@ -5420,8 +5417,6 @@ def main():
             print(f"  결과: {status}")
             if status == "pending_approval":
                 print(f"  → 텔레그램 승인 대기 중")
-            elif status == "auto_applied":
-                print(f"  → 자동 적용 완료 (v{evolution_result.get('new_version', '?')})")
             elif status == "no_change":
                 print(f"  → Claude: 현행 유지 ({evolution_result.get('reason', '')[:60]})")
         except Exception as e:

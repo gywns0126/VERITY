@@ -21,6 +21,7 @@ _VERDICT_EMOJI = {
     "WATCH": "🟡",
     "FAIL": "🔴",
     "INSUFFICIENT_DATA": "⏳",
+    "MEASUREMENT_INCOMPLETE": "⏳",
 }
 
 
@@ -117,11 +118,23 @@ def build_report(portfolio: dict) -> Optional[str]:
         mc = m.get("cost_efficiency", {})
         lines.append(f"  {_pass_mark(mc.get('pass'))} 비용/α     {_fmt_ratio(mc.get('cost_to_alpha_ratio'))}  (gap {_fmt_pp(mc.get('gap_pp_total'))} / α {_fmt_pp(mc.get('alpha_pp'))})")
 
-        # 샘플 체크
-        sc = vr.get("sample_checks", {}) or {}
+        # Evidence diagnostics: report T/N without a target count or ETA.
+        meta = vr.get("_meta", {}) or {}
+        detectable = meta.get("min_detectable", {}) or {}
         lines.append("")
-        lines.append("<b>샘플</b>")
-        lines.append(f"  거래일 {window.get('days', 0)}/{sc.get('days_required', 60)}  매매 {mw.get('trades', 0)}/{sc.get('trades_required', 20)}")
+        lines.append("<b>근거 상태</b>")
+        lines.append(
+            f"  T={window.get('days', 0)}일 · N={mw.get('trades', 0)}거래 · "
+            f"{meta.get('evidence_status', '미산출')}"
+        )
+        gate_meta = meta.get("gate_metrics", {}) or {}
+        measured = gate_meta.get("measured_count")
+        required = gate_meta.get("required_count")
+        if measured is not None and required is not None:
+            missing = ", ".join(gate_meta.get("missing") or []) or "없음"
+            lines.append(f"  지표 측정 {measured}/{required} · 미측정 {missing}")
+        floor = detectable.get("effect_r")
+        lines.append(f"  |t|=3 검출하한 {floor if floor is not None else '측정 불가'}R · 일정 추정 없음")
 
     lines.append("")
     lines.append("<i>※ 판정 기준 변경은 git 커밋으로 이력. 결과 후 기준 조정 금지.</i>")

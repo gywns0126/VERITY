@@ -1,14 +1,12 @@
 {
   "current_version": 1,
   "auto_approve": false,
-  "auto_approve_threshold": {
-    "min_proposals": 10,
-    "hit_rate_pct": 80
-  },
   "cumulative_stats": {
     "total_proposals": 32,
     "accepted": 0,
     "rejected": 1,
+    "invalidated": 1,
+    "unclassified": 30,
     "hit_count": 0,
     "hit_rate_pct": 0,
     "bull_proposals": 11
@@ -56,7 +54,9 @@
       "snapshot_source": "seed_from_current_constitution"
     }
   ],
-  "pending_proposal": {
+  "pending_proposal": null,
+  "invalidated_proposals": [
+  {
     "proposal": {
       "changes": {
         "fact_score_weights": {
@@ -120,7 +120,36 @@
     },
     "trigger": "full",
     "period_end": "",
-    "proposed_at": "2026-06-05T09:00:48+09:00"
+    "proposed_at": "2026-06-05T09:00:48+09:00",
+    "status": "invalidated_stale",
+    "invalidated_at": "2026-09-01T21:42:01+09:00",
+    "invalidation_reason": "legacy proposal has no base constitution hash or expiry and contains axes incompatible with constitution 5.0"
+  }
+  ],
+  "mutation_policy": {
+    "mode": "frozen",
+    "requires_pm_approval": true,
+    "set_at": "2026-09-01T21:42:01+09:00",
+    "reason": "freeze formula weights; any change requires explicit PM approval and a current proposal context"
+  },
+  "ledger_reconciliation": {
+    "reconciled_at": "2026-09-01T21:42:01+09:00",
+    "before": {
+      "total_proposals": 32,
+      "accepted": 0,
+      "rejected": 1,
+      "pending": 1,
+      "unclassified": 30
+    },
+    "after": {
+      "total_proposals": 32,
+      "accepted": 0,
+      "rejected": 1,
+      "invalidated": 1,
+      "pending": 0,
+      "unclassified": 30
+    },
+    "evidence": "only one historical rejection and one stale pending proposal are directly classified; the remaining 30 proposals stay unclassified"
   },
   "circuit_breaker": {
     "rolling_window": 8,

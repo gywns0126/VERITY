@@ -59,6 +59,19 @@ def test_higher_coverage_when_more_data():
         multi_factor={"multi_score": 60,
                       "quant_factors": {"quality": 70, "volatility": 65,
                                         "momentum": 50, "mean_reversion": 50}},
+        quant_factors={
+            "quality": {
+                "quality_score": 70,
+                "piotroski_f": 7,
+                "piotroski_measurable": 9,
+                "gross_profitability": 0.25,
+                "altman": {"z_score": 3.0, "applicable": True},
+                "unmeasured_axes": [],
+            },
+            "volatility": {"volatility_score": 65, "unmeasured_axes": []},
+        },
+        operating_cashflow=100,
+        net_income=80,
     ), portfolio={})
     assert "quant_quality" in rich["components"], "퀀트 퀄리티가 채점 컴포넌트로 부착돼야 한다"
     assert "quant_volatility" in rich["components"]
@@ -71,6 +84,44 @@ def test_coverage_is_diagnostic_not_scoring():
     a = _compute_fact_score(s, portfolio={})
     b = _compute_fact_score(s, portfolio={})
     assert a["score"] == b["score"]
+
+
+def test_coverage_provenance_changes_metadata_not_score():
+    """동일한 채점 컴포넌트에 원입력 provenance만 추가해도 점수는 불변이다."""
+    base = _stock(
+        multi_factor={"multi_score": 60, "quant_factors": {
+            "quality": 70, "volatility": 65, "momentum": 50, "mean_reversion": 50,
+        }},
+    )
+    plain = _compute_fact_score(base, portfolio={})
+    enriched = dict(base)
+    enriched.update({
+        "quant_factors": {
+            "quality": {
+                "quality_score": 70, "piotroski_f": 7, "piotroski_measurable": 9,
+                "gross_profitability": 0.25,
+                "altman": {"z_score": 3.0, "applicable": True},
+            },
+            "volatility": {"volatility_score": 65, "unmeasured_axes": []},
+        },
+        "operating_cashflow": 100,
+        "net_income": 80,
+    })
+    measured = _compute_fact_score(enriched, portfolio={})
+    assert measured["score"] == plain["score"]
+    assert measured["data_coverage"] > plain["data_coverage"]
+
+
+def test_volatility_fallback_without_provenance_is_not_counted_as_measured():
+    out = _compute_fact_score(_stock(
+        multi_factor={"multi_score": 60, "quant_factors": {
+            "quality": 50, "volatility": 50, "momentum": 50, "mean_reversion": 50,
+        }},
+        quant_factors={"volatility": {"volatility_score": 50, "signals": []}},
+    ), portfolio={})
+    measurement = out["coverage_scope"]["axis_measurement"]["quant_volatility"]
+    assert measurement["coverage"] == 0.0
+    assert "quant_volatility" in out["missing_components"]
 
 
 def test_us_fscore_component():

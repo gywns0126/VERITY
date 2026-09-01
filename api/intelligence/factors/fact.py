@@ -337,6 +337,7 @@ def _compute_kis_fact_bonus(stock: Dict[str, Any]) -> Dict[str, Any]:
 _TRACKED_MISSING_AXES = (
     "multi_factor", "consensus", "prediction", "backtest", "timing",
     "analyst_report", "dart_health", "perplexity_risk", "us_fscore",
+    "graham_value", "canslim_growth", "quant_quality", "quant_volatility",
 )
 
 
@@ -572,13 +573,100 @@ def _compute_fact_score(
     if not _num(dart_analysis.get("business_health_score")): _missing.add("dart_health")
     if _risk_level not in _RISK_SCORE_MAP: _missing.add("perplexity_risk")
     if not _num(_us_fscore_raw): _missing.add("us_fscore")
-    _total_w = sum(w.get(k, 0) for k in components)
-    _present_w = sum(w.get(k, 0) for k in components if k not in _missing)
+
+    # 현재 실제 가중치가 있는 4축의 입력 커버리지를 점수와 독립적으로 측정한다.
+    # 중립 50이나 내부 재정규화를 실측 보유로 오독하지 않도록 원입력 분모를 같이 신고한다.
+    _sec_fin = stock.get("sec_financials") or {}
+    _kis_fin = stock.get("kis_financial_ratio") or {}
+    _kis_fin = _kis_fin if _kis_fin.get("source") == "kis" else {}
+
+    def _first_number(*values):
+        return next((v for v in values if _num(v)), None)
+
+    _graham_inputs = {
+        "per": _first_number(stock.get("per"), stock.get("price_to_earnings"), _sec_fin.get("pe_ratio"), _kis_fin.get("per")),
+        "pbr": _first_number(stock.get("pbr"), stock.get("price_to_book"), _sec_fin.get("price_to_book"), _kis_fin.get("pbr")),
+        "debt_ratio": _first_number(_sec_fin.get("debt_ratio"), _kis_fin.get("debt_ratio"), stock.get("debt_ratio")),
+        "roe": _first_number(_sec_fin.get("roe"), _kis_fin.get("roe"), stock.get("roe")),
+        "current_ratio": _first_number(_sec_fin.get("current_ratio"), _kis_fin.get("current_ratio")),
+        "eps_growth": _first_number(stock.get("eps_quarterly_growth"), consensus.get("operating_profit_yoy_est_pct")),
+    }
+    _canslim_inputs = {
+        "current_eps_growth": _first_number(stock.get("eps_quarterly_growth")),
+        "annual_growth": _first_number(consensus.get("operating_profit_yoy_est_pct")),
+        "relative_strength": _first_number(stock.get("drop_from_high_pct")),
+        "volume_ratio": _first_number((stock.get("technical") or {}).get("vol_ratio")),
+    }
+    if stock.get("currency") == "USD":
+        _canslim_inputs["institutional_change"] = _first_number(
+            (stock.get("institutional_ownership") or {}).get("change_pct")
+        )
+
+    _raw_quant = stock.get("quant_factors") or {}
+    _quality = _raw_quant.get("quality") if isinstance(_raw_quant, dict) else {}
+    _quality = _quality if isinstance(_quality, dict) else {}
+    _f_meas = _safe_float(_quality.get("piotroski_measurable"), 0.0)
+    if _f_meas <= 0 and _num(_quality.get("piotroski_f")):
+        _f_meas = 9.0
+    _quality_parts = {
+        "piotroski_f": min(max(_f_meas / 9.0, 0.0), 1.0),
+        "gross_profitability": 1.0 if _num(_quality.get("gross_profitability")) else 0.0,
+        "altman_z": 1.0 if _num((_quality.get("altman") or {}).get("z_score")) else 0.0,
+        "earning_quality": 1.0 if (
+            _num(((stock.get("dart_financials") or {}).get("cashflow") or {}).get("operating_cashflow")
+                 or stock.get("operating_cashflow"))
+            and _num(stock.get("net_income"))
+        ) else 0.0,
+        "stability": 1.0 if _num(stock.get("roe")) and _num(stock.get("operating_margin")) else 0.0,
+    }
+    _quality_weights = {
+        "piotroski_f": 0.35, "gross_profitability": 0.25, "altman_z": 0.20,
+        "earning_quality": 0.10, "stability": 0.10,
+    }
+    _quality_coverage = sum(_quality_parts[k] * _quality_weights[k] for k in _quality_weights)
+    if not _num(_quant_sub.get("quality")):
+        _quality_coverage = 0.0
+
+    _volatility = _raw_quant.get("volatility") if isinstance(_raw_quant, dict) else {}
+    _volatility = _volatility if isinstance(_volatility, dict) else {}
+    _vol_unmeasured = set(_volatility.get("unmeasured_axes") or [])
+    _vol_weights = {
+        "realized_vol": 0.35, "vol_trend": 0.25, "beta": 0.25, "idiosyncratic": 0.15,
+    }
+    _volatility_coverage = sum(v for k, v in _vol_weights.items() if k not in _vol_unmeasured)
+    if (
+        not _num(_quant_sub.get("volatility"))
+        or not _volatility
+        or "unmeasured_axes" not in _volatility
+    ):
+        _volatility_coverage = 0.0
+
+    def _input_coverage(inputs):
+        return sum(1 for value in inputs.values() if _num(value)) / len(inputs) if inputs else 0.0
+
+    _axis_coverage = {
+        "graham_value": _input_coverage(_graham_inputs),
+        "canslim_growth": _input_coverage(_canslim_inputs),
+        "quant_quality": min(max(_quality_coverage, 0.0), 1.0),
+        "quant_volatility": min(max(_volatility_coverage, 0.0), 1.0),
+    }
+    if _axis_coverage["graham_value"] <= 0: _missing.add("graham_value")
+    if _axis_coverage["canslim_growth"] <= 0: _missing.add("canslim_growth")
+    if _axis_coverage["quant_quality"] <= 0: _missing.add("quant_quality")
+    if _axis_coverage["quant_volatility"] <= 0: _missing.add("quant_volatility")
+    _partial = sorted(k for k, ratio in _axis_coverage.items() if 0 < ratio < 1)
+
+    _total_w = sum(v for v in w.values() if isinstance(v, (int, float)) and v > 0)
+    _present_w = sum(
+        weight * _axis_coverage.get(key, 0.0 if key in _missing else 1.0)
+        for key, weight in w.items()
+        if isinstance(weight, (int, float)) and weight > 0
+    )
     data_coverage = (_present_w / _total_w) if _total_w > 0 else 0.0
 
-    # ── 🚨 G6 (PREREG_BASELINE_V1_LITERATURE_2026_08_16 §G4 → G6, 2026-08-20) ──
+    # ── 🚨 G6 진단 이력 (2026-08-20, 2026-08-31 해소) ──
     # data_coverage 는 **가중치로 가중된** 비율이라, 추적 결측 축과 가중 축의 교집합이
-    # 비면 어떤 입력에서도 정확히 1.0 이 된다. 지금이 그 상태다:
+    # 비면 어떤 입력에서도 정확히 1.0 이 된다. 2026-08-20 당시가 그 상태였다:
     #   · 가중치>0 = graham_value · canslim_growth · quant_quality · quant_volatility (4)
     #   · `_missing` 추적 = multi_factor · consensus · prediction · backtest · timing ·
     #     analyst_report · dart_health · perplexity_risk · us_fscore (9)
@@ -587,21 +675,25 @@ def _compute_fact_score(
     # 실제 약신호인가")이 그때부터 작동을 멈췄는데 **아무도 못 잡았다** —
     # 기존 테스트는 IC 동결용 `가중치 0` 분기를 조용히 타서 전부 통과한다
     # ([[feedback_green_check_is_not_safety]] 검사 통과 ≠ 안전).
-    # 🚨 산식 변경 0 · data_coverage 값 불변(계약 보존). 아래는 **신고만** 추가한다.
-    _weighted_axes = sorted(k for k in components if w.get(k, 0) > 0)
+    # 🚨 점수 산식 변경 0. 2026-08-31 활성 4축 분모에 연결해 커버리지 진단만 정상화했다.
+    # 2026-08-31 resolved: 활성 4축을 _missing과 원입력 분모에 연결해 상수 1.0 상태를 종료했다.
+    _weighted_axes = sorted(k for k, value in w.items() if isinstance(value, (int, float)) and value > 0)
     _overlap = sorted(set(_weighted_axes) & set(_TRACKED_MISSING_AXES))
     coverage_scope = {
         "weighted_axes": _weighted_axes,
         "weighted_axis_count": len(_weighted_axes),
         "tracked_missing_axes": sorted(_TRACKED_MISSING_AXES),
         "overlap_with_tracked": _overlap,
-        # 교집합이 비면 이 지표는 상수다 — 값이 1.0 이어도 "커버리지 완전" 을 뜻하지 않는다
         "is_degenerate": len(_overlap) == 0,
-        "note": (
-            "is_degenerate=true 이면 data_coverage 는 입력과 무관하게 1.0 이다. "
-            "커버리지 완전이 아니라 **측정 불능**을 뜻한다. "
-            "처분 = PREREG_BASELINE_V1_LITERATURE_2026_08_16 §G6."
-        ),
+        "axis_measurement": {
+            "graham_value": {"measured_inputs": sum(_num(v) for v in _graham_inputs.values()), "input_count": len(_graham_inputs), "coverage": round(_axis_coverage["graham_value"], 3)},
+            "canslim_growth": {"measured_inputs": sum(_num(v) for v in _canslim_inputs.values()), "input_count": len(_canslim_inputs), "coverage": round(_axis_coverage["canslim_growth"], 3)},
+            "quant_quality": {"measured_subaxis_weight": round(_axis_coverage["quant_quality"], 3), "subaxis_weight_total": 1.0, "coverage": round(_axis_coverage["quant_quality"], 3)},
+            "quant_volatility": {"measured_subaxis_weight": round(_axis_coverage["quant_volatility"], 3), "subaxis_weight_total": 1.0, "coverage": round(_axis_coverage["quant_volatility"], 3)},
+        },
+        "coverage_definition": "effective-weighted measured input share across active fact axes",
+        "is_measurable": bool(_weighted_axes and _overlap),
+        "note": "활성 가중 4축의 원입력과 하위축 분모로 측정한 진단값이며 점수에는 영향을 주지 않는다.",
     }
 
     total = 0.0
@@ -762,6 +854,7 @@ def _compute_fact_score(
         #   즉 **산출물만으로 점수를 재현할 수 없었다.** 여기 실가중을 실어 재현 가능하게 한다.
         "weights_effective": {k: round(v, 4) for k, v in w.items() if isinstance(v, (int, float)) and v > 0},
         "missing_components": sorted(_missing),
+        "partial_components": _partial,
         # 🚨 2026-08-18 (R6) — 팩터 **내부** 미측정 하위축. 점수 영향 0, 보고 전용.
         #   `missing_components`(바깥, 중립 50 대입)와 **정책이 다르다**: 안쪽은 못 잰 축을
         #   빼고 재정규화한다(8/17 시행). 둘을 나란히 실어야 어느 정책이 적용됐는지 보인다.

@@ -472,8 +472,7 @@ def _handle_approve_strategy() -> str:
     try:
         from api.intelligence.strategy_evolver import (
             _load_registry,
-            _save_registry,
-            apply_proposal,
+            approve_pending_proposal,
         )
         registry = _load_registry()
         pending = registry.get("pending_proposal")
@@ -482,15 +481,7 @@ def _handle_approve_strategy() -> str:
 
         proposal = pending["proposal"]
         bt_result = pending["backtest_result"]
-        new_ver = apply_proposal(proposal, bt_result)
-
-        registry["pending_proposal"] = None
-        stats = registry.get("cumulative_stats", {})
-        stats["hit_count"] = stats.get("hit_count", 0) + 1
-        accepted = stats.get("accepted", 0)
-        if accepted > 0:
-            stats["hit_rate_pct"] = round(stats["hit_count"] / accepted * 100, 1)
-        _save_registry(registry)
+        new_ver = approve_pending_proposal()
 
         return (
             f"<b>✅ 전략 v{new_ver} 승인 완료</b>\n\n"

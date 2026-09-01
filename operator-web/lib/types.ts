@@ -80,9 +80,16 @@ export type Vams = {
     holdings?: Holding[]
     total_return_pct?: number
     validation_report?: {
+        _meta?: {
+            evidence_status?: string
+            min_detectable?: { method?: string; unit?: string; n?: number; sigma_r?: number | null; effect_r?: number | null }
+            score_system?: { name?: string; is_operational?: boolean; rule_version?: string }
+            gate_metrics?: { required?: string[]; required_count?: number; measured?: string[]; measured_count?: number; missing?: string[] }
+        }
         overall?: string
-        window?: { start?: string; end?: string; days?: number }
-        sample_checks?: { days_ok?: boolean; trades_ok?: boolean; days_required?: number; trades_required?: number }
+        window?: { start?: string; end?: string; days?: number; rule_version?: string; used_by_gate?: boolean }
+        sample_checks?: { days_ok?: boolean; trades_ok?: boolean; days_required?: number; trades_required?: number; diagnostic_only?: boolean; gate_binding?: boolean }
+        legacy_diagnostic?: { window_start?: string; used_by_gate?: boolean; note?: string }
         metrics?: Record<string, GateMetric>
         computed_at?: string
     }

@@ -38,9 +38,13 @@ def test_coverage_scope_is_present_with_denominator():
     cs = _compute_fact_score(_stock(), portfolio={}).get("coverage_scope")
     assert cs is not None, "coverage_scope 가 산출물에서 사라졌다"
     for k in ("weighted_axes", "weighted_axis_count", "tracked_missing_axes",
-              "overlap_with_tracked", "is_degenerate"):
+              "overlap_with_tracked", "is_degenerate", "axis_measurement",
+              "coverage_definition", "is_measurable"):
         assert k in cs, f"coverage_scope.{k} 누락"
     assert cs["weighted_axis_count"] == len(cs["weighted_axes"])
+    assert set(cs["axis_measurement"]) == {
+        "graham_value", "canslim_growth", "quant_quality", "quant_volatility"
+    }
 
 
 def test_degeneracy_flag_is_honest_in_both_directions():
@@ -63,6 +67,15 @@ def test_degenerate_coverage_can_only_be_one():
             "교집합이 비었는데 coverage 가 1.0 이 아니다 — 축소 논증이 틀렸다는 뜻이므로 "
             "coverage_scope 의 근거 주석을 다시 확인할 것"
         )
+
+
+def test_active_fact_axes_are_all_tracked_and_empty_input_is_not_full_coverage():
+    out = _compute_fact_score({"ticker": "EMPTY"}, portfolio={})
+    cs = out["coverage_scope"]
+    assert set(cs["weighted_axes"]) <= set(cs["tracked_missing_axes"])
+    assert cs["is_degenerate"] is False
+    assert out["data_coverage"] < 1.0
+    assert set(cs["weighted_axes"]) <= set(out["missing_components"])
 
 
 def test_tracked_axes_match_code():
