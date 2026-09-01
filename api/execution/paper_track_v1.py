@@ -97,7 +97,9 @@ def _summary(state: Dict[str, Any], by_tk: Dict[str, Dict[str, Any]],
     target_snaps = state.get("target_snapshots") or {}
     targets = [target_snaps.get(tk) or {"ticker": tk} for tk in state.get("target_tickers", [])]
     denominator = state.get("last_denominator") or {}
-    halted = "v0_nonempty_migration_halted" in flags
+    halted = any(flag in flags for flag in (
+        "v0_nonempty_migration_halted", "v1_partial_state_halted",
+    ))
     status = "HALTED" if halted else ("RUNNING" if targets else "WAITING_FOR_ELIGIBLE_TARGETS")
     sessions_since = int(state.get("sessions_since_rebalance") or 0)
     return {
@@ -206,7 +208,7 @@ def run_paper_track_v1(
         "holiday_calendar": "not_connected",
     }
 
-    if migration == "v0_nonempty_migration_halted":
+    if migration in ("v0_nonempty_migration_halted", "v1_partial_state_halted"):
         flags.append("manual_epoch_decision_required")
         return _summary(state, by_tk, flags, now_fn)
     if state.get("last_date") == today and migration is None:

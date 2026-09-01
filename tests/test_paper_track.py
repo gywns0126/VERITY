@@ -158,6 +158,54 @@ def test_nonempty_v0_state_halts_without_mixing_epochs(tmp_path):
     assert "manual_epoch_decision_required" in s["flags"]
 
 
+def test_partial_empty_v1_state_recovers_before_same_day_guard(tmp_path):
+    partial = {
+        "version": pt.TRACK_VERSION,
+        "formula_version": pt.FORMULA_VERSION,
+        "initialized": "2026-09-02",
+        "epoch_started": "2026-09-02",
+        "cash": 10_000_000.0,
+        "positions": {},
+        "pending": [],
+        "last_date": pt._now().strftime("%Y-%m-%d"),
+        "trades": 0,
+        "realized_pnl": 0.0,
+        "cost_paid": 0.0,
+        "equity_curve": [],
+        "benchmark_start": None,
+    }
+    (tmp_path / "exec_paper_state.json").write_text(json.dumps(partial), encoding="utf-8")
+    s = _run([_rec(final="WATCH", aligned=False, badge="WATCH")], tmp_path)
+    assert s["status"] == "RUNNING"
+    assert s["pending"] == 1
+    assert "recovered_partial_empty_v1" in s["flags"]
+    assert "already_ran_today" not in s["flags"]
+
+
+def test_partial_active_v1_state_halts_without_losing_position(tmp_path):
+    partial = {
+        "version": pt.TRACK_VERSION,
+        "formula_version": pt.FORMULA_VERSION,
+        "initialized": "2026-09-02",
+        "epoch_started": "2026-09-02",
+        "cash": 9_000_000.0,
+        "positions": {"005930": {"qty": 10, "buy_price": 100_000.0, "buy_date": "2026-09-02"}},
+        "pending": [],
+        "last_date": pt._now().strftime("%Y-%m-%d"),
+        "trades": 1,
+        "realized_pnl": 0.0,
+        "cost_paid": 0.0,
+        "equity_curve": [],
+        "benchmark_start": None,
+    }
+    (tmp_path / "exec_paper_state.json").write_text(json.dumps(partial), encoding="utf-8")
+    s = _run([_rec(final="WATCH", aligned=False, badge="WATCH", price=100_000.0)], tmp_path)
+    assert s["status"] == "HALTED"
+    assert "005930" in s["positions"]
+    assert "v1_partial_state_halted" in s["flags"]
+    assert "manual_epoch_decision_required" in s["flags"]
+
+
 def test_same_price_fingerprint_does_not_add_market_session(tmp_path):
     first = _run([_rec(final="WATCH", aligned=False, badge="WATCH")], tmp_path)
     assert first["market_sessions"] == 1

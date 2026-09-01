@@ -190,6 +190,22 @@ def _migrate_state(state: Optional[Dict[str, Any]], today: str) -> tuple[Dict[st
     if not state:
         return _new_state(today), "initialized_v1"
     if state.get("version") == TRACK_VERSION:
+        required = set(_new_state(today))
+        missing = sorted(required.difference(state))
+        if missing:
+            active = bool(state.get("positions") or state.get("pending") or state.get("trades"))
+            if active:
+                state["integrity_missing_keys"] = missing
+                return state, "v1_partial_state_halted"
+            recovered = _new_state(today)
+            recovered["recovered_from"] = {
+                "version": state.get("version"),
+                "initialized": state.get("initialized"),
+                "last_date": state.get("last_date"),
+                "trades": state.get("trades", 0),
+                "missing_keys": missing,
+            }
+            return recovered, "recovered_partial_empty_v1"
         fresh = _new_state(today)
         fresh.update(state)
         return fresh, None
