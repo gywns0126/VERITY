@@ -23,6 +23,9 @@ import pytest
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _VERCEL_JSON = os.path.join(_ROOT, "vercel-api", "vercel.json")
+_ROOT_PACKAGE_JSON = os.path.join(_ROOT, "package.json")
+_ROOT_PACKAGE_LOCK = os.path.join(_ROOT, "package-lock.json")
+_DATA_PACKAGE_JSON = os.path.join(_ROOT, "data", "package.json")
 
 
 @pytest.fixture(scope="module")
@@ -37,6 +40,33 @@ def ignore_cmd() -> str:
 def test_guard_scopes_to_vercel_api(ignore_cmd: str):
     """가드가 vercel-api/ 경로만 보고 판단해야 함 (데이터 커밋에 반응 금지)."""
     assert "-- vercel-api/" in ignore_cmd, "경로 스코프(-- vercel-api/) 소실"
+
+
+def test_high_frequency_data_commits_are_an_independent_workspace():
+    """자동 data/** 커밋을 두 Vercel 앱의 전역 변경으로 오인하지 않게 한다.
+
+    Vercel의 Skip Unaffected Projects는 워크스페이스 밖 변경을 전역 변경으로 본다.
+    data를 독립 워크스페이스로 선언해야 데이터 커밋이 verity-api와
+    operator-web 빌드를 만들지 않는다. 기존 ignoreCommand는 2차 방어로 유지한다.
+    """
+    with open(_ROOT_PACKAGE_JSON, encoding="utf-8") as f:
+        root_package = json.load(f)
+    with open(_ROOT_PACKAGE_LOCK, encoding="utf-8") as f:
+        root_lock = json.load(f)
+    with open(_DATA_PACKAGE_JSON, encoding="utf-8") as f:
+        data_package = json.load(f)
+
+    workspaces = root_package.get("workspaces")
+    assert isinstance(workspaces, list), "루트 package.json에 npm workspaces 목록이 필요함"
+    assert {"data", "operator-web", "vercel-api"}.issubset(set(workspaces)), (
+        "data/operator-web/vercel-api 경계가 불완전하면 data 커밋이 전역 변경으로 보일 수 있음"
+    )
+    assert data_package.get("name") == "@verity/data"
+    assert data_package.get("private") is True
+    lock_packages = root_lock.get("packages", {})
+    assert {"data", "operator-web", "vercel-api"}.issubset(lock_packages), (
+        "루트 package-lock.json에 워크스페이스 그래프가 없으면 Vercel이 경로 영향을 계산할 수 없음"
+    )
 
 
 def test_guard_window_is_wide_enough(ignore_cmd: str):
