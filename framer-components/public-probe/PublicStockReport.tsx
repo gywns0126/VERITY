@@ -182,6 +182,12 @@ function bfLogoSrc(
     const tk = String(ticker || "")
         .toUpperCase()
         .replace(/-/g, ".")
+    // 🚨 2026-07-27 로딩 폴백 깜빡임 제거 — 6자리 KR 티커의 토스 URL 은 결정적이라 맵을 기다릴 이유가 없다.
+    //   기존엔 logo_map.json(771KB) 도착 전까지 src 가 빈 문자열이라 이니셜 타일이 잠깐 보였고,
+    //   그 타일 색이 티커 해시(005930 → 305° 자주)라 "삼성인데 왜 보라" 로 읽혔다(PM 2026-07-27).
+    //   NewsTab 은 이미 직접 조립 방식이라 깜빡임이 없었다 — 같은 방식으로 통일.
+    if (/^\d{6}$/.test(tk))
+        return "https://static.toss.im/png-icons/securities/icn-sec-fill-" + tk + ".png"
     const p = (lm && (lm[tk] || lm[tk.replace(/\./g, "-")])) || "" // 맵 전용 — 미검증 경로 = B 플레이스홀더 위험(2026-07-10)
     if (!p) return ""
     if (p.indexOf("http") === 0) return p // 폴백 소스(nvstly·공식 파비콘) = 절대 URL 그대로
@@ -797,6 +803,9 @@ function Logo(props: {
     const [err, setErr] = useState(false)
     const lm = useBfLogoMap()
     const bfSrc = bfLogoSrc(ticker, lm, size)
+    // 맵이 필요한 티커(해외 등)인데 아직 안 온 상태 = "로고 없음" 이 아니라 "모름".
+    //   색 있는 이니셜을 띄우면 브랜드색 오인이라 중립 회색 타일로 대기한다.
+    const awaitingMap = !bfSrc && lm === null && !/^\d{6}$/.test(String(ticker || ""))
     const ch =
         String(name || "?")
             .trim()
@@ -832,6 +841,16 @@ function Logo(props: {
                         boxSizing: "border-box",
                         display: "block",
                         background: bfLogoBg(ticker),
+                    }}
+                />
+            ) : awaitingMap ? (
+                <span
+                    style={{
+                        width: size,
+                        height: size,
+                        borderRadius: Math.round(size * 0.32),
+                        background: C.grid || C.line,
+                        display: "block",
                     }}
                 />
             ) : (
