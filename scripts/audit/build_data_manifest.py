@@ -44,6 +44,7 @@ GITIGNORE = os.path.join(ROOT, ".gitignore")
 SLA = os.path.join(ROOT, "data", "freshness_sla.json")
 CONTRACTS = os.path.join(ROOT, "data", "contracts")
 CODE_DIRS = ["api", "scripts", "server", "vercel-api", ".github"]
+NON_ARTIFACT_DATA_PATHS = {"data/package.json"}
 
 
 def _read(p: str) -> str:
@@ -67,7 +68,7 @@ def in_scope() -> list[str]:
     all_tracked = tracked_all()
     scope = {t for t in all_tracked if t.count("/") == 1}
     scope |= {t for t in all_tracked if os.path.basename(t) in pub}
-    return sorted(scope)
+    return sorted(scope - NON_ARTIFACT_DATA_PATHS)
 
 
 def publish_names() -> set[str]:
