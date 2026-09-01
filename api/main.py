@@ -2745,7 +2745,9 @@ def main():
 
     if not candidates:
         # universe_scan cron 결함 또는 첫 운영. daily_analysis 가 5000 inline scan 절대 X.
-        # 주말 = silent skip (도래 0 정상, 알림 노이즈 차단), 평일 = 텔레그램 critical.
+        # 🚨 직접 텔레그램 발송 금지: daily_analysis(매시 :07)가 지연된 universe_scan보다
+        # 먼저 도착하는 정상 경계에서도 같은 문구가 반복됐다. 여기서는 exit 1로 다음 cron
+        # 재시도와 실행 이력만 남기고, 실제 연속 결함 알림은 cron_health_monitor 단일 경로가 맡는다.
         abort_msg = (
             f"⚠️ <b>VERITY daily_analysis 중단</b>\n"
             f"universe_candidates.json 없음 또는 {max_stale_hours}h stale.\n"
@@ -2753,14 +2755,7 @@ def main():
             f"(daily_analysis 는 5000 inline scan 안 함 — 분리 sprint 의도 정합)"
         )
         print(f"  {abort_msg}")
-        if not is_weekend:
-            try:
-                from api.notifications.telegram import send_message
-                send_message(abort_msg, bypass_quiet=True, dedupe=False)
-            except Exception as _e:
-                print(f"  텔레그램 alert FAIL: {_e}")
-        else:
-            print(f"  주말 = 텔레그램 silent (universe_scan cron 평일만, 자연 baseline)")
+        print("  텔레그램 silent · 연속 결함은 cron_health_monitor에서 단일 알림")
         import sys as _sys
         _sys.exit(1)
 
