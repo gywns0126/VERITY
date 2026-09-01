@@ -32,6 +32,51 @@ _US_REPORT_PATHS = (
     os.path.join(_ROOT, "data", "us_stock_report_public.json"),
     os.path.join(_ROOT, "data", "us_stock_report_us_smallcap.json"),
 )
+
+# 직접 원자재 검색 진입점. ETF/ETN 대체상품과 혼동하지 않도록 합성 id와
+# underlying_symbol을 분리한다. 가격은 이 인덱스에 싣지 않는다.
+_COMMODITY_UNIVERSE = (
+    ("CMD_GOLD", "금 선물 연속물", "GC=F", "귀금속", "USD", "트로이온스", "COMEX", "금 골드 gold"),
+    ("CMD_SILVER", "은 선물 연속물", "SI=F", "귀금속", "USD", "트로이온스", "COMEX", "은 실버 silver"),
+    ("CMD_COPPER", "구리 선물 연속물", "HG=F", "산업금속", "USD", "파운드", "COMEX", "구리 copper 동"),
+    ("CMD_WTI", "WTI 원유 선물 연속물", "CL=F", "에너지", "USD", "배럴", "NYMEX", "원유 유가 오일 wti crude oil"),
+    ("CMD_BRENT", "브렌트유 선물 연속물", "BZ=F", "에너지", "USD", "배럴", "ICE", "브렌트 원유 유가 brent crude oil"),
+    ("CMD_NATGAS", "천연가스 선물 연속물", "NG=F", "에너지", "USD", "MMBtu", "NYMEX", "천연가스 가스 natural gas"),
+    ("CMD_CORN", "옥수수 선물 연속물", "ZC=F", "농산물", "USD", "부셸", "CBOT", "옥수수 corn"),
+    ("CMD_WHEAT", "밀 선물 연속물", "ZW=F", "농산물", "USD", "부셸", "CBOT", "밀 소맥 wheat"),
+    ("CMD_SOYBEAN", "대두 선물 연속물", "ZS=F", "농산물", "USD", "부셸", "CBOT", "대두 콩 soybean"),
+    ("CMD_COFFEE", "커피 선물 연속물", "KC=F", "농산물", "USD", "파운드", "ICE", "커피 coffee"),
+    ("CMD_SUGAR", "설탕 선물 연속물", "SB=F", "농산물", "USD", "파운드", "ICE", "설탕 원당 sugar"),
+    ("CMD_COTTON", "면화 선물 연속물", "CT=F", "농산물", "USD", "파운드", "ICE", "면화 cotton"),
+)
+
+
+def _append_commodity_universe(uni, seen):
+    """검색용 직접 원자재 12종을 추가한다. 시세·추천·수익률은 포함하지 않는다."""
+    added = 0
+    for ticker, name, symbol, group, currency, unit, exchange, keywords in _COMMODITY_UNIVERSE:
+        if ticker in seen:
+            continue
+        seen.add(ticker)
+        uni.append({
+            "ticker": ticker,
+            "name": name,
+            "name_ko": name,
+            "market": "원자재",
+            "type": "commodity",
+            "report_kind": "commodity",
+            "instrument_type": "continuous_future",
+            "underlying_symbol": symbol,
+            "commodity_group": group,
+            "currency": currency,
+            "unit": unit,
+            "exchange": exchange,
+            "kw": f"{keywords} 원자재 선물 연속물 commodity futures",
+        })
+        added += 1
+    return added
+
+
 def _build_unified_universe(kr_uni):
     """KR universe(KRX) + KR/US report slim 병합 → 통합 검색 universe 발행.
     🚨 KRX universe 콜이 메인보드 대형주(삼성전자·SK하이닉스 등)를 누락 → 리포트 보유 종목 union 으로 보강
@@ -148,6 +193,7 @@ def _build_unified_universe(kr_uni):
                 _idx_n += 1
         except Exception:  # noqa: BLE001 — kr_index_daily 부재 graceful
             pass
+        commodity_n = _append_commodity_universe(uni, seen)
         # 🚨 2026-07-27 한글 검색 별칭 주입 — 국내 종목은 name_ko 가 전부 비어 있어(전수 검사)
         #   이름이 라틴인 135종("NAVER"·"S-Oil"·"KODEX 200" 등)을 한글로 못 찾았다.
         #   검색창은 name·ticker·name_ko·kw 를 보므로 여기서 한 번에 채운다(브랜드 토큰 치환이라
@@ -177,9 +223,10 @@ def _build_unified_universe(kr_uni):
 
         udoc = {
             "_meta": {"generated_at": datetime.now(KST).isoformat(),
-                      "count": len(uni), "kr": len(kr_uni) + kr_rep_n, "us": us_n, "kr_report_union": kr_rep_n,
-                      "source": "KRX universe(KR/ETF/ETN/KONEX) + KR/US report(보유 종목 union) slim 병합 — "
-                                "검색창 4종 단일 소스. ticker/name 사실. 점수·추천 0."},
+                      "count": len(uni), "kr": len(kr_uni) + kr_rep_n, "us": us_n,
+                      "commodity": commodity_n, "kr_report_union": kr_rep_n,
+                      "source": "KRX universe(KR/ETF/ETN/KONEX) + KR/US report(보유 종목 union) + "
+                                "직접 원자재 식별자 12종 slim 병합 — 검색 공통 소스. 가격·점수·추천 0."},
             "stocks": uni,
         }
         with open(UNIVERSE_SEARCH_ALL_PATH, "w", encoding="utf-8") as f:

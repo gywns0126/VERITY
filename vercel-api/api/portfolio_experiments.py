@@ -83,12 +83,22 @@ def _clean_assets(value):
         ticker = str(raw.get("ticker") or "").strip()[:20]
         name = str(raw.get("name_ko") or raw.get("name") or ticker).strip()[:100]
         market = str(raw.get("market") or "").strip()[:12]
+        asset_type = str(raw.get("type") or "").strip()[:24]
+        instrument_type = str(raw.get("instrument_type") or "").strip()[:32]
+        underlying_symbol = str(raw.get("underlying_symbol") or "").strip()[:20]
         try:
             weight = round(float(raw.get("weight") or 0), 2)
         except (TypeError, ValueError):
             weight = 0
         if ticker and 0 <= weight <= 100:
-            out.append({"ticker": ticker, "name": name, "market": market, "weight": weight})
+            item = {"ticker": ticker, "name": name, "market": market, "weight": weight}
+            if asset_type:
+                item["type"] = asset_type
+            if instrument_type:
+                item["instrument_type"] = instrument_type
+            if underlying_symbol:
+                item["underlying_symbol"] = underlying_symbol
+            out.append(item)
     if not out or abs(sum(x["weight"] for x in out) - 100) > 0.02:
         return None
     return out
@@ -222,4 +232,3 @@ class handler(BaseHTTPRequestHandler):
             return _json(self, {"ok": True})
         except Exception:
             return _json(self, {"error": "삭제하지 못했어요"}, 500)
-
