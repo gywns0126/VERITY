@@ -30,6 +30,71 @@ DISC_FEED_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/public_
 _EVENT_CATS = {"공시", "실적", "계약·수주", "M&A·지분", "인사"}
 _disc_index = None  # {ticker: {date: {title,url}}} 모듈 캐시(콜드 컨테이너당 1회 fetch)
 
+# 직접 원자재 검색 유니버스와 동일한 12종. 검색어와 제목 필터를 분리해
+# 일반 경제 뉴스가 원자재 카드에 섞이는 것을 줄인다.
+COMMODITY_TOPICS = {
+    "CMD_GOLD": {
+        "name": "금",
+        "query": "국제 금값",
+        "terms": ("금값", "금 가격", "금 선물", "국제 금", "gold"),
+    },
+    "CMD_SILVER": {
+        "name": "은",
+        "query": "국제 은 가격",
+        "terms": ("은값", "은 가격", "은 선물", "silver"),
+    },
+    "CMD_COPPER": {
+        "name": "구리",
+        "query": "국제 구리 가격",
+        "terms": ("구리", "copper"),
+    },
+    "CMD_WTI": {
+        "name": "WTI 원유",
+        "query": "WTI 국제유가",
+        "terms": ("wti", "서부텍사스유", "국제유가", "원유"),
+    },
+    "CMD_BRENT": {
+        "name": "브렌트유",
+        "query": "브렌트유",
+        "terms": ("브렌트", "brent"),
+    },
+    "CMD_NATGAS": {
+        "name": "천연가스",
+        "query": "천연가스 가격",
+        "terms": ("천연가스", "natural gas"),
+    },
+    "CMD_CORN": {
+        "name": "옥수수",
+        "query": "국제 옥수수 가격",
+        "terms": ("옥수수", "corn"),
+    },
+    "CMD_WHEAT": {
+        "name": "밀",
+        "query": "국제 밀 가격",
+        "terms": ("밀값", "밀 가격", "밀 선물", "소맥", "wheat"),
+    },
+    "CMD_SOYBEAN": {
+        "name": "대두",
+        "query": "국제 대두 가격",
+        "terms": ("대두", "soybean"),
+    },
+    "CMD_COFFEE": {
+        "name": "커피",
+        "query": "국제 커피 원두 가격",
+        "terms": ("커피 원두", "커피 선물", "아라비카", "coffee"),
+    },
+    "CMD_SUGAR": {
+        "name": "설탕",
+        "query": "국제 원당 가격",
+        "terms": ("원당", "설탕 선물", "sugar"),
+    },
+    "CMD_COTTON": {
+        "name": "면화",
+        "query": "국제 면화 가격",
+        "terms": ("면화", "cotton"),
+    },
+}
+
 # 출처 신뢰 사전 (news_headlines.CREDIBLE_SOURCES 동기 — 1차 출처 >=4).
 CREDIBLE_SOURCES = {
     "한국경제": 5, "매일경제": 5, "서울경제": 4, "조선비즈": 4,
@@ -272,6 +337,75 @@ def _name_in_title(name, title):
         return name in title
 
 
+def _commodity_title_matches(title, terms):
+    lowered = (title or "").lower()
+    return any(str(term).lower() in lowered for term in terms)
+
+
+def fetch_commodity_news(code, max_items=15):
+    topic = COMMODITY_TOPICS.get(str(code).upper())
+    if not topic:
+        return []
+
+    now = datetime.utcnow()
+    raw = []
+    try:
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            f_naver = ex.submit(_fetch_search_api, topic["query"], 30)
+            f_google = ex.submit(_fetch_google_news, topic["query"], 30)
+            raw = (f_naver.result() or []) + (f_google.result() or [])
+    except Exception as e:  # noqa: BLE001
+        _logger.warning("commodity news 병렬 fetch 실패: %s", e)
+        raw = _fetch_search_api(topic["query"], 30)
+
+    clusters = {}
+    for it in raw:
+        title = it.get("title") or ""
+        if not title or not _commodity_title_matches(title, topic["terms"]):
+            continue
+        key = _norm_title(title)
+        if not key:
+            continue
+        source = (it.get("source") or "").strip()
+        cred = CREDIBLE_SOURCES.get(source, 2)
+        dt = _parse_dt(it.get("datetime"))
+        current = clusters.get(key)
+        if current is None:
+            clusters[key] = {
+                "item": it,
+                "cred": cred,
+                "dt": dt,
+                "outlets": {source} if source else set(),
+            }
+        else:
+            if source:
+                current["outlets"].add(source)
+            if cred > current["cred"]:
+                current["item"], current["cred"], current["dt"] = it, cred, dt
+
+    out = []
+    for cluster in clusters.values():
+        item, dt = cluster["item"], cluster["dt"]
+        out.append({
+            "title": item.get("title") or "",
+            "url": item.get("url") or "",
+            "source": item.get("source") or "",
+            "category": "가격·시장",
+            "credibility": cluster["cred"],
+            "credible": cluster["cred"] >= 4,
+            "outlets": max(1, len(cluster["outlets"])),
+            "datetime": item.get("datetime") or "",
+            "rel_time": _rel_time(dt, now),
+            "related_disclosure": None,
+            "_sort": dt.timestamp() if dt else 0,
+        })
+
+    out.sort(key=lambda item: item["_sort"], reverse=True)
+    for item in out:
+        item.pop("_sort", None)
+    return out[:max_items]
+
+
 def fetch_stock_news(code, name="", max_items=15, pages=2):
     now = datetime.utcnow()  # dt_s(UTC naive)와 정합 (Vercel/로컬 TZ 무관)
     nm = (name or "").strip()
@@ -354,8 +488,20 @@ class handler(BaseHTTPRequestHandler):
             qs = parse_qs(urlparse(self.path).query)
             code = (qs.get("code", [""])[0] or qs.get("q", [""])[0] or "").strip()
             name = (qs.get("name", [""])[0] or "").strip() or _resolve_name(code)
-            if not re.fullmatch(r"\d{6}", code):
-                body = json.dumps({"error": "code=6자리 종목코드 필요", "items": []}, ensure_ascii=False)
+            commodity = COMMODITY_TOPICS.get(code.upper())
+            if commodity:
+                items = fetch_commodity_news(code)
+                body = json.dumps({
+                    "code": code.upper(),
+                    "asset_type": "commodity",
+                    "name": commodity["name"],
+                    "count": len(items),
+                    "items": items,
+                    "note": "네이버 검색 API · Google News RSS · 원자재 관련 제목만",
+                }, ensure_ascii=False)
+                cache = "public, max-age=300, s-maxage=300"
+            elif not re.fullmatch(r"\d{6}", code):
+                body = json.dumps({"error": "code=6자리 종목코드 또는 CMD_* 필요", "items": []}, ensure_ascii=False)
                 cache = "no-store"
             else:
                 items = fetch_stock_news(code, name)

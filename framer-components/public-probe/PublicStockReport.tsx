@@ -329,8 +329,16 @@ const CROSS_US_URL =
 const NAVER_QUANT = "https://finance.naver.com/sise/sise_quant.naver"
 // 2026-07-11 정정 — 옛 /sise/trade = 404(네이버 경로 변경). 모바일/PC UA 양쪽 200 실측.
 const M_NAVER_QUANT = "https://m.stock.naver.com/domestic/home/trading/KOSPI"
+// KRX 단축코드는 숫자로 시작하는 6자리 영숫자다. 신규 ETF/ETN의 영문 포함 코드도 국내로 유지한다.
+function isKrSecurityCode(tk: any): boolean {
+    return /^\d[0-9A-Z]{5}$/i.test(String(tk || "").trim())
+}
+function isExplicitTickerQuery(raw: any): boolean {
+    const q = String(raw || "").trim()
+    return isKrSecurityCode(q) || /^[A-Z][A-Z0-9.-]{0,9}$/.test(q)
+}
 function naverStockUrl(tk: string): string {
-    if (!/^\d{6}$/.test(String(tk || ""))) return ""
+    if (!isKrSecurityCode(tk)) return ""
     const mobile = typeof window !== "undefined" && window.innerWidth < 720
     return mobile
         ? "https://m.stock.naver.com/domestic/stock/" + tk + "/total"
@@ -919,7 +927,9 @@ function anWriteCcy(v: string) {
     }
 }
 function useAnCcy(onCanvas: boolean): [string, (v: string) => void] {
-    const [ccy, setCcy] = useState<string>(() => (onCanvas ? "USD" : anReadCcy()))
+    const [ccy, setCcy] = useState<string>(() =>
+        onCanvas ? "USD" : anReadCcy()
+    )
     useEffect(() => {
         if (onCanvas) return
         const read = () => setCcy(anReadCcy())
@@ -931,9 +941,18 @@ function useAnCcy(onCanvas: boolean): [string, (v: string) => void] {
             window.removeEventListener("storage", read)
         }
     }, [onCanvas])
-    return [ccy, (v: string) => { setCcy(v); anWriteCcy(v) }]
+    return [
+        ccy,
+        (v: string) => {
+            setCcy(v)
+            anWriteCcy(v)
+        },
+    ]
 }
-function useAnFx(onCanvas: boolean, need: boolean): { rate: number; asOf: string; ok: boolean } {
+function useAnFx(
+    onCanvas: boolean,
+    need: boolean
+): { rate: number; asOf: string; ok: boolean } {
     const [fx, setFx] = useState<any>(null)
     useEffect(() => {
         if (onCanvas || !need || fx) return
@@ -1274,7 +1293,7 @@ function EtfReportBlock({
         doc && Array.isArray(doc.etfs)
             ? doc.etfs.find((x: any) => String(x.ticker) === String(ticker))
             : null
-    const isUs = !/^[0-9]{6}$/.test(String(ticker)) // 알파벳 티커=US ETF(us_etf.json) / 6자리=KR(etf_flow)
+    const isUs = !isKrSecurityCode(ticker) // 숫자로 시작하는 6자리 영숫자=KRX / 그 외=US
     // 통화 토글 — 미국 ETF 만 환산 대상(국내는 이미 원화)
     const _onCanvasE = RenderTarget.current() === RenderTarget.canvas
     const [ccy, setCcy] = useAnCcy(_onCanvasE)
@@ -1296,7 +1315,9 @@ function EtfReportBlock({
     useEffect(() => {
         setHoldChg({})
         if (isUs || !holdKey) return
-        const codes = holdKey.split(",").filter((c: string) => /^\d{6}$/.test(c))
+        const codes = holdKey
+            .split(",")
+            .filter((c: string) => /^\d{6}$/.test(c))
         if (!codes.length) return
         let alive = true
         fetch(CLOSE_LATEST_URL)
@@ -1742,7 +1763,8 @@ function EtfReportBlock({
         if (!lhOk) return null
         const arr = lhNav.filter((x) => isFinite(x) && x > 0)
         const rets: number[] = []
-        for (let i2 = 1; i2 < arr.length; i2++) rets.push(arr[i2] / arr[i2 - 1] - 1)
+        for (let i2 = 1; i2 < arr.length; i2++)
+            rets.push(arr[i2] / arr[i2 - 1] - 1)
         const mean = rets.reduce((a2, b2) => a2 + b2, 0) / (rets.length || 1)
         const varc =
             rets.reduce((a2, b2) => a2 + (b2 - mean) * (b2 - mean), 0) /
@@ -1768,7 +1790,8 @@ function EtfReportBlock({
         for (let i2 = 0; i2 < (LH.c || []).length; i2++) {
             const c2 = Number(LH.c[i2]),
                 v2 = Number(LH.v[i2])
-            if (isFinite(c2) && isFinite(v2) && v2) prems.push(((c2 - v2) / v2) * 100)
+            if (isFinite(c2) && isFinite(v2) && v2)
+                prems.push(((c2 - v2) / v2) * 100)
         }
         const premAvgL = prems.length
             ? prems.reduce((a2, b2) => a2 + b2, 0) / prems.length
@@ -1779,7 +1802,9 @@ function EtfReportBlock({
     const premOf = (x: any) => {
         const c2 = Number(x.close),
             n2 = Number(x.nav)
-        return isFinite(c2) && isFinite(n2) && n2 ? ((c2 - n2) / n2) * 100 : null
+        return isFinite(c2) && isFinite(n2) && n2
+            ? ((c2 - n2) / n2) * 100
+            : null
     }
 
     return (
@@ -1917,7 +1942,10 @@ function EtfReportBlock({
                                     {" "}
                                     · 환율{" "}
                                     {Math.round(fxInfo.rate).toLocaleString()}
-                                    원/$ ({String(fxInfo.asOf).slice(5, 16).replace("T", " ")}{" "}
+                                    원/$ (
+                                    {String(fxInfo.asOf)
+                                        .slice(5, 16)
+                                        .replace("T", " ")}{" "}
                                     기준)
                                 </>
                             ) : null}
@@ -2047,8 +2075,8 @@ function EtfReportBlock({
                                     lineHeight: 1.5,
                                 }}
                             >
-                                회전율 = 1년간 보유종목을 갈아치운 비율. 높을수록
-                                매매비용·과세 이연 불리가 커져요.
+                                회전율 = 1년간 보유종목을 갈아치운 비율.
+                                높을수록 매매비용·과세 이연 불리가 커져요.
                             </div>
                         </div>
                     )}
@@ -2132,10 +2160,7 @@ function EtfReportBlock({
                                         ? kv("PSR", String(e.equity_stats.psr))
                                         : null}
                                     {e.equity_stats.pcf != null
-                                        ? kv(
-                                              "P/CF",
-                                              String(e.equity_stats.pcf)
-                                          )
+                                        ? kv("P/CF", String(e.equity_stats.pcf))
                                         : null}
                                 </div>
                             </div>
@@ -2157,14 +2182,18 @@ function EtfReportBlock({
                                     <div
                                         key={i2}
                                         onClick={() =>
-                                            onPick ? onPick(String(h.t || "")) : null
+                                            onPick
+                                                ? onPick(String(h.t || ""))
+                                                : null
                                         }
                                         style={{
                                             display: "flex",
                                             alignItems: "center",
                                             gap: 8,
                                             padding: "5px 0",
-                                            cursor: onPick ? "pointer" : "default",
+                                            cursor: onPick
+                                                ? "pointer"
+                                                : "default",
                                             borderTop:
                                                 i2 === 0
                                                     ? "none"
@@ -2237,8 +2266,8 @@ function EtfReportBlock({
                                             0,
                                             100 - Number(e.top_w_sum)
                                         ).toFixed(1)}
-                                        %는 그 아래 종목들 (소스가 상위 10종까지만
-                                        제공)
+                                        %는 그 아래 종목들 (소스가 상위
+                                        10종까지만 제공)
                                     </div>
                                 )}
                             </div>
@@ -2462,7 +2491,13 @@ function EtfReportBlock({
                         표본이 20일 미만이면 카드 자체를 렌더하지 않음(신규 상장). */}
                     {lhOk && lhStats && (
                         <div style={card}>
-                            <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 2 }}>
+                            <div
+                                style={{
+                                    fontSize: 13.5,
+                                    fontWeight: 800,
+                                    marginBottom: 2,
+                                }}
+                            >
                                 장기 관측 · NAV 기준
                             </div>
                             <div
@@ -2473,12 +2508,19 @@ function EtfReportBlock({
                                     marginBottom: 10,
                                 }}
                             >
-                                최근 {lhStats.n}거래일 ({String(LH.d[0]).slice(2, 4)}.
+                                최근 {lhStats.n}거래일 (
+                                {String(LH.d[0]).slice(2, 4)}.
                                 {String(LH.d[0]).slice(4, 6)} ~{" "}
                                 {String(LH.d[LH.d.length - 1]).slice(2, 4)}.
                                 {String(LH.d[LH.d.length - 1]).slice(4, 6)})
                             </div>
-                            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    gap: 12,
+                                    flexWrap: "wrap",
+                                }}
+                            >
                                 {[
                                     ["1개월", retOver(21)],
                                     ["3개월", retOver(63)],
@@ -2489,7 +2531,9 @@ function EtfReportBlock({
                                         ? null
                                         : kv(
                                               String(lb),
-                                              (rv >= 0 ? "+" : "") + rv.toFixed(2) + "%",
+                                              (rv >= 0 ? "+" : "") +
+                                                  rv.toFixed(2) +
+                                                  "%",
                                               rv >= 0 ? C.up : C.down
                                           )
                                 )}
@@ -2502,7 +2546,10 @@ function EtfReportBlock({
                                     marginTop: 12,
                                 }}
                             >
-                                {kv("변동성 (연율)", lhStats.vol.toFixed(1) + "%")}
+                                {kv(
+                                    "변동성 (연율)",
+                                    lhStats.vol.toFixed(1) + "%"
+                                )}
                                 {kv("최대 낙폭", lhStats.mdd.toFixed(1) + "%")}
                                 {kv(
                                     "누적 순설정",
@@ -2531,9 +2578,10 @@ function EtfReportBlock({
                                     lineHeight: 1.5,
                                 }}
                             >
-                                수익률·변동성·최대 낙폭 = NAV 기준 관측치 (분배금 미반영,
-                                종가 아님) · 변동성은 일간 변화의 연율 환산 · 최대 낙폭은 크기
-                                · 과거 구간 사실이며 앞으로의 성과를 뜻하지 않아요
+                                수익률·변동성·최대 낙폭 = NAV 기준 관측치
+                                (분배금 미반영, 종가 아님) · 변동성은 일간
+                                변화의 연율 환산 · 최대 낙폭은 크기 · 과거 구간
+                                사실이며 앞으로의 성과를 뜻하지 않아요
                             </div>
                         </div>
                     )}
@@ -2577,25 +2625,18 @@ function EtfReportBlock({
                                 <span style={{ flex: 1, minWidth: 0 }}>
                                     종목
                                 </span>
-                                <span
-                                    style={{ width: 58, textAlign: "right" }}
-                                >
+                                <span style={{ width: 58, textAlign: "right" }}>
                                     총보수
                                 </span>
-                                <span
-                                    style={{ width: 72, textAlign: "right" }}
-                                >
+                                <span style={{ width: 72, textAlign: "right" }}>
                                     순자산
                                 </span>
-                                <span
-                                    style={{ width: 56, textAlign: "right" }}
-                                >
+                                <span style={{ width: 56, textAlign: "right" }}>
                                     괴리율
                                 </span>
                             </div>
                             {peerRows.map((x: any, i2: number) => {
-                                const self =
-                                    String(x.ticker) === String(ticker)
+                                const self = String(x.ticker) === String(ticker)
                                 const p2 = premOf(x)
                                 return (
                                     <div
@@ -4244,13 +4285,83 @@ function CashflowWaterfall({
     )
 }
 
-/* 동종업계 백분위 스트립 (2026-07-12) — 이 종목이 같은 섹터 분포 안에서 어디쯤인가.
-   데이터의 일 = 단일 값의 '분포 내 위치' → 0~100 트랙 위의 점 (막대 아님. 크기가 아니라 위치가 정보).
-   기존엔 탭해야 나오는 6px 마커라 사실상 안 보였음 → 항상 노출.
-   🚨 색: 이 차트엔 등락 파랑이 없으므로 보라(C.vt) 마크 사용 가능 (보라↔파랑 deutan ΔE 6.6 충돌 회피 규칙 정합).
-   RULE 7 = 위치는 사실. 높다·낮다가 좋다·나쁘다 아님 — 좋음/나쁨 색(빨강·초록) 절대 사용 안 함. */
-function PeerStrip({ pct, C }: { pct: number; C: any }) {
+/* 동종업계 해석 게이지 (2026-08-27 PM 요청) — 업종 중앙값과의 거리를 색으로 바로 읽는다.
+   빨강 = 일반적으로 유리한 방향, 파랑 = 일반적으로 부담인 방향, 회색 = 중앙값과 비슷/맥락 필요.
+   PER·PBR은 낮을수록 가격 부담이 작고, ROE·영업이익률은 높을수록 수익성이 높으며,
+   부채비율·D/E는 낮을수록 재무 부담이 작다는 일반 해석이다. 단일 지표 투자판단은 금지한다. */
+type PeerTone = "good" | "bad" | "neutral"
+
+function peerSignal(
+    key: string,
+    vs: string
+): {
+    tone: PeerTone
+    label: string
+    hint: string
+} {
+    if (vs !== "above" && vs !== "below")
+        return {
+            tone: "neutral",
+            label: "중앙값과 비슷",
+            hint: "업종 보통 수준",
+        }
+    const lowerIsLighter =
+        key === "PER" || key === "PBR" || key === "부채비율" || key === "D/E"
+    const higherIsStronger = key === "ROE" || key === "영업이익률"
+    if (!lowerIsLighter && !higherIsStronger)
+        return {
+            tone: "neutral",
+            label: vs === "above" ? "중앙값보다 높음" : "중앙값보다 낮음",
+            hint: "지표 성격 확인 필요",
+        }
+    const favorable = lowerIsLighter ? vs === "below" : vs === "above"
+    if (lowerIsLighter) {
+        const debt = key === "부채비율" || key === "D/E"
+        return favorable
+            ? {
+                  tone: "good",
+                  label: "유리",
+                  hint: debt
+                      ? "동종업계보다 부채 부담이 낮아요"
+                      : "동종업계보다 가격 부담이 낮아요",
+              }
+            : {
+                  tone: "bad",
+                  label: "불리",
+                  hint: debt
+                      ? "동종업계보다 부채 부담이 높아요"
+                      : "동종업계보다 가격 부담이 높아요",
+              }
+    }
+    return favorable
+        ? {
+              tone: "good",
+              label: "유리",
+              hint: "동종업계보다 수익성이 높아요",
+          }
+        : {
+              tone: "bad",
+              label: "불리",
+              hint: "동종업계보다 수익성이 낮아요",
+          }
+}
+
+function PeerStrip({ pct, C, tone }: { pct: number; C: any; tone: PeerTone }) {
     const p = Math.max(0, Math.min(100, Number(pct)))
+    const left = Math.min(50, p)
+    const width = Math.abs(p - 50)
+    const strength = Math.min(1, width / 50)
+    const hue = tone === "good" ? 0 : 217
+    const strongLightness = Math.round(68 - strength * 16)
+    const softColor = tone === "neutral" ? C.faint : `hsl(${hue} 88% 82%)`
+    const strongColor =
+        tone === "neutral" ? C.faint : `hsl(${hue} 84% ${strongLightness}%)`
+    const gradient =
+        tone === "neutral"
+            ? C.faint
+            : p >= 50
+              ? `linear-gradient(90deg, ${softColor}, ${strongColor})`
+              : `linear-gradient(90deg, ${strongColor}, ${softColor})`
     const TRACK = 7,
         DOT = 9 // 마커 ≥8px (dataviz 마크 스펙)
     return (
@@ -4272,6 +4383,18 @@ function PeerStrip({ pct, C }: { pct: number; C: any }) {
                     height: TRACK,
                     borderRadius: TRACK / 2,
                     background: C.bg,
+                }}
+            />
+            {/* 중앙값에서 멀어질수록 길고 진해지는 방향별 해석 그라데이션 */}
+            <div
+                style={{
+                    position: "absolute",
+                    left: `${left}%`,
+                    width: `${width}%`,
+                    top: (DOT + 2 - TRACK) / 2,
+                    height: TRACK,
+                    borderRadius: TRACK / 2,
+                    background: gradient,
                 }}
             />
             {/* 업종 중앙값 = 정의상 50번째 백분위 — 기준 눈금 */}
@@ -4297,7 +4420,7 @@ function PeerStrip({ pct, C }: { pct: number; C: any }) {
                     height: DOT,
                     marginLeft: -DOT / 2,
                     borderRadius: "50%",
-                    background: C.vt,
+                    background: strongColor,
                     boxShadow: `0 0 0 2px ${C.card}`,
                 }}
             />
@@ -4310,7 +4433,9 @@ function readBodyDark(): boolean {
     // 🚨 body-first 금지 — Framer 정적 export 가 새로고침에 body 를 light 로 두면 verity 이전에 단락 → 부분 라이트(2026-07-23). 되돌리지 말 것.
     try {
         if (typeof document !== "undefined") {
-            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+            const h = document.documentElement
+                ? document.documentElement.dataset.anTheme
+                : null
             if (h === "dark") return true
             if (h === "light") return false
             if (document.body) {
@@ -4319,7 +4444,10 @@ function readBodyDark(): boolean {
                 if (a === "light") return false
             }
         }
-        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
+        const s =
+            typeof localStorage !== "undefined"
+                ? localStorage.getItem("verity_theme")
+                : null
         if (s === "dark") return true
     } catch (e) {}
     return false
@@ -4392,6 +4520,9 @@ export default function PublicStockReport(props: Props) {
     const [lendAsOf, setLendAsOf] = useState<string>("")
     const [supplyMap, setSupplyMap] = useState<Record<string, any>>({})
     const [empMap, setEmpMap] = useState<Record<string, any>>({})
+    const [businessOverviewMap, setBusinessOverviewMap] = useState<
+        Record<string, any>
+    >({})
     const [crossMed, setCrossMed] = useState<{
         KR: Record<string, any>
         US: Record<string, any>
@@ -4524,7 +4655,7 @@ export default function PublicStockReport(props: Props) {
             return
         document.body.dataset.verityAssetKind = kind
     }, [kind, onCanvas])
-    const isUsEtf = kind === "etf" && !/^[0-9]{6}$/.test(String(selTicker))
+    const isUsEtf = kind === "etf" && !isKrSecurityCode(selTicker)
     useEffect(() => {
         if (onCanvas || (kind !== "etf" && kind !== "index")) return
         let alive = true
@@ -4551,13 +4682,19 @@ export default function PublicStockReport(props: Props) {
     const [etfHist, setEtfHist] = useState<any>(null)
     useEffect(() => {
         setEtfHist(null)
-        if (onCanvas || kind !== "etf" || isUsEtf || !/^[0-9A-Z]{6}$/.test(String(selTicker)))
+        if (
+            onCanvas ||
+            kind !== "etf" ||
+            isUsEtf ||
+            !/^[0-9A-Z]{6}$/.test(String(selTicker))
+        )
             return
         let alive = true
         fetch(ETF_HIST_BASE + String(selTicker) + ".json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                if (alive && d && Array.isArray(d.d) && d.d.length) setEtfHist(d)
+                if (alive && d && Array.isArray(d.d) && d.d.length)
+                    setEtfHist(d)
             })
             .catch(() => {})
         return () => {
@@ -4615,6 +4752,7 @@ export default function PublicStockReport(props: Props) {
                 if (d.lend_as_of) setLendAsOf(String(d.lend_as_of))
                 merge(setSupplyMap, d.supply)
                 merge(setEmpMap, d.employment)
+                merge(setBusinessOverviewMap, d.business_overview)
                 setListLoaded(true)
             })
             .catch(() => {
@@ -4629,11 +4767,18 @@ export default function PublicStockReport(props: Props) {
     useEffect(() => {
         if (onCanvas || !searchList.length) return
         const t = String(selTicker || "").trim()
+        let rawQ = ""
+        if (typeof window !== "undefined") {
+            try {
+                rawQ = new URLSearchParams(window.location.search).get("q") || ""
+            } catch {}
+        }
         if (
             !t ||
             searchList.some(
                 (x: any) => String(x.ticker).toUpperCase() === t.toUpperCase()
-            )
+            ) ||
+            isExplicitTickerQuery(rawQ || t)
         )
             return
         const low = t.toLowerCase()
@@ -4699,7 +4844,7 @@ export default function PublicStockReport(props: Props) {
     useEffect(() => {
         if (onCanvas) return
         const t = String(selTicker || "").toUpperCase()
-        if (!t || /^[0-9]{6}$/.test(t)) {
+        if (!t || isKrSecurityCode(t)) {
             setUsForen(null)
             return
         }
@@ -4903,7 +5048,7 @@ export default function PublicStockReport(props: Props) {
 
     /* 통화 토글 — 미국 종목의 달러 표기를 원화로. 국내는 원래 원화라 무관.
        빌더가 "$1.26T" 같은 완성 문자열을 주므로 anUSDtoKRW 로 파싱 후 환산한다. */
-    const isUsTk = !/^[0-9]{6}$/.test(String(s.ticker || ""))
+    const isUsTk = !isKrSecurityCode(s.ticker)
     const [ccy, setCcy] = useAnCcy(onCanvas)
     const fxInfo = useAnFx(onCanvas, isUsTk && ccy === "KRW")
     const toKRW = isUsTk && ccy === "KRW" && fxInfo.ok
@@ -4959,9 +5104,7 @@ export default function PublicStockReport(props: Props) {
         // 🚨 날짜만 비교 — new Date() 의 시각 성분을 섞으면 당일이 한 번 더 세어져 +1 과대계상.
         //    브라우저 TZ 와 무관하게 KST 기준 날짜로 정규화한다.
         const kstYmd = (d: Date) =>
-            new Date(d.getTime() + 9 * 3600 * 1000)
-                .toISOString()
-                .slice(0, 10)
+            new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10)
         const todayYmd = kstYmd(new Date())
         let lag = 0
         const cur = new Date(`${last}T00:00:00Z`)
@@ -4995,6 +5138,11 @@ export default function PublicStockReport(props: Props) {
     const empRow = useMemo(
         () => (empMap && empMap[s.ticker]) || null,
         [empMap, s.ticker]
+    )
+    const businessOverview = useMemo(
+        () =>
+            (businessOverviewMap && businessOverviewMap[s.ticker]) || null,
+        [businessOverviewMap, s.ticker]
     )
     const foren = useMemo(
         () => (forensicsMap && forensicsMap[s.ticker]) || null,
@@ -5066,18 +5214,14 @@ export default function PublicStockReport(props: Props) {
         setStarItemId(wasOn ? null : "pending")
         try {
             const _lsk = "verity_watchlist"
-            const _cur = JSON.parse(
-                window.localStorage.getItem(_lsk) || "[]"
-            )
+            const _cur = JSON.parse(window.localStorage.getItem(_lsk) || "[]")
             const _arr = Array.isArray(_cur) ? _cur : []
             const _tk = String(s.ticker || "")
             if (wasOn) {
                 window.localStorage.setItem(
                     _lsk,
                     JSON.stringify(
-                        _arr.filter(
-                            (x: any) => String(x && x.ticker) !== _tk
-                        )
+                        _arr.filter((x: any) => String(x && x.ticker) !== _tk)
                     )
                 )
             } else if (
@@ -5494,7 +5638,7 @@ export default function PublicStockReport(props: Props) {
         //   내부 카드(C.card 등)는 그대로 — 카드는 배경 위에 떠야 하므로 자체 색이 맞다.
         background: "transparent",
         fontFamily: FONT,
-        padding: pad,
+        padding: `8px ${pad}px ${pad}px`,
         boxSizing: "border-box",
         color: C.ink,
     }
@@ -5740,7 +5884,7 @@ export default function PublicStockReport(props: Props) {
                                                 ticker={r.t}
                                                 name={r.n}
                                                 market={
-                                                    /^\d{6}$/.test(String(r.t))
+                                                    isKrSecurityCode(r.t)
                                                         ? "KOSPI"
                                                         : "US"
                                                 }
@@ -5885,7 +6029,7 @@ export default function PublicStockReport(props: Props) {
             ) || {}
         return (
             <div ref={rootRef} style={wrap}>
-                {searchBox}
+            {searchBox}
                 <EtfReportBlock
                     C={C}
                     isDark={C === DARK}
@@ -6213,8 +6357,8 @@ export default function PublicStockReport(props: Props) {
                                     alignSelf: "center",
                                 }}
                             >
-                                환율{" "}
-                                {Math.round(fxInfo.rate).toLocaleString()}원/$ (
+                                환율 {Math.round(fxInfo.rate).toLocaleString()}
+                                원/$ (
                                 {String(fxInfo.asOf)
                                     .slice(5, 16)
                                     .replace("T", " ")}{" "}
@@ -6373,11 +6517,7 @@ export default function PublicStockReport(props: Props) {
             {/* 수급 — 탭하면 정확 수치 */}
             {flowRows.length > 0 && (
                 <>
-                    {sectionTitle(
-                        "수급 — 외국인·기관 5일",
-                        flowAsOf,
-                        "수급"
-                    )}
+                    {sectionTitle("수급 — 외국인·기관 5일", flowAsOf, "수급")}
                     <div
                         style={{
                             background: C.card,
@@ -7067,6 +7207,77 @@ export default function PublicStockReport(props: Props) {
                     </>
                 )}
 
+            {/* 사업의 개요 — DART 사업보고서 원문 발췌. 요약·해석 없이 종목 슬라이스 1건만 표시. */}
+            {businessOverview && businessOverview.text && (
+                <>
+                    {sectionTitle(
+                        "사업의 개요",
+                        businessOverview.report || "DART 사업보고서 원문"
+                    )}
+                    <div
+                        style={{
+                            background: C.card,
+                            borderRadius: 16,
+                            padding: "15px 16px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                        }}
+                    >
+                        <div
+                            style={{
+                                color: C.sub,
+                                fontSize: 13,
+                                fontWeight: 600,
+                                lineHeight: 1.75,
+                                whiteSpace: "pre-line",
+                            }}
+                        >
+                            {businessOverview.text}
+                        </div>
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                flexWrap: "wrap",
+                                marginTop: 12,
+                                paddingTop: 10,
+                                borderTop: `1px solid ${C.line}`,
+                                color: C.faint,
+                                fontSize: 10.5,
+                                fontWeight: 600,
+                                lineHeight: 1.5,
+                            }}
+                        >
+                            <span>{businessOverview.source || "DART 사업보고서 원문"}</span>
+                            {businessOverview.filed_at && (
+                                <span>· 접수 {businessOverview.filed_at}</span>
+                            )}
+                            {businessOverview.truncated && (
+                                <span>· 원문 앞 {businessOverview.chars || 600}자 발췌</span>
+                            )}
+                            {/^https:\/\/dart\.fss\.or\.kr\//.test(
+                                String(businessOverview.url || "")
+                            ) && (
+                                <a
+                                    href={businessOverview.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        marginLeft: "auto",
+                                        color: C.vt,
+                                        fontWeight: 800,
+                                        textDecoration: "none",
+                                    }}
+                                >
+                                    DART 원문 ↗
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
+
+
             {/* 동종업계 비교 — 탭하면 상세 */}
             {peer && peer.rows && peer.rows.length > 0 && (
                 <>
@@ -7085,6 +7296,13 @@ export default function PublicStockReport(props: Props) {
                     >
                         {peer.rows.map((r: any, i: number) => {
                             const opened = openPeer === i
+                            const signal = peerSignal(r.key, r.vs)
+                            const signalColor =
+                                signal.tone === "good"
+                                    ? "#EF4444"
+                                    : signal.tone === "bad"
+                                      ? "#2563EB"
+                                      : C.faint
                             const dir =
                                 r.vs === "above"
                                     ? "업종 중앙값보다 높음"
@@ -7168,8 +7386,49 @@ export default function PublicStockReport(props: Props) {
                                         </div>
                                         {/* 백분위 스트립 — 분포 내 위치(항상 노출). 옛 ↑/↓ 화살표는 위치가 대신하므로 제거 */}
                                         {r.pct != null && (
-                                            <PeerStrip pct={r.pct} C={C} />
+                                            <PeerStrip
+                                                pct={r.pct}
+                                                C={C}
+                                                tone={signal.tone}
+                                            />
                                         )}
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 6,
+                                                marginTop: 5,
+                                                fontSize: 10.5,
+                                                lineHeight: 1.35,
+                                            }}
+                                        >
+                                            <span
+                                                style={{
+                                                    flexShrink: 0,
+                                                    color: signalColor,
+                                                    background:
+                                                        signal.tone === "good"
+                                                            ? "rgba(239,68,68,0.10)"
+                                                            : signal.tone ===
+                                                                "bad"
+                                                              ? "rgba(37,99,235,0.10)"
+                                                              : C.bg,
+                                                    borderRadius: 6,
+                                                    padding: "2px 6px",
+                                                    fontWeight: 800,
+                                                }}
+                                            >
+                                                {signal.label}
+                                            </span>
+                                            <span
+                                                style={{
+                                                    color: C.faint,
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                {signal.hint}
+                                            </span>
+                                        </div>
                                     </div>
                                     {opened && (
                                         <div
@@ -7191,7 +7450,11 @@ export default function PublicStockReport(props: Props) {
                                                 {r.key} {r.value} ·{" "}
                                                 {peer.sector} 중앙값 {r.median}{" "}
                                                 (N={peer.n}) →{" "}
-                                                <span style={{ color: C.vt }}>
+                                                <span
+                                                    style={{
+                                                        color: signalColor,
+                                                    }}
+                                                >
                                                     {dir}
                                                 </span>
                                             </div>
@@ -7224,16 +7487,17 @@ export default function PublicStockReport(props: Props) {
                                                     lineHeight: 1.5,
                                                 }}
                                             >
-                                                같은 섹터 종목 중앙값·분포와의
-                                                사실 비교 — 높다·낮다가
-                                                좋다·나쁘다는 아님(판단 X)
+                                                파랑·빨강은 지표별 일반 해석 ·
+                                                업종 특성, 성장률, 일회성 손익을
+                                                함께 봐야 하며 단일 지표만으로
+                                                투자 판단하지 않아요
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             )
                         })}
-                        {/* 범례 — 단일 계열이라 범례 박스 대신 마크 설명 한 줄 (카드당 1회) */}
+                        {/* 범례 — 색은 값의 등락이 아니라 지표별 일반 해석 방향 */}
                         {peer.rows.some((r: any) => r.pct != null) && (
                             <div
                                 style={{
@@ -7261,10 +7525,30 @@ export default function PublicStockReport(props: Props) {
                                             width: 9,
                                             height: 9,
                                             borderRadius: "50%",
-                                            background: C.vt,
+                                            background: "#EF4444",
                                         }}
                                     />
-                                    이 종목
+                                    유리
+                                </span>
+                                <span
+                                    style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: C.sub,
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            width: 9,
+                                            height: 9,
+                                            borderRadius: "50%",
+                                            background: "#2563EB",
+                                        }}
+                                    />
+                                    불리
                                 </span>
                                 <span
                                     style={{
@@ -7454,7 +7738,7 @@ export default function PublicStockReport(props: Props) {
                 QuarterlyTrend 는 항상 mount(숨김) — fetch 1회 유지 + onCount 로 탭 노출 판단. 둘 다 없으면 섹션 자동 숨김(RULE 7). */}
             {(() => {
                 const onCv = RenderTarget.current() === RenderTarget.canvas
-                const isKRt = /^\d{6}$/.test(String(s.ticker || ""))
+                const isKRt = isKrSecurityCode(s.ticker)
                 const hasAnnual =
                     Array.isArray(s.fin_series) && s.fin_series.length >= 2
                 const hasQ = onCv || qtN >= 4
@@ -9154,7 +9438,7 @@ export default function PublicStockReport(props: Props) {
                             boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                         }}
                     >
-                        {(/^[0-9]{6}$/.test(String(s.ticker))
+                        {(isKrSecurityCode(s.ticker)
                             ? [
                                   {
                                       label: "네이버 증권 · 종목분석",
@@ -10184,3 +10468,4 @@ addPropertyControls(PublicStockReport, {
         disabledTitle: "Off",
     },
 })
+

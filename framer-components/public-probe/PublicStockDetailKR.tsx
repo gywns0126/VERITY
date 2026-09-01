@@ -146,16 +146,16 @@ export default function PublicStockDetailKR(props: { ticker?: string; apiBase?: 
     if (!hasInst && !hasFac && !hasFor) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
 
     const HEAD = "Pretendard, -apple-system, sans-serif"
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: C.bg, fontFamily: FONT, color: C.ink, padding: narrow ? 14 : 18, display: "flex", flexDirection: "column", gap: 14 }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: "transparent", fontFamily: FONT, color: C.ink, padding: "0 clamp(14px, 2vw, 20px)", display: "flex", flexDirection: "column", gap: 12 }
     const title = (t: string, sub: string) => (
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
             <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px" }}>{t}</span>
             <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{sub}</span>
         </div>
     )
-    const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
+    const card: CSSProperties = { background: C.card, borderRadius: 16, padding: narrow ? 14 : 18, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
 
-    if (assetKind === "etf") return null  // ETF/ETN = 기업 전용 섹션 숨김
+    if (assetKind === "etf" || /^CMD_/.test(String(tk).toUpperCase())) return null  // ETF/ETN = 기업 전용 섹션 숨김
 
     return (
         <div ref={rootRef} style={wrap}>
@@ -283,3 +283,4 @@ addPropertyControls(PublicStockDetailKR, {
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: FORENSICS_URL },
     dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false },
 })
+

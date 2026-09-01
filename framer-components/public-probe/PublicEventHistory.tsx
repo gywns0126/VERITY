@@ -18,20 +18,48 @@ interface Props {
     dataUrl: string
     dark: boolean
 }
-const DEFAULT_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/event_study.json"
+const DEFAULT_URL =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/event_study.json"
 
 // up = 상승(한국 관습 빨강) · down = 하락(파랑). tone = 공시 의미축(PublicDisclosureFeed 동일).
 const LIGHT = {
-    bg: "#f2f4f6", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1", line: "#f0f1f3",
-    up: "#f04452", down: "#3182f6", vt: "#6c5ce7", vtS: "#f0edff",
-    amber: "#ff9500", amberS: "#fff6e9", green: "#15c47e", greenS: "#eafaf3", red: "#f04452", redS: "#fff0f1",
+    bg: "#f2f4f6",
+    card: "#ffffff",
+    ink: "#191f28",
+    sub: "#4e5968",
+    faint: "#8b95a1",
+    line: "#f0f1f3",
+    up: "#f04452",
+    down: "#3182f6",
+    vt: "#6c5ce7",
+    vtS: "#f0edff",
+    amber: "#ff9500",
+    amberS: "#fff6e9",
+    green: "#15c47e",
+    greenS: "#eafaf3",
+    red: "#f04452",
+    redS: "#fff0f1",
 }
 const DARK = {
-    bg: "#0f1318", card: "#171c23", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b", line: "#222730",
-    up: "#f04452", down: "#5b9bff", vt: "#a99bff", vtS: "#241f3a",
-    amber: "#ff9500", amberS: "#2a2113", green: "#34e08a", greenS: "#0f241c", red: "#f04452", redS: "#2a1a1d",
+    bg: "#0f1318",
+    card: "#171c23",
+    ink: "#e3e7ec",
+    sub: "#9aa4b1",
+    faint: "#828d9b",
+    line: "#222730",
+    up: "#f04452",
+    down: "#5b9bff",
+    vt: "#a99bff",
+    vtS: "#241f3a",
+    amber: "#ff9500",
+    amberS: "#2a2113",
+    green: "#34e08a",
+    greenS: "#0f241c",
+    red: "#f04452",
+    redS: "#2a1a1d",
 }
-const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+const FONT =
+    "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
 const WINDOWS: { key: string; label: string }[] = [
     { key: "ret_1d", label: "+1일" },
@@ -40,30 +68,116 @@ const WINDOWS: { key: string; label: string }[] = [
     { key: "ret_60d", label: "+60일" },
 ]
 
-interface Occurrence { date: string; report_nm?: string; ret_1d: number | null; ret_5d: number | null; ret_20d: number | null; ret_60d: number | null }
-interface Ev { type: string; tone: string; count: number; occurrences: Occurrence[]; truncated?: number }
-interface Stock { name: string; events: Ev[] }
+interface Occurrence {
+    date: string
+    report_nm?: string
+    ret_1d: number | null
+    ret_5d: number | null
+    ret_20d: number | null
+    ret_60d: number | null
+}
+interface Ev {
+    type: string
+    tone: string
+    count: number
+    occurrences: Occurrence[]
+    truncated?: number
+}
+interface Stock {
+    name: string
+    events: Ev[]
+}
+
+interface WindowStat {
+    n: number
+    median: number
+    min: number
+    max: number
+}
+
+function windowStat(ev: Ev, key: string): WindowStat | null {
+    if (ev.truncated || ev.count !== ev.occurrences.length) return null
+    const values = ev.occurrences
+        .map((o) => (o as any)[key])
+        .filter((v): v is number => typeof v === "number" && Number.isFinite(v))
+        .sort((a, b) => a - b)
+    if (!values.length) return null
+    const mid = Math.floor(values.length / 2)
+    const median =
+        values.length % 2 ? values[mid] : (values[mid - 1] + values[mid]) / 2
+    return {
+        n: values.length,
+        median,
+        min: values[0],
+        max: values[values.length - 1],
+    }
+}
+
+function observationSpan(ev: Ev): string {
+    const dates = ev.occurrences
+        .map((o) => o.date)
+        .filter(Boolean)
+        .sort()
+    if (!dates.length) return "T=—"
+    return dates.length === 1
+        ? `T=${dates[0]}`
+        : `T=${dates[0]}~${dates[dates.length - 1]}`
+}
 
 function readTickerFromUrl(): string {
     if (typeof window === "undefined") return ""
     try {
-        const q = (new URLSearchParams(window.location.search).get("q") || "").trim()
+        const q = (
+            new URLSearchParams(window.location.search).get("q") || ""
+        ).trim()
         if (q) return q.toUpperCase()
-        return (window.localStorage.getItem("verity_last_ticker") || "").trim().toUpperCase()
-    } catch { return "" }
+        return (window.localStorage.getItem("verity_last_ticker") || "")
+            .trim()
+            .toUpperCase()
+    } catch {
+        return ""
+    }
 }
 
 const SAMPLE: Record<string, Stock> = {
     SAMPLE: {
         name: "예시종목",
         events: [
-            { type: "자기주식 취득", tone: "favor", count: 2, occurrences: [
-                { date: "2023-08-14", ret_1d: 1.2, ret_5d: 3.1, ret_20d: 6.4, ret_60d: 11.0 },
-                { date: "2021-05-03", ret_1d: 0.4, ret_5d: -1.8, ret_20d: 2.2, ret_60d: 5.5 },
-            ] },
-            { type: "유상증자", tone: "dilution", count: 1, occurrences: [
-                { date: "2019-11-21", ret_1d: -4.8, ret_5d: -9.2, ret_20d: -12.4, ret_60d: -6.1 },
-            ] },
+            {
+                type: "자기주식 취득",
+                tone: "favor",
+                count: 2,
+                occurrences: [
+                    {
+                        date: "2023-08-14",
+                        ret_1d: 1.2,
+                        ret_5d: 3.1,
+                        ret_20d: 6.4,
+                        ret_60d: 11.0,
+                    },
+                    {
+                        date: "2021-05-03",
+                        ret_1d: 0.4,
+                        ret_5d: -1.8,
+                        ret_20d: 2.2,
+                        ret_60d: 5.5,
+                    },
+                ],
+            },
+            {
+                type: "유상증자",
+                tone: "dilution",
+                count: 1,
+                occurrences: [
+                    {
+                        date: "2019-11-21",
+                        ret_1d: -4.8,
+                        ret_5d: -9.2,
+                        ret_20d: -12.4,
+                        ret_60d: -6.1,
+                    },
+                ],
+            },
         ],
     },
 }
@@ -76,7 +190,9 @@ function anReadDark(): boolean {
         __anHyd = true
         return false
     }
-    const h = document.documentElement ? document.documentElement.dataset.anTheme : null
+    const h = document.documentElement
+        ? document.documentElement.dataset.anTheme
+        : null
     if (h === "dark") return true
     if (h === "light") return false
     return !!(document.body && document.body.dataset.framerTheme === "dark")
@@ -91,27 +207,44 @@ export default function PublicEventHistory(props: Props) {
     const [assetKind, setAssetKind] = useState<string>("stock")
     useEffect(() => {
         if (typeof document === "undefined" || !document.body) return
-        const read = () => setAssetKind(document.body.dataset.verityAssetKind || "stock")
+        const read = () =>
+            setAssetKind(document.body.dataset.verityAssetKind || "stock")
         read()
         if (typeof MutationObserver === "undefined") return
         const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-verity-asset-kind"] })
+        obs.observe(document.body, {
+            attributes: true,
+            attributeFilter: ["data-verity-asset-kind"],
+        })
         return () => obs.disconnect()
     }, [])
     const { ticker, dataUrl, dark } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [themeDark, setThemeDark] = useState<boolean>(() => (RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()))
+    const [themeDark, setThemeDark] = useState<boolean>(() =>
+        RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()
+    )
     useEffect(() => {
         if (onCanvas) return
         const read = () => {
-            const t = (typeof document !== "undefined" && document.body) ? document.body.dataset.framerTheme : ""
+            const t =
+                typeof document !== "undefined" && document.body
+                    ? document.body.dataset.framerTheme
+                    : ""
             setThemeDark(t === "dark")
         }
         read()
-        if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.body) return
+        if (
+            typeof MutationObserver === "undefined" ||
+            typeof document === "undefined" ||
+            !document.body
+        )
+            return
         const obs = new MutationObserver(read)
-        obs.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
+        obs.observe(document.body, {
+            attributes: true,
+            attributeFilter: ["data-framer-theme"],
+        })
         return () => obs.disconnect()
     }, [onCanvas])
 
@@ -120,13 +253,21 @@ export default function PublicEventHistory(props: Props) {
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [tk, setTk] = useState<string>(() => String(ticker || "").trim().toUpperCase())
-    const [data, setData] = useState<Record<string, Stock>>(onCanvas ? SAMPLE : {})
+    const [tk, setTk] = useState<string>(() =>
+        String(ticker || "")
+            .trim()
+            .toUpperCase()
+    )
+    const [data, setData] = useState<Record<string, Stock>>(
+        onCanvas ? SAMPLE : {}
+    )
 
     useEffect(() => {
         const el = rootRef.current
         if (!el || typeof ResizeObserver === "undefined") return
-        const ro = new ResizeObserver((entries) => { for (const e of entries) setW(e.contentRect.width) })
+        const ro = new ResizeObserver((entries) => {
+            for (const e of entries) setW(e.contentRect.width)
+        })
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
@@ -134,13 +275,24 @@ export default function PublicEventHistory(props: Props) {
     /* 종목 = prop 우선, 없으면 URL ?q. in-page 전환 추종 1s 폴링. */
     useEffect(() => {
         if (onCanvas) return
-        const propTk = String(ticker || "").trim().toUpperCase()
-        if (propTk) { setTk(propTk); return }
-        const sync = () => { const u = readTickerFromUrl(); if (u) setTk((cur) => (cur === u ? cur : u)) }
+        const propTk = String(ticker || "")
+            .trim()
+            .toUpperCase()
+        if (propTk) {
+            setTk(propTk)
+            return
+        }
+        const sync = () => {
+            const u = readTickerFromUrl()
+            if (u) setTk((cur) => (cur === u ? cur : u))
+        }
         sync()
         window.addEventListener("popstate", sync)
         const iv = setInterval(sync, 1000)
-        return () => { window.removeEventListener("popstate", sync); clearInterval(iv) }
+        return () => {
+            window.removeEventListener("popstate", sync)
+            clearInterval(iv)
+        }
     }, [ticker, onCanvas])
 
     /* event_study.json 로드 */
@@ -149,9 +301,17 @@ export default function PublicEventHistory(props: Props) {
         let alive = true
         fetch(dataUrl)
             .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { const m = d && d.stocks && typeof d.stocks === "object" ? d.stocks : null; if (alive && m) setData(m) })
+            .then((d) => {
+                const m =
+                    d && d.stocks && typeof d.stocks === "object"
+                        ? d.stocks
+                        : null
+                if (alive && m) setData(m)
+            })
             .catch(() => {})
-        return () => { alive = false }
+        return () => {
+            alive = false
+        }
     }, [dataUrl, onCanvas])
 
     const stock: Stock | null = useMemo(() => {
@@ -161,64 +321,344 @@ export default function PublicEventHistory(props: Props) {
     }, [data, tk, onCanvas])
 
     const narrow = w > 0 && w < 460
-    const toneC = (t: string) => t === "dilution" ? { fg: C.amber, bg: C.amberS } : t === "favor" ? { fg: C.green, bg: C.greenS } : t === "alert" ? { fg: C.red, bg: C.redS } : { fg: C.sub, bg: C.line }
-    const retColor = (v: number | null) => v == null ? C.faint : v > 0 ? C.up : v < 0 ? C.down : C.sub
-    const fmt = (v: number | null) => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(1) + "%"
+    const toneC = (t: string) =>
+        t === "dilution"
+            ? { fg: C.amber, bg: C.amberS }
+            : t === "favor"
+              ? { fg: C.green, bg: C.greenS }
+              : t === "alert"
+                ? { fg: C.red, bg: C.redS }
+                : { fg: C.sub, bg: C.line }
+    const retColor = (v: number | null) =>
+        v == null ? C.faint : v > 0 ? C.up : v < 0 ? C.down : C.sub
+    const fmt = (v: number | null) =>
+        v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(1) + "%"
 
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, padding: narrow ? 14 : 18, boxSizing: "border-box", color: C.ink }
+    const wrap: CSSProperties = {
+        width: "100%",
+        minHeight: "100%",
+        background: "transparent",
+        fontFamily: FONT,
+        padding: "0 clamp(14px, 2vw, 20px)", boxSizing: "border-box",
+        color: C.ink,
+    }
 
     // 데이터 없으면 숨김(빈 카드 방지)
-    if (!stock) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
+    if (!stock)
+        return (
+            <div
+                ref={rootRef}
+                style={{ width: "100%", height: 0, overflow: "hidden" }}
+            />
+        )
 
-    if (assetKind === "etf") return null  // ETF/ETN = 기업 전용 섹션 숨김
+    if (assetKind === "etf" || /^CMD_/.test(String(tk).toUpperCase())) return null // ETF/ETN = 기업 전용 섹션 숨김
 
     return (
         <div ref={rootRef} style={wrap}>
-            <div style={{ background: C.card, borderRadius: 16, padding: narrow ? 14 : 18, boxSizing: "border-box", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginBottom: 3, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: narrow ? 15 : 16, fontWeight: 800, letterSpacing: "-0.3px" }}>과거 공시 패턴</span>
-                    <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>이 종목의 과거 같은 공시 당시 주가 변화</span>
+            <div
+                style={{
+                    background: C.card,
+                    borderRadius: 16,
+                    padding: narrow ? 14 : 18,
+                    boxSizing: "border-box",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                }}
+            >
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: 7,
+                        marginBottom: 3,
+                        flexWrap: "wrap",
+                    }}
+                >
+                    <span
+                        style={{
+                            fontSize: narrow ? 15 : 16,
+                            fontWeight: 800,
+                            letterSpacing: "-0.3px",
+                        }}
+                    >
+                        과거 공시 패턴
+                    </span>
+                    <span
+                        style={{
+                            fontSize: 11.5,
+                            color: C.faint,
+                            fontWeight: 600,
+                        }}
+                    >
+                        이 종목의 과거 같은 공시 당시 주가 변화
+                    </span>
                 </div>
-                <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, marginBottom: 12 }}>발생일 종가 기준 이후 거래일별 주가 변화 · 과거 사실</div>
+                <div
+                    style={{
+                        fontSize: 11,
+                        color: C.faint,
+                        fontWeight: 600,
+                        marginBottom: 12,
+                    }}
+                >
+                    발생일 종가 기준 이후 거래일별 주가 변화 · 과거 사실
+                </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div
+                    style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 14,
+                    }}
+                >
                     {stock.events.map((ev, ei) => {
                         const tc = toneC(ev.tone)
+                        const stats = WINDOWS.map((wd) =>
+                            windowStat(ev, wd.key)
+                        )
                         return (
-                            <div key={ei} style={{ borderTop: ei === 0 ? "none" : "1px solid " + C.line, paddingTop: ei === 0 ? 0 : 12 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
-                                    <span style={{ fontSize: 11, fontWeight: 800, color: tc.fg, background: tc.bg, padding: "3px 8px", borderRadius: 7, whiteSpace: "nowrap" }}>{ev.type}</span>
-                                    <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 700 }}>과거 {ev.count}회</span>
+                            <div
+                                key={ei}
+                                style={{
+                                    borderTop:
+                                        ei === 0
+                                            ? "none"
+                                            : "1px solid " + C.line,
+                                    paddingTop: ei === 0 ? 0 : 12,
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 7,
+                                        marginBottom: 8,
+                                        flexWrap: "wrap",
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            fontSize: 11,
+                                            fontWeight: 800,
+                                            color: tc.fg,
+                                            background: tc.bg,
+                                            padding: "3px 8px",
+                                            borderRadius: 7,
+                                            whiteSpace: "nowrap",
+                                        }}
+                                    >
+                                        {ev.type}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: 11.5,
+                                            color: C.faint,
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        과거 {ev.count}회
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: 10.5,
+                                            color: C.faint,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        {observationSpan(ev)} · N={ev.count}
+                                    </span>
+                                    {ev.count < 30 && (
+                                        <span
+                                            style={{
+                                                fontSize: 10,
+                                                color: C.amber,
+                                                fontWeight: 800,
+                                            }}
+                                        >
+                                            N&lt;30 · 통계 무의미
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* 윈도우 헤더 */}
-                                <div style={{ display: "grid", gridTemplateColumns: `${narrow ? 78 : 96}px repeat(4, 1fr)`, gap: 4, alignItems: "center", padding: "0 2px 5px", borderBottom: "1px solid " + C.line }}>
-                                    <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 700 }}>발생일</span>
+                                <div
+                                    style={{
+                                        display: "grid",
+                                        gridTemplateColumns: `${narrow ? 78 : 96}px repeat(4, 1fr)`,
+                                        gap: 4,
+                                        alignItems: "center",
+                                        padding: "0 2px 5px",
+                                        borderBottom: "1px solid " + C.line,
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            fontSize: 10.5,
+                                            color: C.faint,
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        발생일
+                                    </span>
                                     {WINDOWS.map((wd) => (
-                                        <span key={wd.key} style={{ fontSize: 10.5, color: C.faint, fontWeight: 700, textAlign: "right" }}>{wd.label}</span>
+                                        <span
+                                            key={wd.key}
+                                            style={{
+                                                fontSize: 10.5,
+                                                color: C.faint,
+                                                fontWeight: 700,
+                                                textAlign: "right",
+                                            }}
+                                        >
+                                            {wd.label}
+                                        </span>
                                     ))}
                                 </div>
 
+                                {!ev.truncated &&
+                                    ev.count === ev.occurrences.length && (
+                                        <div
+                                            style={{
+                                                display: "grid",
+                                                gridTemplateColumns: `${narrow ? 78 : 96}px repeat(4, 1fr)`,
+                                                gap: 4,
+                                                alignItems: "start",
+                                                padding: "7px 2px",
+                                                background: C.bg,
+                                                borderBottom:
+                                                    "1px solid " + C.line,
+                                            }}
+                                        >
+                                            <span
+                                                style={{
+                                                    fontSize: 10,
+                                                    color: C.faint,
+                                                    fontWeight: 800,
+                                                }}
+                                            >
+                                                중앙값
+                                                <br />
+                                                범위 · N
+                                            </span>
+                                            {stats.map((st, si) => (
+                                                <span
+                                                    key={WINDOWS[si].key}
+                                                    style={{
+                                                        fontSize: narrow
+                                                            ? 9.5
+                                                            : 10.5,
+                                                        color: st
+                                                            ? retColor(
+                                                                  st.median
+                                                              )
+                                                            : C.faint,
+                                                        fontWeight: 700,
+                                                        lineHeight: 1.4,
+                                                        textAlign: "right",
+                                                    }}
+                                                >
+                                                    {st ? (
+                                                        <>
+                                                            {fmt(st.median)}
+                                                            <br />
+                                                            <span
+                                                                style={{
+                                                                    color: C.faint,
+                                                                    fontWeight: 600,
+                                                                }}
+                                                            >
+                                                                {fmt(st.min)}~
+                                                                {fmt(st.max)} ·
+                                                                N={st.n}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        "–"
+                                                    )}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
                                 {/* 발생별 행 */}
                                 {ev.occurrences.map((o, oi) => (
-                                    <div key={oi} style={{ display: "grid", gridTemplateColumns: `${narrow ? 78 : 96}px repeat(4, 1fr)`, gap: 4, alignItems: "center", padding: "7px 2px", borderTop: oi === 0 ? "none" : "1px solid " + C.line }}>
-                                        <span style={{ fontSize: narrow ? 11 : 12, color: C.sub, fontWeight: 700 }}>{o.date}</span>
+                                    <div
+                                        key={oi}
+                                        style={{
+                                            display: "grid",
+                                            gridTemplateColumns: `${narrow ? 78 : 96}px repeat(4, 1fr)`,
+                                            gap: 4,
+                                            alignItems: "center",
+                                            padding: "7px 2px",
+                                            borderTop:
+                                                oi === 0
+                                                    ? "none"
+                                                    : "1px solid " + C.line,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                fontSize: narrow ? 11 : 12,
+                                                color: C.sub,
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            {o.date}
+                                        </span>
                                         {WINDOWS.map((wd) => {
-                                            const v = (o as any)[wd.key] as number | null
-                                            return <span key={wd.key} style={{ fontSize: narrow ? 11.5 : 12.5, fontWeight: 800, textAlign: "right", color: retColor(v) }}>{fmt(v)}</span>
+                                            const v = (o as any)[wd.key] as
+                                                | number
+                                                | null
+                                            return (
+                                                <span
+                                                    key={wd.key}
+                                                    style={{
+                                                        fontSize: narrow
+                                                            ? 11.5
+                                                            : 12.5,
+                                                        fontWeight: 800,
+                                                        textAlign: "right",
+                                                        color: retColor(v),
+                                                    }}
+                                                >
+                                                    {fmt(v)}
+                                                </span>
+                                            )
                                         })}
                                     </div>
                                 ))}
                                 {ev.truncated ? (
-                                    <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, padding: "6px 2px 0", textAlign: "right" }}>최근 {ev.occurrences.length}건 표시 · 외 {ev.truncated}건 더</div>
+                                    <div
+                                        style={{
+                                            fontSize: 10.5,
+                                            color: C.faint,
+                                            fontWeight: 600,
+                                            padding: "6px 2px 0",
+                                            textAlign: "right",
+                                        }}
+                                    >
+                                        최근 {ev.occurrences.length}건 표시 · 외{" "}
+                                        {ev.truncated}건 더
+                                    </div>
                                 ) : null}
                             </div>
                         )
                     })}
                 </div>
 
-                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 500, marginTop: 13, lineHeight: 1.55 }}>
-                    이 종목의 과거 공시 당시 주가 변화(거래일 기준, 시장 포함) — 과거 사실이며 미래를 보장하지 않아요. 출처 DART 공시이력 + 자체 가격 데이터.
+                <div
+                    style={{
+                        fontSize: 10.5,
+                        color: C.faint,
+                        fontWeight: 500,
+                        marginTop: 13,
+                        lineHeight: 1.55,
+                    }}
+                >
+                    중앙값·범위는 전체 발생 이력이 화면에 있는 유형만 계산해요.
+                    이 종목의 과거 공시 당시 주가 변화(거래일 기준, 시장 포함) —
+                    과거 사실이며 미래를 보장하지 않아요. 출처 DART 공시이력 +
+                    자체 가격 데이터.
                 </div>
             </div>
         </div>
@@ -226,7 +666,22 @@ export default function PublicEventHistory(props: Props) {
 }
 
 addPropertyControls(PublicEventHistory, {
-    ticker: { type: ControlType.String, title: "Ticker(빈값=URL ?q)", defaultValue: "" },
-    dataUrl: { type: ControlType.String, title: "Event Study URL", defaultValue: DEFAULT_URL },
-    dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    ticker: {
+        type: ControlType.String,
+        title: "Ticker(빈값=URL ?q)",
+        defaultValue: "",
+    },
+    dataUrl: {
+        type: ControlType.String,
+        title: "Event Study URL",
+        defaultValue: DEFAULT_URL,
+    },
+    dark: {
+        type: ControlType.Boolean,
+        title: "Dark",
+        defaultValue: false,
+        enabledTitle: "On",
+        disabledTitle: "Off",
+    },
 })
+

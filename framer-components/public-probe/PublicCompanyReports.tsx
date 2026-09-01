@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *
  * 🚨 RULE 7 / held-2027 / feedback_scope: 전부 **외부 소스 링크 모음**(공시·정기보고서·증권사 리포트·IR). VERITY 자체 점수·추천·작문 0.
  *   링크 = 공식/공개 출처(DART·네이버 금융·SEC EDGAR). 클릭 시 원문으로 이동(새 탭).
- * 종목 = prop ticker → 없으면 URL ?q → verity_last_ticker. 6자리=KR / 그 외=US 소스 분기.
+ * 종목 = prop ticker → 없으면 URL ?q → verity_last_ticker. 숫자로 시작하는 6자리 영숫자=KRX / 그 외=US 소스 분기.
  *   리포트 페이지 in-page 전환(replaceState) 추종 위해 ?q 폴링(1s)으로 종목 동기화.
  * 이름 = stock_report_public(KR)/us_stock_report_public(US)에서 ticker→name 매핑(있으면). 없어도 링크는 ticker로 동작.
  * 🚨 2026-08-21 테마 = 자체 내장 CSS 변수(--an-cr-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
@@ -83,25 +83,28 @@ function readTickerFromUrl(): string {
         return ""
     }
 }
+function isKrSecurityCode(tk: any): boolean {
+    return /^\d[0-9A-Z]{5}$/i.test(String(tk || "").trim())
+}
 
 // 외부 리포트·자료 링크 — KR(네이버 금융·DART) / US(SEC EDGAR·Yahoo). 종목코드/티커로 딥링크.
 function linksFor(tk: string): { label: string; src: string; url: string }[] {
     const t = String(tk || "").trim()
     if (!t) return []
-    const isKR = /^\d{6}$/.test(t)
+    const isKR = isKrSecurityCode(t)
     if (isKR) {
         const c = encodeURIComponent(t)
-        // 전부 ?code=/?itemCode= 로 해당 회사 딥링크 (generic 검색페이지 X). 공시 항목은 클릭 시 DART 원문으로 이어짐.
+        // 공시 목록과 리서치 목록 모두 종목 코드를 실제 필터 파라미터로 전달한다.
         return [
             {
                 label: "공시·정기보고서 (사업·분기보고서)",
-                src: "전자공시 DART · 네이버",
+                src: "네이버 금융 · KOSCOM 공시 목록",
                 url: `https://finance.naver.com/item/news_notice.naver?code=${c}`,
             },
             {
                 label: "증권사 리포트",
                 src: "네이버 금융 리서치",
-                url: `https://finance.naver.com/research/company_list.naver?itemCode=${c}`,
+                url: `https://finance.naver.com/research/company_list.naver?searchType=itemCode&itemCode=${c}`,
             },
             {
                 label: "종목 종합 (시세·재무·IR·뉴스)",
@@ -236,9 +239,9 @@ export default function PublicCompanyReports(props: Props) {
     const wrap: CSSProperties = {
         width: "100%",
         minHeight: "100%",
-        background: C.bg,
+        background: "transparent",
         fontFamily: FONT,
-        padding: narrow ? 14 : 18,
+        padding: "0 clamp(14px, 2vw, 20px)",
         boxSizing: "border-box",
         color: C.ink,
     }
@@ -269,7 +272,7 @@ export default function PublicCompanyReports(props: Props) {
         )
     }
 
-    if (assetKind === "etf") return null // ETF/ETN = 기업 전용 섹션 숨김
+    if (assetKind === "etf" || /^CMD_/.test(String(tk).toUpperCase())) return null // ETF/ETN = 기업 전용 섹션 숨김
 
     return (
         <div ref={rootRef} style={wrap}>
@@ -433,3 +436,4 @@ addPropertyControls(PublicCompanyReports, {
         disabledTitle: "Off",
     },
 })
+

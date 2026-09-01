@@ -40,16 +40,46 @@ const US_ETF_URL = DEFAULT_BASE + "/us_etf.json"
 const US_SLICE_BASE = "https://project-yw131.vercel.app/api/stock_slice?ticker="
 const N_CHUNKS = 40
 const LIGHT = {
-    bg: "#ffffff", card: "#ffffff", ink: "#191f28", sub: "#4e5968", faint: "#8b95a1",
-    line: "#e5e8eb", grid: "#eef1f4", up: "#f04452", down: "#3182f6", vg: "#6c5ce7",
-    ma5: "#f2a33c", ma20: "#0ca678", ma60: "#8b6cf0", hi52: "#f04452", lo52: "#3182f6",
-    tipBd: "#e5e8eb", tabActive: "#f2f4f6", skBase: "#e9edf1", skHi: "#f3f5f7",
+    bg: "#ffffff",
+    card: "#ffffff",
+    ink: "#191f28",
+    sub: "#4e5968",
+    faint: "#8b95a1",
+    line: "#e5e8eb",
+    grid: "#eef1f4",
+    up: "#f04452",
+    down: "#3182f6",
+    vg: "#6c5ce7",
+    ma5: "#f2a33c",
+    ma20: "#0ca678",
+    ma60: "#8b6cf0",
+    hi52: "#f04452",
+    lo52: "#3182f6",
+    tipBd: "#e5e8eb",
+    tabActive: "#f2f4f6",
+    skBase: "#e9edf1",
+    skHi: "#f3f5f7",
 }
 const DARK = {
-    bg: "#171c23", card: "#1e242c", ink: "#e3e7ec", sub: "#9aa4b1", faint: "#828d9b",
-    line: "#252b34", grid: "#1e242c", up: "#f04452", down: "#5b9bff", vg: "#a99bff",
-    ma5: "#ffb454", ma20: "#34e08a", ma60: "#a99bff", hi52: "#ff6b76", lo52: "#5b9bff",
-    tipBd: "#2d343d", tabActive: "#252b34", skBase: "#222a33", skHi: "#2d3742",
+    bg: "#171c23",
+    card: "#1e242c",
+    ink: "#e3e7ec",
+    sub: "#9aa4b1",
+    faint: "#828d9b",
+    line: "#252b34",
+    grid: "#1e242c",
+    up: "#f04452",
+    down: "#5b9bff",
+    vg: "#a99bff",
+    ma5: "#ffb454",
+    ma20: "#34e08a",
+    ma60: "#a99bff",
+    hi52: "#ff6b76",
+    lo52: "#5b9bff",
+    tipBd: "#2d343d",
+    tabActive: "#252b34",
+    skBase: "#222a33",
+    skHi: "#2d3742",
 }
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
 const WK = ["일", "월", "화", "수", "목", "금", "토"]
@@ -64,8 +94,16 @@ const RANGES = [
 // 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-plc-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
 const _ANP = "plc"
 const AN_PALETTE =
-    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
-    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+    "body{" +
+    Object.keys(LIGHT)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k])
+        .join(";") +
+    "}" +
+    'body[data-framer-theme="dark"]{' +
+    Object.keys(DARK)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k])
+        .join(";") +
+    "}"
 const C: Record<string, string> = {}
 for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
@@ -73,9 +111,12 @@ function isMobileWidth(): boolean {
     if (typeof window === "undefined") return false
     return window.innerWidth > 0 && window.innerWidth < 560
 }
+function isKrSecurityCode(tk: string): boolean {
+    return /^\d[0-9A-Z]{5}$/i.test(String(tk || "").trim())
+}
 // 증권사(네이버)가 서빙 = 재배포 아님. 실시간·무료·합법 딥링크.
 function naverUrl(tk: string): string {
-    if (!/^\d{6}$/.test(tk)) return "https://finance.naver.com/"
+    if (!isKrSecurityCode(tk)) return "https://finance.naver.com/"
     return isMobileWidth()
         ? "https://m.stock.naver.com/domestic/stock/" + tk + "/total"
         : "https://finance.naver.com/item/main.naver?code=" + tk
@@ -146,7 +187,8 @@ function UsQuoteStrip(props: { sym: string; isDark: boolean }) {
         const s = document.createElement("script")
         s.type = "text/javascript"
         s.async = true
-        s.src = "https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js"
+        s.src =
+            "https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js"
         s.innerHTML = JSON.stringify({
             symbol: sym,
             width: "100%",
@@ -192,12 +234,21 @@ function mmdd(bas: number): string {
 function dateDot(bas: number): string {
     const s = String(bas)
     if (s.length !== 8) return s
-    const wd = WK[new Date(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8)).getDay()]
+    const wd =
+        WK[
+            new Date(
+                +s.slice(0, 4),
+                +s.slice(4, 6) - 1,
+                +s.slice(6, 8)
+            ).getDay()
+        ]
     return `${s.slice(0, 4)}.${s.slice(4, 6)}.${s.slice(6, 8)}(${wd})`
 }
 function won(v: any): string {
     const x = Number(v)
-    return isFinite(x) && x > 0 ? Math.round(x).toLocaleString("en-US") + "원" : "—"
+    return isFinite(x) && x > 0
+        ? Math.round(x).toLocaleString("en-US") + "원"
+        : "—"
 }
 function fmtVol(v: any): string {
     const x = Number(v)
@@ -237,10 +288,22 @@ function toWeekly(cs: number[][]): number[][] {
     for (const c of cs) {
         const str = String(c[0])
         if (str.length !== 8) continue
-        const dt = new Date(+str.slice(0, 4), +str.slice(4, 6) - 1, +str.slice(6, 8))
+        const dt = new Date(
+            +str.slice(0, 4),
+            +str.slice(4, 6) - 1,
+            +str.slice(6, 8)
+        )
         const day = (dt.getDay() + 6) % 7
-        const mon = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() - day)
-        const key = String(mon.getFullYear() * 10000 + (mon.getMonth() + 1) * 100 + mon.getDate())
+        const mon = new Date(
+            dt.getFullYear(),
+            dt.getMonth(),
+            dt.getDate() - day
+        )
+        const key = String(
+            mon.getFullYear() * 10000 +
+                (mon.getMonth() + 1) * 100 +
+                mon.getDate()
+        )
         if (key !== curKey) {
             if (cur) out.push(cur)
             cur = c.slice() // ETF 전용 6·7번(NAV·좌수)까지 보존
@@ -267,15 +330,25 @@ function mergeHist(hist: number[][] | null, recent: number[][]): number[][] {
     const m: Record<number, number[]> = {}
     for (const c of hist) m[c[0]] = c
     for (const c of recent) m[c[0]] = c
-    return Object.keys(m).map((k) => m[+k]).sort((a, b) => a[0] - b[0])
+    return Object.keys(m)
+        .map((k) => m[+k])
+        .sort((a, b) => a[0] - b[0])
 }
 
 function demoCandles(): number[][] {
     const demo: number[][] = []
     let p = 70000
     for (let i = 0; i < 60; i++) {
-        const o = p, c = Math.round(p * (1 + (((i * 7) % 11) - 5) / 100))
-        demo.push([20260400 + (i % 28) + 1, o, Math.round(Math.max(o, c) * 1.01), Math.round(Math.min(o, c) * 0.99), c, 1000000 + i * 9000])
+        const o = p,
+            c = Math.round(p * (1 + (((i * 7) % 11) - 5) / 100))
+        demo.push([
+            20260400 + (i % 28) + 1,
+            o,
+            Math.round(Math.max(o, c) * 1.01),
+            Math.round(Math.min(o, c) * 0.99),
+            c,
+            1000000 + i * 9000,
+        ])
         p = c
     }
     return demo
@@ -286,8 +359,7 @@ function demoCandles(): number[][] {
  * @framerSupportedLayoutHeight any
  */
 export default function PublicLiveChart(props: Props) {
-    const { ticker, chartBase, height, dark, showVolume, usChartHeight } =
-        props
+    const { ticker, chartBase, height, dark, showVolume, usChartHeight } = props
     const base = (chartBase || DEFAULT_BASE).replace(/\/+$/, "")
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const Hprop = height || 480
@@ -331,14 +403,22 @@ export default function PublicLiveChart(props: Props) {
     }, [onCanvas])
 
     // 종목 = prop → URL ?q= → localStorage(StockReport 기록). 이벤트·popstate 수신해 리로드 없이 추종.
-    // 유효 코드 아니면 빈 상태 (기본 종목 fallback 금지 — 엉뚱 그래프 방지). 'K' 포함 우선주 변형 허용.
+    // 유효 코드 아니면 빈 상태 (기본 종목 fallback 금지 — 엉뚱 그래프 방지). 영숫자 KRX 단축코드 허용.
     const resolveTk = (): string => {
-        let t = String(ticker || "").trim().toUpperCase()
+        let t = String(ticker || "")
+            .trim()
+            .toUpperCase()
         if (!t && typeof window !== "undefined") {
-            t = (new URLSearchParams(window.location.search).get("q") || "").trim().toUpperCase()
+            t = (new URLSearchParams(window.location.search).get("q") || "")
+                .trim()
+                .toUpperCase()
             if (!t) {
                 try {
-                    t = (window.localStorage.getItem("verity_last_ticker") || "").trim().toUpperCase()
+                    t = (
+                        window.localStorage.getItem("verity_last_ticker") || ""
+                    )
+                        .trim()
+                        .toUpperCase()
                 } catch (e) {
                     t = ""
                 }
@@ -350,7 +430,7 @@ export default function PublicLiveChart(props: Props) {
     // "표시할 종목이 없습니다"(= 종목 자체가 없다)로 보여 오독을 낳았다. 이제 원문을 보존하고
     // 국내 코드 여부만 파생 — 해외는 "차트 미제공"으로 정직하게 구분해 안내한다.
     const [rawTk, setTk] = useState<string>(resolveTk)
-    const tk = /^[0-9]{5}[0-9A-Z]$/.test(rawTk) ? rawTk : ""
+    const tk = isKrSecurityCode(rawTk) ? rawTk : ""
     const isForeign = !!rawTk && !tk
     useEffect(() => {
         if (onCanvas) return
@@ -401,7 +481,8 @@ export default function PublicLiveChart(props: Props) {
                     .then((e) => {
                         if (!alive || !e) return
                         const f = (e.etfs || []).find(
-                            (x: any) => String(x.ticker || "").toUpperCase() === rawTk
+                            (x: any) =>
+                                String(x.ticker || "").toUpperCase() === rawTk
                         )
                         if (f) setUsInfo({ ...acc, etf: f })
                     })
@@ -480,7 +561,16 @@ export default function PublicLiveChart(props: Props) {
                         const nav = Number(d.v ? d.v[i] : NaN)
                         const ast = Number(d.a ? d.a[i] : NaN)
                         const shr = Number(d.s ? d.s[i] : NaN)
-                        rows.push([Number(ds[i]), px, px, px, px, isFinite(ast) ? ast : 0, isFinite(nav) ? nav : 0, isFinite(shr) ? shr : 0])
+                        rows.push([
+                            Number(ds[i]),
+                            px,
+                            px,
+                            px,
+                            px,
+                            isFinite(ast) ? ast : 0,
+                            isFinite(nav) ? nav : 0,
+                            isFinite(shr) ? shr : 0,
+                        ])
                     }
                     if (rows.length > 1) {
                         rows.sort((a, b) => a[0] - b[0])
@@ -536,7 +626,10 @@ export default function PublicLiveChart(props: Props) {
         fetch(base + "/kr_chart_history/" + tk + ".json")
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                if (alive) setHistFull(d && Array.isArray(d.c) && d.c.length > 1 ? d.c : [])
+                if (alive)
+                    setHistFull(
+                        d && Array.isArray(d.c) && d.c.length > 1 ? d.c : []
+                    )
             })
             .catch(() => {
                 if (alive) setHistFull([])
@@ -557,10 +650,22 @@ export default function PublicLiveChart(props: Props) {
             const candles = isWeekly ? toWeekly(merged) : merged
             const none: (number | null)[] = []
             // MAX = 주봉·수년 스팬 — MA(일봉 산식)·52주선 비표시 (오독 방지)
-            return { candles, ma5: none, ma20: none, ma60: none, hi52, lo52, prevClose: null, isMax: true, isWeekly }
+            return {
+                candles,
+                ma5: none,
+                ma20: none,
+                ma60: none,
+                hi52,
+                lo52,
+                prevClose: null,
+                isMax: true,
+                isWeekly,
+            }
         }
         const closesAll = full.map((c) => c[4])
-        const ma5All = sma(closesAll, 5), ma20All = sma(closesAll, 20), ma60All = sma(closesAll, 60)
+        const ma5All = sma(closesAll, 5),
+            ma20All = sma(closesAll, 20),
+            ma60All = sma(closesAll, 60)
         const days = (RANGES.find((r) => r.key === range) || RANGES[1]).days
         const start = Math.max(0, full.length - days)
         return {
@@ -568,9 +673,11 @@ export default function PublicLiveChart(props: Props) {
             ma5: ma5All.slice(start),
             ma20: ma20All.slice(start),
             ma60: ma60All.slice(start),
-            hi52, lo52,
+            hi52,
+            lo52,
             prevClose: start > 0 ? full[start - 1][4] : null,
-            isMax: false, isWeekly: false,
+            isMax: false,
+            isWeekly: false,
         }
     }, [full, range, histFull])
 
@@ -578,13 +685,17 @@ export default function PublicLiveChart(props: Props) {
     const cv = useMemo(() => {
         if (!view) return null
         const candles = view.candles
-        const his = candles.map((c) => c[2]), los = candles.map((c) => c[3])
+        const his = candles.map((c) => c[2]),
+            los = candles.map((c) => c[3])
         // 52주 고저선은 시야 밖일 수 있음 — 가격축은 현 range + (근접 시) 52주선 포함
-        let pmin = Math.min(...los), pmax = Math.max(...his)
+        let pmin = Math.min(...los),
+            pmax = Math.max(...his)
         if (!view.isMax) {
             const prng0 = pmax - pmin || 1
-            if (view.hi52 <= pmax + prng0 * 0.25) pmax = Math.max(pmax, view.hi52)
-            if (view.lo52 >= pmin - prng0 * 0.25) pmin = Math.min(pmin, view.lo52)
+            if (view.hi52 <= pmax + prng0 * 0.25)
+                pmax = Math.max(pmax, view.hi52)
+            if (view.lo52 >= pmin - prng0 * 0.25)
+                pmin = Math.min(pmin, view.lo52)
         }
         const prng = pmax - pmin || 1
         const W = Math.max(240, (w || 800) - 4)
@@ -611,36 +722,60 @@ export default function PublicLiveChart(props: Props) {
         const chartH = Number.isFinite(_ch) ? _ch : 320
         const Hv = showVolume !== false ? Math.round(chartH * 0.16) : 0
         const gap = Hv ? 8 : 0
-        const padT = 10, padB = 4
+        const padT = 10,
+            padB = 4
         const Hp = chartH - Hv - gap
         const n = candles.length
         const xAt = (i: number) => (n === 1 ? W / 2 : (i / (n - 1)) * W)
-        const yP = (v: number) => padT + (Hp - padT - padB) - ((v - pmin) / prng) * (Hp - padT - padB)
+        const yP = (v: number) =>
+            padT + (Hp - padT - padB) - ((v - pmin) / prng) * (Hp - padT - padB)
         const vols = candles.map((c) => c[5])
         const vmax = Math.max(1, ...vols)
         // ETF 순자산 막대는 0 기준이면 변화가 안 보인다(잔액이라 늘 큰 값) — 최소값 기준으로 깔아줌
-        const vmin = isEtf ? Math.min(...vols.filter((v) => v > 0), vmax) * 0.98 : 0
+        const vmin = isEtf
+            ? Math.min(...vols.filter((v) => v > 0), vmax) * 0.98
+            : 0
         const vspan = Math.max(1, vmax - vmin)
         const cw = Math.max(1.2, (W / n) * 0.62)
         const items = candles.map((c, i) => {
             // ETF 는 시가가 없어 o=c — 전일 종가 대비로 색을 정한다
-            const upDay = isEtf ? (i > 0 ? c[4] >= candles[i - 1][4] : true) : c[4] >= c[1]
+            const upDay = isEtf
+                ? i > 0
+                    ? c[4] >= candles[i - 1][4]
+                    : true
+                : c[4] >= c[1]
             const bh = Hv ? (Math.max(0, c[5] - vmin) / vspan) * (Hv - 2) : 0
             return {
-                x: xAt(i), oy: yP(c[1]), cy: yP(c[4]), hy: yP(c[2]), ly: yP(c[3]),
-                upDay, volTop: Hp + gap + (Hv - bh), volH: Math.max(0.5, bh),
+                x: xAt(i),
+                oy: yP(c[1]),
+                cy: yP(c[4]),
+                hy: yP(c[2]),
+                ly: yP(c[3]),
+                upDay,
+                volTop: Hp + gap + (Hv - bh),
+                volH: Math.max(0.5, bh),
             }
         })
-        const tickIdx = [0, Math.round((n - 1) / 3), Math.round((2 * (n - 1)) / 3), n - 1]
+        const tickIdx = [
+            0,
+            Math.round((n - 1) / 3),
+            Math.round((2 * (n - 1)) / 3),
+            n - 1,
+        ]
         const maPath = (arr: (number | null)[]): string => {
-            let dstr = "", pen = false
+            let dstr = "",
+                pen = false
             for (let i = 0; i < arr.length; i++) {
                 const v = arr[i]
                 if (v == null) {
                     pen = false
                     continue
                 }
-                dstr += (pen ? "L" : "M") + xAt(i).toFixed(1) + "," + yP(v).toFixed(1)
+                dstr +=
+                    (pen ? "L" : "M") +
+                    xAt(i).toFixed(1) +
+                    "," +
+                    yP(v).toFixed(1)
                 pen = true
             }
             return dstr
@@ -652,13 +787,37 @@ export default function PublicLiveChart(props: Props) {
                 ? maPath(candles.map((c) => (c[6] > 0 ? c[6] : null)))
                 : ""
         const closeArea = closeLine
-            ? closeLine + "L" + xAt(n - 1).toFixed(1) + "," + (Hp - padB).toFixed(1) +
-              "L" + xAt(0).toFixed(1) + "," + (Hp - padB).toFixed(1) + "Z"
+            ? closeLine +
+              "L" +
+              xAt(n - 1).toFixed(1) +
+              "," +
+              (Hp - padB).toFixed(1) +
+              "L" +
+              xAt(0).toFixed(1) +
+              "," +
+              (Hp - padB).toFixed(1) +
+              "Z"
             : ""
         return {
-            W, H: chartH, Hp, Hv, gap, pmin, pmax, xAt, yP, items, cw, n, tickIdx,
-            closeLine, navLine, closeArea,
-            p5: maPath(view.ma5), p20: maPath(view.ma20), p60: maPath(view.ma60),
+            W,
+            H: chartH,
+            Hp,
+            Hv,
+            gap,
+            pmin,
+            pmax,
+            xAt,
+            yP,
+            items,
+            cw,
+            n,
+            tickIdx,
+            closeLine,
+            navLine,
+            closeArea,
+            p5: maPath(view.ma5),
+            p20: maPath(view.ma20),
+            p60: maPath(view.ma60),
         }
     }, [view, w, Hprop, showVolume, isEtf])
 
@@ -674,20 +833,30 @@ export default function PublicLiveChart(props: Props) {
     const candles = view ? view.candles : []
     const last = candles.length ? candles[candles.length - 1] : null
     const prevOfLast =
-        candles.length > 1 ? candles[candles.length - 2][4] : (view && view.prevClose) || null
-    const lastChg = last && prevOfLast ? ((last[4] - prevOfLast) / prevOfLast) * 100 : null
+        candles.length > 1
+            ? candles[candles.length - 2][4]
+            : (view && view.prevClose) || null
+    const lastChg =
+        last && prevOfLast ? ((last[4] - prevOfLast) / prevOfLast) * 100 : null
 
     const hov =
-        hoverIdx != null && cv && hoverIdx >= 0 && hoverIdx < cv.n ? candles[hoverIdx] : null
+        hoverIdx != null && cv && hoverIdx >= 0 && hoverIdx < cv.n
+            ? candles[hoverIdx]
+            : null
     const hovX = hov && cv ? cv.xAt(hoverIdx as number) : 0
     const hovChg = (() => {
         if (!hov || hoverIdx == null) return null
-        const pc = (hoverIdx as number) > 0 ? candles[(hoverIdx as number) - 1][4] : view && view.prevClose
+        const pc =
+            (hoverIdx as number) > 0
+                ? candles[(hoverIdx as number) - 1][4]
+                : view && view.prevClose
         if (!pc || pc <= 0) return null
         return ((hov[4] - pc) / pc) * 100
     })()
     const cardLeftPct = cv ? (hovX / cv.W) * 100 : 0
-    const cardFlip = cv ? hoverIdx != null && (hoverIdx as number) > cv.n * 0.5 : false
+    const cardFlip = cv
+        ? hoverIdx != null && (hoverIdx as number) > cv.n * 0.5
+        : false
 
     const wrap: CSSProperties = {
         /* 🚨 height:100% 로 되돌렸다 (2026-08-18 이분탐색).
@@ -696,19 +865,63 @@ export default function PublicLiveChart(props: Props) {
            주입 전부 정상이었다 — 변경 4건 중 이 레이아웃 한 건만 되돌려 원인을 가른다.
            🚨 되돌리지 말 것: 종횡비 수정(폭에서 높이 산출)은 그대로 유지된다. 프레임은
            고정 높이로 둔다(Fit 은 이 값이 100% 라 다시 순환 위험 — 별도로 다뤄야 한다). */
-        width: "100%", height: "100%", minHeight: Math.max(260, Hprop), position: "relative",
-        background: C.bg, borderRadius: 16, overflow: "hidden", boxSizing: "border-box",
-        fontFamily: FONT, padding: "10px 4px 4px", display: "flex", flexDirection: "column",
+        width: "100%",
+        height: "100%",
+        minHeight: Math.max(260, Hprop),
+        position: "relative",
+        background: C.bg,
+        borderRadius: 16,
+        overflow: "hidden",
+        boxSizing: "border-box",
+        fontFamily: FONT,
+        padding: "10px 4px 4px",
+        display: "flex",
+        flexDirection: "column",
     }
     const tipRow = (label: string, value: any, color?: string) => (
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "2px 0" }}>
-            <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 500 }}>{label}</span>
-            <span style={{ fontSize: 11.5, color: color || C.ink, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{value}</span>
+        <div
+            style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 10,
+                padding: "2px 0",
+            }}
+        >
+            <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 500 }}>
+                {label}
+            </span>
+            <span
+                style={{
+                    fontSize: 11.5,
+                    color: color || C.ink,
+                    fontWeight: 600,
+                    fontVariantNumeric: "tabular-nums",
+                }}
+            >
+                {value}
+            </span>
         </div>
     )
     const maChip = (label: string, color: string) => (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 600, color: C.faint }}>
-            <span style={{ width: 10, height: 2, background: color, display: "inline-block", borderRadius: 1 }} />
+        <span
+            style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+                fontSize: 10,
+                fontWeight: 600,
+                color: C.faint,
+            }}
+        >
+            <span
+                style={{
+                    width: 10,
+                    height: 2,
+                    background: color,
+                    display: "inline-block",
+                    borderRadius: 1,
+                }}
+            />
             {label}
         </span>
     )
@@ -720,8 +933,13 @@ export default function PublicLiveChart(props: Props) {
                 setHoverIdx(null)
             }}
             style={{
-                border: "none", cursor: "pointer", fontFamily: FONT, padding: "4px 10px", borderRadius: 8,
-                fontSize: 11.5, fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                fontFamily: FONT,
+                padding: "4px 10px",
+                borderRadius: 8,
+                fontSize: 11.5,
+                fontWeight: 700,
                 background: range === r.key ? C.tabActive : "transparent",
                 color: range === r.key ? C.ink : C.faint,
             }}
@@ -731,9 +949,25 @@ export default function PublicLiveChart(props: Props) {
     )
 
     const renderEmpty = () => (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 7, padding: "0 18px", textAlign: "center" }}>
+        <div
+            style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 7,
+                padding: "0 18px",
+                textAlign: "center",
+            }}
+        >
             {/* Phosphor chart-line (regular) — 자작 점선 아이콘의 끊김 인상 교체 (PM 2026-07-07) */}
-            <svg width="30" height="30" viewBox="0 0 256 256" style={{ opacity: 0.5 }}>
+            <svg
+                width="30"
+                height="30"
+                viewBox="0 0 256 256"
+                style={{ opacity: 0.5 }}
+            >
                 <path
                     d="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V48a8,8,0,0,1,16,0v94.37L90.73,98a8,8,0,0,1,10.07-.38l58.81,44.11L218.73,90a8,8,0,1,1,10.54,12l-64,56a8,8,0,0,1-10.07.38L96.39,114.29,40,163.63V200H224A8,8,0,0,1,232,208Z"
                     style={{ fill: C.faint }}
@@ -742,7 +976,14 @@ export default function PublicLiveChart(props: Props) {
             <span style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>
                 {tk ? "표시할 시세 정보가 없습니다" : "표시할 종목이 없습니다"}
             </span>
-            <span style={{ fontSize: 11, fontWeight: 500, color: C.faint, lineHeight: 1.5 }}>
+            <span
+                style={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: C.faint,
+                    lineHeight: 1.5,
+                }}
+            >
                 {tk
                     ? "이 종목은 차트로 표시할 일봉 데이터가 없어요"
                     : "종목을 선택하면 차트가 표시돼요"}
@@ -758,15 +999,30 @@ export default function PublicLiveChart(props: Props) {
         const url = naverWorldUrl(rawTk, (usInfo && usInfo.nv) || "")
         const kv = (k: string, v: string, col?: string) => (
             <div key={k} style={{ minWidth: 78 }}>
-                <div style={{ fontSize: 10.5, color: C.faint, fontWeight: 700 }}>{k}</div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: col || C.ink, marginTop: 2, letterSpacing: "-0.3px" }}>{v}</div>
+                <div
+                    style={{ fontSize: 10.5, color: C.faint, fontWeight: 700 }}
+                >
+                    {k}
+                </div>
+                <div
+                    style={{
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: col || C.ink,
+                        marginTop: 2,
+                        letterSpacing: "-0.3px",
+                    }}
+                >
+                    {v}
+                </div>
             </div>
         )
         const sg = (v: any) => {
             const x = Number(v)
             return (x > 0 ? "+" : "") + x.toFixed(2) + "%"
         }
-        const cl = (v: any) => (Number(v) > 0 ? C.up : Number(v) < 0 ? C.down : C.faint)
+        const cl = (v: any) =>
+            Number(v) > 0 ? C.up : Number(v) < 0 ? C.down : C.faint
         const st = (usInfo && usInfo.stock) || null
         const rows: any[] = []
         if (st) {
@@ -781,15 +1037,24 @@ export default function PublicLiveChart(props: Props) {
             if (f["ROE"]) rows.push(kv("ROE", String(f["ROE"])))
         }
         if (e && e.returns) {
-            if (e.returns.ytd != null) rows.push(kv("올해", sg(e.returns.ytd), cl(e.returns.ytd)))
-            if (e.returns.y3 != null) rows.push(kv("3년 연평균", sg(e.returns.y3), cl(e.returns.y3)))
-            if (e.returns.y5 != null) rows.push(kv("5년 연평균", sg(e.returns.y5), cl(e.returns.y5)))
+            if (e.returns.ytd != null)
+                rows.push(kv("올해", sg(e.returns.ytd), cl(e.returns.ytd)))
+            if (e.returns.y3 != null)
+                rows.push(kv("3년 연평균", sg(e.returns.y3), cl(e.returns.y3)))
+            if (e.returns.y5 != null)
+                rows.push(kv("5년 연평균", sg(e.returns.y5), cl(e.returns.y5)))
         }
         if (e) {
             if (e.expense != null) rows.push(kv("총보수", e.expense + "%"))
             if (e.yield_pct != null) rows.push(kv("분배율", e.yield_pct + "%"))
             if (e.beta3y != null) rows.push(kv("베타 3년", String(e.beta3y)))
-            if (e.aum_usd) rows.push(kv("순자산", "$" + (Number(e.aum_usd) / 1e9).toFixed(1) + "B"))
+            if (e.aum_usd)
+                rows.push(
+                    kv(
+                        "순자산",
+                        "$" + (Number(e.aum_usd) / 1e9).toFixed(1) + "B"
+                    )
+                )
         }
         // 위젯 높이 — 프레임 실측에서 헤더/사실/푸터 몫을 뺀 값. px 고정(Fit 금지).
         /* 🚨 고정 높이 (PM 2026-07-30 "이것저것 기능이 많다보니 답답해보이네").
@@ -810,8 +1075,24 @@ export default function PublicLiveChart(props: Props) {
                 }}
             >
                 <div style={{ padding: "0 4px" }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px" }}>{nm}</div>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: C.faint, marginTop: 3 }}>
+                    <div
+                        style={{
+                            fontSize: 16,
+                            fontWeight: 800,
+                            color: C.ink,
+                            letterSpacing: "-0.3px",
+                        }}
+                    >
+                        {nm}
+                    </div>
+                    <div
+                        style={{
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            color: C.faint,
+                            marginTop: 3,
+                        }}
+                    >
                         {rawTk}
                         {e && e.category
                             ? " · " + e.category
@@ -928,17 +1209,56 @@ export default function PublicLiveChart(props: Props) {
         }
         const n = 40
         return (
-            <div style={{ flex: 1, padding: "8px 10px 0", display: "flex", flexDirection: "column" }}>
+            <div
+                style={{
+                    flex: 1,
+                    padding: "8px 10px 0",
+                    display: "flex",
+                    flexDirection: "column",
+                }}
+            >
                 <style>{`@keyframes plcShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
-                <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 3 }}>
+                <div
+                    style={{
+                        flex: 1,
+                        display: "flex",
+                        alignItems: "flex-end",
+                        gap: 3,
+                    }}
+                >
                     {Array.from({ length: n }).map((_, i) => {
                         const bh = 26 + ((i * 41 + 17) % 64)
-                        return <div key={i} style={{ flex: 1, height: bh + "%", borderRadius: 3, ...sh }} />
+                        return (
+                            <div
+                                key={i}
+                                style={{
+                                    flex: 1,
+                                    height: bh + "%",
+                                    borderRadius: 3,
+                                    ...sh,
+                                }}
+                            />
+                        )
                     })}
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, marginBottom: 6 }}>
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginTop: 10,
+                        marginBottom: 6,
+                    }}
+                >
                     {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} style={{ width: 38, height: 9, borderRadius: 4, ...sh }} />
+                        <div
+                            key={i}
+                            style={{
+                                width: 38,
+                                height: 9,
+                                borderRadius: 4,
+                                ...sh,
+                            }}
+                        />
                     ))}
                 </div>
             </div>
@@ -962,101 +1282,345 @@ export default function PublicLiveChart(props: Props) {
             >
                 {last && (
                     <>
-                        <span style={{ fontSize: 17, fontWeight: 800, color: C.ink, letterSpacing: -0.3 }}>{won(last[4])}</span>
+                        <span
+                            style={{
+                                fontSize: 17,
+                                fontWeight: 800,
+                                color: C.ink,
+                                letterSpacing: -0.3,
+                            }}
+                        >
+                            {won(last[4])}
+                        </span>
                         {lastChg != null && (
-                            <span style={{ fontSize: 12.5, fontWeight: 700, color: lastChg > 0 ? C.up : lastChg < 0 ? C.down : C.faint }}>
-                                {(lastChg > 0 ? "▲ +" : lastChg < 0 ? "▼ " : "") + lastChg.toFixed(2) + "%"}
+                            <span
+                                style={{
+                                    fontSize: 12.5,
+                                    fontWeight: 700,
+                                    color:
+                                        lastChg > 0
+                                            ? C.up
+                                            : lastChg < 0
+                                              ? C.down
+                                              : C.faint,
+                                }}
+                            >
+                                {(lastChg > 0
+                                    ? "▲ +"
+                                    : lastChg < 0
+                                      ? "▼ "
+                                      : "") +
+                                    lastChg.toFixed(2) +
+                                    "%"}
                             </span>
                         )}
-                        <span style={{ fontSize: 10.5, fontWeight: 700, color: C.faint, background: C.grid, padding: "1px 6px", borderRadius: 5 }}>
+                        <span
+                            style={{
+                                fontSize: 10.5,
+                                fontWeight: 700,
+                                color: C.faint,
+                                background: C.grid,
+                                padding: "1px 6px",
+                                borderRadius: 5,
+                            }}
+                        >
                             전일 종가 · {dateDot(last[0])}
                         </span>
                         {view && view.isWeekly && (
-                            <span style={{ fontSize: 10, fontWeight: 700, color: C.vg }}>주봉</span>
+                            <span
+                                style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: C.vg,
+                                }}
+                            >
+                                주봉
+                            </span>
                         )}
                         {view && (
-                            <span style={{ fontSize: 10.5, fontWeight: 600, color: C.faint }}>
+                            <span
+                                style={{
+                                    fontSize: 10.5,
+                                    fontWeight: 600,
+                                    color: C.faint,
+                                }}
+                            >
                                 52주{" "}
-                                <span style={{ color: C.hi52 }}>{Number(view.hi52).toLocaleString()}</span>{" "}
+                                <span style={{ color: C.hi52 }}>
+                                    {Number(view.hi52).toLocaleString()}
+                                </span>{" "}
                                 /{" "}
-                                <span style={{ color: C.lo52 }}>{Number(view.lo52).toLocaleString()}</span>
+                                <span style={{ color: C.lo52 }}>
+                                    {Number(view.lo52).toLocaleString()}
+                                </span>
                             </span>
                         )}
                     </>
                 )}
-                <span style={{ marginLeft: "auto", display: "inline-flex", gap: 2 }}>{RANGES.map(rangeTab)}</span>
+                <span
+                    style={{
+                        marginLeft: "auto",
+                        display: "inline-flex",
+                        gap: 2,
+                    }}
+                >
+                    {RANGES.map(rangeTab)}
+                </span>
             </div>
 
             {cv && view ? (
                 <>
                     <div
                         ref={svgRef}
-                        style={{ position: "relative", width: "100%", touchAction: "pan-y" }}
+                        style={{
+                            position: "relative",
+                            width: "100%",
+                            touchAction: "pan-y",
+                        }}
                         onMouseMove={(e) => setHoverFromX(e.clientX)}
                         onMouseLeave={() => setHoverIdx(null)}
                         onTouchStart={(e) => {
-                            if (e.touches[0]) setHoverFromX(e.touches[0].clientX)
+                            if (e.touches[0])
+                                setHoverFromX(e.touches[0].clientX)
                         }}
                         onTouchMove={(e) => {
-                            if (e.touches[0]) setHoverFromX(e.touches[0].clientX)
+                            if (e.touches[0])
+                                setHoverFromX(e.touches[0].clientX)
                         }}
                     >
-                        <svg viewBox={`0 0 ${cv.W} ${cv.H}`} width="100%" height={cv.H} preserveAspectRatio="none" style={{ display: "block" }}>
-                            <line x1={0} y1={cv.yP(cv.pmax)} x2={cv.W} y2={cv.yP(cv.pmax)} strokeWidth={1} style={{ stroke: C.grid }} />
-                            <line x1={0} y1={cv.yP((cv.pmax + cv.pmin) / 2)} x2={cv.W} y2={cv.yP((cv.pmax + cv.pmin) / 2)} strokeWidth={1} style={{ stroke: C.grid }} />
-                            <line x1={0} y1={cv.yP(cv.pmin)} x2={cv.W} y2={cv.yP(cv.pmin)} strokeWidth={1} style={{ stroke: C.grid }} />
+                        <svg
+                            viewBox={`0 0 ${cv.W} ${cv.H}`}
+                            width="100%"
+                            height={cv.H}
+                            preserveAspectRatio="none"
+                            style={{ display: "block" }}
+                        >
+                            <line
+                                x1={0}
+                                y1={cv.yP(cv.pmax)}
+                                x2={cv.W}
+                                y2={cv.yP(cv.pmax)}
+                                strokeWidth={1}
+                                style={{ stroke: C.grid }}
+                            />
+                            <line
+                                x1={0}
+                                y1={cv.yP((cv.pmax + cv.pmin) / 2)}
+                                x2={cv.W}
+                                y2={cv.yP((cv.pmax + cv.pmin) / 2)}
+                                strokeWidth={1}
+                                style={{ stroke: C.grid }}
+                            />
+                            <line
+                                x1={0}
+                                y1={cv.yP(cv.pmin)}
+                                x2={cv.W}
+                                y2={cv.yP(cv.pmin)}
+                                strokeWidth={1}
+                                style={{ stroke: C.grid }}
+                            />
                             {/* 52주 고저 점선 (가격축 범위 안 + MAX 아님) */}
-                            {!view.isMax && view.hi52 <= cv.pmax && view.hi52 >= cv.pmin && (
-                                <line x1={0} y1={cv.yP(view.hi52)} x2={cv.W} y2={cv.yP(view.hi52)} strokeWidth={1} strokeOpacity={0.5} strokeDasharray="4 4" vectorEffect="non-scaling-stroke" style={{ stroke: C.hi52 }} />
-                            )}
-                            {!view.isMax && view.lo52 <= cv.pmax && view.lo52 >= cv.pmin && (
-                                <line x1={0} y1={cv.yP(view.lo52)} x2={cv.W} y2={cv.yP(view.lo52)} strokeWidth={1} strokeOpacity={0.5} strokeDasharray="4 4" vectorEffect="non-scaling-stroke" style={{ stroke: C.lo52 }} />
-                            )}
+                            {!view.isMax &&
+                                view.hi52 <= cv.pmax &&
+                                view.hi52 >= cv.pmin && (
+                                    <line
+                                        x1={0}
+                                        y1={cv.yP(view.hi52)}
+                                        x2={cv.W}
+                                        y2={cv.yP(view.hi52)}
+                                        strokeWidth={1}
+                                        strokeOpacity={0.5}
+                                        strokeDasharray="4 4"
+                                        vectorEffect="non-scaling-stroke"
+                                        style={{ stroke: C.hi52 }}
+                                    />
+                                )}
+                            {!view.isMax &&
+                                view.lo52 <= cv.pmax &&
+                                view.lo52 >= cv.pmin && (
+                                    <line
+                                        x1={0}
+                                        y1={cv.yP(view.lo52)}
+                                        x2={cv.W}
+                                        y2={cv.yP(view.lo52)}
+                                        strokeWidth={1}
+                                        strokeOpacity={0.5}
+                                        strokeDasharray="4 4"
+                                        vectorEffect="non-scaling-stroke"
+                                        style={{ stroke: C.lo52 }}
+                                    />
+                                )}
                             {/* ETF = 종가 라인(+면적) · NAV 점선 / 주식 = 캔들. 막대 = 순자산 or 거래량 */}
                             {isEtf
                                 ? cv.items.map((cd: any, i: number) =>
                                       cv.Hv > 0 ? (
-                                          <rect key={i} x={cd.x - cv.cw / 2} y={cd.volTop} width={cv.cw} height={cd.volH} fillOpacity={0.3} style={{ fill: cd.upDay ? C.up : C.down }} />
+                                          <rect
+                                              key={i}
+                                              x={cd.x - cv.cw / 2}
+                                              y={cd.volTop}
+                                              width={cv.cw}
+                                              height={cd.volH}
+                                              fillOpacity={0.3}
+                                              style={{
+                                                  fill: cd.upDay
+                                                      ? C.up
+                                                      : C.down,
+                                              }}
+                                          />
                                       ) : null
                                   )
                                 : cv.items.map((cd: any, i: number) => {
                                       const col = cd.upDay ? C.up : C.down
                                       const bodyTop = Math.min(cd.oy, cd.cy)
-                                      const bodyH = Math.max(0.8, Math.abs(cd.oy - cd.cy))
+                                      const bodyH = Math.max(
+                                          0.8,
+                                          Math.abs(cd.oy - cd.cy)
+                                      )
                                       return (
                                           <g key={i}>
                                               {cv.Hv > 0 && (
-                                                  <rect x={cd.x - cv.cw / 2} y={cd.volTop} width={cv.cw} height={cd.volH} fillOpacity={0.35} style={{ fill: col }} />
+                                                  <rect
+                                                      x={cd.x - cv.cw / 2}
+                                                      y={cd.volTop}
+                                                      width={cv.cw}
+                                                      height={cd.volH}
+                                                      fillOpacity={0.35}
+                                                      style={{ fill: col }}
+                                                  />
                                               )}
-                                              <line x1={cd.x} y1={cd.hy} x2={cd.x} y2={cd.ly} strokeWidth={1} vectorEffect="non-scaling-stroke" style={{ stroke: col }} />
-                                              <rect x={cd.x - cv.cw / 2} y={bodyTop} width={Math.max(1, cv.cw)} height={bodyH} style={{ fill: col }} />
+                                              <line
+                                                  x1={cd.x}
+                                                  y1={cd.hy}
+                                                  x2={cd.x}
+                                                  y2={cd.ly}
+                                                  strokeWidth={1}
+                                                  vectorEffect="non-scaling-stroke"
+                                                  style={{ stroke: col }}
+                                              />
+                                              <rect
+                                                  x={cd.x - cv.cw / 2}
+                                                  y={bodyTop}
+                                                  width={Math.max(1, cv.cw)}
+                                                  height={bodyH}
+                                                  style={{ fill: col }}
+                                              />
                                           </g>
                                       )
                                   })}
                             {isEtf && cv.closeArea && (
-                                <path d={cv.closeArea} stroke="none" fillOpacity={0.1} style={{ fill: C.vg }} />
+                                <path
+                                    d={cv.closeArea}
+                                    stroke="none"
+                                    fillOpacity={0.1}
+                                    style={{ fill: C.vg }}
+                                />
                             )}
                             {isEtf && cv.closeLine && (
-                                <path d={cv.closeLine} fill="none" strokeWidth={1.8} vectorEffect="non-scaling-stroke" style={{ stroke: C.vg }} />
+                                <path
+                                    d={cv.closeLine}
+                                    fill="none"
+                                    strokeWidth={1.8}
+                                    vectorEffect="non-scaling-stroke"
+                                    style={{ stroke: C.vg }}
+                                />
                             )}
                             {isEtf && cv.navLine && (
-                                <path d={cv.navLine} fill="none" strokeWidth={1.2} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" style={{ stroke: C.ma20 }} />
+                                <path
+                                    d={cv.navLine}
+                                    fill="none"
+                                    strokeWidth={1.2}
+                                    strokeDasharray="3 3"
+                                    vectorEffect="non-scaling-stroke"
+                                    style={{ stroke: C.ma20 }}
+                                />
                             )}
                             {/* 이동평균선 5/20/60 */}
-                            {cv.p60 && <path d={cv.p60} fill="none" strokeWidth={1.2} strokeOpacity={0.9} vectorEffect="non-scaling-stroke" style={{ stroke: C.ma60 }} />}
-                            {cv.p20 && <path d={cv.p20} fill="none" strokeWidth={1.2} strokeOpacity={0.9} vectorEffect="non-scaling-stroke" style={{ stroke: C.ma20 }} />}
-                            {cv.p5 && <path d={cv.p5} fill="none" strokeWidth={1.2} strokeOpacity={0.9} vectorEffect="non-scaling-stroke" style={{ stroke: C.ma5 }} />}
+                            {cv.p60 && (
+                                <path
+                                    d={cv.p60}
+                                    fill="none"
+                                    strokeWidth={1.2}
+                                    strokeOpacity={0.9}
+                                    vectorEffect="non-scaling-stroke"
+                                    style={{ stroke: C.ma60 }}
+                                />
+                            )}
+                            {cv.p20 && (
+                                <path
+                                    d={cv.p20}
+                                    fill="none"
+                                    strokeWidth={1.2}
+                                    strokeOpacity={0.9}
+                                    vectorEffect="non-scaling-stroke"
+                                    style={{ stroke: C.ma20 }}
+                                />
+                            )}
+                            {cv.p5 && (
+                                <path
+                                    d={cv.p5}
+                                    fill="none"
+                                    strokeWidth={1.2}
+                                    strokeOpacity={0.9}
+                                    vectorEffect="non-scaling-stroke"
+                                    style={{ stroke: C.ma5 }}
+                                />
+                            )}
                             {hov && (
                                 <>
-                                    <line x1={hovX} y1={0} x2={hovX} y2={cv.H} strokeWidth={1} strokeOpacity={0.45} vectorEffect="non-scaling-stroke" style={{ stroke: C.faint }} />
-                                    <circle cx={hovX} cy={cv.yP(hov[4])} r={4} strokeWidth={1.5} style={{ fill: hov[4] >= hov[1] ? C.up : C.down, stroke: C.bg }} />
+                                    <line
+                                        x1={hovX}
+                                        y1={0}
+                                        x2={hovX}
+                                        y2={cv.H}
+                                        strokeWidth={1}
+                                        strokeOpacity={0.45}
+                                        vectorEffect="non-scaling-stroke"
+                                        style={{ stroke: C.faint }}
+                                    />
+                                    <circle
+                                        cx={hovX}
+                                        cy={cv.yP(hov[4])}
+                                        r={4}
+                                        strokeWidth={1.5}
+                                        style={{
+                                            fill:
+                                                hov[4] >= hov[1]
+                                                    ? C.up
+                                                    : C.down,
+                                            stroke: C.bg,
+                                        }}
+                                    />
                                 </>
                             )}
                         </svg>
-                        <span style={{ position: "absolute", top: 2, right: 4, fontSize: 10, fontWeight: 600, color: C.faint, background: C.bg, padding: "0 3px", borderRadius: 4 }}>
+                        <span
+                            style={{
+                                position: "absolute",
+                                top: 2,
+                                right: 4,
+                                fontSize: 10,
+                                fontWeight: 600,
+                                color: C.faint,
+                                background: C.bg,
+                                padding: "0 3px",
+                                borderRadius: 4,
+                            }}
+                        >
                             {Number(cv.pmax).toLocaleString()}
                         </span>
-                        <span style={{ position: "absolute", top: cv.Hp - 14 + "px", right: 4, fontSize: 10, fontWeight: 600, color: C.faint, background: C.bg, padding: "0 3px", borderRadius: 4 }}>
+                        <span
+                            style={{
+                                position: "absolute",
+                                top: cv.Hp - 14 + "px",
+                                right: 4,
+                                fontSize: 10,
+                                fontWeight: 600,
+                                color: C.faint,
+                                background: C.bg,
+                                padding: "0 3px",
+                                borderRadius: 4,
+                            }}
+                        >
                             {Number(cv.pmin).toLocaleString()}
                         </span>
 
@@ -1064,21 +1628,55 @@ export default function PublicLiveChart(props: Props) {
                         {hov && (
                             <div
                                 style={{
-                                    position: "absolute", top: 2, left: cardLeftPct + "%",
-                                    transform: cardFlip ? "translateX(calc(-100% - 8px))" : "translateX(8px)",
-                                    background: C.card, border: `1px solid ${C.tipBd}`, borderRadius: 10,
-                                    boxShadow: "0 8px 24px rgba(0,0,0,0.14)", padding: "7px 9px", minWidth: 122, zIndex: 30, pointerEvents: "none",
+                                    position: "absolute",
+                                    top: 2,
+                                    left: cardLeftPct + "%",
+                                    transform: cardFlip
+                                        ? "translateX(calc(-100% - 8px))"
+                                        : "translateX(8px)",
+                                    background: C.card,
+                                    border: `1px solid ${C.tipBd}`,
+                                    borderRadius: 10,
+                                    boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+                                    padding: "7px 9px",
+                                    minWidth: 122,
+                                    zIndex: 30,
+                                    pointerEvents: "none",
                                 }}
                             >
-                                <div style={{ fontSize: 12, fontWeight: 600, color: C.ink, marginBottom: 4, letterSpacing: "-0.2px" }}>{dateDot(hov[0])}</div>
+                                <div
+                                    style={{
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        color: C.ink,
+                                        marginBottom: 4,
+                                        letterSpacing: "-0.2px",
+                                    }}
+                                >
+                                    {dateDot(hov[0])}
+                                </div>
                                 {isEtf ? (
                                     <>
                                         {tipRow("종가", won(hov[4]))}
-                                        {hov.length > 6 && hov[6] > 0 && tipRow("NAV", won(hov[6]), C.ma20)}
-                                        {hov.length > 6 && hov[6] > 0 &&
+                                        {hov.length > 6 &&
+                                            hov[6] > 0 &&
+                                            tipRow("NAV", won(hov[6]), C.ma20)}
+                                        {hov.length > 6 &&
+                                            hov[6] > 0 &&
                                             (() => {
-                                                const dv = ((hov[4] - hov[6]) / hov[6]) * 100
-                                                return tipRow("괴리율", (dv > 0 ? "+" : "") + dv.toFixed(2) + "%", Math.abs(dv) >= 0.5 ? C.up : C.faint)
+                                                const dv =
+                                                    ((hov[4] - hov[6]) /
+                                                        hov[6]) *
+                                                    100
+                                                return tipRow(
+                                                    "괴리율",
+                                                    (dv > 0 ? "+" : "") +
+                                                        dv.toFixed(2) +
+                                                        "%",
+                                                    Math.abs(dv) >= 0.5
+                                                        ? C.up
+                                                        : C.faint
+                                                )
                                             })()}
                                         {tipRow("순자산", fmtAmt(hov[5]))}
                                     </>
@@ -1092,24 +1690,64 @@ export default function PublicLiveChart(props: Props) {
                                     </>
                                 )}
                                 {hovChg != null &&
-                                    tipRow("등락률", (hovChg > 0 ? "+" : "") + hovChg.toFixed(2) + "%", hovChg > 0 ? C.up : hovChg < 0 ? C.down : C.faint)}
+                                    tipRow(
+                                        "등락률",
+                                        (hovChg > 0 ? "+" : "") +
+                                            hovChg.toFixed(2) +
+                                            "%",
+                                        hovChg > 0
+                                            ? C.up
+                                            : hovChg < 0
+                                              ? C.down
+                                              : C.faint
+                                    )}
                             </div>
                         )}
                     </div>
                     {/* 날짜축 */}
-                    <div style={{ position: "relative", height: 14, margin: "2px 2px 0" }}>
+                    <div
+                        style={{
+                            position: "relative",
+                            height: 14,
+                            margin: "2px 2px 0",
+                        }}
+                    >
                         {cv.tickIdx.map((ti: number, i: number) => {
                             const lp = (cv.xAt(ti) / cv.W) * 100
-                            const tf = i === 0 ? "translateX(0)" : i === cv.tickIdx.length - 1 ? "translateX(-100%)" : "translateX(-50%)"
+                            const tf =
+                                i === 0
+                                    ? "translateX(0)"
+                                    : i === cv.tickIdx.length - 1
+                                      ? "translateX(-100%)"
+                                      : "translateX(-50%)"
                             return (
-                                <span key={i} style={{ position: "absolute", left: lp + "%", transform: tf, fontSize: 10, fontWeight: 500, color: C.faint, whiteSpace: "nowrap" }}>
+                                <span
+                                    key={i}
+                                    style={{
+                                        position: "absolute",
+                                        left: lp + "%",
+                                        transform: tf,
+                                        fontSize: 10,
+                                        fontWeight: 500,
+                                        color: C.faint,
+                                        whiteSpace: "nowrap",
+                                    }}
+                                >
                                     {candles[ti] ? mmdd(candles[ti][0]) : ""}
                                 </span>
                             )
                         })}
                     </div>
                     {/* 푸터 — MA 범례 + 정직 라벨 + 네이버 실시간 */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 10px 4px", flexWrap: "wrap" }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "5px 10px 4px",
+                            flexWrap: "wrap",
+                        }}
+                    >
                         {isEtf ? (
                             <>
                                 {maChip("종가", C.vg)}
@@ -1125,14 +1763,36 @@ export default function PublicLiveChart(props: Props) {
                                 </>
                             )
                         )}
-                        <span style={{ fontSize: 10, color: C.faint, fontWeight: 500 }}>
+                        <span
+                            style={{
+                                fontSize: 10,
+                                color: C.faint,
+                                fontWeight: 500,
+                            }}
+                        >
                             {isEtf
-                                ? (view.isWeekly ? "주봉" : "일봉") + " · 전일까지 · KRX OpenAPI (T+1)"
-                                : (view.isMax ? (view.isWeekly ? "주봉 · 전체 기간 (2020~)" : "일봉 · 전체 기간") : "일봉") +
+                                ? (view.isWeekly ? "주봉" : "일봉") +
+                                  " · 전일까지 · KRX OpenAPI (T+1)"
+                                : (view.isMax
+                                      ? view.isWeekly
+                                          ? "주봉 · 전체 기간 (2020~)"
+                                          : "일봉 · 전체 기간"
+                                      : "일봉") +
                                   " · 전일까지 · 금융위 공공데이터 (T+1)"}
                         </span>
                         {tk && (
-                            <a href={naverUrl(tk)} target="_blank" rel="noopener noreferrer" style={{ marginLeft: "auto", fontSize: 11, fontWeight: 800, color: C.vg, textDecoration: "none" }}>
+                            <a
+                                href={naverUrl(tk)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    marginLeft: "auto",
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    color: C.vg,
+                                    textDecoration: "none",
+                                }}
+                            >
                                 실시간 호가·차트 · 네이버 ↗
                             </a>
                         )}
@@ -1151,9 +1811,40 @@ export default function PublicLiveChart(props: Props) {
 
 addPropertyControls(PublicLiveChart, {
     ticker: { type: ControlType.String, title: "Ticker", defaultValue: "" },
-    chartBase: { type: ControlType.String, title: "Chart Base", defaultValue: DEFAULT_BASE },
-    height: { type: ControlType.Number, title: "Height(fallback)", defaultValue: 480, min: 220, max: 800, step: 10 },
-    usChartHeight: { type: ControlType.Number, title: "해외 차트 높이", defaultValue: 460, min: 240, max: 900, step: 10 },
-    showVolume: { type: ControlType.Boolean, title: "Volume", defaultValue: true, enabledTitle: "On", disabledTitle: "Off" },
-    dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
+    chartBase: {
+        type: ControlType.String,
+        title: "Chart Base",
+        defaultValue: DEFAULT_BASE,
+    },
+    height: {
+        type: ControlType.Number,
+        title: "Height(fallback)",
+        defaultValue: 480,
+        min: 220,
+        max: 800,
+        step: 10,
+    },
+    usChartHeight: {
+        type: ControlType.Number,
+        title: "해외 차트 높이",
+        defaultValue: 460,
+        min: 240,
+        max: 900,
+        step: 10,
+    },
+    showVolume: {
+        type: ControlType.Boolean,
+        title: "Volume",
+        defaultValue: true,
+        enabledTitle: "On",
+        disabledTitle: "Off",
+    },
+    dark: {
+        type: ControlType.Boolean,
+        title: "Dark(미사용)",
+        defaultValue: false,
+        enabledTitle: "On",
+        disabledTitle: "Off",
+    },
 })
+

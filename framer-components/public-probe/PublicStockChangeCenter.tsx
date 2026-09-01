@@ -147,7 +147,7 @@ export default function PublicStockChangeCenter(props: Props) {
     }, [onCanvas])
 
     useEffect(() => {
-        if (onCanvas) return
+        if (onCanvas || /^CMD_/.test(ticker)) return
         let active = true
         const root = (props.dataUrl || DEFAULT_URL).replace(/\/+$/, "")
         const prefix = ticker.slice(0, 3)
@@ -196,6 +196,7 @@ export default function PublicStockChangeCenter(props: Props) {
     const title: CSSProperties = { margin: 0, color: C.ink, fontSize: 15, fontWeight: 800, letterSpacing: "-0.25px" }
     const sub: CSSProperties = { color: C.faint, fontSize: 10.5, lineHeight: 1.5 }
 
+    if (!onCanvas && /^CMD_/.test(ticker)) return null
     if (error) return <div ref={rootRef} style={shell}><div style={{ ...card, color: C.sub }}>{error}</div></div>
     if (!payload) return <div ref={rootRef} style={shell}><div style={{ ...card, color: C.faint }}>변화 데이터 확인 중…</div></div>
     if (!stock) return <div ref={rootRef} style={shell}><div style={{ ...card, color: C.sub }}>{ticker || "선택 종목"}의 결합 데이터가 없습니다.</div></div>
@@ -303,3 +304,4 @@ addPropertyControls(PublicStockChangeCenter, {
     ticker: { type: ControlType.String, title: "Ticker", defaultValue: "" },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
+
