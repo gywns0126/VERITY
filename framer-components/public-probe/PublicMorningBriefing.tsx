@@ -111,6 +111,13 @@ const PULSE_URL =
 const BRIEF_URL =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/daily_briefing.json"
 const PER_SECTION = 3 // 섹션당 기본 노출, 초과 = "+N건" 접힘
+const SITE_UPDATE_VERSION = "2026-09-01-home-pulse-v1"
+const SITE_UPDATE_READ_KEY = "alphanest_site_update_read"
+const SITE_UPDATES = [
+    { title: "보유·관심종목 로딩 개선", text: "데이터 확인 전 빈 상태가 먼저 보이던 문제를 개선했습니다.", href: "/nest" },
+    { title: "페이지별 읽기 가이드", text: "시장·공시·보유 화면에서 먼저 확인할 순서를 안내합니다.", href: "/market" },
+    { title: "종목 변화 센터", text: "가격·사업·고용·자본조달 변화를 기준일과 함께 확인할 수 있습니다.", href: "/stock" },
+] as const
 
 interface Props {
     apiBase: string
@@ -340,6 +347,11 @@ export default function PublicMorningBriefing(props: Props) {
     const [openSec, setOpenSec] = useState<Record<string, boolean>>({})
     const [, setNowTick] = useState(0) // 경과 시간 표시 갱신용 60초 틱
     const [reloadTick, setReloadTick] = useState(0) // 탭 복귀·5분 폴링 재조회 트리거
+    const [pulseIndex, setPulseIndex] = useState(0)
+    const [pulsePaused, setPulsePaused] = useState(false)
+    const [reduceMotion, setReduceMotion] = useState(false)
+    const [updatesOpen, setUpdatesOpen] = useState(false)
+    const [updatesUnread, setUpdatesUnread] = useState(false)
 
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
 
@@ -362,7 +374,7 @@ export default function PublicMorningBriefing(props: Props) {
             const tk = String((h && h.ticker) || "")
             if (!tk) continue
             const ent = nestIdx[tk]
-            const pct = npsMap ? npsMap[tk] : undefined
+            const pct: number = Number(npsMap?.[tk] ?? 0)
             const evs = ent && Array.isArray(ent.ev) ? ent.ev : []
             if (!evs.length && !(pct > 0)) continue
             out.push({
@@ -580,6 +592,21 @@ export default function PublicMorningBriefing(props: Props) {
         return () => clearInterval(id)
     }, [onCanvas])
 
+    // 제품 업데이트는 버전당 한 번만 자동으로 펼친다. 닫은 뒤에는 상단 버튼으로 다시 볼 수 있다.
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        let seen = ""
+        try { seen = localStorage.getItem(SITE_UPDATE_READ_KEY) || "" } catch {}
+        const unread = seen !== SITE_UPDATE_VERSION
+        setUpdatesUnread(unread)
+        setUpdatesOpen(unread)
+        const media = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)")
+        const syncMotion = () => setReduceMotion(!!media?.matches)
+        syncMotion()
+        media?.addEventListener?.("change", syncMotion)
+        return () => media?.removeEventListener?.("change", syncMotion)
+    }, [onCanvas])
+
     // ── 내 자산 계산 ──
     const asset = useMemo(() => {
         const usePrev = isDemo ? SAMPLE_PREV : null
@@ -740,6 +767,43 @@ export default function PublicMorningBriefing(props: Props) {
               .join(" · ")
         : "수시 갱신"
 
+    // 기존 브리핑 응답만 재사용한다. 별도 API·Blob 요청을 추가하지 않는다.
+    const pulseItems = useMemo(() => {
+        const items: Array<{ text: string; href?: string }> = []
+        if (brief) {
+            const factCount = ((brief.sections || []) as any[]).reduce(
+                (sum, section) => sum + (Array.isArray(section?.items) ? section.items.length : 0),
+                0
+            )
+            if (factCount > 0) items.push({ text: `시장 브리핑 반영 사실 ${factCount}건 · ${dateLine}` })
+            if (banner?.date) items.push({ text: `시장 지수·업종 ${banner.date} 종가 기준`, href: "/market" })
+        }
+        if (!isDemo && myNews.length > 0) items.push({ text: `내 보유 종목 새 소식 ${myNews.length}종목 · 최근 3일`, href: "/nest" })
+        items.push({ text: `새 기능 ${SITE_UPDATES.length}건 · 업데이트 내용 보기` })
+        return items
+    }, [brief, banner?.date, dateLine, isDemo, myNews.length])
+
+    useEffect(() => {
+        if (pulseIndex >= pulseItems.length) setPulseIndex(0)
+    }, [pulseIndex, pulseItems.length])
+
+    useEffect(() => {
+        if (onCanvas || reduceMotion || pulsePaused || pulseItems.length < 2) return
+        const id = setInterval(() => setPulseIndex((index) => (index + 1) % pulseItems.length), 7000)
+        return () => clearInterval(id)
+    }, [onCanvas, pulseItems.length, pulsePaused, reduceMotion])
+
+    const markUpdatesRead = () => {
+        try { localStorage.setItem(SITE_UPDATE_READ_KEY, SITE_UPDATE_VERSION) } catch {}
+        setUpdatesUnread(false)
+    }
+
+    const toggleUpdates = () => {
+        const next = !updatesOpen
+        setUpdatesOpen(next)
+        if (next || updatesUnread) markUpdatesRead()
+    }
+
     // 카드 밖 제호 + 형제 카드 2장 (개인 / 시장). 중첩 카드 회피.
     const shell: CSSProperties = {
         fontFamily: FONT,
@@ -807,17 +871,65 @@ export default function PublicMorningBriefing(props: Props) {
                 >
                     시장 브리핑
                 </span>
-                <span
-                    style={{
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        color: C.faint,
-                        whiteSpace: "nowrap",
-                    }}
-                >
-                    {dateLine}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: C.faint, whiteSpace: "nowrap" }}>{dateLine}</span>
+                    <button
+                        type="button"
+                        onClick={toggleUpdates}
+                        aria-expanded={updatesOpen}
+                        aria-controls="site-update-panel"
+                        style={{ border: "none", borderRadius: 999, padding: "5px 8px", background: updatesUnread ? C.vg : C.vgS, color: updatesUnread ? C.onAccent : C.vg, fontFamily: FONT, fontSize: 10.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                        업데이트 {updatesUnread ? "NEW" : SITE_UPDATES.length}
+                    </button>
+                </div>
             </div>
+
+            {/* 데이터 활동 스트립 — 브리핑에 이미 내려온 사실만 순환. 연속 전광판·추가 요청 없음. */}
+            <div
+                role="status"
+                aria-live="polite"
+                onMouseEnter={() => setPulsePaused(true)}
+                onMouseLeave={() => setPulsePaused(false)}
+                style={{ minHeight: 36, display: "flex", alignItems: "center", gap: 9, background: C.card, borderRadius: 12, padding: "8px 11px", boxSizing: "border-box", overflow: "hidden" }}
+            >
+                <span style={{ flexShrink: 0, color: C.vg, background: C.vgS, borderRadius: 999, padding: "3px 7px", fontSize: 9.5, fontWeight: 850, letterSpacing: "0.3px" }}>NOW</span>
+                <button
+                    type="button"
+                    onClick={() => {
+                        const item = pulseItems[pulseIndex]
+                        if (item?.href && typeof window !== "undefined") window.location.href = item.href
+                        else if (!updatesOpen) toggleUpdates()
+                    }}
+                    style={{ minWidth: 0, flex: 1, border: "none", padding: 0, background: "transparent", color: C.sub, fontFamily: FONT, fontSize: 11.5, fontWeight: 700, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer" }}
+                >
+                    {pulseItems[pulseIndex]?.text || "AlphaNest 데이터 확인 중"}
+                </button>
+                {pulseItems.length > 1 && (
+                    <span aria-hidden="true" style={{ flexShrink: 0, color: C.faint, fontSize: 9.5, fontVariantNumeric: "tabular-nums" }}>{pulseIndex + 1}/{pulseItems.length}</span>
+                )}
+            </div>
+
+            {updatesOpen && (
+                <section id="site-update-panel" aria-label="AlphaNest 업데이트" style={{ ...card, padding: narrow ? "14px" : "16px 18px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                        <div>
+                            <div style={{ color: C.vg, fontSize: 10.5, fontWeight: 850 }}>ALPHANEST UPDATE</div>
+                            <div style={{ marginTop: 3, color: C.ink, fontSize: 15, fontWeight: 800 }}>이번에 달라진 점</div>
+                        </div>
+                        <button type="button" onClick={() => { setUpdatesOpen(false); markUpdatesRead() }} style={{ border: "none", background: C.bg, color: C.sub, borderRadius: 999, padding: "6px 9px", fontFamily: FONT, fontSize: 10.5, fontWeight: 800, cursor: "pointer" }}>닫기</button>
+                    </div>
+                    <div style={{ marginTop: 11, display: "grid", gap: 7 }}>
+                        {SITE_UPDATES.map((update) => (
+                            <a key={update.title} href={update.href} style={{ display: "block", padding: "10px 11px", borderRadius: 11, background: C.bg, color: C.ink, textDecoration: "none" }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 800 }}>{update.title}</div>
+                                <div style={{ marginTop: 3, color: C.faint, fontSize: 10.5, fontWeight: 600, lineHeight: 1.5 }}>{update.text}</div>
+                            </a>
+                        ))}
+                    </div>
+                    <div style={{ marginTop: 9, color: C.faint, fontSize: 10, fontWeight: 600 }}>2026.09.01 · 새 버전일 때 한 번만 자동으로 열립니다.</div>
+                </section>
+            )}
 
             {/* ── ① 내 자산 카드 ── */}
             {noLogin ? (
