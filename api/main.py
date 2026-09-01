@@ -4844,16 +4844,19 @@ def main():
     except Exception as _sa_e:
         print(f"  [system_action] 스킵: {type(_sa_e).__name__}: {_sa_e}")
 
-    # ── 사전등록 페이퍼 트랙 (PM 2026-08-04 "페이퍼 트랙 ㄱㄱ") ──
-    # PREREG_AUTO_EXECUTION_GATE_2026_08_03 의 E·S·X 규칙을 가상 1,000만원으로 문자 그대로
-    # 집행 — 실전 전략(aligned BUY 체계) 자체의 예비 trail 축적. VAMS 불간섭(별도 상태·장부).
-    # 장부 = data/exec_paper_trail.jsonl (다음 step git add data/ broad = RULE 4 자동 포함).
+    # ── 산식 고정 전향 가상 운용 (PM 2026-09-01 "일단 굴려보자") ──
+    # 현행 Brain 산식은 그대로 두고, 현재 분석 KR 후보 안의 WATCH 이상 상위 최대 10개를
+    # 가상 1,000만원으로 집행한다. 비용·코스피·후보 분모·검출하한을 별도 상태와 장부에 기록한다.
+    # VAMS 불간섭 · 실주문 0. 상태=data/exec_paper_state.json, 장부=data/exec_paper_trail.jsonl.
     try:
         from api.execution.paper_track import run_paper_track
-        portfolio["exec_paper"] = run_paper_track(analyzed, DATA_DIR)
+        portfolio["exec_paper"] = run_paper_track(
+            analyzed, DATA_DIR, source_as_of=portfolio.get("updated_at"))
         _ep = portfolio["exec_paper"]
-        print(f"  [exec_paper] equity {_ep['equity']:,} · 진입 {_ep['entered_today']}"
-              f" · pending {_ep['pending']} · flags {_ep['flags']}")
+        _ep_den = _ep.get("denominator") or {}
+        print(f"  [exec_paper] {_ep.get('status')} · equity {_ep['equity']:,}"
+              f" · 대상 {_ep_den.get('selected_n', 0)}/{_ep_den.get('kr_candidate_n', 0)}"
+              f" · 진입 {_ep['entered_today']} · pending {_ep['pending']} · flags {_ep['flags']}")
     except Exception as _ep_e:
         print(f"  [exec_paper] 스킵: {type(_ep_e).__name__}: {_ep_e}")
 

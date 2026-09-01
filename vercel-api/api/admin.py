@@ -1351,9 +1351,9 @@ _TERMINAL_KEYS = (
     "sectors", "macro",
     "system_action",  # 2026-08-03 /macro 시스템 작용 패널 (VERITY #267 — 작은 dict, 슬림 무해)
     # 2026-08-12 구 프레이머 admin 카드 이관 — /system 페이지의 자본 path·AI 사용량·사후분석.
-    # 셋 다 작은 dict 라 슬림 취지(추천 27KB/건 배제)를 해치지 않는다. portfolio_full(3.57MB)을
+    # 아래 항목은 작은 dict 라 슬림 취지(추천 27KB/건 배제)를 해치지 않는다. portfolio_full(3.57MB)을
     # 컴포넌트가 직접 당기면 Safari 메모리 킬이 재발하므로 슬림 경로로만 노출한다.
-    "cost_monitor", "brain_quality", "postmortem",
+    "cost_monitor", "brain_quality", "postmortem", "exec_paper",
 )
 _TERMINAL_REC_FIELDS = (
     "name", "ticker", "currency", "recommendation", "per", "pbr", "roe",

@@ -22,6 +22,7 @@ import CockpitCard from "../components/CockpitCard"
 import SystemMapCard from "../components/SystemMapCard"
 import CapitalPathCard from "../components/CapitalPathCard"
 import GateProgressPanel from "../components/GateProgressPanel"
+import FormulaRunCard from "../components/FormulaRunCard"
 import AiUsageCard from "../components/AiUsageCard"
 import BrainMonitorPanel from "../components/BrainMonitorPanel"
 import PanelBoundary from "../components/PanelBoundary"
@@ -89,6 +90,9 @@ export default function SystemPage() {
                     </PanelBoundary>
                     <PanelBoundary name="실자금 게이트">
                         <GateProgressPanel vams={pf?.vams} status={pfStatus} />
+                    </PanelBoundary>
+                    <PanelBoundary name="현행식 전향 운용">
+                        <FormulaRunCard run={pf?.exec_paper} status={pfStatus} />
                     </PanelBoundary>
                     <PanelBoundary name="자본 path">
                         <CapitalPathCard vams={pf?.vams} status={pfStatus} />

@@ -208,6 +208,83 @@ export type DailyReport = {
     tomorrow_outlook?: string
 }
 
+export type FormulaRunTarget = {
+    ticker?: string
+    name?: string
+    brain_score?: number
+    grade?: string
+    rank?: number
+    signal_rank?: number
+    price_as_of?: string | null
+    market_clock_state?: string
+}
+
+export type FormulaRun = {
+    as_of?: string
+    status?: string
+    version?: string
+    formula_version?: string
+    capital_mode?: string
+    real_orders?: number
+    initial_capital?: number
+    equity?: number
+    cash?: number
+    return_pct?: number
+    benchmark?: {
+        name?: string
+        start_date?: string
+        as_of?: string
+        return_pct?: number | null
+        excess_pct?: number | null
+        source?: string
+        freshness?: string
+    }
+    positions?: Record<string, { qty?: number; buy_price?: number; buy_date?: string; name?: string }>
+    targets?: FormulaRunTarget[]
+    target_holdings?: number
+    target_capacity?: number
+    target_exposure_pct?: number
+    actual_exposure_pct?: number | null
+    pending?: number
+    trades_total?: number
+    realized_pnl?: number
+    cost_paid?: number
+    entered_today?: number
+    market_sessions?: number
+    rebalance?: {
+        interval_sessions?: number
+        sessions_since?: number
+        sessions_remaining?: number
+        last_date?: string | null
+    }
+    denominator?: {
+        kr_candidate_n?: number
+        eligible_n?: number
+        signal_eligible_n?: number
+        selected_n?: number
+        target_capacity_n?: number
+        slot_budget_krw?: number
+        whole_share_only?: boolean
+        not_selected_by_rank_n?: number
+        rejected?: Record<string, number>
+    }
+    price_snapshot?: {
+        source?: string
+        as_of?: string | null
+        market_clock_state?: string
+        holiday_calendar?: string
+    }
+    flags?: string[]
+    _meta?: {
+        score_system?: { name?: string; is_operational?: boolean; capital_mode?: string; note?: string }
+        min_detectable?: { status?: string; unit?: string; n?: number; sigma_pct?: number; effect_pct?: number; reason?: string }
+        evidence_class?: string
+        historical_alpha_claim?: boolean
+        selection_note?: string
+        whole_share_only?: boolean
+    }
+}
+
 export type PortfolioFull = {
     updated_at?: string
     vams?: Vams
@@ -228,6 +305,7 @@ export type PortfolioFull = {
     cost_monitor?: CostMonitor
     brain_quality?: BrainQuality
     postmortem?: Postmortem
+    exec_paper?: FormulaRun
 }
 
 // 시스템 작용 — 매크로·게이트가 지금 파이프라인에 미치는 실작용 (VERITY #267, /macro 1번 패널)
