@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-01T20:32:36+09:00",
+  "collected_at": "2026-09-01T21:02:26+09:00",
   "macro": {
     "usd_krw": {
       "value": 1373.57,
@@ -1365,7 +1365,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-09-01T20:32:46+09:00",
+    "updated_at": "2026-09-01T21:03:26+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.79,
       "us_ig_risk": "LOW",
@@ -1375,7 +1375,7 @@
     },
     "kr_corp_spreads": {
       "date": "20260901",
-      "collected_at": "2026-09-01T20:32:46+09:00",
+      "collected_at": "2026-09-01T21:03:26+09:00",
       "grades": {
         "AA-": {
           "yield": 4.549,
@@ -1417,21 +1417,6 @@
       "impact": "미국 GDP 70%인 서비스업 체감경기. 제조업 PMI와 교차 확인",
       "action": "서비스 견조 시 소프트랜딩 시나리오 우호",
       "source": "ISM",
-      "d_day": 2
-    },
-    {
-      "name": "미국 주간 실업수당 청구",
-      "severity": "medium",
-      "impact_area": [
-        "경기",
-        "고용"
-      ],
-      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
-      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
-      "date": "2026-09-03",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 180,
       "d_day": 2
     },
     {
@@ -1496,21 +1481,6 @@
       "d_day": 9
     },
     {
-      "name": "미국 주간 실업수당 청구",
-      "severity": "medium",
-      "impact_area": [
-        "경기",
-        "고용"
-      ],
-      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
-      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
-      "date": "2026-09-10",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 180,
-      "d_day": 9
-    },
-    {
       "name": "옵션만기일 (한국)",
       "date": "2026-09-10",
       "country": "한국",
@@ -1537,31 +1507,19 @@
       "action": "소비재·리테일 섹터 감정 판단",
       "source": "UMich",
       "d_day": 10
-    },
-    {
-      "name": "미국 CPI 발표",
-      "severity": "high",
-      "impact_area": [
-        "물가",
-        "금리기대",
-        "성장주"
-      ],
-      "impact": "예상 상회 시 금리 인상 우려로 시장 하락, 하회 시 반등",
-      "action": "발표 전 변동성 대비, 인플레 수혜주 vs 피해주 구분",
-      "date": "2026-09-11",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 10,
-      "d_day": 10
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 21.76
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 112.87
   },
   "schema_version": "v0"
 }
