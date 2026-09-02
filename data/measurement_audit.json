@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-02T23:28:11+09:00",
+ "as_of": "2026-09-03T02:08:14+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -99,7 +99,7 @@
    "thin_keys": [
     {
      "key": "analyst_report_summary",
-     "coverage": "2/67"
+     "coverage": "2/82"
     }
    ],
    "detail": "레코드에 한 번도 없는 키 11종 — 해당 채점 축이 조용히 죽어 있다",
@@ -113,7 +113,7 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 111,
+   "snapshots": 112,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
@@ -130,8 +130,8 @@
     "watch_pct": 85.0
    },
    "days_without_any_cap": 12,
-   "days_without_any_cap_pct": 10.8,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(0.9%). cap 없는 날 12/111일",
+   "days_without_any_cap_pct": 10.7,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(0.9%). cap 없는 날 12/112일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -142,7 +142,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 5358,
+   "stock_days": 5455,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -208,13 +208,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 30,
+     "n_present": 15,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 30,
+     "n_present": 15,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -247,8 +247,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 25,
-    "scored": 25,
+    "with_pct": 39,
+    "scored": 39,
     "ok": true
    },
    "dead_guards": [],

@@ -1,7 +1,7 @@
 {
- "as_of": "2026-09-02T23:28:03+09:00",
+ "as_of": "2026-09-03T02:08:07+09:00",
  "version": "short_sale_trail_v0",
- "n_observations": 5461,
+ "n_observations": 5558,
  "window_start": null,
  "thresholds_observed": {
   "kr_auto_avoid": 15.0,
@@ -10,8 +10,8 @@
  },
  "KR": {
   "auto_avoid": {
-   "n_observations": 119,
-   "n_tickers": 31,
+   "n_observations": 120,
+   "n_tickers": 29,
    "fwd_20d": {
     "n_tickers": 13,
     "n_observations": 60,
@@ -30,8 +30,8 @@
    }
   },
   "downgrade": {
-   "n_observations": 347,
-   "n_tickers": 55,
+   "n_observations": 349,
+   "n_tickers": 54,
    "fwd_20d": {
     "n_tickers": 24,
     "n_observations": 209,
@@ -50,8 +50,8 @@
    }
   },
   "clean": {
-   "n_observations": 481,
-   "n_tickers": 84,
+   "n_observations": 478,
+   "n_tickers": 72,
    "fwd_20d": {
     "n_tickers": 30,
     "n_observations": 180,
@@ -70,8 +70,8 @@
    }
   },
   "missing": {
-   "n_observations": 1301,
-   "n_tickers": 111,
+   "n_observations": 1340,
+   "n_tickers": 125,
    "fwd_20d": {
     "n_tickers": 87,
     "n_observations": 1181,
@@ -112,8 +112,8 @@
    }
   },
   "downgrade": {
-   "n_observations": 2,
-   "n_tickers": 1,
+   "n_observations": 4,
+   "n_tickers": 2,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -132,8 +132,8 @@
    }
   },
   "clean": {
-   "n_observations": 1946,
-   "n_tickers": 115,
+   "n_observations": 1964,
+   "n_tickers": 122,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -152,8 +152,8 @@
    }
   },
   "missing": {
-   "n_observations": 1265,
-   "n_tickers": 113,
+   "n_observations": 1303,
+   "n_tickers": 127,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -174,8 +174,8 @@
  },
  "labels": [
   "통계 무의미 — auto_avoid 고유 종목 N=13 < 20 (관측 60건이지만 같은 종목 반복. 등록 §6 게이트)",
-  "US 지표 결측 1265건 — clean 과 분리 집계됨(무혐의 통과 아님)",
-  "KR 지표 결측 1301건 — 수집 이전 기간 포함. clean 과 분리 집계"
+  "US 지표 결측 1303건 — clean 과 분리 집계됨(무혐의 통과 아님)",
+  "KR 지표 결측 1340건 — 수집 이전 기간 포함. clean 과 분리 집계"
  ],
  "brain_input": false,
  "note": "공매도 규칙 사후 수익률 관측 — 임계·강도 재판단의 판정 근거. 점수·집행 입력 0. KR=거래량 비중(흐름) / US=숏인터레스트(포지션) 로 측정 대상이 다르므로 시장 간 수치를 비교하지 말 것. 수익률은 KR 전용(US 일봉 레이크 미도달)."

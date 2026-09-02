@@ -16,25 +16,25 @@
       "total_recs_with_delisted": 0,
       "hits": 0,
       "delisted_count": 0,
-      "snapshot_date": "2026-08-26"
+      "snapshot_date": "2026-08-27"
     },
     "14d": {
-      "hit_rate_net": null,
-      "avg_return_net": null,
-      "hit_rate_gross": null,
-      "avg_return_gross": null,
-      "skipped_no_t_plus_1": 0,
+      "hit_rate_net": 0.0,
+      "avg_return_net": -39.08,
+      "hit_rate_gross": 0.0,
+      "avg_return_gross": -2.15,
+      "skipped_no_t_plus_1": 3,
       "rec_price_basis": "T_plus_1_open_snapshot",
-      "hit_rate": null,
-      "avg_return": null,
-      "max_return": null,
-      "min_return": null,
-      "sharpe": null,
-      "total_recs": 0,
-      "total_recs_with_delisted": 0,
+      "hit_rate": 0.0,
+      "avg_return": -2.15,
+      "max_return": -0.33,
+      "min_return": -50.0,
+      "sharpe": -1.14,
+      "total_recs": 3,
+      "total_recs_with_delisted": 13,
       "hits": 0,
-      "delisted_count": 0,
-      "snapshot_date": "2026-08-19"
+      "delisted_count": 10,
+      "snapshot_date": "2026-08-20"
     },
     "30d": {
       "hit_rate_net": null,
@@ -52,14 +52,69 @@
       "total_recs_with_delisted": 0,
       "hits": 0,
       "delisted_count": 0,
-      "snapshot_date": "2026-08-03"
+      "snapshot_date": "2026-08-04"
     }
   },
-  "recommendations": [],
-  "updated_at": "2026-09-02 22:33:27.121207+09:00",
+  "recommendations": [
+    {
+      "ticker": "DVN",
+      "name": "Devon Energy Corporation",
+      "rec_date": "2026-08-20",
+      "rec_price": 49.099998474121094,
+      "current_price": 48.939998626708984,
+      "return_pct_gross": -0.33,
+      "return_pct_net": -1.06,
+      "slippage_pct": 0.7,
+      "hit_gross": false,
+      "hit_net": false,
+      "period": "14d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": -0.33,
+      "hit": false
+    },
+    {
+      "ticker": "000660",
+      "name": "SK하이닉스",
+      "rec_date": "2026-08-20",
+      "rec_price": 1728000.0,
+      "current_price": 1693000.0,
+      "return_pct_gross": -2.03,
+      "return_pct_net": -2.16,
+      "slippage_pct": 0.1,
+      "hit_gross": false,
+      "hit_net": false,
+      "period": "14d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": -2.03,
+      "hit": false
+    },
+    {
+      "ticker": "A",
+      "name": "A",
+      "rec_date": "2026-08-20",
+      "rec_price": 157.85000610351562,
+      "current_price": 151.40499877929688,
+      "return_pct_gross": -4.08,
+      "return_pct_net": -4.81,
+      "slippage_pct": 0.7,
+      "hit_gross": false,
+      "hit_net": false,
+      "period": "14d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": -4.08,
+      "hit": false
+    }
+  ],
+  "updated_at": "2026-09-03 01:31:49.783271+09:00",
   "_corrections_meta": {
     "version": "1.0",
-    "applied_at": "2026-09-02 22:33:27.121228+09:00",
+    "applied_at": "2026-09-03 01:31:49.783289+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": -50.0,
     "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
@@ -67,7 +122,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
-      "fixed_at": "2026-09-02 22:33:27.121232+09:00"
+      "fixed_at": "2026-09-03 01:31:49.783292+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
