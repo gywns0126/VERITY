@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-02T10:55:33+09:00",
+ "as_of": "2026-09-02T18:50:48+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -15,7 +15,7 @@
  "checks": {
   "ledger_integrity": {
    "ok": false,
-   "episodes": 31,
+   "episodes": 32,
    "phantom_sells": 59,
    "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
@@ -96,13 +96,18 @@
      ]
     }
    ],
-   "thin_keys": [],
+   "thin_keys": [
+    {
+     "key": "analyst_report_summary",
+     "coverage": "2/67"
+    }
+   ],
    "detail": "레코드에 한 번도 없는 키 11종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 7,
+   "holdings_checked": 6,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -137,7 +142,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 5387,
+   "stock_days": 5358,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -152,11 +157,11 @@
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
@@ -203,13 +208,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 17,
+     "n_present": 30,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 17,
+     "n_present": 30,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -223,27 +228,27 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 7,
+   "holdings_checked": 6,
    "coverage": {
     "sector": {
-     "filled": 7,
-     "total": 7,
+     "filled": 6,
+     "total": 6,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 7,
-     "total": 7,
+     "filled": 6,
+     "total": 6,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 7,
-     "total": 7,
+     "filled": 6,
+     "total": 6,
      "guard": "팩터 쏠림 차단"
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 33,
-    "scored": 33,
+    "with_pct": 25,
+    "scored": 25,
     "ok": true
    },
    "dead_guards": [],
@@ -251,7 +256,7 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 7,
+   "holdings_checked": 6,
    "no_profit_exit": [],
    "ladder_broken": [
     {
