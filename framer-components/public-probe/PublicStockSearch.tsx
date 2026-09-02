@@ -316,6 +316,42 @@ function readRecents(): any[] {
     }
 }
 
+function isCommoditySearchItem(x: any): boolean {
+    return (
+        String(x?.type || "").toLowerCase() === "commodity" ||
+        String(x?.market || "") === "원자재" ||
+        String(x?.ticker || "").toUpperCase().startsWith("CMD_")
+    )
+}
+
+function searchRank(x: any, raw: string): number {
+    const s = raw.trim().toLowerCase()
+    if (!s) return 99
+    const t = String(x?.ticker || "").toLowerCase()
+    const n = String(x?.name || "").toLowerCase()
+    const k = String(x?.name_ko || "").toLowerCase()
+    const kw = String(x?.kw || "").toLowerCase()
+    const words = kw.split(/\s+/).filter(Boolean)
+    const commodity = isCommoditySearchItem(x)
+    const matched =
+        t.includes(s) || n.includes(s) || k.includes(s) || kw.includes(s)
+    if (!matched) return 99
+    if (t === s) return 0
+    if (commodity && (n === s || k === s || words.includes(s))) return 1
+    if (n === s || k === s) return 2
+    if (
+        commodity &&
+        (n.startsWith(s) ||
+            k.startsWith(s) ||
+            words.some((word) => word.startsWith(s)))
+    )
+        return 3
+    if (t.startsWith(s)) return 4
+    if (n.startsWith(s) || k.startsWith(s)) return 5
+    if (commodity) return 6
+    return 7
+}
+
 interface Props {
     placeholder: string
     stockPath: string
@@ -457,57 +493,27 @@ export default function PublicStockSearch(props: Props) {
         }
     }, [stockUrl, usStockUrl, onCanvas])
 
-    /* 입력 → 종목코드. 코드/이름 정확 → 부분일치 → (실패 시) raw 텍스트. */
+    /* Enter와 드롭다운이 같은 검색 우선순위를 사용한다. 직접 원자재 정확 별칭을 일반 종목 부분일치보다 먼저 둔다. */
     const resolveTicker = (text: string): string => {
         const s = text.trim()
         if (!s || !universe.length) return s
-        const lower = s.toLowerCase()
-        let hit = universe.find(
-            (x) =>
-                String(x.ticker).toLowerCase() === lower ||
-                String(x.name || "").toLowerCase() === lower ||
-                String((x as any).name_ko || "") === s
-        )
-        if (!hit)
-            hit = universe.find(
-                (x) =>
-                    String(x.ticker).toLowerCase().includes(lower) ||
-                    String(x.name || "")
-                        .toLowerCase()
-                        .includes(lower) ||
-                    String((x as any).name_ko || "").includes(s)
-            )
+        const hit = universe
+            .filter((x) => searchRank(x, s) < 99)
+            .sort(
+                (a: any, b: any) => searchRank(a, s) - searchRank(b, s)
+            )[0]
         return hit ? String(hit.ticker) : s
     }
 
-    /* 라이브 연관검색어 — 코드·영문명·한글명 부분일치, 상위 12. */
+    /* 라이브 연관검색어 — 코드·이름·한글명·별칭을 같은 규칙으로 정렬, 상위 12. */
     const matches = useMemo(() => {
-        const s = q.trim().toLowerCase()
+        const s = q.trim()
         if (!s || !universe.length) return []
-        const rk = (x: any) => {
-            const t = String(x.ticker || "").toLowerCase(),
-                n = String(x.name || "").toLowerCase(),
-                k = String(x.name_ko || "").toLowerCase()
-            return t === s
-                ? 0
-                : n === s || k === s
-                  ? 1
-                  : t.indexOf(s) === 0
-                    ? 2
-                    : n.indexOf(s) === 0 || (k && k.indexOf(s) === 0)
-                      ? 3
-                      : 4
-        }
         return universe
-            .filter(
-                (x) =>
-                    String(x.ticker).toLowerCase().includes(s) ||
-                    String(x.name || "")
-                        .toLowerCase()
-                        .includes(s) ||
-                    String((x as any).name_ko || "").includes(q.trim())
+            .filter((x) => searchRank(x, s) < 99)
+            .sort(
+                (a: any, b: any) => searchRank(a, s) - searchRank(b, s)
             )
-            .sort((a: any, b: any) => rk(a) - rk(b))
             .slice(0, 12)
     }, [q, universe])
 
