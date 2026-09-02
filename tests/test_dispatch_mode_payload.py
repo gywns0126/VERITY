@@ -260,3 +260,67 @@ def test_ran_recently_reads_created_at_window():
     assert m._ran_recently("crypto_collect.yml", 20, now) is True
     m.urllib.request.urlopen = _mk("2026-08-20T13:00:09Z")   # 35분 전 = 앞앞 슬롯
     assert m._ran_recently("crypto_collect.yml", 20, now) is False
+
+
+def test_quick_busy_gate_sees_any_shared_writer_and_allows_completed():
+    import json as _json
+    m = _dp()
+    m.GH_PAT = "test-pat"
+    now = datetime(2026, 9, 2, 14, 7, tzinfo=timezone.utc)
+
+    def _response(status, path=".github/workflows/daily_analysis_full.yml"):
+        class _R:
+            def read(self):
+                return _json.dumps({"workflow_runs": [{
+                    "status": status, "path": path,
+                    "created_at": "2026-09-02T13:07:30Z"
+                }]}).encode()
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        return lambda req, timeout=None: _R()
+
+    m.urllib.request.urlopen = _response("queued")
+    assert m._data_write_group_busy(now) is True
+    m.urllib.request.urlopen = _response("in_progress", ".github/workflows/bond_etf_analysis.yml")
+    assert m._data_write_group_busy(now) is True
+    m.urllib.request.urlopen = _response("completed")
+    assert m._data_write_group_busy(now) is False
+    m.urllib.request.urlopen = _response("in_progress", ".github/workflows/price_pulse.yml")
+    assert m._data_write_group_busy(now) is False
+
+
+def test_quick_busy_gate_fails_safe_but_ignores_ancient_run():
+    import json as _json
+    m = _dp()
+    m.GH_PAT = "test-pat"
+    now = datetime(2026, 9, 2, 14, 7, tzinfo=timezone.utc)
+
+    def _boom(req, timeout=None):
+        raise OSError("network down")
+
+    m.urllib.request.urlopen = _boom
+    assert m._data_write_group_busy(now) is True
+
+    class _R:
+        def read(self):
+            return _json.dumps({"workflow_runs": [{
+                "status": "in_progress", "path": ".github/workflows/daily_analysis_full.yml",
+                "created_at": "2026-08-01T00:00:00Z"
+            }]}).encode()
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    m.urllib.request.urlopen = lambda req, timeout=None: _R()
+    assert m._data_write_group_busy(now) is False
+
+
+def test_data_write_workflow_registry_matches_yaml():
+    import re
+    m = _dp()
+    workflow_dir = _ROOT / ".github" / "workflows"
+    actual = set()
+    for path in workflow_dir.glob("*.yml"):
+        src = path.read_text(encoding="utf-8")
+        if re.search(r"(?m)^\s+group:\s*verity-data-write\s*$", src):
+            actual.add(path.name)
+    assert m.DATA_WRITE_WORKFLOWS == actual

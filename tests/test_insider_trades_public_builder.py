@@ -1,6 +1,10 @@
 """insider_trades_public_builder 단위 테스트 — 자본변동(비매매) 필터."""
 from __future__ import annotations
 
+import json
+from datetime import datetime
+
+import api.builders.insider_trades_public_builder as builder
 from api.builders.insider_trades_public_builder import _aggregate, _is_corporate_action, _int
 
 
@@ -105,3 +109,34 @@ class TestAggregateWindow:
     def test_cutoff_is_inclusive(self):
         _, agg = _aggregate([self._r("2025-08-20", 5)], "2025-08-20")
         assert agg["net_change_365d"] == 5
+
+
+def test_half_day_rotation_uses_distinct_batches(tmp_path, monkeypatch):
+    universe = {
+        "stocks": [{"ticker": f"{i:06d}", "name": str(i)} for i in range(1, 31)]
+    }
+    recs = [{"ticker": "000001", "name": "priority"}]
+    uni_path = tmp_path / "stock_report_public.json"
+    rec_path = tmp_path / "recommendations.json"
+    uni_path.write_text(json.dumps(universe), encoding="utf-8")
+    rec_path.write_text(json.dumps(recs), encoding="utf-8")
+    monkeypatch.setattr(builder, "UNIVERSE_PATH", str(uni_path))
+    monkeypatch.setattr(builder, "REC_PATH", str(rec_path))
+    monkeypatch.setattr(builder, "MAX_CALLS", 6)
+
+    monkeypatch.setattr(builder, "_now_kst", lambda: datetime(2026, 9, 2, 6, 30))
+    morning = [x["ticker"] for x in builder._ordered_universe()[:6]]
+    monkeypatch.setattr(builder, "_now_kst", lambda: datetime(2026, 9, 2, 16, 50))
+    afternoon = [x["ticker"] for x in builder._ordered_universe()[:6]]
+
+    assert morning[0] == afternoon[0] == "000001"
+    assert set(morning[1:]).isdisjoint(afternoon[1:])
+
+
+def test_workflow_caps_insider_runtime_and_calls():
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    src = (root / ".github" / "workflows" / "daily_analysis_full.yml").read_text(encoding="utf-8")
+    block = src.split("- name: 공개 내부자거래 빌드", 1)[1].split("- name:", 1)[0]
+    assert "INSIDER_MAX_SECONDS: '600'" in block
+    assert "INSIDER_MAX_CALLS: '300'" in block

@@ -5,12 +5,12 @@ DART elestock.json(임원·주요주주 특정증권등소유상황보고서) = 
 종목페이지에 없는 forensics 신호. 기존 DART 키·무료 20K/일 재사용(KIS 무관, RULE1 안전).
 
 🚨 전 종목 확장 설계 (universe 병목 해소):
-- universe = stock_report_public.json (discovery와 동일 1,635, insider step 이 그 뒤 실행 → 정합).
+- universe = stock_report_public.json (discovery와 동일한 공개 KR 전 종목, insider step 이 그 뒤 실행 → 정합).
   fallback = recommendations.json.
-- 1일 1회 daily_analysis_full(120분 job) 내 실행 → 런타임 압박 회피 위해:
-  · **일별 rotation**: rec 우선풀 항상 + 나머지를 (day-of-year) offset 회전 → 며칠 내 전 종목 커버.
+- 평일 오전·오후 daily_analysis_full(240분 상한) 내 실행 → 런타임 압박 회피 위해:
+  · **반일 rotation**: rec 우선풀 항상 + 나머지를 오전/오후 배치 단위로 회전 → 며칠 내 전 종목 커버.
   · **carry-forward 병합**: 오늘 수집 안 한 종목은 이전 snapshot 유지(내부자 공시=느린 이벤트, staleness 허용).
-  · **wall-clock budget**(INSIDER_MAX_SECONDS, 기본 2700s) + MAX_CALLS — 예산 초과 시 안전 정지·보존.
+  · **wall-clock budget**(INSIDER_MAX_SECONDS, 기본 600s) + MAX_CALLS(기본 300) — 예산 초과 시 안전 정지·보존.
   · **rate-limit 가드**: DART status 020(일일 제한)→정지·보존, 021(분당)→백오프 1회 재시도. 013=데이터없음(정상 공백).
 - per-entry collected_at 로 신선도 투명 표기. 출력 = data/insider_trades.json (action.yml 등재).
 
@@ -48,8 +48,8 @@ DART_VIEW = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
 WINDOW_DAYS = 365
 MAX_TRADES = 20
 DELAY = 0.2
-MAX_SECONDS = int(os.environ.get("INSIDER_MAX_SECONDS", "2700"))  # 45분 wall-clock budget
-MAX_CALLS = int(os.environ.get("INSIDER_MAX_CALLS", "5000"))
+MAX_SECONDS = int(os.environ.get("INSIDER_MAX_SECONDS", "600"))  # 10분 wall-clock budget
+MAX_CALLS = int(os.environ.get("INSIDER_MAX_CALLS", "300"))
 
 
 def _now_kst() -> datetime:
@@ -185,13 +185,21 @@ def _universe() -> List[Dict[str, str]]:
 
 
 def _ordered_universe() -> List[Dict[str, str]]:
-    """rec 우선풀 먼저 + 나머지를 day-of-year offset 으로 회전(전 종목 순차 커버)."""
+    """rec 우선풀 먼저 + 나머지를 오전/오후 배치 단위로 회전한다.
+
+    종전 ``day-of-year % len(rest)`` 는 하루에 한 종목만 전진했다. 호출 상한을 낮추면
+    전날 배치와 거의 전부 겹쳐 전 종목 커버에 수년이 걸린다. 우선풀에 소비되는 호출을
+    제외한 실제 나머지 배치 폭만큼 이동하고, 06:30/16:50 Full이 서로 다른 구간을 읽는다.
+    """
     uni = _universe()
     rec = _rec_kr_set()
     priority = [u for u in uni if u["ticker"] in rec]
     rest = [u for u in uni if u["ticker"] not in rec]
     if rest:
-        off = _now_kst().timetuple().tm_yday % len(rest)
+        now = _now_kst()
+        half_day_slot = now.timetuple().tm_yday * 2 + int(now.hour >= 12)
+        rest_batch = max(1, MAX_CALLS - len(priority))
+        off = (half_day_slot * rest_batch) % len(rest)
         rest = rest[off:] + rest[:off]
     return priority + rest
 
@@ -309,6 +317,9 @@ def main() -> int:
                 "count": len(stocks),
                 "universe": len(order),
                 "collected_today": collected,
+                "batch_max_calls": MAX_CALLS,
+                "batch_max_seconds": MAX_SECONDS,
+                "rotation": "half_day_batch_stride",
                 "rate_limited": bool(rate_stop),
                 "note": "공시 사실만 — 보고자·직위·증감(매수+/매도−)·날짜·원문. 자체 점수·매매신호 아님 (RULE 7). 美 Form4 KR판. 전 종목 회전 수집(per-stock collected_at).",
             },

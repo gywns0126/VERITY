@@ -25,10 +25,23 @@ from http.server import BaseHTTPRequestHandler
 
 import urllib.request
 import urllib.error
+import urllib.parse
 
 GH_REPO = os.environ.get("GH_DISPATCH_REPO", "gywns0126/VERITY")
 GH_PAT = os.environ.get("GH_DISPATCH_PAT", "")
 CRON_SECRET = os.environ.get("CRON_SECRET", "")
+
+# Quick과 같은 GitHub concurrency group(`verity-data-write`)의 실제 workflow 파일.
+# tests/test_dispatch_mode_payload.py가 워크플로 전체를 열거해 이 집합의 drift를 차단한다.
+DATA_WRITE_WORKFLOWS = {
+    "bond_etf_analysis.yml",
+    "broker_guide.yml",
+    "daily_analysis.yml",
+    "daily_analysis_full.yml",
+    "export_trade_daily.yml",
+    "kis_token_refresh.yml",
+    "reports_v2_cron.yml",
+}
 
 
 def _dispatch(event_type: str, payload: dict | None = None) -> tuple[int, str]:
@@ -275,6 +288,49 @@ def _ran_recently(workflow_file: str, minutes: int, now_utc: datetime) -> bool:
         return False
 
 
+def _data_write_group_busy(now_utc: datetime, max_age_minutes: int = 360) -> bool:
+    """공용 데이터 쓰기 그룹에 최근 미완료 run이 있으면 True.
+
+    GitHub concurrency는 그룹당 대기 run을 하나만 유지한다. Full이 공용 쓰기 잠금을 오래
+    점유할 때 Quick을 대기열에 넣으면 뒤늦게 온 Bond/ETF 등이 그 Quick을 교체 취소한다.
+    그래서 그룹이 바쁠 때는 Quick을 만들지 않고 다음 시간에 다시 확인한다. 조회 실패도
+    True로 처리한다. 6시간보다 오래된 비정상 run은 영구 차단을 막기 위해 제외한다.
+    """
+    if not GH_PAT:
+        return True
+    url = f"https://api.github.com/repos/{GH_REPO}/actions/runs?per_page=100"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {GH_PAT}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "verity-vercel-dispatch/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            runs = (json.loads(resp.read().decode("utf-8")) or {}).get("workflow_runs") or []
+        for run in runs:
+            if str(run.get("status") or "") == "completed":
+                continue
+            workflow_file = str(run.get("path") or "").rsplit("/", 1)[-1]
+            if workflow_file not in DATA_WRITE_WORKFLOWS:
+                continue
+            created = str(run.get("created_at") or "")
+            if created.endswith("Z"):
+                created = created[:-1] + "+00:00"
+            try:
+                age_min = (now_utc - datetime.fromisoformat(created)).total_seconds() / 60
+            except (TypeError, ValueError):
+                return True
+            if 0 <= age_min <= max_age_minutes:
+                return True
+        return False
+    except Exception:
+        return True
+
+
 def _split_event(evt) -> tuple[str, dict | None]:
     """`_resolve_events` 항목을 (event_type, payload) 로 가른다.
 
@@ -308,6 +364,10 @@ class handler(BaseHTTPRequestHandler):
         results = []
         for raw_evt in events:
             evt, _payload = _split_event(raw_evt)
+            if evt == "daily_analysis_quick" and _data_write_group_busy(now_utc):
+                results.append({"event": evt, "payload": _payload, "status": 200,
+                                "detail": "busy-skip: verity-data-write 점유 중, 다음 시간 재확인"})
+                continue
             status, detail = _dispatch(evt, _payload)
             results.append({"event": evt, "payload": _payload,
                             "status": status, "detail": detail})
