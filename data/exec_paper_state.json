@@ -5,96 +5,7 @@
  "epoch_started": "2026-09-02",
  "cash": 10000000.0,
  "positions": {},
- "pending": [
-  {
-   "side": "buy",
-   "ticker": "005930",
-   "created": "2026-09-02",
-   "ref_price": 260000.0,
-   "alloc_krw": 555556,
-   "signal_snapshot": {
-    "formula_version": "brain-current/fact-v1.1-20260823",
-    "brain": 65.0,
-    "fact": {
-     "score": 69,
-     "weights_effective": {
-      "graham_value": 0.28,
-      "canslim_growth": 0.19,
-      "quant_quality": 0.28,
-      "quant_volatility": 0.25
-     },
-     "missing_components": [
-      "perplexity_risk",
-      "us_fscore"
-     ],
-     "unmeasured_subaxes": {
-      "quality": [
-       "gross_profitability(총자산 부재)"
-      ],
-      "volatility": [
-       "beta",
-       "idiosyncratic"
-      ],
-      "mean_reversion": [
-       "zscore",
-       "hurst"
-      ]
-     }
-    },
-    "grade": "WATCH",
-    "rank": 1,
-    "candidate_pool_n": 17,
-    "eligible_n": 9,
-    "target_exposure": 0.5,
-    "price_as_of": "2026-09-01T21:51:18+09:00",
-    "market_clock_state": "preopen_clock"
-   }
-  },
-  {
-   "side": "buy",
-   "ticker": "003550",
-   "created": "2026-09-02",
-   "ref_price": 119400.0,
-   "alloc_krw": 555556,
-   "signal_snapshot": {
-    "formula_version": "brain-current/fact-v1.1-20260823",
-    "brain": 62.0,
-    "fact": {
-     "score": 67,
-     "weights_effective": {
-      "graham_value": 0.28,
-      "canslim_growth": 0.19,
-      "quant_quality": 0.28,
-      "quant_volatility": 0.25
-     },
-     "missing_components": [
-      "analyst_report",
-      "us_fscore"
-     ],
-     "unmeasured_subaxes": {
-      "quality": [
-       "gross_profitability(총자산 부재)"
-      ],
-      "volatility": [
-       "beta",
-       "idiosyncratic"
-      ],
-      "mean_reversion": [
-       "zscore",
-       "hurst"
-      ]
-     }
-    },
-    "grade": "WATCH",
-    "rank": 2,
-    "candidate_pool_n": 17,
-    "eligible_n": 9,
-    "target_exposure": 0.5,
-    "price_as_of": "2026-09-01T21:51:18+09:00",
-    "market_clock_state": "preopen_clock"
-   }
-  }
- ],
+ "pending": [],
  "target_tickers": [
   "005930",
   "003550",
@@ -471,7 +382,7 @@
    "market_clock_state": "preopen_clock"
   }
  },
- "last_date": "2026-09-02",
+ "last_date": "2026-09-03",
  "last_price_fingerprint": "ba7674fcc8838e17895f2c18eae242c8e266aa8228512f1ce8c764db3c51150c",
  "market_sessions": 1,
  "sessions_since_rebalance": 0,
@@ -502,27 +413,26 @@
   "last_date": "2026-09-02",
   "trades": 0
  },
- "target_exposure": 0.5,
+ "target_exposure": 0.1112,
  "price_snapshot": {
   "source": "portfolio.recommendations.current_price",
-  "as_of": "2026-09-01T21:51:18+09:00",
+  "as_of": "2026-09-03T00:09:25+09:00",
   "market_clock_state": "preopen_clock",
   "holiday_calendar": "not_connected"
  },
  "last_denominator": {
-  "kr_candidate_n": 17,
-  "eligible_n": 9,
-  "signal_eligible_n": 11,
-  "selected_n": 9,
+  "kr_candidate_n": 39,
+  "eligible_n": 0,
+  "signal_eligible_n": 0,
+  "selected_n": 0,
   "target_capacity_n": 10,
-  "slot_budget_krw": 555556,
+  "slot_budget_krw": 0,
   "whole_share_only": true,
   "not_selected_by_rank_n": 0,
   "rejected": {
-   "grade_below_watch": 4,
-   "critical_red_flag": 1,
-   "liquidity": 1,
-   "one_share_above_slot": 2
+   "liquidity": 33,
+   "critical_red_flag": 3,
+   "grade_below_watch": 3
   }
  },
  "selection_slot_krw": 555556,
@@ -531,12 +441,11 @@
   "e2_next_run_fill",
   "e3_1m_proxy",
   "fill_live_quote_20260826",
-  "migrated_empty_v0_to_v1",
-  "paper_exposure_fallback_50pct"
+  "target_temporarily_ineligible"
  ],
  "benchmark_latest": {
-  "date": "20260831",
-  "close": 6820.02,
+  "date": "20260901",
+  "close": 6835.8,
   "source": "금융위원회 지수시세정보",
   "freshness": "T+1 EOD"
  }
