@@ -19,9 +19,9 @@
       "last_update_kst": "2026-09-02T21:31:25.918116+09:00",
       "age_hours": 0.03,
       "status": "fresh",
-      "line_count": 513,
+      "line_count": 517,
       "last_entry": {
-        "ts": "2026-09-01T21:31:08.918882+09:00",
+        "ts": "2026-09-02T21:05:05.418847+09:00",
         "step": "f_sector_diversified",
         "mode": "SHADOW",
         "input_n": 100,
@@ -39,9 +39,9 @@
       "last_update_kst": "2026-09-02T21:31:25.640115+09:00",
       "age_hours": 0.03,
       "status": "fresh",
-      "line_count": 167918,
+      "line_count": 170659,
       "last_entry": {
-        "ts": "2026-09-01T22:03:23.234715+09:00"
+        "ts": "2026-09-02T21:36:32.795415+09:00"
       }
     },
     {
@@ -99,7 +99,7 @@
         "candidates_count": 45,
         "kr_count": 30,
         "us_count": 15,
-        "elapsed_s": 3880.41,
+        "elapsed_s": 3426.7,
         "used_prev_snapshot": false
       }
     },
@@ -116,11 +116,13 @@
       "status": "fresh",
       "line_count": 1133,
       "last_entry": {
-        "mode": "quick",
-        "ramp_up_stage": 0,
-        "execution_time_seconds": 0.0,
-        "fail_triggers": [],
-        "yfinance_failure_rate": 0.0
+        "mode": "universe_scan",
+        "ramp_up_stage": 5000,
+        "execution_time_seconds": 3425.98,
+        "fail_triggers": [
+          "execution_time_50pct_overrun"
+        ],
+        "yfinance_failure_rate": 0.0017
       }
     },
     {
