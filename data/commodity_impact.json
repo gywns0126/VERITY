@@ -1,217 +1,312 @@
 {
-  "updated_at": "2026-09-01T22:32:18+09:00",
+  "updated_at": "2026-09-02T09:40:30+09:00",
   "mom_alert_threshold_pct": 10.0,
   "commodity_mom_alerts": [
     {
-      "commodity_ticker": "ZW=F",
-      "vs_prior_month_avg_pct": 15.12,
-      "last_close": 778.5
-    },
-    {
-      "commodity_ticker": "ZC=F",
-      "vs_prior_month_avg_pct": 14.41,
-      "last_close": 536.75
+      "commodity_ticker": "CL=F",
+      "vs_prior_month_avg_pct": 10.59,
+      "last_close": 91.18
     }
   ],
   "high_correlation": [
     {
+      "ticker": "CHRD",
+      "name": "CHRD",
+      "commodity": "CL=F",
+      "correlation_60d": 0.7546,
+      "regime": "동반 상승"
+    },
+    {
       "ticker": "DVN",
       "name": "Devon Energy Corporation",
       "commodity": "CL=F",
-      "correlation_60d": 0.7006,
+      "correlation_60d": 0.691,
       "regime": "동반 상승"
     },
     {
       "ticker": "TXN",
       "name": "Texas Instruments Incorporated",
       "commodity": "LIT",
-      "correlation_60d": 0.6441,
-      "regime": "비용 압박"
-    },
-    {
-      "ticker": "BDC",
-      "name": "BDC",
-      "commodity": "LIT",
-      "correlation_60d": 0.6214,
+      "correlation_60d": 0.6467,
       "regime": "최악의 상황"
     },
     {
       "ticker": "SHEL",
       "name": "Shell plc",
       "commodity": "CL=F",
-      "correlation_60d": 0.5964,
+      "correlation_60d": 0.6077,
       "regime": "동반 상승"
+    },
+    {
+      "ticker": "COHR",
+      "name": "COHR",
+      "commodity": "LIT",
+      "correlation_60d": 0.5642,
+      "regime": "최악의 상황"
     },
     {
       "ticker": "GOLD",
       "name": "GOLD",
       "commodity": "GC=F",
-      "correlation_60d": 0.5585,
+      "correlation_60d": 0.5612,
       "regime": "동반 상승"
-    },
-    {
-      "ticker": "BWA",
-      "name": "BWA",
-      "commodity": "HG=F",
-      "correlation_60d": 0.4663,
-      "regime": "중립"
-    },
-    {
-      "ticker": "ATR",
-      "name": "ATR",
-      "commodity": "CL=F",
-      "correlation_60d": -0.4596,
-      "regime": "비용 압박"
     }
   ],
   "by_ticker": {
-    "ACIW": {
-      "sector": "Technology",
-      "commodity_tickers": [
-        "LIT",
-        "HG=F"
-      ],
-      "primary": {
-        "commodity_ticker": "LIT",
-        "correlation_60d": -0.322,
-        "commodity_20d_pct": 8.26,
-        "stock_20d_pct": -8.29,
-        "spread_regime": "최악의 상황",
-        "safety_adjustment": -50,
-        "pricing_power": 48.8,
-        "raw_material_volatility_score": 81.7,
-        "margin_safety_score": 46.56,
-        "shock_analysis": {
-          "windows": 17,
-          "avg_stock_when_commodity_shock_pct": -9.61
-        },
-        "vs_prior_month_avg_pct": 0.64
-      }
-    },
-    "APAM": {
-      "sector": "Financial Services",
-      "commodity_tickers": [
-        "GC=F",
-        "CL=F"
-      ],
-      "primary": {
-        "commodity_ticker": "CL=F",
-        "correlation_60d": -0.3736,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 10.58,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
-        "pricing_power": 77.5,
-        "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 56.5,
-        "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": 9.91
-        },
-        "vs_prior_month_avg_pct": 7.03
-      }
-    },
-    "ATR": {
+    "002800": {
       "sector": "Healthcare",
       "commodity_tickers": [
         "CL=F",
         "HG=F"
       ],
       "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 10.19,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 48.9,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 56.08,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "003000": {
+      "sector": "Healthcare",
+      "commodity_tickers": [
+        "CL=F",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 2.57,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 31.0,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 45.34,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "003240": {
+      "sector": "Basic Materials",
+      "commodity_tickers": [
+        "HG=F",
+        "SI=F"
+      ],
+      "primary": {
+        "commodity_ticker": "SI=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": 7.67,
+        "stock_20d_pct": 10.68,
+        "spread_regime": "동반 상승",
+        "safety_adjustment": 10,
+        "pricing_power": 28.4,
+        "raw_material_volatility_score": 100.0,
+        "margin_safety_score": 27.01,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.96
+      }
+    },
+    "003570": {
+      "sector": "Industrials",
+      "commodity_tickers": [
+        "HG=F",
+        "CL=F"
+      ],
+      "primary": {
         "commodity_ticker": "CL=F",
-        "correlation_60d": -0.4596,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": -1.75,
-        "spread_regime": "비용 압박",
-        "safety_adjustment": -20,
+        "correlation_60d": null,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": -8.71,
+        "spread_regime": "최악의 상황",
+        "safety_adjustment": -50,
+        "pricing_power": 63.0,
+        "raw_material_volatility_score": 100.0,
+        "margin_safety_score": 47.77,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": 10.59
+      }
+    },
+    "003720": {
+      "sector": "Consumer Cyclical",
+      "commodity_tickers": [
+        "CL=F",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -10.63,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 69.2,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 68.29,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "004310": {
+      "sector": "Healthcare",
+      "commodity_tickers": [
+        "CL=F",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 46.96,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 37.3,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 49.12,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "004370": {
+      "sector": "Consumer Defensive",
+      "commodity_tickers": [
+        "DBA",
+        "CL=F"
+      ],
+      "primary": {
+        "commodity_ticker": "CL=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 16.47,
+        "spread_regime": "동반 상승",
+        "safety_adjustment": 10,
         "pricing_power": 53.8,
         "raw_material_volatility_score": 100.0,
         "margin_safety_score": 42.25,
         "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": 4.53
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
-    "AVNS": {
-      "sector": "Healthcare",
+    "004430": {
+      "sector": "Basic Materials",
       "commodity_tickers": [
-        "CL=F",
-        "HG=F"
+        "HG=F",
+        "SI=F"
       ],
-      "error": "stock_history_empty"
+      "primary": {
+        "commodity_ticker": "SI=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": 7.67,
+        "stock_20d_pct": -1.74,
+        "spread_regime": "비용 압박",
+        "safety_adjustment": -20,
+        "pricing_power": 58.6,
+        "raw_material_volatility_score": 100.0,
+        "margin_safety_score": 45.16,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.96
+      }
     },
-    "BDC": {
+    "004490": {
+      "sector": "Industrials",
+      "commodity_tickers": [
+        "HG=F",
+        "CL=F"
+      ],
+      "primary": {
+        "commodity_ticker": "CL=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 28.6,
+        "spread_regime": "동반 상승",
+        "safety_adjustment": 10,
+        "pricing_power": 32.5,
+        "raw_material_volatility_score": 100.0,
+        "margin_safety_score": 29.5,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": 10.59
+      }
+    },
+    "004770": {
       "sector": "Technology",
       "commodity_tickers": [
         "LIT",
         "HG=F"
       ],
       "primary": {
-        "commodity_ticker": "LIT",
-        "correlation_60d": 0.6214,
-        "commodity_20d_pct": 8.26,
-        "stock_20d_pct": -7.16,
-        "spread_regime": "최악의 상황",
-        "safety_adjustment": -50,
-        "pricing_power": 55.5,
-        "raw_material_volatility_score": 81.7,
-        "margin_safety_score": 50.61,
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 19.79,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 64.6,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 65.5,
         "shock_analysis": {
-          "windows": 17,
-          "avg_stock_when_commodity_shock_pct": 19.32
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": 0.64
+        "vs_prior_month_avg_pct": -0.6
       }
     },
-    "BF-B": {
-      "sector": "Consumer Defensive",
+    "CARR": {
+      "sector": "Industrials",
       "commodity_tickers": [
-        "ZC=F",
-        "ZW=F"
-      ],
-      "primary": {
-        "commodity_ticker": "ZW=F",
-        "correlation_60d": -0.2169,
-        "commodity_20d_pct": 21.93,
-        "stock_20d_pct": -4.03,
-        "spread_regime": "비용 압박",
-        "safety_adjustment": -20,
-        "pricing_power": 77.5,
-        "raw_material_volatility_score": 80.7,
-        "margin_safety_score": 64.22,
-        "shock_analysis": {
-          "windows": 41,
-          "avg_stock_when_commodity_shock_pct": -2.06
-        },
-        "vs_prior_month_avg_pct": 15.12
-      }
-    },
-    "BKR": {
-      "sector": "Energy",
-      "commodity_tickers": [
-        "CL=F",
-        "NG=F"
+        "HG=F",
+        "CL=F"
       ],
       "primary": {
         "commodity_ticker": "CL=F",
-        "correlation_60d": 0.19,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 4.49,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
-        "pricing_power": 54.5,
+        "correlation_60d": -0.2617,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": -9.37,
+        "spread_regime": "최악의 상황",
+        "safety_adjustment": -50,
+        "pricing_power": 55.2,
         "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 42.7,
+        "margin_safety_score": 43.15,
         "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": 3.49
+          "windows": 38,
+          "avg_stock_when_commodity_shock_pct": -6.63
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
-    "BLK": {
+    "CBOE": {
       "sector": "Financial Services",
       "commodity_tickers": [
         "GC=F",
@@ -219,91 +314,137 @@
       ],
       "primary": {
         "commodity_ticker": "CL=F",
-        "correlation_60d": -0.3811,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 0.66,
+        "correlation_60d": 0.2798,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 3.29,
         "spread_regime": "동반 상승",
         "safety_adjustment": 10,
         "pricing_power": 77.5,
         "raw_material_volatility_score": 100.0,
         "margin_safety_score": 56.5,
         "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": 7.11
+          "windows": 38,
+          "avg_stock_when_commodity_shock_pct": 12.9
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
-    "BOOT": {
-      "sector": "Consumer Cyclical",
+    "CCI": {
+      "sector": "Real Estate",
       "commodity_tickers": [
-        "CL=F",
+        "LB=F",
         "HG=F"
       ],
       "primary": {
-        "commodity_ticker": "CL=F",
-        "correlation_60d": -0.3099,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": -6.57,
-        "spread_regime": "최악의 상황",
-        "safety_adjustment": -50,
-        "pricing_power": 54.5,
-        "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 42.7,
+        "commodity_ticker": "HG=F",
+        "correlation_60d": -0.1531,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -1.17,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 77.5,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 73.24,
         "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": -6.7
+          "windows": 1,
+          "avg_stock_when_commodity_shock_pct": -3.98
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": -0.6
       }
     },
-    "BRBR": {
+    "CEG": {
+      "sector": "Utilities",
+      "commodity_tickers": [
+        "NG=F",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": 0.2685,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 2.57,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 44.2,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 53.29,
+        "shock_analysis": {
+          "windows": 1,
+          "avg_stock_when_commodity_shock_pct": 8.42
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "CENX": {
+      "sector": "Basic Materials",
+      "commodity_tickers": [
+        "HG=F",
+        "SI=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": 0.429,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 3.5,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 77.5,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 73.24,
+        "shock_analysis": {
+          "windows": 1,
+          "avg_stock_when_commodity_shock_pct": 4.85
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "CF": {
+      "sector": "Basic Materials",
+      "commodity_tickers": [
+        "HG=F",
+        "SI=F"
+      ],
+      "primary": {
+        "commodity_ticker": "SI=F",
+        "correlation_60d": 0.1322,
+        "commodity_20d_pct": 7.67,
+        "stock_20d_pct": 15.21,
+        "spread_regime": "동반 상승",
+        "safety_adjustment": 10,
+        "pricing_power": 77.5,
+        "raw_material_volatility_score": 100.0,
+        "margin_safety_score": 56.5,
+        "shock_analysis": {
+          "windows": 34,
+          "avg_stock_when_commodity_shock_pct": 0.42
+        },
+        "vs_prior_month_avg_pct": -0.96
+      }
+    },
+    "CHD": {
       "sector": "Consumer Defensive",
       "commodity_tickers": [
-        "ZC=F",
-        "ZW=F"
-      ],
-      "primary": {
-        "commodity_ticker": "ZW=F",
-        "correlation_60d": -0.0864,
-        "commodity_20d_pct": 21.93,
-        "stock_20d_pct": -16.68,
-        "spread_regime": "최악의 상황",
-        "safety_adjustment": -50,
-        "pricing_power": 51.2,
-        "raw_material_volatility_score": 80.7,
-        "margin_safety_score": 48.47,
-        "shock_analysis": {
-          "windows": 41,
-          "avg_stock_when_commodity_shock_pct": 1.7
-        },
-        "vs_prior_month_avg_pct": 15.12
-      }
-    },
-    "BSX": {
-      "sector": "Healthcare",
-      "commodity_tickers": [
-        "CL=F",
-        "HG=F"
+        "DBA",
+        "CL=F"
       ],
       "primary": {
         "commodity_ticker": "CL=F",
-        "correlation_60d": -0.1064,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 0.76,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
-        "pricing_power": 77.5,
+        "correlation_60d": -0.4003,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": -0.28,
+        "spread_regime": "비용 압박",
+        "safety_adjustment": -20,
+        "pricing_power": 67.8,
         "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 56.5,
+        "margin_safety_score": 50.65,
         "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": 1.02
+          "windows": 38,
+          "avg_stock_when_commodity_shock_pct": -0.3
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
-    "BTU": {
+    "CHRD": {
       "sector": "Energy",
       "commodity_tickers": [
         "CL=F",
@@ -311,91 +452,229 @@
       ],
       "primary": {
         "commodity_ticker": "CL=F",
-        "correlation_60d": 0.1196,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 35.83,
+        "correlation_60d": 0.7546,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 8.91,
         "spread_regime": "동반 상승",
         "safety_adjustment": 10,
-        "pricing_power": 22.5,
+        "pricing_power": 77.5,
         "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 23.5,
+        "margin_safety_score": 56.5,
         "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": 0.68
+          "windows": 38,
+          "avg_stock_when_commodity_shock_pct": 13.96
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
-    "BWA": {
-      "sector": "Consumer Cyclical",
+    "CI": {
+      "sector": "Healthcare",
       "commodity_tickers": [
         "CL=F",
         "HG=F"
       ],
       "primary": {
         "commodity_ticker": "HG=F",
-        "correlation_60d": 0.4663,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": 1.41,
+        "correlation_60d": -0.1084,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 0.35,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 32.5,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 46.24,
+        "shock_analysis": {
+          "windows": 1,
+          "avg_stock_when_commodity_shock_pct": -6.64
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "CMC": {
+      "sector": "Industrials",
+      "commodity_tickers": [
+        "HG=F",
+        "CL=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": 0.2382,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -4.37,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 46.2,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 54.49,
+        "shock_analysis": {
+          "windows": 1,
+          "avg_stock_when_commodity_shock_pct": 21.89
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "CME": {
+      "sector": "Financial Services",
+      "commodity_tickers": [
+        "GC=F",
+        "CL=F"
+      ],
+      "primary": {
+        "commodity_ticker": "CL=F",
+        "correlation_60d": 0.2001,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 7.62,
+        "spread_regime": "동반 상승",
+        "safety_adjustment": 10,
+        "pricing_power": 77.5,
+        "raw_material_volatility_score": 100.0,
+        "margin_safety_score": 56.5,
+        "shock_analysis": {
+          "windows": 38,
+          "avg_stock_when_commodity_shock_pct": 8.5
+        },
+        "vs_prior_month_avg_pct": 10.59
+      }
+    },
+    "CMI": {
+      "sector": "Industrials",
+      "commodity_tickers": [
+        "HG=F",
+        "CL=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": 0.4337,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -14.74,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 52.2,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 58.09,
+        "shock_analysis": {
+          "windows": 1,
+          "avg_stock_when_commodity_shock_pct": -2.83
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "CNC": {
+      "sector": "Healthcare",
+      "commodity_tickers": [
+        "CL=F",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": 0.1256,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 2.31,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 32.0,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 45.94,
+        "shock_analysis": {
+          "windows": 1,
+          "avg_stock_when_commodity_shock_pct": -0.15
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "COCO": {
+      "sector": "Consumer Defensive",
+      "commodity_tickers": [
+        "DBA",
+        "CL=F"
+      ],
+      "primary": {
+        "commodity_ticker": "DBA",
+        "correlation_60d": 0.0956,
+        "commodity_20d_pct": 6.12,
+        "stock_20d_pct": -8.41,
+        "spread_regime": "최악의 상황",
+        "safety_adjustment": -50,
+        "pricing_power": 77.5,
+        "raw_material_volatility_score": 34.0,
+        "margin_safety_score": 82.91,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": 5.09
+      }
+    },
+    "COHR": {
+      "sector": "Technology",
+      "commodity_tickers": [
+        "LIT",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "LIT",
+        "correlation_60d": 0.5642,
+        "commodity_20d_pct": 7.64,
+        "stock_20d_pct": -15.97,
+        "spread_regime": "최악의 상황",
+        "safety_adjustment": -50,
+        "pricing_power": 52.0,
+        "raw_material_volatility_score": 81.9,
+        "margin_safety_score": 48.42,
+        "shock_analysis": {
+          "windows": 17,
+          "avg_stock_when_commodity_shock_pct": 19.7
+        },
+        "vs_prior_month_avg_pct": 0.07
+      }
+    },
+    "003470": {
+      "sector": "Financial Services",
+      "commodity_tickers": [
+        "GC=F",
+        "CL=F"
+      ],
+      "primary": {
+        "commodity_ticker": "CL=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 5.38,
+        "spread_regime": "동반 상승",
+        "safety_adjustment": 10,
+        "pricing_power": 79.8,
+        "raw_material_volatility_score": 100.0,
+        "margin_safety_score": 57.85,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": 10.59
+      }
+    },
+    "347700": {
+      "sector": "Healthcare",
+      "commodity_tickers": [
+        "CL=F",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -1.22,
         "spread_regime": "중립",
         "safety_adjustment": 0,
         "pricing_power": 49.0,
         "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 56.18,
+        "margin_safety_score": 56.14,
         "shock_analysis": {
-          "windows": 1,
-          "avg_stock_when_commodity_shock_pct": 4.0
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": -0.15
+        "vs_prior_month_avg_pct": -0.6
       }
     },
-    "CALM": {
-      "sector": "Consumer Defensive",
-      "commodity_tickers": [
-        "ZC=F",
-        "ZW=F"
-      ],
-      "primary": {
-        "commodity_ticker": "ZC=F",
-        "correlation_60d": 0.1613,
-        "commodity_20d_pct": 21.37,
-        "stock_20d_pct": -8.8,
-        "spread_regime": "최악의 상황",
-        "safety_adjustment": -50,
-        "pricing_power": 22.5,
-        "raw_material_volatility_score": 65.1,
-        "margin_safety_score": 37.47,
-        "shock_analysis": {
-          "windows": 24,
-          "avg_stock_when_commodity_shock_pct": 1.49
-        },
-        "vs_prior_month_avg_pct": 14.41
-      }
-    },
-    "CAR": {
-      "sector": "Industrials",
-      "commodity_tickers": [
-        "HG=F",
-        "CL=F"
-      ],
-      "primary": {
-        "commodity_ticker": "CL=F",
-        "correlation_60d": -0.1193,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 5.25,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
-        "pricing_power": 59.8,
-        "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 45.85,
-        "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": -0.69
-        },
-        "vs_prior_month_avg_pct": 7.03
-      }
-    },
-    "000660": {
+    "166090": {
       "sector": "Technology",
       "commodity_tickers": [
         "LIT",
@@ -404,113 +683,21 @@
       "primary": {
         "commodity_ticker": "HG=F",
         "correlation_60d": null,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": 8.06,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -9.93,
         "spread_regime": "중립",
         "safety_adjustment": 0,
         "pricing_power": 100.0,
         "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 86.78,
+        "margin_safety_score": 86.74,
         "shock_analysis": {
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": -0.15
+        "vs_prior_month_avg_pct": -0.6
       }
     },
-    "003550": {
-      "sector": "Technology",
-      "commodity_tickers": [
-        "LIT",
-        "HG=F"
-      ],
-      "primary": {
-        "commodity_ticker": "HG=F",
-        "correlation_60d": null,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": 20.66,
-        "spread_regime": "중립",
-        "safety_adjustment": 0,
-        "pricing_power": 97.3,
-        "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 85.16,
-        "shock_analysis": {
-          "windows": 0,
-          "avg_stock_when_commodity_shock_pct": null
-        },
-        "vs_prior_month_avg_pct": -0.15
-      }
-    },
-    "005930": {
-      "sector": "Technology",
-      "commodity_tickers": [
-        "LIT",
-        "HG=F"
-      ],
-      "primary": {
-        "commodity_ticker": "HG=F",
-        "correlation_60d": null,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": 8.98,
-        "spread_regime": "중립",
-        "safety_adjustment": 0,
-        "pricing_power": 100.0,
-        "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 86.78,
-        "shock_analysis": {
-          "windows": 0,
-          "avg_stock_when_commodity_shock_pct": null
-        },
-        "vs_prior_month_avg_pct": -0.15
-      }
-    },
-    "009150": {
-      "sector": "Technology",
-      "commodity_tickers": [
-        "LIT",
-        "HG=F"
-      ],
-      "primary": {
-        "commodity_ticker": "HG=F",
-        "correlation_60d": null,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": 21.08,
-        "spread_regime": "중립",
-        "safety_adjustment": 0,
-        "pricing_power": 76.8,
-        "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 72.83,
-        "shock_analysis": {
-          "windows": 0,
-          "avg_stock_when_commodity_shock_pct": null
-        },
-        "vs_prior_month_avg_pct": -0.15
-      }
-    },
-    "010130": {
-      "sector": "Basic Materials",
-      "commodity_tickers": [
-        "HG=F",
-        "CL=F"
-      ],
-      "primary": {
-        "commodity_ticker": "CL=F",
-        "correlation_60d": null,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 23.15,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
-        "pricing_power": 65.8,
-        "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 49.45,
-        "shock_analysis": {
-          "windows": 0,
-          "avg_stock_when_commodity_shock_pct": null
-        },
-        "vs_prior_month_avg_pct": 7.03
-      }
-    },
-    "012330": {
+    "192400": {
       "sector": "Consumer Cyclical",
       "commodity_tickers": [
         "CL=F",
@@ -519,44 +706,44 @@
       "primary": {
         "commodity_ticker": "HG=F",
         "correlation_60d": null,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": -9.87,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 2.61,
         "spread_regime": "중립",
         "safety_adjustment": 0,
-        "pricing_power": 47.9,
+        "pricing_power": 58.2,
         "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 55.49,
+        "margin_safety_score": 61.63,
         "shock_analysis": {
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": -0.15
+        "vs_prior_month_avg_pct": -0.6
       }
     },
-    "017670": {
+    "079160": {
       "sector": "Communication Services",
       "commodity_tickers": [
-        "CL=F",
-        "NG=F"
+        "NG=F",
+        "HG=F"
       ],
       "primary": {
-        "commodity_ticker": "NG=F",
+        "commodity_ticker": "HG=F",
         "correlation_60d": null,
-        "commodity_20d_pct": 6.75,
-        "stock_20d_pct": 16.34,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
-        "pricing_power": 77.1,
-        "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 56.23,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 6.55,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 29.5,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 44.44,
         "shock_analysis": {
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": 3.33
+        "vs_prior_month_avg_pct": -0.6
       }
     },
-    "018260": {
+    "232140": {
       "sector": "Technology",
       "commodity_tickers": [
         "LIT",
@@ -565,21 +752,251 @@
       "primary": {
         "commodity_ticker": "HG=F",
         "correlation_60d": null,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": 20.69,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 22.51,
         "spread_regime": "중립",
         "safety_adjustment": 0,
-        "pricing_power": 31.2,
+        "pricing_power": 80.8,
         "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 45.53,
+        "margin_safety_score": 75.19,
         "shock_analysis": {
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": -0.15
+        "vs_prior_month_avg_pct": -0.6
       }
     },
-    "028260": {
+    "499790": {
+      "sector": "Consumer Cyclical",
+      "commodity_tickers": [
+        "CL=F",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 10.56,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 91.2,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 81.49,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "213420": {
+      "sector": "Technology",
+      "commodity_tickers": [
+        "LIT",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 8.29,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 94.0,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 83.14,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "031330": {
+      "sector": "Technology",
+      "commodity_tickers": [
+        "LIT",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -10.53,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 40.4,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 50.95,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "252990": {
+      "sector": "Technology",
+      "commodity_tickers": [
+        "LIT",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -0.79,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 100.0,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 86.74,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "003160": {
+      "sector": "Technology",
+      "commodity_tickers": [
+        "LIT",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 25.61,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 100.0,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 86.74,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "327260": {
+      "sector": "Technology",
+      "commodity_tickers": [
+        "LIT",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 15.69,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 97.8,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 85.39,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "002840": {
+      "sector": "Basic Materials",
+      "commodity_tickers": [
+        "HG=F",
+        "SI=F"
+      ],
+      "primary": {
+        "commodity_ticker": "SI=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": 7.67,
+        "stock_20d_pct": 12.0,
+        "spread_regime": "동반 상승",
+        "safety_adjustment": 10,
+        "pricing_power": 61.5,
+        "raw_material_volatility_score": 100.0,
+        "margin_safety_score": 46.9,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.96
+      }
+    },
+    "001510": {
+      "sector": "Financial Services",
+      "commodity_tickers": [
+        "GC=F",
+        "CL=F"
+      ],
+      "primary": {
+        "commodity_ticker": "CL=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 17.58,
+        "spread_regime": "동반 상승",
+        "safety_adjustment": 10,
+        "pricing_power": 71.2,
+        "raw_material_volatility_score": 100.0,
+        "margin_safety_score": 52.72,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": 10.59
+      }
+    },
+    "295310": {
+      "sector": "Basic Materials",
+      "commodity_tickers": [
+        "HG=F",
+        "SI=F"
+      ],
+      "primary": {
+        "commodity_ticker": "SI=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": 7.67,
+        "stock_20d_pct": -4.84,
+        "spread_regime": "비용 압박",
+        "safety_adjustment": -20,
+        "pricing_power": 92.5,
+        "raw_material_volatility_score": 100.0,
+        "margin_safety_score": 65.5,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.96
+      }
+    },
+    "053610": {
+      "sector": "Technology",
+      "commodity_tickers": [
+        "LIT",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -2.88,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 91.0,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 81.34,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "019210": {
       "sector": "Industrials",
       "commodity_tickers": [
         "HG=F",
@@ -588,41 +1005,87 @@
       "primary": {
         "commodity_ticker": "CL=F",
         "correlation_60d": null,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 18.69,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
-        "pricing_power": 55.0,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": -25.49,
+        "spread_regime": "최악의 상황",
+        "safety_adjustment": -50,
+        "pricing_power": 91.0,
         "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 42.97,
+        "margin_safety_score": 64.6,
         "shock_analysis": {
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
-    "030200": {
-      "sector": "Communication Services",
+    "340570": {
+      "sector": "Healthcare",
       "commodity_tickers": [
         "CL=F",
-        "NG=F"
+        "HG=F"
       ],
       "primary": {
-        "commodity_ticker": "NG=F",
+        "commodity_ticker": "HG=F",
         "correlation_60d": null,
-        "commodity_20d_pct": 6.75,
-        "stock_20d_pct": 3.45,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
-        "pricing_power": 44.7,
-        "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 36.82,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -2.83,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 100.0,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 86.74,
         "shock_analysis": {
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": 3.33
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "037460": {
+      "sector": "Technology",
+      "commodity_tickers": [
+        "LIT",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -11.47,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 65.8,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 66.22,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "029460": {
+      "sector": "Technology",
+      "commodity_tickers": [
+        "LIT",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 33.1,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 49.2,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 56.29,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
       }
     },
     "042660": {
@@ -634,10 +1097,10 @@
       "primary": {
         "commodity_ticker": "CL=F",
         "correlation_60d": null,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 5.9,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": -2.74,
+        "spread_regime": "비용 압박",
+        "safety_adjustment": -20,
         "pricing_power": 78.8,
         "raw_material_volatility_score": 100.0,
         "margin_safety_score": 57.25,
@@ -645,7 +1108,7 @@
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
     "094970": {
@@ -657,18 +1120,18 @@
       "primary": {
         "commodity_ticker": "GC=F",
         "correlation_60d": null,
-        "commodity_20d_pct": 7.0,
-        "stock_20d_pct": -5.83,
+        "commodity_20d_pct": 6.7,
+        "stock_20d_pct": -9.42,
         "spread_regime": "최악의 상황",
         "safety_adjustment": -50,
         "pricing_power": 24.8,
-        "raw_material_volatility_score": 61.3,
-        "margin_safety_score": 40.33,
+        "raw_material_volatility_score": 61.4,
+        "margin_safety_score": 40.29,
         "shock_analysis": {
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": -0.7
+        "vs_prior_month_avg_pct": -0.97
       }
     },
     "418470": {
@@ -680,18 +1143,41 @@
       "primary": {
         "commodity_ticker": "HG=F",
         "correlation_60d": null,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": -2.19,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -5.06,
         "spread_regime": "중립",
         "safety_adjustment": 0,
         "pricing_power": 70.5,
         "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 69.05,
+        "margin_safety_score": 69.01,
         "shock_analysis": {
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": -0.15
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "000660": {
+      "sector": "Technology",
+      "commodity_tickers": [
+        "LIT",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 4.24,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 100.0,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 86.74,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
       }
     },
     "013030": {
@@ -703,8 +1189,8 @@
       "primary": {
         "commodity_ticker": "CL=F",
         "correlation_60d": null,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 10.75,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 4.81,
         "spread_regime": "동반 상승",
         "safety_adjustment": 10,
         "pricing_power": 77.1,
@@ -714,7 +1200,7 @@
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
     "GOLD": {
@@ -725,42 +1211,65 @@
       ],
       "primary": {
         "commodity_ticker": "GC=F",
-        "correlation_60d": 0.5585,
-        "commodity_20d_pct": 7.0,
-        "stock_20d_pct": 2.54,
+        "correlation_60d": 0.5612,
+        "commodity_20d_pct": 6.7,
+        "stock_20d_pct": 2.44,
         "spread_regime": "동반 상승",
         "safety_adjustment": 10,
         "pricing_power": 24.8,
-        "raw_material_volatility_score": 61.3,
-        "margin_safety_score": 40.33,
+        "raw_material_volatility_score": 61.4,
+        "margin_safety_score": 40.29,
         "shock_analysis": {
           "windows": 12,
           "avg_stock_when_commodity_shock_pct": 12.89
         },
-        "vs_prior_month_avg_pct": -0.7
+        "vs_prior_month_avg_pct": -0.97
       }
     },
     "035420": {
       "sector": "Communication Services",
       "commodity_tickers": [
-        "CL=F",
-        "NG=F"
+        "NG=F",
+        "HG=F"
       ],
       "primary": {
-        "commodity_ticker": "NG=F",
+        "commodity_ticker": "HG=F",
         "correlation_60d": null,
-        "commodity_20d_pct": 6.75,
-        "stock_20d_pct": 3.61,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -6.51,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
         "pricing_power": 65.5,
-        "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 49.3,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 66.04,
         "shock_analysis": {
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": 3.33
+        "vs_prior_month_avg_pct": -0.6
+      }
+    },
+    "003550": {
+      "sector": "Technology",
+      "commodity_tickers": [
+        "LIT",
+        "HG=F"
+      ],
+      "primary": {
+        "commodity_ticker": "HG=F",
+        "correlation_60d": null,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 17.65,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
+        "pricing_power": 97.3,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 85.12,
+        "shock_analysis": {
+          "windows": 0,
+          "avg_stock_when_commodity_shock_pct": null
+        },
+        "vs_prior_month_avg_pct": -0.6
       }
     },
     "000270": {
@@ -772,18 +1281,18 @@
       "primary": {
         "commodity_ticker": "HG=F",
         "correlation_60d": null,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": 1.23,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -1.93,
         "spread_regime": "중립",
         "safety_adjustment": 0,
         "pricing_power": 52.9,
         "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 58.49,
+        "margin_safety_score": 58.45,
         "shock_analysis": {
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": -0.15
+        "vs_prior_month_avg_pct": -0.6
       }
     },
     "028050": {
@@ -795,10 +1304,10 @@
       "primary": {
         "commodity_ticker": "CL=F",
         "correlation_60d": null,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 3.15,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": -6.91,
+        "spread_regime": "최악의 상황",
+        "safety_adjustment": -50,
         "pricing_power": 64.1,
         "raw_material_volatility_score": 100.0,
         "margin_safety_score": 48.43,
@@ -806,7 +1315,7 @@
           "windows": 0,
           "avg_stock_when_commodity_shock_pct": null
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
     "DVN": {
@@ -817,19 +1326,19 @@
       ],
       "primary": {
         "commodity_ticker": "CL=F",
-        "correlation_60d": 0.7006,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 9.98,
+        "correlation_60d": 0.691,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 10.05,
         "spread_regime": "동반 상승",
         "safety_adjustment": 10,
         "pricing_power": 77.5,
         "raw_material_volatility_score": 100.0,
         "margin_safety_score": 56.5,
         "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": 6.55
+          "windows": 38,
+          "avg_stock_when_commodity_shock_pct": 6.69
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
     "A": {
@@ -840,19 +1349,19 @@
       ],
       "primary": {
         "commodity_ticker": "HG=F",
-        "correlation_60d": 0.0581,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": 9.94,
+        "correlation_60d": 0.068,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 7.25,
         "spread_regime": "중립",
         "safety_adjustment": 0,
         "pricing_power": 77.5,
         "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 73.28,
+        "margin_safety_score": 73.24,
         "shock_analysis": {
           "windows": 1,
           "avg_stock_when_commodity_shock_pct": 9.33
         },
-        "vs_prior_month_avg_pct": -0.15
+        "vs_prior_month_avg_pct": -0.6
       }
     },
     "AMG": {
@@ -863,19 +1372,19 @@
       ],
       "primary": {
         "commodity_ticker": "CL=F",
-        "correlation_60d": -0.4292,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": -4.66,
-        "spread_regime": "비용 압박",
-        "safety_adjustment": -20,
+        "correlation_60d": -0.4409,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": -5.29,
+        "spread_regime": "최악의 상황",
+        "safety_adjustment": -50,
         "pricing_power": 77.5,
         "raw_material_volatility_score": 100.0,
         "margin_safety_score": 56.5,
         "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": 2.74
+          "windows": 38,
+          "avg_stock_when_commodity_shock_pct": 2.44
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
     "V": {
@@ -886,19 +1395,19 @@
       ],
       "primary": {
         "commodity_ticker": "CL=F",
-        "correlation_60d": -0.3712,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 3.78,
+        "correlation_60d": -0.4003,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 2.1,
         "spread_regime": "동반 상승",
         "safety_adjustment": 10,
         "pricing_power": 77.5,
         "raw_material_volatility_score": 100.0,
         "margin_safety_score": 56.5,
         "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": 3.79
+          "windows": 38,
+          "avg_stock_when_commodity_shock_pct": 3.74
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
     "SPGI": {
@@ -909,19 +1418,19 @@
       ],
       "primary": {
         "commodity_ticker": "CL=F",
-        "correlation_60d": -0.2682,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 4.94,
+        "correlation_60d": -0.2475,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 5.99,
         "spread_regime": "동반 상승",
         "safety_adjustment": 10,
         "pricing_power": 77.5,
         "raw_material_volatility_score": 100.0,
         "margin_safety_score": 56.5,
         "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": 5.44
+          "windows": 38,
+          "avg_stock_when_commodity_shock_pct": 5.5
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
     "TXN": {
@@ -932,65 +1441,42 @@
       ],
       "primary": {
         "commodity_ticker": "LIT",
-        "correlation_60d": 0.6441,
-        "commodity_20d_pct": 8.26,
-        "stock_20d_pct": -4.99,
-        "spread_regime": "비용 압박",
-        "safety_adjustment": -20,
+        "correlation_60d": 0.6467,
+        "commodity_20d_pct": 7.64,
+        "stock_20d_pct": -5.84,
+        "spread_regime": "최악의 상황",
+        "safety_adjustment": -50,
         "pricing_power": 77.5,
-        "raw_material_volatility_score": 81.7,
-        "margin_safety_score": 63.81,
+        "raw_material_volatility_score": 81.9,
+        "margin_safety_score": 63.72,
         "shock_analysis": {
           "windows": 17,
           "avg_stock_when_commodity_shock_pct": -2.04
         },
-        "vs_prior_month_avg_pct": 0.64
-      }
-    },
-    "CME": {
-      "sector": "Financial Services",
-      "commodity_tickers": [
-        "GC=F",
-        "CL=F"
-      ],
-      "primary": {
-        "commodity_ticker": "CL=F",
-        "correlation_60d": 0.2094,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 8.37,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
-        "pricing_power": 77.5,
-        "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 56.5,
-        "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": 8.52
-        },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 0.07
       }
     },
     "GOOGL": {
       "sector": "Communication Services",
       "commodity_tickers": [
-        "CL=F",
-        "NG=F"
+        "NG=F",
+        "HG=F"
       ],
       "primary": {
-        "commodity_ticker": "CL=F",
-        "correlation_60d": -0.3049,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": -11.36,
-        "spread_regime": "최악의 상황",
-        "safety_adjustment": -50,
+        "commodity_ticker": "HG=F",
+        "correlation_60d": 0.1469,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -11.29,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
         "pricing_power": 77.5,
-        "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 56.5,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 73.24,
         "shock_analysis": {
-          "windows": 37,
-          "avg_stock_when_commodity_shock_pct": -4.29
+          "windows": 1,
+          "avg_stock_when_commodity_shock_pct": 0.14
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": -0.6
       }
     },
     "AMZN": {
@@ -1001,9 +1487,9 @@
       ],
       "primary": {
         "commodity_ticker": "CL=F",
-        "correlation_60d": -0.1341,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": -9.02,
+        "correlation_60d": -0.1386,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": -8.11,
         "spread_regime": "최악의 상황",
         "safety_adjustment": -50,
         "pricing_power": 56.8,
@@ -1011,9 +1497,9 @@
         "margin_safety_score": 44.05,
         "shock_analysis": {
           "windows": 37,
-          "avg_stock_when_commodity_shock_pct": 0.65
+          "avg_stock_when_commodity_shock_pct": 0.68
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
     "LLY": {
@@ -1024,19 +1510,19 @@
       ],
       "primary": {
         "commodity_ticker": "HG=F",
-        "correlation_60d": -0.075,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": 5.97,
+        "correlation_60d": -0.0729,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 3.59,
         "spread_regime": "중립",
         "safety_adjustment": 0,
         "pricing_power": 77.5,
         "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 73.28,
+        "margin_safety_score": 73.24,
         "shock_analysis": {
           "windows": 1,
           "avg_stock_when_commodity_shock_pct": -3.78
         },
-        "vs_prior_month_avg_pct": -0.15
+        "vs_prior_month_avg_pct": -0.6
       }
     },
     "UNP": {
@@ -1047,19 +1533,19 @@
       ],
       "primary": {
         "commodity_ticker": "HG=F",
-        "correlation_60d": -0.1093,
-        "commodity_20d_pct": -0.61,
-        "stock_20d_pct": 3.48,
+        "correlation_60d": -0.0851,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": -0.21,
         "spread_regime": "중립",
         "safety_adjustment": 0,
         "pricing_power": 77.5,
         "raw_material_volatility_score": 58.1,
-        "margin_safety_score": 73.28,
+        "margin_safety_score": 73.24,
         "shock_analysis": {
           "windows": 1,
           "avg_stock_when_commodity_shock_pct": 5.2
         },
-        "vs_prior_month_avg_pct": -0.15
+        "vs_prior_month_avg_pct": -0.6
       }
     },
     "SHEL": {
@@ -1070,9 +1556,9 @@
       ],
       "primary": {
         "commodity_ticker": "CL=F",
-        "correlation_60d": 0.5964,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 4.28,
+        "correlation_60d": 0.6077,
+        "commodity_20d_pct": 20.34,
+        "stock_20d_pct": 5.0,
         "spread_regime": "동반 상승",
         "safety_adjustment": 10,
         "pricing_power": 64.2,
@@ -1080,49 +1566,43 @@
         "margin_safety_score": 48.55,
         "shock_analysis": {
           "windows": 37,
-          "avg_stock_when_commodity_shock_pct": 10.58
+          "avg_stock_when_commodity_shock_pct": 10.6
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": 10.59
       }
     },
     "WBD": {
       "sector": "Communication Services",
       "commodity_tickers": [
-        "CL=F",
-        "NG=F"
+        "NG=F",
+        "HG=F"
       ],
       "primary": {
-        "commodity_ticker": "CL=F",
-        "correlation_60d": 0.1422,
-        "commodity_20d_pct": 16.47,
-        "stock_20d_pct": 9.31,
-        "spread_regime": "동반 상승",
-        "safety_adjustment": 10,
+        "commodity_ticker": "HG=F",
+        "correlation_60d": -0.0183,
+        "commodity_20d_pct": -1.06,
+        "stock_20d_pct": 8.55,
+        "spread_regime": "중립",
+        "safety_adjustment": 0,
         "pricing_power": 35.2,
-        "raw_material_volatility_score": 100.0,
-        "margin_safety_score": 31.15,
+        "raw_material_volatility_score": 58.1,
+        "margin_safety_score": 47.89,
         "shock_analysis": {
-          "windows": 36,
-          "avg_stock_when_commodity_shock_pct": -0.95
+          "windows": 1,
+          "avg_stock_when_commodity_shock_pct": -0.69
         },
-        "vs_prior_month_avg_pct": 7.03
+        "vs_prior_month_avg_pct": -0.6
       }
     }
   },
   "mom_narratives": [
     {
-      "commodity_ticker": "ZW=F",
-      "line": "ZW=F 15.12% 급등, BF-B는 비용 압박에도 마진 넉넉하고 가격 결정력 높지만, BRBR은 최악의 상황 속에 마진 보통이고 16.68% 폭락했어.",
-      "source": "gemini"
-    },
-    {
-      "commodity_ticker": "ZC=F",
-      "line": "ZC=F 전월 대비 14.41% 올랐는데, CALM은 최악의 상황에서 마진 여력 빠듯하고 가격 결정력도 낮아 주가 8.8% 하락했어.",
-      "source": "gemini"
+      "commodity_ticker": "CL=F",
+      "line": "사장님, CL=F 전월 대비 +10.6%. 'CHRD' 영업이익률 미공시. 마진 여력은 보통 수준. 원가와 주가가 같이 올라, 판가 전이가 실제로 붙는지는 컨센·실적으로 확인해야 합니다. 같은 원자재에 엮인 종목이 4개 더 있습니다.",
+      "source": "template"
     }
   ],
   "narrative_lines": [
-    "ZW=F 15.12% 급등, BF-B는 비용 압박에도 마진 넉넉하고 가격 결정력 높지만, BRBR은 최악의 상황 속에 마진 보통이고 16.68% 폭락했어.",
-    "ZC=F 전월 대비 14.41% 올랐는데, CALM은 최악의 상황에서 마진 여력 빠듯하고 가격 결정력도 낮아 주가 8.8% 하락했어."
+    "사장님, CL=F 전월 대비 +10.6%. 'CHRD' 영업이익률 미공시. 마진 여력은 보통 수준. 원가와 주가가 같이 올라, 판가 전이가 실제로 붙는지는 컨센·실적으로 확인해야 합니다. 같은 원자재에 엮인 종목이 4개 더 있습니다."
   ]
 }

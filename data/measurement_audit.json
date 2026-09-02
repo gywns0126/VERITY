@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-01T23:30:38+09:00",
+ "as_of": "2026-09-02T10:55:33+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -27,18 +27,12 @@
   },
   "key_coverage": {
    "ok": false,
-   "keys_checked": 75,
+   "keys_checked": 76,
    "dead_keys": [
     {
      "key": "alpha_combined",
      "modules": [
       "fact.py"
-     ]
-    },
-    {
-     "key": "asset_turnover",
-     "modules": [
-      "quality.py"
      ]
     },
     {
@@ -48,27 +42,15 @@
      ]
     },
     {
-     "key": "gross_margin",
+     "key": "equity_research_brief",
      "modules": [
-      "quality.py"
-     ]
-    },
-    {
-     "key": "gross_profit",
-     "modules": [
-      "quality.py"
+      "fact.py"
      ]
     },
     {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
-     ]
-    },
-    {
-     "key": "net_income",
-     "modules": [
-      "quality.py"
      ]
     },
     {
@@ -85,18 +67,6 @@
     },
     {
      "key": "prev_year",
-     "modules": [
-      "quality.py"
-     ]
-    },
-    {
-     "key": "retained_earnings",
-     "modules": [
-      "quality.py"
-     ]
-    },
-    {
-     "key": "revenue",
      "modules": [
       "quality.py"
      ]
@@ -120,26 +90,14 @@
      ]
     },
     {
-     "key": "total_assets",
-     "modules": [
-      "quality.py"
-     ]
-    },
-    {
      "key": "total_debt",
-     "modules": [
-      "quality.py"
-     ]
-    },
-    {
-     "key": "working_capital",
      "modules": [
       "quality.py"
      ]
     }
    ],
    "thin_keys": [],
-   "detail": "레코드에 한 번도 없는 키 18종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 11종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
@@ -150,7 +108,7 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 110,
+   "snapshots": 111,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
@@ -167,8 +125,8 @@
     "watch_pct": 85.0
    },
    "days_without_any_cap": 12,
-   "days_without_any_cap_pct": 10.9,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(0.9%). cap 없는 날 12/110일",
+   "days_without_any_cap_pct": 10.8,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(0.9%). cap 없는 날 12/111일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -179,18 +137,18 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 12,
-   "stock_days": 5291,
+   "stock_days": 5387,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
      "fired": 0
     },
     {
-     "rule": "계속기업 불확실성 (감사인 명시)",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
-     "rule": "외인·기관 순매도 상위 (KIS)",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
@@ -284,8 +242,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 37,
-    "scored": 37,
+    "with_pct": 33,
+    "scored": 33,
     "ok": true
    },
    "dead_guards": [],
