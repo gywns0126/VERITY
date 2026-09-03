@@ -242,6 +242,27 @@ def _candidate_reason(r: Dict[str, Any]) -> Optional[str]:
     return None
 
 
+def _pending_entry_input_gap(r: Dict[str, Any]) -> Optional[str]:
+    """Return an unavailable required field before applying measured entry rules."""
+    if _brain_score(r) is None:
+        return "brain_score"
+    final = str((r.get("display_verdict") or {}).get("final") or r.get("recommendation") or "")
+    if not final:
+        return "grade"
+    if _price(r) is None:
+        return "price"
+    avg_vol = ((r.get("trends") or {}).get("1m") or {}).get("avg_volume")
+    if avg_vol is None or avg_vol == "":
+        return "avg_volume"
+    try:
+        value = float(avg_vol)
+    except (TypeError, ValueError):
+        return "avg_volume"
+    if not math.isfinite(value):
+        return "avg_volume"
+    return None
+
+
 def _rank_eligible(rows: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], Dict[str, int]]:
     rejected: Dict[str, int] = {}
     eligible = []

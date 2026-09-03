@@ -207,6 +207,8 @@ def run_paper_track_v1(
         "market_clock_state": market_clock_state,
         "holiday_calendar": "not_connected",
     }
+    fingerprint = base._market_fingerprint(kr)
+    new_session = bool(fingerprint and fingerprint != state.get("last_price_fingerprint"))
 
     if migration in ("v0_nonempty_migration_halted", "v1_partial_state_halted"):
         flags.append("manual_epoch_decision_required")
@@ -214,6 +216,12 @@ def run_paper_track_v1(
     if state.get("last_date") == today and migration is None:
         prior_flags = list(state.get("last_flags") or [])
         return _summary(state, by_tk, prior_flags + ["already_ran_today"], now_fn)
+    if state.get("last_date") and not new_session:
+        flags.append("waiting_new_market_snapshot")
+        state["price_snapshot"] = price_snapshot
+        state["last_flags"] = sorted(set(flags))
+        _save(state_path, state)
+        return _summary(state, by_tk, flags, now_fn)
     if not gate_live:
         base._append_ledger(ledger_path, {"type": "skip", "reason": "display_verdict_absent", "date": today})
         state["last_date"] = today
@@ -228,8 +236,6 @@ def run_paper_track_v1(
     state["target_exposure"] = exposure
     state["price_snapshot"] = price_snapshot
 
-    fingerprint = base._market_fingerprint(kr)
-    new_session = bool(fingerprint and fingerprint != state.get("last_price_fingerprint"))
     if new_session:
         state["market_sessions"] = int(state.get("market_sessions") or 0) + 1
         if state.get("last_rebalance_date"):
@@ -305,8 +311,13 @@ def run_paper_track_v1(
                                                   "reason": "left_rank_target", "order": od})
                 continue
             if r is None:
-                base._append_ledger(ledger_path, {"type": "cancel", "ticker": tk,
-                                                  "reason": "entry_signal_missing", "order": od})
+                flags.append("entry_data_unavailable")
+                still_pending.append(od)
+                continue
+            input_gap = base._pending_entry_input_gap(r)
+            if input_gap is not None:
+                flags.append("entry_data_unavailable")
+                still_pending.append(od)
                 continue
             entry_reason = base._candidate_reason(r)
             if entry_reason is not None:

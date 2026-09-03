@@ -49,10 +49,39 @@ def test_pending_buy_rechecks_full_entry_condition(tmp_path):
     st = json.load(open(tmp_path / "exec_paper_state.json"))
     st["last_date"] = "2000-01-01"
     json.dump(st, open(tmp_path / "exec_paper_state.json", "w"))
-    s = _run([_rec(price=10_000.0, avg_vol=1)], tmp_path)
+    s = _run([_rec(price=10_100.0, avg_vol=1)], tmp_path)
     assert not s["positions"]
     assert s["pending"] == 0
     assert "target_temporarily_ineligible" in s["flags"]
+
+
+def test_pending_buy_waits_when_required_liquidity_input_is_missing(tmp_path):
+    _run([_rec(price=10_000.0, avg_vol=200_000)], tmp_path)
+    st = json.load(open(tmp_path / "exec_paper_state.json"))
+    st["last_date"] = "2000-01-01"
+    json.dump(st, open(tmp_path / "exec_paper_state.json", "w"))
+
+    s = _run([_rec(price=10_100.0, avg_vol=None)], tmp_path)
+    saved = json.load(open(tmp_path / "exec_paper_state.json"))
+
+    assert not s["positions"]
+    assert s["pending"] == 1
+    assert saved["pending"][0]["ticker"] == "005930"
+    assert "entry_data_unavailable" in s["flags"]
+
+
+def test_pending_buy_waits_when_target_row_is_missing(tmp_path):
+    _run([_rec(tk="005930"), _rec(tk="000660")], tmp_path)
+    st = json.load(open(tmp_path / "exec_paper_state.json"))
+    st["last_date"] = "2000-01-01"
+    json.dump(st, open(tmp_path / "exec_paper_state.json", "w"))
+
+    s = _run([_rec(tk="000660", price=10_100.0)], tmp_path)
+    saved = json.load(open(tmp_path / "exec_paper_state.json"))
+
+    assert "005930" not in s["positions"]
+    assert any(order["ticker"] == "005930" for order in saved["pending"])
+    assert "entry_data_unavailable" in s["flags"]
 
 
 def test_missing_rank_target_does_not_create_stale_order(tmp_path):
@@ -211,9 +240,23 @@ def test_same_price_fingerprint_does_not_add_market_session(tmp_path):
     assert first["market_sessions"] == 1
     st = json.load(open(tmp_path / "exec_paper_state.json"))
     st["last_date"] = "2000-01-01"
+    prior_pending = list(st["pending"])
+    prior_curve = list(st["equity_curve"])
     json.dump(st, open(tmp_path / "exec_paper_state.json", "w"))
     second = _run([_rec(final="WATCH", aligned=False, badge="WATCH")], tmp_path)
+    waiting = json.load(open(tmp_path / "exec_paper_state.json"))
     assert second["market_sessions"] == 1
+    assert second["pending"] == 1
+    assert "waiting_new_market_snapshot" in second["flags"]
+    assert waiting["last_date"] == "2000-01-01"
+    assert waiting["pending"] == prior_pending
+    assert waiting["equity_curve"] == prior_curve
+    assert waiting["trades"] == 0
+
+    third = _run([_rec(final="WATCH", aligned=False, badge="WATCH", price=10_100.0)], tmp_path)
+    assert third["market_sessions"] == 2
+    assert third["pending"] == 0
+    assert "005930" in third["positions"]
 
 
 def test_buy_fill_deducts_registered_cost(tmp_path):
@@ -221,7 +264,7 @@ def test_buy_fill_deducts_registered_cost(tmp_path):
     st = json.load(open(tmp_path / "exec_paper_state.json"))
     st["last_date"] = "2000-01-01"
     json.dump(st, open(tmp_path / "exec_paper_state.json", "w"))
-    s = _run([_rec(price=10_000.0)], tmp_path)
+    s = _run([_rec(price=10_100.0)], tmp_path)
     assert s["trades_total"] == 1
     assert s["cost_paid"] > 0
     assert s["cash"] < 10_000_000 - 490_000
