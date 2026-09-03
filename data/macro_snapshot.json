@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-03T23:32:59+09:00",
+  "collected_at": "2026-09-04T00:02:11+09:00",
   "macro": {
     "usd_krw": {
       "value": 1356.93,
@@ -1403,7 +1403,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-09-03T23:33:16+09:00",
+    "updated_at": "2026-09-04T00:03:11+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.81,
       "us_ig_risk": "LOW",
@@ -1413,7 +1413,7 @@
     },
     "kr_corp_spreads": {
       "date": "20260903",
-      "collected_at": "2026-09-03T23:33:16+09:00",
+      "collected_at": "2026-09-04T00:03:11+09:00",
       "grades": {
         "AA-": {
           "yield": 4.567,
@@ -1430,20 +1430,6 @@
   },
   "global_events": [
     {
-      "name": "ISM 제조업 PMI",
-      "date": "2026-09-01",
-      "country": "미국",
-      "severity": "medium",
-      "impact_area": [
-        "경기",
-        "제조업"
-      ],
-      "impact": "50선 기준. 상회 시 경기 확장, 하회 시 수축. 주식시장 방향성 선행",
-      "action": "50선 돌파/이탈 시 경기민감주 비중 조절",
-      "source": "ISM",
-      "d_day": -2
-    },
-    {
       "name": "ISM 서비스 PMI",
       "date": "2026-09-03",
       "country": "미국",
@@ -1455,7 +1441,7 @@
       "impact": "미국 GDP 70%인 서비스업 체감경기. 제조업 PMI와 교차 확인",
       "action": "서비스 견조 시 소프트랜딩 시나리오 우호",
       "source": "ISM",
-      "d_day": 0
+      "d_day": -1
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1470,7 +1456,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 0
+      "d_day": -1
     },
     {
       "name": "미국 고용지표 (NFP)",
@@ -1486,7 +1472,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 50,
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "ECB 통화정책회의",
@@ -1501,7 +1487,7 @@
       "country": "유럽",
       "source": "ECB",
       "date": "2026-09-10",
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "미국 PPI 발표",
@@ -1516,7 +1502,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 46,
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "미국 기존주택판매",
@@ -1531,7 +1517,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 291,
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1546,7 +1532,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "옵션만기일 (한국)",
@@ -1560,7 +1546,7 @@
       "impact": "프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
       "action": "만기일 장중 단기 매매 자제",
       "source": "KRX",
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "Michigan 소비자심리 예비치",
@@ -1574,7 +1560,7 @@
       "impact": "미국 소비자 기대 인플레이션 포함. Fed도 주시하는 지표",
       "action": "소비재·리테일 섹터 감정 판단",
       "source": "UMich",
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "미국 CPI 발표",
@@ -1590,7 +1576,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 10,
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "미국 FOMC 금리결정",
@@ -1605,7 +1591,7 @@
       "country": "미국",
       "source": "Fed",
       "date": "2026-09-16",
-      "d_day": 13
+      "d_day": 12
     },
     {
       "name": "미국 소매판매",
@@ -1620,7 +1606,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 9,
-      "d_day": 13
+      "d_day": 12
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -1635,7 +1621,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 14
+      "d_day": 13
     },
     {
       "name": "미국 주택착공",
@@ -1650,16 +1636,50 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 27,
+      "d_day": 13
+    },
+    {
+      "name": "BOJ 금융정책결정회합",
+      "severity": "high",
+      "impact_area": [
+        "엔환율",
+        "엔캐리",
+        "반도체",
+        "자동차"
+      ],
+      "impact": "엔 강세 전환 시 엔캐리 청산 리스크 → 글로벌 자산가격 급변. 한일 수출경쟁 영향",
+      "action": "엔/달러 150선 근처면 청산 리스크 경계, 자동차·반도체 수출주 점검",
+      "country": "일본",
+      "source": "BOJ",
+      "date": "2026-09-18",
+      "d_day": 14
+    },
+    {
+      "name": "삼중마녀의 날 (Quad Witching)",
+      "severity": "medium",
+      "impact_area": [
+        "변동성",
+        "지수"
+      ],
+      "impact": "주식·지수 선물·개별·지수 옵션 동시 만기. S&P500 거래량·변동성 급증",
+      "action": "장 마감 전후 30분 변동성 급등 주의",
+      "country": "미국",
+      "source": "CBOE",
+      "date": "2026-09-18",
       "d_day": 14
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 38.69
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 93.44
   },
   "schema_version": "v0"
 }
