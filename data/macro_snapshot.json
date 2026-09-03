@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-03T21:32:07+09:00",
+  "collected_at": "2026-09-03T22:02:09+09:00",
   "macro": {
     "usd_krw": {
       "value": 1355.28,
@@ -1460,22 +1460,6 @@
       "d_day": 0
     },
     {
-      "name": "미국 고용지표 (NFP)",
-      "severity": "high",
-      "impact_area": [
-        "경기",
-        "금리",
-        "환율"
-      ],
-      "impact": "고용 강세→금리 인상 우려, 약세→경기침체 우려. 양면 리스크",
-      "action": "발표일 장 초반 관망, 시장 반응 확인 후 대응",
-      "date": "2026-09-04",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 50,
-      "d_day": 1
-    },
-    {
       "name": "ECB 통화정책회의",
       "severity": "high",
       "impact_area": [
@@ -1641,12 +1625,18 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 29.19
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 147.44
   },
   "schema_version": "v0"
 }
