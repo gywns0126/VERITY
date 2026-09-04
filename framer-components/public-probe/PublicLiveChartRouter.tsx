@@ -480,10 +480,21 @@ export default function PublicLiveChartRouter(props: Props) {
     const hasDaily = Boolean(data && data.daily.length >= 2)
     const allPoints = hasDaily ? data?.daily || [] : data?.monthly || []
     const activeRange: RangeKey = range
-    const points =
+    const selectedPoints =
         activeRange === "1W" && allPoints.length > 5
             ? allPoints.slice(-5)
             : allPoints
+    const points = selectedPoints.map((point, index) => ({
+        ...point,
+        label:
+            index === 0
+                ? activeRange === "1W"
+                    ? "1주 전"
+                    : "1개월 전"
+                : index === selectedPoints.length - 1
+                  ? "최근"
+                  : "",
+    }))
     const sourceIsDaily = hasDaily
     const current =
         numeric(data?.quote?.value) ??
@@ -766,7 +777,7 @@ export default function PublicLiveChartRouter(props: Props) {
                         style={{
                             display: "grid",
                             gridTemplateColumns:
-                                "repeat(3, minmax(0, 1fr))",
+                                "repeat(auto-fit, minmax(112px, 1fr))",
                             gap: 8,
                             marginTop: 6,
                         }}

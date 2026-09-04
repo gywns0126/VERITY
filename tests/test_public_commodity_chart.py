@@ -10,6 +10,8 @@ def test_available_ranges_are_interactive_and_do_not_offer_empty_five_year_data(
     assert '["1W", "1주", allPoints.length >= 5]' in body
     assert '["1M", "1개월", allPoints.length >= 2]' in body
     assert 'onClick={() => enabled && setRange(key)}' in body
+    assert '? "1주 전"' in body
+    assert '"repeat(auto-fit, minmax(112px, 1fr))"' in body
     assert '"5Y"' not in body
     assert '"5년"' not in body
 
