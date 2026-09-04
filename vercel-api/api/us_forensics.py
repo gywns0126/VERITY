@@ -1,20 +1,22 @@
 """
-GET /api/verity/us-forensics?ticker=MSFT  — 단일 ticker 美 forensics 통합 (4 소스 집계)
+GET /api/verity/us-forensics?ticker=MSFT  — 단일 ticker 美 forensics 통합 (6 소스 집계)
 
 집계 소스 (Blob, publish-data 발행):
   insider     = us_insider_trades.json    (SEC Form4 내부자)
   holdings    = us_major_holdings.json     (SEC 13D/13G 5%+ 대량보유)
   smart_money = us_smart_money_13f.json    (집중형 13F 스마트머니)
+  short_interest = us_short_interest.json  (거래소 공매도 잔고)
+  form144     = us_form144.json             (제한주식·지배증권 매도 예정 신고)
   (consensus 섹션 = 2026-07-10 제거 — yfinance 목표가·투자의견은 Benzinga/S&P 실권리,
    재배포 blocker. 표시 = 출처 링크아웃 대체, 숫자 부활 = 유료 티어 Polygon×Benzinga 정식 라이선스.)
 
 [[project_us_financials_sec_edgar]] (b). 프런트(PublicStockReport 등)가 per-ticker 1콜로 소비.
-4 소스 병렬 fetch(maxDuration 5s 내). RULE 7 = 공시/외부 사실만(우리 자체 점수 0).
+6 소스 병렬 fetch(maxDuration 5s 내). RULE 7 = 공시/외부 사실만(우리 자체 점수 0).
 
 거짓말 트랩:
   소스 fetch 실패 → 해당 섹션 null + sources[k].status="unavailable" (가짜 X).
   ticker 가 소스에 없음 → 섹션 null (유효 공백 — 그 종목에 해당 공시 없음, 에러 아님).
-  4 소스 전부 실패 → 503.
+  6 소스 전부 실패 → 503.
 """
 from __future__ import annotations
 
@@ -42,6 +44,7 @@ SOURCES = {
     "smart_money": "us_smart_money_13f.json",
     "short_interest": "us_short_interest.json",
     "disclosure_forensics": "us_disclosure_forensics.json",
+    "form144": "us_form144.json",
 }
 
 TIMEOUT_SEC = 4          # vercel.json maxDuration=5 안전 마진 (병렬이라 벽시계 ≈ 1 fetch)
@@ -125,7 +128,7 @@ class handler(BaseHTTPRequestHandler):
         self._send(200, {
             "status": "ok",
             "ticker": ticker,
-            "sections": sections,          # insider / holdings / smart_money
+            "sections": sections,          # insider / holdings / smart_money / short_interest / disclosure_forensics / form144
             "sources": sources,            # 소스별 status + generated_at (신선도 투명)
         }, cache=True)
 
