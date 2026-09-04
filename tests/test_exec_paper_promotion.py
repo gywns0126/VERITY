@@ -114,3 +114,20 @@ def test_rejects_mismatch_without_changing_destination(tmp_path, target, value):
         promote_exec_paper(dev_path, prod_path, state_path)
 
     assert prod_path.read_bytes() == before
+
+
+def test_rejects_summary_from_an_older_staging_run(tmp_path):
+    production, staging, state = _documents()
+    staging["updated_at"] = "2026-09-04T17:10:00+09:00"
+    prod_path = tmp_path / "portfolio.json"
+    dev_path = tmp_path / "portfolio.dev.json"
+    state_path = tmp_path / "exec_paper_state.json"
+    _write(prod_path, production)
+    _write(dev_path, staging)
+    _write(state_path, state)
+    before = prod_path.read_bytes()
+
+    with pytest.raises(PromotionError, match="predates"):
+        promote_exec_paper(dev_path, prod_path, state_path)
+
+    assert prod_path.read_bytes() == before

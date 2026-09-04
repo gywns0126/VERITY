@@ -38,14 +38,22 @@ def _read_object(path: Path, label: str) -> dict[str, Any]:
     return value
 
 
-def _validate(summary: dict[str, Any], state: dict[str, Any]) -> None:
+def _validate(
+    summary: dict[str, Any], state: dict[str, Any], staging_updated_at: Any,
+) -> None:
     if summary.get("capital_mode") != "paper_only" or summary.get("real_orders") != 0:
         raise PromotionError("exec_paper is not paper-only with zero real orders")
 
     try:
-        datetime.fromisoformat(str(summary["as_of"]))
+        summary_as_of = datetime.fromisoformat(str(summary["as_of"]))
+        staging_as_of = datetime.fromisoformat(str(staging_updated_at))
     except (KeyError, TypeError, ValueError) as exc:
-        raise PromotionError("exec_paper.as_of is missing or invalid") from exc
+        raise PromotionError("staging or exec_paper timestamp is missing or invalid") from exc
+    try:
+        if summary_as_of < staging_as_of:
+            raise PromotionError("exec_paper predates the current staging run")
+    except TypeError as exc:
+        raise PromotionError("staging and exec_paper timestamps use incompatible timezones") from exc
 
     expected = {
         "version": state.get("version"),
@@ -104,7 +112,7 @@ def promote_exec_paper(source: Path, destination: Path, state_path: Path) -> dic
     if not isinstance(summary, dict):
         raise PromotionError("staging portfolio has no exec_paper object")
 
-    _validate(summary, state)
+    _validate(summary, state, staging.get("updated_at"))
     production["exec_paper"] = summary
     _atomic_write(destination, production)
     return summary
