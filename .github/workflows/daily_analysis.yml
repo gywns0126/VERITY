@@ -262,6 +262,17 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python api/main.py
 
+      - name: Promote paper summary to operator portfolio
+        # Quick는 VERITY_MODE=staging이라 최신 전체 결과가 portfolio.dev.json에 저장된다.
+        # 전체 staging 결과를 섞지 않고, 상태 원장과 일치한 exec_paper 한 필드만 승격한다.
+        run: |
+          if git diff --quiet -- data/portfolio.dev.json; then
+            echo "::error::portfolio.dev.json unchanged — current Quick result not proven"
+            exit 1
+          fi
+          python scripts/promote_exec_paper_to_portfolio.py 2>&1 | tee /tmp/exec_paper_promote.log
+          grep -qx "exec paper promote: 1/1" /tmp/exec_paper_promote.log
+
       # Tranche B dual-write (#9 봉인) — 크라운주얼 트레일을 VERITY-private 에도 동기.
       # 단계 설계(private_data.py MANIFEST): dual-write N=2 검증 → 소비자 pull 배선 → public 추적 해제.
       # continue-on-error + 스크립트 자체 토큰-없음 skip = 파이프라인 보호. 변경 시에만 push(무변경 커밋 방지).
@@ -314,7 +325,7 @@ jobs:
           fi
 
       - name: Upload operator portfolio to private Supabase Storage
-        # /system 은 private portfolio_full 을 우선 읽는다. Quick 산출도 origin/main 커밋 뒤
+        # /system 은 private portfolio_full 을 우선 읽는다. 승격된 Quick 요약도 origin/main 커밋 뒤
         # 즉시 동기화해 정본과 오퍼레이터 화면 사이의 stale 간격을 없앤다.
         # portfolio_full 1개만 선택해 다른 저빈도 오퍼레이터 산출물을 되돌리지 않는다.
         env:

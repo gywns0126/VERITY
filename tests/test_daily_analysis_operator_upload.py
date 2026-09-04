@@ -17,11 +17,18 @@ def _steps() -> list[dict]:
 def test_quick_uploads_operator_portfolio_after_origin_push_before_public_publish():
     steps = _steps()
     names = [step.get("name") for step in steps]
+    analysis_i = names.index("Run analysis")
+    promote_i = names.index("Promote paper summary to operator portfolio")
+    private_i = names.index("Private data sync (Tranche B)")
     commit_i = names.index("Commit & push results")
     upload_i = names.index("Upload operator portfolio to private Supabase Storage")
     publish_i = names.index("Publish hot data to VERITY-data")
 
-    assert commit_i < upload_i < publish_i
+    assert analysis_i < promote_i < private_i < commit_i < upload_i < publish_i
+    promote = steps[promote_i]
+    assert "git diff --quiet -- data/portfolio.dev.json" in promote["run"]
+    assert "python scripts/promote_exec_paper_to_portfolio.py" in promote["run"]
+    assert 'grep -qx "exec paper promote: 1/1"' in promote["run"]
     upload = steps[upload_i]
     assert upload["env"] == {
         "SUPABASE_URL": "${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}",
