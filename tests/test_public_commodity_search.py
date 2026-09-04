@@ -11,6 +11,7 @@ def test_commodity_report_reuses_the_canonical_search_component() -> None:
     assert '<PublicStockSearch placeholder="종목·ETF·원자재 검색"' in body
     assert 'stockPath="/stock"' in body
     assert "stockUrl={SEARCH_UNIVERSE}" in body
+    assert "reportStyle={true}" in body
 
 
 def test_canonical_search_keeps_commodity_alias_support() -> None:
@@ -24,4 +25,13 @@ def test_search_is_inside_report_flow_not_an_absolute_page_node() -> None:
     search = body.index("<PublicStockSearch")
     first_section = body.index("<section", search)
     assert search < first_section
-    assert 'height: 44' in body[search - 100 : search]
+    assert 'height: 41' in body[search - 100 : search]
+
+
+def test_report_search_matches_the_stock_report_field_shape() -> None:
+    body = SEARCH.read_text(encoding="utf-8")
+    assert "reportStyle?: boolean" in body
+    assert "background: reportStyle ? C.card : C.field" in body
+    assert "borderRadius: reportStyle ? 12 : 999" in body
+    assert 'reportStyle\n            ? "10px 14px"' in body
+    assert "universe.length.toLocaleString(\"ko-KR\")" in body

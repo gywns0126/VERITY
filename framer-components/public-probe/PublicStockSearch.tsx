@@ -358,6 +358,7 @@ interface Props {
     stockUrl: string
     usStockUrl: string
     dark: boolean
+    reportStyle?: boolean
 }
 
 function readBodyDark(): boolean {
@@ -440,6 +441,7 @@ export default function PublicStockSearch(props: Props) {
     // 색 = self-contained 하드코딩(DARK/LIGHT) — Custom Code 변수 의존 제거(2026-07-19 검색창 복구).
     //   readBodyDark 가 html[data-an-theme](페인트 전 세팅)를 1순위로 판독 = 첫 페인트부터 정합.
     const C = (onCanvas ? !!dark : themeDark) ? DARK : LIGHT
+    const reportStyle = Boolean(props.reportStyle)
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -585,9 +587,13 @@ export default function PublicStockSearch(props: Props) {
         display: "flex",
         alignItems: "center",
         gap: 7,
-        background: C.field,
-        borderRadius: 999,
-        padding: narrow ? "8px 12px" : "9px 14px",
+        background: reportStyle ? C.card : C.field,
+        borderRadius: reportStyle ? 12 : 999,
+        padding: reportStyle
+            ? "10px 14px"
+            : narrow
+              ? "8px 12px"
+              : "9px 14px",
         fontFamily: FONT,
     }
     // fixed + 입력창 rect 좌표 → nav 박스 overflow 에 안 잘림. zIndex 큰 값(nav 위).
@@ -706,7 +712,15 @@ export default function PublicStockSearch(props: Props) {
                     }}
                     onFocus={onFocus}
                     onBlur={() => setTimeout(() => setFocused(false), 160)}
-                    placeholder={placeholder || "종목 검색"}
+                    placeholder={
+                        reportStyle
+                            ? universe.length > 0
+                                ? `종목·ETF·원자재 검색 · 전체 ${universe.length.toLocaleString("ko-KR")}개`
+                                : "종목·ETF·원자재 검색"
+                            : placeholder === "종목 검색 (이름·코드)"
+                              ? "종목·ETF·원자재 검색"
+                              : placeholder || "종목·ETF·원자재 검색"
+                    }
                     style={{
                         border: "none",
                         outline: "none",
@@ -880,7 +894,7 @@ addPropertyControls(PublicStockSearch, {
     placeholder: {
         type: ControlType.String,
         title: "Placeholder",
-        defaultValue: "종목 검색 (이름·코드)",
+        defaultValue: "종목·ETF·원자재 검색",
     },
     stockPath: {
         type: ControlType.String,
@@ -901,6 +915,13 @@ addPropertyControls(PublicStockSearch, {
     dark: {
         type: ControlType.Boolean,
         title: "Dark",
+        defaultValue: false,
+        enabledTitle: "On",
+        disabledTitle: "Off",
+    },
+    reportStyle: {
+        type: ControlType.Boolean,
+        title: "Report Style",
         defaultValue: false,
         enabledTitle: "On",
         disabledTitle: "Off",
