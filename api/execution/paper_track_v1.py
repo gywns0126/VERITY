@@ -15,6 +15,35 @@ from typing import Any, Callable, Dict, List, Optional
 from api.execution import paper_track as base
 
 
+def _session_fingerprint(
+    rows: List[Dict[str, Any]],
+    live_prices: Dict[str, float],
+    active_tickers: List[str],
+) -> Optional[str]:
+    """세션 판정에는 분석 가격보다 활성 주문·보유의 최신 호가를 우선한다.
+
+    분석 후보 가격이 갱신되지 않았더라도 대기 주문의 실제 호가가 바뀌면 다음 실행
+    세션으로 넘어가야 한다. 분석 후보에서 빠진 활성 티커도 최신 호가가 있으면 지문에
+    포함해, 최신 호가 조회가 세션 게이트 뒤에서 영원히 대기하는 순환을 끊는다.
+    """
+    points: List[Dict[str, Any]] = []
+    seen = set()
+    for row in rows:
+        ticker = str(row.get("ticker") or "")
+        if not ticker:
+            continue
+        seen.add(ticker)
+        price = live_prices.get(ticker)
+        if price is None:
+            price = base._price(row)
+        points.append({"ticker": ticker, "current_price": price})
+    for ticker in dict.fromkeys(active_tickers):
+        if not ticker or ticker in seen or ticker not in live_prices:
+            continue
+        points.append({"ticker": ticker, "current_price": live_prices[ticker]})
+    return base._market_fingerprint(points)
+
+
 def _equity_value(state: Dict[str, Any], by_tk: Dict[str, Dict[str, Any]]) -> float:
     return float(state.get("cash") or 0) + sum(
         float(p.get("qty") or 0) * (base._price(by_tk.get(t)) or float(p.get("buy_price") or 0))
@@ -207,8 +236,6 @@ def run_paper_track_v1(
         "market_clock_state": market_clock_state,
         "holiday_calendar": "not_connected",
     }
-    fingerprint = base._market_fingerprint(kr)
-    new_session = bool(fingerprint and fingerprint != state.get("last_price_fingerprint"))
 
     if migration in ("v0_nonempty_migration_halted", "v1_partial_state_halted"):
         flags.append("manual_epoch_decision_required")
@@ -217,10 +244,26 @@ def run_paper_track_v1(
         prior_flags = list(state.get("last_flags") or [])
         return _summary(state, by_tk, prior_flags + ["already_ran_today"], now_fn)
     market_clock_blocked = market_clock_state in ("preopen_clock", "weekend_closed")
-    if state.get("last_date") and (not new_session or market_clock_blocked):
+    if market_clock_blocked:
         flags.append("waiting_new_market_snapshot")
-        if market_clock_blocked:
-            flags.append("market_clock_not_executable")
+        flags.append("market_clock_not_executable")
+        state["price_snapshot"] = price_snapshot
+        state["last_flags"] = sorted(set(flags))
+        _save(state_path, state)
+        return _summary(state, by_tk, flags, now_fn)
+
+    active_tickers = [
+        str(order.get("ticker") or "") for order in state.get("pending", [])
+    ] + list((state.get("positions") or {}).keys())
+    live_px = live_quotes_fn(active_tickers) if active_tickers else {}
+    price_snapshot["fingerprint_source"] = (
+        "analysis_plus_active_live_quotes" if live_px else "analysis_snapshot"
+    )
+    price_snapshot["active_live_quotes_n"] = len(live_px)
+    fingerprint = _session_fingerprint(kr, live_px, active_tickers)
+    new_session = bool(fingerprint and fingerprint != state.get("last_price_fingerprint"))
+    if state.get("last_date") and not new_session:
+        flags.append("waiting_new_market_snapshot")
         state["price_snapshot"] = price_snapshot
         state["last_flags"] = sorted(set(flags))
         _save(state_path, state)
@@ -299,10 +342,6 @@ def run_paper_track_v1(
         })
 
     # 이전 run 주문 체결
-    live_px = live_quotes_fn(
-        [str(od.get("ticker") or "") for od in state.get("pending", [])]
-        + list((state.get("positions") or {}).keys())
-    )
     still_pending: List[Dict[str, Any]] = []
     target_set = set(state.get("target_tickers") or [])
     for od in state.get("pending", []):

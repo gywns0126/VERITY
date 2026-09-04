@@ -4,6 +4,8 @@ import json
 import os
 from datetime import datetime
 
+import pytest
+
 import api.execution.paper_track as pt
 
 
@@ -22,6 +24,12 @@ def _rec(tk="005930", final="BUY", aligned=True, price=10_000.0, brain=70, avg_v
 def _run(analyzed, tmp, exposure=0.5, source_as_of=None):
     pt._fetch_moderation_exposure = lambda: exposure  # S1 종속 주입
     return pt.run_paper_track(analyzed, str(tmp), source_as_of=source_as_of)
+
+
+@pytest.fixture(autouse=True)
+def _fixed_after_close_clock(monkeypatch):
+    """운용 테스트가 실행 시각에 따라 preopen 분기로 흔들리지 않게 한다."""
+    monkeypatch.setattr(pt, "_now", lambda: datetime.fromisoformat("2026-09-03T18:00:00+09:00"))
 
 
 def test_entry_signal_creates_pending_and_fills_next_run(tmp_path, monkeypatch):
@@ -279,6 +287,49 @@ def test_preopen_new_fingerprint_does_not_advance_state(tmp_path, monkeypatch):
     assert waiting["equity_curve"] == prior["equity_curve"]
     assert waiting["trades"] == prior["trades"]
     assert waiting["price_snapshot"]["market_clock_state"] == "preopen_clock"
+
+
+def test_initial_preopen_does_not_create_session_or_pending(tmp_path, monkeypatch):
+    monkeypatch.setattr(pt, "_now", lambda: datetime.fromisoformat("2026-09-04T08:21:00+09:00"))
+    quote_calls = []
+    monkeypatch.setattr(pt, "_live_quotes", lambda tickers: quote_calls.append(tickers) or {})
+
+    summary = _run([_rec(final="WATCH", aligned=False, badge="WATCH")], tmp_path)
+    saved = json.load(open(tmp_path / "exec_paper_state.json"))
+
+    assert summary["market_sessions"] == 0
+    assert summary["pending"] == 0
+    assert saved["last_date"] is None
+    assert saved["last_price_fingerprint"] is None
+    assert saved["equity_curve"] == []
+    assert "market_clock_not_executable" in summary["flags"]
+    assert quote_calls == []
+
+
+def test_active_live_quote_unblocks_stale_analysis_fingerprint(tmp_path, monkeypatch):
+    monkeypatch.setattr(pt, "_now", lambda: datetime.fromisoformat("2026-09-03T18:00:00+09:00"))
+    monkeypatch.setattr(pt, "_live_quotes", lambda tickers: {})
+    first = _run([_rec(final="WATCH", aligned=False, badge="WATCH", price=10_000.0)], tmp_path)
+    assert first["market_sessions"] == 1
+    assert first["pending"] == 1
+
+    calls = []
+    monkeypatch.setattr(pt, "_now", lambda: datetime.fromisoformat("2026-09-04T18:00:00+09:00"))
+    monkeypatch.setattr(
+        pt,
+        "_live_quotes",
+        lambda tickers: calls.append(list(tickers)) or {"005930": 10_100.0},
+    )
+    second = _run([_rec(final="WATCH", aligned=False, badge="WATCH", price=10_000.0)], tmp_path)
+    saved = json.load(open(tmp_path / "exec_paper_state.json"))
+
+    assert second["market_sessions"] == 2
+    assert second["pending"] == 0
+    assert second["positions"]["005930"]["buy_price"] == 10_100.0
+    assert saved["last_date"] == "2026-09-04"
+    assert saved["price_snapshot"]["fingerprint_source"] == "analysis_plus_active_live_quotes"
+    assert saved["price_snapshot"]["active_live_quotes_n"] == 1
+    assert calls == [["005930"]]
 
 
 def test_buy_fill_deducts_registered_cost(tmp_path):
