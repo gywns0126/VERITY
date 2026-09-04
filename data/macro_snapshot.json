@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-04T14:32:17+09:00",
+  "collected_at": "2026-09-04T15:01:49+09:00",
   "macro": {
     "usd_krw": {
       "value": 1352.08,
@@ -1531,22 +1531,6 @@
       "d_day": 7
     },
     {
-      "name": "미국 CPI 발표",
-      "severity": "high",
-      "impact_area": [
-        "물가",
-        "금리기대",
-        "성장주"
-      ],
-      "impact": "예상 상회 시 금리 인상 우려로 시장 하락, 하회 시 반등",
-      "action": "발표 전 변동성 대비, 인플레 수혜주 vs 피해주 구분",
-      "date": "2026-09-11",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 10,
-      "d_day": 7
-    },
-    {
       "name": "미국 FOMC 금리결정",
       "severity": "high",
       "impact_area": [
@@ -1638,12 +1622,18 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 29.85
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 151.12
   },
   "schema_version": "v0"
 }
