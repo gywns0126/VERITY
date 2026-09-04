@@ -72,6 +72,92 @@ def test_key_coverage_whitelists_benign_fallbacks(monkeypatch, tmp_path):
     assert MA.audit_key_coverage(root=str(tmp_path))["ok"] is True
 
 
+def test_key_coverage_accepts_active_fallback_paths(monkeypatch, tmp_path):
+    """최상위 별칭이 없어도 실제 채점 대체 경로가 있으면 죽은 축이 아니다."""
+    mod = tmp_path / "m.py"
+    mod.write_text(
+        "\n".join([
+            'stock.get("close")',
+            'stock.get("operating_income")',
+            'stock.get("prev_year")',
+            'stock.get("sub_sector")',
+            'stock.get("total_debt")',
+            'stock.get("quant_factors")',
+            'stock.get("dart_financials")',
+        ]),
+        encoding="utf-8",
+    )
+    rows = [{
+        "current_price": 100,
+        "revenue": 1_000,
+        "operating_margin": 10,
+        "fscore_deltas": {"delta_roa": 0.01},
+        "industry": "Software",
+        "total_assets": 2_000,
+        "debt_ratio": 50,
+        "multi_factor": {"quant_factors": {"quality": 70}},
+        "dart_source": "dart_pre_attach",
+    }]
+    (tmp_path / "recommendations.json").write_text(json.dumps(rows), encoding="utf-8")
+    monkeypatch.setattr(MA, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(MA, "SCORING_MODULES", ["m.py"])
+
+    r = MA.audit_key_coverage(root=str(tmp_path))
+
+    assert r["ok"] is True
+    assert {item["key"] for item in r["fallback_covered"]} == {
+        "close", "operating_income", "prev_year", "sub_sector", "total_debt",
+        "quant_factors", "dart_financials",
+    }
+
+
+def test_key_coverage_requires_runtime_evidence_for_stripped_inputs(monkeypatch, tmp_path):
+    mod = tmp_path / "m.py"
+    mod.write_text(
+        'stock.get("quant_factors")\nstock.get("dart_financials")\n', encoding="utf-8")
+    (tmp_path / "recommendations.json").write_text(
+        json.dumps([{"ticker": "005930", "currency": "KRW"}]), encoding="utf-8")
+    monkeypatch.setattr(MA, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(MA, "SCORING_MODULES", ["m.py"])
+
+    r = MA.audit_key_coverage(root=str(tmp_path))
+
+    assert [item["key"] for item in r["dead_keys"]] == ["dart_financials", "quant_factors"]
+
+
+def test_key_coverage_distinguishes_evaluated_zero_event(monkeypatch, tmp_path):
+    """SEC 스캔 성공 후 후보 매칭 0건은 살아 있는 규칙의 정상 0건이다."""
+    mod = tmp_path / "m.py"
+    mod.write_text('stock.get("sec_risk_flags")\n', encoding="utf-8")
+    (tmp_path / "recommendations.json").write_text(
+        json.dumps([{"ticker": "AAPL", "currency": "USD"}]), encoding="utf-8")
+    (tmp_path / "portfolio.json").write_text(
+        json.dumps({"sec_risk_scan": {"ok": True, "count": 19, "filings": [{}] * 19}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(MA, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(MA, "SCORING_MODULES", ["m.py"])
+
+    r = MA.audit_key_coverage(root=str(tmp_path))
+
+    assert r["ok"] is True
+    assert r["evaluated_zero"][0]["key"] == "sec_risk_flags"
+    assert r["evaluated_zero"][0]["events_scanned"] == 19
+
+
+def test_key_coverage_keeps_event_key_dead_without_scan_evidence(monkeypatch, tmp_path):
+    mod = tmp_path / "m.py"
+    mod.write_text('stock.get("sec_risk_flags")\n', encoding="utf-8")
+    (tmp_path / "recommendations.json").write_text(
+        json.dumps([{"ticker": "AAPL", "currency": "USD"}]), encoding="utf-8")
+    monkeypatch.setattr(MA, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(MA, "SCORING_MODULES", ["m.py"])
+
+    r = MA.audit_key_coverage(root=str(tmp_path))
+
+    assert [item["key"] for item in r["dead_keys"]] == ["sec_risk_flags"]
+
+
 # ── A. 원장 정합 ─────────────────────────────────────────────────────────
 
 def test_ledger_flags_phantom_sells(monkeypatch, tmp_path):

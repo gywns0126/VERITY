@@ -67,9 +67,87 @@ SCORING_MODULES = [
 ]
 _STOCK_GET = re.compile(r'stock\.get\(\s*["\']([a-zA-Z_0-9]+)["\']')
 
-# 검사 B 화이트리스트 — 폴백이 존재해 결측이 무해한 키 (2026-08-05 검증 완료)
-#   per/pbr 이 67/67 이라 아래 대체 키는 쓰일 일이 없다.
+# 검사 B 화이트리스트 — 동일 의미의 정본 필드가 있어 결측이 무해한 키.
 _BENIGN_MISSING = {"price_to_earnings", "price_to_book"}
+
+# 최상위 키가 없어도 채점 코드가 실제로 소비하는 대체 경로.
+# 각 키의 값은 OR 대안들의 모음이고, 한 대안 안의 경로는 모두 있어야 한다(AND).
+# 예: operating_income = sec_financials 값 OR (revenue AND operating_margin) 파생값.
+_KEY_COVERAGE_FALLBACKS = {
+    "close": (
+        (("current_price",),),
+        (("price",),),
+    ),
+    "operating_income": (
+        (("sec_financials", "operating_income"),),
+        (("revenue",), ("operating_margin",)),
+    ),
+    "prev_year": (
+        (("fscore_deltas",),),
+    ),
+    "sub_sector": (
+        (("industry",),),
+    ),
+    "total_debt": (
+        (("sec_financials", "total_debt"),),
+        (("total_assets",), ("debt_ratio",)),
+    ),
+    # full 채점에서는 최상위 원본을 사용하지만 realtime 저장은 큰 원본을 덜어낸다.
+    # 아래 두 경로는 같은 계산/수집이 실제 실행된 뒤 남는 경량 산출 증거다.
+    "quant_factors": (
+        (("multi_factor", "quant_factors"),),
+    ),
+    "dart_financials": (
+        (("dart_source",),),
+        (("dart_report_date",),),
+    ),
+}
+
+
+def _path_present(row: Dict[str, Any], path: tuple[str, ...]) -> bool:
+    value: Any = row
+    for part in path:
+        if not isinstance(value, dict) or part not in value:
+            return False
+        value = value[part]
+    return value is not None
+
+
+def _fallback_coverage(recs: List[Dict[str, Any]], key: str) -> Optional[Dict[str, Any]]:
+    alternatives = _KEY_COVERAGE_FALLBACKS.get(key) or ()
+    matched_rows = 0
+    matched_via = set()
+    for row in recs:
+        row_matched = False
+        for required_paths in alternatives:
+            if all(_path_present(row, path) for path in required_paths):
+                row_matched = True
+                matched_via.add(" + ".join(".".join(path) for path in required_paths))
+        if row_matched:
+            matched_rows += 1
+    if not matched_rows:
+        return None
+    return {
+        "key": key,
+        "coverage": f"{matched_rows}/{len(recs)}",
+        "via": sorted(matched_via),
+    }
+
+
+def _evaluated_zero_evidence(key: str, recs: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """이벤트가 0건이어도 수집·매칭을 정상 수행했다는 별도 실행 증거."""
+    if key != "sec_risk_flags" or not any(r.get("currency") == "USD" for r in recs):
+        return None
+    portfolio = _load(os.path.join(DATA_DIR, "portfolio.json"), {}) or {}
+    scan = portfolio.get("sec_risk_scan") or {}
+    if scan.get("ok") is not True:
+        return None
+    return {
+        "key": key,
+        "source": "portfolio.sec_risk_scan.ok",
+        "events_scanned": scan.get("count", len(scan.get("filings") or [])),
+        "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
+    }
 
 
 def _load(path: str, default: Any) -> Any:
@@ -129,11 +207,22 @@ def audit_key_coverage(root: str = ".") -> Dict[str, Any]:
                 for k in set(_STOCK_GET.findall(f.read())):
                     wanted.setdefault(k, []).append(os.path.basename(rel))
         dead, thin = [], []
+        fallback_covered, evaluated_zero = [], []
         for k, mods in wanted.items():
             if k in _BENIGN_MISSING:
                 continue
             n = sum(1 for r in recs if r.get(k) is not None)
             if n == 0:
+                fallback = _fallback_coverage(recs, k)
+                if fallback:
+                    fallback["modules"] = sorted(set(mods))
+                    fallback_covered.append(fallback)
+                    continue
+                zero_evidence = _evaluated_zero_evidence(k, recs)
+                if zero_evidence:
+                    zero_evidence["modules"] = sorted(set(mods))
+                    evaluated_zero.append(zero_evidence)
+                    continue
                 dead.append({"key": k, "modules": sorted(set(mods))})
             elif n < len(recs) * 0.05:
                 thin.append({"key": k, "coverage": f"{n}/{len(recs)}"})
@@ -142,6 +231,8 @@ def audit_key_coverage(root: str = ".") -> Dict[str, Any]:
             "keys_checked": len(wanted),
             "dead_keys": sorted(dead, key=lambda x: x["key"]),
             "thin_keys": thin[:10],
+            "fallback_covered": sorted(fallback_covered, key=lambda x: x["key"]),
+            "evaluated_zero": sorted(evaluated_zero, key=lambda x: x["key"]),
             "detail": (f"레코드에 한 번도 없는 키 {len(dead)}종 — 해당 채점 축이 조용히 죽어 있다"
                        if dead else "죽은 키 없음"),
         }
@@ -470,11 +561,25 @@ def audit_rule_discrimination() -> Dict[str, Any]:
 #   경보가 의미를 가지려면 **FAIL = 새로 생겼다** 여야 한다. 알려진 미해결분은 여기에
 #   고정하고 status 를 KNOWN 으로 내린다. 값이 커지면 즉시 FAIL 로 복귀한다.
 #   해소 시 이 baseline 을 낮추는 것이 완료 조건이다(태스크 #19/#20).
+_KNOWN_DEAD_KEYS = [
+    "alpha_combined",
+    "equity_research_brief",
+    "kis_program_trade",
+    "options_flow",
+    "shares_change_pct",
+]
+
+
 _KNOWN_BASELINE = {
     # 8/13 cross-run stale portfolio 로 티쓰리 중복 청산 1건이 추가됐다. 원인은
     # engine 의 ledger 대조 fail-closed 가드로 차단하고, 감사 원문은 보존한다.
     "ledger_integrity": {"phantom_sells": 59},      # 8/28 확인 누적 과거분. 초과 = 재발
-    "key_coverage": {"dead_keys": 10},              # 태스크 #20
+    # 9/4 전수 분류: 대체 경로 5종 + 정상 0건 1종을 오탐에서 제외했다. 남은 5종은
+    # 실제 미측정 축이다. 개수뿐 아니라 이름도 고정해 같은 개수의 신규 결손 교체를 잡는다.
+    "key_coverage": {
+        "dead_keys": len(_KNOWN_DEAD_KEYS),
+        "known_dead_keys": _KNOWN_DEAD_KEYS,
+    },
     # 🚨 2026-08-07 — 3 → 0 하향. 통화 마이그레이션(#300) 적용 후 실 cron 에서 불일치
     #   0건 확인(price_scale ok=True). baseline 을 낮추는 것이 해소의 정의다 —
     #   내려두지 않으면 재발해도 KNOWN 으로 묻힌다.
@@ -502,7 +607,19 @@ def _exceeds_baseline(name: str, chk: Dict[str, Any]) -> Optional[bool]:
     base = _KNOWN_BASELINE.get(name)
     if not base or chk.get("ok") is not False:
         return None
+    if name == "key_coverage":
+        dead = chk.get("dead_keys")
+        known = base.get("known_dead_keys")
+        if not isinstance(dead, list) or not isinstance(known, list):
+            return None
+        current_names = {
+            str(item.get("key")) if isinstance(item, dict) else str(item)
+            for item in dead
+        }
+        return not current_names.issubset(set(known))
     for field, limit in base.items():
+        if not isinstance(limit, (int, float)):
+            continue
         v = chk.get(field)
         if isinstance(v, list):
             v = len(v)

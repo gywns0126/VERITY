@@ -115,8 +115,14 @@ def test_skips_when_history_thin(monkeypatch, tmp_path):
 # ── baseline — 매일 FAIL 인 경보는 경보가 아니다 ─────────────────────
 
 def test_known_unresolved_downgraded_from_fail():
-    """알려진 미해결분(유령 58·죽은키 10·통화 3)은 KNOWN 으로 내려간다."""
+    """알려진 미해결분은 KNOWN 으로 내려간다."""
     for name, base in MA._KNOWN_BASELINE.items():
+        if name == "key_coverage":
+            chk = {"ok": False, "dead_keys": [
+                {"key": key} for key in base["known_dead_keys"]
+            ]}
+            assert MA._exceeds_baseline(name, chk) is False
+            continue
         field, limit = next(iter(base.items()))
         chk = {"ok": False, field: limit}
         assert MA._exceeds_baseline(name, chk) is False
@@ -125,15 +131,23 @@ def test_known_unresolved_downgraded_from_fail():
 def test_regression_above_baseline_is_fail():
     """baseline 초과 = 신규 발생 = FAIL. 이게 경보의 의미다."""
     for name, base in MA._KNOWN_BASELINE.items():
+        if name == "key_coverage":
+            dead = [{"key": key} for key in base["known_dead_keys"]]
+            dead.append({"key": "newly_dead_axis"})
+            assert MA._exceeds_baseline(name, {"ok": False, "dead_keys": dead}) is True
+            continue
         field, limit = next(iter(base.items()))
         assert MA._exceeds_baseline(name, {"ok": False, field: limit + 1}) is True
 
 
 def test_baseline_accepts_list_valued_fields():
-    """dead_keys 처럼 리스트로 오는 필드도 길이로 비교된다."""
-    n = MA._KNOWN_BASELINE["key_coverage"]["dead_keys"]
-    assert MA._exceeds_baseline("key_coverage", {"ok": False, "dead_keys": [0] * n}) is False
-    assert MA._exceeds_baseline("key_coverage", {"ok": False, "dead_keys": [0] * (n + 1)}) is True
+    """죽은 키는 개수가 같아도 이름이 바뀌면 신규 회귀다."""
+    known = MA._KNOWN_BASELINE["key_coverage"]["known_dead_keys"]
+    rows = [{"key": key} for key in known]
+    assert MA._exceeds_baseline("key_coverage", {"ok": False, "dead_keys": rows}) is False
+    swapped = rows[1:] + [{"key": "newly_dead_axis"}]
+    assert len(swapped) == len(rows)
+    assert MA._exceeds_baseline("key_coverage", {"ok": False, "dead_keys": swapped}) is True
 
 
 def test_passing_check_not_baselined():
@@ -150,7 +164,10 @@ def test_run_separates_fail_from_known(monkeypatch, tmp_path):
     monkeypatch.setattr(MA, "OUT_PATH", str(tmp_path / "o.json"))
     monkeypatch.setattr(MA, "TRAIL_PATH", str(tmp_path / "m" / "t.jsonl"))
     monkeypatch.setattr(MA, "audit_ledger", lambda: {"ok": False, "phantom_sells": 59})
-    monkeypatch.setattr(MA, "audit_key_coverage", lambda root=".": {"ok": False, "dead_keys": [0] * 10})
+    monkeypatch.setattr(MA, "audit_key_coverage", lambda root=".": {
+        "ok": False,
+        "dead_keys": [{"key": key} for key in MA._KNOWN_DEAD_KEYS],
+    })
     monkeypatch.setattr(MA, "audit_price_scale", lambda: {"ok": False, "scale_mismatches": [0]})
     monkeypatch.setattr(MA, "audit_flag_coverage", lambda root=".": {"ok": False, "never_fired": [0] * 13})
     out = MA.run(str(tmp_path))
@@ -294,7 +311,10 @@ def test_alarm_silent_when_everything_is_known(monkeypatch, tmp_path):
     monkeypatch.setattr(MA, "OUT_PATH", str(tmp_path / "o.json"))
     monkeypatch.setattr(MA, "TRAIL_PATH", str(tmp_path / "m" / "t.jsonl"))
     monkeypatch.setattr(MA, "audit_ledger", lambda: {"ok": False, "phantom_sells": 58})
-    monkeypatch.setattr(MA, "audit_key_coverage", lambda root=".": {"ok": False, "dead_keys": [0] * 10})
+    monkeypatch.setattr(MA, "audit_key_coverage", lambda root=".": {
+        "ok": False,
+        "dead_keys": [{"key": key} for key in MA._KNOWN_DEAD_KEYS],
+    })
     monkeypatch.setattr(MA, "audit_price_scale", lambda: {"ok": True, "scale_mismatches": []})
     monkeypatch.setattr(MA, "audit_flag_coverage", lambda root=".": {"ok": False, "never_fired": [0] * 13})
     out = MA.run(str(tmp_path))
