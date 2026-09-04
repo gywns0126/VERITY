@@ -2,6 +2,7 @@
 """paper_track — 사전등록 규칙 가상 집행 계약 (E1/E2/E3/E5/S1/X1/X2/X3 + 상태 영속)."""
 import json
 import os
+from datetime import datetime
 
 import api.execution.paper_track as pt
 
@@ -257,6 +258,27 @@ def test_same_price_fingerprint_does_not_add_market_session(tmp_path):
     assert third["market_sessions"] == 2
     assert third["pending"] == 0
     assert "005930" in third["positions"]
+
+
+def test_preopen_new_fingerprint_does_not_advance_state(tmp_path, monkeypatch):
+    monkeypatch.setattr(pt, "_now", lambda: datetime.fromisoformat("2026-09-03T18:00:00+09:00"))
+    first = _run([_rec(final="WATCH", aligned=False, badge="WATCH")], tmp_path)
+    assert first["pending"] == 1
+    prior = json.load(open(tmp_path / "exec_paper_state.json"))
+
+    monkeypatch.setattr(pt, "_now", lambda: datetime.fromisoformat("2026-09-04T08:21:00+09:00"))
+    second = _run([_rec(final="WATCH", aligned=False, badge="WATCH", price=10_100.0)], tmp_path)
+    waiting = json.load(open(tmp_path / "exec_paper_state.json"))
+
+    assert "waiting_new_market_snapshot" in second["flags"]
+    assert "market_clock_not_executable" in second["flags"]
+    assert waiting["last_date"] == prior["last_date"]
+    assert waiting["last_price_fingerprint"] == prior["last_price_fingerprint"]
+    assert waiting["market_sessions"] == prior["market_sessions"]
+    assert waiting["pending"] == prior["pending"]
+    assert waiting["equity_curve"] == prior["equity_curve"]
+    assert waiting["trades"] == prior["trades"]
+    assert waiting["price_snapshot"]["market_clock_state"] == "preopen_clock"
 
 
 def test_buy_fill_deducts_registered_cost(tmp_path):

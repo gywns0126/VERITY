@@ -216,8 +216,11 @@ def run_paper_track_v1(
     if state.get("last_date") == today and migration is None:
         prior_flags = list(state.get("last_flags") or [])
         return _summary(state, by_tk, prior_flags + ["already_ran_today"], now_fn)
-    if state.get("last_date") and not new_session:
+    market_clock_blocked = market_clock_state in ("preopen_clock", "weekend_closed")
+    if state.get("last_date") and (not new_session or market_clock_blocked):
         flags.append("waiting_new_market_snapshot")
+        if market_clock_blocked:
+            flags.append("market_clock_not_executable")
         state["price_snapshot"] = price_snapshot
         state["last_flags"] = sorted(set(flags))
         _save(state_path, state)
