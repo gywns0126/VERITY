@@ -471,10 +471,10 @@
    "market_clock_state": "preopen_clock"
   }
  },
- "last_date": "2026-09-04",
- "last_price_fingerprint": "f27bbc5ccc1ef1946635339800ee153db1c27d03a854f719dd917ded8759c1a1",
- "market_sessions": 2,
- "sessions_since_rebalance": 1,
+ "last_date": "2026-09-02",
+ "last_price_fingerprint": "ba7674fcc8838e17895f2c18eae242c8e266aa8228512f1ce8c764db3c51150c",
+ "market_sessions": 1,
+ "sessions_since_rebalance": 0,
  "last_rebalance_date": "2026-09-02",
  "trades": 0,
  "realized_pnl": 0.0,
@@ -488,15 +488,6 @@
    "cost_paid": 0.0,
    "benchmark_date": "20260831",
    "benchmark_close": 6820.02
-  },
-  {
-   "date": "2026-09-04",
-   "equity": 10000000.0,
-   "positions_n": 0,
-   "trades_total": 0,
-   "cost_paid": 0.0,
-   "benchmark_date": "20260902",
-   "benchmark_close": 6562.72
   }
  ],
  "benchmark_start": {
@@ -511,7 +502,7 @@
   "last_date": "2026-09-02",
   "trades": 0
  },
- "target_exposure": 0.1008,
+ "target_exposure": 0.1112,
  "price_snapshot": {
   "source": "portfolio.recommendations.current_price",
   "as_of": "2026-09-04T06:33:26+09:00",
@@ -519,18 +510,19 @@
   "holiday_calendar": "not_connected"
  },
  "last_denominator": {
-  "kr_candidate_n": 48,
-  "eligible_n": 2,
-  "signal_eligible_n": 2,
-  "selected_n": 2,
+  "kr_candidate_n": 17,
+  "eligible_n": 9,
+  "signal_eligible_n": 11,
+  "selected_n": 9,
   "target_capacity_n": 10,
-  "slot_budget_krw": 504000,
+  "slot_budget_krw": 555556,
   "whole_share_only": true,
   "not_selected_by_rank_n": 0,
   "rejected": {
-   "grade_below_watch": 17,
-   "liquidity": 21,
-   "critical_red_flag": 8
+   "grade_below_watch": 4,
+   "critical_red_flag": 1,
+   "liquidity": 1,
+   "one_share_above_slot": 2
   }
  },
  "selection_slot_krw": 555556,
@@ -538,13 +530,13 @@
   "candidate_pool_rank_not_full_kr_universe",
   "e2_next_run_fill",
   "e3_1m_proxy",
-  "entry_data_unavailable",
   "fill_live_quote_20260826",
-  "target_temporarily_ineligible"
+  "market_clock_not_executable",
+  "waiting_new_market_snapshot"
  ],
  "benchmark_latest": {
-  "date": "20260902",
-  "close": 6562.72,
+  "date": "20260901",
+  "close": 6835.8,
   "source": "금융위원회 지수시세정보",
   "freshness": "T+1 EOD"
  }
