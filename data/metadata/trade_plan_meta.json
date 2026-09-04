@@ -1,13 +1,13 @@
 {
   "version": "v0",
-  "computed_at": "2026-09-04T13:10:40.206212+00:00",
+  "computed_at": "2026-09-04T14:17:32.956731+00:00",
   "status": "active",
   "sample_size": {
     "total": 42,
     "open": 4,
     "closed": 38,
     "with_h5": 38,
-    "with_h14": 33,
+    "with_h14": 34,
     "with_h30": 30,
     "min_for_decompose": 30
   },
@@ -22,11 +22,11 @@
     },
     "h14": {
       "horizon_days": 14,
-      "n": 33,
-      "hit_rate_pct": 66.67,
-      "median_return_pct": 3.15,
-      "mean_return_pct": 2.15,
-      "ic": 0.129
+      "n": 34,
+      "hit_rate_pct": 67.65,
+      "median_return_pct": 3.11,
+      "mean_return_pct": 2.12,
+      "ic": 0.117
     },
     "h30": {
       "horizon_days": 30,
@@ -39,10 +39,10 @@
   },
   "feature_decomposition": {
     "rsi": {
-      "n": 33,
+      "n": 34,
       "boundaries": [
         37.58,
-        42.58,
+        43.08,
         44.72
       ],
       "quartile_mean_return_pct": [
@@ -53,13 +53,13 @@
         },
         {
           "q": 1,
-          "n": 8,
-          "mean_return_pct": 4.66
+          "n": 9,
+          "mean_return_pct": 4.48
         },
         {
           "q": 2,
           "n": 8,
-          "mean_return_pct": 1.59
+          "mean_return_pct": 1.34
         },
         {
           "q": 3,
@@ -69,9 +69,9 @@
       ]
     },
     "macd_hist": {
-      "n": 33,
+      "n": 34,
       "boundaries": [
-        -1.95,
+        -2.5,
         0.12,
         0.55
       ],
@@ -79,12 +79,12 @@
         {
           "q": 0,
           "n": 9,
-          "mean_return_pct": -1.45
+          "mean_return_pct": -1.61
         },
         {
           "q": 1,
-          "n": 9,
-          "mean_return_pct": 3.69
+          "n": 10,
+          "mean_return_pct": 3.57
         },
         {
           "q": 2,
@@ -99,10 +99,10 @@
       ]
     },
     "vol_ratio": {
-      "n": 33,
+      "n": 34,
       "boundaries": [
         0.65,
-        0.84,
+        0.86,
         1.15
       ],
       "quartile_mean_return_pct": [
@@ -113,13 +113,13 @@
         },
         {
           "q": 1,
-          "n": 8,
-          "mean_return_pct": 3.95
+          "n": 9,
+          "mean_return_pct": 3.86
         },
         {
           "q": 2,
           "n": 8,
-          "mean_return_pct": 4.16
+          "mean_return_pct": 3.9
         },
         {
           "q": 3,
@@ -129,7 +129,7 @@
       ]
     },
     "foreign_5d_sum": {
-      "n": 33,
+      "n": 34,
       "boundaries": [
         0.0,
         0.0,
@@ -138,8 +138,8 @@
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 27,
-          "mean_return_pct": 2.04
+          "n": 28,
+          "mean_return_pct": 2.01
         },
         {
           "q": 1,
@@ -159,11 +159,11 @@
       ]
     },
     "technical_score": {
-      "n": 33,
+      "n": 34,
       "boundaries": [
         42.0,
         50.0,
-        52.0
+        53.0
       ],
       "quartile_mean_return_pct": [
         {
@@ -178,18 +178,18 @@
         },
         {
           "q": 2,
-          "n": 1,
+          "n": 4,
           "mean_return_pct": null
         },
         {
           "q": 3,
-          "n": 8,
-          "mean_return_pct": 2.67
+          "n": 6,
+          "mean_return_pct": 2.99
         }
       ]
     },
     "safety_score": {
-      "n": 33,
+      "n": 34,
       "boundaries": [
         78.0,
         79.0,
@@ -198,8 +198,8 @@
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 10,
-          "mean_return_pct": -2.32
+          "n": 11,
+          "mean_return_pct": -2.01
         },
         {
           "q": 1,
@@ -219,7 +219,7 @@
       ]
     },
     "flow_score": {
-      "n": 33,
+      "n": 34,
       "boundaries": [
         50.0,
         50.0,
@@ -228,8 +228,8 @@
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 26,
-          "mean_return_pct": 2.42
+          "n": 27,
+          "mean_return_pct": 2.37
         },
         {
           "q": 1,
@@ -276,10 +276,14 @@
     "Basic Materials": {
       "n": 1,
       "status": "insufficient_data"
+    },
+    "Financial Services": {
+      "n": 1,
+      "status": "insufficient_data"
     }
   },
   "verdict_strength": {
-    "n": 33,
+    "n": 34,
     "multi_score_boundaries": [
       51.0,
       55.0,
@@ -293,8 +297,8 @@
       },
       {
         "q": 1,
-        "n": 8,
-        "mean_return_pct": -3.63
+        "n": 9,
+        "mean_return_pct": -3.11
       },
       {
         "q": 2,
@@ -322,9 +326,9 @@
         "median_return_pct": 6.15
       },
       "60d_plus": {
-        "n": 1,
-        "hit_rate_pct": 0.0,
-        "median_return_pct": -7.95
+        "n": 2,
+        "hit_rate_pct": 50.0,
+        "median_return_pct": -3.43
       }
     }
   },
