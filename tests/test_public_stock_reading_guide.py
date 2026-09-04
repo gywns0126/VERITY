@@ -38,7 +38,11 @@ def test_stock_guide_preserves_ticker_in_next_routes() -> None:
 
 def test_stock_guide_adds_no_network_request() -> None:
     text = source()
-    assert text.count("fetch(") == 2
+    guide = text[
+        text.index('aria-controls="stock-reading-guide"'):
+        text.index('{missing.length > 0')
+    ]
+    assert "fetch(" not in guide
 
 
 def test_stock_guide_has_no_added_outline() -> None:
