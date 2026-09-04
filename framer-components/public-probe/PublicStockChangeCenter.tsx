@@ -7,6 +7,7 @@ import { startTransition, useEffect, useMemo, useRef, useState, type CSSProperti
  */
 
 const DEFAULT_URL = "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/stock_change_public"
+const DEFAULT_API_BASE = "https://project-yw131.vercel.app"
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 
 const LIGHT = {
@@ -20,6 +21,7 @@ const DARK = {
 
 interface Props {
     dataUrl: string
+    apiBase: string
     ticker: string
     dark: boolean
 }
@@ -61,15 +63,57 @@ function readTicker(fallback: string): string {
 }
 
 function numberText(value: unknown, digits = 1): string {
+    if (value === null || value === undefined || value === "") return "—"
     const n = Number(value)
     if (!Number.isFinite(n)) return "—"
     return n.toLocaleString("ko-KR", { maximumFractionDigits: digits })
 }
 
 function percentText(value: unknown): string {
+    if (value === null || value === undefined || value === "") return "—"
     const n = Number(value)
     if (!Number.isFinite(n)) return "—"
     return `${n > 0 ? "+" : ""}${n.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}%`
+}
+
+function isKrTicker(value: string): boolean {
+    return /^\d{6}$/.test(value)
+}
+
+function signedNumberText(value: unknown, suffix = ""): string {
+    if (value === null || value === undefined || value === "") return "—"
+    const n = Number(value)
+    if (!Number.isFinite(n)) return "—"
+    return `${n > 0 ? "+" : ""}${n.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}${suffix}`
+}
+
+function usdText(value: unknown): string {
+    if (value === null || value === undefined || value === "") return "—"
+    const n = Number(value)
+    if (!Number.isFinite(n)) return "—"
+    if (Math.abs(n) >= 1e12) return `$${(n / 1e12).toFixed(1)}T`
+    if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(1)}B`
+    if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
+    return `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+}
+
+function growthPct(after: unknown, before: unknown): number | null {
+    if (after === null || after === undefined || after === "" || before === null || before === undefined || before === "") return null
+    const a = Number(after)
+    const b = Number(before)
+    if (!Number.isFinite(a) || !Number.isFinite(b) || b === 0) return null
+    return Math.round(((a - b) / Math.abs(b)) * 1000) / 10
+}
+
+function StatCell({ title, value, note, colors, tone = "ink" }: any) {
+    const color = tone === "up" ? colors.up : tone === "down" ? colors.down : colors.ink
+    return (
+        <div style={{ minWidth: 0, padding: 10, borderRadius: 10, background: colors.card2 }}>
+            <div style={{ fontSize: 10.5, color: colors.faint, fontWeight: 700 }}>{title}</div>
+            <div style={{ marginTop: 4, fontSize: 16, color, fontWeight: 800, overflowWrap: "anywhere" }}>{value || "—"}</div>
+            {note && <div style={{ marginTop: 3, fontSize: 9.5, color: colors.faint, lineHeight: 1.45 }}>{note}</div>}
+        </div>
+    )
 }
 
 function dateText(value: unknown): string {
@@ -112,6 +156,7 @@ export default function PublicStockChangeCenter(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
     const [ticker, setTicker] = useState(() => onCanvas ? compactTicker(props.ticker || "005930") : readTicker(props.ticker))
     const [payload, setPayload] = useState<any>(() => onCanvas ? SAMPLE : null)
+    const [usPayload, setUsPayload] = useState<any>(null)
     const [error, setError] = useState("")
     const [expanded, setExpanded] = useState(false)
     const [guideOpen, setGuideOpen] = useState(false)
@@ -149,6 +194,24 @@ export default function PublicStockChangeCenter(props: Props) {
     useEffect(() => {
         if (onCanvas || /^CMD_/.test(ticker)) return
         let active = true
+        if (!isKrTicker(ticker)) {
+            const apiBase = (props.apiBase || DEFAULT_API_BASE).replace(/\/+$/, "")
+            setPayload(null)
+            Promise.all([
+                fetch(`${apiBase}/api/stock_slice?ticker=${encodeURIComponent(ticker)}`, { cache: "no-store" }).then((response) => response.ok ? response.json() : Promise.reject(new Error(String(response.status)))),
+                fetch(`${apiBase}/api/verity/us-forensics?ticker=${encodeURIComponent(ticker)}`, { cache: "no-store" }).then((response) => response.ok ? response.json() : Promise.reject(new Error(String(response.status)))),
+            ])
+                .then(([slice, forensics]) => {
+                    if (!active) return
+                    startTransition(() => {
+                        setUsPayload({ slice, forensics })
+                        setError("")
+                    })
+                })
+                .catch(() => { if (active) startTransition(() => setError("미국 종목 변화 데이터를 불러오지 못했습니다.")) })
+            return () => { active = false }
+        }
+        setUsPayload(null)
         const root = (props.dataUrl || DEFAULT_URL).replace(/\/+$/, "")
         const prefix = ticker.slice(0, 3)
         Promise.all([
@@ -161,7 +224,7 @@ export default function PublicStockChangeCenter(props: Props) {
             })
             .catch(() => { if (active) startTransition(() => setError("변화 데이터를 불러오지 못했습니다.")) })
         return () => { active = false }
-    }, [props.dataUrl, onCanvas, ticker])
+    }, [props.dataUrl, props.apiBase, onCanvas, ticker])
 
     useEffect(() => { startTransition(() => setExpanded(false)) }, [ticker])
 
@@ -189,6 +252,14 @@ export default function PublicStockChangeCenter(props: Props) {
     const fields = Array.isArray(today.fields) ? today.fields : []
     const events = Array.isArray(capital.events) ? capital.events : []
     const narrow = width > 0 && width < 460
+    const isUs = !onCanvas && !!ticker && !isKrTicker(ticker) && !/^CMD_/.test(ticker)
+    const krSourceDates = [
+        ["가격·시장", today.as_of],
+        ["사업", currentBusiness?.filed_at],
+        ["고용", employment.as_of],
+        ["연간 실적", performance.as_of],
+        ["자본", events[0]?.date],
+    ].filter(([, value]) => value)
 
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: 16, boxSizing: "border-box", minWidth: 0 }
     // 인접 /stock 컴포넌트와 동일한 외곽 여백. 되돌리지 말 것.
@@ -198,6 +269,89 @@ export default function PublicStockChangeCenter(props: Props) {
 
     if (!onCanvas && /^CMD_/.test(ticker)) return null
     if (error) return <div ref={rootRef} style={shell}><div style={{ ...card, color: C.sub }}>{error}</div></div>
+    if (isUs && !usPayload) return <div ref={rootRef} style={shell}><div style={{ ...card, color: C.faint }}>미국 종목 변화 데이터 확인 중…</div></div>
+    if (isUs) {
+        const report = usPayload?.slice?.report || {}
+        const sections = usPayload?.forensics?.sections || {}
+        const sources = usPayload?.forensics?.sources || {}
+        const series = (Array.isArray(report.fin_series) ? report.fin_series : [])
+            .filter((row: any) => Number.isFinite(Number(row?.year)))
+            .sort((a: any, b: any) => Number(a.year) - Number(b.year))
+        const current = series[series.length - 1] || null
+        const previous = series[series.length - 2] || null
+        const latestDisclosure = Array.isArray(report.disclosures) ? report.disclosures[0] : null
+        const insider = sections.insider || null
+        const holdings = sections.holdings || null
+        const smart = sections.smart_money || null
+        const short = sections.short_interest || null
+        const form144 = sections.form144 || null
+        const latestForm144 = Array.isArray(form144?.notices) ? form144.notices[0] : null
+        const checks = [!!report.ticker, !!(current && previous), !!latestDisclosure, !!insider, !!holdings, !!smart, !!short, !!form144]
+        const hit = checks.filter(Boolean).length
+        const period = current && previous ? `${previous.year}→${current.year}` : "연간 비교 결손"
+        const revenueGrowth = growthPct(current?.revenue, previous?.revenue)
+        const opGrowth = growthPct(current?.op, previous?.op)
+        const netGrowth = growthPct(current?.net, previous?.net)
+        const shortDelta = growthPct(short?.short_pct, short?.short_pct_prior)
+        const generated = String(usPayload?.slice?.report_as_of || "").slice(0, 10)
+        const sourceDates = [
+            ["Form 4", sources.insider?.generated_at],
+            ["13D/G", sources.holdings?.generated_at],
+            ["13F", sources.smart_money?.generated_at],
+            ["Short", sources.short_interest?.generated_at],
+            ["Form 144", sources.form144?.generated_at],
+        ].filter(([, value]) => value)
+
+        return (
+            <div ref={rootRef} style={{ ...shell, color: C.ink, display: "grid", gap: 12 }}>
+                <header style={{ ...card, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ color: C.violet, fontSize: 10.5, fontWeight: 800 }}>미국 종목 변화 센터</div>
+                        <h2 style={{ margin: "3px 0 0", fontSize: 20, fontWeight: 850, letterSpacing: "-0.5px" }}>{report.name_ko || report.name || ticker} <span style={{ color: C.faint, fontSize: 12 }}>{ticker}</span></h2>
+                        <div style={{ ...sub, marginTop: 5 }}>리포트 생성 {dateText(generated)} · SEC·시장 공개 사실 조인 · 추천·점수 없음</div>
+                    </div>
+                    <div style={{ flexShrink: 0, borderRadius: 999, padding: "6px 9px", background: C.violetSoft, color: C.violet, fontSize: 10.5, fontWeight: 800, whiteSpace: "nowrap" }}>표시 소스 {hit}/8</div>
+                </header>
+
+                {hit < 8 && <div role="status" style={{ padding: "9px 12px", borderRadius: 10, background: C.card2, color: C.faint, fontSize: 10.5 }}>미조회·결손 항목 {8 - hit}개 · 해당 사실이 없다는 뜻은 아닙니다.</div>}
+
+                <section style={card} aria-labelledby="us-performance-change-title">
+                    <h3 id="us-performance-change-title" style={title}>최근 연간 실적 변화</h3>
+                    <div style={{ ...sub, marginTop: 4 }}>SEC 연간 실값 단순 비교 · {period}</div>
+                    <div style={{ marginTop: 11, display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 7 }}>
+                        <FactCell title="매출 변화" value={revenueGrowth} period={period} colors={C} />
+                        <FactCell title="영업익 변화" value={opGrowth} period={period} colors={C} />
+                        <FactCell title="순이익 변화" value={netGrowth} period={period} colors={C} />
+                    </div>
+                </section>
+
+                <section style={card} aria-labelledby="us-latest-filing-title">
+                    <h3 id="us-latest-filing-title" style={title}>최근 SEC 공시</h3>
+                    {latestDisclosure ? <a href={latestDisclosure.source_url || undefined} target="_blank" rel="noopener noreferrer" style={{ display: "block", marginTop: 10, color: C.sub, fontSize: 11.5, lineHeight: 1.55, textDecoration: "none" }}><b style={{ color: C.violet }}>{latestDisclosure.label || latestDisclosure.title}</b> · {dateText(latestDisclosure.date)}<br />{latestDisclosure.title}</a> : <div style={{ ...sub, marginTop: 10 }}>결합된 최근 공시가 없습니다.</div>}
+                    {form144 && <div style={{ marginTop: 10, paddingTop: 9, borderTop: `1px solid ${C.line}`, color: C.sub, fontSize: 11, lineHeight: 1.55 }}><b style={{ color: C.violet }}>Form 144 매도 예정 신고</b> · {numberText(form144.notice_count, 0)}건 · 최근 {dateText(form144.latest_filing_date || latestForm144?.filing_date)}<br /><span style={{ color: C.faint }}>체결 확인이 아닌 매도 예정 신고이며 미집행될 수 있습니다.</span></div>}
+                </section>
+
+                <section style={card} aria-labelledby="us-participant-change-title">
+                    <h3 id="us-participant-change-title" style={title}>시장 참여자·포지션 변화</h3>
+                    <div style={{ ...sub, marginTop: 4 }}>각 공시 주기의 기준일을 함께 확인하세요.</div>
+                    <div style={{ marginTop: 11, display: "grid", gridTemplateColumns: narrow ? "repeat(2, minmax(0,1fr))" : "repeat(4, minmax(0,1fr))", gap: 7 }}>
+                        <StatCell title="내부자 순증감" value={signedNumberText(insider?.net_change, "주")} note={`매수 ${numberText(insider?.buy_n, 0)} · 매도 ${numberText(insider?.sell_n, 0)} · 수집 ${dateText(insider?.collected_at)}`} colors={C} tone={Number(insider?.net_change) > 0 ? "up" : Number(insider?.net_change) < 0 ? "down" : "ink"} />
+                        <StatCell title="5%+ 최근 지분" value={Number.isFinite(Number(holdings?.latest_pct)) ? `${numberText(holdings.latest_pct)}%` : "—"} note={`13D ${numberText(holdings?.n_13d, 0)} · 13G ${numberText(holdings?.n_13g, 0)} · 수집 ${dateText(holdings?.collected_at)}`} colors={C} />
+                        <StatCell title="공매도 잔고" value={Number.isFinite(Number(short?.short_pct)) ? `${numberText(short.short_pct, 2)}%` : "—"} note={`전기 ${numberText(short?.short_pct_prior, 2)}% · 변화 ${percentText(shortDelta)} · ${dateText(short?.report_date)}`} colors={C} tone={Number(shortDelta) > 0 ? "down" : Number(shortDelta) < 0 ? "up" : "ink"} />
+                        <StatCell title="집중형 13F" value={`${numberText(smart?.holder_count, 0)}곳`} note={`${usdText(smart?.total_value_usd)} · 분기말 후 공시 지연`} colors={C} />
+                    </div>
+                    <div style={{ ...sub, marginTop: 10 }}>Form 4는 체결 후 신고, 13F는 분기말 이후 신고, 공매도는 거래소 공시 주기 자료입니다. 서로 같은 시점으로 해석하지 않습니다.</div>
+                </section>
+
+                <section style={card} aria-labelledby="us-source-freshness-title">
+                    <h3 id="us-source-freshness-title" style={title}>소스 생성 시각</h3>
+                    <div style={{ marginTop: 9, display: "flex", gap: 7, flexWrap: "wrap" }}>
+                        {sourceDates.map(([label, value]) => <span key={String(label)} style={{ borderRadius: 999, padding: "6px 9px", background: C.card2, color: C.sub, fontSize: 10.5, fontWeight: 700 }}>{label} · {dateText(String(value).slice(0, 10))}</span>)}
+                    </div>
+                </section>
+            </div>
+        )
+    }
     if (!payload) return <div ref={rootRef} style={shell}><div style={{ ...card, color: C.faint }}>변화 데이터 확인 중…</div></div>
     if (!stock) return <div ref={rootRef} style={shell}><div style={{ ...card, color: C.sub }}>{ticker || "선택 종목"}의 결합 데이터가 없습니다.</div></div>
 
@@ -243,6 +397,14 @@ export default function PublicStockChangeCenter(props: Props) {
             )}
 
             {missing.length > 0 && <div role="status" style={{ padding: "9px 12px", borderRadius: 10, background: C.card2, color: C.faint, fontSize: 10.5 }}>미조회·결손: {missing.join(", ")}</div>}
+
+            <section style={card} aria-labelledby="kr-source-freshness-title">
+                <h3 id="kr-source-freshness-title" style={title}>데이터 기준일</h3>
+                <div style={{ ...sub, marginTop: 4 }}>생성 시각이 아니라 각 원천 내용의 기준일입니다.</div>
+                <div style={{ marginTop: 9, display: "flex", gap: 7, flexWrap: "wrap" }}>
+                    {krSourceDates.map(([label, value]) => <span key={String(label)} style={{ borderRadius: 999, padding: "6px 9px", background: C.card2, color: C.sub, fontSize: 10.5, fontWeight: 700 }}>{label} · {dateText(value)}</span>)}
+                </div>
+            </section>
 
             <section style={card} aria-labelledby="today-change-title">
                 <h3 id="today-change-title" style={title}>오늘 달라진 것</h3>
@@ -301,7 +463,7 @@ export default function PublicStockChangeCenter(props: Props) {
 
 addPropertyControls(PublicStockChangeCenter, {
     dataUrl: { type: ControlType.String, title: "Data URL", defaultValue: DEFAULT_URL },
+    apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API_BASE },
     ticker: { type: ControlType.String, title: "Ticker", defaultValue: "" },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
-
