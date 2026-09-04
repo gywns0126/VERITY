@@ -1,27 +1,24 @@
 {
- "as_of": "2026-08-29T16:37:01+09:00",
+ "as_of": "2026-09-05T07:58:24+09:00",
  "version": "v0 (PREREG_POOL_ROTATION_2026_08_04 — 보고서만, 집행 없음)",
- "evidence_days": 25,
- "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 25일. 미달 임계는 발동하지 않음",
+ "evidence_days": 31,
+ "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 31일. 미달 임계는 발동하지 않음",
  "pool": {
-  "size": 46,
-  "kr": 19,
+  "size": 78,
+  "kr": 50,
   "kr_floor": 20,
-  "kr_deficit": 1,
-  "size_note": "정원 미달 46 < 55",
-  "sector_over_cap": {}
+  "kr_deficit": 0,
+  "size_note": "정원 초과 78 > 70",
+  "sector_over_cap": {
+   "Technology": 25.6
+  }
  },
  "r1_held": [
   "000270",
   "003550",
   "028050",
   "035420",
-  "214450",
-  "A",
-  "ALB",
-  "AMG",
-  "DVN",
-  "KMT"
+  "AMG"
  ],
  "r1_held_out_of_pool": [],
  "exits": [],
@@ -30,74 +27,67 @@
    "ticker": "007110",
    "name": "일신석재",
    "source": "smallcap",
-   "trading_value": 1766706875
-  },
-  {
-   "ticker": "012690",
-   "name": "모나리자",
-   "source": "smallcap",
-   "trading_value": 1836327683
+   "trading_value": 1999728427
   },
   {
    "ticker": "228340",
    "name": "동양파일",
    "source": "smallcap",
-   "trading_value": 3547229365
+   "trading_value": 3657416958
   },
   {
    "ticker": "111710",
    "name": "남화산업",
    "source": "smallcap",
-   "trading_value": 1557872684
+   "trading_value": 1573054952
   },
   {
    "ticker": "475430",
    "name": "키스트론",
    "source": "smallcap",
-   "trading_value": 2164171862
+   "trading_value": 1970448407
+  },
+  {
+   "ticker": "463020",
+   "name": "뉴엔AI",
+   "source": "smallcap",
+   "trading_value": 17658892954
   }
  ],
  "watch_streaks": [
   {
    "ticker": "V",
-   "avoid_streak": 5,
+   "avoid_streak": 11,
    "pollution_streak": 0,
    "lowliq_streak": 0,
-   "evidence_days": 5
+   "evidence_days": 11
   },
   {
    "ticker": "CME",
-   "avoid_streak": 5,
+   "avoid_streak": 11,
    "pollution_streak": 0,
    "lowliq_streak": 0,
-   "evidence_days": 5
-  },
-  {
-   "ticker": "UNP",
-   "avoid_streak": 5,
-   "pollution_streak": 0,
-   "lowliq_streak": 0,
-   "evidence_days": 5
+   "evidence_days": 11
   },
   {
    "ticker": "094970",
    "avoid_streak": 0,
    "pollution_streak": 0,
-   "lowliq_streak": 12,
-   "evidence_days": 25
+   "lowliq_streak": 18,
+   "evidence_days": 31
   },
   {
    "ticker": "418470",
    "avoid_streak": 0,
    "pollution_streak": 0,
-   "lowliq_streak": 11,
-   "evidence_days": 25
+   "lowliq_streak": 17,
+   "evidence_days": 31
   }
  ],
  "candidate_supply": {
-  "funnel_total": 24,
+  "funnel_total": 45,
   "funnel_kr_out_of_pool": 0,
-  "smallcap_total": 1631,
+  "smallcap_total": 1626,
   "smallcap_liquidity_field_missing": false
  },
  "swap_cap": 5,
