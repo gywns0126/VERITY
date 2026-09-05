@@ -134,6 +134,20 @@ interface ForRec {
     counts?: Record<string, number>
     n_8k?: number
     latest_8k?: string
+    collection_status?: string
+    event_state?: string
+    recent_window_days?: number
+    recent_8k_n?: number
+    recent_8k_truncated?: boolean
+    recent_filings?: Recent8K[]
+    classification_window_days?: number
+    deep_window_days?: number
+}
+interface Recent8K {
+    date?: string
+    title?: string
+    source_url?: string
+    item_codes?: string[]
 }
 interface InsiderTrade {
     date?: string
@@ -190,8 +204,11 @@ interface SmartRec {
 }
 interface SourceMeta {
     status?: string
+    data_state?: string
     generated_at?: string
     source?: string
+    universe_n?: number
+    processed_n?: number
 }
 interface TimelineItem {
     date: string
@@ -238,6 +255,18 @@ const SAMPLE_F: ForRec = {
     counts: { material_agreement: 2 },
     n_8k: 11,
     latest_8k: "2026-08-01",
+    collection_status: "covered",
+    event_state: "recent_8k",
+    recent_window_days: 90,
+    recent_8k_n: 1,
+    recent_filings: [
+        {
+            date: "2026-08-01",
+            title: "Current report",
+            source_url: "#",
+            item_codes: ["1.01"],
+        },
+    ],
 }
 const SAMPLE_I: InsiderRec = {
     ticker: "AAPL",
@@ -515,7 +544,10 @@ export default function PublicStockDetailUS(props: Props) {
         fx && fx.counts
             ? Object.entries(fx.counts).filter(([, v]) => Number(v) > 0)
             : []
-    const hasFx = !!(fx && (flags.length || Number(fx.n_8k) > 0))
+    const recent8k = (
+        fx && Array.isArray(fx.recent_filings) ? fx.recent_filings : []
+    ).slice(0, 5)
+    const hasFx = !!fx
     const trades = (
         insider && Array.isArray(insider.trades) ? insider.trades : []
     ).slice(0, 5)
@@ -617,11 +649,24 @@ export default function PublicStockDetailUS(props: Props) {
             note: "유통주식 대비 · 월 2회 공시",
             tone: "neutral",
         })
-    if (hasFx && fx && fx.latest_8k)
+    recent8k.slice(0, 3).forEach((filing) => {
+        if (!filing.date) return
+        timeline.push({
+            date: filing.date,
+            kind: "8-K",
+            title: filing.title || "SEC 수시공시",
+            note: (filing.item_codes || []).length
+                ? "SEC 항목 " + (filing.item_codes || []).join(", ")
+                : "SEC 8-K",
+            source_url: filing.source_url,
+            tone: "neutral",
+        })
+    })
+    if (recent8k.length === 0 && hasFx && fx && fx.latest_8k)
         timeline.push({
             date: fx.latest_8k,
             kind: "8-K",
-            title: "최근 수시공시 · " + num(fx.n_8k) + "건 이력",
+            title: "최근 심화 분류 이력 · " + num(fx.n_8k) + "건",
             note: flags
                 .slice(0, 3)
                 .map(([key]) => FLAG_KO[key] || key)
@@ -1319,7 +1364,49 @@ export default function PublicStockDetailUS(props: Props) {
 
             {hasFx && (
                 <section style={card}>
-                    {title("8-K 이력", "SEC 수시공시 · 최근 2년")}
+                    {title(
+                        "8-K 이력",
+                        fx && fx.deep_window_days
+                            ? `SEC 수시공시 · 최근 ${num(fx.recent_window_days || 90)}일 + ${num(fx.deep_window_days)}일 심화`
+                            : `SEC 수시공시 · 최근 ${num((fx && fx.recent_window_days) || 90)}일`
+                    )}
+                    {fx && fx.event_state === "no_recent_8k" ? (
+                        <div
+                            style={{
+                                borderRadius: 12,
+                                padding: "12px 13px",
+                                background: C.bg,
+                                color: C.sub,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                lineHeight: 1.55,
+                                marginBottom: flags.length ? 10 : 0,
+                            }}
+                        >
+                            최근 {num(fx.recent_window_days || 90)}일 8-K 없음
+                            <div style={{ marginTop: 3, color: C.faint, fontSize: 10.5, fontWeight: 500 }}>
+                                SEC 원천 조회는 완료됐고 해당 기간에 제출된 8-K가 없습니다.
+                            </div>
+                        </div>
+                    ) : fx && fx.event_state === "unknown" ? (
+                        <div
+                            style={{
+                                borderRadius: 12,
+                                padding: "12px 13px",
+                                background: C.warnS,
+                                color: C.warn,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                lineHeight: 1.55,
+                                marginBottom: flags.length ? 10 : 0,
+                            }}
+                        >
+                            8-K 원천 확인 필요
+                            <div style={{ marginTop: 3, color: C.faint, fontSize: 10.5, fontWeight: 500 }}>
+                                공시가 없다는 뜻이 아니라 이번 수집에서 확인되지 않은 상태입니다.
+                            </div>
+                        </div>
+                    ) : null}
                     <div
                         style={{
                             display: "flex",
@@ -1346,8 +1433,14 @@ export default function PublicStockDetailUS(props: Props) {
                     </div>
                     <div>
                         {[
-                            fx && isFinite(Number(fx.n_8k))
-                                ? ["8-K 건수", num(fx.n_8k) + "건"]
+                            fx && fx.event_state === "recent_8k"
+                                ? [
+                                      `최근 ${num(fx.recent_window_days || 90)}일`,
+                                      num(fx.recent_8k_n) + (fx.recent_8k_truncated ? "건 이상" : "건"),
+                                  ]
+                                : null,
+                            fx && fx.deep_window_days && isFinite(Number(fx.n_8k))
+                                ? ["심화 분류 범위", num(fx.n_8k) + "건"]
                                 : null,
                             fx && fx.latest_8k
                                 ? ["최근 제출", md(fx.latest_8k)]
@@ -1356,6 +1449,43 @@ export default function PublicStockDetailUS(props: Props) {
                             .filter(Boolean)
                             .map((r: any, i: number) => kv(r[0], r[1], i))}
                     </div>
+                    {recent8k.length > 0 ? (
+                        <div style={{ marginTop: 8 }}>
+                            {recent8k.map((filing, index) => (
+                                <div
+                                    key={(filing.date || "") + (filing.source_url || "") + index}
+                                    style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "minmax(0,1fr) auto",
+                                        gap: 8,
+                                        alignItems: "center",
+                                        padding: "8px 0",
+                                        borderTop: index === 0 ? "none" : "1px solid " + C.line,
+                                    }}
+                                >
+                                    <div style={{ minWidth: 0 }}>
+                                        {filing.source_url ? (
+                                            <a href={filing.source_url} target="_blank" rel="noopener noreferrer" style={{ color: C.ink, textDecoration: "none", fontSize: 11.5, fontWeight: 700 }}>
+                                                {filing.title || "SEC 8-K"}
+                                            </a>
+                                        ) : (
+                                            <span style={{ color: C.ink, fontSize: 11.5, fontWeight: 700 }}>
+                                                {filing.title || "SEC 8-K"}
+                                            </span>
+                                        )}
+                                        {(filing.item_codes || []).length > 0 ? (
+                                            <div style={{ marginTop: 2, color: C.faint, fontSize: 10 }}>
+                                                SEC 항목 {(filing.item_codes || []).join(", ")}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                    <span style={{ color: C.faint, fontSize: 10.5, fontWeight: 600 }}>
+                                        {md(filing.date)}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
                     <div
                         style={{
                             fontSize: 10.5,

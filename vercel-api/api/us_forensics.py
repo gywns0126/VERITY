@@ -15,7 +15,8 @@ GET /api/verity/us-forensics?ticker=MSFT  — 단일 ticker 美 forensics 통합
 
 거짓말 트랩:
   소스 fetch 실패 → 해당 섹션 null + sources[k].status="unavailable" (가짜 X).
-  ticker 가 소스에 없음 → 섹션 null (유효 공백 — 그 종목에 해당 공시 없음, 에러 아님).
+  ticker 가 이벤트형 소스에 없음 → "공시 없음"으로 단정하지 않고 no_record_in_snapshot.
+  8-K는 전 유니버스 상태 행으로 recent_8k / no_recent_8k / unknown을 구분한다.
   6 소스 전부 실패 → 503.
 """
 from __future__ import annotations
@@ -74,7 +75,19 @@ def _fetch_one(key: str, fname: str, ticker: str):
             entry = s
             break
     meta = doc.get("_meta") or {}
-    return key, entry, {"generated_at": meta.get("generated_at"), "source": meta.get("source")}, "ok"
+    public_meta_keys = (
+        "generated_at",
+        "source",
+        "universe_n",
+        "processed_n",
+        "unprocessed_n",
+        "event_present_n",
+        "no_recent_8k_n",
+        "recent_window_days",
+        "deep_window_days",
+    )
+    public_meta = {name: meta.get(name) for name in public_meta_keys if name in meta}
+    return key, entry, public_meta, "ok"
 
 
 class handler(BaseHTTPRequestHandler):
@@ -114,11 +127,22 @@ class handler(BaseHTTPRequestHandler):
         sections: dict = {}
         sources: dict = {}
         ok_n = 0
+        present_n = 0
         for key, entry, meta, status in results:
-            sections[key] = entry          # None = 그 종목에 해당 공시 없음(유효 공백)
-            sources[key] = {"status": status, **(meta or {})}
+            sections[key] = entry
+            if status != "ok":
+                data_state = "source_unavailable"
+            elif entry is None:
+                data_state = "not_in_snapshot"
+            elif key == "disclosure_forensics":
+                data_state = entry.get("event_state") or "unknown"
+            else:
+                data_state = "record_present"
+            sources[key] = {"status": status, "data_state": data_state, **(meta or {})}
             if status == "ok":
                 ok_n += 1
+            if entry is not None:
+                present_n += 1
 
         if ok_n == 0:
             self._send(503, {"status": "source_unavailable", "ticker": ticker,
@@ -130,6 +154,11 @@ class handler(BaseHTTPRequestHandler):
             "ticker": ticker,
             "sections": sections,          # insider / holdings / smart_money / short_interest / disclosure_forensics / form144
             "sources": sources,            # 소스별 status + generated_at (신선도 투명)
+            "coverage": {
+                "source_connected_n": ok_n,
+                "source_total_n": len(SOURCES),
+                "record_present_n": present_n,
+            },
         }, cache=True)
 
 # redeploy-bump 2026-07-10 — dd5066df7 이 봇커밋 87개에 묻혀 ignoreCommand 창(50) 밖 = deploy skip 재발(3차). fresh HEAD 재트리거.

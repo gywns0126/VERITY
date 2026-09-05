@@ -54,6 +54,16 @@ def test_us_detail_teaches_timing_and_interpretation_limits():
         assert sentence in body
 
 
+def test_us_detail_separates_recent_8k_absence_from_collection_unknown():
+    body = source()
+    assert 'fx.event_state === "no_recent_8k"' in body
+    assert 'fx.event_state === "unknown"' in body
+    assert "SEC 원천 조회는 완료됐고 해당 기간에 제출된 8-K가 없습니다" in body
+    assert "공시가 없다는 뜻이 아니라 이번 수집에서 확인되지 않은 상태" in body
+    assert "recent_filings?: Recent8K[]" in body
+    assert "recent8k.map" in body
+
+
 def test_existing_framer_instance_props_remain_compatible():
     body = source()
     for prop in ("shortUrl", "holdUrl", "forensicUrl"):

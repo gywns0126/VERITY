@@ -45,9 +45,10 @@ KR DART 보다 정밀: restatement / auditor_change = 미장 특화 red flag (KR
   문서 파싱이 필요해 미구현 — proxy_annual 을 "희석 예고" 로 읽으면 안 된다.
 
 입력: data/us_smallcap_corner.json(종목) + data/sec_ticker_cik_map.json(CIK)
-출력: data/us_disclosure_forensics.json {stocks:[{ticker, name, counts, latest_8k, n_8k}]}
+출력: data/us_disclosure_forensics.json — 전 US 유니버스 수집 상태 + 최근 8-K + 심화 분류.
 LLM 0(RULE 6). 점수/랭킹 0(RULE 7) — 사실 카운트만. SEC throttle 0.3s (10 req/s 한도 안전).
 """
+import argparse
 import json
 import os
 import sys
@@ -58,6 +59,8 @@ from datetime import datetime, timezone, timedelta
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CORNER_PATH = os.path.join(_ROOT, "data", "us_smallcap_corner.json")
 CIK_MAP_PATH = os.path.join(_ROOT, "data", "sec_ticker_cik_map.json")
+UNIVERSE_PATH = os.path.join(_ROOT, "data", "us_universe_combined.json")
+FEED_PATH = os.path.join(_ROOT, "data", "us_disclosure_feed.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "us_disclosure_forensics.json")
 
 KST = timezone(timedelta(hours=9))
@@ -158,7 +161,184 @@ def _fetch_filings(cik10: str, cutoff: str):
     return out, offerings, proxies
 
 
-def main() -> int:
+def _load_json(path: str, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def _deep_existing() -> list:
+    """기존 2년 심화 결과만 회수한다.
+
+    첫 전환 전 산출물은 전 행이 심화 결과다. 전환 뒤에는 deep_window_days가 있는
+    행만 이어받아, 90일 기본 행이 2년 결과로 승격되는 일을 막는다.
+    """
+    doc = _load_json(OUTPUT_PATH, {})
+    rows = doc.get("stocks") or []
+    if (doc.get("_meta") or {}).get("track") == "us_smallcap_forensics":
+        return rows
+    return [row for row in rows if row.get("deep_window_days")]
+
+
+def _recent_counts(disclosures: list) -> dict:
+    counts = {}
+    for disclosure in disclosures:
+        for code in disclosure.get("item_codes") or []:
+            category = ITEM_CATEGORY.get(str(code).strip())
+            if category:
+                counts[category] = counts.get(category, 0) + 1
+    return counts
+
+
+def _merge_with_feed(deep_stocks: list) -> dict:
+    """일간 8-K feed와 월간 2년 심화 결과를 전 US 유니버스로 합친다.
+
+    feed의 성공 대장을 사용해 `최근 공시 없음`과 `미수집`을 분리한다. 이전 feed처럼
+    성공 티커 대장이 없더라도 처리 수가 분모와 같을 때만 전수 성공으로 인정한다.
+    """
+    universe_doc = _load_json(UNIVERSE_PATH, {})
+    universe = [
+        str(ticker).strip().upper()
+        for ticker in universe_doc.get("tickers") or []
+        if str(ticker).strip()
+    ]
+    names = universe_doc.get("names") or {}
+    feed_doc = _load_json(FEED_PATH, {})
+    feed_meta = feed_doc.get("_meta") or {}
+    feed_rows = {
+        str(row.get("ticker") or "").upper(): row
+        for row in feed_doc.get("items") or []
+        if row.get("ticker")
+    }
+    deep_rows = {
+        str(row.get("ticker") or "").upper(): row
+        for row in deep_stocks
+        if row.get("ticker")
+    }
+
+    coverage = feed_doc.get("_coverage") or {}
+    processed_list = coverage.get("processed_tickers")
+    if isinstance(processed_list, list):
+        processed = {str(ticker).upper() for ticker in processed_list}
+    elif int(feed_meta.get("processed_n") or feed_meta.get("covered_this_run") or 0) >= len(universe):
+        processed = set(universe)
+    else:
+        # 성공 대장이 없는 구버전 부분 실행에서는 공시 행이 있는 종목만 최소 성공으로 본다.
+        processed = set(feed_rows)
+
+    unavailable = {
+        str(ticker).upper()
+        for ticker in coverage.get("unavailable_tickers") or []
+    }
+    unresolved = {
+        str(ticker).upper()
+        for ticker in coverage.get("unresolved_tickers") or []
+    }
+    max_recent = int(feed_meta.get("max_per_ticker") or 5)
+    recent_window = int(feed_meta.get("window_days") or 90)
+
+    rows = []
+    event_present = no_recent = classified = 0
+    for ticker in universe:
+        recent = feed_rows.get(ticker) or {}
+        disclosures = list(recent.get("disclosures") or [])
+        recent_counts = _recent_counts(disclosures)
+        deep = deep_rows.get(ticker)
+        if deep:
+            row = dict(deep)
+            row["deep_window_days"] = int(
+                row.get("deep_window_days") or WINDOW_DAYS
+            )
+            counts = dict(row.get("counts") or {})
+            # 2년 결과가 없는 신규 카테고리만 최근 item code로 보강한다. 겹치는 기간을 합산하지 않는다.
+            for key, value in recent_counts.items():
+                counts.setdefault(key, value)
+            row["counts"] = counts
+            row["classification_window_days"] = row["deep_window_days"]
+        else:
+            row = {
+                "ticker": ticker,
+                "name": names.get(ticker) or recent.get("name") or ticker,
+                "counts": recent_counts,
+                "n_8k": len(disclosures),
+                "latest_8k": recent.get("latest") or "",
+                "classification_window_days": recent_window,
+            }
+
+        row["recent_window_days"] = recent_window
+        row["recent_8k_n"] = len(disclosures)
+        row["recent_8k_truncated"] = len(disclosures) >= max_recent
+        row["recent_filings"] = disclosures
+        if ticker in processed:
+            row["collection_status"] = "covered"
+            row["event_state"] = "recent_8k" if disclosures else "no_recent_8k"
+        elif ticker in unavailable:
+            row["collection_status"] = "source_unavailable"
+            row["event_state"] = "unknown"
+        elif ticker in unresolved:
+            row["collection_status"] = "cik_unresolved"
+            row["event_state"] = "unknown"
+        else:
+            row["collection_status"] = "unprocessed"
+            row["event_state"] = "unknown"
+
+        if disclosures:
+            event_present += 1
+            newest = max(str(row.get("latest_8k") or ""), str(recent.get("latest") or ""))
+            row["latest_8k"] = newest
+        elif row["event_state"] == "no_recent_8k":
+            no_recent += 1
+        if row.get("counts"):
+            classified += 1
+        rows.append(row)
+
+    unprocessed = sorted(set(universe) - processed)
+    return {
+        "_meta": {
+            "generated_at": _now_kst().isoformat(),
+            "track": "us_forensics_full_universe",
+            "source": "SEC EDGAR 일간 8-K feed(최근 기간) + 월간 소형주 8-K item 심화",
+            "universe_n": len(universe),
+            "processed_n": len(processed),
+            "unprocessed_n": len(unprocessed),
+            "unprocessed_tickers": unprocessed,
+            "event_present_n": event_present,
+            "no_recent_8k_n": no_recent,
+            "deep_flagged_n": len(deep_rows),
+            "classified_n": classified,
+            "recent_window_days": recent_window,
+            "deep_window_days": WINDOW_DAYS,
+            "item_map": ITEM_CATEGORY,
+            "disclaimer": "8-K 제출과 SEC item 분류 사실만 표시한다. 분류는 위험도 판단이 아니다. "
+                          "최근 목록은 종목당 상한이 있어 recent_8k_truncated=true면 최소 건수다.",
+        },
+        "stocks": rows,
+    }
+
+
+def _write_output(doc: dict) -> None:
+    tmp = OUTPUT_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, OUTPUT_PATH)
+
+
+def main(merge_feed_only: bool = False) -> int:
+    if merge_feed_only:
+        out = _merge_with_feed(_deep_existing())
+        if not out.get("stocks"):
+            print("[us_forensics] full universe 0종 — 기존 snapshot 보존", file=sys.stderr)
+            return 1
+        _write_output(out)
+        meta = out["_meta"]
+        print(
+            f"[us_forensics] feed merge OK | processed {meta['processed_n']}/{meta['universe_n']} "
+            f"| recent {meta['event_present_n']} | no_recent {meta['no_recent_8k_n']}"
+        )
+        return 0
+
     if not os.path.exists(CORNER_PATH):
         print(f"[us_forensics] 코너 부재: {CORNER_PATH} — us_smallcap_corner_builder 먼저. skip")
         return 0
@@ -230,7 +410,7 @@ def main() -> int:
             print(f"  [{idx}/{len(corner)}] ok={ok} fail={fail} flagged={len(stocks)}", file=sys.stderr, flush=True)
         time.sleep(0.3)  # SEC 10 req/s 한도 안전
 
-    out = {
+    deep_out = {
         "_meta": {
             "generated_at": _now_kst().isoformat(),
             "track": "us_smallcap_forensics",
@@ -244,12 +424,15 @@ def main() -> int:
         },
         "stocks": stocks,
     }
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-        json.dump(out, f, ensure_ascii=False, indent=2)
+    out = _merge_with_feed(deep_out["stocks"])
+    _write_output(out)
     print(f"[us_forensics] 적재 OK | universe {len(corner)} | flagged {len(stocks)} | "
           f"ok={ok} fail={fail} | window {WINDOW_DAYS}d | out={OUTPUT_PATH}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--merge-feed-only", action="store_true")
+    args = parser.parse_args()
+    raise SystemExit(main(merge_feed_only=args.merge_feed_only))

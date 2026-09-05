@@ -1,11 +1,11 @@
 """us_disclosure_feed_builder — 공개 터미널 미장(US) 공시속보 빌더 (SEC 8-K).
 
-2026-06-19 국장/미장 분리. us_financials 유니버스(15 빅캡)의 최근 8-K(수시공시)를
+2026-06-19 국장/미장 분리. combined US 유니버스의 최근 8-K(수시공시)를
 SEC EDGAR submissions 에서 수집 → public-safe JSON. 스키마 = KR public_disclosure_feed.json
 동일 → PublicDisclosureFeed 컴포넌트 재사용 (/us/feed 페이지에 feedUrl=이 파일).
 
 🚨 RULE 7 — 공시 사실(폼타입·제목·접수일·원문URL)만. 점수·등급·추천 0.
-SEC EDGAR 무료, rate limit 10/s (sec_edgar._throttle 내장). UA = SEC_USER_AGENT.
+SEC EDGAR 무료, 요청 간 0.13초 간격. UA = SEC_USER_AGENT.
 publish: data/us_disclosure_feed.json (action.yml 등재 필요).
 빌더는 네트워크 호출 — daily_analysis_full(일간) 에서 실행. 로컬 테스트는 네트워크 필요.
 """
@@ -28,6 +28,8 @@ WINDOW_DAYS = 90        # 8-K 산발적 → 윈도우 넉넉히 (2026-07-17 60�
 MAX_PER_TICKER = 5
 # 🚨 예산 가드 — 무가드 1,505 SEC 순회가 daily_analysis_full 에서 완주 못 해 2건만 남던 사고(2026-07-09) 방지.
 MAX_SECONDS = int(os.environ.get("US_DISCLOSURE_MAX_SECONDS", "1800"))
+SEC_SUBMISSIONS = "https://data.sec.gov/submissions/CIK{cik10}.json"
+SEC_DELAY = 0.13
 
 
 def _now_kst() -> datetime:
@@ -79,7 +81,9 @@ def _universe() -> List[str]:
 
 
 def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
-    from api.collectors.sec_edgar import get_recent_filings
+    import requests
+
+    from api.builders.us_insider_trades_public_builder import _ticker_cik_map
     from api.intelligence.us_financials import SEC_USER_AGENT
 
     cutoff = (_now_kst().date() - timedelta(days=window_days)).strftime("%Y-%m-%d")
@@ -96,31 +100,77 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
         pass
     merged: Dict[str, Dict[str, Any]] = dict(prev)
 
+    order = _universe()
+    sess = requests.Session()
+    cik_map = _ticker_cik_map(sess)
+    processed: List[str] = []
+    unresolved: List[str] = []
+    unavailable: List[str] = []
+    unprocessed: List[str] = []
+
     t0 = time.monotonic()
-    covered = 0
-    for tk in _universe():
+    for idx, tk in enumerate(order):
         if time.monotonic() - t0 > MAX_SECONDS:
-            print(f"[us_disclosure_feed] budget 도달 ({int(time.monotonic()-t0)}s, {covered}종목) — 나머지 carry-forward", file=sys.stderr)
+            unprocessed.extend(order[idx:])
+            print(f"[us_disclosure_feed] budget 도달 ({int(time.monotonic()-t0)}s, {len(processed)}종목) — 나머지 carry-forward", file=sys.stderr)
             break
+        cik = cik_map.get(tk)
+        if not cik:
+            unresolved.append(tk)
+            continue
         name = names.get(tk, tk)
         try:
-            filings = get_recent_filings(tk, SEC_USER_AGENT, ["8-K"]) or []
-        except Exception as e:  # noqa: BLE001
-            print(f"[us_disclosure_feed] {tk} 8-K fetch 실패: {e!r}", file=sys.stderr)
-            continue
-        covered += 1
-        discs = []
-        for fl in filings:
-            d = str(fl.get("filed_date") or "")
-            if d and d < cutoff:
+            response = sess.get(
+                SEC_SUBMISSIONS.format(cik10=cik),
+                headers={"User-Agent": SEC_USER_AGENT, "Accept": "application/json"},
+                timeout=15,
+            )
+            time.sleep(SEC_DELAY)
+            if response.status_code != 200:
+                unavailable.append(tk)
                 continue
+            recent = (response.json().get("filings") or {}).get("recent") or {}
+        except (requests.RequestException, ValueError, KeyError) as e:
+            print(f"[us_disclosure_feed] {tk} 8-K fetch 실패: {e!r}", file=sys.stderr)
+            unavailable.append(tk)
+            continue
+        processed.append(tk)
+
+        forms = recent.get("form") or []
+        dates = recent.get("filingDate") or []
+        descriptions = recent.get("primaryDocDescription") or []
+        primary_documents = recent.get("primaryDocument") or []
+        accessions = recent.get("accessionNumber") or []
+        raw_items = recent.get("items") or []
+        discs = []
+        for i, form in enumerate(forms):
+            if form != "8-K":
+                continue
+            filed = str(dates[i] if i < len(dates) else "")
+            if filed and filed < cutoff:
+                continue
+            accession = str(accessions[i] if i < len(accessions) else "")
+            accession_plain = accession.replace("-", "")
+            primary_document = str(
+                primary_documents[i] if i < len(primary_documents) else ""
+            ).strip()
+            item_codes = [
+                code.strip()
+                for code in str(raw_items[i] if i < len(raw_items) else "").split(",")
+                if code.strip()
+            ]
             discs.append({
-                "title": (fl.get("description") or "").strip() or "8-K 수시공시",
+                "title": str(descriptions[i] if i < len(descriptions) else "").strip() or "8-K 수시공시",
                 "label": "8-K",
-                "date": d,
+                "date": filed,
                 "is_correction": False,
                 "filer": name,
-                "source_url": fl.get("url") or "",
+                "source_url": (
+                    f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{accession_plain}/{primary_document}"
+                    if accession_plain and primary_document
+                    else f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik}&type=8-K&dateb=&owner=include&count=5"
+                ),
+                "item_codes": item_codes,
             })
             if len(discs) >= MAX_PER_TICKER:
                 break
@@ -142,9 +192,22 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
             "count": len(items),
             "disclosure_count": total,
             "window_days": window_days,
-            "covered_this_run": covered,
+            "max_per_ticker": MAX_PER_TICKER,
+            "covered_this_run": len(processed),
+            "processed_n": len(processed),
+            "unresolved_n": len(unresolved),
+            "unavailable_n": len(unavailable),
+            "unprocessed_n": len(unprocessed),
             "note": "공시 사실·일정만 — 점수·등급·추천 아님 (RULE 7). 제목은 SEC 원문, 링크는 EDGAR. "
-                    "유니버스=combined(S&P 1500 + Polygon 소형주), 페이지 회전+carry-forward 누적.",
+                    "유니버스=combined(S&P 1500 + Polygon 소형주), 페이지 회전+carry-forward 누적. "
+                    "processed=SEC submissions 200 응답, unavailable=원천 응답 실패, unresolved=CIK 미확인.",
+        },
+        "_coverage": {
+            "universe_n": len(order),
+            "processed_tickers": sorted(processed),
+            "unresolved_tickers": sorted(unresolved),
+            "unavailable_tickers": sorted(unavailable),
+            "unprocessed_tickers": sorted(unprocessed),
         },
         "items": items,
     }

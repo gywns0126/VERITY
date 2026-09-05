@@ -1,8 +1,8 @@
 name: US Disclosure Feed (SEC 8-K)
 
 # 2026-07-09 전용 워크플로 신설 — 기존엔 daily_analysis_full 안에서 무예산 순회로 완주 못 해 2건만 남던 사고.
-# 8-K 수시공시 = KR public_disclosure_feed 의 美 짝. 유니버스 = combined(S&P1500 + Polygon 소형주 ~5,313),
-# 페이지 회전 + carry-forward + wall-clock budget(1800s) 로 며칠 내 전 커버·누적. SEC 무료(UA 연락처만).
+# 8-K 수시공시 = KR public_disclosure_feed 의 美 짝. 유니버스 분모는
+# data/us_universe_combined.json 에서 매 실행 산출한다. SEC 무료(UA 연락처만).
 
 on:
   schedule:
@@ -45,16 +45,21 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build US disclosure feed (SEC 8-K)
-        # combined 유니버스 페이지 회전 + carry-forward. SEC 무료. RULE 7 = 공시 사실만(점수 0).
+        # combined 유니버스 + 성공/실패 대장. SEC 무료. RULE 7 = 공시 사실만(점수 0).
         env:
           US_DISCLOSURE_MAX_SECONDS: ${{ github.event.inputs.max_seconds || '1800' }}
-        run: python -m api.builders.us_disclosure_feed_builder
+        run: |
+          python -m api.builders.us_disclosure_feed_builder
+          python -m api.builders.us_disclosure_forensics_builder --merge-feed-only
+          python scripts/audit/us_forensics_coverage.py --output data/metadata/us_forensics_coverage.json
 
-      - name: Commit data/us_disclosure_feed.json
+      - name: Commit US disclosure artifacts
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/us_disclosure_feed.json
+          git add data/us_disclosure_forensics.json
+          git add data/metadata/us_forensics_coverage.json
           if git diff --staged --quiet; then
             echo "[us_disclosure_feed] no changes"
             exit 0
