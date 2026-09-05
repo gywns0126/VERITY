@@ -35,7 +35,7 @@ type ChartPoint = {
     value: number
 }
 
-type RangeKey = "1W" | "1M"
+type RangeKey = "1M" | "3M" | "6M" | "1Y"
 
 const COMMODITIES: Record<string, Commodity> = {
     CMD_GOLD: {
@@ -149,6 +149,7 @@ function dataUrl(value?: string): string {
 }
 
 function numeric(value: unknown): number | null {
+    if (value === null || value === undefined || value === "") return null
     const parsed = Number(value)
     return Number.isFinite(parsed) ? parsed : null
 }
@@ -187,6 +188,23 @@ function buildDailyPoints(values: unknown[]): ChartPoint[] {
                       ? "최근"
                       : "",
         }))
+}
+
+function buildHistoryPoints(history: unknown[]): ChartPoint[] {
+    return history
+        .map((row: any) => ({
+            label: String(row?.date || ""),
+            value: numeric(row?.close),
+        }))
+        .filter(
+            (row): row is ChartPoint =>
+                Boolean(row.label) && row.value !== null
+        )
+}
+
+function shortDate(value: string, fallback: string): string {
+    const matched = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    return matched ? matched[2] + "." + matched[3] : fallback
 }
 
 function buildMonthlyPoints(history: unknown[]): ChartPoint[] {
@@ -457,10 +475,13 @@ export default function PublicLiveChartRouter(props: Props) {
         const daily = buildDailyPoints(
             Array.isArray(quote?.sparkline) ? quote.sparkline : []
         )
+        const historyDaily = buildHistoryPoints(
+            Array.isArray(quote?.history_daily) ? quote.history_daily : []
+        )
         const monthly = buildMonthlyPoints(
             Array.isArray(benchmark?.history) ? benchmark.history : []
         )
-        return { quote, benchmark, daily, monthly }
+        return { quote, benchmark, daily, historyDaily, monthly }
     }, [commodity, payload, ticker])
 
     if (!commodity) return null
@@ -474,28 +495,43 @@ export default function PublicLiveChartRouter(props: Props) {
     const faint = dark ? "#828d9b" : "#8b95a1"
     const card = dark ? "#171c23" : "#ffffff"
     const field = dark ? "#222831" : "#f2f4f6"
-    const shadow = dark
-        ? "0 10px 34px rgba(0,0,0,.22)"
-        : "0 10px 34px rgba(0,0,0,.055)"
+    const shadow = "0 1px 3px rgba(0,0,0,0.04)"
+    const hasHistory = Boolean(data && data.historyDaily.length >= 2)
     const hasDaily = Boolean(data && data.daily.length >= 2)
-    const allPoints = hasDaily ? data?.daily || [] : data?.monthly || []
-    const activeRange: RangeKey = range
-    const selectedPoints =
-        activeRange === "1W" && allPoints.length > 5
-            ? allPoints.slice(-5)
-            : allPoints
+    const allPoints = hasHistory
+        ? data?.historyDaily || []
+        : hasDaily
+          ? data?.daily || []
+          : data?.monthly || []
+    const rangeSize: Record<RangeKey, number> = {
+        "1M": 22,
+        "3M": 66,
+        "6M": 132,
+        "1Y": 260,
+    }
+    const rangeMinimum: Record<RangeKey, number> = {
+        "1M": 2,
+        "3M": 45,
+        "6M": 90,
+        "1Y": 180,
+    }
+    const rangeEnabled = (key: RangeKey) =>
+        allPoints.length >= rangeMinimum[key]
+    const nextUnavailableRange = (["3M", "6M", "1Y"] as RangeKey[]).find(
+        (key) => !rangeEnabled(key)
+    )
+    const activeRange: RangeKey = rangeEnabled(range) ? range : "1M"
+    const selectedPoints = allPoints.slice(-rangeSize[activeRange])
     const points = selectedPoints.map((point, index) => ({
         ...point,
         label:
             index === 0
-                ? activeRange === "1W"
-                    ? "1주 전"
-                    : "1개월 전"
+                ? shortDate(point.label, activeRange + " 전")
                 : index === selectedPoints.length - 1
-                  ? "최근"
+                  ? shortDate(point.label, "최근")
                   : "",
     }))
-    const sourceIsDaily = hasDaily
+    const sourceIsDaily = hasHistory || hasDaily
     const current =
         numeric(data?.quote?.value) ??
         points[points.length - 1]?.value ??
@@ -530,6 +566,45 @@ export default function PublicLiveChartRouter(props: Props) {
         seriesStart !== null && current !== null && seriesStart !== 0
             ? ((current - seriesStart) / Math.abs(seriesStart)) * 100
             : null
+    const dailyReturns = points.slice(1).map((point, index) => {
+        const prior = points[index].value
+        return prior === 0 ? 0 : point.value / prior - 1
+    })
+    let rollingPeak = points[0]?.value ?? null
+    let maxDrawdown = 0
+    points.forEach((point) => {
+        rollingPeak =
+            rollingPeak === null ? point.value : Math.max(rollingPeak, point.value)
+        if (rollingPeak) {
+            maxDrawdown = Math.min(
+                maxDrawdown,
+                ((point.value - rollingPeak) / rollingPeak) * 100
+            )
+        }
+    })
+    const positiveRatio = dailyReturns.length
+        ? (dailyReturns.filter((value) => value > 0).length /
+              dailyReturns.length) *
+          100
+        : null
+    const averageReturn = dailyReturns.length
+        ? dailyReturns.reduce((sum, value) => sum + value, 0) /
+          dailyReturns.length
+        : 0
+    const annualizedVolatility = dailyReturns.length
+        ? Math.sqrt(
+              dailyReturns.reduce(
+                  (sum, value) => sum + Math.pow(value - averageReturn, 2),
+                  0
+              ) / dailyReturns.length
+          ) *
+          Math.sqrt(252) *
+          100
+        : null
+    const distanceFromHigh =
+        seriesHigh !== null && current !== null && seriesHigh !== 0
+            ? ((current - seriesHigh) / seriesHigh) * 100
+            : null
     const source = sourceIsDaily
         ? String(data?.quote?.source || "단기 시세")
         : "World Bank Pink Sheet"
@@ -548,7 +623,7 @@ export default function PublicLiveChartRouter(props: Props) {
                 width: "100%",
                 height: "100%",
                 minHeight: 0,
-                padding: "0 10px 4px",
+                padding: "0 0 4px",
                 boxSizing: "border-box",
                 fontFamily: FONT,
                 color: ink,
@@ -559,10 +634,11 @@ export default function PublicLiveChartRouter(props: Props) {
                     width: "100%",
                     minHeight: height,
                     boxSizing: "border-box",
-                    borderRadius: 20,
+                    borderRadius: 16,
                     background: card,
                     boxShadow: shadow,
-                    padding: "18px clamp(16px, 2.4vw, 24px) 14px",
+                    padding: 4,
+                    overflow: "hidden",
                     display: "flex",
                     flexDirection: "column",
                 }}
@@ -574,6 +650,7 @@ export default function PublicLiveChartRouter(props: Props) {
                         justifyContent: "space-between",
                         gap: 16,
                         flexWrap: "wrap",
+                        padding: "10px 10px 0",
                     }}
                 >
                     <div>
@@ -581,7 +658,7 @@ export default function PublicLiveChartRouter(props: Props) {
                             style={{
                                 color: dark ? "#8eb8ff" : "#3182f6",
                                 fontSize: 11.5,
-                                fontWeight: 850,
+                                fontWeight: 800,
                             }}
                         >
                             AlphaNest 원자재 차트
@@ -589,9 +666,9 @@ export default function PublicLiveChartRouter(props: Props) {
                         <div
                             style={{
                                 marginTop: 5,
-                                fontSize: 21,
-                                fontWeight: 900,
-                                letterSpacing: "-0.5px",
+                                fontSize: 16,
+                                fontWeight: 800,
+                                letterSpacing: "-0.3px",
                             }}
                         >
                             {commodity.name}
@@ -612,9 +689,9 @@ export default function PublicLiveChartRouter(props: Props) {
                             <>
                                 <div
                                     style={{
-                                        fontSize: 24,
-                                        fontWeight: 900,
-                                        letterSpacing: "-0.4px",
+                                        fontSize: 17,
+                                        fontWeight: 800,
+                                        letterSpacing: "-0.3px",
                                     }}
                                 >
                                     {formatValue(current)}
@@ -624,7 +701,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                         marginTop: 3,
                                         color,
                                         fontSize: 12.5,
-                                        fontWeight: 850,
+                                        fontWeight: 700,
                                     }}
                                 >
                                     {change !== null
@@ -639,7 +716,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                 style={{
                                     color: faint,
                                     fontSize: 12,
-                                    fontWeight: 750,
+                                    fontWeight: 700,
                                 }}
                             >
                                 데이터 연결 중
@@ -654,25 +731,28 @@ export default function PublicLiveChartRouter(props: Props) {
                         alignItems: "center",
                         justifyContent: "space-between",
                         gap: 12,
-                        marginTop: 16,
+                        marginTop: 12,
+                        padding: "0 10px",
                         flexWrap: "wrap",
                     }}
                 >
                     <div
                         style={{
                             display: "flex",
-                            gap: 4,
-                            padding: 4,
-                            borderRadius: 999,
-                            background: field,
+                            gap: 2,
+                            flexWrap: "wrap",
                         }}
                     >
                         {(
                             [
-                                ["1W", "1주", allPoints.length >= 5],
-                                ["1M", "1개월", allPoints.length >= 2],
+                                ["1M", "1M"],
+                                ["3M", "3M"],
+                                ["6M", "6M"],
+                                ["1Y", "1Y"],
                             ] as const
-                        ).map(([key, label, enabled]) => (
+                        ).map(([key, label]) => {
+                            const enabled = rangeEnabled(key)
+                            return (
                             <button
                                 key={key}
                                 type="button"
@@ -681,10 +761,10 @@ export default function PublicLiveChartRouter(props: Props) {
                                 aria-pressed={activeRange === key}
                                 style={{
                                     border: 0,
-                                    borderRadius: 999,
-                                    padding: "7px 12px",
+                                    borderRadius: 8,
+                                    padding: "5px 10px",
                                     background:
-                                        activeRange === key ? card : "transparent",
+                                        activeRange === key ? field : "transparent",
                                     color:
                                         activeRange === key
                                             ? ink
@@ -693,10 +773,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                               : dark
                                                 ? "#505a67"
                                                 : "#b0b8c1",
-                                    boxShadow:
-                                        activeRange === key
-                                            ? "0 2px 8px rgba(0,0,0,.07)"
-                                            : "none",
+                                    boxShadow: "none",
                                     fontFamily: FONT,
                                     fontSize: 11.5,
                                     fontWeight: 800,
@@ -705,7 +782,8 @@ export default function PublicLiveChartRouter(props: Props) {
                             >
                                 {label}
                             </button>
-                        ))}
+                            )
+                        })}
                     </div>
                     <div
                         style={{
@@ -721,8 +799,10 @@ export default function PublicLiveChartRouter(props: Props) {
 
                 <div
                     style={{
-                        height: Math.max(210, height - 214),
-                        minHeight: 210,
+                        width: "100%",
+                        height: "auto",
+                        aspectRatio: "1.75 / 1",
+                        minHeight: 190,
                         marginTop: 8,
                     }}
                 >
@@ -736,7 +816,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                 placeItems: "center",
                                 color: faint,
                                 fontSize: 12,
-                                fontWeight: 750,
+                                fontWeight: 700,
                             }}
                         >
                             가격 흐름을 불러오고 있어요
@@ -751,7 +831,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                 placeItems: "center",
                                 color: sub,
                                 fontSize: 12,
-                                fontWeight: 750,
+                                fontWeight: 700,
                                 textAlign: "center",
                                 lineHeight: 1.6,
                                 padding: 20,
@@ -772,23 +852,43 @@ export default function PublicLiveChartRouter(props: Props) {
                     )}
                 </div>
 
+                {nextUnavailableRange ? (
+                    <div
+                        style={{
+                            margin: "6px 10px 0",
+                            borderRadius: 10,
+                            background: field,
+                            padding: "8px 10px",
+                            color: faint,
+                            fontSize: 10.5,
+                            lineHeight: 1.5,
+                            fontWeight: 650,
+                        }}
+                    >
+                        현재 {allPoints.length.toLocaleString("ko-KR")}개 관측 · {nextUnavailableRange} 버튼은 {rangeMinimum[nextUnavailableRange]}개부터 사용할 수 있어요.
+                    </div>
+                ) : null}
+
                 {ready ? (
                     <div
                         style={{
                             display: "grid",
                             gridTemplateColumns:
-                                "repeat(auto-fit, minmax(112px, 1fr))",
-                            gap: 8,
+                                "repeat(3, minmax(0, 1fr))",
+                            gap: 6,
                             marginTop: 6,
+                            padding: "0 10px",
                         }}
                     >
                         {[
-                            ["기간 최고가", seriesHigh],
-                            ["기간 최저가", seriesLow],
-                            ["시작가", seriesStart],
-                            ["현재가", current],
-                            ["기간 변동률", periodChange],
-                            ["평균가", seriesAverage],
+                            ["기간 최고종가", seriesHigh],
+                            ["기간 최저종가", seriesLow],
+                            ["기간 수익률", periodChange],
+                            ["고점 대비", distanceFromHigh],
+                            ["최대 낙폭", maxDrawdown],
+                            ["연환산 변동성", annualizedVolatility],
+                            ["상승 관측 비중", positiveRatio],
+                            ["평균 종가", seriesAverage],
                             ["관측 수", points.length],
                         ].map(([label, value]) => (
                             <div
@@ -803,7 +903,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                     style={{
                                         color: faint,
                                         fontSize: 9.5,
-                                        fontWeight: 750,
+                                        fontWeight: 700,
                                     }}
                                 >
                                     {label}
@@ -813,13 +913,19 @@ export default function PublicLiveChartRouter(props: Props) {
                                         marginTop: 3,
                                         color: sub,
                                         fontSize: 11.5,
-                                        fontWeight: 850,
+                                        fontWeight: 800,
                                     }}
                                 >
                                     {typeof value === "number"
                                         ? label === "관측 수"
                                             ? value + "개"
-                                            : label === "기간 변동률"
+                                            : [
+                                                    "기간 수익률",
+                                                    "고점 대비",
+                                                    "최대 낙폭",
+                                                    "연환산 변동성",
+                                                    "상승 관측 비중",
+                                                ].includes(String(label))
                                               ? (value > 0 ? "+" : "") +
                                                 value.toFixed(2) +
                                                 "%"
@@ -833,7 +939,8 @@ export default function PublicLiveChartRouter(props: Props) {
 
                 <div
                     style={{
-                        marginTop: 12,
+                        marginTop: 10,
+                        padding: "0 10px 10px",
                         color: faint,
                         fontSize: 10.5,
                         lineHeight: 1.55,
@@ -841,7 +948,7 @@ export default function PublicLiveChartRouter(props: Props) {
                     }}
                 >
                     {sourceIsDaily
-                        ? "1주·1개월 흐름은 선물 연속물 기준이며 거래소·서비스별로 지연될 수 있어요."
+                        ? "1개월·3개월·6개월·1년 흐름은 선물 연속물 종가 기준이며 거래소·서비스별로 지연될 수 있어요. 변동성·낙폭은 화면의 관측값으로 단순 계산합니다."
                         : "가용한 월평균 기준선으로 표시하며 선물 현재가와 같은 값이 아니에요."}
                     <span> · {source} · {asOf}</span>
                     {!sourceIsDaily ? (
@@ -854,7 +961,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                 style={{
                                     color: dark ? "#8eb8ff" : "#3182f6",
                                     textDecoration: "none",
-                                    fontWeight: 750,
+                                    fontWeight: 700,
                                 }}
                             >
                                 원문

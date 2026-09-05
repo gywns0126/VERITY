@@ -59,6 +59,7 @@ function readTicker(previewTicker: string, onCanvas: boolean) {
     return String(new URLSearchParams(window.location.search).get("q") || "").trim().toUpperCase()
 }
 function num(value: unknown): number | null {
+    if (value === null || value === undefined || value === "") return null
     const parsed = Number(value)
     return Number.isFinite(parsed) ? parsed : null
 }
@@ -80,6 +81,18 @@ function fmtTimestamp(value: unknown) {
     if (!value) return "기준시각 확인 중"
     const date = new Date(String(value))
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) + " KST"
+}
+function fmtRange(low: unknown, high: unknown) {
+    const parsedLow = num(low)
+    const parsedHigh = num(high)
+    return parsedLow === null || parsedHigh === null
+        ? "—"
+        : fmt(parsedLow, 3) + "–" + fmt(parsedHigh, 3)
+}
+function coverageNote(observations: number, required: number) {
+    return observations >= required
+        ? observations.toLocaleString("ko-KR") + "개 관측"
+        : observations.toLocaleString("ko-KR") + "개 관측 · " + required + "개 필요"
 }
 function labelAsset(key: string) {
     return ({ stock: "미국 주식", bond_yield: "미 10년물", usd: "달러", oil: "유가", gold: "금", btc: "비트코인" } as any)[key] || key
@@ -162,8 +175,11 @@ export default function PublicCommodityReport(props: Props) {
     const returns = {
         month: pct(history, 21),
         quarter: pct(history, 65),
+        half: pct(history, 131),
         year: history.length >= 180 ? pct(history, Math.min(251, history.length - 1)) : null,
     }
+    const firstObservation = Array.isArray(quote?.history_daily) ? quote.history_daily[0]?.date : null
+    const lastObservation = quote?.data_date || (Array.isArray(quote?.history_daily) ? quote.history_daily[quote.history_daily.length - 1]?.date : null)
     const corrMatrix = item.corrKey ? macro?.macro?.cross_asset_corr?.matrix?.[item.corrKey] : null
     const correlations = corrMatrix
         ? Object.entries(corrMatrix)
@@ -175,11 +191,11 @@ export default function PublicCommodityReport(props: Props) {
         ? macro.global_events.filter((event: any) => num(event?.d_day) !== null && Number(event.d_day) >= 0).slice(0, 3)
         : []
     const exposureBlock = item.exposureKey ? exposure?.commodities?.[item.exposureKey] : null
-    const card = { background: C.card, borderRadius: 20, padding: "18px clamp(16px,2.4vw,24px)", boxShadow: "0 8px 28px " + C.shadow }
+    const card = { background: C.card, borderRadius: 16, padding: narrow ? 14 : 18, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
     const stat = (label: string, display: string, note?: string) => (
-        <div style={{ background: C.field, borderRadius: 14, padding: "11px 12px", minWidth: 0 }}>
-            <div style={{ color: C.faint, fontSize: 10, fontWeight: 750 }}>{label}</div>
-            <div style={{ color: C.ink, fontSize: 13, fontWeight: 850, marginTop: 4 }}>{display}</div>
+        <div style={{ background: C.field, borderRadius: 12, padding: "11px 12px", minWidth: 0 }}>
+            <div style={{ color: C.faint, fontSize: 10.5, fontWeight: 700 }}>{label}</div>
+            <div style={{ color: C.ink, fontSize: 14, fontWeight: 800, marginTop: 4 }}>{display}</div>
             {note ? <div style={{ color: C.faint, fontSize: 9.5, marginTop: 3 }}>{note}</div> : null}
         </div>
     )
@@ -194,13 +210,13 @@ export default function PublicCommodityReport(props: Props) {
             <section style={card}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
                     <div>
-                        <div style={{ color: C.blue, fontSize: 12, fontWeight: 850 }}>{item.group} · {usesBenchmark ? "월평균 기준선" : "선물 연속물"}</div>
-                        <h1 style={{ margin: "5px 0 0", fontSize: 25, letterSpacing: "-.6px" }}>{item.name}</h1>
+                        <div style={{ color: C.blue, fontSize: 11, fontWeight: 800 }}>{item.group} · {usesBenchmark ? "월평균 기준선" : "선물 연속물"}</div>
+                        <h1 style={{ margin: "5px 0 0", fontSize: narrow ? 20 : 23, fontWeight: 800, letterSpacing: "-.5px" }}>{item.name}</h1>
                         <div style={{ color: C.faint, fontSize: 12, fontWeight: 700, marginTop: 5 }}>{item.symbol} · {item.exchange} · {usesBenchmark ? String(benchmark?.unit || "USD 기준") : item.unit}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 25, fontWeight: 900 }}>{fmt(value, 3)}</div>
-                        <div style={{ marginTop: 4, color: change !== null && change > 0 ? C.red : C.blue, fontSize: 13, fontWeight: 850 }}>{fmtPct(change)}</div>
+                        <div style={{ fontSize: narrow ? 23 : 30, fontWeight: 800 }}>{fmt(value, 3)}</div>
+                        <div style={{ marginTop: 4, color: change !== null && change > 0 ? C.red : C.blue, fontSize: narrow ? 14 : 15, fontWeight: 800 }}>{fmtPct(change)}</div>
                         <div style={{ color: C.faint, fontSize: 10.5, marginTop: 5 }}>{source} · {fmtTimestamp(generatedAt)} · 지연 가능</div>
                     </div>
                 </div>
@@ -212,12 +228,14 @@ export default function PublicCommodityReport(props: Props) {
             <section style={card}>
                 <b>가격 맥락</b>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(118px,1fr))", gap: 8, marginTop: 12 }}>
-                    {stat("1개월", fmtPct(returns.month), history.length >= 22 ? "22관측 기준" : "가용 관측 기준")}
-                    {stat("3개월", fmtPct(returns.quarter), "66관측 기준")}
-                    {stat("1년", fmtPct(returns.year), history.length + "관측")}
+                    {stat("1개월", fmtPct(returns.month), coverageNote(history.length, 22))}
+                    {stat("3개월", fmtPct(returns.quarter), coverageNote(history.length, 66))}
+                    {stat("6개월", fmtPct(returns.half), coverageNote(history.length, 132))}
+                    {stat("1년", fmtPct(returns.year), coverageNote(history.length, 180))}
                     {stat("30일 최고종가", fmt(quote?.high_30d, 3))}
                     {stat("30일 최저종가", fmt(quote?.low_30d, 3))}
-                    {stat("52주 범위", fmt(quote?.low_52w, 3) + "–" + fmt(quote?.high_52w, 3))}
+                    {stat("52주 범위", fmtRange(quote?.low_52w, quote?.high_52w))}
+                    {stat("가격 관측 범위", history.length ? history.length.toLocaleString("ko-KR") + "개" : "—", firstObservation && lastObservation ? firstObservation + "–" + lastObservation : "장기 시계열 준비 중")}
                 </div>
             </section>
 
@@ -230,9 +248,9 @@ export default function PublicCommodityReport(props: Props) {
                         {stat("VIX", fmt(macro?.macro?.vix?.value, 2), fmtPct(macro?.macro?.vix?.change_pct))}
                     </div>
                     {correlations.length ? <div style={{ marginTop: 12 }}>
-                        <div style={{ color: C.faint, fontSize: 10.5, fontWeight: 750 }}>30일 상관 · {macro?.macro?.cross_asset_corr?.as_of}</div>
+                        <div style={{ color: C.faint, fontSize: 10.5, fontWeight: 700 }}>30일 상관 · {macro?.macro?.cross_asset_corr?.as_of}</div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 7 }}>
-                            {correlations.map(([key, val]) => <span key={key} style={{ background: C.field, borderRadius: 999, padding: "7px 9px", color: C.sub, fontSize: 11, fontWeight: 750 }}>{labelAsset(key)} {Number(val).toFixed(2)}</span>)}
+                            {correlations.map(([key, val]) => <span key={key} style={{ background: C.field, borderRadius: 999, padding: "7px 9px", color: C.sub, fontSize: 11, fontWeight: 700 }}>{labelAsset(key)} {Number(val).toFixed(2)}</span>)}
                         </div>
                     </div> : null}
                 </div>
@@ -252,7 +270,7 @@ export default function PublicCommodityReport(props: Props) {
             <section style={card}>
                 <b>무엇이 움직이나요?</b>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 12 }}>
-                    {item.drivers.map((driver) => <span key={driver} style={{ borderRadius: 999, background: C.field, padding: "8px 11px", color: C.sub, fontSize: 11.5, fontWeight: 750 }}>{driver}</span>)}
+                    {item.drivers.map((driver) => <span key={driver} style={{ borderRadius: 999, background: C.field, padding: "8px 11px", color: C.sub, fontSize: 11.5, fontWeight: 700 }}>{driver}</span>)}
                 </div>
                 <div style={{ color: C.sub, fontSize: 12, marginTop: 12 }}>{item.calendar} · {item.related}</div>
             </section>
@@ -262,7 +280,7 @@ export default function PublicCommodityReport(props: Props) {
                 {exposureBlock ? <>
                     <div style={{ color: C.sub, fontSize: 11.5, lineHeight: 1.55, marginTop: 8 }}>{exposureBlock.note}</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 12 }}>
-                        {(exposureBlock.stocks || []).slice(0, 8).map((stock: any) => <a key={stock.ticker} href={"/stock?q=" + encodeURIComponent(stock.ticker)} style={{ borderRadius: 999, background: C.field, padding: "8px 10px", color: C.sub, fontSize: 11.5, fontWeight: 750, textDecoration: "none" }}>{stock.name} · {stock.ticker}</a>)}
+                        {(exposureBlock.stocks || []).slice(0, 8).map((stock: any) => <a key={stock.ticker} href={"/stock?q=" + encodeURIComponent(stock.ticker)} style={{ borderRadius: 999, background: C.field, padding: "8px 10px", color: C.sub, fontSize: 11.5, fontWeight: 700, textDecoration: "none" }}>{stock.name} · {stock.ticker}</a>)}
                     </div>
                     <div style={{ color: C.faint, fontSize: 10, marginTop: 10 }}>산업 분류상 연결 {Number(exposureBlock.count || 0).toLocaleString("ko-KR")}개 · 수혜·추천이 아닌 원가·매출 연관 정보</div>
                 </> : <div style={{ color: C.faint, fontSize: 12, marginTop: 10 }}>공개 산업 매핑은 아직 준비되지 않았습니다.</div>}
