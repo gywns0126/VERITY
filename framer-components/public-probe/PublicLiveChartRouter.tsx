@@ -2,6 +2,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import {
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react"
 const DEFAULT_DATA_BASE =
@@ -224,18 +225,22 @@ function OwnChart({
     color,
     dark,
     gradientId,
+    width,
+    height,
 }: {
     points: ChartPoint[]
     color: string
     dark: boolean
     gradientId: string
+    width: number
+    height: number
 }) {
-    const width = 800
-    const height = 270
-    const left = 18
-    const right = 782
-    const top = 22
-    const bottom = 220
+    const wrapRef = useRef<HTMLDivElement | null>(null)
+    const [hoverIndex, setHoverIndex] = useState<number | null>(null)
+    const left = 0
+    const right = width
+    const top = 10
+    const bottom = height - 4
     const values = points.map((point) => point.value)
     const rawMin = Math.min(...values)
     const rawMax = Math.max(...values)
@@ -278,123 +283,86 @@ function OwnChart({
     )
     const grid = dark ? "#2b323c" : "#eef1f4"
     const label = dark ? "#828d9b" : "#8b95a1"
-    const firstLabel = points[0]?.label || ""
-    const lastLabel = points[points.length - 1]?.label || ""
+    const hovered = hoverIndex === null ? null : coordinates[hoverIndex]
+    const hoveredPrior =
+        hoverIndex !== null && hoverIndex > 0
+            ? coordinates[hoverIndex - 1].value
+            : null
+    const hoveredChange =
+        hovered && hoveredPrior !== null && hoveredPrior !== 0
+            ? ((hovered.value - hoveredPrior) / Math.abs(hoveredPrior)) * 100
+            : null
+    const setHoverFromX = (clientX: number) => {
+        const rect = wrapRef.current?.getBoundingClientRect()
+        if (!rect || rect.width <= 0) return
+        const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+        setHoverIndex(Math.round(ratio * Math.max(points.length - 1, 0)))
+    }
 
     return (
-        <svg
-            viewBox={"0 0 " + width + " " + height}
-            width="100%"
-            height="100%"
-            role="img"
-            aria-label="원자재 가격 추세"
-            preserveAspectRatio="none"
-            style={{ display: "block", overflow: "visible" }}
+        <div
+            ref={wrapRef}
+            style={{ position: "relative", width: "100%", touchAction: "pan-y" }}
+            onMouseMove={(event) => setHoverFromX(event.clientX)}
+            onMouseLeave={() => setHoverIndex(null)}
+            onTouchStart={(event) => {
+                if (event.touches[0]) setHoverFromX(event.touches[0].clientX)
+            }}
+            onTouchMove={(event) => {
+                if (event.touches[0]) setHoverFromX(event.touches[0].clientX)
+            }}
         >
-            <defs>
-                <linearGradient
-                    id={gradientId}
-                    x1="0"
-                    x2="0"
-                    y1="0"
-                    y2="1"
-                >
-                    <stop offset="0%" stopColor={color} stopOpacity="0.24" />
-                    <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-                </linearGradient>
-            </defs>
-            {[0, 0.5, 1].map((ratio) => {
-                const y = top + (bottom - top) * ratio
-                return (
-                    <line
-                        key={ratio}
-                        x1={left}
-                        x2={right}
-                        y1={y}
-                        y2={y}
-                        stroke={grid}
-                        strokeWidth="1"
+            <svg
+                viewBox={"0 0 " + width + " " + height}
+                width="100%"
+                height={height}
+                role="img"
+                aria-label="원자재 가격 추세"
+                preserveAspectRatio="none"
+                style={{ display: "block" }}
+            >
+                <defs>
+                    <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+                        <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+                    </linearGradient>
+                </defs>
+                {[0, 0.5, 1].map((ratio) => {
+                    const y = top + (bottom - top) * ratio
+                    return <line key={ratio} x1={left} x2={right} y1={y} y2={y} stroke={grid} strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                })}
+                <path d={area} fill={"url(#" + gradientId + ")"} />
+                <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                {[
+                    { name: "최고", point: highest },
+                    { name: "최저", point: lowest },
+                ].map(({ name, point }) => (
+                    <circle
+                        key={name}
+                        cx={point.x}
+                        cy={point.y}
+                        r="3.5"
+                        fill={dark ? "#171c23" : "#ffffff"}
+                        stroke={color}
+                        strokeWidth="1.5"
                         vectorEffect="non-scaling-stroke"
+                        aria-label={name + " " + formatValue(point.value)}
                     />
-                )
-            })}
-            <path d={area} fill={"url(#" + gradientId + ")"} />
-            <path
-                d={line}
-                fill="none"
-                stroke={color}
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-            />
-            {[{ point: highest, name: "최고" }, { point: lowest, name: "최저" }].map(
-                ({ point, name }) => (
-                    <g key={name}>
-                        <circle
-                            cx={point.x}
-                            cy={point.y}
-                            r="4"
-                            fill={dark ? "#171c23" : "#ffffff"}
-                            stroke={color}
-                            strokeWidth="2"
-                            vectorEffect="non-scaling-stroke"
-                        />
-                        <text
-                            x={point.x}
-                            y={
-                                name === "최고"
-                                    ? Math.max(13, point.y - 10)
-                                    : Math.min(bottom + 19, point.y + 18)
-                            }
-                            fill={label}
-                            fontSize="11"
-                            fontWeight="750"
-                            fontFamily={FONT}
-                            textAnchor={
-                                point.x > width * 0.72
-                                    ? "end"
-                                    : point.x < width * 0.28
-                                      ? "start"
-                                      : "middle"
-                            }
-                        >
-                            {name + " " + formatValue(point.value)}
-                        </text>
-                    </g>
-                )
-            )}
-            <circle
-                cx={latest.x}
-                cy={latest.y}
-                r="5"
-                fill={color}
-                stroke={dark ? "#171c23" : "#ffffff"}
-                strokeWidth="3"
-                vectorEffect="non-scaling-stroke"
-            />
-            <text
-                x={left}
-                y="252"
-                fill={label}
-                fontSize="13"
-                fontWeight="700"
-                fontFamily={FONT}
-            >
-                {firstLabel}
-            </text>
-            <text
-                x={right}
-                y="252"
-                fill={label}
-                fontSize="13"
-                fontWeight="700"
-                fontFamily={FONT}
-                textAnchor="end"
-            >
-                {lastLabel}
-            </text>
-        </svg>
+                ))}
+                <circle cx={latest.x} cy={latest.y} r="4" fill={color} stroke={dark ? "#171c23" : "#ffffff"} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                {hovered ? <>
+                    <line x1={hovered.x} y1={0} x2={hovered.x} y2={height} stroke={label} strokeWidth="1" strokeOpacity="0.45" vectorEffect="non-scaling-stroke" />
+                    <circle cx={hovered.x} cy={hovered.y} r="4" fill={color} stroke={dark ? "#171c23" : "#ffffff"} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+                </> : null}
+            </svg>
+            <span style={{ position: "absolute", top: 2, right: 4, fontSize: 10, fontWeight: 600, color: label, background: dark ? "#171c23" : "#ffffff", padding: "0 3px", borderRadius: 4 }}>{formatValue(max)}</span>
+            <span style={{ position: "absolute", top: Math.max(4, height - 18), right: 4, fontSize: 10, fontWeight: 600, color: label, background: dark ? "#171c23" : "#ffffff", padding: "0 3px", borderRadius: 4 }}>{formatValue(min)}</span>
+            {hovered ? <div style={{ position: "absolute", top: 2, left: (hovered.x / width) * 100 + "%", transform: hovered.x > width * 0.5 ? "translateX(calc(-100% - 8px))" : "translateX(8px)", minWidth: 118, border: "1px solid " + grid, borderRadius: 10, background: dark ? "#1e242c" : "#ffffff", boxShadow: "0 8px 24px rgba(0,0,0,0.14)", padding: "7px 9px", pointerEvents: "none", zIndex: 30 }}>
+                <div style={{ color: dark ? "#e3e7ec" : "#191f28", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{hovered.label}</div>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, color: label, fontSize: 10.5 }}><span>종가</span><b style={{ color: dark ? "#e3e7ec" : "#191f28", fontSize: 11.5 }}>{formatValue(hovered.value)}</b></div>
+                {hoveredChange !== null ? <div style={{ display: "flex", justifyContent: "space-between", gap: 10, color: label, fontSize: 10.5, marginTop: 3 }}><span>등락률</span><b style={{ color, fontSize: 11.5 }}>{(hoveredChange > 0 ? "+" : "") + hoveredChange.toFixed(2) + "%"}</b></div> : null}
+            </div> : null}
+        </div>
     )
 }
 
@@ -413,6 +381,8 @@ export default function PublicLiveChartRouter(props: Props) {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(false)
     const [range, setRange] = useState<RangeKey>("1M")
+    const wrapRef = useRef<HTMLDivElement | null>(null)
+    const [width, setWidth] = useState(0)
 
     useEffect(() => {
         if (onCanvas) return
@@ -466,6 +436,16 @@ export default function PublicLiveChartRouter(props: Props) {
         }
     }, [props.chartBase])
 
+    useEffect(() => {
+        const element = wrapRef.current
+        if (!element || typeof ResizeObserver === "undefined") return
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) setWidth(entry.contentRect.width)
+        })
+        observer.observe(element)
+        return () => observer.disconnect()
+    }, [])
+
     const commodity = COMMODITIES[ticker]
     const data = useMemo(() => {
         if (!commodity || !payload) return null
@@ -486,16 +466,15 @@ export default function PublicLiveChartRouter(props: Props) {
 
     if (!commodity) return null
 
-    const height = Math.max(
+    const Hprop = Math.max(
         300,
-        Number(props.usChartHeight || props.height || 480)
+        Number(props.height || props.usChartHeight || 480)
     )
     const ink = dark ? "#e3e7ec" : "#191f28"
     const sub = dark ? "#9aa4b1" : "#4e5968"
     const faint = dark ? "#828d9b" : "#8b95a1"
     const card = dark ? "#171c23" : "#ffffff"
     const field = dark ? "#222831" : "#f2f4f6"
-    const shadow = "0 1px 3px rgba(0,0,0,0.04)"
     const hasHistory = Boolean(data && data.historyDaily.length >= 2)
     const hasDaily = Boolean(data && data.daily.length >= 2)
     const allPoints = hasHistory
@@ -522,15 +501,7 @@ export default function PublicLiveChartRouter(props: Props) {
     )
     const activeRange: RangeKey = rangeEnabled(range) ? range : "1M"
     const selectedPoints = allPoints.slice(-rangeSize[activeRange])
-    const points = selectedPoints.map((point, index) => ({
-        ...point,
-        label:
-            index === 0
-                ? shortDate(point.label, activeRange + " 전")
-                : index === selectedPoints.length - 1
-                  ? shortDate(point.label, "최근")
-                  : "",
-    }))
+    const points = selectedPoints
     const sourceIsDaily = hasHistory || hasDaily
     const current =
         numeric(data?.quote?.value) ??
@@ -616,133 +587,54 @@ export default function PublicLiveChartRouter(props: Props) {
         : String(data?.benchmark?.unit || "USD 기준")
     const gradientId = "commodity-area-" + ticker.toLowerCase()
     const ready = points.length >= 2 && current !== null
+    const chartWidth = Math.max(240, (width || 800) - 4)
+    const proposedChartHeight = Math.min(
+        Math.max(190, Math.round(chartWidth / 1.75)),
+        Math.max(220, Hprop - 118)
+    )
+    const chartHeight = Number.isFinite(proposedChartHeight) ? proposedChartHeight : 320
+    const tickIndexes = points.length
+        ? [0, Math.round((points.length - 1) / 3), Math.round((2 * (points.length - 1)) / 3), points.length - 1]
+        : []
+    const high52 = numeric(data?.quote?.high_52w)
+    const low52 = numeric(data?.quote?.low_52w)
 
     return (
         <div
+            ref={wrapRef}
             style={{
                 width: "100%",
                 height: "100%",
-                minHeight: 0,
-                padding: "0 0 4px",
+                minHeight: Hprop,
+                position: "relative",
+                background: card,
+                borderRadius: 16,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                overflow: "hidden",
+                padding: "10px 4px 4px",
                 boxSizing: "border-box",
                 fontFamily: FONT,
                 color: ink,
+                display: "flex",
+                flexDirection: "column",
             }}
         >
-            <section
+            <div
                 style={{
-                    width: "100%",
-                    minHeight: height,
-                    boxSizing: "border-box",
-                    borderRadius: 16,
-                    background: card,
-                    boxShadow: shadow,
-                    padding: 4,
-                    overflow: "hidden",
                     display: "flex",
-                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "0 10px 6px",
+                    flexWrap: "wrap",
                 }}
             >
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        justifyContent: "space-between",
-                        gap: 16,
-                        flexWrap: "wrap",
-                        padding: "10px 10px 0",
-                    }}
-                >
-                    <div>
-                        <div
-                            style={{
-                                color: dark ? "#8eb8ff" : "#3182f6",
-                                fontSize: 11.5,
-                                fontWeight: 800,
-                            }}
-                        >
-                            AlphaNest 원자재 차트
-                        </div>
-                        <div
-                            style={{
-                                marginTop: 5,
-                                fontSize: 16,
-                                fontWeight: 800,
-                                letterSpacing: "-0.3px",
-                            }}
-                        >
-                            {commodity.name}
-                        </div>
-                        <div
-                            style={{
-                                marginTop: 4,
-                                color: faint,
-                                fontSize: 11.5,
-                                fontWeight: 700,
-                            }}
-                        >
-                            {commodity.symbol} · {commodity.exchange}
-                        </div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                        {current !== null ? (
-                            <>
-                                <div
-                                    style={{
-                                        fontSize: 17,
-                                        fontWeight: 800,
-                                        letterSpacing: "-0.3px",
-                                    }}
-                                >
-                                    {formatValue(current)}
-                                </div>
-                                <div
-                                    style={{
-                                        marginTop: 3,
-                                        color,
-                                        fontSize: 12.5,
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    {change !== null
-                                        ? (change > 0 ? "+" : "") +
-                                          change.toFixed(2) +
-                                          "%"
-                                        : "변동률 확인 중"}
-                                </div>
-                            </>
-                        ) : (
-                            <div
-                                style={{
-                                    color: faint,
-                                    fontSize: 12,
-                                    fontWeight: 700,
-                                }}
-                            >
-                                데이터 연결 중
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 12,
-                        marginTop: 12,
-                        padding: "0 10px",
-                        flexWrap: "wrap",
-                    }}
-                >
-                    <div
-                        style={{
-                            display: "flex",
-                            gap: 2,
-                            flexWrap: "wrap",
-                        }}
-                    >
+                {current !== null ? <>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: ink, letterSpacing: "-0.3px" }}>{formatValue(current)}</span>
+                    {change !== null ? <span style={{ color, fontSize: 12.5, fontWeight: 700 }}>{(change > 0 ? "+" : "") + change.toFixed(2) + "%"}</span> : null}
+                    <span style={{ color: faint, background: field, padding: "1px 6px", borderRadius: 5, fontSize: 10.5, fontWeight: 700 }}>선물 종가 · {asOf}</span>
+                    {high52 !== null && low52 !== null ? <span style={{ color: faint, fontSize: 10.5, fontWeight: 600 }}>52주 <span style={{ color: dark ? "#ff6b76" : "#f04452" }}>{formatValue(high52)}</span> / <span style={{ color: dark ? "#5b9bff" : "#3182f6" }}>{formatValue(low52)}</span></span> : null}
+                </> : <span style={{ color: faint, fontSize: 12, fontWeight: 700 }}>데이터 연결 중</span>}
+                <span style={{ marginLeft: "auto", display: "inline-flex", gap: 2 }}>
                         {(
                             [
                                 ["1M", "1M"],
@@ -762,7 +654,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                 style={{
                                     border: 0,
                                     borderRadius: 8,
-                                    padding: "5px 10px",
+                                    padding: "4px 10px",
                                     background:
                                         activeRange === key ? field : "transparent",
                                     color:
@@ -776,7 +668,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                     boxShadow: "none",
                                     fontFamily: FONT,
                                     fontSize: 11.5,
-                                    fontWeight: 800,
+                                    fontWeight: 700,
                                     cursor: enabled ? "pointer" : "default",
                                 }}
                             >
@@ -784,33 +676,15 @@ export default function PublicLiveChartRouter(props: Props) {
                             </button>
                             )
                         })}
-                    </div>
-                    <div
-                        style={{
-                            color: faint,
-                            fontSize: 10.5,
-                            fontWeight: 650,
-                        }}
-                    >
-                        {sourceIsDaily ? "선물 연속물" : "세계은행 월평균"} ·{" "}
-                        {unit}
-                    </div>
-                </div>
+                </span>
+            </div>
 
-                <div
-                    style={{
-                        width: "100%",
-                        height: "auto",
-                        aspectRatio: "1.75 / 1",
-                        minHeight: 190,
-                        marginTop: 8,
-                    }}
-                >
+            <div style={{ width: "100%", height: chartHeight }}>
                     {loading ? (
                         <div
                             style={{
                                 height: "100%",
-                                borderRadius: 16,
+                                borderRadius: 12,
                                 background: field,
                                 display: "grid",
                                 placeItems: "center",
@@ -825,7 +699,7 @@ export default function PublicLiveChartRouter(props: Props) {
                         <div
                             style={{
                                 height: "100%",
-                                borderRadius: 16,
+                                borderRadius: 12,
                                 background: field,
                                 display: "grid",
                                 placeItems: "center",
@@ -848,14 +722,24 @@ export default function PublicLiveChartRouter(props: Props) {
                             color={color}
                             dark={dark}
                             gradientId={gradientId}
+                            width={chartWidth}
+                            height={chartHeight}
                         />
                     )}
-                </div>
+            </div>
+
+            {ready ? <div style={{ position: "relative", height: 14, margin: "2px 2px 0" }}>
+                {tickIndexes.map((index, tickIndex) => {
+                    const left = points.length > 1 ? (index / (points.length - 1)) * 100 : 0
+                    const transform = tickIndex === 0 ? "translateX(0)" : tickIndex === tickIndexes.length - 1 ? "translateX(-100%)" : "translateX(-50%)"
+                    return <span key={tickIndex} style={{ position: "absolute", left: left + "%", transform, color: faint, fontSize: 10, fontWeight: 500, whiteSpace: "nowrap" }}>{shortDate(points[index]?.label || "", "")}</span>
+                })}
+            </div> : null}
 
                 {nextUnavailableRange ? (
                     <div
                         style={{
-                            margin: "6px 10px 0",
+                            margin: "5px 10px 0",
                             borderRadius: 10,
                             background: field,
                             padding: "8px 10px",
@@ -872,12 +756,13 @@ export default function PublicLiveChartRouter(props: Props) {
                 {ready ? (
                     <div
                         style={{
-                            display: "grid",
-                            gridTemplateColumns:
-                                "repeat(3, minmax(0, 1fr))",
-                            gap: 6,
-                            marginTop: 6,
-                            padding: "0 10px",
+                            display: "flex",
+                            gap: 18,
+                            marginTop: 4,
+                            padding: "5px 10px 4px",
+                            overflowX: "auto",
+                            scrollbarWidth: "none",
+                            flexShrink: 0,
                         }}
                     >
                         {[
@@ -894,26 +779,26 @@ export default function PublicLiveChartRouter(props: Props) {
                             <div
                                 key={String(label)}
                                 style={{
-                                    borderRadius: 14,
-                                    background: field,
-                                    padding: "10px 11px",
+                                    minWidth: 78,
+                                    padding: "2px 0",
+                                    flex: "0 0 auto",
                                 }}
                             >
                                 <div
                                     style={{
                                         color: faint,
                                         fontSize: 9.5,
-                                        fontWeight: 700,
+                                        fontWeight: 600,
                                     }}
                                 >
                                     {label}
                                 </div>
                                 <div
                                     style={{
-                                        marginTop: 3,
-                                        color: sub,
+                                        marginTop: 2,
+                                        color: ink,
                                         fontSize: 11.5,
-                                        fontWeight: 800,
+                                        fontWeight: 600,
                                     }}
                                 >
                                     {typeof value === "number"
@@ -939,21 +824,22 @@ export default function PublicLiveChartRouter(props: Props) {
 
                 <div
                     style={{
-                        marginTop: 10,
-                        padding: "0 10px 10px",
+                        marginTop: "auto",
+                        padding: "5px 10px 4px",
                         color: faint,
-                        fontSize: 10.5,
+                        fontSize: 10,
                         lineHeight: 1.55,
-                        fontWeight: 600,
+                        fontWeight: 500,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        flexWrap: "wrap",
                     }}
                 >
-                    {sourceIsDaily
-                        ? "1개월·3개월·6개월·1년 흐름은 선물 연속물 종가 기준이며 거래소·서비스별로 지연될 수 있어요. 변동성·낙폭은 화면의 관측값으로 단순 계산합니다."
-                        : "가용한 월평균 기준선으로 표시하며 선물 현재가와 같은 값이 아니에요."}
-                    <span> · {source} · {asOf}</span>
+                    <span>{commodity.name} · {commodity.symbol} · {commodity.exchange}</span>
+                    <span>{sourceIsDaily ? "선물 연속물" : "세계은행 월평균"} · {unit}</span>
+                    <span>{source} · {asOf} · {points.length}개 관측</span>
                     {!sourceIsDaily ? (
-                        <>
-                            {" · "}
                             <a
                                 href={WORLD_BANK_URL}
                                 target="_blank"
@@ -966,10 +852,8 @@ export default function PublicLiveChartRouter(props: Props) {
                             >
                                 원문
                             </a>
-                        </>
                     ) : null}
                 </div>
-            </section>
         </div>
     )
 }
