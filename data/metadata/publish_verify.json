@@ -1,8 +1,8 @@
 {
- "generated_at": "2026-09-05T09:34:54.932138+09:00",
- "ok": true,
+ "generated_at": "2026-09-05T14:12:12.756537+09:00",
+ "ok": false,
  "checked": 4,
- "failed": 0,
+ "failed": 1,
  "results": [
   {
    "file": "stock_report_public.json",
@@ -15,7 +15,7 @@
    },
    "coverage": {
     "disclosures": 92.0,
-    "fin_series": 93.5,
+    "fin_series": 98.0,
     "ownership": 99.7,
     "calendar": 61.8,
     "peer": 65.1,
@@ -47,22 +47,26 @@
   },
   {
    "file": "us_stock_report_public.json",
-   "ok": true,
-   "total": 5070,
-   "cdn_age_s": 35487,
+   "ok": false,
+   "total": 5057,
+   "cdn_age_s": 0,
    "pct": {
-    "PER": 45.1,
-    "PBR": 73.8
+    "PER": 24.9,
+    "PBR": 27.3
    },
    "coverage": {
-    "disclosures": 81.4,
-    "fin_series": 82.2,
+    "disclosures": 81.7,
+    "fin_series": 86.7,
     "ownership": 89.2,
     "calendar": 28.8,
-    "peer": 85.0,
+    "peer": 80.0,
     "consensus": 0.0,
     "business": 98.6
    },
+   "regression": [
+    "peer 85.0%→80.0%"
+   ],
+   "error": "커버리지 후퇴: peer 85.0%→80.0%",
    "gaps": [
     [
      "consensus",
@@ -73,16 +77,16 @@
      28.8
     ],
     [
+     "peer",
+     80.0
+    ],
+    [
      "disclosures",
-     81.4
+     81.7
     ],
     [
      "fin_series",
-     82.2
-    ],
-    [
-     "peer",
-     85.0
+     86.7
     ]
    ]
   },
@@ -90,7 +94,7 @@
    "file": "us_stock_report_us_smallcap.json",
    "ok": true,
    "total": 3924,
-   "cdn_age_s": 0,
+   "cdn_age_s": 40304,
    "pct": {
     "PER": 37.1,
     "PBR": 73.5
@@ -130,8 +134,8 @@
   {
    "file": "_verity_data_push_recency",
    "ok": true,
-   "pushed_at": "2026-09-05T00:13:29Z",
-   "age_h": 0.36,
+   "pushed_at": "2026-09-05T04:51:53Z",
+   "age_h": 0.34,
    "sla_h": 3.0
   }
  ]
