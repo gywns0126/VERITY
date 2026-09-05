@@ -276,7 +276,7 @@ export default function PublicDividendHistory(props: Props) {
         minHeight: "100%",
         background: "transparent",
         fontFamily: FONT,
-        padding: "0 clamp(14px, 2vw, 20px)",
+        padding: narrow ? "0 12px" : "0 18px",
         boxSizing: "border-box",
         color: C.ink,
     }
@@ -528,4 +528,3 @@ addPropertyControls(PublicDividendHistory, {
         defaultValue: false,
     },
 })
-

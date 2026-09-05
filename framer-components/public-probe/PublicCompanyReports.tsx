@@ -241,7 +241,7 @@ export default function PublicCompanyReports(props: Props) {
         minHeight: "100%",
         background: "transparent",
         fontFamily: FONT,
-        padding: "0 clamp(14px, 2vw, 20px)",
+        padding: w > 0 && w < 560 ? "0 12px" : "0 18px",
         boxSizing: "border-box",
         color: C.ink,
     }
@@ -436,4 +436,3 @@ addPropertyControls(PublicCompanyReports, {
         disabledTitle: "Off",
     },
 })
-

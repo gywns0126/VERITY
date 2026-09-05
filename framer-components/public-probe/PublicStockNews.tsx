@@ -125,7 +125,7 @@ export default function PublicStockNews(props: Props) {
             : cat === "계약·수주" || cat === "M&A·지분" ? C.green
                 : C.faint
 
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: "transparent", fontFamily: FONT, padding: "0 clamp(14px, 2vw, 20px)", boxSizing: "border-box", color: C.ink }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", background: "transparent", fontFamily: FONT, padding: narrow ? "0 12px" : "0 18px", boxSizing: "border-box", color: C.ink }
 
     if (!items.length && !loading) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
 
@@ -182,4 +182,3 @@ addPropertyControls(PublicStockNews, {
     apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
     dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
 })
-

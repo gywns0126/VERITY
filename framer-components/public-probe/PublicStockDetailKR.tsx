@@ -146,7 +146,7 @@ export default function PublicStockDetailKR(props: { ticker?: string; apiBase?: 
     if (!hasInst && !hasFac && !hasFor) return <div ref={rootRef} style={{ width: "100%", height: 0, overflow: "hidden" }} />
 
     const HEAD = "Pretendard, -apple-system, sans-serif"
-    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: "transparent", fontFamily: FONT, color: C.ink, padding: "0 clamp(14px, 2vw, 20px)", display: "flex", flexDirection: "column", gap: 12 }
+    const wrap: CSSProperties = { width: "100%", minHeight: "100%", boxSizing: "border-box", background: "transparent", fontFamily: FONT, color: C.ink, padding: w > 0 && w < 560 ? "0 12px" : "0 18px", display: "flex", flexDirection: "column", gap: 12 }
     const title = (t: string, sub: string) => (
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
             <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px" }}>{t}</span>
@@ -283,4 +283,3 @@ addPropertyControls(PublicStockDetailKR, {
     forensicsUrl: { type: ControlType.String, title: "Forensics URL", defaultValue: FORENSICS_URL },
     dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false },
 })
-

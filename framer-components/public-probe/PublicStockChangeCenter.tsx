@@ -263,7 +263,7 @@ export default function PublicStockChangeCenter(props: Props) {
 
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: 16, boxSizing: "border-box", minWidth: 0 }
     // 인접 /stock 컴포넌트와 동일한 외곽 여백. 되돌리지 말 것.
-    const shell: CSSProperties = { width: "100%", padding: "0 clamp(14px, 2vw, 20px)", boxSizing: "border-box", fontFamily: FONT }
+    const shell: CSSProperties = { width: "100%", padding: width > 0 && width < 560 ? "0 12px" : "0 18px", boxSizing: "border-box", fontFamily: FONT }
     const title: CSSProperties = { margin: 0, color: C.ink, fontSize: 15, fontWeight: 800, letterSpacing: "-0.25px" }
     const sub: CSSProperties = { color: C.faint, fontSize: 10.5, lineHeight: 1.5 }
 
