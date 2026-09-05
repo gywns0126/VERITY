@@ -23,6 +23,21 @@ from api.config import MACRO_DGS10_DEFENSE_PCT
 logger = logging.getLogger(__name__)
 _KST = timezone(timedelta(hours=9))
 
+COMMODITY_SPECS = {
+    "gold": ("GC=F", "금"),
+    "silver": ("SI=F", "은"),
+    "copper": ("HG=F", "구리"),
+    "wti_oil": ("CL=F", "WTI 원유"),
+    "brent": ("BZ=F", "브렌트유"),
+    "natural_gas": ("NG=F", "천연가스"),
+    "corn": ("ZC=F", "옥수수"),
+    "wheat": ("ZW=F", "밀"),
+    "soybean": ("ZS=F", "대두"),
+    "coffee": ("KC=F", "커피"),
+    "sugar": ("SB=F", "설탕"),
+    "cotton": ("CT=F", "면화"),
+}
+
 
 def _now_kst_iso() -> str:
     return datetime.now(_KST).strftime("%Y-%m-%dT%H:%M:%S+09:00")
@@ -36,14 +51,12 @@ def _log_collector_fail(fn: str, ticker: str, err: Exception) -> None:
 
 def get_macro_indicators() -> dict:
     """주요 매크로 지표 수집"""
+    commodity_quotes = _get_commodity_bundle()
     result = {
         "usd_krw": _get_usd_krw(),
         "usd_jpy": _get_fx("JPY=X", "USD/JPY"),
         "eur_usd": _get_fx("EURUSD=X", "EUR/USD"),
-        "wti_oil": _get_commodity("CL=F", "WTI 원유"),
-        "gold": _get_commodity_with_history("GC=F", "금"),
-        "silver": _get_commodity_with_history("SI=F", "은"),
-        "copper": _get_commodity("HG=F", "구리"),
+        **commodity_quotes,
         "vix": _get_commodity("^VIX", "VIX 공포지수"),
         "us_10y": _get_commodity("^TNX", "미국 10년물"),
         "us_2y": _get_commodity("^IRX", "미국 2년물"),
@@ -220,34 +233,137 @@ def _get_commodity(ticker: str, name: str) -> dict:
     return {"value": 0, "change_pct": 0, "sparkline": [], **meta, "status": "fail"}
 
 
-def _get_commodity_with_history(ticker: str, name: str) -> dict:
-    """원자재 시세 + 30일 가격 히스토리 (차트용)"""
+def _round_market(value: float) -> float:
+    return round(value, 4 if abs(value) < 10 else 2)
+
+
+def _commodity_payload(hist, ticker: str, name: str) -> dict:
+    """1년 일봉을 공개 차트 계약으로 변환한다."""
     meta = {"source": "yfinance", "as_of": _now_kst_iso()}
-    try:
-        t = yf.Ticker(ticker)
-        hist = t.history(period="1mo")
-        if len(hist) >= 2:
-            current = float(hist["Close"].iloc[-1])
-            prev = float(hist["Close"].iloc[-2])
-            change_pct = round(((current - prev) / prev) * 100, 2)
-            sparkline = [round(float(v), 2) for v in hist["Close"].tolist()]
-            high_30d = round(float(hist["Close"].max()), 2)
-            low_30d = round(float(hist["Close"].min()), 2)
-            return {
-                "value": round(current, 2),
-                "change_pct": change_pct,
-                "sparkline": sparkline[-30:],
-                "high_30d": high_30d,
-                "low_30d": low_30d,
-                **meta,
-                "status": "ok",
+    closes = hist["Close"].dropna()
+    if len(closes) >= 2:
+        current = float(closes.iloc[-1])
+        prev = float(closes.iloc[-2])
+        change_pct = round(((current - prev) / prev) * 100, 2) if prev else 0
+        recent30 = closes.iloc[-30:]
+        history_daily = [
+            {
+                "date": idx.strftime("%Y-%m-%d"),
+                "close": _round_market(float(value)),
             }
-        elif len(hist) == 1:
-            v = round(float(hist["Close"].iloc[-1]), 2)
-            return {"value": v, "change_pct": 0, "sparkline": [v], "high_30d": v, "low_30d": v, **meta, "status": "ok"}
+            for idx, value in closes.iloc[-260:].items()
+        ]
+        return {
+            "value": _round_market(current),
+            "change_pct": change_pct,
+            "sparkline": [_round_market(float(v)) for v in recent30.tolist()],
+            "history_daily": history_daily,
+            "high_30d": _round_market(float(recent30.max())),
+            "low_30d": _round_market(float(recent30.min())),
+            "high_52w": _round_market(float(closes.max())),
+            "low_52w": _round_market(float(closes.min())),
+            "observations": len(history_daily),
+            "data_date": closes.index[-1].strftime("%Y-%m-%d"),
+            **meta,
+            "status": "ok",
+        }
+    if len(closes) == 1:
+        value = _round_market(float(closes.iloc[-1]))
+        date = closes.index[-1].strftime("%Y-%m-%d")
+        return {
+            "value": value,
+            "change_pct": 0,
+            "sparkline": [value],
+            "history_daily": [{"date": date, "close": value}],
+            "high_30d": value,
+            "low_30d": value,
+            "high_52w": value,
+            "low_52w": value,
+            "observations": 1,
+            "data_date": date,
+            **meta,
+            "status": "ok",
+        }
+    return {
+        "value": 0,
+        "change_pct": 0,
+        "sparkline": [],
+        "history_daily": [],
+        "high_30d": 0,
+        "low_30d": 0,
+        "high_52w": 0,
+        "low_52w": 0,
+        "observations": 0,
+        "data_date": None,
+        **meta,
+        "status": "fail",
+    }
+
+
+def _frame_for_ticker(raw, ticker: str):
+    columns = getattr(raw, "columns", None)
+    if columns is None or getattr(columns, "nlevels", 1) < 2:
+        return raw
+    level0 = set(columns.get_level_values(0))
+    if ticker in level0:
+        return raw[ticker]
+    level1 = set(columns.get_level_values(1))
+    if ticker in level1:
+        return raw.xs(ticker, axis=1, level=1)
+    return None
+
+
+def _get_commodity_bundle() -> dict:
+    """12개 원자재의 1년 일봉을 한 번에 수집하고 실패 종목만 개별 재시도한다."""
+    out = {}
+    tickers = [ticker for ticker, _name in COMMODITY_SPECS.values()]
+    try:
+        raw = yf.download(
+            tickers=tickers,
+            period="1y",
+            interval="1d",
+            group_by="ticker",
+            auto_adjust=False,
+            progress=False,
+            threads=True,
+        )
+        for key, (ticker, name) in COMMODITY_SPECS.items():
+            frame = _frame_for_ticker(raw, ticker)
+            if frame is not None and "Close" in frame:
+                payload = _commodity_payload(frame, ticker, name)
+                if payload.get("status") == "ok":
+                    out[key] = payload
+    except Exception as e:
+        _log_collector_fail("_get_commodity_bundle", ",".join(tickers), e)
+
+    for key, (ticker, name) in COMMODITY_SPECS.items():
+        if key not in out:
+            out[key] = _get_commodity_with_history(ticker, name)
+    return out
+
+
+def _get_commodity_with_history(ticker: str, name: str) -> dict:
+    """배치 결손 종목의 1년 일봉 개별 재시도."""
+    try:
+        hist = yf.Ticker(ticker).history(period="1y", interval="1d")
+        return _commodity_payload(hist, ticker, name)
     except Exception as e:
         _log_collector_fail("_get_commodity_with_history", ticker, e)
-    return {"value": 0, "change_pct": 0, "sparkline": [], "high_30d": 0, "low_30d": 0, **meta, "status": "fail"}
+        return {
+            "value": 0,
+            "change_pct": 0,
+            "sparkline": [],
+            "history_daily": [],
+            "high_30d": 0,
+            "low_30d": 0,
+            "high_52w": 0,
+            "low_52w": 0,
+            "observations": 0,
+            "data_date": None,
+            "source": "yfinance",
+            "as_of": _now_kst_iso(),
+            "status": "fail",
+        }
 
 
 def _get_index_change_fred(series_id: str, name: str) -> dict:
