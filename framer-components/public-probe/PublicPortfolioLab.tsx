@@ -29,8 +29,8 @@ const PRESETS: Preset[] = [
     { ticker: "069500", name: "KODEX 200", lesson: "여러 국내 대형주에 나눠 투자하는 방법이에요." },
     { ticker: "SPY", name: "S&P 500 ETF", lesson: "미국 대표 기업 전체에 나눠 투자하는 방식이에요." },
 ]
-const field = { width: "100%", minHeight: 50, border: "none", outline: "none", borderRadius: 15, background: C.field, color: C.ink, padding: "0 15px", fontFamily: FONT, fontSize: 14, fontWeight: 750, boxSizing: "border-box" as const }
-const card = { background: C.card, borderRadius: 16, padding: 18, boxShadow: `0 8px 24px ${C.shadow}` }
+const field = { width: "100%", minHeight: 50, border: "none", outline: "none", borderRadius: 15, background: C.field, color: C.ink, padding: "0 15px", fontFamily: FONT, fontSize: 14, fontWeight: 700, boxSizing: "border-box" as const }
+const card = { background: C.card, borderRadius: 16, padding: 18, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
 
 function Help({ children }: { children: any }) {
     return <div style={{ color: C.sub, fontSize: 12, lineHeight: 1.55, fontWeight: 600, marginTop: 7 }}>{children}</div>
@@ -47,11 +47,11 @@ function StockMark({ item, size = 34 }: { item: UniverseRow; size?: number }) {
     return (
         <span style={{ position: "relative", width: size, height: size, flex: "0 0 auto", display: "inline-flex" }}>
             {commodity ? (
-                <span style={{ width: size, height: size, borderRadius: Math.round(size * .32), background: C.vgS, color: C.vg, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * .42), fontWeight: 900 }}>◈</span>
+                <span style={{ width: size, height: size, borderRadius: Math.round(size * .32), background: C.vgS, color: C.vg, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * .42), fontWeight: 800 }}>◈</span>
             ) : !failed && ticker ? (
                 <img src={LOGO_BASE + encodeURIComponent(ticker.replace(/-/g, ".")) + ".png"} alt="" width={size} height={size} onError={() => setFailed(true)} style={{ width: size, height: size, borderRadius: Math.round(size * .32), objectFit: "cover", display: "block", background: C.field }} />
             ) : (
-                <span style={{ width: size, height: size, borderRadius: Math.round(size * .32), background: C.vgS, color: C.vg, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * .42), fontWeight: 900 }}>{initial}</span>
+                <span style={{ width: size, height: size, borderRadius: Math.round(size * .32), background: C.vgS, color: C.vg, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * .42), fontWeight: 800 }}>{initial}</span>
             )}
             {!commodity && <img src={FLAG_BASE + flag + ".svg"} alt={flag === "kr" ? "한국" : "미국"} width={flagSize} height={flagSize} style={{ position: "absolute", right: -3, bottom: -3, width: flagSize, height: flagSize, borderRadius: "50%", background: C.card, boxShadow: `0 0 0 1.5px ${C.card}, 0 1px 2px rgba(0,0,0,.18)` }} />}
         </span>
@@ -174,7 +174,7 @@ export default function PublicPortfolioLab(props: Props) {
                 </section>
 
                 <section style={card}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 20, fontWeight: 900 }}><span style={{ color: C.vg }}>1</span> 무엇에 투자해볼까요?</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 17, fontWeight: 800 }}><span style={{ color: C.vg }}>1</span> 무엇에 투자해볼까요?</div>
                     <Help>국내·미국 종목, ETF와 원자재를 이름·종목코드·티커로 검색하세요. 여러 개를 추가하면 비중은 똑같이 나눠드려요.</Help>
                     <div style={{ position: "relative", marginTop: 15 }}>
                         <MagnifyingGlass size={19} color={C.faint} style={{ position: "absolute", left: 15, top: 16, zIndex: 1 }} />
@@ -182,7 +182,7 @@ export default function PublicPortfolioLab(props: Props) {
                         {query.trim() && <div style={{ position: "absolute", zIndex: 10, left: 0, right: 0, top: 56, background: C.card, borderRadius: 18, boxShadow: `0 14px 36px ${C.shadow}`, padding: 6, maxHeight: 330, overflowY: "auto" }}>
                             {matches.map((item) => <button key={item.ticker} onClick={() => addAsset(item)} style={{ width: "100%", border: "none", borderRadius: 13, background: "transparent", color: C.ink, padding: "11px 10px", fontFamily: FONT, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, textAlign: "left" }}>
                                 <span style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}><StockMark item={item} /><span style={{ minWidth: 0 }}><b style={{ fontSize: 13.5 }}>{item.name_ko || item.name}</b>{item.name_ko && item.name !== item.name_ko && <span style={{ display: "block", color: C.faint, fontSize: 11, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>}</span></span>
-                                <span style={{ color: C.faint, fontSize: 11.5, fontWeight: 750, whiteSpace: "nowrap" }}>{item.ticker} · {item.market || "시장 확인"}</span>
+                                <span style={{ color: C.faint, fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap" }}>{item.ticker} · {item.market || "시장 확인"}</span>
                             </button>)}
                             {!loading && matches.length === 0 && <div style={{ padding: 14, color: C.sub, fontSize: 12, fontWeight: 650 }}>검색 결과가 없어요. 이름이나 티커를 다시 확인해주세요.</div>}
                         </div>}
@@ -194,11 +194,11 @@ export default function PublicPortfolioLab(props: Props) {
                             <button onClick={() => removeAsset(item.ticker)} aria-label={`${item.name} 삭제`} style={{ width: 34, height: 34, padding: 0, border: "none", borderRadius: 11, background: C.card, color: C.faint, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 0, flexShrink: 0 }}><Trash size={16} /></button>
                         </div>)}
                     </div>
-                    <div style={{ marginTop: 17, color: C.sub, fontSize: 11.5, fontWeight: 750 }}>빠른 예시</div>
+                    <div style={{ marginTop: 17, color: C.sub, fontSize: 11.5, fontWeight: 700 }}>빠른 예시</div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10, marginTop: 15 }}>
                         {PRESETS.map((item) => {
                             const active = assets.some((x) => x.ticker === item.ticker)
-                            return <button key={item.ticker} onClick={() => addAsset(item)} style={{ border: "none", borderRadius: 18, padding: 15, textAlign: "left", cursor: "pointer", fontFamily: FONT, background: active ? C.vgS : C.field, color: C.ink }}>
+                            return <button key={item.ticker} onClick={() => addAsset(item)} style={{ border: "none", borderRadius: 14, padding: 15, textAlign: "left", cursor: "pointer", fontFamily: FONT, background: active ? C.vgS : C.field, color: C.ink }}>
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><StockMark item={item} size={30} /><b style={{ fontSize: 14 }}>{item.name}</b></span>{active ? <Check size={16} color={C.vg} weight="bold" /> : <Plus size={16} color={C.faint} weight="bold" />}</div>
                                 <div style={{ color: C.faint, fontSize: 11, fontWeight: 800, marginTop: 4 }}>{item.ticker}</div>
                                 <div style={{ color: C.sub, fontSize: 11.5, lineHeight: 1.5, fontWeight: 600, marginTop: 9 }}>{item.lesson}</div>
@@ -208,7 +208,7 @@ export default function PublicPortfolioLab(props: Props) {
                 </section>
 
                 <section style={{ ...card, marginTop: 16 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 20, fontWeight: 900 }}><span style={{ color: C.vg }}>2</span> 한 번에 얼마를 넣을까요?</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 17, fontWeight: 800 }}><span style={{ color: C.vg }}>2</span> 한 번에 얼마를 넣을까요?</div>
                     <Help>기본값은 매달 30만 원입니다. 부담 없이 상상해볼 금액을 입력하세요.</Help>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 12, marginTop: 15 }}>
                         <div><input aria-label="투자 금액" type="number" min={1} value={amount} onChange={(e) => setAmount(Number(e.target.value))} style={field} /><Help>{amount.toLocaleString("ko-KR")}원씩 투자</Help></div>
@@ -217,19 +217,19 @@ export default function PublicPortfolioLab(props: Props) {
                 </section>
 
                 <section style={{ ...card, marginTop: 16, background: C.blueS }}>
-                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}><Sparkle size={22} color={C.blue} weight="fill" /><div><div style={{ fontSize: 16, fontWeight: 900 }}>알파네스트가 먼저 이렇게 계산할게요</div><div style={{ color: C.sub, fontSize: 12.5, lineHeight: 1.65, fontWeight: 650, marginTop: 6 }}>매달 같은 날 투자하고, 받은 배당은 다시 투자하며, 세금과 거래비용은 별도로 보여주는 방식입니다. 각 개념은 결과 화면에서 쉬운 말로 풀이합니다.</div></div></div>
+                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}><Sparkle size={22} color={C.blue} weight="fill" /><div><div style={{ fontSize: 16, fontWeight: 800 }}>알파네스트가 먼저 이렇게 계산할게요</div><div style={{ color: C.sub, fontSize: 12.5, lineHeight: 1.65, fontWeight: 650, marginTop: 6 }}>매달 같은 날 투자하고, 받은 배당은 다시 투자하며, 세금과 거래비용은 별도로 보여주는 방식입니다. 각 개념은 결과 화면에서 쉬운 말로 풀이합니다.</div></div></div>
                 </section>
 
-                <button onClick={() => setAdvanced((v) => !v)} style={{ width: "100%", marginTop: 14, border: "none", borderRadius: 17, padding: "15px 17px", background: C.card, color: C.sub, fontFamily: FONT, fontSize: 13, fontWeight: 850, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}><span>상세 설정 · 익숙한 분만 열어보세요</span><CaretDown size={18} style={{ transform: advanced ? "rotate(180deg)" : "none", transition: "transform .2s" }} /></button>
+                <button onClick={() => setAdvanced((v) => !v)} style={{ width: "100%", marginTop: 14, border: "none", borderRadius: 14, padding: "15px 17px", background: C.card, color: C.sub, fontFamily: FONT, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}><span>상세 설정 · 익숙한 분만 열어보세요</span><CaretDown size={18} style={{ transform: advanced ? "rotate(180deg)" : "none", transition: "transform .2s" }} /></button>
 
                 {advanced && <section style={{ ...card, marginTop: 10 }}>
-                    <div style={{ fontSize: 17, fontWeight: 900 }}>상세 설정</div>
+                    <div style={{ fontSize: 17, fontWeight: 800 }}>상세 설정</div>
                     <div style={{ marginTop: 15, padding: 14, borderRadius: 17, background: C.field }}>
                         <b style={{ fontSize: 12 }}>자산 비중</b>
                         <Help>비중은 투자금 100원 중 각 자산에 몇 원을 나눌지 뜻해요. 합계가 100%여야 합니다.</Help>
-                        <div style={{ display: "grid", gap: 8, marginTop: 10 }}>{assets.map((item) => <div key={item.ticker} style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: 10, alignItems: "center" }}><span style={{ fontSize: 12.5, fontWeight: 750 }}>{item.name_ko || item.name}</span><input aria-label={`${item.name} 비중`} type="number" min={0} max={100} value={item.weight} onChange={(e) => setAssets((rows) => rows.map((x) => x.ticker === item.ticker ? { ...x, weight: Number(e.target.value) } : x))} style={{ ...field, minHeight: 40 }} /></div>)}</div>
-                        <div style={{ marginTop: 9, color: Math.abs(totalWeight - 100) < .01 ? C.blue : C.red, fontSize: 12, fontWeight: 850 }}>합계 {totalWeight.toFixed(2).replace(".00", "")}% {Math.abs(totalWeight - 100) < .01 ? "· 준비됨" : "· 100%로 맞춰주세요"}</div>
-                        <button onClick={() => setAssets((rows) => equalize(rows))} style={{ marginTop: 10, border: "none", borderRadius: 12, background: C.card, color: C.vg, padding: "10px 12px", fontFamily: FONT, fontSize: 12, fontWeight: 850, cursor: "pointer" }}>똑같이 나누기</button>
+                        <div style={{ display: "grid", gap: 8, marginTop: 10 }}>{assets.map((item) => <div key={item.ticker} style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: 10, alignItems: "center" }}><span style={{ fontSize: 12.5, fontWeight: 700 }}>{item.name_ko || item.name}</span><input aria-label={`${item.name} 비중`} type="number" min={0} max={100} value={item.weight} onChange={(e) => setAssets((rows) => rows.map((x) => x.ticker === item.ticker ? { ...x, weight: Number(e.target.value) } : x))} style={{ ...field, minHeight: 40 }} /></div>)}</div>
+                        <div style={{ marginTop: 9, color: Math.abs(totalWeight - 100) < .01 ? C.blue : C.red, fontSize: 12, fontWeight: 800 }}>합계 {totalWeight.toFixed(2).replace(".00", "")}% {Math.abs(totalWeight - 100) < .01 ? "· 준비됨" : "· 100%로 맞춰주세요"}</div>
+                        <button onClick={() => setAssets((rows) => equalize(rows))} style={{ marginTop: 10, border: "none", borderRadius: 12, background: C.card, color: C.vg, padding: "10px 12px", fontFamily: FONT, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>똑같이 나누기</button>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px,1fr))", gap: 12, marginTop: 15 }}>
                         <div><b style={{ fontSize: 12 }}>투자 주기</b><select value={frequency} onChange={(e) => setFrequency(e.target.value)} style={{ ...field, marginTop: 8 }}><option value="monthly">매월</option><option value="quarterly">매분기</option><option value="once">한 번만</option></select><Help>얼마나 자주 같은 금액을 투자할지 정해요.</Help></div>
@@ -240,10 +240,10 @@ export default function PublicPortfolioLab(props: Props) {
                 </section>}
 
                 <section style={{ ...card, marginTop: 16, display: "flex", gap: 16, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
-                    <div><div style={{ fontSize: 16, fontWeight: 900 }}>{assets.length ? `${assets.length}개 자산 실험 준비됨` : "먼저 자산을 골라주세요"}</div><Help>과거 가격·배당·세금 엔진이 연결되면 수익률뿐 아니라 왜 그런 결과가 나왔는지도 보여드려요.</Help>{message && <div style={{ color: C.vg, fontSize: 11.5, fontWeight: 800, marginTop: 6 }}>{message}</div>}</div>
+                    <div><div style={{ fontSize: 16, fontWeight: 800 }}>{assets.length ? `${assets.length}개 자산 실험 준비됨` : "먼저 자산을 골라주세요"}</div><Help>과거 가격·배당·세금 엔진이 연결되면 수익률뿐 아니라 왜 그런 결과가 나왔는지도 보여드려요.</Help>{message && <div style={{ color: C.vg, fontSize: 11.5, fontWeight: 800, marginTop: 6 }}>{message}</div>}</div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button disabled={!valid} onClick={saveDraft} style={{ border: "none", borderRadius: 15, background: privacy === "private" && valid ? C.vg : C.field, color: privacy === "private" && valid ? C.on : C.sub, padding: "14px 18px", fontFamily: FONT, fontSize: 13, fontWeight: 900, cursor: valid ? "pointer" : "default", display: "inline-flex", alignItems: "center", gap: 8 }}><FloppyDisk size={18} weight="bold" />비공개 초안 저장</button>
-                        {privacy !== "private" && <button disabled={!valid || sharing} onClick={shareExperiment} style={{ border: "none", borderRadius: 15, background: valid ? C.vg : C.field, color: valid ? C.on : C.faint, padding: "14px 18px", fontFamily: FONT, fontSize: 13, fontWeight: 900, cursor: valid && !sharing ? "pointer" : "default" }}>{sharing ? "공유 중…" : "커뮤니티에 공유"}</button>}
+                        <button disabled={!valid} onClick={saveDraft} style={{ border: "none", borderRadius: 15, background: privacy === "private" && valid ? C.vg : C.field, color: privacy === "private" && valid ? C.on : C.sub, padding: "14px 18px", fontFamily: FONT, fontSize: 13, fontWeight: 800, cursor: valid ? "pointer" : "default", display: "inline-flex", alignItems: "center", gap: 8 }}><FloppyDisk size={18} weight="bold" />비공개 초안 저장</button>
+                        {privacy !== "private" && <button disabled={!valid || sharing} onClick={shareExperiment} style={{ border: "none", borderRadius: 15, background: valid ? C.vg : C.field, color: valid ? C.on : C.faint, padding: "14px 18px", fontFamily: FONT, fontSize: 13, fontWeight: 800, cursor: valid && !sharing ? "pointer" : "default" }}>{sharing ? "공유 중…" : "커뮤니티에 공유"}</button>}
                     </div>
                 </section>
             </main>

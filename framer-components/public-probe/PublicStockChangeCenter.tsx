@@ -261,7 +261,7 @@ export default function PublicStockChangeCenter(props: Props) {
         ["자본", events[0]?.date],
     ].filter(([, value]) => value)
 
-    const card: CSSProperties = { background: C.card, borderRadius: 16, padding: 16, boxSizing: "border-box", minWidth: 0 }
+    const card: CSSProperties = { background: C.card, borderRadius: 16, padding: 16, boxSizing: "border-box", minWidth: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }
     // 인접 /stock 컴포넌트와 동일한 외곽 여백. 되돌리지 말 것.
     const shell: CSSProperties = { width: "100%", padding: width > 0 && width < 560 ? "0 12px" : "0 18px", boxSizing: "border-box", fontFamily: FONT }
     const title: CSSProperties = { margin: 0, color: C.ink, fontSize: 15, fontWeight: 800, letterSpacing: "-0.25px" }
@@ -307,7 +307,7 @@ export default function PublicStockChangeCenter(props: Props) {
                 <header style={{ ...card, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                     <div style={{ minWidth: 0 }}>
                         <div style={{ color: C.violet, fontSize: 10.5, fontWeight: 800 }}>미국 종목 변화 센터</div>
-                        <h2 style={{ margin: "3px 0 0", fontSize: 20, fontWeight: 850, letterSpacing: "-0.5px" }}>{report.name_ko || report.name || ticker} <span style={{ color: C.faint, fontSize: 12 }}>{ticker}</span></h2>
+                        <h2 style={{ margin: "3px 0 0", fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px" }}>{report.name_ko || report.name || ticker} <span style={{ color: C.faint, fontSize: 12 }}>{ticker}</span></h2>
                         <div style={{ ...sub, marginTop: 5 }}>리포트 생성 {dateText(generated)} · SEC·시장 공개 사실 조인 · 추천·점수 없음</div>
                     </div>
                     <div style={{ flexShrink: 0, borderRadius: 999, padding: "6px 9px", background: C.violetSoft, color: C.violet, fontSize: 10.5, fontWeight: 800, whiteSpace: "nowrap" }}>표시 소스 {hit}/8</div>
@@ -360,7 +360,7 @@ export default function PublicStockChangeCenter(props: Props) {
             <header style={{ ...card, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
                     <div style={{ color: C.violet, fontSize: 10.5, fontWeight: 800 }}>종목 변화 센터</div>
-                    <h2 style={{ margin: "3px 0 0", fontSize: 20, fontWeight: 850, letterSpacing: "-0.5px" }}>{stock.name} <span style={{ color: C.faint, fontSize: 12 }}>{ticker}</span></h2>
+                    <h2 style={{ margin: "3px 0 0", fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px" }}>{stock.name} <span style={{ color: C.faint, fontSize: 12 }}>{ticker}</span></h2>
                     <div style={{ ...sub, marginTop: 5 }}>생성 {dateText(String(meta.generated_at || "").slice(0, 10))} · 기존 사실 조인 · 추천·점수 없음</div>
                 </div>
                 <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-end", gap: 6, flexDirection: narrow ? "column" : "row" }}>

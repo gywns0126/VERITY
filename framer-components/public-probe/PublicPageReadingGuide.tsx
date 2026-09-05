@@ -72,11 +72,11 @@ export default function PublicPageReadingGuide(props: Props) {
     const [open, setOpen] = useState(() => onCanvas || !!props.defaultOpen)
     const guide = GUIDES[props.mode] || GUIDES.market
     const C = props.dark ? DARK : LIGHT
-    const shell: CSSProperties = { width: "100%", padding: "0 clamp(14px, 2vw, 20px)", boxSizing: "border-box", fontFamily: FONT, color: C.ink }
+    const shell: CSSProperties = { width: "100%", padding: "0 clamp(12px, 2vw, 18px)", boxSizing: "border-box", fontFamily: FONT, color: C.ink }
 
     return (
         <div style={shell}>
-            <section style={{ background: C.card, borderRadius: 16, padding: 16, boxSizing: "border-box" }}>
+            <section style={{ background: C.card, borderRadius: 16, padding: 16, boxSizing: "border-box", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <button
                     type="button"
                     onClick={() => setOpen((value) => !value)}
@@ -86,7 +86,7 @@ export default function PublicPageReadingGuide(props: Props) {
                 >
                     <span style={{ minWidth: 0 }}>
                         <span style={{ display: "block", color: C.violet, fontSize: 10.5, fontWeight: 800 }}>{guide.eyebrow}</span>
-                        <span style={{ display: "block", marginTop: 3, fontSize: 15, fontWeight: 850, letterSpacing: "-0.25px" }}>{guide.title}</span>
+                        <span style={{ display: "block", marginTop: 3, fontSize: 15, fontWeight: 800, letterSpacing: "-0.25px" }}>{guide.title}</span>
                     </span>
                     <span style={{ flexShrink: 0, color: C.violet, background: C.violetSoft, borderRadius: 999, padding: "6px 9px", fontSize: 10.5, fontWeight: 800 }}>{open ? "접기" : "처음이라면 · 펼치기"}</span>
                 </button>

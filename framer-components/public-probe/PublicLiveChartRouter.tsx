@@ -494,9 +494,7 @@ export default function PublicLiveChartRouter(props: Props) {
     const faint = dark ? "#828d9b" : "#8b95a1"
     const card = dark ? "#171c23" : "#ffffff"
     const field = dark ? "#222831" : "#f2f4f6"
-    const shadow = dark
-        ? "0 10px 34px rgba(0,0,0,.22)"
-        : "0 10px 34px rgba(0,0,0,.055)"
+    const shadow = "0 1px 3px rgba(0,0,0,0.04)"
     const hasHistory = Boolean(data && data.historyDaily.length >= 2)
     const hasDaily = Boolean(data && data.daily.length >= 2)
     const allPoints = hasHistory
@@ -656,7 +654,7 @@ export default function PublicLiveChartRouter(props: Props) {
                             style={{
                                 color: dark ? "#8eb8ff" : "#3182f6",
                                 fontSize: 11.5,
-                                fontWeight: 850,
+                                fontWeight: 800,
                             }}
                         >
                             AlphaNest 원자재 차트
@@ -664,9 +662,9 @@ export default function PublicLiveChartRouter(props: Props) {
                         <div
                             style={{
                                 marginTop: 5,
-                                fontSize: 21,
-                                fontWeight: 900,
-                                letterSpacing: "-0.5px",
+                                fontSize: 16,
+                                fontWeight: 800,
+                                letterSpacing: "-0.3px",
                             }}
                         >
                             {commodity.name}
@@ -687,9 +685,9 @@ export default function PublicLiveChartRouter(props: Props) {
                             <>
                                 <div
                                     style={{
-                                        fontSize: 24,
-                                        fontWeight: 900,
-                                        letterSpacing: "-0.4px",
+                                        fontSize: 17,
+                                        fontWeight: 800,
+                                        letterSpacing: "-0.3px",
                                     }}
                                 >
                                     {formatValue(current)}
@@ -699,7 +697,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                         marginTop: 3,
                                         color,
                                         fontSize: 12.5,
-                                        fontWeight: 850,
+                                        fontWeight: 700,
                                     }}
                                 >
                                     {change !== null
@@ -714,7 +712,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                 style={{
                                     color: faint,
                                     fontSize: 12,
-                                    fontWeight: 750,
+                                    fontWeight: 700,
                                 }}
                             >
                                 데이터 연결 중
@@ -812,7 +810,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                 placeItems: "center",
                                 color: faint,
                                 fontSize: 12,
-                                fontWeight: 750,
+                                fontWeight: 700,
                             }}
                         >
                             가격 흐름을 불러오고 있어요
@@ -827,7 +825,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                 placeItems: "center",
                                 color: sub,
                                 fontSize: 12,
-                                fontWeight: 750,
+                                fontWeight: 700,
                                 textAlign: "center",
                                 lineHeight: 1.6,
                                 padding: 20,
@@ -882,7 +880,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                     style={{
                                         color: faint,
                                         fontSize: 9.5,
-                                        fontWeight: 750,
+                                        fontWeight: 700,
                                     }}
                                 >
                                     {label}
@@ -892,7 +890,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                         marginTop: 3,
                                         color: sub,
                                         fontSize: 11.5,
-                                        fontWeight: 850,
+                                        fontWeight: 800,
                                     }}
                                 >
                                     {typeof value === "number"
@@ -940,7 +938,7 @@ export default function PublicLiveChartRouter(props: Props) {
                                 style={{
                                     color: dark ? "#8eb8ff" : "#3182f6",
                                     textDecoration: "none",
-                                    fontWeight: 750,
+                                    fontWeight: 700,
                                 }}
                             >
                                 원문
