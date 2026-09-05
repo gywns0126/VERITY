@@ -51,3 +51,17 @@ def test_live_quotes_failure_returns_empty(monkeypatch):
     monkeypatch.setattr(kb, "KISBroker", _Boom)
     assert pt._live_quotes(["005930"]) == {}
     assert pt._live_quotes([]) == {}
+
+
+def test_live_quotes_reads_configured_property(monkeypatch):
+    """KISBroker.is_configured is a property, not a callable."""
+    class _Configured:
+        def __init__(self, *a, **k):
+            self.is_configured = True
+
+        def get_current_price(self, ticker):
+            return {"stck_prpr": "71200" if ticker == "005930" else "0"}
+
+    import api.trading.kis_broker as kb
+    monkeypatch.setattr(kb, "KISBroker", _Configured)
+    assert pt._live_quotes(["005930", "003550"]) == {"005930": 71200.0}

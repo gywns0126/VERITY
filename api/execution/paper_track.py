@@ -393,7 +393,7 @@ def _live_quotes(tickers: List[str]) -> Dict[str, float]:
     try:
         from api.trading.kis_broker import KISBroker
         b = KISBroker(cache_only=True)
-        if not b.is_configured():
+        if not b.is_configured:
             return out
         for tk in dict.fromkeys(tickers):
             try:
