@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-09-05T13:38:46.848938+09:00",
+  "generated_at": "2026-09-05T17:37:18.398366+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 315237,
-    "python_modules": 1023,
+    "code_lines_tsx_py": 315415,
+    "python_modules": 1024,
     "tsx_components": 140,
     "json_data_files": 2276,
     "json_total_tracked": 2297,
-    "workflows": 79,
-    "scheduled_workflows": 63,
-    "cron_triggers": 74,
-    "git_tracked_files": 8227
+    "workflows": 78,
+    "scheduled_workflows": 62,
+    "cron_triggers": 73,
+    "git_tracked_files": 8228
   },
   "subsystems": {
     "ingest": {
@@ -106,7 +106,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 67,
+      "count": 66,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -168,7 +168,6 @@
         "api/intelligence/ticker_facts.py",
         "api/intelligence/trade_plan_evolution.py",
         "api/intelligence/trend_overlay.py",
-        "api/intelligence/tri_llm_synthesis.py",
         "api/intelligence/us_filing_probe.py",
         "api/intelligence/us_financials.py",
         "api/intelligence/value_guards.py",
@@ -179,8 +178,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 79,
-      "scheduled": 63,
+      "count": 78,
+      "scheduled": 62,
       "workflows": [
         {
           "name": "analyst_reports",
@@ -589,13 +588,6 @@
           "scheduled": true
         },
         {
-          "name": "tri_synthesis",
-          "crons": [
-            "0 21 * * 0"
-          ],
-          "scheduled": true
-        },
-        {
           "name": "universe_scan",
           "crons": [
             "30 6 * * 1-5"
@@ -739,20 +731,20 @@
     "validation": {
       "label": "검증",
       "n_trading_days": 78,
-      "n_calendar_days": 110,
+      "n_calendar_days": 111,
       "next_milestone": {
         "next_n": 100,
         "days_remaining": 22,
         "label": "예비 결과 (binomial 95% CI ±10%p)"
       },
-      "as_of": "2026-09-04T13:49:04+09:00"
+      "as_of": "2026-09-05T13:43:21+09:00"
     }
   },
   "python_by_dir": {
-    "api": 455,
-    "tests": 342,
+    "api": 453,
+    "tests": 344,
     "scripts": 153,
-    "vercel-api": 60,
+    "vercel-api": 61,
     "server": 7,
     ".github": 6
   },
