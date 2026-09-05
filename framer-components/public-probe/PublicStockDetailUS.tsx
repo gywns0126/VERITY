@@ -2,22 +2,15 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 /**
- * AlphaNest 공개 — 미국 종목 심화 (공매도 잔고 · 5%+ 대량보유 13D/13G · 8-K 포렌식).
+ * AlphaNest 공개 — 미국 종목 심화 (Form 4 · Form 144 · 13D/G · 13F · 공매도 · 8-K).
  *
- * 왜 만들었나 — 이 세 축은 **이미 수집·발행까지 됐는데 읽는 화면이 0개**였다(2026-08-23 실측).
- *   us_short_interest 4,985종목(98.4%) · us_major_holdings 4,644(91.7%) ·
- *   us_disclosure_forensics 909. 국장 대응 카드(PublicStockDetailKR)의 미장 짝이다.
- *
- * 🚨 `stocks` 는 **배열**이다. `d.stocks[ticker]` 로 읽으면 항상 undefined —
- *   PublicStockDetailKR 이 그 실수로 기관·사업장 파트가 조용히 비어 있다. 반드시 find.
+ * 종목별 통합 API(`/api/verity/us-forensics`) 한 번으로 6개 공개 사실 소스를 읽는다.
+ * 원천별 전 종목 JSON을 브라우저에서 각각 받던 구조로 되돌리지 말 것.
  *
  * 🚨 RULE 7 — 점수·등급·추천 0. 공시 사실만. "공매도 많음 = 하락 신호" 아님.
  * 🚨 공매도 비율은 **유통주식(float) 대비**이고 원천이 yfinance 추정이라 100% 를 넘는 값이
  *   나온다(실측 11건 = 0.22%, 최대 1,395%). 값을 숨기지 않되 **원천 추정 한계를 함께 표기**한다.
  *   중앙값 4.85% · 99분위 38.9% 라 정상 구간은 멀쩡하다.
- *
- * 🚨 로드 순서 — us_major_holdings 는 **8MB** 다. 카드 표시 여부를 그 파일에 걸면 8MB 를
- *   기다려야 첫 렌더가 난다. 가벼운 둘(1MB·187KB)로 먼저 카드를 띄우고 지분은 뒤에 채운다.
  *
  * 테마 = 자체 내장 CSS 변수(--an-usd-*) 구동. JS 다크 감지 안 씀(라이브 표준). 되돌리지 말 것.
  */
@@ -69,6 +62,7 @@ const B = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 const SHORT_URL = B + "/us_short_interest.json"
 const HOLD_URL = B + "/us_major_holdings.json"
 const FORENSIC_URL = B + "/us_disclosure_forensics.json"
+const DEFAULT_API_BASE = "https://project-yw131.vercel.app"
 
 // 8-K 분류 → 한국어.
 // 🚨 키를 **추측하지 말 것.** 첫 판본이 `delisting`·`auditor`·`default`·`material_agreement`
@@ -89,6 +83,21 @@ const FLAG_KO: Record<string, string> = {
     impairment: "손상차손",
     debt_default: "채무불이행",
     bankruptcy: "파산 신청",
+}
+const CHANGE_KO: Record<string, string> = {
+    NEW: "신규",
+    INCREASED: "증가",
+    DECREASED: "감소",
+    HELD: "유지",
+    EXITED: "정리",
+}
+const SOURCE_KO: Record<string, string> = {
+    insider: "Form 4",
+    holdings: "13D/G",
+    smart_money: "13F",
+    short_interest: "공매도",
+    disclosure_forensics: "8-K",
+    form144: "Form 144",
 }
 
 interface ShortRec {
@@ -125,6 +134,72 @@ interface ForRec {
     counts?: Record<string, number>
     n_8k?: number
     latest_8k?: string
+}
+interface InsiderTrade {
+    date?: string
+    person?: string
+    position?: string
+    change?: number
+    code?: string
+    source_url?: string
+    plan_10b51?: boolean
+    sell_to_cover?: boolean
+}
+interface InsiderRec {
+    ticker: string
+    net_change?: number
+    buy_n?: number
+    sell_n?: number
+    total?: number
+    trades?: InsiderTrade[]
+    collected_at?: string
+}
+interface Form144Notice {
+    person?: string
+    relationship?: string
+    units?: number
+    value_usd?: number
+    approx_sale_date?: string
+    filing_date?: string
+    source_url?: string
+}
+interface Form144Rec {
+    ticker: string
+    notice_count?: number
+    notices_in_window?: number
+    truncated?: boolean
+    total_value_usd?: number
+    latest_filing_date?: string
+    notices?: Form144Notice[]
+}
+interface SmartHolder {
+    fund?: string
+    shares?: number
+    value_usd?: number
+    weight_in_fund_pct?: number
+    change_type?: string
+    held_since?: string
+    quarters_held?: number
+    source_url?: string
+}
+interface SmartRec {
+    ticker: string
+    total_value_usd?: number
+    holder_count?: number
+    holders?: SmartHolder[]
+}
+interface SourceMeta {
+    status?: string
+    generated_at?: string
+    source?: string
+}
+interface TimelineItem {
+    date: string
+    kind: string
+    title: string
+    note?: string
+    source_url?: string
+    tone?: "up" | "down" | "neutral"
 }
 
 const SAMPLE_S: ShortRec = {
@@ -164,6 +239,57 @@ const SAMPLE_F: ForRec = {
     n_8k: 11,
     latest_8k: "2026-08-01",
 }
+const SAMPLE_I: InsiderRec = {
+    ticker: "AAPL",
+    net_change: -1439,
+    buy_n: 0,
+    sell_n: 1,
+    total: 1,
+    trades: [
+        {
+            date: "2026-08-25",
+            person: "Jennifer Newstead",
+            position: "Officer",
+            change: -1439,
+            code: "S",
+            source_url: "#",
+            plan_10b51: true,
+        },
+    ],
+}
+const SAMPLE_144: Form144Rec = {
+    ticker: "AAPL",
+    notice_count: 1,
+    notices_in_window: 1,
+    total_value_usd: 2660900,
+    latest_filing_date: "2026-08-11",
+    notices: [
+        {
+            person: "Jennifer Newstead",
+            relationship: "Officer",
+            units: 8632,
+            value_usd: 2660900,
+            filing_date: "2026-08-11",
+            source_url: "#",
+        },
+    ],
+}
+const SAMPLE_M: SmartRec = {
+    ticker: "AAPL",
+    total_value_usd: 65950296923,
+    holder_count: 2,
+    holders: [
+        {
+            fund: "Berkshire Hathaway",
+            shares: 227917808,
+            value_usd: 65950296923,
+            weight_in_fund_pct: 22.04,
+            change_type: "HELD",
+            held_since: "2024-06-30",
+            quarters_held: 9,
+        },
+    ],
+}
 
 function readTickerFromUrl(): string {
     if (typeof window === "undefined") return ""
@@ -187,18 +313,31 @@ const md = (iso?: string | null) => {
         : "—"
 }
 const num = (v: any, d = 0) => {
+    if (v === null || v === undefined || v === "") return "—"
     const n = Number(v)
     return isFinite(n)
         ? n.toLocaleString("en-US", { maximumFractionDigits: d })
         : "—"
 }
 const pct = (v: any, d = 2) => {
+    if (v === null || v === undefined || v === "") return "—"
     const n = Number(v)
     return isFinite(n) ? n.toFixed(d) + "%" : "—"
+}
+const usd = (v: any) => {
+    if (v === null || v === undefined || v === "") return "—"
+    const n = Number(v)
+    if (!isFinite(n)) return "—"
+    if (Math.abs(n) >= 1e12) return "$" + (n / 1e12).toFixed(1) + "T"
+    if (Math.abs(n) >= 1e9) return "$" + (n / 1e9).toFixed(1) + "B"
+    if (Math.abs(n) >= 1e6) return "$" + (n / 1e6).toFixed(1) + "M"
+    return "$" + num(n)
 }
 
 interface Props {
     ticker: string
+    apiBase: string
+    // 이전 Framer 인스턴스 속성 호환용. 데이터 로드는 통합 API만 사용한다.
     shortUrl: string
     holdUrl: string
     forensicUrl: string
@@ -221,6 +360,30 @@ export default function PublicStockDetailUS(props: Props) {
     const [sh, setSh] = useState<ShortRec | null>(onCanvas ? SAMPLE_S : null)
     const [hold, setHold] = useState<HoldRec | null>(onCanvas ? SAMPLE_H : null)
     const [fx, setFx] = useState<ForRec | null>(onCanvas ? SAMPLE_F : null)
+    const [insider, setInsider] = useState<InsiderRec | null>(
+        onCanvas ? SAMPLE_I : null
+    )
+    const [form144, setForm144] = useState<Form144Rec | null>(
+        onCanvas ? SAMPLE_144 : null
+    )
+    const [smart, setSmart] = useState<SmartRec | null>(
+        onCanvas ? SAMPLE_M : null
+    )
+    const [sourceMeta, setSourceMeta] = useState<Record<string, SourceMeta>>(
+        onCanvas
+            ? {
+                  insider: { status: "ok" },
+                  holdings: { status: "ok" },
+                  smart_money: { status: "ok" },
+                  short_interest: { status: "ok" },
+                  disclosure_forensics: { status: "ok" },
+                  form144: { status: "ok" },
+              }
+            : {}
+    )
+    const [loadState, setLoadState] = useState<"idle" | "loading" | "ready" | "error">(
+        onCanvas ? "ready" : "idle"
+    )
 
     // ETF/ETN 선택 시 자기 숨김 — StockReport 가 body[data-verity-asset-kind] 발행
     const [assetKind, setAssetKind] = useState<string>("stock")
@@ -246,7 +409,7 @@ export default function PublicStockDetailUS(props: Props) {
         })
         ro.observe(el)
         return () => ro.disconnect()
-    }, [])
+    }, [tk, assetKind])
 
     /* 종목 추종 — 🚨 in-page 전환은 `verity-ticker-change` 로 온다. replaceState 는
      * popstate 를 발생시키지 않아 popstate 만 달면 페이지 안 전환을 놓친다. 폴링은 안전망. */
@@ -278,10 +441,20 @@ export default function PublicStockDetailUS(props: Props) {
         if (onCanvas) return
         const code = String(tk).trim().toUpperCase()
         // 🚨 미장 전용 — KR 6자리 숫자는 대상 아님(PublicStockDetailKR 담당)
-        if (!code || /^\d{6}$/.test(code)) {
+        if (
+            !code ||
+            /^\d{6}$/.test(code) ||
+            /^CMD_/.test(code) ||
+            assetKind === "etf"
+        ) {
             setSh(null)
             setHold(null)
             setFx(null)
+            setInsider(null)
+            setForm144(null)
+            setSmart(null)
+            setSourceMeta({})
+            setLoadState("idle")
             return
         }
         let alive = true
@@ -289,44 +462,49 @@ export default function PublicStockDetailUS(props: Props) {
         setSh(null)
         setHold(null)
         setFx(null)
-        const pick = (d: any) =>
-            d && Array.isArray(d.stocks)
-                ? d.stocks.find(
-                      (s: any) => String(s && s.ticker).toUpperCase() === code
-                  ) || null
-                : null
-
-        fetch(props.shortUrl || SHORT_URL)
-            .then((r) => (r.ok ? r.json() : null))
+        setInsider(null)
+        setForm144(null)
+        setSmart(null)
+        setSourceMeta({})
+        setLoadState("loading")
+        const apiBase = (props.apiBase || DEFAULT_API_BASE).replace(/\/+$/, "")
+        fetch(
+            apiBase +
+                "/api/verity/us-forensics?ticker=" +
+                encodeURIComponent(code),
+            { cache: "no-store" }
+        )
+            .then((r) => {
+                if (!r.ok) throw new Error(String(r.status))
+                return r.json()
+            })
             .then((d) => {
-                if (alive) setSh(pick(d))
+                if (!alive) return
+                const sections = d && d.status === "ok" ? d.sections || {} : {}
+                setInsider(sections.insider || null)
+                setHold(sections.holdings || null)
+                setSmart(sections.smart_money || null)
+                setSh(sections.short_interest || null)
+                setFx(sections.disclosure_forensics || null)
+                setForm144(sections.form144 || null)
+                setSourceMeta((d && d.sources) || {})
+                setLoadState("ready")
             })
             .catch(() => {
-                if (alive) setSh(null)
-            })
-        fetch(props.forensicUrl || FORENSIC_URL)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                if (alive) setFx(pick(d))
-            })
-            .catch(() => {
-                if (alive) setFx(null)
-            })
-        // 🚨 8MB — 카드 표시 여부를 여기 걸지 않는다. 가벼운 둘로 먼저 뜨고 이건 뒤에 채운다.
-        fetch(props.holdUrl || HOLD_URL)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                if (alive) setHold(pick(d))
-            })
-            .catch(() => {
-                if (alive) setHold(null)
+                if (alive) setLoadState("error")
             })
         return () => {
             alive = false
         }
-    }, [tk, props.shortUrl, props.holdUrl, props.forensicUrl, onCanvas])
+    }, [tk, props.apiBase, onCanvas, assetKind])
 
-    if (assetKind === "etf" || /^CMD_/.test(String(tk).toUpperCase())) return null
+    if (
+        assetKind === "etf" ||
+        !String(tk).trim() ||
+        /^\d{6}$/.test(String(tk)) ||
+        /^CMD_/.test(String(tk).toUpperCase())
+    )
+        return null
 
     const hasShort = !!(sh && isFinite(Number(sh.short_pct)))
     const filings = (
@@ -338,13 +516,119 @@ export default function PublicStockDetailUS(props: Props) {
             ? Object.entries(fx.counts).filter(([, v]) => Number(v) > 0)
             : []
     const hasFx = !!(fx && (flags.length || Number(fx.n_8k) > 0))
-    if (!hasShort && !hasHold && !hasFx)
-        return (
-            <div
-                ref={rootRef}
-                style={{ width: "100%", height: 0, overflow: "hidden" }}
-            />
-        )
+    const trades = (
+        insider && Array.isArray(insider.trades) ? insider.trades : []
+    ).slice(0, 5)
+    const notices = (
+        form144 && Array.isArray(form144.notices) ? form144.notices : []
+    ).slice(0, 5)
+    const holders = (
+        smart && Array.isArray(smart.holders) ? smart.holders : []
+    ).slice(0, 5)
+    const hasInsider = !!(
+        insider &&
+        (trades.length || Number(insider.total) > 0)
+    )
+    const has144 = !!(
+        form144 &&
+        (notices.length || Number(form144.notice_count) > 0)
+    )
+    const hasSmart = !!(
+        smart &&
+        (holders.length || Number(smart.holder_count) > 0)
+    )
+    const sourceKeys = [
+        "insider",
+        "holdings",
+        "smart_money",
+        "short_interest",
+        "disclosure_forensics",
+        "form144",
+    ]
+    const sourceHit = sourceKeys.filter(
+        (key) => sourceMeta[key] && sourceMeta[key].status === "ok"
+    ).length
+    const unavailable = sourceKeys.filter(
+        (key) => !sourceMeta[key] || sourceMeta[key].status !== "ok"
+    )
+
+    const timeline: TimelineItem[] = []
+    trades.slice(0, 4).forEach((trade) => {
+        if (!trade.date) return
+        const change = Number(trade.change)
+        const sold = isFinite(change) && change < 0
+        const bought = isFinite(change) && change > 0
+        timeline.push({
+            date: trade.date,
+            kind: "Form 4",
+            title:
+                (trade.person || "내부자") +
+                " · " +
+                (sold ? "매도 " : bought ? "매수 " : "거래 ") +
+                num(Math.abs(change)) +
+                "주",
+            note: [
+                trade.position,
+                trade.plan_10b51 ? "10b5-1 계획" : "",
+                trade.sell_to_cover ? "세금 원천징수 목적" : "",
+            ]
+                .filter(Boolean)
+                .join(" · "),
+            source_url: trade.source_url,
+            tone: sold ? "down" : bought ? "up" : "neutral",
+        })
+    })
+    notices.slice(0, 4).forEach((notice) => {
+        const date = notice.filing_date || notice.approx_sale_date
+        if (!date) return
+        timeline.push({
+            date,
+            kind: "Form 144",
+            title:
+                (notice.person || "내부자") +
+                " · 매도 예정 " +
+                num(notice.units) +
+                "주",
+            note: "예정 신고 · 실제 체결 아님",
+            source_url: notice.source_url,
+            tone: "neutral",
+        })
+    })
+    filings.slice(0, 3).forEach((filing) => {
+        if (!filing.date) return
+        timeline.push({
+            date: filing.date,
+            kind: filing.type || "13D/G",
+            title:
+                (filing.filer || "대량보유자") +
+                (filing.pct != null && Number(filing.pct) > 0
+                    ? " · " + pct(filing.pct, 1)
+                    : ""),
+            note: "5% 이상 보유 공시",
+            source_url: filing.source_url,
+            tone: "neutral",
+        })
+    })
+    if (hasShort && sh && sh.report_date)
+        timeline.push({
+            date: sh.report_date,
+            kind: "Short",
+            title: "공매도 잔고 " + pct(sh.short_pct),
+            note: "유통주식 대비 · 월 2회 공시",
+            tone: "neutral",
+        })
+    if (hasFx && fx && fx.latest_8k)
+        timeline.push({
+            date: fx.latest_8k,
+            kind: "8-K",
+            title: "최근 수시공시 · " + num(fx.n_8k) + "건 이력",
+            note: flags
+                .slice(0, 3)
+                .map(([key]) => FLAG_KO[key] || key)
+                .join(" · "),
+            tone: "neutral",
+        })
+    timeline.sort((a, b) => String(b.date).localeCompare(String(a.date)))
 
     const narrow = w > 0 && w < 560
     const wrap: CSSProperties = {
@@ -365,6 +649,12 @@ export default function PublicStockDetailUS(props: Props) {
         padding: narrow ? 14 : 18,
         boxSizing: "border-box",
         boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+    }
+    const grid: CSSProperties = {
+        display: "grid",
+        gridTemplateColumns: w >= 760 ? "repeat(2, minmax(0,1fr))" : "1fr",
+        gap: 12,
+        alignItems: "start",
     }
     const title = (t: string, sub: string) => (
         <div
@@ -428,13 +718,366 @@ export default function PublicStockDetailUS(props: Props) {
     const spct = Number(sh && sh.short_pct)
     const prior = Number(sh && sh.short_pct_prior)
     const implausible = isFinite(spct) && spct > 100
+    const hasAny =
+        hasInsider || has144 || hasSmart || hasShort || hasHold || hasFx
+
+    if (loadState === "loading")
+        return (
+            <div ref={rootRef} style={wrap}>
+                <style>{AN_PALETTE}</style>
+                <div style={{ ...card, color: C.faint, fontSize: 12 }}>
+                    미국 공시·수급 상세 확인 중…
+                </div>
+            </div>
+        )
+    if (loadState === "error")
+        return (
+            <div ref={rootRef} style={wrap}>
+                <style>{AN_PALETTE}</style>
+                <div role="status" style={{ ...card, color: C.sub, fontSize: 12 }}>
+                    미국 공시·수급 상세를 불러오지 못했습니다. 위 기본 리포트는
+                    그대로 이용할 수 있습니다.
+                </div>
+            </div>
+        )
 
     return (
         <div ref={rootRef} style={wrap}>
             <style>{AN_PALETTE}</style>
 
+            <header
+                style={{
+                    ...card,
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 12,
+                }}
+            >
+                <div style={{ minWidth: 0 }}>
+                    <div
+                        style={{
+                            color: C.vt,
+                            fontSize: 11,
+                            fontWeight: 800,
+                        }}
+                    >
+                        미국 공시·수급 상세
+                    </div>
+                    <div
+                        style={{
+                            marginTop: 4,
+                            color: C.ink,
+                            fontSize: narrow ? 17 : 19,
+                            fontWeight: 800,
+                            letterSpacing: "-0.45px",
+                        }}
+                    >
+                        {tk}에서 실제로 달라진 것
+                    </div>
+                    <div
+                        style={{
+                            marginTop: 5,
+                            color: C.faint,
+                            fontSize: 10.5,
+                            lineHeight: 1.55,
+                        }}
+                    >
+                        SEC 공시와 시장 자료를 기준일 순서로 봅니다 · 추천·점수
+                        없음
+                    </div>
+                </div>
+                <div
+                    style={{
+                        flexShrink: 0,
+                        borderRadius: 999,
+                        padding: "6px 9px",
+                        background: C.vtS,
+                        color: C.vt,
+                        fontSize: 10.5,
+                        fontWeight: 800,
+                        whiteSpace: "nowrap",
+                    }}
+                >
+                    연결 {sourceHit}/{sourceKeys.length}
+                </div>
+            </header>
+
+            {unavailable.length > 0 ? (
+                <div
+                    role="status"
+                    style={{
+                        padding: "9px 12px",
+                        borderRadius: 10,
+                        background: C.warnS,
+                        color: C.warn,
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                    }}
+                >
+                    현재 미조회 {unavailable.length}개 · {unavailable
+                        .map((key) => SOURCE_KO[key] || key)
+                        .join(", ")}
+                </div>
+            ) : null}
+
+            {timeline.length > 0 ? (
+                <section style={card} aria-labelledby="us-fact-timeline-title">
+                    {title("최근 변화 연대기", "서로 다른 공시 주기의 실제 기준일")}
+                    <div id="us-fact-timeline-title">
+                        {timeline.slice(0, 12).map((item, index) => {
+                            const tone =
+                                item.tone === "up"
+                                    ? C.up
+                                    : item.tone === "down"
+                                      ? C.down
+                                      : C.vt
+                            return (
+                                <div
+                                    key={item.kind + item.date + index}
+                                    style={{
+                                        display: "grid",
+                                        gridTemplateColumns: narrow
+                                            ? "58px minmax(0,1fr)"
+                                            : "70px 64px minmax(0,1fr)",
+                                        gap: 8,
+                                        alignItems: "start",
+                                        padding: "9px 0",
+                                        borderTop:
+                                            index === 0
+                                                ? "none"
+                                                : "1px solid " + C.line,
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            color: C.faint,
+                                            fontSize: 10.5,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        {md(item.date)}
+                                    </span>
+                                    {!narrow ? (
+                                        <span
+                                            style={{
+                                                color: tone,
+                                                fontSize: 10,
+                                                fontWeight: 800,
+                                            }}
+                                        >
+                                            {item.kind}
+                                        </span>
+                                    ) : null}
+                                    <div style={{ minWidth: 0 }}>
+                                        {item.source_url ? (
+                                            <a
+                                                href={item.source_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{
+                                                    color: C.ink,
+                                                    fontSize: 11.5,
+                                                    fontWeight: 750,
+                                                    lineHeight: 1.45,
+                                                    textDecoration: "none",
+                                                }}
+                                            >
+                                                {narrow ? item.kind + " · " : ""}
+                                                {item.title}
+                                            </a>
+                                        ) : (
+                                            <span
+                                                style={{
+                                                    color: C.ink,
+                                                    fontSize: 11.5,
+                                                    fontWeight: 750,
+                                                    lineHeight: 1.45,
+                                                }}
+                                            >
+                                                {narrow ? item.kind + " · " : ""}
+                                                {item.title}
+                                            </span>
+                                        )}
+                                        {item.note ? (
+                                            <div
+                                                style={{
+                                                    marginTop: 2,
+                                                    color: C.faint,
+                                                    fontSize: 9.5,
+                                                    lineHeight: 1.45,
+                                                }}
+                                            >
+                                                {item.note}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </section>
+            ) : null}
+
+            {!hasAny && loadState === "ready" ? (
+                <div style={{ ...card, color: C.sub, fontSize: 12 }}>
+                    연결된 {sourceKeys.length}개 소스에서 이 종목의 표시 가능한 기록을 찾지
+                    못했습니다. 기록 부재와 소스 장애는 구분해 표시합니다.
+                </div>
+            ) : null}
+
+            {hasAny ? <div style={grid}>
+            {hasInsider && (
+                <section style={card} aria-labelledby="us-form4-title">
+                    {title("내부자 실제 거래", "SEC Form 4 · 체결 후 신고")}
+                    <div
+                        id="us-form4-title"
+                        style={{
+                            display: "flex",
+                            alignItems: "baseline",
+                            gap: 8,
+                            flexWrap: "wrap",
+                            marginBottom: 10,
+                        }}
+                    >
+                        <span
+                            style={{
+                                fontFamily: HEAD,
+                                fontSize: narrow ? 19 : 22,
+                                fontWeight: 800,
+                                color:
+                                    Number(insider && insider.net_change) > 0
+                                        ? C.up
+                                        : Number(insider && insider.net_change) < 0
+                                          ? C.down
+                                          : C.ink,
+                            }}
+                        >
+                            {Number(insider && insider.net_change) > 0 ? "+" : ""}
+                            {num(insider && insider.net_change)}주
+                        </span>
+                        <span
+                            style={{
+                                color: C.faint,
+                                fontSize: 11,
+                                fontWeight: 650,
+                            }}
+                        >
+                            매수 {num(insider && insider.buy_n)} · 매도 {num(insider && insider.sell_n)}
+                        </span>
+                    </div>
+                    <div>
+                        {trades.map((trade, index) => {
+                            const change = Number(trade.change)
+                            return (
+                                <div
+                                    key={(trade.date || "") + (trade.person || "") + index}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        padding: "8px 0",
+                                        borderTop:
+                                            index === 0
+                                                ? "none"
+                                                : "1px solid " + C.line,
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            flex: 1,
+                                            minWidth: 0,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                            color: C.ink,
+                                            fontSize: 11.5,
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        {trade.source_url ? (
+                                            <a href={trade.source_url} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                                                {trade.person || "—"}
+                                            </a>
+                                        ) : trade.person || "—"}
+                                    </span>
+                                    <span style={{ color: change > 0 ? C.up : change < 0 ? C.down : C.sub, fontSize: 11.5, fontWeight: 800 }}>
+                                        {change > 0 ? "+" : ""}{num(change)}주
+                                    </span>
+                                    <span style={{ color: C.faint, fontSize: 10.5 }}>{md(trade.date)}</span>
+                                </div>
+                            )
+                        })}
+                    </div>
+                    <div style={{ color: C.faint, fontSize: 10.5, lineHeight: 1.55, marginTop: 10 }}>
+                        매수·매도 사실이며 회사 전망 신호가 아닙니다 · 10b5-1 계획과
+                        세금 원천징수 목적 여부는 각 행의 원문에서 확인합니다
+                    </div>
+                </section>
+            )}
+
+            {has144 && (
+                <section style={card} aria-labelledby="us-form144-title">
+                    {title("내부자 매도 예정", "SEC Form 144 · 체결 확인 아님")}
+                    <div id="us-form144-title" style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap", marginBottom: 10 }}>
+                        <span style={{ fontFamily: HEAD, fontSize: narrow ? 19 : 22, fontWeight: 800, color: C.vt }}>
+                            {num(form144 && form144.notice_count)}건
+                        </span>
+                        <span style={{ color: C.faint, fontSize: 11, fontWeight: 650 }}>
+                            신고 합계 {usd(form144 && form144.total_value_usd)}
+                        </span>
+                    </div>
+                    <div>
+                        {notices.map((notice, index) => (
+                            <div key={(notice.filing_date || "") + (notice.person || "") + index} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto", gap: 8, alignItems: "center", padding: "8px 0", borderTop: index === 0 ? "none" : "1px solid " + C.line }}>
+                                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.ink, fontSize: 11.5, fontWeight: 700 }}>
+                                    {notice.source_url ? <a href={notice.source_url} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>{notice.person || "—"}</a> : notice.person || "—"}
+                                </span>
+                                <span style={{ color: C.sub, fontSize: 11, fontWeight: 700 }}>{num(notice.units)}주</span>
+                                <span style={{ color: C.faint, fontSize: 10.5 }}>{md(notice.filing_date || notice.approx_sale_date)}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ color: C.faint, fontSize: 10.5, lineHeight: 1.55, marginTop: 10 }}>
+                        매도 의향 신고라 실제로 전부 체결됐다는 뜻이 아닙니다
+                        {form144 && form144.truncated ? " · 화면은 최근 일부 신고만 표시합니다" : ""}
+                    </div>
+                </section>
+            )}
+
+            {hasSmart && (
+                <section style={card} aria-labelledby="us-13f-title">
+                    {title("기관 분기 보유", "SEC 13F · 집중형 매니저")}
+                    <div id="us-13f-title" style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap", marginBottom: 10 }}>
+                        <span style={{ fontFamily: HEAD, fontSize: narrow ? 19 : 22, fontWeight: 800, color: C.vt }}>
+                            {num(smart && smart.holder_count)}곳
+                        </span>
+                        <span style={{ color: C.faint, fontSize: 11, fontWeight: 650 }}>
+                            보고가치 합계 {usd(smart && smart.total_value_usd)}
+                        </span>
+                    </div>
+                    <div>
+                        {holders.map((holder, index) => {
+                            const change = String(holder.change_type || "").toUpperCase()
+                            const tone = change === "NEW" || change === "INCREASED" ? C.up : change === "DECREASED" || change === "EXITED" ? C.down : C.faint
+                            return (
+                                <div key={(holder.fund || "") + index} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto", gap: 8, alignItems: "center", padding: "8px 0", borderTop: index === 0 ? "none" : "1px solid " + C.line }}>
+                                    <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.ink, fontSize: 11.5, fontWeight: 700 }}>{holder.fund || "—"}</span>
+                                    <span style={{ color: tone, fontSize: 10.5, fontWeight: 800 }}>{CHANGE_KO[change] || change || "—"}</span>
+                                    <span style={{ color: C.sub, fontSize: 10.5, fontWeight: 700 }}>{usd(holder.value_usd)}</span>
+                                </div>
+                            )
+                        })}
+                    </div>
+                    <div style={{ color: C.faint, fontSize: 10.5, lineHeight: 1.55, marginTop: 10 }}>
+                        분기말 보유를 최대 45일 뒤 신고한 자료입니다 · 가치 변화에는
+                        주가 변화가 섞여 있어 순매수 금액으로 읽지 않습니다
+                    </div>
+                </section>
+            )}
+
             {hasShort && (
-                <div style={card}>
+                <section style={card}>
                     {title("공매도 잔고", "유통주식 대비 · 월 2회 공시")}
                     <div
                         style={{
@@ -525,11 +1168,11 @@ export default function PublicStockDetailUS(props: Props) {
                         공매도 잔고는 사실이며 방향 신호가 아닙니다 · 유통주식
                         대비 비율 · 월 2회 공시라 최신 시점과 차이가 있습니다
                     </div>
-                </div>
+                </section>
             )}
 
             {hasHold && (
-                <div style={card}>
+                <section style={card}>
                     {title("5%+ 대량보유", "SEC 13D·13G · 최근 1년")}
                     <div
                         style={{
@@ -671,11 +1314,11 @@ export default function PublicStockDetailUS(props: Props) {
                             ? ` · 이 화면에 안 실린 건 ${num(hold.omitted)}건`
                             : ""}
                     </div>
-                </div>
+                </section>
             )}
 
             {hasFx && (
-                <div style={card}>
+                <section style={card}>
                     {title("8-K 이력", "SEC 수시공시 · 최근 2년")}
                     <div
                         style={{
@@ -725,8 +1368,9 @@ export default function PublicStockDetailUS(props: Props) {
                         SEC EDGAR 8-K 항목 분류 사실 · 분류일 뿐 위험도 판단이
                         아닙니다
                     </div>
-                </div>
+                </section>
             )}
+            </div> : null}
         </div>
     )
 }
@@ -737,9 +1381,14 @@ addPropertyControls(PublicStockDetailUS, {
         title: "Ticker(빈값=URL ?q)",
         defaultValue: "",
     },
+    apiBase: {
+        type: ControlType.String,
+        title: "API Base",
+        defaultValue: DEFAULT_API_BASE,
+    },
     shortUrl: {
         type: ControlType.String,
-        title: "Short URL",
+        title: "Short URL(이전 호환)",
         defaultValue: SHORT_URL,
     },
     holdUrl: {
