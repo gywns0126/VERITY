@@ -43,3 +43,12 @@ def test_chart_card_uses_the_same_outer_geometry_as_the_stock_chart() -> None:
     assert "padding: 4" in body
     assert 'padding: "10px 10px 0"' in body
     assert 'padding: "0 10px"' in body
+    assert 'aspectRatio: "1.75 / 1"' in body
+    assert "height - 250" not in body
+
+
+def test_chart_does_not_coerce_missing_values_to_zero_and_explains_disabled_ranges() -> None:
+    body = CHART.read_text(encoding="utf-8")
+    assert 'value === null || value === undefined || value === ""' in body
+    assert "nextUnavailableRange" in body
+    assert "개부터 사용할 수 있어요" in body

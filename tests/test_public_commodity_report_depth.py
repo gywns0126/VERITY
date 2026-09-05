@@ -41,6 +41,11 @@ def test_report_only_labels_a_return_when_enough_observations_exist() -> None:
     assert "history.length >= 180" in body
     assert "pct(history, 21)" in body
     assert "pct(history, 65)" in body
+    assert "pct(history, 131)" in body
+    assert 'value === null || value === undefined || value === ""' in body
+    assert "coverageNote(history.length, 180)" in body
+    assert "fmtRange(quote?.low_52w, quote?.high_52w)" in body
+    assert "가격 관측 범위" in body
 
 
 def test_report_fetches_independent_sources_in_parallel_with_local_fallbacks() -> None:

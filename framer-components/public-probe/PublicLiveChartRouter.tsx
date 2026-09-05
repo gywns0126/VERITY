@@ -149,6 +149,7 @@ function dataUrl(value?: string): string {
 }
 
 function numeric(value: unknown): number | null {
+    if (value === null || value === undefined || value === "") return null
     const parsed = Number(value)
     return Number.isFinite(parsed) ? parsed : null
 }
@@ -516,6 +517,9 @@ export default function PublicLiveChartRouter(props: Props) {
     }
     const rangeEnabled = (key: RangeKey) =>
         allPoints.length >= rangeMinimum[key]
+    const nextUnavailableRange = (["3M", "6M", "1Y"] as RangeKey[]).find(
+        (key) => !rangeEnabled(key)
+    )
     const activeRange: RangeKey = rangeEnabled(range) ? range : "1M"
     const selectedPoints = allPoints.slice(-rangeSize[activeRange])
     const points = selectedPoints.map((point, index) => ({
@@ -795,8 +799,10 @@ export default function PublicLiveChartRouter(props: Props) {
 
                 <div
                     style={{
-                        height: Math.max(240, height - 250),
-                        minHeight: 240,
+                        width: "100%",
+                        height: "auto",
+                        aspectRatio: "1.75 / 1",
+                        minHeight: 190,
                         marginTop: 8,
                     }}
                 >
@@ -845,6 +851,23 @@ export default function PublicLiveChartRouter(props: Props) {
                         />
                     )}
                 </div>
+
+                {nextUnavailableRange ? (
+                    <div
+                        style={{
+                            margin: "6px 10px 0",
+                            borderRadius: 10,
+                            background: field,
+                            padding: "8px 10px",
+                            color: faint,
+                            fontSize: 10.5,
+                            lineHeight: 1.5,
+                            fontWeight: 650,
+                        }}
+                    >
+                        현재 {allPoints.length.toLocaleString("ko-KR")}개 관측 · {nextUnavailableRange} 버튼은 {rangeMinimum[nextUnavailableRange]}개부터 사용할 수 있어요.
+                    </div>
+                ) : null}
 
                 {ready ? (
                     <div

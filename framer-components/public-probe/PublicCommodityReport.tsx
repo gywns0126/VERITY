@@ -59,6 +59,7 @@ function readTicker(previewTicker: string, onCanvas: boolean) {
     return String(new URLSearchParams(window.location.search).get("q") || "").trim().toUpperCase()
 }
 function num(value: unknown): number | null {
+    if (value === null || value === undefined || value === "") return null
     const parsed = Number(value)
     return Number.isFinite(parsed) ? parsed : null
 }
@@ -80,6 +81,18 @@ function fmtTimestamp(value: unknown) {
     if (!value) return "기준시각 확인 중"
     const date = new Date(String(value))
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) + " KST"
+}
+function fmtRange(low: unknown, high: unknown) {
+    const parsedLow = num(low)
+    const parsedHigh = num(high)
+    return parsedLow === null || parsedHigh === null
+        ? "—"
+        : fmt(parsedLow, 3) + "–" + fmt(parsedHigh, 3)
+}
+function coverageNote(observations: number, required: number) {
+    return observations >= required
+        ? observations.toLocaleString("ko-KR") + "개 관측"
+        : observations.toLocaleString("ko-KR") + "개 관측 · " + required + "개 필요"
 }
 function labelAsset(key: string) {
     return ({ stock: "미국 주식", bond_yield: "미 10년물", usd: "달러", oil: "유가", gold: "금", btc: "비트코인" } as any)[key] || key
@@ -162,8 +175,11 @@ export default function PublicCommodityReport(props: Props) {
     const returns = {
         month: pct(history, 21),
         quarter: pct(history, 65),
+        half: pct(history, 131),
         year: history.length >= 180 ? pct(history, Math.min(251, history.length - 1)) : null,
     }
+    const firstObservation = Array.isArray(quote?.history_daily) ? quote.history_daily[0]?.date : null
+    const lastObservation = quote?.data_date || (Array.isArray(quote?.history_daily) ? quote.history_daily[quote.history_daily.length - 1]?.date : null)
     const corrMatrix = item.corrKey ? macro?.macro?.cross_asset_corr?.matrix?.[item.corrKey] : null
     const correlations = corrMatrix
         ? Object.entries(corrMatrix)
@@ -212,12 +228,14 @@ export default function PublicCommodityReport(props: Props) {
             <section style={card}>
                 <b>가격 맥락</b>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(118px,1fr))", gap: 8, marginTop: 12 }}>
-                    {stat("1개월", fmtPct(returns.month), history.length >= 22 ? "22관측 기준" : "가용 관측 기준")}
-                    {stat("3개월", fmtPct(returns.quarter), "66관측 기준")}
-                    {stat("1년", fmtPct(returns.year), history.length + "관측")}
+                    {stat("1개월", fmtPct(returns.month), coverageNote(history.length, 22))}
+                    {stat("3개월", fmtPct(returns.quarter), coverageNote(history.length, 66))}
+                    {stat("6개월", fmtPct(returns.half), coverageNote(history.length, 132))}
+                    {stat("1년", fmtPct(returns.year), coverageNote(history.length, 180))}
                     {stat("30일 최고종가", fmt(quote?.high_30d, 3))}
                     {stat("30일 최저종가", fmt(quote?.low_30d, 3))}
-                    {stat("52주 범위", fmt(quote?.low_52w, 3) + "–" + fmt(quote?.high_52w, 3))}
+                    {stat("52주 범위", fmtRange(quote?.low_52w, quote?.high_52w))}
+                    {stat("가격 관측 범위", history.length ? history.length.toLocaleString("ko-KR") + "개" : "—", firstObservation && lastObservation ? firstObservation + "–" + lastObservation : "장기 시계열 준비 중")}
                 </div>
             </section>
 
