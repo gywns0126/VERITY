@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import PublicStockSearch from "https://framer.com/m/PublicStockSearch-iqt9J1.js"
 
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
@@ -90,6 +90,8 @@ export default function PublicCommodityReport(props: Props) {
     const [ticker, setTicker] = useState(() => readTicker(props.previewTicker, onCanvas))
     const [macro, setMacro] = useState<any>(null)
     const [exposure, setExposure] = useState<any>(null)
+    const rootRef = useRef<HTMLDivElement | null>(null)
+    const [width, setWidth] = useState(0)
     const item = useMemo(() => BY_TICKER.get(ticker), [ticker])
 
     useEffect(() => {
@@ -102,6 +104,16 @@ export default function PublicCommodityReport(props: Props) {
             window.removeEventListener("popstate", sync)
         }
     }, [onCanvas, props.previewTicker])
+
+    useEffect(() => {
+        const el = rootRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) setWidth(entry.contentRect.width)
+        })
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [item?.ticker])
 
     useEffect(() => {
         if (!item) {
@@ -128,6 +140,8 @@ export default function PublicCommodityReport(props: Props) {
         })
         return () => { alive = false }
     }, [item?.ticker, props.macroUrl, props.exposureUrl])
+
+    const narrow = width > 0 && width < 560
 
     if (!item) return null
 
@@ -170,7 +184,7 @@ export default function PublicCommodityReport(props: Props) {
         </div>
     )
 
-    return <div style={{ width: "100%", padding: "0 clamp(14px, 2vw, 20px)", boxSizing: "border-box", fontFamily: FONT, color: C.ink }}>
+    return <div ref={rootRef} style={{ width: "100%", padding: narrow ? "0 12px" : "0 18px", boxSizing: "border-box", fontFamily: FONT, color: C.ink }}>
         <style>{PALETTE}</style>
         <main style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gap: 14 }}>
             <div style={{ width: "100%", height: 41, minWidth: 0 }}>
@@ -273,3 +287,4 @@ addPropertyControls(PublicCommodityReport, {
     previewTicker: { type: ControlType.Enum, title: "Preview", options: COMMODITIES.map((item) => item.ticker), optionTitles: COMMODITIES.map((item) => item.name), defaultValue: "CMD_GOLD" },
     dark: { type: ControlType.Boolean, title: "Dark", defaultValue: false },
 })
+
