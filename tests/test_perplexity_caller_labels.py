@@ -47,7 +47,8 @@ def test_client_passes_caller_to_ledger():
 
 def test_every_call_site_declares_caller():
     sites = _call_sites()
-    assert len(sites) >= 11, f"호출부가 {len(sites)}곳뿐 — AST 수집이 깨졌는지 확인"
+    # The retired tri-synthesis runtime removed one legitimate call site (11 -> 10).
+    assert len(sites) >= 10, f"호출부가 {len(sites)}곳뿐 — AST 수집이 깨졌는지 확인"
     missing = [(p, ln) for p, ln, has in sites if not has]
     assert not missing, (
         f"caller 미지정 호출부 {len(missing)}건: {missing}\n"
